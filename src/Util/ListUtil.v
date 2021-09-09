@@ -107,13 +107,13 @@ Module Export List.
     Variable f : A -> B.
 
     Lemma map_nil : forall A B (f : A -> B), map f nil = nil.
-    Proof. reflexivity. Qed.
+    Proof using Type. reflexivity. Qed.
     Lemma map_cons (x:A)(l:list A) : map f (x::l) = (f x) :: (map f l).
     Proof using Type.
       reflexivity.
     Qed.
     Lemma map_repeat x n : map f (List.repeat x n) = List.repeat (f x) n.
-    Proof. induction n; simpl List.repeat; simpl map; congruence. Qed.
+    Proof using Type. induction n; simpl List.repeat; simpl map; congruence. Qed.
   End Map.
   Hint Rewrite @map_cons @map_nil @map_repeat : push_map.
   Hint Rewrite @map_app : push_map.
@@ -134,13 +134,13 @@ Module Export List.
     Context {A B} (f:B->A->A).
     Lemma fold_right_nil : forall {A B} (f:B->A->A) a,
         List.fold_right f a nil = a.
-    Proof. reflexivity. Qed.
+    Proof using Type. reflexivity. Qed.
     Lemma fold_right_cons : forall a b bs,
       fold_right f a (b::bs) = f b (fold_right f a bs).
-    Proof. reflexivity. Qed.
+    Proof using Type. reflexivity. Qed.
     Lemma fold_right_snoc a x ls:
       @fold_right A B f a (ls ++ [x]) = fold_right f (f x a) ls.
-    Proof.
+    Proof using Type.
       rewrite <-(rev_involutive ls), <-rev_cons.
       rewrite !fold_left_rev_right; reflexivity.
     Qed.
@@ -193,7 +193,7 @@ Module Export List.
     Proof using Type. now simpl. Qed.
 
     Lemma firstn_all l: firstn (length l) l = l.
-    Proof. induction l as [| ? ? H]; simpl; [reflexivity | now rewrite H]. Qed.
+    Proof using Type. induction l as [| ? ? H]; simpl; [reflexivity | now rewrite H]. Qed.
 
     Lemma firstn_all2 n: forall (l:list A), (length l) <= n -> firstn n l = l.
     Proof using Type. induction n as [|k iHk].
@@ -251,7 +251,7 @@ Module Export List.
       forall l:list A,
       forall i j : nat,
         firstn i (firstn j l) = firstn (min i j) l.
-    Proof. induction l as [|x xs Hl].
+    Proof using Type. induction l as [|x xs Hl].
            - intros. simpl. now rewrite ?firstn_nil.
            - destruct i.
              * intro. now simpl.
@@ -1176,7 +1176,7 @@ Lemma nth_default_in_bounds : forall {T} (d' d : T) n us, (n < length us)%nat ->
   nth_default d us n = nth_default d' us n.
 Proof.
   intros; erewrite !nth_default_nth_dep; reflexivity.
-  Grab Existential Variables.
+  Unshelve.
   assumption.
 Qed.
 
