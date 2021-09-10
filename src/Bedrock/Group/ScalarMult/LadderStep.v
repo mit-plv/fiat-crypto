@@ -139,7 +139,7 @@ Section __.
                           expr.var Z3_var])
           k_impl
         <{ pred (nlet_eq
-                   [X1_var; X2_var; Z2_var; X3_var; Z3_var]
+                   [X2_var; Z2_var; X3_var; Z3_var]
                    v k) }>.
   Proof.
       repeat straightline'.
@@ -236,9 +236,7 @@ Proof.
       ecancel_assumption.
     }
   }
-  
-  (* TODO: currently takes a few hours *)
-Time Qed.
+Qed.
   
 End __.
 
