@@ -46,7 +46,7 @@ Inductive OpCode :=
 | mulx
 | ret
 | sar
-| rcr    
+| rcr
 | sbb
 | setc
 | seto

@@ -6,106 +6,11 @@ Require Import Util.OptionList.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Testbit.
-
+Require Import Crypto.Util.ListUtil.FoldMap. Import FoldMap.List.
+Require Import Crypto.Util.ListUtil.IndexOf. Import IndexOf.List.
+Require Import Crypto.Util.ListUtil.Forall.
+Require Import Crypto.Util.NUtil.Sorting.
 Require Import coqutil.Z.bitblast.
-
-Module Import List.
-  Section IndexOf.
-    Context [A] (f : A -> bool).
-    Fixpoint indexof (l : list A) : option nat :=
-      match l with
-      | nil => None
-      | cons a l =>
-          if f a then Some 0
-          else option_map S (indexof l )
-      end.
-    Lemma indexof_Some l i (H : indexof l = Some i) :
-      exists a, nth_error l i = Some a /\ f a = true.
-    Proof.
-      revert dependent i; induction l; cbn in *; try congruence; [].
-      destruct (f a) eqn:?; cbn.
-      { inversion 1; subst. eexists. split. exact eq_refl. eassumption. }
-      { cbv [option_map]; destruct (indexof l) eqn:?; inversion 1; subst; eauto. }
-    Qed.
-  End IndexOf.
-
-
-  Section FoldMap. (* map over a list in the state monad *)
-    Context [A B S] (f : A -> S -> B * S).
-    Fixpoint foldmap (l : list A) (s : S) : list B * S :=
-      match l with
-      | nil => (nil, s)
-      | cons a l =>
-          let bs_s := foldmap l s in
-          let b_s := f a (snd bs_s) in
-          (cons (fst b_s) (fst bs_s), snd b_s)
-      end.
-    Lemma foldmap_ind
-      l s
-      (P : list A -> list B -> S -> Prop)
-      (Hnil : P nil nil s)
-      (Hcons : forall (l : list A) (l' : list B) (s : S),
-      P l l' s -> forall a, P (cons a l) (cons (fst (f a s)) l') (snd (f a s))) : P l (fst (foldmap l s)) (snd (foldmap l s)).
-    Proof using Type. induction l; eauto; []; eapply Hcons; trivial. Qed.
-  End FoldMap.
-End List.
-
-Require Coq.Sorting.Mergesort.
-Module NOrder <: Orders.TotalLeBool.
-  Local Open Scope N_scope.
-  Definition t := N.
-  Definition ltb := N.ltb.
-  Definition leb := N.leb.
-  Theorem leb_total : forall a1 a2, leb a1 a2 = true \/ leb a2 a1 = true.
-  Proof.
-    cbv [leb ltb]; intros a1 a2.
-    repeat first [ rewrite !Bool.andb_true_iff
-                 | rewrite !Bool.orb_true_iff
-                 | rewrite !N.eqb_eq
-                 | rewrite !N.ltb_lt
-                 | rewrite !N.leb_le ].
-    Lia.lia.
-  Qed.
-End NOrder.
-Module NSort := Mergesort.Sort NOrder.
-Notation sortN := NSort.sort.
-
-Require Import Coq.Program.Equality.
-
-Section Forall2.
-  Lemma Forall2_flip {A B} {R : A -> B -> Prop} xs ys :
-    Forall2 R xs ys -> Forall2 (fun y x => R x y) ys xs.
-  Proof. induction 1; eauto. Qed.
-
-  Lemma length_Forall2 [A B : Type] [xs ys] [P:A->B->Prop] : Forall2 P xs ys -> length xs = length ys.
-  Proof. induction 1; cbn; eauto. Qed.
-
-  Section weaken.
-    Context {A B} {P Q:A->B->Prop} (H : forall (a : A) (b : B), P a b -> Q a b).
-    Fixpoint Forall2_weaken args args' (pf : Forall2 P args args') : Forall2 Q args args' :=
-      match pf with
-      | Forall2_nil => Forall2_nil _
-      | Forall2_cons _ _ _ _ Rxy k => Forall2_cons _ _ (H _ _ Rxy) (Forall2_weaken _ _ k)
-      end.
-  End weaken.
-  Lemma Forall2_map_l {A' A B} (f : A' -> A) {R : A -> B -> Prop} (xs : list A') (ys : list B) :
-    Forall2 R (map f xs) ys <-> Forall2 (fun x y => R (f x) y) xs ys.
-  Proof.
-    split; intros H; dependent induction H; try destruct xs; cbn in *;
-      try congruence; eauto.
-    { inversion x; subst; eauto. }
-  Qed.
-  Import RelationClasses.
-  Instance Reflexive_forall2 [A] [R] : @Reflexive A R -> Reflexive (Forall2 R).
-  Proof. intros ? l; induction l; eauto. Qed.
-  Lemma Forall2_eq [A] (xs ys : list A) : Forall2 eq xs ys <-> xs = ys.
-  Proof. split; induction 1; subst; eauto; reflexivity. Qed.
-  Lemma Forall2_trans [A B C] [AB BC] [xs : list A] [ys : list B] :
-    Forall2 AB xs ys -> forall [zs : list C], Forall2 BC ys zs ->
-    Forall2 (fun x z => exists y, AB x y /\ BC y z) xs zs.
-  Proof. induction 1; inversion 1; subst; econstructor; eauto. Qed.
-End Forall2.
-
 Require Import Coq.Strings.String Crypto.Util.Strings.Show.
 Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
@@ -354,7 +259,7 @@ Section WithDag.
 
   Lemma eval_eval_Forall2 xs vxs (_ : Forall2 eval xs vxs)
     vys (_ : Forall2 eval xs vys) : vxs = vys.
-  Proof.
+  Proof using Type.
     revert dependent vys; induction H; inversion 1; subst;
       eauto; eauto using f_equal2, IHForall2, eval_eval.
   Qed.
@@ -392,7 +297,7 @@ Fixpoint merge (e : expr) (d : dag) : idx * dag :=
   | ExprApp (op, args) =>
     let idxs_d := List.foldmap merge args d in
     let idxs := if commutative op
-                then sortN (fst idxs_d)
+                then N.sort (fst idxs_d)
                 else (fst idxs_d) in
     merge_node (op, idxs) (snd idxs_d)
   end.
@@ -532,7 +437,7 @@ Proof.
       shelve_unifiable; try congruence; [].
     rewrite ListUtil.map_nth_default_always. eapply H8. }
 
-  pose proof NSort.Permuted_sort (fst idxs_d) as Hperm.
+  pose proof N.Sort.Permuted_sort (fst idxs_d) as Hperm.
   eapply (Permutation.Permutation_Forall2 Hperm) in H2.
   case H2 as (argExprs&Hperm'&H2).
   eapply permute_commutative in H6; try eassumption; [].
@@ -596,7 +501,7 @@ Proof.
   { pose proof (proj1 H eq_refl); Lia.lia. }
   { pose proof (proj2 H H0). inversion H1. }
 Qed.
- 
+
 Lemma ones_min m n : N.ones (N.min m n) = N.land (N.ones m) (N.ones n).
 Proof.
   eapply N.bits_inj_iff; intro i.
@@ -659,7 +564,7 @@ Ltac t:= match goal with
   end.
 
 Lemma bound_sum' G d
-  es (He : Forall (fun e => forall b, bound_expr e = Some b -> 
+  es (He : Forall (fun e => forall b, bound_expr e = Some b ->
        forall (d : dag) (v : Z), eval G d e v -> (0 <= v <= b)%Z) es)
   : forall
   bs (Hb : Option.List.lift (map bound_expr es) = Some bs)
@@ -725,7 +630,7 @@ Proof.
         destruct H0 as [? H0]; eapply Z.log2_le_mono in H0. Lia.lia. } } }
 Qed.
 
-Lemma bound_sum G d es 
+Lemma bound_sum G d es
   bs (Hb : Option.List.lift (map bound_expr es) = Some bs)
   vs (Hv : Forall2 (eval G d) es vs)
   : (0 <= fold_right Z.add 0 vs <= fold_right Z.add 0 bs)%Z.
@@ -865,17 +770,17 @@ Lemma indN: forall (P: N -> Prop),
 Proof. setoid_rewrite N.add_1_r. exact N.peano_ind. Qed.
 
 Ltac induct e := induction e using indN.
-                  
+
 Lemma helper'': forall sz, (2^Z.of_N sz>0)%Z.
-  Proof. 
+  Proof.
     induct sz; cbn in *; try Lia.lia.
     replace (2^Z.of_N (sz+1))%Z with (2 * 2^Z.of_N sz )%Z; try Lia.lia.
     replace (2^Z.of_N (sz+1))%Z with ( 2^ Z.succ (Z.of_N sz) )%Z.
     erewrite Z.pow_succ_r; eauto; Lia.lia.
     f_equal; Lia.lia.
   Qed.
-  
-Lemma helper': forall sz y,(y<= Z.pred (2^ Z.of_N sz))%Z -> (y <  (2 ^ Z.of_N sz ))%Z. 
+
+Lemma helper': forall sz y,(y<= Z.pred (2^ Z.of_N sz))%Z -> (y <  (2 ^ Z.of_N sz ))%Z.
 Proof.
   intros; pose proof helper'' sz; replace( N.pred (2^ sz))%N with (2^sz-1)%N in H by Lia.lia; Lia.lia.
 Qed.
@@ -897,7 +802,7 @@ Definition truncate_small :=
       then e'
       else e | _ => e end | _ => e end.
 Global Instance truncate_small_ok : Ok truncate_small. Proof. t; []. cbn in *; eapply le_ones; eauto. firstorder. Lia.lia. Qed.
- 
+
 Definition addcarry_bit :=
   fun e => match e with
     ExprApp (addcarry s, ([ExprApp (const a, nil);b])) =>
@@ -945,7 +850,7 @@ Definition addbyte_small :=
           then ExprApp (add 64%N, args)
           else e | _ => e end | _ =>  e end.
 Global Instance addbyte_small_ok : Ok addbyte_small.
-Proof. 
+Proof.
   t; f_equal.
   eapply bound_sum in H2; eauto.
   rewrite Z.ones_equiv in E0; rewrite !Z.land_ones, !Z.mod_small; Lia.lia.
@@ -956,7 +861,7 @@ Proof.
   intros.
   erewrite Z.shiftr_div_pow2; eauto; try Lia.lia.
   eapply Z.div_small; eauto; try Lia.lia. pose proof helper'' s.  erewrite Z.ones_equiv. Lia.lia. Qed.
-                    
+
 Definition addcarry_small :=
   fun e => match e with
     ExprApp (addcarry s, args) =>
@@ -1036,7 +941,7 @@ Proof.
 Qed.
 
 Lemma interp_op_associative_app G o : associative o = true ->
-  forall xs vxs, interp_op G o xs = Some vxs -> 
+  forall xs vxs, interp_op G o xs = Some vxs ->
   forall ys vys, interp_op G o ys = Some vys ->
   interp_op G o (xs ++ ys) = interp_op G o [vxs; vys].
 Proof.
@@ -1127,7 +1032,7 @@ Proof.
 
   set (fst (partition isCst l)) as csts in *; clearbody csts.
   set (snd (partition isCst l)) as exps in *; clearbody exps.
-  clear dependent l. clear dependent args'. 
+  clear dependent l. clear dependent args'.
   move o at top; move Heqb0 at top; move Heqb at top.
   eapply eval_interp0_expr in Heqo0; instantiate (1:=d) in Heqo0; instantiate (1:=G) in Heqo0.
 
@@ -1349,7 +1254,7 @@ Definition expr : expr -> expr :=
   ;slice01_subborrowZ
   ;set_slice_set_slice
   ;slice_set_slice
-  ;set_slice0_small 
+  ;set_slice0_small
   ;flatten_associative
   ;consts_commutative
   ;drop_identity
@@ -1362,7 +1267,7 @@ Definition expr : expr -> expr :=
   ;addcarry_small
   ;addoverflow_small
   ;addbyte_small
-  ;xor_same 
+  ;xor_same
   ].
 
 Lemma eval_expr c d e v : eval c d e v -> eval c d (expr e) v.
@@ -1748,7 +1653,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     _ <- HavocFlags;
     if (cnt =? 1)%Z
     then cf <- App ((slice 0 1), cons (x) nil); SetFlag CF cf
-    else ret tt    
+    else ret tt
   | mulx, [hi; lo; src2] =>
     let src1 : ARG := rdx in
     v1 <- GetOperand src1;
@@ -1801,7 +1706,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     _ <- HavocFlags;
     _ <- SetFlag CF zero;
     _ <- SetFlag OF zero;
-    if Equality.ARG_beq ea eb 
+    if Equality.ARG_beq ea eb
     then zf <- App (iszero, [a]); SetFlag ZF zf
     else ret tt
   | clc, [] => zero <- Merge (@ExprApp (const 0, nil)); SetFlag CF zero

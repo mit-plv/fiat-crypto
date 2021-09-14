@@ -435,7 +435,7 @@ Proof.
             let lu := Z.log2 u in
             if (Z.eqb l 0 && Z.eqb u (2^lu))%bool
             then
-              App (((slice 0 (Z.to_N lu)), [idx])) 
+              App (((slice 0 (Z.to_N lu)), [idx]))
             else symex_error (Unhandled_cast l u)
           in
           match idc in ident t return symex_T t with
