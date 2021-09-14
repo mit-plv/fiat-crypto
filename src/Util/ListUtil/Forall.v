@@ -251,3 +251,37 @@ Proof. split; induction 1; constructor; assumption. Qed.
 Lemma Forall2_Forall_ignore_l {A B P ls1 ls2}
   : @Forall2 A B (fun x _ => P x) ls1 ls2 <-> (length ls1 = length ls2 /\ Forall P ls1).
 Proof. now rewrite Forall2_flip_iff; cbv [Basics.flip]; rewrite Forall2_Forall_iff_ignore_r. Qed.
+
+Lemma Forall2_flip {A B} {R : A -> B -> Prop} xs ys :
+  Forall2 R xs ys -> Forall2 (fun y x => R x y) ys xs.
+Proof. induction 1; eauto. Qed.
+
+Lemma length_Forall2 [A B : Type] [xs ys] [P:A->B->Prop] : Forall2 P xs ys -> length xs = length ys.
+Proof. induction 1; cbn; eauto. Qed.
+
+Section weaken.
+  Context {A B} {P Q:A->B->Prop} (H : forall (a : A) (b : B), P a b -> Q a b).
+  Fixpoint Forall2_weaken args args' (pf : Forall2 P args args') : Forall2 Q args args' :=
+    match pf with
+    | Forall2_nil => Forall2_nil _
+    | Forall2_cons _ _ _ _ Rxy k => Forall2_cons _ _ (H _ _ Rxy) (Forall2_weaken _ _ k)
+    end.
+End weaken.
+Lemma Forall2_map_l {A' A B} (f : A' -> A) {R : A -> B -> Prop} (xs : list A') (ys : list B) :
+  Forall2 R (List.map f xs) ys <-> Forall2 (fun x y => R (f x) y) xs ys.
+Proof.
+  remember (List.map f xs) as fxs eqn:Heqn.
+  split; intros H; (revert fxs Heqn + revert xs Heqn); induction H; intros ? Heqn;
+    try destruct xs; cbn in *; inversion Heqn; clear Heqn; subst;
+      try congruence; eauto.
+Qed.
+Import RelationClasses.
+Lemma Reflexive_forall2 [A] [R] : @Reflexive A R -> Reflexive (Forall2 R).
+Proof. intros ? l; induction l; eauto. Qed.
+Global Hint Extern 1 (Reflexive (Forall2 _)) => simple apply @Reflexive_forall2 : typeclass_instances.
+Lemma Forall2_eq [A] (xs ys : list A) : Forall2 eq xs ys <-> xs = ys.
+Proof. split; induction 1; subst; eauto; reflexivity. Qed.
+Lemma Forall2_trans [A B C] [AB BC] [xs : list A] [ys : list B] :
+  Forall2 AB xs ys -> forall [zs : list C], Forall2 BC ys zs ->
+                                            Forall2 (fun x z => exists y, AB x y /\ BC y z) xs zs.
+Proof. induction 1; inversion 1; subst; econstructor; eauto. Qed.

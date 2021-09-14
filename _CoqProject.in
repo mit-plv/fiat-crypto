@@ -295,8 +295,10 @@ src/Util/Decidable/Decidable2Bool.v
 src/Util/ErrorT/Show.v
 src/Util/FMapPositive/Equality.v
 src/Util/ListUtil/FoldBool.v
+src/Util/ListUtil/FoldMap.v
 src/Util/ListUtil/Forall.v
 src/Util/ListUtil/ForallIn.v
+src/Util/ListUtil/IndexOf.v
 src/Util/ListUtil/NthExt.v
 src/Util/ListUtil/SetoidList.v
 src/Util/Logic/Exists.v
@@ -310,6 +312,7 @@ src/Util/MSetPositive/Show.v
 src/Util/MSets/Iso.v
 src/Util/MSets/Show.v
 src/Util/MSets/Sum.v
+src/Util/NUtil/Sorting.v
 src/Util/NUtil/WithoutReferenceToZ.v
 src/Util/SideConditions/Autosolve.v
 src/Util/SideConditions/CorePackages.v
