@@ -127,7 +127,7 @@ Global Instance show_OpCode : Show OpCode
         | adox => "adox"
         | and => "and"
         | bzhi => "bzhi"
-        | rcr => "rcr"           
+        | rcr => "rcr"
         | clc => "clc"
         | cmovc => "cmovc"
         | cmovnz => "cmovnz"

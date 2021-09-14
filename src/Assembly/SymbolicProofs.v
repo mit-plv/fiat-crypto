@@ -226,7 +226,7 @@ Proof.
   revert dependent m; induction s; cbn; break_match; intuition idtac.
   eapply SeparationLogic.Proper_sep_impl1; try eassumption.
   intro; eauto using R_cell64_subsumed.
-  Unshelve. 
+  Unshelve.
   { refine (SortedListWord.ok _ _). }
 Qed.
 
@@ -375,7 +375,7 @@ Ltac step_App :=
   match goal with
   | H : Symbolic.App ?n ?s = Success (?i, ?s') |- _ =>
     let v := fresh "v" i in let Hi := fresh "H" i in
-    let Hl := fresh "Hl" s' in let Hs' := fresh "H" s' in 
+    let Hl := fresh "Hl" s' in let Hs' := fresh "H" s' in
     let t := open_constr:(fun A B => App_R s _ A n ?[v] B _ _ H) in
     unshelve (edestruct t as (Hs'&Hl&Hi); clear H); shelve_unifiable;
     [eassumption|..]
@@ -598,7 +598,7 @@ Proof.
     do 9 (destruct l; try solve [inversion H]); clear H.
   epose proof nth_error_load_bytes _ _ _ _ E as H.
   rewrite length_le_split in *.
-  destruct_one_match; cycle 1. 
+  destruct_one_match; cycle 1.
   { eapply load_bytes_None in E0; destruct E0 as (?&?&?).
     destruct x; [|lia].
     specialize (H 0%nat ltac:(lia));
@@ -965,7 +965,7 @@ Proof.
   case instr as [op args]; cbv [SymexNormalInstruction] in H.
   repeat destruct_one_match_hyp; repeat step01.
 
-  all : repeat 
+  all : repeat
   match goal with
   | |- eval_node _ _ (?op, ?args) ?e =>
       solve [repeat (eauto 99 with nocore || econstructor)]
@@ -1120,7 +1120,7 @@ Proof.
   Unshelve. all : match goal with H : context[Syntax.cmovnz] |- _ => idtac | _ => shelve end.
   { (* cmovnz *)
     destruct vZF; cbn [negb Z.b2z Z.eqb] in *; eauto 9; [].
-    enough (m = m0) by (subst; eauto 9). 
+    enough (m = m0) by (subst; eauto 9).
     clear -Hm0 Hv0 frame G ; eauto using SetOperand_same. }
 
   Unshelve. all : match goal with H : context[Syntax.test] |- _ => idtac | _ => shelve end.

@@ -20,6 +20,7 @@ Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.AddGetCarry.
 Require Import Crypto.Util.ZUtil.MulSplit.
