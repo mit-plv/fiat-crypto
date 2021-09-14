@@ -267,4 +267,43 @@ Module Z.
    Lemma testbit_b2z a m :
      Z.testbit a m = negb (Z.b2z (Z.testbit a m) =? 0).
    Proof. destruct (Z.testbit a m); reflexivity. Qed.
+
+   Lemma pos_le_bitwise a b (H : forall i, Bool.le (Pos.testbit a i) (Pos.testbit b i))
+     : Pos.le a b.
+   Proof.
+     revert dependent a; induction b as [b IHb|b IHb|], a as [a|a|]; intros; try lia;
+       try solve [ change (a <= b)%positive;
+                   apply IHb;
+                   intro i; specialize (H (N.succ i)); destruct i; cbn in H; rewrite ?Pos.pred_N_succ in H; try assumption ].
+     all: first [ cbv [Pos.le]; cbn; rewrite Pos.compare_cont_Lt_not_Gt
+                | cbv [Pos.le]; cbn; rewrite Pos.compare_cont_Gt_not_Gt
+                | idtac ].
+     all: try solve [ apply IHb;
+                      intro i; specialize (H (N.succ i)); destruct i; cbn in H; rewrite ?Pos.pred_N_succ in H; try assumption
+                    | specialize (H 0%N); cbn in H; congruence ].
+     all: specialize (fun i => H (Npos i)).
+     all: lazymatch type of H with
+          | forall i, Bool.le (Pos.testbit ?a _) (Pos.testbit ?b _)
+            => change (forall i, Bool.le (Z.testbit (Zpos a) (Zpos i)) (Z.testbit (Zpos b) (Zpos i))) in H;
+                 specialize (H (Z.to_pos (Z.log2 (Zpos a))))
+          end.
+     all: rewrite Z2Pos.id in H by (apply Z.log2_pos; lia).
+     all: rewrite Z.bit_log2 in H by lia.
+     all: rewrite Z.bits_above_log2 in H; try apply Z.log2_pos; try lia.
+     all: cbn in H; try congruence.
+   Qed.
+
+   Lemma le_bitwise a b (Ha : 0 <= a) (Hb : 0 <= b)  (H : forall i, 0 <= i -> Bool.le (Z.testbit a i) (Z.testbit b i))
+     : Z.le a b.
+   Proof.
+     destruct a as [|a|a], b as [|b|b]; try lia.
+     { specialize (H (Z.log2 (Zpos a)) (Z.log2_nonneg (Zpos a))).
+       rewrite Z.testbit_0_l, Z.bit_log2 in H by lia.
+       cbn in H; congruence. }
+     { apply pos_le_bitwise.
+       intro i; destruct i.
+       { specialize (H 0 ltac:(lia)); cbn in H.
+         destruct a, b; cbn in *; try reflexivity; try congruence. }
+       { refine (H (Zpos _) ltac:(lia)). } }
+   Qed.
 End Z.
