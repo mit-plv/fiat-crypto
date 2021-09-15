@@ -2,7 +2,7 @@ Require Import Coq.Lists.List.
 
 Module List.
   Section FoldMap. (* map over a list in the state monad *)
-    Context [A B S] (f : A -> S -> B * S).
+    Context {A B S} (f : A -> S -> B * S).
     Fixpoint foldmap (l : list A) (s : S) : list B * S :=
       match l with
       | nil => (nil, s)

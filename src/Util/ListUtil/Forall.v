@@ -16,12 +16,12 @@ Lemma unfold_Forallb {A P} ls
       | nil => true
       | cons x xs => andb (P x) (Forallb P xs)
       end.
-Proof. destruct ls; reflexivity. Qed.
+Proof using Type. destruct ls; reflexivity. Qed.
 
 Lemma Forall_Forallb_iff {A} (P : A -> bool) (Q : A -> Prop) (ls : list A)
       (H : forall x, In x ls -> P x = true <-> Q x)
   : Forallb P ls = true <-> Forall Q ls.
-Proof.
+Proof using Type.
   induction ls as [|x xs IHxs]; simpl; rewrite unfold_Forallb.
   { intuition. }
   { simpl in *.
@@ -222,7 +222,7 @@ Qed.
 Global Instance Forall2_Proper_impl {A B}
   : Proper (pointwise_relation _ (pointwise_relation _ Basics.impl) ==> eq ==> eq ==> Basics.impl)
            (@List.Forall2 A B) | 10.
-Proof.
+Proof using Type.
   cbv [Basics.impl respectful pointwise_relation].
   repeat intro; subst; rewrite Forall2_forall_In_combine_iff in *.
   destruct_head'_and; split; eauto.
@@ -231,7 +231,7 @@ Qed.
 Global Instance Forall2_Proper_iff {A B}
   : Proper (pointwise_relation _ (pointwise_relation _ iff) ==> eq ==> eq ==> iff)
            (@List.Forall2 A B) | 10.
-Proof.
+Proof using Type.
   cbv [respectful pointwise_relation].
   repeat intro; subst; rewrite !Forall2_forall_In_combine_iff in *.
   split_iff.
@@ -240,24 +240,24 @@ Qed.
 
 Lemma Forall2_Forall_iff_ignore_r {A B P ls1 ls2}
   : @Forall2 A B (fun _ => P) ls1 ls2 <-> (length ls1 = length ls2 /\ Forall P ls2).
-Proof.
+Proof using Type.
   revert ls1 ls2; induction ls1, ls2; t_Forall2; exfalso; lia.
 Qed.
 
 Lemma Forall2_flip_iff {A B P xs ys}
   : @Forall2 A B P xs ys <-> Forall2 (Basics.flip P) ys xs.
-Proof. split; induction 1; constructor; assumption. Qed.
+Proof using Type. split; induction 1; constructor; assumption. Qed.
 
 Lemma Forall2_Forall_ignore_l {A B P ls1 ls2}
   : @Forall2 A B (fun x _ => P x) ls1 ls2 <-> (length ls1 = length ls2 /\ Forall P ls1).
-Proof. now rewrite Forall2_flip_iff; cbv [Basics.flip]; rewrite Forall2_Forall_iff_ignore_r. Qed.
+Proof using Type. now rewrite Forall2_flip_iff; cbv [Basics.flip]; rewrite Forall2_Forall_iff_ignore_r. Qed.
 
 Lemma Forall2_flip {A B} {R : A -> B -> Prop} xs ys :
   Forall2 R xs ys -> Forall2 (fun y x => R x y) ys xs.
-Proof. induction 1; eauto. Qed.
+Proof using Type. induction 1; eauto. Qed.
 
-Lemma length_Forall2 [A B : Type] [xs ys] [P:A->B->Prop] : Forall2 P xs ys -> length xs = length ys.
-Proof. induction 1; cbn; eauto. Qed.
+Lemma length_Forall2 {A B : Type} {xs ys} {P:A->B->Prop} : Forall2 P xs ys -> length xs = length ys.
+Proof using Type. induction 1; cbn; eauto. Qed.
 
 Section weaken.
   Context {A B} {P Q:A->B->Prop} (H : forall (a : A) (b : B), P a b -> Q a b).
@@ -269,19 +269,19 @@ Section weaken.
 End weaken.
 Lemma Forall2_map_l {A' A B} (f : A' -> A) {R : A -> B -> Prop} (xs : list A') (ys : list B) :
   Forall2 R (List.map f xs) ys <-> Forall2 (fun x y => R (f x) y) xs ys.
-Proof.
+Proof using Type.
   remember (List.map f xs) as fxs eqn:Heqn.
   split; intros H; (revert fxs Heqn + revert xs Heqn); induction H; intros ? Heqn;
     try destruct xs; cbn in *; inversion Heqn; clear Heqn; subst;
       try congruence; eauto.
 Qed.
 Import RelationClasses.
-Lemma Reflexive_forall2 [A] [R] : @Reflexive A R -> Reflexive (Forall2 R).
-Proof. intros ? l; induction l; eauto. Qed.
+Lemma Reflexive_forall2 {A} {R} : @Reflexive A R -> Reflexive (Forall2 R).
+Proof using Type. intros ? l; induction l; eauto. Qed.
 Global Hint Extern 1 (Reflexive (Forall2 _)) => simple apply @Reflexive_forall2 : typeclass_instances.
-Lemma Forall2_eq [A] (xs ys : list A) : Forall2 eq xs ys <-> xs = ys.
-Proof. split; induction 1; subst; eauto; reflexivity. Qed.
-Lemma Forall2_trans [A B C] [AB BC] [xs : list A] [ys : list B] :
-  Forall2 AB xs ys -> forall [zs : list C], Forall2 BC ys zs ->
+Lemma Forall2_eq {A} (xs ys : list A) : Forall2 eq xs ys <-> xs = ys.
+Proof using Type. split; induction 1; subst; eauto; reflexivity. Qed.
+Lemma Forall2_trans {A B C} {AB BC} {xs : list A} {ys : list B} :
+  Forall2 AB xs ys -> forall {zs : list C}, Forall2 BC ys zs ->
                                             Forall2 (fun x z => exists y, AB x y /\ BC y z) xs zs.
-Proof. induction 1; inversion 1; subst; econstructor; eauto. Qed.
+Proof using Type. induction 1; inversion 1; subst; econstructor; eauto. Qed.
