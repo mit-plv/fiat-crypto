@@ -185,58 +185,23 @@ Proof.
     unfold map.getmany_of_list.
     simpl.
     {
-      (*TODO: do in a better way*)
-      change (fun y => exists ws, @?P ws y) with (Lift1Prop.ex1 P).
-      repeat seprewrite FElem_from_bytes.
-      repeat (sepsimpl;
-              match goal with
-                [H : context [FElem ?p ?v] |- Lift1Prop.ex1 (fun h => FElem ?p h * _)%sep _] =>
-                exists v
-              end).
-      sepsimpl.
+      eapply Proper_sep_impl1;
+        [ eapply FElem_to_bytes | | ecancel_assumption].
+      clear H29 m16.
+      repeat (intros m16 H29;
+      eapply Proper_sep_impl1;
+        [ eapply FElem_to_bytes | | ecancel_assumption];
+        clear H29 m16).
+      intros m16 H29.
       exists [].
-      cbv beta.
-      eapply Proper_sep_iff1.
-      2: reflexivity.
-      {
-        instantiate (1:=
-                       (Lift1Prop.ex1 (fun X4 =>
-                        Lift1Prop.ex1 (fun Z4 =>
-                        Lift1Prop.ex1 (fun X5 =>
-                        Lift1Prop.ex1 (fun Z5 =>
-                        (emp ((feval out13, feval out16, feval out9, feval out12)
-                         = (feval X4, feval Z4, feval X5, feval Z5) /\
-                        bounded_by tight_bounds X4 /\
-                        bounded_by tight_bounds Z4 /\
-                        bounded_by tight_bounds X5 /\ bounded_by tight_bounds Z5))
-                        * (FElem pX1 X1 ⋆ FElem pX2 X4 ⋆ FElem pZ2 Z4 ⋆ FElem pX3 X5 ⋆ FElem pZ3 Z5 ⋆ R))))))%sep).
-        cbv [Lift1Prop.iff1 Lift1Prop.ex1].
-        intuition idtac.
-        {
-          destruct H33 as (?&?&?&?&?).
-          exists x0, x1, x2, x3.
-          intuition idtac.
-          eapply sep_emp_l.
-          intuition idtac.
-        }
-        {
-          destruct H28 as (?&?&?&?&?).
-          exists x0, x1, x2, x3.
-          eapply sep_emp_l in H28.
-          intuition idtac.
-        }
-      }
-      sepsimpl; eexists.
-      sepsimpl; eexists.
-      sepsimpl; eexists.
-      sepsimpl; eexists.
-      sepsimpl.
-      auto.
-      all: try assumption.
+      repeat compile_step.
+      do 4 eexists.
+      intuition.
       ecancel_assumption.
     }
   }
 Qed.
+  
   
 End __.
 
