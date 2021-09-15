@@ -163,6 +163,16 @@ Section __.
 
   Ltac compile_custom ::= ladderstep_compile_custom.
 
+  (*TODO: move to pred_sep if deemed useful*)
+    Lemma merge_pred_sep A (a : A) R1 R2 pred tr m locals
+    : pred_sep (R1*R2)%sep pred a tr m locals ->
+      pred_sep R1 (pred_sep R2 pred) a tr m locals.
+    Proof.
+    unfold pred_sep; simpl.
+    unfold Basics.flip; simpl.
+    repeat change (fun x => ?h x) with h.
+    intros; ecancel_assumption.
+    Qed.
   
   Derive ladderstep_body SuchThat
          (let args := ["X1"; "X2"; "Z2"; "X3"; "Z3"] in
@@ -179,21 +189,19 @@ Proof.
   compile_setup.
   repeat compile_step.
   {
+
     unfold pred_sep; simpl.
     unfold Basics.flip; simpl.
     repeat change (fun x => ?h x) with h.
     unfold map.getmany_of_list.
     simpl.
     {
+      repeat match goal with
+      | [ H : _ ?m |- _ ?m] =>
       eapply Proper_sep_impl1;
-        [ eapply FElem_to_bytes | | ecancel_assumption].
-      clear H29 m16.
-      repeat (intros m16 H29;
-      eapply Proper_sep_impl1;
-        [ eapply FElem_to_bytes | | ecancel_assumption];
-        clear H29 m16).
-      intros m16 H29.
-      exists [].
+        [ eapply FElem_to_bytes | clear H m; intros H m | ecancel_assumption]
+      end.
+      eexists.
       repeat compile_step.
       do 4 eexists.
       intuition.

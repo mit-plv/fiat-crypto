@@ -882,56 +882,20 @@ Ltac field_compile_step ::=
     repeat change (fun x => ?h x) with h.
     unfold map.getmany_of_list.
     simpl.
-    {
-      (*TODO: do in a better way*)
-      change (fun y => exists ws, @?P ws y) with (Lift1Prop.ex1 P).
-      repeat seprewrite FElem_from_bytes.
-      repeat (sepsimpl;
-              match goal with
-                [H : context [FElem ?p ?v] |- Lift1Prop.ex1 (fun h => FElem ?p h * _)%sep _] =>
-                exists v
-              end).
-      sepsimpl.
+    {      
+      repeat match goal with
+      | [ H : _ ?m |- _ ?m] =>
+      eapply Proper_sep_impl1;
+        [ eapply FElem_to_bytes | clear H m; intros H m | ecancel_assumption]
+      end.
       exists [].
-      cbv beta.
-      eapply Proper_sep_iff1.
-      2: reflexivity.
-      {
-        instantiate (1:=
-                       Lift1Prop.ex1 (fun OUT0=>
-                      
-                                           (*TODO: tr/tr0 should be same?*)
-     ((emp(tr0 = tr /\
-      feval OUT0 = feval out0 /\
-        bounded_by tight_bounds OUT0))*
-        (FElem pOUT OUT0 ⋆ Scalar pK K ⋆ FElem pU U ⋆ R)))%sep ).
-        cbv [Lift1Prop.iff1 Lift1Prop.ex1].
-        intuition idtac.
-        {
-          subst.
-          destruct H44.
-          exists x4.
-          rewrite sep_emp_l.
-          intuition idtac.
-        }
-        {
-          destruct H21; rewrite sep_emp_l in H21.
-           intuition idtac.
-        }
-        {
-          destruct H21 as [OUT1 H21].
-          rewrite sep_emp_l in H21.
-           exists OUT1; intuition idtac.
-        }
-      }
-      sepsimpl.
-      exists out0.
-      sepsimpl; auto.
-      admit (*TODO: losing info here*).
+      repeat compile_step.
       admit (*TODO: not lined up right*).
+
+      eexists; intuition.
+      (*TODO: out and out0 not limed up; want FElem'?*)
+      admit (*ecancel_assumption.*).
     }
-        }
-      }
       Unshelve.
       constructor.
 
