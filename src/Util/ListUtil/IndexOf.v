@@ -2,7 +2,7 @@ Require Import Coq.Lists.List.
 
 Module List.
   Section IndexOf.
-    Context [A] (f : A -> bool).
+    Context {A} (f : A -> bool).
     Fixpoint indexof (l : list A) : option nat :=
       match l with
       | nil => None
@@ -20,9 +20,8 @@ Module List.
     Qed.
   End IndexOf.
 
-
   Section FoldMap. (* map over a list in the state monad *)
-    Context [A B S] (f : A -> S -> B * S).
+    Context {A B S} (f : A -> S -> B * S).
     Fixpoint foldmap (l : list A) (s : S) : list B * S :=
       match l with
       | nil => (nil, s)
