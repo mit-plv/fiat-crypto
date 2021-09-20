@@ -964,7 +964,7 @@ Module debugging_sat_solinas_25519_expanded.
     Let boundsn : list (ZRange.type.option.interp base.type.Z)
       := repeat bound n.
 
-    (* Time Redirect "log" *)
+    Time Redirect "log"
          Compute
          Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
          (Pipeline.BoundsPipelineToString
