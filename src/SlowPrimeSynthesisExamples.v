@@ -548,6 +548,225 @@ Module debugging_sat_solinas_25519.
   End __.
 End debugging_sat_solinas_25519.
 
+Module debugging_sat_solinas_25519_expanded_straightforward.
+  Import PreExtra.
+  Import Util.LetIn.
+  Import ZUtil.Definitions.
+  Module Saturated.
+    Module Associational.
+      Definition sat_multerm :=
+        fun (s : Z) (t t' : Z * Z) =>
+          dlet xy : Z * Z := Z.mul_split s (snd t) (snd t') in
+          dlet _ := ident.comment ("sat_multerm", ("xy", xy)) in
+          [(fst t * fst t', fst xy); (fst t * fst t' * s, snd xy)].
+      Definition sat_mul :=
+        fun (s : Z) (p q : list (Z * Z)) =>
+          flat_map
+            (fun t : Z * Z =>
+               flat_map
+                 (fun t' : Z * Z => sat_multerm s t t') q)
+            p.
+      Definition sat_multerm_const :=
+        fun (s : Z) (t t' : Z * Z) =>
+          if snd t =? 1
+          then [(fst t * fst t', snd t')]
+          else
+            if snd t =? -1
+            then [(fst t * fst t', - snd t')]
+            else
+              if snd t =? 0
+              then []
+              else
+                dlet xy : Z * Z := Z.mul_split s (snd t) (snd t') in
+          [(fst t * fst t', fst xy); (fst t * fst t' * s, snd xy)].
+      Definition sat_mul_const :=
+        fun (s : Z) (p q : list (Z * Z)) =>
+          flat_map
+            (fun t : Z * Z =>
+               flat_map
+                 (fun t' : Z * Z =>
+                    sat_multerm_const s t t') q) p.
+    End Associational.
+    Module Columns.
+      Definition cons_to_nth :=
+        fun (i : nat) (x : Z) (xs : list (list Z)) =>
+          Crypto.Util.ListUtil.update_nth i (fun y : list Z => x :: y) xs.
+      Definition nils : nat -> list (list Z) := fun n => repeat [] n.
+      Definition from_associational :=
+        fun (weight : nat -> Z) (n : nat) (p : list (Z * Z)) =>
+          fold_right
+            (fun (t : Z * Z) (ls : list (list Z)) =>
+               dlet p0 : nat * Z := place weight t (Init.Nat.pred n) in
+                 cons_to_nth (fst p0) (snd p0) ls)
+            (nils n) p.
+    End Columns.
+    Module Rows.
+      (* if [s] is not exactly equal to a weight, we must adjust it to
+         be a weight, so that rather than dividing by s and
+         multiplying by c, we divide by w and multiply by c*(w/s).
+         See
+         https://github.com/mit-plv/fiat-crypto/issues/326#issuecomment-404135131
+         for a bit more discussion *)
+      Definition adjust_s :=
+        fun (weight : nat -> Z) (fuel : nat) (s : Z) =>
+          fold_right
+            (fun (w_i : Z) '(v, found_adjustment) =>
+               let res0 := (v, found_adjustment) in
+               if found_adjustment : bool
+               then res0
+               else if w_i mod s =? 0 then (w_i, true) else res0)
+            (s, false) (map weight (rev (seq 0 fuel))).
+      Definition sat_reduce :=
+        fun (weight : nat -> Z) (base s : Z) (c : list (Z * Z))
+            (n : nat) (p : list (Z * Z)) =>
+          let
+            '(s', _) := adjust_s weight (S (S n)) s in
+          let lo_hi := split s' p in
+          fst lo_hi ++
+              Associational.sat_mul_const base [
+                (1, s' / s)]
+              (Associational.sat_mul_const base c (snd lo_hi)).
+      Definition repeat_sat_reduce :=
+        fun (weight : nat -> Z) (base s : Z) (c p : list (Z * Z)) (n : nat) =>
+          fold_right
+            (fun (_ : nat) (q : list (Z * Z)) =>
+               sat_reduce weight base s c n q) p
+            (seq 0 n).
+      Definition sum_rows' :=
+        fun (weight : nat -> Z) (start_state : list Z * Z * nat) (row1 row2 : list Z) =>
+          fold_right
+            (fun (next : Z * Z) (state : list Z * Z * nat) =>
+               let i := snd state in
+               let low_high' :=
+                   let low_high := fst state in
+                   let low := fst low_high in
+                   let high := snd low_high in
+                   dlet sum_carry : Z * Z := Z.add_with_get_carry_full
+                                               ((fun i0 : nat => weight (S i0) / weight i0) i)
+                                               high (fst next) (snd next) in
+               (low ++ [fst sum_carry], snd sum_carry) in
+                   (low_high', S i)) start_state (rev (combine row1 row2)).
+      Definition sum_rows :=
+        fun (weight : nat -> Z) (row1 row2 : list Z) =>
+          fst (sum_rows' weight ([], 0, 0%nat) row1 row2).
+      Definition flatten' :=
+        fun (weight : nat -> Z) (start_state : list Z * Z) (inp : list (list Z)) =>
+          fold_right
+            (fun (next_row : list Z) (state : list Z * Z) =>
+               let out_carry := sum_rows weight (fst state) next_row
+               in
+               (fst out_carry, snd state + snd out_carry)) start_state inp.
+      Definition flatten :=
+        fun (weight : nat -> Z) (n : nat) (inp : list (list Z)) =>
+          let default := zeros n in
+          flatten' weight (hd default inp, 0)
+                   (hd default (tl inp) :: tl (tl inp)).
+      Definition extract_row :=
+        fun inp : list (list Z) =>
+          (map (fun c : list Z => tl c) inp, map (fun c : list Z => hd 0 c) inp).
+      Definition from_columns' :=
+        fun (n : nat) (start_state : list (list Z) * list (list Z)) =>
+          fold_right
+            (fun (_ : Z) (state : list (list Z) * list (list Z)) =>
+               let cols'_row := extract_row (fst state) in
+               (fst cols'_row, snd state ++ [snd cols'_row])) start_state
+            (repeat 0 n).
+      Definition from_columns :=
+        fun inp : list (list Z) =>
+          snd
+            (from_columns' (Saturated.Rows.max_column_size inp)
+                           (inp, [])).
+      Definition from_associational :=
+        fun (weight : nat -> Z) (n : nat) (p : list (Z * Z)) =>
+          from_columns
+            (Columns.from_associational weight n p).
+      Definition mulmod :=
+        fun (weight : nat -> Z) (base s : Z) (c : list (Z * Z))
+            (n nreductions : nat) (p q : list Z) =>
+          let p_a := to_associational weight n p in
+          let q_a := to_associational weight n q in
+          let pq_a := Associational.sat_mul base p_a q_a in
+          let r_a :=
+              Rows.repeat_sat_reduce weight base s c pq_a nreductions in
+          Rows.flatten weight n
+                       (Rows.from_associational weight n r_a).
+    End Rows.
+  End Saturated.
+
+  Section __.
+    Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
+    Import Stringification.C.
+    Import Stringification.C.Compilers.
+    Import Stringification.C.Compilers.ToString.
+
+    (* We split these off to make things a bit easier on typeclass resolution and speed things up. *)
+    Local Existing Instances ToString.C.OutputCAPI Pipeline.show_ErrorMessage.
+    Local Instance : only_signed_opt := false.
+    Local Instance : no_select_opt := false.
+    Local Instance : static_opt := true.
+    Local Instance : internal_static_opt := true.
+    Local Instance : inline_opt := true.
+    Local Instance : inline_internal_opt := true.
+    Local Instance : use_mul_for_cmovznz_opt := false.
+    Local Instance : emit_primitives_opt := true.
+    Local Instance : should_split_mul_opt := false.
+    Local Instance : should_split_multiret_opt := false.
+    Local Instance : widen_carry_opt := false.
+    Local Instance : widen_bytes_opt := true. (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
+
+    (** ======= these are the changable parameters ====== *)
+    Let s := 2^256.
+    Let c := [(1, 38)].
+    Let machine_wordsize := 64.
+    (** ================================================= *)
+    Let possible_values := prefix_with_carry [machine_wordsize].
+    Local Instance : machine_wordsize_opt := machine_wordsize. (* for show *)
+    Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
+    Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
+    Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+    Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
+    Let m := s - Associational.eval c.
+    (* Number of reductions is calculated as follows :
+         Let i be the highest limb index of c. Then, each reduction
+         decreases the number of extra limbs by (n-i-1). (The -1 comes
+         from possibly having an extra high partial product at the end
+         of a reduction.) So, to go from the n extra limbs we have
+         post-multiplication down to 0, we need ceil (n / (n - i - 1))
+         reductions.  In some cases. however, [n - i <= 1], and in
+         this case, we do [n] reductions (is this enough?). *)
+    Let nreductions : nat :=
+      let i := fold_right Z.max 0 (map (fun t => Z.log2 (fst t) / machine_wordsize) c) in
+      if Z.of_nat n - i <=? 1
+      then n
+      else Z.to_nat (Qceiling (Z.of_nat n / (Z.of_nat n - i - 1))).
+    Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
+    Let boundsn : list (ZRange.type.option.interp base.type.Z)
+      := repeat bound n.
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (Pipeline.BoundsPipelineToString
+            "fiat" "mul"
+            false (* subst01 *)
+            false (* inline *)
+            None (* fancy *)
+            possible_values
+            machine_wordsize
+            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
+                  let nreductions := (eval cbv in nreductions) (* needs to be reduced to reify correctly *) in
+                  let r := Reify (@Saturated.Rows.mulmod (weight machine_wordsize 1) (2^machine_wordsize) s c n nreductions) in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, (Some boundsn, tt))
+                   (Some boundsn, None (* Should be: Some r[0~>0]%zrange, but bounds analysis is not good enough *) )
+                   (None, (None, tt))
+                   (None, None)
+          : Pipeline.ErrorT _).
+    (* Finished transaction in 6.9 secs (4.764u,0.001s) (successful) *)
+  End __.
+End debugging_sat_solinas_25519_expanded_straightforward.
+
 Module debugging_sat_solinas_25519_expanded.
   Import PreExtra.
   Import Util.LetIn.
