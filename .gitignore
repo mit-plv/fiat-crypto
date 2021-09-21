@@ -107,8 +107,6 @@ _build/
 setup.data
 setup.log
 
-/_CoqProject
-
 # Merlin configuring file for Vim and Emacs
 .merlin
 

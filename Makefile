@@ -72,27 +72,18 @@ SPECIAL_VOFILES := \
 	src/ExtractionHaskell/%.vo
 GREP_EXCLUDE_SPECIAL_VOFILES := grep -v '^src/Extraction\(OCaml\|Haskell\)/'
 
-ifneq (,$(filter 8.9%,$(COQ_VERSION)))
-NATIVE_COMPILER_ONDEMAND_COQPROJECT_FRAGMENT :=
-else
-NATIVE_COMPILER_ONDEMAND_COQPROJECT_FRAGMENT := -arg -native-compiler -arg ondemand
-endif
-
-_CoqProject: _CoqProject.in
-	sed 's/@NATIVE_COMPILER_ARG@/$(NATIVE_COMPILER_ONDEMAND_COQPROJECT_FRAGMENT)/g' $< > $@
-
 # This target is used to update the _CoqProject file.
 # But it only works if we have git
 ifneq (,$(wildcard .git/))
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
-EXISTING_COQPROJECT_CONTENTS_SORTED:=$(shell cat _CoqProject.in 2>&1 | $(SORT_COQPROJECT))
+EXISTING_COQPROJECT_CONTENTS_SORTED:=$(shell cat _CoqProject 2>&1 | $(SORT_COQPROJECT))
 WARNINGS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive
-COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-arg -w -arg $(WARNINGS)'; echo '@NATIVE_COMPILER_ARG@'; (git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES) | $(SORT_COQPROJECT)))
+COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-arg -w -arg $(WARNINGS)'; echo '-arg -native-compiler -arg ondemand'; (git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES) | $(SORT_COQPROJECT)))
 NEW_COQPROJECT_CONTENTS_SORTED:=$(shell $(COQPROJECT_CMD) | $(SORT_COQPROJECT))
 
 ifneq ($(EXISTING_COQPROJECT_CONTENTS_SORTED),$(NEW_COQPROJECT_CONTENTS_SORTED))
-.PHONY: _CoqProject.in
-_CoqProject.in:
+.PHONY: _CoqProject
+_CoqProject:
 	$(SHOW)'ECHO > $@'
 	$(HIDE)$(COQPROJECT_CMD) > $@
 endif
@@ -381,6 +372,7 @@ endif
 
 EXTERNAL_DEPENDENCIES?=
 EXTERNAL_BEDROCK2?=
+EXTERNAL_COQUTIL?=
 EXTERNAL_REWRITER?=
 EXTERNAL_COQPRIME?=
 
@@ -419,13 +411,22 @@ endif
 
 ifneq ($(SKIP_BEDROCK2),1)
 ifneq ($(EXTERNAL_BEDROCK2),1)
-COQPATH_TEMP:=${CURDIR_SAFE}/$(RUPICOLA_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(BEDROCK2_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(COQUTIL_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
-deps: coqutil bedrock2 rupicola
-$(VOFILES): | coqutil bedrock2 rupicola
-$(ALLDFILES): | coqutil bedrock2 rupicola
-cleanall:: clean-bedrock2 clean-coqutil clean-rupicola
-install: install-bedrock2 install-coqutil install-rupicola
+COQPATH_TEMP:=${CURDIR_SAFE}/$(RUPICOLA_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(BEDROCK2_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
+deps: bedrock2 rupicola
+$(VOFILES): | bedrock2 rupicola
+$(ALLDFILES): | bedrock2 rupicola
+cleanall:: clean-bedrock2 clean-rupicola
+install: install-bedrock2 install-rupicola
 endif
+endif
+
+ifneq ($(EXTERNAL_COQUTIL),1)
+COQPATH_TEMP:=${CURDIR_SAFE}/$(COQUTIL_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
+deps: coqutil
+$(VOFILES): | coqutil
+$(ALLDFILES): | coqutil
+cleanall:: clean-coqutil
+install: install-coqutil
 endif
 
 ifneq ($(EXTERNAL_COQPRIME),1)
