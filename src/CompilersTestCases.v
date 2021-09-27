@@ -22,6 +22,8 @@ Import Language.API.Compilers.
 Local Coercion Z.of_nat : nat >-> Z.
 Import Compilers.API.
 
+Local Existing Instance AbstractInterpretation.default_Options.
+
 Local Notation "x + y"
   := ((#ident.Z_add @ x @ y)%expr)
      : expr_scope.

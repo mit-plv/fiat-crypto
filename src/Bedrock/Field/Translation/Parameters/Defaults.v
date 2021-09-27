@@ -20,6 +20,10 @@ Global Existing Instances Types.rep.Z Types.rep.listZ_mem.
 Global Existing Instance default_low_level_rewriter_method.
 (* Output options involving typedefs, carry bounds, etc, which are generally not relevant to bedrock2 *)
 Global Existing Instance default_output_options.
+(* Abstract interpretation options; currently only involving (>>) uint1 bounds, which is not relevant to bedrock2 *)
+Global Instance : AbstractInterpretation.Options
+  := let _ := AbstractInterpretation.default_Options in
+     {| AbstractInterpretation.shiftr_avoid_uint1 := false (* we need to not avoid uint1 to pass bounds analysis tightness, for some reason? *) |}.
 (* Split multiplications into two outputs, not just one huge word *)
 Global Instance should_split_mul : should_split_mul_opt := true.
 (* For functions that return multiple values, split into two LetIns (this is

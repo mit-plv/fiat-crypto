@@ -1638,7 +1638,8 @@ Module Compilers.
         (** Converts a PHOAS AST to lines of code * info on which
             primitive functions are called, or else an error string *)
         ToFunctionLines
-        : forall {relax_zrange : relax_zrange_opt}
+        : forall {absint_opts : AbstractInterpretation.Options}
+                 {relax_zrange : relax_zrange_opt}
                  {language_naming_conventions : language_naming_conventions_opt}
                  {documentation_options : documentation_options_opt}
                  {output_options : output_options_opt}
