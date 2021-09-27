@@ -63,6 +63,7 @@ Section __.
           {language_naming_conventions : language_naming_conventions_opt}
           {documentation_options : documentation_options_opt}
           {output_options : output_options_opt}
+          {opts : AbstractInterpretation.Options}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}

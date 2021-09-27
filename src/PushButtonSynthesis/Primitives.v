@@ -783,6 +783,7 @@ Section __.
           {language_naming_conventions : language_naming_conventions_opt}
           {documentation_options : documentation_options_opt}
           {output_options : output_options_opt}
+          {absint_opts : AbstractInterpretation.Options}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -820,6 +821,11 @@ Section __.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+  (** We override this instance with a version that does not avoid
+      uint1, so that the primitive operations, which in fact do use
+      (>>) to get carries, don't have issues *)
+  Local Instance absint_opts_with_no_shiftr_avoid_uint1 : AbstractInterpretation.Options
+    := {| AbstractInterpretation.shiftr_avoid_uint1 := false |}.
   Local Notation adc_sbb_return_carry_range s
     := ((if List.existsb (Z.eqb s) relax_adc_sbb_return_carry_to_bitwidth then r[0~>2^s%Z-1] else r[0~>1])%zrange).
   Lemma length_saturated_bounds : List.length saturated_bounds = n.

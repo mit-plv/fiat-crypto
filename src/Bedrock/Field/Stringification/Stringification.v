@@ -150,6 +150,7 @@ Notation wrapper_relax_zrange relax_zrange
 
 (* TODO: for now, name_list is just ignored -- could probably make it not ignored *)
 Definition Bedrock2_ToFunctionLines
+           {opts : AbstractInterpretation.Options}
            {relax_zrange : relax_zrange_opt}
            {language_naming_conventions : language_naming_conventions_opt}
            {documentation_options : documentation_options_opt}
