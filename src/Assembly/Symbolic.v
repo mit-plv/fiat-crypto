@@ -7,10 +7,13 @@ Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Testbit.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
+Require Import Crypto.Util.ZUtil.Ones.
 Require Import Crypto.Util.ListUtil.FoldMap. Import FoldMap.List.
 Require Import Crypto.Util.ListUtil.IndexOf. Import IndexOf.List.
 Require Import Crypto.Util.ListUtil.Forall.
+Require Import Crypto.Util.ListUtil.Permutation.
 Require Import Crypto.Util.NUtil.Sorting.
+Require Import Crypto.Util.NUtil.Testbit.
 Require Import Crypto.Util.ListUtil.PermutationCompat.
 Require Import Crypto.Util.Bool.LeCompat.
 Require Import coqutil.Z.bitblast.
@@ -335,22 +338,16 @@ Qed.
 Lemma eval_eval0 d e n G : eval (fun _ => None) d e n -> eval G d e n.
 Proof using Type. eapply eval_weaken_symbols; congruence. Qed.
 
-Lemma permute_add xs ys : Permutation.Permutation xs ys -> fold_right Z.add Z0 xs = fold_right Z.add Z0 ys.
-Proof using Type. induction 1; cbn; try Lia.lia. Qed.
-Lemma permute_mul xs ys : Permutation.Permutation xs ys -> fold_right Z.mul 1%Z xs = fold_right Z.mul 1%Z ys.
-Proof using Type. induction 1; cbn; try Lia.lia. Qed.
 Lemma permute_commutative G op args n : commutative op = true ->
   interp_op G op args = Some n ->
   forall args', Permutation.Permutation args args' ->
   interp_op G op args' = Some n.
 Proof using Type.
-  destruct op; inversion 1; cbn; intros ? ? Hp.
-  { erewrite <-permute_add; eauto. }
-  { erewrite <-permute_add; eauto. }
-  { erewrite <-permute_add; eauto.
-    erewrite <-(permute_add _ (map _ args')); eauto using Permutation.Permutation_map. }
-  { erewrite <-permute_mul; eauto. }
-  { erewrite <-permute_mul; eauto. }
+  destruct op; inversion 1; cbn; intros ? ? Hp;
+    try (erewrite <- Z.fold_right_Proper_Permutation_add; eauto);
+    try (erewrite <- Z.fold_right_Proper_Permutation_mul; eauto).
+  { erewrite <-(Z.fold_right_Proper_Permutation_add _ _ eq_refl _ (map _ args'));
+      eauto using Permutation.Permutation_map. }
 Qed.
 
 Definition dag_ok G (d : dag) := forall i _r, nth_error d (N.to_nat i) = Some _r -> exists v, eval G d (ExprRef i) v.
@@ -496,28 +493,6 @@ Proof using Type.
   eapply eval_interp_expr, eval_weaken_symbols in H; [eassumption|congruence].
 Qed.
 
-Module N.
-Lemma testbit_ones n i : N.testbit (N.ones n) i = N.ltb i n.
-Proof using Type.
-  pose proof N.ones_spec_iff n i.
-  destruct (N.testbit _ _) eqn:? in*; destruct (N.ltb_spec i n); trivial.
-  { pose proof (proj1 H eq_refl); Lia.lia. }
-  { pose proof (proj2 H H0). inversion H1. }
-Qed.
-
-Lemma ones_min m n : N.ones (N.min m n) = N.land (N.ones m) (N.ones n).
-Proof using Type.
-  eapply N.bits_inj_iff; intro i.
-  rewrite N.land_spec.
-  rewrite !N.testbit_ones.
-  destruct (N.ltb_spec0 i (N.min m n));
-  destruct (N.ltb_spec0 i m);
-  destruct (N.ltb_spec0 i n);
-  try reflexivity;
-  Lia.lia.
-Qed.
-End N.
-
 Local Open Scope Z_scope.
 
 Fixpoint bound_expr e : option Z := (* e <= r *)
@@ -584,10 +559,6 @@ Proof using Type.
   Lia.lia.
 Qed.
 
-
-Lemma Z__ones_nonneg n (H : 0 <= n)  : 0 <= Z.ones n.
-Proof using Type. rewrite Z.ones_equiv. pose proof Z.pow_pos_nonneg 2 n ltac:(Lia.lia) ltac:(assumption); Lia.lia. Qed.
-
 Require Import Util.ZRange.LandLorBounds.
 Lemma eval_bound_expr G e b : bound_expr e = Some b ->
   forall d v, eval G d e v -> (0 <= v <= b)%Z.
@@ -617,7 +588,7 @@ Proof using Type.
     eapply Z.le_bitwise.
     { eapply Z.lor_nonneg; split; try eapply Z.land_nonneg; try eapply Z.ldiff_nonneg; Lia.lia. }
     { eapply Z.lor_nonneg; split; try eapply Z.land_nonneg; try eapply Z.ldiff_nonneg;
-        left; try eapply Z__ones_nonneg; Lia.lia. }
+        left; try eapply Z.ones_nonneg; Lia.lia. }
     { intros i Hi.
       Z.rewrite_bitwise.
       destr (i <? Z.of_N sz);
@@ -767,37 +738,6 @@ Proof using Type.
   eapply Z.log2_lt_pow2; Lia.lia.
 Qed.
 
-Lemma indN: forall (P: N -> Prop),
-    P 0%N ->                                 (* base case to prove *)
-    (forall n: N, P n -> P (n + 1)%N) ->     (* inductive case to prove *)
-    forall n, P n.                           (* conclusion to enjoy *)
-Proof using Type. setoid_rewrite N.add_1_r. exact N.peano_ind. Qed.
-
-Ltac induct e := induction e using indN.
-
-Lemma helper'': forall sz, (2^Z.of_N sz>0)%Z.
-  Proof using Type.
-    induct sz; cbn in *; try Lia.lia.
-    replace (2^Z.of_N (sz+1))%Z with (2 * 2^Z.of_N sz )%Z; try Lia.lia.
-    replace (2^Z.of_N (sz+1))%Z with ( 2^ Z.succ (Z.of_N sz) )%Z.
-    erewrite Z.pow_succ_r; eauto; Lia.lia.
-    f_equal; Lia.lia.
-  Qed.
-
-Lemma helper': forall sz y,(y<= Z.pred (2^ Z.of_N sz))%Z -> (y <  (2 ^ Z.of_N sz ))%Z.
-Proof using Type.
-  intros; pose proof helper'' sz; replace( N.pred (2^ sz))%N with (2^sz-1)%N in H by Lia.lia; Lia.lia.
-Qed.
-
-Lemma le_ones: forall sz y,  (0 <= y )%Z -> (y<=Z.ones (Z.of_N sz))%Z -> Z.land y (Z.ones (Z.of_N sz)) = y.
-Proof using Type.
-  intros.
-  erewrite Z.land_ones.
-  erewrite Z.ones_equiv in H0.
-  eapply helper' in H0.
-  eapply Z.mod_small; eauto. Lia.lia.
-Qed.
-
 Definition truncate_small :=
   fun e => match e with
     ExprApp (slice 0%N s, [e']) =>
@@ -805,7 +745,7 @@ Definition truncate_small :=
       if Z.leb b (Z.ones (Z.of_N s))
       then e'
       else e | _ => e end | _ => e end.
-Global Instance truncate_small_ok : Ok truncate_small. Proof using Type. t; []. cbn in *; eapply le_ones; eauto. firstorder. Lia.lia. Qed.
+Global Instance truncate_small_ok : Ok truncate_small. Proof using Type. t; []. cbn in *; eapply Z.land_ones_low_alt_ones; eauto. firstorder. Lia.lia. Qed.
 
 Definition addcarry_bit :=
   fun e => match e with
@@ -861,12 +801,6 @@ Proof using Type.
     replace (Z.of_N 8) with 8 in * by (vm_compute; reflexivity);
     replace (Z.of_N 64) with 64 in * by (vm_compute; reflexivity); Lia.lia.
 Qed.
-
-Lemma shiftr_ones: forall s,  Z.shiftr (Z.ones (Z.of_N s)) (Z.of_N s) = 0%Z.
-Proof using Type.
-  intros.
-  erewrite Z.shiftr_div_pow2; eauto; try Lia.lia.
-  eapply Z.div_small; eauto; try Lia.lia. pose proof helper'' s.  erewrite Z.ones_equiv. Lia.lia. Qed.
 
 Definition addcarry_small :=
   fun e => match e with
@@ -1011,14 +945,6 @@ Definition consts_commutative :=
          end
     else ExprApp (o, fst csts_exprs ++ snd csts_exprs)
     else e | _ => e end.
-
-Lemma Permutation_partition {A} (l : list A) f :
-    Permutation.Permutation l (fst (partition f l) ++ snd (partition f l)).
-Proof using Type.
-  induction l; cbn; BreakMatch.break_match; cbn in *; eauto.
-  etransitivity. econstructor. eassumption.
-  eapply Permutation.Permutation_middle.
-Qed.
 
 Global Instance consts_commutative_ok : Ok consts_commutative.
 Proof using Type.
