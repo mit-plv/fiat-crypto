@@ -259,26 +259,12 @@ Proof using Type.
   2: { epose proof Properties.word.eqb_spec. exact H. }
 Qed.
 
-Lemma Tuple__nth_default_to_list' {A} n (xs : Tuple.tuple' A n) (d : A) :
-  forall i, nth_default d (Tuple.to_list' n xs) i = @Tuple.nth_default A (S n) d i xs.
-Proof using Type.
-  revert xs; induction n, i; cbn; BreakMatch.break_match; intros;
-    rewrite ?ListUtil.nth_default_cons_S; eauto using ListUtil.nth_default_nil.
-Qed.
-Lemma Tuple__nth_default_to_list {A} n (xs : Tuple.tuple A n) (d : A) :
-  forall i, List.nth_default d (Tuple.to_list _ xs) i = Tuple.nth_default d i xs.
-Proof using Type.
-  destruct n; cbv [Tuple.tuple Tuple.to_list] in *.
-  { destruct i; reflexivity. }
-  eapply Tuple__nth_default_to_list'.
-Qed.
-
 Lemma get_reg_R s m (HR : R s m) ri :
   forall i, Symbolic.get_reg s ri = Some i ->
   exists v, eval s i v /\ Tuple.nth_default 0 ri (m : reg_state) = v.
 Proof using Type.
   cbv [Symbolic.get_reg]; intros.
-  rewrite <-Tuple__nth_default_to_list in H.
+  rewrite <-Tuple.nth_default_to_list in H.
   cbv [nth_default] in H; BreakMatch.break_match_hyps; subst; [|solve[congruence] ].
   destruct s,m; cbn in *; destruct HR as (_&?&_); cbv [R_regs R_reg] in *.
   eapply Tuple.fieldwise_to_list_iff in H.
@@ -289,7 +275,7 @@ Proof using Type.
   specialize (proj1 H _ eq_refl).
   eexists; split; [eassumption|].
 
-  rewrite <-Tuple__nth_default_to_list.
+  rewrite <-Tuple.nth_default_to_list.
   cbv [nth_default].
   rewrite Heqo0.
   trivial.
@@ -760,7 +746,7 @@ Proof using Type.
     { eapply Tuple.fieldwise_to_list_iff; eassumption. }
     cbv [R_reg]; intuition idtac; try Option.inversion_option; subst; try eval_same_expr_goal;
     cbv [bitmask_of_reg index_and_shift_and_bitcount_of_reg].
-    { rewrite <-Tuple__nth_default_to_list. cbv [nth_default]; rewrite H5. trivial. }
+    { rewrite <-Tuple.nth_default_to_list. cbv [nth_default]; rewrite H5. trivial. }
     assert (Z.of_N (reg_size r) + Z.of_N (reg_offset r) <= 64) by (destruct r; clear; cbv; discriminate).
     eapply Z.bits_inj_iff'; intros j Hj.
     rewrite Z.land_spec, Z.testbit_ones_nonneg by (clear -Hj; lia).
@@ -925,7 +911,7 @@ Proof using Type.
   destruct a, m; cbn -[DenoteAddress] in *; repeat (subst; Option.inversion_option).
   { cbv [update_reg_with set_reg]; cbn in *; f_equal.
     eapply Tuple.to_list_ext.
-    rewrite <-Tuple__nth_default_to_list in Hd; rewrite <-Hd; clear Hd.
+    rewrite <-Tuple.nth_default_to_list in Hd; rewrite <-Hd; clear Hd.
     unshelve erewrite Tuple.from_list_default_eq, Tuple.to_list_from_list.
     { abstract (rewrite Crypto.Util.ListUtil.length_update_nth; eapply Tuple.length_to_list). }
     eapply List.nth_error_ext; intro i; cbv [nth_default].
