@@ -47,6 +47,9 @@ for fname in asm_files:
 test-amd64-files-print-report:: {fname}.status
 \t@ test $$(cat $<) -eq 0 || echo 'TEST AMD64 {description} ... \t$(RED)$(BOLD)FAILED$(NORMAL)$(NC)'
 
+clean::
+\t$(HIDE)rm -f {fname}.status {fname}.invocation {fname}.description {fname}.out {fname}.out-asm {fname}.stderr {fname}.stdout
+
 {fname}.status: {fname} | {binary}
 \t$(SHOW)'TEST AMD64 {description} ...'
 \t$(HIDE)rm -f $@
