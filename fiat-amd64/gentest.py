@@ -1,7 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # USAGE: ./fiat-amd64/gentest.py fiat-amd64/*.asm | while IFS= read -r line; do eval $line 2>/dev/null > /dev/null && echo "$line" || echo "# $line" ; done
 import shlex
 import sys
+
+# in Python 3.9 and newer, this is primitive as str.removesuffix
+def removesuffix(s, suffix):
+    if s.endswith(suffix): return s[:-len(suffix)]
+    return s
 
 # grep -oP "src/.*square" fiat-c/src/*64*.c
 solinasprimes = dict(
@@ -18,7 +23,7 @@ montgomeryprimes = dict(
   secp256k1='2^256 - 2^32 - 977')
 
 for fname in sys.argv[1:]:
-    op, name = fname.removesuffix('.asm').replace('_solinas','').split('_')[-2:]
+    op, name = removesuffix(fname, '.asm').replace('_solinas','').split('_')[-2:]
     if name in solinasprimes.keys():
         n, prime = solinasprimes[name]
         print ('src/ExtractionOCaml/unsaturated_solinas', name, '64', n, shlex.quote(prime), dict(mul='carry_mul',square='carry_square')[op], '--no-wide-int', '--shiftr-avoid-uint1', '--tight-bounds-mul-by', '1.000001', '--hints-file', shlex.quote(fname), '-o', '/dev/null', '--output-asm', '/dev/null')

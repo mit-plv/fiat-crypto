@@ -39,8 +39,8 @@ INSTALLDEFAULTROOT := Crypto
 	lite only-heavy printlite \
 	all-except-compiled \
 	some-early pre-standalone pre-standalone-extracted standalone standalone-haskell standalone-ocaml \
-	test-c-files test-bedrock2-files test-rust-files test-go-files test-json-files test-java-files test-zig-files \
-	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-json-files only-test-java-files only-test-zig-files \
+	test-c-files test-bedrock2-files test-rust-files test-go-files test-json-files test-java-files test-zig-files test-amd64-files \
+	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-json-files only-test-java-files only-test-zig-files only-test-amd64-files \
 	test-go-module only-test-go-module \
 	javadoc only-javadoc \
 	check-output accept-output
@@ -307,7 +307,7 @@ OUTPUT_PREOUTS += \
 endif
 
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
-ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
+ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS) fiat-amd64.test)
 
 generated-files: c-files rust-files go-files json-files java-files zig-files
 lite-generated-files: lite-c-files lite-rust-files lite-go-files lite-json-files lite-java-files lite-zig-files
@@ -666,6 +666,13 @@ javadoc: $(ALL_JAVA_FILES)
 javadoc only-javadoc:
 	mkdir -p $(JAVADOC_DIR)
 	(cd $(JAVADOC_DIR); javadoc $(addprefix $(realpath .)/,$(ALL_JAVA_FILES)))
+
+test-amd64-files: $(UNSATURATED_SOLINAS) $(WORD_BY_WORD_MONTGOMERY) fiat-amd64/gentest.py fiat-amd64/test.sh
+
+test-amd64-files only-test-amd64-files:
+	fiat-amd64/test.sh | tee fiat-amd64.test.out
+	$(SHOW)'DIFF fiat-amd64.test'
+	$(HIDE)diff --ignore-space-change output-tests/fiat-amd64.test.expected fiat-amd64.test.out || (RV=$$?; echo "To accept the new output, run make accept-fiat-amd64.test"; exit $$RV)
 
 # Perf testing
 PERF_MAKEFILE = src/Rewriter/PerfTesting/Specific/generated/primes.mk
