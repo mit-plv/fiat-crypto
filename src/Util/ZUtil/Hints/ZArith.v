@@ -8,4 +8,4 @@ Global Hint Resolve <- Z.lor_nonneg : zarith.
 
 Global Hint Resolve Zmult_le_compat_r Zmult_le_compat_l Z_div_le Z.add_le_mono Z.sub_le_mono : zarith.
 Global Hint Resolve Z.lt_gt Z.lt_le_incl : zarith.
-Global Hint Resolve Nat2Z.is_nonneg : zarith.
+Global Hint Resolve Nat2Z.is_nonneg N2Z.is_nonneg : zarith.
