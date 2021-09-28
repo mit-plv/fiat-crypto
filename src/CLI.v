@@ -316,8 +316,8 @@ Module ForExtraction.
         ["For any (comma-separated) bitwidths passed to this argument, use bitwidth-sized bounds rather than tighter bounds for the carry return value of primitives such as addcarryx and subborrowx."]).
   Definition cmovznz_by_mul_spec : named_argT
     := ([Arg.long_key "cmovznz-by-mul"], Arg.Unit, ["Use an alternative implementation of cmovznz using multiplication rather than bitwise-and with -1."]).
-  Definition no_shiftr_avoid_uint1_spec : named_argT
-    := ([Arg.long_key "no-shiftr-avoid-uint1"], Arg.Unit, ["Don't avoid uint1 types at the output of (>>) operations."]).
+  Definition shiftr_avoid_uint1_spec : named_argT
+    := ([Arg.long_key "shiftr-avoid-uint1"], Arg.Unit, ["Avoid uint1 types at the output of (>>) operations."]).
   Definition tight_bounds_multiplier_default := default_tight_upperbound_fraction.
   Definition tight_bounds_multiplier_spec : named_argT
     := ([Arg.long_key "tight-bounds-mul-by"],
@@ -579,7 +579,7 @@ Module ForExtraction.
         ; no_field_element_typedefs_spec
         ; relax_primitive_carry_to_bitwidth_spec
         ; cmovznz_by_mul_spec
-        ; no_shiftr_avoid_uint1_spec
+        ; shiftr_avoid_uint1_spec
         ; only_signed_spec
         ; hint_file_spec
         ; output_file_spec
@@ -626,7 +626,7 @@ Module ForExtraction.
              , no_field_element_typedefsv
              , relax_primitive_carry_to_bitwidthv
              , cmovznz_by_mulv
-             , no_shiftr_avoid_uint1v
+             , shiftr_avoid_uint1v
              , only_signedv
              , hint_file_namesv
              , output_file_namev
@@ -690,7 +690,7 @@ Module ForExtraction.
                   ; unfold_value_barrier := negb (to_bool value_barrierv)
                   ; use_mul_for_cmovznz := to_bool cmovznz_by_mulv
                   ; abstract_interpretation_options :=
-                      {| AbstractInterpretation.shiftr_avoid_uint1 := negb (to_bool no_shiftr_avoid_uint1v)
+                      {| AbstractInterpretation.shiftr_avoid_uint1 := to_bool shiftr_avoid_uint1v
                       |}
                   ; emit_primitives := negb (to_bool no_primitivesv)
                   ; output_options :=

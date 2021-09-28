@@ -25,7 +25,7 @@ Module Compilers.
           := { shiftr_avoid_uint1 : shiftr_avoid_uint1_opt
              }.
         Definition default_Options : Options
-          := {| shiftr_avoid_uint1 := true |}.
+          := {| shiftr_avoid_uint1 := false |}.
         Module Export Exports.
           Global Existing Instance Build_Options.
           Global Hint Immediate shiftr_avoid_uint1 : typeclass_instances.
