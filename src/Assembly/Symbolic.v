@@ -6,10 +6,13 @@ Require Import Util.OptionList.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Testbit.
+Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ListUtil.FoldMap. Import FoldMap.List.
 Require Import Crypto.Util.ListUtil.IndexOf. Import IndexOf.List.
 Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.NUtil.Sorting.
+Require Import Crypto.Util.ListUtil.PermutationCompat.
+Require Import Crypto.Util.Bool.LeCompat.
 Require Import coqutil.Z.bitblast.
 Require Import Coq.Strings.String Crypto.Util.Strings.Show.
 Require Import Crypto.Assembly.Syntax.
@@ -65,7 +68,7 @@ Definition commutative o := match o with add _|addcarry _|addoverflow _|mul _|mu
 Definition identity o := match o with add _| mul N0=>None|mul _|mulZ=>Some 1%Z | and s => Some (Z.ones (Z.of_N s)) |_=> None end.
 
 Definition node (A : Set) : Set := op * list A.
-Global Instance Show_node {A : Set} [show_A : Show A] : Show (node A) := show_prod.
+Global Instance Show_node {A : Set} {show_A : Show A} : Show (node A) := show_prod.
 
 Local Unset Elimination Schemes.
 Inductive expr : Set :=
@@ -96,7 +99,7 @@ Definition Show_expr : Show expr
 Global Existing Instance Show_expr.
 
 Lemma op_beq_spec a b : BoolSpec (a=b) (a<>b) (op_beq a b).
-Proof. cbv [op_beq]; destruct (op_eq_dec a b); constructor; congruence. Qed.
+Proof using Type. cbv [op_beq]; destruct (op_eq_dec a b); constructor; congruence. Qed.
 Fixpoint expr_beq (X Y : expr) {struct X} : bool :=
   match X, Y with
   | ExprRef x, ExprRef x0 => N.eqb x x0
@@ -105,7 +108,7 @@ Fixpoint expr_beq (X Y : expr) {struct X} : bool :=
   | _, _ => false
   end.
 Lemma expr_beq_spec a b : BoolSpec (a=b) (a<>b) (expr_beq a b).
-Proof.
+Proof using Type.
   revert b; induction a, b; cbn.
   1: destruct (N.eqb_spec i i0); constructor; congruence.
   1,2: constructor; congruence.
@@ -116,7 +119,7 @@ Proof.
   destruct (IHForall l0); [left|right]; congruence.
 Qed.
 Lemma expr_beq_true a b : expr_beq a b = true -> a = b.
-Proof. destruct (expr_beq_spec a b); congruence. Qed.
+Proof using Type. destruct (expr_beq_spec a b); congruence. Qed.
 
 Require Import Crypto.Util.Option Crypto.Util.Notations Coq.Lists.List.
 Import ListNotations.
@@ -173,7 +176,7 @@ Definition interp0_op := interp_op (fun _ => None).
 Lemma interp_op_weaken_symbols G1 G2 o args
   (H : forall (s:symbol) v, G1 s = Some v -> G2 s = Some v)
   : forall v, interp_op G1 o args = Some v -> interp_op G2 o args = Some v.
-Proof.
+Proof using Type.
   cbv [interp_op option_map]; intros;
     repeat (BreakMatch.break_match || BreakMatch.break_match_hyps);
     inversion_option; subst;
@@ -183,9 +186,9 @@ Qed.
 
 Lemma interp_op_interp0_op o a v (H : interp0_op o a = Some v)
   : forall G, interp_op G o a = Some v.
-Proof. intros; eapply interp_op_weaken_symbols in H; eauto; discriminate. Qed.
+Proof using Type. intros; eapply interp_op_weaken_symbols in H; eauto; discriminate. Qed.
 
-Definition node_beq [A : Set] (arg_eqb : A -> A -> bool) : node A -> node A -> bool :=
+Definition node_beq {A : Set} (arg_eqb : A -> A -> bool) : node A -> node A -> bool :=
   Prod.prod_beq _ _ op_beq (ListUtil.list_beq _ arg_eqb).
 
 Definition dag := list (node idx).
@@ -303,14 +306,14 @@ Fixpoint merge (e : expr) (d : dag) : idx * dag :=
   end.
 
 Lemma node_beq_sound e x : node_beq N.eqb e x = true -> e = x.
-Proof.
+Proof using Type.
   eapply Prod.internal_prod_dec_bl.
   { intros X Y; destruct (op_beq_spec X Y); congruence. }
   { intros X Y. eapply ListUtil.internal_list_dec_bl, N.eqb_eq. }
 Qed.
 
 Lemma eval_weaken G d x e n : eval G d e n -> eval G (d ++ [x]) e n.
-Proof.
+Proof using Type.
   induction 1; subst; econstructor; eauto.
   { erewrite nth_error_app1; try eassumption; [].
     eapply ListUtil.nth_error_value_length; eassumption. }
@@ -322,7 +325,7 @@ Qed.
 Lemma eval_weaken_symbols G1 G2 d e n
   (H : forall s v, G1 s = Some v -> G2 s = Some v)
   : eval G1 d e n -> eval G2 d e n.
-Proof.
+Proof using Type.
   induction 1; subst; econstructor;
     intuition eauto using interp_op_weaken_symbols.
   { eapply Forall2_weaken; [|eassumption]; intros ? ? (?&?); eauto. }
@@ -330,17 +333,17 @@ Proof.
 Qed.
 
 Lemma eval_eval0 d e n G : eval (fun _ => None) d e n -> eval G d e n.
-Proof. eapply eval_weaken_symbols; congruence. Qed.
+Proof using Type. eapply eval_weaken_symbols; congruence. Qed.
 
 Lemma permute_add xs ys : Permutation.Permutation xs ys -> fold_right Z.add Z0 xs = fold_right Z.add Z0 ys.
-Proof. induction 1; cbn; try Lia.lia. Qed.
+Proof using Type. induction 1; cbn; try Lia.lia. Qed.
 Lemma permute_mul xs ys : Permutation.Permutation xs ys -> fold_right Z.mul 1%Z xs = fold_right Z.mul 1%Z ys.
-Proof. induction 1; cbn; try Lia.lia. Qed.
+Proof using Type. induction 1; cbn; try Lia.lia. Qed.
 Lemma permute_commutative G op args n : commutative op = true ->
   interp_op G op args = Some n ->
   forall args', Permutation.Permutation args args' ->
   interp_op G op args' = Some n.
-Proof.
+Proof using Type.
   destruct op; inversion 1; cbn; intros ? ? Hp.
   { erewrite <-permute_add; eauto. }
   { erewrite <-permute_add; eauto. }
@@ -359,7 +362,7 @@ Lemma eval_merge_node :
   eval G (snd (merge_node e d)) (ExprRef (fst (merge_node e d))) n /\
   dag_ok G (snd (merge_node e d)) /\
   forall i e', eval G d i e' -> eval G (snd (merge_node e d)) i e'.
-Proof.
+Proof using Type.
   intros.
   cbv beta delta [merge_node].
   inversion H0; subst.
@@ -397,7 +400,7 @@ Lemma eval_merge G :
   eval G (snd (merge e d)) (ExprRef (fst (merge e d))) n /\
   dag_ok G (snd (merge e d)) /\
   forall i e', eval G d i e' -> eval G (snd (merge e d)) i e'.
-Proof.
+Proof using Type.
   induction e; intros; eauto; [].
   rename n0 into v.
 
@@ -470,7 +473,7 @@ End WithContext.
 Definition interp0_expr := interp_expr (fun _ => None).
 
 Lemma eval_interp_expr G e : forall d v, interp_expr G e = Some v -> eval G d e v.
-Proof.
+Proof using Type.
   induction e; cbn; try discriminate; intros.
   case n in *; cbn [fst snd] in *.
   destruct (Option.List.lift _) eqn:? in *; try discriminate.
@@ -488,14 +491,14 @@ Proof.
 Qed.
 
 Lemma eval_interp0_expr e v (H : interp0_expr e = Some v) : forall G d, eval G d e v.
-Proof.
+Proof using Type.
   cbv [interp0_expr]; intros.
   eapply eval_interp_expr, eval_weaken_symbols in H; [eassumption|congruence].
 Qed.
 
 Module N.
 Lemma testbit_ones n i : N.testbit (N.ones n) i = N.ltb i n.
-Proof.
+Proof using Type.
   pose proof N.ones_spec_iff n i.
   destruct (N.testbit _ _) eqn:? in*; destruct (N.ltb_spec i n); trivial.
   { pose proof (proj1 H eq_refl); Lia.lia. }
@@ -503,13 +506,14 @@ Proof.
 Qed.
 
 Lemma ones_min m n : N.ones (N.min m n) = N.land (N.ones m) (N.ones n).
-Proof.
+Proof using Type.
   eapply N.bits_inj_iff; intro i.
   rewrite N.land_spec.
   rewrite !N.testbit_ones.
   destruct (N.ltb_spec0 i (N.min m n));
   destruct (N.ltb_spec0 i m);
   destruct (N.ltb_spec0 i n);
+  try reflexivity;
   Lia.lia.
 Qed.
 End N.
@@ -570,7 +574,7 @@ Lemma bound_sum' G d
   bs (Hb : Option.List.lift (map bound_expr es) = Some bs)
   vs (Hv : Forall2 (eval G d) es vs)
   , (0 <= fold_right Z.add 0 vs <= fold_right Z.add 0 bs)%Z.
-Proof.
+Proof using Type.
   induction He; cbn in *; repeat t.
   { cbv [fold_right]; Lia.lia. }
   destruct (bound_expr _) eqn:? in *; cbn in *; repeat t.
@@ -582,12 +586,12 @@ Qed.
 
 
 Lemma Z__ones_nonneg n (H : 0 <= n)  : 0 <= Z.ones n.
-Proof. rewrite Z.ones_equiv. pose proof Z.pow_pos_nonneg 2 n ltac:(Lia.lia) ltac:(assumption); Lia.lia. Qed.
+Proof using Type. rewrite Z.ones_equiv. pose proof Z.pow_pos_nonneg 2 n ltac:(Lia.lia) ltac:(assumption); Lia.lia. Qed.
 
 Require Import Util.ZRange.LandLorBounds.
 Lemma eval_bound_expr G e b : bound_expr e = Some b ->
   forall d v, eval G d e v -> (0 <= v <= b)%Z.
-Proof.
+Proof using Type.
   revert b; induction e; simpl bound_expr; BreakMatch.break_match;
     inversion 2; intros; inversion_option; subst;
     try match goal with H : context [set_slice] |- _ => shelve end;
@@ -622,7 +626,7 @@ Proof.
         destr (i <? Z.succ (Z.log2 z0)).
         { eapply Bool.le_implb, Bool.implb_true_r. }
         rewrite Z.bits_above_log2; cbn; trivial; try Lia.lia.
-        destruct H as [? H]; eapply Z.log2_le_mono in H. Lia.lia. }
+        destruct H as [H' H]; eapply Z.log2_le_mono in H. Lia.lia. }
       { clear -H0 Hi.
         destr (i <? Z.succ (Z.log2 z)).
         { eapply Bool.le_implb, Bool.implb_true_r. }
@@ -634,7 +638,7 @@ Lemma bound_sum G d es
   bs (Hb : Option.List.lift (map bound_expr es) = Some bs)
   vs (Hv : Forall2 (eval G d) es vs)
   : (0 <= fold_right Z.add 0 vs <= fold_right Z.add 0 bs)%Z.
-Proof.
+Proof using Type.
   eapply bound_sum' in Hb; eauto.
   eapply Forall_forall; intros.
   eapply eval_bound_expr; eauto.
@@ -711,7 +715,7 @@ Definition slice0 :=
     ExprApp (slice 0 s, [(ExprApp ((addZ|mulZ|negZ|shlZ|shrZ|andZ|orZ|xorZ) as o, args))]) =>
         ExprApp ((match o with addZ=>add s|mulZ=>mul s|negZ=>neg s|shlZ=>shl s|shrZ => shr s|andZ => and s| orZ => or s|xorZ => xor s |_=>old 0%N 999999%N end), args)
       | _ => e end.
-Global Instance slice0_ok : Ok slice0. Proof. t. Qed.
+Global Instance slice0_ok : Ok slice0. Proof using Type. t. Qed.
 
 Definition slice01_addcarryZ :=
   fun e => match e with
@@ -719,7 +723,7 @@ Definition slice01_addcarryZ :=
         ExprApp (addcarry s, args)
       | _ => e end.
 Global Instance slice01_addcarryZ_ok : Ok slice01_addcarryZ.
-Proof. t; rewrite ?Z.shiftr_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2; trivial; Lia.lia. Qed.
+Proof using Type. t; rewrite ?Z.shiftr_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2; trivial; Lia.lia. Qed.
 
 Definition slice01_subborrowZ :=
   fun e => match e with
@@ -727,21 +731,21 @@ Definition slice01_subborrowZ :=
         ExprApp (subborrow s, args)
       | _ => e end.
 Global Instance slice01_subborrowZ_ok : Ok slice01_subborrowZ.
-Proof. t; rewrite ?Z.shiftr_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2; trivial; Lia.lia. Qed.
+Proof using Type. t; rewrite ?Z.shiftr_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2; trivial; Lia.lia. Qed.
 
 Definition slice_set_slice :=
   fun e => match e with
     ExprApp (slice 0 s1, [ExprApp (set_slice 0 s2, [_; e'])]) =>
       if N.leb s1 s2 then ExprApp (slice 0 s1, [e']) else e | _ => e end.
 Global Instance slice_set_slice_ok : Ok slice_set_slice.
-Proof. t. f_equal. Z.bitblast. Qed.
+Proof using Type. t. f_equal. Z.bitblast. Qed.
 
 Definition set_slice_set_slice :=
   fun e => match e with
     ExprApp (set_slice lo1 s1, [ExprApp (set_slice lo2 s2, [x; e']); y]) =>
       if andb (N.eqb lo1 lo2) (N.leb s2 s1) then ExprApp (set_slice lo1 s1, [x; y]) else e | _ => e end.
 Global Instance set_slice_set_slice_ok : Ok set_slice_set_slice.
-Proof. t. f_equal. Z.bitblast. Qed.
+Proof using Type. t. f_equal. Z.bitblast. Qed.
 
 Definition set_slice0_small :=
   fun e => match e with
@@ -750,7 +754,7 @@ Definition set_slice0_small :=
       if Z.leb a (Z.ones (Z.of_N s)) && Z.leb b (Z.ones (Z.of_N s)) then y
       else e | _, _ => e end | _ => e end%bool.
 Global Instance set_slice0_small_ok : Ok set_slice0_small.
-Proof.
+Proof using Type.
   t.
   eapply Zle_bool_imp_le in H0; rewrite Z.ones_equiv in H0; eapply Z.lt_le_pred in H0.
   eapply Zle_bool_imp_le in H1; rewrite Z.ones_equiv in H1; eapply Z.lt_le_pred in H1.
@@ -767,12 +771,12 @@ Lemma indN: forall (P: N -> Prop),
     P 0%N ->                                 (* base case to prove *)
     (forall n: N, P n -> P (n + 1)%N) ->     (* inductive case to prove *)
     forall n, P n.                           (* conclusion to enjoy *)
-Proof. setoid_rewrite N.add_1_r. exact N.peano_ind. Qed.
+Proof using Type. setoid_rewrite N.add_1_r. exact N.peano_ind. Qed.
 
 Ltac induct e := induction e using indN.
 
 Lemma helper'': forall sz, (2^Z.of_N sz>0)%Z.
-  Proof.
+  Proof using Type.
     induct sz; cbn in *; try Lia.lia.
     replace (2^Z.of_N (sz+1))%Z with (2 * 2^Z.of_N sz )%Z; try Lia.lia.
     replace (2^Z.of_N (sz+1))%Z with ( 2^ Z.succ (Z.of_N sz) )%Z.
@@ -781,12 +785,12 @@ Lemma helper'': forall sz, (2^Z.of_N sz>0)%Z.
   Qed.
 
 Lemma helper': forall sz y,(y<= Z.pred (2^ Z.of_N sz))%Z -> (y <  (2 ^ Z.of_N sz ))%Z.
-Proof.
+Proof using Type.
   intros; pose proof helper'' sz; replace( N.pred (2^ sz))%N with (2^sz-1)%N in H by Lia.lia; Lia.lia.
 Qed.
 
 Lemma le_ones: forall sz y,  (0 <= y )%Z -> (y<=Z.ones (Z.of_N sz))%Z -> Z.land y (Z.ones (Z.of_N sz)) = y.
-Proof.
+Proof using Type.
   intros.
   erewrite Z.land_ones.
   erewrite Z.ones_equiv in H0.
@@ -801,7 +805,7 @@ Definition truncate_small :=
       if Z.leb b (Z.ones (Z.of_N s))
       then e'
       else e | _ => e end | _ => e end.
-Global Instance truncate_small_ok : Ok truncate_small. Proof. t; []. cbn in *; eapply le_ones; eauto. firstorder. Lia.lia. Qed.
+Global Instance truncate_small_ok : Ok truncate_small. Proof using Type. t; []. cbn in *; eapply le_ones; eauto. firstorder. Lia.lia. Qed.
 
 Definition addcarry_bit :=
   fun e => match e with
@@ -813,7 +817,7 @@ Definition addcarry_bit :=
       | _, _ => e
       end else e | _ => e end%Z%bool.
 Global Instance addcarry_bit_ok : Ok addcarry_bit.
-Proof.
+Proof using Type.
   repeat step;
     [instantiate (1:=G) in E0; instantiate (1:=G) in E1|];
     destruct (Reflect.reflect_eq_option (eqA:=Z.eqb) (bound_expr e) (Some 1%Z)) in E;
@@ -832,7 +836,7 @@ Definition addoverflow_bit :=
       | _, _ => e
       end else e | _ => e end%Z%bool.
 Global Instance addoverflow_bit_ok : Ok addoverflow_bit.
-Proof.
+Proof using Type.
   repeat step;
     [instantiate (1:=G) in E0; instantiate (1:=G) in E1|];
     destruct (Reflect.reflect_eq_option (eqA:=Z.eqb) (bound_expr e) (Some 1)%Z) in E;
@@ -850,14 +854,16 @@ Definition addbyte_small :=
           then ExprApp (add 64%N, args)
           else e | _ => e end | _ =>  e end.
 Global Instance addbyte_small_ok : Ok addbyte_small.
-Proof.
+Proof using Type.
   t; f_equal.
   eapply bound_sum in H2; eauto.
-  rewrite Z.ones_equiv in E0; rewrite !Z.land_ones, !Z.mod_small; Lia.lia.
+  rewrite Z.ones_equiv in E0; rewrite !Z.land_ones, !Z.mod_small; try Lia.lia;
+    replace (Z.of_N 8) with 8 in * by (vm_compute; reflexivity);
+    replace (Z.of_N 64) with 64 in * by (vm_compute; reflexivity); Lia.lia.
 Qed.
 
 Lemma shiftr_ones: forall s,  Z.shiftr (Z.ones (Z.of_N s)) (Z.of_N s) = 0%Z.
-Proof.
+Proof using Type.
   intros.
   erewrite Z.shiftr_div_pow2; eauto; try Lia.lia.
   eapply Z.div_small; eauto; try Lia.lia. pose proof helper'' s.  erewrite Z.ones_equiv. Lia.lia. Qed.
@@ -871,14 +877,14 @@ Definition addcarry_small :=
           then (ExprApp (const 0, nil))
           else e | _ => e end | _ =>  e end.
 Global Instance addcarry_small_ok : Ok addcarry_small.
-Proof.
+Proof using Type.
   t; f_equal.
   eapply bound_sum in H2; eauto.
   rewrite Z.ones_equiv in E0; rewrite Z.shiftr_div_pow2, Z.div_small; cbn; Lia.lia.
 Qed.
 
 Lemma signed_small s v (Hv : (0 <= v <= Z.ones (Z.of_N s-1))%Z) : signed s v = v.
-Proof.
+Proof using Type.
   destruct (N.eq_dec s 0); subst; cbv [signed].
   { rewrite Z.land_0_r. cbn in *; Lia.lia. }
   rewrite !Z.land_ones, !Z.shiftl_mul_pow2, ?Z.add_0_r, ?Z.mul_1_l by Lia.lia.
@@ -898,7 +904,7 @@ Definition addoverflow_small :=
           then (ExprApp (const 0, nil))
           else e | _ => e end | _ =>  e end.
 Global Instance addoverflow_small_ok : Ok addoverflow_small.
-Proof.
+Proof using Type.
   t; cbv [Option.List.lift Option.bind fold_right] in *;
   BreakMatch.break_match_hyps; Option.inversion_option; t;
   epose proof Z.ones_equiv (Z.of_N s -1).
@@ -914,13 +920,13 @@ Definition constprop :=
            | Some v => ExprApp (const v, nil)
            | _ => e end.
 Global Instance constprop_ok : Ok constprop.
-Proof. t. f_equal; eauto using eval_eval. Qed.
+Proof using Type. t. f_equal; eauto using eval_eval. Qed.
 
 Lemma invert_interp_op_associative o : associative o = true ->
   forall G x xs v, interp_op G o (x :: xs) = Some v ->
   exists v', interp_op G o xs = Some v' /\
   interp_op G o [x; v'] = Some v.
-Proof.
+Proof using Type.
   destruct o; inversion 1; intros * HH; inversion HH; clear HH; subst; cbn;
     eexists; split; eauto; f_equal; try ring; try solve [Z.bitblast].
   { rewrite !Z.add_0_r, ?Z.land_ones; push_Zmod; pull_Zmod; Lia.lia. }
@@ -931,7 +937,7 @@ Lemma interp_op_associative_cons o : associative o = true ->
   forall G x xs ys v,
   interp_op G o xs = Some v -> interp_op G o ys = Some v ->
   interp_op G o (x :: xs) = interp_op G o (x :: ys).
-Proof.
+Proof using Type.
   destruct o; inversion 1;
     do 2 (intros * HH; inversion HH; clear HH; subst; cbn); f_equal.
   { rewrite ?Z.land_ones in *; push_Zmod; rewrite ?H1; pull_Zmod; Lia.lia. }
@@ -944,7 +950,7 @@ Lemma interp_op_associative_app G o : associative o = true ->
   forall xs vxs, interp_op G o xs = Some vxs ->
   forall ys vys, interp_op G o ys = Some vys ->
   interp_op G o (xs ++ ys) = interp_op G o [vxs; vys].
-Proof.
+Proof using Type.
   induction xs; destruct o; inversion H; cbn [app interp_op fold_right] in *;
     intros; Option.inversion_option; subst; f_equal;
     try ring; try solve [Z.bitblast].
@@ -971,7 +977,7 @@ Definition flatten_associative :=
         | _ => [e'] end) args)
     else e | _ => e end.
 Global Instance flatten_associative_ok : Ok flatten_associative.
-Proof.
+Proof using Type.
   repeat step.
   revert dependent v; induction H2; cbn.
   { econstructor; eauto. }
@@ -1008,14 +1014,14 @@ Definition consts_commutative :=
 
 Lemma Permutation_partition {A} (l : list A) f :
     Permutation.Permutation l (fst (partition f l) ++ snd (partition f l)).
-Proof.
+Proof using Type.
   induction l; cbn; BreakMatch.break_match; cbn in *; eauto.
   etransitivity. econstructor. eassumption.
   eapply Permutation.Permutation_middle.
 Qed.
 
 Global Instance consts_commutative_ok : Ok consts_commutative.
-Proof.
+Proof using Type.
   step.
   destruct e; trivial.
   destruct n.
@@ -1069,7 +1075,7 @@ Definition drop_identity :=
 Lemma eval_filter_identity_mulZ G d args v
   (Hv : eval G d (ExprApp (mulZ, args)) v)
   : eval G d (ExprApp (mulZ, filter (neqconst 1) args)) v.
-Proof.
+Proof using Type.
   inversion Hv; clear Hv; subst.
   revert dependent v; induction H1; cbn;
     intros * HH; inversion HH; subst.
@@ -1092,7 +1098,7 @@ Qed.
 Lemma eval_filter_identity_mul G d s args v
   (Hv : eval G d (ExprApp (mul s, args)) v)
   : eval G d (ExprApp (mul s, filter (neqconst 1) args)) v.
-Proof.
+Proof using Type.
   inversion Hv; clear Hv; subst.
   revert dependent v; induction H1; cbn;
     intros * HH; inversion HH; subst.
@@ -1115,7 +1121,7 @@ Qed.
 Lemma eval_filter_identity_add G d s args v
   (Hv : eval G d (ExprApp (add s, args)) v)
   : eval G d (ExprApp (add s, filter (neqconst 0) args)) v.
-Proof.
+Proof using Type.
   inversion Hv; clear Hv; subst.
   revert dependent v; induction H1; cbn;
     intros * HH; inversion HH; subst.
@@ -1138,7 +1144,7 @@ Qed.
 Lemma eval_filter_identity_and G d s args v
   (Hv : eval G d (ExprApp (and s, args)) v)
   : eval G d (ExprApp (and s, filter (neqconst (Z.ones (Z.of_N s))) args)) v.
-Proof.
+Proof using Type.
   inversion Hv; clear Hv; subst.
   revert dependent v; induction H1; cbn;
     intros * HH; inversion HH; subst.
@@ -1160,14 +1166,14 @@ Qed.
 Lemma eval_filter_identity G d o args v i (Hi : identity o = Some i)
   (Hv : eval G d (ExprApp (o, args)) v)
   : eval G d (ExprApp (o, filter (neqconst i) args)) v.
-Proof.
+Proof using Type.
   destruct o; inversion Hi;
     BreakMatch.break_match_hyps; Option.inversion_option; subst;
     eauto using eval_filter_identity_add, eval_filter_identity_mul, eval_filter_identity_mulZ, eval_filter_identity_and.
 Qed.
 
 Lemma signed_0 s : signed s 0 = 0%Z.
-Proof.
+Proof using Type.
   destruct (N.eq_dec s 0); subst; trivial.
   cbv [signed].
   rewrite !Z.land_ones, !Z.shiftl_mul_pow2, ?Z.add_0_r, ?Z.mul_1_l by Lia.lia.
@@ -1178,7 +1184,7 @@ Qed.
 
 Lemma interp_op_nil_is_identity o i (Hi : identity o = Some i)
   G : interp_op G o [] = Some i.
-Proof.
+Proof using Type.
   destruct o; inversion Hi; subst; unfold interp_op, fold_right; f_equal.
   { rewrite Z.land_m1_l; trivial. }
   { destruct s; inversion Hi; subst.
@@ -1190,7 +1196,7 @@ Proof.
 Qed.
 
 Global Instance drop_identity_0k : Ok drop_identity.
-Proof.
+Proof using Type.
   repeat (step; eauto; []).
   pose proof H as H'; eapply eval_filter_identity in H; try eassumption.
   destruct (filter _ _ ) eqn:? in *; eauto.
@@ -1203,7 +1209,7 @@ Definition opcarry_0_at1 :=
   | Some 0 => ExprApp (op, args')
   | _ => e end | _ => e end%Z.
 Global Instance opcarry_0_at1_ok : Ok opcarry_0_at1.
-Proof.
+Proof using Type.
   t;
   try (eapply eval_eval in E; [|
     match goal with H : eval _ ?d _ _ |- _ => assert_fails (has_evar d); exact H end]);
@@ -1216,7 +1222,7 @@ Definition opcarry_0_at2 :=
   | Some 0 => ExprApp (op, cons x args')
   | __ => e end | _ => e end%Z.
 Global Instance opcarry_0_at2_ok : Ok opcarry_0_at2.
-Proof.
+Proof using Type.
   t;
   try (eapply eval_eval in E; [|
     match goal with H : eval _ ?d _ _ |- _ => assert_fails (has_evar d); exact H end]);
@@ -1229,7 +1235,7 @@ Definition opcarry_0_at3 :=
   | Some 0 => ExprApp (op, cons x (cons y args'))
   | _ => e end | _ => e end%Z.
 Global Instance opcarry_0_at3_ok : Ok opcarry_0_at3.
-Proof.
+Proof using Type.
   t;
   try (eapply eval_eval in E; [|
     match goal with H : eval _ ?d _ _ |- _ => assert_fails (has_evar d); exact H end]);
@@ -1242,7 +1248,7 @@ Definition xor_same :=
   fun e => match e with ExprApp (xor _,[x;y]) =>
     if expr_beq x y then ExprApp (const 0, nil) else e | _ => e end.
 Global Instance xor_same_ok : Ok xor_same.
-Proof.
+Proof using Type.
   t; cbn [fold_right]. rewrite Z.lxor_0_r, Z.lxor_nilpotent; trivial.
 Qed.
 
@@ -1271,7 +1277,7 @@ Definition expr : expr -> expr :=
   ].
 
 Lemma eval_expr c d e v : eval c d e v -> eval c d (expr e) v.
-Proof.
+Proof using Type.
   intros H; cbv [expr fold_left].
   repeat lazymatch goal with
   | H : eval ?c ?d ?e _ |- context[?r ?e] =>
@@ -1285,7 +1291,7 @@ Definition simplify (dag : dag) (e : node idx) :=
   Rewrite.expr (reveal_node dag 3 e).
 
 Lemma eval_simplify G d n v : eval_node G d n v -> eval G d (simplify d n) v.
-Proof. eauto using Rewrite.eval_expr, eval_node_reveal_node. Qed.
+Proof using Type. eauto using Rewrite.eval_expr, eval_node_reveal_node. Qed.
 
 Definition reg_state := Tuple.tuple (option idx) 16.
 Definition flag_state := Tuple.tuple (option idx) 6.
@@ -1427,14 +1433,14 @@ Delimit Scope x86symex_scope with x86symex.
 Bind Scope x86symex_scope with M.
 Notation "x <- y ; f" := (bind y (fun x => f%x86symex)) : x86symex_scope.
 Section MapM. (* map over a list in the state monad *)
-  Context [A B] (f : A -> M B).
+  Context {A B} (f : A -> M B).
   Fixpoint mapM (l : list A) : M (list B) :=
     match l with
     | nil => ret nil
     | cons a l => b <- f a; bs <- mapM l; ret (cons b bs)
     end%x86symex.
 End MapM.
-Definition mapM_ [A B] (f: A -> M B) l : M unit := _ <- mapM f l; ret tt.
+Definition mapM_ {A B} (f: A -> M B) l : M unit := _ <- mapM f l; ret tt.
 
 Definition GetFlag f : M idx :=
   some_or (fun s => get_flag s f) (error.get_flag f).
@@ -1553,8 +1559,8 @@ Fixpoint Symeval {s : OperationSize} {sa : AddressSize} (e : pre_expr) : M idx :
   end.
 
 Definition rcrcnt s cnt : Z :=
-  if N.eqb s 8 then Z.land cnt 0x1f mod 9 else
-  if N.eqb s 16 then Z.land cnt 0x1f mod 17 else
+  if N.eqb s 8 then Z.land cnt 31 mod 9 else
+  if N.eqb s 16 then Z.land cnt 31 mod 17 else
   Z.land cnt (Z.of_N s-1).
 
 Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
