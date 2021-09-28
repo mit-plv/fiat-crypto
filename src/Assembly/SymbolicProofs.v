@@ -5,6 +5,8 @@ Require Import Coq.NArith.NArith.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.AbstractInterpretation.ZRange.
 Require Import Crypto.Util.ErrorT.
+Require Import Crypto.Util.ListUtil.IndexOf.
+Require Crypto.Util.Option.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Symbolic.
 Require Import Crypto.Assembly.Semantics.
@@ -31,7 +33,7 @@ Section Memory.
     length bs1 = length bs2 ->
     unchecked_store_bytes (unchecked_store_bytes m a bs1) a bs2 =
     unchecked_store_bytes m a bs2.
-  Proof.
+  Proof using mem_ok word_ok.
     cbv [unchecked_store_bytes]; intros.
     eapply map.map_ext; intros.
     rewrite !map.get_putmany_dec, !map.get_of_list_word_at;
@@ -53,7 +55,7 @@ Section Memory.
     m a bs1 bs2 R (Hsep : sep R (bs1$@a) m)
     (Hlen : length bs1 = length bs2)
     : sep R (bs2$@a) (unchecked_store_bytes m a bs2).
-  Proof.
+  Proof using mem_ok word_ok.
     destruct Hsep as (?&?&(?&Hd)&HR&?);
       cbv [sepclause_of_map] in *; subst.
     setoid_rewrite unchecked_store_bytes_unchecked_store_bytes; trivial.
@@ -116,9 +118,9 @@ Definition R (ss : symbolic_state) (ms : machine_state) : Prop :=
 
 
 Lemma R_flag_None_l d f : R_flag d None f.
-Proof. inversion 1. Qed.
+Proof using Type. inversion 1. Qed.
 Lemma R_flag_None_r d f : autoforward.autoforward (R_flag d f None) (f = None).
-Proof.
+Proof using Type.
   destruct f; cbv; trivial. intros H.
   case (H _ eq_refl) as (?&?&HX); inversion HX.
 Qed.
@@ -130,7 +132,7 @@ Lemma get_flag_R s m f (HR : R s m) :
   forall i, Symbolic.get_flag s f = Some i ->
   exists b, eval s i (Z.b2z b) /\
   Semantics.get_flag m f = Some b.
-Proof.
+Proof using Type.
   repeat (
     DestructHead.destruct_head @prod||
     DestructHead.destruct_head @Semantics.machine_state||
@@ -144,7 +146,7 @@ Qed.
 
 Lemma R_set_flag_internal s m f (HR : R s m) (i:idx) b (Hi : eval s i (Z.b2z b)) :
   R_flags s (Symbolic.set_flag s f i) (Semantics.set_flag m f b).
-Proof.
+Proof using Type.
   repeat (
     DestructHead.destruct_head @prod||
     DestructHead.destruct_head @Semantics.machine_state||
@@ -187,25 +189,25 @@ Local Arguments Z.shiftr !_ !_.
 
 Lemma R_flag_subsumed d s m (HR : R_flag d s m) d' (Hlt : d :< d')
   : R_flag d' s m.
-Proof.
+Proof using Type.
   cbv [R_flag] in *; intros.
   case (HR i H) as (?&?&?); subst; eauto.
 Qed.
 
 Lemma R_flags_subsumed d s m (HR : R_flags d s m) d' (Hlt : d :< d')
   : R_flags d' s m.
-Proof.
+Proof using Type.
   cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *;
     intuition eauto using R_flag_subsumed.
 Qed.
 
 Lemma R_reg_subsumed d s m (HR : R_reg d s m) d' (Hlt : d :< d')
   : R_reg d' s m.
-Proof. cbv [R_reg] in *; intuition eauto. Qed.
+Proof using Type. cbv [R_reg] in *; intuition eauto. Qed.
 
 Lemma R_regs_subsumed d s m (HR : R_regs d s m) d' (Hlt : d :< d')
   : R_regs d' s m.
-Proof.
+Proof using Type.
   cbv [R_regs Tuple.fieldwise Tuple.fieldwise'] in *;
     intuition eauto using R_reg_subsumed.
 Qed.
@@ -215,14 +217,14 @@ Local Existing Instance SortedListWord.ok.
 
 Lemma R_cell64_subsumed d i i0 d' (Hd' : d :< d') m :
   R_cell64 d i i0 m -> R_cell64 d' i i0 m.
-Proof.
+Proof using Type.
   intros (?&?&?&(?&?&?&?)).
   eexists _, _, _, _; split; cbv [emp] in *; intuition eauto.
 Qed.
 
 Lemma R_mem_subsumed d s m (HR : R_mem d s m) d' (Hlt : d :< d')
   : R_mem d' s m.
-Proof.
+Proof using Type.
   revert dependent m; induction s; cbn; break_match; intuition idtac.
   eapply SeparationLogic.Proper_sep_impl1; try eassumption.
   intro; eauto using R_cell64_subsumed.
@@ -232,7 +234,7 @@ Qed.
 
 Lemma R_subsumed s m (HR : R s m) d' (Hd' : dag_ok d') (Hlt : s :< d')
   (s' := update_dag_with s (fun _ => d')) : R s' m.
-Proof.
+Proof using Type.
   destruct s, m; case HR as (Hd&Hr&Hf&Hm);
     cbv [update_dag_with] in *; cbn in *;
     intuition eauto using R_flags_subsumed, R_regs_subsumed, R_mem_subsumed.
@@ -240,7 +242,7 @@ Qed.
 
 Lemma R_mem_Permutation d s1 m (HR : R_mem d s1 m) s2
   (HP : Permutation s1 s2) : R_mem d s2 m.
-Proof.
+Proof using Type.
   revert dependent m. induction HP; cbn; break_match; intros; eauto.
   { eapply SeparationLogic.Proper_sep_impl1; cbv [Lift1Prop.impl1]; eauto. }
   cbv [mem_state] in *.
@@ -259,13 +261,13 @@ Qed.
 
 Lemma Tuple__nth_default_to_list' {A} n (xs : Tuple.tuple' A n) (d : A) :
   forall i, nth_default d (Tuple.to_list' n xs) i = @Tuple.nth_default A (S n) d i xs.
-Proof.
+Proof using Type.
   revert xs; induction n, i; cbn; BreakMatch.break_match; intros;
     rewrite ?ListUtil.nth_default_cons_S; eauto using ListUtil.nth_default_nil.
 Qed.
 Lemma Tuple__nth_default_to_list {A} n (xs : Tuple.tuple A n) (d : A) :
   forall i, List.nth_default d (Tuple.to_list _ xs) i = Tuple.nth_default d i xs.
-Proof.
+Proof using Type.
   destruct n; cbv [Tuple.tuple Tuple.to_list] in *.
   { destruct i; reflexivity. }
   eapply Tuple__nth_default_to_list'.
@@ -274,13 +276,13 @@ Qed.
 Lemma get_reg_R s m (HR : R s m) ri :
   forall i, Symbolic.get_reg s ri = Some i ->
   exists v, eval s i v /\ Tuple.nth_default 0 ri (m : reg_state) = v.
-Proof.
+Proof using Type.
   cbv [Symbolic.get_reg]; intros.
   rewrite <-Tuple__nth_default_to_list in H.
   cbv [nth_default] in H; BreakMatch.break_match_hyps; subst; [|solve[congruence] ].
   destruct s,m; cbn in *; destruct HR as (_&?&_); cbv [R_regs R_reg] in *.
   eapply Tuple.fieldwise_to_list_iff in H.
-  eapply Forall.Forall2_forall_iff_nth_error in H; cbv [Option.option_eq] in H.
+  eapply Forall.Forall2_forall_iff_nth_error in H; cbv [Crypto.Util.Option.option_eq] in H.
 
   rewrite Heqo in H.
   BreakMatch.break_match_hyps; [|solve[contradiction]].
@@ -295,12 +297,12 @@ Qed.
 
 Lemma bind_assoc {A B C} (v:M A) (k1:A->M B) (k2:B->M C) s
  : (y <- (x <- v; k1 x); k2 y)%x86symex s = (x<-v; y<-k1 x; k2 y)%x86symex s.
-Proof. cbv; destruct v; trivial. Qed.
+Proof using Type. cbv; destruct v; trivial. Qed.
 
 (* workaround: using cbn instead of this lemma makes Qed hang after next rewrite in same hyp *)
 Lemma unfold_bind {A B} ma amb s :
   @bind A B ma amb s = ltac:(let t := eval unfold bind, ErrorT.bind in (@bind A B ma amb s) in exact t).
-Proof. exact eq_refl. Qed.
+Proof using Type. exact eq_refl. Qed.
 
 Ltac step_symex0 :=
   match goal with
@@ -321,7 +323,7 @@ Ltac step_symex := step_symex0.
 
 Lemma GetFlag_R s m (HR : R s m) f i s' (H : GetFlag f s = Success (i, s')) :
   exists b, eval s i (Z.b2z b) /\ Semantics.get_flag m f = Some b /\ s = s'.
-Proof.
+Proof using Type.
   cbv [GetFlag some_or] in H.
   destruct (Symbolic.get_flag _ _) eqn:? in H;
     ErrorT.inversion_ErrorT; Prod.inversion_prod; subst; [].
@@ -343,7 +345,7 @@ Ltac step_symex ::= step_symex1.
 Lemma Merge_R s m (HR : R s m) e v (H : eval s e v) :
   forall i s', Merge e s = Success (i, s') ->
   R s' m /\ s :< s' /\ eval s' i v.
-Proof.
+Proof using Type.
   cbv [Merge].
   inversion 1; subst; match goal with H: ?x = ?x |- _ => clear H end.
   destruct s, m.
@@ -366,7 +368,7 @@ Ltac step_symex ::= step_symex2.
 Lemma App_R s m (HR : R s m) e v (H : eval_node G s e v) :
   forall i s', Symbolic.App e s = Success (i, s') ->
   R s' m /\ s :< s' /\ eval s' i v.
-Proof.
+Proof using Type.
   cbv [Symbolic.App]; intros.
   eapply Merge_R in H0; intuition eauto using eval_simplify.
 Qed.
@@ -406,7 +408,7 @@ Import ListNotations.
 Lemma SetFlag_R s m f (HR : R s m) (i:idx) b (Hi : eval s i (Z.b2z b)) :
   forall _tt s', Symbolic.SetFlag f i s = Success (_tt, s') ->
   R s' (SetFlag m f b) /\ s :< s'.
-Proof.
+Proof using Type.
   destruct s; cbv [Symbolic.SetFlag Symbolic.update_flag_with Symbolic.set_flag] in *;
     intros; inversion_ErrorT_step; Prod.inversion_prod; subst.
   cbv [R].
@@ -428,7 +430,7 @@ Ltac step_SetFlag :=
 Lemma GetReg_R s m (HR: R s m) r i s'
   (H : @GetReg r s = Success (i, s'))
   : R s' m  /\ s :< s' /\ eval s' i (get_reg m r).
-Proof.
+Proof using Type.
   cbv [GetReg GetReg64 bind some_or get_reg index_and_shift_and_bitcount_of_reg] in *.
   pose proof (get_reg_R s _ ltac:(eassumption) (reg_index r)) as Hr.
   destruct Symbolic.get_reg in *; [|inversion H]; cbn in H.
@@ -440,7 +442,7 @@ Qed.
 
 Lemma Address_R s m (HR : R s m) sa o a s' (H : @Symbolic.Address sa o s = Success (a, s'))
   : R s' m /\ s :< s' /\ exists v, eval s' a v /\ @DenoteAddress sa m o = v.
-Proof.
+Proof using Type.
   destruct o as [? ? ? ?]; cbv [Address DenoteAddress] in *; repeat step_symex.
   eapply GetReg_R in HSbase; eauto; []; DestructHead.destruct_head'_and.
   destruct mem_extra_reg; cbn -[GetReg] in *.
@@ -471,7 +473,7 @@ Lemma load_bytes_Rcell64 d
   (a:idx) va (Ha : eval d a va)
   i m fr (HR : (R_cell64 d a i ⋆ fr)%sep m)
   : exists bs, load_bytes m (word.of_Z va) 8 = Some bs /\ eval d i (le_combine bs).
-Proof.
+Proof using Type.
   cbn in HR. eapply SeparationLogic.sep_comm in HR.
   destruct HR as (?&?&(?&?)&?&?). rewrite H.
   destruct H2 as (?&?&?). eapply SeparationLogic.sep_emp_l in H2;
@@ -490,7 +492,7 @@ Lemma Load64_R s m (HR : R s m) (a : idx)
   va (Ha : eval s a va)
   i s' (H : Load64 a s = Success (i, s'))
   : s' = s /\ exists v, eval s i v /\ get_mem m va 8 = Some v /\ v = Z.land v (Z.ones 64).
-Proof.
+Proof using Type.
   cbv [Load64 some_or Symbolic.load option_map] in *.
   destruct find as [(?&?)|] eqn:? in *;
     inversion_ErrorT; Prod.inversion_prod; subst.
@@ -520,7 +522,7 @@ Lemma store_R d s m (HR : R_mem d s m)
   v' (Hv' : Z.land v' (Z.ones 64) = v)
   s' (H : Symbolic.store a i s = Some s')
   : exists m', set_mem m va 8 v' = Some m' /\ R_mem d s' m'.
-Proof.
+Proof using Type.
   cbv [Symbolic.store Crypto.Util.Option.bind ] in *.
   destruct List.indexof eqn:Hfound; Option.inversion_option.
   eapply List.indexof_Some in Hfound; destruct_head_ex; destruct_head_and.
@@ -578,7 +580,7 @@ Lemma Store64_R s m (HR : R s m)
   v' (Hv' : Z.land v' (Z.ones 64) = v)
   s' _tt (H : Store64 a i s = Success (_tt, s'))
   : exists m', SetMem m va 8 v' = Some m' /\ R s' m' /\ s :< s'.
-Proof.
+Proof using Type.
   cbv [Store64 bind some_or Crypto.Util.Option.bind ErrorT.bind] in *.
   destruct Symbolic.store eqn:? in H; inversion_ErrorT; Prod.inversion_prod; subst.
   destruct s, m; cbv [R] in *; destruct_head'_and.
@@ -591,7 +593,7 @@ Lemma store8 m a
   old (Hold : get_mem m a 8 = Some old) b
   m'  (Hm': set_mem m a 8 (Z.lor (Z.land b (Z.ones 8)) (Z.ldiff old (Z.ones 8))) = Some m')
   : set_mem m a 1 b = Some m'.
-Proof.
+Proof using Type.
   cbv [set_mem store_bytes] in *.
   destruct_one_match_hyp; Option.inversion_option.
   epose proof length_load_bytes _ _ _ _ E as H;
@@ -655,7 +657,7 @@ Qed.
 Lemma GetOperand_R s m (HR: R s m) so sa a i s'
   (H : @GetOperand so sa a s = Success (i, s'))
   : R s' m /\ s :< s' /\ exists v, eval s' i v /\ DenoteOperand sa so m a = Some v.
-Proof.
+Proof using Type.
   cbv [GetOperand DenoteOperand] in *; BreakMatch.break_innermost_match.
   { eapply GetReg_R in H; intuition eauto. }
   { progress cbv [Load ret] in *.
@@ -711,7 +713,7 @@ Lemma R_SetOperand s m (HR : R s m)
   sz sa a i _tt s' (H : @Symbolic.SetOperand sz sa a i s = Success (_tt, s'))
   v (Hv : eval s i v)
   : exists m', SetOperand sa sz m a v = Some m' /\ R s' m' /\ s :< s'.
-Proof.
+Proof using Type.
   destruct a in *; cbn in H; [ | | solve [inversion H] ];
     cbv [SetOperand Crypto.Util.Option.bind SetReg64 update_reg_with Symbolic.update_reg_with] in *;
     repeat (BreakMatch.break_innermost_match_hyps; Prod.inversion_prod; ErrorT.inversion_ErrorT; subst).
@@ -801,7 +803,7 @@ Ltac step_SetOperand :=
 Lemma HavocFlags_R s m (HR : R s m) :
   forall _tt s', Symbolic.HavocFlags s = Success (_tt, s') ->
   R s' (HavocFlags m) /\ s :< s'.
-Proof.
+Proof using Type.
   destruct s; cbv [Symbolic.HavocFlags Symbolic.update_flag_with] in *;
     intros; inversion_ErrorT_step; Prod.inversion_prod; subst.
   cbv [R]; intuition idtac; try solve [cbv [R] in *; intuition idtac].
@@ -838,7 +840,7 @@ Ltac destr_expr_beq :=
 
 Lemma standalone_operand_size_cases o n : standalone_operand_size o = Some n ->
   (n = 8 \/ n = 16 \/ n = 32 \/ n = 64)%N.
-Proof.
+Proof using Type.
    destruct o; cbn.
    { destruct r; cbn; inversion 1; subst; eauto. }
    { destruct (mem_is_byte _); inversion 1; eauto. }
@@ -848,7 +850,7 @@ Qed.
 Lemma operation_size_cases i n : Syntax.operation_size i = Some n ->
   (exists a, i = Build_NormalInstruction dec [a]) \/ (exists a, i = Build_NormalInstruction inc [a]) \/ (exists a b, i = Build_NormalInstruction Syntax.rcr [a; b]) \/ (exists a b c, i = Build_NormalInstruction Syntax.shrd [a; b; c]) \/ (exists a b, i = Build_NormalInstruction Syntax.sar [a;b])\/(exists a b, i = Build_NormalInstruction Syntax.add [a;b]) ->
   (n = 8 \/ n = 16 \/ n = 32 \/ n = 64)%N.
-Proof.
+Proof using G.
   intuition idtac; DestructHead.destruct_head'_ex; subst; cbn in *.
   all : repeat (repeat (let HH := fresh "H" in destruct (standalone_operand_size _) eqn:HH in H; repeat Option.inversion_option; try eapply standalone_operand_size_cases in HH); cbn in *; repeat Option.inversion_option; subst || Tactics.destruct_one_match_hyp).
   all : lia.
@@ -919,7 +921,7 @@ Ltac step01 := solve [step] || step1.
 Lemma SetOperand_same n m a v m'
   (Hd : DenoteOperand 64 n m a = Some v) (Hs : SetOperand 64 n m a v = Some m')
   : m = m'.
-Proof.
+Proof using Type.
   destruct a, m; cbn -[DenoteAddress] in *; repeat (subst; Option.inversion_option).
   { cbv [update_reg_with set_reg]; cbn in *; f_equal.
     eapply Tuple.to_list_ext.
@@ -960,7 +962,7 @@ Qed.
 Lemma SymexNornalInstruction_R s m (HR : R s m) instr :
   forall _tt s', Symbolic.SymexNormalInstruction instr s = Success (_tt, s') ->
   exists m', Semantics.DenoteNormalInstruction m instr = Some m' /\ R s' m' /\ s :< s'.
-Proof.
+Proof using Type.
   intros [] s' H.
   case instr as [op args]; cbv [SymexNormalInstruction] in H.
   repeat destruct_one_match_hyp; repeat step01.
@@ -1201,7 +1203,7 @@ Qed.
 Lemma SymexLines_R s m (HR : R s m) asm :
   forall _tt s', Symbolic.SymexLines asm s = Success (_tt, s') ->
   exists m', Semantics.DenoteLines m asm = Some m' /\ R s' m' /\ s :< s'.
-Proof.
+Proof using Type.
   revert dependent m; revert dependent s; induction asm; cbn [SymexLines DenoteLines]; intros.
   { inversion H; subst; eauto. }
   destruct a.
