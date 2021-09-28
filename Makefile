@@ -21,6 +21,13 @@ SHOW := $(if $(VERBOSE),@true "",@echo "")
 HIDE := $(if $(VERBOSE),,@)
 INSTALLDEFAULTROOT := Crypto
 
+RED:=\033[0;31m
+# No Color
+NC:=\033[0m
+GREEN:=\033[0;32m
+BOLD:=$(shell tput bold)
+NORMAL:=$(shell tput sgr0)
+
 .PHONY: coq clean update-_CoqProject cleanall install \
 	coq-without-bedrock2 install-without-bedrock2 \
 	install-rewriter clean-rewriter rewriter \
@@ -667,12 +674,40 @@ javadoc only-javadoc:
 	mkdir -p $(JAVADOC_DIR)
 	(cd $(JAVADOC_DIR); javadoc $(addprefix $(realpath .)/,$(ALL_JAVA_FILES)))
 
-test-amd64-files: $(UNSATURATED_SOLINAS) $(WORD_BY_WORD_MONTGOMERY) fiat-amd64/gentest.py fiat-amd64/test.sh
+ifneq (,$(wildcard .git/))
+AMD64_ASM_FILES := $(sort $(shell git ls-files "fiat-amd64/*.asm"))
+else
+AMD64_ASM_FILES := $(sort $(wildcard fiat-amd64/*.asm))
+endif
+AMD64_ASM_STATUS_FILES := $(addsuffix .status,$(AMD64_ASM_FILES))
 
-test-amd64-files only-test-amd64-files:
-	fiat-amd64/test.sh | tee fiat-amd64.test.out
-	$(SHOW)'DIFF fiat-amd64.test'
-	$(HIDE)diff --ignore-space-change output-tests/fiat-amd64.test.expected fiat-amd64.test.out || (RV=$$?; echo "To accept the new output, run make accept-fiat-amd64.test"; exit $$RV)
+Makefile.test-amd64-files.mk: fiat-amd64/gentest.py $(AMD64_ASM_FILES)
+	$(SHOW)'GENTEST --makefile fiat-amd64/*.asm > $@'
+	$(HIDE)fiat-amd64/gentest.py --makefile $(AMD64_ASM_FILES) > $@
+
+include Makefile.test-amd64-files.mk
+
+.PHONY: test-amd64-files-print-report test-amd64-files-status
+
+test-amd64-files-print-report::
+	@ export passed=$$(cat $(AMD64_ASM_STATUS_FILES) 2>/dev/null | grep -c '^0$$'); \
+	  export total=$(words $(AMD64_ASM_STATUS_FILES)); \
+	  export failed=$$(expr $${total} - $${passed}); \
+	  if [ $${passed} -eq $${total} ]; then \
+	      echo "$(GREEN)$(BOLD)ALL $${total} AMD64 ASM TESTS PASSED"; \
+	  else \
+	      echo "$(GREEN)$(BOLD)PASSED:$(NORMAL) $(GREEN)$${passed}$(NC) / $${total}"; \
+	      echo "$(RED)$(BOLD)FAILED:$(NORMAL) $(RED)$${failed}$(NC) / $${total}"; \
+	  fi
+
+test-amd64-files-status: $(AMD64_ASM_STATUS_FILES)
+	$(HIDE)! grep -q -v '^0$$' $^
+
+.PHONY: test-amd64-files-status
+
+test-amd64-files: $(UNSATURATED_SOLINAS) $(WORD_BY_WORD_MONTGOMERY)
+
+test-amd64-files only-test-amd64-files: test-amd64-files-print-report test-amd64-files-status
 
 # Perf testing
 PERF_MAKEFILE = src/Rewriter/PerfTesting/Specific/generated/primes.mk
