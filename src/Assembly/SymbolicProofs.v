@@ -11,7 +11,7 @@ Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Symbolic.
 Require Import Crypto.Assembly.Semantics.
 Require Import Crypto.Assembly.Equivalence.
-Import Permutation.
+Import Sorting.Permutation.
 
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
