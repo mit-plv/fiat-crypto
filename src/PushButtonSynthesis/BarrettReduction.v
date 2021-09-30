@@ -73,6 +73,7 @@ Section rbarrett_red.
   Local Instance split_multiret_to : split_multiret_to_opt := None.
   Local Instance unfold_value_barrier : unfold_value_barrier_opt := true.
   Local Instance assembly_hints_lines : assembly_hints_lines_opt := None.
+  Local Instance ignore_unique_asm_names : ignore_unique_asm_names_opt := false.
   Local Instance low_level_rewriter_method : low_level_rewriter_method_opt := default_low_level_rewriter_method.
 
   Let fancy_args

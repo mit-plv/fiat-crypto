@@ -79,6 +79,7 @@ Section __.
           {should_split_multiret : should_split_multiret_opt}
           {unfold_value_barrier : unfold_value_barrier_opt}
           {assembly_hints_lines : assembly_hints_lines_opt}
+          {ignore_unique_asm_names : ignore_unique_asm_names_opt}
           {widen_carry : widen_carry_opt}
           (widen_bytes : widen_bytes_opt := true) (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
           {assembly_calling_registers : assembly_calling_registers_opt}

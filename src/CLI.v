@@ -415,6 +415,10 @@ Module ForExtraction.
     := ([Arg.long_key "asm-reg-rtl"],
         Arg.Unit,
         ["By default, registers are assumed to be assigned to function arguments from left to right in the hints file.  This flag reverses that convention to be right-to-left.  Note that this flag interacts with --asm-input-first, which determines whether the output pointers are to the left or to the right of the input arguments."]).
+  Definition asm_ignore_unique_names_spec : named_argT
+    := ([Arg.long_key "asm-ignore-unique-name-mismatch"],
+        Arg.Unit,
+        ["Ignore function-name mismatch errors when there's only one assembly function and only one actual function requested."]).
   Definition doc_text_before_function_name_spec : named_argT
     := ([Arg.long_key "doc-text-before-function-name"],
         Arg.String,
@@ -488,6 +492,8 @@ Module ForExtraction.
       ; widen_carry :> widen_carry_opt
       (** Should we widen the byte type to the full bitwidth? *)
       ; widen_bytes :> widen_bytes_opt
+      (** Should we ignore function-name mismatch errors when there's only one assembly function and only one actual function requested? *)
+      ; ignore_unique_asm_names :> ignore_unique_asm_names_opt
       (** What method should we use for rewriting? *)
       ; low_level_rewriter_method :> low_level_rewriter_method_opt
         := default_low_level_rewriter_method
@@ -589,6 +595,7 @@ Module ForExtraction.
         ; no_error_on_unused_asm_functions_spec
         ; asm_input_first_spec
         ; asm_reg_rtl_spec
+        ; asm_ignore_unique_names_spec
         ; doc_text_before_function_name_spec
         ; doc_text_before_type_name_spec
         ; doc_newline_before_package_declaration_spec
@@ -636,6 +643,7 @@ Module ForExtraction.
              , no_error_on_unused_asm_functionsv
              , asm_input_firstv
              , asm_reg_rtlv
+             , asm_ignore_unique_namesv
              , doc_text_before_function_namev
              , doc_text_before_type_namev
              , doc_newline_before_package_declarationv
@@ -699,6 +707,7 @@ Module ForExtraction.
                       |}
                   ; assembly_calling_registers := to_reg_list asm_regv
                   ; assembly_stack_size := to_N_opt asm_stack_sizev
+                  ; ignore_unique_asm_names := to_bool asm_ignore_unique_namesv
                   ; error_on_unused_assembly_functions := negb (to_bool no_error_on_unused_asm_functionsv)
                   ; assembly_output_first := negb (to_bool asm_input_firstv)
                   ; assembly_argument_registers_left_to_right := negb (to_bool asm_reg_rtlv)

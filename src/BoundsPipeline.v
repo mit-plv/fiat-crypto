@@ -227,6 +227,9 @@ Typeclasses Opaque assembly_hints_lines_opt.
 (** Error if there are un-requested assembly functions *)
 Class error_on_unused_assembly_functions_opt := error_on_unused_assembly_functions : bool.
 Typeclasses Opaque error_on_unused_assembly_functions_opt.
+(** Ignore function-name mismatch errors when there's only one assembly function and only one actual function requested *)
+Class ignore_unique_asm_names_opt := ignore_unique_asm_names : bool.
+Typeclasses Opaque ignore_unique_asm_names_opt.
 Inductive synthesis_output_kind := normal_output | assembly_output.
 Notation no_select_size_of_no_select machine_wordsize
   := (if no_select return no_select_size_opt
