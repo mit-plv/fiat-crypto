@@ -62,6 +62,7 @@ Local Instance : should_split_mul_opt := false.
 Local Instance : should_split_multiret_opt := false.
 Local Instance : unfold_value_barrier_opt := true.
 Local Instance : assembly_hints_lines_opt := None.
+Local Instance : ignore_unique_asm_names_opt := false.
 Local Instance : widen_bytes_opt := false.
 Local Instance : widen_carry_opt := false.
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.

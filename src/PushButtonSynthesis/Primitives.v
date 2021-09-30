@@ -806,6 +806,7 @@ Section __.
           {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
           {assembly_output_first : assembly_output_first_opt}
           {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
+          {ignore_unique_asm_names : ignore_unique_asm_names_opt}
           (n : nat)
           (machine_wordsize : machine_wordsize_opt).
   Definition saturated_bounds : list (ZRange.type.option.interp base.type.Z)
@@ -1135,8 +1136,8 @@ Section __.
 
     Definition split_to_assembly_functions {A B} (assembly_data : list (string * A)) (normal_data : list (string * B))
       : list (string * (A * B)) * list (string * B) * list (string * A)
-      := if andb (Nat.eqb (length assembly_data) 1%nat) (Nat.eqb (length normal_data) 1%nat) 
-         then match assembly_data, normal_data with cons (_, a) _, cons (n, b) _ => (cons (n, (a,b)) nil, nil, nil) | _, _ => (nil, normal_data, assembly_data) end
+      := if (ignore_unique_asm_names && (length assembly_data =? 1) && (length normal_data =? 1))%nat%bool
+         then match assembly_data, normal_data with [(_, a)], [(n, b)] => ([(n, (a,b))], nil, nil) | _, _ => (nil, normal_data, assembly_data) end
          else
          let ls := List.map (fun '(n1, normal_data)
                              => ((n1, normal_data), List.find (fun '(n2, _) => n1 =? n2)%string assembly_data))
