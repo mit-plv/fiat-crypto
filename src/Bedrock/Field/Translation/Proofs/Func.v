@@ -36,11 +36,12 @@ Import Wf.Compilers.expr.
 Import Types.Notations.
 
 Section Func.
-  Context {p : parameters} {p_ok : @ok p}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context {ok : ok}.
 
   Local Existing Instance rep.Z.
-  Local Instance sem_ok : Semantics.parameters_ok semantics
-    := semantics_ok.
 
   Inductive valid_func : forall {t}, @API.expr (fun _ => unit) t -> Prop :=
   | validf_Abs :
@@ -85,13 +86,13 @@ Section Func.
         (nextn <= n)%nat ->
         ~ context_varname_set G (varname_gen n)) ->
       forall (tr : Semantics.trace)
-             (locals : Semantics.locals)
-             (mem : Semantics.mem)
+             (locals : locals)
+             (mem : mem)
              (functions : list func),
         (* locals doesn't contain variables we could overwrite *)
         (forall n nvars,
             (nextn <= n)%nat ->
-            map.undef_on locals (used_varnames n nvars)) ->
+            map.undef_on locals (used_varnames (varname_gen:=varname_gen) n nvars)) ->
         (* argument values are equivalent *)
         locally_equivalent_args args argvalues locals ->
         (* contexts are equivalent; for every variable in the context list G,
@@ -105,9 +106,9 @@ Section Func.
              tr = tr' /\
              mem = mem' /\
              subset (varname_set_base (snd (fst out)))
-                            (used_varnames nextn nvars) /\
+                            (used_varnames (varname_gen:=varname_gen) nextn nvars) /\
              Interface.map.only_differ
-               locals (used_varnames nextn nvars) locals' /\
+               locals (used_varnames (varname_gen:=varname_gen) nextn nvars) locals' /\
              locally_equivalent_base
                (listZ:=rep.listZ_local) ret1 ret2 locals').
   Proof.
@@ -151,11 +152,11 @@ Section Func.
     forall (ret : base.interp t)
            (retnames : listexcl_base_ltype (listZ:=rep.listZ_mem) t)
            (retsizes : base_access_sizes t)
-           (locals : Semantics.locals)
-           (mem : Semantics.mem)
-           (R : Semantics.mem -> Prop),
+           (locals : locals)
+           (mem : mem)
+           (R : _ -> Prop),
       sep (equivalent_listexcl
-             ret (map_listexcl (@base_rtype_of_ltype _ _) retnames)
+             ret (map_listexcl (fun t => base_rtype_of_ltype (t:=t)) retnames)
              retsizes locals) R mem ->
       WeakestPrecondition.list_map
         (WeakestPrecondition.get locals)
@@ -222,8 +223,8 @@ Section Func.
     forall (names : base_ltype t)
            (values : base.interp t)
            (sizes : base_access_sizes t)
-           (flat_values : list Semantics.word)
-           (locals locals' : Semantics.locals),
+           (flat_values : list word)
+           (locals locals' : locals),
       NoDup (flatten_base_ltype names) ->
       map.putmany_of_list_zip
         (flatten_base_ltype names) flat_values locals = Some locals' ->
@@ -328,8 +329,8 @@ Section Func.
     forall (argnames : type.for_each_lhs_of_arrow ltype t)
            (args : type.for_each_lhs_of_arrow API.interp_type t)
            (argsizes : type.for_each_lhs_of_arrow access_sizes t)
-           (flat_args : list Semantics.word)
-           (locals locals' : Semantics.locals),
+           (flat_args : list word)
+           (locals locals' : locals),
       NoDup (flatten_argnames argnames) ->
       map.putmany_of_list_zip
         (flatten_argnames argnames) flat_args locals = Some locals' ->
@@ -395,9 +396,9 @@ Section Func.
   Qed.
 
   Lemma equivalent_listonly_flat_iff1 {t} :
-    forall (names : listonly_base_ltype t) (values : list Semantics.word)
+    forall (names : listonly_base_ltype t) (values : list word)
            (sizes : base_access_sizes t)
-           (l locals init_locals : Semantics.locals)
+           (l locals init_locals : locals)
            (vset : set string) (x : base.interp t),
       NoDup (flatten_listonly_base_ltype names) ->
       map.putmany_of_list_zip (flatten_listonly_base_ltype names) values l = Some init_locals ->
@@ -441,9 +442,9 @@ Section Func.
         pose proof H; apply map.only_differ_putmany in H
       end.
 
-      erewrite IHt1; eauto using @only_differ_trans with typeclass_instances;
-        [ | apply disjoint_union_l_iff; split; eauto;
-            symmetry; solve [eauto using NoDup_disjoint] ].
+      erewrite IHt1; eauto using only_differ_trans; [ |
+        apply disjoint_union_l_iff; intuition trivial;
+        symmetry; eapply NoDup_disjoint; eauto ].
       erewrite IHt2 by eauto using only_differ_trans.
       split; intros; [ eexists; eassumption | ].
       sepsimpl.
@@ -506,13 +507,13 @@ Section Func.
                    e argnames arglengths argsizes retnames retsizes in
       let f : func := (fname, fst out) in
       let lengths := snd out in
-      forall (tr : Semantics.trace)
-             (mem : Semantics.mem)
-             (flat_args : list Semantics.word)
-             (out_ptrs : list Semantics.word)
-             (argvalues : list Semantics.word)
+      forall tr
+             (mem : mem)
+             (flat_args : list word)
+             (out_ptrs : list word)
+             (argvalues : list word)
              (functions : list func)
-             (R : Semantics.mem -> Prop),
+             (R : _ -> Prop),
         (* argument values are the concatenation of true argument values
            and output pointer values *)
         argvalues = out_ptrs ++ flat_args ->

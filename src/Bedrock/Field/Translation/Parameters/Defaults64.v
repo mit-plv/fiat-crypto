@@ -33,21 +33,13 @@ Section Defaults_64.
   Instance split_multiret_to : split_multiret_to_opt :=
     split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
   Let wordsize_bytes := Eval vm_compute in (machine_wordsize / 8)%Z.
-  Instance default_parameters : Types.parameters :=
-    {| semantics := BasicC64Semantics.parameters;
-       varname_gen := default_varname_gen;
-       error := expr.var Defaults.ERROR;
-       word_size_in_bytes := wordsize_bytes;
-    |}.
+  Instance default_parameters : Types.parameters
+    (word := BasicC64Semantics.word)
+    (varname_gen := default_varname_gen)
+    (error := expr.var Defaults.ERROR)
+    := tt.
   Instance default_parameters_ok : Types.ok.
-  Proof.
-    constructor.
-    { exact BasicC64Semantics.parameters_ok. }
-    { reflexivity. }
-    { reflexivity. }
-    { reflexivity. }
-    { apply prefix_name_gen_unique. }
-  Defined.
+  Proof. constructor; try exact _; try apply prefix_name_gen_unique. Qed.
 End Defaults_64.
 
 Module Notations.

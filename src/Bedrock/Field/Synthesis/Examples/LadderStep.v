@@ -10,13 +10,12 @@ Require Import coqutil.Word.Interface.
 Require Import coqutil.Tactics.Tactics.
 Require Import Crypto.Spec.MxDH.
 Require Import Crypto.Arithmetic.Core.
-Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults.
+Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults64.
 Require Import Crypto.Bedrock.Field.Common.Tactics.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Bedrock.Field.Synthesis.Generic.Bignum.
 Require Import Crypto.Bedrock.Field.Synthesis.Generic.Operation.
 Require Import Crypto.Bedrock.Field.Synthesis.Generic.UnsaturatedSolinas.
-Require Import Crypto.Bedrock.Field.Translation.Parameters.SelectParameters.
 Require Import Crypto.Bedrock.Field.Synthesis.Specialized.Tactics.
 Require Import Crypto.Bedrock.Field.Synthesis.Specialized.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Field.Synthesis.Examples.X25519_64.
@@ -37,15 +36,17 @@ Definition ladderstep_gallina
            (X1 : F) (P1 P2 : F * F) : F * F * (F * F) :=
   @MxDH.ladderstep F F.add F.sub F.mul a24 X1 P1 P2.
 
-Existing Instances Defaults64.default_parameters
+Existing Instances
+         default_parameters default_parameters_ok
          curve25519_bedrock2_funcs curve25519_bedrock2_specs
          curve25519_bedrock2_correctness.
 
 Local Notation n := X25519_64.n.
 Local Notation s := X25519_64.s.
 Local Notation c := X25519_64.c.
-Local Notation machine_wordsize := X25519_64.machine_wordsize.
 Local Notation M := (UnsaturatedSolinas.m s c).
+Local Notation word := BasicC64Semantics.word.
+Local Notation mem := BasicC64Semantics.mem.
 Local Notation weight :=
   (ModOps.weight (QArith_base.Qnum
                     (UnsaturatedSolinasHeuristics.limbwidth n s c))
@@ -59,26 +60,10 @@ Local Open Scope string_scope.
 Local Infix "*" := sep : sep_scope.
 Delimit Scope sep_scope with sep.
 
-(* need to define scalar-multiplication instance locally so typeclass inference
-   knows which instance to pick up (results in weird ecancel_assumption failures
-   otherwise) *)
-(* TODO: try Existing Instance again *)
-Definition reified_scmul121665 :
-  unsaturated_solinas_reified_scmul n s c machine_wordsize 121665.
-Proof. make_reified_scmul. Defined.
-
-Local Instance curve25519_bedrock2_scmul121665_func
-  : bedrock2_unsaturated_solinas_scmul_func.
-scmul_func_from_ops reified_scmul121665. Defined.
-
-Local Instance curve25519_bedrock2_scmul121665_spec
-  : bedrock2_unsaturated_solinas_scmul_spec.
-scmul_spec_from_ops reified_scmul121665 n s c. Defined.
-
-Local Instance curve25519_bedrock2_scmul121665_correctness :
-  bedrock2_unsaturated_solinas_scmul_correctness.
-prove_correctness_scmul reified_scmul121665 n s c machine_wordsize. Defined.
-
+Existing Instances
+  curve25519_bedrock2_scmul121665_func
+  curve25519_bedrock2_scmul121665_spec
+  curve25519_bedrock2_scmul121665_correctness.
 Require Import bedrock2.NotationsCustomEntry.
 
 Definition ladderstep : Syntax.func :=
@@ -133,10 +118,10 @@ Definition ladderstep : Syntax.func :=
 
 Instance spec_of_ladderstep : spec_of ladderstep :=
   fun functions =>
-    forall (X1 X2 Z2 X3 Z3 A AA B BB E C D DA CB : list Semantics.word)
+    forall (X1 X2 Z2 X3 Z3 A AA B BB E C D DA CB : list word)
            (pX1 pX2 pZ2 pX3 pZ3
-                pA pAA pB pBB pE pC pD pDA pCB : Semantics.word)
-           t m (R : Interface.map.rep (map:=Semantics.mem) -> Prop),
+                pA pAA pB pBB pE pC pD pDA pCB : word)
+           t m (R : Interface.map.rep (map:=mem) -> Prop),
       (* inputs must be bounded by loose_bounds *)
       let X1z := map word.unsigned X1 in
       let X2z := map word.unsigned X2 in
@@ -170,7 +155,7 @@ Instance spec_of_ladderstep : spec_of ladderstep :=
            rets = []%list /\
            exists X4 Z4 X5 Z5 (* output values *)
                   A' AA' B' BB' E' C' D' DA' CB' (* new intermediates *)
-                  : list Semantics.word,
+                  : list word,
              let X4z := map word.unsigned X4 in
              let Z4z := map word.unsigned Z4 in
              let X5z := map word.unsigned X5 in

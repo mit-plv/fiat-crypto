@@ -10,14 +10,17 @@ Import API.Compilers.
 Import Types.Notations.
 
 Section Expr.
-  Context {p : Types.parameters}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context {ok : ok}.
   Existing Instance Types.rep.Z.
   Existing Instance Types.rep.listZ_local. (* local list representation *)
-  Definition max_range : zrange := {| lower := 0; upper := 2 ^ Semantics.width - 1 |}.
+  Definition max_range : zrange := {| lower := 0; upper := 2 ^ width - 1 |}.
   Definition range_good (r : zrange) : bool := zrange_beq r max_range.
 
   (* for the second argument of shifts *)
-  Definition width_range :=  r[0~>Semantics.width-1]%zrange.
+  Definition width_range :=  r[0~>width-1]%zrange.
 
   Local Notation Zcast r :=
     (@expr.App
@@ -82,7 +85,7 @@ Section Expr.
   Definition rtruncating_shiftl
     : rtype (type_Z -> type_Z -> type_Z -> type_Z) :=
     fun s x n =>
-      if literal_eqb s Semantics.width
+      if literal_eqb s width
       then if literal_ltwidth n
            then expr.op bopname.slu x n
            else make_error type_Z
@@ -94,7 +97,7 @@ Section Expr.
       match invert_literal m with
       | Some m => if (2^(Z.log2 m) =? m)
                   then expr.op bopname.xor
-                               (if Z.log2 m =? Semantics.width (* is this a good place to do this optimization? *)
+                               (if Z.log2 m =? width (* is this a good place to do this optimization? *)
                                 then x
                                 else expr.op bopname.and x (expr.literal (Z.ones (Z.log2 m))))
                                (expr.literal (Z.ones (Z.log2 m)))
@@ -106,7 +109,7 @@ Section Expr.
     : rtype (type_Z -> type_Z -> type_Z -> type_Z) :=
     fun c x y =>
       if literal_eqb x 0
-      then if literal_eqb y (2^Semantics.width - 1)
+      then if literal_eqb y (2^width - 1)
            then expr.op bopname.add (expr.literal (-1))
                         (expr.op bopname.eq c (expr.literal 0))
            else base_make_error _
@@ -124,7 +127,7 @@ Section Expr.
   Definition rmul_high
     : rtype (type_Z -> type_Z -> type_Z -> type_Z) :=
     fun s x y =>
-      if literal_eqb s (2 ^ Semantics.width)
+      if literal_eqb s (2 ^ width)
       then expr.op bopname.mulhuu x y
       else base_make_error _.
 

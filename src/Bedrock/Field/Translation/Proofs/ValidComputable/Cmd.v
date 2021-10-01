@@ -23,12 +23,13 @@ Import API.Compilers.
 Import Types.Notations.
 
 Section Cmd.
-  Context {p : Types.parameters} {p_ok : @ok p}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context {ok : ok}.
 
   Local Existing Instance Types.rep.Z.
   Local Existing Instance Types.rep.listZ_local.
-  Local Instance sem_ok : Semantics.parameters_ok semantics
-    := semantics_ok.
 
   Definition is_nil_ident {t} (i : ident.ident t) : bool :=
     match i with

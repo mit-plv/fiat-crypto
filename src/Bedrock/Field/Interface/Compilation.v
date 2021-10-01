@@ -4,8 +4,14 @@ Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Local Open Scope Z_scope.
 
 Section Compile.
-  Context {semantics : Semantics.parameters}
-          {semantics_ok : Semantics.parameters_ok semantics}.
+  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {locals: map.map String.string word}.
+  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
+  Context {ext_spec: bedrock2.Semantics.ExtSpec}.
+  Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
+  Context {locals_ok : map.ok locals}.
+  Context {env_ok : map.ok env}.
+  Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}
           {field_representaton : FieldRepresentation}
           {field_representation_ok : FieldRepresentation_ok}.
@@ -23,13 +29,16 @@ Section Compile.
     end; eauto;
     sepsimpl; repeat straightline'; subst; eauto.
 
-  Lemma compile_binop {name} {op: BinOp name}
-        {tr mem locals functions} x y:
+  Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_BinOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
+  Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_UnOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
+
+  Lemma compile_binop : forall {name} {op: BinOp name}
+        {tr mem locals functions} x y,
     let v := bin_model (feval x) (feval y) in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
       Rin Rout out x_ptr x_var y_ptr y_var out_ptr out_var,
 
-      (_: spec_of name) functions ->
+      (_ : spec_of name) functions ->
       bounded_by bin_xbounds x ->
       bounded_by bin_ybounds y ->
 
@@ -60,7 +69,7 @@ Section Compile.
       <{ pred (nlet_eq [out_var] v k) }>.
   Proof. prove_field_compilation. Qed.
 
-  Lemma compile_unop {name} (op: UnOp name) {tr mem locals functions} x:
+  Lemma compile_unop : forall {name} (op: UnOp name) {tr mem locals functions} x,
     let v := un_model (feval x) in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
       Rin Rout out x_ptr x_var out_ptr out_var,
@@ -128,7 +137,9 @@ Section Compile.
   Definition compile_scmula24 := make_un_lemma un_scmula24.
   Definition compile_inv := make_un_lemma un_inv.
 
-  Lemma compile_felem_copy {tr mem locals functions} x :
+  Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_felem_copy _ _ _ _ _ _ _ _)) : typeclass_instances.
+
+  Lemma compile_felem_copy : forall {tr mem locals functions} x,
     let v := feval x in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
       R x_ptr x_var out out_ptr out_var,
@@ -159,7 +170,9 @@ Section Compile.
       <{ pred (nlet_eq [out_var] v k) }>.
   Proof. prove_field_compilation. Qed.
 
-  Lemma compile_felem_small_literal {tr mem locals functions} x:
+  Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_felem_small_literal _ _ _ _ _ _ _ _)) : typeclass_instances.
+
+  Lemma compile_felem_small_literal : forall {tr mem locals functions} x,
     let v := F.of_Z _ x in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
       R (wx : word) (out : felem) out_ptr out_var,

@@ -14,7 +14,9 @@ Import API.Compilers.
 Import Types.Notations.
 
 Section Func.
-  Context {p : parameters}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
   Existing Instance rep.Z.
 
   (* Feeds arguments to function one by one and then calls translate_cmd *)

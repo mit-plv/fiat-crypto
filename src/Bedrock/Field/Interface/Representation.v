@@ -17,7 +17,10 @@ Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 
 Section Representation.
-  Context {p : Types.parameters} {field_parameters : FieldParameters}
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context {field_parameters : FieldParameters}
           {p_ok : Types.ok}.
   Context (n n_bytes : nat) (weight : nat -> Z)
           (loose_bounds tight_bounds byte_bounds : list (option zrange))
@@ -25,7 +28,6 @@ Section Representation.
              forall X : list Z,
                list_Z_bounded_by tight_bounds X ->
                list_Z_bounded_by loose_bounds X).
-  Existing Instance semantics_ok.
 
   Definition eval_words : list word -> F M_pos :=
     fun ws =>
@@ -43,7 +45,7 @@ Section Representation.
       feval := eval_words;
       feval_bytes := eval_bytes;
       felem_size_in_bytes :=
-        Z.of_nat n * bytes_per_word Semantics.width;
+        Z.of_nat n * bytes_per_word width;
       encoded_felem_size_in_bytes := n_bytes;
       bytes_in_bounds :=
         fun bs => list_Z_bounded_by byte_bounds (map byte.unsigned bs);
@@ -64,11 +66,6 @@ Section Representation.
       reflexivity. }
     { cbv [Placeholder FElem felem_size_in_bytes frep].
       repeat intro.
-      assert (word_size_in_bytes = bytes_per_word width).
-      { pose proof word.width_pos.
-        rewrite word_size_in_bytes_eq; cbn [bytes_per].
-        apply Z2Nat.id. cbv [bytes_per_word].
-        Z.zero_bounds. }
       cbv [Lift1Prop.ex1]; split; intros;
         repeat match goal with
                | H : anybytes _ _ _ |- _ =>
@@ -76,25 +73,15 @@ Section Representation.
                | H : exists _, _ |- _ => destruct H
                | H : _ /\ _ |- _ => destruct H
                end.
-      { match goal with
-          | H : Array.array _ _ _ _ _ |- _ =>
-            eapply Bignum_of_bytes with (n0:=n) in H;
-              [ destruct H | (idtac + destruct Semantics.width_cases); nia.. ]
-        end.
-        eexists; eauto. }
-      {
-        pose proof word_size_in_bytes_pos.
-        let H := match goal with
-                 | H : Bignum _ _ _ _ |- _ => H end in
-        eapply Bignum_to_bytes in H.
-        sepsimpl.
+      { eexists; eapply Bignum_of_bytes; try eassumption.
+        destruct Bitwidth.width_cases; subst width; revert H0; cbn; lia. }
+      { eapply Bignum_to_bytes in H; sepsimpl.
         let H := match goal with
                  | H : Array.array _ _ _ _ _ |- _ => H end in
         eapply Array.array_1_to_anybytes in H.
-        match goal with
-        | H : anybytes ?p ?n1 ?m |- anybytes ?p ?n2 ?m =>
-          replace n2 with n1 by nia; assumption
-        end. } }
+        unshelve (erewrite (_:_*_=_); eassumption).
+        rewrite H; destruct Bitwidth.width_cases as [W|W];
+          rewrite W; cbn; clear; lia. } }
     { cbn [bounded_by frep]; intros.
       apply relax_bounds; auto. }
   Qed.

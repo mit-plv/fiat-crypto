@@ -9,7 +9,6 @@ Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Field.Common.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults.
-Require Import Crypto.Bedrock.Field.Translation.Parameters.SelectParameters.
 Require Import Crypto.Bedrock.Field.Synthesis.Specialized.ReifiedOperation.
 Require Import Crypto.Bedrock.Field.Synthesis.Generic.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Field.Synthesis.Generic.Operation.
@@ -100,66 +99,70 @@ Class names_of_operations :=
     name_of_carry_scmul_const : Z -> string }.
 
 Record unsaturated_solinas_reified_ops
-       {names : names_of_operations} {n s c machine_wordsize} :=
-  { params : Types.parameters;
+  {width BW word mem locals env ext_spec varname_gen error}
+  {parameters_sentinel : @Types.parameters width BW word mem locals env ext_spec varname_gen error}
+  {names : names_of_operations} {n s c} :=
+  { 
     reified_carry_mul :
       reified_op name_of_carry_mul
-                 (@Generic.UnsaturatedSolinas.carry_mul params n s c)
+                 (Generic.UnsaturatedSolinas.carry_mul n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.carry_mul
-                    n s c machine_wordsize);
+                    n s c width);
     reified_carry_square :
       reified_op name_of_carry_square
-                 (@Generic.UnsaturatedSolinas.carry_square params n s c)
+                 (Generic.UnsaturatedSolinas.carry_square n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.carry_square
-                    n s c machine_wordsize);
+                    n s c width);
     reified_carry :
       reified_op name_of_carry
-                 (@Generic.UnsaturatedSolinas.carry params n s c)
+                 (Generic.UnsaturatedSolinas.carry n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.carry
-                    n s c machine_wordsize);
+                    n s c width);
     reified_add :
       reified_op name_of_add
-                 (@Generic.UnsaturatedSolinas.add params n s c)
+                 (Generic.UnsaturatedSolinas.add n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.add
-                    n s c machine_wordsize);
+                    n s c width);
     reified_sub :
       reified_op name_of_sub
-                 (@Generic.UnsaturatedSolinas.sub params n s c)
+                 (Generic.UnsaturatedSolinas.sub n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.sub
-                    n s c machine_wordsize);
+                    n s c width);
     reified_opp :
       reified_op name_of_opp
-                 (@Generic.UnsaturatedSolinas.opp params n s c)
+                 (Generic.UnsaturatedSolinas.opp n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.opp
-                    n s c machine_wordsize);
+                    n s c width);
     reified_selectznz :
       reified_op name_of_selectznz
-                 (@Generic.UnsaturatedSolinas.selectznz params n s c)
+                 (Generic.UnsaturatedSolinas.selectznz n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.selectznz
-                    n machine_wordsize);
+                    n width);
     reified_to_bytes :
       reified_op name_of_to_bytes
-                 (@Generic.UnsaturatedSolinas.to_bytes params n s c)
+                 (Generic.UnsaturatedSolinas.to_bytes n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.to_bytes
-                    n s c machine_wordsize);
+                    n s c width);
     reified_from_bytes :
       reified_op name_of_from_bytes
-                 (@Generic.UnsaturatedSolinas.from_bytes params n s c)
+                 (Generic.UnsaturatedSolinas.from_bytes n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.from_bytes
-                    n s c machine_wordsize) }.
-Arguments unsaturated_solinas_reified_ops {names} n s c machine_wordsize.
+                    n s c width) }.
+Arguments unsaturated_solinas_reified_ops {_ _ _ _ _ _ _ _ _ _ _ } n s c.
 
 Record unsaturated_solinas_reified_scmul
-       {names : names_of_operations} {n s c machine_wordsize} {x : Z} :=
+  {width BW word mem locals env ext_spec varname_gen error}
+  {parameters_sentinel : @Types.parameters width BW word mem locals env ext_spec varname_gen error}
+  {names : names_of_operations} {n s c} {x : Z} :=
   { scmul_params : Types.parameters;
     reified_carry_scmul_const :
-      reified_op (name_of_carry_scmul_const x)
-                 (@Generic.UnsaturatedSolinas.carry_scmul_const
-                    scmul_params n s c x)
+      reified_op (varname_gen := varname_gen) (error:=error)
+                 (name_of_carry_scmul_const x)
+                 (Generic.UnsaturatedSolinas.carry_scmul_const
+                    n s c x)
                  (PushButtonSynthesis.UnsaturatedSolinas.carry_scmul_const
-                    n s c machine_wordsize x) }.
-Arguments unsaturated_solinas_reified_scmul
-          {names} n s c machine_wordsize x.
+                    n s c width x) }.
+Arguments unsaturated_solinas_reified_scmul {_ _ _ _ _ _ _ _ _ _ _} n s c x.
 
 (*** Helpers ***)
 
@@ -189,8 +192,8 @@ Ltac scmul_func_from_ops ops :=
 
 Ltac scmul_spec_from_ops ops n s c :=
   let x := lazymatch type of ops with
-           | unsaturated_solinas_reified_scmul _ _ _ _ ?x => x end in
-  let p := (eval cbn [scmul_params ops] in (scmul_params ops)) in
+           | unsaturated_solinas_reified_scmul _ _ _ ?x => x end in
+  let p := lazymatch type of ops with unsaturated_solinas_reified_scmul(parameters_sentinel:=?p) _ _ _ _ => p end in
   let carry_scmul_const_name :=
       (eval compute in (name_of_carry_scmul_const x)) in
   let carry_scmul_const_spec :=
@@ -198,8 +201,8 @@ Ltac scmul_spec_from_ops ops n s c :=
             [fst snd precondition postcondition
                  Generic.UnsaturatedSolinas.carry_scmul_const
                  Generic.UnsaturatedSolinas.spec_of_carry_scmul_const] in
-          (@Generic.UnsaturatedSolinas.spec_of_carry_scmul_const
-             p n s c x carry_scmul_const_name)) in
+          (Generic.UnsaturatedSolinas.spec_of_carry_scmul_const
+             (parameters_sentinel:=p) n s c x carry_scmul_const_name)) in
   exact {| spec_of_carry_scmul_const := carry_scmul_const_spec |}.
 
 Ltac funcs_from_ops ops :=
@@ -241,7 +244,7 @@ Ltac funcs_from_ops ops :=
            from_bytes := from_bytes_func_value |}.
 
 Ltac specs_from_ops ops n s c :=
-  let p := eval cbn [params ops] in (params ops) in
+  let p := lazymatch type of ops with unsaturated_solinas_reified_ops(parameters_sentinel:=?p) _ _ _ => p end in
   let carry_mul_name := (eval compute in name_of_carry_mul) in
   let carry_square_name := (eval compute in name_of_carry_square) in
   let carry_name := (eval compute in name_of_carry) in
@@ -256,64 +259,64 @@ Ltac specs_from_ops ops n s c :=
             [fst snd precondition postcondition
                  Generic.UnsaturatedSolinas.carry_mul
                  Generic.UnsaturatedSolinas.spec_of_carry_mul] in
-          (@Generic.UnsaturatedSolinas.spec_of_carry_mul
-             p n s c carry_mul_name)) in
+          (Generic.UnsaturatedSolinas.spec_of_carry_mul
+             (parameters_sentinel:=p) n s c carry_mul_name)) in
   let carry_square_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.UnsaturatedSolinas.carry_square
                  Generic.UnsaturatedSolinas.spec_of_carry_square] in
-          (@Generic.UnsaturatedSolinas.spec_of_carry_square
-             p n s c carry_square_name)) in
+          (Generic.UnsaturatedSolinas.spec_of_carry_square
+             (parameters_sentinel:=p) n s c carry_square_name)) in
   let carry_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.UnsaturatedSolinas.carry
                  Generic.UnsaturatedSolinas.spec_of_carry] in
-          (@Generic.UnsaturatedSolinas.spec_of_carry
-             p n s c carry_name)) in
+          (Generic.UnsaturatedSolinas.spec_of_carry
+             (parameters_sentinel:=p) n s c carry_name)) in
   let add_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.UnsaturatedSolinas.add
                  Generic.UnsaturatedSolinas.spec_of_add] in
-          (@Generic.UnsaturatedSolinas.spec_of_add
-             p n s c add_name)) in
+          (Generic.UnsaturatedSolinas.spec_of_add
+             (parameters_sentinel:=p) n s c add_name)) in
   let sub_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.UnsaturatedSolinas.sub
                  Generic.UnsaturatedSolinas.spec_of_sub] in
-          (@Generic.UnsaturatedSolinas.spec_of_sub
-             p n s c sub_name)) in
+          (Generic.UnsaturatedSolinas.spec_of_sub
+             (parameters_sentinel:=p) n s c sub_name)) in
   let opp_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.UnsaturatedSolinas.opp
                  Generic.UnsaturatedSolinas.spec_of_opp] in
-          (@Generic.UnsaturatedSolinas.spec_of_opp
-             p n s c opp_name)) in
+          (Generic.UnsaturatedSolinas.spec_of_opp
+             (parameters_sentinel:=p) n s c opp_name)) in
   let selectznz_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.UnsaturatedSolinas.selectznz
                  Generic.UnsaturatedSolinas.spec_of_selectznz] in
-          (@Generic.UnsaturatedSolinas.spec_of_selectznz
-             p n s c selectznz_name)) in
+          (Generic.UnsaturatedSolinas.spec_of_selectznz
+             (parameters_sentinel:=p) n s c selectznz_name)) in
   let to_bytes_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.UnsaturatedSolinas.to_bytes
                  Generic.UnsaturatedSolinas.spec_of_to_bytes] in
-          (@Generic.UnsaturatedSolinas.spec_of_to_bytes
-             p n s c to_bytes_name)) in
+          (Generic.UnsaturatedSolinas.spec_of_to_bytes
+             (parameters_sentinel:=p) n s c to_bytes_name)) in
   let from_bytes_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.UnsaturatedSolinas.from_bytes
                  Generic.UnsaturatedSolinas.spec_of_from_bytes] in
-          (@Generic.UnsaturatedSolinas.spec_of_from_bytes
-             p n s c from_bytes_name)) in
+          (Generic.UnsaturatedSolinas.spec_of_from_bytes
+             (parameters_sentinel:=p) n s c from_bytes_name)) in
   exact {| spec_of_carry_mul := carry_mul_spec;
            spec_of_carry_square := carry_square_spec;
            spec_of_carry := carry_spec;
@@ -340,38 +343,27 @@ Ltac handle_easy_preconditions :=
   end.
 
 Ltac use_correctness_proofs p n s c :=
-  let Hc := fresh in
   match goal with
   | |- context [Generic.UnsaturatedSolinas.carry_mul] =>
-    apply (@Generic.UnsaturatedSolinas.carry_mul_correct
-             p default_inname_gen default_outname_gen n s c)
+    Coq.Program.Tactics.rapply @Generic.UnsaturatedSolinas.carry_mul_correct
   | |- context [Generic.UnsaturatedSolinas.carry_square] =>
-    apply (@Generic.UnsaturatedSolinas.carry_square_correct
-             p default_inname_gen default_outname_gen n s c)
+    Coq.Program.Tactics.rapply @Generic.UnsaturatedSolinas.carry_square_correct
   | |- context [Generic.UnsaturatedSolinas.carry] =>
-    apply (@Generic.UnsaturatedSolinas.carry_correct
-             p default_inname_gen default_outname_gen n s c)
+    Coq.Program.Tactics.rapply @Generic.UnsaturatedSolinas.carry_correct
   | |- context [Generic.UnsaturatedSolinas.add] =>
-    apply (@Generic.UnsaturatedSolinas.add_correct
-             p default_inname_gen default_outname_gen n s c)
+    Coq.Program.Tactics.rapply @Generic.UnsaturatedSolinas.add_correct
   | |- context [Generic.UnsaturatedSolinas.sub] =>
-    apply (@Generic.UnsaturatedSolinas.sub_correct
-             p default_inname_gen default_outname_gen n s c)
+    Coq.Program.Tactics.rapply @Generic.UnsaturatedSolinas.sub_correct
   | |- context [Generic.UnsaturatedSolinas.opp] =>
-    apply (@Generic.UnsaturatedSolinas.opp_correct
-             p default_inname_gen default_outname_gen n s c)
+    Coq.Program.Tactics.rapply @Generic.UnsaturatedSolinas.opp_correct
   | |- context [Generic.UnsaturatedSolinas.selectznz] =>
-    apply (@Generic.UnsaturatedSolinas.selectznz_correct
-             p default_inname_gen default_outname_gen n s c)
+    Coq.Program.Tactics.rapply @Generic.UnsaturatedSolinas.selectznz_correct
   | |- context [Generic.UnsaturatedSolinas.to_bytes] =>
-    apply (@Generic.UnsaturatedSolinas.to_bytes_correct
-             p default_inname_gen default_outname_gen n s c)
+    Coq.Program.Tactics.rapply @Generic.UnsaturatedSolinas.to_bytes_correct
   | |- context [Generic.UnsaturatedSolinas.from_bytes] =>
-    apply (@Generic.UnsaturatedSolinas.from_bytes_correct
-             p default_inname_gen default_outname_gen n s c)
+    Coq.Program.Tactics.rapply @Generic.UnsaturatedSolinas.from_bytes_correct
   | |- context [Generic.UnsaturatedSolinas.carry_scmul_const] =>
-    apply (@Generic.UnsaturatedSolinas.carry_scmul_const_correct
-             p default_inname_gen default_outname_gen n s c)
+    Coq.Program.Tactics.rapply @Generic.UnsaturatedSolinas.carry_scmul_const_correct
   end.
 
 Ltac change_with_computed_func ops :=
@@ -398,26 +390,28 @@ Ltac change_with_computed_func ops :=
     change carry_scmul_const with (computed_bedrock_func (reified_carry_scmul_const ops))
   end.
 
-Ltac prove_correctness ops n s c machine_wordsize :=
+Ltac prove_correctness ops n s c :=
+  let p := lazymatch type of ops with unsaturated_solinas_reified_ops(parameters_sentinel:=?p) _ _ _ => p end in
+  let width := lazymatch type of ops with unsaturated_solinas_reified_ops(width:=?width) _ _ _ => width end in
   assert (UnsaturatedSolinas.check_args
-            n s c machine_wordsize necessary_requests (ErrorT.Success tt) =
+            n s c width necessary_requests (ErrorT.Success tt) =
           ErrorT.Success tt) by abstract (native_compute; reflexivity);
   lazymatch goal with
     | |- bedrock2_unsaturated_solinas_correctness => econstructor end;
   change_with_computed_func ops; rewrite computed_bedrock_func_eq;
-  let p := (eval cbn [params ops] in (params ops)) in
   use_correctness_proofs p n s c; try assumption;
   handle_easy_preconditions.
 
-Ltac prove_correctness_scmul ops n s c machine_wordsize :=
+Ltac prove_correctness_scmul ops n s c :=
+  let p := lazymatch type of ops with unsaturated_solinas_reified_scmul(parameters_sentinel:=?p) _ _ _ _ => p end in
+  let width := lazymatch type of ops with unsaturated_solinas_reified_scmul(width:=?width) _ _ _ _ => width end in
   assert (UnsaturatedSolinas.check_args
-            n s c machine_wordsize necessary_requests (ErrorT.Success tt) =
+            n s c width necessary_requests (ErrorT.Success tt) =
           ErrorT.Success tt) by abstract (native_compute; reflexivity);
   lazymatch goal with
   | |- bedrock2_unsaturated_solinas_scmul_correctness =>
     econstructor end;
   change_with_computed_func ops; rewrite computed_bedrock_func_eq;
-  let p := (eval cbn [scmul_params ops] in (scmul_params ops)) in
   use_correctness_proofs p n s c; try assumption;
   handle_easy_preconditions.
 
@@ -430,15 +424,13 @@ Ltac make_names_of_operations prefix :=
 
 Ltac make_reified_ops :=
   lazymatch goal with
-    |- unsaturated_solinas_reified_ops ?n ?s ?c ?machine_wordsize =>
-    let p := parameters_from_wordsize machine_wordsize in
-    eapply Build_unsaturated_solinas_reified_ops with (params:=p)
+    |- unsaturated_solinas_reified_ops ?n ?s ?c =>
+    eapply Build_unsaturated_solinas_reified_ops
   end; prove_reified_op.
 
 Ltac make_reified_scmul :=
   lazymatch goal with
-    |- unsaturated_solinas_reified_scmul ?n ?s ?c ?machine_wordsize ?x =>
-    let p := parameters_from_wordsize machine_wordsize in
-    eapply Build_unsaturated_solinas_reified_scmul with (scmul_params:=p)
+    |- unsaturated_solinas_reified_scmul ?n ?s ?c ?x =>
+    eapply Build_unsaturated_solinas_reified_scmul
   end;
   prove_reified_op.

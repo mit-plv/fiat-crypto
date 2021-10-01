@@ -13,9 +13,7 @@ Require Import Crypto.Curves.Montgomery.XZProofs.
 Require Import Crypto.Util.Loops.
 
 Section Equivalence.
-  Context {semantics : Semantics.parameters}.
-  Context {field_parameters : FieldParameters}
-          {field_representation : FieldRepresentation}.
+  Context {field_parameters : FieldParameters}.
 
   Lemma ladderstep_gallina_equiv X1 P1 P2 :
     ladderstep_gallina X1 P1 P2 =

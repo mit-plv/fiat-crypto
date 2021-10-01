@@ -1,4 +1,4 @@
-Require Import Rupicola.Lib.Api.
+Require Import Rupicola.Lib.Api. Import bedrock2.WeakestPrecondition.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Compilation.
 Require Import Crypto.Bedrock.Group.Point.
@@ -6,8 +6,14 @@ Require Import Crypto.Bedrock.Specs.Field.
 Local Open Scope Z_scope.
 
 Section __.
-  Context {semantics : Semantics.parameters}
-          {semantics_ok : Semantics.parameters_ok semantics}.
+  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {locals: map.map String.string word}.
+  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
+  Context {ext_spec: bedrock2.Semantics.ExtSpec}.
+  Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
+  Context {locals_ok : map.ok locals}.
+  Context {env_ok : map.ok env}.
+  Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}
           {field_representaton : FieldRepresentation}
           {field_representation_ok : FieldRepresentation_ok}.
@@ -49,7 +55,7 @@ Section __.
   Instance spec_of_ladderstep : spec_of "ladderstep" :=
     fnspec! "ladderstep"
           (pX1 pX2 pZ2 pX3 pZ3
-               pA pAA pB pBB pE pC pD pDA pCB : Semantics.word)
+               pA pAA pB pBB pE pC pD pDA pCB : word)
           / (X1 X2 Z2 X3 Z3 A AA B BB E C D DA CB : felem) R,
     { requires tr mem :=
         bounded_by tight_bounds X1
@@ -85,8 +91,8 @@ Section __.
               * FElem pE E' * FElem pC C' * FElem pD D'
               * FElem pDA DA' * FElem pCB CB' * R)%sep mem'}.
 
-  Lemma compile_ladderstep {tr mem locals functions}
-        (x1 x2 z2 x3 z3 : F M_pos) :
+  Lemma compile_ladderstep : forall {tr mem locals functions}
+        (x1 x2 z2 x3 z3 : F M_pos),
     let v := ladderstep_gallina x1 (x2, z2) (x3, z3) in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
            Rout
@@ -197,6 +203,8 @@ Section __.
 
   Ltac compile_custom ::= ladderstep_compile_custom.
 
+  Hint Extern 1 (spec_of _) => (simple refine (@spec_of_BinOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
+  Hint Extern 1 (spec_of _) => (simple refine (@spec_of_UnOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
   Derive ladderstep_body SuchThat
          (let args := ["X1"; "X2"; "Z2"; "X3"; "Z3";
                          "A"; "AA"; "B"; "BB"; "E"; "C";
@@ -218,6 +226,6 @@ End __.
 
 Existing Instance spec_of_ladderstep.
 
-Local Coercion expr.var : string >-> Syntax.expr.
+Import Syntax.
 Local Unset Printing Coercions.
 Redirect "Crypto.Bedrock.Group.ScalarMult.LadderStep.ladderstep_body" Print ladderstep_body.

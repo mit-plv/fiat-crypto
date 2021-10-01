@@ -92,18 +92,20 @@ Ltac apply_correctness_in H :=
 Notation necessary_requests := ["to_bytes"; "from_bytes"]%string (only parsing).
 
 Section __.
-  Context {p : Types.parameters}
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
           {inname_gen outname_gen : nat -> string}
           (n : nat) (s : Z) (c : list (Z * Z)).
   Local Notation is_correct :=
-    (@is_correct p inname_gen outname_gen).
+    (is_correct (parameters_sentinel:=parameters_sentinel) (inname_gen:=inname_gen) (outname_gen:=outname_gen)).
   Local Notation loose_bounds :=
     (UnsaturatedSolinasHeuristics.loose_bounds n s c).
   Local Notation tight_bounds :=
     (UnsaturatedSolinasHeuristics.tight_bounds n s c).
   Local Notation bit_range := {|ZRange.lower := 0; ZRange.upper := 1|}.
   Local Notation saturated_bounds :=
-    (Primitives.saturated_bounds n Semantics.width).
+    (Primitives.saturated_bounds n width).
   Local Notation prime_bytes_bounds :=
     (UnsaturatedSolinas.prime_bytes_bounds s).
   Local Notation n_bytes := (UnsaturatedSolinas.n_bytes s).
@@ -161,80 +163,80 @@ Section __.
   Definition carry_mul
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.carry_mul n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.carry_mul n s c width).
     prove_operation_correctness.
   Defined.
 
   Definition carry_square
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.carry_square n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.carry_square n s c width).
     prove_operation_correctness.
   Defined.
 
   Definition carry
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.carry n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.carry n s c width).
     prove_operation_correctness.
   Defined.
 
   Definition add
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.add n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.add n s c width).
     prove_operation_correctness.
   Defined.
 
   Definition sub
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.sub n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.sub n s c width).
     prove_operation_correctness.
   Defined.
 
   Definition opp
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.opp n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.opp n s c width).
     prove_operation_correctness.
   Defined.
 
   Definition selectznz
     : operation (type_Z -> type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.selectznz n Semantics.width).
+    make_operation (UnsaturatedSolinas.selectznz n width).
     prove_operation_correctness.
     Unshelve.
-    { apply Semantics.width. }
+    { apply width. }
     { apply (UnsaturatedSolinasHeuristics.limbwidth n s c). }
   Defined.
 
   Definition to_bytes
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.to_bytes n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.to_bytes n s c width).
     prove_operation_correctness.
   Defined.
 
   Definition from_bytes
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.from_bytes n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.from_bytes n s c width).
     prove_operation_correctness.
   Defined.
 
   Definition carry_scmul_const (x : Z)
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.carry_scmul_const n s c Semantics.width x).
+    make_operation (UnsaturatedSolinas.carry_scmul_const n s c width x).
     prove_operation_correctness.
   Defined.
 
   Definition spec_of_carry_mul name : spec_of name :=
     fun functions =>
       forall wx wy px py pout wold_out t m
-             (Rx Ry Rout : Semantics.mem -> Prop),
+             (Rx Ry Rout : mem -> Prop),
         let op := carry_mul in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
         op.(precondition) args ->
@@ -255,7 +257,7 @@ Section __.
   Definition spec_of_carry_square name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Rx Rout : Semantics.mem -> Prop),
+             (Rx Rout : mem -> Prop),
         let op := carry_square in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
@@ -274,7 +276,7 @@ Section __.
   Definition spec_of_carry name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Rx Rout : Semantics.mem -> Prop),
+             (Rx Rout : mem -> Prop),
         let op := carry in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
@@ -293,7 +295,7 @@ Section __.
   Definition spec_of_add name : spec_of name :=
     fun functions =>
       forall wx wy px py pout wold_out t m
-             (Rx Ry Rout : Semantics.mem -> Prop),
+             (Rx Ry Rout : mem -> Prop),
         let op := add in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
         op.(precondition) args ->
@@ -313,7 +315,7 @@ Section __.
   Definition spec_of_sub name : spec_of name :=
     fun functions =>
       forall wx wy px py pout wold_out t m
-             (Rx Ry Rout : Semantics.mem -> Prop),
+             (Rx Ry Rout : mem -> Prop),
         let op := sub in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
         op.(precondition) args ->
@@ -333,7 +335,7 @@ Section __.
   Definition spec_of_opp name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Rx Ry Rout : Semantics.mem -> Prop),
+             (Rx Ry Rout : mem -> Prop),
         let op := opp in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
@@ -352,7 +354,7 @@ Section __.
   Definition spec_of_selectznz name : spec_of name :=
     fun functions =>
       forall wc wx px wy py pout wold_out t m
-             (Rx Ry Rout : Semantics.mem -> Prop),
+             (Rx Ry Rout : mem -> Prop),
         let op := selectznz in
         let args := (word.unsigned wc,
                      (map word.unsigned wx, (map word.unsigned wy, tt))) in
@@ -375,7 +377,7 @@ Section __.
   Definition spec_of_to_bytes name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Rx Rout : Semantics.mem -> Prop),
+             (Rx Rout : mem -> Prop),
         let op := to_bytes in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
@@ -395,7 +397,7 @@ Section __.
   Definition spec_of_from_bytes name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Rx Rout : Semantics.mem -> Prop),
+             (Rx Rout : mem -> Prop),
         let op := from_bytes in
         let args := (map byte.unsigned wx, tt) in
         op.(precondition) args ->
@@ -416,7 +418,7 @@ Section __.
     : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Rx Rout : Semantics.mem -> Prop),
+             (Rx Rout : mem -> Prop),
         let op := carry_scmul_const z in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
@@ -448,7 +450,6 @@ Section __.
 
   Section Proofs.
     Context {ok : Types.ok}.
-    Existing Instance semantics_ok.
 
     (* loose_bounds_ok could be proven in parameterized form, but is a pain
       and is easily computable with parameters plugged in. So for now, leaving
@@ -457,7 +458,7 @@ Section __.
       (loose_bounds_ok :
          ZRange.type.option.is_tighter_than
            (t:=type_listZ) (Some loose_bounds)
-           (Some (max_bounds n)) = true).
+           (Some (@max_bounds width n)) = true).
 
     Context (inname_gen_varname_gen_ok : disjoint inname_gen varname_gen)
             (outname_gen_varname_gen_ok : disjoint outname_gen varname_gen)
@@ -467,8 +468,16 @@ Section __.
 
     Lemma relax_to_max_bounds x :
       list_Z_bounded_by loose_bounds x ->
-      list_Z_bounded_by (max_bounds n) x.
+      list_Z_bounded_by (@max_bounds width n) x.
     Proof. apply relax_list_Z_bounded_by; auto. Qed.
+
+    (* TODO: move to coqutil.Datatypes.List *)
+    Local Lemma Forall_repeat : forall {A} (R : A -> Prop) n x,
+      R x -> Forall R (repeat x n).
+    Proof using. clear.
+    intros; induction n; intros; cbn [repeat];
+    constructor; auto.
+    Qed.
 
     Lemma relax_to_byte_bounds x :
       list_Z_bounded_by prime_bytes_bounds x ->
@@ -620,71 +629,71 @@ Section __.
       use_translate_func_correct Rout arg_ptrs out_ptrs;
       solve_translate_func_subgoals prove_bounds prove_output_length;
       [ repeat next_argument; [ .. | reflexivity ];
-        cbv [Bignum EncodedBignum] in *; sepsimpl;
+        cbv [Bignum EncodedBignum Memory.bytes_per] in *; sepsimpl;
         canonicalize_arrays; ecancel_assumption
       | setup_lists_reserved; solve_lists_reserved out_ptrs ].
 
     Context (check_args_ok :
-               check_args n s c Semantics.width necessary_requests (ErrorT.Success tt)
+               check_args n s c width necessary_requests (ErrorT.Success tt)
                = ErrorT.Success tt).
 
     Lemma carry_mul_correct name :
       is_correct
-        (UnsaturatedSolinas.carry_mul n s c Semantics.width)
+        (UnsaturatedSolinas.carry_mul n s c width)
         carry_mul (spec_of_carry_mul name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma carry_square_correct name :
       is_correct
-        (UnsaturatedSolinas.carry_square n s c Semantics.width)
+        (UnsaturatedSolinas.carry_square n s c width)
         carry_square (spec_of_carry_square name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma carry_correct name :
       is_correct
-        (UnsaturatedSolinas.carry n s c Semantics.width)
+        (UnsaturatedSolinas.carry n s c width)
         carry (spec_of_carry name).
     Proof. setup. prove_is_correct Rout. Qed.
 
     Lemma add_correct name :
       is_correct
-        (UnsaturatedSolinas.add n s c Semantics.width)
+        (UnsaturatedSolinas.add n s c width)
         add (spec_of_add name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma sub_correct name :
       is_correct
-        (UnsaturatedSolinas.sub n s c Semantics.width)
+        (UnsaturatedSolinas.sub n s c width)
         sub (spec_of_sub name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma opp_correct name :
       is_correct
-        (UnsaturatedSolinas.opp n s c Semantics.width)
+        (UnsaturatedSolinas.opp n s c width)
         opp (spec_of_opp name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma selectznz_correct name :
       is_correct
-        (UnsaturatedSolinas.selectznz n Semantics.width)
+        (UnsaturatedSolinas.selectznz n width)
         selectznz (spec_of_selectznz name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma to_bytes_correct name :
       is_correct
-        (UnsaturatedSolinas.to_bytes n s c Semantics.width)
+        (UnsaturatedSolinas.to_bytes n s c width)
         to_bytes (spec_of_to_bytes name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma from_bytes_correct name :
       is_correct
-        (UnsaturatedSolinas.from_bytes n s c Semantics.width)
+        (UnsaturatedSolinas.from_bytes n s c width)
         from_bytes (spec_of_from_bytes name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma carry_scmul_const_correct (x : Z) name :
       is_correct
-        (UnsaturatedSolinas.carry_scmul_const n s c Semantics.width x)
+        (UnsaturatedSolinas.carry_scmul_const n s c width x)
         (carry_scmul_const x) (spec_of_carry_scmul_const x name).
     Proof. setup; prove_is_correct Rout. Qed.
   End Proofs.

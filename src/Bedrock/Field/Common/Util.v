@@ -13,6 +13,7 @@ Require Import bedrock2.WeakestPreconditionProperties.
 Require Import coqutil.Tactics.destr.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import coqutil.Word.Interface coqutil.Word.Properties.
+Require Import coqutil.Word.LittleEndianList.
 Require Import coqutil.Datatypes.PropSet.
 Require Import coqutil.Datatypes.List.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
@@ -25,94 +26,6 @@ Require Import Coq.Lists.List. (* after SeparationLogic *)
 Import ListNotations.
 
 Import AbstractInterpretation.Compilers.
-
-(* This file contains general-purpose lemmas about other libraries that should
-   eventually be moved to those libraries or to coqutil *)
-
-Section Lists.
-  Context {A : Type}.
-
-  Lemma Forall_repeat (R : A -> Prop) n x :
-    R x -> Forall R (repeat x n).
-  Proof.
-    induction n; intros; cbn [repeat];
-    constructor; auto.
-  Qed.
-
-  Section Partition.
-    Fixpoint partition_equal_size' {T}
-             (n : nat) (xs acc : list T) (i : nat)
-    : list (list T) :=
-      match xs with
-      | [] => match i with
-              | O => [acc]
-              | S _ => [] (* if the last acc is incomplete, drop it *)
-              end
-      | x :: xs' =>
-        match i with
-        | O => acc :: partition_equal_size' n xs' [x] (n-1)
-        | S i' => partition_equal_size' n xs' (acc ++ [x])%list i'
-        end
-      end.
-    Definition partition_equal_size {T} (n : nat) (xs : list T) :=
-      partition_equal_size' n xs [] n.
-
-    Lemma length_partition_equal_size' :
-      forall n (xs : list A) acc i,
-        n <> 0%nat -> (i <= n)%nat ->
-        length (partition_equal_size' n xs acc i) = ((length xs + (n-i)) / n)%nat.
-    Proof.
-      induction xs; destruct i; cbn [partition_equal_size' length];
-        intros; rewrite ?IHxs by lia; autorewrite with natsimplify;
-          repeat match goal with
-                 | _ => rewrite Nat.div_same by lia
-                 | _ => rewrite Nat.div_small by lia
-                 | _ => rewrite NatUtil.div_minus, Nat.add_1_r by lia
-                 | |- (_ / ?x)%nat = (_ / ?x)%nat => repeat (f_equal; try lia)
-                 | |- S _ = S _ => repeat (f_equal; try lia)
-                 | _ => lia
-                 end.
-    Qed.
-
-    Lemma length_partition_equal_size :
-      forall n (xs : list A),
-        n <> 0%nat ->
-        length (partition_equal_size n xs) = (length xs / n)%nat.
-    Proof.
-      cbv [partition_equal_size]; intros.
-      rewrite length_partition_equal_size' by lia.
-      autorewrite with natsimplify. reflexivity.
-    Qed.
-
-    Lemma partition_equal_size'_equal_size :
-      forall n (xs : list A) acc i,
-        n <> 0%nat -> (length acc = n - i)%nat -> (i <= n)%nat ->
-        Forall (fun l => length l = n) (partition_equal_size' n xs acc i).
-    Proof.
-      induction xs; destruct i; cbn [partition_equal_size']; intros;
-          repeat match goal with
-                 | _ => apply Forall_nil
-                 | _ => apply Forall_cons
-                 | _ => lia
-                 | _ => progress autorewrite with natsimplify in *
-                 end; [ | ].
-      { eapply Forall_impl; [ | apply IHxs; cbn [length]; lia ].
-        cbv beta; auto. }
-      { eapply Forall_impl; [ | apply IHxs; rewrite ?app_length;
-                                cbn [length]; lia ].
-        cbv beta; auto. }
-    Qed.
-
-    Lemma partition_equal_size_equal_size :
-      forall n (xs : list A),
-        n <> 0%nat ->
-        Forall (fun l => length l = n) (partition_equal_size n xs).
-    Proof.
-      intros.
-      apply partition_equal_size'_equal_size; cbn [length]; lia.
-    Qed.
-  End Partition.
-End Lists.
 
 Section Maps.
   Local Hint Mode map.map - - : typeclass_instances.
@@ -684,20 +597,13 @@ Section ListZBoundedBy.
 End ListZBoundedBy.
 
 Section Bytes.
-  Context {width : Z} {word : word width} {ok : word.ok word}.
+  Context {width : Z} {word : word width} {word_ok : word.ok word}.
+  Local Notation bytes_per_word := (Z.to_nat (Memory.bytes_per_word width)).
 
-  Local Notation bytes_per_word :=
-    (Memory.bytes_per (width:=width) access_size.word).
-
-  Definition eval_bytes (bs : list Byte.byte) : list Z :=
-    map (fun l => LittleEndian.combine _ (HList.tuple.of_list l))
-        (partition_equal_size bytes_per_word bs).
+  Definition eval_bytes bs := map le_combine (chunk bytes_per_word bs).
 
   Definition encode_bytes (xs : list word) : list Byte.byte :=
-    flat_map
-      (fun x => HList.tuple.to_list
-                  (LittleEndian.split bytes_per_word (word.unsigned x)))
-      xs.
+    flat_map (fun w => le_split bytes_per_word (word.unsigned w)) xs.
 
   Lemma bytes_per_word_nz : bytes_per_word <> 0%nat.
   Proof.
@@ -708,46 +614,15 @@ Section Bytes.
     lia.
   Qed.
 
-  Lemma bits_per_word_eq_width :
-    (width mod 8 = 0)%Z ->
-    (Z.of_nat bytes_per_word * 8 = width)%Z.
-  Proof.
-    intro width_0mod8. pose proof word.width_pos.
-    cbv [Memory.bytes_per Memory.bytes_per_word].
-    rewrite Z2Nat.id by (try apply Z.div_pos; lia).
-    rewrite Z.mul_div_eq', Z.add_mod by lia.
-    rewrite width_0mod8, Z.add_0_l.
-    repeat rewrite (Z.mod_small 7 8) by lia.
-    lia.
-  Qed.
-
   Lemma eval_bytes_length bs n :
     length bs = (n * bytes_per_word)%nat ->
     length (eval_bytes bs) = n.
   Proof.
     intro Hlength.
     pose proof bytes_per_word_nz.
-    rewrite <-(Nat.div_mul n bytes_per_word) by lia.
-    cbv [eval_bytes]. rewrite <-Hlength, map_length.
-    apply length_partition_equal_size; lia.
-  Qed.
-
-  Lemma eval_bytes_range bs :
-    (width mod 8 = 0)%Z ->
-    Forall (fun z : Z => (0 <= z < 2 ^ width)%Z) (eval_bytes bs).
-  Proof.
-    pose proof bytes_per_word_nz. intros.
-    cbv [eval_bytes]. apply Forall_map_iff.
-    eapply Forall_impl;
-      [ | apply partition_equal_size_equal_size; solve [auto] ].
-    cbv beta; intros.
-    match goal with
-    | |- context [LittleEndian.combine ?n ?t] =>
-      pose proof LittleEndian.combine_bound t
-    end.
-    rewrite <-bits_per_word_eq_width by lia.
-    rewrite (Z.mul_comm _ 8).
-    congruence.
+    rewrite <-(Nat.div_mul n bytes_per_word) by trivial.
+    cbv [eval_bytes]; rewrite map_length, length_chunk by trivial.
+    rewrite Hlength, Nat.div_up_exact, Nat.div_mul; trivial.
   Qed.
 
   Lemma Forall_map_byte_unsigned x :
@@ -756,62 +631,61 @@ Section Bytes.
     induction x; cbn [length] in *; constructor; eauto; [ ].
     apply Byte.byte.unsigned_range.
   Qed.
+
+  Context {bits_per_word_eq_width : (Z.of_nat bytes_per_word * 8 = width)%Z}.
+
+  Lemma eval_bytes_range bs :
+    Forall (fun z : Z => (0 <= z < 2 ^ width)%Z) (eval_bytes bs).
+  Proof.
+    pose proof bytes_per_word_nz as Hnz.
+    apply Forall_map_iff, Forall_nth; intros.
+    split; try eapply Z.lt_le_trans; try apply le_combine_bound.
+    eapply Z.pow_le_mono_r; [cbv;trivial|].
+    rewrite length_chunk in H by trivial.
+    erewrite nth_error_nth in *; [|eapply nth_error_chunk; trivial].
+    rewrite firstn_length, skipn_length.
+
+    change 8%Z with (Z.of_nat 8).
+    rewrite <-Nat2Z.inj_mul, <-Nat.mul_min_distr_l, Nat2Z.inj_min, Nat.mul_comm.
+    rewrite Nat2Z.inj_mul.
+    setoid_rewrite bits_per_word_eq_width.
+    eapply Z.le_min_l.
+  Qed.
 End Bytes.
 
 Section Scalars.
-  Local Hint Mode word.word - : typeclass_instances.
-  Context {p : Semantics.parameters} {ok : Semantics.parameters_ok p}.
+  Context
+  {width: Z} {BW: Bitwidth.Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}
+  {locals: map.map String.string word}
+  {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}
+  {ext_spec: bedrock2.Semantics.ExtSpec}
+  {varname_gen : nat -> String.string}
+  {word_ok : word.ok word} {mem_ok : map.ok mem}
+  {locals_ok : map.ok locals}
+  {env_ok : map.ok env}
+  {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
 
   Local Notation bytes_per_word :=
-    (Memory.bytes_per (width:=Semantics.width) access_size.word).
+    (@Memory.bytes_per_word width).
 
-  Lemma scalar_to_bytes a x :
+  Lemma scalar_to_bytes (a x : word) :
     Lift1Prop.iff1
       (scalar a x)
       (array ptsto (word.of_Z 1) a
              (HList.tuple.to_list
-                (LittleEndian.split bytes_per_word
+             (LittleEndian.split (Z.to_nat bytes_per_word)
                                     (word.unsigned x)))).
   Proof. reflexivity. Qed.
 
-  Lemma scalar_of_bytes
-        a l (Hlen : length l = bytes_per_word) :
-    (Semantics.width mod 8 = 0)%Z ->
-    Lift1Prop.iff1 (array ptsto (word.of_Z 1) a l)
-                   (scalar a (word.of_Z
-                                (LittleEndian.combine
-                                   _ (HList.tuple.of_list l)))).
-  Proof.
-    intros; cbn. rewrite word.unsigned_of_Z.
-    fold (@Memory.bytes_per Semantics.width access_size.word).
-    pose proof (bits_per_word_eq_width (word:=Semantics.word) ltac:(eassumption)) as Hbits.
-    rewrite (Z.mul_comm _ 8) in Hbits. (* N.B. in some Coq version (8.12 but not 8.11) lia fails to handle the mul_comm somehow *)
-    rewrite <-Hlen in *.
-    match goal with
-      |- context [word.wrap (LittleEndian.combine ?n ?t)] =>
-      let H := fresh in
-      pose proof LittleEndian.combine_bound t as H;
-        match type of H with
-          (_ <= _ < 2 ^ ?x)%Z =>
-          let H' := fresh in
-          pose proof Z.pow_le_mono_r 2 x Semantics.width ltac:(lia) as H';
-            specialize (H' ltac:(rewrite <-Hbits; lia))
-        end
-    end.
-    cbv [word.wrap]. rewrite Z.mod_small by lia.
-    rewrite LittleEndian.split_combine.
-    rewrite HList.tuple.to_list_of_list. reflexivity.
-  Qed.
-
   Lemma truncated_scalar_one_ptsto_iff1 :
-    forall addr x,
+    forall (addr : word) x,
       Lift1Prop.iff1
         (truncated_scalar access_size.one addr x)
         (ptsto addr (Byte.byte.of_Z x)).
   Proof. intros; cbn. cancel. reflexivity. Qed.
 
   Lemma array_truncated_scalar_scalar_iff1 :
-    forall xs start size,
+    forall xs (start : word) size,
       Lift1Prop.iff1
         (array (truncated_scalar access_size.word)
                size start (map word.unsigned xs))
@@ -822,7 +696,7 @@ Section Scalars.
   Qed.
 
   Lemma array_truncated_scalar_ptsto_iff1 :
-    forall xs start size,
+    forall xs (start : word) size,
       Lift1Prop.iff1
         (array (truncated_scalar access_size.one)
                size start xs)
@@ -863,8 +737,9 @@ Section Words.
       auto using word.unsigned_range.
   Qed.
 
-  Lemma Forall_word_unsigned_within_access_size x :
-    (width mod 8 = 0)%Z ->
+  Local Notation bytes_per_word := (Z.to_nat (Memory.bytes_per_word width)).
+  Lemma Forall_word_unsigned_within_access_size 
+    {bits_per_word_eq_width : (Z.of_nat bytes_per_word * 8 = width)%Z} x :
     Forall
       (fun z : Z =>
          0 <= z < 2 ^ (Z.of_nat (Memory.bytes_per (width:=width) access_size.word) * 8))%Z
@@ -873,7 +748,7 @@ Section Words.
     intros.
     eapply Forall_impl; [ | apply Forall_map_unsigned ].
       cbv beta; intros.
-    rewrite bits_per_word_eq_width by auto; lia.
+    setoid_rewrite bits_per_word_eq_width; assumption.
   Qed.
 End Words.
 
@@ -912,14 +787,22 @@ End Separation.
 
 (* These lemmas should be moved to bedrock2, not coqutil *)
 Section WeakestPrecondition.
-  Context {p : Semantics.parameters} {p_ok : Semantics.parameters_ok p}.
+  Import Bitwidth bedrock2.WeakestPrecondition.
+  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {locals: map.map String.string word}.
+  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
+  Context {ext_spec: bedrock2.Semantics.ExtSpec}.
+  Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
+  Context {locals_ok : map.ok locals}.
+  Context {env_ok : map.ok env}.
+  Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
 
   (* "expr" should not be Compilers.expr; can remove once upstreamed *)
   Local Notation expr := WeakestPrecondition.expr.
 
   Section Load.
     Lemma load_empty :
-      forall s m a post,
+      forall s (m:mem) a post,
         load s map.empty a post -> load s m a post.
     Proof.
       intros *.
@@ -940,14 +823,14 @@ Section WeakestPrecondition.
   End Load.
 
   Section Get.
-    Lemma get_put_same l x y (post:_->Prop) :
+    Lemma get_put_same (l : locals) x y (post:_->Prop) :
       post y -> get (map.put l x y) x post.
     Proof.
       cbv [get]; intros.
       exists y; rewrite map.get_put_same; tauto.
     Qed.
 
-    Lemma get_put_diff l x1 x2 y (post:_->Prop) :
+    Lemma get_put_diff (l : locals) x1 x2 y (post:_->Prop) :
       x1 <> x2 ->
       get l x1 post ->
       get (map.put l x2 y) x1 post.
@@ -960,7 +843,7 @@ Section WeakestPrecondition.
 
     (* TODO: make module around Maps to stop name collision *)
     Lemma WP_get_only_differ_undef :
-      forall e vset locals locals' post,
+      forall e vset (locals locals' : locals) post,
         map.only_differ locals vset locals' ->
         map.undef_on locals vset ->
         get locals e post ->
@@ -974,7 +857,7 @@ Section WeakestPrecondition.
 
   Section Expr.
     Lemma expr_empty :
-      forall e m locals post,
+      forall e m (locals : locals) post,
         expr map.empty locals e post ->
         expr m locals e post.
     Proof.
@@ -990,7 +873,7 @@ Section WeakestPrecondition.
         cbv beta in *. eapply IHe2; eauto. }
     Qed.
 
-    Lemma expr_untouched mem1 mem2 l1 l2 vars v P :
+    Lemma expr_untouched mem1 mem2 (l1 l2 : locals) vars v P :
       map.only_differ l2 vars l1 ->
       ~ vars v ->
       expr mem1 l1 (expr.var v) P <->
@@ -1018,7 +901,7 @@ Section WeakestPrecondition.
     Qed.
 
     Lemma expr_only_differ_undef :
-      forall e m vset locals locals' post,
+      forall e m vset (locals locals' : locals) post,
         map.only_differ locals vset locals' ->
         map.undef_on locals vset ->
         expr m locals e post ->
@@ -1066,7 +949,7 @@ Section WeakestPrecondition.
   End ListMap.
 
   Section Dexpr.
-    Lemma dexpr_equiv m l n x1 x2 :
+    Lemma dexpr_equiv m (l : locals) n x1 x2 :
       dexpr m l (expr.var n) x1 ->
       dexpr m l (expr.var n) x2 ->
       x1 = x2.
@@ -1074,11 +957,11 @@ Section WeakestPrecondition.
       destruct 1; destruct 1; destruct_head'_and; congruence.
     Qed.
 
-    Lemma dexpr_put_same m l n x :
+    Lemma dexpr_put_same m (l : locals) n x :
       dexpr m (map.put l n x) (expr.var n) x.
     Proof. eexists; rewrite map.get_put_same; tauto. Qed.
 
-    Lemma dexpr_put_diff m l n1 n2 x y :
+    Lemma dexpr_put_diff m (l : locals) n1 n2 x y :
       n1 <> n2 ->
       dexpr m l (expr.var n1) x ->
       dexpr m (map.put l n2 y) (expr.var n1) x.
@@ -1123,7 +1006,7 @@ Section WeakestPrecondition.
       | _ => congruence
       end.
 
-    Lemma dexprs_cons_iff m l e es v vs :
+    Lemma dexprs_cons_iff m (l : locals) e es v vs :
       dexprs m l (e :: es) (v :: vs) <->
       (expr m l e (eq v)
        /\ dexprs m l es vs).
@@ -1146,7 +1029,7 @@ Section WeakestPrecondition.
       destruct vs; cbn [tl]; propers.
     Qed.
 
-    Lemma dexprs_cons_nil m l e es :
+    Lemma dexprs_cons_nil m (l : locals) e es :
       dexprs m l (e :: es) [] -> False.
     Proof.
       cbv [dexprs].
@@ -1162,7 +1045,7 @@ Section WeakestPrecondition.
       propers_step. peel_expr. propers.
     Qed.
 
-    Lemma dexprs_app_l m l es1 :
+    Lemma dexprs_app_l m (l : locals) es1 :
       forall es2 vs,
         dexprs m l (es1 ++ es2) vs ->
         (dexprs m l es1 (firstn (length es1) vs)) /\
@@ -1179,7 +1062,7 @@ Section WeakestPrecondition.
         repeat split; try eapply IHes1; eauto. }
     Qed.
 
-    Lemma dexprs_length m l :
+    Lemma dexprs_length m (l : locals) :
       forall vs es,
         dexprs m l es vs ->
         length es = length vs.

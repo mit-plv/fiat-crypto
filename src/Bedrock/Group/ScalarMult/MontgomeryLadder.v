@@ -1,6 +1,6 @@
 (* NOTE: the plan is to completely redo montladder after ladderstep is updated to use stackalloc *)
 
-Require Import Rupicola.Lib.Api.
+Require Import Rupicola.Lib.Api. Import bedrock2.WeakestPrecondition.
 Require Import Rupicola.Lib.SepLocals.
 Require Import Rupicola.Lib.ControlFlow.CondSwap.
 Require Import Rupicola.Lib.ControlFlow.DownTo.
@@ -15,13 +15,19 @@ Require Import Crypto.Util.NumTheoryUtil.
 Local Open Scope Z_scope.
 
 Section __.
-  Context {semantics : Semantics.parameters}
-          {semantics_ok : Semantics.parameters_ok semantics}.
+  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {locals: map.map String.string word}.
+  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
+  Context {ext_spec: bedrock2.Semantics.ExtSpec}.
+  Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
+  Context {locals_ok : map.ok locals}.
+  Context {env_ok : map.ok env}.
+  Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}
           {scalar_field_parameters : ScalarFieldParameters}.
   Context {scalar_field_parameters_ok : ScalarFieldParameters_ok}.
   Context {field_representaton : FieldRepresentation}
-          {scalar_representation : ScalarRepresentation}.
+  {scalar_representation : ScalarRepresentation}.
   Context {field_representation_ok : FieldRepresentation_ok}.
   Hint Resolve @relax_bounds : compiler.
 
@@ -61,7 +67,7 @@ Section __.
     Instance spec_of_montladder : spec_of "montladder" :=
       fnspec! "montladder"
             (pOUT pK pU pX1 pZ1 pX2 pZ2
-                  pA pAA pB pBB pE pC pD pDA pCB : Semantics.word)
+                  pA pAA pB pBB pE pC pD pDA pCB : word)
             / (K : scalar) (U : felem) (* inputs *)
             OUT X1 Z1 X2 Z2 A AA B BB E C D DA CB (* intermediates *)
             R,
@@ -221,9 +227,9 @@ Section __.
        compiler doesn't work, presumably because of the typeclass
        preconditions. This is a hacky workaround. *)
     (* TODO: figure out a cleaner way to do this *)
-    Lemma unsigned_of_Z_1 : word.unsigned (@word.of_Z _ Semantics.word 1) = 1.
+    Lemma unsigned_of_Z_1 : word.unsigned (@word.of_Z _ word 1) = 1.
     Proof. exact word.unsigned_of_Z_1. Qed.
-    Lemma unsigned_of_Z_0 : word.unsigned (@word.of_Z _ Semantics.word 0) = 0.
+    Lemma unsigned_of_Z_0 : word.unsigned (@word.of_Z _ word 0) = 0.
     Proof. exact word.unsigned_of_Z_0. Qed.
     Hint Resolve unsigned_of_Z_0 unsigned_of_Z_1 : compiler.
 
@@ -256,8 +262,8 @@ Section __.
         is_evar R;
         let R1 := fresh "R" in
         let R2 := fresh "R" in
-        evar (R1 : Semantics.mem -> Prop);
-        evar (R2 : Semantics.mem -> Prop);
+        evar (R1 : mem -> Prop);
+        evar (R2 : mem -> Prop);
         unify R (sep R1 R2);
         seprewrite (cswap_iff1 FElem)
       end.
@@ -279,6 +285,7 @@ Section __.
 
     Existing Instance spec_of_sctestbit.
 
+    Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_felem_small_literal _ _ _ _ _ _ _ _)) : typeclass_instances.
     Derive montladder_body SuchThat
            (let args := ["OUT"; "K"; "U"; "X1"; "Z1"; "X2"; "Z2";
                            "A"; "AA"; "B"; "BB"; "E"; "C"; "D"; "DA"; "CB"] in
@@ -313,7 +320,7 @@ Section __.
       let locals := lazymatch goal with
                     | |- WeakestPrecondition.cmd _ _ _ _ ?l _ => l end in
       remember locals as L;
-      evar (l : map.rep (map:=Semantics.locals));
+      evar (l : map.rep (map:=locals));
         let Hl := fresh in
         assert (map.remove L i_var = l) as Hl by
               (subst L; push_map_remove; subst_lets_in_goal; reflexivity);
@@ -421,11 +428,11 @@ Section __.
           lift_eexists. sepsimpl.
           (* first, resolve evars *)
           all:lazymatch goal with
-              | |- @sep _ _ Semantics.mem _ _ _ =>
+              | |- @sep _ _ mem _ _ _ =>
                 repeat seprewrite FElem_from_bytes;
                 repeat (sepsimpl; lift_eexists);
                 ecancel_assumption
-              | |- @sep _ _ Semantics.locals _ _ ?locals =>
+              | |- @sep _ _ locals _ _ ?locals =>
                 subst_lets_in_goal; push_map_remove;
                   let locals := match goal with |- ?P ?l => l end in
                   sep_from_literal_locals locals;
@@ -490,7 +497,9 @@ Section __.
   End MontLadder.
 End __.
 
-Local Coercion expr.var : string >-> Syntax.expr.
+Global Hint Extern 1 (spec_of _) => (simple refine (@spec_of_montladder _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
+
+Import bedrock2.Syntax.Coercions.
 Local Unset Printing Coercions.
 (*
 Redirect "Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body" Print montladder_body.

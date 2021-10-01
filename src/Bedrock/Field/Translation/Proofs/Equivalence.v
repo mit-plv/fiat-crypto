@@ -14,9 +14,12 @@ Import API.Compilers.
 Import Types.Notations.
 
 Section Equivalent.
-  Context {p : parameters}
-          (* list representation -- could be local or in-memory *)
-          {listZ : rep.rep base_listZ}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters
+     width BW word mem locals env ext_spec varname_gen error}.
+  Local Notation parameters := (ltac:(let t := type of parameters_sentinel in exact t)) (only parsing).
+  Context {listZ : rep.rep base_listZ}.
   Existing Instance rep.Z.
 
   (* relation that states whether a fiat-crypto value and a bedrock2 value are
@@ -25,8 +28,8 @@ Section Equivalent.
     : base.interp t -> (* fiat-crypto value *)
       base_rtype t -> (* bedrock2 value *)
       base_access_sizes t -> (* size in memory (if applicable) *)
-      Semantics.locals ->
-      Semantics.mem -> Prop :=
+      locals ->
+      mem -> Prop :=
     match t with
     | base.type.prod a b =>
       fun (x : base.interp a * base.interp b)
@@ -48,8 +51,8 @@ Section Equivalent.
       type.for_each_lhs_of_arrow rtype t -> (* bedrock2 value *)
       type.for_each_lhs_of_arrow
         access_sizes t -> (* sizes in memory *)
-      Semantics.locals ->
-      Semantics.mem -> Prop :=
+      locals ->
+      mem -> Prop :=
     match t with
     | type.base b => fun _ _ _ _ _ => True
     | type.arrow (type.base a) b =>
@@ -72,8 +75,8 @@ Section Equivalent.
     : API.interp_type t -> (* fiat-crypto value *)
       rtype t -> (* bedrock2 value *)
       access_sizes t -> (* sizes in memory *)
-      Semantics.locals ->
-      Semantics.mem -> Prop :=
+      locals ->
+      mem -> Prop :=
     match t with
     | type.base b => equivalent_base
     | _ => fun _ _ _ _ _ => False
@@ -85,8 +88,8 @@ Section Equivalent.
     : base.interp t -> (* fiat-crypto value *)
       listonly_base_rtype t -> (* bedrock2 value *)
       base_access_sizes t ->
-      Semantics.locals ->
-      Semantics.mem -> Prop :=
+      locals ->
+      mem -> Prop :=
     match t with
     | base.type.prod a b =>
       fun x y s locals =>
@@ -101,8 +104,8 @@ Section Equivalent.
     : base.interp t -> (* fiat-crypto value *)
       listexcl_base_rtype t -> (* bedrock2 value *)
       base_access_sizes t ->
-      Semantics.locals ->
-      Semantics.mem -> Prop :=
+      locals ->
+      mem -> Prop :=
     match t with
     | base.type.prod a b =>
       fun x y s locals =>
@@ -116,16 +119,20 @@ End Equivalent.
 
 (* equivalence with flat lists of words *)
 Section EquivalentFlat.
-  Context {p : parameters}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters
+     width BW word mem locals env ext_spec varname_gen error}.
+  Local Notation parameters := (ltac:(let t := type of parameters_sentinel in exact t)) (only parsing).
   Existing Instances rep.listZ_mem rep.Z.
 
   Fixpoint equivalent_flat_base {t}
     : base.interp t ->
-      list Semantics.word ->
+      list word ->
       base_access_sizes t ->
-      Semantics.mem -> Prop :=
+      mem -> Prop :=
     match t as t0 return
-          base.interp t0 -> list Semantics.word
+          base.interp t0 -> list word
           -> base_access_sizes t0 -> _ with
     | base.type.prod a b =>
       fun (x : base.interp a * base.interp b) words sizes =>
@@ -138,7 +145,7 @@ Section EquivalentFlat.
         (* since this is in-memory representation, [words] should be one word
              that indicates the memory location of the head of the list *)
         sep
-          (map:=Semantics.mem)
+          (map:=mem)
           (emp (length words = 1%nat))
           (let addr := word.unsigned (hd (word.of_Z 0%Z) words) in
            rep.equiv (rep:=rep.listZ_mem)
@@ -146,7 +153,7 @@ Section EquivalentFlat.
     | base_Z =>
       fun (x : Z) words sizes =>
         sep
-          (map:=Semantics.mem)
+          (map:=mem)
           (emp (length words = 1%nat))
           (let w := word.unsigned (hd (word.of_Z 0%Z) words) in
            rep.equiv (rep:=rep.Z) x
@@ -156,9 +163,9 @@ Section EquivalentFlat.
 
   Fixpoint equivalent_flat_args {t}
     : type.for_each_lhs_of_arrow API.interp_type t ->
-      list Semantics.word ->
+      list word ->
       type.for_each_lhs_of_arrow access_sizes t ->
-      Semantics.mem -> Prop :=
+      mem -> Prop :=
     match t as t0
           return type.for_each_lhs_of_arrow _ t0 -> _ ->
                  type.for_each_lhs_of_arrow _ t0 -> _
@@ -176,12 +183,12 @@ Section EquivalentFlat.
     end.
   Fixpoint equivalent_listexcl_flat_base {t}
     : base.interp t ->
-      list Semantics.word ->
+      list word ->
       base_access_sizes t ->
-      Semantics.mem -> Prop :=
+      mem -> Prop :=
     match t as t0 return
           base.interp t0 -> _ -> base_access_sizes t0
-          -> Semantics.mem -> Prop with
+          -> mem -> Prop with
     | base.type.prod a b =>
       fun (x : base.interp a * base.interp b) words s=>
         Lift1Prop.ex1
@@ -197,12 +204,12 @@ Section EquivalentFlat.
 
   Fixpoint equivalent_listonly_flat_base {t}
     : base.interp t ->
-      list Semantics.word ->
+      list word ->
       base_access_sizes t ->
-      Semantics.mem -> Prop :=
+      mem -> Prop :=
     match t as t0 return
           base.interp t0 -> _ -> base_access_sizes t0
-          -> Semantics.mem -> Prop with
+          -> mem -> Prop with
     | base.type.prod a b =>
       fun (x : base.interp a * base.interp b) words sizes =>
         Lift1Prop.ex1

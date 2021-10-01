@@ -1,5 +1,5 @@
 Require Import bedrock2.Semantics.
-Require Import Rupicola.Lib.Api.
+Require Import Rupicola.Lib.Api. Import bedrock2.WeakestPrecondition.
 Require Import Crypto.Algebra.Group.
 Require Import Crypto.Algebra.Hierarchy.
 Require Import Crypto.Algebra.ScalarMult.
@@ -24,15 +24,18 @@ Class GroupParameters_ok {group_parameters : GroupParameters} :=
     scalarmult_ok : @is_scalarmult G eq add zero opp scalarmult;
   }.
 
-Class GroupRepresentation {G : Type} {semantics : Semantics.parameters} :=
+Class GroupRepresentation {G : Type} {width} {BW:Bitwidth.Bitwidth width} {word : word width} {mem : map.map word byte} :=
   { gelem : Type;
     grepresents : gelem -> G -> Prop;
-    GElem : word -> gelem -> Semantics.mem -> Prop;
+    GElem : word -> gelem -> mem -> Prop;
   }.
 
 Section FunctionSpecs.
-  Context {semantics : Semantics.parameters}
-          {scalar_field_parameters : ScalarFieldParameters}
+  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {locals: map.map String.string word}.
+  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
+  Context {ext_spec: bedrock2.Semantics.ExtSpec}.
+  Context {scalar_field_parameters : ScalarFieldParameters}
           {scalar_representaton : ScalarRepresentation}.
   Context {group_parameters : GroupParameters}
           {group_representaton : GroupRepresentation (G:=G)}.

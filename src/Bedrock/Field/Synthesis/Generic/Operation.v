@@ -35,8 +35,10 @@ Notation foreach_ret F t :=
   (F (type.base (type.final_codomain t))) (only parsing).
 
 Section op.
-  Context {p : Types.parameters}
-          {inname_gen outname_gen : nat -> string}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context {inname_gen outname_gen : nat -> string}.
 
   Definition make_bedrock_func_with_sizes
              {t} insizes outsizes inlengths (res : API.Expr t)

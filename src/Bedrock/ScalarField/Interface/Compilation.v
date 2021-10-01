@@ -4,13 +4,21 @@ Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Local Open Scope Z_scope.
 
 Section Compile.
-  Context {semantics : Semantics.parameters}
-          {semantics_ok : Semantics.parameters_ok semantics}.
+  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {locals: map.map String.string word}.
+  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
+  Context {ext_spec: bedrock2.Semantics.ExtSpec}.
+  Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
+  Context {locals_ok : map.ok locals}.
+  Context {env_ok : map.ok env}.
+  Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {scalar_field_parameters : ScalarFieldParameters}.
   Context {scalar_representaton : ScalarRepresentation}.
   Existing Instance spec_of_sctestbit.
 
-  Lemma compile_sctestbit {tr mem locals functions} x i:
+  Local Hint Extern 1 (spec_of sctestbit) => (simple refine (@spec_of_sctestbit _ _ _ _ _ _ _ _)) : typeclass_instances.
+
+  Lemma compile_sctestbit : forall {tr mem locals functions} x i,
     let v := Z.testbit (F.to_Z (sceval x)) (Z.of_nat i) in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
       R x_ptr x_var wi i_var out_var,

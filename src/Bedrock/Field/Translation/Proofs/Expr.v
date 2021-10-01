@@ -30,12 +30,13 @@ Import Wf.Compilers.expr.
 Import Types.Notations.
 
 Section Expr.
-  Context {p : Types.parameters} {p_ok : @ok p}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context {ok : ok}.
 
   Local Existing Instance Types.rep.Z.
   Local Existing Instance Types.rep.listZ_local.
-  Local Instance sem_ok : Semantics.parameters_ok semantics
-    := semantics_ok.
 
   Inductive valid_expr
     : forall {t},
@@ -44,7 +45,7 @@ Section Expr.
   | valid_cast1 :
       forall rc r x,
         valid_expr false x ->
-        range_good r = true ->
+        range_good (width:=width) r = true ->
         valid_expr rc
                    (expr.App
                       (expr.App (expr.Ident ident.Z_cast)
@@ -52,8 +53,8 @@ Section Expr.
   | valid_cast2 :
       forall (rc : bool) r1 r2 x,
         valid_expr false x ->
-        range_good r1 = true ->
-        range_good r2 = true ->
+        range_good (width:=width) r1 = true ->
+        range_good (width:=width) r2 = true ->
         valid_expr rc
                    (expr.App
                       (expr.App (expr.Ident ident.Z_cast2)
@@ -72,7 +73,7 @@ Section Expr.
         valid_expr false (expr.App (expr.Ident ident.snd) x)
   | valid_literalz :
       forall rc z,
-        (is_bounded_by_bool z max_range || negb rc)%bool = true ->
+        (is_bounded_by_bool z (max_range(width:=width)) || negb rc)%bool = true ->
         valid_expr rc (expr.Ident (ident.Literal (t:=base.type.Z) z))
   | valid_literalnat :
       forall n,
@@ -85,7 +86,7 @@ Section Expr.
       forall d l i,
         (* only accepting literal d, because it makes things easier for
            computable condition *)
-        0 <= d < 2 ^ Semantics.width ->
+        0 <= d < 2 ^ width ->
         valid_expr
           false
           (expr.App
@@ -99,20 +100,20 @@ Section Expr.
   | valid_shiftr :
       forall (x : API.expr type_Z) n,
         valid_expr true x ->
-        0 <= n < Semantics.width ->
+        0 <= n < width ->
         valid_expr (t:=type_Z) false
                    (expr.App (expr.App (expr.Ident ident.Z_shiftr) x)
                    (expr.Ident (ident.Literal (t:=base.type.Z) n)))
   | valid_shiftl :
       forall (x : API.expr type_Z) n,
         valid_expr true x ->
-        0 <= n < Semantics.width ->
+        0 <= n < width ->
         valid_expr (t:=type_Z) false
                    (expr.App (expr.App (expr.Ident ident.Z_shiftl) x)
                    (expr.Ident (ident.Literal (t:=base.type.Z) n)))
   | valid_mul_high :
       forall (s : Z) (x y : API.expr type_Z),
-        s = 2 ^ Semantics.width ->
+        s = 2 ^ width ->
         valid_expr true x ->
         valid_expr true y ->
         valid_expr (t:=type_Z) false
@@ -122,8 +123,8 @@ Section Expr.
                                 x) y)
   | valid_truncating_shiftl :
       forall (s n : Z) (x : API.expr type_Z),
-        s = Semantics.width ->
-        0 <= n < Semantics.width ->
+        s = width ->
+        0 <= n < width ->
         valid_expr true x ->
         valid_expr (t:=type_Z) false
                    (expr.App (expr.App
@@ -132,7 +133,7 @@ Section Expr.
                                 x) (expr.Ident (ident.Literal (t:=base.type.Z) n)))
   | valid_lnot_modulo :
       forall (x : API.expr type_Z) (m : Z),
-        is_bounded_by_bool (m-1) max_range = true ->
+        is_bounded_by_bool (m-1) (max_range(width:=width)) = true ->
         2 ^ Z.log2 m = m ->
         valid_expr true x ->
         valid_expr (t:=type_Z) false
@@ -142,7 +143,7 @@ Section Expr.
   | valid_zselect :
       forall (c : API.expr type_Z) (x y : Z),
         x = 0 ->
-        y = 2^Semantics.width-1 ->
+        y = 2^width-1 ->
         valid_expr true c ->
         valid_expr (t:=type_Z) false
                    (expr.App (expr.App
@@ -238,12 +239,12 @@ Section Expr.
         (i : ident.ident (type_Z -> type_Z -> type_Z))
         (x1 x2 : base.interp base_Z)
         (y1 y2 : Syntax.expr)
-        op locals :
+        op l :
     translate_binop i = Some op ->
-    locally_equivalent (t:=type_Z) x1 y1 locals ->
-    locally_equivalent (t:=type_Z) x2 y2 locals ->
+    locally_equivalent (t:=type_Z) x1 y1 l ->
+    locally_equivalent (t:=type_Z) x2 y2 l ->
     WeakestPrecondition.dexpr
-      map.empty locals
+      map.empty l
       (op y1 y2) (word.of_Z (Compilers.ident_interp i x1 x2)).
   Proof.
     intros.
@@ -261,11 +262,11 @@ Section Expr.
   Qed.
 
   Fixpoint locally_equivalent_nobounds_base {t}
-    : base.interp t -> base_rtype t -> Semantics.locals -> Prop :=
+    : base.interp t -> base_rtype t -> locals -> Prop :=
     match t as t0 return
           base.interp t0 ->
           base_rtype t0 ->
-          Semantics.locals -> Prop with
+          locals -> Prop with
     | base.type.prod a b =>
       fun x y locals =>
         locally_equivalent_nobounds_base (fst x) (fst y) locals /\
@@ -282,7 +283,7 @@ Section Expr.
     | _ => fun _ _ _ => False
     end.
   Definition locally_equivalent_nobounds {t}
-    : API.interp_type t -> rtype t -> Semantics.locals -> Prop :=
+    : API.interp_type t -> rtype t -> locals -> Prop :=
     match t with
     | type.base b => locally_equivalent_nobounds_base
     | type.arrow _ _ => fun _ _ _ => False
@@ -306,7 +307,7 @@ Section Expr.
   Lemma require_cast_for_arg_binop {var t} :
     forall i : ident.ident t,
       translate_binop i <> None ->
-      require_cast_for_arg (var:=var) (expr.Ident i) = true.
+      require_cast_for_arg (width:=width) (var:=var) (expr.Ident i) = true.
   Proof.
     destruct i;
       cbn [translate_binop require_cast_for_arg];
@@ -316,7 +317,7 @@ Section Expr.
   Lemma require_cast_for_arg_binop2 {var s d} :
     forall (i : ident.ident (s -> d)) x,
       translate_binop i <> None ->
-      require_cast_for_arg (var:=var) (expr.App (expr.Ident i) x) = true.
+      require_cast_for_arg (width:=width) (var:=var) (expr.App (expr.Ident i) x) = true.
   Proof.
     (* destruct is too weak *)
     intro i.
@@ -349,26 +350,26 @@ Section Expr.
   Qed.
 
   Lemma is_bounded_by_bool_max_range n :
-    0 <= n < 2 ^ Semantics.width ->
-    is_bounded_by_bool n max_range = true.
+    0 <= n < 2 ^ width ->
+    is_bounded_by_bool n (max_range(width:=width)) = true.
   Proof.
     intros; cbv [is_bounded_by_bool upper lower max_range].
     apply Bool.andb_true_iff; split; apply Z.leb_le; lia.
   Qed.
 
   Lemma is_bounded_by_bool_width_range n :
-    0 <= n < Semantics.width ->
-    is_bounded_by_bool n width_range = true.
+    0 <= n < width ->
+    is_bounded_by_bool n (@width_range width) = true.
   Proof.
     intros; cbv [is_bounded_by_bool upper lower width_range].
     apply Bool.andb_true_iff; split; apply Z.leb_le; lia.
   Qed.
 
   (* useful fact to say anything in width_range is also in max_range *)
-  Lemma width_lt_pow2width : Semantics.width < 2 ^ Semantics.width.
+  Lemma width_lt_pow2width : width < 2 ^ width.
   Proof. pose proof word.width_pos. apply Z.pow_gt_lin_r; lia. Qed.
 
-  Lemma pow2width_pos : 0 < 2 ^ Semantics.width.
+  Lemma pow2width_pos : 0 < 2 ^ width.
   Proof.
     pose proof word.width_pos.
     apply Z.pow_pos_nonneg; lia.
