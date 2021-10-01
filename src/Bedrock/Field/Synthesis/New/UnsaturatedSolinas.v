@@ -27,73 +27,75 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Import ListNotations API.Compilers Types.Notations.
 
 Class unsaturated_solinas_ops
-           {p : Types.parameters}
-           {field_parameters : FieldParameters}
-           {n s c} {machine_wordsize : Z} : Type :=
+  {width BW word mem locals env ext_spec varname_gen error}
+  {parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
+  {field_parameters : FieldParameters}
+  {n s c} : Type :=
   { mul_op :
       computed_op
-        (UnsaturatedSolinas.carry_mul n s c machine_wordsize) Field.mul
+        (UnsaturatedSolinas.carry_mul n s c width) Field.mul
         list_binop_insizes list_binop_outsizes (list_binop_inlengths n);
     add_op :
       computed_op
-        (UnsaturatedSolinas.add n s c machine_wordsize) Field.add
+        (UnsaturatedSolinas.add n s c width) Field.add
         list_binop_insizes list_binop_outsizes (list_binop_inlengths n);
     sub_op :
       computed_op
-        (UnsaturatedSolinas.sub n s c machine_wordsize) Field.sub
+        (UnsaturatedSolinas.sub n s c width) Field.sub
         list_binop_insizes list_binop_outsizes (list_binop_inlengths n);
     opp_op :
       computed_op
-        (UnsaturatedSolinas.opp n s c machine_wordsize) Field.opp
+        (UnsaturatedSolinas.opp n s c width) Field.opp
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
     square_op :
       computed_op
-        (UnsaturatedSolinas.carry_square n s c machine_wordsize)
+        (UnsaturatedSolinas.carry_square n s c width)
         Field.square
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
     scmula24_op :
       computed_op
-        (UnsaturatedSolinas.carry_scmul_const n s c Semantics.width
+        (UnsaturatedSolinas.carry_scmul_const n s c width
                                               (F.to_Z a24)) Field.scmula24
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
     from_bytes_op :
       computed_op
-        (UnsaturatedSolinas.from_bytes n s c Semantics.width)
+        (UnsaturatedSolinas.from_bytes n s c width)
         Field.from_bytes
         from_bytes_insizes from_bytes_outsizes (from_bytes_inlengths
                                                   (n_bytes s));
     to_bytes_op :
       computed_op
-        (UnsaturatedSolinas.to_bytes n s c Semantics.width)
+        (UnsaturatedSolinas.to_bytes n s c width)
         Field.to_bytes
         to_bytes_insizes to_bytes_outsizes (to_bytes_inlengths n);
   }.
-Arguments unsaturated_solinas_ops {_ _} _ _ _ _.
+Arguments unsaturated_solinas_ops {_ _ _ _ _ _ _ _ _ _ _} n.
 
 (** We need to tell [check_args] that we are requesting these functions in order to get the relevant properties out *)
 Notation necessary_requests := ["to_bytes"; "from_bytes"]%string (only parsing).
 
 Section UnsaturatedSolinas.
-  Context {p:Types.parameters} {p_ok : Types.ok}
-          {field_parameters : FieldParameters}
-          (varname_gen_is_default :
-             varname_gen = default_varname_gen).
+  Context
+  {width BW word mem locals env ext_spec error}
+  {parameters_sentinel : @parameters width BW word mem locals env ext_spec default_varname_gen error}
+  {field_parameters : FieldParameters}
+  {ok : Types.ok}.
 
   Context (n : nat) (s : Z) (c : list (Z * Z))
           (M_eq : M = m s c)
           (check_args_ok :
-             check_args n s c Semantics.width necessary_requests (ErrorT.Success tt)
+             check_args n s c width necessary_requests (ErrorT.Success tt)
              = ErrorT.Success tt)
           (* TODO: prove a transitivity lemma for list_Z_tighter_than and use
              loose_bounds_tighter_than to prove tight_bounds_tighter_than *)
           (tight_bounds_tighter_than:
              list_Z_tighter_than (tight_bounds n s c)
-                                 (MaxBounds.max_bounds n))
+                                 (@MaxBounds.max_bounds width n))
           (loose_bounds_tighter_than:
              list_Z_tighter_than (loose_bounds n s c)
-                                 (MaxBounds.max_bounds n)).
+                                 (@MaxBounds.max_bounds width n)).
 
-  Context (ops : unsaturated_solinas_ops n s c Semantics.width)
+  Context (ops : unsaturated_solinas_ops n s c)
           mul_func add_func sub_func opp_func square_func
           scmula24_func from_bytes_func to_bytes_func
           (mul_func_eq : mul_func = b2_func mul_op)
@@ -104,8 +106,6 @@ Section UnsaturatedSolinas.
           (scmula24_func_eq : scmula24_func = b2_func scmula24_op)
           (from_bytes_func_eq : from_bytes_func = b2_func from_bytes_op)
           (to_bytes_func_eq : to_bytes_func = b2_func to_bytes_op).
-  Existing Instance semantics_ok.
-
   Local Notation weight :=
     (ModOps.weight (QArith_base.Qnum (limbwidth n s c))
                    (Z.pos (QArith_base.Qden (limbwidth n s c))))
@@ -152,6 +152,14 @@ Section UnsaturatedSolinas.
   Proof using Type. reflexivity. Qed.
   Lemma tight_bounds_eq : Field.tight_bounds = tight_bounds n s c.
   Proof. reflexivity. Qed.
+
+  (* TODO: move to coqutil.Datatypes.List *)
+  Lemma Forall_repeat : forall {A} (R : A -> Prop) n x,
+    R x -> Forall R (repeat x n).
+  Proof using. clear.
+    intros; induction n; intros; cbn [repeat];
+    constructor; auto.
+  Qed.
 
   Lemma byte_bounds_tighter_than :
     list_Z_tighter_than prime_bytes_bounds_value
@@ -246,7 +254,6 @@ Section UnsaturatedSolinas.
             let e := lazymatch goal with | |- forall res, ?e = _ -> API.Wf _ => e end in
             idtac "Warning: Falling back to manually proving pipeline well-formedness for" e;
             PipelineTactics.prove_pipeline_wf ()
-       | |- context [varname_gen] => rewrite varname_gen_is_default
        | |- context [Field.tight_bounds] => rewrite tight_bounds_eq
        | |- context [Field.loose_bounds] => rewrite loose_bounds_eq
        | _ => idtac
@@ -280,8 +287,8 @@ Section UnsaturatedSolinas.
     valid_func (res mul_op _) ->
     forall functions,
       spec_of_BinOp bin_mul (mul_func :: functions).
-  Proof using M_eq check_args_ok mul_func_eq p_ok
-        tight_bounds_tighter_than varname_gen_is_default.
+  Proof using M_eq check_args_ok mul_func_eq ok
+        tight_bounds_tighter_than.
     intros. cbv [spec_of_BinOp bin_mul]. rewrite mul_func_eq.
     pose proof carry_mul_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq mul_op)
@@ -304,8 +311,8 @@ Section UnsaturatedSolinas.
     valid_func (res square_op _) ->
     forall functions,
       spec_of_UnOp un_square (square_func :: functions).
-  Proof using M_eq check_args_ok p_ok square_func_eq
-        tight_bounds_tighter_than varname_gen_is_default.
+  Proof using M_eq check_args_ok ok square_func_eq
+        tight_bounds_tighter_than.
     intros. cbv [spec_of_UnOp un_square]. rewrite square_func_eq.
     pose proof carry_square_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq square_op)
@@ -327,8 +334,8 @@ Section UnsaturatedSolinas.
     valid_func (res add_op _) ->
     forall functions,
       spec_of_BinOp bin_add (add_func :: functions).
-  Proof using M_eq check_args_ok add_func_eq p_ok
-        tight_bounds_tighter_than varname_gen_is_default loose_bounds_tighter_than.
+  Proof using M_eq check_args_ok add_func_eq ok
+        tight_bounds_tighter_than loose_bounds_tighter_than.
     intros. cbv [spec_of_BinOp bin_add]. rewrite add_func_eq.
     pose proof add_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq add_op)
@@ -352,8 +359,8 @@ Section UnsaturatedSolinas.
     valid_func (res sub_op _) ->
     forall functions,
       spec_of_BinOp bin_sub (sub_func :: functions).
-  Proof using M_eq check_args_ok sub_func_eq p_ok
-        tight_bounds_tighter_than varname_gen_is_default loose_bounds_tighter_than.
+  Proof using M_eq check_args_ok sub_func_eq ok
+        tight_bounds_tighter_than loose_bounds_tighter_than.
     intros. cbv [spec_of_BinOp bin_sub]. rewrite sub_func_eq.
     pose proof sub_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq sub_op)
@@ -377,8 +384,7 @@ Section UnsaturatedSolinas.
     valid_func (res opp_op _) ->
     forall functions,
       spec_of_UnOp un_opp (opp_func :: functions).
-  Proof using M_eq check_args_ok loose_bounds_tighter_than opp_func_eq p_ok
-        varname_gen_is_default.
+  Proof using M_eq check_args_ok loose_bounds_tighter_than opp_func_eq ok.
     intros. cbv [spec_of_UnOp un_opp]. rewrite opp_func_eq.
     pose proof opp_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq opp_op)
@@ -402,8 +408,8 @@ Section UnsaturatedSolinas.
     valid_func (res scmula24_op _) ->
     forall functions,
       spec_of_UnOp un_scmula24 (scmula24_func :: functions).
-  Proof using M_eq check_args_ok p_ok scmula24_func_eq
-        tight_bounds_tighter_than varname_gen_is_default.
+  Proof using M_eq check_args_ok ok scmula24_func_eq
+        tight_bounds_tighter_than.
     intros. cbv [spec_of_UnOp un_scmula24]. rewrite scmula24_func_eq.
     pose proof carry_scmul_const_correct
          _ _ _ _ _ (ltac:(eassumption)) (F.to_Z a24) _
@@ -427,8 +433,8 @@ Section UnsaturatedSolinas.
     valid_func (res from_bytes_op _) ->
     forall functions,
       spec_of_from_bytes (from_bytes_func :: functions).
-  Proof using M_eq check_args_ok from_bytes_func_eq p_ok
-        tight_bounds_tighter_than varname_gen_is_default.
+  Proof using M_eq check_args_ok from_bytes_func_eq ok
+        tight_bounds_tighter_than.
     intros. cbv [spec_of_from_bytes]. rewrite from_bytes_func_eq.
     pose proof UnsaturatedSolinas.from_bytes_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq from_bytes_op) (eq_refl true)
@@ -442,6 +448,7 @@ Section UnsaturatedSolinas.
       FtoZ. congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
+    { (*  [bytes_in_bounds] does not seem to be sufficiently specified by FieldRepresentation_ok *)
     (* forall (p0 : Interface.word.rep) (bs : list Init.Byte.byte)
        (R : Interface.map.rep -> Prop) (m : Interface.map.rep),
        Separation.sep (FElemBytes p0 bs) R m -> bytes_in_bounds bs *)
@@ -451,7 +458,7 @@ Section UnsaturatedSolinas.
     valid_func (res to_bytes_op _) ->
     forall functions,
       spec_of_to_bytes (to_bytes_func :: functions).
-  Proof using M_eq check_args_ok p_ok to_bytes_func_eq varname_gen_is_default.
+  Proof using M_eq check_args_ok ok to_bytes_func_eq.
     intros. cbv [spec_of_to_bytes]. rewrite to_bytes_func_eq.
     pose proof UnsaturatedSolinas.to_bytes_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq to_bytes_op) (eq_refl true)
@@ -540,10 +547,8 @@ Section Tests.
   Definition s := (2^255)%Z.
   Definition c := [(1, 19)]%Z.
 
-  Existing Instances default_parameters default_parameters_ok semantics semantics_ok.
+  Existing Instances Defaults64.default_parameters default_parameters_ok.
   Existing Instances no_select_size split_mul_to split_multiret_to.
-  Instance machine_wordsize_opt : machine_wordsize_opt := machine_wordsize.
-
   Definition prefix : string := "fe25519_"%string.
 
   Instance field_parameters : FieldParameters.
@@ -557,7 +562,7 @@ Section Tests.
          M ((a - F.of_Z _ 2) / F.of_Z _ 4)%F prefix).
   Defined.
 
-  Instance fe25519_ops : unsaturated_solinas_ops n s c machine_wordsize.
+  Instance fe25519_ops : unsaturated_solinas_ops n s c.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
   Derive fe25519_mul

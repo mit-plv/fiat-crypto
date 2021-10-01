@@ -21,12 +21,13 @@ Import API.Compilers.
 Import Types.Notations.
 
 Section Expr.
-  Context {p : Types.parameters} {p_ok : @ok p}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context {ok : ok}.
 
   Local Existing Instance Types.rep.Z.
   Local Existing Instance Types.rep.listZ_local.
-  Local Instance sem_ok : Semantics.parameters_ok semantics
-    := semantics_ok.
 
   Definition is_fst_snd_ident {t} (i : ident.ident t) : bool :=
     match i with
@@ -39,9 +40,9 @@ Section Expr.
            (e : @API.expr (fun _ => unit) t) : bool :=
     match e with
     | expr.App type_range (type.arrow type_Z type_Z) f r =>
-      is_cast_ident_expr f && is_cast_literal r
+      is_cast_ident_expr f && is_cast_literal(width:=width) r
     | expr.App type_range2 (type.arrow type_ZZ type_ZZ) f r =>
-      is_cast_ident_expr f && is_cast2_literal r
+      is_cast_ident_expr f && is_cast2_literal(width:=width) r
     | expr.Ident (type.arrow type_ZZ type_Z) i =>
       negb require_casts && is_fst_snd_ident i
     | _ => false
@@ -70,7 +71,7 @@ Section Expr.
         f (expr.Ident _ (ident.Literal base.type.Z s)) =>
       (is_mul_high_ident_expr f)
         && (negb require_casts)
-        && (Z.eqb s (2 ^ Semantics.width))
+        && (Z.eqb s (2 ^ width))
     | expr.Ident (type.arrow type_Z (type.arrow type_Z type_Z)) i =>
       match translate_binop i with
       | None => false
@@ -100,7 +101,7 @@ Section Expr.
         f (expr.Ident _ (ident.Literal base.type.Z s)) =>
       (is_shiftl_ident_expr f)
         && (negb require_casts)
-        && Z.eqb s Semantics.width
+        && Z.eqb s width
     | expr.Ident _ ident.Z_shiftr =>
       negb require_casts
     | expr.Ident _ ident.Z_shiftl =>
@@ -112,7 +113,7 @@ Section Expr.
            (e : @API.expr (fun _ => unit) t) : bool :=
     match e with
     | expr.Ident _ (ident.Literal base.type.Z n) =>
-      is_bounded_by_bool n width_range
+      is_bounded_by_bool n (@width_range width)
     | _ => false
     end.
 
@@ -131,7 +132,7 @@ Section Expr.
                   type_listZ
                   (type.arrow type_nat type_Z))
         f (expr.Ident _ (ident.Literal base.type.Z d)) =>
-      valid_expr_nth_default_App3_bool f && is_bounded_by_bool d max_range
+      valid_expr_nth_default_App3_bool f && is_bounded_by_bool d (@max_range width)
     | _ => false
     end.
   Definition valid_expr_nth_default_App1_bool {t}
@@ -176,7 +177,7 @@ Section Expr.
            (e : @API.expr (fun _ => unit) t) : bool :=
     match e with
     | expr.Ident _ (ident.Literal base.type.Z n) =>
-      (is_bounded_by_bool (n-1) max_range) && (n =? 2 ^ Z.log2 n)
+      (is_bounded_by_bool (n-1) (@max_range width)) && (n =? 2 ^ Z.log2 n)
     | _ => false
     end.
 
@@ -258,7 +259,7 @@ Section Expr.
                  valid_shifter x
                else if valid_expr_bool' Select require_casts f
                     then (* f is a select; make sure x = 2^w-1 *)
-                      is_literalz x (2^Semantics.width-1)
+                      is_literalz x (2^width-1)
                     else
                       if valid_expr_bool' Lnot require_casts f
                       then (* f is lnot_modulo; make sure argument is a valid
@@ -281,7 +282,7 @@ Section Expr.
           (valid_expr_App1_bool require_casts f)
             && valid_expr_bool' NotPartial false x
         | expr.Ident _ (ident.Literal base.type.Z z) =>
-          is_bounded_by_bool z max_range || negb require_casts
+          is_bounded_by_bool z (@max_range width)|| negb require_casts
         | expr.Ident _ (ident.Literal base.type.nat n) =>
           negb require_casts
         | expr.Var type_Z v => true
@@ -387,7 +388,7 @@ Section Expr.
   Lemma valid_expr_nth_default_App3_bool_impl1 {t}
         (f : API.expr t) n l d :
     valid_expr_nth_default_App3_bool f = true ->
-    is_bounded_by_bool d max_range = true ->
+    is_bounded_by_bool d (@max_range width) = true ->
     (match t as t0 return expr.expr t0 -> Prop with
      | type.arrow type_Z
                   (type.arrow type_listZ (type.arrow type_nat type_Z)) =>
@@ -485,10 +486,10 @@ Section Expr.
   Qed.
 
   Lemma is_cast_literal_ident_eq {t} (i : ident.ident t) :
-    is_cast_literal_ident i = true ->
+    is_cast_literal_ident (width:=width) i = true ->
     (match t as t0 return ident.ident t0 -> Prop with
      | type_range =>
-       fun i => i = ident.Literal (t:=base.type.zrange) max_range
+       fun i => i = ident.Literal (t:=base.type.zrange) (@max_range width)
      | _ => fun _ => False
      end) i.
   Proof.
@@ -500,11 +501,11 @@ Section Expr.
   Qed.
 
   Lemma is_cast_literal_eq {t} (r : API.expr t) :
-    is_cast_literal r = true ->
+    is_cast_literal (width:=width) r = true ->
     (match t as t0 return @API.expr (fun _ => unit) t0 -> Prop with
      | type_range =>
        fun r =>
-         r = expr.Ident (ident.Literal (t:=base.type.zrange) max_range)
+         r = expr.Ident (ident.Literal (t:=base.type.zrange) (@max_range width))
      | _ => fun _ => False
      end) r.
   Proof.
@@ -549,14 +550,14 @@ Section Expr.
   Qed.
 
   Lemma is_cast2_literal_App1_eq {t} (r : API.expr t) :
-    is_cast2_literal_App1 r = true ->
+    is_cast2_literal_App1 (width:=width) r = true ->
     (match t as t0 return @API.expr (fun _ => unit) t0 -> Prop with
      | type.arrow type_range type_range2 =>
        fun r =>
          r = expr.App
                (expr.Ident ident.pair)
                (expr.Ident
-                  (ident.Literal (t:=base.type.zrange) max_range))
+                  (ident.Literal (t:=base.type.zrange) (@max_range width)))
      | _ => fun _ => False
      end) r.
   Proof.
@@ -575,7 +576,7 @@ Section Expr.
   Qed.
 
   Lemma is_cast2_literal_eq {t} (r : API.expr t) :
-    is_cast2_literal r = true ->
+    is_cast2_literal (width:=width) r = true ->
     (match t as t0 return @API.expr (fun _ => unit) t0 -> Prop with
      | type_range2 =>
        fun r =>
@@ -583,9 +584,9 @@ Section Expr.
                (expr.App
                   (expr.Ident ident.pair)
                   (expr.Ident
-                     (ident.Literal (t:=base.type.zrange) max_range)))
+                     (ident.Literal (t:=base.type.zrange) (@max_range width))))
                (expr.Ident
-                  (ident.Literal (t:=base.type.zrange) max_range))
+                  (ident.Literal (t:=base.type.zrange) (@max_range width)))
      | _ => fun _ => False
      end) r.
   Proof.
@@ -611,7 +612,7 @@ Section Expr.
          forall
            (r : API.expr type_range)
            (x : API.expr type_Z),
-           is_cast_literal r = true ->
+           is_cast_literal (width:=width) r = true ->
            valid_expr false x ->
            valid_expr rc (expr.App (expr.App f r) x)
      | type.arrow type_range2 (type.arrow type_ZZ type_ZZ) =>
@@ -619,7 +620,7 @@ Section Expr.
          forall
            (r : API.expr type_range2)
            (x : API.expr type_ZZ),
-           is_cast2_literal r = true ->
+           is_cast2_literal (width:=width) r = true ->
            valid_expr false x ->
            valid_expr rc (expr.App (expr.App f r) x)
      | _ => fun _ => False
@@ -795,7 +796,7 @@ Section Expr.
      | type_Z =>
        fun x =>
          exists n,
-           is_bounded_by_bool n width_range = true /\
+           is_bounded_by_bool n (@width_range width) = true /\
            x = expr.Ident (ident.Literal (t:=base.type.Z) n)
      | _ => fun _ => False
      end) x.
@@ -892,7 +893,7 @@ Section Expr.
          forall c x y : API.expr type_Z,
            valid_expr true c ->
            is_literalz x 0 = true ->
-           is_literalz y (2^Semantics.width-1) = true ->
+           is_literalz y (2^width-1) = true ->
            valid_expr rc
                       (expr.App
                          (expr.App
@@ -917,7 +918,7 @@ Section Expr.
      | type_Z =>
        fun x =>
          exists n,
-           is_bounded_by_bool (n-1) max_range = true
+           is_bounded_by_bool (n-1) (@max_range width) = true
            /\ n = 2 ^ Z.log2 n
            /\ x = expr.Ident (ident.Literal (t:=base.type.Z) n)
      | _ => fun _ => False
@@ -983,13 +984,13 @@ Section Expr.
          | type.arrow type_Z type_Z =>
            fun f =>
              forall x,
-               is_literalz x (2^Semantics.width-1) = true ->
+               is_literalz x (2^width-1) = true ->
                valid_expr rc (expr.App f x)
          | type.arrow type_Z (type.arrow type_Z type_Z) =>
            fun f =>
              forall x y,
                is_literalz x 0 = true ->
-               is_literalz y (2^Semantics.width-1) = true ->
+               is_literalz y (2^width-1) = true ->
                valid_expr rc (expr.App (expr.App f x) y)
          | type.arrow
              type_Z
@@ -999,7 +1000,7 @@ Section Expr.
                valid_expr true c ->
                valid_expr_select_bool rc f = true ->
                is_literalz x 0 = true ->
-               is_literalz y (2^Semantics.width-1) = true ->
+               is_literalz y (2^width-1) = true ->
                valid_expr rc (expr.App (expr.App (expr.App f c) x) y)
          | _ => fun _ => False
          end) e

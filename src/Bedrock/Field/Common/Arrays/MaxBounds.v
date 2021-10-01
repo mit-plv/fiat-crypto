@@ -19,20 +19,21 @@ Local Open Scope Z_scope.
 Import ListNotations.
 
 Section MaxBounds.
-  Context {p : Types.parameters} {ok : Types.ok}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context {ok : ok}.
   Context (n : nat).
-
-  Existing Instance semantics_ok.
 
   (* TODO: make Expr.v import this *)
   Definition max_range : ZRange.zrange :=
-    {|ZRange.lower:=0; ZRange.upper:=2^Semantics.width-1|}.
+    {|ZRange.lower:=0; ZRange.upper:=2^width-1|}.
   Definition max_bounds : list (option ZRange.zrange) :=
     repeat (Some max_range) n.
 
   Lemma max_bounds_range_iff x :
     let bytes := (Memory.bytes_per
-                    (width:=Semantics.width) access_size.word) in
+                    (width:=width) access_size.word) in
     list_Z_bounded_by max_bounds x <->
     (length x = n /\
      Forall
@@ -40,7 +41,8 @@ Section MaxBounds.
           0 <= z < 2 ^ (Z.of_nat bytes * 8)) x).
   Proof.
     cbv [max_bounds max_range list_Z_bounded_by].
-    rewrite bits_per_word_eq_width by auto using width_0mod_8.
+    replace (Z.of_nat (Memory.bytes_per access_size.word) * 8) with width
+      by (destruct Bitwidth.width_cases; subst width; exact eq_refl).
     generalize n as m.
     induction x; destruct m; split;
       cbn [FoldBool.fold_andb_map repeat]; try congruence; intros;
@@ -115,32 +117,34 @@ Section MaxBounds.
     eapply Forall_impl;
       [ | apply Forall_map_byte_unsigned ].
     cbv beta; intros.
-    pose proof Z.pow_le_mono_r 2 8 Semantics.width ltac:(lia) width_ge_8.
-    rewrite bits_per_word_eq_width by auto using width_0mod_8.
+    pose proof Z.pow_le_mono_r 2 8 width ltac:(lia) width_ge_8.
+    replace (Z.of_nat (Memory.bytes_per access_size.word) * 8) with width
+      by (destruct Bitwidth.width_cases; subst width; exact eq_refl).
     lia.
   Qed.
 
   Lemma partition_max_range :
     forall x,
       let bytes := (Memory.bytes_per
-                      (width:=Semantics.width) access_size.word) in
+                      (width:=width) access_size.word) in
       Forall (fun z => 0 <= z < 2^(Z.of_nat bytes * 8))
              (Partition.partition
-                (UniformWeight.uweight Semantics.width) n x).
+                (UniformWeight.uweight width) n x).
   Proof.
     pose proof word.width_pos. cbv zeta.
     induction n; intros; [ solve [constructor] | ].
     rewrite partition_step. apply Forall_snoc; auto; [ ].
     rewrite UniformWeight.uweight_S by lia.
     rewrite <-Z.mod_pull_div by auto with zarith.
-    rewrite bits_per_word_eq_width by auto using width_0mod_8.
+    replace (Z.of_nat (Memory.bytes_per access_size.word) * 8) with width
+      by (destruct Bitwidth.width_cases; subst width; exact eq_refl).
     apply Z.mod_pos_bound; auto with zarith.
   Qed.
 
   Lemma partition_bounded_by x :
     list_Z_bounded_by
       max_bounds
-      (Partition.partition (UniformWeight.uweight Semantics.width) n x).
+      (Partition.partition (UniformWeight.uweight width) n x).
   Proof.
     apply max_bounds_range_iff; split;
       auto using partition_max_range, length_partition.

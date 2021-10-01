@@ -27,7 +27,9 @@ Import Types.Notations.
    then returns local variables which we store. This file handles the
    loading/storing part of that process. *)
 Section Lists.
-  Context {p : parameters} {p_ok : ok}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
   Local Existing Instance rep.Z.
 
   Fixpoint extract_listnames {t}
@@ -51,7 +53,7 @@ Section Lists.
              (load_size : access_size)
              (start : Syntax.expr.expr) (i : nat)
     : Syntax.expr.expr :=
-    let nbytes := Memory.bytes_per (width:=Semantics.width) load_size in
+    let nbytes := Memory.bytes_per (width:=width) load_size in
     let offset := expr.literal (Z.of_nat (nbytes * i)) in
     let loc := expr.op bopname.add start offset in
     expr.load load_size loc.
@@ -134,7 +136,7 @@ Section Lists.
              (size : access_size)
              (start value : Syntax.expr.expr) (i : nat)
     : cmd.cmd :=
-    let nbytes := Memory.bytes_per (width:=Semantics.width) size in
+    let nbytes := Memory.bytes_per (width:=width) size in
     let offset := expr.literal (Z.of_nat (nbytes * i)) in
     let loc := expr.op bopname.add start offset in
     cmd.store size loc value.

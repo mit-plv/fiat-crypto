@@ -8,7 +8,7 @@ Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import coqutil.Word.Interface.
 Require Import Crypto.Arithmetic.Core.
-Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults.
+Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults64.
 Require Import Crypto.Bedrock.Field.Common.Tactics.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Bedrock.Field.Synthesis.Generic.Bignum.
@@ -34,7 +34,7 @@ Local Open Scope string_scope.
 Local Notation n := X25519_64.n.
 Local Notation s := X25519_64.s.
 Local Notation c := X25519_64.c.
-Local Notation machine_wordsize := X25519_64.machine_wordsize.
+Local Existing Instances default_parameters default_parameters_ok.
 Local Notation M := (UnsaturatedSolinas.m s c).
 Local Notation weight :=
   (ModOps.weight (QArith_base.Qnum
@@ -64,15 +64,13 @@ Definition mul_twice : func :=
 Instance spec_of_mul_twice : spec_of mul_twice :=
   fun functions =>
     forall x y old_out px py pout t m
-           (R : Interface.map.rep
-                  (map:=Semantics.mem) -> Prop),
+           (R : Interface.map.rep -> Prop),
       let xz := map word.unsigned x in
       let yz := map word.unsigned y in
       list_Z_bounded_by loose_bounds xz ->
       list_Z_bounded_by loose_bounds yz ->
       (Bignum n px x * Bignum n py y * Bignum n pout old_out * R)%sep m ->
       WeakestPrecondition.call
-        (p:=Types.semantics)
         functions mul_twice t m
         (pout :: px :: py ::  nil)
         (fun t' m' rets =>

@@ -3,7 +3,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.ToCString.
-Require Import bedrock2.BasicC64Semantics.
+Require Import coqutil.Word.Naive coqutil.Map.SortedListWord coqutil.Map.SortedListString.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Stringification.IR.
 Require Import Crypto.Bedrock.Field.Common.Types.
@@ -12,7 +12,6 @@ Require Import Crypto.Bedrock.Field.Common.Arrays.MakeListLengths.
 Require Import Crypto.Bedrock.Field.Common.Names.MakeNames.
 Require Import Crypto.Bedrock.Field.Common.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults.
-Require Import Crypto.Bedrock.Field.Translation.Parameters.SelectParameters.
 Require Import Crypto.Bedrock.Field.Translation.Func.
 Require Import Crypto.Bedrock.Field.Stringification.FlattenVarData.
 Require Import Crypto.Bedrock.Field.Stringification.LoadStoreListVarData.
@@ -29,13 +28,15 @@ Local Open Scope string_scope.
 Local Open Scope list_scope.
 
 Section with_parameters.
-  Context {p : parameters}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
 
   Fixpoint make_base_var_data {t}
     : base_ltype t -> list_lengths (type.base t) ->
       option (base_var_data t) :=
     let int_type :=
-        ToString.int.unsigned (Z.to_nat Semantics.width) in
+        ToString.int.unsigned (Z.to_nat width) in
     match t as t0 return
           base_ltype t0 ->
           list_lengths (type.base t0) ->
@@ -113,7 +114,8 @@ Definition bedrock_func_to_lines (f : func)
   [c_func f].
 
 Definition wrap_call
-           {p : parameters}
+  {width BW word mem locals env ext_spec varname_gen error}
+  `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
            {t}
            (indata : type.for_each_lhs_of_arrow var_data t)
            (outdata : base_var_data (type.final_codomain t))
@@ -144,6 +146,14 @@ Definition wrap_call
                  all_args))
         ++ ")")%string.
 
+Local Instance Decidable_Bitwidth width
+  : Decidable.Decidable (Bitwidth.Bitwidth width).
+Proof.
+  eapply Decidable.Decidable_iff_to_impl.
+  { split. { intros H. split. exact H. } { intros [H]. exact H. } }
+  exact _.
+Qed.
+
 (** When writing wrapper functions, we first check to see if any of the arguments fit in uint8_t; if not then we use the given bounds relaxation function *)
 Notation wrapper_relax_zrange relax_zrange
   := (fun r => Option.value (BoundsPipeline.relax_zrange_gen false (* only signed=false *) [8]%Z r) (relax_zrange r)).
@@ -155,7 +165,7 @@ Definition Bedrock2_ToFunctionLines
            {language_naming_conventions : language_naming_conventions_opt}
            {documentation_options : documentation_options_opt}
            {output_options : output_options_opt}
-           (machine_wordsize : Z)
+           (width : Z)
            (do_bounds_check : bool) (internal_static : bool) (static : bool) (all_static : bool) (inline : bool) (prefix : string) (name : string)
            {t}
            (e : @API.Expr t)
@@ -168,10 +178,19 @@ Definition Bedrock2_ToFunctionLines
            (outtypedefs : base_var_typedef_data (type.final_codomain t))
   : (list string * ToString.ident_infos) + string
   :=
-    match select_parameters machine_wordsize with
-    | inr err => inr err
-    | inl p =>
-      let innames := make_innames (inname_gen:=default_inname_gen) t in
+    match Decidable.dec (0 < width)%Z, Decidable.dec (Bitwidth.Bitwidth width) with
+    | left width_pos, left BW =>
+      let p : Types.parameters
+        (BW:=BW)
+        (word:=Naive.word width)
+        (locals:=SortedListString.map _)
+        (mem:=SortedListWord.map(word_ok:=Naive.ok width width_pos) _ _)
+        (env:=SortedListString.map _)
+        (ext_spec:=fun _ _ _ _ _ => False)
+        (varname_gen := default_varname_gen)
+        (error := expr.var Defaults.ERROR)
+        := tt in
+      let innames := make_innames (parameters_sentinel:=p)(inname_gen:=default_inname_gen) t in
       let outnames := make_outnames (outname_gen:=default_outname_gen)
                                     (type.final_codomain t) in
       match list_lengths_from_argbounds inbounds with
@@ -228,7 +247,10 @@ Definition Bedrock2_ToFunctionLines
       | None =>
         inr ("Error determining argument lengths from input bounds")
       end
+    | _,_ => inr ("Only 32-bit and 64-bit targets are supported")
     end.
+Set Printing All.
+Print Bedrock2_ToFunctionLines.
 
 Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
   {|

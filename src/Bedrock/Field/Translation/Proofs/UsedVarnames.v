@@ -23,11 +23,11 @@ Import API.Compilers.
 Import ListNotations Types.Notations.
 
 Section UsedVarnames.
-  Context {p : Types.parameters} {ok : @ok p}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context {ok : ok}.
   Local Existing Instance Types.rep.Z.
-
-  Local Instance sem_ok : Semantics.parameters_ok semantics
-    := semantics_ok.
   Local Instance varname_eqb_spec x y : BoolSpec _ _ _
     := Decidable.String.eqb_spec x y.
   Local Notation varname := String.string.
@@ -156,7 +156,7 @@ Section UsedVarnames.
     eexists; split; eauto; lia.
   Qed.
 
-  Implicit Types l : Semantics.locals.
+  Implicit Types l : locals.
 
   Lemma only_differ_zero nextn l :
     map.only_differ l (used_varnames nextn 0) l.

@@ -23,11 +23,11 @@ Import API.Compilers.
 Import Types.Notations.
 
 Section Func.
-  Context {p : Types.parameters} {p_ok : @ok p}.
-
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context {ok : ok }.
   Local Existing Instance Types.rep.Z.
-  Local Instance sem_ok : Semantics.parameters_ok semantics
-    := semantics_ok.
 
   Definition valid_cmd_bool_if_base
            {t} : @API.expr (fun _ => unit) t -> bool :=

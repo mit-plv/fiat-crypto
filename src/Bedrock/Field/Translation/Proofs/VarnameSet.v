@@ -7,9 +7,11 @@ Import API.Compilers.
 Import Types.Notations.
 
 Section VarnameSet.
-  Context {p : parameters}
-          (* list representation -- could be local or in-memory *)
-          {listZ : rep.rep base_listZ}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters
+     width BW word mem locals env ext_spec varname_gen error}.
+  Context {listZ : rep.rep base_listZ}.
   Existing Instance rep.Z.
 
   (* Set of variable names used by an ltype *)

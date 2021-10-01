@@ -10,7 +10,7 @@ Require Import bedrock2.Map.SeparationLogic.
 Require Import coqutil.Word.Interface.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.Partition.
-Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults.
+Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults64.
 Require Import Crypto.Bedrock.Field.Common.Tactics.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Bedrock.Field.Synthesis.Generic.Bignum.
@@ -27,7 +27,7 @@ Import Syntax.Coercions.
 Local Open Scope Z_scope.
 
 Existing Instances
-         Defaults64.default_parameters names
+         default_parameters default_parameters_ok names
          curve25519_bedrock2_funcs curve25519_bedrock2_specs
          curve25519_bedrock2_correctness.
 Local Open Scope string_scope.
@@ -36,7 +36,6 @@ Local Open Scope string_scope.
 Local Notation n := X25519_64.n.
 Local Notation s := X25519_64.s.
 Local Notation c := X25519_64.c.
-Local Notation machine_wordsize := X25519_64.machine_wordsize.
 Local Notation M := (UnsaturatedSolinas.m s c).
 Local Notation weight :=
   (ModOps.weight (QArith_base.Qnum

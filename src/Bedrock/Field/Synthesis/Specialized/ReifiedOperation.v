@@ -16,10 +16,10 @@ that is necessary to prove the preconditions of translate_func. This way,
 computation of the full term is separated from the rest of the proofs, which has
 performance benefits. **)
 
-Local Notation make_bedrock_func :=
-  (@make_bedrock_func _ default_inname_gen default_outname_gen).
-
-Record reified_op {p t}
+Record reified_op
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @Types.parameters width BW word mem locals env ext_spec varname_gen error}
+    {t}
        {name : String.string}
        {op : operation t}
        {start : ErrorT.ErrorT Pipeline.ErrorMessage
@@ -27,13 +27,13 @@ Record reified_op {p t}
   { res : API.Expr t;
     computed_bedrock_func : Syntax.func;
     computed_bedrock_func_eq :
-      computed_bedrock_func = make_bedrock_func name op res;
+      computed_bedrock_func = make_bedrock_func (inname_gen:=default_inname_gen) (outname_gen:=default_outname_gen) name op res;
     reified_eq : start = ErrorT.Success res;
     reified_Wf_via_start : forall res, start = ErrorT.Success res -> API.Wf res;
     reified_Wf : API.Wf res := reified_Wf_via_start _ reified_eq;
-    reified_valid : Func.valid_func (p:=p) (res (fun _ => unit));
+    reified_valid : Func.valid_func (res (fun _ => unit));
   }.
-Global Arguments reified_op {p t} name op start.
+Global Arguments reified_op {_ _ _ _ _ _ _ _ _ _ t} name op start.
 
 Ltac prove_reified_op :=
   lazymatch goal with |- reified_op _ _ _ => idtac end;
@@ -58,5 +58,5 @@ Ltac prove_reified_op :=
   | |- valid_func_bool ?x = true =>
     abstract vm_cast_no_check (eq_refl true)
   end.
-Ltac make_reified_op p name op start :=
-  assert (@reified_op p _ name op start) by prove_reified_op.
+Ltac make_reified_op parameters_sentinel name op start :=
+  assert (reified_op (parameters_sentinel:=parameters_sentinel) _ name op start) by prove_reified_op.

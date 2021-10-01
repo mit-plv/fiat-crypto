@@ -20,13 +20,11 @@ Import API.Compilers.
 Import ListNotations Types.Notations.
 
 Section OnlyDiffer.
-  Context {p : Types.parameters} {ok : @ok p}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context {ok : ok}.
   Local Existing Instance Types.rep.Z.
-
-  Local Instance sem_ok : Semantics.parameters_ok semantics
-    := semantics_ok.
-  Local Instance varname_eqb_spec x y : BoolSpec _ _ _
-    := Decidable.String.eqb_spec x y.
 
   Lemma equiv_Z_only_differ_iff1
         {listZ : rep.rep base_listZ}
@@ -61,13 +59,14 @@ Section OnlyDiffer.
   Section Local.
     Local Existing Instance rep.listZ_local.
 
-    Lemma equiv_listZ_only_differ_local
-          locals1 locals2 vset (varnames : base_ltype base_listZ) s x mem :
+    Lemma equiv_listZ_only_differ_local : forall
+          locals1 locals2 vset (varnames : base_ltype base_listZ) s x (mem : mem),
       map.only_differ locals1 vset locals2 ->
       disjoint vset (varname_set_base varnames) ->
       rep.equiv x (rep.rtype_of_ltype varnames) s locals1 mem ->
       rep.equiv x (rep.rtype_of_ltype varnames) s locals2 mem.
     Proof.
+      intros *.
       cbn [rep.equiv rep.rtype_of_ltype rep.listZ_local
                      varname_set rep.varname_set].
       rewrite !Forall.Forall2_map_r_iff.
@@ -126,12 +125,14 @@ Section OnlyDiffer.
     Local Existing Instance rep.listZ_mem.
 
     Lemma equiv_listZ_only_differ_mem
-          locals1 locals2 vset (varnames : base_ltype base_listZ) s x mem :
+          locals1 locals2 vset (varnames : base_ltype base_listZ) s x :
+          forall (mem : mem),
       map.only_differ locals1 vset locals2 ->
       disjoint vset (varname_set_base varnames) ->
       rep.equiv x (rep.rtype_of_ltype varnames) s locals1 mem ->
       rep.equiv x (rep.rtype_of_ltype varnames) s locals2 mem.
     Proof.
+      intros *.
       cbn [rep.equiv rep.rtype_of_ltype rep.listZ_mem
                      varname_set rep.varname_set].
       intros.
@@ -176,7 +177,7 @@ Section OnlyDiffer.
       eapply (equiv_Z_only_differ_undef (listZ:=rep.listZ_mem)); eauto.
     Qed.
 
-    Lemma equiv_nil_iff1 y s locals :
+    Lemma equiv_nil_iff1 y s : forall (locals : locals),
       Lift1Prop.iff1
         (rep.equiv (rep:=rep.listZ_mem) [] y s locals)
         (Lift1Prop.ex1
@@ -340,7 +341,10 @@ Global Hint Resolve
      equiv_listZ_only_differ_mem : equiv.
 
 Section ContextEquivalence.
-  Context {p : Types.parameters} {ok : @ok p}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context {ok : ok}.
   Local Existing Instance Types.rep.Z.
 
   Section Local.
@@ -349,7 +353,7 @@ Section ContextEquivalence.
     (* 3-way equivalence (for single elements of the context list G
        from wf3 preconditions) *)
     Definition equiv3 {var1}
-               (locals : Interface.map.rep (map:=Semantics.locals))
+               (locals : Interface.map.rep (map:=locals))
                (x : {t : API.type
                          & (var1 t * API.interp_type t * ltype t)%type})
       : Prop :=

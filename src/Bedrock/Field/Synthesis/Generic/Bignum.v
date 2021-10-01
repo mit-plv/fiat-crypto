@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
+Require Import coqutil.Datatypes.List.
 Require Import bedrock2.Array.
 Require Import bedrock2.Scalars.
 Require Import bedrock2.Map.Separation.
@@ -17,124 +18,97 @@ Require Import Crypto.Bedrock.Field.Common.Arrays.ByteBounds.
 Local Open Scope Z_scope.
 
 Section Bignum.
-  Context {p : Types.parameters}.
+  Import Bitwidth bedrock2.Memory bedrock2.ptsto_bytes.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
 
-  Definition Bignum
-             (n : nat) (px : Semantics.word) (x : list Semantics.word)
-    : Semantics.mem -> Prop :=
-    sep (emp (length x = n)) (array scalar (word.of_Z word_size_in_bytes) px x).
+  Local Notation k := (bytes_per_word width).
+  Definition Bignum (n : nat) (px : word) (x : list word) : mem -> Prop :=
+    sep (emp (length x = n)) (array scalar (word.of_Z k) px x).
 
   Definition EncodedBignum
-             (n_bytes : nat) (px : Semantics.word) (x : list Byte.byte)
-    : Semantics.mem -> Prop :=
+             (n_bytes : nat) (px : word) (x : list Byte.byte)
+    : mem -> Prop :=
     sep (emp (length x = n_bytes)) (array ptsto (word.of_Z 1) px x).
 
   Section Proofs.
     Context {ok : Types.ok}.
-    Existing Instance semantics_ok.
 
-    (* TODO: factor this proof into a more general form that says if subarrays
-    of your arrays form a different kind of element, then you have an array of
-    the other type *)
+    (* note: LittleEndianList would work better here if Translation used it too *)
+    Local Notation lew_combine :=
+      (fun c => word.of_Z (LittleEndian.combine _ (HList.tuple.of_list c))).
+    Local Notation lew_split :=
+      (fun w => HList.tuple.to_list (LittleEndian.split (Z.to_nat k) (word.unsigned w))).
+
     Lemma Bignum_of_bytes n :
       forall addr bs,
-        length bs = (n * Z.to_nat word_size_in_bytes)%nat ->
-        Lift1Prop.impl1
+        length bs = (n * Z.to_nat (bytes_per_word width))%nat ->
+        Lift1Prop.iff1
           (array ptsto (word.of_Z 1) addr bs)
-          (Lift1Prop.ex1 (Bignum n addr)).
+          (Bignum n addr (map lew_combine (chunk (Z.to_nat k) bs))).
     Proof.
       cbv [Bignum].
       induction n; intros.
       { destruct bs; cbn [length] in *; try lia; [ ].
-        repeat intro. exists nil.
-        cbn [array length] in *. sepsimpl; eauto. }
-      { rewrite <-(firstn_skipn (Z.to_nat word_size_in_bytes) bs).
+        repeat intro. intuition sepsimpl; eauto. }
+      { rewrite <-(firstn_skipn (Z.to_nat k) bs).
         rewrite array_append.
         rewrite Scalars.scalar_of_bytes with (l:=List.firstn _ _);
           lazymatch goal with
-          | [ |- _ <= Semantics.width ] => destruct Semantics.width_cases; lia
+          | [ |- _ <= width ] => destruct width_cases; lia
           | _ => idtac
           end.
         2:{
-          rewrite word_size_in_bytes_eq in *.
-          etransitivity;
-            [ symmetry; apply bits_per_word_eq_width;
-              solve [eauto using width_0mod_8] | ].
           rewrite firstn_length, Min.min_l by lia.
-          lia. }
-        intros ? Hsep. destruct Hsep as [? [? [? [Hsca Harr]]]].
-        cbv [Lift1Prop.impl1] in *.
-        pose proof word_size_in_bytes_pos.
-        rewrite word.unsigned_of_Z_1, Z.mul_1_l in Harr.
-        rewrite firstn_length, Min.min_l in Harr by nia.
-        rewrite Z2Nat.id in Harr by lia.
-        match type of Harr with
-        | array _ _ _ (List.skipn ?sz ?xs) _ =>
-          match goal with
-          | H : length xs = (S ?n * sz)%nat |- _ =>
-            assert (length (List.skipn sz xs) = (n * sz)%nat);
-              [ rewrite skipn_length, H; nia | ]
-          end
-        end.
-        specialize (IHn _ _ ltac:(eauto) _ Harr).
-        destruct IHn; sepsimpl.
-        match goal with
-        | Htl : array scalar _ _ ?t _,
-                Hhd : scalar _ ?h _ |- _ =>
-          exists (h :: t)
-        end.
-        cbn [length array].
-        sepsimpl; eauto; [ ].
-        do 2 eexists.
-        eauto. }
+          destruct width_cases; subst width; trivial. }
+        rewrite chunk_app_chunk; cycle 1.
+        { destruct width_cases; subst width; cbv; inversion 1. }
+        { rewrite firstn_length; lia. }
+        cbn [length array map]; progress (cancel; cbv [seps]).
+        unshelve erewrite (_ : forall n m, (S n = S m <-> n = m)).
+        { clear; intros; split; congruence. }
+        rewrite <-IHn by (rewrite skipn_length; lia); clear IHn.
+        Morphisms.f_equiv. f_equal. f_equal.
+        rewrite word.unsigned_of_Z_1, Z.mul_1_l, firstn_length, H.
+        destruct width_cases; subst width; cbn; lia. }
+    Qed.
+
+    (* TODO: move to coqutil.List.Datatypes *)
+    Lemma chunk_flat_map_exact {A B} k (Hk : k <> O)
+      (f : A -> list B) (Hf : forall a : A, length (f a) = k) xs
+      : chunk k (flat_map f xs) = map f xs.
+    Proof.
+      induction xs; trivial; cbn [flat_map map].
+      rewrite ?chunk_app_chunk, IHxs; trivial.
     Qed.
 
     Lemma Bignum_to_bytes n :
       forall addr x,
-        Lift1Prop.impl1
+        Lift1Prop.iff1
           (Bignum n addr x)
-          (Lift1Prop.ex1
-             (fun bs =>
-                sep (emp (length bs = (n * Z.to_nat word_size_in_bytes)%nat))
-                    (array ptsto (word.of_Z 1) addr bs))).
+          (sep (emp (length (flat_map lew_split x) = (n * Z.to_nat k)%nat))
+          (array ptsto (word.of_Z 1) addr (flat_map lew_split x))).
     Proof.
-      cbv [Bignum].
-      induction n; repeat intro; sepsimpl; destruct x;
-        cbn [length array] in *; try lia;
-        [ exists nil; cbn in *; sepsimpl; solve [eauto] | ].
-      match goal with
-      | H : sep _ _ _ |- _ =>
-        seprewrite_in scalar_to_bytes H
-      end.
-      match goal with
-      | H : sep _ _ _ |- _ =>
-        cbv [sep] in H; cleanup
-      end.
-      match goal with
-      | H : array scalar _ ?addr ?xs ?m |- _ =>
-        specialize (IHn addr xs m);
-          match type of IHn with ?P -> _ =>
-                                 assert P by (sepsimpl; auto; lia) end;
-          specialize (IHn ltac:(assumption))
-      end.
-      destruct IHn as [bs ?].
-      sepsimpl.
-      match goal with
-      | Htl : array ptsto _ _ bs _,
-              Hhd : array ptsto _ _ ?h _ |- _ =>
-        exists (h ++ bs)
-      end.
-      sepsimpl; [ | ].
-      { rewrite app_length.
-        rewrite HList.tuple.length_to_list.
-        rewrite word_size_in_bytes_eq in *.
-        rewrite !Nat2Z.id in *. lia. }
-      { apply array_append.
-        pose proof word_size_in_bytes_pos.
-        rewrite word.unsigned_of_Z_1, Z.mul_1_l.
-        rewrite HList.tuple.length_to_list.
-        rewrite <-word_size_in_bytes_eq.
-        do 2 eexists. eauto. }
+      intros.
+      assert (length (flat_map lew_split x) = (length x * Z.to_nat k)%nat).
+      { erewrite flat_map_const_length, Nat.mul_comm;
+        auto using HList.tuple.length_to_list. }
+      rewrite Bignum_of_bytes by eassumption; cbv [Bignum].
+      rewrite chunk_flat_map_exact, map_map; cycle 1.
+      { destruct width_cases; subst width; inversion 1. }
+      { intros; apply HList.tuple.length_to_list. }
+      erewrite List.map_ext with (g:=fun x=>x), map_id; try cancel; cbv [seps].
+      { rewrite sep_emp_emp. setoid_rewrite H. 
+        cbv [Lift1Prop.iff1 emp]; intuition (
+          destruct width_cases; subst width; subst; cbn in *; try nia). }
+      intros.
+      (* note: this mess would unnecessary with LittleEndianList *)
+      destruct width_cases; subst width; simpl k; simpl length(*+arguments*);
+        unshelve erewrite (_:HList.tuple.of_list _=_);
+        rewrite ?LittleEndian.combine_split; try exact eq_refl;
+        rewrite Z.mod_small, word.of_Z_unsigned;
+        trivial; eapply word.unsigned_range.
     Qed.
   End Proofs.
 End Bignum.

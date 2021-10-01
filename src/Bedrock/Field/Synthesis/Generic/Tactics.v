@@ -57,8 +57,9 @@ Ltac crush_argument_equivalence_subgoals :=
          | |- map word.unsigned _ = map byte.unsigned _ =>
            erewrite map_unsigned_of_Z,map_word_wrap_bounded
              by eauto using byte_unsigned_within_max_bounds
-         | _ => solve [apply Forall_word_unsigned_within_access_size;
-                       auto using width_0mod_8]
+         | _ => solve [unshelve eapply Forall_word_unsigned_within_access_size;
+             rewrite ?bytes_per_word_eq, ?bits_per_word_eq_width; trivial]
+
          | _ => solve [auto using Forall_map_unsigned,
                        Forall_map_byte_unsigned]
          | _ => solve [apply word.unsigned_range]
@@ -141,7 +142,8 @@ Ltac access_size_simplify :=
 Ltac simplify_translate_func_postcondition :=
   match goal with
     H : context [sep _ _ ?m] |- context [_ ?m] =>
-    cbn - [Memory.bytes_per translate_func] in H
+    cbn - [Memory.bytes_per_word translate_func] in H;
+    rewrite ?Z2Nat.id in H by (apply Z.lt_le_incl, word_size_in_bytes_pos)
   end;
   sepsimpl_hyps.
 
@@ -150,9 +152,12 @@ Ltac setup_lists_reserved :=
   translator_simplify;
   try match goal with
       | H : context [map byte.unsigned ?bs] |- _ =>
+        let width := open_constr:(_) in
+        let __ := constr:(_ : Bitwidth.Bitwidth width) in
+        let word := constr:( _ :Interface.word width) in
         assert (map byte.unsigned bs
                 = map word.unsigned
-                      (map (@word.of_Z _ Semantics.word) (map byte.unsigned bs)))
+                      (map (@word.of_Z _ word) (map byte.unsigned bs)))
           by (erewrite map_unsigned_of_Z, map_word_wrap_bounded;
               eauto using byte_unsigned_within_max_bounds)
       end.
@@ -162,8 +167,8 @@ Ltac handle_lists_reserved :=
          | _ => progress sepsimpl;
                 auto using Forall_map_unsigned,
                 Forall_map_byte_unsigned
-         | _ => rewrite bits_per_word_eq_width
-             by auto using width_0mod_8
+         | _ => solve [unshelve eapply Forall_word_unsigned_within_access_size;
+             rewrite ?bytes_per_word_eq, ?bits_per_word_eq_width; trivial]
          | _ => erewrite map_unsigned_of_Z,map_word_wrap_bounded
              by eauto using byte_unsigned_within_max_bounds
          | |- WeakestPrecondition.get _ _ _ =>
@@ -196,7 +201,11 @@ Ltac get_bedrock2_arglist args :=
     let y := get_bedrock2_arglist b in
     let ptrs := (eval cbv [app] in (x ++ y)%list) in
     constr:(ptrs)
-  | tt => constr:(@nil (Semantics.word)) (* end of args *)
+  | tt => 
+      let width := open_constr:(_) in
+      let __ := constr:(_ : Bitwidth.Bitwidth width) in
+      let word := constr:( _ :Interface.word width) in
+      constr:(@nil word) (* end of args *)
   | ?x =>
     lazymatch type of x with
     | list _ =>
@@ -243,7 +252,10 @@ Ltac exists_all_placeholders out_array_ptrs :=
         lazymatch type of bits with
         | list word.rep => constr:(bits)
         | list Init.Byte.byte =>
-          constr:(map (@word.of_Z _ Semantics.word) (map byte.unsigned bits))
+          let width := open_constr:(_) in
+          let __ := constr:(_ : Bitwidth.Bitwidth width) in
+          let word := constr:( _ :Interface.word width) in
+          constr:(map (@word.of_Z _ word) (map byte.unsigned bits))
         | ?t => fail "unexpected placeholder type" t
         end in
     exists_out_array_placeholder zs words p;
@@ -266,11 +278,12 @@ Ltac canonicalize_arrays :=
            seprewrite_in array_truncated_scalar_scalar_iff1 H
          | H : sep _ _ ?m |- context [?m] =>
            seprewrite_in array_truncated_scalar_ptsto_iff1 H
-         | _ => rewrite <-@word_size_in_bytes_eq in * by eauto
          | _ => rewrite byte_map_of_Z_unsigned by auto
          | _ => rewrite map_unsigned_of_Z by auto
          | _ => erewrite map_word_wrap_bounded by
                eauto using byte_unsigned_within_max_bounds
+         | _ => progress cbn [Memory.bytes_per] in *
+         | _ => rewrite !Z2Nat.id by (apply Z.lt_le_incl, word_size_in_bytes_pos)
          end.
 
 Ltac solve_translate_func_subgoals prove_bounds t :=
@@ -278,7 +291,7 @@ Ltac solve_translate_func_subgoals prove_bounds t :=
   make_outnames_varname_gen_disjoint,
   make_innames_make_outnames_disjoint,
   flatten_make_innames_NoDup, flatten_make_outnames_NoDup;
-  pose proof bits_per_word_eq_width width_0mod_8;
+  pose proof bits_per_word_le_width;
   pose proof width_ge_8;
   repeat match goal with
          | _ => progress sepsimpl

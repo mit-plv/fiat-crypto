@@ -21,17 +21,20 @@ Class ScalarFieldParameters_ok
 
 Class ScalarRepresentation
       {scalar_field_parameters : ScalarFieldParameters}
-      {semantics : Semantics.parameters} :=
+      {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}
+       :=
   { scalar : Type;
     sceval : scalar -> F L_pos;
-    Scalar : word -> scalar -> Semantics.mem -> Prop;
+    Scalar : word -> scalar -> mem -> Prop;
   }.
 
 Section FunctionSpecs.
-  Context {semantics : Semantics.parameters}
-          {semantics_ok : Semantics.parameters_ok semantics}.
+  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {locals: map.map String.string word}.
+  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
+  Context {ext_spec: bedrock2.Semantics.ExtSpec}.
   Context {scalar_field_parameters : ScalarFieldParameters}.
-  Context {scalar_representaton : ScalarRepresentation}.
+  Context {scalar_representaton : ScalarRepresentation (word:=word) (mem:=mem)}.
 
   Definition spec_of_sctestbit : spec_of sctestbit :=
     (forall! (x : scalar) (px wi : word)
@@ -48,8 +51,7 @@ Section FunctionSpecs.
 End FunctionSpecs.
 
 Section SpecProperties.
-  Context {semantics : Semantics.parameters}
-          {semantics_ok : Semantics.parameters_ok semantics}.
+  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
   Context {scalar_field_parameters : ScalarFieldParameters}
           {scalar_field_parameters_ok : ScalarFieldParameters_ok}
           {scalar_representation : ScalarRepresentation}.

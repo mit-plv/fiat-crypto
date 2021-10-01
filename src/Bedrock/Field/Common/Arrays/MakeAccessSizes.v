@@ -22,7 +22,9 @@ Import AbstractInterpretation.Compilers.
 Import Types.Notations.
 
 Section __.
-  Context {p : Types.parameters}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
   Existing Instances rep.Z rep.listZ_mem.
 
   Let all_access_sizes :=
@@ -44,7 +46,7 @@ Section __.
 
   Definition access_size_to_zrange (size : access_size) : zrange :=
     let bytes := Z.of_nat (Memory.bytes_per
-                             (width:=Semantics.width) size) in
+                             (width:=width) size) in
     {| lower:=0; upper:= (2^(bytes*8) - 1) |}.
 
   Definition zrange_to_access_size'
@@ -145,8 +147,7 @@ Section __.
     end.
 
   Section proofs.
-    Context {p_ok : @Types.ok p}.
-    Existing Instance semantics_ok.
+    Context {ok : Types.ok}.
 
     Lemma access_size_to_zrange_lower s :
       lower (access_size_to_zrange s) = 0.
@@ -262,25 +263,32 @@ Section __.
         eauto using zrange_to_access_size_tighter_than_word.
     Qed.
 
+    Lemma bits_per_word_eq_width :
+      (Z.of_nat (Memory.bytes_per
+                   (width:=width) access_size.word) * 8
+       = width).
+    Proof.
+      destruct Bitwidth.width_cases; subst; cbv; trivial.
+    Qed.
+
     Lemma bits_per_word_le_width :
       (Z.of_nat (Memory.bytes_per
-                   (width:=Semantics.width) access_size.word) * 8
-       <= Semantics.width).
+                   (width:=width) access_size.word) * 8
+       <= width).
     Proof.
-      rewrite bits_per_word_eq_width by auto using width_0mod_8.
-      reflexivity.
+      rewrite bits_per_word_eq_width; reflexivity.
     Qed.
 
     Lemma bytes_per_word_eq :
-      Z.to_nat (Memory.bytes_per_word Semantics.width)
-      = Memory.bytes_per (width:=Semantics.width) access_size.word.
+      Z.to_nat (Memory.bytes_per_word width)
+      = Memory.bytes_per (width:=width) access_size.word.
     Proof. reflexivity. Qed.
 
     Lemma make_access_size_good ranges size :
       make_access_size ranges = Some size ->
       (Z.of_nat (Memory.bytes_per
-                   (width:=Semantics.width) size) * 8
-       <= Semantics.width).
+                   (width:=width) size) * 8
+       <= width).
     Proof.
       intros.
       pose proof word.width_pos.
@@ -341,7 +349,7 @@ Section __.
     Qed.
 
     (* useful for proving byte access sizes are legal *)
-    Lemma width_ge_8 : 8 <= Semantics.width.
+    Lemma width_ge_8 : 8 <= width.
     Proof.
       pose proof word.width_pos.
       pose proof width_0mod_8.

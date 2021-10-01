@@ -34,7 +34,9 @@ Import Syntax.Coercions.
 Local Open Scope Z_scope.
 
 Section Generic.
-  Context {p : Types.parameters}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
   Definition make_bedrock_func {t} (name : string)
              insizes outsizes inlengths (res : API.Expr t)
   : func :=
@@ -79,7 +81,10 @@ Local Hint Resolve MakeAccessSizes.bits_per_word_le_width
   : translate_func_preconditions.
 
 Section WithParameters.
-  Context {p:Types.parameters} {p_ok : Types.ok}
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context {ok : Types.ok}
           {field_parameters : FieldParameters}.
   Context (n n_bytes : nat) (weight : nat -> Z)
           (loose_bounds tight_bounds byte_bounds
@@ -92,9 +97,8 @@ Section WithParameters.
              disjoint default_inname_gen varname_gen)
           (outname_gen_varname_gen_disjoint :
              disjoint default_outname_gen varname_gen).
-  Existing Instance semantics_ok.
   Local Instance field_representation : FieldRepresentation
-    := @frep p field_parameters n n_bytes weight loose_bounds tight_bounds
+    := @frep _ BW _ _ field_parameters n n_bytes weight loose_bounds tight_bounds
              byte_bounds.
   Local Instance field_representation_ok : FieldRepresentation_ok
     := frep_ok n n_bytes weight loose_bounds tight_bounds byte_bounds
@@ -103,29 +107,30 @@ Section WithParameters.
   Lemma FElem_array_truncated_scalar_iff1 px x :
     Lift1Prop.iff1
       (FElem px x)
-      (sep (map:=Semantics.mem)
-           (emp (map:=Semantics.mem) (length x = n))
+      (sep (map:=mem)
+           (emp (map:=mem) (length x = n))
            (Array.array
               (Scalars.truncated_scalar access_size.word)
               (word.of_Z
                  (Z.of_nat (BinIntDef.Z.to_nat (bytes_per_word width))))
               px (map word.unsigned x))).
-  Proof using p_ok.
+  Proof using ok.
     cbv [FElem Bignum.Bignum field_representation frep].
     rewrite Util.array_truncated_scalar_scalar_iff1.
-    rewrite word_size_in_bytes_eq. reflexivity.
+    Morphisms.f_equiv. Morphisms.f_equiv. Morphisms.f_equiv.
+    destruct Bitwidth.width_cases as [W|W]; rewrite W; trivial.
   Qed.
 
   Lemma FElemBytes_array_truncated_scalar_iff1 pbs bs :
     Lift1Prop.iff1
       (FElemBytes pbs bs)
-      (sep (map:=Semantics.mem)
-           (emp (map:=Semantics.mem)
+      (sep (map:=mem)
+           (emp (map:=mem)
                 (length bs = encoded_felem_size_in_bytes))
            (Array.array
               (Scalars.truncated_scalar access_size.one)
               (word.of_Z 1) pbs (map byte.unsigned bs))).
-  Proof using p_ok.
+  Proof using ok.
     cbv [FElemBytes].
     rewrite Util.array_truncated_scalar_ptsto_iff1.
     rewrite ByteBounds.byte_map_of_Z_unsigned.
@@ -151,14 +156,11 @@ Section WithParameters.
       apply Util.get_put_same; reflexivity
     | |- Forall (fun z => 0 <= z < 2 ^ (?e * 8))
                 (map word.unsigned _) =>
-      change e with
-          (Z.of_nat (bytes_per (width:=width) access_size.word));
-      solve [eauto using
-                   Util.Forall_word_unsigned_within_access_size,
-             width_0mod_8]
-    | |- Forall (fun z => 0 <= z < 2 ^ (?e * 8))
+          unshelve eapply Util.Forall_word_unsigned_within_access_size;
+          destruct Bitwidth.width_cases as [W|W]; rewrite W; trivial
+    | |- Forall (fun z => 0 <= z < ?e)
                 (map byte.unsigned _) =>
-      change e with 1; rewrite Z.mul_1_l;
+      change e with 256;
       apply Util.Forall_map_byte_unsigned
     | |- sep _ _ _ =>
       change (Z.of_nat (bytes_per access_size.one)) with 1;
@@ -183,12 +185,12 @@ Section WithParameters.
 
   Ltac compute_names :=
     repeat lazymatch goal with
-           | |- context [@make_innames ?p ?gen ?t] =>
-             let x := constr:(@make_innames p gen t) in
+           | |- context [@make_innames ?w ?B ?W ?M ?L ?E ?X ?G ?R ?p ?gen ?t] =>
+             let x := constr:(@make_innames w B W M L E X G R p gen t) in
              let y := (eval compute in x) in
              change x with y
-           | |- context [@make_outnames ?p ?gen ?t] =>
-             let x := constr:(@make_outnames p gen t) in
+           | |- context [@make_outnames  ?w ?B ?W ?M ?L ?E ?X ?G ?R ?p ?gen ?t] =>
+             let x := constr:(@make_outnames w B W M L E X G R p gen t) in
              let y := (eval compute in x) in
              change x with y
            end.
@@ -200,7 +202,7 @@ Section WithParameters.
           args end in
     let out_ptr := (eval compute in (hd (word.of_Z 0) arg_ptrs)) in
     let in_ptrs := (eval compute in (tl arg_ptrs)) in
-    eapply (@translate_func_correct p p_ok)
+    eapply (translate_func_correct (parameters_sentinel:=parameters_sentinel))
     with (out_ptrs:=[out_ptr]) (flat_args:=in_ptrs)
          (args:=b2_args) (R:=R_).
 
@@ -231,8 +233,9 @@ Section WithParameters.
       apply flatten_make_outnames_NoDup;
       solve [eapply prefix_name_gen_unique]
     | |- LoadStoreList.base_access_sizes_good _ =>
-      autounfold with types access_sizes;
-      solve [auto with translate_func_preconditions]
+       autounfold with types access_sizes; cbn;
+       destruct Bitwidth.width_cases as [W|W]; rewrite ?W;
+           clear; cbn; intuition Lia.lia
     | |- PropSet.disjoint
            (VarnameSet.varname_set_args (make_innames _))
            (VarnameSet.varname_set_base (make_outnames _)) =>
@@ -252,9 +255,8 @@ Section WithParameters.
       rewrite <-?MakeAccessSizes.bytes_per_word_eq;
       sepsimpl; crush_sep; solve [solve_equivalence_side_conditions]
     | |- LoadStoreList.within_access_sizes_args _ _ =>
-      autounfold with access_sizes pairs access_sizes;
-      ssplit; try apply Util.Forall_word_unsigned_within_access_size;
-      solve [auto with translate_func_preconditions]
+      autounfold with types access_sizes; cbn; ssplit; trivial;
+      solve_equivalence_side_conditions 
     | |- LoadStoreList.within_base_access_sizes _ _ =>
       autounfold with types access_sizes;
       first [ eapply MaxBounds.max_bounds_range_iff
@@ -262,8 +264,9 @@ Section WithParameters.
       cbn [type.app_curried fst snd];
       solve [eauto using relax_list_Z_bounded_by]
     | |- LoadStoreList.access_sizes_good_args _ =>
-      autounfold with access_sizes pairs access_sizes;
-      ssplit; solve [auto with translate_func_preconditions]
+      autounfold with access_sizes pairs access_sizes; cbn;
+       destruct Bitwidth.width_cases as [W|W]; rewrite ?W;
+           clear; cbn; intuition Lia.lia
     | |- _ = LoadStoreList.list_lengths_from_args _ =>
       autounfold with list_lengths pairs list_lengths;
       felem_to_array; sepsimpl; rewrite !map_length;
@@ -315,7 +318,7 @@ Section WithParameters.
                valid_func (res (fun _ : API.type => unit)))
             (res_Wf : API.Wf res).
     Context name (bop : BinOp name)
-            (res_eq : forall x y : list Semantics.word,
+            (res_eq : forall x y : list word,
                 bounded_by bin_xbounds x ->
                 bounded_by bin_ybounds y ->
                 feval (map word.of_Z
@@ -328,7 +331,7 @@ Section WithParameters.
                 list_Z_bounded_by bin_ybounds y ->
                 list_Z_bounded_by bin_outbounds (API.interp (res _) x y))
 
-            (outbounds_tighter_than_max : list_Z_tighter_than bin_outbounds (max_bounds n))
+            (outbounds_tighter_than_max : list_Z_tighter_than bin_outbounds ((@max_bounds width) n))
             (xbounds_length : length bin_xbounds = n)
             (ybounds_length : length bin_ybounds = n)
             (outbounds_length : length bin_outbounds = n).
@@ -405,7 +408,7 @@ Section WithParameters.
                valid_func (res (fun _ : API.type => unit)))
             (res_Wf : API.Wf res).
     Context name (uop : UnOp name)
-            (res_eq : forall x : list Semantics.word,
+            (res_eq : forall x : list word,
                 bounded_by un_xbounds x ->
                 feval (map word.of_Z
                            (API.interp (res _) (map word.unsigned x)))
@@ -413,7 +416,7 @@ Section WithParameters.
             (res_bounds : forall x,
                 list_Z_bounded_by un_xbounds x ->
                 list_Z_bounded_by un_outbounds (API.interp (res _) x))
-            (outbounds_tighter_than_max : list_Z_tighter_than un_outbounds (max_bounds n))
+            (outbounds_tighter_than_max : list_Z_tighter_than un_outbounds (@max_bounds width n))
             (xbounds_length : length un_xbounds = n)
             (outbounds_length : length un_outbounds = n).
 
@@ -449,7 +452,7 @@ Section WithParameters.
       forall functions, unop_spec _ (f :: functions).
     Proof using inname_gen_varname_gen_disjoint outbounds_length
           outbounds_tighter_than_max outname_gen_varname_gen_disjoint
-          p_ok relax_bounds res_Wf res_bounds res_eq res_valid.
+          ok relax_bounds res_Wf res_bounds res_eq res_valid.
       subst inlengths insizes outsizes.
       cbv [unop_spec list_unop_insizes list_unop_outsizes list_unop_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
@@ -492,7 +495,7 @@ Section WithParameters.
                valid_func (res (fun _ : API.type => unit)))
             (res_Wf : API.Wf res).
     Context (tight_bounds_tighter_than_max :
-               list_Z_tighter_than tight_bounds (MaxBounds.max_bounds n))
+               list_Z_tighter_than tight_bounds (@MaxBounds.max_bounds width n))
             (tight_bounds_length : length tight_bounds = n)
             (res_eq : forall bs,
                 bytes_in_bounds bs ->
@@ -540,7 +543,7 @@ Section WithParameters.
       forall functions,
         spec_of_from_bytes (f :: functions).
     Proof using inname_gen_varname_gen_disjoint
-          outname_gen_varname_gen_disjoint p_ok relax_bounds res_Wf
+          outname_gen_varname_gen_disjoint ok relax_bounds res_Wf
           res_bounds res_eq res_valid tight_bounds_length
           tight_bounds_tighter_than_max FElemBytes_in_bounds.
       subst inlengths insizes outsizes. cbv [spec_of_from_bytes].
@@ -636,7 +639,7 @@ Section WithParameters.
         spec_of_to_bytes (f :: functions).
     Proof using byte_bounds_length byte_bounds_tighter_than_max
           inname_gen_varname_gen_disjoint
-          outname_gen_varname_gen_disjoint p_ok res_Wf res_bounds
+          outname_gen_varname_gen_disjoint ok res_Wf res_bounds
           res_eq res_valid.
       subst inlengths insizes outsizes. cbv [spec_of_to_bytes].
       cbv [to_bytes_insizes to_bytes_outsizes to_bytes_inlengths].

@@ -116,7 +116,6 @@ src/Bedrock/Field/Translation/LoadStoreList.v
 src/Bedrock/Field/Translation/Parameters/Defaults.v
 src/Bedrock/Field/Translation/Parameters/Defaults32.v
 src/Bedrock/Field/Translation/Parameters/Defaults64.v
-src/Bedrock/Field/Translation/Parameters/SelectParameters.v
 src/Bedrock/Field/Translation/Proofs/Cmd.v
 src/Bedrock/Field/Translation/Proofs/Equivalence.v
 src/Bedrock/Field/Translation/Proofs/EquivalenceProperties.v

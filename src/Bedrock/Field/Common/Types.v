@@ -13,34 +13,10 @@ Import ListNotations. Local Open Scope Z_scope.
 Import API.Compilers.
 
 (*** This file contains the setup for the bedrock2 backend; the type
-system, the parameter class, and some shorthand notations. ***)
-
-Class parameters :=
-  {
-    semantics :> Semantics.parameters;
-    varname_gen : nat -> String.string;
-    error : Syntax.expr.expr;
-    word_size_in_bytes : Z;
-    maxint := 2 ^ Semantics.width;
-  }.
-
-Class ok {p:parameters} :=
-  {
-    semantics_ok : Semantics.parameters_ok semantics;
-    word_size_in_bytes_pos : 0 < word_size_in_bytes;
-    word_size_in_bytes_eq :
-      word_size_in_bytes = Z.of_nat (Memory.bytes_per
-                                       (width:=Semantics.width)
-                                       Syntax.access_size.word);
-    (* width needs to be an integer number of bytes, otherwise integers that fit
-       into allotted bytes are not necessarily < 2^Semantics.width *)
-    width_0mod_8 : Semantics.width mod 8 = 0;
-    varname_gen_unique :
-      forall i j : nat, varname_gen i = varname_gen j <-> i = j;
-  }.
+  system, the parameter class, and some shorthand notations. ***)
 
 (* Notations for commonly-used types in the fiat-crypto language *)
-Module Notations.
+Module Import Notations.
   Notation base_range := (base.type.type_base base.type.zrange).
   Notation base_nat := (base.type.type_base base.type.nat).
   Notation base_Z := (base.type.type_base base.type.Z).
@@ -55,13 +31,50 @@ Module Notations.
   Notation type_range2 := (type.base base_range2).
   Notation type_ZZ := (type.base base_ZZ).
 End Notations.
-Import Notations.
+
+Class parameters
+  {width: Z} {BW: Bitwidth.Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}
+  {locals: map.map String.string word}
+  {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}
+  {ext_spec: bedrock2.Semantics.ExtSpec}
+  {varname_gen : nat -> String.string}
+  {error : Syntax.expr.expr} := parameters_sentinel : unit.
+
+Section WithParameters.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters
+     width BW word mem locals env ext_spec varname_gen error}.
+  Local Notation parameters := (ltac:(let t := type of parameters_sentinel in exact t)) (only parsing).
+  Class ok {parameters_sentinel : parameters} :=
+    {
+      (* semantics_ok : Semantics.parameters_ok semantics *)
+      word_ok :> word.ok word;
+      mem_ok :> map.ok mem;
+      locals_ok :> map.ok locals;
+      env_ok :> map.ok env;
+      ext_spec_ok :> Semantics.ext_spec.ok ext_spec;
+
+      varname_gen_unique :
+        forall i j : nat, varname_gen i = varname_gen j <-> i = j;
+    }.
+
+  Context {ok : ok}.
+  Lemma word_size_in_bytes_pos : 0 < Memory.bytes_per_word width.
+  Proof. destruct Bitwidth.width_cases as [H|H]; rewrite H; cbv; trivial. Qed.
+  Lemma width_0mod_8 : width mod 8 = 0.
+  Proof. destruct Bitwidth.width_cases as [H|H]; rewrite H; cbv; trivial. Qed.
+End WithParameters.
 
 Module rep.
   Section rep.
-    Context {p : parameters}.
+    Context 
+      {width BW word mem locals env ext_spec varname_gen error}
+     `{parameters_sentinel : @parameters
+       width BW word mem locals env ext_spec varname_gen error}.
+    Local Notation parameters := (ltac:(let t := type of parameters_sentinel in exact t)) (only parsing).
 
-    Class rep (t : base.type) :=
+    Class rep {parameters_sentinel : parameters} (t : base.type) :=
       { ltype : Type; (* type for LHS of assignment *)
         rtype : Type; (* type for RHS of assignment *)
         size : Type; (* amount of space taken in memory, if applicable *)
@@ -70,9 +83,7 @@ Module rep.
         make_error : rtype;
         dummy_size : size;
         varname_set : ltype -> PropSet.set string;
-        equiv :
-          base.interp t -> rtype -> size ->
-          Semantics.locals -> Semantics.mem -> Prop }.
+        equiv : base.interp t -> rtype -> size -> locals -> mem -> Prop }.
 
     (* store a list in local variables; each element of the list is
        represented as a separate variable *)
@@ -107,19 +118,19 @@ Module rep.
         equiv :=
           fun (x : list Z) (y : rtype) sz locals =>
             Lift1Prop.ex1
-              (fun start : Semantics.word =>
+              (fun start : word =>
                  Lift1Prop.ex1
-                   (fun ws : list Semantics.word =>
+                   (fun ws : list word =>
                       let bytes :=
-                          Z.of_nat (Memory.bytes_per (width:=Semantics.width) sz) in
-                      sep (map:=Semantics.mem)
+                          Z.of_nat (Memory.bytes_per (width:=width) sz) in
+                      sep (map:=mem)
                           (sep
                              (emp (map word.unsigned ws = x /\
                                    Forall
                                      (fun z =>
                                         (0 <= z < 2 ^ (bytes * 8))%Z)
                                      x))
-                             (fun mem : Semantics.mem =>
+                             (fun mem : mem =>
                                 equiv (word.unsigned start) y
                                       (dummy_size (rep:=zrep))
                                       locals mem))
@@ -140,7 +151,7 @@ Module rep.
         equiv :=
           fun (x : Z) (y : Syntax.expr.expr) _ locals =>
             Lift1Prop.ex1
-              (fun w : Semantics.word =>
+              (fun w : word =>
                  emp (word.unsigned w = x /\
                       WeakestPrecondition.dexpr
                         map.empty locals y w))
@@ -149,7 +160,12 @@ Module rep.
 End rep.
 
 Section defs.
-  Context {p : parameters}
+  Context
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters
+     width BW word mem locals env ext_spec varname_gen error}.
+  Local Notation parameters := (ltac:(let t := type of parameters_sentinel in exact t)) (only parsing).
+  Context
           (* list representation -- could be local or in-memory *)
           {listZ : rep.rep base_listZ}.
   Existing Instance rep.Z.

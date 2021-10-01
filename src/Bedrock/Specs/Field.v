@@ -38,7 +38,8 @@ Class FieldParameters_ok {field_parameters : FieldParameters} :=
 
 Class FieldRepresentation
       {field_parameters : FieldParameters}
-      {semantics : Semantics.parameters} :=
+      {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}
+       :=
   { felem : Type;
     feval : felem -> F M_pos;
     feval_bytes : list byte -> F M_pos;
@@ -47,8 +48,8 @@ Class FieldRepresentation
     bytes_in_bounds : list byte -> Prop;
 
     (* Memory layout *)
-    FElem : word -> felem -> Semantics.mem -> Prop;
-    FElemBytes : word -> list byte -> Semantics.mem -> Prop :=
+    FElem : word -> felem -> mem -> Prop;
+    FElemBytes : word -> list byte -> mem -> Prop :=
       fun addr bs =>
         (emp (length bs = encoded_felem_size_in_bytes)
          * array ptsto (word.of_Z 1) addr bs)%sep;
@@ -62,17 +63,17 @@ Class FieldRepresentation
 
 Definition Placeholder
            {field_parameters : FieldParameters}
-           {semantics : Semantics.parameters}
-           {field_representation : FieldRepresentation}
-           (p : Semantics.word) : Semantics.mem -> Prop :=
-  Memory.anybytes p felem_size_in_bytes.
+           {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}
+           {field_representation : FieldRepresentation(mem:=mem)}
+           (p : word) : mem -> Prop :=
+  Memory.anybytes(mem:=mem) p felem_size_in_bytes.
 
 Class FieldRepresentation_ok
       {field_parameters : FieldParameters}
-      {semantics : Semantics.parameters}
+      {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}
       {field_representation : FieldRepresentation} :=
   {  felem_size_in_bytes_mod :
-       felem_size_in_bytes mod Memory.bytes_per_word Semantics.width = 0;
+       felem_size_in_bytes mod Memory.bytes_per_word width = 0;
      FElem_from_bytes :
       forall px,
         Lift1Prop.iff1 (Placeholder px) (Lift1Prop.ex1 (FElem px));
@@ -81,8 +82,14 @@ Class FieldRepresentation_ok
                         -> bounded_by loose_bounds X;
   }.
 Section FunctionSpecs.
-  Context {semantics : Semantics.parameters}
-          {semantics_ok : Semantics.parameters_ok semantics}.
+  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {locals: map.map String.string word}.
+  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
+  Context {ext_spec: bedrock2.Semantics.ExtSpec}.
+  Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
+  Context {locals_ok : map.ok locals}.
+  Context {env_ok : map.ok env}.
+  Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}
           {field_representation : FieldRepresentation}.
 
@@ -90,6 +97,8 @@ Section FunctionSpecs.
     { un_model: F M_pos -> F M_pos;
       un_xbounds: bounds;
       un_outbounds: bounds }.
+
+  Import WeakestPrecondition.
 
   Definition unop_spec {name} (op: UnOp name) :=
     fnspec! name (pout px : word) / (out x : felem) Rr,
@@ -190,8 +199,14 @@ Existing Instances spec_of_UnOp spec_of_BinOp bin_mul un_square bin_add bin_sub
          un_scmula24 un_inv spec_of_felem_copy spec_of_felem_small_literal.
 
 Section SpecProperties.
-  Context {semantics : Semantics.parameters}
-          {semantics_ok : Semantics.parameters_ok semantics}.
+  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {locals: map.map String.string word}.
+  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
+  Context {ext_spec: bedrock2.Semantics.ExtSpec}.
+  Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
+  Context {locals_ok : map.ok locals}.
+  Context {env_ok : map.ok env}.
+  Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}
           {field_representation : FieldRepresentation}
           {field_representation_ok : FieldRepresentation_ok}.

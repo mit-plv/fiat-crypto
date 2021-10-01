@@ -16,9 +16,15 @@ Require Import Crypto.Spec.MontgomeryCurve.
 
 Module M.
   Section __.
-    Context {semantics : Semantics.parameters}
-            {semantics_ok : Semantics.parameters_ok _}
-            {field_parameters : FieldParameters}
+    Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+    Context {locals: map.map String.string word}.
+    Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
+    Context {ext_spec: bedrock2.Semantics.ExtSpec}.
+    Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
+    Context {locals_ok : map.ok locals}.
+    Context {env_ok : map.ok env}.
+    Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
+    Context {field_parameters : FieldParameters}
             {field_parameters_ok : FieldParameters_ok}
             {field_representation : FieldRepresentation}
             {field_representation_ok : FieldRepresentation_ok}.
@@ -99,7 +105,7 @@ Module M.
       (* redeclaration plugs in implicits so [enter] works *)
       Definition spec_of_scmul : spec_of scmul :=
         Eval cbv [spec_of_scmul] in
-          (@spec_of_scmul semantics scalar_field_parameters
+          (@spec_of_scmul _ _ _ _ _ _ scalar_field_parameters
                           scalar_field_representation group_parameters
                           x_representation).
       Definition spec_of_from_bytes : spec_of from_bytes := spec_of_from_bytes.
@@ -133,7 +139,7 @@ Module M.
                                           expr.var "C"; expr.var "D"; expr.var "DA"; expr.var "CB"])
                          (cmd.call [] to_bytes [expr.var "out"; expr.var "r"]))))).
 
-      Lemma and_iff1_l (X : Prop) (P : Semantics.mem -> Prop) :
+      Lemma and_iff1_l (X : Prop) (P : mem -> Prop) :
         X ->
         Lift1Prop.iff1 (fun m => X /\ P m) P.
       Proof.
@@ -177,7 +183,7 @@ Module M.
           end
         end.
       Ltac extract_emp :=
-        let pred := constr:(emp (map:=Semantics.mem)) in
+        let pred := constr:(emp (map:=mem)) in
         extract_pred pred.
       Ltac extract_ex1 :=
         lazymatch goal with

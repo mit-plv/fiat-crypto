@@ -92,27 +92,29 @@ Ltac apply_correctness_in H :=
   end.
 
 Section __.
-  Context {p : Types.parameters}
+  Context
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
           {inname_gen outname_gen : nat -> string}
           (m : Z).
-  Local Notation is_correct := (@is_correct p inname_gen outname_gen).
+  Local Notation is_correct := (is_correct (parameters_sentinel:=parameters_sentinel) (inname_gen:=inname_gen) (outname_gen:=outname_gen)).
   Local Notation bit_range := {|ZRange.lower := 0; ZRange.upper := 1|}.
-  Local Notation n := (WordByWordMontgomery.n m Semantics.width).
+  Local Notation n := (WordByWordMontgomery.n m width).
   Local Notation n_bytes := (WordByWordMontgomery.n_bytes m).
   Local Notation bounds :=
-    (WordByWordMontgomery.bounds m Semantics.width).
+    (WordByWordMontgomery.bounds m width).
   Local Notation montgomery_domain_bounds :=
-    (WordByWordMontgomery.montgomery_domain_bounds m Semantics.width).
+    (WordByWordMontgomery.montgomery_domain_bounds m width).
   Local Notation non_montgomery_domain_bounds :=
-    (WordByWordMontgomery.non_montgomery_domain_bounds m Semantics.width).
+    (WordByWordMontgomery.non_montgomery_domain_bounds m width).
   Local Notation prime_bounds :=
-    (WordByWordMontgomery.prime_bounds m Semantics.width).
+    (WordByWordMontgomery.prime_bounds m width).
   Local Notation prime_bytes_bounds :=
     (WordByWordMontgomery.prime_bytes_bounds m).
   Local Notation saturated_bounds :=
-    (Primitives.saturated_bounds n Semantics.width).
+    (Primitives.saturated_bounds n width).
   Local Notation eval :=
-    (@WordByWordMontgomery.WordByWordMontgomery.eval Semantics.width n).
+    (@WordByWordMontgomery.WordByWordMontgomery.eval width n).
 
   Ltac select_access_size b :=
     lazymatch b with
@@ -165,87 +167,87 @@ Section __.
   Definition mul
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.mul m Semantics.width).
+    make_operation (WordByWordMontgomery.mul m width).
     prove_operation_correctness.
   Defined.
 
   Definition square
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.square m Semantics.width).
+    make_operation (WordByWordMontgomery.square m width).
     prove_operation_correctness.
   Defined.
 
   Definition add
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.add m Semantics.width).
+    make_operation (WordByWordMontgomery.add m width).
     prove_operation_correctness.
   Defined.
 
   Definition sub
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.sub m Semantics.width).
+    make_operation (WordByWordMontgomery.sub m width).
     prove_operation_correctness.
   Defined.
 
   Definition opp
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.opp m Semantics.width).
+    make_operation (WordByWordMontgomery.opp m width).
     prove_operation_correctness.
   Defined.
 
   Definition to_montgomery
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.to_montgomery m Semantics.width).
+    make_operation (WordByWordMontgomery.to_montgomery m width).
     prove_operation_correctness.
   Defined.
 
   Definition from_montgomery
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.from_montgomery m Semantics.width).
+    make_operation (WordByWordMontgomery.from_montgomery m width).
     prove_operation_correctness.
   Defined.
 
   Definition nonzero
     : operation (type_listZ -> type_Z).
   Proof.
-    make_operation (WordByWordMontgomery.nonzero m Semantics.width).
+    make_operation (WordByWordMontgomery.nonzero m width).
     prove_operation_correctness.
   Defined.
 
   Definition selectznz
     : operation (type_Z -> type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.selectznz m Semantics.width).
+    make_operation (WordByWordMontgomery.selectznz m width).
     prove_operation_correctness.
     Unshelve.
-    { apply Semantics.width. }
-    { apply (inject_Z Semantics.width). }
+    { apply width. }
+    { apply (inject_Z width). }
   Defined.
 
   Definition to_bytes
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.to_bytes m Semantics.width).
+    make_operation (WordByWordMontgomery.to_bytes m width).
     prove_operation_correctness.
   Defined.
 
   Definition from_bytes
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.from_bytes m Semantics.width).
+    make_operation (WordByWordMontgomery.from_bytes m width).
     prove_operation_correctness.
   Defined.
 
   Definition spec_of_mul name : spec_of name :=
     fun functions =>
       forall wx wy px py pout wold_out t m
-             (Rx Ry Rout : Semantics.mem -> Prop),
+             (Rx Ry Rout : mem -> Prop),
         let op := mul in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
         op.(precondition) args ->
@@ -266,7 +268,7 @@ Section __.
   Definition spec_of_square name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Rx Rout : Semantics.mem -> Prop),
+             (Rx Rout : mem -> Prop),
         let op := square in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
@@ -285,7 +287,7 @@ Section __.
   Definition spec_of_add name : spec_of name :=
     fun functions =>
       forall wx wy px py pout wold_out t m
-             (Rx Ry Rout : Semantics.mem -> Prop),
+             (Rx Ry Rout : mem -> Prop),
         let op := add in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
         op.(precondition) args ->
@@ -305,7 +307,7 @@ Section __.
   Definition spec_of_sub name : spec_of name :=
     fun functions =>
       forall wx wy px py pout wold_out t m
-             (Rx Ry Rout : Semantics.mem -> Prop),
+             (Rx Ry Rout : mem -> Prop),
         let op := sub in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
         op.(precondition) args ->
@@ -325,7 +327,7 @@ Section __.
   Definition spec_of_opp name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Rx Rout : Semantics.mem -> Prop),
+             (Rx Rout : mem -> Prop),
         let op := opp in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
@@ -344,7 +346,7 @@ Section __.
   Definition spec_of_to_montgomery name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Rx Rout : Semantics.mem -> Prop),
+             (Rx Rout : mem -> Prop),
         let op := to_montgomery in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
@@ -364,7 +366,7 @@ Section __.
   Definition spec_of_from_montgomery name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Rx Rout : Semantics.mem -> Prop),
+             (Rx Rout : mem -> Prop),
         let op := from_montgomery in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
@@ -384,7 +386,7 @@ Section __.
   Definition spec_of_nonzero name : spec_of name :=
     fun functions =>
       forall wx px t m
-             (Rx Rout : Semantics.mem -> Prop),
+             (Rx Rout : mem -> Prop),
         let op := nonzero in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
@@ -403,7 +405,7 @@ Section __.
   Definition spec_of_selectznz name : spec_of name :=
     fun functions =>
       forall wc wx px wy py pout wold_out t m
-             (Rx Ry Rout : Semantics.mem -> Prop),
+             (Rx Ry Rout : mem -> Prop),
         let op := selectznz in
         let args := (word.unsigned wc,
                      (map word.unsigned wx, (map word.unsigned wy, tt))) in
@@ -426,7 +428,7 @@ Section __.
   Definition spec_of_to_bytes name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Rx Rout : Semantics.mem -> Prop),
+             (Rx Rout : mem -> Prop),
         let op := to_bytes in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
@@ -446,7 +448,7 @@ Section __.
   Definition spec_of_from_bytes name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Rx Rout : Semantics.mem -> Prop),
+             (Rx Rout : mem -> Prop),
         let op := from_bytes in
         let args := (map byte.unsigned wx, tt) in
         op.(precondition) args ->
@@ -481,7 +483,6 @@ Section __.
 
   Section Proofs.
     Context {ok : Types.ok}.
-    Existing Instance semantics_ok.
 
     Context (inname_gen_varname_gen_ok : disjoint inname_gen varname_gen)
             (outname_gen_varname_gen_ok : disjoint outname_gen varname_gen)
@@ -491,7 +492,7 @@ Section __.
 
     Lemma relax_to_max_bounds x :
       list_Z_bounded_by bounds x ->
-      list_Z_bounded_by (max_bounds n) x.
+      list_Z_bounded_by (@max_bounds width n) x.
     Proof.
       apply relax_list_Z_bounded_by. cbn.
       cbv [bounds Primitives.saturated_bounds max_bounds list_Z_tighter_than].
@@ -499,6 +500,14 @@ Section __.
       cbn [repeat FoldBool.fold_andb_map ZRange.lower ZRange.upper max_range].
       apply Bool.andb_true_iff. split; [ | solve [ auto ] ].
       apply Bool.andb_true_iff. split; Z.ltb_to_lt; lia.
+    Qed.
+
+    (* TODO: move to coqutil.Datatypes.List *)
+    Lemma Forall_repeat : forall {A} (R : A -> Prop) n x,
+      R x -> Forall R (repeat x n).
+    Proof using. clear.
+      intros; induction n; intros; cbn [repeat];
+      constructor; auto.
     Qed.
 
     Lemma relax_prime_bounds x :
@@ -563,16 +572,16 @@ Section __.
     Proof. eapply byte_bounds_range_iff. Qed.
 
     Lemma valid_bounded_by_prime_bounds x :
-      (check_args m Semantics.width [] (ErrorT.Success tt)
+      (check_args m width [] (ErrorT.Success tt)
        = ErrorT.Success tt) ->
-      WordByWordMontgomery.valid Semantics.width n m x ->
+      WordByWordMontgomery.valid width n m x ->
       list_Z_bounded_by prime_bounds x.
     Proof.
       intros; unshelve eapply bounded_by_prime_bounds_of_valid; eauto.
     Qed.
 
     Lemma valid_bounded_by_prime_bytes_bounds x :
-      (check_args m Semantics.width [] (ErrorT.Success tt)
+      (check_args m width [] (ErrorT.Success tt)
        = ErrorT.Success tt) ->
       WordByWordMontgomery.valid 8 n_bytes m x ->
       list_Z_bounded_by prime_bytes_bounds x.
@@ -586,7 +595,7 @@ Section __.
       match goal with
       | H: list_Z_bounded_by ?bs x |- _ => idtac
       | _ =>
-        assert (WordByWordMontgomery.valid Semantics.width n m x)
+        assert (WordByWordMontgomery.valid width n m x)
                by prove_bounds_direct;
         assert (list_Z_bounded_by prime_bounds x)
                by (apply valid_bounded_by_prime_bounds; auto)
@@ -716,72 +725,72 @@ Section __.
       | setup_lists_reserved; solve_lists_reserved out_ptrs ].
 
     Context (check_args_ok :
-               check_args m Semantics.width [] (ErrorT.Success tt)
+               check_args m width [] (ErrorT.Success tt)
                = ErrorT.Success tt).
 
     Lemma mul_correct name :
       is_correct
-        (WordByWordMontgomery.mul m Semantics.width)
+        (WordByWordMontgomery.mul m width)
         mul (spec_of_mul name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma square_correct name :
       is_correct
-        (WordByWordMontgomery.square m Semantics.width)
+        (WordByWordMontgomery.square m width)
         square (spec_of_square name).
     Proof. setup. prove_is_correct Rout. Qed.
 
     Lemma add_correct name :
       is_correct
-        (WordByWordMontgomery.add m Semantics.width)
+        (WordByWordMontgomery.add m width)
         add (spec_of_add name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma sub_correct name :
       is_correct
-        (WordByWordMontgomery.sub m Semantics.width)
+        (WordByWordMontgomery.sub m width)
         sub (spec_of_sub name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma opp_correct name :
       is_correct
-        (WordByWordMontgomery.opp m Semantics.width)
+        (WordByWordMontgomery.opp m width)
         opp (spec_of_opp name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma to_montgomery_correct name :
       is_correct
-        (WordByWordMontgomery.to_montgomery m Semantics.width)
+        (WordByWordMontgomery.to_montgomery m width)
         to_montgomery (spec_of_to_montgomery name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma from_montgomery_correct name :
       is_correct
-        (WordByWordMontgomery.from_montgomery m Semantics.width)
+        (WordByWordMontgomery.from_montgomery m width)
         from_montgomery (spec_of_from_montgomery name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma nonzero_correct name :
       is_correct
-        (WordByWordMontgomery.nonzero m Semantics.width)
+        (WordByWordMontgomery.nonzero m width)
         nonzero (spec_of_nonzero name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma selectznz_correct name :
       is_correct
-        (WordByWordMontgomery.selectznz m Semantics.width)
+        (WordByWordMontgomery.selectznz m width)
         selectznz (spec_of_selectznz name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma to_bytes_correct name :
       is_correct
-        (WordByWordMontgomery.to_bytes m Semantics.width)
+        (WordByWordMontgomery.to_bytes m width)
         to_bytes (spec_of_to_bytes name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma from_bytes_correct name :
       is_correct
-        (WordByWordMontgomery.from_bytes m Semantics.width)
+        (WordByWordMontgomery.from_bytes m width)
         from_bytes (spec_of_from_bytes name).
     Proof. setup; prove_is_correct Rout. Qed.
   End Proofs.

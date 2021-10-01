@@ -9,7 +9,6 @@ Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
 Require Import Crypto.Bedrock.Field.Common.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults.
-Require Import Crypto.Bedrock.Field.Translation.Parameters.SelectParameters.
 Require Import Crypto.Bedrock.Field.Synthesis.Specialized.ReifiedOperation.
 Require Import Crypto.Bedrock.Field.Synthesis.Generic.WordByWordMontgomery.
 Require Import Crypto.Bedrock.Field.Synthesis.Generic.Operation.
@@ -97,64 +96,54 @@ Class names_of_operations :=
     name_of_from_bytes : string }.
 
 Record wbwmontgomery_reified_ops
-       {names : names_of_operations} {m machine_wordsize} :=
-  { params : Types.parameters;
-    reified_mul :
+  {width BW word mem locals env ext_spec varname_gen error}
+  {parameters_sentinel : @Types.parameters width BW word mem locals env ext_spec varname_gen error}
+       {names : names_of_operations} {m} :=
+  { reified_mul :
       reified_op name_of_mul
-                 (@Generic.WordByWordMontgomery.mul params m)
-                 (PushButtonSynthesis.WordByWordMontgomery.mul
-                    m machine_wordsize);
+                 (Generic.WordByWordMontgomery.mul m)
+                 (PushButtonSynthesis.WordByWordMontgomery.mul m width);
     reified_square :
       reified_op name_of_square
-                 (@Generic.WordByWordMontgomery.square params m)
-                 (PushButtonSynthesis.WordByWordMontgomery.square
-                    m machine_wordsize);
+                 (Generic.WordByWordMontgomery.square m)
+                 (PushButtonSynthesis.WordByWordMontgomery.square m width);
     reified_add :
       reified_op name_of_add
-                 (@Generic.WordByWordMontgomery.add params m)
-                 (PushButtonSynthesis.WordByWordMontgomery.add
-                    m machine_wordsize);
+                 (Generic.WordByWordMontgomery.add m)
+                 (PushButtonSynthesis.WordByWordMontgomery.add m width);
     reified_sub :
       reified_op name_of_sub
-                 (@Generic.WordByWordMontgomery.sub params m)
-                 (PushButtonSynthesis.WordByWordMontgomery.sub
-                    m machine_wordsize);
+                 (Generic.WordByWordMontgomery.sub m)
+                 (PushButtonSynthesis.WordByWordMontgomery.sub m width);
     reified_opp :
       reified_op name_of_opp
-                 (@Generic.WordByWordMontgomery.opp params m)
-                 (PushButtonSynthesis.WordByWordMontgomery.opp
-                    m machine_wordsize);
+                 (Generic.WordByWordMontgomery.opp m)
+                 (PushButtonSynthesis.WordByWordMontgomery.opp m width);
     reified_to_montgomery :
       reified_op name_of_to_montgomery
-                 (@Generic.WordByWordMontgomery.to_montgomery params m)
-                 (PushButtonSynthesis.WordByWordMontgomery.to_montgomery
-                    m machine_wordsize);
+                 (Generic.WordByWordMontgomery.to_montgomery m)
+                 (PushButtonSynthesis.WordByWordMontgomery.to_montgomery m width);
     reified_from_montgomery :
       reified_op name_of_from_montgomery
-                 (@Generic.WordByWordMontgomery.from_montgomery params m)
-                 (PushButtonSynthesis.WordByWordMontgomery.from_montgomery
-                    m machine_wordsize);
+                 (Generic.WordByWordMontgomery.from_montgomery m)
+                 (PushButtonSynthesis.WordByWordMontgomery.from_montgomery m width);
     reified_nonzero :
       reified_op name_of_nonzero
-                 (@Generic.WordByWordMontgomery.nonzero params m)
-                 (PushButtonSynthesis.WordByWordMontgomery.nonzero
-                    m machine_wordsize);
+                 (Generic.WordByWordMontgomery.nonzero m)
+                 (PushButtonSynthesis.WordByWordMontgomery.nonzero m width);
     reified_selectznz :
       reified_op name_of_selectznz
-                 (@Generic.WordByWordMontgomery.selectznz params m)
-                 (PushButtonSynthesis.WordByWordMontgomery.selectznz
-                    m machine_wordsize);
+                 (Generic.WordByWordMontgomery.selectznz m)
+                 (PushButtonSynthesis.WordByWordMontgomery.selectznz m width);
     reified_to_bytes :
       reified_op name_of_to_bytes
-                 (@Generic.WordByWordMontgomery.to_bytes params m)
-                 (PushButtonSynthesis.WordByWordMontgomery.to_bytes
-                    m machine_wordsize);
+                 (Generic.WordByWordMontgomery.to_bytes m)
+                 (PushButtonSynthesis.WordByWordMontgomery.to_bytes m width);
     reified_from_bytes :
       reified_op name_of_from_bytes
-                 (@Generic.WordByWordMontgomery.from_bytes params m)
-                 (PushButtonSynthesis.WordByWordMontgomery.from_bytes
-                    m machine_wordsize) }.
-Arguments wbwmontgomery_reified_ops {names} m machine_wordsize.
+                 (Generic.WordByWordMontgomery.from_bytes m)
+                 (PushButtonSynthesis.WordByWordMontgomery.from_bytes m width) }.
+Arguments wbwmontgomery_reified_ops {_ _ _ _ _ _ _ _ _ _ _} m.
 
 (*** Helpers ***)
 
@@ -222,7 +211,7 @@ Ltac funcs_from_ops ops :=
            from_bytes := from_bytes_func_value |}.
 
 Ltac specs_from_ops ops m :=
-  let p := eval cbn [params ops] in (params ops) in
+  let p := lazymatch type of ops with wbwmontgomery_reified_ops(parameters_sentinel:=?p) _ => p end in
   let mul_name := (eval compute in name_of_mul) in
   let square_name := (eval compute in name_of_square) in
   let add_name := (eval compute in name_of_add) in
@@ -239,78 +228,78 @@ Ltac specs_from_ops ops m :=
             [fst snd precondition postcondition
                  Generic.WordByWordMontgomery.mul
                  Generic.WordByWordMontgomery.spec_of_mul] in
-          (@Generic.WordByWordMontgomery.spec_of_mul
-             p m mul_name)) in
+          (Generic.WordByWordMontgomery.spec_of_mul
+             (parameters_sentinel:=p) m mul_name)) in
   let square_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.WordByWordMontgomery.square
                  Generic.WordByWordMontgomery.spec_of_square] in
-          (@Generic.WordByWordMontgomery.spec_of_square
-             p m square_name)) in
+          (Generic.WordByWordMontgomery.spec_of_square
+             (parameters_sentinel:=p) m square_name)) in
   let add_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.WordByWordMontgomery.add
                  Generic.WordByWordMontgomery.spec_of_add] in
-          (@Generic.WordByWordMontgomery.spec_of_add
-             p m add_name)) in
+          (Generic.WordByWordMontgomery.spec_of_add
+             (parameters_sentinel:=p) m add_name)) in
   let sub_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.WordByWordMontgomery.sub
                  Generic.WordByWordMontgomery.spec_of_sub] in
-          (@Generic.WordByWordMontgomery.spec_of_sub
-             p m sub_name)) in
+          (Generic.WordByWordMontgomery.spec_of_sub
+             (parameters_sentinel:=p) m sub_name)) in
   let to_montgomery_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.WordByWordMontgomery.to_montgomery
                  Generic.WordByWordMontgomery.spec_of_to_montgomery] in
-          (@Generic.WordByWordMontgomery.spec_of_to_montgomery
-             p m to_montgomery_name)) in
+          (Generic.WordByWordMontgomery.spec_of_to_montgomery
+             (parameters_sentinel:=p) m to_montgomery_name)) in
   let from_montgomery_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.WordByWordMontgomery.from_montgomery
                  Generic.WordByWordMontgomery.spec_of_from_montgomery] in
-          (@Generic.WordByWordMontgomery.spec_of_from_montgomery
-             p m from_montgomery_name)) in
+          (Generic.WordByWordMontgomery.spec_of_from_montgomery
+             (parameters_sentinel:=p) m from_montgomery_name)) in
   let opp_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.WordByWordMontgomery.opp
                  Generic.WordByWordMontgomery.spec_of_opp] in
-          (@Generic.WordByWordMontgomery.spec_of_opp
-             p m opp_name)) in
+          (Generic.WordByWordMontgomery.spec_of_opp
+             (parameters_sentinel:=p) m opp_name)) in
   let nonzero_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.WordByWordMontgomery.nonzero
                  Generic.WordByWordMontgomery.spec_of_nonzero] in
-          (@Generic.WordByWordMontgomery.spec_of_nonzero
-             p m nonzero_name)) in
+          (Generic.WordByWordMontgomery.spec_of_nonzero
+             (parameters_sentinel:=p) m nonzero_name)) in
   let selectznz_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.WordByWordMontgomery.selectznz
                  Generic.WordByWordMontgomery.spec_of_selectznz] in
-          (@Generic.WordByWordMontgomery.spec_of_selectznz
-             p m selectznz_name)) in
+          (Generic.WordByWordMontgomery.spec_of_selectznz
+             (parameters_sentinel:=p) m selectznz_name)) in
   let to_bytes_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.WordByWordMontgomery.to_bytes
                  Generic.WordByWordMontgomery.spec_of_to_bytes] in
-          (@Generic.WordByWordMontgomery.spec_of_to_bytes
-             p m to_bytes_name)) in
+          (Generic.WordByWordMontgomery.spec_of_to_bytes
+             (parameters_sentinel:=p) m to_bytes_name)) in
   let from_bytes_spec :=
       (eval cbv
             [fst snd precondition postcondition
                  Generic.WordByWordMontgomery.from_bytes
                  Generic.WordByWordMontgomery.spec_of_from_bytes] in
-          (@Generic.WordByWordMontgomery.spec_of_from_bytes
-             p m from_bytes_name)) in
+          (Generic.WordByWordMontgomery.spec_of_from_bytes
+             (parameters_sentinel:=p) m from_bytes_name)) in
   exact {| spec_of_mul := mul_spec;
            spec_of_square := square_spec;
            spec_of_add := add_spec;
@@ -342,38 +331,27 @@ Ltac use_correctness_proofs p m :=
   let Hc := fresh in
   match goal with
   | |- context [Generic.WordByWordMontgomery.mul] =>
-    apply (@Generic.WordByWordMontgomery.mul_correct
-             p default_inname_gen default_outname_gen m)
+    Coq.Program.Tactics.rapply @Generic.WordByWordMontgomery.mul_correct
   | |- context [Generic.WordByWordMontgomery.square] =>
-    apply (@Generic.WordByWordMontgomery.square_correct
-             p default_inname_gen default_outname_gen m)
+    Coq.Program.Tactics.rapply @Generic.WordByWordMontgomery.square_correct
   | |- context [Generic.WordByWordMontgomery.add] =>
-    apply (@Generic.WordByWordMontgomery.add_correct
-             p default_inname_gen default_outname_gen m)
+    Coq.Program.Tactics.rapply @Generic.WordByWordMontgomery.add_correct
   | |- context [Generic.WordByWordMontgomery.sub] =>
-    apply (@Generic.WordByWordMontgomery.sub_correct
-             p default_inname_gen default_outname_gen m)
+    Coq.Program.Tactics.rapply @Generic.WordByWordMontgomery.sub_correct
   | |- context [Generic.WordByWordMontgomery.opp] =>
-    apply (@Generic.WordByWordMontgomery.opp_correct
-             p default_inname_gen default_outname_gen m)
+    Coq.Program.Tactics.rapply @Generic.WordByWordMontgomery.opp_correct
   | |- context [Generic.WordByWordMontgomery.to_montgomery] =>
-    apply (@Generic.WordByWordMontgomery.to_montgomery_correct
-             p default_inname_gen default_outname_gen m)
+    Coq.Program.Tactics.rapply @Generic.WordByWordMontgomery.to_montgomery_correct
   | |- context [Generic.WordByWordMontgomery.from_montgomery] =>
-    apply (@Generic.WordByWordMontgomery.from_montgomery_correct
-             p default_inname_gen default_outname_gen m)
+    Coq.Program.Tactics.rapply @Generic.WordByWordMontgomery.from_montgomery_correct
   | |- context [Generic.WordByWordMontgomery.nonzero] =>
-    apply (@Generic.WordByWordMontgomery.nonzero_correct
-             p default_inname_gen default_outname_gen m)
+    Coq.Program.Tactics.rapply @Generic.WordByWordMontgomery.nonzero_correct
   | |- context [Generic.WordByWordMontgomery.selectznz] =>
-    apply (@Generic.WordByWordMontgomery.selectznz_correct
-             p default_inname_gen default_outname_gen m)
+    Coq.Program.Tactics.rapply @Generic.WordByWordMontgomery.selectznz_correct
   | |- context [Generic.WordByWordMontgomery.to_bytes] =>
-    apply (@Generic.WordByWordMontgomery.to_bytes_correct
-             p default_inname_gen default_outname_gen m)
+    Coq.Program.Tactics.rapply @Generic.WordByWordMontgomery.to_bytes_correct
   | |- context [Generic.WordByWordMontgomery.from_bytes] =>
-    apply (@Generic.WordByWordMontgomery.from_bytes_correct
-             p default_inname_gen default_outname_gen m)
+    Coq.Program.Tactics.rapply @Generic.WordByWordMontgomery.from_bytes_correct
   end.
 
 Ltac change_with_computed_func ops :=
@@ -402,14 +380,15 @@ Ltac change_with_computed_func ops :=
     change from_bytes with (computed_bedrock_func (reified_from_bytes ops))
   end.
 
-Ltac prove_correctness ops m machine_wordsize :=
+Ltac prove_correctness ops m :=
+  let width := lazymatch type of ops with wbwmontgomery_reified_ops(width:=?width) _ => width end in
   assert (WordByWordMontgomery.check_args
-            m machine_wordsize [] (ErrorT.Success tt) =
+            m width [] (ErrorT.Success tt) =
           ErrorT.Success tt) by abstract (native_compute; reflexivity);
   lazymatch goal with
     | |- bedrock2_wbwmontgomery_correctness => econstructor end;
   change_with_computed_func ops; rewrite computed_bedrock_func_eq;
-  let p := (eval cbn [params ops] in (params ops)) in
+  let p := lazymatch type of ops with wbwmontgomery_reified_ops(parameters_sentinel:=?p) _ => p end in
   use_correctness_proofs p m; try assumption;
   handle_easy_preconditions.
 
@@ -422,7 +401,6 @@ Ltac make_names_of_operations prefix :=
 
 Ltac make_reified_ops :=
   lazymatch goal with
-    |- wbwmontgomery_reified_ops ?m ?machine_wordsize =>
-    let p := parameters_from_wordsize machine_wordsize in
-    eapply Build_wbwmontgomery_reified_ops with (params:=p)
+    |- wbwmontgomery_reified_ops ?m =>
+    eapply Build_wbwmontgomery_reified_ops
   end; prove_reified_op.

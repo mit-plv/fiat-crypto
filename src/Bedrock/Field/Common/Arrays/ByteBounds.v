@@ -20,7 +20,10 @@ Import ListNotations.
 Import Partition.
 
 Section ByteBounds.
-  Context {p : Types.parameters} {ok : Types.ok}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context {ok : ok}.
   Context (n : nat).
 
   Definition byte_range : ZRange.zrange :=

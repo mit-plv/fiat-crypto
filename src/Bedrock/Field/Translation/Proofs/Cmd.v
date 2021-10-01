@@ -33,12 +33,13 @@ Import Wf.Compilers.expr.
 Import Types.Notations.
 
 Section Cmd.
-  Context {p : Types.parameters} {p_ok : @ok p}.
+  Context 
+    {width BW word mem locals env ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context {ok : ok}.
 
   Local Existing Instance Types.rep.Z.
   Local Existing Instance Types.rep.listZ_local.
-  Local Instance sem_ok : Semantics.parameters_ok semantics
-    := semantics_ok.
 
   Inductive valid_cmd :
     forall {t}, @API.expr (fun _ => unit) t -> Prop :=
@@ -76,16 +77,16 @@ Section Cmd.
     forall (rhs : base_rtype base_listZ)
            (xs : base.interp base_listZ)
            (nextn : nat)
-           (tr : Semantics.trace)
-           (mem : Semantics.mem)
-           (locals : Semantics.locals)
+           tr
+           (mem : mem)
+           (locals : locals)
            functions,
       (* rhs == x *)
       locally_equivalent_base xs rhs locals ->
       (* locals don't contain any variables we can overwrite *)
       (forall n nvars,
           (nextn <= n)%nat ->
-          map.undef_on locals (used_varnames n nvars)) ->
+          map.undef_on locals (used_varnames (varname_gen:=varname_gen) n nvars)) ->
       let out := assign_list nextn rhs in
       let nvars := fst (fst out) in
       let lhs := snd (fst out) in
@@ -97,7 +98,7 @@ Section Cmd.
            tr = tr'
            /\ mem = mem'
            /\ PropSet.sameset (varname_set_base lhs)
-                              (used_varnames nextn nvars)
+                              (used_varnames (varname_gen:=varname_gen) nextn nvars)
            /\ map.only_differ locals (varname_set_base lhs) locals'
            /\ locally_equivalent_base xs (base_rtype_of_ltype lhs) locals').
   Proof.
@@ -106,7 +107,7 @@ Section Cmd.
     { repeat straightline.
       repeat match goal with
              | |- _ /\ _ => split
-             | H : _ |- _ => apply H
+             | _ => eassumption
              | _ => apply only_differ_empty
              | _ => reflexivity
              end. }
@@ -163,16 +164,16 @@ Section Cmd.
     forall (x : base.interp t)
            (rhs : base_rtype t)
            (nextn : nat)
-           (tr : Semantics.trace)
-           (mem : Semantics.mem)
-           (locals : Semantics.locals)
+           tr
+           (mem : mem)
+           (locals : locals)
            functions,
       (* rhs == x *)
       locally_equivalent_base x rhs locals ->
       (* locals don't contain any variables we can overwrite *)
       (forall n nvars,
           (nextn <= n)%nat ->
-          map.undef_on locals (used_varnames n nvars)) ->
+          map.undef_on locals (used_varnames (varname_gen:=varname_gen) n nvars)) ->
       let out := assign_base nextn rhs in
       let nvars := fst (fst out) in
       let lhs := snd (fst out) in
@@ -185,7 +186,7 @@ Section Cmd.
            /\ mem = mem'
            (* return values match the number of variables used *)
            /\ PropSet.sameset (varname_set_base lhs)
-                              (used_varnames nextn nvars)
+                              (used_varnames (varname_gen:=varname_gen) nextn nvars)
            (* new locals only differ in the values of LHS variables *)
            /\ map.only_differ locals (varname_set_base lhs) locals'
            (* evaluating lhs == x *)
@@ -252,16 +253,16 @@ Section Cmd.
     forall (x : API.interp_type t)
            (rhs : rtype t)
            (nextn : nat)
-           (tr : Semantics.trace)
-           (mem : Semantics.mem)
-           (locals : Semantics.locals)
+           tr
+           (mem : mem)
+           (locals : locals)
            functions,
       (* rhs == x *)
       locally_equivalent x rhs locals ->
       (* locals don't contain any variables we can overwrite *)
       (forall n nvars,
           (nextn <= n)%nat ->
-          map.undef_on locals (used_varnames n nvars)) ->
+          map.undef_on locals (used_varnames (varname_gen:=varname_gen) n nvars)) ->
       let out := assign nextn rhs in
       let nvars := fst (fst out) in
       let lhs := snd (fst out) in
@@ -274,7 +275,7 @@ Section Cmd.
            /\ mem = mem'
            (* return values match the number of variables used *)
            /\ PropSet.sameset (varname_set lhs)
-                              (used_varnames nextn nvars)
+                              (used_varnames (varname_gen:=varname_gen) nextn nvars)
            (* new locals only differ in the values of LHS variables *)
            /\ map.only_differ locals (varname_set lhs) locals'
            (* evaluating lhs == x *)
@@ -380,7 +381,7 @@ Section Cmd.
     (* exprs are all related *)
     wf3 G e1 e2 e3 ->
     forall functions
-           (locals : Semantics.locals)
+           (locals : locals)
            (nextn : nat),
       (* ret := fiat-crypto interpretation of e2 *)
       let ret1 : API.interp_type t := API.interp e2 in
@@ -396,9 +397,9 @@ Section Cmd.
       (* locals don't contain any variables we can overwrite *)
       (forall n nvars,
           (nextn <= n)%nat ->
-          map.undef_on locals (used_varnames n nvars)) ->
-      forall (tr : Semantics.trace)
-             (mem : Semantics.mem),
+          map.undef_on locals (used_varnames(varname_gen:=varname_gen) n nvars)) ->
+      forall tr
+             (mem : mem),
         (* contexts are equivalent; for every variable in the context list G,
              the fiat-crypto and bedrock2 results match *)
         context_equiv G locals ->
@@ -411,9 +412,9 @@ Section Cmd.
              mem = mem' /\
              PropSet.subset
                (varname_set (snd (fst out)))
-               (used_varnames nextn nvars) /\
+               (used_varnames(varname_gen:=varname_gen) nextn nvars) /\
              map.only_differ
-               locals (used_varnames nextn nvars) locals' /\
+               locals (used_varnames(varname_gen:=varname_gen) nextn nvars) locals' /\
              locally_equivalent ret1 ret2 locals').
   Proof.
     revert e2 e3 G. cbv zeta.
