@@ -392,7 +392,7 @@ Section WithParameters.
             rewrite <-H end.
           rewrite map_map.
           f_equal; eapply List.nth_error_ext; intros i; rewrite ListUtil.nth_error_map.
-          case (nth_error x2 i); cbn; trivial; []; intros; eapply f_equal.
+          case (nth_error _ i); cbn; trivial; []; intros; eapply f_equal.
           symmetry; eapply word.of_Z_unsigned. }
         { (* output bounds *)
           cbn [bounded_by field_representation frep] in *.
