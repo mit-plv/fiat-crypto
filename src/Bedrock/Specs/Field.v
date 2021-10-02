@@ -127,7 +127,8 @@ Section FunctionSpecs.
     { requires tr mem :=
         bounded_by bin_xbounds x
         /\ bounded_by bin_ybounds y
-        /\ (exists Ra, (FElem px x * FElem py y * Ra)%sep mem)
+        /\ (exists Rx, (FElem px x * Rx)%sep mem)
+        /\ (exists Ry, (FElem py y * Ry)%sep mem)
         /\ (FElem pout out * Rr)%sep mem;
       ensures tr' mem' :=
         tr = tr' /\
