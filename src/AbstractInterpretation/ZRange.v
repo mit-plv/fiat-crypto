@@ -16,6 +16,24 @@ Module Compilers.
   Export Language.API.Compilers.
 
   Module ZRange.
+    Module Export Settings.
+      Class shiftr_avoid_uint1_opt := shiftr_avoid_uint1 : bool.
+      Typeclasses Opaque shiftr_avoid_uint1_opt.
+      Module AbstractInterpretation.
+        Local Set Primitive Projections.
+        Class Options
+          := { shiftr_avoid_uint1 : shiftr_avoid_uint1_opt
+             }.
+        Definition default_Options : Options
+          := {| shiftr_avoid_uint1 := false |}.
+        Module Export Exports.
+          Global Existing Instance Build_Options.
+          Global Hint Immediate shiftr_avoid_uint1 : typeclass_instances.
+          Global Coercion shiftr_avoid_uint1 : Options >-> shiftr_avoid_uint1_opt.
+        End Exports.
+      End AbstractInterpretation.
+      Export AbstractInterpretation.Exports.
+    End Settings.
     Module type.
       Local Notation binterp := base.interp.
       Local Notation tinterp_gen := type.interp.
@@ -480,7 +498,7 @@ Module Compilers.
              | None, None => None
              end.
         Local Notation tZ := (base.type.type_base base.type.Z).
-        Definition interp (assume_cast_truncates : bool) {t} (idc : ident t) : type.option.interp t
+        Definition interp {shiftr_avoid_uint1 : shiftr_avoid_uint1_opt} (assume_cast_truncates : bool) {t} (idc : ident t) : type.option.interp t
           := let interp_Z_cast := if assume_cast_truncates then interp_Z_cast_truncate else interp_Z_cast in
              match idc in ident.ident t return type.option.interp t with
              | ident.Literal t v => @of_literal (base.type.type_base t) v
@@ -713,9 +731,12 @@ Module Compilers.
              | ident.Z_sub as idc
                => fun x y => x <- x; y <- y; Some (ZRange.four_corners (ident.interp idc) x y)
              | ident.Z_div as idc
-             | ident.Z_shiftr as idc
              | ident.Z_shiftl as idc
                => fun x y => x <- x; y <- y; Some (ZRange.four_corners_and_zero (ident.interp idc) x y)
+             | ident.Z_shiftr as idc
+               => fun x y => x <- x; y <- y; Some (let r := ZRange.four_corners_and_zero (ident.interp idc) x y in
+                                                   (* kludge to avoid uint1 after >> *)
+                                                   if shiftr_avoid_uint1 && (r =? r[0~>1]) then r[0~>2] else r)
              | ident.Z_add_with_carry as idc
                => fun x y z => x <- x; y <- y; z <- z; Some (ZRange.eight_corners (ident.interp idc) x y z)
              | ident.Z_cc_m as idc
@@ -888,4 +909,5 @@ Module Compilers.
       End option.
     End ident.
   End ZRange.
+  Export ZRange.Settings.
 End Compilers.

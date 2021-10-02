@@ -98,6 +98,7 @@ Section __.
           {language_naming_conventions : language_naming_conventions_opt}
           {documentation_options : documentation_options_opt}
           {output_options : output_options_opt}
+          {opts : AbstractInterpretation.Options}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -250,7 +251,7 @@ Section __.
       /\ s = 2^Z.log2 s
       /\ s <= uweight machine_wordsize n
       /\ s <= uweight 8 n_bytes.
-  Proof.
+  Proof using curve_good.
     prepare_use_curve_good (); cbv [s c] in *.
     { destruct m eqn:?; cbn; lia. }
     { use_curve_good_t. }
@@ -1000,7 +1001,7 @@ Section __.
   Proof using curve_good. Primitives.prove_correctness use_curve_good. Qed.
 
   Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). Qed.
+  Proof using Type. revert Hres; cbv [selectznz]; apply Wf_selectznz. Qed.
 
   Section ring.
     Context from_montgomery_res (Hfrom_montgomery : from_montgomery = Success from_montgomery_res)

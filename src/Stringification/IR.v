@@ -1711,6 +1711,7 @@ Module Compilers.
                    (make_name name_list) (reset_if_names_given name_list).
 
             Definition ExprOfPHOAS_with_opt_outbounds_cps
+                       {absint_opts : AbstractInterpretation.Options}
                        {t}
                        (e : @API.Expr t)
                        (name_list : option (list string))
@@ -1726,6 +1727,7 @@ Module Compilers.
                    (e _) (make_in_name name_list) (make_out_name name_list) inbounds outbounds intypedefs outtypedefs 1 (reset_if_names_given name_list) k.
 
             Definition ExprOfPHOAS_cps
+                       {absint_opts : AbstractInterpretation.Options}
                        {t}
                        (e : @API.Expr t)
                        (name_list : option (list string))
@@ -1738,6 +1740,7 @@ Module Compilers.
               := ExprOfPHOAS_with_opt_outbounds_cps e name_list inbounds None intypedefs outtypedefs k.
 
             Definition var_data_of_PHOAS
+                       {absint_opts : AbstractInterpretation.Options}
                        {t}
                        (e : @API.Expr t)
                        (name_list : option (list string))
@@ -1750,6 +1753,7 @@ Module Compilers.
                    (fun '(count, (din, dout, e)) => ret (din, dout)).
 
             Definition var_data_of_PHOAS_bounds
+                       {absint_opts : AbstractInterpretation.Options}
                        {t}
                        (e : @API.Expr t)
                        (name_list : option (list string))
@@ -1763,6 +1767,7 @@ Module Compilers.
                    (fun '(count, (din, dout, e)) => ret (din, dout)).
 
             Definition ExprOfPHOAS
+                       {absint_opts : AbstractInterpretation.Options}
                        {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
                        (do_bounds_check : bool)
                        {t}

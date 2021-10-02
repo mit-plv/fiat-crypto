@@ -16,44 +16,44 @@ Local Open Scope bool_scope. Local Open Scope Z_scope.
 
 Module Z.
   Lemma ones_le x y : x <= y -> Z.ones x <= Z.ones y.
-  Proof.
+  Proof using Type.
     rewrite !Z.ones_equiv; auto with zarith.
   Qed.
   Hint Resolve ones_le : zarith.
 
   Lemma ones_lt_pow2 x y : 0 <= x <= y -> Z.ones x < 2^y.
-  Proof.
+  Proof using Type.
     rewrite Z.ones_equiv, Z.lt_pred_le.
     auto with zarith.
   Qed.
   Hint Resolve ones_lt_pow2 : zarith.
 
   Lemma log2_ones_full x : Z.log2 (Z.ones x) = Z.max 0 (Z.pred x).
-  Proof.
+  Proof using Type.
     rewrite Z.ones_equiv, Z.log2_pred_pow2_full; reflexivity.
   Qed.
   Hint Rewrite log2_ones_full : zsimplify.
 
   Lemma log2_ones_lt x y : 0 < x <= y -> Z.log2 (Z.ones x) < y.
-  Proof.
+  Proof using Type.
     rewrite log2_ones_full; apply Z.max_case_strong; lia.
   Qed.
   Hint Resolve log2_ones_lt : zarith.
 
   Lemma log2_ones_le x y : 0 <= x <= y -> Z.log2 (Z.ones x) <= y.
-  Proof.
+  Proof using Type.
     rewrite log2_ones_full; apply Z.max_case_strong; lia.
   Qed.
   Hint Resolve log2_ones_le : zarith.
 
   Lemma log2_ones_lt_nonneg x y : 0 < y -> x <= y -> Z.log2 (Z.ones x) < y.
-  Proof.
+  Proof using Type.
     rewrite log2_ones_full; apply Z.max_case_strong; lia.
   Qed.
   Hint Resolve log2_ones_lt_nonneg : zarith.
 
   Lemma ones_pred : forall i, 0 < i -> Z.ones (Z.pred i) = Z.shiftr (Z.ones i) 1.
-  Proof.
+  Proof using Type.
     induction i as [|p|p]; [ | | pose proof (Pos2Z.neg_is_neg p) ]; try lia.
     intros.
     unfold Z.ones.
@@ -69,7 +69,7 @@ Module Z.
 
   Lemma ones_succ : forall x, (0 <= x) ->
     Z.ones (Z.succ x) = 2 ^ x + Z.ones x.
-  Proof.
+  Proof using Type.
     unfold Z.ones; intros.
     rewrite !Z.shiftl_1_l.
     rewrite Z.add_pred_r.
@@ -79,7 +79,7 @@ Module Z.
   Qed.
 
   Lemma ones_nonneg : forall i, (0 <= i) -> 0 <= Z.ones i.
-  Proof.
+  Proof using Type.
     apply natlike_ind.
     + unfold Z.ones. simpl; lia.
     + intros.
@@ -90,10 +90,10 @@ Module Z.
 
   Lemma ones_bound m (Hm : 0 <= m) :
     0 <= Z.ones m < 2 ^ m.
-  Proof. split. apply ones_nonneg; lia. rewrite Z.ones_equiv; lia. Qed.
+  Proof using Type. split. apply ones_nonneg; lia. rewrite Z.ones_equiv; lia. Qed.
 
   Lemma ones_pos_pos : forall i, (0 < i) -> 0 < Z.ones i.
-  Proof.
+  Proof using Type.
     intros.
     unfold Z.ones.
     rewrite Z.shiftl_1_l.
@@ -103,14 +103,14 @@ Module Z.
   Hint Resolve ones_pos_pos : zarith.
 
   Lemma lnot_ones_equiv n : Z.lnot (Z.ones n) = -2^n.
-  Proof. rewrite Z.ones_equiv, Z.lnot_equiv, <- ?Z.sub_1_r; lia. Qed.
+  Proof using Type. rewrite Z.ones_equiv, Z.lnot_equiv, <- ?Z.sub_1_r; lia. Qed.
 
   Lemma land_ones_ones n m
     : Z.land (Z.ones n) (Z.ones m)
       = Z.ones (if ((n <? 0) || (m <? 0))
                 then Z.max n m
                 else Z.min n m).
-  Proof.
+  Proof using Type.
     repeat first [ reflexivity
                  | break_innermost_match_step
                  | progress rewrite ?Bool.orb_true_iff in *
@@ -146,7 +146,7 @@ Module Z.
       = Z.ones (if ((n <? 0) || (m <? 0))
                 then Z.min n m
                 else Z.max n m).
-  Proof.
+  Proof using Type.
     destruct (Z_zerop n), (Z_zerop m); subst;
       repeat first [ reflexivity
                    | break_innermost_match_step
@@ -180,7 +180,7 @@ Module Z.
   Hint Rewrite lor_ones_ones : zsimplify.
 
   Lemma lor_pow2_mod_pow2_r x e (He : 0 <= e) : Z.lor x (2^e-1) mod (2^e) = 2^e-1.
-  Proof.
+  Proof using Type.
     destruct (Z_zerop e).
     { subst; autorewrite with zsimplify_const; reflexivity. }
     assert (0 <= x mod 2^e < 2^e) by auto with zarith.
@@ -196,12 +196,12 @@ Module Z.
   Hint Rewrite lor_pow2_mod_pow2_r using assumption : zsimplify_fast.
 
   Lemma lor_pow2_mod_pow2_l x e (He : 0 <= e) : Z.lor (2^e-1) x mod (2^e) = 2^e-1.
-  Proof. rewrite Z.lor_comm; apply lor_pow2_mod_pow2_r; assumption. Qed.
+  Proof using Type. rewrite Z.lor_comm; apply lor_pow2_mod_pow2_r; assumption. Qed.
   Hint Rewrite lor_pow2_mod_pow2_l using zutil_arith : zsimplify.
   Hint Rewrite lor_pow2_mod_pow2_l using assumption : zsimplify_fast.
-  
+
   Lemma lor_pow2_div_pow2_r x e (He : 0 <= e) : (Z.lor x (2^e-1)) / (2^e) = x / 2^e.
-  Proof.
+  Proof using Type.
     destruct (Z_zerop e).
     { subst; autorewrite with zsimplify_const; reflexivity. }
     assert (0 < 2^e) by auto with zarith.
@@ -213,7 +213,30 @@ Module Z.
   Hint Rewrite lor_pow2_div_pow2_r using assumption : zsimplify_fast.
 
   Lemma lor_pow2_div_pow2_l x e (He : 0 <= e) : (Z.lor (2^e-1) x) / (2^e) = x / 2^e.
-  Proof. rewrite Z.lor_comm; apply lor_pow2_div_pow2_r; assumption. Qed.
+  Proof using Type. rewrite Z.lor_comm; apply lor_pow2_div_pow2_r; assumption. Qed.
   Hint Rewrite lor_pow2_div_pow2_l using zutil_arith : zsimplify.
   Hint Rewrite lor_pow2_div_pow2_l using assumption : zsimplify_fast.
+
+  Lemma land_ones_low_alt a n : 0 <= a < 2^n -> Z.land a (Z.ones n) = a.
+  Proof using Type.
+    destruct (Z_zerop a); subst; [ intros; now rewrite Z.land_0_l | ].
+    intros; apply Z.land_ones_low; try lia; apply Z.log2_lt_pow2; try lia.
+  Qed.
+  Hint Rewrite land_ones_low_alt using zutil_arith : zsimplify.
+  Hint Rewrite land_ones_low_alt using (idtac + split); assumption : zsimplify_fast.
+
+  Lemma land_ones_low_alt_ones a n : 0 <= a <= Z.ones n -> Z.land a (Z.ones n) = a.
+  Proof using Type. rewrite Z.ones_equiv at 1; intro H; rewrite land_ones_low_alt; lia. Qed.
+  Hint Rewrite land_ones_low_alt_ones using zutil_arith : zsimplify.
+  Hint Rewrite land_ones_low_alt_ones using (idtac + split); assumption : zsimplify_fast.
+
+  Lemma shiftr_ones_sub n m : 0 <= m <= n -> Z.shiftr (Z.ones n) m = Z.ones (n - m).
+  Proof using Type. intro; now rewrite Z.shiftr_div_pow2, Z.ones_div_pow2 by lia. Qed.
+  Hint Rewrite shiftr_ones_sub using zutil_arith : zsimplify.
+  Hint Rewrite shiftr_ones_sub using (idtac + split); assumption : zsimplify_fast.
+
+  Lemma shiftr_ones_same n : 0 <= n -> Z.shiftr (Z.ones n) n = 0.
+  Proof using Type. intro; rewrite shiftr_ones_sub, Z.sub_diag by lia; reflexivity. Qed.
+  Hint Rewrite shiftr_ones_same using zutil_arith : zsimplify.
+  Hint Rewrite shiftr_ones_same using assumption : zsimplify_fast.
 End Z.

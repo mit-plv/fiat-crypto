@@ -385,6 +385,7 @@ Module Java.
          ++ [" */"%string].
 
   Definition ToFunctionLines
+             {absint_opts : AbstractInterpretation.Options}
              {relax_zrange : relax_zrange_opt}
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}

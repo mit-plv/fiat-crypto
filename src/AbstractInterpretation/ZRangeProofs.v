@@ -47,6 +47,7 @@ Require Import Crypto.AbstractInterpretation.ZRange.
 
 Module Compilers.
   Import AbstractInterpretation.ZRange.Compilers.
+  Export ZRange.Settings.
 
   Module ZRange.
     Module type.
@@ -70,7 +71,8 @@ Module Compilers.
       Module option.
         (** First we prove relatedness for some particularly complicated identifiers separately *)
         Section interp_related.
-          Context (assume_cast_truncates : bool).
+          Context {shiftr_avoid_uint1 : shiftr_avoid_uint1_opt}
+                  (assume_cast_truncates : bool).
           Local Notation interp_is_related idc
             := (type.related_hetero
                   (fun t st v => ZRange.type.base.option.is_bounded_by st v = true)
@@ -91,13 +93,13 @@ Module Compilers.
             auto using ident.cast_always_bounded.
 
           Lemma interp_related_Z_cast : interp_is_related ident.Z_cast.
-          Proof. z_cast_t. Qed.
+          Proof using Type. z_cast_t. Qed.
 
           Lemma interp_related_Z_cast2 : interp_is_related ident.Z_cast2.
-          Proof. z_cast_t. Qed.
+          Proof using Type. z_cast_t. Qed.
 
           Lemma interp_related_List_flat_map A B : interp_is_related (@ident.List_flat_map A B).
-          Proof.
+          Proof using Type.
             cbn; cbv [respectful_hetero]; intros.
             destruct_head' option; cbn in *; [ | reflexivity ].
             break_match; cbn in *; [ | reflexivity ].
@@ -135,7 +137,7 @@ Module Compilers.
           Qed.
 
           Lemma interp_related_List_partition A : interp_is_related (@ident.List_partition A).
-          Proof.
+          Proof using Type.
             cbn; cbv [respectful_hetero]; intros.
             destruct_head' option; cbn in *; [ | break_innermost_match; reflexivity ].
             rewrite fold_andb_map_iff in *.
@@ -391,7 +393,7 @@ Module Compilers.
             (0 <= x < 2^ (n / 2))%Z ->
             (0 <= y < 2^ (n / 2))%Z ->
             (0 <= x * y <= 2 ^ n - 1)%Z.
-          Proof.
+          Proof using Type.
             intros. rewrite Z.le_sub_1_iff.
             assert (2 ^ (n / 2) * 2 ^ (n / 2) <= 2 ^ n)%Z.
             { rewrite <-Z.pow_twice_r.
@@ -412,7 +414,7 @@ Module Compilers.
           Local Lemma invert_to_literal {t} e v
             : ZRange.ident.option.to_literal (t:=t) e = Some v
               <-> e = ZRange.ident.option.of_literal v.
-          Proof.
+          Proof using Type.
             induction t; split_iff; split; cbn; cbv [Crypto.Util.Option.bind option_map Option.lift]; break_innermost_match;
               repeat first [ progress Z.ltb_to_lt
                            | reflexivity
@@ -448,7 +450,7 @@ Module Compilers.
 
           Local Lemma is_bounded_by_of_literal {t} x y
             : ZRange.type.base.option.is_bounded_by (t:=t) (ZRange.ident.option.of_literal x) y = true <-> x = y.
-          Proof.
+          Proof using Type.
             induction t; split_iff; split; cbn [ZRange.ident.option.of_literal ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by]; break_innermost_match.
             all: repeat first [ progress intros
                               | progress subst
@@ -507,7 +509,7 @@ Module Compilers.
 
           Local Lemma interp_related_fancy_rshi :
             interp_is_related ident.fancy_rshi.
-          Proof.
+          Proof using Type.
             cbn [type.related_hetero ZRange.ident.option.interp ident.interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some ZRange.ident.option.of_literal].
             cbv [respectful_hetero option_map list_case].
             intros.
@@ -534,7 +536,7 @@ Module Compilers.
           Qed.
 
           Lemma interp_related {t} (idc : ident t) : interp_is_related idc.
-          Proof.
+          Proof using Type.
             destruct idc.
             all: lazymatch goal with
                  | [ |- context[ident.Z_cast] ] => apply interp_related_Z_cast
@@ -618,6 +620,12 @@ Module Compilers.
                           => apply (fun pf => @ZRange.monotoneb_two_corners_gen f pf x _ Hx); intros; auto with zarith
                         | [ |- is_bounded_by_bool (if _ then _ else _) (ZRange.four_corners _ _ _) = true ]
                           => apply ZRange.is_bounded_by_bool_Proper_if_bool_union_dep; intros; Z.ltb_to_lt
+                        | [ _ : is_bounded_by_bool ?x1 ?r1 = true,
+                                _ : is_bounded_by_bool ?x2 ?r2 = true,
+                                    H : (?fr ?r1 ?r2 =? r[0 ~> 1])%zrange = true |- is_bounded_by_bool (?f ?x1 ?x2) r[0~>2] = true ]
+                          => cut (is_bounded_by_bool (f x1 x2) (fr r1 r2) = true);
+                               [ apply ZRange.is_bounded_by_of_is_tighter_than; apply zrange_bl in H; rewrite H; clear
+                               | clear H ]
                         | [ H : ?x <> ?x |- _ ] => destruct (H eq_refl)
                         | [ |- context[Proper _ (Z.mul ?v)] ] => is_var v; destruct v; auto with zarith
                         | [ |- context[Proper _ (Z.div ?v)] ] => is_var v; destruct v; auto with zarith
@@ -634,7 +642,8 @@ Module Compilers.
             all: try solve [ cbv [Proper respectful Basics.flip]; constructor; intros; lia ].
             all: try solve [ cbv [Proper respectful Basics.flip]; constructor; intros; autorewrite with zsimplify_const; lia ].
             all: cbv [is_bounded_by_bool ZRange.upper ZRange.lower]; rewrite ?Bool.andb_true_iff, ?Z.leb_le.
-            all: try solve [ match goal with
+            all: try solve [ lia
+                           | match goal with
                              | [ |- ((0 <= _ mod _ <= _) /\ (0 <= _ <= _))%Z ]
                                => Z.div_mod_to_quot_rem; nia
                              end

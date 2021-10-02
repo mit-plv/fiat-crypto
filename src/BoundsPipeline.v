@@ -161,6 +161,7 @@ Module typedef.
   Global Arguments description {_ _ _} _.
 End typedef.
 Notation typedef := typedef.typedef (only parsing).
+Export ZRange.Settings.
 (** Which of the rewriter methods do we use? *)
 (** Note that we don't currently generate a precomputed naive method, because it eats too much RAM to do so. *)
 Inductive low_level_rewriter_method_opt :=
@@ -391,6 +392,7 @@ Module Pipeline.
          => let _ := default_language_naming_conventions in
             let _ := default_documentation_options in
             let _ := default_output_options in
+            let _ := AbstractInterpretation.default_Options in
             match ToString.ToFunctionLines
                     (relax_zrange := fun r => r)
                     machine_wordsize
@@ -505,6 +507,7 @@ Module Pipeline.
              end; |}.
 
   Definition PreBoundsPipeline
+             {opts : AbstractInterpretation.Options}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {only_signed : only_signed_opt}
              {unfold_value_barrier : unfold_value_barrier_opt}
@@ -543,6 +546,7 @@ Module Pipeline.
        List.fold_right (fun f v => f v) E (List.repeat (RewriteRules.RewriteAddAssocLeft opts) n).
 
   Definition BoundsPipeline
+             {opts : AbstractInterpretation.Options}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {only_signed : only_signed_opt}
              {no_select_size : no_select_size_opt}
@@ -637,6 +641,7 @@ Module Pipeline.
       end.
 
   Definition BoundsPipelineToExtendedResult
+             {opts : AbstractInterpretation.Options}
              {output_language_api : ToString.OutputLanguageAPI}
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
@@ -686,6 +691,7 @@ Module Pipeline.
        end.
 
   Definition BoundsPipelineToStrings
+             {opts : AbstractInterpretation.Options}
              {output_language_api : ToString.OutputLanguageAPI}
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
@@ -733,6 +739,7 @@ Module Pipeline.
        end.
 
   Definition BoundsPipelineToString
+             {opts : AbstractInterpretation.Options}
              {output_language_api : ToString.OutputLanguageAPI}
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
@@ -806,16 +813,16 @@ Module Pipeline.
     end.
 
   Notation type_of_pipeline result
-    := ((fun a b c d e f g h i possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h i possible_values t E arg_bounds out_bounds = result') => t) _ _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e f g h i j possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h i j possible_values t E arg_bounds out_bounds = result') => t) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Notation arg_bounds_of_pipeline result
-    := ((fun a b c d e f g h i possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h i possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e f g h i j possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h i j possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Notation out_bounds_of_pipeline result
-    := ((fun a b c d e f g h i possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h i possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e f g h i j possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h i j possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Notation possible_values_of_pipeline result
-    := ((fun a b c d e f g h i possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h i possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e f g h i j possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h i j possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Notation arg_typedefs_via_tc_of_pipeline result
     := (match type_of_pipeline result, arg_bounds_of_pipeline result return _ with
@@ -1083,6 +1090,7 @@ Module Pipeline.
           | progress destruct_head'_and ].
 
   Lemma BoundsPipeline_correct
+             {opts : AbstractInterpretation.Options}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {only_signed : only_signed_opt}
              {no_select_size : no_select_size_opt}
@@ -1140,6 +1148,7 @@ Module Pipeline.
        /\ Wf rv.
 
   Lemma BoundsPipeline_correct_trans
+        {opts : AbstractInterpretation.Options}
         {low_level_rewriter_method : low_level_rewriter_method_opt}
         {only_signed : only_signed_opt}
         {no_select_size : no_select_size_opt}

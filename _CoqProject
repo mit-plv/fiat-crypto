@@ -1,6 +1,6 @@
 -R src Crypto
 -arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive
-@NATIVE_COMPILER_ARG@
+-arg -native-compiler -arg ondemand
 src/BoundsPipeline.v
 src/CLI.v
 src/COperationSpecifications.v
@@ -300,6 +300,8 @@ src/Util/ListUtil/Forall.v
 src/Util/ListUtil/ForallIn.v
 src/Util/ListUtil/IndexOf.v
 src/Util/ListUtil/NthExt.v
+src/Util/ListUtil/Permutation.v
+src/Util/ListUtil/PermutationCompat.v
 src/Util/ListUtil/SetoidList.v
 src/Util/Logic/Exists.v
 src/Util/Logic/ExistsEqAnd.v
@@ -313,6 +315,7 @@ src/Util/MSets/Iso.v
 src/Util/MSets/Show.v
 src/Util/MSets/Sum.v
 src/Util/NUtil/Sorting.v
+src/Util/NUtil/Testbit.v
 src/Util/NUtil/WithoutReferenceToZ.v
 src/Util/SideConditions/Autosolve.v
 src/Util/SideConditions/CorePackages.v
