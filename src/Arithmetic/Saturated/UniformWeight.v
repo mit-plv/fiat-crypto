@@ -44,10 +44,10 @@ Section UniformWeight.
            | _ => rewrite B.Positional.eval_unit; [ ]
            | _ => rewrite B.Positional.eval_step; [ ]
            | _ => rewrite IHn; [ ]
-           | _ => rewrite eval_from_eq with (offset0:=S offset)
+           | _ => rewrite @eval_from_eq with (offset:=S offset)
                by (intros; f_equal; lia)
-           | _ => rewrite eval_from_eq with
-                  (wt:=fun i => uweight (S i)) (offset0:=1%nat)
+           | _ => rewrite @eval_from_eq with
+                  (wt:=fun i => uweight (S i)) (offset:=1%nat)
                by (intros; f_equal; lia)
            | _ => ring
            end.

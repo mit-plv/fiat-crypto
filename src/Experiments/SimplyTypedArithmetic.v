@@ -9806,12 +9806,12 @@ Module PreFancy.
         induction 1; intros; cbn [of_straightline interp].
         { apply replace_interp_cast_scalar; auto. }
         { erewrite !of_straightline_ident_correct by (eauto; cbv [range_ok]; apply in_word_range_word_range).
-          rewrite replace_interp_cast_scalar with (interp_cast'0:=interp_cast') by auto.
+          rewrite @replace_interp_cast_scalar with (interp_cast':=interp_cast') by auto.
           eauto using ident_interp_has_range. }
         { erewrite !of_straightline_ident_correct by
               (eauto; try solve [cbv [range_ok]; split; auto using in_word_range_word_range];
                cbv [is_tighter_than_bool_range_type]; apply andb_true_iff; split; auto).
-          rewrite replace_interp_cast_scalar with (interp_cast'0:=interp_cast') by auto.
+          rewrite @replace_interp_cast_scalar with (interp_cast':=interp_cast') by auto.
           eauto using ident_interp_has_range. }
       Qed.
     End no_interp_cast.
@@ -11181,7 +11181,7 @@ Module BarrettReduction.
              SuchThat (barrett_reduce = x mod M)
              As barrett_reduce_correct.
       Proof.
-        erewrite <-reduce_correct with (rep:=represents) (muSelect:=muSelect) (k0:=k) (mut:=[muLow;1]) (xt0:=xt)
+        erewrite <- @reduce_correct with (rep:=represents) (muSelect:=muSelect) (k:=k) (mut:=[muLow;1]) (xt:=xt)
           by (auto using x_bounds, muSelect_correct, x_rep, mu_rep; lia).
         subst barrett_reduce. reflexivity.
       Qed.
