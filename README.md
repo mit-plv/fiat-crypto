@@ -25,13 +25,14 @@ Note that if you install Coq from Ubuntu aptitude packages, you need `libcoq-oca
 Note that in some cases (such as installing Coq via homebrew on Mac), you may also need to install `ocaml-findlib` (for `ocamlfind`).
 If you want to build the bedrock2 code, you need [Coq 8.13](https://github.com/coq/coq/releases/tag/V8.13.0) or later (otherwise you can pass `SKIP_BEDROCK2=1` to `make`).
 We suggest downloading [the latest version of Coq](https://github.com/coq/coq/wiki#coq-installation).
+Generation of JSON code via the Makefile also requires `jq`.
 
 Alternatively, choose your package-manager to install dependencies:
 
 Package Manager | Command Line Invocation |
 --|--|
-Aptitude (Ubuntu / Debian) | `apt install coq ocaml-findlib libcoq-ocaml-dev` |
-Homebrew (OS X) | `brew install coq ocaml-findlib coreutils` |
+Aptitude (Ubuntu / Debian) | `apt install coq ocaml-findlib libcoq-ocaml-dev jq` |
+Homebrew (OS X) | `brew install coq ocaml-findlib coreutils jq` |
 Pacman (Archlinux) | `pacman -S coq ocaml-findlib ocaml-zarith jq` |
 
 You can clone this repository with
