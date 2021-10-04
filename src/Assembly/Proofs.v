@@ -39,7 +39,7 @@ Import API.Compilers APINotations.Compilers AbstractInterpretation.ZRange.Compil
 Import ListNotations.
 Local Open Scope list_scope.
 
-Section WithCtx.
+Section WithFixedCtx.
 Context (G : symbol -> option Z).
 
 Fixpoint eval_base_var (dag : dag) {t : base.type} : base_var t -> API.interp_type (type.base t) -> Prop :=
@@ -115,7 +115,7 @@ Lemma RevealConstant_correct idx d d' v
       (H : RevealConstant idx d = Success (v, d'))
       (d_ok : dag_ok G d)
   : eval G d (ExprRef idx) (Z.of_N v) /\ d = d'.
-Proof.
+Proof using Type.
   cbv [RevealConstant] in *; break_innermost_match_hyps;
     inversion_ErrorT; inversion_prod; subst; split; trivial; [].
   pose proof Heqe as Hx.
@@ -194,7 +194,7 @@ Local Ltac saturate_eval_merge := repeat saturate_eval_merge_step.
 Lemma App_correct n d (Hdag : dag_ok G d) i d' (H : App n d = Success (i, d'))
   v (Heval : eval_node G d n v)
   : eval G d' (ExprRef i) v /\ dag_ok G d' /\ (forall e n, eval G d e n -> eval G d' e n).
-Proof.
+Proof using Type.
   cbv [App] in *. inversion_ErrorT.
   do 2
   match goal with
@@ -209,7 +209,7 @@ Qed.
 (* workaround: using cbn instead of this lemma makes Qed hang after next destruct *)
 Lemma unfold_symex_bind {A B} ma amb :
   @symex_bind A B ma amb = ltac:(let t := eval cbv [symex_bind ErrorT.bind] in (@symex_bind A B ma amb) in exact t).
-Proof. exact eq_refl. Qed.
+Proof using Type. exact eq_refl. Qed.
 
 Theorem symex_ident_correct
         {t} (idc : ident t)
@@ -691,25 +691,118 @@ Proof using Type.
                       end ].
 Qed.
 
+Lemma empty_dag_ok : dag_ok G empty_dag.
+Proof using Type.
+  econstructor. setoid_rewrite ListUtil.nth_error_nil_error in H. inversion H.
+  Unshelve.
+  exact Z0.
+Qed.
+End WithFixedCtx.
+
+(*
+Definition read_inputs_from_machine_state
+           (st : machine_state) (output_types : type_spec) (stack_size : nat)
+           (inputs : list (Z + list Z)) (reg_available : list REG) (asm : Lines)
+  : ErrorT EquivalenceCheckingError machine_state.
+Admitted. *)
+(*
+Definition before_call
+           (reg_available : list REG) (stack_size : nat)
+           (inputs : list (Z + list Z))
+           (output_types : type_spec)
+           (Frame : mem_state -> Prop)
+  : machine_state -> Prop.
+Definition after_call
+           (reg_available : list REG) (stack_size : nat)
+           (output_types : type_spec)
+           (retvals : list (Z + list Z))
+  : machine_state -> Prop.
+Definition execute_asm_func_correct
+           (output_types : type_spec) (stack_size : nat)
+           (inputs : list (Z + list Z)) (reg_available : list REG) (asm : Lines)
+: machine_state -> Prop
+  : ErrorT EquivalenceCheckingError machine_state.
+    := let '(output_placeholders, (d, gensym_st)) := build_inputs (d, gensym_st) output_types in
+      let '(rsp_idx, gensym_st) := gensym gensym_st in
+      let '(stack_placeholders, (d, gensym_st)) := build_inputarray (d, gensym_st) stack_size in
+      let '(asminputs, (d, gensym_st)) := build_base_addresses (d, gensym_st) (output_placeholders ++ inputs) in
+      let '(initial_reg_idxs, (d, gensym_st)) := dag_gensym_n 16 (d, gensym_st) in
+      let s0 :=
+        {|
+          dag_state := d;
+          symbolic_reg_state := Tuple.from_list_default None 16 (List.map Some initial_reg_idxs);
+          symbolic_mem_state := [];
+          symbolic_flag_state := Tuple.repeat None 6;
+        |} in
+
+      match
+        (argptrs <- mapM (fun '(r, (base, oarr)) => _ <- SetReg r base; (* note: overwrites initial value *)
+          match oarr with None => Symbolic.ret None
+          | Some idxs =>
+              addrs <- mapM (fun '(i, idx) =>
+                offset <- Symbolic.App ((const (8*Z.of_nat i)), nil);
+                addr <- Symbolic.App (add 64, [base; offset]);
+                (fun s => Success (addr, update_mem_with s (cons (addr,idx))))
+              ) (List.enumerate idxs);
+              Symbolic.ret (Some addrs)
+          end) (List.combine reg_available asminputs);
+        _ <- SetReg rsp rsp_idx;
+        _ <- mapM_ (fun '(i, idx) =>
+            a <- @Address (64%N) {| mem_reg := rsp; mem_offset := Some (Z.opp (Z.of_nat(8*S i))); mem_is_byte := false; mem_extra_reg:=None |};
+            (fun s => Success (tt, update_mem_with s (cons (a,idx))))
+          ) (List.enumerate stack_placeholders);
+        _ <- SymexLines asm;
+        Symbolic.ret argptrs)%N%x86symex s0
+      with
+      | Error (e, s) => Error (Symbolic_execution_failed e s)
+      | Success (argptrs, s) =>
+          let outputaddrs : list (option (list idx))  := firstn (length argptrs - length inputs) argptrs in
+          match Option.List.lift (List.map (fun ocells =>
+            match ocells with
+            | None => None
+            | Some cells => Option.List.lift (List.map (fun i => load i s) cells)
+            end
+          ) outputaddrs) with
+          | None => Error (Internal_error_output_load_failed outputaddrs s)
+          | Some asm_output =>
+              Success (List.map inr asm_output, s)
+          end
+      end.
+Admitted.
+
+Definition symex_asm_func_full
+           (G : symbol -> option Z := fun _ => None)
+           (st : machine_state) (d : dag) (gensym_st : gensym_state) (output_types : type_spec) (stack_size : nat)
+           (inputs : list (idx + list idx)) (real_inputs : list (Z + list Z)) (reg_available : list REG) (asm : Lines)
+  : ErrorT EquivalenceCheckingError ((symbol -> option Z) * list (idx + list idx) * symbolic_state * list (Z + list Z) * machine_state).
+Admitted.
+
+
+
+*)
 Theorem symex_asm_func_correct
-        (d : dag) (gensym_st : gensym_state) (output_types : type_spec) (stack_size : nat)
+        (d : dag) (output_types : type_spec) (stack_size : nat)
         (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
         (rets : list (idx + list idx))
         (s : symbolic_state)
-        (H : symex_asm_func d gensym_st output_types stack_size inputs reg_available asm = Success (rets, s))
+        (H : symex_asm_func d output_types stack_size inputs reg_available asm = Success (rets, s))
         (d' := s.(dag_state))
         (st : machine_state)
         (runtime_inputs : list (Z + list Z))
-        (Hinputs : List.Forall2 (eval_idx_or_list_idx d) inputs runtime_inputs)
+        (* TODO: FIXME: instantiate G *)
+        (input_G : symbol -> option Z)
+        (output_G : symbol -> option Z)
+        (Hinput_G_ok : dag_ok input_G d)
+        (Hinputs : List.Forall2 (eval_idx_or_list_idx input_G d) inputs runtime_inputs)
         (* TODO(Andres): write down something that relates [st] to args *)
   : (exists st'
             (* ??? *) (*(input_runtime_var : type.for_each_lhs_of_arrow API.interp_type t)*)
            (runtime_rets : list (Z + list Z)),
         DenoteLines st asm = Some st'
         /\ True (* TODO(Andres): write down something that relates st' to retvals *)
-        /\ List.Forall2 (eval_idx_or_list_idx d') rets runtime_rets)
-    /\ dag_ok G d'
-    /\ (forall e n, eval G d e n -> eval G d' e n).
+        /\ List.Forall2 (eval_idx_or_list_idx output_G d') rets runtime_rets)
+    /\ dag_ok output_G d'
+    /\ (forall e n, eval input_G d e n -> eval output_G d' e n).
 Proof.
 Admitted.
 
@@ -820,25 +913,32 @@ Proof using Type.
   pose proof (build_input_runtime_ok t arg_bounds args input_types PHOAS_args [] H Hargs HPHOAS_args).
   destruct_head'_ex; destruct_head'_and; subst; rewrite app_nil_r; assumption.
 Qed.
-
-Lemma build_inputs_ok d gensym_st (spec : type_spec) inputs d' gensym_st'
+(*
+Fixpoint build_inputs_G (G : symbol -> option Z) (d : dag) (types : type_spec) (args : list (Z + list Z))
+  : list (idx + list idx) * dag * (symbol -> option Z)
+  := match types, args with
+     | [], _ | _, [] => ([], d, G)
+     | None :: tys, inl v :: args
+       => let '(idx, d) := merge_fresh_symbol d in
+          let '(rest, d, G) := build_inputs G d tys args in
+          (inl idx :: rest, d, (fun idx' => if (idx' =? idx)%N then v else G idx'))
+     | Some len :: tys, inr vs :: args
+       => let '(idxs, d) := build_inputarray d len in
+          let '(rest, d) := build_inputs d tys in
+          (inr idxs :: rest, d)
+     end.
+*)
+Lemma build_inputs_ok G d (spec : type_spec) inputs d'
       (d_ok : dag_ok G d)
-      (H : build_inputs (d, gensym_st) spec = (inputs, (d', gensym_st')))
+      (H : build_inputs d spec = (inputs, d'))
   : (forall args,
         Forall2 val_or_list_val_matches_spec args spec
-        -> Forall2 (eval_idx_or_list_idx d') inputs args)
+        -> Forall2 (eval_idx_or_list_idx G d') inputs args)
     /\ dag_ok G d'
     /\ True (* something about gensym_st' *).
 Proof.
   (* TODO(Andres) *)
 Admitted.
-
-Lemma empty_dag_ok : dag_ok G empty_dag.
-Proof using Type.
-  econstructor. setoid_rewrite ListUtil.nth_error_nil_error in H. inversion H.
-  Unshelve.
-  exact Z0.
-Qed.
 
 Theorem check_equivalence_correct
         {assembly_calling_registers' : assembly_calling_registers_opt}
@@ -863,7 +963,7 @@ Theorem check_equivalence_correct
     /\ DenoteLines st asm' = Some st'
     /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
     /\ True (* TODO(andres): write down something that relates st' to retvals *).
-Proof using G.
+Proof.
   cbv beta delta [check_equivalence ErrorT.bind] in H.
   repeat match type of H with
          | (let n := ?v in _) = _
@@ -894,10 +994,10 @@ Proof using G.
   let H := fresh in pose proof Hargs as H; eapply build_input_runtime_ok_nil in H; [ | eassumption .. ].
   repeat first [ assumption
                | match goal with
-                 | [ H : build_inputs _ _ = _ |- _ ] => move H at bottom; apply build_inputs_ok in H; [ | assumption .. ]
+                 | [ H : build_inputs _ _ = _ |- _ ] => move H at bottom; eapply build_inputs_ok in H; [ | (assumption + apply empty_dag_ok) .. ]
                  | [ H : symex_PHOAS ?expr ?inputs ?d = Success _, H' : build_input_runtime _ ?ri = Some _ |- _ ]
-                   => move H at bottom; apply symex_PHOAS_correct with (runtime_inputs:=ri) in H; [ | assumption .. ]
-                 | [ H : symex_asm_func _ _ _ _ _ _ _ = Success _ |- _ ]
+                   => move H at bottom; eapply symex_PHOAS_correct with (runtime_inputs:=ri) in H; [ | eassumption .. ]
+                 | [ H : symex_asm_func _ _ _ _ _ _ = Success _ |- _ ]
                    => move H at bottom; eapply symex_asm_func_correct in H;
                       [ | try eassumption .. ];
                       [ | clear H; eapply Forall2_weaken; [ apply lift_eval_idx_or_list_idx_impl | eassumption ] ]
@@ -913,6 +1013,8 @@ Proof using G.
                    => specialize (H _ H')
                  end ].
   do 3 eexists; repeat apply conj; try eassumption; trivial.
+  Unshelve.
+  all: exact (fun _ => None).
 Qed.
 
 Theorem generate_assembly_of_hinted_expr_correct
@@ -948,11 +1050,10 @@ Theorem generate_assembly_of_hinted_expr_correct
         /\ DenoteLines st asm' = Some st'
         /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
         /\ True (* TODO(andres): write down something that relates st' to retvals *).
-Proof using G.
+Proof.
   cbv [generate_assembly_of_hinted_expr] in H.
   break_innermost_match_hyps; inversion H; subst; destruct_head'_and; split; [ reflexivity | intros ].
   eapply check_equivalence_correct; eassumption.
 Qed.
-End WithCtx.
 
 (* Some theorems about the result of calling generate_assembly_of_hinted_expr_correct on various Pipeline functions *)

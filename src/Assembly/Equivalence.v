@@ -138,14 +138,10 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
 Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
   := fun err => String.concat String.NewLine (show_lines err).
 
-(** FIXME: pick better definitions *)
-Definition symbol := N.
-Definition gensym_state := N.
-Definition gensym_state_init : gensym_state := 0%N.
-Definition gensym (st : gensym_state) : symbol * gensym_state := (st, N.succ st).
-
 Definition empty_dag : dag := nil.
 Definition merge_symbol (s:symbol) (d:dag) : idx * dag := merge_node ((old 64%N s), nil) d.
+(** We use the length of the dag as a source of fresh symbols *)
+Definition merge_fresh_symbol (d:dag) : idx * dag := merge_symbol (N.of_nat (List.length d)) d.
 Definition merge_literal (l:Z) (d:dag) : idx * dag := merge_node ((const l, nil)) d.
 
 (** symbolic evaluations live in the state monad, pushed to the leaves of a PHOAS type *)
@@ -219,52 +215,45 @@ Fixpoint simplify_input_type
              Success (vA ++ vB))
      end%error.
 
-Definition build_inputarray (st : dag * gensym_state) (len : nat)  : list idx * (dag * gensym_state) :=
-  List.fold_left (fun '(idxs, (d, st)) _
-                    => let '(n, st) := gensym st in
-                       let '(idx, d) := merge_symbol n d in
-                       (idx :: idxs, (d, st)))
+Definition build_inputarray (d : dag) (len : nat)  : list idx * dag :=
+  List.fold_left (fun '(idxs, d) _
+                    => let '(idx, d) := merge_fresh_symbol d in
+                       (idx :: idxs, d))
                    (List.seq 0 len)
-                   ([], st).
+                   ([], d).
 
-Fixpoint build_inputs (st : dag * gensym_state) (types : type_spec) : list (idx + list idx) * (dag * gensym_state)
+Fixpoint build_inputs (d : dag) (types : type_spec) : list (idx + list idx) * dag
   := match types with
-     | [] => ([], st)
+     | [] => ([], d)
      | None :: tys
-       => let '(d, st) := st in
-          let '(n, st) := gensym st in
-          let '(idx, d) := merge_symbol n d in
-          let '(rest, (d, st)) := build_inputs (d, st) tys in
-          (inl idx :: rest, (d, st))
+       => let '(idx, d) := merge_fresh_symbol d in
+          let '(rest, d) := build_inputs d tys in
+          (inl idx :: rest, d)
      | Some len :: tys
-       => let '(idxs, (d, st)) := build_inputarray st len in
-          let '(rest, (d, st)) := build_inputs (d, st) tys in
-          (inr idxs :: rest, (d, st))
+       => let '(idxs, d) := build_inputarray d len in
+          let '(rest, d) := build_inputs d tys in
+          (inr idxs :: rest, d)
      end.
 
-Fixpoint build_base_addresses {T} (st : dag * gensym_state) (items : list (idx + T)) : list (idx * option T) * (dag * gensym_state)
+Fixpoint build_base_addresses {T} (d : dag) (items : list (idx + T)) : list (idx * option T) * dag
   := match items with
-     | [] => ([], st)
+     | [] => ([], d)
      | inr x :: xs
-       => let '(d, st) := st in
-          let '(n, st) := gensym st in
-          let '(idx, d) := merge_symbol n d in
-          let '(rest, (d, st)) := build_base_addresses (d, st) xs in
-          ((idx, Some x) :: rest, (d, st))
+       => let '(idx, d) := merge_fresh_symbol d in
+          let '(rest, d) := build_base_addresses d xs in
+          ((idx, Some x) :: rest, d)
      | inl idx :: xs =>
-          let '(rest, st) := build_base_addresses st xs in
-          ((idx, None) :: rest, st)
+          let '(rest, d) := build_base_addresses d xs in
+          ((idx, None) :: rest, d)
      end.
 
-Fixpoint dag_gensym_n (n : nat) (s : dag * gensym_state) : list symbol * (dag * gensym_state) :=
+Fixpoint dag_gensym_n (n : nat) (d : dag) : list symbol * dag :=
   match n with
-  | O => (nil, s)
+  | O => (nil, d)
   | S n =>
-      let (d, s) := s in
-      let (sym, s) := gensym s in
-      let (i, d) := merge_symbol sym d in
-      let '(rest, (d, s)) := dag_gensym_n n (d, s) in
-      (cons i rest, (d, s))
+      let (i, d) := merge_fresh_symbol d in
+      let '(rest, d) := dag_gensym_n n d in
+      (cons i rest, d)
   end.
 
 (** PHOAS var type, storing dag indices or nat literals *)
@@ -665,14 +654,14 @@ Definition symex_PHOAS
      Success (PHOAS_output, d)).
 
 Definition symex_asm_func
-           (d : dag) (gensym_st : gensym_state) (output_types : type_spec) (stack_size : nat)
+           (d : dag) (output_types : type_spec) (stack_size : nat)
            (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
   : ErrorT EquivalenceCheckingError (list (idx + list idx) * symbolic_state)
-  := let '(output_placeholders, (d, gensym_st)) := build_inputs (d, gensym_st) output_types in
-      let '(rsp_idx, gensym_st) := gensym gensym_st in
-      let '(stack_placeholders, (d, gensym_st)) := build_inputarray (d, gensym_st) stack_size in
-      let '(asminputs, (d, gensym_st)) := build_base_addresses (d, gensym_st) (output_placeholders ++ inputs) in
-      let '(initial_reg_idxs, (d, gensym_st)) := dag_gensym_n 16 (d, gensym_st) in
+  := let '(output_placeholders, d) := build_inputs d output_types in
+      let '(rsp_idx, d) := merge_fresh_symbol d in
+      let '(stack_placeholders, d) := build_inputarray d stack_size in
+      let '(asminputs, d) := build_base_addresses d (output_placeholders ++ inputs) in
+      let '(initial_reg_idxs, d) := dag_gensym_n 16 d in
       let s0 :=
         {|
           dag_state := d;
@@ -741,17 +730,16 @@ Section check_equivalence.
     Definition check_equivalence : ErrorT EquivalenceCheckingError unit :=
       let reg_available := assembly_calling_registers (* registers available for calling conventions *) in
       let d := empty_dag in
-      let gensym_st := gensym_state_init in
       input_types <- simplify_input_type t arg_bounds;
       output_types <- simplify_base_type (type.final_codomain t) out_bounds;
-      let '(inputs, (d, gensym_st)) := build_inputs (d, gensym_st) input_types in
+      let '(inputs, d) := build_inputs d input_types in
 
       PHOAS_output <- symex_PHOAS expr inputs d;
       let '(PHOAS_output, d) := PHOAS_output in
 
       asm <- strip_ret asm;
       let stack_size : nat := N.to_nat (assembly_stack_size asm) in
-      symevaled_asm <- symex_asm_func d gensym_st output_types stack_size inputs reg_available asm;
+      symevaled_asm <- symex_asm_func d output_types stack_size inputs reg_available asm;
       let '(asm_output, s) := symevaled_asm in
 
       if list_beq _ (sum_beq _ _ N.eqb (list_beq _ N.eqb)) asm_output PHOAS_output
