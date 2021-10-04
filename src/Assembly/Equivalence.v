@@ -37,7 +37,7 @@ Typeclasses Opaque assembly_argument_registers_left_to_right_opt.
 (** Stack size (in bytes) *)
 Class assembly_stack_size_opt := assembly_stack_size' : option N.
 Typeclasses Opaque assembly_stack_size_opt.
-Definition default_assembly_stack_size := 40%N.
+Definition default_assembly_stack_size := 0%N.
 (** The stack size is taken to be the given command line argument, or
     else inferred to be the literal argument to the first [sub rsp,
     LITERAL] in the code, or else [default_assembly_stack_size] if
