@@ -577,8 +577,7 @@ Section Func.
       erewrite flatten_args_samelength; eauto. }
     match goal with H : _ |- _ =>
                     pose proof H;
-                      eapply of_list_zip_flatten_argnames
-                        with (argnames0:=argnames) in H;
+                      eapply (of_list_zip_flatten_argnames argnames) in H;
                       cleanup
     end.
     match goal with
@@ -598,7 +597,7 @@ Section Func.
           eapply equivalent_flat_args_iff1; eauto. }
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
-    2 : { eapply translate_func'_correct with (args0:=args);
+    2 : { eapply @translate_func'_correct with (args:=args);
           cbv [context_equiv]; intros; try apply Wf3_of_Wf; eauto; [ ].
           eapply only_differ_disjoint_undef_on; eauto;
             [ eapply used_varnames_disjoint; lia | ].

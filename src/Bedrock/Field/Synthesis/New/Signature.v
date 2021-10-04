@@ -243,9 +243,10 @@ Section WithParameters.
       eauto using outname_gen_inname_gen_disjoint;
       solve [apply prefix_name_gen_unique]
     | |- Equivalence.equivalent_flat_args _ _ _ _ =>
-      eapply equivalent_flat_args_iff1
-        with (argnames:=make_innames (inname_gen:=default_inname_gen) _)
-             (locals0:=map.empty);
+      eapply (equivalent_flat_args_iff1
+                (make_innames (inname_gen:=default_inname_gen) _)
+                _ _ _
+                map.empty);
       [ apply flatten_make_innames_NoDup;
         solve [eapply prefix_name_gen_unique]
       | reflexivity | ];
@@ -375,7 +376,7 @@ Section WithParameters.
       2: {
         use_translate_func_correct
           constr:((map word.unsigned x, (map word.unsigned y, tt))) Rr;
-          translate_func_precondition_hammer.
+        translate_func_precondition_hammer.
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout; solve_equivalence_side_conditions. } }
       { postcondition_simplify; [ | | ]; cycle -1.
