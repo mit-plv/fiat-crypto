@@ -249,8 +249,6 @@ Definition Bedrock2_ToFunctionLines
       end
     | _,_ => inr ("Only 32-bit and 64-bit targets are supported")
     end.
-Set Printing All.
-Print Bedrock2_ToFunctionLines.
 
 Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
   {|
