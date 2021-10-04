@@ -92,7 +92,7 @@ Here are some examples of ways to invoke the binaries (from the directories that
     ./word_by_word_montgomery 'p256' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_32.c
     ./word_by_word_montgomery 'p256' '64' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_64.c
 
-You can find more examples in the `Makefile`.
+You can find more examples in the [`Makefile`](./Makefile).
 
 Note that for large primes, you may need to increase the stack size to avoid stack overflows.  For example:
 
@@ -144,7 +144,7 @@ Here are some examples of ways to invoke the binaries (from the directories that
     ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '64' '3' '2^130 - 5' > poly1305_64.c
     ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '32' '5' '2^130 - 5' > poly1305_32.c
 
-You can find more examples in the `Makefile`.
+You can find more examples in the [`Makefile`](./Makefile).
 
 License
 -------
