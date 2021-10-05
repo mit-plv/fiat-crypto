@@ -14,6 +14,7 @@ Require Import Crypto.Stringification.Language.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ListUtil.FoldMap.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Notations.
@@ -139,10 +140,15 @@ Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
   := fun err => String.concat String.NewLine (show_lines err).
 
 Definition empty_dag : dag := nil.
-Definition merge_symbol (s:symbol) (d:dag) : idx * dag := merge_node ((old 64%N s), nil) d.
+Definition merge_symbol (s:symbol) : dag.M idx := merge_node ((old 64%N s), nil).
 (** We use the length of the dag as a source of fresh symbols *)
-Definition merge_fresh_symbol (d:dag) : idx * dag := merge_symbol (N.of_nat (List.length d)) d.
-Definition merge_literal (l:Z) (d:dag) : idx * dag := merge_node ((const l, nil)) d.
+Definition merge_fresh_symbol : dag.M idx := fun d => merge_symbol (N.of_nat (List.length d)) d.
+Definition merge_literal (l:Z) : dag.M idx := merge_node ((const l, nil)).
+
+Definition SetRegFresh (r : REG) : M idx :=
+  (idx <- lift_dag merge_fresh_symbol;
+  _ <- SetReg r idx;
+  Symbolic.ret idx).
 
 (** symbolic evaluations live in the state monad, pushed to the leaves of a PHOAS type *)
 Definition symexM T := dag -> ErrorT EquivalenceCheckingError (T * dag).
@@ -215,46 +221,60 @@ Fixpoint simplify_input_type
              Success (vA ++ vB))
      end%error.
 
-Definition build_inputarray (d : dag) (len : nat)  : list idx * dag :=
-  List.fold_left (fun '(idxs, d) _
-                    => let '(idx, d) := merge_fresh_symbol d in
-                       (idx :: idxs, d))
-                   (List.seq 0 len)
-                   ([], d).
+Definition build_inputarray (len : nat) : dag.M (list idx) :=
+  List.foldmap (fun _ => merge_fresh_symbol) (List.seq 0 len).
 
-Fixpoint build_inputs (d : dag) (types : type_spec) : list (idx + list idx) * dag
+Fixpoint build_inputs (types : type_spec) : dag.M (list (idx + list idx))
   := match types with
-     | [] => ([], d)
+     | [] => dag.ret []
      | None :: tys
-       => let '(idx, d) := merge_fresh_symbol d in
-          let '(rest, d) := build_inputs d tys in
-          (inl idx :: rest, d)
+       => (idx <- merge_fresh_symbol;
+           rest <- build_inputs tys;
+           dag.ret (inl idx :: rest))
      | Some len :: tys
-       => let '(idxs, d) := build_inputarray d len in
-          let '(rest, d) := build_inputs d tys in
-          (inr idxs :: rest, d)
-     end.
-
-Fixpoint build_base_addresses {T} (d : dag) (items : list (idx + T)) : list (idx * option T) * dag
+       => (idxs <- build_inputarray len;
+           rest <- build_inputs tys;
+           dag.ret (inr idxs :: rest))
+     end%dagM.
+(*
+Fixpoint build_base_addresses {T} (items : list (idx + T)) : dag.M (list (idx * option T))
   := match items with
-     | [] => ([], d)
+     | [] => dag.ret []
      | inr x :: xs
-       => let '(idx, d) := merge_fresh_symbol d in
-          let '(rest, d) := build_base_addresses d xs in
-          ((idx, Some x) :: rest, d)
+       => (idx <- merge_fresh_symbol;
+           rest <- build_base_addresses xs;
+           dag.ret ((idx, Some x) :: rest))
      | inl idx :: xs =>
-          let '(rest, d) := build_base_addresses d xs in
-          ((idx, None) :: rest, d)
-     end.
+          (rest <- build_base_addresses xs;
+           dag.ret ((idx, None) :: rest))
+     end%dagM.
+*)
+Fixpoint build_merge_base_addresses (items : list (idx + list idx)) (reg_available : list REG) : M (list (option (list idx)))
+  := match items, reg_available with
+     | [], _ | _, [] => Symbolic.ret []
+     | inr idxs :: xs, r :: reg_available
+       => (base <- SetRegFresh r; (* note: overwrites initial value *)
+           addrs <- mapM (fun '(i, idx) =>
+                offset <- Symbolic.App ((const (8*Z.of_nat i)), nil);
+                addr <- Symbolic.App (add 64, [base; offset]);
+                (fun s => Success (addr, update_mem_with s (cons (addr,idx))))
+              ) (List.enumerate idxs);
+           rest <- build_merge_base_addresses xs reg_available;
+           Symbolic.ret (Some addrs :: rest))
+     | inl idx :: xs, r :: reg_available =>
+          (_ <- SetReg r idx; (* note: overwrites initial value *)
+           rest <- build_merge_base_addresses xs reg_available;
+           Symbolic.ret (None :: rest))
+     end%N%x86symex.
 
-Fixpoint dag_gensym_n (n : nat) (d : dag) : list symbol * dag :=
+Fixpoint dag_gensym_n (n : nat) : dag.M (list symbol) :=
   match n with
-  | O => (nil, d)
+  | O => dag.ret nil
   | S n =>
-      let (i, d) := merge_fresh_symbol d in
-      let '(rest, d) := dag_gensym_n n d in
-      (cons i rest, d)
-  end.
+      (i <- merge_fresh_symbol;
+       rest <- dag_gensym_n n;
+       dag.ret (cons i rest))
+  end%dagM.
 
 (** PHOAS var type, storing dag indices or nat literals *)
 Fixpoint base_var (t : base.type) : Set
@@ -653,56 +673,65 @@ Definition symex_PHOAS
      PHOAS_output <- simplify_base_var PHOAS_output;
      Success (PHOAS_output, d)).
 
+Definition init_symbolic_state (d : dag) : symbolic_state
+  := let '(initial_reg_idxs, d) := dag_gensym_n 16 d in
+     {|
+       dag_state := d;
+       symbolic_reg_state := Tuple.from_list_default None 16 (List.map Some initial_reg_idxs);
+       symbolic_mem_state := [];
+       symbolic_flag_state := Tuple.repeat None 6;
+     |}.
+
+Definition build_merge_stack_placeholders (stack_size : nat)
+  : M unit
+  := (_ <- SetRegFresh rsp;
+      stack_placeholders <- lift_dag (build_inputarray stack_size);
+      mapM_ (fun '(i, idx) =>
+            a <- @Address (64%N) {| mem_reg := rsp; mem_offset := Some (Z.opp (Z.of_nat(8*S i))); mem_is_byte := false; mem_extra_reg:=None |};
+            (fun s => Success (tt, update_mem_with s (cons (a,idx))))
+          ) (List.enumerate stack_placeholders))%x86symex.
+
+Definition LoadOutputs (outputaddrs : list (option (list idx)))
+  : M (list (idx + list idx))
+  := (asm_output <- mapM (fun ocells =>
+            match ocells with
+            | None => err (error.load 0)
+            | Some cells => mapM Load64 cells
+            end) outputaddrs;
+      Symbolic.ret (List.map inr asm_output))%N%x86symex.
+
+Definition symex_asm_func_M
+           (output_types : type_spec) (stack_size : nat)
+           (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
+  : M (ErrorT (list (option (list idx)) (* outputaddrs *)) (list (idx + list idx)))
+  := (output_placeholders <- lift_dag (build_inputs output_types);
+      argptrs <- build_merge_base_addresses (output_placeholders ++ inputs) reg_available;
+      _ <- build_merge_stack_placeholders stack_size;
+      _ <- SymexLines asm;
+      let outputaddrs : list (option (list idx)) := firstn (length argptrs - length inputs) argptrs in
+      (* In the following line, we match on the result so we can emit Internal_error_output_load_failed in the calling function, rather than passing through the error from LoadOutputs *)
+      (fun s => match LoadOutputs outputaddrs s with
+                | Error (_, s) => Success (Error outputaddrs, s)
+                | Success (asm_output, s) => Success (Success asm_output, s)
+                end))%N%x86symex.
+
 Definition symex_asm_func
            (d : dag) (output_types : type_spec) (stack_size : nat)
            (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
   : ErrorT EquivalenceCheckingError (list (idx + list idx) * symbolic_state)
-  := let '(output_placeholders, d) := build_inputs d output_types in
-      let '(rsp_idx, d) := merge_fresh_symbol d in
-      let '(stack_placeholders, d) := build_inputarray d stack_size in
-      let '(asminputs, d) := build_base_addresses d (output_placeholders ++ inputs) in
-      let '(initial_reg_idxs, d) := dag_gensym_n 16 d in
-      let s0 :=
-        {|
-          dag_state := d;
-          symbolic_reg_state := Tuple.from_list_default None 16 (List.map Some initial_reg_idxs);
-          symbolic_mem_state := [];
-          symbolic_flag_state := Tuple.repeat None 6;
-        |} in
-
-      match
-        (argptrs <- mapM (fun '(r, (base, oarr)) => _ <- SetReg r base; (* note: overwrites initial value *)
-          match oarr with None => Symbolic.ret None
-          | Some idxs =>
-              addrs <- mapM (fun '(i, idx) =>
-                offset <- Symbolic.App ((const (8*Z.of_nat i)), nil);
-                addr <- Symbolic.App (add 64, [base; offset]);
-                (fun s => Success (addr, update_mem_with s (cons (addr,idx))))
-              ) (List.enumerate idxs);
-              Symbolic.ret (Some addrs)
-          end) (List.combine reg_available asminputs);
-        _ <- SetReg rsp rsp_idx;
-        _ <- mapM_ (fun '(i, idx) =>
-            a <- @Address (64%N) {| mem_reg := rsp; mem_offset := Some (Z.opp (Z.of_nat(8*S i))); mem_is_byte := false; mem_extra_reg:=None |};
-            (fun s => Success (tt, update_mem_with s (cons (a,idx))))
-          ) (List.enumerate stack_placeholders);
-        _ <- SymexLines asm;
-        Symbolic.ret argptrs)%N%x86symex s0
-      with
-      | Error (e, s) => Error (Symbolic_execution_failed e s)
-      | Success (argptrs, s) =>
-          let outputaddrs : list (option (list idx))  := firstn (length argptrs - length inputs) argptrs in
-          match Option.List.lift (List.map (fun ocells =>
-            match ocells with
-            | None => None
-            | Some cells => Option.List.lift (List.map (fun i => load i s) cells)
-            end
-          ) outputaddrs) with
-          | None => Error (Internal_error_output_load_failed outputaddrs s)
-          | Some asm_output =>
-              Success (List.map inr asm_output, s)
-          end
-      end.
+  := let s0 := init_symbolic_state d in
+     let num_reg_given := List.length reg_available in
+     let num_reg_needed := List.length inputs + List.length output_types in
+     if (num_reg_given <? num_reg_needed)%nat
+     then
+       Error (Not_enough_registers num_reg_given num_reg_needed)
+     else
+       match symex_asm_func_M output_types stack_size inputs reg_available asm s0 with
+       | Error (e, s) => Error (Symbolic_execution_failed e s)
+       | Success (Error outputaddrs, s)
+         => Error (Internal_error_output_load_failed outputaddrs s)
+       | Success (Success asm_output, s) => Success (asm_output, s)
+       end.
 
 Section check_equivalence.
   Context {assembly_calling_registers' : assembly_calling_registers_opt}
@@ -732,7 +761,7 @@ Section check_equivalence.
       let d := empty_dag in
       input_types <- simplify_input_type t arg_bounds;
       output_types <- simplify_base_type (type.final_codomain t) out_bounds;
-      let '(inputs, d) := build_inputs d input_types in
+      let '(inputs, d) := build_inputs input_types d in
 
       PHOAS_output <- symex_PHOAS expr inputs d;
       let '(PHOAS_output, d) := PHOAS_output in

@@ -292,11 +292,23 @@ Section WithDag.
   Qed.
 End WithDag.
 
-Definition merge_node (n : node idx) (d : dag) : idx * dag :=
-  match List.indexof (node_beq N.eqb n) d with
-  | Some i => (N.of_nat i, d)
-  | None => (N.of_nat (length d), List.app d (cons n nil))
-  end.
+Module dag.
+  Definition M T := dag -> T * dag.
+  Definition bind {A B} (v : M A) (f : A -> M B) : M B
+    := fun d => let '(v, d) := v d in f v d.
+  Definition ret {A} (v : A) : M A
+    := fun d => (v, d).
+End dag.
+
+Delimit Scope dagM_scope with dagM.
+Bind Scope dagM_scope with dag.M.
+Notation "x <- y ; f" := (dag.bind y (fun x => f%dagM)) : dagM_scope.
+
+Definition merge_node (n : node idx) : dag.M idx :=
+  fun d => match List.indexof (node_beq N.eqb n) d with
+           | Some i => (N.of_nat i, d)
+           | None => (N.of_nat (length d), List.app d (cons n nil))
+           end.
 Fixpoint merge (e : expr) (d : dag) : idx * dag :=
   match e with
   | ExprRef i => (i, d)
@@ -1354,6 +1366,10 @@ Definition some_or {A} (f : symbolic_state -> option A) (e : error) : M A :=
   fun st => match f st with Some x => Success (x, st) | None => Error (e, st) end.
 Definition bind {A B} (x : M A) (f : A -> M B) : M B :=
   fun s => (x_s <- x s; f (fst x_s) (snd x_s))%error.
+Definition lift_dag {A} (v : dag.M A) : M A :=
+  fun s => let '(v, d) := v s.(dag_state) in
+           Success (v, update_dag_with s (fun _ => d)).
+
 Declare Scope x86symex_scope.
 Delimit Scope x86symex_scope with x86symex.
 Bind Scope x86symex_scope with M.
