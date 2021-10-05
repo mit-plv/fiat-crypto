@@ -8,10 +8,10 @@ Require Import Crypto.Language.APINotations.
 Require Import Crypto.AbstractInterpretation.ZRange.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Assembly.Syntax.
-Require Import Crypto.Assembly.Semantics.
+Require Import Crypto.Assembly.WithBedrock.Semantics.
+Require Import Crypto.Assembly.WithBedrock.SymbolicProofs.
 Require Import Crypto.Assembly.Symbolic.
 Require Import Crypto.Assembly.Equivalence.
-Require Import Crypto.Assembly.SymbolicProofs.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Prod.
