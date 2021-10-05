@@ -141,8 +141,20 @@ Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
 
 Definition empty_dag : dag := nil.
 Definition merge_symbol (s:symbol) : dag.M idx := merge_node ((old 64%N s), nil).
-(** We use the length of the dag as a source of fresh symbols *)
-Definition merge_fresh_symbol : dag.M idx := fun d => merge_symbol (N.of_nat (List.length d)) d.
+(** We use successor as a source of fresh symbols *)
+Print dag.
+Print node.
+Print op.
+Definition max_idx_list (l : list idx) : idx := List.fold_right N.max 0%N l.
+Definition max_idx_op (o : op) : idx
+  := match o with
+     | old _ x => x
+     | _ => 0%N
+     end.
+Definition max_idx_node (n : node idx) : idx := N.max (max_idx_op (fst n)) (max_idx_list (snd n)).
+Definition max_idx_dag (d : dag) : idx := max_idx_list (List.map max_idx_node d).
+Definition gensym (d : dag) : idx := N.succ (max_idx_dag d).
+Definition merge_fresh_symbol : dag.M idx := fun d => merge_symbol (gensym d) d.
 Definition merge_literal (l:Z) : dag.M idx := merge_node ((const l, nil)).
 
 Definition SetRegFresh (r : REG) : M idx :=
