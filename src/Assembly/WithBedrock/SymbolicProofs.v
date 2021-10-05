@@ -9,7 +9,7 @@ Require Import Crypto.Util.ListUtil.IndexOf.
 Require Crypto.Util.Option.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Symbolic.
-Require Import Crypto.Assembly.Semantics.
+Require Import Crypto.Assembly.WithBedrock.Semantics.
 Require Import Crypto.Assembly.Equivalence.
 Import Sorting.Permutation.
 

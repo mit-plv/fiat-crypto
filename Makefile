@@ -102,6 +102,7 @@ PERFTESTING_VO := \
 BEDROCK2_FILES_PATTERN := \
 	src/ExtractionOCaml/bedrock2_% \
 	src/ExtractionHaskell/bedrock2_% \
+	src/Assembly/WithBedrock/% \
 	src/Bedrock/% # it's important to catch not just the .vo files, but also the .glob files, etc, because this is used to filter FILESTOINSTALL
 EXCLUDE_PATTERN :=
 ifeq ($(SKIP_BEDROCK2),1)
