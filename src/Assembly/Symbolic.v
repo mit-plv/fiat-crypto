@@ -304,21 +304,6 @@ Delimit Scope dagM_scope with dagM.
 Bind Scope dagM_scope with dag.M.
 Notation "x <- y ; f" := (dag.bind y (fun x => f%dagM)) : dagM_scope.
 
-Module dag_err.
-  Definition M {error} T := dag -> ErrorT error (T * dag).
-  Definition bind {error A B} (v : @M error A) (f : A -> @M error B) : @M error B
-    := fun d => (vd <- v d; let '(v, d) := vd in f v d)%error.
-  Definition ret {error A} (v : A) : @M error A
-    := fun d => Success (v, d).
-  Definition err {error A} (err : error) : @M error A
-    := fun d => Error err.
-End dag_err.
-Arguments dag_err.M {error} T, error T.
-
-Delimit Scope dagMerr_scope with dagMerr.
-Bind Scope dagMerr_scope with dag_err.M.
-Notation "x <- y ; f" := (dag_err.bind y (fun x => f%dagMerr)) : dagMerr_scope.
-
 Definition merge_node (n : node idx) : dag.M idx :=
   fun d => match List.indexof (node_beq N.eqb n) d with
            | Some i => (N.of_nat i, d)
@@ -1372,72 +1357,58 @@ Module error.
 End error.
 Notation error := error.error.
 
-Definition M_gen {error} T := symbolic_state -> ErrorT (error * symbolic_state) (T * symbolic_state).
-Arguments M_gen {error} T, error T.
-Definition M T := M_gen error T.
-Definition ret {error A} (x : A) : M_gen error A :=
+Definition M T := symbolic_state -> ErrorT (error * symbolic_state) (T * symbolic_state).
+Definition ret {A} (x : A) : M A :=
   fun s => Success (x, s).
-Definition err {error A} (e : error) : M_gen error A :=
+Definition err {A} (e : error) : M A :=
   fun s => Error (e, s).
-Definition some_or {error A} (f : symbolic_state -> option A) (e : error) : M_gen error A :=
+Definition some_or {A} (f : symbolic_state -> option A) (e : error) : M A :=
   fun st => match f st with Some x => Success (x, st) | None => Error (e, st) end.
-Definition bind {error A B} (x : M_gen error A) (f : A -> M_gen error B) : M_gen error B :=
+Definition bind {A B} (x : M A) (f : A -> M B) : M B :=
   fun s => (x_s <- x s; f (fst x_s) (snd x_s))%error.
-Definition lift_dag {error A} (v : dag.M A) : M_gen error A :=
+Definition lift_dag {A} (v : dag.M A) : M A :=
   fun s => let '(v, d) := v s.(dag_state) in
            Success (v, update_dag_with s (fun _ => d)).
-Definition lift_dag_err {error A} (v : dag_err.M error A) : M_gen error A :=
-  fun s => match v s.(dag_state) with
-           | Error err => Error (err, s)
-           | Success (v, d)
-             => Success (v, update_dag_with s (fun _ => d))
-           end.
-Definition lift_gen {error A} (v : ErrorT error A) : M_gen error A
-  := fun s => match v with
-              | Error err => Error (err, s)
-              | Success v => Success (v, s)
-              end.
 
 Declare Scope x86symex_scope.
 Delimit Scope x86symex_scope with x86symex.
 Bind Scope x86symex_scope with M.
-Bind Scope x86symex_scope with M_gen.
 Notation "x <- y ; f" := (bind y (fun x => f%x86symex)) : x86symex_scope.
 Section MapM. (* map over a list in the state monad *)
-  Context {error A B} (f : A -> M_gen error B).
-  Fixpoint mapM (l : list A) : M_gen (list B) :=
+  Context {A B} (f : A -> M B).
+  Fixpoint mapM (l : list A) : M (list B) :=
     match l with
     | nil => ret nil
     | cons a l => b <- f a; bs <- mapM l; ret (cons b bs)
     end%x86symex.
 End MapM.
-Definition mapM_ {error A B} (f: A -> M_gen error B) l : M_gen error unit := _ <- mapM f l; ret tt.
+Definition mapM_ {A B} (f: A -> M B) l : M unit := _ <- mapM f l; ret tt.
 
 Definition GetFlag f : M idx :=
   some_or (fun s => get_flag s f) (error.get_flag f).
 Definition GetReg64 ri : M idx :=
   some_or (fun st => get_reg st ri) (error.get_reg (widest_register_of_index ri)).
 Definition Load64 (a : idx) : M idx := some_or (load a) (error.load a).
-Definition SetFlag {error} f i : M_gen error unit :=
+Definition SetFlag f i : M unit :=
   fun s => Success (tt, update_flag_with s (fun s => set_flag s f i)).
-Definition HavocFlags {error} : M_gen error unit :=
+Definition HavocFlags : M unit :=
   fun s => Success (tt, update_flag_with s (fun _ => Tuple.repeat None 6)).
-Definition PreserveFlag {error} {T} (f : FLAG) (k : M_gen error T) : M_gen error T :=
+Definition PreserveFlag {T} (f : FLAG) (k : M T) : M T :=
   vf <- (fun s => Success (get_flag s f, s));
   x <- k;
   _ <- (fun s => Success (tt, update_flag_with s (fun s => set_flag_internal s f vf)));
   ret x.
-Definition SetReg64 {error} rn i : M_gen error unit :=
+Definition SetReg64 rn i : M unit :=
   fun s => Success (tt, update_reg_with s (fun s => set_reg s rn i)).
 Definition Store64 (a v : idx) : M unit :=
   ms <- some_or (store a v) (error.store a v);
   fun s => Success (tt, update_mem_with s (fun _ => ms)).
-Definition Merge {error} (e : expr) : M_gen error idx := fun s =>
+Definition Merge (e : expr) : M idx := fun s =>
   let i_dag := merge e s in
   Success (fst i_dag, update_dag_with s (fun _ => snd i_dag)).
-Definition App {error} (n : node idx) : M_gen error idx :=
+Definition App (n : node idx) : M idx :=
   fun s => Merge (simplify s n) s.
-Definition Reveal {error} n (i : idx) : M_gen error expr :=
+Definition Reveal n (i : idx) : M expr :=
   fun s => Success (reveal s n i, s).
 Definition RevealConst (i : idx) : M Z :=
   x <- Reveal 1 i;

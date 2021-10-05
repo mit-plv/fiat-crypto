@@ -328,8 +328,8 @@ Ltac step_GetFlag :=
 Ltac step_symex1 := first [step_symex0 | step_GetFlag].
 Ltac step_symex ::= step_symex1.
 
-Lemma Merge_R {error} s m (HR : R s m) e v (H : eval s e v) :
-  forall i s', Merge (error:=error) e s = Success (i, s') ->
+Lemma Merge_R s m (HR : R s m) e v (H : eval s e v) :
+  forall i s', Merge e s = Success (i, s') ->
   R s' m /\ s :< s' /\ eval s' i v.
 Proof using Type.
   cbv [Merge].
@@ -351,8 +351,8 @@ Ltac step_Merge :=
 Ltac step_symex2 := first [step_symex1 | step_Merge].
 Ltac step_symex ::= step_symex2.
 
-Lemma App_R {error} s m (HR : R s m) e v (H : eval_node G s e v) :
-  forall i s', Symbolic.App (error:=error) e s = Success (i, s') ->
+Lemma App_R s m (HR : R s m) e v (H : eval_node G s e v) :
+  forall i s', Symbolic.App e s = Success (i, s') ->
   R s' m /\ s :< s' /\ eval s' i v.
 Proof using Type.
   cbv [Symbolic.App]; intros.
@@ -391,8 +391,8 @@ Ltac eval_same_expr_goal :=
 
 Import ListNotations.
 
-Lemma SetFlag_R {error} s m f (HR : R s m) (i:idx) b (Hi : eval s i (Z.b2z b)) :
-  forall _tt s', Symbolic.SetFlag (error:=error) f i s = Success (_tt, s') ->
+Lemma SetFlag_R s m f (HR : R s m) (i:idx) b (Hi : eval s i (Z.b2z b)) :
+  forall _tt s', Symbolic.SetFlag f i s = Success (_tt, s') ->
   R s' (SetFlag m f b) /\ s :< s'.
 Proof using Type.
   destruct s; cbv [Symbolic.SetFlag Symbolic.update_flag_with Symbolic.set_flag] in *;
@@ -786,8 +786,8 @@ Ltac step_SetOperand :=
         as (m&?Hm&HR&Hl); clear H
   end.
 
-Lemma HavocFlags_R {error} s m (HR : R s m) :
-  forall _tt s', Symbolic.HavocFlags (error:=error) s = Success (_tt, s') ->
+Lemma HavocFlags_R s m (HR : R s m) :
+  forall _tt s', Symbolic.HavocFlags s = Success (_tt, s') ->
   R s' (HavocFlags m) /\ s :< s'.
 Proof using Type.
   destruct s; cbv [Symbolic.HavocFlags Symbolic.update_flag_with] in *;
