@@ -20,6 +20,7 @@ Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ListUtil.FoldMap.
 Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.AddGetCarry.
@@ -978,7 +979,7 @@ Abort.
 
 Lemma build_inputarray_ok_full G d len vals inputs d'
       (d_ok : dag_ok G d)
-      (H : build_inputarray d len = (inputs, d'))
+      (H : build_inputarray len d = (inputs, d'))
       (Hargs : List.length vals = len)
       inputs'' d'' G''
       (H'' : build_inputarray_G G d vals = (inputs'', d'', G''))
@@ -997,7 +998,7 @@ Proof.
   set (n:=[]) in *; clearbody n.
   move s at top; move vals at top.
   repeat match goal with H : _ |- _ => revert H end.
-  induction vals as [|v vs IHvs], s as [|s0 ss]; cbn [List.length fold_left seq]; intros; try congruence.
+  induction vals as [|v vs IHvs], s as [|s0 ss]; cbn [List.length List.foldmap fold_left seq]; intros; try congruence.
   { inversion_prod; subst;
       repeat match goal with
              | [ H : ?x = ?y ++ ?x |- _ ] => is_var y; destruct y; cbn [List.app] in H
@@ -1005,7 +1006,8 @@ Proof.
              | [ H : context[List.length (_ ++ _)] |- _ ] => rewrite app_length in H
              | [ H : context[List.length (_ :: _)] |- _ ] => rewrite cons_length in H
              end;
-      eauto; try (exfalso; lia). }
+      eauto; try (exfalso; lia).
+    all: shelve. }
   { inversion Hs; clear Hs.
     break_innermost_match_hyps.
     ((unshelve let H := open_constr:(IHvs _ _ _ _ _ _ _ _ _ _ _ _ _) in specialize H); destruct inputs, inputs''; shelve_unifiable; revgoals); cbv beta iota;
@@ -1026,8 +1028,8 @@ Admitted.
 
 Lemma build_inputarray_ok_full_refl G d vals (len := List.length vals)
       (d_ok : dag_ok G d)
-      (inputs := fst (build_inputarray d len))
-      (d' := snd (build_inputarray d len))
+      (inputs := fst (build_inputarray len d))
+      (d' := snd (build_inputarray len d))
       (inputs'' := fst (fst (build_inputarray_G G d vals)))
       (d'' := snd (fst (build_inputarray_G G d vals)))
       (G'' := snd (build_inputarray_G G d vals))
@@ -1059,7 +1061,7 @@ Fixpoint build_inputs_G (G : symbol -> option Z) (d : dag) (types : type_spec) (
 
 Lemma build_inputs_ok_full G d (spec : type_spec) inputs d'
       (d_ok : dag_ok G d)
-      (H : build_inputs d spec = (inputs, d'))
+      (H : build_inputs spec d = (inputs, d'))
       args
       (Hargs : Forall2 val_or_list_val_matches_spec args spec)
       inputs'' d'' G''
@@ -1073,7 +1075,7 @@ Proof.
   repeat match goal with H : _ |- _ => revert H end.
   intros ? ? Hargs; induction Hargs.
   { cbn [build_inputs build_inputs_G]; intros.
-    inversion_prod; subst; eauto. }
+    inversion_prod; subst; eauto. all: shelve. }
   { cbn [build_inputs build_inputs_G]; intros.
     break_innermost_match_hyps; inversion_prod; cbn [val_or_list_val_matches_spec] in *; subst;
       try (now exfalso).
@@ -1108,7 +1110,7 @@ Admitted.
 
 Lemma build_inputs_ok G d (spec : type_spec) inputs args d'
       (d_ok : dag_ok G d)
-      (H : build_inputs d spec = (inputs, d'))
+      (H : build_inputs spec d = (inputs, d'))
       (Hargs : Forall2 val_or_list_val_matches_spec args spec)
       (G' := snd (build_inputs_G G d spec args))
   : Forall2 (eval_idx_or_list_idx G' d') inputs args
