@@ -236,19 +236,7 @@ Fixpoint build_inputs (types : type_spec) : dag.M (list (idx + list idx))
            rest <- build_inputs tys;
            dag.ret (inr idxs :: rest))
      end%dagM.
-(*
-Fixpoint build_base_addresses {T} (items : list (idx + T)) : dag.M (list (idx * option T))
-  := match items with
-     | [] => dag.ret []
-     | inr x :: xs
-       => (idx <- merge_fresh_symbol;
-           rest <- build_base_addresses xs;
-           dag.ret ((idx, Some x) :: rest))
-     | inl idx :: xs =>
-          (rest <- build_base_addresses xs;
-           dag.ret ((idx, None) :: rest))
-     end%dagM.
-*)
+
 Fixpoint build_merge_base_addresses (items : list (idx + list idx)) (reg_available : list REG) : M (list (option (list idx)))
   := match items, reg_available with
      | [], _ | _, [] => Symbolic.ret []
