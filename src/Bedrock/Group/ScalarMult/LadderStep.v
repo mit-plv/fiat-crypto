@@ -1,5 +1,5 @@
-Require Import Rupicola.Lib.Api.
-Require Import Rupicola.Lib.Alloc. 
+
+Require Import Rupicola.Lib.Api. Import bedrock2.WeakestPrecondition.
 Require Import Rupicola.Lib.SeparationLogicImpl.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Specs.Field.
@@ -155,9 +155,9 @@ Section __.
   Qed.
 
   (*TODO: move to pred_sep if deemed useful*)
-    Lemma merge_pred_sep A (a : A) R1 R2 pred tr m locals
-    : pred_sep (R1*R2)%sep pred a tr m locals ->
-      pred_sep R1 (pred_sep R2 pred) a tr m locals.
+    Lemma merge_pred_sep A (a : A) R1 R2 pred tr m l
+    : pred_sep (R1*R2)%sep pred a tr m l ->
+      pred_sep R1 (pred_sep R2 pred) a tr m l.
     Proof.
     unfold pred_sep; simpl.
     unfold Basics.flip; simpl.
@@ -183,27 +183,21 @@ Section __.
 
   Ltac compile_custom ::= ladderstep_compile_custom.
 
-Derive ladderstep_body SuchThat
-       (let args := ["X1"; "X2"; "Z2"; "X3"; "Z3"] in
-        ltac:(
-          let proc := constr:(("ladderstep",
-                               (args, [], ladderstep_body))
-                              : Syntax.func) in
-          let goal := Rupicola.Lib.Tactics.program_logic_goal_for_function
-                        proc [mul;add;sub;square;scmula24] in
-          exact (__rupicola_program_marker ladderstep_gallina -> goal)))
-       As ladderstep_correct.
-Proof.
-  compile_setup.
-  repeat compile_step.
-  (*TODO: why isn't this integrated w/ compile_step?
-    I need something in compile_step that peels off existentials
-   *)
-  repeat compile_cleanup_post.
-  compile_step.
-Qed.
+  Hint Extern 1 (spec_of _) => (simple refine (@spec_of_BinOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
+  Hint Extern 1 (spec_of _) => (simple refine (@spec_of_UnOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
   
-  
+  Derive ladderstep_body SuchThat
+         (let args := ["X1"; "X2"; "Z2"; "X3"; "Z3"] in
+          ltac:(
+            let proc := constr:(("ladderstep",
+                                 (args, [], ladderstep_body))
+                                : Syntax.func) in
+            let goal := Rupicola.Lib.Tactics.program_logic_goal_for_function
+                          proc [mul;add;sub;square;scmula24] in
+            exact (__rupicola_program_marker ladderstep_gallina -> goal)))
+         As ladderstep_correct.
+  Proof. compile. Qed.
+
 End __.
 
 Existing Instance spec_of_ladderstep.

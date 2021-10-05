@@ -6,7 +6,6 @@ Require Import Rupicola.Lib.SepLocals.
 Require Import Rupicola.Lib.ControlFlow.CondSwap.
 Require Import Rupicola.Lib.ControlFlow.DownTo.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Bedrock.Group.Point.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
 Require Import Crypto.Bedrock.ScalarField.Interface.Compilation.
 Require Import Crypto.Bedrock.Specs.Field.
@@ -143,7 +142,6 @@ Section __.
       simple apply compile_nlet_as_nlet_eq;
       first [ simple eapply compile_downto
             | simple eapply compile_sctestbit
-            | simple eapply compile_point_assign
             | simple eapply compile_felem_small_literal
             | simple eapply compile_felem_copy
             | simple eapply compile_cswap_pair
@@ -159,8 +157,8 @@ Section __.
                (st : F M_pos * F M_pos * F M_pos * F M_pos * bool)
       : predicate :=
       fun (_ : Semantics.trace)
-          (mem : Semantics.mem)
-          (locals : Semantics.locals) =>
+          (mem : mem)
+          (locals : locals) =>
         let '(x1, z1, x2, z2, swap) := st in
         locals = (map.put
              (map.put
@@ -300,118 +298,51 @@ Section __.
         let (b1,b2) := cswap b b1 b2 in
         (FElem b1 ptr1 c1 * FElem b2 ptr2 c2 * R)%sep mem' }.
   
-   Lemma compile_felem_cswap {tr mem locals functions} swap (lhs rhs : F M_pos) :
+   Lemma compile_felem_cswap {tr m l functions} swap (lhs rhs : F M_pos) :
     let v := cswap swap lhs rhs in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
       R mask_var lhs_ptr lhs_var b_lhs rhs_ptr rhs_var b_rhs,
 
       spec_of_felem_cswap functions ->
 
-      map.get locals mask_var = Some (word.of_Z (Z.b2z swap)) ->
+      map.get l mask_var = Some (word.of_Z (Z.b2z swap)) ->
       
-      map.get locals lhs_var = Some lhs_ptr ->
-      map.get locals rhs_var = Some rhs_ptr ->
+      map.get l lhs_var = Some lhs_ptr ->
+      map.get l rhs_var = Some rhs_ptr ->
 
-      (FElem b_lhs lhs_ptr lhs * FElem b_rhs rhs_ptr rhs * R)%sep mem ->
+      (FElem b_lhs lhs_ptr lhs * FElem b_rhs rhs_ptr rhs * R)%sep m ->
 
       (let v := v in
        let (b1,b2) := cswap swap b_lhs b_rhs in
-       forall m,
-         (FElem b1 lhs_ptr (fst v) * FElem b2 rhs_ptr (snd v) * R)%sep m ->
+       forall m',
+         (FElem b1 lhs_ptr (fst v) * FElem b2 rhs_ptr (snd v) * R)%sep m' ->
          (<{ Trace := tr;
-             Memory := m;
-             Locals := locals;
+             Memory := m';
+             Locals := l;
              Functions := functions }>
           k_impl
           <{ pred (k v eq_refl) }>)) ->
       <{ Trace := tr;
-         Memory := mem;
-         Locals := locals;
+         Memory := m;
+         Locals := l;
          Functions := functions }>
       cmd.seq
         (cmd.call [] felem_cswap [expr.var mask_var; expr.var lhs_var; expr.var rhs_var])
         k_impl
       <{ pred (nlet_eq [lhs_var; rhs_var] v k) }>.
    Proof.     
-     Local Ltac prove_field_compilation :=
-       repeat straightline';
+     Local Ltac prove_field_compilation locals :=
+       repeat straightline' locals;
        handle_call;
        lazymatch goal with
        | |- sep _ _ _ => ecancel_assumption
        | _ => idtac
        end; eauto;
-       sepsimpl; repeat straightline'; subst; eauto.
-     prove_field_compilation.
+       sepsimpl; repeat straightline' locals; subst; eauto.
+     prove_field_compilation l.
      destruct swap; eapply H4; unfold v; unfold cswap; simpl; eauto.
    Qed.
    Hint Resolve compile_felem_cswap : compiler.
-
-
-  
-  (*TODO: move to right place*)
-  (* There are two ways cswap could be compiled; you can either swap the local
-     variables (the pointers), or you can leave the pointers and copy over the
-     data. This version does the copying. *)
-  Lemma compile_cswap_nocopy {tr mem locals functions} (swap: bool) {A} (x y: A) :
-    let v := cswap swap x y in
-    forall {P} {pred: P v -> predicate}
-      {k: nlet_eq_k P v} {k_impl}
-      R (Data : word -> A -> Semantics.mem -> Prop)
-      swap_var x_var x_ptr y_var y_ptr tmp,
-
-      map.get locals swap_var = Some (word.of_Z (Z.b2z swap)) ->
-      map.get locals x_var = Some x_ptr ->
-      map.get locals y_var = Some y_ptr ->
-
-      (* tmp is a strictly temporary variable, confined to one part of the
-         if-clause; it gets unset after use *)
-      map.get locals tmp = None ->
-      (Data x_ptr x * Data y_ptr y * R)%sep mem ->
-
-      (let v := v in
-       <{ Trace := tr;
-          Memory := mem;
-          Locals := map.put (map.put locals x_var (fst (cswap swap x_ptr y_ptr))) y_var
-                      (snd (cswap swap x_ptr y_ptr));
-          Functions := functions }>
-       k_impl
-       <{ pred (k v eq_refl) }>) ->
-      <{ Trace := tr;
-         Memory := mem;
-         Locals := locals;
-         Functions := functions }>
-      cmd.seq
-        (cmd.cond
-           (expr.var swap_var)
-           (cmd.seq
-              (cmd.seq
-                 (cmd.seq
-                    (cmd.set tmp (expr.var x_var))
-                    (cmd.set x_var (expr.var y_var)))
-                 (cmd.set y_var (expr.var tmp)))
-              (cmd.unset tmp))
-           (cmd.skip))
-        k_impl
-      <{ pred (nlet_eq [x_var; y_var] v k) }>.
-  Proof.
-    intros; subst v; unfold cswap.
-    simple eapply compile_if with
-        (val_pred := fun _ tr' mem' locals' =>
-                      tr' = tr /\
-                      mem' = mem /\
-                      locals' =
-                      let locals := map.put locals x_var (if swap then y_ptr else x_ptr) in
-                      let locals := map.put locals y_var (if swap then x_ptr else y_ptr) in
-                      locals);
-      repeat compile_step;
-      repeat straightline'; subst_lets_in_goal; cbn; ssplit; eauto.
-    - rewrite !map.remove_put_diff, !map.remove_put_same, map.remove_not_in by congruence.
-      reflexivity.
-    - rewrite (map.put_noop x_var x_ptr), map.put_noop by assumption.
-      reflexivity.
-    - cbv beta in *; repeat compile_step; cbn.
-      destruct swap; eassumption.
-  Qed.
 
   (*
   Lemma compile_cswap_pair {tr mem locals functions} (swap: bool) {A} (x y: A * A) x1 x2 :
@@ -455,6 +386,10 @@ Section __.
 
   Existing Instance felem_alloc.
 
+  
+  Hint Extern 1 (spec_of _) => (simple refine (@spec_of_felem_copy _ _ _ _ _ _ _ _)) : typeclass_instances.
+  Hint Extern 1 (spec_of _) => (simple refine (@spec_of_felem_small_literal _ _ _ _ _ _ _ _)) : typeclass_instances.
+  
   Derive montladder_body SuchThat
            (let args := ["OUT"; "K"; "U" (*;"X1"; "Z1"; "X2"; "Z2" *)] in
             let montladder : Syntax.func :=
@@ -478,22 +413,20 @@ Section __.
       (*TODO: is this doing allocation?*)
       compile_step.
       compile_step.
-      unfold alloc in v; subst v.
       simple eapply compile_felem_small_literal; eauto.
       compile_step.
       compile_step.
       simple apply compile_nlet_as_nlet_eq.
       simple eapply compile_alloc; eauto.
       compile_step.
-      unfold alloc in v0; subst v0.
       simple eapply compile_felem_small_literal; eauto.
       compile_step.
       compile_step.
       simple apply compile_nlet_as_nlet_eq.
       simple eapply compile_alloc; eauto.
       compile_step.
-      unfold alloc in v1; subst v1.
       simple eapply compile_felem_copy; eauto.
+      admit (*TODO: hint not working*).
       compile_step.
       compile_step.
       compile_step.
@@ -501,7 +434,6 @@ Section __.
       simple apply compile_nlet_as_nlet_eq.
       simple eapply compile_alloc; eauto.
       compile_step.
-      unfold alloc in v2; subst v2.
       simple eapply compile_felem_small_literal; eauto.
       compile_step.
       compile_step.
