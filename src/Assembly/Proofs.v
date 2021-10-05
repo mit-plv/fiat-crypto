@@ -11,7 +11,6 @@ Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Semantics.
 Require Import Crypto.Assembly.Symbolic.
 Require Import Crypto.Assembly.Equivalence.
-Require Import Crypto.Assembly.SymbolicProofs.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Prod.
@@ -781,68 +780,32 @@ Admitted.
 
 
 
- *)
-
-Theorem symex_asm_func_M_correct
-        frame (G : symbol -> option Z) (s s' : symbolic_state) (m : machine_state) (output_types : type_spec) (stack_size : nat)
-        (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
-        (rets : list (idx + list idx))
-        (H : symex_asm_func_M output_types stack_size inputs reg_available asm s = Success (Success rets, s'))
-        (runtime_inputs : list (Z + list Z))
-        (HR : R frame G s m)
-        (d := s.(dag_state))
-        (d' := s'.(dag_state))
-        (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
-  : exists m' G'
-           (runtime_rets : list (Z + list Z)),
-    (* This bit lines up with SymexLines_R *)
-    (DenoteLines m asm = Some m'
-     /\ R frame G' s' m'
-     /\ (forall e n, eval G' d e n -> eval G' d' e n))
-    /\ (List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets
-        /\ (forall e n, eval G d e n -> eval G' d' e n)).
-Proof.
-  cbv [symex_asm_func_M Symbolic.bind ErrorT.bind lift_dag] in H.
-  break_innermost_match_hyps; cbn [fst snd] in *; try discriminate; [].
-  repeat first [ progress subst
-               | match goal with
-                 | [ H : Success _ = Success _ |- _ ] => inversion H; clear H
-                 | [ x := ?y |- _ ] => subst x
-                 end ].
-  (* ... *)
-  lazymatch goal with
-  | [ H : SymexLines _ _ = Success ?v |- _ ]
-    => (tryif is_var v then destruct v else idtac);
-         eapply SymexLines_R in H;
-         [ destruct H as [? H]; do 3 eexists; split;
-           [ repeat apply conj; intros; try eapply H | ]
-         | .. ]
-  end.
-Admitted.
-
+*)
 Theorem symex_asm_func_correct
-        frame (G : symbol -> option Z) (s s' : symbolic_state) (m : machine_state) (output_types : type_spec) (stack_size : nat)
+        (d : dag) (output_types : type_spec) (stack_size : nat)
         (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
         (rets : list (idx + list idx))
-        (H : symex_asm_func output_types stack_size inputs reg_available asm s = Success (rets, s'))
+        (s : symbolic_state)
+        (H : symex_asm_func d output_types stack_size inputs reg_available asm = Success (rets, s))
+        (d' := s.(dag_state))
+        (st : machine_state)
         (runtime_inputs : list (Z + list Z))
-        (HR : R frame G s m)
-        (d := s.(dag_state))
-        (d' := s'.(dag_state))
-        (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
-  : exists m' G'
+        (* TODO: FIXME: instantiate G *)
+        (input_G : symbol -> option Z)
+        (output_G : symbol -> option Z)
+        (Hinput_G_ok : dag_ok input_G d)
+        (Hinputs : List.Forall2 (eval_idx_or_list_idx input_G d) inputs runtime_inputs)
+        (* TODO(Andres): write down something that relates [st] to args *)
+  : (exists st'
+            (* ??? *) (*(input_runtime_var : type.for_each_lhs_of_arrow API.interp_type t)*)
            (runtime_rets : list (Z + list Z)),
-    (* This bit lines up with SymexLines_R *)
-    (DenoteLines m asm = Some m'
-     /\ R frame G' s' m'
-     /\ (forall e n, eval G' d e n -> eval G' d' e n))
-    /\ (List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets
-        /\ (forall e n, eval G d e n -> eval G' d' e n)).
+        DenoteLines st asm = Some st'
+        /\ True (* TODO(Andres): write down something that relates st' to retvals *)
+        /\ List.Forall2 (eval_idx_or_list_idx output_G d') rets runtime_rets)
+    /\ dag_ok output_G d'
+    /\ (forall e n, eval input_G d e n -> eval output_G d' e n).
 Proof.
-  cbv [symex_asm_func err] in H.
-  break_innermost_match_hyps; inversion_ErrorT; inversion_prod; subst.
-  eapply symex_asm_func_M_correct; eassumption.
-Qed.
+Admitted.
 
 Definition val_or_list_val_matches_spec (arg : Z + list Z) (spec : option nat)
   := match arg, spec with
@@ -1158,114 +1121,6 @@ Proof.
                  | etransitivity; [ apply surjective_pairing | apply f_equal2 ] ].
 Qed.
 
-Lemma check_equivalenceM_correct
-        {assembly_calling_registers' : assembly_calling_registers_opt}
-        {assembly_stack_size' : assembly_stack_size_opt}
-        {assembly_output_first : assembly_output_first_opt}
-        {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
-        frame (G : symbol -> option Z) (s s' : symbolic_state) (m : machine_state)
-        {t}
-        (asm : Lines)
-        (expr : API.Expr t)
-        (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
-        (out_bounds : ZRange.type.base.option.interp (type.final_codomain t))
-        (Hwf : API.Wf expr)
-        (H : check_equivalenceM asm expr arg_bounds out_bounds s = Success (tt, s'))
-        (PHOAS_args : type.for_each_lhs_of_arrow API.interp_type t)
-        (args : list (Z + list Z))
-        (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
-        (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
-        (HR : R frame G s m)
-        (d := s.(dag_state))
-        (d' := s'.(dag_state))
-  (* TODO: this should match symex_asm_func_correct *)
-  : exists asm' G' m' rets (runtime_rets : list (Z + list Z)),
-    strip_ret asm = Success asm'
-    /\ DenoteLines m asm' = Some m'
-    /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some runtime_rets
-    /\ R frame G' s' m'
-    /\ (forall e n, eval G d e n -> eval G' d' e n)
-    /\ List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets
-    /\ True (* TODO(andres): write down something that relates m' to rets *).
-Proof.
-  subst d d'.
-  cbv beta delta [check_equivalenceM ErrorT.bind Symbolic.bind lift_gen lift_dag lift_dag_err ret err] in H.
-  repeat match type of H with
-         | (let n := ?v in _) = _
-           => set v as n in H;
-                lazymatch type of H with
-                | (let n := ?v in ?rest) = ?rhs
-                  => change (match v with n => rest end = rhs) in H
-                end
-         | (let n := ?v in _) _ = _
-           => set v as n in H;
-                lazymatch type of H with
-                | (let n := ?v in ?rest) ?x = ?rhs
-                  => change (match v with n => rest x end = rhs) in H; cbv beta in H
-                end
-         | match ?v with Success n => @?S n | Error e => @?E e end = ?rhs
-           => let n := fresh n in
-              let e := fresh e in
-              destruct v as [n|e] eqn:?; [ change (S n = rhs) in H | change (E e = rhs) in H ];
-                cbv beta in H
-         | match ?v with pair a b => @?P a b end = ?rhs
-           => let a := fresh a in
-              let b := fresh b in
-              destruct v as [a b] eqn:?; change (P a b = rhs) in H;
-                cbv beta in H
-         | match ?v with true => ?T | false => ?F end = ?rhs
-           => let a := fresh a in
-              let b := fresh b in
-              destruct v eqn:?; [ change (T = rhs) in H | change (F = rhs) in H ];
-                cbv beta in H
-         end; try discriminate; [].
-  repeat (break_innermost_match_hyps_step; inversion_ErrorT; subst; inversion_prod; subst; cbn [fst snd] in * ).
-  reflect_hyps.
-  subst.
-  pose proof (empty_dag_ok (fun _ => None)).
-  let H := fresh in pose proof Hargs as H; eapply build_input_runtime_ok_nil in H; [ | eassumption .. ].
-  repeat first [ assumption
-               | match goal with
-                 | [ H : build_inputs _ _ = _ |- _ ] => move H at bottom; eapply build_inputs_ok in H; [ | eassumption .. ]
-                 | [ H : symex_PHOAS ?expr ?inputs ?d = Success _, H' : build_input_runtime _ ?ri = Some _ |- _ ]
-                   => move H at bottom; eapply symex_PHOAS_correct with (runtime_inputs:=ri) in H; [ | eassumption .. ]
-                 | [ H : symex_asm_func _ _ _ _ _ _ = Success ?v |- _ ]
-                   => (tryif is_var v then destruct v else idtac);
-                      move H at bottom; eapply symex_asm_func_correct in H;
-                      [ | try eassumption .. ];
-                      [ | clear H; eapply Forall2_weaken; [ apply lift_eval_idx_or_list_idx_impl | eassumption ] ]
-                 end
-               | progress destruct_head'_ex
-               | progress destruct_head'_and
-               | progress inversion_prod
-               | progress subst
-               | match goal with
-                 | [ H : ?x = Some ?a, H' : ?x = Some ?b |- _ ]
-                   => rewrite H in H'; inversion_option
-                 | [ H : forall args, Forall2 ?P args ?v -> Forall2 _ _ _, H' : Forall2 ?P _ ?v |- _ ]
-                   => specialize (H _ H')
-                 end ].
-  lazymatch goal with
-  | [ H : symex_asm_func _ _ _ _ _ _ = Success ?v |- _ ]
-    => (tryif is_var v then destruct v else idtac);
-         move H at bottom; eapply symex_asm_func_correct in H;
-         [ | try eassumption .. ];
-         [ | | clear H; eapply Forall2_weaken; [ apply lift_eval_idx_or_list_idx_impl | try eassumption ] ]
-  end.
-  do 5 eexists; repeat apply conj; try eassumption; trivial.
-  Unshelve.
-  (*all: exact (fun _ => None).*)
-Admitted.
-
-Lemma init_symbolic_state_correct frame G m
-  : R frame G (init_symbolic_state empty_dag) m.
-Proof.
-  unfold R.
-  cbv [init_symbolic_state].
-  break_innermost_match.
-  (* TODO(Andres) *)
-Admitted.
-
 Theorem check_equivalence_correct
         {assembly_calling_registers' : assembly_calling_registers_opt}
         {assembly_stack_size' : assembly_stack_size_opt}
@@ -1290,15 +1145,57 @@ Theorem check_equivalence_correct
     /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
     /\ True (* TODO(andres): write down something that relates st' to retvals *).
 Proof.
-  cbv [check_equivalence] in H.
-  break_innermost_match_hyps; inversion_ErrorT; subst.
-  match goal with H : _ |- _ => eapply check_equivalenceM_correct in H end.
-  { destruct_head'_ex; destruct_head'_and; eauto 100. }
-  all: eauto.
-  apply init_symbolic_state_correct.
+  cbv beta delta [check_equivalence ErrorT.bind] in H.
+  repeat match type of H with
+         | (let n := ?v in _) = _
+           => set v as n in H;
+                lazymatch type of H with
+                | (let n := ?v in ?rest) = ?rhs
+                  => change (match v with n => rest end = rhs) in H
+                end
+         | match ?v with Success n => @?S n | Error e => @?E e end = ?rhs
+           => let n := fresh n in
+              let e := fresh e in
+              destruct v as [n|e] eqn:?; [ change (S n = rhs) in H | change (E e = rhs) in H ];
+                cbv beta in H
+         | match ?v with pair a b => @?P a b end = ?rhs
+           => let a := fresh a in
+              let b := fresh b in
+              destruct v as [a b] eqn:?; change (P a b = rhs) in H;
+                cbv beta in H
+         | match ?v with true => ?T | false => ?F end = ?rhs
+           => let a := fresh a in
+              let b := fresh b in
+              destruct v eqn:?; [ change (T = rhs) in H | change (F = rhs) in H ];
+                cbv beta in H
+         end; try discriminate; [].
+  reflect_hyps.
+  subst.
+  pose proof (empty_dag_ok (fun _ => None)).
+  let H := fresh in pose proof Hargs as H; eapply build_input_runtime_ok_nil in H; [ | eassumption .. ].
+  repeat first [ assumption
+               | match goal with
+                 | [ H : build_inputs _ _ = _ |- _ ] => move H at bottom; eapply build_inputs_ok in H; [ | eassumption .. ]
+                 | [ H : symex_PHOAS ?expr ?inputs ?d = Success _, H' : build_input_runtime _ ?ri = Some _ |- _ ]
+                   => move H at bottom; eapply symex_PHOAS_correct with (runtime_inputs:=ri) in H; [ | eassumption .. ]
+                 | [ H : symex_asm_func _ _ _ _ _ _ = Success _ |- _ ]
+                   => move H at bottom; eapply symex_asm_func_correct in H;
+                      [ | try eassumption .. ];
+                      [ | clear H; eapply Forall2_weaken; [ apply lift_eval_idx_or_list_idx_impl | eassumption ] ]
+                 end
+               | progress destruct_head'_ex
+               | progress destruct_head'_and
+               | progress inversion_prod
+               | progress subst
+               | match goal with
+                 | [ H : ?x = Some ?a, H' : ?x = Some ?b |- _ ]
+                   => rewrite H in H'; inversion_option
+                 | [ H : forall args, Forall2 ?P args ?v -> Forall2 _ _ _, H' : Forall2 ?P _ ?v |- _ ]
+                   => specialize (H _ H')
+                 end ].
+  do 3 eexists; repeat apply conj; try eassumption; trivial.
   Unshelve.
-  { unshelve econstructor. exact nil. reflexivity. }
-  { intro; exact None. }
+  all: exact (fun _ => None).
 Qed.
 
 Theorem generate_assembly_of_hinted_expr_correct
