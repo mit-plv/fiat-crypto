@@ -33,11 +33,11 @@ for fname in asm_files:
     if name in solinasprimes.keys():
         n, prime = solinasprimes[name]
         binary = 'src/ExtractionOCaml/unsaturated_solinas'
-        invocation = ' '.join((binary, name, '64', n, shlex.quote(prime), dict(mul='carry_mul',square='carry_square')[op], '--no-wide-int', '--shiftr-avoid-uint1', '--asm-ignore-unique-name-mismatch', '--tight-bounds-mul-by', '1.000001', '--hints-file', shlex.quote(fname)))
+        invocation = ' '.join((binary, name, '64', n, shlex.quote(prime), dict(mul='carry_mul',square='carry_square')[op], '--no-wide-int', '--shiftr-avoid-uint1', '--tight-bounds-mul-by', '1.000001', '--hints-file', shlex.quote(fname)))
     elif name in montgomeryprimes.keys():
         prime = montgomeryprimes[name]
         binary = 'src/ExtractionOCaml/word_by_word_montgomery'
-        invocation = ' '.join((binary, name, '64', shlex.quote(prime), op, '--no-wide-int', '--shiftr-avoid-uint1', '--asm-ignore-unique-name-mismatch', '--hints-file', shlex.quote(fname)))
+        invocation = ' '.join((binary, name, '64', shlex.quote(prime), op, '--no-wide-int', '--shiftr-avoid-uint1', '--hints-file', shlex.quote(fname)))
     else:
         assert False, name
     if output_makefile:
