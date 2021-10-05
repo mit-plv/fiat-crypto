@@ -11,6 +11,7 @@ Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Semantics.
 Require Import Crypto.Assembly.Symbolic.
 Require Import Crypto.Assembly.Equivalence.
+Require Import Crypto.Assembly.SymbolicProofs.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Prod.
@@ -780,32 +781,87 @@ Admitted.
 
 
 
-*)
-Theorem symex_asm_func_correct
-        (d : dag) (output_types : type_spec) (stack_size : nat)
+ *)
+
+
+(* TODO(Andres): Fix this statement *)
+Lemma init_symbolic_state_correct frame G d m
+  : R frame G (init_symbolic_state d) m
+    /\ forall v n, eval G d v n -> eval G (init_symbolic_state d) v n.
+Proof.
+  (* TODO(Andres) *)
+Admitted.
+
+Theorem symex_asm_func_M_correct
+        frame (G : symbol -> option Z) (s s' : symbolic_state) (m : machine_state) (output_types : type_spec) (stack_size : nat)
         (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
         (rets : list (idx + list idx))
-        (s : symbolic_state)
-        (H : symex_asm_func d output_types stack_size inputs reg_available asm = Success (rets, s))
-        (d' := s.(dag_state))
-        (st : machine_state)
+        (H : symex_asm_func_M output_types stack_size inputs reg_available asm s = Success (Success rets, s'))
         (runtime_inputs : list (Z + list Z))
-        (* TODO: FIXME: instantiate G *)
-        (input_G : symbol -> option Z)
-        (output_G : symbol -> option Z)
-        (Hinput_G_ok : dag_ok input_G d)
-        (Hinputs : List.Forall2 (eval_idx_or_list_idx input_G d) inputs runtime_inputs)
-        (* TODO(Andres): write down something that relates [st] to args *)
-  : (exists st'
-            (* ??? *) (*(input_runtime_var : type.for_each_lhs_of_arrow API.interp_type t)*)
+        (HR : R frame G s m)
+        (d := s.(dag_state))
+        (d' := s'.(dag_state))
+        (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
+  : exists m' G'
            (runtime_rets : list (Z + list Z)),
-        DenoteLines st asm = Some st'
-        /\ True (* TODO(Andres): write down something that relates st' to retvals *)
-        /\ List.Forall2 (eval_idx_or_list_idx output_G d') rets runtime_rets)
-    /\ dag_ok output_G d'
-    /\ (forall e n, eval input_G d e n -> eval output_G d' e n).
+    (* This bit lines up with SymexLines_R *)
+    (DenoteLines m asm = Some m'
+     /\ R frame G' s' m'
+     /\ (forall e n, eval G' d e n -> eval G' d' e n))
+    /\ (List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets
+        /\ (forall e n, eval G d e n -> eval G' d' e n)).
 Proof.
+  cbv [symex_asm_func_M Symbolic.bind ErrorT.bind lift_dag] in H.
+  break_innermost_match_hyps; cbn [fst snd] in *; try discriminate; [].
+  repeat first [ progress subst
+               | match goal with
+                 | [ H : Success _ = Success _ |- _ ] => inversion H; clear H
+                 | [ x := ?y |- _ ] => subst x
+                 end ].
+  (* ... *)
+  lazymatch goal with
+  | [ H : SymexLines _ _ = Success ?v |- _ ]
+    => (tryif is_var v then destruct v else idtac);
+         eapply SymexLines_R in H;
+         [ destruct H as [? H]; do 3 eexists; split;
+           [ repeat apply conj; intros; try eapply H | ]
+         | .. ]
+  end.
 Admitted.
+
+Theorem symex_asm_func_correct
+        frame (G : symbol -> option Z) (d : dag) (output_types : type_spec) (stack_size : nat)
+        (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
+        (rets : list (idx + list idx))
+        (s' : symbolic_state)
+        (H : symex_asm_func d output_types stack_size inputs reg_available asm = Success (rets, s'))
+        (d' := s'.(dag_state))
+        (m : machine_state)
+        (runtime_inputs : list (Z + list Z))
+        (HG_ok : dag_ok G d)
+        (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
+        (* TODO(Andres): write down something that relates [st] to args *)
+  : (exists m' G'
+            (* ??? *) (*(input_runtime_var : type.for_each_lhs_of_arrow API.interp_type t)*)
+            (runtime_rets : list (Z + list Z)),
+        DenoteLines m asm = Some m'
+        /\ R frame G' s' m'
+        /\ List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets
+        /\ dag_ok G' d'
+        /\ (forall e n, eval G d e n -> eval G' d' e n)).
+Proof.
+  cbv [symex_asm_func] in H; break_innermost_match_hyps; inversion_ErrorT; inversion_prod; subst.
+  cbv [R]; break_innermost_match.
+  let H := multimatch goal with H : _ = Success _ |- _ => H end in
+  eapply symex_asm_func_M_correct in H; cbv [R] in H; try eassumption;
+    [ .. | eapply Forall2_weaken; [ apply lift_eval_idx_or_list_idx_impl | eassumption ] ].
+  { destruct_head'_ex; destruct_head'_and.
+    do 3 eexists; repeat match goal with |- _ /\ _ => apply conj end; try eassumption.
+    intros; match goal with H : _ |- _ => eapply H end.
+    apply init_symbolic_state_correct; assumption. }
+  { apply init_symbolic_state_correct; assumption. }
+  { apply init_symbolic_state_correct; assumption. }
+Qed.
 
 Definition val_or_list_val_matches_spec (arg : Z + list Z) (spec : option nat)
   := match arg, spec with
@@ -1195,7 +1251,7 @@ Proof.
                  end ].
   do 3 eexists; repeat apply conj; try eassumption; trivial.
   Unshelve.
-  all: exact (fun _ => None).
+  { unshelve econstructor. exact nil. reflexivity. }
 Qed.
 
 Theorem generate_assembly_of_hinted_expr_correct

@@ -691,7 +691,7 @@ Definition LoadOutputs (outputaddrs : list (option (list idx)))
 Definition symex_asm_func_M
            (output_types : type_spec) (stack_size : nat)
            (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
-  : M (ErrorT (list (option (list idx)) (* outputaddrs *)) (list (idx + list idx)))
+  : M (ErrorT EquivalenceCheckingError (list (idx + list idx)))
   := (output_placeholders <- lift_dag (build_inputs output_types);
       argptrs <- build_merge_base_addresses (output_placeholders ++ inputs) reg_available;
       _ <- build_merge_stack_placeholders stack_size;
@@ -699,7 +699,7 @@ Definition symex_asm_func_M
       let outputaddrs : list (option (list idx)) := firstn (length argptrs - length inputs) argptrs in
       (* In the following line, we match on the result so we can emit Internal_error_output_load_failed in the calling function, rather than passing through the error from LoadOutputs *)
       (fun s => match LoadOutputs outputaddrs s with
-                | Error (_, s) => Success (Error outputaddrs, s)
+                | Error (_, s) => Success (Error (Internal_error_output_load_failed outputaddrs s), s)
                 | Success (asm_output, s) => Success (Success asm_output, s)
                 end))%N%x86symex.
 
@@ -707,17 +707,16 @@ Definition symex_asm_func
            (d : dag) (output_types : type_spec) (stack_size : nat)
            (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
   : ErrorT EquivalenceCheckingError (list (idx + list idx) * symbolic_state)
-  := let s0 := init_symbolic_state d in
+  := let s := init_symbolic_state d in
      let num_reg_given := List.length reg_available in
      let num_reg_needed := List.length inputs + List.length output_types in
      if (num_reg_given <? num_reg_needed)%nat
      then
        Error (Not_enough_registers num_reg_given num_reg_needed)
      else
-       match symex_asm_func_M output_types stack_size inputs reg_available asm s0 with
-       | Error (e, s) => Error (Symbolic_execution_failed e s)
-       | Success (Error outputaddrs, s)
-         => Error (Internal_error_output_load_failed outputaddrs s)
+       match symex_asm_func_M output_types stack_size inputs reg_available asm s with
+       | Error (e, s)                    => Error (Symbolic_execution_failed e s)
+       | Success (Error err, s)          => Error err
        | Success (Success asm_output, s) => Success (asm_output, s)
        end.
 
