@@ -1053,210 +1053,189 @@ Proof using Type.
   destruct_head'_ex; destruct_head'_and; subst; rewrite app_nil_r; assumption.
 Qed.
 
-Definition build_inputarray_G (G : symbol -> option Z) (d : dag) (vals : list Z) : list idx * dag * (symbol -> option Z) :=
-  List.fold_left (fun '(idxs, d, G) val
-                    => let '(idx, d) := merge_fresh_symbol d in
-                       (idx :: idxs, d, (fun idx' => if (idx' =? idx)%N then Some val else G idx')))
-                   vals
-                   ([], d, G).
+Definition ctx_set (s : symbol) (v : Z) (G : symbol -> option Z) : symbol -> option Z
+  := fun idx => if (idx =? s)%N then Some v else G idx.
 
-Lemma build_inputarray_ok_full_helper {T} G d len vals inputs d' n (s : list T)
-      (d_ok : dag_ok G d)
-      (Hs : List.length s = len)
-      (H : List.fold_left (fun '(idxs, d) _
-                    => let '(idx, d) := merge_fresh_symbol d in
-                       (idx :: idxs, d))
-                   s
-                   (n, d) = (inputs, d'))
-      (Hargs : List.length vals = len)
-      inputs'' d'' G''
-      (H'' : List.fold_left (fun '(idxs, d, G) val
-                             => let '(idx, d) := merge_fresh_symbol d in
-                                (idx :: idxs, d, (fun idx' => if (idx' =? idx)%N then Some val else G idx')))
-                            vals
-                            (n, d, G) = (inputs'', d'', G''))
-  : exists inputs_rest,
-    inputs = inputs_rest ++ n
-    /\ Forall2 (eval_idx_Z G'' d') inputs_rest vals
-    /\ dag_ok G'' d'
-    /\ inputs = inputs''
-    /\ List.length inputs_rest = len
-    /\ d' = d''.
-Proof.
-  destruct Hargs; subst.
-  move s at top; move vals at top.
-  repeat match goal with H : _ |- _ => revert H end.
-  induction vals as [|v vs IHvs], s as [|s0 ss]; cbn [List.length fold_left seq]; intros; try congruence.
-  { inversion_prod; subst;
-      repeat match goal with
-             | [ H : ?x = ?y ++ ?x |- _ ] => is_var y; destruct y; cbn [List.app] in H
-             | [ H : ?x = _ :: _ ++ ?x |- _ ] => apply (f_equal (@List.length _)) in H
-             | [ H : context[List.length (_ ++ _)] |- _ ] => rewrite app_length in H
-             | [ H : context[List.length (_ :: _)] |- _ ] => rewrite cons_length in H
-             end;
-      try (exfalso; lia); exists nil; cbn [List.app List.length]; eauto 100. }
-  { inversion Hs; clear Hs.
-    break_innermost_match_hyps.
-    lazymatch type of H'' with
-    | fold_left _ _ (?n, ?d, ?G) = _
-      => specialize (fun Hdok => IHvs T ss G d _ d' n Hdok ltac:(assumption) ltac:(eassumption) _ _ _ ltac:(eassumption))
-    end.
-    let H := open_constr:(IHvs _) in specialize H.
-    destruct IHvs as [inputs_rest IHvs]; eexists (inputs_rest ++ [_]); cbn [List.app List.length];
-      rewrite <- List.app_assoc; cbn [List.app].
-    repeat (let H := fresh in apply conj; [ destruct IHvs as [IHvs H] | destruct IHvs as [H IHvs] ]);
-      let LHS := match type of IHvs with ?LHS = _ => LHS | _ => True end in
-      lazymatch goal with
-      | [ |- Forall2 _ (_ :: _) (_ :: _) ] => constructor; [ clear IHvs | exact IHvs ]
-      | [ |- dag_ok _ _ ] => exact IHvs
-      | [ |- _ :: _ = _ :: _ ] => apply f_equal2; [ reflexivity | exact IHvs ]
-      | [ |- LHS = _ ] => exact IHvs
-      | _ => idtac
-      end.
-Abort.
+Definition merge_fresh_symbol_G (v : Z) : (symbol -> option Z) * dag -> idx * ((symbol -> option Z) * dag)
+  := fun '(G, d) => let '(idx, d) := merge_fresh_symbol d in (idx, (ctx_set idx v G, d)).
 
-Lemma build_inputarray_ok_full G d len vals inputs d'
-      (d_ok : dag_ok G d)
-      (H : build_inputarray len d = (inputs, d'))
-      (Hargs : List.length vals = len)
-      inputs'' d'' G''
-      (H'' : build_inputarray_G G d vals = (inputs'', d'', G''))
-  : Forall2 (eval_idx_Z G'' d') inputs vals
-    /\ dag_ok G'' d'
-    /\ inputs = inputs''
-    /\ List.length inputs = len
-    /\ d' = d''.
-Proof.
-  subst.
-  move vals at top.
-  replace inputs with (inputs ++ nil) in * |- by now rewrite app_nil_r.
-  replace inputs'' with (inputs'' ++ nil) in * |- by now rewrite app_nil_r.
-  cbv [build_inputarray build_inputarray_G] in *.
-  generalize (seq_length (List.length vals) 0); intro Hs; generalize dependent (seq 0 (List.length vals)); intro s.
-  set (n:=[]) in *; clearbody n.
-  move s at top; move vals at top.
-  repeat match goal with H : _ |- _ => revert H end.
-  induction vals as [|v vs IHvs], s as [|s0 ss]; cbn [List.length List.foldmap fold_left seq]; intros; try congruence.
-  { inversion_prod; subst;
-      repeat match goal with
-             | [ H : ?x = ?y ++ ?x |- _ ] => is_var y; destruct y; cbn [List.app] in H
-             | [ H : ?x = _ :: _ ++ ?x |- _ ] => apply (f_equal (@List.length _)) in H
-             | [ H : context[List.length (_ ++ _)] |- _ ] => rewrite app_length in H
-             | [ H : context[List.length (_ :: _)] |- _ ] => rewrite cons_length in H
-             end;
-      eauto; try (exfalso; lia).
-    all: shelve. }
-  { inversion Hs; clear Hs.
-    break_innermost_match_hyps.
-    ((unshelve let H := open_constr:(IHvs _ _ _ _ _ _ _ _ _ _ _ _ _) in specialize H); destruct inputs, inputs''; shelve_unifiable; revgoals); cbv beta iota;
-      [ repeat (let H := fresh in apply conj; [ destruct IHvs as [IHvs H] | destruct IHvs as [H IHvs] ]);
-        let LHS := match type of IHvs with ?LHS = _ => LHS | _ => True end in
-        lazymatch goal with
-        | [ |- Forall2 _ (_ :: _) (_ :: _) ] => constructor; [ clear IHvs | exact IHvs ]
-        | [ |- dag_ok _ _ ] => exact IHvs
-        | [ |- _ :: _ = _ :: _ ] => apply f_equal2; [ | exact IHvs ]
-        | [ |- LHS = _ ] => exact IHvs
-        | _ => idtac
-        end
-      | exfalso
-      | exfalso
-      | exfalso
-      | .. ].
-Admitted.
+Definition build_inputarray_G (vals : list Z) : (symbol -> option Z) * dag -> list idx * ((symbol -> option Z) * dag)
+  := List.foldmap merge_fresh_symbol_G vals.
 
-Lemma build_inputarray_ok_full_refl G d vals (len := List.length vals)
-      (d_ok : dag_ok G d)
-      (inputs := fst (build_inputarray len d))
-      (d' := snd (build_inputarray len d))
-      (inputs'' := fst (fst (build_inputarray_G G d vals)))
-      (d'' := snd (fst (build_inputarray_G G d vals)))
-      (G'' := snd (build_inputarray_G G d vals))
-  : Forall2 (eval_idx_Z G'' d') inputs vals
-    /\ dag_ok G'' d'
-    /\ inputs = inputs''
-    /\ List.length inputs = len
-    /\ d' = d''.
-Proof.
-  eapply build_inputarray_ok_full; try eassumption;
-    repeat first [ reflexivity
-                 | etransitivity; [ apply surjective_pairing | apply f_equal2 ] ].
-Qed.
-
-Fixpoint build_inputs_G (G : symbol -> option Z) (d : dag) (types : type_spec) (args : list (Z + list Z))
-  : list (idx + list idx) * dag * (symbol -> option Z)
-  := match types, args with
-     | [], _ | _, [] => ([], d, G)
-     | None :: tys, inl v :: args
-       => let '(idx, d) := merge_fresh_symbol d in
-          let '(rest, d, G) := build_inputs_G G d tys args in
-          (inl idx :: rest, d, (fun idx' => if (idx' =? idx)%N then Some v else G idx'))
-     | Some len :: tys, inr vs :: args
-       => let '(idxs, d, G) := build_inputarray_G G d vs in
-          let '(rest, d, G) := build_inputs_G G d tys args in
-          (inr idxs :: rest, d, G)
-     | _, _ => ([], d, G)
+Fixpoint build_inputs_G (vals : list (Z + list Z))
+  : (symbol -> option Z) * dag -> list (idx + list idx) * ((symbol -> option Z) * dag)
+  := match vals with
+     | [] => fun st => ([], st)
+     | inr vs :: args
+       => fun st
+          => let '(idxs, st) := build_inputarray_G vs st in
+             let '(rest, st) := build_inputs_G args st in
+             (inr idxs :: rest, st)
+     | inl v :: args
+       => fun st
+          => let '(idx, st) := merge_fresh_symbol_G v st in
+             let '(rest, st) := build_inputs_G args st in
+             (inl idx :: rest, st)
      end.
 
-Lemma build_inputs_ok_full G d (spec : type_spec) inputs d'
-      (d_ok : dag_ok G d)
-      (H : build_inputs spec d = (inputs, d'))
-      args
-      (Hargs : Forall2 val_or_list_val_matches_spec args spec)
-      inputs'' d'' G''
-      (H'' : build_inputs_G G d spec args = (inputs'', d'', G''))
-  : Forall2 (eval_idx_or_list_idx G'' d') inputs args
-    /\ dag_ok G'' d'
-    /\ inputs = inputs''
-    /\ d' = d''.
+Lemma merge_fresh_symbol_eq_G G d v
+      (res := merge_fresh_symbol_G v (G, d))
+  : merge_fresh_symbol d = (fst res, snd (snd res)).
 Proof.
-  move Hargs at top.
-  repeat match goal with H : _ |- _ => revert H end.
-  intros ? ? Hargs; induction Hargs.
-  { cbn [build_inputs build_inputs_G]; intros.
-    inversion_prod; subst; eauto. all: shelve. }
-  { cbn [build_inputs build_inputs_G]; intros.
-    break_innermost_match_hyps; inversion_prod; cbn [val_or_list_val_matches_spec] in *; subst;
-      try (now exfalso).
-    1: epose proof (@build_inputarray_ok_full_refl _ _ _ d_ok) as Hbia; cbv zeta in Hbia.
-    all: ((unshelve let H := open_constr:(IHHargs _ _ _ _ _ _ _ _ _ _) in specialize H); shelve_unifiable; revgoals;
-          [ repeat (apply conj; [ destruct IHHargs as [IHHargs _] | destruct IHHargs as [_ IHHargs] ]);
-            let LHS := match type of IHHargs with ?LHS = _ => LHS | _ => True end in
-            lazymatch goal with
-            | [ |- Forall2 _ (_ :: _) (_ :: _) ]
-              => constructor;
-                 [ cbn [eval_idx_or_list_idx]; clear IHHargs;
-                   lazymatch goal with
-                   | [ |- Forall2 _ _ _ ] => eapply Forall2_Proper_impl; [ intros ? ?; hnf | reflexivity | reflexivity | eapply Hbia ]
-                   | _ => idtac
-                   end
-                 | exact IHHargs ]
-            | [ |- dag_ok _ _ ] => exact IHHargs
-            | [ |- _ :: _ = _ :: _ ] => apply f_equal2; [ apply f_equal; try apply Hbia | exact IHHargs ]
-            | [ |- LHS = _ ] => exact IHHargs
-            | _ => idtac
-            end
-          | clear IHHargs;
-            repeat match goal with
-                   | [ |- _ = (_, _) ] => etransitivity; [ apply surjective_pairing | apply f_equal2 ]
-                   end
-                   .. ]).
-    all: try reflexivity.
-    all: try (destruct_head'_and; match goal with H : _ = _ |- _ => rewrite H; reflexivity end).
-    all: try (destruct_head'_and; match goal with H : _ = _ |- _ => rewrite <- H; assumption end).
-  (* TODO(Andres) *)
+  subst res; cbv [merge_fresh_symbol_G]; break_innermost_match; reflexivity.
+Qed.
+
+Lemma merge_fresh_symbol_G_ok G d v G' d' idx
+      (Hd : dag_ok G d)
+      (H : merge_fresh_symbol_G v (G, d) = (idx, (G', d')))
+  : eval_idx_Z G' d' idx v
+    /\ dag_ok G' d'
+    /\ (forall e n, eval G d e n -> eval G' d' e n).
+Proof.
+  assert (H' : eval_idx_Z G' d' idx v
+               /\ dag_ok G' d'
+               /\ (forall e n, eval G' d e n -> eval G' d' e n)).
+  { cbv [merge_fresh_symbol_G] in *.
+    cbv [merge_fresh_symbol] in *.
+    cbv [merge_symbol] in *.
+    break_innermost_match_hyps; inversion_prod.
+    set (m := merge_node _ _) in *; subst.
+    eapply eval_merge_node.
+    2: econstructor; cbn [List.map]; eauto; cbn [interp_op].
+    shelve.
+    shelve. }
+  { repeat first [ exact H' | split; [ destruct H' as [H' ?] | destruct H' as [? H'] ] ].
+    intros e n He; eapply H'; revert e n He.
+    (* TODO *)
 Admitted.
 
-Lemma build_inputs_ok G d (spec : type_spec) inputs args d'
-      (d_ok : dag_ok G d)
-      (H : build_inputs spec d = (inputs, d'))
-      (Hargs : Forall2 val_or_list_val_matches_spec args spec)
-      (G' := snd (build_inputs_G G d spec args))
-  : Forall2 (eval_idx_or_list_idx G' d') inputs args
-    /\ dag_ok G' d'.
+Lemma build_inputarray_eq_G G d vals (len := List.length vals)
+  : build_inputarray len d = (fst (build_inputarray_G vals (G, d)), snd (snd (build_inputarray_G vals (G, d)))).
 Proof.
-  split; eapply build_inputs_ok_full; try eassumption;
-    repeat first [ reflexivity
-                 | etransitivity; [ apply surjective_pairing | apply f_equal2 ] ].
+  cbv [build_inputarray build_inputarray_G].
+  generalize (seq_length len 0); generalize (seq 0 len); subst len; intro l; revert l.
+  induction vals, l; cbn [List.length List.foldmap fst snd]; try congruence.
+  intro H; inversion H; clear H; specialize (IHvals _ ltac:(eassumption)).
+  rewrite !IHvals; clear IHvals.
+  clear dependent l.
+  edestruct List.foldmap; destruct_head'_prod; cbn [fst snd].
+  repeat f_equal.
+  all: erewrite !@merge_fresh_symbol_eq_G; cbn [fst snd]; reflexivity.
+Qed.
+
+Lemma build_inputarray_G_ok G d vals G' d' ia
+      (Hd : dag_ok G d)
+      (H : build_inputarray_G vals (G, d) = (ia, (G', d')))
+  : Forall2 (eval_idx_Z G' d') ia vals
+    /\ dag_ok G' d'
+    /\ (forall e n, eval G d e n -> eval G' d' e n).
+Proof.
+  cbv [build_inputarray_G] in *.
+  revert ia G d G' d' Hd H.
+  induction vals as [|v vals IHvals], ia as [|i ia]; cbn [List.foldmap]; intros;
+    inversion_prod; subst; eauto; try congruence.
+  { set (res := List.foldmap _ _ _) in *.
+    destruct res eqn:Hres; subst res; destruct_head'_prod; cbn [fst snd] in *.
+    specialize (IHvals _ _ _ _ _ ltac:(eassumption) ltac:(eassumption)).
+    repeat first [ progress subst
+                 | progress destruct_head'_and
+                 | match goal with
+                   | [ H : ?x :: ?xs = ?y :: ?ys |- _ ] => assert (x = y /\ xs = ys) by (now inversion H; split); clear H
+                   end ].
+    let lem := match goal with |- context[merge_fresh_symbol_G ?v (?G, ?d)] => constr:(merge_fresh_symbol_G_ok G d v) end in
+    pose proof (lem _ _ _ ltac:(assumption) ltac:(repeat rewrite <- surjective_pairing; reflexivity)).
+    repeat first [ progress subst
+                 | progress destruct_head'_and
+                 | assumption
+                 | solve [ eauto ]
+                 | match goal with
+                   | [ |- _ /\ _ ] => split
+                   | [ |- Forall2 _ (_ :: _) (_ :: _) ] => constructor
+                   | [ H : Forall2 _ ?l1 ?l2 |- Forall2 _ ?l1 ?l2 ] => eapply Forall2_weaken; [ clear H | exact H ]
+                   | [ |- forall a b, eval_idx_Z _ _ a b -> eval_idx_Z _ _ a b ] => apply lift_eval_idx_Z_impl
+                   end ]. }
+Qed.
+
+Lemma build_inputarray_ok G d len idxs args d'
+      (d_ok : dag_ok G d)
+      (H : build_inputarray len d = (idxs, d'))
+      (Hargs : List.length args = len)
+  : exists G',
+    Forall2 (eval_idx_Z G' d') idxs args
+    /\ dag_ok G' d'
+    /\ (forall e n, eval G d e n -> eval G' d' e n).
+Proof.
+  subst len; erewrite build_inputarray_eq_G in H; inversion_prod.
+  eexists; eapply build_inputarray_G_ok; try eassumption.
+  repeat first [ eassumption | apply path_prod | reflexivity ].
+Qed.
+
+Lemma type_spec_of_runtime_val_or_list_val_matches_spec vals types
+  : types = type_spec_of_runtime vals <-> Forall2 val_or_list_val_matches_spec vals types.
+Proof.
+  split.
+  { intro; subst; induction vals; cbn; constructor; break_innermost_match; cbn; eauto. }
+  { intro H; induction H;
+    repeat (subst || cbn in * || destruct_head' option || break_innermost_match || intuition). }
+Qed.
+
+Lemma build_inputs_eq_G G d vals (types := type_spec_of_runtime vals)
+  : build_inputs types d = (fst (build_inputs_G vals (G, d)), snd (snd (build_inputs_G vals (G, d)))).
+Proof.
+  revert G d; subst types; induction vals as [|v vals IHvals]; [ reflexivity | ].
+  cbn [build_inputs type_spec_of_runtime List.map build_inputs_G]; fold (type_spec_of_runtime vals); intros.
+  cbv [dag.bind dag.ret]; break_innermost_match; destruct_head'_prod; cbn [fst snd].
+  all: repeat first [ progress cbn [fst snd] in *
+                    | progress subst
+                    | reflexivity
+                    | match goal with
+                      | [ H : pair _ _ = pair _ _ |- _ ] => inversion H; clear H
+                      | [ H : merge_fresh_symbol _ = _, H' : merge_fresh_symbol_G _ _ = _ |- _ ] => erewrite merge_fresh_symbol_eq_G, H' in H
+                      | [ H : build_inputarray _ _ = _, H' : build_inputarray_G _ _ = _ |- _ ] => erewrite build_inputarray_eq_G, H' in H
+                      | [ H : build_inputs _ _ = _, H' : build_inputs_G _ _ = _ |- _ ] => erewrite IHvals, H' in H
+                      end ].
+Qed.
+
+Lemma build_inputs_G_ok G d vals G' d' inputs
+      (Hd : dag_ok G d)
+      (H : build_inputs_G vals (G, d) = (inputs, (G', d')))
+  : Forall2 (eval_idx_or_list_idx G' d') inputs vals
+    /\ dag_ok G' d'
+    /\ (forall e n, eval G d e n -> eval G' d' e n).
+Proof.
+  revert inputs G d G' d' Hd H.
+  induction vals as [|v vals IHvals], inputs as [|i inputs]; cbn [build_inputs_G]; intros;
+    inversion_prod; subst; eauto; try (break_innermost_match; cbn [fst snd] in *; congruence).
+  { break_innermost_match; destruct_head'_prod; cbn [fst snd] in *.
+    all: repeat first [ progress subst
+                      | progress destruct_head'_and
+                      | solve [ eauto ]
+                      | match goal with
+                        | [ H : ?x :: ?xs = ?y :: ?ys |- _ ] => assert (x = y /\ xs = ys) by (now inversion H; split); clear H
+                        | [ H : merge_fresh_symbol_G _ _ = _ |- _ ] => apply merge_fresh_symbol_G_ok in H; [ | assumption .. ]
+                        | [ H : build_inputarray_G _ _ = _ |- _ ] => apply build_inputarray_G_ok in H; [ | assumption .. ]
+                        | [ H : build_inputs_G _ _ = _ |- _ ] => apply IHvals in H; [ | assumption .. ]
+                        | [ |- _ /\ _ ] => split
+                        | [ |- Forall2 _ (_ :: _) (_ :: _) ] => constructor
+                        | [ H : eval_idx_Z _ _ ?e ?n |- eval_idx_Z _ _ ?e ?n ] => revert H; apply lift_eval_idx_Z_impl; assumption
+                        | [ H : Forall2 (eval_idx_Z _ _) ?e ?n |- Forall2 (eval_idx_Z _ _) ?e ?n ] => revert H; apply Forall2_weaken, lift_eval_idx_Z_impl; assumption
+                        end
+                      | progress cbv [eval_idx_or_list_idx] ]. }
+Qed.
+
+Lemma build_inputs_ok G d types inputs args d'
+      (d_ok : dag_ok G d)
+      (H : build_inputs types d = (inputs, d'))
+      (Hargs : Forall2 val_or_list_val_matches_spec args types)
+  : exists G',
+    Forall2 (eval_idx_or_list_idx G' d') inputs args
+    /\ dag_ok G' d'
+    /\ (forall e n, eval G d e n -> eval G' d' e n).
+Proof.
+  apply type_spec_of_runtime_val_or_list_val_matches_spec in Hargs; subst types.
+  erewrite build_inputs_eq_G in H; inversion_prod.
+  eexists; eapply build_inputs_G_ok; try eassumption.
+  repeat first [ eassumption | apply path_prod | reflexivity ].
 Qed.
 
 Theorem check_equivalence_correct
