@@ -997,7 +997,6 @@ Qed.
 Lemma merge_fresh_symbol_G_ok G d v G' d' idx
       (Hd : dag_ok G d)
       (H : merge_fresh_symbol_G v (G, d) = (idx, (G', d')))
-      (* TODO: We probably need some additional condition here, like that [G] contains no indices not present in the dag *)
   : eval_idx_Z G' d' idx v
     /\ dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
