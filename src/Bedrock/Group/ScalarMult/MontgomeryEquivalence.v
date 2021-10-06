@@ -15,8 +15,12 @@ Require Import Crypto.Util.Loops.
 Section Equivalence.
   Context {field_parameters : FieldParameters}.
 
+  (*TODO: which of ladderstep_gallina and M.xzladderstep should we change? either?*)
+  Definition reorder_pairs {A B C D} (p : A * B * C * D) : (A*B)*(C*D) :=
+    ((fst (fst (fst p)), snd (fst (fst p))),(snd (fst p), snd p)).
+  
   Lemma ladderstep_gallina_equiv X1 P1 P2 :
-    ladderstep_gallina X1 P1 P2 =
+    reorder_pairs (ladderstep_gallina X1 (fst P1) (snd P1) (fst P2) (snd P2)) =
     @M.xzladderstep
       _ F.add F.sub F.mul a24 X1 P1 P2.
   Proof.
@@ -26,6 +30,7 @@ Section Equivalence.
     rewrite !F.pow_2_r; trivial.
   Qed.
 
+  (*TODO: account for reorder_pairs*)
   Lemma montladder_gallina_equiv
         n scalarbits testb point :
     (forall i, testb i = Z.testbit n (Z.of_nat i)) ->
@@ -38,6 +43,9 @@ Section Equivalence.
     intros. cbv [montladder_gallina M.montladder].
     cbv [Rewriter.Util.LetIn.Let_In Notations.nlet]. cbn [fst snd].
     rewrite downto_while.
+    unfold Alloc.alloc.
+  Abort.
+  (*
     match goal with
     | |- ?lhs = ?rhs =>
       match lhs with
@@ -86,4 +94,5 @@ Section Equivalence.
     }
     { rewrite Z2Nat.id by lia. reflexivity. }
   Qed.
+   *)
 End Equivalence.

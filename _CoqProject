@@ -88,6 +88,7 @@ src/Bedrock/Field/Common/Arrays/MaxBounds.v
 src/Bedrock/Field/Common/Names/MakeNames.v
 src/Bedrock/Field/Common/Names/VarnameGenerator.v
 src/Bedrock/Field/Interface/Compilation.v
+src/Bedrock/Field/Interface/Compilation2.v
 src/Bedrock/Field/Interface/Representation.v
 src/Bedrock/Field/Stringification/FlattenVarData.v
 src/Bedrock/Field/Stringification/LoadStoreListVarData.v

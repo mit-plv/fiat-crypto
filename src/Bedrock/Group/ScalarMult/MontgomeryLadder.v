@@ -94,7 +94,7 @@ Section __.
 
     Instance spec_of_montladder : spec_of "montladder" :=
       fnspec! "montladder"
-            (pOUT pK pU (*pX1 pZ1 pX2 pZ2*) : Semantics.word)
+            (pOUT pK pU (*pX1 pZ1 pX2 pZ2*) : word)
             / (K : scalar) (U : F M_pos) (* inputs *)
             out_bound OUT (*X1 Z1 X2 Z2 *) (* intermediates *)
             R,
@@ -169,7 +169,7 @@ Section __.
                             (*TODO: where did outvar come from?*)
                             (map.put (map.put map.empty OUT_var pOUT) K_var K_ptr)
                             U_var U_ptr) X1_var X1_ptr) Z1_var Z1_ptr) X2_var
-                   X2_ptr) Z2_var Z2_ptr) swap_var (b2w swap))
+                   X2_ptr) Z2_var Z2_ptr) swap_var (word.b2w swap))
             /\ ((Scalar K_ptr K * FElem (Some tight_bounds) X1_ptr x1
             * FElem (Some tight_bounds) Z1_ptr z1
             * FElem (Some tight_bounds) X2_ptr x2
@@ -444,7 +444,7 @@ Section __.
       (*TODO: use regular compile_step for downto, figure out invariant inference *)
       (*compile_step.*)
       (*TODO: copy locals into inv*)
-      
+      (* TODO: use loop inference
       simple apply compile_nlet_as_nlet_eq.
       let tmp_var := constr:("tmp") in
       let x1_var := constr:("X1") in
@@ -684,7 +684,7 @@ Section __.
       Unshelve.
       constructor.
 
-(* NOTE: the plan is to completely redo montladder after ladderstep is updated to use stackalloc *)
+(* NOTE: the plan is to completely redo montladder after ladderstep is updated to use stackalloc *)*)
     Abort.
 (*
       pose proof scalarbits_pos.
