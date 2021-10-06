@@ -1,17 +1,18 @@
 (* NOTE: the plan is to completely redo montladder after ladderstep is updated to use stackalloc *)
 
-Require Import Rupicola.Lib.Api. Import bedrock2.WeakestPrecondition.
+Require Import Rupicola.Lib.Api.
+Require Import Rupicola.Lib.Alloc.
 Require Import Rupicola.Lib.SepLocals.
 Require Import Rupicola.Lib.ControlFlow.CondSwap.
 Require Import Rupicola.Lib.ControlFlow.DownTo.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Bedrock.Field.Interface.Compilation.
 Require Import Crypto.Bedrock.Group.Point.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
 Require Import Crypto.Bedrock.ScalarField.Interface.Compilation.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Specs.ScalarField.
 Require Import Crypto.Util.NumTheoryUtil.
+Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Local Open Scope Z_scope.
 
 
@@ -58,10 +59,10 @@ Section __.
     Definition montladder_gallina
                (scalarbits : Z) (testbit:nat ->bool) (u:F M_pos)
       : F M_pos :=
-      let/n X1 := felem_alloc 1 in
-      let/n Z1 := felem_alloc 0 in
-      let/n X2 := felem_alloc u in
-      let/n Z2 := felem_alloc 1 in
+      let/n X1 := alloc 1 in
+      let/n Z1 := alloc 0 in
+      let/n X2 := alloc u in
+      let/n Z2 := alloc 1 in
      (* let/d P1 := (1, 0) in
         let/d P2 := (X2, Z2) in
       *)
@@ -84,7 +85,7 @@ Section __.
            ) in
       let/n (X1, X2) := cswap swap X1 X2 in
       let/n (Z1, Z2) := cswap swap Z1 Z2 in
-      let/n r := felem_alloc (F.inv Z1) in
+      let/n r := alloc (F.inv Z1) in
       let/n r := (X1 * r) in
       r.
   End Gallina.
@@ -95,26 +96,24 @@ Section __.
     Instance spec_of_montladder : spec_of "montladder" :=
       fnspec! "montladder"
             (pOUT pK pU (*pX1 pZ1 pX2 pZ2*) : Semantics.word)
-            / (K : scalar) (U : felem) (* inputs *)
-            OUT (*X1 Z1 X2 Z2 *) (* intermediates *)
+            / (K : scalar) (U : F M_pos) (* inputs *)
+            out_bound OUT (*X1 Z1 X2 Z2 *) (* intermediates *)
             R,
       { requires tr mem :=
-           bounded_by tight_bounds U
-           /\ (FElem pOUT OUT * Scalar pK K * FElem pU U
+          (FElem out_bound pOUT OUT * Scalar pK K * FElem (Some tight_bounds) pU U
               (** FElem pX1 X1 * FElem pZ1 Z1
                * FElem pX2 X2 * FElem pZ2 Z2*)
                *  R)%sep mem;
         ensures tr' mem' :=
           tr' = tr
-          /\ (exists OUT (*X1 Z1 X2 Z2*)  : felem,
-                 feval OUT = montladder_gallina
-                               scalarbits
-                               (fun i =>
-                                  Z.testbit (F.to_Z (sceval K))
-                                            (Z.of_nat i))
-                               (feval U)
-            /\ bounded_by tight_bounds OUT
-            /\ (FElem pOUT OUT * Scalar pK K * FElem pU U
+          /\ (let OUT :=  montladder_gallina
+                            scalarbits
+                            (fun i =>
+                               Z.testbit (F.to_Z (sceval K))
+                                         (Z.of_nat i))
+                            U in
+              (FElem (Some tight_bounds) pOUT OUT * Scalar pK K
+               * FElem (Some tight_bounds) pU U
                 (** FElem pX1 X1 * FElem pZ1 Z1
                 * FElem pX2 X2 * FElem pZ2 Z2 *)
                 * R)%sep mem') }.
@@ -153,8 +152,8 @@ Section __.
     (* TODO: make a new loop invariant, drop the sep-local stuff *)
     (*nat -> bool -> F M_pos * F M_pos * F M_pos * F M_pos * bool -> predicate*)
     Definition downto_inv
-               (swap_var  X1_var Z1_var X2_var Z2_var K_var : string)
-               K (K_ptr X1_ptr Z1_ptr X2_ptr Z2_ptr : word) R
+               (swap_var OUT_var U_var X1_var Z1_var X2_var Z2_var K_var : string)
+               K (pOUT K_ptr U_ptr X1_ptr Z1_ptr X2_ptr Z2_ptr : word) R
                (_ : nat)
                (gst : bool)
                (st : F M_pos * F M_pos * F M_pos * F M_pos * bool)
@@ -162,33 +161,21 @@ Section __.
       fun (_ : Semantics.trace)
           (mem : Semantics.mem)
           (locals : Semantics.locals) =>
-      let '(x1, z1, x2, z2, swap) := st in
-      let swapped := gst in
-      (liftexists
-                 X1 Z1 X2 Z2,
-        (emp (bounded_by tight_bounds X1
-              /\ bounded_by tight_bounds Z1
-              /\ bounded_by tight_bounds X2
-              /\ bounded_by tight_bounds Z2
-              /\ feval X1 = x1
-                     /\ feval Z1 = z1
-                     /\ feval X2 = x2
-                     /\ feval Z2 = z2
-            /\ map.get locals swap_var = Some (word.of_Z (Z.b2z swap))
-            /\ map.get locals K_var = Some K_ptr
-            /\ map.get locals X1_var = Some X1_ptr
-            /\ map.get locals X2_var = Some X2_ptr
-            /\ map.get locals Z1_var = Some Z1_ptr
-            /\ map.get locals Z2_var = Some Z2_ptr
-             (*
-              /\ (Var swap_var (word.of_Z (Z.b2z swap)) * Var K_var K_ptr
-                  * Var X1_var X1_ptr' * Var Z1_var Z1_ptr'
-                  * Var X2_var X2_ptr' * Var Z2_var Z2_ptr'
-                  * Rl)%sep locals *) )
-         * (Scalar K_ptr K * FElem X1_ptr X1
-            * FElem Z1_ptr Z1
-            * FElem X2_ptr X2
-            * FElem Z2_ptr Z2) * R)%sep) mem.
+        let '(x1, z1, x2, z2, swap) := st in
+        locals = (map.put
+             (map.put
+                (map.put
+                   (map.put
+                      (map.put
+                         (map.put
+                            (*TODO: where did outvar come from?*)
+                            (map.put (map.put map.empty OUT_var pOUT) K_var K_ptr)
+                            U_var U_ptr) X1_var X1_ptr) Z1_var Z1_ptr) X2_var
+                   X2_ptr) Z2_var Z2_ptr) swap_var (b2w swap))
+            /\ ((Scalar K_ptr K * FElem (Some tight_bounds) X1_ptr x1
+            * FElem (Some tight_bounds) Z1_ptr z1
+            * FElem (Some tight_bounds) X2_ptr x2
+            * FElem (Some tight_bounds) Z2_ptr z2) * R)%sep mem.
     
     Definition downto_ghost_step
                (K : scalar) (st : F M_pos * F M_pos * F M_pos * F M_pos * bool)
@@ -294,158 +281,6 @@ Section __.
     Existing Instance spec_of_sctestbit.
 
 
-      Lemma compile_felem_small_literal_alloc {tr mem locals functions} x:
-    let v := felem_alloc (F.of_Z _ x) in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-      (R : _ -> Prop) (wx : word) out_var,
-
-      spec_of_felem_small_literal functions ->
-      R mem ->
-
-      word.unsigned wx = x ->
-
-      (let v := v in
-       forall X m out_ptr,
-         (FElem out_ptr X * R)%sep m ->
-         feval X = v ->
-         bounded_by tight_bounds X ->
-         (<{ Trace := tr;
-             Memory := m;
-             Locals := map.put locals out_var out_ptr;
-             Functions := functions }>
-          k_impl
-          <{ pred_sep (Placeholder out_ptr) pred (k v eq_refl) }>)) ->
-      <{ Trace := tr;
-         Memory := mem;
-         Locals := locals;
-         Functions := functions }>
-      cmd.stackalloc out_var (@felem_size_in_bytes field_parameters _ field_representaton)
-                     (cmd.seq
-                        (cmd.call [] felem_small_literal
-                                  [expr.var out_var; expr.literal x])
-                        k_impl)
-      <{ pred (nlet_eq [out_var] v k) }>.
-  Proof.
-     repeat straightline'.
-     split; eauto using felem_size_in_bytes_mod.
-     intros out_ptr mStack mCombined Hplace%FElem_from_bytes.
-     destruct Hplace as [out Hout].
-     repeat straightline'.
-     straightline_call.
-     intuition eauto.
-     {
-       exists mStack.
-       exists mem.
-       intuition eauto.
-       apply map.split_comm; eauto.
-     }
-     repeat straightline'.
-     eapply WeakestPrecondition_weaken
-       with (p1 := pred_sep (Memory.anybytes out_ptr felem_size_in_bytes)
-                            pred (let/n x as out_var eq:Heq := v in
-                                  k x Heq)).
-     {
-       unfold pred_sep.
-       repeat straightline'.
-       destruct H4 as [mStack' [m' [Hmem [HmStack Hm]]]].
-       unfold Basics.flip in Hm.
-       exists m'.
-       exists mStack'.
-       intuition.
-       apply map.split_comm; auto.
-     }
-     eapply H2; repeat straightline'.
-     {
-       unfold v.
-       unfold felem_alloc.
-       eauto.
-     }
-     eauto.
-     {
-       rewrite H6.
-       rewrite <- H1.
-       rewrite word.of_Z_unsigned.
-       rewrite H1.
-       reflexivity.
-     }
-     eauto.
-  Qed.
-
-  
-  Lemma compile_felem_copy_alloc {tr mem locals functions} x :
-    let v := feval x in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-      R x_ptr x_var out_var,
-
-      spec_of_felem_copy functions ->
-
-      (FElem x_ptr x  * R)%sep mem ->
-      map.get locals x_var = Some x_ptr ->
-
-      out_var<> x_var ->
-      
-      (let v := v in
-       forall X m out_ptr,
-         (FElem out_ptr X * (FElem x_ptr x  * R))%sep m ->
-         feval X = v ->
-         (<{ Trace := tr;
-             Memory := m;
-             Locals := map.put locals out_var out_ptr;
-             Functions := functions }>
-          k_impl
-          <{ pred_sep (Placeholder out_ptr) pred (k v eq_refl) }>)) ->
-      <{ Trace := tr;
-         Memory := mem;
-         Locals := locals;
-         Functions := functions }>
-      cmd.stackalloc out_var (@felem_size_in_bytes field_parameters _ field_representaton)
-      (cmd.seq
-        (cmd.call [] felem_copy [expr.var out_var; expr.var x_var])
-        k_impl)
-      <{ pred (nlet_eq [out_var] v k) }>.
-  Proof.
-     repeat straightline'.
-     split; eauto using felem_size_in_bytes_mod.
-     intros out_ptr mStack mCombined Hplace%FElem_from_bytes.
-     destruct Hplace as [out Hout].
-     repeat straightline'.
-     straightline_call.
-     intuition eauto.
-     {
-       apply sep_assoc.
-       apply sep_comm.
-       apply sep_assoc.
-       exists mStack.
-       exists mem.
-       intuition eauto.
-       eauto.
-       apply map.split_comm; eauto.
-       apply sep_comm; eauto.
-     }
-     repeat straightline'.
-     eapply WeakestPrecondition_weaken
-       with (p1 := pred_sep (Memory.anybytes out_ptr felem_size_in_bytes)
-                            pred (let/n x as out_var eq:Heq := v in
-                                  k x Heq)).
-     {
-       unfold pred_sep.
-       repeat straightline'.
-       destruct H5 as [mStack' [m' [Hmem [HmStack Hm]]]].
-       unfold Basics.flip in Hm.
-       exists m'.
-       exists mStack'.
-       intuition.
-       apply map.split_comm; auto.
-     }
-     eapply H3; repeat straightline'.
-     {
-       unfold v.
-       unfold felem_alloc.
-       ecancel_assumption.
-     }
-     eauto.
-  Qed.
-
   (*TODO: get compiling
   Require Import Rupicola.Examples.CMove.
    *)
@@ -455,19 +290,20 @@ Section __.
     TODO: instantiate
    *)  
   Instance spec_of_felem_cswap : spec_of felem_cswap :=
-    fnspec! felem_cswap mask ptr1 ptr2 / b c1 c2 R,
+    fnspec! felem_cswap mask ptr1 ptr2 / b1 b2 b c1 c2 R,
     { requires tr mem :=
         mask = word.of_Z (Z.b2z b) /\
-        (FElem ptr1 c1 * FElem ptr2 c2 * R)%sep mem;
+        (FElem b1 ptr1 c1 * FElem b2 ptr2 c2 * R)%sep mem;
       ensures tr' mem' :=
         tr' = tr /\
         let (c1,c2) := cswap b c1 c2 in
-        (FElem ptr1 c1 * FElem ptr2 c2 * R)%sep mem' }.
+        let (b1,b2) := cswap b b1 b2 in
+        (FElem b1 ptr1 c1 * FElem b2 ptr2 c2 * R)%sep mem' }.
   
    Lemma compile_felem_cswap {tr mem locals functions} swap (lhs rhs : F M_pos) :
     let v := cswap swap lhs rhs in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-      R mask_var lhs_ptr lhs_var lhs' rhs_ptr rhs_var rhs',
+      R mask_var lhs_ptr lhs_var b_lhs rhs_ptr rhs_var b_rhs,
 
       spec_of_felem_cswap functions ->
 
@@ -476,17 +312,12 @@ Section __.
       map.get locals lhs_var = Some lhs_ptr ->
       map.get locals rhs_var = Some rhs_ptr ->
 
-      
-      feval lhs' = lhs ->
-      feval rhs' = rhs ->
-
-      (FElem lhs_ptr lhs' * FElem rhs_ptr rhs' * R)%sep mem ->
+      (FElem b_lhs lhs_ptr lhs * FElem b_rhs rhs_ptr rhs * R)%sep mem ->
 
       (let v := v in
-       forall m lhs' rhs',
-         feval lhs' = fst v ->
-         feval rhs' = snd v ->
-         (FElem lhs_ptr lhs' * FElem rhs_ptr rhs' * R)%sep m ->
+       let (b1,b2) := cswap swap b_lhs b_rhs in
+       forall m,
+         (FElem b1 lhs_ptr (fst v) * FElem b2 rhs_ptr (snd v) * R)%sep m ->
          (<{ Trace := tr;
              Memory := m;
              Locals := locals;
@@ -511,46 +342,9 @@ Section __.
        end; eauto;
        sepsimpl; repeat straightline'; subst; eauto.
      prove_field_compilation.
-     destruct swap; eapply H6; unfold v; unfold cswap; simpl; eauto.
+     destruct swap; eapply H4; unfold v; unfold cswap; simpl; eauto.
    Qed.
    Hint Resolve compile_felem_cswap : compiler.
-    
-
-  (*TODO: why doesn't simple eapply work? *)
-Ltac field_compile_step ::=
-  first [ simple eapply compile_scmula24 (* must precede compile_mul *)
-        | simple eapply compile_mul
-        | simple eapply compile_add
-        | simple eapply compile_sub
-        | simple eapply compile_square
-        | simple eapply compile_inv
-        (*must come second due to eapply *)
-        | eapply compile_scmula24_alloc (* must precede compile_mul_alloc *)
-        | eapply compile_mul_alloc
-        | eapply compile_add_alloc
-        | eapply compile_sub_alloc
-        | eapply compile_square_alloc
-        | eapply compile_inv_alloc 
-        | eapply compile_felem_small_literal_alloc
-        | eapply compile_felem_copy_alloc ];
-  lazymatch goal with
-  | |- feval _ = _ => try eassumption; try reflexivity
-  | |- _ => idtac
-  end.
-
-
-  
-  Ltac ladderstep_compile_custom :=
-    simple apply compile_nlet_as_nlet_eq;
-    field_compile_step; [ repeat compile_step .. | intros ];
-    eauto with compiler;
-    (* rewrite results in terms of feval to match lemmas *)
-    repeat lazymatch goal with
-           | H : feval _ = ?x |- context [?x] =>
-             is_var x; rewrite <-H
-           end.
-  
-  Ltac compile_custom ::= ladderstep_compile_custom.
 
 
   
@@ -659,7 +453,9 @@ Ltac field_compile_step ::=
       reflexivity.
   Qed.
 
-    Derive montladder_body SuchThat
+  Existing Instance felem_alloc.
+
+  Derive montladder_body SuchThat
            (let args := ["OUT"; "K"; "U" (*;"X1"; "Z1"; "X2"; "Z2" *)] in
             let montladder : Syntax.func :=
                 ("montladder", (args, [], montladder_body)) in
@@ -676,16 +472,47 @@ Ltac field_compile_step ::=
       compile_setup.
       unfold F.one.
       unfold F.zero.
-      compile_step. 
+      
+      simple apply compile_nlet_as_nlet_eq.
+      simple eapply compile_alloc; eauto.
+      (*TODO: is this doing allocation?*)
+      compile_step.
+      compile_step.
+      unfold alloc in v; subst v.
+      simple eapply compile_felem_small_literal; eauto.
+      compile_step.
+      compile_step.
+      simple apply compile_nlet_as_nlet_eq.
+      simple eapply compile_alloc; eauto.
+      compile_step.
+      unfold alloc in v0; subst v0.
+      simple eapply compile_felem_small_literal; eauto.
+      compile_step.
+      compile_step.
+      simple apply compile_nlet_as_nlet_eq.
+      simple eapply compile_alloc; eauto.
+      compile_step.
+      unfold alloc in v1; subst v1.
+      simple eapply compile_felem_copy; eauto.
+      compile_step.
+      compile_step.
+      compile_step.
+      compile_step.
+      simple apply compile_nlet_as_nlet_eq.
+      simple eapply compile_alloc; eauto.
+      compile_step.
+      unfold alloc in v2; subst v2.
+      simple eapply compile_felem_small_literal; eauto.
       compile_step.
       compile_step.
       compile_step.
       compile_step.
       compile_step.
       compile_step.
-      compile_step.
-      compile_step.
-      compile_step.
+      (*TODO: use regular compile_step for downto, figure out invariant inference *)
+      (*compile_step.*)
+      (*TODO: copy locals into inv*)
+      
       simple apply compile_nlet_as_nlet_eq.
       let tmp_var := constr:("tmp") in
       let x1_var := constr:("X1") in
@@ -699,12 +526,17 @@ Ltac field_compile_step ::=
       (ghost_step := downto_ghost_step K)
       (Inv :=
          downto_inv
-           _ x1_var z1_var x2_var z2_var _
-           _ pK out_ptr out_ptr0 out_ptr1 out_ptr2
+           _ "OUT" "U" x1_var z1_var x2_var z2_var _
+           _ _ pK _ out_ptr out_ptr0 out_ptr1 out_ptr2
            _).
       {
         unfold downto_inv.
+        rewrite map.remove_put_same;
+          repeat (rewrite map.remove_put_diff; [|compile_step]).
+        rewrite map.remove_empty.
         repeat compile_step.
+        TODO: need bounds on U
+        ecancel_assumption.
         exists X.
         exists X0.
         exists X1.
@@ -816,6 +648,27 @@ Ltac field_compile_step ::=
           admit (*easy*).
           {
             unfold downto_inv.
+            rewrite H11 in Heq.
+            rewrite H22 in Heq.
+            rewrite H38 in Heq.
+            rewrite H39 in Heq.
+            assert (X1 = U) by admit (*TODO: want X1 to be U*).
+            subst X1.
+            rewrite Heq.
+            simpl.
+            do 4 eexists.
+            sepsimpl.
+            5-8:eauto.
+            all: eauto.
+            {
+              rewrite map.get_remove_diff; [| solve[ compile_step]];
+                repeat (rewrite map.get_put_diff; [| solve[ compile_step]]).
+              rewrite map.get_put_same.
+              TODO: where does b come from again?
+              solve[ compile_step].
+              
+            
+            all: repeat compile_step.
             admit(*TODO: is this unnecessarily complex? ghost state is showing up*).
           }
         }

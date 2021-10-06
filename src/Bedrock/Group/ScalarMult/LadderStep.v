@@ -1,8 +1,9 @@
-Require Import Rupicola.Lib.Api. Import bedrock2.WeakestPrecondition.
+Require Import Rupicola.Lib.Api.
+Require Import Rupicola.Lib.Alloc.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Bedrock.Field.Interface.Compilation.
 Require Import Crypto.Bedrock.Group.Point.
 Require Import Crypto.Bedrock.Specs.Field.
+Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Local Open Scope Z_scope.
 
 
@@ -19,21 +20,22 @@ Section __.
           {field_representaton : FieldRepresentation}
           {field_representation_ok : FieldRepresentation_ok}.
   Hint Resolve relax_bounds : compiler.
-
+  Existing Instance felem_alloc.
+  
   Section Gallina.
     Local Open Scope F_scope.
 
     Definition ladderstep_gallina
                (X1 X2 Z2 X3 Z3: F M_pos) : F M_pos * F M_pos * F M_pos * F M_pos :=
-      let/n A := felem_alloc (X2+Z2) in
-      let/n AA := felem_alloc (A^2) in
-      let/n B := felem_alloc (X2-Z2) in
-      let/n BB := felem_alloc (B^2) in
-      let/n E := felem_alloc (AA-BB) in
-      let/n C := felem_alloc (X3+Z3) in
-      let/n D := felem_alloc (X3-Z3) in
-      let/n DA := felem_alloc (D*A) in
-      let/n CB := felem_alloc (C*B) in
+      let/n A := alloc (X2+Z2) in
+      let/n AA := alloc (A^2) in
+      let/n B := alloc (X2-Z2) in
+      let/n BB := alloc (B^2) in
+      let/n E := alloc (AA-BB) in
+      let/n C := alloc (X3+Z3) in
+      let/n D := alloc (X3-Z3) in
+      let/n DA := alloc (D*A) in
+      let/n CB := alloc (C*B) in
       (* store X5 under X3 pointer *)
       let/n X3 := (DA+CB) in
       let/n X3 := X3^2 in
@@ -53,31 +55,26 @@ Section __.
   Instance spec_of_ladderstep : spec_of "ladderstep" :=
     fnspec! "ladderstep"
           (pX1 pX2 pZ2 pX3 pZ3 : Semantics.word)
-          / (X1 X2 Z2 X3 Z3 : felem) R,
+          / (X1 X2 Z2 X3 Z3 : F M_pos) R,
     { requires tr mem :=
-        bounded_by tight_bounds X1
-        /\ bounded_by tight_bounds X2
-        /\ bounded_by tight_bounds Z2
-        /\ bounded_by tight_bounds X3
-        /\ bounded_by tight_bounds Z3
-        /\ (FElem pX1 X1
-            * FElem pX2 X2 * FElem pZ2 Z2
-            * FElem pX3 X3 * FElem pZ3 Z3 * R)%sep mem;
+        (FElem (Some tight_bounds) pX1 X1
+            * FElem (Some tight_bounds) pX2 X2
+            * FElem (Some tight_bounds) pZ2 Z2
+            * FElem (Some tight_bounds) pX3 X3
+            * FElem (Some tight_bounds) pZ3 Z3 * R)%sep mem;
       ensures tr' mem' :=
         tr = tr'
         /\ exists X4 Z4 X5 Z5 (* output values *)
-                  : felem,
-          (ladderstep_gallina
-             (feval X1) (feval X2) (feval Z2)
-             (feval X3) (feval Z3)
-           = (feval X4, feval Z4, feval X5, feval Z5))
-          /\ bounded_by tight_bounds X4
-          /\ bounded_by tight_bounds Z4
-          /\ bounded_by tight_bounds X5
-          /\ bounded_by tight_bounds Z5
-          /\ (FElem pX1 X1 * FElem pX2 X4 * FElem pZ2 Z4
-              * FElem pX3 X5 * FElem pZ3 Z5 * R)%sep mem'}.
+                  : F M_pos,
+          (ladderstep_gallina X1 X2 Z2 X3 Z3
+           = (X4, Z4, X5, Z5))
+          /\ (FElem (Some tight_bounds) pX1 X1
+              * FElem (Some tight_bounds) pX2 X4
+              * FElem (Some tight_bounds) pZ2 Z4
+              * FElem (Some tight_bounds) pX3 X5
+              * FElem (Some tight_bounds) pZ3 Z5 * R)%sep mem'}.
 
+  (*TODO
   Lemma compile_ladderstep {tr mem locals functions}
         (x1 x2 z2 x3 z3 : F M_pos) :
     let v := ladderstep_gallina x1 x2 z2 x3 z3 in
@@ -149,10 +146,17 @@ Section __.
         | _ => solve [eauto]
         end.
     Qed.
-
+*)
   
   Ltac ladderstep_compile_custom :=
-    simple apply compile_nlet_as_nlet_eq;
+    (*TODO: move some of this into core rupicola?*)
+    lazymatch goal with
+    | [v := alloc _ |-_] =>
+      unfold alloc in v;
+      subst v
+      | _ =>
+        simple apply compile_nlet_as_nlet_eq
+    end;
     field_compile_step; [ repeat compile_step .. | intros ];
     eauto with compiler;
     (* rewrite results in terms of feval to match lemmas *)
@@ -162,6 +166,29 @@ Section __.
            end.
 
   Ltac compile_custom ::= ladderstep_compile_custom.
+
+  
+  Lemma relax_bounds_FElem x_ptr x
+    : Lift1Prop.impl1 (FElem (Some tight_bounds) x_ptr x)
+                      (FElem (Some loose_bounds) x_ptr x).
+  Proof.
+    unfold FElem.
+    intros m H.
+    sepsimpl.
+    exists x0.
+    sepsimpl; simpl in *; eauto using relax_bounds.
+  Qed.
+  
+  Lemma drop_bounds_FElem x_ptr x bounds
+    : Lift1Prop.impl1 (FElem bounds x_ptr x)
+                      (FElem None x_ptr x).
+  Proof.
+    unfold FElem.
+    intros m H.
+    sepsimpl.
+    exists x0.
+    sepsimpl; simpl in *; eauto using relax_bounds.
+  Qed.
 
   (*TODO: move to pred_sep if deemed useful*)
     Lemma merge_pred_sep A (a : A) R1 R2 pred tr m locals
@@ -173,33 +200,64 @@ Section __.
     repeat change (fun x => ?h x) with h.
     intros; ecancel_assumption.
     Qed.
-  
-  Derive ladderstep_body SuchThat
-         (let args := ["X1"; "X2"; "Z2"; "X3"; "Z3"] in
-          ltac:(
-            let proc := constr:(("ladderstep",
-                                 (args, [], ladderstep_body))
-                                : Syntax.func) in
-            let goal := Rupicola.Lib.Tactics.program_logic_goal_for_function
-                          proc [mul;add;sub;square;scmula24] in
-            exact (__rupicola_program_marker ladderstep_gallina -> goal)))
-         As ladderstep_correct.
-Proof.
+
+    
+    Derive ladderstep_body SuchThat
+           (let args := ["X1"; "X2"; "Z2"; "X3"; "Z3"] in
+            ltac:(
+              let proc := constr:(("ladderstep",
+                                   (args, [], ladderstep_body))
+                                  : Syntax.func) in
+              let goal := Rupicola.Lib.Tactics.program_logic_goal_for_function
+                            proc [mul;add;sub;square;scmula24] in
+              exact (__rupicola_program_marker ladderstep_gallina -> goal)))
+           As ladderstep_correct.
+    Proof.
 
   compile_setup.
   repeat compile_step.
   {
-
+    eapply Proper_sep_impl1.
+    {
+      intros x H'.
+      eapply Proper_sep_impl1.
+      eapply relax_bounds_FElem.
+      eapply relax_bounds_FElem.
+      ecancel_assumption.
+    }
+    2:{
+      ecancel_assumption.
+    }
+    exact (fun a b=> b).
+  }
+  repeat compile_step.
+  repeat compile_step.
+  {
+    eapply Proper_sep_impl1.
+    {
+      intros x H'.
+      eapply Proper_sep_impl1.
+      eapply relax_bounds_FElem.
+      eapply relax_bounds_FElem.
+      ecancel_assumption.
+    }
+    2:{
+      ecancel_assumption.
+    }
+    exact (fun a b=> b).
+  }
+  repeat compile_step.
+  repeat compile_step.
+  {
     unfold pred_sep; simpl.
-    unfold Basics.flip; simpl.
     repeat change (fun x => ?h x) with h.
     unfold map.getmany_of_list.
     simpl.
-    {
+    {      
       repeat match goal with
       | [ H : _ ?m |- _ ?m] =>
       eapply Proper_sep_impl1;
-        [ eapply FElem_to_bytes | clear H m; intros H m | ecancel_assumption]
+        [ eapply P_to_bytes | clear H m; intros H m | ecancel_assumption]
       end.
       eexists.
       repeat compile_step.
@@ -209,6 +267,9 @@ Proof.
     }
   }
 Qed.
+
+
+
   
   
 End __.
