@@ -60,7 +60,7 @@ Section Compile.
   Qed.
 
   #[refine]
-  Instance felem_alloc : Allocable FElem :=
+  Instance felem_alloc : Allocable (FElem None) :=
     {
     size_in_bytes := felem_size_in_bytes;
     size_in_bytes_mod := felem_size_in_bytes_mod;
@@ -74,7 +74,6 @@ Section Compile.
     }      
     {
       intros; intros m H.
-      exists None.
       apply FElem'_from_bytes.
       eauto.
     }
