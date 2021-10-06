@@ -37,17 +37,13 @@ Section FunctionSpecs.
   Context {scalar_representaton : ScalarRepresentation (word:=word) (mem:=mem)}.
 
   Definition spec_of_sctestbit : spec_of sctestbit :=
-    (forall! (x : scalar) (px wi : word)
-           (b:=Z.testbit (F.to_Z (sceval x)) (word.unsigned wi)),
-        (fun Rr mem =>
-           (exists Ra, (Scalar px x * Ra)%sep mem)
-           /\ Rr mem)
-          ===>
-          sctestbit @ [px; wi] returns rets
-          ===>
-          (liftexists r,
-           emp (rets = [r]
-                /\ r = word.of_Z (Z.b2z b)))).
+    fnspec! sctestbit (px wi: word) / (x: scalar) Ra Rr ~> r,
+    { requires tr mem :=
+        (Scalar px x * Ra)%sep mem /\ Rr mem;
+      ensures tr' mem' :=
+        tr = tr' /\ Rr mem' /\
+        let b := Z.testbit (F.to_Z (sceval x)) (word.unsigned wi) in
+        r = word.b2w b }.
 End FunctionSpecs.
 
 Section SpecProperties.
