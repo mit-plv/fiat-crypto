@@ -205,4 +205,8 @@ Existing Instance spec_of_ladderstep.
 
 Import Syntax.
 Local Unset Printing Coercions.
+Set Printing Depth 70.
+Print ladderstep_body.
 Redirect "Crypto.Bedrock.Group.ScalarMult.LadderStep.ladderstep_body" Print ladderstep_body.
+(*TODO: should I set it back?*)
+Set Printing Depth 50.

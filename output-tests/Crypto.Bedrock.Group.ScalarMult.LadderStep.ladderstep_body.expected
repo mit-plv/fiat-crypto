@@ -1,28 +1,56 @@
 ladderstep_body = 
-fun field_parameters : FieldParameters =>
+fun (width : Z) (BW : Bitwidth width) (word : word width)
+  (mem : map.map word byte) (word_ok : word.ok word) 
+  (mem_ok : map.ok mem) (field_parameters : FieldParameters)
+  (field_representaton : FieldRepresentation)
+  (field_representation_ok : FieldRepresentation_ok) =>
 noskips
-  (cmd.seq (cmd.call [] add ["A"; "X2"; "Z2"])
-     (cmd.seq (cmd.call [] square ["AA"; "A"])
-        (cmd.seq (cmd.call [] sub ["B"; "X2"; "Z2"])
-           (cmd.seq (cmd.call [] square ["BB"; "B"])
-              (cmd.seq (cmd.call [] sub ["E"; "AA"; "BB"])
-                 (cmd.seq (cmd.call [] add ["C"; "X3"; "Z3"])
-                    (cmd.seq (cmd.call [] sub ["D"; "X3"; "Z3"])
-                       (cmd.seq (cmd.call [] mul ["DA"; "D"; "A"])
-                          (cmd.seq (cmd.call [] mul ["CB"; "C"; "B"])
-                             (cmd.seq (cmd.call [] add ["X3"; "DA"; "CB"])
-                                (cmd.seq (cmd.call [] square ["X3"; "X3"])
+  (cmd.stackalloc "A" size_in_bytes
+     (cmd.seq (cmd.call [] add ["A"; "X2"; "Z2"])
+        (cmd.stackalloc "AA" size_in_bytes
+           (cmd.seq (cmd.call [] square ["AA"; "A"])
+              (cmd.stackalloc "B" size_in_bytes
+                 (cmd.seq (cmd.call [] sub ["B"; "X2"; "Z2"])
+                    (cmd.stackalloc "BB" size_in_bytes
+                       (cmd.seq (cmd.call [] square ["BB"; "B"])
+                          (cmd.stackalloc "E" size_in_bytes
+                             (cmd.seq (cmd.call [] sub ["E"; "AA"; "BB"])
+                                (cmd.stackalloc "C" size_in_bytes
                                    (cmd.seq
-                                      (cmd.call [] sub ["Z3"; "DA"; "CB"])
-                                      (cmd.seq
-                                         (cmd.call [] square ["Z3"; "Z3"])
+                                      (cmd.call [] add ["C"; "X3"; "Z3"])
+                                      (cmd.stackalloc "D" size_in_bytes
                                          (cmd.seq
-                                            (cmd.call [] mul
-                                               ["Z3"; "X1"; "Z3"])
-                                            (cmd.seq
-                                               (cmd.call [] mul
-                                                 ["X2"; "AA"; "BB"])
+                                            (cmd.call [] sub
+                                               ["D"; "X3"; "Z3"])
+                                            (cmd.stackalloc "DA"
+                                               size_in_bytes
                                                (cmd.seq
+                                                 (cmd.call [] mul
+                                                 ["DA"; "D"; "A"])
+                                                 (cmd.stackalloc "CB"
+                                                 size_in_bytes
+                                                 (cmd.seq
+                                                 (cmd.call [] mul
+                                                 ["CB"; "C"; "B"])
+                                                 (cmd.seq
+                                                 (cmd.call [] add
+                                                 ["X3"; "DA"; "CB"])
+                                                 (cmd.seq
+                                                 (cmd.call [] square
+                                                 ["X3"; "X3"])
+                                                 (cmd.seq
+                                                 (cmd.call [] sub
+                                                 ["Z3"; "DA"; "CB"])
+                                                 (cmd.seq
+                                                 (cmd.call [] square
+                                                 ["Z3"; "Z3"])
+                                                 (cmd.seq
+                                                 (cmd.call [] mul
+                                                 ["Z3"; "X1"; "Z3"])
+                                                 (cmd.seq
+                                                 (cmd.call [] mul
+                                                 ["X2"; "AA"; "BB"])
+                                                 (cmd.seq
                                                  (cmd.call [] scmula24
                                                  ["Z2"; "E"])
                                                  (cmd.seq
@@ -35,7 +63,14 @@ noskips
                                                  (fun (v : string) (c : cmd)
                                                  => 
                                                  cmd.seq (cmd.unset v) c)
-                                                 cmd.skip [])))))))))))))))))))
-     : FieldParameters -> cmd
+                                                 cmd.skip []))))))))))))))))))))))))))))
+     : forall (width : Z) (BW : Bitwidth width) (word : word width)
+         (mem : map.map word byte),
+       word.ok word ->
+       map.ok mem ->
+       forall (field_parameters : FieldParameters)
+         (field_representaton : FieldRepresentation),
+       FieldRepresentation_ok -> cmd
 
-Arguments ladderstep_body {field_parameters}
+Arguments ladderstep_body {width}%Z_scope {BW word mem word_ok mem_ok
+  field_parameters field_representaton field_representation_ok}
