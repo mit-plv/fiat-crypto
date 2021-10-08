@@ -769,10 +769,10 @@ Definition type_spec_of_runtime (ls : list (Z + list Z)) : list (option nat)
   := List.map (fun v => match v with inl _ => None | inr ls => Some (List.length ls) end) ls.
 (* outputs, inputs *)
 Definition get_asm_arguments (m : machine_state) (output_types : type_spec) (runtime_inputs : type_spec) (reg_available : list REG) : list (Naive.word 64) * list (Naive.word 64).
-  (** TODO *)
+  (* TODO *)
 Admitted.
 Definition R_runtime_input (frame : Semantics.mem_state) (output_types : type_spec) (runtime_inputs : list (Z + list Z)) (stack_size : nat) (asm_arguments_out asm_arguments_in : list (Naive.word 64)) (reg_available : list REG) (m : machine_state) : Prop.
-  (** TODO(Andres) *)
+  (* TODO *)
 Admitted.
 Definition cell64 wa (v : Z) : Semantics.mem_state -> Prop :=
   Lift1Prop.ex1 (fun bs => sep (emp (
@@ -785,7 +785,7 @@ Definition R_runtime_output (frame : Semantics.mem_state) (runtime_outputs : lis
   Check array.
   Check R_cell64.
   Locate array.
-  (** TODO(Andres) *)
+  (* TODO *)
 Admitted.
 
 Theorem symex_asm_func_M_correct
