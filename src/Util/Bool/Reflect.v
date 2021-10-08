@@ -63,6 +63,11 @@ Lemma reflect_rect_dep {P b} (Q : reflect P b -> Type)
   : forall x, Q x.
 Proof. intro x; destruct x; apply H. Defined.
 
+Definition reflect_of_BoolSpec {P b} (H : BoolSpec P (~P) b) : reflect P b.
+Proof. destruct b; constructor; inversion H; assumption. Defined.
+Definition BoolSpec_of_reflect {P b} (H : reflect P b) : BoolSpec P (~P) b.
+Proof. destruct b; constructor; inversion H; assumption. Defined.
+
 Definition mark {T} (v : T) := v.
 
 Ltac induction_reflect x :=
@@ -110,6 +115,11 @@ Existing Class reflect.
 Definition decb (P : Prop) {b : bool} {H : reflect P b} := b.
 Notation reflect_rel P b := (forall x y, reflect (P x y) (b x y)).
 Definition decb_rel {A B} (P : A -> B -> Prop) {b : A -> B -> bool} {H : reflect_rel P b} := b.
+
+Definition reflect_rel_of_BoolSpec {A R Rb} (H : forall a b : A, BoolSpec (R a b) (~R a b) (Rb a b)) : reflect_rel R Rb.
+Proof. intros; now apply reflect_of_BoolSpec. Defined.
+Definition BoolSpec_of_reflect_rel {A R Rb} (H : reflect_rel R Rb) : forall a b : A, BoolSpec (R a b) (~R a b) (Rb a b).
+Proof. intros; now apply BoolSpec_of_reflect. Defined.
 
 Lemma decb_true_iff P {b} {H : reflect P b} : @decb P b H = true <-> P.
 Proof. symmetry; apply reflect_iff, H. Qed.
