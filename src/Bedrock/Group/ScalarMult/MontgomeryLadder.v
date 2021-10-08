@@ -14,7 +14,8 @@ Require Import Crypto.Util.NumTheoryUtil.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Local Open Scope Z_scope.
 
-
+(* TODO: migrate these to rupicola *)
+(* TODO: which tuple to use? *)
 Notation "'let/n' ( w , x , y , z ) := val 'in' body" :=
   (nlet [IdentParsing.TC.ident_to_string w;
         IdentParsing.TC.ident_to_string x;
@@ -23,6 +24,19 @@ Notation "'let/n' ( w , x , y , z ) := val 'in' body" :=
         val  (fun '(w, x, y, z) => body))
    (at level 200, w ident, x  ident, y ident, z ident, body at level 200,
     only parsing).
+
+
+Notation "'let/n' ( v , w , x , y , z ) := val 'in' body" :=
+  (nlet [IdentParsing.TC.ident_to_string v;
+        IdentParsing.TC.ident_to_string w;
+        IdentParsing.TC.ident_to_string x;
+        IdentParsing.TC.ident_to_string y;
+        IdentParsing.TC.ident_to_string z]
+        val (fun vwxyz => let '\< v, w, x, y, z \> := vwxyz in body))
+    (at level 200, v ident, w ident, x ident, y ident, z ident, body at level 200,
+     only parsing).
+
+(*
 
 Notation "'let/n' ( v , w , x , y , z ) := val 'in' body" :=
   (nlet [IdentParsing.TC.ident_to_string v;
@@ -33,6 +47,7 @@ Notation "'let/n' ( v , w , x , y , z ) := val 'in' body" :=
         val  (fun '(v, w, x, y, z) => body))
    (at level 200, v ident,  w ident, x  ident, y ident, z ident, body at level 200,
      only parsing).
+*)
 
 
 Section __.
@@ -55,6 +70,7 @@ Section __.
   Section Gallina.
     Local Open Scope F_scope.
 
+    Locate "let/n".
     Definition montladder_gallina
                (scalarbits : Z) (testbit:nat ->bool) (u:F M_pos)
       : F M_pos :=
@@ -69,18 +85,18 @@ Section __.
       let/n count := scalarbits in
       let/n (X1, Z1, X2, Z2, swap) :=
          downto
-           (X1, Z1, X2, Z2, swap) (* initial state *)
+           \<X1, Z1, X2, Z2, swap\> (* initial state *)
            (Z.to_nat count)
            (fun state i =>
               (*TODO: should this be a /n?*)
-              let '(X1, Z1, X2, Z2, swap) := state in
+              let '\<X1, Z1, X2, Z2, swap\> := state in
               let/n s_i := testbit i in
               let/n swap := xorb swap s_i in
               let/n (X1, X2) := cswap swap X1 X2 in
               let/n (Z1, Z2) := cswap swap Z1 Z2 in
               let/n (X1, Z1, X2, Z2) := ladderstep_gallina u X1 Z1 X2 Z2 in
               let/n swap := s_i in
-              (X1, Z1, X2, Z2, swap)
+              \<X1, Z1, X2, Z2, swap\>
            ) in
       let/n (X1, X2) := cswap swap X1 X2 in
       let/n (Z1, Z2) := cswap swap Z1 Z2 in
@@ -441,6 +457,20 @@ Section __.
       compile_step.
       compile_step.
       compile_step.
+      Import DownToCompiler.
+      simple apply compile_nlet_as_nlet_eq.
+      lazymatch goal with
+      | [ |- WeakestPrecondition.cmd _ _ _ _ ?locals _ ] =>
+        let i_v := gensym locals "i" in
+        let lp := infer_downto_predicate i_v in
+        eapply compile_downto with (i_var := i_v) (loop_pred := lp)
+      end.
+      (*
+      compile_downto.
+      compile_step; [repeat compile_step ..|].
+      admit.
+      Import DownToCompiler.
+       *)
       (*TODO: use regular compile_step for downto, figure out invariant inference *)
       (*compile_step.*)
       (*TODO: copy locals into inv*)
