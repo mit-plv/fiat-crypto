@@ -998,6 +998,14 @@ Proof.
                     | solve [ firstorder lia ] ].
 Qed.
 
+Local Lemma land_ones_eq_of_bounded v n
+      (H : (0 <= v < 2 ^ (Z.of_N n))%Z)
+  : Z.land v (Z.ones (Z.of_N n)) = v.
+Proof.
+  rewrite Z.land_ones by lia.
+  rewrite Z.mod_small by lia.
+  reflexivity.
+Qed.
 Lemma merge_fresh_symbol_G_ok_bounded G d v G' d' idx
       (Hd : gensym_dag_ok G d)
       (H : merge_fresh_symbol_G v (G, d) = (idx, (G', d')))
@@ -1006,9 +1014,7 @@ Lemma merge_fresh_symbol_G_ok_bounded G d v G' d' idx
     /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
-  replace v with (Z.land v (Z.ones (Z.of_N 64))); [ now apply merge_fresh_symbol_G_ok | ].
-  rewrite Z.land_ones by lia.
-  rewrite Z.mod_small by lia.
+  replace v with (Z.land v (Z.ones (Z.of_N 64))); [ now apply merge_fresh_symbol_G_ok | rewrite land_ones_eq_of_bounded by assumption ].
   reflexivity.
 Qed.
 
@@ -1258,6 +1264,89 @@ Proof.
                | apply Word.Properties.word.unsigned_range ].
 Qed.
 
+Definition init_symbolic_state_G (m : machine_state)
+  : (symbol -> option Z) * dag -> (symbol -> option Z) * symbolic_state
+  := fun st
+     => let vals := Tuple.to_list _ (m.(machine_reg_state)) in
+        let '(initial_reg_idxs, (G, d)) := dag_gensym_n_G vals st in
+        (G,
+         {| dag_state := d
+            ; symbolic_reg_state := Tuple.from_list_default None 16 (List.map Some initial_reg_idxs)
+            ; symbolic_flag_state := Tuple.repeat None 6
+            ; symbolic_mem_state := []
+         |}).
+
+Lemma init_symbolic_state_eq_G G d m
+  : init_symbolic_state d = snd (init_symbolic_state_G m (G, d)).
+Proof.
+  cbv [init_symbolic_state init_symbolic_state_G].
+  pose proof (@dag_gensym_n_eq_G G d (Tuple.to_list 16 m.(machine_reg_state))) as H.
+  rewrite Tuple.length_to_list in H; rewrite H; clear H.
+  eta_expand; cbn [fst snd].
+  reflexivity.
+Qed.
+
+Lemma init_symbolic_state_G_ok m G d G' ss
+      (frame : Semantics.mem_state)
+      (Hd : gensym_dag_ok G d)
+      (H : init_symbolic_state_G m (G, d) = (G', ss))
+      (d' := ss.(dag_state))
+      (Hframe : frame = m)
+      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list 16 m.(machine_reg_state)))
+  : R frame G' ss m
+    /\ gensym_dag_ok G' d'
+    /\ (forall e n, eval G d e n -> eval G' d' e n).
+Proof.
+  cbv [init_symbolic_state_G] in *.
+  eta_expand; cbn [fst snd] in *; inversion_prod; subst.
+  pose proof (dag_gensym_n_G_ok _ _ _ _ _ _ ltac:(eassumption) ltac:(repeat rewrite <- surjective_pairing; reflexivity) ltac:(eassumption)).
+  destruct_head'_and; cbv [R].
+  repeat match goal with |- _ /\ _ => split end; try eassumption; try reflexivity.
+  2: { cbv [Tuple.repeat R_flags Tuple.append Tuple.fieldwise Tuple.fieldwise' R_flag]; cbn [fst snd];
+       repeat apply conj; congruence. }
+  set (v := dag_gensym_n_G _ _) in *; clearbody v; destruct_head'_prod; cbn [fst snd] in *.
+  eassert (H' : Tuple.to_list 16 m.(machine_reg_state) = _).
+  { repeat match goal with H : _ |- _ => clear H end.
+      cbv [Tuple.to_list Tuple.to_list'].
+      set_evars; eta_expand; subst_evars; reflexivity. }
+  generalize dependent (Tuple.to_list 16 m.(machine_reg_state)); intros; subst.
+  repeat match goal with H : context[?x :: _] |- _ => assert_fails is_var x; set x in * end.
+  repeat match goal with H : Forall2 _ ?v (_ :: _) |- _ => is_var v; inversion H; clear H; subst end.
+  repeat match goal with H : Forall2 _ ?v nil |- _ => is_var v; inversion H; clear H; subst end.
+  repeat match goal with H : Forall _ (_ :: _) |- _ => inversion H; clear H; subst end.
+  cbv [List.map Tuple.from_list_default Tuple.from_list_default'].
+  cbv [R_regs R_reg Tuple.fieldwise Tuple.fieldwise' eval_idx_Z] in *; cbn [fst snd].
+  repeat apply conj; intros; inversion_option; subst; try assumption.
+  all: change 64%Z with (Z.of_N 64).
+  all: rewrite land_ones_eq_of_bounded; [ reflexivity | ].
+  all: assumption.
+Qed.
+
+Lemma init_symbolic_state_ok m G d
+      (frame : Semantics.mem_state)
+      (Hd : gensym_dag_ok G d)
+      (ss := init_symbolic_state d)
+      (d' := ss.(dag_state))
+      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list 16 m.(machine_reg_state)))
+      (Hframe : frame = m)
+  : exists G',
+    R frame G' ss m
+    /\ gensym_dag_ok G' d'
+    /\ (forall e n, eval G d e n -> eval G' d' e n).
+Proof.
+  subst ss d'; erewrite init_symbolic_state_eq_G.
+  eexists; eapply init_symbolic_state_G_ok; try eassumption.
+  eta_expand; reflexivity.
+Qed.
+
+(* TODO: TEMP *)
+Lemma bounds_of_R_runtime_input
+      {frame output_types runtime_inputs stack_size asm_args_out asm_args_in reg_available m}
+      (HR : R_runtime_input frame output_types runtime_inputs stack_size asm_args_out asm_args_in reg_available m)
+  : Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list 16 m.(machine_reg_state)).
+Proof.
+Admitted.
+
 Theorem symex_asm_func_M_correct
         d frame asm_args_out asm_args_in (G : symbol -> option Z) (s := init_symbolic_state d)
         (s' : symbolic_state) (m : machine_state) (output_types : type_spec) (stack_size : nat)
@@ -1280,6 +1369,7 @@ Theorem symex_asm_func_M_correct
     /\ List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets.
 Proof.
   pose proof (word_args_to_Z_args_bounded word_runtime_inputs).
+  pose proof (bounds_of_R_runtime_input HR).
   cbv [symex_asm_func_M Symbolic.bind ErrorT.bind lift_dag] in H.
   break_innermost_match_hyps; destruct_head'_prod; destruct_head'_unit; cbn [fst snd] in *; try discriminate; [].
   repeat first [ progress subst
@@ -1287,6 +1377,11 @@ Proof.
                  | [ H : Success _ = Success _ |- _ ] => inversion H; clear H
                  | [ x := ?y |- _ ] => subst x
                  end ].
+  destruct (init_symbolic_state_ok m G _ _ ltac:(eassumption) ltac:(eassumption) eq_refl) as [G1 ?]; destruct_head'_and.
+  lazymatch goal with
+  | [ H : build_inputs _ _ = _ |- _ ] => move H at bottom; eapply build_inputs_ok in H; [ |  .. ]
+  end.
+  2: eassumption.
   (* ... *)
   let H := lazymatch goal with H : SymexLines _ _ = Success _ |- _ => H end in
   eapply SymexLines_R in H;
