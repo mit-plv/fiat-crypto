@@ -40,6 +40,7 @@ Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SetEvars.
+Require Import Crypto.Util.Tactics.SubstEvars.
 Import API.Compilers APINotations.Compilers AbstractInterpretation.ZRange.Compilers.
 Import ListNotations.
 Local Open Scope list_scope.
@@ -897,6 +898,16 @@ Fixpoint build_inputs_G (vals : list (Z + list Z))
              (inl idx :: rest, st)
      end.
 
+Fixpoint dag_gensym_n_G (vals : list Z) : (symbol -> option Z) * dag -> list idx * ((symbol -> option Z) * dag)
+  := match vals with
+     | nil => fun st => ([], st)
+     | v :: vs
+       => fun st
+          => let '(idx, st) := merge_fresh_symbol_G v st in
+             let '(rest, st) := dag_gensym_n_G vs st in
+             (idx :: rest, st)
+     end.
+
 Lemma merge_fresh_symbol_eq_G G d v
       (res := merge_fresh_symbol_G v (G, d))
   : merge_fresh_symbol d = (fst res, snd (snd res)).
@@ -1063,6 +1074,62 @@ Lemma build_inputarray_ok G d len idxs args d'
 Proof.
   subst len; erewrite build_inputarray_eq_G in H; inversion_prod.
   eexists; eapply build_inputarray_G_ok; try eassumption.
+  repeat first [ eassumption | apply path_prod | reflexivity ].
+Qed.
+
+Lemma dag_gensym_n_eq_G G d vals (len := List.length vals)
+  : dag_gensym_n len d = (fst (dag_gensym_n_G vals (G, d)), snd (snd (dag_gensym_n_G vals (G, d)))).
+Proof.
+  subst len.
+  revert G d; induction vals as [|v vals IHvals]; cbn [dag_gensym_n dag_gensym_n_G fst snd List.length]; [ reflexivity | ]; intros.
+  cbv [dag.bind dag.ret]; eta_expand; cbn [fst snd].
+  erewrite !@merge_fresh_symbol_eq_G, IHvals; cbn [fst snd]; eta_expand; reflexivity.
+Qed.
+
+Lemma dag_gensym_n_G_ok G d vals G' d' ia
+      (Hd : gensym_dag_ok G d)
+      (H : dag_gensym_n_G vals (G, d) = (ia, (G', d')))
+      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) vals)
+  : Forall2 (eval_idx_Z G' d') ia vals
+    /\ gensym_dag_ok G' d'
+    /\ (forall e n, eval G d e n -> eval G' d' e n).
+Proof.
+  revert ia G d G' d' Hd H.
+  induction vals as [|v vals IHvals], ia as [|i ia]; cbn [dag_gensym_n_G]; intros;
+    try solve [ inversion_prod; subst; eta_expand; cbn [fst snd] in *; eauto; try congruence ].
+  { break_innermost_match_hyps.
+    inversion Hbounds; subst; clear Hbounds.
+    destruct_head'_prod.
+    specialize (fun H => IHvals ltac:(assumption) _ _ _ _ _ H ltac:(eassumption)).
+    match goal with H : pair _ _ = pair _ _ |- _ => inversion H; clear H end; subst.
+    let lem := match goal with H : context[merge_fresh_symbol_G ?v (?G, ?d)] |- _ => constr:(merge_fresh_symbol_G_ok_bounded G d v) end in
+    pose proof (lem _ _ _ ltac:(assumption) ltac:(eassumption) ltac:(lia)).
+    destruct_head'_and; specialize_by_assumption.
+    repeat first [ progress subst
+                 | progress destruct_head'_and
+                 | assumption
+                 | solve [ eauto ]
+                 | match goal with
+                   | [ |- _ /\ _ ] => split
+                   | [ |- Forall2 _ (_ :: _) (_ :: _) ] => constructor
+                   | [ H : Forall2 _ ?l1 ?l2 |- Forall2 _ ?l1 ?l2 ] => eapply Forall2_weaken; [ clear H | exact H ]
+                   | [ |- forall a b, eval_idx_Z _ _ a b -> eval_idx_Z _ _ a b ] => apply lift_eval_idx_Z_impl
+                   | [ |- eval_idx_Z _ _ _ _ ] => eapply lift_eval_idx_Z_impl; now eauto
+                   end ]. }
+Qed.
+
+Lemma dag_gensym_n_ok G d len idxs args d'
+      (d_ok : gensym_dag_ok G d)
+      (H : dag_gensym_n len d = (idxs, d'))
+      (Hargs : List.length args = len)
+      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) args)
+  : exists G',
+    Forall2 (eval_idx_Z G' d') idxs args
+    /\ gensym_dag_ok G' d'
+    /\ (forall e n, eval G d e n -> eval G' d' e n).
+Proof.
+  subst len; erewrite dag_gensym_n_eq_G in H; inversion_prod.
+  eexists; eapply dag_gensym_n_G_ok; try eassumption.
   repeat first [ eassumption | apply path_prod | reflexivity ].
 Qed.
 
