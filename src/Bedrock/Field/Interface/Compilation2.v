@@ -17,19 +17,30 @@ Section Compile.
           {field_representaton : FieldRepresentation}
           {field_representation_ok : FieldRepresentation_ok}.
 
-   (*TODO: what to do about the bounds?*)
   Definition maybe_bounded mbounds v :=
     match mbounds with
     | Some bounds => bounded_by bounds v
     | None => True
     end.
 
+  (* TODO: Replace uses of the old FElem with this? *)
   Definition FElem mbounds ptr v :=
     (Lift1Prop.ex1 (fun v' => (emp (feval v' = v /\ maybe_bounded mbounds v') * FElem ptr v')%sep)).
 
   Lemma drop_bounds_FElem x_ptr x bounds
     : Lift1Prop.impl1 (FElem bounds x_ptr x)
                       (FElem None x_ptr x).
+  Proof.
+    unfold FElem.
+    intros m H.
+    sepsimpl.
+    exists x0.
+    sepsimpl; simpl in *; eauto using relax_bounds.
+  Qed.
+
+  Lemma relax_bounds_FElem x_ptr x
+    : Lift1Prop.impl1 (FElem (Some tight_bounds) x_ptr x)
+                      (FElem (Some loose_bounds) x_ptr x).
   Proof.
     unfold FElem.
     intros m H.
@@ -60,11 +71,11 @@ Section Compile.
   Qed.
 
   #[refine]
-  Instance felem_alloc : Allocable (FElem None) :=
-    {
+   Instance felem_alloc : Allocable (FElem None) :=
+    {|
     size_in_bytes := felem_size_in_bytes;
     size_in_bytes_mod := felem_size_in_bytes_mod;
-    }.
+    |}.
   Proof.
     {
       intros; intros m H.
@@ -145,7 +156,7 @@ Section Compile.
   Lemma compile_unop {name} (op: UnOp name) {tr m l functions} x:
     let v := un_model x in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-      Rin Rout out x_ptr x_var out_ptr out_var out_bounds,
+           Rin Rout out x_ptr x_var out_ptr out_var out_bounds,
 
       (_: spec_of name) functions ->
 
@@ -227,7 +238,7 @@ Section Compile.
   Lemma compile_felem_copy {tr m l functions} x : 
     let v := x in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-      R x_ptr x_var out out_ptr out_var x_bound out_bound,
+           R x_ptr x_var out out_ptr out_var x_bound out_bound,
 
       spec_of_felem_copy functions ->
 
@@ -266,9 +277,9 @@ Section Compile.
     sepsimpl;
       eauto.
     do 2 (eexists;
-    sepsimpl;
-    simpl;
-    eauto).
+          sepsimpl;
+          simpl;
+          eauto).
     ecancel_assumption.
   Qed.
 
@@ -277,7 +288,7 @@ Section Compile.
   Lemma compile_felem_small_literal {tr m l functions} x:
     let v := F.of_Z _ x in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-      R (wx : word) out out_ptr out_var out_bounds,
+           R (wx : word) out out_ptr out_var out_bounds,
 
       spec_of_felem_small_literal functions ->
 
@@ -315,43 +326,35 @@ Section Compile.
     2:exact(fun a b => b).
     intros m' H'.
     eexists;
-    sepsimpl;
+      sepsimpl;
       eauto.
     match goal with H : _ |- _ =>
                     rewrite word.of_Z_unsigned in H end.
     assumption.
   Qed.
-   
+
 End Compile.
 
-(*TODO: why doesn't simple eapply work? *)
-Ltac field_compile_step :=
-  first [ simple eapply compile_scmula24 (* must precede compile_mul *)
-        | simple eapply compile_mul
-        | simple eapply compile_add
-        | simple eapply compile_sub
-        | simple eapply compile_square
-        | simple eapply compile_inv];
-  lazymatch goal with
-  | |- feval _ = _ => try eassumption; try reflexivity
-  | |- _ => idtac
-  end.
 
-(* Change an FElem into a Placeholder to indicate that it is overwritable *)
-Ltac free p :=
-  match goal with
-  | H : sep ?P ?Q ?m |- context [?m] =>
-    let x :=
-        match type of H with
-        | context [FElem p ?x] => x
-        end in
-    let F :=
-        match (eval pattern (FElem p x) in (sep P Q m)) with
-        | ?F _ => F end in
-    let H' := fresh in
-    assert (F (Placeholder p)) as H'
-        by (seprewrite FElem_from_bytes; sepsimpl; eexists;
-            ecancel_assumption);
-    cbv beta in H'; clear H
-  end.
+(*must be higher priority than compile_mul*)
+#[export] Hint Extern 6 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (a24 * _)%F _))) =>
+simple eapply compile_scmula24; shelve : compiler.
 
+#[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (_ * _)%F _))) =>
+simple eapply compile_mul; shelve : compiler.
+#[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (_ + _)%F _))) =>
+simple eapply compile_add; shelve : compiler.
+#[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (_ - _)%F _))) =>
+simple eapply compile_sub; shelve : compiler.
+#[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (_ ^ 2)%F _))) =>
+simple eapply compile_square; shelve : compiler.
+#[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.inv _) _))) =>
+simple eapply compile_inv; shelve : compiler.
+
+
+#[export] Hint Immediate relax_bounds_FElem : ecancel_impl.
+#[export] Hint Immediate drop_bounds_FElem : ecancel_impl.
+
+
+#[export] Hint Extern 1 (spec_of _) => (simple refine (@spec_of_BinOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
+#[export] Hint Extern 1 (spec_of _) => (simple refine (@spec_of_UnOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.

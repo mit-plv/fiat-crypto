@@ -2,6 +2,7 @@
 
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Alloc.
+Require Import Rupicola.Lib.SeparationLogicImpl.
 Require Import Rupicola.Lib.SepLocals.
 Require Import Rupicola.Lib.ControlFlow.CondSwap.
 Require Import Rupicola.Lib.ControlFlow.DownTo.
@@ -276,22 +277,7 @@ Section __.
         unify R (sep R1 R2);
         seprewrite (cswap_iff1 FElem)
       end.
-
-    Ltac safe_field_compile_step :=
-      field_compile_step;
-      lazymatch goal with
-      | |- sep _ ?R _ =>
-        tryif is_evar R
-        then (repeat rewrite_cswap_iff1_with_evar_frame)
-        else (repeat seprewrite (cswap_iff1 FElem));
-        ecancel_assumption
-      | _ => idtac
-      end;
-      lazymatch goal with
-      | |- context [WeakestPrecondition.cmd] => idtac
-      | _ => solve_field_subgoals_with_cswap
-      end.
-
+    
     Existing Instance spec_of_sctestbit.
 
 
@@ -402,6 +388,8 @@ Section __.
 
   Existing Instance felem_alloc.
 
+  
+  Local Ltac ecancel_assumption ::= ecancel_assumption_impl.
   
   Hint Extern 1 (spec_of _) => (simple refine (@spec_of_felem_copy _ _ _ _ _ _ _ _)) : typeclass_instances.
   Hint Extern 1 (spec_of _) => (simple refine (@spec_of_felem_small_literal _ _ _ _ _ _ _ _)) : typeclass_instances.

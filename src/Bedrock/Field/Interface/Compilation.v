@@ -210,17 +210,15 @@ Section Compile.
                     rewrite word.of_Z_unsigned in H end.
     use_hyp_with_matching_cmd; eauto.
   Qed.
-   
 End Compile.
 
-(*TODO: why doesn't simple eapply work? *)
 Ltac field_compile_step :=
   first [ simple eapply compile_scmula24 (* must precede compile_mul *)
         | simple eapply compile_mul
         | simple eapply compile_add
         | simple eapply compile_sub
         | simple eapply compile_square
-        | simple eapply compile_inv];
+        | simple eapply compile_inv ];
   lazymatch goal with
   | |- feval _ = _ => try eassumption; try reflexivity
   | |- _ => idtac
