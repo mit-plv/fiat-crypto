@@ -81,7 +81,7 @@ Section WithCtx.
 Context (frame : mem_state).
 Context (G : symbol -> option Z).
 Local Notation eval := (Symbolic.eval G).
-Local Notation dag_ok := (Symbolic.dag_ok G).
+Local Notation gensym_dag_ok := (Symbolic.gensym_dag_ok G).
 
 Section WithDag.
 Context (d : dag).
@@ -114,7 +114,7 @@ End WithDag.
 Definition R (ss : symbolic_state) (ms : machine_state) : Prop :=
   let (mr, mf, mm) := ms in
   let (d, sr, sf, sm) := ss in
-  dag_ok d /\ R_regs d sr mr /\ R_flags d sf mf /\ R_mem d sm mm.
+  gensym_dag_ok d /\ R_regs d sr mr /\ R_flags d sf mf /\ R_mem d sm mm.
 
 
 Lemma R_flag_None_l d f : R_flag d None f.
@@ -232,7 +232,7 @@ Proof using Type.
   { refine (SortedListWord.ok _ _). }
 Qed.
 
-Lemma R_subsumed s m (HR : R s m) d' (Hd' : dag_ok d') (Hlt : s :< d')
+Lemma R_subsumed s m (HR : R s m) d' (Hd' : gensym_dag_ok d') (Hlt : s :< d')
   (s' := update_dag_with s (fun _ => d')) : R s' m.
 Proof using Type.
   destruct s, m; case HR as (Hd&Hr&Hf&Hm);
