@@ -763,98 +763,6 @@ Proof using Type.
     exfalso; eapply List.nth_error_nil_Some; eassumption.
 Qed.
 
-Import Map.Interface Map.Separation. (* for coercions *)
-Require Import bedrock2.Array.
-Import LittleEndianList.
-Import coqutil.Word.Interface.
-Definition type_spec_of_runtime {A} (ls : list (A + list A)) : list (option nat)
-  := List.map (fun v => match v with inl _ => None | inr ls => Some (List.length ls) end) ls.
-(* outputs, inputs *)
-Definition get_asm_arguments (m : machine_state) (output_types : type_spec) (runtime_inputs : type_spec) (reg_available : list REG) : list (Naive.word 64) * list (Naive.word 64).
-  (* TODO *)
-Admitted.
-Definition R_runtime_input (frame : Semantics.mem_state) (output_types : type_spec) (runtime_inputs : list (Z + list Z)) (stack_size : nat) (asm_arguments_out asm_arguments_in : list (Naive.word 64)) (reg_available : list REG) (m : machine_state) : Prop.
-  (* TODO *)
-Admitted.
-Definition cell64 wa (v : Z) : Semantics.mem_state -> Prop :=
-  Lift1Prop.ex1 (fun bs => sep (emp (
-      length bs = 8%nat /\ v = le_combine bs))
-                               (eq (OfListWord.map.of_list_word_at wa bs))).
-Print array.
-Check array cell64 (word.of_Z 8).
-Definition R_runtime_output (frame : Semantics.mem_state) (runtime_outputs : list (Z + list Z)) (runtime_inputs : type_spec) (stack_size : nat) (asm_arguments_out asm_arguments_in : list (Naive.word 64)) (m : machine_state) : Prop.
-  Print array.
-  Check array.
-  Check R_cell64.
-  Locate array.
-  (* TODO *)
-Admitted.
-
-Theorem symex_asm_func_M_correct
-        d frame asm_args_out asm_args_in (G : symbol -> option Z) (s := init_symbolic_state d)
-        (s' : symbolic_state) (m : machine_state) (output_types : type_spec) (stack_size : nat)
-        (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
-        (rets : list (idx + list idx))
-        (H : symex_asm_func_M output_types stack_size inputs reg_available asm s = Success (Success rets, s'))
-        (runtime_inputs : list (Z + list Z))
-        (Hasm : get_asm_arguments m output_types (type_spec_of_runtime runtime_inputs) reg_available = (asm_args_out, asm_args_in))
-        (HR : R_runtime_input frame output_types runtime_inputs stack_size asm_args_out asm_args_in reg_available m)
-        (Hd_ok : gensym_dag_ok G d)
-        (d' := s'.(dag_state))
-        (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
-  : exists m' G'
-           (runtime_rets : list (Z + list Z)),
-    DenoteLines m asm = Some m'
-    /\ R_runtime_output frame runtime_rets (type_spec_of_runtime runtime_inputs) stack_size asm_args_out asm_args_in m'
-    /\ gensym_dag_ok G' d'
-    /\ (forall e n, eval G d e n -> eval G' d' e n)
-    /\ List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets.
-Proof.
-  cbv [symex_asm_func_M Symbolic.bind ErrorT.bind lift_dag] in H.
-  break_innermost_match_hyps; destruct_head'_prod; destruct_head'_unit; cbn [fst snd] in *; try discriminate; [].
-  repeat first [ progress subst
-               | match goal with
-                 | [ H : Success _ = Success _ |- _ ] => inversion H; clear H
-                 | [ x := ?y |- _ ] => subst x
-                 end ].
-
-  (* ... *)
-  let H := lazymatch goal with H : SymexLines _ _ = Success _ |- _ => H end in
-  eapply SymexLines_R in H;
-    [ destruct H as [? H]; do 3 eexists;
-      repeat match goal with |- _ /\ _ => split end;
-      try apply H
-    | .. ].
-Admitted.
-
-Theorem symex_asm_func_correct
-        frame asm_args_out asm_args_in (G : symbol -> option Z) (d : dag) (output_types : type_spec) (stack_size : nat)
-        (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
-        (rets : list (idx + list idx))
-        (s' : symbolic_state)
-        (H : symex_asm_func d output_types stack_size inputs reg_available asm = Success (rets, s'))
-        (d' := s'.(dag_state))
-        (m : machine_state)
-        (runtime_inputs : list (Z + list Z))
-        (Hasm : get_asm_arguments m output_types (type_spec_of_runtime runtime_inputs) reg_available = (asm_args_out, asm_args_in))
-        (HR : R_runtime_input frame output_types runtime_inputs stack_size asm_args_out asm_args_in reg_available m)
-        (HG_ok : gensym_dag_ok G d)
-        (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
-  : (exists m' G'
-            (runtime_rets : list (Z + list Z)),
-        DenoteLines m asm = Some m'
-        /\ R_runtime_output frame runtime_rets (type_spec_of_runtime runtime_inputs) stack_size asm_args_out asm_args_in m'
-        /\ (forall e n, eval G d e n -> eval G' d' e n)
-        /\ gensym_dag_ok G' d'
-        /\ List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets).
-Proof.
-  cbv [symex_asm_func] in H; break_innermost_match_hyps; inversion_ErrorT; inversion_prod; subst.
-  cbv [R]; break_innermost_match.
-  let H := multimatch goal with H : _ = Success _ |- _ => H end in
-  eapply symex_asm_func_M_correct in H; try eassumption; try apply surjective_pairing.
-  { destruct_head'_ex; destruct_head'_and.
-    do 3 eexists; repeat match goal with |- _ /\ _ => apply conj end; try eassumption. }
-Qed.
 
 Definition val_or_list_val_matches_spec (arg : Z + list Z) (spec : option nat)
   := match arg, spec with
@@ -1158,6 +1066,9 @@ Proof.
   repeat first [ eassumption | apply path_prod | reflexivity ].
 Qed.
 
+Definition type_spec_of_runtime {A} (ls : list (A + list A)) : list (option nat)
+  := List.map (fun v => match v with inl _ => None | inr ls => Some (List.length ls) end) ls.
+
 Lemma type_spec_of_runtime_val_or_list_val_matches_spec vals types
   : types = type_spec_of_runtime vals <-> Forall2 val_or_list_val_matches_spec vals types.
 Proof.
@@ -1235,6 +1146,31 @@ Proof.
   repeat first [ eassumption | apply path_prod | reflexivity ].
 Qed.
 
+Import Map.Interface Map.Separation. (* for coercions *)
+Require Import bedrock2.Array.
+Import LittleEndianList.
+Import coqutil.Word.Interface.
+(* outputs, inputs *)
+Definition get_asm_arguments (m : machine_state) (output_types : type_spec) (runtime_inputs : type_spec) (reg_available : list REG) : list (Naive.word 64) * list (Naive.word 64).
+  (* TODO *)
+Admitted.
+Definition R_runtime_input (frame : Semantics.mem_state) (output_types : type_spec) (runtime_inputs : list (Z + list Z)) (stack_size : nat) (asm_arguments_out asm_arguments_in : list (Naive.word 64)) (reg_available : list REG) (m : machine_state) : Prop.
+  (* TODO *)
+Admitted.
+Definition cell64 wa (v : Z) : Semantics.mem_state -> Prop :=
+  Lift1Prop.ex1 (fun bs => sep (emp (
+      length bs = 8%nat /\ v = le_combine bs))
+                               (eq (OfListWord.map.of_list_word_at wa bs))).
+Print array.
+Check array cell64 (word.of_Z 8).
+Definition R_runtime_output (frame : Semantics.mem_state) (runtime_outputs : list (Z + list Z)) (runtime_inputs : type_spec) (stack_size : nat) (asm_arguments_out asm_arguments_in : list (Naive.word 64)) (m : machine_state) : Prop.
+  Print array.
+  Check array.
+  Check R_cell64.
+  Locate array.
+  (* TODO *)
+Admitted.
+
 Definition word_args_to_Z_args
   : list (Naive.word 64 + list (Naive.word 64)) -> list (Z + list Z)
   := List.map (fun v => match v with
@@ -1253,6 +1189,74 @@ Proof.
                | rewrite Forall_map_iff, Forall_forall
                | progress break_innermost_match
                | apply Word.Properties.word.unsigned_range ].
+Qed.
+
+Theorem symex_asm_func_M_correct
+        d frame asm_args_out asm_args_in (G : symbol -> option Z) (s := init_symbolic_state d)
+        (s' : symbolic_state) (m : machine_state) (output_types : type_spec) (stack_size : nat)
+        (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
+        (rets : list (idx + list idx))
+        (H : symex_asm_func_M output_types stack_size inputs reg_available asm s = Success (Success rets, s'))
+        (word_runtime_inputs : list (Naive.word 64 + list (Naive.word 64)))
+        (runtime_inputs := word_args_to_Z_args word_runtime_inputs)
+        (Hasm : get_asm_arguments m output_types (type_spec_of_runtime runtime_inputs) reg_available = (asm_args_out, asm_args_in))
+        (HR : R_runtime_input frame output_types runtime_inputs stack_size asm_args_out asm_args_in reg_available m)
+        (Hd_ok : gensym_dag_ok G d)
+        (d' := s'.(dag_state))
+        (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
+  : exists m' G'
+           (runtime_rets : list (Z + list Z)),
+    DenoteLines m asm = Some m'
+    /\ R_runtime_output frame runtime_rets (type_spec_of_runtime runtime_inputs) stack_size asm_args_out asm_args_in m'
+    /\ gensym_dag_ok G' d'
+    /\ (forall e n, eval G d e n -> eval G' d' e n)
+    /\ List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets.
+Proof.
+  pose proof (word_args_to_Z_args_bounded word_runtime_inputs).
+  cbv [symex_asm_func_M Symbolic.bind ErrorT.bind lift_dag] in H.
+  break_innermost_match_hyps; destruct_head'_prod; destruct_head'_unit; cbn [fst snd] in *; try discriminate; [].
+  repeat first [ progress subst
+               | match goal with
+                 | [ H : Success _ = Success _ |- _ ] => inversion H; clear H
+                 | [ x := ?y |- _ ] => subst x
+                 end ].
+  (* ... *)
+  let H := lazymatch goal with H : SymexLines _ _ = Success _ |- _ => H end in
+  eapply SymexLines_R in H;
+    [ destruct H as [? H]; do 3 eexists;
+      repeat match goal with |- _ /\ _ => split end;
+      try apply H
+    | .. ].
+Admitted.
+
+Theorem symex_asm_func_correct
+        frame asm_args_out asm_args_in (G : symbol -> option Z) (d : dag) (output_types : type_spec) (stack_size : nat)
+        (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
+        (rets : list (idx + list idx))
+        (s' : symbolic_state)
+        (H : symex_asm_func d output_types stack_size inputs reg_available asm = Success (rets, s'))
+        (d' := s'.(dag_state))
+        (m : machine_state)
+        (word_runtime_inputs : list (Naive.word 64 + list (Naive.word 64)))
+        (runtime_inputs := word_args_to_Z_args word_runtime_inputs)
+        (Hasm : get_asm_arguments m output_types (type_spec_of_runtime runtime_inputs) reg_available = (asm_args_out, asm_args_in))
+        (HR : R_runtime_input frame output_types runtime_inputs stack_size asm_args_out asm_args_in reg_available m)
+        (HG_ok : gensym_dag_ok G d)
+        (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
+  : (exists m' G'
+            (runtime_rets : list (Z + list Z)),
+        DenoteLines m asm = Some m'
+        /\ R_runtime_output frame runtime_rets (type_spec_of_runtime runtime_inputs) stack_size asm_args_out asm_args_in m'
+        /\ (forall e n, eval G d e n -> eval G' d' e n)
+        /\ gensym_dag_ok G' d'
+        /\ List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets).
+Proof.
+  cbv [symex_asm_func] in H; break_innermost_match_hyps; inversion_ErrorT; inversion_prod; subst.
+  cbv [R]; break_innermost_match.
+  let H := multimatch goal with H : _ = Success _ |- _ => H end in
+  eapply symex_asm_func_M_correct in H; try eassumption; try apply surjective_pairing.
+  { destruct_head'_ex; destruct_head'_and.
+    do 3 eexists; repeat match goal with |- _ /\ _ => apply conj end; try eassumption. }
 Qed.
 
 Theorem check_equivalence_correct
