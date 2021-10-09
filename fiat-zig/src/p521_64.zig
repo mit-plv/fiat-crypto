@@ -13,7 +13,7 @@
 //   balance = [0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x3fffffffffffffe]
 
 const std = @import("std");
-const mode = std.builtin.mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels
+const mode = @import("builtin").mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels
 
 inline fn cast(comptime DestType: type, target: anytype) DestType {
     if (@typeInfo(@TypeOf(target)) == .Int) {

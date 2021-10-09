@@ -18,7 +18,7 @@
 //                            if x1 & (2^256-1) < 2^255 then x1 & (2^256-1) else (x1 & (2^256-1)) - 2^256
 
 const std = @import("std");
-const mode = std.builtin.mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels
+const mode = @import("builtin").mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels
 
 inline fn cast(comptime DestType: type, target: anytype) DestType {
     if (@typeInfo(@TypeOf(target)) == .Int) {
