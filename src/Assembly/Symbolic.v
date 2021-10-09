@@ -1,5 +1,6 @@
 Require Crypto.Assembly.Parse.
 Require Import Coq.Lists.List.
+Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Crypto.Util.Tuple.
 Require Import Util.OptionList.
@@ -8,6 +9,8 @@ Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Testbit.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Ones.
+Require Import Crypto.Util.Bool.Reflect.
+Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.FoldMap. Import FoldMap.List.
 Require Import Crypto.Util.ListUtil.IndexOf. Import IndexOf.List.
 Require Import Crypto.Util.ListUtil.Forall.
@@ -16,6 +19,9 @@ Require Import Crypto.Util.NUtil.Sorting.
 Require Import Crypto.Util.NUtil.Testbit.
 Require Import Crypto.Util.ListUtil.PermutationCompat.
 Require Import Crypto.Util.Bool.LeCompat.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Prod.
+Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import coqutil.Z.bitblast.
 Require Import Coq.Strings.String Crypto.Util.Strings.Show.
 Require Import Crypto.Assembly.Syntax.
@@ -103,6 +109,7 @@ Global Existing Instance Show_expr.
 
 Lemma op_beq_spec a b : BoolSpec (a=b) (a<>b) (op_beq a b).
 Proof using Type. cbv [op_beq]; destruct (op_eq_dec a b); constructor; congruence. Qed.
+Global Instance reflect_eq_op : reflect_rel eq op_beq | 10 := reflect_rel_of_BoolSpec op_beq_spec.
 Fixpoint expr_beq (X Y : expr) {struct X} : bool :=
   match X, Y with
   | ExprRef x, ExprRef x0 => N.eqb x x0
@@ -121,6 +128,7 @@ Proof using Type.
   destruct (H e); cbn; try (constructor; congruence); []; subst.
   destruct (IHForall l0); [left|right]; congruence.
 Qed.
+Global Instance reflect_eq_expr : reflect_rel eq expr_beq | 10 := reflect_rel_of_BoolSpec expr_beq_spec.
 Lemma expr_beq_true a b : expr_beq a b = true -> a = b.
 Proof using Type. destruct (expr_beq_spec a b); congruence. Qed.
 
@@ -193,6 +201,8 @@ Proof using Type. intros; eapply interp_op_weaken_symbols in H; eauto; discrimin
 
 Definition node_beq {A : Set} (arg_eqb : A -> A -> bool) : node A -> node A -> bool :=
   Prod.prod_beq _ _ op_beq (ListUtil.list_beq _ arg_eqb).
+Global Instance reflect_node_beq {A : Set} {arg_eqb} {H : reflect_rel (@eq A) arg_eqb}
+  : reflect_rel eq (@node_beq A arg_eqb) | 10 := _.
 
 Definition dag := list (node idx).
 
@@ -362,20 +372,34 @@ Proof using Type.
       eauto using Permutation.Permutation_map. }
 Qed.
 
-Definition dag_ok G (d : dag) := forall i _r, nth_error d (N.to_nat i) = Some _r -> exists v, eval G d (ExprRef i) v.
+(* fresh symbols must have value <= their index, so that fresh symbols are truly fresh *)
+Definition node_ok (i : idx) (n : node idx) := forall w s args, n = (old w s, args) -> (s <= i)%N.
+(* the gensym state cannot map anything past the end of the dag *)
+Definition gensym_ok (G : symbol -> option Z) (d : dag) := forall s _v, G s = Some _v -> (s < N.of_nat (List.length d))%N.
+Definition dag_ok G (d : dag) := forall i r, nth_error d (N.to_nat i) = Some r -> node_ok i r /\ exists v, eval G d (ExprRef i) v.
+Definition gensym_dag_ok G d := gensym_ok G d /\ dag_ok G d.
+
+Lemma gensym_ok_length_Proper G d1 d2
+      (H : List.length d1 <= List.length d2)
+  : gensym_ok G d1 -> gensym_ok G d2.
+Proof. cbv [gensym_ok]; firstorder lia. Qed.
+
+Lemma gensym_ok_app G d1 d2
+  : gensym_ok G d1 -> gensym_ok G (d1 ++ d2).
+Proof. apply gensym_ok_length_Proper; rewrite app_length; lia. Qed.
 
 Lemma eval_merge_node :
-  forall G d, dag_ok G d ->
+  forall G d, gensym_dag_ok G d ->
   forall op args n, let e := (op, args) in
   eval G d (ExprApp (op, List.map ExprRef args)) n ->
   eval G (snd (merge_node e d)) (ExprRef (fst (merge_node e d))) n /\
-  dag_ok G (snd (merge_node e d)) /\
+  gensym_dag_ok G (snd (merge_node e d)) /\
   forall i e', eval G d i e' -> eval G (snd (merge_node e d)) i e'.
 Proof using Type.
   intros.
   cbv beta delta [merge_node].
   inversion H0; subst.
-  case (indexof _ _) eqn:?; cbn; repeat split; eauto.
+  case (indexof _ _) eqn:?; cbn; repeat split; try solve [ cbv [gensym_dag_ok dag_ok] in *; split_and; eauto ].
   { eapply indexof_Some in Heqo; case Heqo as (?&?&?).
     replace x with e in * by (eauto using node_beq_sound); clear H2. (* node_beq -> eq *)
     econstructor; rewrite ?Nnat.Nat2N.id; eauto. }
@@ -383,31 +407,38 @@ Proof using Type.
     { erewrite ?nth_error_app2, ?Nnat.Nat2N.id, Nat.sub_diag by Lia.lia.
       exact eq_refl. }
     eapply Forall2_weaken; [|eauto]; eauto using eval_weaken. }
-  { cbv [dag_ok]; intros.
+  { cbv [gensym_dag_ok] in *; destruct_head'_and; now apply gensym_ok_app. }
+  { cbv [gensym_dag_ok dag_ok gensym_ok] in *; split_and; eauto.
+    rewrite @nth_error_app in *; break_innermost_match_hyps; eauto.
+    destruct (_ - _)%nat as [| [|] ]; cbn [nth_error] in *; inversion_option; subst.
+    hnf; intros; subst e; inversion_prod; subst; cbn [interp_op] in *; break_innermost_match_hyps; inversion_option; subst.
+    firstorder lia. }
+  { cbv [gensym_dag_ok dag_ok] in *; split_and; intros.
     case (lt_dec (N.to_nat i) (length d)) as [?|?];
       erewrite ?nth_error_app1, ?nth_error_app2 in H1 by Lia.lia.
-      { case (H _ _ H1); eauto using eval_weaken. }
-      { destruct (N.to_nat i - length d) eqn:?.
-        2: { inversion H1. rewrite ListUtil.nth_error_nil_error in H4; inversion H4. }
-        eexists. econstructor.
-        replace (N.to_nat i) with (length d) by Lia.lia.
-        { erewrite ?nth_error_app2, ?Nnat.Nat2N.id, Nat.sub_diag by Lia.lia.
-          exact eq_refl. }
-        { eapply Forall2_weaken; [|eauto]; eauto using eval_weaken. }
-        eauto. } }
+    { match goal with
+      | [ H : forall i r, nth_error _ (N.to_nat i) = Some r -> exists v, eval _ _ _ _, H1 : nth_error _ _ = Some _ |- _ ]
+        => case (H _ _ H1); eauto using eval_weaken
+      end. }
+    { destruct (N.to_nat i - length d) as [| [|] ] eqn:?; cbn [nth_error] in *; inversion_option; subst.
+      eexists. econstructor.
+      replace (N.to_nat i) with (length d) by Lia.lia.
+      { erewrite ?nth_error_app2, ?Nnat.Nat2N.id, Nat.sub_diag by Lia.lia.
+        exact eq_refl. }
+      { eapply Forall2_weaken; [|eauto]; eauto using eval_weaken. }
+      eauto. } }
   { eauto using eval_weaken. }
 Qed.
 
-Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import coqutil.Tactics.autoforward coqutil.Decidable coqutil.Tactics.Tactics.
 Global Set Default Goal Selector "1".
 
 Lemma eval_merge G :
   forall e n,
-  forall d, dag_ok G d ->
+  forall d, gensym_dag_ok G d ->
   eval G d e n ->
   eval G (snd (merge e d)) (ExprRef (fst (merge e d))) n /\
-  dag_ok G (snd (merge e d)) /\
+  gensym_dag_ok G (snd (merge e d)) /\
   forall i e', eval G d i e' -> eval G (snd (merge e d)) i e'.
 Proof using Type.
   induction e; intros; eauto; [].
@@ -426,7 +457,7 @@ Proof using Type.
   inversion H1; clear H1 ; subst.
 
   cbn [fst snd] in *.
-  assert (dag_ok G (snd idxs_d) /\
+  assert (gensym_dag_ok G (snd idxs_d) /\
     Forall2 (fun i v => eval G (snd idxs_d) (ExprRef i) v) (fst idxs_d) args' /\
     forall i e', eval G d i e' -> eval G (snd idxs_d) i e'
   ) as HH; [|destruct HH as(?&?&?)].

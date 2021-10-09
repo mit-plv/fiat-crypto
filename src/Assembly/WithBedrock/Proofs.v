@@ -20,9 +20,11 @@ Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Bool.
+Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.FoldMap.
 Require Import Crypto.Util.ListUtil.Forall.
+Require Import Crypto.Util.ListUtil.IndexOf.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.AddGetCarry.
 Require Import Crypto.Util.ZUtil.MulSplit.
@@ -35,6 +37,7 @@ Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.PrintContext.
 Require Import Crypto.Util.Tactics.PrintGoal.
 Require Import Crypto.Util.Tactics.UniquePose.
+Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SetEvars.
 Import API.Compilers APINotations.Compilers AbstractInterpretation.ZRange.Compilers.
@@ -199,7 +202,7 @@ Qed.
 
 Lemma RevealConstant_correct idx d d' v
       (H : RevealConstant idx d = Success (v, d'))
-      (d_ok : dag_ok G d)
+      (d_ok : gensym_dag_ok G d)
   : eval G d (ExprRef idx) (Z.of_N v) /\ d = d'.
 Proof using Type.
   cbv [RevealConstant] in *; break_innermost_match_hyps;
@@ -214,7 +217,7 @@ Qed.
 
 Lemma RevealWidth_correct idx d d' v
       (H : RevealWidth idx d = Success (v, d'))
-      (d_ok : dag_ok G d)
+      (d_ok : gensym_dag_ok G d)
   : eval G d (ExprRef idx) (2 ^ Z.of_N v) /\ d = d'.
 Proof using Type.
   cbv [RevealWidth symex_bind ErrorT.bind symex_return symex_error] in *.
@@ -277,9 +280,9 @@ Local Ltac saturate_eval_merge_step :=
         | solve [ eauto 100 ] ].
 Local Ltac saturate_eval_merge := repeat saturate_eval_merge_step.
 
-Lemma App_correct n d (Hdag : dag_ok G d) i d' (H : App n d = Success (i, d'))
+Lemma App_correct n d (Hdag : gensym_dag_ok G d) i d' (H : App n d = Success (i, d'))
   v (Heval : eval_node G d n v)
-  : eval G d' (ExprRef i) v /\ dag_ok G d' /\ (forall e n, eval G d e n -> eval G d' e n).
+  : eval G d' (ExprRef i) v /\ gensym_dag_ok G d' /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof using Type.
   cbv [App] in *. inversion_ErrorT.
   do 2
@@ -302,16 +305,16 @@ Theorem symex_ident_correct
         (d : dag)
         (input_var_data : type.for_each_lhs_of_arrow var t)
         (input_runtime_var : type.for_each_lhs_of_arrow API.interp_type t)
-        (* N.B. We need [Hinput] for the [dag_ok] conclusion, because
+        (* N.B. We need [Hinput] for the [gensym_dag_ok] conclusion, because
             we need to know that we can evaluate the indices in the
             arguments w.r.t. the dag for, e.g., [eval_merge_node] *)
         (Hinput : type.and_for_each_lhs_of_arrow (@eval_var d) input_var_data input_runtime_var)
         (rets : base_var (type.final_codomain t))
         (d' : dag)
         (H : symex_T_app_curried (symex_ident idc) input_var_data d = Success (rets, d'))
-        (d_ok : dag_ok G d)
+        (d_ok : gensym_dag_ok G d)
   : eval_base_var d' rets (type.app_curried (Compilers.ident_interp idc) input_runtime_var)
-    /\ dag_ok G d'
+    /\ gensym_dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof using Type.
   cbv [symex_ident] in H; break_innermost_match_hyps.
@@ -404,9 +407,9 @@ Theorem symex_expr_correct
         (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) GG -> eval_var d v1 v2)
         (Hwf : API.wf GG expr1 expr2)
         (H : symex_T_app_curried (symex_expr expr1) input_var_data d = Success (rets, d'))
-        (d_ok : dag_ok G d)
+        (d_ok : gensym_dag_ok G d)
   : eval_base_var d' rets (type.app_curried (API.interp expr2) input_runtime_var)
-    /\ dag_ok G d'
+    /\ gensym_dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof using Type.
   revert dependent d; revert dependent d'; revert dependent input_var_data; revert dependent input_runtime_var.
@@ -418,7 +421,7 @@ Proof using Type.
                       | [ HIn : List.In (existT _ ?t (?v1, ?v2)) _ |- context[expr.Var] ]
                         => is_var t; specialize (HG t _ _ HIn); destruct t
                       (* abs case, eventually *)
-                      | [ H : context[_ /\ dag_ok _ /\ (forall e n, _ -> _)] |- context[expr.Abs] ]
+                      | [ H : context[_ /\ gensym_dag_ok _ /\ (forall e n, _ -> _)] |- context[expr.Abs] ]
                         => eapply H; try eassumption; clear H; []
                       end
                     | match goal with
@@ -517,9 +520,9 @@ Theorem symex_PHOAS_PHOAS_correct
         (d' : dag)
         (Hwf : API.Wf expr)
         (H : symex_PHOAS_PHOAS expr input_var_data d = Success (rets, d'))
-        (d_ok : dag_ok G d)
+        (d_ok : gensym_dag_ok G d)
   : eval_base_var d' rets (type.app_curried (API.Interp expr) input_runtime_var)
-    /\ dag_ok G d'
+    /\ gensym_dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof using Type.
   cbv [symex_PHOAS_PHOAS] in H.
@@ -698,13 +701,13 @@ Theorem symex_PHOAS_correct
         (d' : dag)
         (Hwf : API.Wf expr)
         (H : symex_PHOAS expr inputs d = Success (rets, d'))
-        (d_ok : dag_ok G d)
+        (d_ok : gensym_dag_ok G d)
   : (exists (input_runtime_var : type.for_each_lhs_of_arrow API.interp_type t)
             (runtime_rets : list (Z + list Z)),
         build_input_runtime t runtime_inputs = Some (input_runtime_var, [])
         /\ simplify_base_runtime (type.app_curried (API.Interp expr) input_runtime_var) = Some runtime_rets
         /\ List.Forall2 (eval_idx_or_list_idx G d') rets runtime_rets)
-    /\ dag_ok G d'
+    /\ gensym_dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof using Type.
   cbv [symex_PHOAS ErrorT.bind] in H; break_innermost_match_hyps; try discriminate.
@@ -752,20 +755,19 @@ Proof using Type.
                            rewrite H, H' in H''; clear H H'
                       end ].
 Qed.
-
-Lemma empty_dag_ok : dag_ok G empty_dag.
-Proof using Type.
-  econstructor. setoid_rewrite ListUtil.nth_error_nil_error in H. inversion H.
-  Unshelve.
-  exact Z0.
-Qed.
 End WithFixedCtx.
+
+Lemma empty_gensym_dag_ok : gensym_dag_ok (fun _ => None) empty_dag.
+Proof using Type.
+  cbv [empty_dag gensym_dag_ok gensym_ok dag_ok node_ok]; repeat split; try congruence;
+    exfalso; eapply List.nth_error_nil_Some; eassumption.
+Qed.
 
 Import Map.Interface Map.Separation. (* for coercions *)
 Require Import bedrock2.Array.
 Import LittleEndianList.
 Import coqutil.Word.Interface.
-Definition type_spec_of_runtime (ls : list (Z + list Z)) : list (option nat)
+Definition type_spec_of_runtime {A} (ls : list (A + list A)) : list (option nat)
   := List.map (fun v => match v with inl _ => None | inr ls => Some (List.length ls) end) ls.
 (* outputs, inputs *)
 Definition get_asm_arguments (m : machine_state) (output_types : type_spec) (runtime_inputs : type_spec) (reg_available : list REG) : list (Naive.word 64) * list (Naive.word 64).
@@ -797,14 +799,14 @@ Theorem symex_asm_func_M_correct
         (runtime_inputs : list (Z + list Z))
         (Hasm : get_asm_arguments m output_types (type_spec_of_runtime runtime_inputs) reg_available = (asm_args_out, asm_args_in))
         (HR : R_runtime_input frame output_types runtime_inputs stack_size asm_args_out asm_args_in reg_available m)
-        (Hd_ok : dag_ok G d)
+        (Hd_ok : gensym_dag_ok G d)
         (d' := s'.(dag_state))
         (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
   : exists m' G'
            (runtime_rets : list (Z + list Z)),
     DenoteLines m asm = Some m'
     /\ R_runtime_output frame runtime_rets (type_spec_of_runtime runtime_inputs) stack_size asm_args_out asm_args_in m'
-    /\ dag_ok G' d'
+    /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n)
     /\ List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets.
 Proof.
@@ -836,14 +838,14 @@ Theorem symex_asm_func_correct
         (runtime_inputs : list (Z + list Z))
         (Hasm : get_asm_arguments m output_types (type_spec_of_runtime runtime_inputs) reg_available = (asm_args_out, asm_args_in))
         (HR : R_runtime_input frame output_types runtime_inputs stack_size asm_args_out asm_args_in reg_available m)
-        (HG_ok : dag_ok G d)
+        (HG_ok : gensym_dag_ok G d)
         (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
   : (exists m' G'
             (runtime_rets : list (Z + list Z)),
         DenoteLines m asm = Some m'
         /\ R_runtime_output frame runtime_rets (type_spec_of_runtime runtime_inputs) stack_size asm_args_out asm_args_in m'
         /\ (forall e n, eval G d e n -> eval G' d' e n)
-        /\ dag_ok G' d'
+        /\ gensym_dag_ok G' d'
         /\ List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets).
 Proof.
   cbv [symex_asm_func] in H; break_innermost_match_hyps; inversion_ErrorT; inversion_prod; subst.
@@ -994,41 +996,109 @@ Proof.
   subst res; cbv [merge_fresh_symbol_G]; break_innermost_match; reflexivity.
 Qed.
 
+Lemma big_old_node_absent n d w args
+      (H : forall i r, nth_error d (N.to_nat i) = Some r -> node_ok i r)
+      (Hn : (N.of_nat (List.length d) <= n)%N)
+  : List.indexof (node_beq N.eqb (old w n, args)) d = None.
+Proof.
+  revert dependent n; induction d as [|v d IHd] using List.rev_ind; [ reflexivity | ];
+    rewrite ?app_length in *; cbn [List.indexof List.length] in *; intros.
+  rewrite List.indexof_app.
+  rewrite IHd; cbv [Crypto.Util.Option.sequence]; cbv [List.indexof option_map].
+  { break_innermost_match; reflect_hyps; subst; try reflexivity.
+    specialize (H (N.of_nat (List.length d))).
+    rewrite nth_error_app in H; break_innermost_match_hyps; try lia; [].
+    rewrite Nat2N.id, Nat.sub_diag in H; specialize (H _ eq_refl _ _ _ eq_refl).
+    lia. }
+  { intros ? ? Hi; apply H; rewrite nth_error_app, Hi; break_innermost_match; try reflexivity.
+    apply nth_error_value_length in Hi; tauto. }
+  { lia. }
+Qed.
+
+Lemma gensym_node_absent G d w args
+      (H : gensym_dag_ok G d)
+  : List.indexof (node_beq N.eqb (old w (gensym d), args)) d = None.
+Proof.
+  apply big_old_node_absent; try apply H.
+  cbv [gensym]; reflexivity.
+Qed.
+
 Lemma merge_fresh_symbol_G_ok G d v G' d' idx
-      (Hd : dag_ok G d)
+      (Hd : gensym_dag_ok G d)
       (H : merge_fresh_symbol_G v (G, d) = (idx, (G', d')))
-  : eval_idx_Z G' d' idx v
-    /\ dag_ok G' d'
+  : eval_idx_Z G' d' idx (Z.land v (Z.ones (Z.of_N 64)))
+    /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
-  assert (H' : eval_idx_Z G' d' idx v
-               /\ dag_ok G' d'
-               /\ (forall e n, eval G' d e n -> eval G' d' e n)).
-  { cbv [merge_fresh_symbol_G] in *.
-    cbv [merge_fresh_symbol] in *.
-    cbv [merge_symbol] in *.
-    break_innermost_match_hyps; inversion_prod.
-    set (m := merge_node _ _) in *; subst.
-    eapply eval_merge_node.
-    2: econstructor; cbn [List.map]; eauto; cbn [interp_op].
-    shelve.
-    shelve. }
-  { repeat first [ exact H' | split; [ destruct H' as [H' ?] | destruct H' as [? H'] ] ].
-    intros e n He; eapply H'; revert e n He.
-    cbv [merge_fresh_symbol_G] in *.
-    cbv [merge_fresh_symbol] in *.
-    cbv [merge_symbol] in *.
-    break_innermost_match_hyps; inversion_prod.
-    set (m := merge_node _ _) in *; subst.
-    (* TODO *)
-Admitted.
+  cbv [merge_fresh_symbol_G merge_fresh_symbol merge_symbol merge_node] in *.
+  erewrite gensym_node_absent in * by eauto.
+  assert (forall e n, eval G d e n -> eval G' d' e n).
+  1: inversion_prod; subst; intros e n H; induction H; econstructor.
+  all: repeat first [ progress inversion_prod
+                    | progress split_and
+                    | progress subst
+                    | progress destruct_head'_and
+                    | progress cbv [eval_idx_Z gensym_dag_ok gensym_ok ctx_set gensym dag_ok node_ok] in *
+                    | rewrite Nat2N.id, nth_error_app, Nat.sub_diag
+                    | progress break_innermost_match
+                    | progress break_innermost_match_hyps
+                    | progress inversion_option
+                    | lia
+                    | progress cbn [nth_error List.map interp_op List.length fst snd] in *
+                    | progress reflect_hyps
+                    | reflexivity
+                    | rewrite app_length
+                    | progress intros
+                    | rewrite @nth_error_app in *
+                    | match goal with
+                      | [ H : nth_error ?d ?i = Some _, H' : ~?i < List.length ?d |- _ ]
+                        => exfalso; apply nth_error_value_length in H; clear -H H'; tauto
+                      | [ H : interp_op _ ?op ?args = Some ?n |- interp_op _ ?op ?args = Some ?n ]
+                        => revert H; destruct op; cbn [interp_op]; break_innermost_match
+                      | [ H : forall s _v, ?G s = Some _v -> (s < ?v)%N, H' : ?G ?v = Some _ |- _ ]
+                        => exfalso; specialize (H _ _ H'); clear -H
+                      | [ |- _ /\ _ ] => split
+                      | [ |- eval _ (?d ++ _) (ExprRef (N.of_nat (length ?d))) _ ] => econstructor
+                      | [ |- Forall2 _ nil _ ] => constructor
+                      | [ H : fst ?x = _ |- _ ] => is_var x; destruct x
+                      | [ H : _ = snd ?x |- _ ] => is_var x; destruct x
+                      | [ H : nth_error (_ :: _) ?x = Some _ |- _ ] => destruct x eqn:?; cbn [nth_error] in H
+                      | [ H : nth_error nil ?x = Some _ |- _ ] => destruct x eqn:?; cbn [nth_error] in H
+                      | [ H : old _ _ = old _ _ |- _ ] => inversion H; clear H
+                      | [ H : ?x - ?y = 0, H' : ~?x < ?y |- _ ] => assert (x = y) by lia; clear H H'
+                      | [ H : N.to_nat ?x = ?y |- _ ] => is_var x; assert (x = N.of_nat y) by lia; clear H
+                      | [ |- exists v, eval _ (?d ++ _) (ExprRef (N.of_nat (length ?d))) v ]
+                        => eexists; econstructor
+                      | [ H : Forall2 _ ?xs _ |- Forall2 _ ?xs _ ] => eapply Forall2_weaken; [ | eassumption ]; intuition tauto
+                      | [ H : forall i r, nth_error ?d (N.to_nat i) = Some r -> exists v, eval _ ?d (ExprRef i) v,
+                            H' : nth_error ?d (N.to_nat ?idx) = Some _
+                            |- exists v', eval _ (?d ++ _) (ExprRef ?idx) v' ]
+                        => let v := fresh "v" in specialize (H _ _ H'); destruct H as [v H]; exists v
+                      end
+                    | solve [ eauto ]
+                    | solve [ firstorder lia ] ].
+Qed.
+
+Lemma merge_fresh_symbol_G_ok_bounded G d v G' d' idx
+      (Hd : gensym_dag_ok G d)
+      (H : merge_fresh_symbol_G v (G, d) = (idx, (G', d')))
+      (Hv : (0 <= v < 2^64)%Z)
+  : eval_idx_Z G' d' idx v
+    /\ gensym_dag_ok G' d'
+    /\ (forall e n, eval G d e n -> eval G' d' e n).
+Proof.
+  replace v with (Z.land v (Z.ones (Z.of_N 64))); [ now apply merge_fresh_symbol_G_ok | ].
+  rewrite Z.land_ones by lia.
+  rewrite Z.mod_small by lia.
+  reflexivity.
+Qed.
 
 Lemma build_inputarray_eq_G G d vals (len := List.length vals)
   : build_inputarray len d = (fst (build_inputarray_G vals (G, d)), snd (snd (build_inputarray_G vals (G, d)))).
 Proof.
   cbv [build_inputarray build_inputarray_G].
   generalize (seq_length len 0); generalize (seq 0 len); subst len; intro l; revert l.
-  induction vals, l; cbn [List.length List.foldmap fst snd]; try congruence.
+  induction vals, l; cbn [List.length List.foldmap fst snd]; try congruence; try reflexivity.
   intro H; inversion H; clear H; specialize (IHvals _ ltac:(eassumption)).
   rewrite !IHvals; clear IHvals.
   clear dependent l.
@@ -1037,11 +1107,13 @@ Proof.
   all: erewrite !@merge_fresh_symbol_eq_G; cbn [fst snd]; reflexivity.
 Qed.
 
+
 Lemma build_inputarray_G_ok G d vals G' d' ia
-      (Hd : dag_ok G d)
+      (Hd : gensym_dag_ok G d)
       (H : build_inputarray_G vals (G, d) = (ia, (G', d')))
+      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) vals)
   : Forall2 (eval_idx_Z G' d') ia vals
-    /\ dag_ok G' d'
+    /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
   cbv [build_inputarray_G] in *.
@@ -1050,14 +1122,15 @@ Proof.
     inversion_prod; subst; eauto; try congruence.
   { set (res := List.foldmap _ _ _) in *.
     destruct res eqn:Hres; subst res; destruct_head'_prod; cbn [fst snd] in *.
-    specialize (IHvals _ _ _ _ _ ltac:(eassumption) ltac:(eassumption)).
+    inversion Hbounds; subst.
+    specialize (IHvals ltac:(assumption) _ _ _ _ _ ltac:(eassumption) ltac:(eassumption)).
     repeat first [ progress subst
                  | progress destruct_head'_and
                  | match goal with
                    | [ H : ?x :: ?xs = ?y :: ?ys |- _ ] => assert (x = y /\ xs = ys) by (now inversion H; split); clear H
                    end ].
-    let lem := match goal with |- context[merge_fresh_symbol_G ?v (?G, ?d)] => constr:(merge_fresh_symbol_G_ok G d v) end in
-    pose proof (lem _ _ _ ltac:(assumption) ltac:(repeat rewrite <- surjective_pairing; reflexivity)).
+    let lem := match goal with |- context[merge_fresh_symbol_G ?v (?G, ?d)] => constr:(merge_fresh_symbol_G_ok_bounded G d v) end in
+    pose proof (lem _ _ _ ltac:(assumption) ltac:(repeat rewrite <- surjective_pairing; reflexivity) ltac:(lia)).
     repeat first [ progress subst
                  | progress destruct_head'_and
                  | assumption
@@ -1071,12 +1144,13 @@ Proof.
 Qed.
 
 Lemma build_inputarray_ok G d len idxs args d'
-      (d_ok : dag_ok G d)
+      (d_ok : gensym_dag_ok G d)
       (H : build_inputarray len d = (idxs, d'))
       (Hargs : List.length args = len)
+      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) args)
   : exists G',
     Forall2 (eval_idx_Z G' d') idxs args
-    /\ dag_ok G' d'
+    /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
   subst len; erewrite build_inputarray_eq_G in H; inversion_prod.
@@ -1111,10 +1185,14 @@ Proof.
 Qed.
 
 Lemma build_inputs_G_ok G d vals G' d' inputs
-      (Hd : dag_ok G d)
+      (Hd : gensym_dag_ok G d)
       (H : build_inputs_G vals (G, d) = (inputs, (G', d')))
+      (Hbounds : Forall (fun v => match v with
+                                  | inl v => (0 <= v < 2^64)%Z
+                                  | inr vs => Forall (fun v => (0 <= v < 2^64)%Z) vs
+                                  end) vals)
   : Forall2 (eval_idx_or_list_idx G' d') inputs vals
-    /\ dag_ok G' d'
+    /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
   revert inputs G d G' d' Hd H.
@@ -1126,9 +1204,10 @@ Proof.
                       | solve [ eauto ]
                       | match goal with
                         | [ H : ?x :: ?xs = ?y :: ?ys |- _ ] => assert (x = y /\ xs = ys) by (now inversion H; split); clear H
-                        | [ H : merge_fresh_symbol_G _ _ = _ |- _ ] => apply merge_fresh_symbol_G_ok in H; [ | assumption .. ]
+                        | [ H : merge_fresh_symbol_G _ _ = _ |- _ ] => apply merge_fresh_symbol_G_ok_bounded in H; [ | (assumption  + lia) .. ]
                         | [ H : build_inputarray_G _ _ = _ |- _ ] => apply build_inputarray_G_ok in H; [ | assumption .. ]
                         | [ H : build_inputs_G _ _ = _ |- _ ] => apply IHvals in H; [ | assumption .. ]
+                        | [ H : Forall _ (_ :: _) |- _ ] => inversion H; clear H
                         | [ |- _ /\ _ ] => split
                         | [ |- Forall2 _ (_ :: _) (_ :: _) ] => constructor
                         | [ H : eval_idx_Z _ _ ?e ?n |- eval_idx_Z _ _ ?e ?n ] => revert H; apply lift_eval_idx_Z_impl; assumption
@@ -1138,18 +1217,42 @@ Proof.
 Qed.
 
 Lemma build_inputs_ok G d types inputs args d'
-      (d_ok : dag_ok G d)
+      (d_ok : gensym_dag_ok G d)
       (H : build_inputs types d = (inputs, d'))
+      (Hbounds : Forall (fun v => match v with
+                                  | inl v => (0 <= v < 2^64)%Z
+                                  | inr vs => Forall (fun v => (0 <= v < 2^64)%Z) vs
+                                  end) args)
       (Hargs : Forall2 val_or_list_val_matches_spec args types)
   : exists G',
     Forall2 (eval_idx_or_list_idx G' d') inputs args
-    /\ dag_ok G' d'
+    /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
   apply type_spec_of_runtime_val_or_list_val_matches_spec in Hargs; subst types.
   erewrite build_inputs_eq_G in H; inversion_prod.
   eexists; eapply build_inputs_G_ok; try eassumption.
   repeat first [ eassumption | apply path_prod | reflexivity ].
+Qed.
+
+Definition word_args_to_Z_args
+  : list (Naive.word 64 + list (Naive.word 64)) -> list (Z + list Z)
+  := List.map (fun v => match v with
+                        | inl v => inl (word.unsigned v)
+                        | inr vs => inr (List.map word.unsigned vs)
+                        end).
+
+Lemma word_args_to_Z_args_bounded args
+  : Forall (fun v => match v with
+                     | inl v => (0 <= v < 2^64)%Z
+                     | inr vs => Forall (fun v => (0 <= v < 2^64)%Z) vs
+                     end) (word_args_to_Z_args args).
+Proof.
+  cbv [word_args_to_Z_args].
+  repeat first [ progress intros
+               | rewrite Forall_map_iff, Forall_forall
+               | progress break_innermost_match
+               | apply Word.Properties.word.unsigned_range ].
 Qed.
 
 Theorem check_equivalence_correct
@@ -1167,7 +1270,8 @@ Theorem check_equivalence_correct
         (H : check_equivalence asm expr arg_bounds out_bounds = Success tt)
         (st : machine_state)
         (PHOAS_args : type.for_each_lhs_of_arrow API.interp_type t)
-        (args : list (Z + list Z))
+        (word_args : list (Naive.word 64 + list (Naive.word 64)))
+        (args := word_args_to_Z_args word_args)
         (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
         (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
         (output_types : type_spec := match simplify_base_type (type.final_codomain t) out_bounds with Success output_types => output_types | Error _ => nil end)
@@ -1207,8 +1311,9 @@ Proof.
          end; try discriminate; [].
   reflect_hyps.
   subst.
-  pose proof (empty_dag_ok (fun _ => None)).
+  pose proof empty_gensym_dag_ok.
   let H := fresh in pose proof Hargs as H; eapply build_input_runtime_ok_nil in H; [ | eassumption .. ].
+  pose proof (word_args_to_Z_args_bounded word_args).
   repeat first [ assumption
                | match goal with
                  | [ H : build_inputs _ _ = _ |- _ ] => move H at bottom; eapply build_inputs_ok in H; [ | eassumption .. ]
@@ -1265,7 +1370,8 @@ Theorem generate_assembly_of_hinted_expr_correct
     /\ forall (st : machine_state)
               (frame : Semantics.mem_state)
               (PHOAS_args : type.for_each_lhs_of_arrow API.interp_type t)
-              (args : list (Z + list Z))
+              (word_args : list (Naive.word 64 + list (Naive.word 64)))
+              (args := word_args_to_Z_args word_args)
               (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
               (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
               (output_types : type_spec := match simplify_base_type (type.final_codomain t) out_bounds with Success output_types => output_types | Error _ => nil end)
