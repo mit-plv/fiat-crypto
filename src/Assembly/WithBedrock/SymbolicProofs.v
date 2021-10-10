@@ -661,7 +661,7 @@ Proof using Type.
       destruct_one_match_hyp; Option.inversion_option.
       epose proof length_load_bytes _ _ _ _ E0.
       do 1 (destruct l; try solve [inversion H]).
-      eapply nth_error_load_bytes with (i0:=0%nat) in E0; [|clear;lia].
+      eapply @nth_error_load_bytes with (i:=0%nat) in E0; [|clear;lia].
       symmetry in E0; cbn [nth_error] in E0; simpl Z.of_nat in E0.
       simpl load_bytes.
       change (Pos.to_nat 1) with 1%nat.
