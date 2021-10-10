@@ -37,7 +37,7 @@ jobs:
       run: |
         if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
         sudo apt-get -o Acquire::Retries=30 update -q
-        sudo apt-get -o Acquire::Retries=30 install jq python-is-python3 ocaml-findlib $COQ_PACKAGE -y --allow-unauthenticated
+        sudo apt-get -o Acquire::Retries=30 install jq python-is-python3 ocaml-findlib libgmp3-dev $COQ_PACKAGE -y --allow-unauthenticated
     - uses: haskell/actions/setup@v1
       with:
         ghc-version: ${{ matrix.ghc }}
