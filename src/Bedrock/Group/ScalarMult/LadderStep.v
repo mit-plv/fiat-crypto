@@ -1,4 +1,3 @@
-
 Require Import Rupicola.Lib.Api. Import bedrock2.WeakestPrecondition.
 Require Import Rupicola.Lib.SeparationLogicImpl.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
@@ -28,26 +27,22 @@ Section __.
     Definition ladderstep_gallina
                (X1 X2 Z2 X3 Z3: F M_pos) : F M_pos * F M_pos * F M_pos * F M_pos :=
       let/n A := alloc (X2+Z2) in
-      let/n AA := alloc (A^2) in
-      let/n B := alloc (X2-Z2) in
-      let/n BB := alloc (B^2) in
-      let/n E := alloc (AA-BB) in
-      let/n C := alloc (X3+Z3) in
-      let/n D := alloc (X3-Z3) in
-      let/n DA := alloc (D*A) in
-      let/n CB := alloc (C*B) in
-      (* store X5 under X3 pointer *)
-      let/n X3 := (DA+CB) in
+      let/n X2 := (X2-Z2) in
+      let/n Z2 := (X3+Z3) in
+      let/n Z3 := (X3-Z3) in
+      let/n Z3 := (Z3*A) in
+      let/n Z2 := (Z2*X2) in
+      let/n A := (A^2) in
+      let/n X2 := (X2^2) in
+      let/n E := alloc (A-X2) in
+      let/n X3 := (Z3+Z2) in
       let/n X3 := X3^2 in
-      (* store Z5 under Z3 pointer *)
-      let/n Z3 := (DA-CB) in
+      let/n Z3 := (Z3-Z2) in
       let/n Z3 := Z3^2 in
       let/n Z3 := X1*Z3 in
-      (* store X4 under X2 pointer *)
-      let/n X2 := AA*BB in
-      (* store Z4 under Z2 pointer *)
+      let/n X2 := A*X2 in
       let/n Z2 := a24*E in
-      let/n Z2:= (AA+Z2) in
+      let/n Z2:= (A+Z2) in
       let/n Z2 := E*Z2 in
       (X2, Z2, X3, Z3).
   End Gallina.
@@ -153,4 +148,5 @@ Existing Instance spec_of_ladderstep.
 Import Syntax.
 Local Unset Printing Coercions.
 Local Set Printing Depth 70.
+Local Unset Printing Width.
 Redirect "Crypto.Bedrock.Group.ScalarMult.LadderStep.ladderstep_body" Print ladderstep_body.
