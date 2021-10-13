@@ -19,6 +19,8 @@ Section Compile.
   Context {field_parameters : FieldParameters}
           {field_representation : FieldRepresentation}.
 
+  (* TODO: uses removed notation.
+     Find out whether anything still uses this file
   Lemma compile_point_assign :
     forall (l: locals) (mem: mem)
            (locals_ok : locals -> Prop)
@@ -44,4 +46,5 @@ Section Compile.
   Proof.
     repeat straightline'. eauto.
   Qed.
+   *)
 End Compile.

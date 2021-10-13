@@ -1,18 +1,55 @@
 (* NOTE: the plan is to completely redo montladder after ladderstep is updated to use stackalloc *)
 
-Require Import Rupicola.Lib.Api. Import bedrock2.WeakestPrecondition.
+Require Import Rupicola.Lib.Api.
+Require Import Rupicola.Lib.Alloc.
+Require Import Rupicola.Lib.SeparationLogicImpl.
 Require Import Rupicola.Lib.SepLocals.
 Require Import Rupicola.Lib.ControlFlow.CondSwap.
 Require Import Rupicola.Lib.ControlFlow.DownTo.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Bedrock.Field.Interface.Compilation.
-Require Import Crypto.Bedrock.Group.Point.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
 Require Import Crypto.Bedrock.ScalarField.Interface.Compilation.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Specs.ScalarField.
 Require Import Crypto.Util.NumTheoryUtil.
+Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Local Open Scope Z_scope.
+
+(* TODO: migrate these to rupicola *)
+(* TODO: which tuple to use? *)
+Notation "'let/n' ( w , x , y , z ) := val 'in' body" :=
+  (nlet [IdentParsing.TC.ident_to_string w;
+        IdentParsing.TC.ident_to_string x;
+        IdentParsing.TC.ident_to_string y;
+        IdentParsing.TC.ident_to_string z]
+        val  (fun '(w, x, y, z) => body))
+   (at level 200, w ident, x  ident, y ident, z ident, body at level 200,
+    only parsing).
+
+
+Notation "'let/n' ( v , w , x , y , z ) := val 'in' body" :=
+  (nlet [IdentParsing.TC.ident_to_string v;
+        IdentParsing.TC.ident_to_string w;
+        IdentParsing.TC.ident_to_string x;
+        IdentParsing.TC.ident_to_string y;
+        IdentParsing.TC.ident_to_string z]
+        val (fun vwxyz => let '\< v, w, x, y, z \> := vwxyz in body))
+    (at level 200, v ident, w ident, x ident, y ident, z ident, body at level 200,
+     only parsing).
+
+(*
+
+Notation "'let/n' ( v , w , x , y , z ) := val 'in' body" :=
+  (nlet [IdentParsing.TC.ident_to_string v;
+        IdentParsing.TC.ident_to_string w;
+        IdentParsing.TC.ident_to_string x;
+        IdentParsing.TC.ident_to_string y;
+        IdentParsing.TC.ident_to_string z]
+        val  (fun '(v, w, x, y, z) => body))
+   (at level 200, v ident,  w ident, x  ident, y ident, z ident, body at level 200,
+     only parsing).
+*)
+
 
 Section __.
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
@@ -34,30 +71,38 @@ Section __.
   Section Gallina.
     Local Open Scope F_scope.
 
+    Locate "let/n".
     Definition montladder_gallina
                (scalarbits : Z) (testbit:nat ->bool) (u:F M_pos)
       : F M_pos :=
-      let/n P1 := (1, 0) in
-      let/n P2 := (u, 1) in
+      let/n X1 := alloc 1 in
+      let/n Z1 := alloc 0 in
+      let/n X2 := alloc u in
+      let/n Z2 := alloc 1 in
+     (* let/d P1 := (1, 0) in
+        let/d P2 := (X2, Z2) in
+      *)
       let/n swap := false in
       let/n count := scalarbits in
-      let '(P1, P2, swap) :=
+      let/n (X1, Z1, X2, Z2, swap) :=
          downto
-           (P1, P2, swap) (* initial state *)
+           \<X1, Z1, X2, Z2, swap\> (* initial state *)
            (Z.to_nat count)
            (fun state i =>
-              let '(P1, P2, swap) := state in
+              (*TODO: should this be a /n?*)
+              let '\<X1, Z1, X2, Z2, swap\> := state in
               let/n s_i := testbit i in
               let/n swap := xorb swap s_i in
-              let/n (P1, P2) := cswap swap P1 P2 in
-              let/n (P1, P2) := ladderstep_gallina u P1 P2 in
+              let/n (X1, X2) := cswap swap X1 X2 in
+              let/n (Z1, Z2) := cswap swap Z1 Z2 in
+              let/n (X1, Z1, X2, Z2) := ladderstep_gallina u X1 Z1 X2 Z2 in
               let/n swap := s_i in
-              (P1, P2, swap)
+              \<X1, Z1, X2, Z2, swap\>
            ) in
-      let/n (P1, P2) := cswap swap P1 P2 in
-      let '(x, z) := P1 in
-      let/n r := F.inv z in
-      let/n r := (x * r) in
+      let/n (X1, X2) := cswap swap X1 X2 in
+      let/n (Z1, Z2) := cswap swap Z1 Z2 in
+      let/n r := alloc (F.inv Z1) in
+      let/n r := (X1 * r) in
       r.
   End Gallina.
 
@@ -66,40 +111,29 @@ Section __.
 
     Instance spec_of_montladder : spec_of "montladder" :=
       fnspec! "montladder"
-            (pOUT pK pU pX1 pZ1 pX2 pZ2
-                  pA pAA pB pBB pE pC pD pDA pCB : word)
-            / (K : scalar) (U : felem) (* inputs *)
-            OUT X1 Z1 X2 Z2 A AA B BB E C D DA CB (* intermediates *)
+            (pOUT pK pU (*pX1 pZ1 pX2 pZ2*) : word)
+            / (K : scalar) (U : F M_pos) (* inputs *)
+            out_bound OUT (*X1 Z1 X2 Z2 *) (* intermediates *)
             R,
       { requires tr mem :=
-           bounded_by tight_bounds U
-           /\ (FElem pOUT OUT * Scalar pK K * FElem pU U
-               * FElem pX1 X1 * FElem pZ1 Z1
-               * FElem pX2 X2 * FElem pZ2 Z2
-               * FElem pA A * FElem pAA AA
-               * FElem pB B * FElem pBB BB
-               * FElem pE E * FElem pC C
-               * FElem pD D * FElem pDA DA
-               * FElem pCB CB * R)%sep mem;
+          (FElem out_bound pOUT OUT * Scalar pK K * FElem (Some tight_bounds) pU U
+              (** FElem pX1 X1 * FElem pZ1 Z1
+               * FElem pX2 X2 * FElem pZ2 Z2*)
+               *  R)%sep mem;
         ensures tr' mem' :=
           tr' = tr
-          /\ (exists OUT X1 Z1 X2 Z2
-                     A AA B BB E C D DA CB : felem,
-                 feval OUT = montladder_gallina
-                               scalarbits
-                               (fun i =>
-                                  Z.testbit (F.to_Z (sceval K))
-                                            (Z.of_nat i))
-                               (feval U)
-            /\ bounded_by tight_bounds OUT
-            /\ (FElem pOUT OUT * Scalar pK K * FElem pU U
-                * FElem pX1 X1 * FElem pZ1 Z1
-                * FElem pX2 X2 * FElem pZ2 Z2
-                * FElem pA A * FElem pAA AA
-                * FElem pB B * FElem pBB BB
-                * FElem pE E * FElem pC C
-                * FElem pD D * FElem pDA DA
-                * FElem pCB CB * R)%sep mem) }.
+          /\ (let OUT :=  montladder_gallina
+                            scalarbits
+                            (fun i =>
+                               Z.testbit (F.to_Z (sceval K))
+                                         (Z.of_nat i))
+                            U in
+              (FElem (Some tight_bounds) pOUT OUT * Scalar pK K
+               * FElem (Some tight_bounds) pU U
+                (** FElem pX1 X1 * FElem pZ1 Z1
+                * FElem pX2 X2 * FElem pZ2 Z2 *)
+                * R)%sep mem') }.
+
 
     Ltac apply_compile_cswap_nocopy :=
       simple eapply compile_cswap_nocopy with
@@ -125,67 +159,43 @@ Section __.
       simple apply compile_nlet_as_nlet_eq;
       first [ simple eapply compile_downto
             | simple eapply compile_sctestbit
-            | simple eapply compile_point_assign
             | simple eapply compile_felem_small_literal
             | simple eapply compile_felem_copy
             | simple eapply compile_cswap_pair
             | apply_compile_cswap_nocopy ].
 
     (* TODO: make a new loop invariant, drop the sep-local stuff *)
-    (*
+    (*nat -> bool -> F M_pos * F M_pos * F M_pos * F M_pos * bool -> predicate*)
     Definition downto_inv
-               swap_var X1_var Z1_var X2_var Z2_var K_var
-               K K_ptr X1_ptr Z1_ptr X2_ptr Z2_ptr Rl
-               A_ptr AA_ptr B_ptr BB_ptr E_ptr C_ptr D_ptr DA_ptr CB_ptr
-               (locals : Semantics.locals)
+               (swap_var OUT_var U_var X1_var Z1_var X2_var Z2_var K_var : string)
+               K (pOUT K_ptr U_ptr X1_ptr Z1_ptr X2_ptr Z2_ptr : word) R
                (_ : nat)
                (gst : bool)
-               (st : point * point * bool)
-               (_ : list word)
-      : Semantics.mem -> Prop :=
-      let P1 := fst (fst st) in
-      let P2 := snd (fst st) in
-      let swap := snd st in
-      let x1 := fst P1 in
-      let z1 := snd P1 in
-      let x2 := fst P2 in
-      let z2 := snd P2 in
-      let swapped := gst in
-      liftexists X1_ptr' Z1_ptr' X2_ptr' Z2_ptr'
-                 X1 Z1 X2 Z2,
-        (emp (bounded_by tight_bounds X1
-              /\ bounded_by tight_bounds Z1
-              /\ bounded_by tight_bounds X2
-              /\ bounded_by tight_bounds Z2
-              /\ feval X1 = x1
-              /\ feval Z1 = z1
-              /\ feval X2 = x2
-              /\ feval Z2 = z2
-              /\ (if swapped
-                  then (X1_ptr' = X2_ptr
-                        /\ Z1_ptr' = Z2_ptr
-                        /\ X2_ptr' = X1_ptr
-                        /\ Z2_ptr' = Z1_ptr)
-                  else (X1_ptr' = X1_ptr
-                        /\ Z1_ptr' = Z1_ptr
-                        /\ X2_ptr' = X2_ptr
-                        /\ Z2_ptr' = Z2_ptr))
-              /\ (Var swap_var (word.of_Z (Z.b2z swap)) * Var K_var K_ptr
-                  * Var X1_var X1_ptr' * Var Z1_var Z1_ptr'
-                  * Var X2_var X2_ptr' * Var Z2_var Z2_ptr'
-                  * Rl)%sep locals)
-         * (Scalar K_ptr K * FElem X1_ptr' X1 * FElem Z1_ptr' Z1
-            * FElem X2_ptr' X2 * FElem Z2_ptr' Z2
-            * Placeholder A_ptr * Placeholder AA_ptr
-            * Placeholder B_ptr * Placeholder BB_ptr
-            * Placeholder E_ptr * Placeholder C_ptr
-            * Placeholder D_ptr * Placeholder DA_ptr
-            * Placeholder CB_ptr))%sep.
-*)
+               (st : F M_pos * F M_pos * F M_pos * F M_pos * bool)
+      : predicate :=
+      fun (_ : Semantics.trace)
+          (mem : mem)
+          (locals : locals) =>
+        let '(x1, z1, x2, z2, swap) := st in
+        locals = (map.put
+             (map.put
+                (map.put
+                   (map.put
+                      (map.put
+                         (map.put
+                            (*TODO: where did outvar come from?*)
+                            (map.put (map.put map.empty OUT_var pOUT) K_var K_ptr)
+                            U_var U_ptr) X1_var X1_ptr) Z1_var Z1_ptr) X2_var
+                   X2_ptr) Z2_var Z2_ptr) swap_var (word.b2w swap))
+            /\ ((Scalar K_ptr K * FElem (Some tight_bounds) X1_ptr x1
+            * FElem (Some tight_bounds) Z1_ptr z1
+            * FElem (Some tight_bounds) X2_ptr x2
+            * FElem (Some tight_bounds) Z2_ptr z2) * R)%sep mem.
+    
     Definition downto_ghost_step
-               (K : scalar) (st : point * point * bool)
+               (K : scalar) (st : F M_pos * F M_pos * F M_pos * F M_pos * bool)
                (gst : bool) (i : nat) :=
-      let swap := snd st in
+      let '(x1, z1, x2, z2, swap) := st in
       let swap := xorb swap (Z.testbit (F.to_Z (sceval K)) (Z.of_nat i)) in
       xorb gst swap.
 
@@ -267,38 +277,432 @@ Section __.
         unify R (sep R1 R2);
         seprewrite (cswap_iff1 FElem)
       end.
-
-    Ltac safe_field_compile_step :=
-      field_compile_step;
-      lazymatch goal with
-      | |- sep _ ?R _ =>
-        tryif is_evar R
-        then (repeat rewrite_cswap_iff1_with_evar_frame)
-        else (repeat seprewrite (cswap_iff1 FElem));
-        ecancel_assumption
-      | _ => idtac
-      end;
-      lazymatch goal with
-      | |- context [WeakestPrecondition.cmd] => idtac
-      | _ => solve_field_subgoals_with_cswap
-      end.
-
+    
     Existing Instance spec_of_sctestbit.
 
-    Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_felem_small_literal _ _ _ _ _ _ _ _)) : typeclass_instances.
-    Derive montladder_body SuchThat
-           (let args := ["OUT"; "K"; "U"; "X1"; "Z1"; "X2"; "Z2";
-                           "A"; "AA"; "B"; "BB"; "E"; "C"; "D"; "DA"; "CB"] in
+
+  (*TODO: get compiling
+  Require Import Rupicola.Examples.CMove.
+   *)
+  
+ Definition felem_cswap := "felem_cswap".
+  (*TODO: move to the right place;
+    TODO: instantiate
+   *)  
+  Instance spec_of_felem_cswap : spec_of felem_cswap :=
+    fnspec! felem_cswap mask ptr1 ptr2 / b1 b2 b c1 c2 R,
+    { requires tr mem :=
+        mask = word.of_Z (Z.b2z b) /\
+        (FElem b1 ptr1 c1 * FElem b2 ptr2 c2 * R)%sep mem;
+      ensures tr' mem' :=
+        tr' = tr /\
+        let (c1,c2) := cswap b c1 c2 in
+        let (b1,b2) := cswap b b1 b2 in
+        (FElem b1 ptr1 c1 * FElem b2 ptr2 c2 * R)%sep mem' }.
+  
+   Lemma compile_felem_cswap {tr m l functions} swap (lhs rhs : F M_pos) :
+    let v := cswap swap lhs rhs in
+    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+      R mask_var lhs_ptr lhs_var b_lhs rhs_ptr rhs_var b_rhs,
+
+      spec_of_felem_cswap functions ->
+
+      map.get l mask_var = Some (word.of_Z (Z.b2z swap)) ->
+      
+      map.get l lhs_var = Some lhs_ptr ->
+      map.get l rhs_var = Some rhs_ptr ->
+
+      (FElem b_lhs lhs_ptr lhs * FElem b_rhs rhs_ptr rhs * R)%sep m ->
+
+      (let v := v in
+       let (b1,b2) := cswap swap b_lhs b_rhs in
+       forall m',
+         (FElem b1 lhs_ptr (fst v) * FElem b2 rhs_ptr (snd v) * R)%sep m' ->
+         (<{ Trace := tr;
+             Memory := m';
+             Locals := l;
+             Functions := functions }>
+          k_impl
+          <{ pred (k v eq_refl) }>)) ->
+      <{ Trace := tr;
+         Memory := m;
+         Locals := l;
+         Functions := functions }>
+      cmd.seq
+        (cmd.call [] felem_cswap [expr.var mask_var; expr.var lhs_var; expr.var rhs_var])
+        k_impl
+      <{ pred (nlet_eq [lhs_var; rhs_var] v k) }>.
+   Proof.     
+     Local Ltac prove_field_compilation locals :=
+       repeat straightline' locals;
+       handle_call;
+       lazymatch goal with
+       | |- sep _ _ _ => ecancel_assumption
+       | _ => idtac
+       end; eauto;
+       sepsimpl; repeat straightline' locals; subst; eauto.
+     prove_field_compilation l.
+     destruct swap; eapply H4; unfold v; unfold cswap; simpl; eauto.
+   Qed.
+   Hint Resolve compile_felem_cswap : compiler.
+
+  (*
+  Lemma compile_cswap_pair {tr mem locals functions} (swap: bool) {A} (x y: A * A) x1 x2 :
+    let v := cswap swap x y in
+    forall {P} {pred: P v -> predicate}
+      {k: nlet_eq_k P v} {k_impl},
+      (let __ := 0 in (* placeholder FIXME why? *)
+       <{ Trace := tr;
+          Memory := mem;
+          Locals := locals;
+          Functions := functions }>
+       k_impl
+       <{ pred (nlet_eq [x1] (cswap swap (fst x) (fst y))
+                     (fun xy1 eq1 =>
+                        nlet_eq [x2] (cswap swap (snd x) (snd y))
+                             (fun xy2 eq2 =>
+                                let x := (fst xy1, fst xy2) in
+                                let y := (snd xy1, snd xy2) in
+                                k (x, y) ltac:(eauto)))) }>) ->
+      <{ Trace := tr;
+         Memory := mem;
+         Locals := locals;
+         Functions := functions }>
+      k_impl
+      <{ pred (nlet_eq [x1; x2] v k) }>.
+  Proof.
+    repeat straightline'.
+    subst_lets_in_goal. destruct_products.
+    destruct swap; cbv [cswap dlet] in *; cbn [fst snd] in *.
+    all:eauto.
+  Qed.
+   *)
+
+  
+  Lemma destruct_cswap {A} b (lhs rhs : A)
+    : cswap b lhs rhs = (if b then rhs else lhs, if b then lhs else rhs).
+  Proof.
+    destruct b;
+      reflexivity.
+  Qed.
+
+  Existing Instance felem_alloc.
+
+  
+  Local Ltac ecancel_assumption ::= ecancel_assumption_impl.
+  
+  Hint Extern 1 (spec_of _) => (simple refine (@spec_of_felem_copy _ _ _ _ _ _ _ _)) : typeclass_instances.
+  Hint Extern 1 (spec_of _) => (simple refine (@spec_of_felem_small_literal _ _ _ _ _ _ _ _)) : typeclass_instances.
+  
+  Derive montladder_body SuchThat
+           (let args := ["OUT"; "K"; "U" (*;"X1"; "Z1"; "X2"; "Z2" *)] in
             let montladder : Syntax.func :=
                 ("montladder", (args, [], montladder_body)) in
           ltac:(
             let goal := Rupicola.Lib.Tactics.program_logic_goal_for_function
-                          montladder [felem_small_literal; felem_copy;
+                          montladder [felem_cswap; felem_small_literal; felem_copy;
                                         sctestbit; "ladderstep"; inv; mul] in
             exact (__rupicola_program_marker montladder_gallina -> goal)))
          As montladder_correct.
     Proof.
-(* NOTE: the plan is to completely redo montladder after ladderstep is updated to use stackalloc *)
+      pose proof scalarbits_pos.
+      pose proof unsigned_of_Z_1.
+      pose proof unsigned_of_Z_0.
+      compile_setup.
+      unfold F.one.
+      unfold F.zero.
+      
+      simple apply compile_nlet_as_nlet_eq.
+      simple eapply compile_alloc; eauto.
+      (*TODO: is this doing allocation?*)
+      compile_step.
+      compile_step.
+      simple eapply compile_felem_small_literal; eauto.
+      compile_step.
+      compile_step.
+      simple apply compile_nlet_as_nlet_eq.
+      simple eapply compile_alloc; eauto.
+      compile_step.
+      simple eapply compile_felem_small_literal; eauto.
+      compile_step.
+      compile_step.
+      simple apply compile_nlet_as_nlet_eq.
+      simple eapply compile_alloc; eauto.
+      compile_step.
+      simple eapply compile_felem_copy; eauto.
+      admit (*TODO: hint not working*).
+      compile_step.
+      compile_step.
+      compile_step.
+      compile_step.
+      simple apply compile_nlet_as_nlet_eq.
+      simple eapply compile_alloc; eauto.
+      compile_step.
+      simple eapply compile_felem_small_literal; eauto.
+      compile_step.
+      compile_step.
+      compile_step.
+      compile_step.
+      compile_step.
+      compile_step.
+      Import DownToCompiler.
+      simple apply compile_nlet_as_nlet_eq.
+      lazymatch goal with
+      | [ |- WeakestPrecondition.cmd _ _ _ _ ?locals _ ] =>
+        let i_v := gensym locals "i" in
+        let lp := infer_downto_predicate i_v in
+        eapply compile_downto with (i_var := i_v) (loop_pred := lp)
+      end.
+      (*
+      compile_downto.
+      compile_step; [repeat compile_step ..|].
+      admit.
+      Import DownToCompiler.
+       *)
+      (*TODO: use regular compile_step for downto, figure out invariant inference *)
+      (*compile_step.*)
+      (*TODO: copy locals into inv*)
+      (* TODO: use loop inference
+      simple apply compile_nlet_as_nlet_eq.
+      let tmp_var := constr:("tmp") in
+      let x1_var := constr:("X1") in
+      let z1_var := constr:("Z1") in
+      let x2_var := constr:("X2") in
+      let z2_var := constr:("Z2") in
+      let counter_var := constr:("count") in
+      eapply compile_downto with (i_var := counter_var)
+      (wcount := word.of_Z scalarbits)
+      (ginit := false)
+      (ghost_step := downto_ghost_step K)
+      (Inv :=
+         downto_inv
+           _ "OUT" "U" x1_var z1_var x2_var z2_var _
+           _ _ pK _ out_ptr out_ptr0 out_ptr1 out_ptr2
+           _).
+      {
+        unfold downto_inv.
+        rewrite map.remove_put_same;
+          repeat (rewrite map.remove_put_diff; [|compile_step]).
+        rewrite map.remove_empty.
+        repeat compile_step.
+        TODO: need bounds on U
+        ecancel_assumption.
+        exists X.
+        exists X0.
+        exists X1.
+        exists X2.
+        progress sepsimpl; eauto.
+        admit(*TODO: X1 related to U; how to find/preserve bounds?*).
+        instantiate (1:="swap").
+        rewrite map.get_remove_diff.
+        compile_step.
+        compile_step.
+        instantiate (1:="K").
+        rewrite map.get_remove_diff.
+        compile_step.
+        compile_step.
+        all: try rewrite map.get_remove_diff.
+        all: repeat compile_step.
+      }
+      compile_step.
+      admit (*z/word math*).
+      lia.
+      {
+        compile_step.
+        unfold downto_inv in H12.
+        do 4 destruct st as [st ?].
+        do 4 destruct H12 as [? H12].
+        sepsimpl.
+        clear gst'.
+        eapply compile_nlet_as_nlet_eq.
+        eapply compile_sctestbit; eauto.
+        ecancel_assumption.
+        all: 
+          repeat
+            match goal with
+            | [H : map.get (map.remove _ _)_ = _|-_] =>
+              rewrite map.get_remove_diff in H; [| compile_step];[]
+            end.
+        {
+          rewrite map.get_put_diff; eauto;
+            compile_step.
+        }
+        compile_step.
+        repeat compile_step.
+        {
+          repeat rewrite map.get_put_diff;
+            repeat compile_step.
+        }
+        repeat compile_step.
+        (*TODO: why not handled by compile_step?*)
+        (*TODO: need free vars from downto_inv?*)
+        eapply compile_nlet_as_nlet_eq.
+        eapply compile_felem_cswap; eauto;
+          try ecancel_assumption.
+        compile_step.
+        {
+          repeat rewrite map.get_put_diff; compile_step.
+        }
+        {
+          repeat rewrite map.get_put_diff; compile_step.
+        }
+        {
+          compile_step.
+          remember v8 as v9.
+          unfold v8 in *.
+          clear v8.
+          rewrite destruct_cswap in Heqv9.
+          destruct v9 as [v91 v92].
+          inversion Heqv9; clear Heqv9; subst v91 v92.
+
+          
+          eapply compile_nlet_as_nlet_eq.
+          eapply compile_felem_cswap; eauto;
+            try ecancel_assumption.
+          compile_step.
+          {
+            repeat rewrite map.get_put_diff; compile_step.
+          }
+          {
+            repeat rewrite map.get_put_diff; compile_step.
+          }
+          compile_step.
+          remember v8 as v9.
+          unfold v8 in *.
+          clear v8.
+          rewrite destruct_cswap in Heqv9.
+          destruct v9 as [v91 v92].
+          inversion Heqv9; clear Heqv9; subst v91 v92.
+          
+          eapply compile_nlet_as_nlet_eq.
+          cbn [fst snd] in *.
+          eapply compile_ladderstep; eauto;
+            try ecancel_assumption.
+          admit (*TODO: bounds*).
+          admit (*TODO: bounds*).
+          admit (*TODO: bounds*).
+          admit (*TODO: bounds*).
+          admit (*TODO: bounds*).
+          assert (X1 = U) by admit (*TODO: want X1 to be U*).
+          subst X1.
+          ecancel_assumption.
+          {
+            repeat rewrite map.get_put_diff.
+            admit (*TODO: U ptr*).
+            admit.
+            admit.
+            admit.
+          }
+          all: try solve [repeat rewrite map.get_put_diff; compile_step].
+          repeat compile_step.
+          admit (*easy*).
+          {
+            unfold downto_inv.
+            rewrite H11 in Heq.
+            rewrite H22 in Heq.
+            rewrite H38 in Heq.
+            rewrite H39 in Heq.
+            assert (X1 = U) by admit (*TODO: want X1 to be U*).
+            subst X1.
+            rewrite Heq.
+            simpl.
+            do 4 eexists.
+            sepsimpl.
+            5-8:eauto.
+            all: eauto.
+            {
+              rewrite map.get_remove_diff; [| solve[ compile_step]];
+                repeat (rewrite map.get_put_diff; [| solve[ compile_step]]).
+              rewrite map.get_put_same.
+              TODO: where does b come from again?
+              solve[ compile_step].
+              
+            
+            all: repeat compile_step.
+            admit(*TODO: is this unnecessarily complex? ghost state is showing up*).
+          }
+        }
+      }
+      {
+        compile_step.
+        remember v5 as v6.
+        destruct v6 as [[[[? ?] ?] ?] ?].
+        unfold downto_inv in H12.
+        sepsimpl.
+        all: 
+          repeat
+            match goal with
+            | [H : map.get (map.remove _ _)_ = _|-_] =>
+              rewrite map.get_remove_diff in H; [| compile_step];[]
+            end.
+
+        
+        eapply compile_nlet_as_nlet_eq.
+        eapply compile_felem_cswap; eauto.
+        ecancel_assumption.
+
+        compile_step.
+        remember v6 as v9.
+        unfold v6 in *.
+        clear v6.
+        rewrite destruct_cswap in Heqv9.
+        destruct v9 as [v91 v92].
+        inversion Heqv9; clear Heqv9; subst v91 v92.
+        cbn [fst snd] in *.
+
+        
+        eapply compile_nlet_as_nlet_eq.
+        eapply compile_felem_cswap; eauto.
+        ecancel_assumption.
+        
+        compile_step.
+        remember v6 as v9.
+        unfold v6 in *.
+        clear v6.
+        rewrite destruct_cswap in Heqv9.
+        destruct v9 as [v91 v92].
+        inversion Heqv9; clear Heqv9; subst v91 v92.
+        cbn [fst snd] in *.
+
+        rewrite <- H38.
+        compile_step.
+        admit (*TOD: bounds*).
+        rewrite <- H35.
+        rewrite <- Heq.
+        compile_step.
+        admit (*TOD: bounds*).
+        {
+          rewrite map.get_put_same; auto.
+        }
+        {
+          rewrite map.get_put_diff; eauto.
+          compile_step.
+        }
+        repeat compile_step.
+        {
+    unfold pred_sep; simpl.
+    unfold Basics.flip; simpl.
+    repeat change (fun x => ?h x) with h.
+    unfold map.getmany_of_list.
+    simpl.
+    {      
+      repeat match goal with
+      | [ H : _ ?m |- _ ?m] =>
+      eapply Proper_sep_impl1;
+        [ eapply FElem_to_bytes | clear H m; intros H m | ecancel_assumption]
+      end.
+      exists [].
+      repeat compile_step.
+      admit (*TODO: not lined up right*).
+
+      eexists; intuition.
+      (*TODO: out and out0 not limed up; want FElem'?*)
+      admit (*ecancel_assumption.*).
+    }
+      Unshelve.
+      constructor.
+
+(* NOTE: the plan is to completely redo montladder after ladderstep is updated to use stackalloc *)*)
     Abort.
 (*
       pose proof scalarbits_pos.
