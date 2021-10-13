@@ -1,9 +1,6 @@
 ladderstep_body = 
-fun (width : Z) (BW : Bitwidth width) (word : word width)
-  (mem : map.map word byte) (word_ok : word.ok word) 
-  (mem_ok : map.ok mem) (field_parameters : FieldParameters)
-  (field_representaton : FieldRepresentation)
-  (field_representation_ok : FieldRepresentation_ok) =>
+fun (width : Z) (BW : Bitwidth width) (word : word width) (mem : map.map word byte) (word_ok : word.ok word) (mem_ok : map.ok mem)
+  (field_parameters : FieldParameters) (field_representaton : FieldRepresentation) (field_representation_ok : FieldRepresentation_ok) =>
 noskips
   (cmd.stackalloc "A" size_in_bytes
      (cmd.seq (cmd.call [] add ["A"; "X2"; "Z2"])
@@ -16,43 +13,19 @@ noskips
                           (cmd.seq (cmd.call [] square ["X2"; "X2"])
                              (cmd.stackalloc "E" size_in_bytes
                                 (cmd.seq (cmd.call [] sub ["E"; "A"; "X2"])
-                                   (cmd.seq
-                                      (cmd.call [] add ["X3"; "Z3"; "Z2"])
-                                      (cmd.seq
-                                         (cmd.call [] square ["X3"; "X3"])
-                                         (cmd.seq
-                                            (cmd.call [] sub
-                                               ["Z3"; "Z3"; "Z2"])
-                                            (cmd.seq
-                                               (cmd.call [] square
-                                                 ["Z3"; "Z3"])
-                                               (cmd.seq
-                                                 (cmd.call [] mul
-                                                 ["Z3"; "X1"; "Z3"])
-                                                 (cmd.seq
-                                                 (cmd.call [] mul
-                                                 ["X2"; "A"; "X2"])
-                                                 (cmd.seq
-                                                 (cmd.call [] scmula24
-                                                 ["Z2"; "E"])
-                                                 (cmd.seq
-                                                 (cmd.call [] add
-                                                 ["Z2"; "A"; "Z2"])
-                                                 (cmd.seq
-                                                 (cmd.call [] mul
-                                                 ["Z2"; "E"; "Z2"])
-                                                 (fold_right
-                                                 (fun (v : string) (c : cmd)
-                                                 => 
-                                                 cmd.seq (cmd.unset v) c)
-                                                 cmd.skip [])))))))))))))))))))))
-     : forall (width : Z) (BW : Bitwidth width) (word : word width)
-         (mem : map.map word byte),
+                                   (cmd.seq (cmd.call [] add ["X3"; "Z3"; "Z2"])
+                                      (cmd.seq (cmd.call [] square ["X3"; "X3"])
+                                         (cmd.seq (cmd.call [] sub ["Z3"; "Z3"; "Z2"])
+                                            (cmd.seq (cmd.call [] square ["Z3"; "Z3"])
+                                               (cmd.seq (cmd.call [] mul ["Z3"; "X1"; "Z3"])
+                                                  (cmd.seq (cmd.call [] mul ["X2"; "A"; "X2"])
+                                                     (cmd.seq (cmd.call [] scmula24 ["Z2"; "E"])
+                                                        (cmd.seq (cmd.call [] add ["Z2"; "A"; "Z2"])
+                                                           (cmd.seq (cmd.call [] mul ["Z2"; "E"; "Z2"])
+                                                              (fold_right (fun (v : string) (c : cmd) => cmd.seq (cmd.unset v) c) cmd.skip
+                                                                 [])))))))))))))))))))))
+     : forall (width : Z) (BW : Bitwidth width) (word : word width) (mem : map.map word byte),
        word.ok word ->
-       map.ok mem ->
-       forall (field_parameters : FieldParameters)
-         (field_representaton : FieldRepresentation),
-       FieldRepresentation_ok -> cmd
+       map.ok mem -> forall (field_parameters : FieldParameters) (field_representaton : FieldRepresentation), FieldRepresentation_ok -> cmd
 
-Arguments ladderstep_body {width}%Z_scope {BW word mem word_ok mem_ok
-  field_parameters field_representaton field_representation_ok}
+Arguments ladderstep_body {width}%Z_scope {BW word mem word_ok mem_ok field_parameters field_representaton field_representation_ok}

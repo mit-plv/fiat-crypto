@@ -148,5 +148,8 @@ Existing Instance spec_of_ladderstep.
 Import Syntax.
 Local Unset Printing Coercions.
 Local Set Printing Depth 70.
-Local Unset Printing Width.
+(* Set the printing width so that arguments are printed on 1 line.
+   Otherwise the build breaks.
+*)
+Local Set Printing Width 140.
 Redirect "Crypto.Bedrock.Group.ScalarMult.LadderStep.ladderstep_body" Print ladderstep_body.
