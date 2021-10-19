@@ -100,9 +100,9 @@ Section __.
            ) in
       let/n (X1, X2) := cswap swap X1 X2 in
       let/n (Z1, Z2) := cswap swap Z1 Z2 in
-      let/n r := stack (F.inv Z1) in
-      let/n r := (X1 * r) in
-      r.
+      let/n OUT := (F.inv Z1) in
+      let/n OUT := (X1 * OUT) in
+      OUT.
   End Gallina.
 
   Section MontLadder.
@@ -399,22 +399,51 @@ Section __.
   Hint Extern 1 (spec_of _) => (simple refine (@spec_of_felem_small_literal _ _ _ _ _ _ _ _)) : typeclass_instances.
 
   Axiom TODO: forall {A}, A.
-  Ltac todo := solve[refine (TODO)].
+ (* Ltac todo := solve[refine (TODO)].*)
 
   (*TODO: priority 0; backport to SeparationLogic *)
   Hint Extern 0 => exact (fun m x => x) : ecancel_impl.
-  
+
+  Lemma scalarbits_bound : scalarbits < 2 ^ width.
+  Proof.
+    rewrite <- scalarbits_small.
+    unfold word.wrap.
+    apply Z_mod_lt.
+    pose proof word.width_pos.
+    pose proof (Z.pow_pos_nonneg 2 width ltac:(lia)).
+    lia.
+  Qed.
+    
+
+  (*TODO: tactics not working; specs not properly generated *)
+
+  Derive montladder_body SuchThat
+ (let args := ["OUT"; "K"; "U"] in
+  let montladder := ("montladder", (args, [], montladder_body)) in
+  __rupicola_program_marker montladder_gallina ->
+  forall functions : list bedrock_func,
+  spec_of_felem_cswap functions ->
+  spec_of_felem_small_literal functions ->
+  spec_of_felem_small_literal functions ->
+  spec_of_felem_copy functions ->
+  spec_of_sctestbit functions ->
+  spec_of_ladderstep functions ->
+  spec_of_UnOp un_inv functions ->
+  spec_of_BinOp bin_mul functions ->
+  spec_of_montladder (montladder :: functions))
+  As montladder_correct.
+(*  
   Derive montladder_body SuchThat
            (let args := ["OUT"; "K"; "U" (*;"X1"; "Z1"; "X2"; "Z2" *)] in
             let montladder : Syntax.func :=
                 ("montladder", (args, [], montladder_body)) in
           ltac:(
             let goal := Rupicola.Lib.Tactics.program_logic_goal_for_function
-                          montladder [felem_cswap; felem_small_literal; felem_copy;
+                          montladder [felem_cswap; felem_copy;
                                         sctestbit; "ladderstep"; inv; mul] in
             exact (__rupicola_program_marker montladder_gallina -> goal)))
-         As montladder_correct.
-    Proof.
+         As montladder_correct.*)
+  Proof.
       pose proof scalarbits_pos.
       pose proof unsigned_of_Z_1.
       pose proof unsigned_of_Z_0.
@@ -423,8 +452,7 @@ Section __.
       unfold F.zero.
       
       simple apply compile_nlet_as_nlet_eq.
-      simple eapply compile_stack; eauto.
-      (*TODO: is this doing allocation?*)
+      simple eapply compile_alloc; eauto.
       compile_step.
       compile_step.
       simple eapply compile_felem_small_literal; eauto.
@@ -440,7 +468,6 @@ Section __.
       simple eapply compile_stack; eauto.
       compile_step.
       simple eapply compile_felem_copy; eauto.
-      todo (*TODO: hint not working*).
       compile_step.
       compile_step.
       compile_step.
@@ -464,16 +491,18 @@ Section __.
         let lp := infer_downto_predicate i_v in
         eapply compile_downto with (i_var := i_v) (loop_pred := lp)
       end.
-      { todo (*easy*). }
+      { pose proof scalarbits_bound; lia. }
       { solve[repeat compile_step]. }
       { solve[repeat compile_step]. }
       { solve[repeat compile_step]. }
       {
         repeat compile_step.
-        todo (*spec_of should be in context*).
         2:{
           instantiate (1:=word.of_Z (Z.of_nat i)).
-          todo (* easy*).
+          rewrite word.unsigned_of_Z.
+          rewrite word.wrap_small; auto.
+          pose proof scalarbits_bound.
+          lia.
         }
         solve[repeat compile_step].
         repeat compile_step.
@@ -512,19 +541,22 @@ Section __.
         compile_step.
         destruct v8.
         eapply compile_nlet_as_nlet_eq.
-        eapply compile_ladderstep; [todo (*TODO: spec of*) | solve[repeat compile_step] .. |].
+        eapply compile_ladderstep; [ solve[repeat compile_step] .. |].
 
         compile_step.
         (*TODO: why is this needed?*)
         remember v8 as v9.
         destruct v9 as [[[? ?] ?] ?].
         eapply compile_nlet_as_nlet_eq.
-        eapply compile_sctestbit; eauto; [todo (*TODO: spec of*) | ..].
+        eapply compile_sctestbit; eauto.
         solve[repeat compile_step].
         solve[repeat compile_step].
         2:{
           instantiate (1:=word.of_Z (Z.of_nat i)).
-          todo (* easy*).
+          rewrite word.unsigned_of_Z.
+          rewrite word.wrap_small; auto.
+          pose proof scalarbits_bound.
+          lia.
         }
         solve[repeat compile_step].
         {
@@ -532,7 +564,7 @@ Section __.
           compile_step.
           compile_step.
           cbn [P2.car P2.cdr seps].
-          cbn [seps] in H16.
+          cbn [seps] in H17.
           unfold v8 in *.
           rewrite Heq in Heqv9.
           inversion Heqv9; subst.
@@ -555,7 +587,7 @@ Section __.
         compile_step.
         destruct v6.
 
-        (*TODO: why not handled by compile_step?*)
+         (*TODO: why not handled by compile_step?*)
         (*TODO: need free vars from downto_inv?*)
         eapply compile_nlet_as_nlet_eq.
         eapply compile_felem_cswap;
@@ -568,35 +600,19 @@ Section __.
         
         compile_step.
         destruct v6.
-
+                        
         (*TODO: tries to apply felem_copy*)
         eapply compile_nlet_as_nlet_eq.
-        simple eapply compile_alloc.
-        eassumption.
-        compile_step.
-        compile_step.
-        todo (*spec_of*).
-        solve[repeat compile_step].
-        solve[repeat compile_step].
-        solve[repeat compile_step].
-        solve[repeat compile_step].
+        simple eapply compile_inv; [solve[repeat compile_step] .. |].
         
         compile_step.
         (*TODO: tries to apply felem_copy*)
         eapply compile_nlet_as_nlet_eq.
-        simple eapply compile_mul; [todo (*TODO: spec of*) | solve[repeat compile_step] .. |].
+        simple eapply compile_mul; [solve[repeat compile_step] .. |].
         
         repeat compile_step.
-        shelve (*TODO: why OUT in hyp?*).
       }
-
-      Unshelve.
-      all: todo.
     Qed.
-    Eval 
-      cbv[ fold_right ExprReflection.compile word.b2w montladder_body gs
-                      cmd_downto cmd_downto_fresh]
-      in montladder_body.
   End MontLadder.
 End __.
 
@@ -604,6 +620,4 @@ Global Hint Extern 1 (spec_of _) => (simple refine (@spec_of_montladder _ _ _ _ 
 
 Import bedrock2.Syntax.Coercions.
 Local Unset Printing Coercions.
-(*
 Redirect "Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body" Print montladder_body.
-*)
