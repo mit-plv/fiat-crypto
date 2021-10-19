@@ -400,6 +400,9 @@ Section __.
 
   Axiom TODO: forall {A}, A.
   Ltac todo := solve[refine (TODO)].
+
+  (*TODO: priority 0; backport to SeparationLogic *)
+  Hint Extern 0 => exact (fun m x => x) : ecancel_impl.
   
   Derive montladder_body SuchThat
            (let args := ["OUT"; "K"; "U" (*;"X1"; "Z1"; "X2"; "Z2" *)] in
@@ -461,177 +464,130 @@ Section __.
         let lp := infer_downto_predicate i_v in
         eapply compile_downto with (i_var := i_v) (loop_pred := lp)
       end.
-      todo (*easy*).
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      repeat compile_step.
-      todo (*spec_of should be in context*).
-      2:{
-        instantiate (1:=word.of_Z (Z.of_nat i)).
-        todo (* easy*).
-      }
-      solve[repeat compile_step].
-      repeat compile_step.
-      simple apply compile_nlet_as_nlet_eq.
-      eapply compile_bool_xorb. (*TODO: why not already a hint?*)
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      repeat compile_step.
-      (*TODO: why not handled by compile_step?*)
-      (*TODO: need free vars from downto_inv?*)
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_felem_cswap; eauto;
-        try ecancel_assumption.
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      repeat compile_step.
-      
-      (*TODO: automate w/ compile cswap*)
-      rewrite cswap_same.
-
-      compile_step.
-      (*make sure not to unfold st*)
-      remember st as st'.
-      destruct st'.
-      destruct v8.
-      (*TODO: why not handled by compile_step?*)
-      (*TODO: need free vars from downto_inv?*)
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_felem_cswap; eauto;
-        try ecancel_assumption.
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      repeat compile_step.
-      
-      (*TODO: automate w/ compile cswap*)
-      rewrite cswap_same.
-      
-      compile_step.
-      destruct v8.
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_ladderstep; eauto;
-        try ecancel_assumption.
-      todo (*TODO: spec of*).
-      assert ((FElem (Some tight_bounds) out_ptr0 (fst (f1, f2))
-         ⋆ FElem (Some tight_bounds) out_ptr2 (snd (f1, f2))
-         ⋆ seps
-             [FElem (Some tight_bounds) out_ptr (fst (f, f0));
-             FElem (Some tight_bounds) out_ptr1 (snd (f, f0)); Scalar pK K; 
-             FElem (Some tight_bounds) pU U; FElem out_bound pOUT OUT; R]) m'8) by
-          todo (* TODO: bounds*).
-      clear H13.
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-
-      compile_step.
-      (*TODO: why is this needed?*)
-      remember v8 as v9.
-      destruct v9 as [[[? ?] ?] ?].
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_sctestbit; eauto.
-      todo (*TODO: spec of*).
-      ecancel_assumption.
-      solve[repeat compile_step].
-      2:{
-        instantiate (1:=word.of_Z (Z.of_nat i)).
-        todo (* easy*).
-      }
-      solve[repeat compile_step].
+      { todo (*easy*). }
+      { solve[repeat compile_step]. }
+      { solve[repeat compile_step]. }
+      { solve[repeat compile_step]. }
       {
+        repeat compile_step.
+        todo (*spec_of should be in context*).
+        2:{
+          instantiate (1:=word.of_Z (Z.of_nat i)).
+          todo (* easy*).
+        }
+        solve[repeat compile_step].
+        repeat compile_step.
+        simple apply compile_nlet_as_nlet_eq.
+        eapply compile_bool_xorb. (*TODO: why not already a hint?*)
+        solve[repeat compile_step].
+        solve[repeat compile_step].
+        repeat compile_step.
+        (*TODO: why not handled by compile_step?*)
+        (*TODO: need free vars from downto_inv?*)
+        eapply compile_nlet_as_nlet_eq.
+        eapply compile_felem_cswap;
+        [solve[repeat compile_step] .. | ].
+        
+        repeat compile_step.
+
+        (*TODO: automate w/ compile cswap*)
+        rewrite cswap_same.
+
         compile_step.
+        (*make sure not to unfold st*)
+        remember st as st'.
+        destruct st'.
+        destruct v8.
+        (*TODO: why not handled by compile_step?*)
+        (*TODO: need free vars from downto_inv?*)
+        eapply compile_nlet_as_nlet_eq.
+        eapply compile_felem_cswap;
+          [solve[repeat compile_step] .. | ].
+        
+        repeat compile_step.
+        
+        (*TODO: automate w/ compile cswap*)
+        rewrite cswap_same.
+        
         compile_step.
+        destruct v8.
+        eapply compile_nlet_as_nlet_eq.
+        eapply compile_ladderstep; [todo (*TODO: spec of*) | solve[repeat compile_step] .. |].
+
         compile_step.
-        cbn [P2.car P2.cdr seps].
-        cbn [seps] in H16.
-        unfold v8 in *.
-        rewrite Heq in Heqv9.
-        inversion Heqv9; subst.
-        ecancel_assumption.
+        (*TODO: why is this needed?*)
+        remember v8 as v9.
+        destruct v9 as [[[? ?] ?] ?].
+        eapply compile_nlet_as_nlet_eq.
+        eapply compile_sctestbit; eauto; [todo (*TODO: spec of*) | ..].
+        solve[repeat compile_step].
+        solve[repeat compile_step].
+        2:{
+          instantiate (1:=word.of_Z (Z.of_nat i)).
+          todo (* easy*).
+        }
+        solve[repeat compile_step].
+        {
+          compile_step.
+          compile_step.
+          compile_step.
+          cbn [P2.car P2.cdr seps].
+          cbn [seps] in H16.
+          unfold v8 in *.
+          rewrite Heq in Heqv9.
+          inversion Heqv9; subst.
+          ecancel_assumption.
+        }
       }
       {
         repeat compile_step.
-      (*TODO: why not handled by compile_step?*)
-      (*TODO: need free vars from downto_inv?*)
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_felem_cswap; eauto;
-        try ecancel_assumption.
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      repeat compile_step.
-      
-      (*TODO: automate w/ compile cswap*)
-      rewrite cswap_same.
-      
-      compile_step.
-      destruct v6.
+        (*TODO: why not handled by compile_step?*)
+        (*TODO: need free vars from downto_inv?*)
+        eapply compile_nlet_as_nlet_eq.
+        eapply compile_felem_cswap;
+          [solve[repeat compile_step] .. | ].
+        
+        repeat compile_step.
+        
+        (*TODO: automate w/ compile cswap*)
+        rewrite cswap_same.
+        
+        compile_step.
+        destruct v6.
 
-      (*TODO: why not handled by compile_step?*)
-      (*TODO: need free vars from downto_inv?*)
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_felem_cswap; eauto;
-        try ecancel_assumption.
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      repeat compile_step.
-      
-      (*TODO: automate w/ compile cswap*)
-      rewrite cswap_same.
-      
-      compile_step.
-      destruct v6.
+        (*TODO: why not handled by compile_step?*)
+        (*TODO: need free vars from downto_inv?*)
+        eapply compile_nlet_as_nlet_eq.
+        eapply compile_felem_cswap;
+          [solve[repeat compile_step] .. | ].
+        
+        repeat compile_step.
+        
+        (*TODO: automate w/ compile cswap*)
+        rewrite cswap_same.
+        
+        compile_step.
+        destruct v6.
 
-      (*TODO: tries to apply felem_copy*)
-      eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_alloc.
-      eassumption.
-      compile_step.
-      compile_step.
-      todo (*spec_of*).
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      assert ((FElem (Some tight_bounds) out_ptr3 uninit3
-         ⋆ (FElem (Some tight_bounds) out_ptr0 (fst (f1, f2))
-            ⋆ FElem (Some tight_bounds) out_ptr2 (snd (f1, f2))
-            ⋆ seps
-                [FElem (Some tight_bounds) out_ptr (fst (f, f0));
-                FElem (Some tight_bounds) out_ptr1 (snd (f, f0)); 
-                FElem (Some tight_bounds) pU U; FElem out_bound pOUT OUT; 
-                Scalar pK K; R])) m'9) by
-          todo (* TODO: bounds*).
-      clear H12.
-      ecancel_assumption.
-      solve[repeat compile_step].
-
-      compile_step.
-      (*TODO: tries to apply felem_copy*)
-      eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_mul;
-      repeat compile_step.
-      todo (*spec_of*).
-      assert ((FElem (Some loose_bounds) out_ptr3 v6
-         ⋆ seps
-             [FElem (Some loose_bounds) out_ptr0 f1; FElem (Some loose_bounds) out_ptr2 f2;
-             FElem (Some loose_bounds) out_ptr f; FElem (Some loose_bounds) out_ptr1 f0; 
-             FElem (Some loose_bounds) pU U; FElem out_bound pOUT OUT; 
-             Scalar pK K; R]) m'10) by
-          todo (* TODO: bounds*).
-      clear H10.
-      ecancel_assumption.
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      assert (seps [FElem (Some tight_bounds) pU U; FElem (Some tight_bounds) pOUT OUT; Scalar pK K; R] H11)
-        by todo.
-      clear m'11.
-      shelve (*TODO: why OUT in hyp?*).
+        (*TODO: tries to apply felem_copy*)
+        eapply compile_nlet_as_nlet_eq.
+        simple eapply compile_alloc.
+        eassumption.
+        compile_step.
+        compile_step.
+        todo (*spec_of*).
+        solve[repeat compile_step].
+        solve[repeat compile_step].
+        solve[repeat compile_step].
+        solve[repeat compile_step].
+        
+        compile_step.
+        (*TODO: tries to apply felem_copy*)
+        eapply compile_nlet_as_nlet_eq.
+        simple eapply compile_mul; [todo (*TODO: spec of*) | solve[repeat compile_step] .. |].
+        
+        repeat compile_step.
+        shelve (*TODO: why OUT in hyp?*).
       }
 
       Unshelve.

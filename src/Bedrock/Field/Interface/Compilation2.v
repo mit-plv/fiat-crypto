@@ -249,7 +249,7 @@ Section Compile.
 
       (let v := v in
        forall m',
-         (FElem None x_ptr x * FElem None out_ptr x * R)%sep m' ->
+         (FElem x_bound x_ptr x * FElem x_bound out_ptr x * R)%sep m' ->
          (<{ Trace := tr;
              Memory := m';
              Locals := l;
