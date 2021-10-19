@@ -620,4 +620,8 @@ Global Hint Extern 1 (spec_of _) => (simple refine (@spec_of_montladder _ _ _ _ 
 
 Import bedrock2.Syntax.Coercions.
 Local Unset Printing Coercions.
+(* Set the printing width so that arguments are printed on 1 line.
+   Otherwise the build breaks.
+*)
+Local Set Printing Width 160.
 Redirect "Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body" Print montladder_body.
