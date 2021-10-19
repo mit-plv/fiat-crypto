@@ -14,8 +14,9 @@ Require Import Crypto.Util.NumTheoryUtil.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Local Open Scope Z_scope.
 
+Import NoExprReflectionCompiler.
 Import DownToCompiler.
-Locate "let/n".
+
 (* TODO: migrate these to rupicola.
    Currently break when put in Notations.v
  *)
@@ -251,6 +252,20 @@ Section __.
   Hint Extern 1 (spec_of "ladderstep") =>
   (simple refine (@spec_of_ladderstep _ _ _ _ _ _ _ _)) : typeclass_instances.
 
+  (* TODO: this seems a bit delicate*)
+  Ltac compile_cswap :=
+    eapply compile_felem_cswap;
+    [solve[repeat compile_step] ..
+    | repeat compile_step;
+      rewrite cswap_same;
+      compile_step;      
+      match goal with
+      | [|- (WeakestPrecondition.cmd _ _ _ _ _ (_ (let (_,_) := ?v in _)))] =>
+        destruct v
+      end].
+  
+  Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (cswap _ _ _) _))) =>
+    compile_cswap; shelve : compiler.
 
   
 (* TODO: this one is dangerous to have as a hint.
@@ -290,102 +305,37 @@ simple eapply compile_felem_copy; shelve : compiler.
       }
       solve[repeat compile_step].
       {
-      repeat compile_step.
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_bool_xorb. (*TODO: why not already a hint?*)
+        repeat compile_step.
+        eapply compile_nlet_as_nlet_eq.
+        eapply compile_ladderstep; [ solve[repeat compile_step] .. |].
+        
+        compile_step.
+        (*TODO: why is this needed?*)
+        remember v8 as v9.
+        destruct v9 as [[[? ?] ?] ?].
+        unfold v6.
+        compile_step.
+        solve[repeat compile_step].
+        solve[repeat compile_step].
+        solve[repeat compile_step].
+        2:{
+          instantiate (1:=word.of_Z (Z.of_nat i)).
+          rewrite word.unsigned_of_Z.
+          rewrite word.wrap_small; auto.
+          pose proof scalarbits_bound.
+          lia.
+        }
       solve[repeat compile_step].
-      solve[repeat compile_step].
-      repeat compile_step.
-      (*TODO: why not handled by compile_step?*)
-      (*TODO: need free vars from downto_inv?*)
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_felem_cswap;
-        [solve[repeat compile_step] .. | ].
-      
-      repeat compile_step.
-
-      (*TODO: automate w/ compile cswap*)
-      rewrite cswap_same.
-
-      compile_step.
-      (*make sure not to unfold st*)
-      remember st as st'.
-      destruct st'.
-      destruct v8.
-      (*TODO: why not handled by compile_step?*)
-      (*TODO: need free vars from downto_inv?*)
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_felem_cswap;
-        [solve[repeat compile_step] .. | ].
-      
-      repeat compile_step.
-      
-      (*TODO: automate w/ compile cswap*)
-      rewrite cswap_same.
-      
-      compile_step.
-      destruct v8.
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_ladderstep; [ solve[repeat compile_step] .. |].
-
-      compile_step.
-      (*TODO: why is this needed?*)
-      remember v8 as v9.
-      destruct v9 as [[[? ?] ?] ?].
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_sctestbit; eauto.
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      2:{
-        instantiate (1:=word.of_Z (Z.of_nat i)).
-        rewrite word.unsigned_of_Z.
-        rewrite word.wrap_small; auto.
-        pose proof scalarbits_bound.
-        lia.
-      }
+        compile_step.
+        compile_step.        
       solve[repeat compile_step].
       {
-          compile_step.
-          compile_step.
-          compile_step.
           cbn [P2.car P2.cdr seps].
           unfold v8 in *.
           rewrite Heq in Heqv9.
           inversion Heqv9; subst.
           ecancel_assumption.
       }
-      }
-      {
-        repeat compile_step.
-        (*TODO: why not handled by compile_step?*)
-        (*TODO: need free vars from downto_inv?*)
-        eapply compile_nlet_as_nlet_eq.
-        eapply compile_felem_cswap;
-          [solve[repeat compile_step] .. | ].
-        
-        repeat compile_step.
-        
-        (*TODO: automate w/ compile cswap*)
-        rewrite cswap_same.
-        
-        compile_step.
-        destruct v6.
-
-         (*TODO: why not handled by compile_step?*)
-        (*TODO: need free vars from downto_inv?*)
-        eapply compile_nlet_as_nlet_eq.
-        eapply compile_felem_cswap;
-          [solve[repeat compile_step] .. | ].
-        
-        repeat compile_step.
-        
-        (*TODO: automate w/ compile cswap*)
-        rewrite cswap_same.
-        
-        compile_step.
-        destruct v6.
-
-        repeat compile_step.
       }
     Qed.
   End MontLadder.
