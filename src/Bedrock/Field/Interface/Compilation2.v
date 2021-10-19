@@ -350,6 +350,8 @@ simple eapply compile_sub; shelve : compiler.
 simple eapply compile_square; shelve : compiler.
 #[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.inv _) _))) =>
 simple eapply compile_inv; shelve : compiler.
+#[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.of_Z M_pos _) _))) =>
+simple eapply compile_felem_small_literal; shelve : compiler.
 
 
 #[export] Hint Immediate relax_bounds_FElem : ecancel_impl.
@@ -358,3 +360,5 @@ simple eapply compile_inv; shelve : compiler.
 
 #[export] Hint Extern 1 (spec_of _) => (simple refine (@spec_of_BinOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
 #[export] Hint Extern 1 (spec_of _) => (simple refine (@spec_of_UnOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
+#[export] Hint Extern 1 (spec_of felem_copy) => (simple refine (@spec_of_felem_copy _ _ _ _ _ _ _ _)) : typeclass_instances.
+#[export] Hint Extern 1 (spec_of felem_small_literal) => (simple refine (@spec_of_felem_small_literal _ _ _ _ _ _ _ _)) : typeclass_instances.
