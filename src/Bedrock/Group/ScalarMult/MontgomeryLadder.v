@@ -589,28 +589,58 @@ Section __.
       compile_step.
       destruct v6.
 
+      (*TODO: tries to apply felem_copy*)
+      eapply compile_nlet_as_nlet_eq.
+      simple eapply compile_alloc.
+      eassumption.
+      compile_step.
+      compile_step.
+      todo (*spec_of*).
+      solve[repeat compile_step].
+      solve[repeat compile_step].
+      assert ((FElem (Some tight_bounds) out_ptr3 uninit3
+         ⋆ (FElem (Some tight_bounds) out_ptr0 (fst (f1, f2))
+            ⋆ FElem (Some tight_bounds) out_ptr2 (snd (f1, f2))
+            ⋆ seps
+                [FElem (Some tight_bounds) out_ptr (fst (f, f0));
+                FElem (Some tight_bounds) out_ptr1 (snd (f, f0)); 
+                FElem (Some tight_bounds) pU U; FElem out_bound pOUT OUT; 
+                Scalar pK K; R])) m'9) by
+          todo (* TODO: bounds*).
+      clear H12.
+      ecancel_assumption.
+      solve[repeat compile_step].
+
+      compile_step.
+      (*TODO: tries to apply felem_copy*)
+      eapply compile_nlet_as_nlet_eq.
+      simple eapply compile_mul;
       repeat compile_step.
       todo (*spec_of*).
-      shelve (*TODO: what is r?*).
-      shelve (*TODO: no R in conclusion?*).
-        
+      assert ((FElem (Some loose_bounds) out_ptr3 v6
+         ⋆ seps
+             [FElem (Some loose_bounds) out_ptr0 f1; FElem (Some loose_bounds) out_ptr2 f2;
+             FElem (Some loose_bounds) out_ptr f; FElem (Some loose_bounds) out_ptr1 f0; 
+             FElem (Some loose_bounds) pU U; FElem out_bound pOUT OUT; 
+             Scalar pK K; R]) m'10) by
+          todo (* TODO: bounds*).
+      clear H10.
+      ecancel_assumption.
       solve[repeat compile_step].
-      todo (*spec_of*).
-      shelve (*TODO: what is r?*).
-
       solve[repeat compile_step].
-      repeat compile_step.
-      (*TODO: clear pred_seps didn't work?*)
-
-      cbv[ fold_right ExprReflection.compile word.b2w] in montladder_body.
-
-      shelve.
+      assert (seps [FElem (Some tight_bounds) pU U; FElem (Some tight_bounds) pOUT OUT; Scalar pK K; R] H11)
+        by todo.
+      clear m'11.
+      shelve (*TODO: why OUT in hyp?*).
+      }
 
       Unshelve.
       all: todo.
-      }
     Qed.
-    
+    Eval 
+      cbv[ fold_right ExprReflection.compile word.b2w montladder_body gs
+                      cmd_downto cmd_downto_fresh]
+      in montladder_body.
   End MontLadder.
 End __.
 
