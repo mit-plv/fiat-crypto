@@ -40,49 +40,18 @@ Section Representation.
                            n_bytes
                            (map byte.unsigned bs)).
 
-  Local Instance frep : FieldRepresentation :=
-    { felem := list word;
+  Local Instance frep : FieldRepresentation := {
       feval := eval_words;
       feval_bytes := eval_bytes;
-      felem_size_in_bytes :=
-        Z.of_nat n * bytes_per_word width;
+      felem_size_in_words := n;
       encoded_felem_size_in_bytes := n_bytes;
-      bytes_in_bounds :=
-        fun bs => list_Z_bounded_by byte_bounds (map byte.unsigned bs);
-      FElem := Bignum n;
+      bytes_in_bounds bs := list_Z_bounded_by byte_bounds (map byte.unsigned bs);
       bounds := list (option zrange);
-      bounded_by :=
-        fun bs ws =>
-          list_Z_bounded_by bs (map word.unsigned ws);
+      bounded_by bs ws := list_Z_bounded_by bs (map word.unsigned ws);
       loose_bounds := loose_bounds;
       tight_bounds := tight_bounds;
     }.
 
   Local Instance frep_ok : FieldRepresentation_ok.
-  Proof.
-    constructor.
-    { cbn [felem_size_in_bytes frep].
-      push_Zmod. autorewrite with zsimplify_fast.
-      reflexivity. }
-    { cbv [Placeholder FElem felem_size_in_bytes frep].
-      repeat intro.
-      cbv [Lift1Prop.ex1]; split; intros;
-        repeat match goal with
-               | H : anybytes _ _ _ |- _ =>
-                 apply Array.anybytes_to_array_1 in H
-               | H : exists _, _ |- _ => destruct H
-               | H : _ /\ _ |- _ => destruct H
-               end.
-      { eexists; eapply Bignum_of_bytes; try eassumption.
-        destruct Bitwidth.width_cases; subst width; revert H0; cbn; lia. }
-      { eapply Bignum_to_bytes in H; sepsimpl.
-        let H := match goal with
-                 | H : Array.array _ _ _ _ _ |- _ => H end in
-        eapply Array.array_1_to_anybytes in H.
-        unshelve (erewrite (_:_*_=_); eassumption).
-        rewrite H; destruct Bitwidth.width_cases as [W|W];
-          rewrite W; cbn; clear; lia. } }
-    { cbn [bounded_by frep]; intros.
-      apply relax_bounds; auto. }
-  Qed.
+  Proof. split. cbn [bounded_by frep]; intros. apply relax_bounds; auto. Qed.
 End Representation.
