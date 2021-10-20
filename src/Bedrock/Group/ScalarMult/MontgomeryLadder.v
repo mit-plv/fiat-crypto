@@ -1,5 +1,3 @@
-(* NOTE: the plan is to completely redo montladder after ladderstep is updated to use stackalloc *)
-
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Alloc.
 Require Import Rupicola.Lib.SepLocals.
@@ -12,11 +10,13 @@ Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Specs.ScalarField.
 Require Import Crypto.Util.NumTheoryUtil.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
+
+Require Import bedrock2.ZnWords.
+
 Local Open Scope Z_scope.
 
 Import NoExprReflectionCompiler.
 Import DownToCompiler.
-
 (* TODO: migrate these to rupicola.
    Currently break when put in Notations.v
  *)
@@ -69,9 +69,6 @@ Section __.
       let/n Z1 := stack 0 in
       let/n X2 := stack u in
       let/n Z2 := stack 1 in
-     (* let/d P1 := (1, 0) in
-        let/d P2 := (X2, Z2) in
-      *)
       let/n swap := false in
       let/n count := scalarbits in
       let/n (X1, Z1, X2, Z2, swap) :=
@@ -79,7 +76,6 @@ Section __.
            \<X1, Z1, X2, Z2, swap\> (* initial state *)
            (Z.to_nat count)
            (fun state i =>
-              (*TODO: should this be a /n?*)
               let '\<X1, Z1, X2, Z2, swap\> := state in
               let/n s_i := testbit i in
               let/n swap := xorb swap s_i in
@@ -101,14 +97,12 @@ Section __.
 
     Instance spec_of_montladder : spec_of "montladder" :=
       fnspec! "montladder"
-            (pOUT pK pU (*pX1 pZ1 pX2 pZ2*) : word)
+            (pOUT pK pU : word)
             / (K : scalar) (U : F M_pos) (* inputs *)
-            out_bound OUT (*X1 Z1 X2 Z2 *) (* intermediates *)
+            out_bound OUT
             R,
       { requires tr mem :=
           (FElem out_bound pOUT OUT * Scalar pK K * FElem (Some tight_bounds) pU U
-              (** FElem pX1 X1 * FElem pZ1 Z1
-               * FElem pX2 X2 * FElem pZ2 Z2*)
                *  R)%sep mem;
         ensures tr' mem' :=
           tr' = tr
@@ -120,8 +114,6 @@ Section __.
                             U in
               (FElem (Some tight_bounds) pOUT OUT * Scalar pK K
                * FElem (Some tight_bounds) pU U
-                (** FElem pX1 X1 * FElem pZ1 Z1
-                * FElem pX2 X2 * FElem pZ2 Z2 *)
                 * R)%sep mem') }.
 
     (* Adding word.unsigned_of_Z_1 and word.unsigned_of_Z_0 as hints to
@@ -227,24 +219,6 @@ Section __.
     lia.
   Qed.
 
-  (*TODO: tactics not working; specs not properly generated *)
-(*
-  Derive montladder_body SuchThat
- (let args := ["OUT"; "K"; "U"] in
-  let montladder := ("montladder", (args, [], montladder_body)) in
-  __rupicola_program_marker montladder_gallina ->
-  forall functions : list bedrock_func,
-  spec_of_felem_cswap functions ->
-  spec_of_felem_small_literal functions ->
-  spec_of_felem_small_literal functions ->
-  spec_of_felem_copy functions ->
-  spec_of_sctestbit functions ->
-  spec_of_ladderstep functions ->
-  spec_of_UnOp un_inv functions ->
-  spec_of_BinOp bin_mul functions ->
-  spec_of_montladder (montladder :: functions))
-  As montladder_correct.*)
-
   (* TODO: why doesn't `Existing Instance` work?
     Existing Instance spec_of_sctestbit.*)
   Hint Extern 1 (spec_of sctestbit) =>
@@ -265,7 +239,32 @@ Section __.
       end].
   
   Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (cswap _ _ _) _))) =>
-    compile_cswap; shelve : compiler.
+  compile_cswap; shelve : compiler.
+    
+    Ltac compile_ladderstep :=
+      eapply compile_ladderstep;
+      [ | | | | | |
+        | compile_step;
+          match goal with
+          | [|- (WeakestPrecondition.cmd _ _ _ _ _ (_ (match ?e with _ => _ end)))] =>
+            let v := fresh "v" in
+            remember e as v;
+            destruct v as [[[? ?] ?] ?]
+          end].
+    Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (ladderstep_gallina _ _ _ _ _) _))) =>
+    compile_ladderstep; shelve : compiler.
+
+    
+    Lemma word_unsigned_of_Z_eq z
+      : 0 <= z < 2 ^ width -> word.unsigned (word.of_Z z : word) = z.
+    Proof.
+      intros.
+      rewrite word.unsigned_of_Z.
+      rewrite word.wrap_small; auto.
+    Qed.
+
+    Hint Extern 8 (word.unsigned (word.of_Z _) = _) =>
+    simple eapply word_unsigned_of_Z_eq; [ ZnWords |] : compiler.
 
   
 (* TODO: this one is dangerous to have as a hint.
@@ -297,6 +296,18 @@ simple eapply compile_felem_copy; shelve : compiler.
       
       { pose proof scalarbits_bound; lia. }
       2:{
+        pose proof scalarbits_bound.
+        apply word_unsigned_of_Z_eq.
+        lia.
+      }
+      solve[repeat compile_step].
+      repeat compile_step.
+      unfold v6.
+      compile_step.
+      solve[repeat compile_step].
+      solve[repeat compile_step].
+      solve[repeat compile_step].
+      2:{
         instantiate (1:=word.of_Z (Z.of_nat i)).
         rewrite word.unsigned_of_Z.
         rewrite word.wrap_small; auto.
@@ -304,30 +315,8 @@ simple eapply compile_felem_copy; shelve : compiler.
         lia.
       }
       solve[repeat compile_step].
-      {
-        repeat compile_step.
-        eapply compile_nlet_as_nlet_eq.
-        eapply compile_ladderstep; [ solve[repeat compile_step] .. |].
-        
-        compile_step.
-        (*TODO: why is this needed?*)
-        remember v8 as v9.
-        destruct v9 as [[[? ?] ?] ?].
-        unfold v6.
-        compile_step.
-        solve[repeat compile_step].
-        solve[repeat compile_step].
-        solve[repeat compile_step].
-        2:{
-          instantiate (1:=word.of_Z (Z.of_nat i)).
-          rewrite word.unsigned_of_Z.
-          rewrite word.wrap_small; auto.
-          pose proof scalarbits_bound.
-          lia.
-        }
-      solve[repeat compile_step].
-        compile_step.
-        compile_step.        
+      compile_step.
+      compile_step.        
       solve[repeat compile_step].
       {
           cbn [P2.car P2.cdr seps].
@@ -336,8 +325,7 @@ simple eapply compile_felem_copy; shelve : compiler.
           inversion Heqv9; subst.
           ecancel_assumption.
       }
-      }
-    Qed.
+  Qed.
   End MontLadder.
 End __.
 

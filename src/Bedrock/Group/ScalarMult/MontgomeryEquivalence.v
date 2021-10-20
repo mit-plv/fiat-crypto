@@ -1,5 +1,6 @@
 Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
+Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.ControlFlow.CondSwap.
 Require Import bedrock2.Semantics.
 Require Import coqutil.Tactics.Tactics.
@@ -18,6 +19,14 @@ Section Equivalence.
   (*TODO: which of ladderstep_gallina and M.xzladderstep should we change? either?*)
   Definition reorder_pairs {A B C D} (p : A * B * C * D) : (A*B)*(C*D) :=
     ((fst (fst (fst p)), snd (fst (fst p))),(snd (fst p), snd p)).
+
+  Lemma invert_reorder_pairs {A B C D} (p : A * B * C * D) w x y z
+    : reorder_pairs p = (w,x, (y,z)) <-> p = (w,x,y,z).
+  Proof.
+    destruct p as [[[? ?] ?] ?].
+    cbv.
+    intuition congruence.
+  Qed.
   
   Lemma ladderstep_gallina_equiv X1 P1 P2 :
     reorder_pairs (ladderstep_gallina X1 (fst P1) (snd P1) (fst P2) (snd P2)) =
@@ -41,11 +50,9 @@ Section Equivalence.
       a24 cswap scalarbits (Z.testbit n) point.
   Proof.
     intros. cbv [montladder_gallina M.montladder].
-    cbv [Rewriter.Util.LetIn.Let_In Notations.nlet]. cbn [fst snd].
+    cbv [Rewriter.Util.LetIn.Let_In Notations.nlet]. cbn [fst snd P2.car P2.cdr].
     rewrite downto_while.
     unfold Alloc.stack.
-  Abort.
-  (*
     match goal with
     | |- ?lhs = ?rhs =>
       match lhs with
@@ -57,18 +64,13 @@ Section Equivalence.
                        (fun s1 s2 =>
                           s1 =
                           let '(x2, z2, x3, z3, swap, i) := s2 in
-                          (x2, z2, (x3, z3), swap, i)))
+                          (\<x2, z2, x3, z3, swap\>, i)))
               with (init2:=rinit);
               [ remember (while rtest rbody fuel rinit) | .. ]
         end end end.
 
     (* first, finish proving post-loop equivalence *)
-    { destruct_products; cbn [fst snd]. rewrite cswap_pair. cbn [fst snd].
-      repeat match goal with
-             | |- context [match ?e with | pair _ _ => _ end] =>
-               destr e
-             end.
-      reflexivity. }
+    { destruct_products; cbn [fst snd]. reflexivity. }
 
     (* then, prove loop-equivalence preconditions *)
     { intros. destruct_products. congruence. }
@@ -89,10 +91,13 @@ Section Equivalence.
              | _ => reflexivity
              end. 
 
-             (* fixup added during merge without investigation: *)
-             setoid_rewrite <-E; setoid_rewrite E3; trivial.
+      rewrite <- ladderstep_gallina_equiv in E3.
+      rewrite invert_reorder_pairs in E3.
+      simpl in E3.
+      rewrite E1 in E3.
+      congruence.
     }
     { rewrite Z2Nat.id by lia. reflexivity. }
   Qed.
-   *)
+
 End Equivalence.
