@@ -2,7 +2,9 @@ Require Import coqutil.Byte.
 Require Import Rupicola.Lib.Api.
 Require Import Crypto.Algebra.Hierarchy.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+Require Import Crypto.Bedrock.Field.Synthesis.Generic.Bignum.
 Local Open Scope Z_scope.
+Import bedrock2.Memory.
 
 Class FieldParameters :=
   { (** mathematical parameters **)
@@ -31,24 +33,24 @@ Class FieldParameters :=
     felem_small_literal : string;
   }.
 
-Class FieldParameters_ok {field_parameters : FieldParameters} :=
-  { M_prime : Znumtheory.prime M;
-    (* TODO: a24_ok *)
-  }.
+Class FieldParameters_ok {field_parameters : FieldParameters} := {
+  M_prime : Znumtheory.prime M
+}.
 
 Class FieldRepresentation
       {field_parameters : FieldParameters}
       {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}
        :=
-  { felem : Type;
+  { felem := list word;
     feval : felem -> F M_pos;
     feval_bytes : list byte -> F M_pos;
-    felem_size_in_bytes : Z; (* for stack allocation *)
+    felem_size_in_words : nat;
+    felem_size_in_bytes : Z := Z.of_nat felem_size_in_words * bytes_per_word width; (* for stack allocation *)
     encoded_felem_size_in_bytes : nat; (* number of bytes when serialized *)
     bytes_in_bounds : list byte -> Prop;
 
     (* Memory layout *)
-    FElem : word -> felem -> mem -> Prop;
+    FElem : word -> list word -> mem -> Prop := Bignum felem_size_in_words;
     FElemBytes : word -> list byte -> mem -> Prop :=
       fun addr bs =>
         (emp (length bs = encoded_felem_size_in_bytes)
@@ -71,16 +73,49 @@ Definition Placeholder
 Class FieldRepresentation_ok
       {field_parameters : FieldParameters}
       {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}
-      {field_representation : FieldRepresentation} :=
-  {  felem_size_in_bytes_mod :
-       felem_size_in_bytes mod Memory.bytes_per_word width = 0;
-     FElem_from_bytes :
-      forall px,
-        Lift1Prop.iff1 (Placeholder px) (Lift1Prop.ex1 (FElem px));
+      {field_representation : FieldRepresentation} := {
     relax_bounds :
       forall X : felem, bounded_by tight_bounds X
                         -> bounded_by loose_bounds X;
   }.
+
+Section BignumToFieldRepresentationAdapterLemmas.
+  Context
+  {field_parameters : FieldParameters}
+  {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}
+  {field_representation : FieldRepresentation}.
+  Context {word_ok : @word.ok width word} {map_ok : @map.ok word Init.Byte.byte mem}.
+
+  Lemma felem_size_in_bytes_mod :
+         felem_size_in_bytes mod Memory.bytes_per_word width = 0.
+  Proof. apply Z_mod_mult. Qed.
+  Lemma FElem_from_bytes p : Lift1Prop.iff1 (Placeholder p) (Lift1Prop.ex1 (FElem p)).
+  Proof.
+    cbv [Placeholder FElem felem_size_in_bytes].
+    repeat intro.
+    cbv [Lift1Prop.ex1]; split; intros;
+      repeat match goal with
+             | H : anybytes _ _ _ |- _ => eapply Array.anybytes_to_array_1 in H
+             | H : exists _, _ |- _ => destruct H
+             | H : _ /\ _ |- _ => destruct H
+             end.
+      all : repeat match goal with
+             | H : anybytes _ _ _ |- _ => eapply Array.anybytes_to_array_1 in H
+             | H : exists _, _ |- _ => destruct H
+             | H : _ /\ _ |- _ => destruct H
+             end.
+    { eexists; eapply Bignum_of_bytes; try eassumption.
+      destruct Bitwidth.width_cases; subst width; revert H0; cbn; lia. }
+    { eapply Bignum_to_bytes in H; sepsimpl.
+      let H := match goal with
+               | H : Array.array _ _ _ _ _ |- _ => H end in
+      eapply Array.array_1_to_anybytes in H.
+      unshelve (erewrite (_:_*_=_); eassumption).
+      rewrite H; destruct Bitwidth.width_cases as [W|W];
+        symmetry in W; destruct W; cbn; clear; lia. }
+  Qed.
+End BignumToFieldRepresentationAdapterLemmas.
+
 Section FunctionSpecs.
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.

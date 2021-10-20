@@ -18,10 +18,8 @@ Require Import Crypto.Bedrock.Field.Common.Arrays.ByteBounds.
 Local Open Scope Z_scope.
 
 Section Bignum.
-  Import Bitwidth bedrock2.Memory bedrock2.ptsto_bytes.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Import bedrock2.Memory bedrock2.ptsto_bytes.
+  Context  {width} {word : Interface.word width} {mem : map.map word Init.Byte.byte}.
 
   Local Notation k := (bytes_per_word width).
   Definition Bignum (n : nat) (px : word) (x : list word) : mem -> Prop :=
@@ -33,7 +31,8 @@ Section Bignum.
     sep (emp (length x = n_bytes)) (array ptsto (word.of_Z 1) px x).
 
   Section Proofs.
-    Context {ok : Types.ok}.
+    Context {word_ok : @word.ok width word} {map_ok : @map.ok word Init.Byte.byte mem}
+      {BW : coqutil.Word.Bitwidth.Bitwidth width}.
 
     (* note: LittleEndianList would work better here if Translation used it too *)
     Local Notation lew_combine :=
@@ -56,14 +55,14 @@ Section Bignum.
         rewrite array_append.
         rewrite Scalars.scalar_of_bytes with (l:=List.firstn _ _);
           lazymatch goal with
-          | [ |- _ <= width ] => destruct width_cases; lia
+          | [ |- _ <= width ] => destruct Bitwidth.width_cases; lia
           | _ => idtac
           end.
         2:{
           rewrite firstn_length, Min.min_l by lia.
-          destruct width_cases; subst width; trivial. }
+          destruct Bitwidth.width_cases; subst width; trivial. }
         rewrite chunk_app_chunk; cycle 1.
-        { destruct width_cases; subst width; cbv; inversion 1. }
+        { destruct Bitwidth.width_cases; subst width; cbv; inversion 1. }
         { rewrite firstn_length; lia. }
         cbn [length array map]; progress (cancel; cbv [seps]).
         unshelve erewrite (_ : forall n m, (S n = S m <-> n = m)).
@@ -71,7 +70,7 @@ Section Bignum.
         rewrite <-IHn by (rewrite skipn_length; lia); clear IHn.
         Morphisms.f_equiv. f_equal. f_equal.
         rewrite word.unsigned_of_Z_1, Z.mul_1_l, firstn_length, H.
-        destruct width_cases; subst width; cbn; lia. }
+        destruct Bitwidth.width_cases; subst width; cbn; lia. }
     Qed.
 
     (* TODO: move to coqutil.List.Datatypes *)
@@ -96,15 +95,15 @@ Section Bignum.
         auto using HList.tuple.length_to_list. }
       rewrite Bignum_of_bytes by eassumption; cbv [Bignum].
       rewrite chunk_flat_map_exact, map_map; cycle 1.
-      { destruct width_cases; subst width; inversion 1. }
+      { destruct Bitwidth.width_cases; subst width; inversion 1. }
       { intros; apply HList.tuple.length_to_list. }
       erewrite List.map_ext with (g:=fun x=>x), map_id; try cancel; cbv [seps].
       { rewrite sep_emp_emp. setoid_rewrite H. 
         cbv [Lift1Prop.iff1 emp]; intuition (
-          destruct width_cases; subst width; subst; cbn in *; try nia). }
+          destruct Bitwidth.width_cases; subst width; subst; cbn in *; try nia). }
       intros.
       (* note: this mess would unnecessary with LittleEndianList *)
-      destruct width_cases; subst width; simpl k; simpl length(*+arguments*);
+      destruct Bitwidth.width_cases; subst width; simpl k; simpl length(*+arguments*);
         unshelve erewrite (_:HList.tuple.of_list _=_);
         rewrite ?LittleEndian.combine_split; try exact eq_refl;
         rewrite Z.mod_small, word.of_Z_unsigned;
