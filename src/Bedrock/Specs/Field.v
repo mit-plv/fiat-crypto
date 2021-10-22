@@ -53,7 +53,8 @@ Class FieldRepresentation
     FElem : word -> list word -> mem -> Prop := Bignum felem_size_in_words;
     FElemBytes : word -> list byte -> mem -> Prop :=
       fun addr bs =>
-        (emp (length bs = encoded_felem_size_in_bytes)
+        (emp (length bs = encoded_felem_size_in_bytes
+              /\ bytes_in_bounds bs)
          * array ptsto (word.of_Z 1) addr bs)%sep;
 
     bounds : Type;
@@ -115,6 +116,16 @@ Section BignumToFieldRepresentationAdapterLemmas.
         symmetry in W; destruct W; cbn; clear; lia. }
   Qed.
 End BignumToFieldRepresentationAdapterLemmas.
+
+Section ToFromBytes.
+  Definition nth_byte (x : Z) (n : nat) : byte :=
+    byte.of_Z (Z.shiftr x (8 * Z.of_nat n)).
+  Definition Z_to_bytes (x : Z) (n : nat) : list byte :=
+    List.map (nth_byte x) (seq 0 n).
+  Definition Z_from_bytes (bs : list byte) : Z :=
+    List.fold_right
+      (fun b acc => Z.shiftl acc 8 + byte.unsigned b) 0 bs.
+End ToFromBytes.
 
 Section FunctionSpecs.
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
@@ -208,9 +219,10 @@ Section FunctionSpecs.
         (exists Ra, (FElem px x * Ra)%sep mem)
         /\ (FElemBytes pout out * Rr)%sep mem;
       ensures tr' mem' :=
-        tr = tr' /\
-        exists bs, feval_bytes bs = feval x
-                   /\ (FElemBytes pout bs * Rr)%sep mem' }.
+        tr = tr'
+        /\ let bs := Z_to_bytes (F.to_Z (feval x))
+                                encoded_felem_size_in_bytes in
+           (FElemBytes pout bs * Rr)%sep mem' }.
 
   Instance spec_of_felem_copy : spec_of felem_copy :=
     fnspec! felem_copy (pout px : word) / (out x : felem) R,

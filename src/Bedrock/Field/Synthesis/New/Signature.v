@@ -14,6 +14,7 @@ Require Import coqutil.Map.Interface.
 Require Import coqutil.Tactics.Tactics.
 Require Import coqutil.Word.Interface.
 Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Common.Arrays.MaxBounds.
 Require Import Crypto.Bedrock.Field.Common.Names.MakeNames.
@@ -126,7 +127,8 @@ Section WithParameters.
       (FElemBytes pbs bs)
       (sep (map:=mem)
            (emp (map:=mem)
-                (length bs = encoded_felem_size_in_bytes))
+                (length bs = encoded_felem_size_in_bytes
+                 /\ bytes_in_bounds bs))
            (Array.array
               (Scalars.truncated_scalar access_size.one)
               (word.of_Z 1) pbs (map byte.unsigned bs))).
@@ -508,8 +510,11 @@ Section WithParameters.
                 list_Z_bounded_by
                   tight_bounds
                   (API.interp (res _) (map byte.unsigned bs))).
-    Context (FElemBytes_in_bounds :
-      forall p bs R m, (FElemBytes p bs ⋆ R)%sep m -> bytes_in_bounds bs).
+
+    Lemma FElemBytes_in_bounds p bs R m :
+      (FElemBytes p bs ⋆ R)%sep m ->
+      bytes_in_bounds bs.
+    Proof. cbv [FElemBytes]. intros; sepsimpl. assumption. Qed.
 
     Local Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
@@ -546,7 +551,7 @@ Section WithParameters.
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok relax_bounds res_Wf
           res_bounds res_eq res_valid tight_bounds_length
-          tight_bounds_tighter_than_max FElemBytes_in_bounds.
+          tight_bounds_tighter_than_max.
       subst inlengths insizes outsizes. cbv [spec_of_from_bytes].
       cbv [from_bytes_insizes from_bytes_outsizes from_bytes_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
@@ -598,24 +603,23 @@ Section WithParameters.
                length byte_bounds = encoded_felem_size_in_bytes)
             (res_eq : forall x,
                 bounded_by tight_bounds x ->
-                feval_bytes
-                  (map byte.of_Z
-                       (API.interp (res _) (map word.unsigned x)))
-                = feval x)
+                API.interp (res _) (map word.unsigned x)
+                = Partition.partition
+                    (ModOps.weight 8 1)
+                    encoded_felem_size_in_bytes
+                    (F.to_Z (feval x)))
             (res_bounds : forall x,
                 bounded_by tight_bounds x ->
-                list_Z_bounded_by
-                  byte_bounds
-                  (API.interp (res _)
-                              (map word.unsigned x))).
+                bytes_in_bounds
+                  (map byte.of_Z
+                       (API.interp (res _)
+                                   (map word.unsigned x)))).
 
     Local Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
-      | |- context [length (API.interp (res _) (map word.unsigned ?x))] =>
-        specialize (res_bounds x ltac:(auto));
-          rewrite (length_list_Z_bounded_by _ _ res_bounds);
-          try congruence; rewrite !map_length;
-          felem_to_array; sepsimpl; congruence
+      | |- context [length (Partition.partition _ _ _)] =>
+          autorewrite with distr_length;
+          cbv [FElemBytes] in *; sepsimpl; solve [auto]
       end.
 
     Local Notation t :=
@@ -634,14 +638,33 @@ Section WithParameters.
     Let outsizes := to_bytes_outsizes.
     Let inlengths := to_bytes_inlengths.
 
+    (* helper lemma about partition and nth_byte *)
+    Lemma nth_byte_partition x nbytes :
+      map (nth_byte x) (seq 0 nbytes) =
+      map byte.of_Z
+          (Partition.partition (ModOps.weight 8 1) nbytes x).
+    Proof.
+      cbv [Partition.partition nth_byte]. rewrite map_map.
+      apply map_ext; intros. rewrite Z.shiftr_div_pow2 by Lia.lia.
+      apply byte.unsigned_inj. rewrite !byte.unsigned_of_Z.
+      cbv [byte.wrap ModOps.weight].
+      autorewrite with zsimplify.
+      rewrite Nat2Z.inj_succ.
+      autorewrite with zsimplify.
+      rewrite Z.add_comm, Z.pow_add_r by Lia.lia.
+      rewrite !Modulo.Z.mod_pull_div by Lia.lia.
+      rewrite Z.mod_mod by auto with zarith.
+      reflexivity.
+    Qed.
+
     Lemma to_bytes_correct f :
       f = make_bedrock_func to_bytes insizes outsizes inlengths res ->
       forall functions,
         spec_of_to_bytes (f :: functions).
     Proof using byte_bounds_length byte_bounds_tighter_than_max
           inname_gen_varname_gen_disjoint
-          outname_gen_varname_gen_disjoint ok res_Wf res_bounds
-          res_eq res_valid.
+          outname_gen_varname_gen_disjoint ok res_Wf
+          res_eq res_valid res_bounds.
       subst inlengths insizes outsizes. cbv [spec_of_to_bytes].
       cbv [to_bytes_insizes to_bytes_outsizes to_bytes_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
@@ -650,27 +673,33 @@ Section WithParameters.
         use_translate_func_correct
           constr:((map word.unsigned x, tt)) Rr.
         all:try translate_func_precondition_hammer.
+        all:cbn [type.app_curried fst snd].
+        all:try rewrite res_eq by auto.
+        { eapply ByteBounds.byte_bounds_range_iff.
+          auto using ByteBounds.partition_bounded_by. }
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.
           all:solve_equivalence_side_conditions. } }
-      { postcondition_simplify; [ | ].
-        { (* output correctness *)
-          eapply res_eq; auto. }
-        { (* separation-logic postcondition *)
-          eapply Proper_sep_iff1;
-            [ solve [apply FElemBytes_array_truncated_scalar_iff1]
-            | reflexivity | ].
-          sepsimpl; [ | ].
-          { rewrite !map_length.
-            solve_equivalence_side_conditions. }
-          { erewrite ByteBounds.byte_map_unsigned_of_Z,
-            ByteBounds.map_byte_wrap_bounded
-              by eauto using relax_list_Z_bounded_by.
-            change (Z.of_nat (bytes_per access_size.one)) with 1 in *.
-            match goal with
-              H : map word.unsigned _ = API.interp (res _) _ |- _ =>
-              rewrite <-H end.
-            auto. } } }
+      { postcondition_simplify; [ ].
+        (* separation-logic postcondition *)
+        eapply Proper_sep_iff1;
+          [ solve [apply FElemBytes_array_truncated_scalar_iff1]
+          | reflexivity | ].
+        cbv [Z_to_bytes].
+        sepsimpl; [ | | ].
+        { autorewrite with distr_length. reflexivity. }
+        { rewrite nth_byte_partition, <-res_eq by auto.
+          eapply res_bounds; auto. }
+        { rewrite nth_byte_partition.
+          erewrite ByteBounds.byte_map_unsigned_of_Z,
+          ByteBounds.map_byte_wrap_bounded
+            by apply ByteBounds.partition_bounded_by.
+          rewrite <-res_eq by auto.
+          match goal with
+            H : map word.unsigned _ = API.interp (res _) _ |- _ =>
+            rewrite <-H end.
+          change (Z.of_nat (bytes_per access_size.one)) with 1 in *.
+          auto. } }
     Qed.
   End ToBytes.
 End WithParameters.

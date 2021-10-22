@@ -441,18 +441,14 @@ Section UnsaturatedSolinas.
       as Hcorrect.
 
     eapply Signature.from_bytes_correct with (res:=res from_bytes_op);
-      handle_side_conditions; [ | | ].
+      handle_side_conditions; [ | ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ. congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-    { (*  [bytes_in_bounds] does not seem to be sufficiently specified by FieldRepresentation_ok *)
-    (* forall (p0 : Interface.word.rep) (bs : list Init.Byte.byte)
-       (R : Interface.map.rep -> Prop) (m : Interface.map.rep),
-       Separation.sep (FElemBytes p0 bs) R m -> bytes_in_bounds bs *)
-  Admitted.
+  Qed.
 
   Lemma to_bytes_func_correct :
     valid_func (res to_bytes_op _) ->
@@ -468,18 +464,16 @@ Section UnsaturatedSolinas.
       handle_side_conditions; [ | ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
-      rewrite Hcorrect. simpl_map_unsigned.
-      FtoZ.
-      rewrite Partition.eval_partition by apply Freeze.wprops_bytes.
-      lazymatch goal with
-      | |- (((?x mod ?m) mod ?s) mod ?m = ?x mod ?m)%Z =>
-        pose proof (Z.mod_pos_bound x m);
-          pose proof modulus_fits_in_bytes;
-          rewrite (Z.mod_small (x mod m) s) by auto with zarith
-      end.
-      rewrite Z.mod_mod by auto with zarith; reflexivity. }
+      rewrite Hcorrect.
+      rewrite F.to_Z_of_Z, <-M_eq.
+      reflexivity. }
     { (* output *bounds* are correct *)
       intros. rewrite Hcorrect by auto.
+      cbn [bytes_in_bounds Representation.frep
+                           Signature.field_representation].
+      erewrite ByteBounds.byte_map_unsigned_of_Z,
+      ByteBounds.map_byte_wrap_bounded
+        by apply ByteBounds.partition_bounded_by.
       apply partition_bounded_by_prime_bytes_bounds.
       apply Z.mod_pos_bound.
       apply modulus_fits_in_bytes. }
