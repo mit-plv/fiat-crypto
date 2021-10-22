@@ -43,7 +43,7 @@ Section Equivalence.
     intros. cbv [montladder_gallina M.montladder].
     cbv [Rewriter.Util.LetIn.Let_In Notations.nlet]. cbn [fst snd].
     rewrite downto_while.
-    unfold Alloc.alloc.
+    unfold Alloc.stack.
   Abort.
   (*
     match goal with

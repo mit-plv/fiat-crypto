@@ -2,7 +2,6 @@
 
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Alloc.
-Require Import Rupicola.Lib.SeparationLogicImpl.
 Require Import Rupicola.Lib.SepLocals.
 Require Import Rupicola.Lib.ControlFlow.CondSwap.
 Require Import Rupicola.Lib.ControlFlow.DownTo.
@@ -75,10 +74,10 @@ Section __.
     Definition montladder_gallina
                (scalarbits : Z) (testbit:nat ->bool) (u:F M_pos)
       : F M_pos :=
-      let/n X1 := alloc 1 in
-      let/n Z1 := alloc 0 in
-      let/n X2 := alloc u in
-      let/n Z2 := alloc 1 in
+      let/n X1 := stack 1 in
+      let/n Z1 := stack 0 in
+      let/n X2 := stack u in
+      let/n Z2 := stack 1 in
      (* let/d P1 := (1, 0) in
         let/d P2 := (X2, Z2) in
       *)
@@ -101,7 +100,7 @@ Section __.
            ) in
       let/n (X1, X2) := cswap swap X1 X2 in
       let/n (Z1, Z2) := cswap swap Z1 Z2 in
-      let/n r := alloc (F.inv Z1) in
+      let/n r := stack (F.inv Z1) in
       let/n r := (X1 * r) in
       r.
   End Gallina.
@@ -413,7 +412,7 @@ Section __.
       unfold F.zero.
       
       simple apply compile_nlet_as_nlet_eq.
-      simple eapply compile_alloc; eauto.
+      simple eapply compile_stack; eauto.
       (*TODO: is this doing allocation?*)
       compile_step.
       compile_step.
@@ -421,13 +420,13 @@ Section __.
       compile_step.
       compile_step.
       simple apply compile_nlet_as_nlet_eq.
-      simple eapply compile_alloc; eauto.
+      simple eapply compile_stack; eauto.
       compile_step.
       simple eapply compile_felem_small_literal; eauto.
       compile_step.
       compile_step.
       simple apply compile_nlet_as_nlet_eq.
-      simple eapply compile_alloc; eauto.
+      simple eapply compile_stack; eauto.
       compile_step.
       simple eapply compile_felem_copy; eauto.
       admit (*TODO: hint not working*).
@@ -436,7 +435,7 @@ Section __.
       compile_step.
       compile_step.
       simple apply compile_nlet_as_nlet_eq.
-      simple eapply compile_alloc; eauto.
+      simple eapply compile_stack; eauto.
       compile_step.
       simple eapply compile_felem_small_literal; eauto.
       compile_step.
