@@ -1,5 +1,4 @@
 Require Import Rupicola.Lib.Api. Import bedrock2.WeakestPrecondition.
-Require Import Rupicola.Lib.SeparationLogicImpl.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
@@ -26,7 +25,7 @@ Section __.
 
     Definition ladderstep_gallina
                (X1 X2 Z2 X3 Z3: F M_pos) : F M_pos * F M_pos * F M_pos * F M_pos :=
-      let/n A := alloc (X2+Z2) in
+      let/n A := stack (X2+Z2) in
       let/n X2 := (X2-Z2) in
       let/n Z2 := (X3+Z3) in
       let/n Z3 := (X3-Z3) in
@@ -34,7 +33,7 @@ Section __.
       let/n Z2 := (Z2*X2) in
       let/n A := (A^2) in
       let/n X2 := (X2^2) in
-      let/n E := alloc (A-X2) in
+      let/n E := stack (A-X2) in
       let/n X3 := (Z3+Z2) in
       let/n X3 := X3^2 in
       let/n Z3 := (Z3-Z2) in
