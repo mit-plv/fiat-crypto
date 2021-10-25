@@ -265,13 +265,6 @@ Section __.
 
     Hint Extern 8 (word.unsigned (word.of_Z _) = _) =>
     simple eapply word_unsigned_of_Z_eq; [ ZnWords |] : compiler.
-
-  
-(* TODO: this one is dangerous to have as a hint.
-   How should we automate this? check for an identifier? marker like `stack`? seems fragile
-#[export] Hint Extern 10 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ _ _))) =>
-simple eapply compile_felem_copy; shelve : compiler.
- *)
   
   Derive montladder_body SuchThat
            (let args := ["OUT"; "K"; "U" (*;"X1"; "Z1"; "X2"; "Z2" *)] in
@@ -292,8 +285,6 @@ simple eapply compile_felem_copy; shelve : compiler.
       unfold F.zero.
 
       repeat compile_step.
-      simple eapply compile_felem_copy; repeat compile_step.
-      
       { pose proof scalarbits_bound; lia. }
       2:{
         pose proof scalarbits_bound.

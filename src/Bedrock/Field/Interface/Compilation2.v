@@ -352,6 +352,8 @@ simple eapply compile_square; shelve : compiler.
 simple eapply compile_inv; shelve : compiler.
 #[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.of_Z M_pos _) _))) =>
 simple eapply compile_felem_small_literal; shelve : compiler.
+#[export] Hint Extern 10 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ ?v _))) =>
+is_var v; simple eapply compile_felem_copy; shelve : compiler.
 
 
 #[export] Hint Immediate relax_bounds_FElem : ecancel_impl.
