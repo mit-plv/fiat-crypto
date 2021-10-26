@@ -261,6 +261,39 @@ Section __.
 
     Hint Extern 8 (word.unsigned (word.of_Z _) = _) =>
     simple eapply word_unsigned_of_Z_eq; [ ZnWords |] : compiler.
+
+    (*TODO: should this go in core rupicola?*)
+    (* FIXME find a way to automate the application of these copy lemmas *)
+    (* N.B. should only be added to compilation tactics that solve their subgoals,
+     since this applies to any shape of goal *)
+    Lemma compile_copy_bool {tr m l functions} (x: bool) :
+      let v := x in
+      forall {P} {pred: P v -> predicate}
+             {k: nlet_eq_k P v} {k_impl}
+             x_expr var,
+
+        WeakestPrecondition.dexpr m l x_expr (word.of_Z (Z.b2z v)) ->
+
+        (let v := v in
+         <{ Trace := tr;
+            Memory := m;
+            Locals := map.put l var (word.of_Z (Z.b2z v));
+            Functions := functions }>
+         k_impl
+         <{ pred (k v eq_refl) }>) ->
+        <{ Trace := tr;
+           Memory := m;
+           Locals := l;
+           Functions := functions }>
+        cmd.seq (cmd.set var x_expr) k_impl
+        <{ pred (nlet_eq [var] v k) }>.
+    Proof.
+      intros.
+      repeat straightline.
+      eauto.
+    Qed.
+    Hint Extern 10 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ ?v _))) =>
+    is_var v; simple eapply compile_copy_bool; shelve : compiler.
     
     Derive montladder_body SuchThat
            (let args := ["OUT"; "K"; "U"] in
@@ -276,35 +309,15 @@ Section __.
       pose proof scalarbits_pos.
       pose proof unsigned_of_Z_1.
       pose proof unsigned_of_Z_0.
+      pose proof scalarbits_bound.
       compile_setup.
       unfold F.one.
-      unfold F.zero.
-
-      repeat compile_step.
-      { pose proof scalarbits_bound; lia. }
-      2:{
-        pose proof scalarbits_bound.
-        apply word_unsigned_of_Z_eq.
-        lia.
-      }
-      solve[repeat compile_step].
-      repeat compile_step.
-      unfold v6.
-      compile_step.
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      2:{
-        instantiate (1:=word.of_Z (Z.of_nat i)).
-        rewrite word.unsigned_of_Z.
-        rewrite word.wrap_small; auto.
-        pose proof scalarbits_bound.
-        lia.
-      }
-      solve[repeat compile_step].
-      compile_step.
-      compile_step.        
-      solve[repeat compile_step].
+      unfold F.zero.     
+      
+      repeat compile_step;
+        [ lia | | apply word_unsigned_of_Z_eq; lia | ];
+        repeat compile_step.
+      (*TODO: the final compile step takes ~30s to fail *)
       {
         cbn [P2.car P2.cdr seps].
         unfold v8 in *.
@@ -325,3 +338,4 @@ Local Unset Printing Coercions.
  *)
 Local Set Printing Width 160.
 Redirect "Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body" Print montladder_body.
+
