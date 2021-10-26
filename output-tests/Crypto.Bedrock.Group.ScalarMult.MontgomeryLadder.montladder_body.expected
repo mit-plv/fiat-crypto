@@ -22,7 +22,7 @@ noskips
                                          (cmd.seq (cmd.call [] felem_cswap ["swap"; "X1"; "X2"])
                                             (cmd.seq (cmd.call [] felem_cswap ["swap"; "Z1"; "Z2"])
                                                (cmd.seq (cmd.call [] "ladderstep" ["U"; "X1"; "Z1"; "X2"; "Z2"])
-                                                  (cmd.seq (cmd.call ["swap"] sctestbit ["K"; "_gs_i0"])
+                                                  (cmd.seq (cmd.set "swap" (ExprReflection.compile (ExprReflection.EVar "s_i")))
                                                      (fold_right (fun (v : string) (c : cmd) => cmd.seq (cmd.unset v) c) cmd.skip ["s_i"])))))))
                                    (cmd.seq (cmd.call [] felem_cswap ["swap"; "X1"; "X2"])
                                       (cmd.seq (cmd.call [] felem_cswap ["swap"; "Z1"; "Z2"])
