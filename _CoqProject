@@ -44,6 +44,7 @@ src/Arithmetic/ModularArithmeticPre.v
 src/Arithmetic/ModularArithmeticTheorems.v
 src/Arithmetic/Partition.v
 src/Arithmetic/PrimeFieldTheorems.v
+src/Arithmetic/FLia.v
 src/Arithmetic/Primitives.v
 src/Arithmetic/Saturated.v
 src/Arithmetic/UniformWeight.v
