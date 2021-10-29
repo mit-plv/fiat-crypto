@@ -8,6 +8,7 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
 Require Import Crypto.Spec.CompleteEdwardsCurve  Crypto.Curves.Edwards.AffineProofs.
 Require Import Coq.setoid_ring.Field_theory.
+Require Import Field_tac.
 
 Module M.
   Section EdwardsMontgomery.
@@ -113,9 +114,7 @@ Module M.
         end.
 
     Global Instance EdwardsMontgomeryIsomorphism {_1 _2 _3 _4}
-           (* {discriminant_nonzero:id(4*aw*aw*aw + 27*bw*bw <> 0)} *)
            {char_ge_12:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 12}
-           (* {char_ge_28:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 28} XXX: this is a workaround for nsatz assuming arbitrary characteristic *)
       :
       @Group.isomorphic_commutative_groups
         (@E.point F Feq Fone Fadd Fmul ae de)
@@ -136,6 +135,7 @@ Module M.
       eapply Group.commutative_group_by_isomorphism.
       { eapply (E.edwards_curve_commutative_group(a:=ae)(d:=de)(nonzero_a:=nonzero_ae)(square_a:=square_ae)(nonsquare_d:=nonsquare_de)). }
       Time all:t.
+      Add Field _field : (Algebra.Field.field_theory_for_stdlib_tactic (T:=F)).
       fsatz. 
       fsatz. 
       fsatz. 
@@ -332,7 +332,7 @@ Module M.
       }
       fsatz.
       fsatz.
-      fsatz.
+      field_simplify_eq; repeat split; auto; fsatz.
       fsatz.
       {
         rewrite <- H in H3.
