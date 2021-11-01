@@ -27,8 +27,9 @@ Section Compile.
       (Scalar x_ptr x * R)%sep mem ->
       map.get locals x_var = Some x_ptr ->
 
+      wi = word.of_Z (Z.of_nat i) ->
+      Z.of_nat i < 2^width ->
       map.get locals i_var = Some wi ->
-      word.unsigned wi = Z.of_nat i ->
 
       (let v := v in
        forall m,
@@ -54,9 +55,7 @@ Section Compile.
                  | cbv [dlet.dlet] in *|-; sepsimpl ].
     cbn [length] in *. destruct_lists_of_known_length.
     subst_lets_in_goal. subst.
-    match goal with H : word.unsigned _ = Z.of_nat _ |- _ =>
-                    rewrite H in *
-    end.
+    rewrite word.unsigned_of_Z_nowrap by lia.
     repeat straightline'; eauto.
   Qed.
 End Compile.
