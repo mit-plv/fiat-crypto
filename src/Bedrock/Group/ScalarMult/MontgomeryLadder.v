@@ -25,7 +25,7 @@ Notation "'let/n' ( w , x , y , z ) := val 'in' body" :=
         IdentParsing.TC.ident_to_string x;
         IdentParsing.TC.ident_to_string y;
         IdentParsing.TC.ident_to_string z]
-        val  (fun '(w, x, y, z) => body))
+        val  (fun '\<w, x, y, z\> => body))
     (at level 200, w ident, x  ident, y ident, z ident, body at level 200,
      only parsing).
 
@@ -237,19 +237,6 @@ Section __.
     Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (cswap _ _ _) _))) =>
     compile_cswap; shelve : compiler.
     
-    Ltac compile_ladderstep :=
-      eapply compile_ladderstep;
-      [ | | | | | |
-        | compile_step;
-          match goal with
-          | [|- (WeakestPrecondition.cmd _ _ _ _ _ (_ (match ?e with _ => _ end)))] =>
-            let v := fresh "v" in
-            remember e as v;
-            destruct v as [[[? ?] ?] ?]
-          end].
-    Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (ladderstep_gallina _ _ _ _ _) _))) =>
-    compile_ladderstep; shelve : compiler.
-
     
     Lemma word_unsigned_of_Z_eq z
       : 0 <= z < 2 ^ width -> word.unsigned (word.of_Z z : word) = z.
@@ -263,9 +250,6 @@ Section __.
     simple eapply word_unsigned_of_Z_eq; [ ZnWords |] : compiler.
 
     (*TODO: should this go in core rupicola?*)
-    (* FIXME find a way to automate the application of these copy lemmas *)
-    (* N.B. should only be added to compilation tactics that solve their subgoals,
-     since this applies to any shape of goal *)
     Lemma compile_copy_bool {tr m l functions} (x: bool) :
       let v := x in
       forall {P} {pred: P v -> predicate}
@@ -326,14 +310,7 @@ Section __.
     Proof.
       pose proof scalarbits_pos.
       pose proof scalarbits_bound.
-      compile_setup.
-      repeat compile_step.
-      {
-        unfold v8 in *.
-        rewrite Heq in Heqv9.
-        inversion Heqv9; subst.
-        ecancel_assumption.
-      }
+      compile.
     Qed.
   End MontLadder.
 End __.
