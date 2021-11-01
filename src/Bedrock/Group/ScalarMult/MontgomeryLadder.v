@@ -294,6 +294,24 @@ Section __.
     Qed.
     Hint Extern 10 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ ?v _))) =>
     is_var v; simple eapply compile_copy_bool; shelve : compiler.
+
+
+    Hint Resolve unsigned_of_Z_0 : compiler_cleanup.
+    Hint Resolve unsigned_of_Z_1 : compiler_cleanup.
+    Hint Unfold F.one F.zero : compiler_cleanup.
+
+    Hint Extern 10 (_ < _) => lia : compiler_cleanup.
+
+    (* TODO: update the original definition in bedrock2 *)
+    Ltac find_implication xs y ::=
+      multimatch xs with
+      | cons ?x _ =>
+          (* Only proceed if we can find an implication between x and y *)
+          let _ := constr:(ltac:(solve [auto 1 with nocore ecancel_impl])
+                            : Lift1Prop.impl1 x y) in
+          constr:(O)
+      | cons _ ?xs => let i := find_implication xs y in constr:(S i)
+      end.
     
     Derive montladder_body SuchThat
            (let args := ["OUT"; "K"; "U"] in
@@ -307,19 +325,10 @@ Section __.
            As montladder_correct.
     Proof.
       pose proof scalarbits_pos.
-      pose proof unsigned_of_Z_1.
-      pose proof unsigned_of_Z_0.
       pose proof scalarbits_bound.
       compile_setup.
-      unfold F.one.
-      unfold F.zero.     
-      
-      repeat compile_step;
-        [ lia | | apply word_unsigned_of_Z_eq; lia | ];
-        repeat compile_step.
-      (*TODO: the final compile step takes ~30s to fail *)
+      repeat compile_step.
       {
-        cbn [P2.car P2.cdr seps].
         unfold v8 in *.
         rewrite Heq in Heqv9.
         inversion Heqv9; subst.
