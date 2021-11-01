@@ -24,7 +24,7 @@ Section __.
     Local Open Scope F_scope.
 
     Definition ladderstep_gallina
-               (X1 X2 Z2 X3 Z3: F M_pos) : F M_pos * F M_pos * F M_pos * F M_pos :=
+               (X1 X2 Z2 X3 Z3: F M_pos) : \<< F M_pos, F M_pos, F M_pos, F M_pos \>> :=
       let/n A := stack (X2+Z2) in
       let/n X2 := (X2-Z2) in
       let/n Z2 := (X3+Z3) in
@@ -43,7 +43,7 @@ Section __.
       let/n Z2 := a24*E in
       let/n Z2:= (A+Z2) in
       let/n Z2 := E*Z2 in
-      (X2, Z2, X3, Z3).
+      \<X2, Z2, X3, Z3\>.
   End Gallina.
 
   Instance spec_of_ladderstep : spec_of "ladderstep" :=
@@ -61,7 +61,7 @@ Section __.
         /\ exists X4 Z4 X5 Z5 (* output values *)
                   : F M_pos,
           (ladderstep_gallina X1 X2 Z2 X3 Z3
-           = (X4, Z4, X5, Z5))
+           = \<X4, Z4, X5, Z5\>)
           /\ (FElem (Some tight_bounds) pX1 X1
               * FElem (Some tight_bounds) pX2 X4
               * FElem (Some tight_bounds) pZ2 Z4
@@ -89,9 +89,8 @@ Section __.
       map.get l Z3_var = Some Z3_ptr ->
 
       (let v := v in
-       forall X4 Z4 X5 Z5 (* output values *) m'
-              (Heq : ladderstep_gallina x1 x2 z2 x3 z3
-                     = (X4, Z4, X5, Z5)),
+       forall (* output values *) m',
+        let '\<X4, Z4, X5, Z5\> := ladderstep_gallina x1 x2 z2 x3 z3 in
          (FElem (Some tight_bounds) X1_ptr x1
           * FElem (Some tight_bounds) X2_ptr X4
           * FElem (Some tight_bounds) Z2_ptr Z4
@@ -119,11 +118,10 @@ Section __.
                  v k) }>.
   Proof.
     repeat straightline'.
-    handle_call;
-      lazymatch goal with
-      | |- sep _ _ _ => ecancel_assumption
-      | _ => solve [eauto]
-      end.
+    handle_call.
+    apply H6.
+    rewrite H9.
+    ecancel_assumption.
   Qed.
 
   Local Ltac ecancel_assumption ::=  ecancel_assumption_impl.
@@ -143,6 +141,9 @@ Section __.
 End __.
 
 Existing Instance spec_of_ladderstep.
+
+Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (ladderstep_gallina _ _ _ _ _) _))) =>
+       simple eapply compile_ladderstep; shelve : compiler.
 
 Import Syntax.
 Local Unset Printing Coercions.
