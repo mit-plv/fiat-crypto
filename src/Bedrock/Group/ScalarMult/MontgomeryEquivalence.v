@@ -17,13 +17,13 @@ Section Equivalence.
   Context {field_parameters : FieldParameters}.
 
   (*TODO: which of ladderstep_gallina and M.xzladderstep should we change? either?*)
-  Definition reorder_pairs {A B C D} (p : A * B * C * D) : (A*B)*(C*D) :=
-    ((fst (fst (fst p)), snd (fst (fst p))),(snd (fst p), snd p)).
+  Definition reorder_pairs {A B C D} (p : \<<A , B , C , D\>>) : (A*B)*(C*D) :=
+    (P2.car p, P2.car (P2.cdr p),((P2.car (P2.cdr (P2.cdr p))),(P2.cdr (P2.cdr (P2.cdr p))))).
 
-  Lemma invert_reorder_pairs {A B C D} (p : A * B * C * D) w x y z
-    : reorder_pairs p = (w,x, (y,z)) <-> p = (w,x,y,z).
+  Lemma invert_reorder_pairs {A B C D} (p : \<<A , B , C , D\>>) w x y z
+    : reorder_pairs p = (w,x, (y,z)) <-> p = \<w,x,y,z\>.
   Proof.
-    destruct p as [[[? ?] ?] ?].
+    destruct p as [? [? [? ?]]].
     cbv.
     intuition congruence.
   Qed.
@@ -91,11 +91,11 @@ Section Equivalence.
              | _ => reflexivity
              end. 
 
-      rewrite <- ladderstep_gallina_equiv in E3.
-      rewrite invert_reorder_pairs in E3.
-      simpl in E3.
-      rewrite E1 in E3.
-      congruence.
+      rewrite <- ladderstep_gallina_equiv in E2.
+      rewrite invert_reorder_pairs in E2.
+      simpl in E2.
+      rewrite E2.
+      reflexivity.
     }
     { rewrite Z2Nat.id by lia. reflexivity. }
   Qed.
