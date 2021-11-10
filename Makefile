@@ -33,6 +33,7 @@ NORMAL:=$(shell tput sgr0)
 	install-rewriter clean-rewriter rewriter \
 	install-coqprime clean-coqprime coqprime coqprime-all \
 	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
+	bedrock2-compiler clean-bedrock2-compiler install-bedrock2-compiler \
 	rupicola clean-rupicola install-rupicola \
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	uninstall-standalone uninstall-standalone-ocaml uninstall-standalone-haskell \
@@ -390,10 +391,14 @@ REWRITER_FOLDER := rewriter
 REWRITER_SRC := $(REWRITER_FOLDER)/src
 COQPRIME_FOLDER := coqprime
 COQPRIME_SRC := $(COQPRIME_FOLDER)/src
-BEDROCK2_FOLDER := rupicola/bedrock2/bedrock2
+BEDROCK2_ROOT_FOLDER := rupicola/bedrock2
+BEDROCK2_FOLDER := $(BEDROCK2_ROOT_FOLDER)/bedrock2
 BEDROCK2_SRC := $(BEDROCK2_FOLDER)/src
 BEDROCK2_NAME := bedrock2
-COQUTIL_FOLDER := rupicola/bedrock2/deps/coqutil
+BEDROCK2_COMPILER_FOLDER := $(BEDROCK2_ROOT_FOLDER)/compiler
+BEDROCK2_COMPILER_SRC := $(BEDROCK2_COMPILER_FOLDER)/src
+BEDROCK2_COMPILER_NAME := compiler
+COQUTIL_FOLDER := $(BEDROCK2_ROOT_FOLDER)/deps/coqutil
 COQUTIL_SRC := $(COQUTIL_FOLDER)/src
 COQUTIL_NAME := coqutil
 RUPICOLA_FOLDER := rupicola
@@ -419,12 +424,12 @@ endif
 
 ifneq ($(SKIP_BEDROCK2),1)
 ifneq ($(EXTERNAL_BEDROCK2),1)
-COQPATH_TEMP:=${CURDIR_SAFE}/$(RUPICOLA_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(BEDROCK2_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
-deps: bedrock2 rupicola
-$(VOFILES): | bedrock2 rupicola
-$(ALLDFILES): | bedrock2 rupicola
-cleanall:: clean-bedrock2 clean-rupicola
-install: install-bedrock2 install-rupicola
+COQPATH_TEMP:=${CURDIR_SAFE}/$(RUPICOLA_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(BEDROCK2_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(BEDROCK2_COMPILER_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
+deps: bedrock2 bedrock2-compiler rupicola
+$(VOFILES): | bedrock2 bedrock2-compiler rupicola
+$(ALLDFILES): | bedrock2 bedrock2-compiler rupicola
+cleanall:: clean-bedrock2 clean-bedrock2-compiler clean-rupicola
+install: install-bedrock2 install-bedrock2-compiler install-rupicola
 endif
 endif
 
@@ -480,13 +485,22 @@ install-coqutil:
 	$(MAKE) --no-print-directory -C $(COQUTIL_FOLDER) install
 
 bedrock2: coqutil
-	$(MAKE) --no-print-directory -C $(BEDROCK2_FOLDER) noex
+	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) bedrock2_noex
 
 clean-bedrock2:
-	$(MAKE) --no-print-directory -C $(BEDROCK2_FOLDER) clean
+	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) clean_bedrock2
 
 install-bedrock2:
-	$(MAKE) --no-print-directory -C $(BEDROCK2_FOLDER) install
+	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) install_bedrock2
+
+bedrock2-compiler: bedrock2
+	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) compiler_noex
+
+clean-bedrock2-compiler:
+	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) clean_compiler
+
+install-bedrock2-compiler:
+	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) install_compiler
 
 rupicola: bedrock2
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) lib
