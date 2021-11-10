@@ -494,7 +494,9 @@ install-bedrock2:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) install_bedrock2
 
 bedrock2-compiler: bedrock2
+	# We have to build the compiler *including* examples to get compilerExamples/MMIO.v
 	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) compiler_noex
+	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) compiler_ex
 
 clean-bedrock2-compiler:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) clean_compiler
