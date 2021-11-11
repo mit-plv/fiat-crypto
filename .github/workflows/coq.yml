@@ -12,12 +12,13 @@ jobs:
     strategy:
       matrix:
         env:
-        - { COQ_VERSION: "8.13.1", COQ_PACKAGE: "coq-8.13.1 libcoq-8.13.1-ocaml-dev", SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-11" }
-        - { COQ_VERSION: "8.13.1", COQ_PACKAGE: "coq-8.13.1 libcoq-8.13.1-ocaml-dev", SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-08" }
-        - { COQ_VERSION: "8.13.1", COQ_PACKAGE: "coq-8.13.1 libcoq-8.13.1-ocaml-dev", SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05" }
+        - { COQ_VERSION: "8.14.0", COQ_PACKAGE: "coq-8.14.0 libcoq-8.14.0-ocaml-dev", SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-11" }
+        - { COQ_VERSION: "8.14.0", COQ_PACKAGE: "coq-8.14.0 libcoq-8.14.0-ocaml-dev", SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-08" }
+        - { COQ_VERSION: "8.13.2", COQ_PACKAGE: "coq-8.13.2 libcoq-8.13.2-ocaml-dev", SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05" }
         - { COQ_VERSION: "8.12.2", COQ_PACKAGE: "coq-8.12.2 libcoq-8.12.2-ocaml-dev", SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05" }
-        - { COQ_VERSION: "8.11.1", COQ_PACKAGE: "coq-8.11.1 libcoq-8.11.1-ocaml-dev", SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05" }
+        - { COQ_VERSION: "8.11.2", COQ_PACKAGE: "coq-8.11.2 libcoq-8.11.2-ocaml-dev", SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05" }
         - { COQ_VERSION: "master", COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-master-daily", EXTRA_GH_REPORTIFY: "--warnings" }
+        - { COQ_VERSION: "v8.14" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.14-daily" }
         - { COQ_VERSION: "v8.13" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.13-daily" }
         - { COQ_VERSION: "v8.12" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.12-daily" }
         - { COQ_VERSION: "v8.11" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.11-daily" }

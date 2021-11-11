@@ -13,7 +13,7 @@ jobs:
 
     env:
       NJOBS: "2"
-      COQ_VERSION: "8.13.1"
+      COQ_VERSION: "8.14.0"
 
     steps:
     - uses: actions/checkout@v2
