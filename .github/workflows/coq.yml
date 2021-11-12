@@ -21,7 +21,7 @@ jobs:
         - { COQ_VERSION: "v8.13" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.13-daily" }
         - { COQ_VERSION: "v8.12" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.12-daily" }
         - { COQ_VERSION: "v8.11" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.11-daily" }
-        ghc: [ 'latest' ]
+        ghc: [ '9.0.1' ]
         cabal: [ 'latest' ]
         os: ['ubuntu-latest']
         include:
