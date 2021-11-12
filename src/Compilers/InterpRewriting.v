@@ -117,7 +117,7 @@ Local Ltac reify_transformation interp_base_type interp_op ctx es T cont :=
              | _ => ctx
              end in
   lazymatch T with
-  | ?f ?e
+  | ?f ?e'
     => let ctx := lazymatch ctx with
                   | context[exist _ f _] => ctx
                   | _ => let hf := head f in
@@ -135,7 +135,7 @@ Local Ltac reify_transformation interp_base_type interp_op ctx es T cont :=
                                       ctx)
                   end in
        reify_transformation
-         ctx es e
+         ctx es e'
          ltac:(fun ctx es re
                => let idx := find ctx f in
                   cont ctx es (transform idx re))
