@@ -23,23 +23,21 @@ jobs:
         - { COQ_VERSION: "v8.11" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.11-daily" }
         ghc: [ 'latest' ]
         cabal: [ 'latest' ]
-        os: ['ubuntu-latest']
         include:
         - env: { COQ_VERSION: "Ubuntu LTS", COQ_PACKAGE: "coq libcoq-ocaml-dev", SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "" }
-          os: 'ubuntu-20.04'
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ['ubuntu-upstream-latest']
     env: ${{ matrix.env }}
 
     steps:
     - uses: actions/checkout@v2
       with:
         submodules: recursive
-    - name: install Coq
+    - name: install dependencies
       run: |
         if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
         sudo apt-get -o Acquire::Retries=30 update -q
-        sudo apt-get -o Acquire::Retries=30 install ocaml-findlib $COQ_PACKAGE -y --allow-unauthenticated
+        sudo apt-get -o Acquire::Retries=30 install jq python-is-python3 ocaml-findlib libgmp3-dev $COQ_PACKAGE -y --allow-unauthenticated
     - uses: haskell/actions/setup@v1
       with:
         ghc-version: ${{ matrix.ghc }}
