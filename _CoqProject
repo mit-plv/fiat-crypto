@@ -144,6 +144,7 @@ src/Bedrock/Specs/Group.v
 src/Bedrock/Specs/ScalarField.v
 src/Bedrock/Standalone/StandaloneHaskellMain.v
 src/Bedrock/Standalone/StandaloneOCamlMain.v
+src/Curves/EdwardsMontgomery.v
 src/Curves/Edwards/AffineProofs.v
 src/Curves/Edwards/Pre.v
 src/Curves/Edwards/XYZT/Basic.v
