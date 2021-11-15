@@ -33,16 +33,18 @@ for fname in asm_files:
     if name in solinasprimes.keys():
         n, prime = solinasprimes[name]
         binary = 'src/ExtractionOCaml/unsaturated_solinas'
+        binary_descr = 'Unsaturated Solinas'
         invocation = ' '.join((binary, name, '64', n, shlex.quote(prime), dict(mul='carry_mul',square='carry_square')[op], '--no-wide-int', '--shiftr-avoid-uint1', '--tight-bounds-mul-by', '1.000001', '--hints-file', shlex.quote(fname)))
     elif name in montgomeryprimes.keys():
         prime = montgomeryprimes[name]
         binary = 'src/ExtractionOCaml/word_by_word_montgomery'
+        binary_descr = 'Word-by-Word Montgomery'
         invocation = ' '.join((binary, name, '64', shlex.quote(prime), op, '--no-wide-int', '--shiftr-avoid-uint1', '--hints-file', shlex.quote(fname)))
     else:
         assert False, name
     if output_makefile:
         short_fname = '_'.join(removesuffix(removeprefix(fname, 'fiat-amd64/'),'.asm').replace('_solinas','').split('_')[:-2])
-        description = f'{name} {prime} ({short_fname})'
+        description = f'{name} {prime} ({short_fname}) (${op}) ({binary_descr})'
         print(f'''
 test-amd64-files-print-report:: {fname}.status
 \t@ test $$(cat $<) -eq 0 || echo 'TEST AMD64 {description} ... \t$(RED)$(BOLD)FAILED$(NORMAL)$(NC)'
