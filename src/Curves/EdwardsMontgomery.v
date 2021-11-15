@@ -202,18 +202,17 @@ Module M.
     Proof.
       eapply Group.commutative_group_by_isomorphism.
       { eapply (E.edwards_curve_commutative_group(a:=ae)(d:=de)(nonzero_a:=nonzero_ae)(square_a:=square_ae)(nonsquare_d:=nonsquare_de)). }   
-      { (* Bijection *)
+      { (* Bijection, not automated due to non-local case analysis *)
         t; split.
-        7-10: assert (f <> 0) by t2.
-        9-10: assert (f0 <> 1) by fsatz; destruct H1; split.
-        all: fsatz.
+        all: try solve [t2].
+        all: assert (f <> 0) by t2; assert (f0 <> 1) by fsatz; destruct H1; split; fsatz.
       }
       { (* Equality *)
         t.
         7: t5.
         all: try split; t3.
       }
-      { (* Addition *)
+      { (* Addition: numerous calls to clear below are needed to make fsatz run in reasonable time *)
         t.
 
         4, 21-25: split; fsatz.
