@@ -42,6 +42,18 @@ Module Nat.
   Global Instance fold_right_Proper_Permutation_mul
   : Proper (eq ==> @Permutation _ ==> eq) (fold_right Nat.mul) | 100.
   Proof using Type. apply fold_right_Proper_commutative_associative_Permutation; [ hnf; apply Nat.mul_comm | hnf; apply Nat.mul_assoc ]. Qed.
+
+  Global Instance fold_right_Proper_Permutation_land
+  : Proper (eq ==> @Permutation _ ==> eq) (fold_right Nat.land) | 100.
+  Proof using Type. apply fold_right_Proper_commutative_associative_Permutation; [ hnf; apply Nat.land_comm | hnf; apply Nat.land_assoc ]. Qed.
+
+  Global Instance fold_right_Proper_Permutation_lor
+  : Proper (eq ==> @Permutation _ ==> eq) (fold_right Nat.lor) | 100.
+  Proof using Type. apply fold_right_Proper_commutative_associative_Permutation; [ hnf; apply Nat.lor_comm | hnf; apply Nat.lor_assoc ]. Qed.
+
+  Global Instance fold_right_Proper_Permutation_lxor
+  : Proper (eq ==> @Permutation _ ==> eq) (fold_right Nat.lxor) | 100.
+  Proof using Type. apply fold_right_Proper_commutative_associative_Permutation; [ hnf; apply Nat.lxor_comm | hnf; intros; symmetry; apply Nat.lxor_assoc ]. Qed.
 End Nat.
 
 Module N.
@@ -52,6 +64,18 @@ Module N.
   Global Instance fold_right_Proper_Permutation_mul
   : Proper (eq ==> @Permutation _ ==> eq) (fold_right N.mul) | 100.
   Proof using Type. apply fold_right_Proper_commutative_associative_Permutation; [ hnf; apply N.mul_comm | hnf; apply N.mul_assoc ]. Qed.
+
+  Global Instance fold_right_Proper_Permutation_land
+  : Proper (eq ==> @Permutation _ ==> eq) (fold_right N.land) | 100.
+  Proof using Type. apply fold_right_Proper_commutative_associative_Permutation; [ hnf; apply N.land_comm | hnf; apply N.land_assoc ]. Qed.
+
+  Global Instance fold_right_Proper_Permutation_lor
+  : Proper (eq ==> @Permutation _ ==> eq) (fold_right N.lor) | 100.
+  Proof using Type. apply fold_right_Proper_commutative_associative_Permutation; [ hnf; apply N.lor_comm | hnf; apply N.lor_assoc ]. Qed.
+
+  Global Instance fold_right_Proper_Permutation_lxor
+  : Proper (eq ==> @Permutation _ ==> eq) (fold_right N.lxor) | 100.
+  Proof using Type. apply fold_right_Proper_commutative_associative_Permutation; [ hnf; apply N.lxor_comm | hnf; intros; symmetry; apply N.lxor_assoc ]. Qed.
 End N.
 
 Module Z.
@@ -62,4 +86,16 @@ Module Z.
   Global Instance fold_right_Proper_Permutation_mul
   : Proper (eq ==> @Permutation _ ==> eq) (fold_right Z.mul) | 100.
   Proof using Type. apply fold_right_Proper_commutative_associative_Permutation; [ hnf; apply Z.mul_comm | hnf; apply Z.mul_assoc ]. Qed.
+
+  Global Instance fold_right_Proper_Permutation_land
+  : Proper (eq ==> @Permutation _ ==> eq) (fold_right Z.land) | 100.
+  Proof using Type. apply fold_right_Proper_commutative_associative_Permutation; [ hnf; apply Z.land_comm | hnf; apply Z.land_assoc ]. Qed.
+
+  Global Instance fold_right_Proper_Permutation_lor
+  : Proper (eq ==> @Permutation _ ==> eq) (fold_right Z.lor) | 100.
+  Proof using Type. apply fold_right_Proper_commutative_associative_Permutation; [ hnf; apply Z.lor_comm | hnf; apply Z.lor_assoc ]. Qed.
+
+  Global Instance fold_right_Proper_Permutation_lxor
+  : Proper (eq ==> @Permutation _ ==> eq) (fold_right Z.lxor) | 100.
+  Proof using Type. apply fold_right_Proper_commutative_associative_Permutation; [ hnf; apply Z.lxor_comm | hnf; intros; symmetry; apply Z.lxor_assoc ]. Qed.
 End Z.
