@@ -93,6 +93,108 @@ Inductive EquivalenceCheckingError :=
 | Code_after_ret
 .
 
+Fixpoint explain_array_unification_error
+         (singular plural : string)
+         (explain_idx_unification_error : idx -> idx -> list string)
+         (asm_array PHOAS_array : list idx) (start_idx : nat)
+  : list string
+  := match asm_array, PHOAS_array with
+     | [], []
+       => ["Internal Error: Unifiable " ++ plural]
+     | [], PHOAS_array
+       => ["The synthesized " ++ singular ++ " contains " ++ show (List.length PHOAS_array) ++ " more values than the assembly " ++ singular ++ "."]
+     | asm_array, []
+       => ["The assembly " ++ singular ++ " contains " ++ show (List.length asm_array) ++ " more values than the synthesized " ++ singular ++ "."]
+     | asm_value :: asm_array, PHOAS_value :: PHOAS_array
+       => if Decidable.dec (asm_value = PHOAS_value)
+          then explain_array_unification_error singular plural explain_idx_unification_error asm_array PHOAS_array (S start_idx)
+          else ((["index " ++ show start_idx ++ ": " ++ show asm_value ++ " != " ++ show PHOAS_value]%string)
+                  ++ explain_idx_unification_error asm_value PHOAS_value
+               )%list
+     end%string%list.
+
+Definition explain_mismatch_from_state (st : symbolic_state) (asm_idx PHOAS_idx : idx) : list string
+  := let describe_from_state idx
+       := match reverse_lookup_widest_reg st.(symbolic_reg_state) idx, reverse_lookup_flag st.(symbolic_flag_state) idx, reverse_lookup_mem st.(symbolic_mem_state) idx with
+          | Some r, _, _ => Some ("the value of the register " ++ show r)
+          | None, Some f, _ => Some ("the value of the flag " ++ show f)
+          | None, None, Some (ptr, ptsto) => Some ("the memory location at pseudo-address " ++ Hex.show_N ptr ++ " which points to dag index " ++ show ptsto ++ " which holds the value " ++ show (reveal st.(dag_state) 1 ptsto))
+          | None, None, None => None
+          end%string in
+     let is_old idx := match reveal st.(dag_state) 1 idx with
+                       | ExprApp (old _ _, _) => true
+                       | _ => false
+                       end in
+     let make_old_descr kind idx
+       := match is_old idx, describe_from_state idx with
+          | true, Some descr
+            => [show idx ++ " is " ++ descr ++ "."]
+          | true, None
+            => [show idx ++ " is a special value no longer present in the symbolic machine state at the end of execution."]
+          | _, _ => []
+          end%string in
+     ((make_old_descr "assembly" asm_idx)
+        ++ (make_old_descr "synthesized" PHOAS_idx))%list.
+
+Fixpoint explain_idx_unification_error (st : symbolic_state) (fuel : nat) (asm_idx PHOAS_idx : idx) {struct fuel} : list string
+  := let recr := match fuel with
+                 | O => fun _ _ => ["Internal error: out of fuel in explain_expr_unification_error"]
+                 | S fuel => explain_idx_unification_error st fuel
+                 end in
+     let reveal_idx idx := List.nth_error st.(dag_state) (N.to_nat idx) in
+     let reveal_show_idx idx
+       := match reveal_idx idx with
+          | Some n => show n
+          | None => show idx
+          end in
+     let reveal_show_node '(op, e)
+       := ("(" ++ show op ++ ", " ++ @show_list _ reveal_show_idx e ++ ")")%string in
+     match reveal_idx asm_idx, reveal_idx PHOAS_idx with
+     | None, None
+       => ["Internal error: neither expression is in the dag"]
+     | None, Some _
+       => ["Internal error: assembly index " ++ show asm_idx ++ " is not in the dag"]
+     | Some _, None
+       => ["Internal error: synthesized index " ++ show PHOAS_idx ++ " is not in the dag"]
+     | Some ((asm_o, asm_e) as asm), Some ((PHOAS_o, PHOAS_e) as PHOAS)
+       => (([show asm ++ " != " ++ show PHOAS]%string)
+             ++ (if Decidable.dec (asm_o = PHOAS_o)
+                 then
+                   explain_array_unification_error "argument" "arguments" recr asm_e PHOAS_e 0
+                 else (([reveal_show_node asm ++ " != " ++ reveal_show_node PHOAS
+                         ; "Operation mismatch: " ++ show asm_o ++ " != " ++ show PHOAS_o]%string)
+                         ++ explain_mismatch_from_state st asm_idx PHOAS_idx)%list))%list
+     end%string.
+
+Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list idx)) (start_idx : nat) (st : symbolic_state)
+  : list string
+  := let fuel := (10 + (2 * List.length st.(dag_state)))%nat (* we since the dag is acyclic, we shouldn't have to do more recursive lookups than its length; we double and add 10 for safety *) in
+     match asm_output, PHOAS_output with
+     | [], []
+       => ["Internal Error: Unifiable"]
+     | [], PHOAS_output
+       => ["The synthesized code returns " ++ show (List.length PHOAS_output) ++ " more values than the assembly code."]
+     | asm_output, []
+       => ["The assembly code returns " ++ show (List.length asm_output) ++ " more values than the synthesized code."]
+     | asm_value :: asm_output, PHOAS_value :: PHOAS_output
+       => if Decidable.dec (asm_value = PHOAS_value)
+          then explain_unification_error asm_output PHOAS_output (S start_idx) st
+          else let prefix := ("Could not unify the values at index " ++ show start_idx ++ ":")%string in
+               match asm_value, PHOAS_value with
+               | inl _, inr _ => [prefix; "The assembly code returns a scalar while the synthesized code returns an array."]
+               | inr _, inl _ => [prefix; "The assembly code returns an array while the synthesized code returns a scalar."]
+               | inl asm_idx, inl PHOAS_idx
+                 => (["index  " ++ show start_idx ++ ": " ++ show asm_idx ++ " != " ++ show PHOAS_idx]%string)
+                      ++ explain_idx_unification_error st fuel asm_idx PHOAS_idx
+               | inr asm_idxs, inr PHOAS_idxs
+                 => ([prefix ++ " " ++ show asm_idxs ++ " != " ++ show PHOAS_idxs]%string)
+                      ++ (explain_array_unification_error
+                            "array" "arrays" (explain_idx_unification_error st fuel)
+                            asm_idxs PHOAS_idxs
+                            0)
+               end%list
+     end%string%list.
+
 Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheckingError
   := fun err => match err with
                 | Symbolic_execution_failed l r
@@ -130,7 +232,10 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                 | Unhandled_cast l u
                   => ["Argument not yet handled by symbolic evaluation: " ++ show (l, u)]%string
                 | Unable_to_unify asm_output PHOAS_output r
-                  => ["Unable to unify: " ++ show asm_output ++ " == " ++ show PHOAS_output]%string ++ show_lines r
+                  => ["Unable to unify:"; "In environment:"]
+                       ++ show_lines r
+                       ++ ["Unable to unify: " ++ show asm_output ++ " == " ++ show PHOAS_output]%string
+                       ++ explain_unification_error asm_output PHOAS_output 0 r
                 | Missing_ret
                   => ["Missing 'ret' at the end of the function"]
                 | Code_after_ret
