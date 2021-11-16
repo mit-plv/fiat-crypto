@@ -435,6 +435,7 @@ src/Util/ZUtil/LnotModulo.v
 src/Util/ZUtil/Log2.v
 src/Util/ZUtil/Lor.v
 src/Util/ZUtil/Ltz.v
+src/Util/ZUtil/Lxor.v
 src/Util/ZUtil/ModExp.v
 src/Util/ZUtil/ModInv.v
 src/Util/ZUtil/Modulo.v
