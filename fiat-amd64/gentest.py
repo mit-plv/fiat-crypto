@@ -59,7 +59,14 @@ clean::
 \t$(HIDE)echo '{description}' > $<.description
 \t$(HIDE){invocation} -o $<.out --output-asm $<.out-asm 2>$<.stderr >$<.stdout && \\
 \t  {{ echo $$? > $@; echo 'TEST AMD64 {description} ... \t$(GREEN)$(BOLD)PASSED$(NORMAL)$(NC)'; }} || \\
-\t  {{ echo $$? > $@; echo 'TEST AMD64 {description} ... \t$(RED)$(BOLD)FAILED$(NORMAL)$(NC)'; exit 1; }}
+\t  {{ echo $$? > $@; echo 'TEST AMD64 {description} ... \t$(RED)$(BOLD)FAILED$(NORMAL)$(NC)'; \\
+\t       echo '================== stdout =================='; \\
+\t       cat $<.stdout;                                       \\
+\t       echo '============================================'; \\
+\t       echo '================== stderr =================='; \\
+\t       cat $<.stderr;                                       \\
+\t       echo '============================================'; \\
+\t       exit 1; }}
 ''')
     else:
         print(invocation, '-o', '/dev/null', '--output-asm', '/dev/null')
