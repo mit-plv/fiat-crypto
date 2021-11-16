@@ -44,7 +44,7 @@ for fname in asm_files:
         assert False, name
     if output_makefile:
         short_fname = '_'.join(removesuffix(removeprefix(fname, 'fiat-amd64/'),'.asm').replace('_solinas','').split('_')[:-2])
-        description = f'{name} {prime} ({short_fname}) ({op}) ({binary_descr})'
+        description = f'{name} {prime.replace(" ", "")} ({op}) ({binary_descr}) ({short_fname})'
         print(f'''
 test-amd64-files-print-report:: {fname}.status
 \t@ test $$(cat $<) -eq 0 || echo 'TEST AMD64 {description} ... \t$(RED)$(BOLD)FAILED$(NORMAL)$(NC)'
