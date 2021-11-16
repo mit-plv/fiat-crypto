@@ -1290,6 +1290,11 @@ Definition havoc_flag (st : flag_state) (f : FLAG) : flag_state
   := set_flag_internal st f None.
 Definition havoc_flags : flag_state
   := (None, None, None, None, None, None).
+Definition reverse_lookup_flag (st : flag_state) (i : idx) : option FLAG
+  := option_map
+       (@snd _ _)
+       (List.find (fun v => option_beq N.eqb (Some i) (fst v))
+                  (Tuple.to_list _ (Tuple.map2 (@pair _ _) st (CF, PF, AF, ZF, SF, OF)))).
 
 Definition get_reg (st : reg_state) (ri : nat) : option idx
   := Tuple.nth_default None ri st.
@@ -1298,12 +1303,22 @@ Definition set_reg (st : reg_state) ri (i : idx) : reg_state
        ri
        (Some i)
        (Tuple.to_list _ st)).
+Definition reverse_lookup_widest_reg (st : reg_state) (i : idx) : option REG
+  := option_map
+       (fun v => widest_register_of_index (fst v))
+       (List.find (fun v => option_beq N.eqb (Some i) (snd v))
+                  (List.enumerate (Tuple.to_list _ st))).
 
 Definition load (a : idx) (s : mem_state) : option idx :=
   option_map snd (find (fun p => fst p =? a)%N s).
 Definition store (a v : idx) (s : mem_state) : option mem_state :=
   n <- indexof (fun p => fst p =? a)%N s;
   Some (ListUtil.update_nth n (fun ptsto => (fst ptsto, v)) s).
+Definition reverse_lookup_mem (st : mem_state) (i : idx) : option (N * idx)
+  := option_map
+       (fun '(n, (_, ptsto)) => (N.of_nat n, ptsto))
+       (List.find (fun v => N.eqb i (fst (snd v)))
+                  (List.enumerate st)).
 
 Record symbolic_state := { dag_state :> dag ; symbolic_reg_state :> reg_state ; symbolic_flag_state :> flag_state ; symbolic_mem_state :> mem_state }.
 Definition update_dag_with (st : symbolic_state) (f : dag -> dag) : symbolic_state
