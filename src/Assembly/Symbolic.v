@@ -22,6 +22,9 @@ Require Import Crypto.Util.Bool.LeCompat.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.SplitInContext.
+Require Import Crypto.Util.ZUtil.Lxor.
+Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Import Crypto.Util.Bool.Reflect.
 Require Import coqutil.Z.bitblast.
 Require Import Coq.Strings.String Crypto.Util.Strings.Show.
 Require Import Crypto.Assembly.Syntax.
@@ -72,9 +75,9 @@ Global Instance Show_op : Show op := fun o =>
   | subborrowZ s => "subborrowZ " ++ show s
   end%string.
 
-Definition associative o := match o with add _|mul _|mulZ|or _|and _=> true | _ => false end.
-Definition commutative o := match o with add _|addcarry _|addoverflow _|mul _|mulZ => true | _ => false end.
-Definition identity o := match o with add _| mul N0=>None|mul _|mulZ=>Some 1%Z | and s => Some (Z.ones (Z.of_N s)) |_=> None end.
+Definition associative o := match o with add _|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ=> true | _ => false end.
+Definition commutative o := match o with add _|addcarry _|addoverflow _|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ => true | _ => false end.
+Definition identity o := match o with mul N0 => Some 0%Z| mul _|mulZ=>Some 1%Z |add _|addZ|or _|orZ|xor _|xorZ => Some 0%Z | and s => Some (Z.ones (Z.of_N s))|andZ => Some (-1)%Z |_=> None end.
 
 Definition node (A : Set) : Set := op * list A.
 Global Instance Show_node {A : Set} {show_A : Show A} : Show (node A) := show_prod.
@@ -367,7 +370,10 @@ Lemma permute_commutative G op args n : commutative op = true ->
 Proof using Type.
   destruct op; inversion 1; cbn; intros ? ? Hp;
     try (erewrite <- Z.fold_right_Proper_Permutation_add; eauto);
-    try (erewrite <- Z.fold_right_Proper_Permutation_mul; eauto).
+    try (erewrite <- Z.fold_right_Proper_Permutation_mul; eauto);
+    try (erewrite <- Z.fold_right_Proper_Permutation_land; eauto);
+    try (erewrite <- Z.fold_right_Proper_Permutation_lor; eauto);
+    try (erewrite <- Z.fold_right_Proper_Permutation_lxor; eauto).
   { erewrite <-(Z.fold_right_Proper_Permutation_add _ _ eq_refl _ (map _ args'));
       eauto using Permutation.Permutation_map. }
 Qed.
@@ -899,6 +905,31 @@ Definition constprop :=
 Global Instance constprop_ok : Ok constprop.
 Proof using Type. t. f_equal; eauto using eval_eval. Qed.
 
+Lemma interp_op_drop_identity o id : identity o = Some id ->
+  forall G xs, interp_op G o xs = interp_op G o (List.filter (fun v => negb (Z.eqb v id)) xs).
+Proof.
+  destruct o; cbn [identity]; intro; inversion_option; subst; intros G xs; cbn [interp_op]; f_equal.
+  all: induction xs as [|x xs IHxs]; cbn [fold_right List.filter]; try reflexivity.
+  all: unfold negb at 1; break_innermost_match_step; reflect_hyps; subst; cbn [fold_right].
+  all: break_innermost_match_hyps; inversion_option; subst.
+  all: autorewrite with zsimplify_const.
+  all: try assumption.
+  all: rewrite ?(Z.land_comm (Z.ones _)).
+  all: try solve [ rewrite <- !Z.land_assoc; congruence ].
+  all: try solve [ rewrite ?Z.land_ones by lia; pull_Zmod; push_Zmod; rewrite <- ?Z.land_ones by lia; rewrite <- ?IHxs; try reflexivity ].
+  { rewrite 2Z.land_lor_distr_l, IHxs; reflexivity. }
+  { rewrite Z.land_lxor_distr_r, IHxs, <- Z.land_lxor_distr_r; reflexivity. }
+Qed.
+
+Lemma interp_op_nil_is_identity o i (Hi : identity o = Some i)
+  G : interp_op G o [] = Some i.
+Proof.
+  destruct o; cbn [identity] in *; break_innermost_match_hyps; inversion_option; subst; cbn [interp_op fold_right]; f_equal.
+  all: cbn [interp_op fold_right]; autorewrite with zsimplify_const; try reflexivity.
+  { cbn [identity]; break_innermost_match; try reflexivity.
+    rewrite Z.land_ones by lia; Z.rewrite_mod_small; reflexivity. }
+Qed.
+
 Lemma invert_interp_op_associative o : associative o = true ->
   forall G x xs v, interp_op G o (x :: xs) = Some v ->
   exists v', interp_op G o xs = Some v' /\
@@ -910,17 +941,96 @@ Proof using Type.
   { rewrite !Z.mul_1_r, ?Z.land_ones; push_Zmod; pull_Zmod; Lia.lia. }
 Qed.
 
-Lemma interp_op_associative_cons o : associative o = true ->
-  forall G x xs ys v,
-  interp_op G o xs = Some v -> interp_op G o ys = Some v ->
-  interp_op G o (x :: xs) = interp_op G o (x :: ys).
+(* is it okay for associative to imply identity? *)
+Lemma interp_op_associative_spec_fold o : associative o = true ->
+  forall G xs, interp_op G o xs = fold_right (fun v acc => acc <- acc; interp_op G o [v; acc])%option (interp_op G o []) xs.
 Proof using Type.
-  destruct o; inversion 1;
-    do 2 (intros * HH; inversion HH; clear HH; subst; cbn); f_equal.
-  { rewrite ?Z.land_ones in *; push_Zmod; rewrite ?H1; pull_Zmod; Lia.lia. }
-  { rewrite <-2Z.land_assoc; congruence. }
-  { rewrite 2Z.land_lor_distr_l; congruence. }
-  { rewrite ?Z.land_ones in *; push_Zmod; rewrite ?H1; pull_Zmod; Lia.lia. }
+  intros H G; induction xs as [|x xs IHxs]; cbn [fold_right]; [ reflexivity | ].
+  rewrite <- IHxs; clear IHxs.
+  destruct o; inversion H; cbn [interp_op Option.bind fold_right]; f_equal.
+  all: autorewrite with zsimplify_const.
+  all: try solve [ Z.bitblast ].
+  all: try solve [ rewrite ?Z.land_ones in *; push_Zmod; pull_Zmod; Lia.lia ].
+Qed.
+
+Lemma interp_op_associative_spec_id o : associative o = true ->
+  forall G, interp_op G o [] = identity o.
+Proof using Type.
+  intros H G.
+  pose proof (fun id H => interp_op_nil_is_identity o id H G) as H1.
+  destruct o; inversion H; cbn [identity] in *; break_innermost_match_hyps; erewrite H1; try reflexivity.
+Qed.
+
+Lemma interp_op_associative_identity_Some o : associative o = true ->
+  forall G xs vxs, interp_op G o xs = Some vxs -> Option.is_Some (identity o) = true.
+Proof using Type.
+  intros H G xs vxs H1; rewrite <- interp_op_associative_spec_id with (G:=G) by assumption.
+  rewrite interp_op_associative_spec_fold in H1 by assumption.
+  cbv [is_Some]; break_innermost_match; try reflexivity.
+  exfalso.
+  clear -H1.
+  revert dependent vxs; induction xs as [|?? IH]; cbn in *; intros; inversion_option.
+  unfold Option.bind at 1 in H1; break_innermost_match_hyps; eauto.
+Qed.
+
+Lemma interp_op_associative_spec_assoc o : associative o = true ->
+  forall G ys vys, interp_op G o ys = Some vys ->
+  forall   zs vzs, interp_op G o zs = Some vzs ->
+  forall x, ((xy <- interp_op G o [x; vys]; interp_op G o [xy; vzs]) = (yz <- interp_op G o [vys; vzs]; interp_op G o [x; yz]))%option.
+Proof.
+  destruct o; inversion 1; intros * H1 * H2; cbn [interp_op fold_right Option.bind] in *.
+  all: intros; autorewrite with zsimplify_const; f_equal; inversion_option.
+  all: rewrite ?Z.land_ones by lia; push_Zmod; pull_Zmod; rewrite <- ?Z.land_ones by lia.
+  all: try solve [ f_equal; lia ].
+  all: try reflexivity.
+  all: try solve [ Z.bitblast ].
+  all: try lia.
+Qed.
+
+Lemma interp_op_associative_spec_concat o : associative o = true ->
+  forall G xs, interp_op G o (List.concat xs) = (vxs <-- List.map (interp_op G o) xs; interp_op G o vxs)%option.
+Proof using Type.
+  intros H G; induction xs as [|x xs IHxs]; cbn [fold_right]; [ reflexivity | ].
+  cbn [List.concat List.map Option.List.bind_list].
+  rewrite interp_op_associative_spec_fold, fold_right_app, <- interp_op_associative_spec_fold by assumption.
+  rewrite IHxs; clear IHxs.
+  setoid_rewrite Option.List.bind_list_cps_id; rewrite <- Option.List.eq_bind_list_lift.
+  destruct (Option.List.lift (map (interp_op G o) xs)) as [vxs|]; cbn [Option.bind].
+  { revert vxs; clear xs.
+    induction x as [|x xs IHxs]; intro vxs.
+    { cbn [fold_right].
+      destruct (interp_op G o []) as [id|] eqn:H'; cbn [Option.bind].
+      { etransitivity; erewrite interp_op_drop_identity by (erewrite <- interp_op_associative_spec_id; eassumption); [ | reflexivity ].
+        cbn [List.filter]; unfold negb at 2; break_innermost_match_step; reflect_hyps; try congruence. }
+      { pose proof (interp_op_associative_identity_Some o H G vxs) as H1.
+        rewrite interp_op_associative_spec_id in * by assumption.
+        rewrite H' in *.
+        cbn [is_Some] in *.
+        destruct interp_op; try reflexivity; specialize (H1 _ eq_refl); congruence. } }
+    { cbn [fold_right].
+      rewrite IHxs; clear IHxs.
+      symmetry; rewrite interp_op_associative_spec_fold by assumption; cbn [fold_right]; rewrite <- interp_op_associative_spec_fold by assumption.
+      unfold Option.bind at 2; break_innermost_match_step; cbn [Option.bind]; [ | reflexivity ].
+      symmetry; rewrite interp_op_associative_spec_fold by assumption; cbn [fold_right]; rewrite <- interp_op_associative_spec_fold by assumption.
+      symmetry.
+      setoid_rewrite interp_op_associative_spec_fold at 2; [ | assumption ].
+      cbn [fold_right].
+      setoid_rewrite <- interp_op_associative_spec_fold; [ | assumption ].
+      destruct (interp_op G o vxs) eqn:?; cbn [Option.bind]; [ | cbv [Option.bind]; break_match; reflexivity ].
+      eapply interp_op_associative_spec_assoc; eassumption. } }
+  { etransitivity; [ | cbv [Option.bind]; break_innermost_match; reflexivity ].
+    induction x as [|? ? IHx]; cbn; rewrite ?IHx; reflexivity. }
+Qed.
+
+Lemma interp_op_associative_app_bind G o : associative o = true ->
+  forall xs ys,
+  interp_op G o (xs ++ ys) = (vxs <- interp_op G o xs; vys <- interp_op G o ys; interp_op G o [vxs; vys])%option.
+Proof using Type.
+  intros.
+  etransitivity; [ etransitivity; [ | refine (interp_op_associative_spec_concat o H G [xs; ys]) ] | ].
+  { cbn [concat]; rewrite List.app_nil_r; reflexivity. }
+  { cbn [map Option.List.bind_list].
+    cbv [Option.bind]; break_innermost_match; reflexivity. }
 Qed.
 
 Lemma interp_op_associative_app G o : associative o = true ->
@@ -928,20 +1038,35 @@ Lemma interp_op_associative_app G o : associative o = true ->
   forall ys vys, interp_op G o ys = Some vys ->
   interp_op G o (xs ++ ys) = interp_op G o [vxs; vys].
 Proof using Type.
-  induction xs; destruct o; inversion H; cbn [app interp_op fold_right] in *;
-    intros; Option.inversion_option; subst; f_equal;
-    try ring; try solve [Z.bitblast].
-  { rewrite ?Z.land_ones in *; push_Zmod; pull_Zmod; try Lia.lia; f_equal; ring. }
-  { rewrite ?Z.land_ones in *; push_Zmod; pull_Zmod; try Lia.lia; f_equal; ring. }
-  all : epose proof (IHxs _ eq_refl _ _ eq_refl) as HH;
-        inversion HH as [HHH]; clear IHxs HH.
-  { rewrite ?Z.land_ones in *; push_Zmod;
-    rewrite ?HHH; push_Zmod; pull_Zmod; try Lia.lia. f_equal; ring. }
-  { rewrite <-2Z.land_assoc. rewrite ?HHH. Z.bitblast. }
-  { rewrite 2Z.land_lor_distr_l. rewrite ?HHH. Z.bitblast. }
-  { rewrite ?Z.land_ones in *; push_Zmod;
-    rewrite ?HHH; push_Zmod; pull_Zmod; try Lia.lia. f_equal; ring. }
-  { rewrite ?HHH. ring. }
+  intros H * H1 * H2.
+  rewrite interp_op_associative_app_bind, H1, H2 by assumption.
+  reflexivity.
+Qed.
+
+Lemma interp_op_associative_idempotent G o : associative o = true ->
+  forall xs vxs, interp_op G o xs = Some vxs ->
+  interp_op G o [vxs] = Some vxs.
+Proof using Type.
+  intros H xs vxs H1.
+  pose proof (interp_op_associative_spec_concat o H G [ xs ]) as H2.
+  cbn in H2.
+  rewrite List.app_nil_r, H1 in H2; cbn [Option.bind] in *; congruence.
+Qed.
+
+Lemma interp_op_associative_cons o : associative o = true ->
+  forall G x xs ys v,
+  interp_op G o xs = Some v -> interp_op G o ys = Some v ->
+  interp_op G o (x :: xs) = interp_op G o (x :: ys).
+Proof using Type.
+  intros H * H1 H2.
+  etransitivity; [ etransitivity | ]; [ | refine (interp_op_associative_spec_concat o H _ [ [x]; xs]) | ].
+  all: cbn [concat List.app map Option.List.bind_list]; rewrite ?List.app_nil_r.
+  1: reflexivity.
+  symmetry; etransitivity; [ etransitivity | ]; [ | refine (interp_op_associative_spec_concat o H _ [ [x]; ys]) | ].
+  all: cbn [concat List.app map Option.List.bind_list]; rewrite ?List.app_nil_r.
+  1: reflexivity.
+  rewrite !H1, H2; cbn [Option.bind].
+  reflexivity.
 Qed.
 
 Definition flatten_associative :=
@@ -1020,13 +1145,12 @@ Proof using Type.
   clear dependent exps. clear dependent csts.
   clear -H2 H6 Heqb Heqb0.
 
-  destruct o; try solve [inversion Heqb; inversion Heqb0]; clear Heqb Heqb0;
-  inversion H6; inversion H2; clear H6 H2; subst; eapply (f_equal Some).
-  all: rewrite fold_right_app, ListUtil.List.fold_right_cons.
-  all : rewrite ?Z.land_ones; push_Zmod; pull_Zmod; try Lia.lia; f_equal.
-  all : set (fold_right _ _ ys) as Y; clearbody Y.
-  all : induction xs; cbn [fold_right]; eauto;
-    try ring [IHxs]; try (symmetry in IHxs; ring [IHxs]); try ring.
+  change (?x :: ?xs) with ([x] ++ xs).
+  rewrite interp_op_associative_app_bind in * by assumption.
+  erewrite interp_op_associative_idempotent by eassumption; cbn [Option.bind].
+  unfold Option.bind in * |- .
+  break_innermost_match_hyps; inversion_option; subst; cbn [Option.bind].
+  assumption.
 Qed.
 
 Definition neqconst i := fun a : expr => negb (option_beq Z.eqb (interp0_expr a) (Some i)).
@@ -1041,104 +1165,60 @@ Definition drop_identity :=
         end
     | _ => e end | _ => e end.
 
-Lemma eval_filter_identity_mulZ G d args v
-  (Hv : eval G d (ExprApp (mulZ, args)) v)
-  : eval G d (ExprApp (mulZ, filter (neqconst 1) args)) v.
-Proof using Type.
-  inversion Hv; clear Hv; subst.
-  revert dependent v; induction H1; cbn;
-    intros * HH; inversion HH; subst.
-  { repeat Econstructor; eauto. }
-  cbv [neqconst];
-  destruct (@Reflect.reflect_eq_option _ _ BinInt.Z.eqb_spec (interp0_expr x) (Some 1%Z)); cbn;
-  match goal with |- context[filter ?x] => change x with (neqconst 1%Z) end.
-  { epose proof eval_interp0_expr _ _ e G d as He; step; step; subst; clear H.
-    cbn -[Z.mul] in HH; Option.inversion_option; subst.
-    rewrite Z.mul_1_l.
-    eapply IHForall2. exact eq_refl. }
-  { clear n.
-    cbn -[Z.mul] in HH; Option.inversion_option; subst.
-    specialize (IHForall2 (fold_right Z.mul 1%Z l') eq_refl);
-      inversion IHForall2; subst.
-    repeat Econstructor; eauto.
-    cbn [fold_right interp_op] in *; Option.inversion_option; f_equal. ring [H5]. }
+Lemma filter_neqconst_helper G d o id
+      (Hid : identity o = Some id)
+      l args
+      (H : Forall2 (eval G d) l args)
+  : exists args',
+    Forall2 (eval G d) (filter (neqconst id) l) args'
+    /\ List.filter (fun v => negb (Z.eqb v id)) args' = List.filter (fun v => negb (Z.eqb v id)) args.
+Proof.
+  induction H; cbn; [ eexists; split; constructor | ].
+  destruct_head'_ex; destruct_head'_and.
+  unfold neqconst at 1.
+  unfold negb at 1; break_innermost_match_step; reflect_hyps.
+  all: unfold negb at 1; break_innermost_match_step; reflect_hyps.
+  all: repeat first [ match goal with
+                      | [ H : interp0_expr ?e = Some _, H' : eval ?Gv ?dv ?e _ |- _ ]
+                        => apply eval_interp0_expr with (G:=Gv) (d:=dv) in H
+                      end
+                    | progress reflect_hyps
+                    | congruence
+                    | progress subst
+                    | solve [ eauto ]
+                    | step; eauto; [] ].
+  all: econstructor; split; [ constructor; eassumption | cbn [filter] ].
+  all: unfold negb in *; break_innermost_match; reflect_hyps; try congruence.
 Qed.
 
-Lemma eval_filter_identity_mul G d s args v
-  (Hv : eval G d (ExprApp (mul s, args)) v)
-  : eval G d (ExprApp (mul s, filter (neqconst 1) args)) v.
-Proof using Type.
-  inversion Hv; clear Hv; subst.
-  revert dependent v; induction H1; cbn;
-    intros * HH; inversion HH; subst.
-  { repeat Econstructor; eauto. }
-  cbv [neqconst];
-  destruct (@Reflect.reflect_eq_option _ _ BinInt.Z.eqb_spec (interp0_expr x) (Some 1%Z)); cbn;
-  match goal with |- context[filter ?x] => change x with (neqconst 1%Z) end.
-  { epose proof eval_interp0_expr _ _ e G d as He; step; step; subst; clear H.
-    cbn -[Z.mul] in HH; Option.inversion_option; subst.
-    rewrite Z.mul_1_l.
-    eapply IHForall2. exact eq_refl. }
-  { clear n.
-    cbn -[Z.mul] in HH; Option.inversion_option; subst.
-    epose proof (IHForall2 _ eq_refl) as IH; inversion IH; subst.
-    repeat Econstructor; eauto.
-    cbn [fold_right interp_op] in *; Option.inversion_option; f_equal.
-    rewrite !Z.land_ones in *; push_Zmod; rewrite ?H5; pull_Zmod; Lia.lia. }
+Lemma filter_neqconst G d o id
+      (Hid : identity o = Some id)
+      l args
+      (H : Forall2 (eval G d) l args)
+  : exists args',
+    Forall2 (eval G d) (filter (neqconst id) l) args'
+    /\ interp_op G o args' = interp_op G o args.
+Proof.
+  edestruct filter_neqconst_helper as [args' [H1 H2] ]; try eassumption.
+  exists args'; split; try assumption.
+  erewrite interp_op_drop_identity, H2, <- interp_op_drop_identity by eassumption.
+  reflexivity.
 Qed.
 
-Lemma eval_filter_identity_add G d s args v
-  (Hv : eval G d (ExprApp (add s, args)) v)
-  : eval G d (ExprApp (add s, filter (neqconst 0) args)) v.
+Global Instance drop_identity_0k : Ok drop_identity.
 Proof using Type.
-  inversion Hv; clear Hv; subst.
-  revert dependent v; induction H1; cbn;
-    intros * HH; inversion HH; subst.
-  { repeat Econstructor; eauto. }
-  cbv [neqconst];
-  destruct (@Reflect.reflect_eq_option _ _ BinInt.Z.eqb_spec (interp0_expr x) (Some 0%Z)); cbn;
-  match goal with |- context[filter ?x] => change x with (neqconst 0%Z) end.
-  { epose proof eval_interp0_expr _ _ e G d as He; step; step; subst; clear H.
-    cbn -[Z.add] in HH; Option.inversion_option; subst.
-    rewrite Z.add_0_l.
-    eapply IHForall2. exact eq_refl. }
-  { clear n.
-    cbn -[Z.add] in HH; Option.inversion_option; subst.
-    epose proof (IHForall2 _ eq_refl) as IH; inversion IH; subst.
-    repeat Econstructor; eauto.
-    cbn [fold_right interp_op] in *; Option.inversion_option; f_equal.
-    rewrite !Z.land_ones in *; push_Zmod; rewrite ?H5; pull_Zmod; Lia.lia. }
-Qed.
-
-Lemma eval_filter_identity_and G d s args v
-  (Hv : eval G d (ExprApp (and s, args)) v)
-  : eval G d (ExprApp (and s, filter (neqconst (Z.ones (Z.of_N s))) args)) v.
-Proof using Type.
-  inversion Hv; clear Hv; subst.
-  revert dependent v; induction H1; cbn;
-    intros * HH; inversion HH; subst.
-  { repeat Econstructor; eauto. }
-  cbv [neqconst];
-  destruct (@Reflect.reflect_eq_option _ _ BinInt.Z.eqb_spec (interp0_expr x) (Some (Z.ones (Z.of_N s)))); cbn;
-  match goal with |- context[filter ?x] => change x with (neqconst (Z.ones (Z.of_N s))) end.
-  { epose proof eval_interp0_expr _ _ e G d as He; step; step; subst; clear H.
-    rewrite Z.land_comm, Z.land_assoc, Z.land_diag, Z.land_comm.
-    eapply IHForall2. exact eq_refl. }
-  { clear n.
-    cbn -[Z.land] in HH; Option.inversion_option; subst.
-    epose proof (IHForall2 _ eq_refl) as IH; inversion IH; subst.
-    repeat Econstructor; eauto.
-    cbn [fold_right interp_op] in *; Option.inversion_option; f_equal.
-    rewrite <-2Z.land_assoc. congruence. }
-Qed.
-
-Lemma eval_filter_identity G d o args v i (Hi : identity o = Some i)
-  (Hv : eval G d (ExprApp (o, args)) v)
-  : eval G d (ExprApp (o, filter (neqconst i) args)) v.
-Proof using Type.
-  destruct o; inversion Hi;
-    BreakMatch.break_match_hyps; Option.inversion_option; subst;
-    eauto using eval_filter_identity_add, eval_filter_identity_mul, eval_filter_identity_mulZ, eval_filter_identity_and.
+  repeat (step; eauto; []).
+  inversion H; subst; clear H.
+  destruct (filter _ _ ) eqn:H'.
+  2: rewrite <- H'; clear H'.
+  2: repeat (step; eauto; []).
+  all: destruct (filter_neqconst _ _ _ _ ltac:(eassumption) _ _ ltac:(eassumption)) as [? [? ?] ].
+  all: repeat first [ match goal with
+                      | [ H : ?ls = [], H' : Forall2 _ ?ls _ |- _ ] => rewrite H in H'
+                      end
+                    | congruence
+                    | erewrite interp_op_nil_is_identity in * by eassumption
+                    | t ].
 Qed.
 
 Lemma signed_0 s : signed s 0 = 0%Z.
@@ -1149,27 +1229,6 @@ Proof using Type.
   rewrite Z.mod_small; try ring.
   split; try (eapply Z.pow_lt_mono_r; Lia.lia).
   eapply Z.pow_nonneg; Lia.lia.
-Qed.
-
-Lemma interp_op_nil_is_identity o i (Hi : identity o = Some i)
-  G : interp_op G o [] = Some i.
-Proof using Type.
-  destruct o; inversion Hi; subst; unfold interp_op, fold_right; f_equal.
-  { rewrite Z.land_m1_l; trivial. }
-  { destruct s; inversion Hi; subst.
-    rewrite Z.land_ones, Z.mod_small; try split; try Lia.lia; trivial.
-    replace (Z.of_N (N.pos p)) with (1 + Z.of_N (N.pos p -1)%N)%Z by Lia.lia.
-    rewrite Z.pow_add_r by Lia.lia.
-    epose proof Z.pow_pos_nonneg 2 (Z.of_N (N.pos p - 1))%Z ltac:(Lia.lia) ltac:(Lia.lia).
-    Lia.nia. }
-Qed.
-
-Global Instance drop_identity_0k : Ok drop_identity.
-Proof using Type.
-  repeat (step; eauto; []).
-  pose proof H as H'; eapply eval_filter_identity in H; try eassumption.
-  destruct (filter _ _ ) eqn:? in *; eauto.
-  repeat step. erewrite interp_op_nil_is_identity in * by eassumption; t.
 Qed.
 
 Definition opcarry_0_at1 :=
