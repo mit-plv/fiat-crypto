@@ -389,11 +389,11 @@ Definition gensym_dag_ok G d := gensym_ok G d /\ dag_ok G d.
 Lemma gensym_ok_length_Proper G d1 d2
       (H : List.length d1 <= List.length d2)
   : gensym_ok G d1 -> gensym_ok G d2.
-Proof. cbv [gensym_ok]; firstorder lia. Qed.
+Proof using Type. cbv [gensym_ok]; firstorder lia. Qed.
 
 Lemma gensym_ok_app G d1 d2
   : gensym_ok G d1 -> gensym_ok G (d1 ++ d2).
-Proof. apply gensym_ok_length_Proper; rewrite app_length; lia. Qed.
+Proof using Type. apply gensym_ok_length_Proper; rewrite app_length; lia. Qed.
 
 Lemma eval_merge_node :
   forall G d, gensym_dag_ok G d ->
@@ -908,7 +908,7 @@ Proof using Type. t. f_equal; eauto using eval_eval. Qed.
 
 Lemma interp_op_drop_identity o id : identity o = Some id ->
   forall G xs, interp_op G o xs = interp_op G o (List.filter (fun v => negb (Z.eqb v id)) xs).
-Proof.
+Proof using Type.
   destruct o; cbn [identity]; intro; inversion_option; subst; intros G xs; cbn [interp_op]; f_equal.
   all: induction xs as [|x xs IHxs]; cbn [fold_right List.filter]; try reflexivity.
   all: unfold negb at 1; break_innermost_match_step; reflect_hyps; subst; cbn [fold_right].
@@ -924,11 +924,13 @@ Qed.
 
 Lemma interp_op_nil_is_identity o i (Hi : identity o = Some i)
   G : interp_op G o [] = Some i.
-Proof.
+Proof using Type.
   destruct o; cbn [identity] in *; break_innermost_match_hyps; inversion_option; subst; cbn [interp_op fold_right]; f_equal.
   all: cbn [interp_op fold_right]; autorewrite with zsimplify_const; try reflexivity.
   { cbn [identity]; break_innermost_match; try reflexivity.
-    rewrite Z.land_ones by lia; Z.rewrite_mod_small; reflexivity. }
+    rewrite Z.land_ones by lia; Z.rewrite_mod_small; try reflexivity;
+      (* compat with older versions of Coq (needed for 8.11, not for 8.13) *)
+      rewrite Z.mod_small; rewrite ?Z.log2_lt_pow2; cbn [Z.log2]; try lia. }
 Qed.
 
 Lemma invert_interp_op_associative o : associative o = true ->
