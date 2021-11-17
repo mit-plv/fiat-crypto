@@ -8,6 +8,7 @@ Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Testbit.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
+Require Import Crypto.Util.ZUtil.Land.
 Require Import Crypto.Util.ZUtil.Ones.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.ListUtil.
@@ -1221,6 +1222,61 @@ Proof using Type.
                     | t ].
 Qed.
 
+Definition fold_consts_to_and :=
+  fun e => match consts_commutative e with
+           | ExprApp ((and _ | andZ) as o, ExprApp (const v, nil) :: args)
+             => let v' := match o with
+                          | and sz => Z.land v (Z.ones (Z.of_N sz))
+                          | _ => v
+                          end in
+                if (v' <? 0)%Z
+                then if (v' =? -1)%Z
+                     then ExprApp (andZ, args)
+                     else ExprApp (andZ, ExprApp (const v', nil) :: args)
+                else let v_sz := (1 + Z.log2 v') in
+                     if (v' =? Z.ones v_sz)%Z
+                     then ExprApp (and (Z.to_N v_sz), args)
+                     else ExprApp (and (Z.to_N v_sz), ExprApp (const v', nil) :: args)
+           | _ => e
+           end.
+
+Global Instance fold_consts_to_and_0k : Ok fold_consts_to_and.
+Proof using Type.
+  repeat (step; eauto; []).
+  break_innermost_match; try assumption; reflect_hyps.
+  all: match goal with
+       | [ H : eval _ _ ?e _, H' : consts_commutative ?e = _ |- _ ]
+         => apply consts_commutative_ok in H; rewrite H' in H; clear e H'
+       end.
+  all: repeat (step; eauto; []).
+  all: cbn [interp_op fold_right] in *; inversion_option; subst.
+  all: repeat first [ match goal with
+                      | [ H : Z.land ?x ?y = _ |- context[Z.land (Z.land ?x _) ?y] ]
+                        => rewrite !(Z.land_comm x), <- !Z.land_assoc, H
+                      | [ |- context[Z.land ?x ?y] ]
+                        => match goal with
+                           | [ |- context[Z.land ?y ?x] ]
+                             => rewrite (Z.land_comm x y)
+                           end
+                      | [ H : ?x = Z.ones _ |- _ ]
+                        => is_var x; rewrite <- H
+                      | [ |- Z.land (Z.land ?x ?y) (Z.ones (1 + Z.log2 ?x)) = Z.land ?x ?y ]
+                        => rewrite !(Z.land_comm x), <- !Z.land_assoc; f_equal
+                      | [ |- Z.land (Z.land (Z.land ?y ?s) ?v) (Z.ones (1 + Z.log2 (Z.land ?y ?s))) = Z.land (Z.land ?y ?v) ?s ]
+                        => cut (Z.land (Z.land y s) (Z.ones (1 + Z.log2 (Z.land y s))) = Z.land y s);
+                           [ rewrite <- !(Z.land_comm v), <- !Z.land_assoc;
+                             let H := fresh in intro H; rewrite H; reflexivity
+                           | generalize dependent (Z.land y s); intros ]
+                      end
+                    | progress autorewrite with zsimplify_const
+                    | apply (f_equal (@Some _))
+                    | progress cbn [fold_right]
+                    | rewrite Z2N.id by auto with zarith
+                    | solve [ t ]
+                    | solve [ Z.bitblast; now rewrite Z.bits_above_log2 by lia ]
+                    | t ].
+Qed.
+
 Lemma signed_0 s : signed s 0 = 0%Z.
 Proof using Type.
   destruct (N.eq_dec s 0); subst; trivial.
@@ -1291,6 +1347,7 @@ Definition expr : expr -> expr :=
   ;set_slice0_small
   ;flatten_associative
   ;consts_commutative
+  ;fold_consts_to_and
   ;drop_identity
   ;opcarry_0_at1
   ;opcarry_0_at3
