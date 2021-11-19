@@ -1339,6 +1339,7 @@ Proof using Type.
   t; cbn [fold_right]. rewrite Z.lxor_0_r, Z.lxor_nilpotent; trivial.
 Qed.
 
+(** TODO: Add a pass that turns unary operations like [and], [add], etc into truncation *)
 Definition expr : expr -> expr :=
   List.fold_left (fun e f => f e)
   [constprop
