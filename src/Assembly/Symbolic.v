@@ -944,6 +944,7 @@ Proof using Type.
   { rewrite !Z.mul_1_r, ?Z.land_ones; push_Zmod; pull_Zmod; Lia.lia. }
 Qed.
 
+(** TODO: plausibly we want to define all associative operations in terms of some [make_associative_op] definition, so that we can separate out the binary operation reasoning from the fold and option reasoning *)
 (* is it okay for associative to imply identity? *)
 Lemma interp_op_associative_spec_fold o : associative o = true ->
   forall G xs, interp_op G o xs = fold_right (fun v acc => acc <- acc; interp_op G o [v; acc])%option (interp_op G o []) xs.
