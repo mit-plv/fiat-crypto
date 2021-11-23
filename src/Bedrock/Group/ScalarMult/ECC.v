@@ -742,6 +742,10 @@ Section S.
              (FElem (Some tight_bounds) x_ptr x
               * FElem (Some tight_bounds) sq_ptr ret  * R)%sep mem'}.
 
+    Import LoopCompiler.
+    Hint Resolve clean_width : compiler_side_conditions.
+    Hint Extern 10 => lia : compiler_side_conditions.
+
     Derive exp_97_body SuchThat
            (defn! "exp_97" ("x", "res") { exp_97_body },
             implements exp_97 using [square; mul])
@@ -759,31 +763,15 @@ Section S.
     lower_setup.
     repeat lower_step.
     reflexivity.
-    
+
     rewrite <- Heq.
     subst rewritten.
-    cbv beta. 
+    cbv beta.
 
     repeat compile_step.
-
-    simple apply compile_nlet_as_nlet_eq.
-
-    eapply compile_ranged_for_u with (loop_pred := (fun idx z tr' mem' locals' =>
-         tr' = tr /\
-         locals' = map.put
-                 (map.put (map.put (map.put map.empty "x" x_ptr) "res" sq_ptr) "from"
-                    idx) "to" v2 /\
-         (FElem (Some tight_bounds) sq_ptr z ⋆ (FElem (Some tight_bounds) x_ptr x ⋆ R)) mem')); repeat compile_step.
-
-    Print Ltac compile.
-
-    try compile_done.
-
-    simple eapply clean_width; reflexivity.
-    
     Qed.
 
-    Compute exp_97_body.
+    Eval cbn in exp_97_body.
   End Bedrock.
 
 End S.
