@@ -701,16 +701,46 @@ Section S.
     Hint Unfold exp_square_and_multiply : lowering.
     (* Hint Unfold loop : lowering. *)
 
+    Definition exponent : positive := 57896044618658097711785492504343953926634992332820282019728792003956564819951.
+
+    Ltac prove_match n :=
+        lazymatch goal with
+        | [ |- ?x ] => idtac x
+        end;
+        
+        simpl;
+        unfold n;
+        eexists.
+
+      Ltac simplify_match_arithmetic :=
+        lazymatch goal with
+        | [ |- context [ match (?x + ?y)%nat with
+                         | 0%nat => _
+                         | _ => _
+                         end
+                       ]
+          ] =>
+          idtac x; idtac y;
+          let n := fresh "n" in
+          evar(n : nat);
+          eassert (n = (x + y)%nat) as Heqn by prove_match n;
+          rewrite <- Heqn;
+          subst n;
+          clear Heqn
+        end.
+
     Derive rewritten_encoded SuchThat
-           (forall x, rewritten_encoded x = (x, let/n res := exp_by_squaring_encoded x 97 in res))
+           (forall x, rewritten_encoded x = (x, let/n res := exp_by_squaring_encoded x exponent in res))
            As rewrite'.
     Proof.
+      unfold exponent.
       lower_setup.
-      change (0 + 1)%nat with 1%nat.
-      change (1 + 1 + 1)%nat with 3%nat.
+      repeat simplify_match_arithmetic.
       repeat lower_step.
       reflexivity.
     Qed.
+
+    Print rewritten_encoded.
 
     Definition exp (n: positive) (x: F M_pos) :=
       F.pow x (N.pos n).
@@ -730,6 +760,16 @@ Section S.
           tr = tr'
           /\ (FElem (Some tight_bounds) x_ptr x
               * FElem (Some tight_bounds) sq_ptr (exp 97 x)  * R)%sep mem'}.
+
+    Instance spec_of_exp57896044618658097711785492504343953926634992332820282019728792003956564819951 : spec_of (expn 57896044618658097711785492504343953926634992332820282019728792003956564819951) :=
+      fnspec! "exp_57896044618658097711785492504343953926634992332820282019728792003956564819951" (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
+      { requires tr mem :=
+          (FElem (Some tight_bounds) x_ptr x
+           * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
+        ensures tr' mem' :=
+          tr = tr'
+          /\ (FElem (Some tight_bounds) x_ptr x
+              * FElem (Some tight_bounds) sq_ptr (exp 57896044618658097711785492504343953926634992332820282019728792003956564819951 x)  * R)%sep mem'}.
 
     Context (M_nz: M <> 0).
 
@@ -758,6 +798,16 @@ Section S.
     Qed.
 
     Eval cbn in exp_97_body.
+
+    Derive exp_57896044618658097711785492504343953926634992332820282019728792003956564819951_body SuchThat
+           (defn! "exp_57896044618658097711785492504343953926634992332820282019728792003956564819951" ("x", "res") { exp_57896044618658097711785492504343953926634992332820282019728792003956564819951_body },
+             implements (exp 57896044618658097711785492504343953926634992332820282019728792003956564819951) using [square; mul])
+           As exp_57896044618658097711785492504343953926634992332820282019728792003956564819951_body_correct.
+    Proof.
+      compile.
+    Qed.
+
+    
   End Bedrock.
 
 End S.
