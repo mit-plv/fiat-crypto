@@ -5,6 +5,7 @@ Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Specs.ScalarField.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Algebra.Hierarchy.
+Require Import Numbers.DecimalString.
 
 Local Open Scope Z_scope.
 
@@ -26,7 +27,6 @@ Section S.
   Hint Resolve @relax_bounds : compiler.
 
   Section Gallina.
-
     Fixpoint exp_by_squaring (x : F M_pos) (n : positive) : F M_pos :=
       match n with
       | xH => x
@@ -166,7 +166,7 @@ Section S.
     Qed.
 
     Lemma exp_by_squaring_correct :
-      forall n x, exp_by_squaring x n = F.pow x (Npos n).
+      forall n x, exp_by_squaring x n = (x ^ N.pos n)%F.
     Proof.
       induction n; intros; cbn [exp_by_squaring]; unfold nlet;
         rewrite (Pos2N_pos_xI n) || rewrite (Pos2N_pos_xO n) || idtac.
@@ -356,8 +356,8 @@ Section S.
       F_lia.
     Qed.
 
-    Lemma exp_by_squaring_encoded_simple_correct : 
-      M <> 0 -> forall n x, exp_by_squaring_encoded_simple x n = F.pow x (N.pos n).
+    Lemma exp_by_squaring_encoded_simple_correct :
+      M <> 0 -> forall n x, exp_by_squaring_encoded_simple x n = (x ^ N.pos n)%F.
     Proof.
       intros. rewrite <- exp_by_squaring_correct; eauto.
       unfold exp_by_squaring_encoded_simple; induction n; simpl.
@@ -485,7 +485,7 @@ Section S.
       unfold name; fold name.
 
     Lemma exp_by_squaring_encoded_correct :
-      M <> 0 -> forall n x, exp_by_squaring_encoded x n = F.pow x (N.pos n).
+      M <> 0 -> forall n x, exp_by_squaring_encoded x n = (x ^ N.pos n)%F.
     Proof.
       intros. rewrite <- exp_by_squaring_encoded_simple_correct; eauto.
       unfold exp_by_squaring_encoded. unfold exp_by_squaring_encoded_simple.
@@ -556,7 +556,7 @@ Section S.
         erewrite ranged_for'_unfold_r_nstop; try lia; try easy.
         all: rewrite <- IHk; reflexivity.
     Qed.
-    
+
     Lemma loop_equals :
       forall {A} f (x : A) k,
         Z.of_nat k < 2 ^ width ->
@@ -586,14 +586,11 @@ Section S.
     Proof.
      intros; destruct width_cases as [ -> | -> ]; lia.
     Qed.
-    
-    Hint Unfold exp_square : compiler_cleanup.
 
+    Hint Unfold exp_square : compiler_cleanup.
   End Gallina.
 
-
   Section Bedrock.
-
     Create HintDb lowering.
 
     Ltac lower_step :=
@@ -695,15 +692,6 @@ Section S.
 
     Print exp_6_body.
 
-    Ltac compile_custom ::=
-      progress ( try rewrite loop_equals;
-                 try (try simple eapply compile_dlet_as_nlet_eq;
-                      try simple eapply compile_nlet_as_nlet_eq;
-                      first [ simple eapply compile_square
-                            | simple eapply compile_mul
-                            | compile_try_copy_pointer]));
-      intros.
-
     Hint Unfold exp_by_squaring_encoded : lowering.
     Hint Unfold exp_from_encoding : lowering.
     Hint Unfold exp_by_squaring_encoded_simple : lowering.
@@ -724,51 +712,49 @@ Section S.
       reflexivity.
     Qed.
 
-    Print rewritten_encoded.
-    
-    Definition exp_97 x := let/n res := exp_by_squaring_encoded x 97 in (x, res).
-    About exp_97.
+    Definition exp (n: positive) (x: F M_pos) :=
+      F.pow x (N.pos n).
 
-    Instance spec_of_exp_97_encoded : spec_of "exp_97" :=
-      fnspec! "exp_97"
-            (x_ptr sq_ptr : word)
-            / (x sq : F M_pos) R,
+    Notation expn n :=
+      ltac:(let n := constr:(NilEmpty.string_of_uint (Pos.to_uint n)) in
+            let s := constr:(String.append "exp_" n%positive) in
+            let s := eval cbv in s in
+              exact s) (only parsing).
+
+    Instance spec_of_exp97 : spec_of (expn 97) :=
+      fnspec! "exp_97" (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
       { requires tr mem :=
           (FElem (Some tight_bounds) x_ptr x
            * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
         ensures tr' mem' :=
           tr = tr'
-          /\ let (x, ret) := exp_97 x in
-             (FElem (Some tight_bounds) x_ptr x
-              * FElem (Some tight_bounds) sq_ptr ret  * R)%sep mem'}.
+          /\ (FElem (Some tight_bounds) x_ptr x
+              * FElem (Some tight_bounds) sq_ptr (exp 97 x)  * R)%sep mem'}.
+
+    Context (M_nz: M <> 0).
 
     Import LoopCompiler.
+    Hint Rewrite @loop_equals : compiler_cleanup.
     Hint Resolve clean_width : compiler_side_conditions.
     Hint Extern 10 => lia : compiler_side_conditions.
+    Hint Extern 1 => simple apply compile_square; shelve : compiler.
+    Hint Extern 1 => simple apply compile_mul; shelve : compiler.
+    Hint Extern 1 => compile_try_copy_pointer; shelve : compiler.
+
+    Hint Extern 1 =>
+           lazymatch goal with
+           | |- WeakestPrecondition.cmd _ _ _ ?mem _ (_ (?x ^ N.pos ?n)%F) =>
+               eassert (?[rewritten] = (x ^ N.pos n)%F) as <- (* FIXME clean up *)
+                 by (rewrite <- exp_by_squaring_encoded_correct by assumption;
+                     lower_setup; cbn -[loop]; repeat lower_step; reflexivity)
+           end; shelve : compiler_cleanup.
 
     Derive exp_97_body SuchThat
            (defn! "exp_97" ("x", "res") { exp_97_body },
-            implements exp_97 using [square; mul])
+             implements (exp 97) using [square; mul])
            As exp_97_body_correct.
-
-    compile_setup.
-    evar (rewritten : F M_pos -> F M_pos * F M_pos).
-
-    assert (forall x0 : F M_pos,
-               rewritten x0 = (let/n res as "res" := exp_by_squaring_encoded x0 97 in
-                               (x0, res))) as Heq.
-    autounfold with lowering.
-    change (0 + 1)%nat with 1%nat.
-    change (1 + 1 + 1)%nat with 3%nat.
-    lower_setup.
-    repeat lower_step.
-    reflexivity.
-
-    rewrite <- Heq.
-    subst rewritten.
-    cbv beta.
-
-    repeat compile_step.
+    Proof.
+      compile.
     Qed.
 
     Eval cbn in exp_97_body.
