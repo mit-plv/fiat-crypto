@@ -747,6 +747,10 @@ Section S.
 
     Hint Extern 1 => rewrite_exponentiation exp_by_squaring_encoded_correct; shelve : compiler_cleanup.
 
+    Import LoopCompiler.
+    Hint Resolve clean_width : compiler_side_conditions.
+    Hint Extern 10 => lia : compiler_side_conditions.
+
     Derive exp_97_body SuchThat
            (defn! "exp_97" ("x", "res") { exp_97_body },
             implements (exp 97) using [square; mul])
@@ -764,7 +768,6 @@ Section S.
     Qed.
 
     Eval cbn in  exp_large_body.
-
   End Bedrock.
 
 End S.
