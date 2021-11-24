@@ -296,16 +296,14 @@ Section __.
           constr:(O)
       | cons _ ?xs => let i := find_implication xs y in constr:(S i)
       end.
+
     
     Derive montladder_body SuchThat
-           (let args := ["OUT"; "K"; "U"] in
-            let montladder : Syntax.func :=
-                ("montladder", (args, [], montladder_body)) in
-            ltac:(
-              let goal := Rupicola.Lib.Tactics.program_logic_goal_for_function
-                            montladder [felem_cswap; felem_copy; felem_small_literal;
-                                       sctestbit; "ladderstep"; inv; mul] in
-              exact (__rupicola_program_marker montladder_gallina -> goal)))
+           (defn! "montladder" ("OUT", "K", "U")
+                { montladder_body },
+             implements montladder_gallina
+                        using [felem_cswap; felem_copy; felem_small_literal;
+                               sctestbit; "ladderstep"; inv; mul])
            As montladder_correct.
     Proof.
       pose proof scalarbits_pos.
