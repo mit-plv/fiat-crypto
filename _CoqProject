@@ -79,6 +79,7 @@ src/Assembly/WithBedrock/Proofs.v
 src/Assembly/WithBedrock/Semantics.v
 src/Assembly/WithBedrock/SymbolicProofs.v
 src/Bedrock/End2End/X25519/Field25519.v
+src/Bedrock/End2End/Poly1305/Field1305.v
 src/Bedrock/Field/Common/Tactics.v
 src/Bedrock/Field/Common/Types.v
 src/Bedrock/Field/Common/Util.v
