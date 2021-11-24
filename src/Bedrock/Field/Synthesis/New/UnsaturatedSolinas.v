@@ -517,7 +517,7 @@ Local Ltac begin_derive_bedrock2_func :=
   | |- context [spec_of_to_bytes] => eapply to_bytes_func_correct
   end.
 
-Local Ltac derive_bedrock2_func op :=
+Ltac derive_bedrock2_func op :=
   begin_derive_bedrock2_func;
   (* this goal fills in the evar, so do it first for [abstract] to be happy *)
   try lazymatch goal with
@@ -536,6 +536,7 @@ Local Ltac derive_bedrock2_func op :=
   | |- _ = default_varname_gen => vm_compute; reflexivity
   end.
 
+(*
 Section Tests.
   Definition n := 5%nat.
   Definition s := (2^255)%Z.
@@ -635,4 +636,5 @@ Print fe25519_opp.
 Print fe25519_scmula24.
 Print fe25519_from_bytes.
 Print fe25519_to_bytes.
+*)
 *)
