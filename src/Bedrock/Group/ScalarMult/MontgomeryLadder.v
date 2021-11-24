@@ -280,11 +280,11 @@ Section __.
     is_var v; simple eapply compile_copy_bool; shelve : compiler.
 
 
-    Hint Resolve unsigned_of_Z_0 : compiler_cleanup.
-    Hint Resolve unsigned_of_Z_1 : compiler_cleanup.
+    Hint Resolve unsigned_of_Z_0 : compiler_side_conditions.
+    Hint Resolve unsigned_of_Z_1 : compiler_side_conditions.
     Hint Unfold F.one F.zero : compiler_cleanup.
 
-    Hint Extern 10 (_ < _) => lia : compiler_cleanup.
+    Hint Extern 10 (_ < _) => lia : compiler_side_conditions.
 
     (* TODO: update the original definition in bedrock2 *)
     Ltac find_implication xs y ::=
