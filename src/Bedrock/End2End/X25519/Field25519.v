@@ -86,6 +86,14 @@ Section Field.
                         (fe25519_sub :: functions))
          As fe25519_sub_correct.
   Proof. Time derive_bedrock2_func sub_op. Qed.
+
+  Derive fe25519_scmula24
+         SuchThat (forall functions,
+                      spec_of_UnOp un_scmula24
+                        (field_representation:=field_representation n s c)
+                        (fe25519_scmula24 :: functions))
+         As fe25519_scmula24_correct.
+  Proof. Time derive_bedrock2_func scmula24_op. Qed.
 End Field.
 
 (* Uncomment below to sanity-check that compilation works *)
