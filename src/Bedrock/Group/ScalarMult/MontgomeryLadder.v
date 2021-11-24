@@ -310,7 +310,9 @@ Section __.
     Proof.
       pose proof scalarbits_pos.
       pose proof scalarbits_bound.
-      compile.
+      compile_setup;
+      solve[repeat repeat compile_step];
+      compile_done.
     Qed.
   End MontLadder.
 End __.
