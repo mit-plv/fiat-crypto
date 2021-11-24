@@ -127,14 +127,10 @@ Section __.
   Local Ltac ecancel_assumption ::=  ecancel_assumption_impl.
   
   Derive ladderstep_body SuchThat
-         (let args := ["X1"; "X2"; "Z2"; "X3"; "Z3"] in
-          ltac:(
-            let proc := constr:(("ladderstep",
-                                 (args, [], ladderstep_body))
-                                : Syntax.func) in
-            let goal := Rupicola.Lib.Tactics.program_logic_goal_for_function
-                          proc [mul;add;sub;square;scmula24] in
-            exact (__rupicola_program_marker ladderstep_gallina -> goal)))
+         (defn! "ladderstep" ("X1", "X2", "Z2", "X3", "Z3")
+              { ladderstep_body },
+           implements ladderstep_gallina
+                      using [mul;add;sub;square;scmula24])
          As ladderstep_correct.
   Proof. compile. Qed.
 

@@ -10,19 +10,15 @@ noskips
                  (cmd.seq (cmd.call [] felem_copy ["X2"; "U"])
                     (cmd.stackalloc "Z2" size_in_bytes
                        (cmd.seq (cmd.call [] felem_small_literal ["Z2"; 1])
-                          (cmd.seq
-                             (cmd.set "swap"
-                                (ExprReflection.compile
-                                   (ExprReflection.ELit (word.unsigned (word.b2w false)) (word.b2w false) (word.of_Z_unsigned (word.b2w false)))))
-                             (cmd.seq (cmd.set "count" (ExprReflection.compile (ExprReflection.ELit scalarbits scalarbits eq_refl)))
-                                (cmd_downto_fresh (gs "_gs_i0")
-                                   (ExprReflection.compile (ExprReflection.ELit (Z.of_nat (Z.to_nat scalarbits)) (Z.of_nat (Z.to_nat scalarbits)) eq_refl))
+                          (cmd.seq (cmd.set "swap" (word.unsigned (word.b2w false)))
+                             (cmd.seq (cmd.set "count" (word.unsigned (word.of_Z scalarbits)))
+                                (cmd_downto_fresh (gs "_gs_i0") (word.unsigned (word.of_Z (Z.of_nat (Z.to_nat scalarbits))))
                                    (cmd.seq (cmd.call ["s_i"] sctestbit ["K"; "_gs_i0"])
                                       (cmd.seq (cmd.set "swap" (expr.op bopname.xor "swap" "s_i"))
                                          (cmd.seq (cmd.call [] felem_cswap ["swap"; "X1"; "X2"])
                                             (cmd.seq (cmd.call [] felem_cswap ["swap"; "Z1"; "Z2"])
                                                (cmd.seq (cmd.call [] "ladderstep" ["U"; "X1"; "Z1"; "X2"; "Z2"])
-                                                  (cmd.seq (cmd.set "swap" (ExprReflection.compile (ExprReflection.EVar "s_i")))
+                                                  (cmd.seq (cmd.set "swap" "s_i")
                                                      (fold_right (fun (v : string) (c : cmd) => cmd.seq (cmd.unset v) c) cmd.skip ["s_i"])))))))
                                    (cmd.seq (cmd.call [] felem_cswap ["swap"; "X1"; "X2"])
                                       (cmd.seq (cmd.call [] felem_cswap ["swap"; "Z1"; "Z2"])
