@@ -356,6 +356,14 @@ Section S.
       F_lia.
     Qed.
 
+    Ltac simplify_F :=
+      unfold nlet;
+      autorewrite with F_pow;
+      repeat rewrite f_one;
+      repeat rewrite one_f;
+      try reflexivity;
+      try F_lia.
+
     Lemma exp_by_squaring_encoded_simple_correct :
       M <> 0 -> forall n x, exp_by_squaring_encoded_simple x n = (x ^ N.pos n)%F.
     Proof.
@@ -370,72 +378,39 @@ Section S.
             cbn. replace (n0 + 1)%nat with (S n0) by lia.
             unfold nlet; destruct n0.
             { cbn.
-              destruct n eqn : H'; unfold nlet.
-              { unfold exp_square_and_multiply.
-                unfold nlet.
-                F_lia_orig.
+              destruct n eqn : H'; unfold exp_square_and_multiply; unfold nlet.
+              { F_lia_orig.
                 rewrite <- Z.mul_comm.
                 f_equal.
-                F_lia_orig.
+                f_equal.
                 f_equal.
                 F_lia_orig.
               }
-              { unfold exp_square_and_multiply.
-                unfold nlet.
-                F_lia_orig.
+              { F_lia_orig.
                 rewrite <- Z.mul_comm.
                 f_equal.
-                F_lia_orig.
+                f_equal.
                 f_equal.
                 F_lia_orig.
               }
               {
                 unfold run_length_encoding in Heq.
                 inversion Heq.
-                repeat eapply mod_equal.
-                unfold exp_square_and_multiply; unfold nlet.
                 unfold exp_from_encoding_simple.
-                rewrite_Z.
-                F_math.
-                rewrite <- Z.mul_comm.
-                replace (F.to_Z ((1 ^ 2 * x) ^ 2)) with (F.to_Z (x ^ 2)).
-                reflexivity.
-                f_equal.
-                repeat rewrite F.pow_2_r.
-                replace (1 * 1 * x)%F with x.
-                reflexivity.
-                rewrite f_one.
-                rewrite one_f.
-                reflexivity.
+                simplify_F.
               }
             }
             cbn.
-            destruct n eqn : H'; unfold nlet.
-            { repeat eapply mod_equal.
-              Z.push_pull_mod.
-              unfold exp_square_and_multiply; unfold nlet.
-              F_lia_orig.
-            }
-            { repeat eapply mod_equal.
-              Z.push_pull_mod.
-              unfold exp_square_and_multiply; unfold nlet.
-              F_lia_orig.
-            }
-            {
-              unfold run_length_encoding in Heq.
-              inversion Heq.
-            }
+            destruct n eqn : H'; unfold exp_square_and_multiply; unfold nlet.
+            all: try F_lia_orig.
+            unfold run_length_encoding in Heq.
+            inversion Heq.
           }
           rewrite <- IHn.
           cbn.
           unfold nlet.
           destruct n0; destruct n eqn : H'; try reflexivity.
-          { unfold run_length_encoding in Heq.
-            Z.push_pull_mod.
-            inversion Heq.
-          }
-          unfold run_length_encoding in Heq.
-          inversion Heq.
+          all: unfold run_length_encoding in Heq; inversion Heq.
       - rewrite <- IHn.
         cbn. 
         destruct n eqn : H'.
@@ -445,11 +420,7 @@ Section S.
           unfold nlet.
           cbn.
           unfold exp_square.
-          destruct n0.
-          { unfold loop.
-            F_lia_orig.
-          }
-          F_lia_orig.
+          destruct n0; unfold loop; F_lia_orig.
         }
         { destruct (run_length_encoding p~0) as [|[[|] n0] t]; try reflexivity.
           simpl.
@@ -457,28 +428,12 @@ Section S.
           unfold nlet.
           cbn.
           unfold exp_square.
-          destruct n0.
-          { unfold loop.
-            F_lia_orig.
-          }
-          F_lia_orig.
+          destruct n0; unfold loop; F_lia_orig.
         }
         unfold run_length_encoding.
         unfold exp_from_encoding_simple.
-        unfold nlet.
-        rewrite_Z.
-        repeat rewrite F.pow_2_r.
-        f_equal.
-        rewrite associative.
-        repeat rewrite one_f.
-        repeat rewrite f_one.
-        reflexivity.
-      - unfold nlet.
-        rewrite_Z.
-        rewrite F.pow_2_r.
-        f_equal.
-        repeat rewrite f_one.
-        reflexivity.
+        simplify_F.
+      - simplify_F.
     Qed.
 
     Ltac simple_unfold name :=
@@ -493,50 +448,39 @@ Section S.
       - cbn.
         reflexivity.
       - destruct a.
-        destruct b; simple_unfold exp_from_encoding; simple_unfold exp_from_encoding_simple; destruct n0; try destruct n0; destruct l; unfold nlet; try rewrite IHl; eauto; simple_unfold exp_from_encoding_simple.
-        + rewrite F.pow_2_r.
-          repeat rewrite f_one.
-          reflexivity.
-        + unfold exp_square_and_multiply; unfold loop; unfold nlet.
-          repeat rewrite F.pow_2_r.
-          repeat rewrite one_f.
-          F_lia.
+        destruct b; simple_unfold exp_from_encoding; simple_unfold exp_from_encoding_simple; destruct n0; try destruct n0; destruct l; unfold nlet; try rewrite IHl; eauto; simple_unfold exp_from_encoding_simple; try simplify_F.
+        + unfold exp_square_and_multiply; unfold loop.
+          simplify_F.
         + pose loop_plus_one.
           specialize e with (f := exp_square_and_multiply x) (k := S (S n0)) (x := 1%F).
           rewrite <- e.
           replace (exp_square_and_multiply x 1) with x.
-          2: { unfold exp_square_and_multiply; unfold nlet. rewrite F.pow_2_r. repeat rewrite one_f. reflexivity. }
+          2: { unfold exp_square_and_multiply; simplify_F. }
           pose loop_plus_one.
           specialize e0 with (f := exp_square_and_multiply x) (k := (S n0)) (x := x).
           rewrite <- e0.
           f_equal.
           unfold exp_square_and_multiply; unfold nlet.
-          F_lia_orig.
+          simplify_F.
         + destruct p; destruct b; destruct n0; unfold nlet; eauto.
           destruct l; eauto.
           unfold exp_from_encoding_simple.
-          repeat rewrite F.pow_2_r.
-          repeat rewrite f_one.
-          reflexivity.
+          simplify_F.
         + destruct p; destruct b; destruct n0; unfold nlet; eauto.
           destruct l; eauto.
           unfold exp_from_encoding_simple.
-          unfold loop; unfold exp_square; unfold nlet.
-          repeat rewrite F.pow_2_r.
-          repeat rewrite f_one.
-          reflexivity.
+          unfold loop; unfold exp_square.
+          simplify_F.
         + destruct p; destruct b; destruct n1; unfold nlet; eauto.
           destruct l; eauto.
           unfold exp_from_encoding_simple.
-          repeat rewrite F.pow_2_r.
-          repeat rewrite f_one.
+          simplify_F.
           pose loop_plus_one.
           specialize e with (f := exp_square) (k := (S (S n0))) (x := x).
           rewrite <- e.
           f_equal.
-          unfold exp_square; unfold nlet.
-          repeat rewrite F.pow_2_r.
-          reflexivity.
+          unfold exp_square.
+          simplify_F.
     Qed.
 
     Lemma loop_equals':
@@ -720,7 +664,6 @@ Section S.
                          end
                        ]
           ] =>
-          idtac x; idtac y;
           let n := fresh "n" in
           evar(n : nat);
           eassert (n = (x + y)%nat) as Heqn by prove_match n;
@@ -729,6 +672,8 @@ Section S.
           clear Heqn
         end.
 
+
+     
     Derive rewritten_encoded SuchThat
            (forall x, rewritten_encoded x = (x, let/n res := exp_by_squaring_encoded x exponent in res))
            As rewrite'.
@@ -761,15 +706,15 @@ Section S.
           /\ (FElem (Some tight_bounds) x_ptr x
               * FElem (Some tight_bounds) sq_ptr (exp 97 x)  * R)%sep mem'}.
 
-    Instance spec_of_exp57896044618658097711785492504343953926634992332820282019728792003956564819951 : spec_of (expn 57896044618658097711785492504343953926634992332820282019728792003956564819951) :=
-      fnspec! "exp_57896044618658097711785492504343953926634992332820282019728792003956564819951" (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
+    Instance spec_of_exp_large : spec_of (expn exponent) :=
+      fnspec! (expn exponent) (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
       { requires tr mem :=
           (FElem (Some tight_bounds) x_ptr x
            * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
         ensures tr' mem' :=
           tr = tr'
           /\ (FElem (Some tight_bounds) x_ptr x
-              * FElem (Some tight_bounds) sq_ptr (exp 57896044618658097711785492504343953926634992332820282019728792003956564819951 x)  * R)%sep mem'}.
+              * FElem (Some tight_bounds) sq_ptr (exp exponent x)  * R)%sep mem'}.
 
     Context (M_nz: M <> 0).
 
@@ -799,13 +744,15 @@ Section S.
 
     Eval cbn in exp_97_body.
 
-    Derive exp_57896044618658097711785492504343953926634992332820282019728792003956564819951_body SuchThat
-           (defn! "exp_57896044618658097711785492504343953926634992332820282019728792003956564819951" ("x", "res") { exp_57896044618658097711785492504343953926634992332820282019728792003956564819951_body },
-             implements (exp 57896044618658097711785492504343953926634992332820282019728792003956564819951) using [square; mul])
-           As exp_57896044618658097711785492504343953926634992332820282019728792003956564819951_body_correct.
+    Derive exp_exponent_body SuchThat
+           (defn! (expn exponent) ("x", "res") { exp_exponent_body },
+             implements (exp exponent) using [square; mul])
+           As exp_exponent_body_correct.
     Proof.
       compile.
     Qed.
+
+    Eval cbn in  exp_exponent_body.
 
     
   End Bedrock.
