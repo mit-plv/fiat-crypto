@@ -49,7 +49,6 @@ Section S.
 
     Ltac F_math :=
       rewrite !F.to_Z_mul.
-    
 
     Ltac F_lia_orig :=
       try rewrite_Z;
@@ -138,7 +137,6 @@ Section S.
 
     Ltac F_lia := F_zify; lia.
 
-
     Create HintDb F_pow.
     Hint Rewrite @F.pow_2_r : F_pow.
     Hint Rewrite @F.pow_add_r : F_pow.
@@ -171,7 +169,7 @@ Section S.
       induction n; intros; cbn [exp_by_squaring]; unfold nlet;
         rewrite (Pos2N_pos_xI n) || rewrite (Pos2N_pos_xO n) || idtac.
       all: try rewrite IHn.
-      all: try destruct n eqn : H'; autorewrite with F_pow.
+      all: try destruct n eqn : H'; autorewrite with F_pow; try reflexivity.
       all: F_lia_orig. (* FIXME: ask Dustin why F_lia doesn't work *)
     Qed.
 
@@ -255,7 +253,6 @@ Section S.
     Definition exp_square (x' : F M_pos) :=
       F.pow x' 2.
 
-    (* Computes x ^ (decoded n). *)
     Fixpoint exp_from_encoding_simple (x : F M_pos) (n : list (bool * nat)) : F M_pos :=
       match n with
       | [] =>
@@ -279,8 +276,6 @@ Section S.
         let/n res := loop res (S k) (exp_square) in
         res
       end.
-
-    Compute run_length_encoding 11.
 
     Fixpoint exp_from_encoding (x : F M_pos) (n : list (bool * nat)) : F M_pos :=
       match n with
@@ -381,15 +376,13 @@ Section S.
               destruct n eqn : H'; unfold exp_square_and_multiply; unfold nlet.
               { F_lia_orig.
                 rewrite <- Z.mul_comm.
-                f_equal.
-                f_equal.
+                repeat F_lia_orig.
                 f_equal.
                 F_lia_orig.
               }
               { F_lia_orig.
                 rewrite <- Z.mul_comm.
-                f_equal.
-                f_equal.
+                repeat F_lia_orig.
                 f_equal.
                 F_lia_orig.
               }
@@ -441,6 +434,7 @@ Section S.
 
     Lemma exp_by_squaring_encoded_correct :
       M <> 0 -> forall n x, exp_by_squaring_encoded x n = (x ^ N.pos n)%F.
+    
     Proof.
       intros. rewrite <- exp_by_squaring_encoded_simple_correct; eauto.
       unfold exp_by_squaring_encoded. unfold exp_by_squaring_encoded_simple.
@@ -460,25 +454,24 @@ Section S.
           specialize e0 with (f := exp_square_and_multiply x) (k := (S n0)) (x := x).
           rewrite <- e0.
           f_equal.
-          unfold exp_square_and_multiply; unfold nlet.
+          unfold exp_square_and_multiply.
           simplify_F.
-        + destruct p; destruct b; destruct n0; unfold nlet; eauto.
+        + destruct p; destruct b; destruct n0; eauto.
           destruct l; eauto.
           unfold exp_from_encoding_simple.
           simplify_F.
-        + destruct p; destruct b; destruct n0; unfold nlet; eauto.
+        + destruct p; destruct b; destruct n0; eauto.
           destruct l; eauto.
           unfold exp_from_encoding_simple.
           unfold loop; unfold exp_square.
           simplify_F.
-        + destruct p; destruct b; destruct n1; unfold nlet; eauto.
+        + destruct p; destruct b; destruct n1; eauto.
           destruct l; eauto.
           unfold exp_from_encoding_simple.
           simplify_F.
           pose loop_plus_one.
           specialize e with (f := exp_square) (k := (S (S n0))) (x := x).
           rewrite <- e.
-          f_equal.
           unfold exp_square.
           simplify_F.
     Qed.
@@ -528,14 +521,30 @@ Section S.
     Lemma clean_width :
       forall x, x < 2 ^ 32 -> x < 2 ^ width.
     Proof.
-     intros; destruct width_cases as [ -> | -> ]; lia.
+      intros; destruct width_cases as [ -> | -> ]; lia.
     Qed.
 
-    Hint Unfold exp_square : compiler_cleanup.
   End Gallina.
 
   Section Bedrock.
+
+    Definition exponent : positive := 57896044618658097711785492504343953926634992332820282019728792003956564819951.
+
+    Lemma exponent_correct :
+      exponent = Z.to_pos (2 ^ 255 - 17).
+      unfold exponent. simpl. reflexivity.
+    Qed.
+
     Create HintDb lowering.
+    Hint Unfold exp_by_squaring : lowering.
+    Hint Unfold exp_by_squaring_encoded : lowering.
+    Hint Unfold exp_from_encoding : lowering.
+    Hint Unfold exp_by_squaring_encoded_simple : lowering.
+    Hint Unfold exp_from_encoding_simple : lowering.
+    Hint Unfold run_length_encoding : lowering.
+    Hint Unfold exp_square : lowering.
+    Hint Unfold exp_square_and_multiply : lowering.
+    Hint Unfold exponent : lowering.
 
     Ltac lower_step :=
       lazymatch goal with
@@ -550,6 +559,40 @@ Section S.
       | [ |- _ = (_, let/n _ as _ := _ in _)] =>
         eapply letn_paren_equal
       end.
+
+    Ltac prove_match n :=
+      simpl;
+      unfold n;
+      eexists.
+
+    Ltac simplify_match_arithmetic :=
+      lazymatch goal with
+      | [ |- context [ match (?x + ?y)%nat with
+                       | 0%nat => _
+                       | _ => _
+                       end
+                     ]
+        ] =>
+        let n := fresh "n" in
+        evar(n : nat);
+        eassert (n = (x + y)%nat) as Heqn by prove_match n;
+        rewrite <- Heqn;
+        subst n;
+        clear Heqn
+      end.
+
+    Ltac lower_setup :=
+      autounfold with lowering;
+      lazymatch goal with
+      | [ H := _ |- _ ] =>
+        subst H
+      end;
+      repeat simplify_match_arithmetic.
+    
+    Ltac lower :=
+      lower_setup;
+      repeat lower_step;
+      reflexivity.
 
     Ltac compile_try_copy_pointer :=
       lazymatch goal with
@@ -571,19 +614,7 @@ Section S.
                            | compile_try_copy_pointer]));
       intros.
 
-    Hint Unfold exp_by_squaring : lowering.
-
-    Ltac lower_setup :=
-      autounfold with lowering;
-      lazymatch goal with
-      | [ H := _ |- _ ] =>
-        subst H
-      end.
-
-    Ltac lower :=
-      lower_setup;
-      repeat lower_step;
-      reflexivity.
+    Local Ltac ecancel_assumption ::= ecancel_assumption_impl.
 
     Derive rewritten SuchThat
            (forall x, rewritten x = (x, let/n res := exp_by_squaring x 6 in res))
@@ -591,12 +622,8 @@ Section S.
     Proof.
       lower.
     Qed.
-    
-    Print rewritten.
-    About rewritten.
 
     Definition exp_6 x := let/n res := exp_by_squaring x 6 in (x, res).
-    About exp_6.
 
     Instance spec_of_exp_6 : spec_of "exp_6" :=
       fnspec! "exp_6"
@@ -609,17 +636,13 @@ Section S.
           tr = tr'
           /\ let (x, ret) := exp_6 x in
              (FElem (Some tight_bounds) x_ptr x
-              * FElem (Some tight_bounds) sq_ptr ret  * R)%sep mem'}.
-
-    Local Ltac ecancel_assumption ::= ecancel_assumption_impl.
-
-
+              * FElem (Some tight_bounds) sq_ptr ret * R)%sep mem'}.
     
     Derive exp_6_body SuchThat
            (defn! "exp_6" ("x", "res") { exp_6_body },
             implements exp_6 using [square; mul])
            As exp_6_body_correct.
-
+    Proof.
     compile_setup.
     evar (rewritten : F M_pos -> F M_pos * F M_pos).
 
@@ -634,58 +657,12 @@ Section S.
     repeat compile_step.
     Qed.
 
-    Print exp_6_body.
-
-    Hint Unfold exp_by_squaring_encoded : lowering.
-    Hint Unfold exp_from_encoding : lowering.
-    Hint Unfold exp_by_squaring_encoded_simple : lowering.
-    Hint Unfold exp_from_encoding_simple : lowering.
-    Hint Unfold run_length_encoding : lowering.
-    Hint Unfold exp_square : lowering.
-    Hint Unfold exp_square_and_multiply : lowering.
-    (* Hint Unfold loop : lowering. *)
-
-    Definition exponent : positive := 57896044618658097711785492504343953926634992332820282019728792003956564819951.
-
-    Ltac prove_match n :=
-        lazymatch goal with
-        | [ |- ?x ] => idtac x
-        end;
-        
-        simpl;
-        unfold n;
-        eexists.
-
-      Ltac simplify_match_arithmetic :=
-        lazymatch goal with
-        | [ |- context [ match (?x + ?y)%nat with
-                         | 0%nat => _
-                         | _ => _
-                         end
-                       ]
-          ] =>
-          let n := fresh "n" in
-          evar(n : nat);
-          eassert (n = (x + y)%nat) as Heqn by prove_match n;
-          rewrite <- Heqn;
-          subst n;
-          clear Heqn
-        end.
-
-
-     
     Derive rewritten_encoded SuchThat
            (forall x, rewritten_encoded x = (x, let/n res := exp_by_squaring_encoded x exponent in res))
            As rewrite'.
     Proof.
-      unfold exponent.
-      lower_setup.
-      repeat simplify_match_arithmetic.
-      repeat lower_step.
-      reflexivity.
+      lower.
     Qed.
-
-    Print rewritten_encoded.
 
     Definition exp (n: positive) (x: F M_pos) :=
       F.pow x (N.pos n).
@@ -694,7 +671,7 @@ Section S.
       ltac:(let n := constr:(NilEmpty.string_of_uint (Pos.to_uint n)) in
             let s := constr:(String.append "exp_" n%positive) in
             let s := eval cbv in s in
-              exact s) (only parsing).
+                exact s) (only parsing).
 
     Instance spec_of_exp97 : spec_of (expn 97) :=
       fnspec! "exp_97" (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
@@ -727,33 +704,30 @@ Section S.
     Hint Extern 1 => compile_try_copy_pointer; shelve : compiler.
 
     Hint Extern 1 =>
-           lazymatch goal with
-           | |- WeakestPrecondition.cmd _ _ _ ?mem _ (_ (?x ^ N.pos ?n)%F) =>
-               eassert (?[rewritten] = (x ^ N.pos n)%F) as <- (* FIXME clean up *)
-                 by (rewrite <- exp_by_squaring_encoded_correct by assumption;
-                     lower_setup; cbn -[loop]; repeat lower_step; reflexivity)
-           end; shelve : compiler_cleanup.
+    lazymatch goal with
+    | |- WeakestPrecondition.cmd _ _ _ ?mem _ (_ (?x ^ N.pos ?n)%F) =>
+      eassert (?[rewritten] = (x ^ N.pos n)%F) as <- (* FIXME clean up *)
+          by (rewrite <- exp_by_squaring_encoded_correct by assumption;
+             lower_setup; cbn -[loop]; repeat lower_step; reflexivity)
+    end; shelve : compiler_cleanup.
 
     Derive exp_97_body SuchThat
            (defn! "exp_97" ("x", "res") { exp_97_body },
-             implements (exp 97) using [square; mul])
+            implements (exp 97) using [square; mul])
            As exp_97_body_correct.
     Proof.
       compile.
     Qed.
 
-    Eval cbn in exp_97_body.
-
-    Derive exp_exponent_body SuchThat
-           (defn! (expn exponent) ("x", "res") { exp_exponent_body },
-             implements (exp exponent) using [square; mul])
-           As exp_exponent_body_correct.
+    Derive exp_large_body SuchThat
+           (defn! (expn exponent) ("x", "res") { exp_large_body },
+            implements (exp exponent) using [square; mul])
+           As exp_large_body_correct.
     Proof.
       compile.
     Qed.
 
-    Eval cbn in  exp_exponent_body.
-
+    Eval cbn in  exp_large_body.
     
   End Bedrock.
 
