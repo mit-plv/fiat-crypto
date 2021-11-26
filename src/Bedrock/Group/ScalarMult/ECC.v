@@ -773,7 +773,7 @@ End S.
 Require Import bedrock2.BasicC64Semantics.
 
 Section Extraction.
-  Definition _M_pos := (2 ^ 255)%positive.
+  Definition _M_pos := (2 ^ 255 - 19)%positive.
   Context (_a24: F _M_pos).
 
   Instance fp : FieldParameters :=
