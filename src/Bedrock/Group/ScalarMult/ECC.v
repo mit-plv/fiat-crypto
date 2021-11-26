@@ -64,14 +64,13 @@ Section S.
   Section Gallina.
     Fixpoint exp_by_squaring (x : F M_pos) (n : positive) : F M_pos :=
       match n with
-      | xH => x
-      | xO xH => F.pow x 2
-      | xI xH => let/n res := F.pow x 2 in F.mul x res
-      | xO n' => let/n res := exp_by_squaring x n' in F.pow res 2
-      | xI n' => let/n res := exp_by_squaring x n' in
-                 let/n res := F.pow res 2 in
-                 F.mul x res
-      end.
+      | 1    => x
+      | n'~0 => let/n res := exp_by_squaring x n' in
+                F.pow res 2
+      | n'~1 => let/n res := exp_by_squaring x n' in
+                let/n res := F.pow res 2 in
+                F.mul x res
+      end%positive.
 
     (* FIXME go over this section with Dustin to understand why the code below
        is needed.  Are the TODOs below still relevant? *)
@@ -421,8 +420,6 @@ Section S.
             cbn.
             destruct n eqn : H'; unfold exp_square_and_multiply; unfold nlet.
             all: try F_lia_orig.
-            unfold run_length_encoding in Heq.
-            inversion Heq.
           }
           rewrite <- IHn.
           cbn.
@@ -574,11 +571,13 @@ Section S.
     Hint Unfold exponent : lowering.
 
     Ltac lower_step :=
-      lazymatch goal with
+      match goal with
       | [ |- forall _, _ ] =>
         intros
       | [ |- let _ := _ in _ = _ ] =>
         intros
+      | [ |- _ = let/n _ as _ := ?x in _] =>
+        is_var x; change (nlet _ ?x ?k) with (k x) at 1; cbv beta
       | [ |- _ = let/n _ as _ := (let/n _ as _ := _ in _) in _] =>
         eapply letn_nested
       | [ |- _ = let/n _ as _ := _ in _] =>
