@@ -35,7 +35,7 @@ Section Equivalence.
   Proof.
     intros. cbv [ladderstep_gallina M.xzladderstep].
     destruct P1 as [x1 z1]. destruct P2 as [x2 z2].
-    cbv [Rewriter.Util.LetIn.Let_In Notations.nlet]. cbn [fst snd].
+    cbv [Rewriter.Util.LetIn.Let_In nlet]. cbn [fst snd].
     rewrite !F.pow_2_r; trivial.
   Qed.
 
@@ -50,7 +50,7 @@ Section Equivalence.
       a24 cswap scalarbits (Z.testbit n) point.
   Proof.
     intros. cbv [montladder_gallina M.montladder].
-    cbv [Rewriter.Util.LetIn.Let_In Notations.nlet]. cbn [fst snd P2.car P2.cdr].
+    cbv [Rewriter.Util.LetIn.Let_In nlet]. cbn [fst snd P2.car P2.cdr].
     rewrite downto_while.
     unfold Alloc.stack.
     match goal with
