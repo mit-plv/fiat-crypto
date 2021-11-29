@@ -25,7 +25,7 @@ jobs:
       with:
         submodules: recursive
     - name: Setup Python
-      uses: actions/setup-python@v2.3.0
+      uses: actions/setup-python@v2.3.1
     - name: Set up OCaml
       uses: ocaml/setup-ocaml@v2
       with:
