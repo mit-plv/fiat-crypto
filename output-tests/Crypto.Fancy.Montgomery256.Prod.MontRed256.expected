@@ -18,6 +18,4 @@
        SUB 0 lo hi y;
        ADDM lo lo RegZero RegMod;
        Ret lo
-     : register ->
-       register ->
-       register -> register -> register -> register -> register -> expr
+     : register -> register -> register -> register -> register -> register -> register -> expr

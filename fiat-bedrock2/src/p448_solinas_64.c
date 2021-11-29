@@ -13,17 +13,29 @@
 /*   balance = [0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffc, 0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffe] */
 
 #include <stdint.h>
-#include <memory.h>
+#include <string.h>
 
-// LITTLE-ENDIAN memory access is REQUIRED
-// the following two functions are required to work around -fstrict-aliasing
-static inline uintptr_t _br2_load(uintptr_t a, size_t sz) {
-  uintptr_t r = 0;
-  memcpy(&r, (void*)a, sz);
-  return r;
+// We use memcpy to work around -fstrict-aliasing.
+// A plain memcpy is enough on clang 10, but not on gcc 10, which fails
+// to infer the bounds on an integer loaded by memcpy.
+// Adding a range mask after memcpy in turn makes slower code in clang.
+// Loading individual bytes, shifting them together, and or-ing is fast
+// on clang and sometimes on GCC, but other times GCC inlines individual
+// byte operations without reconstructing wider accesses.
+// The little-endian idiom below seems fast in gcc 9+ and clang 10.
+static __attribute__((always_inline)) inline uintptr_t
+_br2_load(uintptr_t a, uintptr_t sz) {
+  switch (sz) {
+  case 1: { uint8_t  r = 0; memcpy(&r, (void*)a, 1); return r; }
+  case 2: { uint16_t r = 0; memcpy(&r, (void*)a, 2); return r; }
+  case 4: { uint32_t r = 0; memcpy(&r, (void*)a, 4); return r; }
+  case 8: { uint64_t r = 0; memcpy(&r, (void*)a, 8); return r; }
+  default: __builtin_unreachable();
+  }
 }
 
-static inline void _br2_store(uintptr_t a, uintptr_t v, size_t sz) {
+static __attribute__((always_inline)) inline void
+_br2_store(uintptr_t a, uintptr_t v, uintptr_t sz) {
   memcpy((void*)a, &v, sz);
 }
 

@@ -1,6 +1,4 @@
-     = fun
-         x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4
-          scratchp5 : register =>
+     = fun x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5 : register =>
        let q1Bottom256 := scratchp1 in
        let muSelect := scratchp2 in
        let q2 := scratchp3 in
@@ -40,7 +38,4 @@
        SUB 0 q3 muSelect maybeM;
        ADDM x q3 RegZero RegMod;
        Ret x
-     : register ->
-       register ->
-       register ->
-       register -> register -> register -> register -> register -> expr
+     : register -> register -> register -> register -> register -> register -> register -> register -> expr
