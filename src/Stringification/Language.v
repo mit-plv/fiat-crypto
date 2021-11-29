@@ -919,6 +919,8 @@ Module Compilers.
       Definition bitwidth_of (t : type) : Z := 2^Z.of_nat (lgbitwidth_of t).
       Definition of_bitwidth (is_signed : bool) (bitwidth : Z) : type
         := of_lgbitwidth is_signed (Z.to_nat (Z.log2 bitwidth)).
+      Definition of_bitwidth_up (is_signed : bool) (bitwidth : Z) : type
+        := of_lgbitwidth is_signed (Z.to_nat (Z.log2_up bitwidth)).
       Definition is_signed (t : type) : bool := match t with signed _ => true | unsigned _ => false end.
       Definition is_unsigned (t : type) : bool := negb (is_signed t).
       Definition to_zrange (t : type) : zrange
@@ -967,7 +969,17 @@ Module Compilers.
         apply of_lgbitwidth_of.
       Qed.
 
+      Lemma of_bitwidth_up_of v : of_bitwidth_up (is_signed v) (bitwidth_of v) = v.
+      Proof.
+        cbv [of_bitwidth_up bitwidth_of].
+        rewrite Z.log2_up_pow2, Nat2Z.id by lia.
+        apply of_lgbitwidth_of.
+      Qed.
+
       Lemma is_signed_of_bitwidth b v : is_signed (of_bitwidth b v) = b.
+      Proof. apply is_signed_of_lgbitwidth. Qed.
+
+      Lemma is_signed_of_bitwidth_up b v : is_signed (of_bitwidth_up b v) = b.
       Proof. apply is_signed_of_lgbitwidth. Qed.
 
       Global Instance show_lvl_type : ShowLevel type
