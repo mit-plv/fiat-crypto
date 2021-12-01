@@ -2,38 +2,38 @@
 ## Cf for instance: git shortlog -nse. More details via: man git shortlog
 
 # having the same name <email> name <email> on a line will fix capitalization
-Adam Chlipala <adamc@csail.mit.edu>                            Adam Chlipala <adamc@csail.mit.edu>
 Adam Chlipala <adamc@csail.mit.edu>                            Adam Chlipala <adam@chlipala.net>
-Andrej Dudenhefner <mrhaandi@gmail.com>                        Andrej Dudenhefner <mrhaandi@gmail.com>
+Adam Chlipala <adamc@csail.mit.edu>                            Adam Chlipala <adamc@csail.mit.edu>
 Andrej Dudenhefner <mrhaandi@gmail.com>                        Andrej Dudenhefner <31094379+mrhaandi@users.noreply.github.com>
-Andres Erbsen <andreser@mit.edu>                               Andres Erbsen <andreser@mit.edu>
+Andrej Dudenhefner <mrhaandi@gmail.com>                        Andrej Dudenhefner <mrhaandi@gmail.com>
 Andres Erbsen <andreser@mit.edu>                               Andres Erbsen <andres@krutt.org>
 Andres Erbsen <andreser@mit.edu>                               Andres Erbsen <andreser@google.com>
-Frédéric Besson <frederic.besson@inria.fr>                     Frédéric Besson <frederic.besson@inria.fr>
+Andres Erbsen <andreser@mit.edu>                               Andres Erbsen <andreser@mit.edu>
 Frédéric Besson <frederic.besson@inria.fr>                     BESSON Frederic <frederic.besson@inria.fr>
 Frédéric Besson <frederic.besson@inria.fr>                     Frederic Besson <frederic.besson@inria.fr>
+Frédéric Besson <frederic.besson@inria.fr>                     Frédéric Besson <frederic.besson@inria.fr>
+Jade Philipoom <jadep@mit.edu>                                 Jade Philipoom <jadep@google.com>
 Jade Philipoom <jadep@mit.edu>                                 Jade Philipoom <jadep@mit.edu>
-Jade Philipoom <jadep@mit.edu>                                 jadephilipoom <jade.philipoom@gmail.com>
 Jade Philipoom <jadep@mit.edu>                                 jadep <jade.philipoom@gmail.com>
 Jade Philipoom <jadep@mit.edu>                                 jadep <jadep@mit.edu>
-Jade Philipoom <jadep@mit.edu>                                 Jade Philipoom <jadep@google.com>
+Jade Philipoom <jadep@mit.edu>                                 jadephilipoom <jade.philipoom@gmail.com>
 Jason Gross <jgross@mit.edu>                                   Jason Gross <jagro@google.com>
 Jason Gross <jgross@mit.edu>                                   Jason Gross <jasongross9@gmail.com>
 Jason Gross <jgross@mit.edu>                                   Jason Gross <jgross@mit.edu>
-Kris Kwiatkowski <kris@amongbytes.com>                         Kris Kwiatkowski <kris@amongbytes.com>
 Kris Kwiatkowski <kris@amongbytes.com>                         Kris Kwiatkowski <contact@amongbytes.com>
-Maxime Dénès <maxime.denes@inria.fr>                           Maxime Dénès <maxime.denes@inria.fr>
+Kris Kwiatkowski <kris@amongbytes.com>                         Kris Kwiatkowski <kris@amongbytes.com>
 Maxime Dénès <maxime.denes@inria.fr>                           Maxime Dénès <mail@maximedenes.fr>
+Maxime Dénès <maxime.denes@inria.fr>                           Maxime Dénès <maxime.denes@inria.fr>
+Robert Sloan <varomodt@gmail.com>                              Rob Sloan <varomodt@gmail.com>
+Robert Sloan <varomodt@gmail.com>                              Rob Sloan <varomodt@google.com>
 Robert Sloan <varomodt@gmail.com>                              Robert Sloan <rsloan@sumologic.com>
+Robert Sloan <varomodt@gmail.com>                              Robert Sloan <varomodt@Roberts-MacBook.local>
 Robert Sloan <varomodt@gmail.com>                              Robert Sloan <varomodt@dhcp-18-189-26-21.dyn.MIT.EDU>
 Robert Sloan <varomodt@gmail.com>                              Robert Sloan <varomodt@dhcp-18-189-51-40.dyn.MIT.EDU>
 Robert Sloan <varomodt@gmail.com>                              Robert Sloan <varomodt@gmail.com>
-Robert Sloan <varomodt@gmail.com>                              Robert Sloan <varomodt@Roberts-MacBook.local>
-Robert Sloan <varomodt@gmail.com>                              Rob Sloan <varomodt@gmail.com>
-Robert Sloan <varomodt@gmail.com>                              varomodt <varomodt@localhost.localdomain>
 Robert Sloan <varomodt@gmail.com>                              Robert Sloan <varomodt@google.com>
-Robert Sloan <varomodt@gmail.com>                              Rob Sloan <varomodt@google.com>
-Vincent Laporte <Vincent.Laporte@inria.fr>                     Vincent Laporte <Vincent.Laporte@inria.fr>
+Robert Sloan <varomodt@gmail.com>                              varomodt <varomodt@localhost.localdomain>
 Vincent Laporte <Vincent.Laporte@inria.fr>                     Vincent Laporte <Vincent.Laporte@fondation-inria.fr>
+Vincent Laporte <Vincent.Laporte@inria.fr>                     Vincent Laporte <Vincent.Laporte@inria.fr>
 Zoe Paraskevopoulou <zoopar@fb.com>                            Zoe Paraskevopoulou <zoopar@fb.com>
 Zoe Paraskevopoulou <zoopar@fb.com>                            zoep <zoe.paraskevopoulou@gmail.com>
