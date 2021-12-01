@@ -53,6 +53,9 @@ Let us define one more type.  The recursive type of expressions
 }
 ```
 
+When `parameters` is empty, the entire `"parameters": { parameters }`
+key-value pair will be omitted.
+
 It describes a line of code or an expression:
 
 - whose output type is specified by `"datatype"` (`"(auto)"` means
@@ -116,7 +119,6 @@ Here a few examples:
 "datatype": "u64",
 "name": ["x1"],
 "operation": "=",
-"parameters": {},
 "arguments": ["arg1[1]"]
 }
 ```
@@ -176,7 +178,6 @@ uint64_t x173 = ((uint64_t)x172 + x153);
 "datatype": "u64",
 "name": ["x173"],
 "operation": "+",
-"parameters": {},
 "arguments": ["x172", "x153"]
 }
 ```
@@ -189,7 +190,6 @@ fiat_p256_cmovznz_u64(&x184, x183, x174, x165);
 "datatype": "u64",
 "name": ["x184"],
 "operation": "cmovznz",
-"parameters": {},
 "arguments": ["x183", "x174", "x165"]
 }
 ```
@@ -205,7 +205,6 @@ fiat_25519_uint128 x14 = ((fiat_25519_uint128)(arg1[2]) * (arg1[1]));
 "datatype": "u128",
 "name": ["x14"],
 "operation": "*",
-"parameters": {},
 "arguments": ["arg1[2]", "arg1[1]"]
 }
 ```
@@ -218,7 +217,6 @@ uint64_t x45 = (x44 >> 51);
 "datatype": "u64",
 "name": ["x45"],
 "operation": ">>",
-"parameters": {},
 "arguments": ["x44", "51"]
 }
 ```
@@ -233,7 +231,6 @@ fiat_25519_uint1 x48 = (fiat_25519_uint1)(x47 >> 51);
 "datatype": "u1",
 "name": ["x48"],
 "operation": ">>",
-"parameters": {},
 "arguments": ["x47", "51"]
 }
 ```
@@ -246,7 +243,6 @@ uint64_t x105 = (x92 + (x83 + (x75 + (x68 + (x62 + (x57 + (x53 + (x50 + (x48 + x
  "datatype": "u64",
  "name": ["x105"],
  "operation": "+",
- "parameters": {},
  "arguments": [
   "x92"
   ,
@@ -254,7 +250,6 @@ uint64_t x105 = (x92 + (x83 + (x75 + (x68 + (x62 + (x57 + (x53 + (x50 + (x48 + x
    "datatype": "u64",
    "name": [],
    "operation": "+",
-   "parameters": {},
    "arguments": [
     "x83"
     ,
@@ -262,7 +257,6 @@ uint64_t x105 = (x92 + (x83 + (x75 + (x68 + (x62 + (x57 + (x53 + (x50 + (x48 + x
      "datatype": "u64",
      "name": [],
      "operation": "+",
-     "parameters": {},
      "arguments": [
       "x75"
       ,
@@ -270,7 +264,6 @@ uint64_t x105 = (x92 + (x83 + (x75 + (x68 + (x62 + (x57 + (x53 + (x50 + (x48 + x
        "datatype": "u64",
        "name": [],
        "operation": "+",
-       "parameters": {},
        "arguments": [
         "x68"
         ,
@@ -278,7 +271,6 @@ uint64_t x105 = (x92 + (x83 + (x75 + (x68 + (x62 + (x57 + (x53 + (x50 + (x48 + x
          "datatype": "u64",
          "name": [],
          "operation": "+",
-         "parameters": {},
          "arguments": [
           "x62"
           ,
@@ -286,7 +278,6 @@ uint64_t x105 = (x92 + (x83 + (x75 + (x68 + (x62 + (x57 + (x53 + (x50 + (x48 + x
            "datatype": "u64",
            "name": [],
            "operation": "+",
-           "parameters": {},
            "arguments": [
             "x57"
             ,
@@ -294,7 +285,6 @@ uint64_t x105 = (x92 + (x83 + (x75 + (x68 + (x62 + (x57 + (x53 + (x50 + (x48 + x
              "datatype": "u64",
              "name": [],
              "operation": "+",
-             "parameters": {},
              "arguments": [
               "x53"
               ,
@@ -302,7 +292,6 @@ uint64_t x105 = (x92 + (x83 + (x75 + (x68 + (x62 + (x57 + (x53 + (x50 + (x48 + x
                "datatype": "u64",
                "name": [],
                "operation": "+",
-               "parameters": {},
                "arguments": [
                 "x50"
                 ,
@@ -310,7 +299,6 @@ uint64_t x105 = (x92 + (x83 + (x75 + (x68 + (x62 + (x57 + (x53 + (x50 + (x48 + x
                  "datatype": "u64",
                  "name": [],
                  "operation": "+",
-                 "parameters": {},
                  "arguments": [
                   "x48"
                   ,

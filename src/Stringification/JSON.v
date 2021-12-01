@@ -68,8 +68,13 @@ Module JSON.
          ; " ""datatype"": """ ++ v.(datatype) ++ ""","
          ; " ""name"": [" ++ String.concat ", " (List.map (fun n => """" ++ n ++ """")%string v.(name)) ++ "],"
          ; " ""operation"": """ ++ v.(operation) ++ ""","
-         ; " ""parameters"": {" ++ String.concat ", " (List.map (fun '(n, val) => """" ++ n ++ """: " ++ val)%string v.(parameters)) ++ "},"
-         ; " ""arguments"": ["]%string)
+         ]%string)
+         ++ match v.(parameters) with
+            | [] => []
+            | _ =>
+                [" ""parameters"": {" ++ String.concat ", " (List.map (fun '(n, val) => """" ++ n ++ """: " ++ val)%string v.(parameters)) ++ "},"]%string
+            end
+         ++ [" ""arguments"": ["]
          ++ (indent "  " (comma_concat v.(arguments)))
          ++ [" ]"
              ; "}"].
