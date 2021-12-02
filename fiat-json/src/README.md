@@ -36,9 +36,7 @@ Let us define the following types:
 
 - `bound`, either `null` or a `number` or a list of `bound`s
 
-- `parameters`, a comma-separated list of key-value pairs separated by
-  `:`, where the keys are quoted string literals and the values are
-  either quoted string literals or `number`
+- `parameters`, a JSON object with `string` keys and `string | number` values
 
 Let us define one more type.  The recursive type of expressions
 (corresponding to lines of code or expressions) `expr` has the format:
@@ -48,7 +46,7 @@ Let us define one more type.  The recursive type of expressions
 "datatype"  : datatype,
 "name"      : [name],
 "operation" : operation,
-"parameters": { parameters }
+"parameters": parameters
 "arguments" : [ name | expr | number ]
 }
 ```
@@ -154,7 +152,7 @@ would correspond to
 }
 ```
 also, we can infer from `subborrowx` which arguments have which meaning
-and which varibable in `"name"` contains the carry out.
+and which variable in `"name"` contains the carry out.
 
 ```c
 fiat_p256_addcarryx_u51(&x180, &x181, x179, x171, UINT64_C(0xffffffff00000001));
