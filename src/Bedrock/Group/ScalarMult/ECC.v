@@ -11,230 +11,76 @@ Local Open Scope Z_scope.
 
 Section Utils.
   (* FIXME put here things needed by impl below, like loop *)
+  
+  (* FIXME loop is the same as Nat.iter; use Nat.iter directly. *)
+  Fixpoint loop {A} (x : A) (k : nat) (f : A -> A) : A :=
+    match k with
+    | 0%nat => x
+    | S k' => f (loop x k' f)
+    end.
+
+   (* FIXME: Rename to mention Nat_iter *)
+    Lemma loop_plus_one :
+      forall A f k (x : A), loop (f x) k f = loop x (S k) f.
+    Proof.
+      intros. 
+      induction k; unfold loop; fold @loop; unfold nlet.
+      - reflexivity.
+      - rewrite IHk.
+        f_equal.
+    Qed.
+
+    Print Nat.iter.
+
+
+    
+    Lemma Nat_iter_plus_one :
+      forall A f k (x : A), Nat.iter k f (f x) = Nat.iter (S k) f x.
+    Proof.
+      intros.
+      induction k.
+      - reflexivity.
+      - simpl.
+        rewrite IHk.
+        f_equal.
+    Qed.
+(*
+    compile nat iter
+*)
+    Print Nat.iter.
+
 End Utils.
 
 Section FElems.
-  (* FIXME move here context elements that are related to FElems *)
 
-  Section Impl.
-    (* FIXME move Gallina definitions of exp_* here *)
-  End Impl.
-
-  Section FUtils.
-  (* FIXME move here everything that's related to reorganizing computations on
-     FElem / Z, like F_math, F_lia_orig, f_one, etc. (and check in with Dustin about
-     this) *)
-  End FUtils.
-
-  Section Proofs.
-  (* FIXME move proofs that the Gallina implementations of exponentiation in
-     Impl match regular exponentiation, e.g. exp_by_squaring_correct *)
-  End Proofs.
-
-  Section Bedrock2.
-    (* FIXME move here context elements that are related to bedrock: width, word, mem, etc. *)
-    (* FIXME move compilation lemmas, hints, and fnspec!s here.  Only this section should need  *)
-
-    Section Lowering.
-    End Lowering.
-
-    Section Compilation.
-    End Compilation.
-  End Bedrock2.
-End FElems.
-
-(* LATER: Make a separate compilation lemma for (loop) *)
-
-Section S.
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
-  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
+  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}. 
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
   Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
   Context {locals_ok : map.ok locals}.
   Context {env_ok : map.ok env}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
+  
   Context {field_parameters : FieldParameters}
           {scalar_field_parameters : ScalarFieldParameters}.
   Context {scalar_field_parameters_ok : ScalarFieldParameters_ok}.
   Context {field_representaton : FieldRepresentation}
           {scalar_representation : ScalarRepresentation}.
-  Context {field_representation_ok : FieldRepresentation_ok}.
+  Context {field_representation_ok : FieldRepresentation_ok}. 
 
-  Section Gallina.
+  Section Impl.
     Fixpoint exp_by_squaring (x : F M_pos) (n : positive) : F M_pos :=
       match n with
       | 1    => x
       | n'~0 => let/n res := exp_by_squaring x n' in
-                F.pow res 2
+                let/n res := F.pow res 2 in
+                res
       | n'~1 => let/n res := exp_by_squaring x n' in
                 let/n res := F.pow res 2 in
-                F.mul x res
+                let/n res := F.mul x res in
+                res
       end%positive.
-
-    (* FIXME go over this section with Dustin to understand why the code below
-       is needed.  Are the TODOs below still relevant? *)
-
-    Ltac rewrite_Z :=
-      lazymatch goal with
-      | [|- ?a = ?b] =>
-        let H := fresh "H" in
-        let m := open_constr:(_) in
-        enough (F.of_Z m (F.to_Z a) = F.of_Z m (F.to_Z b)) as H;
-        [rewrite !F.of_Z_to_Z in H; assumption| f_equal]
-      end.
-
-    Ltac F_math :=
-      rewrite !F.to_Z_mul.
-
-    Ltac F_lia_orig :=
-      try rewrite_Z;
-      try F_math;
-      try rewrite <- !PullPush.Z.mul_mod_l;
-      try rewrite <- !PullPush.Z.mul_mod_r;
-      try f_equal;
-      try lia.
-
-    Lemma solve_F_equality_via_Z lhs' rhs' (lhs rhs : F M_pos)
-      : F.to_Z lhs = lhs' mod Z.pos M_pos ->
-        F.to_Z rhs = rhs' mod Z.pos M_pos ->
-        lhs' = rhs' ->
-        lhs = rhs.
-    Proof.
-      intros.
-      rewrite <- (F.of_Z_to_Z lhs).
-      rewrite <- (F.of_Z_to_Z rhs).
-      intuition congruence.
-    Qed.
-
-    (*TODO: add remaining homomorphisms *)
-
-    Lemma F_mul_to_Z a a' b b'
-      : F.to_Z a = a' mod Z.pos M_pos ->
-        F.to_Z b = b' mod Z.pos M_pos ->
-        @F.to_Z M_pos (a * b) = (a' * b') mod Z.pos M_pos.
-    Proof.
-      intros H H0.
-      rewrite F.to_Z_mul.
-      rewrite H, H0.
-      rewrite <- PullPush.Z.mul_mod_l.
-      rewrite <- PullPush.Z.mul_mod_r.
-      congruence.
-    Qed.
-
-    Lemma F_add_to_Z a a' b b'
-      : F.to_Z a = a' mod Z.pos M_pos ->
-        F.to_Z b = b' mod Z.pos M_pos ->
-        @F.to_Z M_pos (a + b) = (a' + b') mod Z.pos M_pos.
-    Proof.
-      intros H H0.
-      rewrite F.to_Z_add.
-      rewrite H, H0.
-      rewrite <- PullPush.Z.add_mod_l.
-      rewrite <- PullPush.Z.add_mod_r.
-      congruence.
-    Qed.
-
-    Lemma F_var_to_Z (x : F M_pos) : F.to_Z x = proj1_sig x mod Z.pos M_pos.
-    Proof.
-      destruct x; simpl; assumption.
-    Qed.
-
-    Lemma F_one_to_Z : @F.to_Z M_pos 1 = 1 mod Z.pos M_pos.
-    Proof.
-      reflexivity.
-    Qed.
-
-
-    Lemma F_const_to_Z c : F.to_Z (F.of_Z M_pos c) = c mod Z.pos M_pos.
-    Proof.
-      reflexivity.
-    Qed.
-
-
-    Ltac F_convert_to_Z :=
-      solve [repeat
-               let e := lazymatch goal with |- F.to_Z ?x = _ => x end in
-               tryif is_var e
-               then simple eapply F_var_to_Z
-               else first [ simple eapply F_mul_to_Z
-                          | simple eapply F_add_to_Z
-                          | simple eapply F_one_to_Z
-                          | simple eapply F_const_to_Z]].
-
-    (*TODO: doesn't prepare hypotheses*)
-    Ltac F_zify :=
-      intros;
-      lazymatch goal with
-      | [|- ?lhs = ?rhs] =>
-        simple eapply solve_F_equality_via_Z;
-        [F_convert_to_Z | F_convert_to_Z | ]
-      end.
-
-    Ltac F_lia := F_zify; lia.
-
-    Create HintDb F_pow.
-    Hint Rewrite @F.pow_2_r : F_pow.
-    Hint Rewrite @F.pow_add_r : F_pow.
-    Hint Rewrite @F.pow_mul_l : F_pow.
-    Hint Rewrite <- @F.pow_pow_l : F_pow.
-    Hint Rewrite @F.pow_1_r : F_pow.
-    Hint Rewrite @F.pow_3_r : F_pow.
-
-    Definition Pos2N_pos_xI n : N.pos n~1 = (2 * N.pos n + 1)%N := eq_refl.
-    Definition Pos2N_pos_xO n : N.pos n~0 = (2 * N.pos n)%N := eq_refl.
-
-    Lemma exp_by_squaring_correct :
-      forall n x, exp_by_squaring x n = (x ^ N.pos n)%F.
-    Proof.
-      induction n; intros; cbn [exp_by_squaring]; unfold nlet;
-        rewrite (Pos2N_pos_xI n) || rewrite (Pos2N_pos_xO n) || idtac.
-      all: try rewrite IHn.
-      all: try destruct n eqn : H'; autorewrite with F_pow; try reflexivity.
-      all: F_lia_orig. (* FIXME: ask Dustin why F_lia doesn't work *)
-    Qed.
-
-    Lemma letn_equal :
-      forall A B (val : A) (body_l body_r : A -> B) (var : string),
-        (let x := val in body_l x = body_r x)
-        -> (let/n x as var := val in body_l x) = (let/n y as var := val in body_r y).
-    Proof.
-      intros. assumption.
-    Qed.
-
-    Lemma letn_nested :
-      forall A B C (a : C) (val1 : A) (body1 : A -> B) (body2 : B -> C) (var var' : string),
-        a = (let/n x as var' := val1 in let/n y as var := body1 x in body2 y)
-        -> a = (let/n y as var := let/n x as var' := val1 in body1 x in body2 y).
-    Proof.
-      intros. assumption.
-    Qed.
-
-    Lemma letn_paren_equal :
-      forall A B (a : A) (val : A) (body_r : A -> B) (var : string) left,
-        left = (let/n y as var := val in (a, body_r y))
-        -> left = (a, let/n y as var := val in body_r y).
-    Proof.
-      intros.
-      rewrite H. reflexivity.
-    Qed.
-
-    (* FIXME remove, also remove unused things *)
-    Ltac tac :=
-      lazymatch goal with
-      | [ |- let _ := _ in _ = _ ] =>
-        intros
-      | [ |- _ = let/n _ as _ := (let/n _ as _ := _ in _) in _] =>
-        eapply letn_nested
-      | [ |- _ = let/n _ as _ := _ in _] =>
-        eapply letn_equal with (body_l := fun _ => _)
-      | [ |- _ = (_, let/n _ as _ := _ in _)] =>
-        eapply letn_paren_equal
-      end.
-
-    (* FIXME remove *)
-    Definition exp_result x_ptr q_ptr xq_val : list word -> _ -> Prop :=
-      fun _ => (FElem (Some tight_bounds) x_ptr (fst xq_val) * FElem (Some tight_bounds) q_ptr (snd xq_val))%sep.
 
     Fixpoint run_length_encoding (n : positive) : list (bool * nat) :=
       match n with
@@ -250,24 +96,6 @@ Section S.
         | t => (true, 0) :: t
         end
       end%nat.
-
-    (* FIXME loop is the same as Nat.iter; use Nat.iter directly. *)
-    Fixpoint loop {A} (x : A) (k : nat) (f : A -> A) : A :=
-      match k with
-      | 0%nat => x
-      | S k' => f (loop x k' f)
-      end.
-
-    (* FIXME: Rename to mention Nat_iter *)
-    Lemma loop_plus_one :
-      forall A f k (x : A), loop (f x) k f = loop x (S k) f.
-    Proof.
-      intros.
-      induction k; unfold loop; fold @loop; unfold nlet.
-      - reflexivity.
-      - rewrite IHk.
-        f_equal.
-    Qed.
 
     Definition exp_square_and_multiply (x : F M_pos) (x' : F M_pos) :=
       let/n res := F.pow x' 2 in
@@ -346,8 +174,186 @@ Section S.
 
     Definition exp_by_squaring_encoded (x : F M_pos) (n : positive) : F M_pos :=
       exp_from_encoding x (run_length_encoding n).
+  End Impl.
 
-    Lemma run_length_encoding_nonempty:
+  Section FUtils.
+    (* FIXME go over this section with Dustin to understand why the code below
+       is needed. *)
+    
+    Lemma solve_F_equality_via_Z lhs' rhs' (lhs rhs : F M_pos)
+      : F.to_Z lhs = lhs' mod Z.pos M_pos ->
+        F.to_Z rhs = rhs' mod Z.pos M_pos ->
+        lhs' = rhs' ->
+        lhs = rhs.
+    Proof.
+      intros.
+      rewrite <- (F.of_Z_to_Z lhs).
+      rewrite <- (F.of_Z_to_Z rhs).
+      intuition congruence.
+    Qed.
+
+    Lemma F_mul_to_Z a a' b b'
+      : F.to_Z a = a' mod Z.pos M_pos ->
+        F.to_Z b = b' mod Z.pos M_pos ->
+        @F.to_Z M_pos (a * b) = (a' * b') mod Z.pos M_pos.
+    Proof.
+      intros H H0.
+      rewrite F.to_Z_mul.
+      rewrite H, H0.
+      rewrite <- PullPush.Z.mul_mod_l.
+      rewrite <- PullPush.Z.mul_mod_r.
+      congruence.
+    Qed.
+
+    Lemma F_add_to_Z a a' b b'
+      : F.to_Z a = a' mod Z.pos M_pos ->
+        F.to_Z b = b' mod Z.pos M_pos ->
+        @F.to_Z M_pos (a + b) = (a' + b') mod Z.pos M_pos.
+    Proof.
+      intros H H0.
+      rewrite F.to_Z_add.
+      rewrite H, H0.
+      rewrite <- PullPush.Z.add_mod_l.
+      rewrite <- PullPush.Z.add_mod_r.
+      congruence.
+    Qed.
+
+    Lemma F_exp_to_Z a a' n
+      : F.to_Z a = a' mod Z.pos M_pos ->
+        @F.to_Z M_pos (a ^ n) = (a' ^ n) mod Z.pos M_pos.
+    Proof.
+      intros H.
+      rewrite F.to_Z_pow.
+      rewrite H.
+      rewrite <- PullPush.Z.mod_pow_full.
+      congruence.
+    Qed.
+
+    Lemma F_var_to_Z (x : F M_pos) : F.to_Z x = proj1_sig x mod Z.pos M_pos.    Proof.
+      destruct x; simpl; assumption.
+    Qed.
+
+    Lemma F_one_to_Z : @F.to_Z M_pos 1 = 1 mod Z.pos M_pos.
+    Proof.
+      reflexivity.
+    Qed.
+
+
+    Lemma F_const_to_Z c : F.to_Z (F.of_Z M_pos c) = c mod Z.pos M_pos.
+    Proof.
+      reflexivity.
+    Qed.
+
+
+    Definition Pos2N_pos_xI n : N.pos n~1 = (2 * N.pos n + 1)%N := eq_refl.
+    Definition Pos2N_pos_xO n : N.pos n~0 = (2 * N.pos n)%N := eq_refl.
+    
+  End FUtils.
+
+  Section Proofs.
+    Ltac rewrite_Z :=
+      lazymatch goal with
+      | [|- ?a = ?b] =>
+        let H := fresh "H" in
+        let m := open_constr:(_) in
+        enough (F.of_Z m (F.to_Z a) = F.of_Z m (F.to_Z b)) as H;
+        [rewrite !F.of_Z_to_Z in H; assumption| f_equal]
+      end.
+
+    Ltac F_lia_orig :=
+      try rewrite_Z;
+      try rewrite !F.to_Z_mul;
+      try f_equal;
+      try lia.
+    
+    Ltac F_convert_to_Z :=
+      solve [repeat
+               let e := lazymatch goal with |- F.to_Z ?x = _ => x end in
+               tryif is_var e
+               then simple eapply F_var_to_Z
+               else first [ simple eapply F_exp_to_Z
+                          | simple eapply F_mul_to_Z
+                          | simple eapply F_add_to_Z
+                          | simple eapply F_one_to_Z
+                          | simple eapply F_const_to_Z]].
+
+    Ltac F_zify :=
+      intros;
+      lazymatch goal with
+      | [|- ?lhs = ?rhs] =>
+        simple eapply solve_F_equality_via_Z;
+        [F_convert_to_Z | F_convert_to_Z | ]
+      end.
+
+    Ltac F_lia := F_zify; lia.
+
+    Lemma F_mul_1_r : forall x : F M_pos,
+        (x * 1)%F = x.
+    Proof.
+      intros.
+      F_lia.
+    Qed.
+
+    Lemma F_mul_1_l : forall x : F M_pos,
+        (1 * x)%F = x.
+    Proof.
+      intros.
+      F_lia.
+    Qed.
+
+    Ltac simplify_F :=
+      unfold nlet;
+      autorewrite with F_pow;
+      repeat rewrite F_mul_1_r;
+      repeat rewrite F_mul_1_l; 
+      try reflexivity;
+      try F_lia.
+
+    Create HintDb F_pow.
+    Hint Rewrite @F.pow_2_r : F_pow.
+    Hint Rewrite @F.pow_add_r : F_pow.
+    Hint Rewrite @F.pow_mul_l : F_pow.
+    Hint Rewrite <- @F.pow_pow_l : F_pow.
+    Hint Rewrite @F.pow_1_r : F_pow.
+    Hint Rewrite @F.pow_3_r : F_pow.
+
+
+     Lemma exp_by_squaring_correct :
+      forall n x, exp_by_squaring x n = (x ^ N.pos n)%F.
+    Proof.
+      induction n; intros; cbn [exp_by_squaring]; unfold nlet;
+        rewrite (Pos2N_pos_xI n) || rewrite (Pos2N_pos_xO n) || idtac.
+      all: try rewrite IHn.
+      all: try destruct n eqn : H'; autorewrite with F_pow; try reflexivity.
+      all: F_lia.
+    Qed.
+    
+    Lemma letn_equal :
+      forall A B (val : A) (body_l body_r : A -> B) (var : string),
+        (let x := val in body_l x = body_r x)
+        -> (let/n x as var := val in body_l x) = (let/n y as var := val in body_r y).
+    Proof.
+      intros. assumption.
+    Qed.
+
+    Lemma letn_nested :
+      forall A B C (a : C) (val1 : A) (body1 : A -> B) (body2 : B -> C) (var var' : string),
+        a = (let/n x as var' := val1 in let/n y as var := body1 x in body2 y)
+        -> a = (let/n y as var := let/n x as var' := val1 in body1 x in body2 y).
+    Proof.
+      intros. assumption.
+    Qed.
+
+    Lemma letn_paren_equal :
+      forall A B (a : A) (val : A) (body_r : A -> B) (var : string) left,
+        left = (let/n y as var := val in (a, body_r y))
+        -> left = (a, let/n y as var := val in body_r y).
+    Proof.
+      intros.
+      rewrite H. reflexivity.
+    Qed.
+
+     Lemma run_length_encoding_nonempty:
       forall n, run_length_encoding n <> [].
     Proof.
       destruct n eqn : H'; simpl.
@@ -359,29 +365,6 @@ Section S.
         destruct p0; destruct b; inversion 1.
       + inversion 1.
     Qed.
-
-    (* FIXME name these consistently: this one would be F_mul_1_r *)
-    Lemma f_one : forall x : F M_pos,
-        (x * 1)%F = x.
-    Proof.
-      intros.
-      F_lia.
-    Qed.
-
-    Lemma one_f : forall x : F M_pos,
-        (1 * x)%F = x.
-    Proof.
-      intros.
-      F_lia.
-    Qed.
-
-    Ltac simplify_F :=
-      unfold nlet;
-      autorewrite with F_pow;
-      repeat rewrite f_one;
-      repeat rewrite one_f;
-      try reflexivity;
-      try F_lia.
 
     Lemma exp_by_squaring_encoded_simple_correct :
       M <> 0 -> forall n x, exp_by_squaring_encoded_simple x n = (x ^ N.pos n)%F.
@@ -400,13 +383,15 @@ Section S.
               destruct n eqn : H'; unfold exp_square_and_multiply; unfold nlet.
               { F_lia_orig.
                 rewrite <- Z.mul_comm.
-                repeat F_lia_orig.
+                F_lia_orig.
+                f_equal.
                 f_equal.
                 F_lia_orig.
               }
               { F_lia_orig.
                 rewrite <- Z.mul_comm.
-                repeat F_lia_orig.
+                F_lia_orig.
+                f_equal.
                 f_equal.
                 F_lia_orig.
               }
@@ -414,12 +399,12 @@ Section S.
                 unfold run_length_encoding in Heq.
                 inversion Heq.
                 unfold exp_from_encoding_simple.
-                simplify_F.
+                F_lia.
               }
             }
             cbn.
             destruct n eqn : H'; unfold exp_square_and_multiply; unfold nlet.
-            all: try F_lia_orig.
+            all: F_lia_orig.
           }
           rewrite <- IHn.
           cbn.
@@ -545,232 +530,178 @@ Section S.
     Proof.
       intros; destruct width_cases as [ -> | -> ]; lia.
     Qed.
+    
+  End Proofs.
 
-  End Gallina.
+  Section Bedrock2.
+    Section Lowering.
+      (* letn equal things *)
+    End Lowering.
 
-  Section Bedrock.
-    (* FIXME: define exponent as  Z.to_pos (2 ^ 255 - 17) and rewrite exponent_correct during proof. *)
-    Definition exponent : positive :=
-      57896044618658097711785492504343953926634992332820282019728792003956564819951.
+    Section Compilation.
 
-    Lemma exponent_correct :
-      exponent = Z.to_pos (2 ^ 255 - 17).
-    Proof. reflexivity. Qed.
+      Definition exponent : positive :=
+        Z.to_pos (2 ^ 255 - 17).
 
-    Hint Resolve @relax_bounds : compiler.
+      Lemma exponent_correct :
+        exponent = 57896044618658097711785492504343953926634992332820282019728792003956564819951%positive.
+      Proof. reflexivity. Qed.
 
-    Create HintDb lowering.
-    Hint Unfold exp_by_squaring : lowering.
-    Hint Unfold exp_by_squaring_encoded : lowering.
-    Hint Unfold exp_from_encoding : lowering.
-    Hint Unfold exp_by_squaring_encoded_simple : lowering.
-    Hint Unfold exp_from_encoding_simple : lowering.
-    Hint Unfold run_length_encoding : lowering.
-    Hint Unfold exp_square : lowering.
-    Hint Unfold exp_square_and_multiply : lowering.
-    Hint Unfold exponent : lowering.
+      Hint Resolve @relax_bounds : compiler.
 
-    Ltac lower_step :=
-      match goal with
-      | [ |- forall _, _ ] =>
-        intros
-      | [ |- let _ := _ in _ = _ ] =>
-        intros
-      | [ |- _ = let/n _ as _ := ?x in _] =>
-        is_var x; change (nlet _ ?x ?k) with (k x) at 1; cbv beta
-      | [ |- _ = let/n _ as _ := (let/n _ as _ := _ in _) in _] =>
-        eapply letn_nested
-      | [ |- _ = let/n _ as _ := _ in _] =>
-        eapply letn_equal with (body_l := fun _ => _)
-      | [ |- _ = (_, let/n _ as _ := _ in _)] =>
-        eapply letn_paren_equal
-      end.
+      Create HintDb lowering.
+      Hint Unfold exp_by_squaring : lowering.
+      Hint Unfold exp_by_squaring_encoded : lowering.
+      Hint Unfold exp_from_encoding : lowering.
+      Hint Unfold exp_by_squaring_encoded_simple : lowering.
+      Hint Unfold exp_from_encoding_simple : lowering.
+      Hint Unfold run_length_encoding : lowering.
+      Hint Unfold exp_square : lowering.
+      Hint Unfold exp_square_and_multiply : lowering.
+      Hint Unfold exponent : lowering.
 
-    Ltac prove_match n :=
-      simpl;
-      unfold n;
-      eexists.
+      Ltac lower_step :=
+        match goal with
+        | [ |- forall _, _ ] =>
+          intros
+        | [ |- let _ := _ in _ = _ ] =>
+          intros
+        | [ |- _ = let/n _ as _ := ?x in _] =>
+          is_var x; change (nlet _ ?x ?k) with (k x) at 1; cbv beta
+        | [ |- _ = let/n _ as _ := (let/n _ as _ := _ in _) in _] =>
+          eapply letn_nested
+        | [ |- _ = let/n _ as _ := _ in _] =>
+          eapply letn_equal with (body_l := fun _ => _)
+        | [ |- _ = (_, let/n _ as _ := _ in _)] =>
+          eapply letn_paren_equal
+        end.
 
-    (* FIXME what's going on here? *)
-    Ltac simplify_match_arithmetic :=
-      lazymatch goal with
-      | [ |- context [ match (?x + ?y)%nat with
-                       | 0%nat => _
-                       | _ => _
-                       end
-                     ]
-        ] =>
-        let n := fresh "n" in
-        evar(n : nat);
-        eassert (n = (x + y)%nat) as Heqn by prove_match n;
-        rewrite <- Heqn;
-        subst n;
-        clear Heqn
-      end.
-
-    Ltac lower_setup :=
-      autounfold with lowering;
-      lazymatch goal with
-      | [ H := _ |- _ ] =>
-        subst H
-      end;
-      repeat simplify_match_arithmetic.
-
-    (* FIXME use in rewrite_exponentiation *)
-    Ltac lower :=
-      lower_setup;
-      repeat lower_step;
-      reflexivity.
-
-    (* FIXME: Move to Rupicola's standard library and check if it breaks anything*)
-    Ltac compile_try_copy_pointer :=
-      lazymatch goal with
-      | [ |- WeakestPrecondition.cmd _ _ _ ?mem _ (_ (nlet_eq [ _ ] ?x _)) ] =>
+      Ltac lower_setup :=
+        autounfold with lowering;
         lazymatch goal with
-        | [ H : ?pred mem |- _ ] =>
-          lazymatch pred with
-          | context [ ?data ?ptr x ] =>
-            simple eapply @compile_copy_pointer with (x_ptr := ptr) (Data := data)
+        | [ H := _ |- _ ] =>
+          subst H
+        end;
+        repeat simpl Nat.add;
+        cbn - [loop].
+
+      Ltac lower :=
+        lower_setup;
+        repeat lower_step;
+        reflexivity.
+
+      (* FIXME: Move to Rupicola's standard library and check if it breaks anything*)
+      Ltac compile_try_copy_pointer :=
+        lazymatch goal with
+        | [ |- WeakestPrecondition.cmd _ _ _ ?mem _ (_ (nlet_eq [ _ ] ?x _)) ] =>
+          lazymatch goal with
+          | [ H : ?pred mem |- _ ] =>
+            lazymatch pred with
+            | context [ ?data ?ptr x ] =>
+              simple eapply @compile_copy_pointer with (x_ptr := ptr) (Data := data)
+            end
           end
-        end
-      end.
+        end.
 
-    (* FIXME unused, remove *)
-    Ltac compile_custom ::=
-      progress (try (try simple eapply compile_dlet_as_nlet_eq;
-                     try simple eapply compile_nlet_as_nlet_eq;
-                     first [ simple eapply compile_square
-                           | simple eapply compile_mul
-                           | compile_try_copy_pointer]));
-      intros.
+      Local Ltac ecancel_assumption ::= ecancel_assumption_impl.
 
-    Local Ltac ecancel_assumption ::= ecancel_assumption_impl.
+      Definition exp (n: positive) (x: F M_pos) :=
+        F.pow x (N.pos n).
 
-    (* FIXME remove *)
-    Derive rewritten SuchThat
-           (forall x, rewritten x = (x, let/n res := exp_by_squaring x 6 in res))
-           As rewrite.
-    Proof.
-      lower.
-    Qed.
+      Definition exp_6 x := let/n res := exp_by_squaring x 6 in (x, res).
 
-    Definition exp_6 x := let/n res := exp_by_squaring x 6 in (x, res).
+      (* FIXME after that the spec should be basically the same as below, so make a definition for it and reuse it. *)
+      Instance spec_of_exp_6 : spec_of "exp_6" :=
+        fnspec! "exp_6" (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
+        { requires tr mem :=
+            (FElem (Some tight_bounds) x_ptr x
+             * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
+          ensures tr' mem' :=
+            tr = tr'
+            /\ (FElem (Some tight_bounds) x_ptr x
+                * FElem (Some tight_bounds) sq_ptr (exp 6 x) * R)%sep mem'}.
 
-    (* FIXME rewrite as x ^ 6, not exp_by_squaring 6. *)
-    (* FIXME after that the spec should be basically the same as below, so make a definition for it and reuse it. *)
-    Instance spec_of_exp_6 : spec_of "exp_6" :=
-      fnspec! "exp_6" (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
-      { requires tr mem :=
-          (FElem (Some tight_bounds) x_ptr x
-           * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
-        ensures tr' mem' :=
-          tr = tr'
-          /\ let (x, ret) := exp_6 x in
-             (FElem (Some tight_bounds) x_ptr x
-              * FElem (Some tight_bounds) sq_ptr ret * R)%sep mem'}.
-
-    (* FIXME: use rewrite_exponentiation Hint below to automate this proof  *)
-    Derive exp_6_body SuchThat
-           (defn! "exp_6" ("x", "res") { exp_6_body },
-            implements exp_6 using [square; mul])
-           As exp_6_body_correct.
-    Proof.
-
-    compile_setup.
-    evar (rewritten : F M_pos -> F M_pos * F M_pos).
-
-    assert (forall x0 : F M_pos,
-               rewritten x0 = (let/n res as "res" := exp_by_squaring x0 6 in
-                               (x0, res))).
-    lower.
-
-    rewrite <- H3.
-    subst rewritten.
-    cbv beta.
-    repeat compile_step.
-    Qed.
-
-    (* FIXME remove *)
-    Derive rewritten_encoded SuchThat
-           (forall x, rewritten_encoded x = (x, let/n res := exp_by_squaring_encoded x exponent in res))
-           As rewrite'.
-    Proof.
-      lower.
-    Qed.
-
-    Definition exp (n: positive) (x: F M_pos) :=
-      F.pow x (N.pos n).
-
-    Notation expn n :=
-      ltac:(let n := constr:(NilEmpty.string_of_uint (Pos.to_uint n)) in
-            let s := constr:(String.append "exp_" n%positive) in
-            let s := eval cbv in s in
-                exact s) (only parsing).
-
-    Instance spec_of_exp97 : spec_of (expn 97) :=
-      fnspec! "exp_97" (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
-      { requires tr mem :=
-          (FElem (Some tight_bounds) x_ptr x
-           * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
-        ensures tr' mem' :=
-          tr = tr'
-          /\ (FElem (Some tight_bounds) x_ptr x
-              * FElem (Some tight_bounds) sq_ptr (exp 97 x)  * R)%sep mem'}.
-
-    Instance spec_of_exp_large : spec_of (expn exponent) :=
-      fnspec! (expn exponent) (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
-      { requires tr mem :=
-          (FElem (Some tight_bounds) x_ptr x
-           * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
-        ensures tr' mem' :=
-          tr = tr'
-          /\ (FElem (Some tight_bounds) x_ptr x
-              * FElem (Some tight_bounds) sq_ptr (exp exponent x)  * R)%sep mem'}.
-
-    Context (M_nz: M <> 0).
-
-    Import LoopCompiler.
-    Hint Rewrite @loop_equals : compiler_cleanup.
-    Hint Resolve clean_width : compiler_side_conditions.
-    Hint Extern 10 => lia : compiler_side_conditions.
-    Hint Extern 1 => simple apply compile_square; shelve : compiler.
-    Hint Extern 1 => simple apply compile_mul; shelve : compiler.
-    Hint Extern 1 => compile_try_copy_pointer; shelve : compiler.
-
-    Ltac rewrite_exponentiation lemma :=
-      lazymatch goal with
-      | |- WeakestPrecondition.cmd _ _ _ ?mem _ (_ (?x ^ N.pos ?n)%F) =>
+      Ltac rewrite_exponentiation lemma :=
+        lazymatch goal with
+        | |- WeakestPrecondition.cmd _ _ _ ?mem _ (_ (?x ^ N.pos ?n)%F) =>
           eassert (?[rewritten] = (x ^ N.pos n)%F) as <-
-            by (rewrite <- lemma by assumption;
-                lower_setup; cbn -[loop]; repeat lower_step; reflexivity)
-      end.
+              by (rewrite <- lemma by assumption;
+                  lower; reflexivity)
+        end.
 
-    Hint Extern 1 => rewrite_exponentiation exp_by_squaring_encoded_correct; shelve : compiler_cleanup.
+      Section Exp_by_squaring.
+        Hint Extern 1 => rewrite_exponentiation exp_by_squaring_correct; shelve : compiler_cleanup.
 
-    Import LoopCompiler.
-    Hint Resolve clean_width : compiler_side_conditions.
-    Hint Extern 10 => lia : compiler_side_conditions.
+        Derive exp_6_body SuchThat
+               (defn! "exp_6" ("x", "res") { exp_6_body },
+                implements (exp 6) using [square; mul])
+               As exp_6_body_correct.
+        Proof.
+          compile.
+        Qed.
+        
+      End Exp_by_squaring.
 
-    Derive exp_97_body SuchThat
-           (defn! "exp_97" ("x", "res") { exp_97_body },
-            implements (exp 97) using [square; mul])
-           As exp_97_body_correct.
-    Proof.
-      compile.
-    Qed.
+      Notation expn n :=
+        ltac:(let n := constr:(NilEmpty.string_of_uint (Pos.to_uint n)) in
+              let s := constr:(String.append "exp_" n%positive) in
+              let s := eval cbv in s in
+                  exact s) (only parsing).
 
-    Derive exp_large_body SuchThat
-           (defn! (expn exponent) ("x", "res") { exp_large_body },
-            implements (exp exponent) using [square; mul])
-           As exp_large_body_correct.
-    Proof.
-      compile.
-    Qed.
+      Instance spec_of_exp97 : spec_of (expn 97) :=
+        fnspec! "exp_97" (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
+        { requires tr mem :=
+            (FElem (Some tight_bounds) x_ptr x
+             * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
+          ensures tr' mem' :=
+            tr = tr'
+            /\ (FElem (Some tight_bounds) x_ptr x
+                * FElem (Some tight_bounds) sq_ptr (exp 97 x)  * R)%sep mem'}.
 
-    Eval cbn in  exp_large_body.
-  End Bedrock.
+      Instance spec_of_exp_large : spec_of (expn exponent) :=
+        fnspec! (expn exponent) (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
+        { requires tr mem :=
+            (FElem (Some tight_bounds) x_ptr x
+             * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
+          ensures tr' mem' :=
+            tr = tr'
+            /\ (FElem (Some tight_bounds) x_ptr x
+                * FElem (Some tight_bounds) sq_ptr (exp exponent x)  * R)%sep mem'}.
 
-End S.
+      Context (M_nz: M <> 0).
+
+      Import LoopCompiler.
+      Hint Rewrite @loop_equals : compiler_cleanup.
+      Hint Resolve clean_width : compiler_side_conditions.
+      Hint Extern 10 => lia : compiler_side_conditions.
+      Hint Extern 1 => simple apply compile_square; shelve : compiler.
+      Hint Extern 1 => simple apply compile_mul; shelve : compiler.
+      Hint Extern 1 => compile_try_copy_pointer; shelve : compiler.
+
+      Hint Extern 1 => rewrite_exponentiation exp_by_squaring_encoded_correct; shelve : compiler_cleanup.
+
+      Derive exp_97_body SuchThat
+             (defn! "exp_97" ("x", "res") { exp_97_body },
+              implements (exp 97) using [square; mul])
+             As exp_97_body_correct.
+      Proof.
+        compile.
+      Qed.
+
+      Derive exp_large_body SuchThat
+             (defn! (expn exponent) ("x", "res") { exp_large_body },
+              implements (exp exponent) using [square; mul])
+             As exp_large_body_correct.
+      Proof.
+        compile.
+      Qed.
+
+
+    End Compilation.
+  End Bedrock2.
+End FElems.
+
+(* LATER: Make a separate compilation lemma for (loop) *)
 
 Require Import bedrock2.BasicC64Semantics.
 
