@@ -83,6 +83,7 @@ jobs:
       with:
         name: ExtractionOCaml-${{ matrix.env.COQ_VERSION }}
         path: src/ExtractionOCaml
+      if: always ()
     - name: standalone-haskell
       run: etc/ci/github-actions-make.sh -j1 standalone-haskell GHCFLAGS='+RTS -M5G -RTS'
     - name: upload Haskell files
@@ -90,6 +91,7 @@ jobs:
       with:
         name: ExtractionHaskell-${{ matrix.env.COQ_VERSION }}
         path: src/ExtractionHaskell
+      if: always ()
     - name: display timing info
       run: cat time-of-build-pretty.log
     - name: display per-line timing info

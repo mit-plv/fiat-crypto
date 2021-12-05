@@ -17,13 +17,13 @@ Section Equivalence.
   Context {field_parameters : FieldParameters}.
 
   (*TODO: which of ladderstep_gallina and M.xzladderstep should we change? either?*)
-  Definition reorder_pairs {A B C D} (p : A * B * C * D) : (A*B)*(C*D) :=
-    ((fst (fst (fst p)), snd (fst (fst p))),(snd (fst p), snd p)).
+  Definition reorder_pairs {A B C D} (p : \<<A , B , C , D\>>) : (A*B)*(C*D) :=
+    (P2.car p, P2.car (P2.cdr p),((P2.car (P2.cdr (P2.cdr p))),(P2.cdr (P2.cdr (P2.cdr p))))).
 
-  Lemma invert_reorder_pairs {A B C D} (p : A * B * C * D) w x y z
-    : reorder_pairs p = (w,x, (y,z)) <-> p = (w,x,y,z).
+  Lemma invert_reorder_pairs {A B C D} (p : \<<A , B , C , D\>>) w x y z
+    : reorder_pairs p = (w,x, (y,z)) <-> p = \<w,x,y,z\>.
   Proof.
-    destruct p as [[[? ?] ?] ?].
+    destruct p as [? [? [? ?]]].
     cbv.
     intuition congruence.
   Qed.
@@ -35,7 +35,7 @@ Section Equivalence.
   Proof.
     intros. cbv [ladderstep_gallina M.xzladderstep].
     destruct P1 as [x1 z1]. destruct P2 as [x2 z2].
-    cbv [Rewriter.Util.LetIn.Let_In Notations.nlet]. cbn [fst snd].
+    cbv [Rewriter.Util.LetIn.Let_In nlet]. cbn [fst snd].
     rewrite !F.pow_2_r; trivial.
   Qed.
 
@@ -50,7 +50,7 @@ Section Equivalence.
       a24 cswap scalarbits (Z.testbit n) point.
   Proof.
     intros. cbv [montladder_gallina M.montladder].
-    cbv [Rewriter.Util.LetIn.Let_In Notations.nlet]. cbn [fst snd P2.car P2.cdr].
+    cbv [Rewriter.Util.LetIn.Let_In nlet]. cbn [fst snd P2.car P2.cdr].
     rewrite downto_while.
     unfold Alloc.stack.
     match goal with
@@ -91,11 +91,11 @@ Section Equivalence.
              | _ => reflexivity
              end. 
 
-      rewrite <- ladderstep_gallina_equiv in E3.
-      rewrite invert_reorder_pairs in E3.
-      simpl in E3.
-      rewrite E1 in E3.
-      congruence.
+      rewrite <- ladderstep_gallina_equiv in E2.
+      rewrite invert_reorder_pairs in E2.
+      simpl in E2.
+      rewrite E2.
+      reflexivity.
     }
     { rewrite Z2Nat.id by lia. reflexivity. }
   Qed.

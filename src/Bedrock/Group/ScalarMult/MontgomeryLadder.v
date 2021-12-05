@@ -25,7 +25,7 @@ Notation "'let/n' ( w , x , y , z ) := val 'in' body" :=
         IdentParsing.TC.ident_to_string x;
         IdentParsing.TC.ident_to_string y;
         IdentParsing.TC.ident_to_string z]
-        val  (fun '(w, x, y, z) => body))
+        val  (fun '\<w, x, y, z\> => body))
     (at level 200, w ident, x  ident, y ident, z ident, body at level 200,
      only parsing).
 
@@ -237,19 +237,6 @@ Section __.
     Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (cswap _ _ _) _))) =>
     compile_cswap; shelve : compiler.
     
-    Ltac compile_ladderstep :=
-      eapply compile_ladderstep;
-      [ | | | | | |
-        | compile_step;
-          match goal with
-          | [|- (WeakestPrecondition.cmd _ _ _ _ _ (_ (match ?e with _ => _ end)))] =>
-            let v := fresh "v" in
-            remember e as v;
-            destruct v as [[[? ?] ?] ?]
-          end].
-    Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (ladderstep_gallina _ _ _ _ _) _))) =>
-    compile_ladderstep; shelve : compiler.
-
     
     Lemma word_unsigned_of_Z_eq z
       : 0 <= z < 2 ^ width -> word.unsigned (word.of_Z z : word) = z.
@@ -261,57 +248,69 @@ Section __.
 
     Hint Extern 8 (word.unsigned (word.of_Z _) = _) =>
     simple eapply word_unsigned_of_Z_eq; [ ZnWords |] : compiler.
+
+    (*TODO: should this go in core rupicola?*)
+    Lemma compile_copy_bool {tr m l functions} (x: bool) :
+      let v := x in
+      forall {P} {pred: P v -> predicate}
+             {k: nlet_eq_k P v} {k_impl}
+             x_expr var,
+
+        WeakestPrecondition.dexpr m l x_expr (word.of_Z (Z.b2z v)) ->
+
+        (let v := v in
+         <{ Trace := tr;
+            Memory := m;
+            Locals := map.put l var (word.of_Z (Z.b2z v));
+            Functions := functions }>
+         k_impl
+         <{ pred (k v eq_refl) }>) ->
+        <{ Trace := tr;
+           Memory := m;
+           Locals := l;
+           Functions := functions }>
+        cmd.seq (cmd.set var x_expr) k_impl
+        <{ pred (nlet_eq [var] v k) }>.
+    Proof.
+      intros.
+      repeat straightline.
+      eauto.
+    Qed.
+    Hint Extern 10 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ ?v _))) =>
+    is_var v; simple eapply compile_copy_bool; shelve : compiler.
+
+
+    Hint Resolve unsigned_of_Z_0 : compiler_side_conditions.
+    Hint Resolve unsigned_of_Z_1 : compiler_side_conditions.
+    Hint Unfold F.one F.zero : compiler_cleanup.
+
+    Hint Extern 10 (_ < _) => lia : compiler_side_conditions.
+
+    (* TODO: update the original definition in bedrock2 *)
+    Ltac find_implication xs y ::=
+      multimatch xs with
+      | cons ?x _ =>
+          (* Only proceed if we can find an implication between x and y *)
+          let _ := constr:(ltac:(solve [auto 1 with nocore ecancel_impl])
+                            : Lift1Prop.impl1 x y) in
+          constr:(O)
+      | cons _ ?xs => let i := find_implication xs y in constr:(S i)
+      end.
+
     
     Derive montladder_body SuchThat
-           (let args := ["OUT"; "K"; "U"] in
-            let montladder : Syntax.func :=
-                ("montladder", (args, [], montladder_body)) in
-            ltac:(
-              let goal := Rupicola.Lib.Tactics.program_logic_goal_for_function
-                            montladder [felem_cswap; felem_copy; felem_small_literal;
-                                       sctestbit; "ladderstep"; inv; mul] in
-              exact (__rupicola_program_marker montladder_gallina -> goal)))
+           (defn! "montladder" ("OUT", "K", "U")
+                { montladder_body },
+             implements montladder_gallina
+                        using [felem_cswap; felem_copy; felem_small_literal;
+                               sctestbit; "ladderstep"; inv; mul])
            As montladder_correct.
     Proof.
       pose proof scalarbits_pos.
-      pose proof unsigned_of_Z_1.
-      pose proof unsigned_of_Z_0.
-      compile_setup.
-      unfold F.one.
-      unfold F.zero.
-
-      repeat compile_step.
-      { pose proof scalarbits_bound; lia. }
-      2:{
-        pose proof scalarbits_bound.
-        apply word_unsigned_of_Z_eq.
-        lia.
-      }
-      solve[repeat compile_step].
-      repeat compile_step.
-      unfold v6.
-      compile_step.
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      solve[repeat compile_step].
-      2:{
-        instantiate (1:=word.of_Z (Z.of_nat i)).
-        rewrite word.unsigned_of_Z.
-        rewrite word.wrap_small; auto.
-        pose proof scalarbits_bound.
-        lia.
-      }
-      solve[repeat compile_step].
-      compile_step.
-      compile_step.        
-      solve[repeat compile_step].
-      {
-        cbn [P2.car P2.cdr seps].
-        unfold v8 in *.
-        rewrite Heq in Heqv9.
-        inversion Heqv9; subst.
-        ecancel_assumption.
-      }
+      pose proof scalarbits_bound.
+      compile_setup;
+      solve[repeat repeat compile_step];
+      compile_done.
     Qed.
   End MontLadder.
 End __.
@@ -325,3 +324,4 @@ Local Unset Printing Coercions.
  *)
 Local Set Printing Width 160.
 Redirect "Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body" Print montladder_body.
+
