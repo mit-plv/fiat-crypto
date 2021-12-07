@@ -1,5 +1,6 @@
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Loops.
+Require Import Rupicola.Lib.ControlFlow.DownTo.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Specs.ScalarField.
@@ -10,30 +11,7 @@ Require Import Numbers.DecimalString.
 Local Open Scope Z_scope.
 
 Section Utils.
-  (* FIXME put here things needed by impl below, like loop *)
   
-  (* FIXME loop is the same as Nat.iter; use Nat.iter directly. *)
-  Fixpoint loop {A} (x : A) (k : nat) (f : A -> A) : A :=
-    match k with
-    | 0%nat => x
-    | S k' => f (loop x k' f)
-    end.
-
-   (* FIXME: Rename to mention Nat_iter *)
-    Lemma loop_plus_one :
-      forall A f k (x : A), loop (f x) k f = loop x (S k) f.
-    Proof.
-      intros. 
-      induction k; unfold loop; fold @loop; unfold nlet.
-      - reflexivity.
-      - rewrite IHk.
-        f_equal.
-    Qed.
-
-    Print Nat.iter.
-
-
-    
     Lemma Nat_iter_plus_one :
       forall A f k (x : A), Nat.iter k f (f x) = Nat.iter (S k) f x.
     Proof.
@@ -44,10 +22,6 @@ Section Utils.
         rewrite IHk.
         f_equal.
     Qed.
-(*
-    compile nat iter
-*)
-    Print Nat.iter.
 
 End Utils.
 
@@ -99,10 +73,14 @@ Section FElems.
 
     Definition exp_square_and_multiply (x : F M_pos) (x' : F M_pos) :=
       let/n res := F.pow x' 2 in
-      F.mul res x.
+      let/n res := F.mul res x in
+      res.
 
     Definition exp_square (x' : F M_pos) :=
-      F.pow x' 2.
+      let/n res := F.pow x' 2 in
+      res.
+
+    Print Nat.iter.
 
     Fixpoint exp_from_encoding_simple (x : F M_pos) (n : list (bool * nat)) : F M_pos :=
       match n with
@@ -116,7 +94,7 @@ Section FElems.
         res
       | (true, k) :: t =>
         let/n res := exp_from_encoding_simple x t in
-        let/n res := loop res (S k) (exp_square_and_multiply x) in
+        let/n res := Nat.iter (S k) (exp_square_and_multiply x) res in
         res
       | (false, 0%nat) :: t =>
         let/n res := exp_from_encoding_simple x t in
@@ -124,7 +102,7 @@ Section FElems.
         res
       | (false, k) :: t =>
         let/n res := exp_from_encoding_simple x t in
-        let/n res := loop res (S k) (exp_square) in
+        let/n res := Nat.iter (S k) (exp_square) res in
         res
       end.
 
@@ -141,14 +119,14 @@ Section FElems.
       | [(true, (S k))] =>
         let/n res := F.pow x 2 in
         let/n res := F.mul x res in
-        let/n res := loop res k (exp_square_and_multiply x) in
+        let/n res := Nat.iter k (exp_square_and_multiply x) res in
         res
       | [(false, 0%nat); (true, 0%nat)] =>
         let/n res := F.pow x 2 in
         res
       | [(false, k); (true, 0%nat)] =>
         let/n res := F.pow x 2 in
-        let/n res := loop res k (exp_square) in
+        let/n res := Nat.iter k (exp_square) res in
         res
       | (true, 0%nat) :: t =>
         let/n res := exp_from_encoding x t in
@@ -157,7 +135,7 @@ Section FElems.
         res
       | (true, k) :: t =>
         let/n res := exp_from_encoding x t in
-        let/n res := loop res (S k) (exp_square_and_multiply x) in
+        let/n res := Nat.iter (S k) (exp_square_and_multiply x) res in
         res
       | (false, 0%nat) :: t =>
         let/n res := exp_from_encoding x t in
@@ -165,7 +143,7 @@ Section FElems.
         res
       | (false, k) :: t =>
         let/n res := exp_from_encoding x t in
-        let/n res := loop res (S k) (exp_square) in
+        let/n res := Nat.iter (S k) (exp_square) res in
         res
       end.
 
@@ -317,7 +295,6 @@ Section FElems.
     Hint Rewrite @F.pow_1_r : F_pow.
     Hint Rewrite @F.pow_3_r : F_pow.
 
-
      Lemma exp_by_squaring_correct :
       forall n x, exp_by_squaring x n = (x ^ N.pos n)%F.
     Proof.
@@ -326,31 +303,6 @@ Section FElems.
       all: try rewrite IHn.
       all: try destruct n eqn : H'; autorewrite with F_pow; try reflexivity.
       all: F_lia.
-    Qed.
-    
-    Lemma letn_equal :
-      forall A B (val : A) (body_l body_r : A -> B) (var : string),
-        (let x := val in body_l x = body_r x)
-        -> (let/n x as var := val in body_l x) = (let/n y as var := val in body_r y).
-    Proof.
-      intros. assumption.
-    Qed.
-
-    Lemma letn_nested :
-      forall A B C (a : C) (val1 : A) (body1 : A -> B) (body2 : B -> C) (var var' : string),
-        a = (let/n x as var' := val1 in let/n y as var := body1 x in body2 y)
-        -> a = (let/n y as var := let/n x as var' := val1 in body1 x in body2 y).
-    Proof.
-      intros. assumption.
-    Qed.
-
-    Lemma letn_paren_equal :
-      forall A B (a : A) (val : A) (body_r : A -> B) (var : string) left,
-        left = (let/n y as var := val in (a, body_r y))
-        -> left = (a, let/n y as var := val in body_r y).
-    Proof.
-      intros.
-      rewrite H. reflexivity.
     Qed.
 
      Lemma run_length_encoding_nonempty:
@@ -371,8 +323,7 @@ Section FElems.
     Proof.
       intros. rewrite <- exp_by_squaring_correct; eauto.
       unfold exp_by_squaring_encoded_simple; induction n; simpl.
-      - cbn -[loop].
-        destruct (run_length_encoding n) eqn : Heq.
+      - destruct (run_length_encoding n) eqn : Heq.
         + apply run_length_encoding_nonempty in Heq.
           inversion Heq.
         + destruct p. destruct b.
@@ -420,7 +371,7 @@ Section FElems.
           unfold nlet.
           cbn.
           unfold exp_square.
-          destruct n0; unfold loop; F_lia_orig.
+          destruct n0; F_lia_orig.
         }
         { destruct (run_length_encoding p~0) as [|[[|] n0] t]; try reflexivity.
           simpl.
@@ -428,7 +379,7 @@ Section FElems.
           unfold nlet.
           cbn.
           unfold exp_square.
-          destruct n0; unfold loop; F_lia_orig.
+          destruct n0; F_lia_orig.
         }
         unfold run_length_encoding.
         unfold exp_from_encoding_simple.
@@ -450,14 +401,15 @@ Section FElems.
         reflexivity.
       - destruct a.
         destruct b; simple_unfold exp_from_encoding; simple_unfold exp_from_encoding_simple; destruct n0; try destruct n0; destruct l; unfold nlet; try rewrite IHl; eauto; simple_unfold exp_from_encoding_simple; try simplify_F.
-        + unfold exp_square_and_multiply; unfold loop.
+        + unfold exp_square_and_multiply.
+          simpl Nat.iter.
           simplify_F.
-        + pose loop_plus_one.
+        + pose Nat_iter_plus_one.
           specialize e with (f := exp_square_and_multiply x) (k := S (S n0)) (x := 1%F).
           rewrite <- e.
           replace (exp_square_and_multiply x 1) with x.
           2: { unfold exp_square_and_multiply; simplify_F. }
-          pose loop_plus_one.
+          pose Nat_iter_plus_one.
           specialize e0 with (f := exp_square_and_multiply x) (k := (S n0)) (x := x).
           rewrite <- e0.
           f_equal.
@@ -470,59 +422,18 @@ Section FElems.
         + destruct p; destruct b; destruct n0; eauto.
           destruct l; eauto.
           unfold exp_from_encoding_simple.
-          unfold loop; unfold exp_square.
+          unfold exp_square.
+          simpl Nat.iter.
           simplify_F.
         + destruct p; destruct b; destruct n1; eauto.
           destruct l; eauto.
           unfold exp_from_encoding_simple.
           simplify_F.
-          pose loop_plus_one.
+          pose Nat_iter_plus_one.
           specialize e with (f := exp_square) (k := (S (S n0))) (x := x).
           rewrite <- e.
           unfold exp_square.
           simplify_F.
-    Qed.
-
-    Lemma loop_equals':
-      forall {A} f (x : A) k,
-        (ExitToken.new, loop x k f) =
-        (ranged_for' 0 (Z.of_nat k)
-                     (fun (acc : A) (tok : ExitToken.t) (idx : Z)  _ =>
-                        (tok, f acc)) x).
-    Proof.
-      induction k.
-      - simpl.
-        unfold ranged_for'.
-        rewrite ranged_for_break_exit; try reflexivity.
-        lia.
-      - cbn -[Z.of_nat].
-        replace (Z.of_nat (S k)) with (Z.of_nat k + 1) by lia.
-        erewrite ranged_for'_unfold_r_nstop; try lia; try easy.
-        all: rewrite <- IHk; reflexivity.
-    Qed.
-
-    Lemma loop_equals :
-      forall {A} f (x : A) k,
-        Z.of_nat k < 2 ^ width ->
-        loop x k f =
-        let/n from := 0 in
-        let/n to := word.of_Z (Z.of_nat k) in
-        ranged_for_u (word.of_Z from) to
-                     (fun acc t _ _ =>
-                        let/n res := f acc in (t, res)) x.
-    Proof.
-      intros.
-      unfold nlet.
-      unfold ranged_for_u in *.
-      unfold ranged_for_w in *.
-      unfold ranged_for in *.
-      unfold w_body_tok.
-      pose proof Nat2Z.is_nonneg k.
-      repeat rewrite word.unsigned_of_Z_0.
-      repeat rewrite word.unsigned_of_Z.
-      repeat rewrite word.wrap_small by lia.
-      rewrite <- loop_equals'.
-      reflexivity.
     Qed.
 
     Lemma clean_width :
@@ -535,7 +446,30 @@ Section FElems.
 
   Section Bedrock2.
     Section Lowering.
-      (* letn equal things *)
+      Lemma letn_equal :
+        forall A B (val : A) (body_l body_r : A -> B) (var : string),
+          (let x := val in body_l x = body_r x)
+          -> (let/n x as var := val in body_l x) = (let/n y as var := val in body_r y).
+      Proof.
+        intros. assumption.
+      Qed.
+
+      Lemma letn_nested :
+        forall A B C (a : C) (val1 : A) (body1 : A -> B) (body2 : B -> C) (var var' : string),
+          a = (let/n x as var' := val1 in let/n y as var := body1 x in body2 y)
+          -> a = (let/n y as var := let/n x as var' := val1 in body1 x in body2 y).
+      Proof.
+        intros. assumption.
+      Qed.
+
+      Lemma letn_paren_equal :
+        forall A B (a : A) (val : A) (body_r : A -> B) (var : string) left,
+          left = (let/n y as var := val in (a, body_r y))
+          -> left = (a, let/n y as var := val in body_r y).
+      Proof.
+        intros.
+        rewrite H. reflexivity.
+      Qed.
     End Lowering.
 
     Section Compilation.
@@ -543,9 +477,10 @@ Section FElems.
       Definition exponent : positive :=
         Z.to_pos (2 ^ 255 - 17).
 
+      (*
       Lemma exponent_correct :
         exponent = 57896044618658097711785492504343953926634992332820282019728792003956564819951%positive.
-      Proof. reflexivity. Qed.
+      Proof. reflexivity. Qed. *)
 
       Hint Resolve @relax_bounds : compiler.
 
@@ -583,7 +518,7 @@ Section FElems.
           subst H
         end;
         repeat simpl Nat.add;
-        cbn - [loop].
+        cbn -[Nat.iter].
 
       Ltac lower :=
         lower_setup;
@@ -610,7 +545,6 @@ Section FElems.
 
       Definition exp_6 x := let/n res := exp_by_squaring x 6 in (x, res).
 
-      (* FIXME after that the spec should be basically the same as below, so make a definition for it and reuse it. *)
       Instance spec_of_exp_6 : spec_of "exp_6" :=
         fnspec! "exp_6" (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
         { requires tr mem :=
@@ -671,11 +605,11 @@ Section FElems.
       Context (M_nz: M <> 0).
 
       Import LoopCompiler.
-      Hint Rewrite @loop_equals : compiler_cleanup.
       Hint Resolve clean_width : compiler_side_conditions.
       Hint Extern 10 => lia : compiler_side_conditions.
       Hint Extern 1 => simple apply compile_square; shelve : compiler.
       Hint Extern 1 => simple apply compile_mul; shelve : compiler.
+      Hint Extern 1 => compile_downto; shelve : compiler.
       Hint Extern 1 => compile_try_copy_pointer; shelve : compiler.
 
       Hint Extern 1 => rewrite_exponentiation exp_by_squaring_encoded_correct; shelve : compiler_cleanup.
@@ -688,6 +622,9 @@ Section FElems.
         compile.
       Qed.
 
+      Arguments exp_97_body /.
+      Eval cbn in exp_97_body.
+
       Derive exp_large_body SuchThat
              (defn! (expn exponent) ("x", "res") { exp_large_body },
               implements (exp exponent) using [square; mul])
@@ -696,6 +633,8 @@ Section FElems.
         compile.
       Qed.
 
+      Arguments exp_large_body /.
+      Eval cbn in exp_large_body.
 
     End Compilation.
   End Bedrock2.
@@ -723,6 +662,4 @@ Section Extraction.
        to_bytes := "to_bytes";
        felem_copy := "felem_copy";
        felem_small_literal := "felem_small_literal" |}.
-
-  Compute ToCString.c_func exp_large_body.
 End Extraction.
