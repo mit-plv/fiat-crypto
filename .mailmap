@@ -2,38 +2,66 @@
 ## Cf for instance: git shortlog -nse. More details via: man git shortlog
 
 # having the same name <email> name <email> on a line will fix capitalization
-Adam Chlipala <adamc@csail.mit.edu>                        Adam Chlipala <adamc@csail.mit.edu>
-Adam Chlipala <adamc@csail.mit.edu>                        Adam Chlipala <adam@chlipala.net>
-Andrej Dudenhefner <mrhaandi@gmail.com>                    Andrej Dudenhefner <mrhaandi@gmail.com>
-Andrej Dudenhefner <mrhaandi@gmail.com>                    Andrej Dudenhefner <31094379+mrhaandi@users.noreply.github.com>
-Andres Erbsen <andreser@mit.edu>                           Andres Erbsen <andreser@mit.edu>
-Andres Erbsen <andreser@mit.edu>                           Andres Erbsen <andres@krutt.org>
-Andres Erbsen <andreser@mit.edu>                           Andres Erbsen <andreser@google.com>
-Frédéric Besson <frederic.besson@inria.fr>                 Frédéric Besson <frederic.besson@inria.fr>
-Frédéric Besson <frederic.besson@inria.fr>                 BESSON Frederic <frederic.besson@inria.fr>
-Frédéric Besson <frederic.besson@inria.fr>                 Frederic Besson <frederic.besson@inria.fr>
-Jade Philipoom <jadep@mit.edu>                             Jade Philipoom <jadep@mit.edu>
-Jade Philipoom <jadep@mit.edu>                             jadephilipoom <jade.philipoom@gmail.com>
-Jade Philipoom <jadep@mit.edu>                             jadep <jade.philipoom@gmail.com>
-Jade Philipoom <jadep@mit.edu>                             jadep <jadep@mit.edu>
-Jade Philipoom <jadep@mit.edu>                             Jade Philipoom <jadep@google.com>
-Jason Gross <jgross@mit.edu>                               Jason Gross <jagro@google.com>
-Jason Gross <jgross@mit.edu>                               Jason Gross <jasongross9@gmail.com>
-Jason Gross <jgross@mit.edu>                               Jason Gross <jgross@mit.edu>
-Kris Kwiatkowski <kris@amongbytes.com>                     Kris Kwiatkowski <kris@amongbytes.com>
-Kris Kwiatkowski <kris@amongbytes.com>                     Kris Kwiatkowski <contact@amongbytes.com>
-Maxime Dénès <maxime.denes@inria.fr>                       Maxime Dénès <maxime.denes@inria.fr>
-Maxime Dénès <maxime.denes@inria.fr>                       Maxime Dénès <mail@maximedenes.fr>
-Robert Sloan <varomodt@gmail.com>                          Robert Sloan <rsloan@sumologic.com>
-Robert Sloan <varomodt@gmail.com>                          Robert Sloan <varomodt@dhcp-18-189-26-21.dyn.MIT.EDU>
-Robert Sloan <varomodt@gmail.com>                          Robert Sloan <varomodt@dhcp-18-189-51-40.dyn.MIT.EDU>
-Robert Sloan <varomodt@gmail.com>                          Robert Sloan <varomodt@gmail.com>
-Robert Sloan <varomodt@gmail.com>                          Robert Sloan <varomodt@Roberts-MacBook.local>
-Robert Sloan <varomodt@gmail.com>                          Rob Sloan <varomodt@gmail.com>
-Robert Sloan <varomodt@gmail.com>                          varomodt <varomodt@localhost.localdomain>
-Robert Sloan <varomodt@gmail.com>                          Robert Sloan <varomodt@google.com>
-Robert Sloan <varomodt@gmail.com>                          Rob Sloan <varomodt@google.com>
-Vincent Laporte <Vincent.Laporte@inria.fr>                 Vincent Laporte <Vincent.Laporte@inria.fr>
-Vincent Laporte <Vincent.Laporte@inria.fr>                 Vincent Laporte <Vincent.Laporte@fondation-inria.fr>
-Zoe Paraskevopoulou <zoopar@fb.com>                        Zoe Paraskevopoulou <zoopar@fb.com>
-Zoe Paraskevopoulou <zoopar@fb.com>                        zoep <zoe.paraskevopoulou@gmail.com>
+Adam Chlipala <adamc@csail.mit.edu>                            Adam Chlipala <adam@chlipala.net>
+Adam Chlipala <adamc@csail.mit.edu>                            Adam Chlipala <adamc@csail.mit.edu>
+Andrej Dudenhefner <mrhaandi@gmail.com>                        Andrej Dudenhefner <31094379+mrhaandi@users.noreply.github.com>
+Andrej Dudenhefner <mrhaandi@gmail.com>                        Andrej Dudenhefner <mrhaandi@gmail.com>
+Andres Erbsen <andreser@mit.edu>                               Andres Erbsen <andres@krutt.org>
+Andres Erbsen <andreser@mit.edu>                               Andres Erbsen <andreser@google.com>
+Andres Erbsen <andreser@mit.edu>                               Andres Erbsen <andreser@mit.edu>
+Ashley Lin <ashlin@mit.edu>                                    Ashley Lin <ashlin@mit.edu>
+Benjamin Barenblat <bbaren@google.com>                         Benjamin Barenblat <bbaren@google.com>
+Benjamin Salling Hvass <bsh@eng.au.dk>                         Benjamin Salling Hvass <bsh@eng.au.dk>
+Chuyue Sun <33578456+ChuyueSun@users.noreply.github.com>       ChuyueSun <33578456+ChuyueSun@users.noreply.github.com>
+Clément Pit-Claudel <clement.pitclaudel@live.com>              Clément Pit-Claudel <clement.pitclaudel@live.com>
+Daniel Hirche <daniel@xcx.cc>                                  Daniel Hirche <daniel@xcx.cc>
+David Benjamin <davidben@google.com>                           David Benjamin <davidben@google.com>
+Diego F. Aranha <dfaranha@gmail.com>                           Diego F. Aranha <dfaranha@gmail.com>
+Dustin Jamner <dijamner@me.com>                                Dustin Jamner <dijamner@me.com>
+Dustin Jamner <dijamner@me.com>                                Dustin Jamner <jamner.d@husky.neu.edu>
+Emil Bremer Orloff <ebo@secata.com>                            Emil Bremer Orloff <ebo@secata.com>
+Frank Denis <github@pureftpd.org>                              Frank Denis <github@pureftpd.org>
+François Garillot <francois@garillot.net>                      François Garillot <francois@garillot.net>
+Frédéric Besson <frederic.besson@inria.fr>                     BESSON Frederic <frederic.besson@inria.fr>
+Frédéric Besson <frederic.besson@inria.fr>                     Frederic Besson <frederic.besson@inria.fr>
+Frédéric Besson <frederic.besson@inria.fr>                     Frédéric Besson <frederic.besson@inria.fr>
+Gaëtan Gilbert <gaetan.gilbert@skyskimmer.net>                 Gaëtan Gilbert <gaetan.gilbert@skyskimmer.net>
+George Tankersley <george.tankersley@gmail.com>                George Tankersley <george.tankersley@gmail.com>
+Hannes Mehnert <hannes@mehnert.org>                            Hannes Mehnert <hannes@mehnert.org>
+Hugo Herbelin <Hugo.Herbelin@inria.fr>                         Hugo Herbelin <Hugo.Herbelin@inria.fr>
+Jade Philipoom <jadep@mit.edu>                                 Jade Philipoom <jadep@google.com>
+Jade Philipoom <jadep@mit.edu>                                 Jade Philipoom <jadep@mit.edu>
+Jade Philipoom <jadep@mit.edu>                                 jadep <jade.philipoom@gmail.com>
+Jade Philipoom <jadep@mit.edu>                                 jadep <jadep@mit.edu>
+Jade Philipoom <jadep@mit.edu>                                 jadephilipoom <jade.philipoom@gmail.com>
+Jason Gross <jgross@mit.edu>                                   Jason Gross <jagro@google.com>
+Jason Gross <jgross@mit.edu>                                   Jason Gross <jasongross9@gmail.com>
+Jason Gross <jgross@mit.edu>                                   Jason Gross <jgross@mit.edu>
+Jasper Hugunin <jasperh@cs.washington.edu>                     Jasper Hugunin <jasperh@cs.washington.edu>
+Joel <rootjdev@gmail.com>                                      Joel <dderjoel@users.noreply.github.com>
+Joel <rootjdev@gmail.com>                                      Joel <rootjdev@gmail.com>
+Joel <rootjdev@gmail.com>                                      dderjoel <dderjoel@users.noreply.github.com>
+Kris Kwiatkowski <kris@amongbytes.com>                         Kris Kwiatkowski <contact@amongbytes.com>
+Kris Kwiatkowski <kris@amongbytes.com>                         Kris Kwiatkowski <kris@amongbytes.com>
+Krit Boonsiriseth <20820162+talkon@users.noreply.github.com>   Krit Boonsiriseth <20820162+talkon@users.noreply.github.com>
+Maxime Dénès <maxime.denes@inria.fr>                           Maxime Dénès <mail@maximedenes.fr>
+Maxime Dénès <maxime.denes@inria.fr>                           Maxime Dénès <maxime.denes@inria.fr>
+Mukesh Tiwari <mukeshtiwari.iiitm@gmail.com>                   Mukesh Tiwari <mukeshtiwari.iiitm@gmail.com>
+Mukesh Tiwari <mukeshtiwari.iiitm@gmail.com>                   mukesh tiwari <mukeshtiwari.iiitm@gmail.com>
+Pierre Letouzey <pierre.letouzey@inria.fr>                     Pierre Letouzey <pierre.letouzey@inria.fr>
+Pierre Roux <pierre.roux@onera.fr>                             Pierre Roux <pierre.roux@onera.fr>
+Pierre-Marie Pédrot <pierre-marie.pedrot@inria.fr>             Pierre-Marie Pédrot <pierre-marie.pedrot@inria.fr>
+Robert Sloan <varomodt@gmail.com>                              Rob Sloan <varomodt@gmail.com>
+Robert Sloan <varomodt@gmail.com>                              Rob Sloan <varomodt@google.com>
+Robert Sloan <varomodt@gmail.com>                              Robert Sloan <rsloan@sumologic.com>
+Robert Sloan <varomodt@gmail.com>                              Robert Sloan <varomodt@Roberts-MacBook.local>
+Robert Sloan <varomodt@gmail.com>                              Robert Sloan <varomodt@dhcp-18-189-26-21.dyn.MIT.EDU>
+Robert Sloan <varomodt@gmail.com>                              Robert Sloan <varomodt@dhcp-18-189-51-40.dyn.MIT.EDU>
+Robert Sloan <varomodt@gmail.com>                              Robert Sloan <varomodt@gmail.com>
+Robert Sloan <varomodt@gmail.com>                              Robert Sloan <varomodt@google.com>
+Robert Sloan <varomodt@gmail.com>                              varomodt <varomodt@localhost.localdomain>
+Samuel Gruetter <samuel.gruetter@epfl.ch>                      Samuel Gruetter <samuel.gruetter@epfl.ch>
+Vincent Laporte <Vincent.Laporte@inria.fr>                     Vincent Laporte <Vincent.Laporte@fondation-inria.fr>
+Vincent Laporte <Vincent.Laporte@inria.fr>                     Vincent Laporte <Vincent.Laporte@inria.fr>
+Zoe Paraskevopoulou <zoopar@fb.com>                            Zoe Paraskevopoulou <zoopar@fb.com>
+Zoe Paraskevopoulou <zoopar@fb.com>                            zoep <zoe.paraskevopoulou@gmail.com>

@@ -8434,12 +8434,15 @@
     ],
     "body": [
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x1",
           "x2"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "0x0",
           "arg1[0]",
@@ -8447,12 +8450,15 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x3",
           "x4"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "x2",
           "arg1[1]",
@@ -8460,12 +8466,15 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x5",
           "x6"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "x4",
           "arg1[2]",
@@ -8473,12 +8482,15 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x7",
           "x8"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "x6",
           "arg1[3]",
@@ -8486,12 +8498,15 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x9",
           "x10"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "x8",
           "arg1[4]",
@@ -8499,12 +8514,15 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x11",
           "x12"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "x10",
           "arg1[5]",
@@ -8512,12 +8530,15 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x13",
           "x14"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "x12",
           "arg1[6]",
@@ -8525,12 +8546,15 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x15",
           "x16"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "x14",
           "arg1[7]",
@@ -8538,12 +8562,15 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x17",
           "x18"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 57
+        },
         "arguments": [
           "x16",
           "arg1[8]",
@@ -8570,17 +8597,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x20",
           "x21"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "0x0",
           "x1",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [
@@ -8591,17 +8621,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x22",
           "x23"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "x21",
           "x3",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [
@@ -8612,17 +8645,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x24",
           "x25"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "x23",
           "x5",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [
@@ -8633,17 +8669,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x26",
           "x27"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "x25",
           "x7",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [
@@ -8654,17 +8693,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x28",
           "x29"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "x27",
           "x9",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [
@@ -8675,17 +8717,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x30",
           "x31"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "x29",
           "x11",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [
@@ -8696,17 +8741,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x32",
           "x33"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "x31",
           "x13",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [
@@ -8717,17 +8765,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x34",
           "x35"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 58
+        },
         "arguments": [
           "x33",
           "x15",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [
@@ -8738,17 +8789,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x36",
           "_"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 57
+        },
         "arguments": [
           "x35",
           "x17",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [

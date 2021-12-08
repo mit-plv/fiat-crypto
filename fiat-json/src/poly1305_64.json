@@ -2637,12 +2637,15 @@
     ],
     "body": [
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x1",
           "x2"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 44
+        },
         "arguments": [
           "0x0",
           "arg1[0]",
@@ -2650,12 +2653,15 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x3",
           "x4"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 43
+        },
         "arguments": [
           "x2",
           "arg1[1]",
@@ -2663,12 +2669,15 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x5",
           "x6"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 43
+        },
         "arguments": [
           "x4",
           "arg1[2]",
@@ -2695,17 +2704,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x8",
           "x9"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 44
+        },
         "arguments": [
           "0x0",
           "x1",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [
@@ -2716,17 +2728,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x10",
           "x11"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 43
+        },
         "arguments": [
           "x9",
           "x3",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [
@@ -2737,17 +2752,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x12",
           "_"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 43
+        },
         "arguments": [
           "x11",
           "x5",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [

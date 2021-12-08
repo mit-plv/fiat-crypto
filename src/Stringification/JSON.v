@@ -27,9 +27,12 @@ Module JSON.
   Definition indent (indent : string) : list string -> list string
     := List.map (fun s => indent ++ s)%string.
 
+  Definition int_bitwidth_to_string (signed : bool) (bitwidth : Z) : string :=
+    ((if signed then "i" else "u")
+       ++ Decimal.Z.to_string bitwidth)%string.
+
   Definition int_type_to_string (t : ToString.int.type) : string :=
-    ((if ToString.int.is_unsigned t then "u" else "i")
-       ++ Decimal.Z.to_string (ToString.int.bitwidth_of t))%string.
+    int_bitwidth_to_string (ToString.int.is_signed t) (ToString.int.bitwidth_of t).
 
   Definition primitive_type_to_string (t : IR.type.primitive)
              (r : option ToString.int.type) : string :=
@@ -50,7 +53,7 @@ Module JSON.
   Import IR.Notations.
 
   Record op_data :=
-    { datatype : string ; name : list string ; operation : string ; arguments : list (list string) }.
+    { datatype : string ; name : list string ; operation : string ; parameters : list (string * string) ; arguments : list (list string) }.
 
   Definition comma_concat (ls : list (list string)) : list string
     := let ret := List.flat_map (fun s => match s with
@@ -65,7 +68,13 @@ Module JSON.
          ; " ""datatype"": """ ++ v.(datatype) ++ ""","
          ; " ""name"": [" ++ String.concat ", " (List.map (fun n => """" ++ n ++ """")%string v.(name)) ++ "],"
          ; " ""operation"": """ ++ v.(operation) ++ ""","
-         ; " ""arguments"": ["]%string)
+         ]%string)
+         ++ match v.(parameters) with
+            | [] => []
+            | _ =>
+                [" ""parameters"": {" ++ String.concat ", " (List.map (fun '(n, val) => """" ++ n ++ """: " ++ val)%string v.(parameters)) ++ "},"]%string
+            end
+         ++ [" ""arguments"": ["]
          ++ (indent "  " (comma_concat v.(arguments)))
          ++ [" ]"
              ; "}"].
@@ -74,18 +83,21 @@ Module JSON.
            {t} (sz : option ToString.int.type)
            (e : IR.arith_expr t)
     : list (list string)
-    := let handle_op sz op outargs inargs
+    := let handle_op sz op params outargs inargs
            := [op_data_to_JSON
                  {| datatype := match sz with None => "(auto)" | Some ty => int_type_to_string ty end
                     ; name := outargs
                     ; operation := op
+                    ; parameters := params
                     ; arguments := inargs |}] in
+       let handle_op_size lg2s op outargs inargs
+         := handle_op sz op [("size", Decimal.show_Z lg2s)] outargs inargs in
        let handle_op1 op {t} inargs
-           := handle_op sz op outargs (@arith_to_string [] t sz inargs) in
+           := handle_op sz op [] outargs (@arith_to_string [] t sz inargs) in
        let wrap_value res
            := match outargs with
               | [] => res
-              | _ => handle_op sz "=" outargs res
+              | _ => handle_op sz "=" [] outargs res
               end in
        match e with
        (* integer literals *)
@@ -100,14 +112,14 @@ Module JSON.
        | (IR.Dereference @@@ IR.Var _ v)
          => wrap_value [ ["""*" ++ v ++ """"] ]
        | (IR.Dereference @@@ e)
-         => handle_op sz "dereference" [] (arith_to_string [] sz e)
+         => handle_op sz "dereference" [] [] (arith_to_string [] sz e)
        (* bitwise operations *)
        | (IR.Z_shiftr offset @@@ e)
-         => handle_op sz ">>" outargs
+         => handle_op sz ">>" [] outargs
                       ((arith_to_string [] sz e)
                          ++ [ ["""" ++ Decimal.Z.to_string offset ++ """"]%string ])%list
        | (IR.Z_shiftl offset @@@ e)
-         => handle_op sz "<<" outargs
+         => handle_op sz "<<" [] outargs
                       ((arith_to_string [] sz e)
                          ++ [ ["""" ++ Decimal.Z.to_string offset ++ """"]%string ])%list
        | (IR.Z_land @@@ args)
@@ -128,19 +140,19 @@ Module JSON.
        | (IR.Z_bneg @@@ args)
          => handle_op1 "!" args
        | (IR.Z_mul_split lg2s @@@ ((IR.Addr @@@ IR.Var _ x1, IR.Addr @@@ IR.Var _ x2), args))
-         => let sz := Some (int.of_bitwidth false lg2s) in
-            wrap_value (handle_op sz "mulx" [x1; x2] (arith_to_string [] sz args))
+         => let sz' := Some (int.of_bitwidth_up false lg2s) in
+            wrap_value (handle_op_size lg2s "mulx" [x1; x2] (arith_to_string [] sz' args))
        | (IR.Z_add_with_get_carry lg2s @@@ ((IR.Addr @@@ IR.Var _ x1, IR.Addr @@@ IR.Var _ x2), args))
-         => let sz := Some (int.of_bitwidth false lg2s) in
-            wrap_value (handle_op sz "addcarryx" [x1; x2] (arith_to_string [] sz args))
+         => let sz' := Some (int.of_bitwidth_up false lg2s) in
+            wrap_value (handle_op_size lg2s "addcarryx" [x1; x2] (arith_to_string [] sz' args))
        | (IR.Z_sub_with_get_borrow lg2s @@@ ((IR.Addr @@@ IR.Var _ x1, IR.Addr @@@ IR.Var _ x2), args))
-         => let sz := Some (int.of_bitwidth false lg2s) in
-            wrap_value (handle_op sz "subborrowx" [x1; x2] (arith_to_string [] sz args))
+         => let sz' := Some (int.of_bitwidth_up false lg2s) in
+            wrap_value (handle_op_size lg2s "subborrowx" [x1; x2] (arith_to_string [] sz' args))
        | (IR.Z_value_barrier ty @@@ args) => arith_to_string outargs sz args
        | (IR.Z_zselect ty @@@ (IR.Addr @@@ IR.Var _ v, args))
-         => wrap_value (handle_op (Some ty) "cmovznz" [v] (arith_to_string [] (Some ty) args))
+         => wrap_value (handle_op (Some ty) "cmovznz" [] [v] (arith_to_string [] (Some ty) args))
        | (IR.Z_static_cast int_t @@@ args)
-         => handle_op (Some int_t) "static_cast" outargs (arith_to_string [] (Some int_t) args)
+         => handle_op (Some int_t) "static_cast" [] outargs (arith_to_string [] (Some int_t) args)
        | IR.Var _ v
          => wrap_value [ [ """" ++ v ++ """" ] ]
        | IR.Pair A B a b

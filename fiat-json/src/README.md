@@ -4,8 +4,8 @@ a bit ad-hoc; here is a partial description:
 The types of the fields:
 
 Let `string` be the standard string type, let `[t]` stand for an array
-whose elements have type `t`, and let `t | u` denote the union of
-types `t` and `u`.  String literals will be used as singleton types
+whose elements have type `t`, let `t | u` denote the union of types
+`t` and `u`.  String literals will be used as singleton types
 containing only themselves, and we will use braces (`{` and `}`) for
 standard JSON objects/dictionaries.
 
@@ -36,17 +36,23 @@ Let us define the following types:
 
 - `bound`, either `null` or a `number` or a list of `bound`s
 
+- `parameters`, a JSON object with `string` keys and `string | number` values
+
 Let us define one more type.  The recursive type of expressions
 (corresponding to lines of code or expressions) `expr` has the format:
 
 ```json
 {
-"datatype" : datatype,
-"name"     : [name],
-"operation": operation,
-"arguments": [ name | expr | number ]
+"datatype"  : datatype,
+"name"      : [name],
+"operation" : operation,
+"parameters": parameters
+"arguments" : [ name | expr | number ]
 }
 ```
+
+When `parameters` is empty, the entire `"parameters": { parameters }`
+key-value pair will be omitted.
 
 It describes a line of code or an expression:
 
@@ -59,7 +65,13 @@ It describes a line of code or an expression:
   expression),
 
 - whose kind of function / operation is given by the `"operation"`
-  field, and
+  field,
+
+- whose compile-time constant parameters are given by the
+  `"parameters"` field (currently only relevant for `mulx`,
+  `addcarryx`, and `subborrowx`, all of which have a single parameter
+  `"size"` which is an integer bitwidth denoting the carry location),
+  and
 
 - whose arguments are the in the arguments field, which may be either
   subexpressions or variable names
@@ -116,13 +128,14 @@ fiat_p256_mulx_u64(&x5, &x6, x4, (arg1[3]));
 would correspond to:
 ```json
 {
-"datatype": "u64",
+"datatype": "(auto)",
 "name": ["x5", "x6"],
 "operation": "mulx",
+"parameters": {"size": 64},
 "arguments": ["x4", "arg1[3]"]
 }
 ```
-from the combination "mulx" and "u64" we can infer, which elements from
+from the combination `"mulx"` and `"size": 64` we can infer, which elements from
 the name-property is high/low limb.
 
 ```c
@@ -131,14 +144,29 @@ fiat_p256_subborrowx_u64(&x180, &x181, x179, x171, UINT64_C(0xffffffff00000001))
 would correspond to
 ```json
 {
-"datatype": "u64",
+"datatype": "(auto)",
 "name": ["x180", "x181"],
 "operation": "subborrowx",
+"parameters": {"size": 64},
 "arguments": ["x179", "x171", "0xffffffff00000001"]
 }
 ```
-also, we can infer from subborrowx which arguments have which meaning
-and which varibable in "name" contains the carry out.
+also, we can infer from `subborrowx` which arguments have which meaning
+and which variable in `"name"` contains the carry out.
+
+```c
+fiat_p256_addcarryx_u51(&x180, &x181, x179, x171, UINT64_C(0xffffffff00000001));
+```
+would correspond to
+```json
+{
+"datatype": "(auto)",
+"name": ["x180", "x181"],
+"operation": "addcarryx",
+"parameters": {"size": 51},
+"arguments": ["x179", "x171", "0xffffffff00000001"]
+}
+```
 
 ```c
 uint64_t x173 = ((uint64_t)x172 + x153);
@@ -170,6 +198,7 @@ arguments[2]`, or replaced: `x184 <- x183 == 0 ? x174 : x165`;
 ```c
 fiat_25519_uint128 x14 = ((fiat_25519_uint128)(arg1[2]) * (arg1[1]));
 ```
+```json
 {
 "datatype": "u128",
 "name": ["x14"],

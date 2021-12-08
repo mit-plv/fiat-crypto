@@ -621,60 +621,75 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x5",
           "x6"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x4",
           "arg2[3]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x7",
           "x8"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x4",
           "arg2[2]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x9",
           "x10"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x4",
           "arg2[1]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x11",
           "x12"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x4",
           "arg2[0]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x13",
           "x14"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x12",
@@ -682,12 +697,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x15",
           "x16"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x14",
           "x10",
@@ -695,12 +713,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x17",
           "x18"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x16",
           "x8",
@@ -726,48 +747,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x20",
           "x21"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x11",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x22",
           "x23"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x11",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x24",
           "x25"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x11",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x26",
           "x27"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x25",
@@ -793,12 +826,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x30"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x11",
@@ -806,12 +842,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x31",
           "x32"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x30",
           "x13",
@@ -819,12 +858,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x33",
           "x34"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x32",
           "x15",
@@ -832,12 +874,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x35",
           "x36"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x34",
           "x17",
@@ -845,12 +890,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x37",
           "x38"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x36",
           "x19",
@@ -858,60 +906,75 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x39",
           "x40"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x1",
           "arg2[3]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x41",
           "x42"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x1",
           "arg2[2]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x43",
           "x44"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x1",
           "arg2[1]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x45",
           "x46"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x1",
           "arg2[0]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x47",
           "x48"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x46",
@@ -919,12 +982,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x49",
           "x50"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x48",
           "x44",
@@ -932,12 +998,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x51",
           "x52"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x50",
           "x42",
@@ -963,12 +1032,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x54",
           "x55"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x31",
@@ -976,12 +1048,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x56",
           "x57"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x55",
           "x33",
@@ -989,12 +1064,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x58",
           "x59"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x57",
           "x35",
@@ -1002,12 +1080,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x60",
           "x61"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x59",
           "x37",
@@ -1015,12 +1096,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x62",
           "x63"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x61",
           {
@@ -1035,48 +1119,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x64",
           "x65"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x54",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x66",
           "x67"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x54",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x68",
           "x69"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x54",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x70",
           "x71"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x69",
@@ -1102,12 +1198,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x74"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x54",
@@ -1115,12 +1214,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x75",
           "x76"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x74",
           "x56",
@@ -1128,12 +1230,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x77",
           "x78"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x76",
           "x58",
@@ -1141,12 +1246,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x79",
           "x80"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x78",
           "x60",
@@ -1154,12 +1262,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x81",
           "x82"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x80",
           "x62",
@@ -1192,60 +1303,75 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x84",
           "x85"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x2",
           "arg2[3]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x86",
           "x87"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x2",
           "arg2[2]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x88",
           "x89"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x2",
           "arg2[1]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x90",
           "x91"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x2",
           "arg2[0]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x92",
           "x93"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x91",
@@ -1253,12 +1379,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x94",
           "x95"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x93",
           "x89",
@@ -1266,12 +1395,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x96",
           "x97"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x95",
           "x87",
@@ -1297,12 +1429,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x99",
           "x100"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x75",
@@ -1310,12 +1445,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x101",
           "x102"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x100",
           "x77",
@@ -1323,12 +1461,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x103",
           "x104"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x102",
           "x79",
@@ -1336,12 +1477,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x105",
           "x106"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x104",
           "x81",
@@ -1349,12 +1493,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x107",
           "x108"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x106",
           "x83",
@@ -1362,48 +1509,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x109",
           "x110"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x99",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x111",
           "x112"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x99",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x113",
           "x114"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x99",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x115",
           "x116"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x114",
@@ -1429,12 +1588,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x119"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x99",
@@ -1442,12 +1604,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x120",
           "x121"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x119",
           "x101",
@@ -1455,12 +1620,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x122",
           "x123"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x121",
           "x103",
@@ -1468,12 +1636,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x124",
           "x125"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x123",
           "x105",
@@ -1481,12 +1652,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x126",
           "x127"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x125",
           "x107",
@@ -1519,60 +1693,75 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x129",
           "x130"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x3",
           "arg2[3]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x131",
           "x132"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x3",
           "arg2[2]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x133",
           "x134"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x3",
           "arg2[1]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x135",
           "x136"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x3",
           "arg2[0]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x137",
           "x138"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x136",
@@ -1580,12 +1769,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x139",
           "x140"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x138",
           "x134",
@@ -1593,12 +1785,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x141",
           "x142"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x140",
           "x132",
@@ -1624,12 +1819,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x144",
           "x145"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x120",
@@ -1637,12 +1835,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x146",
           "x147"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x145",
           "x122",
@@ -1650,12 +1851,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x148",
           "x149"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x147",
           "x124",
@@ -1663,12 +1867,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x150",
           "x151"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x149",
           "x126",
@@ -1676,12 +1883,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x152",
           "x153"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x151",
           "x128",
@@ -1689,48 +1899,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x154",
           "x155"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x144",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x156",
           "x157"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x144",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x158",
           "x159"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x144",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x160",
           "x161"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x159",
@@ -1756,12 +1978,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x164"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x144",
@@ -1769,12 +1994,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x165",
           "x166"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x164",
           "x146",
@@ -1782,12 +2010,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x167",
           "x168"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x166",
           "x148",
@@ -1795,12 +2026,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x169",
           "x170"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x168",
           "x150",
@@ -1808,12 +2042,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x171",
           "x172"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x170",
           "x152",
@@ -1846,12 +2083,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x174",
           "x175"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x165",
@@ -1859,12 +2099,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x176",
           "x177"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x175",
           "x167",
@@ -1872,12 +2115,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x178",
           "x179"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x177",
           "x169",
@@ -1892,12 +2138,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x180",
           "x181"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x179",
           "x171",
@@ -1905,12 +2154,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x183"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x181",
           "x173",
@@ -2094,60 +2346,75 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x5",
           "x6"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x4",
           "arg1[3]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x7",
           "x8"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x4",
           "arg1[2]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x9",
           "x10"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x4",
           "arg1[1]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x11",
           "x12"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x4",
           "arg1[0]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x13",
           "x14"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x12",
@@ -2155,12 +2422,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x15",
           "x16"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x14",
           "x10",
@@ -2168,12 +2438,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x17",
           "x18"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x16",
           "x8",
@@ -2199,48 +2472,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x20",
           "x21"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x11",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x22",
           "x23"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x11",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x24",
           "x25"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x11",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x26",
           "x27"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x25",
@@ -2266,12 +2551,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x30"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x11",
@@ -2279,12 +2567,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x31",
           "x32"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x30",
           "x13",
@@ -2292,12 +2583,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x33",
           "x34"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x32",
           "x15",
@@ -2305,12 +2599,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x35",
           "x36"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x34",
           "x17",
@@ -2318,12 +2615,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x37",
           "x38"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x36",
           "x19",
@@ -2331,60 +2631,75 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x39",
           "x40"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x1",
           "arg1[3]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x41",
           "x42"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x1",
           "arg1[2]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x43",
           "x44"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x1",
           "arg1[1]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x45",
           "x46"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x1",
           "arg1[0]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x47",
           "x48"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x46",
@@ -2392,12 +2707,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x49",
           "x50"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x48",
           "x44",
@@ -2405,12 +2723,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x51",
           "x52"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x50",
           "x42",
@@ -2436,12 +2757,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x54",
           "x55"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x31",
@@ -2449,12 +2773,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x56",
           "x57"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x55",
           "x33",
@@ -2462,12 +2789,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x58",
           "x59"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x57",
           "x35",
@@ -2475,12 +2805,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x60",
           "x61"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x59",
           "x37",
@@ -2488,12 +2821,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x62",
           "x63"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x61",
           {
@@ -2508,48 +2844,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x64",
           "x65"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x54",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x66",
           "x67"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x54",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x68",
           "x69"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x54",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x70",
           "x71"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x69",
@@ -2575,12 +2923,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x74"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x54",
@@ -2588,12 +2939,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x75",
           "x76"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x74",
           "x56",
@@ -2601,12 +2955,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x77",
           "x78"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x76",
           "x58",
@@ -2614,12 +2971,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x79",
           "x80"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x78",
           "x60",
@@ -2627,12 +2987,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x81",
           "x82"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x80",
           "x62",
@@ -2665,60 +3028,75 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x84",
           "x85"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x2",
           "arg1[3]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x86",
           "x87"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x2",
           "arg1[2]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x88",
           "x89"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x2",
           "arg1[1]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x90",
           "x91"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x2",
           "arg1[0]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x92",
           "x93"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x91",
@@ -2726,12 +3104,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x94",
           "x95"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x93",
           "x89",
@@ -2739,12 +3120,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x96",
           "x97"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x95",
           "x87",
@@ -2770,12 +3154,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x99",
           "x100"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x75",
@@ -2783,12 +3170,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x101",
           "x102"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x100",
           "x77",
@@ -2796,12 +3186,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x103",
           "x104"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x102",
           "x79",
@@ -2809,12 +3202,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x105",
           "x106"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x104",
           "x81",
@@ -2822,12 +3218,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x107",
           "x108"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x106",
           "x83",
@@ -2835,48 +3234,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x109",
           "x110"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x99",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x111",
           "x112"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x99",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x113",
           "x114"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x99",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x115",
           "x116"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x114",
@@ -2902,12 +3313,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x119"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x99",
@@ -2915,12 +3329,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x120",
           "x121"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x119",
           "x101",
@@ -2928,12 +3345,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x122",
           "x123"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x121",
           "x103",
@@ -2941,12 +3361,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x124",
           "x125"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x123",
           "x105",
@@ -2954,12 +3377,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x126",
           "x127"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x125",
           "x107",
@@ -2992,60 +3418,75 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x129",
           "x130"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x3",
           "arg1[3]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x131",
           "x132"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x3",
           "arg1[2]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x133",
           "x134"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x3",
           "arg1[1]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x135",
           "x136"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x3",
           "arg1[0]"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x137",
           "x138"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x136",
@@ -3053,12 +3494,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x139",
           "x140"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x138",
           "x134",
@@ -3066,12 +3510,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x141",
           "x142"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x140",
           "x132",
@@ -3097,12 +3544,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x144",
           "x145"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x120",
@@ -3110,12 +3560,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x146",
           "x147"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x145",
           "x122",
@@ -3123,12 +3576,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x148",
           "x149"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x147",
           "x124",
@@ -3136,12 +3592,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x150",
           "x151"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x149",
           "x126",
@@ -3149,12 +3608,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x152",
           "x153"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x151",
           "x128",
@@ -3162,48 +3624,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x154",
           "x155"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x144",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x156",
           "x157"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x144",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x158",
           "x159"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x144",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x160",
           "x161"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x159",
@@ -3229,12 +3703,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x164"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x144",
@@ -3242,12 +3719,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x165",
           "x166"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x164",
           "x146",
@@ -3255,12 +3735,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x167",
           "x168"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x166",
           "x148",
@@ -3268,12 +3751,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x169",
           "x170"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x168",
           "x150",
@@ -3281,12 +3767,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x171",
           "x172"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x170",
           "x152",
@@ -3319,12 +3808,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x174",
           "x175"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x165",
@@ -3332,12 +3824,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x176",
           "x177"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x175",
           "x167",
@@ -3345,12 +3840,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x178",
           "x179"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x177",
           "x169",
@@ -3365,12 +3863,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x180",
           "x181"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x179",
           "x171",
@@ -3378,12 +3879,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x183"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x181",
           "x173",
@@ -3543,12 +4047,15 @@
     ],
     "body": [
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x1",
           "x2"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "arg1[0]",
@@ -3556,12 +4063,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x3",
           "x4"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x2",
           "arg1[1]",
@@ -3569,12 +4079,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x5",
           "x6"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x4",
           "arg1[2]",
@@ -3582,12 +4095,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x7",
           "x8"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x6",
           "arg1[3]",
@@ -3595,12 +4111,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x9",
           "x10"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x1",
@@ -3608,12 +4127,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x11",
           "x12"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x10",
           "x3",
@@ -3621,12 +4143,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x13",
           "x14"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x12",
           "x5",
@@ -3641,12 +4166,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x15",
           "x16"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x14",
           "x7",
@@ -3654,12 +4182,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x18"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x16",
           {
@@ -3826,12 +4357,15 @@
     ],
     "body": [
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x1",
           "x2"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "arg1[0]",
@@ -3839,12 +4373,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x3",
           "x4"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x2",
           "arg1[1]",
@@ -3852,12 +4389,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x5",
           "x6"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x4",
           "arg1[2]",
@@ -3865,12 +4405,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x7",
           "x8"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x6",
           "arg1[3]",
@@ -3897,12 +4440,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x10",
           "x11"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x1",
@@ -3910,12 +4456,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x12",
           "x13"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x11",
           "x3",
@@ -3931,12 +4480,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x14",
           "x15"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x13",
           "x5",
@@ -3951,12 +4503,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x16",
           "_"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x15",
           "x7",
@@ -4053,12 +4608,15 @@
     ],
     "body": [
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x1",
           "x2"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           {
@@ -4073,12 +4631,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x3",
           "x4"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x2",
           {
@@ -4093,12 +4654,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x5",
           "x6"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x4",
           {
@@ -4113,12 +4677,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x7",
           "x8"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x6",
           {
@@ -4152,12 +4719,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x10",
           "x11"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x1",
@@ -4165,12 +4735,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x12",
           "x13"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x11",
           "x3",
@@ -4186,12 +4759,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x14",
           "x15"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x13",
           "x5",
@@ -4206,12 +4782,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x16",
           "_"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x15",
           "x7",
@@ -4318,48 +4897,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x2",
           "x3"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x1",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x4",
           "x5"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x1",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x6",
           "x7"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x1",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x8",
           "x9"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x7",
@@ -4367,12 +4958,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x11"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x1",
@@ -4380,12 +4974,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x12",
           "x13"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x11",
           {
@@ -4400,12 +4997,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x14",
           "x15"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x12",
@@ -4413,48 +5013,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x16",
           "x17"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x14",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x18",
           "x19"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x14",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x20",
           "x21"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x14",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x22",
           "x23"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x21",
@@ -4462,12 +5074,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x25"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x14",
@@ -4475,12 +5090,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x26",
           "x27"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x25",
           {
@@ -4533,12 +5151,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x28",
           "x29"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x27",
           "x2",
@@ -4561,12 +5182,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x30",
           "x31"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x29",
           "x3",
@@ -4574,12 +5198,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x32",
           "x33"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x26",
@@ -4587,12 +5214,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x34",
           "x35"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x33",
           "x28",
@@ -4607,12 +5237,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x36",
           "x37"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x35",
           "x30",
@@ -4627,48 +5260,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x38",
           "x39"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x32",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x40",
           "x41"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x32",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x42",
           "x43"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x32",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x44",
           "x45"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x43",
@@ -4676,12 +5321,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x47"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x32",
@@ -4689,12 +5337,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x48",
           "x49"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x47",
           "x34",
@@ -4702,12 +5353,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x50",
           "x51"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x49",
           "x36",
@@ -4730,12 +5384,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x52",
           "x53"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x51",
           {
@@ -4773,12 +5430,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x54",
           "x55"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x48",
@@ -4786,12 +5446,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x56",
           "x57"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x55",
           "x50",
@@ -4806,12 +5469,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x58",
           "x59"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x57",
           "x52",
@@ -4826,48 +5492,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x60",
           "x61"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x54",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x62",
           "x63"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x54",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x64",
           "x65"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x54",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x66",
           "x67"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x65",
@@ -4875,12 +5553,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x69"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x54",
@@ -4888,12 +5569,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x70",
           "x71"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x69",
           "x56",
@@ -4901,12 +5585,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x72",
           "x73"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x71",
           "x58",
@@ -4929,12 +5616,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x74",
           "x75"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x73",
           {
@@ -4990,12 +5680,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x77",
           "x78"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x70",
@@ -5003,12 +5696,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x79",
           "x80"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x78",
           "x72",
@@ -5016,12 +5712,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x81",
           "x82"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x80",
           "x74",
@@ -5036,12 +5735,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x83",
           "x84"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x82",
           "x76",
@@ -5049,12 +5751,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x86"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x84",
           {
@@ -5245,60 +5950,75 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x5",
           "x6"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x4",
           "0x4fffffffd"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x7",
           "x8"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x4",
           "0xfffffffffffffffe"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x9",
           "x10"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x4",
           "0xfffffffbffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x11",
           "x12"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x4",
           "0x3"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x13",
           "x14"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x12",
@@ -5306,12 +6026,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x15",
           "x16"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x14",
           "x10",
@@ -5319,12 +6042,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x17",
           "x18"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x16",
           "x8",
@@ -5332,48 +6058,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x19",
           "x20"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x11",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x21",
           "x22"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x11",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x23",
           "x24"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x11",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x25",
           "x26"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x24",
@@ -5381,12 +6119,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x28"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x11",
@@ -5394,12 +6135,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x29",
           "x30"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x28",
           "x13",
@@ -5407,12 +6151,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x31",
           "x32"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x30",
           "x15",
@@ -5435,12 +6182,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x33",
           "x34"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x32",
           "x17",
@@ -5448,12 +6198,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x35",
           "x36"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x34",
           {
@@ -5476,60 +6229,75 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x37",
           "x38"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x1",
           "0x4fffffffd"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x39",
           "x40"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x1",
           "0xfffffffffffffffe"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x41",
           "x42"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x1",
           "0xfffffffbffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x43",
           "x44"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x1",
           "0x3"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x45",
           "x46"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x44",
@@ -5537,12 +6305,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x47",
           "x48"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x46",
           "x42",
@@ -5550,12 +6321,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x49",
           "x50"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x48",
           "x40",
@@ -5563,12 +6337,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x51",
           "x52"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x29",
@@ -5576,12 +6353,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x53",
           "x54"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x52",
           "x31",
@@ -5589,12 +6369,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x55",
           "x56"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x54",
           "x33",
@@ -5602,12 +6385,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x57",
           "x58"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x56",
           "x35",
@@ -5615,48 +6401,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x59",
           "x60"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x51",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x61",
           "x62"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x51",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x63",
           "x64"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x51",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x65",
           "x66"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x64",
@@ -5664,12 +6462,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x68"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x51",
@@ -5677,12 +6478,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x69",
           "x70"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x68",
           "x53",
@@ -5690,12 +6494,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x71",
           "x72"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x70",
           "x55",
@@ -5718,12 +6525,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x73",
           "x74"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x72",
           "x57",
@@ -5731,12 +6541,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x75",
           "x76"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x74",
           {
@@ -5789,60 +6602,75 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x77",
           "x78"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x2",
           "0x4fffffffd"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x79",
           "x80"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x2",
           "0xfffffffffffffffe"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x81",
           "x82"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x2",
           "0xfffffffbffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x83",
           "x84"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x2",
           "0x3"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x85",
           "x86"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x84",
@@ -5850,12 +6678,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x87",
           "x88"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x86",
           "x82",
@@ -5863,12 +6694,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x89",
           "x90"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x88",
           "x80",
@@ -5876,12 +6710,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x91",
           "x92"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x69",
@@ -5889,12 +6726,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x93",
           "x94"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x92",
           "x71",
@@ -5902,12 +6742,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x95",
           "x96"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x94",
           "x73",
@@ -5915,12 +6758,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x97",
           "x98"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x96",
           "x75",
@@ -5928,48 +6774,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x99",
           "x100"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x91",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x101",
           "x102"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x91",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x103",
           "x104"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x91",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x105",
           "x106"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x104",
@@ -5977,12 +6835,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x108"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x91",
@@ -5990,12 +6851,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x109",
           "x110"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x108",
           "x93",
@@ -6003,12 +6867,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x111",
           "x112"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x110",
           "x95",
@@ -6031,12 +6898,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x113",
           "x114"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x112",
           "x97",
@@ -6044,12 +6914,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x115",
           "x116"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x114",
           {
@@ -6102,60 +6975,75 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x117",
           "x118"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x3",
           "0x4fffffffd"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x119",
           "x120"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x3",
           "0xfffffffffffffffe"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x121",
           "x122"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x3",
           "0xfffffffbffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x123",
           "x124"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x3",
           "0x3"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x125",
           "x126"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x124",
@@ -6163,12 +7051,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x127",
           "x128"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x126",
           "x122",
@@ -6176,12 +7067,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x129",
           "x130"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x128",
           "x120",
@@ -6189,12 +7083,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x131",
           "x132"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x109",
@@ -6202,12 +7099,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x133",
           "x134"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x132",
           "x111",
@@ -6215,12 +7115,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x135",
           "x136"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x134",
           "x113",
@@ -6228,12 +7131,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x137",
           "x138"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x136",
           "x115",
@@ -6241,48 +7147,60 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x139",
           "x140"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x131",
           "0xffffffff00000001"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x141",
           "x142"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x131",
           "0xffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x143",
           "x144"
         ],
         "operation": "mulx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x131",
           "0xffffffffffffffff"
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x145",
           "x146"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x144",
@@ -6290,12 +7208,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x148"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x131",
@@ -6303,12 +7224,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x149",
           "x150"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x148",
           "x133",
@@ -6316,12 +7240,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x151",
           "x152"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x150",
           "x135",
@@ -6344,12 +7271,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x153",
           "x154"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x152",
           "x137",
@@ -6357,12 +7287,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x155",
           "x156"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x154",
           {
@@ -6415,12 +7348,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x157",
           "x158"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x149",
@@ -6428,12 +7364,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x159",
           "x160"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x158",
           "x151",
@@ -6441,12 +7380,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x161",
           "x162"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x160",
           "x153",
@@ -6461,12 +7403,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x163",
           "x164"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x162",
           "x155",
@@ -6474,12 +7419,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x166"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x164",
           {
@@ -9419,12 +10367,15 @@
     ],
     "body": [
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x1",
           "_"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           {
@@ -9487,12 +10438,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x4",
           "_"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           {
@@ -9586,12 +10540,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x12",
           "x13"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           {
@@ -9613,12 +10570,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x14",
           "x15"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x13",
           {
@@ -9640,12 +10600,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x16",
           "x17"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x15",
           {
@@ -9667,12 +10630,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x18",
           "x19"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x17",
           {
@@ -9694,12 +10660,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x20",
           "_"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x19",
           {
@@ -9829,12 +10798,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x31",
           "x32"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x27",
@@ -9842,12 +10814,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x33",
           "x34"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x32",
           "x28",
@@ -9855,12 +10830,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x35",
           "x36"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x34",
           "x29",
@@ -9868,12 +10846,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x37",
           "x38"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x36",
           "x30",
@@ -9881,12 +10862,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x39",
           "x40"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x31",
@@ -9894,12 +10878,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x41",
           "x42"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x40",
           "x33",
@@ -9907,12 +10894,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x43",
           "x44"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x42",
           "x35",
@@ -9927,12 +10917,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x45",
           "x46"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x44",
           "x37",
@@ -9940,12 +10933,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x48"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x46",
           {
@@ -10007,12 +11003,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x53",
           "x54"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           {
@@ -10027,12 +11026,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x55",
           "x56"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x54",
           {
@@ -10047,12 +11049,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x57",
           "x58"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x56",
           {
@@ -10067,12 +11072,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x59",
           "x60"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x58",
           {
@@ -10106,12 +11114,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x62",
           "x63"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x53",
@@ -10119,12 +11130,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x64",
           "x65"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x63",
           "x55",
@@ -10140,12 +11154,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x66",
           "x67"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x65",
           "x57",
@@ -10160,12 +11177,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x68",
           "_"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x67",
           "x59",
@@ -10342,12 +11362,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x80",
           "x81"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x22",
@@ -10355,12 +11378,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x82",
           "x83"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x81",
           "x23",
@@ -10368,12 +11394,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x84",
           "x85"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x83",
           "x24",
@@ -10381,12 +11410,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x86",
           "x87"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x85",
           "x25",
@@ -10394,12 +11426,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x88",
           "_"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x87",
           "x26",
@@ -10483,12 +11518,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x94",
           "x95"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x70",
@@ -10496,12 +11534,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x96",
           "x97"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x95",
           "x71",
@@ -10509,12 +11550,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x98",
           "x99"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x97",
           "x72",
@@ -10522,12 +11566,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x100",
           "x101"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x99",
           "x73",
@@ -10535,12 +11582,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x102",
           "x103"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x94",
@@ -10548,12 +11598,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x104",
           "x105"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x103",
           "x96",
@@ -10561,12 +11614,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x106",
           "x107"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x105",
           "x98",
@@ -10581,12 +11637,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x108",
           "x109"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x107",
           "x100",
@@ -10594,12 +11653,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "_",
           "x111"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "x109",
           {
@@ -10621,12 +11683,15 @@
         ]
       },
       {
-        "datatype": "u64",
+        "datatype": "(auto)",
         "name": [
           "x112",
           "_"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 64
+        },
         "arguments": [
           "0x0",
           "x6",

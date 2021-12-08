@@ -3889,12 +3889,15 @@
     ],
     "body": [
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x1",
           "x2"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 51
+        },
         "arguments": [
           "0x0",
           "arg1[0]",
@@ -3902,12 +3905,15 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x3",
           "x4"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 51
+        },
         "arguments": [
           "x2",
           "arg1[1]",
@@ -3915,12 +3921,15 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x5",
           "x6"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 51
+        },
         "arguments": [
           "x4",
           "arg1[2]",
@@ -3928,12 +3937,15 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x7",
           "x8"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 51
+        },
         "arguments": [
           "x6",
           "arg1[3]",
@@ -3941,12 +3953,15 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x9",
           "x10"
         ],
         "operation": "subborrowx",
+        "parameters": {
+          "size": 51
+        },
         "arguments": [
           "x8",
           "arg1[4]",
@@ -3973,17 +3988,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x12",
           "x13"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 51
+        },
         "arguments": [
           "0x0",
           "x1",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [
@@ -3994,17 +4012,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x14",
           "x15"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 51
+        },
         "arguments": [
           "x13",
           "x3",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [
@@ -4015,17 +4036,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x16",
           "x17"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 51
+        },
         "arguments": [
           "x15",
           "x5",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [
@@ -4036,17 +4060,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x18",
           "x19"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 51
+        },
         "arguments": [
           "x17",
           "x7",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [
@@ -4057,17 +4084,20 @@
         ]
       },
       {
-        "datatype": "u32",
+        "datatype": "(auto)",
         "name": [
           "x20",
           "_"
         ],
         "operation": "addcarryx",
+        "parameters": {
+          "size": 51
+        },
         "arguments": [
           "x19",
           "x9",
           {
-            "datatype": "u32",
+            "datatype": "u64",
             "name": [],
             "operation": "&",
             "arguments": [
