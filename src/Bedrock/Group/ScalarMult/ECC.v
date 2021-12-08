@@ -279,14 +279,6 @@ Section FElems.
       F_lia.
     Qed.
 
-    Ltac simplify_F :=
-      unfold nlet;
-      autorewrite with F_pow;
-      repeat rewrite F_mul_1_r;
-      repeat rewrite F_mul_1_l; 
-      try reflexivity;
-      try F_lia.
-
     Create HintDb F_pow.
     Hint Rewrite @F.pow_2_r : F_pow.
     Hint Rewrite @F.pow_add_r : F_pow.
@@ -294,6 +286,14 @@ Section FElems.
     Hint Rewrite <- @F.pow_pow_l : F_pow.
     Hint Rewrite @F.pow_1_r : F_pow.
     Hint Rewrite @F.pow_3_r : F_pow.
+
+    Ltac simplify_F :=
+      unfold nlet;
+      autorewrite with F_pow;
+      repeat rewrite F_mul_1_r;
+      repeat rewrite F_mul_1_l; 
+      try reflexivity;
+      try F_lia.
 
      Lemma exp_by_squaring_correct :
       forall n x, exp_by_squaring x n = (x ^ N.pos n)%F.
@@ -327,68 +327,34 @@ Section FElems.
         + apply run_length_encoding_nonempty in Heq.
           inversion Heq.
         + destruct p. destruct b.
-          { rewrite <- IHn.
+          * rewrite <- IHn.
             cbn. replace (n0 + 1)%nat with (S n0) by lia.
-            unfold nlet; destruct n0.
-            { cbn.
-              destruct n eqn : H'; unfold exp_square_and_multiply; unfold nlet.
-              { F_lia_orig.
-                rewrite <- Z.mul_comm.
-                F_lia_orig.
-                f_equal.
-                f_equal.
-                F_lia_orig.
-              }
-              { F_lia_orig.
-                rewrite <- Z.mul_comm.
-                F_lia_orig.
-                f_equal.
-                f_equal.
-                F_lia_orig.
-              }
-              {
-                unfold run_length_encoding in Heq.
-                inversion Heq.
-                unfold exp_from_encoding_simple.
-                F_lia.
-              }
-            }
+            unfold nlet; destruct n0; cbn; destruct n eqn : H'; unfold exp_square_and_multiply; unfold nlet; set (exp_from_encoding_simple x l) as expxl; try F_lia; F_lia_orig.
+          * rewrite <- IHn.
             cbn.
-            destruct n eqn : H'; unfold exp_square_and_multiply; unfold nlet.
-            all: F_lia_orig.
-          }
-          rewrite <- IHn.
-          cbn.
-          unfold nlet.
-          destruct n0; destruct n eqn : H'; try reflexivity.
-          all: unfold run_length_encoding in Heq; inversion Heq.
+            unfold nlet.
+            destruct n0; destruct n eqn : H'; try reflexivity.
       - rewrite <- IHn.
-        cbn.
         destruct n eqn : H'.
-        { destruct (run_length_encoding p~1) as [|[[|] n0] t]; try reflexivity.
+        * destruct (run_length_encoding p~1) as [|[[|] n0] t]; try reflexivity.
           simpl.
           replace (n0 + 1)%nat with (S n0) by lia.
           unfold nlet.
           cbn.
           unfold exp_square.
           destruct n0; F_lia_orig.
-        }
-        { destruct (run_length_encoding p~0) as [|[[|] n0] t]; try reflexivity.
+        * destruct (run_length_encoding p~0) as [|[[|] n0] t]; try reflexivity.
           simpl.
           replace (n0 + 1)% nat with (S n0) by lia.
           unfold nlet.
-          cbn.
+          simpl.
           unfold exp_square.
           destruct n0; F_lia_orig.
-        }
-        unfold run_length_encoding.
-        unfold exp_from_encoding_simple.
-        simplify_F.
+        * unfold run_length_encoding.
+          unfold exp_from_encoding_simple.
+          simplify_F.
       - simplify_F.
     Qed.
-
-    Ltac simple_unfold name :=
-      unfold name; fold name.
 
     Lemma exp_by_squaring_encoded_correct :
       M <> 0 -> forall n x, exp_by_squaring_encoded x n = (x ^ N.pos n)%F.
@@ -400,7 +366,7 @@ Section FElems.
       - cbn.
         reflexivity.
       - destruct a.
-        destruct b; simple_unfold exp_from_encoding; simple_unfold exp_from_encoding_simple; destruct n0; try destruct n0; destruct l; unfold nlet; try rewrite IHl; eauto; simple_unfold exp_from_encoding_simple; try simplify_F.
+        destruct b; simpl exp_from_encoding; unfold exp_from_encoding_simple; fold exp_from_encoding_simple; destruct n0; try destruct n0; destruct l; try rewrite IHl; simpl exp_from_encoding_simple; try simplify_F.
         + unfold exp_square_and_multiply.
           simpl Nat.iter.
           simplify_F.
@@ -421,8 +387,7 @@ Section FElems.
           simplify_F.
         + destruct p; destruct b; destruct n0; eauto.
           destruct l; eauto.
-          unfold exp_from_encoding_simple.
-          unfold exp_square.
+          unfold exp_from_encoding_simple, exp_square.
           simpl Nat.iter.
           simplify_F.
         + destruct p; destruct b; destruct n1; eauto.
@@ -477,11 +442,6 @@ Section FElems.
       Definition exponent : positive :=
         Z.to_pos (2 ^ 255 - 17).
 
-      (*
-      Lemma exponent_correct :
-        exponent = 57896044618658097711785492504343953926634992332820282019728792003956564819951%positive.
-      Proof. reflexivity. Qed. *)
-
       Hint Resolve @relax_bounds : compiler.
 
       Create HintDb lowering.
@@ -525,7 +485,7 @@ Section FElems.
         repeat lower_step;
         reflexivity.
 
-      (* FIXME: Move to Rupicola's standard library and check if it breaks anything*)
+      (* TODO: Move to Rupicola's standard library and check if it breaks anything*)
       Ltac compile_try_copy_pointer :=
         lazymatch goal with
         | [ |- WeakestPrecondition.cmd _ _ _ ?mem _ (_ (nlet_eq [ _ ] ?x _)) ] =>
