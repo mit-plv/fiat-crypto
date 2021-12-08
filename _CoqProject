@@ -135,9 +135,9 @@ src/Bedrock/Field/Translation/Proofs/VarnameSet.v
 src/Bedrock/Field/Translation/Proofs/ValidComputable/Cmd.v
 src/Bedrock/Field/Translation/Proofs/ValidComputable/Expr.v
 src/Bedrock/Field/Translation/Proofs/ValidComputable/Func.v
+src/Bedrock/Group/AdditionChains.v
 src/Bedrock/Group/Loops.v
 src/Bedrock/Group/Point.v
-src/Bedrock/Group/ScalarMult/ECC.v
 src/Bedrock/Group/ScalarMult/LadderStep.v
 src/Bedrock/Group/ScalarMult/MontgomeryEquivalence.v
 src/Bedrock/Group/ScalarMult/MontgomeryLadder.v

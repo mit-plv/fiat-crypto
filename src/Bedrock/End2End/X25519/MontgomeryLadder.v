@@ -1,13 +1,14 @@
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
+Require Import Crypto.Spec.Curve25519.
 Require Import bedrock2.Syntax.
 Require Import compiler.Pipeline.
 Require Import compiler.MMIO.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.End2End.X25519.Field25519.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
-Require Import Crypto.Bedrock.Group.ScalarMult.ECC.
+Require Import Crypto.Bedrock.Group.AdditionChains.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
 Require Import Crypto.Bedrock.Specs.ScalarField.
@@ -18,10 +19,7 @@ Print ScalarFieldParameters.
 
 (* TODO: move to a separate file? *)
 Local Instance scalar_field_parameters : ScalarFieldParameters :=
-  {  L_pos := 7237005577332262213973186563042994240857116359379907606001950938285454250989%positive;
-     scalarbits := 253;
-     sctestbit := "sc25519_testbit";
-  }.
+  { L_pos := Curve25519.l; scalarbits := 253; sctestbit := "sc25519_testbit" }.
 
 Definition ladderstep : func :=
   Eval vm_compute in
