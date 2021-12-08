@@ -72,8 +72,13 @@ Definition sc25519_testbit : func :=
   cmd.seq
     (cmd.set tmp (expr.op bopname.add (expr.var px) (expr.var wi))) 
     (cmd.set r (expr.literal 0)))).
-Definition fe25519_inv : func := exp_large_body (word:=BasicC64Semantics.word) (field_parameters:=field_parameters).
-Compute fe25519_inv.
+Definition fe25519_inv : func.
+  let r := eval vm_compute in
+    (exp_large_body (word:=BasicC64Semantics.word) (field_parameters:=field_parameters)) in
+  match r with
+  | (?bad_name, ?f) => exact ("fe25519_inv", f)
+  end.
+Defined.
 
 Check montladder_correct.
 
