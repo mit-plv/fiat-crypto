@@ -461,7 +461,7 @@ COQPATH?=$(patsubst %$(COQPATH_SEP),%,$(COQPATH_TEMP))
 export COQPATH
 
 coqprime:
-	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) src/Coqprime/PrimalityTest/Zp.vo
+	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) src/Coqprime/PrimalityTest/Zp.vo src/Coqprime/PrimalityTest/PocklingtonCertificat.vo
 
 coqprime-all: coqprime
 	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER)

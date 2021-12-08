@@ -218,6 +218,7 @@ src/Rewriter/Passes/UnfoldValueBarrier.v
 src/Rewriter/PerfTesting/Core.v
 src/Rewriter/PerfTesting/StandaloneOCamlMain.v
 src/Spec/CompleteEdwardsCurve.v
+src/Spec/Curve25519.v
 src/Spec/ModularArithmetic.v
 src/Spec/MontgomeryCurve.v
 src/Spec/MxDH.v

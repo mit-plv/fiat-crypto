@@ -610,15 +610,17 @@ Section FElems.
           /\ (FElem (Some tight_bounds) x_ptr x
           * FElem (Some tight_bounds) sq_ptr (F.inv x)  * R)%sep mem'}.
 
+    Require Import Crypto.Spec.Curve25519.
     Lemma fe_inv_correct : 
       Z.pos M_pos = 2^255-19 ->
-      Znumtheory.prime (N.pos M_pos) ->
       program_logic_goal_for_function! fe25519_inv.
     Proof.
       intros Hm HmPrime ? ** ? **.
       eapply Proper_call; [|eapply fe25519_inv_correct_exp; eauto 1; exact I].
       intros ? ** ? ** ? ** ?; intuition idtac.
-      unshelve erewrite F.Fq_inv_fermat; rewrite Hm; try vm_decide. assumption.
+      unshelve erewrite F.Fq_inv_fermat; rewrite Hm; try vm_decide.
+      { exact Curve25519.prime_p. }
+      { assumption. }
     Qed.
 
     End Compilation.

@@ -4,8 +4,8 @@
 Require Import Coq.NArith.BinNatDef.
 Require Import Coq.ZArith.BinIntDef.
 Require Import Coq.PArith.BinPosDef.
-Require Import Spec.ModularArithmetic Spec.MxDH Crypto.Util.Decidable.
-Definition F := F (2^255 - 19).
+Require Import Spec.ModularArithmetic Spec.Curve25519 Spec.MxDH Crypto.Util.Decidable.
+Definition F := F Curve25519.p.
 Definition a : F := F.of_Z _ 486662.
 Definition a24 : F := ((a - F.of_Z _ 2) / F.of_Z _ 4)%F.
 Definition cswap {T} (swap:bool) (a b:T) := if swap then (b, a) else (a, b).
