@@ -790,5 +790,5 @@ Section Extraction.
        felem_copy := "felem_copy";
        felem_small_literal := "felem_small_literal" |}.
 
-  Compute ToCString.c_func ("exp7", (["x"; "res"], [], exp_large_body (word := word))).
+  Compute ToCString.c_func exp_large_body.
 End Extraction.
