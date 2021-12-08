@@ -74,7 +74,7 @@ Definition sc25519_testbit : func :=
     (cmd.set r (expr.literal 0)))).
 Definition fe25519_inv : func.
   let r := eval vm_compute in
-    (exp_large_body (word:=BasicC64Semantics.word) (field_parameters:=field_parameters)) in
+    (exp_large_body (word:=BasicC32Semantics.word) (field_parameters:=field_parameters)) in
   match r with
   | (?bad_name, ?f) => exact ("fe25519_inv", f)
   end.
@@ -100,73 +100,5 @@ Definition funcs : list func :=
     fe25519_scmula24 ].
 
 Compute
-  match compile (compile_ext_call (funname_env:=SortedListString.map)) (map.of_list (skipn 3 funcs)) with
+  match compile (compile_ext_call (funname_env:=SortedListString.map)) (map.of_list funcs) with
   Some ((x, z), y) => (length x, z) | _ => (O, map.empty) end.
-(*
-= (4977%nat,
-       {|
-         SortedList.value :=
-           [("exp_57896044618658097711785492504343953926634992332820282019728792003956564819951",
-            (2%nat, 0%nat, 19628)); ("fe25519_add", (3%nat, 0%nat, 18904));
-           ("fe25519_copy", (2%nat, 0%nat, 18844));
-           ("fe25519_mul", (3%nat, 0%nat, 8476));
-           ("fe25519_scmula24", (2%nat, 0%nat, 7088));
-           ("fe25519_small_literal", (2%nat, 0%nat, 7028));
-           ("fe25519_square", (2%nat, 0%nat, 1428));
-           ("fe25519_sub", (3%nat, 0%nat, 576));
-           ("felem_cswap", (3%nat, 0%nat, 476));
-           ("ladderstep", (5%nat, 0%nat, 68));
-           ("sc25519_testbit", (2%nat, 1%nat, 0))];
-         SortedList._value_ok := eq_refl
-       |})
-     : nat * map.rep
-*)
-Compute
-  match compile (compile_ext_call (funname_env:=SortedListString.map)) (map.of_list (skipn 2 funcs)) with
-  Some ((x, z), y) => (length x, z) | _ => (O, map.empty) end.
-(*
-= (0%nat, {| SortedList.value := []; SortedList._value_ok := eq_refl |})
-     : nat * map.rep
-*)
-Require Import bedrock2.NotationsInConstr. Import bedrock2.Syntax.Coercions.
-Compute nth_error funcs 2.
-(* = Some ("montladder", (["OUT"; "K"; "U"], [],
-         cmd.stackalloc "X1" 80
-           (cmd.call [] "fe25519_small_literal"
-              [expr.var "X1"; (uintptr_t)1ULL%bedrock_expr];;
-            cmd.stackalloc "Z1" 80
-              (cmd.call [] "fe25519_small_literal"
-                 [expr.var "Z1"; (uintptr_t)0ULL%bedrock_expr];;
-               cmd.stackalloc "X2" 80
-                 (cmd.call [] "fe25519_copy" [expr.var "X2"; expr.var "U"];;
-                  cmd.stackalloc "Z2" 80
-                    (cmd.call [] "fe25519_small_literal"
-                       [expr.var "Z2"; (uintptr_t)1ULL%bedrock_expr];;
-                     "swap" = (uintptr_t)0ULL;;
-                     "count" = (uintptr_t)253ULL;;
-                     "_gs_i0" = (uintptr_t)253ULL;;
-                     (while ((uintptr_t)0ULL < expr.var "_gs_i0") {{
-                        "_gs_i0" = expr.var "_gs_i0" - (uintptr_t)1ULL;;
-                        cmd.call ["s_i"] "sc25519_testbit"
-                          [expr.var "K"; expr.var "_gs_i0"];;
-                        "swap" = expr.var "swap" .^ expr.var "s_i";;
-                        cmd.call [] "felem_cswap"
-                          [expr.var "swap"; expr.var "X1"; expr.var "X2"];;
-                        cmd.call [] "felem_cswap"
-                          [expr.var "swap"; expr.var "Z1"; expr.var "Z2"];;
-                        cmd.call [] "ladderstep"
-                          [expr.var "U"; expr.var "X1"; 
-                          expr.var "Z1"; expr.var "X2"; 
-                          expr.var "Z2"];;
-                        "swap" = expr.var "s_i";;
-                        cmd.unset "s_i"
-                      }});;
-                     cmd.call [] "felem_cswap"
-                       [expr.var "swap"; expr.var "X1"; expr.var "X2"];;
-                     cmd.call [] "felem_cswap"
-                       [expr.var "swap"; expr.var "Z1"; expr.var "Z2"];;
-                     cmd.call [] "fe25519_inv"
-                       [expr.var "OUT"; expr.var "Z1"];;
-                     cmd.call [] "fe25519_mul"
-                       [expr.var "OUT"; expr.var "X1"; expr.var "OUT"]))))))
-*)
