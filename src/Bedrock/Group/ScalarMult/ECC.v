@@ -594,7 +594,7 @@ Section FElems.
       Qed.
 
       Arguments exp_large_body /.
-      Eval cbn in exp_large_body.
+      Eval cbn in exp_large_body. 
 
     End Compilation.
   End Bedrock2.

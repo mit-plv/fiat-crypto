@@ -296,7 +296,6 @@ Section __.
           constr:(O)
       | cons _ ?xs => let i := find_implication xs y in constr:(S i)
       end.
-
     
     Derive montladder_body SuchThat
            (defn! "montladder" ("OUT", "K", "U")

@@ -404,6 +404,9 @@ BEDROCK2_COMPILER_NAME := compiler
 COQUTIL_FOLDER := $(BEDROCK2_ROOT_FOLDER)/deps/coqutil
 COQUTIL_SRC := $(COQUTIL_FOLDER)/src
 COQUTIL_NAME := coqutil
+RISCV_FOLDER := $(BEDROCK2_ROOT_FOLDER)/deps/riscv-coq
+RISCV_SRC := $(RISCV_FOLDER)/src
+RISCV_NAME := riscv
 RUPICOLA_FOLDER := rupicola
 RUPICOLA_SRC := $(RUPICOLA_FOLDER)/src
 RUPICOLA_NAME := rupicola
@@ -427,7 +430,7 @@ endif
 
 ifneq ($(SKIP_BEDROCK2),1)
 ifneq ($(EXTERNAL_BEDROCK2),1)
-COQPATH_TEMP:=${CURDIR_SAFE}/$(RUPICOLA_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(BEDROCK2_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(BEDROCK2_COMPILER_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
+COQPATH_TEMP:=${CURDIR_SAFE}/$(RUPICOLA_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(BEDROCK2_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(BEDROCK2_COMPILER_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(RISCV_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
 deps: bedrock2 bedrock2-compiler rupicola
 $(VOFILES): | bedrock2 bedrock2-compiler rupicola
 $(ALLDFILES): | bedrock2 bedrock2-compiler rupicola
@@ -500,6 +503,7 @@ bedrock2-compiler: bedrock2
 	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) compiler_noex
 
 clean-bedrock2-compiler:
+	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) clean_deps
 	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) clean_compiler
 
 install-bedrock2-compiler:
