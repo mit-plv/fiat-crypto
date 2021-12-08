@@ -440,7 +440,7 @@ Section FElems.
     Section Compilation.
 
       Definition exponent : positive :=
-        Z.to_pos (2 ^ 255 - 17).
+        Z.to_pos (2 ^ 255 - 21).
 
       Hint Resolve @relax_bounds : compiler.
 
@@ -552,8 +552,8 @@ Section FElems.
             /\ (FElem (Some tight_bounds) x_ptr x
                 * FElem (Some tight_bounds) sq_ptr (exp 97 x)  * R)%sep mem'}.
 
-      Instance spec_of_exp_large : spec_of (expn exponent) :=
-        fnspec! (expn exponent) (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
+      Local Instance spec_of_exp_large : spec_of "fe25519_inv" :=
+        fnspec! "fe25519_inv" (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
         { requires tr mem :=
             (FElem (Some tight_bounds) x_ptr x
              * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
@@ -582,19 +582,44 @@ Section FElems.
         compile.
       Qed.
 
+      (*
       Arguments exp_97_body /.
       Eval cbn in exp_97_body.
+      *)
 
-      Derive exp_large_body SuchThat
-             (defn! (expn exponent) ("x", "res") { exp_large_body },
+      Derive fe25519_inv SuchThat
+             (defn! "fe25519_inv" ("x", "res") { fe25519_inv },
               implements (exp exponent) using [square; mul])
-             As exp_large_body_correct.
+             As fe25519_inv_correct_exp.
       Proof.
         compile.
       Qed.
 
+      (*
       Arguments exp_large_body /.
       Eval cbn in exp_large_body.
+      *)
+
+    Global Instance spec_of_fe25519_inv : spec_of "fe25519_inv" :=
+      fnspec! "fe25519_inv" (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
+      { requires tr mem :=
+          (FElem (Some tight_bounds) x_ptr x
+           * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
+        ensures tr' mem' :=
+          tr = tr'
+          /\ (FElem (Some tight_bounds) x_ptr x
+          * FElem (Some tight_bounds) sq_ptr (F.inv x)  * R)%sep mem'}.
+
+    Lemma fe_inv_correct : 
+      Z.pos M_pos = 2^255-19 ->
+      Znumtheory.prime (N.pos M_pos) ->
+      program_logic_goal_for_function! fe25519_inv.
+    Proof.
+      intros Hm HmPrime ? ** ? **.
+      eapply Proper_call; [|eapply fe25519_inv_correct_exp; eauto 1; exact I].
+      intros ? ** ? ** ? ** ?; intuition idtac.
+      unshelve erewrite F.Fq_inv_fermat; rewrite Hm; try vm_decide. assumption.
+    Qed.
 
     End Compilation.
   End Bedrock2.

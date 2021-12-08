@@ -72,13 +72,6 @@ Definition sc25519_testbit : func :=
   cmd.seq
     (cmd.set tmp (expr.op bopname.add (expr.var px) (expr.var wi))) 
     (cmd.set r (expr.literal 0)))).
-Definition fe25519_inv : func.
-  let r := eval vm_compute in
-    (exp_large_body (word:=BasicC32Semantics.word) (field_parameters:=field_parameters)) in
-  match r with
-  | (?bad_name, ?f) => exact ("fe25519_inv", f)
-  end.
-Defined.
 
 Check montladder_correct.
 
@@ -91,7 +84,7 @@ Definition funcs : list func :=
     fe25519_copy;
     fe25519_small_literal;
     sc25519_testbit ;
-    fe25519_inv;
+    fe25519_inv(word:=BasicC32Semantics.word)(field_parameters:=field_parameters);
     ladderstep;
     fe25519_mul;
     fe25519_add;
