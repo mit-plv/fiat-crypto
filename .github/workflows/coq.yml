@@ -76,6 +76,12 @@ jobs:
       run: etc/ci/github-actions-make.sh -j2 deps
     - name: all
       run: etc/ci/github-actions-make.sh ${EXTRA_GH_REPORTIFY} -j2 all
+    - name: upload generated files
+      uses: actions/upload-artifact@v2.2.4
+      with:
+        name: generated-files-${{ matrix.env.COQ_VERSION }}
+        path: fiat-*/
+      if: ${{ failure() }} 
     - name: only-test-amd64-files
       run: etc/ci/github-actions-make.sh -j2 only-test-amd64-files
     - name: upload OCaml files
