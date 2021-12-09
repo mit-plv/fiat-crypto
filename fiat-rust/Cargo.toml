@@ -12,3 +12,7 @@ license = "MIT OR Apache-2.0 OR BSD-1-Clause"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+[features]
+default = [ "std" ]
+std = []
