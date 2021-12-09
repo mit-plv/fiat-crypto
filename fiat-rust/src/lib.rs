@@ -1,3 +1,4 @@
+#![cfg_attr(not(feature = "std"), no_std)]
 pub mod curve25519_64;
 pub mod curve25519_32;
 pub mod p521_64; // Zoe: Has assignments from u32 to u64
