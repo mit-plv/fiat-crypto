@@ -16,7 +16,7 @@ jobs:
 
     env:
       NJOBS: "2"
-      COQ_VERSION: "8.14.0"
+      COQ_VERSION: "8.12.0" # https://packages.debian.org/stable/coq
       SKIP_BEDROCK2: "1"
       OPAMYES: "true"
 
