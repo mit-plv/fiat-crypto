@@ -2,7 +2,9 @@ name: CI (Coq)
 
 on:
   push:
+    branches: [ master , sp2019latest , v8.6 , v8.8 , v8.10 ]
   pull_request:
+  workflow_dispatch:
   schedule:
     - cron: '0 0 1 * *'
 
@@ -81,7 +83,7 @@ jobs:
       with:
         name: generated-files-${{ matrix.env.COQ_VERSION }}
         path: fiat-*/
-      if: ${{ failure() }} 
+      if: ${{ failure() }}
     - name: only-test-amd64-files
       run: etc/ci/github-actions-make.sh -j2 only-test-amd64-files
     - name: upload OCaml files
