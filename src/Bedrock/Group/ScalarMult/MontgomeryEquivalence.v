@@ -29,7 +29,7 @@ Section Equivalence.
   Qed.
   
   Lemma ladderstep_gallina_equiv X1 P1 P2 :
-    reorder_pairs (ladderstep_gallina X1 (fst P1) (snd P1) (fst P2) (snd P2)) =
+    reorder_pairs (ladderstep_gallina _ a24 X1 (fst P1) (snd P1) (fst P2) (snd P2)) =
     @M.xzladderstep
       _ F.add F.sub F.mul a24 X1 P1 P2.
   Proof.
@@ -40,64 +40,36 @@ Section Equivalence.
   Qed.
 
   (*TODO: account for reorder_pairs*)
-  Lemma montladder_gallina_equiv
-        n scalarbits testb point :
-    (forall i, testb i = Z.testbit n (Z.of_nat i)) ->
-    (0 <= scalarbits)%Z ->
-    montladder_gallina scalarbits testb point =
-    @M.montladder
-      _ F.zero F.one F.add F.sub F.mul F.inv
-      a24 cswap scalarbits (Z.testbit n) point.
+  Lemma montladder_gallina_equiv scalarbits n point :
+    montladder_gallina _ a24 scalarbits n point =
+    @M.montladder _ F.zero F.one F.add F.sub F.mul F.inv
+      a24 cswap (Z.of_nat scalarbits) (Z.testbit n) point.
   Proof.
-    intros. cbv [montladder_gallina M.montladder].
-    cbv [Rewriter.Util.LetIn.Let_In nlet]. cbn [fst snd P2.car P2.cdr].
+    cbv [montladder_gallina M.montladder Rewriter.Util.LetIn.Let_In stack].
+    do 5 (unfold nlet at 1); cbn [fst snd P2.car P2.cdr].
     rewrite downto_while.
-    unfold Alloc.stack.
     match goal with
     | |- ?lhs = ?rhs =>
-      match lhs with
-        | context [while ?ltest ?lbody ?fuel ?linit] =>
-        match rhs with
-          | context [while ?rtest ?rbody ?fuel ?rinit] =>
-            rewrite (while.preservation
-                       ltest lbody rtest rbody
-                       (fun s1 s2 =>
-                          s1 =
-                          let '(x2, z2, x3, z3, swap, i) := s2 in
-                          (\<x2, z2, x3, z3, swap\>, i)))
-              with (init2:=rinit);
-              [ remember (while rtest rbody fuel rinit) | .. ]
-        end end end.
-
-    (* first, finish proving post-loop equivalence *)
-    { destruct_products; cbn [fst snd]. reflexivity. }
-
-    (* then, prove loop-equivalence preconditions *)
+      match lhs with context [while ?ltest ?lbody ?fuel ?linit] =>
+      match rhs with context [while ?rtest ?rbody ?fuel ?rinit] =>
+      rewrite (while.preservation ltest lbody rtest rbody
+        (fun s1 s2 => s1 = let '(x2, z2, x3, z3, swap, i) := s2 in
+        (\<x2, z2, x3, z3, swap\>, i))) with (init2:=rinit)
+    end end end.
+    { rewrite !Nat2Z.id. destruct (while _ _ _ _) eqn:? at 1 2.
+      destruct_products; reflexivity. }
     { intros. destruct_products. congruence. }
-    { intros. destruct_products. LtbToLt.Z.ltb_to_lt.
+    { intros. destruct_products. Prod.inversion_prod. LtbToLt.Z.ltb_to_lt. subst.
+      rewrite !Z2Nat.id by lia.
+      cbv [nlet].
       repeat match goal with
-             | _ => progress rewrite Z2Nat.id by lia
-             | _ => progress cbn [fst snd]
-             | _ => rewrite cswap_pair
-             | _ => rewrite ladderstep_gallina_equiv
-             | _ => rewrite <-surjective_pairing
-             | H : forall i : nat, _ i = Z.testbit _ _ |- _ =>
-               rewrite H
              | H : (_,_) = (_,_) |- _ => inversion H; subst; clear H
-             | H : context [match ?e with | pair _ _ => _ end] |- _ =>
-               destr e
-             | |- context [match ?e with | pair _ _ => _ end] =>
-               destr e
-             | _ => reflexivity
+             | _ => progress BreakMatch.break_match
+             | _ => progress BreakMatch.break_match_hyps
              end. 
-
-      rewrite <- ladderstep_gallina_equiv in E2.
-      rewrite invert_reorder_pairs in E2.
-      simpl in E2.
-      rewrite E2.
-      reflexivity.
-    }
-    { rewrite Z2Nat.id by lia. reflexivity. }
+      rewrite <- ladderstep_gallina_equiv, invert_reorder_pairs  in Heqp2.
+      cbn [fst snd] in Heqp2. rewrite Heqp2. reflexivity. }
+    { reflexivity. }
   Qed.
 
 End Equivalence.

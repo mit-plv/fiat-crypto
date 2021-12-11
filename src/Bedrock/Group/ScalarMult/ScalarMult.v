@@ -8,7 +8,6 @@ Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryEquivalence.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Specs.Group.
-Require Import Crypto.Bedrock.Specs.ScalarField.
 Require Import Crypto.Curves.Montgomery.AffineInstances.
 Require Import Crypto.Curves.Montgomery.XZ.
 Require Import Crypto.Curves.Montgomery.XZProofs.
@@ -27,7 +26,8 @@ Module M.
     Context {field_parameters : FieldParameters}
             {field_parameters_ok : FieldParameters_ok}
             {field_representation : FieldRepresentation}
-            {field_representation_ok : FieldRepresentation_ok}.
+            {field_representation_ok : FieldRepresentation_ok}
+            {scalarbits : nat}.
     Context (char_ge_3 :
                @Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add
                              F.sub F.mul 3)
@@ -97,17 +97,12 @@ Module M.
       }.
 
     Section Implementation.
-      Context {scalar_field_parameters : ScalarFieldParameters}
-              {scalar_field_parameters_ok : ScalarFieldParameters_ok}
-              {scalar_field_representation : ScalarRepresentation}.
-      Existing Instance spec_of_montladder.
+      Local Instance spec_of_montladder : spec_of "montladder" := spec_of_montladder scalarbits.
 
       (* redeclaration plugs in implicits so [enter] works *)
       Definition spec_of_scmul : spec_of scmul :=
         Eval cbv [spec_of_scmul] in
-          (@spec_of_scmul _ _ _ _ _ _ scalar_field_parameters
-                          scalar_field_representation group_parameters
-                          x_representation).
+          (@spec_of_scmul _ _ _ _ _ _  group_parameters x_representation (Nat.div_up scalarbits 8)).
       Definition spec_of_from_bytes : spec_of from_bytes := spec_of_from_bytes.
       Definition spec_of_to_bytes : spec_of to_bytes := spec_of_to_bytes.
       Existing Instances spec_of_scmul spec_of_from_bytes spec_of_to_bytes.

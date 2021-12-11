@@ -4,7 +4,6 @@ Require Import Crypto.Algebra.Group.
 Require Import Crypto.Algebra.Hierarchy.
 Require Import Crypto.Algebra.ScalarMult.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Bedrock.Specs.ScalarField.
 
 Class GroupParameters :=
   { (** mathematical parameters **)
@@ -35,25 +34,25 @@ Section FunctionSpecs.
   Context {locals: map.map String.string word}.
   Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
-  Context {scalar_field_parameters : ScalarFieldParameters}
-          {scalar_representaton : ScalarRepresentation}.
   Context {group_parameters : GroupParameters}
-          {group_representaton : GroupRepresentation (G:=G)}.
+          {group_representaton : GroupRepresentation (G:=G)}
+          {scalarbytes : nat}.
 
   (* N.B. spec_of_scmul has only one separation-logic condition for now because
      using multiple results in problems with stack allocation. Should be further
      looked into. *)
   Instance spec_of_scmul : spec_of scmul :=
     fnspec! scmul (pout px pk : word)
-          / (x out : gelem) (k : scalar) (X : G) R,
+          / (x out : gelem) bs (X : G) R,
     { requires tr mem :=
+        length bs = scalarbytes /\
         grepresents x X
-        /\ (GElem pout out * GElem px x * Scalar pk k * R)%sep mem;
+        /\ (GElem pout out * GElem px x * array ptsto (word.of_Z 1) pk bs * R)%sep mem;
       ensures tr' mem' :=
         tr = tr' /\
         exists (xk : gelem),
-          grepresents xk (scalarmult (F.to_Z (sceval k)) X)
-          /\ (GElem pout xk * GElem px x * Scalar pk k * R)%sep mem' }.
+          grepresents xk (scalarmult (LittleEndianList.le_combine bs) X)
+          /\ (GElem pout xk * GElem px x * array ptsto (word.of_Z 1) pk bs * R)%sep mem' }.
 End FunctionSpecs.
 
-Existing Instance spec_of_scmul.
+Global Existing Instance spec_of_scmul.
