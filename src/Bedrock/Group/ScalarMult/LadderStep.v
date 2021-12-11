@@ -4,6 +4,31 @@ Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Local Open Scope Z_scope.
 
+Section Gallina.
+  Local Open Scope F_scope.
+
+  Definition ladderstep_gallina (m : positive) (a24 : F m)
+             (X1 X2 Z2 X3 Z3: F m) : \<< F m, F m, F m, F m \>> :=
+    let/n A := stack (X2+Z2) in
+    let/n X2 := (X2-Z2) in
+    let/n Z2 := (X3+Z3) in
+    let/n Z3 := (X3-Z3) in
+    let/n Z3 := (Z3*A) in
+    let/n Z2 := (Z2*X2) in
+    let/n A := (A^2) in
+    let/n X2 := (X2^2) in
+    let/n E := stack (A-X2) in
+    let/n X3 := (Z3+Z2) in
+    let/n X3 := X3^2 in
+    let/n Z3 := (Z3-Z2) in
+    let/n Z3 := Z3^2 in
+    let/n Z3 := X1*Z3 in
+    let/n X2 := A*X2 in
+    let/n Z2 := a24*E in
+    let/n Z2:= (A+Z2) in
+    let/n Z2 := E*Z2 in
+    \<X2, Z2, X3, Z3\>.
+End Gallina.
 
 Section __.
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
@@ -19,32 +44,6 @@ Section __.
           {field_representation_ok : FieldRepresentation_ok}.
   Hint Resolve relax_bounds : compiler.
   Existing Instance felem_alloc.
-  
-  Section Gallina.
-    Local Open Scope F_scope.
-
-    Definition ladderstep_gallina
-               (X1 X2 Z2 X3 Z3: F M_pos) : \<< F M_pos, F M_pos, F M_pos, F M_pos \>> :=
-      let/n A := stack (X2+Z2) in
-      let/n X2 := (X2-Z2) in
-      let/n Z2 := (X3+Z3) in
-      let/n Z3 := (X3-Z3) in
-      let/n Z3 := (Z3*A) in
-      let/n Z2 := (Z2*X2) in
-      let/n A := (A^2) in
-      let/n X2 := (X2^2) in
-      let/n E := stack (A-X2) in
-      let/n X3 := (Z3+Z2) in
-      let/n X3 := X3^2 in
-      let/n Z3 := (Z3-Z2) in
-      let/n Z3 := Z3^2 in
-      let/n Z3 := X1*Z3 in
-      let/n X2 := A*X2 in
-      let/n Z2 := a24*E in
-      let/n Z2:= (A+Z2) in
-      let/n Z2 := E*Z2 in
-      \<X2, Z2, X3, Z3\>.
-  End Gallina.
 
   Instance spec_of_ladderstep : spec_of "ladderstep" :=
     fnspec! "ladderstep"
@@ -60,7 +59,7 @@ Section __.
         tr = tr'
         /\ exists X4 Z4 X5 Z5 (* output values *)
                   : F M_pos,
-          (ladderstep_gallina X1 X2 Z2 X3 Z3
+                  (ladderstep_gallina M_pos a24 X1 X2 Z2 X3 Z3
            = \<X4, Z4, X5, Z5\>)
           /\ (FElem (Some tight_bounds) pX1 X1
               * FElem (Some tight_bounds) pX2 X4
@@ -70,7 +69,7 @@ Section __.
 
   Lemma compile_ladderstep {tr m l functions}
         (x1 x2 z2 x3 z3 : F M_pos) :
-    let v := ladderstep_gallina x1 x2 z2 x3 z3 in
+    let v := ladderstep_gallina M_pos a24 x1 x2 z2 x3 z3 in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
            Rout
            X1_ptr X1_var X2_ptr X2_var Z2_ptr Z2_var
@@ -90,7 +89,7 @@ Section __.
 
       (let v := v in
        forall (* output values *) m',
-        let '\<X4, Z4, X5, Z5\> := ladderstep_gallina x1 x2 z2 x3 z3 in
+       let '\<X4, Z4, X5, Z5\> := ladderstep_gallina M_pos a24 x1 x2 z2 x3 z3 in
          (FElem (Some tight_bounds) X1_ptr x1
           * FElem (Some tight_bounds) X2_ptr X4
           * FElem (Some tight_bounds) Z2_ptr Z4
@@ -138,7 +137,7 @@ End __.
 
 Existing Instance spec_of_ladderstep.
 
-Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (ladderstep_gallina _ _ _ _ _) _))) =>
+Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (ladderstep_gallina _ _ _ _ _ _ _) _))) =>
        simple eapply compile_ladderstep; shelve : compiler.
 
 Import Syntax.

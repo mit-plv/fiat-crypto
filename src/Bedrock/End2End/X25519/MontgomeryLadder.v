@@ -11,15 +11,8 @@ Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Group.AdditionChains.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
-Require Import Crypto.Bedrock.Specs.ScalarField.
 Local Open Scope string_scope.
 Import ListNotations.
-
-Print ScalarFieldParameters.
-
-(* TODO: move to a separate file? *)
-Local Instance scalar_field_parameters : ScalarFieldParameters :=
-  { L_pos := Curve25519.l; scalarbits := 253; sctestbit := "sc25519_testbit" }.
 
 Definition ladderstep : func :=
   Eval vm_compute in
@@ -29,10 +22,9 @@ Definition ladderstep : func :=
 
 Definition montladder : func :=
   Eval vm_compute in
-    (montladder_body
+    (montladder_body (Z.to_nat (Z.log2_up Curve25519.l))
       (field_parameters:=field_parameters)
-      (field_representaton:=field_representation n s c)
-      (scalar_field_parameters:=scalar_field_parameters)).
+      (field_representaton:=field_representation n s c)).
 
 (* TODO: replace these stubs with real implementations. *)
 Definition felem_cswap : func :=
@@ -61,17 +53,6 @@ Definition fe25519_small_literal : func :=
   let x := "x" in
   ("fe25519_small_literal", ([pout; x], [],
     cmd.store access_size.word (expr.var pout) (expr.var x))).
-Definition sc25519_testbit : func :=
-  let px := "px" in
-  let wi := "wi" in
-  let r := "r" in
-  let tmp := "tmp" in
-  ("sc25519_testbit", ([px; wi], [r],
-  cmd.seq
-    (cmd.set tmp (expr.op bopname.add (expr.var px) (expr.var wi))) 
-    (cmd.set r (expr.literal 0)))).
-
-Check montladder_correct.
 
 Definition funcs : list func :=
   [
@@ -81,7 +62,6 @@ Definition funcs : list func :=
     felem_cswap;
     fe25519_copy;
     fe25519_small_literal;
-    sc25519_testbit ;
     fe25519_inv(word:=BasicC32Semantics.word)(field_parameters:=field_parameters);
     ladderstep;
     fe25519_mul;
@@ -92,4 +72,4 @@ Definition funcs : list func :=
 
 Compute
   match compile (compile_ext_call (funname_env:=SortedListString.map)) (map.of_list funcs) with
-  Some ((x, z), y) => (length x, z) | _ => (O, map.empty) end.
+  Success ((x, z), y) => (length x, z) | _ => (O, map.empty) end.

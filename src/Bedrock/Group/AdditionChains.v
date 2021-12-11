@@ -3,7 +3,6 @@ Require Import Rupicola.Lib.Loops.
 Require Import Rupicola.Lib.ControlFlow.DownTo.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Specs.Field.
-Require Import Crypto.Bedrock.Specs.ScalarField.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Algebra.Hierarchy.
 Require Import Numbers.DecimalString.
