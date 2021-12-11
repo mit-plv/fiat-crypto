@@ -142,10 +142,8 @@ src/Bedrock/Group/ScalarMult/LadderStep.v
 src/Bedrock/Group/ScalarMult/MontgomeryEquivalence.v
 src/Bedrock/Group/ScalarMult/MontgomeryLadder.v
 src/Bedrock/Group/ScalarMult/ScalarMult.v
-src/Bedrock/ScalarField/Interface/Compilation.v
 src/Bedrock/Specs/Field.v
 src/Bedrock/Specs/Group.v
-src/Bedrock/Specs/ScalarField.v
 src/Bedrock/Standalone/StandaloneHaskellMain.v
 src/Bedrock/Standalone/StandaloneOCamlMain.v
 src/Curves/EdwardsMontgomery.v
