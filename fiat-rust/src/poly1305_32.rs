@@ -13,7 +13,7 @@
 //!   balance = [0x7fffff6, 0x7fffffe, 0x7fffffe, 0x7fffffe, 0x7fffffe]
 
 #![allow(unused_parens)]
-#[allow(non_camel_case_types)]
+#![allow(non_camel_case_types)]
 
 pub type fiat_poly1305_u1 = u8;
 pub type fiat_poly1305_i1 = i8;
