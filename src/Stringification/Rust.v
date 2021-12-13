@@ -71,7 +71,7 @@ Module Rust.
        let type_prefix := (if internal_private then "type " else "pub type ")%string in
        (["";
         "#![allow(unused_parens)]";
-        "#[allow(non_camel_case_types)]";
+        "#![allow(non_camel_case_types)]";
         ""]%string
            ++ (List.flat_map
                  (fun bw
