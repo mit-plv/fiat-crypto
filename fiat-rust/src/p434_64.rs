@@ -18,7 +18,7 @@
 //!                            if x1 & (2^448-1) < 2^447 then x1 & (2^448-1) else (x1 & (2^448-1)) - 2^448
 
 #![allow(unused_parens)]
-#[allow(non_camel_case_types)]
+#![allow(non_camel_case_types)]
 
 pub type fiat_p434_u1 = u8;
 pub type fiat_p434_i1 = i8;

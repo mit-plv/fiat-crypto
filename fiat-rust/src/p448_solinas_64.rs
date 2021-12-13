@@ -13,7 +13,7 @@
 //!   balance = [0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffc, 0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffe]
 
 #![allow(unused_parens)]
-#[allow(non_camel_case_types)]
+#![allow(non_camel_case_types)]
 
 pub type fiat_p448_u1 = u8;
 pub type fiat_p448_i1 = i8;

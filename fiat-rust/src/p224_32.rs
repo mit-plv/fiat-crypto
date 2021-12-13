@@ -18,7 +18,7 @@
 //!                            if x1 & (2^224-1) < 2^223 then x1 & (2^224-1) else (x1 & (2^224-1)) - 2^224
 
 #![allow(unused_parens)]
-#[allow(non_camel_case_types)]
+#![allow(non_camel_case_types)]
 
 pub type fiat_p224_u1 = u8;
 pub type fiat_p224_i1 = i8;
