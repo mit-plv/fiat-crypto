@@ -70,7 +70,7 @@ jobs:
     - name: all
       run: etc/ci/github-actions-make.sh ${EXTRA_GH_REPORTIFY} -j2 all
     - name: upload generated files
-      uses: actions/upload-artifact@v2.2.4
+      uses: actions/upload-artifact@v2.3.1
       with:
         name: generated-files-${{ matrix.env.COQ_VERSION }}
         path: fiat-*/
@@ -78,7 +78,7 @@ jobs:
     - name: only-test-amd64-files
       run: etc/ci/github-actions-make.sh -j2 only-test-amd64-files
     - name: upload OCaml files
-      uses: actions/upload-artifact@v2.2.4
+      uses: actions/upload-artifact@v2.3.1
       with:
         name: ExtractionOCaml-${{ matrix.env.COQ_VERSION }}
         path: src/ExtractionOCaml
@@ -86,7 +86,7 @@ jobs:
     - name: standalone-haskell
       run: etc/ci/github-actions-make.sh -j1 standalone-haskell GHCFLAGS='+RTS -M5G -RTS'
     - name: upload Haskell files
-      uses: actions/upload-artifact@v2.2.4
+      uses: actions/upload-artifact@v2.3.1
       with:
         name: ExtractionHaskell-${{ matrix.env.COQ_VERSION }}
         path: src/ExtractionHaskell
@@ -96,7 +96,7 @@ jobs:
     - name: display per-line timing info
       run: etc/ci/github-actions-display-per-line-timing.sh
 #    - name: upload timing and .vo info
-#      uses: actions/upload-artifact@v2.2.4
+#      uses: actions/upload-artifact@v2.3.1
 #      with:
 #        name: build-outputs-${{ matrix.env.COQ_VERSION }}
 #        path: .

@@ -88,7 +88,7 @@ jobs:
         eval $(opam env)
         etc/ci/github-actions-make.sh -j2 only-test-amd64-files
     - name: upload OCaml files
-      uses: actions/upload-artifact@v2.2.4
+      uses: actions/upload-artifact@v2.3.1
       with:
         name: ExtractionOCaml
         path: src/ExtractionOCaml
@@ -97,7 +97,7 @@ jobs:
     - name: display per-line timing info
       run: etc/ci/github-actions-display-per-line-timing.sh
 #    - name: upload timing and .vo info
-#      uses: actions/upload-artifact@v2.2.4
+#      uses: actions/upload-artifact@v2.3.1
 #      with:
 #        name: build-outputs
 #        path: .

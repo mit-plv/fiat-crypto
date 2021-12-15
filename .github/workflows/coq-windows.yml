@@ -90,7 +90,7 @@ jobs:
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} only-test-amd64-files'
       shell: cmd
     - name: upload OCaml files
-      uses: actions/upload-artifact@v2.2.4
+      uses: actions/upload-artifact@v2.3.1
       with:
         name: ExtractionOCaml
         path: src/ExtractionOCaml
@@ -102,7 +102,7 @@ jobs:
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; etc/ci/github-actions-display-per-line-timing.sh'
       shell: cmd
 #    - name: upload timing and .vo info
-#      uses: actions/upload-artifact@v2.2.4
+#      uses: actions/upload-artifact@v2.3.1
 #      with:
 #        name: build-outputs
 #        path: .
