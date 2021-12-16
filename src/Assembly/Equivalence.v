@@ -72,7 +72,7 @@ printing functions on command-lines options indicating how verbose to
 be in printing the error message. *)
 Inductive EquivalenceCheckingError :=
 | Symbolic_execution_failed (_ : Symbolic.error) (_ : symbolic_state)
-| Internal_error_output_load_failed (_ : list (option (list idx))) (_ : symbolic_state)
+| Internal_error_output_load_failed (_ : list (option idx)) (_ : symbolic_state)
 | Internal_error_extra_input_arguments (t : API.type) (unused_arguments : list (idx + list idx))
 | Not_enough_registers (num_given num_extra_needed : nat)
 | Incorrect_array_input_dag_node
@@ -343,7 +343,7 @@ Fixpoint build_inputs (types : type_spec) : dag.M (list (idx + list idx))
            dag.ret (inr idxs :: rest))
      end%dagM.
 
-Fixpoint build_merge_base_addresses (items : list (idx + list idx)) (reg_available : list REG) : M (list (option (list idx)))
+Fixpoint build_merge_base_addresses (items : list (idx + list idx)) (reg_available : list REG) : M (list (option idx))
   := match items, reg_available with
      | [], _ | _, [] => Symbolic.ret []
      | inr idxs :: xs, r :: reg_available
@@ -354,7 +354,7 @@ Fixpoint build_merge_base_addresses (items : list (idx + list idx)) (reg_availab
                 (fun s => Success (addr, update_mem_with s (cons (addr,idx))))
               ) (List.enumerate idxs);
            rest <- build_merge_base_addresses xs reg_available;
-           Symbolic.ret (Some addrs :: rest))
+           Symbolic.ret (Some base :: rest))
      | inl idx :: xs, r :: reg_available =>
           (_ <- SetReg r idx; (* note: overwrites initial value *)
            rest <- build_merge_base_addresses xs reg_available;
@@ -785,13 +785,18 @@ Definition build_merge_stack_placeholders (stack_size : nat)
             (fun s => Success (tt, update_mem_with s (cons (a,idx))))
           ) (List.enumerate stack_placeholders))%x86symex.
 
-Definition LoadOutputs (outputaddrs : list (option (list idx)))
+Definition LoadOutputs (outputaddrs : list (option idx)) (output_types : type_spec)
   : M (list (idx + list idx))
-  := (asm_output <- mapM (fun ocells =>
-            match ocells with
-            | None => err (error.load 0)
-            | Some cells => mapM Load64 cells
-            end) outputaddrs;
+  := (asm_output <- mapM (fun '(ocells, spec) =>
+            match ocells, spec with
+            | None, None | None, Some _ | Some _, None => err (error.load 0)
+            | Some base, Some len
+              => mapM (fun i =>
+                         offset <- Symbolic.App ((const (8*Z.of_nat i)), nil);
+                       addr <- Symbolic.App (add 64, [base; offset]);
+                       Load64 addr)
+                      (seq 0 len)
+            end) (List.combine outputaddrs output_types);
       Symbolic.ret (List.map inr asm_output))%N%x86symex.
 
 Definition symex_asm_func_M
@@ -802,9 +807,9 @@ Definition symex_asm_func_M
       argptrs <- build_merge_base_addresses (output_placeholders ++ inputs) reg_available;
       _ <- build_merge_stack_placeholders stack_size;
       _ <- SymexLines asm;
-      let outputaddrs : list (option (list idx)) := firstn (length argptrs - length inputs) argptrs in
-      (* In the following line, we match on the result so we can emit Internal_error_output_load_failed in the calling function, rather than passing through the error from LoadOutputs *)
-      (fun s => match LoadOutputs outputaddrs s with
+      let outputaddrs : list (option idx) := firstn (length argptrs - length inputs) argptrs in
+      (* In the following line, we match on the result so we can emit Internal_error_output_load_failed in the calling function, rather than passing through the placeholder error from LoadOutputs *)
+      (fun s => match LoadOutputs outputaddrs output_types s with
                 | Error (_, s) => Success (Error (Internal_error_output_load_failed outputaddrs s), s)
                 | Success (asm_output, s) => Success (Success asm_output, s)
                 end))%N%x86symex.
@@ -813,14 +818,13 @@ Definition symex_asm_func
            (d : dag) (output_types : type_spec) (stack_size : nat)
            (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
   : ErrorT EquivalenceCheckingError (list (idx + list idx) * symbolic_state)
-  := let s := init_symbolic_state d in
-     let num_reg_given := List.length reg_available in
+  := let num_reg_given := List.length reg_available in
      let num_reg_needed := List.length inputs + List.length output_types in
      if (num_reg_given <? num_reg_needed)%nat
      then
        Error (Not_enough_registers num_reg_given num_reg_needed)
      else
-       match symex_asm_func_M output_types stack_size inputs reg_available asm s with
+       match symex_asm_func_M output_types stack_size inputs reg_available asm (init_symbolic_state d) with
        | Error (e, s)                    => Error (Symbolic_execution_failed e s)
        | Success (Error err, s)          => Error err
        | Success (Success asm_output, s) => Success (asm_output, s)
