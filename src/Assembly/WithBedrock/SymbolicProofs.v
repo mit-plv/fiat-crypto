@@ -77,12 +77,13 @@ Import coqutil.Tactics.autoforward coqutil.Decidable coqutil.Tactics.Tactics.
 
 Local Coercion ExprRef : idx >-> expr.
 
-Section WithCtx.
-Context (frame : mem_state).
+Section WithFrame.
+Context (frame : mem_state -> Prop).
+
+Section WithCtx1.
 Context (G : symbol -> option Z).
 Local Notation eval := (Symbolic.eval G).
 Local Notation gensym_dag_ok := (Symbolic.gensym_dag_ok G).
-
 Section WithDag.
 Context (d : dag).
 Local Notation eval := (Symbolic.eval G d).
@@ -106,7 +107,7 @@ Definition R_cell64 (ia iv : idx) : mem_state -> Prop :=
 
 Fixpoint R_mem (sm : Symbolic.mem_state) : mem_state -> Prop :=
   match sm with
-  | nil => eq frame
+  | nil => frame
   | cons (ia, iv) sm' => sep (R_cell64 ia iv) (R_mem sm')
   end.
 End WithDag.
@@ -158,9 +159,9 @@ Proof using Type.
   cbv [R_flags Tuple.fieldwise Tuple.fieldwise' fst snd] in *; intuition idtac;
   cbv [R_flag]; intros ? HH; inversion HH; clear HH; subst; eauto.
 Qed.
-
-Notation subsumed d1 d2 := (forall i v, eval d1 i v -> eval d2 i v).
-Local Infix ":<" := subsumed (at level 70, no associativity).
+End WithCtx1.
+Local Hint Resolve R_flag_None_l : core.
+Local Hint Resolve R_flag_None_r : typeclass_instances.
 
 Local Arguments Tuple.tuple : simpl never.
 Local Arguments Tuple.fieldwise : simpl never.
@@ -187,26 +188,51 @@ Local Arguments Z.lor !_ !_.
 Local Arguments Z.shiftl !_ !_.
 Local Arguments Z.shiftr !_ !_.
 
+Section WithCtx2.
+Context (G G' : symbol -> option Z).
+Local Notation eval := (Symbolic.eval G).
+Local Notation gensym_dag_ok := (Symbolic.gensym_dag_ok G).
+Local Notation eval' := (Symbolic.eval G').
+Local Notation gensym_dag_ok' := (Symbolic.gensym_dag_ok G').
+
+Local Notation R_reg' := (R_reg G').
+Local Notation R_reg := (R_reg G).
+Local Notation R_regs' := (R_regs G').
+Local Notation R_regs := (R_regs G).
+Local Notation R_flag' := (R_flag G').
+Local Notation R_flag := (R_flag G).
+Local Notation R_flags' := (R_flags G').
+Local Notation R_flags := (R_flags G).
+Local Notation R_cell64' := (R_cell64 G').
+Local Notation R_cell64 := (R_cell64 G).
+Local Notation R_mem' := (R_mem G').
+Local Notation R_mem := (R_mem G).
+Local Notation R' := (R G').
+Local Notation R := (R G).
+
+Notation subsumed d1 d2 := (forall i v, eval d1 i v -> eval' d2 i v).
+Local Infix ":<" := subsumed (at level 70, no associativity).
+
 Lemma R_flag_subsumed d s m (HR : R_flag d s m) d' (Hlt : d :< d')
-  : R_flag d' s m.
+  : R_flag' d' s m.
 Proof using Type.
   cbv [R_flag] in *; intros.
   case (HR i H) as (?&?&?); subst; eauto.
 Qed.
 
 Lemma R_flags_subsumed d s m (HR : R_flags d s m) d' (Hlt : d :< d')
-  : R_flags d' s m.
+  : R_flags' d' s m.
 Proof using Type.
   cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *;
     intuition eauto using R_flag_subsumed.
 Qed.
 
 Lemma R_reg_subsumed d s m (HR : R_reg d s m) d' (Hlt : d :< d')
-  : R_reg d' s m.
+  : R_reg' d' s m.
 Proof using Type. cbv [R_reg] in *; intuition eauto. Qed.
 
 Lemma R_regs_subsumed d s m (HR : R_regs d s m) d' (Hlt : d :< d')
-  : R_regs d' s m.
+  : R_regs' d' s m.
 Proof using Type.
   cbv [R_regs Tuple.fieldwise Tuple.fieldwise'] in *;
     intuition eauto using R_reg_subsumed.
@@ -216,14 +242,14 @@ Local Existing Instance Naive.word64_ok.
 Local Existing Instance SortedListWord.ok.
 
 Lemma R_cell64_subsumed d i i0 d' (Hd' : d :< d') m :
-  R_cell64 d i i0 m -> R_cell64 d' i i0 m.
+  R_cell64 d i i0 m -> R_cell64' d' i i0 m.
 Proof using Type.
-  intros (?&?&?&(?&?&?&?)).
+  clear frame; intros (?&?&?&(?&?&?&?)).
   eexists _, _, _, _; split; cbv [emp] in *; intuition eauto.
 Qed.
 
 Lemma R_mem_subsumed d s m (HR : R_mem d s m) d' (Hlt : d :< d')
-  : R_mem d' s m.
+  : R_mem' d' s m.
 Proof using Type.
   revert dependent m; induction s; cbn; break_match; intuition idtac.
   eapply SeparationLogic.Proper_sep_impl1; try eassumption.
@@ -232,13 +258,32 @@ Proof using Type.
   { refine (SortedListWord.ok _ _). }
 Qed.
 
-Lemma R_subsumed s m (HR : R s m) d' (Hd' : gensym_dag_ok d') (Hlt : s :< d')
-  (s' := update_dag_with s (fun _ => d')) : R s' m.
+Lemma R_subsumed s m (HR : R s m) d' (Hd' : gensym_dag_ok' d') (Hlt : s :< d')
+  (s' := update_dag_with s (fun _ => d')) : R' s' m.
 Proof using Type.
   destruct s, m; case HR as (Hd&Hr&Hf&Hm);
     cbv [update_dag_with] in *; cbn in *;
     intuition eauto using R_flags_subsumed, R_regs_subsumed, R_mem_subsumed.
 Qed.
+End WithCtx2.
+
+Section WithCtx1'.
+Context (G : symbol -> option Z).
+Local Notation eval := (Symbolic.eval G).
+Local Notation gensym_dag_ok := (Symbolic.gensym_dag_ok G).
+Local Notation R_reg := (R_reg G).
+Local Notation R_regs := (R_regs G).
+Local Notation R_flag := (R_flag G).
+Local Notation R_flags := (R_flags G).
+Local Notation R_cell64 := (R_cell64 G).
+Local Notation R_mem := (R_mem G).
+Local Notation R := (R G).
+
+Notation subsumed d1 d2 := (forall i v, eval d1 i v -> eval d2 i v).
+Local Infix ":<" := subsumed (at level 70, no associativity).
+
+Local Existing Instance Naive.word64_ok.
+Local Existing Instance SortedListWord.ok.
 
 Lemma R_mem_Permutation d s1 m (HR : R_mem d s1 m) s2
   (HP : Permutation s1 s2) : R_mem d s2 m.
@@ -580,6 +625,7 @@ Lemma store8 m a
   m'  (Hm': set_mem m a 8 (Z.lor (Z.land b (Z.ones 8)) (Z.ldiff old (Z.ones 8))) = Some m')
   : set_mem m a 1 b = Some m'.
 Proof using Type.
+  clear frame.
   cbv [set_mem store_bytes] in *.
   destruct_one_match_hyp; Option.inversion_option.
   epose proof length_load_bytes _ _ _ _ E as H;
@@ -1199,4 +1245,5 @@ Proof using Type.
   eapply SymexNornalInstruction_R in E; eauto. destruct E as (m1&Hm1&Rm1&?). rewrite Hm1.
   eapply IHasm in H; eauto. destruct H as (?&?&?&?). eauto 9.
 Qed.
-End WithCtx.
+End WithCtx1'.
+End WithFrame.
