@@ -67,53 +67,34 @@ Existing Instances
 Require Import bedrock2.NotationsCustomEntry.
 
 Definition ladderstep : Syntax.func :=
-  let X1 := "X1" in
-  let X2 := "X2" in
-  let Z2 := "Z2" in
-  let X3 := "X3" in
-  let Z3 := "Z3" in
-  (* intermediate variables *)
-  let A := "A" in
-  let AA := "AA" in
-  let B := "B" in
-  let BB := "BB" in
-  let E := "E" in
-  let C := "C" in
-  let D := "D" in
-  let DA := "DA" in
-  let CB := "CB" in
-  (* store results back in P1 (X2, Z2) and P2 (X3, Z3) *)
-  let X4 := "X2" in
-  let Z4 := "Z2" in
-  let X5 := "X3" in
-  let Z5 := "Z3" in
   let mul := "curve25519_carry_mul" in
   let square := "curve25519_carry_square" in
   let add := "curve25519_add" in
   let sub := "curve25519_sub" in
   let scmul121665 := "curve25519_carry_scmul_const121665" in
   ("ladderstep",
-   ([X1; X2; Z2; X3; Z3;
-       A; AA; B; BB; E; C; D; DA; CB], [],
+   (["X1"; "X2"; "Z2"; "X3"; "Z3";
+       "A"; "AA"; "B"; "BB"; "E"; "C"; "D"; "DA"; "CB"], [],
+    (* store results back in P1 (X2, Z2) and P2 (X3, Z3) *)
     bedrock_func_body:(
-      add (A, X2, Z2) ;     (* llet A  := X2+Z2 in *)
-      square (AA, A) ;      (* llet AA := A^2 in *)
-      sub (B, X2, Z2) ;     (* llet B  := X2-Z2 in *)
-      square (BB, B) ;      (* llet BB := B^2 in *)
-      sub (E, AA, BB) ;     (* llet E  := AA-BB in *)
-      add (C, X3, Z3) ;     (* llet C  := X3+Z3 in *)
-      sub (D, X3, Z3) ;     (* llet D  := X3-Z3 in *)
-      mul (DA, D, A) ;      (* llet DA := D*A in *)
-      mul (CB, C, B) ;      (* llet CB := C*B in *)
-      add (X5, DA, CB) ;    (* llet X5 := (DA+CB)^2 in *)
-      square (X5, X5) ;
-      sub (Z5, DA, CB) ;    (* llet Z5 := X1*(DA-CB)^2 in *)
-      square (Z5, Z5) ;
-      mul (Z5, X1, Z5) ;
-      mul (X4, AA, BB) ;    (* llet X4 := AA*BB in *)
-      scmul121665 (Z4, E) ; (* llet Z4 := E*(AA + a24*E) in *)
-      add (Z4, AA, Z4) ;
-      mul (Z4, E, Z4)        (* pair4 X4 Z4 X5 Z5 *)
+      $add (A, X2, Z2) ;     (* llet A  := X2+Z2 in *)
+      $square (AA, A) ;      (* llet AA := A^2 in *)
+      $sub (B, X2, Z2) ;     (* llet B  := X2-Z2 in *)
+      $square (BB, B) ;      (* llet BB := B^2 in *)
+      $sub (E, AA, BB) ;     (* llet E  := AA-BB in *)
+      $add (C, X3, Z3) ;     (* llet C  := X3+Z3 in *)
+      $sub (D, X3, Z3) ;     (* llet D  := X3-Z3 in *)
+      $mul (DA, D, A) ;      (* llet DA := D*A in *)
+      $mul (CB, C, B) ;      (* llet CB := C*B in *)
+      $add (X3, DA, CB) ;    (* llet X3 := (DA+CB)^2 in *)
+      $square (X3, X3) ;
+      $sub (Z3, DA, CB) ;    (* llet Z3 := X1*(DA-CB)^2 in *)
+      $square (Z3, Z3) ;
+      $mul (Z3, X1, Z3) ;
+      $mul (X2, AA, BB) ;    (* llet X2 := AA*BB in *)
+      $scmul121665 (Z2, E) ; (* llet Z2 := E*(AA + a24*E) in *)
+      $add (Z2, AA, Z2) ;
+      $mul (Z2, E, Z2)        (* pair4 X2 Z2 X3 Z3 *)
   ))).
 
 Instance spec_of_ladderstep : spec_of ladderstep :=
