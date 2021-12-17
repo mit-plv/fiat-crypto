@@ -672,17 +672,23 @@ Section Scalars.
     Lift1Prop.iff1
       (scalar a x)
       (array ptsto (word.of_Z 1) a
-             (HList.tuple.to_list
-             (LittleEndian.split (Z.to_nat bytes_per_word)
-                                    (word.unsigned x)))).
-  Proof. reflexivity. Qed.
+             (LittleEndianList.le_split (Z.to_nat bytes_per_word)
+             (word.unsigned x))).
+  Proof.
+    unfold scalar, truncated_word, truncated_scalar, littleendian, ptsto_bytes.ptsto_bytes.
+    rewrite HList.tuple.to_list_of_list; reflexivity.
+  Qed.
 
   Lemma truncated_scalar_one_ptsto_iff1 :
     forall (addr : word) x,
       Lift1Prop.iff1
         (truncated_scalar access_size.one addr x)
         (ptsto addr (Byte.byte.of_Z x)).
-  Proof. intros; cbn. cancel. reflexivity. Qed.
+  Proof. intros.
+    unfold scalar, truncated_word, truncated_scalar, littleendian, ptsto_bytes.ptsto_bytes.
+    rewrite HList.tuple.to_list_of_list. unfold Memory.bytes_per, le_split, array.
+    cancel.
+  Qed.
 
   Lemma array_truncated_scalar_scalar_iff1 :
     forall xs (start : word) size,

@@ -128,6 +128,7 @@ Section __.
      LittleEndianList.le_combine bs = x ->
 
      wi = word.of_Z (Z.of_nat i) ->
+     0 <= Z.of_nat i < 2 ^ width ->
      Z.of_nat i < 8 * Z.of_nat (length bs) ->
      map.get locals i_var = Some wi ->
 
@@ -142,11 +143,11 @@ Section __.
         Memory := mem;
         Locals := locals;
         Functions := functions }>
-     bedrock_cmd:(out_var = (load1(x_var+i_var>>coq:(3))>>(i_var&coq:(7)))&coq:(1); coq:(k_impl))
+     bedrock_cmd:($out_var = (load1($x_var+$i_var>>coq:(3))>>($i_var&coq:(7)))&coq:(1); coq:(k_impl))
      <{ pred (nlet_eq [out_var] v k) }>.
  Proof.
    repeat straightline.
-   repeat (eexists; split; repeat straightline'; eauto); cbn; repeat straightline.
+   repeat (eexists; split; repeat straightline'; eauto); cbn [Semantics.interp_binop].
 
    eapply load_one_of_sep.
    (*
@@ -154,25 +155,39 @@ Section __.
     let t := type of Hrw in
     let t := eval cbv zeta in t in
     *)
+   unshelve (
    let Hrw := open_constr:(@bytearray_index_inbounds _ _ _ _ _ _ _ _ _ : Lift1Prop.iff1 _ _) in
-   seprewrite0_in Hrw H; ecancel_assumption.
+   seprewrite0_in Hrw H; ecancel_assumption).
+   all : cycle 1.
 
-   unfold word.b2w.
-   subst_lets_in_goal; subst.
-   eapply word.unsigned_inj; repeat rewrite
-     ?word.unsigned_of_Z, ?word.unsigned_and_nowrap, ?word.unsigned_sru_nowrap.
+   all: try eapply word.unsigned_inj.
+   all: unfold word.b2w.
+   all: subst_lets_in_goal; subst.
+   all : repeat rewrite
+     ?word.unsigned_of_Z_b2z, ?word.unsigned_of_Z, ?word.unsigned_and_nowrap, ?word.unsigned_sru_nowrap.
    all : cbv [word.wrap]; rewrite ?Z.mod_small.
    all : change 7 with (Z.ones 3); change 1 with (Z.ones 1); rewrite ?Z.land_ones.
    all : rewrite ?Z.shiftr_div_pow2; change (2^3) with 8; change (2^1) with 2.
    all : rewrite <-?hd_skipn_nth_default.
-   rewrite <-Z.testbit_spec'; f_equal.
-   replace (Z.to_nat (Z.of_nat i / 8)) with (i/8)%nat.
-   all : try (destruct Bitwidth.width_cases; cbn; Lia.lia).
-   (* word<->Z side conditions and nth_default le_combine
+   1: rewrite <-Z.testbit_spec'; f_equal.
+   1: setoid_rewrite Z2Nat.inj_div.
+   all : try match goal with |- 0 <= byte.unsigned ?x < _ => epose proof byte.unsigned_range x end.
+   all : try (destruct Bitwidth.width_cases as [E|E]; rewrite ?E in *; Lia.lia).
+   all : try (destruct Bitwidth.width_cases as [E|E]; rewrite ?E in *; cbn in *; Lia.lia).
+
+   (*
       Z.testbit (LittleEndianList.le_combine bs) (Z.of_nat i) =
-      Z.testbit (byte.unsigned (nth_default (byte.of_Z 0) bs (i / 8))) (Z.of_nat i mod 8)
-    *)
- Admitted.
+      Z.testbit (byte.unsigned
+        (nth_default (byte.of_Z 0) bs (Z.to_nat (Z.of_nat i) / Z.to_nat 8)))
+        (Z.of_nat i mod 8)
+   *)
+   rewrite <-(LittleEndianList.split_le_combine bs) at 2.
+   rewrite LittleEndianList.nth_default_le_split, byte.unsigned_of_Z, Nat2Z.id
+     by (eapply Nat.div_lt_upper_bound; Lia.nia).
+   cbv [byte.wrap]; rewrite <-Z.land_ones, Z.land_spec, Z.ones_spec_low by Lia.lia.
+   rewrite Z.shiftr_spec, Bool.andb_true_r by Lia.lia; f_equal.
+   rewrite Nat2Z.inj_div. Lia.lia.
+ Qed.
 
   Hint Extern 8
        (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (Z.testbit _ _) _))) =>

@@ -34,11 +34,8 @@ Section Bignum.
     Context {word_ok : @word.ok width word} {map_ok : @map.ok word Init.Byte.byte mem}
       {BW : coqutil.Word.Bitwidth.Bitwidth width}.
 
-    (* note: LittleEndianList would work better here if Translation used it too *)
-    Local Notation lew_combine :=
-      (fun c => word.of_Z (LittleEndian.combine _ (HList.tuple.of_list c))).
-    Local Notation lew_split :=
-      (fun w => HList.tuple.to_list (LittleEndian.split (Z.to_nat k) (word.unsigned w))).
+    Local Notation lew_combine := (fun c => word.of_Z (LittleEndianList.le_combine c)).
+    Local Notation lew_split := (fun w => LittleEndianList.le_split (Z.to_nat k) (word.unsigned w)).
 
     Lemma Bignum_of_bytes n :
       forall addr bs,
@@ -92,20 +89,19 @@ Section Bignum.
       intros.
       assert (length (flat_map lew_split x) = (length x * Z.to_nat k)%nat).
       { erewrite flat_map_const_length, Nat.mul_comm;
-        auto using HList.tuple.length_to_list. }
+        auto using LittleEndianList.length_le_split. }
       rewrite Bignum_of_bytes by eassumption; cbv [Bignum].
       rewrite chunk_flat_map_exact, map_map; cycle 1.
       { destruct Bitwidth.width_cases; subst width; inversion 1. }
-      { intros; apply HList.tuple.length_to_list. }
+      { intros; apply LittleEndianList.length_le_split. }
       erewrite List.map_ext with (g:=fun x=>x), map_id; try cancel; cbv [seps].
       { rewrite sep_emp_emp. setoid_rewrite H. 
         cbv [Lift1Prop.iff1 emp]; intuition (
           destruct Bitwidth.width_cases; subst width; subst; cbn in *; try nia). }
       intros.
-      (* note: this mess would unnecessary with LittleEndianList *)
+      (* note: this mess could be cleaned up now that we use LittleEndianList *)
       destruct Bitwidth.width_cases; subst width; simpl k; simpl length(*+arguments*);
-        unshelve erewrite (_:HList.tuple.of_list _=_);
-        rewrite ?LittleEndian.combine_split; try exact eq_refl;
+        rewrite ?LittleEndianList.le_combine_split; try exact eq_refl;
         rewrite Z.mod_small, word.of_Z_unsigned;
         trivial; eapply word.unsigned_range.
     Qed.
