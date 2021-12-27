@@ -36,11 +36,10 @@ jobs:
         set -e
         eval $(opam env)
         opam update
-        opam install opam-depext
-        opam-depext coq
         opam pin add coq ${COQ_VERSION}
       env:
         OPAMYES: "true"
+        OPAMCONFIRMLEVEL: "unsafe-yes"
 
     - name: echo build params
       run: |

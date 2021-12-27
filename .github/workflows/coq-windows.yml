@@ -21,6 +21,7 @@ jobs:
       COQ_VERSION: "8.12.0" # https://packages.debian.org/stable/coq
       SKIP_BEDROCK2: "1"
       OPAMYES: "true"
+      OPAMCONFIRMLEVEL: "unsafe-yes"
 
     steps:
     - uses: actions/checkout@v2
@@ -32,8 +33,6 @@ jobs:
       uses: ocaml/setup-ocaml@v2
       with:
         ocaml-compiler: 4.11.1
-    - run: opam install opam-depext
-    - run: opam exec -- opam-depext coq.${{ env.COQ_VERSION }}
     - run: opam pin add --kind=version coq ${{ env.COQ_VERSION }}
 
     - name: Install System Dependencies

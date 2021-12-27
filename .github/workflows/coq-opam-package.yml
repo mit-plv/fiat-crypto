@@ -40,6 +40,7 @@ jobs:
 
     env:
       OPAMYES: "true"
+      OPAMCONFIRMLEVEL: "unsafe-yes"
 
     steps:
     - name: Set up OCaml
@@ -106,8 +107,6 @@ jobs:
     - run: opam repo add coq-released https://coq.inria.fr/opam/released
     - run: opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
     - run: opam update
-    - run: opam install opam-depext
-    - run: opam exec -- opam-depext coq.${{ matrix.coq-version }}
     - run: opam pin --kind=version add coq ${{ matrix.coq-version }}
 
     - name: echo more build params
@@ -125,7 +124,6 @@ jobs:
         echo "" | opam exec -- coqtop
         echo ::endgroup::
 
-    - run: opam exec -- opam-depext coq-fiat-crypto
     - run: opam install coq-fiat-crypto ${{ matrix.opam-jobs-flag }}
       env:
         COQEXTRAFLAGS: ${{ matrix.coq-extra-flags }}
