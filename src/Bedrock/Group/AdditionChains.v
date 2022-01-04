@@ -146,81 +146,6 @@ Section FElems.
       exp_from_encoding x (run_length_encoding n).
   End Impl.
 
-  Section FUtils.
-    Context (m : positive).
-    (* FIXME go over this section with Dustin to understand why the code below
-       is needed. *)
-    
-    Lemma solve_F_equality_via_Z lhs' rhs' (lhs rhs : F m)
-      : F.to_Z lhs = lhs' mod Z.pos m ->
-        F.to_Z rhs = rhs' mod Z.pos m ->
-        lhs' = rhs' ->
-        lhs = rhs.
-    Proof.
-      intros.
-      rewrite <- (F.of_Z_to_Z lhs).
-      rewrite <- (F.of_Z_to_Z rhs).
-      intuition congruence.
-    Qed.
-
-    Lemma F_mul_to_Z a a' b b'
-      : F.to_Z a = a' mod Z.pos m ->
-        F.to_Z b = b' mod Z.pos m ->
-        @F.to_Z m (a * b) = (a' * b') mod Z.pos m.
-    Proof.
-      intros H H0.
-      rewrite F.to_Z_mul.
-      rewrite H, H0.
-      rewrite <- PullPush.Z.mul_mod_l.
-      rewrite <- PullPush.Z.mul_mod_r.
-      congruence.
-    Qed.
-
-    Lemma F_add_to_Z a a' b b'
-      : F.to_Z a = a' mod Z.pos m ->
-        F.to_Z b = b' mod Z.pos m ->
-        @F.to_Z m (a + b) = (a' + b') mod Z.pos m.
-    Proof.
-      intros H H0.
-      rewrite F.to_Z_add.
-      rewrite H, H0.
-      rewrite <- PullPush.Z.add_mod_l.
-      rewrite <- PullPush.Z.add_mod_r.
-      congruence.
-    Qed.
-
-    Lemma F_exp_to_Z a a' n
-      : F.to_Z a = a' mod Z.pos m ->
-        @F.to_Z m (a ^ n) = (a' ^ n) mod Z.pos m.
-    Proof.
-      intros H.
-      rewrite F.to_Z_pow.
-      rewrite H.
-      rewrite <- PullPush.Z.mod_pow_full.
-      congruence.
-    Qed.
-
-    Lemma F_var_to_Z (x : F m) : F.to_Z x = proj1_sig x mod Z.pos m.    Proof.
-      destruct x; simpl; assumption.
-    Qed.
-
-    Lemma F_one_to_Z : @F.to_Z m 1 = 1 mod Z.pos m.
-    Proof.
-      reflexivity.
-    Qed.
-
-
-    Lemma F_const_to_Z c : F.to_Z (F.of_Z m c) = c mod Z.pos m.
-    Proof.
-      reflexivity.
-    Qed.
-
-
-    Definition Pos2N_pos_xI n : N.pos n~1 = (2 * N.pos n + 1)%N := eq_refl.
-    Definition Pos2N_pos_xO n : N.pos n~0 = (2 * N.pos n)%N := eq_refl.
-    
-  End FUtils.
-
   Section Proofs.
     Context (m : positive).
    
@@ -251,9 +176,13 @@ Section FElems.
       unfold nlet;
       autorewrite with F_pow;
       repeat rewrite F_mul_1_r;
-      repeat rewrite F_mul_1_l; 
+      repeat rewrite F_mul_1_l;
       try reflexivity;
       try F_lia.
+
+    
+    Definition Pos2N_pos_xI n : N.pos n~1 = (2 * N.pos n + 1)%N := eq_refl.
+    Definition Pos2N_pos_xO n : N.pos n~0 = (2 * N.pos n)%N := eq_refl.
 
      Lemma exp_by_squaring_correct :
       forall n x, exp_by_squaring m x n = (x ^ N.pos n)%F.
