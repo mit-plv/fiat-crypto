@@ -39,6 +39,7 @@ src/Arithmetic/BaseConversion.v
 src/Arithmetic/Core.v
 src/Arithmetic/FancyMontgomeryReduction.v
 src/Arithmetic/Freeze.v
+src/Arithmetic/FLia.v
 src/Arithmetic/ModOps.v
 src/Arithmetic/ModularArithmeticPre.v
 src/Arithmetic/ModularArithmeticTheorems.v
