@@ -2,6 +2,7 @@ Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Loops.
 Require Import Rupicola.Lib.ControlFlow.DownTo.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+Require Import Crypto.Arithmetic.FLia.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Algebra.Hierarchy.
@@ -222,41 +223,7 @@ Section FElems.
 
   Section Proofs.
     Context (m : positive).
-    Ltac rewrite_Z :=
-      lazymatch goal with
-      | [|- ?a = ?b] =>
-        let H := fresh "H" in
-        let m := open_constr:(_) in
-        enough (F.of_Z m (F.to_Z a) = F.of_Z m (F.to_Z b)) as H;
-        [rewrite !F.of_Z_to_Z in H; assumption| f_equal]
-      end.
-
-    Ltac F_lia_orig :=
-      try rewrite_Z;
-      try rewrite !F.to_Z_mul;
-      try f_equal;
-      try lia.
-    
-    Ltac F_convert_to_Z :=
-      solve [repeat
-               let e := lazymatch goal with |- F.to_Z ?x = _ => x end in
-               tryif is_var e
-               then simple eapply F_var_to_Z
-               else first [ simple eapply F_exp_to_Z
-                          | simple eapply F_mul_to_Z
-                          | simple eapply F_add_to_Z
-                          | simple eapply F_one_to_Z
-                          | simple eapply F_const_to_Z]].
-
-    Ltac F_zify :=
-      intros;
-      lazymatch goal with
-      | [|- ?lhs = ?rhs] =>
-        simple eapply solve_F_equality_via_Z;
-        [F_convert_to_Z | F_convert_to_Z | ]
-      end.
-
-    Ltac F_lia := F_zify; lia.
+   
 
     Lemma F_mul_1_r : forall x : F m,
         (x * 1)%F = x.
@@ -322,7 +289,7 @@ Section FElems.
         + destruct p. destruct b.
           * rewrite <- IHn.
             cbn. replace (n0 + 1)%nat with (S n0) by lia.
-            unfold nlet; destruct n0; cbn; destruct n eqn : H'; unfold exp_square_and_multiply; unfold nlet; set (exp_from_encoding_simple _ x l) as expxl; try F_lia; F_lia_orig.
+            unfold nlet; destruct n0; cbn; destruct n eqn : H'; unfold exp_square_and_multiply; unfold nlet; set (exp_from_encoding_simple _ x l) as expxl; F_lia.
           * rewrite <- IHn.
             cbn.
             unfold nlet.
@@ -335,14 +302,14 @@ Section FElems.
           unfold nlet.
           cbn.
           unfold exp_square.
-          destruct n0; F_lia_orig.
+          destruct n0; cbv [nlet Nat.iter]; simpl; F_lia.
         * destruct (run_length_encoding p~0) as [|[[|] n0] t]; try reflexivity.
           simpl.
           replace (n0 + 1)% nat with (S n0) by lia.
           unfold nlet.
           simpl.
           unfold exp_square.
-          destruct n0; F_lia_orig.
+          destruct n0; cbv [nlet Nat.iter]; simpl; F_lia.
         * unfold run_length_encoding.
           unfold exp_from_encoding_simple.
           simplify_F.
