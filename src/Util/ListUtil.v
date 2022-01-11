@@ -140,13 +140,13 @@ Module Export List.
     Variable f : A -> B.
 
     Lemma map_nil : forall A B (f : A -> B), map f nil = nil.
-    Proof. reflexivity. Qed.
+    Proof using Type. reflexivity. Qed.
     Lemma map_cons (x:A)(l:list A) : map f (x::l) = (f x) :: (map f l).
     Proof using Type.
       reflexivity.
     Qed.
     Lemma map_repeat x n : map f (List.repeat x n) = List.repeat (f x) n.
-    Proof. induction n; simpl List.repeat; simpl map; congruence. Qed.
+    Proof using Type. induction n; simpl List.repeat; simpl map; congruence. Qed.
   End Map.
   Hint Rewrite @map_cons @map_nil @map_repeat : push_map.
   Hint Rewrite @map_app : push_map.
@@ -167,13 +167,13 @@ Module Export List.
     Context {A B} (f:B->A->A).
     Lemma fold_right_nil : forall {A B} (f:B->A->A) a,
         List.fold_right f a nil = a.
-    Proof. reflexivity. Qed.
+    Proof using Type. reflexivity. Qed.
     Lemma fold_right_cons : forall a b bs,
       fold_right f a (b::bs) = f b (fold_right f a bs).
-    Proof. reflexivity. Qed.
+    Proof using Type. reflexivity. Qed.
     Lemma fold_right_snoc a x ls:
       @fold_right A B f a (ls ++ [x]) = fold_right f (f x a) ls.
-    Proof.
+    Proof using Type.
       rewrite <-(rev_involutive ls), <-rev_cons.
       rewrite !fold_left_rev_right; reflexivity.
     Qed.
@@ -226,7 +226,7 @@ Module Export List.
     Proof using Type. now simpl. Qed.
 
     Lemma firstn_all l: firstn (length l) l = l.
-    Proof. induction l as [| ? ? H]; simpl; [reflexivity | now rewrite H]. Qed.
+    Proof using Type. induction l as [| ? ? H]; simpl; [reflexivity | now rewrite H]. Qed.
 
     Lemma firstn_all2 n: forall (l:list A), (length l) <= n -> firstn n l = l.
     Proof using Type. induction n as [|k iHk].
@@ -284,7 +284,7 @@ Module Export List.
       forall l:list A,
       forall i j : nat,
         firstn i (firstn j l) = firstn (min i j) l.
-    Proof. induction l as [|x xs Hl].
+    Proof using Type. induction l as [|x xs Hl].
            - intros. simpl. now rewrite ?firstn_nil.
            - destruct i.
              * intro. now simpl.
@@ -461,6 +461,22 @@ Lemma list_lb_hetero_eq {A}
       {x y}
   : x = y -> list_beq_hetero A_beq x y = true.
 Proof using Type. rewrite list_beq_hetero_uniform; now apply internal_list_dec_lb. Qed.
+
+Lemma eqlistA_bl {A eqA} {R : relation A}
+      (H : forall x y : A, eqA x y = true -> R x y)
+  : forall x y, list_beq A eqA x y = true -> eqlistA R x y.
+Proof.
+  induction x, y; cbn; auto; try discriminate; constructor.
+  all: rewrite Bool.andb_true_iff in *; destruct_head'_and; eauto.
+Qed.
+
+Lemma eqlistA_lb {A eqA} {R : relation A}
+      (H : forall x y : A, R x y -> eqA x y = true)
+  : forall x y, eqlistA R x y -> list_beq A eqA x y = true.
+Proof.
+  induction x, y; cbn; auto; try discriminate; inversion 1; subst.
+  all: rewrite Bool.andb_true_iff; eauto.
+Qed.
 
 Lemma nth_default_cons : forall {T} (x u0 : T) us, nth_default x (u0 :: us) 0 = u0.
 Proof. auto. Qed.
@@ -2375,6 +2391,15 @@ Fixpoint remove_duplicates' {A} (beq : A -> A -> bool) (ls : list A) : list A
      end.
 Definition remove_duplicates {A} (beq : A -> A -> bool) (ls : list A) : list A
   := List.rev (remove_duplicates' beq (List.rev ls)).
+Fixpoint find_duplicates' {A} (beq : A -> A -> bool) (ls : list A) : list A
+  := match ls with
+     | nil => nil
+     | cons x xs => if existsb (beq x) xs
+                    then x :: @find_duplicates' A beq xs
+                    else @find_duplicates' A beq xs
+     end.
+Definition find_duplicates {A} (beq : A -> A -> bool) (ls : list A) : list A
+  := remove_duplicates beq (find_duplicates' beq ls).
 
 Lemma InA_remove_duplicates'
       {A} (A_beq : A -> A -> bool)
@@ -2823,7 +2848,7 @@ Section find_index.
 
   Lemma find_index_none_iff xs
     : find_index xs = None <-> forall i a, nth_error xs i = Some a -> f a = false.
-  Proof.
+  Proof using Type.
     cbv [find_index enumerate].
     edestruct find eqn:H; cbn; [ split; [ congruence | ] | split; [ intros _ | reflexivity ] ].
     { rewrite find_some_iff in H.
@@ -2841,7 +2866,7 @@ Section find_index.
   Lemma find_index_some_iff xs n
     : find_index xs = Some n
       <-> ((exists x, nth_error xs n = Some x /\ f x = true) /\ forall n', n' < n -> forall a, nth_error xs n' = Some a -> f a = false).
-  Proof.
+  Proof using Type.
     cbv [find_index enumerate].
     edestruct find eqn:H; cbn; [ | split; [ congruence | ] ].
     { rewrite find_some_iff in H.
@@ -2873,3 +2898,24 @@ Section find_index.
       congruence. }
   Qed.
 End find_index.
+
+Lemma fold_left_id {A B} init ls
+  : @fold_left A B (fun x _ => x) ls init = init.
+Proof.
+  revert init; induction ls as [|x xs IHxs]; cbn [fold_left]; eauto.
+Qed.
+
+Lemma fold_left_cons {B} init ls
+  : @fold_left _ B (fun xs x => cons x xs) ls init = List.rev ls ++ init.
+Proof.
+  revert init; induction ls as [|x xs IHxs]; cbn [fold_left List.rev];
+    intros; rewrite ?IHxs, ?List.app_nil_l, ?List.app_nil_r, <- ?List.app_assoc;
+    cbn [List.app]; reflexivity.
+Qed.
+
+Lemma map_swap_combine {A B} ls1 ls2
+  : List.map (fun xy => (snd xy, fst xy)) (List.combine ls2 ls1)
+    = @List.combine A B ls1 ls2.
+Proof.
+  revert ls2; induction ls1 as [|x xs IHxs], ls2 as [|y ys]; cbn [List.combine List.map fst snd]; congruence.
+Qed.
