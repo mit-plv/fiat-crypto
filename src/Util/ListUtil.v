@@ -462,6 +462,22 @@ Lemma list_lb_hetero_eq {A}
   : x = y -> list_beq_hetero A_beq x y = true.
 Proof using Type. rewrite list_beq_hetero_uniform; now apply internal_list_dec_lb. Qed.
 
+Lemma eqlistA_bl {A eqA} {R : relation A}
+      (H : forall x y : A, eqA x y = true -> R x y)
+  : forall x y, list_beq A eqA x y = true -> eqlistA R x y.
+Proof.
+  induction x, y; cbn; auto; try discriminate; constructor.
+  all: rewrite Bool.andb_true_iff in *; destruct_head'_and; eauto.
+Qed.
+
+Lemma eqlistA_lb {A eqA} {R : relation A}
+      (H : forall x y : A, R x y -> eqA x y = true)
+  : forall x y, eqlistA R x y -> list_beq A eqA x y = true.
+Proof.
+  induction x, y; cbn; auto; try discriminate; inversion 1; subst.
+  all: rewrite Bool.andb_true_iff; eauto.
+Qed.
+
 Lemma nth_default_cons : forall {T} (x u0 : T) us, nth_default x (u0 :: us) 0 = u0.
 Proof. auto. Qed.
 
@@ -2375,6 +2391,15 @@ Fixpoint remove_duplicates' {A} (beq : A -> A -> bool) (ls : list A) : list A
      end.
 Definition remove_duplicates {A} (beq : A -> A -> bool) (ls : list A) : list A
   := List.rev (remove_duplicates' beq (List.rev ls)).
+Fixpoint find_duplicates' {A} (beq : A -> A -> bool) (ls : list A) : list A
+  := match ls with
+     | nil => nil
+     | cons x xs => if existsb (beq x) xs
+                    then x :: @find_duplicates' A beq xs
+                    else @find_duplicates' A beq xs
+     end.
+Definition find_duplicates {A} (beq : A -> A -> bool) (ls : list A) : list A
+  := remove_duplicates beq (find_duplicates' beq ls).
 
 Lemma InA_remove_duplicates'
       {A} (A_beq : A -> A -> bool)
