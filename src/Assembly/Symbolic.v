@@ -79,6 +79,7 @@ Global Instance Show_op : Show op := fun o =>
 Definition associative o := match o with add _|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ=> true | _ => false end.
 Definition commutative o := match o with add _|addcarry _|addoverflow _|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ => true | _ => false end.
 Definition identity o := match o with mul N0 => Some 0%Z| mul _|mulZ=>Some 1%Z |add _|addZ|or _|orZ|xor _|xorZ => Some 0%Z | and s => Some (Z.ones (Z.of_N s))|andZ => Some (-1)%Z |_=> None end.
+Definition unary_truncate_size o := match o with add s|and s|or s|xor s|mul s => Some (Z.of_N s) | addZ|mulZ|andZ|orZ|xorZ => Some (-1)%Z | _ => None end.
 
 Definition node (A : Set) : Set := op * list A.
 Global Instance Show_node {A : Set} {show_A : Show A} : Show (node A) := show_prod.
@@ -906,6 +907,36 @@ Definition constprop :=
 Global Instance constprop_ok : Ok constprop.
 Proof using Type. t. f_equal; eauto using eval_eval. Qed.
 
+(* convert unary operations to slice *)
+Definition unary_truncate :=
+  fun e => match e with
+    ExprApp (o, [x]) =>
+    match unary_truncate_size o with
+    | Some (-1)%Z => x
+    | Some 0%Z => ExprApp (const 0, nil)
+    | Some (Zpos p)
+      => ExprApp (slice 0%N (Npos p), [x])
+    | _ => e end | _ => e end.
+
+Global Instance unary_truncate_ok : Ok unary_truncate.
+Proof using Type.
+  t.
+  all: repeat first [ progress cbv [unary_truncate_size] in *
+                    | progress cbn [fold_right Z.of_N] in *
+                    | progress change (Z.of_N 0) with 0 in *
+                    | progress change (Z.ones 0) with 0 in *
+                    | apply (f_equal (@Some _))
+                    | lia
+                    | progress autorewrite with zsimplify_const
+                    | progress break_innermost_match_hyps
+                    | match goal with
+                      | [ H : Z.of_N ?s = 0 |- _ ] => is_var s; destruct s; try lia
+                      | [ H : Z.of_N ?s = Z.pos _ |- _ ] => is_var s; destruct s; try lia
+                      | [ H : Z.pos _ = Z.pos _ |- _ ] => inversion H; clear H
+                      end
+                    | progress t ].
+Qed.
+
 Lemma interp_op_drop_identity o id : identity o = Some id ->
   forall G xs, interp_op G o xs = interp_op G o (List.filter (fun v => negb (Z.eqb v id)) xs).
 Proof using Type.
@@ -1339,7 +1370,6 @@ Proof using Type.
   t; cbn [fold_right]. rewrite Z.lxor_0_r, Z.lxor_nilpotent; trivial.
 Qed.
 
-(** TODO: Add a pass that turns unary operations like [and], [add], etc into truncation *)
 Definition expr : expr -> expr :=
   List.fold_left (fun e f => f e)
   [constprop
@@ -1356,6 +1386,7 @@ Definition expr : expr -> expr :=
   ;opcarry_0_at1
   ;opcarry_0_at3
   ;opcarry_0_at2
+  ;unary_truncate
   ;truncate_small
   ;addoverflow_bit
   ;addcarry_bit
