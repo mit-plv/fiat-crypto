@@ -1622,9 +1622,9 @@ Proof.
 Theorem symex_asm_func_M_correct
         d frame asm_args_out asm_args_in (G : symbol -> option Z) (s := init_symbolic_state d)
         (s' : symbolic_state) (m : machine_state) (output_types : type_spec) (stack_size : nat)
-        (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
+        (inputs : list (idx + list idx)) (callee_saved_registers : list REG) (reg_available : list REG) (asm : Lines)
         (rets : list (idx + list idx))
-        (H : symex_asm_func_M output_types stack_size inputs reg_available asm s = Success (Success rets, s'))
+        (H : symex_asm_func_M callee_saved_registers output_types stack_size inputs reg_available asm s = Success (Success rets, s'))
         (word_runtime_inputs : list (Naive.word 64 + list (Naive.word 64)))
         (runtime_inputs := word_args_to_Z_args word_runtime_inputs)
         (Hasm : get_asm_arguments m output_types (type_spec_of_runtime runtime_inputs) reg_available = (asm_args_out, asm_args_in))
@@ -1682,20 +1682,22 @@ Proof.
   (*move Heqp at bottom.*)
   Search R.
   (* ... *)
+  (*
   let H := lazymatch goal with H : SymexLines _ _ = Success _ |- _ => H end in
   eapply SymexLines_R in H;
     [ destruct H as [? H]; do 3 eexists;
       repeat match goal with |- _ /\ _ => split end;
       try apply H
     | .. ].
+   *)
 Admitted.
 
 Theorem symex_asm_func_correct
         frame asm_args_out asm_args_in (G : symbol -> option Z) (d : dag) (output_types : type_spec) (stack_size : nat)
-        (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
+        (inputs : list (idx + list idx)) (callee_saved_registers : list REG) (reg_available : list REG) (asm : Lines)
         (rets : list (idx + list idx))
         (s' : symbolic_state)
-        (H : symex_asm_func d output_types stack_size inputs reg_available asm = Success (rets, s'))
+        (H : symex_asm_func d callee_saved_registers output_types stack_size inputs reg_available asm = Success (rets, s'))
         (d' := s'.(dag_state))
         (m : machine_state)
         (word_runtime_inputs : list (Naive.word 64 + list (Naive.word 64)))
@@ -1725,6 +1727,7 @@ Theorem check_equivalence_correct
         {assembly_stack_size' : assembly_stack_size_opt}
         {assembly_output_first : assembly_output_first_opt}
         {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
+        {assembly_callee_saved_registers' : assembly_callee_saved_registers_opt}
         {t}
         (frame : Semantics.mem_state)
         (asm : Lines)
@@ -1784,7 +1787,7 @@ Proof.
                  | [ H : build_inputs _ _ = _ |- _ ] => move H at bottom; eapply build_inputs_ok in H; [ | eassumption .. ]
                  | [ H : symex_PHOAS ?expr ?inputs ?d = Success _, H' : build_input_runtime _ ?ri = Some _ |- _ ]
                    => move H at bottom; eapply symex_PHOAS_correct with (runtime_inputs:=ri) in H; [ | eassumption .. ]
-                 | [ H : symex_asm_func _ _ _ _ _ _ = Success _ |- _ ]
+                 | [ H : symex_asm_func _ _ _ _ _ _ _ = Success _ |- _ ]
                    => move H at bottom; eapply symex_asm_func_correct in H;
                       [ | try (eassumption + apply surjective_pairing) .. ];
                       [ | clear H; eapply Forall2_weaken; [ apply lift_eval_idx_or_list_idx_impl | eassumption ] ]
@@ -1815,6 +1818,7 @@ Theorem generate_assembly_of_hinted_expr_correct
         {assembly_stack_size' : assembly_stack_size_opt}
         {assembly_output_first : assembly_output_first_opt}
         {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
+        {assembly_callee_saved_registers' : assembly_callee_saved_registers_opt}
         {t}
         (asm : Lines)
         (expr : API.Expr t)

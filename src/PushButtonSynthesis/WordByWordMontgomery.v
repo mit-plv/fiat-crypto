@@ -117,11 +117,8 @@ Section __.
           {ignore_unique_asm_names : ignore_unique_asm_names_opt}
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
-          {assembly_calling_registers : assembly_calling_registers_opt}
-          {assembly_stack_size : assembly_stack_size_opt}
+          {assembly_conventions : assembly_conventions_opt}
           {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
-          {assembly_output_first : assembly_output_first_opt}
-          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
           (m : Z)
           (machine_wordsize : machine_wordsize_opt).
 
