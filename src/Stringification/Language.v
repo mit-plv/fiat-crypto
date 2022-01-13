@@ -716,32 +716,38 @@ Module Compilers.
           Context {var}
                   (of_string : forall t, string -> option (var t))
                   (k : forall t, @API.expr var t -> type.for_each_lhs_of_arrow (fun t => (Level -> string) * ZRange.type.option.interp t)%type t -> positive -> (positive * (Level -> list string)) * ZRange.type.base.option.interp (type.final_codomain t)).
+          Definition show_eta_abs_aux
+              (aux : forall t (idx : positive) (e : @API.expr var t),
+                     (positive * (list string * (Level -> list string))) * ZRange.type.base.option.interp (type.final_codomain t))
+              s d (idx : positive) (f : var s -> @API.expr var d)
+            : (positive * (list string * (Level -> list string))) * ZRange.type.base.option.interp (type.final_codomain d)
+            := let n := "x" ++ Decimal.Pos.to_string idx in
+               match of_string s n with
+               | Some n'
+                 => let '(_, (args, show_f), r) := aux d (Pos.succ idx) (f n') in
+                    (idx,
+                     (n :: args, show_f),
+                     r)
+               | None
+                 => (idx,
+                     ([n], (fun _ => ["λ_(" ++ show s ++ ")"])),
+                     ZRange.type.base.option.None)
+               end.
           Fixpoint show_eta_abs_cps' {t} (idx : positive) (e : @API.expr var t)
             : (positive * (list string * (Level -> list string))) * ZRange.type.base.option.interp (type.final_codomain t)
             := match e in expr.expr t return (unit -> _ * ZRange.type.base.option.interp (type.final_codomain t)) -> _ * ZRange.type.base.option.interp (type.final_codomain t) with
                | expr.Abs s d f
                  => fun _
-                    => let n := "x" ++ Decimal.Pos.to_string idx in
-                       match of_string s n with
-                       | Some n'
-                         => let '(_, (args, show_f), r) := @show_eta_abs_cps' d (Pos.succ idx) (f n') in
-                            (idx,
-                             (n :: args, show_f),
-                             r)
-                       | None
-                         => (idx,
-                             ([n], (fun _ => ["λ_(" ++ show t ++ ")"])),
-                             ZRange.type.base.option.None)
-                       end
+                    => show_eta_abs_aux (@show_eta_abs_cps') s d idx f
                | _
                  => fun default
                     => default tt
                end (fun _
                     => let '(args, (idx, show_f, r)) := get_eta_cps_args _ idx (@k _ e) in
                        ((idx, (args, show_f)), r)).
-          Definition show_eta_abs_cps (with_casts : bool) {t} (idx : positive) (e : @API.expr var t) (extraargs : type.for_each_lhs_of_arrow (fun t => (Level -> string) * ZRange.type.option.interp t)%type t)
-            : (positive * (Level -> list string)) * ZRange.type.base.option.interp (type.final_codomain t)
-            := let '(idx, (args, show_f), r) := @show_eta_abs_cps' t idx e in
+          Definition show_eta_abs_cps (with_casts : bool) {s d} (idx : positive) (f : var s -> @API.expr var d) (extraargs : type.for_each_lhs_of_arrow (fun t => (Level -> string) * ZRange.type.option.interp t)%type (s -> d))
+            : (positive * (Level -> list string)) * ZRange.type.base.option.interp (type.final_codomain d)
+            := let '(idx, (args, show_f), r) := show_eta_abs_aux (@show_eta_abs_cps') s d idx f in
                let argstr := String.concat " " args in
                (idx,
                 fun lvl
@@ -780,9 +786,9 @@ Module Compilers.
                               (idx, fun lvl => [v lvl], r)
              | expr.Var t v
                => fun args => (idx, fun lvl => [show_application with_casts (fun _ => to_string _ v) args lvl], ZRange.type.base.option.None)
-             | expr.Abs s d f as e
+             | expr.Abs s d f
                => fun args
-                  => show_eta_abs_cps of_string (fun t e args idx => let '(idx, v, r) := @show_expr_lines_gen with_casts var to_string of_string t e args idx in (idx, fun _ => v term_lvl, r)) with_casts idx e args
+                  => show_eta_abs_cps of_string (fun t e args idx => let '(idx, v, r) := @show_expr_lines_gen with_casts var to_string of_string t e args idx in (idx, fun _ => v term_lvl, r)) with_casts idx f args
              | expr.App s d f x
                => fun args
                   => let '(idx', x', xr) := show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen with_casts var to_string of_string t e args idx) idx x in
