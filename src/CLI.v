@@ -604,6 +604,10 @@ Module ForExtraction.
         ; doc_prepend_header_spec
        ].
 
+  (* We follow the standard convention of giving precedence to the final option passed *)
+  Definition choose_one_of_many {A} (args : list A) : option A
+    := List.nth_error (List.rev args) 0.
+
   Definition parse_common_optional_options
              {supported_languages : supported_languagesT}
              {machine_wordsizev : machine_wordsize_opt}
@@ -659,11 +663,11 @@ Module ForExtraction.
                              | nil => None
                              | ls => Some (List.concat ls)
                              end in
-       let to_N_opt ls := List.nth_error (to_N_list ls) 0 in
+       let to_N_opt ls := choose_one_of_many (to_N_list ls) in
        let to_N_default ls default := Option.value (to_N_opt ls) default in
-       let to_string_opt ls := List.nth_error (to_string_list ls) 0 in
+       let to_string_opt ls := choose_one_of_many (to_string_list ls) in
        let to_string_default ls default := Option.value (to_string_opt ls) default in
-       let to_capitalization_data_opt ls := List.nth_error (List.map (fun '(_, (_, v)) => v) ls) 0 in
+       let to_capitalization_data_opt ls := choose_one_of_many (List.map (fun '(_, (_, v)) => v) ls) in
        let to_capitalization_convention_opt ls
            := option_map (fun d => {| capitalization_convention_data := d ; only_lower_first_letters := true |})
                          (to_capitalization_data_opt ls) in
@@ -1043,7 +1047,7 @@ Module ForExtraction.
                    requests) := args in
              let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
              let to_bool ls := (0 <? List.length ls)%nat in
-             let to_string_opt ls := List.nth_error (List.map (@snd _ _) ls) 0 in
+             let to_string_opt ls := choose_one_of_many (List.map (@snd _ _) ls) in
              let inbounds_multiplier := to_string_opt inbounds_multiplier in
              let outbounds_multiplier := to_string_opt outbounds_multiplier in
              let inbounds := to_string_opt inbounds in
