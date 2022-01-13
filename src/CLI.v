@@ -64,6 +64,9 @@ Module ForExtraction.
           ls <-- List.map ParseArithmetic.Q_to_Z_strict ls;
           Some ls).
 
+  Definition parse_callee_saved_registers (s : string) : option assembly_callee_saved_registers_opt
+    := finalize parse_assembly_callee_saved_registers_opt s.
+
   (* Workaround for lack of notation in 8.8 *)
   Local Notation "x =? y" := (if string_dec x y then true else false) : string_scope.
 
@@ -399,6 +402,11 @@ Module ForExtraction.
         Arg.Custom (parse_string_and parse_list_REG) "REG",
         ["A comma-separated list of registers to use for calling conventions.  Only relevant when --hints-file is specified."
          ; "Defaults to the System V AMD64 ABI of " ++ String.concat "," (List.map show default_assembly_calling_registers) ++ ".  Note that registers are first used for outputs and then inputs."]).
+  Definition asm_callee_saved_registers_spec : named_argT
+    := ([Arg.long_key "asm-callee-saved-registers"],
+         Arg.Custom (parse_string_and parse_callee_saved_registers) "REG",
+         ["Either '" ++ show System_V_AMD64 ++ "' (indicating " ++ String.concat "," (List.map show system_v_amd64_assembly_callee_saved_registers) ++ "), '" ++ show Microsoft_x64 ++ "' (indicating " ++ String.concat "," (List.map show microsoft_x64_assembly_callee_saved_registers) ++ "), or a comma-separated list of registers which are callee-saved / non-volatile.  Only relevant when --hints-file is specified."
+          ; "Defaults to " ++ show default_assembly_callee_saved_registers ++ "."]).
   Definition asm_stack_size_spec : named_argT
     := ([Arg.long_key "asm-stack-size"],
         Arg.Custom (parse_string_and parse_N) "ℕ",
@@ -507,16 +515,10 @@ Module ForExtraction.
       ; language_naming_conventions :> language_naming_conventions_opt
       (** Documentation options *)
       ; documentation_options :> documentation_options_opt
-      (** list of registers for calling assembly functions *)
-      ; assembly_calling_registers :> assembly_calling_registers_opt
-      (** size of the stack in bytes *)
-      ; assembly_stack_size :> assembly_stack_size_opt
+      (** assembly convention options *)
+      ; assembly_conventions :> assembly_conventions_opt
       (** error if there are un-requested assembly functions *)
       ; error_on_unused_assembly_functions :> error_on_unused_assembly_functions_opt
-      (** Are output arrays considered to come before input arrays, or after them? *)
-      ; assembly_output_first :> assembly_output_first_opt
-      (** Should we assign registers to the arguments in left-to-right or right-to-left order? *)
-      ; assembly_argument_registers_left_to_right :> assembly_argument_registers_left_to_right_opt
       (** don't prepend fiat to prefix *)
       ; no_prefix_fiat : bool
       (** Extra lines before the documentation header *)
@@ -591,6 +593,7 @@ Module ForExtraction.
         ; output_file_spec
         ; asm_output_spec
         ; asm_reg_spec
+        ; asm_callee_saved_registers_spec
         ; asm_stack_size_spec
         ; no_error_on_unused_asm_functions_spec
         ; asm_input_first_spec
@@ -643,6 +646,7 @@ Module ForExtraction.
              , output_file_namev
              , asm_output_file_namev
              , asm_regv
+             , asm_callee_saved_registersv
              , asm_stack_sizev
              , no_error_on_unused_asm_functionsv
              , asm_input_firstv
@@ -663,6 +667,8 @@ Module ForExtraction.
                              | nil => None
                              | ls => Some (List.concat ls)
                              end in
+       let to_assembly_callee_saved_registers_opt ls := choose_one_of_many (List.map (fun '(_, (_, v)) => v) ls) in
+       let to_assembly_callee_saved_registers_default ls default := Option.value (to_assembly_callee_saved_registers_opt ls) default in
        let to_N_opt ls := choose_one_of_many (to_N_list ls) in
        let to_N_default ls default := Option.value (to_N_opt ls) default in
        let to_string_opt ls := choose_one_of_many (to_string_list ls) in
@@ -709,12 +715,15 @@ Module ForExtraction.
                       {| skip_typedefs_ := to_bool no_field_element_typedefsv
                          ; relax_adc_sbb_return_carry_to_bitwidth_ := to_Z_flat_list relax_primitive_carry_to_bitwidthv
                       |}
-                  ; assembly_calling_registers := to_reg_list asm_regv
-                  ; assembly_stack_size := to_N_opt asm_stack_sizev
+                  ; assembly_conventions :=
+                    {| assembly_calling_registers_ := to_reg_list asm_regv
+                    ; assembly_callee_saved_registers_ := to_assembly_callee_saved_registers_default asm_callee_saved_registersv default_assembly_callee_saved_registers
+                    ; assembly_stack_size_ := to_N_opt asm_stack_sizev
+                    ; assembly_output_first_ := negb (to_bool asm_input_firstv)
+                    ; assembly_argument_registers_left_to_right_ := negb (to_bool asm_reg_rtlv)
+                    |}
                   ; ignore_unique_asm_names := negb (to_bool asm_error_on_unique_names_mismatchv)
                   ; error_on_unused_assembly_functions := negb (to_bool no_error_on_unused_asm_functionsv)
-                  ; assembly_output_first := negb (to_bool asm_input_firstv)
-                  ; assembly_argument_registers_left_to_right := negb (to_bool asm_reg_rtlv)
                   ; documentation_options
                     := {| text_before_function_name_opt := to_string_opt doc_text_before_function_namev
                           ; text_before_type_name_opt := to_string_opt doc_text_before_type_namev

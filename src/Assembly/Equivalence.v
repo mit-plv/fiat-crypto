@@ -5,6 +5,7 @@ Require Import Coq.NArith.NArith.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Parse.
 Require Import Crypto.Assembly.Symbolic.
+Require Import Crypto.Util.Strings.Parse.Common.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.Strings.String.
 Require Import Crypto.Language.API.
@@ -29,6 +30,29 @@ Typeclasses Opaque assembly_calling_registers_opt.
 Definition default_assembly_calling_registers := [rdi;rsi;rdx;rcx;r8;r9].
 Definition assembly_calling_registers {v : assembly_calling_registers_opt} : list REG
   := Option.value v default_assembly_calling_registers.
+(** List of callee-saved / non-volatile registers *)
+Variant assembly_callee_saved_registers_opt := Microsoft_x64 | System_V_AMD64 | explicit_registers (_ : list REG).
+Existing Class assembly_callee_saved_registers_opt.
+(* https://en.wikipedia.org/wiki/X86_calling_conventions#Microsoft_x64_calling_convention *)
+(* The registers RAX, RCX, RDX, R8, R9, R10, R11 are considered volatile (caller-saved).[22]
+
+The registers RBX, RBP, RDI, RSI, RSP, R12, R13, R14, and R15 are considered nonvolatile (callee-saved).[22]
+
+-----
+[22] https://docs.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170&viewFallbackFrom=vs-2019#callercallee-saved-registers *)
+Definition microsoft_x64_assembly_callee_saved_registers := [rbx;rbp;rdi;rsi;rsp;r12;r13;r14;r15].
+(* https://en.wikipedia.org/wiki/X86_calling_conventions#System_V_AMD64_ABI *)
+(* If the callee wishes to use registers RBX, RSP, RBP, and R12–R15, it must restore their original values before returning control to the caller. All other registers must be saved by the caller if it wishes to preserve their values.[25]: 16
+
+[25] Michael Matz; Jan Hubička; Andreas Jaeger; et al., eds. (2018-01-28). "System V Application Binary Interface: AMD64 Architecture Processor Supplement (With LP64 and ILP32 Programming Models) Version 1.0" (PDF). 1.0. https://github.com/hjl-tools/x86-psABI/wiki/x86-64-psABI-1.0.pdf *)
+Definition system_v_amd64_assembly_callee_saved_registers := [rbx;rsp;rbp;r12;r13;r14;r15].
+Definition default_assembly_callee_saved_registers := System_V_AMD64.
+Definition assembly_callee_saved_registers {v : assembly_callee_saved_registers_opt} : list REG
+  := match v with
+     | Microsoft_x64 => microsoft_x64_assembly_callee_saved_registers
+     | System_V_AMD64 => system_v_amd64_assembly_callee_saved_registers
+     | explicit_registers ls => ls
+     end.
 (** Are output arrays considered to come before input arrays, or after them? *)
 Class assembly_output_first_opt := assembly_output_first : bool.
 Typeclasses Opaque assembly_output_first_opt.
@@ -61,6 +85,28 @@ Definition assembly_stack_size {v : assembly_stack_size_opt} (asm : _) : N
           end
      end.
 
+Class assembly_conventions_opt :=
+  { assembly_calling_registers_ :> assembly_calling_registers_opt
+  ; assembly_stack_size_ :> assembly_stack_size_opt
+  ; assembly_output_first_ :> assembly_output_first_opt
+  ; assembly_argument_registers_left_to_right_ :> assembly_argument_registers_left_to_right_opt
+  ; assembly_callee_saved_registers_ :> assembly_callee_saved_registers_opt
+  }.
+
+Global Instance show_assembly_callee_saved_registers_opt : Show assembly_callee_saved_registers_opt | 10
+  := fun v => match v with
+              | Microsoft_x64 => "Microsoft x64"
+              | System_V_AMD64 => "System V AMD64"
+              | explicit_registers ls => show ls
+              end.
+
+Definition parse_assembly_callee_saved_registers_opt : ParserAction assembly_callee_saved_registers_opt
+  := ((parse_strs
+         [(show Microsoft_x64, Microsoft_x64); ("Microsoft x64", Microsoft_x64); ("Microsoft_x64", Microsoft_x64); ("Microsoft-x64", Microsoft_x64); ("microsoft", Microsoft_x64); ("Microsoft", Microsoft_x64)
+          ; (show System_V_AMD64, System_V_AMD64); ("System V", System_V_AMD64); ("System_V_AMD64", System_V_AMD64); ("system-v", System_V_AMD64); ("System-V-AMD64", System_V_AMD64); ("AMD64", System_V_AMD64); ("amd64", System_V_AMD64); ("system v", System_V_AMD64)])
+        ||->{fun v => match v with inl v => v | inr ls => explicit_registers ls end}
+        parse_comma_list parse_REG)%parse.
+
 (** N.B. The printer of these error messages will always know the
 assembly function lines and the AST used for equivalence checking, so
 these error messages need not include this information.  However, they
@@ -75,12 +121,15 @@ Inductive EquivalenceCheckingError :=
 | Internal_error_output_load_failed (_ : list (option idx)) (_ : symbolic_state)
 | Internal_error_extra_input_arguments (t : API.type) (unused_arguments : list (idx + list idx))
 | Not_enough_registers (num_given num_extra_needed : nat)
+| Registers_too_narrow (bad_reg : list REG)
+| Duplicate_registers (bad_reg : list REG)
 | Incorrect_array_input_dag_node
 | Incorrect_Z_input_dag_node
 | Not_enough_input_dag_nodes (t : API.type)
 | Expected_const_in_reference_code (_ : idx)
 | Expected_power_of_two (w : N) (_ : idx)
 | Unknown_array_length (t : base.type)
+| Registers_not_saved (regs : list (REG * idx (* before *) * idx (* after *))) (_ : symbolic_state)
 | Invalid_arrow_type (t : API.type)
 | Invalid_argument_type (t : API.type)
 | Invalid_return_type (t : base.type)
@@ -90,11 +139,12 @@ Inductive EquivalenceCheckingError :=
 | Unhandled_cast (_ _ : Z)
 | Unable_to_unify (_ _ : list (idx + list idx)) (_ : symbolic_state)
 | Missing_ret
-| Code_after_ret
+| Code_after_ret (significant : Lines) (l : Lines)
 .
 
 Fixpoint explain_array_unification_error
          (singular plural : string)
+         (left_descr right_descr : string)
          (explain_idx_unification_error : idx -> idx -> list string)
          (asm_array PHOAS_array : list idx) (start_idx : nat)
   : list string
@@ -102,18 +152,20 @@ Fixpoint explain_array_unification_error
      | [], []
        => ["Internal Error: Unifiable " ++ plural]
      | [], PHOAS_array
-       => ["The synthesized " ++ singular ++ " contains " ++ show (List.length PHOAS_array) ++ " more values than the assembly " ++ singular ++ "."]
+       => ["The " ++ right_descr ++ " " ++ singular ++ " contains " ++ show (List.length PHOAS_array) ++ " more values than the " ++ left_descr ++ " " ++ singular ++ "."]
      | asm_array, []
-       => ["The assembly " ++ singular ++ " contains " ++ show (List.length asm_array) ++ " more values than the synthesized " ++ singular ++ "."]
+       => ["The " ++ left_descr ++ " " ++ singular ++ " contains " ++ show (List.length asm_array) ++ " more values than the " ++ right_descr ++ " " ++ singular ++ "."]
      | asm_value :: asm_array, PHOAS_value :: PHOAS_array
        => if Decidable.dec (asm_value = PHOAS_value)
-          then explain_array_unification_error singular plural explain_idx_unification_error asm_array PHOAS_array (S start_idx)
+          then explain_array_unification_error singular plural left_descr right_descr explain_idx_unification_error asm_array PHOAS_array (S start_idx)
           else ((["index " ++ show start_idx ++ ": " ++ show asm_value ++ " != " ++ show PHOAS_value]%string)
                   ++ explain_idx_unification_error asm_value PHOAS_value
                )%list
      end%string%list.
 
-Definition explain_mismatch_from_state (st : symbolic_state) (asm_idx PHOAS_idx : idx) : list string
+Definition explain_mismatch_from_state
+           (left_descr right_descr : string)
+           (st : symbolic_state) (asm_idx PHOAS_idx : idx) : list string
   := let describe_from_state idx
        := match reverse_lookup_widest_reg st.(symbolic_reg_state) idx, reverse_lookup_flag st.(symbolic_flag_state) idx, reverse_lookup_mem st.(symbolic_mem_state) idx with
           | Some r, _, _ => Some ("the value of the register " ++ show r)
@@ -133,13 +185,15 @@ Definition explain_mismatch_from_state (st : symbolic_state) (asm_idx PHOAS_idx 
             => [show idx ++ " is a special value no longer present in the symbolic machine state at the end of execution."]
           | _, _ => []
           end%string in
-     ((make_old_descr "assembly" asm_idx)
-        ++ (make_old_descr "synthesized" PHOAS_idx))%list.
+     ((make_old_descr left_descr asm_idx)
+        ++ (make_old_descr right_descr PHOAS_idx))%list.
 
-Fixpoint explain_idx_unification_error (st : symbolic_state) (fuel : nat) (asm_idx PHOAS_idx : idx) {struct fuel} : list string
+Fixpoint explain_idx_unification_error
+         (left_descr right_descr : string)
+         (st : symbolic_state) (fuel : nat) (asm_idx PHOAS_idx : idx) {struct fuel} : list string
   := let recr := match fuel with
                  | O => fun _ _ => ["Internal error: out of fuel in explain_expr_unification_error"]
-                 | S fuel => explain_idx_unification_error st fuel
+                 | S fuel => explain_idx_unification_error left_descr right_descr st fuel
                  end in
      let reveal_idx idx := List.nth_error st.(dag_state) (N.to_nat idx) in
      let reveal_show_idx idx
@@ -160,15 +214,18 @@ Fixpoint explain_idx_unification_error (st : symbolic_state) (fuel : nat) (asm_i
        => (([show asm ++ " != " ++ show PHOAS]%string)
              ++ (if Decidable.dec (asm_o = PHOAS_o)
                  then
-                   explain_array_unification_error "argument" "arguments" recr asm_e PHOAS_e 0
+                   explain_array_unification_error "argument" "arguments" left_descr right_descr recr asm_e PHOAS_e 0
                  else (([reveal_show_node asm ++ " != " ++ reveal_show_node PHOAS
                          ; "Operation mismatch: " ++ show asm_o ++ " != " ++ show PHOAS_o]%string)
-                         ++ explain_mismatch_from_state st asm_idx PHOAS_idx)%list))%list
+                         ++ explain_mismatch_from_state left_descr right_descr st asm_idx PHOAS_idx)%list))%list
      end%string.
+
+Definition explain_unification_default_fuel (st : symbolic_state) : nat
+  := (10 + (2 * List.length st.(dag_state)))%nat (* we since the dag is acyclic, we shouldn't have to do more recursive lookups than its length; we double and add 10 for safety *).
 
 Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list idx)) (start_idx : nat) (st : symbolic_state)
   : list string
-  := let fuel := (10 + (2 * List.length st.(dag_state)))%nat (* we since the dag is acyclic, we shouldn't have to do more recursive lookups than its length; we double and add 10 for safety *) in
+  := let fuel := explain_unification_default_fuel st in
      match asm_output, PHOAS_output with
      | [], []
        => ["Internal Error: Unifiable"]
@@ -185,11 +242,11 @@ Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list i
                | inr _, inl _ => [prefix; "The assembly code returns an array while the synthesized code returns a scalar."]
                | inl asm_idx, inl PHOAS_idx
                  => (["index  " ++ show start_idx ++ ": " ++ show asm_idx ++ " != " ++ show PHOAS_idx]%string)
-                      ++ explain_idx_unification_error st fuel asm_idx PHOAS_idx
+                      ++ explain_idx_unification_error "assembly" "synthesized" st fuel asm_idx PHOAS_idx
                | inr asm_idxs, inr PHOAS_idxs
                  => ([prefix ++ " " ++ show asm_idxs ++ " != " ++ show PHOAS_idxs]%string)
                       ++ (explain_array_unification_error
-                            "array" "arrays" (explain_idx_unification_error st fuel)
+                            "array" "arrays" "assembly" "synthesized" (explain_idx_unification_error "assembly" "synthesized" st fuel)
                             asm_idxs PHOAS_idxs
                             0)
                end%list
@@ -204,6 +261,10 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                   => ["Internal error. Too many input arguments for type " ++ show t ++ ". Unused arguments: " ++ show unused_arguments]%string
                 | Not_enough_registers num_given num_extra_needed
                   => ["Not enough registers available for storing input and output (given " ++ show num_given ++ ", needed an additional " ++ show num_extra_needed ++ "."]%string
+                | Registers_too_narrow regs
+                  => ["Some registers given were more narrow than 64 bits: " ++ String.concat ", " (List.map (fun r => show r ++ " (width: " ++ show (reg_size r) ++ ")") regs)]%string
+                | Duplicate_registers regs
+                  => ["List of registers contains duplicates: " ++ String.concat ", " (List.map show regs)]%string
                 | Incorrect_array_input_dag_node
                   => ["Internal error: Input dag node had an unexpected array."]
                 | Incorrect_Z_input_dag_node
@@ -231,6 +292,17 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                   => ["Identifier not yet handled by symbolic evaluation: " ++ show idc ++ "."]%string
                 | Unhandled_cast l u
                   => ["Argument not yet handled by symbolic evaluation: " ++ show (l, u)]%string
+                | Registers_not_saved regs r
+                  => let reg_before := List.map (fun '(r, idx_before, idx_after) => idx_before) regs in
+                     let reg_after := List.map (fun '(r, idx_before, idx_after) => idx_after) regs in
+                     let regs := List.map (fun '(r, idx_before, idx_after) => r) regs in
+                     (["Unable to establish that callee-saved non-volatile registers were preserved: " ++ String.concat ", " (List.map show regs); "In environment:"]%string)
+                       ++ show_lines r
+                       ++ ["Unable to unify: " ++ show reg_before ++ " == " ++ show reg_after]%string
+                       ++ explain_array_unification_error
+                            "list" "lists" "original" "final" (explain_idx_unification_error "original" "final" r (explain_unification_default_fuel r))
+                            reg_before reg_after
+                            0
                 | Unable_to_unify asm_output PHOAS_output r
                   => ["Unable to unify:"; "In environment:"]
                        ++ show_lines r
@@ -238,8 +310,8 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                        ++ explain_unification_error asm_output PHOAS_output 0 r
                 | Missing_ret
                   => ["Missing 'ret' at the end of the function"]
-                | Code_after_ret
-                  => ["Code after ret"]
+                | Code_after_ret significant l
+                  => ["Code after ret:"; "In:"] ++ show_lines l ++ ["Found instructions:"] ++ show_lines significant
                 end%list.
 Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
   := fun err => String.concat String.NewLine (show_lines err).
@@ -800,22 +872,30 @@ Definition LoadOutputs (outputaddrs : list (option idx)) (output_types : type_sp
       Symbolic.ret (List.map inr asm_output))%N%x86symex.
 
 Definition symex_asm_func_M
+           (callee_saved_registers : list REG)
            (output_types : type_spec) (stack_size : nat)
            (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
   : M (ErrorT EquivalenceCheckingError (list (idx + list idx)))
   := (output_placeholders <- lift_dag (build_inputs output_types);
       argptrs <- build_merge_base_addresses (output_placeholders ++ inputs) reg_available;
       _ <- build_merge_stack_placeholders stack_size;
+      initial_register_values <- mapM (fun r => rv <- GetReg r; ret (r, rv)) callee_saved_registers;
       _ <- SymexLines asm;
+      initial_final_register_values <- mapM (fun '(r, init) => rv <- GetReg r; ret (r, init, rv)) initial_register_values;
+      let unsaved_registers : list (REG * idx * idx) := List.filter (fun '(r, init, final) => negb (init =? final)%N) initial_final_register_values in
       let outputaddrs : list (option idx) := firstn (length argptrs - length inputs) argptrs in
       (* In the following line, we match on the result so we can emit Internal_error_output_load_failed in the calling function, rather than passing through the placeholder error from LoadOutputs *)
-      (fun s => match LoadOutputs outputaddrs output_types s with
-                | Error (_, s) => Success (Error (Internal_error_output_load_failed outputaddrs s), s)
-                | Success (asm_output, s) => Success (Success asm_output, s)
+      (fun s => match LoadOutputs outputaddrs output_types s, unsaved_registers with
+                | Success (asm_output, s), []
+                  => Success (Success asm_output, s)
+                | Error (_, s), _
+                  => Success (Error (Internal_error_output_load_failed outputaddrs s), s)
+                | Success (_, s), unsaved_registers
+                  => Success (Error (Registers_not_saved unsaved_registers s), s)
                 end))%N%x86symex.
 
 Definition symex_asm_func
-           (d : dag) (output_types : type_spec) (stack_size : nat)
+           (d : dag) (callee_saved_registers : list REG) (output_types : type_spec) (stack_size : nat)
            (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
   : ErrorT EquivalenceCheckingError (list (idx + list idx) * symbolic_state)
   := let num_reg_given := List.length reg_available in
@@ -824,17 +904,27 @@ Definition symex_asm_func
      then
        Error (Not_enough_registers num_reg_given num_reg_needed)
      else
-       match symex_asm_func_M output_types stack_size inputs reg_available asm (init_symbolic_state d) with
-       | Error (e, s)                    => Error (Symbolic_execution_failed e s)
-       | Success (Error err, s)          => Error err
-       | Success (Success asm_output, s) => Success (asm_output, s)
-       end.
+       let register_wide_enough := fun reg => (reg_size reg =? 64)%N in
+       if negb (forallb register_wide_enough reg_available)
+       then
+         Error (Registers_too_narrow (filter (fun reg => negb (register_wide_enough reg)) reg_available))
+       else
+         if negb (list_beq _ REG_beq (remove_duplicates REG_beq reg_available) reg_available)
+         then
+           Error (Duplicate_registers (find_duplicates REG_beq reg_available))
+         else
+           match symex_asm_func_M callee_saved_registers output_types stack_size inputs reg_available asm (init_symbolic_state d) with
+           | Error (e, s)                    => Error (Symbolic_execution_failed e s)
+           | Success (Error err, s)          => Error err
+           | Success (Success asm_output, s) => Success (asm_output, s)
+           end.
 
 Section check_equivalence.
   Context {assembly_calling_registers' : assembly_calling_registers_opt}
           {assembly_stack_size' : assembly_stack_size_opt}
           {assembly_output_first : assembly_output_first_opt}
-          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}.
+          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
+          {assembly_callee_saved_registers' : assembly_callee_saved_registers_opt}.
 
   Section with_expr.
     Context {t}
@@ -849,7 +939,7 @@ Section check_equivalence.
       match dropWhile notret asm with
       | nil => Error Missing_ret
       | cons _r trailer =>
-          if List.existsb isinstr trailer then Error Code_after_ret
+          if List.existsb isinstr trailer then Error (Code_after_ret (List.filter isinstr trailer) trailer)
           else Success (takeWhile notret asm)
       end.
 
@@ -865,7 +955,7 @@ Section check_equivalence.
 
       asm <- strip_ret asm;
       let stack_size : nat := N.to_nat (assembly_stack_size asm) in
-      symevaled_asm <- symex_asm_func d output_types stack_size inputs reg_available asm;
+      symevaled_asm <- symex_asm_func d assembly_callee_saved_registers output_types stack_size inputs reg_available asm;
       let '(asm_output, s) := symevaled_asm in
 
       if list_beq _ (sum_beq _ _ N.eqb (list_beq _ N.eqb)) asm_output PHOAS_output
