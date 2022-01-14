@@ -122,6 +122,7 @@ Inductive EquivalenceCheckingError :=
 | Internal_error_extra_input_arguments (t : API.type) (unused_arguments : list (idx + list idx))
 | Not_enough_registers (num_given num_extra_needed : nat)
 | Registers_too_narrow (bad_reg : list REG)
+| Callee_saved_registers_too_narrow (bad_reg : list REG)
 | Duplicate_registers (bad_reg : list REG)
 | Incorrect_array_input_dag_node
 | Incorrect_Z_input_dag_node
@@ -129,7 +130,7 @@ Inductive EquivalenceCheckingError :=
 | Expected_const_in_reference_code (_ : idx)
 | Expected_power_of_two (w : N) (_ : idx)
 | Unknown_array_length (t : base.type)
-| Registers_not_saved (regs : list (REG * idx (* before *) * idx (* after *))) (_ : symbolic_state)
+| Registers_not_saved (regs : list (REG * (idx (* before *) * idx (* after *)))) (_ : symbolic_state)
 | Invalid_arrow_type (t : API.type)
 | Invalid_argument_type (t : API.type)
 | Invalid_return_type (t : base.type)
@@ -263,6 +264,8 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                   => ["Not enough registers available for storing input and output (given " ++ show num_given ++ ", needed an additional " ++ show num_extra_needed ++ "."]%string
                 | Registers_too_narrow regs
                   => ["Some registers given were more narrow than 64 bits: " ++ String.concat ", " (List.map (fun r => show r ++ " (width: " ++ show (reg_size r) ++ ")") regs)]%string
+                | Callee_saved_registers_too_narrow regs
+                  => ["Some callee-saved / non-volatile registers given were more narrow than 64 bits: " ++ String.concat ", " (List.map (fun r => show r ++ " (width: " ++ show (reg_size r) ++ ")") regs)]%string
                 | Duplicate_registers regs
                   => ["List of registers contains duplicates: " ++ String.concat ", " (List.map show regs)]%string
                 | Incorrect_array_input_dag_node
@@ -293,9 +296,9 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                 | Unhandled_cast l u
                   => ["Argument not yet handled by symbolic evaluation: " ++ show (l, u)]%string
                 | Registers_not_saved regs r
-                  => let reg_before := List.map (fun '(r, idx_before, idx_after) => idx_before) regs in
-                     let reg_after := List.map (fun '(r, idx_before, idx_after) => idx_after) regs in
-                     let regs := List.map (fun '(r, idx_before, idx_after) => r) regs in
+                  => let reg_before := List.map (fun '(r, (idx_before, idx_after)) => idx_before) regs in
+                     let reg_after := List.map (fun '(r, (idx_before, idx_after)) => idx_after) regs in
+                     let regs := List.map (fun '(r, (idx_before, idx_after)) => r) regs in
                      (["Unable to establish that callee-saved non-volatile registers were preserved: " ++ String.concat ", " (List.map show regs); "In environment:"]%string)
                        ++ show_lines r
                        ++ ["Unable to unify: " ++ show reg_before ++ " == " ++ show reg_after]%string
@@ -415,16 +418,23 @@ Fixpoint build_inputs (types : type_spec) : dag.M (list (idx + list idx))
            dag.ret (inr idxs :: rest))
      end%dagM.
 
+(* we factor this out so that conversion is not slow when proving things about this *)
+Definition compute_array_address (base : idx) (i : nat)
+  := (offset <- Symbolic.App (zconst 64%N (8 * Z.of_nat i), nil);
+      Symbolic.App (add 64%N, [base; offset]))%x86symex.
+
+Definition build_merge_array_addresses (base : idx) (items : list idx) : M (list idx)
+  := mapM (fun '(i, idx) =>
+             (addr <- compute_array_address base i;
+              (fun s => Success (addr, update_mem_with s (cons (addr,idx)))))
+          )%x86symex (List.enumerate items).
+
 Fixpoint build_merge_base_addresses (items : list (idx + list idx)) (reg_available : list REG) : M (list (option idx))
   := match items, reg_available with
      | [], _ | _, [] => Symbolic.ret []
      | inr idxs :: xs, r :: reg_available
        => (base <- SetRegFresh r; (* note: overwrites initial value *)
-           addrs <- mapM (fun '(i, idx) =>
-                offset <- Symbolic.App ((const (8*Z.of_nat i)), nil);
-                addr <- Symbolic.App (add 64, [base; offset]);
-                (fun s => Success (addr, update_mem_with s (cons (addr,idx))))
-              ) (List.enumerate idxs);
+           addrs <- build_merge_array_addresses base idxs; (* note: overwrites initial value *)
            rest <- build_merge_base_addresses xs reg_available;
            Symbolic.ret (Some base :: rest))
      | inl idx :: xs, r :: reg_available =>
@@ -850,12 +860,18 @@ Definition init_symbolic_state (d : dag) : symbolic_state
 
 Definition build_merge_stack_placeholders (stack_size : nat)
   : M unit
-  := (_ <- SetRegFresh rsp;
-      stack_placeholders <- lift_dag (build_inputarray stack_size);
-      mapM_ (fun '(i, idx) =>
-            a <- @Address (64%N) {| mem_reg := rsp; mem_offset := Some (Z.opp (Z.of_nat(8*S i))); mem_is_byte := false; mem_extra_reg:=None |};
-            (fun s => Success (tt, update_mem_with s (cons (a,idx))))
-          ) (List.enumerate stack_placeholders))%x86symex.
+  := (stack_placeholders <- lift_dag (build_inputarray stack_size);
+      rsp_val <- SetRegFresh rsp;
+      stack_size <- Symbolic.App (zconst 64 (-8 * Z.of_nat stack_size), []);
+      stack_base <- Symbolic.App (add 64%N, [rsp_val; stack_size]);
+      _ <- build_merge_array_addresses stack_base stack_placeholders;
+      ret tt)%x86symex.
+
+Definition LoadArray (base : idx) (len : nat) : M (list idx)
+  := mapM (fun i =>
+             (addr <- compute_array_address base i;
+              Load64 addr)%x86symex)
+          (seq 0 len).
 
 Definition LoadOutputs (outputaddrs : list (option idx)) (output_types : type_spec)
   : M (list (idx + list idx))
@@ -863,11 +879,7 @@ Definition LoadOutputs (outputaddrs : list (option idx)) (output_types : type_sp
             match ocells, spec with
             | None, None | None, Some _ | Some _, None => err (error.load 0)
             | Some base, Some len
-              => mapM (fun i =>
-                         offset <- Symbolic.App ((const (8*Z.of_nat i)), nil);
-                       addr <- Symbolic.App (add 64, [base; offset]);
-                       Load64 addr)
-                      (seq 0 len)
+              => LoadArray base len
             end) (List.combine outputaddrs output_types);
       Symbolic.ret (List.map inr asm_output))%N%x86symex.
 
@@ -879,10 +891,10 @@ Definition symex_asm_func_M
   := (output_placeholders <- lift_dag (build_inputs output_types);
       argptrs <- build_merge_base_addresses (output_placeholders ++ inputs) reg_available;
       _ <- build_merge_stack_placeholders stack_size;
-      initial_register_values <- mapM (fun r => rv <- GetReg r; ret (r, rv)) callee_saved_registers;
+      initial_register_values <- mapM GetReg callee_saved_registers;
       _ <- SymexLines asm;
-      initial_final_register_values <- mapM (fun '(r, init) => rv <- GetReg r; ret (r, init, rv)) initial_register_values;
-      let unsaved_registers : list (REG * idx * idx) := List.filter (fun '(r, init, final) => negb (init =? final)%N) initial_final_register_values in
+      final_register_values <- mapM GetReg callee_saved_registers;
+      let unsaved_registers : list (REG * (idx * idx)) := List.filter (fun '(r, (init, final)) => negb (init =? final)%N) (List.combine callee_saved_registers (List.combine initial_register_values final_register_values)) in
       let outputaddrs : list (option idx) := firstn (length argptrs - length inputs) argptrs in
       (* In the following line, we match on the result so we can emit Internal_error_output_load_failed in the calling function, rather than passing through the placeholder error from LoadOutputs *)
       (fun s => match LoadOutputs outputaddrs output_types s, unsaved_registers with
@@ -909,15 +921,19 @@ Definition symex_asm_func
        then
          Error (Registers_too_narrow (filter (fun reg => negb (register_wide_enough reg)) reg_available))
        else
-         if negb (list_beq _ REG_beq (remove_duplicates REG_beq reg_available) reg_available)
+         if negb (forallb register_wide_enough callee_saved_registers)
          then
-           Error (Duplicate_registers (find_duplicates REG_beq reg_available))
+           Error (Callee_saved_registers_too_narrow (filter (fun reg => negb (register_wide_enough reg)) callee_saved_registers))
          else
-           match symex_asm_func_M callee_saved_registers output_types stack_size inputs reg_available asm (init_symbolic_state d) with
-           | Error (e, s)                    => Error (Symbolic_execution_failed e s)
-           | Success (Error err, s)          => Error err
-           | Success (Success asm_output, s) => Success (asm_output, s)
-           end.
+           if negb (list_beq _ REG_beq (remove_duplicates REG_beq reg_available) reg_available)
+           then
+             Error (Duplicate_registers (find_duplicates REG_beq reg_available))
+           else
+             match symex_asm_func_M callee_saved_registers output_types stack_size inputs reg_available asm (init_symbolic_state d) with
+             | Error (e, s)                    => Error (Symbolic_execution_failed e s)
+             | Success (Error err, s)          => Error err
+             | Success (Success asm_output, s) => Success (asm_output, s)
+             end.
 
 Section check_equivalence.
   Context {assembly_calling_registers' : assembly_calling_registers_opt}
