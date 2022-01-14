@@ -483,3 +483,32 @@ Hint Rewrite max_xy_x : natsimplify.
 Lemma max_yx_x x y : Nat.max (Nat.max y x) x = Nat.max y x.
 Proof. now rewrite <- Nat.max_assoc; autorewrite with natsimplify. Qed.
 Hint Rewrite max_yx_x : natsimplify.
+
+Ltac inversion_nat_eq_step :=
+  match goal with
+  | [ H : O = S _ |- _ ] => solve [ inversion H ]
+  | [ H : S _ = O |- _ ] => solve [ inversion H ]
+  | [ H : O = O |- _ ] => clear H
+  | [ H : O = O |- _ ] => pose proof (@UIP_nat _ _ eq_refl H); subst H
+  | [ H : S _ = S _ |- _ ]
+    => apply (f_equal pred) in H; cbn [pred] in H
+  end.
+Ltac inversion_nat_eq := repeat inversion_nat_eq_step.
+
+Ltac inversion_nat_rel_step :=
+  first [ inversion_nat_eq_step
+        | match goal with
+          | [ H : S _ <= O |- _ ] => exfalso; clear -H; lia
+          | [ H : _ < O |- _ ] => exfalso; clear -H; lia
+          | [ H : O >= S _ |- _ ] => exfalso; clear -H; lia
+          | [ H : O > _ |- _ ] => exfalso; clear -H; lia
+          | [ H : O <= _ |- _ ] => clear H
+          | [ H : O < S _ |- _ ] => clear H
+          | [ H : _ >= O |- _ ] => clear H
+          | [ H : S _ > O |- _ ] => clear H
+          | [ H : S _ <= S _ |- _ ] => apply le_S_n in H
+          | [ H : S _ < S _ |- _ ] => rewrite <- succ_lt_mono in H
+          | [ H : S _ >= S _ |- _ ] => progress cbv [ge] in H
+          | [ H : S _ > S _ |- _ ] => progress cbv [gt] in H
+          end ].
+Ltac inversion_nat_rel := repeat inversion_nat_rel_step.

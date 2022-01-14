@@ -368,7 +368,6 @@ Fixpoint drop_while {T} (f : T -> bool) (ls : list T) : list T
      | nil => nil
      | cons x xs => if f x then @drop_while T f xs else x :: xs
      end.
-
 Ltac boring :=
   simpl; intuition auto with zarith datatypes;
   repeat match goal with
@@ -405,8 +404,11 @@ Section Relations.
                          | eapply transitivity; eassumption
                          | eauto ] ].
 
+  Fixpoint list_eq_refl {T} {R} {Reflexive_R:@Reflexive T R} (ls : list T) : list_eq R ls ls.
+  Proof. destruct ls; cbn; repeat split; auto. Defined.
   Global Instance Reflexive_list_eq {T} {R} {Reflexive_R:@Reflexive T R}
-    : Reflexive (list_eq R) | 1. Proof. intro l; induction l; t. Qed.
+    : Reflexive (list_eq R) | 1
+    := list_eq_refl.
 
   Lemma list_eq_sym {A B} {R1 R2 : _ -> _ -> Prop} (HR : forall v1 v2, R1 v1 v2 -> R2 v2 v1)
     : forall v1 v2, @list_eq A B R1 v1 v2 -> list_eq R2 v2 v1.
@@ -426,6 +428,81 @@ Section Relations.
   Global Instance Equivalence_list_eq {T} {R} {Equivalence_R:@Equivalence T R}
     : Equivalence (list_eq R). Proof. split; exact _. Qed.
 End Relations.
+
+Definition list_leq_to_eq {A} {x y : list A} : x = y -> list_eq eq x y.
+Proof. destruct 1; reflexivity. Defined.
+
+Fixpoint list_eq_to_leq {A} {x y : list A} {struct x} : list_eq eq x y -> x = y.
+Proof.
+  destruct x, y; cbn; try reflexivity; destruct 1; try apply f_equal2; eauto.
+Defined.
+
+Lemma list_leq_to_eq_refl {A x} : @list_leq_to_eq A x x eq_refl = reflexivity _.
+Proof. destruct x; cbn; reflexivity. Qed.
+
+Lemma list_eq_to_leq_refl {A x} : @list_eq_to_leq A x x (reflexivity _) = eq_refl.
+Proof.
+  induction x as [|x xs IH]; cbn; rewrite ?IH; try reflexivity.
+Qed.
+
+Lemma list_leq_to_eq_to_leq {A x y} v : @list_eq_to_leq A x y (@list_leq_to_eq A x y v) = v.
+Proof.
+  now subst; rewrite list_leq_to_eq_refl, list_eq_to_leq_refl.
+Qed.
+
+Lemma list_eq_to_leq_to_eq {A x y} v : @list_leq_to_eq A x y (@list_eq_to_leq A x y v) = v.
+Proof.
+  revert y v.
+  induction x as [|x xs IH], y as [|y ys]; try specialize (IH ys); cbn.
+  1-3: intro H; destruct H; reflexivity.
+  intro H; destruct H as [? H]; subst; specialize (IH H).
+  cbv [list_leq_to_eq] in *; subst.
+  break_innermost_match_hyps; subst; reflexivity.
+Qed.
+
+Lemma UIP_nil {A} (p q : @nil A = @nil A) : p = q.
+Proof.
+  rewrite <- (list_leq_to_eq_to_leq p), <- (list_leq_to_eq_to_leq q); simpl; reflexivity.
+Qed.
+
+Lemma invert_list_eq {A x y} (p : @list_eq A A eq x y) : { pf : x = y | list_leq_to_eq pf = p }.
+Proof. eexists; apply list_eq_to_leq_to_eq. Qed.
+
+Lemma invert_eq_list {A x y} (p : x = y) : { pf : @list_eq A A eq x y | list_eq_to_leq pf = p }.
+Proof. eexists; apply list_leq_to_eq_to_leq. Qed.
+
+Ltac destr_list_eq H :=
+  lazymatch type of H with
+  | True => first [ clear H | destruct H ]
+  | False => destruct H
+  | _ = _ /\ _
+    => let H' := fresh in
+       destruct H as [H' H];
+       destr_list_eq H
+  | list_eq eq _ _
+    => first [ apply list_eq_to_leq in H
+             | let H' := fresh in
+               rename H into H';
+               destruct (invert_list_eq H') as [H ?]; subst H' ]
+  end.
+Ltac inversion_list_step :=
+  match goal with
+  | [ H : nil = nil |- _ ] => clear H
+  | [ H : cons _ _ = nil |- _ ] => solve [ inversion H ]
+  | [ H : nil = cons _ _ |- _ ] => solve [ inversion H ]
+  | [ H : nil = nil |- _ ]
+    => assert (eq_refl = H) by apply UIP_nil; subst H
+  | [ H : cons _ _ = cons _ _ |- _ ]
+    => apply list_leq_to_eq in H; cbn [list_eq] in H;
+       destr_list_eq H
+  | [ H : cons _ _ = cons _ _ |- _ ]
+    => let H' := fresh in
+       rename H into H';
+       destruct (invert_eq_list H') as [H ?]; subst H';
+       cbn [list_eq] in H; destr_list_eq H
+  end.
+
+Ltac inversion_list := repeat inversion_list_step.
 
 Lemma list_bl_hetero {A B} {AB_beq : A -> B -> bool} {AB_R : A -> B -> Prop}
       (AB_bl : forall x y, AB_beq x y = true -> AB_R x y)

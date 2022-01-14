@@ -95,11 +95,23 @@ Section prod.
     reflexivity.
   Defined.
 
-  (** *** Curried version of proving equality of sigma types *)
+  (** *** Equality of [pair]s is itself a [prod] *)
+  Definition path_pair_uncurried {A B : Type} (a1 a2 : A) (b1 b2 : B)
+             (pq : prod (a1 = a2) (b1 = b2))
+    : (a1, b1) = (a2, b2)
+    := path_prod_uncurried (_, _) (_, _) pq.
+
+  (** *** Curried version of proving equality of prod types *)
   Definition path_prod {A B : Type} (u v : prod A B)
              (p : fst u = fst v) (q : snd u = snd v)
     : u = v
     := path_prod_uncurried u v (pair p q).
+
+  (** *** Curried version of proving equality of prod types *)
+  Definition path_pair {A B : Type} (a1 a2 : A) (b1 b2 : B)
+             (p : a1 = a2) (q : b1 = b2)
+    : (a1, b1) = (a2, b2)
+    := path_pair_uncurried _ _ _ _ (pair p q).
 
   (** *** Equivalence of equality of [prod] with a [prod] of equality *)
   (** We could actually use [IsIso] here, but for simplicity, we
@@ -111,6 +123,11 @@ Section prod.
   Proof.
     split; [ intro; subst; split; reflexivity | apply path_prod_uncurried ].
   Defined.
+
+  Definition path_pair_uncurried_iff {A B}
+             (a1 a2 : A) (b1 b2 : B)
+    : (a1, b1) = (a2, b2) <-> (prod (a1 = a2) (b1 = b2))
+    := path_prod_uncurried_iff (_, _) (_, _).
 
   (** *** Eta-expansion of [@eq (prod _ _)] *)
   Definition path_prod_eta {A B} {u v : @prod A B} (p : u = v)
@@ -124,6 +141,13 @@ Section prod.
   Proof. intro p; specialize (f (fst_path p) (snd_path p)); destruct u, p; exact f. Defined.
   Definition path_prod_rec {A B u v} (P : u = v :> @prod A B -> Set) := path_prod_rect P.
   Definition path_prod_ind {A B u v} (P : u = v :> @prod A B -> Prop) := path_prod_rec P.
+
+  Definition path_pair_rect {A B} {a1 a2 : A} {b1 b2 : B} (P : (a1, b1) = (a2, b2) -> Type)
+             (f : forall p q, P (path_pair_uncurried _ _ _ _ (p, q)))
+    : forall p, P p
+    := path_prod_rect P f.
+  Definition path_pair_rec {A B a1 a2 b1 b2} (P : (a1, b1) = (a2, b2) :> @prod A B -> Set) := path_pair_rect P.
+  Definition path_pair_ind {A B a1 a2 b1 b2} (P : (a1, b1) = (a2, b2) :> @prod A B -> Prop) := path_pair_rec P.
 End prod.
 
 Lemma prod_iff_and (A B : Prop) : (A /\ B) <-> (A * B).
@@ -175,6 +199,22 @@ Ltac inversion_prod_step :=
   end.
 Ltac inversion_prod := repeat inversion_prod_step.
 
+(** *** [inversion_pair] *)
+(** A version of [inversion_prod] that occurs only when there are pairs on both sides *)
+Ltac induction_path_pair H :=
+  let H0 := fresh H in
+  let H1 := fresh H in
+  induction H as [H0 H1] using path_pair_rect.
+Ltac inversion_pair_step :=
+  match goal with
+  | [ H : pair _ _ = pair _ _ |- _ ]
+    => induction_path_pair H
+  | [ H : pair _ _ = pair _ _ |- _ ]
+    => induction_path_pair H
+  end.
+Ltac inversion_pair := repeat inversion_pair_step.
+
+
 (** This turns a goal like [x = let v := p in let '(x, y) := f v in x
     + y)] into a goal like [x = fst (f p) + snd (f p)].  Note that it
     inlines [let ... in ...] as well as destructuring lets. *)
@@ -196,19 +236,30 @@ Ltac eta_expand :=
 (** *** [subst_prod] *)
 (** The tactic [subst_prod] is like [subst], but it works on equations
     of the form [_ = (x, y)] and [(x, y) = _] for [x] and [y]
-    identifiers. *)
-Ltac do_subst_prod A B x y :=
-  is_var x; is_var y;
-  let H := fresh in
-  let xy := fresh x in
-  remember (@pair A B x y) as xy eqn:H;
-  assert (fst xy = x) by (subst xy; reflexivity);
-  assert (snd xy = y) by (subst xy; reflexivity);
-  subst x y;
-  clear H; try subst xy.
-Ltac subst_prod_step :=
-  match goal with
-  | [ H : _ = @pair ?A ?B ?x ?y |- _ ] => do_subst_prod A B x y
-  | [ H : @pair ?A ?B ?x ?y = _ |- _ ] => do_subst_prod A B x y
+    identifiers (or recursively pairs of identitifers). *)
+Ltac on_pair_vars tac x :=
+  lazymatch x with
+  | pair ?x ?y => on_pair_vars tac x; on_pair_vars tac y
+  | _ => tac x
   end.
+Ltac is_pair_var x := on_pair_vars is_var x.
+Ltac do_subst_prod v :=
+  lazymatch v with
+  | @pair ?A ?B ?x ?y
+    => let H := fresh in
+       let xy := fresh v in
+       remember v as xy eqn:H;
+       assert (fst xy = x) by (subst xy; reflexivity);
+       assert (snd xy = y) by (subst xy; reflexivity);
+       clear H;
+       do_subst_prod x; do_subst_prod y;
+       try subst xy
+  | _ => subst v
+  end.
+Ltac subst_prod_step :=
+  first [ inversion_pair_step
+        | match goal with
+          | [ H : _ = ?v |- _ ] => is_pair_var v; do_subst_prod v
+          | [ H : ?v = _ |- _ ] => is_pair_var v; do_subst_prod v
+          end ].
 Ltac subst_prod := repeat subst_prod_step.
