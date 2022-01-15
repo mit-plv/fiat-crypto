@@ -133,6 +133,7 @@ Section __.
     := List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list.
   Definition prime_bytes_bounds : list (ZRange.type.option.interp base.type.Z)
     := List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list.
+  Local Notation word_bound := (word_bound machine_wordsize).
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
   Local Notation balance := (balance n s c).
 
@@ -581,6 +582,25 @@ Section __.
              (fun fname : string => [text_before_function_name ++ fname ++ " encodes an integer as a field element."]%string)
              (encode_correct weightf n m tight_bounds)).
 
+  Definition encode_word
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_encode_gen
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n)
+         (Some word_bound, tt)
+         (Some tight_bounds).
+
+  Definition sencode_word (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "encode_word" encode_word
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " encodes an integer as a field element."]%string)
+             (encode_word_correct machine_wordsize weightf n m tight_bounds)).
+
   Definition zero
     := Pipeline.BoundsPipeline
          true (* subst01 *)
@@ -651,6 +671,11 @@ Section __.
   Definition sselectznz (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Primitives.sselectznz n machine_wordsize prefix.
+
+  Definition copy : Pipeline.ErrorT _ := Primitives.copy n machine_wordsize.
+  Definition scopy (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Primitives.scopy n machine_wordsize prefix.
 
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
