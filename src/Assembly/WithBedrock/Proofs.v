@@ -2492,7 +2492,6 @@ Lemma LoadArray_ok G s s' base base_val len idxs
     /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof.
   cbv [LoadArray Symbolic.bind ErrorT.bind] in H.
-  Search Forall2 ex.
   subst d d' r r' f f' m m'.
   revert H Hd Hbase.
   generalize (seq 0 len); intros indices; clear len.
@@ -2717,61 +2716,69 @@ Definition R_list_scalar_or_array
 
 Definition get_asm_reg (m : machine_state) (reg_available : list REG) : list Z
   := List.map (Semantics.get_reg m) reg_available.
-
+Print Semantics.get_reg.
 Definition R_runtime_input
            (frame : Semantics.mem_state -> Prop)
            (output_types : type_spec) (runtime_inputs : list (Z + list Z))
-           (stack_size : nat)
+           (stack_size : nat) (stack_base : Naive.word 64)
            (asm_arguments_out asm_arguments_in : list (Naive.word 64))
            (reg_available : list REG) (runtime_reg : list Z)
            (callee_saved_registers : list REG) (runtime_callee_saved_registers : list Z)
            (m : machine_state)
-  : Prop.
-  refine (Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list _ m.(machine_reg_state))
-          /\ (Nat.min (List.length output_types + List.length runtime_inputs) (List.length reg_available) <= List.length runtime_reg)%nat
-          /\ (exists stack_placeholder_values : list Z,
-                 Forall (fun v : Z => (0 <= v < 2 ^ 64)%Z) stack_placeholder_values
-                 /\ stack_size = List.length stack_placeholder_values)
-          /\ (exists output_placeholder_values : list (Z + list Z),
-                 Forall2 val_or_list_val_matches_spec output_placeholder_values output_types
-                 /\ Forall (fun v => match v with
-                                     | inl v => (0 <= v < 2^64)%Z
-                                     | inr vs => Forall (fun v => (0 <= v < 2^64)%Z) vs
-                                     end) output_placeholder_values
-                 /\ (* it must be the case that all the scalars in output_placeholder_values and the real input values match what's in registers / the calling convention *)
-                   Forall2
-                     (fun v1 v2 => match v1 with
-                                   | inl v => v = v2
-                                   | inr _ => True
-                                   end)
-                     (output_placeholder_values ++ runtime_inputs)
-                     (firstn
-                        (length output_types + length runtime_inputs)
-                        runtime_reg)
-                 /\ ((frame *
-                        R_list_scalar_or_array output_placeholder_values asm_arguments_out *
-                        R_list_scalar_or_array runtime_inputs asm_arguments_in)%sep)
-                      m)).
-  (* TODO: This is just a small part *)
-Defined.
-Print array.
-Check array cell64 (word.of_Z 8).
+  : Prop
+  := exists (stack_placeholder_values : list Z) (output_placeholder_values : list (Z + list Z)),
+    Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list _ m.(machine_reg_state))
+    /\ (Nat.min (List.length output_types + List.length runtime_inputs) (List.length reg_available) <= List.length runtime_reg)%nat
+    /\ get_asm_reg m reg_available = runtime_reg
+    /\ get_asm_reg m callee_saved_registers = runtime_callee_saved_registers
+    /\ Forall (fun v : Z => (0 <= v < 2 ^ 64)%Z) stack_placeholder_values
+    /\ stack_size = List.length stack_placeholder_values
+    /\ (Semantics.get_reg m rsp - 8 * Z.of_nat stack_size)%Z = word.unsigned stack_base
+    /\ Forall2 val_or_list_val_matches_spec output_placeholder_values output_types
+    /\ Forall (fun v => match v with
+                        | inl v => (0 <= v < 2^64)%Z
+                        | inr vs => Forall (fun v => (0 <= v < 2^64)%Z) vs
+                        end) output_placeholder_values
+    /\ (* it must be the case that all the scalars in output_placeholder_values and the real input values match what's in registers / the calling convention *)
+      Forall2
+        (fun v1 v2 => match v1 with
+                      | inl v => v = v2
+                      | inr _ => True
+                      end)
+        (output_placeholder_values ++ runtime_inputs)
+        (firstn
+           (length output_types + length runtime_inputs)
+           runtime_reg)
+    /\ ((frame *
+           R_list_scalar_or_array output_placeholder_values asm_arguments_out *
+           R_list_scalar_or_array runtime_inputs asm_arguments_in *
+           array cell64 (word.of_Z 8) stack_base stack_placeholder_values)%sep)
+         m.
+
+(* TODO : should we preserve inputs? *)
 Definition R_runtime_output
            (frame : Semantics.mem_state -> Prop)
-           (runtime_outputs : list (Z + list Z)) (runtime_inputs : type_spec)
-           (stack_size : nat)
+           (runtime_outputs : list (Z + list Z)) (input_types : type_spec)
+           (stack_size : nat) (stack_base : Naive.word 64)
            (asm_arguments_out asm_arguments_in : list (Naive.word 64))
            (callee_saved_registers : list REG) (runtime_callee_saved_registers : list Z)
            (m : machine_state)
-  : Prop.
-  (* Include: stack exists, placeholder values; inputs still point to initial values; outputs point to output values *)
-  (* TODO: figure out what to say about rsp; probably that it's unchanged; also add a check to equivalence checker that rsp is unchanged; also figure out callee saved registers *)
-  Print array.
-  Check array.
-  Check R_cell64.
-  Locate array.
-  (* TODO *)
-Admitted.
+  : Prop
+  := exists (stack_placeholder_values : list Z) (input_placeholder_values : list (Z + list Z)),
+    Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list _ m.(machine_reg_state))
+    /\ get_asm_reg m callee_saved_registers = runtime_callee_saved_registers
+    /\ Forall (fun v : Z => (0 <= v < 2 ^ 64)%Z) stack_placeholder_values
+    /\ stack_size = List.length stack_placeholder_values
+    /\ Forall2 val_or_list_val_matches_spec input_placeholder_values input_types
+    /\ Forall (fun v => match v with
+                        | inl v => (0 <= v < 2^64)%Z
+                        | inr vs => Forall (fun v => (0 <= v < 2^64)%Z) vs
+                        end) input_placeholder_values
+    /\ ((frame *
+           R_list_scalar_or_array runtime_outputs asm_arguments_out *
+           R_list_scalar_or_array input_placeholder_values asm_arguments_in *
+           array cell64 (word.of_Z 8) stack_base stack_placeholder_values)%sep)
+         m.
 
 Definition word_args_to_Z_args
   : list (Naive.word 64 + list (Naive.word 64)) -> list (Z + list Z)
@@ -2899,9 +2906,62 @@ Lemma Forall2_rets_of_R_mem {A} G frame d mem_st m' idxs base_len_base_vals rets
 Proof.
 Admitted.
 
+Local Ltac saturate_lengths_step :=
+  match goal with
+  | [ |- context[length (?x ++ ?y)] ]
+    => rewrite (app_length x y)
+  | [ H : context[length ?x], H' : Forall2 _ ?y ?x |- context[length ?y] ]
+    => let H := fresh in
+       assert (H : length y = length x) by eapply eq_length_Forall2, H';
+       rewrite H in *
+  | [ H : Forall2 _ ?y ?x |- _ ]
+    => unique assert (length y = length x) by eapply eq_length_Forall2, H
+  | [ |- context[length (@List.map ?A ?B ?f ?x)] ]
+    => unique assert (length (@List.map A B f x) = length x) by apply map_length
+  end.
+Local Ltac saturate_lengths := repeat saturate_lengths_step.
+
+Local Lemma connect_Forall2_app_connect {A B C R1 R2 R3 R4 ls1 ls1' ls2 ls2' ls3}
+      (H1 : @Forall2 A B R1 ls1 ls1')
+      (H2 : @Forall2 A B R2 ls2 ls2')
+      (H3 : @Forall2 _ C R3 (ls1' ++ ls2') ls3)
+      (Ha : forall a1 b1 c, R1 a1 b1 -> R3 b1 c -> R4 a1 c : Prop)
+      (Hb : forall a2 b2 c, R2 a2 b2 -> R3 b2 c -> R4 a2 c : Prop)
+  : @Forall2 _ C R4 (ls1 ++ ls2) ls3.
+Proof.
+  saturate_lengths.
+  rewrite app_length in *.
+  rewrite !@Forall2_forall_iff_nth_error in *; intro i.
+  repeat first [ progress rewrite ?@nth_error_app in *
+               | match goal with
+                 | [ H : context[nth_error ?ls _] |- context[nth_error ?ls ?i] ]
+                   => specialize (H i); lazymatch type of H with context[nth_error ls i] => idtac end
+                 | [ H : context[nth_error ?ls _], H' : context[nth_error ?ls ?i] |- _ ]
+                   => specialize (H i); lazymatch type of H with context[nth_error ls i] => idtac end
+                 end ].
+  all: repeat first [ progress cbv [option_eq] in *
+                    | progress cbn [List.length] in *
+                    | progress inversion_option
+                    | progress subst
+                    | lia
+                    | solve [ eauto ]
+                    | match goal with
+                      | [ H : ?x < ?y, H' : context[(?x - ?y)%nat] |- _ ]
+                        => rewrite (@not_le_minus_0 x y) in H' by lia
+                      | [ H : nth_error ?l 0 = _ |- _ ] => is_var l; destruct l; cbn [nth_error] in H
+                      | [ H : nth_error ?ls ?i = Some _, H' : ~?i < length ?ls |- _ ]
+                        => rewrite nth_error_length_error in H by lia
+                      | [ H : nth_error ?ls ?i = _, H' : nth_error ?ls ?i' = _ |- _ ]
+                        => let H'' := fresh in
+                           assert (H'' : i = i') by lia; rewrite H'' in *; rewrite H in H'
+                      end
+                    | break_innermost_match_step
+                    | break_innermost_match_hyps_step ].
+Qed.
+
 Theorem symex_asm_func_M_correct
         d frame asm_args_out asm_args_in (G : symbol -> option Z) (s := init_symbolic_state d)
-        (s' : symbolic_state) (m : machine_state) (output_types : type_spec) (stack_size : nat)
+        (s' : symbolic_state) (m : machine_state) (output_types : type_spec) (stack_size : nat) (stack_base : Naive.word 64)
         (inputs : list (idx + list idx)) (callee_saved_registers : list REG) (reg_available : list REG) (asm : Lines)
         (rets : list (idx + list idx))
         (H : symex_asm_func_M callee_saved_registers output_types stack_size inputs reg_available asm s = Success (Success rets, s'))
@@ -2911,7 +2971,7 @@ Theorem symex_asm_func_M_correct
         (*(Hasm_reg : get_asm_reg m reg_available = runtime_reg)*)
         (runtime_callee_saved_registers : list Z)
         (*(Hasm_callee_saved_registers : get_asm_reg m callee_saved_registers = runtime_callee_saved_registers)*)
-        (HR : R_runtime_input frame output_types runtime_inputs stack_size asm_args_out asm_args_in reg_available runtime_reg callee_saved_registers runtime_callee_saved_registers m)
+        (HR : R_runtime_input frame output_types runtime_inputs stack_size stack_base asm_args_out asm_args_in reg_available runtime_reg callee_saved_registers runtime_callee_saved_registers m)
         (Hd_ok : gensym_dag_ok G d)
         (d' := s'.(dag_state))
         (H_enough_reg : (List.length output_types + List.length runtime_inputs <= List.length reg_available)%nat)
@@ -2920,11 +2980,11 @@ Theorem symex_asm_func_M_correct
         (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
   : exists m' G'
            (runtime_rets : list (Z + list Z)),
-    DenoteLines m asm = Some m'
-    /\ R_runtime_output frame runtime_rets (type_spec_of_runtime runtime_inputs) stack_size asm_args_out asm_args_in callee_saved_registers runtime_callee_saved_registers m'
+    (DenoteLines m asm = Some m'
+     /\ R_runtime_output frame runtime_rets (type_spec_of_runtime runtime_inputs) stack_size stack_base asm_args_out asm_args_in callee_saved_registers runtime_callee_saved_registers m'
+     /\ List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets)
     /\ gensym_dag_ok G' d'
-    /\ (forall e n, eval G d e n -> eval G' d' e n)
-    /\ List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets.
+    /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
   pose proof (word_args_to_Z_args_bounded word_runtime_inputs).
   cbv [symex_asm_func_M Symbolic.bind ErrorT.bind lift_dag] in H.
@@ -2936,288 +2996,114 @@ Proof.
                  end ].
   cbv [R_runtime_input] in HR; repeat (destruct_head'_ex; destruct_head'_and).
   destruct (init_symbolic_state_ok m G _ _ ltac:(eassumption) ltac:(eassumption) eq_refl) as [G1 ?]; destruct_head'_and.
-  (* build_inputs *)
-  lazymatch goal with
-  | [ H : build_inputs _ _ = _ |- _ ]
-    => move H at bottom; eapply build_inputs_ok in H;
-       [
-       | lazymatch goal with
-         | [ |- gensym_dag_ok _ _ ] => eassumption
-         | [ |- Forall2 val_or_list_val_matches_spec _ _ ] => eassumption
-         | _ => idtac
-         end .. ];
-       [ | assumption ]
-  end.
-  repeat (destruct_head'_ex; destruct_head'_and).
-  (* update R *)
-  lazymatch goal with
-  | [ H : R _ _ (init_symbolic_state _) _ |- _ ]
-    => eapply R_subsumed in H; [ | eassumption .. ]
-  end.
-  (* build_merge_base_addresses *)
-  lazymatch goal with
-  | [ H : build_merge_base_addresses _ _ _ = _ |- _ ]
-    => move H at bottom;
-       eapply build_merge_base_addresses_ok
-         with (runtime_reg := runtime_reg (*get_asm_reg m reg_available*))
-         in H;
-       [
-       | lazymatch goal with
-         | [ |- gensym_dag_ok _ _ ] => eassumption
-         | _ => idtac
-         end .. ];
-       [ | try assumption .. ]
-  end.
-  all: [ >
-       | repeat first [ lia
+  let debug_run tac := tac () in
+  repeat first [ progress destruct_head'_ex
+               | progress destruct_head'_and
+               | progress cbn [update_dag_with Symbolic.dag_state Symbolic.symbolic_flag_state Symbolic.symbolic_mem_state Symbolic.symbolic_reg_state] in *
+               | match reverse goal with
+                 | [ H : build_inputs _ _ = _ |- exists m' : machine_state, _ ]
+                   => debug_run ltac:(fun _ => idtac "build_inputs start");
+                      move H at bottom; eapply build_inputs_ok in H;
+                      [
+                      | lazymatch goal with
+                        | [ |- gensym_dag_ok _ _ ] => eassumption
+                        | [ |- Forall2 val_or_list_val_matches_spec _ _ ] => eassumption
+                        | _ => idtac
+                        end .. ];
+                      [ | assumption ];
+                      debug_run ltac:(fun _ => idtac "build_inputs end")
+                 | [ H : R _ _ (init_symbolic_state _) _ |- exists m' : machine_state, _ ]
+                   => debug_run ltac:(fun _ => idtac "update R start");
+                      eapply R_subsumed in H; [ | eassumption .. ];
+                      debug_run ltac:(fun _ => idtac "update R end")
+                 | [ H : build_merge_base_addresses _ _ _ = _ |- exists m' : machine_state, _ ]
+                   => debug_run ltac:(fun _ => idtac "build_merge_base_addresses start");
+                      move H at bottom;
+                      eapply build_merge_base_addresses_ok
+                        with (runtime_reg := runtime_reg (*get_asm_reg m reg_available*))
+                        in H;
+                      [
+                      | clear H;
+                        lazymatch goal with
+                        | [ |- gensym_dag_ok _ _ ] => eassumption
+                        | _ => idtac
+                        end .. ];
+                      [ | try assumption .. ];
+                      [ | repeat first [ lia
+                                       | saturate_lengths_step
+                                       | progress intros *
+                                       | break_innermost_match_step
+                                       | progress subst
+                                       | progress intros
+                                       | eapply connect_Forall2_app_connect; [ eassumption | eassumption | eassumption | .. ]
+                                       | solve [ eauto using lift_eval_idx_Z_impl ]
+                                       | progress cbv [eval_idx_or_list_idx] in * ] .. ];
+                      [];
+                      debug_run ltac:(fun _ => idtac "build_merge_base_addresses end")
+                 | [ H : build_merge_stack_placeholders _ _ = _ |- exists m' : machine_state, _ ]
+                   => debug_run ltac:(fun _ => idtac "build_merge_stack_placeholders start");
+                      subst stack_size;
+                      move H at bottom; eapply build_merge_stack_placeholders_ok in H;
+                      [ destruct H as [G_final H]
+                      | lazymatch goal with
+                        | [ |- gensym_dag_ok _ _ ] => eassumption
+                        | _ => idtac
+                        end .. ];
+                      [ | try assumption .. ];
+                      [];
+                      debug_run ltac:(fun _ => idtac "build_merge_stack_placeholders end")
+                 | [ H : mapM _ callee_saved_registers _ = _ |- @ex ?T _ ]
+                   => lazymatch T with
+                      | (*runtime_rets*) list (Z + list Z) => idtac
+                      | (*m'*) machine_state => idtac
+                      end;
+                      debug_run ltac:(fun _ => idtac "get callee_saved_registers start");
+                      eapply (@mapM_GetReg_ok_bounded G_final) in H;
+                      [ | clear H; try assumption .. ];
+                      [
+                      | lazymatch goal with
+                        | [ |- Forall2 (option_eq (eval_idx_Z _ _))
+                                       (List.map (get_reg _) (List.map reg_index callee_saved_registers))
+                                       (List.map Some _) ]
+                          => destruct_head' symbolic_state; cbn [Symbolic.symbolic_reg_state Symbolic.dag_state] in *; subst
+                        | [ |- gensym_dag_ok _ _ ] => eassumption
+                        | _ => idtac
+                        end .. ];
+                      [ | idtac "TODO" .. ];
+                      debug_run ltac:(fun _ => idtac "get callee_saved_registers end")
+                 | [ H : SymexLines _ _ = Success _ |- exists m' : machine_state, _ ]
+                   => debug_run ltac:(fun _ => idtac "SymexLines start");
+                      eapply SymexLines_R in H;
+                      [ destruct H as [m' H];
+                        exists m', G_final;
+                        repeat (destruct_head'_ex; destruct_head'_and);
+                        repeat match goal with
+                               | [ H : R _ ?G ?s _ |- _ ]
+                                 => unique assert (gensym_dag_ok G s) by (destruct s; apply H)
+                               end
+                      | clear H .. ];
+                      [ | idtac "TODO" .. ];
+                      debug_run ltac:(fun _ => idtac "SymexLines end")
+                 | [ H : LoadOutputs _ _ _ = _ |- exists runtime_rets : list (Z + list Z), _ ]
+                   => debug_run ltac:(fun _ => idtac "LoadOutputs start");
+                      eapply LoadOutputs_ok in H;
+                      [ | clear H; try eassumption .. ];
+                      [
                       | match goal with
-                        | [ |- context[length (?x ++ ?y)] ]
-                          => rewrite (app_length x y)
-                        | [ H : context[length ?x], H' : Forall2 _ ?y ?x |- context[length ?y] ]
-                          => let H := fresh in
-                             assert (H : length y = length x) by eapply eq_length_Forall2, H';
-                             rewrite H in *
-                        | [ H : Forall2 _ ?y ?x |- _ ]
-                          => unique assert (length y = length x) by eapply eq_length_Forall2, H
-                        | [ |- context[length (@List.map ?A ?B ?f ?x)] ]
-                          => unique assert (length (@List.map A B f x) = length x) by apply map_length
-                        end ]
-                .. ].
-  2: { rewrite !@Forall2_forall_iff_nth_error in *; intro i.
-       rewrite ?@nth_error_app in *.
-       cbn [update_dag_with dag_state] in *.
-       repeat match goal with
-              | [ H : context[nth_error ?ls _] |- context[nth_error ?ls ?i] ]
-                => specialize (H i); lazymatch type of H with context[nth_error ls i] => idtac end
-              | [ H : context[nth_error ?ls _], H' : context[nth_error ?ls ?i] |- _ ]
-                => specialize (H i); lazymatch type of H with context[nth_error ls i] => idtac end
-              end.
-       rewrite ?@nth_error_app in *.
-       all: repeat first [ exact I
-                         | assumption
-                         | progress inversion_option
-                         | progress cbv [option_eq] in *
-                         | progress cbn [eval_idx_or_list_idx] in *
-                         | progress subst
-                         | lia
-                         | match goal with
-                           | [ H : nth_error ?ls ?i = Some _, H' : ~?i < length ?ls |- _ ]
-                             => rewrite nth_error_length_error in H by lia
-                           | [ H : nth_error ?ls ?i = _, H' : nth_error ?ls ?i' = _ |- _ ]
-                             => let H'' := fresh in
-                                assert (H'' : i = i') by lia; rewrite H'' in *; rewrite H in H'
-                           end
-                         | break_innermost_match_step
-                         | break_innermost_match_hyps_step
-                         | solve [ eauto using lift_eval_idx_Z_impl ] ]. }
-  cbn [update_dag_with dag_state symbolic_flag_state symbolic_mem_state symbolic_reg_state] in *.
-  repeat (destruct_head'_ex; destruct_head'_and).
-  all: [ > ].
-  (* build_merge_stack_placeholders *)
-  subst stack_size.
-  lazymatch goal with
-  | [ H : build_merge_stack_placeholders _ _ = _ |- _ ]
-    => move H at bottom; eapply build_merge_stack_placeholders_ok in H;
-       [ destruct H as [G_final H]
-       | lazymatch goal with
-         | [ |- gensym_dag_ok _ _ ] => eassumption
-         | _ => idtac
-         end .. ];
-       [ | try assumption .. ]
-  end.
-  repeat (destruct_head'_ex; destruct_head'_and).
-  all: [ > ].
-  (* get callee_saved_registers *)
-  lazymatch reverse goal with
-  | [ H : mapM _ callee_saved_registers _ = _ |- _ ]
-    => eapply (@mapM_GetReg_ok_bounded G_final) in H;
-       [ | try assumption .. ];
-       [
-       | lazymatch goal with
-         | [ |- Forall2 (option_eq (eval_idx_Z _ _))
-                        (List.map (get_reg _) (List.map reg_index callee_saved_registers))
-                        (List.map Some _) ]
-           => destruct_head' symbolic_state; cbn [Symbolic.symbolic_reg_state Symbolic.dag_state] in *; subst
-         | [ |- gensym_dag_ok _ _ ] => eassumption
-         | _ => idtac
-         end .. ]
-  end.
-  repeat (destruct_head'_ex; destruct_head'_and).
-  2-3: idtac "TODO"; shelve.
-  all: [ > ].
-  (* SymexLines *)
-  lazymatch goal with
-  | [ H : SymexLines _ _ = Success _ |- _ ]
-    => eapply SymexLines_R in H;
-       [ destruct H as [m' H]
-       | .. ]
-  end.
-  exists m', G_final.
-  repeat (destruct_head'_ex; destruct_head'_and).
-  repeat match goal with
-         | [ H : R _ ?G ?s _ |- _ ]
-           => unique assert (gensym_dag_ok G s) by (destruct s; apply H)
-         end.
-  2: { repeat first [ progress cbn [Symbolic.dag_state Symbolic.symbolic_reg_state Symbolic.symbolic_mem_state Symbolic.symbolic_flag_state] in *
-                    | progress subst
-                    | match goal with
-                      | [ H : symbolic_flag_state _ = symbolic_flag_state ?x, H' : symbolic_flag_state ?x = _ |- _ ]
-                        => is_var x;
-                           let do_clear_in ev :=
-                             (is_evar ev;
-                             let H := fresh in
-                             pose ev as H; instantiate (1:=ltac:(clear dependent x)) in (value of H); clear H) in
-                           repeat match goal with
-                                  | [ H : context[?ev] |- _ ] => do_clear_in ev
-                                  | [ |- context[?ev] ] => do_clear_in ev
-                                  end;
-                           destruct x
-                      end ].
-       idtac "TODO"; shelve. }
-  all: [ > ].
-  (* get callee_saved_registers after *)
-  lazymatch reverse goal with
-  | [ H : mapM _ callee_saved_registers _ = _ |- _ ]
-    => eapply (@mapM_GetReg_ok_bounded G_final) in H;
-       [ | try assumption .. ];
-       [
-       | lazymatch goal with
-         | [ |- Forall2 (option_eq (eval_idx_Z _ _))
-                        (List.map (get_reg _) (List.map reg_index callee_saved_registers))
-                        (List.map Some _) ]
-           => destruct_head' symbolic_state; cbn [Symbolic.symbolic_reg_state Symbolic.dag_state] in *; subst
-         | [ |- gensym_dag_ok _ _ ] => eassumption
-         | _ => idtac
-         end .. ]
-  end.
-  2-3: idtac "TODO"; shelve.
-  repeat (destruct_head'_ex; destruct_head'_and).
-  all: [ > ].
-  (* LoadOutputs *)
-  lazymatch goal with
-  | [ H : LoadOutputs _ _ _ = _ |- _ ]
-    => eapply LoadOutputs_ok in H; [ | try eassumption .. ];
-       [
-       | match goal with
-         | [ |- Forall2 _ (firstn _ _) _ ]
-           => eapply Forall2_firstn;
-              eapply Forall2_weaken; [ | eassumption ]; cbv beta; intros *; break_innermost_match; eauto using lift_eval_idx_Z_impl
-         end .. ]
-  end.
-  all: [ > ].
-  repeat (destruct_head'_ex; destruct_head'_and).
+                        | [ |- Forall2 _ (firstn _ _) _ ]
+                          => eapply Forall2_firstn;
+                             eapply Forall2_weaken; [ | eassumption ]; cbv beta; intros *; break_innermost_match; eauto using lift_eval_idx_Z_impl
+                        end .. ];
+                      [];
+                      debug_run ltac:(fun _ => idtac "LoadOutputs end")
+                 end ].
   eexists.
   repeat (apply conj; eauto 10; []).
-  apply conj.
-  2: repeat (apply conj; eauto 10; []).
-  2: { move rets at bottom.
-       revert H51.
-       revert rets.
-       move H35 at bottom.
-       move s2 at bottom.
-       move s' at bottom.
-       cbv [R] in H35.
-       destruct_head' symbolic_state.
-       cbn [Symbolic.dag_state Symbolic.symbolic_reg_state Symbolic.symbolic_mem_state Symbolic.symbolic_flag_state] in *.
-       repeat match goal with
-                | [ H : context[?e] |- _ ] => is_evar e; let H := fresh in pose e as H; instantiate (1:=ltac:(progress clear)) in (value of H); subst H
-                end.
-       instantiate (1:=ltac:(clear)).
-       revert H35.
-       instantiate (2:=ltac:(clear)).
-       intro H35.
-       subst.
-       destruct_head'_and.
-       revert H18.
-       move dag_state at bottom.
-       intros.
-       eapply R_mem_subsumed with (d':=dag_state) in H18; [ | now eauto using lift_eval_idx_Z_impl ].
-       revert rets H18 H51.
-       move x7 at bottom.
-       set (sorta_output_vals:=(List.combine
-             (List.combine (firstn (length l3 - length inputs) l3) output_types)
-             (firstn (length l3 - length inputs) (firstn (length l3) runtime_reg)))) in *.
-       intro rets; revert rets H45.
-
-       assert (Forall2 (fun idxs '((base, len), base_val)
-                        => match idxs, base, len with
-                           | inr idxs, Some base, Some len
-                             => Forall2 (eval_idx_Z G_final dag_state0) idxs (List.map (fun i => Z.land (base_val + 8 * Z.of_nat i) (Z.ones 64)) (seq 0 len))
-                           | _, _, _ => False
-                           end)
-                       x7
-                       sorta_output_vals).
-       (*
-         forall rets : list (idx + list idx),
-  Forall2
-    (fun (idxs : idx + list idx) '(base, len, base_val) =>
-     match idxs with
-     | inl _ => False
-     | inr idxs0 =>
-         match base with
-         | Some _ =>
-             match len with
-             | Some len0 =>
-                 Forall2 (eval_idx_Z G_final dag_state) idxs0
-                   (List.map
-                      (fun i : nat =>
-                       Z.land (base_val + 8 * Z.of_nat i) (Z.ones 64))
-                      (seq 0 len0))
-             | None => False
-             end
-         | None => False
-         end
-     end) x7 sorta_output_vals ->
-  R_mem ?frame G_final dag_state symbolic_mem_state m' ->
-  Some rets =
-  Option.List.lift
-    (List.map
-       (fun idxs : idx + list idx =>
-        match idxs with
-        | inl _ => None
-        | inr idxs0 =>
-            option_map inr
-              (Option.List.lift
-                 (List.map (fun a : idx => load a symbolic_mem_state) idxs0))
-        end) x7) -> Forall2 (eval_idx_or_list_idx G_final dag_state) rets ?Goal8*)
-       (*
-       { eapply Forall2_weaken; [ | eassumption ]; intros; break_innermost_match; trivial.
-         eapply Forall2_weaken; [ | eassumption ]; intros *; eauto using lift_eval_idx_Z_impl.
-
-         move dag_state at bottom.
-         move dag_state at bottom.
-         move dag_state0 at bottom.
-       Set Printing Coercions.
-       destruct *)
-       shelve.
-       shelve. }
-  Unshelve.
-  all: shelve_unifiable.
-  { repeat first [ progress cbn [Symbolic.dag_state Symbolic.symbolic_reg_state Symbolic.symbolic_mem_state Symbolic.symbolic_flag_state] in *
-                    | progress subst
-                    | match goal with
-                      | [ H : symbolic_flag_state _ = symbolic_flag_state ?x, H' : symbolic_flag_state ?x = _ |- _ ]
-                        => is_var x;
-                           let do_clear_in ev :=
-                             (is_evar ev;
-                             let H := fresh in
-                             pose ev as H; instantiate (1:=ltac:(clear dependent x)) in (value of H); clear H) in
-                           repeat match goal with
-                                  | [ H : context[?ev] |- _ ] => do_clear_in ev
-                                  | [ |- context[?ev] ] => do_clear_in ev
-                                  end;
-                           destruct x
-                      end ].
-    shelve. }
-  { cbv [R].
-    break_innermost_match.
-    shelve. }
-  Print LoadOutputs.
-
+  move rets at bottom.
 Admitted.
 
 Theorem symex_asm_func_correct
-        frame asm_args_out asm_args_in (G : symbol -> option Z) (d : dag) (output_types : type_spec) (stack_size : nat)
+        frame asm_args_out asm_args_in (G : symbol -> option Z) (d : dag) (output_types : type_spec) (stack_size : nat) (stack_base : Naive.word 64)
         (inputs : list (idx + list idx)) (callee_saved_registers : list REG) (reg_available : list REG) (asm : Lines)
         (rets : list (idx + list idx))
         (s' : symbolic_state)
@@ -3226,17 +3112,16 @@ Theorem symex_asm_func_correct
         (m : machine_state)
         (word_runtime_inputs : list (Naive.word 64 + list (Naive.word 64)))
         (runtime_inputs := word_args_to_Z_args word_runtime_inputs)
-        (*(Hasm : get_asm_arguments m output_types (type_spec_of_runtime runtime_inputs) reg_available = (asm_args_out, asm_args_in))*)
         (runtime_reg : list Z)
         (runtime_callee_saved_registers : list Z)
         (Hasm_reg : get_asm_reg m reg_available = runtime_reg)
-        (HR : R_runtime_input frame output_types runtime_inputs stack_size asm_args_out asm_args_in reg_available runtime_reg callee_saved_registers runtime_callee_saved_registers m)
+        (HR : R_runtime_input frame output_types runtime_inputs stack_size stack_base asm_args_out asm_args_in reg_available runtime_reg callee_saved_registers runtime_callee_saved_registers m)
         (HG_ok : gensym_dag_ok G d)
         (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
   : (exists m' G'
             (runtime_rets : list (Z + list Z)),
         DenoteLines m asm = Some m'
-        /\ R_runtime_output frame runtime_rets (type_spec_of_runtime runtime_inputs) stack_size asm_args_out asm_args_in callee_saved_registers runtime_callee_saved_registers m'
+        /\ R_runtime_output frame runtime_rets (type_spec_of_runtime runtime_inputs) stack_size stack_base asm_args_out asm_args_in callee_saved_registers runtime_callee_saved_registers m'
         /\ (forall e n, eval G d e n -> eval G' d' e n)
         /\ gensym_dag_ok G' d'
         /\ List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets).
@@ -3272,16 +3157,16 @@ Theorem check_equivalence_correct
         (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
         (output_types : type_spec := match simplify_base_type (type.final_codomain t) out_bounds with Success output_types => output_types | Error _ => nil end)
         (asm_args_out asm_args_in : list (Naive.word 64))
-        (*(asm_args := get_asm_arguments st output_types (type_spec_of_runtime args) assembly_calling_registers)*)
         (runtime_regs := get_asm_reg st assembly_calling_registers)
         (runtime_callee_saved_registers := get_asm_reg st assembly_callee_saved_registers)
         (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
-        (HR : R_runtime_input frame output_types args stack_size asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st)
+        (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
+        (HR : R_runtime_input frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st)
   : exists asm' st' (retvals : list (Z + list Z)),
     strip_ret asm = Success asm'
     /\ DenoteLines st asm' = Some st'
     /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
-    /\ R_runtime_output frame retvals (type_spec_of_runtime args) stack_size asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st'.
+    /\ R_runtime_output frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st'.
 Proof.
   subst stack_size.
   cbv beta delta [check_equivalence ErrorT.bind] in H.
@@ -3376,18 +3261,18 @@ Theorem generate_assembly_of_hinted_expr_correct
               (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
               (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
               (output_types : type_spec := match simplify_base_type (type.final_codomain t) out_bounds with Success output_types => output_types | Error _ => nil end)
-              (*(asm_args := get_asm_arguments st output_types (type_spec_of_runtime args) assembly_calling_registers)*)
               (asm_args_out asm_args_in : list (Naive.word 64))
               (runtime_regs := get_asm_reg st assembly_calling_registers)
               (runtime_callee_saved_registers := get_asm_reg st assembly_callee_saved_registers)
               (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
-              (HR : R_runtime_input frame output_types args stack_size asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st),
+              (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
+              (HR : R_runtime_input frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st),
       (* Should match check_equivalence_correct exactly *)
       exists asm' st' (retvals : list (Z + list Z)),
              strip_ret asm = Success asm'
         /\ DenoteLines st asm' = Some st'
         /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
-        /\ R_runtime_output frame retvals (type_spec_of_runtime args) stack_size asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st'.
+        /\ R_runtime_output frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st'.
 Proof.
   cbv [generate_assembly_of_hinted_expr] in H.
   break_innermost_match_hyps; inversion H; subst; destruct_head'_and; split; [ reflexivity | intros ].
