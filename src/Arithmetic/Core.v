@@ -1067,6 +1067,7 @@ Section Positional_nonuniform.
     erewrite <- !map_S_seq, IHxs; [ reflexivity | ]; cbn; eauto with lia.
   Qed.
 End Positional_nonuniform.
+Hint Rewrite @eval_cons using solve [auto; distr_length]: push_eval.
 End Positional.
 
 Record weight_properties {weight : nat -> Z} :=
@@ -1077,6 +1078,7 @@ Record weight_properties {weight : nat -> Z} :=
     weight_divides : forall i : nat, 0 < weight (S i) / weight i;
   }.
 Global Hint Resolve weight_0 weight_positive weight_multiples weight_divides : core.
+Hint Rewrite @weight_0 @weight_multiples using solve [auto]: push_eval.
 Lemma weight_nz {weight : nat -> Z} {wprops : @weight_properties weight}
   : forall i, weight i <> 0.
 Proof. intro i; pose proof (@weight_positive _ wprops i); lia. Qed.
