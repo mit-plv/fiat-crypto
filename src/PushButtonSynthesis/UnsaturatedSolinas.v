@@ -898,6 +898,14 @@ Section __.
   Lemma Wf_one res (Hres : one = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
+  Lemma copy_correct res
+        (Hres : copy = Success res)
+    : copy_correct saturated_bounds (Interp res).
+  Proof using curve_good. Primitives.prove_correctness use_curve_good. Qed.
+
+  Lemma Wf_copy res (Hres : copy = Success res) : Wf res.
+  Proof using Type. revert Hres; cbv [copy]; apply Wf_copy. Qed.
+
   Section ring.
     Context carry_mul_res (Hcarry_mul : carry_mul = Success carry_mul_res)
             add_res       (Hadd       : add       = Success add_res)
@@ -1008,6 +1016,7 @@ Module Export Hints.
        encode
        zero
        one
+       copy
   : wf_op_cache.
   Hint Immediate
        Wf_carry_mul
@@ -1026,5 +1035,6 @@ Module Export Hints.
        Wf_encode
        Wf_zero
        Wf_one
+       Wf_copy
   : wf_op_cache.
 End Hints.
