@@ -492,6 +492,81 @@ Section WithParameters.
     Qed.
   End ListUnop.
 
+  Section FelemCopy.
+    Context {res : API.Expr (type_listZ -> type_listZ)}
+            (res_valid :
+               valid_func (res (fun _ : API.type => unit)))
+            (res_Wf : API.Wf res).
+    Context (res_eq : forall x : list word,
+                length x = n ->
+                (map word.of_Z (API.interp (res _) (map word.unsigned x)))
+                = x)
+            (res_bounds : forall x,
+                list_Z_bounded_by (max_bounds (width:=width) n) x ->
+                list_Z_bounded_by (max_bounds (width:=width) n) (API.interp (res _) x)).
+
+    Local Ltac equivalence_side_conditions_hook ::=
+      lazymatch goal with
+      | |- context [length (API.interp (res _) ?x)] =>
+      idtac (*; specialize (res_bounds x ltac:(auto));
+        rewrite (length_list_Z_bounded_by _ _ res_bounds);
+        try congruence;
+        rewrite !map_length, outbounds_length;
+                felem_to_array; sepsimpl; congruence*)
+      | _ => idtac
+      end.
+
+    Local Notation t :=
+      (type.arrow type_listZ type_listZ) (only parsing).
+
+    Definition felem_copy_insizes
+      : type.for_each_lhs_of_arrow access_sizes t :=
+      (access_size.word, tt).
+    Definition felem_copy_outsizes
+      : base_access_sizes (type.final_codomain t) :=
+      access_size.word.
+    Definition felem_copy_inlengths
+      : type.for_each_lhs_of_arrow list_lengths t :=
+      (n, tt).
+    Let insizes := felem_copy_insizes.
+    Let outsizes := felem_copy_outsizes.
+    Let inlengths := felem_copy_inlengths.
+
+    Lemma felem_copy_correct f :
+      f = make_bedrock_func felem_copy insizes outsizes inlengths res ->
+      forall functions, spec_of_felem_copy (f :: functions).
+    Proof.
+      subst inlengths insizes outsizes.
+      cbv [spec_of_felem_copy felem_copy_insizes felem_copy_outsizes felem_copy_inlengths].
+      cbv beta; intros; subst f. cbv [make_bedrock_func].
+      cleanup. eapply Proper_call.
+      2: {
+        Set Ltac Backtrace.
+        rename R into Rr.
+        use_translate_func_correct constr:((map word.unsigned x, tt)) (FElem px x * Rr)%sep.
+        all:try translate_func_precondition_hammer.
+
+
+      autounfold with types access_sizes;
+      first [ eapply MaxBounds.max_bounds_range_iff
+            | eapply ByteBounds.byte_bounds_range_iff ];
+      cbn [type.app_curried fst snd].
+apply res_bounds.
+rewrite max_bounds_range_iff.
+(* note: need to constrain length of x, extract that from H0 *)
+admit.
+        { (* lists_reserved_with_initial_context *)
+          lists_reserved_simplify pout.
+          all:try solve_equivalence_side_conditions.
+          setoid_rewrite max_bounds_range_iff in res_bounds.
+          rewrite (fun x pf => proj1 (res_bounds x pf)).
+          admit. admit.
+      use_sep_assumption.
+      cancel; unfold seps.
+      admit.
+        Admitted.
+  End FelemCopy.
+
   Section FromBytes.
     Context {res : API.Expr (type_listZ -> type_listZ)}
             (res_valid :

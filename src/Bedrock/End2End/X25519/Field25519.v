@@ -55,6 +55,14 @@ Section Field.
          As fe25519_to_bytes_correct.
   Proof. Time derive_bedrock2_func to_bytes_op. Qed.
 
+  Derive fe25519_copy
+         SuchThat (forall functions,
+                      spec_of_felem_copy
+                        (field_representation:=field_representation n s c)
+                        (fe25519_copy :: functions))
+         As fe25519_copy_correct.
+  Proof. Time derive_bedrock2_func felem_copy_op. Qed.
+
   Derive fe25519_mul
          SuchThat (forall functions,
                       spec_of_BinOp bin_mul
