@@ -320,17 +320,17 @@ Section Compile.
     unfold FElem in *.
     sepsimpl.
     prove_field_compilation.
-    apply H3.
+    apply H4.
     
     eapply Proper_sep_impl1; eauto.
     2:exact(fun a b => b).
     intros m' H'.
+    match goal with H : _ |- _ =>
+                    rewrite word.of_Z_unsigned in H end.
+    SpecializeBy.specialize_by_assumption.
     eexists;
       sepsimpl;
       eauto.
-    match goal with H : _ |- _ =>
-                    rewrite word.of_Z_unsigned in H end.
-    assumption.
   Qed.
 
 End Compile.
