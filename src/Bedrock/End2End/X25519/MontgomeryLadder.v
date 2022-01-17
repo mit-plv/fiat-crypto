@@ -44,11 +44,6 @@ Definition felem_cswap : func :=
            (cmd.store access_size.word (expr.var ptr2) (expr.var tmp1))
            (cmd.store access_size.word (expr.var ptr1) (expr.var tmp2)))))
     (cmd.skip))).
-Definition fe25519_copy : func :=
-  let pout := "pout" in
-  let px := "px" in
-  ("fe25519_copy", ([pout; px], [],
-   cmd.set pout (expr.var px))).
 Definition fe25519_small_literal : func :=
   let pout := "pout" in
   let x := "x" in
