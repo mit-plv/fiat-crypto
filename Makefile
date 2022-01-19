@@ -274,6 +274,8 @@ BEDROCK2_WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/bedrock2_word_by_word_mo
 
 C_EXTRA_ARGS := --inline-internal --static --use-value-barrier
 
+JSON_EXTRA_ARGS := --emit-all-casts
+
 BEDROCK2_ARGS := --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select --no-field-element-typedefs
 BEDROCK2_EXTRA_CFLAGS := -Wno-error=unused-but-set-variable
 
@@ -664,7 +666,7 @@ only-test-go-files: $(addprefix only-test-,$(ALL_GO_FILES))
 $(ALL_JSON_FILES) : $(JSON_DIR)%.json : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok1 $@.ok2
-	$(HIDE)(($(TIMER) $($($*_BINARY_NAME)) --lang JSON $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok1) | jq -s . && touch $@.ok2) > $@.tmp
+	$(HIDE)(($(TIMER) $($($*_BINARY_NAME)) --lang JSON $(JSON_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok1) | jq -s . && touch $@.ok2) > $@.tmp
 	$(HIDE)(rm $@.ok1 $@.ok2 && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_JSON_FILES))

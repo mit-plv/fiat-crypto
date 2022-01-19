@@ -66,6 +66,9 @@ Module Compilers.
     (** Which adc/sbb bitwidth-split-carries should be relaxed to bitwidth *)
     Class relax_adc_sbb_return_carry_to_bitwidth_opt := relax_adc_sbb_return_carry_to_bitwidth : list Z.
     Typeclasses Opaque relax_adc_sbb_return_carry_to_bitwidth_opt.
+    (** Do language-specific cast adjustment *)
+    Class language_specific_cast_adjustment_opt := language_specific_cast_adjustment : bool.
+    Typeclasses Opaque language_specific_cast_adjustment_opt.
     Class language_naming_conventions_opt :=
       { public_function_naming_convention : option capitalization_convention
         ; private_function_naming_convention : option capitalization_convention
@@ -131,12 +134,14 @@ Module Compilers.
 
     Class output_options_opt :=
       { skip_typedefs_ :> skip_typedefs_opt
-        ; relax_adc_sbb_return_carry_to_bitwidth_ :> relax_adc_sbb_return_carry_to_bitwidth_opt
+      ; relax_adc_sbb_return_carry_to_bitwidth_ :> relax_adc_sbb_return_carry_to_bitwidth_opt
+      ; language_specific_cast_adjustment_ :> language_specific_cast_adjustment_opt
       }.
 
     Definition default_output_options : output_options_opt
       := {| skip_typedefs_ := true
-            ; relax_adc_sbb_return_carry_to_bitwidth_ := []
+         ; relax_adc_sbb_return_carry_to_bitwidth_ := []
+         ; language_specific_cast_adjustment_ := true
          |}.
   End Options.
 
