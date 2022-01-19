@@ -495,7 +495,7 @@ Section __.
       list_Z_bounded_by (@max_bounds width n) x.
     Proof.
       apply relax_list_Z_bounded_by. cbn.
-      cbv [bounds Primitives.saturated_bounds max_bounds list_Z_tighter_than].
+      cbv [bounds Primitives.saturated_bounds Primitives.word_bound max_bounds list_Z_tighter_than].
       induction n; [ reflexivity | ].
       cbn [repeat FoldBool.fold_andb_map ZRange.lower ZRange.upper max_range].
       apply Bool.andb_true_iff. split; [ | solve [ auto ] ].
