@@ -61,8 +61,9 @@ Definition to_upper (s : string) : string := map Ascii.to_upper s.
 
 (** *** string reversal *)
 (** [rev s] reverses the string [s] *)
+(** Note that we use [rev_append . []] for non-quadratic behavior *)
 Definition rev : string -> string
-  := lift_list_function (@List.rev _).
+  := lift_list_function (fun s => List.rev_append s nil).
 
 Lemma rev_step s
   : rev s
@@ -70,7 +71,7 @@ Lemma rev_step s
       | EmptyString => EmptyString
       | String x xs => rev xs ++ String x EmptyString
       end.
-Proof. destruct s; cbn; rewrite ?string_of_list_ascii_app; reflexivity. Qed.
+Proof. destruct s; cbn; rewrite ?List.rev_append_rev, ?List.app_nil_r, ?string_of_list_ascii_app; reflexivity. Qed.
 
 Fixpoint take_while_drop_while (f : ascii -> bool) (s : string) : string * string
   := match s with
@@ -190,7 +191,7 @@ Section strip_prefix_cps.
   Lemma strip_prefix_cps_found sepch sep s2 s2'
         (Hfound : String sepch sep ++ s2' = s2)
     : strip_prefix_cps sepch sep s2 = found s2'.
-  Proof.
+  Proof using Type.
     revert sepch sep Hfound; induction s2 as [|ch s2 IHs2]; intros; cbn in Hfound; inversion Hfound; clear Hfound; subst.
     destruct sep; cbn [strip_prefix_cps]; now rewrite Ascii.eqb_refl; auto.
   Qed.
@@ -409,4 +410,4 @@ Fixpoint strip_leading_newlines (s : list string) : list string
      end.
 
 Definition strip_trailing_newlines (s : list string) : list string
-  := List.rev (strip_leading_newlines (List.rev s)).
+  := List.rev_append (strip_leading_newlines (List.rev_append s nil)) nil.
