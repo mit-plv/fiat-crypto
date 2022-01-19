@@ -132,7 +132,7 @@ NOBIGMEM_UNMADE_VOFILES := \
 REGULAR_VOFILES := $(filter-out $(EXCLUDE_PATTERN) $(SPECIAL_VOFILES),$(VOFILES))
 REGULAR_EXCEPT_BEDROCK2_VOFILES := $(filter-out $(BEDROCK2_FILES_PATTERN),$(REGULAR_VOFILES))
 BEDROCK2_VOFILES := $(filter $(BEDROCK2_FILES_PATTERN),$(REGULAR_VOFILES))
-PRE_STANDALONE_PRE_VOFILES := $(filter src/Standalone%.vo,$(REGULAR_VOFILES))
+PRE_STANDALONE_PRE_VOFILES := $(filter src/Standalone%.vo src/Bedrock/Standalone%.vo,$(REGULAR_VOFILES))
 UTIL_PRE_VOFILES := $(filter src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(REGULAR_VOFILES))
 SOME_EARLY_VOFILES := \
   src/Arithmetic/Core.vo \
