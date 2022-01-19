@@ -806,8 +806,10 @@ Section __.
           {ignore_unique_asm_names : ignore_unique_asm_names_opt}
           (n : nat)
           (machine_wordsize : machine_wordsize_opt).
+  Definition word_bound : ZRange.type.interp base.type.Z
+    := r[0 ~> 2^machine_wordsize-1]%zrange.
   Definition saturated_bounds : list (ZRange.type.option.interp base.type.Z)
-    := List.repeat (Some r[0 ~> 2^machine_wordsize-1]%zrange) n.
+      := List.repeat (Some word_bound) n.
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
   Definition possible_values_of_machine_wordsize
@@ -961,6 +963,24 @@ Section __.
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct false s)).
+
+  Definition copy
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         reified_id_gen
+         (Some saturated_bounds, tt)%zrange
+         (Some saturated_bounds).
+  Definition scopy (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "copy" copy
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a multi-limb identity function."]%string)
+             (copy_correct saturated_bounds)).
+
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd machine_wordsize_opt] in *; Bool.split_andb; Z.ltb_to_lt; lia.
   Hint Rewrite
@@ -1031,6 +1051,14 @@ Section __.
   Proof using Type. prove_correctness I. Qed.
 
   Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
+  Lemma copy_correct res
+        (Hres : copy = Success res)
+    : copy_correct saturated_bounds (Interp res).
+  Proof using Type. prove_correctness I. Qed.
+
+  Lemma Wf_copy res (Hres : copy = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
   Section for_stringification.
@@ -1248,6 +1276,7 @@ Module Export Hints.
        cmovznz
        cmovznz_by_mul
        selectznz
+       copy
   : wf_op_cache.
   Hint Immediate
        Wf_mulx
@@ -1257,5 +1286,6 @@ Module Export Hints.
        Wf_cmovznz
        Wf_cmovznz_by_mul
        Wf_selectznz
+       Wf_copy
   : wf_op_cache.
 End Hints.

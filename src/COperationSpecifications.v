@@ -171,6 +171,19 @@ Module Primitives.
            -> cmovznz cond z nz = (if Decidable.dec (cond = 0) then z else nz)
               /\ is_bounded_by0 rs (cmovznz cond z nz) = true
        end.
+
+  Section copy.
+    Context (n : nat)
+            (saturated_bounds : list (option zrange))
+            (length_saturated_bounds : length saturated_bounds = n).
+
+    Definition copy_correct
+               (copy : list Z -> list Z)
+      := forall x,
+        list_Z_bounded_by saturated_bounds x
+        -> copy x = x
+           /\ list_Z_bounded_by saturated_bounds (copy x).
+  End copy.
 End Primitives.
 
 Module selectznz.
@@ -191,7 +204,6 @@ Module selectznz.
            /\ list_Z_bounded_by saturated_bounds (selectznz cond x y).
   End __.
 End selectznz.
-
 
 Module BaseConversion.
   Section __.
@@ -222,7 +234,8 @@ Module Solinas.
   Include selectznz.
 
   Section __.
-    Context (wt : nat -> Z)
+    Context (bitwidth : Z) (* only for encode_word *)
+            (wt : nat -> Z)
             (n : nat)
             (n_bytes : nat)
             (m : Z)
@@ -241,6 +254,8 @@ Module Solinas.
       := Partition.partition (weight 8 1) n_bytes (s-1).
     Let prime_bytes_bounds : list (option zrange)
       := List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list.
+    Local Notation word_bound
+      := r[0~>(2^bitwidth - 1)]%zrange.
     Let prime_bound : zrange
       := r[0~>(m - 1)]%zrange.
 
@@ -357,6 +372,13 @@ Module Solinas.
         -> eval (encode x) mod m = x mod m
            /\ list_Z_bounded_by tight_bounds (encode x).
 
+    Definition encode_word_correct
+               (encode_word : Z -> list Z)
+      := forall x,
+        is_bounded_by0 word_bound x = true
+        -> eval (encode_word x) mod m = x mod m
+           /\ list_Z_bounded_by tight_bounds (encode_word x).
+
     Section ring.
       Context carry_mul (Hcarry_mul : carry_mul_correct carry_mul)
               add       (Hadd       :       add_correct add)
@@ -417,7 +439,7 @@ Module Solinas.
       Qed.
 
       Lemma Good : GoodT.
-      Proof.
+      Proof using Hadd Hcarry Hcarry_mul Hencode Hone Hopp Hrelax Hsub Hzero m_pos.
         split_and; simpl in *.
         repeat match goal with
                | [ H : context[andb _ true] |- _ ] => setoid_rewrite andb_true_r in H
@@ -494,6 +516,8 @@ Module WordByWordMontgomery.
 
     Let prime_bound : zrange
       := r[0~>(m - 1)]%zrange.
+    Local Notation prime_word_bound (* fits in a single word, and smaller than the prime *)
+      := r[0~>(Z.min m (2^bitwidth) - 1)]%zrange.
 
     Definition from_montgomery_correct
       := forall v,
@@ -561,6 +585,13 @@ Module WordByWordMontgomery.
         is_bounded_by0 prime_bound x = true
         -> eval (from_montgomery (encode x)) mod m = x mod m
            /\ valid (encode x).
+
+    Definition encode_word_correct
+               (encode_word : Z -> list Z)
+      := forall x,
+        is_bounded_by0 prime_word_bound x = true
+        -> eval (from_montgomery (encode_word x)) mod m = x mod m
+           /\ valid (encode_word x).
 
     Definition nonzero_correct
                (nonzero : list Z -> Z)
@@ -687,7 +718,7 @@ Module WordByWordMontgomery.
       Qed.
 
       Lemma Good : GoodT.
-      Proof.
+      Proof using Hadd Hencode Hmul Hone Hopp Hsub Hzero m_pos.
         split_and; simpl in *.
         repeat match goal with
                | [ H : context[andb _ true] |- _ ] => setoid_rewrite andb_true_r in H
