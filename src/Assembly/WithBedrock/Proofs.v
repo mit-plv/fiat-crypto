@@ -34,6 +34,10 @@ Require Import Crypto.Util.ZUtil.Land.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
+Require Import Crypto.Util.ZUtil.Ones.
+Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
+Require Import Crypto.Util.ZUtil.LandLorBounds.
+Require Import Crypto.Util.ZUtil.Tactics.PeelLe.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.HasBody.
@@ -2716,7 +2720,7 @@ Definition R_list_scalar_or_array
 
 Definition get_asm_reg (m : machine_state) (reg_available : list REG) : list Z
   := List.map (Semantics.get_reg m) reg_available.
-Print Semantics.get_reg.
+
 Definition R_runtime_input
            (frame : Semantics.mem_state -> Prop)
            (output_types : type_spec) (runtime_inputs : list (Z + list Z))
@@ -2834,6 +2838,7 @@ Lemma init_symbolic_state_G_ok m G d G' ss
       (Hframe : frame m)
       (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list 16 m.(machine_reg_state)))
   : R frame G' ss m
+    /\ (forall regs, Forall (fun v => Option.is_Some v = true) (List.map (get_reg ss.(symbolic_reg_state)) (List.map reg_index regs)))
     /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
@@ -2844,6 +2849,17 @@ Proof.
   repeat match goal with |- _ /\ _ => split end; try eassumption; try reflexivity.
   2: { cbv [Tuple.repeat R_flags Tuple.append Tuple.fieldwise Tuple.fieldwise' R_flag]; cbn [fst snd];
        repeat apply conj; congruence. }
+  2: { intros; cbn [List.map]; cbv [get_reg symbolic_reg_state].
+       rewrite !Forall_map, Forall_forall; intros.
+       unshelve erewrite <- Tuple.nth_default_to_list, Tuple.from_list_default_eq, Tuple.to_list_from_list.
+       { rewrite map_length.
+         erewrite length_Forall2, Tuple.length_to_list
+           by (eapply dag_gensym_n_G_ok; [ | eta_expand; reflexivity | ]; assumption).
+         reflexivity. }
+       erewrite map_nth_default with (x:=0%N); [ reflexivity | ].
+       erewrite length_Forall2, Tuple.length_to_list
+         by (eapply dag_gensym_n_G_ok; [ | eta_expand; reflexivity | ]; assumption).
+       clear; cbv [reg_index]; break_innermost_match; lia. }
   set (v := dag_gensym_n_G _ _) in *; clearbody v; destruct_head'_prod; cbn [fst snd] in *.
   eassert (H' : Tuple.to_list 16 m.(machine_reg_state) = _).
   { repeat match goal with H : _ |- _ => clear H end.
@@ -2871,6 +2887,7 @@ Lemma init_symbolic_state_ok m G d
       (Hframe : frame m)
   : exists G',
     R frame G' ss m
+    /\ (forall regs, Forall (fun v => Option.is_Some v = true) (List.map (get_reg ss.(symbolic_reg_state)) (List.map reg_index regs)))
     /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
@@ -2878,8 +2895,86 @@ Proof.
   eexists; eapply init_symbolic_state_G_ok; try eassumption.
   eta_expand; reflexivity.
 Qed.
+
+Lemma Forall2_get_reg_of_R G d r mr regs
+      (Hwide : Forall (fun reg => let '(_, _, sz) := index_and_shift_and_bitcount_of_reg reg in sz = 64%N) regs)
+      (Hknown : Forall (fun v => Option.is_Some v = true) (List.map (get_reg r) (List.map reg_index regs)))
+      (Hreg : R_regs G d r mr)
+  : Forall2 (option_eq (eval_idx_Z G d))
+            (List.map (get_reg r) (List.map reg_index regs))
+            (List.map Some (List.map (Semantics.get_reg mr) regs)).
+Proof.
+  induction regs as [|reg regs IH]; cbn [List.map] in *;
+    inversion Hwide; clear Hwide; inversion Hknown; clear Hknown; subst;
+    constructor; auto; clear dependent regs; [].
+  assert (reg_offset reg = 0%N) by now destruct reg.
+  assert (reg_index reg < length (Tuple.to_list _ r))
+    by now rewrite Tuple.length_to_list; destruct reg; cbv [reg_index]; lia.
+  cbv [get_reg Semantics.get_reg R_regs] in *.
+  rewrite Tuple.fieldwise_to_list_iff in Hreg.
+  erewrite @Forall2_forall_iff in Hreg by now rewrite !Tuple.length_to_list.
+  specialize (Hreg (reg_index reg) ltac:(assumption)); rewrite !@Tuple.nth_default_to_list in *.
+  cbv [index_and_shift_and_bitcount_of_reg] in *.
+  generalize dependent (reg_size reg); intros; subst.
+  generalize dependent (reg_offset reg); intros; subst.
+  change (Z.of_N 0) with 0%Z.
+  change (Z.of_N 64) with 64%Z.
+  rewrite Z.shiftr_0_r.
+  do 2 match goal with
+       | [ H : context[Tuple.nth_default ?d ?i ?l] |- context[Tuple.nth_default ?d' ?i' ?l] ]
+         => is_evar d; unify d d'; unify i i'
+       end.
+  cbv [R_reg] in Hreg.
+  destruct Hreg as [Hreg Hreg'].
+  rewrite <- Hreg'.
+  cbv [option_eq eval_idx_Z Option.is_Some] in *.
+  break_innermost_match; try discriminate; [].
+  now apply Hreg.
+Qed.
+
+Lemma get_reg_bounded mr regs
+  : Forall (fun v : Z => (0 <= v < 2 ^ 64)%Z)
+           (List.map (Semantics.get_reg mr) regs).
+Proof.
+  rewrite Forall_map, Forall_forall; intros reg ?.
+  assert ((reg_size reg <= 64)%N)
+    by now clear; destruct reg; cbv [reg_index reg_size]; lia.
+  cbv [Semantics.get_reg index_and_shift_and_bitcount_of_reg] in *.
+  rewrite Z.land_nonneg, Z.shiftr_nonneg.
+  split; [ right; apply Z.ones_nonneg; lia | ].
+  eapply Z.le_lt_trans;
+    [ rewrite Z.land_comm; apply Z.land_le; intros; apply Z.ones_nonneg
+    | rewrite Z.ones_equiv, Z.lt_pred_le; Z.peel_le ];
+    lia.
+Qed.
+
+Lemma reg_all_set_set_reg r regs i v
+  : Forall (fun v => Option.is_Some v = true) (List.map (get_reg r) regs)
+    -> Forall (fun v => Option.is_Some v = true)
+              (List.map (get_reg (set_reg r i v)) regs).
+Proof.
+  rewrite !Forall_map; apply Forall_impl; intro.
+  rewrite get_reg_set_reg_full.
+  cbv [Option.is_Some]; break_innermost_match; congruence.
+Qed.
+
+Lemma reg_all_set_fold_left {A} r regs f (ls : list A)
+      (Hf : forall rst v,
+          List.In v ls
+          -> Forall (fun v => Option.is_Some v = true) (List.map (get_reg rst) regs)
+          -> Forall (fun v => Option.is_Some v = true) (List.map (get_reg (f rst v)) regs))
+  : Forall (fun v => Option.is_Some v = true) (List.map (get_reg r) regs)
+    -> Forall (fun v => Option.is_Some v = true)
+              (List.map (get_reg (fold_left f ls r))
+                        regs).
+Proof.
+  revert r; induction ls as [|x xs IH]; intros; cbn [fold_left]; auto.
+  apply IH; break_innermost_match; intros; apply Hf; cbn [List.In] in *; auto.
+Qed.
+
 Import Coq.Strings.String.
 Import Coq.Lists.List.
+Import Crypto.Util.Option.
 Axiom TODO : string -> Prop.
 Axiom todo : forall s, TODO s.
 Lemma Forall2_rets_of_R_mem {A} G frame d mem_st m' idxs base_len_base_vals rets
@@ -3063,13 +3158,44 @@ Proof.
                       [
                       | lazymatch goal with
                         | [ |- Forall2 (option_eq (eval_idx_Z _ _))
-                                       (List.map (get_reg _) (List.map reg_index callee_saved_registers))
+                                       (List.map (get_reg _) (List.map reg_index _))
                                        (List.map Some _) ]
-                          => destruct_head' symbolic_state; cbn [Symbolic.symbolic_reg_state Symbolic.dag_state] in *; subst
+                          => destruct_head' symbolic_state; cbn [Symbolic.symbolic_reg_state Symbolic.dag_state] in *; subst;
+                             idtac "TODO: this is actually wrong, because we're not guaranteed that the symeval won't clear registers";
+                             eapply Forall2_get_reg_of_R;
+                             [ lazymatch goal with
+                               | [ |- R_regs _ _ _ _ ]
+                                 => match goal with H : R _ _ _ _ |- _ => try eapply H end
+                               | [ |- Forall (fun v => Option.is_Some v = true)
+                                             (List.map (get_reg _) _) ]
+                                 => repeat
+                                      match goal with
+                                      | [ |- Forall (fun v => Option.is_Some v = true)
+                                                    (List.map (get_reg (set_reg _ _ _)) _) ]
+                                        => apply reg_all_set_set_reg
+                                      | [ |- Forall (fun v => Option.is_Some v = true)
+                                                    (List.map (get_reg (fold_left _ _ _)) _) ]
+                                        => apply reg_all_set_fold_left; intros
+                                      | [ |- context[let '(_, _) := ?x in _] ]
+                                        => is_var x; destruct x
+                                      | [ |- Forall (fun v => Option.is_Some v = true)
+                                                    (List.map (get_reg _) _) ]
+                                        => solve [ auto | assumption ]
+                                      end
+                               | _ => idtac
+                               end .. ];
+                             try assumption
                         | [ |- gensym_dag_ok _ _ ] => eassumption
                         | _ => idtac
                         end .. ];
-                      [ | idtac "TODO" .. ];
+                      [
+                      | lazymatch goal with
+                        | [ |- Forall (fun v : Z => (0 <= v < 2 ^ 64)%Z)
+                                      (List.map (Semantics.get_reg _) _) ]
+                          => apply get_reg_bounded
+                        | _ => idtac
+                        end .. ];
+                      [ | match goal with |- ?G => idtac "TODO" G end .. ];
                       debug_run ltac:(fun _ => idtac "get callee_saved_registers end")
                  | [ H : SymexLines _ _ = Success _ |- exists m' : machine_state, _ ]
                    => debug_run ltac:(fun _ => idtac "SymexLines start");
@@ -3082,7 +3208,7 @@ Proof.
                                  => unique assert (gensym_dag_ok G s) by (destruct s; apply H)
                                end
                       | clear H .. ];
-                      [ | idtac "TODO" .. ];
+                      [ | match goal with |- ?G => idtac "TODO" G end .. ];
                       debug_run ltac:(fun _ => idtac "SymexLines end")
                  | [ H : LoadOutputs _ _ _ = _ |- exists runtime_rets : list (Z + list Z), _ ]
                    => debug_run ltac:(fun _ => idtac "LoadOutputs start");
@@ -3099,6 +3225,12 @@ Proof.
                  end ].
   eexists.
   repeat (apply conj; eauto 10; []).
+  all: let do_with ev := (let H := fresh in pose ev as H; instantiate (1:=ltac:(progress (repeat match goal with H : symbolic_state |- _ => clear dependent H | [ H : list Z |- _ ] => clear dependent H end))) in (value of H); subst H) in
+       repeat match goal with
+              | [ H : context[?ev] |- _ ] => is_evar ev; do_with ev
+              | [ H := context[?ev] |- _ ] => is_evar ev; do_with ev
+              | [ |- context[?ev] ] => is_evar ev; do_with ev
+              end.
   move rets at bottom.
 Admitted.
 
