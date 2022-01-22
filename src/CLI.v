@@ -313,6 +313,8 @@ Module ForExtraction.
     := ([Arg.long_key "no-primitives"], Arg.Unit, ["Suppress the generation of the bodies of primitive operations such as addcarryx, subborrowx, cmovznz, mulx, etc."]).
   Definition no_field_element_typedefs_spec : named_argT
     := ([Arg.long_key "no-field-element-typedefs"], Arg.Unit, ["Do not use type aliases for field elements based on bounds, Montgomery-domain vs not Montgomery-domain, etc."]).
+  Definition emit_all_casts_spec : named_argT
+    := ([Arg.long_key "emit-all-casts"], Arg.Unit, ["Rather than performing language-specific cast-adjustment, just emit all casts that are present in the intermediate representation, annotating all constructions."]).
   Definition relax_primitive_carry_to_bitwidth_spec : named_argT
     := ([Arg.long_key "relax-primitive-carry-to-bitwidth"],
         Arg.Custom (parse_string_and parse_comma_list_Z) "ℤ,ℤ,…",
@@ -585,6 +587,7 @@ Module ForExtraction.
         ; value_barrier_spec
         ; no_primitives_spec
         ; no_field_element_typedefs_spec
+        ; emit_all_casts_spec
         ; relax_primitive_carry_to_bitwidth_spec
         ; cmovznz_by_mul_spec
         ; shiftr_avoid_uint1_spec
@@ -638,6 +641,7 @@ Module ForExtraction.
              , value_barrierv
              , no_primitivesv
              , no_field_element_typedefsv
+             , emit_all_castsv
              , relax_primitive_carry_to_bitwidthv
              , cmovznz_by_mulv
              , shiftr_avoid_uint1v
@@ -713,7 +717,8 @@ Module ForExtraction.
                   ; emit_primitives := negb (to_bool no_primitivesv)
                   ; output_options :=
                       {| skip_typedefs_ := to_bool no_field_element_typedefsv
-                         ; relax_adc_sbb_return_carry_to_bitwidth_ := to_Z_flat_list relax_primitive_carry_to_bitwidthv
+                      ; relax_adc_sbb_return_carry_to_bitwidth_ := to_Z_flat_list relax_primitive_carry_to_bitwidthv
+                      ; language_specific_cast_adjustment_ := negb (to_bool emit_all_castsv)
                       |}
                   ; assembly_conventions :=
                     {| assembly_calling_registers_ := to_reg_list asm_regv
