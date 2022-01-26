@@ -37,9 +37,9 @@ src/Arithmetic/BYInv.v
 src/Arithmetic/BarrettReduction.v
 src/Arithmetic/BaseConversion.v
 src/Arithmetic/Core.v
+src/Arithmetic/FLia.v
 src/Arithmetic/FancyMontgomeryReduction.v
 src/Arithmetic/Freeze.v
-src/Arithmetic/FLia.v
 src/Arithmetic/ModOps.v
 src/Arithmetic/ModularArithmeticPre.v
 src/Arithmetic/ModularArithmeticTheorems.v
@@ -238,7 +238,6 @@ src/Util/AutoRewrite.v
 src/Util/Bool.v
 src/Util/CPSNotations.v
 src/Util/CPSUtil.v
-src/Util/ChangeInAll.v
 src/Util/Comparison.v
 src/Util/Compose.v
 src/Util/Curry.v
