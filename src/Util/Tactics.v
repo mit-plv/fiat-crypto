@@ -4,6 +4,7 @@ Require Export Crypto.Util.Tactics.AllInstances.
 Require Export Crypto.Util.Tactics.AllSuccesses.
 Require Export Crypto.Util.Tactics.AppendUnderscores.
 Require Export Crypto.Util.Tactics.BreakMatch.
+Require Export Crypto.Util.Tactics.CPSId.
 Require Export Crypto.Util.Tactics.CacheTerm.
 Require Export Crypto.Util.Tactics.ChangeInAll.
 Require Export Crypto.Util.Tactics.ClearAll.
@@ -13,7 +14,6 @@ Require Export Crypto.Util.Tactics.ConstrFail.
 Require Export Crypto.Util.Tactics.Contains.
 Require Export Crypto.Util.Tactics.ConvoyDestruct.
 Require Export Crypto.Util.Tactics.CountBinders.
-Require Export Crypto.Util.Tactics.CPSId.
 Require Export Crypto.Util.Tactics.DebugPrint.
 Require Export Crypto.Util.Tactics.DestructHead.
 Require Export Crypto.Util.Tactics.DestructHyps.
@@ -23,10 +23,12 @@ Require Export Crypto.Util.Tactics.ESpecialize.
 Require Export Crypto.Util.Tactics.ETransitivity.
 Require Export Crypto.Util.Tactics.EvarExists.
 Require Export Crypto.Util.Tactics.EvarNormalize.
+Require Export Crypto.Util.Tactics.FindHyp.
 Require Export Crypto.Util.Tactics.Forward.
 Require Export Crypto.Util.Tactics.GetGoal.
 Require Export Crypto.Util.Tactics.HasBody.
 Require Export Crypto.Util.Tactics.Head.
+Require Export Crypto.Util.Tactics.HeadUnderBinders.
 Require Export Crypto.Util.Tactics.MoveLetIn.
 Require Export Crypto.Util.Tactics.NormalizeCommutativeIdentifier.
 Require Export Crypto.Util.Tactics.Not.
@@ -36,6 +38,7 @@ Require Export Crypto.Util.Tactics.PrintContext.
 Require Export Crypto.Util.Tactics.PrintGoal.
 Require Export Crypto.Util.Tactics.Revert.
 Require Export Crypto.Util.Tactics.RewriteHyp.
+Require Export Crypto.Util.Tactics.RunTacticAsConstr.
 Require Export Crypto.Util.Tactics.SetEvars.
 Require Export Crypto.Util.Tactics.SetoidSubst.
 Require Export Crypto.Util.Tactics.SideConditionsBeforeToAfter.

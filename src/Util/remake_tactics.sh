@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+cd "$( dirname "${BASH_SOURCE[0]}" )"
+
 cat > Tactics.v <<EOF
 (** * Generic Tactics *)
 Require Export Crypto.Util.FixCoqMistakes.
