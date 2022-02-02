@@ -3,6 +3,9 @@ Require Import Rupicola.Lib.Api.
 Require Import Crypto.Algebra.Hierarchy.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Synthesis.Generic.Bignum.
+Require Import Crypto.Bedrock.Field.Common.Arrays.MaxBounds.
+Require Import Crypto.COperationSpecifications.
+Require Import Crypto.Util.ZUtil.ModInv.
 Local Open Scope Z_scope.
 Import bedrock2.Memory.
 
@@ -19,6 +22,8 @@ Class FieldParameters :=
     mul : string; add : string; sub : string; opp : string;
     square : string; scmula24 : string; inv : string;
     from_bytes : string; to_bytes : string;
+    from_mont : string; to_mont : string; (*only for word-by-word Montgomery*)
+    select_znz : string;
 
     (* felem_small_literal p x :=
          store p (expr.literal x);
@@ -43,6 +48,15 @@ Class FieldRepresentation
        :=
   { felem := list word;
     feval : felem -> F M_pos;
+    (*  
+        TODO: do we actually need this?
+        feval_alt is used only by word-by-word Montgomery,
+        as it needs to distinguish between evaulation with/without
+        pulling the argument out of Montgomery domain.
+        For Solinas, this is the same as feval
+    *)
+    feval_alt : felem -> F M_pos; 
+
     feval_bytes : list byte -> F M_pos;
     felem_size_in_words : nat;
     felem_size_in_bytes : Z := Z.of_nat felem_size_in_words * bytes_per_word width; (* for stack allocation *)
@@ -208,7 +222,7 @@ Section FunctionSpecs.
         /\ (FElem pout out * Rr)%sep mem;
       ensures tr' mem' :=
         tr = tr' /\
-        exists X, feval X = feval_bytes bs
+        exists X, feval_alt X = feval_bytes bs
              /\ bounded_by tight_bounds X
              /\ (FElem pout X * Rr)%sep mem' }.
 
@@ -220,7 +234,7 @@ Section FunctionSpecs.
         /\ (FElemBytes pout out * Rr)%sep mem;
       ensures tr' mem' :=
         tr = tr'
-        /\ let bs := Z_to_bytes (F.to_Z (feval x))
+        /\ let bs := Z_to_bytes (F.to_Z (feval_alt x))
                                 encoded_felem_size_in_bytes in
            (FElemBytes pout bs * Rr)%sep mem' }.
 
@@ -241,6 +255,41 @@ Section FunctionSpecs.
         exists X, feval X = F.of_Z _ (word.unsigned x)
              /\ bounded_by tight_bounds X
              /\ (FElem pout X * R)%sep mem' }.
+
+    Local Notation bit_range := {|ZRange.lower := 0; ZRange.upper := 1|}.
+
+    Instance spec_of_selectznz  : spec_of select_znz :=
+    fnspec! select_znz (pout pc px py : word) / out Rout Rx Ry x y,
+    {
+        requires tr mem :=
+        (*Are this list_Z_bounded_by's necessary? Can this information be inferred from FElem?*)
+        list_Z_bounded_by (@max_bounds width felem_size_in_words) (List.map word.unsigned x) /\
+        list_Z_bounded_by (@max_bounds width felem_size_in_words) (List.map word.unsigned y) /\
+        list_Z_bounded_by (@max_bounds width felem_size_in_words) (List.map word.unsigned out) /\
+        (FElem pout out * Rout)%sep mem /\
+        (FElem px x * Rx)%sep mem /\
+        (FElem py y * Ry)%sep mem /\
+        ZRange.is_bounded_by_bool (word.unsigned pc) bit_range = true;
+        ensures tr' mem' :=
+        if ((word.unsigned pc) =? 1)
+            then ((FElem pout y * Rout)%sep mem')
+            else ((FElem pout x * Rout)%sep mem')
+    }.
+
+    (*Parameters for word-by-word Montgomery arithmetic*)
+    Definition r := 2 ^ width.
+    Definition m' := Z.modinv (- M) r.
+    Definition r' := Z.modinv (r) M.
+  
+    Definition from_mont_model x := F.mul x (@F.of_Z M_pos (r' ^ (Z.of_nat felem_size_in_words)%Z)).
+    Definition to_mont_model x := F.mul x (@F.of_Z M_pos (r ^ (Z.of_nat felem_size_in_words)%Z)).
+  
+    Instance un_from_mont : UnOp from_mont :=
+      {| un_model := from_mont_model; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.
+  
+    Instance un_to_mont : UnOp to_mont :=
+      {| un_model := to_mont_model; un_xbounds := tight_bounds; un_outbounds := loose_bounds|}.
+
 End FunctionSpecs.
 
 Existing Instances spec_of_UnOp spec_of_BinOp bin_mul un_square bin_add bin_sub

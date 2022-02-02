@@ -202,7 +202,19 @@ Module selectznz.
         -> list_Z_bounded_by saturated_bounds y
         -> eval (selectznz cond x y) = (if Decidable.dec (cond = 0) then eval x else eval y)
            /\ list_Z_bounded_by saturated_bounds (selectznz cond x y).
+
+    Definition selectznz_correct_alt
+        (selectznz : Z -> list Z -> list Z -> list Z)
+      := forall cond x y,
+      is_bounded_by0 r[0~>1] cond = true
+      -> list_Z_bounded_by saturated_bounds x
+      -> list_Z_bounded_by saturated_bounds y
+      -> (selectznz cond x y) = (if Decidable.dec (cond = 0) then x else y)
+      /\ list_Z_bounded_by saturated_bounds (selectznz cond x y).
+         
   End __.
+
+
 End selectznz.
 
 Module BaseConversion.
@@ -620,6 +632,13 @@ Module WordByWordMontgomery.
            n
            saturated_bounds
            selectznz.
+
+    Definition selectznz_correct_alt
+                (selectznz : Z -> list Z -> list Z -> list Z)
+      : Prop
+      := selectznz.selectznz_correct_alt
+            saturated_bounds
+            selectznz.
 
     (* Bernstein-Yang inversion *)
     Definition msat_correct

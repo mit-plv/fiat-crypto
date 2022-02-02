@@ -1,4 +1,5 @@
 Require Rupicola.Lib.Tactics.
+Require Import Coq.micromega.Lia.
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List. (* after strings *)
 Require Import Coq.QArith.QArith.
@@ -88,22 +89,25 @@ Section WithParameters.
   Context {ok : Types.ok}
           {field_parameters : FieldParameters}.
   Context (n n_bytes : nat) (weight : nat -> Z)
-          (loose_bounds tight_bounds byte_bounds
-           : list (option ZRange.zrange))
+          (bounds : Type)
+          (loose_bounds tight_bounds byte_bounds : bounds)
+          (list_in_bounds : bounds -> list Z -> Prop)
           (relax_bounds :
              forall X,
-               list_Z_bounded_by tight_bounds X ->
-               list_Z_bounded_by loose_bounds X).
+               list_in_bounds tight_bounds X ->
+               list_in_bounds loose_bounds X)
+          (eval_transformation : list Z -> list Z)
+          (eval_bytes_transformation : list Z -> list Z).
   Context (inname_gen_varname_gen_disjoint :
              disjoint default_inname_gen varname_gen)
           (outname_gen_varname_gen_disjoint :
              disjoint default_outname_gen varname_gen).
   Local Instance field_representation : FieldRepresentation
-    := @frep _ BW _ _ field_parameters n n_bytes weight loose_bounds tight_bounds
-             byte_bounds.
+    := @frep _ BW _ _ field_parameters n n_bytes weight bounds list_in_bounds loose_bounds tight_bounds
+             byte_bounds eval_transformation eval_bytes_transformation.
   Local Instance field_representation_ok : FieldRepresentation_ok
-    := frep_ok n n_bytes weight loose_bounds tight_bounds byte_bounds
-               relax_bounds.
+    := frep_ok n n_bytes weight bounds list_in_bounds loose_bounds tight_bounds byte_bounds
+               relax_bounds _ _.
 
   Lemma FElem_array_truncated_scalar_iff1 px x :
     Lift1Prop.iff1
@@ -315,6 +319,16 @@ Section WithParameters.
            | |- _ /\ _ => eexists
            end.
 
+    Ltac solve_length x Hlength := rewrite map_length;
+    match goal with
+        | H : (FElem _ x * _)%sep _ |- _ => cbv [FElem Bignum.Bignum] in H; sepsimpl_hyps
+        | _ => idtac
+    end;
+    match goal with
+        | H : Datatypes.length x = _ |- _ => rewrite H
+        | _ => idtac
+    end; rewrite Hlength; auto.
+
   Section ListBinop.
     Context {res : API.Expr (type_listZ -> type_listZ -> type_listZ)}
             (res_valid :
@@ -330,14 +344,14 @@ Section WithParameters.
                                        (map word.unsigned y)))
                 = bin_model (feval x) (feval y))
             (res_bounds : forall x y,
-                list_Z_bounded_by bin_xbounds x ->
-                list_Z_bounded_by bin_ybounds y ->
-                list_Z_bounded_by bin_outbounds (API.interp (res _) x y))
+                list_in_bounds bin_xbounds x ->
+                list_in_bounds bin_ybounds y ->
+                list_in_bounds bin_outbounds (API.interp (res _) x y))
 
-            (outbounds_tighter_than_max : list_Z_tighter_than bin_outbounds ((@max_bounds width) n))
-            (xbounds_length : length bin_xbounds = n)
-            (ybounds_length : length bin_ybounds = n)
-            (outbounds_length : length bin_outbounds = n).
+            (outbounds_tighter_than_max : forall x, list_in_bounds bin_outbounds x -> list_Z_bounded_by ((@max_bounds width) n) x)
+            (xbounds_length : forall x, list_in_bounds bin_xbounds x -> length x = n)
+            (ybounds_length : forall x, list_in_bounds bin_ybounds x -> length x = n)
+            (outbounds_length : forall x, list_in_bounds bin_outbounds x -> length x = n).
 
     Local Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
@@ -380,7 +394,8 @@ Section WithParameters.
           constr:((map word.unsigned x, (map word.unsigned y, tt))) Rr;
         translate_func_precondition_hammer.
         { (* lists_reserved_with_initial_context *)
-          lists_reserved_simplify pout; solve_equivalence_side_conditions. } }
+          lists_reserved_simplify pout; try solve_equivalence_side_conditions; solve_length out outbounds_length.
+          } }
       { postcondition_simplify; [ | | ]; cycle -1.
         { refine (proj1 (Proper_sep_iff1 _ _ _ _ _ _ _) _);
             [symmetry; eapply FElem_array_truncated_scalar_iff1 | reflexivity | sepsimpl ].
@@ -388,7 +403,7 @@ Section WithParameters.
           erewrite <-map_length.
           match goal with H : map word.unsigned _ = API.interp (res _) _ _ |- _ =>
             rewrite H end.
-          erewrite length_list_Z_bounded_by; eauto using res_bounds. }
+          erewrite length_list_Z_bounded_by; eauto using res_bounds; apply repeat_length. }
         { (* output correctness *)
           erewrite <-res_eq; auto.
           match goal with H : map word.unsigned _ = API.interp (res _) _ _ |- _ =>
@@ -417,11 +432,11 @@ Section WithParameters.
                            (API.interp (res _) (map word.unsigned x)))
                 = un_model (feval x))
             (res_bounds : forall x,
-                list_Z_bounded_by un_xbounds x ->
-                list_Z_bounded_by un_outbounds (API.interp (res _) x))
-            (outbounds_tighter_than_max : list_Z_tighter_than un_outbounds (@max_bounds width n))
-            (xbounds_length : length un_xbounds = n)
-            (outbounds_length : length un_outbounds = n).
+                list_in_bounds un_xbounds x ->
+                list_in_bounds un_outbounds (API.interp (res _) x))
+            (outbounds_tighter_than_max : forall x, list_in_bounds un_outbounds x -> list_Z_bounded_by (@max_bounds width n) x)
+            (xbounds_length : forall x, list_in_bounds un_xbounds x -> length x = n)
+            (outbounds_length : forall x, list_in_bounds un_outbounds x -> length x = n).
 
     Local Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
@@ -465,7 +480,8 @@ Section WithParameters.
         all:translate_func_precondition_hammer.
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.
-          all:solve_equivalence_side_conditions. } }
+          all: try solve_equivalence_side_conditions.
+          solve_length out outbounds_length. } }
       { postcondition_simplify; [ | | ].
         { (* output correctness *)
           eapply res_eq; auto. }
@@ -479,8 +495,7 @@ Section WithParameters.
             [ solve [apply FElem_array_truncated_scalar_iff1]
             | reflexivity | ].
           sepsimpl; [ | ].
-          { rewrite !map_length.
-            solve_equivalence_side_conditions. }
+          { rewrite !map_length. apply outbounds_length; auto. }
           { erewrite Util.map_unsigned_of_Z, MaxBounds.map_word_wrap_bounded
               by eauto using relax_list_Z_bounded_by.
             rewrite MakeAccessSizes.bytes_per_word_eq.
@@ -498,16 +513,18 @@ Section WithParameters.
                valid_func (res (fun _ : API.type => unit)))
             (res_Wf : API.Wf res).
     Context (tight_bounds_tighter_than_max :
-               list_Z_tighter_than tight_bounds (@MaxBounds.max_bounds width n))
-            (tight_bounds_length : length tight_bounds = n)
+              forall x,
+                list_in_bounds tight_bounds x ->
+                list_Z_bounded_by (@max_bounds width n) x)
+            (tight_bounds_length : forall x, list_in_bounds tight_bounds x -> length x = n)
             (res_eq : forall bs,
                 bytes_in_bounds bs ->
-                feval (map word.of_Z
+                feval_alt (map word.of_Z
                            (API.interp (res _) (map byte.unsigned bs)))
                 = feval_bytes bs)
             (res_bounds : forall bs,
                 bytes_in_bounds bs ->
-                list_Z_bounded_by
+                list_in_bounds
                   tight_bounds
                   (API.interp (res _) (map byte.unsigned bs))).
 
@@ -560,10 +577,11 @@ Section WithParameters.
       eapply Proper_call.
       2:{
         use_translate_func_correct constr:((map Byte.byte.unsigned bs, tt)) Rr.
-        all:translate_func_precondition_hammer.
+        all: try translate_func_precondition_hammer.
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.
-          all:solve_equivalence_side_conditions.
+          all: try solve_equivalence_side_conditions.
+          solve_length out tight_bounds_length.
         } }
       { postcondition_simplify; [ | | ].
         { (* output correctness *)
@@ -578,8 +596,7 @@ Section WithParameters.
             [ solve [apply FElem_array_truncated_scalar_iff1]
             | reflexivity | ].
           sepsimpl; [ | ].
-          { rewrite !map_length.
-            solve_equivalence_side_conditions. }
+          { rewrite !map_length; apply tight_bounds_length; auto. }
           { erewrite Util.map_unsigned_of_Z, MaxBounds.map_word_wrap_bounded
               by eauto using relax_list_Z_bounded_by.
             rewrite MakeAccessSizes.bytes_per_word_eq.
@@ -597,17 +614,20 @@ Section WithParameters.
                valid_func (res (fun _ : API.type => unit)))
             (res_Wf : API.Wf res).
     Context (byte_bounds_tighter_than_max :
-               list_Z_tighter_than
-                 byte_bounds (ByteBounds.byte_bounds n_bytes))
+              forall x,
+                list_in_bounds byte_bounds x ->
+                list_Z_bounded_by (ByteBounds.byte_bounds n_bytes) x)
             (byte_bounds_length :
-               length byte_bounds = encoded_felem_size_in_bytes)
+              forall x,
+                list_in_bounds byte_bounds x ->
+                length x = encoded_felem_size_in_bytes)
             (res_eq : forall x,
                 bounded_by tight_bounds x ->
                 API.interp (res _) (map word.unsigned x)
                 = Partition.partition
                     (ModOps.weight 8 1)
                     encoded_felem_size_in_bytes
-                    (F.to_Z (feval x)))
+                    (F.to_Z (feval_alt x)))
             (res_bounds : forall x,
                 bounded_by tight_bounds x ->
                 bytes_in_bounds
@@ -702,4 +722,213 @@ Section WithParameters.
           auto. } }
     Qed.
   End ToBytes.
+
+
+Section SelectZnz.
+
+  Local Notation bit_range := {|ZRange.lower := 0; ZRange.upper := 1|}.
+  Context {res : API.Expr (type_Z -> type_listZ -> type_listZ -> type_listZ)}
+  (res_valid :
+     valid_func (res (fun _ : API.type => unit)))
+  (res_Wf : API.Wf res).
+
+(*res_bounds is not used; perhaps change spec of select_znz to not assume length of lists.*)
+
+Context
+  (res_eq : forall (x y : list word) (c : word),
+      list_Z_bounded_by (@max_bounds width n) (map word.unsigned x) ->
+      list_Z_bounded_by (@max_bounds width n) (map word.unsigned y) ->
+      ZRange.is_bounded_by_bool (word.unsigned c) bit_range = true ->
+                 (API.interp (res _)    
+                             (word.unsigned c)
+                             (map word.unsigned x)
+                             (map word.unsigned y))
+      = map word.unsigned (if (word.unsigned c =? 0) then x else y)).
+  (* (res_bounds : forall x y c,
+      list_in_bounds bin_xbounds x ->
+      list_in_bounds bin_ybounds y ->
+      list_in_bounds bin_outbounds (API.interp (res _) x y c))
+
+  (outbounds_tighter_than_max : forall x, list_in_bounds bin_outbounds x -> list_Z_bounded_by ((@max_bounds width) n) x)
+  (xbounds_length : forall x, list_in_bounds bin_xbounds x -> length x = n)  
+  (ybounds_length : forall x, list_in_bounds bin_ybounds x -> length x = n)
+  (outbounds_length : forall x, list_in_bounds bin_outbounds x -> length x = n). *)
+
+    Local Ltac equivalence_side_conditions_hook ::=
+      lazymatch goal with
+      | |- context [length (Partition.partition _ _ _)] =>
+          autorewrite with distr_length;
+          cbv [FElemBytes] in *; sepsimpl; solve [auto]
+      end.
+
+      Local Notation t :=
+      (type.arrow type_Z (type.arrow type_listZ (type.arrow type_listZ type_listZ)))
+        (only parsing).
+
+    Definition list_selectznz_insizes
+      : type.for_each_lhs_of_arrow access_sizes t :=
+      (tt, (access_size.word, (access_size.word, tt))).
+    Definition list_selectznz_outsizes
+      : base_access_sizes (type.final_codomain t) :=
+      access_size.word.
+    Definition list_selectznz_inlengths
+      : type.for_each_lhs_of_arrow list_lengths t :=
+      (tt, (n, (n, tt))).
+
+      Let insizes := list_selectznz_insizes.
+      Let outsizes := list_selectznz_outsizes.
+      Let inlengths := list_selectznz_inlengths.
+
+    Lemma bit_range_eq : forall x, ZRange.is_bounded_by_bool x bit_range = true -> x = 0 \/ x = 1.
+    Proof.
+        intros. apply RulesProofs.unfold_is_bounded_by_bool in H.
+        simpl in H. lia.
+    Qed.
+
+    Lemma max_bounds_words : forall (x : list word) n, length x = n -> list_Z_bounded_by (@max_bounds width n) (map word.unsigned x).
+    Proof.
+        intros. generalize dependent x.
+        induction n0; intros.
+            - destruct x; try discriminate. simpl. cbv. auto.
+            - destruct x; try discriminate. simpl.
+              eapply Util.list_Z_bounded_by_cons. split.
+              2: {
+                  simpl in IHn0. eapply IHn0. auto.
+              }
+              apply Expr.is_bounded_by_bool_width_range.
+              eauto.
+              pose proof Properties.word.unsigned_range. auto.
+    Qed. 
+
+    Lemma select_znz_correct f :
+      f = make_bedrock_func select_znz insizes outsizes inlengths res ->
+      forall functions,
+        spec_of_selectznz (f :: functions).
+    Proof using inname_gen_varname_gen_disjoint
+          outname_gen_varname_gen_disjoint ok res_Wf
+          res_eq res_valid.
+      subst inlengths insizes outsizes. cbv [spec_of_selectznz].
+      cbv [list_selectznz_insizes list_selectznz_outsizes list_selectznz_inlengths].
+      cbv beta; intros; subst f. cbv [make_bedrock_func].
+      cleanup.
+      match goal with
+      | H : ZRange.is_bounded_by_bool _ _ = _ |- _ => rename H into Hbound
+      | _ => idtac
+      end.
+      eapply Proper_call.
+      2:{ use_translate_func_correct
+          constr:((word.unsigned pc, (map word.unsigned x, (map word.unsigned y, tt)))) Rout.
+        all:try translate_func_precondition_hammer.
+        all:cbn [type.app_curried fst snd].
+        all:try rewrite res_eq by auto.
+        {
+            eapply (equivalent_flat_args_iff1
+            (make_innames (inname_gen:=default_inname_gen) _)
+            _ _ _
+            map.empty).
+                - apply flatten_make_innames_NoDup; solve [eapply prefix_name_gen_unique].
+                - reflexivity.
+                - compute_names. autounfold with equivalence pairs.
+                cbv [Equivalence.equivalent_base].
+                autounfold with equivalence pairs.
+                rewrite <- ?MakeAccessSizes.bytes_per_word_eq; sepsimpl.
+                    + crush_sep; try solve_equivalence_side_conditions. eauto. (*Which one?*)
+                    + crush_sep; try solve_equivalence_side_conditions.
+                    + crush_sep; try solve_equivalence_side_conditions.
+                    + auto.
+        }
+        1:  destruct (bit_range_eq _ Hbound) as [Hbit| Hbit]; rewrite Hbit; simpl;
+            eapply MaxBounds.max_bounds_range_iff; eauto.
+        lists_reserved_simplify pout.
+          all: try solve_equivalence_side_conditions.
+          destruct (bit_range_eq _ Hbound) as [Hbit| Hbit]; rewrite Hbit; simpl; auto;
+          erewrite length_list_Z_bounded_by; eauto; symmetry; erewrite length_list_Z_bounded_by; eauto.
+      }
+        postcondition_simplify.
+        destruct (bit_range_eq _ Hbound) as [Hbit| Hbit].
+            - rewrite Hbit. simpl. eapply Proper_sep_iff1.
+                + apply FElem_array_truncated_scalar_iff1.
+                + intros; split; intros; eauto.
+                + sepsimpl; try ecancel_assumption.
+                    * erewrite <- map_length. erewrite length_list_Z_bounded_by; eauto.
+                      cbv [max_bounds]. rewrite repeat_length. eauto.
+                    * specialize (res_eq x y pc); rewrite Hbit in res_eq; simpl in res_eq.
+                      erewrite <- res_eq; eauto; rewrite <- Hbit; simpl in *; eauto.
+                      match goal with
+                      | H : map word.unsigned _ = _ |- _ => rewrite <- H
+                      | _ => idtac
+                      end; eauto.
+            - rewrite Hbit; simpl; eapply Proper_sep_iff1.
+                + apply FElem_array_truncated_scalar_iff1.
+                + intros; split; intros; eauto.
+                + sepsimpl; try ecancel_assumption.
+                    * erewrite <- map_length; erewrite length_list_Z_bounded_by; eauto;
+                      cbv [max_bounds]; rewrite repeat_length; eauto.
+                    * specialize (res_eq x y pc); rewrite Hbit in res_eq; simpl in res_eq.
+                      erewrite <- res_eq; eauto; rewrite <- Hbit; simpl in *; eauto.
+                      match goal with
+                      | H : map word.unsigned _ = _ |- _ => rewrite <- H
+                      | _ => idtac
+                      end; eauto.
+    Qed.
+
+
+    Lemma select_znz_correct_alt f :
+    f = make_bedrock_func select_znz insizes outsizes inlengths res ->
+    forall functions,
+      spec_of_selectznz (f :: functions).
+  Proof using inname_gen_varname_gen_disjoint
+        outname_gen_varname_gen_disjoint ok res_Wf
+        res_eq res_valid.
+    subst inlengths insizes outsizes. cbv [spec_of_selectznz].
+    cbv [list_selectznz_insizes list_selectznz_outsizes list_selectznz_inlengths].
+    cbv beta; intros; subst f. cbv [make_bedrock_func].
+    cleanup.
+    match goal with
+    | H : ZRange.is_bounded_by_bool _ _ = _ |- _ => rename H into Hbound
+    | _ => idtac
+    end.
+    eapply Proper_call.
+    2:{ use_translate_func_correct
+        constr:((word.unsigned pc, (map word.unsigned x, (map word.unsigned y, tt)))) Rout.
+      all:try translate_func_precondition_hammer.
+      all:cbn [type.app_curried fst snd].
+      all:try rewrite res_eq by auto.
+      {
+          eapply (equivalent_flat_args_iff1
+          (make_innames (inname_gen:=default_inname_gen) _)
+          _ _ _
+          map.empty).
+              - apply flatten_make_innames_NoDup; solve [eapply prefix_name_gen_unique].
+              - reflexivity.
+              - compute_names. autounfold with equivalence pairs.
+              cbv [Equivalence.equivalent_base].
+              autounfold with equivalence pairs.
+              rewrite <- ?MakeAccessSizes.bytes_per_word_eq; sepsimpl.
+                  + crush_sep; try solve_equivalence_side_conditions. eauto. (*Which one?*)
+                  + crush_sep; try solve_equivalence_side_conditions.
+                  + crush_sep; try solve_equivalence_side_conditions.
+                  + auto.
+      }
+      1:  destruct (bit_range_eq _ Hbound) as [Hbit| Hbit]; rewrite Hbit; simpl;
+          eapply MaxBounds.max_bounds_range_iff; eauto.
+      lists_reserved_simplify pout.
+        all: try solve_equivalence_side_conditions.
+        destruct (bit_range_eq _ Hbound) as [Hbit| Hbit]; rewrite Hbit; simpl; auto;
+        erewrite length_list_Z_bounded_by; eauto; symmetry; erewrite length_list_Z_bounded_by; eauto.
+    }
+      postcondition_simplify.
+      destruct (bit_range_eq _ Hbound) as [Hbit| Hbit]; [
+      rewrite Hbit; simpl;
+      rewrite H9 in H12; rewrite res_eq in H12; eauto;
+      rewrite Hbit in H12; simpl in H12; eapply Proper_sep_iff1; [apply FElem_array_truncated_scalar_iff1| intros; split; intros; eauto | sepsimpl; try ecancel_assumption; erewrite <- map_length;
+      erewrite length_list_Z_bounded_by; eauto; cbv [max_bounds]; rewrite repeat_length; eauto
+      ] |
+      rewrite Hbit; simpl;
+      rewrite H9 in H12; rewrite res_eq in H12; eauto;
+      rewrite Hbit in H12; simpl in H12; eapply Proper_sep_iff1; [apply FElem_array_truncated_scalar_iff1| intros; split; intros; eauto | sepsimpl; try ecancel_assumption; erewrite <- map_length;
+      erewrite length_list_Z_bounded_by; eauto; cbv [max_bounds]; rewrite repeat_length; eauto
+      ] ].
+  Qed.
+  End SelectZnz.
 End WithParameters.
