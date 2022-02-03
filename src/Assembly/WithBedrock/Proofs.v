@@ -4173,13 +4173,6 @@ goal 5 (ID 17084) is:
                            end
                          | progress (SeparationLogic.cancel; cbn [seps]) ]
         | .. ]. }
-  (* remaining goals:
-============================
-  R_runtime_output frame runtime_rets
-    (type_spec_of_runtime (word_args_to_Z_args word_runtime_inputs))
-    (Datatypes.length x) stack_base asm_args_out asm_args_in callee_saved_registers
-    runtime_callee_saved_registers m'
-   *)
 Admitted.
 
 Theorem symex_asm_func_correct
