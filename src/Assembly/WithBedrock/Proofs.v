@@ -26,6 +26,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.FoldMap.
 Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.ListUtil.IndexOf.
+Require Import Crypto.Util.ListUtil.Split.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.AddGetCarry.
@@ -42,6 +43,7 @@ Require Import Crypto.Util.ZUtil.Tactics.PeelLe.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.HasBody.
+Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.PrintContext.
 Require Import Crypto.Util.Tactics.PrintGoal.
 Require Import Crypto.Util.Tactics.UniquePose.
@@ -3536,6 +3538,311 @@ Proof.
   reflexivity.
 Qed.
 
+Definition same_mem_addressed (s1 s2 : mem_state) : Prop
+  := List.map fst s1 = List.map fst s2.
+
+Lemma update_nth_fst_mem_same m1 n y
+  : same_mem_addressed m1 (update_nth n (fun ptsto : idx * idx => (fst ptsto, y)) m1).
+Proof.
+  revert n m1.
+  cbv [same_mem_addressed]; induction n as [|n IH], m1 as [|? m1]; cbn [update_nth List.map fst]; f_equal; eauto.
+Qed.
+
+(* TODO: move? *)
+Lemma store_mem_same x y m1 m2 (H : store x y m1 = Some m2)
+  : same_mem_addressed m1 m2.
+Proof.
+  cbv [store Crypto.Util.Option.bind] in *; break_innermost_match_hyps; inversion_option; subst.
+  apply update_nth_fst_mem_same.
+Qed.
+
+Class same_mem_addressed_of_success {T} (f : M T)
+  := success_same_mem : forall v s s', f s = Success (v, s') -> same_mem_addressed s s'.
+
+Local Ltac same_mem_addressed_of_success_t_step_normal_nobreak :=
+  first [ progress cbv [same_mem_addressed_of_success] in *
+        | progress intros
+        | reflexivity
+        | assumption
+        | progress inversion_ErrorT
+        | progress destruct_head'_prod
+        | progress cbn [fst snd Symbolic.symbolic_mem_state] in *
+        | progress cbv [update_dag_with update_mem_with update_flag_with update_reg_with Symbolic.bind Symbolic.ret Symbolic.err some_or ErrorT.bind] in *
+        | progress inversion_pair
+        | progress subst
+        | match goal with
+          | [ H : store _ _ _ = Some _ |- _ ] => apply store_mem_same in H
+          | [ H : _ = Success _ |- _ ] => apply success_same_mem in H
+          end
+        | cbv [same_mem_addressed] in *; congruence ].
+
+Local Ltac same_mem_addressed_of_success_t_step_normal :=
+  first [ same_mem_addressed_of_success_t_step_normal_nobreak
+        | break_innermost_match_hyps_step ].
+
+Local Ltac same_mem_addressed_of_success_t_step_unfold :=
+  match goal with
+  | [ H : ?f = Success _ |- _ ]
+    => let f' := head f in
+       idtac f';
+       progress unfold f' in H
+  end.
+
+Local Ltac same_mem_addressed_of_success_t_step_unfold_go :=
+  repeat same_mem_addressed_of_success_t_step_normal;
+  same_mem_addressed_of_success_t_step_unfold;
+  repeat same_mem_addressed_of_success_t_step_normal.
+
+Local Ltac same_mem_addressed_of_success_t := repeat first [ same_mem_addressed_of_success_t_step_normal | same_mem_addressed_of_success_t_step_unfold ].
+
+(* TODO: move? *)
+Local Instance Merge_mem_same x : same_mem_addressed_of_success (Symbolic.Merge x).
+Proof. same_mem_addressed_of_success_t. Qed.
+
+(* TODO: move? *)
+Local Instance App_mem_same x : same_mem_addressed_of_success (Symbolic.App x).
+Proof. same_mem_addressed_of_success_t. Qed.
+
+(* TODO: move? *)
+Local Instance GetReg_mem_same r : same_mem_addressed_of_success (GetReg r).
+Proof. same_mem_addressed_of_success_t. Qed.
+
+(* TODO: move? *)
+Local Instance Address_mem_same sa a : same_mem_addressed_of_success (@Address sa a).
+Proof. same_mem_addressed_of_success_t. Qed.
+
+(* TODO: move? *)
+Local Instance GetOperand_mem_same sz sa arg : same_mem_addressed_of_success (@GetOperand sz sa arg).
+Proof. same_mem_addressed_of_success_t. Qed.
+
+(* TODO: move? *)
+Local Instance GetFlag_mem_same f : same_mem_addressed_of_success (GetFlag f).
+Proof. same_mem_addressed_of_success_t. Qed.
+
+(* TODO: move? *)
+Local Instance SetOperand_mem_same sz sa arg v : same_mem_addressed_of_success (@SetOperand sz sa arg v).
+Proof. same_mem_addressed_of_success_t. Qed.
+
+(* TODO: move? *)
+Local Instance SetFlag_mem_same f v : same_mem_addressed_of_success (SetFlag f v).
+Proof. same_mem_addressed_of_success_t. Qed.
+
+(* TODO: move? *)
+Local Instance RevealConst_mem_same v : same_mem_addressed_of_success (RevealConst v).
+Proof. same_mem_addressed_of_success_t. Qed.
+
+(* TODO: move? *)
+Local Instance Reveal_mem_same v1 v2 : same_mem_addressed_of_success (Reveal v1 v2).
+Proof. same_mem_addressed_of_success_t. Qed.
+
+(* TODO: move? *)
+Local Instance HavocFlags_mem_same : same_mem_addressed_of_success HavocFlags.
+Proof. same_mem_addressed_of_success_t. Qed.
+
+(* TODO: move? *)
+Local Instance ret_mem_same {T} (v : T) : same_mem_addressed_of_success (ret v).
+Proof. same_mem_addressed_of_success_t. Qed.
+
+(* TODO: move? *)
+Local Instance bind_mem_same {A B} f v
+      {H0 : same_mem_addressed_of_success v}
+      {H1 : forall v', same_mem_addressed_of_success (f v')}
+  : same_mem_addressed_of_success (@Symbolic.bind A B v f).
+Proof.
+  same_mem_addressed_of_success_t.
+  specialize (H0 _ _ _ ltac:(eassumption)).
+  specialize (H1 _ _ _ _ ltac:(eassumption)).
+  cbv [same_mem_addressed] in *; congruence.
+Qed.
+
+(* TODO: move? *)
+Local Instance mapM_mem_same {A B} f ls
+      {H1 : forall v', same_mem_addressed_of_success (f v')}
+  : same_mem_addressed_of_success (@mapM A B f ls).
+Proof.
+  induction ls as [|?? IH]; cbn [mapM];
+    same_mem_addressed_of_success_t.
+  specialize (IH _ _ _ ltac:(eassumption)).
+  specialize (H1 _ _ _ _ ltac:(eassumption)).
+  same_mem_addressed_of_success_t.
+Defined.
+
+(* TODO: move? *)
+Fixpoint Symeval_mem_same sz sa args {struct args} : same_mem_addressed_of_success (@Symeval sz sa args).
+Proof.
+  destruct args; cbn [Symeval] in *; typeclasses eauto.
+Qed.
+Local Existing Instance Symeval_mem_same.
+Typeclasses Opaque Symeval.
+Typeclasses Transparent AddressSize OperationSize.
+
+(* TODO: move? *)
+Local Instance SymexNormalInstruction_mem_same instr : same_mem_addressed_of_success (SymexNormalInstruction instr).
+Proof.
+  destruct instr; cbv [SymexNormalInstruction err Symbolic.bind ret Syntax.op Syntax.args ErrorT.bind same_mem_addressed_of_success] in *; intros.
+  same_mem_addressed_of_success_t.
+Qed.
+
+(* TODO: move? *)
+Local Instance SymexLine_mem_same line : same_mem_addressed_of_success (SymexLine line).
+Proof.
+  cbv [SymexLine SymexRawLine err ret] in *; break_innermost_match; try congruence.
+  typeclasses eauto.
+Qed.
+
+(* TODO: move? *)
+Lemma SymexLines_mem_same lines s s'
+      (H : SymexLines lines s = Success (tt, s'))
+  : same_mem_addressed s s'.
+Proof.
+  revert s H.
+  induction lines as [|line lines IH]; cbn [SymexLines]; cbv [Symbolic.ret Symbolic.bind ErrorT.bind]; intros *; break_innermost_match; intros; inversion_ErrorT; inversion_pair; subst; try reflexivity.
+  specialize (IH _ ltac:(eassumption)).
+  same_mem_addressed_of_success_t.
+Qed.
+
+Lemma same_mem_addressed_alt l1 l2
+      (H : same_mem_addressed l1 l2)
+  : exists l2b, List.combine (List.map fst l1) l2b = l2 /\ List.length l2b = List.length l1.
+Proof.
+  cbv [same_mem_addressed] in *.
+  rewrite H.
+  pose proof (split_combine l2) as H'.
+  rewrite split_alt in H'.
+  eexists; split; [ eassumption | ].
+  apply (f_equal (@List.length _)) in H.
+  rewrite !map_length in *; congruence.
+Qed.
+
+Lemma same_mem_addressed_app_ex_r l1 l2 l3
+      (H : same_mem_addressed (l1 ++ l2) l3)
+  : exists l3a l3b, l3a ++ l3b = l3 /\ same_mem_addressed l1 l3a /\ same_mem_addressed l2 l3b.
+Proof.
+  cbv [same_mem_addressed] in *.
+  rewrite map_app in H.
+  exists (firstn (List.length l1) l3), (skipn (List.length l1) l3).
+  rewrite <- firstn_map, <- skipn_map, <- H, firstn_app, skipn_app, map_length, Nat.sub_diag, firstn_O, skipn_O, firstn_skipn, firstn_all, (skipn_all (List.length l1)), app_nil_l, app_nil_r by now rewrite map_length; lia.
+  auto.
+Qed.
+
+Lemma same_mem_addressed_rev_ex_r l1 l2
+      (H : same_mem_addressed (List.rev l1) l2)
+  : exists l3, List.rev l3 = l2 /\ same_mem_addressed l1 l3.
+Proof.
+  cbv [same_mem_addressed] in *.
+  exists (List.rev l2).
+  rewrite map_rev, <- H, map_rev, !rev_involutive.
+  auto.
+Qed.
+
+Lemma same_mem_addressed_combine_ex_r_helper l1a l1b l2
+      (H : same_mem_addressed (List.combine l1a l1b) l2)
+  : exists l2b, List.combine (firstn (List.length l1b) l1a) l2b = l2.
+Proof.
+  cbv [same_mem_addressed] in *.
+  exists (List.map snd l2).
+  rewrite map_fst_combine in H.
+  pose proof (split_combine l2) as H'.
+  rewrite split_alt, <- H in H'.
+  assumption.
+Qed.
+
+Lemma same_mem_addressed_combine_ex_r l1a l1b l2
+      (H : same_mem_addressed (List.combine l1a l1b) l2)
+  : exists l2b, List.combine l1a l2b = l2.
+Proof.
+  apply same_mem_addressed_combine_ex_r_helper in H.
+  destruct H as [l2b H].
+  exists (firstn (List.length l1b) l2b).
+  subst.
+  etransitivity; rewrite combine_truncate_l, combine_truncate_r; [ | reflexivity ].
+  rewrite ?firstn_length, ?firstn_firstn_min.
+  do 2 f_equal; lia.
+Qed.
+
+Lemma same_mem_addressed_nil ls
+      (H : same_mem_addressed nil ls)
+  : nil = ls.
+Proof.
+  destruct ls; cbv in H; congruence.
+Qed.
+
+Lemma same_mem_addressed_init_symbolic_state d ls
+      (H : same_mem_addressed (init_symbolic_state d) ls)
+  : symbolic_mem_state (init_symbolic_state d) = ls.
+Proof.
+  cbv [init_symbolic_state] in *.
+  break_innermost_match_hyps.
+  apply same_mem_addressed_nil, H.
+Qed.
+
+Lemma same_mem_addressed_flat_map_combine_addrs_ex_r {dereference_scalar:bool} {T} (ls1 : list (_ + T * _)) ls2 ls'
+      (H : same_mem_addressed (List.flat_map
+                                 (fun '(idx', idx)
+                                  => match idx', idx with
+                                     | inl addr_or_val, inl val => if dereference_scalar then [(addr_or_val, val)] else []
+                                     | inl _, _ | _, inl _ => []
+                                     | inr (base', addrs'), inr items
+                                       => List.combine addrs' items
+                                     end)
+                                 (List.combine ls1 ls2))
+                              ls')
+  : exists ls'2, List.flat_map
+                   (fun '(idx', idx)
+                    => match idx', idx with
+                       | inl addr_or_val, inl val => if dereference_scalar then [(addr_or_val, val)] else []
+                       | inl _, _ | _, inl _ => []
+                       | inr (base', addrs'), inr items
+                         => List.combine addrs' items
+                       end)
+                   (List.combine ls1 ls'2) = ls'.
+Proof.
+  revert dependent ls'.
+  revert ls1 ls2.
+  induction ls1 as [|?? IH], ls2 as [|? ls2];
+    try specialize (IH ls2);
+    cbn [List.combine List.map List.flat_map]; intros.
+  all: repeat first [ progress subst
+                    | progress destruct_head'_and
+                    | progress destruct_head'_ex
+                    | (now exists nil)
+                    | specialize (IH _ ltac:(eassumption))
+                    | match goal with
+                      | [ H : same_mem_addressed nil _ |- _ ] => apply same_mem_addressed_nil in H
+                      | [ H : same_mem_addressed (_ ++ _) _ |- _ ] => apply same_mem_addressed_app_ex_r in H
+                      | [ H : nil = List.map _ ?ls |- _ ] => is_var ls; destruct ls
+                      | [ H : same_mem_addressed match _ with _ => _ end ?x |- _ ]
+                        => is_var x; apply same_mem_addressed_alt in H
+                      end ].
+  eexists (_ :: _); cbn [flat_map]; apply f_equal2; [ | reflexivity ].
+  repeat first [ match goal with
+                 | [ |- match ?x with _ => _ end = List.combine (List.map _ match ?x with _ => _ end) _ ]
+                   => destruct x
+                 | [ |- match ?ev with inl _ => _ | inr _ => nil end = List.combine (List.map _ match ?x with inl _ => _ | inr _ => nil end) _ ]
+                   => is_evar ev;
+                      is_var x;
+                      let __ := open_constr:(eq_refl : ev = match x with inl _ => inl _ | inr _ => inr _ end) in
+                      destruct x
+                 | [ |- [(_, ?ev)] = match ?x with _ => _ end ]
+                   => is_evar ev;
+                      is_var x;
+                      let __ := open_constr:(eq_refl : ev = match x with nil => _ | _ :: _ => _ end) in
+                      destruct x
+                 | [ |- List.combine ?ls ?ev = List.combine (firstn (List.length ?ls') ?ls) ?x ]
+                   => is_evar ev; unify ev (firstn (List.length ls') x)
+                 end
+               | exfalso; discriminate
+               | reflexivity
+               | rewrite map_fst_combine
+               | progress cbn [List.map List.combine fst List.length] in *
+               | break_innermost_match_step ].
+  etransitivity; rewrite combine_truncate_l, combine_truncate_r; [ | reflexivity ].
+  rewrite ?firstn_length, ?firstn_firstn_min.
+  do 2 f_equal; lia.
+  Unshelve.
+  all: assumption.
+Qed.
+
 Import Coq.Strings.String.
 Import Coq.Lists.List.
 Import Crypto.Util.Option.
@@ -3706,6 +4013,24 @@ Local Ltac handle_R_regs _ :=
       debug_run ltac:(fun _ => idtac "R => R_regs set_reg end")
   end.
 
+Local Ltac handle_same_mem :=
+  repeat first [ progress subst
+               | progress destruct_head'_ex
+               | progress destruct_head'_and
+               | match goal with
+                 | [ H : same_mem_addressed nil _ |- _ ] => apply same_mem_addressed_nil in H
+                 | [ H : same_mem_addressed (_ ++ _)%list _ |- _ ] => apply same_mem_addressed_app_ex_r in H
+                 | [ H : same_mem_addressed (List.rev _) _ |- _ ] => apply same_mem_addressed_rev_ex_r in H
+                 | [ H : same_mem_addressed (List.flat_map _ _) _ |- _ ]
+                   => apply (same_mem_addressed_flat_map_combine_addrs_ex_r (dereference_scalar:=false)) in H
+                 | [ H : same_mem_addressed (List.flat_map _ _) _ |- _ ]
+                   => apply (same_mem_addressed_flat_map_combine_addrs_ex_r (dereference_scalar:=true)) in H
+                 | [ H : same_mem_addressed (symbolic_mem_state (init_symbolic_state _)) _ |- _ ]
+                   => apply same_mem_addressed_init_symbolic_state in H
+                 | [ H : same_mem_addressed (List.combine _ _) _ |- _ ]
+                   => apply same_mem_addressed_combine_ex_r in H
+                 end ].
+
 Theorem symex_asm_func_M_correct
         d frame asm_args_out asm_args_in (G : symbol -> option Z) (s := init_symbolic_state d)
         (s' : symbolic_state) (m : machine_state) (output_types : type_spec) (stack_size : nat) (stack_base : Naive.word 64)
@@ -3867,6 +4192,8 @@ Proof.
                       debug_run ltac:(fun _ => idtac "get callee_saved_registers end")
                  | [ H : SymexLines _ _ = Success _ |- exists m' : machine_state, _ ]
                    => debug_run ltac:(fun _ => idtac "SymexLines start");
+                      let H' := fresh in
+                      pose proof H as H'; apply SymexLines_mem_same in H';
                       eapply SymexLines_R in H;
                       [ destruct H as [m' H];
                         exists m', G_final;
@@ -3942,7 +4269,7 @@ Proof.
                       debug_run ltac:(fun _ => idtac "Forall2_rets_of_R_mem end")
                  end
                | progress repeat (apply conj; eauto 10; []) ].
-  all: destruct_head' symbolic_state; cbn [update_dag_with Symbolic.dag_state Symbolic.symbolic_flag_state Symbolic.symbolic_mem_state Symbolic.symbolic_reg_state] in *; subst.
+  all: destruct_head' symbolic_state; cbn [update_dag_with Symbolic.dag_state Symbolic.symbolic_flag_state Symbolic.symbolic_mem_state Symbolic.symbolic_reg_state] in *; subst; handle_same_mem.
   { cbv [R_runtime_output R update_dag_with] in *; destruct_head'_and.
     do 2 eexists.
     repeat match goal with |- _ /\ _ => split end.
