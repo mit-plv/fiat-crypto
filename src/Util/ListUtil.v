@@ -2857,6 +2857,10 @@ Lemma filter_takeWhile {A} f xs
   : filter f (@takeWhile A f xs) = @takeWhile A f xs.
 Proof. induction xs; cbn; break_innermost_match; boring. Qed.
 
+Lemma eq_filter_nil_Forall_iff {A} f (xs : list A)
+  : filter f xs = nil <-> Forall (fun x => f x = false) xs.
+Proof. induction xs; cbn; break_innermost_match; boring; inversion_list; inversion_one_head Forall; congruence. Qed.
+
 Definition is_nil {A} (x : list A) : bool
   := match x with
      | nil => true
