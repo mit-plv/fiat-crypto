@@ -3987,6 +3987,7 @@ Proof.
                            | break_innermost_match_hyps_step ]
          | _ => idtac
          end.
+    all: revgoals.
     (* what's left:
   Forall (fun v : Z => (0 <= v < 2 ^ 64)%Z) ?stack_placeholder_values
 
