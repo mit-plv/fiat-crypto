@@ -3943,12 +3943,72 @@ Proof.
                  end
                | progress repeat (apply conj; eauto 10; []) ].
   all: destruct_head' symbolic_state; cbn [update_dag_with Symbolic.dag_state Symbolic.symbolic_flag_state Symbolic.symbolic_mem_state Symbolic.symbolic_reg_state] in *; subst.
-  { move m' at bottom.
-    move m at bottom.
-    move m' at bottom.
-    cbv [R_runtime_output R update_dag_with] in *; destruct_head'_and.
-    move symbolic_mem_state4 at bottom.
-    shelve. }
+  { cbv [R_runtime_output R update_dag_with] in *; destruct_head'_and.
+    do 2 eexists.
+    repeat match goal with |- _ /\ _ => split end.
+    cbv [Semantics.machine_reg_state] in *.
+    all: lazymatch goal with
+         | [ H : R_regs _ _ _ ?m' |- Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list _ ?m') ]
+           => cbv [R_regs R_reg] in H;
+              rewrite Tuple.fieldwise_to_list_iff, Forall2_forall_iff_nth_error in H;
+              rewrite Forall_forall_iff_nth_error_match;
+              let i := fresh "i" in
+              intro i; specialize (H i); cbv [option_eq] in H;
+              revert H; break_innermost_match; try tauto; try discriminate;
+              rewrite ?Z.land_ones by lia;
+              try now clear; intros [_ ?]; Z.to_euclidean_division_equations; nia
+         | [ |- get_asm_reg _ ?callee_saved_registers = get_asm_reg _ ?callee_saved_registers ]
+           => cbv [get_asm_reg] in *;
+              revert dependent callee_saved_registers;
+              intro callee_saved_registers;
+              rewrite ?eq_filter_nil_Forall_iff, <- !Forall2_eq, ?Forall2_map_map_iff, ?Forall2_map_r_iff, ?Forall2_map_l_iff, ?Forall2_forall_iff_nth_error, ?Forall_forall_iff_nth_error_match;
+              intros;
+              repeat match goal with
+                     | [ H : context[nth_error ?ls _] |- context[nth_error ?ls ?i] ]
+                       => specialize (H i)
+                     | [ H : context[nth_error ?ls _], H' : context[nth_error ?ls ?i] |- _ ]
+                       => specialize (H i)
+                     | [ H : context[nth_error (List.combine ?ls _) _] |- context[nth_error ?ls ?i] ]
+                       => specialize (H i)
+                     end;
+              rewrite ?@nth_error_combine in *;
+              cbv [option_eq eval_idx_Z] in *;
+              repeat first [ exfalso; assumption
+                           | reflexivity
+                           | assumption
+                           | progress inversion_option
+                           | progress subst
+                           | match goal with
+                             | [ H : negb _ = false |- _ ] => rewrite Bool.negb_false_iff in H; reflect_hyps
+                             | [ H : eval _ _ ?x ?v, H' : eval _ _ ?x ?v' |- _ ]
+                               => unique assert (v = v') by eauto 10 using eval_eval
+                             end
+                           | break_innermost_match_step
+                           | break_innermost_match_hyps_step ]
+         | _ => idtac
+         end.
+    (* what's left:
+  Forall (fun v : Z => (0 <= v < 2 ^ 64)%Z) ?stack_placeholder_values
+
+goal 2 (ID 17077) is:
+ Datatypes.length x = Datatypes.length ?stack_placeholder_values
+goal 3 (ID 17080) is:
+ Forall2 val_or_list_val_matches_spec ?input_placeholder_values
+   (type_spec_of_runtime (word_args_to_Z_args word_runtime_inputs))
+goal 4 (ID 17083) is:
+ Forall
+   (fun v : Z + list Z =>
+    match v with
+    | inl v0 => (0 <= v0 < 2 ^ 64)%Z
+    | inr vs => Forall (fun v0 : Z => (0 <= v0 < 2 ^ 64)%Z) vs
+    end) ?input_placeholder_values
+goal 5 (ID 17084) is:
+ (frame ⋆ R_list_scalar_or_array runtime_rets asm_args_out
+  ⋆ R_list_scalar_or_array ?input_placeholder_values asm_args_in
+  ⋆ array cell64 (word.of_Z 8) stack_base ?stack_placeholder_values)%sep m'
+     *)
+    1-5: [ > match goal with |- ?G => idtac "TODO" G end .. ].
+    1-5: shelve. }
   { lazymatch goal with
     | [ H : R _ _ (update_dag_with _ _) _ |- R_mem _ _ _ _ ?m ]
       => cbv [R update_dag_with] in H; destruct_head'_and;
