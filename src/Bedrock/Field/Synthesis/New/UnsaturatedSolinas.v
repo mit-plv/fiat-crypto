@@ -121,7 +121,7 @@ Section UnsaturatedSolinas.
          (UnsaturatedSolinasHeuristics.loose_bounds n s c)
          (UnsaturatedSolinasHeuristics.tight_bounds n s c)
          (prime_bytes_bounds_value)
-         list_Z_bounded_by (fun x => x) (fun x => x).
+         list_Z_bounded_by (fun x => x).
 
   Local Ltac specialize_correctness_hyp Hcorrect :=
     cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
@@ -432,7 +432,7 @@ Section UnsaturatedSolinas.
       handle_side_conditions; [ loosen_bounds | bounds_length | | ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
-      destruct Hcorrect. cbv [feval_alt].
+      destruct Hcorrect.
       FtoZ. simpl_map_unsigned. congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
@@ -458,7 +458,7 @@ Section UnsaturatedSolinas.
     }
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
-      rewrite Hcorrect. cbv [feval_alt Representation.eval_words_alt].
+      rewrite Hcorrect.
       rewrite F.to_Z_of_Z, <-M_eq.
       reflexivity. }
     { (* output *bounds* are correct *)
@@ -497,8 +497,6 @@ Definition field_parameters_prefixed
     (prefix ++ "to_bytes")
     (prefix ++ "copy")
     (prefix ++ "small_literal")
-    (prefix ++ "to_mont")
-    (prefix ++ "from_mont")
     (prefix ++ "select_znz")
 .
 

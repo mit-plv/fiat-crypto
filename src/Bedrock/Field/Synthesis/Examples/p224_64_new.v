@@ -8,8 +8,20 @@ Require Import Crypto.Bedrock.Field.Synthesis.New.WordByWordMontgomery.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults32.
 Require Import Crypto.Bedrock.Specs.Field.
 Import ListNotations.
+Require Import bedrock2.WeakestPreconditionProperties.
+Require Import bedrock2.WeakestPrecondition.
+Require Import bedrock2.ProgramLogic.
+Require Import bedrock2.Map.Separation.
+Require Import bedrock2.Map.SeparationLogic.
+Require Import bedrock2.Syntax.
+Local Open Scope string_scope.
+Local Infix "*" := sep : sep_scope.
+Delimit Scope sep_scope with sep.
+Local Notation function_t := ((String.string * (list String.string * list String.string * Syntax.cmd.cmd))%type).
+Local Notation functions_t := (list function_t).
+Local Open Scope sep_scope.
 
-(* Parameters for Curve25519 field. *)
+(* Parameters for p224 field. *)
 Section Field.
   Definition n : nat := 4.
   Definition m : Z := (2^224 - 2^96 + 1)%Z.
@@ -19,36 +31,23 @@ Section Field.
   Existing Instances no_select_size split_mul_to split_multiret_to.
   Definition prefix : string := "p224_"%string.
 
-  (* Define Curve25519 field *)
+  (* Define p224 field *)
   Instance field_parameters : FieldParameters.
   Proof using Type.
     let M := (eval vm_compute in (Z.to_pos (m))) in
     (* curve 'A' parameter *)
-    let a := constr:(F.of_Z M 486662) in
+    let a := constr:(F.of_Z M (m - 3)) in
     let prefix := constr:("p224_felem_"%string) in
     eapply
       (field_parameters_prefixed
          M ((a - F.of_Z _ 2) / F.of_Z _ 4)%F prefix).
   Defined.
 
-  Require Import bedrock2.WeakestPreconditionProperties.
-  Require Import bedrock2.WeakestPrecondition.
-  Require Import bedrock2.ProgramLogic.
-  Require Import bedrock2.Map.Separation.
-  Require Import bedrock2.Map.SeparationLogic.
-  (* Require Import bedrock2.NotationsInConstr. *)
-Require Import bedrock2.Syntax.
-
-
-    Local Open Scope string_scope.
-    Local Infix "*" := sep : sep_scope.
-    Delimit Scope sep_scope with sep.
-    Local Notation function_t := ((String.string * (list String.string * list String.string * Syntax.cmd.cmd))%type).
-    Local Notation functions_t := (list function_t).
-    Local Open Scope sep_scope.
+  Definition to_mont_string := prefix ++ "to_mont".
+  Definition from_mont_string := prefix ++ "from_mont".
 
   (* Call fiat-crypto pipeline on all field operations *)
-  Instance p224_ops : word_by_word_Montgomery_ops (WordByWordMontgomery.n m machine_wordsize) m.
+  Instance p224_ops : @word_by_word_Montgomery_ops from_mont_string to_mont_string _ _ _ _ _ _ _ _ _ _ _ (WordByWordMontgomery.n m machine_wordsize) m.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
 
@@ -77,19 +76,16 @@ Require Import bedrock2.Syntax.
         lazymatch goal with
         | |- _ = @ErrorT.Success ?ErrT unit tt =>
           abstract (vm_cast_no_check (@eq_refl _ (@ErrorT.Success ErrT unit tt)))
-        (* | |- list_Z_tighter_than _ _ =>
-          abstract (vm_cast_no_check (@eq_refl bool true)) *)
         | |- Func.valid_func _ =>
           eapply Func.valid_func_bool_iff;
           abstract vm_cast_no_check (eq_refl true)
         | |- (_ = _)%Z => vm_compute; reflexivity
-        (* | |- _ = default_varname_gen => vm_compute; reflexivity *)
         end.
 
   Derive p224_from_bytes
          SuchThat (forall functions,
                       spec_of_from_bytes
-                        (field_representation:=field_representation m)
+                        (field_representation:=field_representation_raw m)
                         (p224_from_bytes :: functions))
          As p224_from_bytes_correct.
   Proof. Time derive_bedrock2_func from_bytes_op. Qed.
@@ -97,7 +93,7 @@ Require Import bedrock2.Syntax.
   Derive p224_to_bytes
          SuchThat (forall functions,
                       spec_of_to_bytes
-                        (field_representation:=field_representation m)
+                        (field_representation:=field_representation_raw m)
                         (p224_to_bytes :: functions))
          As p224_to_bytes_correct.
   Proof. Time derive_bedrock2_func to_bytes_op. Qed.
@@ -134,6 +130,7 @@ Require Import bedrock2.Syntax.
          As p224_sub_correct.
   Proof. Time derive_bedrock2_func sub_op. Qed.
 
+  (*TODO: adapt derive_bedrock2_func to also derive the remaining functions.*)
   Derive p224_from_mont
          SuchThat (forall functions,
                       spec_of_UnOp un_from_mont
@@ -141,10 +138,13 @@ Require Import bedrock2.Syntax.
                         (p224_from_mont :: functions))
          As p224_from_mont_correct.
   Proof.
-    eapply from_mont_func_correct; auto.
+    eapply (from_mont_func_correct _ _ _ from_mont_string to_mont_string); auto.
         - vm_compute; reflexivity.
         - eapply Func.valid_func_bool_iff. abstract vm_cast_no_check (eq_refl true).
-     Qed.
+          Unshelve.
+            + auto.
+            + auto.
+  Qed.
 
   Derive p224_to_mont
          SuchThat (forall functions,
@@ -153,9 +153,10 @@ Require Import bedrock2.Syntax.
                         (p224_to_mont :: functions))
          As to_from_mont_correct.
   Proof.
-    eapply to_mont_func_correct; auto.
+    eapply (to_mont_func_correct _ _ _ from_mont_string to_mont_string); auto.
         - vm_compute; reflexivity.
         - eapply Func.valid_func_bool_iff. abstract vm_cast_no_check (eq_refl true).
+          Unshelve. all: auto.
      Qed.
 
   Derive p224_select_znz

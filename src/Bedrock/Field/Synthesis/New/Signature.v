@@ -96,18 +96,17 @@ Section WithParameters.
              forall X,
                list_in_bounds tight_bounds X ->
                list_in_bounds loose_bounds X)
-          (eval_transformation : list Z -> list Z)
-          (eval_bytes_transformation : list Z -> list Z).
+          (eval_transformation : list Z -> list Z).
   Context (inname_gen_varname_gen_disjoint :
              disjoint default_inname_gen varname_gen)
           (outname_gen_varname_gen_disjoint :
              disjoint default_outname_gen varname_gen).
   Local Instance field_representation : FieldRepresentation
     := @frep _ BW _ _ field_parameters n n_bytes weight bounds list_in_bounds loose_bounds tight_bounds
-             byte_bounds eval_transformation eval_bytes_transformation.
+             byte_bounds eval_transformation.
   Local Instance field_representation_ok : FieldRepresentation_ok
     := frep_ok n n_bytes weight bounds list_in_bounds loose_bounds tight_bounds byte_bounds
-               relax_bounds _ _.
+               relax_bounds _.
 
   Lemma FElem_array_truncated_scalar_iff1 px x :
     Lift1Prop.iff1
@@ -519,7 +518,7 @@ Section WithParameters.
             (tight_bounds_length : forall x, list_in_bounds tight_bounds x -> length x = n)
             (res_eq : forall bs,
                 bytes_in_bounds bs ->
-                feval_alt (map word.of_Z
+                feval (map word.of_Z
                            (API.interp (res _) (map byte.unsigned bs)))
                 = feval_bytes bs)
             (res_bounds : forall bs,
@@ -627,7 +626,7 @@ Section WithParameters.
                 = Partition.partition
                     (ModOps.weight 8 1)
                     encoded_felem_size_in_bytes
-                    (F.to_Z (feval_alt x)))
+                    (F.to_Z (feval x)))
             (res_bounds : forall x,
                 bounded_by tight_bounds x ->
                 bytes_in_bounds
@@ -724,15 +723,13 @@ Section WithParameters.
   End ToBytes.
 
 
-Section SelectZnz.
+Section SelectZnZ.
 
   Local Notation bit_range := {|ZRange.lower := 0; ZRange.upper := 1|}.
   Context {res : API.Expr (type_Z -> type_listZ -> type_listZ -> type_listZ)}
   (res_valid :
      valid_func (res (fun _ : API.type => unit)))
   (res_Wf : API.Wf res).
-
-(*res_bounds is not used; perhaps change spec of select_znz to not assume length of lists.*)
 
 Context
   (res_eq : forall (x y : list word) (c : word),
@@ -744,15 +741,6 @@ Context
                              (map word.unsigned x)
                              (map word.unsigned y))
       = map word.unsigned (if (word.unsigned c =? 0) then x else y)).
-  (* (res_bounds : forall x y c,
-      list_in_bounds bin_xbounds x ->
-      list_in_bounds bin_ybounds y ->
-      list_in_bounds bin_outbounds (API.interp (res _) x y c))
-
-  (outbounds_tighter_than_max : forall x, list_in_bounds bin_outbounds x -> list_Z_bounded_by ((@max_bounds width) n) x)
-  (xbounds_length : forall x, list_in_bounds bin_xbounds x -> length x = n)  
-  (ybounds_length : forall x, list_in_bounds bin_ybounds x -> length x = n)
-  (outbounds_length : forall x, list_in_bounds bin_outbounds x -> length x = n). *)
 
     Local Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
@@ -800,6 +788,11 @@ Context
               pose proof Properties.word.unsigned_range. auto.
     Qed. 
 
+    Lemma FElem_max_bounds : forall px x m R, (FElem px x * R)%sep m -> list_Z_bounded_by (@max_bounds width n) (map word.unsigned x).
+    Proof.
+      intros. eapply max_bounds_words. cbv [FElem Bignum.Bignum] in H. sepsimpl. eauto.
+    Qed. 
+
     Lemma select_znz_correct f :
       f = make_bedrock_func select_znz insizes outsizes inlengths res ->
       forall functions,
@@ -811,6 +804,8 @@ Context
       cbv [list_selectznz_insizes list_selectznz_outsizes list_selectznz_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
       cleanup.
+      pose proof (FElem_max_bounds _ _ _ _ H0) as Hxbounds.
+      pose proof (FElem_max_bounds _ _ _ _ H1) as Hybounds.
       match goal with
       | H : ZRange.is_bounded_by_bool _ _ = _ |- _ => rename H into Hbound
       | _ => idtac
@@ -839,10 +834,14 @@ Context
         }
         1:  destruct (bit_range_eq _ Hbound) as [Hbit| Hbit]; rewrite Hbit; simpl;
             eapply MaxBounds.max_bounds_range_iff; eauto.
-        lists_reserved_simplify pout.
-          all: try solve_equivalence_side_conditions.
-          destruct (bit_range_eq _ Hbound) as [Hbit| Hbit]; rewrite Hbit; simpl; auto;
-          erewrite length_list_Z_bounded_by; eauto; symmetry; erewrite length_list_Z_bounded_by; eauto.
+            lists_reserved_simplify pout.
+            all: try solve_equivalence_side_conditions.
+            destruct (bit_range_eq _ Hbound) as [Hbit| Hbit]; rewrite Hbit; simpl; auto; cbv [FElem Bignum.Bignum] in *; sepsimpl;
+            repeat rewrite map_length;
+            match goal with
+              | H : ?n1 = _ |- ?n1 = _ => rewrite H
+              | _ => idtac
+            end; eauto.
       }
         postcondition_simplify.
         destruct (bit_range_eq _ Hbound) as [Hbit| Hbit].
@@ -871,64 +870,5 @@ Context
                       | _ => idtac
                       end; eauto.
     Qed.
-
-
-    Lemma select_znz_correct_alt f :
-    f = make_bedrock_func select_znz insizes outsizes inlengths res ->
-    forall functions,
-      spec_of_selectznz (f :: functions).
-  Proof using inname_gen_varname_gen_disjoint
-        outname_gen_varname_gen_disjoint ok res_Wf
-        res_eq res_valid.
-    subst inlengths insizes outsizes. cbv [spec_of_selectznz].
-    cbv [list_selectznz_insizes list_selectznz_outsizes list_selectznz_inlengths].
-    cbv beta; intros; subst f. cbv [make_bedrock_func].
-    cleanup.
-    match goal with
-    | H : ZRange.is_bounded_by_bool _ _ = _ |- _ => rename H into Hbound
-    | _ => idtac
-    end.
-    eapply Proper_call.
-    2:{ use_translate_func_correct
-        constr:((word.unsigned pc, (map word.unsigned x, (map word.unsigned y, tt)))) Rout.
-      all:try translate_func_precondition_hammer.
-      all:cbn [type.app_curried fst snd].
-      all:try rewrite res_eq by auto.
-      {
-          eapply (equivalent_flat_args_iff1
-          (make_innames (inname_gen:=default_inname_gen) _)
-          _ _ _
-          map.empty).
-              - apply flatten_make_innames_NoDup; solve [eapply prefix_name_gen_unique].
-              - reflexivity.
-              - compute_names. autounfold with equivalence pairs.
-              cbv [Equivalence.equivalent_base].
-              autounfold with equivalence pairs.
-              rewrite <- ?MakeAccessSizes.bytes_per_word_eq; sepsimpl.
-                  + crush_sep; try solve_equivalence_side_conditions. eauto. (*Which one?*)
-                  + crush_sep; try solve_equivalence_side_conditions.
-                  + crush_sep; try solve_equivalence_side_conditions.
-                  + auto.
-      }
-      1:  destruct (bit_range_eq _ Hbound) as [Hbit| Hbit]; rewrite Hbit; simpl;
-          eapply MaxBounds.max_bounds_range_iff; eauto.
-      lists_reserved_simplify pout.
-        all: try solve_equivalence_side_conditions.
-        destruct (bit_range_eq _ Hbound) as [Hbit| Hbit]; rewrite Hbit; simpl; auto;
-        erewrite length_list_Z_bounded_by; eauto; symmetry; erewrite length_list_Z_bounded_by; eauto.
-    }
-      postcondition_simplify.
-      destruct (bit_range_eq _ Hbound) as [Hbit| Hbit]; [
-      rewrite Hbit; simpl;
-      rewrite H9 in H12; rewrite res_eq in H12; eauto;
-      rewrite Hbit in H12; simpl in H12; eapply Proper_sep_iff1; [apply FElem_array_truncated_scalar_iff1| intros; split; intros; eauto | sepsimpl; try ecancel_assumption; erewrite <- map_length;
-      erewrite length_list_Z_bounded_by; eauto; cbv [max_bounds]; rewrite repeat_length; eauto
-      ] |
-      rewrite Hbit; simpl;
-      rewrite H9 in H12; rewrite res_eq in H12; eauto;
-      rewrite Hbit in H12; simpl in H12; eapply Proper_sep_iff1; [apply FElem_array_truncated_scalar_iff1| intros; split; intros; eauto | sepsimpl; try ecancel_assumption; erewrite <- map_length;
-      erewrite length_list_Z_bounded_by; eauto; cbv [max_bounds]; rewrite repeat_length; eauto
-      ] ].
-  Qed.
-  End SelectZnz.
+  End SelectZnZ.
 End WithParameters.

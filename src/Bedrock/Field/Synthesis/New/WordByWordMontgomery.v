@@ -29,6 +29,7 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Import ListNotations API.Compilers Types.Notations.
 
 Class word_by_word_Montgomery_ops
+  {from_mont to_mont : string}
   {width BW word mem locals env ext_spec varname_gen error}
   {parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
   {field_parameters : FieldParameters}
@@ -68,12 +69,12 @@ Class word_by_word_Montgomery_ops
     from_mont_op :
       computed_op
         (WordByWordMontgomery.from_montgomery m width)
-        Field.from_mont
+        from_mont
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
     to_mont_op :
       computed_op
         (WordByWordMontgomery.to_montgomery m width)
-        Field.to_mont
+        to_mont
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
     select_znz_op : 
         computed_op
@@ -82,7 +83,7 @@ Class word_by_word_Montgomery_ops
         list_selectznz_insizes list_selectznz_outsizes (list_selectznz_inlengths n)
   }.
 
-Arguments word_by_word_Montgomery_ops {_ _ _ _ _ _ _ _ _ _ _} n.
+Arguments word_by_word_Montgomery_ops {_ _ _ _ _ _ _ _ _ _ _ _ _} n.
 
 (** We need to tell [check_args] that we are requesting these functions in order to get the relevant properties out *)
 Notation necessary_requests := ["to_bytes"; "from_bytes"]%string (only parsing).
@@ -160,7 +161,9 @@ Section WordByWordMontgomery.
 
   Local Notation n := (WordByWordMontgomery.n m width).
 
-  Context (ops : word_by_word_Montgomery_ops n m)
+  Context (from_mont : string)
+          (to_mont : string)
+          (ops : word_by_word_Montgomery_ops n m)
           mul_func add_func sub_func opp_func square_func
           from_bytes_func to_bytes_func
           from_mont_func to_mont_func select_znz_func
@@ -173,11 +176,11 @@ Section WordByWordMontgomery.
           (to_bytes_func_eq : to_bytes_func = b2_func to_bytes_op)
           (from_mont_func_eq : from_mont_func = b2_func from_mont_op)
           (to_mont_func_eq : to_mont_func = b2_func to_mont_op)
-          (select_znz_func_eq : select_znz_func = b2_func select_znz_op).
+          (select_znz_func_eq : select_znz_func = b2_func (@select_znz_op from_mont to_mont _ _ _ _ _ _ _ _ _ _ _ _ _ _)).
 
   Local Notation weight := (uweight width) (only parsing).
   Definition eval_trans := (WordByWordMontgomery.from_montgomerymod width n m (WordByWordMontgomery.m' m width)).
-  Definition bytes_eval_trans := @id (list Z).
+  Definition eval_raw : (list Z -> list Z) := fun x => x. 
 
   Inductive bounds_type := (*Bounds type for WBW. must distinguish between bounds for lists of words and lists of bytes*)
   | wordlist
@@ -190,14 +193,22 @@ Section WordByWordMontgomery.
     | bytelist => WordByWordMontgomery.valid 8 (n_bytes m) m x
     end.
 
+  Local Instance field_representation_raw : FieldRepresentation
+  := Signature.field_representation
+      n (n_bytes m) weight bounds_type
+      wordlist
+      wordlist
+      bytelist
+      list_in_bounds eval_raw.
+
   Local Instance field_representation : FieldRepresentation
     := field_representation
          n (n_bytes m) weight bounds_type
          wordlist
          wordlist
          bytelist
-         list_in_bounds eval_trans bytes_eval_trans.
-
+         list_in_bounds eval_trans.
+  
   Local Ltac specialize_correctness_hyp Hcorrect :=
     cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
                field_representation Signature.field_representation
@@ -322,7 +333,7 @@ Qed.
   Lemma mul_func_correct :
     valid_func (res mul_op _) ->
     forall functions,
-      spec_of_BinOp bin_mul (mul_func :: functions).
+      spec_of_BinOp bin_mul (mul_func :: functions). Set Printing All.
   Proof using M_eq check_args_ok mul_func_eq ok.
         (* tight_bounds_tighter_than. *)
     intros. cbv [spec_of_BinOp bin_mul]. rewrite mul_func_eq.
@@ -330,7 +341,7 @@ Qed.
          m width _ ltac:(eassumption) _ (res_eq mul_op)     
       as Hcorrect.
     eapply list_binop_correct with (res:=res mul_op);
-    handle_side_conditions; [| | eapply valid_max_bounds; eauto | apply valid_length].
+    try handle_side_conditions; [| | eapply valid_max_bounds; eauto | apply valid_length].
     {   
     (* output *value* is correct *)
       intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
@@ -484,7 +495,7 @@ Qed.
   Lemma from_bytes_func_correct :
     valid_func (res from_bytes_op _) ->
     forall functions,
-      spec_of_from_bytes (from_bytes_func :: functions).
+      (@spec_of_from_bytes _ _ _ _ _ _ _ field_representation_raw) (from_bytes_func :: functions).
   Proof using M_eq check_args_ok from_bytes_func_eq ok.
     intros. cbv [spec_of_from_bytes]. rewrite from_bytes_func_eq.
     pose proof from_bytes_correct
@@ -500,10 +511,10 @@ Qed.
              Representation.frep Representation.eval_bytes
              Representation.eval_words
              bin_model bin_xbounds bin_ybounds
-             un_model un_xbounds eval_trans bytes_eval_trans
+             un_model un_xbounds eval_trans
     ] in *.
     
-    specialize (Hcorrect (map Byte.byte.unsigned bs) H0). cbv [Representation.eval_words_alt].
+    specialize (Hcorrect (map Byte.byte.unsigned bs) H0).
     rewrite map_unsigned_of_Z. erewrite (MaxBounds.map_word_wrap_bounded).
     2: {
       eapply valid_max_bounds; eauto. destruct Hcorrect; eauto.
@@ -518,7 +529,7 @@ Qed.
   Lemma to_bytes_func_correct :
     valid_func (res to_bytes_op _) ->
     forall functions,
-      spec_of_to_bytes (to_bytes_func :: functions).
+      (@spec_of_to_bytes _ _ _ _ _ _ _ field_representation_raw) (to_bytes_func :: functions).
   Proof using M_eq check_args_ok ok to_bytes_func_eq.
     intros. cbv [spec_of_to_bytes]. rewrite to_bytes_func_eq.
     pose proof to_bytes_correct
@@ -543,7 +554,7 @@ Qed.
              Representation.frep Representation.eval_bytes
              Representation.eval_words
              bin_model bin_xbounds bin_ybounds
-             un_model un_xbounds eval_trans bytes_eval_trans
+             un_model un_xbounds eval_trans
     ] in *.
     
     specialize (Hcorrect (map Interface.word.unsigned x) H0).
@@ -608,7 +619,7 @@ Qed.
   Lemma from_mont_func_correct :
   valid_func (res from_mont_op _) ->
   forall functions,
-    spec_of_UnOp un_from_mont (from_mont_func :: functions).
+    (@spec_of_UnOp _ _ _ _ _ _ _ _ from_mont) un_from_mont (from_mont_func :: functions).
     Proof using M_eq check_args_ok ok from_mont_func_eq.
     clear field_parameters_ok.
     intros. cbv [spec_of_UnOp un_from_mont]. rewrite from_mont_func_eq.
@@ -649,7 +660,7 @@ Qed.
   Lemma to_mont_func_correct :
   valid_func (res to_mont_op _) ->
   forall functions,
-    spec_of_UnOp un_to_mont (to_mont_func :: functions).
+    (@spec_of_UnOp _ _ _ _ _ _ _ _ to_mont) un_to_mont (to_mont_func :: functions).
     Proof using M_eq check_args_ok ok to_mont_func_eq.
     intros. cbv [spec_of_UnOp un_to_mont]. rewrite to_mont_func_eq.
     pose proof to_montgomery_correct
@@ -707,12 +718,12 @@ Qed.
     spec_of_selectznz (select_znz_func :: functions).
 Proof using M_eq check_args_ok select_znz_func_eq ok.
   intros. cbv [spec_of_selectznz]. rewrite select_znz_func_eq.
-  pose proof selectznz_correct_alt
+  pose proof selectznz_correct
        _ _ _ ltac:(eassumption) _ (res_eq select_znz_op)
     as Hcorrect.
-  eapply Signature.select_znz_correct_alt with (res:=res select_znz_op);
+  eapply Signature.select_znz_correct with (res:=res select_znz_op);
     handle_side_conditions. intros x y c H0 H1 H2.
-    unfold COperationSpecifications.WordByWordMontgomery.selectznz_correct_alt in Hcorrect.
+    unfold COperationSpecifications.WordByWordMontgomery.selectznz_correct in Hcorrect.
     edestruct (bit_range_eq 1 (fun n => 1%Z) _ H2) as [Hbit | Hbit].
     - specialize (Hcorrect (Interface.word.unsigned c) (map Interface.word.unsigned x) (map Interface.word.unsigned y) H2 ltac:(eauto) ltac:(eauto)).
       destruct Hcorrect as [H4 H5]. rewrite Hbit in H4. simpl in H4. rewrite Hbit. simpl. auto.
@@ -721,6 +732,7 @@ Proof using M_eq check_args_ok select_znz_func_eq ok.
 Qed.
 
 End WordByWordMontgomery.
+
 
 (* Prototyping full pipeline: *)
 
@@ -742,17 +754,15 @@ Definition field_parameters_prefixed
     (prefix ++ "inv")
     (prefix ++ "from_bytes")
     (prefix ++ "to_bytes")
-    (prefix ++ "from_mont")
-    (prefix ++ "to_mont")
     (prefix ++ "felem_copy")
     (prefix ++ "small_literal")
     (prefix ++ "select_znz")
 .
 
-(*
+
 Require Import bedrock2.ProgramLogic.
 
-Section Tests.
+(* Section Tests.
   Definition m := (2^224 - 2^96 + 1)%Z.
   Definition prefix : string := "p224_"%string.
 
@@ -808,19 +818,18 @@ Section Tests.
 Derive p224_to_bytes
   SuchThat (forall functions,
                spec_of_to_bytes
-                 (field_representation:=field_representation m)
+                 (field_representation:=field_representation_raw m)
                  (p224_to_bytes :: functions))
   As p224_to_bytes_correct.
 Proof. derive_bedrock2_func to_bytes_op. Qed.
 
 Derive p224_mul
   SuchThat (forall functions,
-              spec_of_to_bytes
+              spec_of_BinOp bin_mul
                 (field_representation := field_representation m)
                 (p224_mul :: functions))
   As p22_mul_correct.
 Proof. derive_bedrock2_func mul_op. Qed.
 
-Print p224_mul. 
 
 End Tests. *)

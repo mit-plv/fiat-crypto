@@ -1032,10 +1032,13 @@ Section __.
   Proof using Type. prove_pipeline_wf (). Qed.
 
   Local Opaque Pipeline.BoundsPipeline. (* need this or else [eapply Pipeline.BoundsPipeline_correct in Hres] takes forever *)
+
   Lemma selectznz_correct res
         (Hres : selectznz = Success res)
-    : selectznz_correct machine_wordsize n saturated_bounds (Interp res).
-  Proof using curve_good. Primitives.prove_correctness use_curve_good. Qed.
+    : selectznz_correct saturated_bounds (Interp res).
+  Proof using curve_good.
+    Primitives.prove_correctness use_curve_good. eapply select_eq; eauto.
+  Qed.
 
   Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
   Proof using Type. revert Hres; cbv [selectznz]; apply Wf_selectznz. Qed.

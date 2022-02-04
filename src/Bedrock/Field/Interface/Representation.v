@@ -30,28 +30,24 @@ Section Representation.
              forall X : list Z,
                list_in_bounds tight_bounds X ->
                list_in_bounds loose_bounds X)
-               
-          (eval_transformation : list Z -> list Z) (*Pulls argument out of Montgomery domain. Identity for Solinas*)
-          (eval_bytes_transformation : list Z -> list Z).
+          (*Transformation to applied to list before evaluating. For Solinas, this is the identity,
+            and for word-by-word Montgomery, the argument must be pulled out of the Montgomery domain*)
+          (eval_transformation : list Z -> list Z).
+
 
   Definition eval_words : list word -> F M_pos :=
     fun ws =>
       F.of_Z _ (Positional.eval weight n (eval_transformation (map word.unsigned ws))).
 
-  Definition eval_words_alt : list word -> F M_pos :=
-    fun ws =>
-      F.of_Z _ (Positional.eval weight n (map word.unsigned ws)).
-
   Definition eval_bytes : list byte -> F M_pos :=
     fun bs =>
       F.of_Z _ (Positional.eval
                            (ModOps.weight 8 1)
-                           n_bytes (eval_bytes_transformation
-                           (map byte.unsigned bs))).
+                           n_bytes 
+                           (map byte.unsigned bs)).
 
   Local Instance frep : FieldRepresentation := {
       feval := eval_words;
-      feval_alt := eval_words_alt;
       feval_bytes := eval_bytes;
       felem_size_in_words := n;
       encoded_felem_size_in_bytes := n_bytes;
