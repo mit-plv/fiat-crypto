@@ -1,0 +1,41 @@
+     = [(normal_output,
+        "check_args
+/*  */
+/* Computed values: */
+/*   carry_chain = [0, 1, 2, 0, 1] */
+/*   eval z = z[0] + (z[1] << 43) + (z[2] << 85) */
+/*   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) */
+/*   balance = [0xffffffffffe, 0x7fffffffffe, 0x7fffffffffe] */
+
+#include <stdint.h>
+#ifdef __GNUC__
+#  define CURVEFIAT_INLINE __inline__
+#else
+#  define CURVEFIAT_INLINE
+#endif
+
+#if (-1 & 3) != 3
+#error ""This code only works on a two's complement system""
+#endif
+",
+        ErrorT.Success
+          ["/*  */"; "/* Computed values: */"; "/*   carry_chain = [0, 1, 2, 0, 1] */";
+          "/*   eval z = z[0] + (z[1] << 43) + (z[2] << 85) */";
+          "/*   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) */";
+          "/*   balance = [0xffffffffffe, 0x7fffffffffe, 0x7fffffffffe] */"; ""; "#include <stdint.h>";
+          "#ifdef __GNUC__"; "#  define CURVEFIAT_INLINE __inline__"; "#else"; "#  define CURVEFIAT_INLINE";
+          "#endif"; ""; "#if (-1 & 3) != 3"; "#error ""This code only works on a two's complement system""";
+          "#endif"; ""]);
+       (normal_output, "curveadd",
+       ErrorT.Success
+         ["/*"; " * The function curveadd adds two field elements."; " *"; " * Postconditions:";
+         " *   eval out1 mod m = (eval arg1 + eval arg2) mod m"; " *"; " * Input Bounds:";
+         " *   arg1: [[0x0 ~> 0x80000000000], [0x0 ~> 0x40000000000], [0x0 ~> 0x40000000000]]";
+         " *   arg2: [[0x0 ~> 0x80000000000], [0x0 ~> 0x40000000000], [0x0 ~> 0x40000000000]]";
+         " * Output Bounds:";
+         " *   out1: [[0x0 ~> 0x180000000000], [0x0 ~> 0xc0000000000], [0x0 ~> 0xc0000000000]]"; " */";
+         "CURVEFIAT_INLINE void curveadd(uint64_t out1[3], const uint64_t arg1[3], const uint64_t arg2[3]) {";
+         "  uint64_t x1;"; "  uint64_t x2;"; "  uint64_t x3;"; "  x1 = ((arg1[0]) + (arg2[0]));";
+         "  x2 = ((arg1[1]) + (arg2[1]));"; "  x3 = ((arg1[2]) + (arg2[2]));"; "  out1[0] = x1;";
+         "  out1[1] = x2;"; "  out1[2] = x3;"; "}"])]
+     : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
