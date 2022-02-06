@@ -429,7 +429,8 @@ Module Compilers.
                   {relax_zrange : relax_zrange_opt}
                   {consider_retargs_live : consider_retargs_live_opt}
                   {rename_dead : rename_dead_opt}
-                  {lift_declarations : lift_declarations_opt}.
+                  {lift_declarations : lift_declarations_opt}
+                  {language_specific_cast_adjustment : language_specific_cast_adjustment_opt}.
 
           (* None means unconstrained *)
           Definition bin_op_natural_output_opt
@@ -456,18 +457,23 @@ Module Compilers.
                   | None => (tout, None)
                   end.
 
-          Definition Zcast
+          Definition Zcast {always : bool}
             : option int.type -> arith_expr_for_base tZ -> arith_expr_for_base tZ
             := fun desired_type '(e, known_type)
-               => match desired_type, known_type with
-                  | None, _ => (e, known_type)
-                  | Some desired_type, Some known_type
-                    => if int.type_beq known_type desired_type
-                       then (e, Some known_type)
-                       else (Z_static_cast desired_type @@@ e, Some desired_type)
-                  | Some desired_type, None
-                    => (Z_static_cast desired_type @@@ e, Some desired_type)
-                  end%core%Cexpr.
+               => let eq_known_type_desired_type
+                    := (known_type <- known_type;
+                        desired_type <- desired_type;
+                        Some (int.type_beq known_type desired_type))%option in
+                 match always, language_specific_cast_adjustment, desired_type, eq_known_type_desired_type with
+                 | true, _, Some desired_type, _ (* if we always insert the cast, and there's a cast, then insert it *)
+                 | _, true, Some desired_type, Some false (* if we are doing language-specific casts and we know the desired type and it's not the same as the known type, insert it *)
+                 | _, true, Some desired_type, None (* if we are doing language-specific casts and we know the desired type and there was no known type, insert it *)
+                   => (Z_static_cast desired_type @@@ e, Some desired_type)
+                 | false, false, _, _ (* if we're not doing cast insertion (neither by forcing nor by language-specific casts), don't insert a cast *)
+                 | _, true, Some _, Some true (* if we're doing language-specific casts but the new type is the same as the known type, we don't need to insert a cast *)
+                 | _, _, None, _ (* if we don't know the type to insert, we can't insert a cast *)
+                   => (e, known_type)
+                 end%core%Cexpr%bool.
 
           Definition get_Zcast_down_if_needed
             : option int.type -> option int.type -> option int.type
@@ -485,11 +491,7 @@ Module Compilers.
           Definition Zcast_down_if_needed
             : option int.type -> arith_expr_for_base tZ -> arith_expr_for_base tZ
             := fun desired_type '(e, known_type)
-               => match get_Zcast_down_if_needed desired_type known_type with
-                  | None => (e, known_type)
-                  | Some desired_type
-                    => (Z_static_cast desired_type @@@ e, Some desired_type)
-                  end%core%Cexpr.
+               => Zcast (always:=false) (get_Zcast_down_if_needed desired_type known_type) (e, known_type).
 
           Fixpoint cast_down_if_needed {t}
             : int.option.interp t -> arith_expr_for_base t -> arith_expr_for_base t
@@ -531,15 +533,7 @@ Module Compilers.
           Definition Zcast_up_if_needed
             : option int.type -> arith_expr_for_base tZ -> arith_expr_for_base tZ
             := fun desired_type '(e, known_type)
-               => Zcast (get_Zcast_up_if_needed desired_type known_type) (e, known_type).
-
-                                               (*match desired_type, known_type with
-                  | None, _ | _, None => (e, known_type)
-                  | Some desired_type, Some known_type
-                    => if int.is_tighter_than desired_type known_type
-                       then (e, Some known_type)
-                       else (Z_static_cast desired_type @@@ e, Some desired_type)%core%Cexpr
-                  end.*)
+               => Zcast (always:=false) (get_Zcast_up_if_needed desired_type known_type) (e, known_type).
 
           Fixpoint cast_up_if_needed {t}
             : int.option.interp t -> arith_expr_for_base t -> arith_expr_for_base t
@@ -567,27 +561,27 @@ Module Compilers.
                        end
                end.
 
-          Fixpoint cast {t}
+          Fixpoint cast {always:bool} {t}
             : int.option.interp t -> arith_expr_for_base t -> arith_expr_for_base t
             := match t with
-               | tZ => Zcast
+               | tZ => Zcast (always:=always)
                | base.type.type_base _
                | base.type.unit
                  => fun _ x => x
                | base.type.prod A B
-                 => fun '(r1, r2) '(e1, e2) => (@cast A r1 e1,
-                                                @cast B r2 e2)
+                 => fun '(r1, r2) '(e1, e2) => (@cast always A r1 e1,
+                                                @cast always B r2 e2)
                | base.type.list A
                  => fun r1 ls
                     => match r1 with
-                       | Some r1 => List.map (fun '(r, e) => @cast A r e)
+                       | Some r1 => List.map (fun '(r, e) => @cast always A r e)
                                              (List.combine r1 ls)
                        | None => ls
                        end
                | base.type.option A
                  => fun r1 ls
                     => match r1 with
-                       | Some r1 => Option.map (fun '(r, e) => @cast A r e)
+                       | Some r1 => Option.map (fun '(r, e) => @cast always A r e)
                                                (Option.combine r1 ls)
                        | None => ls
                        end
@@ -601,8 +595,8 @@ Module Compilers.
             := fun desired_type '((e1, t1), (e2, t2)) =>
                  let '(cstout, (cst1, cst2)) := bin_op_casts_opt idc desired_type (t1, t2) in
                  let typ := bin_op_natural_output_opt idc (Option.or_else cst1 t1, Option.or_else cst2 t2) in
-                 let '((e1, t1), (e2, t2)) := (Zcast cst1 (e1, t1), Zcast cst2 (e2, t2)) in
-                 Zcast cstout ((idc @@@ (e1, e2))%Cexpr, typ).
+                 let '((e1, t1), (e2, t2)) := (Zcast (always:=false) cst1 (e1, t1), Zcast (always:=false) cst2 (e2, t2)) in
+                 Zcast (always:=false) cstout ((idc @@@ (e1, e2))%Cexpr, typ).
 
           Definition arith_un_arith_expr_of_PHOAS_ident
                      (s:=tZ)
@@ -612,8 +606,8 @@ Module Compilers.
             := fun desired_type '(e, t) =>
                  let '(cstout, cst) := un_op_casts_opt idc desired_type t in
                  let typ := (*un_op_natural_output_opt idc*) Option.or_else cst t in
-                 let '(e, t) := Zcast cst (e, t) in
-                 Zcast cstout ((idc @@@ e)%Cexpr, typ).
+                 let '(e, t) := Zcast (always:=false) cst (e, t) in
+                 Zcast (always:=false) cstout ((idc @@@ e)%Cexpr, typ).
 
           Local Definition fakeprod (A B : Compilers.type.type base.type) : Compilers.type.type base.type
             := match A, B with
@@ -773,7 +767,7 @@ Module Compilers.
                               | Some lgbitwidth
                                 => let ty := int.unsigned lgbitwidth in
                                    let rin' := Some ty in
-                                   let '(e, _) := Zcast rin' (e, r) in
+                                   let '(e, _) := Zcast (always:=false) rin' (e, r) in
                                    ret (cast_down_if_needed rout (cast_up_if_needed rout (Z_lnot ty @@@ e, rin')))
                               | None => inr ["Invalid modulus for Z.lnot (not 2^(2^_)): " ++ show modulus]%string
                               end
@@ -915,14 +909,27 @@ Module Compilers.
                                    t)
                  with
                  | ident.Z_cast
-                   => inl (fun r arg
-                           => r <- r tt;
-                              inl (fun r' => arg <- arg (Some (int.of_zrange_relaxed r)); ret (Zcast_down_if_needed r' arg)))
+                   => inl
+                        (fun r arg
+                         => r <- r tt;
+                         let r := Some (int.of_zrange_relaxed r) in
+                         inl (fun r'
+                              => if language_specific_cast_adjustment
+                                 then
+                                   arg <- arg r; ret (Zcast_down_if_needed r' arg)
+                                 else
+                                   arg <- arg None; ret (Zcast (always:=true) r arg)))
                  | ident.Z_cast2
-                   => inl (fun r arg
-                           => r <- r (tt, tt);
-                              inl (fun r' => arg <- (arg (Some (int.of_zrange_relaxed (fst r)), Some (int.of_zrange_relaxed (snd r))));
-                                             ret (cast_down_if_needed (t:=tZ*tZ) r' arg)))
+                   => inl
+                        (fun r arg
+                         => r <- r (tt, tt);
+                         let r := (Some (int.of_zrange_relaxed (fst r)), Some (int.of_zrange_relaxed (snd r))) in
+                         inl (fun r'
+                              => if language_specific_cast_adjustment
+                                 then
+                                   (arg <- arg r; ret (cast_down_if_needed (t:=tZ*tZ) r' arg))
+                                 else
+                                   (arg <- arg (None, None); ret (cast (always:=true) (t:=tZ*tZ) r arg))))
                  | ident.pair A B
                    => inl (fun ea eb
                            => inl
@@ -1029,13 +1036,13 @@ Module Compilers.
             Definition result_upcast {t}
               : int.option.interp t -> arith_expr_for_base t -> arith_expr_for_base t
               := if upcast_on_assignment
-                 then cast
+                 then cast (always:=false)
                  else fun _ e => e.
 
             Definition funcall_upcast {t}
               : int.option.interp t -> arith_expr_for_base t -> arith_expr_for_base t
               := if upcast_on_funcall
-                 then cast
+                 then cast (always:=false)
                  else fun _ e => e.
 
             Fixpoint make_return_assignment_of_base_arith {t}

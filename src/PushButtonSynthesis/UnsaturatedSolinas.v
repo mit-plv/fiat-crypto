@@ -104,11 +104,8 @@ Section __.
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
           {tight_upperbound_fraction : tight_upperbound_fraction_opt}
-          {assembly_calling_registers : assembly_calling_registers_opt}
-          {assembly_stack_size : assembly_stack_size_opt}
+          {assembly_conventions : assembly_conventions_opt}
           {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
-          {assembly_output_first : assembly_output_first_opt}
-          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
           (n : nat)
           (s : Z)
           (c : list (Z * Z))
@@ -136,6 +133,7 @@ Section __.
     := List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list.
   Definition prime_bytes_bounds : list (ZRange.type.option.interp base.type.Z)
     := List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list.
+  Local Notation word_bound := (word_bound machine_wordsize).
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
   Local Notation balance := (balance n s c).
 
@@ -584,6 +582,25 @@ Section __.
              (fun fname : string => [text_before_function_name ++ fname ++ " encodes an integer as a field element."]%string)
              (encode_correct weightf n m tight_bounds)).
 
+  Definition encode_word
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_encode_gen
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n)
+         (Some word_bound, tt)
+         (Some tight_bounds).
+
+  Definition sencode_word (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "encode_word" encode_word
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " encodes an integer as a field element."]%string)
+             (encode_word_correct machine_wordsize weightf n m tight_bounds)).
+
   Definition zero
     := Pipeline.BoundsPipeline
          true (* subst01 *)
@@ -654,6 +671,11 @@ Section __.
   Definition sselectznz (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Primitives.sselectznz n machine_wordsize prefix.
+
+  Definition copy : Pipeline.ErrorT _ := Primitives.copy n machine_wordsize.
+  Definition scopy (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Primitives.scopy n machine_wordsize prefix.
 
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
@@ -876,6 +898,14 @@ Section __.
   Lemma Wf_one res (Hres : one = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
+  Lemma copy_correct res
+        (Hres : copy = Success res)
+    : copy_correct saturated_bounds (Interp res).
+  Proof using curve_good. Primitives.prove_correctness use_curve_good. Qed.
+
+  Lemma Wf_copy res (Hres : copy = Success res) : Wf res.
+  Proof using Type. revert Hres; cbv [copy]; apply Wf_copy. Qed.
+
   Section ring.
     Context carry_mul_res (Hcarry_mul : carry_mul = Success carry_mul_res)
             add_res       (Hadd       : add       = Success add_res)
@@ -986,6 +1016,7 @@ Module Export Hints.
        encode
        zero
        one
+       copy
   : wf_op_cache.
   Hint Immediate
        Wf_carry_mul
@@ -1004,5 +1035,6 @@ Module Export Hints.
        Wf_encode
        Wf_zero
        Wf_one
+       Wf_copy
   : wf_op_cache.
 End Hints.

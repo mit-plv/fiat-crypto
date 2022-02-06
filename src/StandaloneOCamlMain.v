@@ -155,7 +155,7 @@ Global Instance OCamlIODriver : ForExtraction.IODriverAPI unit
        ; ForExtraction.ret := fun 'tt => tt
        ; ForExtraction.with_read_stdin k
          := seq (fun 'tt => read_channel_rev stdin)
-                (fun rev_lines => k (List.map string_to_Coq_string (List.rev rev_lines)))
+                (fun rev_lines => k (List.map string_to_Coq_string (List.rev_append rev_lines nil)))
        ; ForExtraction.write_stdout_then lines k
          := seq (fun _ => fprintf_list_string stdout lines)
                 k
@@ -164,7 +164,7 @@ Global Instance OCamlIODriver : ForExtraction.IODriverAPI unit
                 (fun chan
                  => seq (fun 'tt => read_channel_rev chan)
                         (fun rev_lines => seq (fun 'tt => close_in chan)
-                                              (fun 'tt => k (List.map string_to_Coq_string (List.rev rev_lines)))))
+                                              (fun 'tt => k (List.map string_to_Coq_string (List.rev_append rev_lines nil)))))
        ; ForExtraction.write_file_then fname lines k
          := seq (fun 'tt => open_out (string_of_Coq_string fname))
                 (fun chan

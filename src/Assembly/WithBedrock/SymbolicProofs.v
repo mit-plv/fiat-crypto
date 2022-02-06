@@ -304,26 +304,33 @@ Proof using Type.
   2: { epose proof Properties.word.eqb_spec. exact H. }
 Qed.
 
-Lemma get_reg_R s m (HR : R s m) ri :
+Lemma get_reg_R_regs d s m (HR : R_regs d s m) ri :
   forall i, Symbolic.get_reg s ri = Some i ->
-  exists v, eval s i v /\ Tuple.nth_default 0 ri (m : reg_state) = v.
+  exists v, eval d i v /\ Tuple.nth_default 0 ri m = v.
 Proof using Type.
   cbv [Symbolic.get_reg]; intros.
   rewrite <-Tuple.nth_default_to_list in H.
   cbv [nth_default] in H; BreakMatch.break_match_hyps; subst; [|solve[congruence] ].
-  destruct s,m; cbn in *; destruct HR as (_&?&_); cbv [R_regs R_reg] in *.
-  eapply Tuple.fieldwise_to_list_iff in H.
-  eapply Forall.Forall2_forall_iff_nth_error in H; cbv [Crypto.Util.Option.option_eq] in H.
+  destruct s,m; cbn in *; cbv [R_regs R_reg] in *.
+  eapply Tuple.fieldwise_to_list_iff in HR.
+  eapply Forall.Forall2_forall_iff_nth_error in HR; cbv [Crypto.Util.Option.option_eq] in HR.
 
-  rewrite Heqo in H.
+  rewrite Heqo in HR.
   BreakMatch.break_match_hyps; [|solve[contradiction]].
-  specialize (proj1 H _ eq_refl).
+  specialize (proj1 HR _ eq_refl).
   eexists; split; [eassumption|].
 
   rewrite <-Tuple.nth_default_to_list.
   cbv [nth_default].
   rewrite Heqo0.
   trivial.
+Qed.
+
+Lemma get_reg_R s m (HR : R s m) ri :
+  forall i, Symbolic.get_reg s ri = Some i ->
+  exists v, eval s i v /\ Tuple.nth_default 0 ri (m : reg_state) = v.
+Proof using Type.
+  destruct s, m; apply get_reg_R_regs, HR.
 Qed.
 
 Lemma bind_assoc {A B C} (v:M A) (k1:A->M B) (k2:B->M C) s

@@ -136,6 +136,8 @@ Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fract
 (* 76.298 s for primes 2^300 up to 2^401 *)
 Local Open Scope nat_scope.
 Local Open Scope core_scope.
+Local Set NativeCompute Profiling.
+Local Set NativeCompute Timing.
 Time Definition possible_limbs :=
   Eval native_compute in
     Option.List.lift

@@ -53,6 +53,7 @@ Module debugging_go_bits_add.
     Local Existing Instance Go.OutputGoAPI.
     Local Instance : relax_adc_sbb_return_carry_to_bitwidth_opt := [32; 64].
     Local Instance : skip_typedefs_opt := true.
+    Local Instance : language_specific_cast_adjustment_opt := true.
     Local Existing Instance Build_output_options_opt.
     Local Instance static : static_opt := false.
     Local Instance : internal_static_opt := false.

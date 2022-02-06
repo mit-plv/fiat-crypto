@@ -117,11 +117,8 @@ Section __.
           {ignore_unique_asm_names : ignore_unique_asm_names_opt}
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
-          {assembly_calling_registers : assembly_calling_registers_opt}
-          {assembly_stack_size : assembly_stack_size_opt}
+          {assembly_conventions : assembly_conventions_opt}
           {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
-          {assembly_output_first : assembly_output_first_opt}
-          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
           (m : Z)
           (machine_wordsize : machine_wordsize_opt).
 
@@ -147,12 +144,16 @@ Section __.
   Definition upperbounds : list Z := prime_upperbound_list.
   Definition prime_bound : ZRange.type.interp (base.type.Z)
     := r[0~>m-1]%zrange.
+  Definition prime_word_bound : ZRange.type.interp (base.type.Z) (* a word that's guaranteed to be smaller than the prime *)
+    := r[0 ~> Z.min m (2^machine_wordsize) - 1]%zrange.
   Definition prime_bounds : list (ZRange.type.option.interp base.type.Z)
     := List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list.
   Definition prime_bytes_bounds : list (ZRange.type.option.interp (base.type.Z))
     := List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list.
+  Local Notation word_bound := (word_bound machine_wordsize).
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
   Local Notation larger_saturated_bounds := (Primitives.saturated_bounds sat_limbs machine_wordsize).
+
 
   Definition divstep_input :=
     (Some r[0~>2^machine_wordsize-1],
@@ -517,6 +518,27 @@ Section __.
              (fun fname : string => [text_before_function_name ++ fname ++ " encodes an integer as a field element in the Montgomery domain."]%string)
              (encode_correct machine_wordsize n m valid from_montgomery_res)).
 
+
+  Definition encode_word
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_encode_gen
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+         (Some prime_word_bound, tt)
+         (Some saturated_bounds).
+
+  Definition sencode_word (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "encode_word" encode_word
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname : string => [text_before_function_name ++ fname ++ " encodes an integer as a field element in the Montgomery domain."]%string)
+             (encode_word_correct machine_wordsize n m valid from_montgomery_res)).
+
   Definition zero
     := Pipeline.BoundsPipeline
          true (* subst01 *)
@@ -605,6 +627,11 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Primitives.sselectznz n machine_wordsize prefix.
 
+  Definition copy : Pipeline.ErrorT _ := Primitives.copy n machine_wordsize.
+  Definition scopy (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Primitives.scopy n machine_wordsize prefix.
+
   Definition msat
     := Pipeline.BoundsPipeline
          true (* subst01 *)
@@ -673,7 +700,7 @@ Section __.
     clear -H use_curve_good curve_good.
     destruct H as [H _]; destruct_head'_and.
     cbv [small] in H.
-    cbv [ZRange.type.base.option.is_bounded_by bounds saturated_bounds].
+    cbv [ZRange.type.base.option.is_bounded_by bounds saturated_bounds word_bound].
     replace n with (List.length x) by now rewrite H, Partition.length_partition.
     rewrite <- map_const, fold_andb_map_map1, fold_andb_map_iff.
     cbv [ZRange.type.base.is_bounded_by is_bounded_by_bool lower upper type_base].
@@ -977,6 +1004,15 @@ Section __.
   Lemma Wf_encode res (Hres : encode = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
+  Strategy -1000 [encode_word]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
+  Lemma encode_word_correct res
+        (Hres : encode_word = Success res)
+    : encode_word_correct machine_wordsize n m valid from_montgomery_res (Interp res).
+  Proof using curve_good. prove_correctness encodemod_correct. Qed.
+
+  Lemma Wf_encode_word res (Hres : encode_word = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Strategy -1000 [zero]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma zero_correct res
         (Hres : zero = Success res)
@@ -1003,6 +1039,14 @@ Section __.
 
   Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
   Proof using Type. revert Hres; cbv [selectznz]; apply Wf_selectznz. Qed.
+
+  Lemma copy_correct res
+        (Hres : copy = Success res)
+    : copy_correct saturated_bounds (Interp res).
+  Proof using curve_good. Primitives.prove_correctness use_curve_good. Qed.
+
+  Lemma Wf_copy res (Hres : copy = Success res) : Wf res.
+  Proof using Type. revert Hres; cbv [copy]; apply Wf_copy. Qed.
 
   Section ring.
     Context from_montgomery_res (Hfrom_montgomery : from_montgomery = Success from_montgomery_res)
@@ -1104,9 +1148,11 @@ Module Export Hints.
        to_bytes
        from_bytes
        encode
+       encode_word
        zero
        one
        selectznz
+       copy
   : wf_op_cache.
   Hint Immediate
        Wf_mul
@@ -1120,8 +1166,10 @@ Module Export Hints.
        Wf_to_bytes
        Wf_from_bytes
        Wf_encode
+       Wf_encode_word
        Wf_zero
        Wf_one
        Wf_selectznz
+       Wf_copy
   : wf_op_cache.
 End Hints.

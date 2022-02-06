@@ -53,3 +53,15 @@ endif
 endef
 
 $(eval $(foreach f,$(VERSION_DEPENDENT_FILES),$(call make_version_rule,$(f))))
+
+SORT_TACTICS := env LC_COLLATE=C sort
+TACTICS_V_FILE := src/Util/Tactics.v
+EXISTING_TACTICS_CONTENTS_SORTED:=$(shell cat $(TACTICS_V_FILE) 2>&1 | $(SORT_TACTICS))
+NEW_TACTICS_CONTENTS_SORTED:=$(shell src/Util/make_tactics.sh | $(SORT_TACTICS))
+
+ifneq ($(EXISTING_TACTICS_CONTENTS_SORTED),$(NEW_TACTICS_CONTENTS_SORTED))
+.PHONY: $(TACTICS_V_FILE)
+$(TACTICS_V_FILE):
+	$(SHOW)'ECHO > $@'
+	$(HIDE)src/Util/make_tactics.sh > $@
+endif

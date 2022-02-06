@@ -132,7 +132,7 @@ NOBIGMEM_UNMADE_VOFILES := \
 REGULAR_VOFILES := $(filter-out $(EXCLUDE_PATTERN) $(SPECIAL_VOFILES),$(VOFILES))
 REGULAR_EXCEPT_BEDROCK2_VOFILES := $(filter-out $(BEDROCK2_FILES_PATTERN),$(REGULAR_VOFILES))
 BEDROCK2_VOFILES := $(filter $(BEDROCK2_FILES_PATTERN),$(REGULAR_VOFILES))
-PRE_STANDALONE_PRE_VOFILES := $(filter src/Standalone%.vo,$(REGULAR_VOFILES))
+PRE_STANDALONE_PRE_VOFILES := $(filter src/Standalone%.vo src/Bedrock/Standalone%.vo,$(REGULAR_VOFILES))
 UTIL_PRE_VOFILES := $(filter src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(REGULAR_VOFILES))
 SOME_EARLY_VOFILES := \
   src/Arithmetic/Core.vo \
@@ -273,6 +273,8 @@ BEDROCK2_UNSATURATED_SOLINAS := src/ExtractionOCaml/bedrock2_unsaturated_solinas
 BEDROCK2_WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/bedrock2_word_by_word_montgomery
 
 C_EXTRA_ARGS := --inline-internal --static --use-value-barrier
+
+JSON_EXTRA_ARGS := --emit-all-casts
 
 BEDROCK2_ARGS := --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select --no-field-element-typedefs
 BEDROCK2_EXTRA_CFLAGS := -Wno-error=unused-but-set-variable
@@ -664,7 +666,7 @@ only-test-go-files: $(addprefix only-test-,$(ALL_GO_FILES))
 $(ALL_JSON_FILES) : $(JSON_DIR)%.json : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok1 $@.ok2
-	$(HIDE)(($(TIMER) $($($*_BINARY_NAME)) --lang JSON $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok1) | jq -s . && touch $@.ok2) > $@.tmp
+	$(HIDE)(($(TIMER) $($($*_BINARY_NAME)) --lang JSON $(JSON_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok1) | jq -s . && touch $@.ok2) > $@.tmp
 	$(HIDE)(rm $@.ok1 $@.ok2 && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_JSON_FILES))

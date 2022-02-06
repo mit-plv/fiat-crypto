@@ -12,6 +12,7 @@ jobs:
   build:
 
     strategy:
+      fail-fast: false
       matrix:
         env:
         - { COQ_VERSION: "master", COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-master-daily", EXTRA_GH_REPORTIFY: "--warnings" }
