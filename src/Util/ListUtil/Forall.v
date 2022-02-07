@@ -87,10 +87,16 @@ Proof using Type.
   revert ls2; induction ls1 as [|l ls IHls], ls2 as [|l' ls'];
     t_Forall2.
 Qed.
+
+Lemma Forall2_flip_iff {A B P xs ys}
+  : @Forall2 A B P xs ys <-> Forall2 (Basics.flip P) ys xs.
+Proof using Type. split; induction 1; constructor; assumption. Qed.
+
 Lemma Forall2_Forall {A R ls}
   : @List.Forall2 A A R ls ls
     <-> @List.Forall A (Proper R) ls.
 Proof using Type. induction ls as [|l ls IHls]; t_Forall2. Qed.
+
 Lemma Forall_seq {R start len}
   : List.Forall R (seq start len) <-> (forall x, (start <= x < start + len)%nat -> R x).
 Proof using Type.
@@ -128,17 +134,37 @@ Proof using Type.
   rewrite <- (rev_involutive ls2), Forall2_rev_iff, !rev_involutive; reflexivity.
 Qed.
 
+Lemma Forall2_firstn_skipn_iff n {A B R ls1 ls2}
+  : @List.Forall2 A B R ls1 ls2 <-> (List.Forall2 R (List.firstn n ls1) (List.firstn n ls2) /\ List.Forall2 R (List.skipn n ls1) (List.skipn n ls2)).
+Proof. revert ls1 ls2; induction n, ls1, ls2; t_Forall2. Qed.
+
 Lemma Forall2_firstn {A B R ls1 ls2 n}
   : @List.Forall2 A B R ls1 ls2 -> @List.Forall2 A B R (List.firstn n ls1) (List.firstn n ls2).
-Proof using Type.
-  revert ls1 ls2; induction n as [|n IHn], ls1 as [|l1 ls2], ls2 as [|l2 ls2]; t_Forall2.
-Qed.
+Proof using Type. rewrite (Forall2_firstn_skipn_iff n); tauto. Qed.
 
 Lemma Forall2_skipn {A B R ls1 ls2 n}
   : @List.Forall2 A B R ls1 ls2 -> @List.Forall2 A B R (List.skipn n ls1) (List.skipn n ls2).
-Proof using Type.
-  revert ls1 ls2; induction n as [|n IHn], ls1 as [|l1 ls2], ls2 as [|l2 ls2]; t_Forall2.
-Qed.
+Proof using Type. rewrite (Forall2_firstn_skipn_iff n); tauto. Qed.
+
+Lemma Forall_firstn_skipn_iff n {A R ls}
+  : @List.Forall A R ls <-> (List.Forall R (List.firstn n ls) /\ List.Forall R (List.skipn n ls)).
+Proof. revert ls; induction n, ls; t_Forall2. Qed.
+
+Lemma Forall_firstn {A R ls n}
+  : @List.Forall A R ls -> @List.Forall A R (List.firstn n ls).
+Proof using Type. rewrite (Forall_firstn_skipn_iff n); tauto. Qed.
+
+Lemma Forall_skipn {A R ls n}
+  : @List.Forall A R ls -> @List.Forall A R (List.skipn n ls).
+Proof using Type. rewrite (Forall_firstn_skipn_iff n); tauto. Qed.
+
+Lemma Forall2_app_l_iff {A B R ls1 ls2 ls}
+  : @List.Forall2 A B R (ls1 ++ ls2) ls <-> (List.Forall2 R ls1 (List.firstn (List.length ls1) ls) /\ List.Forall2 R ls2 (List.skipn (List.length ls1) ls)).
+Proof. rewrite (Forall2_firstn_skipn_iff (List.length ls1)), firstn_app, skipn_app, firstn_all, skipn_all, PeanoNat.Nat.sub_diag, firstn_O, skipn_O, app_nil_l, app_nil_r; reflexivity. Qed.
+
+Lemma Forall2_app_r_iff {A B R ls1 ls2 ls}
+  : @List.Forall2 A B R ls (ls1 ++ ls2) <-> (List.Forall2 R (List.firstn (List.length ls1) ls) ls1 /\ List.Forall2 R (List.skipn (List.length ls1) ls) ls2).
+Proof. rewrite Forall2_flip_iff, Forall2_app_l_iff, <- !Forall2_flip_iff; reflexivity. Qed.
 
 Lemma eq_length_Forall2 {A B R ls1 ls2}
   : @List.Forall2 A B R ls1 ls2 -> List.length ls1 = List.length ls2.
@@ -153,6 +179,24 @@ Lemma Forall2_combine {A B C D R1 R2 R3 ls1 ls2 ls3 ls4}
     -> List.Forall2 R3 (List.combine ls1 ls3) (List.combine ls2 ls4).
 Proof using Type.
   revert ls2 ls3 ls4; induction ls1, ls2, ls3, ls4; t_Forall2.
+Qed.
+
+Lemma Forall_forall_iff_nth_error {A R ls}
+  : @Forall A R ls
+    <-> (forall i v, nth_error ls i = Some v -> R v).
+Proof using Type.
+  rewrite Forall_forall.
+  split; eauto using nth_error_In.
+  intros ? ? H'; apply In_nth_error in H'.
+  firstorder auto.
+Qed.
+
+Lemma Forall_forall_iff_nth_error_match {A R ls}
+  : @Forall A R ls
+    <-> forall i, match nth_error ls i with Some v => R v | None => True end.
+Proof using Type.
+  rewrite Forall_forall_iff_nth_error.
+  split; intros H i; try intro; specialize (H i); break_match; break_match_hyps; eauto; congruence.
 Qed.
 
 Lemma Forall2_forall_iff_nth_error {A B R xs ys}
@@ -243,10 +287,6 @@ Lemma Forall2_Forall_iff_ignore_r {A B P ls1 ls2}
 Proof using Type.
   revert ls1 ls2; induction ls1, ls2; t_Forall2; exfalso; lia.
 Qed.
-
-Lemma Forall2_flip_iff {A B P xs ys}
-  : @Forall2 A B P xs ys <-> Forall2 (Basics.flip P) ys xs.
-Proof using Type. split; induction 1; constructor; assumption. Qed.
 
 Lemma Forall2_Forall_ignore_l {A B P ls1 ls2}
   : @Forall2 A B (fun x _ => P x) ls1 ls2 <-> (length ls1 = length ls2 /\ Forall P ls1).
