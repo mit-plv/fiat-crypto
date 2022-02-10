@@ -38,7 +38,7 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 
 Section S.
 Implicit Type s : OperationSize.
-Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | subborrow s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
+Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | subborrow s | addoverflow s | neg s | shl s | shlx s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
   | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | xorZ | addcarryZ s | subborrowZ s.
 Definition op_beq a b := if op_eq_dec a b then true else false.
 End S.
@@ -53,6 +53,7 @@ Global Instance Show_op : Show op := fun o =>
   | addoverflow s => "addoverflow " ++ show s
   | neg s => "neg " ++ show s
   | shl s => "shl " ++ show s
+  | shlx s => "shlx " ++ show s
   | shr s => "shr " ++ show s
   | sar s => "sar " ++ show s
   | rcr s => "rcr " ++ show s
@@ -1805,6 +1806,17 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     vh <- App (shrZ, [v; s]);
     _ <- SetOperand lo v;
          SetOperand hi vh
+  | Syntax.shl, [dst; cnt] =>
+    let cnt := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
+    v <- Symeval (shl s@(dst, cnt));
+    _ <- SetOperand dst v;
+    HavocFlags
+  | Syntax.shlx, [dst; src; cnt] =>
+    cnt <- GetOperand cnt;
+    cnt <- RevealConst cnt;
+    let cnt' := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
+    v <- Symeval (shl s@(src, cnt));
+         SetOperand dst v
   | Syntax.shr, [dst; cnt] =>
     let cnt := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
     v <- Symeval (shr s@(dst, cnt));
