@@ -16,6 +16,7 @@ Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.FoldMap.
+Require Import Crypto.Util.ListUtil.FilterN.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Notations.
@@ -189,6 +190,20 @@ Definition explain_mismatch_from_state
      ((make_old_descr left_descr asm_idx)
         ++ (make_old_descr right_descr PHOAS_idx))%list.
 
+(* If the operation is commutative, we want to exclude any values that appear on both sides *)
+Fixpoint minimize_array_idx_modulo_commutativity
+         (asm_array PHOAS_array : list idx)
+         {struct asm_array}
+  : list idx * list idx
+  := match asm_array with
+     | [] => ([], PHOAS_array)
+     | val :: vals
+       => if List.existsb (N.eqb val) PHOAS_array
+          then minimize_array_idx_modulo_commutativity vals (List.filtern (N.eqb val) PHOAS_array 1)
+          else let '(vals, PHOAS_array) := minimize_array_idx_modulo_commutativity vals PHOAS_array in
+               (val :: vals, PHOAS_array)
+     end.
+
 Fixpoint explain_idx_unification_error
          (left_descr right_descr : string)
          (st : symbolic_state) (fuel : nat) (asm_idx PHOAS_idx : idx) {struct fuel} : list string
@@ -215,6 +230,10 @@ Fixpoint explain_idx_unification_error
        => (([show asm ++ " != " ++ show PHOAS]%string)
              ++ (if Decidable.dec (asm_o = PHOAS_o)
                  then
+                   let '(asm_e, PHOAS_e) :=
+                     if commutative asm_o
+                     then minimize_array_idx_modulo_commutativity asm_e PHOAS_e
+                     else (asm_e, PHOAS_e) in
                    explain_array_unification_error "argument" "arguments" left_descr right_descr recr asm_e PHOAS_e 0
                  else (([reveal_show_node asm ++ " != " ++ reveal_show_node PHOAS
                          ; "Operation mismatch: " ++ show asm_o ++ " != " ++ show PHOAS_o]%string)
