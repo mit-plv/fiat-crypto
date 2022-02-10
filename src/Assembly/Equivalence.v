@@ -148,47 +148,54 @@ Fixpoint explain_array_unification_error
          (singular plural : string)
          (left_descr right_descr : string)
          (explain_idx_unification_error : idx -> idx -> list string)
+         (describe_idx : idx -> list string)
          (asm_array PHOAS_array : list idx) (start_idx : nat)
   : list string
   := match asm_array, PHOAS_array with
      | [], []
        => ["Internal Error: Unifiable " ++ plural]
      | [], PHOAS_array
-       => ["The " ++ right_descr ++ " " ++ singular ++ " contains " ++ show (List.length PHOAS_array) ++ " more values than the " ++ left_descr ++ " " ++ singular ++ "."]
+       => ((["The " ++ right_descr ++ " " ++ singular ++ " contains " ++ show (List.length PHOAS_array) ++ " more values than the " ++ left_descr ++ " " ++ singular ++ "."]%string)
+             ++ List.flat_map describe_idx PHOAS_array)%list
      | asm_array, []
-       => ["The " ++ left_descr ++ " " ++ singular ++ " contains " ++ show (List.length asm_array) ++ " more values than the " ++ right_descr ++ " " ++ singular ++ "."]
+       => ((["The " ++ left_descr ++ " " ++ singular ++ " contains " ++ show (List.length asm_array) ++ " more values than the " ++ right_descr ++ " " ++ singular ++ "."]%string)
+             ++ List.flat_map describe_idx asm_array)%list
      | asm_value :: asm_array, PHOAS_value :: PHOAS_array
        => if Decidable.dec (asm_value = PHOAS_value)
-          then explain_array_unification_error singular plural left_descr right_descr explain_idx_unification_error asm_array PHOAS_array (S start_idx)
+          then explain_array_unification_error singular plural left_descr right_descr explain_idx_unification_error describe_idx asm_array PHOAS_array (S start_idx)
           else ((["index " ++ show start_idx ++ ": " ++ show asm_value ++ " != " ++ show PHOAS_value]%string)
                   ++ explain_idx_unification_error asm_value PHOAS_value
                )%list
      end%string%list.
 
-Definition explain_mismatch_from_state
-           (left_descr right_descr : string)
-           (st : symbolic_state) (asm_idx PHOAS_idx : idx) : list string
-  := let describe_from_state idx
+Definition describe_idx_from_state
+           (st : symbolic_state) (idx : idx) : list string
+  := let description_from_state
        := match reverse_lookup_widest_reg st.(symbolic_reg_state) idx, reverse_lookup_flag st.(symbolic_flag_state) idx, reverse_lookup_mem st.(symbolic_mem_state) idx with
           | Some r, _, _ => Some ("the value of the register " ++ show r)
           | None, Some f, _ => Some ("the value of the flag " ++ show f)
           | None, None, Some (ptr, ptsto) => Some ("the memory location at pseudo-address " ++ Hex.show_N ptr ++ " which points to dag index " ++ show ptsto ++ " which holds the value " ++ show (reveal st.(dag_state) 1 ptsto))
           | None, None, None => None
           end%string in
-     let is_old idx := match reveal st.(dag_state) 1 idx with
-                       | ExprApp (old _ _, _) => true
-                       | _ => false
-                       end in
-     let make_old_descr kind idx
-       := match is_old idx, describe_from_state idx with
+     let is_old := match reveal st.(dag_state) 1 idx with
+                   | ExprApp (old _ _, _) => true
+                   | _ => false
+                   end in
+     let old_descr
+       := match is_old, description_from_state with
           | true, Some descr
             => [show idx ++ " is " ++ descr ++ "."]
           | true, None
             => [show idx ++ " is a special value no longer present in the symbolic machine state at the end of execution."]
           | _, _ => []
           end%string in
-     ((make_old_descr left_descr asm_idx)
-        ++ (make_old_descr right_descr PHOAS_idx))%list.
+     old_descr.
+
+Definition explain_mismatch_from_state
+           (left_descr right_descr : string)
+           (st : symbolic_state) (asm_idx PHOAS_idx : idx) : list string
+  := ((describe_idx_from_state (*left_descr*) st asm_idx)
+        ++ (describe_idx_from_state (*right_descr*) st PHOAS_idx))%list.
 
 (* If the operation is commutative, we want to exclude any values that appear on both sides *)
 Fixpoint minimize_array_idx_modulo_commutativity
@@ -230,11 +237,13 @@ Fixpoint explain_idx_unification_error
        => (([show asm ++ " != " ++ show PHOAS]%string)
              ++ (if Decidable.dec (asm_o = PHOAS_o)
                  then
-                   let '(asm_e, PHOAS_e) :=
+                   let '(asm_e', PHOAS_e') :=
                      if commutative asm_o
                      then minimize_array_idx_modulo_commutativity asm_e PHOAS_e
                      else (asm_e, PHOAS_e) in
-                   explain_array_unification_error "argument" "arguments" left_descr right_descr recr asm_e PHOAS_e 0
+                   if ((List.length asm_e' =? 0) && (List.length PHOAS_e' =? 0) && (negb ((List.length asm_e =? 0) && (List.length PHOAS_e =? 0))))%nat
+                   then ["Arguments of commutative operation differ only in ordering."]
+                   else explain_array_unification_error "argument" "arguments" left_descr right_descr recr (describe_idx_from_state st) asm_e' PHOAS_e' 0
                  else (([reveal_show_node asm ++ " != " ++ reveal_show_node PHOAS
                          ; "Operation mismatch: " ++ show asm_o ++ " != " ++ show PHOAS_o]%string)
                          ++ explain_mismatch_from_state left_descr right_descr st asm_idx PHOAS_idx)%list))%list
@@ -266,7 +275,7 @@ Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list i
                | inr asm_idxs, inr PHOAS_idxs
                  => ([prefix ++ " " ++ show asm_idxs ++ " != " ++ show PHOAS_idxs]%string)
                       ++ (explain_array_unification_error
-                            "array" "arrays" "assembly" "synthesized" (explain_idx_unification_error "assembly" "synthesized" st fuel)
+                            "array" "arrays" "assembly" "synthesized" (explain_idx_unification_error "assembly" "synthesized" st fuel) (describe_idx_from_state st)
                             asm_idxs PHOAS_idxs
                             0)
                end%list
@@ -322,7 +331,7 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                        ++ show_lines r
                        ++ ["Unable to unify: " ++ show reg_before ++ " == " ++ show reg_after]%string
                        ++ explain_array_unification_error
-                            "list" "lists" "original" "final" (explain_idx_unification_error "original" "final" r (explain_unification_default_fuel r))
+                            "list" "lists" "original" "final" (explain_idx_unification_error "original" "final" r (explain_unification_default_fuel r)) (describe_idx_from_state r)
                             reg_before reg_after
                             0
                 | Unable_to_unify asm_output PHOAS_output r
