@@ -4,13 +4,11 @@ Require Import bedrock2.Semantics.
 Require Import coqutil.Word.Interface coqutil.Byte.
 Local Open Scope Z_scope.
 Require Import Rupicola.Lib.Arrays.
-Require Import Rupicola.Examples.Cells.Cells.
 
 
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Alloc.
 Require Import Rupicola.Lib.SepLocals.
-Require Import Rupicola.Examples.CMove.CMove.
 Require Import Rupicola.Lib.ControlFlow.DownTo.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
@@ -514,8 +512,8 @@ Section __.
   Import LoopCompiler.
   Hint Extern 10 (_ < _) => lia: compiler_side_conditions.
     
-    Instance spec_of_cswap : spec_of "cswap" :=
-      fnspec! "cswap" mask ptr1 ptr2 / c1 c2 R,
+    Instance spec_of_cswap : spec_of "felem_cswap" :=
+      fnspec! "felem_cswap" mask ptr1 ptr2 / c1 c2 R,
         (*TODO: if b then bw should be all 1s*)
         { requires tr mem :=
             (mask = word.of_Z 0 \/ mask = word.of_Z 1) /\
@@ -530,7 +528,7 @@ Section __.
 
   Import LoopCompiler.
   Derive cswap_body SuchThat         
-           (defn! "cswap" ("mask", "a1", "a2") { cswap_body },
+           (defn! "felem_cswap" ("mask", "a1", "a2") { cswap_body },
              implements cswap_low)
            As cswap_body_correct.
   Proof.
@@ -580,7 +578,7 @@ Section __.
            Locals := l;
            Functions := functions }>
         cmd.seq
-          (cmd.call [] "cswap" [expr.var mask_var; expr.var lhs_var; expr.var rhs_var])
+          (cmd.call [] "felem_cswap" [expr.var mask_var; expr.var lhs_var; expr.var rhs_var])
           k_impl
         <{ pred (nlet_eq [lhs_var; rhs_var] v k) }>.
   Proof.
@@ -662,3 +660,10 @@ Section __.
   Hint Resolve compile_felem_cswap : compiler.
   
 End __.
+
+
+Hint Resolve compile_felem_cswap : compiler.
+
+(* TODO: why doesn't `Existing Instance` work? *)
+Hint Extern 1 (spec_of "felem_cswap") =>
+       (simple refine (spec_of_cswap)) : typeclass_instances.

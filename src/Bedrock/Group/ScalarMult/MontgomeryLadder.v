@@ -1,10 +1,10 @@
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Alloc.
 Require Import Rupicola.Lib.SepLocals.
-Require Import Rupicola.Lib.ControlFlow.CondSwap.
 Require Import Rupicola.Lib.ControlFlow.DownTo.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
+Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Util.NumTheoryUtil.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
@@ -194,72 +194,10 @@ Section __.
   simple eapply compile_sctestbit; shelve : compiler.
 
 
-  (*TODO: determine the best place for felem_cswap. Should it get its own file?*)
-  Definition felem_cswap := "felem_cswap".
-  (*TODO: move to the right place;
-  TODO: instantiate
-   *)  
-  Instance spec_of_felem_cswap : spec_of felem_cswap :=
-    fnspec! felem_cswap mask ptr1 ptr2 / b1 b2 b c1 c2 R,
-    { requires tr mem :=
-        mask = word.of_Z (Z.b2z b) /\
-        (FElem b1 ptr1 c1 * FElem b2 ptr2 c2 * R)%sep mem;
-      ensures tr' mem' :=
-        tr' = tr /\
-        let (c1,c2) := cswap b c1 c2 in
-        let (b1,b2) := cswap b b1 b2 in
-        (FElem b1 ptr1 c1 * FElem b2 ptr2 c2 * R)%sep mem' }.
-  
-  Lemma compile_felem_cswap {tr m l functions} swap (lhs rhs : F M_pos) :
-    let v := cswap swap lhs rhs in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-           R mask_var lhs_ptr lhs_var b_lhs rhs_ptr rhs_var b_rhs,
-
-      spec_of_felem_cswap functions ->
-
-      map.get l mask_var = Some (word.of_Z (Z.b2z swap)) ->
-      
-      map.get l lhs_var = Some lhs_ptr ->
-      map.get l rhs_var = Some rhs_ptr ->
-
-      (FElem b_lhs lhs_ptr lhs * FElem b_rhs rhs_ptr rhs * R)%sep m ->
-
-      (let v := v in
-       let (b1,b2) := cswap swap b_lhs b_rhs in
-       forall m',
-         (FElem b1 lhs_ptr (fst v) * FElem b2 rhs_ptr (snd v) * R)%sep m' ->
-         (<{ Trace := tr;
-             Memory := m';
-             Locals := l;
-             Functions := functions }>
-          k_impl
-          <{ pred (k v eq_refl) }>)) ->
-      <{ Trace := tr;
-         Memory := m;
-         Locals := l;
-         Functions := functions }>
-      cmd.seq
-        (cmd.call [] felem_cswap [expr.var mask_var; expr.var lhs_var; expr.var rhs_var])
-        k_impl
-      <{ pred (nlet_eq [lhs_var; rhs_var] v k) }>.
-  Proof.     
-    Local Ltac prove_field_compilation locals :=
-      repeat straightline' locals;
-      handle_call;
-      lazymatch goal with
-      | |- sep _ _ _ => ecancel_assumption
-      | _ => idtac
-      end; eauto;
-      sepsimpl; repeat straightline' locals; subst; eauto.
-    prove_field_compilation l.
-    destruct swap; eapply H4; unfold v; unfold cswap; simpl; eauto.
-  Qed.
-  Hint Resolve compile_felem_cswap : compiler.
-
   Existing Instance felem_alloc.
 
 
-  Lemma cswap_same {A} b (a : A): cswap b a a = (a,a).
+  Lemma cswap_same {A} b (a : A): cswap b a a = \<a,a\>.
   Proof.
     destruct b; reflexivity.
   Qed.
@@ -281,6 +219,10 @@ Section __.
   Hint Extern 1 (spec_of "ladderstep") =>
   (simple refine (@spec_of_ladderstep _ _ _ _ _ _ _ _)) : typeclass_instances.
 
+  
+  Hint Extern 1 (spec_of "cswap") =>
+  (simple refine (spec_of_cswap)) : typeclass_instances.
+    
   (* TODO: this seems a bit delicate*)
   Ltac compile_cswap :=
     eapply compile_felem_cswap;
@@ -360,10 +302,10 @@ Section __.
          (defn! "montladder" ("OUT", "K", "U")
               { montladder_body },
            implements montladder_gallina
-                      using [felem_cswap; felem_copy; felem_small_literal;
+                      using ["felem_cswap"; felem_copy; felem_small_literal;
                              "ladderstep"; inv; mul])
          As montladder_correct.
-  Proof.
+    Proof.
     pose proof scalarbits_bound.
     compile_setup;
     repeat repeat compile_step.
