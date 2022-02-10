@@ -302,7 +302,6 @@ src/Util/Decidable/Bool2Prop.v
 src/Util/Decidable/Decidable2Bool.v
 src/Util/ErrorT/Show.v
 src/Util/FMapPositive/Equality.v
-src/Util/ListUtil/FilterN.v
 src/Util/ListUtil/FoldBool.v
 src/Util/ListUtil/FoldMap.v
 src/Util/ListUtil/Forall.v
@@ -311,6 +310,7 @@ src/Util/ListUtil/IndexOf.v
 src/Util/ListUtil/NthExt.v
 src/Util/ListUtil/Permutation.v
 src/Util/ListUtil/PermutationCompat.v
+src/Util/ListUtil/RemoveN.v
 src/Util/ListUtil/SetoidList.v
 src/Util/ListUtil/Split.v
 src/Util/Logic/Exists.v
