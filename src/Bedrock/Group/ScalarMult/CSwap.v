@@ -32,6 +32,12 @@ Section __.
   Context {field_parameters : FieldParameters}.
   Context {field_representaton : FieldRepresentation}.
   Context {field_representation_ok : FieldRepresentation_ok}.
+  (*TODO: move this requirement to the right place,
+    or find a way to discharge it
+    Should this go in FieldReprsentation_ok?
+   *)
+  Context (felem_size_in_words_small
+    : Z.of_nat felem_size_in_words < 2^width).
   Hint Resolve @relax_bounds : compiler.
  
   
@@ -136,10 +142,7 @@ Section __.
     apply foldl_dep'_funext.
     eauto.
   Qed.
-
-  (*TODO: move this requirement to the right place, or find a way to discharge it*)
-  Axiom felem_size_in_words_small
-    : Z.of_nat felem_size_in_words < 2^width.
+  
 
   Lemma wrap_felem_size_in_words_small
     : word.wrap (Z.of_nat felem_size_in_words) = (Z.of_nat felem_size_in_words).
@@ -664,6 +667,6 @@ End __.
 
 Hint Resolve compile_felem_cswap : compiler.
 
-(* TODO: why doesn't `Existing Instance` work? *)
+(* TODO: why doesn't `Existing Instance` work? is it the raw string? *)
 Hint Extern 1 (spec_of "felem_cswap") =>
        (simple refine (spec_of_cswap)) : typeclass_instances.
