@@ -3709,7 +3709,7 @@ Proof.
   rewrite H.
   pose proof (split_combine l2) as H'.
   rewrite split_alt in H'.
-  eexists; split; [ eassumption | ].
+  eexists; split; [ now eauto | ].
   apply (f_equal (@List.length _)) in H.
   rewrite !map_length in *; congruence.
 Qed.
@@ -3744,7 +3744,7 @@ Proof.
   rewrite map_fst_combine in H.
   pose proof (split_combine l2) as H'.
   rewrite split_alt, <- H in H'.
-  assumption.
+  now eauto.
 Qed.
 
 Lemma same_mem_addressed_combine_ex_r l1a l1b l2
