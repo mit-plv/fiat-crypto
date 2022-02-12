@@ -310,6 +310,7 @@ src/Util/ListUtil/IndexOf.v
 src/Util/ListUtil/NthExt.v
 src/Util/ListUtil/Permutation.v
 src/Util/ListUtil/PermutationCompat.v
+src/Util/ListUtil/RemoveN.v
 src/Util/ListUtil/SetoidList.v
 src/Util/ListUtil/Split.v
 src/Util/Logic/Exists.v

@@ -1137,8 +1137,6 @@ Qed.
 Definition consts_commutative :=
   fun e => match e with
     ExprApp (o, args) =>
-    (* note: removing the next line makes tests fail *)
-    if (match o with mul _ => true | _ => false end) then e else
     if commutative o then
     let csts_exprs := List.partition isCst args in
     if associative o
@@ -1154,7 +1152,6 @@ Proof using Type.
   step.
   destruct e; trivial.
   destruct n.
-  destruct (match o with mul _ => true | _ => false end); trivial.
   destruct commutative eqn:?; trivial.
   inversion H; clear H; subst.
   epose proof Permutation_partition l isCst.
