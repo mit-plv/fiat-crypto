@@ -186,7 +186,7 @@ Definition parse_MEM : ParserAction MEM
         (((strip_whitespace_after "byte ")?) ;;
          (strip_whitespace_after "[" ;;R
           parse_REG ;;
-          ((strip_whitespace_around "+" ;;R parse_REG)?) ;;
+          ((strip_whitespace_around ("+" ||->{id} "-") ;; (parse_Z_arith_strict ;;L strip_whitespace_around "*")? ;; parse_REG)?) ;; 
           ((strip_whitespace_before ("+" ||->{id} "-") ;; parse_Z_arith_strict) ||->{id} parse_any_whitespace) ;;L
           "]")).
 
@@ -274,6 +274,7 @@ Global Instance show_lvl_MEM : ShowLevel MEM
            => "[" ++ (show m.(mem_reg))
                   ++ (match m.(mem_extra_reg) with
                       | None => ""
+                      | Some r => Z ++ " * " ++ show r
                       | Some r => " + " ++ show r
                       end)
                   ++ (match m.(mem_offset) with
