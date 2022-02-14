@@ -10,6 +10,7 @@ Require Import Crypto.Bedrock.End2End.X25519.Field25519.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Group.AdditionChains.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
+Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
 Local Open Scope string_scope.
 Import ListNotations.
