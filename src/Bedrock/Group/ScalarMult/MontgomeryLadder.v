@@ -297,21 +297,20 @@ Section __.
         constr:(O)
     | cons _ ?xs => let i := find_implication xs y in constr:(S i)
     end.
-  
-  Derive montladder_body SuchThat
-         (defn! "montladder" ("OUT", "K", "U")
-              { montladder_body },
-           implements montladder_gallina
-                      using ["felem_cswap"; felem_copy; felem_small_literal;
-                             "ladderstep"; inv; mul])
-         As montladder_correct.
+    
+    Derive montladder_body SuchThat
+           (defn! "montladder" ("OUT", "K", "U")
+                { montladder_body },
+             implements montladder_gallina
+                        using [felem_cswap; felem_copy; felem_small_literal;
+                               "ladderstep"; inv; mul])
+           As montladder_correct.
     Proof.
-    pose proof scalarbits_bound.
-    compile_setup;
-    repeat repeat compile_step.
-    all : try compile_done.
-  Qed.
-End MontLadder.
+      pose proof scalarbits_bound.
+      compile.
+    Qed.
+    
+  End MontLadder.
 End __.
 
 Global Hint Extern 1 (spec_of "montladder") => (simple refine (@spec_of_montladder _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
