@@ -1036,9 +1036,7 @@ Section __.
   Lemma selectznz_correct res
         (Hres : selectznz = Success res)
     : selectznz_correct saturated_bounds (Interp res).
-  Proof using curve_good.
-    Primitives.prove_correctness use_curve_good.
-  Qed.
+  Proof using curve_good. Primitives.prove_correctness use_curve_good. Qed.
 
   Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
   Proof using Type. revert Hres; cbv [selectznz]; apply Wf_selectznz. Qed.

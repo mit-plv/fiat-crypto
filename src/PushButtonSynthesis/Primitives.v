@@ -241,10 +241,11 @@ Ltac prove_correctness' should_not_clear use_curve_good :=
     repeat first [ reflexivity
                  | progress autorewrite with interp_extra interp_gen_cache
                  | progress autorewrite with push_eval
-                 | progress erewrite select_eq
+                 | erewrite select_eq
                  | progress autounfold with push_eval
                  | progress autorewrite with distr_length in *
-                 | typeclasses eauto | eauto with zarith ]
+                 | typeclasses eauto
+                 | solve [ eauto with zarith ] ]
   | .. ].
 
 Ltac prove_correctness use_curve_good := prove_correctness' ltac:(fun _ => fail) use_curve_good.
