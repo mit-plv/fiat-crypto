@@ -3579,6 +3579,10 @@ Local Ltac saturate_lengths_step :=
     => do_with ls
   | [ H : context[length ?ls] |- _ ]
     => do_with ls
+  | [ H : nth_error _ _ = None |- _ ]
+    => unique pose proof (@nth_error_error_length _ _ _ H)
+  | [ H : nth_error _ _ = Some _ |- _ ]
+    => unique pose proof (@nth_error_value_length _ _ _ _ H)
   end.
 Local Ltac saturate_lengths := repeat saturate_lengths_step.
 Local Ltac cleanup_min :=
@@ -4395,6 +4399,53 @@ Proof.
   eapply bounded_of_R_regs, H.
 Qed.
 
+Lemma eq_lift_to_Forall2_rets_inner mem_st idxs rets
+      (Hrets : Some rets = Option.List.lift (List.map (fun a => load a mem_st) idxs))
+  : Forall2 (fun rv idx => load idx mem_st = Some rv) rets idxs.
+Proof.
+  revert idxs rets Hrets; cbv [Option.List.lift option_map Crypto.Util.Option.bind].
+  induction idxs as [|idx idxs IH], rets as [|ret rets];
+    try specialize (IH rets); cbn [List.map fold_right]; intros.
+  all: repeat first [ progress inversion_option
+                    | progress inversion_list
+                    | progress subst
+                    | progress break_match_hyps
+                    | solve [ eauto ]
+                    | constructor ].
+Qed.
+
+Lemma eq_lift_to_Forall2_rets {A} mem_st idxs (rets : list (A + _))
+      (Hrets : Some rets
+               = Option.List.lift
+                   (List.map (fun idxs
+                              => match idxs : idx + list idx with
+                                 | inr idxs => option_map inr (Option.List.lift (List.map (fun a => load a mem_st) idxs))
+                                 | inl idx => None (* Some (inl idx) ?? *)
+                                 end)
+                             idxs))
+  : Forall2 (fun rv idxs
+             => match idxs, rv with
+                | inl idx, inl _ => False
+                | inr idxs, inr rets => Forall2 (fun rv idx => load idx mem_st = Some rv) rets idxs
+                | inl _, inr _ | inr _, inl _ => False
+                end)
+            rets idxs.
+Proof.
+  revert idxs rets Hrets; cbv [Option.List.lift option_map Crypto.Util.Option.bind].
+  induction idxs as [|idx idxs IH], rets as [|ret rets];
+    try specialize (IH rets); cbn [List.map fold_right]; intros.
+  all: repeat first [ progress inversion_option
+                    | progress inversion_list
+                    | progress subst
+                    | break_innermost_match_hyps_step
+                    | break_innermost_match_step
+                    | progress break_match_hyps
+                    | progress specialize_by reflexivity
+                    | eapply eq_lift_to_Forall2_rets_inner; (idtac + symmetry); eassumption
+                    | solve [ eauto ]
+                    | constructor ].
+Qed.
+
 Import Coq.Strings.String.
 Import Coq.Lists.List.
 Import Crypto.Util.Option.
@@ -4860,7 +4911,7 @@ Proof.
                    => debug_run ltac:(fun _ => idtac "Forall2_rets_of_R_mem start");
                       assert (List.length rets = List.length ls) by (symmetry in H; rewrite Option.List.lift_Some_nth_error_all_iff, map_length in H; destruct_head'_and; congruence);
                       let H' := fresh in
-                      pose proof H as H';
+                      pose proof H as H'; apply eq_lift_to_Forall2_rets in H';
                       eapply Forall2_rets_of_R_mem in H;
                       [ destruct H as [runtime_rets H]; exists runtime_rets
                       | clear H H';
@@ -5225,22 +5276,117 @@ Proof.
          => cut (zval = zval'); [ intros ->; reflexivity | ]
        end.
   all: [ > ].
-  (*
-  { move x14 at bottom.
-    revert H131.
-    move runtime_rets at bottom.
-    revert H71.
-    move rets at bottom.
-    revert H70.
-    move x9 at bottom.
-    revert H62.
-    revert_Foralls.
-    shelve. }
-  Unshelve.
-   *)
+  apply Forall2_eq.
+  let rec tac _ :=
+    (revert_Foralls;
+     rewrite !@Forall2_forall_iff_nth_error, ?@Forall_forall_iff_nth_error_match;
+     cbv [option_eq];
+     intros;
+     repeat match goal with
+            | [ H : context[nth_error ?ls _] |- context[nth_error ?ls ?i] ]
+              => specialize (H i)
+            | [ H : context[nth_error ?ls _], H' : context[nth_error ?ls ?i] |- _ ]
+              => specialize (H i)
+            end;
+     repeat rewrite ?@nth_error_combine, ?@nth_error_firstn, ?@nth_error_map, ?@nth_error_seq in *;
+     cbv [option_map] in *;
+     repeat first [ exfalso; assumption
+                  | assumption
+                  | progress subst
+                  | progress cbv [eval_idx_or_list_idx] in *
+                  | progress inversion_option
+                  | progress destruct_head'_and
+                  | break_innermost_match_step
+                  | break_innermost_match_hyps_step
+                  | match goal with
+                    | [ |- inr _ = inr _ ] => apply f_equal
+                    | [ |- _ = _ :> list _ ] => apply Forall2_eq; tac ()
+                    | [ |- Some _ = None ] => exfalso
+                    end ])
+  in
+  tac ().
+  all: lazymatch goal with
+       | [ |- False ] => saturate_lengths
+       | _ => idtac
+       end.
+  all: lazymatch goal with
+       | [ |- False ]
+         => repeat match goal with
+                   | [ H : _ = _ :> nat |- _ ] => revert H
+                   | [ H : (_ < _)%nat |- _ ] => revert H
+                   | [ H : (_ >= _)%nat |- _ ] => revert H
+                   | [ H : ~ (_ < _)%nat |- _ ] => revert H
+                   end;
+            clear; autorewrite with distr_length; intros
+       | _ => idtac
+       end.
+  all: lazymatch goal with
+       | [ |- False ]
+         => repeat first [ match goal with
+                           | [ H : ?T, H' : ?T |- _ ] => clear H'
+                           | [ H : ?x = ?x |- _ ] => clear H
+                           | [ H : context[@List.length ?A ?x] |- _ ]
+                             => is_var x; generalize dependent (@List.length A x)
+                           | [ |- context[@List.length ?A ?x] ]
+                             => is_var x; generalize dependent (@List.length A x)
+                           end
+                         | progress subst
+                         | progress intros ]
+       | _ => idtac
+       end.
+  all: lazymatch goal with
+       | [ |- False ] => try lia
+       | _ => idtac
+       end.
+  all: [ > ].
+  move z0 at bottom.
+  move z at bottom.
+  revert H71 H131.
+  move i4 at bottom.
+  move i3 at bottom.
+  revert Heqo12.
+  revert H70.
+  move i5 at bottom.
+  move l2 at bottom.
+  revert Heqo1 H62.
+  move x10 at bottom.
+  rewrite Nat.add_0_l.
+  move i5 at bottom.
+  move l9 at bottom.
+  revert Heqo14.
+  move x9 at bottom.
+  revert Heqo9.
+  move x9 at bottom.
+  move x3 at bottom.
+  revert Heqo4.
+  move i0 at bottom.
+  move l7 at bottom.
   (* What remains:
   ============================
  x14 = runtime_rets
+
+OR:
+  ============================
+  nth_error x3 i = Some (inr (i0, l7)) ->
+  nth_error x9 i = Some (inr l9) ->
+  nth_error l9 i2 = Some i5 ->
+  nth_error x10 i = Some (inr l2) ->
+  eval_idx_Z G_final dag_state4 i5
+    (Z.land (Semantics.get_reg machine_reg_state0 r + 8 * Z.of_nat i2) (Z.ones 64)) ->
+  load i5
+    (rev (List.combine x4 x11) ++
+     rev
+       (flat_map
+          (fun pat : (idx + idx * list idx) * (idx + list idx) =>
+           match pat with
+           | (inr (_, addrs'), inl _) => []
+           | (inr (_, addrs'), inr items) => List.combine addrs' items
+           | _ => []
+           end) (List.combine x3 x10))) = Some i4 ->
+  nth_error l2 i2 = Some i3 ->
+  eval_idx_Z G_final dag_state4 i4 z0 ->
+  eval_idx_Z G_final dag_state0 i3 z -> z = z0
+
 *)
 
 Admitted.
