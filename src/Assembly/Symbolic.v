@@ -1368,6 +1368,18 @@ Proof using Type.
   t; cbn [fold_right]. rewrite Z.lxor_0_r, Z.lxor_nilpotent; trivial.
 Qed.
 
+Definition shift_to_mul :=
+  fun e => match e with
+    ExprApp ((shl _ | shlx _ | shlZ) as o, [e'; ExprApp (const v, [])]) =>
+      let o' := match o with shl bitwidth | shlx bitwidth => mul bitwidth | shlZ => mulZ | _ => o (* impossible *) end in
+      if Z.eqb v 0
+      then e'
+      else if Z.ltb 0 v
+      then ExprApp (o', [e'; ExprApp (const (2^v)%Z, [])])
+      else e | _ => e end.
+Global Instance shift_to_mul_ok : Ok shift_to_mul_small.
+Proof. t. cbn in *. firstorder (lia + eauto). Qed.
+
 Definition expr : expr -> expr :=
   List.fold_left (fun e f => f e)
   [constprop
@@ -1392,6 +1404,7 @@ Definition expr : expr -> expr :=
   ;addoverflow_small
   ;addbyte_small
   ;xor_same
+  ;shift_to_mul
   ].
 
 Lemma eval_expr c d e v : eval c d e v -> eval c d (expr e) v.
