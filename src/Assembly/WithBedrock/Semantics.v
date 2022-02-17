@@ -360,6 +360,8 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | sar, _
   | rcr, _
   | sbb, _
+  | shl, _
+  | shlx, _
   | shr, _
   | shrd, _
   | sub, _
