@@ -174,21 +174,25 @@ Definition parse_FLAG : ParserAction FLAG
 
 Definition parse_MEM : ParserAction MEM
   := parse_map
-        (fun '(has_byte, (r, (r', maybe_pm_z)))
+        (fun '(has_byte, (br (*base reg*), (sr (*scale reg, including z *), offset)))
          => {| mem_is_byte := if has_byte:option _ then true else false
-               ; mem_reg := r
-               ; mem_extra_reg := r'
-               ; mem_offset := match maybe_pm_z with
+               ; mem_base_reg := br
+               ; mem_scale_reg := sr
+               ; mem_offset := match offset with
                                | inl (inl _ (* plus *), z) => Some z
                                | inl (inr _ (* minus *), z) => Some (-z)
                                | inr _ (* only whitespace *) => None
                                end%Z |})
         (((strip_whitespace_after "byte ")?) ;;
          (strip_whitespace_after "[" ;;R
-          parse_REG ;;
-          ((strip_whitespace_around "+" ;;R parse_REG)?) ;;
-          ((strip_whitespace_before ("+" ||->{id} "-") ;; parse_Z_arith_strict) ||->{id} parse_any_whitespace) ;;L
-          "]")).
+          (
+(*[rax]                 *) (parse_REG;; ((                                ((const 0)                                             * None      );; ((const 0)                                                         )    )))||->{id}
+(*[rax           + 0x10]*) (parse_REG;; ((                                ((const 0)                                             * None      );; (strip_whitespace_before ("+" ||->{id} "-") ;; parse_Z_arith_strict)    )))||->{id}
+(*[rax +     rbx]       *) (parse_REG;; ((strip_whitespace_around "+" ;;R ((const 1)                                             * parse_REG );; ((const 0)                                                         )    )))||->{id}
+(*[rax + 2 * rbx]       *) (parse_REG;; ((strip_whitespace_around "+" ;;R (parse_Z_arith_strict (strip_whitespace_around "*";;R  * parse_REG));; ((const 0)                                                         )    )))||->{id}
+(*[      2 * rax]       *) (None;;      ((                                (parse_Z_arith_strict (strip_whitespace_around "*";;R  * parse_REG));; ((const 0)                                                         )    )))
+            ) ||->{id} parse_any_whitespace);;L
+            "]")).
 
 Definition parse_CONST (const_keyword : bool) : ParserAction CONST
   := if const_keyword
@@ -271,10 +275,13 @@ Global Instance show_lvl_MEM : ShowLevel MEM
   := fun m
      => (if m.(mem_is_byte) then show_lvl_app (fun 'tt => "byte") else show_lvl)
           (fun 'tt
-           => "[" ++ (show m.(mem_reg))
-                  ++ (match m.(mem_extra_reg) with
+           => "[" ++ (match m.(mem_base_reg) with
                       | None => ""
                       | Some r => " + " ++ show r
+                      end)
+                  ++ (match m.(mem_scale_reg) with
+                      | None => ""
+                      | Some (z * r) => Decimal.showZ z ++ " * " ++ show r 
                       end)
                   ++ (match m.(mem_offset) with
                       | None => ""
