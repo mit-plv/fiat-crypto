@@ -1834,7 +1834,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     cnt <- RevealConst cnt;
     let cnt' := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
     v <- Symeval (shl s@(src, cnt'));
-         SetOperand dst v
+    SetOperand dst v
   | Syntax.shr, [dst; cnt] =>
     let cnt := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
     v <- Symeval (shr s@(dst, cnt));
