@@ -9,8 +9,14 @@ mov [ rsp + 0x130 ], r13; saving to stack
 mov [ rsp + 0x138 ], r14; saving to stack
 mov [ rsp + 0x140 ], r15; saving to stack
 mov rax, [ rsi + 0x40 ]; load m64 x1 to register64
-imul r10, rax, 0x2; x2 <- x1 * 0x2
-imul r10, r10, 0x2; x10001 <- x2 * 0x2
+
+; works
+; imul r10, rax, 0x2; x2 <- x1 * 0x2
+; imul r10, r10, 0x2; x10001 <- x2 * 0x2
+
+; does not work
+imul r10, rax, 0x4; x10001 <- x1 * 0x4
+
 mov r11, [ rsi + 0x28 ]; load m64 x10 to register64
 mov rbx, [ rsi + 0x38 ]; load m64 x4 to register64
 mov rbp, [ rsi + 0x30 ]; load m64 x7 to register64
