@@ -1394,6 +1394,7 @@ Definition expr : expr -> expr :=
   ;set_slice_set_slice
   ;slice_set_slice
   ;set_slice0_small
+  ;shift_to_mul
   ;flatten_associative
   ;consts_commutative
   ;fold_consts_to_and
@@ -1409,7 +1410,6 @@ Definition expr : expr -> expr :=
   ;addoverflow_small
   ;addbyte_small
   ;xor_same
-  ;shift_to_mul
   ].
 
 Lemma eval_expr c d e v : eval c d e v -> eval c d (expr e) v.
