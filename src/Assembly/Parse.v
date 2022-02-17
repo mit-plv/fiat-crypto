@@ -292,7 +292,7 @@ Global Instance show_lvl_MEM : ShowLevel MEM
           (fun 'tt
            => "[" ++ (match m.(mem_base_reg) with
                       | None => ""
-                      | Some r => " + " ++ show r
+                      | Some r => " + " ++ show_REG r
                       end)
                   ++ (match m.(mem_scale_reg) with
                       | None => ""
