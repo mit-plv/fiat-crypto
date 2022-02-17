@@ -1372,13 +1372,18 @@ Definition shift_to_mul :=
   fun e => match e with
     ExprApp ((shl _ | shlx _ | shlZ) as o, [e'; ExprApp (const v, [])]) =>
       let o' := match o with shl bitwidth | shlx bitwidth => mul bitwidth | shlZ => mulZ | _ => o (* impossible *) end in
+      let bw := match o with shl bitwidth | shlx bitwidth => Some bitwidth | shlZ => None | _ => None (* impossible *) end in
       if Z.eqb v 0
-      then e'
+      then match bw with
+           | Some N0 => ExprApp (const 0, nil)
+           | Some (Npos p) => ExprApp (slice 0%N (Npos p), [e'])
+           | None => e'
+           end
       else if Z.ltb 0 v
       then ExprApp (o', [e'; ExprApp (const (2^v)%Z, [])])
       else e | _ => e end.
-Global Instance shift_to_mul_ok : Ok shift_to_mul_small.
-Proof. t. cbn in *. firstorder (lia + eauto). Qed.
+Global Instance shift_to_mul_ok : Ok shift_to_mul.
+Proof. t; cbn in *; rewrite ?Z.shiftl_mul_pow2, ?Z.land_0_r by lia; repeat (lia + f_equal). Qed.
 
 Definition expr : expr -> expr :=
   List.fold_left (fun e f => f e)
