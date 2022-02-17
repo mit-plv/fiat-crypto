@@ -296,7 +296,7 @@ Global Instance show_lvl_MEM : ShowLevel MEM
                       end)
                   ++ (match m.(mem_scale_reg) with
                       | None => ""
-                      | Some (z * r) => Decimal.showZ z ++ " * " ++ show r 
+                      | Some (z, r) => show z ++ " * " ++ show r 
                       end)
                   ++ (match m.(mem_offset) with
                       | None => ""
