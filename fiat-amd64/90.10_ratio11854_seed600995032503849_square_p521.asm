@@ -19,7 +19,7 @@ shlx rbp, r10, 0x1
 imul rbp, rbp, 0x2; x10001 <- x2 * 0x2
 mov r13, [ rsi + 0x30 ]; load m64 x7 to register64
 imul r14, rax, 0x2; x5 <- x4 * 0x2
-shlx r15, [ rsi + 0x28 ], 0x1; x11 <- x10 (==arg1[5]) *2 (by shlx'ing by 1 (from mem))
+shlx r15, [ rsi + 0x28 ], 0x1; x11 <- x10 (x10==arg1[5]) *2 (by shlx'ing by 1 (from mem))
 
 imul r14, r14, 0x2; x10003 <- x5 * 0x2
 imul rdx, r13, 0x2; x8 <- x7 * 0x2
@@ -58,7 +58,7 @@ clc;
 adcx r10, rbx
 setc dl; spill CF x120 to reg (rdx)
 seto bl; spill OF x116 to reg (rbx)
-imul r12, r12, 0x2; x10006 <- x10 * 0x2
+imul r12, [ rsi + 0x28 ], 0x2; x10006 <- x10(x10==arg[5]) * 0x2
 xchg rdx, r15; x10001, swapping with x120, which is currently in rdx
 mov [ rsp + 0x28 ], r13; spilling x7 to mem
 mulx rdi, r13, [ rsi + 0x10 ]; x60, x59<- arg1[2] * x10001
