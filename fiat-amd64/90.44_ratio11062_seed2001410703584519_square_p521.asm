@@ -9,12 +9,17 @@ mov [ rsp + 0x120 ], r13; saving to stack
 mov [ rsp + 0x128 ], r14; saving to stack
 mov [ rsp + 0x130 ], r15; saving to stack
 mov rax, [ rsi + 0x40 ]; load m64 x1 to register64
-imul r10, rax, 0x2; x2 <- x1 * 0x2
 mov rdx, [ rsi + 0x0 ]; arg1[0] to rdx
 mulx r11, rbx, [ rsi + 0x0 ]; x106, x105<- arg1[0] * arg1[0]
 mov rbp, [ rsi + 0x30 ]; load m64 x7 to register64
 imul r12, rbp, 0x2; x8 <- x7 * 0x2
-imul r10, r10, 0x2; x10001 <- x2 * 0x2
+
+; old
+; imul r10, rax, 0x2; x2 <- x1 * 0x2
+; imul r10, r10, 0x2; x10001 <- x2 * 0x2
+shlx r10, [ rsi + 0x40 ], 0x2 ; x10001 <- x1 (x1==arg1[8]) * 2 * 2 (by shlx'ing from memory by 2)
+; this tests, if the shl-mul-rewrite occurs before the constant-folding
+
 imul r12, r12, 0x2; x10005 <- x8 * 0x2
 mov r13, [ rsi + 0x28 ]; load m64 x10 to register64
 imul r14, r13, 0x2; x11 <- x10 * 0x2
