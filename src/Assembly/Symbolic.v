@@ -1667,7 +1667,7 @@ Definition Address {sa : AddressSize} (a : MEM) : M idx :=
            | None => App ((const 0), nil)
            end;
   index <- match a.(mem_scale_reg) with
-           | Some (z, r) => App (add sa, [GetReg r; z])
+           | Some (z, r) => App (mulZ, [(GetReg r); z])
            | None => App ((const 0), nil)
            end;
   offset <- App (match a.(mem_offset) with
