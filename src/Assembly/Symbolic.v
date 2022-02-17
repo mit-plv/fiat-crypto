@@ -1662,9 +1662,12 @@ Definition SetReg r (v : idx) : M unit :=
 
 Class AddressSize := address_size : OperationSize.
 Definition Address {sa : AddressSize} (a : MEM) : M idx :=
-  base <- GetReg a.(mem_reg);
-  index <- match a.(mem_extra_reg) with
+  base <- match a.(mem_base_reg) with
            | Some r => GetReg r
+           | None => App ((const 0), nil)
+           end;
+  index <- match a.(mem_scale_reg) with
+           | Some (z * r) => App (add sa, [GetReg r; z])
            | None => App ((const 0), nil)
            end;
   offset <- App (match a.(mem_offset) with
