@@ -12,16 +12,22 @@ mov rax, [ rsi + 0x38 ]; load m64 x4 to register64
 mov r10, [ rsi + 0x40 ]; load m64 x1 to register64
 mov rdx, [ rsi + 0x0 ]; arg1[0] to rdx
 mulx r11, rbx, [ rsi + 0x0 ]; x106, x105<- arg1[0] * arg1[0]
-imul rbp, r10, 0x2; x2 <- x1 * 0x2
-mov r12, [ rsi + 0x28 ]; load m64 x10 to register64
+
+; x2 <- x1 * 0x2 (by shlx'ing by 1 from reg)
+shlx rbp, r10, 0x1
+
 imul rbp, rbp, 0x2; x10001 <- x2 * 0x2
 mov r13, [ rsi + 0x30 ]; load m64 x7 to register64
 imul r14, rax, 0x2; x5 <- x4 * 0x2
-imul r15, r12, 0x2; x11 <- x10 * 0x2
+shlx r15, [ rsi + 0x28 ], 0x1; x11 <- x10 (==arg1[5]) *2 (by shlx'ing by 1 (from mem))
+
 imul r14, r14, 0x2; x10003 <- x5 * 0x2
 imul rdx, r13, 0x2; x8 <- x7 * 0x2
 imul rdx, rdx, 0x2; x10005 <- x8 * 0x2
-imul r15, r15, 0x2; x10007 <- x11 * 0x2
+
+; x10007 <- x11 * 2 (by shl 1)
+shl r15, 0x1
+
 xchg rdx, r14; x10003, swapping with x10005, which is currently in rdx
 mulx rcx, r8, [ rsi + 0x10 ]; x62, x61<- arg1[2] * x10003
 xchg rdx, r14; x10005, swapping with x10003, which is currently in rdx
