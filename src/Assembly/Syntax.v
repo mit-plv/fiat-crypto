@@ -23,7 +23,7 @@ Inductive REG :=
 Definition CONST := Z.
 Coercion CONST_of_Z (x : Z) : CONST := x.
 
-Record MEM := { mem_is_byte : bool ; mem_reg : REG ; mem_extra_reg : option  REG  ; mem_offset : option Z }.
+Record MEM := { mem_is_byte : bool ; mem_reg : REG ; mem_extra_reg : option REG  ; mem_offset : option Z }.
 
 Inductive FLAG := CF | PF | AF | ZF | SF | OF.
 
