@@ -270,7 +270,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     v1 <- DenoteOperand sa s st src;
     cnt <- DenoteOperand sa s st cnt;
     let v := Z.land (Z.shiftl v1 (Z.land cnt (Z.of_N s-1))) (Z.ones (Z.of_N s)) in
-    st <- SetOperand sa s st dst v;
+    SetOperand sa s st dst v
   | shr, [dst; cnt] =>
     v1 <- DenoteOperand sa s st dst;
     cnt <- DenoteOperand sa s st cnt;
