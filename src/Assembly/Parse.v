@@ -186,7 +186,7 @@ Definition parse_MEM : ParserAction MEM
         (((strip_whitespace_after "byte ")?) ;;
          (strip_whitespace_after "[" ;;R
           parse_REG ;;
-          ((strip_whitespace_around "+" ;;R parse_REG)?) ;; 
+          ((strip_whitespace_around "+" ;;R parse_REG)?) ;;
           ((strip_whitespace_before ("+" ||->{id} "-") ;; parse_Z_arith_strict) ||->{id} parse_any_whitespace) ;;L
           "]")).
 
