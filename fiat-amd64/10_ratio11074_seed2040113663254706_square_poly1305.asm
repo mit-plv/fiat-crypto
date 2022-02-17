@@ -6,7 +6,7 @@ sub rsp, 0x30 ; last 0x30 (6) for Caller - save regs
 ;instead of 
 ; mov [ rsp + 0x0 ], rbx; saving to stack
 
-; we want to use
+; we also want to use
 mov [ rsp ], rbx; saving to stack
 
 mov [ rsp + 0x8 ], rbp; saving to stack
@@ -18,14 +18,14 @@ mov [ rsp + 0x28 ], r15; saving to stack
 ; instead of 
 ;imul rax, [ rsi + 0x10 ], 0x5; x1 <- arg1[2] * 0x5
 
-; we want to use 
+; we want also to use 
 mov rax, [ rsi + 0x10 ]
 lea rax, [ rax + 4 * rax ]
 
-;instead of 
+; instead of 
 ;imul r10, rax, 0x2; x2 <- x1 * 0x2
 
-; we want to use
+; we also want to use
 lea r10, [ 2 * rax]
 
 mov rdx, [ rsi + 0x0 ]; arg1[0] to rdx
@@ -37,7 +37,9 @@ mulx r11, rbx, [ rsi + 0x0 ]; x16, x15<- arg1[0] * arg1[0]
 ;we want to use 
 lea r10, [r10 + r10]
 
+; we also still need to support basic addressing with REG+off
 mov rdx, [ rsi + 0x8 ]; arg1[1] to rdx
+
 mulx r10, rbp, r10; x8, x7<- arg1[1] * x10000
 xor r12, r12
 adox rbp, rbx
