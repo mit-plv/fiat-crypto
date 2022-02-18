@@ -180,34 +180,34 @@ Definition parse_MEM : ParserAction MEM
            ; mem_scale_reg := sr:option (Z * REG)
            ; mem_offset := offset:option Z |})
        (((strip_whitespace_after "byte ")?) ;;
-        (strip_whitespace_after "["
+        ("["
          ;;R
              (
                (*[rax]                 *)
                (parse_map
                   (fun r => (Some r, None, None))
-                  parse_REG)
+                  (strip_whitespace_around parse_REG))
                || (*[rax           + 0x10]*)
                  (parse_map
                     (fun '(br, (pm, z)) => (Some br, None, Some match pm with
                                                                 | inl _ (* plus *) => z
                                                                 | inr _ (* minus *) => -z
                                                                 end%Z))
-                    (strip_whitespace_after parse_REG ;; ("+" ||->{id} "-") ;; strip_whitespace_before parse_Z_arith_strict))
+                    (strip_whitespace_around parse_REG ;; ("+" ||->{id} "-") ;; parse_Z_arith_strict))
                || (*[rax +     rbx]       *)
                  (parse_map
                     (fun '(br, sr) => (Some br, Some (1%Z, sr), None))
-                    (strip_whitespace_after parse_REG ;; "+" ;;R strip_whitespace_before parse_REG))
+                    (strip_whitespace_around parse_REG ;; "+" ;;R strip_whitespace_around parse_REG))
                || (*[rax + 2 * rbx]       *)
                  (parse_map
                     (fun '(br, (z, sr)) => (Some br, Some (z, sr), None))
-                    (strip_whitespace_after parse_REG ;; "+" ;;R strip_whitespace_around parse_Z_arith_strict ;; "*" ;;R strip_whitespace_before parse_REG))
+                    (strip_whitespace_around parse_REG ;; "+" ;;R parse_Z_arith_strict ;; "*" ;;R strip_whitespace_around parse_REG))
                || (*[      2 * rax]       *)
                  (parse_map
                     (fun '(z, r) => (None, Some (z, r), None))
-                    (strip_whitespace_after parse_Z_arith_strict ;; "*" ;;R strip_whitespace_before parse_REG))
+                    (parse_Z_arith_strict ;; "*" ;;R strip_whitespace_around parse_REG))
              )
-         ;;L strip_whitespace_before "]")).
+         ;;L "]")).
 
 Definition parse_CONST (const_keyword : bool) : ParserAction CONST
   := if const_keyword
