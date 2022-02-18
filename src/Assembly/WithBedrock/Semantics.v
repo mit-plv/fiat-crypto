@@ -263,7 +263,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     st <- SetOperand sa s st dst v;
     Some (if cnt =? 0 then st else
       let st := HavocFlagsFromResult s st v in
-      let st := if cnt =? 1 then SetFlag st OF (Z.lxor (Z.b2z (Z.testbit v1 (Z.of_N s-2)))  (Z.b2z (Z.testbit v1 (Z.of_N s-1)))) else st in
+      let st := if cnt =? 1 then SetFlag st OF (Z.z2b (Z.lxor (Z.b2z (Z.testbit v1 (Z.of_N s-2))) (Z.b2z (Z.testbit v1 (Z.of_N s-1))))) else st in
       let st := if cnt <? Z.of_N s then SetFlag st CF (Z.testbit v1 (65-cnt)) else st in
       HavocFlag st AF)
   | shlx, [dst; src; cnt] =>
