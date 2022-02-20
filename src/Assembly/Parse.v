@@ -290,13 +290,11 @@ Global Instance show_lvl_MEM : ShowLevel MEM
   := fun m
      => (if m.(mem_is_byte) then show_lvl_app (fun 'tt => "byte") else show_lvl)
           (fun 'tt
-           => "[" ++ (match m.(mem_base_reg) with
-                      | None => ""
-                      | Some r => " + " ++ show_REG r
-                      end)
-                  ++ (match m.(mem_scale_reg) with
-                      | None => ""
-                      | Some (z, r) => (if z <? 0 then " - " else " + ") ++ (let z := Z.abs z in if z =? 1 then "" else (Decimal.show_Z z ++ " * ")) ++ show_REG r
+           => "[" ++ (match m.(mem_base_reg), m.(mem_scale_reg) with
+                      | (*"[Reg]"          *) Some br, None         => show_REG br
+                      | (*"[Reg + Z * Reg]"*) Some br, Some (z, sr) => show_REG br  ++ " + " ++  Decimal.show_Z z  ++ " * " ++ show_REG sr (*only matching '+' here, because there cannot be a negative scale. *)
+                      | (*"[      Z * Reg]"*) None,    Some (z, sr) =>                           Decimal.show_Z z  ++ " * " ++ show_REG sr
+                      | (*"[             ]"*) None,    None         => "" (* impossible, because only offset is invalid, but we seem to need it for coq because both are option's*)
                       end%Z)
                   ++ (match m.(mem_offset) with
                       | None => ""
