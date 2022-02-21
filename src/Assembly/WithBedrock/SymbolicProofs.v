@@ -1237,6 +1237,7 @@ Proof using Type.
     3: enough (0 <= Z.land v3 (Z.of_N n - 1)) by lia; eapply Z.land_nonneg; right.
     1,2,3:pose_operation_size_cases; intuition (subst; cbn; clear; lia). }
   all : fail.
+  Unshelve.
 Qed.
 
 Lemma SymexLines_R s m (HR : R s m) asm :
