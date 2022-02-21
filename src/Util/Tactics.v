@@ -56,3 +56,4 @@ Require Export Crypto.Util.Tactics.UnfoldArg.
 Require Export Crypto.Util.Tactics.UnifyAbstractReflexivity.
 Require Export Crypto.Util.Tactics.UniquePose.
 Require Export Crypto.Util.Tactics.VM.
+Require Export Crypto.Util.Tactics.WarnIfGoalsRemain.

@@ -411,6 +411,7 @@ src/Util/Tactics/UnfoldArg.v
 src/Util/Tactics/UnifyAbstractReflexivity.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
+src/Util/Tactics/WarnIfGoalsRemain.v
 src/Util/Telescope/Core.v
 src/Util/Telescope/Equality.v
 src/Util/Telescope/Instances.v
