@@ -158,17 +158,26 @@ Fixpoint remove_common_indices {T} (eqb : T -> T -> bool) (xs ys : list T) (star
           else ((start_idx, x) :: xs', ys')
      end.
 
-Fixpoint explain_array_unification_error_without_commutativity
+Definition show_expr_node_lite : Show Symbolic.expr
+  := fix show_expr_node_lite (e : Symbolic.expr) : string
+    := match e with
+       | ExprRef i => "#" ++ show i
+       | ExprApp (op, e)
+         => "(" ++ show op ++ ", " ++ @show_list _ show_expr_node_lite e ++ ")"
+       end%string.
+
+Fixpoint explain_array_unification_error_single
          (singular plural : string)
          (left_descr right_descr : string)
          (explain_idx_unification_error : idx -> idx -> list string)
          (describe_idx : idx -> list string)
+         (modulo_commutativity : bool)
          (asm_array PHOAS_array : list idx) (start_idx : nat)
   : list string
-  := let recr := explain_array_unification_error_without_commutativity singular plural left_descr right_descr explain_idx_unification_error describe_idx in
+  := let recr := explain_array_unification_error_single singular plural left_descr right_descr explain_idx_unification_error describe_idx modulo_commutativity in
      match asm_array, PHOAS_array with
      | [], []
-       => ["Internal Error: Unifiable " ++ plural]
+       => ["Internal Error: Unifiable " ++ plural ++ (if modulo_commutativity then " modulo commutativity" else "")]
      | [], PHOAS_array
        => ((["The " ++ right_descr ++ " " ++ singular ++ " contains " ++ show (List.length PHOAS_array) ++ " more values than the " ++ left_descr ++ " " ++ singular ++ "."]%string)
              ++ List.flat_map describe_idx PHOAS_array)%list
@@ -179,9 +188,13 @@ Fixpoint explain_array_unification_error_without_commutativity
        => if Decidable.dec (asm_value = PHOAS_value)
           then recr asm_array PHOAS_array (S start_idx)
           else
-            ((["index " ++ show start_idx ++ ": #" ++ show asm_value ++ " != #" ++ show PHOAS_value]%string)
-               ++ explain_idx_unification_error asm_value PHOAS_value
-            )%list
+            if modulo_commutativity && List.existsb (N.eqb asm_value) PHOAS_array
+            then
+              recr asm_array (PHOAS_value :: List.removen (N.eqb asm_value) PHOAS_array 1) (S start_idx)
+            else
+              ((["index " ++ show start_idx ++ ": " ++ show_expr_node_lite (ExprRef asm_value) ++ " != " ++ show_expr_node_lite (ExprRef PHOAS_value)]%string)
+                 ++ explain_idx_unification_error asm_value PHOAS_value
+              )%list
      end%string%list%bool.
 
 Definition recursive_deps_list_step
@@ -255,14 +268,6 @@ Definition indices_at_leaves_map (ls : list Symbolic.expr) : list idx
 
 Definition indices_at_leaves (e : Symbolic.expr) : list idx
   := indices_at_leaves_map [e].
-
-Definition show_expr_node_lite : Show Symbolic.expr
-  := fix show_expr_node_lite (e : Symbolic.expr) : string
-    := match e with
-       | ExprRef i => "#" ++ show i
-       | ExprApp (op, e)
-         => "(" ++ show op ++ ", " ++ @show_list _ show_expr_node_lite e ++ ")"
-       end%string.
 
 Fixpoint make_iteratively_revealed_exprs
          (dag : dag)
@@ -341,7 +346,7 @@ Definition explain_array_unification_error
            (modulo_commutativity : bool)
            (asm_array PHOAS_array : list idx)
   : list string
-  := if modulo_commutativity
+  := if (modulo_commutativity && negb (List.length asm_array =? List.length PHOAS_array))%nat%bool
      then
        match remove_common_indices N.eqb asm_array PHOAS_array 0 with
        | ([], [])
@@ -361,7 +366,7 @@ Definition explain_array_unification_error
          => iteratively_explain_array_unification_error_modulo_commutativity dag describe_idx asm_array PHOAS_array
        end%string%list%bool
      else
-       explain_array_unification_error_without_commutativity singular plural left_descr right_descr explain_idx_unification_error describe_idx asm_array PHOAS_array 0.
+       explain_array_unification_error_single singular plural left_descr right_descr explain_idx_unification_error describe_idx modulo_commutativity asm_array PHOAS_array 0.
 
 Definition explain_mismatch_from_state
            (left_descr right_descr : string)
