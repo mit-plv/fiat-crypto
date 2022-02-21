@@ -1236,8 +1236,8 @@ Proof using Type.
     1:ring_simplify; rewrite Z.add_sub_swap; exact eq_refl.
     3: enough (0 <= Z.land v3 (Z.of_N n - 1)) by lia; eapply Z.land_nonneg; right.
     1,2,3:pose_operation_size_cases; intuition (subst; cbn; clear; lia). }
-  all : fail.
-  Unshelve. Show.
+  Unshelve. all: shelve_unifiable.
+  all: fail_if_goals_remain ().
 Qed.
 
 Lemma SymexLines_R s m (HR : R s m) asm :
