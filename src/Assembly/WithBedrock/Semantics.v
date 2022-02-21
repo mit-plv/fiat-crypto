@@ -107,7 +107,7 @@ Definition DenoteConst (sz : N) (a : CONST) : Z :=
 Definition DenoteAddress (sa : N) (st : machine_state) (a : MEM) : Z :=
   Z.land (
     get_reg st (mem_base_reg a) +
-    match mem_scale_reg a with Some (z, r) => r <- get_reg st r; z<- DenoteConst sa z; r * z | _ => 0 end +
+    match mem_scale_reg a with Some (z, r) => get_reg st r * DenoteConst sa z | _ => 0 end +
     match mem_scale_reg a with Some e => get_reg st e | _ => 0 end +
     match mem_offset a with Some z => DenoteConst sa z | _ => 0 end) (Z.ones (Z.of_N sa)).
 
