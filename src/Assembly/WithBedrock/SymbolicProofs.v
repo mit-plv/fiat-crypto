@@ -6,6 +6,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.AbstractInterpretation.ZRange.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.IndexOf.
+Require Import Crypto.Util.Tactics.WarnIfGoalsRemain.
 Require Crypto.Util.Option.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Symbolic.
