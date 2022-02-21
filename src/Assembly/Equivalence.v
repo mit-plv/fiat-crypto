@@ -309,9 +309,11 @@ Definition describe_idx_from_state
      old_descr.
 
 Definition iteratively_explain_array_unification_error_modulo_commutativity
-         (dag : dag)
-         (describe_idx : idx -> list string)
-         (asm_array : list (nat * idx)) (PHOAS_array : list idx)
+           (dag : dag)
+           (describe_idx : idx -> list string)
+           (op : option op)
+           (show_initial : bool)
+           (asm_array : list (nat * idx)) (PHOAS_array : list idx)
   : list string
   := let recursive_deps := recursive_deps_list (S (List.length dag)) dag NSet.empty in
      let asm_deps := recursive_deps (List.map snd asm_array) in
@@ -328,10 +330,17 @@ Definition iteratively_explain_array_unification_error_modulo_commutativity
      let reveal_one_final_time := List.map (at_leaves (reveal dag 1)) in
      let last_asm := reveal_one_final_time last_asm in
      let last_PHOAS := reveal_one_final_time last_PHOAS in
-     let reveals := reveals ++ [(last_asm, last_PHOAS)] in
+     let reveals := (if show_initial then [(asm_exprs, PHOAS_exprs)] else [])
+                      ++ reveals ++ [(last_asm, last_PHOAS)] in
+     let show_array array
+       := let args := @show_list _ show_expr_node_lite array in
+          match op with
+          | Some op => "(" ++ show op ++ ", " ++ args ++ ")"
+          | None => args
+          end%string in
      List.map
        (fun '(asm_array, PHOAS_array)
-        => (@show_list _ show_expr_node_lite asm_array ++ " != " ++ @show_list _ show_expr_node_lite PHOAS_array)%string)
+        => (show_array asm_array ++ " != " ++ show_array PHOAS_array)%string)
        reveals
        ++ (List.flat_map
              describe_idx
@@ -343,11 +352,14 @@ Definition explain_array_unification_error
            (left_descr right_descr : string)
            (explain_idx_unification_error : idx -> idx -> list string)
            (describe_idx : idx -> list string)
-           (modulo_commutativity : bool)
+           (op : option op)
            (asm_array PHOAS_array : list idx)
   : list string
-  := if (modulo_commutativity && negb (List.length asm_array =? List.length PHOAS_array))%nat%bool
+  := let modulo_commutativity := match op with Some o => commutative o | None => false end in
+     if (modulo_commutativity && negb (List.length asm_array =? List.length PHOAS_array))%nat%bool
      then
+       let orig_asm_array := asm_array in
+       let orig_PHOAS_array := PHOAS_array in
        match remove_common_indices N.eqb asm_array PHOAS_array 0 with
        | ([], [])
          => ["Internal Error: Unifiable " ++ plural ++ " modulo commutativity"]
@@ -363,7 +375,10 @@ Definition explain_array_unification_error
               ++ explain_idx_unification_error asm_value PHOAS_value
            )%list
        | (asm_array, PHOAS_array)
-         => iteratively_explain_array_unification_error_modulo_commutativity dag describe_idx asm_array PHOAS_array
+         => (* show init state when there are some common indices; otherwise we don't want to duplicate the expression *)
+           let show_initial_state := (negb ((List.length asm_array =? List.length orig_asm_array) && (List.length PHOAS_array =? List.length orig_PHOAS_array)))%nat in
+           iteratively_explain_array_unification_error_modulo_commutativity
+             dag describe_idx op show_initial_state asm_array PHOAS_array
        end%string%list%bool
      else
        explain_array_unification_error_single singular plural left_descr right_descr explain_idx_unification_error describe_idx modulo_commutativity asm_array PHOAS_array 0.
@@ -401,7 +416,7 @@ Fixpoint explain_idx_unification_error
      | Some ((asm_o, asm_e) as asm), Some ((PHOAS_o, PHOAS_e) as PHOAS)
        => (([show_node_lite asm ++ " != " ++ show_node_lite PHOAS]%string)
              ++ (if Decidable.dec (asm_o = PHOAS_o)
-                 then explain_array_unification_error st "argument" "arguments" left_descr right_descr recr (describe_idx_from_state st) (commutative asm_o) asm_e PHOAS_e
+                 then explain_array_unification_error st "argument" "arguments" left_descr right_descr recr (describe_idx_from_state st) (Some asm_o) asm_e PHOAS_e
                  else (([reveal_show_node asm ++ " != " ++ reveal_show_node PHOAS
                          ; "Operation mismatch: " ++ show asm_o ++ " != " ++ show PHOAS_o]%string)
                          ++ explain_mismatch_from_state left_descr right_descr st asm_idx PHOAS_idx)%list))%list
@@ -433,7 +448,7 @@ Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list i
                | inr asm_idxs, inr PHOAS_idxs
                  => ([prefix ++ " " ++ @show_list _ show_expr_node_lite (List.map ExprRef asm_idxs) ++ " != " ++ @show_list _ show_expr_node_lite (List.map ExprRef PHOAS_idxs)]%string)
                       ++ (explain_array_unification_error
-                            st "array" "arrays" "assembly" "synthesized" (explain_idx_unification_error "assembly" "synthesized" st fuel) (describe_idx_from_state st) false
+                            st "array" "arrays" "assembly" "synthesized" (explain_idx_unification_error "assembly" "synthesized" st fuel) (describe_idx_from_state st) None
                             asm_idxs PHOAS_idxs)
                end%list
      end%string%list.
@@ -488,7 +503,7 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                        ++ show_lines r
                        ++ ["Unable to unify: " ++ show reg_before ++ " == " ++ show reg_after]%string
                        ++ explain_array_unification_error
-                            r "list" "lists" "original" "final" (explain_idx_unification_error "original" "final" r (explain_unification_default_fuel r)) (describe_idx_from_state r) false
+                            r "list" "lists" "original" "final" (explain_idx_unification_error "original" "final" r (explain_unification_default_fuel r)) (describe_idx_from_state r) None
                             reg_before reg_after
                 | Unable_to_unify asm_output PHOAS_output r
                   => ["Unable to unify:"; "In environment:"]
