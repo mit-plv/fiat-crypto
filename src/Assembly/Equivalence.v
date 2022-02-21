@@ -179,7 +179,7 @@ Fixpoint explain_array_unification_error_without_commutativity
        => if Decidable.dec (asm_value = PHOAS_value)
           then recr asm_array PHOAS_array (S start_idx)
           else
-            ((["index " ++ show start_idx ++ ": " ++ show asm_value ++ " != " ++ show PHOAS_value]%string)
+            ((["index " ++ show start_idx ++ ": #" ++ show asm_value ++ " != #" ++ show PHOAS_value]%string)
                ++ explain_idx_unification_error asm_value PHOAS_value
             )%list
      end%string%list%bool.
@@ -354,7 +354,7 @@ Definition explain_array_unification_error
                ++ List.flat_map describe_idx (List.map snd asm_array))%list
        | ([(arr_index, asm_value)], [PHOAS_value])
          => (* there's only one idx on each side, so we can just naively compare them *)
-           ((["index " ++ show arr_index ++ ": " ++ show asm_value ++ " != " ++ show PHOAS_value]%string)
+           ((["index " ++ show arr_index ++ ": " ++ show_expr_node_lite (ExprRef asm_value) ++ " != " ++ show_expr_node_lite (ExprRef PHOAS_value)]%string)
               ++ explain_idx_unification_error asm_value PHOAS_value
            )%list
        | (asm_array, PHOAS_array)
@@ -380,8 +380,10 @@ Fixpoint explain_idx_unification_error
      let reveal_show_idx idx
        := match reveal_idx idx with
           | Some n => show n
-          | None => show idx
+          | None => show_expr_node_lite (ExprRef idx)
           end in
+     let show_node_lite '(op, e)
+       := show_expr_node_lite (ExprApp (op, List.map ExprRef e)) in
      let reveal_show_node '(op, e)
        := ("(" ++ show op ++ ", " ++ @show_list _ reveal_show_idx e ++ ")")%string in
      match reveal_idx asm_idx, reveal_idx PHOAS_idx with
@@ -392,7 +394,7 @@ Fixpoint explain_idx_unification_error
      | Some _, None
        => ["Internal error: synthesized index " ++ show PHOAS_idx ++ " is not in the dag"]
      | Some ((asm_o, asm_e) as asm), Some ((PHOAS_o, PHOAS_e) as PHOAS)
-       => (([show asm ++ " != " ++ show PHOAS]%string)
+       => (([show_node_lite asm ++ " != " ++ show_node_lite PHOAS]%string)
              ++ (if Decidable.dec (asm_o = PHOAS_o)
                  then explain_array_unification_error st "argument" "arguments" left_descr right_descr recr (describe_idx_from_state st) (commutative asm_o) asm_e PHOAS_e
                  else (([reveal_show_node asm ++ " != " ++ reveal_show_node PHOAS
@@ -421,10 +423,10 @@ Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list i
                | inl _, inr _ => [prefix; "The assembly code returns a scalar while the synthesized code returns an array."]
                | inr _, inl _ => [prefix; "The assembly code returns an array while the synthesized code returns a scalar."]
                | inl asm_idx, inl PHOAS_idx
-                 => (["index  " ++ show start_idx ++ ": " ++ show asm_idx ++ " != " ++ show PHOAS_idx]%string)
+                 => (["index  " ++ show start_idx ++ ": " ++ show_expr_node_lite (ExprRef asm_idx) ++ " != " ++ show_expr_node_lite (ExprRef PHOAS_idx)]%string)
                       ++ explain_idx_unification_error "assembly" "synthesized" st fuel asm_idx PHOAS_idx
                | inr asm_idxs, inr PHOAS_idxs
-                 => ([prefix ++ " " ++ show asm_idxs ++ " != " ++ show PHOAS_idxs]%string)
+                 => ([prefix ++ " " ++ @show_list _ show_expr_node_lite (List.map ExprRef asm_idxs) ++ " != " ++ @show_list _ show_expr_node_lite (List.map ExprRef PHOAS_idxs)]%string)
                       ++ (explain_array_unification_error
                             st "array" "arrays" "assembly" "synthesized" (explain_idx_unification_error "assembly" "synthesized" st fuel) (describe_idx_from_state st) false
                             asm_idxs PHOAS_idxs)
