@@ -61,6 +61,11 @@ Class unsaturated_solinas_ops
       computed_op
         (UnsaturatedSolinas.copy n width) Field.felem_copy
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
+    from_word_op :
+      computed_op
+        (UnsaturatedSolinas.encode_word n s c width)
+        Field.from_word
+        from_word_insizes from_word_outsizes from_word_inlengths;
     from_bytes_op :
       computed_op
         (UnsaturatedSolinas.from_bytes n s c width)
@@ -101,7 +106,7 @@ Section UnsaturatedSolinas.
 
   Context (ops : unsaturated_solinas_ops n s c)
           mul_func add_func sub_func opp_func square_func
-          scmula24_func felem_copy_func from_bytes_func to_bytes_func
+          scmula24_func felem_copy_func from_word_func from_bytes_func to_bytes_func
           (mul_func_eq : mul_func = b2_func mul_op)
           (add_func_eq : add_func = b2_func add_op)
           (sub_func_eq : sub_func = b2_func sub_op)
@@ -109,6 +114,7 @@ Section UnsaturatedSolinas.
           (square_func_eq : square_func = b2_func square_op)
           (scmula24_func_eq : scmula24_func = b2_func scmula24_op)
           (felem_copy_func_eq : felem_copy_func = b2_func felem_copy_op)
+          (from_word_func_eq : from_word_func = b2_func from_word_op)
           (from_bytes_func_eq : from_bytes_func = b2_func from_bytes_op)
           (to_bytes_func_eq : to_bytes_func = b2_func to_bytes_op).
   Local Notation weight :=
@@ -455,6 +461,15 @@ Section UnsaturatedSolinas.
       intros. apply Hcorrect; auto. }
   Admitted.
 
+  Lemma from_word_func_correct :
+    valid_func (res from_word_op _) ->
+    forall functions,
+      spec_of_from_word (from_word_func :: functions).
+  Proof using M_eq check_args_ok from_word_func_eq ok
+        tight_bounds_tighter_than.
+    intros. cbv [spec_of_from_word]. rewrite from_word_func_eq.
+  Admitted.
+
   Lemma from_bytes_func_correct :
     valid_func (res from_bytes_op _) ->
     forall functions,
@@ -528,7 +543,7 @@ Definition field_parameters_prefixed
     (prefix ++ "from_bytes")
     (prefix ++ "to_bytes")
     (prefix ++ "copy")
-    (prefix ++ "small_literal")
+    (prefix ++ "from_word")
 .
 
 Local Ltac begin_derive_bedrock2_func :=
@@ -539,9 +554,10 @@ Local Ltac begin_derive_bedrock2_func :=
   | |- context [spec_of_BinOp bin_sub] => eapply sub_func_correct
   | |- context [spec_of_UnOp un_opp] => eapply opp_func_correct
   | |- context [spec_of_UnOp un_scmula24] => eapply scmula24_func_correct
-  | |- context [spec_of_felem_copy] => eapply felem_copy_func_correct
   | |- context [spec_of_from_bytes] => eapply from_bytes_func_correct
   | |- context [spec_of_to_bytes] => eapply to_bytes_func_correct
+  | |- context [spec_of_felem_copy] => eapply felem_copy_func_correct
+  | |- context [spec_of_from_word] => eapply from_word_func_correct
   end.
 
 Ltac derive_bedrock2_func op :=
