@@ -2837,25 +2837,43 @@ Ltac rewrite_fold_left_fun_apply :=
                  rewrite pf
   end.
 
-Fixpoint takeWhile {A} (f : A -> bool) (ls : list A) : list A
-  := match ls with
-     | nil => nil
-     | x :: xs => if f x then x :: takeWhile f xs else nil
-     end.
+Definition span {A} (f : A -> bool)
+  := fix span (ls : list A) : list A * list A
+    := match ls with
+       | nil => (nil, nil)
+       | x :: xs => if f x then let '(xs, ys) := span xs in (x :: xs, ys) else (nil, ls)
+       end.
 
-Fixpoint dropWhile {A} (f : A -> bool) (ls : list A) : list A
-  := match ls with
-     | nil => nil
-     | x :: xs => if f x then dropWhile f xs else ls
-     end.
+Definition takeWhile {A} (f : A -> bool) (ls : list A) : list A := fst (span f ls).
+Definition dropWhile {A} (f : A -> bool) (ls : list A) : list A := snd (span f ls).
+
+Lemma span_app {A} f xs
+  : fst (@span A f xs) ++ snd (@span A f xs) = xs.
+Proof. induction xs; cbn; break_innermost_match; boring. Qed.
 
 Lemma takeWhile_app_dropWhile {A} f xs
   : @takeWhile A f xs ++ @dropWhile A f xs = xs.
+Proof. apply span_app. Qed.
+
+Lemma filter_fst_span {A} f xs
+  : filter f (fst (@span A f xs)) = fst (@span A f xs).
 Proof. induction xs; cbn; break_innermost_match; boring. Qed.
 
 Lemma filter_takeWhile {A} f xs
   : filter f (@takeWhile A f xs) = @takeWhile A f xs.
-Proof. induction xs; cbn; break_innermost_match; boring. Qed.
+Proof. apply filter_fst_span. Qed.
+
+Lemma hd_not_snd_span {A} f xs x
+      (H : nth_error (snd (@span A f xs)) 0 = Some x)
+  : f x = false.
+Proof.
+  induction xs.
+  all: repeat first [ progress cbn in *
+                    | progress cbv [fst snd] in *
+                    | congruence
+                    | solve [ auto ]
+                    | break_innermost_match_hyps_step ].
+Qed.
 
 Lemma eq_filter_nil_Forall_iff {A} f (xs : list A)
   : filter f xs = nil <-> Forall (fun x => f x = false) xs.
