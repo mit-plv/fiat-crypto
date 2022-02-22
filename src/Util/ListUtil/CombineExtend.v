@@ -1,4 +1,5 @@
 Require Import Coq.Lists.List.
+Require Export Crypto.Util.FixCoqMistakes.
 Import ListNotations.
 Local Open Scope list_scope.
 
