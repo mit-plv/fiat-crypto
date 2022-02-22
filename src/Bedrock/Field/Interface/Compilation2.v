@@ -283,14 +283,14 @@ Section Compile.
     ecancel_assumption.
   Qed.
 
-  Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_felem_small_literal _ _ _ _ _ _ _ _)) : typeclass_instances.
+  Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_from_word _ _ _ _ _ _ _ _)) : typeclass_instances.
 
-  Lemma compile_felem_small_literal {tr m l functions} x:
+  Lemma compile_from_word {tr m l functions} x:
     let v := F.of_Z _ x in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
            R (wx : word) out out_ptr out_var out_bounds,
 
-      spec_of_felem_small_literal functions ->
+      spec_of_from_word functions ->
 
       map.get l out_var = Some out_ptr ->
       (FElem out_bounds out_ptr out * R)%sep m ->
@@ -311,7 +311,7 @@ Section Compile.
          Locals := l;
          Functions := functions }>
       cmd.seq
-        (cmd.call [] felem_small_literal
+        (cmd.call [] from_word
                   [expr.var out_var; expr.literal x])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
@@ -320,7 +320,7 @@ Section Compile.
     unfold FElem in *.
     sepsimpl.
     prove_field_compilation.
-    apply H4.
+    apply H3.
     
     eapply Proper_sep_impl1; eauto.
     2:exact(fun a b => b).
@@ -351,7 +351,7 @@ simple eapply compile_square; shelve : compiler.
 #[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.inv _) _))) =>
 simple eapply compile_inv; shelve : compiler.
 #[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.of_Z M_pos _) _))) =>
-simple eapply compile_felem_small_literal; shelve : compiler.
+simple eapply compile_from_word; shelve : compiler.
 #[export] Hint Extern 10 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ ?v _))) =>
 is_var v; simple eapply compile_felem_copy; shelve : compiler.
 
@@ -363,4 +363,4 @@ is_var v; simple eapply compile_felem_copy; shelve : compiler.
 #[export] Hint Extern 1 (spec_of _) => (simple refine (@spec_of_BinOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
 #[export] Hint Extern 1 (spec_of _) => (simple refine (@spec_of_UnOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
 #[export] Hint Extern 1 (spec_of felem_copy) => (simple refine (@spec_of_felem_copy _ _ _ _ _ _ _ _)) : typeclass_instances.
-#[export] Hint Extern 1 (spec_of felem_small_literal) => (simple refine (@spec_of_felem_small_literal _ _ _ _ _ _ _ _)) : typeclass_instances.
+#[export] Hint Extern 1 (spec_of from_word) => (simple refine (@spec_of_from_word _ _ _ _ _ _ _ _)) : typeclass_instances.

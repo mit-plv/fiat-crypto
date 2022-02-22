@@ -20,17 +20,8 @@ Class FieldParameters :=
     square : string; scmula24 : string; inv : string;
     from_bytes : string; to_bytes : string;
 
-    (* felem_small_literal p x :=
-         store p (expr.literal x);
-         store (p+4) (expr.literal 0);
-         ...
-
-       felem_copy pX pY :=
-         store pX (load pY);
-         store (pX+4) (load (pY+4));
-         ... *)
     felem_copy : string;
-    felem_small_literal : string;
+    from_word : string;
   }.
 
 Class FieldParameters_ok {field_parameters : FieldParameters} := {
@@ -232,8 +223,8 @@ Section FunctionSpecs.
         tr = tr' /\
         (FElem px x * FElem pout x * R)%sep mem' }.
 
-  Instance spec_of_felem_small_literal : spec_of felem_small_literal :=
-    fnspec! felem_small_literal (pout x : word) / out R,
+  Instance spec_of_from_word : spec_of from_word :=
+    fnspec! from_word (pout x : word) / out R,
     { requires tr mem :=
         (FElem pout out * R)%sep mem;
       ensures tr' mem' :=
@@ -244,7 +235,7 @@ Section FunctionSpecs.
 End FunctionSpecs.
 
 Existing Instances spec_of_UnOp spec_of_BinOp bin_mul un_square bin_add bin_sub
-         un_scmula24 un_inv spec_of_felem_copy spec_of_felem_small_literal.
+         un_scmula24 un_inv spec_of_felem_copy spec_of_from_word.
 
 Section SpecProperties.
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.

@@ -27,37 +27,14 @@ Definition montladder : func :=
       (field_parameters:=field_parameters)
       (field_representaton:=field_representation n s c)).
 
-(* TODO: replace these stubs with real implementations. *)
-Definition felem_cswap : func :=
-  let mask := "mask" in
-  let ptr1 := "ptr1" in
-  let ptr2 := "ptr2" in
-  let tmp1 := "tmp1" in
-  let tmp2 := "tmp2" in
-  (felem_cswap, ([mask; ptr1; ptr2], [],
-   cmd.cond (expr.var mask)
-     (cmd.seq
-       (cmd.set tmp1 (expr.load access_size.word (expr.var ptr1)))
-       (cmd.seq
-         (cmd.set tmp2 (expr.load access_size.word (expr.var ptr2)))
-         (cmd.seq
-           (cmd.store access_size.word (expr.var ptr2) (expr.var tmp1))
-           (cmd.store access_size.word (expr.var ptr1) (expr.var tmp2)))))
-    (cmd.skip))).
-Definition fe25519_small_literal : func :=
-  let pout := "pout" in
-  let x := "x" in
-  ("fe25519_small_literal", ([pout; x], [],
-    cmd.store access_size.word (expr.var pout) (expr.var x))).
-
 Definition funcs : list func :=
   [
+    montladder;
     fe25519_to_bytes;
     fe25519_from_bytes;
-    montladder;
-    felem_cswap;
+    fe25519_from_word;
+    CSwap.cswap_body(word:=BasicC32Semantics.word)(field_parameters:=field_parameters)(field_representaton:=field_representation n s c);
     fe25519_copy;
-    fe25519_small_literal;
     fe25519_inv(word:=BasicC32Semantics.word)(field_parameters:=field_parameters);
     ladderstep;
     fe25519_mul;
@@ -66,6 +43,13 @@ Definition funcs : list func :=
     fe25519_square;
     fe25519_scmula24 ].
 
+(*
+Require Import bedrock2.ToCString.
+Compute c_module funcs.
+*)
+
+Definition compiler_test_out := Eval vm_compute in
+  compile (compile_ext_call (funname_env:=SortedListString.map)) (map.of_list funcs).
 Compute
-  match compile (compile_ext_call (funname_env:=SortedListString.map)) (map.of_list funcs) with
-  Success ((x, z), y) => (length x, z) | _ => (O, map.empty) end.
+  match compiler_test_out with
+  Success ((x, z), y) => Success (length x, z) | Failure e => Failure e end.
