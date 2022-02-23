@@ -25,6 +25,7 @@ Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.ZUtil.Lxor.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Import Crypto.Util.Tactics.WarnIfGoalsRemain.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import coqutil.Z.bitblast.
 Require Import Coq.Strings.String Crypto.Util.Strings.Show.
@@ -1385,6 +1386,80 @@ Definition shift_to_mul :=
 Global Instance shift_to_mul_ok : Ok shift_to_mul.
 Proof. t; cbn in *; rewrite ?Z.shiftl_mul_pow2, ?Z.land_0_r by lia; repeat (lia + f_equal). Qed.
 
+Definition combines_to o := match o with add s => Some (mul s) | addZ => Some mulZ | _ => None end.
+
+Fixpoint combine_to_consts_map (o : op) (args : list expr) (mapping : list (expr * list Z))
+  : list (expr * list Z)
+  := match args with
+     | [] => mapping
+     | arg :: args
+       => let mapping
+            := match combines_to o with
+               | Some o'
+                 => if commutative o' && associative o'
+                    then
+                      let '(e, vs)
+                        := match arg with
+                           | ExprApp (o'', args')
+                             => if op_beq o' o''
+                                then
+                                  let csts_exprs := List.partition isCst args' in
+                                  match interp0_expr (ExprApp (o', fst csts_exprs)) with
+                                  | Some v => (ExprApp (o', snd csts_exprs), [v])
+                                  | None => (arg, [])
+                                  end
+                                else (arg, [])
+                           | _ => (arg, [])
+                           end in
+                      (n <- List.indexof (fun '(e', _) => expr_beq e e') mapping;
+                       e_v' <- List.nth_error mapping n;
+                       Some (set_nth n (e, vs ++ snd e_v') mapping))
+                        ;;;
+                        ((e, vs) :: mapping)
+                    else (arg, []) :: mapping
+               | None => (arg, []) :: mapping
+               end in
+          combine_to_consts_map o args mapping
+     end%bool%option.
+
+(* combines_to o = Some o' *)
+Definition compress_consts_map (o o' : op) (mapping : list (expr * list Z)) : option expr
+  := (args <-- (List.map
+                  (fun '(e, vs) =>
+                     match vs with
+                     | [] => Some e
+                     | _
+                       => (v <- interp0_op o vs;
+                           i <- identity o;
+                           Some
+                             (if (v =? i)%Z
+                              then e
+                              else ExprApp (o', [ExprApp (const v, []); e])))
+                     end)
+                  mapping);
+      Some (ExprApp (o, args)))%option.
+Global Instance compress_consts_map_ok : Ok compress_consts_map.
+Proof using Type.
+  Unshelve. all: shelve_unifiable.
+  all: fail_if_goals_remain ().
+Qed.
+
+Definition combine_consts : expr -> expr :=
+  fun e => match e with ExprApp (o, args) =>
+    if commutative o then match combines_to o with
+    | Some o' =>
+        let mapping := combine_to_consts_map o args [] in
+        match compress_consts_map o o' mapping with
+        | Some e => e | None => e
+        end
+    | None => e end else e | _ => e end.
+Global Instance combine_consts_ok : Ok combine_consts.
+Proof using Type.
+  Unshelve. all: shelve_unifiable.
+  all: fail_if_goals_remain ().
+Qed.
+
+
 Definition expr : expr -> expr :=
   List.fold_left (fun e f => f e)
   [constprop
@@ -1397,6 +1472,7 @@ Definition expr : expr -> expr :=
   ;shift_to_mul
   ;flatten_associative
   ;consts_commutative
+  ;combine_consts
   ;fold_consts_to_and
   ;drop_identity
   ;opcarry_0_at1
