@@ -3,6 +3,7 @@ Require Import Coq.Arith.Arith.
 Require Import Coq.Sorting.Permutation.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ListUtil.Partition.
+Require Import Crypto.Util.ListUtil.StdlibCompat.
 Require Export Crypto.Util.FixCoqMistakes.
 Import ListNotations.
 Local Open Scope list_scope.
@@ -24,7 +25,7 @@ Module List.
   Lemma groupAllBy'_eq_fuel' A f ls fuel fuel'
         (H : List.length ls <= fuel <= fuel')
     : @groupAllBy' A f ls fuel = @groupAllBy' A f ls fuel'.
-  Proof.
+  Proof using Type.
     revert fuel' fuel ls H.
     induction fuel' as [|fuel' IH], fuel as [|fuel], ls as [|x xs];
       try specialize (IH fuel); cbn [List.length groupAllBy']; try lia; try reflexivity.
@@ -37,7 +38,7 @@ Module List.
         (H : List.length ls <= fuel)
         (H' : List.length ls <= fuel')
     : @groupAllBy' A f ls fuel = @groupAllBy' A f ls fuel'.
-  Proof.
+  Proof using Type.
     destruct (le_gt_dec fuel fuel').
     all: (idtac + symmetry); apply groupAllBy'_eq_fuel'; lia.
   Qed.
@@ -49,7 +50,7 @@ Module List.
                              => let '(xs, ys) := partition (f x) xs in
                                 (x :: xs) :: groupAllBy f ys
                            end.
-  Proof.
+  Proof using Type.
     induction ls as [|x xs IH]; cbn; try reflexivity.
     cbv [groupAllBy].
     pose proof (partition_length (f x) xs) as H.
@@ -60,7 +61,7 @@ Module List.
 
   Lemma concat_groupAllBy {A} (f : A -> A -> bool) ls
     : Permutation (List.concat (groupAllBy f ls)) ls.
-  Proof.
+  Proof using Type.
     remember (List.length ls) as n eqn:H.
     revert ls H.
     induction n as [n IH] using lt_wf_ind; intros ls H'; subst.
