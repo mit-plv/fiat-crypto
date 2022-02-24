@@ -309,8 +309,10 @@ src/Util/ListUtil/FoldBool.v
 src/Util/ListUtil/FoldMap.v
 src/Util/ListUtil/Forall.v
 src/Util/ListUtil/ForallIn.v
+src/Util/ListUtil/GroupAllBy.v
 src/Util/ListUtil/IndexOf.v
 src/Util/ListUtil/NthExt.v
+src/Util/ListUtil/Partition.v
 src/Util/ListUtil/Permutation.v
 src/Util/ListUtil/PermutationCompat.v
 src/Util/ListUtil/RemoveN.v
