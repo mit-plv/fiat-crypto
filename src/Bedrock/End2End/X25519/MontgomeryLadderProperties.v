@@ -191,23 +191,13 @@ Proof.
       { apply Signature.field_representation_ok.
         apply UnsaturatedSolinas.relax_valid. }
       { cbv [Core.__rupicola_program_marker]; tauto. }
-      { 
-        Set Printing Implicit.
-        change (SortedListString.map (@word.rep 32 BasicC32Semantics.word)) with BasicC32Semantics.locals.
-        Search fe25519_mul.
-        Search 
-        Print BasicC32Semantics.locals.
-        eapply @fe25519_mul_correct.
-        Search spec_of_BinOp.
-       
-      
-
-     }
+      { eapply @fe25519_mul_correct. (* FIXME: this eapply is slow. *) }
+      { (* TODO: peel off non-matching functions from the function list and use
+           correctness proof. *) admit. }
+      { (* TODO: peel off non-matching functions from the function list and use
+           correctness proof. *) admit. }
+      { (* TODO: peel off non-matching functions from the function list and use
+           correctness proof. *) admit. }
 
 
 Qed.
-
-
-
-
-
