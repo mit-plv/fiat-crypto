@@ -35,9 +35,6 @@ Defined.
 Local Instance mem : map.map (word.rep (width:=32)) Init.Byte.byte := SortedListWord.map _ _.
 Local Existing Instance BW32.
 
-(* scalars are 253 bits long *)
-Definition scalarbits : nat := 253.
-
 (* Postcondition extracted from spec_of_montladder *)
 Definition montladder_post (pOUT pK pU : word.rep (word:=BasicC32Semantics.word))
           (Kbytes : list Byte.byte) (K : Z)
@@ -55,7 +52,7 @@ Definition montladder_post (pOUT pK pU : word.rep (word:=BasicC32Semantics.word)
          (BW:=BW32)
          (field_representaton:=field_representation n s c)
          (Some Field.tight_bounds) pOUT
-         (montladder_gallina Field.M_pos Field.a24 scalarbits K U)
+         (montladder_gallina Field.M_pos Field.a24 (Z.to_nat (Z.log2_up Curve25519.l)) K U)
          ⋆ Array.array ptsto (word.of_Z 1) pK Kbytes
          ⋆ FElem (BW:=BW32)
                  (field_representaton:=field_representation n s c)
@@ -64,6 +61,10 @@ Definition montladder_post (pOUT pK pU : word.rep (word:=BasicC32Semantics.word)
 
 Local Instance Registers : map.map Z (@word.rep 32 BasicC32Semantics.word)
   := Zkeyed_map _.
+
+Require Import riscv.Spec.Decode.
+
+Local Existing Instance RV32I_bitwidth.
 
 Lemma montladder_compiles_correctly :
   forall (t : Semantics.trace)
@@ -115,4 +116,74 @@ Lemma montladder_compiles_correctly :
               LowerPipeline.machine_ok p_funcs stack_lo stack_hi
                 montladder_insns mH' Rdata Rexec final).
 Proof.
-Admitted.
+  intros.
+  eapply (compiler_correct_wp (ext_spec:=FE310CSemantics.ext_spec))
+    with (fname:=fname).
+  all:cbn [fname montladder fst snd].
+
+  (* fill in easy subgoals that instantiate evars *)
+  all:lazymatch goal with
+      | |- compile _ _ = Success _ =>
+        rewrite montladder_compiler_result_ok;
+        transitivity (Success (montladder_insns,
+                               montladder_finfo,
+                               montladder_stack_size));
+        [ | reflexivity ]; reflexivity
+      | _ => idtac
+      end.
+  all:lazymatch goal with
+      | |- getPc (getMachine _) = _ => eassumption
+      | |- getLog (getMachine _) = _ => eassumption
+      | |- map.get (getRegs (getMachine _)) _ = Some _ => eassumption
+      | |- map.getmany_of_list
+             (getRegs (getMachine _)) _ = Some _ => eassumption
+      | |- context [LowerPipeline.machine_ok] => eassumption
+      | |- map.get montladder_finfo _ = Some _ => reflexivity
+      | _ => idtac
+      end.
+  
+  (* solve remaining goals one by one *)
+  { eapply compile_ext_call_correct. }
+  { intros. cbv [compile_ext_call compile_interact].
+    repeat (destruct_one_match; try reflexivity). }
+  { unfold ExprImp.valid_funs. unfold funcs.
+    (* TODO: need lemma/tactic to break down map.get (map.of_list [...]) into a
+       case for each function, then valid_fun is just proving there are no
+       duplicates in arg/ret names *)
+    admit. }
+  { cbn. (* TODO: prove function names are NoDup *) admit. }
+  { unfold funcs. 
+    (* montladder is not at the front of the function list; remove everything
+       that doesn't match the name *)
+    repeat 
+      lazymatch goal with
+      | |- ?call (?f :: ?funcs) ?fname ?t ?m ?args ?post =>
+        assert_fails (unify (fst f) fname);
+        let H := fresh in
+        assert (call funcs fname t m args post) as H;
+        [ | remember funcs; rewrite (surjective_pairing f);
+            cbn [WeakestPrecondition.call WeakestPrecondition.call_body ];
+            lazymatch goal with |- context[if (String.eqb ?x ?y) then _ else _] =>
+              let x' := (eval vm_compute in x) in change x with x';
+              destr (String.eqb x' y); [ congruence | ]
+            end; exact H ]
+      end.
+      rewrite montladder_defn.
+      eapply WeakestPreconditionProperties.Proper_call.
+      2:{
+      About montladder_correct.
+      pose proof @montladder_correct as Hmont.
+      cbv [spec_of_montladder] in Hmont.
+      eapply @montladder_correct.
+   
+      { cbn [Morphisms.pointwise_relation
+      Locate Proper_call.
+      apply @montladder_correct.
+
+
+Qed.
+
+
+
+
+

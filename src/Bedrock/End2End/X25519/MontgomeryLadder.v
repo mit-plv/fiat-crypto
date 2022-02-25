@@ -6,6 +6,7 @@ Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Syntax.
 Require Import compiler.Pipeline.
 Require Import compiler.MMIO.
+Require Import coqutil.Word.Bitwidth32.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.End2End.X25519.Field25519.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
@@ -18,17 +19,22 @@ Local Open Scope string_scope.
 Import ListNotations.
 
 
-Definition ladderstep : func :=
-  Eval vm_compute in
-    (ladderstep_body
-      (field_parameters:=field_parameters)
-      (field_representaton:=field_representation n s c)).
+Derive ladderstep SuchThat
+       (ladderstep = ladderstep_body
+                       (field_parameters:=field_parameters)
+                       (field_representaton:=field_representation n s c))
+       As ladderstep_defn.
+Proof. vm_compute. subst; exact eq_refl. Qed.
 
-Definition montladder : func :=
-  Eval vm_compute in
-    (montladder_body (Z.to_nat (Z.log2_up Curve25519.l))
-      (field_parameters:=field_parameters)
-      (field_representaton:=field_representation n s c)).
+Derive montladder SuchThat
+       (montladder
+        = montladder_body
+            (BW:=BW32)
+            (Z.to_nat (Z.log2_up Curve25519.l))
+            (field_parameters:=field_parameters)
+            (field_representaton:=field_representation n s c))
+       As montladder_defn.
+Proof. vm_compute. subst; exact eq_refl. Qed.
 
 Definition funcs : list func :=
   [
