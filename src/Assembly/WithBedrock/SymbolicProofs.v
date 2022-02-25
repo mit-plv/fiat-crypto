@@ -887,19 +887,95 @@ Proof using Type.
    { inversion 1. }
 Qed.
 
+Lemma opcode_size_cases o n : opcode_size o = Some n ->
+  ((o = clc /\ n = 1) \/ n = 8 \/ n = 16 \/ n = 32 \/ n = 64)%N.
+Proof using Type.
+  destruct o; cbn; intros; Option.inversion_option; try now subst; eauto.
+Qed.
+
+Lemma lift_map_standalone_operand_size_cases_Forall args ls
+      (H : Crypto.Util.OptionList.Option.List.lift
+             (map standalone_operand_size args) =
+             Some ls)
+      (P := fun n => (n = 8 \/ n = 16 \/ n = 32 \/ n = 64)%N)
+  : Forall P ls.
+Proof using Type.
+  revert ls H; induction args as [|x xs IH]; intros; cbn in *; cbv [Crypto.Util.Option.bind] in *; break_match_hyps; repeat Option.inversion_option; subst; try now constructor.
+  specialize (IH _ ltac:(eassumption)).
+  match goal with H : _ |- _ => apply standalone_operand_size_cases in H end.
+  constructor; subst P; eauto.
+Qed.
+
+Lemma lift_map_standalone_operand_size_cases_fold_right args x xs f init
+      (H : Crypto.Util.OptionList.Option.List.lift
+             (map standalone_operand_size args) =
+             Some (x :: xs))
+      (P := fun n => (n = 8 \/ n = 16 \/ n = 32 \/ n = 64)%N)
+      (Hf : forall a b, P a -> (b = init \/ P b) -> P (f a b))
+      (n := fold_right f init (x :: xs))
+  : P n.
+Proof using Type.
+  apply lift_map_standalone_operand_size_cases_Forall in H.
+  inversion H; clear H; subst.
+  subst n; cbn [fold_right].
+  apply Hf; try assumption.
+  induction xs as [|x' xs IH]; inversion_one_head Forall; eauto.
+Qed.
+
+Lemma map_id_map_standalone_operand_size_cases_Forall args ls
+      (H : Crypto.Util.OptionList.Option.List.map id
+             (map standalone_operand_size args) =
+             ls)
+      (P := fun n => (n = 8 \/ n = 16 \/ n = 32 \/ n = 64)%N)
+  : Forall P ls.
+Proof using Type.
+  subst.
+  induction args as [|x xs IH]; intros; cbn in *; cbv [Crypto.Util.Option.bind] in *; break_match; repeat Option.inversion_option; subst; try (now constructor); eauto.
+  constructor; subst P; eauto.
+  eapply standalone_operand_size_cases; eassumption.
+Qed.
+
+Lemma map_id_map_standalone_operand_size_cases_fold_right args x xs f init
+      (H : Crypto.Util.OptionList.Option.List.map id
+             (map standalone_operand_size args) =
+             x :: xs)
+      (P := fun n => (n = 8 \/ n = 16 \/ n = 32 \/ n = 64)%N)
+      (Hf : forall a b, P a -> (b = init \/ P b) -> P (f a b))
+      (n := fold_right f init (x :: xs))
+  : P n.
+Proof using Type.
+  apply map_id_map_standalone_operand_size_cases_Forall in H.
+  inversion H; clear H; subst.
+  subst n; cbn [fold_right].
+  apply Hf; try assumption.
+  induction xs as [|x' xs IH]; inversion_one_head Forall; eauto.
+Qed.
+
 Lemma operation_size_cases i n : Syntax.operation_size i = Some n ->
-  (exists a, i = Build_NormalInstruction dec [a]) \/ (exists a, i = Build_NormalInstruction inc [a]) \/ (exists a b, i = Build_NormalInstruction Syntax.rcr [a; b]) \/ (exists a b c, i = Build_NormalInstruction Syntax.shrd [a; b; c]) \/ (exists a b, i = Build_NormalInstruction Syntax.sar [a;b])\/(exists a b, i = Build_NormalInstruction Syntax.add [a;b]) ->
-  (n = 8 \/ n = 16 \/ n = 32 \/ n = 64)%N.
-Proof using G.
+  (((exists ls, i = Build_NormalInstruction Syntax.clc ls) /\ n = 1) \/ (n = 8 \/ n = 16 \/ n = 32 \/ n = 64))%N.
+Proof using Type.
+  clear G.
   intuition idtac; DestructHead.destruct_head'_ex; subst; cbn in *.
-  all : repeat (repeat (let HH := fresh "H" in destruct (standalone_operand_size _) eqn:HH in H; repeat Option.inversion_option; try eapply standalone_operand_size_cases in HH); cbn in *; repeat Option.inversion_option; subst || Tactics.destruct_one_match_hyp).
-  all : lia.
+  cbv [Syntax.operation_size] in H.
+  break_match_hyps; Option.inversion_option; subst.
+  all: repeat first [ progress destruct_head'_or
+                    | progress destruct_head'_and
+                    | progress subst
+                    | solve [ eauto ]
+                    | eapply lift_map_standalone_operand_size_cases_fold_right; [ eassumption | intros ]
+                    | eapply map_id_map_standalone_operand_size_cases_fold_right; [ eassumption | intros ]
+                    | apply N.min_case_strong; intros
+                    | match goal with
+                      | [ H : Syntax.op ?i = _ |- _ ] => is_var i; destruct i; cbn in H
+                      | [ H : opcode_size _ = Some _ |- _ ] => apply opcode_size_cases in H
+                      | [ |- (_ /\ _) \/ _ ] => right
+                      end ].
 Qed.
 
 Ltac pose_operation_size_cases :=
   match goal with
   | H : Syntax.operation_size _ = Some _ |- _ =>
-      unique pose proof (operation_size_cases _ _ H ltac:(eauto 99))
+      unique pose proof (operation_size_cases _ _ H)
   end.
 
 Ltac invert_eval :=
@@ -915,6 +991,16 @@ Ltac invert_eval :=
       let x := fresh "x" in (* COQBUG: using _ below clears unrelated hypothesis *)
       inversion E0 as [|? ? x ? [] HH ]; clear x;
       clear H; subst; rename HH into H
+  | H : eval _ (ExprApp _) _ |- _ =>
+      inversion H; clear H; subst
+  | H : Forall2 _ nil _ |- _
+    => inversion H; clear H; subst
+  | H : Forall2 _ _ nil |- _
+    => inversion H; clear H; subst
+  | H : Forall2 _ (_ :: _) _ |- _
+    => inversion H; clear H; subst
+  | H : Forall2 _ _ (_ :: _) |- _
+    => inversion H; clear H; subst
   | H : interp_op _ ?o ?a = Some ?v |- _ => inversion H; clear H; subst
   end.
 
@@ -1032,6 +1118,12 @@ Proof using Type.
   | |- _ /\ _ :< _ => split; [|solve[eauto 99 with nocore] ]
   end.
 
+  all: repeat first [ match goal with
+                      | [ H : DenoteOperand _ _ _ (Syntax.const _) = Some _ |- _ ] => cbv [DenoteOperand DenoteConst operand_size standalone_operand_size CONST_of_Z] in H
+                      end
+                    | progress Option.inversion_option
+                    | progress subst ].
+
   all : cbn [fold_right map]; rewrite ?N2Z.id, ?Z.add_0_r, ?Z.add_assoc, ?Z.mul_1_r, ?Z.land_m1_r, ?Z.lxor_0_r;
     (congruence||eauto).
   all : try solve [rewrite Z.land_ones, Z.bit0_mod by Lia.lia; exact eq_refl].
@@ -1062,8 +1154,7 @@ Proof using Type.
     push_Zmod; pull_Zmod. rewrite ?Z.sub_add_distr, ?Z.add_opp_r. congruence. }
 
   Unshelve. all : match goal with H : context[Syntax.dec] |- _ => idtac | _ => shelve end.
-  { cbv [DenoteOperand DenoteConst] in Hv0. Option.inversion_option. subst v0.
-    cbn; repeat (rewrite ?Z.land_ones, ?Z.add_opp_r by Lia.lia).
+  { cbn; repeat (rewrite ?Z.land_ones, ?Z.add_opp_r by Lia.lia).
     push_Zmod; pull_Zmod. replace v1 with v by congruence. exact eq_refl. }
   { cbv [Symbolic.PreserveFlag Symbolic.HavocFlags Symbolic.update_flag_with ret] in HSx4; cbn in HSx4; induction_path_ErrorT HSx4; Prod.inversion_prod; subst.
     inversion H; clear H; subst s'.
@@ -1090,8 +1181,7 @@ Proof using Type.
              pose_operation_size_cases; intuition (subst; trivial). }
 
   Unshelve. all : match goal with H : context[Syntax.inc] |- _ => idtac | _ => shelve end.
-  { cbv [DenoteOperand DenoteConst] in Hv0. Option.inversion_option. subst v0.
-    cbn; repeat (rewrite ?Z.land_ones, ?Z.add_opp_r by Lia.lia).
+  { cbn; repeat (rewrite ?Z.land_ones, ?Z.add_opp_r by Lia.lia).
     push_Zmod; pull_Zmod. replace v1 with v by congruence. exact eq_refl. }
   { cbv [Symbolic.PreserveFlag Symbolic.HavocFlags Symbolic.update_flag_with ret] in HSx4; cbn in HSx4; induction_path_ErrorT HSx4; Prod.inversion_prod; subst.
     inversion H; subst s'.
@@ -1115,7 +1205,7 @@ Proof using Type.
              f_equal.
              1:congruence.
              f_equal.
-             pose_operation_size_cases; intuition (subst; trivial). }
+             pose_operation_size_cases; intuition (destruct_head'_ex; subst; try discriminate; trivial). }
 
   Unshelve. all : match goal with H : context[Syntax.add] |- _ => idtac | _ => shelve end.
   { destruct s';
@@ -1181,7 +1271,7 @@ Proof using Type.
     subst st st0.
     rewrite <-H1; cbn.
     replace (1 <? Z.of_N n) with true; cycle 1. {
-     pose_operation_size_cases; intuition (subst; cbn; clear; lia). }
+     pose_operation_size_cases; intuition (subst; destruct_head'_ex; subst; try discriminate; cbn; clear; lia). }
     revert Hs'.
     repeat match goal with x:= _ |- _ => subst x end;
     destruct s';
@@ -1195,7 +1285,6 @@ Proof using Type.
            end; eauto. }
 
   Unshelve. all : match goal with H : context[Syntax.rcr] |- _ => idtac | _ => shelve end; shelve_unifiable.
-  all : inversion Heqe as [|? ? ? ? []]; cbn [interp_op] in *; Option.inversion_option; subst; trivial.
   all : change Symbolic.rcrcnt with rcrcnt in *.
   { destruct_one_match_hyp; repeat step; eauto.
     { econstructor. econstructor. eauto 9. econstructor. cbn.
@@ -1224,19 +1313,21 @@ Proof using Type.
   { (* lea *)
     cbv [SetOperand update_reg_with] in *; Option.inversion_option; subst; trivial. }
 
-  Unshelve. all : match goal with H : context[Syntax.bzhi] |- _ => idtac | _ => shelve end; shelve_unifiable.
-  { (* bzhi *) inversion Heqe; subst. inversion H1; subst. inversion H3; congruence. }
-
   Unshelve. all : match goal with H : context[Syntax.shrd] |- _ => idtac | _ => shelve end; shelve_unifiable.
   { eapply Z.bits_inj_iff'; intros i Hi.
-    inversion Hv2; subst; cbv [DenoteConst operand_size standalone_operand_size].
     repeat rewrite ?Z.land_spec, ?Z.lor_spec, ?Z.shiftr_spec, ?Z.shiftl_spec, ?Z.testbit_ones_nonneg, ?Z.testbit_0_l; try lia.
     destr (i <? Z.of_N n); rewrite ?Bool.orb_false_r, ?Bool.andb_false_r, ?Bool.andb_true_r; trivial.
     replace v0 with v3 by congruence; f_equal; f_equal.
     rewrite Z.land_ones, Z.mod_small.
-    1:ring_simplify; rewrite Z.add_sub_swap; exact eq_refl.
+    1: lia.
     3: enough (0 <= Z.land v3 (Z.of_N n - 1)) by lia; eapply Z.land_nonneg; right.
     1,2,3:pose_operation_size_cases; intuition (subst; cbn; clear; lia). }
+
+  Unshelve. all : match goal with H : context[Syntax.shlx] |- _ => idtac | _ => shelve end; shelve_unifiable.
+  { rewrite <- Z.land_assoc.
+    f_equal; f_equal; [].
+    pose_operation_size_cases; intuition subst; reflexivity. }
+
   Unshelve. all: shelve_unifiable.
   all: fail_if_goals_remain ().
 Qed.
