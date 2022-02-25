@@ -1,6 +1,7 @@
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
+Require Import coqutil.Word.Bitwidth32.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Representation.
 Require Import Crypto.Bedrock.Field.Synthesis.New.ComputedOp.
@@ -9,14 +10,15 @@ Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults32.
 Require Import Crypto.Bedrock.Specs.Field.
 Import ListNotations.
 
-(* Parameters for Curve25519 field. *)
+(* Parameters for Curve25519 field (32-bit machine). *)
 Section Field.
+  Context {ext_spec: Semantics.ExtSpec}.
   Definition n : nat := 10.
   Definition s : Z := 2^255.
   Definition c : list (Z * Z) := [(1, 19)]%Z.
 
   Existing Instances Defaults32.default_parameters
-           Defaults32.default_parameters_ok.
+           Defaults32.default_parameters_ok BW32.
   Existing Instances no_select_size split_mul_to split_multiret_to.
   Definition prefix : string := "fe25519_"%string.
 

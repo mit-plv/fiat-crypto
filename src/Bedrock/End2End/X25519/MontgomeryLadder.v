@@ -21,6 +21,7 @@ Import ListNotations.
 
 Derive ladderstep SuchThat
        (ladderstep = ladderstep_body
+                       (BW:=BW32)
                        (field_parameters:=field_parameters)
                        (field_representaton:=field_representation n s c))
        As ladderstep_defn.

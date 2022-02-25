@@ -66,6 +66,24 @@ Require Import riscv.Spec.Decode.
 
 Local Existing Instance RV32I_bitwidth.
 
+(* TODO: does something like this already exist? *)
+(* when the function name being called is not first in the list of functions,
+   peel off non-matching names *)
+Local Ltac prepare_call :=
+  repeat 
+    lazymatch goal with
+    | |- ?call (?f :: ?funcs) ?fname ?t ?m ?args ?post =>
+      assert_fails (unify (fst f) fname);
+      let H := fresh in
+      assert (call funcs fname t m args post) as H;
+      [ | remember funcs; rewrite (surjective_pairing f);
+          cbn [WeakestPrecondition.call WeakestPrecondition.call_body ];
+          lazymatch goal with |- context[if (String.eqb ?x ?y) then _ else _] =>
+            let x' := (eval vm_compute in x) in change x with x';
+            destr (String.eqb x' y); [ congruence | ]
+          end; exact H ]
+    end.
+
 Lemma montladder_compiles_correctly :
   forall (t : Semantics.trace)
          (mH : map.rep word.rep Init.Byte.byte mem)
@@ -155,30 +173,36 @@ Proof.
   { unfold funcs. 
     (* montladder is not at the front of the function list; remove everything
        that doesn't match the name *)
-    repeat 
-      lazymatch goal with
-      | |- ?call (?f :: ?funcs) ?fname ?t ?m ?args ?post =>
-        assert_fails (unify (fst f) fname);
-        let H := fresh in
-        assert (call funcs fname t m args post) as H;
-        [ | remember funcs; rewrite (surjective_pairing f);
-            cbn [WeakestPrecondition.call WeakestPrecondition.call_body ];
-            lazymatch goal with |- context[if (String.eqb ?x ?y) then _ else _] =>
-              let x' := (eval vm_compute in x) in change x with x';
-              destr (String.eqb x' y); [ congruence | ]
-            end; exact H ]
-      end.
-      rewrite montladder_defn.
-      eapply WeakestPreconditionProperties.Proper_call.
-      2:{
-      About montladder_correct.
-      pose proof @montladder_correct as Hmont.
-      cbv [spec_of_montladder] in Hmont.
-      eapply @montladder_correct.
-   
-      { cbn [Morphisms.pointwise_relation
-      Locate Proper_call.
-      apply @montladder_correct.
+    prepare_call.
+    (* use montladder correctness proof *)
+    rewrite montladder_defn.
+    eapply @montladder_correct; try (typeclasses eauto).
+    { apply Signature.field_representation_ok.
+      apply UnsaturatedSolinas.relax_valid. }
+    { reflexivity. }
+    { cbv [Core.__rupicola_program_marker]. tauto. }
+    { (* TODO: use proof of cswap correctness. *) admit. }
+    { (* TODO: use proof of copy correctness. *) admit. }
+    { (* TODO: use proof of small-literal correctness. *) admit. }
+    {
+      cbv [LadderStep.spec_of_ladderstep]; intros. 
+      prepare_call. rewrite ladderstep_defn.
+      eapply @LadderStep.ladderstep_correct; try (typeclasses eauto).
+      { apply Signature.field_representation_ok.
+        apply UnsaturatedSolinas.relax_valid. }
+      { cbv [Core.__rupicola_program_marker]; tauto. }
+      { 
+        Set Printing Implicit.
+        change (SortedListString.map (@word.rep 32 BasicC32Semantics.word)) with BasicC32Semantics.locals.
+        Search fe25519_mul.
+        Search 
+        Print BasicC32Semantics.locals.
+        eapply @fe25519_mul_correct.
+        Search spec_of_BinOp.
+       
+      
+
+     }
 
 
 Qed.
