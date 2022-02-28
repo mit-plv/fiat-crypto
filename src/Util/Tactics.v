@@ -9,6 +9,7 @@ Require Export Crypto.Util.Tactics.CacheTerm.
 Require Export Crypto.Util.Tactics.ChangeInAll.
 Require Export Crypto.Util.Tactics.ClearAll.
 Require Export Crypto.Util.Tactics.ClearDuplicates.
+Require Export Crypto.Util.Tactics.ClearHead.
 Require Export Crypto.Util.Tactics.ClearbodyAll.
 Require Export Crypto.Util.Tactics.ConstrFail.
 Require Export Crypto.Util.Tactics.Contains.
@@ -55,3 +56,4 @@ Require Export Crypto.Util.Tactics.UnfoldArg.
 Require Export Crypto.Util.Tactics.UnifyAbstractReflexivity.
 Require Export Crypto.Util.Tactics.UniquePose.
 Require Export Crypto.Util.Tactics.VM.
+Require Export Crypto.Util.Tactics.WarnIfGoalsRemain.

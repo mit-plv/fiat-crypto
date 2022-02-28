@@ -38,7 +38,7 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 
 Section S.
 Implicit Type s : OperationSize.
-Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | subborrow s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
+Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | subborrow s | addoverflow s | neg s | shl s | shlx s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
   | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | xorZ | addcarryZ s | subborrowZ s.
 Definition op_beq a b := if op_eq_dec a b then true else false.
 End S.
@@ -53,6 +53,7 @@ Global Instance Show_op : Show op := fun o =>
   | addoverflow s => "addoverflow " ++ show s
   | neg s => "neg " ++ show s
   | shl s => "shl " ++ show s
+  | shlx s => "shlx " ++ show s
   | shr s => "shr " ++ show s
   | sar s => "sar " ++ show s
   | rcr s => "rcr " ++ show s
@@ -1367,6 +1368,23 @@ Proof using Type.
   t; cbn [fold_right]. rewrite Z.lxor_0_r, Z.lxor_nilpotent; trivial.
 Qed.
 
+Definition shift_to_mul :=
+  fun e => match e with
+    ExprApp ((shl _ | shlx _ | shlZ) as o, [e'; ExprApp (const v, [])]) =>
+      let o' := match o with shl bitwidth | shlx bitwidth => mul bitwidth | shlZ => mulZ | _ => o (* impossible *) end in
+      let bw := match o with shl bitwidth | shlx bitwidth => Some bitwidth | shlZ => None | _ => None (* impossible *) end in
+      if Z.eqb v 0
+      then match bw with
+           | Some N0 => ExprApp (const 0, nil)
+           | Some (Npos p) => ExprApp (slice 0%N (Npos p), [e'])
+           | None => e'
+           end
+      else if Z.ltb 0 v
+      then ExprApp (o', [e'; ExprApp (const (2^v)%Z, [])])
+      else e | _ => e end.
+Global Instance shift_to_mul_ok : Ok shift_to_mul.
+Proof. t; cbn in *; rewrite ?Z.shiftl_mul_pow2, ?Z.land_0_r by lia; repeat (lia + f_equal). Qed.
+
 Definition expr : expr -> expr :=
   List.fold_left (fun e f => f e)
   [constprop
@@ -1376,6 +1394,7 @@ Definition expr : expr -> expr :=
   ;set_slice_set_slice
   ;slice_set_slice
   ;set_slice0_small
+  ;shift_to_mul
   ;flatten_associative
   ;consts_commutative
   ;fold_consts_to_and
@@ -1805,6 +1824,17 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     vh <- App (shrZ, [v; s]);
     _ <- SetOperand lo v;
          SetOperand hi vh
+  | Syntax.shl, [dst; cnt] =>
+    let cnt := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
+    v <- Symeval (shl s@(dst, cnt));
+    _ <- SetOperand dst v;
+    HavocFlags
+  | Syntax.shlx, [dst; src; cnt] =>
+    cnt <- GetOperand cnt;
+    cnt <- RevealConst cnt;
+    let cnt' := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
+    v <- Symeval (shl s@(src, cnt'));
+    SetOperand dst v
   | Syntax.shr, [dst; cnt] =>
     let cnt := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
     v <- Symeval (shr s@(dst, cnt));

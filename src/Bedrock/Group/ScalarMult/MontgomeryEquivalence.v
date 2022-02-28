@@ -1,7 +1,7 @@
 Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Import Rupicola.Lib.Api.
-Require Import Rupicola.Lib.ControlFlow.CondSwap.
+Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
 Require Import bedrock2.Semantics.
 Require Import coqutil.Tactics.Tactics.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
@@ -19,6 +19,9 @@ Section Equivalence.
   (*TODO: which of ladderstep_gallina and M.xzladderstep should we change? either?*)
   Definition reorder_pairs {A B C D} (p : \<<A , B , C , D\>>) : (A*B)*(C*D) :=
     (P2.car p, P2.car (P2.cdr p),((P2.car (P2.cdr (P2.cdr p))),(P2.cdr (P2.cdr (P2.cdr p))))).
+
+  (* TODO: should M.montladder change to accomodate this? *)
+  Definition to_pair {A B} p : A*B := (P2.car p, P2.cdr p).
 
   Lemma invert_reorder_pairs {A B C D} (p : \<<A , B , C , D\>>) w x y z
     : reorder_pairs p = (w,x, (y,z)) <-> p = \<w,x,y,z\>.
@@ -39,11 +42,10 @@ Section Equivalence.
     rewrite !F.pow_2_r; trivial.
   Qed.
 
-  (*TODO: account for reorder_pairs*)
   Lemma montladder_gallina_equiv scalarbits n point :
     montladder_gallina _ a24 scalarbits n point =
     @M.montladder _ F.zero F.one F.add F.sub F.mul F.inv
-      a24 cswap (Z.of_nat scalarbits) (Z.testbit n) point.
+      a24 (fun b x y => to_pair (cswap b x y)) (Z.of_nat scalarbits) (Z.testbit n) point.
   Proof.
     cbv [montladder_gallina M.montladder Rewriter.Util.LetIn.Let_In stack].
     do 5 (unfold nlet at 1); cbn [fst snd P2.car P2.cdr].
@@ -68,7 +70,13 @@ Section Equivalence.
              | _ => progress BreakMatch.break_match_hyps
              end. 
       rewrite <- ladderstep_gallina_equiv, invert_reorder_pairs  in Heqp2.
-      cbn [fst snd] in Heqp2. rewrite Heqp2. reflexivity. }
+      cbn [fst snd] in Heqp2.
+      unfold to_pair in Heqp0;
+      inversion Heqp0; subst; clear Heqp0.
+      unfold to_pair in Heqp1;
+        inversion Heqp1; subst; clear Heqp1.
+      set (ladderstep_gallina _ _ _ _ _ _ _) in *.
+      rewrite Heqp2. reflexivity. }
     { reflexivity. }
   Qed.
 

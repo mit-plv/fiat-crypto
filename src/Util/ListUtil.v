@@ -2837,25 +2837,125 @@ Ltac rewrite_fold_left_fun_apply :=
                  rewrite pf
   end.
 
-Fixpoint takeWhile {A} (f : A -> bool) (ls : list A) : list A
-  := match ls with
-     | nil => nil
-     | x :: xs => if f x then x :: takeWhile f xs else nil
-     end.
+Definition span_cps' {A} (f : A -> bool) {T} (k : list A * list A -> T)
+  := fix span_cps' (ls : list A) (prefix : list A) : T
+    := match ls with
+       | nil => k (List.rev prefix, nil)
+       | x :: xs => if f x then span_cps' xs (x :: prefix) else k (List.rev prefix, ls)
+       end.
 
-Fixpoint dropWhile {A} (f : A -> bool) (ls : list A) : list A
-  := match ls with
-     | nil => nil
-     | x :: xs => if f x then dropWhile f xs else ls
-     end.
+Definition span_cps {A} (f : A -> bool) (ls : list A) {T} (k : list A * list A -> T) : T
+  := span_cps' f k ls [].
+
+Definition span {A} (f : A -> bool) (ls : list A) : list A * list A
+  := span_cps f ls id.
+Definition takeWhile {A} (f : A -> bool) (ls : list A) : list A := fst (span f ls).
+Definition dropWhile {A} (f : A -> bool) (ls : list A) : list A := snd (span f ls).
+
+Lemma span_cps'_id A f xs T k prefix
+  : @span_cps' A f T k xs prefix = k (List.rev prefix ++ fst (span f xs), snd (span f xs)).
+Proof.
+  revert T k prefix; induction xs as [|?? IH]; intros; cbn; try (rewrite !IH; clear IH); cbv [id]; break_innermost_match; cbn [List.rev fst snd List.app]; rewrite ?List.app_nil_l, ?List.app_nil_r, <- ?List.app_assoc; try reflexivity.
+Qed.
+
+Lemma span_cps_id A f xs T k
+  : @span_cps A f xs T k = k (span f xs).
+Proof. cbv [span_cps]; rewrite span_cps'_id; destruct span; reflexivity. Qed.
+
+Lemma span_nil A f : @span A f nil = (nil, nil).
+Proof. reflexivity. Qed.
+Lemma span_cons A f x xs : @span A f (x :: xs) = if f x then let '(xs, ys) := span f xs in (x :: xs, ys) else (nil, x :: xs).
+Proof. cbv [span span_cps]; cbn; rewrite !span_cps'_id; cbv [id]; reflexivity. Qed.
+
+Lemma span_app {A} f xs
+  : fst (@span A f xs) ++ snd (@span A f xs) = xs.
+Proof. induction xs; rewrite ?span_nil, ?span_cons; break_innermost_match; boring. Qed.
 
 Lemma takeWhile_app_dropWhile {A} f xs
   : @takeWhile A f xs ++ @dropWhile A f xs = xs.
-Proof. induction xs; cbn; break_innermost_match; boring. Qed.
+Proof. apply span_app. Qed.
+
+Lemma filter_fst_span {A} f xs
+  : filter f (fst (@span A f xs)) = fst (@span A f xs).
+Proof. induction xs; rewrite ?span_nil, ?span_cons; break_innermost_match; boring. Qed.
 
 Lemma filter_takeWhile {A} f xs
   : filter f (@takeWhile A f xs) = @takeWhile A f xs.
-Proof. induction xs; cbn; break_innermost_match; boring. Qed.
+Proof. apply filter_fst_span. Qed.
+
+Lemma hd_not_snd_span {A} f xs x
+      (H : nth_error (snd (@span A f xs)) 0 = Some x)
+  : f x = false.
+Proof.
+  induction xs.
+  all: repeat first [ rewrite !span_nil in *
+                    | rewrite !span_cons in *
+                    | progress cbn in *
+                    | progress cbv [fst snd] in *
+                    | congruence
+                    | solve [ auto ]
+                    | break_innermost_match_hyps_step ].
+Qed.
+
+
+Definition groupBy' {A} (f : A -> A -> bool)
+  := fix groupBy' (ls : list A) (prefix : list A) : list (list A)
+    := match ls with
+       | [] => []
+       | x :: xs => span_cps'
+                      (f x) (fun '(xs, ys)
+                             => (x :: xs) :: match ys with
+                                             | [] => []
+                                             | _ => groupBy' ys []
+                                             end)
+                      xs prefix
+       end.
+Definition groupBy {A} (f : A -> A -> bool) (ls : list A) : list (list A)
+  := groupBy' f ls [].
+
+Definition span_cps'_rect A (f : A -> bool) T (k : list A * list A -> T)
+           (P : list A -> list A -> T -> Type)
+           (Pnil : forall prefix, P nil prefix (k (List.rev prefix, nil)))
+           (Pcons_true : forall x xs prefix rv, f x = true -> P xs (x :: prefix) rv -> P (x :: xs) prefix rv)
+           (Pcons_false : forall x ls prefix xs, f x = false -> ls = x :: xs -> P ls prefix (k (List.rev prefix, ls)))
+  : forall (ls : list A) (prefix : list A), P ls prefix (@span_cps' A f T k ls prefix).
+Proof.
+  fix span_cps'_rect 1.
+  intro ls.
+  case_eq ls; [ | intros x xs ]; intros H prefix; cbn [span_cps'].
+  { apply Pnil. }
+  { destruct (f x) eqn:H'.
+    { apply Pcons_true; [ apply H' | apply span_cps'_rect ]. }
+    { generalize (Pcons_false x ls prefix xs H' H).
+      clear -H; subst ls; exact id. } }
+Defined.
+
+Fixpoint concat_groupBy' {A f} ls prefix {struct ls}
+  : match ls with
+    | nil => List.concat (@groupBy' A f ls prefix) = nil
+    | x :: xs
+      => List.concat (@groupBy' A f ls prefix) = x :: List.rev prefix ++ xs
+    end.
+Proof.
+  specialize (concat_groupBy' A f).
+  destruct ls as [|x xs].
+  { reflexivity. }
+  { cbn [groupBy'].
+    apply span_cps'_rect; cbn [concat List.rev List.app]; clear xs prefix.
+    { intros; rewrite ?List.app_nil_l, ?List.app_nil_r; split; reflexivity. }
+    { intros *; rewrite ?app_comm_cons, <- ?List.app_assoc; cbn [List.app]; trivial. }
+    { intros x' ls xs' prefix' H H'.
+      specialize (concat_groupBy' ls); cbv beta iota in *.
+      subst ls.
+      rewrite concat_groupBy'; cbn.
+      reflexivity. } }
+Qed.
+
+Lemma concat_groupBy A f ls
+  : List.concat (@groupBy A f ls) = ls.
+Proof.
+  cbv [groupBy]; destruct ls as [|x xs]; [ reflexivity | apply (concat_groupBy' (x :: xs)) ].
+Qed.
 
 Lemma eq_filter_nil_Forall_iff {A} f (xs : list A)
   : filter f xs = nil <-> Forall (fun x => f x = false) xs.

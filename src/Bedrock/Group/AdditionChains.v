@@ -392,7 +392,7 @@ Section FElems.
 
       Instance spec_of_exp_6
       : spec_of "exp_6" :=
-        fnspec! "exp_6" (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
+        fnspec! "exp_6" (sq_ptr x_ptr : word) / (sq x : F M_pos) R,
         { requires tr mem :=
             (FElem (Some tight_bounds) x_ptr x
              * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
@@ -413,7 +413,7 @@ Section FElems.
         Hint Extern 1 => rewrite_exponentiation exp_by_squaring_correct; shelve : compiler_cleanup.
 
         Derive exp_6_body SuchThat
-          (defn! "exp_6" ("x", "res") { exp_6_body },
+          (defn! "exp_6" ("res", "x") { exp_6_body },
           implements (exp 6) using [square; mul])
           As exp_6_body_correct.
         Proof.
@@ -422,7 +422,7 @@ Section FElems.
       End Exp_by_squaring.
 
       Instance spec_of_exp97 : spec_of "exp_97" :=
-        fnspec! "exp_97" (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
+        fnspec! "exp_97" (sq_ptr x_ptr : word) / (sq x : F M_pos) R,
         { requires tr mem :=
             (FElem (Some tight_bounds) x_ptr x
              * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
@@ -432,7 +432,7 @@ Section FElems.
                 * FElem (Some tight_bounds) sq_ptr (exp 97 x)  * R)%sep mem'}.
 
       Local Instance spec_of_exp_large : spec_of "fe25519_inv" :=
-        fnspec! "fe25519_inv" (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
+        fnspec! "fe25519_inv" (sq_ptr x_ptr : word) / (sq x : F M_pos) R,
         { requires tr mem :=
             (FElem (Some tight_bounds) x_ptr x
              * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
@@ -452,7 +452,7 @@ Section FElems.
       Hint Extern 1 => rewrite_exponentiation exp_by_squaring_encoded_correct; shelve : compiler_cleanup.
 
       Derive exp_97_body SuchThat
-             (defn! "exp_97" ("x", "res") { exp_97_body },
+             (defn! "exp_97" ("res", "x") { exp_97_body },
               implements (exp 97) using [square; mul])
              As exp_97_body_correct.
       Proof.
@@ -463,7 +463,7 @@ Section FElems.
       Print Assumptions exp_97_body. (* depends on [width] and  [word] :/ *)
 
       Derive fe25519_inv SuchThat
-             (defn! "fe25519_inv" ("x", "res") { fe25519_inv },
+             (defn! "fe25519_inv" ("res", "x") { fe25519_inv },
              implements (exp (2^255-21)) using [square; mul])
              As fe25519_inv_correct_exp.
       Proof.
@@ -471,7 +471,7 @@ Section FElems.
       Qed.
 
     Global Instance spec_of_fe25519_inv : spec_of "fe25519_inv" :=
-      fnspec! "fe25519_inv" (x_ptr sq_ptr : word) / (x sq : F M_pos) R,
+      fnspec! "fe25519_inv" (sq_ptr x_ptr : word) / (sq x : F M_pos) R,
       { requires tr mem :=
           (FElem (Some tight_bounds) x_ptr x
            * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;

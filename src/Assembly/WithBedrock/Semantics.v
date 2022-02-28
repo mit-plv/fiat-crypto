@@ -256,6 +256,21 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
       let st := if cnt =? 1 then SetFlag st OF false else st in
       let st := if cnt <? Z.of_N s then SetFlag st CF (Z.testbit v1 (cnt-1)) else st in
       HavocFlag st AF)
+  | shl, [dst; cnt] =>
+    v1 <- DenoteOperand sa s st dst;
+    cnt <- DenoteOperand sa s st cnt;
+    let v := Z.land (Z.shiftl v1 (Z.land cnt (Z.of_N s-1))) (Z.ones (Z.of_N s)) in
+    st <- SetOperand sa s st dst v;
+    Some (if cnt =? 0 then st else
+      let st := HavocFlagsFromResult s st v in
+      let st := if cnt =? 1 then SetFlag st OF (xorb (Z.testbit v1 (Z.of_N s-2)) (Z.testbit v1 (Z.of_N s-1))) else st in
+      let st := if cnt <? Z.of_N s then SetFlag st CF (Z.testbit v1 (65-cnt)) else st in
+      HavocFlag st AF)
+  | shlx, [dst; src; cnt] =>
+    v1 <- DenoteOperand sa s st src;
+    cnt <- DenoteOperand sa s st cnt;
+    let v := Z.land (Z.shiftl v1 (Z.land cnt (Z.of_N s-1))) (Z.ones (Z.of_N s)) in
+    SetOperand sa s st dst v
   | shr, [dst; cnt] =>
     v1 <- DenoteOperand sa s st dst;
     cnt <- DenoteOperand sa s st cnt;
@@ -345,6 +360,8 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | sar, _
   | rcr, _
   | sbb, _
+  | shl, _
+  | shlx, _
   | shr, _
   | shrd, _
   | sub, _

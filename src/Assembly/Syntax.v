@@ -50,6 +50,8 @@ Inductive OpCode :=
 | sbb
 | setc
 | seto
+| shl
+| shlx
 | shr
 | shrd
 | sub

@@ -145,6 +145,8 @@ Global Instance show_OpCode : Show OpCode
         | setc => "setc"
         | seto => "seto"
         | shrd => "shrd"
+        | shl => "shl"
+        | shlx => "shlx"
         | shr => "shr"
         | test => "test"
         | xchg => "xchg"
