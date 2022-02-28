@@ -16,7 +16,7 @@ jobs:
       with:
         submodules: recursive
     - name: Set up Go 1.13
-      uses: actions/setup-go@v2.2.0
+      uses: actions/setup-go@v3
       with:
         go-version: 1.13
       id: go
