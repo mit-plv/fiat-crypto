@@ -266,6 +266,7 @@ src/Util/ListUtil.v
 src/Util/Listable.v
 src/Util/Logic.v
 src/Util/Loops.v
+src/Util/MSetN.v
 src/Util/NatUtil.v
 src/Util/Notations.v
 src/Util/NumTheoryUtil.v
@@ -305,17 +306,21 @@ src/Util/Decidable/Bool2Prop.v
 src/Util/Decidable/Decidable2Bool.v
 src/Util/ErrorT/Show.v
 src/Util/FMapPositive/Equality.v
+src/Util/ListUtil/CombineExtend.v
 src/Util/ListUtil/FoldBool.v
 src/Util/ListUtil/FoldMap.v
 src/Util/ListUtil/Forall.v
 src/Util/ListUtil/ForallIn.v
+src/Util/ListUtil/GroupAllBy.v
 src/Util/ListUtil/IndexOf.v
 src/Util/ListUtil/NthExt.v
+src/Util/ListUtil/Partition.v
 src/Util/ListUtil/Permutation.v
 src/Util/ListUtil/PermutationCompat.v
 src/Util/ListUtil/RemoveN.v
 src/Util/ListUtil/SetoidList.v
 src/Util/ListUtil/Split.v
+src/Util/ListUtil/StdlibCompat.v
 src/Util/Logic/Exists.v
 src/Util/Logic/ExistsEqAnd.v
 src/Util/Logic/Forall.v
@@ -412,6 +417,7 @@ src/Util/Tactics/UnfoldArg.v
 src/Util/Tactics/UnifyAbstractReflexivity.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
+src/Util/Tactics/WarnIfGoalsRemain.v
 src/Util/Telescope/Core.v
 src/Util/Telescope/Equality.v
 src/Util/Telescope/Instances.v

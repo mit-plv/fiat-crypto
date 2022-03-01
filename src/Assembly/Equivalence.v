@@ -14,9 +14,12 @@ Require Import Crypto.AbstractInterpretation.ZRange.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.NUtil.Sorting.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.FoldMap.
+Require Import Crypto.Util.ListUtil.CombineExtend.
 Require Import Crypto.Util.ListUtil.RemoveN.
+Require Import Crypto.Util.MSetN.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Notations.
@@ -144,7 +147,26 @@ Inductive EquivalenceCheckingError :=
 | Code_after_ret (significant : Lines) (l : Lines)
 .
 
-Fixpoint explain_array_unification_error
+Fixpoint remove_common_indices {T} (eqb : T -> T -> bool) (xs ys : list T) (start_idx : nat) : list (nat * T) * list T
+  := match xs with
+     | [] => (List.map (fun '(idx, x) => (start_idx + idx, x)) (List.enumerate xs),
+               ys)
+     | x :: xs
+       => let '(xs', ys') := remove_common_indices eqb xs (List.removen (eqb x) ys 1) (S start_idx) in
+          if List.existsb (eqb x) ys
+          then (xs', ys')
+          else ((start_idx, x) :: xs', ys')
+     end.
+
+Definition show_expr_node_lite : Show Symbolic.expr
+  := fix show_expr_node_lite (e : Symbolic.expr) : string
+    := match e with
+       | ExprRef i => "#" ++ show i
+       | ExprApp (op, e)
+         => "(" ++ show op ++ ", " ++ @show_list _ show_expr_node_lite e ++ ")"
+       end%string.
+
+Fixpoint explain_array_unification_error_single
          (singular plural : string)
          (left_descr right_descr : string)
          (explain_idx_unification_error : idx -> idx -> list string)
@@ -152,7 +174,7 @@ Fixpoint explain_array_unification_error
          (modulo_commutativity : bool)
          (asm_array PHOAS_array : list idx) (start_idx : nat)
   : list string
-  := let recr := explain_array_unification_error singular plural left_descr right_descr explain_idx_unification_error describe_idx modulo_commutativity in
+  := let recr := explain_array_unification_error_single singular plural left_descr right_descr explain_idx_unification_error describe_idx modulo_commutativity in
      match asm_array, PHOAS_array with
      | [], []
        => ["Internal Error: Unifiable " ++ plural ++ (if modulo_commutativity then " modulo commutativity" else "")]
@@ -170,10 +192,98 @@ Fixpoint explain_array_unification_error
             then
               recr asm_array (PHOAS_value :: List.removen (N.eqb asm_value) PHOAS_array 1) (S start_idx)
             else
-              ((["index " ++ show start_idx ++ ": " ++ show asm_value ++ " != " ++ show PHOAS_value]%string)
+              ((["index " ++ show start_idx ++ ": " ++ show_expr_node_lite (ExprRef asm_value) ++ " != " ++ show_expr_node_lite (ExprRef PHOAS_value)]%string)
                  ++ explain_idx_unification_error asm_value PHOAS_value
               )%list
      end%string%list%bool.
+
+Definition recursive_deps_list_step
+           (recursive_deps : NSet.t -> idx -> NSet.t)
+           (so_far : NSet.t)
+           (ls : list idx)
+  : NSet.t
+  := fold_left recursive_deps ls so_far.
+
+Definition recursive_deps_step
+           (recursive_deps : NSet.t -> idx -> NSet.t)
+           (dag : dag)
+           (so_far : NSet.t)
+           (i : idx)
+  : NSet.t
+  := if NSet.mem i so_far
+     then so_far
+     else let so_far := NSet.add i so_far in
+          match nth_error dag (N.to_nat i) with
+          | Some (_op, args)
+            => recursive_deps_list_step recursive_deps so_far args
+          | None => so_far
+          end.
+
+Fixpoint recursive_deps
+         (fuel : nat)
+         (dag : dag)
+         (init : NSet.t)
+         (i : idx)
+  : NSet.t
+  := match fuel with
+     | 0 => NSet.singleton i
+     | S fuel => recursive_deps_step (recursive_deps fuel dag) dag init i
+     end.
+
+Definition recursive_deps_list
+           (fuel : nat) (dag : dag)
+           (init : NSet.t)
+           (ls : list idx)
+  : NSet.t
+  := recursive_deps_list_step (recursive_deps fuel dag) init ls.
+
+Definition at_leaves_fold
+           {T} (f : idx -> T -> Symbolic.expr * T)
+  := fix at_leaves_fold (e : Symbolic.expr) : T -> Symbolic.expr * T
+    := match e with
+       | ExprRef i => f i
+       | ExprApp (op0, args)
+         => fun st => let '(args, st) := List.foldmap at_leaves_fold args st in
+                      (ExprApp (op0, args), st)
+       end.
+
+Definition at_leaves (f : idx -> Symbolic.expr) (e : Symbolic.expr) : Symbolic.expr
+  := fst (at_leaves_fold (fun i 'tt => (f i, tt)) e tt).
+
+Definition reveal_one_except (dag : dag) (except : idx -> bool) (e : Symbolic.expr) : Symbolic.expr * (bool (* revealed something *))
+  := at_leaves_fold
+       (fun i revealed
+        => if except i
+           then (ExprRef i, revealed)
+           else match nth_error dag (N.to_nat i) with
+                | Some (op0, args)
+                  => (ExprApp (op0, List.map ExprRef args), true)
+                | None => (ExprRef i, revealed)
+                end)
+       e
+       false.
+
+Definition indices_at_leaves_map (ls : list Symbolic.expr) : list idx
+  := N.sort (NSet.elements (snd (List.foldmap (at_leaves_fold (fun i idxs => (ExprRef i, NSet.add i idxs))) ls NSet.empty))).
+
+Definition indices_at_leaves (e : Symbolic.expr) : list idx
+  := indices_at_leaves_map [e].
+
+Fixpoint make_iteratively_revealed_exprs
+         (dag : dag)
+         (max_depth : nat)
+         (except : idx -> bool)
+         (ls : list Symbolic.expr)
+  := match max_depth with
+     | 0 => [] (* should not get here *)
+     | S max_depth
+       => let res := List.map (reveal_one_except dag except) ls in
+          let ls := List.map fst res in
+          let progress := List.existsb (fun b => b) (List.map snd res) in
+          if progress
+          then ls :: make_iteratively_revealed_exprs dag max_depth except ls
+          else []
+     end.
 
 Definition describe_idx_from_state
            (st : symbolic_state) (idx : idx) : list string
@@ -198,6 +308,81 @@ Definition describe_idx_from_state
           end%string in
      old_descr.
 
+Definition iteratively_explain_array_unification_error_modulo_commutativity
+           (dag : dag)
+           (describe_idx : idx -> list string)
+           (op : option op)
+           (show_initial : bool)
+           (asm_array : list (nat * idx)) (PHOAS_array : list idx)
+  : list string
+  := let recursive_deps := recursive_deps_list (S (List.length dag)) dag NSet.empty in
+     let asm_deps := recursive_deps (List.map snd asm_array) in
+     let PHOAS_deps := recursive_deps PHOAS_array in
+     let common_deps := NSet.inter asm_deps PHOAS_deps in
+     let make_iteratively_revealed_exprs := make_iteratively_revealed_exprs dag (S (List.length dag)) (fun i => NSet.mem i common_deps) in
+     let asm_exprs := List.map ExprRef (List.map snd asm_array) in
+     let PHOAS_exprs := List.map ExprRef PHOAS_array in
+     let asm_reveals := make_iteratively_revealed_exprs asm_exprs in
+     let PHOAS_reveals := make_iteratively_revealed_exprs PHOAS_exprs in
+     let reveals := List.combine_extend asm_exprs PHOAS_exprs asm_reveals PHOAS_reveals in
+     let '(last_asm, last_PHOAS) := List.last reveals (asm_exprs, PHOAS_exprs) in
+     (* reveal one more time *)
+     let reveal_one_final_time := List.map (at_leaves (reveal dag 1)) in
+     let last_asm := reveal_one_final_time last_asm in
+     let last_PHOAS := reveal_one_final_time last_PHOAS in
+     let reveals := (if show_initial then [(asm_exprs, PHOAS_exprs)] else [])
+                      ++ reveals ++ [(last_asm, last_PHOAS)] in
+     let show_array array
+       := let args := @show_list _ show_expr_node_lite array in
+          match op with
+          | Some op => "(" ++ show op ++ ", " ++ args ++ ")"
+          | None => args
+          end%string in
+     List.map
+       (fun '(asm_array, PHOAS_array)
+        => (show_array asm_array ++ " != " ++ show_array PHOAS_array)%string)
+       reveals
+       ++ (List.flat_map
+             describe_idx
+             (indices_at_leaves_map (last_asm ++ last_PHOAS))).
+
+Definition explain_array_unification_error
+           (dag : dag)
+           (singular plural : string)
+           (left_descr right_descr : string)
+           (explain_idx_unification_error : idx -> idx -> list string)
+           (describe_idx : idx -> list string)
+           (op : option op)
+           (asm_array PHOAS_array : list idx)
+  : list string
+  := let modulo_commutativity := match op with Some o => commutative o | None => false end in
+     if (modulo_commutativity && negb (List.length asm_array =? List.length PHOAS_array))%nat%bool
+     then
+       let orig_asm_array := asm_array in
+       let orig_PHOAS_array := PHOAS_array in
+       match remove_common_indices N.eqb asm_array PHOAS_array 0 with
+       | ([], [])
+         => ["Internal Error: Unifiable " ++ plural ++ " modulo commutativity"]
+       | ([], PHOAS_array)
+         => ((["The " ++ right_descr ++ " " ++ singular ++ " contains " ++ show (List.length PHOAS_array) ++ " more values than the " ++ left_descr ++ " " ++ singular ++ "."]%string)
+               ++ List.flat_map describe_idx PHOAS_array)%list
+       | (asm_array, [])
+         => ((["The " ++ left_descr ++ " " ++ singular ++ " contains " ++ show (List.length asm_array) ++ " more values than the " ++ right_descr ++ " " ++ singular ++ "."]%string)
+               ++ List.flat_map describe_idx (List.map snd asm_array))%list
+       | ([(arr_index, asm_value)], [PHOAS_value])
+         => (* there's only one idx on each side, so we can just naively compare them *)
+           ((["index " ++ show arr_index ++ ": " ++ show_expr_node_lite (ExprRef asm_value) ++ " != " ++ show_expr_node_lite (ExprRef PHOAS_value)]%string)
+              ++ explain_idx_unification_error asm_value PHOAS_value
+           )%list
+       | (asm_array, PHOAS_array)
+         => (* show init state when there are some common indices; otherwise we don't want to duplicate the expression *)
+           let show_initial_state := (negb ((List.length asm_array =? List.length orig_asm_array) && (List.length PHOAS_array =? List.length orig_PHOAS_array)))%nat in
+           iteratively_explain_array_unification_error_modulo_commutativity
+             dag describe_idx op show_initial_state asm_array PHOAS_array
+       end%string%list%bool
+     else
+       explain_array_unification_error_single singular plural left_descr right_descr explain_idx_unification_error describe_idx modulo_commutativity asm_array PHOAS_array 0.
+
 Definition explain_mismatch_from_state
            (left_descr right_descr : string)
            (st : symbolic_state) (asm_idx PHOAS_idx : idx) : list string
@@ -215,8 +400,10 @@ Fixpoint explain_idx_unification_error
      let reveal_show_idx idx
        := match reveal_idx idx with
           | Some n => show n
-          | None => show idx
+          | None => show_expr_node_lite (ExprRef idx)
           end in
+     let show_node_lite '(op, e)
+       := show_expr_node_lite (ExprApp (op, List.map ExprRef e)) in
      let reveal_show_node '(op, e)
        := ("(" ++ show op ++ ", " ++ @show_list _ reveal_show_idx e ++ ")")%string in
      match reveal_idx asm_idx, reveal_idx PHOAS_idx with
@@ -227,9 +414,9 @@ Fixpoint explain_idx_unification_error
      | Some _, None
        => ["Internal error: synthesized index " ++ show PHOAS_idx ++ " is not in the dag"]
      | Some ((asm_o, asm_e) as asm), Some ((PHOAS_o, PHOAS_e) as PHOAS)
-       => (([show asm ++ " != " ++ show PHOAS]%string)
+       => (([show_node_lite asm ++ " != " ++ show_node_lite PHOAS]%string)
              ++ (if Decidable.dec (asm_o = PHOAS_o)
-                 then explain_array_unification_error "argument" "arguments" left_descr right_descr recr (describe_idx_from_state st) (commutative asm_o) asm_e PHOAS_e 0
+                 then explain_array_unification_error st "argument" "arguments" left_descr right_descr recr (describe_idx_from_state st) (Some asm_o) asm_e PHOAS_e
                  else (([reveal_show_node asm ++ " != " ++ reveal_show_node PHOAS
                          ; "Operation mismatch: " ++ show asm_o ++ " != " ++ show PHOAS_o]%string)
                          ++ explain_mismatch_from_state left_descr right_descr st asm_idx PHOAS_idx)%list))%list
@@ -256,14 +443,13 @@ Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list i
                | inl _, inr _ => [prefix; "The assembly code returns a scalar while the synthesized code returns an array."]
                | inr _, inl _ => [prefix; "The assembly code returns an array while the synthesized code returns a scalar."]
                | inl asm_idx, inl PHOAS_idx
-                 => (["index  " ++ show start_idx ++ ": " ++ show asm_idx ++ " != " ++ show PHOAS_idx]%string)
+                 => (["index  " ++ show start_idx ++ ": " ++ show_expr_node_lite (ExprRef asm_idx) ++ " != " ++ show_expr_node_lite (ExprRef PHOAS_idx)]%string)
                       ++ explain_idx_unification_error "assembly" "synthesized" st fuel asm_idx PHOAS_idx
                | inr asm_idxs, inr PHOAS_idxs
-                 => ([prefix ++ " " ++ show asm_idxs ++ " != " ++ show PHOAS_idxs]%string)
+                 => ([prefix ++ " " ++ @show_list _ show_expr_node_lite (List.map ExprRef asm_idxs) ++ " != " ++ @show_list _ show_expr_node_lite (List.map ExprRef PHOAS_idxs)]%string)
                       ++ (explain_array_unification_error
-                            "array" "arrays" "assembly" "synthesized" (explain_idx_unification_error "assembly" "synthesized" st fuel) (describe_idx_from_state st) false
-                            asm_idxs PHOAS_idxs
-                            0)
+                            st "array" "arrays" "assembly" "synthesized" (explain_idx_unification_error "assembly" "synthesized" st fuel) (describe_idx_from_state st) None
+                            asm_idxs PHOAS_idxs)
                end%list
      end%string%list.
 
@@ -317,9 +503,8 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                        ++ show_lines r
                        ++ ["Unable to unify: " ++ show reg_before ++ " == " ++ show reg_after]%string
                        ++ explain_array_unification_error
-                            "list" "lists" "original" "final" (explain_idx_unification_error "original" "final" r (explain_unification_default_fuel r)) (describe_idx_from_state r) false
+                            r "list" "lists" "original" "final" (explain_idx_unification_error "original" "final" r (explain_unification_default_fuel r)) (describe_idx_from_state r) None
                             reg_before reg_after
-                            0
                 | Unable_to_unify asm_output PHOAS_output r
                   => ["Unable to unify:"; "In environment:"]
                        ++ show_lines r
