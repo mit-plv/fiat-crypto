@@ -135,6 +135,9 @@ Proof.
      duplicates in arg/ret names *)
 Admitted.
 
+Local Instance riscv_word_ok : RiscvWordProperties.word.riscv_ok BasicC32Semantics.word.
+Admitted.
+
 (* TODO: replace with real inv correctness proof once it exists *)
 Lemma fe25519_inv_correct
     {ext_spec : Semantics.ExtSpec}
