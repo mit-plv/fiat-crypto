@@ -1,0 +1,73 @@
+     = "Success (""/*
+ * Input Bounds:
+ *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
+ *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
+ * Output Bounds:
+ *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
+ *   out2: None
+ */
+static void mul(uint64_t out1[2], uint64_t* out2, const uint64_t arg1[2], const uint64_t arg2[2]) {
+  uint64_t x1;
+  uint64_t x2;
+  uint64_t x3;
+  uint64_t x4;
+  uint64_t x5;
+  uint64_t x6;
+  uint64_t x7;
+  uint64_t x8;
+  uint64_t x9;
+  uint64_t x10;
+  uint64_t x11;
+  uint64_t x12;
+  uint64_t x13;
+  uint64_t x14;
+  uint64_t x15;
+  uint64_t x16;
+  uint64_t x17;
+  uint64_t x18;
+  uint64_t x19;
+  fiatuint1 x20;
+  uint64_t x21;
+  fiatuint1 x22;
+  uint64_t x23;
+  fiatuint1 x24;
+  uint64_t x25;
+  fiatuint1 x26;
+  uint64_t x27;
+  fiatuint1 x28;
+  uint64_t x29;
+  fiatuint1 x30;
+  uint64_t x31;
+  fiatuint1 x32;
+  uint64_t x33;
+  fiatuint1 x34;
+  uint64_t x35;
+  fiatuint1 x36;
+  uint64_t x37;
+  fiatuint1 x38;
+  uint64_t x39;
+  fiatmulx_u64(&x1, &x2, (arg1[1]), (arg2[1]));
+  fiatmulx_u64(&x3, &x4, (arg1[1]), (arg2[0]));
+  fiatmulx_u64(&x5, &x6, (arg1[0]), (arg2[1]));
+  fiatmulx_u64(&x7, &x8, (arg1[0]), (arg2[0]));
+  fiatmulx_u64(&x9, &x10, 0x2, x2);
+  fiatmulx_u64(&x11, &x12, 0x2, x1);
+  fiatmulx_u64(&x13, &x14, 0x2, x4);
+  fiatmulx_u64(&x15, &x16, 0x2, x6);
+  fiatmulx_u64(&x17, &x18, 0x2, (fiatuint1)x10);
+  fiataddcarryx_u64(&x19, &x20, 0x0, x8, x9);
+  fiataddcarryx_u64(&x21, &x22, 0x0, x19, (fiatuint1)x12);
+  fiataddcarryx_u64(&x23, &x24, 0x0, x7, x17);
+  fiataddcarryx_u64(&x25, &x26, x24, x21, (fiatuint1)x14);
+  fiataddcarryx_u64(&x27, &x28, 0x0, x23, x11);
+  fiataddcarryx_u64(&x29, &x30, x28, x25, (fiatuint1)x16);
+  fiataddcarryx_u64(&x31, &x32, 0x0, x27, x13);
+  fiataddcarryx_u64(&x33, &x34, x32, x29, x3);
+  fiataddcarryx_u64(&x35, &x36, 0x0, x31, x15);
+  fiataddcarryx_u64(&x37, &x38, x36, x33, x5);
+  x39 = ((((((uint64_t)x20 + x22) + (uint64_t)x26) + (uint64_t)x30) + (uint64_t)x34) + (uint64_t)x38);
+  out1[0] = x35;
+  out1[1] = x37;
+  *out2 = x39;
+}"", {| bitwidths_used := [uint1, uint64] ; addcarryx_lg_splits := [64] ; mulx_lg_splits := [64] ; cmovznz_bitwidths := [] ; value_barrier_bitwidths := [] ; typedefs_used := [] |})"
+     : string
