@@ -3,13 +3,13 @@
        noreassign
          (noskips
             (cmd.stackalloc "X1" size_in_bytes
-               (cmd.seq (cmd.call [] felem_small_literal ["X1"; 1])
+               (cmd.seq (cmd.call [] from_word ["X1"; 1])
                   (cmd.stackalloc "Z1" size_in_bytes
-                     (cmd.seq (cmd.call [] felem_small_literal ["Z1"; 0])
+                     (cmd.seq (cmd.call [] from_word ["Z1"; 0])
                         (cmd.stackalloc "X2" size_in_bytes
                            (cmd.seq (cmd.call [] felem_copy ["X2"; "U"])
                               (cmd.stackalloc "Z2" size_in_bytes
-                                 (cmd.seq (cmd.call [] felem_small_literal ["Z2"; 1])
+                                 (cmd.seq (cmd.call [] from_word ["Z2"; 1])
                                     (cmd.seq (cmd.set "swap" (word.unsigned (word.b2w false)))
                                        (cmd.seq (cmd.set "_gs_i0" (word.unsigned (word.of_Z (Z.of_nat 253))))
                                           (cmd.seq
