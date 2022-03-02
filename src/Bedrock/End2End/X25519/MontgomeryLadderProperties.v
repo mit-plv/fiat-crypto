@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import bedrock2.Map.Separation.
+Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.Syntax.
 Require Import compiler.Pipeline.
 Require Import compiler.MMIO.
@@ -69,20 +70,122 @@ Local Existing Instance RV32I_bitwidth.
 (* TODO: does something like this already exist? *)
 (* when the function name being called is not first in the list of functions,
    peel off non-matching names *)
-Local Ltac prepare_call :=
-  repeat 
-    lazymatch goal with
-    | |- ?call (?f :: ?funcs) ?fname ?t ?m ?args ?post =>
-      assert_fails (unify (fst f) fname);
-      let H := fresh in
-      assert (call funcs fname t m args post) as H;
-      [ | remember funcs; rewrite (surjective_pairing f);
-          cbn [WeakestPrecondition.call WeakestPrecondition.call_body ];
-          lazymatch goal with |- context[if (String.eqb ?x ?y) then _ else _] =>
-            let x' := (eval vm_compute in x) in change x with x';
-            destr (String.eqb x' y); [ congruence | ]
-          end; exact H ]
+Local Ltac prepare_call_step :=
+  lazymatch goal with
+  | |- ?call (?f :: ?funcs) ?fname ?t ?m ?args ?post =>
+    assert_fails (unify (fst f) fname);
+    let H := fresh in
+    assert (call funcs fname t m args post) as H;
+    [ | remember funcs; rewrite (surjective_pairing f);
+        cbn [WeakestPrecondition.call WeakestPrecondition.call_body ];
+        lazymatch goal with |- context[if (String.eqb ?x ?y) then _ else _] =>
+          let x' := (eval vm_compute in x) in change x with x';
+          let y' := (eval vm_compute in y) in change y with y';
+          destr (String.eqb x' y'); [ congruence | ]
+        end; exact H ]
+  end.
+Local Ltac prepare_call := repeat prepare_call_step.
+
+
+(* TODO: move to Spec.Field? *)
+Section Generic.
+  Context {width : Z} {BW : Bitwidth width} {word : word width}
+          {mem : map.map word.rep (Init.Byte.byte : Type)}
+          {locals : map.map string (word.rep (word:=word))}
+          {ext_spec : Semantics.ExtSpec}
+          {field_parameters : FieldParameters}
+          {field_representation : FieldRepresentation}.
+        
+  Lemma peel_func_binop
+      {name} (op : BinOp name) funcs0 funcs :
+    fst funcs0 <> name ->
+    spec_of_BinOp op funcs ->
+    spec_of_BinOp op (funcs0 :: funcs).
+  Proof.
+    cbv [spec_of_BinOp binop_spec]; intros.
+    cbn [WeakestPrecondition.call WeakestPrecondition.call_body ].
+    destruct funcs0; cbn [fst snd] in *.
+    lazymatch goal with |- context[if (String.eqb ?x ?y) then _ else _] =>
+      destr (String.eqb x y); [ congruence | ]
     end.
+    eauto.
+  Qed.
+  
+  Lemma peel_func_unop
+      {name} (op : UnOp name) funcs0 funcs :
+    fst funcs0 <> name ->
+    spec_of_UnOp op funcs ->
+    spec_of_UnOp op (funcs0 :: funcs).
+  Proof.
+    cbv [spec_of_UnOp unop_spec]; intros.
+    cbn [WeakestPrecondition.call WeakestPrecondition.call_body ].
+    destruct funcs0; cbn [fst snd] in *.
+    lazymatch goal with |- context[if (String.eqb ?x ?y) then _ else _] =>
+      destr (String.eqb x y); [ congruence | ]
+    end.
+    eauto.
+  Qed.
+  
+End Generic.
+
+Lemma valid_funs_funcs : ExprImp.valid_funs (map.of_list funcs).
+Proof.
+  unfold ExprImp.valid_funs. unfold funcs.
+  (* TODO: need lemma/tactic to break down map.get (map.of_list [...]) into a
+     case for each function, then valid_fun is just proving there are no
+     duplicates in arg/ret names *)
+Admitted.
+
+(* TODO: replace with real cswap correctness proof once it exists *)
+Lemma fe25519_cswap_correct
+    {ext_spec : Semantics.ExtSpec}
+    {ext_spec_ok : Semantics.ext_spec.ok ext_spec} :
+  forall functions,
+    CSwap.spec_of_cswap
+      (field_parameters:=field_parameters)
+      (field_representaton:=field_representation n s c)
+      (felem_cswap :: functions). 
+Admitted.
+
+(* TODO: replace with real copy correctness proof once it exists *)
+Lemma fe25519_copy_correct
+    {ext_spec : Semantics.ExtSpec}
+    {ext_spec_ok : Semantics.ext_spec.ok ext_spec} :
+  forall functions,
+    spec_of_felem_copy
+      (field_parameters:=field_parameters)
+      (field_representation:=field_representation n s c)
+      (fe25519_copy :: functions).
+Admitted.
+
+(* TODO: replace with real small-literal correctness proof once it exists *)
+Lemma fe25519_small_literal_correct
+    {ext_spec : Semantics.ExtSpec}
+    {ext_spec_ok : Semantics.ext_spec.ok ext_spec} :
+  forall functions,
+    spec_of_felem_small_literal
+      (field_parameters:=field_parameters)
+      (field_representation:=field_representation n s c)
+      (fe25519_small_literal :: functions).
+Admitted.
+
+(* TODO: replace with real inv correctness proof once it exists *)
+Lemma fe25519_inv_correct
+    {ext_spec : Semantics.ExtSpec}
+    {ext_spec_ok : Semantics.ext_spec.ok ext_spec} :
+  forall functions,
+    spec_of_UnOp un_inv
+      (field_parameters:=field_parameters)
+      (field_representation:=field_representation n s c)
+      (AdditionChains.fe25519_inv
+         (word:=BasicC32Semantics.word)
+         (field_parameters:=field_parameters) :: functions).
+Admitted.
+
+(* TODO: fill this in. Naive.word may need to be adjusted for behavior in the
+   (out of spec) case when shift arguments are out of range. *)
+Local Instance riscv_ok_word : RiscvWordProperties.word.riscv_ok BasicC32Semantics.word.
+Admitted.
 
 Lemma montladder_compiles_correctly :
   forall (t : Semantics.trace)
@@ -135,7 +238,10 @@ Lemma montladder_compiles_correctly :
                 montladder_insns mH' Rdata Rexec final).
 Proof.
   intros.
-  eapply (compiler_correct_wp (ext_spec:=FE310CSemantics.ext_spec))
+  eapply (compiler_correct_wp
+            (ext_spec:=FE310CSemantics.ext_spec)
+            (string_keyed_map := SortedListString.map)
+            (string_keyed_map_ok := SortedListString.ok))
     with (fname:=fname).
   all:cbn [fname montladder fst snd].
 
@@ -161,15 +267,11 @@ Proof.
       end.
   
   (* solve remaining goals one by one *)
-  { eapply compile_ext_call_correct. }
+  { eapply (compile_ext_call_correct (funname_env_ok:=SortedListString.ok)). }
   { intros. cbv [compile_ext_call compile_interact].
     repeat (destruct_one_match; try reflexivity). }
-  { unfold ExprImp.valid_funs. unfold funcs.
-    (* TODO: need lemma/tactic to break down map.get (map.of_list [...]) into a
-       case for each function, then valid_fun is just proving there are no
-       duplicates in arg/ret names *)
-    admit. }
-  { cbn. (* TODO: prove function names are NoDup *) admit. }
+  { apply valid_funs_funcs. }
+  { lazy. repeat constructor; cbn [In]; intuition idtac; congruence. }
   { unfold funcs. 
     (* montladder is not at the front of the function list; remove everything
        that doesn't match the name *)
@@ -181,23 +283,39 @@ Proof.
       apply UnsaturatedSolinas.relax_valid. }
     { reflexivity. }
     { cbv [Core.__rupicola_program_marker]. tauto. }
-    { (* TODO: use proof of cswap correctness. *) admit. }
-    { (* TODO: use proof of copy correctness. *) admit. }
-    { (* TODO: use proof of small-literal correctness. *) admit. }
-    {
-      cbv [LadderStep.spec_of_ladderstep]; intros. 
+    { apply fe25519_cswap_correct. }
+    { apply fe25519_copy_correct. }
+    { cbv [spec_of_felem_small_literal].
+      intros; prepare_call.
+      eapply @fe25519_small_literal_correct;
+        try (typeclasses eauto); ecancel_assumption. }
+    { cbv [LadderStep.spec_of_ladderstep]; intros. 
       prepare_call. rewrite ladderstep_defn.
       eapply @LadderStep.ladderstep_correct; try (typeclasses eauto).
       { apply Signature.field_representation_ok.
         apply UnsaturatedSolinas.relax_valid. }
       { cbv [Core.__rupicola_program_marker]; tauto. }
-      { eapply @fe25519_mul_correct. (* FIXME: this eapply is slow. *) }
-      { (* TODO: peel off non-matching functions from the function list and use
-           correctness proof. *) admit. }
-      { (* TODO: peel off non-matching functions from the function list and use
-           correctness proof. *) admit. }
-      { (* TODO: peel off non-matching functions from the function list and use
-           correctness proof. *) admit. }
-
-
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_mul_correct. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_add_correct. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_sub_correct. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_square_correct. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_scmula24_correct. }
+      { ecancel_assumption. } }
+    { repeat (apply peel_func_unop; [ lazy; congruence | ]).
+      apply fe25519_inv_correct. }
+    { repeat (apply peel_func_unop; [ lazy; congruence | ]).
+      apply fe25519_mul_correct. }
+    { ssplit; try eassumption; [ ].
+      lazymatch goal with H : length Kbytes = _ |- _ => rewrite H end. 
+      lazy; congruence. } }
+  { assumption. }
+  { assumption. }
+  { assumption. }
 Qed.
+
+(* Print Assumptions montladder_compiles_correctly. *)

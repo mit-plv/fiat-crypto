@@ -3,6 +3,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
 Require Import coqutil.Word.Bitwidth32.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+Require Import Crypto.Bedrock.Field.Common.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Field.Interface.Representation.
 Require Import Crypto.Bedrock.Field.Synthesis.New.ComputedOp.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
@@ -10,17 +11,30 @@ Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults32.
 Require Import Crypto.Bedrock.Specs.Field.
 Import ListNotations.
 
+Existing Instances BW32.
+Existing Instances no_select_size split_mul_to split_multiret_to.
+
 (* Parameters for Curve25519 field (32-bit machine). *)
 Section Field.
-  Context {ext_spec: Semantics.ExtSpec}.
+  Context {ext_spec: Semantics.ExtSpec} {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Definition n : nat := 10.
   Definition s : Z := 2^255.
   Definition c : list (Z * Z) := [(1, 19)]%Z.
 
-  Existing Instances Defaults32.default_parameters
-           Defaults32.default_parameters_ok BW32.
-  Existing Instances no_select_size split_mul_to split_multiret_to.
   Definition prefix : string := "fe25519_"%string.
+
+  (* Note: Cannot use Defaults32.default_parameters here as the parameters for
+     the bedrock2 backend because it uses BasicC32Semantics.ext_spec, while we
+     will eventually want to plug in FE310CSemantics.ext_spec. TODO: is there a
+     way to prove the ext_spec doesn't matter here, since we're not using any MMIO? *)
+  (* Parameters for the fiat-crypto bedrock2 backend *)
+  Instance translation_parameters : Types.parameters
+    (word := BasicC32Semantics.word)
+    (varname_gen := default_varname_gen)
+    (error := Syntax.expr.var Defaults.ERROR)
+    := tt.
+  Instance translation_parameters_ok : Types.ok.
+  Proof. constructor; try exact _; apply prefix_name_gen_unique. Qed.
 
   (* Define Curve25519 field *)
   Instance field_parameters : FieldParameters.
@@ -35,7 +49,7 @@ Section Field.
   Defined.
 
   (* Call fiat-crypto pipeline on all field operations *)
-  Instance fe25519_ops : unsaturated_solinas_ops n s c.
+  Instance fe25519_ops : unsaturated_solinas_ops (ext_spec:=ext_spec) n s c.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
   (**** Translate each field operation into bedrock2 and apply bedrock2 backend
@@ -44,6 +58,7 @@ Section Field.
   Derive fe25519_from_bytes
          SuchThat (forall functions,
                       spec_of_from_bytes
+                        (ext_spec:=ext_spec)
                         (field_representation:=field_representation n s c)
                         (fe25519_from_bytes :: functions))
          As fe25519_from_bytes_correct.
