@@ -86,7 +86,6 @@ Local Ltac prepare_call_step :=
   end.
 Local Ltac prepare_call := repeat prepare_call_step.
 
-
 (* TODO: move to Spec.Field? *)
 Section Generic.
   Context {width : Z} {BW : Bitwidth width} {word : word width}
@@ -136,39 +135,6 @@ Proof.
      duplicates in arg/ret names *)
 Admitted.
 
-(* TODO: replace with real cswap correctness proof once it exists *)
-Lemma fe25519_cswap_correct
-    {ext_spec : Semantics.ExtSpec}
-    {ext_spec_ok : Semantics.ext_spec.ok ext_spec} :
-  forall functions,
-    CSwap.spec_of_cswap
-      (field_parameters:=field_parameters)
-      (field_representaton:=field_representation n s c)
-      (felem_cswap :: functions). 
-Admitted.
-
-(* TODO: replace with real copy correctness proof once it exists *)
-Lemma fe25519_copy_correct
-    {ext_spec : Semantics.ExtSpec}
-    {ext_spec_ok : Semantics.ext_spec.ok ext_spec} :
-  forall functions,
-    spec_of_felem_copy
-      (field_parameters:=field_parameters)
-      (field_representation:=field_representation n s c)
-      (fe25519_copy :: functions).
-Admitted.
-
-(* TODO: replace with real small-literal correctness proof once it exists *)
-Lemma fe25519_small_literal_correct
-    {ext_spec : Semantics.ExtSpec}
-    {ext_spec_ok : Semantics.ext_spec.ok ext_spec} :
-  forall functions,
-    spec_of_felem_small_literal
-      (field_parameters:=field_parameters)
-      (field_representation:=field_representation n s c)
-      (fe25519_small_literal :: functions).
-Admitted.
-
 (* TODO: replace with real inv correctness proof once it exists *)
 Lemma fe25519_inv_correct
     {ext_spec : Semantics.ExtSpec}
@@ -180,12 +146,15 @@ Lemma fe25519_inv_correct
       (AdditionChains.fe25519_inv
          (word:=BasicC32Semantics.word)
          (field_parameters:=field_parameters) :: functions).
+Proof.
+  intros functions.
+  (* later we'd use the following lemma instead of this admit: *)
+  epose proof AdditionChains.fe_inv_correct _ functions.
 Admitted.
 
 (* TODO: fill this in. Naive.word may need to be adjusted for behavior in the
    (out of spec) case when shift arguments are out of range. *)
 Local Instance riscv_ok_word : RiscvWordProperties.word.riscv_ok BasicC32Semantics.word.
-Admitted.
 
 Lemma montladder_compiles_correctly :
   forall (t : Semantics.trace)
@@ -283,13 +252,12 @@ Proof.
       apply UnsaturatedSolinas.relax_valid. }
     { reflexivity. }
     { cbv [Core.__rupicola_program_marker]. tauto. }
-    { apply fe25519_cswap_correct. }
-    { apply fe25519_copy_correct. }
-    { cbv [spec_of_felem_small_literal].
-      intros; prepare_call.
-      eapply @fe25519_small_literal_correct;
-        try (typeclasses eauto); ecancel_assumption. }
-    { cbv [LadderStep.spec_of_ladderstep]; intros. 
+    { eapply CSwap.cswap_body_correct; [|exact I].
+      unfold field_representation, Signature.field_representation, Representation.frep; cbn; unfold n; cbv; trivial. }
+    { eapply fe25519_copy_correct. }
+    { eapply fe25519_from_word_correct. }
+    {
+      cbv [LadderStep.spec_of_ladderstep]; intros. 
       prepare_call. rewrite ladderstep_defn.
       eapply @LadderStep.ladderstep_correct; try (typeclasses eauto).
       { apply Signature.field_representation_ok.
