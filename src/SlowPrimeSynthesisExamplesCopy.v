@@ -125,11 +125,7 @@ Module debugging_red.
 
     Context weight {wprops : @weight_properties weight}.
 
-    (* Definition sat_reduce base s c n (p : list (Z * Z)) := *)
-    (*   let '(s', _) := Saturated.Rows.adjust_s weight (S (S n)) s in *)
-    (*   let lo_hi := Associational.split s' p in *)
-    (*   fst lo_hi ++ (Saturated.Associational.sat_mul_const base [(1, s'/s)] (Saturated.Associational.sat_mul_const base c (snd lo_hi))). *)
-
+    (*
     Definition sat_mul_const_test s n (p : list (Z * Z)) (q : list Z) :=
       let q_a := Positional.to_associational weight n q in
       let pq_a := Saturated.Associational.sat_mul_const s p q_a in
@@ -141,14 +137,7 @@ Module debugging_red.
       let q_a := Positional.to_associational weight n q in
       let pq_a := Saturated.Associational.sat_mul_const s p q_a in
       let pq_r := Saturated.Rows.from_associational weight n pq_a in
-      pq_r.
-
-    (* Definition sat_reduce_positional base s c m n (p : list Z) := *)
-    (*   let p_a := Positional.to_associational weight m p in *)
-    (*   let r_a := sat_reduce base s c m p_a in *)
-    (*   let r_r := Saturated.Rows.from_associational weight n r_a in *)
-    (*   let r_f := Saturated.Rows.flatten weight n r_r in *)
-    (*   r_f. *)
+      pq_r. *)
 
     Definition sat_reduce base s c n (p : list (Z * Z)) :=
       let '(s', _) := Saturated.Rows.adjust_s weight (S (S n)) s in
@@ -159,12 +148,30 @@ Module debugging_red.
     Definition repeat_sat_reduce base s c (p : list (Z * Z)) n :=
       fold_right (fun _ q => sat_reduce base s c n q) p (seq 0 n).
 
-    Definition mulmod base s c n nreductions (p q : list Z) :=
+    Definition mul_no_reduce base n (p q : list Z) :=
       let p_a := Positional.to_associational weight n p in
       let q_a := Positional.to_associational weight n q in
       let pq_a := Saturated.Associational.sat_mul base p_a q_a in
-      let r_a := repeat_sat_reduce base s c pq_a nreductions in
-      Saturated.Rows.flatten weight n (Saturated.Rows.from_associational weight n r_a).
+      let pq_rows := Saturated.Rows.from_associational weight (2*n) pq_a in
+      let pq := Saturated.Rows.flatten weight (2*n) pq_rows in
+      pq.
+
+    Definition reduce_double_wide base s c n m nreductions (p : list Z) :=
+      let p_a := Positional.to_associational weight n p in
+      let r_a := repeat_sat_reduce base s c p_a nreductions in
+      let r_rows := Saturated.Rows.from_associational weight m r_a in
+      let r_flat := Saturated.Rows.flatten weight m r_rows in
+      r_flat.
+
+    Definition mulmod base s c n nreductions (p q : list Z) :=
+      let pq := mul_no_reduce base n p q in
+      let pq_f := fst pq in
+      let pq_r := reduce_double_wide base s c (2*n) n nreductions pq_f in
+      pq_r.
+(*      let pq_f := fst pq in
+      let pq_a' := Positional.to_associational weight (2*n) pq_f in
+      let r_a := Saturated.Rows.repeat_sat_reduce weight base s c pq_a' nreductions in
+      Saturated.Rows.flatten weight n (Saturated.Rows.from_associational weight n r_a). *)
 
   End solinas_reduction.
 
@@ -186,9 +193,23 @@ Module debugging_red.
     Let w : nat -> Z := weight machine_wordsize 1.
     Let base : Z := 2 ^ machine_wordsize.
 
-    Compute (sat_mul_const_test w base 2 c [5; 5]).
-    Compute (sat_mul_const_test2 w base 2 c [5; 5]).
-    Compute (sat_mul_const_test w base 2 [(1, 2)] [5; 5]).
+    Let v : Z := 2^64 - 1.
+
+    Let p : list Z := (repeat v n).
+    Let q : list Z := (repeat v n).
+
+    Let pq : list Z * Z:= mul_no_reduce w base n p q.
+    Compute p.
+    Compute pq.
+    Compute (Positional.eval w n p).
+    Compute (Positional.eval w n q).
+    Compute (mul_no_reduce w base n p q).
+    Compute (mulmod w base s c n nreductions p q).
+    Compute (let p_a := Positional.to_associational w 2 p in
+             let q_a := Positional.to_associational w 2 q in
+             let pq_a := Saturated.Associational.sat_mul base p_a q_a in
+             let pq_p := Positional.from_associational w 5 pq_a in
+             pq_p).
 
     Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
     Let bounds : list (ZRange.type.option.interp base.type.Z)
@@ -225,25 +246,6 @@ Module debugging_red.
     Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
     Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
 
-    (* Time Compute *)
-    (*      Show.show  *)
-    (*      (Pipeline.BoundsPipelineToString *)
-    (*         "fiat" "mul" *)
-    (*         false (* subst01 *) *)
-    (*         false (* inline *) *)
-    (*         None (* fancy *) *)
-    (*         possible_values *)
-    (*         machine_wordsize *)
-    (*         ltac:(let n := (eval cbv in n) in *)
-    (*               let r := Reify (sat_mul_const_test (weight machine_wordsize 1) s n c) in *)
-    (*               exact r) *)
-    (*                (fun _ _ => []) *)
-    (*                (Some boundsn, tt) *)
-    (*                (Some boundsn, None) *)
-    (*                (None, tt) *)
-    (*                (None, None) *)
-    (*        : Pipeline.ErrorT _). *)
-
     Time Compute
          Show.show
          (Pipeline.BoundsPipelineToString
@@ -264,26 +266,7 @@ Module debugging_red.
                    (None, None)
            : Pipeline.ErrorT _).
 
-    Time Compute
-         Show.show
-         (Pipeline.BoundsPipelineToString
-            "fiat" "mul"
-            false (* subst01 *)
-            false (* inline *)
-            None (* fancy *)
-            possible_values
-            machine_wordsize
-            ltac:(let n := (eval cbv in n) in
-                  let nreductions' := (eval cbv in nreductions') in
-                  let r := Reify (Saturated.Rows.mulmod (weight machine_wordsize 1) (2^machine_wordsize) s c n 3) in
-                  exact r)
-                   (fun _ _ => [])
-                   (Some boundsn, (Some boundsn, tt))
-                   (Some boundsn, None)
-                   (None, (None, tt))
-                   (None, None)
-           : Pipeline.ErrorT _).
-
+    (* compiling standalone reduce *)
     Time Compute
          Show.show
          (Pipeline.BoundsPipelineToString
@@ -294,12 +277,13 @@ Module debugging_red.
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) in
-                  let m := (eval cbv in m) in
-                  let r := Reify (sat_reduce_positional (weight machine_wordsize 1) (2^machine_wordsize) s c m n) in
+                  let r := Reify (reduce_double_wide (weight machine_wordsize 1)
+                                                     (2^machine_wordsize)
+                                                     s c (2*n) n 3) in
                   exact r)
                    (fun _ _ => [])
                    (Some (repeat bound (2*n)), tt)
-                   (Some (repeat bound n), None)
+                   (Some boundsn, None)
                    (None, tt)
                    (None, None)
            : Pipeline.ErrorT _).
@@ -308,8 +292,8 @@ Module debugging_red.
 
 End debugging_red.
 
-(**
-     = "Success (""/*
+(*
+= "Success (""/*
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -351,136 +335,95 @@ static void mul(uint64_t out1[4], uint64_t* out2, const uint64_t arg1[4], const 
   uint64_t x31;
   uint64_t x32;
   uint64_t x33;
-  uint64_t x34;
+  fiatuint1 x34;
   uint64_t x35;
-  uint64_t x36;
+  fiatuint1 x36;
   uint64_t x37;
   uint64_t x38;
-  uint64_t x39;
+  fiatuint1 x39;
   uint64_t x40;
-  uint64_t x41;
+  fiatuint1 x41;
   uint64_t x42;
-  uint64_t x43;
+  fiatuint1 x43;
   uint64_t x44;
   uint64_t x45;
-  uint64_t x46;
+  fiatuint1 x46;
   uint64_t x47;
-  uint64_t x48;
+  fiatuint1 x48;
   uint64_t x49;
-  uint64_t x50;
+  fiatuint1 x50;
   uint64_t x51;
-  uint64_t x52;
+  fiatuint1 x52;
   uint64_t x53;
-  uint64_t x54;
+  fiatuint1 x54;
   uint64_t x55;
   uint64_t x56;
-  uint64_t x57;
+  fiatuint1 x57;
   uint64_t x58;
-  uint64_t x59;
+  fiatuint1 x59;
   uint64_t x60;
-  uint64_t x61;
+  fiatuint1 x61;
   uint64_t x62;
-  uint64_t x63;
+  fiatuint1 x63;
   uint64_t x64;
-  uint64_t x65;
+  fiatuint1 x65;
   uint64_t x66;
-  uint64_t x67;
-  fiatuint1 x68;
-  uint64_t x69;
+  fiatuint1 x67;
+  uint64_t x68;
+  fiatuint1 x69;
   uint64_t x70;
   fiatuint1 x71;
   uint64_t x72;
   fiatuint1 x73;
   uint64_t x74;
-  uint64_t x75;
-  fiatuint1 x76;
-  uint64_t x77;
-  fiatuint1 x78;
-  uint64_t x79;
-  fiatuint1 x80;
-  uint64_t x81;
-  fiatuint1 x82;
-  uint64_t x83;
-  fiatuint1 x84;
-  uint64_t x85;
-  fiatuint1 x86;
-  uint64_t x87;
-  fiatuint1 x88;
-  uint64_t x89;
-  fiatuint1 x90;
-  uint64_t x91;
-  fiatuint1 x92;
-  uint64_t x93;
-  fiatuint1 x94;
-  uint64_t x95;
-  fiatuint1 x96;
+  fiatuint1 x75;
+  uint64_t x76;
+  fiatuint1 x77;
+  uint64_t x78;
+  fiatuint1 x79;
+  uint64_t x80;
+  fiatuint1 x81;
+  uint64_t x82;
+  fiatuint1 x83;
+  uint64_t x84;
+  fiatuint1 x85;
+  uint64_t x86;
+  fiatuint1 x87;
+  uint64_t x88;
+  fiatuint1 x89;
+  uint64_t x90;
+  fiatuint1 x91;
+  uint64_t x92;
+  fiatuint1 x93;
+  uint64_t x94;
+  fiatuint1 x95;
+  uint64_t x96;
   uint64_t x97;
-  fiatuint1 x98;
+  uint64_t x98;
   uint64_t x99;
-  fiatuint1 x100;
+  uint64_t x100;
   uint64_t x101;
-  fiatuint1 x102;
+  uint64_t x102;
   uint64_t x103;
-  fiatuint1 x104;
+  uint64_t x104;
   uint64_t x105;
-  fiatuint1 x106;
-  uint64_t x107;
-  fiatuint1 x108;
-  uint64_t x109;
-  fiatuint1 x110;
-  uint64_t x111;
-  fiatuint1 x112;
-  uint64_t x113;
-  fiatuint1 x114;
-  uint64_t x115;
-  fiatuint1 x116;
-  uint64_t x117;
-  fiatuint1 x118;
-  uint64_t x119;
-  fiatuint1 x120;
-  uint64_t x121;
-  fiatuint1 x122;
-  uint64_t x123;
-  fiatuint1 x124;
-  uint64_t x125;
-  fiatuint1 x126;
-  uint64_t x127;
-  fiatuint1 x128;
-  uint64_t x129;
-  fiatuint1 x130;
-  uint64_t x131;
-  fiatuint1 x132;
-  uint64_t x133;
-  fiatuint1 x134;
-  uint64_t x135;
-  fiatuint1 x136;
-  uint64_t x137;
-  fiatuint1 x138;
-  uint64_t x139;
-  fiatuint1 x140;
-  uint64_t x141;
-  fiatuint1 x142;
-  uint64_t x143;
-  fiatuint1 x144;
-  uint64_t x145;
-  fiatuint1 x146;
-  uint64_t x147;
-  fiatuint1 x148;
-  uint64_t x149;
-  fiatuint1 x150;
-  uint64_t x151;
-  fiatuint1 x152;
-  uint64_t x153;
-  fiatuint1 x154;
-  uint64_t x155;
-  fiatuint1 x156;
-  uint64_t x157;
-  fiatuint1 x158;
-  uint64_t x159;
-  fiatuint1 x160;
-  uint64_t x161;
-  fiatuint1 x162;
-  uint64_t x163;
+  uint64_t x106;
+  fiatuint1 x107;
+  uint64_t x108;
+  fiatuint1 x109;
+  uint64_t x110;
+  fiatuint1 x111;
+  uint64_t x112;
+  fiatuint1 x113;
+  uint64_t x114;
+  fiatuint1 x115;
+  uint64_t x116;
+  fiatuint1 x117;
+  uint64_t x118;
+  fiatuint1 x119;
+  uint64_t x120;
+  fiatuint1 x121;
+  uint64_t x122;
   fiatmulx_u64(&x1, &x2, (arg1[3]), (arg2[3]));
   fiatmulx_u64(&x3, &x4, (arg1[3]), (arg2[2]));
   fiatmulx_u64(&x5, &x6, (arg1[3]), (arg2[1]));
@@ -497,79 +440,127 @@ static void mul(uint64_t out1[4], uint64_t* out2, const uint64_t arg1[4], const 
   fiatmulx_u64(&x27, &x28, (arg1[0]), (arg2[2]));
   fiatmulx_u64(&x29, &x30, (arg1[0]), (arg2[1]));
   fiatmulx_u64(&x31, &x32, (arg1[0]), (arg2[0]));
-  fiatmulx_u64(&x33, &x34, UINT8_C(0x26), x2);
-  fiatmulx_u64(&x35, &x36, UINT8_C(0x26), x1);
-  fiatmulx_u64(&x37, &x38, UINT8_C(0x26), x4);
-  fiatmulx_u64(&x39, &x40, UINT8_C(0x26), x3);
-  fiatmulx_u64(&x41, &x42, UINT8_C(0x26), x6);
-  fiatmulx_u64(&x43, &x44, UINT8_C(0x26), x5);
-  fiatmulx_u64(&x45, &x46, UINT8_C(0x26), x8);
-  fiatmulx_u64(&x47, &x48, UINT8_C(0x26), x10);
-  fiatmulx_u64(&x49, &x50, UINT8_C(0x26), x9);
-  fiatmulx_u64(&x51, &x52, UINT8_C(0x26), x12);
-  fiatmulx_u64(&x53, &x54, UINT8_C(0x26), x11);
-  fiatmulx_u64(&x55, &x56, UINT8_C(0x26), x14);
-  fiatmulx_u64(&x57, &x58, UINT8_C(0x26), x18);
-  fiatmulx_u64(&x59, &x60, UINT8_C(0x26), x17);
-  fiatmulx_u64(&x61, &x62, UINT8_C(0x26), x20);
-  fiatmulx_u64(&x63, &x64, UINT8_C(0x26), x26);
-  fiatmulx_u64(&x65, &x66, UINT8_C(0x26), x34);
-  fiataddcarryx_u64(&x67, &x68, 0x0, x32, x39);
-  x69 = (x68 + x30);
-  fiataddcarryx_u64(&x70, &x71, 0x0, x67, x41);
-  fiataddcarryx_u64(&x72, &x73, x71, x69, 0x0);
-  x74 = (x73 + x28);
-  fiataddcarryx_u64(&x75, &x76, 0x0, x70, x44);
-  fiataddcarryx_u64(&x77, &x78, x76, x72, x35);
-  fiataddcarryx_u64(&x79, &x80, x78, x74, 0x0);
-  fiataddcarryx_u64(&x81, &x82, 0x0, x75, x46);
-  fiataddcarryx_u64(&x83, &x84, x82, x77, x37);
-  fiataddcarryx_u64(&x85, &x86, x84, x79, 0x0);
-  fiataddcarryx_u64(&x87, &x88, 0x0, x81, x49);
-  fiataddcarryx_u64(&x89, &x90, x88, x83, x40);
-  fiataddcarryx_u64(&x91, &x92, x90, x85, x33);
-  fiataddcarryx_u64(&x93, &x94, 0x0, x87, x51);
-  fiataddcarryx_u64(&x95, &x96, x94, x89, x42);
-  fiataddcarryx_u64(&x97, &x98, x96, x91, x36);
-  fiataddcarryx_u64(&x99, &x100, 0x0, x31, x65);
-  fiataddcarryx_u64(&x101, &x102, x100, x93, x54);
-  fiataddcarryx_u64(&x103, &x104, x102, x95, x47);
-  fiataddcarryx_u64(&x105, &x106, x104, x97, x38);
-  fiataddcarryx_u64(&x107, &x108, 0x0, x99, x43);
-  fiataddcarryx_u64(&x109, &x110, x108, x101, x56);
-  fiataddcarryx_u64(&x111, &x112, x110, x103, x50);
-  fiataddcarryx_u64(&x113, &x114, x112, x105, x48);
-  fiataddcarryx_u64(&x115, &x116, 0x0, x107, x45);
-  fiataddcarryx_u64(&x117, &x118, x116, x109, x57);
-  fiataddcarryx_u64(&x119, &x120, x118, x111, x52);
-  fiataddcarryx_u64(&x121, &x122, x120, x113, x7);
-  fiataddcarryx_u64(&x123, &x124, 0x0, x115, x53);
-  fiataddcarryx_u64(&x125, &x126, x124, x117, x60);
-  fiataddcarryx_u64(&x127, &x128, x126, x119, x58);
-  fiataddcarryx_u64(&x129, &x130, x128, x121, x13);
-  fiataddcarryx_u64(&x131, &x132, 0x0, x123, x55);
-  fiataddcarryx_u64(&x133, &x134, x132, x125, x62);
-  fiataddcarryx_u64(&x135, &x136, x134, x127, x15);
-  fiataddcarryx_u64(&x137, &x138, x136, x129, x16);
-  fiataddcarryx_u64(&x139, &x140, 0x0, x131, x59);
-  fiataddcarryx_u64(&x141, &x142, x140, x133, x64);
-  fiataddcarryx_u64(&x143, &x144, x142, x135, x21);
-  fiataddcarryx_u64(&x145, &x146, x144, x137, x19);
-  fiataddcarryx_u64(&x147, &x148, 0x0, x139, x61);
-  fiataddcarryx_u64(&x149, &x150, x148, x141, x23);
-  fiataddcarryx_u64(&x151, &x152, x150, x143, x24);
-  fiataddcarryx_u64(&x153, &x154, x152, x145, x22);
-  fiataddcarryx_u64(&x155, &x156, 0x0, x147, x63);
-  fiataddcarryx_u64(&x157, &x158, x156, x149, x29);
-  fiataddcarryx_u64(&x159, &x160, x158, x151, x27);
-  fiataddcarryx_u64(&x161, &x162, x160, x153, x25);
-  x163 = ((((((((((((uint64_t)x80 + x86) + (uint64_t)x92) + (uint64_t)x98) + (uint64_t)x106) + (uint64_t)x114) + (uint64_t)x122) + (uint64_t)x130) + (uint64_t)x138) + (uint64_t)x146) + (uint64_t)x154) + (uint64_t)x162);
-  out1[0] = x155;
-  out1[1] = x157;
-  out1[2] = x159;
-  out1[3] = x161;
-  *out2 = x163;
+  fiataddcarryx_u64(&x33, &x34, 0x0, x28, x7);
+  fiataddcarryx_u64(&x35, &x36, x34, x26, x5);
+  x37 = (x36 + x18);
+  fiataddcarryx_u64(&x38, &x39, 0x0, x33, x13);
+  fiataddcarryx_u64(&x40, &x41, x39, x35, x8);
+  fiataddcarryx_u64(&x42, &x43, x41, x37, 0x0);
+  x44 = (x43 + x10);
+  fiataddcarryx_u64(&x45, &x46, 0x0, x30, x15);
+  fiataddcarryx_u64(&x47, &x48, x46, x38, x16);
+  fiataddcarryx_u64(&x49, &x50, x48, x40, x11);
+  fiataddcarryx_u64(&x51, &x52, x50, x42, x3);
+  fiataddcarryx_u64(&x53, &x54, x52, x44, 0x0);
+  x55 = (x54 + x2);
+  fiataddcarryx_u64(&x56, &x57, 0x0, x45, x21);
+  fiataddcarryx_u64(&x58, &x59, x57, x47, x19);
+  fiataddcarryx_u64(&x60, &x61, x59, x49, x14);
+  fiataddcarryx_u64(&x62, &x63, x61, x51, x6);
+  fiataddcarryx_u64(&x64, &x65, x63, x53, 0x0);
+  fiataddcarryx_u64(&x66, &x67, x65, x55, 0x0);
+  fiataddcarryx_u64(&x68, &x69, 0x0, x32, x23);
+  fiataddcarryx_u64(&x70, &x71, x69, x56, x24);
+  fiataddcarryx_u64(&x72, &x73, x71, x58, x22);
+  fiataddcarryx_u64(&x74, &x75, x73, x60, x17);
+  fiataddcarryx_u64(&x76, &x77, x75, x62, x9);
+  fiataddcarryx_u64(&x78, &x79, x77, x64, x1);
+  fiataddcarryx_u64(&x80, &x81, x79, x66, 0x0);
+  fiataddcarryx_u64(&x82, &x83, 0x0, x68, x29);
+  fiataddcarryx_u64(&x84, &x85, x83, x70, x27);
+  fiataddcarryx_u64(&x86, &x87, x85, x72, x25);
+  fiataddcarryx_u64(&x88, &x89, x87, x74, x20);
+  fiataddcarryx_u64(&x90, &x91, x89, x76, x12);
+  fiataddcarryx_u64(&x92, &x93, x91, x78, x4);
+  fiataddcarryx_u64(&x94, &x95, x93, x80, 0x0);
+  fiatmulx_u64(&x96, &x97, UINT8_C(0x26), x94);
+  fiatmulx_u64(&x98, &x99, UINT8_C(0x26), x92);
+  fiatmulx_u64(&x100, &x101, UINT8_C(0x26), x90);
+  fiatmulx_u64(&x102, &x103, UINT8_C(0x26), x88);
+  fiatmulx_u64(&x104, &x105, UINT8_C(0x26), x97);
+  fiataddcarryx_u64(&x106, &x107, 0x0, x31, x104);
+  fiataddcarryx_u64(&x108, &x109, x107, x82, x100);
+  fiataddcarryx_u64(&x110, &x111, x109, x84, x98);
+  fiataddcarryx_u64(&x112, &x113, x111, x86, x96);
+  fiataddcarryx_u64(&x114, &x115, 0x0, x106, x102);
+  fiataddcarryx_u64(&x116, &x117, x115, x108, x103);
+  fiataddcarryx_u64(&x118, &x119, x117, x110, x101);
+  fiataddcarryx_u64(&x120, &x121, x119, x112, x99);
+  x122 = ((uint64_t)x113 + x121);
+  out1[0] = x114;
+  out1[1] = x116;
+  out1[2] = x118;
+  out1[3] = x120;
+  *out2 = x122;
 }"", {| bitwidths_used := [uint1, uint64] ; addcarryx_lg_splits := [64] ; mulx_lg_splits := [64] ; cmovznz_bitwidths := [] ; value_barrier_bitwidths := [] ; typedefs_used := [] |})"
      : string
-Finished transaction in 3.993 secs (3.94u,0.009s) (successful)
-**)
+Finished transaction in 5.047 secs (5.032u,0.009s) (successful)
+*)
+
+(*
+"Success (""/*
+ * Input Bounds:
+ *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
+ * Output Bounds:
+ *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
+ *   out2: None
+ */
+static void mul(uint64_t out1[4], uint64_t* out2, const uint64_t arg1[8]) {
+  uint64_t x1;
+  uint64_t x2;
+  uint64_t x3;
+  uint64_t x4;
+  uint64_t x5;
+  uint64_t x6;
+  uint64_t x7;
+  uint64_t x8;
+  uint64_t x9;
+  uint64_t x10;
+  uint64_t x11;
+  uint64_t x12;
+  uint64_t x13;
+  uint64_t x14;
+  uint64_t x15;
+  fiatuint1 x16;
+  uint64_t x17;
+  fiatuint1 x18;
+  uint64_t x19;
+  fiatuint1 x20;
+  uint64_t x21;
+  fiatuint1 x22;
+  uint64_t x23;
+  fiatuint1 x24;
+  uint64_t x25;
+  fiatuint1 x26;
+  uint64_t x27;
+  fiatuint1 x28;
+  uint64_t x29;
+  fiatuint1 x30;
+  uint64_t x31;
+  fiatmulx_u64(&x1, &x2, UINT8_C(0x26), (arg1[7]));
+  fiatmulx_u64(&x3, &x4, UINT8_C(0x26), (arg1[6]));
+  fiatmulx_u64(&x5, &x6, UINT8_C(0x26), (arg1[5]));
+  fiatmulx_u64(&x7, &x8, UINT8_C(0x26), (arg1[4]));
+  fiatmulx_u64(&x9, &x10, UINT8_C(0x26), x2);
+  x11 = (arg1[3]);
+  x12 = (arg1[2]);
+  x13 = (arg1[1]);
+  x14 = (arg1[0]);
+  fiataddcarryx_u64(&x15, &x16, 0x0, x14, x9);
+  fiataddcarryx_u64(&x17, &x18, x16, x13, x5);
+  fiataddcarryx_u64(&x19, &x20, x18, x12, x3);
+  fiataddcarryx_u64(&x21, &x22, x20, x11, x1);
+  fiataddcarryx_u64(&x23, &x24, 0x0, x15, x7);
+  fiataddcarryx_u64(&x25, &x26, x24, x17, x8);
+  fiataddcarryx_u64(&x27, &x28, x26, x19, x6);
+  fiataddcarryx_u64(&x29, &x30, x28, x21, x4);
+  x31 = ((uint64_t)x22 + x30);
+  out1[0] = x23;
+  out1[1] = x25;
+  out1[2] = x27;
+  out1[3] = x29;
+  *out2 = x31;
+}"", {| bitwidths_used := [uint1, uint64] ; addcarryx_lg_splits := [64] ; mulx_lg_splits := [64] ; cmovznz_bitwidths := [] ; value_barrier_bitwidths := [] ; typedefs_used := [] |})"
+     : string
+Finished transaction in 2.767 secs (2.76u,0.s) (successful)
+*)
