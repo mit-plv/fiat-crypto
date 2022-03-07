@@ -8,6 +8,7 @@ Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Util.NumTheoryUtil.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
+Require Import Crypto.Bedrock.Group.AdditionChains.
 
 Require bedrock2.NotationsCustomEntry. Import bedrock2.Syntax.Coercions.
 
@@ -297,17 +298,30 @@ Section __.
         constr:(O)
     | cons _ ?xs => let i := find_implication xs y in constr:(S i)
     end.
-    
+
+  Context { F_M_pos : Z.pos M_pos = 2^255-19 }.
+
+  Hint Extern 1 (spec_of "fe25519_inv") =>
+  (simple refine (spec_of_exp_large)) : typeclass_instances.
+  
     Derive montladder_body SuchThat
            (defn! "montladder" ("OUT", "K", "U")
                 { montladder_body },
              implements montladder_gallina
                         using [felem_cswap; felem_copy; from_word;
-                               "ladderstep"; inv; mul])
+                               "ladderstep"; "fe25519_inv"; mul])
            As montladder_correct.
     Proof.
       pose proof scalarbits_bound.
-      compile.
+      compile_setup.
+      repeat compile_step.
+      eapply compile_nlet_as_nlet_eq.
+      eapply compile_felem_cswap; repeat compile_step.
+      
+      eapply compile_nlet_as_nlet_eq.
+      eapply compile_felem_cswap; repeat compile_step.
+
+      compile_step.
     Qed.
     
   End MontLadder.
