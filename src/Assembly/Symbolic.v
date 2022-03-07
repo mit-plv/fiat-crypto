@@ -12,6 +12,7 @@ Require Import Crypto.Util.ZUtil.Land.
 Require Import Crypto.Util.ZUtil.Ones.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ListUtil.GroupAllBy.
 Require Import Crypto.Util.ListUtil.FoldMap. Import FoldMap.List.
 Require Import Crypto.Util.ListUtil.IndexOf. Import IndexOf.List.
 Require Import Crypto.Util.ListUtil.Forall.
@@ -1388,72 +1389,76 @@ Proof. t; cbn in *; rewrite ?Z.shiftl_mul_pow2, ?Z.land_0_r by lia; repeat (lia 
 
 Definition combines_to o := match o with add s => Some (mul s) | addZ => Some mulZ | _ => None end.
 
-Fixpoint combine_to_consts_map (o : op) (args : list expr) (mapping : list (expr * list Z))
-  : list (expr * list Z)
-  := match args with
-     | [] => mapping
-     | arg :: args
-       => let mapping
-            := match combines_to o with
-               | Some o'
-                 => if commutative o' && associative o'
-                    then
-                      let '(e, vs)
-                        := match arg with
-                           | ExprApp (o'', args')
-                             => if op_beq o' o''
-                                then
-                                  let csts_exprs := List.partition isCst args' in
-                                  match interp0_expr (ExprApp (o', fst csts_exprs)) with
-                                  | Some v => (ExprApp (o', snd csts_exprs), [v])
-                                  | None => (arg, [])
-                                  end
-                                else (arg, [])
-                           | _ => (arg, [])
-                           end in
-                      (n <- List.indexof (fun '(e', _) => expr_beq e e') mapping;
-                       e_v' <- List.nth_error mapping n;
-                       Some (set_nth n (e, vs ++ snd e_v') mapping))
-                        ;;;
-                        ((e, vs) :: mapping)
-                    else (arg, []) :: mapping
-               | None => (arg, []) :: mapping
-               end in
-          combine_to_consts_map o args mapping
-     end%bool%option.
+(* o is like mul *)
+(* invariant: Forall2 (fun x '(y, z) => eval (o x i) matches eval (o y z)) input output *)
+Definition split_consts (o : op) (i : Z) : list expr -> list (expr * Z)
+  := List.map
+       (fun e
+        => match e with
+           | ExprApp (o', args)
+             => if op_beq o' o
+                then
+                  let '(csts, exprs) :=
+                    if commutative o' && associative o'
+                    then let '(csts, exprs) := List.partition isCst args in
+                         (interp0_expr (ExprApp (o', csts)), exprs)
+                    else
+                      match args with
+                      | [arg; ExprApp ((const c), _)]
+                        => (Some c, [arg])
+                      | _ => (Some i, args)
+                      end
+                  in
+                  match csts, exprs with
+                  | None, args => (ExprApp (o', args), i)
+                  | Some c, [arg] => (arg, c)
+                  | Some c, args => (ExprApp (o', args), i)
+                  end
+                else (e, i)
+           | _ => (e, i)
+           end%bool).
 
-(* combines_to o = Some o' *)
-Definition compress_consts_map (o o' : op) (mapping : list (expr * list Z)) : option expr
-  := (args <-- (List.map
-                  (fun '(e, vs) =>
-                     match vs with
-                     | [] => Some e
-                     | _
-                       => (v <- interp0_op o vs;
-                           i <- identity o;
-                           Some
-                             (if (v =? i)%Z
-                              then e
-                              else ExprApp (o', [ExprApp (const v, []); e])))
-                     end)
-                  mapping);
-      Some (ExprApp (o, args)))%option.
-Global Instance compress_consts_map_ok : Ok compress_consts_map.
-Proof using Type.
-  Unshelve. all: shelve_unifiable.
-  all: fail_if_goals_remain ().
-Qed.
+(* invariant: input is a permutation of concat (List.map (fun '(e, zs) => List.map (pair e) zs) output) *)
+Definition group_consts (ls : list (expr * Z)) : list (expr * list Z)
+  := Option.List.map
+       (fun xs => match xs with
+                  | [] => None
+                  | (e, z) :: xs => Some (e, z :: List.map snd xs)
+                  end)
+       (List.groupAllBy (fun x y => expr_beq (fst x) (fst y)) ls).
+
+(* o is like add *)
+(* spec: if interp0_op o zs is always Some _, then Forall2 (fun '(e, zs) '(e', z) => e = e' /\ interp0_op o zs = Some z) input output *)
+Definition compress_consts (o : op) (ls : list (expr * list Z)) : list (expr * Z)
+  := List.flat_map
+       (fun '(e, zs) => match interp0_op o zs with
+                        | None => List.map (pair e) zs
+                        | Some z => [(e, z)]
+                        end)
+       ls.
+
+(* o is like mul *)
+(* spec is that Forall (fun '(e, z) e' => o (eval e) z matches eval e') inputs outputs *)
+Definition app_consts (o : op) (ls : list (expr * Z)) : list expr
+  := List.map (fun '(e, z) => let z := ExprApp (const z, []) in
+                              match e with
+                              | ExprApp (o', args)
+                                => if op_beq o' o
+                                   then ExprApp (o, args ++ [z])
+                                   else ExprApp (o, [e; z])
+                              | _ => ExprApp (o, [e; z])
+                              end)
+              ls.
 
 Definition combine_consts : expr -> expr :=
   fun e => match e with ExprApp (o, args) =>
-    if commutative o then match combines_to o with
-    | Some o' =>
-        let mapping := combine_to_consts_map o args [] in
-        match compress_consts_map o o' mapping with
-        | Some e => e | None => e
-        end
-    | None => e end else e | _ => e end.
-Global Instance combine_consts_ok : Ok combine_consts.
+    if commutative o && associative o then match combines_to o with
+    | Some o' => match identity o' with
+    | Some idv =>
+        ExprApp (o, app_consts o' (compress_consts o (group_consts (split_consts o' idv args))))
+    | None => e end | None => e end else e | _ => e end%bool.
+
+Global Instance combine_consts_0k : Ok combine_consts.
 Proof using Type.
   Unshelve. all: shelve_unifiable.
   all: fail_if_goals_remain ().
