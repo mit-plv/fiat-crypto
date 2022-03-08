@@ -83,6 +83,7 @@ src/Assembly/WithBedrock/SymbolicProofs.v
 src/Bedrock/End2End/Poly1305/Field1305.v
 src/Bedrock/End2End/X25519/Field25519.v
 src/Bedrock/End2End/X25519/MontgomeryLadder.v
+src/Bedrock/End2End/X25519/MontgomeryLadderProperties.v
 src/Bedrock/Field/Common/Tactics.v
 src/Bedrock/Field/Common/Types.v
 src/Bedrock/Field/Common/Util.v
@@ -92,7 +93,6 @@ src/Bedrock/Field/Common/Arrays/MakeListLengths.v
 src/Bedrock/Field/Common/Arrays/MaxBounds.v
 src/Bedrock/Field/Common/Names/MakeNames.v
 src/Bedrock/Field/Common/Names/VarnameGenerator.v
-src/Bedrock/Field/Interface/Compilation.v
 src/Bedrock/Field/Interface/Compilation2.v
 src/Bedrock/Field/Interface/Representation.v
 src/Bedrock/Field/Stringification/FlattenVarData.v
