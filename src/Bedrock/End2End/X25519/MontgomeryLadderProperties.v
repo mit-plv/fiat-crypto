@@ -94,7 +94,7 @@ Section Generic.
           {ext_spec : Semantics.ExtSpec}
           {field_parameters : FieldParameters}
           {field_representation : FieldRepresentation}.
-        
+
   Lemma peel_func_binop
       {name} (op : BinOp name) funcs0 funcs :
     fst funcs0 <> name ->
@@ -109,7 +109,7 @@ Section Generic.
     end.
     eauto.
   Qed.
-  
+
   Lemma peel_func_unop
       {name} (op : UnOp name) funcs0 funcs :
     fst funcs0 <> name ->
@@ -124,7 +124,7 @@ Section Generic.
     end.
     eauto.
   Qed.
-  
+
 End Generic.
 
 Lemma valid_funs_funcs : ExprImp.valid_funs (map.of_list funcs).
@@ -203,8 +203,9 @@ Lemma montladder_compiles_correctly :
               Some retvals /\
               montladder_post pOUT pK pU Kbytes K U OUT R t
                  (getLog (getMachine final)) mH' retvals /\
-              map.agree_on LowerPipeline.callee_saved
-                (getRegs (getMachine initial)) (getRegs (getMachine final)) /\
+              map.only_differ (getRegs (getMachine initial))
+                              reg_class.caller_saved
+                              (getRegs (getMachine final)) /\
               getPc (getMachine final) = ret_addr /\
               LowerPipeline.machine_ok p_funcs stack_lo stack_hi
                 montladder_insns mH' Rdata Rexec final).
@@ -237,14 +238,14 @@ Proof.
       | |- map.get montladder_finfo _ = Some _ => reflexivity
       | _ => idtac
       end.
-  
+
   (* solve remaining goals one by one *)
   { eapply (compile_ext_call_correct (funname_env_ok:=SortedListString.ok)). }
   { intros. cbv [compile_ext_call compile_interact].
     repeat (destruct_one_match; try reflexivity). }
   { apply valid_funs_funcs. }
   { lazy. repeat constructor; cbn [In]; intuition idtac; congruence. }
-  { unfold funcs. 
+  { unfold funcs.
     (* montladder is not at the front of the function list; remove everything
        that doesn't match the name *)
     prepare_call.
@@ -260,7 +261,7 @@ Proof.
     { eapply fe25519_copy_correct. }
     { eapply fe25519_from_word_correct. }
     {
-      cbv [LadderStep.spec_of_ladderstep]; intros. 
+      cbv [LadderStep.spec_of_ladderstep]; intros.
       prepare_call. rewrite ladderstep_defn.
       eapply @LadderStep.ladderstep_correct; try (typeclasses eauto).
       { apply Signature.field_representation_ok.
@@ -282,7 +283,7 @@ Proof.
     { repeat (apply peel_func_unop; [ lazy; congruence | ]).
       apply fe25519_mul_correct. }
     { ssplit; try eassumption; [ ].
-      lazymatch goal with H : length Kbytes = _ |- _ => rewrite H end. 
+      lazymatch goal with H : length Kbytes = _ |- _ => rewrite H end.
       lazy; congruence. } }
   { assumption. }
   { assumption. }
