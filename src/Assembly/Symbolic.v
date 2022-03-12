@@ -13,6 +13,7 @@ Require Import Crypto.Util.ZUtil.Land.
 Require Import Crypto.Util.ZUtil.Ones.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ListUtil.Concat.
 Require Import Crypto.Util.ListUtil.GroupAllBy.
 Require Import Crypto.Util.ListUtil.FoldMap. Import FoldMap.List.
 Require Import Crypto.Util.ListUtil.IndexOf. Import IndexOf.List.
@@ -1689,9 +1690,70 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma interp_op_combines_to_idempotent_rev G o o' (H : combines_to o = Some o') xs vxs
+  : interp_op G o' xs = Some vxs -> interp_op G o [vxs] = Some vxs.
+Proof.
+  destruct o; cbv [combines_to] in *; inversion_option; subst; cbn [interp_op fold_right]; intros; inversion_option; subst.
+  all: autorewrite with zsimplify_const.
+  all: apply f_equal; try reflexivity.
+  rewrite ?Z.land_ones by lia; push_Zmod; pull_Zmod.
+  reflexivity.
+Qed.
+
+Lemma interp_op_combines_to_singleton_same_size G o o' (H : combines_to o = Some o') v
+  : interp_op G o [v] = interp_op G o' [v].
+Proof.
+  destruct o; cbv [combines_to] in *; inversion_option; subst; cbn [interp_op fold_right]; intros; inversion_option; subst.
+  all: autorewrite with zsimplify_const.
+  all: reflexivity.
+Qed.
+
+(* a more general version useful for us *)
+Lemma combines_to_correct_or o o' v G xs vxs xsv
+      (Ho : associative o = true)
+      (Ho' : op_always_interps o = true)
+      (H : combines_to o = Some o')
+      (H' : Forall2 (fun x vx => interp_op G o' [v; x] = Some vx \/ interp_op G o' [v; x] = interp_op G o' [vx]) xs vxs)
+      (H'' : interp_op G o xs = Some xsv)
+  : interp_op G o' [v; xsv] = interp_op G o vxs.
+Proof.
+  rewrite <- (List.concat_map_singleton vxs).
+  rewrite interp_op_associative_spec_concat, map_map by assumption.
+  rewrite Option.List.bind_list_cps_id, <- Option.List.eq_bind_list_lift; cbv [Crypto.Util.Option.bind]; break_match; revgoals.
+  { exfalso.
+    let H := match goal with H : _ = None |- _ => H end in
+    revert H; clear -Ho Ho'.
+    cbv [Option.List.lift].
+    induction vxs as [|?? IH]; cbn; cbv [Crypto.Util.Option.bind] in *; break_match; try congruence.
+    intro; eapply interp_op_always_interps; eassumption. }
+  eapply combines_to_correct; try eassumption.
+  let l := match goal with |- Forall2 _ _ ?l => l end in
+  revert dependent xsv; revert dependent l.
+  cbv [Option.List.lift] in *.
+  induction H'; cbn [List.map fold_right]; intros [|z xs]; intros; cbv [Crypto.Util.Option.bind] in *; break_match_hyps.
+  all: inversion_option; inversion_list; subst; constructor.
+  all: repeat first [ break_innermost_match_hyps_step
+                    | progress inversion_option
+                    | progress subst
+                    | assumption
+                    | match goal with
+                      | [ H : forall x, Some _ = Some x -> _ |- _ ] => specialize (H _ eq_refl)
+                      | [ H : context[?x :: ?l] |- _ ]
+                        => is_var x; is_var l; change (x :: l) with ([x] ++ l) in *;
+                           rewrite interp_op_associative_app_bind in H by assumption;
+                           cbv [Crypto.Util.Option.bind] in H
+                      | [ H : context[interp_op _ _ [_] ] |- _ ] => erewrite interp_op_combines_to_idempotent_rev in H by eassumption
+                      end
+                    | progress destruct_head'_or
+                    | erewrite interp_op_combines_to_singleton_same_size in * by eassumption
+                    | congruence ].
+Qed.
+
 Lemma combines_to_correct_alt G d o o' xs ys i z z1 e
       (Ho : combines_to o = Some o')
       (Hi : identity o' = Some i)
+      (Ha : associative o = true)
+      (Hai : op_always_interps o = true)
       (H : Forall2 (fun x y => exists v', eval G d e v' /\ (interp_op G o' [v'; x] = Some y \/ (x = i /\ (y = v' \/ interp_op G o' [v'] = Some y)))) xs ys)
       (H' : interp_op G o ys = Some z1)
       (Hz : interp_op G o xs = Some z)
@@ -1708,21 +1770,17 @@ Proof.
   { eexists [_]; eapply interp_op_combines_to_idempotent; eassumption. }
   { assumption. }
   { rewrite <- H'.
-    eapply combines_to_correct; try eassumption.
+    eapply combines_to_correct_or; try eassumption.
     clear z1 z H' Hz Hnonempty.
     induction H; constructor; eauto.
     repeat (destruct_head'_ex; destruct_head'_and; destruct_head'_or).
     all: repeat (step; eauto; []); subst; eauto.
-    all: erewrite interp_op_drop_identity by eassumption; cbn [filter]; cbv [negb]; break_innermost_match; reflect_hyps; subst.
+    all: erewrite @interp_op_drop_identity in * by eassumption; cbn [filter] in *; cbv [negb] in *; break_innermost_match; break_innermost_match_hyps;
+      reflect_hyps; subst.
     all: try congruence.
-    all: try now apply interp_op_nil_is_identity.
-    all: try solve [ erewrite interp_op_drop_identity in * by eassumption; cbn [filter] in *; cbv [negb] in *; break_innermost_match_hyps; reflect_hyps; subst;
-                     try assumption; try congruence ].
-    (* fixme bounds *)
-    shelve. }
-  Unshelve. all: shelve_unifiable.
-  all: warn_if_goals_remain ().
-Admitted.
+    all: try now (idtac + left); apply interp_op_nil_is_identity.
+    all: eauto. }
+Qed.
 
 Lemma combine_consts_helper o o' G d ls args i
       (H : Forall2
