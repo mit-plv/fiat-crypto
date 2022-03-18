@@ -40,6 +40,7 @@ Require Import Crypto.Util.ZUtil.LandLorBounds.
 Require Import Crypto.Util.ZUtil.Tactics.PeelLe.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.RevertUntil.
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.PrintContext.
@@ -348,11 +349,9 @@ Proof.
   now apply Hreg.
 Qed.
 
-Lemma get_reg_bounded mr regs
-  : Forall (fun v : Z => (0 <= v < 2 ^ 64)%Z)
-           (List.map (Semantics.get_reg mr) regs).
+Lemma get_reg_bounded mr reg
+  : (0 <= Semantics.get_reg mr reg < 2 ^ 64)%Z.
 Proof.
-  rewrite Forall_map, Forall_forall; intros reg ?.
   assert ((reg_size reg <= 64)%N)
     by now clear; destruct reg; cbv [reg_index reg_size]; lia.
   cbv [Semantics.get_reg index_and_shift_and_bitcount_of_reg] in *.
@@ -362,6 +361,13 @@ Proof.
     [ rewrite Z.land_comm; apply Z.land_le; intros; apply Z.ones_nonneg
     | rewrite Z.ones_equiv, Z.lt_pred_le; Z.peel_le ];
     lia.
+Qed.
+
+Lemma get_reg_bounded_Forall mr regs
+  : Forall (fun v : Z => (0 <= v < 2 ^ 64)%Z)
+           (List.map (Semantics.get_reg mr) regs).
+Proof.
+  rewrite Forall_map, Forall_forall; intros; apply get_reg_bounded.
 Qed.
 
 Lemma load_eval_R_mem_eval G d idx idx' mem_st m' frame
@@ -481,16 +487,16 @@ Proof.
                  end ].
 Qed.
 
-Lemma R_regs_preserved_fold_left_set_reg_index {T} G d rs rs' rm (r_idxs : list (_ * (_ + _ * T)))
+Lemma R_regs_preserved_fold_left_set_reg_index {T1 T2} G d rs rs' rm (r_idxs : list (_ * (_ * T1 + _ * T2)))
       (H : R_regs_preserved G d rm rs rs')
-      (H_same : Forall (fun '(r, v) => let v := match v with inl v => v | inr (v, _) => v end in exists idx, Symbolic.get_reg rs (reg_index r) = Some idx /\ let v' := R_regs_preserved_v (reg_index r) rm in eval_idx_Z G d idx v' -> eval_idx_Z G d v v') r_idxs)
+      (H_same : Forall (fun '(r, v) => let v := match v with inl (v, _) => v | inr (v, _) => v end in exists idx, Symbolic.get_reg rs (reg_index r) = Some idx /\ let v' := R_regs_preserved_v (reg_index r) rm in eval_idx_Z G d idx v' -> eval_idx_Z G d v v') r_idxs)
   : R_regs_preserved
       G d rm
       rs
       (fold_left (fun rst '(r, idx')
                   => Symbolic.set_reg rst (reg_index r)
                              match idx' with
-                             | inl idx' => idx'
+                             | inl (idx', _) => idx'
                              | inr (base_idx', idxs') => base_idx'
                              end)
                  r_idxs rs').
@@ -531,16 +537,16 @@ Lemma Forall2_R_regs_preserved_same_helper G d reg_available idxs m rs
                let
                  '(_, _, sz) := index_and_shift_and_bitcount_of_reg reg in
                sz = 64%N) reg_available)
-      (H : Forall2 (fun (idx' : idx + idx * list idx) v
+      (H : Forall2 (fun (idx' : idx * option idx + idx * list idx) v
                     => match idx' with
-                       | inl idx' => eval_idx_Z G d idx' (Z.land v (Z.ones 64))
+                       | inl (idx', _) => eval_idx_Z G d idx' (Z.land v (Z.ones 64))
                        | inr (base', _) => eval_idx_Z G d base' (Z.land v (Z.ones 64))
                        end)
                    idxs (firstn (List.length idxs) (get_asm_reg m reg_available)))
       (HR : R_regs G d rs m)
       (Hex : forall n r, (n < List.length idxs)%nat -> nth_error reg_available n = Some r -> exists idx, Symbolic.get_reg rs (reg_index r) = Some idx)
   : Forall (fun '(r, v)
-            => let v := match v with inl v => v | inr (v, _) => v end in
+            => let v := match v with inl (v, _) => v | inr (v, _) => v end in
                exists idx, Symbolic.get_reg rs (reg_index r) = Some idx
                            /\ let v' := R_regs_preserved_v (reg_index r) m in eval_idx_Z G d idx v' -> eval_idx_Z G d v v')
            (List.combine reg_available idxs).
@@ -1710,18 +1716,18 @@ Proof.
                     | constructor ].
 Qed.
 
-Lemma eq_lift_to_Forall2_rets {A} mem_st idxs (rets : list (A + _))
+Lemma eq_lift_to_Forall2_rets mem_st idxs rets
       (Hrets : Some rets
                = Option.List.lift
                    (List.map (fun idxs
                               => match idxs : idx + list idx with
                                  | inr idxs => option_map inr (Option.List.lift (List.map (fun a => load a mem_st) idxs))
-                                 | inl idx => None (* Some (inl idx) ?? *)
+                                 | inl idx => Some (inl idx)
                                  end)
                              idxs))
   : Forall2 (fun rv idxs
              => match idxs, rv with
-                | inl idx, inl _ => False
+                | inl idx, inl v => idx = v
                 | inr idxs, inr rets => Forall2 (fun rv idx => load idx mem_st = Some rv) rets idxs
                 | inl _, inr _ | inr _, inl _ => False
                 end)
@@ -1742,16 +1748,100 @@ Proof.
                     | constructor ].
 Qed.
 
+Local Ltac revert_Forall_step ls :=
+  match goal with
+  | [ H : Forall2 _ ls _ |- _ ] => revert H
+  | [ H : Forall2 _ _ ls |- _ ] => revert H
+  | [ H : Forall _ ls |- _ ] => revert H
+  end.
+
+Local Ltac revert_Foralls :=
+  repeat match goal with
+         | [ |- context[Forall2 _ ?ls _] ]
+           => revert_Forall_step ls
+         | [ |- context[Forall2 _ _ ?ls] ]
+           => revert_Forall_step ls
+         | [ |- context[Forall _ ?ls] ]
+           => revert_Forall_step ls
+         end.
+
+Local Ltac intros_then_revert tac :=
+  let H := fresh in
+  pose proof I as H;
+  intros;
+  tac ();
+  revert_until H;
+  clear H.
+
+Local Ltac revert_Foralls_to_nth_error :=
+  revert_Foralls;
+  rewrite ?@Forall2_forall_iff_nth_error, ?@Forall_forall_iff_nth_error_match;
+  cbv [option_eq];
+  intros_then_revert
+    ltac:(fun _
+          => repeat match goal with
+                    | [ H : context[nth_error ?ls _] |- context[nth_error ?ls ?i] ]
+                      => specialize (H i)
+                    | [ H : context[nth_error ?ls _], H' : context[nth_error ?ls ?i] |- _ ]
+                      => specialize (H i)
+                    end).
+
+Ltac adjust_Foralls_firstn_skipn :=
+  let rep a a' :=
+    tryif constr_eq a a'
+    then idtac
+    else (let H' := fresh in
+          assert (H' : a' = a) by congruence;
+          rewrite H' in * ) in
+  let check_H H :=
+    lazymatch type of H with
+    | Forall _ _ => idtac
+    | Forall2 _ _ _ => idtac
+    end in
+  repeat match goal with
+         | [ H : context[firstn ?n ?ls] |- context[firstn ?n' ?ls] ]
+           => check_H H; progress rep n n'
+         | [ H : context[skipn ?n ?ls] |- context[skipn ?n' ?ls] ]
+           => check_H H; progress rep n n'
+         end.
+
+Local Ltac Foralls_to_nth_error :=
+  revert_Foralls_to_nth_error;
+  intros *;
+  repeat rewrite ?@nth_error_combine, ?@nth_error_firstn, ?@nth_error_map, ?@nth_error_seq; cbv [option_map];
+  break_innermost_match;
+  intros_then_revert
+    ltac:(fun _
+          => repeat first [ assumption
+                          | exact I
+                          | exfalso; assumption
+                          | progress subst
+                          | progress inversion_option ]).
+
+Local Ltac handle_eval_eval :=
+  repeat match goal with
+         | [ H : eval_idx_Z _ _ ?i _, H' : eval_idx_Z _ _ ?i _ |- _ ]
+           => eapply eval_eval_idx_Z in H'; [ | eapply lift_eval_idx_Z_impl; [ | exact H ]; now eauto ]
+         | [ H : eval _ _ ?i ?v, H' : eval _ _ ?i ?v' |- _ ]
+           => eapply (@eval_eval _ _ _ v) in H'; [ | now eauto ]
+         end.
+
 Import Coq.Strings.String.
 Import Coq.Lists.List.
 Import Crypto.Util.Option.
 Axiom TODO : string -> Prop.
 Axiom todo : forall s, TODO s.
-Lemma Forall2_rets_of_R_mem {A} G frame d mem_st m' idxs base_len_base_vals rets
+Lemma Forall2_rets_of_R_mem {A} G frame d s mem_st m' idxs base_len_base_vals rets
       (Hbase : Forall2 (fun idxs '((base, len), base_val)
-                        => match idxs, (base:option A), len with
-                           | inr idxs, Some base, Some len
+                        => match idxs, (base : _ + A), len with
+                           | inr idxs, inr base, Some len
                              => Forall2 (eval_idx_Z G d) idxs (List.map (fun i => Z.land (base_val + 8 * Z.of_nat i) (Z.ones 64)) (seq 0 len))
+                           | inl idx, inl (inl r), None
+                             => (exists idx',
+                                    get_reg s (reg_index r) = Some idx'
+                                    /\ forall v, eval_idx_Z G d idx v -> eval_idx_Z G d idx' v)
+                           | inl idx, inl (inr addr), None
+                             => idx = addr
                            | _, _, _ => False
                            end)
                        idxs
@@ -1762,7 +1852,7 @@ Lemma Forall2_rets_of_R_mem {A} G frame d mem_st m' idxs base_len_base_vals rets
                    (List.map (fun idxs
                               => match idxs : idx + list idx with
                                  | inr idxs => option_map inr (Option.List.lift (List.map (fun a => load a mem_st) idxs))
-                                 | inl idx => None (* Some (inl idx) ?? *)
+                                 | inl idx => Some (inl idx)
                                  end)
                              idxs))
   : exists runtime_rets,
@@ -1795,7 +1885,8 @@ Proof.
                     | progress break_match_hyps
                     | now eexists nil; split; auto using todo
                     | now eexists (inr _ :: _); eauto ].
-Qed.
+  (* TODO FIXME *)
+Admitted.
 
 Local Lemma connect_Forall2_app_connect {A B C R1 R2 R3 R4 ls1 ls1' ls2 ls2' ls3}
       (H1 : @Forall2 A B R1 ls1 ls1')
@@ -1957,22 +2048,6 @@ Local Ltac clear_Prop :=
               end
          end.
 
-Local Ltac revert_Forall_step ls :=
-  match goal with
-  | [ H : Forall2 _ ls _ |- _ ] => revert H
-  | [ H : Forall2 _ _ ls |- _ ] => revert H
-  | [ H : Forall _ ls |- _ ] => revert H
-  end.
-
-Local Ltac revert_Foralls :=
-  repeat match goal with
-         | [ |- context[Forall2 _ ?ls _] ]
-           => revert_Forall_step ls
-         | [ |- context[Forall2 _ _ ?ls] ]
-           => revert_Forall_step ls
-         | [ |- context[Forall _ ?ls] ]
-           => revert_Forall_step ls
-         end.
 Theorem symex_asm_func_M_correct
         d frame asm_args_out asm_args_in (G : symbol -> option Z) (s := init_symbolic_state d)
         (s' : symbolic_state) (m : machine_state) (output_types : type_spec) (stack_size : nat) (stack_base : Naive.word 64)
@@ -2061,7 +2136,7 @@ Proof.
                  | [ H : build_merge_base_addresses _ _ _ = _ |- exists m' : machine_state, _ ]
                    => debug_run ltac:(fun _ => idtac "build_merge_base_addresses start");
                       move H at bottom;
-                      eapply build_merge_base_addresses_ok
+                      eapply @build_merge_base_addresses_ok
                         with (runtime_reg := runtime_reg (*get_asm_reg m reg_available*))
                         in H;
                       [
@@ -2136,7 +2211,7 @@ Proof.
                       | lazymatch goal with
                         | [ |- Forall (fun v : Z => (0 <= v < 2 ^ 64)%Z)
                                       (List.map (Semantics.get_reg _) _) ]
-                          => apply get_reg_bounded
+                          => apply get_reg_bounded_Forall
                         | _ => idtac
                         end;
                         repeat first [ assumption
@@ -2196,10 +2271,32 @@ Proof.
                       eapply LoadOutputs_ok in H;
                       [ | clear H; try eassumption .. ];
                       [
-                      | match goal with
-                        | [ |- Forall2 _ (firstn _ _) _ ]
+                      | lazymatch goal with
+                        | [ H : @Forall2 _ Z _ ?outputaddrs ?runtime_reg |- Forall2 _ (firstn ?nv ?outputaddrs) ?eruntime_reg ]
                           => eapply Forall2_firstn;
+                             unify eruntime_reg (firstn nv runtime_reg);
                              eapply Forall2_weaken; [ | eassumption ]; cbv beta; intros *; break_innermost_match; eauto using lift_eval_idx_Z_impl
+                        | [ H : Forall2 _ ?ls (firstn ?nv ?reg_available) |- Forall _ (firstn _ ?ls) ]
+                          => apply Forall_firstn;
+                             eapply @Forall_firstn with (n:=nv) in Hreg_wide_enough;
+                             subst;
+                             cbv [Option.is_Some get_asm_reg] in *;
+                             Foralls_to_nth_error; try discriminate;
+                             intros; destruct_head'_and;
+                             cbv [index_and_shift_and_bitcount_of_reg] in *; inversion_pair; subst;
+                             split; eauto; [];
+                             destruct_head' symbolic_state;
+                             cbn [update_dag_with Symbolic.dag_state Symbolic.symbolic_flag_state Symbolic.symbolic_mem_state Symbolic.symbolic_reg_state] in *;
+                             subst;
+                             let H := fresh in
+                             eexists; intros ? H;
+                             eapply get_reg_R_regs in H;
+                             [ erewrite <- Semantics_get_reg_eq_nth_default_of_R in H by eassumption;
+                               destruct_head'_ex; destruct_head'_and; subst;
+                               rewrite Z.land_ones by (clear; lia);
+                               rewrite Z.mod_small; [ eapply lift_eval_idx_Z_impl; [ | eassumption ]; eauto | ];
+                               apply get_reg_bounded
+                             | cbv [R update_dag_with] in *; destruct_head'_and; eassumption ]
                         end .. ];
                       [];
                       debug_run ltac:(fun _ => idtac "LoadOutputs end")
@@ -2357,6 +2454,8 @@ Proof.
        do 2 (tac ();
              repeat first [ progress saturate_lengths
                           | progress adjust_firstn_skipns ]).
+  (* FIXME: this is old from before the adjustment to dereference_scalar *)
+  (*
   all: rewrite !(R_mem_flat_map_ex_R_list_scalar_or_array_iff_emp (dereference_scalar:=false));
        [
        | lazymatch goal with
@@ -2684,7 +2783,7 @@ OR:
   eval_idx_Z G_final dag_state0 i3 z -> z = z0
 
 *)
-
+*)
 Admitted.
 
 Theorem symex_asm_func_correct

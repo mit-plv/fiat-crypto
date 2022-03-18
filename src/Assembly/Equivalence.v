@@ -122,7 +122,7 @@ printing functions on command-lines options indicating how verbose to
 be in printing the error message. *)
 Inductive EquivalenceCheckingError :=
 | Symbolic_execution_failed (_ : Symbolic.error) (_ : symbolic_state)
-| Internal_error_output_load_failed (_ : list (option idx)) (_ : symbolic_state)
+| Internal_error_output_load_failed (_ : list ((REG + idx) + idx)) (_ : symbolic_state)
 | Internal_error_extra_input_arguments (t : API.type) (unused_arguments : list (idx + list idx))
 | Not_enough_registers (num_given num_extra_needed : nat)
 | Registers_too_narrow (bad_reg : list REG)
@@ -628,18 +628,24 @@ Definition build_merge_array_addresses (base : idx) (items : list idx) : M (list
               (fun s => Success (addr, update_mem_with s (cons (addr,idx)))))
           )%x86symex (List.enumerate items).
 
-Fixpoint build_merge_base_addresses (items : list (idx + list idx)) (reg_available : list REG) : M (list (option idx))
+Fixpoint build_merge_base_addresses {dereference_scalar:bool} (items : list (idx + list idx)) (reg_available : list REG) : M (list ((REG + idx) + idx))
   := match items, reg_available with
      | [], _ | _, [] => Symbolic.ret []
      | inr idxs :: xs, r :: reg_available
        => (base <- SetRegFresh r; (* note: overwrites initial value *)
            addrs <- build_merge_array_addresses base idxs; (* note: overwrites initial value *)
-           rest <- build_merge_base_addresses xs reg_available;
-           Symbolic.ret (Some base :: rest))
+           rest <- build_merge_base_addresses (dereference_scalar:=dereference_scalar) xs reg_available;
+           Symbolic.ret (inr base :: rest))
      | inl idx :: xs, r :: reg_available =>
-          (_ <- SetReg r idx; (* note: overwrites initial value *)
-           rest <- build_merge_base_addresses xs reg_available;
-           Symbolic.ret (None :: rest))
+          (addr <- (if dereference_scalar
+                    then
+                      (addr <- SetRegFresh r;
+                       fun s => Success (inr addr, update_mem_with s (cons (addr, idx))))
+                    else
+                      (_ <- SetReg r idx; (* note: overwrites initial value *)
+                       ret (inl r)));
+           rest <- build_merge_base_addresses (dereference_scalar:=dereference_scalar) xs reg_available;
+           Symbolic.ret (inl addr :: rest))
      end%N%x86symex.
 
 Fixpoint dag_gensym_n (n : nat) : dag.M (list symbol) :=
@@ -1057,12 +1063,15 @@ Definition init_symbolic_state (d : dag) : symbolic_state
        symbolic_flag_state := Tuple.repeat None 6;
      |}.
 
+Definition compute_stack_base (stack_size : nat) : M idx
+  := (rsp_val <- SetRegFresh rsp;
+      stack_size <- Symbolic.App (zconst 64 (-8 * Z.of_nat stack_size), []);
+      Symbolic.App (add 64%N, [rsp_val; stack_size]))%x86symex.
+
 Definition build_merge_stack_placeholders (stack_size : nat)
   : M unit
   := (stack_placeholders <- lift_dag (build_inputarray stack_size);
-      rsp_val <- SetRegFresh rsp;
-      stack_size <- Symbolic.App (zconst 64 (-8 * Z.of_nat stack_size), []);
-      stack_base <- Symbolic.App (add 64%N, [rsp_val; stack_size]);
+      stack_base <- compute_stack_base stack_size;
       _ <- build_merge_array_addresses stack_base stack_placeholders;
       ret tt)%x86symex.
 
@@ -1072,15 +1081,24 @@ Definition LoadArray (base : idx) (len : nat) : M (list idx)
               Load64 addr)%x86symex)
           (seq 0 len).
 
-Definition LoadOutputs (outputaddrs : list (option idx)) (output_types : type_spec)
+Definition LoadOutputs {dereference_scalar:bool} (outputaddrs : list ((REG + idx) + idx)) (output_types : type_spec)
   : M (list (idx + list idx))
-  := (asm_output <- mapM (fun '(ocells, spec) =>
+  := (mapM (fun '(ocells, spec) =>
             match ocells, spec with
-            | None, None | None, Some _ | Some _, None => err (error.load 0)
-            | Some base, Some len
-              => LoadArray base len
-            end) (List.combine outputaddrs output_types);
-      Symbolic.ret (List.map inr asm_output))%N%x86symex.
+            | inl _, Some _ | inr _, None => err (error.load 0)
+            | inl addr, None
+              => (v <- match addr, dereference_scalar with
+                       | inl r, false
+                         => GetReg r
+                       | inr addr, true
+                         => Load64 addr
+                       | inl _, true | inr _, false => err (error.load 0)
+                       end;
+                  ret (inl v))
+            | inr base, Some len
+              => (v <- LoadArray base len;
+                  ret (inr v))
+            end) (List.combine outputaddrs output_types))%N%x86symex.
 
 Definition symex_asm_func_M
            (callee_saved_registers : list REG)
@@ -1088,15 +1106,15 @@ Definition symex_asm_func_M
            (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
   : M (ErrorT EquivalenceCheckingError (list (idx + list idx)))
   := (output_placeholders <- lift_dag (build_inputs output_types);
-      argptrs <- build_merge_base_addresses (output_placeholders ++ inputs) reg_available;
+      argptrs <- build_merge_base_addresses (dereference_scalar:=false) (output_placeholders ++ inputs) reg_available;
       _ <- build_merge_stack_placeholders stack_size;
       initial_register_values <- mapM GetReg callee_saved_registers;
       _ <- SymexLines asm;
       final_register_values <- mapM GetReg callee_saved_registers;
       let unsaved_registers : list (REG * (idx * idx)) := List.filter (fun '(r, (init, final)) => negb (init =? final)%N) (List.combine callee_saved_registers (List.combine initial_register_values final_register_values)) in
-      let outputaddrs : list (option idx) := firstn (length argptrs - length inputs) argptrs in
+      let outputaddrs : list (_ + idx) := firstn (length argptrs - length inputs) argptrs in
       (* In the following line, we match on the result so we can emit Internal_error_output_load_failed in the calling function, rather than passing through the placeholder error from LoadOutputs *)
-      (fun s => match LoadOutputs outputaddrs output_types s, unsaved_registers with
+      (fun s => match LoadOutputs (dereference_scalar:=false) outputaddrs output_types s, unsaved_registers with
                 | Success (asm_output, s), []
                   => Success (Success asm_output, s)
                 | Error (_, s), _
