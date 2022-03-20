@@ -23,6 +23,7 @@ Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.FoldMap.
 Require Import Crypto.Util.ListUtil.Forall.
+Require Import Crypto.Util.ListUtil.StdlibCompat.
 Require Import Crypto.Util.ListUtil.IndexOf.
 Require Import Crypto.Util.ListUtil.Split.
 Require Import Crypto.Util.OptionList.
@@ -359,9 +360,10 @@ Proof using Type.
   all : match goal with
         | |- context[eval _ _ _ _] => idtac (* solve below *)
         | _ => solve [ repeat first [ solve [ eauto using length_Forall2, Forall.Forall2_firstn, Forall.Forall2_skipn, Forall.Forall2_combine, Forall2_app, Forall2_rev ]
-                                | rewrite Forall2_eq
-                                | rewrite Forall.Forall2_repeat_iff
-                                | now apply Forall.Forall2_forall_iff'' ] ] end.
+                                    | eapply Forall.Forall2_combine; [ | eassumption .. ]; eauto
+                                    | rewrite Forall2_eq
+                                    | rewrite Forall.Forall2_repeat_iff
+                                    | now apply Forall.Forall2_forall_iff'' ] ] end.
   all: match goal with (* eval_same_expr_goal *)
         | |- eval G ?d ?e ?v =>
             match goal with
