@@ -400,6 +400,7 @@ src/Util/Tactics/PoseTermWithName.v
 src/Util/Tactics/PrintContext.v
 src/Util/Tactics/PrintGoal.v
 src/Util/Tactics/Revert.v
+src/Util/Tactics/RevertUntil.v
 src/Util/Tactics/RewriteHyp.v
 src/Util/Tactics/RunTacticAsConstr.v
 src/Util/Tactics/SetEvars.v
