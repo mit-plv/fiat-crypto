@@ -456,8 +456,8 @@ Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list i
 Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheckingError
   := fun err => match err with
                 | Symbolic_execution_failed l r
-                  => ["Symbolic execution failed: " ++ show l]%string ++ ["Combined state:"] ++ show_lines r
-                | Internal_error_output_load_failed l r => ["Internal error. Output load failed: " ++ show l]%string ++ ["Combined state:"] ++ show_lines r
+                  => ["In combined state:"] ++ show_lines r ++ ["Symbolic execution failed:"] ++ show_lines l
+                | Internal_error_output_load_failed l r => ["In combined state:"] ++ show_lines r ++ ["Internal error. Output load failed: " ++ show l]%string
                 | Internal_error_extra_input_arguments t unused_arguments
                   => ["Internal error. Too many input arguments for type " ++ show t ++ ". Unused arguments: " ++ show unused_arguments]%string
                 | Not_enough_registers num_given num_extra_needed
@@ -513,7 +513,7 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                 | Missing_ret
                   => ["Missing 'ret' at the end of the function"]
                 | Code_after_ret significant l
-                  => ["Code after ret:"; "In:"] ++ show_lines l ++ ["Found instructions:"] ++ show_lines significant
+                  => ["Code after ret:"; "In:"] ++ show_lines l ++ ["Found instructions after ret:"] ++ show_lines significant
                 end%list.
 Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
   := fun err => String.concat String.NewLine (show_lines err).
@@ -1085,14 +1085,14 @@ Definition LoadOutputs {dereference_scalar:bool} (outputaddrs : list ((REG + idx
   : M (list (idx + list idx))
   := (mapM (fun '(ocells, spec) =>
             match ocells, spec with
-            | inl _, Some _ | inr _, None => err (error.load 0)
+            | inl _, Some _ | inr _, None => err (error.unsupported_memory_access_size 0)
             | inl addr, None
               => (v <- match addr, dereference_scalar with
                        | inl r, false
                          => GetReg r
                        | inr addr, true
                          => Load64 addr
-                       | inl _, true | inr _, false => err (error.load 0)
+                       | inl _, true | inr _, false => err (error.unsupported_memory_access_size 0)
                        end;
                   ret (inl v))
             | inr base, Some len
