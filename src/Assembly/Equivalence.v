@@ -166,6 +166,10 @@ Definition show_expr_node_lite : Show Symbolic.expr
          => "(" ++ show op ++ ", " ++ @show_list _ show_expr_node_lite e ++ ")"
        end%string.
 
+Definition show_node_lite : Show (node idx)
+  := fun '(op, e)
+     => show_expr_node_lite (ExprApp (op, List.map ExprRef e)).
+
 Fixpoint explain_array_unification_error_single
          (singular plural : string)
          (left_descr right_descr : string)
@@ -286,6 +290,7 @@ Fixpoint make_iteratively_revealed_exprs
      end.
 
 Definition describe_idx_from_state
+           (show_full : bool)
            (st : symbolic_state) (idx : idx) : list string
   := let description_from_state
        := match reverse_lookup_widest_reg st.(symbolic_reg_state) idx, reverse_lookup_flag st.(symbolic_flag_state) idx, reverse_lookup_mem st.(symbolic_mem_state) idx with
@@ -298,15 +303,19 @@ Definition describe_idx_from_state
                    | ExprApp (old _ _, _) => true
                    | _ => false
                    end in
-     let old_descr
-       := match is_old, description_from_state with
-          | true, Some descr
-            => [show idx ++ " is " ++ descr ++ "."]
-          | true, None
-            => [show idx ++ " is a special value no longer present in the symbolic machine state at the end of execution."]
-          | _, _ => []
-          end%string in
-     old_descr.
+     match is_old, description_from_state, show_full with
+     | true, Some descr, _
+     | _, Some descr, true
+       => [show idx ++ " is " ++ descr ++ "."]
+     | true, None, _
+       => [show idx ++ " is a special value no longer present in the symbolic machine state at the end of execution."]
+     | _, _, false => []
+     | _, None, true
+       => [show idx ++ " is " ++ match List.nth_error st.(dag_state) (N.to_nat idx) with
+                                 | Some e => show_node_lite e
+                                 | None => "not in the dag"
+                                 end]
+     end%string.
 
 Definition iteratively_explain_array_unification_error_modulo_commutativity
            (dag : dag)
@@ -345,6 +354,21 @@ Definition iteratively_explain_array_unification_error_modulo_commutativity
        ++ (List.flat_map
              describe_idx
              (indices_at_leaves_map (last_asm ++ last_PHOAS))).
+
+Definition iteratively_describe_idx
+           (dag : dag)
+           (describe_idx : idx -> list string)
+           (show_initial : bool)
+           (i : idx)
+  : list string
+  := let deps := recursive_deps_list (S (List.length dag)) dag NSet.empty [i] in
+     let deps := if show_initial then NSet.add i deps else deps in
+     let deps := List.rev (N.sort (NSet.elements deps)) in
+     List.flat_map describe_idx deps.
+
+Definition describe_full_idx_from_state (st : symbolic_state) (i : idx)
+  : list string
+  := iteratively_describe_idx st (describe_idx_from_state true st) true i.
 
 Definition explain_array_unification_error
            (dag : dag)
@@ -386,8 +410,8 @@ Definition explain_array_unification_error
 Definition explain_mismatch_from_state
            (left_descr right_descr : string)
            (st : symbolic_state) (asm_idx PHOAS_idx : idx) : list string
-  := ((describe_idx_from_state (*left_descr*) st asm_idx)
-        ++ (describe_idx_from_state (*right_descr*) st PHOAS_idx))%list.
+  := ((describe_idx_from_state false (*left_descr*) st asm_idx)
+        ++ (describe_idx_from_state false (*right_descr*) st PHOAS_idx))%list.
 
 Fixpoint explain_idx_unification_error
          (left_descr right_descr : string)
@@ -402,8 +426,6 @@ Fixpoint explain_idx_unification_error
           | Some n => show n
           | None => show_expr_node_lite (ExprRef idx)
           end in
-     let show_node_lite '(op, e)
-       := show_expr_node_lite (ExprApp (op, List.map ExprRef e)) in
      let reveal_show_node '(op, e)
        := ("(" ++ show op ++ ", " ++ @show_list _ reveal_show_idx e ++ ")")%string in
      match reveal_idx asm_idx, reveal_idx PHOAS_idx with
@@ -416,7 +438,7 @@ Fixpoint explain_idx_unification_error
      | Some ((asm_o, asm_e) as asm), Some ((PHOAS_o, PHOAS_e) as PHOAS)
        => (([show_node_lite asm ++ " != " ++ show_node_lite PHOAS]%string)
              ++ (if Decidable.dec (asm_o = PHOAS_o)
-                 then explain_array_unification_error st "argument" "arguments" left_descr right_descr recr (describe_idx_from_state st) (Some asm_o) asm_e PHOAS_e
+                 then explain_array_unification_error st "argument" "arguments" left_descr right_descr recr (describe_idx_from_state false st) (Some asm_o) asm_e PHOAS_e
                  else (([reveal_show_node asm ++ " != " ++ reveal_show_node PHOAS
                          ; "Operation mismatch: " ++ show asm_o ++ " != " ++ show PHOAS_o]%string)
                          ++ explain_mismatch_from_state left_descr right_descr st asm_idx PHOAS_idx)%list))%list
@@ -448,7 +470,7 @@ Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list i
                | inr asm_idxs, inr PHOAS_idxs
                  => ([prefix ++ " " ++ @show_list _ show_expr_node_lite (List.map ExprRef asm_idxs) ++ " != " ++ @show_list _ show_expr_node_lite (List.map ExprRef PHOAS_idxs)]%string)
                       ++ (explain_array_unification_error
-                            st "array" "arrays" "assembly" "synthesized" (explain_idx_unification_error "assembly" "synthesized" st fuel) (describe_idx_from_state st) None
+                            st "array" "arrays" "assembly" "synthesized" (explain_idx_unification_error "assembly" "synthesized" st fuel) (describe_idx_from_state false st) None
                             asm_idxs PHOAS_idxs)
                end%list
      end%string%list.
@@ -456,7 +478,14 @@ Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list i
 Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheckingError
   := fun err => match err with
                 | Symbolic_execution_failed l r
-                  => ["In combined state:"] ++ show_lines r ++ ["Symbolic execution failed:"] ++ show_lines l
+                  => ["In combined state:"]
+                       ++ show_lines r ++ ["Symbolic execution failed:"] ++ show_lines l
+                       ++ match l with
+                          | error.load idx s
+                          | error.store idx _ s
+                            => describe_full_idx_from_state s idx
+                          | _ => []
+                          end
                 | Internal_error_output_load_failed l r => ["In combined state:"] ++ show_lines r ++ ["Internal error. Output load failed: " ++ show l]%string
                 | Internal_error_extra_input_arguments t unused_arguments
                   => ["Internal error. Too many input arguments for type " ++ show t ++ ". Unused arguments: " ++ show unused_arguments]%string
@@ -503,7 +532,7 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                        ++ show_lines r
                        ++ ["Unable to unify: " ++ show reg_before ++ " == " ++ show reg_after]%string
                        ++ explain_array_unification_error
-                            r "list" "lists" "original" "final" (explain_idx_unification_error "original" "final" r (explain_unification_default_fuel r)) (describe_idx_from_state r) None
+                            r "list" "lists" "original" "final" (explain_idx_unification_error "original" "final" r (explain_unification_default_fuel r)) (describe_idx_from_state false r) None
                             reg_before reg_after
                 | Unable_to_unify asm_output PHOAS_output r
                   => ["Unable to unify:"; "In environment:"]
