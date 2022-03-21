@@ -483,6 +483,7 @@ Lemma Address_R s m (HR : R s m) sa o a s' (H : @Symbolic.Address sa o s = Succe
   : R s' m /\ s :< s' /\ exists v, eval s' a v /\ @DenoteAddress sa m o = v.
 Proof using Type.
   destruct o as [? ? ? ?]; cbv [Address DenoteAddress] in *; repeat step_symex.
+  Require Import Crypto.Util.PrintGoal. print_context_and_goal ().
   eapply GetReg_R in HSbase; eauto; []; DestructHead.destruct_head'_and.
   destruct mem_extra_reg; cbn -[GetReg] in *.
   1: eapply GetReg_R in HSindex; eauto; []; DestructHead.destruct_head'_and.
