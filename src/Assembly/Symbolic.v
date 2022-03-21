@@ -1547,8 +1547,7 @@ Module error.
   | unimplemented_instruction (_ : NormalInstruction)
   | unsupported_line (_ : RawLine)
   | ambiguous_operation_size (_ : NormalInstruction)
-
-  | failed_to_unify (_ : list (expr * (option idx * option idx))).
+  .
 
   Global Instance show_lines_error : ShowLines error
     := fun e
@@ -1564,19 +1563,11 @@ Module error.
           | load a s
             => (["In mem state:"]
                   ++ show_lines_mem_state s
-                  ++ ["Index " ++ show a ++ " loaded without being present.";
-                      "Index " ++ show a ++ match List.nth_error s.(dag_state) (N.to_nat a) with
-                                            | Some v => " evaluates to " ++ show v
-                                            | None => " is not present in the dag."
-                                            end]%string)%list
+                  ++ ["Index " ++ show a ++ " loaded without being present."]%string)%list
           | store a v s
             => (["In mem state:"]
                   ++ show_lines_mem_state s
-                  ++ ["Index " ++ show a ++ " updated (with value " ++ show v ++ ") without being present.";
-                      "Index " ++ show a ++ match List.nth_error s.(dag_state) (N.to_nat a) with
-                                            | Some v => " evaluates to " ++ show v
-                                            | None => " is not present in the dag."
-                                            end]%string)%list
+                  ++ ["Index " ++ show a ++ " updated (with value " ++ show v ++ ") without being present."]%string)%list
           | set_const c i
             => ["SetOperand called with Syntax.const " ++ show c ++ " " ++ show i]%string
           | expected_const i x
@@ -1585,7 +1576,6 @@ Module error.
           | unimplemented_instruction n => ["error.unimplemented_instruction " ++ show n]
           | unsupported_line n => ["error.unsupported_line " ++ show n]
           | ambiguous_operation_size n => ["error.ambiguous_operation_size " ++ show n]
-          | failed_to_unify l => ["error.failed_to_unify " ++ show l]
           end%string.
   Global Instance Show_error : Show error := _.
 End error.
