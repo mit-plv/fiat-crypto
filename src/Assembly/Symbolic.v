@@ -1536,14 +1536,12 @@ Global Instance ShowLines_symbolic_state : ShowLines symbolic_state :=
 
 Module error.
   Variant error :=
-  | nth_error_dag (_ : nat)
-
-  | get_flag (f : FLAG)
-  | get_reg (r : REG)
-  | load (a : idx)
-  | store (a v : idx)
+  | get_flag (f : FLAG) (s : flag_state)
+  | get_reg (r : nat + REG) (s : reg_state)
+  | load (a : idx) (s : symbolic_state)
+  | store (a v : idx) (s : symbolic_state)
   | set_const (_ : CONST) (_ : idx)
-  | expected_const (_ : idx)
+  | expected_const (_ : idx) (_ : expr)
 
   | unsupported_memory_access_size (_:N)
   | unimplemented_instruction (_ : NormalInstruction)
@@ -1552,21 +1550,44 @@ Module error.
 
   | failed_to_unify (_ : list (expr * (option idx * option idx))).
 
-  Global Instance Show_error : Show error := fun e =>
-   match e with
-   | nth_error_dag n => "error.nth_error_dag " ++ show n
-   | get_flag f => "error.get_flag " ++ show f
-   | get_reg r => "error.get_reg " ++ show r
-   | load a => "error.load " ++ show a
-   | store a v => "error.store " ++ show a ++ " " ++ show v
-   | set_const c i => "error.set_const " ++ show c ++ " " ++ show i
-   | expected_const i => "error.expected_const " ++ show i
-   | unsupported_memory_access_size n => "error.unsupported_memory_access_size " ++ show n
-   | unimplemented_instruction n => "error.unimplemented_instruction " ++ show n
-   | unsupported_line n => "error.unsupported_line " ++ show n
-   | ambiguous_operation_size n => "error.ambiguous_operation_size " ++ show n
-   | failed_to_unify l => "error.failed_to_unify " ++ show l
-   end%string.
+  Global Instance show_lines_error : ShowLines error
+    := fun e
+       => match e with
+          | get_flag f s
+            => ["In flag state " ++ show_flag_state s;
+                "Flag " ++ show f ++ " was read without being set."]
+          | get_reg (inl i) s
+            => ["Invalid reg index " ++ show_nat i]
+          | get_reg (inr r) s
+            => ["In reg state " ++ show_reg_state s;
+                "Register " ++ show (r : REG) ++ " read without being set."]
+          | load a s
+            => (["In mem state:"]
+                  ++ show_lines_mem_state s
+                  ++ ["Index " ++ show a ++ " loaded without being present.";
+                      "Index " ++ show a ++ match List.nth_error s.(dag_state) (N.to_nat a) with
+                                            | Some v => " evaluates to " ++ show v
+                                            | None => " is not present in the dag."
+                                            end]%string)%list
+          | store a v s
+            => (["In mem state:"]
+                  ++ show_lines_mem_state s
+                  ++ ["Index " ++ show a ++ " updated (with value " ++ show v ++ ") without being present.";
+                      "Index " ++ show a ++ match List.nth_error s.(dag_state) (N.to_nat a) with
+                                            | Some v => " evaluates to " ++ show v
+                                            | None => " is not present in the dag."
+                                            end]%string)%list
+          | set_const c i
+            => ["SetOperand called with Syntax.const " ++ show c ++ " " ++ show i]%string
+          | expected_const i x
+            => ["RevealConst called at " ++ show i ++ " resulted in non-const value " ++ show x]
+          | unsupported_memory_access_size n => ["error.unsupported_memory_access_size " ++ show n]
+          | unimplemented_instruction n => ["error.unimplemented_instruction " ++ show n]
+          | unsupported_line n => ["error.unsupported_line " ++ show n]
+          | ambiguous_operation_size n => ["error.ambiguous_operation_size " ++ show n]
+          | failed_to_unify l => ["error.failed_to_unify " ++ show l]
+          end%string.
+  Global Instance Show_error : Show error := _.
 End error.
 Notation error := error.error.
 
@@ -1575,8 +1596,8 @@ Definition ret {A} (x : A) : M A :=
   fun s => Success (x, s).
 Definition err {A} (e : error) : M A :=
   fun s => Error (e, s).
-Definition some_or {A} (f : symbolic_state -> option A) (e : error) : M A :=
-  fun st => match f st with Some x => Success (x, st) | None => Error (e, st) end.
+Definition some_or {A} (f : symbolic_state -> option A) (e : symbolic_state -> error) : M A :=
+  fun st => match f st with Some x => Success (x, st) | None => Error (e st, st) end.
 Definition bind {A B} (x : M A) (f : A -> M B) : M B :=
   fun s => (x_s <- x s; f (fst x_s) (snd x_s))%error.
 Definition lift_dag {A} (v : dag.M A) : M A :=
@@ -1597,10 +1618,16 @@ Section MapM. (* map over a list in the state monad *)
 End MapM.
 Definition mapM_ {A B} (f: A -> M B) l : M unit := _ <- mapM f l; ret tt.
 
+Definition error_get_reg_of_reg_index ri : symbolic_state -> error
+  := error.get_reg (let r := widest_register_of_index ri in
+                    if (reg_index r =? ri)%nat
+                    then inr r
+                    else inl ri).
+
 Definition GetFlag f : M idx :=
   some_or (fun s => get_flag s f) (error.get_flag f).
 Definition GetReg64 ri : M idx :=
-  some_or (fun st => get_reg st ri) (error.get_reg (widest_register_of_index ri)).
+  some_or (fun st => get_reg st ri) (error_get_reg_of_reg_index ri).
 Definition Load64 (a : idx) : M idx := some_or (load a) (error.load a).
 Definition SetFlag f i : M unit :=
   fun s => Success (tt, update_flag_with s (fun s => set_flag s f i)).
@@ -1627,7 +1654,7 @@ Definition RevealConst (i : idx) : M Z :=
   x <- Reveal 1 i;
   match x with
   | ExprApp (const n, nil) => ret n
-  | _ => err (error.expected_const i)
+  | _ => err (error.expected_const i x)
   end.
 
 Definition GetReg r : M idx :=
