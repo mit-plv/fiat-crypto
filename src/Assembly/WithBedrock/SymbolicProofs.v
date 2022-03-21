@@ -491,22 +491,15 @@ Ltac step_GetReg :=
 Lemma Address_R s m (HR : R s m) sa o a s' (H : @Symbolic.Address sa o s = Success (a, s'))
   : R s' m /\ s :< s' /\ exists v, eval s' a v /\ @DenoteAddress sa m o = v.
 Proof using Type.
-  destruct o as [? ? ? ?]; cbv [Address DenoteAddress Syntax.mem_base_reg Syntax.mem_offset Syntax.mem_scale_reg] in *; repeat first [ step_symex | step_GetReg | break_innermost_match_hyps_step ].
-  all: cbn [fst snd] in *.
-  all: lazymatch goal with
-       | [ |- eval_node _ _ _ _ ]
-         => econstructor; repeat first [ eapply Forall2_cons | eapply Forall2_nil ]; cbn [interp_op zconst]; eauto
-       | _ => idtac
-       end.
-  all: cbn [fold_right] in *.
-  all: repeat (apply conj; eauto 10; []).
-  all: eauto 10.
-  all: eexists; split; [ eauto | ].
-  all: cbv [DenoteConst].
-  all: rewrite !Z.land_ones by lia.
-  all: autorewrite with zsimplify_const.
-  all: push_Zmod; pull_Zmod.
-  all: f_equal; lia.
+  destruct o as [? ? ? ?]; cbv [Address DenoteAddress Syntax.mem_base_reg Syntax.mem_offset Syntax.mem_scale_reg] in *; repeat step_symex.
+  all : repeat first [ first [ step_symex | step_GetReg ]; try solve [repeat (eauto || econstructor)]; []
+                     | break_innermost_match_hyps_step; cbn [fst snd] in * ].
+  all : Tactics.ssplit; eauto 99.
+  all : eexists; split; eauto; [].
+  all : cbv [DenoteConst fold_right].
+  all : rewrite !Z.land_ones by lia.
+  all : push_Zmod; pull_Zmod.
+  all : f_equal; lia.
   (* step_symex leaves over useless evars :-( *)
   Unshelve. all: try exact True.
 Qed.
