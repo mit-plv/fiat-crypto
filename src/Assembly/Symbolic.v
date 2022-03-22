@@ -1275,7 +1275,7 @@ Proof.
   reflexivity.
 Qed.
 
-Global Instance drop_identity_0k : Ok drop_identity.
+Global Instance drop_identity_Ok : Ok drop_identity.
 Proof using Type.
   repeat (step; eauto; []).
   inversion H; subst; clear H.
@@ -1309,7 +1309,7 @@ Definition fold_consts_to_and :=
            | _ => e
            end.
 
-Global Instance fold_consts_to_and_0k : Ok fold_consts_to_and.
+Global Instance fold_consts_to_and_Ok : Ok fold_consts_to_and.
 Proof using Type.
   repeat (step; eauto; []).
   break_innermost_match; try assumption; reflect_hyps.
@@ -1488,13 +1488,22 @@ Definition app_consts (o : op) (ls : list (expr * Z)) : list expr
                                    | _ => default end else default)
               ls.
 
-Definition combine_consts : expr -> expr :=
+Definition combine_consts_pre : expr -> expr :=
   fun e => match e with ExprApp (o, args) =>
     if commutative o && associative o && op_always_interps o then match combines_to o with
     | Some o' => match identity o' with
     | Some idv =>
         ExprApp (o, app_consts o' (compress_consts o (group_consts (split_consts o' idv args))))
     | None => e end | None => e end else e | _ => e end%bool.
+
+Definition cleanup_combine_consts : expr -> expr :=
+  let simp_outside := List.fold_left (fun e f => f e) [flatten_associative] in
+  let simp_inside := List.fold_left (fun e f => f e) [constprop;drop_identity;unary_truncate;truncate_small] in
+  fun e => simp_outside match e with ExprApp (o, args)  =>
+    ExprApp (o, List.map simp_inside args)
+                   | _ => e end.
+
+Definition combine_consts : expr -> expr := fun e => cleanup_combine_consts (combine_consts_pre e).
 
 Lemma split_consts_correct o i ls G d argsv
       (H : Forall2 (eval G d) ls argsv)
@@ -1849,7 +1858,30 @@ Proof.
   all: try solve [ constructor ].
 Qed.
 
-Global Instance combine_consts_0k : Ok combine_consts.
+Global Instance cleanup_combine_consts_Ok : Ok cleanup_combine_consts.
+Proof.
+  repeat (step; eauto; []); cbn [fold_left].
+  repeat match goal with
+         | [ |- eval _ _ (?r ?e) _ ]
+           => apply (_:Ok r)
+         end.
+  econstructor; [ | eassumption ].
+  rewrite Forall2_map_l.
+  rewrite !@Forall2_forall_iff_nth_error in *; cbv [option_eq] in *.
+  intros.
+  repeat match goal with
+         | [ H : context[nth_error ?l] |- context[nth_error ?l ?i] ] => specialize (H i)
+         end.
+  break_innermost_match; eauto.
+  cbn [fold_left].
+  repeat lazymatch goal with
+  | H : eval ?c ?d ?e _ |- context[?r ?e] =>
+    let Hr := fresh in epose proof ((_:Ok r) _ _ _ _ H) as Hr; clear H
+  end.
+  assumption.
+Qed.
+
+Global Instance combine_consts_pre_Ok : Ok combine_consts_pre.
 Proof using Type.
   repeat (step; eauto; []).
   match goal with
@@ -1875,6 +1907,9 @@ Proof using Type.
   { congruence. }
 Qed.
 
+Global Instance combine_consts_Ok : Ok combine_consts.
+Proof. repeat step; apply cleanup_combine_consts_Ok, combine_consts_pre_Ok; assumption. Qed.
+
 Definition expr : expr -> expr :=
   List.fold_left (fun e f => f e)
   [constprop
@@ -1887,7 +1922,6 @@ Definition expr : expr -> expr :=
   ;shift_to_mul
   ;flatten_associative
   ;consts_commutative
-  ;combine_consts
   ;fold_consts_to_and
   ;drop_identity
   ;opcarry_0_at1
@@ -1895,6 +1929,7 @@ Definition expr : expr -> expr :=
   ;opcarry_0_at2
   ;unary_truncate
   ;truncate_small
+  ;combine_consts
   ;addoverflow_bit
   ;addcarry_bit
   ;addcarry_small
