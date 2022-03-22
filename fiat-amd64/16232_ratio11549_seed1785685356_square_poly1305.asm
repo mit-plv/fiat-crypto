@@ -50,7 +50,11 @@ add r14, rbx; could be done better, if r0 has been u8 as well
 adc r13, 0x0; add CF to r0's alloc
 mov r15, r14;x20, copying x19_0 here, cause x19_0 is needed in a reg. It has those deps: "x20, x21, size: 2", current hard deps: ""
 shrd r15, r13, 43; x20 <- x19_1||x19_0 >> 43
+
+; imul works
+; imul r10, r15, 5
 lea r10, [r15 + 4 * r15]; x22 <- x20 * 5 (by add to itself*4)
+
 lea r8, [ r8 + r10 ]
 bzhi rcx, r14, rbp; x21 <- x19_0 (only least 0x2b bits)
 mov rdx, r8;x24, copying x23 here, cause x23 is needed in a reg. It has those deps: "x24, x25, size: 2", current hard deps: ""
