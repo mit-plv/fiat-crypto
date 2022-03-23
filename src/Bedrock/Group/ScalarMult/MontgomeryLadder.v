@@ -302,7 +302,7 @@ Section __.
            (defn! "montladder" ("OUT", "K", "U")
                 { montladder_body },
              implements montladder_gallina
-                        using [felem_cswap; felem_copy; felem_small_literal;
+                        using [felem_cswap; felem_copy; from_word;
                                "ladderstep"; inv; mul])
            As montladder_correct.
     Proof.

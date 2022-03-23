@@ -744,7 +744,7 @@ Section Words.
   Qed.
 
   Local Notation bytes_per_word := (Z.to_nat (Memory.bytes_per_word width)).
-  Lemma Forall_word_unsigned_within_access_size 
+  Lemma Forall_word_unsigned_within_access_size
     {bits_per_word_eq_width : (Z.of_nat bytes_per_word * 8 = width)%Z} x :
     Forall
       (fun z : Z =>
@@ -870,13 +870,17 @@ Section WeakestPrecondition.
       induction e;
         cbn [expr expr_body];
         cbv [dlet.dlet literal get];
-        intros; eauto; [ | ].
+        intros; eauto.
       { eapply IHe; eauto.
         eapply Proper_expr; [ repeat intro | eassumption ].
         eauto using load_empty. }
       { eapply IHe1; eauto.
         eapply Proper_expr; [ repeat intro | eassumption ].
         cbv beta in *. eapply IHe2; eauto. }
+      { eapply IHe1; eauto.
+        eapply Proper_expr; [ repeat intro | eassumption ].
+        cbv beta in *.
+        destr (word.eqb a (word.of_Z 0)); eauto. }
     Qed.
 
     Lemma expr_untouched mem1 mem2 (l1 l2 : locals) vars v P :
@@ -915,10 +919,13 @@ Section WeakestPrecondition.
     Proof.
       induction e;
         cbn [expr expr_body]; cbv [dlet.dlet literal];
-        intros; eauto using WP_get_only_differ_undef; [ ].
+        intros; eauto using WP_get_only_differ_undef.
       { eapply IHe1; eauto.
         eapply Proper_expr; [ repeat intro | eassumption ].
         cbv beta in *. eapply IHe2; eauto. }
+      { eapply IHe1; eauto.
+        eapply Proper_expr; [ repeat intro | eassumption ].
+        cbv beta in *. destr (word.eqb a (word.of_Z 0)); eauto. }
     Qed.
   End Expr.
 

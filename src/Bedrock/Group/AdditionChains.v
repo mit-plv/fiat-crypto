@@ -519,5 +519,5 @@ Section Extraction.
        to_bytes := "to_bytes";
        select_znz := "select_znz";
        felem_copy := "felem_copy";
-       felem_small_literal := "felem_small_literal" |}.
+       from_word := "from_word" |}.
 End Extraction.

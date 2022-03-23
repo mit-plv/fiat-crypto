@@ -415,9 +415,9 @@ Qed.
 Ltac step_App :=
   match goal with
   | H : Symbolic.App ?n ?s = Success (?i, ?s') |- _ =>
-    let v := fresh "v" i in let Hi := fresh "H" i in
+    (*let v := fresh "v" i in*) let Hi := fresh "H" i in (* fresh does not generate fresh evar names *)
     let Hl := fresh "Hl" s' in let Hs' := fresh "H" s' in
-    let t := open_constr:(fun A B => App_R s _ A n ?[v] B _ _ H) in
+    let t := open_constr:(fun A B => App_R s _ A n _(*?[v]*) B _ _ H) in
     unshelve (edestruct t as (Hs'&Hl&Hi); clear H); shelve_unifiable;
     [eassumption|..]
   end.
@@ -479,24 +479,29 @@ Proof using Type.
   repeat (eauto || econstructor); cbn [interp_op].
 Qed.
 
+Ltac step_GetReg :=
+  match goal with
+  | H : Symbolic.GetReg ?r ?s = Success (?v, ?s') |- _ =>
+    let Hs' := fresh "H" s' in let Hlt := fresh "He" s' in let Hv := fresh "Hv" s' in
+    let t := open_constr:(fun A B => GetReg_R s _ A r v s' H) in
+    unshelve (edestruct t as (Hs'&Hlt&Hv); clear H); shelve_unifiable;
+    [eassumption|..|clear H]
+  end.
+
 Lemma Address_R s m (HR : R s m) sa o a s' (H : @Symbolic.Address sa o s = Success (a, s'))
   : R s' m /\ s :< s' /\ exists v, eval s' a v /\ @DenoteAddress sa m o = v.
 Proof using Type.
-  destruct o as [? ? ? ?]; cbv [Address DenoteAddress] in *; repeat step_symex.
-  eapply GetReg_R in HSbase; eauto; []; DestructHead.destruct_head'_and.
-  destruct mem_extra_reg; cbn -[GetReg] in *.
-  1: eapply GetReg_R in HSindex; eauto; []; DestructHead.destruct_head'_and.
-  all: destruct mem_offset; cbn -[GetReg] in *.
-  all: (step_symex; try solve [repeat (eauto || econstructor)]; []).
-  all: (step_symex; try solve [repeat (eauto || econstructor)]; []).
-  all: (step_symex; try solve [repeat (eauto || econstructor)]; []).
-  3,4: (step_symex; try solve [repeat (eauto || econstructor)]; []).
-  all : cbn in *.
-  all : Tactics.ssplit; eauto 99 with nocore.
+  destruct o as [? ? ? ?]; cbv [Address DenoteAddress Syntax.mem_base_reg Syntax.mem_offset Syntax.mem_scale_reg] in *; repeat step_symex.
+  all : repeat first [ first [ step_symex | step_GetReg ]; try solve [repeat (eauto || econstructor)]; []
+                     | break_innermost_match_hyps_step; cbn [fst snd] in * ].
+  all : Tactics.ssplit; eauto 99.
   all : eexists; split; eauto; [].
-  all : cbv [DenoteConst].
-  all : rewrite ?Z.add_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2 by lia.
-  all : push_Zmod; pull_Zmod; split; trivial.
+  all : cbv [DenoteConst fold_right].
+  all : rewrite !Z.land_ones by lia.
+  all : push_Zmod; pull_Zmod.
+  all : f_equal; lia.
+  (* step_symex leaves over useless evars :-( *)
+  Unshelve. all: try exact True.
 Qed.
 
 Ltac step_Address :=

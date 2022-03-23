@@ -387,3 +387,43 @@ Proof using Type.
   setoid_rewrite Forall2_flip_iff; cbv [Basics.flip].
   rewrite pull_ex_Forall2_l_iff; reflexivity.
 Qed.
+
+Lemma Forall2_concat_l_ex_iff A B P xs ls
+  : @Forall2 A B P (concat xs) ls <-> (exists ys, ls = concat ys /\ Forall2 (Forall2 P) xs ys).
+Proof using Type.
+  revert ls; induction xs as [|x xs IH]; cbn [concat]; intros.
+  all: rewrite ?Forall2_nil_l_iff, ?Forall2_nil_r_iff.
+  all: split; intros; firstorder (subst; auto).
+  all: rewrite ?Forall2_nil_l_iff, ?Forall2_nil_r_iff in *; subst; cbn [concat].
+  all: try solve [ reflexivity
+                 | exists nil; cbn [concat]; eauto ].
+  all: repeat first [ progress subst
+                    | progress cbn [concat]
+                    | assumption
+                    | reflexivity
+                    | match goal with
+                      | [ H : ex _ |- _ ] => destruct H
+                      | [ H : and _ _ |- _ ] => destruct H
+                      | [ H : Forall2 _ (_ ++ _) _ |- _ ] => apply Forall2_app_inv_l in H
+                      | [ H : Forall2 _ (_ :: _) _ |- _ ] => rewrite Forall2_cons_l_ex_iff in H
+                      end
+                    | apply Forall2_app
+                    | rewrite IH; eauto
+                    | progress rewrite IH in *
+                    | eexists (_ :: _); split; cbn [concat]; [ | constructor; eassumption ] ].
+Qed.
+
+Lemma Forall2_concat_r_ex_iff A B P ls xs
+  : @Forall2 A B P ls (concat xs) <-> (exists ys, ls = concat ys /\ Forall2 (Forall2 P) ys xs).
+Proof using Type.
+  split; intro H; [ apply Forall2_flip, Forall2_concat_l_ex_iff in H | apply Forall2_flip, Forall2_concat_l_ex_iff ].
+  all: destruct H as [ys H]; exists ys; firstorder (subst; auto).
+  all: apply Forall2_flip; (eapply Forall2_weaken; [ | eassumption ]).
+  all: apply Forall2_flip.
+Qed.
+
+Lemma Forall2_concat_concat A B P xs ys
+  : Forall2 (Forall2 P) xs ys -> @Forall2 A B P (concat xs) (concat ys).
+Proof using Type.
+  rewrite Forall2_concat_l_ex_iff; intros; repeat esplit; assumption.
+Qed.

@@ -272,7 +272,7 @@ LITE_ZIG_FILES := $(patsubst %,$(ZIG_DIR)%.zig,$(LITE_BASE_FILES))
 BEDROCK2_UNSATURATED_SOLINAS := src/ExtractionOCaml/bedrock2_unsaturated_solinas
 BEDROCK2_WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/bedrock2_word_by_word_montgomery
 
-C_EXTRA_ARGS := --inline-internal --static --use-value-barrier
+C_EXTRA_ARGS := --inline --static --use-value-barrier
 
 JSON_EXTRA_ARGS := --emit-all-casts
 

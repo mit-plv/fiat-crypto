@@ -137,7 +137,7 @@ Module Compilers.
                             else [])
                              ++ [(FIAT_INLINE prefix, "__inline__")]
                     in
-                    ["#ifdef __GNUC__"]
+                    ["#if defined(__GNUC__) || defined(__clang__)"]
                       ++ List.map (fun '(MACRO, primitive) => "#  define " ++ MACRO ++ " " ++ primitive)%string gnuc_defines
                       ++ ["#else"]
                       ++ List.map (fun '(MACRO, primitive) => "#  define " ++ MACRO)%string gnuc_defines
