@@ -315,9 +315,6 @@ Module WordByWordMontgomery.
         split; cbn; autorewrite with zsimplify_fast; auto with zarith. }
       { rewrite (surjective_pairing (Rows.mul _ _ _ _ _ _)).
         rewrite Rows.mul_partitions by (try rewrite Hsmall; auto using length_partition, Positional.length_extend_to_length with lia).
-        autorewrite with push_eval.
-        rewrite Positional.eval_cons by reflexivity.
-        rewrite weight_0 by auto.
         autorewrite with push_eval zsimplify_fast.
         split; [reflexivity | ].
         rewrite uweight_S, uweight_eq_alt by lia.

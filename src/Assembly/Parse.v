@@ -174,21 +174,40 @@ Definition parse_FLAG : ParserAction FLAG
 
 Definition parse_MEM : ParserAction MEM
   := parse_map
-        (fun '(has_byte, (r, (r', maybe_pm_z)))
-         => {| mem_is_byte := if has_byte:option _ then true else false
-               ; mem_reg := r
-               ; mem_extra_reg := r'
-               ; mem_offset := match maybe_pm_z with
-                               | inl (inl _ (* plus *), z) => Some z
-                               | inl (inr _ (* minus *), z) => Some (-z)
-                               | inr _ (* only whitespace *) => None
-                               end%Z |})
-        (((strip_whitespace_after "byte ")?) ;;
-         (strip_whitespace_after "[" ;;R
-          parse_REG ;;
-          ((strip_whitespace_around "+" ;;R parse_REG)?) ;;
-          ((strip_whitespace_before ("+" ||->{id} "-") ;; parse_Z_arith_strict) ||->{id} parse_any_whitespace) ;;L
-          "]")).
+       (fun '(has_byte, (br (*base reg*), sr (*scale reg, including z *), offset))
+        => {| mem_is_byte := if has_byte:option _ then true else false
+           ; mem_base_reg := br:option REG
+           ; mem_scale_reg := sr:option (Z * REG)
+           ; mem_offset := offset:option Z |})
+       (((strip_whitespace_after "byte ")?) ;;
+        ("["
+         ;;R
+             (
+               (*[rax]                 *)
+               (parse_map
+                  (fun r => (Some r, None, None))
+                  (strip_whitespace_around parse_REG))
+               || (*[rax           + 0x10]*)
+                 (parse_map
+                    (fun '(br, (pm, z)) => (Some br, None, Some match pm with
+                                                                | inl _ (* plus *) => z
+                                                                | inr _ (* minus *) => -z
+                                                                end%Z))
+                    (strip_whitespace_around parse_REG ;; ("+" ||->{id} "-") ;; parse_Z_arith_strict))
+               || (*[rax +     rbx]       *)
+                 (parse_map
+                    (fun '(br, sr) => (Some br, Some (1%Z, sr), None))
+                    (strip_whitespace_around parse_REG ;; "+" ;;R strip_whitespace_around parse_REG))
+               || (*[rax + 2 * rbx]       *)
+                 (parse_map
+                    (fun '(br, (z, sr)) => (Some br, Some (z, sr), None))
+                    (strip_whitespace_around parse_REG ;; "+" ;;R parse_Z_arith_strict ;; "*" ;;R strip_whitespace_around parse_REG))
+               || (*[      2 * rax]       *)
+                 (parse_map
+                    (fun '(z, r) => (None, Some (z, r), None))
+                    (parse_Z_arith_strict ;; "*" ;;R strip_whitespace_around parse_REG))
+             )
+         ;;L "]")).
 
 Definition parse_CONST (const_keyword : bool) : ParserAction CONST
   := if const_keyword
@@ -271,11 +290,12 @@ Global Instance show_lvl_MEM : ShowLevel MEM
   := fun m
      => (if m.(mem_is_byte) then show_lvl_app (fun 'tt => "byte") else show_lvl)
           (fun 'tt
-           => "[" ++ (show m.(mem_reg))
-                  ++ (match m.(mem_extra_reg) with
-                      | None => ""
-                      | Some r => " + " ++ show r
-                      end)
+           => "[" ++ (match m.(mem_base_reg), m.(mem_scale_reg) with
+                      | (*"[Reg]"          *) Some br, None         => show_REG br
+                      | (*"[Reg + Z * Reg]"*) Some br, Some (z, sr) => show_REG br  ++ " + " ++  Decimal.show_Z z  ++ " * " ++ show_REG sr (*only matching '+' here, because there cannot be a negative scale. *)
+                      | (*"[      Z * Reg]"*) None,    Some (z, sr) =>                           Decimal.show_Z z  ++ " * " ++ show_REG sr
+                      | (*"[             ]"*) None,    None         => "" (* impossible, because only offset is invalid, but we seem to need it for coq because both are option's*)
+                      end%Z)
                   ++ (match m.(mem_offset) with
                       | None => ""
                       | Some offset

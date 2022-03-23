@@ -2,6 +2,7 @@ Require Crypto.Assembly.Parse.
 Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.Sorting.Permutation.
 Require Crypto.Util.Tuple.
 Require Import Util.OptionList.
 Require Import Crypto.Util.ErrorT.
@@ -12,19 +13,27 @@ Require Import Crypto.Util.ZUtil.Land.
 Require Import Crypto.Util.ZUtil.Ones.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ListUtil.Concat.
+Require Import Crypto.Util.ListUtil.GroupAllBy.
 Require Import Crypto.Util.ListUtil.FoldMap. Import FoldMap.List.
 Require Import Crypto.Util.ListUtil.IndexOf. Import IndexOf.List.
 Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.ListUtil.Permutation.
+Require Import Crypto.Util.ListUtil.Partition.
+Require Import Crypto.Util.ListUtil.Filter.
+Require Import Crypto.Util.ListUtil.PermutationCompat. Import ListUtil.PermutationCompat.Coq.Sorting.Permutation.
 Require Import Crypto.Util.NUtil.Sorting.
 Require Import Crypto.Util.NUtil.Testbit.
+Require Import Crypto.Util.MSetN.
 Require Import Crypto.Util.ListUtil.PermutationCompat.
 Require Import Crypto.Util.Bool.LeCompat.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.SplitInContext.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.ZUtil.Lxor.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Import Crypto.Util.Tactics.WarnIfGoalsRemain.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import coqutil.Z.bitblast.
 Require Import Coq.Strings.String Crypto.Util.Strings.Show.
@@ -81,6 +90,8 @@ Definition associative o := match o with add _|mul _|mulZ|or _|and _|xor _|andZ|
 Definition commutative o := match o with add _|addcarry _|addoverflow _|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ => true | _ => false end.
 Definition identity o := match o with mul N0 => Some 0%Z| mul _|mulZ=>Some 1%Z |add _|addZ|or _|orZ|xor _|xorZ => Some 0%Z | and s => Some (Z.ones (Z.of_N s))|andZ => Some (-1)%Z |_=> None end.
 Definition unary_truncate_size o := match o with add s|and s|or s|xor s|mul s => Some (Z.of_N s) | addZ|mulZ|andZ|orZ|xorZ => Some (-1)%Z | _ => None end.
+Definition op_always_interps o := match o with add _|addcarry _|addoverflow _|and _|or _|xor _|mul _|addZ|mulZ|andZ|orZ|xorZ|addcarryZ _ => true | _ => false end.
+Definition combines_to o := match o with add s => Some (mul s) | addZ => Some mulZ | _ => None end.
 
 Definition node (A : Set) : Set := op * list A.
 Global Instance Show_node {A : Set} {show_A : Show A} : Show (node A) := show_prod.
@@ -228,6 +239,54 @@ Section WithDag.
   Definition reveal_node n '(op, args) :=
     ExprApp (op, List.map (reveal n) args).
 
+  (** given a set of indices, get the set of indices of their arguments *)
+  Definition reveal_gather_deps_args (ls : NSet.t) : NSet.t
+    := fold_right
+         (fun i so_far => match List.nth_error dag (N.to_nat i) with
+                          | None => so_far
+                          | Some (_op, args) => fold_right NSet.add so_far args
+                          end)
+         NSet.empty
+         (NSet.elements ls).
+
+  (** given a set of seen indices and a set of newly-revealed indices,
+  we want to merge the new indices into what's been seen and recurse
+  on the new indices *)
+  Definition reveal_gather_deps_step reveal_gather_deps (so_far : NSet.t) (new_idxs : NSet.t) : NSet.t
+    := let new_idxs := NSet.diff new_idxs so_far in
+       if NSet.is_empty new_idxs
+       then so_far
+       else reveal_gather_deps (NSet.union so_far new_idxs) (reveal_gather_deps_args new_idxs).
+
+  Fixpoint reveal_gather_deps_list (n : nat) (so_far : NSet.t) (new_idxs : NSet.t) : NSet.t
+    := match n with
+       | O => NSet.union so_far new_idxs
+       | S n => reveal_gather_deps_step (reveal_gather_deps_list n) so_far new_idxs
+       end.
+
+  Definition reveal_gather_deps (n : nat) (i : idx) : NSet.t
+    := reveal_gather_deps_list n NSet.empty (NSet.singleton i).
+
+  Definition reveal_step_from_deps reveal (deps : NSet.t) (i : idx) : expr
+    := if NSet.mem i deps
+       then match List.nth_error dag (N.to_nat i) with
+            | None => (* undefined *) ExprRef i
+            | Some (op, args) => ExprApp (op, List.map reveal args)
+            end
+       else ExprRef i.
+  Fixpoint reveal_from_deps_fueled (fuel : nat) (deps : NSet.t) (i : idx) :=
+    match fuel with
+    | O => ExprRef i
+    | S fuel => reveal_step_from_deps (reveal_from_deps_fueled fuel deps) deps i
+    end.
+  (** depth determines which indices get expanded, but all references
+  to the same index get expanded if they appear in the output *)
+  Definition reveal_at_least n (i : idx) : expr
+    := reveal_from_deps_fueled (S (List.length dag)) (reveal_gather_deps n i) i.
+
+  Definition reveal_node_at_least n '(op, args) :=
+    ExprApp (op, List.map (reveal_at_least n) args).
+
   Local Unset Elimination Schemes.
   Inductive eval : expr -> Z -> Prop :=
   | ERef i op args args' n
@@ -305,6 +364,35 @@ Section WithDag.
     eapply (proj1 (Forall2_map_l _ _ _)) in H0; eapply Forall2_map_l.
     eapply Forall2_weaken; try eassumption; []; cbv beta; intros.
     eapply eval_reveal; eauto.
+  Qed.
+
+  Lemma eval_reveal_from_deps_fueled deps : forall n i, forall v, eval (ExprRef i) v ->
+    forall e, reveal_from_deps_fueled n deps i = e -> eval e v.
+  Proof using Type.
+    induction n; cbn [reveal_from_deps_fueled]; cbv [reveal_step_from_deps]; intros; subst; eauto; [].
+    break_innermost_match_step; eauto; [].
+    inversion H; subst; clear H.
+    rewrite H1; econstructor; try eassumption; [].
+    eapply (proj1 (Forall2_map_l _ _ _)) in H2.
+    clear dependent i; clear dependent v.
+    induction H2; cbn; eauto.
+  Qed.
+
+  Lemma eval_reveal_at_least : forall n i, forall v, eval (ExprRef i) v ->
+    forall e, reveal_at_least n i = e -> eval e v.
+  Proof using Type.
+    cbv [reveal_at_least].
+    intros; eapply eval_reveal_from_deps_fueled; eassumption.
+  Qed.
+
+  Lemma eval_node_reveal_node_at_least : forall n v, eval_node n v ->
+    forall f e, reveal_node_at_least f n = e -> eval e v.
+  Proof using Type.
+    cbv [reveal_node]; inversion 1; intros; subst.
+    econstructor; eauto.
+    eapply (proj1 (Forall2_map_l _ _ _)) in H0; eapply Forall2_map_l.
+    eapply Forall2_weaken; try eassumption; []; cbv beta; intros.
+    eapply eval_reveal_at_least; eauto.
   Qed.
 End WithDag.
 
@@ -669,8 +757,7 @@ Qed.
 
 
 Definition isCst (e : expr) :=
-  match e with ExprApp ((const _), _) => true | _ => false end.
-
+  match e with ExprApp ((const _), []) => true | _ => false end.
 
 Module Rewrite.
 Class Ok r := rwok : forall G d e v, eval G d e v -> eval G d (r e) v.
@@ -965,6 +1052,34 @@ Proof using Type.
       rewrite Z.mod_small; rewrite ?Z.log2_lt_pow2; cbn [Z.log2]; try lia. }
 Qed.
 
+Lemma interp_op_always_interps G o args
+  : op_always_interps o = true -> interp_op G o args <> None.
+Proof. destruct o; cbn; congruence. Qed.
+
+Lemma interp0_op_always_interps o args
+  : op_always_interps o = true -> interp0_op o args <> None.
+Proof. apply interp_op_always_interps. Qed.
+
+(* completeness check, just update the definition if this doesn't go through *)
+Lemma interp_op_always_interps_complete o
+  : op_always_interps o = false -> exists G args, interp_op G o args = None.
+Proof.
+  destruct o; cbn; try solve [ inversion 1 ]; intros _; do 2 try eapply ex_intro.
+  all: repeat match goal with
+              | [ |- match ?ev with [] => None | _ => _ end = None ] => let __ := open_constr:(eq_refl : ev = []) in cbv beta iota
+              | [ |- match ?ev with _ :: _ => None | _ => _ end = None ] => let __ := open_constr:(eq_refl : ev = _ :: _) in cbv beta iota
+              | [ |- None = None ] => reflexivity
+              end.
+  Unshelve. all: shelve_unifiable.
+  all: lazymatch goal with
+       | [ |- Z ] => exact 0%Z
+       | [ |- _ -> option _ ] => intro; exact None
+       | [ |- list _ ] => exact nil
+       | _ => idtac
+       end.
+  all: fail_if_goals_remain ().
+Qed.
+
 Lemma invert_interp_op_associative o : associative o = true ->
   forall G x xs v, interp_op G o (x :: xs) = Some v ->
   exists v', interp_op G o xs = Some v' /\
@@ -1238,7 +1353,7 @@ Proof.
   reflexivity.
 Qed.
 
-Global Instance drop_identity_0k : Ok drop_identity.
+Global Instance drop_identity_Ok : Ok drop_identity.
 Proof using Type.
   repeat (step; eauto; []).
   inversion H; subst; clear H.
@@ -1272,7 +1387,7 @@ Definition fold_consts_to_and :=
            | _ => e
            end.
 
-Global Instance fold_consts_to_and_0k : Ok fold_consts_to_and.
+Global Instance fold_consts_to_and_Ok : Ok fold_consts_to_and.
 Proof using Type.
   repeat (step; eauto; []).
   break_innermost_match; try assumption; reflect_hyps.
@@ -1385,6 +1500,494 @@ Definition shift_to_mul :=
 Global Instance shift_to_mul_ok : Ok shift_to_mul.
 Proof. t; cbn in *; rewrite ?Z.shiftl_mul_pow2, ?Z.land_0_r by lia; repeat (lia + f_equal). Qed.
 
+(* o is like mul *)
+(* invariant: Forall2 (fun x '(y, z) => eval (o x i) matches eval (o y z)) input output *)
+Definition split_consts (o : op) (i : Z) : list expr -> list (expr * Z)
+  := List.map
+       (fun e
+        => match e with
+           | ExprApp (o', args)
+             => if op_beq o' o
+                then
+                  let '(csts, exprs) :=
+                    if commutative o' && associative o'
+                    then let '(csts, exprs) := List.partition isCst args in
+                         (interp0_expr (ExprApp (o', csts)), exprs)
+                    else
+                      (* nest matches for fewer proof cases *)
+                      match match args with
+                            | [arg; ExprApp ((const c), _)]
+                              => Some (c, arg)
+                            | _ => None
+                            end with
+                      | Some (c, arg) => (Some c, [arg])
+                      | None => (Some i, args)
+                      end
+                  in
+                  match csts, exprs with
+                  | None, _ => (e, i)
+                  | Some c, [arg] => (arg, c)
+                  | Some c, args => (ExprApp (o', args), c)
+                  end
+                else (e, i)
+           | _ => (e, i)
+           end%bool).
+
+(* invariant: input is a permutation of concat (List.map (fun '(e, zs) => List.map (pair e) zs) output) *)
+Definition group_consts (ls : list (expr * Z)) : list (expr * list Z)
+  := Option.List.map
+       (fun xs => match xs with
+                  | [] => None
+                  | (e, z) :: xs => Some (e, z :: List.map snd xs)
+                  end)
+       (List.groupAllBy (fun x y => expr_beq (fst x) (fst y)) ls).
+
+(* o is like add *)
+(* spec: if interp0_op o zs is always Some _, then Forall2 (fun '(e, zs) '(e', z) => e = e' /\ interp0_op o zs = Some z) input output *)
+Definition compress_consts (o : op) (ls : list (expr * list Z)) : list (expr * Z)
+  := List.flat_map
+       (fun '(e, zs) => match interp0_op o zs with
+                        | None => List.map (pair e) zs
+                        | Some z => [(e, z)]
+                        end)
+       ls.
+
+(* o is like mul *)
+(* spec is that Forall (fun '(e, z) e' => o (eval e) z matches eval e') inputs outputs *)
+Definition app_consts (o : op) (ls : list (expr * Z)) : list expr
+  := List.map (fun '(e, z) => let z := ExprApp (const z, []) in
+                              let default := ExprApp (o, [e; z]) in
+                              if associative o
+                              then match e with
+                                   | ExprApp (o', args)
+                                     => if op_beq o' o
+                                        then ExprApp (o, args ++ [z])
+                                        else default
+                                   | _ => default end else default)
+              ls.
+
+Definition combine_consts_pre : expr -> expr :=
+  fun e => match e with ExprApp (o, args) =>
+    if commutative o && associative o && op_always_interps o then match combines_to o with
+    | Some o' => match identity o' with
+    | Some idv =>
+        ExprApp (o, app_consts o' (compress_consts o (group_consts (split_consts o' idv args))))
+    | None => e end | None => e end else e | _ => e end%bool.
+
+Definition cleanup_combine_consts : expr -> expr :=
+  let simp_outside := List.fold_left (fun e f => f e) [flatten_associative] in
+  let simp_inside := List.fold_left (fun e f => f e) [constprop;drop_identity;unary_truncate;truncate_small] in
+  fun e => simp_outside match e with ExprApp (o, args)  =>
+    ExprApp (o, List.map simp_inside args)
+                   | _ => e end.
+
+Definition combine_consts : expr -> expr := fun e => cleanup_combine_consts (combine_consts_pre e).
+
+Lemma split_consts_correct o i ls G d argsv
+      (H : Forall2 (eval G d) ls argsv)
+      (Hi : identity o = Some i)
+  : Forall2 (fun '(e, z) v => exists v', eval G d e v' /\ (interp_op G o [v'; z] = Some v \/ (z = i /\ (v = v' \/ interp_op G o [v'] = Some v)))) (split_consts o i ls) argsv.
+Proof.
+  assert (eval G d (ExprApp (o, [])) i) by now econstructor; [ constructor | apply interp_op_nil_is_identity; assumption ].
+  cbv [split_consts].
+  revert dependent argsv; intro argsv.
+  revert argsv; induction ls as [|x xs IH], argsv as [|v argsv];
+    try specialize (IH argsv); intros; cbn [List.map];
+    invlist Forall2; specialize_by_assumption; constructor; try assumption; clear IH.
+  repeat first [ progress inversion_pair
+               | progress subst
+               | progress inversion_option
+               | progress inversion_list
+               | progress destruct_head'_ex
+               | progress destruct_head'_and
+               | progress reflect_hyps
+               | rewrite app_nil_r in *
+               | solve [ eauto 10 ]
+               | eapply ex_intro; split; [ now unshelve (repeat first [ eassumption | econstructor ]) | ]
+               | match goal with
+                 | [ |- (let '(x, y) := match ?v with _ => _ end in _) _ ]
+                   => tryif is_var v then destruct v else destruct v eqn:?
+                 | [ H : (match ?v with _ => _ end) = _ |- _ ]
+                   => tryif is_var v then destruct v else destruct v eqn:?
+                 | [ H : Forall2 _ (_ :: _) _ |- _ ] => rewrite Forall2_cons_l_ex_iff in H
+                 | [ H : Forall2 _ [] _ |- _ ] => rewrite Forall2_nil_l_iff in H
+                 | [ H : Forall _ (_ :: _) |- _ ] => rewrite Forall_cons_iff in H
+                 | [ H : Forall2 _ (_ ++ _) _ |- _ ] => apply Forall2_app_inv_l in H
+                 | [ H : interp_op _ (const _) _ = _ |- _ ] => cbn [interp_op] in H
+                 | [ H : andb _ _ = true |- _ ] => rewrite Bool.andb_true_iff in H
+                 | [ H : ?x = Some _, H' : ?x = Some _ |- _ ] => rewrite H in H'
+                 | [ H : context[interp_op _ _ (_ ++ _)] |- _ ] => rewrite interp_op_associative_app_bind in H by assumption; cbv [Crypto.Util.Option.bind] in H
+                 | [ H : partition _ _ = _ |- _ ]
+                   => let H' := fresh in
+                      pose proof H as H'; apply List.Forall_partition in H';
+                      let H' := fresh in
+                      pose proof H as H'; apply List.partition_eq_filter in H';
+                      apply List.partition_permutation in H
+                 | [ H : Permutation _ ?l, H' : Forall2 _ ?l ?args, H'' : interp_op _ _ ?args = Some _ |- _ ]
+                   => is_var args; eapply Permutation_Forall2 in H'; [ | symmetry; exact H ];
+                      let H''' := fresh in
+                      destruct H' as [? [H''' H'] ];
+                      eapply permute_commutative in H''; try exact H'''; try assumption; [];
+                      clear args H'''
+                 | [ H : eval _ _ (ExprApp _) _ |- _ ] => inversion H; clear H
+                 | [ H : interp0_expr (ExprApp _) = Some _ |- _ ]
+                   => eapply eval_interp0_expr in H
+                 | [ H : Forall2 (eval _ _) ?ls ?v1, H' : Forall2 (eval _ _) ?ls ?v2 |- _ ]
+                   => assert (v1 = v2) by (eapply eval_eval_Forall2; eassumption);
+                      clear H'
+                 | [ H : Permutation (@filter ?A ?f ?ls) ?ls |- _ ]
+                   => apply Permutation_length, List.filter_eq_length_eq in H;
+                      generalize dependent (@filter A f ls); intros; subst
+                 | [ H : interp_op _ ?o [?x] = Some _ |- context[interp_op _ ?o (?x :: ?ls)] ]
+                   => change (x :: ls) with ([x] ++ ls);
+                      rewrite interp_op_associative_app_bind, H by assumption;
+                      try erewrite interp_op_associative_idempotent by eassumption;
+                      cbn [Crypto.Util.Option.bind]
+                 | [ H : commutative ?o = true, H' : interp_op _ ?o [?a; ?b] = Some ?v |- interp_op _ ?o [?b; ?a] = Some ?v \/ _ ]
+                   => left; erewrite permute_commutative; [ reflexivity | .. ]; try eassumption; rewrite Permutation_rev; reflexivity
+                 end
+               | erewrite <- interp_op_associative_app by eassumption ].
+Qed.
+
+Lemma group_consts_Permutation ls
+  : Permutation (List.concat (List.map (fun '(e, zs) => List.map (pair e) zs) (group_consts ls))) ls.
+Proof.
+  cbv [group_consts].
+  let fv := match goal with |- context[List.groupAllBy ?f ls] => f end in
+  pose proof (@List.Forall_groupAllBy _ fv ls) as H;
+  etransitivity; [ | apply List.concat_groupAllBy with (f:=fv) ];
+  generalize dependent (List.groupAllBy fv ls); intro gfls; intros.
+  match goal with |- ?R ?x ?y => cut (x = y); [ intros ->; reflexivity | ] end.
+  apply f_equal.
+  induction H; [ reflexivity | ]; cbn.
+  break_innermost_match; cbn [List.map]; try solve [ exfalso; assumption ].
+  repeat (f_equal; try assumption; []).
+  cbn [fst snd] in *.
+  lazymatch goal with
+  | [ H : Forall _ ?ls |- map (pair _) (map snd ?ls) = ?ls ]
+    => revert H; clear
+  end.
+  intro H; induction H; destruct_head'_prod; cbn [List.map fst snd]; reflect_hyps; subst; cbn [fst snd].
+  all: f_equal; assumption.
+Qed.
+
+Lemma group_consts_nonempty ls
+  : Forall (fun '(e, zs) => zs <> nil) (group_consts ls).
+Proof.
+  cbv [group_consts].
+  let fv := match goal with |- context[List.groupAllBy ?f ls] => f end in
+  pose proof (@List.Forall_groupAllBy_full _ fv ls) as H;
+  generalize dependent (List.groupAllBy fv ls); intro gfls; intros.
+  induction gfls as [|x xs IH]; cbn [list_rect Option.List.map fold_right] in *; break_innermost_match; destruct_head'_and; destruct_head'_False;
+    constructor; try congruence; eauto.
+Qed.
+
+Lemma compress_consts_correct o ls
+      (Ho : op_always_interps o = true)
+  : Forall2 (fun '(e, zs) '(e', z) => e = e' /\ interp0_op o zs = Some z) ls (compress_consts o ls).
+Proof.
+  cbv [compress_consts].
+  induction ls as [|x xs IH]; cbn [List.flat_map]; break_innermost_match; cbn [List.app];
+    try solve [ exfalso; eapply interp0_op_always_interps; eassumption ]; constructor; eauto.
+Qed.
+
+(* in a more specific, usable form *)
+Lemma compress_consts_correct_alt G d o' o ls argsv
+      (Ho : op_always_interps o = true)
+      (H : Forall2 (fun '(e, zs) v => exists z, interp0_op o zs = Some z /\ exists v', (exists xs, interp_op G o' xs = Some z) /\ eval G d e v' /\ interp_op G o' [v'; z] = Some v) ls argsv)
+  : Forall2 (fun '(e, z) v => exists v', (exists xs, interp_op G o' xs = Some z) /\ eval G d e v' /\ interp_op G o' [v'; z] = Some v) (compress_consts o ls) argsv.
+Proof.
+  eapply compress_consts_correct in Ho.
+  apply Forall2_flip in H.
+  eapply Forall2_trans in Ho; [ | exact H ].
+  apply Forall2_flip.
+  eapply Forall2_weaken; [ | eassumption ]; cbv beta.
+  intros; repeat (destruct_head'_ex || destruct_head'_prod || destruct_head'_and || subst).
+  repeat first [ progress inversion_option
+               | progress subst
+               | match goal with
+                 | [ H : ?x = Some _, H' : ?x = Some _ |- _ ] => rewrite H in H'
+                 end
+               | solve [ eauto ] ].
+Qed.
+
+Lemma app_consts_correct G d o ls argsv
+      (H : Forall2 (fun '(e, z) v => exists v', (exists xs, interp_op G o xs = Some z) /\ eval G d e v' /\ interp_op G o [v'; z] = Some v) ls argsv)
+  : Forall2 (eval G d) (app_consts o ls) argsv.
+Proof.
+  cbv [app_consts].
+  induction H; cbn [List.map]; constructor.
+  all: repeat first [ assumption
+                    | progress destruct_head'_prod
+                    | progress destruct_head'_ex
+                    | progress destruct_head'_and
+                    | progress subst
+                    | progress reflect_hyps
+                    | break_innermost_match_step
+                    | match goal with
+                      | [ |- eval _ _ (ExprApp (_, [_; _])) _ ]
+                        => econstructor; [ | eassumption ]; unshelve (repeat (constructor; [ shelve | ])); [ .. | constructor ]
+                      | [ |- eval _ _ (ExprApp (const ?z, [])) _ ]
+                        => econstructor; [ constructor | reflexivity ]
+                      end
+                    | step; eauto; []
+                    | match goal with
+                      | [ |- eval _ _ (ExprApp (_, _ ++ _)) _ ]
+                        => econstructor; [ repeat first [ eassumption | apply Forall2_app | apply Forall2_cons | apply Forall2_nil ] | ]
+                      end
+                    | erewrite interp_op_associative_app; try eassumption; []
+                    | eapply interp_op_associative_idempotent; try eassumption ].
+Qed.
+
+Lemma combines_to_correct o o' v G xs vxs xsv
+      (H : combines_to o = Some o')
+      (H' : Forall2 (fun x vx => interp_op G o' [v; x] = Some vx) xs vxs)
+      (H'' : interp_op G o xs = Some xsv)
+  : interp_op G o' [v; xsv] = interp_op G o vxs.
+Proof.
+  cbv [combines_to] in H; destruct o; inversion_option; subst.
+  all: cbn [interp_op fold_right] in *; inversion_option; subst; apply f_equal.
+  all: autorewrite with zsimplify_const in *.
+  all: rewrite ?Z.land_ones by lia; push_Zmod; pull_Zmod.
+  all: eapply Forall2_weaken in H';
+    [
+    | intros *;
+      let H := fresh in
+      intro H;
+      inversion_option;
+      autorewrite with zsimplify_const in H;
+      rewrite ?Z.land_ones in H by lia; exact H ].
+  all: rewrite <- Forall2_map_l in H'.
+  all: apply Forall2_eq in H'; subst.
+  all: induction xs as [|x xs IH]; cbn [fold_right List.map]; autorewrite with zsimplify_const; try reflexivity.
+  all: push_Zmod; pull_Zmod.
+  all: revert IH; push_Zmod; intro IH; rewrite <- IH; clear IH; pull_Zmod.
+  all: rewrite <- Z.mul_add_distr_l.
+  all: reflexivity.
+Qed.
+
+(* should this be factored differently? *)
+Lemma interp_op_combines_to_idempotent G o o' (H : combines_to o = Some o') xs vxs
+  : interp_op G o xs = Some vxs -> interp_op G o' [vxs] = Some vxs.
+Proof.
+  destruct o; cbv [combines_to] in *; inversion_option; subst; cbn [interp_op fold_right]; intros; inversion_option; subst.
+  all: autorewrite with zsimplify_const.
+  all: apply f_equal; try reflexivity.
+  rewrite ?Z.land_ones by lia; push_Zmod; pull_Zmod.
+  reflexivity.
+Qed.
+
+Lemma interp_op_combines_to_idempotent_rev G o o' (H : combines_to o = Some o') xs vxs
+  : interp_op G o' xs = Some vxs -> interp_op G o [vxs] = Some vxs.
+Proof.
+  destruct o; cbv [combines_to] in *; inversion_option; subst; cbn [interp_op fold_right]; intros; inversion_option; subst.
+  all: autorewrite with zsimplify_const.
+  all: apply f_equal; try reflexivity.
+  rewrite ?Z.land_ones by lia; push_Zmod; pull_Zmod.
+  reflexivity.
+Qed.
+
+Lemma interp_op_combines_to_singleton_same_size G o o' (H : combines_to o = Some o') v
+  : interp_op G o [v] = interp_op G o' [v].
+Proof.
+  destruct o; cbv [combines_to] in *; inversion_option; subst; cbn [interp_op fold_right]; intros; inversion_option; subst.
+  all: autorewrite with zsimplify_const.
+  all: reflexivity.
+Qed.
+
+(* a more general version useful for us *)
+Lemma combines_to_correct_or o o' v G xs vxs xsv
+      (Ho : associative o = true)
+      (Ho' : op_always_interps o = true)
+      (H : combines_to o = Some o')
+      (H' : Forall2 (fun x vx => interp_op G o' [v; x] = Some vx \/ interp_op G o' [v; x] = interp_op G o' [vx]) xs vxs)
+      (H'' : interp_op G o xs = Some xsv)
+  : interp_op G o' [v; xsv] = interp_op G o vxs.
+Proof.
+  rewrite <- (List.concat_map_singleton vxs).
+  rewrite interp_op_associative_spec_concat, map_map by assumption.
+  rewrite Option.List.bind_list_cps_id, <- Option.List.eq_bind_list_lift; cbv [Crypto.Util.Option.bind]; break_match; revgoals.
+  { exfalso.
+    let H := match goal with H : _ = None |- _ => H end in
+    revert H; clear -Ho Ho'.
+    cbv [Option.List.lift].
+    induction vxs as [|?? IH]; cbn; cbv [Crypto.Util.Option.bind] in *; break_match; try congruence.
+    intro; eapply interp_op_always_interps; eassumption. }
+  eapply combines_to_correct; try eassumption.
+  let l := match goal with |- Forall2 _ _ ?l => l end in
+  revert dependent xsv; revert dependent l.
+  cbv [Option.List.lift] in *.
+  induction H'; cbn [List.map fold_right]; intros [|z xs]; intros; cbv [Crypto.Util.Option.bind] in *; break_match_hyps.
+  all: inversion_option; inversion_list; subst; constructor.
+  all: repeat first [ break_innermost_match_hyps_step
+                    | progress inversion_option
+                    | progress subst
+                    | assumption
+                    | match goal with
+                      | [ H : forall x, Some _ = Some x -> _ |- _ ] => specialize (H _ eq_refl)
+                      | [ H : context[?x :: ?l] |- _ ]
+                        => is_var x; is_var l; change (x :: l) with ([x] ++ l) in *;
+                           rewrite interp_op_associative_app_bind in H by assumption;
+                           cbv [Crypto.Util.Option.bind] in H
+                      | [ H : context[interp_op _ _ [_] ] |- _ ] => erewrite interp_op_combines_to_idempotent_rev in H by eassumption
+                      end
+                    | progress destruct_head'_or
+                    | erewrite interp_op_combines_to_singleton_same_size in * by eassumption
+                    | congruence ].
+Qed.
+
+Lemma combines_to_correct_alt G d o o' xs ys i z z1 e
+      (Ho : combines_to o = Some o')
+      (Hi : identity o' = Some i)
+      (Ha : associative o = true)
+      (Hai : op_always_interps o = true)
+      (H : Forall2 (fun x y => exists v', eval G d e v' /\ (interp_op G o' [v'; x] = Some y \/ (x = i /\ (y = v' \/ interp_op G o' [v'] = Some y)))) xs ys)
+      (H' : interp_op G o ys = Some z1)
+      (Hz : interp_op G o xs = Some z)
+      (Hnonempty : xs <> nil)
+  : exists v' : Z, (exists xs0 : list Z, interp_op G o' xs0 = Some z) /\ eval G d e v' /\ interp_op G o' [v'; z] = Some z1.
+Proof.
+  cut (exists v', eval G d e v');
+    [ intros [ev ?]; exists ev
+    | match goal with
+      | [ H : Forall2 _ ?l _, H' : ?l <> [] |- _ ]
+        => inversion H; subst; try congruence; destruct_head'_ex; destruct_head'_and; eauto
+      end ].
+  repeat apply conj.
+  { eexists [_]; eapply interp_op_combines_to_idempotent; eassumption. }
+  { assumption. }
+  { rewrite <- H'.
+    eapply combines_to_correct_or; try eassumption.
+    clear z1 z H' Hz Hnonempty.
+    induction H; constructor; eauto.
+    repeat (destruct_head'_ex; destruct_head'_and; destruct_head'_or).
+    all: repeat (step; eauto; []); subst; eauto.
+    all: erewrite @interp_op_drop_identity in * by eassumption; cbn [filter] in *; cbv [negb] in *; break_innermost_match; break_innermost_match_hyps;
+      reflect_hyps; subst.
+    all: try congruence.
+    all: try now (idtac + left); apply interp_op_nil_is_identity.
+    all: eauto. }
+Qed.
+
+Lemma combine_consts_helper o o' G d ls args i
+      (H : Forall2
+             (fun '(e, zs) y =>
+                Forall2
+                  (fun '(e, z') (v : Z) =>
+                     exists v' : Z, eval G d e v' /\ (interp_op G o' [v'; z'] = Some v \/ (z' = i /\ (v = v' \/ interp_op G o' [v'] = Some v))))
+                  (map (pair e) zs) y)
+             ls args)
+      (Hi' : identity o' = Some i)
+      (Halways : op_always_interps o = true)
+      (Hassoc : associative o = true)
+      (Hc : combines_to o = Some o')
+      (Hnonempty : Forall (fun '(e, zs) => zs <> nil) ls)
+  : exists args',
+    interp_op G o (concat args) = interp_op G o args'
+    /\ Forall2
+         (fun '(e, zs) (v0 : Z) =>
+            exists z' : Z,
+              interp0_op o zs = Some z' /\
+                (exists v' : Z, (exists xs : list Z, interp_op G o' xs = Some z') /\ eval G d e v' /\ interp_op G o' [v'; z'] = Some v0))
+         ls args'.
+Proof.
+  revert ls args H Hnonempty.
+  induction ls as [|x xs IH], args as [|arg args]; try specialize (IH args).
+  all: rewrite ?Forall2_nil_l_iff, ?Forall2_nil_r_iff, ?Forall2_cons_cons_iff; try congruence.
+  { exists nil; split; [ cbn; reflexivity | constructor ]. }
+  repeat first [ progress destruct_head_prod
+               | progress destruct_head_and
+               | progress destruct_head_ex
+               | progress intros
+               | progress specialize_by_assumption
+               | progress invlist Forall ].
+  match goal with
+  | [ |- ex ?P ] => cut (exists a b, P ([a] ++ b)); [ intros [a [b ?] ]; exists ([a] ++ b); assumption | ]
+  end.
+  cbv beta.
+  rewrite !interp_op_associative_app_bind by assumption.
+  setoid_rewrite interp_op_associative_app_bind; [ | assumption ].
+  cbv [Crypto.Util.Option.bind]; break_innermost_match; inversion_option; subst; do 2 eexists; break_innermost_match; split; try reflexivity.
+  all: repeat first [ progress inversion_option
+                    | match goal with
+                      | [ H : interp_op _ _ ?l = Some ?x, H' : interp_op _ _ [?v] = Some ?x' |- interp_op _ _ [?x; ?y] = interp_op _ _ [?x'; ?y'] ]
+                        => erewrite interp_op_associative_idempotent in H' by first [ exact H | assumption ]
+                      | [ H : Some _ = _ |- _ ] => symmetry in H
+                      | [ H : interp_op _ _ [?x] = _ |- _ ]
+                        => tryif is_evar x then fail else erewrite interp_op_associative_idempotent in H by eassumption
+                      | [ H : interp_op _ _ _ = None |- _ ]
+                        => apply interp_op_always_interps in H; [ exfalso | assumption ]
+                      end
+                    | progress subst
+                    | progress cbn [List.app]
+                    | apply Forall2_cons
+                    | eassumption
+                    | rewrite @Forall2_map_l_iff in *
+                    | match goal with
+                      | [ |- exists z, interp0_op ?o ?l = Some z /\ _ ]
+                        => let H := fresh in
+                           destruct (interp0_op o l) eqn:H;
+                           [ eexists; split; [ reflexivity | ]
+                           | apply interp_op_always_interps in H; [ exfalso | assumption ] ]
+                      end ].
+  all: try congruence.
+  eapply combines_to_correct_alt; try ((idtac + eapply interp_op_interp0_op); eassumption).
+  Unshelve.
+  all: try solve [ constructor ].
+Qed.
+
+Global Instance cleanup_combine_consts_Ok : Ok cleanup_combine_consts.
+Proof.
+  repeat (step; eauto; []); cbn [fold_left].
+  repeat match goal with
+         | [ |- eval _ _ (?r ?e) _ ]
+           => apply (_:Ok r)
+         end.
+  econstructor; [ | eassumption ].
+  rewrite Forall2_map_l.
+  rewrite !@Forall2_forall_iff_nth_error in *; cbv [option_eq] in *.
+  intros.
+  repeat match goal with
+         | [ H : context[nth_error ?l] |- context[nth_error ?l ?i] ] => specialize (H i)
+         end.
+  break_innermost_match; eauto.
+  cbn [fold_left].
+  repeat lazymatch goal with
+  | H : eval ?c ?d ?e _ |- context[?r ?e] =>
+    let Hr := fresh in epose proof ((_:Ok r) _ _ _ _ H) as Hr; clear H
+  end.
+  assumption.
+Qed.
+
+Global Instance combine_consts_pre_Ok : Ok combine_consts_pre.
+Proof using Type.
+  repeat (step; eauto; []).
+  match goal with
+  | [ |- context[split_consts ?o ?i ?l] ]
+    => pose proof (@split_consts_correct o i l _ _ _ ltac:(eassumption) ltac:(assumption)) as Hs
+  end.
+  match goal with
+  | [ |- context[group_consts ?ls] ]
+    => pose proof (@group_consts_Permutation ls) as Hg;
+       pose proof (@group_consts_nonempty ls) as Hg'
+  end.
+  eapply Permutation_Forall2 in Hs; [ | symmetry; exact Hg ].
+  destruct Hs as [? [? Hs] ].
+  let H := match goal with H : interp_op _ _ _ = Some _ |- _ => H end in
+  eapply permute_commutative in H; [ | eassumption .. ].
+  rewrite Forall2_concat_l_ex_iff in Hs.
+  destruct Hs as [? [? Hs] ]; subst.
+  rewrite Forall2_map_l_iff in Hs.
+  eapply Forall2_weaken, combine_consts_helper in Hs; try assumption; try solve [ intros; destruct_head'_prod; eassumption ]; [ | try eassumption .. ].
+  destruct Hs as [? [? Hs] ].
+  econstructor; [ apply app_consts_correct, compress_consts_correct_alt; try assumption | ].
+  { eassumption. }
+  { congruence. }
+Qed.
+
+Global Instance combine_consts_Ok : Ok combine_consts.
+Proof. repeat step; apply cleanup_combine_consts_Ok, combine_consts_pre_Ok; assumption. Qed.
+
 Definition expr : expr -> expr :=
   List.fold_left (fun e f => f e)
   [constprop
@@ -1404,6 +2007,7 @@ Definition expr : expr -> expr :=
   ;opcarry_0_at2
   ;unary_truncate
   ;truncate_small
+  ;combine_consts
   ;addoverflow_bit
   ;addcarry_bit
   ;addcarry_small
@@ -1424,10 +2028,10 @@ Qed.
 End Rewrite.
 
 Definition simplify (dag : dag) (e : node idx) :=
-  Rewrite.expr (reveal_node dag 3 e).
+  Rewrite.expr (reveal_node_at_least dag 3 e).
 
 Lemma eval_simplify G d n v : eval_node G d n v -> eval G d (simplify d n) v.
-Proof using Type. eauto using Rewrite.eval_expr, eval_node_reveal_node. Qed.
+Proof using Type. eauto using Rewrite.eval_expr, eval_node_reveal_node_at_least. Qed.
 
 Definition reg_state := Tuple.tuple (option idx) 16.
 Definition flag_state := Tuple.tuple (option idx) 6.
@@ -1536,37 +2140,48 @@ Global Instance ShowLines_symbolic_state : ShowLines symbolic_state :=
 
 Module error.
   Variant error :=
-  | nth_error_dag (_ : nat)
-
-  | get_flag (f : FLAG)
-  | get_reg (r : REG)
-  | load (a : idx)
-  | store (a v : idx)
+  | get_flag (f : FLAG) (s : flag_state)
+  | get_reg (r : nat + REG) (s : reg_state)
+  | load (a : idx) (s : symbolic_state)
+  | store (a v : idx) (s : symbolic_state)
   | set_const (_ : CONST) (_ : idx)
-  | expected_const (_ : idx)
+  | expected_const (_ : idx) (_ : expr)
 
   | unsupported_memory_access_size (_:N)
   | unimplemented_instruction (_ : NormalInstruction)
   | unsupported_line (_ : RawLine)
   | ambiguous_operation_size (_ : NormalInstruction)
+  .
 
-  | failed_to_unify (_ : list (expr * (option idx * option idx))).
-
-  Global Instance Show_error : Show error := fun e =>
-   match e with
-   | nth_error_dag n => "error.nth_error_dag " ++ show n
-   | get_flag f => "error.get_flag " ++ show f
-   | get_reg r => "error.get_reg " ++ show r
-   | load a => "error.load " ++ show a
-   | store a v => "error.store " ++ show a ++ " " ++ show v
-   | set_const c i => "error.set_const " ++ show c ++ " " ++ show i
-   | expected_const i => "error.expected_const " ++ show i
-   | unsupported_memory_access_size n => "error.unsupported_memory_access_size " ++ show n
-   | unimplemented_instruction n => "error.unimplemented_instruction " ++ show n
-   | unsupported_line n => "error.unsupported_line " ++ show n
-   | ambiguous_operation_size n => "error.ambiguous_operation_size " ++ show n
-   | failed_to_unify l => "error.failed_to_unify " ++ show l
-   end%string.
+  Global Instance show_lines_error : ShowLines error
+    := fun e
+       => match e with
+          | get_flag f s
+            => ["In flag state " ++ show_flag_state s;
+                "Flag " ++ show f ++ " was read without being set."]
+          | get_reg (inl i) s
+            => ["Invalid reg index " ++ show_nat i]
+          | get_reg (inr r) s
+            => ["In reg state " ++ show_reg_state s;
+                "Register " ++ show (r : REG) ++ " read without being set."]
+          | load a s
+            => (["In mem state:"]
+                  ++ show_lines_mem_state s
+                  ++ ["Index " ++ show a ++ " loaded without being present."]%string)%list
+          | store a v s
+            => (["In mem state:"]
+                  ++ show_lines_mem_state s
+                  ++ ["Index " ++ show a ++ " updated (with value " ++ show v ++ ") without being present."]%string)%list
+          | set_const c i
+            => ["SetOperand called with Syntax.const " ++ show c ++ " " ++ show i]%string
+          | expected_const i x
+            => ["RevealConst called at " ++ show i ++ " resulted in non-const value " ++ show x]
+          | unsupported_memory_access_size n => ["error.unsupported_memory_access_size " ++ show n]
+          | unimplemented_instruction n => ["error.unimplemented_instruction " ++ show n]
+          | unsupported_line n => ["error.unsupported_line " ++ show n]
+          | ambiguous_operation_size n => ["error.ambiguous_operation_size " ++ show n]
+          end%string.
+  Global Instance Show_error : Show error := _.
 End error.
 Notation error := error.error.
 
@@ -1575,8 +2190,8 @@ Definition ret {A} (x : A) : M A :=
   fun s => Success (x, s).
 Definition err {A} (e : error) : M A :=
   fun s => Error (e, s).
-Definition some_or {A} (f : symbolic_state -> option A) (e : error) : M A :=
-  fun st => match f st with Some x => Success (x, st) | None => Error (e, st) end.
+Definition some_or {A} (f : symbolic_state -> option A) (e : symbolic_state -> error) : M A :=
+  fun st => match f st with Some x => Success (x, st) | None => Error (e st, st) end.
 Definition bind {A B} (x : M A) (f : A -> M B) : M B :=
   fun s => (x_s <- x s; f (fst x_s) (snd x_s))%error.
 Definition lift_dag {A} (v : dag.M A) : M A :=
@@ -1597,10 +2212,16 @@ Section MapM. (* map over a list in the state monad *)
 End MapM.
 Definition mapM_ {A B} (f: A -> M B) l : M unit := _ <- mapM f l; ret tt.
 
+Definition error_get_reg_of_reg_index ri : symbolic_state -> error
+  := error.get_reg (let r := widest_register_of_index ri in
+                    if (reg_index r =? ri)%nat
+                    then inr r
+                    else inl ri).
+
 Definition GetFlag f : M idx :=
   some_or (fun s => get_flag s f) (error.get_flag f).
 Definition GetReg64 ri : M idx :=
-  some_or (fun st => get_reg st ri) (error.get_reg (widest_register_of_index ri)).
+  some_or (fun st => get_reg st ri) (error_get_reg_of_reg_index ri).
 Definition Load64 (a : idx) : M idx := some_or (load a) (error.load a).
 Definition SetFlag f i : M unit :=
   fun s => Success (tt, update_flag_with s (fun s => set_flag s f i)).
@@ -1627,7 +2248,7 @@ Definition RevealConst (i : idx) : M Z :=
   x <- Reveal 1 i;
   match x with
   | ExprApp (const n, nil) => ret n
-  | _ => err (error.expected_const i)
+  | _ => err (error.expected_const i x)
   end.
 
 Definition GetReg r : M idx :=
@@ -1645,9 +2266,12 @@ Definition SetReg r (v : idx) : M unit :=
 
 Class AddressSize := address_size : OperationSize.
 Definition Address {sa : AddressSize} (a : MEM) : M idx :=
-  base <- GetReg a.(mem_reg);
-  index <- match a.(mem_extra_reg) with
+  base <- match a.(mem_base_reg) with
            | Some r => GetReg r
+           | None => App ((const 0), nil)
+           end;
+  index <- match a.(mem_scale_reg) with
+           | Some (z, r) => z <- App (zconst sa z, []); r <- GetReg r; App (mul sa, [r; z])
            | None => App ((const 0), nil)
            end;
   offset <- App (match a.(mem_offset) with

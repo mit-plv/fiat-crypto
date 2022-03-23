@@ -506,6 +506,182 @@ Section WithParameters.
     Qed.
   End ListUnop.
 
+  Section FromWord.
+    Context {res : API.Expr (type_Z -> type_listZ)}
+            (res_valid :
+               valid_func (res (fun _ : API.type => unit)))
+            (res_Wf : API.Wf res).
+    Context (res_eq : forall w,
+                feval (map word.of_Z
+                           (API.interp (res _) w))
+                = F.of_Z _ w)
+            (res_bounds : forall w,
+                list_Z_bounded_by
+                  tight_bounds
+                  (API.interp (res _) w)).
+    Context (tight_bounds_tighter_than_max :
+               list_Z_tighter_than tight_bounds (@MaxBounds.max_bounds width n))
+            (tight_bounds_length : length tight_bounds = n).
+
+    Local Notation t :=
+      (type.arrow type_Z type_listZ) (only parsing).
+
+    Definition from_word_insizes
+      : type.for_each_lhs_of_arrow access_sizes t :=
+      (tt, tt).
+    Definition from_word_outsizes
+      : base_access_sizes (type.final_codomain t) :=
+      access_size.word.
+    Definition from_word_inlengths
+      : type.for_each_lhs_of_arrow list_lengths t :=
+      (tt, tt).
+    Let insizes := from_word_insizes.
+    Let outsizes := from_word_outsizes.
+    Let inlengths := from_word_inlengths.
+
+    Lemma from_word_correct f :
+      f = make_bedrock_func from_word insizes outsizes inlengths res ->
+      forall functions,
+        spec_of_from_word (f :: functions).
+    Proof using inname_gen_varname_gen_disjoint
+          outname_gen_varname_gen_disjoint ok relax_bounds res_Wf
+          res_bounds res_eq res_valid tight_bounds_length tight_bounds_tighter_than_max.
+      subst inlengths insizes outsizes. cbv [spec_of_from_word].
+      cbv [from_word_insizes from_word_outsizes from_word_inlengths].
+      cbv beta; intros; subst f. cbv [make_bedrock_func].
+      cleanup.
+      eapply Proper_call.
+      2:{
+        (* inlined [use_translate_func_correct constr:((word.unsigned x, tt)) R] and edited R0 *)
+        let b2_args := constr:((word.unsigned x, tt)) in
+        let R_ := R in
+        let arg_ptrs :=
+          lazymatch goal with
+          |- WeakestPrecondition.call _ _ _ _ ?args _ =>
+          args end in
+          let out_ptr := (eval compute in (hd (word.of_Z 0) arg_ptrs)) in
+          let in_ptrs := (eval compute in (tl arg_ptrs)) in
+          eapply (translate_func_correct (parameters_sentinel:=parameters_sentinel))
+          with (out_ptrs:=[out_ptr]) (flat_args:=in_ptrs)
+          (args:=b2_args).
+        16:instantiate (1:=R).
+        all:try translate_func_precondition_hammer.
+        1:reflexivity.
+        { cbv [Equivalence.equivalent_flat_args]; eexists 1%nat; split; [eexists|reflexivity].
+          cbv [Equivalence.equivalent_flat_base rep.equiv rep.Z]; sepsimpl; [reflexivity|eexists].
+          sepsimpl; trivial.
+          { cbn. cbv [WeakestPrecondition.literal dlet.dlet]. rewrite word.of_Z_unsigned; trivial. }
+          { eassumption. } }
+        { (* lists_reserved_with_initial_context *)
+          lists_reserved_simplify pout.
+          all:try solve_equivalence_side_conditions.
+          symmetry.
+          erewrite length_list_Z_bounded_by by (eapply relax_list_Z_bounded_by; eauto).
+          rewrite map_length; cbv [max_bounds]; rewrite repeat_length.
+          felem_to_array; sepsimpl; congruence.
+        } }
+      { postcondition_simplify; [ | | ].
+        { (* output correctness *)
+          eapply res_eq; auto. }
+        { (* output bounds *)
+          cbn [bounded_by field_representation frep] in *.
+          erewrite Util.map_unsigned_of_Z, MaxBounds.map_word_wrap_bounded
+            by eauto using relax_list_Z_bounded_by.
+          eauto. }
+        { (* separation-logic postcondition *)
+          eapply Proper_sep_iff1;
+            [ solve [apply FElem_array_truncated_scalar_iff1]
+            | reflexivity | ].
+          sepsimpl; [ | ].
+          { rewrite !map_length.
+            erewrite length_list_Z_bounded_by by (eapply relax_list_Z_bounded_by; eauto).
+            cbv [max_bounds]; rewrite repeat_length; trivial. }
+          { erewrite Util.map_unsigned_of_Z, MaxBounds.map_word_wrap_bounded
+              by eauto using relax_list_Z_bounded_by.
+            rewrite MakeAccessSizes.bytes_per_word_eq.
+            clear tight_bounds_length; subst.
+            match goal with
+              H : map word.unsigned _ = API.interp (res _) _ |- _ =>
+              rewrite <-H end.
+            auto. } } }
+    Qed.
+  End FromWord.
+
+  Section FelemCopy.
+    Context {res : API.Expr (type_listZ -> type_listZ)}
+            (res_valid :
+               valid_func (res (fun _ : API.type => unit)))
+            (res_Wf : API.Wf res).
+    Context (res_eq : forall x : list word,
+                length x = n ->
+                (map word.of_Z (API.interp (res _) (map word.unsigned x)))
+                = x)
+            (res_bounds : forall x,
+                list_Z_bounded_by (max_bounds (width:=width) n) x ->
+                list_Z_bounded_by (max_bounds (width:=width) n) (API.interp (res _) x)).
+
+    Local Ltac equivalence_side_conditions_hook ::=
+      lazymatch goal with
+      | |- context [length (API.interp (res _) ?x)] =>
+      idtac (*; specialize (res_bounds x ltac:(auto));
+        rewrite (length_list_Z_bounded_by _ _ res_bounds);
+        try congruence;
+        rewrite !map_length, outbounds_length;
+                felem_to_array; sepsimpl; congruence*)
+      | _ => idtac
+      end.
+
+    Local Notation t :=
+      (type.arrow type_listZ type_listZ) (only parsing).
+
+    Definition felem_copy_insizes
+      : type.for_each_lhs_of_arrow access_sizes t :=
+      (access_size.word, tt).
+    Definition felem_copy_outsizes
+      : base_access_sizes (type.final_codomain t) :=
+      access_size.word.
+    Definition felem_copy_inlengths
+      : type.for_each_lhs_of_arrow list_lengths t :=
+      (n, tt).
+    Let insizes := felem_copy_insizes.
+    Let outsizes := felem_copy_outsizes.
+    Let inlengths := felem_copy_inlengths.
+
+    Lemma felem_copy_correct f :
+      f = make_bedrock_func felem_copy insizes outsizes inlengths res ->
+      forall functions, spec_of_felem_copy (f :: functions).
+    Proof.
+      subst inlengths insizes outsizes.
+      cbv [spec_of_felem_copy felem_copy_insizes felem_copy_outsizes felem_copy_inlengths].
+      cbv beta; intros; subst f. cbv [make_bedrock_func].
+      cleanup. eapply Proper_call.
+      2: {
+        Set Ltac Backtrace.
+        rename R into Rr.
+        use_translate_func_correct constr:((map word.unsigned x, tt)) (FElem px x * Rr)%sep.
+        all:try translate_func_precondition_hammer.
+
+
+      autounfold with types access_sizes;
+      first [ eapply MaxBounds.max_bounds_range_iff
+            | eapply ByteBounds.byte_bounds_range_iff ];
+      cbn [type.app_curried fst snd].
+apply res_bounds.
+rewrite max_bounds_range_iff.
+(* note: need to constrain length of x, extract that from H0 *)
+admit.
+        { (* lists_reserved_with_initial_context *)
+          lists_reserved_simplify pout.
+          all:try solve_equivalence_side_conditions.
+          setoid_rewrite max_bounds_range_iff in res_bounds.
+          rewrite (fun x pf => proj1 (res_bounds x pf)).
+          admit. admit.
+      use_sep_assumption.
+      cancel; unfold seps.
+      admit.
+        Admitted.
+  End FelemCopy.
+
   Section FromBytes.
     Context {res : API.Expr (type_listZ -> type_listZ)}
             (res_valid :

@@ -57,6 +57,15 @@ Class unsaturated_solinas_ops
         (UnsaturatedSolinas.carry_scmul_const n s c width
                                               (F.to_Z a24)) Field.scmula24
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
+    felem_copy_op :
+      computed_op
+        (UnsaturatedSolinas.copy n width) Field.felem_copy
+        list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
+    from_word_op :
+      computed_op
+        (UnsaturatedSolinas.encode_word n s c width)
+        Field.from_word
+        from_word_insizes from_word_outsizes from_word_inlengths;
     from_bytes_op :
       computed_op
         (UnsaturatedSolinas.from_bytes n s c width)
@@ -97,13 +106,15 @@ Section UnsaturatedSolinas.
 
   Context (ops : unsaturated_solinas_ops n s c)
           mul_func add_func sub_func opp_func square_func
-          scmula24_func from_bytes_func to_bytes_func
+          scmula24_func felem_copy_func from_word_func from_bytes_func to_bytes_func
           (mul_func_eq : mul_func = b2_func mul_op)
           (add_func_eq : add_func = b2_func add_op)
           (sub_func_eq : sub_func = b2_func sub_op)
           (opp_func_eq : opp_func = b2_func opp_op)
           (square_func_eq : square_func = b2_func square_op)
           (scmula24_func_eq : scmula24_func = b2_func scmula24_op)
+          (felem_copy_func_eq : felem_copy_func = b2_func felem_copy_op)
+          (from_word_func_eq : from_word_func = b2_func from_word_op)
           (from_bytes_func_eq : from_bytes_func = b2_func from_bytes_op)
           (to_bytes_func_eq : to_bytes_func = b2_func to_bytes_op).
   Local Notation weight :=
@@ -417,6 +428,36 @@ Section UnsaturatedSolinas.
       intros. apply Hcorrect; auto. }
   Qed.
 
+  Lemma felem_copy_func_correct :
+    valid_func (res felem_copy_op _) ->
+    forall functions,
+      spec_of_felem_copy (felem_copy_func :: functions).
+  Proof using M_eq check_args_ok ok felem_copy_func_eq
+        tight_bounds_tighter_than.
+    intros. cbv [spec_of_felem_copy]. rewrite felem_copy_func_eq.
+    pose proof copy_correct _ _ _ _ _ ltac:(eassumption) _ (res_eq felem_copy_op)
+      as Hcorrect.
+
+    eapply felem_copy_correct;
+      repeat handle_side_conditions; [ | ]; intros.
+    { (* output *value* is correct *)
+      unshelve erewrite (proj1 (Hcorrect _ _)); cycle 1.
+      { rewrite map_map, Core.map_ext_id; trivial; intros.
+        rewrite ?Word.Interface.word.of_Z_unsigned; trivial. }
+      (* saturated_bounds on word.unsigned *) admit. }
+    { (* output *bounds* are correct *)
+      intros. apply Hcorrect; auto. }
+  Admitted.
+
+  Lemma from_word_func_correct :
+    valid_func (res from_word_op _) ->
+    forall functions,
+      spec_of_from_word (from_word_func :: functions).
+  Proof using M_eq check_args_ok from_word_func_eq ok
+        tight_bounds_tighter_than.
+    intros. cbv [spec_of_from_word]. rewrite from_word_func_eq.
+  Admitted.
+
   Lemma from_bytes_func_correct :
     valid_func (res from_bytes_op _) ->
     forall functions,
@@ -498,6 +539,7 @@ Definition field_parameters_prefixed
     (prefix ++ "copy")
     (prefix ++ "small_literal")
     (prefix ++ "select_znz")
+    (prefix ++ "from_word")
 .
 
 Local Ltac begin_derive_bedrock2_func :=
@@ -510,6 +552,8 @@ Local Ltac begin_derive_bedrock2_func :=
   | |- context [spec_of_UnOp un_scmula24] => eapply scmula24_func_correct
   | |- context [spec_of_from_bytes] => eapply from_bytes_func_correct
   | |- context [spec_of_to_bytes] => eapply to_bytes_func_correct
+  | |- context [spec_of_felem_copy] => eapply felem_copy_func_correct
+  | |- context [spec_of_from_word] => eapply from_word_func_correct
   end.
 
 Ltac derive_bedrock2_func op :=

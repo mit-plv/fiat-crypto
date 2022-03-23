@@ -63,6 +63,7 @@ src/ArithmeticCPS/Saturated.v
 src/ArithmeticCPS/WordByWordMontgomery.v
 src/Assembly/Equality.v
 src/Assembly/Equivalence.v
+src/Assembly/EquivalenceProofs.v
 src/Assembly/Parse.v
 src/Assembly/Symbolic.v
 src/Assembly/Syntax.v
@@ -82,6 +83,7 @@ src/Assembly/WithBedrock/SymbolicProofs.v
 src/Bedrock/End2End/Poly1305/Field1305.v
 src/Bedrock/End2End/X25519/Field25519.v
 src/Bedrock/End2End/X25519/MontgomeryLadder.v
+src/Bedrock/End2End/X25519/MontgomeryLadderProperties.v
 src/Bedrock/Field/Common/Tactics.v
 src/Bedrock/Field/Common/Types.v
 src/Bedrock/Field/Common/Util.v
@@ -91,7 +93,6 @@ src/Bedrock/Field/Common/Arrays/MakeListLengths.v
 src/Bedrock/Field/Common/Arrays/MaxBounds.v
 src/Bedrock/Field/Common/Names/MakeNames.v
 src/Bedrock/Field/Common/Names/VarnameGenerator.v
-src/Bedrock/Field/Interface/Compilation.v
 src/Bedrock/Field/Interface/Compilation2.v
 src/Bedrock/Field/Interface/Representation.v
 src/Bedrock/Field/Stringification/FlattenVarData.v
@@ -307,6 +308,8 @@ src/Util/Decidable/Decidable2Bool.v
 src/Util/ErrorT/Show.v
 src/Util/FMapPositive/Equality.v
 src/Util/ListUtil/CombineExtend.v
+src/Util/ListUtil/Concat.v
+src/Util/ListUtil/Filter.v
 src/Util/ListUtil/FoldBool.v
 src/Util/ListUtil/FoldMap.v
 src/Util/ListUtil/Forall.v
@@ -399,6 +402,7 @@ src/Util/Tactics/PoseTermWithName.v
 src/Util/Tactics/PrintContext.v
 src/Util/Tactics/PrintGoal.v
 src/Util/Tactics/Revert.v
+src/Util/Tactics/RevertUntil.v
 src/Util/Tactics/RewriteHyp.v
 src/Util/Tactics/RunTacticAsConstr.v
 src/Util/Tactics/SetEvars.v

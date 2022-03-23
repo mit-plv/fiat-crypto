@@ -16,7 +16,7 @@ jobs:
     - uses: hecrj/setup-rust-action@v1
       with:
         rust-version: ${{ matrix.rust }}
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v3
     - name: Login to crates.io
       run: cargo login $CRATES_IO_TOKEN
       env:
