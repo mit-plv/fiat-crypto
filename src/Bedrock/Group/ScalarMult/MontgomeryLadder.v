@@ -26,7 +26,7 @@ Notation "'let/n' ( w , x , y , z ) := val 'in' body" :=
         IdentParsing.TC.ident_to_string y;
         IdentParsing.TC.ident_to_string z]
         val  (fun '\<w, x, y, z\> => body))
-    (at level 200, w ident, x  ident, y ident, z ident, body at level 200,
+    (at level 200, w name, x  name, y name, z name, body at level 200,
      only parsing).
 
 
@@ -37,7 +37,7 @@ Notation "'let/n' ( v , w , x , y , z ) := val 'in' body" :=
         IdentParsing.TC.ident_to_string y;
         IdentParsing.TC.ident_to_string z]
         val (fun vwxyz => let '\< v, w, x, y, z \> := vwxyz in body))
-    (at level 200, v ident, w ident, x ident, y ident, z ident, body at level 200,
+    (at level 200, v name, w name, x name, y name, z name, body at level 200,
      only parsing).
 
 Section Gallina.
