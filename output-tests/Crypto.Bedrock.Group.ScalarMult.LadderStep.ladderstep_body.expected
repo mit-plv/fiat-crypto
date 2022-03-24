@@ -25,7 +25,7 @@ noreassign
                                                         (cmd.seq (cmd.call [] scmula24 ["Z2"; "E"])
                                                            (cmd.seq (cmd.call [] add ["Z2"; "A"; "Z2"])
                                                               (cmd.seq (cmd.call [] mul ["Z2"; "E"; "Z2"])
-                                                                 (fold_right (fun (v : string) (c : cmd) => cmd.seq (cmd.unset v) c)
+                                                                 (fold_right (fun (v : string) (c : Syntax.cmd) => cmd.seq (cmd.unset v) c)
                                                                     cmd.skip []))))))))))))))))))))))))
      : forall (width : Z) (BW : Bitwidth width) (word : word width) (mem : map.map word byte),
        word.ok word -> map.ok mem -> forall field_parameters : FieldParameters, FieldRepresentation -> bedrock_func

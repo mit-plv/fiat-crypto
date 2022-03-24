@@ -2896,7 +2896,7 @@ pub fn nonzero(out1: *u64, arg1: [6]u64) void {
 /// The function selectznz is a multi-limb conditional select.
 ///
 /// Postconditions:
-///   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
+///   out1 = (if arg1 = 0 then arg2 else arg3)
 ///
 /// Input Bounds:
 ///   arg1: [0x0 ~> 0x1]

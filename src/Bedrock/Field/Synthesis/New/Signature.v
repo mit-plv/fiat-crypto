@@ -516,12 +516,11 @@ Section WithParameters.
                            (API.interp (res _) w))
                 = F.of_Z _ w)
             (res_bounds : forall w,
-                list_Z_bounded_by
+                list_in_bounds
                   tight_bounds
                   (API.interp (res _) w)).
-    Context (tight_bounds_tighter_than_max :
-               list_Z_tighter_than tight_bounds (@MaxBounds.max_bounds width n))
-            (tight_bounds_length : length tight_bounds = n).
+    Context (tight_bounds_tighter_than_max : forall x,
+                list_in_bounds tight_bounds x -> list_Z_bounded_by (@MaxBounds.max_bounds width n) x).
 
     Local Notation t :=
       (type.arrow type_Z type_listZ) (only parsing).
@@ -545,7 +544,7 @@ Section WithParameters.
         spec_of_from_word (f :: functions).
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok relax_bounds res_Wf
-          res_bounds res_eq res_valid tight_bounds_length tight_bounds_tighter_than_max.
+          res_bounds res_eq res_valid tight_bounds_tighter_than_max.
       subst inlengths insizes outsizes. cbv [spec_of_from_word].
       cbv [from_word_insizes from_word_outsizes from_word_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
@@ -576,9 +575,9 @@ Section WithParameters.
           lists_reserved_simplify pout.
           all:try solve_equivalence_side_conditions.
           symmetry.
-          erewrite length_list_Z_bounded_by by (eapply relax_list_Z_bounded_by; eauto).
-          rewrite map_length; cbv [max_bounds]; rewrite repeat_length.
-          felem_to_array; sepsimpl; congruence.
+          erewrite length_list_Z_bounded_by; [| eapply tight_bounds_tighter_than_max, res_bounds].
+          cbv [max_bounds]. rewrite repeat_length. rewrite map_length.
+          cbv [FElem Bignum.Bignum] in *. sepsimpl. auto.
         } }
       { postcondition_simplify; [ | | ].
         { (* output correctness *)
@@ -586,7 +585,7 @@ Section WithParameters.
         { (* output bounds *)
           cbn [bounded_by field_representation frep] in *.
           erewrite Util.map_unsigned_of_Z, MaxBounds.map_word_wrap_bounded
-            by eauto using relax_list_Z_bounded_by.
+            by eauto using relax_list_Z_bounded_by. cbv [Field.tight_bounds]. simpl.
           eauto. }
         { (* separation-logic postcondition *)
           eapply Proper_sep_iff1;
@@ -594,12 +593,12 @@ Section WithParameters.
             | reflexivity | ].
           sepsimpl; [ | ].
           { rewrite !map_length.
-            erewrite length_list_Z_bounded_by by (eapply relax_list_Z_bounded_by; eauto).
+            erewrite length_list_Z_bounded_by; [| eapply tight_bounds_tighter_than_max, res_bounds].
             cbv [max_bounds]; rewrite repeat_length; trivial. }
           { erewrite Util.map_unsigned_of_Z, MaxBounds.map_word_wrap_bounded
               by eauto using relax_list_Z_bounded_by.
             rewrite MakeAccessSizes.bytes_per_word_eq.
-            clear tight_bounds_length; subst.
+            (* clear tight_bounds_length; subst. *)
             match goal with
               H : map word.unsigned _ = API.interp (res _) _ |- _ =>
               rewrite <-H end.
