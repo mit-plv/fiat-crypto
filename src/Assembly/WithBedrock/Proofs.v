@@ -3159,14 +3159,15 @@ Proof.
        | [ |- Semantics.get_reg ?m1 ?r = Semantics.get_reg ?m2 ?r ]
          => idtac
        end.
-Admitted.
+Time Admitted. (* 201.5s o.O *)
 
 Theorem symex_asm_func_correct
+        {output_scalars_are_pointers:bool}
         frame asm_args_out asm_args_in (G : symbol -> option Z) (d : dag) (output_types : type_spec) (stack_size : nat) (stack_base : Naive.word 64)
         (inputs : list (idx + list idx)) (callee_saved_registers : list REG) (reg_available : list REG) (asm : Lines)
         (rets : list (idx + list idx))
         (s' : symbolic_state)
-        (H : symex_asm_func d callee_saved_registers output_types stack_size inputs reg_available asm = Success (rets, s'))
+        (H : symex_asm_func (dereference_output_scalars:=output_scalars_are_pointers) d callee_saved_registers output_types stack_size inputs reg_available asm = Success (rets, s'))
         (d' := s'.(dag_state))
         (m : machine_state)
         (word_runtime_inputs : list (Naive.word 64 + list (Naive.word 64)))
@@ -3174,13 +3175,13 @@ Theorem symex_asm_func_correct
         (runtime_reg : list Z)
         (runtime_callee_saved_registers : list Z)
         (Hasm_reg : get_asm_reg m reg_available = runtime_reg)
-        (HR : R_runtime_input frame output_types runtime_inputs stack_size stack_base asm_args_out asm_args_in reg_available runtime_reg callee_saved_registers runtime_callee_saved_registers m)
+        (HR : R_runtime_input (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types runtime_inputs stack_size stack_base asm_args_out asm_args_in reg_available runtime_reg callee_saved_registers runtime_callee_saved_registers m)
         (HG_ok : gensym_dag_ok G d)
         (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
   : (exists m' G'
             (runtime_rets : list (Z + list Z)),
         DenoteLines m asm = Some m'
-        /\ R_runtime_output frame runtime_rets (type_spec_of_runtime runtime_inputs) stack_size stack_base asm_args_out asm_args_in callee_saved_registers runtime_callee_saved_registers m'
+        /\ R_runtime_output (output_scalars_are_pointers:=output_scalars_are_pointers) frame runtime_rets (type_spec_of_runtime runtime_inputs) stack_size stack_base asm_args_out asm_args_in callee_saved_registers runtime_callee_saved_registers m'
         /\ (forall e n, eval G d e n -> eval G' d' e n)
         /\ gensym_dag_ok G' d'
         /\ List.Forall2 (eval_idx_or_list_idx G' d') rets runtime_rets).
@@ -3195,6 +3196,7 @@ Proof.
 Qed.
 
 Theorem check_equivalence_correct
+        (output_scalars_are_pointers:=false)
         {assembly_calling_registers' : assembly_calling_registers_opt}
         {assembly_stack_size' : assembly_stack_size_opt}
         {assembly_output_first : assembly_output_first_opt}
@@ -3220,12 +3222,12 @@ Theorem check_equivalence_correct
         (runtime_callee_saved_registers := get_asm_reg st assembly_callee_saved_registers)
         (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
         (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
-        (HR : R_runtime_input frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st)
+        (HR : R_runtime_input (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st)
   : exists asm' st' (retvals : list (Z + list Z)),
     strip_ret asm = Success asm'
     /\ DenoteLines st asm' = Some st'
     /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
-    /\ R_runtime_output frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st'.
+    /\ R_runtime_output (output_scalars_are_pointers:=output_scalars_are_pointers) frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st'.
 Proof.
   subst stack_size.
   cbv beta delta [check_equivalence ErrorT.bind] in H.
@@ -3290,6 +3292,7 @@ Proof.
 Qed.
 
 Theorem generate_assembly_of_hinted_expr_correct
+        (output_scalars_are_pointers:=false)
         {assembly_calling_registers' : assembly_calling_registers_opt}
         {assembly_stack_size' : assembly_stack_size_opt}
         {assembly_output_first : assembly_output_first_opt}
@@ -3325,13 +3328,13 @@ Theorem generate_assembly_of_hinted_expr_correct
               (runtime_callee_saved_registers := get_asm_reg st assembly_callee_saved_registers)
               (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
               (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
-              (HR : R_runtime_input frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st),
+              (HR : R_runtime_input (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st),
       (* Should match check_equivalence_correct exactly *)
       exists asm' st' (retvals : list (Z + list Z)),
              strip_ret asm = Success asm'
         /\ DenoteLines st asm' = Some st'
         /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
-        /\ R_runtime_output frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st'.
+        /\ R_runtime_output (output_scalars_are_pointers:=output_scalars_are_pointers) frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st'.
 Proof.
   cbv [generate_assembly_of_hinted_expr] in H.
   break_innermost_match_hyps; inversion H; subst; destruct_head'_and; split; [ reflexivity | intros ].
