@@ -23,6 +23,7 @@ jobs:
       OPAMYES: "true"
       OPAMCONFIRMLEVEL: "unsafe-yes"
       COQEXTRAFLAGS: "-async-proofs-j 1"
+      SKIP_BEDROCK2: "1"
 
     steps:
     - uses: actions/checkout@v3
