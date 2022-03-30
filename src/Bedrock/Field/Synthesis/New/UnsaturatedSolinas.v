@@ -128,10 +128,11 @@ Section UnsaturatedSolinas.
          (prime_bytes_upperbound_list s)).
   Local Instance field_representation : FieldRepresentation
     := field_representation
-         n (n_bytes s) weight
+         n (n_bytes s) weight (list (option ZRange.zrange))
          (UnsaturatedSolinasHeuristics.loose_bounds n s c)
          (UnsaturatedSolinasHeuristics.tight_bounds n s c)
-         (prime_bytes_bounds_value).
+         (prime_bytes_bounds_value)
+         list_Z_bounded_by (fun x => x).
 
   Local Ltac specialize_correctness_hyp Hcorrect :=
     cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
@@ -294,6 +295,14 @@ Section UnsaturatedSolinas.
     apply F.eq_of_Z_iff; rewrite ?F.to_Z_of_Z;
     cbv [M] in M_eq; rewrite ?M_eq; pull_Zmod.
 
+  Ltac loosen_bounds := lazymatch goal with
+  | |- forall _, list_Z_bounded_by ?thesebounds _ -> _ => simpl; intros; eapply relax_list_Z_bounded_by; [| eauto];
+    simpl; try apply tight_bounds_tighter_than; try apply loose_bounds_tighter_than
+  | _ => idtac
+  end.
+
+  Ltac bounds_length := simpl; intros; erewrite length_list_Z_bounded_by; eauto; try apply length_tight_bounds; try apply length_loose_bounds.
+
   Lemma mul_func_correct :
     valid_func (res mul_op _) ->
     forall functions,
@@ -305,7 +314,7 @@ Section UnsaturatedSolinas.
          _ _ _ _ _ ltac:(eassumption) _ (res_eq mul_op)
       as Hcorrect.
     eapply list_binop_correct with (res:=res mul_op);
-    handle_side_conditions; [ | | ].
+    handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
       intros. 
       specialize_correctness_hyp Hcorrect.
@@ -313,9 +322,6 @@ Section UnsaturatedSolinas.
       FtoZ; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-    { cbv [bin_outbounds tight_bounds tight_upperbounds
-        prime_upperbound_list Partition.Partition.partition];
-        rewrite !map_length, seq_length; trivial. }
   Qed.
 
   Lemma square_func_correct :
@@ -329,16 +335,13 @@ Section UnsaturatedSolinas.
          _ _ _ _ _ ltac:(eassumption) _ (res_eq square_op)
       as Hcorrect.
     eapply list_unop_correct with (res:=res square_op);
-      handle_side_conditions; [ | | ].
+      handle_side_conditions; [ | | loosen_bounds| bounds_length ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       rewrite F.pow_2_r. FtoZ; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-    { cbv [un_outbounds tight_bounds tight_upperbounds
-        prime_upperbound_list Partition.Partition.partition];
-        rewrite !map_length, seq_length; trivial. }
   Qed.
 
   Lemma add_func_correct :
@@ -352,7 +355,7 @@ Section UnsaturatedSolinas.
          _ _ _ _ _ ltac:(eassumption) _ (res_eq add_op)
       as Hcorrect.
     eapply list_binop_correct with (res:=res add_op);
-    handle_side_conditions; [ | | ].
+    handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
       intros. 
       specialize_correctness_hyp Hcorrect.
@@ -360,10 +363,6 @@ Section UnsaturatedSolinas.
       FtoZ; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-    { cbn. cbv [loose_bounds loose_upperbounds tight_upperbounds 
-        prime_upperbound_list Partition.Partition.partition  ].
-      rewrite !map_length,combine_length,!map_length,seq_length,length_balance.
-      eapply Nat.min_id. }
   Qed.
 
   Lemma sub_func_correct :
@@ -377,7 +376,7 @@ Section UnsaturatedSolinas.
          _ _ _ _ _ ltac:(eassumption) _ (res_eq sub_op)
       as Hcorrect.
     eapply list_binop_correct with (res:=res sub_op);
-    handle_side_conditions; [ | | ].
+    handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
       intros. 
       specialize_correctness_hyp Hcorrect.
@@ -385,10 +384,6 @@ Section UnsaturatedSolinas.
       rewrite <-F.of_Z_sub. FtoZ. congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-    { cbn. cbv [loose_bounds loose_upperbounds tight_upperbounds 
-        prime_upperbound_list Partition.Partition.partition  ].
-      rewrite !map_length,combine_length,!map_length,seq_length,length_balance.
-      eapply Nat.min_id. }
   Qed.
 
   Lemma opp_func_correct :
@@ -402,17 +397,13 @@ Section UnsaturatedSolinas.
       as Hcorrect.
 
     eapply list_unop_correct with (res:=res opp_op);
-      handle_side_conditions; [ | | ].
+      handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ. rewrite Z.sub_0_l; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-    { cbn. cbv [loose_bounds loose_upperbounds tight_upperbounds 
-        prime_upperbound_list Partition.Partition.partition  ].
-      rewrite !map_length,combine_length,!map_length,seq_length,length_balance.
-      eapply Nat.min_id. }
   Qed.
 
   Lemma scmula24_func_correct :
@@ -428,16 +419,13 @@ Section UnsaturatedSolinas.
       as Hcorrect.
 
     eapply list_unop_correct with (res:=res scmula24_op);
-      handle_side_conditions; [ | | ].
+      handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ. congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-    { cbv [un_outbounds tight_bounds tight_upperbounds
-        prime_upperbound_list Partition.Partition.partition];
-        rewrite !map_length, seq_length; trivial. }
   Qed.
 
   Lemma felem_copy_func_correct :
@@ -482,11 +470,11 @@ Section UnsaturatedSolinas.
       as Hcorrect.
 
     eapply Signature.from_bytes_correct with (res:=res from_bytes_op);
-      handle_side_conditions; [ | ].
+      handle_side_conditions; [ loosen_bounds | bounds_length | | ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
-      destruct Hcorrect. simpl_map_unsigned.
-      FtoZ. congruence. }
+      destruct Hcorrect.
+      FtoZ. simpl_map_unsigned. congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
   Qed.
@@ -502,7 +490,13 @@ Section UnsaturatedSolinas.
       as Hcorrect.
 
     eapply Signature.to_bytes_correct with (res:=res to_bytes_op);
-      handle_side_conditions; [ | ].
+      handle_side_conditions; [ | | | ].
+    {
+      intros. eapply relax_list_Z_bounded_by; [| eauto]. apply byte_bounds_tighter_than.
+    }
+    {
+      intros. erewrite length_list_Z_bounded_by; [| eauto]. apply length_byte_bounds.
+    }
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       rewrite Hcorrect.
@@ -543,7 +537,9 @@ Definition field_parameters_prefixed
     (prefix ++ "from_bytes")
     (prefix ++ "to_bytes")
     (prefix ++ "copy")
-    (prefix ++ "from_word")
+    (prefix ++ "small_literal")
+    (prefix ++ "select_znz")
+    (* (prefix ++ "from_word") *)
 .
 
 Local Ltac begin_derive_bedrock2_func :=

@@ -23,21 +23,27 @@ Section Representation.
   Context {field_parameters : FieldParameters}
           {p_ok : Types.ok}.
   Context (n n_bytes : nat) (weight : nat -> Z)
-          (loose_bounds tight_bounds byte_bounds : list (option zrange))
+          (bounds : Type)
+          (list_in_bounds : bounds -> list Z -> Prop)
+          (loose_bounds tight_bounds byte_bounds : bounds)
           (relax_bounds :
              forall X : list Z,
-               list_Z_bounded_by tight_bounds X ->
-               list_Z_bounded_by loose_bounds X).
+               list_in_bounds tight_bounds X ->
+               list_in_bounds loose_bounds X)
+          (*Transformation to applied to list before evaluating. For Solinas, this is the identity,
+            and for word-by-word Montgomery, the argument must be pulled out of the Montgomery domain*)
+          (eval_transformation : list Z -> list Z).
+
 
   Definition eval_words : list word -> F M_pos :=
     fun ws =>
-      F.of_Z _ (Positional.eval weight n (map word.unsigned ws)).
+      F.of_Z _ (Positional.eval weight n (eval_transformation (map word.unsigned ws))).
 
   Definition eval_bytes : list byte -> F M_pos :=
     fun bs =>
       F.of_Z _ (Positional.eval
                            (ModOps.weight 8 1)
-                           n_bytes
+                           n_bytes 
                            (map byte.unsigned bs)).
 
   Local Instance frep : FieldRepresentation := {
@@ -45,9 +51,9 @@ Section Representation.
       feval_bytes := eval_bytes;
       felem_size_in_words := n;
       encoded_felem_size_in_bytes := n_bytes;
-      bytes_in_bounds bs := list_Z_bounded_by byte_bounds (map byte.unsigned bs);
-      bounds := list (option zrange);
-      bounded_by bs ws := list_Z_bounded_by bs (map word.unsigned ws);
+      bytes_in_bounds bs := list_in_bounds byte_bounds (map byte.unsigned bs);
+      bounds := bounds;
+      bounded_by bs ws := list_in_bounds bs (map word.unsigned ws);
       loose_bounds := loose_bounds;
       tight_bounds := tight_bounds;
     }.

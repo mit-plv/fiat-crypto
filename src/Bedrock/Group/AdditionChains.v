@@ -666,6 +666,7 @@ Section Extraction.
        inv := "inv";
        from_bytes := "from_bytes";
        to_bytes := "to_bytes";
+       select_znz := "select_znz";
        felem_copy := "felem_copy";
        from_word := "from_word" |}.
 End Extraction.

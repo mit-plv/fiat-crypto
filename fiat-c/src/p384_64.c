@@ -2975,7 +2975,7 @@ static FIAT_P384_FIAT_INLINE void fiat_p384_nonzero(uint64_t* out1, const uint64
  * The function fiat_p384_selectznz is a multi-limb conditional select.
  *
  * Postconditions:
- *   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
+ *   out1 = (if arg1 = 0 then arg2 else arg3)
  *
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]

@@ -241,9 +241,11 @@ Ltac prove_correctness' should_not_clear use_curve_good :=
     repeat first [ reflexivity
                  | progress autorewrite with interp_extra interp_gen_cache
                  | progress autorewrite with push_eval
+                 | erewrite select_eq
                  | progress autounfold with push_eval
                  | progress autorewrite with distr_length in *
-                 | typeclasses eauto ]
+                 | typeclasses eauto
+                 | solve [ eauto with zarith ] ]
   | .. ].
 
 Ltac prove_correctness use_curve_good := prove_correctness' ltac:(fun _ => fail) use_curve_good.
@@ -858,7 +860,7 @@ Section __.
           machine_wordsize prefix "selectznz" selectznz
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a multi-limb conditional select."]%string)
-             (selectznz_correct dummy_weight n saturated_bounds)).
+             (selectznz_correct saturated_bounds)).
   Definition mulx (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -985,6 +987,7 @@ Section __.
     cbn [lower upper fst snd machine_wordsize_opt] in *; Bool.split_andb; Z.ltb_to_lt; lia.
   Hint Rewrite
        eval_select
+       select_eq
        Arithmetic.Primitives.mulx_correct
        Arithmetic.Primitives.addcarryx_correct
        Arithmetic.Primitives.subborrowx_correct
@@ -1045,9 +1048,9 @@ Section __.
   Lemma Wf_cmovznz_by_mul s' res (Hres : cmovznz_by_mul s' = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
-  Lemma selectznz_correct limbwidth res
+  Lemma selectznz_correct res
         (Hres : selectznz = Success res)
-    : selectznz_correct (weight (Qnum limbwidth) (QDen limbwidth)) n saturated_bounds (Interp res).
+    : selectznz_correct saturated_bounds (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
   Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.

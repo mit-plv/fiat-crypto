@@ -470,7 +470,7 @@ static FIAT_POLY1305_FIAT_INLINE void fiat_poly1305_opp(fiat_poly1305_loose_fiel
  * The function fiat_poly1305_selectznz is a multi-limb conditional select.
  *
  * Postconditions:
- *   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
+ *   out1 = (if arg1 = 0 then arg2 else arg3)
  *
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]

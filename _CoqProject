@@ -104,6 +104,7 @@ src/Bedrock/Field/Synthesis/Examples/MulTwice.v
 src/Bedrock/Field/Synthesis/Examples/X1305_32.v
 src/Bedrock/Field/Synthesis/Examples/X25519_64.v
 src/Bedrock/Field/Synthesis/Examples/p224_64.v
+src/Bedrock/Field/Synthesis/Examples/p224_64_new.v
 src/Bedrock/Field/Synthesis/Examples/p256_64.v
 src/Bedrock/Field/Synthesis/Generic/Bignum.v
 src/Bedrock/Field/Synthesis/Generic/Operation.v
@@ -113,6 +114,7 @@ src/Bedrock/Field/Synthesis/Generic/WordByWordMontgomery.v
 src/Bedrock/Field/Synthesis/New/ComputedOp.v
 src/Bedrock/Field/Synthesis/New/Signature.v
 src/Bedrock/Field/Synthesis/New/UnsaturatedSolinas.v
+src/Bedrock/Field/Synthesis/New/WordByWordMontgomery.v
 src/Bedrock/Field/Synthesis/Specialized/ReifiedOperation.v
 src/Bedrock/Field/Synthesis/Specialized/Tactics.v
 src/Bedrock/Field/Synthesis/Specialized/UnsaturatedSolinas.v

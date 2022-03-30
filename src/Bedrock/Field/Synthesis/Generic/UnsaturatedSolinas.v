@@ -209,7 +209,6 @@ Section __.
     prove_operation_correctness.
     Unshelve.
     { apply width. }
-    { apply (UnsaturatedSolinasHeuristics.limbwidth n s c). }
   Defined.
 
   Definition to_bytes
