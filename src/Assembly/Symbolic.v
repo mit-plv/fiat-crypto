@@ -2082,6 +2082,9 @@ Definition reverse_lookup_widest_reg (st : reg_state) (i : idx) : option REG
 
 Definition load (a : idx) (s : mem_state) : option idx :=
   option_map snd (find (fun p => fst p =? a)%N s).
+Definition remove (a : idx) (s : mem_state) : list idx * mem_state :=
+  let '(vs, s) := List.partition (fun p => fst p =? a)%N s in
+  (List.map snd vs, s).
 Definition store (a v : idx) (s : mem_state) : option mem_state :=
   n <- indexof (fun p => fst p =? a)%N s;
   Some (ListUtil.update_nth n (fun ptsto => (fst ptsto, v)) s).
@@ -2143,6 +2146,8 @@ Module error.
   | get_flag (f : FLAG) (s : flag_state)
   | get_reg (r : nat + REG) (s : reg_state)
   | load (a : idx) (s : symbolic_state)
+  | remove (a : idx) (s : symbolic_state)
+  | remove_has_duplicates (a : idx) (vs : list idx) (s : symbolic_state)
   | store (a v : idx) (s : symbolic_state)
   | set_const (_ : CONST) (_ : idx)
   | expected_const (_ : idx) (_ : expr)
@@ -2168,6 +2173,14 @@ Module error.
             => (["In mem state:"]
                   ++ show_lines_mem_state s
                   ++ ["Index " ++ show a ++ " loaded without being present."]%string)%list
+          | remove a s
+            => (["In mem state:"]
+                  ++ show_lines_mem_state s
+                  ++ ["Index " ++ show a ++ " removed without being present."]%string)%list
+          | remove_has_duplicates a ls s
+            => (["In mem state:"]
+                  ++ show_lines_mem_state s
+                  ++ ["Index " ++ show a ++ " occurs multiple times during removal (" ++ show ls ++ ")."]%string)%list
           | store a v s
             => (["In mem state:"]
                   ++ show_lines_mem_state s
@@ -2223,6 +2236,13 @@ Definition GetFlag f : M idx :=
 Definition GetReg64 ri : M idx :=
   some_or (fun st => get_reg st ri) (error_get_reg_of_reg_index ri).
 Definition Load64 (a : idx) : M idx := some_or (load a) (error.load a).
+Definition Remove64 (a : idx) : M idx
+  := fun s => let '(vs, m) := remove a s in
+              match vs with
+              | [] => Error (error.remove a s, s)
+              | [v] => Success (v, update_mem_with s (fun _ => m))
+              | vs => Error (error.remove_has_duplicates a vs s, s)
+              end.
 Definition SetFlag f i : M unit :=
   fun s => Success (tt, update_flag_with s (fun s => set_flag s f i)).
 Definition HavocFlags : M unit :=
@@ -2285,6 +2305,13 @@ Definition Load {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
   then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
   addr <- Address a;
   v <- Load64 addr;
+  App ((slice 0 (Syntax.operand_size a s)), [v]).
+
+Definition Remove {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
+  if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
+  then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
+  addr <- Address a;
+  v <- Remove64 addr;
   App ((slice 0 (Syntax.operand_size a s)), [v]).
 
 Definition Store {s : OperationSize} {sa : AddressSize} (a : MEM) v : M unit :=

@@ -135,29 +135,28 @@ Proof.
      duplicates in arg/ret names *)
 Admitted.
 
-Local Instance riscv_word_ok : RiscvWordProperties.word.riscv_ok BasicC32Semantics.word.
+Local Instance TODO_reconcile_riscv_word_and_bedrock2_compiler_with_Naive : RiscvWordProperties.word.riscv_ok BasicC32Semantics.word.
+split.
+4: {
+  intros.
+  eapply word.unsigned_inj.
+  rewrite word.unsigned_mulhuu, word.unsigned_of_Z.
+  rewrite BitOps.bitSlice_alt by Lia.lia.
+  cbv [word.wrap BitOps.bitSlice'].
+  f_equal.
+  rewrite Z.mod_small; trivial.
+  pose proof word.unsigned_range y.
+  pose proof word.unsigned_range z.
+  Lia.nia. }
 Admitted.
 
-(* TODO: replace with real inv correctness proof once it exists *)
-Lemma fe25519_inv_correct
-    {ext_spec : Semantics.ExtSpec}
-    {ext_spec_ok : Semantics.ext_spec.ok ext_spec} :
-  forall functions,
-    spec_of_UnOp un_inv
-      (field_parameters:=field_parameters)
-      (field_representation:=field_representation n s c)
-      (AdditionChains.fe25519_inv
-         (word:=BasicC32Semantics.word)
-         (field_parameters:=field_parameters) :: functions).
-Proof.
-  intros functions.
-  (* later we'd use the following lemma instead of this admit: *)
-  epose proof AdditionChains.fe_inv_correct _ functions.
+Lemma weaken_bounded_by : 
+forall X : list Z,
+COperationSpecifications.list_Z_bounded_by
+  (UnsaturatedSolinasHeuristics.tight_bounds n s c) X ->
+COperationSpecifications.list_Z_bounded_by
+  (UnsaturatedSolinasHeuristics.loose_bounds n s c) X.
 Admitted.
-
-(* TODO: fill this in. Naive.word may need to be adjusted for behavior in the
-   (out of spec) case when shift arguments are out of range. *)
-Local Instance riscv_ok_word : RiscvWordProperties.word.riscv_ok BasicC32Semantics.word.
 
 Lemma montladder_compiles_correctly :
   forall (t : Semantics.trace)
@@ -256,6 +255,7 @@ Proof.
       apply UnsaturatedSolinas.relax_valid. }
     { reflexivity. }
     { cbv [Core.__rupicola_program_marker]. tauto. }
+    { exact I. }
     { eapply CSwap.cswap_body_correct; [|exact I].
       unfold field_representation, Signature.field_representation, Representation.frep; cbn; unfold n; cbv; trivial. }
     { eapply fe25519_copy_correct. }
@@ -279,7 +279,12 @@ Proof.
         apply fe25519_scmula24_correct. }
       { ecancel_assumption. } }
     { repeat (apply peel_func_unop; [ lazy; congruence | ]).
-      apply fe25519_inv_correct. }
+      unshelve eapply AdditionChains.fe25519_inv_correct_exp; try exact I.
+      { unshelve eapply Signature.field_representation_ok, weaken_bounded_by. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_square_correct. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_mul_correct. } }
     { repeat (apply peel_func_unop; [ lazy; congruence | ]).
       apply fe25519_mul_correct. }
     { ssplit; try eassumption; [ ].

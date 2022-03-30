@@ -435,7 +435,7 @@ Section FElems.
         fnspec! "fe25519_inv" (sq_ptr x_ptr : word) / (sq x : F M_pos) R,
         { requires tr mem :=
             (FElem (Some tight_bounds) x_ptr x
-             * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
+             * FElem None sq_ptr sq * R)%sep mem;
           ensures tr' mem' :=
             tr = tr'
             /\ (FElem (Some tight_bounds) x_ptr x
@@ -461,14 +461,166 @@ Section FElems.
 
       Print Assumptions exp_6_body. (* does not depend on [width] or [word] *)
       Print Assumptions exp_97_body. (* depends on [width] and  [word] :/ *)
-
+      
       Derive fe25519_inv SuchThat
              (defn! "fe25519_inv" ("res", "x") { fe25519_inv },
-             implements (exp (2^255-21)) using [square; mul])
+              implements (exp (2^255-21)) using [square; mul])
              As fe25519_inv_correct_exp.
       Proof.
         compile.
       Qed.
+
+      Context { F_M_pos : Z.pos M_pos = 2^255-19 }.
+      Require Import Crypto.Spec.Curve25519.
+
+      Lemma compile_inv : forall m l tr functions x,
+            let v := F.inv x in
+            forall {P} (pred : P v -> predicate) (k : nlet_eq_k P v) {k_impl}
+                   (R : map.rep -> Prop) (out : F M_pos) 
+                   (x_ptr : word.rep) (x_var : string) (out_ptr : word.rep) (out_var : string)
+                   (out_bounds : option bounds),
+              
+              spec_of_exp_large functions ->
+              
+              map.get l out_var = Some out_ptr ->
+              map.get l x_var = Some x_ptr ->
+              (FElem out_bounds out_ptr out ⋆ FElem (Some tight_bounds) x_ptr x ⋆ R) m ->
+              
+              (let v := v in
+               forall m',
+                 (FElem (Some loose_bounds) out_ptr v ⋆ FElem (Some tight_bounds) x_ptr x ⋆ R) m' ->
+                 <{ Trace := tr; Memory := m'; Locals := l; Functions := functions }>
+                 k_impl
+                 <{ pred (k v eq_refl) }>) ->
+              
+              <{ Trace := tr; Memory := m; Locals := l; Functions := functions }>
+              
+              cmd.seq (cmd.call [] "fe25519_inv" [expr.var out_var; expr.var x_var]) k_impl
+                      
+              <{ pred (let/n x as out_var eq:Heq := v in k x Heq) }>.
+      Proof.
+        repeat straightline.
+        repeat (eexists; split; eauto).
+        straightline_call.
+        ecancel_assumption.
+        repeat (eexists; split; eauto).
+        repeat compile_step.
+        unfold nlet_eq.
+        intuition subst.
+        eapply H3.
+        repeat compile_step.
+        intuition subst.
+        subst v.
+        replace (F.inv x) with (exp (2^255-21) x).
+        2: { unshelve erewrite F.Fq_inv_fermat; rewrite F_M_pos; try vm_decide.
+             exact Curve25519.prime_p.
+             eauto.
+        }
+        ecancel_assumption.
+      Qed.
+      
+      (*
+      Context { F_M_pos : Z.pos M_pos = 2^255-19 }.
+      Require Import Crypto.Spec.Curve25519.
+     
+      Derive fe25519_inv SuchThat
+             (defn! inv ("res", "x") { fe25519_inv },
+             implements (exp (2^255-21)) using [square; mul])
+             As fe25519_inv_correct_exp.
+      Proof.
+        (* replace (exp (2^255-21)) with @F.inv.*)
+        compile_setup_unfold_spec_of.
+        unfold spec_of_UnOp, un_inv, un_model.
+        cbv [ spec_of_UnOp unop_spec un_inv un_model ].
+        intros.
+        replace (F.inv (feval x)) with (exp (2^255-21) (feval x)).
+        2: { unshelve erewrite F.Fq_inv_fermat; rewrite F_M_pos; try vm_decide.
+             exact Curve25519.prime_p.
+             lia.
+             unfold feval; eauto.
+        }
+        compile_setup.
+        rewrite_exponentiation exp_by_squaring_encoded_correct.
+
+        destruct H2.
+        destruct H3.
+        destruct H3.
+
+       
+
+        eassert ((FElem _ px _ * _) mem0)%sep.
+        unfold FElem.
+        sepsimpl.
+        eexists.
+        sepsimpl.
+        reflexivity.
+        unfold un_xbounds in H2.
+
+        unfold maybe_bounded.
+        let x := open_constr:(Some _) in instantiate(2:=x).
+        simpl.
+        eapply H2.
+        eapply H3.
+
+        compile_step.
+        compile_step.
+        compile_step.
+
+        unfold maybe_bounded.
+        unfold un_xbounds in H2.
+        unfold FElem.
+        sepsimpl.
+        eexists.
+        sepsimpl.
+        reflexivity.
+        instantiate (2 := None).
+        eauto.
+        eapply H4.
+
+        compile_step.
+        compile_step.
+        
+        Set Typeclasses Debug.
+        compile_step.
+        Set Typeclasses Debug.
+        compile_step.
+        compile_step.
+        compile_step.
+        compile_step.
+
+        instantiate (2 := pout). instantiate (1 := Rr).
+
+        About fe25519.
+        Print UnOp.
+        Print Build_UnOp.
+        Search UnOp.
+
+        eapply H6.
+        compile_step.
+        
+        let x := open_constr:(Some _) in instantiate(2:=pout).
+        simpl.
+        eapply H2.
+        eapply H3.
+        compile_step.
+        
+        ecancel_assumption.
+
+        compile_step.
+        compile_step.
+        compile_step.
+        compile_step.
+        
+
+        Set Typeclasses Debug.
+        repeat compile_step.
+
+        inversion H5.
+
+        3: { instantiate (2 := "x"). repeat compile_step. }
+        3: { instantiate (1 := "x"). repeat compile_step. }
+        
+        change (fun x => ?c x) with c.  
 
     Global Instance spec_of_fe25519_inv : spec_of "fe25519_inv" :=
       fnspec! "fe25519_inv" (sq_ptr x_ptr : word) / (sq x : F M_pos) R,
@@ -478,9 +630,9 @@ Section FElems.
         ensures tr' mem' :=
           tr = tr'
           /\ (FElem (Some tight_bounds) x_ptr x
-          * FElem (Some tight_bounds) sq_ptr (F.inv x)  * R)%sep mem'}.
+          * FElem (Some tight_bounds) sq_ptr (F.inv x)  * R)%sep mem'}. 
 
-    Require Import Crypto.Spec.Curve25519.
+    Require Import Crypto.Spec.Curve25519. *)
     Lemma fe_inv_correct : 
       Z.pos M_pos = 2^255-19 ->
       program_logic_goal_for_function! fe25519_inv.
@@ -488,9 +640,6 @@ Section FElems.
       intros Hm HmPrime ? ** ? **.
       eapply Proper_call; [|eapply fe25519_inv_correct_exp; eauto 1; exact I].
       intros ? ** ? ** ? ** ?; intuition idtac.
-      unshelve erewrite F.Fq_inv_fermat; rewrite Hm; try vm_decide.
-      { exact Curve25519.prime_p. }
-      { assumption. }
     Qed.
 
     End Compilation.
@@ -521,3 +670,6 @@ Section Extraction.
        felem_copy := "felem_copy";
        from_word := "from_word" |}.
 End Extraction.
+
+#[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.inv _) _))) =>
+simple eapply compile_inv; shelve : compiler.

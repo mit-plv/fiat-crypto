@@ -231,7 +231,6 @@ Section Compile.
 
   Definition compile_square := make_un_lemma un_square.
   Definition compile_scmula24 := make_un_lemma un_scmula24.
-  Definition compile_inv := make_un_lemma un_inv.
 
   Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_felem_copy _ _ _ _ _ _ _ _)) : typeclass_instances.
   
@@ -348,8 +347,6 @@ simple eapply compile_add; shelve : compiler.
 simple eapply compile_sub; shelve : compiler.
 #[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (_ ^ 2)%F _))) =>
 simple eapply compile_square; shelve : compiler.
-#[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.inv _) _))) =>
-simple eapply compile_inv; shelve : compiler.
 #[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.of_Z M_pos _) _))) =>
 simple eapply compile_from_word; shelve : compiler.
 #[export] Hint Extern 10 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ ?v _))) =>
