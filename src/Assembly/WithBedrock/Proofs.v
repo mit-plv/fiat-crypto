@@ -27,6 +27,7 @@ Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.ListUtil.Permutation.
 Require Import Crypto.Util.ListUtil.PermutationCompat.
 Require Import Crypto.Util.ListUtil.IndexOf.
+Require Import Crypto.Util.ListUtil.Filter.
 Require Import Crypto.Util.ListUtil.Split.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.ZUtil.Definitions.
@@ -147,28 +148,31 @@ Definition R_runtime_input
            (frame : Semantics.mem_state -> Prop)
            (output_types : type_spec) (runtime_inputs : list (Z + list Z))
            (stack_size : nat) (stack_base : Naive.word 64)
-           (asm_arguments_out asm_arguments_in : list (Naive.word 64))
+           (asm_pointer_arguments_out asm_pointer_arguments_in : list (Naive.word 64))
            (reg_available : list REG) (runtime_reg : list Z)
            (callee_saved_registers : list REG) (runtime_callee_saved_registers : list Z)
            (m : machine_state)
   : Prop
-  := Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list _ m.(machine_reg_state))
-     /\ (Nat.min (List.length output_types + List.length runtime_inputs) (List.length reg_available) <= List.length runtime_reg)%nat
-     /\ get_asm_reg m reg_available = runtime_reg
-     /\ get_asm_reg m callee_saved_registers = runtime_callee_saved_registers
-     /\ List.length asm_arguments_out = List.length output_types
-     /\ List.map word.unsigned asm_arguments_out = List.firstn (List.length output_types) runtime_reg
-     /\ List.map word.unsigned asm_arguments_in = List.firstn (List.length runtime_inputs) (List.skipn (List.length output_types) runtime_reg)
-     /\ (Semantics.get_reg m rsp - 8 * Z.of_nat stack_size)%Z = word.unsigned stack_base
-     /\ (* it must be the case that all the scalars in the real input values match what's in registers / the calling convention *)
-       Forall2
-         (fun v1 v2 => match v1 with
-                       | inl v => v = v2
-                       | inr _ => True
-                       end)
-         runtime_inputs
-         (firstn (length runtime_inputs) (skipn (length output_types) runtime_reg))
-     /\ R_runtime_input_mem (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types runtime_inputs stack_size stack_base asm_arguments_out asm_arguments_in runtime_reg m.
+  := exists (asm_arguments_out asm_arguments_in : list (Naive.word 64)),
+    Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list _ m.(machine_reg_state))
+    /\ (Nat.min (List.length output_types + List.length runtime_inputs) (List.length reg_available) <= List.length runtime_reg)%nat
+    /\ get_asm_reg m reg_available = runtime_reg
+    /\ get_asm_reg m callee_saved_registers = runtime_callee_saved_registers
+    /\ List.length asm_arguments_out = List.length output_types
+    /\ List.map word.unsigned asm_arguments_out = List.firstn (List.length output_types) runtime_reg
+    /\ List.map word.unsigned asm_arguments_in = List.firstn (List.length runtime_inputs) (List.skipn (List.length output_types) runtime_reg)
+    /\ List.map fst (List.filter (fun '(_, v) => output_scalars_are_pointers || Option.is_Some v)%bool (List.combine asm_arguments_out output_types)) = asm_pointer_arguments_out
+    /\ List.map fst (List.filter (fun '(_, v) => match v with inl _ => false | inr _ => true end)%bool (List.combine asm_arguments_in runtime_inputs)) = asm_pointer_arguments_in
+    /\ (Semantics.get_reg m rsp - 8 * Z.of_nat stack_size)%Z = word.unsigned stack_base
+    /\ (* it must be the case that all the scalars in the real input values match what's in registers / the calling convention *)
+      Forall2
+        (fun v1 v2 => match v1 with
+                      | inl v => v = v2
+                      | inr _ => True
+                      end)
+        runtime_inputs
+        (firstn (length runtime_inputs) (skipn (length output_types) runtime_reg))
+    /\ R_runtime_input_mem (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types runtime_inputs stack_size stack_base asm_arguments_out asm_arguments_in runtime_reg m.
 
 (* TODO : should we preserve inputs? *)
 Definition R_runtime_output_mem
@@ -198,13 +202,16 @@ Definition R_runtime_output
            (frame : Semantics.mem_state -> Prop)
            (runtime_outputs : list (Z + list Z)) (input_types : type_spec)
            (stack_size : nat) (stack_base : Naive.word 64)
-           (asm_arguments_out asm_arguments_in : list (Naive.word 64))
+           (asm_pointer_arguments_out asm_pointer_arguments_in : list (Naive.word 64))
            (callee_saved_registers : list REG) (runtime_callee_saved_registers : list Z)
            (m : machine_state)
   : Prop
-  := Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list _ m.(machine_reg_state))
-     /\ get_asm_reg m callee_saved_registers = runtime_callee_saved_registers
-     /\ R_runtime_output_mem (output_scalars_are_pointers:=output_scalars_are_pointers) frame runtime_outputs input_types stack_size stack_base asm_arguments_out asm_arguments_in m.
+  := exists (asm_arguments_out asm_arguments_in : list (Naive.word 64)),
+    Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list _ m.(machine_reg_state))
+    /\ get_asm_reg m callee_saved_registers = runtime_callee_saved_registers
+    /\ List.map fst (List.filter (fun '(_, v) => output_scalars_are_pointers || match v with inl _ => false | inr _ => true end)%bool (List.combine asm_arguments_out runtime_outputs)) = asm_pointer_arguments_out
+    /\ List.map fst (List.filter (fun '(_, v) => Option.is_Some v)%bool (List.combine asm_arguments_in input_types)) = asm_pointer_arguments_in
+    /\ R_runtime_output_mem (output_scalars_are_pointers:=output_scalars_are_pointers) frame runtime_outputs input_types stack_size stack_base asm_arguments_out asm_arguments_in m.
 
 Definition word_args_to_Z_args
   : list (Naive.word 64 + list (Naive.word 64)) -> list (Z + list Z)
@@ -1537,6 +1544,14 @@ Local Ltac find_list_in ls in_ls :=
   | List.map _ ?ls' => find_list_in ls ls'
   end.
 
+Local Ltac find_sublist_in ls in_ls :=
+  first [ find_list_in ls in_ls
+        | lazymatch ls with
+          | firstn _ ?ls => find_sublist_in ls in_ls
+          | List.combine ?lsa ?lsb => first [ find_sublist_in lsa in_ls | find_sublist_in lsb in_ls ]
+          | List.map _ ?ls => find_sublist_in ls in_ls
+          end ].
+
 Local Ltac revert_Forall_step ls :=
   match goal with
   | [ H : Forall2 _ ?lsa ?lsb |- _ ]
@@ -1568,8 +1583,7 @@ Local Ltac intros_then_revert tac :=
   revert_until H;
   clear H.
 
-Local Ltac revert_Foralls_to_nth_error :=
-  revert_Foralls;
+Local Ltac reverted_Foralls_to_nth_error :=
   rewrite ?@Forall2_forall_iff_nth_error, ?@Forall_forall_iff_nth_error_match;
   cbv [option_eq];
   intros_then_revert
@@ -1585,6 +1599,8 @@ Local Ltac revert_Foralls_to_nth_error :=
                     | [ H : context[nth_error ?ls _], H' : context[nth_error ?ls' ?i] |- _ ]
                       => find_list_in ls ls'; specialize (H i)
                     end).
+
+Local Ltac revert_Foralls_to_nth_error := revert_Foralls; reverted_Foralls_to_nth_error.
 
 Ltac adjust_Foralls_firstn_skipn :=
   let rep a a' :=
@@ -3081,18 +3097,23 @@ Proof.
                 end
        | _ => idtac
        end.
-  1: lazymatch goal with
-     | [ |- asm_args_in = _ ] => idtac
-     end.
-  2: lazymatch goal with
-     | [ |- asm_args_out = _ ] => idtac
-     end.
   all: [ > | ].
+  all: lazymatch goal with
+       | [ |- List.map fst (filter _ (List.combine _ _)) = List.map fst (filter _ (List.combine _ _)) ]
+         => idtac
+       end.
+  all: rewrite <- Forall2_eq, !Forall2_map_l_iff, !Forall2_map_r_iff.
+  all: apply List.Forall2_filter_same.
+  all: pose proof Hreg_wide_enough as Hreg_wide_enough'.
   all: rewrite Forall_forall_iff_nth_error in Hreg_wide_enough;
     cbv [get_asm_reg val_or_list_val_matches_spec] in *;
     rewrite <- !@Forall2_eq, ?@Forall2_map_l_iff, ?@Forall2_map_r_iff in *;
     saturate_lengths;
     Foralls_to_nth_error.
+  all: cbn [fst].
+  all: repeat (rewrite ?Bool.orb_true_l, ?Bool.orb_true_r, ?Bool.orb_false_l, ?Bool.orb_false_r in *; subst).
+  all: try discriminate.
+  all: try reflexivity.
   all: try specialize (Hreg_wide_enough _ eq_refl).
   all: try specialize (Hreg_wide_enough _ _ ltac:(eassumption)).
   all: intros; saturate_lengths.
@@ -3113,11 +3134,51 @@ Proof.
                    rewrite H in H'
               end.
   all: inversion_option; subst.
-  all: cbv [eval_idx_or_list_idx] in *.
-  all: handle_eval_eval.
+  all: cbv [Option.is_Some] in *; break_innermost_match_hyps; inversion_option; inversion_sum.
   all: subst.
-  all: apply Properties.word.unsigned_inj.
+  all: try discriminate.
+  all: lazymatch goal with
+       | [ H : nth_error ?ls ?i = Some (Some _), H' : nth_error ?ls' ?i = Some (inl _) |- False ]
+         => revert H H'
+       | [ H : nth_error ?ls ?i = Some None, H' : nth_error ?ls' ?i = Some (inr _) |- False ]
+         => revert H H'
+       | [ H : nth_error _ _ = Some ?r, H' : nth_error _ _ = Some ?r0 |- ?r = ?r0 ]
+         => apply Properties.word.unsigned_inj; revert H H'
+       end.
+  all: repeat match goal with
+              | [ H : Forall2 _ ?x _ |- context[nth_error ?x _] ] => revert H
+              | [ H : Forall2 _ _ (List.combine ?lsa ?lsb) |- context[nth_error ?ls] ]
+                => first [ find_list_in ls lsa | find_list_in ls lsb ]; revert H
+              end.
+  all: revert dependent rets; intro.
+  all: reverted_Foralls_to_nth_error;
+    intros *; Foralls_to_nth_error_rewrites; Foralls_to_nth_error_destructs;
+    Foralls_to_nth_error_cleanup.
+  all: intros; saturate_lengths.
+  all: try match goal with
+           | [ H : (?x < ?y)%nat, H' : (?x >= ?y')%nat |- _ ]
+             => exfalso; cut (y = y'); [ clear -H H'; lia | congruence ]
+           end.
   all: try congruence.
+  all: repeat match goal with
+              | [ H : context[nth_error (List.combine _ _)] |- _ ]
+                => lazymatch type of H with
+                   | forall i : nat, @?P i
+                     => let T := open_constr:(forall i : nat, _) in
+                        cut T;
+                        [ clear H
+                        | let i := fresh "i" in
+                          intro i; specialize (H i);
+                          set_evars; revert H; Foralls_to_nth_error_rewrites;
+                          intro H; subst_evars; exact H ]
+                   end
+              end.
+  all: Foralls_to_nth_error.
+  all: intros; saturate_lengths.
+  all: try match goal with
+           | [ H : (?x < ?y)%nat, H' : (?x >= ?y')%nat |- _ ]
+             => exfalso; cut (y = y'); [ clear -H H'; lia | congruence ]
+           end.
   all: rewrite ?(fun x y => Z.land_ones (Semantics.get_reg x y)) in * by (clear; lia).
   all: rewrite ?(fun x y => Z.mod_small (Semantics.get_reg x y)) in * by now apply get_reg_bounded.
   all: split_iff.
@@ -3140,6 +3201,15 @@ Proof.
            | [ H : Symbolic.get_reg _ _ = Some _ |- _ ]
              => eapply get_reg_of_R_regs in H; [ | eassumption .. ]
            end.
+  all: lazymatch goal with
+       | [ H : nth_error ?ls _ = Some (inl (inl ?r)), H' : Symbolic.get_reg _ (reg_index ?r) = _ |- _ ]
+         => repeat match goal with
+                   | [ H : Forall2 _ ls _ |- _ ]
+                     => revert H
+                   end
+       | _ => idtac
+       end.
+  all: Foralls_to_nth_error.
   all: handle_eval_eval.
   all: repeat match goal with
               | [ H : eval_idx_Z ?G ?d ?e ?v, H' : forall a b, eval ?G ?d a b -> eval ?G' ?d' a b |- _ ]
@@ -3148,18 +3218,51 @@ Proof.
   all: handle_eval_eval.
   all: subst.
   all: try congruence.
-  all: match goal with
-       | [ |- word.unsigned ?x = word.unsigned ?y ]
-         => generalize dependent (word.unsigned x);
-            generalize dependent (word.unsigned y);
-            intros; subst
-       end.
-  all: [ > | ].
+  all: try specialize (Hreg_wide_enough _ eq_refl).
   all: lazymatch goal with
-       | [ |- Semantics.get_reg ?m1 ?r = Semantics.get_reg ?m2 ?r ]
-         => idtac
+       | [ H : eval_idx_Z _ _ ?i ?v, H' : nth_error _ _ = Some (inl ?i), H'' : nth_error _ _ = Some (inl (inr ?i)) |- ?v = _ ]
+         => revert H' H''
+       | [ H : eval_idx_Z _ _ ?i ?v, H' : nth_error ?ls _ = Some (inl ?i) |- ?v = _ ]
+         => revert H'
+       | [ H : nth_error _ _ = Some ?r |- word.unsigned ?r = _ ]
+         => revert H
        end.
-Time Admitted. (* 201.5s o.O *)
+  all: repeat match goal with
+              | [ H : Forall2 _ ?lsa ?lsb |- context[nth_error ?ls] ]
+                => first [ find_list_in ls lsa | find_list_in ls lsb ];
+                   revert H
+              end.
+  all: Foralls_to_nth_error.
+  all: intros.
+  all: cbv [eval_idx_or_list_idx] in *.
+  all: rewrite ?(fun x y => Z.land_ones (Semantics.get_reg x y)) in * by (clear; lia).
+  all: rewrite ?(fun x y => Z.mod_small (Semantics.get_reg x y)) in * by now apply get_reg_bounded.
+  all: split_iff.
+  all: try specialize (Hreg_wide_enough _ eq_refl).
+  all: repeat first [ match goal with
+                      | [ H : forall v, (0 <= v < _)%Z -> eval_idx_Z _ _ ?a v -> _, H' : eval_idx_Z _ _ ?a ?v' |- _ ]
+                        => specialize (fun H1 H2 => H v' (conj H1 H2))
+                      | [ H : ?x = Some _, H' : ?x = None |- _ ]
+                        => rewrite H in H'; inversion_option
+                      | [ H : ?x = Some _, H' : ?x = Some _ |- _ ]
+                        => rewrite H in H'; inversion_option
+                      | [ H : Symbolic.get_reg _ _ = Some _ |- _ ]
+                        => eapply get_reg_of_R_regs in H; [ | eassumption .. ]
+                      end
+                    | progress subst
+                    | progress inversion_sum
+                    | congruence
+                    | progress specialize_by_assumption
+                    | progress specialize_by (cbv [eval_idx_Z] in *; eauto)
+                    | progress specialize_by apply get_reg_bounded
+                    | progress handle_eval_eval ].
+  all: repeat match goal with
+              | [ H : eval_idx_Z ?G ?d ?e ?v, H' : forall a b, eval ?G ?d a b -> eval ?G' ?d' a b |- _ ]
+                => apply H' in H; change (eval_idx_Z G' d' e v) in H
+              end.
+  all: handle_eval_eval.
+  all: try congruence.
+Time Qed. (* Finished transaction in 14.751 secs (14.751u,0.s) *)
 
 Theorem symex_asm_func_correct
         {output_scalars_are_pointers:bool}
