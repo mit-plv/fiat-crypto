@@ -1,7 +1,7 @@
 (* Rewritten versions of poly1305 and chacha20 that you can compile with Rupicola *)
 Require Import Coq.Unicode.Utf8.
 Require Import Rupicola.Lib.Api.
-Require Import Rupicola.Examples.Crypto.Spec.
+Require Import Crypto.Bedrock.End2End.RupicolaCrypto.Spec.
 Require Import bedrock2.BasicC32Semantics.
 Import Syntax.Coercions ProgramLogic.Coercions.
 Import Datatypes.
@@ -1037,7 +1037,7 @@ Proof.
   cbn [List.map]; rewrite List.map_app.
   repeat f_equal.
 
-  About Nat_iter_rew_inv.
+  (*About Nat_iter_rew_inv.*)
 
   eapply Nat_iter_rew_inv with (P := Forall (in_bounds 32)); intros.
   - eauto 10 using quarterround_in_bounds.
