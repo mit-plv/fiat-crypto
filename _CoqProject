@@ -81,6 +81,9 @@ src/Assembly/WithBedrock/Proofs.v
 src/Assembly/WithBedrock/Semantics.v
 src/Assembly/WithBedrock/SymbolicProofs.v
 src/Bedrock/End2End/Poly1305/Field1305.v
+src/Bedrock/End2End/RupicolaCrypto/Derive.v
+src/Bedrock/End2End/RupicolaCrypto/Low.v
+src/Bedrock/End2End/RupicolaCrypto/Spec.v
 src/Bedrock/End2End/X25519/Field25519.v
 src/Bedrock/End2End/X25519/MontgomeryLadder.v
 src/Bedrock/End2End/X25519/MontgomeryLadderProperties.v

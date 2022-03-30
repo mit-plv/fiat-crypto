@@ -912,10 +912,10 @@ Notation "'let/n' ( x0 , y0 , z0 , t0 , x1 , y1 , z1 , t1 , x2 , y2 , z2 , t2 , 
                           x2, y2, z2, t2,
                           x3, y3, z3, t3 \> := xyz in body))
     (at level 200,
-      x0 ident, y0 ident, z0 ident, t0 ident,
-      x1 ident, y1 ident, z1 ident, t1 ident,
-      x2 ident, y2 ident, z2 ident, t2 ident,
-      x3 ident, y3 ident, z3 ident, t3 ident,
+      x0 name, y0 name, z0 name, t0 name,
+      x1 name, y1 name, z1 name, t1 name,
+      x2 name, y2 name, z2 name, t2 name,
+      x3 name, y3 name, z3 name, t3 name,
       body at level 200,
       only parsing).
 
