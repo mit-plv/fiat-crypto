@@ -522,7 +522,7 @@ clean-rupicola:
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) clean
 
 install-rupicola:
-	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) install
+	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) install_lib
 endif
 
 Makefile.coq: Makefile _CoqProject
