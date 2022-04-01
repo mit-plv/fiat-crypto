@@ -20,10 +20,9 @@ jobs:
       NJOBS: "2"
       COQ_VERSION: "8.12.0" # https://packages.debian.org/stable/coq
       SKIP_BEDROCK2: "1"
+      COQEXTRAFLAGS: "-async-proofs-j 1"
       OPAMYES: "true"
       OPAMCONFIRMLEVEL: "unsafe-yes"
-      COQEXTRAFLAGS: "-async-proofs-j 1"
-      SKIP_BEDROCK2: "1"
 
     steps:
     - uses: actions/checkout@v3
