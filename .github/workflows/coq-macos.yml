@@ -16,6 +16,7 @@ jobs:
     env:
       NJOBS: "2"
       COQ_VERSION: "8.14.0"
+      COQCHKEXTRAFLAGS: ""
 
     steps:
     - uses: actions/checkout@v3
@@ -104,5 +105,5 @@ jobs:
     - name: validate
       run: |
         eval $(opam env)
-        make TIMED=1 validate COQCHKFLAGS="-o"
+        make TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"
       if: github.event_name != 'pull_request'
