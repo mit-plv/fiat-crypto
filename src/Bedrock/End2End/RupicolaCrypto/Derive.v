@@ -1,6 +1,7 @@
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Arrays.
 Require Import Rupicola.Lib.Loops.
+Require Import Rupicola.Lib.Gensym.
 Require Import coqutil.Word.LittleEndianList.
 Require Import Crypto.Bedrock.End2End.RupicolaCrypto.Low.
 Require Import bedrock2.BasicC32Semantics.
@@ -61,6 +62,7 @@ Section Bedrock2.
     handle_call; eauto.
   Qed.
 
+
   Instance spec_of_chacha20_block : spec_of "chacha20_block" :=
     fnspec! "chacha20_block" (key_ptr nonce_ptr st_ptr : word) /
           (key nonce st : ListArray.t byte) R,
@@ -98,23 +100,52 @@ Section Bedrock2.
     eapply compile_buf_push_word32; repeat compile_step.
     subst v; unfold buf_backed_by. unfold buf_push. eauto. simpl. lia.
     subst v; unfold buf_backed_by. unfold buf_push.
-    (*compile_step.
+    admit.
+
+    
+  (*compile_step.*)
 
     simple eapply compile_nlet_as_nlet_eq.
     eapply compile_buf_push_word32; repeat compile_step.
-    subst v; unfold buf_backed_by. unfold buf_push. eauto. simpl. lia.
-    subst v; unfold buf_backed_by. unfold buf_push. compile_step.
+    { subst v; unfold buf_backed_by. unfold buf_push. eauto. simpl. lia. }
+    { subst v; unfold buf_backed_by. unfold buf_push. admit (*compile_step*). }
 
     simple eapply compile_nlet_as_nlet_eq.
     eapply compile_buf_push_word32; repeat compile_step.
-    subst v; unfold buf_backed_by. unfold buf_push. eauto. simpl. lia.
-    subst v; unfold buf_backed_by. unfold buf_push. compile_step.n
+    { subst v; unfold buf_backed_by. unfold buf_push. eauto. simpl. lia. }
+    { subst v; unfold buf_backed_by. unfold buf_push. admit (*compile_step.*). }
 
     simple eapply compile_nlet_as_nlet_eq.
     simple eapply compile_w32s_of_bytes; repeat compile_step.
 
     simple eapply compile_nlet_as_nlet_eq.
-    simple eapply compile_buf_append; repeat compile_step.
+   
+
+    (*TODO: gensym*)
+    Ltac compile_buf_append:=
+    lazymatch goal with
+    | [ |- WeakestPrecondition.cmd _ _ _ _ ?locals (_ (nlet_eq [?var] ?v _)) ] =>
+        let arr_var_str := gensym locals constr:((var++"_app")%string) in
+        simple eapply compile_buf_append with (arr_var:=arr_var_str)
+    end; [shelve ..|].
+    compile_buf_append.
+
+    (*
+    (*simple eapply compile_buf_append; [shelve .. |].*)
+    compile_step.
+    compile_step.
+
+    
+    simple eapply compile_nlet_as_nlet_eq.
+    simple eapply compile_bytes_of_w32s; repeat compile_step.
+    compile_step.
+    simple eapply compile_buf_append; [shelve..|].
+
+    
+    [ repeat compile_step.. |].
+    admit.
+    intros.
+    repeat compile_step.
     {
       use_sep_assumption. cancel. 
 
