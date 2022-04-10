@@ -10,6 +10,7 @@ Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.Prod.
 Require Import Crypto.Assembly.Syntax.
 
 Delimit Scope REG_scope with REG.
@@ -48,8 +49,8 @@ Bind Scope MEM_scope with MEM.
 
 Definition MEM_beq (x y : MEM) : bool
   := ((Bool.eqb x.(mem_is_byte) y.(mem_is_byte))
-      && (x.(mem_reg) =? y.(mem_reg))%REG
-      && (option_beq REG_beq x.(mem_extra_reg) y.(mem_extra_reg))
+      && (option_beq REG_beq x.(mem_base_reg) y.(mem_base_reg))
+      && (option_beq (prod_beq _ _ Z.eqb REG_beq) x.(mem_scale_reg) y.(mem_scale_reg))
       && (option_beq Z.eqb x.(mem_offset) y.(mem_offset)))%bool.
 Global Arguments MEM_beq !_ !_ / .
 

@@ -227,7 +227,6 @@ Section __.
     prove_operation_correctness.
     Unshelve.
     { apply width. }
-    { apply (inject_Z width). }
   Defined.
 
   Definition to_bytes

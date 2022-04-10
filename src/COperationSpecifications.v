@@ -195,14 +195,17 @@ Module selectznz.
     Local Notation eval := (Positional.eval wt n).
 
     Definition selectznz_correct
-               (selectznz : Z -> list Z -> list Z -> list Z)
+        (selectznz : Z -> list Z -> list Z -> list Z)
       := forall cond x y,
-        is_bounded_by0 r[0~>1] cond = true
-        -> list_Z_bounded_by saturated_bounds x
-        -> list_Z_bounded_by saturated_bounds y
-        -> eval (selectznz cond x y) = (if Decidable.dec (cond = 0) then eval x else eval y)
-           /\ list_Z_bounded_by saturated_bounds (selectznz cond x y).
+      is_bounded_by0 r[0~>1] cond = true
+      -> list_Z_bounded_by saturated_bounds x
+      -> list_Z_bounded_by saturated_bounds y
+      -> (selectznz cond x y) = (if Decidable.dec (cond = 0) then x else y)
+      /\ list_Z_bounded_by saturated_bounds (selectznz cond x y).
+         
   End __.
+
+
 End selectznz.
 
 Module BaseConversion.
@@ -613,13 +616,11 @@ Module WordByWordMontgomery.
            /\ valid (from_bytes x).
 
     Definition selectznz_correct
-               (selectznz : Z -> list Z -> list Z -> list Z)
+                (selectznz : Z -> list Z -> list Z -> list Z)
       : Prop
       := selectznz.selectznz_correct
-           (UniformWeight.uweight bitwidth)
-           n
-           saturated_bounds
-           selectznz.
+            saturated_bounds
+            selectznz.
 
     (* Bernstein-Yang inversion *)
     Definition msat_correct

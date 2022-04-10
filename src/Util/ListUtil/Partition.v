@@ -33,4 +33,17 @@ Module List.
     all: destruct IH.
     all: repeat first [ constructor | assumption ].
   Qed.
+
+  Lemma partition_eq_filter A f (ls : list A) xs ys
+        (H : @partition A f ls = (xs, ys))
+    : filter f ls = xs /\ filter (fun x => negb (f x)) ls = ys.
+  Proof.
+    revert xs ys H.
+    induction ls as [|x ls IH]; cbn [partition filter]; intros xs ys H; inversion H; subst; clear H.
+    { repeat constructor. }
+    { destruct (partition f ls); specialize (IH _ _ eq_refl).
+      destruct IH; subst.
+      destruct f; match goal with H : pair _ _ = pair _ _ |- _ => inversion H; clear H end.
+      all: subst; cbn; repeat constructor. }
+  Qed.
 End List.

@@ -3146,7 +3146,7 @@ public static void fiat_P224_nonzero(Box<Integer> out1, final int[] arg1) {
  * The function fiat_P224_selectznz is a multi-limb conditional select. <p>
  * <p>
  * Postconditions: <p>
- *   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3) <p>
+ *   out1 = (if arg1 = 0 then arg2 else arg3) <p>
  * <p>
  * Input Bounds: <p>
  *   arg1: [0x0 ~&gt; 0x1] <p>

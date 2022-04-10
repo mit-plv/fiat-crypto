@@ -17,12 +17,13 @@ jobs:
     runs-on: windows-latest
 
     env:
-      NJOBS: "1"
+      NJOBS: "2"
       COQ_VERSION: "8.12.0" # https://packages.debian.org/stable/coq
       SKIP_BEDROCK2: "1"
+      COQEXTRAFLAGS: "-async-proofs-j 1"
+      COQCHKEXTRAFLAGS: ""
       OPAMYES: "true"
       OPAMCONFIRMLEVEL: "unsafe-yes"
-      COQEXTRAFLAGS: "-async-proofs-j 1"
 
     steps:
     - uses: actions/checkout@v3
@@ -109,6 +110,6 @@ jobs:
 #      if: always ()
     - name: validate
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- make TIMED=1 validate COQCHKFLAGS="-o"'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- make TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"'
       shell: cmd
       if: github.event_name != 'pull_request'

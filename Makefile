@@ -55,9 +55,12 @@ NORMAL:=$(shell tput sgr0)
 
 TIMEFMT?="$@ (real: %e, user: %U, sys: %S, mem: %M ko)"
 SKIP_INCLUDE?=
+SKIP_COQSCRIPTS_INCLUDE?=
 ifneq ($(SKIP_INCLUDE),1)
 -include Makefile.coq
+ifneq ($(SKIP_COQSCRIPTS_INCLUDE),1)
 include etc/coq-scripts/Makefile.vo_closure
+endif
 
 ifeq (,$(COQ_VERSION))
 # Makefile.coq didn't get included, so we need to make a best-effort to get the Coq version so we can make _CoqProject
@@ -272,7 +275,7 @@ LITE_ZIG_FILES := $(patsubst %,$(ZIG_DIR)%.zig,$(LITE_BASE_FILES))
 BEDROCK2_UNSATURATED_SOLINAS := src/ExtractionOCaml/bedrock2_unsaturated_solinas
 BEDROCK2_WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/bedrock2_word_by_word_montgomery
 
-C_EXTRA_ARGS := --inline-internal --static --use-value-barrier
+C_EXTRA_ARGS := --inline --static --use-value-barrier
 
 JSON_EXTRA_ARGS := --emit-all-casts
 
@@ -519,7 +522,7 @@ clean-rupicola:
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) clean
 
 install-rupicola:
-	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) install
+	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) install_lib
 endif
 
 Makefile.coq: Makefile _CoqProject
