@@ -208,7 +208,6 @@ Module compiling_reduce_flatten.
   Let out_boundsn := (repeat bound n) ++
                                       [Some r[0~>0]%zrange] ++
                                       (repeat (Some r[0~>0]%zrange) (n-1)).
-  Compute out_boundsn.
   Time Compute
        Show.show
        (Pipeline.BoundsPipelineToString
@@ -246,6 +245,102 @@ Module compiling_reduce_flatten.
                  (None, (None, tt))
                  (None, None)
          : Pipeline.ErrorT _). *)
+
+  (*
+     = "Success (""/*
+ * Input Bounds:
+ *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
+ * Output Bounds:
+ *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0x1], [0x0 ~> 0x0], [0x0 ~> 0x0], [0x0 ~> 0x0]]
+ */
+static void mul(uint64_t out1[8], const uint64_t arg1[8]) {
+  uint64_t x1;
+  uint64_t x2;
+  uint64_t x3;
+  uint64_t x4;
+  uint64_t x5;
+  uint64_t x6;
+  uint64_t x7;
+  uint64_t x8;
+  uint64_t x9;
+  uint64_t x10;
+  uint64_t x11;
+  uint64_t x12;
+  uint64_t x13;
+  fiatuint1 x14;
+  uint64_t x15;
+  fiatuint1 x16;
+  uint64_t x17;
+  fiatuint1 x18;
+  uint64_t x19;
+  uint64_t x20;
+  fiatuint1 x21;
+  uint64_t x22;
+  fiatuint1 x23;
+  uint64_t x24;
+  fiatuint1 x25;
+  uint64_t x26;
+  fiatuint1 x27;
+  uint64_t x28;
+  uint64_t x29;
+  uint64_t x30;
+  uint64_t x31;
+  fiatuint1 x32;
+  uint64_t x33;
+  fiatuint1 x34;
+  uint64_t x35;
+  fiatuint1 x36;
+  uint64_t x37;
+  fiatuint1 x38;
+  uint64_t x39;
+  uint64_t x40;
+  uint64_t x41;
+  fiatuint1 x42;
+  uint64_t x43;
+  fiatuint1 x44;
+  uint64_t x45;
+  fiatuint1 x46;
+  uint64_t x47;
+  fiatuint1 x48;
+  fiatmulx_u64(&x1, &x2, UINT8_C(0x26), (arg1[7]));
+  fiatmulx_u64(&x3, &x4, UINT8_C(0x26), (arg1[6]));
+  fiatmulx_u64(&x5, &x6, UINT8_C(0x26), (arg1[5]));
+  fiatmulx_u64(&x7, &x8, UINT8_C(0x26), (arg1[4]));
+  x9 = (arg1[3]);
+  x10 = (arg1[2]);
+  x11 = (arg1[1]);
+  x12 = (arg1[0]);
+  fiataddcarryx_u64(&x13, &x14, 0x0, x11, x5);
+  fiataddcarryx_u64(&x15, &x16, x14, x10, x3);
+  fiataddcarryx_u64(&x17, &x18, x16, x9, x1);
+  x19 = (x18 + x2);
+  fiataddcarryx_u64(&x20, &x21, 0x0, x12, x7);
+  fiataddcarryx_u64(&x22, &x23, x21, x13, x8);
+  fiataddcarryx_u64(&x24, &x25, x23, x15, x6);
+  fiataddcarryx_u64(&x26, &x27, x25, x17, x4);
+  x28 = (x27 + x19);
+  fiatmulx_u64(&x29, &x30, UINT8_C(0x26), x28);
+  fiataddcarryx_u64(&x31, &x32, 0x0, x20, x29);
+  fiataddcarryx_u64(&x33, &x34, x32, x22, 0x0);
+  fiataddcarryx_u64(&x35, &x36, x34, x24, 0x0);
+  fiataddcarryx_u64(&x37, &x38, x36, x26, 0x0);
+  fiatmulx_u64(&x39, &x40, UINT8_C(0x26), x38);
+  fiataddcarryx_u64(&x41, &x42, 0x0, x31, x39);
+  fiataddcarryx_u64(&x43, &x44, x42, x33, 0x0);
+  fiataddcarryx_u64(&x45, &x46, x44, x35, 0x0);
+  fiataddcarryx_u64(&x47, &x48, x46, x37, 0x0);
+  out1[0] = x41;
+  out1[1] = x43;
+  out1[2] = x45;
+  out1[3] = x47;
+  out1[4] = x48;
+  out1[5] = 0x0;
+  out1[6] = 0x0;
+  out1[7] = 0x0;
+}"", {| bitwidths_used := [uint1, uint64] ; addcarryx_lg_splits := [64] ; mulx_lg_splits := [64] ; cmovznz_bitwidths := [] ; value_barrier_bitwidths := [] ; typedefs_used := [] |})"
+     : string
+Finished transaction in 4.122 secs (4.07u,0.05s) (successful)
+*)
 
 End compiling_reduce_flatten.
 
