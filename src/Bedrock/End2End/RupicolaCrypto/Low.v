@@ -449,6 +449,84 @@ Section CompileBufPolymorphic.
     }
     eapply Hk.
   Qed.
+
+  (*Only included to support the byte and word lemmas below. Do not use.*)
+  Section Deprecated.
+    Local Lemma deprecated_do_not_use_compile_buf_append {t m l} var (buf : buffer_t T) (arr : array_t T) (c : Z) (a : word) :
+    let v := buf_append buf arr in
+    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {fill_impl k_impl} R,
+    (buffer_at c buf a * R)%sep m ->
+    (length buf + length arr <= c) ->
+    (forall uninit Rbuf,
+      let ax := (a + word.of_Z (sz * length buf))%word in
+      (array pT sz a buf * uninit$@ax * Rbuf * R)%sep m ->
+      length uninit = sz * length arr :>Z ->
+      <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+        fill_impl
+        <{ nlet_eq [append var "_app"] arr (fun arr _ t m l =>
+          (array pT sz a buf * arr$T@ax * Rbuf * R)%sep m /\ (
+          (buffer_at c (buf++arr) a * R)%sep m ->
+          <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+            k_impl
+          <{ pred (k v eq_refl) }> )) }> ) ->
+    <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+      bedrock_cmd:($fill_impl; $k_impl)
+    <{ pred (nlet_eq [var] v k) }>.
+  Proof.
+    repeat straightline.
+    unfold buffer_at in *.
+    eapply sep_comm, sep_assoc, sep_comm in H; sepsimpl.
+    rename x into pad.
+    rewrite <-(firstn_skipn (Z.to_nat sz * length arr) pad) in H2.
+    seprewrite_in @bytearray_append H2.
+    eapply Proper_cmd; [eapply Proper_call| |eapply H1].
+    2: ecancel_assumption.
+    2: {
+      pose proof word.unsigned_range sz.
+      rewrite firstn_length; nia. }
+    intros t1 m1 l1 [Hm Hk]; eapply Hk; clear Hk.
+    seprewrite open_constr:(array_append _ _ buf arr).
+    rewrite app_length, Nat2Z.inj_add, Z.mul_add_distr_l.
+    sepsimpl. eexists. sepsimpl; cycle 1.
+    1: { use_sep_assumption. cancel; repeat ecancel_step.
+      f_equiv. f_equiv. f_equal.
+      rewrite firstn_length, word.ring_morph_add, word.add_assoc.
+      f_equal; f_equal.
+      pose proof word.unsigned_range sz.
+      nia. }
+    { pose proof word.unsigned_range sz.
+      rewrite skipn_length. 
+      nia. }
+  Qed.
+
+  Lemma deprecated_do_not_use_compile_buf_push {t m l} var (buf : buffer_t T) (x : T) (c : Z) (a : word) :
+    let v := buf_push buf x in
+    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {fill_impl k_impl} R,
+    (buffer_at c buf a * R)%sep m ->
+    (length buf + 1 <= c) ->
+    (forall uninit Rbuf,
+      let ax := (a + word.of_Z (sz * length buf))%word in
+      (array pT sz a buf * uninit$@ax * Rbuf * R)%sep m ->
+      length uninit = sz :>Z ->
+      <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+        fill_impl
+        <{ nlet_eq [append var "_app"] x (fun arr _ t m l =>
+          (array pT sz a buf * pT ax x * Rbuf * R)%sep m /\ (
+          (buffer_at c (buf++[x]) a * R)%sep m ->
+          <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+            k_impl
+          <{ pred (k v eq_refl) }> )) }> ) ->
+    <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+      bedrock_cmd:($fill_impl; $k_impl)
+    <{ pred (nlet_eq [var] v k) }>.
+  Proof.
+    intros.  eapply deprecated_do_not_use_compile_buf_append with (arr:=[x]).  {
+    ecancel_assumption. } { eassumption. } intros.  eapply Proper_cmd;
+    [eapply Proper_call| |eapply H1].  2:{ ecancel_assumption. } 2:{ cbn
+  [length] in *; lia. } intros t1 m1 l1 [Hm Hk].  cbv [nlet_eq] in *.  cbn
+  [array] in *.  split; sepsimpl.  { ecancel_assumption. } eapply Hk.  Qed.
+  End Deprecated.
+  
 End CompileBufPolymorphic.
 
 Section CompileBufByte.
@@ -486,9 +564,8 @@ Section CompileBufByte.
       bedrock_cmd:(store1($buf_expr+$len_expr, $x_expr); $k_impl)
     <{ pred (nlet_eq [var] v k) }>.
   Proof.
-    (*
     intros.
-    eapply compile_buf_push with (pT := pT) (sz:=sz).
+    eapply deprecated_do_not_use_compile_buf_push with (pT := pT) (sz:=sz).
     { clear. subst pT; subst sz. intros x.
       eexists (cons _ nil); split; eauto. intros. cbn [array]. ecancel. }
     { ecancel_assumption. }
@@ -518,8 +595,6 @@ Section CompileBufByte.
       ecancel_assumption. }
     eauto.
   Qed.
-     *)
-  Admitted.
 End CompileBufByte.
 
 Section CompileBufWord32.
@@ -558,9 +633,8 @@ Section CompileBufWord32.
       bedrock_cmd:(store($buf_expr+$len_expr<<$2,$x_expr); $k_impl)
     <{ pred (nlet_eq [var] v k) }>.
   Proof.
-    (*
     intros.
-    eapply compile_buf_push with (pT := pT) (sz:=sz).
+    eapply deprecated_do_not_use_compile_buf_push with (pT := pT) (sz:=sz).
     { clear. subst pT; subst sz. intros x.
       unfold scalar32, truncated_word, truncated_scalar, littleendian, ptsto_bytes.ptsto_bytes.
       rewrite HList.tuple.to_list_of_list.
@@ -599,8 +673,7 @@ Section CompileBufWord32.
       rewrite <-word.morph_shiftl, word.unsigned_of_Z, word.wrap_small by lia.
       rewrite Z.shiftl_mul_pow2, Z.mul_comm by lia. reflexivity. }
     eauto.
-  Qed.*)
-  Admitted.
+  Qed.
 End CompileBufWord32.
 
 
