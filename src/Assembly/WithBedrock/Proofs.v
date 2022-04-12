@@ -240,7 +240,8 @@ Proof. apply map_length. Qed.
 Definition init_symbolic_state_G (m : machine_state)
   : (symbol -> option Z) * dag -> (symbol -> option Z) * symbolic_state
   := fun st
-     => let vals := Tuple.to_list _ (m.(machine_reg_state)) in
+     => let _ := init_symbolic_state_descr in
+        let vals := Tuple.to_list _ (m.(machine_reg_state)) in
         let '(initial_reg_idxs, (G, d)) := dag_gensym_n_G vals st in
         (G,
          {| dag_state := d
@@ -253,7 +254,7 @@ Lemma init_symbolic_state_eq_G G d m
   : init_symbolic_state d = snd (init_symbolic_state_G m (G, d)).
 Proof.
   cbv [init_symbolic_state init_symbolic_state_G].
-  pose proof (@dag_gensym_n_eq_G G d (Tuple.to_list 16 m.(machine_reg_state))) as H.
+  epose proof (dag_gensym_n_eq_G G d (Tuple.to_list 16 m.(machine_reg_state))) as H.
   rewrite Tuple.length_to_list in H; rewrite H; clear H.
   eta_expand; cbn [fst snd].
   reflexivity.
@@ -273,7 +274,8 @@ Lemma init_symbolic_state_G_ok m G d G' ss
 Proof.
   cbv [init_symbolic_state_G] in *.
   eta_expand; cbn [fst snd] in *; inversion_prod; subst.
-  pose proof (dag_gensym_n_G_ok _ _ _ _ _ _ ltac:(eassumption) ltac:(repeat rewrite <- surjective_pairing; reflexivity) ltac:(eassumption)).
+  epose proof (dag_gensym_n_G_ok) as H. (* COQBUG(https://github.com/coq/coq/issues/15927) *)
+  specialize (H _ _ _ _ _ _ ltac:(eassumption) ltac:(repeat rewrite <- surjective_pairing; reflexivity) ltac:(eassumption)).
   destruct_head'_and; cbv [R].
   repeat match goal with |- _ /\ _ => split end; try eassumption; try reflexivity.
   2: { cbv [Tuple.repeat R_flags Tuple.append Tuple.fieldwise Tuple.fieldwise' R_flag]; cbn [fst snd];
@@ -1427,7 +1429,7 @@ Proof.
                     | constructor ].
 Qed.
 
-Lemma build_inputs_ok_R G ss types inputs args d' frame ms
+Lemma build_inputs_ok_R {descr:description} G ss types inputs args d' frame ms
       (d := ss.(dag_state))
       (H : build_inputs types d = (inputs, d'))
       (HR : R frame G ss ms)
@@ -1448,7 +1450,7 @@ Proof.
   eapply R_subsumed; eassumption.
 Qed.
 
-Lemma build_merge_stack_placeholders_ok_R G s s' frame frame' ms
+Lemma build_merge_stack_placeholders_ok_R {descr:description} G s s' frame frame' ms
       (rsp_val : Z) (stack_vals : list Z) base_stack base_stack_word_val
       (H : build_merge_stack_placeholders (List.length stack_vals) s = Success (base_stack, s'))
       (d := s.(dag_state))
@@ -1755,7 +1757,7 @@ Local Ltac handle_eval_eval :=
          end.
 
 Lemma build_merge_base_addresses_ok_R
-      {dereference_scalar:bool}
+      {descr:description} {dereference_scalar:bool}
       (idxs : list (idx + list idx))
       (reg_available : list REG)
       (runtime_reg : list Z)
@@ -1959,7 +1961,7 @@ Proof.
     all: eauto with nocore. }
 Qed.
 
-Lemma mapM_GetReg_ok_R_full G regs idxs reg_vals s s' frame ms
+Lemma mapM_GetReg_ok_R_full {descr:description} G regs idxs reg_vals s s' frame ms
       (H : mapM GetReg regs s = Success (idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -1993,7 +1995,7 @@ Proof.
   all: eauto using R_regs_subsumed, R_flags_subsumed, R_mem_subsumed.
 Qed.
 
-Lemma mapM_GetReg_ok_R G regs idxs s s' frame (ms : machine_state)
+Lemma mapM_GetReg_ok_R {descr:description} G regs idxs s s' frame (ms : machine_state)
       (H : mapM GetReg regs s = Success (idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -2101,7 +2103,7 @@ Qed.
 Lemma get_asm_reg_bounded s rs : Forall (fun v => (0 <= v < 2 ^ 64)%Z) (get_asm_reg s rs).
 Proof. apply get_reg_bounded_Forall. Qed.
 
-Lemma LoadArray_ok_R frame G s ms s' base base_val base_word_val len idxs
+Lemma LoadArray_ok_R {descr:description} frame G s ms s' base base_val base_word_val len idxs
       (H : LoadArray base len s = Success (idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -2400,7 +2402,7 @@ Proof.
                     | apply SeparationLogic.impl1_r_sep_emp; split; [ | reflexivity ] ].
 Qed.
 
-Lemma LoadOutputs_ok_R {dereference_scalar:bool} frame G s ms s' outputaddrs output_types output_vals idxs
+Lemma LoadOutputs_ok_R {descr:description} {dereference_scalar:bool} frame G s ms s' outputaddrs output_types output_vals idxs
       (H : LoadOutputs (dereference_scalar:=dereference_scalar) outputaddrs output_types s = Success (Success idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))

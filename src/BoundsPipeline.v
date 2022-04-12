@@ -462,7 +462,10 @@ Module Pipeline.
               => (["Error while checking for equivalence of syntax tree and assembly:"]
                     ++ show_lines_Expr arg_bounds false (* don't re-print input bounds; they're not relevant *) e
                     ++ [""; "Assembly (in " ++ asm_fname ++ "):"]%string
-                    ++ show_lines asm
+                    ++ match Equivalence.symbolic_state_of_EquivalenceCheckingError err with
+                       | Some s => Equivalence.show_lines_AnnotatedLines (asm, s)
+                       | None => show_lines asm
+                       end
                     ++ [""; "Equivalence checking error:"]
                     ++ show_lines err)
             end%list.
