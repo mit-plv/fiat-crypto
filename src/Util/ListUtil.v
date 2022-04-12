@@ -2840,7 +2840,7 @@ Ltac rewrite_fold_left_fun_apply :=
 Definition span_cps' {A} (f : A -> bool) {T} (k : list A * list A -> T)
   := fix span_cps' (ls : list A) (prefix : list A) : T
     := match ls with
-       | nil => k (List.rev prefix, nil)
+       | nil => k (List.rev prefix, ls)
        | x :: xs => if f x then span_cps' xs (x :: prefix) else k (List.rev prefix, ls)
        end.
 
