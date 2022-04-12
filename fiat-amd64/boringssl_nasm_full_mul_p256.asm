@@ -298,3 +298,170 @@ __ecp_nistz256_mul_montq:
 	mov	QWORD[24+rdi],r9
 
 	DB	0F3h,0C3h		;repret
+
+
+ALIGN	32
+__ecp_nistz256_mul_montx:
+
+
+
+	mulx	r9,r8,r9
+	mulx	r10,rcx,r10
+	mov	r14,32
+	xor	r13,r13
+	mulx	r11,rbp,r11
+	mov	r15,QWORD[(($L$poly+24))]
+	adc	r9,rcx
+	mulx	r12,rcx,r12
+	mov	rdx,r8
+	adc	r10,rbp
+	shlx	rbp,r8,r14
+	adc	r11,rcx
+	shrx	rcx,r8,r14
+	adc	r12,0
+
+
+
+	add	r9,rbp
+	adc	r10,rcx
+
+	mulx	rbp,rcx,r15
+	mov	rdx,QWORD[8+rbx]
+	adc	r11,rcx
+	adc	r12,rbp
+	adc	r13,0
+	xor	r8,r8
+
+
+
+	mulx	rbp,rcx,QWORD[((0+128))+rsi]
+	adcx	r9,rcx
+	adox	r10,rbp
+
+	mulx	rbp,rcx,QWORD[((8+128))+rsi]
+	adcx	r10,rcx
+	adox	r11,rbp
+
+	mulx	rbp,rcx,QWORD[((16+128))+rsi]
+	adcx	r11,rcx
+	adox	r12,rbp
+
+	mulx	rbp,rcx,QWORD[((24+128))+rsi]
+	mov	rdx,r9
+	adcx	r12,rcx
+	shlx	rcx,r9,r14
+	adox	r13,rbp
+	shrx	rbp,r9,r14
+
+	adcx	r13,r8
+	adox	r8,r8
+	adc	r8,0
+
+
+
+	add	r10,rcx
+	adc	r11,rbp
+
+	mulx	rbp,rcx,r15
+	mov	rdx,QWORD[16+rbx]
+	adc	r12,rcx
+	adc	r13,rbp
+	adc	r8,0
+	xor	r9,r9
+
+
+
+	mulx	rbp,rcx,QWORD[((0+128))+rsi]
+	adcx	r10,rcx
+	adox	r11,rbp
+
+	mulx	rbp,rcx,QWORD[((8+128))+rsi]
+	adcx	r11,rcx
+	adox	r12,rbp
+
+	mulx	rbp,rcx,QWORD[((16+128))+rsi]
+	adcx	r12,rcx
+	adox	r13,rbp
+
+	mulx	rbp,rcx,QWORD[((24+128))+rsi]
+	mov	rdx,r10
+	adcx	r13,rcx
+	shlx	rcx,r10,r14
+	adox	r8,rbp
+	shrx	rbp,r10,r14
+
+	adcx	r8,r9
+	adox	r9,r9
+	adc	r9,0
+
+
+
+	add	r11,rcx
+	adc	r12,rbp
+
+	mulx	rbp,rcx,r15
+	mov	rdx,QWORD[24+rbx]
+	adc	r13,rcx
+	adc	r8,rbp
+	adc	r9,0
+	xor	r10,r10
+
+
+
+	mulx	rbp,rcx,QWORD[((0+128))+rsi]
+	adcx	r11,rcx
+	adox	r12,rbp
+
+	mulx	rbp,rcx,QWORD[((8+128))+rsi]
+	adcx	r12,rcx
+	adox	r13,rbp
+
+	mulx	rbp,rcx,QWORD[((16+128))+rsi]
+	adcx	r13,rcx
+	adox	r8,rbp
+
+	mulx	rbp,rcx,QWORD[((24+128))+rsi]
+	mov	rdx,r11
+	adcx	r8,rcx
+	shlx	rcx,r11,r14
+	adox	r9,rbp
+	shrx	rbp,r11,r14
+
+	adcx	r9,r10
+	adox	r10,r10
+	adc	r10,0
+
+
+
+	add	r12,rcx
+	adc	r13,rbp
+
+	mulx	rbp,rcx,r15
+	mov	rbx,r12
+	mov	r14,QWORD[(($L$poly+8))]
+	adc	r8,rcx
+	mov	rdx,r13
+	adc	r9,rbp
+	adc	r10,0
+
+
+
+	xor	eax,eax
+	mov	rcx,r8
+	sbb	r12,-1
+	sbb	r13,r14
+	sbb	r8,0
+	mov	rbp,r9
+	sbb	r9,r15
+	sbb	r10,0
+
+	cmovc	r12,rbx
+	cmovc	r13,rdx
+	mov	QWORD[rdi],r12
+	cmovc	r8,rcx
+	mov	QWORD[8+rdi],r13
+	cmovc	r9,rbp
+	mov	QWORD[16+rdi],r8
+	mov	QWORD[24+rdi],r9
+
+	DB	0F3h,0C3h		;repret
