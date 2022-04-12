@@ -445,8 +445,8 @@ Module Pipeline.
             | Invalid_argument msg
               => ["Invalid argument: " ++ msg]%string
             | Assembly_parsing_error msgs
-              => ((["Error while parsing assembly:"]%string)
-                    ++ show_lines msgs)
+              => ((*(["Error while parsing assembly:"]%string) (* already present *)
+                    ++*) show_lines msgs)
             | Unused_global_assembly_labels labels valid_requests
               => ["The following global functions are present in the hints file but do not correspond to any requested function: " ++ String.concat ", " labels ++ " (expected one of: " ++ String.concat ", " valid_requests ++ ")"]%string
             | Equivalence_checking_failure _ e asm arg_bounds err
