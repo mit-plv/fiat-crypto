@@ -166,10 +166,59 @@ Inductive EquivalenceCheckingError :=
 | Invalid_higher_order_let {var} {s : API.type} (x : API.expr (var:=var) s)
 | Unhandled_identifier {t} (idc : ident t)
 | Unhandled_cast (_ _ : Z)
-| Unable_to_unify (_ _ : list (idx + list idx)) (_ : symbolic_state)
+| Unable_to_unify (_ _ : list (idx + list idx)) (first_new_idx_after_all_old_idxs : idx) (_ : symbolic_state)
 | Missing_ret
 | Code_after_ret (significant : Lines) (l : Lines)
 .
+
+Definition symbolic_state_of_EquivalenceCheckingError (e : EquivalenceCheckingError) : option symbolic_state
+  := match e with
+     | Symbolic_execution_failed _ s
+     | Internal_error_output_load_failed _ _ s
+     | Internal_error_lingering_memory s
+     | Unable_to_unify _ _ _ s
+     | Registers_not_saved _ s
+       => Some s
+     | Internal_error_extra_input_arguments _ _
+     | Internal_error_LoadOutputs_length_mismatch _ _
+     | Not_enough_registers _ _
+     | Registers_too_narrow _
+     | Callee_saved_registers_too_narrow _
+     | Duplicate_registers _
+     | Incorrect_array_input_dag_node
+     | Incorrect_Z_input_dag_node
+     | Not_enough_input_dag_nodes _
+     | Expected_const_in_reference_code _
+     | Expected_power_of_two _ _
+     | Unknown_array_length _
+     | Invalid_arrow_type _
+     | Invalid_argument_type _
+     | Invalid_return_type _
+     | Invalid_higher_order_application _ _ _ _ _
+     | Invalid_higher_order_let _ _ _
+     | Unhandled_identifier _ _
+     | Unhandled_cast _ _
+     | Missing_ret
+     | Code_after_ret _ _
+       => None
+     end.
+
+Definition AnnotatedLine := (Line * symbolic_state)%type.
+Definition AnnotatedLines := (Lines * symbolic_state)%type.
+
+Definition show_annotated_Line : Show AnnotatedLine
+  := fun '(l, ss)
+     => let d := ss.(dag_state) in
+        let l := show l in
+        (l ++ match dag_description_lookup d l with
+              | [] => ""
+              | new_idxs
+                => String.Tab ++ "; " ++ String.concat ", " (List.map (fun i => "#" ++ show i) new_idxs)
+              end)%string.
+
+Global Instance show_lines_AnnotatedLines : ShowLines AnnotatedLines
+  := fun '(ls, ss)
+     => List.map (fun l => show_annotated_Line (l, ss)) ls.
 
 Fixpoint remove_common_indices {T} (eqb : T -> T -> bool) (xs ys : list T) (start_idx : nat) : list (nat * T) * list T
   := match xs with
@@ -195,6 +244,7 @@ Definition show_node_lite : Show (node idx)
      => show_expr_node_lite (ExprApp (op, List.map ExprRef e)).
 
 Fixpoint explain_array_unification_error_single
+         (first_new_idx_after_all_old_idxs : idx)
          (singular plural : string)
          (left_descr right_descr : string)
          (explain_idx_unification_error : idx -> idx -> list string)
@@ -202,7 +252,7 @@ Fixpoint explain_array_unification_error_single
          (modulo_commutativity : bool)
          (asm_array PHOAS_array : list idx) (start_idx : nat)
   : list string
-  := let recr := explain_array_unification_error_single singular plural left_descr right_descr explain_idx_unification_error describe_idx modulo_commutativity in
+  := let recr := explain_array_unification_error_single first_new_idx_after_all_old_idxs singular plural left_descr right_descr explain_idx_unification_error describe_idx modulo_commutativity in
      match asm_array, PHOAS_array with
      | [], []
        => ["Internal Error: Unifiable " ++ plural ++ (if modulo_commutativity then " modulo commutativity" else "")]
@@ -222,6 +272,8 @@ Fixpoint explain_array_unification_error_single
             else
               ((["index " ++ show start_idx ++ ": " ++ show_expr_node_lite (ExprRef asm_value) ++ " ≠ " ++ show_expr_node_lite (ExprRef PHOAS_value)]%string)
                  ++ explain_idx_unification_error asm_value PHOAS_value
+              (*++ if ((0 <? first_new_idx_after_all_old_idxs) (* splitting index is meaningful *) && (asm_value <? first_new_idx_after_all_old_idxs) && (PHOAS_value <? first_new_idx_after_all_old_idxs) && (existsb (fun i => first_new_idx_after_all_old_idxs <=? i) (asm_array ++ PHOAS_array)))%N%bool (* if there we are entering into territory where all values were computed both by asm and PHOAS, and leaving territory where some values were computed only by the one that ran second, we will print out extra information about the smallest value that ran second *)*)
+                 (* TODO: When we transition from an inequality that contains indices appearing only in assembly to an inequality containing indices that appear in both, recursively expand all indices appearing only in asm, before (after?) continuing on describing why the first arguments are not equal *)
               )%list
      end%string%list%bool.
 
@@ -241,7 +293,7 @@ Definition recursive_deps_step
   := if NSet.mem i so_far
      then so_far
      else let so_far := NSet.add i so_far in
-          match nth_error dag (N.to_nat i) with
+          match dag_lookup dag (N.to_nat i) with
           | Some (_op, args)
             => recursive_deps_list_step recursive_deps so_far args
           | None => so_far
@@ -283,7 +335,7 @@ Definition reveal_one_except (dag : dag) (except : idx -> bool) (e : Symbolic.ex
        (fun i revealed
         => if except i
            then (ExprRef i, revealed)
-           else match nth_error dag (N.to_nat i) with
+           else match dag_lookup dag (N.to_nat i) with
                 | Some (op0, args)
                   => (ExprApp (op0, List.map ExprRef args), true)
                 | None => (ExprRef i, revealed)
@@ -335,7 +387,7 @@ Definition describe_idx_from_state
        => [show idx ++ " is a special value no longer present in the symbolic machine state at the end of execution."]
      | _, _, false => []
      | _, None, true
-       => [show idx ++ " is " ++ match List.nth_error st.(dag_state) (N.to_nat idx) with
+       => [show idx ++ " is " ++ match dag_lookup st.(dag_state) (N.to_nat idx) with
                                  | Some e => show_node_lite e
                                  | None => "not in the dag"
                                  end]
@@ -395,6 +447,7 @@ Definition describe_full_idx_from_state (st : symbolic_state) (i : idx)
   := iteratively_describe_idx st (describe_idx_from_state true st) true i.
 
 Definition explain_array_unification_error
+           (first_new_idx_after_all_old_idxs : idx)
            (dag : dag)
            (singular plural : string)
            (left_descr right_descr : string)
@@ -429,7 +482,7 @@ Definition explain_array_unification_error
              dag describe_idx op show_initial_state asm_array PHOAS_array
        end%string%list%bool
      else
-       explain_array_unification_error_single singular plural left_descr right_descr explain_idx_unification_error describe_idx modulo_commutativity asm_array PHOAS_array 0.
+       explain_array_unification_error_single first_new_idx_after_all_old_idxs singular plural left_descr right_descr explain_idx_unification_error describe_idx modulo_commutativity asm_array PHOAS_array 0.
 
 Definition explain_mismatch_from_state
            (left_descr right_descr : string)
@@ -438,13 +491,14 @@ Definition explain_mismatch_from_state
         ++ (describe_idx_from_state false (*right_descr*) st PHOAS_idx))%list.
 
 Fixpoint explain_idx_unification_error
+         (first_new_idx_after_all_old_idxs : idx)
          (left_descr right_descr : string)
          (st : symbolic_state) (fuel : nat) (asm_idx PHOAS_idx : idx) {struct fuel} : list string
   := let recr := match fuel with
                  | O => fun _ _ => ["Internal error: out of fuel in explain_expr_unification_error"]
-                 | S fuel => explain_idx_unification_error left_descr right_descr st fuel
+                 | S fuel => explain_idx_unification_error first_new_idx_after_all_old_idxs left_descr right_descr st fuel
                  end in
-     let reveal_idx idx := List.nth_error st.(dag_state) (N.to_nat idx) in
+     let reveal_idx idx := dag_lookup st.(dag_state) (N.to_nat idx) in
      let reveal_show_idx idx
        := match reveal_idx idx with
           | Some n => show n
@@ -462,7 +516,7 @@ Fixpoint explain_idx_unification_error
      | Some ((asm_o, asm_e) as asm), Some ((PHOAS_o, PHOAS_e) as PHOAS)
        => (([show_node_lite asm ++ " ≠ " ++ show_node_lite PHOAS]%string)
              ++ (if Decidable.dec (asm_o = PHOAS_o)
-                 then explain_array_unification_error st "argument" "arguments" left_descr right_descr recr (describe_idx_from_state false st) (Some asm_o) asm_e PHOAS_e
+                 then explain_array_unification_error first_new_idx_after_all_old_idxs st "argument" "arguments" left_descr right_descr recr (describe_idx_from_state false st) (Some asm_o) asm_e PHOAS_e
                  else (([reveal_show_node asm ++ " ≠ " ++ reveal_show_node PHOAS
                          ; "Operation mismatch: " ++ show asm_o ++ " ≠ " ++ show PHOAS_o]%string)
                          ++ explain_mismatch_from_state left_descr right_descr st asm_idx PHOAS_idx)%list))%list
@@ -471,7 +525,7 @@ Fixpoint explain_idx_unification_error
 Definition explain_unification_default_fuel (st : symbolic_state) : nat
   := (10 + (2 * List.length st.(dag_state)))%nat (* we since the dag is acyclic, we shouldn't have to do more recursive lookups than its length; we double and add 10 for safety *).
 
-Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list idx)) (start_idx : nat) (st : symbolic_state)
+Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list idx)) (first_new_idx_after_all_old_idxs : idx) (start_idx : nat) (st : symbolic_state)
   : list string
   := let fuel := explain_unification_default_fuel st in
      match asm_output, PHOAS_output with
@@ -483,18 +537,18 @@ Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list i
        => ["The assembly code returns " ++ show (List.length asm_output) ++ " more values than the synthesized code."]
      | asm_value :: asm_output, PHOAS_value :: PHOAS_output
        => if Decidable.dec (asm_value = PHOAS_value)
-          then explain_unification_error asm_output PHOAS_output (S start_idx) st
+          then explain_unification_error asm_output PHOAS_output first_new_idx_after_all_old_idxs (S start_idx) st
           else let prefix := ("Could not unify the values at index " ++ show start_idx ++ ":")%string in
                match asm_value, PHOAS_value with
                | inl _, inr _ => [prefix; "The assembly code returns a scalar while the synthesized code returns an array."]
                | inr _, inl _ => [prefix; "The assembly code returns an array while the synthesized code returns a scalar."]
                | inl asm_idx, inl PHOAS_idx
                  => (["index  " ++ show start_idx ++ ": " ++ show_expr_node_lite (ExprRef asm_idx) ++ " ≠ " ++ show_expr_node_lite (ExprRef PHOAS_idx)]%string)
-                      ++ explain_idx_unification_error "assembly" "synthesized" st fuel asm_idx PHOAS_idx
+                      ++ explain_idx_unification_error first_new_idx_after_all_old_idxs "assembly" "synthesized" st fuel asm_idx PHOAS_idx
                | inr asm_idxs, inr PHOAS_idxs
                  => ([prefix ++ " " ++ @show_list _ show_expr_node_lite (List.map ExprRef asm_idxs) ++ " ≠ " ++ @show_list _ show_expr_node_lite (List.map ExprRef PHOAS_idxs)]%string)
                       ++ (explain_array_unification_error
-                            st "array" "arrays" "assembly" "synthesized" (explain_idx_unification_error "assembly" "synthesized" st fuel) (describe_idx_from_state false st) None
+                            first_new_idx_after_all_old_idxs st "array" "arrays" "assembly" "synthesized" (explain_idx_unification_error first_new_idx_after_all_old_idxs "assembly" "synthesized" st fuel) (describe_idx_from_state false st) None
                             asm_idxs PHOAS_idxs)
                end%list
      end%string%list.
@@ -560,15 +614,16 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                      let regs := List.map (fun '(r, (idx_before, idx_after)) => r) regs in
                      (["Unable to establish that callee-saved non-volatile registers were preserved: " ++ String.concat ", " (List.map show regs); "In environment:"]%string)
                        ++ show_lines r
-                       ++ ["Unable to unify: " ++ show reg_before ++ " == " ++ show reg_after]%string
-                       ++ explain_array_unification_error
-                            r "list" "lists" "original" "final" (explain_idx_unification_error "original" "final" r (explain_unification_default_fuel r)) (describe_idx_from_state false r) None
-                            reg_before reg_after
-                | Unable_to_unify asm_output PHOAS_output r
+                       ++ ["Unable to establish that callee-saved non-volatile registers were preserved: " ++ String.concat ", " (List.map show regs); "Unable to unify: " ++ show reg_before ++ " == " ++ show reg_after]%string
+                       ++ (let first_new_idx_after_all_old_idxs := 0%N in  (* dummy, since we don't know the value here, and it's hard to pipe the info through, and it's not super-important *)
+                           explain_array_unification_error
+                             first_new_idx_after_all_old_idxs r "list" "lists" "original" "final" (explain_idx_unification_error first_new_idx_after_all_old_idxs "original" "final" r (explain_unification_default_fuel r)) (describe_idx_from_state false r) None
+                             reg_before reg_after)
+                | Unable_to_unify asm_output PHOAS_output first_new_idx_after_all_old_idxs r
                   => ["Unable to unify:"; "In environment:"]
                        ++ show_lines r
                        ++ ["Unable to unify: " ++ show asm_output ++ " == " ++ show PHOAS_output]%string
-                       ++ explain_unification_error asm_output PHOAS_output 0 r
+                       ++ explain_unification_error asm_output PHOAS_output first_new_idx_after_all_old_idxs 0 r
                 | Missing_ret
                   => ["Missing 'ret' at the end of the function"]
                 | Code_after_ret significant l
@@ -578,13 +633,13 @@ Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
   := fun err => String.concat String.NewLine (show_lines err).
 
 Definition empty_dag : dag := nil.
-Definition merge_symbol (s:symbol) : dag.M idx := merge_node ((old 64%N s), nil).
+Definition merge_symbol {descr:description} (s:symbol) : dag.M idx := merge_node ((old 64%N s), nil).
 (** We use dag length as a source of fresh symbols *)
 Definition gensym (d : dag) : idx := N.of_nat (List.length d).
-Definition merge_fresh_symbol : dag.M idx := fun d => merge_symbol (gensym d) d.
-Definition merge_literal (l:Z) : dag.M idx := merge_node ((const l, nil)).
+Definition merge_fresh_symbol {descr:description} : dag.M idx := fun d => merge_symbol (gensym d) d.
+Definition merge_literal {descr:description} (l:Z) : dag.M idx := merge_node ((const l, nil)).
 
-Definition SetRegFresh (r : REG) : M idx :=
+Definition SetRegFresh {descr:description} (r : REG) : M idx :=
   (idx <- lift_dag merge_fresh_symbol;
   _ <- SetReg r idx;
   Symbolic.ret idx).
@@ -600,7 +655,7 @@ Bind Scope symex_scope with symexM.
 Notation "'slet' x .. y <- X ; B"  := (symex_bind X (fun x => .. (fun y => B%symex) .. )) : symex_scope.
 Notation "A <- X ; B" := (symex_bind X (fun A => B%symex)) : symex_scope.
 (* light alias *)
-Definition App (e : Symbolic.node idx) : symexM idx := fun st => Success (merge (simplify st e) st).
+Definition App {descr:description} (e : Symbolic.node idx) : symexM idx := fun st => Success (merge (simplify st e) st).
 Definition RevealConstant (i : idx) : symexM N := fun st =>
   match reveal st 1 i with
   | ExprApp (const n, nil) =>
@@ -660,10 +715,10 @@ Fixpoint simplify_input_type
              Success (vA ++ vB))
      end%error.
 
-Definition build_inputarray (len : nat) : dag.M (list idx) :=
+Definition build_inputarray {descr:description} (len : nat) : dag.M (list idx) :=
   List.foldmap (fun _ => merge_fresh_symbol) (List.seq 0 len).
 
-Fixpoint build_inputs (types : type_spec) : dag.M (list (idx + list idx))
+Fixpoint build_inputs {descr:description} (types : type_spec) : dag.M (list (idx + list idx))
   := match types with
      | [] => dag.ret []
      | None :: tys
@@ -677,17 +732,17 @@ Fixpoint build_inputs (types : type_spec) : dag.M (list (idx + list idx))
      end%dagM.
 
 (* we factor this out so that conversion is not slow when proving things about this *)
-Definition compute_array_address (base : idx) (i : nat)
+Definition compute_array_address {descr:description} (base : idx) (i : nat)
   := (offset <- Symbolic.App (zconst 64%N (8 * Z.of_nat i), nil);
       Symbolic.App (add 64%N, [base; offset]))%x86symex.
 
-Definition build_merge_array_addresses (base : idx) (items : list idx) : M (list idx)
+Definition build_merge_array_addresses {descr:description} (base : idx) (items : list idx) : M (list idx)
   := mapM (fun '(i, idx) =>
              (addr <- compute_array_address base i;
               (fun s => Success (addr, update_mem_with s (cons (addr,idx)))))
           )%x86symex (List.enumerate items).
 
-Fixpoint build_merge_base_addresses {dereference_scalar:bool} (items : list (idx + list idx)) (reg_available : list REG) : M (list ((REG + idx) + idx))
+Fixpoint build_merge_base_addresses {descr:description} {dereference_scalar:bool} (items : list (idx + list idx)) (reg_available : list REG) : M (list ((REG + idx) + idx))
   := match items, reg_available with
      | [], _ | _, [] => Symbolic.ret []
      | inr idxs :: xs, r :: reg_available
@@ -707,7 +762,7 @@ Fixpoint build_merge_base_addresses {dereference_scalar:bool} (items : list (idx
            Symbolic.ret (inl addr :: rest))
      end%N%x86symex.
 
-Fixpoint dag_gensym_n (n : nat) : dag.M (list symbol) :=
+Fixpoint dag_gensym_n {descr:description} (n : nat) : dag.M (list symbol) :=
   match n with
   | O => dag.ret nil
   | S n =>
@@ -877,7 +932,7 @@ Fixpoint symex_T_app_curried {t : API.type} : symex_T t -> type.for_each_lhs_of_
 
 Bind Scope symex_scope with symex_T.
 
-Definition symex_ident {t} (idc : ident t) : symex_T t.
+Definition symex_ident {descr:description} {t} (idc : ident t) : symex_T t.
 Proof.
   refine (let symex_mod_zrange idx '(ZRange.Build_zrange l u) :=
             let u := Z.succ u in
@@ -1069,18 +1124,19 @@ Proof.
   all: cbn in *.
 Defined.
 
-Fixpoint symex_expr {t} (e : API.expr (var:=var) t) : symex_T t
-  := match e in expr.expr t return symex_T t with
+Fixpoint symex_expr {descr:description} {t} (e : API.expr (var:=var) t) : symex_T t
+  := let _ := @Compilers.ToString.PHOAS.expr.partially_show_expr in
+     match e in expr.expr t return symex_T t with
      | expr.Ident _ idc => symex_ident idc
      | expr.Var _ v => symex_T_return v
-     | expr.Abs (type.base _) _ f => fun v => @symex_expr _ (f v)
+     | expr.Abs (type.base _) _ f => fun v => symex_expr (f v)
      | expr.App (type.base _) _ f x
-       => let ef := @symex_expr _ f in
-          let ex := @symex_expr _ x in
+       => let ef := symex_expr f in
+          let ex := symex_expr x in
           symex_T_bind_base ex ef
      | expr.LetIn (type.base _) _ x f
-       => let ef v := @symex_expr _ (f v) in
-          let ex := @symex_expr _ x in
+       => let ef v := symex_expr (f v) in
+          let ex := symex_expr (descr:=Some (show x, false)) x in
           symex_T_bind_base ex ef
      | expr.App (type.arrow _ _) _ f x
        => symex_T_error (Invalid_higher_order_application f x)
@@ -1095,7 +1151,7 @@ Definition symex_PHOAS_PHOAS {t} (expr : API.Expr t) (input_var_data : type.for_
   : ErrorT EquivalenceCheckingError (base_var (type.final_codomain t) * dag)
   := let ast : API.expr (type.base (type.final_codomain t))
          := invert_expr.smart_App_curried (expr _) input_var_data in
-     symex_expr ast d.
+     symex_expr (descr:=None) ast d.
 
 (* takes and returns assembly/list style things *)
 Definition symex_PHOAS
@@ -1113,8 +1169,11 @@ Definition symex_PHOAS
      PHOAS_output <- simplify_base_var PHOAS_output;
      Success (PHOAS_output, d)).
 
+Definition init_symbolic_state_descr : description := Some ("init_symbolic_state", true).
+
 Definition init_symbolic_state (d : dag) : symbolic_state
-  := let '(initial_reg_idxs, d) := dag_gensym_n 16 d in
+  := let _ := init_symbolic_state_descr in
+     let '(initial_reg_idxs, d) := dag_gensym_n 16 d in
      {|
        dag_state := d;
        symbolic_reg_state := Tuple.from_list_default None 16 (List.map Some initial_reg_idxs);
@@ -1122,25 +1181,25 @@ Definition init_symbolic_state (d : dag) : symbolic_state
        symbolic_flag_state := Tuple.repeat None 6;
      |}.
 
-Definition compute_stack_base (stack_size : nat) : M idx
+Definition compute_stack_base {descr:description} (stack_size : nat) : M idx
   := (rsp_val <- SetRegFresh rsp;
       stack_size <- Symbolic.App (zconst 64 (-8 * Z.of_nat stack_size), []);
       Symbolic.App (add 64%N, [rsp_val; stack_size]))%x86symex.
 
-Definition build_merge_stack_placeholders (stack_size : nat)
+Definition build_merge_stack_placeholders {descr:description} (stack_size : nat)
   : M idx
   := (stack_placeholders <- lift_dag (build_inputarray stack_size);
       stack_base <- compute_stack_base stack_size;
       _ <- build_merge_array_addresses stack_base stack_placeholders;
       ret stack_base)%x86symex.
 
-Definition LoadArray (base : idx) (len : nat) : M (list idx)
+Definition LoadArray {descr:description} (base : idx) (len : nat) : M (list idx)
   := mapM (fun i =>
              (addr <- compute_array_address base i;
               Remove64 addr)%x86symex)
           (seq 0 len).
 
-Definition LoadOutputs_internal {dereference_scalar:bool} (outputaddrs : list ((REG + idx) + idx)) (output_types : type_spec)
+Definition LoadOutputs_internal {descr:description} {dereference_scalar:bool} (outputaddrs : list ((REG + idx) + idx)) (output_types : type_spec)
   : M (list (idx + list idx))
   := (mapM (fun '(ocells, spec) =>
             match ocells, spec with
@@ -1159,7 +1218,7 @@ Definition LoadOutputs_internal {dereference_scalar:bool} (outputaddrs : list ((
                   ret (inr v))
             end) (List.combine outputaddrs output_types))%N%x86symex.
 
-Definition LoadOutputs {dereference_scalar:bool} (outputaddrs : list ((REG + idx) + idx)) (output_types : type_spec)
+Definition LoadOutputs {descr:description} {dereference_scalar:bool} (outputaddrs : list ((REG + idx) + idx)) (output_types : type_spec)
   : M (ErrorT EquivalenceCheckingError (list (idx + list idx)))
   := (* In the following line, we match on the result so we can emit Internal_error_output_load_failed in the calling function, rather than passing through the placeholder error from LoadOutputs *)
   fun s => if (List.length outputaddrs =? List.length output_types)%nat
@@ -1183,33 +1242,35 @@ Definition symex_asm_func_M
            (output_types : type_spec) (stack_size : nat)
            (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
   : M (ErrorT EquivalenceCheckingError (list (idx + list idx)))
-  := (output_placeholders <- lift_dag (build_inputs output_types);
+  := (output_placeholders <- lift_dag (build_inputs (descr:=Some ("output_placeholders", true)) output_types);
       let n_outputs := List.length output_placeholders in
       (* to make proofs easier, we merge addresses in reverse order from reading them *)
-      inputaddrs <- build_merge_base_addresses (dereference_scalar:=dereference_input_scalars) inputs (skipn n_outputs reg_available);
-      outputaddrs <- build_merge_base_addresses (dereference_scalar:=dereference_output_scalars) output_placeholders (firstn n_outputs reg_available);
-      stack_base <- build_merge_stack_placeholders stack_size;
-      initial_register_values <- mapM GetReg callee_saved_registers;
+      inputaddrs <- build_merge_base_addresses (descr:=Some ("inputaddrs", true)) (dereference_scalar:=dereference_input_scalars) inputs (skipn n_outputs reg_available);
+      outputaddrs <- build_merge_base_addresses (descr:=Some ("outputaddrs", true)) (dereference_scalar:=dereference_output_scalars) output_placeholders (firstn n_outputs reg_available);
+      stack_base <- build_merge_stack_placeholders (descr:=Some ("stack_base", true)) stack_size;
+      initial_register_values <- mapM (GetReg (descr:=Some ("initial_register_values", true))) callee_saved_registers;
       _ <- SymexLines asm;
-      final_register_values <- mapM GetReg callee_saved_registers;
-      _ <- LoadArray stack_base stack_size;
+      final_register_values <- mapM (GetReg (descr:=Some ("final_register_values", true))) callee_saved_registers;
+      _ <- LoadArray (descr:=Some ("load final stack", true)) stack_base stack_size;
       let unsaved_registers : list (REG * (idx * idx)) := List.filter (fun '(r, (init, final)) => negb (init =? final)%N) (List.combine callee_saved_registers (List.combine initial_register_values final_register_values)) in
-      asm_output <- LoadOutputs (dereference_scalar:=dereference_output_scalars) outputaddrs output_types;
+      asm_output <- LoadOutputs (descr:=Some ("asm_output", true)) (dereference_scalar:=dereference_output_scalars) outputaddrs output_types;
       (* also load inputs, for the sake of the proof *)
       (* reconstruct input types *)
       let input_types := List.map (fun v => match v with inl _ => None | inr ls => Some (List.length ls) end) inputs in
-      asm_input <- LoadOutputs (dereference_scalar:=dereference_input_scalars) inputaddrs input_types;
-      (fun s => match asm_output, asm_input, unsaved_registers, s.(symbolic_mem_state) with
-                | Success asm_output, Success _, [], []
-                  => Success (Success asm_output, s)
-                | Error err, _, _, _
-                | _, Error err, _, _
-                  => Success (Error err, s)
-                | Success _, Success _, (_ :: _) as unsaved_registers, _
-                  => Success (Error (Registers_not_saved unsaved_registers s), s)
-                | Success _, Success _, _, (_ :: _) as mem_remaining
-                  => Success (Error (Internal_error_lingering_memory s), s)
-                end))%N%x86symex.
+      asm_input <- LoadOutputs (descr:=Some ("asm_input <- LoadOutputs", true)) (dereference_scalar:=dereference_input_scalars) inputaddrs input_types;
+      (fun s => Success
+                  (match asm_output, asm_input, unsaved_registers, s.(symbolic_mem_state) with
+                   | Success asm_output, Success _, [], []
+                     => Success asm_output
+                   | Error err, _, _, _
+                   | _, Error err, _, _
+                     => Error err
+                   | Success _, Success _, (_ :: _) as unsaved_registers, _
+                     => Error (Registers_not_saved unsaved_registers s)
+                   | Success _, Success _, _, (_ :: _) as mem_remaining
+                     => Error (Internal_error_lingering_memory s)
+                   end,
+                    s)))%N%x86symex.
 
 Definition symex_asm_func
            {dereference_output_scalars:bool}
@@ -1276,10 +1337,12 @@ Section check_equivalence.
       let d := empty_dag in
       input_types <- map_err_None (simplify_input_type t arg_bounds);
       output_types <- map_err_None (simplify_base_type (type.final_codomain t) out_bounds);
-      let '(inputs, d) := build_inputs input_types d in
+      let '(inputs, d) := build_inputs (descr:=Some ("build_inputs", true)) input_types d in
 
       PHOAS_output <- map_err_None (symex_PHOAS expr inputs d);
       let '(PHOAS_output, d) := PHOAS_output in
+
+      let first_new_idx_after_all_old_idxs : idx := N.of_nat (List.length d) in
 
       _ <-- (List.map
                (fun '((fname, asm) as label)
@@ -1290,7 +1353,7 @@ Section check_equivalence.
 
                     if list_beq _ (sum_beq _ _ N.eqb (list_beq _ N.eqb)) asm_output PHOAS_output
                     then Success tt
-                    else Error (Some label, Unable_to_unify asm_output PHOAS_output s)))
+                    else Error (Some label, Unable_to_unify asm_output PHOAS_output first_new_idx_after_all_old_idxs s)))
                asm);
     Success tt.
 

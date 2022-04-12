@@ -221,12 +221,47 @@ Definition node_beq {A : Set} (arg_eqb : A -> A -> bool) : node A -> node A -> b
 Global Instance reflect_node_beq {A : Set} {arg_eqb} {H : reflect_rel (@eq A) arg_eqb}
   : reflect_rel eq (@node_beq A arg_eqb) | 10 := _.
 
-Definition dag := list (node idx).
+Class description := descr : option (string * bool (* always show *)).
+Typeclasses Opaque description.
+Definition dag := list (node idx * description).
+Definition dag_lookup (d : dag) (i : nat) : option (node idx) := List.nth_error (List.map fst d) i.
+Definition dag_reverse_lookup (d : dag) (n : node idx) : option nat
+  := List.indexof (fun '(n', _) => node_beq N.eqb n n') d.
+Definition dag_description_lookup (d : dag) (descr : string) : list idx
+  := List.map N.of_nat (List.map fst (List.filter (fun '(_, (_, descr')) => match descr' with Some (descr', _) => String.eqb descr descr' | _ => false end) (List.enumerate d))).
+
+Lemma dag_lookup_app1 (d d' : dag) n : n < List.length d -> dag_lookup (d++d') n = dag_lookup d n.
+Proof. cbv [dag_lookup]; intro; rewrite map_app; apply nth_error_app1; distr_length. Qed.
+Lemma dag_lookup_app2 (d d' : dag) n : List.length d <= n -> dag_lookup (d++d') n = dag_lookup d' (n - List.length d).
+Proof. cbv [dag_lookup]; intro; rewrite map_app, nth_error_app2; now distr_length. Qed.
+Lemma dag_lookup_value_length i (xs:dag) x : dag_lookup xs i = Some x -> i < List.length xs.
+Proof. cbv [dag_lookup]; intro H; apply nth_error_value_length in H; distr_length. Qed.
+Lemma dag_reverse_lookup_Some l n i (H : dag_reverse_lookup l n = Some i) : dag_lookup l i = Some n.
+Proof.
+  cbv [dag_reverse_lookup dag_lookup] in *; apply indexof_Some in H.
+  rewrite nth_error_map; cbv [option_map].
+  destruct_head'_ex; destruct_head'_and; destruct_head'_prod.
+  destruct nth_error; inversion_option; subst.
+  reflect_hyps; subst; reflexivity.
+Qed.
+Lemma dag_lookup_app n (xs ys:dag) : dag_lookup (xs ++ ys) n =
+                                       if lt_dec n (List.length xs)
+                                       then dag_lookup xs n
+                                       else dag_lookup ys (n - List.length xs).
+Proof. cbv [dag_lookup]; rewrite map_app, nth_error_app; now distr_length. Qed.
+Lemma dag_reverse_lookup_app (d1 d2 : dag) n : dag_reverse_lookup (d1 ++ d2) n = Option.sequence (dag_reverse_lookup d1 n) (option_map (fun x => List.length d1 + x) (dag_reverse_lookup d2 n)).
+Proof. apply List.indexof_app. Qed.
+Lemma eta_dag_lookup d i : dag_lookup d i = match i, d with
+                                            | O, x :: _ => Some (fst x)
+                                            | S n, _ :: d => dag_lookup d n
+                                            | _, _ => None
+                                            end.
+Proof. destruct d, i; reflexivity. Qed.
 
 Section WithDag.
   Context (ctx : symbol -> option Z) (dag : dag).
   Definition reveal_step reveal (i : idx) : expr :=
-    match List.nth_error dag (N.to_nat i) with
+    match dag_lookup dag (N.to_nat i) with
     | None => (* undefined *) ExprRef i
     | Some (op, args) => ExprApp (op, List.map reveal args)
     end.
@@ -242,7 +277,7 @@ Section WithDag.
   (** given a set of indices, get the set of indices of their arguments *)
   Definition reveal_gather_deps_args (ls : NSet.t) : NSet.t
     := fold_right
-         (fun i so_far => match List.nth_error dag (N.to_nat i) with
+         (fun i so_far => match dag_lookup dag (N.to_nat i) with
                           | None => so_far
                           | Some (_op, args) => fold_right NSet.add so_far args
                           end)
@@ -269,7 +304,7 @@ Section WithDag.
 
   Definition reveal_step_from_deps reveal (deps : NSet.t) (i : idx) : expr
     := if NSet.mem i deps
-       then match List.nth_error dag (N.to_nat i) with
+       then match dag_lookup dag (N.to_nat i) with
             | None => (* undefined *) ExprRef i
             | Some (op, args) => ExprApp (op, List.map reveal args)
             end
@@ -290,7 +325,7 @@ Section WithDag.
   Local Unset Elimination Schemes.
   Inductive eval : expr -> Z -> Prop :=
   | ERef i op args args' n
-    (_:List.nth_error dag (N.to_nat i) = Some (op, args))
+    (_:dag_lookup dag (N.to_nat i) = Some (op, args))
     (_:List.Forall2 eval (map ExprRef args) args')
     (_:interp_op ctx op args' = Some n)
     : eval (ExprRef i) n
@@ -308,7 +343,7 @@ Section WithDag.
 
   Section eval_ind.
     Context (P : expr -> Z -> Prop)
-      (HRef : forall i op args args' n, nth_error dag (N.to_nat i) = Some (op, args) ->
+      (HRef : forall i op args args' n, dag_lookup dag (N.to_nat i) = Some (op, args) ->
         Forall2 (fun e n => eval e n /\ P e n) (map ExprRef args) args' ->
         interp_op ctx op args' = Some n ->
         P (ExprRef i) n)
@@ -408,12 +443,12 @@ Delimit Scope dagM_scope with dagM.
 Bind Scope dagM_scope with dag.M.
 Notation "x <- y ; f" := (dag.bind y (fun x => f%dagM)) : dagM_scope.
 
-Definition merge_node (n : node idx) : dag.M idx :=
-  fun d => match List.indexof (node_beq N.eqb n) d with
+Definition merge_node {descr : description} (n : node idx) : dag.M idx :=
+  fun d => match dag_reverse_lookup d n with
            | Some i => (N.of_nat i, d)
-           | None => (N.of_nat (length d), List.app d (cons n nil))
+           | None => (N.of_nat (length d), List.app d (cons (n, descr) nil))
            end.
-Fixpoint merge (e : expr) (d : dag) : idx * dag :=
+Fixpoint merge {descr : description} (e : expr) (d : dag) : idx * dag :=
   match e with
   | ExprRef i => (i, d)
   | ExprApp (op, args) =>
@@ -434,8 +469,8 @@ Qed.
 Lemma eval_weaken G d x e n : eval G d e n -> eval G (d ++ [x]) e n.
 Proof using Type.
   induction 1; subst; econstructor; eauto.
-  { erewrite nth_error_app1; try eassumption; [].
-    eapply ListUtil.nth_error_value_length; eassumption. }
+  { erewrite dag_lookup_app1; try eassumption; [].
+    eapply dag_lookup_value_length; eassumption. }
   all : eapply Forall2_weaken; [|eassumption].
   { intuition eauto. eapply H2. }
   { intuition eauto. eapply H1. }
@@ -473,7 +508,7 @@ Qed.
 Definition node_ok (i : idx) (n : node idx) := forall w s args, n = (old w s, args) -> (s <= i)%N.
 (* the gensym state cannot map anything past the end of the dag *)
 Definition gensym_ok (G : symbol -> option Z) (d : dag) := forall s _v, G s = Some _v -> (s < N.of_nat (List.length d))%N.
-Definition dag_ok G (d : dag) := forall i r, nth_error d (N.to_nat i) = Some r -> node_ok i r /\ exists v, eval G d (ExprRef i) v.
+Definition dag_ok G (d : dag) := forall i r, dag_lookup d (N.to_nat i) = Some r -> node_ok i r /\ exists v, eval G d (ExprRef i) v.
 Definition gensym_dag_ok G d := gensym_ok G d /\ dag_ok G d.
 
 Lemma gensym_ok_length_Proper G d1 d2
@@ -485,42 +520,41 @@ Lemma gensym_ok_app G d1 d2
   : gensym_ok G d1 -> gensym_ok G (d1 ++ d2).
 Proof using Type. apply gensym_ok_length_Proper; rewrite app_length; lia. Qed.
 
-Lemma eval_merge_node :
+Lemma eval_merge_node {descr descr' descr'' descr'''} :
   forall G d, gensym_dag_ok G d ->
   forall op args n, let e := (op, args) in
   eval G d (ExprApp (op, List.map ExprRef args)) n ->
-  eval G (snd (merge_node e d)) (ExprRef (fst (merge_node e d))) n /\
-  gensym_dag_ok G (snd (merge_node e d)) /\
-  forall i e', eval G d i e' -> eval G (snd (merge_node e d)) i e'.
+  eval G (snd (@merge_node descr e d)) (ExprRef (fst (@merge_node descr' e d))) n /\
+  gensym_dag_ok G (snd (@merge_node descr'' e d)) /\
+  forall i e', eval G d i e' -> eval G (snd (@merge_node descr''' e d)) i e'.
 Proof using Type.
   intros.
   cbv beta delta [merge_node].
   inversion H0; subst.
-  case (indexof _ _) eqn:?; cbn; repeat split; try solve [ cbv [gensym_dag_ok dag_ok] in *; split_and; eauto ].
-  { eapply indexof_Some in Heqo; case Heqo as (?&?&?).
-    replace x with e in * by (eauto using node_beq_sound); clear H2. (* node_beq -> eq *)
+  case (dag_reverse_lookup _ _) eqn:?; cbn; repeat split; try solve [ cbv [gensym_dag_ok dag_ok] in *; split_and; eauto ].
+  { apply dag_reverse_lookup_Some in Heqo.
     econstructor; rewrite ?Nnat.Nat2N.id; eauto. }
   { econstructor; eauto.
-    { erewrite ?nth_error_app2, ?Nnat.Nat2N.id, Nat.sub_diag by Lia.lia.
+    { erewrite ?dag_lookup_app2, ?Nnat.Nat2N.id, Nat.sub_diag by Lia.lia.
       exact eq_refl. }
     eapply Forall2_weaken; [|eauto]; eauto using eval_weaken. }
   { cbv [gensym_dag_ok] in *; destruct_head'_and; now apply gensym_ok_app. }
   { cbv [gensym_dag_ok dag_ok gensym_ok] in *; split_and; eauto.
-    rewrite @nth_error_app in *; break_innermost_match_hyps; eauto.
-    destruct (_ - _)%nat as [| [|] ]; cbn [nth_error] in *; inversion_option; subst.
+    rewrite @dag_lookup_app in *; break_innermost_match_hyps; eauto.
+    destruct (_ - _)%nat as [| [|] ]; cbn [dag_lookup nth_error List.map] in *; inversion_option; subst.
     hnf; intros; subst e; inversion_prod; subst; cbn [interp_op] in *; break_innermost_match_hyps; inversion_option; subst.
     firstorder lia. }
   { cbv [gensym_dag_ok dag_ok] in *; split_and; intros.
     case (lt_dec (N.to_nat i) (length d)) as [?|?];
-      erewrite ?nth_error_app1, ?nth_error_app2 in H1 by Lia.lia.
+      erewrite ?dag_lookup_app1, ?dag_lookup_app2 in H1 by Lia.lia.
     { match goal with
-      | [ H : forall i r, nth_error _ (N.to_nat i) = Some r -> exists v, eval _ _ _ _, H1 : nth_error _ _ = Some _ |- _ ]
+      | [ H : forall i r, dag_lookup _ (N.to_nat i) = Some r -> exists v, eval _ _ _ _, H1 : dag_lookup _ _ = Some _ |- _ ]
         => case (H _ _ H1); eauto using eval_weaken
       end. }
-    { destruct (N.to_nat i - length d) as [| [|] ] eqn:?; cbn [nth_error] in *; inversion_option; subst.
+    { destruct (N.to_nat i - length d) as [| [|] ] eqn:?; cbn [nth_error dag_lookup List.map] in *; inversion_option; subst.
       eexists. econstructor.
       replace (N.to_nat i) with (length d) by Lia.lia.
-      { erewrite ?nth_error_app2, ?Nnat.Nat2N.id, Nat.sub_diag by Lia.lia.
+      { erewrite ?dag_lookup_app2, ?Nnat.Nat2N.id, Nat.sub_diag by Lia.lia.
         exact eq_refl. }
       { eapply Forall2_weaken; [|eauto]; eauto using eval_weaken. }
       eauto. } }
@@ -530,7 +564,7 @@ Qed.
 Require Import coqutil.Tactics.autoforward coqutil.Decidable coqutil.Tactics.Tactics.
 Global Set Default Goal Selector "1".
 
-Lemma eval_merge G :
+Lemma eval_merge {descr:description} G :
   forall e n,
   forall d, gensym_dag_ok G d ->
   eval G d e n ->
@@ -541,7 +575,7 @@ Proof using Type.
   induction e; intros; eauto; [].
   rename n0 into v.
 
-  set (merge _ _) as m; cbv beta iota delta [merge] in m; fold merge in m.
+  set (merge _ _) as m; cbv beta iota delta [merge] in m; fold @merge in m.
   destruct n as (op&args).
   repeat match goal with
     m := let x := ?A in @?B x |- _ =>
@@ -564,7 +598,8 @@ Proof using Type.
   clearbody idxs_d.
 
   enough (eval G (snd idxs_d) (ExprApp (op, map ExprRef idxs)) v) by
-    (unshelve edestruct ((eval_merge_node _ _ ltac:(eassumption) op) idxs v) as (?&?&?); eauto); clear m.
+    (unshelve (let lem := open_constr:(eval_merge_node _ _ ltac:(eassumption) op idxs v) in
+               edestruct lem as (?&?&?)); eauto); clear m.
 
   pose proof length_Forall2 H4; pose proof length_Forall2 H2.
 
@@ -2116,9 +2151,13 @@ Global Instance show_flag_state : Show flag_state :=
   ++" SF="++show sfv
   ++" ZF="++show zfv
   ++" OF="++show ofv++")")%string.
-Global Instance show_lines_dag : ShowLines dag := (fun d =>
+Global Instance show_lines_dag : ShowLines dag := (fun d:dag =>
   ["(*dag*)["]
-  ++List.map (fun '(i, v) =>"(*"++show i ++"*) " ++ show v++";")%string (@ListUtil.List.enumerate (node idx) d)
+    ++List.map (fun '(i, (v, descr)) =>"(*"++show i ++"*) " ++ show v++";"
+                                           ++ match descr with
+                                              | None | Some (_, false) => ""
+                                              | Some (descr, true (* always show *)) => " " ++ String.Tab ++ "(*" ++ descr ++ "*)"
+                                              end)%string (@ListUtil.List.enumerate _ d)
   ++["]"])%list%string.
 Global Instance show_lines_mem_state : ShowLines mem_state :=
   @show_lines_list _ ShowLines_of_Show.
@@ -2263,10 +2302,10 @@ Definition SetReg64 rn i : M unit :=
 Definition Store64 (a v : idx) : M unit :=
   ms <- some_or (store a v) (error.store a v);
   fun s => Success (tt, update_mem_with s (fun _ => ms)).
-Definition Merge (e : expr) : M idx := fun s =>
+Definition Merge {descr : description} (e : expr) : M idx := fun s =>
   let i_dag := merge e s in
   Success (fst i_dag, update_dag_with s (fun _ => snd i_dag)).
-Definition App (n : node idx) : M idx :=
+Definition App {descr : description} (n : node idx) : M idx :=
   fun s => Merge (simplify s n) s.
 Definition Reveal n (i : idx) : M expr :=
   fun s => Success (reveal s n i, s).
@@ -2277,11 +2316,11 @@ Definition RevealConst (i : idx) : M Z :=
   | _ => err (error.expected_const i x)
   end.
 
-Definition GetReg r : M idx :=
+Definition GetReg {descr:description} r : M idx :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   v <- GetReg64 rn;
   App ((slice lo sz), [v]).
-Definition SetReg r (v : idx) : M unit :=
+Definition SetReg {descr:description} r (v : idx) : M unit :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   if N.eqb sz 64
   then v <- App (slice 0 64, [v]);
@@ -2291,7 +2330,7 @@ Definition SetReg r (v : idx) : M unit :=
        SetReg64 rn v.
 
 Class AddressSize := address_size : OperationSize.
-Definition Address {sa : AddressSize} (a : MEM) : M idx :=
+Definition Address {descr:description} {sa : AddressSize} (a : MEM) : M idx :=
   _ <- match a.(mem_base_label) with
        | None => ret tt
        | Some l => err (error.unsupported_label_in_memory l)
@@ -2310,21 +2349,21 @@ Definition Address {sa : AddressSize} (a : MEM) : M idx :=
   bi <- App (add sa, [base; index]);
   App (add sa, [bi; offset]).
 
-Definition Load {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
+Definition Load {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
   if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
   then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
   addr <- Address a;
   v <- Load64 addr;
   App ((slice 0 (Syntax.operand_size a s)), [v]).
 
-Definition Remove {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
+Definition Remove {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
   if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
   then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
   addr <- Address a;
   v <- Remove64 addr;
   App ((slice 0 (Syntax.operand_size a s)), [v]).
 
-Definition Store {s : OperationSize} {sa : AddressSize} (a : MEM) v : M unit :=
+Definition Store {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) v : M unit :=
   if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
   then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
   addr <- Address a;
@@ -2334,7 +2373,7 @@ Definition Store {s : OperationSize} {sa : AddressSize} (a : MEM) v : M unit :=
   Store64 addr v.
 
 (* note: this could totally just handle truncation of constants if semanics handled it *)
-Definition GetOperand {s : OperationSize} {sa : AddressSize} (o : ARG) : M idx :=
+Definition GetOperand {descr:description} {s : OperationSize} {sa : AddressSize} (o : ARG) : M idx :=
   match o with
   | Syntax.const a => App (zconst s a, [])
   | mem a => Load a
@@ -2342,7 +2381,7 @@ Definition GetOperand {s : OperationSize} {sa : AddressSize} (o : ARG) : M idx :
   | label l => err (error.unsupported_label_argument l)
   end.
 
-Definition SetOperand {s : OperationSize} {sa : AddressSize} (o : ARG) (v : idx) : M unit :=
+Definition SetOperand {descr:description} {s : OperationSize} {sa : AddressSize} (o : ARG) (v : idx) : M unit :=
   match o with
   | Syntax.const a => err (error.set_const a v)
   | mem a => Store a v
@@ -2366,7 +2405,7 @@ Example __testPreARG_boring : ARG -> list pre_expr := fun x : ARG => @cons pre_e
 Example __testPreARG : ARG -> list pre_expr := fun x : ARG => [x].
 *)
 
-Fixpoint Symeval {s : OperationSize} {sa : AddressSize} (e : pre_expr) : M idx :=
+Fixpoint Symeval {descr:description} {s : OperationSize} {sa : AddressSize} (e : pre_expr) : M idx :=
   match e with
   | PreARG o => GetOperand o
   | PreFLG f => GetFlag f
@@ -2382,7 +2421,7 @@ Definition rcrcnt s cnt : Z :=
   Z.land cnt (Z.of_N s-1).
 
 Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
-Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
+Definition SymexNormalInstruction {descr:description} (instr : NormalInstruction) : M unit :=
   let stack_addr_size : AddressSize := 64%N in
   let sa : AddressSize := 64%N in
   match Syntax.operation_size instr with Some s =>
@@ -2555,7 +2594,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | Some prefix => err (error.unimplemented_prefix instr) end
   | None => err (error.ambiguous_operation_size instr) end%N%x86symex.
 
-Definition SymexRawLine (rawline : RawLine) : M unit :=
+Definition SymexRawLine {descr:description} (rawline : RawLine) : M unit :=
   match rawline with
   | EMPTY
   | LABEL _
@@ -2569,7 +2608,9 @@ Definition SymexRawLine (rawline : RawLine) : M unit :=
       => err (error.unsupported_line rawline)
   end.
 
-Definition SymexLine line := SymexRawLine line.(rawline).
+Definition SymexLine line :=
+  let descr:description := Some (show line, false) in
+  SymexRawLine line.(rawline).
 
 Fixpoint SymexLines (lines : Lines) : M unit
   := match lines with
