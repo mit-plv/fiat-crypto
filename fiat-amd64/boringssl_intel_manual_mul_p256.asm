@@ -7,6 +7,7 @@ push   r12
 push   r13
 push   r14
 push   r15
+xchg   rdx,rsi                  ; hack: swap args
 mov    rbx,rdx
 mov    rax,QWORD PTR [rbx]
 mov    r9,QWORD PTR [rsi]
