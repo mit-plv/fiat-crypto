@@ -1,12 +1,12 @@
 SECTION .text
 	GLOBAL ecp_nistz256_mul_mont
 ecp_nistz256_mul_mont:
-;push   rbp
-;push   rbx
-;push   r12
-;push   r13
-;push   r14
-;push   r15
+push   rbp
+push   rbx
+push   r12
+push   r13
+push   r14
+push   r15
 mov    rbx,rdx
 mov    rax,QWORD PTR [rbx]
 mov    r9,QWORD PTR [rsi]
@@ -176,11 +176,11 @@ mov    QWORD PTR [rdi+0x8],r13
 cmovb  r9,rdx
 mov    QWORD PTR [rdi+0x10],r8
 mov    QWORD PTR [rdi+0x18],r9
-;mov    r15,QWORD PTR [rsp]
-;mov    r14,QWORD PTR [rsp+0x8]
-;mov    r13,QWORD PTR [rsp+0x10]
-;mov    r12,QWORD PTR [rsp+0x18]
-;mov    rbx,QWORD PTR [rsp+0x20]
-;mov    rbp,QWORD PTR [rsp+0x28]
+mov    r15,QWORD PTR [rsp]
+mov    r14,QWORD PTR [rsp+0x8]
+mov    r13,QWORD PTR [rsp+0x10]
+mov    r12,QWORD PTR [rsp+0x18]
+mov    rbx,QWORD PTR [rsp+0x20]
+mov    rbp,QWORD PTR [rsp+0x28]
 ;lea    rsp,[rsp+0x30]
 ret
