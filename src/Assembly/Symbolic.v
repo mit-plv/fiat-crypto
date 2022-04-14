@@ -2539,13 +2539,21 @@ Definition SymexNormalInstruction {descr:description} (instr : NormalInstruction
     else ret tt
   | mulx, [hi; lo; src2] =>
     let src1 : ARG := rdx in
-    v1 <- GetOperand src1;
-    v2 <- GetOperand src2;
-    v <- App (mulZ, [v1; v2]);
-    s <- App (const (Z.of_N s), nil);
-    vh <- App (shrZ, [v; s]);
+    v  <- Symeval (mulZ@(src1,src2));
+    vh <- Symeval (shrZ@(v,PreARG (Z.of_N s)));
     _ <- SetOperand lo v;
          SetOperand hi vh
+  | (Syntax.mul | imul), [src2] =>
+    let src1 : ARG := rax in
+    v  <- Symeval (mulZ@(src1,src2));
+    vh <- Symeval (shrZ@(v,PreARG (Z.of_N s)));
+    lo <- resize_reg rax;
+    hi <- (if (s =? 8)%N
+           then ret ah
+           else resize_reg rdx);
+    _ <- SetOperand (lo:ARG) v;
+    _ <- SetOperand (hi:ARG) vh;
+    HavocFlags (* This is conservative and can be made more precise *)
   | Syntax.shl, [dst; cnt] =>
     let cnt := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
     v <- Symeval (shl s@(dst, cnt));
@@ -2604,6 +2612,18 @@ Definition SymexNormalInstruction {descr:description} (instr : NormalInstruction
     then zf <- App (iszero, [a]); SetFlag ZF zf
     else ret tt
   | clc, [] => zero <- Merge (@ExprApp (const 0, nil)); SetFlag CF zero
+  | push, [src]
+    => v    <- GetOperand src;
+       rsp' <- GetOperand (s:=stack_addr_size) rsp;
+       rsp' <- Symeval (s:=stack_addr_size) (add stack_addr_size@(rsp', PreARG (-(Z.of_N s/8))%Z));
+       _    <- SetOperand rsp rsp';
+               SetOperand (mem_of_reg rsp) v
+  | pop, [dst]
+    => v    <- GetOperand (mem_of_reg rsp);
+       rsp' <- GetOperand (s:=stack_addr_size) rsp;
+       rsp' <- Symeval (s:=stack_addr_size) (add stack_addr_size@(rsp', PreARG ((Z.of_N s/8)%Z)));
+       _    <- SetOperand rsp rsp';
+               SetOperand dst v
   | _, _ => err (error.unimplemented_instruction instr)
  end
   | Some prefix => err (error.unimplemented_prefix instr) end
