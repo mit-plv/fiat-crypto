@@ -370,6 +370,7 @@ src/Util/Structures/Orders/Sum.v
 src/Util/Tactics/AllInstances.v
 src/Util/Tactics/AllSuccesses.v
 src/Util/Tactics/AppendUnderscores.v
+src/Util/Tactics/Beta1.v
 src/Util/Tactics/BreakMatch.v
 src/Util/Tactics/CPSId.v
 src/Util/Tactics/CacheTerm.v
@@ -383,6 +384,7 @@ src/Util/Tactics/Contains.v
 src/Util/Tactics/ConvoyDestruct.v
 src/Util/Tactics/CountBinders.v
 src/Util/Tactics/DebugPrint.v
+src/Util/Tactics/Delta1.v
 src/Util/Tactics/DestructHead.v
 src/Util/Tactics/DestructHyps.v
 src/Util/Tactics/DestructTrivial.v
@@ -393,9 +395,11 @@ src/Util/Tactics/EvarExists.v
 src/Util/Tactics/EvarNormalize.v
 src/Util/Tactics/FindHyp.v
 src/Util/Tactics/Forward.v
+src/Util/Tactics/GeneralizeOverHoles.v
 src/Util/Tactics/GetGoal.v
 src/Util/Tactics/HasBody.v
 src/Util/Tactics/Head.v
+src/Util/Tactics/HeadConstrEq.v
 src/Util/Tactics/HeadUnderBinders.v
 src/Util/Tactics/MoveLetIn.v
 src/Util/Tactics/NormalizeCommutativeIdentifier.v
@@ -415,6 +419,7 @@ src/Util/Tactics/SimplifyProjections.v
 src/Util/Tactics/SimplifyRepeatedIfs.v
 src/Util/Tactics/SpecializeAllWays.v
 src/Util/Tactics/SpecializeBy.v
+src/Util/Tactics/SpecializeUnderBindersBy.v
 src/Util/Tactics/SplitInContext.v
 src/Util/Tactics/SubstEvars.v
 src/Util/Tactics/SubstLet.v
@@ -425,6 +430,7 @@ src/Util/Tactics/UnifyAbstractReflexivity.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
 src/Util/Tactics/WarnIfGoalsRemain.v
+src/Util/Tactics/Zeta1.v
 src/Util/Telescope/Core.v
 src/Util/Telescope/Equality.v
 src/Util/Telescope/Instances.v
