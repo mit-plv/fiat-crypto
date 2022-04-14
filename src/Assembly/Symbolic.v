@@ -2300,6 +2300,9 @@ Definition Address {sa : AddressSize} (a : MEM) : M idx :=
   bi <- App (add sa, [base; index]);
   App (add sa, [bi; offset]).
 
+Definition mem_of_reg (r : REG) : MEM :=
+  {| mem_is_byte := false ; mem_base_reg := Some r ; mem_offset := None ; mem_scale_reg := None |}.
+
 Definition Load {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
   if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
   then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
