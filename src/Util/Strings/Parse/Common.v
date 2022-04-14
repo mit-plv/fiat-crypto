@@ -164,6 +164,11 @@ Definition parse_alt_list {T} (ls : list (ParserAction T)) : ParserAction T
 Definition parse_strs {T} (ls : list (string * T)) : ParserAction T
   := parse_alt_list (List.map (fun '(s, v) => parse_map (fun _ => v) (s:string)) ls).
 
+Definition parse_strs_case_insensitive {T} (ls : list (string * T)) : ParserAction T
+  := parse_alt_list (List.map (fun '(s, v) => parse_map (fun _ => v) (casefold s)) ls).
+
+Notation parse_strs_casefold := parse_strs_case_insensitive (only parsing).
+
 Definition parse_one_whitespace : ParserAction string
   := Eval cbv [List.fold_right List.fold_left whitespace whitespace_strs List.tl List.hd parse_strs List.combine] in
       (List.fold_left (B:=string) parse_alt (tl whitespace_strs) (hd " " whitespace_strs)).
