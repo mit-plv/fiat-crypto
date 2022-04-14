@@ -51,10 +51,10 @@ jobs:
         wmic cpu list /format:list
         ECHO ::endgroup::
         ECHO ::group::git config -l
-        %CYGWIN_ROOT%\bash.exe -l -c 'git config -l'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'git config -l'
         ECHO ::endgroup::
         ECHO ::group::git config --global -l
-        %CYGWIN_ROOT%\bash.exe -l -c 'git config --global -l'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'git config --global -l'
         ECHO ::endgroup::
         ECHO ::group::opam list
         opam list
