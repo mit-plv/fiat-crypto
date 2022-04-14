@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.derive.Derive.
+Require Import Coq.Strings.Ascii.
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import Crypto.Assembly.Syntax.
@@ -13,6 +14,7 @@ Require Import Crypto.Util.Listable.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.
 Import ListNotations.
+Local Open Scope bool_scope.
 Local Open Scope list_scope.
 Local Open Scope string_scope.
 Local Open Scope parse_scope.
@@ -127,32 +129,59 @@ Global Instance show_OpCode : Show OpCode
         | adox => "adox"
         | and => "and"
         | bzhi => "bzhi"
-        | rcr => "rcr"
+        | call => "call"
         | clc => "clc"
+        | cmovb => "cmovb"
         | cmovc => "cmovc"
         | cmovnz => "cmovnz"
+        | cmp => "cmp"
+        | db => "db"
+        | dd => "dd"
         | dec => "dec"
+        | dq => "dq"
+        | dw => "dw"
         | imul => "imul"
         | inc => "inc"
+        | je => "je"
+        | jmp => "jmp"
         | lea => "lea"
         | mov => "mov"
         | movzx => "movzx"
+        | mul => "mul"
         | mulx => "mulx"
+        | pop => "pop"
+        | push => "push"
+        | rcr => "rcr"
         | ret => "ret"
         | sar => "sar"
-        | sub => "sub"
         | sbb => "sbb"
         | setc => "setc"
         | seto => "seto"
-        | shrd => "shrd"
         | shl => "shl"
         | shlx => "shlx"
         | shr => "shr"
+        | shrx => "shrx"
+        | shrd => "shrd"
+        | sub => "sub"
         | test => "test"
         | xchg => "xchg"
         | xor => "xor"
         end.
 Global Instance show_lvl_OpCode : ShowLevel OpCode := show_OpCode.
+
+Derive OpPrefix_Listable SuchThat (@FinitelyListable OpPrefix OpPrefix_Listable) As OpPrefix_FinitelyListable.
+Proof. prove_ListableDerive. Qed.
+Global Existing Instances OpPrefix_Listable OpPrefix_FinitelyListable.
+
+(* M-x query-replace-regex RET \([^ ]+\) => _ RET \1 => "\1" *)
+Global Instance show_OpPrefix : Show OpPrefix
+  := fun opp
+     => match opp with
+        | rep => "rep"
+        | repz => "repz"
+        | repnz => "repnz"
+        end.
+Global Instance show_lvl_OpPrefix : ShowLevel OpPrefix := show_OpPrefix.
 
 Definition parse_REG_list : list (string * REG)
   := Eval vm_compute in
@@ -172,40 +201,96 @@ Definition parse_FLAG_list : list (string * FLAG)
 Definition parse_FLAG : ParserAction FLAG
   := parse_strs parse_FLAG_list.
 
+Derive AccessSize_Listable SuchThat (@FinitelyListable AccessSize AccessSize_Listable) As AccessSize_FinitelyListable.
+Proof. prove_ListableDerive. Qed.
+Global Existing Instances AccessSize_Listable AccessSize_FinitelyListable.
+
+(* M-x query-replace-regex RET \([^ ]+\) => _ RET \1 => "\1" *)
+Global Instance show_AccessSize : Show AccessSize
+  := fun sz
+     => match sz with
+        | byte => "byte"
+        | word => "word"
+        | dword => "dword"
+        | qword => "qword"
+        end.
+Global Instance show_lvl_AccessSize : ShowLevel AccessSize := show_AccessSize.
+
+Definition parse_AccessSize_list : list (string * AccessSize)
+  := Eval vm_compute in
+      List.map
+        (fun r => (show r, r))
+        (list_all AccessSize).
+
+Definition parse_AccessSize : ParserAction AccessSize
+  := (parse_strs_casefold parse_AccessSize_list ;;L (casefold " ptr")?).
+
+
+(* Do we want to support anything else from the printable characters?
+!""#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ *)
+(* According to https://www.nasm.us/xdoc/2.15.05/html/nasmdoc3.html:
+Valid characters in labels are letters, numbers, _, $, #, @, ~, ., and ?. The only characters which may be used as the first character of an identifier are letters, . (with special meaning: see section 3.9), _ and ?. An identifier may also be prefixed with a $ to indicate that it is intended to be read as an identifier and not a reserved word; thus, if some other module you are linking with defines a symbol called eax, you can refer to $eax in NASM code to distinguish the symbol from the register. Maximum length of an identifier is 4095 characters. *)
+Definition parse_label : ParserAction string
+  := let parse_any_ascii s := parse_alt_list (List.map parse_ascii (list_ascii_of_string s)) in
+     parse_map
+       (fun '(char, ls) => string_of_list_ascii (char :: ls))
+       (([a-zA-Z] || parse_any_ascii "._?$") ;;
+        (([a-zA-Z] || parse_any_ascii "0123456789_$#@~.?")* )).
+
 Definition parse_MEM : ParserAction MEM
   := parse_map
-       (fun '(has_byte, (br (*base reg*), sr (*scale reg, including z *), offset))
-        => {| mem_is_byte := if has_byte:option _ then true else false
+       (fun '(access_size, (br (*base reg*), sr (*scale reg, including z *), offset, base_label))
+        => {| mem_bits_access_size := access_size:option AccessSize
            ; mem_base_reg := br:option REG
+           ; mem_base_label := base_label
            ; mem_scale_reg := sr:option (Z * REG)
            ; mem_offset := offset:option Z |})
-       (((strip_whitespace_after "byte ")?) ;;
+       (((strip_whitespace_after parse_AccessSize)?) ;;
         ("["
          ;;R
+             parse_or_else
              (
                (*[rax]                 *)
                (parse_map
-                  (fun r => (Some r, None, None))
+                  (fun r => (Some r, None, None, None))
                   (strip_whitespace_around parse_REG))
                || (*[rax           + 0x10]*)
                  (parse_map
                     (fun '(br, (pm, z)) => (Some br, None, Some match pm with
                                                                 | inl _ (* plus *) => z
                                                                 | inr _ (* minus *) => -z
-                                                                end%Z))
+                                                                end%Z, None))
                     (strip_whitespace_around parse_REG ;; ("+" ||->{id} "-") ;; parse_Z_arith_strict))
+               || (*[0x10          + rax]*)
+                 (parse_map
+                    (fun '(z, br) => (Some br, None, Some z, None))
+                    ((strip_whitespace_before "+")? ;;R parse_Z_arith_strict ;; "+" ;;R strip_whitespace_around parse_REG))
                || (*[rax +     rbx]       *)
                  (parse_map
-                    (fun '(br, sr) => (Some br, Some (1%Z, sr), None))
+                    (fun '(br, sr) => (Some br, Some (1%Z, sr), None, None))
                     (strip_whitespace_around parse_REG ;; "+" ;;R strip_whitespace_around parse_REG))
                || (*[rax + 2 * rbx]       *)
                  (parse_map
-                    (fun '(br, (z, sr)) => (Some br, Some (z, sr), None))
+                    (fun '(br, (z, sr)) => (Some br, Some (z, sr), None, None))
                     (strip_whitespace_around parse_REG ;; "+" ;;R parse_Z_arith_strict ;; "*" ;;R strip_whitespace_around parse_REG))
+               || (*[2 * rbx + rax]       *)
+                 (parse_map
+                    (fun '(z, (sr, br)) => (Some br, Some (z, sr), None, None))
+                    (parse_Z_arith_strict ;; "*" ;;R strip_whitespace_around parse_REG ;; "+" ;;R strip_whitespace_around parse_REG))
                || (*[      2 * rax]       *)
                  (parse_map
-                    (fun '(z, r) => (None, Some (z, r), None))
+                    (fun '(z, r) => (None, Some (z, r), None, None))
                     (parse_Z_arith_strict ;; "*" ;;R strip_whitespace_around parse_REG))
+             )
+             (
+               (*FIXME: what's the full form of this? how should it be combined with other options? *)
+               (*[(($L$poly+8))]                 *)
+               (parse_map
+                  (fun '(l, (pm, z)) => (None, None, Some match pm with
+                                                          | inl _ (* plus *) => z
+                                                          | inr _ (* minus *) => -z
+                                                          end%Z, Some l))
+                  ("((" ;;R strip_whitespace_around parse_label ;; ("+" ||->{id} "-") ;; parse_Z_arith_strict ;;L "))"))
              )
          ;;L "]")).
 
@@ -214,11 +299,22 @@ Definition parse_CONST (const_keyword : bool) : ParserAction CONST
      then "CONST " ;;R parse_Z_arith_strict ;;L parse_lookahead_not parse_one_whitespace
      else parse_lookahead_not parse_one_whitespace ;;R parse_Z_arith_strict ;;L parse_lookahead_not parse_one_whitespace.
 
+Definition parse_JUMP_LABEL : ParserAction JUMP_LABEL
+  := parse_map
+       (fun '(near, lbl)
+        => {| jump_near := if near:option _ then true else false
+           ; label_name := lbl : string
+           |})
+       ((strip_whitespace_after "NEAR ")? ;; parse_label).
+
+(* we only parse something as a label if it cannot possibly be anything else, because asm is terrible and has ambiguous parses otherwise :-( *)
 Definition parse_ARG (const_keyword : bool) : ParserAction ARG
-  := parse_alt_list
-       [parse_map reg parse_REG
-        ; parse_map mem parse_MEM
-        ; parse_map const (parse_CONST const_keyword)].
+  := parse_or_else
+       (parse_alt_list
+          [parse_map reg parse_REG
+           ; parse_map mem parse_MEM
+           ; parse_map const (parse_CONST const_keyword)])
+       (parse_map label parse_JUMP_LABEL).
 
 Definition parse_OpCode_list : list (string * OpCode)
   := Eval vm_compute in
@@ -227,7 +323,16 @@ Definition parse_OpCode_list : list (string * OpCode)
         (list_all OpCode).
 
 Definition parse_OpCode : ParserAction OpCode
-  := parse_strs parse_OpCode_list.
+  := parse_strs_case_insensitive parse_OpCode_list.
+
+Definition parse_OpPrefix_list : list (string * OpPrefix)
+  := Eval vm_compute in
+      List.map
+        (fun r => (show r, r))
+        (list_all OpPrefix).
+
+Definition parse_OpPrefix : ParserAction OpPrefix
+  := parse_strs parse_OpPrefix_list.
 
 (** assumes no leading nor trailing whitespace and no comment *)
 Definition parse_RawLine : ParserAction RawLine
@@ -236,22 +341,40 @@ Definition parse_RawLine : ParserAction RawLine
         (* get the first space-separated opcode *)
         let '(mnemonic, args) := String.take_while_drop_while (fun ch => negb (Ascii.is_whitespace ch)) s in
         let args := String.trim args in
-        if (mnemonic =? "SECTION")
+        if (String.to_upper mnemonic =? "SECTION")
         then [(SECTION args, "")]
-        else if (mnemonic =? "GLOBAL")
-             then [(GLOBAL args, "")]
-             else if String.endswith ":" s
-                  then [(LABEL (substring 0 (pred (String.length s)) s), "")]
-                  else if (s =? "")
-                       then [(EMPTY, "")]
-                       else let parsed_mnemonic := (parse_OpCode ;;L ε) mnemonic in
-                            let parsed_args := (parse_list_gen "" "," "" (parse_ARG false) ;;L ε) args in
-                            List.flat_map
-                              (fun '(opc, _)
-                               => List.map
-                                    (fun '(argsv, _) => (INSTR {| op := opc ; args := argsv |}, ""))
-                                    parsed_args)
-                              parsed_mnemonic.
+        else if (String.to_upper mnemonic =? "GLOBAL")
+        then [(GLOBAL args, "")]
+        else if (String.to_upper mnemonic =? "ALIGN")
+        then [(ALIGN args, "")]
+        else if (String.to_upper mnemonic =? "DEFAULT") && (String.to_upper args =? "REL")
+        then [(DEFAULT_REL, "")]
+        else if String.endswith ":" s
+        then [(LABEL (substring 0 (pred (String.length s)) s), "")]
+        else if (s =? "")
+        then [(EMPTY, "")]
+        else let parsed_prefix := (parse_OpPrefix ;;L ε) mnemonic in
+             List.flat_map
+               (fun '(parsed_prefix, mnemonic, args)
+                => let parsed_mnemonic := (parse_OpCode ;;L ε) mnemonic in
+                   let parsed_args := (parse_list_gen "" "," "" (parse_ARG false) ;;L ε) args in
+                   List.flat_map
+                     (fun '(opc, _)
+                      => List.map
+                           (fun '(argsv, _) => (INSTR {| prefix := parsed_prefix ; op := opc ; args := argsv |}, ""))
+                           parsed_args)
+                     parsed_mnemonic)
+               match parsed_prefix with
+               | []
+                 => [(None, mnemonic, args)]
+               | _
+                 => List.map
+                      (fun '(parsed_prefix, _)
+                       => let '(mnemonic, args) := String.take_while_drop_while (fun ch => negb (Ascii.is_whitespace ch)) args in
+                          let args := String.trim args in
+                          (Some parsed_prefix, mnemonic, args))
+                      parsed_prefix
+               end.
 
 Definition parse_Line : ParserAction Line
   := fun s
@@ -288,15 +411,21 @@ Notation parse := parse_Lines (only parsing).
 
 Global Instance show_lvl_MEM : ShowLevel MEM
   := fun m
-     => (if m.(mem_is_byte) then show_lvl_app (fun 'tt => "byte") else show_lvl)
+     => (match m.(mem_bits_access_size) with
+         | Some n
+           => show_lvl_app (fun 'tt => if n =? 8 then "byte" else if n =? 64 then "QWORD PTR" else "BAD SIZE")%N (* TODO: Fix casing and stuff *)
+         | None => show_lvl
+         end)
           (fun 'tt
-           => "[" ++ (match m.(mem_base_reg), m.(mem_scale_reg) with
-                      | (*"[Reg]"          *) Some br, None         => show_REG br
-                      | (*"[Reg + Z * Reg]"*) Some br, Some (z, sr) => show_REG br  ++ " + " ++  Decimal.show_Z z  ++ " * " ++ show_REG sr (*only matching '+' here, because there cannot be a negative scale. *)
-                      | (*"[      Z * Reg]"*) None,    Some (z, sr) =>                           Decimal.show_Z z  ++ " * " ++ show_REG sr
-                      | (*"[             ]"*) None,    None         => "" (* impossible, because only offset is invalid, but we seem to need it for coq because both are option's*)
-                      end%Z)
-                  ++ (match m.(mem_offset) with
+           => let reg_part
+                := (match m.(mem_base_reg), m.(mem_scale_reg) with
+                    | (*"[Reg]"          *) Some br, None         => show_REG br
+                    | (*"[Reg + Z * Reg]"*) Some br, Some (z, sr) => show_REG br  ++ " + " ++  Decimal.show_Z z  ++ " * " ++ show_REG sr (*only matching '+' here, because there cannot be a negative scale. *)
+                    | (*"[      Z * Reg]"*) None,    Some (z, sr) =>                           Decimal.show_Z z  ++ " * " ++ show_REG sr
+                    | (*"[             ]"*) None,    None         => "" (* impossible, because only offset is invalid, but we seem to need it for coq because both are option's*)
+                    end%Z) in
+              let offset_part
+                := (match m.(mem_offset) with
                       | None => ""
                       | Some offset
                         => (if offset <? 0 then " - " else " + ")
@@ -304,9 +433,19 @@ Global Instance show_lvl_MEM : ShowLevel MEM
                                  if (Z.modulo offset 8 =? 0)%Z
                                  then "0x08 * " ++ Decimal.show_Z (offset / 8)
                                  else Hex.show_Z offset)
-                      end%Z)
+                    end%Z) in
+              "[" ++ match m.(mem_base_label) with
+                     | None => reg_part ++ offset_part
+                     | Some l => "((" ++ l ++ offset_part ++ "))"
+                     end
                   ++ "]").
 Global Instance show_MEM : Show MEM := show_lvl_MEM.
+
+Global Instance show_lvl_JUMP_LABEL : ShowLevel JUMP_LABEL
+  := fun l _
+     => ((if l.(jump_near) then "NEAR " else "")
+           ++ l.(label_name)).
+Global Instance show_JUMP_LABEL : Show JUMP_LABEL := show_lvl_JUMP_LABEL.
 
 Global Instance show_lvl_ARG : ShowLevel ARG
   := fun a
@@ -314,6 +453,7 @@ Global Instance show_lvl_ARG : ShowLevel ARG
         | reg r => show_lvl r
         | mem m => show_lvl m
         | const c => show_lvl c
+        | label l => show_lvl l
         end.
 Global Instance show_ARG : Show ARG := show_lvl_ARG.
 
@@ -329,6 +469,8 @@ Global Instance show_RawLine : Show RawLine
      => match l with
         | SECTION name => "SECTION " ++ name
         | GLOBAL name => "GLOBAL " ++ name
+        | ALIGN args => "ALIGN " ++ args
+        | DEFAULT_REL => "DEFAULT REL"
         | LABEL name => name ++ ":"
         | EMPTY => ""
         | INSTR instr => show instr

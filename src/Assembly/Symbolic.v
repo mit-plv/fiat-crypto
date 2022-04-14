@@ -2153,6 +2153,9 @@ Module error.
   | expected_const (_ : idx) (_ : expr)
 
   | unsupported_memory_access_size (_:N)
+  | unsupported_label_in_memory (_:string)
+  | unsupported_label_argument (_:JUMP_LABEL)
+  | unimplemented_prefix (_:NormalInstruction)
   | unimplemented_instruction (_ : NormalInstruction)
   | unsupported_line (_ : RawLine)
   | ambiguous_operation_size (_ : NormalInstruction)
@@ -2190,7 +2193,10 @@ Module error.
           | expected_const i x
             => ["RevealConst called at " ++ show i ++ " resulted in non-const value " ++ show x]
           | unsupported_memory_access_size n => ["error.unsupported_memory_access_size " ++ show n]
+          | unsupported_label_in_memory l => ["error.unsupported_label_in_memory " ++ l]
+          | unsupported_label_argument l => ["error.unsupported_label_argument " ++ show l]
           | unimplemented_instruction n => ["error.unimplemented_instruction " ++ show n]
+          | unimplemented_prefix n => ["error.unimplemented_prefix " ++ show n]
           | unsupported_line n => ["error.unsupported_line " ++ show n]
           | ambiguous_operation_size n => ["error.ambiguous_operation_size " ++ show n]
           end%string.
@@ -2286,6 +2292,10 @@ Definition SetReg r (v : idx) : M unit :=
 
 Class AddressSize := address_size : OperationSize.
 Definition Address {sa : AddressSize} (a : MEM) : M idx :=
+  _ <- match a.(mem_base_label) with
+       | None => ret tt
+       | Some l => err (error.unsupported_label_in_memory l)
+       end;
   base <- match a.(mem_base_reg) with
            | Some r => GetReg r
            | None => App ((const 0), nil)
@@ -2301,7 +2311,7 @@ Definition Address {sa : AddressSize} (a : MEM) : M idx :=
   App (add sa, [bi; offset]).
 
 Definition mem_of_reg (r : REG) : MEM :=
-  {| mem_is_byte := false ; mem_base_reg := Some r ; mem_offset := None ; mem_scale_reg := None |}.
+  {| mem_base_reg := Some r ; mem_offset := None ; mem_scale_reg := None ; mem_bits_access_size := None ; mem_base_label := None |}.
 
 Definition Load {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
   if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
@@ -2332,6 +2342,7 @@ Definition GetOperand {s : OperationSize} {sa : AddressSize} (o : ARG) : M idx :
   | Syntax.const a => App (zconst s a, [])
   | mem a => Load a
   | reg r => GetReg r
+  | label l => err (error.unsupported_label_argument l)
   end.
 
 Definition SetOperand {s : OperationSize} {sa : AddressSize} (o : ARG) (v : idx) : M unit :=
@@ -2339,6 +2350,7 @@ Definition SetOperand {s : OperationSize} {sa : AddressSize} (o : ARG) (v : idx)
   | Syntax.const a => err (error.set_const a v)
   | mem a => Store a v
   | reg a => SetReg a v
+  | label l => err (error.unsupported_label_argument l)
   end.
 
 Local Unset Elimination Schemes.
@@ -2375,8 +2387,11 @@ Definition rcrcnt s cnt : Z :=
 Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
 Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   let sa : AddressSize := 64%N in
+  let stack_addr_size : AddressSize := 64%N in
   match Syntax.operation_size instr with Some s =>
+  match Syntax.prefix instr with None =>
   let s : OperationSize := s in
+  let resize_reg r := some_or (fun _ => reg_of_index_and_shift_and_bitcount_opt (reg_index r, 0%N (* offset *), s)) (fun _ => error.unimplemented_instruction instr) in
   match instr.(Syntax.op), instr.(args) with
   | (mov | movzx), [dst; src] => (* Note: unbundle when switching from N to Z *)
     v <- GetOperand src;
@@ -2386,7 +2401,9 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     vb <- GetOperand b;
     _ <- SetOperand b va;
     SetOperand a vb
-  | cmovc, [dst; src] =>
+  | cmovc, [dst; src]
+  | cmovb, [dst; src]
+    =>
     v <- Symeval (selectznz@(CF, dst, src));
     SetOperand dst v
   | cmovnz, [dst; src] =>
@@ -2538,7 +2555,8 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | clc, [] => zero <- Merge (@ExprApp (const 0, nil)); SetFlag CF zero
   | _, _ => err (error.unimplemented_instruction instr)
  end
-  | _ => err (error.ambiguous_operation_size instr) end%N%x86symex.
+  | Some prefix => err (error.unimplemented_prefix instr) end
+  | None => err (error.ambiguous_operation_size instr) end%N%x86symex.
 
 Definition SymexRawLine (rawline : RawLine) : M unit :=
   match rawline with
@@ -2549,6 +2567,8 @@ Definition SymexRawLine (rawline : RawLine) : M unit :=
     => SymexNormalInstruction instr
   | SECTION _
   | GLOBAL _
+  | ALIGN _
+  | DEFAULT_REL
       => err (error.unsupported_line rawline)
   end.
 
