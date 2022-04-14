@@ -65,6 +65,15 @@ Definition parse_ascii (prefix : ascii) : ParserAction ascii
 
 Coercion parse_ascii : ascii >-> ParserAction.
 
+Definition parse_ascii_case_insensitive (prefix : ascii) : ParserAction ascii
+  := fun s
+     => match s with
+        | EmptyString => []
+        | String ch s' => if (Ascii.to_lower ch =? Ascii.to_lower prefix)%char
+                          then [(ch, s')]
+                          else []
+        end.
+
 Definition parse_str (prefix : string) : ParserAction string
   := fun s
      => if startswith prefix s
@@ -72,6 +81,16 @@ Definition parse_str (prefix : string) : ParserAction string
         else [].
 
 Coercion parse_str : string >-> ParserAction.
+
+Definition parse_str_case_insensitive (prefix : string) : ParserAction string
+  := fun s
+     => let '(s1, s2) := (substring 0 (String.length prefix) s,
+                           substring (String.length prefix) (String.length s) s) in
+        if (String.to_lower prefix =? String.to_lower s1)%string
+        then [(s1, s2)]
+        else [].
+
+Notation casefold := parse_str_case_insensitive (only parsing).
 
 Definition parse_map {A B} (f : A -> B) : ParserAction A -> ParserAction B
   := fun p s

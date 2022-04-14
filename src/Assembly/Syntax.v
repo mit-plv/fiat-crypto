@@ -2,6 +2,8 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.NArith.NArith.
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
+Require Import Coq.derive.Derive.
+Require Import Crypto.Util.Option.
 Require Crypto.Util.Tuple.
 Require Crypto.Util.OptionList.
 Import ListNotations.
@@ -231,6 +233,27 @@ Definition reg_offset (r : REG) : N :=
 Definition index_and_shift_and_bitcount_of_reg (r : REG) :=
   (reg_index r, reg_offset r, reg_size r).
 
+Definition regs_of_index (index : nat) : list (list REG) :=
+  match index with
+  |  0 => [ [  al ; ah] ; [  ax] ; [ eax] ; [rax] ]
+  |  1 => [ [  cl ; ch] ; [  cx] ; [ ecx] ; [rcx] ]
+  |  2 => [ [  dl ; dh] ; [  dx] ; [ edx] ; [rdx] ]
+  |  3 => [ [  bl ; bh] ; [  bx] ; [ ebx] ; [rbx] ]
+  |  4 => [ [ spl     ] ; [  sp] ; [ esp] ; [rsp] ]
+  |  5 => [ [ bpl     ] ; [  bp] ; [ ebp] ; [rbp] ]
+  |  6 => [ [ sil     ] ; [  si] ; [ esi] ; [rsi] ]
+  |  7 => [ [ dil     ] ; [  di] ; [ edi] ; [rdi] ]
+  |  8 => [ [ r8b     ] ; [ r8w] ; [ r8d] ; [r8 ] ]
+  |  9 => [ [ r9b     ] ; [ r9w] ; [ r9d] ; [r9 ] ]
+  | 10 => [ [r10b     ] ; [r10w] ; [r10d] ; [r10] ]
+  | 11 => [ [r11b     ] ; [r11w] ; [r11d] ; [r11] ]
+  | 12 => [ [r12b     ] ; [r12w] ; [r12d] ; [r12] ]
+  | 13 => [ [r13b     ] ; [r13w] ; [r13d] ; [r13] ]
+  | 14 => [ [r14b     ] ; [r14w] ; [r14d] ; [r14] ]
+  | 15 => [ [r15b     ] ; [r15w] ; [r15d] ; [r15] ]
+  | _  => []
+  end.
+
 (** convenience printing function *)
 Definition widest_register_of_index (n : nat) : REG
   := match n with
@@ -252,6 +275,22 @@ Definition widest_register_of_index (n : nat) : REG
      | 15 => r15
      | _ => rax
      end%nat.
+
+Definition reg_of_index_and_shift_and_bitcount_opt :=
+  fun '(index, offset, size) =>
+    let sz := N.log2 (size / 8) in
+    let offset_n := (offset / 8)%N in
+    if ((8 * 2^sz =? size) && (offset =? offset_n * 8))%N%bool
+    then (rs <- nth_error (regs_of_index index) (N.to_nat sz);
+          nth_error rs (N.to_nat offset_n))%option
+    else None.
+Definition reg_of_index_and_shift_and_bitcount :=
+  fun '(index, offset, size) =>
+    match reg_of_index_and_shift_and_bitcount_opt (index, offset, size) with
+    | Some r => r
+    | None => widest_register_of_index index
+    end.
+
 Lemma widest_register_of_index_correct
   : forall n,
     (~exists r, reg_index r = n)
@@ -266,4 +305,45 @@ Proof.
   all: intros [] H; cbv in H; try (exfalso; congruence).
   all: try (left; reflexivity).
   all: try (right; vm_compute; reflexivity).
+Qed.
+
+Lemma reg_of_index_and_shift_and_bitcount_opt_correct v r
+  : reg_of_index_and_shift_and_bitcount_opt v = Some r <-> index_and_shift_and_bitcount_of_reg r = v.
+Proof.
+  split; [ | intro; subst; destruct r; vm_compute; reflexivity ].
+  cbv [index_and_shift_and_bitcount_of_reg]; destruct v as [ [index shift] bitcount ].
+  cbv [reg_of_index_and_shift_and_bitcount_opt].
+  generalize (shift / 8)%N (N.log2 (bitcount / 8)); intros *.
+  repeat first [ congruence
+               | progress subst
+               | match goal with
+                 | [ H : _ /\ _ |- _ ] => destruct H
+                 | [ H : N.to_nat _ = _ |- _ ] => apply (f_equal N.of_nat) in H; rewrite N2Nat.id in H; subst
+                 | [ |- Some _ = Some _ -> _ ] => inversion 1; subst
+                 | [ |- context[match ?x with _ => _ end] ] => destruct x eqn:?; subst
+                 end
+               | progress cbv [regs_of_index]
+               | match goal with
+                 | [ |- context[nth_error _ ?n] ] => destruct n eqn:?; cbn [nth_error Option.bind]
+                 end
+               | rewrite Bool.andb_true_iff, ?N.eqb_eq in * |- ].
+  all: vm_compute; reflexivity.
+Qed.
+
+Lemma reg_of_index_and_shift_and_bitcount_of_reg r
+  : reg_of_index_and_shift_and_bitcount (index_and_shift_and_bitcount_of_reg r) = r.
+Proof. destruct r; vm_compute; reflexivity. Qed.
+
+Lemma reg_of_index_and_shift_and_bitcount_eq v r
+  : reg_of_index_and_shift_and_bitcount v = r
+    -> (index_and_shift_and_bitcount_of_reg r = v
+        \/ ((~exists r, index_and_shift_and_bitcount_of_reg r = v)
+            /\ r = widest_register_of_index (fst (fst v)))).
+Proof.
+  cbv [reg_of_index_and_shift_and_bitcount].
+  destruct v as [ [index offset] size ].
+  destruct reg_of_index_and_shift_and_bitcount_opt eqn:H;
+    [ left | right; split; [ intros [r' H'] | ] ]; subst; try reflexivity.
+  { rewrite reg_of_index_and_shift_and_bitcount_opt_correct in H; assumption. }
+  { rewrite <- reg_of_index_and_shift_and_bitcount_opt_correct in H'; congruence. }
 Qed.
