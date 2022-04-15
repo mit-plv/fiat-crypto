@@ -27,9 +27,6 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: recursive
-    - name: Work around https://github.com/actions/checkout/issues/766
-      run: |
-        git config --global --add safe.directory "$GITHUB_WORKSPACE"
     - name: install Coq
       run: |
         if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
