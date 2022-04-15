@@ -221,13 +221,17 @@ Definition node_beq {A : Set} (arg_eqb : A -> A -> bool) : node A -> node A -> b
 Global Instance reflect_node_beq {A : Set} {arg_eqb} {H : reflect_rel (@eq A) arg_eqb}
   : reflect_rel eq (@node_beq A arg_eqb) | 10 := _.
 
-Class description := descr : option (string * bool (* always show *)).
+Class description := descr : option ((unit -> string) * bool (* always show *)).
 Typeclasses Opaque description.
+Definition eager_description := option (string * bool).
 Definition dag := list (node idx * description).
+Definition eager_dag := list (node idx * eager_description).
+Definition force_dag : dag -> eager_dag
+  := List.map (fun '(n, descr) => (n, option_map (fun '(descr, always_show) => (descr tt, always_show)) descr)).
 Definition dag_lookup (d : dag) (i : nat) : option (node idx) := List.nth_error (List.map fst d) i.
 Definition dag_reverse_lookup (d : dag) (n : node idx) : option nat
   := List.indexof (fun '(n', _) => node_beq N.eqb n n') d.
-Definition dag_description_lookup (d : dag) (descr : string) : list idx
+Definition dag_description_lookup (d : eager_dag) (descr : string) : list idx
   := List.map N.of_nat (List.map fst (List.filter (fun '(_, (_, descr')) => match descr' with Some (descr', _) => String.eqb descr descr' | _ => false end) (List.enumerate d))).
 
 Lemma dag_lookup_app1 (d d' : dag) n : n < List.length d -> dag_lookup (d++d') n = dag_lookup d n.
@@ -2156,7 +2160,7 @@ Global Instance show_lines_dag : ShowLines dag := (fun d:dag =>
     ++List.map (fun '(i, (v, descr)) =>"(*"++show i ++"*) " ++ show v++";"
                                            ++ match descr with
                                               | None | Some (_, false) => ""
-                                              | Some (descr, true (* always show *)) => " " ++ String.Tab ++ "(*" ++ descr ++ "*)"
+                                              | Some (descr, true (* always show *)) => " " ++ String.Tab ++ "(*" ++ descr tt ++ "*)"
                                               end)%string (@ListUtil.List.enumerate _ d)
   ++["]"])%list%string.
 Global Instance show_lines_mem_state : ShowLines mem_state :=
@@ -2609,7 +2613,7 @@ Definition SymexRawLine {descr:description} (rawline : RawLine) : M unit :=
   end.
 
 Definition SymexLine line :=
-  let descr:description := Some (show line, false) in
+  let descr:description := Some (fun 'tt => show line, false) in
   SymexRawLine line.(rawline).
 
 Fixpoint SymexLines (lines : Lines) : M unit
