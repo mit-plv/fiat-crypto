@@ -42,6 +42,11 @@ jobs:
         %CYGWIN_ROOT%\setup-x86_64.exe -qnNdO -P time
       shell: cmd
 
+    - name: Work around https://github.com/actions/checkout/issues/766
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'git config --global --add safe.directory "$(cygpath -u "$GITHUB_WORKSPACE")"'
+      shell: cmd
+
     - name: echo build params
       run: |
         ECHO ::group::wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
