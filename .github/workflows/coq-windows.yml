@@ -44,7 +44,7 @@ jobs:
 
     - name: Work around https://github.com/actions/checkout/issues/766
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'git config --global --add safe.directory "$(cygpath -u "$GITHUB_WORKSPACE")"'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'git config --global --add safe.directory "*"'
       shell: cmd
 
     - name: echo build params
