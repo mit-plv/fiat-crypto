@@ -46,25 +46,29 @@ for fname in asm_files:
         short_fname = '_'.join(removesuffix(removeprefix(fname, 'fiat-amd64/'),'.asm').replace('_solinas','').split('_')[:-2])
         description = f'{name} {prime.replace(" ", "")} ({op}) ({binary_descr}) ({short_fname})'
         print(f'''
+only-test-amd64-files-print-report:: {fname}.only-status
+\t@ test $$(cat $<) -eq 0 || echo 'TEST AMD64 {description} ... \t$(RED)$(BOLD)FAILED$(NORMAL)$(NC)'
+
 test-amd64-files-print-report:: {fname}.status
 \t@ test $$(cat $<) -eq 0 || echo 'TEST AMD64 {description} ... \t$(RED)$(BOLD)FAILED$(NORMAL)$(NC)'
 
 clean::
-\t$(HIDE)rm -f {fname}.status {fname}.invocation {fname}.description {fname}.out {fname}.out-asm {fname}.stderr {fname}.stdout
+\t$(HIDE)rm -f {fname}.status {fname}.only-status {fname}.invocation {fname}.description {fname}.out {fname}.out-asm {fname}.stdout
 
-{fname}.status: {fname} | {binary}
+.PHONY: {fname}.only-status
+
+{fname}.status: | {binary}
+
+{fname}.status {fname}.only-status: {fname}
 \t$(SHOW)'TEST AMD64 {description} ...'
 \t$(HIDE)rm -f $@
 \t$(HIDE)echo {shlex.quote(invocation + ' -o /dev/null --output-asm /dev/null')} > $<.invocation
 \t$(HIDE)echo '{description}' > $<.description
-\t$(HIDE){invocation} -o $<.out --output-asm $<.out-asm 2>$<.stderr >$<.stdout && \\
+\t$(HIDE)$(TIMER) {invocation} -o $<.out --output-asm $<.out-asm >$<.stdout && \\
 \t  {{ echo $$? > $@; echo 'TEST AMD64 {description} ... \t$(GREEN)$(BOLD)PASSED$(NORMAL)$(NC)'; }} || \\
 \t  {{ echo $$? > $@; echo 'TEST AMD64 {description} ... \t$(RED)$(BOLD)FAILED$(NORMAL)$(NC)'; \\
 \t       echo '================== stdout =================='; \\
 \t       cat $<.stdout;                                       \\
-\t       echo '============================================'; \\
-\t       echo '================== stderr =================='; \\
-\t       cat $<.stderr;                                       \\
 \t       echo '============================================'; \\
 \t       exit 1; }}
 ''')
