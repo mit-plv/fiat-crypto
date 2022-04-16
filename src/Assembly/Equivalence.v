@@ -1136,7 +1136,7 @@ Fixpoint symex_expr {descr:description} {t} (e : API.expr (var:=var) t) : symex_
           symex_T_bind_base ex ef
      | expr.LetIn (type.base _) _ x f
        => let ef v := symex_expr (f v) in
-          let ex := symex_expr (descr:=Some (fun 'tt => show x, false)) x in
+          let ex := symex_expr (descr:=Build_description (show x) false) x in
           symex_T_bind_base ex ef
      | expr.App (type.arrow _ _) _ f x
        => symex_T_error (Invalid_higher_order_application f x)
@@ -1151,7 +1151,7 @@ Definition symex_PHOAS_PHOAS {t} (expr : API.Expr t) (input_var_data : type.for_
   : ErrorT EquivalenceCheckingError (base_var (type.final_codomain t) * dag)
   := let ast : API.expr (type.base (type.final_codomain t))
          := invert_expr.smart_App_curried (expr _) input_var_data in
-     symex_expr (descr:=None) ast d.
+     symex_expr (descr:=no_description) ast d.
 
 (* takes and returns assembly/list style things *)
 Definition symex_PHOAS
@@ -1169,7 +1169,7 @@ Definition symex_PHOAS
      PHOAS_output <- simplify_base_var PHOAS_output;
      Success (PHOAS_output, d)).
 
-Definition init_symbolic_state_descr : description := Some (fun 'tt => "init_symbolic_state", true).
+Definition init_symbolic_state_descr : description := Build_description "init_symbolic_state" true.
 
 Definition init_symbolic_state (d : dag) : symbolic_state
   := let _ := init_symbolic_state_descr in
@@ -1242,22 +1242,22 @@ Definition symex_asm_func_M
            (output_types : type_spec) (stack_size : nat)
            (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
   : M (ErrorT EquivalenceCheckingError (list (idx + list idx)))
-  := (output_placeholders <- lift_dag (build_inputs (descr:=Some (fun 'tt => "output_placeholders", true)) output_types);
+  := (output_placeholders <- lift_dag (build_inputs (descr:=Build_description "output_placeholders" true) output_types);
       let n_outputs := List.length output_placeholders in
       (* to make proofs easier, we merge addresses in reverse order from reading them *)
-      inputaddrs <- build_merge_base_addresses (descr:=Some (fun 'tt => "inputaddrs", true)) (dereference_scalar:=dereference_input_scalars) inputs (skipn n_outputs reg_available);
-      outputaddrs <- build_merge_base_addresses (descr:=Some (fun 'tt => "outputaddrs", true)) (dereference_scalar:=dereference_output_scalars) output_placeholders (firstn n_outputs reg_available);
-      stack_base <- build_merge_stack_placeholders (descr:=Some (fun 'tt => "stack_base", true)) stack_size;
-      initial_register_values <- mapM (GetReg (descr:=Some (fun 'tt => "initial_register_values", true))) callee_saved_registers;
+      inputaddrs <- build_merge_base_addresses (descr:=Build_description "inputaddrs" true) (dereference_scalar:=dereference_input_scalars) inputs (skipn n_outputs reg_available);
+      outputaddrs <- build_merge_base_addresses (descr:=Build_description "outputaddrs" true) (dereference_scalar:=dereference_output_scalars) output_placeholders (firstn n_outputs reg_available);
+      stack_base <- build_merge_stack_placeholders (descr:=Build_description "stack_base" true) stack_size;
+      initial_register_values <- mapM (GetReg (descr:=Build_description "initial_register_values" true)) callee_saved_registers;
       _ <- SymexLines asm;
-      final_register_values <- mapM (GetReg (descr:=Some (fun 'tt => "final_register_values", true))) callee_saved_registers;
-      _ <- LoadArray (descr:=Some (fun 'tt => "load final stack", true)) stack_base stack_size;
+      final_register_values <- mapM (GetReg (descr:=Build_description "final_register_values" true)) callee_saved_registers;
+      _ <- LoadArray (descr:=Build_description "load final stack" true) stack_base stack_size;
       let unsaved_registers : list (REG * (idx * idx)) := List.filter (fun '(r, (init, final)) => negb (init =? final)%N) (List.combine callee_saved_registers (List.combine initial_register_values final_register_values)) in
-      asm_output <- LoadOutputs (descr:=Some (fun 'tt => "asm_output", true)) (dereference_scalar:=dereference_output_scalars) outputaddrs output_types;
+      asm_output <- LoadOutputs (descr:=Build_description "asm_output" true) (dereference_scalar:=dereference_output_scalars) outputaddrs output_types;
       (* also load inputs, for the sake of the proof *)
       (* reconstruct input types *)
       let input_types := List.map (fun v => match v with inl _ => None | inr ls => Some (List.length ls) end) inputs in
-      asm_input <- LoadOutputs (descr:=Some (fun 'tt => "asm_input <- LoadOutputs", true)) (dereference_scalar:=dereference_input_scalars) inputaddrs input_types;
+      asm_input <- LoadOutputs (descr:=Build_description "asm_input <- LoadOutputs" true) (dereference_scalar:=dereference_input_scalars) inputaddrs input_types;
       (fun s => Success
                   (match asm_output, asm_input, unsaved_registers, s.(symbolic_mem_state) with
                    | Success asm_output, Success _, [], []
@@ -1337,7 +1337,7 @@ Section check_equivalence.
       let d := empty_dag in
       input_types <- map_err_None (simplify_input_type t arg_bounds);
       output_types <- map_err_None (simplify_base_type (type.final_codomain t) out_bounds);
-      let '(inputs, d) := build_inputs (descr:=Some (fun 'tt => "build_inputs", true)) input_types d in
+      let '(inputs, d) := build_inputs (descr:=Build_description "build_inputs" true ) input_types d in
 
       PHOAS_output <- map_err_None (symex_PHOAS expr inputs d);
       let '(PHOAS_output, d) := PHOAS_output in
