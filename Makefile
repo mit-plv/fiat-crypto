@@ -714,6 +714,7 @@ else
 AMD64_ASM_FILES := $(sort $(wildcard fiat-amd64/*.asm))
 endif
 AMD64_ASM_STATUS_FILES := $(addsuffix .status,$(AMD64_ASM_FILES))
+AMD64_ASM_ONLY_STATUS_FILES := $(addsuffix .only-status,$(AMD64_ASM_FILES))
 
 Makefile.test-amd64-files.mk: fiat-amd64/gentest.py $(AMD64_ASM_FILES)
 	$(SHOW)'GENTEST --makefile fiat-amd64/*.asm > $@'
@@ -721,7 +722,7 @@ Makefile.test-amd64-files.mk: fiat-amd64/gentest.py $(AMD64_ASM_FILES)
 
 include Makefile.test-amd64-files.mk
 
-.PHONY: test-amd64-files-print-report test-amd64-files-status
+.PHONY: test-amd64-files-print-report only-test-amd64-files-print-report
 
 test-amd64-files-print-report::
 	@ export passed=$$(cat $(AMD64_ASM_STATUS_FILES) 2>/dev/null | grep -c '^0$$'); \
@@ -734,14 +735,30 @@ test-amd64-files-print-report::
 	      echo "$(RED)$(BOLD)FAILED:$(NORMAL) $(RED)$${failed}$(NC) / $${total}"; \
 	  fi
 
+only-test-amd64-files-print-report::
+	@ export passed=$$(cat $(AMD64_ASM_ONLY_STATUS_FILES) 2>/dev/null | grep -c '^0$$'); \
+	  export total=$(words $(AMD64_ASM_ONLY_STATUS_FILES)); \
+	  export failed=$$(expr $${total} - $${passed}); \
+	  if [ $${passed} -eq $${total} ]; then \
+	      echo "$(GREEN)$(BOLD)ALL $${total} AMD64 ASM TESTS PASSED"; \
+	  else \
+	      echo "$(GREEN)$(BOLD)PASSED:$(NORMAL) $(GREEN)$${passed}$(NC) / $${total}"; \
+	      echo "$(RED)$(BOLD)FAILED:$(NORMAL) $(RED)$${failed}$(NC) / $${total}"; \
+	  fi
+
 test-amd64-files-status: $(AMD64_ASM_STATUS_FILES)
 	$(HIDE)! grep -q -v '^0$$' $^
 
-.PHONY: test-amd64-files-status
+only-test-amd64-files-status: $(AMD64_ASM_ONLY_STATUS_FILES)
+	$(HIDE)! grep -q -v '^0$$' $^
+
+.PHONY: test-amd64-files-status only-test-amd64-files-status
 
 test-amd64-files: $(UNSATURATED_SOLINAS) $(WORD_BY_WORD_MONTGOMERY)
 
-test-amd64-files only-test-amd64-files: test-amd64-files-print-report test-amd64-files-status
+test-amd64-files: test-amd64-files-print-report test-amd64-files-status
+
+only-test-amd64-files: only-test-amd64-files-print-report only-test-amd64-files-status
 
 # Perf testing
 PERF_MAKEFILE = src/Rewriter/PerfTesting/Specific/generated/primes.mk
