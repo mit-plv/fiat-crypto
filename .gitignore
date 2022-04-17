@@ -224,6 +224,7 @@ fiat-amd64/*.asm.stderr
 fiat-amd64/*.asm.out
 fiat-amd64/*.asm.out-asm
 fiat-amd64/*.asm.status
+fiat-amd64/*.asm.only-status
 fiat-amd64/*.asm.description
 fiat-amd64/*.asm.invocation
 /Makefile.test-amd64-files.mk
