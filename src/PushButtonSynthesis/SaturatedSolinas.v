@@ -106,7 +106,7 @@ Section __.
          reductions.  In some cases. however, [n - i <= 1], and in
          this case, we do [n] reductions (is this enough?). *)
   Definition nreductions : nat :=
-    let i := fold_right Z.max 0 (map (fun t => Z.log2 (fst t) / machine_wordsize) c) in
+    let i := fold_right Z.max 0 (List.map (fun t => Z.log2 (fst t) / machine_wordsize) c) in
     if Z.of_nat n - i <=? 1
     then n
     else Z.to_nat (Qceiling (Z.of_nat n / (Z.of_nat n - i - 1))).

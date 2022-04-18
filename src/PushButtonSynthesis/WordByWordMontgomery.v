@@ -716,7 +716,7 @@ Section __.
     generalize n.
     intro n'.
     induction n' as [|n' IHn'].
-    { cbv [Partition.partition seq map In]; tauto. }
+    { cbv [Partition.partition seq List.map In]; tauto. }
     { intros *; rewrite Partition.partition_step, in_app_iff; cbn [List.In].
       intros; destruct_head'_or; subst *; eauto; try tauto; [].
       rewrite uweight_S by lia.

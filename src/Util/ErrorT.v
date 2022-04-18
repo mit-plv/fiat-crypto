@@ -23,6 +23,24 @@ Definition bind {A B ErrT} (x : ErrorT ErrT A) (k : A -> ErrorT ErrT B) : ErrorT
      | Error msg => Error msg
      end.
 
+Definition map2 {ErrT1 ErrT2 A B} (f : A -> B) (fe : ErrT1 -> ErrT2) (x : ErrorT ErrT1 A) : ErrorT ErrT2 B
+  := match x with
+     | Success v => Success (f v)
+     | Error e => Error (fe e)
+     end.
+
+Definition map {ErrT A B} (f : A -> B) : ErrorT ErrT A -> ErrorT ErrT B
+  := map2 f id.
+
+Definition map_error {ErrT1 ErrT2 A} (fe : ErrT1 -> ErrT2) : ErrorT ErrT1 A -> ErrorT ErrT2 A
+  := map2 id fe.
+
+Definition error_bind {ErrT1 ErrT2 A} (x : ErrorT ErrT1 A) (k : ErrT1 -> ErrorT ErrT2 A) : ErrorT ErrT2 A
+  := match x with
+     | Success v => Success v
+     | Error msg => k msg
+     end.
+
 Notation "x <- y ; f" := (bind y (fun x => f%error)) : error_scope.
 
 (** ** Equality for [ErrorT] *)
