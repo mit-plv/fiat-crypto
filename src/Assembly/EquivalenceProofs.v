@@ -46,6 +46,7 @@ Require Import Crypto.Util.ZUtil.LandLorBounds.
 Require Import Crypto.Util.ZUtil.Tactics.PeelLe.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.SpecializeUnderBindersBy.
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.PrintContext.
@@ -2740,7 +2741,11 @@ Class same_reg_some_of_success {T} (f : M T)
   := success_same_reg : forall v s s', f s = Success (v, s') -> same_reg_some s s'.
 
 Local Ltac same_reg_some_of_success_t_step_normal_nobreak :=
-  first [ progress cbv [same_reg_some_of_success] in *
+  first [ match goal with
+          | [ H : context[set_reg _ _ ?v] |- _ ]
+            => tryif is_var v then fail else generalize dependent v; intros
+          end
+        | progress cbv [same_reg_some_of_success] in *
         | progress intros
         | reflexivity
         | assumption
@@ -2856,6 +2861,11 @@ Proof.
   destruct instr; cbv [SymexNormalInstruction err Symbolic.bind ret Syntax.op Syntax.args ErrorT.bind same_reg_some_of_success] in *; intros.
   same_reg_some_of_success_t.
   all: cbv [same_reg_some] in *; eauto 10 with nocore.
+  all: intro reg; repeat match goal with H : forall r : REG, _ |- _ => specialize (H reg) end.
+  all: rewrite !@get_reg_set_reg_full in *.
+  all: break_innermost_match_hyps.
+  all: cbn [Option.is_Some] in *.
+  all: eauto.
 Qed.
 
 (* TODO: move? *)

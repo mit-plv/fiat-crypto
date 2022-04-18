@@ -66,27 +66,48 @@ Typeclasses Opaque assembly_argument_registers_left_to_right_opt.
 (** Stack size (in bytes) *)
 Class assembly_stack_size_opt := assembly_stack_size' : option N.
 Typeclasses Opaque assembly_stack_size_opt.
-Definition default_assembly_stack_size := 0%N.
+Definition extra_assembly_stack_size := 0%N.
 (** The stack size is taken to be the given command line argument, or
-    else inferred to be the literal argument to the first [sub rsp,
-    LITERAL] in the code, or else [default_assembly_stack_size] if
-    none exists *)
+    else inferred to be extra_assembly_stack_size plus the maximum
+    statically knowable increase to rsp (via `push`, `pop`, `sub`,
+    `add`, and `lea` instructions) *)
+Fixpoint assembly_stack_size_at (cur_stack_size : Z) (asm : _) : list Z
+  := match asm with
+     | [] => []
+     | l :: asm
+       => let cng := match l.(rawline) with
+                     | INSTR {| Syntax.op := sub ; args := [reg rsp; Syntax.const n] |}
+                       => n
+                     | INSTR {| Syntax.op := Syntax.add ; args := [reg rsp; Syntax.const n] |}
+                       => -n
+                     | INSTR {| Syntax.op := lea ; args := [reg rsp; Syntax.mem {| mem_base_reg := Some rsp ; mem_offset := Some n ; mem_scale_reg := None ; mem_bits_access_size := None |}] |}
+                       => -n
+                     | INSTR {| Syntax.op := lea ; args := [reg rsp; Syntax.mem {| mem_base_reg := Some rsp ; mem_offset := Some n ; mem_scale_reg := None ; mem_bits_access_size := Some sz |}] |}
+                       => if (sz =? 64)%N
+                          then -n
+                          else 0
+                     | INSTR instr
+                       => match Syntax.operation_size instr with
+                          | Some s
+                            => match instr with
+                               | {| Syntax.op := push ; args := [_] |}
+                                 => Z.of_N s / 8
+                               | {| Syntax.op := pop ; args := [_] |}
+                                 => -Z.of_N s / 8
+                               | _ => 0
+                               end
+                          | None => 0
+                          end
+                     | _ => 0
+                     end in
+          let new_stack_size := cur_stack_size + cng in
+          new_stack_size :: assembly_stack_size_at new_stack_size asm
+     end%Z.
 Definition assembly_stack_size {v : assembly_stack_size_opt} (asm : _) : N
   := match v with
      | Some v => v
-     | None
-       => match Option.List.map
-                  (fun l
-                   => match l.(rawline) with
-                      | INSTR {| Syntax.op := sub ; args := [reg rsp; Syntax.const n] |}
-                        => Some (Z.to_N n)
-                      | _ => None
-                      end)
-                  asm
-          with
-          | n :: _ => n
-          | [] => default_assembly_stack_size
-          end
+     | None => let extra_ss := Z.of_N extra_assembly_stack_size in
+               Z.to_N (fold_right Z.max extra_ss (assembly_stack_size_at extra_ss asm))
      end.
 
 Class assembly_conventions_opt :=
@@ -1235,7 +1256,10 @@ Section check_equivalence.
 
     Definition strip_ret (asm : Lines) :=
       let isinstr := fun l => match l.(rawline) with INSTR _ => true | _ => false end in
-      let notret := fun l => negb (Equality.RawLine_beq l.(rawline) (INSTR {| Syntax.op := Syntax.ret; Syntax.args := nil |})) in
+      let notret := fun l => match l.(rawline) with
+                             | INSTR {| Syntax.op := Syntax.ret ; Syntax.args := nil |} => false
+                             | _ => true
+                             end in
       match dropWhile notret asm with
       | nil => Error Missing_ret
       | cons _r trailer =>

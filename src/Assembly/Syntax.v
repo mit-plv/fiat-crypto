@@ -25,9 +25,24 @@ Inductive REG :=
 Definition CONST := Z.
 Coercion CONST_of_Z (x : Z) : CONST := x.
 
-Record MEM := { mem_is_byte : bool ; mem_base_reg : option REG ; mem_scale_reg : option (Z * REG) ; mem_offset : option Z }.
+Inductive AccessSize := byte | word | dword | qword.
+Coercion bits_of_AccessSize (x : AccessSize) : N
+  := match x with
+     | byte => 8
+     | word => 16
+     | dword => 32
+     | qword => 64
+     end.
+
+Record MEM := { mem_bits_access_size : option AccessSize ; mem_base_reg : option REG ; mem_scale_reg : option (Z * REG) ; mem_base_label : option string ; mem_offset : option Z }.
 
 Inductive FLAG := CF | PF | AF | ZF | SF | OF.
+
+Inductive OpPrefix :=
+| rep
+| repz
+| repnz
+.
 
 Inductive OpCode :=
 | adc
@@ -36,25 +51,38 @@ Inductive OpCode :=
 | adox
 | and
 | bzhi
+| call
 | clc
+| cmovb
 | cmovc
 | cmovnz
+| cmp
+| db
+| dd
 | dec
+| dq
+| dw
 | imul
 | inc
+| je
+| jmp
 | lea
 | mov
 | movzx
+| mul
 | mulx
+| pop
+| push
+| rcr
 | ret
 | sar
-| rcr
 | sbb
 | setc
 | seto
 | shl
 | shlx
 | shr
+| shrx
 | shrd
 | sub
 | test
@@ -62,17 +90,21 @@ Inductive OpCode :=
 | xor
 .
 
-Inductive ARG := reg (r : REG) | mem (m : MEM) | const (c : CONST).
+Record JUMP_LABEL := { jump_near : bool ; label_name : string }.
+
+Inductive ARG := reg (r : REG) | mem (m : MEM) | const (c : CONST) | label (l : JUMP_LABEL).
 Coercion reg : REG >-> ARG.
 Coercion mem : MEM >-> ARG.
 Coercion const : CONST >-> ARG.
 
-Record NormalInstruction := { op : OpCode ; args : list ARG }.
+Record NormalInstruction := { prefix : option OpPrefix ; op : OpCode ; args : list ARG }.
 
 Inductive RawLine :=
 | SECTION (name : string)
 | GLOBAL (name : string)
 | LABEL (name : string)
+| ALIGN (amount : string)
+| DEFAULT_REL
 | EMPTY
 | INSTR (instr : NormalInstruction)
 .
@@ -95,10 +127,9 @@ Definition reg_size (r : REG) : N :=
 Definition standalone_operand_size (x : ARG) : option N :=
   match x with
   | reg r => Some (reg_size r)
-  | mem m => if m.(mem_is_byte)
-             then Some 8
-             else None
+  | mem m => option_map bits_of_AccessSize m.(mem_bits_access_size)
   | const c => None
+  | label _ => None
   end%N.
 
 Definition opcode_size (op : OpCode) :=

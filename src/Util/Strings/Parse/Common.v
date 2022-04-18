@@ -31,6 +31,15 @@ Definition parse_alt_gen {A B C} (f : A + B -> C) (p1 : ParserAction A) (p2 : Pa
            ++ List.map (fun '(v, s) => (f (inr v), s)) (p2 s))%list.
 Definition parse_alt {A} (p1 p2 : ParserAction A) : ParserAction A
   := parse_alt_gen (fun aa => match aa with inl a => a | inr a => a end) p1 p2.
+(* variant of alt which only parses the second branch if there are no matches on the first branch *)
+Definition parse_or_else_gen {A B C} (f : A + B -> C) (p1 : ParserAction A) (p2 : ParserAction B) : ParserAction C
+  := fun s
+     => match p1 s with
+        | [] => List.map (fun '(v, s) => (f (inr v), s)) (p2 s)
+        | ls => List.map (fun '(v, s) => (f (inl v), s)) ls
+        end.
+Definition parse_or_else {A} (p1 p2 : ParserAction A) : ParserAction A
+  := parse_or_else_gen (fun aa => match aa with inl a => a | inr a => a end) p1 p2.
 
 Notation ε := parse_empty.
 Infix "||" := parse_alt : parse_scope.
