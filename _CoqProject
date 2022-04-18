@@ -309,6 +309,7 @@ src/Util/Bool/LeCompat.v
 src/Util/Bool/Reflect.v
 src/Util/Decidable/Bool2Prop.v
 src/Util/Decidable/Decidable2Bool.v
+src/Util/ErrorT/List.v
 src/Util/ErrorT/Show.v
 src/Util/FMapPositive/Equality.v
 src/Util/ListUtil/CombineExtend.v

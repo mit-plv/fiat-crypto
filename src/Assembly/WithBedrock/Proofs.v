@@ -3307,57 +3307,69 @@ Theorem check_equivalence_correct
         {assembly_callee_saved_registers' : assembly_callee_saved_registers_opt}
         {t}
         (frame : Semantics.mem_state -> Prop)
-        (asm : Lines)
+        (asm : list (String.string (* fname *) * Lines))
         (expr : API.Expr t)
         (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
         (out_bounds : ZRange.type.base.option.interp (type.final_codomain t))
         (Hwf : API.Wf expr)
         (H : check_equivalence asm expr arg_bounds out_bounds = Success tt)
-        (st : machine_state)
         (PHOAS_args : type.for_each_lhs_of_arrow API.interp_type t)
         (word_args : list (Naive.word 64 + list (Naive.word 64)))
         (args := word_args_to_Z_args word_args)
         (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
         (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
         (output_types : type_spec := match simplify_base_type (type.final_codomain t) out_bounds with Success output_types => output_types | Error _ => nil end)
+        (st : machine_state)
         (asm_args_out asm_args_in : list (Naive.word 64))
         (runtime_regs := get_asm_reg st assembly_calling_registers)
         (runtime_callee_saved_registers := get_asm_reg st assembly_callee_saved_registers)
-        (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
-        (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
-        (HR : R_runtime_input (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st)
-  : exists asm' st' (retvals : list (Z + list Z)),
-    strip_ret asm = Success asm'
-    /\ DenoteLines st asm' = Some st'
-    /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
-    /\ R_runtime_output (output_scalars_are_pointers:=output_scalars_are_pointers) frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st'.
+  : Forall
+      (fun '(_fname, asm)
+       => forall
+           (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
+           (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
+           (HR : R_runtime_input (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st),
+         exists asm' st' (retvals : list (Z + list Z)),
+           strip_ret asm = Success asm'
+           /\ DenoteLines st asm' = Some st'
+           /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
+           /\ R_runtime_output (output_scalars_are_pointers:=output_scalars_are_pointers) frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st')
+      asm.
 Proof.
-  subst stack_size.
   cbv beta delta [check_equivalence ErrorT.bind] in H.
-  repeat match type of H with
-         | (let n := ?v in _) = _
-           => set v as n in H;
-                lazymatch type of H with
-                | (let n := ?v in ?rest) = ?rhs
-                  => change (match v with n => rest end = rhs) in H
-                end
-         | match ?v with Success n => @?S n | Error e => @?E e end = ?rhs
-           => let n := fresh n in
-              let e := fresh e in
-              destruct v as [n|e] eqn:?; [ change (S n = rhs) in H | change (E e = rhs) in H ];
-                cbv beta in H
-         | match ?v with pair a b => @?P a b end = ?rhs
-           => let a := fresh a in
-              let b := fresh b in
-              destruct v as [a b] eqn:?; change (P a b = rhs) in H;
-                cbv beta in H
-         | match ?v with true => ?T | false => ?F end = ?rhs
-           => let a := fresh a in
-              let b := fresh b in
-              destruct v eqn:?; [ change (T = rhs) in H | change (F = rhs) in H ];
-                cbv beta in H
-         end; try discriminate; [].
-  reflect_hyps.
+  repeat
+    first [ rewrite List.ErrorT.List.bind_list_cps_id, <- List.ErrorT.List.eq_bind_list_lift in H;
+            cbv beta delta [ErrorT.bind] in H
+          | match type of H with
+            | (let n := ?v in _) = _
+              => set v as n in H;
+                 lazymatch type of H with
+                 | (let n := ?v in ?rest) = ?rhs
+                   => change (match v with n => rest end = rhs) in H
+                 end
+            | match ?v with Success n => @?S n | Error e => @?E e end = ?rhs
+              => let n := fresh n in
+                 let e := fresh e in
+                 destruct v as [n|e] eqn:?; [ change (S n = rhs) in H | change (E e = rhs) in H ];
+                 cbv beta in H
+            | match ?v with pair a b => @?P a b end = ?rhs
+              => let a := fresh a in
+                 let b := fresh b in
+                 destruct v as [a b] eqn:?; change (P a b = rhs) in H;
+                 cbv beta in H
+            | match ?v with true => ?T | false => ?F end = ?rhs
+              => let a := fresh a in
+                 let b := fresh b in
+                 destruct v eqn:?; [ change (T = rhs) in H | change (F = rhs) in H ];
+                 cbv beta in H
+            end ]; try discriminate; [].
+  cbv beta delta [map_error ErrorT.map2 id] in *.
+  break_innermost_match_hyps; inversion_ErrorT; subst.
+  rewrite @List.ErrorT.List.lift_Success_Forall2_iff in *.
+  progress rewrite ?@Forall2_map_l_iff, ?@Forall2_map_r_iff in *.
+  Foralls_to_nth_error.
+  intros; inversion_ErrorT; subst.
+  progress reflect_hyps.
   subst.
   pose proof empty_gensym_dag_ok.
   let H := fresh in pose proof Hargs as H; eapply build_input_runtime_ok_nil in H; [ | eassumption .. ].
@@ -3402,12 +3414,12 @@ Theorem generate_assembly_of_hinted_expr_correct
         {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
         {assembly_callee_saved_registers' : assembly_callee_saved_registers_opt}
         {t}
-        (asm : Lines)
+        (asm : list (String.string (* fname *) * Lines))
         (expr : API.Expr t)
         (f : type.interp _ t)
         (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
         (out_bounds : ZRange.type.base.option.interp (type.final_codomain t))
-        (asm_out : Lines)
+        (asm_out : list (String.string (* fname *) * Lines))
         (* Phrased this way to line up with the bounds pipeline exactly *)
         (Hbounded
          : (forall arg1 arg2
@@ -3428,16 +3440,19 @@ Theorem generate_assembly_of_hinted_expr_correct
               (output_types : type_spec := match simplify_base_type (type.final_codomain t) out_bounds with Success output_types => output_types | Error _ => nil end)
               (asm_args_out asm_args_in : list (Naive.word 64))
               (runtime_regs := get_asm_reg st assembly_calling_registers)
-              (runtime_callee_saved_registers := get_asm_reg st assembly_callee_saved_registers)
-              (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
-              (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
-              (HR : R_runtime_input (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st),
-      (* Should match check_equivalence_correct exactly *)
-      exists asm' st' (retvals : list (Z + list Z)),
-             strip_ret asm = Success asm'
-        /\ DenoteLines st asm' = Some st'
-        /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
-        /\ R_runtime_output (output_scalars_are_pointers:=output_scalars_are_pointers) frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st'.
+              (runtime_callee_saved_registers := get_asm_reg st assembly_callee_saved_registers),
+             Forall
+         (fun '(_fname, asm)
+          => forall (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
+                    (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
+                    (HR : R_runtime_input (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st),
+            (* Should match check_equivalence_correct exactly *)
+            exists asm' st' (retvals : list (Z + list Z)),
+              strip_ret asm = Success asm'
+              /\ DenoteLines st asm' = Some st'
+              /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
+              /\ R_runtime_output (output_scalars_are_pointers:=output_scalars_are_pointers) frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st')
+         asm.
 Proof.
   cbv [generate_assembly_of_hinted_expr] in H.
   break_innermost_match_hyps; inversion H; subst; destruct_head'_and; split; [ reflexivity | intros ].

@@ -5,6 +5,7 @@ Require Import Coq.NArith.NArith.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.AbstractInterpretation.ZRange.
 Require Import Crypto.Util.ErrorT.
+Import Coq.Lists.List. (* [map] is [List.map] not [ErrorT.map] *)
 Require Import Crypto.Util.ListUtil.IndexOf.
 Require Import Crypto.Util.Tactics.WarnIfGoalsRemain.
 Require Crypto.Util.Option.
@@ -728,7 +729,7 @@ Proof using Type.
       symmetry in E0; cbn [nth_error] in E0; simpl Z.of_nat in E0.
       simpl load_bytes.
       change (Pos.to_nat 1) with 1%nat.
-      cbv [load_bytes footprint map seq List.option_all].
+      cbv [load_bytes footprint List.map seq List.option_all].
       setoid_rewrite E0.
       eexists; split; eauto.
       cbv [le_combine].

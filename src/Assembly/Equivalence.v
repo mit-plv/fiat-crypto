@@ -21,6 +21,7 @@ Require Import Crypto.Util.ListUtil.CombineExtend.
 Require Import Crypto.Util.ListUtil.RemoveN.
 Require Import Crypto.Util.MSetN.
 Require Import Crypto.Util.Sum.
+Require Import Crypto.Util.ErrorT.List.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Notations.
 Import API.Compilers APINotations.Compilers AbstractInterpretation.ZRange.Compilers.
@@ -1249,7 +1250,7 @@ Section check_equivalence.
 
   Section with_expr.
     Context {t}
-            (asm : Lines)
+            (asm : list (string (* fname *) * Lines))
             (expr : API.Expr t)
             (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
             (out_bounds : ZRange.type.base.option.interp (type.final_codomain t)).
@@ -1267,27 +1268,34 @@ Section check_equivalence.
           else Success (takeWhile notret asm)
       end.
 
-    Definition check_equivalence : ErrorT EquivalenceCheckingError unit :=
+    Local Notation map_err_None v := (ErrorT.map_error (fun e => (None, e)) v).
+    Local Notation map_err_Some label v := (ErrorT.map_error (fun e => (Some label, e)) v).
+
+    Definition check_equivalence : ErrorT (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError) unit :=
       let reg_available := assembly_calling_registers (* registers available for calling conventions *) in
       let d := empty_dag in
-      input_types <- simplify_input_type t arg_bounds;
-      output_types <- simplify_base_type (type.final_codomain t) out_bounds;
+      input_types <- map_err_None (simplify_input_type t arg_bounds);
+      output_types <- map_err_None (simplify_base_type (type.final_codomain t) out_bounds);
       let '(inputs, d) := build_inputs input_types d in
 
-      PHOAS_output <- symex_PHOAS expr inputs d;
+      PHOAS_output <- map_err_None (symex_PHOAS expr inputs d);
       let '(PHOAS_output, d) := PHOAS_output in
 
-      asm <- strip_ret asm;
-      let stack_size : nat := N.to_nat (assembly_stack_size asm) in
-      symevaled_asm <- symex_asm_func (dereference_output_scalars:=false) d assembly_callee_saved_registers output_types stack_size inputs reg_available asm;
-      let '(asm_output, s) := symevaled_asm in
+      _ <-- (List.map
+               (fun '((fname, asm) as label)
+                => (asm <- map_err_Some label (strip_ret asm);
+                    let stack_size : nat := N.to_nat (assembly_stack_size asm) in
+                    symevaled_asm <- map_err_Some label (symex_asm_func (dereference_output_scalars:=false) d assembly_callee_saved_registers output_types stack_size inputs reg_available asm);
+                    let '(asm_output, s) := symevaled_asm in
 
-      if list_beq _ (sum_beq _ _ N.eqb (list_beq _ N.eqb)) asm_output PHOAS_output
-      then Success tt
-      else Error (Unable_to_unify asm_output PHOAS_output s).
+                    if list_beq _ (sum_beq _ _ N.eqb (list_beq _ N.eqb)) asm_output PHOAS_output
+                    then Success tt
+                    else Error (Some label, Unable_to_unify asm_output PHOAS_output s)))
+               asm);
+    Success tt.
 
     (** We don't actually generate assembly, we just check equivalence and pass assembly through unchanged *)
-    Definition generate_assembly_of_hinted_expr : ErrorT EquivalenceCheckingError Lines
+    Definition generate_assembly_of_hinted_expr : ErrorT (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError) (list (string * Lines))
       := match check_equivalence with
          | Success tt => Success asm (* the asm is equivalent, so we can emit this asm *)
          | Error err => Error err
