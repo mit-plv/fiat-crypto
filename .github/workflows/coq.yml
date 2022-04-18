@@ -77,7 +77,7 @@ jobs:
         path: generated-files.tgz
       if: ${{ failure() }}
     - name: only-test-amd64-files
-      run: etc/ci/github-actions-make.sh -j2 only-test-amd64-files
+      run: etc/ci/github-actions-make.sh -j2 only-test-amd64-files SLOWEST_FIRST=1
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
       with:

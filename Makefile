@@ -713,8 +713,6 @@ AMD64_ASM_FILES := $(sort $(shell git ls-files "fiat-amd64/*.asm"))
 else
 AMD64_ASM_FILES := $(sort $(wildcard fiat-amd64/*.asm))
 endif
-AMD64_ASM_STATUS_FILES := $(addsuffix .status,$(AMD64_ASM_FILES))
-AMD64_ASM_ONLY_STATUS_FILES := $(addsuffix .only-status,$(AMD64_ASM_FILES))
 
 Makefile.test-amd64-files.mk: fiat-amd64/gentest.py $(AMD64_ASM_FILES)
 	$(SHOW)'GENTEST --makefile fiat-amd64/*.asm > $@'
