@@ -93,7 +93,7 @@ jobs:
       shell: cmd
     - name: only-test-amd64-files
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} only-test-amd64-files'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} only-test-amd64-files SLOWEST_FIRST=1'
       shell: cmd
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
