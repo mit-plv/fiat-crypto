@@ -221,19 +221,19 @@ Definition node_beq {A : Set} (arg_eqb : A -> A -> bool) : node A -> node A -> b
 Global Instance reflect_node_beq {A : Set} {arg_eqb} {H : reflect_rel (@eq A) arg_eqb}
   : reflect_rel eq (@node_beq A arg_eqb) | 10 := _.
 
-Class description := descr : unit (*option ((unit -> string) * bool (* always show *))*).
+Class description := descr : option ((unit -> string) * bool (* always show *)).
 Typeclasses Opaque description.
-Definition eager_description := unit (*option (string * bool)*).
-Notation Build_description descr always_show := (* (Some (fun 'tt => descr, always_show)) *) tt (only parsing).
-Notation no_description := (* None *) tt (only parsing).
+Definition eager_description := option (string * bool).
+Notation Build_description descr always_show := (Some (fun 'tt => descr, always_show)) (only parsing).
+Notation no_description := None (only parsing).
 Definition dag := list (node idx * description).
 Definition eager_dag := list (node idx * eager_description).
 Definition get_eager_description_description (d : eager_description) : option string
-  := None (* option_map fst d *).
+  := option_map fst d.
 Definition get_eager_description_always_show (d : eager_description) : bool
-:= false. (* match d with Some (_, always_show) => always_show | None => false end. *)
+:= match d with Some (_, always_show) => always_show | None => false end.
 Definition force_description : description -> eager_description
-  := fun 'tt => tt. (* option_map (fun '(descr, always_show) => (descr tt, always_show)) *)
+  := option_map (fun '(descr, always_show) => (descr tt, always_show)).
 Definition force_dag : dag -> eager_dag
   := List.map (fun '(n, descr) => (n, force_description descr)).
 Definition dag_lookup (d : dag) (i : nat) : option (node idx) := option_map fst (List.nth_error d i).
