@@ -21,6 +21,8 @@ SHOW := $(if $(VERBOSE),@true "",@echo "")
 HIDE := $(if $(VERBOSE),,@)
 INSTALLDEFAULTROOT := Crypto
 
+PERF_RECORD?=perf record -g -o "$@.perf.data" --
+
 RED:=\033[0;31m
 # No Color
 NC:=\033[0m
@@ -88,6 +90,13 @@ CAMLOPT_PERF_SHOW:=OCAMLOPT
 else
 CAMLOPT_PERF ?= "$(OCAMLFIND)" ocamloptp
 CAMLOPT_PERF_SHOW:=OCAMLOPTP
+endif
+
+PERF_TESTS?=
+ifneq ($(PERF_TESTS),1)
+PERF_RECORDER?=
+else
+PERF_RECORDER?=$(PERF_RECORD)
 endif
 
 .DEFAULT_GOAL := all
@@ -657,7 +666,7 @@ $(ALL_GO_FILES) : $(GO_DIR)%.go : $$($$(GO_$$(call GO_FILE_TO_KEY,$$*)_BINARY_NA
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)mkdir -p $(dir $@)
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $($(GO_$(call GO_FILE_TO_KEY,$*)_BINARY_NAME)) --lang Go $(GO_EXTRA_ARGS_$(GO_$(call GO_FILE_TO_KEY,$*)_BITWIDTH)) --package-name $(GO_$(call GO_FILE_TO_KEY,$*)_PACKAGE) "" $(GO_$(call GO_FILE_TO_KEY,$*)_ARGS) $(GO_$(call GO_FILE_TO_KEY,$*)_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(PERF_RECORDER) $($(GO_$(call GO_FILE_TO_KEY,$*)_BINARY_NAME)) --lang Go $(GO_EXTRA_ARGS_$(GO_$(call GO_FILE_TO_KEY,$*)_BITWIDTH)) --package-name $(GO_$(call GO_FILE_TO_KEY,$*)_PACKAGE) "" $(GO_$(call GO_FILE_TO_KEY,$*)_ARGS) $(GO_$(call GO_FILE_TO_KEY,$*)_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_GO_FILES))
@@ -681,7 +690,7 @@ only-test-go-files: $(addprefix only-test-,$(ALL_GO_FILES))
 $(ALL_JSON_FILES) : $(JSON_DIR)%.json : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok1 $@.ok2
-	$(HIDE)(($(TIMER) $($($*_BINARY_NAME)) --lang JSON $(JSON_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok1) | jq -s . && touch $@.ok2) > $@.tmp
+	$(HIDE)(($(TIMER) $(PERF_RECORDER) $($($*_BINARY_NAME)) --lang JSON $(JSON_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok1) | jq -s . && touch $@.ok2) > $@.tmp
 	$(HIDE)(rm $@.ok1 $@.ok2 && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_JSON_FILES))
@@ -699,7 +708,7 @@ only-test-json-files: $(addprefix only-test-,$(ALL_JSON_FILES))
 $(ALL_JAVA_FILES) : $(JAVA_DIR)%.java : $$($$(JAVA_$$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $($(JAVA_$*_BINARY_NAME)) --lang Java $(JAVA_EXTRA_ARGS_$(JAVA_$*_BITWIDTH)) $(JAVA_$*_DESCRIPTION) $(JAVA_$*_ARGS) $(JAVA_$*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(PERF_RECORDER) $($(JAVA_$*_BINARY_NAME)) --lang Java $(JAVA_EXTRA_ARGS_$(JAVA_$*_BITWIDTH)) $(JAVA_$*_DESCRIPTION) $(JAVA_$*_ARGS) $(JAVA_$*_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_JAVA_FILES))

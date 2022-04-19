@@ -104,7 +104,7 @@ clean::
 \t$(HIDE)rm -f $@
 \t$(HIDE)echo {shlex.quote(invocation + ' -o /dev/null --output-asm /dev/null')} > {output_name}.invocation
 \t$(HIDE)echo '{description}' > {output_name}.description
-\t$(HIDE)$(TIMER) {invocation} -o {output_name}.out --output-asm {output_name}.out-asm >{output_name}.stdout && \\
+\t$(HIDE)$(TIMER) $(PERF_RECORDER) {invocation} -o {output_name}.out --output-asm {output_name}.out-asm >{output_name}.stdout && \\
 \t  {{ echo $$? > $@; echo 'TEST AMD64 {description} ... \t$(GREEN)$(BOLD)PASSED$(NORMAL)$(NC)'; }} || \\
 \t  {{ echo $$? > $@; echo 'TEST AMD64 {description} ... \t$(RED)$(BOLD)FAILED$(NORMAL)$(NC)'; \\
 \t       echo '================== stdout =================='; \\
