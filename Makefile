@@ -739,7 +739,7 @@ test-amd64-files-print-report::
 	  export total=$(words $(AMD64_ASM_STATUS_FILES)); \
 	  export failed=$$(expr $${total} - $${passed}); \
 	  if [ $${passed} -eq $${total} ]; then \
-	      echo "$(GREEN)$(BOLD)ALL $${total} AMD64 ASM TESTS PASSED"; \
+	      echo "$(GREEN)$(BOLD)ALL $${total} AMD64 ASM TESTS PASSED$(NC)"; \
 	  else \
 	      echo "$(GREEN)$(BOLD)PASSED:$(NORMAL) $(GREEN)$${passed}$(NC) / $${total}"; \
 	      echo "$(RED)$(BOLD)FAILED:$(NORMAL) $(RED)$${failed}$(NC) / $${total}"; \
@@ -750,7 +750,7 @@ only-test-amd64-files-print-report::
 	  export total=$(words $(AMD64_ASM_ONLY_STATUS_FILES)); \
 	  export failed=$$(expr $${total} - $${passed}); \
 	  if [ $${passed} -eq $${total} ]; then \
-	      echo "$(GREEN)$(BOLD)ALL $${total} AMD64 ASM TESTS PASSED"; \
+	      echo "$(GREEN)$(BOLD)ALL $${total} AMD64 ASM TESTS PASSED$(NC)"; \
 	  else \
 	      echo "$(GREEN)$(BOLD)PASSED:$(NORMAL) $(GREEN)$${passed}$(NC) / $${total}"; \
 	      echo "$(RED)$(BOLD)FAILED:$(NORMAL) $(RED)$${failed}$(NC) / $${total}"; \
