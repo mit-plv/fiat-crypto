@@ -28,6 +28,8 @@ GREEN:=\033[0;32m
 BOLD:=$(shell tput bold)
 NORMAL:=$(shell tput sgr0)
 
+WITH_PERF?=
+
 .PHONY: coq clean update-_CoqProject cleanall install \
 	coq-without-bedrock2 install-without-bedrock2 \
 	install-rewriter clean-rewriter rewriter \
@@ -77,6 +79,16 @@ endif
 
 # This include is meant to be safe
 include Makefile.local.common
+
+# in case we didn't include Makefile.coq
+OCAMLFIND?=ocamlfind
+ifneq ($(WITH_PERF),1)
+CAMLOPT_PERF ?= "$(OCAMLFIND)" ocamlopt
+CAMLOPT_PERF_SHOW:=OCAMLOPT
+else
+CAMLOPT_PERF ?= "$(OCAMLFIND)" ocamloptp
+CAMLOPT_PERF_SHOW:=OCAMLOPTP
+endif
 
 .DEFAULT_GOAL := all
 
@@ -566,8 +578,8 @@ $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/haskell.sed
 # pass -w -20 to disable the unused argument warning
 # unix package needed for Unix.gettimeofday for the perf_* binaries
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml
-	$(SHOW)'OCAMLOPT $< -o $@'
-	$(HIDE)$(TIMER) ocamlfind ocamlopt -package unix -linkpkg -w -20 -g -o $@ $<
+	$(SHOW)'$(CAMLOPT_PERF_SHOW) $< -o $@'
+	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -linkpkg -w -20 -g -o $@ $<
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
 	$(SHOW)'GHC $< -o $@'
