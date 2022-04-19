@@ -796,6 +796,7 @@ End WithFixedCtx.
 Lemma empty_gensym_dag_ok : gensym_dag_ok (fun _ => None) empty_dag.
 Proof using Type.
   cbv [empty_dag gensym_dag_ok gensym_ok dag_ok node_ok]; repeat split; try congruence;
+    cbv [dag_lookup option_map] in *; break_match_hyps; inversion_option; subst;
     exfalso; match goal with H : _ |- _ => apply nth_error_In in H; cbn in H end; assumption.
 Qed.
 

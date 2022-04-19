@@ -236,22 +236,22 @@ Definition force_description : description -> eager_description
   := fun 'tt => tt. (* option_map (fun '(descr, always_show) => (descr tt, always_show)) *)
 Definition force_dag : dag -> eager_dag
   := List.map (fun '(n, descr) => (n, force_description descr)).
-Definition dag_lookup (d : dag) (i : nat) : option (node idx) := List.nth_error (List.map fst d) i.
+Definition dag_lookup (d : dag) (i : nat) : option (node idx) := option_map fst (List.nth_error d i).
 Definition dag_reverse_lookup (d : dag) (n : node idx) : option nat
   := List.indexof (fun '(n', _) => node_beq N.eqb n n') d.
 Definition dag_description_lookup (d : eager_dag) (descr : string) : list idx
   := List.map N.of_nat (List.map fst (List.filter (fun '(_, (_, descr')) => match get_eager_description_description descr' with Some descr' => String.eqb descr descr' | _ => false end) (List.enumerate d))).
 
 Lemma dag_lookup_app1 (d d' : dag) n : n < List.length d -> dag_lookup (d++d') n = dag_lookup d n.
-Proof. cbv [dag_lookup]; intro; rewrite map_app; apply nth_error_app1; distr_length. Qed.
+Proof. cbv [dag_lookup]; intro; f_equal; apply nth_error_app1; assumption. Qed.
 Lemma dag_lookup_app2 (d d' : dag) n : List.length d <= n -> dag_lookup (d++d') n = dag_lookup d' (n - List.length d).
-Proof. cbv [dag_lookup]; intro; rewrite map_app, nth_error_app2; now distr_length. Qed.
+Proof. cbv [dag_lookup]; intro; f_equal; apply nth_error_app2; assumption. Qed.
 Lemma dag_lookup_value_length i (xs:dag) x : dag_lookup xs i = Some x -> i < List.length xs.
-Proof. cbv [dag_lookup]; intro H; apply nth_error_value_length in H; distr_length. Qed.
+Proof. cbv [dag_lookup option_map]; break_innermost_match; intro; inversion_option; subst; eapply nth_error_value_length; eassumption. Qed.
 Lemma dag_reverse_lookup_Some l n i (H : dag_reverse_lookup l n = Some i) : dag_lookup l i = Some n.
 Proof.
   cbv [dag_reverse_lookup dag_lookup] in *; apply indexof_Some in H.
-  rewrite nth_error_map; cbv [option_map].
+  cbv [option_map].
   destruct_head'_ex; destruct_head'_and; destruct_head'_prod.
   destruct nth_error; inversion_option; subst.
   reflect_hyps; subst; reflexivity.
@@ -260,7 +260,7 @@ Lemma dag_lookup_app n (xs ys:dag) : dag_lookup (xs ++ ys) n =
                                        if lt_dec n (List.length xs)
                                        then dag_lookup xs n
                                        else dag_lookup ys (n - List.length xs).
-Proof. cbv [dag_lookup]; rewrite map_app, nth_error_app; now distr_length. Qed.
+Proof. cbv [dag_lookup option_map]; rewrite nth_error_app; break_innermost_match; reflexivity. Qed.
 Lemma dag_reverse_lookup_app (d1 d2 : dag) n : dag_reverse_lookup (d1 ++ d2) n = Option.sequence (dag_reverse_lookup d1 n) (option_map (fun x => List.length d1 + x) (dag_reverse_lookup d2 n)).
 Proof. apply List.indexof_app. Qed.
 Lemma eta_dag_lookup d i : dag_lookup d i = match i, d with
@@ -553,7 +553,7 @@ Proof using Type.
   { cbv [gensym_dag_ok] in *; destruct_head'_and; now apply gensym_ok_app. }
   { cbv [gensym_dag_ok dag_ok gensym_ok] in *; split_and; eauto.
     rewrite @dag_lookup_app in *; break_innermost_match_hyps; eauto.
-    destruct (_ - _)%nat as [| [|] ]; cbn [dag_lookup nth_error List.map] in *; inversion_option; subst.
+    destruct (_ - _)%nat as [| [|] ]; cbn [dag_lookup option_map nth_error List.map] in *; inversion_option; subst.
     hnf; intros; subst e; inversion_prod; subst; cbn [interp_op] in *; break_innermost_match_hyps; inversion_option; subst.
     firstorder lia. }
   { cbv [gensym_dag_ok dag_ok] in *; split_and; intros.
@@ -563,7 +563,7 @@ Proof using Type.
       | [ H : forall i r, dag_lookup _ (N.to_nat i) = Some r -> exists v, eval _ _ _ _, H1 : dag_lookup _ _ = Some _ |- _ ]
         => case (H _ _ H1); eauto using eval_weaken
       end. }
-    { destruct (N.to_nat i - length d) as [| [|] ] eqn:?; cbn [nth_error dag_lookup List.map] in *; inversion_option; subst.
+    { destruct (N.to_nat i - length d) as [| [|] ] eqn:?; cbn [nth_error dag_lookup option_map List.map] in *; inversion_option; subst.
       eexists. econstructor.
       replace (N.to_nat i) with (length d) by Lia.lia.
       { erewrite ?dag_lookup_app2, ?Nnat.Nat2N.id, Nat.sub_diag by Lia.lia.
