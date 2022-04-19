@@ -36,6 +36,9 @@ Coercion bits_of_AccessSize (x : AccessSize) : N
 
 Record MEM := { mem_bits_access_size : option AccessSize ; mem_base_reg : option REG ; mem_scale_reg : option (Z * REG) ; mem_base_label : option string ; mem_offset : option Z }.
 
+Definition mem_of_reg (r : REG) : MEM :=
+  {| mem_base_reg := Some r ; mem_offset := None ; mem_scale_reg := None ; mem_bits_access_size := None ; mem_base_label := None |}.
+
 Inductive FLAG := CF | PF | AF | ZF | SF | OF.
 
 Inductive OpPrefix :=
