@@ -2383,8 +2383,8 @@ Definition rcrcnt s cnt : Z :=
 
 Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
 Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
-  let sa : AddressSize := 64%N in
   let stack_addr_size : AddressSize := 64%N in
+  let sa : AddressSize := 64%N in
   match Syntax.operation_size instr with Some s =>
   match Syntax.prefix instr with None =>
   let s : OperationSize := s in
