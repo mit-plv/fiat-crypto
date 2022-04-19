@@ -15,9 +15,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - env: { COQ_VERSION: "master"    , COQ_PACKAGE: "coq libcoq-ocaml-dev", SKIP_BEDROCK2: "" , SKIP_VALIDATE: "", COQCHKEXTRAFLAGS: "-bytecode-compiler yes", PPA: "ppa:jgross-h/coq-master-daily", EXTRA_GH_REPORTIFY: "--warnings" }
+        - env: { COQ_VERSION: "master"    , COQ_PACKAGE: "coq libcoq-ocaml-dev", SKIP_BEDROCK2: "" , SKIP_VALIDATE: "", COQCHKEXTRAFLAGS: "-bytecode-compiler yes", PPA: "ppa:jgross-h/coq-master-daily", EXTRA_GH_REPORTIFY: "--warnings", PERF_TESTS: "1" }
           os: 'ubuntu-latest'
-        - env: { COQ_VERSION: "Ubuntu LTS", COQ_PACKAGE: "coq libcoq-ocaml-dev", SKIP_BEDROCK2: "1", SKIP_VALIDATE: "", COQCHKEXTRAFLAGS: ""                      , PPA: "" }
+        - env: { COQ_VERSION: "Ubuntu LTS", COQ_PACKAGE: "coq libcoq-ocaml-dev", SKIP_BEDROCK2: "1", SKIP_VALIDATE: "", COQCHKEXTRAFLAGS: ""                      , PPA: "", PERF_TESTS: "1" }
           os: 'ubuntu-20.04'
 
     runs-on: ${{ matrix.os }}
@@ -36,6 +36,10 @@ jobs:
       with:
         ghc-version: 'latest'
         cabal-version: 'latest'
+    - name: support perf
+      run: |
+        sudo sh -c 'echo 0 >/proc/sys/kernel/perf_event_paranoid'
+        sudo sh -c 'echo 0 >/proc/sys/kernel/kptr_restrict'
     - name: echo build params
       run: |
         echo "::group::lscpu"
@@ -46,6 +50,12 @@ jobs:
         echo "::endgroup::"
         echo "::group::lsb_release -a"
         lsb_release -a
+        echo "::endgroup::"
+        echo "::group::ls -l /proc/kallsyms"
+        ls -l /proc/kallsyms
+        echo "::endgroup::"
+        echo "::group::cat /proc/kallsyms"
+        cat /proc/kallsyms
         echo "::endgroup::"
         echo "::group::ghc --version"
         ghc --version
@@ -91,6 +101,16 @@ jobs:
       with:
         name: ExtractionHaskell-${{ matrix.env.COQ_VERSION }}
         path: src/ExtractionHaskell
+      if: always ()
+    - name: collect perf info
+      run: |
+        find . -name "*.perf.data" | xargs tar -czvf perf.data.tgz
+      if: always ()
+    - name: upload perf files
+      uses: actions/upload-artifact@v3
+      with:
+        name: perf-data-${{ matrix.env.COQ_VERSION }}
+        path: perf.data.tgz
       if: always ()
     - name: display timing info
       run: cat time-of-build-pretty.log
