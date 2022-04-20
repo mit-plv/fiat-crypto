@@ -17,10 +17,7 @@ jobs:
     runs-on: windows-latest
 
     env:
-      NJOBS: "1"
-      DEPS_NJOBS: "2"
-      TESTS_NJOBS: "2"
-      STANDALONE_NJOBS: "2"
+      NJOBS: "2"
       COQ_VERSION: "8.12.0" # https://packages.debian.org/stable/coq
       SKIP_BEDROCK2: "1"
       COQEXTRAFLAGS: "-async-proofs-j 1"
@@ -88,11 +85,15 @@ jobs:
       shell: cmd
     - name: deps
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${DEPS_NJOBS} deps'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} deps'
       shell: cmd
     - name: standalone-ocaml
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${STANDALONE_NJOBS} standalone-ocaml'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} standalone-ocaml'
+      shell: cmd
+    - name: all-except-generated
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 coq'
       shell: cmd
     - name: all
       run: |
@@ -100,7 +101,7 @@ jobs:
       shell: cmd
     - name: only-test-amd64-files
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${TESTS_NJOBS} only-test-amd64-files SLOWEST_FIRST=1'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} only-test-amd64-files SLOWEST_FIRST=1'
       shell: cmd
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
