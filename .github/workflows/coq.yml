@@ -32,7 +32,7 @@ jobs:
         if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
         sudo apt-get -o Acquire::Retries=30 update -q
         sudo apt-get -o Acquire::Retries=30 install ocaml-findlib $COQ_PACKAGE -y --allow-unauthenticated
-    - uses: haskell/actions/setup@v1
+    - uses: haskell/actions/setup@v2
       with:
         ghc-version: 'latest'
         cabal-version: 'latest'
