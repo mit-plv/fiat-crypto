@@ -89,6 +89,9 @@ Section TableMult.
     (mulP : Z -> P -> P)
     (O : P) (* zero element *)
     (B : P) (* base point *)
+    (q : Z) (* order of B *)
+    (odd_q : Zodd q)
+    (mulP_q : mulP q B = O)
     (mulP_zero : forall Q, mulP 0 Q = O)
     (mulP_addP : forall m n Q, mulP (m + n) Q = addP (mulP m Q) (mulP n Q))
     (mulP_doubleP : forall n Q, mulP (2 * n) Q = doubleP (mulP n Q)).
@@ -97,10 +100,11 @@ Section TableMult.
 
   (* Table-based multiplication, as outlined in https://eprint.iacr.org/2012/309.pdf, Section 3.3 *)
 
-  (* Here, we assume n = 1.
-    s denotes spacing, t denotes # of teeth, and D = s * t denotes the total number of digits *)
-  Context (s : Z) (t : Z) (D : Z) 
-          (Hs: 0 <= s) (Ht: 0 <= t) (HD: D = s * t).
+  (* Here, n denotes # of blocks, s denotes spacing, t denotes # of teeth, 
+           and D = s * n * t denotes the total number of digits *)
+  Context (s : Z) (t : Z) (n : Z) (nt : Z) (D : Z) 
+          (Hs: 0 <= s) (Ht: 0 <= t) (Hn: 1 <= n)
+          (Hnt: nt = n * t) (HD: D = s * nt).
 
   Section Multicomb.
 
@@ -129,8 +133,11 @@ Section TableMult.
 
     Definition Zseq (k: Z) (l: Z) := List.map Z.of_nat (List.seq (Z.to_nat k) (Z.to_nat l)).
 
+    Definition entry (bnum: Z) (offset: Z) 
+      := List.map (fun x => (s * x, s * x + offset)) (Zseq (t * bnum) t).
+    
     Definition comb (offset: Z) : state 
-      := List.map (fun x => (s * x, s * x + offset)) (Zseq 0 t).
+      := List.map (fun x => (s * x, s * x + offset)) (Zseq 0 nt).
 
     Definition multicomb : state
       := List.fold_right (fun x y => add x (shift 1 y)) [] (List.map (fun x => comb x) (Zseq 0 s)).
@@ -143,8 +150,8 @@ Section TableMult.
     (* -------------------- *)
     (* Zseq *)
 
-    Lemma Zseq_succ_r: forall n : Z,
-      0 <= n -> Zseq 0 (Z.succ n) = Zseq 0 n ++ [(n)].
+    Lemma Zseq_succ_r': forall n b : Z,
+      0 <= n -> 0 <= b -> Zseq b (Z.succ n) = Zseq b n ++ [(b + n)].
     Proof.
       intros.
       unfold Zseq.
@@ -153,32 +160,62 @@ Section TableMult.
       rewrite map_app.
       simpl.
       f_equal.
-      rewrite Z2Nat.id by trivial; trivial.
+      rewrite <- Z2Nat.inj_add by trivial.
+      rewrite Z2Nat.id by lia; trivial.
     Qed.
 
-    Lemma Zseq_bound: forall t : Z, 0 <= t
-      -> forall a : Z,
-        In a (Zseq 0 t) <-> 0 <= a < t.
+    Lemma Zseq_succ_r: forall n : Z,
+      0 <= n -> Zseq 0 (Z.succ n) = Zseq 0 n ++ [n].
+    Proof.
+      intros; apply Zseq_succ_r' with (b := 0); lia.
+    Qed.
+
+    Lemma Zseq_bound': forall t : Z, 0 <= t
+      -> forall b : Z, 0 <= b
+      -> (forall a : Z, In a (Zseq b t) <-> b <= a < b + t).
     Proof.
       refine (natlike_ind _ _ _).
       - intros. split; intro.
-        + inversion H.
+        + inversion H0.
         + lia.
       - intros.
-        destruct (Z.eq_dec a x); split; intro.
+        destruct (Z.eq_dec a (b + x)); split; intro.
         + lia.
-        + rewrite Zseq_succ_r by assumption.
+        + rewrite Zseq_succ_r' by assumption.
           rewrite in_app_iff.
           right. subst. apply in_eq.
-        + rewrite Zseq_succ_r in H1 by assumption.
-          apply in_app_or in H1.
+        + rewrite Zseq_succ_r' in H2 by assumption.
+          apply in_app_or in H2.
           simpl in H1.
-          intuition; apply H0 in H2; lia.
-        + rewrite Zseq_succ_r by assumption.
+          intuition.
+          1-2: apply H0 with (a := a) in H1;
+               apply H1 in H3; lia.
+          all: inversion H3; try lia; inversion H2.
+        + rewrite Zseq_succ_r' by assumption.
           rewrite in_app_iff.
           left.
-          assert (0 <= a < x) by lia.
+          assert (b <= a < b + x) by lia.
           apply H0; assumption.
+    Qed.
+
+    Lemma Zseq_bound: forall t : Z, 0 <= t
+      -> forall a : Z, In a (Zseq 0 t) <-> 0 <= a < t.
+    Proof.
+      intros; apply Zseq_bound'; lia.
+    Qed.
+
+    Lemma Zseq_app: forall b t1 t2 : Z,
+      0 <= b -> 0 <= t1 -> 0 <= t2
+      -> Zseq b (t1 + t2) = Zseq b t1 ++ Zseq (b + t1) t2.
+    Proof.
+      intros.
+      unfold Zseq.
+      rewrite <- map_app.
+      f_equal.
+      rewrite Z2Nat.inj_add by trivial.
+      rewrite seq_app.
+      rewrite Z2Nat.inj_add by trivial.
+      reflexivity.
     Qed.
 
     (* -------------------- *)
@@ -328,9 +365,9 @@ Section TableMult.
                     -> Zodd e
                     -> eval (stateseq n) e = (e mod 2 ^ (n + 1)) - 2 ^ n.
     Proof.
-      intros n Hn.
-      destruct Hn.
-      generalize dependent n.
+      intros m Hm.
+      destruct Hm.
+      generalize dependent m.
       refine (natlike_ind _ _ _).
       - intros. unfold stateseq, eval.
         rewrite <- Zodd_bool_iff in H1.
@@ -339,7 +376,7 @@ Section TableMult.
         replace (2 ^ (0 + 1)) with 2 by nia.
         simpl.
         lia.
-      - intro n. intros.
+      - intro m. intros.
         unfold stateseq in *.
         rewrite Zseq_succ_r by trivial.
         rewrite map_app.
@@ -372,13 +409,13 @@ Section TableMult.
         rewrite Z.add_sub_assoc.
         rewrite Z.mul_1_r.
         rewrite Z.testbit_spec' by lia.
-        replace D with (D - (n + 1) + (n + 1)) at 1 by lia.
-        replace D with (D - (n + 1 + 1) + (n + 1 + 1)) at 2 by lia.
+        replace D with (D - (m + 1) + (m + 1)) at 1 by lia.
+        replace D with (D - (m + 1 + 1) + (m + 1 + 1)) at 2 by lia.
         rewrite Z.pow_add_r by lia.
-        rewrite Z.pow_add_r with (c := n + 1 + 1) by lia.
+        rewrite Z.pow_add_r with (c := m + 1 + 1) by lia.
         repeat rewrite mod_sub by lia.
-        assert (f / 2 ^ n = (2 * f + 1) / (2 ^ n * 2)). {
-          rewrite Z.mul_comm with (n := 2 ^ n).
+        assert (f / 2 ^ m = (2 * f + 1) / (2 ^ m * 2)). {
+          rewrite Z.mul_comm with (n := 2 ^ m).
           rewrite <- Z.div_div by lia.
           rewrite Z.mul_comm.
           rewrite Z.div_add_l by lia.
@@ -390,7 +427,7 @@ Section TableMult.
         repeat rewrite Z.pow_add_r by lia.
         repeat rewrite Z.pow_1_r.
         rewrite H5.
-        rewrite (Z.rem_mul_r (2 * f + 1) (2 ^ n * 2) 2) by lia.
+        rewrite (Z.rem_mul_r (2 * f + 1) (2 ^ m * 2) 2) by lia.
         lia. 
     Qed.
         
@@ -473,6 +510,35 @@ Section TableMult.
     Qed.
 
     (* -------------------- *)
+    (* comb, entry *)
+
+    Lemma comb_entry: forall offset,
+      comb offset = List.flat_map (fun x => entry x offset) (Zseq 0 n).
+    Proof.
+      assert (0 <= n) by lia.
+      unfold comb.
+      rewrite Hnt.
+      clear Hn Hnt.
+      generalize dependent n.
+      refine (natlike_ind _ _ _).
+      - simpl. trivial.
+      - intros.
+        rewrite Zseq_succ_r by assumption.
+        rewrite flat_map_app.
+        simpl.
+        replace (Z.succ x * t) with (x * t + t) by nia.
+        rewrite app_nil_r.
+        rewrite Zseq_app by nia.
+        rewrite map_app.
+        unfold entry.
+        f_equal.
+        + apply H0.
+        + f_equal.
+          f_equal.
+          nia.
+    Qed.
+
+    (* -------------------- *)
     (* multicomb *)
 
     Lemma multicomb_length:
@@ -480,7 +546,7 @@ Section TableMult.
     Proof.
       unfold multicomb.
       erewrite <- fold_right_map with (u := 0%nat) (fU := Nat.add).
-      - assert (map (fun x : Z => length (comb x)) (Zseq 0 s) = map (fun x : Z => Z.to_nat t) (Zseq 0 s)).
+      - assert (map (fun x : Z => length (comb x)) (Zseq 0 s) = map (fun x : Z => Z.to_nat nt) (Zseq 0 s)).
         { apply map_ext_in.
           intros.
           unfold comb, Zseq.
@@ -512,7 +578,7 @@ Section TableMult.
 
     Lemma multicomb_simple:
       multicomb = List.fold_right add [] (map (fun x =>
-        (map (fun o => (s * o + x, s * o + x)) (Zseq 0 t)))
+        (map (fun o => (s * o + x, s * o + x)) (Zseq 0 nt)))
         (Zseq 0 s)).
     Proof.
       unfold multicomb, comb.
@@ -530,14 +596,14 @@ Section TableMult.
       rewrite multicomb_simple.
       unfold add.
       setoid_rewrite fold_right_flat_map with
-        (f := fun x : Z => map (fun o : Z => (s * o + x, s * o + x)) (Zseq 0 t)) (l := (Zseq 0 s)).
+        (f := fun x : Z => map (fun o : Z => (s * o + x, s * o + x)) (Zseq 0 nt)) (l := (Zseq 0 s)).
       rewrite in_flat_map.
-      exists (n mod s); split.
+      exists (n0 mod s); split.
       - apply Zseq_bound; try apply Z.mod_pos_bound; lia.
       - apply in_map_iff.
-        exists (n / s); split.
+        exists (n0 / s); split.
         + rewrite <- Z_div_mod_eq_full. trivial.
-        + apply Zseq_bound; try assumption; split.
+        + apply Zseq_bound; try nia; split.
           * apply Z_div_nonneg_nonneg; lia.
           * apply Z.div_lt_upper_bound; lia.
     Qed.
@@ -599,18 +665,22 @@ Section TableMult.
     - make it clear which part is used at runtime
     - (potentially) split file into code and proofs
     - add negation (negate values when looking up if necessary)
-    - add support for n > 1, non-odd e (requires taking mod q for some q odd; maybe add q such that ZtoP q = O)
+    - add support non-odd e (requires taking mod q for some q odd; maybe add q such that ZtoP q = O)
     *)
 
     (* To be replaced by looking up in an actual precomputed table *)
-    Definition table_entry (d: Z) : P
+    Definition table_entry (bnum: Z) (d: Z) : P
       := List.fold_right addP O
-      (List.map (fun x => ZtoP ((2 * (Z.b2z (Z.testbit d x)) - 1) * 2 ^ (x * s))) (Zseq 0 t)).
+      (List.map
+        (fun x => ZtoP ((2 * (Z.b2z (Z.testbit d (x - t * bnum))) - 1) * 2 ^ (s * x)))
+        (Zseq (t * bnum) t)).
 
-    Lemma table_entry_spec: forall d : Z,
+    Lemma table_entry_hyp: forall bnum d : Z,
       0 <= d < 2 ^ t ->
-      table_entry d = List.fold_right addP O
-      (List.map (fun x => ZtoP ((2 * (Z.b2z (Z.testbit d x)) - 1) * 2 ^ (x * s))) (Zseq 0 t)).
+      table_entry bnum d = List.fold_right addP O
+      (List.map
+        (fun x => ZtoP ((2 * (Z.b2z (Z.testbit d (x - t * bnum))) - 1) * 2 ^ (s * x)))
+        (Zseq (t * bnum) t)).
     Proof. intros. reflexivity. Qed.
 
     (* Definition table := List.map table_entry (Zseq 0 (2 ^ t)). *)
@@ -621,7 +691,8 @@ Section TableMult.
       (Zseq 0 t)).
 
     Definition table_comb (offset: Z) (e: Z) : P
-      := table_entry (extract_bits offset e).
+      := List.fold_right addP O
+      (List.map (fun x => table_entry x (extract_bits (offset + x * s * t) e)) (Zseq 0 n)).
 
     Definition table_multicomb (e: Z) : P :=
       List.fold_right (fun x y => addP x (doubleP y)) O (List.map (fun x => table_comb x e) (Zseq 0 s)).
@@ -691,9 +762,9 @@ Section TableMult.
     Qed.    
 
     Lemma extract_bits_spec: forall offset e x : Z,
-      0 <= x -> 0 <= offset < s ->
+      0 <= x -> 0 <= offset <= s * nt ->
         (x < t -> Z.testbit (extract_bits offset e) x 
-          = Z.testbit ((e + 2 ^ (s * t) - 1) / 2) (s * x + offset))
+          = Z.testbit ((e + 2 ^ (s * nt) - 1) / 2) (s * x + offset))
         /\ (t <= x -> Z.testbit (extract_bits offset e) x = false).
     Proof.
       intros.
@@ -702,11 +773,11 @@ Section TableMult.
       intuition.
       - rewrite Z.mul_comm with (m := x).
         apply bitmap_testbit with
-          (f := fun x : Z => Z.testbit ((e + 2 ^ (s * t) - 1) / 2) (x * s + offset));
+          (f := fun x : Z => Z.testbit ((e + 2 ^ (s * nt) - 1) / 2) (x * s + offset));
           lia.
       - rewrite <- Z.div_pow2_bits with (n := x) (m := 0) by lia.
         pose proof bitmap_bound t Ht (fun x : Z =>
-          Z.testbit ((e + 2 ^ (s * t) - 1) / 2) (x * s + offset)).
+          Z.testbit ((e + 2 ^ (s * nt) - 1) / 2) (x * s + offset)).
         assert (0 < 2) by lia.
         pose proof Z.pow_le_mono_r 2 t x H4 H0.
         rewrite Z.div_small; [ auto | lia ].
@@ -740,6 +811,38 @@ Section TableMult.
     Qed.
 
     (* -------------------- *)
+    (* table_entry *)
+
+    Lemma table_entry_spec: forall bnum offset e : Z,
+      0 <= bnum < n -> 0 <= offset < s
+        -> table_entry bnum (extract_bits (offset + bnum * s * t) e) = ZtoP (eval (entry bnum offset) e).
+    Proof.
+      intros.
+      unfold eval, table_entry, entry.
+      rewrite fold_right_addP.
+      rewrite map_map.
+      f_equal.
+      f_equal.
+      apply map_ext_in.
+      intros.
+      rewrite Z.mul_comm.
+      f_equal.
+      unfold sbit.
+      f_equal.
+      f_equal.
+      f_equal.
+      assert (Hb: 0 <= t * bnum) by nia.
+      pose proof Zseq_bound' t Ht (t * bnum) Hb.
+      apply H2 in H1.
+      replace a with (a - t * bnum + t * bnum) by lia.
+      remember (a - t * bnum) as a'.
+      rewrite Z.add_simpl_r.
+      rewrite HD.
+      replace (s * (a' + t * bnum) + offset) with (s * a' + (offset + bnum * s * t)) by nia.
+      eapply extract_bits_spec; assert (0 < s * t) by nia; nia.
+    Qed.
+
+    (* -------------------- *)
     (* table_comb *)
 
     Lemma table_comb_spec: forall offset e : Z,
@@ -747,28 +850,24 @@ Section TableMult.
     Proof.
       intros.
       unfold table_comb.
-      unfold eval.
-      unfold table_entry.
-      f_equal.
-      unfold comb.
-      rewrite map_map.
+      assert (rewrite_map: map (fun x : Z => table_entry x (extract_bits (offset + x * s * t) e))
+                (Zseq 0 n) = map (fun x : Z => ZtoP (eval (entry x offset) e)) (Zseq 0 n)). {
+        apply map_ext_in.
+        intros.
+        apply table_entry_spec; apply Zseq_bound in H0; lia.
+      }
+      rewrite rewrite_map.
       rewrite fold_right_addP.
       f_equal.
       f_equal.
-      apply map_ext_in.
-      intros.
-      rewrite Z.mul_comm.
-      f_equal.
-      - f_equal. ring.
-      - unfold sbit.
-        f_equal.
-        f_equal.
-        f_equal.
-        pose proof Zseq_bound t Ht.
-        rewrite HD.
-        apply extract_bits_spec; apply H1 in H0; intuition; try lia.
+      rewrite comb_entry.
+      rewrite <- fold_right_flat_map.
+      rewrite fold_right_map with (t := []) (fT := add) (TtoU := fun x => eval x e).
+      - f_equal.
+      - intros. rewrite eval_add. trivial.
+      - trivial.
     Qed.
-  
+    
     (* -------------------- *)
     (* table_multicomb *)
 
@@ -836,6 +935,7 @@ Section AddMod.
   Definition doubleP : P -> P := F.mul (F.of_Z _ 2).
   Definition mulP (n : Z) : P -> P := F.mul (F.of_Z _ n).
 
+  Definition n := 1.
   Definition s := 2.
   Definition t := 3.
   Definition D := s * t.
