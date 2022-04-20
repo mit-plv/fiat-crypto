@@ -1,0 +1,905 @@
+Require Import Coq.Lists.List.
+Require Import Coq.ZArith.ZArith.
+Require Import Lia.
+Require Import Coq.Sorting.Permutation.
+Import ListNotations.
+
+Local Open Scope Z_scope.
+
+Section FoldLemmas.
+
+  Lemma fold_right_val_closed: forall (T : Type) (V: Type)
+    (fT: T -> T -> T) (val: T -> Prop),
+    (forall x y : T, val x -> val y -> val (fT x y)) ->
+    forall (f: V -> T) t l,
+      val t -> List.Forall (fun v : V => val (f v)) l -> val (fold_right fT t (map f l)).
+  Proof.
+    intros.
+    induction l.
+    - auto.
+    - simpl. apply H; [ | apply IHl]; inversion H1; assumption.
+  Qed.
+
+  Lemma fold_right_map_cond: forall (T U V : Type)
+    (fT: T -> T -> T) (fU: U -> U -> U) (TtoU: T -> U) (val: T -> Prop),
+    (forall x y : T, val x -> val y -> fU (TtoU x) (TtoU y) = TtoU (fT x y)) ->
+    (forall x y : T, val x -> val y -> val (fT x y)) ->
+    forall (f : V -> T) l t u,
+      TtoU t = u ->
+      val t ->
+      List.Forall (fun v : V => val (f v)) l ->
+      fold_right fU u (map (fun x : V => TtoU (f x)) l) =
+      TtoU (fold_right fT t (map f l)).
+  Proof.
+    intros.
+    induction l.
+    - auto.
+    - simpl. rewrite IHl. rewrite H.
+      + trivial.
+      + inversion H3. assumption.
+      + simpl. apply fold_right_val_closed; try assumption.
+        inversion H3. assumption.
+      + inversion H3. assumption.
+  Qed.
+
+  Lemma fold_right_map: forall (T U V : Type)
+    (fT: T -> T -> T) (fU: U -> U -> U) (TtoU: T -> U),
+    (forall x y : T, fU (TtoU x) (TtoU y) = TtoU (fT x y)) ->
+    forall (f : V -> T) l t u,
+      TtoU t = u ->
+      fold_right fU u (map (fun x : V => TtoU (f x)) l) =
+      TtoU (fold_right fT t (map f l)).
+  Proof.
+    intros.
+    induction l.
+    - auto.
+    - simpl. rewrite IHl. rewrite H. trivial.
+  Qed.
+
+  Lemma app_cons: forall [A : Type] (l : list A) (a : A),
+      a :: l = [a] ++ l.
+  Proof.
+    simpl. reflexivity.
+  Qed.
+
+  Lemma fold_right_flat_map: forall (T U : Type) (f: T -> list U) (l : list T),
+    fold_right (@List.app _ ) [] (map f l) = flat_map f l.
+  Proof.
+    intros.
+    induction l.
+    - auto.
+    - rewrite app_cons.
+      rewrite map_app.
+      rewrite fold_right_app.
+      rewrite flat_map_app.
+      rewrite IHl.
+      simpl.
+      rewrite app_nil_r.
+      trivial.
+  Qed.
+
+End FoldLemmas.
+
+Section TableMult.
+
+  Context
+    (P : Type)
+    (addP : P -> P -> P)
+    (doubleP : P -> P)
+    (mulP : Z -> P -> P)
+    (O : P) (* zero element *)
+    (B : P) (* base point *)
+    (mulP_zero : forall Q, mulP 0 Q = O)
+    (mulP_addP : forall m n Q, mulP (m + n) Q = addP (mulP m Q) (mulP n Q))
+    (mulP_doubleP : forall n Q, mulP (2 * n) Q = doubleP (mulP n Q)).
+
+  Definition ZtoP (n : Z) : P := mulP n B.
+
+  (* Table-based multiplication, as outlined in https://eprint.iacr.org/2012/309.pdf, Section 3.3 *)
+
+  (* Here, we assume n = 1.
+    s denotes spacing, t denotes # of teeth, and D = s * t denotes the total number of digits *)
+  Context (s : Z) (t : Z) (D : Z) 
+          (Hs: 0 <= s) (Ht: 0 <= t) (HD: D = s * t).
+
+  Section Multicomb.
+
+    (* ======================================== *)
+    (* Definitions related to `eval` and `multicomb` *)
+
+    (* A `state` is a list of (location, bit #). A state is `valid` if all locations are nonnegative. *)
+    Definition state := list (Z * Z).
+    Definition valid (st: state) : Prop
+      := List.Forall (fun '(i, x) => i >= 0) st.
+
+    (* `shift` shifts the location of every bit in a state by k *)
+    Definition shift (k: Z) : state -> state := List.map (fun '(i, x) => (k+i, x)).
+
+    (* `add` adds two states together *)
+    Definition add : state -> state -> state := @List.app _ .
+
+    (* Signed bit for a given odd e *)
+    Definition sbit (e : Z) (x : Z) := 2 * Z.b2z (Z.testbit ((e + 2 ^ D - 1) / 2)  x) - 1.
+
+    (* Unscaled signed bit for a given odd e*)
+    Definition sbit' (e : Z) (x : Z) := Z.b2z (Z.testbit ((e + 2 ^ D - 1) / 2) x).
+
+    Definition eval (l: state) (e: Z): Z
+      := List.fold_right Z.add 0 (List.map (fun '(i, x) => 2^i * (sbit e x)) l).
+
+    Definition Zseq (k: Z) (l: Z) := List.map Z.of_nat (List.seq (Z.to_nat k) (Z.to_nat l)).
+
+    Definition comb (offset: Z) : state 
+      := List.map (fun x => (s * x, s * x + offset)) (Zseq 0 t).
+
+    Definition multicomb : state
+      := List.fold_right (fun x y => add x (shift 1 y)) [] (List.map (fun x => comb x) (Zseq 0 s)).
+
+    Definition stateseq (k: Z) := List.map (fun x => (x, x)) (Zseq 0 k).
+
+    (* ==================== *)
+    (* Lemmas and theorems *)
+
+    (* -------------------- *)
+    (* Zseq *)
+
+    Lemma Zseq_succ_r: forall n : Z,
+      0 <= n -> Zseq 0 (Z.succ n) = Zseq 0 n ++ [(n)].
+    Proof.
+      intros.
+      unfold Zseq.
+      rewrite Z2Nat.inj_succ by trivial.
+      rewrite seq_S.
+      rewrite map_app.
+      simpl.
+      f_equal.
+      rewrite Z2Nat.id by trivial; trivial.
+    Qed.
+
+    Lemma Zseq_bound: forall t : Z, 0 <= t
+      -> forall a : Z,
+        In a (Zseq 0 t) <-> 0 <= a < t.
+    Proof.
+      refine (natlike_ind _ _ _).
+      - intros. split; intro.
+        + inversion H.
+        + lia.
+      - intros.
+        destruct (Z.eq_dec a x); split; intro.
+        + lia.
+        + rewrite Zseq_succ_r by assumption.
+          rewrite in_app_iff.
+          right. subst. apply in_eq.
+        + rewrite Zseq_succ_r in H1 by assumption.
+          apply in_app_or in H1.
+          simpl in H1.
+          intuition; apply H0 in H2; lia.
+        + rewrite Zseq_succ_r by assumption.
+          rewrite in_app_iff.
+          left.
+          assert (0 <= a < x) by lia.
+          apply H0; assumption.
+    Qed.
+
+    (* -------------------- *)
+    (* shift, add *)
+
+    Lemma shift_0: forall st : state,
+      (shift 0 st) = st.
+    Proof.
+      intros.
+      induction st; simpl.
+      - trivial.
+      - destruct a; rewrite IHst; trivial.
+    Qed.
+
+    Lemma valid_add: forall st1 st2 : state,
+      valid st1 -> valid st2 -> valid (add st1 st2).
+    Proof.
+      intros.
+      unfold valid in *.
+      unfold add.
+      apply Forall_app.
+      intuition.
+    Qed.
+
+    Lemma valid_shift: forall st : state, forall k : Z,
+      valid st -> 0 <= k -> valid (shift k st).
+    Proof.
+      intros.
+      unfold valid in *.
+      unfold shift.
+      apply Forall_map.
+      eapply Forall_impl; [ | exact H].
+      intros.
+      destruct a.
+      lia.
+    Qed.
+
+    Lemma eval_add: forall st1 st2 : state, forall e : Z,
+      eval (add st1 st2) e = eval st1 e + eval st2 e.
+    Proof.
+      intros st1 st2 e.
+      unfold eval.
+      induction st1.
+      - simpl. reflexivity.
+      - simpl. rewrite IHst1. rewrite Z.add_assoc. reflexivity.
+    Qed.
+
+    Lemma eval_shift: forall st : state, forall k e : Z,
+      valid st -> 0 <= k -> eval (shift k st) e = 2^k * eval st e.
+    Proof.
+      intros.
+      unfold eval.
+      induction st.
+      - simpl. ring.
+      - simpl.
+        rewrite IHst.
+        clear IHst.
+        destruct a.
+        ring_simplify.
+        f_equal.
+        rewrite Z.pow_add_r.
+        rewrite Z.mul_comm.
+        rewrite Z.mul_assoc.
+        trivial.
+        trivial.
+        + unfold valid in H.
+          inversion H.
+          lia.
+        + unfold valid in H.
+          inversion H.
+          unfold valid.
+          trivial.
+    Qed.
+
+    Lemma shift_add: forall st1 st2 k,
+      add (shift k st1) (shift k st2) = shift k (add st1 st2).
+    Proof.
+      intros. unfold shift, add. rewrite map_app. trivial.
+    Qed.
+
+    Lemma shift_shift: forall st k l,
+      shift k (shift l st) = shift (k + l) st.
+    Proof.
+      intros. unfold shift.
+      rewrite map_map.
+      apply map_ext_in.
+      intros.
+      destruct a.
+      rewrite Z.add_assoc.
+      trivial.
+    Qed.
+
+    Lemma fold_right_shift: forall t, 0 <= t -> forall (f : Z -> state) l,
+      fold_right (fun x y => add x (shift 1 y)) l (map f (Zseq 0 t)) =
+      fold_right add (shift t l) (map (fun n => (shift n (f n))) (Zseq 0 t)).
+    Proof.
+      refine (natlike_ind _ _ _).
+      - intros. simpl. rewrite shift_0. trivial.
+      - intros.
+        repeat rewrite Zseq_succ_r by assumption.
+        repeat rewrite map_app.
+        repeat rewrite fold_right_app.
+        rewrite H0.
+        f_equal.
+        simpl.
+        rewrite <- shift_add.
+        f_equal.
+        rewrite shift_shift.
+        f_equal.
+    Qed.
+
+    (* -------------------- *)
+    (* eval, stateseq *)
+
+    Lemma in_stateseq: forall n, 0 <= n -> forall x,
+      In x (stateseq n) -> exists m, 0 <= m < n /\ x = (m, m).
+    Proof.
+      refine (natlike_ind _ _ _).
+      - simpl. intuition.
+      - unfold stateseq.
+        intros.
+        rewrite Zseq_succ_r in H1 by assumption.
+        rewrite map_app in H1.
+        simpl in H1.
+        rewrite in_app_iff in H1.
+        intuition.
+        + apply H0 in H2.
+          destruct H2.
+          exists x1.
+          intuition; lia.
+        + exists x.
+          intuition; try lia.
+          inversion H2; try destruct H1; auto.
+    Qed.
+
+    Lemma mod_sub: forall a b c : Z, c <> 0 -> (a - b * c) mod c = a mod c.
+    Proof.
+      intros.
+      rewrite <- Z.add_opp_r.
+      rewrite <- Z.mul_opp_l.
+      apply Z.mod_add.
+      assumption.
+    Qed.
+
+    Theorem eval_stateseq_partial: forall n, 0 <= n < D
+      -> forall e : Z, 0 <= e < 2 ^ D 
+                    -> Zodd e
+                    -> eval (stateseq n) e = (e mod 2 ^ (n + 1)) - 2 ^ n.
+    Proof.
+      intros n Hn.
+      destruct Hn.
+      generalize dependent n.
+      refine (natlike_ind _ _ _).
+      - intros. unfold stateseq, eval.
+        rewrite <- Zodd_bool_iff in H1.
+        pose proof Zmod_odd e.
+        rewrite H1 in H2.
+        replace (2 ^ (0 + 1)) with 2 by nia.
+        simpl.
+        lia.
+      - intro n. intros.
+        unfold stateseq in *.
+        rewrite Zseq_succ_r by trivial.
+        rewrite map_app.
+        rewrite eval_add.
+        erewrite H0;[ | lia | trivial | trivial].
+        unfold eval.
+        simpl.
+        rewrite <- Z.add_1_r.
+        rewrite -> Z.add_0_r.
+        unfold sbit.
+
+        remember ((e + 2 ^ D - 1) / 2) as f.
+        assert (e = 2 * f + 1 - 2 ^ D). {
+          rewrite Heqf.
+          erewrite <- Z_div_exact_2; try lia.
+          apply Zodd_ex in H3.
+          destruct H3.
+          rewrite H3 in *.
+          replace D with (D - 1 + 1) by lia.
+          remember (D - 1) as E.
+          assert (0 <= E) by lia.
+          rewrite Z.pow_add_r; try lia.
+          rewrite Z.pow_1_r.
+          replace (2 * x + 1 + 2 ^ E * 2 - 1) with ((x + 2 ^ E) * 2) by lia.
+          apply Z_mod_mult.
+        }
+        replace (n + 1 - 1) with n by lia.
+        rewrite H4.
+        rewrite Z.mul_sub_distr_l.
+        rewrite Z.add_sub_assoc.
+        rewrite Z.mul_1_r.
+        rewrite Z.testbit_spec' by lia.
+        replace D with (D - (n + 1) + (n + 1)) at 1 by lia.
+        replace D with (D - (n + 1 + 1) + (n + 1 + 1)) at 2 by lia.
+        rewrite Z.pow_add_r by lia.
+        rewrite Z.pow_add_r with (c := n + 1 + 1) by lia.
+        repeat rewrite mod_sub by lia.
+        assert (f / 2 ^ n = (2 * f + 1) / (2 ^ n * 2)). {
+          rewrite Z.mul_comm with (n := 2 ^ n).
+          rewrite <- Z.div_div by lia.
+          rewrite Z.mul_comm.
+          rewrite Z.div_add_l by lia.
+          replace (1 / 2) with 0 by auto.
+          rewrite Z.add_0_r.
+          trivial.
+        }
+        rewrite Z.mul_assoc.
+        repeat rewrite Z.pow_add_r by lia.
+        repeat rewrite Z.pow_1_r.
+        rewrite H5.
+        rewrite (Z.rem_mul_r (2 * f + 1) (2 ^ n * 2) 2) by lia.
+        lia. 
+    Qed.
+        
+    Theorem eval_stateseq: forall e : Z,
+      0 <= e < 2 ^ D
+      -> Zodd e
+      -> eval (stateseq D) e = e.
+    Proof.
+      intros.
+      assert (HD1: 1 <= D). {
+        destruct D.
+        - rewrite Z.pow_0_r in H.
+          apply Zodd_ex in H0.
+          destruct H0; lia.
+        - lia.
+        - nia.
+      }
+      assert (stateseq D = stateseq (D - 1) ++ [(D - 1, D - 1)]).
+      { 
+        unfold stateseq.
+        replace D with (Z.succ (D - 1)) at 1 by lia.
+        rewrite Zseq_succ_r by lia.
+        rewrite map_app.
+        simpl.
+        trivial.
+      }
+      rewrite H1.
+      rewrite eval_add.
+      erewrite eval_stateseq_partial with (n := (D - 1)) (e := e); try lia; try assumption.
+      unfold eval.
+      simpl.
+      assert (sbit e (D - 1) = 1).
+      {
+        clear H1.
+        unfold sbit.
+        rewrite Z.testbit_spec' by lia.
+        rewrite Z.div_div by lia.
+        rewrite <- Z.pow_succ_r by lia.
+        replace (Z.succ (D - 1)) with D by lia.
+        assert (e <> 0). 
+        { unfold not; intros. apply Zodd_ex in H0. destruct H0. lia. }
+        assert (1 <= e) by lia.
+        replace (e + 2 ^ D - 1) with (e - 1 + (1 * 2 ^ D)) by lia.
+        rewrite Z.div_add by lia.
+        rewrite Z.div_small by lia.
+        auto.
+      }
+      rewrite H2.
+      rewrite Z.sub_add.
+      rewrite Z.mod_small; lia.
+    Qed.
+
+    Theorem eval_permutation: forall st1 st2 : state, forall e : Z, 
+      Permutation st1 st2 -> eval st1 e = eval st2 e.
+    Proof.
+      induction 1; simpl; auto.
+      - rewrite app_cons.
+        rewrite (app_cons l' x).
+        rewrite eval_add.
+        rewrite eval_add.
+        rewrite IHPermutation.
+        trivial.
+      - rewrite app_cons.
+        rewrite (app_cons l x).
+        rewrite (app_cons (y :: l) x).
+        rewrite (app_cons l y).
+        repeat progress rewrite eval_add.
+        ring.
+      - rewrite IHPermutation1.
+        eapply IHPermutation2.
+    Qed.
+
+    Theorem permute_comb_correct: forall e : Z, forall st : state, 
+      0 <= e < 2 ^ D -> Zodd e -> Permutation (stateseq D) st -> eval st e = e.
+    Proof.
+      intros.
+      rewrite <- eval_permutation with (st1 := stateseq D).
+      apply eval_stateseq.
+      all: assumption.
+    Qed.
+
+    (* -------------------- *)
+    (* multicomb *)
+
+    Lemma multicomb_length:
+      length multicomb = Z.to_nat D.
+    Proof.
+      unfold multicomb.
+      erewrite <- fold_right_map with (u := 0%nat) (fU := Nat.add).
+      - assert (map (fun x : Z => length (comb x)) (Zseq 0 s) = map (fun x : Z => Z.to_nat t) (Zseq 0 s)).
+        { apply map_ext_in.
+          intros.
+          unfold comb, Zseq.
+          repeat rewrite map_length.
+          apply seq_length. }
+        rewrite H; clear H.
+        rewrite HD; clear HD.
+        generalize dependent s.
+        refine (natlike_ind _ _ _).
+        + auto.
+        + intros.
+          rewrite Zseq_succ_r by assumption.
+          rewrite map_app.
+          rewrite <- fold_symmetric by lia.
+          rewrite fold_left_app.
+          simpl.
+          rewrite -> fold_symmetric by lia.
+          rewrite H0.
+          lia.
+      - intros.
+        unfold add.
+        rewrite app_length.
+        f_equal.
+        unfold shift.
+        rewrite map_length.
+        trivial.
+      - auto.
+    Qed.
+
+    Lemma multicomb_simple:
+      multicomb = List.fold_right add [] (map (fun x =>
+        (map (fun o => (s * o + x, s * o + x)) (Zseq 0 t)))
+        (Zseq 0 s)).
+    Proof.
+      unfold multicomb, comb.
+      rewrite fold_right_shift by assumption.
+      simpl.
+      f_equal.
+      apply map_ext_in; intros; unfold shift; rewrite map_map.
+      apply map_ext_in; intros; rewrite Z.add_comm; trivial.
+    Qed.
+      
+    Lemma multicomb_elts: forall n,
+      0 <= n < D -> In (n, n) multicomb.
+    Proof.
+      intros.
+      rewrite multicomb_simple.
+      unfold add.
+      setoid_rewrite fold_right_flat_map with
+        (f := fun x : Z => map (fun o : Z => (s * o + x, s * o + x)) (Zseq 0 t)) (l := (Zseq 0 s)).
+      rewrite in_flat_map.
+      exists (n mod s); split.
+      - apply Zseq_bound; try apply Z.mod_pos_bound; lia.
+      - apply in_map_iff.
+        exists (n / s); split.
+        + rewrite <- Z_div_mod_eq_full. trivial.
+        + apply Zseq_bound; try assumption; split.
+          * apply Z_div_nonneg_nonneg; lia.
+          * apply Z.div_lt_upper_bound; lia.
+    Qed.
+    
+    Theorem multicomb_stateseq: 
+      Permutation (stateseq D) multicomb.
+    Proof.
+      eapply NoDup_Permutation_bis.
+      - unfold stateseq, Zseq.
+        apply NoDup_map_inv with (f := (fun '(i, x) => Z.to_nat i)).
+        repeat rewrite map_map.
+        assert (forall l, map (fun x : nat => Z.to_nat (Z.of_nat x)) l = l).
+        { intros.
+          induction l.
+          - auto.
+          - simpl. rewrite IHl. rewrite Nat2Z.id. trivial. }
+        rewrite H.
+        apply seq_NoDup.
+      - rewrite multicomb_length.
+        unfold stateseq, Zseq.
+        repeat rewrite map_length.
+        rewrite seq_length.
+        auto.
+      - rewrite incl_Forall_in_iff.
+        rewrite Forall_forall.
+        intros.
+        apply in_stateseq in H; [ | lia ].
+        destruct H. rename x0 into m.
+        destruct H.
+        rewrite H0.
+        apply multicomb_elts; assumption.
+    Qed.
+
+    Theorem multicomb_correct: forall e : Z, 
+      0 <= e < 2 ^ D -> Zodd e -> eval multicomb e = e.
+    Proof.
+      intros.
+      apply permute_comb_correct; try assumption.
+      exact multicomb_stateseq.
+    Qed.
+
+  End Multicomb.
+
+  Section Table.
+
+    (* ======================================== *)
+    (* Definitions related to tables *)
+
+    (*
+                    1  0    0  1 = 9
+      Table: c =  [+1; -1; -1; +1], offset |-> sum (c[i] * 2^(i*k))
+          should be equal to eval (comb s t offset) e * P,
+          where the c is the bits in the respective positions of e
+    *)
+
+    (* TODO *)
+    (* 
+    - submit PR
+    - make it clear which part is used at runtime
+    - (potentially) split file into code and proofs
+    - add negation (negate values when looking up if necessary)
+    - add support for n > 1, non-odd e (requires taking mod q for some q odd; maybe add q such that ZtoP q = O)
+    *)
+
+    (* To be replaced by looking up in an actual precomputed table *)
+    Definition table_entry (d: Z) : P
+      := List.fold_right addP O
+      (List.map (fun x => ZtoP ((2 * (Z.b2z (Z.testbit d x)) - 1) * 2 ^ (x * s))) (Zseq 0 t)).
+
+    Lemma table_entry_spec: forall d : Z,
+      0 <= d < 2 ^ t ->
+      table_entry d = List.fold_right addP O
+      (List.map (fun x => ZtoP ((2 * (Z.b2z (Z.testbit d x)) - 1) * 2 ^ (x * s))) (Zseq 0 t)).
+    Proof. intros. reflexivity. Qed.
+
+    (* Definition table := List.map table_entry (Zseq 0 (2 ^ t)). *)
+
+    Definition extract_bits (offset: Z) (e: Z) : Z
+      := List.fold_right Z.add 0 (
+      List.map (fun x => (sbit' e (x * s + offset)) * (2 ^ x))
+      (Zseq 0 t)).
+
+    Definition table_comb (offset: Z) (e: Z) : P
+      := table_entry (extract_bits offset e).
+
+    Definition table_multicomb (e: Z) : P :=
+      List.fold_right (fun x y => addP x (doubleP y)) O (List.map (fun x => table_comb x e) (Zseq 0 s)).
+
+    (* ==================== *)
+    (* Lemmas and theorems *)
+
+    (* -------------------- *)
+    (* extract_bits *)
+
+    Lemma bitmap_bound: forall (t : Z), 0 <= t ->
+      forall (f: Z -> bool),
+        0 <= fold_right Z.add 0 (map (fun y : Z => Z.b2z (f y) * 2 ^ y) (Zseq 0 t)) < 2 ^ t.
+    Proof.
+      refine (natlike_ind _ _ _).
+      - intros. simpl. lia.
+      - intros. simpl.
+        rewrite Zseq_succ_r by lia.
+        rewrite map_app.
+        simpl.
+        rewrite <- fold_symmetric by lia.
+        rewrite fold_left_app.
+        simpl.
+        rewrite fold_symmetric by lia.
+        specialize H0 with f.
+        assert (0 <= Z.b2z (f x) * 2 ^ x <= 2 ^ x). {
+          case (f x).
+          - replace (Z.b2z true) with 1; [ lia | compute; trivial].
+          - replace (Z.b2z false) with 0; [ lia | compute; trivial].
+        }
+        replace (2 ^ Z.succ x) with (2 ^ x + 2 ^ x); [ lia | ].
+        rewrite <- Z.add_1_r.
+        rewrite Z.pow_add_r by lia.
+        nia.
+    Qed.
+
+    Lemma bitmap_testbit: forall (t : Z), 0 <= t ->
+      forall (x : Z), 0 <= x < t ->
+      forall (f: Z -> bool),
+        Z.testbit (fold_right Z.add 0 
+          (map (fun y : Z => Z.b2z (f y) * 2 ^ y) (Zseq 0 t))) x
+        = f x.
+    Proof.
+      refine (natlike_ind _ _ _).
+      - intros. lia.
+      - intros.
+        rewrite Zseq_succ_r by lia.
+        rewrite map_app.
+        simpl.
+        rewrite <- fold_symmetric by lia.
+        rewrite fold_left_app.
+        simpl.
+        rewrite fold_symmetric by lia.
+        simpl.
+        destruct (Z.eq_dec x0 x).
+        + subst.
+          rewrite <- Z.div_pow2_bits with (n := x) (m := 0) by lia.
+          rewrite Z.div_add by nia.
+          pose proof bitmap_bound x H f.
+          rewrite Z.div_small by assumption.
+          rewrite Z.add_0_l.
+          apply Z.b2z_bit0.
+        + assert (x0 < x) by lia.
+          rewrite <- Z.mod_pow2_bits_low with (m := x0) (n := x) by lia.
+          rewrite Z.mod_add by nia.
+          rewrite Z.mod_small; [ apply H0 | apply bitmap_bound ]; lia.
+    Qed.    
+
+    Lemma extract_bits_spec: forall offset e x : Z,
+      0 <= x -> 0 <= offset < s ->
+        (x < t -> Z.testbit (extract_bits offset e) x 
+          = Z.testbit ((e + 2 ^ (s * t) - 1) / 2) (s * x + offset))
+        /\ (t <= x -> Z.testbit (extract_bits offset e) x = false).
+    Proof.
+      intros.
+      unfold extract_bits, sbit'.
+      rewrite HD in *.
+      intuition.
+      - rewrite Z.mul_comm with (m := x).
+        apply bitmap_testbit with
+          (f := fun x : Z => Z.testbit ((e + 2 ^ (s * t) - 1) / 2) (x * s + offset));
+          lia.
+      - rewrite <- Z.div_pow2_bits with (n := x) (m := 0) by lia.
+        pose proof bitmap_bound t Ht (fun x : Z =>
+          Z.testbit ((e + 2 ^ (s * t) - 1) / 2) (x * s + offset)).
+        assert (0 < 2) by lia.
+        pose proof Z.pow_le_mono_r 2 t x H4 H0.
+        rewrite Z.div_small; [ auto | lia ].
+    Qed.
+
+    (* -------------------- *)
+    (* fold_right with addP and shiftP *)
+
+    Lemma fold_right_ZtoP: forall fZ fP,
+      (forall x y, fP (ZtoP x) (ZtoP y) = ZtoP (fZ x y)) ->
+      forall f l,
+        fold_right fP O (map (fun x : Z => ZtoP (f x)) l ) = 
+        ZtoP (fold_right fZ 0 (map f l)).
+    Proof.
+      intros. apply fold_right_map. exact H. unfold ZtoP. apply mulP_zero.
+    Qed.
+
+    Lemma fold_right_addP: forall f l,
+      fold_right addP O (map (fun x : Z => ZtoP (f x)) l) =
+      ZtoP (fold_right Z.add 0 (map f l)).
+    Proof.
+      apply fold_right_ZtoP. unfold ZtoP. intros. rewrite mulP_addP. trivial.
+    Qed.
+
+    Lemma fold_right_addP_shiftP: forall f l,
+      fold_right (fun x y : P => addP x (doubleP y)) O (map (fun x : Z => ZtoP (f x)) l) =
+      ZtoP (fold_right (fun x y : Z => Z.add x (Z.double y)) 0 (map f l)).
+    Proof.
+      apply fold_right_ZtoP. unfold ZtoP. intros.
+      rewrite mulP_addP. rewrite mulP_doubleP. trivial.
+    Qed.
+
+    (* -------------------- *)
+    (* table_comb *)
+
+    Lemma table_comb_spec: forall offset e : Z,
+      0 <= offset < s -> table_comb offset e = ZtoP (eval (comb offset) e).
+    Proof.
+      intros.
+      unfold table_comb.
+      unfold eval.
+      unfold table_entry.
+      f_equal.
+      unfold comb.
+      rewrite map_map.
+      rewrite fold_right_addP.
+      f_equal.
+      f_equal.
+      apply map_ext_in.
+      intros.
+      rewrite Z.mul_comm.
+      f_equal.
+      - f_equal. ring.
+      - unfold sbit.
+        f_equal.
+        f_equal.
+        f_equal.
+        pose proof Zseq_bound t Ht.
+        rewrite HD.
+        apply extract_bits_spec; apply H1 in H0; intuition; try lia.
+    Qed.
+  
+    (* -------------------- *)
+    (* table_multicomb *)
+
+    Theorem table_multicomb_spec: forall e : Z,
+      table_multicomb e = ZtoP (eval multicomb e).
+    Proof.
+      intros.
+      unfold table_multicomb.
+      unfold ZtoP.
+      unfold multicomb.
+      assert (rewrite_map: fold_right (fun x y : P => addP x (doubleP y)) O
+                (map (fun x : Z => table_comb x e) (Zseq 0 s)) =
+              fold_right (fun x y : P => addP x (doubleP y)) O
+                (map (fun x : Z => ZtoP (eval (comb x) e)) (Zseq 0 s))).
+      { f_equal.
+        apply map_ext_in.
+        intros.
+        pose proof Zseq_bound s Hs.
+        apply H0 in H.
+        apply table_comb_spec; assumption. }
+      rewrite rewrite_map.
+      rewrite fold_right_addP_shiftP.
+      unfold ZtoP.
+      f_equal.
+      eapply fold_right_map_cond with (TtoU := fun st : state => eval st e) (val := valid).
+      - intros.
+        rewrite eval_add.
+        rewrite eval_shift by (try assumption; lia).
+        nia.
+      - intros.
+        apply valid_add; try apply valid_shift; try assumption; lia.
+      - compute. trivial.
+      - unfold valid. auto.
+      - unfold comb.
+        rewrite Forall_forall.
+        intros.
+        unfold valid.
+        rewrite Forall_map.
+        rewrite Forall_forall.
+        intros.
+        apply Zseq_bound in H0; nia.
+    Qed.
+
+    Theorem table_multicomb_correct: forall e : Z,
+      0 <= e < 2 ^ D -> Zodd e -> table_multicomb e = ZtoP e.
+    Proof.
+      intros. rewrite table_multicomb_spec. f_equal.
+      apply multicomb_correct; assumption.
+    Qed.
+
+  End Table.
+
+End TableMult.
+
+Check table_multicomb_correct.
+
+Section AddMod.
+
+  Require Import Spec.ModularArithmetic.
+
+  Definition P := F ( 101 ).
+  Definition O : P := F.zero.
+  Definition B : P := F.of_Z _ 2.
+  Definition addP : P -> P -> P := F.add.
+  Definition doubleP : P -> P := F.mul (F.of_Z _ 2).
+  Definition mulP (n : Z) : P -> P := F.mul (F.of_Z _ n).
+
+  Definition s := 2.
+  Definition t := 3.
+  Definition D := s * t.
+
+  Compute mulP 4 B.
+
+  Print table_entry.
+  Compute table_entry P addP mulP O B s t 4.
+  (* -16 -4 +1 mod 101 = 82 *)
+
+  Print extract_bits.
+  Compute extract_bits s t D 1 1.
+
+  Print table_comb.
+  Compute table_comb P addP mulP O B s t D 1 1.
+
+  Print table_multicomb.
+  Compute table_multicomb P addP doubleP mulP O B s t D (-7).
+
+End AddMod.
+
+(* TODO test on multiplication over F_p, using FLT to do negative exponents *)
+
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
+Require Import Coq.Sorting.Mergesort Coq.Structures.Orders.
+
+
+Module Zpair.
+  Module Order <: TotalLeBool.
+    Definition t : Type := Z * Z.
+    Definition leb := fun '(x0, x1) '(y0, y1) => Z.leb x0 y0 && (implb (Z.eqb x0 y0) (Z.leb x1 y1)).
+    Local Coercion is_true : bool >-> Sortclass.
+    Theorem leb_total : forall a1 a2, leb a1 a2 \/ leb a2 a1.
+    Proof.
+    (* intros x y; destruct (Z.le_ge_cases x y); [ left | right ]; unfold is_true, leb; rewrite Z.leb_le; lia.  *)
+    Admitted.
+  End Order.
+
+  Module Sort := Mergesort.Sort Order.
+
+  Notation sort := Sort.sort.
+  Notation Sorted_sort := Sort.Sorted_sort.
+  Notation LocallySorted_sort := Sort.LocallySorted_sort.
+  Notation StronglySorted_sort := Sort.StronglySorted_sort.
+  Notation Permuted_sort := Sort.Permuted_sort.
+End Zpair.
+
+Section ConcreteVals.
+  Compute Zpair.sort [(0, 3); (4, 1); (2, 2); (2, 0)].
+  Check Zpair.Permuted_sort.
+
+  Theorem four_bit_multicomb: forall e : Z,
+    0 <= e < 2 ^ 4 -> Zodd e -> eval 4 (multicomb 2 2) e = e.
+  Proof.
+    intros.
+    eapply permute_comb_correct with (s := 2) (t := 2) (D := 4); try lia; try assumption.
+    apply Permutation_sym.
+    eapply perm_trans.
+    eapply Zpair.Permuted_sort.
+    compute.
+    reflexivity.
+  Qed. Print Assumptions four_bit_multicomb.
+
+  (* s = 3, t = 4, D = 12 *)
+  Compute eval 12 (multicomb 3 4) 1337.
+End ConcreteVals.
+
