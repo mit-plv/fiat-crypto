@@ -166,7 +166,7 @@ Inductive EquivalenceCheckingError :=
 | Invalid_higher_order_let {var} {s : API.type} (x : API.expr (var:=var) s)
 | Unhandled_identifier {t} (idc : ident t)
 | Unhandled_cast (_ _ : Z)
-| Unable_to_unify (_ _ : list (idx + list idx)) (first_new_idx_after_all_old_idxs : idx) (_ : symbolic_state)
+| Unable_to_unify (_ _ : list (idx + list idx)) (first_new_idx_after_all_old_idxs : option idx) (_ : symbolic_state)
 | Missing_ret
 | Code_after_ret (significant : Lines) (l : Lines)
 .
@@ -242,40 +242,6 @@ Definition show_expr_node_lite : Show Symbolic.expr
 Definition show_node_lite : Show (node idx)
   := fun '(op, e)
      => show_expr_node_lite (ExprApp (op, List.map ExprRef e)).
-
-Fixpoint explain_array_unification_error_single
-         (first_new_idx_after_all_old_idxs : idx)
-         (singular plural : string)
-         (left_descr right_descr : string)
-         (explain_idx_unification_error : idx -> idx -> list string)
-         (describe_idx : idx -> list string)
-         (modulo_commutativity : bool)
-         (asm_array PHOAS_array : list idx) (start_idx : nat)
-  : list string
-  := let recr := explain_array_unification_error_single first_new_idx_after_all_old_idxs singular plural left_descr right_descr explain_idx_unification_error describe_idx modulo_commutativity in
-     match asm_array, PHOAS_array with
-     | [], []
-       => ["Internal Error: Unifiable " ++ plural ++ (if modulo_commutativity then " modulo commutativity" else "")]
-     | [], PHOAS_array
-       => ((["The " ++ right_descr ++ " " ++ singular ++ " contains " ++ show (List.length PHOAS_array) ++ " more values than the " ++ left_descr ++ " " ++ singular ++ "."]%string)
-             ++ List.flat_map describe_idx PHOAS_array)%list
-     | asm_array, []
-       => ((["The " ++ left_descr ++ " " ++ singular ++ " contains " ++ show (List.length asm_array) ++ " more values than the " ++ right_descr ++ " " ++ singular ++ "."]%string)
-             ++ List.flat_map describe_idx asm_array)%list
-     | asm_value :: asm_array, PHOAS_value :: PHOAS_array
-       => if Decidable.dec (asm_value = PHOAS_value)
-          then recr asm_array PHOAS_array (S start_idx)
-          else
-            if modulo_commutativity && List.existsb (N.eqb asm_value) PHOAS_array
-            then
-              recr asm_array (PHOAS_value :: List.removen (N.eqb asm_value) PHOAS_array 1) (S start_idx)
-            else
-              ((["index " ++ show start_idx ++ ": " ++ show_expr_node_lite (ExprRef asm_value) ++ " ≠ " ++ show_expr_node_lite (ExprRef PHOAS_value)]%string)
-                 ++ explain_idx_unification_error asm_value PHOAS_value
-              (*++ if ((0 <? first_new_idx_after_all_old_idxs) (* splitting index is meaningful *) && (asm_value <? first_new_idx_after_all_old_idxs) && (PHOAS_value <? first_new_idx_after_all_old_idxs) && (existsb (fun i => first_new_idx_after_all_old_idxs <=? i) (asm_array ++ PHOAS_array)))%N%bool (* if there we are entering into territory where all values were computed both by asm and PHOAS, and leaving territory where some values were computed only by the one that ran second, we will print out extra information about the smallest value that ran second *)*)
-                 (* TODO: When we transition from an inequality that contains indices appearing only in assembly to an inequality containing indices that appear in both, recursively expand all indices appearing only in asm, before (after?) continuing on describing why the first arguments are not equal *)
-              )%list
-     end%string%list%bool.
 
 Definition recursive_deps_list_step
            (recursive_deps : NSet.t -> idx -> NSet.t)
@@ -393,6 +359,87 @@ Definition describe_idx_from_state
                                  end]
      end%string.
 
+Definition iteratively_describe_idxs_after
+           (first_new_idx_after_all_old_idxs : option idx)
+           (dag : dag)
+           (describe_idx : idx -> list string)
+           (show_initial : bool)
+           (idxs : list idx)
+  : list string
+  := let deps := recursive_deps_list (S (List.length dag)) dag NSet.empty idxs in
+     let deps := if show_initial then List.fold_right NSet.add deps idxs else deps in
+     let deps := List.rev (N.sort (NSet.elements deps)) in
+     let deps := match first_new_idx_after_all_old_idxs with
+                 | Some first_new_idx_after_all_old_idxs
+                   => filter (fun i => (first_new_idx_after_all_old_idxs <=? i)%N) deps
+                 | None => deps
+                 end in
+     List.flat_map describe_idx deps.
+
+Definition iteratively_describe_idx
+           (dag : dag)
+           (describe_idx : idx -> list string)
+           (show_initial : bool)
+           (i : idx)
+  : list string
+  := iteratively_describe_idxs_after None dag describe_idx show_initial [i].
+
+Definition describe_full_idx_from_state (st : symbolic_state) (i : idx)
+  : list string
+  := iteratively_describe_idx st (describe_idx_from_state true st) true i.
+
+Fixpoint explain_array_unification_error_single
+         (dag : dag)
+         (first_new_idx_after_all_old_idxs : option idx)
+         (singular plural : string)
+         (left_descr right_descr : string)
+         (explain_idx_unification_error : idx -> idx -> list string)
+         (describe_idx : idx -> list string)
+         (modulo_commutativity : bool)
+         (asm_array PHOAS_array : list idx) (start_idx : nat)
+  : list string
+  := let recr := explain_array_unification_error_single dag first_new_idx_after_all_old_idxs singular plural left_descr right_descr explain_idx_unification_error describe_idx modulo_commutativity in
+     match asm_array, PHOAS_array with
+     | [], []
+       => ["Internal Error: Unifiable " ++ plural ++ (if modulo_commutativity then " modulo commutativity" else "")]
+     | [], PHOAS_array
+       => ((["The " ++ right_descr ++ " " ++ singular ++ " contains " ++ show (List.length PHOAS_array) ++ " more values than the " ++ left_descr ++ " " ++ singular ++ "."]%string)
+             ++ List.flat_map describe_idx PHOAS_array)%list
+     | asm_array, []
+       => ((["The " ++ left_descr ++ " " ++ singular ++ " contains " ++ show (List.length asm_array) ++ " more values than the " ++ right_descr ++ " " ++ singular ++ "."]%string)
+             ++ List.flat_map describe_idx asm_array)%list
+     | asm_value :: asm_array, PHOAS_value :: PHOAS_array
+       => if Decidable.dec (asm_value = PHOAS_value)
+          then recr asm_array PHOAS_array (S start_idx)
+          else
+            if modulo_commutativity && List.existsb (N.eqb asm_value) PHOAS_array
+            then
+              recr asm_array (PHOAS_value :: List.removen (N.eqb asm_value) PHOAS_array 1) (S start_idx)
+            else
+              ((["index " ++ show start_idx ++ ": " ++ show_expr_node_lite (ExprRef asm_value) ++ " ≠ " ++ show_expr_node_lite (ExprRef PHOAS_value)]%string)
+                 (* if there we are entering into territory where all values were computed both by asm and PHOAS, and leaving territory where some values were computed only by the one that ran second, we will print out extra information about the smallest value that ran second *)
+                 (* When we transition from an inequality that contains indices appearing only in assembly to an inequality containing indices that appear in both, recursively expand all indices appearing only in asm, before (after?) continuing on describing why the first arguments are not equal *)
+                 ++ match first_new_idx_after_all_old_idxs with
+                    | None => []
+                    | Some first_new_idx_after_all_old_idxs
+                      => if ((asm_value <? first_new_idx_after_all_old_idxs) && (PHOAS_value <? first_new_idx_after_all_old_idxs))%N%bool
+                         then
+                           match filter (fun i => first_new_idx_after_all_old_idxs <=? i)%N (asm_array ++ PHOAS_array) with
+                           | [] => []
+                           | new_idxs
+                             => iteratively_describe_idxs_after
+                                  None (* if we don't want to display the ones from only PHOAS, we could pass (Some first_new_idx_after_all_old_idxs) instead *)
+                                  dag
+                                  describe_idx
+                                  true (* show initial *)
+                                  new_idxs
+                           end
+                         else []
+                    end
+                 ++ explain_idx_unification_error asm_value PHOAS_value
+              )%list
+     end%string%list%bool.
+
 Definition iteratively_explain_array_unification_error_modulo_commutativity
            (dag : dag)
            (describe_idx : idx -> list string)
@@ -431,23 +478,8 @@ Definition iteratively_explain_array_unification_error_modulo_commutativity
              describe_idx
              (indices_at_leaves_map (last_asm ++ last_PHOAS))).
 
-Definition iteratively_describe_idx
-           (dag : dag)
-           (describe_idx : idx -> list string)
-           (show_initial : bool)
-           (i : idx)
-  : list string
-  := let deps := recursive_deps_list (S (List.length dag)) dag NSet.empty [i] in
-     let deps := if show_initial then NSet.add i deps else deps in
-     let deps := List.rev (N.sort (NSet.elements deps)) in
-     List.flat_map describe_idx deps.
-
-Definition describe_full_idx_from_state (st : symbolic_state) (i : idx)
-  : list string
-  := iteratively_describe_idx st (describe_idx_from_state true st) true i.
-
 Definition explain_array_unification_error
-           (first_new_idx_after_all_old_idxs : idx)
+           (first_new_idx_after_all_old_idxs : option idx)
            (dag : dag)
            (singular plural : string)
            (left_descr right_descr : string)
@@ -482,7 +514,7 @@ Definition explain_array_unification_error
              dag describe_idx op show_initial_state asm_array PHOAS_array
        end%string%list%bool
      else
-       explain_array_unification_error_single first_new_idx_after_all_old_idxs singular plural left_descr right_descr explain_idx_unification_error describe_idx modulo_commutativity asm_array PHOAS_array 0.
+       explain_array_unification_error_single dag first_new_idx_after_all_old_idxs singular plural left_descr right_descr explain_idx_unification_error describe_idx modulo_commutativity asm_array PHOAS_array 0.
 
 Definition explain_mismatch_from_state
            (left_descr right_descr : string)
@@ -491,7 +523,7 @@ Definition explain_mismatch_from_state
         ++ (describe_idx_from_state false (*right_descr*) st PHOAS_idx))%list.
 
 Fixpoint explain_idx_unification_error
-         (first_new_idx_after_all_old_idxs : idx)
+         (first_new_idx_after_all_old_idxs : option idx)
          (left_descr right_descr : string)
          (st : symbolic_state) (fuel : nat) (asm_idx PHOAS_idx : idx) {struct fuel} : list string
   := let recr := match fuel with
@@ -525,7 +557,7 @@ Fixpoint explain_idx_unification_error
 Definition explain_unification_default_fuel (st : symbolic_state) : nat
   := (10 + (2 * List.length st.(dag_state)))%nat (* we since the dag is acyclic, we shouldn't have to do more recursive lookups than its length; we double and add 10 for safety *).
 
-Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list idx)) (first_new_idx_after_all_old_idxs : idx) (start_idx : nat) (st : symbolic_state)
+Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list idx)) (first_new_idx_after_all_old_idxs : option idx) (start_idx : nat) (st : symbolic_state)
   : list string
   := let fuel := explain_unification_default_fuel st in
      match asm_output, PHOAS_output with
@@ -615,7 +647,7 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                      (["Unable to establish that callee-saved non-volatile registers were preserved: " ++ String.concat ", " (List.map show regs); "In environment:"]%string)
                        ++ show_lines r
                        ++ ["Unable to establish that callee-saved non-volatile registers were preserved: " ++ String.concat ", " (List.map show regs); "Unable to unify: " ++ show reg_before ++ " == " ++ show reg_after]%string
-                       ++ (let first_new_idx_after_all_old_idxs := 0%N in  (* dummy, since we don't know the value here, and it's hard to pipe the info through, and it's not super-important *)
+                       ++ (let first_new_idx_after_all_old_idxs := None in  (* dummy, since we don't know the value here, and it's hard to pipe the info through, and it's not super-important *)
                            explain_array_unification_error
                              first_new_idx_after_all_old_idxs r "list" "lists" "original" "final" (explain_idx_unification_error first_new_idx_after_all_old_idxs "original" "final" r (explain_unification_default_fuel r)) (describe_idx_from_state false r) None
                              reg_before reg_after)
@@ -1342,7 +1374,7 @@ Section check_equivalence.
       PHOAS_output <- map_err_None (symex_PHOAS expr inputs d);
       let '(PHOAS_output, d) := PHOAS_output in
 
-      let first_new_idx_after_all_old_idxs : idx := N.of_nat (List.length d) in
+      let first_new_idx_after_all_old_idxs : option idx := Some (N.of_nat (List.length d)) in
 
       _ <-- (List.map
                (fun '((fname, asm) as label)
