@@ -118,6 +118,7 @@ _opam/
 
 # compilation outputs
 *.exe
+*.perf.data
 /*.o
 etc/tscfreq
 src/Specific/NISTP256/AMD64/feadd.c
