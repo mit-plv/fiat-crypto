@@ -148,3 +148,8 @@ Local Set Printing Depth 70.
 *)
 Local Set Printing Width 140.
 Redirect "Crypto.Bedrock.Group.ScalarMult.LadderStep.ladderstep_body" Print ladderstep_body.
+
+(*
+Require Import bedrock2.NotationsCustomEntry.
+Eval cbv -[add sub mul square scmula24 size_in_bytes] in snd ladderstep_body.
+ *)

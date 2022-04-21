@@ -419,6 +419,13 @@ Section FElems.
         Proof.
           compile.
         Qed.
+
+        (*
+        Local Unset Printing Coercions.
+        Import bedrock2.Syntax.Coercions.
+        Require Import bedrock2.NotationsCustomEntry.
+        Eval cbv -[square mul] in snd exp_6_body.
+        *)
       End Exp_by_squaring.
 
       Instance spec_of_exp97 : spec_of "exp_97" :=
