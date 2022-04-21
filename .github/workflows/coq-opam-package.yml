@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        coq-version: ['dev', '8.14.0', '8.13.2', '8.12.2', '8.11.2']
+        coq-version: ['dev', '8.15.1', '8.14.1', '8.13.2', '8.12.2', '8.11.2']
         ocaml-compiler: ['4.11.1']
         os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
         coq-extra-flags: ['-async-proofs-j 1', '']
@@ -90,6 +90,12 @@ jobs:
         echo ::group::wmic cpu list /format:list
         wmic cpu list /format:list
         echo ::endgroup::
+      shell: cmd
+      if: ${{ runner.os == 'Windows' }}
+
+    - name: Work around https://github.com/actions/checkout/issues/766 / https://github.com/ocaml/setup-ocaml/issues/479 / https://github.com/actions/checkout/issues/767 / https://github.com/actions/checkout/issues/760
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'git config --global --add safe.directory "*"'
       shell: cmd
       if: ${{ runner.os == 'Windows' }}
 

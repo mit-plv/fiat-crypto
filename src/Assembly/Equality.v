@@ -13,6 +13,21 @@ Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Assembly.Syntax.
 
+Local Ltac t_dec :=
+  lazymatch goal with
+  | [ |- ?beq ?x ?y = true -> ?x = ?y ]
+    => is_var x; is_var y; destruct x, y; cbv [beq]
+  | [ |- ?x = ?y -> ?beq ?x ?y = true ]
+    => is_var x; is_var y; destruct x; cbv [beq]; intros; subst
+  end;
+  simpl;
+  rewrite ?Bool.andb_true_iff; intros; destruct_head'_and;
+  repeat apply conj; try reflexivity;
+  reflect_hyps; subst;
+  try solve [ reflexivity
+            | exfalso; assumption
+            | apply unreflect_bool; reflexivity ].
+
 Delimit Scope REG_scope with REG.
 Bind Scope REG_scope with REG.
 
@@ -44,32 +59,57 @@ Proof. rewrite <- CONST_beq_eq; destruct (x =? y)%CONST; intuition congruence. Q
 Global Instance CONST_beq_compat : Proper (eq ==> eq ==> eq) CONST_beq | 10.
 Proof. repeat intro; subst; reflexivity. Qed.
 
+Delimit Scope JUMP_LABEL_scope with JUMP_LABEL.
+Bind Scope JUMP_LABEL_scope with JUMP_LABEL.
+
+Definition JUMP_LABEL_beq (x y : JUMP_LABEL) : bool
+  := ((Bool.eqb x.(jump_near) y.(jump_near))
+      && (x.(label_name) =? y.(label_name))%string).
+Global Arguments JUMP_LABEL_beq !_ !_ / .
+
+Infix "=?" := JUMP_LABEL_beq : JUMP_LABEL_scope.
+Lemma JUMP_LABEL_dec_bl (x y : JUMP_LABEL) : JUMP_LABEL_beq x y = true -> x = y.
+Proof. t_dec. Qed.
+Lemma JUMP_LABEL_dec_lb (x y : JUMP_LABEL) : x = y -> JUMP_LABEL_beq x y = true.
+Proof. t_dec. Qed.
+Definition JUMP_LABEL_eq_dec (x y : JUMP_LABEL) : {x = y} + {x <> y}
+  := (if (x =? y)%JUMP_LABEL as b return (x =? y)%JUMP_LABEL = b -> _
+      then fun pf => left (@JUMP_LABEL_dec_bl _ _ pf)
+      else fun pf => right (fun pf' => diff_false_true (eq_trans (eq_sym pf) (@JUMP_LABEL_dec_lb _ _ pf'))))
+       eq_refl.
+
+Global Instance JUMP_LABEL_beq_spec : reflect_rel (@eq JUMP_LABEL) JUMP_LABEL_beq | 10
+  := reflect_of_beq JUMP_LABEL_dec_bl JUMP_LABEL_dec_lb.
+Definition JUMP_LABEL_beq_eq x y : (x =? y)%JUMP_LABEL = true <-> x = y := conj (@JUMP_LABEL_dec_bl _ _) (@JUMP_LABEL_dec_lb _ _).
+Lemma JUMP_LABEL_beq_neq x y : (x =? y)%JUMP_LABEL = false <-> x <> y.
+Proof. rewrite <- JUMP_LABEL_beq_eq; destruct (x =? y)%JUMP_LABEL; intuition congruence. Qed.
+Global Instance JUMP_LABEL_beq_compat : Proper (eq ==> eq ==> eq) JUMP_LABEL_beq | 10.
+Proof. repeat intro; subst; reflexivity. Qed.
+Delimit Scope AccessSize_scope with AccessSize.
+Bind Scope AccessSize_scope with AccessSize.
+
+Infix "=?" := AccessSize_beq : AccessSize_scope.
+
+Global Instance AccessSize_beq_spec : reflect_rel (@eq AccessSize) AccessSize_beq | 10
+  := reflect_of_beq internal_AccessSize_dec_bl internal_AccessSize_dec_lb.
+Definition AccessSize_beq_eq x y : (x =? y)%AccessSize = true <-> x = y := conj (@internal_AccessSize_dec_bl _ _) (@internal_AccessSize_dec_lb _ _).
+Lemma AccessSize_beq_neq x y : (x =? y)%AccessSize = false <-> x <> y.
+Proof. rewrite <- AccessSize_beq_eq; destruct (x =? y)%AccessSize; intuition congruence. Qed.
+Global Instance AccessSize_beq_compat : Proper (eq ==> eq ==> eq) AccessSize_beq | 10.
+Proof. repeat intro; subst; reflexivity. Qed.
+
 Delimit Scope MEM_scope with MEM.
 Bind Scope MEM_scope with MEM.
 
 Definition MEM_beq (x y : MEM) : bool
-  := ((Bool.eqb x.(mem_is_byte) y.(mem_is_byte))
+  := ((option_beq AccessSize_beq x.(mem_bits_access_size) y.(mem_bits_access_size))
+      && option_beq String.eqb x.(mem_base_label) y.(mem_base_label)
       && (option_beq REG_beq x.(mem_base_reg) y.(mem_base_reg))
       && (option_beq (prod_beq _ _ Z.eqb REG_beq) x.(mem_scale_reg) y.(mem_scale_reg))
       && (option_beq Z.eqb x.(mem_offset) y.(mem_offset)))%bool.
 Global Arguments MEM_beq !_ !_ / .
 
 Infix "=?" := MEM_beq : MEM_scope.
-
-Local Ltac t_dec :=
-  lazymatch goal with
-  | [ |- ?beq ?x ?y = true -> ?x = ?y ]
-    => is_var x; is_var y; destruct x, y; cbv [beq]
-  | [ |- ?x = ?y -> ?beq ?x ?y = true ]
-    => is_var x; is_var y; destruct x; cbv [beq]; intros; subst
-  end;
-  simpl;
-  rewrite ?Bool.andb_true_iff; intros; destruct_head'_and;
-  repeat apply conj; try reflexivity;
-  reflect_hyps; subst;
-  try solve [ reflexivity
-            | exfalso; assumption
-            | apply unreflect_bool; reflexivity ].
 
 Lemma MEM_dec_bl (x y : MEM) : MEM_beq x y = true -> x = y.
 Proof. t_dec. Qed.
@@ -115,6 +155,19 @@ Proof. rewrite <- OpCode_beq_eq; destruct (x =? y)%OpCode; intuition congruence.
 Global Instance OpCode_beq_compat : Proper (eq ==> eq ==> eq) OpCode_beq | 10.
 Proof. repeat intro; subst; reflexivity. Qed.
 
+Delimit Scope OpPrefix_scope with OpPrefix.
+Bind Scope OpPrefix_scope with OpPrefix.
+
+Infix "=?" := OpPrefix_beq : OpPrefix_scope.
+
+Global Instance OpPrefix_beq_spec : reflect_rel (@eq OpPrefix) OpPrefix_beq | 10
+  := reflect_of_beq internal_OpPrefix_dec_bl internal_OpPrefix_dec_lb.
+Definition OpPrefix_beq_eq x y : (x =? y)%OpPrefix = true <-> x = y := conj (@internal_OpPrefix_dec_bl _ _) (@internal_OpPrefix_dec_lb _ _).
+Lemma OpPrefix_beq_neq x y : (x =? y)%OpPrefix = false <-> x <> y.
+Proof. rewrite <- OpPrefix_beq_eq; destruct (x =? y)%OpPrefix; intuition congruence. Qed.
+Global Instance OpPrefix_beq_compat : Proper (eq ==> eq ==> eq) OpPrefix_beq | 10.
+Proof. repeat intro; subst; reflexivity. Qed.
+
 Delimit Scope ARG_scope with ARG.
 Bind Scope ARG_scope with ARG.
 
@@ -123,9 +176,11 @@ Definition ARG_beq (x y : ARG) : bool
      | reg x, reg y => REG_beq x y
      | mem x, mem y => MEM_beq x y
      | const x, const y => CONST_beq x y
+     | label x, label y => JUMP_LABEL_beq x y
      | reg _, _
      | mem _, _
      | const _, _
+     | label _, _
        => false
      end.
 Global Arguments ARG_beq !_ !_ / .
@@ -154,7 +209,8 @@ Delimit Scope NormalInstruction_scope with NormalInstruction.
 Bind Scope NormalInstruction_scope with NormalInstruction.
 
 Definition NormalInstruction_beq (x y : NormalInstruction) : bool
-  := ((x.(op) =? y.(op))%OpCode
+  := (option_beq OpPrefix_beq x.(prefix) y.(prefix)
+      && (x.(op) =? y.(op))%OpCode
       && list_beq _ ARG_beq x.(args) y.(args))%bool.
 Global Arguments NormalInstruction_beq !_ !_ / .
 
@@ -187,12 +243,16 @@ Definition RawLine_beq (x y : RawLine) : bool
      | GLOBAL x, GLOBAL y => String.eqb x y
      | LABEL x, LABEL y => String.eqb x y
      | EMPTY, EMPTY => true
+     | DEFAULT_REL, DEFAULT_REL => true
      | INSTR x, INSTR y => NormalInstruction_beq x y
+     | ALIGN x, ALIGN y => String.eqb x y
      | SECTION _, _
      | GLOBAL _, _
      | LABEL _, _
      | EMPTY, _
      | INSTR _, _
+     | ALIGN _, _
+     | DEFAULT_REL, _
        => false
      end.
 Global Arguments RawLine_beq !_ !_ / .

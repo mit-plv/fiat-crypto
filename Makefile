@@ -21,12 +21,16 @@ SHOW := $(if $(VERBOSE),@true "",@echo "")
 HIDE := $(if $(VERBOSE),,@)
 INSTALLDEFAULTROOT := Crypto
 
+PERF_RECORD?=perf record -g -o "$@.perf.data" --
+
 RED:=\033[0;31m
 # No Color
 NC:=\033[0m
 GREEN:=\033[0;32m
 BOLD:=$(shell tput bold)
 NORMAL:=$(shell tput sgr0)
+
+WITH_PERF?=
 
 .PHONY: coq clean update-_CoqProject cleanall install \
 	coq-without-bedrock2 install-without-bedrock2 \
@@ -77,6 +81,23 @@ endif
 
 # This include is meant to be safe
 include Makefile.local.common
+
+# in case we didn't include Makefile.coq
+OCAMLFIND?=ocamlfind
+ifneq ($(WITH_PERF),1)
+CAMLOPT_PERF ?= "$(OCAMLFIND)" ocamlopt
+CAMLOPT_PERF_SHOW:=OCAMLOPT
+else
+CAMLOPT_PERF ?= "$(OCAMLFIND)" ocamloptp
+CAMLOPT_PERF_SHOW:=OCAMLOPTP
+endif
+
+PERF_TESTS?=
+ifneq ($(PERF_TESTS),1)
+PERF_RECORDER?=
+else
+PERF_RECORDER?=$(PERF_RECORD)
+endif
 
 .DEFAULT_GOAL := all
 
@@ -522,7 +543,7 @@ clean-rupicola:
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) clean
 
 install-rupicola:
-	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) install
+	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) install_lib
 endif
 
 Makefile.coq: Makefile _CoqProject
@@ -566,8 +587,8 @@ $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/haskell.sed
 # pass -w -20 to disable the unused argument warning
 # unix package needed for Unix.gettimeofday for the perf_* binaries
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml
-	$(SHOW)'OCAMLOPT $< -o $@'
-	$(HIDE)$(TIMER) ocamlfind ocamlopt -package unix -linkpkg -w -20 -g -o $@ $<
+	$(SHOW)'$(CAMLOPT_PERF_SHOW) $< -o $@'
+	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -linkpkg -w -20 -g -o $@ $<
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
 	$(SHOW)'GHC $< -o $@'
@@ -645,7 +666,7 @@ $(ALL_GO_FILES) : $(GO_DIR)%.go : $$($$(GO_$$(call GO_FILE_TO_KEY,$$*)_BINARY_NA
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)mkdir -p $(dir $@)
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $($(GO_$(call GO_FILE_TO_KEY,$*)_BINARY_NAME)) --lang Go $(GO_EXTRA_ARGS_$(GO_$(call GO_FILE_TO_KEY,$*)_BITWIDTH)) --package-name $(GO_$(call GO_FILE_TO_KEY,$*)_PACKAGE) "" $(GO_$(call GO_FILE_TO_KEY,$*)_ARGS) $(GO_$(call GO_FILE_TO_KEY,$*)_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(PERF_RECORDER) $($(GO_$(call GO_FILE_TO_KEY,$*)_BINARY_NAME)) --lang Go $(GO_EXTRA_ARGS_$(GO_$(call GO_FILE_TO_KEY,$*)_BITWIDTH)) --package-name $(GO_$(call GO_FILE_TO_KEY,$*)_PACKAGE) "" $(GO_$(call GO_FILE_TO_KEY,$*)_ARGS) $(GO_$(call GO_FILE_TO_KEY,$*)_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_GO_FILES))
@@ -669,7 +690,7 @@ only-test-go-files: $(addprefix only-test-,$(ALL_GO_FILES))
 $(ALL_JSON_FILES) : $(JSON_DIR)%.json : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok1 $@.ok2
-	$(HIDE)(($(TIMER) $($($*_BINARY_NAME)) --lang JSON $(JSON_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok1) | jq -s . && touch $@.ok2) > $@.tmp
+	$(HIDE)(($(TIMER) $(PERF_RECORDER) $($($*_BINARY_NAME)) --lang JSON $(JSON_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok1) | jq -s . && touch $@.ok2) > $@.tmp
 	$(HIDE)(rm $@.ok1 $@.ok2 && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_JSON_FILES))
@@ -687,7 +708,7 @@ only-test-json-files: $(addprefix only-test-,$(ALL_JSON_FILES))
 $(ALL_JAVA_FILES) : $(JAVA_DIR)%.java : $$($$(JAVA_$$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $($(JAVA_$*_BINARY_NAME)) --lang Java $(JAVA_EXTRA_ARGS_$(JAVA_$*_BITWIDTH)) $(JAVA_$*_DESCRIPTION) $(JAVA_$*_ARGS) $(JAVA_$*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(PERF_RECORDER) $($(JAVA_$*_BINARY_NAME)) --lang Java $(JAVA_EXTRA_ARGS_$(JAVA_$*_BITWIDTH)) $(JAVA_$*_DESCRIPTION) $(JAVA_$*_ARGS) $(JAVA_$*_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_JAVA_FILES))
@@ -713,7 +734,6 @@ AMD64_ASM_FILES := $(sort $(shell git ls-files "fiat-amd64/*.asm"))
 else
 AMD64_ASM_FILES := $(sort $(wildcard fiat-amd64/*.asm))
 endif
-AMD64_ASM_STATUS_FILES := $(addsuffix .status,$(AMD64_ASM_FILES))
 
 Makefile.test-amd64-files.mk: fiat-amd64/gentest.py $(AMD64_ASM_FILES)
 	$(SHOW)'GENTEST --makefile fiat-amd64/*.asm > $@'
@@ -721,14 +741,25 @@ Makefile.test-amd64-files.mk: fiat-amd64/gentest.py $(AMD64_ASM_FILES)
 
 include Makefile.test-amd64-files.mk
 
-.PHONY: test-amd64-files-print-report test-amd64-files-status
+.PHONY: test-amd64-files-print-report only-test-amd64-files-print-report
 
 test-amd64-files-print-report::
 	@ export passed=$$(cat $(AMD64_ASM_STATUS_FILES) 2>/dev/null | grep -c '^0$$'); \
 	  export total=$(words $(AMD64_ASM_STATUS_FILES)); \
 	  export failed=$$(expr $${total} - $${passed}); \
 	  if [ $${passed} -eq $${total} ]; then \
-	      echo "$(GREEN)$(BOLD)ALL $${total} AMD64 ASM TESTS PASSED"; \
+	      echo "$(GREEN)$(BOLD)ALL $${total} AMD64 ASM TESTS PASSED$(NC)"; \
+	  else \
+	      echo "$(GREEN)$(BOLD)PASSED:$(NORMAL) $(GREEN)$${passed}$(NC) / $${total}"; \
+	      echo "$(RED)$(BOLD)FAILED:$(NORMAL) $(RED)$${failed}$(NC) / $${total}"; \
+	  fi
+
+only-test-amd64-files-print-report::
+	@ export passed=$$(cat $(AMD64_ASM_ONLY_STATUS_FILES) 2>/dev/null | grep -c '^0$$'); \
+	  export total=$(words $(AMD64_ASM_ONLY_STATUS_FILES)); \
+	  export failed=$$(expr $${total} - $${passed}); \
+	  if [ $${passed} -eq $${total} ]; then \
+	      echo "$(GREEN)$(BOLD)ALL $${total} AMD64 ASM TESTS PASSED$(NC)"; \
 	  else \
 	      echo "$(GREEN)$(BOLD)PASSED:$(NORMAL) $(GREEN)$${passed}$(NC) / $${total}"; \
 	      echo "$(RED)$(BOLD)FAILED:$(NORMAL) $(RED)$${failed}$(NC) / $${total}"; \
@@ -737,11 +768,16 @@ test-amd64-files-print-report::
 test-amd64-files-status: $(AMD64_ASM_STATUS_FILES)
 	$(HIDE)! grep -q -v '^0$$' $^
 
-.PHONY: test-amd64-files-status
+only-test-amd64-files-status: $(AMD64_ASM_ONLY_STATUS_FILES)
+	$(HIDE)! grep -q -v '^0$$' $^
+
+.PHONY: test-amd64-files-status only-test-amd64-files-status
 
 test-amd64-files: $(UNSATURATED_SOLINAS) $(WORD_BY_WORD_MONTGOMERY)
 
-test-amd64-files only-test-amd64-files: test-amd64-files-print-report test-amd64-files-status
+test-amd64-files: test-amd64-files-print-report test-amd64-files-status
+
+only-test-amd64-files: only-test-amd64-files-print-report only-test-amd64-files-status
 
 # Perf testing
 PERF_MAKEFILE = src/Rewriter/PerfTesting/Specific/generated/primes.mk

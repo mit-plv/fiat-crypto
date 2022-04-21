@@ -3,6 +3,7 @@ Require Export Crypto.Util.FixCoqMistakes.
 Require Export Crypto.Util.Tactics.AllInstances.
 Require Export Crypto.Util.Tactics.AllSuccesses.
 Require Export Crypto.Util.Tactics.AppendUnderscores.
+Require Export Crypto.Util.Tactics.Beta1.
 Require Export Crypto.Util.Tactics.BreakMatch.
 Require Export Crypto.Util.Tactics.CPSId.
 Require Export Crypto.Util.Tactics.CacheTerm.
@@ -16,6 +17,7 @@ Require Export Crypto.Util.Tactics.Contains.
 Require Export Crypto.Util.Tactics.ConvoyDestruct.
 Require Export Crypto.Util.Tactics.CountBinders.
 Require Export Crypto.Util.Tactics.DebugPrint.
+Require Export Crypto.Util.Tactics.Delta1.
 Require Export Crypto.Util.Tactics.DestructHead.
 Require Export Crypto.Util.Tactics.DestructHyps.
 Require Export Crypto.Util.Tactics.DestructTrivial.
@@ -26,9 +28,11 @@ Require Export Crypto.Util.Tactics.EvarExists.
 Require Export Crypto.Util.Tactics.EvarNormalize.
 Require Export Crypto.Util.Tactics.FindHyp.
 Require Export Crypto.Util.Tactics.Forward.
+Require Export Crypto.Util.Tactics.GeneralizeOverHoles.
 Require Export Crypto.Util.Tactics.GetGoal.
 Require Export Crypto.Util.Tactics.HasBody.
 Require Export Crypto.Util.Tactics.Head.
+Require Export Crypto.Util.Tactics.HeadConstrEq.
 Require Export Crypto.Util.Tactics.HeadUnderBinders.
 Require Export Crypto.Util.Tactics.MoveLetIn.
 Require Export Crypto.Util.Tactics.NormalizeCommutativeIdentifier.
@@ -48,6 +52,7 @@ Require Export Crypto.Util.Tactics.SimplifyProjections.
 Require Export Crypto.Util.Tactics.SimplifyRepeatedIfs.
 Require Export Crypto.Util.Tactics.SpecializeAllWays.
 Require Export Crypto.Util.Tactics.SpecializeBy.
+Require Export Crypto.Util.Tactics.SpecializeUnderBindersBy.
 Require Export Crypto.Util.Tactics.SplitInContext.
 Require Export Crypto.Util.Tactics.SubstEvars.
 Require Export Crypto.Util.Tactics.SubstLet.
@@ -58,3 +63,4 @@ Require Export Crypto.Util.Tactics.UnifyAbstractReflexivity.
 Require Export Crypto.Util.Tactics.UniquePose.
 Require Export Crypto.Util.Tactics.VM.
 Require Export Crypto.Util.Tactics.WarnIfGoalsRemain.
+Require Export Crypto.Util.Tactics.Zeta1.

@@ -21,4 +21,17 @@ Module List.
     pose proof (filter_length_le f ls).
     lia.
   Qed.
+
+  Lemma Forall2_filter_same A B P f g lsA lsB
+    : @Forall2 A B (fun a b => match f a, g b with
+                               | true, true => P a b
+                               | false, false => True
+                               | true, false | false, true => False
+                               end)
+              lsA lsB
+      -> Forall2 P (filter f lsA) (filter g lsB).
+  Proof.
+    induction 1; cbn; [ constructor | ].
+    destruct f, g; try constructor; auto; try (exfalso; assumption).
+  Qed.
 End List.

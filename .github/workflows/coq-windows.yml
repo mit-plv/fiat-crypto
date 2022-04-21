@@ -20,10 +20,10 @@ jobs:
       NJOBS: "2"
       COQ_VERSION: "8.12.0" # https://packages.debian.org/stable/coq
       SKIP_BEDROCK2: "1"
+      COQEXTRAFLAGS: "-async-proofs-j 1"
+      COQCHKEXTRAFLAGS: ""
       OPAMYES: "true"
       OPAMCONFIRMLEVEL: "unsafe-yes"
-      COQEXTRAFLAGS: "-async-proofs-j 1"
-      SKIP_BEDROCK2: "1"
 
     steps:
     - uses: actions/checkout@v3
@@ -42,6 +42,11 @@ jobs:
         %CYGWIN_ROOT%\setup-x86_64.exe -qnNdO -P time
       shell: cmd
 
+    - name: Work around https://github.com/actions/checkout/issues/766
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'git config --global --add safe.directory "*"'
+      shell: cmd
+
     - name: echo build params
       run: |
         ECHO ::group::wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
@@ -51,10 +56,10 @@ jobs:
         wmic cpu list /format:list
         ECHO ::endgroup::
         ECHO ::group::git config -l
-        %CYGWIN_ROOT%\bash.exe -l -c 'git config -l'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'git config -l'
         ECHO ::endgroup::
         ECHO ::group::git config --global -l
-        %CYGWIN_ROOT%\bash.exe -l -c 'git config --global -l'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'git config --global -l'
         ECHO ::endgroup::
         ECHO ::group::opam list
         opam list
@@ -82,13 +87,21 @@ jobs:
       run: |
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} deps'
       shell: cmd
+    - name: standalone-ocaml
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} standalone-ocaml'
+      shell: cmd
+    - name: all-except-generated
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 coq'
+      shell: cmd
     - name: all
       run: |
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} all'
       shell: cmd
     - name: only-test-amd64-files
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} only-test-amd64-files'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} only-test-amd64-files SLOWEST_FIRST=1'
       shell: cmd
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
@@ -110,6 +123,6 @@ jobs:
 #      if: always ()
     - name: validate
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- make TIMED=1 validate COQCHKFLAGS="-o"'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- make TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"'
       shell: cmd
       if: github.event_name != 'pull_request'
