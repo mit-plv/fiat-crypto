@@ -459,10 +459,15 @@ Global Instance show_ARG : Show ARG := show_lvl_ARG.
 
 Global Instance show_NormalInstruction : Show NormalInstruction
   := fun i
-     => show i.(op) ++ match i.(args) with
-                             | [] => ""
-                             | _ => " " ++ String.concat ", " (List.map show i.(args))
-                       end.
+     => match i.(prefix) with
+        | None => ""
+        | Some prefix => show prefix ++ " "
+        end
+          ++ (show i.(op))
+          ++ match i.(args) with
+             | [] => ""
+             | _ => " " ++ String.concat ", " (List.map show i.(args))
+             end.
 
 Global Instance show_RawLine : Show RawLine
   := fun l
