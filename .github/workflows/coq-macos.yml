@@ -102,8 +102,8 @@ jobs:
 #        name: build-outputs
 #        path: .
 #      if: always ()
-    - name: validate
-      run: |
-        eval $(opam env)
-        make TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"
-      if: github.event_name != 'pull_request'
+#    - name: validate
+#      run: |
+#        eval $(opam env)
+#        make TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"
+#      if: github.event_name != 'pull_request'
