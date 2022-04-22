@@ -84,11 +84,13 @@ include Makefile.local.common
 
 # in case we didn't include Makefile.coq
 OCAMLFIND?=ocamlfind
+OCAMLOPT?="$(OCAMLFIND)" ocamlopt
+OCAMLOPTP?="$(OCAMLFIND)" ocamloptp
 ifneq ($(WITH_PERF),1)
-CAMLOPT_PERF ?= "$(OCAMLFIND)" ocamlopt
+CAMLOPT_PERF ?= $(OCAMLOPT)
 CAMLOPT_PERF_SHOW:=OCAMLOPT
 else
-CAMLOPT_PERF ?= "$(OCAMLFIND)" ocamloptp
+CAMLOPT_PERF ?= $(OCAMLOPTP)
 CAMLOPT_PERF_SHOW:=OCAMLOPTP
 endif
 
