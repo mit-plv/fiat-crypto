@@ -45,6 +45,7 @@ Definition parse_bin_prefix : ParserAction _ := "0b".
 Definition parse_oct_prefix : ParserAction _ := "0o".
 Definition parse_dec_prefix : ParserAction _ := "".
 Definition parse_hex_prefix : ParserAction _ := "0x".
+Definition parse_hex_postfix : ParserAction _ := "h".
 
 (** Is [E]/[e] a valid digit in the given base? *)
 Definition base_accepts_E (base : N) : bool
@@ -87,57 +88,91 @@ Local Coercion inject_Z : Z >-> Q.
 Definition parse_N_digits (base : N) : ParserAction N
   := (parse_map (digits_to_N base) ((parse_digits_gen_step base)+)).
 
-Definition parse_num_gen (allow_neg : bool) {P} (base : N) (parse_prefix : ParserAction P) : ParserAction Q
-  := let parse_E_exponent
-         := (("e" || "E") ;;->{ fun _ v => Qpower 10 v }
-                          (((strip_whitespace_after "-")?)
-                             ;;->{ fun n (v:N) => if n:option _ then (-v)%Z else v }
-                             (parse_N_digits base)))%parse in
-     let parse_P_exponent
-         := (("p" || "P") ;;->{ fun _ v => Qpower 2 v }
-                          (((strip_whitespace_after "-")?)
-                             ;;->{ fun n (v:N) => if n:option _ then (-v)%Z else v }
-                             (parse_N_digits base)))%parse in
-     (if allow_neg then ((strip_whitespace_after "-")?) else parse_map (fun _ => None) "")
-       ;;->{ fun n v => if n:option _ then (-v)%Q else v }
-       parse_prefix ;;->{ fun _ v => v }
-       ((((parse_digits_gen_step base)* )
-           ;;->{ fun ds decimals
-                 => (digits_to_N base ds
-                     + digits_to_N base decimals / base^List.length decimals)%Q }
-           "." ;;->{ fun _ v => v }
-           (parse_digits_gen_step base)* )
-        || parse_map (digits_to_N base : _ -> Q) ((parse_digits_gen_step base)+))
-       ;;->{ fun n e => match e with Some e => n * e | None => n end%Q }
-       ((if base_accepts_E base
-         then parse_P_exponent (* if [e] is a valid character in the base, then we don't permit [e] as an exponent *)
-         else (parse_E_exponent || parse_P_exponent))?).
+Definition parse_num_gen {P P'} (allow_neg : bool) (base : N) (parse_prefix : option (ParserAction P)) (parse_postfix : option (ParserAction P'))  : ParserAction Q
+  := (let parse_E_exponent
+        := (("e" || "E") ;;->{ fun _ v => Qpower 10 v }
+                         (((strip_whitespace_after "-")?)
+                            ;;->{ fun n (v:N) => if n:option _ then (-v)%Z else v }
+                            (parse_N_digits base)))%parse in
+      let parse_P_exponent
+        := (("p" || "P") ;;->{ fun _ v => Qpower 2 v }
+                         (((strip_whitespace_after "-")?)
+                            ;;->{ fun n (v:N) => if n:option _ then (-v)%Z else v }
+                            (parse_N_digits base)))%parse in
+      (if allow_neg then ((strip_whitespace_after "-")?) else parse_map (fun _ => None) "")
+        ;;->{ fun n v => if n:option _ then (-v)%Q else v }
+        let parse_main
+          := let parse_main_digits := (parse_digits_gen_step base)* in
+             (((match parse_prefix with
+                | Some _ => parse_main_digits
+                | None => parse_digits_gen_step (N.min 10 base) ;;->{cons} parse_main_digits
+                end)
+                 ;;->{ fun ds decimals
+                       => (digits_to_N base ds
+                           + digits_to_N base decimals / base^List.length decimals)%Q }
+                 "." ;;R
+                         (parse_digits_gen_step base)* )
+              || parse_map (digits_to_N base : _ -> Q) ((parse_digits_gen_step base)+))
+               ;;->{ fun n e => match e with Some e => n * e | None => n end%Q }
+               ((if base_accepts_E base
+                 then parse_P_exponent (* if [e] is a valid character in the base, then we don't permit [e] as an exponent *)
+                 else (parse_E_exponent || parse_P_exponent))?) in
+        match parse_prefix, parse_postfix with
+        | None, None => parse_main
+        | Some parse_prefix, None => parse_prefix ;;R parse_main
+        | Some parse_prefix, Some parse_postfix => parse_prefix ;;R parse_main ;;L parse_postfix
+        | None, Some parse_postfix => parse_main ;;L parse_postfix
+        end)%parse.
+
+Definition parse_num_gen_prefix {P} (allow_neg : bool) (base : N) (parse_prefix : ParserAction P) : ParserAction Q
+  := @parse_num_gen P unit allow_neg base (Some parse_prefix) None.
+Definition parse_num_gen_postfix {P} (allow_neg : bool) (base : N) (parse_postfix : ParserAction P) : ParserAction Q
+  := @parse_num_gen unit P allow_neg base None (Some parse_postfix).
 
 Definition parse_num (allow_neg : bool) : ParserAction Q
-  := parse_num_gen allow_neg 2 parse_bin_prefix
-     || parse_num_gen allow_neg 8 parse_oct_prefix
-     || parse_num_gen allow_neg 10 parse_dec_prefix
-     || parse_num_gen allow_neg 16 parse_hex_prefix.
+  := parse_num_gen_prefix allow_neg 2 parse_bin_prefix
+     || parse_num_gen_prefix allow_neg 8 parse_oct_prefix
+     || parse_num_gen_prefix allow_neg 10 parse_dec_prefix
+     || parse_num_gen_prefix allow_neg 16 parse_hex_prefix
+     || parse_num_gen_postfix allow_neg 16 parse_hex_postfix.
 
-Definition parse_int_gen (allow_neg : bool) {P} (base : N) (parse_prefix : ParserAction P) : ParserAction Z
-  := let parse_E_exponent
-         := (("e" || "E") ;;->{ fun _ (v:N) => Z.pow 10 v } (parse_N_digits base))%parse in
-     let parse_P_exponent
-         := (("p" || "P") ;;->{ fun _ (v:N) => Z.pow 2 v } (parse_N_digits base))%parse in
-     (if allow_neg then ((strip_whitespace_after "-")?) else parse_map (fun _ => None) "")
-       ;;->{ fun n v => if n:option _ then (-v)%Z else v }
-       parse_prefix ;;->{ fun _ v => v }
-       (parse_N_digits base)
-       ;;->{ fun (n:N) e => match e with Some e => n * e | None => n end%Z }
-       ((if base_accepts_E base
-         then parse_P_exponent (* if [e] is a valid character in the base, then we don't permit [e] as an exponent *)
-         else (parse_E_exponent || parse_P_exponent))?).
+Definition parse_int_gen {P P'} (allow_neg : bool) (base : N) (parse_prefix : option (ParserAction P)) (parse_postfix : option (ParserAction P')) : ParserAction Z
+  := (let parse_E_exponent
+        := (("e" || "E") ;;->{ fun _ (v:N) => Z.pow 10 v } (parse_N_digits base))%parse in
+      let parse_P_exponent
+        := (("p" || "P") ;;->{ fun _ (v:N) => Z.pow 2 v } (parse_N_digits base))%parse in
+      (if allow_neg then ((strip_whitespace_after "-")?) else parse_map (fun _ => None) "")
+        ;;->{ fun n v => if n:option _ then (-v)%Z else v }
+        let parse_main
+          := let parse_main_digits := (parse_digits_gen_step base)* in
+             (parse_map
+                (digits_to_N base)
+                match parse_prefix with
+                | Some _ => parse_main_digits
+                | None => parse_digits_gen_step (N.min 10 base) ;;->{cons} parse_main_digits
+                end)
+               ;;->{ fun (n:N) e => match e with Some e => n * e | None => n end%Z }
+               ((if base_accepts_E base
+                 then parse_P_exponent (* if [e] is a valid character in the base, then we don't permit [e] as an exponent *)
+                 else (parse_E_exponent || parse_P_exponent))?) in
+        match parse_prefix, parse_postfix with
+        | None, None => parse_main
+        | Some parse_prefix, None => parse_prefix ;;R parse_main
+        | Some parse_prefix, Some parse_postfix => parse_prefix ;;R parse_main ;;L parse_postfix
+        | None, Some parse_postfix => parse_main ;;L parse_postfix
+        end)%parse.
+
+Definition parse_int_gen_prefix {P} (allow_neg : bool) (base : N) (parse_prefix : ParserAction P) : ParserAction Z
+  := @parse_int_gen P unit allow_neg base (Some parse_prefix) None.
+Definition parse_int_gen_postfix {P} (allow_neg : bool) (base : N) (parse_postfix : ParserAction P) : ParserAction Z
+  := @parse_int_gen unit P allow_neg base None (Some parse_postfix).
 
 Definition parse_int (allow_neg : bool) : ParserAction Z
-  := parse_int_gen allow_neg 2 parse_bin_prefix
-     || parse_int_gen allow_neg 8 parse_oct_prefix
-     || parse_int_gen allow_neg 10 parse_dec_prefix
-     || parse_int_gen allow_neg 16 parse_hex_prefix.
+  := parse_int_gen_prefix allow_neg 2 parse_bin_prefix
+     || parse_int_gen_prefix allow_neg 8 parse_oct_prefix
+     || parse_int_gen_prefix allow_neg 10 parse_dec_prefix
+     || parse_int_gen_prefix allow_neg 16 parse_hex_prefix
+     || parse_int_gen_postfix allow_neg 16 parse_hex_postfix.
 
 Redirect "log" Check let ls := [("-1234", -(1234):Q); ("0xF", 15:Q); ("10.5", (10 + 5/10)); ("-10.5", -(10+5/10))]%Q in
                      eq_refl

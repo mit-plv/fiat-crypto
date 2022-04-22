@@ -278,7 +278,7 @@ Module Pipeline.
   | Stringification_failed {t} (e : Expr t) (err : string)
   | Invalid_argument (msg : string)
   | Assembly_parsing_error (fname : string) (msg : Assembly.Parse.ParseValidatedError)
-  | Unused_global_assembly_labels (labels : list string) (valid_requests : list string)
+  | Unused_global_assembly_labels (fname_labels : list (string * list string)) (valid_requests : list string)
   | Equivalence_checking_failure_pre_asm
       {t} (e : Expr t) (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
       (msg : Assembly.Equivalence.EquivalenceCheckingError)
@@ -450,8 +450,8 @@ Module Pipeline.
             | Assembly_parsing_error fname msgs
               => (["In assembly file " ++ fname ++ ":"]%string)
                    ++ show_lines msgs
-            | Unused_global_assembly_labels labels valid_requests
-              => ["The following global functions are present in the hints file but do not correspond to any requested function: " ++ String.concat ", " labels ++ " (expected one of: " ++ String.concat ", " valid_requests ++ ")"]%string
+            | Unused_global_assembly_labels fname_labels valid_requests
+              => ["The following global functions are present in the hints file but do not correspond to any requested function: " ++ String.concat ", " (List.map (fun '(fname, labels) => String.concat ", " labels ++ " (in " ++ fname ++ ")") fname_labels) ++ " (expected one of: " ++ String.concat ", " valid_requests ++ ")"]%string
             | Equivalence_checking_failure_pre_asm _ e arg_bounds err
               => (["Error while preparing to check for equivalence of syntax tree and assembly:"]
                     ++ show_lines_Expr arg_bounds false (* don't re-print input bounds; they're not relevant *) e

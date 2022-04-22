@@ -1171,7 +1171,7 @@ Section __.
       := parse_asm_files_lines assembly_hints_lines.
 
     Definition split_to_assembly_functions {A B} (assembly_data : list (string (* file name *) * list (string * A))) (normal_data : list (string * B))
-      : list (string * (list (string (* file name *) * A) * B)) * list (string * B) * list (string * list (string (* file name *) * A))
+      : list (string * (list (string (* file name *) * A) * B)) * list (string * B) * list (string (* file name *) * list (string (* function name *) * A))
       := if (ignore_unique_asm_names && (forallb (fun '(_, data) => length data =? 1) assembly_data) && (length normal_data =? 1))%nat%bool
          then match normal_data with
               | [(n, b)]
@@ -1200,15 +1200,27 @@ Section __.
          let '(lsAB, lsB) := List.partition (fun '(_, o) => match o with Some _ => true | None => false end) ls in
          (* get the assembly functions that have no corresponding normal function *)
          let lsA := List.filter (fun '(n1, _) => negb (List.existsb (fun '(n2, _) => (n1 =? n2)%string) normal_data)) assembly_data in
+         (* flatten out assembly functions and move the file names first *)
+         let lsA := List.flat_map (fun '(function_name, ls) => List.map (fun '(file_name, v) => (file_name, (function_name, v))) ls) lsA in
+         (* group by files for assembly data *)
+         let lsA := List.groupAllBy (fun '(n1, _) '(n2, _) => (n1 =? n2)%string) lsA in
+         let lsA
+           := Option.List.map
+                (fun ls
+                 => match ls with
+                    | [] => None
+                    | (n, _) :: _ => Some (n, List.map snd ls)
+                    end)
+                lsA in
          (Option.List.map
             (fun '((n, normal_data), assembly_data)
-              => match assembly_data with
-                 | Some (_n (* should be equal to n *), assembly_data) => Some (n, (assembly_data, normal_data))
-                 | None => (* should not happen *) None
-                 end)
+             => match assembly_data with
+                | Some (_n (* should be equal to n *), assembly_data) => Some (n, (assembly_data, normal_data))
+                | None => (* should not happen *) None
+                end)
             lsAB,
-          List.map (@fst _ _) lsB,
-          lsA).
+           List.map (@fst _ _) lsB,
+           lsA).
 
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
@@ -1235,7 +1247,7 @@ Section __.
                      let asm_ls_check
                          := if (error_on_unused_assembly_functions && (0 <? List.length unused_asm_ls))%nat
                             then [(assembly_output, "check", Error (Pipeline.Unused_global_assembly_labels
-                                                                      (List.map (@fst _ _) unused_asm_ls)
+                                                                      (List.map (fun '(file_name, labels) => (file_name, List.map (@fst _ _) labels)) unused_asm_ls)
                                                                       valid_function_names))]
                             else [] in
                      let asm_ls

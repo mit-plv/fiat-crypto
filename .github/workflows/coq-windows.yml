@@ -121,8 +121,8 @@ jobs:
 #        name: build-outputs
 #        path: .
 #      if: always ()
-    - name: validate
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- make TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"'
-      shell: cmd
-      if: github.event_name != 'pull_request'
+#    - name: validate
+#      run: |
+#        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- make TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"'
+#      shell: cmd
+#      if: github.event_name != 'pull_request'
