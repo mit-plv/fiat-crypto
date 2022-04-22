@@ -1171,12 +1171,15 @@ Section __.
       := parse_asm_files_lines assembly_hints_lines.
 
     Definition split_to_assembly_functions {A B} (assembly_data : list (string (* file name *) * list (string * A))) (normal_data : list (string * B))
-      : list (string * (list (string (* file name *) * A) * B)) * list (string * B) * list (string (* file name *) * list (string (* function name *) * A))
-      := if (ignore_unique_asm_names && (forallb (fun '(_, data) => length data =? 1) assembly_data) && (length normal_data =? 1))%nat%bool
+      : list (string * (list (string (* file name *) * A) * B)) * list (string * B) * list (string (* file name *) * list (string (* function name *) * A)) * list (string (* file name of files with no globals *))
+      := let assembly_files_without_globals := List.filter (fun '(_, ls) => (List.length ls =? 0)%nat) assembly_data in
+         let assembly_files_without_globals := List.map (fun '(fname, _) => fname) assembly_files_without_globals in
+         let assembly_data := List.filter (fun '(_, ls) => negb (List.length ls =? 0)%nat) assembly_data in
+         if (ignore_unique_asm_names && (forallb (fun '(_, data) => length data =? 1) assembly_data) && (length normal_data =? 1))%nat%bool
          then match normal_data with
               | [(n, b)]
-                => ([(n, (List.flat_map (fun '(fname, asm_ls) => List.map (fun '(_, a) => (fname, a)) asm_ls) assembly_data, b))], [], [])
-              | _ => ([], normal_data, assembly_data)
+                => ([(n, (List.flat_map (fun '(fname, asm_ls) => List.map (fun '(_, a) => (fname, a)) asm_ls) assembly_data, b))], [], [], assembly_files_without_globals)
+              | _ => ([], normal_data, assembly_data, assembly_files_without_globals)
               end
          else
          (* move the function name first, flatten the functions associated to each file *)
@@ -1220,7 +1223,8 @@ Section __.
                 end)
             lsAB,
            List.map (@fst _ _) lsB,
-           lsA).
+           lsA,
+           assembly_files_without_globals).
 
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
@@ -1243,13 +1247,18 @@ Section __.
                        := List.map (fun '(fname, (prefix, _)) => (assembly_output, "header-prefix for " ++ fname, Success (Show.show_lines prefix)))%string asm_hints in
                      let function_asms := List.map (fun '(fname, (_prefix, function_asms)) => (fname, function_asms)) asm_hints in
                      let valid_function_names := List.map fst ls in
-                     let '(asm_ls, ls, unused_asm_ls) := split_to_assembly_functions function_asms ls in
+                     let '(asm_ls, ls, unused_asm_ls, asm_missing_globals) := split_to_assembly_functions function_asms ls in
                      let asm_ls_check
-                         := if (error_on_unused_assembly_functions && (0 <? List.length unused_asm_ls))%nat
-                            then [(assembly_output, "check", Error (Pipeline.Unused_global_assembly_labels
-                                                                      (List.map (fun '(file_name, labels) => (file_name, List.map (@fst _ _) labels)) unused_asm_ls)
-                                                                      valid_function_names))]
-                            else [] in
+                       := if negb (List.length asm_missing_globals =? 0)%nat
+                          then [(assembly_output, "check", Error (Pipeline.Assembly_without_any_global_labels asm_missing_globals))]
+                          else [] in
+                     let asm_ls_check
+                       := asm_ls_check
+                            ++ if (error_on_unused_assembly_functions && (0 <? List.length unused_asm_ls))%nat
+                               then [(assembly_output, "check", Error (Pipeline.Unused_global_assembly_labels
+                                                                         (List.map (fun '(file_name, labels) => (file_name, List.map (@fst _ _) labels)) unused_asm_ls)
+                                                                         valid_function_names))]
+                               else [] in
                      let asm_ls
                          := List.map
                               (fun '(name, (asm_fname_and_lines, synthesis_res))
