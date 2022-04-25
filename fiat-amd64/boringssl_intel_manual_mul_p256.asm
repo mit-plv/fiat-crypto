@@ -183,5 +183,5 @@ mov    r13,QWORD PTR [rsp+0x10]
 mov    r12,QWORD PTR [rsp+0x18]
 mov    rbx,QWORD PTR [rsp+0x20]
 mov    rbp,QWORD PTR [rsp+0x28]
-;lea    rsp,[rsp+0x30]
+lea    rsp,[rsp+0x30]
 ret
