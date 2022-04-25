@@ -5,7 +5,8 @@ Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
 Require Import bedrock2.Semantics.
 Require Import coqutil.Tactics.Tactics.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Bedrock.Specs.Field.
+Require Import Crypto.Bedrock.Specs.AbstractField.
+Require Import Crypto.Bedrock.Specs.PrimeField.
 Require Import Crypto.Bedrock.Group.Loops.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
@@ -14,7 +15,7 @@ Require Import Crypto.Curves.Montgomery.XZProofs.
 Require Import Crypto.Util.Loops.
 
 Section Equivalence.
-  Context {field_parameters : FieldParameters}.
+  Context {prime_field_parameters : PrimeFieldParameters}.
 
   (*TODO: which of ladderstep_gallina and M.xzladderstep should we change? either?*)
   Definition reorder_pairs {A B C D} (p : \<<A , B , C , D\>>) : (A*B)*(C*D) :=

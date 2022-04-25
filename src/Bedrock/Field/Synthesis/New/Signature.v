@@ -25,7 +25,8 @@ Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Bedrock.Field.Translation.Func.
 Require Import Crypto.Bedrock.Field.Translation.Proofs.Func.
 Require Import Crypto.Bedrock.Field.Interface.Representation.
-Require Import Crypto.Bedrock.Specs.Field.
+Require Import Crypto.Bedrock.Specs.AbstractField.
+Require Import Crypto.Bedrock.Specs.PrimeField.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Language.API.
 Require Import Crypto.Spec.ModularArithmetic.
@@ -87,7 +88,7 @@ Section WithParameters.
     {width BW word mem locals env ext_spec varname_gen error}
    `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
   Context {ok : Types.ok}
-          {field_parameters : FieldParameters}.
+          {prime_field_parameters : PrimeFieldParameters}.
   Context (n n_bytes : nat) (weight : nat -> Z)
           (bounds : Type)
           (loose_bounds tight_bounds byte_bounds : bounds)
@@ -101,8 +102,11 @@ Section WithParameters.
              disjoint default_inname_gen varname_gen)
           (outname_gen_varname_gen_disjoint :
              disjoint default_outname_gen varname_gen).
+
+  Local Instance field_parameters : FieldParameters := PrimeField.prime_field_parameters.
+
   Local Instance field_representation : FieldRepresentation
-    := @frep _ BW _ _ field_parameters n n_bytes weight bounds list_in_bounds loose_bounds tight_bounds
+    := @frep _ BW _ _ prime_field_parameters n n_bytes weight bounds list_in_bounds loose_bounds tight_bounds
              byte_bounds eval_transformation.
   Local Instance field_representation_ok : FieldRepresentation_ok
     := frep_ok n n_bytes weight bounds list_in_bounds loose_bounds tight_bounds byte_bounds
@@ -578,6 +582,13 @@ Section WithParameters.
           erewrite length_list_Z_bounded_by; [| eapply tight_bounds_tighter_than_max, res_bounds].
           cbv [max_bounds]. rewrite repeat_length. rewrite map_length.
           cbv [FElem Bignum.Bignum] in *. sepsimpl. auto.
+          lazymatch goal with
+          | H : _ ?m |- _ ?m => destruct H as [m1 [m2 [Hsplit [ Hmem Hmem2] ] ] ]
+          | _ => idtac
+          end.
+          do 2 eexists; split; [| split]; eauto.
+          eapply FElem_array_truncated_scalar_iff1 in Hmem. sepsimpl.
+          auto.
         } }
       { postcondition_simplify; [ | | ].
         { (* output correctness *)
@@ -585,7 +596,7 @@ Section WithParameters.
         { (* output bounds *)
           cbn [bounded_by field_representation frep] in *.
           erewrite Util.map_unsigned_of_Z, MaxBounds.map_word_wrap_bounded
-            by eauto using relax_list_Z_bounded_by. cbv [Field.tight_bounds]. simpl.
+            by eauto using relax_list_Z_bounded_by. cbv [AbstractField.tight_bounds]. simpl.
           eauto. }
         { (* separation-logic postcondition *)
           eapply Proper_sep_iff1;
@@ -797,17 +808,17 @@ admit.
                 length x = encoded_felem_size_in_bytes)
             (res_eq : forall x,
                 bounded_by tight_bounds x ->
-                API.interp (res _) (map word.unsigned x)
-                = Partition.partition
-                    (ModOps.weight 8 1)
-                    encoded_felem_size_in_bytes
-                    (F.to_Z (feval x)))
+                feval x
+                = feval_bytes (map byte.of_Z (API.interp (res _) (map word.unsigned x))))
             (res_bounds : forall x,
                 bounded_by tight_bounds x ->
-                bytes_in_bounds
-                  (map byte.of_Z
+                list_Z_bounded_by (ByteBounds.byte_bounds n_bytes)
                        (API.interp (res _)
-                                   (map word.unsigned x)))).
+                                   (map word.unsigned x)))
+            (res_bounds' : forall x,
+              bounded_by tight_bounds x ->
+              list_in_bounds byte_bounds (API.interp (res _)
+                                (map word.unsigned x))).
 
     Local Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
@@ -851,6 +862,11 @@ admit.
       reflexivity.
     Qed.
 
+    Lemma FElem_bytes_length p x R m : (AbstractField.FElemBytes p x * R)%sep m -> Datatypes.length x = encoded_felem_size_in_bytes.
+    Proof.
+        intros; cbv [AbstractField.FElemBytes] in *; sepsimpl; auto.
+    Qed.
+
     Lemma to_bytes_correct f :
       f = make_bedrock_func to_bytes insizes outsizes inlengths res ->
       forall functions,
@@ -858,7 +874,7 @@ admit.
     Proof using byte_bounds_length byte_bounds_tighter_than_max
           inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok res_Wf
-          res_eq res_valid res_bounds.
+          res_eq res_valid res_bounds res_bounds'.
       subst inlengths insizes outsizes. cbv [spec_of_to_bytes].
       cbv [to_bytes_insizes to_bytes_outsizes to_bytes_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
@@ -869,31 +885,39 @@ admit.
         all:try translate_func_precondition_hammer.
         all:cbn [type.app_curried fst snd].
         all:try rewrite res_eq by auto.
-        { eapply ByteBounds.byte_bounds_range_iff.
-          auto using ByteBounds.partition_bounded_by. }
+        (* { eapply ByteBounds.byte_bounds_range_iff.
+          auto using ByteBounds.partition_bounded_by. } *)
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.
-          all:solve_equivalence_side_conditions. } }
-      { postcondition_simplify; [ ].
+          all: try solve_equivalence_side_conditions.
+          (*output length*)
+          rewrite map_length; erewrite FElem_bytes_length; eauto.
+          erewrite length_list_Z_bounded_by; [| eapply res_bounds; auto].
+          simpl; cbv [ByteBounds.byte_bounds]; rewrite repeat_length; auto.
+          } }
+      { postcondition_simplify; [ eapply res_eq; eauto| ].
         (* separation-logic postcondition *)
-        eapply Proper_sep_iff1;
-          [ solve [apply FElemBytes_array_truncated_scalar_iff1]
-          | reflexivity | ].
-        cbv [Z_to_bytes].
-        sepsimpl; [ | | ].
-        { autorewrite with distr_length. reflexivity. }
-        { rewrite nth_byte_partition, <-res_eq by auto.
-          eapply res_bounds; auto. }
-        { rewrite nth_byte_partition.
-          erewrite ByteBounds.byte_map_unsigned_of_Z,
-          ByteBounds.map_byte_wrap_bounded
-            by apply ByteBounds.partition_bounded_by.
-          rewrite <-res_eq by auto.
-          match goal with
+      {  eapply Proper_sep_iff1;
+      [ solve [apply FElemBytes_array_truncated_scalar_iff1]
+      | reflexivity | ].
+      cbv [Z_to_bytes]; sepsimpl.
+      {
+        autorewrite with distr_length. erewrite  length_list_Z_bounded_by; [|eapply res_bounds; eauto]. 
+          cbv [ByteBounds.byte_bounds]; rewrite repeat_length; eauto.
+      }
+      {
+        cbv [bytes_in_bounds]. simpl. rewrite ByteBounds.byte_map_unsigned_of_Z.
+        erewrite ByteBounds.map_byte_wrap_bounded; [| eauto].
+        eapply res_bounds'; auto.
+      }
+      {
+        erewrite ByteBounds.byte_map_unsigned_of_Z, ByteBounds.map_byte_wrap_bounded; [ |
+        eapply res_bounds; auto].
+        match goal with
             H : map word.unsigned _ = API.interp (res _) _ |- _ =>
-            rewrite <-H end.
-          change (Z.of_nat (bytes_per access_size.one)) with 1 in *.
-          auto. } }
+            rewrite <-H end. auto.
+      }
+    } }
     Qed.
   End ToBytes.
 

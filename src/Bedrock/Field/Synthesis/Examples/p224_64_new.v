@@ -6,7 +6,8 @@ Require Import Crypto.Bedrock.Field.Interface.Representation.
 Require Import Crypto.Bedrock.Field.Synthesis.New.ComputedOp.
 Require Import Crypto.Bedrock.Field.Synthesis.New.WordByWordMontgomery.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults32.
-Require Import Crypto.Bedrock.Specs.Field.
+Require Import Crypto.Bedrock.Specs.AbstractField.
+Require Import Crypto.Bedrock.Specs.PrimeField.
 Import ListNotations.
 Require Import bedrock2.WeakestPreconditionProperties.
 Require Import bedrock2.WeakestPrecondition.
@@ -32,7 +33,7 @@ Section Field.
   Definition prefix : string := "p224_"%string.
 
   (* Define p224 field *)
-  Instance field_parameters : FieldParameters.
+  Instance field_parameters : PrimeFieldParameters.
   Proof using Type.
     let M := (eval vm_compute in (Z.to_pos (m))) in
     (* curve 'A' parameter *)

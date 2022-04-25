@@ -8,7 +8,8 @@ Require Import Crypto.Bedrock.Field.Interface.Representation.
 Require Import Crypto.Bedrock.Field.Synthesis.New.ComputedOp.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults32.
-Require Import Crypto.Bedrock.Specs.Field.
+Require Import Crypto.Bedrock.Specs.AbstractField.
+Require Import Crypto.Bedrock.Specs.PrimeField.
 Import ListNotations.
 
 Existing Instances BW32.
@@ -37,14 +38,14 @@ Section Field.
   Proof. constructor; try exact _; apply prefix_name_gen_unique. Qed.
 
   (* Define Curve25519 field *)
-  Instance field_parameters : FieldParameters.
+  Instance field_parameters : PrimeFieldParameters.
   Proof using Type.
     let M := (eval vm_compute in (Z.to_pos (UnsaturatedSolinas.m s c))) in
     (* curve 'A' parameter *)
     let a := constr:(F.of_Z M 486662) in
     let prefix := constr:("fe25519_"%string) in
     eapply
-      (field_parameters_prefixed
+      (prime_field_parameters_prefixed
          M ((a - F.of_Z _ 2) / F.of_Z _ 4)%F prefix).
   Defined.
 

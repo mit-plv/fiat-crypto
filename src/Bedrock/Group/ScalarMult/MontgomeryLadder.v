@@ -5,7 +5,8 @@ Require Import Rupicola.Lib.ControlFlow.DownTo.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
 Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
-Require Import Crypto.Bedrock.Specs.Field.
+Require Import Crypto.Bedrock.Specs.AbstractField.
+Require Import Crypto.Bedrock.Specs.PrimeField.
 Require Import Crypto.Util.NumTheoryUtil.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Bedrock.Group.AdditionChains.
@@ -43,6 +44,7 @@ Notation "'let/n' ( v , w , x , y , z ) := val 'in' body" :=
 
 Section Gallina.
   Local Open Scope F_scope.
+  Let F := F.F.
   Definition montladder_gallina (m : positive) (a24 : F m) (count : nat) (k : Z) (u : F m)
     : F m :=
     let/n X1 := stack 1 in
@@ -81,7 +83,10 @@ Section __.
   Context {locals_ok : map.ok locals}.
   Context {env_ok : map.ok env}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
-  Context {field_parameters : FieldParameters}.
+  Context {prime_field_parameters : PrimeFieldParameters}.
+
+  Instance field_parameters : AbstractField.FieldParameters := PrimeField.prime_field_parameters.
+
   Context {field_representaton : FieldRepresentation}.
   Context {field_representation_ok : FieldRepresentation_ok}.
   Hint Resolve @relax_bounds : compiler.
@@ -89,6 +94,7 @@ Section __.
   Section MontLadder.
     Context scalarbits (scalarbits_small : word.wrap (Z.of_nat scalarbits) = Z.of_nat scalarbits).
     Local Notation "bs $@ a" := (array ptsto (word.of_Z 1) a bs) (at level 20).
+    Let F := F.F.
 
     Instance spec_of_montladder : spec_of "montladder" :=
       fnspec! "montladder"
@@ -304,6 +310,77 @@ Section __.
   Hint Extern 1 (spec_of "fe25519_inv") =>
   (simple refine (spec_of_exp_large)) : typeclass_instances.
   
+    (*Why must we instantiate specs here?*)
+    Instance spec_of_mul : spec_of (@mul prime_field_parameters).
+    Proof.
+      pose proof (binop_spec bin_mul). cbv [spec_of]. eapply X.
+    Defined.
+
+    Instance spec_of_felem_copy : spec_of (@felem_copy prime_field_parameters).
+    Proof.
+      pose proof (AbstractField.spec_of_felem_copy). eapply X.
+    Defined.
+
+    Instance spec_of_inv : spec_of (@inv prime_field_parameters).
+    Proof.
+      pose proof (unop_spec un_inv). cbv [spec_of]. eapply X.
+    Defined.
+
+    Local Hint Extern 9 =>
+    simple eapply (@compile_stack _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      ((@FElem width BW word mem prime_field_parameters field_representaton
+      (@None (@bounds field_parameters width BW word mem field_representaton)))));
+      [ecancel_assumption | shelve] : compiler.
+
+    Local Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.of_Z M_pos _) _))) =>
+    epose proof compile_from_word as Hword; eapply Hword; clear Hword : compiler.
+
+    (* Local Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (_ * _)%F _))) =>
+    let Hmul := (fresh "Hmul") in epose proof compile_mul as Hmul; cbv [Fmul] in Hmul;
+    eapply Hmul; clear Hmul; compile_step; simpl : compiler. *)
+
+    Local Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (_ * _)%F _))) =>
+    let Hmul := (fresh "Hmul") in pose proof compile_mul as Hmul;
+    cbv [Compilation2.field_parameters PrimeField.prime_field_parameters] in Hmul;
+    eapply Hmul; [| | | try (eapply sep_assoc; eapply relax_bounds_FElem_R; ecancel_assumption) | | |]; clear Hmul; shelve : compiler.
+
+    (* Local Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.inv _) _))) =>
+    let Hinv := (fresh "Hinv") in pose proof compile_inv as Hinv;
+    cbv [Compilation2.field_parameters PrimeField.prime_field_parameters] in Hinv;
+    eapply Hinv; [| | | try (ecancel_assumption) | |]; clear Hinv; shelve : compiler. *)
+
+    Local Hint Extern 6 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (stack _) _))) =>
+    simple eapply (@compile_stack _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+    ((@FElem width BW word mem prime_field_parameters field_representaton
+    (@None (@bounds field_parameters width BW word mem field_representaton))))) : compiler.
+
+    Local Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.of_Z _ _) _))) =>
+    let Hfrom := (fresh "Hfrom") in epose proof compile_from_word as Hfrom;
+    cbv [Compilation2.field_parameters PrimeField.prime_field_parameters] in Hfrom;
+    eapply Hfrom; [repeat compile_step| repeat compile_step | try ecancel_assumption | repeat compile_step | ]; clear Hfrom; shelve : compiler.
+
+    Local Hint Extern 10 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ _ _))) =>
+    let Hcopy := (fresh "Hcopy") in epose proof compile_felem_copy as Hcopy;
+    cbv [Compilation2.field_parameters PrimeField.prime_field_parameters] in Hcopy;
+    eapply Hcopy; [repeat compile_step| repeat compile_step | try ecancel_assumption | repeat compile_step | ]; clear Hcopy; shelve : compiler.
+
+
+
+    (*hint for cleanup phase of compilation*)
+    Ltac clear_pred_seps' :=   
+      unfold pred_sep;
+      repeat change (fun x => ?h x) with h;
+      repeat match goal with
+             | [ H : _ ?m |- _ ?m] =>
+               eapply Proper_sep_impl1;
+               [ eapply P_to_bytes | clear H m; intros H m |
+                try (eapply FElem_bounds_None; ecancel_assumption);
+                try (eapply FElem_bounds_None; eapply relax_bounds_FElem_R; ecancel_assumption)]
+             end.
+    
+      Hint Extern 1 (pred_sep _ _ _ _ _ _) =>
+             clear_pred_seps'; shelve : compiler_cleanup_post.
+    
     Derive montladder_body SuchThat
            (defn! "montladder" ("OUT", "K", "U")
                 { montladder_body },
@@ -312,16 +389,17 @@ Section __.
                                "ladderstep"; "fe25519_inv"; mul])
            As montladder_correct.
     Proof.
+      cbv [Compilation2.field_parameters PrimeField.prime_field_parameters] in *.
       pose proof scalarbits_bound.
       compile_setup.
       repeat compile_step.
       eapply compile_nlet_as_nlet_eq.
-      eapply compile_felem_cswap; repeat compile_step.
+      eapply compile_felem_cswap; compile_step.
       
       eapply compile_nlet_as_nlet_eq.
-      eapply compile_felem_cswap; repeat compile_step.
-
-      compile_step.
+      eapply compile_felem_cswap; compile_step.
+      repeat compile_step.
+      compile_step; compile_step.
     Qed.
     
   End MontLadder.

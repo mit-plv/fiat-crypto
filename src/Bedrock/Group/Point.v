@@ -1,10 +1,11 @@
 Require Import Rupicola.Lib.Api.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Bedrock.Specs.Field.
+Require Import Crypto.Bedrock.Specs.AbstractField.
+Require Import Crypto.Bedrock.Specs.PrimeField.
 
 Section Gallina.
-  Definition point {field_parameters : FieldParameters} : Type
-    := (F M_pos * F M_pos).
+  Definition point {field_parameters : PrimeFieldParameters} : Type
+    := (F.F M_pos * F.F M_pos).
 End Gallina.
 
 Section Compile.
@@ -16,8 +17,11 @@ Section Compile.
   Context {locals_ok : map.ok locals}.
   Context {env_ok : map.ok env}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
-  Context {field_parameters : FieldParameters}
-          {field_representation : FieldRepresentation}.
+  Context {prime_field_parameters : PrimeFieldParameters}.
+
+  Local Instance field_parameters : FieldParameters := PrimeField.prime_field_parameters.
+  
+  Context {field_representation : FieldRepresentation}.
 
   (* TODO: uses removed notation.
      Find out whether anything still uses this file

@@ -11,7 +11,8 @@ Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.End2End.X25519.Field25519.
 Require Import Crypto.Bedrock.End2End.X25519.MontgomeryLadder.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
-Require Import Crypto.Bedrock.Specs.Field.
+Require Import Crypto.Bedrock.Specs.AbstractField.
+Require Import Crypto.Bedrock.Specs.PrimeField.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
 
@@ -39,8 +40,8 @@ Local Existing Instance BW32.
 (* Postcondition extracted from spec_of_montladder *)
 Definition montladder_post (pOUT pK pU : word.rep (word:=BasicC32Semantics.word))
           (Kbytes : list Byte.byte) (K : Z)
-          (U : F (Field.M_pos (FieldParameters:=field_parameters)))
-          (OUT : F (Field.M_pos (FieldParameters:=field_parameters)))
+          (U : F.F (PrimeField.M_pos (PrimeFieldParameters:=Field25519.field_parameters)))
+          (OUT : F.F (PrimeField.M_pos (PrimeFieldParameters:=Field25519.field_parameters)))
           (R : map.rep word.rep Init.Byte.byte mem -> Prop)
           (tr : Semantics.trace) :
   Semantics.trace -> map.rep _ _ mem -> list (word.rep (word:=BasicC32Semantics.word)) -> Prop :=
@@ -52,12 +53,12 @@ Definition montladder_post (pOUT pK pU : word.rep (word:=BasicC32Semantics.word)
       (FElem
          (BW:=BW32)
          (field_representaton:=field_representation n s c)
-         (Some Field.tight_bounds) pOUT
-         (montladder_gallina Field.M_pos Field.a24 (Z.to_nat (Z.log2_up Curve25519.l)) K U)
+         (Some AbstractField.tight_bounds) pOUT
+         (montladder_gallina PrimeField.M_pos PrimeField.a24 (Z.to_nat (Z.log2_up Curve25519.l)) K U)
          ⋆ Array.array ptsto (word.of_Z 1) pK Kbytes
          ⋆ FElem (BW:=BW32)
                  (field_representaton:=field_representation n s c)
-                 (Some Field.tight_bounds) pU U ⋆ R)%sep
+                 (Some AbstractField.tight_bounds) pU U ⋆ R)%sep
         mem').
 
 Local Instance Registers : map.map Z (@word.rep 32 BasicC32Semantics.word)
@@ -161,8 +162,8 @@ Admitted.
 Lemma montladder_compiles_correctly :
   forall (t : Semantics.trace)
          (mH : map.rep word.rep Init.Byte.byte mem)
-         (pOUT pK pU : word.rep) (out_bound : option Field.bounds)
-         (OUT U: F Field.M_pos) (Kbytes : list Byte.byte) (K : Z)
+         (pOUT pK pU : word.rep) (out_bound : option AbstractField.bounds)
+         (OUT U: F.F PrimeField.M_pos) (Kbytes : list Byte.byte) (K : Z)
          (initial : MetricRiscvMachine)
          (stack_lo stack_hi ret_addr p_funcs : word.rep)
          (R Rdata Rexec : map.rep word.rep Init.Byte.byte mem -> Prop),
@@ -174,7 +175,7 @@ Lemma montladder_compiles_correctly :
           ⋆ Array.array ptsto (word.of_Z 1) pK Kbytes
           ⋆  FElem (BW:=BW32)
                    (field_representaton:=field_representation n s c)
-                   (Some Field.tight_bounds) pU U
+                   (Some AbstractField.tight_bounds) pU U
           ⋆ R)%sep mH ->
          montladder_stack_size <=
          word.unsigned (word.sub stack_hi stack_lo) /

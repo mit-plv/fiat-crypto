@@ -1,33 +1,33 @@
 ladderstep_body = 
 fun (width : Z) (BW : Bitwidth width) (word : word width) (mem : map.map word byte) (word_ok : word.ok word) (mem_ok : map.ok mem)
-  (field_parameters : FieldParameters) (field_representaton : FieldRepresentation) =>
+  (prime_field_parameters : PrimeFieldParameters) (field_representaton : FieldRepresentation) =>
 ("ladderstep",
 (["X1"; "X2"; "Z2"; "X3"; "Z3"], [],
 noreassign
   (noskips
      (cmd.stackalloc "A" size_in_bytes
-        (cmd.seq (cmd.call [] add ["A"; "X2"; "Z2"])
-           (cmd.seq (cmd.call [] sub ["X2"; "X2"; "Z2"])
-              (cmd.seq (cmd.call [] add ["Z2"; "X3"; "Z3"])
-                 (cmd.seq (cmd.call [] sub ["Z3"; "X3"; "Z3"])
-                    (cmd.seq (cmd.call [] mul ["Z3"; "Z3"; "A"])
-                       (cmd.seq (cmd.call [] mul ["Z2"; "Z2"; "X2"])
-                          (cmd.seq (cmd.call [] square ["A"; "A"])
-                             (cmd.seq (cmd.call [] square ["X2"; "X2"])
+        (cmd.seq (cmd.call [] AbstractField.add ["A"; "X2"; "Z2"])
+           (cmd.seq (cmd.call [] AbstractField.sub ["X2"; "X2"; "Z2"])
+              (cmd.seq (cmd.call [] AbstractField.add ["Z2"; "X3"; "Z3"])
+                 (cmd.seq (cmd.call [] AbstractField.sub ["Z3"; "X3"; "Z3"])
+                    (cmd.seq (cmd.call [] AbstractField.mul ["Z3"; "Z3"; "A"])
+                       (cmd.seq (cmd.call [] AbstractField.mul ["Z2"; "Z2"; "X2"])
+                          (cmd.seq (cmd.call [] AbstractField.square ["A"; "A"])
+                             (cmd.seq (cmd.call [] AbstractField.square ["X2"; "X2"])
                                 (cmd.stackalloc "E" size_in_bytes
-                                   (cmd.seq (cmd.call [] sub ["E"; "A"; "X2"])
-                                      (cmd.seq (cmd.call [] add ["X3"; "Z3"; "Z2"])
-                                         (cmd.seq (cmd.call [] square ["X3"; "X3"])
-                                            (cmd.seq (cmd.call [] sub ["Z3"; "Z3"; "Z2"])
-                                               (cmd.seq (cmd.call [] square ["Z3"; "Z3"])
-                                                  (cmd.seq (cmd.call [] mul ["Z3"; "X1"; "Z3"])
-                                                     (cmd.seq (cmd.call [] mul ["X2"; "A"; "X2"])
-                                                        (cmd.seq (cmd.call [] scmula24 ["Z2"; "E"])
-                                                           (cmd.seq (cmd.call [] add ["Z2"; "A"; "Z2"])
-                                                              (cmd.seq (cmd.call [] mul ["Z2"; "E"; "Z2"])
+                                   (cmd.seq (cmd.call [] AbstractField.sub ["E"; "A"; "X2"])
+                                      (cmd.seq (cmd.call [] AbstractField.add ["X3"; "Z3"; "Z2"])
+                                         (cmd.seq (cmd.call [] AbstractField.square ["X3"; "X3"])
+                                            (cmd.seq (cmd.call [] AbstractField.sub ["Z3"; "Z3"; "Z2"])
+                                               (cmd.seq (cmd.call [] AbstractField.square ["Z3"; "Z3"])
+                                                  (cmd.seq (cmd.call [] AbstractField.mul ["Z3"; "X1"; "Z3"])
+                                                     (cmd.seq (cmd.call [] AbstractField.mul ["X2"; "A"; "X2"])
+                                                        (cmd.seq (cmd.call [] AbstractField.scmula24 ["Z2"; "E"])
+                                                           (cmd.seq (cmd.call [] AbstractField.add ["Z2"; "A"; "Z2"])
+                                                              (cmd.seq (cmd.call [] AbstractField.mul ["Z2"; "E"; "Z2"])
                                                                  (fold_right (fun (v : string) (c : Syntax.cmd) => cmd.seq (cmd.unset v) c)
                                                                     cmd.skip []))))))))))))))))))))))))
      : forall (width : Z) (BW : Bitwidth width) (word : word width) (mem : map.map word byte),
-       word.ok word -> map.ok mem -> forall field_parameters : FieldParameters, FieldRepresentation -> bedrock_func
+       word.ok word -> map.ok mem -> forall prime_field_parameters : PrimeFieldParameters, FieldRepresentation -> bedrock_func
 
-Arguments ladderstep_body {width}%Z_scope {BW word mem word_ok mem_ok field_parameters field_representaton}
+Arguments ladderstep_body {width}%Z_scope {BW word mem word_ok mem_ok prime_field_parameters field_representaton}

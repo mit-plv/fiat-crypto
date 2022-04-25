@@ -10,7 +10,8 @@ Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Common.Tactics.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Bedrock.Field.Synthesis.Generic.Bignum.
-Require Import Crypto.Bedrock.Specs.Field.
+Require Import Crypto.Bedrock.Specs.AbstractField.
+Require Import Crypto.Bedrock.Specs.PrimeField.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
@@ -20,7 +21,7 @@ Section Representation.
   Context 
     {width BW word mem locals env ext_spec varname_gen error}
    `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
-  Context {field_parameters : FieldParameters}
+  Context {prime_field_parameters : PrimeFieldParameters}
           {p_ok : Types.ok}.
   Context (n n_bytes : nat) (weight : nat -> Z)
           (bounds : Type)
@@ -34,12 +35,13 @@ Section Representation.
             and for word-by-word Montgomery, the argument must be pulled out of the Montgomery domain*)
           (eval_transformation : list Z -> list Z).
 
+  Local Instance field_parameters : FieldParameters := PrimeField.prime_field_parameters.
 
-  Definition eval_words : list word -> F M_pos :=
+  Definition eval_words : list word -> F :=
     fun ws =>
       F.of_Z _ (Positional.eval weight n (eval_transformation (map word.unsigned ws))).
 
-  Definition eval_bytes : list byte -> F M_pos :=
+  Definition eval_bytes : list byte -> F :=
     fun bs =>
       F.of_Z _ (Positional.eval
                            (ModOps.weight 8 1)

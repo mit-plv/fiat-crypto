@@ -4,15 +4,14 @@ Require Import bedrock2.Semantics.
 Require Import coqutil.Word.Interface coqutil.Byte.
 Local Open Scope Z_scope.
 Require Import Rupicola.Lib.Arrays.
-
-
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Alloc.
 Require Import Rupicola.Lib.SepLocals.
 Require Import Rupicola.Lib.ControlFlow.DownTo.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
-Require Import Crypto.Bedrock.Specs.Field.
+Require Import Crypto.Bedrock.Specs.PrimeField.
+Require Import Crypto.Bedrock.Specs.AbstractField.
 Require Import Crypto.Util.NumTheoryUtil.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import bedrock2.ZnWords.
@@ -29,16 +28,22 @@ Section __.
   Context {locals_ok : map.ok locals}.
   Context {env_ok : map.ok env}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
-  Context {field_parameters : FieldParameters}.
-  Context {field_representaton : FieldRepresentation}.
-  Context {field_representation_ok : FieldRepresentation_ok}.
+  Context {prime_field_parameters : PrimeFieldParameters}.
+
+  Instance field_parameters : AbstractField.FieldParameters.
+  Proof.
+    exact (PrimeField.prime_field_parameters).
+  Defined.
+
+  Context {field_representaton : AbstractField.FieldRepresentation}.
+  Context {field_representation_ok : AbstractField.FieldRepresentation_ok}.
   (*TODO: move this requirement to the right place,
     or find a way to discharge it
     Should this go in FieldReprsentation_ok?
    *)
   Context (felem_size_in_words_small
-    : Z.of_nat felem_size_in_words < 2^width).
-  Hint Resolve @relax_bounds : compiler.
+    : Z.of_nat AbstractField.felem_size_in_words < 2^width).
+  Hint Resolve @AbstractField.relax_bounds : compiler.
  
   
   Notation all_1s := (word.of_Z (-1) : word).
@@ -555,7 +560,7 @@ Section __.
     apply Z.div_pos; try lia.
   Qed.    
 
-    Lemma compile_felem_cswap {tr m l functions} swap (lhs rhs : F M_pos) :
+    Lemma compile_felem_cswap {tr m l functions} swap (lhs rhs : F.F M_pos) :
       let v := cswap swap lhs rhs in
       forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
              R mask_var bounds lhs_ptr lhs_var rhs_ptr rhs_var,
@@ -587,14 +592,18 @@ Section __.
           k_impl
         <{ pred (nlet_eq [lhs_var; rhs_var] v k) }>.
   Proof.
-    unfold FElem, Field.FElem.
+    unfold FElem, AbstractField.FElem.
     rewrite !Bignum_as_array.
     repeat straightline' locals.
     sepsimpl.
     straightline_call.
     ssplit.
     { destruct swap; simpl; intuition fail. }
-    ecancel_assumption.
+    1: { (*Why does ecancel_assumption fail here?*)
+      eapply sep_comm in H7.
+      eassert (Hsep : (_ * _ * R)%sep m) by ecancel_assumption.
+      eapply Hsep.
+    }
     repeat straightline' l.
     apply H4.
     sepsimpl.

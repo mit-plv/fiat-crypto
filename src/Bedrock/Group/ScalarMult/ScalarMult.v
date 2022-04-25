@@ -6,7 +6,8 @@ Require Import Crypto.Algebra.ScalarMult.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryEquivalence.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
-Require Import Crypto.Bedrock.Specs.Field.
+Require Import Crypto.Bedrock.Specs.AbstractField.
+Require Import Crypto.Bedrock.Specs.PrimeField.
 Require Import Crypto.Bedrock.Specs.Group.
 Require Import Crypto.Curves.Montgomery.AffineInstances.
 Require Import Crypto.Curves.Montgomery.XZ.
@@ -23,11 +24,16 @@ Module M.
     Context {locals_ok : map.ok locals}.
     Context {env_ok : map.ok env}.
     Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
-    Context {field_parameters : FieldParameters}
-            {field_parameters_ok : FieldParameters_ok}
-            {field_representation : FieldRepresentation}
+    Context {prime_field_parameters : PrimeFieldParameters}
+            {prime_field_parameters_ok : PrimeFieldParameters_ok}.
+
+    Local Instance field_parameters : FieldParameters := PrimeField.prime_field_parameters.
+    Context {field_representation : FieldRepresentation}
             {field_representation_ok : FieldRepresentation_ok}
             {scalarbits : nat}.
+
+    Let F := F.F.
+
     Context (char_ge_3 :
                @Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add
                              F.sub F.mul 3)
@@ -229,9 +235,8 @@ Module M.
       Proof.
         (* straightline doesn't work properly for setup, so the first step
            is inlined and changed here *)
-        Fail straightline.
-        cbv [program_logic_goal_for].
-        enter scmul_func. intros.
+        (* Fail straightline. *)
+        cbv [program_logic_goal_for scmul_func spec_of_scmul]; intros.
         WeakestPrecondition.unfold1_call_goal.
         (cbv beta match delta [WeakestPrecondition.call_body]).
         lazymatch goal with

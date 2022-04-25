@@ -3,7 +3,8 @@ Require Import Rupicola.Lib.Loops.
 Require Import Rupicola.Lib.ControlFlow.DownTo.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Arithmetic.FLia.
-Require Import Crypto.Bedrock.Specs.Field.
+Require Import Crypto.Bedrock.Specs.AbstractField.
+Require Import Crypto.Bedrock.Specs.PrimeField.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Algebra.Hierarchy.
 Require Import Numbers.DecimalString.
@@ -35,6 +36,8 @@ Section FElems.
   Context {locals_ok : map.ok locals}.
   Context {env_ok : map.ok env}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
+
+  Let F := F.F.
 
   Section Impl.
     Context (m : positive).
@@ -77,7 +80,7 @@ Section FElems.
     Fixpoint exp_from_encoding_simple (x : F m) (n : list (bool * nat)) : F m :=
       match n with
       | [] =>
-        1
+        1%F
       (* can add more cases for small k to be faster *)
       | (true, 0%nat) :: t =>
         let/n res := exp_from_encoding_simple x t in
@@ -101,7 +104,7 @@ Section FElems.
     Fixpoint exp_from_encoding (x : F m) (n : list (bool * nat)) : F m :=
       match n with
       | [] =>
-        1
+        1%F
       | [(true, 0%nat)] =>
         x
       | [(true, 1%nat)] =>
@@ -262,7 +265,7 @@ Section FElems.
         + pose Nat_iter_plus_one.
           specialize e with (f := exp_square_and_multiply m x) (k := S (S n0)) (x := 1%F).
           rewrite <- e.
-          replace (exp_square_and_multiply m x 1) with x.
+          replace (exp_square_and_multiply m x 1%F) with x.
           2: { unfold exp_square_and_multiply; simplify_F. }
           pose Nat_iter_plus_one.
           specialize e0 with (f := exp_square_and_multiply m x) (k := (S n0)) (x := x).
@@ -384,8 +387,13 @@ Section FElems.
 
       Local Ltac ecancel_assumption ::= ecancel_assumption_impl.
 
-      Context {field_parameters : FieldParameters}.
-      Context {field_representaton : FieldRepresentation}.
+      Context {prime_field_parameters : PrimeFieldParameters}.
+
+      Local Instance my_field_parameters : FieldParameters.
+      Proof.
+        exact (PrimeField.prime_field_parameters).
+      Defined.
+      Context {field_representation : @FieldRepresentation my_field_parameters _ _ _ _}.
       Context {field_representation_ok : FieldRepresentation_ok}.
 
       Definition exp (e : positive) (x : F M_pos) := F.pow x (N.pos e).
@@ -394,12 +402,12 @@ Section FElems.
       : spec_of "exp_6" :=
         fnspec! "exp_6" (sq_ptr x_ptr : word) / (sq x : F M_pos) R,
         { requires tr mem :=
-            (FElem (Some tight_bounds) x_ptr x
-             * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
+            (FElem (Some (@tight_bounds my_field_parameters _ _ _ _ _)) x_ptr x
+             * FElem (Some (@tight_bounds my_field_parameters _ _ _ _ _)) sq_ptr sq * R)%sep mem;
           ensures tr' mem' :=
             tr = tr'
-            /\ (FElem (Some tight_bounds) x_ptr x
-                * FElem (Some tight_bounds) sq_ptr (exp 6 x) * R)%sep mem'}.
+            /\ (FElem (Some (@tight_bounds my_field_parameters _ _ _ _ _)) x_ptr x
+                * FElem (Some (@tight_bounds my_field_parameters _ _ _ _ _)) sq_ptr (exp 6 x) * R)%sep mem'}.
 
       Ltac rewrite_exponentiation lemma :=
         lazymatch goal with
@@ -409,14 +417,51 @@ Section FElems.
                   lower; reflexivity)
         end.
 
+        Lemma relax_bounds_FElem_R : forall R x x_ptr, Lift1Prop.impl1 ((FElem (Some tight_bounds) x_ptr x * R)%sep) ((FElem (Some loose_bounds) x_ptr x * R)%sep).
+        Proof.
+          intros. cbv [Lift1Prop.impl1]. intros m H.
+          destruct H, H, H, H0.
+          eexists; eexists; split; [eapply H | ]. split; eauto. eapply relax_bounds_FElem. auto.
+        Qed.
+
+        Lemma relax_bounds_binop : forall R x x_ptr y y_ptr, Lift1Prop.impl1 ((FElem (Some tight_bounds) x_ptr x * FElem (Some tight_bounds) y_ptr y * R)%sep) ((FElem (Some loose_bounds) x_ptr x * FElem (Some loose_bounds) y_ptr y * R)%sep).
+        Proof.
+          intros. cbv [Lift1Prop.impl1]. intros. eapply sep_assoc. eapply relax_bounds_FElem_R.
+          eapply sep_comm, sep_assoc. eapply relax_bounds_FElem_R. ecancel_assumption.
+        Qed.
+
+        Local Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (_ ^ 2)%F _))) =>
+          let Hsquare := (fresh "Hsquare") in pose proof compile_square as Hsquare;
+          repeat rewrite F.pow_2_r; cbv [Compilation2.field_parameters PrimeField.prime_field_parameters] in Hsquare;
+          eapply Hsquare; [| | |eapply relax_bounds_FElem_R; ecancel_assumption | | ]; clear Hsquare; shelve : compiler.
+
+        Local Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (_ * _)%F _))) =>
+          let Hmul := (fresh "Hmul") in pose proof compile_mul as Hmul;
+          cbv [Compilation2.field_parameters PrimeField.prime_field_parameters] in Hmul;
+          eapply Hmul; [| | |eapply relax_bounds_binop; ecancel_assumption | | |]; clear Hmul; shelve : compiler.
+
+
       Section Exp_by_squaring.
         Hint Extern 1 => rewrite_exponentiation exp_by_squaring_correct; shelve : compiler_cleanup.
 
+        Instance spec_of_mul : spec_of (@mul prime_field_parameters).
+        Proof.
+          pose proof (binop_spec bin_mul). cbv [spec_of]. eapply X.
+        Defined.
+
+        Instance spec_of_square : spec_of (@square prime_field_parameters).
+        Proof.
+          pose proof (unop_spec un_square). cbv [spec_of]. eapply X.
+        Defined.
+
+        Lemma square_eq : forall x, AbstractField.Fsquare x = (x * x)%F.
+        Proof. auto. Qed.
+
         Derive exp_6_body SuchThat
           (defn! "exp_6" ("res", "x") { exp_6_body },
-          implements (exp 6) using [square; mul])
+          implements (exp 6) using [@square prime_field_parameters; @mul prime_field_parameters])
           As exp_6_body_correct.
-        Proof.
+        Proof with autounfold.
           compile.
         Qed.
       End Exp_by_squaring.
@@ -451,12 +496,22 @@ Section FElems.
 
       Hint Extern 1 => rewrite_exponentiation exp_by_squaring_encoded_correct; shelve : compiler_cleanup.
 
+      Instance spec_of_mul' : spec_of (@mul prime_field_parameters).
+      Proof.
+        pose proof (binop_spec bin_mul). cbv [spec_of]. eapply X.
+      Defined.
+
+      Instance spec_of_square' : spec_of (@square prime_field_parameters).
+      Proof.
+        pose proof (unop_spec un_square). cbv [spec_of]. eapply X.
+      Defined.
       Derive exp_97_body SuchThat
              (defn! "exp_97" ("res", "x") { exp_97_body },
-              implements (exp 97) using [square; mul])
+              implements (exp 97) using [@square prime_field_parameters; @mul prime_field_parameters])
              As exp_97_body_correct.
       Proof.
         compile.
+        eapply (clean_width (2)%positive); lia.
       Qed.
 
       Print Assumptions exp_6_body. (* does not depend on [width] or [word] *)
@@ -467,7 +522,7 @@ Section FElems.
               implements (exp (2^255-21)) using [square; mul])
              As fe25519_inv_correct_exp.
       Proof.
-        compile.
+          compile; eapply (clean_width (2)%positive); lia.
       Qed.
 
       Context { F_M_pos : Z.pos M_pos = 2^255-19 }.
@@ -652,9 +707,9 @@ Require Import bedrock2.BasicC64Semantics.
 
 Section Extraction.
   Definition _M_pos := (2 ^ 255 - 19)%positive.
-  Context (_a24: F _M_pos).
+  Context (_a24: F.F _M_pos).
 
-  Instance fp : FieldParameters :=
+  Instance pfp : PrimeFieldParameters :=
     {| M_pos := _M_pos;
        a24 := _a24;
        mul := "mul";
@@ -669,6 +724,8 @@ Section Extraction.
        select_znz := "select_znz";
        felem_copy := "felem_copy";
        from_word := "from_word" |}.
+
+  Instance fp : FieldParameters := PrimeField.prime_field_parameters.
 End Extraction.
 
 #[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.inv _) _))) =>

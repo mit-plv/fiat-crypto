@@ -22,7 +22,7 @@ Import ListNotations.
 Derive ladderstep SuchThat
        (ladderstep = ladderstep_body
                        (BW:=BW32)
-                       (field_parameters:=field_parameters)
+                       (prime_field_parameters:=Field25519.field_parameters)
                        (field_representaton:=field_representation n s c))
        As ladderstep_defn.
 Proof. vm_compute. subst; exact eq_refl. Qed.
@@ -32,7 +32,7 @@ Derive montladder SuchThat
         = montladder_body
             (BW:=BW32)
             (Z.to_nat (Z.log2_up Curve25519.l))
-            (field_parameters:=field_parameters)
+            (prime_field_parameters:=Field25519.field_parameters)
             (field_representaton:=field_representation n s c))
        As montladder_defn.
 Proof. vm_compute. subst; exact eq_refl. Qed.
@@ -43,9 +43,9 @@ Definition funcs : list func :=
     fe25519_to_bytes;
     fe25519_from_bytes;
     fe25519_from_word;
-    CSwap.cswap_body(word:=BasicC32Semantics.word)(field_parameters:=field_parameters)(field_representaton:=field_representation n s c);
+    CSwap.cswap_body(word:=BasicC32Semantics.word)(prime_field_parameters:=Field25519.field_parameters)(field_representaton:=field_representation n s c);
     fe25519_copy;
-    fe25519_inv(word:=BasicC32Semantics.word)(field_parameters:=field_parameters);
+    fe25519_inv(word:=BasicC32Semantics.word)(prime_field_parameters:=Field25519.field_parameters);
     ladderstep;
     fe25519_mul;
     fe25519_add;

@@ -28,5 +28,6 @@
                                                                   (cmd.seq (cmd.set "swap" "s_i") (cmd.seq (cmd.unset "s_i") cmd.skip)))))))))
                                              (cmd.seq (cmd.call [] felem_cswap ["swap"; "X1"; "X2"])
                                                 (cmd.seq (cmd.call [] felem_cswap ["swap"; "Z1"; "Z2"])
-                                                   (cmd.seq (cmd.call [] "fe25519_inv" ["OUT"; "Z1"]) (cmd.seq (cmd.call [] mul ["OUT"; "X1"; "OUT"]) cmd.skip))))))))))))))))))
+                                                   (cmd.seq (cmd.call [] "fe25519_inv" ["OUT"; "Z1"])
+                                                      (cmd.seq (cmd.call [] AbstractField.mul ["OUT"; "X1"; "OUT"]) cmd.skip))))))))))))))))))
      : bedrock_func

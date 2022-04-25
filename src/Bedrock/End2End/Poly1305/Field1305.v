@@ -6,7 +6,8 @@ Require Import Crypto.Bedrock.Field.Interface.Representation.
 Require Import Crypto.Bedrock.Field.Synthesis.New.ComputedOp.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults32.
-Require Import Crypto.Bedrock.Specs.Field.
+Require Import Crypto.Bedrock.Specs.AbstractField.
+Require Import Crypto.Bedrock.Specs.PrimeField.
 Import ListNotations.
 
 (* Parameters for Poly1305 field. *)
@@ -21,14 +22,14 @@ Section Field.
   Definition prefix : string := "fe1305_"%string.
 
   (* Define Poly1305 field *)
-  Instance field_parameters : FieldParameters.
+  Instance field_parameters : PrimeFieldParameters.
   Proof using Type.
     let M := (eval vm_compute in (Z.to_pos (UnsaturatedSolinas.m s c))) in
     (* dummy 'A' parameter since we don't care about scmula24 here *)
     let a := constr:(F.of_Z M 2) in
     let prefix := constr:("fe1305_"%string) in
     eapply
-      (field_parameters_prefixed
+      (prime_field_parameters_prefixed
          M ((a - F.of_Z _ 2) / F.of_Z _ 4)%F prefix).
   Defined.
 
