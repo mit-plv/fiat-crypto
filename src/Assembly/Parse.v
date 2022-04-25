@@ -13,6 +13,8 @@ Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.Listable.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Sum.
 Import ListNotations.
 Local Open Scope bool_scope.
 Local Open Scope list_scope.
@@ -246,53 +248,29 @@ Definition parse_MEM : ParserAction MEM
            ; mem_scale_reg := sr:option (Z * REG)
            ; mem_offset := offset:option Z |})
        (((strip_whitespace_after parse_AccessSize)?) ;;
-        ("["
-         ;;R
-             parse_or_else
-             (
-               (*[rax]                 *)
-               (parse_map
-                  (fun r => (Some r, None, None, None))
-                  (strip_whitespace_around parse_REG))
-               || (*[rax           + 0x10]*)
-                 (parse_map
-                    (fun '(br, (pm, z)) => (Some br, None, Some match pm with
-                                                                | inl _ (* plus *) => z
-                                                                | inr _ (* minus *) => -z
-                                                                end%Z, None))
-                    (strip_whitespace_around parse_REG ;; ("+" ||->{id} "-") ;; parse_Z_arith_strict))
-               || (*[0x10          + rax]*)
-                 (parse_map
-                    (fun '(z, br) => (Some br, None, Some z, None))
-                    ((strip_whitespace_before "+")? ;;R parse_Z_arith_strict ;; "+" ;;R strip_whitespace_around parse_REG))
-               || (*[rax +     rbx]       *)
-                 (parse_map
-                    (fun '(br, sr) => (Some br, Some (1%Z, sr), None, None))
-                    (strip_whitespace_around parse_REG ;; "+" ;;R strip_whitespace_around parse_REG))
-               || (*[rax + 2 * rbx]       *)
-                 (parse_map
-                    (fun '(br, (z, sr)) => (Some br, Some (z, sr), None, None))
-                    (strip_whitespace_around parse_REG ;; "+" ;;R parse_Z_arith_strict ;; "*" ;;R strip_whitespace_around parse_REG))
-               || (*[2 * rbx + rax]       *)
-                 (parse_map
-                    (fun '(z, (sr, br)) => (Some br, Some (z, sr), None, None))
-                    (parse_Z_arith_strict ;; "*" ;;R strip_whitespace_around parse_REG ;; "+" ;;R strip_whitespace_around parse_REG))
-               || (*[      2 * rax]       *)
-                 (parse_map
-                    (fun '(z, r) => (None, Some (z, r), None, None))
-                    (parse_Z_arith_strict ;; "*" ;;R strip_whitespace_around parse_REG))
-             )
-             (
-               (*FIXME: what's the full form of this? how should it be combined with other options? *)
-               (*[(($L$poly+8))]                 *)
-               (parse_map
-                  (fun '(l, (pm, z)) => (None, None, Some match pm with
-                                                          | inl _ (* plus *) => z
-                                                          | inr _ (* minus *) => -z
-                                                          end%Z, Some l))
-                  ("((" ;;R strip_whitespace_around parse_label ;; ("+" ||->{id} "-") ;; parse_Z_arith_strict ;;L "))"))
-             )
-         ;;L "]")).
+        (parse_option_list_map
+           (fun '(offset, vars)
+            => (vars <-- List.map (fun '(c, (v, e), vs) => match vs, e with [], 1%Z => Some (c, v) | _, _ => None end) vars;
+                let regs : list (Z * REG) := Option.List.map (fun '(c, v) => match v with inl v => Some (c, v) | inr _ => None end) vars in
+                let labels : list (Z * string) := Option.List.map (fun '(c, v) => match v with inr v => Some (c, v) | inl _ => None end) vars in
+                base_label <- match labels with
+                              | [] => Some None
+                              | [(1%Z, lbl)] => Some (Some lbl)
+                              | _ => None
+                              end;
+                let offset := if (0 =? offset)%Z then None else Some offset in
+                base_scale_reg <- match regs with
+                                  | [] => Some (None, None)
+                                  | [(1%Z, r)] => Some (Some r, None)
+                                  | [(s, r)] => Some (None, Some (s, r))
+                                  | [(1%Z, r1); (s, r2)]
+                                  | [(s, r2); (1%Z, r1)]
+                                    => Some (Some r1, Some (s, r2))
+                                  | _ => None
+                                  end;
+                let '(br, sr) := base_scale_reg in
+                Some (br (*base reg*), sr (*scale reg, including z *), offset, base_label))%option)
+           ("[" ;;R parse_Z_poly_strict (sum_beq _ _ REG_beq String.eqb) (parse_or_else_gen (fun x => x) parse_REG parse_label) ;;L "]"))).
 
 Definition parse_CONST (const_keyword : bool) : ParserAction CONST
   := if const_keyword
