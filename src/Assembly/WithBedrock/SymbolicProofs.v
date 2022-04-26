@@ -76,6 +76,8 @@ End Memory.
 
 Require Import Crypto.Util.Prod.
 From Crypto.Util.Tactics Require Import BreakMatch DestructHead UniquePose.
+Require Import Crypto.Util.Bool.Reflect.
+Require Import Crypto.Util.ZUtil.Ones.
 Import coqutil.Tactics.autoforward coqutil.Decidable coqutil.Tactics.Tactics.
 
 Local Coercion ExprRef : idx >-> expr.
@@ -1014,12 +1016,18 @@ Ltac invert_eval :=
   end.
 
 Ltac resolve_match_using_hyp :=
-  match goal with |- context[match ?x with _ => _ end] =>
-  match goal with H : x = ?v |- _ =>
-      let h := Head.head v in
-      is_constructor h;
-      rewrite H
-  end end.
+  let rewrite_for x
+    := match goal with
+       | [ H : x = ?v |- _ ]
+         => let h := Head.head v in
+            is_constructor h;
+            rewrite H
+       end in
+  match goal with
+  | [ |- context[match ?x with _ => _ end] ] => rewrite_for x
+  | [ |- context[match (if _ then ?x else ?y) with _ => _ end] ]
+    => progress (try rewrite_for x; try rewrite_for y)
+  end.
 
 Ltac resolve_SetOperand_using_hyp :=
   match goal with
@@ -1042,13 +1050,14 @@ Ltac step :=
   first
   [ lift_let_goal
   | resolve_match_using_hyp
-  | progress (cbn beta iota delta [fst snd Syntax.op Syntax.args] in *; cbv beta iota delta [Reveal RevealConst Crypto.Util.Option.bind Symbolic.ret Symbolic.err Symeval mapM PreserveFlag] in *; subst)
+  | progress (cbn beta iota delta [fst snd Syntax.op Syntax.args] in *; cbv beta iota delta [Reveal RevealConst Crypto.Util.Option.bind Symbolic.ret Symbolic.err Symeval mapM PreserveFlag some_or] in *; subst)
   | Prod.inversion_prod_step
   | inversion_ErrorT_step
   | Option.inversion_option_step
   | invert_eval
   | step_symex
   | destr_expr_beq
+  | rewrite N.eqb_refl (* TODO: should this live elsewhere? *)
   ].
 Ltac step1 := step; (eassumption||trivial); [].
 Ltac step01 := solve [step] || step1.
@@ -1099,8 +1108,8 @@ Lemma SymexNornalInstruction_R {descr:description} s m (HR : R s m) instr :
   exists m', Semantics.DenoteNormalInstruction m instr = Some m' /\ R s' m' /\ s :< s'.
 Proof using Type.
   intros [] s' H.
-  case instr as [op args]; cbv [SymexNormalInstruction] in H.
-  repeat destruct_one_match_hyp; repeat step01.
+  case instr as [op args]; cbv [SymexNormalInstruction OperationSize] in H.
+  repeat (repeat destruct_one_match_hyp; repeat step01).
 
   all : repeat
   match goal with
@@ -1113,8 +1122,8 @@ Proof using Type.
       exact eq_refl || rewrite Z.bit0_mod; trivial; rewrite  Z.mod_small; trivial; Lia.lia]
   end.
 
-  all: cbv beta delta [DenoteNormalInstruction].
-  all: repeat
+  all: cbv beta delta [DenoteNormalInstruction];
+       repeat
   match goal with
   | x := ?v |- _ => let t := type of x in
       assert_fails (idtac; match v with context[match _ with _ => _ end] => idtac end);
@@ -1122,6 +1131,7 @@ Proof using Type.
   | _ => step
   | _ => resolve_SetOperand_using_hyp
   | _ => rewrite (Bool.pull_bool_if Some)
+  | |- context[if (?x =? ?y)%N then _ else _] => destruct (x =? y)%N eqn:?; reflect_hyps; subst; try congruence
   | |- exists _, Some _ = Some _ /\ _ => eexists; split; [f_equal|]
   | |- exists _, None   = Some _ /\ _ => exfalso
   | |- _ /\ _ :< _ => split; [|solve[eauto 99 with nocore] ]
@@ -1135,6 +1145,9 @@ Proof using Type.
 
   all : cbn [fold_right map]; rewrite ?N2Z.id, ?Z.add_0_r, ?Z.add_assoc, ?Z.mul_1_r, ?Z.land_m1_r, ?Z.lxor_0_r;
     (congruence||eauto).
+  all: rewrite ?Z.land_ones_low_alt by now try split; try apply Zpow_facts.Zpower2_lt_lin; lia.
+  all: rewrite ?(fun x => Z.land_ones_low_alt (x / 8) x) by now split; try (eapply Z.le_lt_trans; [ | apply Zpow_facts.Zpower2_lt_lin ]); try lia; Z.to_euclidean_division_equations; nia.
+  all: try exact eq_refl.
   all : try solve [rewrite Z.land_ones, Z.bit0_mod by Lia.lia; exact eq_refl].
 
   all: try solve[ (* bash flags weakening *)
@@ -1296,12 +1309,7 @@ Proof using Type.
 
   Unshelve. all : match goal with H : context[Syntax.rcr] |- _ => idtac | _ => shelve end; shelve_unifiable.
   all : change Symbolic.rcrcnt with rcrcnt in *.
-  { destruct_one_match_hyp; repeat step; eauto.
-    { econstructor. econstructor. eauto 9. econstructor. cbn.
-      rewrite Z.shiftr_0_r. rewrite Z.land_ones by lia.
-      rewrite <-Z.bit0_mod. exact eq_refl. }
-  all : destruct_one_match; try lia.
-  all : split; [|solve[eauto 99 with nocore] ].
+  { repeat destruct_one_match; try lia.
   all:
       destruct s';
       repeat match goal with
@@ -1338,6 +1346,9 @@ Proof using Type.
   { rewrite <- Z.land_assoc.
     f_equal; f_equal; [].
     pose_operation_size_cases; intuition subst; reflexivity. }
+
+  Unshelve. all : match goal with H : context[push] |- _ => idtac | H : context[pop] |- _ => idtac | _ => shelve end; shelve_unifiable.
+  all: rewrite !Z.land_ones by lia; push_Zmod; pull_Zmod; f_equal; lia.
 
   Unshelve. all: shelve_unifiable.
   all: fail_if_goals_remain ().
