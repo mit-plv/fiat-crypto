@@ -12,6 +12,8 @@ Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Land.
 Require Import Crypto.Util.ZUtil.Ones.
 Require Import Crypto.Util.Bool.Reflect.
+Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Strings.Subscript.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.Concat.
 Require Import Crypto.Util.ListUtil.GroupAllBy.
@@ -38,6 +40,7 @@ Require Import Crypto.Util.Bool.Reflect.
 Require Import coqutil.Z.bitblast.
 Require Import Coq.Strings.String Crypto.Util.Strings.Show.
 Require Import Crypto.Assembly.Syntax.
+Import ListNotations.
 Definition idx := N.
 Local Set Decidable Equality Schemes.
 Definition symbol := N.
@@ -47,7 +50,7 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 
 Section S.
 Implicit Type s : OperationSize.
-Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | subborrow s | addoverflow s | neg s | shl s | shlx s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
+Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | subborrow s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
   | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | xorZ | addcarryZ s | subborrowZ s.
 Definition op_beq a b := if op_eq_dec a b then true else false.
 End S.
@@ -62,7 +65,6 @@ Global Instance Show_op : Show op := fun o =>
   | addoverflow s => "addoverflow " ++ show s
   | neg s => "neg " ++ show s
   | shl s => "shl " ++ show s
-  | shlx s => "shlx " ++ show s
   | shr s => "shr " ++ show s
   | sar s => "sar " ++ show s
   | rcr s => "rcr " ++ show s
@@ -84,6 +86,39 @@ Global Instance Show_op : Show op := fun o =>
   | xorZ => "xorZ"
   | addcarryZ s => "addcarryZ " ++ show s
   | subborrowZ s => "subborrowZ " ++ show s
+  end%string.
+
+Definition show_op_subscript : Show op := fun o =>
+  match o with
+  | old s n => "old" ++ String.to_subscript (show s) ++ " " ++ show n
+  | const n => "const " ++ show n
+  | add s => "add" ++ String.to_subscript (show s)
+  | addcarry s => "addcarry" ++ String.to_subscript (show s)
+  | subborrow s => "subborrow" ++ String.to_subscript (show s)
+  | addoverflow s => "addoverflow" ++ String.to_subscript (show s)
+  | neg s => "neg" ++ String.to_subscript (show s)
+  | shl s => "shl" ++ String.to_subscript (show s)
+  | shr s => "shr" ++ String.to_subscript (show s)
+  | sar s => "sar" ++ String.to_subscript (show s)
+  | rcr s => "rcr" ++ String.to_subscript (show s)
+  | and s => "and" ++ String.to_subscript (show s)
+  | or s => "or" ++ String.to_subscript (show s)
+  | xor s => "xor" ++ String.to_subscript (show s)
+  | slice lo sz => "slice" ++ String.to_subscript (show lo) ++ "," ++ String.to_subscript (show sz)
+  | mul s => "mul" ++ String.to_subscript (show s)
+  | set_slice lo sz => "set_slice" ++ String.to_subscript (show lo) ++ "," ++ String.to_subscript (show sz)
+  | selectznz => "selectznz"
+  | iszero => "iszero"
+  | addZ => "addℤ"
+  | mulZ => "mulℤ"
+  | negZ => "negℤ"
+  | shlZ => "shlℤ"
+  | shrZ => "shrℤ"
+  | andZ => "andℤ"
+  | orZ => "orℤ"
+  | xorZ => "xorℤ"
+  | addcarryZ s => "addcarryℤ" ++ String.to_subscript (show s)
+  | subborrowZ s => "subborrowℤ" ++ String.to_subscript (show s)
   end%string.
 
 Definition associative o := match o with add _|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ=> true | _ => false end.
@@ -123,6 +158,70 @@ Definition Show_expr : Show expr
   := Eval cbv -[String.append show_N concat List.map Show_op] in
       fix Show_expr e := Show_expr_body Show_expr e.
 Global Existing Instance Show_expr.
+
+Local Notation max_powers_of_two := 5%nat (only parsing).
+Local Notation max_decimal := 256%Z (only parsing).
+
+Definition show_infix_op (o : op) : option string
+  := match o with
+     | add s => Some ("+" ++ String.to_subscript (show s))
+     | shl s => Some (">>" ++ String.to_subscript (show s))
+     | shr s => Some (">>" ++ String.to_subscript (show s))
+     | and s => Some ("&"  ++ String.to_subscript (show s))
+     | or s  => Some ("|"  ++ String.to_subscript (show s))
+     | xor s => Some ("^"  ++ String.to_subscript (show s))
+     | mul s => Some ("*"  ++ String.to_subscript (show s))
+     | sar s => Some (">>>" ++ String.to_subscript (show s))
+     | addZ  => Some "+ℤ"
+     | mulZ  => Some "*ℤ"
+     | shlZ  => Some "<<ℤ"
+     | shrZ  => Some ">>ℤ"
+     | andZ  => Some "&ℤ"
+     | orZ   => Some "|ℤ"
+     | xorZ  => Some "^ℤ"
+     | _ => None
+     end%string.
+
+Definition show_prefix_op (o : op) : option (string * Level)
+  := match o with
+     | neg s => Some ("-" ++ String.to_subscript (show s), opp_lvl)
+     | negZ => Some ("-ℤ", opp_lvl)
+     | _ => None
+     end%string.
+
+Definition show_lvl_expr_pretty : ShowLevel expr
+  := fix show_lvl_pretty_expr (e : expr) : Level -> string
+    := let __ : ShowLevel expr := show_lvl_pretty_expr in
+       let __ : Show expr := @Show_of_ShowLevel _ show_lvl_pretty_expr in
+       let show_comment_args args
+         := match args with
+            | nil => ""
+            | _ => " (* " ++ show args ++ " *)"
+            end%string in
+       match e with
+       | ExprRef i => fun _ => "#" ++ show i
+       | ExprApp (old s x, args) => lvl_wrap_parens app_lvl ("old" ++ String.to_subscript (show s) ++ " " ++ show x ++ show_comment_args args)
+       | ExprApp (const x, args) => fun lvl => PowersOfTwo.show_lvl_Z_up_to max_powers_of_two max_decimal x lvl ++ show_comment_args args
+       | ExprApp ((add _|shl _|shr _|and _|or _|xor _|mul _|sar _|addZ|mulZ|shlZ|shrZ|andZ|orZ|xorZ) as o, args)
+         => let o : string := Option.invert_Some (show_infix_op o) in
+            match args with
+            | nil => fun _ => o ++ "[]"
+            | x :: nil => fun _ => o ++ "[" ++ show x ++ "]"
+            | _ => fun _ => "(" ++ String.concat (" " ++ o ++ " ") (List.map show args) ++ ")"
+            end
+       | ExprApp ((neg _|negZ) as o, args)
+         => let '(o, lvl) := Option.invert_Some (show_prefix_op o) in
+            match args with
+            | nil => fun _ => o ++ "[]"
+            | x :: nil => fun _ => o ++ show_lvl x lvl
+            | _ => fun _ => o ++ show args
+            end
+       | ExprApp (o, args)
+         => fun _ => "(" ++ show_op_subscript o ++ ", " ++ show args ++ ")"
+       end%string%list.
+
+Definition show_expr_pretty : Show expr
+  := @Show_of_ShowLevel _ show_lvl_expr_pretty.
 
 Lemma op_beq_spec a b : BoolSpec (a=b) (a<>b) (op_beq a b).
 Proof using Type. cbv [op_beq]; destruct (op_eq_dec a b); constructor; congruence. Qed.
@@ -1532,9 +1631,9 @@ Qed.
 
 Definition shift_to_mul :=
   fun e => match e with
-    ExprApp ((shl _ | shlx _ | shlZ) as o, [e'; ExprApp (const v, [])]) =>
-      let o' := match o with shl bitwidth | shlx bitwidth => mul bitwidth | shlZ => mulZ | _ => o (* impossible *) end in
-      let bw := match o with shl bitwidth | shlx bitwidth => Some bitwidth | shlZ => None | _ => None (* impossible *) end in
+    ExprApp ((shl _ | shlZ) as o, [e'; ExprApp (const v, [])]) =>
+      let o' := match o with shl bitwidth => mul bitwidth | shlZ => mulZ | _ => o (* impossible *) end in
+      let bw := match o with shl bitwidth => Some bitwidth | shlZ => None | _ => None (* impossible *) end in
       if Z.eqb v 0
       then match bw with
            | Some N0 => ExprApp (const 0, nil)
