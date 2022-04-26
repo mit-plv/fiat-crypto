@@ -183,7 +183,7 @@ Module compiling_reduce_flatten.
       let r1 := reduce1 base s c (2*n) p in
       let r2 := reduce1 base s c (2*n) (r1) in
       let r3 := reduce1 base s c (2*n) (r2) in
-      r3.
+      r1.
 
     Definition mul_no_reduce base n (p q : list Z) :=
       let p_a := Positional.to_associational weight n p in
@@ -200,13 +200,18 @@ Module compiling_reduce_flatten.
 
   End single_reduction.
 
+  Search Saturated.Rows.sum_rows.
+  Search Partition.partition.
+  Search Partition.partition app.
+  Search Saturated.Rows.flatten.
+
   Let v := (2^64-1).
   Let p := repeat v (2*n).
   Let r' := reduce' w base s c n p.
   Compute r'.
 
   Let out_boundsn := (repeat bound n) ++
-                                      [Some r[0~>0]%zrange] ++
+                                      [Some r[0~>39]%zrange] ++
                                       (repeat (Some r[0~>0]%zrange) (n-1)).
   Time Compute
        Show.show
