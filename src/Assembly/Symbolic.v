@@ -1099,7 +1099,7 @@ Proof using Type.
   split; try (eapply Z.pow_lt_mono_r; Lia.lia).
   eapply Z.pow_nonneg; Lia.lia.
 Qed.
-Global Hint Rewrite signed_0 : zsimplify_const zsimplify zsimplify_fast.
+Hint Rewrite signed_0 : zsimplify_const zsimplify zsimplify_fast.
 Global Hint Resolve signed_0 : zarith.
 
 Lemma interp_op_drop_identity o id : identity o = Some id ->
