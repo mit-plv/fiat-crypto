@@ -592,6 +592,7 @@ Section CompileBufPolymorphic.
   Local Lemma memcpy_helper (l1 l2 : list word) z len
     : len = length l1 ->
       len = length l2 ->
+      len <= 2^32 ->
       0 <= z <= len ->
       snd
         (Loops.foldl
@@ -603,7 +604,7 @@ Section CompileBufPolymorphic.
                Loops.ExitToken.get (fst tok_acc)) (Loops.z_range z len)
            (false, firstn (Z.to_nat z) l1 ++ skipn (Z.to_nat z) l2)) = l1.
   Proof.
-    intros Hlen1 Hlen2 Hz.
+    intros Hlen1 Hlen2 Hlen_bound Hz.
     remember (Loops.z_range z len) as lst.
     revert z Hz Heqlst.
     induction lst.
@@ -637,71 +638,54 @@ Section CompileBufPolymorphic.
         inversion Heqlst.
       }
       {
-        simpl.
         unfold nlet in *.
         rewrite Loops.z_range_cons in Heqlst by lia.
         inversion Heqlst; subst.
+        set (tmp := word.of_Z).
+        simpl; subst tmp.
         rewrite Arrays.ListArray.put_app_len.
         {
           change (?e ++ ?a::?e') with (e++[a]++e').
           rewrite app_assoc.
-          replace (Arrays.ListArray.get l1 (Naive.wrap z))
-            with (Arrays.ListArray.get l1 z) by admit.
-          rewrite firstn_extend.
-          rewrite tl_skipn.
-          replace (S (Z.to_nat z)) with (Z.to_nat (z + 1)) by lia.
-          eapply IHlst; eauto.
-          all: try lia.
-          split; try lia.
-          destruct Hz.
-  Admitted.
+          replace (Arrays.ListArray.get l1 (word.of_Z (word:=word) z))
+            with (Arrays.ListArray.get l1 z).
+          {
+            rewrite firstn_extend.
+            rewrite tl_skipn.
+            replace (S (Z.to_nat z)) with (Z.to_nat (z + 1)) by lia.
+            eapply IHlst; eauto.
+            all: try lia.
+            split; try lia.
+            destruct Hz.
+            destruct (Z.le_gt_cases (length l1) z); try lia; auto.
+          }
+          {
+            unfold Arrays.ListArray.get.
+            unfold cast, Convertible_word_nat, Convertible_Z_nat.
+            rewrite word.unsigned_of_Z.
+            rewrite word.wrap_small by lia.
+            reflexivity.
+          }
+        }
+        {
+          rewrite skipn_length.
+          change  (@Naive.rep 32) with (@word.rep 32 word).
+          lia.
+        }
+        {
+          unfold cast, Convertible_word_nat, Convertible_Z_nat.
+          rewrite firstn_length.
+          rewrite Nat.min_l; try lia.
+          rewrite word.unsigned_of_Z.
+          rewrite word.wrap_small by lia; auto.
+          change (@Naive.rep 32) with (@word.rep 32 word).          
+          erewrite <- (Nat2Z.id (length l1)).
+          apply Z2Nat.inj_le; lia.
+        }
+      }
+    }
+  Qed.
 
-   
-  (*
-  (* TODO: move next to memcpy def *)
-Lemma memcpy_spec (l1 l2 : list word) len
-    : (*word.unsigned len <= length l1 ->
-      word.unsigned len <= length l2 ->*)
-      list_memcpy len l1 l2
-      = (l1, firstn (Z.to_nat (word.unsigned len)) l1
-                    ++ skipn (Z.to_nat (word.unsigned len)) l2).
-  Proof.
-    unfold list_memcpy, Loops.ranged_for_u, Loops.ranged_for_w.
-    unfold Loops.w_body_tok.
-    rewrite <- Loops.nd_as_ranged_for.
-    unfold Loops.nd_ranged_for, Loops.nd_ranged_for', Loops.nd_ranged_for_break,
-      Loops.ExitToken.new.
-    unfold nlet at 1.
-    (*intro Hlen.*)
-    f_equal.
-    (*revert Hlen.*)
-    pose proof (word.unsigned_range len) as H'; revert H'.
-    generalize (word.unsigned len).
-    intros z z_gt_0.
-    rewrite <- (Z2Nat.id z); [|lia].
-    generalize (Z.to_nat z).
-    clear z z_gt_0.
-    intros n.
-    rewrite !Nat2Z.id.
-    rewrite word.unsigned_of_Z_0.
-    (*
-    set (l3:= l2).
-    unfold l3 at 2.*)
-    replace l2 with (firstn 0 l1 ++ skipn 0 l2) at 1.
-    replace (0%nat) with (Z.to_nat 0) by lia.
-    assert (0 <= Z.of_nat n) as H' by lia; revert H'.
-    assert 
-    generalize 0.
-  
-    induction n.
-    {
-      intros; assert (z = 0). by lia.
-      intros; rewrite Loops.z_range_nil. [try reflexivity |lia].
-    }
-    {
-      
-    }
-    *)
   
   Lemma memcpy_identity (l1 l2 : list word) len
     : word.unsigned len = length l1 ->
@@ -741,8 +725,8 @@ Lemma memcpy_spec (l1 l2 : list word) len
     rewrite word.wrap_small by auto.
     all: eauto.
     rewrite Hlen in H.
-    Set Printing Coercions.
     apply Nat2Z.inj; auto.
+    lia.
     lia.
   Qed.
   
@@ -772,12 +756,12 @@ Lemma memcpy_spec (l1 l2 : list word) len
       <{ Trace := t; Memory := m; Locals := l; Functions := e }>
       cmd.seq
         (cmd.call [] "unsizedlist_memcpy"
-                  [len_expr; expr.var a2_var; a_expr])
+                  [len_expr; a_expr; expr.var a2_var])
         k_impl
       <{ pred (nlet_eq [a2_var] v k) }>.
   Proof.
     repeat straightline.
-    exists [len; a2; a]; split.
+    exists [len; a; a2]; split.
     {
       cbv [dexprs list_map list_map_body].
       repeat (eapply WeakestPrecondition_dexpr_expr; eauto).
@@ -797,11 +781,13 @@ Lemma memcpy_spec (l1 l2 : list word) len
       seprewrite_in @ArrayCasts.truncated_scalars_of_bytes H; cycle 1.
       seprewrite_in @ArrayCasts.truncated_scalars_of_bytes H; cycle 1.
 
+
       unfold scalar.
       change (word.of_Z 4) with (word.of_Z (word:=word) (Memory.bytes_per (width:=32) access_size.word)).
+
       refine (subrelation_refl Lift1Prop.impl1 _ _ _ m H).
       cancel.
-      eapply Proper_sep_impl1.
+      cancel_seps_at_indices_by_implication 1%nat 0%nat.
       {
         intros m' H'.
         eapply ArrayCasts.truncated_words_of_truncated_scalars in H'.
@@ -826,21 +812,7 @@ Lemma memcpy_spec (l1 l2 : list word) len
       2:pose proof (Nat2Z.inj_mod (length bs) 4).
       all: nia.
     }
-    {
-      cbv [Arrays.listarray_value
-             Arrays.ai_width
-             Arrays.ai_repr
-             Arrays.ai_size
-             Arrays._access_info
-             Memory.bytes_per
-             Memory.bytes_per_word];
-      change (BinIntDef.Z.to_nat ((32 + 7) / 8)) with 4%nat.
-      rewrite ArrayCasts.zs2ws_length.
-      rewrite ArrayCasts.bs2zs_length; try nia.
-      2:pose proof (Nat2Z.inj_mod (length bs2) 4); nia.
-      rewrite Nat2Z.inj_div.
-      nia.
-    }
+    (*OK*)
     {
       cbv [Arrays.listarray_value
              Arrays.ai_width
@@ -856,28 +828,129 @@ Lemma memcpy_spec (l1 l2 : list word) len
       rewrite Nat2Z.inj_div.
       nia.
     }
-    intros t' m' l' H'.
-    intuition subst.
-    exists l; intuition.
-
-    Unshelve.
-    eapply H6.
-    revert H10.
-    rewrite !memcpy_identity.
     {
-      simpl.
       cbv [Arrays.listarray_value
              Arrays.ai_width
              Arrays.ai_repr
              Arrays.ai_size
              Arrays._access_info
              Memory.bytes_per
-             Memory.bytes_per_word].
-      unfold scalar.
-      unfold truncated_word.
-      intro H'.
-  Admitted.
-      
+             Memory.bytes_per_word];
+      change (BinIntDef.Z.to_nat ((32 + 7) / 8)) with 4%nat.
+      rewrite ArrayCasts.zs2ws_length.
+      rewrite ArrayCasts.bs2zs_length; try nia.
+      2:pose proof (Nat2Z.inj_mod (length bs2) 4); nia.
+      rewrite Nat2Z.inj_div.
+      nia.
+    }
+    (*OK*)
+    intros t' m' l' H'.
+    intuition subst.
+    exists l; intuition.
+
+    
+    eapply H6.
+    revert H10.
+    rewrite !memcpy_identity.
+    {
+      set (tmp := word.of_Z).
+      simpl; subst tmp.
+      cbv [Arrays.listarray_value
+             Arrays.ai_width
+             Arrays.ai_repr
+             Arrays.ai_size
+             Arrays._access_info
+             Memory.bytes_per
+             Memory.bytes_per_word
+             Pos.to_nat Pos.iter_op Init.Nat.add].
+      eapply Proper_sep_impl1; [| exact (fun _ x => x)].
+      intros m'' H''.
+      refine (subrelation_refl Lift1Prop.impl1 _ _ _ m'' H'').
+      eapply Proper_sep_impl1.
+      {
+        clear m' m'' H''.
+        intros m'' H''. 
+        eapply (ArrayCasts.words_of_bytes a bs); eauto.
+        {          
+          cbn.         
+          cbv [Arrays.listarray_value
+                 Arrays.ai_width
+                 Arrays.ai_repr
+                 Arrays.ai_size
+                 Arrays._access_info
+                 Memory.bytes_per
+                 Memory.bytes_per_word
+                 Pos.to_nat Pos.iter_op Init.Nat.add].
+          eapply Nat.div_exact; try lia.
+          eapply Nat2Z.inj.
+          rewrite <- (Nat2Z.id (length bs)) at 2.
+          rewrite <- !H1.
+          rewrite Z2Nat.inj_mul; try lia.
+          change (Z.to_nat 4) with 4%nat.
+          rewrite Nat.div_mul.
+          lia.
+          lia.
+        }
+      }
+      {
+        clear m' m'' H''.
+        intros m'' H''. 
+        eapply (ArrayCasts.words_of_bytes a2 bs); eauto.
+        {          
+          cbn.         
+          cbv [Arrays.listarray_value
+                 Arrays.ai_width
+                 Arrays.ai_repr
+                 Arrays.ai_size
+                 Arrays._access_info
+                 Memory.bytes_per
+                 Memory.bytes_per_word
+                 Pos.to_nat Pos.iter_op Init.Nat.add].
+          eapply Nat.div_exact; try lia.
+          eapply Nat2Z.inj.
+          rewrite <- (Nat2Z.id (length bs)) at 2.
+          rewrite <- !H1.
+          rewrite Z2Nat.inj_mul; try lia.
+          change (Z.to_nat 4) with 4%nat.
+          rewrite Nat.div_mul.
+          lia.
+          lia.
+        }
+      }
+    }
+    all: rewrite !ArrayCasts.zs2ws_length.
+    all: rewrite !ArrayCasts.bs2zs_length.
+    all: cbn;
+          cbv [Arrays.listarray_value
+                 Arrays.ai_width
+                 Arrays.ai_repr
+                 Arrays.ai_size
+                 Arrays._access_info
+                 Memory.bytes_per
+                 Memory.bytes_per_word
+                 Pos.to_nat Pos.iter_op Init.Nat.add].
+    all: try lia.
+    {
+      assert (length bs = (Z.to_nat len * 4)%nat) as H7 by lia.
+      rewrite H7.
+      rewrite Nat.div_mul; lia.
+    }
+    {
+      assert (length bs = (Z.to_nat len * 4)%nat) as H7 by lia.
+      rewrite H7.
+      rewrite Nat.mod_mul; lia.
+    }
+    {
+      assert (length bs2 = (Z.to_nat len * 4)%nat) as H7 by lia.
+      rewrite H7.
+      rewrite Nat.div_mul; lia.
+    }
+    {
+      assert (length bs2 = (Z.to_nat len * 4)%nat) as H7 by lia.
+      rewrite H7.
+      rewrite Nat.mod_mul; lia.
+    }      
+  Qed.
   
   
 End CompileBufPolymorphic.
