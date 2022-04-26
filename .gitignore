@@ -118,6 +118,7 @@ _opam/
 
 # compilation outputs
 *.exe
+*.perf.data
 /*.o
 etc/tscfreq
 src/Specific/NISTP256/AMD64/feadd.c
@@ -219,13 +220,14 @@ src/Rewriter/PerfTesting/Specific/generated/*.v
 src/Rewriter/PerfTesting/Specific/generated/*.log
 src/Rewriter/PerfTesting/Specific/generated/*.sh
 src/Rewriter/PerfTesting/Specific/generated/primes.mk
-fiat-amd64/*.asm.stdout
-fiat-amd64/*.asm.stderr
-fiat-amd64/*.asm.out
-fiat-amd64/*.asm.out-asm
-fiat-amd64/*.asm.status
-fiat-amd64/*.asm.description
-fiat-amd64/*.asm.invocation
+fiat-amd64/*.stdout
+fiat-amd64/*.stderr
+fiat-amd64/*.out
+fiat-amd64/*.out-asm
+fiat-amd64/*.status
+fiat-amd64/*.only-status
+fiat-amd64/*.description
+fiat-amd64/*.invocation
 /Makefile.test-amd64-files.mk
 
 # Version-Specific Generated Files

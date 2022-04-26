@@ -390,7 +390,7 @@ Module ForExtraction.
   Definition hint_file_spec : named_argT
     := ([Arg.long_key "hints-file"],
         Arg.String,
-        ["An assembly file to be read for hinting the synthesis process.  Use - for stdin."]).
+        ["An assembly file to be read for hinting the synthesis process.  Use - for stdin.  To check multiple files against the same synthesized operation(s), pass this argument multiple times."]).
   Definition output_file_spec : named_argT
     := ([Arg.long_key "output"; Arg.short_key "o"],
         Arg.String,
@@ -412,7 +412,7 @@ Module ForExtraction.
   Definition asm_stack_size_spec : named_argT
     := ([Arg.long_key "asm-stack-size"],
         Arg.Custom (parse_string_and parse_N) "ℕ",
-        ["The number of bytes of stack.  Only relevant when --hints-file is specified.  Defaults to the literal argument to the first `sub rsp, LITERAL` in the code, or else " ++ show (default_assembly_stack_size:N) ++ " if none exists."]).
+        ["The number of bytes of stack.  Only relevant when --hints-file is specified.  Defaults to " ++ show (extra_assembly_stack_size:N) ++ " plus the maximum statically knowable increase to `rsp` (via `push`, `pop`, `sub`, `add`, and `lea` instructions) the code."]).
   Definition no_error_on_unused_asm_functions_spec : named_argT
     := ([Arg.long_key "no-error-on-unused-asm-functions"],
         Arg.Unit,
@@ -552,7 +552,7 @@ Module ForExtraction.
            (hint_file_names : list string)
     : (assembly_hints_lines_opt -> A) -> A
     := match hint_file_names with
-       | nil => fun k => k None
+       | nil => fun k => k []
        | fname :: fnames
          => fun k
             => with_read_file
@@ -561,7 +561,7 @@ Module ForExtraction.
                   => with_read_concat_asm_files_cps
                        with_read_file
                        fnames
-                       (fun rest_lines => k (Some (lines ++ Option.value rest_lines nil)%list)))
+                       (fun rest => k ((fname, lines) :: rest)))
        end.
 
   Definition common_optional_options {supported_languages : supported_languagesT}
@@ -894,7 +894,7 @@ Module ForExtraction.
                                     normal_lines
                                     (fun 'tt
                                      => match asm_lines, assembly_hints_linesv with
-                                        | nil, None => ret tt
+                                        | nil, [] => ret tt
                                         | _, _ => write_file_then
                                                     asm_output_file_name
                                                     asm_lines

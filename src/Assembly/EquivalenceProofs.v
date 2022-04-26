@@ -46,6 +46,7 @@ Require Import Crypto.Util.ZUtil.LandLorBounds.
 Require Import Crypto.Util.ZUtil.Tactics.PeelLe.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.SpecializeUnderBindersBy.
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.PrintContext.
@@ -299,7 +300,7 @@ Local Ltac saturate_eval_merge_step :=
         | solve [ eauto 100 ] ].
 Local Ltac saturate_eval_merge := repeat saturate_eval_merge_step.
 
-Lemma App_correct n d (Hdag : gensym_dag_ok G d) i d' (H : App n d = Success (i, d'))
+Lemma App_correct {descr:description} n d (Hdag : gensym_dag_ok G d) i d' (H : App n d = Success (i, d'))
   v (Heval : eval_node G d n v)
   : eval G d' (ExprRef i) v /\ gensym_dag_ok G d' /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof using Type.
@@ -320,6 +321,7 @@ Lemma unfold_symex_bind {A B} ma amb :
 Proof using Type. exact eq_refl. Qed.
 
 Theorem symex_ident_correct
+        {descr:description}
         {t} (idc : ident t)
         (d : dag)
         (input_var_data : type.for_each_lhs_of_arrow var t)
@@ -416,7 +418,9 @@ Proof using Type.
   all : match goal with H : Z.succ _=_|-_=> rewrite <-H, Z.add_1_r end; trivial.
   all : fail.
 Qed.
+
 Theorem symex_expr_correct
+        {descr:description}
         {t} (expr1 : API.expr (var:=var) t) (expr2 : API.expr (var:=API.interp_type) t)
         (d : dag)
         (input_var_data : type.for_each_lhs_of_arrow var t) (input_runtime_var : type.for_each_lhs_of_arrow API.interp_type t)
@@ -432,11 +436,11 @@ Theorem symex_expr_correct
     /\ gensym_dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof using Type.
-  revert dependent d; revert dependent d'; revert dependent input_var_data; revert dependent input_runtime_var.
+  revert dependent descr; revert dependent d; revert dependent d'; revert dependent input_var_data; revert dependent input_runtime_var.
   induction Hwf; intros; cbn [symex_expr] in *.
   all: repeat first [ match goal with
                       (* ident case *)
-                      | [ |- context[expr.Ident] ] => eapply symex_ident_correct; eassumption
+                      | [ |- context[expr.Ident] ] => eapply @symex_ident_correct; eassumption
                       (* var case *)
                       | [ HIn : List.In (existT _ ?t (?v1, ?v2)) _ |- context[expr.Var] ]
                         => is_var t; specialize (HG t _ _ HIn); destruct t
@@ -445,66 +449,78 @@ Proof using Type.
                         => eapply H; try eassumption; clear H; []
                       end
                     | match goal with
-                      | [ H : Success _ = Success _ |- _ ] => inversion H; clear H
-                      | [ H : Error _ = Success _ |- _ ] => now inversion H
                       | [ H : symex_T_app_curried (symex_T_bind_base _ _) _ _ = Success _ |- _ ]
                         => apply symex_T_app_curried_symex_T_bind_base_split in H
-                      end
-                    | match goal with
-                      | [ IH : forall rets d' d, _ -> symex_expr ?x d = Success (rets, d') -> _, H : symex_expr ?x _ = Success (_, _) |- _ ]
-                        => specialize (fun H' => IH _ _ _ H' H)
-                      | [ IH : forall rets irv c ivd e d' d0, _ -> _ -> _ -> symex_T_app_curried (symex_expr ?f ivd) e d0 = Success (rets, d') -> _,
-                            H : symex_T_app_curried (symex_expr ?f _) _ _ = Success (_, _) |- _ ]
-                        => specialize (fun irv c H1 H2 H3 => IH _ irv c _ _ _ _ H1 H2 H3 H)
-                      | [ IH : forall v1 v2 rets irv ivd d' d, _ -> _ -> symex_T_app_curried (symex_expr (?f v1)) ivd d = Success (rets, d') -> _,
-                            H : symex_T_app_curried (symex_expr (?f _)) _ _ = Success (_, _) |- _ ]
-                        => specialize (fun v2 irv H1 H2 => IH _ v2 _ irv _ _ _ H1 H2 H)
-                      | [ IH : forall irv c, eval_base_var ?a ?b irv -> _, H : eval_base_var ?a ?b _ |- _ ]
-                        => specialize (fun c => IH _ c H)
-                      | [ IH : forall c, type.and_for_each_lhs_of_arrow ?x ?ivd c -> _, H : type.and_for_each_lhs_of_arrow ?y ?ivd ?cv |- _ ]
-                        => specialize (fun H' => IH cv ltac:(eapply Wf.Compilers.type.and_for_each_lhs_of_arrow_Proper_impl; [ .. | eexact H ]; try reflexivity; cbv [Morphisms.forall_relation Morphisms.pointwise_relation Basics.impl]; eapply lift_eval_var_impl; eassumption))
-                      | [ IH : forall v2 c, type.and_for_each_lhs_of_arrow ?x ?ivd c -> _, H : type.and_for_each_lhs_of_arrow ?y ?ivd ?cv |- _ ]
-                        => specialize (fun v2 H' => IH v2 cv ltac:(eapply Wf.Compilers.type.and_for_each_lhs_of_arrow_Proper_impl; [ .. | eexact H ]; try reflexivity; cbv [Morphisms.forall_relation Morphisms.pointwise_relation Basics.impl]; eapply lift_eval_var_impl; eassumption))
-                      | [ H : forall v, ?T -> (forall t v1 v2, existT _ _ _ = _ \/ _ -> _) -> _ |- _ ]
-                        => specialize (fun H1 H3 v H2 => H v H1 (fun t v1 v2 pf => match pf with
-                                                                                   | or_introl pf => H2 t v1 v2 pf
-                                                                                   | or_intror pf => H3 t v1 v2 pf
-                                                                                   end))
-                      | [ H : forall v, (forall t v1 v2, existT _ _ _ = existT _ t (v1, v2) -> _) -> _ |- _ ]
-                        => specialize (H _ ltac:(intros; inversion_sigma; subst; cbn [eq_rect] in *; inversion_prod; subst; eassumption))
-                      end
-                    | match goal with
-                      | [ H : forall a (b : unit), _ |- _ ] => specialize (fun a => H a tt)
-                      | [ H : forall a b, True -> _ |- _ ] => specialize (fun a b => H a b I)
-                      | [ H : forall a b c, True -> _ |- _ ] => specialize (fun a b c => H a b c I)
-                      | [ H : forall a (b : _ * _), _ |- _ ] => specialize (fun a b c => H a (b, c))
-                      | [ H : forall a b c (d : _ * _), _ |- _ ] => specialize (fun a b c d e => H a b c (d, e))
-                      | [ H : forall a b c d e f, _ /\ _ -> _ |- _ ] => specialize (fun a b c d e f g h => H a b c d e f (conj g h))
-                      | [ H : forall a b c d e f g, _ /\ _ -> _ |- _ ] => specialize (fun a b c d e f g h i => H a b c d e f g (conj h i))
+                      | [ H : forall v, (forall t v1 v2, existT _ _ _ = _ \/ _ -> _) -> _ |- _ ]
+                        => specialize (fun H3 v H2
+                                       => H v (fun t v1 v2 pf
+                                               => match pf with
+                                                  | or_introl pf => H2 t v1 v2 pf
+                                                  | or_intror pf => H3 t v1 v2 pf
+                                                  end))
                       end
                     | exfalso; assumption
                     | progress subst
-                    | progress destruct_head_hnf' unit
-                    | progress destruct_head_hnf' True
-                    | progress destruct_head_hnf' prod
                     | progress destruct_head'_and
                     | progress destruct_head'_ex
+                    | progress inversion_ErrorT
+                    | progress inversion_pair
                     | progress cbn [symex_T_app_curried symex_T_return eval_var type.app_curried] in *
                     | progress cbn [type.and_for_each_lhs_of_arrow type.for_each_lhs_of_arrow fst snd List.In eq_rect] in *
                     | progress cbn [type.final_codomain base_var] in *
                     | progress cbv [symex_return] in *
                     | rewrite @symex_T_app_curried_symex_T_error in *
                     | solve [ auto ]
-                    | progress inversion_sigma
-                    | progress inversion_prod
-                    | progress break_innermost_match_hyps
-                    | progress destruct_head'_or
-                    | progress intros
+                    | break_innermost_match_hyps_step
                     | progress specialize_by_assumption
-                    | progress specialize_by (eauto using lift_eval_var_impl) ].
+                    | progress
+                        guarded_specialize_dep_under_binders_by
+                        ltac:(idtac;
+                              lazymatch goal with
+                              | [ |- True ] => exact I
+                              | [ |- unit ] => exact tt
+                              | [ |- _ /\ _ ] => split
+                              | [ |- _ * _ ] => split
+                              end)
+                               ltac:(fun H => lazymatch type of H with
+                                              | context[forall x : True, _] => idtac
+                                              | context[forall x : unit, _] => idtac
+                                              | context[forall x : _ * _, _] => idtac
+                                              | context[forall x : _ /\ _, _] => idtac
+                                              end)
+                    | progress
+                        guarded_specialize_under_binders_by
+                        ltac:(idtac;
+                              match goal with
+                              | [ H : symex_T_app_curried _ _ _ = Success _ |- symex_T_app_curried _ _ _ = Success _ ]
+                                => exact H
+                              | [ H : symex_expr _ _ = Success _ |- symex_expr _ _ = Success _ ]
+                                => exact H
+                              end)
+                               ltac:(fun H => lazymatch type of H with
+                                              | context[symex_T_app_curried _ _ _ = Success _ -> _] => idtac
+                                              | context[symex_expr _ _ = Success _ -> _] => idtac
+                                              end)
+                    | progress
+                        guarded_specialize_under_binders_by
+                        ltac:(idtac;
+                              match goal with
+                              | [ H : type.and_for_each_lhs_of_arrow _ _ _ |- type.and_for_each_lhs_of_arrow _ _ _ ]
+                                => first [ exact H
+                                         | eapply Wf.Compilers.type.and_for_each_lhs_of_arrow_Proper_impl; [ cbv [forall_relation pointwise_relation Basics.impl] .. | exact H ]; try eapply lift_eval_var_impl; eauto ]
+                              | [ H : eval_base_var _ _ _ |- eval_base_var _ _ _ ] => exact H
+                              | [ |- forall t v1 v2, existT _ _ _ = existT _ t (v1, v2) -> _ ]
+                                => intros; inversion_sigma; subst; cbn [eq_rect] in *; inversion_prod; subst; eassumption
+                              end)
+                               ltac:(fun H => lazymatch type of H with
+                                              | context[type.and_for_each_lhs_of_arrow _ _ _ -> _] => idtac
+                                              | context[eval_base_var _ _ _ -> _] => idtac
+                                              | context[(forall t v1 v2, existT _ _ _ = existT _ t (v1, v2) -> _) -> _] => idtac
+                                              end)
+                    | progress specialize_under_binders_by eauto using lift_eval_var_impl ].
 Qed.
 
-Lemma symex_expr_App_curried {t} (e : API.expr t) input_var_data d
+Lemma symex_expr_App_curried {descr:description} {t} (e : API.expr t) input_var_data d
   : symex_expr (invert_expr.App_curried e (type.map_for_each_lhs_of_arrow (fun t v => ($v)%expr) input_var_data)) d
     = symex_T_app_curried (symex_expr e) input_var_data d.
 Proof using Type.
@@ -521,7 +537,7 @@ Proof using Type.
   all: destruct_head'_or; destruct_head'_ex; destruct_head'_and; congruence.
 Qed.
 
-Lemma symex_expr_smart_App_curried {t} (e : API.expr t) input_var_data d
+Lemma symex_expr_smart_App_curried {descr:description} {t} (e : API.expr t) input_var_data d
   : symex_expr (invert_expr.smart_App_curried e input_var_data) d
     = symex_T_app_curried (symex_expr e) input_var_data d.
 Proof using Type.
@@ -780,6 +796,7 @@ End WithFixedCtx.
 Lemma empty_gensym_dag_ok : gensym_dag_ok (fun _ => None) empty_dag.
 Proof using Type.
   cbv [empty_dag gensym_dag_ok gensym_ok dag_ok node_ok]; repeat split; try congruence;
+    cbv [dag_lookup option_map] in *; break_match_hyps; inversion_option; subst;
     exfalso; match goal with H : _ |- _ => apply nth_error_In in H; cbn in H end; assumption.
 Qed.
 
@@ -899,13 +916,13 @@ Module dagG.
   Definition M A := (symbol -> option Z) * dag -> A * ((symbol -> option Z) * dag).
 End dagG.
 
-Definition merge_fresh_symbol_G (v : Z) : dagG.M idx
+Definition merge_fresh_symbol_G {descr:description} (v : Z) : dagG.M idx
   := fun '(G, d) => let '(idx, d) := merge_fresh_symbol d in (idx, (ctx_set idx v G, d)).
 
-Definition build_inputarray_G (vals : list Z) : dagG.M (list idx)
+Definition build_inputarray_G {descr:description} (vals : list Z) : dagG.M (list idx)
   := List.foldmap merge_fresh_symbol_G vals.
 
-Fixpoint build_inputs_G (vals : list (Z + list Z))
+Fixpoint build_inputs_G {descr:description} (vals : list (Z + list Z))
   : dagG.M (list (idx + list idx))
   := match vals with
      | [] => fun st => ([], st)
@@ -921,7 +938,7 @@ Fixpoint build_inputs_G (vals : list (Z + list Z))
              (inl idx :: rest, st)
      end.
 
-Fixpoint dag_gensym_n_G (vals : list Z) : dagG.M (list idx)
+Fixpoint dag_gensym_n_G {descr:description} (vals : list Z) : dagG.M (list idx)
   := match vals with
      | nil => fun st => ([], st)
      | v :: vs
@@ -950,12 +967,13 @@ Definition lift_dag_G {A} (v : dagG.M A) : G.M A
   := fun '(G, s) => let '(v, (G, d)) := v (G, s.(dag_state)) in
                     Some (v, (G, update_dag_with s (fun _ => d))).
 
-Definition SetRegFresh_G (r : REG) (v : Z) : G.M idx
+Definition SetRegFresh_G {descr:description} (r : REG) (v : Z) : G.M idx
   := (idx <- lift_dag_G (merge_fresh_symbol_G v);
       _ <- G.lift (SetReg r idx);
       G.ret idx)%GM.
 
 Fixpoint build_merge_base_addresses_G
+         {descr:description}
          {dereference_scalar:bool}
          (items : list (idx + list idx)) (reg_available : list REG) (runtime_reg : list Z) {struct items}
   : G.M (list ((REG + idx) + idx))
@@ -980,13 +998,13 @@ Fixpoint build_merge_base_addresses_G
            G.ret (inl addr :: rest))
      end%GM%N%x86symex.
 
-Definition compute_stack_base_G (rsp_val : Z) (stack_size : nat)
+Definition compute_stack_base_G {descr:description} (rsp_val : Z) (stack_size : nat)
   : G.M idx
   := (rsp_idx <- SetRegFresh_G rsp rsp_val;
       stack_size <- G.lift (Symbolic.App (zconst 64 (-8 * Z.of_nat stack_size), []));
       G.lift (Symbolic.App (add 64%N, [rsp_idx; stack_size])))%GM.
 
-Definition build_merge_stack_placeholders_G (rsp_val : Z) (stack_vals : list Z)
+Definition build_merge_stack_placeholders_G {descr:description} (rsp_val : Z) (stack_vals : list Z)
   : G.M idx
   := (let stack_size := List.length stack_vals in
       stack_placeholders <- lift_dag_G (build_inputarray_G stack_vals);
@@ -1088,7 +1106,7 @@ Proof.
   all: intros; break_match; intuition.
 Qed.
 
-Lemma merge_fresh_symbol_eq_G G d v
+Lemma merge_fresh_symbol_eq_G {descr:description} G d v
       (res := merge_fresh_symbol_G v (G, d))
   : merge_fresh_symbol d = (fst res, snd (snd res)).
 Proof.
@@ -1096,33 +1114,33 @@ Proof.
 Qed.
 
 Lemma big_old_node_absent n d w args
-      (H : forall i r, nth_error d (N.to_nat i) = Some r -> node_ok i r)
+      (H : forall i r, dag_lookup d (N.to_nat i) = Some r -> node_ok i r)
       (Hn : (N.of_nat (List.length d) <= n)%N)
-  : List.indexof (node_beq N.eqb (old w n, args)) d = None.
+  : dag_reverse_lookup d (old w n, args) = None.
 Proof.
   revert dependent n; induction d as [|v d IHd] using List.rev_ind; [ reflexivity | ];
     rewrite ?app_length in *; cbn [List.indexof List.length] in *; intros.
-  rewrite List.indexof_app.
-  rewrite IHd; cbv [Crypto.Util.Option.sequence]; cbv [List.indexof option_map].
+  rewrite dag_reverse_lookup_app.
+  rewrite IHd; cbv [Crypto.Util.Option.sequence]; cbv [dag_reverse_lookup List.indexof option_map].
   { break_innermost_match; reflect_hyps; subst; try reflexivity.
     specialize (H (N.of_nat (List.length d))).
-    rewrite nth_error_app in H; break_innermost_match_hyps; try lia; [].
+    rewrite dag_lookup_app in H; break_innermost_match_hyps; try lia; [].
     rewrite Nat2N.id, Nat.sub_diag in H; specialize (H _ eq_refl _ _ _ eq_refl).
     lia. }
-  { intros ? ? Hi; apply H; rewrite nth_error_app, Hi; break_innermost_match; try reflexivity.
-    apply nth_error_value_length in Hi; tauto. }
+  { intros ? ? Hi; apply H; rewrite dag_lookup_app, Hi; break_innermost_match; try reflexivity.
+    apply dag_lookup_value_length in Hi; tauto. }
   { lia. }
 Qed.
 
 Lemma gensym_node_absent G d w args
       (H : gensym_dag_ok G d)
-  : List.indexof (node_beq N.eqb (old w (gensym d), args)) d = None.
+  : dag_reverse_lookup d (old w (gensym d), args) = None.
 Proof.
   apply big_old_node_absent; try apply H.
   cbv [gensym]; reflexivity.
 Qed.
 
-Lemma merge_fresh_symbol_G_ok G d v G' d' idx
+Lemma merge_fresh_symbol_G_ok {descr:description} G d v G' d' idx
       (Hd : gensym_dag_ok G d)
       (H : merge_fresh_symbol_G v (G, d) = (idx, (G', d')))
   : eval_idx_Z G' d' idx (Z.land v (Z.ones (Z.of_N 64)))
@@ -1138,20 +1156,20 @@ Proof.
                     | progress subst
                     | progress destruct_head'_and
                     | progress cbv [eval_idx_Z gensym_dag_ok gensym_ok ctx_set gensym dag_ok node_ok] in *
-                    | rewrite Nat2N.id, nth_error_app, Nat.sub_diag
+                    | rewrite Nat2N.id, dag_lookup_app, Nat.sub_diag
                     | progress break_innermost_match
                     | progress break_innermost_match_hyps
                     | progress inversion_option
                     | lia
-                    | progress cbn [nth_error List.map interp_op List.length fst snd] in *
+                    | progress cbn [List.map interp_op List.length fst snd] in *
                     | progress reflect_hyps
                     | reflexivity
                     | rewrite app_length
                     | progress intros
-                    | rewrite @nth_error_app in *
+                    | rewrite @dag_lookup_app in *
                     | match goal with
-                      | [ H : nth_error ?d ?i = Some _, H' : ~?i < List.length ?d |- _ ]
-                        => exfalso; apply nth_error_value_length in H; clear -H H'; tauto
+                      | [ H : dag_lookup ?d ?i = Some _, H' : ~?i < List.length ?d |- _ ]
+                        => exfalso; apply dag_lookup_value_length in H; clear -H H'; tauto
                       | [ H : interp_op _ ?op ?args = Some ?n |- interp_op _ ?op ?args = Some ?n ]
                         => revert H; destruct op; cbn [interp_op]; break_innermost_match
                       | [ H : forall s _v, ?G s = Some _v -> (s < ?v)%N, H' : ?G ?v = Some _ |- _ ]
@@ -1161,16 +1179,18 @@ Proof.
                       | [ |- Forall2 _ nil _ ] => constructor
                       | [ H : fst ?x = _ |- _ ] => is_var x; destruct x
                       | [ H : _ = snd ?x |- _ ] => is_var x; destruct x
-                      | [ H : nth_error (_ :: _) ?x = Some _ |- _ ] => destruct x eqn:?; cbn [nth_error] in H
-                      | [ H : nth_error nil ?x = Some _ |- _ ] => destruct x eqn:?; cbn [nth_error] in H
+                      | [ H : dag_lookup (_ :: _) ?x = Some _ |- _ ]
+                        => rewrite eta_dag_lookup in H; destruct x eqn:?; cbn [fst] in *
+                      | [ H : dag_lookup nil ?x = Some _ |- _ ]
+                        => rewrite eta_dag_lookup in H; destruct x eqn:?
                       | [ H : old _ _ = old _ _ |- _ ] => inversion H; clear H
                       | [ H : ?x - ?y = 0, H' : ~?x < ?y |- _ ] => assert (x = y) by lia; clear H H'
                       | [ H : N.to_nat ?x = ?y |- _ ] => is_var x; assert (x = N.of_nat y) by lia; clear H
                       | [ |- exists v, eval _ (?d ++ _) (ExprRef (N.of_nat (length ?d))) v ]
                         => eexists; econstructor
                       | [ H : Forall2 _ ?xs _ |- Forall2 _ ?xs _ ] => eapply Forall2_weaken; [ | eassumption ]; intuition tauto
-                      | [ H : forall i r, nth_error ?d (N.to_nat i) = Some r -> exists v, eval _ ?d (ExprRef i) v,
-                            H' : nth_error ?d (N.to_nat ?idx) = Some _
+                      | [ H : forall i r, dag_lookup ?d (N.to_nat i) = Some r -> exists v, eval _ ?d (ExprRef i) v,
+                            H' : dag_lookup ?d (N.to_nat ?idx) = Some _
                             |- exists v', eval _ (?d ++ _) (ExprRef ?idx) v' ]
                         => let v := fresh "v" in specialize (H _ _ H'); destruct H as [v H]; exists v
                       end
@@ -1187,7 +1207,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma merge_fresh_symbol_G_ok_bounded G d v G' d' idx
+Lemma merge_fresh_symbol_G_ok_bounded {descr:description} G d v G' d' idx
       (Hd : gensym_dag_ok G d)
       (H : merge_fresh_symbol_G v (G, d) = (idx, (G', d')))
       (Hv : (0 <= v < 2^64)%Z)
@@ -1199,7 +1219,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma build_inputarray_eq_G G d vals (len := List.length vals)
+Lemma build_inputarray_eq_G {descr:description} G d vals (len := List.length vals)
   : build_inputarray len d = (fst (build_inputarray_G vals (G, d)), snd (snd (build_inputarray_G vals (G, d)))).
 Proof.
   cbv [build_inputarray build_inputarray_G].
@@ -1214,7 +1234,7 @@ Proof.
 Qed.
 
 
-Lemma build_inputarray_G_ok G d vals G' d' ia
+Lemma build_inputarray_G_ok {descr:description} G d vals G' d' ia
       (Hd : gensym_dag_ok G d)
       (H : build_inputarray_G vals (G, d) = (ia, (G', d')))
       (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) vals)
@@ -1249,7 +1269,7 @@ Proof.
                    end ]. }
 Qed.
 
-Lemma build_inputarray_ok G d len idxs args d'
+Lemma build_inputarray_ok {descr:description} G d len idxs args d'
       (d_ok : gensym_dag_ok G d)
       (H : build_inputarray len d = (idxs, d'))
       (Hargs : List.length args = len)
@@ -1264,7 +1284,7 @@ Proof.
   repeat first [ eassumption | apply path_prod | reflexivity ].
 Qed.
 
-Lemma dag_gensym_n_eq_G G d vals (len := List.length vals)
+Lemma dag_gensym_n_eq_G {descr:description} G d vals (len := List.length vals)
   : dag_gensym_n len d = (fst (dag_gensym_n_G vals (G, d)), snd (snd (dag_gensym_n_G vals (G, d)))).
 Proof.
   subst len.
@@ -1273,7 +1293,7 @@ Proof.
   erewrite !@merge_fresh_symbol_eq_G, IHvals; cbn [fst snd]; eta_expand; reflexivity.
 Qed.
 
-Lemma dag_gensym_n_G_ok G d vals G' d' ia
+Lemma dag_gensym_n_G_ok {descr:description} G d vals G' d' ia
       (Hd : gensym_dag_ok G d)
       (H : dag_gensym_n_G vals (G, d) = (ia, (G', d')))
       (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) vals)
@@ -1305,7 +1325,7 @@ Proof.
                    end ]. }
 Qed.
 
-Lemma dag_gensym_n_ok G d len idxs args d'
+Lemma dag_gensym_n_ok {descr:description} G d len idxs args d'
       (d_ok : gensym_dag_ok G d)
       (H : dag_gensym_n len d = (idxs, d'))
       (Hargs : List.length args = len)
@@ -1332,7 +1352,7 @@ Proof.
     repeat (subst || cbn in * || destruct_head' option || break_innermost_match || intuition). }
 Qed.
 
-Lemma build_inputs_eq_G G d vals (types := type_spec_of_runtime vals)
+Lemma build_inputs_eq_G {descr:description} G d vals (types := type_spec_of_runtime vals)
   : build_inputs types d = (fst (build_inputs_G vals (G, d)), snd (snd (build_inputs_G vals (G, d)))).
 Proof.
   revert G d; subst types; induction vals as [|v vals IHvals]; [ reflexivity | ].
@@ -1349,7 +1369,7 @@ Proof.
                       end ].
 Qed.
 
-Lemma build_inputs_G_ok G d vals G' d' inputs
+Lemma build_inputs_G_ok {descr:description} G d vals G' d' inputs
       (Hd : gensym_dag_ok G d)
       (H : build_inputs_G vals (G, d) = (inputs, (G', d')))
       (Hbounds : Forall (fun v => match v with
@@ -1381,7 +1401,7 @@ Proof.
                       | progress cbv [eval_idx_or_list_idx] ]. }
 Qed.
 
-Lemma build_inputs_ok G d types inputs args d'
+Lemma build_inputs_ok {descr:description} G d types inputs args d'
       (d_ok : gensym_dag_ok G d)
       (H : build_inputs types d = (inputs, d'))
       (Hbounds : Forall (fun v => match v with
@@ -1412,7 +1432,7 @@ Proof.
   eexists; reflexivity.
 Qed.
 
-Lemma SetRegFresh_eq_G G r s v idx s'
+Lemma SetRegFresh_eq_G {descr:description} G r s v idx s'
       (H : SetRegFresh r s = Success (idx, s'))
   : exists G',
     SetRegFresh_G r v (G, s) = Some (idx, (G', s')).
@@ -1439,7 +1459,7 @@ Proof.
                | progress destruct_head'_prod ].
 Qed.
 
-Lemma build_merge_base_addresses_eq_G {dereference_scalar:bool}
+Lemma build_merge_base_addresses_eq_G {descr:description} {dereference_scalar:bool}
       G items reg_available runtime_reg s res s'
       (Hreg : Nat.min (List.length items) (List.length reg_available) <= List.length runtime_reg)
       (H : build_merge_base_addresses (dereference_scalar:=dereference_scalar) items reg_available s = Success (res, s'))
@@ -1474,7 +1494,7 @@ Proof.
                       | [ H : Forall2 _ [] _ |- _ ] => inversion H; clear H
                       | [ H : S ?x <= S ?y |- _ ] => assert (x <= y) by lia; clear H
                       | [ H : build_merge_base_addresses _ _ _ = _ |- _ ]
-                        => specialize (IH _ _ _ _ H)
+                        => specialize (IH _ _ _ _ _ H)
                       | [ IH : forall G rr, _ -> exists G', build_merge_base_addresses_G ?it ?ra rr (G, ?s) = _,
                             H' : build_merge_base_addresses_G ?it ?ra ?rrv (?Gv, ?s) = _ |- _ ]
                         => specialize (IH Gv rrv)
@@ -1485,7 +1505,7 @@ Proof.
                     | progress destruct_head'_prod ].
 Qed.
 
-Lemma compute_stack_base_eq_G G rsp_val stack_size s res s'
+Lemma compute_stack_base_eq_G {descr:description} G rsp_val stack_size s res s'
       (H : compute_stack_base stack_size s = Success (res, s'))
   : exists G',
     compute_stack_base_G rsp_val stack_size (G, s) = Some (res, (G', s')).
@@ -1511,7 +1531,7 @@ Proof.
                | break_innermost_match_step ].
 Qed.
 
-Lemma build_merge_stack_placeholders_eq_G G rsp_val stack_vals s res s'
+Lemma build_merge_stack_placeholders_eq_G {descr:description} G rsp_val stack_vals s res s'
       (H : build_merge_stack_placeholders (List.length stack_vals) s = Success (res, s'))
   : exists G',
     build_merge_stack_placeholders_G rsp_val stack_vals (G, s) = Some (res, (G', s')).
@@ -1542,7 +1562,7 @@ Proof.
                | break_innermost_match_step ].
 Qed.
 
-Lemma SetReg_ok G s s' reg idx rn lo sz v
+Lemma SetReg_ok {descr:description} G s s' reg idx rn lo sz v
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
       (H64 : sz = 64%N)
       (H : SetReg reg idx s = Success (tt, s'))
@@ -1588,7 +1608,7 @@ Proof.
               [ solve [ repeat first [ eassumption | exactly_once econstructor ] ] | ];
               generalize dependent (simplify s n); intros
          | [ H : context[merge ?e ?d] |- _ ]
-           => pose proof (@eval_merge _ e _ d ltac:(eassumption) ltac:(eassumption));
+           => pose proof (@eval_merge _ _ e _ d ltac:(eassumption) ltac:(eassumption));
               generalize dependent (merge e d); intros
          end.
   repeat first [ progress inversion_ErrorT
@@ -1602,7 +1622,7 @@ Proof.
                | eapply ex_intro ].
 Qed.
 
-Lemma SetReg_ok_bounded G s s' reg idx rn lo sz v
+Lemma SetReg_ok_bounded {descr:description} G s s' reg idx rn lo sz v
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
       (H64 : sz = 64%N)
       (H : SetReg reg idx s = Success (tt, s'))
@@ -1629,7 +1649,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma SetRegFresh_G_ok G G' s s' reg idx rn lo sz v
+Lemma SetRegFresh_G_ok {descr:description} G G' s s' reg idx rn lo sz v
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
       (H64 : sz = 64%N)
       (H : SetRegFresh_G reg v (G, s) = Some (idx, (G', s')))
@@ -1675,7 +1695,7 @@ Proof.
                | eapply ex_intro ].
 Qed.
 
-Lemma SetRegFresh_G_ok_bounded G G' s s' reg idx rn lo sz v
+Lemma SetRegFresh_G_ok_bounded {descr:description} G G' s s' reg idx rn lo sz v
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
       (H64 : sz = 64%N)
       (H : SetRegFresh_G reg v (G, s) = Some (idx, (G', s')))
@@ -1702,7 +1722,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma GetReg_ok G s s' reg idx rn lo sz v
+Lemma GetReg_ok {descr:description} G s s' reg idx rn lo sz v
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
       (H64 : sz = 64%N)
       (H : GetReg reg s = Success (idx, s'))
@@ -1743,7 +1763,7 @@ Proof.
               [ solve [ repeat first [ eassumption | exactly_once econstructor ] ] | ];
               generalize dependent (simplify s n); intros
          | [ H : context[merge ?e ?d] |- _ ]
-           => pose proof (@eval_merge _ e _ d ltac:(eassumption) ltac:(eassumption));
+           => pose proof (@eval_merge _ _ e _ d ltac:(eassumption) ltac:(eassumption));
               generalize dependent (merge e d); intros
          end.
   all: repeat first [ progress inversion_ErrorT
@@ -1761,7 +1781,7 @@ Proof.
                     | eapply ex_intro ].
 Qed.
 
-Lemma GetReg_ok_bounded G s s' reg idx rn lo sz v
+Lemma GetReg_ok_bounded {descr:description} G s s' reg idx rn lo sz v
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
       (H64 : sz = 64%N)
       (H : GetReg reg s = Success (idx, s'))
@@ -1878,7 +1898,7 @@ Proof.
   rewrite get_reg_set_reg_full; break_innermost_match; reflect_hyps; cbv beta in *; try reflexivity; lia.
 Qed.
 
-Lemma compute_array_address_ok G s s' base i idx base_val
+Lemma compute_array_address_ok {descr:description} G s s' base i idx base_val
       (H : compute_array_address base i s = Success (idx, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -1921,7 +1941,7 @@ Proof.
                       [ solve [ repeat first [ eassumption | solve [ eauto ] | exactly_once econstructor ] ] | ];
                       generalize dependent (simplify s n); intros
                  | [ H : context[merge ?e ?d] |- _ ]
-                   => pose proof (@eval_merge _ e _ d ltac:(eassumption) ltac:(eassumption));
+                   => pose proof (@eval_merge _ _ e _ d ltac:(eassumption) ltac:(eassumption));
                       generalize dependent (merge e d); intros
                  | [ H : (?x, ?y) = (?z, ?w) |- _ ] => is_var x; is_var z; is_var w; inversion H; clear H
                  end
@@ -1945,7 +1965,7 @@ Proof.
                     | progress (push_Zmod; pull_Zmod) ].
 Qed.
 
-Lemma compute_array_address_ok_bounded G s s' base i idx base_val
+Lemma compute_array_address_ok_bounded {descr:description} G s s' base i idx base_val
       (H : compute_array_address base i s = Success (idx, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -1970,7 +1990,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma build_merge_array_addresses_ok G s s'
+Lemma build_merge_array_addresses_ok {descr:description} G s s'
       base base_val items addrs
       (H : build_merge_array_addresses base items s = Success (addrs, s'))
       (d := s.(dag_state))
@@ -2042,7 +2062,7 @@ Proof.
     eauto 20. }
 Qed.
 
-Lemma compute_stack_base_G_ok G G' s s' rv
+Lemma compute_stack_base_G_ok {descr:description} G G' s s' rv
       (rsp_val : Z) (stack_size : nat)
       (H : compute_stack_base_G rsp_val stack_size (G, s) = Some (rv, (G', s')))
       (d := s.(dag_state))
@@ -2093,7 +2113,7 @@ Proof.
                            [ solve [ repeat first [ eassumption | solve [ eauto ] | exactly_once econstructor ] ] | ];
                            generalize dependent (simplify s n); intros
                       | [ H : context[merge ?e ?d] |- _ ]
-                        => pose proof (@eval_merge _ e _ d ltac:(eassumption) ltac:(eassumption));
+                        => pose proof (@eval_merge _ _ e _ d ltac:(eassumption) ltac:(eassumption));
                            generalize dependent (merge e d); intros
                       | [ H : SetRegFresh_G _ _ _ = _ |- _ ]
                         => eapply SetRegFresh_G_ok in H;
@@ -2116,7 +2136,7 @@ Proof.
                     | f_equal; lia ].
 Qed.
 
-Lemma build_merge_stack_placeholders_G_ok G G' s s'
+Lemma build_merge_stack_placeholders_G_ok {descr:description} G G' s s'
       (rsp_val : Z) (stack_vals : list Z) stack_base
       (H : build_merge_stack_placeholders_G rsp_val stack_vals (G, s) = Some (stack_base, (G', s')))
       (d := s.(dag_state))
@@ -2209,7 +2229,7 @@ Ltac handle_eval_eval :=
          end.
 
 Lemma build_merge_base_addresses_G_ok
-      {dereference_scalar:bool}
+      {descr:description} {dereference_scalar:bool}
   : forall (idxs : list (idx + list idx))
            (reg_available : list REG)
            (runtime_reg : list Z)
@@ -2431,7 +2451,7 @@ Proof.
                  end ].
 Qed.
 
-Lemma compute_stack_ok G s s' base
+Lemma compute_stack_ok {descr:description} G s s' base
       (rsp_val : Z) (stack_size : nat)
       (H : compute_stack_base stack_size s = Success (base, s'))
       (d := s.(dag_state))
@@ -2458,7 +2478,7 @@ Proof.
   eapply compute_stack_base_G_ok in H; try eassumption.
 Qed.
 
-Lemma build_merge_stack_placeholders_ok G s s'
+Lemma build_merge_stack_placeholders_ok {descr:description} G s s'
       (rsp_val : Z) (stack_vals : list Z) stack_base
       (H : build_merge_stack_placeholders (List.length stack_vals) s = Success (stack_base, s'))
       (d := s.(dag_state))
@@ -2491,7 +2511,7 @@ Proof.
 Qed.
 
 Lemma build_merge_base_addresses_ok
-      {dereference_scalar:bool}
+      {descr:description} {dereference_scalar:bool}
       (idxs : list (idx + list idx))
       (reg_available : list REG)
       (runtime_reg : list Z)
@@ -2611,7 +2631,7 @@ Proof.
 Qed.
 
 
-Lemma mapM_GetReg_ok_bounded G
+Lemma mapM_GetReg_ok_bounded {descr:description} G
   : forall regs idxs reg_vals s s'
            (H : mapM GetReg regs s = Success (idxs, s'))
            (d := s.(dag_state))
@@ -2740,7 +2760,11 @@ Class same_reg_some_of_success {T} (f : M T)
   := success_same_reg : forall v s s', f s = Success (v, s') -> same_reg_some s s'.
 
 Local Ltac same_reg_some_of_success_t_step_normal_nobreak :=
-  first [ progress cbv [same_reg_some_of_success] in *
+  first [ match goal with
+          | [ H : context[set_reg _ _ ?v] |- _ ]
+            => tryif is_var v then fail else generalize dependent v; intros
+          end
+        | progress cbv [same_reg_some_of_success] in *
         | progress intros
         | reflexivity
         | assumption
@@ -2778,23 +2802,23 @@ Local Ltac same_reg_some_of_success_t_step_unfold_go :=
 Local Ltac same_reg_some_of_success_t := repeat first [ same_reg_some_of_success_t_step_normal | same_reg_some_of_success_t_step_unfold ].
 
 (* TODO: move? *)
-Local Instance Merge_reg_same x : same_reg_some_of_success (Symbolic.Merge x).
+Local Instance Merge_reg_same {descr:description} x : same_reg_some_of_success (Symbolic.Merge x).
 Proof. same_reg_some_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance App_reg_same x : same_reg_some_of_success (Symbolic.App x).
+Local Instance App_reg_same {descr:description} x : same_reg_some_of_success (Symbolic.App x).
 Proof. same_reg_some_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance GetReg_reg_same r : same_reg_some_of_success (GetReg r).
+Local Instance GetReg_reg_same {descr:description} r : same_reg_some_of_success (GetReg r).
 Proof. same_reg_some_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance Address_reg_same sa a : same_reg_some_of_success (@Address sa a).
+Local Instance Address_reg_same {descr:description} {sa:AddressSize} a : same_reg_some_of_success (Address a).
 Proof. same_reg_some_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance GetOperand_reg_same sz sa arg : same_reg_some_of_success (@GetOperand sz sa arg).
+Local Instance GetOperand_reg_same {descr:description} {sz:OperationSize} {sa:AddressSize} arg : same_reg_some_of_success (GetOperand arg).
 Proof. same_reg_some_of_success_t. Qed.
 
 (* TODO: move? *)
@@ -2802,7 +2826,7 @@ Local Instance GetFlag_reg_same f : same_reg_some_of_success (GetFlag f).
 Proof. same_reg_some_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance SetOperand_reg_same sz sa arg v : same_reg_some_of_success (@SetOperand sz sa arg v).
+Local Instance SetOperand_reg_same {descr:description} {sz:OperationSize} {sa:AddressSize} arg v : same_reg_some_of_success (SetOperand arg v).
 Proof. same_reg_some_of_success_t. Qed.
 
 (* TODO: move? *)
@@ -2842,7 +2866,7 @@ Proof.
 Defined.
 
 (* TODO: move? *)
-Fixpoint Symeval_reg_same sz sa args {struct args} : same_reg_some_of_success (@Symeval sz sa args).
+Fixpoint Symeval_reg_same descr sz sa args {struct args} : same_reg_some_of_success (@Symeval descr sz sa args).
 Proof.
   destruct args; cbn [Symeval] in *; typeclasses eauto.
 Qed.
@@ -2851,18 +2875,23 @@ Typeclasses Opaque Symeval.
 Typeclasses Transparent AddressSize OperationSize.
 
 (* TODO: move? *)
-Local Instance SymexNormalInstruction_reg_same instr : same_reg_some_of_success (SymexNormalInstruction instr).
+Local Instance SymexNormalInstruction_reg_same {descr:description} instr : same_reg_some_of_success (SymexNormalInstruction instr).
 Proof.
   destruct instr; cbv [SymexNormalInstruction err Symbolic.bind ret Syntax.op Syntax.args ErrorT.bind same_reg_some_of_success] in *; intros.
   same_reg_some_of_success_t.
   all: cbv [same_reg_some] in *; eauto 10 with nocore.
+  all: intro reg; repeat match goal with H : forall r : REG, _ |- _ => specialize (H reg) end.
+  all: rewrite !@get_reg_set_reg_full in *.
+  all: break_innermost_match_hyps.
+  all: cbn [Option.is_Some] in *.
+  all: eauto.
 Qed.
 
 (* TODO: move? *)
 Local Instance SymexLine_reg_same line : same_reg_some_of_success (SymexLine line).
 Proof.
   cbv [SymexLine SymexRawLine err ret] in *; break_innermost_match; try congruence.
-  typeclasses eauto.
+  apply SymexNormalInstruction_reg_same.
 Qed.
 
 (* TODO: move? *)
@@ -2933,23 +2962,23 @@ Local Ltac same_mem_addressed_of_success_t_step_unfold_go :=
 Local Ltac same_mem_addressed_of_success_t := repeat first [ same_mem_addressed_of_success_t_step_normal | same_mem_addressed_of_success_t_step_unfold ].
 
 (* TODO: move? *)
-Local Instance Merge_mem_same x : same_mem_addressed_of_success (Symbolic.Merge x).
+Local Instance Merge_mem_same {descr:description} x : same_mem_addressed_of_success (Symbolic.Merge x).
 Proof. same_mem_addressed_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance App_mem_same x : same_mem_addressed_of_success (Symbolic.App x).
+Local Instance App_mem_same {descr:description} x : same_mem_addressed_of_success (Symbolic.App x).
 Proof. same_mem_addressed_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance GetReg_mem_same r : same_mem_addressed_of_success (GetReg r).
+Local Instance GetReg_mem_same {descr:description} r : same_mem_addressed_of_success (GetReg r).
 Proof. same_mem_addressed_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance Address_mem_same sa a : same_mem_addressed_of_success (@Address sa a).
+Local Instance Address_mem_same descr sa a : same_mem_addressed_of_success (@Address descr sa a).
 Proof. same_mem_addressed_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance GetOperand_mem_same sz sa arg : same_mem_addressed_of_success (@GetOperand sz sa arg).
+Local Instance GetOperand_mem_same descr sz sa arg : same_mem_addressed_of_success (@GetOperand descr sz sa arg).
 Proof. same_mem_addressed_of_success_t. Qed.
 
 (* TODO: move? *)
@@ -2957,7 +2986,7 @@ Local Instance GetFlag_mem_same f : same_mem_addressed_of_success (GetFlag f).
 Proof. same_mem_addressed_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance SetOperand_mem_same sz sa arg v : same_mem_addressed_of_success (@SetOperand sz sa arg v).
+Local Instance SetOperand_mem_same descr sz sa arg v : same_mem_addressed_of_success (@SetOperand descr sz sa arg v).
 Proof. same_mem_addressed_of_success_t. Qed.
 
 (* TODO: move? *)
@@ -3005,7 +3034,7 @@ Proof.
 Defined.
 
 (* TODO: move? *)
-Fixpoint Symeval_mem_same sz sa args {struct args} : same_mem_addressed_of_success (@Symeval sz sa args).
+Fixpoint Symeval_mem_same descr sz sa args {struct args} : same_mem_addressed_of_success (@Symeval descr sz sa args).
 Proof.
   destruct args; cbn [Symeval] in *; typeclasses eauto.
 Qed.
@@ -3014,7 +3043,7 @@ Typeclasses Opaque Symeval.
 Typeclasses Transparent AddressSize OperationSize.
 
 (* TODO: move? *)
-Local Instance SymexNormalInstruction_mem_same instr : same_mem_addressed_of_success (SymexNormalInstruction instr).
+Local Instance SymexNormalInstruction_mem_same {descr:description} instr : same_mem_addressed_of_success (SymexNormalInstruction instr).
 Proof.
   destruct instr; cbv [SymexNormalInstruction err Symbolic.bind ret Syntax.op Syntax.args ErrorT.bind same_mem_addressed_of_success] in *; intros.
   same_mem_addressed_of_success_t.
@@ -3024,7 +3053,7 @@ Qed.
 Local Instance SymexLine_mem_same line : same_mem_addressed_of_success (SymexLine line).
 Proof.
   cbv [SymexLine SymexRawLine err ret] in *; break_innermost_match; try congruence.
-  typeclasses eauto.
+  apply SymexNormalInstruction_mem_same.
 Qed.
 
 (* TODO: move? *)
@@ -3343,7 +3372,7 @@ Proof.
 Qed.
 
 Local Existing Instance Permutation_cons | 0.
-Lemma LoadArray_ok G s s' base base_val len idxs
+Lemma LoadArray_ok {descr:description} G s s' base base_val len idxs
       (H : LoadArray base len s = Success (idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -3451,7 +3480,7 @@ Ltac saturate_lengths_step :=
   end.
 Ltac saturate_lengths := repeat saturate_lengths_step.
 
-Lemma LoadOutputs_ok {dereference_scalar:bool} G s s' outputaddrs output_types output_vals idxs
+Lemma LoadOutputs_ok {descr:description} {dereference_scalar:bool} G s s' outputaddrs output_types output_vals idxs
       (H : LoadOutputs (dereference_scalar:=dereference_scalar) outputaddrs output_types s = Success (Success idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))

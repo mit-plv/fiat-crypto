@@ -116,6 +116,7 @@ Definition DenoteOperand (sa s : N) (st : machine_state) (a : ARG) : option Z :=
   | reg a => Some (get_reg st a)
   | mem a => get_mem st (DenoteAddress sa st a) (N.to_nat (N.div (operand_size a s) 8))
   | const a => Some (DenoteConst (operand_size a s) a)
+  | label _ => None
   end.
 
 Definition SetMem (st : machine_state) (addr : Z) (nbytes : nat) (v : Z) : option machine_state :=
@@ -127,6 +128,7 @@ Definition SetOperand (sa s : N) (st : machine_state) (a : ARG) (v : Z) : option
   | reg a => Some (update_reg_with st (fun rs => set_reg rs a v))
   | mem a => SetMem st (DenoteAddress sa st a) (N.to_nat (N.div (operand_size a s) 8)) v
   | const a => None
+  | label _ => None
   end.
 
 Definition result_flags s v :=
@@ -158,7 +160,10 @@ Definition rcrcnt s cnt : Z :=
  * performed ahead of time. *)
 Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstruction) : option machine_state :=
   let sa := 64%N in
+  let stack_addr_size := 64%N in
   match operation_size instr with Some s =>
+  let resize_reg r := reg_of_index_and_shift_and_bitcount_opt (reg_index r, 0%N (* offset *), s) in
+  match instr.(prefix) with None =>
   match instr.(op), instr.(args) with
   | (mov | movzx), [dst; src] => (* Note: unbundle when switching from N to Z *)
     v <- DenoteOperand sa s st src;
@@ -174,7 +179,9 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     SetOperand sa s st dst (Z.b2z b)
   | clc, [] => Some (update_flag_with st (fun fs =>
     set_flag fs CF false))
-  | cmovc, [dst; src] => (* Flags Affected: None *)
+  | cmovc, [dst; src] (* Flags Affected: None *)
+  | cmovb, [dst; src] (* Flags Affected: None *)
+    =>
     v <- DenoteOperand sa s st src;
     cf <- get_flag st CF;
     if cf
@@ -238,7 +245,18 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     let v := v1 * v2 in
     st <- SetOperand sa s st lo v;
     SetOperand sa s st hi (Z.shiftr v (Z.of_N s))
-  | imul, [_] => None (* Note: exists, not supported yet, different CF/OF *)
+  | (Syntax.mul | imul), [src2] =>
+    let src1 : ARG := rax in
+    v1 <- DenoteOperand sa s st src1;
+    v2 <- DenoteOperand sa s st src2;
+    let v := v1 * v2 in
+    lo <- resize_reg rax;
+    hi <- (if (s =? 8)%N
+           then Some ah
+           else resize_reg rdx);
+    st <- SetOperand sa s st lo v;
+    st <- SetOperand sa s st hi (Z.shiftr v (Z.of_N s));
+    Some (HavocFlags st) (* conservative *)
   | imul, ([src1 as dst; src2] | [dst; src1; src2]) =>
     v1 <- DenoteOperand sa s st src1;
     v2 <- DenoteOperand sa s st src2;
@@ -337,6 +355,18 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     let st := SetFlag st CF false in
     let st := SetFlag st OF false in
     Some (HavocFlag st AF)
+  | push, [src]
+    => v    <- DenoteOperand sa s st src;
+       rsp' <- DenoteOperand sa stack_addr_size st rsp;
+       let rsp' := Z.land (rsp' - (Z.of_N s / 8)) (Z.ones (Z.of_N stack_addr_size)) in (* we don't actually need to truncate here, but it makes proofs a bit easier *)
+       st   <- SetOperand stack_addr_size s st rsp rsp';
+               SetOperand sa s st (mem_of_reg rsp) v
+  | pop, [dst]
+    => v    <- DenoteOperand sa s st (mem_of_reg rsp);
+       rsp' <- DenoteOperand sa stack_addr_size st rsp;
+       let rsp' := Z.land (rsp' + (Z.of_N s / 8)) (Z.ones (Z.of_N stack_addr_size)) in (* we don't actually need to truncate here, but it makes proofs a bit easier *)
+       st   <- SetOperand stack_addr_size s st rsp rsp';
+               SetOperand sa s st dst v
 
   | ret, _ => None (* not sure what to do with this ret, maybe exlude it? *)
 
@@ -346,8 +376,18 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | adox, _
   | and, _
   | bzhi, _
+  | db, _
+  | dw, _
+  | dd, _
+  | dq, _
   | mulx, _
+  | mul, _
+  | call, _
+  | cmp, _
+  | je, _
+  | jmp, _
   | cmovc, _
+  | cmovb, _
   | cmovnz, _
   | setc, _
   | seto, _
@@ -358,18 +398,21 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | movzx, _
   | imul, _
   | inc, _
+  | push, _
+  | pop, _
   | sar, _
   | rcr, _
   | sbb, _
   | shl, _
   | shlx, _
   | shr, _
+  | shrx, _
   | shrd, _
   | sub, _
   | test, _
   | xor, _
   | xchg, _ => None
- end | _ => None end%Z%option.
+ end | _ => None end | _ => None end%Z%option.
 
 
 Definition DenoteRawLine (st : machine_state) (rawline : RawLine) : option machine_state :=
@@ -381,6 +424,8 @@ Definition DenoteRawLine (st : machine_state) (rawline : RawLine) : option machi
     => DenoteNormalInstruction st instr
   | SECTION _
   | GLOBAL _
+  | ALIGN _
+  | DEFAULT_REL
     => None
   end.
 

@@ -65,9 +65,13 @@ Extract Inlined Constant String.eqb => "((Prelude.==) :: Prelude.String -> Prelu
 
 Local Notation "x <- y ; f" := (_IO_bind _ _ y (fun x => f)).
 
+Definition raise_failure (msg : list String.string) : _IO unit
+  := (_ <- printf_string (String.concat String.NewLine msg);
+      raise_failure "Synthesis failed").
+
 Global Instance HaskellIODriver : ForExtraction.IODriverAPI (_IO unit)
   := {
-       ForExtraction.error err := raise_failure (String.concat String.NewLine err)
+       ForExtraction.error := raise_failure
        ; ForExtraction.ret 'tt := _IO_return _ tt
        ; ForExtraction.with_read_stdin k :=
            (lines <- getContents;

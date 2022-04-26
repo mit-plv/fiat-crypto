@@ -86,7 +86,7 @@ jobs:
     - name: only-test-amd64-files
       run: |
         eval $(opam env)
-        etc/ci/github-actions-make.sh -j2 only-test-amd64-files
+        etc/ci/github-actions-make.sh -j2 only-test-amd64-files SLOWEST_FIRST=1
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
       with:
@@ -102,8 +102,8 @@ jobs:
 #        name: build-outputs
 #        path: .
 #      if: always ()
-    - name: validate
-      run: |
-        eval $(opam env)
-        make TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"
-      if: github.event_name != 'pull_request'
+#    - name: validate
+#      run: |
+#        eval $(opam env)
+#        make TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"
+#      if: github.event_name != 'pull_request'

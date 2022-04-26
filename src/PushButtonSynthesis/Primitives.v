@@ -32,6 +32,8 @@ Require Import Crypto.Arithmetic.UniformWeight.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
+Require Import Crypto.Util.ErrorT.List.
+Require Import Crypto.Util.ListUtil.GroupAllBy.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Crypto.Assembly.Parse.
@@ -1143,7 +1145,7 @@ Section __.
             Error
               (Pipeline.Invalid_argument
                  ("Unrecognized request to synthesize """ ++ name ++ """; valid names are " ++ valid_names ++ ".")))
-           ((map
+           ((List.map
                (fun '(expected_name, resf)
                 => if (name =? expected_name)%string
                    then Some (resf function_name_prefix)
@@ -1151,27 +1153,68 @@ Section __.
                known_functions)
               ++ extra_special_synthesis name).
 
-    Definition parse_asm_hints
-      : Pipeline.ErrorT (option (Assembly.Syntax.Lines (* prefix *) * list (string (* function name *) * Assembly.Syntax.Lines)))
-      := match assembly_hints_lines with
-         | None => Success None
-         | Some lines
+    Fixpoint parse_asm_files_lines (ls : list (string (* fname *) * list string))
+      : Pipeline.ErrorT (list (string (* fname *) * (Assembly.Syntax.Lines (* prefix *) * list (string (* function name *) * Assembly.Syntax.Lines))))
+      := match ls with
+         | [] => Success []
+         | (fname, lines) :: ls
            => match Assembly.Parse.parse_validated lines with
-              | Error err => Error (Pipeline.Assembly_parsing_error err)
-              | Success v => Success (Some (Assembly.Parse.split_code_to_functions v))
+              | Error err => Error (Pipeline.Assembly_parsing_error fname err)
+              | Success v
+                => (vs <- parse_asm_files_lines ls;
+                    Success ((fname, Assembly.Parse.split_code_to_functions v) :: vs))
               end
-         end.
+         end%error.
 
-    Definition split_to_assembly_functions {A B} (assembly_data : list (string * A)) (normal_data : list (string * B))
-      : list (string * (A * B)) * list (string * B) * list (string * A)
-      := if (ignore_unique_asm_names && (length assembly_data =? 1) && (length normal_data =? 1))%nat%bool
-         then match assembly_data, normal_data with [(_, a)], [(n, b)] => ([(n, (a,b))], nil, nil) | _, _ => (nil, normal_data, assembly_data) end
+    Definition parse_asm_hints
+      : Pipeline.ErrorT (list (string (* fname *) * (Assembly.Syntax.Lines (* prefix *) * list (string (* function name *) * Assembly.Syntax.Lines))))
+      := parse_asm_files_lines assembly_hints_lines.
+
+    Definition split_to_assembly_functions {A B} (assembly_data : list (string (* file name *) * list (string * A))) (normal_data : list (string * B))
+      : list (string * (list (string (* file name *) * A) * B)) * list (string * B) * list (string (* file name *) * list (string (* function name *) * A)) * list (string (* file name of files with no globals *))
+      := let assembly_files_without_globals := List.filter (fun '(_, ls) => (List.length ls =? 0)%nat) assembly_data in
+         let assembly_files_without_globals := List.map (fun '(fname, _) => fname) assembly_files_without_globals in
+         let assembly_data := List.filter (fun '(_, ls) => negb (List.length ls =? 0)%nat) assembly_data in
+         if (ignore_unique_asm_names && (forallb (fun '(_, data) => length data =? 1) assembly_data) && (length normal_data =? 1))%nat%bool
+         then match normal_data with
+              | [(n, b)]
+                => ([(n, (List.flat_map (fun '(fname, asm_ls) => List.map (fun '(_, a) => (fname, a)) asm_ls) assembly_data, b))], [], [], assembly_files_without_globals)
+              | _ => ([], normal_data, assembly_data, assembly_files_without_globals)
+              end
          else
+         (* move the function name first, flatten the functions associated to each file *)
+         let assembly_data : list (string (* function name *) * (string (* file name *) * A)) := List.flat_map (fun '(fname, asm_ls) => List.map (fun '(func_name, a) => (func_name, (fname, a))) asm_ls) assembly_data in
+         (* now group the asesmbly functions by their function name *)
+         let assembly_data := List.groupAllBy (fun '(n1, _) '(n2, _) => (n1 =? n2)%string) assembly_data in
+         (* now pull out the function name to top level *)
+         let assembly_data : list (string (* function name *) * list (string (* file name *) * A))
+           := Option.List.map
+                (fun ls
+                 => match ls with
+                    | [] => None
+                    | (n, _) :: _ => Some (n, List.map snd ls)
+                    end)
+                assembly_data in
+         (* combine normal data with corresponding assembly data *)
          let ls := List.map (fun '(n1, normal_data)
                              => ((n1, normal_data), List.find (fun '(n2, _) => n1 =? n2)%string assembly_data))
                             normal_data in
+         (* split out the normal data that has assembly data from the normal data that doesn't *)
          let '(lsAB, lsB) := List.partition (fun '(_, o) => match o with Some _ => true | None => false end) ls in
+         (* get the assembly functions that have no corresponding normal function *)
          let lsA := List.filter (fun '(n1, _) => negb (List.existsb (fun '(n2, _) => (n1 =? n2)%string) normal_data)) assembly_data in
+         (* flatten out assembly functions and move the file names first *)
+         let lsA := List.flat_map (fun '(function_name, ls) => List.map (fun '(file_name, v) => (file_name, (function_name, v))) ls) lsA in
+         (* group by files for assembly data *)
+         let lsA := List.groupAllBy (fun '(n1, _) '(n2, _) => (n1 =? n2)%string) lsA in
+         let lsA
+           := Option.List.map
+                (fun ls
+                 => match ls with
+                    | [] => None
+                    | (n, _) :: _ => Some (n, List.map snd ls)
+                    end)
+                lsA in
          (Option.List.map
             (fun '((n, normal_data), assembly_data)
              => match assembly_data with
@@ -1179,8 +1222,9 @@ Section __.
                 | None => (* should not happen *) None
                 end)
             lsAB,
-          List.map (@fst _ _) lsB,
-          lsA).
+           List.map (@fst _ _) lsB,
+           lsA,
+           assembly_files_without_globals).
 
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
@@ -1196,36 +1240,52 @@ Section __.
          let ls := List.map (synthesize_of_name function_name_prefix) requests in
          let '(asm_ls, ls)
              := match parse_asm_hints with
-                | Success None => ([], ls)
-                | Success (Some (prefix, function_asms))
-                  => let valid_function_names := List.map fst ls in
-                     let '(asm_ls, ls, unused_asm_ls) := split_to_assembly_functions function_asms ls in
-                     (* TODO: Currently we just pass the prefix/header through unchanged; maybe we should instead generate a better header? *)
-                     let asm_ls_prefix := [(assembly_output, "header-prefix", Success (Show.show_lines prefix))] in
+                | Success [] => ([], ls)
+                | Success asm_hints
+                  => (* TODO: Currently we just pass the prefix/header through unchanged; maybe we should instead generate a better header? *)
+                     let asm_ls_prefix
+                       := List.map (fun '(fname, (prefix, _)) => (assembly_output, "header-prefix for " ++ fname, Success (Show.show_lines prefix)))%string asm_hints in
+                     let function_asms := List.map (fun '(fname, (_prefix, function_asms)) => (fname, function_asms)) asm_hints in
+                     let valid_function_names := List.map fst ls in
+                     let '(asm_ls, ls, unused_asm_ls, asm_missing_globals) := split_to_assembly_functions function_asms ls in
                      let asm_ls_check
-                         := if (error_on_unused_assembly_functions && (0 <? List.length unused_asm_ls))%nat
-                            then [(assembly_output, "check", Error (Pipeline.Unused_global_assembly_labels
-                                                                      (List.map (@fst _ _) unused_asm_ls)
-                                                                      valid_function_names))]
-                            else [] in
+                       := if negb (List.length asm_missing_globals =? 0)%nat
+                          then [(assembly_output, "check", Error (Pipeline.Assembly_without_any_global_labels asm_missing_globals))]
+                          else [] in
+                     let asm_ls_check
+                       := asm_ls_check
+                            ++ if (error_on_unused_assembly_functions && (0 <? List.length unused_asm_ls))%nat
+                               then [(assembly_output, "check", Error (Pipeline.Unused_global_assembly_labels
+                                                                         (List.map (fun '(file_name, labels) => (file_name, List.map (@fst _ _) labels)) unused_asm_ls)
+                                                                         valid_function_names))]
+                               else [] in
                      let asm_ls
                          := List.map
-                              (fun '(name, (asm_lines, synthesis_res))
+                              (fun '(name, (asm_fname_and_lines, synthesis_res))
                                => (name,
                                    (synthesis_res <- synthesis_res;
                                    let 'existT _ synthesis_res := synthesis_res in
                                    match Assembly.Equivalence.generate_assembly_of_hinted_expr
-                                           asm_lines
+                                           asm_fname_and_lines
                                            (synthesis_res.(Pipeline.expr))
                                            (synthesis_res.(Pipeline.arg_bounds))
                                            (synthesis_res.(Pipeline.out_bounds))
                                    with
-                                   | Success lines => Success (Show.show_lines lines)
-                                   | Error err => Error (Pipeline.Equivalence_checking_failure
-                                                           (synthesis_res.(Pipeline.expr))
-                                                           asm_lines
-                                                           (synthesis_res.(Pipeline.arg_bounds))
-                                                           err)
+                                   | Success lines => Success (List.flat_map (fun '(_fname, lines) => Show.show_lines lines) lines)
+                                   | Error (Some (fname, asm_lines), err)
+                                     => Error
+                                          (Pipeline.Equivalence_checking_failure
+                                             (synthesis_res.(Pipeline.expr))
+                                             fname
+                                             asm_lines
+                                             (synthesis_res.(Pipeline.arg_bounds))
+                                             err)
+                                   | Error (None, err)
+                                     => Error
+                                          (Pipeline.Equivalence_checking_failure_pre_asm
+                                             (synthesis_res.(Pipeline.expr))
+                                             (synthesis_res.(Pipeline.arg_bounds))
+                                             err)
                                    end)%error))
                               asm_ls in
                      let asm_ls := List.map (fun '(name, lines) => (assembly_output, name, lines)) asm_ls in

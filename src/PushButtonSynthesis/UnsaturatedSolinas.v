@@ -153,7 +153,7 @@ Section __.
      at least 1 *)
   Definition m_enc_min : list Z :=
     let wt := weight (Qnum limbwidth) (Qden limbwidth) in
-    let fw := map (fun i => wt (S i) / wt i) (seq 0 n) in
+    let fw := List.map (fun i => wt (S i) / wt i) (seq 0 n) in
     let m_enc_min := map2 Z.sub tight_upperbounds fw in
     if List.forallb (Z.eqb 0) m_enc_min
     then set_nth (n-1) 1 m_enc_min
@@ -227,7 +227,7 @@ Section __.
                    ; (let v1 := s in
                       let v2 := weight (Qnum limbwidth) (QDen limbwidth) n in
                       (v1 =? v2, Pipeline.Values_not_provably_equalZ "s ≠ weight n (needed for to_bytes)" v1 v2))
-                   ; (let v1 := (map (Z.land (Z.ones machine_wordsize)) m_enc) in
+                   ; (let v1 := (List.map (Z.land (Z.ones machine_wordsize)) m_enc) in
                       let v2 := m_enc in
                       (list_beq _ Z.eqb v1 v2, Pipeline.Values_not_provably_equal_listZ "map mask m_enc ≠ m_enc (needed for to_bytes)" v1 v2))
                    ; (let v1 := eval (weight (Qnum limbwidth) (QDen limbwidth)) n m_enc in
@@ -270,7 +270,7 @@ Section __.
       /\ (request_present requests "to_bytes" = true -> 1 < s)
       /\ (request_present requests "to_bytes" = true -> 0 < Associational.eval c < s)
       /\ (request_present requests "to_bytes" = true -> s = weight (Qnum limbwidth) (QDen limbwidth) n)
-      /\ (request_present requests "to_bytes" = true -> map (Z.land (Z.ones machine_wordsize)) m_enc = m_enc)
+      /\ (request_present requests "to_bytes" = true -> List.map (Z.land (Z.ones machine_wordsize)) m_enc = m_enc)
       /\ (request_present requests "to_bytes" = true -> eval m_enc = s - Associational.eval c)
       /\ (request_present requests "to_bytes" = true -> eval tight_upperbounds < 2 * eval m_enc)
       /\ List.length tight_bounds = n

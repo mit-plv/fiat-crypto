@@ -5,6 +5,7 @@ Require Import Coq.NArith.NArith.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.AbstractInterpretation.ZRange.
 Require Import Crypto.Util.ErrorT.
+Import Coq.Lists.List. (* [map] is [List.map] not [ErrorT.map] *)
 Require Import Crypto.Util.ListUtil.IndexOf.
 Require Import Crypto.Util.Tactics.WarnIfGoalsRemain.
 Require Crypto.Util.Option.
@@ -73,7 +74,10 @@ Section Memory.
 End Memory.
 
 
-Import BreakMatch DestructHead UniquePose.
+Require Import Crypto.Util.Prod.
+From Crypto.Util.Tactics Require Import BreakMatch DestructHead UniquePose.
+Require Import Crypto.Util.Bool.Reflect.
+Require Import Crypto.Util.ZUtil.Ones.
 Import coqutil.Tactics.autoforward coqutil.Decidable coqutil.Tactics.Tactics.
 
 Local Coercion ExprRef : idx >-> expr.
@@ -381,7 +385,7 @@ Ltac step_GetFlag :=
 Ltac step_symex1 := first [step_symex0 | step_GetFlag].
 Ltac step_symex ::= step_symex1.
 
-Lemma Merge_R s m (HR : R s m) e v (H : eval s e v) :
+Lemma Merge_R {descr:description} s m (HR : R s m) e v (H : eval s e v) :
   forall i s', Merge e s = Success (i, s') ->
   R s' m /\ s :< s' /\ eval s' i v.
 Proof using Type.
@@ -404,7 +408,7 @@ Ltac step_Merge :=
 Ltac step_symex2 := first [step_symex1 | step_Merge].
 Ltac step_symex ::= step_symex2.
 
-Lemma App_R s m (HR : R s m) e v (H : eval_node G s e v) :
+Lemma App_R {descr:description} s m (HR : R s m) e v (H : eval_node G s e v) :
   forall i s', Symbolic.App e s = Success (i, s') ->
   R s' m /\ s :< s' /\ eval s' i v.
 Proof using Type.
@@ -466,8 +470,8 @@ Ltac step_SetFlag :=
     [eassumption|..|clear H]
   end.
 
-Lemma GetReg_R s m (HR: R s m) r i s'
-  (H : @GetReg r s = Success (i, s'))
+Lemma GetReg_R {descr:description} s m (HR: R s m) r i s'
+  (H : GetReg r s = Success (i, s'))
   : R s' m  /\ s :< s' /\ eval s' i (get_reg m r).
 Proof using Type.
   cbv [GetReg GetReg64 bind some_or get_reg index_and_shift_and_bitcount_of_reg] in *.
@@ -488,11 +492,14 @@ Ltac step_GetReg :=
     [eassumption|..|clear H]
   end.
 
-Lemma Address_R s m (HR : R s m) sa o a s' (H : @Symbolic.Address sa o s = Success (a, s'))
+Lemma Address_R {descr:description} s m (HR : R s m) (sa:AddressSize) o a s' (H : Symbolic.Address o s = Success (a, s'))
   : R s' m /\ s :< s' /\ exists v, eval s' a v /\ @DenoteAddress sa m o = v.
 Proof using Type.
-  destruct o as [? ? ? ?]; cbv [Address DenoteAddress Syntax.mem_base_reg Syntax.mem_offset Syntax.mem_scale_reg] in *; repeat step_symex.
-  all : repeat first [ first [ step_symex | step_GetReg ]; try solve [repeat (eauto || econstructor)]; []
+  destruct o as [? ? ? ?]; cbv [Address DenoteAddress Syntax.mem_base_reg Syntax.mem_offset Syntax.mem_scale_reg err ret] in *; repeat step_symex.
+  all : repeat first [ progress inversion_ErrorT
+                     | progress inversion_pair
+                     | progress subst
+                     | first [ step_symex | step_GetReg ]; try solve [repeat (eauto || econstructor)]; []
                      | break_innermost_match_hyps_step; cbn [fst snd] in * ].
   all : Tactics.ssplit; eauto 99.
   all : eexists; split; eauto; [].
@@ -699,11 +706,11 @@ Proof using Type.
 Qed.
 
 
-Lemma GetOperand_R s m (HR: R s m) so sa a i s'
-  (H : @GetOperand so sa a s = Success (i, s'))
+Lemma GetOperand_R {descr:description} s m (HR: R s m) (so:OperationSize) (sa:AddressSize) a i s'
+  (H : GetOperand a s = Success (i, s'))
   : R s' m /\ s :< s' /\ exists v, eval s' i v /\ DenoteOperand sa so m a = Some v.
 Proof using Type.
-  cbv [GetOperand DenoteOperand] in *; BreakMatch.break_innermost_match.
+  cbv [GetOperand DenoteOperand err] in *; break_innermost_match; inversion_ErrorT.
   { eapply GetReg_R in H; intuition eauto. }
   { progress cbv [Load ret] in *.
     repeat (cbv [err] in *; cbn [fst snd] in * || step_symex || Tactics.destruct_one_match_hyp || inversion_ErrorT || Prod.inversion_prod || subst).
@@ -724,7 +731,7 @@ Proof using Type.
       symmetry in E0; cbn [nth_error] in E0; simpl Z.of_nat in E0.
       simpl load_bytes.
       change (Pos.to_nat 1) with 1%nat.
-      cbv [load_bytes footprint map seq List.option_all].
+      cbv [load_bytes footprint List.map seq List.option_all].
       setoid_rewrite E0.
       eexists; split; eauto.
       cbv [le_combine].
@@ -754,12 +761,12 @@ Ltac step_GetOperand :=
   end.
 
 (* note: do the two SetOperand both truncate inputs or not?... *)
-Lemma R_SetOperand s m (HR : R s m)
-  sz sa a i _tt s' (H : @Symbolic.SetOperand sz sa a i s = Success (_tt, s'))
+Lemma R_SetOperand {descr:description} s m (HR : R s m)
+  (sz:OperationSize) (sa:AddressSize) a i _tt s' (H : Symbolic.SetOperand a i s = Success (_tt, s'))
   v (Hv : eval s i v)
   : exists m', SetOperand sa sz m a v = Some m' /\ R s' m' /\ s :< s'.
 Proof using Type.
-  destruct a in *; cbn in H; [ | | solve [inversion H] ];
+  destruct a in *; cbn in H; cbv [err] in *; inversion_ErrorT; [ | ];
     cbv [SetOperand Crypto.Util.Option.bind SetReg64 update_reg_with Symbolic.update_reg_with] in *;
     repeat (BreakMatch.break_innermost_match_hyps; Prod.inversion_prod; ErrorT.inversion_ErrorT; subst).
 
@@ -886,10 +893,9 @@ Ltac destr_expr_beq :=
 Lemma standalone_operand_size_cases o n : standalone_operand_size o = Some n ->
   (n = 8 \/ n = 16 \/ n = 32 \/ n = 64)%N.
 Proof using Type.
-   destruct o; cbn.
+   destruct o; cbn; try congruence.
    { destruct r; cbn; inversion 1; subst; eauto. }
-   { destruct (mem_is_byte _); inversion 1; eauto. }
-   { inversion 1. }
+   { destruct (mem_bits_access_size _) as [ [] | ]; inversion 1; subst; eauto. }
 Qed.
 
 Lemma opcode_size_cases o n : opcode_size o = Some n ->
@@ -957,7 +963,7 @@ Proof using Type.
 Qed.
 
 Lemma operation_size_cases i n : Syntax.operation_size i = Some n ->
-  (((exists ls, i = Build_NormalInstruction Syntax.clc ls) /\ n = 1) \/ (n = 8 \/ n = 16 \/ n = 32 \/ n = 64))%N.
+  (((exists prefix ls, i = Build_NormalInstruction prefix Syntax.clc ls) /\ n = 1) \/ (n = 8 \/ n = 16 \/ n = 32 \/ n = 64))%N.
 Proof using Type.
   clear G.
   intuition idtac; DestructHead.destruct_head'_ex; subst; cbn in *.
@@ -1010,12 +1016,18 @@ Ltac invert_eval :=
   end.
 
 Ltac resolve_match_using_hyp :=
-  match goal with |- context[match ?x with _ => _ end] =>
-  match goal with H : x = ?v |- _ =>
-      let h := Head.head v in
-      is_constructor h;
-      rewrite H
-  end end.
+  let rewrite_for x
+    := match goal with
+       | [ H : x = ?v |- _ ]
+         => let h := Head.head v in
+            is_constructor h;
+            rewrite H
+       end in
+  match goal with
+  | [ |- context[match ?x with _ => _ end] ] => rewrite_for x
+  | [ |- context[match (if _ then ?x else ?y) with _ => _ end] ]
+    => progress (try rewrite_for x; try rewrite_for y)
+  end.
 
 Ltac resolve_SetOperand_using_hyp :=
   match goal with
@@ -1038,13 +1050,14 @@ Ltac step :=
   first
   [ lift_let_goal
   | resolve_match_using_hyp
-  | progress (cbn beta iota delta [fst snd Syntax.op Syntax.args] in *; cbv beta iota delta [Reveal RevealConst Crypto.Util.Option.bind Symbolic.ret Symbolic.err Symeval mapM PreserveFlag] in *; subst)
+  | progress (cbn beta iota delta [fst snd Syntax.op Syntax.args] in *; cbv beta iota delta [Reveal RevealConst Crypto.Util.Option.bind Symbolic.ret Symbolic.err Symeval mapM PreserveFlag some_or] in *; subst)
   | Prod.inversion_prod_step
   | inversion_ErrorT_step
   | Option.inversion_option_step
   | invert_eval
   | step_symex
   | destr_expr_beq
+  | rewrite N.eqb_refl (* TODO: should this live elsewhere? *)
   ].
 Ltac step1 := step; (eassumption||trivial); [].
 Ltac step01 := solve [step] || step1.
@@ -1090,13 +1103,13 @@ Proof using Type.
 Qed.
 
 
-Lemma SymexNornalInstruction_R s m (HR : R s m) instr :
+Lemma SymexNornalInstruction_R {descr:description} s m (HR : R s m) instr :
   forall _tt s', Symbolic.SymexNormalInstruction instr s = Success (_tt, s') ->
   exists m', Semantics.DenoteNormalInstruction m instr = Some m' /\ R s' m' /\ s :< s'.
 Proof using Type.
   intros [] s' H.
-  case instr as [op args]; cbv [SymexNormalInstruction] in H.
-  repeat destruct_one_match_hyp; repeat step01.
+  case instr as [op args]; cbv [SymexNormalInstruction OperationSize] in H.
+  repeat (repeat destruct_one_match_hyp; repeat step01).
 
   all : repeat
   match goal with
@@ -1109,8 +1122,8 @@ Proof using Type.
       exact eq_refl || rewrite Z.bit0_mod; trivial; rewrite  Z.mod_small; trivial; Lia.lia]
   end.
 
-  all: cbv beta delta [DenoteNormalInstruction].
-  all: repeat
+  all: cbv beta delta [DenoteNormalInstruction];
+       repeat
   match goal with
   | x := ?v |- _ => let t := type of x in
       assert_fails (idtac; match v with context[match _ with _ => _ end] => idtac end);
@@ -1118,6 +1131,7 @@ Proof using Type.
   | _ => step
   | _ => resolve_SetOperand_using_hyp
   | _ => rewrite (Bool.pull_bool_if Some)
+  | |- context[if (?x =? ?y)%N then _ else _] => destruct (x =? y)%N eqn:?; reflect_hyps; subst; try congruence
   | |- exists _, Some _ = Some _ /\ _ => eexists; split; [f_equal|]
   | |- exists _, None   = Some _ /\ _ => exfalso
   | |- _ /\ _ :< _ => split; [|solve[eauto 99 with nocore] ]
@@ -1131,6 +1145,9 @@ Proof using Type.
 
   all : cbn [fold_right map]; rewrite ?N2Z.id, ?Z.add_0_r, ?Z.add_assoc, ?Z.mul_1_r, ?Z.land_m1_r, ?Z.lxor_0_r;
     (congruence||eauto).
+  all: rewrite ?Z.land_ones_low_alt by now try split; try apply Zpow_facts.Zpower2_lt_lin; lia.
+  all: rewrite ?(fun x => Z.land_ones_low_alt (x / 8) x) by now split; try (eapply Z.le_lt_trans; [ | apply Zpow_facts.Zpower2_lt_lin ]); try lia; Z.to_euclidean_division_equations; nia.
+  all: try exact eq_refl.
   all : try solve [rewrite Z.land_ones, Z.bit0_mod by Lia.lia; exact eq_refl].
 
   all: try solve[ (* bash flags weakening *)
@@ -1248,11 +1265,12 @@ Proof using Type.
   Unshelve. all : match goal with H : context[Syntax.adox] |- _ => idtac | _ => shelve end.
   { cbn [fold_right] in *; rewrite ?Z.bit0_odd, ?Z.add_0_r, ?Z.add_assoc in *; assumption. }
 
-  Unshelve. all : match goal with H : context[Syntax.cmovc] |- _ => idtac | _ => shelve end.
-  { (* cmovc *)
-    destruct vCF; cbn [negb Z.b2z Z.eqb] in *; eauto 9; [].
-    enough (m = m0) by (subst; eauto 9).
-    clear -Hm0 Hv frame G ; eauto using SetOperand_same. }
+  Unshelve. all : match goal with H : context[Syntax.cmovc] |- _ => idtac |  H : context[Syntax.cmovb] |- _ => idtac | _ => shelve end.
+  (* cmovc / cmovb *)
+  all: destruct vCF; cbn [negb Z.b2z Z.eqb] in *; eauto 9; [].
+  all: enough (m = m0) by (subst; eauto 9).
+  all: clear -Hm0 Hv frame G ; eauto using SetOperand_same.
+  all: fail.
 
   Unshelve. all : match goal with H : context[Syntax.cmovnz] |- _ => idtac | _ => shelve end.
   { (* cmovnz *)
@@ -1291,12 +1309,7 @@ Proof using Type.
 
   Unshelve. all : match goal with H : context[Syntax.rcr] |- _ => idtac | _ => shelve end; shelve_unifiable.
   all : change Symbolic.rcrcnt with rcrcnt in *.
-  { destruct_one_match_hyp; repeat step; eauto.
-    { econstructor. econstructor. eauto 9. econstructor. cbn.
-      rewrite Z.shiftr_0_r. rewrite Z.land_ones by lia.
-      rewrite <-Z.bit0_mod. exact eq_refl. }
-  all : destruct_one_match; try lia.
-  all : split; [|solve[eauto 99 with nocore] ].
+  { repeat destruct_one_match; try lia.
   all:
       destruct s';
       repeat match goal with
@@ -1310,6 +1323,7 @@ Proof using Type.
              end; try eauto; try Lia.lia.
      destr (machine_flag_state m0); cbn [Tuple.tuple'] in *; DestructHead.destruct_head'_prod; subst; Prod.inversion_prod; subst.
      f_equal.
+     let E0 := match goal with H : rcrcnt _ _ = _ |- _ => H end in
      rewrite E0; cbn.
      rewrite <-2Z.bit0_odd, Z.lor_spec, Z.shiftl_spec_low, Bool.orb_false_r; trivial.
      pose_operation_size_cases; intuition (subst; cbn; clear; lia). }
@@ -1332,6 +1346,9 @@ Proof using Type.
   { rewrite <- Z.land_assoc.
     f_equal; f_equal; [].
     pose_operation_size_cases; intuition subst; reflexivity. }
+
+  Unshelve. all : match goal with H : context[push] |- _ => idtac | H : context[pop] |- _ => idtac | _ => shelve end; shelve_unifiable.
+  all: rewrite !Z.land_ones by lia; push_Zmod; pull_Zmod; f_equal; lia.
 
   Unshelve. all: shelve_unifiable.
   all: fail_if_goals_remain ().

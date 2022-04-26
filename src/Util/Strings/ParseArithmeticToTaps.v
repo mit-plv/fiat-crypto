@@ -53,6 +53,7 @@ def parse_term(t) :
     *)
 Fixpoint parse_term_of_Qexpr (v : Qexpr) : option (Z * Z)
   := match v with
+     | Qvar x => match x with end
      | Qv x => q <- Q_to_Z_strict x; Some (1, q)
      | Qeopp a => v <- parse_term_of_Qexpr a; Some (fst v, -snd v)
      | Qeadd a b => None

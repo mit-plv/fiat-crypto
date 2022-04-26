@@ -31,6 +31,15 @@ Definition parse_alt_gen {A B C} (f : A + B -> C) (p1 : ParserAction A) (p2 : Pa
            ++ List.map (fun '(v, s) => (f (inr v), s)) (p2 s))%list.
 Definition parse_alt {A} (p1 p2 : ParserAction A) : ParserAction A
   := parse_alt_gen (fun aa => match aa with inl a => a | inr a => a end) p1 p2.
+(* variant of alt which only parses the second branch if there are no matches on the first branch *)
+Definition parse_or_else_gen {A B C} (f : A + B -> C) (p1 : ParserAction A) (p2 : ParserAction B) : ParserAction C
+  := fun s
+     => match p1 s with
+        | [] => List.map (fun '(v, s) => (f (inr v), s)) (p2 s)
+        | ls => List.map (fun '(v, s) => (f (inl v), s)) ls
+        end.
+Definition parse_or_else {A} (p1 p2 : ParserAction A) : ParserAction A
+  := parse_or_else_gen (fun aa => match aa with inl a => a | inr a => a end) p1 p2.
 
 Notation ε := parse_empty.
 Infix "||" := parse_alt : parse_scope.
@@ -65,6 +74,15 @@ Definition parse_ascii (prefix : ascii) : ParserAction ascii
 
 Coercion parse_ascii : ascii >-> ParserAction.
 
+Definition parse_ascii_case_insensitive (prefix : ascii) : ParserAction ascii
+  := fun s
+     => match s with
+        | EmptyString => []
+        | String ch s' => if (Ascii.to_lower ch =? Ascii.to_lower prefix)%char
+                          then [(ch, s')]
+                          else []
+        end.
+
 Definition parse_str (prefix : string) : ParserAction string
   := fun s
      => if startswith prefix s
@@ -72,6 +90,16 @@ Definition parse_str (prefix : string) : ParserAction string
         else [].
 
 Coercion parse_str : string >-> ParserAction.
+
+Definition parse_str_case_insensitive (prefix : string) : ParserAction string
+  := fun s
+     => let '(s1, s2) := (substring 0 (String.length prefix) s,
+                           substring (String.length prefix) (String.length s) s) in
+        if (String.to_lower prefix =? String.to_lower s1)%string
+        then [(s1, s2)]
+        else [].
+
+Notation casefold := parse_str_case_insensitive (only parsing).
 
 Definition parse_map {A B} (f : A -> B) : ParserAction A -> ParserAction B
   := fun p s
@@ -144,6 +172,11 @@ Definition parse_alt_list {T} (ls : list (ParserAction T)) : ParserAction T
 
 Definition parse_strs {T} (ls : list (string * T)) : ParserAction T
   := parse_alt_list (List.map (fun '(s, v) => parse_map (fun _ => v) (s:string)) ls).
+
+Definition parse_strs_case_insensitive {T} (ls : list (string * T)) : ParserAction T
+  := parse_alt_list (List.map (fun '(s, v) => parse_map (fun _ => v) (casefold s)) ls).
+
+Notation parse_strs_casefold := parse_strs_case_insensitive (only parsing).
 
 Definition parse_one_whitespace : ParserAction string
   := Eval cbv [List.fold_right List.fold_left whitespace whitespace_strs List.tl List.hd parse_strs List.combine] in

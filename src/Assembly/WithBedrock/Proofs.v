@@ -240,7 +240,8 @@ Proof. apply map_length. Qed.
 Definition init_symbolic_state_G (m : machine_state)
   : (symbol -> option Z) * dag -> (symbol -> option Z) * symbolic_state
   := fun st
-     => let vals := Tuple.to_list _ (m.(machine_reg_state)) in
+     => let _ := init_symbolic_state_descr in
+        let vals := Tuple.to_list _ (m.(machine_reg_state)) in
         let '(initial_reg_idxs, (G, d)) := dag_gensym_n_G vals st in
         (G,
          {| dag_state := d
@@ -253,7 +254,7 @@ Lemma init_symbolic_state_eq_G G d m
   : init_symbolic_state d = snd (init_symbolic_state_G m (G, d)).
 Proof.
   cbv [init_symbolic_state init_symbolic_state_G].
-  pose proof (@dag_gensym_n_eq_G G d (Tuple.to_list 16 m.(machine_reg_state))) as H.
+  epose proof (dag_gensym_n_eq_G G d (Tuple.to_list 16 m.(machine_reg_state))) as H.
   rewrite Tuple.length_to_list in H; rewrite H; clear H.
   eta_expand; cbn [fst snd].
   reflexivity.
@@ -273,7 +274,8 @@ Lemma init_symbolic_state_G_ok m G d G' ss
 Proof.
   cbv [init_symbolic_state_G] in *.
   eta_expand; cbn [fst snd] in *; inversion_prod; subst.
-  pose proof (dag_gensym_n_G_ok _ _ _ _ _ _ ltac:(eassumption) ltac:(repeat rewrite <- surjective_pairing; reflexivity) ltac:(eassumption)).
+  epose proof (dag_gensym_n_G_ok) as H. (* COQBUG(https://github.com/coq/coq/issues/15927) *)
+  specialize (H _ _ _ _ _ _ ltac:(eassumption) ltac:(repeat rewrite <- surjective_pairing; reflexivity) ltac:(eassumption)).
   destruct_head'_and; cbv [R].
   repeat match goal with |- _ /\ _ => split end; try eassumption; try reflexivity.
   2: { cbv [Tuple.repeat R_flags Tuple.append Tuple.fieldwise Tuple.fieldwise' R_flag]; cbn [fst snd];
@@ -1427,7 +1429,7 @@ Proof.
                     | constructor ].
 Qed.
 
-Lemma build_inputs_ok_R G ss types inputs args d' frame ms
+Lemma build_inputs_ok_R {descr:description} G ss types inputs args d' frame ms
       (d := ss.(dag_state))
       (H : build_inputs types d = (inputs, d'))
       (HR : R frame G ss ms)
@@ -1448,7 +1450,7 @@ Proof.
   eapply R_subsumed; eassumption.
 Qed.
 
-Lemma build_merge_stack_placeholders_ok_R G s s' frame frame' ms
+Lemma build_merge_stack_placeholders_ok_R {descr:description} G s s' frame frame' ms
       (rsp_val : Z) (stack_vals : list Z) base_stack base_stack_word_val
       (H : build_merge_stack_placeholders (List.length stack_vals) s = Success (base_stack, s'))
       (d := s.(dag_state))
@@ -1755,7 +1757,7 @@ Local Ltac handle_eval_eval :=
          end.
 
 Lemma build_merge_base_addresses_ok_R
-      {dereference_scalar:bool}
+      {descr:description} {dereference_scalar:bool}
       (idxs : list (idx + list idx))
       (reg_available : list REG)
       (runtime_reg : list Z)
@@ -1959,7 +1961,7 @@ Proof.
     all: eauto with nocore. }
 Qed.
 
-Lemma mapM_GetReg_ok_R_full G regs idxs reg_vals s s' frame ms
+Lemma mapM_GetReg_ok_R_full {descr:description} G regs idxs reg_vals s s' frame ms
       (H : mapM GetReg regs s = Success (idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -1993,7 +1995,7 @@ Proof.
   all: eauto using R_regs_subsumed, R_flags_subsumed, R_mem_subsumed.
 Qed.
 
-Lemma mapM_GetReg_ok_R G regs idxs s s' frame (ms : machine_state)
+Lemma mapM_GetReg_ok_R {descr:description} G regs idxs s s' frame (ms : machine_state)
       (H : mapM GetReg regs s = Success (idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -2101,7 +2103,7 @@ Qed.
 Lemma get_asm_reg_bounded s rs : Forall (fun v => (0 <= v < 2 ^ 64)%Z) (get_asm_reg s rs).
 Proof. apply get_reg_bounded_Forall. Qed.
 
-Lemma LoadArray_ok_R frame G s ms s' base base_val base_word_val len idxs
+Lemma LoadArray_ok_R {descr:description} frame G s ms s' base base_val base_word_val len idxs
       (H : LoadArray base len s = Success (idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -2400,7 +2402,7 @@ Proof.
                     | apply SeparationLogic.impl1_r_sep_emp; split; [ | reflexivity ] ].
 Qed.
 
-Lemma LoadOutputs_ok_R {dereference_scalar:bool} frame G s ms s' outputaddrs output_types output_vals idxs
+Lemma LoadOutputs_ok_R {descr:description} {dereference_scalar:bool} frame G s ms s' outputaddrs output_types output_vals idxs
       (H : LoadOutputs (dereference_scalar:=dereference_scalar) outputaddrs output_types s = Success (Success idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -3307,57 +3309,69 @@ Theorem check_equivalence_correct
         {assembly_callee_saved_registers' : assembly_callee_saved_registers_opt}
         {t}
         (frame : Semantics.mem_state -> Prop)
-        (asm : Lines)
+        (asm : list (String.string (* fname *) * Lines))
         (expr : API.Expr t)
         (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
         (out_bounds : ZRange.type.base.option.interp (type.final_codomain t))
         (Hwf : API.Wf expr)
         (H : check_equivalence asm expr arg_bounds out_bounds = Success tt)
-        (st : machine_state)
         (PHOAS_args : type.for_each_lhs_of_arrow API.interp_type t)
         (word_args : list (Naive.word 64 + list (Naive.word 64)))
         (args := word_args_to_Z_args word_args)
         (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
         (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
         (output_types : type_spec := match simplify_base_type (type.final_codomain t) out_bounds with Success output_types => output_types | Error _ => nil end)
+        (st : machine_state)
         (asm_args_out asm_args_in : list (Naive.word 64))
         (runtime_regs := get_asm_reg st assembly_calling_registers)
         (runtime_callee_saved_registers := get_asm_reg st assembly_callee_saved_registers)
-        (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
-        (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
-        (HR : R_runtime_input (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st)
-  : exists asm' st' (retvals : list (Z + list Z)),
-    strip_ret asm = Success asm'
-    /\ DenoteLines st asm' = Some st'
-    /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
-    /\ R_runtime_output (output_scalars_are_pointers:=output_scalars_are_pointers) frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st'.
+  : Forall
+      (fun '(_fname, asm)
+       => forall
+           (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
+           (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
+           (HR : R_runtime_input (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st),
+         exists asm' st' (retvals : list (Z + list Z)),
+           strip_ret asm = Success asm'
+           /\ DenoteLines st asm' = Some st'
+           /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
+           /\ R_runtime_output (output_scalars_are_pointers:=output_scalars_are_pointers) frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st')
+      asm.
 Proof.
-  subst stack_size.
   cbv beta delta [check_equivalence ErrorT.bind] in H.
-  repeat match type of H with
-         | (let n := ?v in _) = _
-           => set v as n in H;
-                lazymatch type of H with
-                | (let n := ?v in ?rest) = ?rhs
-                  => change (match v with n => rest end = rhs) in H
-                end
-         | match ?v with Success n => @?S n | Error e => @?E e end = ?rhs
-           => let n := fresh n in
-              let e := fresh e in
-              destruct v as [n|e] eqn:?; [ change (S n = rhs) in H | change (E e = rhs) in H ];
-                cbv beta in H
-         | match ?v with pair a b => @?P a b end = ?rhs
-           => let a := fresh a in
-              let b := fresh b in
-              destruct v as [a b] eqn:?; change (P a b = rhs) in H;
-                cbv beta in H
-         | match ?v with true => ?T | false => ?F end = ?rhs
-           => let a := fresh a in
-              let b := fresh b in
-              destruct v eqn:?; [ change (T = rhs) in H | change (F = rhs) in H ];
-                cbv beta in H
-         end; try discriminate; [].
-  reflect_hyps.
+  repeat
+    first [ rewrite List.ErrorT.List.bind_list_cps_id, <- List.ErrorT.List.eq_bind_list_lift in H;
+            cbv beta delta [ErrorT.bind] in H
+          | match type of H with
+            | (let n := ?v in _) = _
+              => set v as n in H;
+                 lazymatch type of H with
+                 | (let n := ?v in ?rest) = ?rhs
+                   => change (match v with n => rest end = rhs) in H
+                 end
+            | match ?v with Success n => @?S n | Error e => @?E e end = ?rhs
+              => let n := fresh n in
+                 let e := fresh e in
+                 destruct v as [n|e] eqn:?; [ change (S n = rhs) in H | change (E e = rhs) in H ];
+                 cbv beta in H
+            | match ?v with pair a b => @?P a b end = ?rhs
+              => let a := fresh a in
+                 let b := fresh b in
+                 destruct v as [a b] eqn:?; change (P a b = rhs) in H;
+                 cbv beta in H
+            | match ?v with true => ?T | false => ?F end = ?rhs
+              => let a := fresh a in
+                 let b := fresh b in
+                 destruct v eqn:?; [ change (T = rhs) in H | change (F = rhs) in H ];
+                 cbv beta in H
+            end ]; try discriminate; [].
+  cbv beta delta [map_error ErrorT.map2 id] in *.
+  break_innermost_match_hyps; inversion_ErrorT; subst.
+  rewrite @List.ErrorT.List.lift_Success_Forall2_iff in *.
+  progress rewrite ?@Forall2_map_l_iff, ?@Forall2_map_r_iff in *.
+  Foralls_to_nth_error.
+  intros; inversion_ErrorT; subst.
+  progress reflect_hyps.
   subst.
   pose proof empty_gensym_dag_ok.
   let H := fresh in pose proof Hargs as H; eapply build_input_runtime_ok_nil in H; [ | eassumption .. ].
@@ -3402,12 +3416,12 @@ Theorem generate_assembly_of_hinted_expr_correct
         {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
         {assembly_callee_saved_registers' : assembly_callee_saved_registers_opt}
         {t}
-        (asm : Lines)
+        (asm : list (String.string (* fname *) * Lines))
         (expr : API.Expr t)
         (f : type.interp _ t)
         (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
         (out_bounds : ZRange.type.base.option.interp (type.final_codomain t))
-        (asm_out : Lines)
+        (asm_out : list (String.string (* fname *) * Lines))
         (* Phrased this way to line up with the bounds pipeline exactly *)
         (Hbounded
          : (forall arg1 arg2
@@ -3428,16 +3442,19 @@ Theorem generate_assembly_of_hinted_expr_correct
               (output_types : type_spec := match simplify_base_type (type.final_codomain t) out_bounds with Success output_types => output_types | Error _ => nil end)
               (asm_args_out asm_args_in : list (Naive.word 64))
               (runtime_regs := get_asm_reg st assembly_calling_registers)
-              (runtime_callee_saved_registers := get_asm_reg st assembly_callee_saved_registers)
-              (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
-              (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
-              (HR : R_runtime_input (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st),
-      (* Should match check_equivalence_correct exactly *)
-      exists asm' st' (retvals : list (Z + list Z)),
-             strip_ret asm = Success asm'
-        /\ DenoteLines st asm' = Some st'
-        /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
-        /\ R_runtime_output (output_scalars_are_pointers:=output_scalars_are_pointers) frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st'.
+              (runtime_callee_saved_registers := get_asm_reg st assembly_callee_saved_registers),
+             Forall
+         (fun '(_fname, asm)
+          => forall (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
+                    (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
+                    (HR : R_runtime_input (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st),
+            (* Should match check_equivalence_correct exactly *)
+            exists asm' st' (retvals : list (Z + list Z)),
+              strip_ret asm = Success asm'
+              /\ DenoteLines st asm' = Some st'
+              /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
+              /\ R_runtime_output (output_scalars_are_pointers:=output_scalars_are_pointers) frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st')
+         asm.
 Proof.
   cbv [generate_assembly_of_hinted_expr] in H.
   break_innermost_match_hyps; inversion H; subst; destruct_head'_and; split; [ reflexivity | intros ].

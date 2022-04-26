@@ -222,7 +222,7 @@ Typeclasses Opaque widen_bytes_opt.
 Class unfold_value_barrier_opt := unfold_value_barrier : bool.
 Typeclasses Opaque unfold_value_barrier_opt.
 (** Lines of assembly code (implicitly separated by \n) *)
-Class assembly_hints_lines_opt := assembly_hints_lines : option (list string).
+Class assembly_hints_lines_opt := assembly_hints_lines : list (string (* file name *) * list string).
 Typeclasses Opaque assembly_hints_lines_opt.
 (** Error if there are un-requested assembly functions *)
 Class error_on_unused_assembly_functions_opt := error_on_unused_assembly_functions : bool.
@@ -277,10 +277,14 @@ Module Pipeline.
   | Unsupported_casts_in_input {t} (e : Expr t) (ls : list { t : _ & @expr (fun _ => string) t })
   | Stringification_failed {t} (e : Expr t) (err : string)
   | Invalid_argument (msg : string)
-  | Assembly_parsing_error (msg : Assembly.Parse.ParseValidatedError)
-  | Unused_global_assembly_labels (labels : list string) (valid_requests : list string)
+  | Assembly_parsing_error (fname : string) (msg : Assembly.Parse.ParseValidatedError)
+  | Assembly_without_any_global_labels (fnames : list string)
+  | Unused_global_assembly_labels (fname_labels : list (string * list string)) (valid_requests : list string)
+  | Equivalence_checking_failure_pre_asm
+      {t} (e : Expr t) (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+      (msg : Assembly.Equivalence.EquivalenceCheckingError)
   | Equivalence_checking_failure
-      {t} (e : Expr t) (asm : Assembly.Syntax.Lines) (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+      {t} (e : Expr t) (asm_fname : string) (asm : Assembly.Syntax.Lines) (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
       (msg : Assembly.Equivalence.EquivalenceCheckingError)
   .
 
@@ -444,16 +448,29 @@ Module Pipeline.
             | Stringification_failed t e err => ["Stringification failed on the syntax tree:"] ++ show_lines e ++ [err]
             | Invalid_argument msg
               => ["Invalid argument: " ++ msg]%string
-            | Assembly_parsing_error msgs
-              => ((["Error while parsing assembly:"]%string)
-                    ++ show_lines msgs)
-            | Unused_global_assembly_labels labels valid_requests
-              => ["The following global functions are present in the hints file but do not correspond to any requested function: " ++ String.concat ", " labels ++ " (expected one of: " ++ String.concat ", " valid_requests ++ ")"]%string
-            | Equivalence_checking_failure _ e asm arg_bounds err
+            | Assembly_parsing_error fname msgs
+              => (["In assembly file " ++ fname ++ ":"]%string)
+                   ++ show_lines msgs
+            | Assembly_without_any_global_labels []
+              => ["Internal error: Assembly_without_any_global_labels []"]
+            | Assembly_without_any_global_labels fnames
+              => ["There are no global labels in " ++ String.concat ", " fnames ++ "."]%string
+            | Unused_global_assembly_labels fname_labels valid_requests
+              => ["The following global functions are present in the hints file but do not correspond to any requested function: " ++ String.concat ", " (List.map (fun '(fname, labels) => String.concat ", " labels ++ " (in " ++ fname ++ ")") fname_labels) ++ " (expected one of: " ++ String.concat ", " valid_requests ++ ")"]%string
+            | Equivalence_checking_failure_pre_asm _ e arg_bounds err
+              => (["Error while preparing to check for equivalence of syntax tree and assembly:"]
+                    ++ show_lines_Expr arg_bounds false (* don't re-print input bounds; they're not relevant *) e
+                    ++ [""; "(no assembly)"]%string
+                    ++ [""; "Equivalence checking error:"]
+                    ++ show_lines err)
+            | Equivalence_checking_failure _ e asm_fname asm arg_bounds err
               => (["Error while checking for equivalence of syntax tree and assembly:"]
                     ++ show_lines_Expr arg_bounds false (* don't re-print input bounds; they're not relevant *) e
-                    ++ [""; "Assembly:"]
-                    ++ show_lines asm
+                    ++ [""; "Assembly (in " ++ asm_fname ++ "):"]%string
+                    ++ match Equivalence.symbolic_state_of_EquivalenceCheckingError err with
+                       | Some s => Equivalence.show_lines_AnnotatedLines (asm, s)
+                       | None => show_lines asm
+                       end
                     ++ [""; "Equivalence checking error:"]
                     ++ show_lines err)
             end%list.
