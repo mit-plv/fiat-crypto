@@ -160,7 +160,9 @@ Definition rcrcnt s cnt : Z :=
  * performed ahead of time. *)
 Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstruction) : option machine_state :=
   let sa := 64%N in
+  let stack_addr_size := 64%N in
   match operation_size instr with Some s =>
+  let resize_reg r := reg_of_index_and_shift_and_bitcount_opt (reg_index r, 0%N (* offset *), s) in
   match instr.(prefix) with None =>
   match instr.(op), instr.(args) with
   | (mov | movzx), [dst; src] => (* Note: unbundle when switching from N to Z *)
@@ -243,7 +245,18 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     let v := v1 * v2 in
     st <- SetOperand sa s st lo v;
     SetOperand sa s st hi (Z.shiftr v (Z.of_N s))
-  | imul, [_] => None (* Note: exists, not supported yet, different CF/OF *)
+  | (Syntax.mul | imul), [src2] =>
+    let src1 : ARG := rax in
+    v1 <- DenoteOperand sa s st src1;
+    v2 <- DenoteOperand sa s st src2;
+    let v := v1 * v2 in
+    lo <- resize_reg rax;
+    hi <- (if (s =? 8)%N
+           then Some ah
+           else resize_reg rdx);
+    st <- SetOperand sa s st lo v;
+    st <- SetOperand sa s st hi (Z.shiftr v (Z.of_N s));
+    Some (HavocFlags st) (* conservative *)
   | imul, ([src1 as dst; src2] | [dst; src1; src2]) =>
     v1 <- DenoteOperand sa s st src1;
     v2 <- DenoteOperand sa s st src2;
@@ -342,6 +355,18 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     let st := SetFlag st CF false in
     let st := SetFlag st OF false in
     Some (HavocFlag st AF)
+  | push, [src]
+    => v    <- DenoteOperand sa s st src;
+       rsp' <- DenoteOperand sa stack_addr_size st rsp;
+       let rsp' := Z.land (rsp' - (Z.of_N s / 8)) (Z.ones (Z.of_N stack_addr_size)) in (* we don't actually need to truncate here, but it makes proofs a bit easier *)
+       st   <- SetOperand stack_addr_size s st rsp rsp';
+               SetOperand sa s st (mem_of_reg rsp) v
+  | pop, [dst]
+    => v    <- DenoteOperand sa s st (mem_of_reg rsp);
+       rsp' <- DenoteOperand sa stack_addr_size st rsp;
+       let rsp' := Z.land (rsp' + (Z.of_N s / 8)) (Z.ones (Z.of_N stack_addr_size)) in (* we don't actually need to truncate here, but it makes proofs a bit easier *)
+       st   <- SetOperand stack_addr_size s st rsp rsp';
+               SetOperand sa s st dst v
 
   | ret, _ => None (* not sure what to do with this ret, maybe exlude it? *)
 

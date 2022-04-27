@@ -31,6 +31,7 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.SpecializeUnderBindersBy.
 Require Import Crypto.Util.ZUtil.Lxor.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.Tactics.WarnIfGoalsRemain.
@@ -88,7 +89,9 @@ Global Instance Show_op : Show op := fun o =>
 
 Definition associative o := match o with add _|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ=> true | _ => false end.
 Definition commutative o := match o with add _|addcarry _|addoverflow _|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ => true | _ => false end.
-Definition identity o := match o with mul N0 => Some 0%Z| mul _|mulZ=>Some 1%Z |add _|addZ|or _|orZ|xor _|xorZ => Some 0%Z | and s => Some (Z.ones (Z.of_N s))|andZ => Some (-1)%Z |_=> None end.
+Definition identity o := match o with mul N0 => Some 0%Z| mul _|mulZ=>Some 1%Z |add _|addZ|or _|orZ|xor _|xorZ|addcarry _|addcarryZ _|addoverflow _ => Some 0%Z | and s => Some (Z.ones (Z.of_N s))|andZ => Some (-1)%Z |_=> None end.
+(* identity, but not in the first slot *)
+Definition identity_after_0 o := match o with subborrow _|subborrowZ _ => Some 0%Z | _=> None end.
 Definition unary_truncate_size o := match o with add s|and s|or s|xor s|mul s => Some (Z.of_N s) | addZ|mulZ|andZ|orZ|xorZ => Some (-1)%Z | _ => None end.
 Definition op_always_interps o := match o with add _|addcarry _|addoverflow _|and _|or _|xor _|mul _|addZ|mulZ|andZ|orZ|xorZ|addcarryZ _ => true | _ => false end.
 Definition combines_to o := match o with add s => Some (mul s) | addZ => Some mulZ | _ => None end.
@@ -1072,20 +1075,57 @@ Proof using Type.
                     | progress t ].
 Qed.
 
+Lemma fold_right_filter_identity_gen A B C f init F G xs
+      (Hid : forall x y, F x = false -> G (f x y) = G y)
+      (HProper : forall x y y', G y = G y' -> G (f x y) = G (f x y'))
+  : G (@fold_right A B f init (filter F xs)) = G (@fold_right A B f init xs) :> C.
+Proof.
+  induction xs as [|x xs IH]; [ | specialize (Hid x) ]; cbn; break_innermost_match; cbn; rewrite ?Hid by auto; auto; congruence.
+Qed.
+
+Lemma fold_right_filter_identity A B f init F xs
+      (Hid : forall x y, F x = false -> f x y = y)
+  : @fold_right A B f init (filter F xs) = @fold_right A B f init xs.
+Proof.
+  apply fold_right_filter_identity_gen with (G:=id); cbv [id]; intuition (subst; eauto).
+Qed.
+
+Lemma signed_0 s : signed s 0 = 0%Z.
+Proof using Type.
+  destruct (N.eq_dec s 0); subst; trivial.
+  cbv [signed].
+  rewrite !Z.land_ones, !Z.shiftl_mul_pow2, ?Z.add_0_r, ?Z.mul_1_l by Lia.lia.
+  rewrite Z.mod_small; try ring.
+  split; try (eapply Z.pow_lt_mono_r; Lia.lia).
+  eapply Z.pow_nonneg; Lia.lia.
+Qed.
+Hint Rewrite signed_0 : zsimplify_const zsimplify zsimplify_fast.
+Global Hint Resolve signed_0 : zarith.
+
 Lemma interp_op_drop_identity o id : identity o = Some id ->
   forall G xs, interp_op G o xs = interp_op G o (List.filter (fun v => negb (Z.eqb v id)) xs).
 Proof using Type.
   destruct o; cbn [identity]; intro; inversion_option; subst; intros G xs; cbn [interp_op]; f_equal.
-  all: induction xs as [|x xs IHxs]; cbn [fold_right List.filter]; try reflexivity.
-  all: unfold negb at 1; break_innermost_match_step; reflect_hyps; subst; cbn [fold_right].
   all: break_innermost_match_hyps; inversion_option; subst.
-  all: autorewrite with zsimplify_const.
-  all: try assumption.
-  all: rewrite ?(Z.land_comm (Z.ones _)).
-  all: try solve [ rewrite <- !Z.land_assoc; congruence ].
-  all: try solve [ rewrite ?Z.land_ones by lia; pull_Zmod; push_Zmod; rewrite <- ?Z.land_ones by lia; rewrite <- ?IHxs; try reflexivity ].
-  { rewrite 2Z.land_lor_distr_l, IHxs; reflexivity. }
-  { rewrite Z.land_lxor_distr_r, IHxs, <- Z.land_lxor_distr_r; reflexivity. }
+  all: rewrite ?fold_right_map.
+  all: rewrite ?fold_right_filter_identity by now intros; reflect_hyps; subst; auto with zarith; autorewrite with zsimplify_const; lia.
+  all: repeat first [ reflexivity
+                    | progress autorewrite with zsimplify_const ].
+  { (idtac + symmetry); apply fold_right_filter_identity_gen with (G:=fun x => Z.land x _).
+    all: intros; reflect_hyps; subst.
+    all: rewrite <- ?Z.land_assoc, ?(Z.land_comm (Z.ones _)), ?Z.land_ones in * by lia.
+    all: push_Zmod; pull_Zmod.
+    all: congruence. }
+Qed.
+
+Lemma interp_op_drop_identity_after_0 o id : identity_after_0 o = Some id ->
+  forall G x xs, interp_op G o (x :: xs) = interp_op G o (x :: List.filter (fun v => negb (Z.eqb v id)) xs).
+Proof using Type.
+  destruct o; cbn [identity_after_0]; intro; inversion_option; subst; intros G x xs; cbn [interp_op]; f_equal.
+  all: rewrite ?fold_right_map.
+  all: rewrite ?fold_right_filter_identity by now intros; reflect_hyps; subst; auto with zarith; autorewrite with zsimplify_const; lia.
+  all: repeat first [ reflexivity
+                    | progress autorewrite with zsimplify_const ].
 Qed.
 
 Lemma interp_op_nil_is_identity o i (Hi : identity o = Some i)
@@ -1358,10 +1398,13 @@ Definition drop_identity :=
         | nil => ExprApp (const i, nil)
         | _ => ExprApp (o, args)
         end
-    | _ => e end | _ => e end.
+    | _ => match identity_after_0 o, args with
+    | Some i, arg :: args =>
+        let args := List.filter (neqconst i) args in
+        ExprApp (o, arg :: args)
+    | _, _ => e end end | _ => e end.
 
-Lemma filter_neqconst_helper G d o id
-      (Hid : identity o = Some id)
+Lemma filter_neqconst_helper G d id
       l args
       (H : Forall2 (eval G d) l args)
   : exists args',
@@ -1395,8 +1438,23 @@ Lemma filter_neqconst G d o id
     /\ interp_op G o args' = interp_op G o args.
 Proof.
   edestruct filter_neqconst_helper as [args' [H1 H2] ]; try eassumption.
-  exists args'; split; try assumption.
+  exists args'; split; try eassumption.
   erewrite interp_op_drop_identity, H2, <- interp_op_drop_identity by eassumption.
+  reflexivity.
+Qed.
+
+Lemma filter_neqconst' G d o id
+      (Hid : identity_after_0 o = Some id)
+      e arg l args
+      (H0 : eval G d e arg)
+      (H : Forall2 (eval G d) l args)
+  : exists args',
+    Forall2 (eval G d) (filter (neqconst id) l) args'
+    /\ interp_op G o (arg :: args') = interp_op G o (arg :: args).
+Proof.
+  edestruct filter_neqconst_helper as [args' [H1 H2] ]; try eassumption.
+  exists args'; split; try eassumption.
+  erewrite interp_op_drop_identity_after_0, H2, <- interp_op_drop_identity_after_0 by eassumption.
   reflexivity.
 Qed.
 
@@ -1404,16 +1462,23 @@ Global Instance drop_identity_Ok : Ok drop_identity.
 Proof using Type.
   repeat (step; eauto; []).
   inversion H; subst; clear H.
-  destruct (filter _ _ ) eqn:H'.
-  2: rewrite <- H'; clear H'.
-  2: repeat (step; eauto; []).
-  all: destruct (filter_neqconst _ _ _ _ ltac:(eassumption) _ _ ltac:(eassumption)) as [? [? ?] ].
-  all: repeat first [ match goal with
-                      | [ H : ?ls = [], H' : Forall2 _ ?ls _ |- _ ] => rewrite H in H'
+  destruct identity eqn:?; [ | destruct identity_after_0 eqn:? ]; break_innermost_match.
+  all: repeat (step; eauto; []).
+  all: pose proof filter_neqconst.
+  all: pose proof filter_neqconst'.
+  all: specialize_under_binders_by eassumption.
+  all: destruct_head'_ex.
+  all: destruct_head'_and.
+  all: repeat first [ progress subst
+                    | progress inversion_option
+                    | match goal with
+                      | [ H : ?ls = nil, H' : context[?ls] |- _ ] => rewrite H in H'
+                      | [ H : ?ls = cons _ _, H' : context[?ls] |- _ ] => rewrite H in H'
+                      | [ H : Forall2 _ nil _ |- _ ] => inversion H; clear H
+                      | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
                       end
-                    | congruence
                     | erewrite interp_op_nil_is_identity in * by eassumption
-                    | t ].
+                    | solve [ t ] ].
 Qed.
 
 Definition fold_consts_to_and :=
@@ -1469,57 +1534,6 @@ Proof using Type.
                     | solve [ t ]
                     | solve [ Z.bitblast; now rewrite Z.bits_above_log2 by lia ]
                     | t ].
-Qed.
-
-Lemma signed_0 s : signed s 0 = 0%Z.
-Proof using Type.
-  destruct (N.eq_dec s 0); subst; trivial.
-  cbv [signed].
-  rewrite !Z.land_ones, !Z.shiftl_mul_pow2, ?Z.add_0_r, ?Z.mul_1_l by Lia.lia.
-  rewrite Z.mod_small; try ring.
-  split; try (eapply Z.pow_lt_mono_r; Lia.lia).
-  eapply Z.pow_nonneg; Lia.lia.
-Qed.
-
-Definition opcarry_0_at1 :=
-  fun e => match e with ExprApp ((addcarryZ s|addcarry s|addoverflow s) as op, cons x args') =>
-  match interp0_expr x with
-  | Some 0 => ExprApp (op, args')
-  | _ => e end | _ => e end%Z.
-Global Instance opcarry_0_at1_ok : Ok opcarry_0_at1.
-Proof using Type.
-  t;
-  try (eapply eval_eval in E; [|
-    match goal with H : eval _ ?d _ _ |- _ => assert_fails (has_evar d); exact H end]);
-  subst; cbn; repeat (rewrite ?Z.add_0_r, ?signed_0); f_equal.
-Qed.
-
-Definition opcarry_0_at2 :=
-  fun e => match e with ExprApp ((subborrowZ s|subborrow s|addcarryZ s|addcarry s|addoverflow s) as op, cons x (cons y args')) =>
-  match interp0_expr y with
-  | Some 0 => ExprApp (op, cons x args')
-  | __ => e end | _ => e end%Z.
-Global Instance opcarry_0_at2_ok : Ok opcarry_0_at2.
-Proof using Type.
-  t;
-  try (eapply eval_eval in E; [|
-    match goal with H : eval _ ?d _ _ |- _ => assert_fails (has_evar d); exact H end]);
-  subst; cbn; repeat (rewrite ?Z.add_0_r, ?signed_0); f_equal.
-Qed.
-
-Definition opcarry_0_at3 :=
-  fun e => match e with ExprApp ((subborrowZ s|subborrow s|addcarryZ s|addcarry s|addoverflow s) as op, cons x (cons y (cons z args'))) =>
-  match interp0_expr z with
-  | Some 0 => ExprApp (op, cons x (cons y args'))
-  | _ => e end | _ => e end%Z.
-Global Instance opcarry_0_at3_ok : Ok opcarry_0_at3.
-Proof using Type.
-  t;
-  try (eapply eval_eval in E; [|
-    match goal with H : eval _ ?d _ _ |- _ => assert_fails (has_evar d); exact H end]);
-  try (eapply eval_eval in E0; [|
-    match goal with H : eval _ ?d _ _ |- _ => assert_fails (has_evar d); exact H end]);
-  subst; cbn; repeat (rewrite ?Z.add_0_r, ?signed_0); f_equal.
 Qed.
 
 Definition xor_same :=
@@ -2049,9 +2063,6 @@ Definition expr : expr -> expr :=
   ;consts_commutative
   ;fold_consts_to_and
   ;drop_identity
-  ;opcarry_0_at1
-  ;opcarry_0_at3
-  ;opcarry_0_at2
   ;unary_truncate
   ;truncate_small
   ;combine_consts
@@ -2539,13 +2550,21 @@ Definition SymexNormalInstruction {descr:description} (instr : NormalInstruction
     else ret tt
   | mulx, [hi; lo; src2] =>
     let src1 : ARG := rdx in
-    v1 <- GetOperand src1;
-    v2 <- GetOperand src2;
-    v <- App (mulZ, [v1; v2]);
-    s <- App (const (Z.of_N s), nil);
-    vh <- App (shrZ, [v; s]);
+    v  <- Symeval (mulZ@(src1,src2));
+    vh <- Symeval (shrZ@(v,PreARG (Z.of_N s)));
     _ <- SetOperand lo v;
          SetOperand hi vh
+  | (Syntax.mul | imul), [src2] =>
+    let src1 : ARG := rax in
+    v  <- Symeval (mulZ@(src1,src2));
+    vh <- Symeval (shrZ@(v,PreARG (Z.of_N s)));
+    lo <- resize_reg rax;
+    hi <- (if (s =? 8)%N
+           then ret ah
+           else resize_reg rdx);
+    _ <- SetOperand (lo:ARG) v;
+    _ <- SetOperand (hi:ARG) vh;
+    HavocFlags (* This is conservative and can be made more precise *)
   | Syntax.shl, [dst; cnt] =>
     let cnt := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
     v <- Symeval (shl s@(dst, cnt));
@@ -2604,6 +2623,18 @@ Definition SymexNormalInstruction {descr:description} (instr : NormalInstruction
     then zf <- App (iszero, [a]); SetFlag ZF zf
     else ret tt
   | clc, [] => zero <- Merge (@ExprApp (const 0, nil)); SetFlag CF zero
+  | push, [src]
+    => v    <- GetOperand src;
+       rsp' <- GetOperand (s:=stack_addr_size) rsp;
+       rsp' <- Symeval (s:=stack_addr_size) (add stack_addr_size@(rsp', PreARG (-(Z.of_N s/8))%Z));
+       _    <- SetOperand rsp rsp';
+               SetOperand (mem_of_reg rsp) v
+  | pop, [dst]
+    => v    <- GetOperand (mem_of_reg rsp);
+       rsp' <- GetOperand (s:=stack_addr_size) rsp;
+       rsp' <- Symeval (s:=stack_addr_size) (add stack_addr_size@(rsp', PreARG ((Z.of_N s/8)%Z)));
+       _    <- SetOperand rsp rsp';
+               SetOperand dst v
   | _, _ => err (error.unimplemented_instruction instr)
  end
   | Some prefix => err (error.unimplemented_prefix instr) end

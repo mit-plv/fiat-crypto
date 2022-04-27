@@ -278,6 +278,7 @@ Module Pipeline.
   | Stringification_failed {t} (e : Expr t) (err : string)
   | Invalid_argument (msg : string)
   | Assembly_parsing_error (fname : string) (msg : Assembly.Parse.ParseValidatedError)
+  | Assembly_without_any_global_labels (fnames : list string)
   | Unused_global_assembly_labels (fname_labels : list (string * list string)) (valid_requests : list string)
   | Equivalence_checking_failure_pre_asm
       {t} (e : Expr t) (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
@@ -450,6 +451,10 @@ Module Pipeline.
             | Assembly_parsing_error fname msgs
               => (["In assembly file " ++ fname ++ ":"]%string)
                    ++ show_lines msgs
+            | Assembly_without_any_global_labels []
+              => ["Internal error: Assembly_without_any_global_labels []"]
+            | Assembly_without_any_global_labels fnames
+              => ["There are no global labels in " ++ String.concat ", " fnames ++ "."]%string
             | Unused_global_assembly_labels fname_labels valid_requests
               => ["The following global functions are present in the hints file but do not correspond to any requested function: " ++ String.concat ", " (List.map (fun '(fname, labels) => String.concat ", " labels ++ " (in " ++ fname ++ ")") fname_labels) ++ " (expected one of: " ++ String.concat ", " valid_requests ++ ")"]%string
             | Equivalence_checking_failure_pre_asm _ e arg_bounds err

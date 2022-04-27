@@ -1,7 +1,10 @@
 (* Rewritten versions of poly1305 and chacha20 that you can compile with Rupicola *)
 Require Import Coq.Unicode.Utf8.
 Require Import Rupicola.Lib.Api.
+Require Import Rupicola.Examples.Loops.
 Require Import Crypto.Bedrock.End2End.RupicolaCrypto.Spec.
+Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import bedrock2.BasicC32Semantics.
 Import Syntax.Coercions ProgramLogic.Coercions.
 Import Datatypes.
@@ -241,24 +244,25 @@ Section CompileBufPolymorphic.
     ecancel_assumption.
   Qed.
 
-  Lemma compile_buf_make_stack (n:nat) :
+ Lemma compile_buf_make_stack (n:nat) :
     let v := buf_make T n in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
     a_var {t m l} (R: mem -> Prop),
       (sz * n) mod Memory.bytes_per_word 32 = 0 ->
       R m ->
-      (forall a m, (buffer_at n nil a * R)%sep m ->
+      (let v:= v in
+       forall a m, (buffer_at n nil a * R)%sep m ->
        <{ Trace := t; Memory := m; Locals := #{ … l; a_var => a }#;
           Functions := e }>
          k_impl
          <{ pred_sep (Lift1Prop.ex1 (fun b => buffer_at n b a))
-                      pred (nlet_eq [a_var] v k) }>) ->
+                      pred (k v eq_refl) }>) ->
     <{ Trace := t; Memory := m; Locals := l; Functions := e }>
       bedrock_func_body:(
       stackalloc (sz*n) as $a_var;
       $k_impl
      )
-    <{ pred (k v eq_refl) }>.
+    <{ pred (nlet_eq [a_var] v k) }>.
   Proof.
     repeat straightline; split; eauto.
     intros.
@@ -450,6 +454,45 @@ Section CompileBufPolymorphic.
     eapply Hk.
   Qed.
 
+  Lemma compile_buf_split {t m l} (n : nat) (bs : buffer_t T) :
+    let v := buf_split bs in
+    let offset := (word.of_Z (word.unsigned sz * Z.of_nat (length bs))) in
+    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+           c a a_var b_var  R,
+      let b := word.add a offset in
+      (buffer_at c bs a * R)%sep m ->
+      sz * n = length bs ->
+      (let v := v in
+       forall m,
+         (bs$T@a * buffer_at (c - length bs) nil b * R)%sep m ->
+         <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+           k_impl
+         <{ pred (k v eq_refl) }>) ->
+      <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+        k_impl
+      <{ pred (nlet_eq [a_var; b_var] v k) }>.
+  Proof.
+    intros * HA HB HC; eapply HC; clear HC.
+    unfold buffer_at in *.
+    cbn [array]; sepsimpl; trivial; [].
+    
+    refine (subrelation_refl Lift1Prop.impl1 _ _ _ m HA).
+    cancel.
+    eapply Proper_sep_impl1; [intro; tauto|].
+    eapply Proper_sep_impl1; [|intro; tauto].
+    eapply Lift1Prop.Proper_ex1_impl1.
+    intro bs'.
+    cbn [length].
+    clear.
+    intros m H.
+    sepsimpl.
+    lia.
+    rewrite Z.mul_0_r.
+    rewrite (Radd_comm word.ring_theory); eauto.
+    rewrite (Radd_0_l word.ring_theory);eauto.
+  Qed.
+
+
   (*Only included to support the byte and word lemmas below. Do not use.*)
   Section Deprecated.
     Local Lemma deprecated_do_not_use_compile_buf_append {t m l} var (buf : buffer_t T) (arr : array_t T) (c : Z) (a : word) :
@@ -526,6 +569,389 @@ Section CompileBufPolymorphic.
   [length] in *; lia. } intros t1 m1 l1 [Hm Hk].  cbv [nlet_eq] in *.  cbn
   [array] in *.  split; sepsimpl.  { ecancel_assumption. } eapply Hk.  Qed.
   End Deprecated.
+
+  (* TODO: where best to put this? *)
+  Definition copy {T} (x : T) := x.
+
+  Lemma firstn_extend {A} `{HasDefault A} (l1 : list A) z
+    :0 <= z < length l1 ->
+     (firstn (Z.to_nat z) l1 ++ [Arrays.ListArray.get l1 z])
+     = firstn (Z.to_nat (z + 1)) l1.
+  Proof.
+    unfold Arrays.ListArray.get.
+    unfold cast, Convertible_Z_nat.
+    intros.
+    replace ((Z.to_nat (z + 1))) with (S (Z.to_nat z)) by lia.
+    erewrite ListUtil.firstn_succ by lia.
+    do 2 f_equal.
+    rewrite nth_default_eq.
+    reflexivity.
+  Qed.
+
+
+  Local Lemma memcpy_helper (l1 l2 : list word) z len
+    : len = length l1 ->
+      len = length l2 ->
+      len <= 2^32 ->
+      0 <= z <= len ->
+      snd
+        (Loops.foldl
+           (λ (acc : Loops.ExitToken.t * Arrays.ListArray.t word) (idx : Z),
+             let/n v as "v" := Arrays.ListArray.get l1 (word.of_Z (word:=word) idx) in
+             let/n a2 as "a2" := Arrays.ListArray.put (snd acc) (word.of_Z (word:=word) idx) v in
+             (false, a2))
+           (λ tok_acc : Loops.ExitToken.t * Arrays.ListArray.t word,
+               Loops.ExitToken.get (fst tok_acc)) (Loops.z_range z len)
+           (false, firstn (Z.to_nat z) l1 ++ skipn (Z.to_nat z) l2)) = l1.
+  Proof.
+    intros Hlen1 Hlen2 Hlen_bound Hz.
+    remember (Loops.z_range z len) as lst.
+    revert z Hz Heqlst.
+    induction lst.
+    {
+      intros.
+      destruct (Z.eq_dec z len).
+      {
+        subst z.
+        simpl.
+        rewrite Hlen1 at 1.
+        rewrite Hlen2 at 1.
+        rewrite !Nat2Z.id.
+        rewrite firstn_all, skipn_all.
+        rewrite app_nil_r.
+        reflexivity.
+      }
+      {
+        exfalso.
+        assert (z < len) by lia.
+        rewrite Loops.z_range_cons in Heqlst by auto.
+        inversion Heqlst.
+      }
+    }
+    {
+      intros.
+      destruct (Z.eq_dec z len).
+      {
+        exfalso.
+        subst.
+        rewrite Loops.z_range_nil in Heqlst by lia.
+        inversion Heqlst.
+      }
+      {
+        unfold nlet in *.
+        rewrite Loops.z_range_cons in Heqlst by lia.
+        inversion Heqlst; subst.
+        set (tmp := word.of_Z).
+        simpl; subst tmp.
+        rewrite Arrays.ListArray.put_app_len.
+        {
+          change (?e ++ ?a::?e') with (e++[a]++e').
+          rewrite app_assoc.
+          replace (Arrays.ListArray.get l1 (word.of_Z (word:=word) z))
+            with (Arrays.ListArray.get l1 z).
+          {
+            rewrite firstn_extend.
+            rewrite tl_skipn.
+            replace (S (Z.to_nat z)) with (Z.to_nat (z + 1)) by lia.
+            eapply IHlst; eauto.
+            all: try lia.
+            split; try lia.
+            destruct Hz.
+            destruct (Z.le_gt_cases (length l1) z); try lia; auto.
+          }
+          {
+            unfold Arrays.ListArray.get.
+            unfold cast, Convertible_word_nat, Convertible_Z_nat.
+            rewrite word.unsigned_of_Z.
+            rewrite word.wrap_small by lia.
+            reflexivity.
+          }
+        }
+        {
+          rewrite skipn_length.
+          change  (@Naive.rep 32) with (@word.rep 32 word).
+          lia.
+        }
+        {
+          unfold cast, Convertible_word_nat, Convertible_Z_nat.
+          rewrite firstn_length.
+          rewrite Nat.min_l; try lia.
+          rewrite word.unsigned_of_Z.
+          rewrite word.wrap_small by lia; auto.
+          change (@Naive.rep 32) with (@word.rep 32 word).          
+          erewrite <- (Nat2Z.id (length l1)).
+          apply Z2Nat.inj_le; lia.
+        }
+      }
+    }
+  Qed.
+
+  
+  Lemma memcpy_identity (l1 l2 : list word) len
+    : word.unsigned len = length l1 ->
+      word.unsigned len = length l2 ->
+      list_memcpy len l1 l2 = (l1, l1).
+  Proof.
+    unfold list_memcpy, Loops.ranged_for_u, Loops.ranged_for_w.
+    unfold Loops.w_body_tok.
+    rewrite <- Loops.nd_as_ranged_for.
+    unfold Loops.nd_ranged_for, Loops.nd_ranged_for', Loops.nd_ranged_for_break,
+      Loops.ExitToken.new.
+    unfold nlet at 1.
+    intro Hlen.
+    f_equal.
+    revert l1 l2 Hlen.
+    pose proof (word.unsigned_range len) as H'; revert H'.
+    generalize (word.unsigned len).
+    intros z z_gt_0.
+    rewrite <- (Z2Nat.id z); [|lia].
+    assert (z = Z.to_nat z) by lia.
+    rewrite H in z_gt_0.
+    revert z_gt_0.
+    clear H.
+    generalize (Z.to_nat z).
+    clear z.
+
+
+    intros.
+
+    f_equal.
+    replace l2 with (firstn (Z.to_nat 0) l1 ++ skipn (Z.to_nat 0) l2).
+    rewrite <- (word.unsigned_of_Z_nowrap ((Z.of_nat n))).
+    rewrite word.unsigned_of_Z_0.
+    erewrite <- (memcpy_helper l1) at 2.
+    repeat f_equal; eauto.
+    rewrite !word.unsigned_of_Z.
+    rewrite word.wrap_small by auto.
+    all: eauto.
+    rewrite Hlen in H.
+    apply Nat2Z.inj; auto.
+    lia.
+    lia.
+  Qed.
+  
+  Lemma compile_byte_memcpy (n : nat) (bs bs2 : list byte) :
+    let v := copy bs in
+    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+           len a a2 len_expr a_expr a2_var {t m l} (R: mem -> Prop),
+      
+      (bs$@a * bs2$@a2 * R)%sep m ->
+      
+      spec_of_unsizedlist_memcpy e ->
+
+      
+      (word.unsigned len) * 4 = Z.of_nat (List.length bs) ->
+      (word.unsigned len) * 4 = Z.of_nat (List.length bs2) ->
+      
+      DEXPR m l a_expr a ->
+      DEXPR m l len_expr len ->
+      map.get l a2_var = Some a2 ->
+      
+      (let v := v in
+       forall m,
+         (bs$@a * bs$@a2 * R)%sep m ->
+         <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+         k_impl
+         <{ pred (k v eq_refl) }>) ->
+      <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+      cmd.seq
+        (cmd.call [] "unsizedlist_memcpy"
+                  [len_expr; a_expr; expr.var a2_var])
+        k_impl
+      <{ pred (nlet_eq [a2_var] v k) }>.
+  Proof.
+    repeat straightline.
+    exists [len; a; a2]; split.
+    {
+      cbv [dexprs list_map list_map_body].
+      repeat (eapply WeakestPrecondition_dexpr_expr; eauto).
+      eapply expr_compile_var; auto.
+    }
+    eapply Proper_call; cycle -1.
+    eapply H0; cycle 2.
+    {
+      cbv [Arrays.listarray_value
+             Arrays.ai_width
+             Arrays.ai_repr
+             Arrays.ai_size
+             Arrays._access_info
+             Memory.bytes_per
+             Memory.bytes_per_word].
+      change (BinIntDef.Z.to_nat ((32 + 7) / 8) : Z) with 4%Z.
+      seprewrite_in @ArrayCasts.truncated_scalars_of_bytes H; cycle 1.
+      seprewrite_in @ArrayCasts.truncated_scalars_of_bytes H; cycle 1.
+
+
+      unfold scalar.
+      change (word.of_Z 4) with (word.of_Z (word:=word) (Memory.bytes_per (width:=32) access_size.word)).
+
+      refine (subrelation_refl Lift1Prop.impl1 _ _ _ m H).
+      cancel.
+      cancel_seps_at_indices_by_implication 1%nat 0%nat.
+      {
+        intros m' H'.
+        eapply ArrayCasts.truncated_words_of_truncated_scalars in H'.
+        exact H'.
+      }
+      eapply Proper_sep_impl1.
+      {
+        intros m' H'.
+        eapply ArrayCasts.truncated_words_of_truncated_scalars in H'.
+        exact H'.
+      }
+      exact (fun m H => H).
+      all:cbv [Arrays.listarray_value
+             Arrays.ai_width
+             Arrays.ai_repr
+             Arrays.ai_size
+             Arrays._access_info
+             Memory.bytes_per
+             Memory.bytes_per_word];
+        change (BinIntDef.Z.to_nat ((32 + 7) / 8)) with 4%nat.
+      1:pose proof (Nat2Z.inj_mod (length bs2) 4).
+      2:pose proof (Nat2Z.inj_mod (length bs) 4).
+      all: nia.
+    }
+    (*OK*)
+    {
+      cbv [Arrays.listarray_value
+             Arrays.ai_width
+             Arrays.ai_repr
+             Arrays.ai_size
+             Arrays._access_info
+             Memory.bytes_per
+             Memory.bytes_per_word];
+      change (BinIntDef.Z.to_nat ((32 + 7) / 8)) with 4%nat.
+      rewrite ArrayCasts.zs2ws_length.
+      rewrite ArrayCasts.bs2zs_length; try nia.
+      2:pose proof (Nat2Z.inj_mod (length bs) 4); nia.
+      rewrite Nat2Z.inj_div.
+      nia.
+    }
+    {
+      cbv [Arrays.listarray_value
+             Arrays.ai_width
+             Arrays.ai_repr
+             Arrays.ai_size
+             Arrays._access_info
+             Memory.bytes_per
+             Memory.bytes_per_word];
+      change (BinIntDef.Z.to_nat ((32 + 7) / 8)) with 4%nat.
+      rewrite ArrayCasts.zs2ws_length.
+      rewrite ArrayCasts.bs2zs_length; try nia.
+      2:pose proof (Nat2Z.inj_mod (length bs2) 4); nia.
+      rewrite Nat2Z.inj_div.
+      nia.
+    }
+    (*OK*)
+    intros t' m' l' H'.
+    intuition subst.
+    exists l; intuition.
+
+    
+    eapply H6.
+    revert H10.
+    rewrite !memcpy_identity.
+    {
+      set (tmp := word.of_Z).
+      simpl; subst tmp.
+      cbv [Arrays.listarray_value
+             Arrays.ai_width
+             Arrays.ai_repr
+             Arrays.ai_size
+             Arrays._access_info
+             Memory.bytes_per
+             Memory.bytes_per_word
+             Pos.to_nat Pos.iter_op Init.Nat.add].
+      eapply Proper_sep_impl1; [| exact (fun _ x => x)].
+      intros m'' H''.
+      refine (subrelation_refl Lift1Prop.impl1 _ _ _ m'' H'').
+      eapply Proper_sep_impl1.
+      {
+        clear m' m'' H''.
+        intros m'' H''. 
+        eapply (ArrayCasts.words_of_bytes a bs); eauto.
+        {          
+          cbn.         
+          cbv [Arrays.listarray_value
+                 Arrays.ai_width
+                 Arrays.ai_repr
+                 Arrays.ai_size
+                 Arrays._access_info
+                 Memory.bytes_per
+                 Memory.bytes_per_word
+                 Pos.to_nat Pos.iter_op Init.Nat.add].
+          eapply Nat.div_exact; try lia.
+          eapply Nat2Z.inj.
+          rewrite <- (Nat2Z.id (length bs)) at 2.
+          rewrite <- !H1.
+          rewrite Z2Nat.inj_mul; try lia.
+          change (Z.to_nat 4) with 4%nat.
+          rewrite Nat.div_mul.
+          lia.
+          lia.
+        }
+      }
+      {
+        clear m' m'' H''.
+        intros m'' H''. 
+        eapply (ArrayCasts.words_of_bytes a2 bs); eauto.
+        {          
+          cbn.         
+          cbv [Arrays.listarray_value
+                 Arrays.ai_width
+                 Arrays.ai_repr
+                 Arrays.ai_size
+                 Arrays._access_info
+                 Memory.bytes_per
+                 Memory.bytes_per_word
+                 Pos.to_nat Pos.iter_op Init.Nat.add].
+          eapply Nat.div_exact; try lia.
+          eapply Nat2Z.inj.
+          rewrite <- (Nat2Z.id (length bs)) at 2.
+          rewrite <- !H1.
+          rewrite Z2Nat.inj_mul; try lia.
+          change (Z.to_nat 4) with 4%nat.
+          rewrite Nat.div_mul.
+          lia.
+          lia.
+        }
+      }
+    }
+    all: rewrite !ArrayCasts.zs2ws_length.
+    all: rewrite !ArrayCasts.bs2zs_length.
+    all: cbn;
+          cbv [Arrays.listarray_value
+                 Arrays.ai_width
+                 Arrays.ai_repr
+                 Arrays.ai_size
+                 Arrays._access_info
+                 Memory.bytes_per
+                 Memory.bytes_per_word
+                 Pos.to_nat Pos.iter_op Init.Nat.add].
+    all: try lia.
+    {
+      assert (length bs = (Z.to_nat len * 4)%nat) as H7 by lia.
+      rewrite H7.
+      rewrite Nat.div_mul; lia.
+    }
+    {
+      assert (length bs = (Z.to_nat len * 4)%nat) as H7 by lia.
+      rewrite H7.
+      rewrite Nat.mod_mul; lia.
+    }
+    {
+      assert (length bs2 = (Z.to_nat len * 4)%nat) as H7 by lia.
+      rewrite H7.
+      rewrite Nat.div_mul; lia.
+    }
+    {
+      assert (length bs2 = (Z.to_nat len * 4)%nat) as H7 by lia.
+      rewrite H7.
+      rewrite Nat.mod_mul; lia.
+    }      
+  Qed.
+  
   
 End CompileBufPolymorphic.
 
@@ -678,13 +1104,11 @@ End CompileBufWord32.
 
 
 
-Definition p : Z := 2^130 - 5.
-Definition felem_init_zero := 0.
-Definition felem_add (z1 z2: Z) : Z := z1 + z2 mod p.
-Definition felem_mul (z1 z2: Z) : Z := z1 * z2 mod p.
-Definition bytes_as_felem_inplace (bs: list byte) : Z :=
-  le_combine bs.
-Definition felem_as_uint128 z : Z := z mod 2 ^ 128.
+Definition p : positive := 2^130 - 5.
+Definition felem_init_zero : F p := 0.
+Definition bytes_as_felem_inplace (bs: list byte) : F p :=
+  F.of_Z _ (le_combine bs).
+Definition felem_as_uint128 (z : F p) : Z := (F.to_Z z) mod 2 ^ 128.
 
 Definition uint128_add z1 z2 : Z :=
   (z1 + z2) mod 2 ^ 128.
@@ -782,7 +1206,7 @@ Axiom felem_size : nat.
 #[local] Hint Unfold array_fold_chunked array_map_chunked : poly.
 #[local] Hint Unfold array_get array_put : poly.
 #[local] Hint Unfold bytes_as_felem_inplace : poly.
-#[local] Hint Unfold felem_init_zero felem_add felem_mul felem_as_uint128 : poly.
+#[local] Hint Unfold felem_init_zero felem_as_uint128 : poly.
 #[local] Hint Unfold uint128_add bytes_as_uint128 uint128_as_bytes : poly.
 #[local] Hint Unfold bytes_of_w32s w32s_of_bytes : poly.
 
@@ -802,8 +1226,8 @@ Definition poly1305_loop scratch output msg (padded: bool) :=
                              nscratch in
           let/n nscratch := buf_push nscratch x01 in (* len = 17 *)
           let/n nscratch := bytes_as_felem_inplace nscratch in
-          let/n output := felem_add output nscratch in
-          let/n output := felem_mul output scratch in
+          let/n output := F.add output nscratch in
+          let/n output := F.mul output scratch in
           output)
        output in
   output.
@@ -812,10 +1236,10 @@ Definition poly1305
            (k : array_t byte)
            (header msg footer : array_t byte)
            (pad_header pad_msg pad_footer : bool)
-           (output: Z): array_t byte :=
+           (output: array_t byte): array_t byte :=
   let/n (f16, l16) := array_split_at 16 k in
   let/n scratch := buf_make byte felem_size in
-  let/n scratch := buf_append scratch f16 in
+  let/n scratch := buf_append scratch (copy f16) in
   let/n (scratch, lone_byte_and_felem_spare_space) := buf_split scratch in
   let/n scratch := List.map (fun '(w1, w2) => let/n w1 := byte.and w1 w2 in w1)
                            (combine scratch (le_split 16 0x0ffffffc0ffffffc0ffffffc0fffffff)) in
@@ -833,6 +1257,114 @@ Definition poly1305
   let/n k := array_unsplit f16 l16 in
   let/n output := uint128_as_bytes output in
   output.
+
+
+  Instance spec_of_poly1305 : spec_of "poly1305" :=
+    fnspec! "poly1305" (key_ptr msg_ptr out_ptr : word) /
+          (k msg output : array_t byte) (*(output : Z (*felem*))*) R,
+      { requires tr mem :=
+        (Z.of_nat (Datatypes.length k) = 32) /\ (*TODO: all lens*)
+          (array ptsto (word.of_Z 1) key_ptr k ⋆
+                 array ptsto (word.of_Z 1) msg_ptr msg ⋆
+                 array ptsto (word.of_Z 1) out_ptr output ⋆ R) mem;
+        ensures tr' mem' :=
+        tr = tr' /\
+          (array ptsto (word.of_Z 1) key_ptr k ⋆
+                 array ptsto (word.of_Z 1) msg_ptr msg ⋆
+                 array ptsto (word.of_Z 1) out_ptr (poly1305 k [] msg [] false false false output) ⋆ R) mem }.
+
+
+
+Definition offset base idx width :=
+  (expr.op bopname.add base (expr.op bopname.mul width idx)).
+
+Lemma compile_array_split_at {tr} {mem : mem} {locals functions}
+      (*TODO: not bytes*) (a : array_t _) idx a_ptr (*a_expr idx_expr*):
+      let v := array_split_at idx a in
+      forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl: cmd}
+        R (varfst varsnd: string),
+
+      (idx <= Datatypes.length a)%nat ->
+
+      sep (array ptsto (word.of_Z 1) a_ptr a) R mem ->
+      (*
+      WeakestPrecondition.dexpr mem locals a_expr a_ptr ->
+      WeakestPrecondition.dexpr mem locals idx_expr (word.of_Z (Z.of_nat idx)) ->
+       *)
+      (let v := v in
+       forall mem',
+         ((array ptsto (word.of_Z 1) a_ptr (fst v))
+          * (array ptsto (word.of_Z 1) (word.add a_ptr (word.of_Z (Z.of_nat idx))) (snd v)) * R)%sep mem' ->
+         <{ Trace := tr;
+            Memory := mem';
+            Locals := locals;
+            Functions := functions }>
+         k_impl
+         <{ pred (k v eq_refl) }>) ->
+      <{ Trace := tr;
+         Memory := mem;
+         Locals := locals;
+         Functions := functions }>
+        (*TODO: do I need local var(s) for arrays?*)
+    (*  cmd.seq
+        (cmd.store
+           (word.of_Z 1)
+           (offset a_expr idx_expr (expr.literal (word.of_Z 1)))
+           val_expr)*)
+        k_impl
+      <{ pred (nlet_eq [varfst; varsnd] v k) }>.
+    Proof.
+      cbn; intros Hlt *.
+      repeat straightline'.
+      eapply H1; clear H1.
+      erewrite <- (firstn_skipn idx a) in H0.
+      seprewrite_in @array_append H0.
+      rewrite (word.unsigned_of_Z_1) in H0.
+      rewrite Z.mul_1_l in H0.
+      rewrite firstn_length in H0.
+      rewrite Nat.min_l in H0; auto.
+    Qed.
+
+  Derive poly1305_body SuchThat
+         (defn! "poly1305" ("k", "msg", "output") ~> "output" { poly1305_body },
+          implements (poly1305))
+         As poly1305_body_correct.
+Proof.
+  compile.
+  eapply compile_nlet_as_nlet_eq.
+  eapply compile_array_split_at.
+  lia.
+  repeat compile_step.
+  compile_step.
+  change v with (fst v, snd v).
+  compile_step.
+  eapply compile_nlet_as_nlet_eq.
+  eapply compile_buf_make_stack.
+
+  (*TODO: existentials aren't friendly; what to do?*)
+  compile_step.
+  admit.
+
+  admit.
+  compile_step.
+
+  compile_step.
+
+  
+  eapply compile_nlet_as_nlet_eq.
+  eapply compile_buf_append.
+  compile_step.
+  compile_step.
+  shelve.
+  compile_step.
+  admit.
+
+  repeat compile_step.
+  (*TODO: bad*)
+  unfold nlet_eq at 1.
+  eapply compile_nlet_as_nlet_eq.
+  eapply compile_buf_split.
+  Abort.
 
 (** ** Equivalence proof **)
 
@@ -1722,8 +2254,12 @@ Proof.
   - rewrite !fold_left_app.
     set (fold_left _ (chunk 16 (firstn _ _)) _) as prefix.
     cbn [fold_left List.app]; rewrite <- !app_assoc.
-    rewrite app_length, skipn_length, repeat_length; do 6 f_equal.
-    rewrite app_assoc, <- repeat_app; do 2 f_equal.
+    rewrite app_length, skipn_length, repeat_length; do 3 f_equal.
+    symmetry.
+    erewrite (app_assoc (repeat _ _) (repeat _ _)).
+    rewrite 
+      <- repeat_app.
+    do 4 f_equal.
     lia.
 Qed.
 
