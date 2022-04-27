@@ -92,6 +92,7 @@ Section TableMult.
     (B : P) (* base point *)
     (q : Z) (* order of B *)
     (odd_q : Zodd q)
+    (addP_negP : forall Q R, addP (negP Q) (negP R) = negP (addP Q R))
     (mulP_q : mulP q B = O)
     (mulP_zero : forall Q, mulP 0 Q = O)
     (mulP_one : forall Q, mulP 1 Q = Q)
@@ -107,7 +108,7 @@ Section TableMult.
   (* Here, n denotes # of blocks, s denotes spacing, t denotes # of teeth, 
            and D = s * n * t denotes the total number of digits *)
   Context (s : Z) (t : Z) (n : Z) (nt : Z) (D : Z) 
-          (Hs: 0 <= s) (Ht: 0 <= t) (Hn: 1 <= n)
+          (Hs: 0 <= s) (Ht: 1 <= t) (Hn: 1 <= n)
           (Hnt: nt = n * t) (HD: D = s * nt)
           (Hq: 0 < q) (HDq: q < 2 ^ D).
 
@@ -695,7 +696,6 @@ Section TableMult.
     - submit PR
     - make it clear which part is used at runtime
     - (potentially) split file into code and proofs
-    - add negation (negate values when looking up if necessary)
     *)
 
     (* To be replaced by looking up in an actual precomputed table *)
@@ -705,13 +705,21 @@ Section TableMult.
         (fun x => ZtoP ((2 * (Z.b2z (Z.testbit d (x - t * bnum))) - 1) * 2 ^ (s * x)))
         (Zseq (t * bnum) t)).
 
-    Lemma table_entry_hyp: forall bnum d : Z,
-      0 <= d < 2 ^ t ->
-      table_entry bnum d = List.fold_right addP O
+    Definition table_entry' (bnum: Z) (d: Z) : P
+      := List.fold_right addP O
       (List.map
         (fun x => ZtoP ((2 * (Z.b2z (Z.testbit d (x - t * bnum))) - 1) * 2 ^ (s * x)))
         (Zseq (t * bnum) t)).
+
+    Lemma table_entry_hyp: forall bnum d : Z,
+      0 <= d < 2 ^ (t - 1) ->
+      table_entry bnum d = table_entry' bnum d.
     Proof. intros. reflexivity. Qed.
+
+    Opaque table_entry.
+
+    Definition table_lookup (bnum: Z) (d: Z) : P 
+      := if Z.testbit d (t - 1) then negP (table_entry bnum (2 ^ t - 1 - d)) else table_entry bnum d.
 
     (* Definition table := List.map table_entry (Zseq 0 (2 ^ t)). *)
 
@@ -722,7 +730,7 @@ Section TableMult.
 
     Definition table_comb (offset: Z) (e: Z) : P
       := List.fold_right addP O
-      (List.map (fun x => table_entry x (extract_bits (offset + x * s * t) e)) (Zseq 0 n)).
+      (List.map (fun x => table_lookup x (extract_bits (offset + x * s * t) e)) (Zseq 0 n)).
 
     Definition table_multicomb (e: Z) : P :=
       List.fold_right (fun x y => addP x (doubleP y)) O (List.map (fun x => table_comb x e) (Zseq 0 s)).
@@ -791,7 +799,13 @@ Section TableMult.
           rewrite <- Z.mod_pow2_bits_low with (m := x0) (n := x) by lia.
           rewrite Z.mod_add by nia.
           rewrite Z.mod_small; [ apply H0 | apply bitmap_bound ]; lia.
-    Qed.    
+    Qed.   
+
+    Lemma extract_bits_bound: forall offset e,
+     0 <= extract_bits offset e < 2 ^ t.
+    Proof.
+      intros; unfold extract_bits; apply bitmap_bound; lia.
+    Qed.
 
     Lemma extract_bits_spec: forall offset e x : Z,
       0 <= x -> 0 <= offset <= s * nt ->
@@ -808,7 +822,8 @@ Section TableMult.
           (f := fun x : Z => Z.testbit ((e + 2 ^ (s * nt) - 1) / 2) (x * s + offset));
           lia.
       - rewrite <- Z.div_pow2_bits with (n := x) (m := 0) by lia.
-        pose proof bitmap_bound t Ht (fun x : Z =>
+        assert (Ht' : 0 <= t) by lia.
+        pose proof bitmap_bound t Ht' (fun x : Z =>
           Z.testbit ((e + 2 ^ (s * nt) - 1) / 2) (x * s + offset)).
         assert (0 < 2) by lia.
         pose proof Z.pow_le_mono_r 2 t x H4 H0.
@@ -843,14 +858,14 @@ Section TableMult.
     Qed.
 
     (* -------------------- *)
-    (* table_entry *)
+    (* table_lookup *)
 
-    Lemma table_entry_spec: forall bnum offset e : Z,
+    Lemma table_entry'_spec: forall bnum offset e : Z,
       0 <= bnum < n -> 0 <= offset < s
-        -> table_entry bnum (extract_bits (offset + bnum * s * t) e) = ZtoP (eval (entry bnum offset) e).
+        -> table_entry' bnum (extract_bits (offset + bnum * s * t) e) = ZtoP (eval (entry bnum offset) e).
     Proof.
       intros.
-      unfold eval, table_entry, entry.
+      unfold eval, entry, table_entry'.
       rewrite fold_right_addP.
       rewrite map_map.
       f_equal.
@@ -864,7 +879,8 @@ Section TableMult.
       f_equal.
       f_equal.
       assert (Hb: 0 <= t * bnum) by nia.
-      pose proof Zseq_bound' t Ht (t * bnum) Hb.
+      assert (Ht': 0 <= t) by lia.
+      pose proof Zseq_bound' t Ht' (t * bnum) Hb.
       apply H2 in H1.
       replace a with (a - t * bnum + t * bnum) by lia.
       remember (a - t * bnum) as a'.
@@ -874,6 +890,120 @@ Section TableMult.
       eapply extract_bits_spec; assert (0 < s * t) by nia; nia.
     Qed.
 
+
+    Lemma testbit_flip: forall d t' b : Z,
+      0 <= d < 2 ^ t' -> 0 <= b < t'
+        -> Z.testbit (2 ^ t' - 1 - d) b = negb (Z.testbit d b).
+    Proof.
+      intros.
+      rewrite <- Z.lnot_spec by lia.
+      rewrite <- Z.mod_pow2_bits_low with (n := t') by lia.
+      rewrite <- Z.mod_pow2_bits_low with (n := t') (a := Z.lnot d) by lia.
+      f_equal.
+      rewrite <- mod_sub with (b := 1) by nia.
+      f_equal.
+      pose proof Z.add_lnot_diag d.
+      lia.
+    Qed.
+
+    Lemma b2z_testbit_flip: forall d t' b : Z,
+      0 <= d < 2 ^ t' -> 0 <= b < t'
+        -> 2 * (Z.b2z (Z.testbit (2 ^ t' - 1 - d) b)) - 1
+           = - (2 * (Z.b2z (Z.testbit d b)) - 1).
+    Proof.
+      intros.
+      rewrite testbit_flip by assumption.
+      case (Z.testbit d b); reflexivity.
+    Qed.
+
+    Lemma testbit_top_bit: forall d t' : Z,
+      1 <= t' -> 0 <= d < 2 ^ t'
+        -> Z.testbit d (t' - 1) = (2 ^ (t' - 1) <=? d).
+    Proof.
+      intros.
+      assert (0 <= t' - 1) by lia.
+      case_eq (2 ^ (t' - 1) <=? d); intro.
+      - rewrite Z.leb_le in H2.
+        replace (t' - 1) with (0 + (t' - 1)) by lia.
+        rewrite <- Z.div_pow2_bits by lia.
+        replace (d / 2 ^ (t' - 1)) with 1; auto.
+        replace d with (d - 2 ^ (t' - 1) + 1 * 2 ^ (t' - 1)) by lia.
+        rewrite Z.div_add by nia.
+        replace 1 with (0 + 1) at 1 by lia.
+        apply Z.add_cancel_r.
+        symmetry.
+        apply Z.div_small.
+        replace (2 ^ t') with (2 ^ (t' - 1) + 2 ^ (t' - 1)) in H0.
+        lia.
+        replace t' with (t' - 1 + 1) at 3 by lia.
+        rewrite Z.pow_add_r by lia.
+        nia.
+      - rewrite Z.leb_gt in H2.
+        replace (t' - 1) with (0 + (t' - 1)) by lia.
+        rewrite <- Z.div_pow2_bits by lia.
+        replace (d / 2 ^ (t' - 1)) with 0; auto.
+        symmetry.
+        apply Z.div_small.
+        lia.
+    Qed.      
+
+    Lemma table_entry'_flip: forall bnum d : Z,
+      0 <= d < 2 ^ t -> 0 <= bnum
+        -> table_entry' bnum (2 ^ t - 1 - d) = negP (table_entry' bnum d).
+    Proof.
+      intros.
+      unfold table_entry'.
+      assert (rewrite_map:
+        map (fun x : Z => ZtoP ((2 * Z.b2z (Z.testbit (2 ^ t - 1 - d) (x - t * bnum)) - 1) * 2 ^ (s * x)))
+        (Zseq (t * bnum) t) =
+        map (fun x : Z => negP (ZtoP ((2 * Z.b2z (Z.testbit d (x - t * bnum)) - 1) * 2 ^ (s * x))))
+        (Zseq (t * bnum) t)).
+      {
+        apply map_ext_in.
+        intros.
+        rewrite Zseq_bound' in H1 by lia.
+        rewrite b2z_testbit_flip by lia.
+        unfold ZtoP.
+        rewrite <- mulP_negP.
+        f_equal.
+        nia.
+      }
+      rewrite rewrite_map.
+      apply fold_right_map.
+      - exact addP_negP.
+      - rewrite <- mulP_zero with (Q := B).
+        rewrite <- mulP_negP.
+        f_equal; lia.
+    Qed.
+
+    Lemma table_lookup_spec: forall bnum offset e : Z,
+      0 <= bnum < n -> 0 <= offset < s
+        -> table_lookup bnum (extract_bits (offset + bnum * s * t) e) = ZtoP (eval (entry bnum offset) e).
+    Proof.
+      intros.
+      pose proof extract_bits_bound (offset + bnum * s * t) e.
+      unfold table_lookup.
+      pose proof testbit_top_bit (extract_bits (offset + bnum * s * t) e) t Ht H1.
+      case_eq (Z.testbit (extract_bits (offset + bnum * s * t) e) (t - 1)); intro; rewrite H3 in *.
+      - symmetry in H2. 
+        rewrite Z.leb_le in H2.
+        replace (2 ^ t) with (2 ^ (t - 1) + 2 ^ (t - 1)) in *;
+          [ | replace t with (t - 1 + 1) at 3 by lia; rewrite Z.pow_add_r; nia ].
+        rewrite table_entry_hyp by lia.
+        rewrite <- table_entry'_flip.
+        + rewrite <- table_entry'_spec by lia.
+          f_equal.
+          replace (2 ^ t) with (2 ^ (t - 1) + 2 ^ (t - 1)) in *;
+            [ lia | replace t with (t - 1 + 1) at 3 by lia; rewrite Z.pow_add_r; nia ].
+        + replace (2 ^ t) with (2 ^ (t - 1) + 2 ^ (t - 1)) in *;
+            [ lia | replace t with (t - 1 + 1) at 3 by lia; rewrite Z.pow_add_r; nia ].
+        + lia.
+      - symmetry in H2.
+        rewrite Z.leb_gt in H2.
+        rewrite table_entry_hyp by lia.
+        apply table_entry'_spec; assumption.
+    Qed. 
+
     (* -------------------- *)
     (* table_comb *)
 
@@ -882,11 +1012,11 @@ Section TableMult.
     Proof.
       intros.
       unfold table_comb.
-      assert (rewrite_map: map (fun x : Z => table_entry x (extract_bits (offset + x * s * t) e))
+      assert (rewrite_map: map (fun x : Z => table_lookup x (extract_bits (offset + x * s * t) e))
                 (Zseq 0 n) = map (fun x : Z => ZtoP (eval (entry x offset) e)) (Zseq 0 n)). {
         apply map_ext_in.
         intros.
-        apply table_entry_spec; apply Zseq_bound in H0; lia.
+        apply table_lookup_spec; apply Zseq_bound in H0; lia.
       }
       rewrite rewrite_map.
       rewrite fold_right_addP.
@@ -954,17 +1084,31 @@ Section TableMult.
 
   Section Oddify.
 
+    (* ======================================== *)
+    (* Oddify: support any value of e by reducing mod q to an odd number in bounds. *)
+
     Definition oddify (e: Z) : Z := if Z.odd e then e else (e - q).
-
-    (* evenify has been replaced by positify *)
+    Definition positify (e: Z) : Z := (2 ^ D - 1 + oddify (e mod q)) / 2.
     (* 
-    Definition evenify (e: Z) : Z := if Z.odd e then e + q else e.
-
-    Definition sbit_evenify (e: Z) (x: Z) := 2 * Z.b2z (Z.testbit (evenify (e + 2 ^ D - 1) / 2) x) - 1.
-    Definition sbit'_evenify (e: Z) (x: Z) := Z.b2z (Z.testbit (evenify (e + 2 ^ D - 1) / 2) x).
+      This can always be computed without negative intermediate values:
+      if oddify (e mod q) <= 0 then this amounts to flipping the last D bits from  - (oddify (e mod q));
+      else, we compute 2 ^ (D - 1) + (oddify (e mod q) >> 1).
     *)
 
-    Definition positify (e: Z) : Z := (2 ^ D - 1 + oddify (e mod q)) / 2.
+    (*
+    Definition positify' (e: Z) : Z :=
+     let e := e mod q in 
+     if Z.odd e then
+       2 ^ (D - 1) + (e >> 1)
+     else
+      ((2 ^ D - 1) - (q - e)) >> 1.
+
+    Definition positify'' (e: Z) : Z :=
+     let e := e mod q in
+     let o := 2 ^ D - 1 + e in
+     let i := if Z.odd e then o else o - q in
+     Z.shiftr i 1.
+     *)
 
     Definition extract_bits_positify (offset: Z) (e: Z) : Z
     := List.fold_right Z.add 0 (
@@ -973,10 +1117,19 @@ Section TableMult.
 
     Definition table_comb_positify (offset: Z) (e: Z) : P
     := List.fold_right addP O
-    (List.map (fun x => table_entry x (extract_bits_positify (offset + x * s * t) e)) (Zseq 0 n)).
+    (List.map (fun x => table_lookup x (extract_bits_positify (offset + x * s * t) e)) (Zseq 0 n)).
 
+    (* This is the definition used at runtime! *)
     Definition table_multicomb_positify (e: Z) : P :=
     List.fold_right (fun x y => addP x (doubleP y)) O (List.map (fun x => table_comb_positify x e) (Zseq 0 s)).
+
+    (* Evenify has been replaced by positify *)
+    (* 
+    Definition evenify (e: Z) : Z := if Z.odd e then e + q else e.
+
+    Definition sbit_evenify (e: Z) (x: Z) := 2 * Z.b2z (Z.testbit (evenify (e + 2 ^ D - 1) / 2) x) - 1.
+    Definition sbit'_evenify (e: Z) (x: Z) := Z.b2z (Z.testbit (evenify (e + 2 ^ D - 1) / 2) x).
+    *)
 
     (* ==================== *)
     (* Lemmas and theorems *)
@@ -1141,12 +1294,14 @@ Section TableMult.
       rewrite table_multicomb_positify_spec.
       apply table_multicomb_oddify_correct.
     Qed.
-
+    
   End Oddify.
 
 End TableMult.
 
-Check table_multicomb_correct.
+Print Transparent Dependencies table_multicomb_positify.
+
+Section Instantiations.
 
 Section AddMod.
 
@@ -1158,6 +1313,7 @@ Section AddMod.
   Definition addP : P -> P -> P := F.add.
   Definition doubleP : P -> P := F.mul (F.of_Z _ 2).
   Definition mulP (n : Z) : P -> P := F.mul (F.of_Z _ n).
+  Definition negP : P -> P := F.opp.
 
   Definition n := 1.
   Definition s := 2.
@@ -1167,63 +1323,21 @@ Section AddMod.
   Compute mulP 4 B.
 
   Print table_entry.
-  Compute table_entry P addP mulP O B s t 4.
-  (* -16 -4 +1 mod 101 = 82 *)
+  Compute table_entry P addP mulP O B s t 0 1.
+  (* (-16 -4 +1) * 2 mod 101 = 63 *)
 
   Print extract_bits.
   Compute extract_bits s t D 1 1.
 
   Print table_comb.
-  Compute table_comb P addP mulP O B s t D 1 1.
+  Compute table_comb P addP negP mulP O B s t n D 1 1.
 
   Print table_multicomb.
-  Compute table_multicomb P addP doubleP mulP O B s t D (-7).
+  Compute table_multicomb P addP doubleP negP mulP O B s t n D (-7).
 
 End AddMod.
 
 (* TODO test on multiplication over F_p, using FLT to do negative exponents *)
+(* TODO instantiate this for Curve25519 *)
 
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.Sorting.Mergesort Coq.Structures.Orders.
-
-
-Module Zpair.
-  Module Order <: TotalLeBool.
-    Definition t : Type := Z * Z.
-    Definition leb := fun '(x0, x1) '(y0, y1) => Z.leb x0 y0 && (implb (Z.eqb x0 y0) (Z.leb x1 y1)).
-    Local Coercion is_true : bool >-> Sortclass.
-    Theorem leb_total : forall a1 a2, leb a1 a2 \/ leb a2 a1.
-    Proof.
-    (* intros x y; destruct (Z.le_ge_cases x y); [ left | right ]; unfold is_true, leb; rewrite Z.leb_le; lia.  *)
-    Admitted.
-  End Order.
-
-  Module Sort := Mergesort.Sort Order.
-
-  Notation sort := Sort.sort.
-  Notation Sorted_sort := Sort.Sorted_sort.
-  Notation LocallySorted_sort := Sort.LocallySorted_sort.
-  Notation StronglySorted_sort := Sort.StronglySorted_sort.
-  Notation Permuted_sort := Sort.Permuted_sort.
-End Zpair.
-
-Section ConcreteVals.
-  Compute Zpair.sort [(0, 3); (4, 1); (2, 2); (2, 0)].
-  Check Zpair.Permuted_sort.
-
-  Theorem four_bit_multicomb: forall e : Z,
-    0 <= e < 2 ^ 4 -> Zodd e -> eval 4 (multicomb 2 2) e = e.
-  Proof.
-    intros.
-    eapply permute_comb_correct with (s := 2) (t := 2) (D := 4); try lia; try assumption.
-    apply Permutation_sym.
-    eapply perm_trans.
-    eapply Zpair.Permuted_sort.
-    compute.
-    reflexivity.
-  Qed. Print Assumptions four_bit_multicomb.
-
-  (* s = 3, t = 4, D = 12 *)
-  Compute eval 12 (multicomb 3 4) 1337.
-End ConcreteVals.
-
+End Instantiations.
