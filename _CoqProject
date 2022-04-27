@@ -363,6 +363,8 @@ src/Util/Strings/String.v
 src/Util/Strings/StringMap.v
 src/Util/Strings/String_as_OT.v
 src/Util/Strings/String_as_OT_old.v
+src/Util/Strings/Subscript.v
+src/Util/Strings/Superscript.v
 src/Util/Strings/Parse/Common.v
 src/Util/Structures/Orders.v
 src/Util/Structures/Equalities/Iso.v

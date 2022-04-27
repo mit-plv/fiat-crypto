@@ -470,10 +470,16 @@ Definition iteratively_explain_array_unification_error_modulo_commutativity
           | Some op => "(" ++ show op ++ ", " ++ args ++ ")"
           | None => args
           end%string in
+     let show_array_pretty array
+       := match op with
+          | Some op => show_expr_pretty (ExprApp (op, array))
+          | None => @show_list _ show_expr_pretty array
+          end%string in
      List.map
        (fun '(asm_array, PHOAS_array)
         => (show_array asm_array ++ " ≠ " ++ show_array PHOAS_array)%string)
        reveals
+       ++ [show_array_pretty last_asm ++ " ≠ " ++ show_array_pretty last_PHOAS]%string
        ++ (List.flat_map
              describe_idx
              (indices_at_leaves_map (last_asm ++ last_PHOAS))).
