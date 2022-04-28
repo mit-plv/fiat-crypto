@@ -4,7 +4,8 @@ From Crypto.Util Require Import
      ListUtil
      Strings.String Strings.Decimal Strings.Show
      ZRange.Operations ZRange.Show
-     Option OptionList Bool.Equality.
+     OptionList Bool.Equality.
+Require Import Crypto.Util.Option.
 (* Work around COQBUG(https://github.com/coq/coq/issues/12251) *)
 Require Import Crypto.Util.ZRange.
 

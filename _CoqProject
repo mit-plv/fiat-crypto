@@ -254,6 +254,7 @@ src/Util/DefaultedTypes.v
 src/Util/DynList.v
 src/Util/Equality.v
 src/Util/ErrorT.v
+src/Util/FMapN.v
 src/Util/Factorize.v
 src/Util/FixCoqMistakes.v
 src/Util/FsatzAutoLemmas.v
@@ -312,6 +313,7 @@ src/Util/Decidable/Decidable2Bool.v
 src/Util/ErrorT/List.v
 src/Util/ErrorT/Show.v
 src/Util/FMapPositive/Equality.v
+src/Util/FSets/Iso.v
 src/Util/ListUtil/CombineExtend.v
 src/Util/ListUtil/Concat.v
 src/Util/ListUtil/Filter.v
@@ -352,6 +354,7 @@ src/Util/Sigma/Associativity.v
 src/Util/Sigma/Lift.v
 src/Util/Sigma/MapProjections.v
 src/Util/Sigma/Related.v
+src/Util/Sorting/Sorted/Proper.v
 src/Util/Strings/Ascii.v
 src/Util/Strings/Decimal.v
 src/Util/Strings/NamingConventions.v
@@ -366,9 +369,16 @@ src/Util/Strings/String_as_OT_old.v
 src/Util/Strings/Subscript.v
 src/Util/Strings/Superscript.v
 src/Util/Strings/Parse/Common.v
+src/Util/Structures/OrderedType.v
 src/Util/Structures/Orders.v
+src/Util/Structures/Equalities/Bool.v
 src/Util/Structures/Equalities/Iso.v
+src/Util/Structures/Equalities/List.v
+src/Util/Structures/Equalities/Option.v
+src/Util/Structures/Equalities/Prod.v
 src/Util/Structures/Equalities/Sum.v
+src/Util/Structures/Equalities/Unit.v
+src/Util/Structures/OrderedType/Iso.v
 src/Util/Structures/Orders/Iso.v
 src/Util/Structures/Orders/Sum.v
 src/Util/Tactics/AllInstances.v
