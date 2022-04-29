@@ -9,7 +9,7 @@ on:
     - cron: '0 0 1 * *'
 
 jobs:
-  build:
+  build-macos:
 
     runs-on: macOS-10.15
 

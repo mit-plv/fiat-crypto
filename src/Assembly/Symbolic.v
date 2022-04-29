@@ -12,6 +12,8 @@ Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Land.
 Require Import Crypto.Util.ZUtil.Ones.
 Require Import Crypto.Util.Bool.Reflect.
+Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Strings.Subscript.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.Concat.
 Require Import Crypto.Util.ListUtil.GroupAllBy.
@@ -31,6 +33,7 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.SpecializeUnderBindersBy.
 Require Import Crypto.Util.ZUtil.Lxor.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.Tactics.WarnIfGoalsRemain.
@@ -38,6 +41,7 @@ Require Import Crypto.Util.Bool.Reflect.
 Require Import coqutil.Z.bitblast.
 Require Import Coq.Strings.String Crypto.Util.Strings.Show.
 Require Import Crypto.Assembly.Syntax.
+Import ListNotations.
 Definition idx := N.
 Local Set Decidable Equality Schemes.
 Definition symbol := N.
@@ -47,7 +51,7 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 
 Section S.
 Implicit Type s : OperationSize.
-Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | subborrow s | addoverflow s | neg s | shl s | shlx s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
+Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | subborrow s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
   | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | xorZ | addcarryZ s | subborrowZ s.
 Definition op_beq a b := if op_eq_dec a b then true else false.
 End S.
@@ -62,7 +66,6 @@ Global Instance Show_op : Show op := fun o =>
   | addoverflow s => "addoverflow " ++ show s
   | neg s => "neg " ++ show s
   | shl s => "shl " ++ show s
-  | shlx s => "shlx " ++ show s
   | shr s => "shr " ++ show s
   | sar s => "sar " ++ show s
   | rcr s => "rcr " ++ show s
@@ -86,9 +89,44 @@ Global Instance Show_op : Show op := fun o =>
   | subborrowZ s => "subborrowZ " ++ show s
   end%string.
 
+Definition show_op_subscript : Show op := fun o =>
+  match o with
+  | old s n => "old" ++ String.to_subscript (show s) ++ " " ++ show n
+  | const n => "const " ++ show n
+  | add s => "add" ++ String.to_subscript (show s)
+  | addcarry s => "addcarry" ++ String.to_subscript (show s)
+  | subborrow s => "subborrow" ++ String.to_subscript (show s)
+  | addoverflow s => "addoverflow" ++ String.to_subscript (show s)
+  | neg s => "neg" ++ String.to_subscript (show s)
+  | shl s => "shl" ++ String.to_subscript (show s)
+  | shr s => "shr" ++ String.to_subscript (show s)
+  | sar s => "sar" ++ String.to_subscript (show s)
+  | rcr s => "rcr" ++ String.to_subscript (show s)
+  | and s => "and" ++ String.to_subscript (show s)
+  | or s => "or" ++ String.to_subscript (show s)
+  | xor s => "xor" ++ String.to_subscript (show s)
+  | slice lo sz => "slice" ++ String.to_subscript (show lo) ++ "," ++ String.to_subscript (show sz)
+  | mul s => "mul" ++ String.to_subscript (show s)
+  | set_slice lo sz => "set_slice" ++ String.to_subscript (show lo) ++ "," ++ String.to_subscript (show sz)
+  | selectznz => "selectznz"
+  | iszero => "iszero"
+  | addZ => "addℤ"
+  | mulZ => "mulℤ"
+  | negZ => "negℤ"
+  | shlZ => "shlℤ"
+  | shrZ => "shrℤ"
+  | andZ => "andℤ"
+  | orZ => "orℤ"
+  | xorZ => "xorℤ"
+  | addcarryZ s => "addcarryℤ" ++ String.to_subscript (show s)
+  | subborrowZ s => "subborrowℤ" ++ String.to_subscript (show s)
+  end%string.
+
 Definition associative o := match o with add _|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ=> true | _ => false end.
 Definition commutative o := match o with add _|addcarry _|addoverflow _|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ => true | _ => false end.
-Definition identity o := match o with mul N0 => Some 0%Z| mul _|mulZ=>Some 1%Z |add _|addZ|or _|orZ|xor _|xorZ => Some 0%Z | and s => Some (Z.ones (Z.of_N s))|andZ => Some (-1)%Z |_=> None end.
+Definition identity o := match o with mul N0 => Some 0%Z| mul _|mulZ=>Some 1%Z |add _|addZ|or _|orZ|xor _|xorZ|addcarry _|addcarryZ _|addoverflow _ => Some 0%Z | and s => Some (Z.ones (Z.of_N s))|andZ => Some (-1)%Z |_=> None end.
+(* identity, but not in the first slot *)
+Definition identity_after_0 o := match o with subborrow _|subborrowZ _ => Some 0%Z | _=> None end.
 Definition unary_truncate_size o := match o with add s|and s|or s|xor s|mul s => Some (Z.of_N s) | addZ|mulZ|andZ|orZ|xorZ => Some (-1)%Z | _ => None end.
 Definition op_always_interps o := match o with add _|addcarry _|addoverflow _|and _|or _|xor _|mul _|addZ|mulZ|andZ|orZ|xorZ|addcarryZ _ => true | _ => false end.
 Definition combines_to o := match o with add s => Some (mul s) | addZ => Some mulZ | _ => None end.
@@ -123,6 +161,70 @@ Definition Show_expr : Show expr
   := Eval cbv -[String.append show_N concat List.map Show_op] in
       fix Show_expr e := Show_expr_body Show_expr e.
 Global Existing Instance Show_expr.
+
+Local Notation max_powers_of_two := 5%nat (only parsing).
+Local Notation max_decimal := 256%Z (only parsing).
+
+Definition show_infix_op (o : op) : option string
+  := match o with
+     | add s => Some ("+" ++ String.to_subscript (show s))
+     | shl s => Some (">>" ++ String.to_subscript (show s))
+     | shr s => Some (">>" ++ String.to_subscript (show s))
+     | and s => Some ("&"  ++ String.to_subscript (show s))
+     | or s  => Some ("|"  ++ String.to_subscript (show s))
+     | xor s => Some ("^"  ++ String.to_subscript (show s))
+     | mul s => Some ("*"  ++ String.to_subscript (show s))
+     | sar s => Some (">>>" ++ String.to_subscript (show s))
+     | addZ  => Some "+ℤ"
+     | mulZ  => Some "*ℤ"
+     | shlZ  => Some "<<ℤ"
+     | shrZ  => Some ">>ℤ"
+     | andZ  => Some "&ℤ"
+     | orZ   => Some "|ℤ"
+     | xorZ  => Some "^ℤ"
+     | _ => None
+     end%string.
+
+Definition show_prefix_op (o : op) : option (string * Level)
+  := match o with
+     | neg s => Some ("-" ++ String.to_subscript (show s), opp_lvl)
+     | negZ => Some ("-ℤ", opp_lvl)
+     | _ => None
+     end%string.
+
+Definition show_lvl_expr_pretty : ShowLevel expr
+  := fix show_lvl_pretty_expr (e : expr) : Level -> string
+    := let __ : ShowLevel expr := show_lvl_pretty_expr in
+       let __ : Show expr := @Show_of_ShowLevel _ show_lvl_pretty_expr in
+       let show_comment_args args
+         := match args with
+            | nil => ""
+            | _ => " (* " ++ show args ++ " *)"
+            end%string in
+       match e with
+       | ExprRef i => fun _ => "#" ++ show i
+       | ExprApp (old s x, args) => lvl_wrap_parens app_lvl ("old" ++ String.to_subscript (show s) ++ " " ++ show x ++ show_comment_args args)
+       | ExprApp (const x, args) => fun lvl => PowersOfTwo.show_lvl_Z_up_to max_powers_of_two max_decimal x lvl ++ show_comment_args args
+       | ExprApp ((add _|shl _|shr _|and _|or _|xor _|mul _|sar _|addZ|mulZ|shlZ|shrZ|andZ|orZ|xorZ) as o, args)
+         => let o : string := Option.invert_Some (show_infix_op o) in
+            match args with
+            | nil => fun _ => o ++ "[]"
+            | x :: nil => fun _ => o ++ "[" ++ show x ++ "]"
+            | _ => fun _ => "(" ++ String.concat (" " ++ o ++ " ") (List.map show args) ++ ")"
+            end
+       | ExprApp ((neg _|negZ) as o, args)
+         => let '(o, lvl) := Option.invert_Some (show_prefix_op o) in
+            match args with
+            | nil => fun _ => o ++ "[]"
+            | x :: nil => fun _ => o ++ show_lvl x lvl
+            | _ => fun _ => o ++ show args
+            end
+       | ExprApp (o, args)
+         => fun _ => "(" ++ show_op_subscript o ++ ", " ++ show args ++ ")"
+       end%string%list.
+
+Definition show_expr_pretty : Show expr
+  := @Show_of_ShowLevel _ show_lvl_expr_pretty.
 
 Lemma op_beq_spec a b : BoolSpec (a=b) (a<>b) (op_beq a b).
 Proof using Type. cbv [op_beq]; destruct (op_eq_dec a b); constructor; congruence. Qed.
@@ -1072,20 +1174,57 @@ Proof using Type.
                     | progress t ].
 Qed.
 
+Lemma fold_right_filter_identity_gen A B C f init F G xs
+      (Hid : forall x y, F x = false -> G (f x y) = G y)
+      (HProper : forall x y y', G y = G y' -> G (f x y) = G (f x y'))
+  : G (@fold_right A B f init (filter F xs)) = G (@fold_right A B f init xs) :> C.
+Proof.
+  induction xs as [|x xs IH]; [ | specialize (Hid x) ]; cbn; break_innermost_match; cbn; rewrite ?Hid by auto; auto; congruence.
+Qed.
+
+Lemma fold_right_filter_identity A B f init F xs
+      (Hid : forall x y, F x = false -> f x y = y)
+  : @fold_right A B f init (filter F xs) = @fold_right A B f init xs.
+Proof.
+  apply fold_right_filter_identity_gen with (G:=id); cbv [id]; intuition (subst; eauto).
+Qed.
+
+Lemma signed_0 s : signed s 0 = 0%Z.
+Proof using Type.
+  destruct (N.eq_dec s 0); subst; trivial.
+  cbv [signed].
+  rewrite !Z.land_ones, !Z.shiftl_mul_pow2, ?Z.add_0_r, ?Z.mul_1_l by Lia.lia.
+  rewrite Z.mod_small; try ring.
+  split; try (eapply Z.pow_lt_mono_r; Lia.lia).
+  eapply Z.pow_nonneg; Lia.lia.
+Qed.
+Hint Rewrite signed_0 : zsimplify_const zsimplify zsimplify_fast.
+Global Hint Resolve signed_0 : zarith.
+
 Lemma interp_op_drop_identity o id : identity o = Some id ->
   forall G xs, interp_op G o xs = interp_op G o (List.filter (fun v => negb (Z.eqb v id)) xs).
 Proof using Type.
   destruct o; cbn [identity]; intro; inversion_option; subst; intros G xs; cbn [interp_op]; f_equal.
-  all: induction xs as [|x xs IHxs]; cbn [fold_right List.filter]; try reflexivity.
-  all: unfold negb at 1; break_innermost_match_step; reflect_hyps; subst; cbn [fold_right].
   all: break_innermost_match_hyps; inversion_option; subst.
-  all: autorewrite with zsimplify_const.
-  all: try assumption.
-  all: rewrite ?(Z.land_comm (Z.ones _)).
-  all: try solve [ rewrite <- !Z.land_assoc; congruence ].
-  all: try solve [ rewrite ?Z.land_ones by lia; pull_Zmod; push_Zmod; rewrite <- ?Z.land_ones by lia; rewrite <- ?IHxs; try reflexivity ].
-  { rewrite 2Z.land_lor_distr_l, IHxs; reflexivity. }
-  { rewrite Z.land_lxor_distr_r, IHxs, <- Z.land_lxor_distr_r; reflexivity. }
+  all: rewrite ?fold_right_map.
+  all: rewrite ?fold_right_filter_identity by now intros; reflect_hyps; subst; auto with zarith; autorewrite with zsimplify_const; lia.
+  all: repeat first [ reflexivity
+                    | progress autorewrite with zsimplify_const ].
+  { (idtac + symmetry); apply fold_right_filter_identity_gen with (G:=fun x => Z.land x _).
+    all: intros; reflect_hyps; subst.
+    all: rewrite <- ?Z.land_assoc, ?(Z.land_comm (Z.ones _)), ?Z.land_ones in * by lia.
+    all: push_Zmod; pull_Zmod.
+    all: congruence. }
+Qed.
+
+Lemma interp_op_drop_identity_after_0 o id : identity_after_0 o = Some id ->
+  forall G x xs, interp_op G o (x :: xs) = interp_op G o (x :: List.filter (fun v => negb (Z.eqb v id)) xs).
+Proof using Type.
+  destruct o; cbn [identity_after_0]; intro; inversion_option; subst; intros G x xs; cbn [interp_op]; f_equal.
+  all: rewrite ?fold_right_map.
+  all: rewrite ?fold_right_filter_identity by now intros; reflect_hyps; subst; auto with zarith; autorewrite with zsimplify_const; lia.
+  all: repeat first [ reflexivity
+                    | progress autorewrite with zsimplify_const ].
 Qed.
 
 Lemma interp_op_nil_is_identity o i (Hi : identity o = Some i)
@@ -1358,10 +1497,13 @@ Definition drop_identity :=
         | nil => ExprApp (const i, nil)
         | _ => ExprApp (o, args)
         end
-    | _ => e end | _ => e end.
+    | _ => match identity_after_0 o, args with
+    | Some i, arg :: args =>
+        let args := List.filter (neqconst i) args in
+        ExprApp (o, arg :: args)
+    | _, _ => e end end | _ => e end.
 
-Lemma filter_neqconst_helper G d o id
-      (Hid : identity o = Some id)
+Lemma filter_neqconst_helper G d id
       l args
       (H : Forall2 (eval G d) l args)
   : exists args',
@@ -1395,8 +1537,23 @@ Lemma filter_neqconst G d o id
     /\ interp_op G o args' = interp_op G o args.
 Proof.
   edestruct filter_neqconst_helper as [args' [H1 H2] ]; try eassumption.
-  exists args'; split; try assumption.
+  exists args'; split; try eassumption.
   erewrite interp_op_drop_identity, H2, <- interp_op_drop_identity by eassumption.
+  reflexivity.
+Qed.
+
+Lemma filter_neqconst' G d o id
+      (Hid : identity_after_0 o = Some id)
+      e arg l args
+      (H0 : eval G d e arg)
+      (H : Forall2 (eval G d) l args)
+  : exists args',
+    Forall2 (eval G d) (filter (neqconst id) l) args'
+    /\ interp_op G o (arg :: args') = interp_op G o (arg :: args).
+Proof.
+  edestruct filter_neqconst_helper as [args' [H1 H2] ]; try eassumption.
+  exists args'; split; try eassumption.
+  erewrite interp_op_drop_identity_after_0, H2, <- interp_op_drop_identity_after_0 by eassumption.
   reflexivity.
 Qed.
 
@@ -1404,16 +1561,23 @@ Global Instance drop_identity_Ok : Ok drop_identity.
 Proof using Type.
   repeat (step; eauto; []).
   inversion H; subst; clear H.
-  destruct (filter _ _ ) eqn:H'.
-  2: rewrite <- H'; clear H'.
-  2: repeat (step; eauto; []).
-  all: destruct (filter_neqconst _ _ _ _ ltac:(eassumption) _ _ ltac:(eassumption)) as [? [? ?] ].
-  all: repeat first [ match goal with
-                      | [ H : ?ls = [], H' : Forall2 _ ?ls _ |- _ ] => rewrite H in H'
+  destruct identity eqn:?; [ | destruct identity_after_0 eqn:? ]; break_innermost_match.
+  all: repeat (step; eauto; []).
+  all: pose proof filter_neqconst.
+  all: pose proof filter_neqconst'.
+  all: specialize_under_binders_by eassumption.
+  all: destruct_head'_ex.
+  all: destruct_head'_and.
+  all: repeat first [ progress subst
+                    | progress inversion_option
+                    | match goal with
+                      | [ H : ?ls = nil, H' : context[?ls] |- _ ] => rewrite H in H'
+                      | [ H : ?ls = cons _ _, H' : context[?ls] |- _ ] => rewrite H in H'
+                      | [ H : Forall2 _ nil _ |- _ ] => inversion H; clear H
+                      | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
                       end
-                    | congruence
                     | erewrite interp_op_nil_is_identity in * by eassumption
-                    | t ].
+                    | solve [ t ] ].
 Qed.
 
 Definition fold_consts_to_and :=
@@ -1471,57 +1635,6 @@ Proof using Type.
                     | t ].
 Qed.
 
-Lemma signed_0 s : signed s 0 = 0%Z.
-Proof using Type.
-  destruct (N.eq_dec s 0); subst; trivial.
-  cbv [signed].
-  rewrite !Z.land_ones, !Z.shiftl_mul_pow2, ?Z.add_0_r, ?Z.mul_1_l by Lia.lia.
-  rewrite Z.mod_small; try ring.
-  split; try (eapply Z.pow_lt_mono_r; Lia.lia).
-  eapply Z.pow_nonneg; Lia.lia.
-Qed.
-
-Definition opcarry_0_at1 :=
-  fun e => match e with ExprApp ((addcarryZ s|addcarry s|addoverflow s) as op, cons x args') =>
-  match interp0_expr x with
-  | Some 0 => ExprApp (op, args')
-  | _ => e end | _ => e end%Z.
-Global Instance opcarry_0_at1_ok : Ok opcarry_0_at1.
-Proof using Type.
-  t;
-  try (eapply eval_eval in E; [|
-    match goal with H : eval _ ?d _ _ |- _ => assert_fails (has_evar d); exact H end]);
-  subst; cbn; repeat (rewrite ?Z.add_0_r, ?signed_0); f_equal.
-Qed.
-
-Definition opcarry_0_at2 :=
-  fun e => match e with ExprApp ((subborrowZ s|subborrow s|addcarryZ s|addcarry s|addoverflow s) as op, cons x (cons y args')) =>
-  match interp0_expr y with
-  | Some 0 => ExprApp (op, cons x args')
-  | __ => e end | _ => e end%Z.
-Global Instance opcarry_0_at2_ok : Ok opcarry_0_at2.
-Proof using Type.
-  t;
-  try (eapply eval_eval in E; [|
-    match goal with H : eval _ ?d _ _ |- _ => assert_fails (has_evar d); exact H end]);
-  subst; cbn; repeat (rewrite ?Z.add_0_r, ?signed_0); f_equal.
-Qed.
-
-Definition opcarry_0_at3 :=
-  fun e => match e with ExprApp ((subborrowZ s|subborrow s|addcarryZ s|addcarry s|addoverflow s) as op, cons x (cons y (cons z args'))) =>
-  match interp0_expr z with
-  | Some 0 => ExprApp (op, cons x (cons y args'))
-  | _ => e end | _ => e end%Z.
-Global Instance opcarry_0_at3_ok : Ok opcarry_0_at3.
-Proof using Type.
-  t;
-  try (eapply eval_eval in E; [|
-    match goal with H : eval _ ?d _ _ |- _ => assert_fails (has_evar d); exact H end]);
-  try (eapply eval_eval in E0; [|
-    match goal with H : eval _ ?d _ _ |- _ => assert_fails (has_evar d); exact H end]);
-  subst; cbn; repeat (rewrite ?Z.add_0_r, ?signed_0); f_equal.
-Qed.
-
 Definition xor_same :=
   fun e => match e with ExprApp (xor _,[x;y]) =>
     if expr_beq x y then ExprApp (const 0, nil) else e | _ => e end.
@@ -1532,9 +1645,9 @@ Qed.
 
 Definition shift_to_mul :=
   fun e => match e with
-    ExprApp ((shl _ | shlx _ | shlZ) as o, [e'; ExprApp (const v, [])]) =>
-      let o' := match o with shl bitwidth | shlx bitwidth => mul bitwidth | shlZ => mulZ | _ => o (* impossible *) end in
-      let bw := match o with shl bitwidth | shlx bitwidth => Some bitwidth | shlZ => None | _ => None (* impossible *) end in
+    ExprApp ((shl _ | shlZ) as o, [e'; ExprApp (const v, [])]) =>
+      let o' := match o with shl bitwidth => mul bitwidth | shlZ => mulZ | _ => o (* impossible *) end in
+      let bw := match o with shl bitwidth => Some bitwidth | shlZ => None | _ => None (* impossible *) end in
       if Z.eqb v 0
       then match bw with
            | Some N0 => ExprApp (const 0, nil)
@@ -2049,9 +2162,6 @@ Definition expr : expr -> expr :=
   ;consts_commutative
   ;fold_consts_to_and
   ;drop_identity
-  ;opcarry_0_at1
-  ;opcarry_0_at3
-  ;opcarry_0_at2
   ;unary_truncate
   ;truncate_small
   ;combine_consts
