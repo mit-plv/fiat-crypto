@@ -369,9 +369,11 @@ src/Util/Strings/String_as_OT_old.v
 src/Util/Strings/Subscript.v
 src/Util/Strings/Superscript.v
 src/Util/Strings/Parse/Common.v
+src/Util/Structures/Equalities.v
 src/Util/Structures/OrderedType.v
 src/Util/Structures/Orders.v
 src/Util/Structures/Equalities/Bool.v
+src/Util/Structures/Equalities/Empty.v
 src/Util/Structures/Equalities/Iso.v
 src/Util/Structures/Equalities/List.v
 src/Util/Structures/Equalities/Option.v
@@ -379,8 +381,12 @@ src/Util/Structures/Equalities/Prod.v
 src/Util/Structures/Equalities/Sum.v
 src/Util/Structures/Equalities/Unit.v
 src/Util/Structures/OrderedType/Iso.v
+src/Util/Structures/Orders/Bool.v
+src/Util/Structures/Orders/Empty.v
 src/Util/Structures/Orders/Iso.v
+src/Util/Structures/Orders/List.v
 src/Util/Structures/Orders/Sum.v
+src/Util/Structures/Orders/Unit.v
 src/Util/Tactics/AllInstances.v
 src/Util/Tactics/AllSuccesses.v
 src/Util/Tactics/AppendUnderscores.v
