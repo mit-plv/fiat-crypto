@@ -189,7 +189,7 @@ Module solinas_reduction.
         forall q_lo q_hi1 q_hi2,
           let q := reduce1 base s c (S n) (S n) p in
           q = q_lo ++ [q_hi1] ++ [q_hi2] ->
-          canonical_repr n q ->
+          canonical_repr (S n) q ->
           ((* canonical_repr n q /\ *)
              ((q_hi2 = 1 /\ q_hi1 = 0) \/
                 (q_hi2 = 0))).
@@ -227,17 +227,11 @@ Module solinas_reduction.
         rewrite snd_split_app.
         autorewrite with push_eval.
 
-        assert (z = 2^256) by admit.
-        subst.
-
-
-        Search Rows.adjust_s.
-
         all: admit.
       }
 
       assert (q_hi2 < 2).
-      { pose proof fun pf => nth_default_partition weight 0 n (eval weight n q) (1 + length q_lo) pf.
+      { pose proof fun pf => nth_default_partition weight 0 (S n) (eval weight (S n) q) (1 + length q_lo) pf.
         unfold canonical_repr in H2.
         destruct H2.
         rewrite <-H5 in H0.
@@ -251,7 +245,6 @@ Module solinas_reduction.
         simpl in H0.
         rewrite Hevalq in H0.
         rewrite H0.
-        replace 1 with (weight (S (Datatypes.length q_lo)) / weight (S (Datatypes.length q_lo))) by admit.
         Search (_ / _ < _).
         apply Z.div_lt_upper_bound.
         admit.
@@ -272,16 +265,59 @@ Module solinas_reduction.
       intuition.
       left.
       intuition.
-      pose proof f_equal (eval weight n) H1.
+      pose proof f_equal (eval weight (S n)) H1.
       rewrite app_assoc in H6.
       Search eval app.
       erewrite eval_snoc in H6.
       2: eauto.
       erewrite eval_snoc in H6.
       2: eauto.
+      Search (_ = _ + _ -> _ - _ = _).
       rewrite Hevalq in H6.
-      pose proof Z.mod_le.
+      subst.
+      autorewrite with zsimplify_const in H6.
+      apply LinearSubstitute.Z.move_L_pX with (y:=weight (Datatypes.length (q_lo ++ [q_hi1]))) in H6.
+      Search nth_default Partition.partition.
+      pose proof fun pf => nth_default_partition weight 0 (n) (38 * hi + eval weight n lo - weight (Datatypes.length (q_lo ++ [q_hi1]))) (length q_lo) pf.
+      assert (Partition.partition weight n (38 * hi + eval weight n lo - weight (Datatypes.length (q_lo ++ [q_hi1]))) = q_lo ++ [q_hi1]) by admit.
+      rewrite H7 in H.
+      rewrite nth_default_app in H.
+      destruct lt_dec in H.
+      lia.
+      replace (Datatypes.length q_lo - Datatypes.length q_lo)%nat with 0%nat in H by lia.
+      replace (nth_default 0 [q_hi1] 0) with (q_hi1) in H.
+      2: { unfold nth_default.
+           reflexivity. }
+      rewrite H.
+      Search (_ / _ = 0).
+      apply Z.div_small.
+      split.
+      admit.
+      apply Le.Z.le_sub_1_iff.
+      etransitivity.
+      apply Z.mod_le.
+      admit.
+      apply wprops.
+      { admit. }
+      unfold canonical_repr in H2.
+      intuition.
+      apply f_equal with (f:=fun l => length l) in H1.
+      rewrite !app_length in H1.
+      cbn [Datatypes.length] in H1.
+      assert (Datatypes.length q_lo = (n - 1)%nat) by lia.
+      lia.
+      rewrite app_length.
+      cbn [Datatypes.length].
+      lia.
 
+      unfold canonical_repr in H2.
+      intuition.
+      apply f_equal with (f:=fun l => length l) in H1.
+      rewrite !app_length in *.
+      cbn [Datatypes.length] in *.
+      apply f_equal.
+      rewrite H8 in H1.
+      lia.
     Admitted.
 
   End __.
