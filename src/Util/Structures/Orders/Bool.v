@@ -51,7 +51,12 @@ Module BoolLeIsLtEq.
 End BoolLeIsLtEq.
 
 Module BoolHasCmp.
-  Definition compare := Bool.compare.
+  Definition compare (x y : bool) :=
+    match x, y with
+    | false, true => Lt
+    | true, true | false, false => Eq
+    | true, false => Gt
+    end.
 End BoolHasCmp.
 
 Module BoolCmpNotation := Nop <+ CmpNotation BoolTyp BoolHasCmp.
@@ -59,7 +64,7 @@ Module BoolCmpNotation := Nop <+ CmpNotation BoolTyp BoolHasCmp.
 Module BoolCmpSpec.
   Local Infix "<" := BoolHasLt.lt.
   Local Infix "==" := eq (at level 70).
-  Lemma compare_spec : forall x y, CompareSpec (x == y) (x < y) (y < x) (Bool.compare x y).
+  Lemma compare_spec : forall x y, CompareSpec (x == y) (x < y) (y < x) (BoolHasCmp.compare x y).
   Proof. t. Qed.
 End BoolCmpSpec.
 
@@ -108,7 +113,7 @@ End BoolUsualLeIsLtEq.
 
 Module BoolUsualCmpSpec.
   Local Infix "<" := BoolHasLt.lt.
-  Lemma compare_spec : forall x y, CompareSpec (x = y) (x < y) (y < x) (Bool.compare x y).
+  Lemma compare_spec : forall x y, CompareSpec (x = y) (x < y) (y < x) (BoolHasCmp.compare x y).
   Proof. t. Qed.
 End BoolUsualCmpSpec.
 
