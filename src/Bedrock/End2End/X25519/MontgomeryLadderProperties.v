@@ -4,6 +4,7 @@ Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.Syntax.
 Require Import compiler.Pipeline.
 Require Import compiler.MMIO.
+Require Import compiler.NaiveRiscvWordProperties.
 Require Import coqutil.Map.SortedListWord.
 Require Import coqutil.Map.Z_keyed_SortedListMap.
 Require Import coqutil.Word.Bitwidth32.
@@ -135,22 +136,10 @@ Proof.
      duplicates in arg/ret names *)
 Admitted.
 
-Local Instance TODO_reconcile_riscv_word_and_bedrock2_compiler_with_Naive : RiscvWordProperties.word.riscv_ok BasicC32Semantics.word.
-split.
-4: {
-  intros.
-  eapply word.unsigned_inj.
-  rewrite word.unsigned_mulhuu, word.unsigned_of_Z.
-  rewrite BitOps.bitSlice_alt by Lia.lia.
-  cbv [word.wrap BitOps.bitSlice'].
-  f_equal.
-  rewrite Z.mod_small; trivial.
-  pose proof word.unsigned_range y.
-  pose proof word.unsigned_range z.
-  Lia.nia. }
-Admitted.
+Local Instance naive_word_riscv_ok :
+  RiscvWordProperties.word.riscv_ok BasicC32Semantics.word := naive_word_riscv_ok 5.
 
-Lemma weaken_bounded_by : 
+Lemma weaken_bounded_by :
 forall X : list Z,
 COperationSpecifications.list_Z_bounded_by
   (UnsaturatedSolinasHeuristics.tight_bounds n s c) X ->
