@@ -1,5 +1,6 @@
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Import Coq.Structures.Equalities.
+Require Import Crypto.Util.Structures.Equalities.
 Require Import Crypto.Util.Bool.
 
 Local Set Implicit Arguments.
@@ -67,3 +68,10 @@ Module BoolUsualBoolEq <: UsualBoolEq
 := BoolUsualEq <+ BoolUsualHasEqBool.
 Module BoolUsualDecidableTypeFull <: UsualDecidableTypeFull
  := BoolUsualEq <+ UsualIsEq <+ UsualIsEqOrig <+ BoolUsualHasEqDec <+ BoolUsualHasEqBool.
+Local Coercion is_true : bool >-> Sortclass.
+Module BoolIsEqb <: IsEqb BoolTyp BoolHasEqb.
+  Global Instance eqb_equiv : Equivalence Bool.eqb | 5.
+  Proof.
+    split; cbv; repeat intros []; constructor.
+  Qed.
+End BoolIsEqb.

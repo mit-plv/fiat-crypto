@@ -2,6 +2,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.Lists.SetoidList.
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Import Coq.Structures.Equalities.
+Require Import Crypto.Util.Structures.Equalities.
 Require Import Crypto.Util.ListUtil.
 
 Local Set Implicit Arguments.
@@ -11,7 +12,6 @@ Module ListTyp (E : Typ) <: Typ.
 End ListTyp.
 
 Module ListHasEq (E : Eq).
-  Search list relation.
   Definition eq : relation (list E.t) := eqlistA E.eq.
 End ListHasEq.
 
@@ -23,11 +23,21 @@ Module ListIsEq (E : EqualityType).
   Defined.
 End ListIsEq.
 
-Module ListHasEqDec (E : Equalities.DecidableType).
+Module ListIsEqOrig (E : EqualityTypeOrig).
+  Local Notation eq := (eqlistA E.eq).
+  Lemma eq_refl : Reflexive eq.
+  Proof. apply eqlistA_equiv; split; first [ exact E.eq_refl | exact E.eq_sym | exact E.eq_trans ]. Qed.
+  Lemma eq_sym : Symmetric eq.
+  Proof. apply eqlistA_equiv; split; first [ exact E.eq_refl | exact E.eq_sym | exact E.eq_trans ]. Qed.
+  Lemma eq_trans : Transitive eq.
+  Proof. apply eqlistA_equiv; split; first [ exact E.eq_refl | exact E.eq_sym | exact E.eq_trans ]. Qed.
+End ListIsEqOrig.
+
+Module ListHasEqDec (E : Eq) (EDec : HasEqDec E).
   Local Notation eq := (eqlistA E.eq).
   Definition eq_dec x y : {eq x y} + {~eq x y}.
   Proof.
-    revert y; induction x as [|x xs IH], y as [|y ys]; try destruct (IH ys), (E.eq_dec x y).
+    revert y; induction x as [|x xs IH], y as [|y ys]; try destruct (IH ys), (EDec.eq_dec x y).
     all: try solve [ constructor; repeat (constructor + assumption) ].
     all: try (right; abstract (inversion 1; subst; eauto)).
   Defined.
@@ -97,15 +107,25 @@ Module ListUsualHasEqBool (E : UsualBoolEq) := ListHasEqb E E <+ ListUsualEqbSpe
 
 Module ListEq (E : Eq) <: Eq := ListTyp E <+ ListHasEq E.
 Module ListEqualityType (E : EqualityType) <: EqualityType := ListEq E <+ ListIsEq E.
-Module ListDecidableType (E : DecidableType) <: EqualityType := ListEqualityType E <+ ListHasEqDec E.
+Module ListEqualityTypeOrig (E : EqualityTypeOrig) <: EqualityTypeOrig := ListEq E <+ ListIsEqOrig E.
+Module ListEqualityTypeBoth (E : EqualityTypeBoth) <: EqualityTypeBoth := ListEq E <+ ListIsEq E <+ ListIsEqOrig E.
+Module ListDecidableType (E : DecidableType) <: EqualityType := ListEqualityType E <+ ListHasEqDec E E.
+Module ListDecidableTypeOrig (E : DecidableTypeOrig) <: DecidableTypeOrig := ListEqualityTypeOrig E <+ ListHasEqDec E E.
+Module ListDecidableTypeBoth (E : DecidableTypeBoth) <: DecidableTypeBoth := ListEqualityTypeBoth E <+ ListHasEqDec E E.
 Module ListBooleanEqualityType (E : BooleanEqualityType) <: BooleanEqualityType := ListEqualityType E <+ ListHasEqb E E <+ ListEqbSpec E E E E.
-Module ListBooleanDecidableType (E : BooleanDecidableType) <: BooleanDecidableType := ListBooleanEqualityType E <+ ListHasEqDec E.
+Module ListBooleanDecidableType (E : BooleanDecidableType) <: BooleanDecidableType := ListBooleanEqualityType E <+ ListHasEqDec E E.
+Module ListDecidableTypeFull (E : DecidableTypeFull) <: DecidableTypeFull := ListEq E <+ ListIsEq E <+ ListIsEqOrig E <+ ListHasEqDec E E <+ ListHasEqBool E E.
 
 Module ListEq' (E : Eq) := ListEq E <+ EqNotation.
 Module ListEqualityType' (E : EqualityType) := ListEqualityType E <+ EqNotation.
+Module ListEqualityTypeOrig' (E : EqualityTypeOrig) := ListEqualityTypeOrig E <+ EqNotation.
+Module ListEqualityTypeBoth' (E : EqualityTypeBoth) := ListEqualityTypeBoth E <+ EqNotation.
 Module ListDecidableType' (E : DecidableType) := ListDecidableType E <+ EqNotation.
+Module ListDecidableTypeOrig' (E : DecidableTypeOrig) := ListDecidableTypeOrig E <+ EqNotation.
+Module ListDecidableTypeBoth' (E : DecidableTypeBoth) := ListDecidableTypeBoth E <+ EqNotation.
 Module ListBooleanEqualityType' (E : BooleanEqualityType) := ListBooleanEqualityType E <+ EqNotation <+ EqbNotation.
 Module ListBooleanDecidableType' (E : BooleanDecidableType) := ListBooleanDecidableType E <+ EqNotation <+ EqbNotation.
+Module ListBooleanDecidableTypeFull' (E : DecidableTypeFull) := ListDecidableTypeFull E <+ EqNotation.
 
 Module ListUsualEqualityType (E : UsualEqualityType) <: UsualEqualityType := ListUsualEq E <+ UsualIsEq.
 
@@ -119,3 +139,19 @@ Module ListUsualBoolEq (E : UsualBoolEq) <: UsualBoolEq
 := ListUsualEq E <+ ListUsualHasEqBool E.
 Module ListUsualDecidableTypeFull (E : UsualDecidableTypeFull) <: UsualDecidableTypeFull
  := ListUsualEq E <+ UsualIsEq <+ UsualIsEqOrig <+ ListUsualHasEqDec E <+ ListUsualHasEqBool E.
+
+Local Coercion is_true : bool >-> Sortclass.
+Module ListIsEqb (E : Typ) (Eb : HasEqb E) (EEqb' : IsEqb E Eb).
+  Global Instance eq_equiv : Equivalence (list_beq _ Eb.eqb) | 5.
+  Proof.
+    split; hnf;
+      [ induction x as [|x xs IH];
+        try pose proof ((_ : Reflexive Eb.eqb) x)
+      | induction x as [|x xs IH], y as [|y ys];
+        try (specialize (IH ys); pose proof ((_ : Symmetric Eb.eqb) x y))
+      | induction x as [|x xs IH], y as [|y ys], z as [|z zs];
+        try (specialize (IH ys zs); pose proof ((_ : Transitive Eb.eqb) x y z)) ];
+      cbn in *; cbv [is_true] in *;
+      rewrite ?Bool.andb_true_iff; intuition (congruence + eauto).
+  Qed.
+End ListIsEqb.
