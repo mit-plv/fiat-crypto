@@ -105,8 +105,8 @@ Lemma padding_eqn a b:
    if a mod b =? 0 then 0 else b - a mod b)%nat.
 Proof.
   destruct (Nat.eq_dec b 0); [subst; destruct (_ =? _)%nat; reflexivity|].
-  intros; rewrite div_up_eqn by lia.
-  destruct (Nat.eqb_spec (a mod b) 0); div_up_t.
+  intros; rewrite Nat.div_up_eqn by lia.
+  destruct (Nat.eqb_spec (a mod b) 0); Nat.div_up_t.
 Qed.
 
 Lemma padding_len_eqn {T} (l: list T) m:
@@ -657,7 +657,6 @@ Section CompileBufWord32.
     split.
     { eapply WeakestPrecondition_dexpr_expr; eauto. }
     seprewrite_in @scalar32_of_bytes H5; trivial.
-    { reflexivity. }
     { subst sz. rewrite word.unsigned_of_Z in H6.
       rewrite word.wrap_small in H6; lia. }
     eapply store_four_of_sep.
@@ -1530,11 +1529,11 @@ Proof.
   f_equal.
   cbn [List.app List.map].
   rewrite word.unsigned_add, !word.unsigned_of_Z, map_map.
-  rewrite map_unsigned_of_Z_le_combine_4.
+  pose proof map_unsigned_of_Z_le_combine as P. cbn zeta in P. rewrite P. clear P.
   cbn [List.flat_map]. f_equal.
   + unfold word.wrap; Z.push_pull_mod; rewrite <- le_split_mod.
     f_equal; simpl; lia.
-  + rewrite flat_map_le_split_combine_chunk; eauto || reflexivity.
+  + rewrite flat_map_le_split_combine_chunk; eauto. cbv. lia.
 Qed.
 
 Definition chacha20poly1305_aead_encrypt aad key iv constant plaintext tag :=
@@ -1613,7 +1612,7 @@ Proof.
   erewrite map_ext_in with (g := fun x => length (snd x)); cycle 1.
   - intros (?&?); unfold zip.
     rewrite map_length, combine_length. cbn [snd].
-    intros Hin%in_combine_r%(Forall_In (Forall_chunk_length_le _ 64 ltac:(lia))).
+    intros Hin%in_combine_r%(Forall_In (@Forall_chunk_length_le _ 64 ltac:(lia) _)).
     unshelve epose proof length_spec_chacha20_block key (le_split 4 (Z.of_nat n) ++ nonce) ltac:(auto) _.
     { rewrite app_length, length_le_split; lia. }
     lia.
@@ -1677,7 +1676,7 @@ Lemma chunk_pad bs n:
   else chunk n (firstn rlen bs) ++ [pad (skipn rlen bs) n].
 Proof.
   intros; unfold pad; rewrite <- (firstn_skipn (n * (length bs / n))%nat bs), <- !app_assoc.
-  rewrite !(chunk_app (firstn _ _)), !firstn_skipn; try lia.
+  unshelve erewrite !(chunk_app _ _ (firstn _ _)), !firstn_skipn; try lia.
   subst rlen; rewrite padding_len_round, padding_len_eqn, !Nat_mod_eq'' by lia.
   2-3: rewrite firstn_length_le, Nat.mul_comm, Nat.mod_mul; try lia; apply Nat.mul_div_le; lia.
   destruct (Nat.eqb_spec (length bs mod n) 0) as [->|Hnz]; f_equal.
@@ -1704,8 +1703,8 @@ Proof.
     erewrite (fold_left_Proper f' f); [ | reflexivity.. | ]; cycle 1
   end. {
     intros * Hin;
-      pose proof (Forall_In (Forall_chunk_length_mod _ 16 ltac:(lia)) Hin) as Hmod;
-      pose proof (Forall_In (Forall_chunk_length_le _ 16 ltac:(lia)) Hin) as Hle;
+      pose proof (Forall_In (Forall_chunk_length_mod 16 ltac:(lia) _) Hin) as Hmod;
+      pose proof (Forall_In (Forall_chunk_length_le 16 ltac:(lia) _) Hin) as Hle;
       cbv beta in *.
     unfold padding_len, padded_len in *.
     rewrite (length_padded_mod 16 msg x00) in * by lia.
@@ -1765,8 +1764,11 @@ Proof.
     autounfold with poly; intros.
 
   cbn [List.app List.map List.flat_map].
-  rewrite !map_app, !map_map with (f := word.of_Z), !map_unsigned_of_Z_le_combine_4.
-  rewrite <- !map_app, <- !chunk_app, flat_map_le_split_combine_chunk; [ | solve[eauto] || lia ..].
+  rewrite !map_app, !map_map with (f := word.of_Z).
+  pose proof map_unsigned_of_Z_le_combine as P. cbn zeta in P. rewrite !P. clear P.
+  rewrite <- !map_app.
+  rewrite <- !chunk_app, flat_map_le_split_combine_chunk;
+    [ | solve[eauto] || (try (cbn; lia)) ..].
   rewrite chacha20_encrypt_ok, chacha20_block_ok by eauto.
 
   apply f_equal2; [ reflexivity | ]. (* FIXME why does f_equal not work? *)
