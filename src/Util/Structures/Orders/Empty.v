@@ -31,8 +31,8 @@ Local Ltac t :=
                | congruence
                | progress destruct_head'_Empty_set
                | progress destruct_head'_or
-               | exactly_once constructor
-               | solve [ eauto ] ].
+               | solve [ eauto ]
+               | exactly_once constructor ].
 
 Module EmptyIsStrOrder.
   Global Instance lt_strorder : StrictOrder EmptyHasLt.lt | 1.

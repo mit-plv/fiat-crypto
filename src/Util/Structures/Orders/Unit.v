@@ -32,8 +32,8 @@ Local Ltac t :=
                | congruence
                | progress destruct_head'_unit
                | progress destruct_head'_or
-               | exactly_once constructor
-               | solve [ eauto ] ].
+               | solve [ eauto ]
+               | exactly_once constructor ].
 
 Module UnitIsStrOrder.
   Global Instance lt_strorder : StrictOrder UnitHasLt.lt | 1.

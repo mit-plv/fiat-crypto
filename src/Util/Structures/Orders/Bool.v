@@ -32,8 +32,8 @@ Local Ltac t :=
                | progress congruence
                | progress destruct_head'_bool
                | progress destruct_head'_or
-               | exactly_once constructor
-               | solve [ eauto ] ].
+               | solve [ eauto ]
+               | exactly_once constructor ].
 
 Module BoolIsStrOrder.
   Global Instance lt_strorder : StrictOrder BoolHasLt.lt | 1.
