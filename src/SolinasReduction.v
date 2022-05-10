@@ -10,6 +10,7 @@ Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
+Require Import Crypto.Arithmetic.UniformWeight.
 Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
 Require Crypto.Stringification.C.
@@ -74,7 +75,10 @@ Module solinas_reduction.
 
   Section __.
 
-    Context weight {wprops : @weight_properties weight}.
+    Print weight_properties.
+
+    Context (weight := uweight 64)
+            {wprops : @weight_properties weight}.
 
     Definition sat_reduce base s c n (p : list (Z * Z)) :=
       let s' := fst (Saturated.Rows.adjust_s weight (S (S n)) s) in
@@ -190,45 +194,81 @@ Module solinas_reduction.
           let q := reduce1 base s c (S n) (S n) p in
           q = q_lo ++ [q_hi1] ++ [q_hi2] ->
           canonical_repr (S n) q ->
-          ((* canonical_repr n q /\ *)
-             ((q_hi2 = 1 /\ q_hi1 = 0) \/
-                (q_hi2 = 0))).
+          ((q_hi2 = 1 /\ q_hi1 = 0) \/
+             (q_hi2 = 0)).
     Proof using wprops.
       intros.
       intuition.
 
       assert (Hevalq : eval weight (S n) q = 38 * hi + eval weight n lo).
-      { cbv [reduce1] in *.
+      { cbv [reduce1 canonical_repr] in *.
+        intuition.
         cbv [q].
         rewrite !H.
-        Search eval Rows.flatten.
         rewrite Rows.flatten_mod.
-        Search Rows.eval Rows.from_associational.
         rewrite Rows.eval_from_associational.
-        Search Associational.eval sat_reduce.
         rewrite value_sat_reduce.
 
         lazymatch goal with
         | |- context[Saturated.Rows.adjust_s ?weight ?fuel ?s] =>
             destruct (adjust_s_invariant fuel s ltac:(assumption)) as [Hmod ?]
         end.
-        destruct Rows.adjust_s.
+
+        assert (Rows.adjust_s weight (S (S (S n))) s = (weight 4, true)) by admit.
+        rewrite H7 in *.
+
+        Search Rows.adjust_s.
         cbn [fst] in *.
         cbv [to_associational].
-        Search combine app.
-        Search seq app.
         rewrite seq_snoc.
         rewrite map_app.
         replace (map weight [(0 + n)%nat]) with [weight n] by auto.
         rewrite combine_snoc.
 
-        Search split snd.
         rewrite fst_split_app.
         rewrite snd_split_app.
         autorewrite with push_eval.
 
-        all: admit.
-      }
+        assert (n = 4%nat) by admit.
+        rewrite H8.
+        assert (split (weight 4) [(weight 4, hi)] = ([], [(1, hi)])) by eauto.
+        rewrite H9; cbn [fst snd].
+        autorewrite with push_eval; cbn [fst snd]; autorewrite with zsimplify_const.
+        assert (split (weight 4) (combine (map weight (seq 0 4)) lo) =
+                  ((combine (map weight (seq 0 4)) lo), [])).
+        { admit. }
+        rewrite H10; cbn [fst snd].
+        autorewrite with push_eval; cbn [fst snd]; autorewrite with zsimplify_const.
+        assert (s = 2^255) by admit.
+        assert (c = [(1, 19)]) by admit.
+        assert (base = 2^256) by admit.
+        rewrite H11, H12, H13.
+        replace (weight 4 / 2 ^ 255) with 2 by eauto.
+        replace (Associational.sat_mul_const (2 ^ 256) [(1, 2)] [(1, 19)]) with ([(1, 38)]) by admit.
+        autorewrite with push_eval; cbn [fst snd]; autorewrite with zsimplify_const.
+        unfold eval, to_associational.
+        Search (?x mod _ = ?x).
+        apply Zmod_small.
+        split.
+        admit.
+        Locate "<=".
+
+        admit. (* plugging in constant values *)
+
+        rewrite H in H2.
+        rewrite app_length in H2.
+        simpl in H2.
+        rewrite plus_comm in H2.
+        rewrite map_length.
+        rewrite seq_length.
+        lia.
+
+        admit. (* base <> 0 *)
+        eauto.
+        lia.
+        eauto.
+        intros.
+        eapply Rows.length_from_associational; eauto. }
 
       assert (q_hi2 < 2).
       { pose proof fun pf => nth_default_partition weight 0 (S n) (eval weight (S n) q) (1 + length q_lo) pf.
