@@ -177,3 +177,8 @@ Module EmptyBoolOrdSpecs := EmptyEqbSpec <+ EmptyLtbSpec <+ EmptyLebSpec.
 
 Module EmptyOrderFunctions := EmptyHasCompare <+ EmptyHasEmptyOrdFuns <+ EmptyBoolOrdSpecs.
 Module EmptyOrderFunctions' := EmptyHasCompare <+ EmptyCmpNotation <+ EmptyHasEmptyOrdFuns' <+ EmptyBoolOrdSpecs.
+
+Require Import Coq.Structures.OrderedType.
+Require Import Crypto.Util.Structures.OrderedType.
+Module EmptyOrderedTypeOrig <: OrderedType.OrderedType := OT_of_New EmptyOrderedType.
+Module EmptyMiniOrderedType <: OrderedType.MiniOrderedType := EmptyOrderedTypeOrig.
