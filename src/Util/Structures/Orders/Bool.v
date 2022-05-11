@@ -182,3 +182,8 @@ Module BoolBoolOrdSpecs := BoolEqbSpec <+ BoolLtbSpec <+ BoolLebSpec.
 
 Module BoolOrderFunctions := BoolHasCompare <+ BoolHasBoolOrdFuns <+ BoolBoolOrdSpecs.
 Module BoolOrderFunctions' := BoolHasCompare <+ BoolCmpNotation <+ BoolHasBoolOrdFuns' <+ BoolBoolOrdSpecs.
+
+Require Import Coq.Structures.OrderedType.
+Require Import Crypto.Util.Structures.OrderedType.
+Module BoolOrderedTypeOrig <: OrderedType.OrderedType := OT_of_New BoolOrderedType.
+Module BoolMiniOrderedType <: OrderedType.MiniOrderedType := BoolOrderedTypeOrig.

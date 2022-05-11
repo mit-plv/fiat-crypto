@@ -454,3 +454,14 @@ End LebIsLtbEqb.
 
 
 *)
+
+Require Import Coq.Structures.OrderedType.
+Require Import Crypto.Util.Structures.OrderedType.
+Module ListOrderedTypeOrig (E : OrderedType.MiniOrderedType) <: OrderedType.OrderedType.
+  Module Import _ListOrderedTypeOrig.
+    Module E' := OT_of_Orig E.
+    Module L := ListOrderedType E'.
+  End _ListOrderedTypeOrig.
+  Include OT_of_New L.
+End ListOrderedTypeOrig.
+Module ListMiniOrderedType (E : OrderedType.MiniOrderedType) <: OrderedType.MiniOrderedType := ListOrderedTypeOrig E.

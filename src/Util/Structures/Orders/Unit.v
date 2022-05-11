@@ -178,3 +178,8 @@ Module UnitBoolOrdSpecs := UnitEqbSpec <+ UnitLtbSpec <+ UnitLebSpec.
 
 Module UnitOrderFunctions := UnitHasCompare <+ UnitHasUnitOrdFuns <+ UnitBoolOrdSpecs.
 Module UnitOrderFunctions' := UnitHasCompare <+ UnitCmpNotation <+ UnitHasUnitOrdFuns' <+ UnitBoolOrdSpecs.
+
+Require Import Coq.Structures.OrderedType.
+Require Import Crypto.Util.Structures.OrderedType.
+Module UnitOrderedTypeOrig <: OrderedType.OrderedType := OT_of_New UnitOrderedType.
+Module UnitMiniOrderedType <: OrderedType.MiniOrderedType := UnitOrderedTypeOrig.

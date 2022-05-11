@@ -231,3 +231,15 @@ Module SumOrderFunctions (E1 : EqLtLe) (E2 : EqLtLe) (E1f : OrderFunctions E1) (
 := SumHasCompare E1 E2 E1f E2f <+ SumHasBoolOrdFuns E1 E2 E1f E2f <+ SumBoolOrdSpecs E1 E2 E1f E2f E1f E2f.
 Module SumOrderFunctions' (E1 : EqLtLe) (E2 : EqLtLe) (E1f : OrderFunctions E1) (E2f : OrderFunctions E2)
 := SumHasCompare E1 E2 E1f E2f <+ SumCmpNotation E1 E2 E1f E2f <+ SumHasBoolOrdFuns' E1 E2 E1f E2f <+ SumBoolOrdSpecs E1 E2 E1f E2f E1f E2f.
+
+Require Import Coq.Structures.OrderedType.
+Require Import Crypto.Util.Structures.OrderedType.
+Module SumOrderedTypeOrig (E1 : OrderedType.MiniOrderedType) (E2 : OrderedType.MiniOrderedType) <: OrderedType.OrderedType.
+  Module Import _SumOrderedTypeOrig.
+    Module E1' := OT_of_Orig E1.
+    Module E2' := OT_of_Orig E2.
+    Module S := SumOrderedType E1' E2'.
+  End _SumOrderedTypeOrig.
+  Include OT_of_New S.
+End SumOrderedTypeOrig.
+Module SumMiniOrderedType (E1 : OrderedType.MiniOrderedType) (E2 : OrderedType.MiniOrderedType) <: OrderedType.MiniOrderedType := SumOrderedTypeOrig E1 E2.
