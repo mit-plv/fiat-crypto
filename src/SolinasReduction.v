@@ -170,27 +170,40 @@ Module solinas_reduction.
     Hint Resolve length_partition : push_length.
     Hint Resolve Rows.length_from_associational : push_length.
 
+    Lemma canonical_pos n : forall (p : list Z),
+        canonical_repr n p ->
+        0 <= eval weight n p.
+    Proof.
+      intros.
+      unfold canonical_repr in *.
+      intuition.
+      pose proof Partition.eval_partition.
+      specialize (H weight wprops n (eval weight n p)).
+      rewrite <-H1 in H.
+      rewrite H.
+      apply Z.mod_pos_bound.
+      eauto.
+    Qed.
+
     Lemma canonical_bounded n : forall (p : list Z),
         canonical_repr n p ->
         forall x, In x p -> 0 <= x < 2 ^ machine_wordsize.
     Proof.
       intros.
-      unfold canonical_repr, Partition.partition in *.
+      pose proof (canonical_pos n p H).
+      unfold canonical_repr, Partition.partition in H.
       destruct H.
-      rewrite H1 in H0.
+      rewrite H2 in H0.
       rewrite in_map_iff in H0.
       destruct H0.
       intuition.
-      Print Partition.partition.
-      { rewrite <-H2.
-        assert (0 <= eval weight n p) by admit.
+      { rewrite <-H3.
         apply Z.div_nonneg.
         apply Z_mod_nonneg_nonneg.
         assumption.
         eauto using Z.lt_le_incl.
         eauto using Z.lt_le_incl. }
-      { rewrite <-H2.
-        Search (_ < _ * _ -> _ / _ < _).
+      { rewrite <-H3.
         apply OrdersEx.Z_as_OT.div_lt_upper_bound; eauto.
         assert (weight (S x0) = weight x0 * 2 ^ machine_wordsize).
         { unfold weight, uweight, ModOps.weight.
@@ -205,7 +218,7 @@ Module solinas_reduction.
         rewrite <-H0.
         apply OrdersEx.Z_as_OT.mod_pos_bound.
         eauto. }
-    Admitted.
+    Qed.
 
     Lemma reduce_canonical_repr base s c n m : forall (p : list Z),
         canonical_repr m (reduce1 base s c n m p).
@@ -326,6 +339,10 @@ Module solinas_reduction.
              (q_hi2 = 0)).
     Proof using wprops.
       intros.
+
+      (* pose proof *)
+      (*      (value_reduce_second base s c n s_nz p lo hi H H0 H2). *)
+
       intuition.
 
       assert (Hevalq : eval weight (S n) q = 38 * hi + eval weight n lo).
@@ -392,7 +409,6 @@ Module solinas_reduction.
           intuition.
           discriminate x. }
         unfold weight in *.
-        lia.
 
         all: admit.
 
