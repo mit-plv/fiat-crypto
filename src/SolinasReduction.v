@@ -220,6 +220,48 @@ Module solinas_reduction.
         eauto. }
     Qed.
 
+    Lemma canonical_eval_bounded n : forall (p : list Z),
+        canonical_repr n p ->
+        eval weight n p < weight n.
+    Proof.
+      intros.
+      pose proof (canonical_bounded _ _ H).
+      unfold canonical_repr in *; intuition.
+      induction p; simpl.
+      { simpl in H1; subst.
+        vm_compute.
+        eauto. }
+      { simpl in H1; subst.
+        rewrite eval_cons.
+        autorewrite with zsimplify_const.
+        rewrite <-IHp.
+    Admitted.
+
+    Lemma canonical_app : forall n n1 n2 (p p1 p2: list Z),
+        p = p1 ++ p2 ->
+        length p1 = n1 ->
+        length p2 = n2 ->
+        canonical_repr (n) p ->
+        canonical_repr n1 p1 /\ canonical_repr n2 p2.
+    Proof.
+      intros.
+      unfold canonical_repr in *.
+      rewrite H in H2.
+      intuition.
+      unfold weight in H4.
+      Search (eval _ _ (_ ++ _)).
+      rewrite uweight_eval_app with (n:=n1) in H4.
+      Search (Partition.partition _ _ (_ + _)).
+      pose proof uweight_partition_app.
+      assert (eval (uweight machine_wordsize) n1 p1 =
+                eval (uweight machine_wordsize) n1 p1 mod uweight machine_wordsize n1).
+      { rewrite Z.mod_small.
+        eauto.
+        split.
+        admit.
+
+    Admitted.
+
     Lemma reduce_canonical_repr base s c n m : forall (p : list Z),
         canonical_repr m (reduce1 base s c n m p).
     Proof using wprops.
@@ -328,7 +370,7 @@ Module solinas_reduction.
       eapply Rows.length_from_associational; eauto.
     Admitted.
 
-    Theorem reduce_second base s c n (s_nz:s<>0) : forall (p : list Z) lo hi,
+    Theorem reduce_second' base s c n (s_nz:s<>0) : forall (p : list Z) lo hi,
         p = lo ++ [hi] ->
         (canonical_repr (S n) p /\ hi <= 39) ->
         forall q_lo q_hi1 q_hi2,
@@ -340,8 +382,118 @@ Module solinas_reduction.
     Proof using wprops.
       intros.
 
-      (* pose proof *)
-      (*      (value_reduce_second base s c n s_nz p lo hi H H0 H2). *)
+      pose proof
+           (value_reduce_second base s c n s_nz p lo hi H H0 H2).
+
+      assert (0 <= q_hi2 < 2).
+      { split.
+        { pose proof (canonical_bounded _ _ H2).
+          assert (In q_hi2 q).
+          { rewrite H1.
+            simpl.
+            apply in_or_app.
+            right.
+            simpl.
+            intuition. }
+          apply H4 in H5.
+          lia. }
+        { pose proof fun pf => nth_default_partition weight 0 (S n) (eval weight (S n) q) (1 + length q_lo) pf.
+          unfold canonical_repr in H2.
+          intuition.
+          rewrite <-H7 in H4.
+          rewrite H1 in H4 at 1.
+          rewrite nth_default_app in H4.
+          destruct (lt_dec) in H4; try lia.
+          replace (1 + Datatypes.length q_lo - Datatypes.length q_lo)%nat with 1%nat in H4 by lia.
+          unfold nth_default in H4.
+          simpl in H4.
+          cbv [q] in H4.
+          rewrite H3 in H4.
+          rewrite H4.
+          apply Z.div_lt_upper_bound.
+          eauto.
+          admit.
+          apply f_equal with (f:=fun l => length l) in H1.
+          rewrite !app_length in H1.
+          rewrite H0 in H1.
+          rewrite H1.
+          simpl.
+          lia. }
+      }
+      assert (q_hi2 = 1 \/ q_hi2 = 0) by lia.
+      intuition.
+      left.
+      intuition.
+      pose proof f_equal (eval weight (S n)) H1.
+      erewrite app_assoc, !eval_snoc in H5; eauto.
+      cbv [q] in H5.
+      rewrite H3 in H5.
+      subst.
+      autorewrite with zsimplify_const in H5.
+      Search (_ + _ + _).
+      (* rewrite <-Z.add_assoc in H5. *)
+      apply LinearSubstitute.Z.move_L_pX in H5.
+
+      remember (Associational.eval (Associational.sat_mul_const base [(1, fst (Rows.adjust_s weight (S (S (S n))) s) / s)] c)) as coef.
+      pose proof
+           fun pf => nth_default_partition weight 0 n (coef * hi + eval weight n lo - weight (S (Datatypes.length q_lo))) (length q_lo) pf.
+      assert (Partition.partition weight n (coef * hi + eval weight n lo - weight (S (Datatypes.length q_lo))) = q_lo ++ [q_hi1]) by admit.
+
+      (* apply LinearSubstitute.Z.move_L_pX with (y:=weight (Datatypes.length (q_lo ++ [q_hi1]))) in H5. *)
+      (* Search nth_default Partition.partition. *)
+      (* pose proof fun pf => nth_default_partition weight 0 (n) (38 * hi + eval weight n lo - weight (Datatypes.length (q_lo ++ [q_hi1]))) (length q_lo) pf. *)
+      (* assert (Partition.partition weight n (38 * hi + eval weight n lo - weight (Datatypes.length (q_lo ++ [q_hi1]))) = q_lo ++ [q_hi1]) by admit. *)
+      (* rewrite H7 in H. *)
+      (* rewrite nth_default_app in H. *)
+      (* destruct lt_dec in H. *)
+      (* lia. *)
+      (* replace (Datatypes.length q_lo - Datatypes.length q_lo)%nat with 0%nat in H by lia. *)
+      (* replace (nth_default 0 [q_hi1] 0) with (q_hi1) in H. *)
+      (* 2: { unfold nth_default. *)
+      (*      reflexivity. } *)
+      (* rewrite H. *)
+      (* Search (_ / _ = 0). *)
+      (* apply Z.div_small. *)
+      (* split. *)
+      (* admit. *)
+      (* apply Le.Z.le_sub_1_iff. *)
+      (* etransitivity. *)
+      (* apply Z.mod_le. *)
+      (* admit. *)
+      (* apply wprops. *)
+      (* { admit. } *)
+      (* unfold canonical_repr in H2. *)
+      (* intuition. *)
+      (* apply f_equal with (f:=fun l => length l) in H1. *)
+      (* rewrite !app_length in H1. *)
+      (* cbn [Datatypes.length] in H1. *)
+      (* assert (Datatypes.length q_lo = (n - 1)%nat) by lia. *)
+      (* lia. *)
+      (* rewrite app_length. *)
+      (* cbn [Datatypes.length]. *)
+      (* lia. *)
+
+      (* unfold canonical_repr in H2. *)
+      (* intuition. *)
+      (* apply f_equal with (f:=fun l => length l) in H1. *)
+      (* rewrite !app_length in *. *)
+      (* cbn [Datatypes.length] in *. *)
+      (* apply f_equal. *)
+      (* rewrite H8 in H1. *)
+      (* lia. *)
+    Admitted.
+
+    Theorem reduce_second base s c n (s_nz:s<>0) : forall (p : list Z) lo hi,
+        p = lo ++ [hi] ->
+        (canonical_repr (S n) p /\ hi <= 39) ->
+        forall q_lo q_hi1 q_hi2,
+          let q := reduce1 base s c (S n) (S n) p in
+          q = q_lo ++ [q_hi1] ++ [q_hi2] ->
+          canonical_repr (S n) q ->
+          ((q_hi2 = 1 /\ q_hi1 = 0) \/
+             (q_hi2 = 0)).
+    Proof using wprops.
+      intros.
 
       intuition.
 
@@ -445,7 +597,7 @@ Module solinas_reduction.
         rewrite H0.
         Search (_ / _ < _).
         apply Z.div_lt_upper_bound.
-        admit.
+        eauto.
 
         Search Z.lt Z.le 1 iff.
         apply Le.Z.le_sub_1_iff.
@@ -453,7 +605,9 @@ Module solinas_reduction.
         etransitivity.
         apply Z.mod_le.
         admit.
-        apply wprops.
+        eauto.
+
+
 
         admit.
         admit. }
