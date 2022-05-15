@@ -1,6 +1,7 @@
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Import Coq.Structures.Equalities.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Structures.Equalities.
 
 Local Set Implicit Arguments.
 
@@ -103,6 +104,15 @@ Module OptionMiniDecidableType (E : MiniDecidableType) <: MiniDecidableType.
   Include OptionUsualHasEqDec E'.
 End OptionMiniDecidableType.
 
+Local Coercion is_true : bool >-> Sortclass.
+Module OptionIsEqb (E : EqbType).
+  Global Instance eqb_equiv : Equivalence (option_beq E.eqb) | 5.
+  Proof.
+    destruct E.eqb_equiv.
+    split; repeat intros [|]; cbv in *; try congruence; eauto.
+  Qed.
+End OptionIsEqb.
+
 Module OptionUsualHasEqBool (E : UsualBoolEq) := OptionHasEqb E E <+ OptionUsualEqbSpec E.
 
 Module OptionEq (E : Eq) <: Eq := OptionTyp E <+ OptionHasEq E.
@@ -129,3 +139,5 @@ Module OptionUsualBoolEq (E : UsualBoolEq) <: UsualBoolEq
 := OptionUsualEq E <+ OptionUsualHasEqBool E.
 Module OptionUsualDecidableTypeFull (E : UsualDecidableTypeFull) <: UsualDecidableTypeFull
  := OptionUsualEq E <+ UsualIsEq <+ UsualIsEqOrig <+ OptionUsualHasEqDec E <+ OptionUsualHasEqBool E.
+
+Module OptionEqbType (E : EqbType) <: EqbType := OptionTyp E <+ OptionHasEqb E E <+ OptionIsEqb E.

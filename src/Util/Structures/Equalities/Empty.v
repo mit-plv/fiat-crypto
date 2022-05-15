@@ -33,6 +33,14 @@ Module EmptyEqbSpec.
   Proof. destruct x, y; cbv; repeat constructor. Qed.
 End EmptyEqbSpec.
 
+Local Coercion is_true : bool >-> Sortclass.
+Module EmptyIsEqb <: IsEqb EmptyTyp EmptyHasEqb.
+  Global Instance eqb_equiv : Equivalence EmptyHasEqb.eqb | 5.
+  Proof.
+    split; cbv; repeat intros []; constructor.
+  Qed.
+End EmptyIsEqb.
+
 Module EmptyHasEqBool := EmptyHasEqb <+ EmptyEqbSpec.
 
 Module EmptyUsualHasEqDec := EmptyHasEqDec.
@@ -69,10 +77,4 @@ Module EmptyUsualBoolEq <: UsualBoolEq
 Module EmptyUsualDecidableTypeFull <: UsualDecidableTypeFull
  := EmptyUsualEq <+ UsualIsEq <+ UsualIsEqOrig <+ EmptyUsualHasEqDec <+ EmptyUsualHasEqBool.
 
-Local Coercion is_true : bool >-> Sortclass.
-Module EmptyIsEqb <: IsEqb EmptyTyp EmptyHasEqb.
-  Global Instance eqb_equiv : Equivalence EmptyHasEqb.eqb | 5.
-  Proof.
-    split; cbv; repeat intros []; constructor.
-  Qed.
-End EmptyIsEqb.
+Module EmptyEqbType <: EqbType := EmptyTyp <+ EmptyHasEqb <+ EmptyIsEqb.

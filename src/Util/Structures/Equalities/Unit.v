@@ -34,6 +34,14 @@ Module UnitEqbSpec.
   Proof. destruct x, y; cbv; repeat constructor. Qed.
 End UnitEqbSpec.
 
+Local Coercion is_true : bool >-> Sortclass.
+Module UnitIsEqb <: IsEqb UnitTyp UnitHasEqb.
+  Global Instance eqb_equiv : Equivalence UnitHasEqb.eqb | 5.
+  Proof.
+    split; cbv; repeat intros []; constructor.
+  Qed.
+End UnitIsEqb.
+
 Module UnitHasEqBool := UnitHasEqb <+ UnitEqbSpec.
 
 Module UnitUsualHasEqDec := UnitHasEqDec.
@@ -70,10 +78,4 @@ Module UnitUsualBoolEq <: UsualBoolEq
 Module UnitUsualDecidableTypeFull <: UsualDecidableTypeFull
  := UnitUsualEq <+ UsualIsEq <+ UsualIsEqOrig <+ UnitUsualHasEqDec <+ UnitUsualHasEqBool.
 
-Local Coercion is_true : bool >-> Sortclass.
-Module UnitIsEqb <: IsEqb UnitTyp UnitHasEqb.
-  Global Instance eqb_equiv : Equivalence UnitHasEqb.eqb | 5.
-  Proof.
-    split; cbv; repeat intros []; constructor.
-  Qed.
-End UnitIsEqb.
+Module UnitEqbType <: EqbType := UnitTyp <+ UnitHasEqb <+ UnitIsEqb.

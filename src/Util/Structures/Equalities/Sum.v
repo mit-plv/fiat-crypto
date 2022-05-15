@@ -1,6 +1,7 @@
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Import Coq.Structures.Equalities.
 Require Import Crypto.Util.Sum.
+Require Import Crypto.Util.Structures.Equalities.
 
 Local Set Implicit Arguments.
 
@@ -104,6 +105,15 @@ Module SumMiniDecidableType (E1 : MiniDecidableType) (E2 : MiniDecidableType) <:
   Include SumUsualHasEqDec E1' E2'.
 End SumMiniDecidableType.
 
+Local Coercion is_true : bool >-> Sortclass.
+Module SumIsEqb (E1 : EqbType) (E2 : EqbType).
+  Global Instance eqb_equiv : Equivalence (sum_beq _ _ E1.eqb E2.eqb) | 5.
+  Proof.
+    destruct E1.eqb_equiv, E2.eqb_equiv.
+    split; repeat intros [|]; cbv in *; try congruence; eauto.
+  Qed.
+End SumIsEqb.
+
 Module SumUsualHasEqBool (E1 : UsualBoolEq) (E2 : UsualBoolEq) := SumHasEqb E1 E2 E1 E2 <+ SumUsualEqbSpec E1 E2.
 
 Module SumEq (E1 : Eq) (E2 : Eq) <: Eq := SumTyp E1 E2 <+ SumHasEq E1 E2.
@@ -130,3 +140,5 @@ Module SumUsualBoolEq (E1 : UsualBoolEq) (E2 : UsualBoolEq) <: UsualBoolEq
 := SumUsualEq E1 E2 <+ SumUsualHasEqBool E1 E2.
 Module SumUsualDecidableTypeFull (E1 : UsualDecidableTypeFull) (E2 : UsualDecidableTypeFull) <: UsualDecidableTypeFull
  := SumUsualEq E1 E2 <+ UsualIsEq <+ UsualIsEqOrig <+ SumUsualHasEqDec E1 E2 <+ SumUsualHasEqBool E1 E2.
+
+Module SumEqbType (E1 : EqbType) (E2 : EqbType) <: EqbType := SumTyp E1 E2 <+ SumHasEqb E1 E2 E1 E2 <+ SumIsEqb E1 E2.

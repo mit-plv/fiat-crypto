@@ -75,3 +75,5 @@ Module BoolIsEqb <: IsEqb BoolTyp BoolHasEqb.
     split; cbv; repeat intros []; constructor.
   Qed.
 End BoolIsEqb.
+
+Module BoolEqbType <: EqbType := BoolTyp <+ BoolHasEqb <+ BoolIsEqb.

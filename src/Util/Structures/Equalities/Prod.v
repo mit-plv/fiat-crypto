@@ -1,6 +1,10 @@
 Require Import Coq.Classes.RelationPairs.
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Import Coq.Structures.Equalities.
+Require Import Crypto.Util.Structures.Equalities.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.SetoidSubst.
 Require Import Crypto.Util.Prod.
 
 Local Set Implicit Arguments.
@@ -93,6 +97,18 @@ Module ProdMiniDecidableType (E1 : MiniDecidableType) (E2 : MiniDecidableType) <
   Include ProdUsualHasEqDec E1' E2'.
 End ProdMiniDecidableType.
 
+Local Coercion is_true : bool >-> Sortclass.
+Module ProdIsEqb (E1 : EqbType) (E2 : EqbType).
+  Global Instance eqb_equiv : Equivalence (prod_beq _ _ E1.eqb E2.eqb) | 5.
+  Proof.
+    destruct E1.eqb_equiv, E2.eqb_equiv.
+    split; repeat intro; destruct_head'_prod;
+      cbn in *; cbv [is_true] in *; rewrite ?Bool.andb_true_iff in *;
+      destruct_head'_and; split;
+      multimatch goal with H : _ |- _ => eapply H end; eassumption.
+  Qed.
+End ProdIsEqb.
+
 Module ProdUsualHasEqBool (E1 : UsualBoolEq) (E2 : UsualBoolEq) := ProdHasEqb E1 E2 E1 E2 <+ ProdUsualEqbSpec E1 E2.
 
 Module ProdEq (E1 : Eq) (E2 : Eq) <: Eq := ProdTyp E1 E2 <+ ProdHasEq E1 E2.
@@ -119,3 +135,5 @@ Module ProdUsualBoolEq (E1 : UsualBoolEq) (E2 : UsualBoolEq) <: UsualBoolEq
 := ProdUsualEq E1 E2 <+ ProdUsualHasEqBool E1 E2.
 Module ProdUsualDecidableTypeFull (E1 : UsualDecidableTypeFull) (E2 : UsualDecidableTypeFull) <: UsualDecidableTypeFull
  := ProdUsualEq E1 E2 <+ UsualIsEq <+ UsualIsEqOrig <+ ProdUsualHasEqDec E1 E2 <+ ProdUsualHasEqBool E1 E2.
+
+Module ProdEqbType (E1 : EqbType) (E2 : EqbType) <: EqbType := ProdTyp E1 E2 <+ ProdHasEqb E1 E2 E1 E2 <+ ProdIsEqb E1 E2.

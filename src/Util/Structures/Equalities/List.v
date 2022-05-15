@@ -141,17 +141,19 @@ Module ListUsualDecidableTypeFull (E : UsualDecidableTypeFull) <: UsualDecidable
  := ListUsualEq E <+ UsualIsEq <+ UsualIsEqOrig <+ ListUsualHasEqDec E <+ ListUsualHasEqBool E.
 
 Local Coercion is_true : bool >-> Sortclass.
-Module ListIsEqb (E : Typ) (Eb : HasEqb E) (EEqb' : IsEqb E Eb).
-  Global Instance eq_equiv : Equivalence (list_beq _ Eb.eqb) | 5.
+Module ListIsEqb (E : EqbType).
+  Global Instance eqb_equiv : Equivalence (list_beq _ E.eqb) | 5.
   Proof.
     split; hnf;
       [ induction x as [|x xs IH];
-        try pose proof ((_ : Reflexive Eb.eqb) x)
+        try pose proof ((_ : Reflexive E.eqb) x)
       | induction x as [|x xs IH], y as [|y ys];
-        try (specialize (IH ys); pose proof ((_ : Symmetric Eb.eqb) x y))
+        try (specialize (IH ys); pose proof ((_ : Symmetric E.eqb) x y))
       | induction x as [|x xs IH], y as [|y ys], z as [|z zs];
-        try (specialize (IH ys zs); pose proof ((_ : Transitive Eb.eqb) x y z)) ];
+        try (specialize (IH ys zs); pose proof ((_ : Transitive E.eqb) x y z)) ];
       cbn in *; cbv [is_true] in *;
       rewrite ?Bool.andb_true_iff; intuition (congruence + eauto).
   Qed.
 End ListIsEqb.
+
+Module ListEqbType (E : EqbType) <: EqbType := ListTyp E <+ ListHasEqb E E <+ ListIsEqb E.
