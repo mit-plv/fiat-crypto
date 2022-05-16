@@ -142,7 +142,6 @@ Module BackportStrOrder (Import E : EqLt) (EE : IsEq E) (S : IsStrOrder E) <: Is
   Proof.
     pose proof (_ : Irreflexive lt) as H.
     intros x y H1 H2.
-    cbv [lt eq] in *.
     rewrite H2 in H1.
     apply H in H1.
     assumption.
