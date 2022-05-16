@@ -26,7 +26,7 @@ Require Import Crypto.Util.ListUtil.Filter.
 Require Import Crypto.Util.ListUtil.PermutationCompat. Import ListUtil.PermutationCompat.Coq.Sorting.Permutation.
 Require Import Crypto.Util.NUtil.Sorting.
 Require Import Crypto.Util.NUtil.Testbit.
-Require Import Crypto.Util.MSetN.
+Require Import Crypto.Util.MSets.MSetN.
 Require Import Crypto.Util.ListUtil.PermutationCompat.
 Require Import Crypto.Util.Bool.LeCompat.
 Require Import Crypto.Util.Tactics.DestructHead.

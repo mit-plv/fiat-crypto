@@ -254,7 +254,6 @@ src/Util/DefaultedTypes.v
 src/Util/DynList.v
 src/Util/Equality.v
 src/Util/ErrorT.v
-src/Util/FMapN.v
 src/Util/Factorize.v
 src/Util/FixCoqMistakes.v
 src/Util/FsatzAutoLemmas.v
@@ -272,7 +271,6 @@ src/Util/ListUtil.v
 src/Util/Listable.v
 src/Util/Logic.v
 src/Util/Loops.v
-src/Util/MSetN.v
 src/Util/NatUtil.v
 src/Util/Notations.v
 src/Util/NumTheoryUtil.v
@@ -312,8 +310,8 @@ src/Util/Decidable/Bool2Prop.v
 src/Util/Decidable/Decidable2Bool.v
 src/Util/ErrorT/List.v
 src/Util/ErrorT/Show.v
-src/Util/FMapPositive/Equality.v
-src/Util/FSets/Iso.v
+src/Util/FSets/FMapIso.v
+src/Util/FSets/FMapN.v
 src/Util/ListUtil/CombineExtend.v
 src/Util/ListUtil/Concat.v
 src/Util/ListUtil/Filter.v
@@ -336,12 +334,14 @@ src/Util/Logic/ExistsEqAnd.v
 src/Util/Logic/Forall.v
 src/Util/Logic/ImplAnd.v
 src/Util/Logic/ProdForall.v
-src/Util/MSetPositive/Equality.v
-src/Util/MSetPositive/Facts.v
-src/Util/MSetPositive/Show.v
-src/Util/MSets/Iso.v
+src/Util/MSets/MSetIso.v
+src/Util/MSets/MSetN.v
+src/Util/MSets/MSetSum.v
 src/Util/MSets/Show.v
-src/Util/MSets/Sum.v
+src/Util/MSets/FMapPositive/Equality.v
+src/Util/MSets/MSetPositive/Equality.v
+src/Util/MSets/MSetPositive/Facts.v
+src/Util/MSets/MSetPositive/Show.v
 src/Util/NUtil/Sorting.v
 src/Util/NUtil/Testbit.v
 src/Util/NUtil/WithoutReferenceToZ.v
@@ -381,7 +381,6 @@ src/Util/Structures/Equalities/Prod.v
 src/Util/Structures/Equalities/Project.v
 src/Util/Structures/Equalities/Sum.v
 src/Util/Structures/Equalities/Unit.v
-src/Util/Structures/OrderedType/Iso.v
 src/Util/Structures/Orders/Bool.v
 src/Util/Structures/Orders/Empty.v
 src/Util/Structures/Orders/Flip.v

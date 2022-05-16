@@ -10,8 +10,8 @@ Require Import Crypto.Util.Logic.Forall.
 Require Import Crypto.Util.Logic.Exists.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Structures.Equalities.Iso.
-Require Import Crypto.Util.Structures.OrderedType.Iso.
-Require Import Crypto.Util.Structures.OrderedType.
+Require Import Crypto.Util.Structures.Orders.
+Require Import Crypto.Util.Structures.Orders.Iso.
 Require Import Crypto.Util.Sorting.Sorted.Proper.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -494,7 +494,7 @@ Module WIsoS (W' : WS) (E : IsoDecidableTypeOrig W'.E) <: WS.
   Include WIsoSfun W'.E W' E.
 End WIsoS.
 
-Module IsoSfun (E' : OrderedType) (W' : Sfun E') (E : IsoOrderedType E') <: Sfun E.
+Module IsoSfun (E' : OrderedTypeOrig) (W' : Sfun E') (E : IsoOrderedTypeOrig E') <: Sfun E.
   Include WIsoSfun E' W' E.
   Section elt.
     Variable elt:Type.
@@ -514,7 +514,7 @@ Module IsoSfun (E' : OrderedType) (W' : Sfun E') (E : IsoOrderedType E') <: Sfun
 End IsoSfun.
 
 Module IsoS (S' : S) (E' : IsoMiniOrderedType S'.E) <: S.
-  Module E <: IsoOrderedType S'.E := E' <+ OT_of_MOT.
+  Module E <: IsoOrderedTypeOrig S'.E := E' <+ OT_of_MOT.
   Include IsoSfun S'.E S' E.
 End IsoS.
 

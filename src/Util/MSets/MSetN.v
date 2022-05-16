@@ -6,7 +6,7 @@ Require Import Coq.Structures.OrdersEx.
 Require Import Coq.MSets.MSetInterface.
 Require Import Coq.MSets.MSetPositive.
 Require Import Coq.NArith.NArith.
-Require Import Crypto.Util.MSets.Iso.
+Require Import Crypto.Util.MSets.MSetIso.
 Require Import Crypto.Util.Structures.Equalities.Iso.
 Require Import Crypto.Util.Structures.Orders.Iso.
 
