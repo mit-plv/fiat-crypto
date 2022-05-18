@@ -32,16 +32,16 @@ Proof.
   apply IHxs; assumption.
 Qed.
 
-Lemma InA_map A B (f : A -> B) (eqA eqB : relation _) a b l
-      (f_Proper_a_b : forall v, eqA a v -> eqB b (f v))
+Lemma InA_map_strict A B (f : A -> B) (eqA eqB : relation _) a b l
+      (f_Proper_a_b : forall v, List.In v l -> eqA a v -> eqB b (f v))
   : InA eqA a l -> InA eqB b (List.map f l).
 Proof.
   rewrite !InA_alt.
   intros [v H]; exists (f v); split; [ now apply f_Proper_a_b | now apply in_map ].
 Qed.
 
-Lemma InA_map' A B (f : A -> B) (eqA eqB : relation _) a b l
-      (f_Proper_a_b : forall v, eqB b (f v) -> eqA a v)
+Lemma InA_map_strict' A B (f : A -> B) (eqA eqB : relation _) a b l
+      (f_Proper_a_b : forall v, List.In v l -> eqB b (f v) -> eqA a v)
   : InA eqB b (List.map f l) -> InA eqA a l.
 Proof using Type.
   rewrite !InA_alt.
@@ -52,12 +52,27 @@ Proof using Type.
   eexists; eauto.
 Qed.
 
+Lemma InA_map_iff_strict A B (f : A -> B) (eqA eqB : relation _) a b l
+      (f_Proper_a_b : forall v, List.In v l -> eqA a v <-> eqB b (f v))
+  : InA eqB b (List.map f l) <-> InA eqA a l.
+Proof.
+  split; (apply InA_map_strict + apply InA_map_strict'); apply f_Proper_a_b.
+Qed.
+
+Lemma InA_map A B (f : A -> B) (eqA eqB : relation _) a b l
+      (f_Proper_a_b : forall v, eqA a v -> eqB b (f v))
+  : InA eqA a l -> InA eqB b (List.map f l).
+Proof. apply InA_map_strict; eauto. Qed.
+
+Lemma InA_map' A B (f : A -> B) (eqA eqB : relation _) a b l
+      (f_Proper_a_b : forall v, eqB b (f v) -> eqA a v)
+  : InA eqB b (List.map f l) -> InA eqA a l.
+Proof. apply InA_map_strict'; eauto. Qed.
+
 Lemma InA_map_iff A B (f : A -> B) (eqA eqB : relation _) a b l
       (f_Proper_a_b : forall v, eqA a v <-> eqB b (f v))
   : InA eqB b (List.map f l) <-> InA eqA a l.
-Proof.
-  split; (apply InA_map + apply InA_map'); apply f_Proper_a_b.
-Qed.
+Proof. apply InA_map_iff_strict; eauto. Qed.
 
 Lemma NoDupA_map_inv A B (f : A -> B) (eqA eqB : relation _) (l : list A)
       {f_Proper : Proper (eqA ==> eqB) f}
