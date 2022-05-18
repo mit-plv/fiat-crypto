@@ -310,9 +310,12 @@ src/Util/Decidable/Bool2Prop.v
 src/Util/Decidable/Decidable2Bool.v
 src/Util/ErrorT/List.v
 src/Util/ErrorT/Show.v
+src/Util/FSets/FMapBool.v
+src/Util/FSets/FMapEmpty.v
 src/Util/FSets/FMapIso.v
 src/Util/FSets/FMapN.v
 src/Util/FSets/FMapSect.v
+src/Util/FSets/FMapUnit.v
 src/Util/ListUtil/CombineExtend.v
 src/Util/ListUtil/Concat.v
 src/Util/ListUtil/Filter.v
