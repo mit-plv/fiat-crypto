@@ -125,7 +125,7 @@ Module ListDecidableTypeOrig' (E : DecidableTypeOrig) := ListDecidableTypeOrig E
 Module ListDecidableTypeBoth' (E : DecidableTypeBoth) := ListDecidableTypeBoth E <+ EqNotation.
 Module ListBooleanEqualityType' (E : BooleanEqualityType) := ListBooleanEqualityType E <+ EqNotation <+ EqbNotation.
 Module ListBooleanDecidableType' (E : BooleanDecidableType) := ListBooleanDecidableType E <+ EqNotation <+ EqbNotation.
-Module ListBooleanDecidableTypeFull' (E : DecidableTypeFull) := ListDecidableTypeFull E <+ EqNotation.
+Module ListDecidableTypeFull' (E : DecidableTypeFull) := ListDecidableTypeFull E <+ EqNotation.
 
 Module ListUsualEqualityType (E : UsualEqualityType) <: UsualEqualityType := ListUsualEq E <+ UsualIsEq.
 

@@ -1,6 +1,7 @@
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Import Coq.Structures.Equalities.
 Require Import Crypto.Util.Sum.
+Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Structures.Equalities.
 
 Local Set Implicit Arguments.
@@ -21,11 +22,21 @@ Module SumIsEq (E1 : EqualityType) (E2 : EqualityType).
   Defined.
 End SumIsEq.
 
-Module SumHasEqDec (E1 : Equalities.DecidableType) (E2 : Equalities.DecidableType).
+Module SumIsEqOrig (E1 : EqualityTypeOrig) (E2 : EqualityTypeOrig).
+  Local Notation eq := (sumwise E1.eq E2.eq).
+  Definition eq_refl : Reflexive eq.
+  Proof. repeat intro; destruct_head'_sum; (apply E1.eq_refl + apply E2.eq_refl). Defined.
+  Definition eq_sym : Symmetric eq.
+  Proof. repeat intro; destruct_head'_sum; (apply E1.eq_sym + apply E2.eq_sym + idtac); eassumption. Defined.
+  Definition eq_trans : Transitive eq.
+  Proof. repeat intro; destruct_head'_sum; cbv [eq] in *; (eapply E1.eq_trans + eapply E2.eq_trans + idtac + exfalso); eassumption. Defined.
+End SumIsEqOrig.
+
+Module SumHasEqDec (E1 : Eq) (E2 : Eq) (E1Dec : HasEqDec E1) (E2Dec : HasEqDec E2).
   Local Notation eq := (sumwise E1.eq E2.eq).
   Definition eq_dec x y : {eq x y} + {~eq x y}.
   Proof.
-    pose proof E1.eq_dec; pose proof E2.eq_dec.
+    pose proof E1Dec.eq_dec; pose proof E2Dec.eq_dec.
     unshelve eapply dec_sumwise; eauto.
   Defined.
 End SumHasEqDec.
@@ -118,15 +129,25 @@ Module SumUsualHasEqBool (E1 : UsualBoolEq) (E2 : UsualBoolEq) := SumHasEqb E1 E
 
 Module SumEq (E1 : Eq) (E2 : Eq) <: Eq := SumTyp E1 E2 <+ SumHasEq E1 E2.
 Module SumEqualityType (E1 : EqualityType) (E2 : EqualityType) <: EqualityType := SumEq E1 E2 <+ SumIsEq E1 E2.
-Module SumDecidableType (E1 : DecidableType) (E2 : DecidableType) <: EqualityType := SumEqualityType E1 E2 <+ SumHasEqDec E1 E2.
+Module SumEqualityTypeOrig (E1 : EqualityTypeOrig) (E2 : EqualityTypeOrig) <: EqualityTypeOrig := SumEq E1 E2 <+ SumIsEqOrig E1 E2.
+Module SumEqualityTypeBoth (E1 : EqualityTypeBoth) (E2 : EqualityTypeBoth) <: EqualityTypeBoth := SumEq E1 E2 <+ SumIsEq E1 E2 <+ SumIsEqOrig E1 E2.
+Module SumDecidableType (E1 : DecidableType) (E2 : DecidableType) <: EqualityType := SumEqualityType E1 E2 <+ SumHasEqDec E1 E2 E1 E2.
+Module SumDecidableTypeOrig (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) <: EqualityTypeOrig := SumEqualityTypeOrig E1 E2 <+ SumHasEqDec E1 E2 E1 E2.
+Module SumDecidableTypeBoth (E1 : DecidableTypeBoth) (E2 : DecidableTypeBoth) <: EqualityTypeBoth := SumEqualityTypeBoth E1 E2 <+ SumHasEqDec E1 E2 E1 E2.
 Module SumBooleanEqualityType (E1 : BooleanEqualityType) (E2 : BooleanEqualityType) <: BooleanEqualityType := SumEqualityType E1 E2 <+ SumHasEqb E1 E2 E1 E2 <+ SumEqbSpec E1 E2 E1 E2 E1 E2 E1 E2.
-Module SumBooleanDecidableType (E1 : BooleanDecidableType) (E2 : BooleanDecidableType) <: BooleanDecidableType := SumBooleanEqualityType E1 E2 <+ SumHasEqDec E1 E2.
+Module SumBooleanDecidableType (E1 : BooleanDecidableType) (E2 : BooleanDecidableType) <: BooleanDecidableType := SumBooleanEqualityType E1 E2 <+ SumHasEqDec E1 E2 E1 E2.
+Module SumDecidableTypeFull (E1 : DecidableTypeFull) (E2 : DecidableTypeFull) <: DecidableTypeFull := SumEq E1 E2 <+ SumIsEq E1 E2 <+ SumIsEqOrig E1 E2 <+ SumHasEqDec E1 E2 E1 E2 <+ SumHasEqBool E1 E2 E1 E2.
 
 Module SumEq' (E1 : Eq) (E2 : Eq) := SumEq E1 E2 <+ EqNotation.
 Module SumEqualityType' (E1 : EqualityType) (E2 : EqualityType) := SumEqualityType E1 E2 <+ EqNotation.
+Module SumEqualityTypeOrig' (E1 : EqualityTypeOrig) (E2 : EqualityTypeOrig) := SumEqualityTypeOrig E1 E2 <+ EqNotation.
+Module SumEqualityTypeBoth' (E1 : EqualityTypeBoth) (E2 : EqualityTypeBoth) := SumEqualityTypeBoth E1 E2 <+ EqNotation.
 Module SumDecidableType' (E1 : DecidableType) (E2 : DecidableType) := SumDecidableType E1 E2 <+ EqNotation.
+Module SumDecidableTypeOrig' (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) := SumDecidableTypeOrig E1 E2 <+ EqNotation.
+Module SumDecidableTypeBoth' (E1 : DecidableTypeBoth) (E2 : DecidableTypeBoth) := SumDecidableTypeBoth E1 E2 <+ EqNotation.
 Module SumBooleanEqualityType' (E1 : BooleanEqualityType) (E2 : BooleanEqualityType) := SumBooleanEqualityType E1 E2 <+ EqNotation <+ EqbNotation.
 Module SumBooleanDecidableType' (E1 : BooleanDecidableType) (E2 : BooleanDecidableType) := SumBooleanDecidableType E1 E2 <+ EqNotation <+ EqbNotation.
+Module SumDecidableTypeFull' (E1 : DecidableTypeFull) (E2 : DecidableTypeFull) := SumDecidableTypeFull E1 E2 <+ EqNotation.
 
 Module SumUsualEqualityType (E1 : UsualEqualityType) (E2 : UsualEqualityType) <: UsualEqualityType := SumUsualEq E1 E2 <+ UsualIsEq.
 

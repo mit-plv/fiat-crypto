@@ -25,11 +25,21 @@ Module ProdIsEq (E1 : EqualityType) (E2 : EqualityType).
   Defined.
 End ProdIsEq.
 
-Module ProdHasEqDec (E1 : Equalities.DecidableType) (E2 : Equalities.DecidableType).
+Module ProdIsEqOrig (E1 : EqualityTypeOrig) (E2 : EqualityTypeOrig).
+  Local Notation eq := (RelProd E1.eq E2.eq).
+  Definition eq_refl : Reflexive eq.
+  Proof. split; (apply E1.eq_refl + apply E2.eq_refl). Defined.
+  Definition eq_sym : Symmetric eq.
+  Proof. cbv -[fst snd]; split; (apply E1.eq_sym + apply E2.eq_sym); (eapply proj1 + eapply proj2); eassumption. Defined.
+  Definition eq_trans : Transitive eq.
+  Proof. cbv -[fst snd]; split; (eapply E1.eq_trans + eapply E2.eq_trans); (eapply proj1 + eapply proj2); eassumption. Defined.
+End ProdIsEqOrig.
+
+Module ProdHasEqDec (E1 : Eq) (E2 : Eq) (E1Dec : HasEqDec E1) (E2Dec : HasEqDec E2).
   Local Notation eq := (RelProd E1.eq E2.eq).
   Definition eq_dec x y : {eq x y} + {~eq x y}.
   Proof.
-    destruct (E1.eq_dec (fst x) (fst y)); [ destruct (E2.eq_dec (snd x) (snd y)); [ left; split | right; intros [? ?] ] | right; intros [? ?] ]; auto with nocore.
+    destruct (E1Dec.eq_dec (fst x) (fst y)); [ destruct (E2Dec.eq_dec (snd x) (snd y)); [ left; split | right; intros [? ?] ] | right; intros [? ?] ]; auto with nocore.
   Defined.
 End ProdHasEqDec.
 
@@ -113,15 +123,25 @@ Module ProdUsualHasEqBool (E1 : UsualBoolEq) (E2 : UsualBoolEq) := ProdHasEqb E1
 
 Module ProdEq (E1 : Eq) (E2 : Eq) <: Eq := ProdTyp E1 E2 <+ ProdHasEq E1 E2.
 Module ProdEqualityType (E1 : EqualityType) (E2 : EqualityType) <: EqualityType := ProdEq E1 E2 <+ ProdIsEq E1 E2.
-Module ProdDecidableType (E1 : DecidableType) (E2 : DecidableType) <: EqualityType := ProdEqualityType E1 E2 <+ ProdHasEqDec E1 E2.
+Module ProdEqualityTypeOrig (E1 : EqualityTypeOrig) (E2 : EqualityTypeOrig) <: EqualityTypeOrig := ProdEq E1 E2 <+ ProdIsEqOrig E1 E2.
+Module ProdEqualityTypeBoth (E1 : EqualityTypeBoth) (E2 : EqualityTypeBoth) <: EqualityTypeBoth := ProdEq E1 E2 <+ ProdIsEq E1 E2 <+ ProdIsEqOrig E1 E2.
+Module ProdDecidableType (E1 : DecidableType) (E2 : DecidableType) <: EqualityType := ProdEqualityType E1 E2 <+ ProdHasEqDec E1 E2 E1 E2.
+Module ProdDecidableTypeOrig (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) <: EqualityTypeOrig := ProdEqualityTypeOrig E1 E2 <+ ProdHasEqDec E1 E2 E1 E2.
+Module ProdDecidableTypeBoth (E1 : DecidableTypeBoth) (E2 : DecidableTypeBoth) <: EqualityTypeBoth := ProdEqualityTypeBoth E1 E2 <+ ProdHasEqDec E1 E2 E1 E2.
 Module ProdBooleanEqualityType (E1 : BooleanEqualityType) (E2 : BooleanEqualityType) <: BooleanEqualityType := ProdEqualityType E1 E2 <+ ProdHasEqb E1 E2 E1 E2 <+ ProdEqbSpec E1 E2 E1 E2 E1 E2 E1 E2.
-Module ProdBooleanDecidableType (E1 : BooleanDecidableType) (E2 : BooleanDecidableType) <: BooleanDecidableType := ProdBooleanEqualityType E1 E2 <+ ProdHasEqDec E1 E2.
+Module ProdBooleanDecidableType (E1 : BooleanDecidableType) (E2 : BooleanDecidableType) <: BooleanDecidableType := ProdBooleanEqualityType E1 E2 <+ ProdHasEqDec E1 E2 E1 E2.
+Module ProdDecidableTypeFull (E1 : DecidableTypeFull) (E2 : DecidableTypeFull) <: DecidableTypeFull := ProdEq E1 E2 <+ ProdIsEq E1 E2 <+ ProdIsEqOrig E1 E2 <+ ProdHasEqDec E1 E2 E1 E2 <+ ProdHasEqBool E1 E2 E1 E2.
 
 Module ProdEq' (E1 : Eq) (E2 : Eq) := ProdEq E1 E2 <+ EqNotation.
 Module ProdEqualityType' (E1 : EqualityType) (E2 : EqualityType) := ProdEqualityType E1 E2 <+ EqNotation.
+Module ProdEqualityTypeOrig' (E1 : EqualityTypeOrig) (E2 : EqualityTypeOrig) := ProdEqualityTypeOrig E1 E2 <+ EqNotation.
+Module ProdEqualityTypeBoth' (E1 : EqualityTypeBoth) (E2 : EqualityTypeBoth) := ProdEqualityTypeBoth E1 E2 <+ EqNotation.
 Module ProdDecidableType' (E1 : DecidableType) (E2 : DecidableType) := ProdDecidableType E1 E2 <+ EqNotation.
+Module ProdDecidableTypeOrig' (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) := ProdDecidableTypeOrig E1 E2 <+ EqNotation.
+Module ProdDecidableTypeBoth' (E1 : DecidableTypeBoth) (E2 : DecidableTypeBoth) := ProdDecidableTypeBoth E1 E2 <+ EqNotation.
 Module ProdBooleanEqualityType' (E1 : BooleanEqualityType) (E2 : BooleanEqualityType) := ProdBooleanEqualityType E1 E2 <+ EqNotation <+ EqbNotation.
 Module ProdBooleanDecidableType' (E1 : BooleanDecidableType) (E2 : BooleanDecidableType) := ProdBooleanDecidableType E1 E2 <+ EqNotation <+ EqbNotation.
+Module ProdDecidableTypeFull' (E1 : DecidableTypeFull) (E2 : DecidableTypeFull) := ProdDecidableTypeFull E1 E2 <+ EqNotation.
 
 Module ProdUsualEqualityType (E1 : UsualEqualityType) (E2 : UsualEqualityType) <: UsualEqualityType := ProdUsualEq E1 E2 <+ UsualIsEq.
 

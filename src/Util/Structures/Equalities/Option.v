@@ -1,6 +1,7 @@
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Import Coq.Structures.Equalities.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Structures.Equalities.
 
 Local Set Implicit Arguments.
@@ -21,11 +22,21 @@ Module OptionIsEq (E : EqualityType).
   Defined.
 End OptionIsEq.
 
-Module OptionHasEqDec (E : Equalities.DecidableType).
+Module OptionIsEqOrig (E : EqualityTypeOrig).
+  Local Notation eq := (option_eq E.eq).
+  Definition eq_refl : Reflexive eq.
+  Proof. repeat intro; destruct_head' option; (reflexivity + apply E.eq_refl). Defined.
+  Definition eq_sym : Symmetric eq.
+  Proof. repeat intro; destruct_head' option; cbv [eq] in *; (assumption + apply E.eq_sym + idtac + exfalso + inversion_option); assumption. Defined.
+  Definition eq_trans : Transitive eq.
+  Proof. repeat intro; destruct_head' option; cbv [eq] in *; try ((assumption + eapply E.eq_trans + idtac + exfalso + inversion_option); eassumption). Defined.
+End OptionIsEqOrig.
+
+Module OptionHasEqDec (E : Eq) (EDec : HasEqDec E).
   Local Notation eq := (option_eq E.eq).
   Definition eq_dec x y : {eq x y} + {~eq x y}.
   Proof.
-    destruct x as [x|], y as [y|]; [ destruct (E.eq_dec x y); [ left | right ] | right | right | left ];
+    destruct x as [x|], y as [y|]; [ destruct (EDec.eq_dec x y); [ left | right ] | right | right | left ];
       cbv [option_eq]; try assumption; try reflexivity; try solve [ intros [] ]; congruence.
   Defined.
 End OptionHasEqDec.
@@ -117,15 +128,25 @@ Module OptionUsualHasEqBool (E : UsualBoolEq) := OptionHasEqb E E <+ OptionUsual
 
 Module OptionEq (E : Eq) <: Eq := OptionTyp E <+ OptionHasEq E.
 Module OptionEqualityType (E : EqualityType) <: EqualityType := OptionEq E <+ OptionIsEq E.
-Module OptionDecidableType (E : DecidableType) <: EqualityType := OptionEqualityType E <+ OptionHasEqDec E.
+Module OptionEqualityTypeOrig (E : EqualityTypeOrig) <: EqualityTypeOrig := OptionEq E <+ OptionIsEqOrig E.
+Module OptionEqualityTypeBoth (E : EqualityTypeBoth) <: EqualityTypeBoth := OptionEq E <+ OptionIsEq E <+ OptionIsEqOrig E.
+Module OptionDecidableType (E : DecidableType) <: EqualityType := OptionEqualityType E <+ OptionHasEqDec E E.
+Module OptionDecidableTypeOrig (E : DecidableTypeOrig) <: EqualityTypeOrig := OptionEqualityTypeOrig E <+ OptionHasEqDec E E.
+Module OptionDecidableTypeBoth (E : DecidableTypeBoth) <: EqualityTypeBoth := OptionEqualityTypeBoth E <+ OptionHasEqDec E E.
 Module OptionBooleanEqualityType (E : BooleanEqualityType) <: BooleanEqualityType := OptionEqualityType E <+ OptionHasEqb E E <+ OptionEqbSpec E E E E.
-Module OptionBooleanDecidableType (E : BooleanDecidableType) <: BooleanDecidableType := OptionBooleanEqualityType E <+ OptionHasEqDec E.
+Module OptionBooleanDecidableType (E : BooleanDecidableType) <: BooleanDecidableType := OptionBooleanEqualityType E <+ OptionHasEqDec E E.
+Module OptionDecidableTypeFull (E : DecidableTypeFull) <: DecidableTypeFull := OptionEq E <+ OptionIsEq E <+ OptionIsEqOrig E <+ OptionHasEqDec E E <+ OptionHasEqBool E E.
 
 Module OptionEq' (E : Eq) := OptionEq E <+ EqNotation.
 Module OptionEqualityType' (E : EqualityType) := OptionEqualityType E <+ EqNotation.
+Module OptionEqualityTypeOrig' (E : EqualityTypeOrig) := OptionEqualityTypeOrig E <+ EqNotation.
+Module OptionEqualityTypeBoth' (E : EqualityTypeBoth) := OptionEqualityTypeBoth E <+ EqNotation.
 Module OptionDecidableType' (E : DecidableType) := OptionDecidableType E <+ EqNotation.
+Module OptionDecidableTypeOrig' (E : DecidableTypeOrig) := OptionDecidableTypeOrig E <+ EqNotation.
+Module OptionDecidableTypeBoth' (E : DecidableTypeBoth) := OptionDecidableTypeBoth E <+ EqNotation.
 Module OptionBooleanEqualityType' (E : BooleanEqualityType) := OptionBooleanEqualityType E <+ EqNotation <+ EqbNotation.
 Module OptionBooleanDecidableType' (E : BooleanDecidableType) := OptionBooleanDecidableType E <+ EqNotation <+ EqbNotation.
+Module OptionDecidableTypeFull' (E : DecidableTypeFull) := OptionDecidableTypeFull E <+ EqNotation.
 
 Module OptionUsualEqualityType (E : UsualEqualityType) <: UsualEqualityType := OptionUsualEq E <+ UsualIsEq.
 
