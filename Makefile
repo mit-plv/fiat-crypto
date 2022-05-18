@@ -135,6 +135,23 @@ BEDROCK2_FILES_PATTERN := \
 	src/Assembly/WithBedrock/% \
 	src/Bedrock/% # it's important to catch not just the .vo files, but also the .glob files, etc, because this is used to filter FILESTOINSTALL
 EXCLUDE_PATTERN :=
+
+FORCE_BEDROCK2?=
+ifneq (,$(filter 8.11% 8.12% 8.13%,$(COQ_VERSION)))
+ifneq ($(SKIP_BEDROCK2),1)
+$(warning Coq version $(COQ_VERSION) is older than the minimum bedrock2 Coq version of 8.14)
+ifeq ($(FORCE_BEDROCK2),1)
+$(warning Building bedrock2 code anyway because FORCE_BEDROCK2=$(FORCE_BEDROCK2))
+else
+ifeq ($(SKIP_BEDROCK2),)
+SKIP_BEDROCK2=1
+else
+$(error Cannot build bedrock2! Pass FORCE_BEDROCK2=1 to override this error and build anyway, or pass SKIP_BEDROCK2=1 (instead of SKIP_BEDROCK2=$(SKIP_BEDROCK2)) to skip bedrock2)
+endif
+endif
+endif
+endif
+
 ifeq ($(SKIP_BEDROCK2),1)
 EXCLUDE_PATTERN += $(BEDROCK2_FILES_PATTERN)
 $(warning Skipping bedrock2)
