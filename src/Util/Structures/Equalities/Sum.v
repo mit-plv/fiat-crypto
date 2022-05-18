@@ -112,7 +112,7 @@ Module SumUsualIsEqOrig (E1 : UsualEq) (E2 : UsualEq).
   Module Import _SumUsualIsEqOrig.
     Module E' := SumUsualEq E1 E2.
   End _SumUsualIsEqOrig.
-  Include UsualIsEqOrig E.
+  Include UsualIsEqOrig E'.
 End SumUsualIsEqOrig.
 
 Module SumMiniDecidableType (E1 : MiniDecidableType) (E2 : MiniDecidableType) <: MiniDecidableType.

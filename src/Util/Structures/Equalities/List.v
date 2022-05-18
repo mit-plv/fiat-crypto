@@ -81,25 +81,33 @@ Module ListUsualEqbSpec (E : UsualBoolEq).
 End ListUsualEqbSpec.
 
 Module ListHasUsualEq (E : UsualEq).
-  Module E := ListTyp E.
-  Include HasUsualEq E.
+  Module Import _ListHasUsualEq.
+    Module E' := ListTyp E.
+  End _ListHasUsualEq.
+  Include HasUsualEq E'.
 End ListHasUsualEq.
 
 Module ListUsualEq (E : UsualEq) <: UsualEq := ListTyp E <+ HasUsualEq.
 
 Module ListUsualIsEq (E : UsualEq).
-  Module E := ListUsualEq E.
-  Include UsualIsEq E.
+  Module Import _ListUsualIsEq.
+    Module E' := ListUsualEq E.
+  End _ListUsualIsEq.
+  Include UsualIsEq E'.
 End ListUsualIsEq.
 
 Module ListUsualIsEqOrig (E : UsualEq).
-  Module E := ListUsualEq E.
-  Include UsualIsEqOrig E.
+  Module Import _ListUsualIsEqOrig.
+    Module E' := ListUsualEq E.
+  End _ListUsualIsEqOrig.
+  Include UsualIsEqOrig E'.
 End ListUsualIsEqOrig.
 
 Module ListMiniDecidableType (E : MiniDecidableType) <: MiniDecidableType.
   Include ListTyp E.
-  Module E' := Make_UDT E.
+  Module Import _ListMiniDecidableType.
+    Module E' := Make_UDT E.
+  End _ListMiniDecidableType.
   Include ListUsualHasEqDec E'.
 End ListMiniDecidableType.
 

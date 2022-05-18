@@ -103,7 +103,7 @@ Module ProdUsualIsEqOrig (E1 : UsualEq) (E2 : UsualEq).
   Module Import _ProdUsualIsEqOrig.
     Module E' := ProdUsualEq E1 E2.
   End _ProdUsualIsEqOrig.
-  Include UsualIsEqOrig E.
+  Include UsualIsEqOrig E'.
 End ProdUsualIsEqOrig.
 
 Module ProdMiniDecidableType (E1 : MiniDecidableType) (E2 : MiniDecidableType) <: MiniDecidableType.
