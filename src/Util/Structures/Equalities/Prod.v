@@ -84,26 +84,34 @@ Module ProdUsualEqbSpec (E1 : UsualBoolEq) (E2 : UsualBoolEq).
 End ProdUsualEqbSpec.
 
 Module ProdHasUsualEq (E1 : UsualEq) (E2 : UsualEq).
-  Module E := ProdTyp E1 E2.
-  Include HasUsualEq E.
+  Module Import _ProdHasUsualEq.
+    Module E' := ProdTyp E1 E2.
+  End _ProdHasUsualEq.
+  Include HasUsualEq E'.
 End ProdHasUsualEq.
 
 Module ProdUsualEq (E1 : UsualEq) (E2 : UsualEq) <: UsualEq := ProdTyp E1 E2 <+ HasUsualEq.
 
 Module ProdUsualIsEq (E1 : UsualEq) (E2 : UsualEq).
-  Module E := ProdUsualEq E1 E2.
-  Include UsualIsEq E.
+  Module Import _ProdUsualIsEq.
+    Module E' := ProdUsualEq E1 E2.
+  End _ProdUsualIsEq.
+  Include UsualIsEq E'.
 End ProdUsualIsEq.
 
 Module ProdUsualIsEqOrig (E1 : UsualEq) (E2 : UsualEq).
-  Module E := ProdUsualEq E1 E2.
+  Module Import _ProdUsualIsEqOrig.
+    Module E' := ProdUsualEq E1 E2.
+  End _ProdUsualIsEqOrig.
   Include UsualIsEqOrig E.
 End ProdUsualIsEqOrig.
 
 Module ProdMiniDecidableType (E1 : MiniDecidableType) (E2 : MiniDecidableType) <: MiniDecidableType.
   Include ProdTyp E1 E2.
-  Module E1' := Make_UDT E1.
-  Module E2' := Make_UDT E2.
+  Module Import _ProdMiniDecidableType.
+    Module E1' := Make_UDT E1.
+    Module E2' := Make_UDT E2.
+  End _ProdMiniDecidableType.
   Include ProdUsualHasEqDec E1' E2'.
 End ProdMiniDecidableType.
 

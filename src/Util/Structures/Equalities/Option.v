@@ -93,25 +93,33 @@ Module OptionUsualEqbSpec (E : UsualBoolEq).
 End OptionUsualEqbSpec.
 
 Module OptionHasUsualEq (E : UsualEq).
-  Module E := OptionTyp E.
-  Include HasUsualEq E.
+  Module Import _OptionHasUsualEq.
+    Module E' := OptionTyp E.
+  End _OptionHasUsualEq.
+  Include HasUsualEq E'.
 End OptionHasUsualEq.
 
 Module OptionUsualEq (E : UsualEq) <: UsualEq := OptionTyp E <+ HasUsualEq.
 
 Module OptionUsualIsEq (E : UsualEq).
-  Module E := OptionUsualEq E.
-  Include UsualIsEq E.
+  Module Import _OptionUsualIsEq.
+    Module E' := OptionUsualEq E.
+  End _OptionUsualIsEq.
+  Include UsualIsEq E'.
 End OptionUsualIsEq.
 
 Module OptionUsualIsEqOrig (E : UsualEq).
-  Module E := OptionUsualEq E.
-  Include UsualIsEqOrig E.
+  Module Import _OptionUsualIsEqOrig.
+    Module E' := OptionUsualEq E.
+  End _OptionUsualIsEqOrig.
+  Include UsualIsEqOrig E'.
 End OptionUsualIsEqOrig.
 
 Module OptionMiniDecidableType (E : MiniDecidableType) <: MiniDecidableType.
   Include OptionTyp E.
-  Module E' := Make_UDT E.
+  Module Import _OptionMiniDecidableType.
+    Module E' := Make_UDT E.
+  End _OptionMiniDecidableType.
   Include OptionUsualHasEqDec E'.
 End OptionMiniDecidableType.
 

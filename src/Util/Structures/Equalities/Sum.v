@@ -93,26 +93,34 @@ Module SumUsualEqbSpec (E1 : UsualBoolEq) (E2 : UsualBoolEq).
 End SumUsualEqbSpec.
 
 Module SumHasUsualEq (E1 : UsualEq) (E2 : UsualEq).
-  Module E := SumTyp E1 E2.
-  Include HasUsualEq E.
+  Module Import _SumHasUsualEq.
+    Module E' := SumTyp E1 E2.
+  End _SumHasUsualEq.
+  Include HasUsualEq E'.
 End SumHasUsualEq.
 
 Module SumUsualEq (E1 : UsualEq) (E2 : UsualEq) <: UsualEq := SumTyp E1 E2 <+ HasUsualEq.
 
 Module SumUsualIsEq (E1 : UsualEq) (E2 : UsualEq).
-  Module E := SumUsualEq E1 E2.
-  Include UsualIsEq E.
+  Module Import _SumUsualIsEq.
+    Module E' := SumUsualEq E1 E2.
+  End _SumUsualIsEq.
+  Include UsualIsEq E'.
 End SumUsualIsEq.
 
 Module SumUsualIsEqOrig (E1 : UsualEq) (E2 : UsualEq).
-  Module E := SumUsualEq E1 E2.
+  Module Import _SumUsualIsEqOrig.
+    Module E' := SumUsualEq E1 E2.
+  End _SumUsualIsEqOrig.
   Include UsualIsEqOrig E.
 End SumUsualIsEqOrig.
 
 Module SumMiniDecidableType (E1 : MiniDecidableType) (E2 : MiniDecidableType) <: MiniDecidableType.
   Include SumTyp E1 E2.
-  Module E1' := Make_UDT E1.
-  Module E2' := Make_UDT E2.
+  Module Import _SumMiniDecidableType.
+    Module E1' := Make_UDT E1.
+    Module E2' := Make_UDT E2.
+  End _SumMiniDecidableType.
   Include SumUsualHasEqDec E1' E2'.
 End SumMiniDecidableType.
 
