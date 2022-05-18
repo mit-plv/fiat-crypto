@@ -215,19 +215,19 @@ Module HasEqDec_DecStrOrder (Import E : DecStrOrder') <: HasEqDec E.
     refine (match compare x y as c return CompareSpec _ _ _ c -> _ with
             | Eq
               => fun pf
-                 => left match pf with
+                 => left match pf in CompareSpec _ _ _ c return match c return Prop with Eq => _ | _ => True end with
                          | CompEq pf => pf
                          | _ => I
                          end
             | Lt
               => fun pf
-                 => right match pf with
+                 => right match pf in CompareSpec _ _ _ c return match c return Prop with Lt => _ | _ => True end with
                           | CompLt pf' => _
                           | _ => I
                           end
             | Gt
               => fun pf
-                 => right match pf with
+                 => right match pf in CompareSpec _ _ _ c return match c return Prop with Gt => _ | _ => True end with
                           | CompGt pf' => _
                           | _ => I
                           end
