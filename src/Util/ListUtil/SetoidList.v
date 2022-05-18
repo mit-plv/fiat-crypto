@@ -40,15 +40,23 @@ Proof.
   intros [v H]; exists (f v); split; [ now apply f_Proper_a_b | now apply in_map ].
 Qed.
 
+Lemma InA_map' A B (f : A -> B) (eqA eqB : relation _) a b l
+      (f_Proper_a_b : forall v, eqB b (f v) -> eqA a v)
+  : InA eqB b (List.map f l) -> InA eqA a l.
+Proof using Type.
+  rewrite !InA_alt.
+  intros [? [? H']].
+  rewrite in_map_iff in H'.
+  destruct H' as [? [? ?]].
+  subst.
+  eexists; eauto.
+Qed.
+
 Lemma InA_map_iff A B (f : A -> B) (eqA eqB : relation _) a b l
       (f_Proper_a_b : forall v, eqA a v <-> eqB b (f v))
   : InA eqB b (List.map f l) <-> InA eqA a l.
 Proof.
-  split; [ | solve [ apply InA_map, f_Proper_a_b ] ].
-  rewrite !InA_alt; intros [v [H1 H2]].
-  induction l as [|? ? IH]; cbn [List.map List.In] in *;
-    [ easy | ].
-  destruct H2; subst; firstorder eauto.
+  split; (apply InA_map + apply InA_map'); apply f_Proper_a_b.
 Qed.
 
 Lemma NoDupA_map_inv A B (f : A -> B) (eqA eqB : relation _) (l : list A)
