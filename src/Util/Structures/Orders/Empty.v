@@ -99,6 +99,18 @@ Module EmptyUsualIsStrOrder.
   Global Instance lt_compat : Proper (eq==>eq==>iff) EmptyHasLt.lt | 1 := _.
 End EmptyUsualIsStrOrder.
 
+Module EmptyIsStrOrderOrig.
+  Lemma lt_trans : forall x y z, EmptyHasLt.lt x y -> EmptyHasLt.lt y z -> EmptyHasLt.lt x z.
+  Proof. t. Qed.
+  Lemma lt_not_eq : forall x y, EmptyHasLt.lt x y -> ~ eq x y.
+  Proof. t. Qed.
+End EmptyIsStrOrderOrig.
+
+Module EmptyHasCompareOrig.
+  Definition compare : forall x y, OrderedType.Compare EmptyHasLt.lt eq x y.
+  Proof. intros []. Defined.
+End EmptyHasCompareOrig.
+
 Module EmptyUsualLeIsLtEq.
   Local Infix "<=" := EmptyHasLe.le.
   Local Infix "<" := EmptyHasLt.lt.

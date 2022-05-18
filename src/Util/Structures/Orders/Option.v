@@ -355,6 +355,37 @@ Module OptionUsualOrderedTypeOrig (E : UsualMiniOrderedType) <: UsualOrderedType
 End OptionUsualOrderedTypeOrig.
 Module OptionUsualMiniOrderedType (E : UsualMiniOrderedType) <: UsualMiniOrderedType := OptionUsualOrderedTypeOrig E.
 
+(* TODO: more precise module argument typing? *)
+Module OptionIsStrOrderOrig (E : MiniOrderedType).
+  Module Import _OptionIsStrOrderOrig.
+    Module O := OptionOrderedTypeOrig E.
+  End _OptionIsStrOrderOrig.
+  Definition lt_trans := O.lt_trans.
+  Definition lt_not_eq := O.lt_not_eq.
+End OptionIsStrOrderOrig.
+(* TODO: more precise module argument typing? *)
+Module OptionHasCompareOrig (E : MiniOrderedType).
+  Module Import _OptionHasCompareOrig.
+    Module O := OptionOrderedTypeOrig E.
+  End _OptionHasCompareOrig.
+  Definition compare := O.compare.
+End OptionHasCompareOrig.
+(* TODO: more precise module argument typing? *)
+Module OptionUsualIsStrOrderOrig (E : UsualMiniOrderedType).
+  Module Import _OptionUsualIsStrOrderOrig.
+    Module O := OptionUsualOrderedTypeOrig E.
+  End _OptionUsualIsStrOrderOrig.
+  Definition lt_trans := O.lt_trans.
+  Definition lt_not_eq := O.lt_not_eq.
+End OptionUsualIsStrOrderOrig.
+(* TODO: more precise module argument typing? *)
+Module OptionUsualHasCompareOrig (E : UsualMiniOrderedType).
+  Module Import _OptionUsualHasCompareOrig.
+    Module O := OptionUsualOrderedTypeOrig E.
+  End _OptionUsualHasCompareOrig.
+  Definition compare := O.compare.
+End OptionUsualHasCompareOrig.
+
 Module OptionLeBool (E : EqLeBool) <: LeBool := OptionTyp E <+ OptionHasLeb E E.
 Module OptionLtBool (E : EqLtBool) <: LtBool := OptionTyp E <+ OptionHasLtb E E.
 Module OptionLeBool' (E : EqLeBool) <: LeBool' := OptionLeBool E <+ LebNotation.

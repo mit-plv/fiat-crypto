@@ -42,6 +42,20 @@ Module BoolIsStrOrder.
   Proof. t. Qed.
 End BoolIsStrOrder.
 
+Module BoolIsStrOrderOrig.
+  Lemma lt_trans : forall x y z, BoolHasLt.lt x y -> BoolHasLt.lt y z -> BoolHasLt.lt x z.
+  Proof. t. Qed.
+  Lemma lt_not_eq : forall x y, BoolHasLt.lt x y -> ~ eq x y.
+  Proof. t. Qed.
+End BoolIsStrOrderOrig.
+
+Module BoolHasCompareOrig.
+  Definition compare : forall x y, OrderedType.Compare BoolHasLt.lt eq x y.
+  Proof.
+    intros; destruct_head'_bool; constructor; cbv; reflexivity.
+  Defined.
+End BoolHasCompareOrig.
+
 Module BoolLeIsLtEq.
   Local Infix "<=" := BoolHasLe.le.
   Local Infix "<" := BoolHasLt.lt.

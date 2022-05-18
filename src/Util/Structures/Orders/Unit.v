@@ -42,6 +42,20 @@ Module UnitIsStrOrder.
   Proof. t. Qed.
 End UnitIsStrOrder.
 
+Module UnitIsStrOrderOrig.
+  Lemma lt_trans : forall x y z, UnitHasLt.lt x y -> UnitHasLt.lt y z -> UnitHasLt.lt x z.
+  Proof. t. Qed.
+  Lemma lt_not_eq : forall x y, UnitHasLt.lt x y -> ~ eq x y.
+  Proof. t. Qed.
+End UnitIsStrOrderOrig.
+
+Module UnitHasCompareOrig.
+  Definition compare : forall x y, OrderedType.Compare UnitHasLt.lt eq x y.
+  Proof.
+    constructor; destruct_head'_unit; reflexivity.
+  Defined.
+End UnitHasCompareOrig.
+
 Module UnitLeIsLtEq.
   Local Infix "<=" := UnitHasLe.le.
   Local Infix "<" := UnitHasLt.lt.

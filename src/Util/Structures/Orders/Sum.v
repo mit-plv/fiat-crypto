@@ -272,6 +272,37 @@ Module SumUsualOrderedTypeOrig (E1 : UsualMiniOrderedType) (E2 : UsualMiniOrdere
 End SumUsualOrderedTypeOrig.
 Module SumUsualMiniOrderedType (E1 : UsualMiniOrderedType) (E2 : UsualMiniOrderedType) <: UsualMiniOrderedType := SumUsualOrderedTypeOrig E1 E2.
 
+(* TODO: more precise module argument typing? *)
+Module SumIsStrOrderOrig (E1 : MiniOrderedType) (E2 : MiniOrderedType).
+  Module Import _SumIsStrOrderOrig.
+    Module S := SumOrderedTypeOrig E1 E2.
+  End _SumIsStrOrderOrig.
+  Definition lt_trans := S.lt_trans.
+  Definition lt_not_eq := S.lt_not_eq.
+End SumIsStrOrderOrig.
+(* TODO: more precise module argument typing? *)
+Module SumHasCompareOrig (E1 : MiniOrderedType) (E2 : MiniOrderedType).
+  Module Import _SumHasCompareOrig.
+    Module S := SumOrderedTypeOrig E1 E2.
+  End _SumHasCompareOrig.
+  Definition compare := S.compare.
+End SumHasCompareOrig.
+(* TODO: more precise module argument typing? *)
+Module SumUsualIsStrOrderOrig (E1 : UsualMiniOrderedType) (E2 : UsualMiniOrderedType).
+  Module Import _SumUsualIsStrOrderOrig.
+    Module S := SumUsualOrderedTypeOrig E1 E2.
+  End _SumUsualIsStrOrderOrig.
+  Definition lt_trans := S.lt_trans.
+  Definition lt_not_eq := S.lt_not_eq.
+End SumUsualIsStrOrderOrig.
+(* TODO: more precise module argument typing? *)
+Module SumUsualHasCompareOrig (E1 : UsualMiniOrderedType) (E2 : UsualMiniOrderedType).
+  Module Import _SumUsualHasCompareOrig.
+    Module S := SumUsualOrderedTypeOrig E1 E2.
+  End _SumUsualHasCompareOrig.
+  Definition compare := S.compare.
+End SumUsualHasCompareOrig.
+
 Module SumLeBool (E1 : LeBool) (E2 : LeBool) <: LeBool := SumTyp E1 E2 <+ SumHasLeb E1 E2 E1 E2.
 Module SumLtBool (E1 : LtBool) (E2 : LtBool) <: LtBool := SumTyp E1 E2 <+ SumHasLtb E1 E2 E1 E2.
 Module SumLeBool' (E1 : LeBool) (E2 : LeBool) <: LeBool' := SumLeBool E1 E2 <+ LebNotation.

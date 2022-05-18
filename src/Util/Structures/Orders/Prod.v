@@ -452,6 +452,37 @@ Module ProdUsualOrderedTypeOrig (E1 : UsualMiniOrderedType) (E2 : UsualMiniOrder
 End ProdUsualOrderedTypeOrig.
 Module ProdUsualMiniOrderedType (E1 : UsualMiniOrderedType) (E2 : UsualMiniOrderedType) <: UsualMiniOrderedType := ProdUsualOrderedTypeOrig E1 E2.
 
+(* TODO: more precise module argument typing? *)
+Module ProdIsStrOrderOrig (E1 : MiniOrderedType) (E2 : MiniOrderedType).
+  Module Import _ProdIsStrOrderOrig.
+    Module P := ProdOrderedTypeOrig E1 E2.
+  End _ProdIsStrOrderOrig.
+  Definition lt_trans := P.lt_trans.
+  Definition lt_not_eq := P.lt_not_eq.
+End ProdIsStrOrderOrig.
+(* TODO: more precise module argument typing? *)
+Module ProdHasCompareOrig (E1 : MiniOrderedType) (E2 : MiniOrderedType).
+  Module Import _ProdHasCompareOrig.
+    Module P := ProdOrderedTypeOrig E1 E2.
+  End _ProdHasCompareOrig.
+  Definition compare := P.compare.
+End ProdHasCompareOrig.
+(* TODO: more precise module argument typing? *)
+Module ProdUsualIsStrOrderOrig (E1 : UsualMiniOrderedType) (E2 : UsualMiniOrderedType).
+  Module Import _ProdUsualIsStrOrderOrig.
+    Module P := ProdUsualOrderedTypeOrig E1 E2.
+  End _ProdUsualIsStrOrderOrig.
+  Definition lt_trans := P.lt_trans.
+  Definition lt_not_eq := P.lt_not_eq.
+End ProdUsualIsStrOrderOrig.
+(* TODO: more precise module argument typing? *)
+Module ProdUsualHasCompareOrig (E1 : UsualMiniOrderedType) (E2 : UsualMiniOrderedType).
+  Module Import _ProdUsualHasCompareOrig.
+    Module P := ProdUsualOrderedTypeOrig E1 E2.
+  End _ProdUsualHasCompareOrig.
+  Definition compare := P.compare.
+End ProdUsualHasCompareOrig.
+
 Module ProdLeBool (E1 : EqLeBool) (E2 : LeBool) <: LeBool := ProdTyp E1 E2 <+ ProdHasLeb E1 E2 E1 E1 E2.
 Module ProdLtBool (E1 : EqLtBool) (E2 : LtBool) <: LtBool := ProdTyp E1 E2 <+ ProdHasLtb E1 E2 E1 E1 E2.
 Module ProdLeBool' (E1 : EqLeBool) (E2 : LeBool) <: LeBool' := ProdLeBool E1 E2 <+ LebNotation.

@@ -460,6 +460,37 @@ Module ListUsualOrderedTypeOrig (E : UsualMiniOrderedType) <: UsualOrderedTypeOr
 End ListUsualOrderedTypeOrig.
 Module ListUsualMiniOrderedType (E : UsualMiniOrderedType) <: UsualMiniOrderedType := ListUsualOrderedTypeOrig E.
 
+(* TODO: more precise module argument typing? *)
+Module ListIsStrOrderOrig (E : MiniOrderedType).
+  Module Import _ListIsStrOrderOrig.
+    Module L := ListOrderedTypeOrig E.
+  End _ListIsStrOrderOrig.
+  Definition lt_trans := L.lt_trans.
+  Definition lt_not_eq := L.lt_not_eq.
+End ListIsStrOrderOrig.
+(* TODO: more precise module argument typing? *)
+Module ListHasCompareOrig (E : MiniOrderedType).
+  Module Import _ListHasCompareOrig.
+    Module L := ListOrderedTypeOrig E.
+  End _ListHasCompareOrig.
+  Definition compare := L.compare.
+End ListHasCompareOrig.
+(* TODO: more precise module argument typing? *)
+Module ListUsualIsStrOrderOrig (E : UsualMiniOrderedType).
+  Module Import _ListUsualIsStrOrderOrig.
+    Module L := ListUsualOrderedTypeOrig E.
+  End _ListUsualIsStrOrderOrig.
+  Definition lt_trans := L.lt_trans.
+  Definition lt_not_eq := L.lt_not_eq.
+End ListUsualIsStrOrderOrig.
+(* TODO: more precise module argument typing? *)
+Module ListUsualHasCompareOrig (E : UsualMiniOrderedType).
+  Module Import _ListUsualHasCompareOrig.
+    Module L := ListUsualOrderedTypeOrig E.
+  End _ListUsualHasCompareOrig.
+  Definition compare := L.compare.
+End ListUsualHasCompareOrig.
+
 Module ListLeBool (E : EqLeBool) <: LeBool := ListTyp E <+ ListHasLeb E E E.
 Module ListLtBool (E : EqLtBool) <: LtBool := ListTyp E <+ ListHasLtb E E E.
 Module ListLeBool' (E : EqLeBool) <: LeBool' := ListLeBool E <+ LebNotation.
