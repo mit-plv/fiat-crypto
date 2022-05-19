@@ -428,7 +428,7 @@ Module ListUsualStrOrder (E : UsualStrOrder) <: UsualStrOrder := ListUsualEquali
 Module ListUsualHasCompare (E : UsualEqLt) (Ec : HasCompare E) := ListHasCmp E Ec <+ ListUsualCmpSpec E Ec.
 
 Module ListUsualDecStrOrder (E : UsualDecStrOrder) <: UsualDecStrOrder := ListUsualStrOrder E <+ ListUsualHasCompare E E.
-Module ListUsualOrderedType (E : UsualOrderedType) <: UsualOrderedType := ListUsualDecStrOrder E <+ ListUsualHasEqDec E.
+Module ListUsualOrderedType (E : UsualOrderedType) <: UsualOrderedType := ListUsualDecStrOrder E <+ ListUsualHasEqDec E E.
 Module ListUsualOrderedTypeFull (E : UsualOrderedTypeFull) <: UsualOrderedTypeFull := ListUsualOrderedType E <+ ListHasLe E <+ ListUsualLeIsLtEq E E E.
 
 Module ListUsualStrOrder' (E : UsualStrOrder) <: UsualStrOrder' := ListUsualStrOrder E <+ LtNotation.

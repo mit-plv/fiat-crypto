@@ -73,6 +73,8 @@ Module BoolBooleanDecidableType' := BoolBooleanDecidableType <+ EqNotation <+ Eq
 Module BoolDecidableTypeFull' := BoolDecidableTypeFull <+ EqNotation.
 
 Module BoolUsualEqualityType <: UsualEqualityType := BoolUsualEq <+ UsualIsEq.
+Module BoolUsualEqualityTypeOrig <: UsualEqualityTypeOrig := BoolUsualEq <+ UsualIsEqOrig.
+Module BoolUsualEqualityTypeBoth <: UsualEqualityTypeBoth := BoolUsualEq <+ UsualIsEq <+ UsualIsEqOrig.
 
 Module BoolUsualDecidableType <: UsualDecidableType
 := BoolUsualEq <+ UsualIsEq <+ BoolUsualHasEqDec.

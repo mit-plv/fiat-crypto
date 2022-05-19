@@ -81,6 +81,8 @@ Module EmptyBooleanDecidableType' := EmptyBooleanDecidableType <+ EqNotation <+ 
 Module EmptyDecidableTypeFull' := EmptyDecidableTypeFull <+ EqNotation.
 
 Module EmptyUsualEqualityType <: UsualEqualityType := EmptyUsualEq <+ UsualIsEq.
+Module EmptyUsualEqualityTypeOrig <: UsualEqualityTypeOrig := EmptyUsualEq <+ UsualIsEqOrig.
+Module EmptyUsualEqualityTypeBoth <: UsualEqualityTypeBoth := EmptyUsualEq <+ UsualIsEq <+ UsualIsEqOrig.
 
 Module EmptyUsualDecidableType <: UsualDecidableType
 := EmptyUsualEq <+ UsualIsEq <+ EmptyUsualHasEqDec.

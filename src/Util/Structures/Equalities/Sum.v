@@ -67,14 +67,14 @@ End SumEqbSpec.
 
 Module SumHasEqBool (E1 : Eq) (E2 : Eq) (E1s : HasEqBool E1) (E2s : HasEqBool E2) := SumHasEqb E1 E2 E1s E2s <+ SumEqbSpec E1 E2 E1 E2 E1s E2s E1s E2s.
 
-Module SumUsualHasEqDec (E1 : UsualDecidableType) (E2 : UsualDecidableType).
+Module SumUsualHasEqDec (E1 : UsualEq) (E2 : UsualEq) (E1Dec : HasEqDec E1) (E2Dec : HasEqDec E2).
   Definition eq_dec (x y : E1.t + E2.t) : {eq x y} + {~eq x y}.
   Proof.
     destruct x as [x|x], y as [y|y];
-      [ destruct (E1.eq_dec x y); [ left | right ]
+      [ destruct (E1Dec.eq_dec x y); [ left | right ]
       | right
       | right
-      | destruct (E2.eq_dec x y); [ left | right ] ];
+      | destruct (E2Dec.eq_dec x y); [ left | right ] ];
       repeat first [ apply f_equal
                    | assumption
                    | intro
@@ -121,7 +121,7 @@ Module SumMiniDecidableType (E1 : MiniDecidableType) (E2 : MiniDecidableType) <:
     Module E1' := Make_UDT E1.
     Module E2' := Make_UDT E2.
   End _SumMiniDecidableType.
-  Include SumUsualHasEqDec E1' E2'.
+  Include SumUsualHasEqDec E1' E2' E1' E2'.
 End SumMiniDecidableType.
 
 Local Coercion is_true : bool >-> Sortclass.
@@ -157,17 +157,19 @@ Module SumBooleanEqualityType' (E1 : BooleanEqualityType) (E2 : BooleanEqualityT
 Module SumBooleanDecidableType' (E1 : BooleanDecidableType) (E2 : BooleanDecidableType) := SumBooleanDecidableType E1 E2 <+ EqNotation <+ EqbNotation.
 Module SumDecidableTypeFull' (E1 : DecidableTypeFull) (E2 : DecidableTypeFull) := SumDecidableTypeFull E1 E2 <+ EqNotation.
 
-Module SumUsualEqualityType (E1 : UsualEqualityType) (E2 : UsualEqualityType) <: UsualEqualityType := SumUsualEq E1 E2 <+ UsualIsEq.
+Module SumUsualEqualityType (E1 : UsualEq) (E2 : UsualEq) <: UsualEqualityType := SumUsualEq E1 E2 <+ UsualIsEq.
+Module SumUsualEqualityTypeOrig (E1 : UsualEq) (E2 : UsualEq) <: UsualEqualityTypeOrig := SumUsualEq E1 E2 <+ UsualIsEqOrig.
+Module SumUsualEqualityTypeBoth (E1 : UsualEq) (E2 : UsualEq) <: UsualEqualityTypeBoth := SumUsualEq E1 E2 <+ UsualIsEq <+ UsualIsEqOrig.
 
 Module SumUsualDecidableType (E1 : UsualDecidableType) (E2 : UsualDecidableType) <: UsualDecidableType
-:= SumUsualEq E1 E2 <+ UsualIsEq <+ SumUsualHasEqDec E1 E2.
-Module SumUsualDecidableTypeOrig (E1 : UsualDecidableType) (E2 : UsualDecidableType) <: UsualDecidableTypeOrig
-:= SumUsualEq E1 E2 <+ UsualIsEqOrig <+ SumUsualHasEqDec E1 E2.
-Module SumUsualDecidableTypeBoth (E1 : UsualDecidableType) (E2 : UsualDecidableType) <: UsualDecidableTypeBoth
+:= SumUsualEq E1 E2 <+ UsualIsEq <+ SumUsualHasEqDec E1 E2 E1 E2.
+Module SumUsualDecidableTypeOrig (E1 : UsualDecidableTypeOrig) (E2 : UsualDecidableTypeOrig) <: UsualDecidableTypeOrig
+:= SumUsualEq E1 E2 <+ UsualIsEqOrig <+ SumUsualHasEqDec E1 E2 E1 E2.
+Module SumUsualDecidableTypeBoth (E1 : UsualDecidableTypeBoth) (E2 : UsualDecidableTypeBoth) <: UsualDecidableTypeBoth
  := SumUsualDecidableType E1 E2 <+ UsualIsEqOrig.
 Module SumUsualBoolEq (E1 : UsualBoolEq) (E2 : UsualBoolEq) <: UsualBoolEq
 := SumUsualEq E1 E2 <+ SumUsualHasEqBool E1 E2.
 Module SumUsualDecidableTypeFull (E1 : UsualDecidableTypeFull) (E2 : UsualDecidableTypeFull) <: UsualDecidableTypeFull
- := SumUsualEq E1 E2 <+ UsualIsEq <+ UsualIsEqOrig <+ SumUsualHasEqDec E1 E2 <+ SumUsualHasEqBool E1 E2.
+ := SumUsualEq E1 E2 <+ UsualIsEq <+ UsualIsEqOrig <+ SumUsualHasEqDec E1 E2 E1 E2 <+ SumUsualHasEqBool E1 E2.
 
 Module SumEqbType (E1 : EqbType) (E2 : EqbType) <: EqbType := SumTyp E1 E2 <+ SumHasEqb E1 E2 E1 E2 <+ SumIsEqb E1 E2.

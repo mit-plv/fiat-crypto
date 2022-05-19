@@ -67,10 +67,10 @@ End ProdEqbSpec.
 
 Module ProdHasEqBool (E1 : Eq) (E2 : Eq) (E1s : HasEqBool E1) (E2s : HasEqBool E2) := ProdHasEqb E1 E2 E1s E2s <+ ProdEqbSpec E1 E2 E1 E2 E1s E2s E1s E2s.
 
-Module ProdUsualHasEqDec (E1 : UsualDecidableType) (E2 : UsualDecidableType).
+Module ProdUsualHasEqDec (E1 : UsualEq) (E2 : UsualEq) (E1Dec : HasEqDec E1) (E2Dec : HasEqDec E2).
   Definition eq_dec (x y : E1.t * E2.t) : {eq x y} + {~eq x y}.
   Proof.
-    destruct (E1.eq_dec (fst x) (fst y)); [ destruct (E2.eq_dec (snd x) (snd y)); [ left; destruct x, y | right; intro; subst y; destruct x ] | right; intro; subst y; destruct x ]; cbn in *; subst; try reflexivity; eauto using eq_refl with nocore.
+    destruct (E1Dec.eq_dec (fst x) (fst y)); [ destruct (E2Dec.eq_dec (snd x) (snd y)); [ left; destruct x, y | right; intro; subst y; destruct x ] | right; intro; subst y; destruct x ]; cbn in *; subst; try reflexivity; eauto using eq_refl with nocore.
   Defined.
 End ProdUsualHasEqDec.
 
@@ -112,7 +112,7 @@ Module ProdMiniDecidableType (E1 : MiniDecidableType) (E2 : MiniDecidableType) <
     Module E1' := Make_UDT E1.
     Module E2' := Make_UDT E2.
   End _ProdMiniDecidableType.
-  Include ProdUsualHasEqDec E1' E2'.
+  Include ProdUsualHasEqDec E1' E2' E1' E2'.
 End ProdMiniDecidableType.
 
 Local Coercion is_true : bool >-> Sortclass.
@@ -151,17 +151,19 @@ Module ProdBooleanEqualityType' (E1 : BooleanEqualityType) (E2 : BooleanEquality
 Module ProdBooleanDecidableType' (E1 : BooleanDecidableType) (E2 : BooleanDecidableType) := ProdBooleanDecidableType E1 E2 <+ EqNotation <+ EqbNotation.
 Module ProdDecidableTypeFull' (E1 : DecidableTypeFull) (E2 : DecidableTypeFull) := ProdDecidableTypeFull E1 E2 <+ EqNotation.
 
-Module ProdUsualEqualityType (E1 : UsualEqualityType) (E2 : UsualEqualityType) <: UsualEqualityType := ProdUsualEq E1 E2 <+ UsualIsEq.
+Module ProdUsualEqualityType (E1 : UsualEq) (E2 : UsualEq) <: UsualEqualityType := ProdUsualEq E1 E2 <+ UsualIsEq.
+Module ProdUsualEqualityTypeOrig (E1 : UsualEq) (E2 : UsualEq) <: UsualEqualityTypeOrig := ProdUsualEq E1 E2 <+ UsualIsEqOrig.
+Module ProdUsualEqualityTypeBoth (E1 : UsualEq) (E2 : UsualEq) <: UsualEqualityTypeBoth := ProdUsualEq E1 E2 <+ UsualIsEq <+ UsualIsEqOrig.
 
 Module ProdUsualDecidableType (E1 : UsualDecidableType) (E2 : UsualDecidableType) <: UsualDecidableType
-:= ProdUsualEq E1 E2 <+ UsualIsEq <+ ProdUsualHasEqDec E1 E2.
-Module ProdUsualDecidableTypeOrig (E1 : UsualDecidableType) (E2 : UsualDecidableType) <: UsualDecidableTypeOrig
-:= ProdUsualEq E1 E2 <+ UsualIsEqOrig <+ ProdUsualHasEqDec E1 E2.
-Module ProdUsualDecidableTypeBoth (E1 : UsualDecidableType) (E2 : UsualDecidableType) <: UsualDecidableTypeBoth
+:= ProdUsualEq E1 E2 <+ UsualIsEq <+ ProdUsualHasEqDec E1 E2 E1 E2.
+Module ProdUsualDecidableTypeOrig (E1 : UsualDecidableTypeOrig) (E2 : UsualDecidableTypeOrig) <: UsualDecidableTypeOrig
+:= ProdUsualEq E1 E2 <+ UsualIsEqOrig <+ ProdUsualHasEqDec E1 E2 E1 E2.
+Module ProdUsualDecidableTypeBoth (E1 : UsualDecidableTypeBoth) (E2 : UsualDecidableTypeBoth) <: UsualDecidableTypeBoth
  := ProdUsualDecidableType E1 E2 <+ UsualIsEqOrig.
 Module ProdUsualBoolEq (E1 : UsualBoolEq) (E2 : UsualBoolEq) <: UsualBoolEq
 := ProdUsualEq E1 E2 <+ ProdUsualHasEqBool E1 E2.
 Module ProdUsualDecidableTypeFull (E1 : UsualDecidableTypeFull) (E2 : UsualDecidableTypeFull) <: UsualDecidableTypeFull
- := ProdUsualEq E1 E2 <+ UsualIsEq <+ UsualIsEqOrig <+ ProdUsualHasEqDec E1 E2 <+ ProdUsualHasEqBool E1 E2.
+ := ProdUsualEq E1 E2 <+ UsualIsEq <+ UsualIsEqOrig <+ ProdUsualHasEqDec E1 E2 E1 E2 <+ ProdUsualHasEqBool E1 E2.
 
 Module ProdEqbType (E1 : EqbType) (E2 : EqbType) <: EqbType := ProdTyp E1 E2 <+ ProdHasEqb E1 E2 E1 E2 <+ ProdIsEqb E1 E2.

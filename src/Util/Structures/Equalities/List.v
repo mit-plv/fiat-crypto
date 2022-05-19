@@ -67,9 +67,9 @@ End ListEqbSpec.
 
 Module ListHasEqBool (E : Eq) (Es : HasEqBool E) := ListHasEqb E Es <+ ListEqbSpec E E Es Es.
 
-Module ListUsualHasEqDec (E : UsualDecidableType).
+Module ListUsualHasEqDec (E : UsualEq) (EDec : HasEqDec E).
   Definition eq_dec (x y : list E.t) : {eq x y} + {~eq x y}
-    := List.list_eq_dec E.eq_dec x y.
+    := List.list_eq_dec EDec.eq_dec x y.
 End ListUsualHasEqDec.
 
 Module ListUsualEqbSpec (E : UsualBoolEq).
@@ -108,7 +108,7 @@ Module ListMiniDecidableType (E : MiniDecidableType) <: MiniDecidableType.
   Module Import _ListMiniDecidableType.
     Module E' := Make_UDT E.
   End _ListMiniDecidableType.
-  Include ListUsualHasEqDec E'.
+  Include ListUsualHasEqDec E' E'.
 End ListMiniDecidableType.
 
 Module ListUsualHasEqBool (E : UsualBoolEq) := ListHasEqb E E <+ ListUsualEqbSpec E.
@@ -136,17 +136,19 @@ Module ListBooleanDecidableType' (E : BooleanDecidableType) := ListBooleanDecida
 Module ListDecidableTypeFull' (E : DecidableTypeFull) := ListDecidableTypeFull E <+ EqNotation.
 
 Module ListUsualEqualityType (E : UsualEqualityType) <: UsualEqualityType := ListUsualEq E <+ UsualIsEq.
+Module ListUsualEqualityTypeOrig (E : UsualEqualityTypeOrig) <: UsualEqualityTypeOrig := ListUsualEq E <+ UsualIsEqOrig.
+Module ListUsualEqualityTypeBoth (E : UsualEqualityTypeBoth) <: UsualEqualityTypeBoth := ListUsualEq E <+ UsualIsEq <+ UsualIsEqOrig.
 
 Module ListUsualDecidableType (E : UsualDecidableType) <: UsualDecidableType
-:= ListUsualEq E <+ UsualIsEq <+ ListUsualHasEqDec E.
+:= ListUsualEq E <+ UsualIsEq <+ ListUsualHasEqDec E E.
 Module ListUsualDecidableTypeOrig (E : UsualDecidableType) <: UsualDecidableTypeOrig
-:= ListUsualEq E <+ UsualIsEqOrig <+ ListUsualHasEqDec E.
+:= ListUsualEq E <+ UsualIsEqOrig <+ ListUsualHasEqDec E E.
 Module ListUsualDecidableTypeBoth (E : UsualDecidableType) <: UsualDecidableTypeBoth
  := ListUsualDecidableType E <+ UsualIsEqOrig.
 Module ListUsualBoolEq (E : UsualBoolEq) <: UsualBoolEq
 := ListUsualEq E <+ ListUsualHasEqBool E.
 Module ListUsualDecidableTypeFull (E : UsualDecidableTypeFull) <: UsualDecidableTypeFull
- := ListUsualEq E <+ UsualIsEq <+ UsualIsEqOrig <+ ListUsualHasEqDec E <+ ListUsualHasEqBool E.
+ := ListUsualEq E <+ UsualIsEq <+ UsualIsEqOrig <+ ListUsualHasEqDec E E <+ ListUsualHasEqBool E.
 
 Local Coercion is_true : bool >-> Sortclass.
 Module ListIsEqb (E : EqbType).
