@@ -25,7 +25,7 @@ Local Set Implicit Arguments.
 (* TODO: move to global settings *)
 Local Set Keyed Unification.
 
-Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
+Module IsoWSfun (E' : DecidableType) (W' : WSfun E')
        (E : IsoDecidableTypeOrig E') <: WSfun E.
   Local Existing Instances E.Proper_to_ E.Proper_of_.
 
@@ -487,15 +487,15 @@ Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
 	     (x:key)(f:option elt->option elt'->option elt''),
       In x (map2 f m m') -> In x m \/ In x m'.
   Proof. spec_t. Qed.
-End WIsoSfun.
+End IsoWSfun.
 
-Module WIsoS (W' : WS) (E : IsoDecidableTypeOrig W'.E) <: WS.
+Module IsoWS (W' : WS) (E : IsoDecidableTypeOrig W'.E) <: WS.
   Module E := E.
-  Include WIsoSfun W'.E W' E.
-End WIsoS.
+  Include IsoWSfun W'.E W' E.
+End IsoWS.
 
 Module IsoSfun (E' : OrderedTypeOrig) (W' : Sfun E') (E : IsoOrderedTypeOrig E') <: Sfun E.
-  Include WIsoSfun E' W' E.
+  Include IsoWSfun E' W' E.
   Section elt.
     Variable elt:Type.
     Definition lt_key (p p':key*elt) := E.lt (fst p) (fst p').

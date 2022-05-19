@@ -1204,7 +1204,7 @@ Module Compilers.
       Proof. cbv [eq SumPositiveSet.E.eq sumwise]; intros [?|?] [?|?] ?; subst; tauto. Qed.
     End IntAsDecidableType.
 
-    Module IntSet <: WSets := WIsoSets SumPositiveSet IntAsDecidableType.
+    Module IntSet <: WSets := IsoWSets SumPositiveSet IntAsDecidableType.
     Module Import IntSetShow := ShowWSets IntSet.
     Global Instance show_IntSet : Show IntSet.t := _.
     Global Instance show_lines_IntSet : ShowLines IntSet.t := _.
