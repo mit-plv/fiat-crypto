@@ -82,6 +82,8 @@ Module UnitBooleanDecidableType' := UnitBooleanDecidableType <+ EqNotation <+ Eq
 Module UnitDecidableTypeFull' := UnitDecidableTypeFull <+ EqNotation.
 
 Module UnitUsualEqualityType <: UsualEqualityType := UnitUsualEq <+ UsualIsEq.
+Module UnitUsualEqualityTypeOrig <: UsualEqualityTypeOrig := UnitUsualEq <+ UsualIsEqOrig.
+Module UnitUsualEqualityTypeBoth <: UsualEqualityTypeBoth := UnitUsualEq <+ UsualIsEq <+ UsualIsEqOrig.
 
 Module UnitUsualDecidableType <: UsualDecidableType
 := UnitUsualEq <+ UsualIsEq <+ UnitUsualHasEqDec.

@@ -238,7 +238,7 @@ Module SumUsualStrOrder (E1 : UsualStrOrder) (E2 : UsualStrOrder) <: UsualStrOrd
 Module SumUsualHasCompare (E1 : UsualEqLt) (E2 : UsualEqLt) (E1c : HasCompare E1) (E2c : HasCompare E2) := SumHasCmp E1 E2 E1c E2c <+ SumUsualCmpSpec E1 E2 E1c E2c.
 
 Module SumUsualDecStrOrder (E1 : UsualDecStrOrder) (E2 : UsualDecStrOrder) <: UsualDecStrOrder := SumUsualStrOrder E1 E2 <+ SumUsualHasCompare E1 E2 E1 E2.
-Module SumUsualOrderedType (E1 : UsualOrderedType) (E2 : UsualOrderedType) <: UsualOrderedType := SumUsualDecStrOrder E1 E2 <+ SumUsualHasEqDec E1 E2.
+Module SumUsualOrderedType (E1 : UsualOrderedType) (E2 : UsualOrderedType) <: UsualOrderedType := SumUsualDecStrOrder E1 E2 <+ SumUsualHasEqDec E1 E2 E1 E2.
 Module SumUsualOrderedTypeFull (E1 : UsualOrderedTypeFull) (E2 : UsualOrderedTypeFull) <: UsualOrderedTypeFull := SumUsualOrderedType E1 E2 <+ SumHasLe E1 E2 <+ SumUsualLeIsLtEq E1 E2 E1 E2.
 
 Module SumUsualStrOrder' (E1 : UsualStrOrder) (E2 : UsualStrOrder) <: UsualStrOrder' := SumUsualStrOrder E1 E2 <+ LtNotation.

@@ -2,6 +2,11 @@ Require Import Coq.Classes.Morphisms.
 Require Import Coq.Structures.Equalities.
 Require Export Crypto.Util.FixCoqMistakes.
 
+Module Type UsualEqualityTypeOrig <: EqualityTypeOrig
+ := UsualEq <+ UsualIsEqOrig.
+Module Type UsualEqualityTypeBoth <: EqualityTypeBoth
+ := UsualEq <+ UsualIsEq <+ UsualIsEqOrig.
+
 Local Coercion is_true : bool >-> Sortclass.
 Module Type IsEqb (Import E : Typ) (Import Eb:HasEqb E).
 #[global]

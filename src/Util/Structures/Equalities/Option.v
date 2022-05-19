@@ -66,11 +66,11 @@ End OptionEqbSpec.
 
 Module OptionHasEqBool (E : Eq) (Es : HasEqBool E) := OptionHasEqb E Es <+ OptionEqbSpec E E Es Es.
 
-Module OptionUsualHasEqDec (E : UsualDecidableType).
+Module OptionUsualHasEqDec (E : UsualEq) (EDec : HasEqDec E).
   Definition eq_dec (x y : option E.t) : {eq x y} + {~eq x y}.
   Proof.
     destruct x as [x|], y as [y|];
-      [ destruct (E.eq_dec x y); [ left | right ]
+      [ destruct (EDec.eq_dec x y); [ left | right ]
       | right
       | right
       | left ];
@@ -120,7 +120,7 @@ Module OptionMiniDecidableType (E : MiniDecidableType) <: MiniDecidableType.
   Module Import _OptionMiniDecidableType.
     Module E' := Make_UDT E.
   End _OptionMiniDecidableType.
-  Include OptionUsualHasEqDec E'.
+  Include OptionUsualHasEqDec E' E'.
 End OptionMiniDecidableType.
 
 Local Coercion is_true : bool >-> Sortclass.
@@ -157,16 +157,18 @@ Module OptionBooleanDecidableType' (E : BooleanDecidableType) := OptionBooleanDe
 Module OptionDecidableTypeFull' (E : DecidableTypeFull) := OptionDecidableTypeFull E <+ EqNotation.
 
 Module OptionUsualEqualityType (E : UsualEqualityType) <: UsualEqualityType := OptionUsualEq E <+ UsualIsEq.
+Module OptionUsualEqualityTypeOrig (E : UsualEqualityTypeOrig) <: UsualEqualityTypeOrig := OptionUsualEq E <+ UsualIsEqOrig.
+Module OptionUsualEqualityTypeBoth (E : UsualEqualityTypeBoth) <: UsualEqualityTypeBoth := OptionUsualEq E <+ UsualIsEq <+ UsualIsEqOrig.
 
 Module OptionUsualDecidableType (E : UsualDecidableType) <: UsualDecidableType
-:= OptionUsualEq E <+ UsualIsEq <+ OptionUsualHasEqDec E.
-Module OptionUsualDecidableTypeOrig (E : UsualDecidableType) <: UsualDecidableTypeOrig
-:= OptionUsualEq E <+ UsualIsEqOrig <+ OptionUsualHasEqDec E.
-Module OptionUsualDecidableTypeBoth (E : UsualDecidableType) <: UsualDecidableTypeBoth
+:= OptionUsualEq E <+ UsualIsEq <+ OptionUsualHasEqDec E E.
+Module OptionUsualDecidableTypeOrig (E : UsualDecidableTypeOrig) <: UsualDecidableTypeOrig
+:= OptionUsualEq E <+ UsualIsEqOrig <+ OptionUsualHasEqDec E E.
+Module OptionUsualDecidableTypeBoth (E : UsualDecidableTypeBoth) <: UsualDecidableTypeBoth
  := OptionUsualDecidableType E <+ UsualIsEqOrig.
 Module OptionUsualBoolEq (E : UsualBoolEq) <: UsualBoolEq
 := OptionUsualEq E <+ OptionUsualHasEqBool E.
 Module OptionUsualDecidableTypeFull (E : UsualDecidableTypeFull) <: UsualDecidableTypeFull
- := OptionUsualEq E <+ UsualIsEq <+ UsualIsEqOrig <+ OptionUsualHasEqDec E <+ OptionUsualHasEqBool E.
+ := OptionUsualEq E <+ UsualIsEq <+ UsualIsEqOrig <+ OptionUsualHasEqDec E E <+ OptionUsualHasEqBool E.
 
 Module OptionEqbType (E : EqbType) <: EqbType := OptionTyp E <+ OptionHasEqb E E <+ OptionIsEqb E.

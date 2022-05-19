@@ -418,7 +418,7 @@ Module ProdUsualStrOrder (E1 : UsualStrOrder) (E2 : UsualStrOrder) <: UsualStrOr
 Module ProdUsualHasCompare (E1 : UsualEqLt) (E2 : UsualEqLt) (E1c : HasCompare E1) (E2c : HasCompare E2) := ProdHasCmp E1 E2 E1c E2c <+ ProdUsualCmpSpec E1 E2 E1c E2c.
 
 Module ProdUsualDecStrOrder (E1 : UsualDecStrOrder) (E2 : UsualDecStrOrder) <: UsualDecStrOrder := ProdUsualStrOrder E1 E2 <+ ProdUsualHasCompare E1 E2 E1 E2.
-Module ProdUsualOrderedType (E1 : UsualOrderedType) (E2 : UsualOrderedType) <: UsualOrderedType := ProdUsualDecStrOrder E1 E2 <+ ProdUsualHasEqDec E1 E2.
+Module ProdUsualOrderedType (E1 : UsualOrderedType) (E2 : UsualOrderedType) <: UsualOrderedType := ProdUsualDecStrOrder E1 E2 <+ ProdUsualHasEqDec E1 E2 E1 E2.
 Module ProdUsualOrderedTypeFull (E1 : UsualOrderedTypeFull) (E2 : UsualOrderedTypeFull) <: UsualOrderedTypeFull := ProdUsualOrderedType E1 E2 <+ ProdHasLe E1 E2 <+ ProdUsualLeIsLtEq E1 E2 E1 E2 E1.
 
 Module ProdUsualStrOrder' (E1 : UsualStrOrder) (E2 : UsualStrOrder) <: UsualStrOrder' := ProdUsualStrOrder E1 E2 <+ LtNotation.
@@ -523,36 +523,3 @@ Module ProdBoolOrdSpecs (O1 : EqLtLe) (O2 : EqLtLe) (F1 : HasBoolOrdFuns O1) (F2
 Module ProdOrderFunctions (O1 : EqLtLe) (O2 : EqLtLe) (F1 : OrderFunctions O1) (F2 : OrderFunctions O2) (O1e : IsEq O1) := ProdHasCompare O1 O2 F1 F2 O1e <+ ProdHasBoolOrdFuns O1 O2 F1 F2 <+ ProdBoolOrdSpecs O1 O2 F1 F2 F1 F2.
 
 Module ProdOrderFunctions' (O1 : EqLtLe) (O2 : EqLtLe) (F1 : OrderFunctions O1) (F2 : OrderFunctions O2) (O1e : IsEq O1) := ProdHasCompare O1 O2 F1 F2 O1e <+ ProdCmpNotation O1 O2 F1 F2 <+ ProdHasBoolOrdFuns' O1 O2 F1 F2 <+ ProdBoolOrdSpecs O1 O2 F1 F2 F1 F2.
-
-
-
-
-
-
-
-
-
-
-
-
-(*
-Module ProdTotalLeBool (E1 : CompatibleTotalEqLtLeBool) (E2 : TotalLeBool) <: TotalLeBool := ProdLeBool E1 E2 <+ ProdLebIsTotal E1 E2 E1 E2 E1 E1.
-Module ProdTotalLeBool' (E1 : TotalLeBool) (E2 : TotalLeBool) <: TotalLeBool' := ProdLeBool' E1 E2 <+ ProdLebIsTotal E1 E2.
-Module ProdTotalEqLtLeBool (E1 : TotalEqLtLeBool) (E2 : TotalEqLtLeBool) <: TotalEqLtLeBool := ProdEqLtLeBool E1 E2 <+ ProdEqLtLebIsTotal E1 E2.
-Module ProdTotalEqLtLeBool' (E1 : TotalEqLtLeBool) (E2 : TotalEqLtLeBool) <: TotalEqLtLeBool' := ProdEqLtLeBool' E1 E2 <+ ProdEqLtLebIsTotal E1 E2.
-
-Module ProdTotalTransitiveLeBool (E1 : TotalTransitiveLeBool) (E2 : TotalTransitiveLeBool) <: TotalTransitiveLeBool := ProdTotalLeBool E1 E2 <+ ProdLebIsTransitive E1 E2 E1 E2.
-Module ProdTotalTransitiveLeBool' (E1 : TotalTransitiveLeBool) (E2 : TotalTransitiveLeBool) <: TotalTransitiveLeBool' := ProdTotalLeBool' E1 E2 <+ ProdLebIsTransitive E1 E2 E1 E2.
-
-Module ProdHasBoolOrdFuns (E1 : Typ) (E2 : Typ) (E1s : HasBoolOrdFuns E1) (E2s : HasBoolOrdFuns E2) := ProdTyp E1 E2 <+ ProdHasEqb E1 E2 E1s E2s <+ ProdHasLtb E1 E2 E1s E2s <+ ProdHasLeb E1 E2 E1s E2s.
-
-Module ProdHasBoolOrdFuns' (E1 : Typ) (E2 : Typ) (E1s : HasBoolOrdFuns E1) (E2s : HasBoolOrdFuns E2) := ProdHasBoolOrdFuns E1 E2 E1s E2s <+ ProdEqbNotation E1 E2 E1s E2s <+ ProdLtbNotation E1 E2 E1s E2s <+ ProdLebNotation E1 E2 E1s E2s.
-
-Module ProdBoolOrdSpecs (E1 : EqLtLe) (E2 : EqLtLe) (F1 : HasBoolOrdFuns E1) (F2 : HasBoolOrdFuns E2) (E1s : BoolOrdSpecs E1 F1) (E2s : BoolOrdSpecs E2 F2)
-:= ProdEqbSpec E1 E2 E1 E2 F1 F2 E1s E2s <+ ProdLtbSpec E1 E2 E1 E2 F1 F2 E1s E2s <+ ProdLebSpec E1 E2 E1 E2 F1 F2 E1s E2s.
-
-Module ProdOrderFunctions (E1 : EqLtLe) (E2 : EqLtLe) (E1f : OrderFunctions E1) (E2f : OrderFunctions E2)
-:= ProdHasCompare E1 E2 E1f E2f <+ ProdHasBoolOrdFuns E1 E2 E1f E2f <+ ProdBoolOrdSpecs E1 E2 E1f E2f E1f E2f.
-Module ProdOrderFunctions' (E1 : EqLtLe) (E2 : EqLtLe) (E1f : OrderFunctions E1) (E2f : OrderFunctions E2)
-:= ProdHasCompare E1 E2 E1f E2f <+ ProdCmpNotation E1 E2 E1f E2f <+ ProdHasBoolOrdFuns' E1 E2 E1f E2f <+ ProdBoolOrdSpecs E1 E2 E1f E2f E1f E2f.
-*)

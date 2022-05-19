@@ -323,7 +323,7 @@ Module OptionUsualStrOrder (E : UsualStrOrder) <: UsualStrOrder := OptionUsualEq
 Module OptionUsualHasCompare (E : UsualEqLt) (Ec : HasCompare E) := OptionHasCmp E Ec <+ OptionUsualCmpSpec E Ec.
 
 Module OptionUsualDecStrOrder (E : UsualDecStrOrder) <: UsualDecStrOrder := OptionUsualStrOrder E <+ OptionUsualHasCompare E E.
-Module OptionUsualOrderedType (E : UsualOrderedType) <: UsualOrderedType := OptionUsualDecStrOrder E <+ OptionUsualHasEqDec E.
+Module OptionUsualOrderedType (E : UsualOrderedType) <: UsualOrderedType := OptionUsualDecStrOrder E <+ OptionUsualHasEqDec E E.
 Module OptionUsualOrderedTypeFull (E : UsualOrderedTypeFull) <: UsualOrderedTypeFull := OptionUsualOrderedType E <+ OptionHasLe E <+ OptionUsualLeIsLtEq E E E.
 
 Module OptionUsualStrOrder' (E : UsualStrOrder) <: UsualStrOrder' := OptionUsualStrOrder E <+ LtNotation.
