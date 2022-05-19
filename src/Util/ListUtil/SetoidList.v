@@ -124,6 +124,20 @@ Proof.
   intro; apply f_Proper.
 Qed.
 
+Lemma NoDupA_map_inv' A B (f : A -> B) (eqA eqB : relation _) (l : list A)
+      (f_Proper : forall a v : A, eqB (f a) (f v) -> eqA a v)
+  : NoDupA eqA l -> NoDupA eqB (List.map f l).
+Proof.
+  induction l as [|? ? IH]; cbn [List.map]; intro H; inversion_clear H;
+    [ constructor | ].
+  specialize (IH ltac:(assumption)).
+  constructor; [ | assumption ].
+  let H := match goal with H : ~ InA _ _ _ |- _ => H end in
+  intro H'; apply H; clear H.
+  eapply InA_map'; [ | eassumption ].
+  intro; apply f_Proper.
+Qed.
+
 Global Instance InA_Proper_impl {A} {eqA : relation A}
        {eqA_Proper : Proper (eqA ==> eqA ==> Basics.impl) eqA}
   : Proper (eqA ==> eqlistA eqA ==> Basics.impl) (@InA A eqA) | 10.
