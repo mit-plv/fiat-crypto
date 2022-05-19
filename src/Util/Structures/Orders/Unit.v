@@ -42,6 +42,20 @@ Module UnitIsStrOrder.
   Proof. t. Qed.
 End UnitIsStrOrder.
 
+Module UnitIsStrOrderOrig.
+  Lemma lt_trans : forall x y z, UnitHasLt.lt x y -> UnitHasLt.lt y z -> UnitHasLt.lt x z.
+  Proof. t. Qed.
+  Lemma lt_not_eq : forall x y, UnitHasLt.lt x y -> ~ eq x y.
+  Proof. t. Qed.
+End UnitIsStrOrderOrig.
+
+Module UnitHasCompareOrig.
+  Definition compare : forall x y, OrderedType.Compare UnitHasLt.lt eq x y.
+  Proof.
+    constructor; destruct_head'_unit; reflexivity.
+  Defined.
+End UnitHasCompareOrig.
+
 Module UnitLeIsLtEq.
   Local Infix "<=" := UnitHasLe.le.
   Local Infix "<" := UnitHasLt.lt.
@@ -119,6 +133,20 @@ Module UnitUsualLtIsTotal.
   Proof. t. Qed.
 End UnitUsualLtIsTotal.
 
+Local Coercion is_true : bool >-> Sortclass.
+
+Module UnitIsStrOrderBool.
+  Global Instance ltb_strorder : StrictOrder UnitHasLtb.ltb | 10.
+  Proof. t. Qed.
+  Global Instance ltb_compat : Proper (UnitHasEqb.eqb==>UnitHasEqb.eqb==>eq) UnitHasLtb.ltb | 10.
+  Proof. t. Qed.
+End UnitIsStrOrderBool.
+
+Module UnitLebIsLtbEqb.
+  Lemma leb_ltbeqb : forall x y, (UnitHasLeb.leb x y = (UnitHasLtb.ltb x y || UnitHasEqb.eqb x y))%bool.
+  Proof. t. Qed.
+End UnitLebIsLtbEqb.
+
 Module UnitEqLt <: EqLt := UnitEq <+ UnitHasLt.
 Module UnitEqLe <: EqLe := UnitEq <+ UnitHasLe.
 Module UnitEqLtLe <: EqLtLe := UnitEq <+ UnitHasLt <+ UnitHasLe.
@@ -159,27 +187,47 @@ Module UnitUsualTotalOrder <: UsualTotalOrder
 Module UnitTotalOrder' <: TotalOrder' := UnitTotalOrder <+ EqLtLeNotation.
 Module UnitUsualTotalOrder' <: UsualTotalOrder' := UnitUsualTotalOrder <+ LtLeNotation.
 
+Module UnitOrderedTypeOrig <: OrderedTypeOrig := OT_of_New UnitOrderedType.
+Module UnitMiniOrderedType <: MiniOrderedType := UnitOrderedTypeOrig.
+Module UnitUsualOrderedTypeOrig <: UsualOrderedTypeOrig := UnitOrderedTypeOrig.
+Module UnitUsualMiniOrderedType <: UsualMiniOrderedType := UnitOrderedTypeOrig.
+
 Module UnitLeBool <: LeBool := UnitTyp <+ UnitHasLeb.
 Module UnitLtBool <: LtBool := UnitTyp <+ UnitHasLtb.
 Module UnitLeBool' <: LeBool' := UnitLeBool <+ LebNotation.
 Module UnitLtBool' <: LtBool' := UnitLtBool <+ LtbNotation.
+Module UnitEqLeBool <: EqLeBool := UnitTyp <+ UnitHasEqb <+ UnitHasLeb.
+Module UnitEqLtBool <: EqLtBool := UnitTyp <+ UnitHasEqb <+ UnitHasLtb.
+Module UnitEqLeBool' <: EqLeBool' := UnitEqLeBool <+ EqbNotation <+ LebNotation.
+Module UnitEqLtBool' <: EqLtBool' := UnitEqLtBool <+ EqbNotation <+ LtbNotation.
+Module UnitEqLtLeBool <: EqLtLeBool := UnitTyp <+ UnitHasEqb <+ UnitHasLtb <+ UnitHasLeb.
+Module UnitEqLtLeBool' <: EqLtLeBool' := UnitEqLtLeBool <+ EqbNotation <+ LtbNotation <+ LebNotation.
 
 Module UnitTotalLeBool <: TotalLeBool := UnitLeBool <+ UnitLebIsTotal.
 Module UnitTotalLeBool' <: TotalLeBool' := UnitLeBool' <+ UnitLebIsTotal.
+Module UnitTotalEqLeBool <: TotalEqLeBool := UnitEqLeBool <+ UnitLebIsTotal.
+Module UnitTotalEqLeBool' <: TotalEqLeBool' := UnitEqLeBool' <+ UnitLebIsTotal.
+Module UnitTotalEqLtLeBool <: TotalEqLtLeBool := UnitEqLtLeBool <+ UnitLebIsTotal.
+Module UnitTotalEqLtLeBool' <: TotalEqLtLeBool' := UnitEqLtLeBool' <+ UnitLebIsTotal.
 
 Module UnitTotalTransitiveLeBool <: TotalTransitiveLeBool := UnitTotalLeBool <+ UnitLebIsTransitive.
 Module UnitTotalTransitiveLeBool' <: TotalTransitiveLeBool' := UnitTotalLeBool' <+ UnitLebIsTransitive.
+Module UnitTotalTransitiveEqLeBool <: TotalTransitiveEqLeBool := UnitTotalEqLeBool <+ UnitLebIsTransitive.
+Module UnitTotalTransitiveEqLeBool' <: TotalTransitiveEqLeBool' := UnitTotalEqLeBool' <+ UnitLebIsTransitive.
+Module UnitTotalTransitiveEqLtLeBool <: TotalTransitiveEqLtLeBool := UnitTotalEqLtLeBool <+ UnitLebIsTransitive.
+Module UnitTotalTransitiveEqLtLeBool' <: TotalTransitiveEqLtLeBool' := UnitTotalEqLtLeBool' <+ UnitLebIsTransitive.
 
-Module UnitHasUnitOrdFuns := UnitTyp <+ UnitHasEqb <+ UnitHasLtb <+ UnitHasLeb.
+Module UnitStrOrderBool <: StrOrderBool := UnitEqbType <+ UnitHasLtb <+ UnitIsStrOrderBool.
+Module UnitStrOrderBool' <: StrOrderBool' := UnitStrOrderBool <+ EqLtBoolNotation.
 
-Module UnitHasUnitOrdFuns' := UnitHasUnitOrdFuns <+ UnitEqbNotation <+ UnitLtbNotation <+ UnitLebNotation.
+Module UnitTotalOrderBool <: TotalOrderBool := UnitStrOrderBool <+ UnitHasLeb <+ UnitLebIsLtbEqb <+ UnitLebIsTotal.
+Module UnitTotalOrderBool' <: TotalOrderBool' := UnitTotalOrderBool <+ EqLtLeBoolNotation.
+
+Module UnitHasBoolOrdFuns := UnitHasEqb <+ UnitHasLtb <+ UnitHasLeb.
+
+Module UnitHasBoolOrdFuns' := UnitHasBoolOrdFuns <+ UnitEqbNotation <+ UnitLtbNotation <+ UnitLebNotation.
 
 Module UnitBoolOrdSpecs := UnitEqbSpec <+ UnitLtbSpec <+ UnitLebSpec.
 
-Module UnitOrderFunctions := UnitHasCompare <+ UnitHasUnitOrdFuns <+ UnitBoolOrdSpecs.
-Module UnitOrderFunctions' := UnitHasCompare <+ UnitCmpNotation <+ UnitHasUnitOrdFuns' <+ UnitBoolOrdSpecs.
-
-Require Import Coq.Structures.OrderedType.
-Require Import Crypto.Util.Structures.OrderedType.
-Module UnitOrderedTypeOrig <: OrderedType.OrderedType := OT_of_New UnitOrderedType.
-Module UnitMiniOrderedType <: OrderedType.MiniOrderedType := UnitOrderedTypeOrig.
+Module UnitOrderFunctions := UnitHasCompare <+ UnitHasBoolOrdFuns <+ UnitBoolOrdSpecs.
+Module UnitOrderFunctions' := UnitHasCompare <+ UnitCmpNotation <+ UnitHasBoolOrdFuns' <+ UnitBoolOrdSpecs.

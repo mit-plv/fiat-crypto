@@ -198,37 +198,37 @@ Module ListLtIsTotal (E : EqLt) (Es : LtIsTotal E).
   Qed.
 End ListLtIsTotal.
 
-Module ListHasLeb (E : Typ) (Ee : HasEqb E) (Es : HasLeb E).
+Module ListHasLeb (E : Typ) (EEqb : HasEqb E) (ELeb : HasLeb E).
   Fixpoint leb (x y : list E.t) : bool
     := match x, y with
        | nil, _ => true
        | _, nil => false
-       | x :: xs, y :: ys => Es.leb x y && (negb (Ee.eqb x y) || leb xs ys)
+       | x :: xs, y :: ys => ELeb.leb x y && (negb (EEqb.eqb x y) || leb xs ys)
        end%bool.
 End ListHasLeb.
 
-Module ListHasLtb (E : Typ) (Ee : HasEqb E) (Es : HasLtb E).
+Module ListHasLtb (E : Typ) (EEqb : HasEqb E) (ELtb : HasLtb E).
   Fixpoint ltb (x y : list E.t) : bool
     := match x, y with
        | nil, _::_ => true
        | nil, nil => false
        | _, nil => false
-       | x :: xs, y :: ys => Es.ltb x y || (Ee.eqb x y && ltb xs ys)
+       | x :: xs, y :: ys => ELtb.ltb x y || (EEqb.eqb x y && ltb xs ys)
        end%bool.
 End ListHasLtb.
 
-Module ListLebNotation (E : Typ) (Ee : HasEqb E) (Es : HasLeb E).
+Module ListLebNotation (E : Typ) (EEqb : HasEqb E) (ELeb : HasLeb E).
   Module Import _ListLebNotation.
     Module T := ListTyp E.
-    Module E' := ListHasLeb E Ee Es.
+    Module E' := ListHasLeb E EEqb ELeb.
   End _ListLebNotation.
   Include LebNotation T E'.
 End ListLebNotation.
 
-Module ListLtbNotation (E : Typ) (Ee : HasEqb E) (Es : HasLtb E).
+Module ListLtbNotation (E : Typ) (EEqb : HasEqb E) (ELtb : HasLtb E).
   Module Import _ListLtbNotation.
     Module T := ListTyp E.
-    Module E' := ListHasLtb E Ee Es.
+    Module E' := ListHasLtb E EEqb ELtb.
   End _ListLtbNotation.
   Include LtbNotation T E'.
 End ListLtbNotation.
@@ -261,7 +261,7 @@ End ListLtbSpec.
 
 Local Coercion is_true : bool >-> Sortclass.
 
-Module ListLebIsTotal (E : EqLtLeBool) (ETotal : LebIsTotal E) (ELebIsLtbEqb : LebIsLtbEqb E) (EIsEqb : IsEqb E E).
+Module ListLebIsTotal (E : TotalOrderBool).
   Module Import _ListLebIsTotal.
     Module L := ListHasLeb E E E.
   End _ListLebIsTotal.
@@ -269,26 +269,26 @@ Module ListLebIsTotal (E : EqLtLeBool) (ETotal : LebIsTotal E) (ELebIsLtbEqb : L
   Lemma leb_total : forall x y, (x <=? y) = true \/ (y <=? x) = true.
   Proof.
     induction x as [|x xs IH], y as [|y ys]; try specialize (IH ys);
-      try (pose proof (ETotal.leb_total x y); pose proof (ELebIsLtbEqb.leb_ltbeqb x y); pose proof (ELebIsLtbEqb.leb_ltbeqb y x); pose proof ((_ : Symmetric E.eqb) x y); pose proof ((_ : Symmetric E.eqb) y x)).
+      try (pose proof (E.leb_total x y); pose proof (E.leb_ltbeqb x y); pose proof (E.leb_ltbeqb y x); pose proof ((_ : Symmetric E.eqb) x y); pose proof ((_ : Symmetric E.eqb) y x)).
     all: t.
   Qed.
 End ListLebIsTotal.
 
-Module ListLebIsTransitive (E : EqLtLeBool) (ET : LebIsTransitive E) (ELebIsLtbEqb : LebIsLtbEqb E) (EStrOrder : IsStrOrderBool E) (EIsEqb : IsEqb E E).
+Module ListLebIsTransitive (E : TotalOrderBool).
   Module Import _ListLebIsTransitive.
-    Module E' := E <+ EIsEqb <+ IsEqbFacts.
+    Module E' := E <+ IsEqbFacts <+ TransitiveLeBool_of_TotalOrderBool.
     Module L := ListHasLeb E E E.
   End _ListLebIsTransitive.
   Lemma leb_trans : Transitive L.leb.
   Proof.
     hnf.
     induction x as [|x xs IH], y as [|y ys], z as [|z zs];
-      try (specialize (IH ys zs); pose proof (@ET.leb_trans x y z); pose proof (ELebIsLtbEqb.leb_ltbeqb x y); pose proof (ELebIsLtbEqb.leb_ltbeqb y z); pose proof (ELebIsLtbEqb.leb_ltbeqb x z); pose proof ((_ : Transitive E.ltb) y z y));
+      try (specialize (IH ys zs); pose proof (@E'.leb_trans x y z); pose proof (E.leb_ltbeqb x y); pose proof (E.leb_ltbeqb y z); pose proof (E.leb_ltbeqb x z); pose proof ((_ : Transitive E.ltb) y z y));
       t.
-    all: pose proof EStrOrder.ltb_compat; pose proof EIsEqb.eqb_equiv.
+    all: pose proof E.ltb_compat; pose proof E.eqb_equiv.
     all: pose proof E'.eqb_Proper.
-    all: destruct EStrOrder.ltb_strorder.
-    all: rewrite ?ELebIsLtbEqb.leb_ltbeqb in *.
+    all: destruct E.ltb_strorder.
+    all: rewrite ?E.leb_ltbeqb in *.
     all: repeat first [ progress cbn in *
                       | match goal with
                         | [ H : ?x = true |- _ ] => rewrite H in *
@@ -300,9 +300,9 @@ Module ListLebIsTransitive (E : EqLtLeBool) (ET : LebIsTransitive E) (ELebIsLtbE
   Qed.
 End ListLebIsTransitive.
 
-Module Type ListIsStrOrderBool (E:EqLtBool') (EStrOrder : IsStrOrderBool E) (Es : IsEqb E E).
+Module Type ListIsStrOrderBool (E : StrOrderBool).
   Module Import _ListIsStrOrderBool.
-    Module E' := E <+ EStrOrder <+ Es <+ IsEqbFacts.
+    Module E' := E <+ IsEqbFacts.
     Module L := ListHasEqb E E <+ ListHasLtb E E E.
   End _ListIsStrOrderBool.
   Global Instance ltb_strorder : StrictOrder L.ltb | 10.
@@ -324,6 +324,26 @@ Module Type ListIsStrOrderBool (E:EqLtBool') (EStrOrder : IsStrOrderBool E) (Es 
     end.
   Qed.
 End ListIsStrOrderBool.
+
+Module ListLebIsLtbEqb (E : TotalOrderBool).
+  Module Import _ListLebIsLtbEqb.
+    Module L := ListHasEqb E E <+ ListHasLtb E E E <+ ListHasLeb E E E.
+  End _ListLebIsLtbEqb.
+  Lemma leb_ltbeqb : forall x y, (L.leb x y = (L.ltb x y || L.eqb x y))%bool.
+  Proof.
+    pose proof E.ltb_compat.
+    destruct E.eqb_equiv; hnf in *.
+    destruct E.ltb_strorder.
+    induction x as [|x xs IH], y as [|y ys];
+      try (specialize (IH ys); pose proof (E.leb_ltbeqb x y));
+      try reflexivity.
+    cbn; cbv [orb andb negb] in *.
+    t.
+    fold_is_true; setoid_subst_rel E.eqb.
+    cbv -[L.ltb L.leb L.eqb] in *; exfalso.
+    intuition eauto.
+  Qed.
+End ListLebIsLtbEqb.
 
 Module ListUsualIsStrOrder (E : UsualStrOrder).
   Module Import _ListUsualIsStrOrder.
@@ -423,45 +443,91 @@ Module ListUsualTotalOrder (E : UsualTotalOrder) <: UsualTotalOrder
 Module ListTotalOrder' (E : TotalOrder) <: TotalOrder' := ListTotalOrder E <+ EqLtLeNotation.
 Module ListUsualTotalOrder' (E : UsualTotalOrder) <: UsualTotalOrder' := ListUsualTotalOrder E <+ LtLeNotation.
 
-Module ListLeBool (E : EqLeBool) <: LeBool := ListTyp E <+ ListHasLeb E E E.
-Module ListLtBool (E : EqLtBool) <: LtBool := ListTyp E <+ ListHasLtb E E E.
-Module ListLeBool' (E : EqLeBool) <: LeBool' := ListLeBool E <+ LebNotation.
-Module ListLtBool' (E : EqLtBool) <: LtBool' := ListLtBool E <+ LtbNotation.
-(*
-Module ListTotalLeBool (E : TotalEqLtLeBool) <: TotalLeBool := ListLeBool E <+ ListLebIsTotal E E E E.
-Module ListTotalLeBool' (E : TotalEqLeBool) <: TotalLeBool' := ListLeBool' E <+ ListLebIsTotal E.
- *)
-(*
-Module ListTotalTransitiveLeBool (E : TotalTransitiveLeBool) <: TotalTransitiveLeBool := ListTotalLeBool E <+ ListLebIsTransitive E E.
-Module ListTotalTransitiveLeBool' (E : TotalTransitiveLeBool) <: TotalTransitiveLeBool' := ListTotalLeBool' E <+ ListLebIsTransitive E E.
-*)
-Module ListHasBoolOrdFuns (E : Typ) (Es : HasBoolOrdFuns E) := ListTyp E <+ ListHasEqb E Es <+ ListHasLtb E Es Es <+ ListHasLeb E Es Es.
-
-Module ListHasBoolOrdFuns' (E : Typ) (Es : HasBoolOrdFuns E) := ListHasBoolOrdFuns E Es <+ ListEqbNotation E Es <+ ListLtbNotation E Es Es <+ ListLebNotation E Es Es.
-
-Module ListBoolOrdSpecs (E : EqLtLe) (F : HasBoolOrdFuns E) (Es : BoolOrdSpecs E F)
-:= ListEqbSpec E E F Es <+ ListLtbSpec E E E F F Es Es <+ ListLebSpec E E E F F Es Es.
-(*
-Module ListOrderFunctions (E : EqLtLe) (Ef : OrderFunctions E)
-:= ListHasCompare E Ef Ef <+ ListHasBoolOrdFuns E Ef <+ ListBoolOrdSpecs E Ef Ef.
-Module ListOrderFunctions' (E : EqLtLe) (Ef : OrderFunctions E)
-:= ListHasCompare E Ef <+ ListCmpNotation E Ef <+ ListHasBoolOrdFuns' E Ef <+ ListBoolOrdSpecs E Ef Ef.
-
-Module ListLebIsLtbEqb (E:EqLtLeBool') (ELebIsLtbEqb : LebIsLtbEqb E).
-  Module Import L := ListEqLtLeBool E.
-  Lemma leb_ltbeqb : forall x y, ((x <=? y) = ((x <? y) || (x =? y)))%bool.
-End LebIsLtbEqb.
-
-
-*)
-
-Require Import Coq.Structures.OrderedType.
-Require Import Crypto.Util.Structures.OrderedType.
-Module ListOrderedTypeOrig (E : OrderedType.MiniOrderedType) <: OrderedType.OrderedType.
+Module ListOrderedTypeOrig (E : MiniOrderedType) <: OrderedTypeOrig.
   Module Import _ListOrderedTypeOrig.
     Module E' := OT_of_Orig E.
     Module L := ListOrderedType E'.
   End _ListOrderedTypeOrig.
   Include OT_of_New L.
 End ListOrderedTypeOrig.
-Module ListMiniOrderedType (E : OrderedType.MiniOrderedType) <: OrderedType.MiniOrderedType := ListOrderedTypeOrig E.
+Module ListMiniOrderedType (E : MiniOrderedType) <: MiniOrderedType := ListOrderedTypeOrig E.
+Module ListUsualOrderedTypeOrig (E : UsualMiniOrderedType) <: UsualOrderedTypeOrig.
+  Module Import _ListUsualOrderedTypeOrig.
+    Module E' := UsualOT_of_UsualOrig E.
+    Module L := ListUsualOrderedType E'.
+  End _ListUsualOrderedTypeOrig.
+  Include OT_of_New L.
+End ListUsualOrderedTypeOrig.
+Module ListUsualMiniOrderedType (E : UsualMiniOrderedType) <: UsualMiniOrderedType := ListUsualOrderedTypeOrig E.
+
+(* TODO: more precise module argument typing? *)
+Module ListIsStrOrderOrig (E : MiniOrderedType).
+  Module Import _ListIsStrOrderOrig.
+    Module L := ListOrderedTypeOrig E.
+  End _ListIsStrOrderOrig.
+  Definition lt_trans := L.lt_trans.
+  Definition lt_not_eq := L.lt_not_eq.
+End ListIsStrOrderOrig.
+(* TODO: more precise module argument typing? *)
+Module ListHasCompareOrig (E : MiniOrderedType).
+  Module Import _ListHasCompareOrig.
+    Module L := ListOrderedTypeOrig E.
+  End _ListHasCompareOrig.
+  Definition compare := L.compare.
+End ListHasCompareOrig.
+(* TODO: more precise module argument typing? *)
+Module ListUsualIsStrOrderOrig (E : UsualMiniOrderedType).
+  Module Import _ListUsualIsStrOrderOrig.
+    Module L := ListUsualOrderedTypeOrig E.
+  End _ListUsualIsStrOrderOrig.
+  Definition lt_trans := L.lt_trans.
+  Definition lt_not_eq := L.lt_not_eq.
+End ListUsualIsStrOrderOrig.
+(* TODO: more precise module argument typing? *)
+Module ListUsualHasCompareOrig (E : UsualMiniOrderedType).
+  Module Import _ListUsualHasCompareOrig.
+    Module L := ListUsualOrderedTypeOrig E.
+  End _ListUsualHasCompareOrig.
+  Definition compare := L.compare.
+End ListUsualHasCompareOrig.
+
+Module ListLeBool (E : EqLeBool) <: LeBool := ListTyp E <+ ListHasLeb E E E.
+Module ListLtBool (E : EqLtBool) <: LtBool := ListTyp E <+ ListHasLtb E E E.
+Module ListLeBool' (E : EqLeBool) <: LeBool' := ListLeBool E <+ LebNotation.
+Module ListLtBool' (E : EqLtBool) <: LtBool' := ListLtBool E <+ LtbNotation.
+Module ListEqLeBool (E : EqLeBool) <: EqLeBool := ListTyp E <+ ListHasEqb E E <+ ListHasLeb E E E.
+Module ListEqLtBool (E : EqLtBool) <: EqLtBool := ListTyp E <+ ListHasEqb E E <+ ListHasLtb E E E.
+Module ListEqLeBool' (E : EqLeBool) <: EqLeBool' := ListEqLeBool E <+ EqbNotation <+ LebNotation.
+Module ListEqLtBool' (E : EqLtBool) <: EqLtBool' := ListEqLtBool E <+ EqbNotation <+ LtbNotation.
+Module ListEqLtLeBool (E : EqLtLeBool) <: EqLtLeBool := ListTyp E <+ ListHasEqb E E <+ ListHasLtb E E E <+ ListHasLeb E E E.
+Module ListEqLtLeBool' (E : EqLtLeBool) <: EqLtLeBool' := ListEqLtLeBool E <+ EqbNotation <+ LtbNotation <+ LebNotation.
+
+Module ListTotalLeBool (E : TotalOrderBool) <: TotalLeBool := ListLeBool E <+ ListLebIsTotal E.
+Module ListTotalLeBool' (E : TotalOrderBool) <: TotalLeBool' := ListLeBool' E <+ ListLebIsTotal E.
+Module ListTotalEqLeBool (E : TotalOrderBool) <: TotalEqLeBool := ListEqLeBool E <+ ListLebIsTotal E.
+Module ListTotalEqLeBool' (E : TotalOrderBool) <: TotalEqLeBool' := ListEqLeBool' E <+ ListLebIsTotal E.
+Module ListTotalEqLtLeBool (E : TotalOrderBool) <: TotalEqLtLeBool := ListEqLtLeBool E <+ ListLebIsTotal E.
+Module ListTotalEqLtLeBool' (E : TotalOrderBool) <: TotalEqLtLeBool' := ListEqLtLeBool' E <+ ListLebIsTotal E.
+
+Module ListTotalTransitiveLeBool (E : TotalOrderBool) <: TotalTransitiveLeBool := ListTotalLeBool E <+ ListLebIsTransitive E.
+Module ListTotalTransitiveLeBool' (E : TotalOrderBool) <: TotalTransitiveLeBool' := ListTotalLeBool' E <+ ListLebIsTransitive E.
+Module ListTotalTransitiveEqLeBool (E : TotalOrderBool) <: TotalTransitiveEqLeBool := ListTotalEqLeBool E <+ ListLebIsTransitive E.
+Module ListTotalTransitiveEqLeBool' (E : TotalOrderBool) <: TotalTransitiveEqLeBool' := ListTotalEqLeBool' E <+ ListLebIsTransitive E.
+Module ListTotalTransitiveEqLtLeBool (E : TotalOrderBool) <: TotalTransitiveEqLtLeBool := ListTotalEqLtLeBool E <+ ListLebIsTransitive E.
+Module ListTotalTransitiveEqLtLeBool' (E : TotalOrderBool) <: TotalTransitiveEqLtLeBool' := ListTotalEqLtLeBool' E <+ ListLebIsTransitive E.
+
+Module ListStrOrderBool (E : StrOrderBool) <: StrOrderBool := ListEqbType E <+ ListHasLtb E E E <+ ListIsStrOrderBool E.
+Module ListStrOrderBool' (E : StrOrderBool) <: StrOrderBool' := ListStrOrderBool E <+ EqLtBoolNotation.
+
+Module ListTotalOrderBool (E : TotalOrderBool) <: TotalOrderBool := ListStrOrderBool E <+ ListHasLeb E E E <+ ListLebIsLtbEqb E <+ ListLebIsTotal E.
+Module ListTotalOrderBool' (E : TotalOrderBool) <: TotalOrderBool' := ListTotalOrderBool E <+ EqLtLeBoolNotation.
+
+Module ListHasBoolOrdFuns (E : Typ) (F : HasBoolOrdFuns E) := ListHasEqb E F <+ ListHasLtb E F F <+ ListHasLeb E F F.
+
+Module ListHasBoolOrdFuns' (E : Typ) (F : HasBoolOrdFuns E) := ListHasBoolOrdFuns E F <+ ListEqbNotation E F <+ ListLtbNotation E F F <+ ListLebNotation E F F.
+
+Module ListBoolOrdSpecs (O : EqLtLe) (F : HasBoolOrdFuns O) (S : BoolOrdSpecs O F) := ListEqbSpec O O F S <+ ListLtbSpec O O O F F S S <+ ListLebSpec O O O F F S S.
+
+Module ListOrderFunctions (O : EqLtLe) (F : OrderFunctions O) (Oe : IsEq O) := ListHasCompare O F Oe <+ ListHasBoolOrdFuns O F <+ ListBoolOrdSpecs O F F.
+
+Module ListOrderFunctions' (O : EqLtLe) (F : OrderFunctions O) (Oe : IsEq O) := ListHasCompare O F Oe <+ ListCmpNotation O F <+ ListHasBoolOrdFuns' O F <+ ListBoolOrdSpecs O F F.

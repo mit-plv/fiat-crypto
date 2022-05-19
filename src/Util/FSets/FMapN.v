@@ -5,13 +5,14 @@ Require Import Coq.Structures.OrderedType.
 Require Import Coq.FSets.FMapInterface.
 Require Import Coq.FSets.FMapPositive.
 Require Import Coq.NArith.NArith.
-Require Import Crypto.Util.FSets.Iso.
+Require Import Crypto.Util.FSets.FMapIso.
 Require Import Crypto.Util.Structures.Equalities.Iso.
-Require Import Crypto.Util.Structures.OrderedType.Iso.
+Require Import Crypto.Util.Structures.Orders.Iso.
 
 Local Set Implicit Arguments.
 
-Module NIsoPositive <: IsoOrderedType PositiveMap.E.
+(* TODO: Swap out for the version in Util/Structures/OrdersEx.v, and profile to see if there are any perf implications *)
+Module NIsoPositive <: IsoOrderedTypeOrig PositiveMap.E.
   Definition t := N.
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : Equivalence eq := _.

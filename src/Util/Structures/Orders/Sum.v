@@ -1,6 +1,7 @@
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Import Coq.Structures.Equalities.
 Require Import Coq.Structures.Orders.
+Require Import Crypto.Util.Structures.Equalities.
 Require Import Crypto.Util.Structures.Equalities.Sum.
 Require Import Crypto.Util.Structures.Orders.
 Require Import Crypto.Util.Sum.
@@ -113,8 +114,8 @@ Module SumLebIsTotal (E1 : TotalLeBool) (E2 : TotalLeBool).
   Qed.
 End SumLebIsTotal.
 
+Local Coercion is_true : bool >-> Sortclass.
 Module SumLebIsTransitive (E1 : LeBool) (E2 : LeBool) (E1T : LebIsTransitive E1) (E2T : LebIsTransitive E2).
-  Local Coercion is_true : bool >-> Sortclass.
   Lemma leb_trans : Transitive (sum_leb E1.leb E2.leb).
   Proof.
     pose proof E1T.leb_trans; pose proof E2T.leb_trans.
@@ -122,6 +123,49 @@ Module SumLebIsTransitive (E1 : LeBool) (E2 : LeBool) (E1T : LebIsTransitive E1)
       etransitivity; eassumption.
   Qed.
 End SumLebIsTransitive.
+
+Module SumLebIsTransitive_of_TotalOrderBool (E1 : TotalOrderBool) (E2 : TotalOrderBool).
+  Module Import _SumLebIsTransitive_of_TotalOrderBool.
+    Module E1' := E1 <+ TransitiveLeBool_of_TotalOrderBool.
+    Module E2' := E2 <+ TransitiveLeBool_of_TotalOrderBool.
+  End _SumLebIsTransitive_of_TotalOrderBool.
+  Include SumLebIsTransitive E1' E2' E1' E2'.
+End SumLebIsTransitive_of_TotalOrderBool.
+
+Module Type SumIsStrOrderBool (E1 : StrOrderBool) (E2 : StrOrderBool).
+  Module Import _SumIsStrOrderBool.
+    Module E1' := E1 <+ IsEqbFacts.
+    Module E2' := E2 <+ IsEqbFacts.
+    Module S := SumHasEqb E1 E2 E1 E2 <+ SumHasLtb E1 E2 E1 E2.
+  End _SumIsStrOrderBool.
+  Global Instance ltb_strorder : StrictOrder S.ltb | 10.
+  Proof.
+    destruct E1'.ltb_strorder, E1'.eqb_equiv; hnf in *.
+    destruct E2'.ltb_strorder, E2'.eqb_equiv; hnf in *.
+    pose proof E1'.ltb_compat.
+    pose proof E2'.ltb_compat.
+    split; repeat intros [?|?]; cbv in *; eauto with nocore; try congruence.
+  Qed.
+  Global Instance ltb_compat : Proper (S.eqb==>S.eqb==>eq) S.ltb | 10.
+  Proof.
+    destruct E1'.eqb_equiv; hnf in *.
+    destruct E2'.eqb_equiv; hnf in *.
+    pose proof E1'.ltb_compat.
+    pose proof E2'.ltb_compat.
+    cbv in *; repeat first [ intros [?|?] | intro ];
+      eauto with nocore; try congruence.
+  Qed.
+End SumIsStrOrderBool.
+
+Module SumLebIsLtbEqb (E1 : EqLtLeBool') (E2 : EqLtLeBool') (E1s : LebIsLtbEqb E1) (E2s : LebIsLtbEqb E2).
+  Module Import _SumLebIsLtbEqb.
+    Module S := SumHasEqb E1 E2 E1 E2 <+ SumHasLtb E1 E2 E1 E2 <+ SumHasLeb E1 E2 E1 E2.
+  End _SumLebIsLtbEqb.
+  Lemma leb_ltbeqb : forall x y, (S.leb x y = (S.ltb x y || S.eqb x y))%bool.
+  Proof.
+    intros [?|?] [?|?]; cbv; rewrite ?E1s.leb_ltbeqb, ?E2s.leb_ltbeqb; reflexivity.
+  Qed.
+End SumLebIsLtbEqb.
 
 Module SumUsualIsStrOrder (E1 : UsualStrOrder) (E2 : UsualStrOrder).
   Global Instance lt_strorder : StrictOrder (sum_le E1.lt E2.lt) | 1 := _.
@@ -180,7 +224,7 @@ Module SumStrOrder' (E1 : StrOrder) (E2 : StrOrder) <: StrOrder' := SumStrOrder 
 Module SumHasCompare (E1 : EqLt) (E2 : EqLt) (E1c : HasCompare E1) (E2c : HasCompare E2) := SumHasCmp E1 E2 E1c E2c <+ SumCmpSpec E1 E2 E1c E2c.
 Module SumDecStrOrder (E1 : DecStrOrder) (E2 : DecStrOrder) <: DecStrOrder := SumStrOrder E1 E2 <+ SumHasCompare E1 E2 E1 E2.
 Module SumDecStrOrder' (E1 : DecStrOrder) (E2 : DecStrOrder) <: DecStrOrder' := SumDecStrOrder E1 E2 <+ EqLtNotation <+ CmpNotation.
-Module SumOrderedType (E1 : OrderedType) (E2 : OrderedType) <: OrderedType := SumDecStrOrder E1 E2 <+ SumHasEqDec E1 E2.
+Module SumOrderedType (E1 : OrderedType) (E2 : OrderedType) <: OrderedType := SumDecStrOrder E1 E2 <+ SumHasEqDec E1 E2 E1 E2.
 Module SumOrderedType' (E1 : OrderedType') (E2 : OrderedType') <: OrderedType' := SumOrderedType E1 E2 <+ EqLtNotation <+ CmpNotation.
 Module SumOrderedTypeFull (E1 : OrderedTypeFull) (E2 : OrderedTypeFull) <: OrderedTypeFull := SumOrderedType E1 E2 <+ SumHasLe E1 E2 <+ SumLeIsLtEq E1 E2 E1 E2.
 Module SumOrderedTypeFull' (E1 : OrderedTypeFull') (E2 : OrderedTypeFull') <: OrderedTypeFull' := SumOrderedTypeFull E1 E2 <+ EqLtLeNotation <+ CmpNotation.
@@ -209,32 +253,7 @@ Module SumUsualTotalOrder (E1 : UsualTotalOrder) (E2 : UsualTotalOrder) <: Usual
 Module SumTotalOrder' (E1 : TotalOrder) (E2 : TotalOrder) <: TotalOrder' := SumTotalOrder E1 E2 <+ EqLtLeNotation.
 Module SumUsualTotalOrder' (E1 : UsualTotalOrder) (E2 : UsualTotalOrder) <: UsualTotalOrder' := SumUsualTotalOrder E1 E2 <+ LtLeNotation.
 
-Module SumLeBool (E1 : LeBool) (E2 : LeBool) <: LeBool := SumTyp E1 E2 <+ SumHasLeb E1 E2 E1 E2.
-Module SumLtBool (E1 : LtBool) (E2 : LtBool) <: LtBool := SumTyp E1 E2 <+ SumHasLtb E1 E2 E1 E2.
-Module SumLeBool' (E1 : LeBool) (E2 : LeBool) <: LeBool' := SumLeBool E1 E2 <+ LebNotation.
-Module SumLtBool' (E1 : LtBool) (E2 : LtBool) <: LtBool' := SumLtBool E1 E2 <+ LtbNotation.
-
-Module SumTotalLeBool (E1 : TotalLeBool) (E2 : TotalLeBool) <: TotalLeBool := SumLeBool E1 E2 <+ SumLebIsTotal E1 E2.
-Module SumTotalLeBool' (E1 : TotalLeBool) (E2 : TotalLeBool) <: TotalLeBool' := SumLeBool' E1 E2 <+ SumLebIsTotal E1 E2.
-
-Module SumTotalTransitiveLeBool (E1 : TotalTransitiveLeBool) (E2 : TotalTransitiveLeBool) <: TotalTransitiveLeBool := SumTotalLeBool E1 E2 <+ SumLebIsTransitive E1 E2 E1 E2.
-Module SumTotalTransitiveLeBool' (E1 : TotalTransitiveLeBool) (E2 : TotalTransitiveLeBool) <: TotalTransitiveLeBool' := SumTotalLeBool' E1 E2 <+ SumLebIsTransitive E1 E2 E1 E2.
-
-Module SumHasBoolOrdFuns (E1 : Typ) (E2 : Typ) (E1s : HasBoolOrdFuns E1) (E2s : HasBoolOrdFuns E2) := SumTyp E1 E2 <+ SumHasEqb E1 E2 E1s E2s <+ SumHasLtb E1 E2 E1s E2s <+ SumHasLeb E1 E2 E1s E2s.
-
-Module SumHasBoolOrdFuns' (E1 : Typ) (E2 : Typ) (E1s : HasBoolOrdFuns E1) (E2s : HasBoolOrdFuns E2) := SumHasBoolOrdFuns E1 E2 E1s E2s <+ SumEqbNotation E1 E2 E1s E2s <+ SumLtbNotation E1 E2 E1s E2s <+ SumLebNotation E1 E2 E1s E2s.
-
-Module SumBoolOrdSpecs (E1 : EqLtLe) (E2 : EqLtLe) (F1 : HasBoolOrdFuns E1) (F2 : HasBoolOrdFuns E2) (E1s : BoolOrdSpecs E1 F1) (E2s : BoolOrdSpecs E2 F2)
-:= SumEqbSpec E1 E2 E1 E2 F1 F2 E1s E2s <+ SumLtbSpec E1 E2 E1 E2 F1 F2 E1s E2s <+ SumLebSpec E1 E2 E1 E2 F1 F2 E1s E2s.
-
-Module SumOrderFunctions (E1 : EqLtLe) (E2 : EqLtLe) (E1f : OrderFunctions E1) (E2f : OrderFunctions E2)
-:= SumHasCompare E1 E2 E1f E2f <+ SumHasBoolOrdFuns E1 E2 E1f E2f <+ SumBoolOrdSpecs E1 E2 E1f E2f E1f E2f.
-Module SumOrderFunctions' (E1 : EqLtLe) (E2 : EqLtLe) (E1f : OrderFunctions E1) (E2f : OrderFunctions E2)
-:= SumHasCompare E1 E2 E1f E2f <+ SumCmpNotation E1 E2 E1f E2f <+ SumHasBoolOrdFuns' E1 E2 E1f E2f <+ SumBoolOrdSpecs E1 E2 E1f E2f E1f E2f.
-
-Require Import Coq.Structures.OrderedType.
-Require Import Crypto.Util.Structures.OrderedType.
-Module SumOrderedTypeOrig (E1 : OrderedType.MiniOrderedType) (E2 : OrderedType.MiniOrderedType) <: OrderedType.OrderedType.
+Module SumOrderedTypeOrig (E1 : MiniOrderedType) (E2 : MiniOrderedType) <: OrderedType.OrderedType.
   Module Import _SumOrderedTypeOrig.
     Module E1' := OT_of_Orig E1.
     Module E2' := OT_of_Orig E2.
@@ -242,4 +261,85 @@ Module SumOrderedTypeOrig (E1 : OrderedType.MiniOrderedType) (E2 : OrderedType.M
   End _SumOrderedTypeOrig.
   Include OT_of_New S.
 End SumOrderedTypeOrig.
-Module SumMiniOrderedType (E1 : OrderedType.MiniOrderedType) (E2 : OrderedType.MiniOrderedType) <: OrderedType.MiniOrderedType := SumOrderedTypeOrig E1 E2.
+Module SumMiniOrderedType (E1 : MiniOrderedType) (E2 : MiniOrderedType) <: MiniOrderedType := SumOrderedTypeOrig E1 E2.
+Module SumUsualOrderedTypeOrig (E1 : UsualMiniOrderedType) (E2 : UsualMiniOrderedType) <: UsualOrderedTypeOrig.
+  Module Import _SumUsualOrderedTypeOrig.
+    Module E1' := UsualOT_of_UsualOrig E1.
+    Module E2' := UsualOT_of_UsualOrig E2.
+    Module S := SumUsualOrderedType E1' E2'.
+  End _SumUsualOrderedTypeOrig.
+  Include OT_of_New S.
+End SumUsualOrderedTypeOrig.
+Module SumUsualMiniOrderedType (E1 : UsualMiniOrderedType) (E2 : UsualMiniOrderedType) <: UsualMiniOrderedType := SumUsualOrderedTypeOrig E1 E2.
+
+(* TODO: more precise module argument typing? *)
+Module SumIsStrOrderOrig (E1 : MiniOrderedType) (E2 : MiniOrderedType).
+  Module Import _SumIsStrOrderOrig.
+    Module S := SumOrderedTypeOrig E1 E2.
+  End _SumIsStrOrderOrig.
+  Definition lt_trans := S.lt_trans.
+  Definition lt_not_eq := S.lt_not_eq.
+End SumIsStrOrderOrig.
+(* TODO: more precise module argument typing? *)
+Module SumHasCompareOrig (E1 : MiniOrderedType) (E2 : MiniOrderedType).
+  Module Import _SumHasCompareOrig.
+    Module S := SumOrderedTypeOrig E1 E2.
+  End _SumHasCompareOrig.
+  Definition compare := S.compare.
+End SumHasCompareOrig.
+(* TODO: more precise module argument typing? *)
+Module SumUsualIsStrOrderOrig (E1 : UsualMiniOrderedType) (E2 : UsualMiniOrderedType).
+  Module Import _SumUsualIsStrOrderOrig.
+    Module S := SumUsualOrderedTypeOrig E1 E2.
+  End _SumUsualIsStrOrderOrig.
+  Definition lt_trans := S.lt_trans.
+  Definition lt_not_eq := S.lt_not_eq.
+End SumUsualIsStrOrderOrig.
+(* TODO: more precise module argument typing? *)
+Module SumUsualHasCompareOrig (E1 : UsualMiniOrderedType) (E2 : UsualMiniOrderedType).
+  Module Import _SumUsualHasCompareOrig.
+    Module S := SumUsualOrderedTypeOrig E1 E2.
+  End _SumUsualHasCompareOrig.
+  Definition compare := S.compare.
+End SumUsualHasCompareOrig.
+
+Module SumLeBool (E1 : LeBool) (E2 : LeBool) <: LeBool := SumTyp E1 E2 <+ SumHasLeb E1 E2 E1 E2.
+Module SumLtBool (E1 : LtBool) (E2 : LtBool) <: LtBool := SumTyp E1 E2 <+ SumHasLtb E1 E2 E1 E2.
+Module SumLeBool' (E1 : LeBool) (E2 : LeBool) <: LeBool' := SumLeBool E1 E2 <+ LebNotation.
+Module SumLtBool' (E1 : LtBool) (E2 : LtBool) <: LtBool' := SumLtBool E1 E2 <+ LtbNotation.
+Module SumEqLeBool (E1 : EqLeBool) (E2 : EqLeBool) <: EqLeBool := SumTyp E1 E2 <+ SumHasEqb E1 E2 E1 E2 <+ SumHasLeb E1 E2 E1 E2.
+Module SumEqLtBool (E1 : EqLtBool) (E2 : EqLtBool) <: EqLtBool := SumTyp E1 E2 <+ SumHasEqb E1 E2 E1 E2 <+ SumHasLtb E1 E2 E1 E2.
+Module SumEqLeBool' (E1 : EqLeBool) (E2 : EqLeBool) <: EqLeBool' := SumEqLeBool E1 E2 <+ EqbNotation <+ LebNotation.
+Module SumEqLtBool' (E1 : EqLtBool) (E2 : EqLtBool) <: EqLtBool' := SumEqLtBool E1 E2 <+ EqbNotation <+ LtbNotation.
+Module SumEqLtLeBool (E1 : EqLtLeBool) (E2 : EqLtLeBool) <: EqLtLeBool := SumTyp E1 E2 <+ SumHasEqb E1 E2 E1 E2 <+ SumHasLtb E1 E2 E1 E2 <+ SumHasLeb E1 E2 E1 E2.
+Module SumEqLtLeBool' (E1 : EqLtLeBool) (E2 : EqLtLeBool) <: EqLtLeBool' := SumEqLtLeBool E1 E2 <+ EqbNotation <+ LtbNotation <+ LebNotation.
+
+Module SumTotalLeBool (E1 : TotalOrderBool) (E2 : TotalOrderBool) <: TotalLeBool := SumLeBool E1 E2 <+ SumLebIsTotal E1 E2.
+Module SumTotalLeBool' (E1 : TotalOrderBool) (E2 : TotalOrderBool) <: TotalLeBool' := SumLeBool' E1 E2 <+ SumLebIsTotal E1 E2.
+Module SumTotalEqLeBool (E1 : TotalOrderBool) (E2 : TotalOrderBool) <: TotalEqLeBool := SumEqLeBool E1 E2 <+ SumLebIsTotal E1 E2.
+Module SumTotalEqLeBool' (E1 : TotalOrderBool) (E2 : TotalOrderBool) <: TotalEqLeBool' := SumEqLeBool' E1 E2 <+ SumLebIsTotal E1 E2.
+Module SumTotalEqLtLeBool (E1 : TotalOrderBool) (E2 : TotalOrderBool) <: TotalEqLtLeBool := SumEqLtLeBool E1 E2 <+ SumLebIsTotal E1 E2.
+Module SumTotalEqLtLeBool' (E1 : TotalOrderBool) (E2 : TotalOrderBool) <: TotalEqLtLeBool' := SumEqLtLeBool' E1 E2 <+ SumLebIsTotal E1 E2.
+
+Module SumTotalTransitiveLeBool (E1 : TotalOrderBool) (E2 : TotalOrderBool) <: TotalTransitiveLeBool := SumTotalLeBool E1 E2 <+ SumLebIsTransitive_of_TotalOrderBool E1 E2.
+Module SumTotalTransitiveLeBool' (E1 : TotalOrderBool) (E2 : TotalOrderBool) <: TotalTransitiveLeBool' := SumTotalLeBool' E1 E2 <+ SumLebIsTransitive_of_TotalOrderBool E1 E2.
+Module SumTotalTransitiveEqLeBool (E1 : TotalOrderBool) (E2 : TotalOrderBool) <: TotalTransitiveEqLeBool := SumTotalEqLeBool E1 E2 <+ SumLebIsTransitive_of_TotalOrderBool E1 E2.
+Module SumTotalTransitiveEqLeBool' (E1 : TotalOrderBool) (E2 : TotalOrderBool) <: TotalTransitiveEqLeBool' := SumTotalEqLeBool' E1 E2 <+ SumLebIsTransitive_of_TotalOrderBool E1 E2.
+Module SumTotalTransitiveEqLtLeBool (E1 : TotalOrderBool) (E2 : TotalOrderBool) <: TotalTransitiveEqLtLeBool := SumTotalEqLtLeBool E1 E2 <+ SumLebIsTransitive_of_TotalOrderBool E1 E2.
+Module SumTotalTransitiveEqLtLeBool' (E1 : TotalOrderBool) (E2 : TotalOrderBool) <: TotalTransitiveEqLtLeBool' := SumTotalEqLtLeBool' E1 E2 <+ SumLebIsTransitive_of_TotalOrderBool E1 E2.
+
+Module SumStrOrderBool (E1 : StrOrderBool) (E2 : StrOrderBool) <: StrOrderBool := SumEqbType E1 E2 <+ SumHasLtb E1 E2 E1 E2 <+ SumIsStrOrderBool E1 E2.
+Module SumStrOrderBool' (E1 : StrOrderBool) (E2 : StrOrderBool) <: StrOrderBool' := SumStrOrderBool E1 E2 <+ EqLtBoolNotation.
+
+Module SumTotalOrderBool (E1 : TotalOrderBool) (E2 : TotalOrderBool) <: TotalOrderBool := SumStrOrderBool E1 E2 <+ SumHasLeb E1 E2 E1 E2 <+ SumLebIsLtbEqb E1 E2 E1 E2 <+ SumLebIsTotal E1 E2.
+Module SumTotalOrderBool' (E1 : TotalOrderBool) (E2 : TotalOrderBool) <: TotalOrderBool' := SumTotalOrderBool E1 E2 <+ EqLtLeBoolNotation.
+
+Module SumHasBoolOrdFuns (E1 : Typ) (E2 : Typ) (F1 : HasBoolOrdFuns E1) (F2 : HasBoolOrdFuns E2) := SumHasEqb E1 E2 F1 F2 <+ SumHasLtb E1 E2 F1 F2 <+ SumHasLeb E1 E2 F1 F2.
+
+Module SumHasBoolOrdFuns' (E1 : Typ) (E2 : Typ) (F1 : HasBoolOrdFuns E1) (F2 : HasBoolOrdFuns E2) := SumHasBoolOrdFuns E1 E2 F1 F2 <+ SumEqbNotation E1 E2 F1 F2 <+ SumLtbNotation E1 E2 F1 F2 <+ SumLebNotation E1 E2 F1 F2.
+
+Module SumBoolOrdSpecs (O1 : EqLtLe) (O2 : EqLtLe) (F1 : HasBoolOrdFuns O1) (F2 : HasBoolOrdFuns O2) (S1 : BoolOrdSpecs O1 F1) (S2 : BoolOrdSpecs O2 F2) := SumEqbSpec O1 O2 O1 O2 F1 F2 S1 S2 <+ SumLtbSpec O1 O2 O1 O2 F1 F2 S1 S2 <+ SumLebSpec O1 O2 O1 O2 F1 F2 S1 S2.
+
+Module SumOrderFunctions (O1 : EqLtLe) (O2 : EqLtLe) (F1 : OrderFunctions O1) (F2 : OrderFunctions O2) := SumHasCompare O1 O2 F1 F2 <+ SumHasBoolOrdFuns O1 O2 F1 F2 <+ SumBoolOrdSpecs O1 O2 F1 F2 F1 F2.
+
+Module SumOrderFunctions' (O1 : EqLtLe) (O2 : EqLtLe) (F1 : OrderFunctions O1) (F2 : OrderFunctions O2) := SumHasCompare O1 O2 F1 F2 <+ SumCmpNotation O1 O2 F1 F2 <+ SumHasBoolOrdFuns' O1 O2 F1 F2 <+ SumBoolOrdSpecs O1 O2 F1 F2 F1 F2.

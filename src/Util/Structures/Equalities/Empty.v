@@ -17,6 +17,12 @@ Module EmptyIsEq.
   Proof. exact _. Defined.
 End EmptyIsEq.
 
+Module EmptyIsEqOrig.
+  Definition eq_refl : Reflexive (@eq Empty_set) := _.
+  Definition eq_sym : Symmetric (@eq Empty_set) := _.
+  Definition eq_trans : Transitive (@eq Empty_set) := _.
+End EmptyIsEqOrig.
+
 Module EmptyHasEqDec.
   Definition eq_dec x y : {@eq Empty_set x y} + {~@eq Empty_set x y}.
   Proof. left; destruct x, y; constructor. Defined.
@@ -33,6 +39,14 @@ Module EmptyEqbSpec.
   Proof. destruct x, y; cbv; repeat constructor. Qed.
 End EmptyEqbSpec.
 
+Local Coercion is_true : bool >-> Sortclass.
+Module EmptyIsEqb <: IsEqb EmptyTyp EmptyHasEqb.
+  Global Instance eqb_equiv : Equivalence EmptyHasEqb.eqb | 5.
+  Proof.
+    split; cbv; repeat intros []; constructor.
+  Qed.
+End EmptyIsEqb.
+
 Module EmptyHasEqBool := EmptyHasEqb <+ EmptyEqbSpec.
 
 Module EmptyUsualHasEqDec := EmptyHasEqDec.
@@ -46,15 +60,25 @@ Module EmptyMiniDecidableType <: MiniDecidableType := EmptyTyp <+ EmptyUsualHasE
 Module EmptyUsualHasEqBool := EmptyHasEqb <+ EmptyUsualEqbSpec.
 Module EmptyEq <: Eq := EmptyTyp <+ EmptyHasEq.
 Module EmptyEqualityType <: EqualityType := EmptyEq <+ EmptyIsEq.
+Module EmptyEqualityTypeOrig <: EqualityTypeOrig := EmptyEq <+ EmptyIsEqOrig.
+Module EmptyEqualityTypeBoth <: EqualityTypeBoth := EmptyEq <+ EmptyIsEq <+ EmptyIsEqOrig.
 Module EmptyDecidableType <: EqualityType := EmptyEqualityType <+ EmptyHasEqDec.
+Module EmptyDecidableTypeOrig <: EqualityTypeOrig := EmptyEqualityTypeOrig <+ EmptyHasEqDec.
+Module EmptyDecidableTypeBoth <: EqualityTypeBoth := EmptyEqualityTypeBoth <+ EmptyHasEqDec.
 Module EmptyBooleanEqualityType <: BooleanEqualityType := EmptyEqualityType <+ EmptyHasEqb <+ EmptyEqbSpec.
 Module EmptyBooleanDecidableType <: BooleanDecidableType := EmptyBooleanEqualityType <+ EmptyHasEqDec.
+Module EmptyDecidableTypeFull <: DecidableTypeFull := EmptyEq <+ EmptyIsEq <+ EmptyIsEqOrig <+ EmptyHasEqDec <+ EmptyHasEqBool.
 
 Module EmptyEq' := EmptyEq <+ EqNotation.
 Module EmptyEqualityType' := EmptyEqualityType <+ EqNotation.
+Module EmptyEqualityTypeOrig' := EmptyEqualityTypeOrig <+ EqNotation.
+Module EmptyEqualityTypeBoth' := EmptyEqualityTypeBoth <+ EqNotation.
 Module EmptyDecidableType' := EmptyDecidableType <+ EqNotation.
+Module EmptyDecidableTypeOrig' := EmptyDecidableTypeOrig <+ EqNotation.
+Module EmptyDecidableTypeBoth' := EmptyDecidableTypeBoth <+ EqNotation.
 Module EmptyBooleanEqualityType' := EmptyBooleanEqualityType <+ EqNotation <+ EqbNotation.
 Module EmptyBooleanDecidableType' := EmptyBooleanDecidableType <+ EqNotation <+ EqbNotation.
+Module EmptyDecidableTypeFull' := EmptyDecidableTypeFull <+ EqNotation.
 
 Module EmptyUsualEqualityType <: UsualEqualityType := EmptyUsualEq <+ UsualIsEq.
 
@@ -69,10 +93,6 @@ Module EmptyUsualBoolEq <: UsualBoolEq
 Module EmptyUsualDecidableTypeFull <: UsualDecidableTypeFull
  := EmptyUsualEq <+ UsualIsEq <+ UsualIsEqOrig <+ EmptyUsualHasEqDec <+ EmptyUsualHasEqBool.
 
-Local Coercion is_true : bool >-> Sortclass.
-Module EmptyIsEqb <: IsEqb EmptyTyp EmptyHasEqb.
-  Global Instance eqb_equiv : Equivalence EmptyHasEqb.eqb | 5.
-  Proof.
-    split; cbv; repeat intros []; constructor.
-  Qed.
-End EmptyIsEqb.
+Module EmptyEqbType <: EqbType := EmptyTyp <+ EmptyHasEqb <+ EmptyIsEqb.
+
+Module EmptyBoolEqualityFacts := BoolEqualityFacts EmptyBooleanEqualityType.

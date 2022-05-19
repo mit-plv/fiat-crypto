@@ -18,6 +18,12 @@ Module UnitIsEq.
   Proof. exact _. Defined.
 End UnitIsEq.
 
+Module UnitIsEqOrig.
+  Definition eq_refl : Reflexive (@eq unit) := _.
+  Definition eq_sym : Symmetric (@eq unit) := _.
+  Definition eq_trans : Transitive (@eq unit) := _.
+End UnitIsEqOrig.
+
 Module UnitHasEqDec.
   Definition eq_dec x y : {@eq unit x y} + {~@eq unit x y}.
   Proof. left; destruct x, y; constructor. Defined.
@@ -34,6 +40,14 @@ Module UnitEqbSpec.
   Proof. destruct x, y; cbv; repeat constructor. Qed.
 End UnitEqbSpec.
 
+Local Coercion is_true : bool >-> Sortclass.
+Module UnitIsEqb <: IsEqb UnitTyp UnitHasEqb.
+  Global Instance eqb_equiv : Equivalence UnitHasEqb.eqb | 5.
+  Proof.
+    split; cbv; repeat intros []; constructor.
+  Qed.
+End UnitIsEqb.
+
 Module UnitHasEqBool := UnitHasEqb <+ UnitEqbSpec.
 
 Module UnitUsualHasEqDec := UnitHasEqDec.
@@ -47,15 +61,25 @@ Module UnitMiniDecidableType <: MiniDecidableType := UnitTyp <+ UnitUsualHasEqDe
 Module UnitUsualHasEqBool := UnitHasEqb <+ UnitUsualEqbSpec.
 Module UnitEq <: Eq := UnitTyp <+ UnitHasEq.
 Module UnitEqualityType <: EqualityType := UnitEq <+ UnitIsEq.
+Module UnitEqualityTypeOrig <: EqualityTypeOrig := UnitEq <+ UnitIsEqOrig.
+Module UnitEqualityTypeBoth <: EqualityTypeBoth := UnitEq <+ UnitIsEq <+ UnitIsEqOrig.
 Module UnitDecidableType <: EqualityType := UnitEqualityType <+ UnitHasEqDec.
+Module UnitDecidableTypeOrig <: EqualityTypeOrig := UnitEqualityTypeOrig <+ UnitHasEqDec.
+Module UnitDecidableTypeBoth <: EqualityTypeBoth := UnitEqualityTypeBoth <+ UnitHasEqDec.
 Module UnitBooleanEqualityType <: BooleanEqualityType := UnitEqualityType <+ UnitHasEqb <+ UnitEqbSpec.
 Module UnitBooleanDecidableType <: BooleanDecidableType := UnitBooleanEqualityType <+ UnitHasEqDec.
+Module UnitDecidableTypeFull <: DecidableTypeFull := UnitEq <+ UnitIsEq <+ UnitIsEqOrig <+ UnitHasEqDec <+ UnitHasEqBool.
 
 Module UnitEq' := UnitEq <+ EqNotation.
 Module UnitEqualityType' := UnitEqualityType <+ EqNotation.
+Module UnitEqualityTypeOrig' := UnitEqualityTypeOrig <+ EqNotation.
+Module UnitEqualityTypeBoth' := UnitEqualityTypeBoth <+ EqNotation.
 Module UnitDecidableType' := UnitDecidableType <+ EqNotation.
+Module UnitDecidableTypeOrig' := UnitDecidableTypeOrig <+ EqNotation.
+Module UnitDecidableTypeBoth' := UnitDecidableTypeBoth <+ EqNotation.
 Module UnitBooleanEqualityType' := UnitBooleanEqualityType <+ EqNotation <+ EqbNotation.
 Module UnitBooleanDecidableType' := UnitBooleanDecidableType <+ EqNotation <+ EqbNotation.
+Module UnitDecidableTypeFull' := UnitDecidableTypeFull <+ EqNotation.
 
 Module UnitUsualEqualityType <: UsualEqualityType := UnitUsualEq <+ UsualIsEq.
 
@@ -70,10 +94,6 @@ Module UnitUsualBoolEq <: UsualBoolEq
 Module UnitUsualDecidableTypeFull <: UsualDecidableTypeFull
  := UnitUsualEq <+ UsualIsEq <+ UsualIsEqOrig <+ UnitUsualHasEqDec <+ UnitUsualHasEqBool.
 
-Local Coercion is_true : bool >-> Sortclass.
-Module UnitIsEqb <: IsEqb UnitTyp UnitHasEqb.
-  Global Instance eqb_equiv : Equivalence UnitHasEqb.eqb | 5.
-  Proof.
-    split; cbv; repeat intros []; constructor.
-  Qed.
-End UnitIsEqb.
+Module UnitEqbType <: EqbType := UnitTyp <+ UnitHasEqb <+ UnitIsEqb.
+
+Module UnitBoolEqualityFacts := BoolEqualityFacts UnitBooleanEqualityType.

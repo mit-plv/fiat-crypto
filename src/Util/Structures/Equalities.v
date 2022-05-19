@@ -18,3 +18,6 @@ Module IsEqbFacts (Import E : Typ) (Import Eb:HasEqb E) (Import E' : IsEqb E Eb)
     all: etransitivity; (idtac + symmetry); (idtac + etransitivity); eassumption.
   Qed.
 End IsEqbFacts.
+
+Module Type EqbType := Typ <+ HasEqb <+ IsEqb.
+Module Type EqbType' := Typ <+ HasEqb <+ IsEqb <+ EqbNotation.

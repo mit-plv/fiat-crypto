@@ -99,6 +99,18 @@ Module EmptyUsualIsStrOrder.
   Global Instance lt_compat : Proper (eq==>eq==>iff) EmptyHasLt.lt | 1 := _.
 End EmptyUsualIsStrOrder.
 
+Module EmptyIsStrOrderOrig.
+  Lemma lt_trans : forall x y z, EmptyHasLt.lt x y -> EmptyHasLt.lt y z -> EmptyHasLt.lt x z.
+  Proof. t. Qed.
+  Lemma lt_not_eq : forall x y, EmptyHasLt.lt x y -> ~ eq x y.
+  Proof. t. Qed.
+End EmptyIsStrOrderOrig.
+
+Module EmptyHasCompareOrig.
+  Definition compare : forall x y, OrderedType.Compare EmptyHasLt.lt eq x y.
+  Proof. intros []. Defined.
+End EmptyHasCompareOrig.
+
 Module EmptyUsualLeIsLtEq.
   Local Infix "<=" := EmptyHasLe.le.
   Local Infix "<" := EmptyHasLt.lt.
@@ -117,6 +129,20 @@ Module EmptyUsualLtIsTotal.
   Lemma lt_total : forall x y, x < y \/ x = y \/ y < x.
   Proof. t. Qed.
 End EmptyUsualLtIsTotal.
+
+Local Coercion is_true : bool >-> Sortclass.
+
+Module EmptyIsStrOrderBool.
+  Global Instance ltb_strorder : StrictOrder EmptyHasLtb.ltb | 10.
+  Proof. t. Qed.
+  Global Instance ltb_compat : Proper (EmptyHasEqb.eqb==>EmptyHasEqb.eqb==>eq) EmptyHasLtb.ltb | 10.
+  Proof. t. Qed.
+End EmptyIsStrOrderBool.
+
+Module EmptyLebIsLtbEqb.
+  Lemma leb_ltbeqb : forall x y, (EmptyHasLeb.leb x y = (EmptyHasLtb.ltb x y || EmptyHasEqb.eqb x y))%bool.
+  Proof. t. Qed.
+End EmptyLebIsLtbEqb.
 
 Module EmptyEqLt <: EqLt := EmptyEq <+ EmptyHasLt.
 Module EmptyEqLe <: EqLe := EmptyEq <+ EmptyHasLe.
@@ -158,27 +184,47 @@ Module EmptyUsualTotalOrder <: UsualTotalOrder
 Module EmptyTotalOrder' <: TotalOrder' := EmptyTotalOrder <+ EqLtLeNotation.
 Module EmptyUsualTotalOrder' <: UsualTotalOrder' := EmptyUsualTotalOrder <+ LtLeNotation.
 
+Module EmptyOrderedTypeOrig <: OrderedTypeOrig := OT_of_New EmptyOrderedType.
+Module EmptyMiniOrderedType <: MiniOrderedType := EmptyOrderedTypeOrig.
+Module EmptyUsualOrderedTypeOrig <: UsualOrderedTypeOrig := EmptyOrderedTypeOrig.
+Module EmptyUsualMiniOrderedType <: UsualMiniOrderedType := EmptyOrderedTypeOrig.
+
 Module EmptyLeBool <: LeBool := EmptyTyp <+ EmptyHasLeb.
 Module EmptyLtBool <: LtBool := EmptyTyp <+ EmptyHasLtb.
 Module EmptyLeBool' <: LeBool' := EmptyLeBool <+ LebNotation.
 Module EmptyLtBool' <: LtBool' := EmptyLtBool <+ LtbNotation.
+Module EmptyEqLeBool <: EqLeBool := EmptyTyp <+ EmptyHasEqb <+ EmptyHasLeb.
+Module EmptyEqLtBool <: EqLtBool := EmptyTyp <+ EmptyHasEqb <+ EmptyHasLtb.
+Module EmptyEqLeBool' <: EqLeBool' := EmptyEqLeBool <+ EqbNotation <+ LebNotation.
+Module EmptyEqLtBool' <: EqLtBool' := EmptyEqLtBool <+ EqbNotation <+ LtbNotation.
+Module EmptyEqLtLeBool <: EqLtLeBool := EmptyTyp <+ EmptyHasEqb <+ EmptyHasLtb <+ EmptyHasLeb.
+Module EmptyEqLtLeBool' <: EqLtLeBool' := EmptyEqLtLeBool <+ EqbNotation <+ LtbNotation <+ LebNotation.
 
 Module EmptyTotalLeBool <: TotalLeBool := EmptyLeBool <+ EmptyLebIsTotal.
 Module EmptyTotalLeBool' <: TotalLeBool' := EmptyLeBool' <+ EmptyLebIsTotal.
+Module EmptyTotalEqLeBool <: TotalEqLeBool := EmptyEqLeBool <+ EmptyLebIsTotal.
+Module EmptyTotalEqLeBool' <: TotalEqLeBool' := EmptyEqLeBool' <+ EmptyLebIsTotal.
+Module EmptyTotalEqLtLeBool <: TotalEqLtLeBool := EmptyEqLtLeBool <+ EmptyLebIsTotal.
+Module EmptyTotalEqLtLeBool' <: TotalEqLtLeBool' := EmptyEqLtLeBool' <+ EmptyLebIsTotal.
 
 Module EmptyTotalTransitiveLeBool <: TotalTransitiveLeBool := EmptyTotalLeBool <+ EmptyLebIsTransitive.
 Module EmptyTotalTransitiveLeBool' <: TotalTransitiveLeBool' := EmptyTotalLeBool' <+ EmptyLebIsTransitive.
+Module EmptyTotalTransitiveEqLeBool <: TotalTransitiveEqLeBool := EmptyTotalEqLeBool <+ EmptyLebIsTransitive.
+Module EmptyTotalTransitiveEqLeBool' <: TotalTransitiveEqLeBool' := EmptyTotalEqLeBool' <+ EmptyLebIsTransitive.
+Module EmptyTotalTransitiveEqLtLeBool <: TotalTransitiveEqLtLeBool := EmptyTotalEqLtLeBool <+ EmptyLebIsTransitive.
+Module EmptyTotalTransitiveEqLtLeBool' <: TotalTransitiveEqLtLeBool' := EmptyTotalEqLtLeBool' <+ EmptyLebIsTransitive.
 
-Module EmptyHasEmptyOrdFuns := EmptyTyp <+ EmptyHasEqb <+ EmptyHasLtb <+ EmptyHasLeb.
+Module EmptyStrOrderBool <: StrOrderBool := EmptyEqbType <+ EmptyHasLtb <+ EmptyIsStrOrderBool.
+Module EmptyStrOrderBool' <: StrOrderBool' := EmptyStrOrderBool <+ EqLtBoolNotation.
 
-Module EmptyHasEmptyOrdFuns' := EmptyHasEmptyOrdFuns <+ EmptyEqbNotation <+ EmptyLtbNotation <+ EmptyLebNotation.
+Module EmptyTotalOrderBool <: TotalOrderBool := EmptyStrOrderBool <+ EmptyHasLeb <+ EmptyLebIsLtbEqb <+ EmptyLebIsTotal.
+Module EmptyTotalOrderBool' <: TotalOrderBool' := EmptyTotalOrderBool <+ EqLtLeBoolNotation.
+
+Module EmptyHasBoolOrdFuns := EmptyHasEqb <+ EmptyHasLtb <+ EmptyHasLeb.
+
+Module EmptyHasBoolOrdFuns' := EmptyHasBoolOrdFuns <+ EmptyEqbNotation <+ EmptyLtbNotation <+ EmptyLebNotation.
 
 Module EmptyBoolOrdSpecs := EmptyEqbSpec <+ EmptyLtbSpec <+ EmptyLebSpec.
 
-Module EmptyOrderFunctions := EmptyHasCompare <+ EmptyHasEmptyOrdFuns <+ EmptyBoolOrdSpecs.
-Module EmptyOrderFunctions' := EmptyHasCompare <+ EmptyCmpNotation <+ EmptyHasEmptyOrdFuns' <+ EmptyBoolOrdSpecs.
-
-Require Import Coq.Structures.OrderedType.
-Require Import Crypto.Util.Structures.OrderedType.
-Module EmptyOrderedTypeOrig <: OrderedType.OrderedType := OT_of_New EmptyOrderedType.
-Module EmptyMiniOrderedType <: OrderedType.MiniOrderedType := EmptyOrderedTypeOrig.
+Module EmptyOrderFunctions := EmptyHasCompare <+ EmptyHasBoolOrdFuns <+ EmptyBoolOrdSpecs.
+Module EmptyOrderFunctions' := EmptyHasCompare <+ EmptyCmpNotation <+ EmptyHasBoolOrdFuns' <+ EmptyBoolOrdSpecs.
