@@ -22,6 +22,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     env: ${{ matrix.env }}
+    name: ${{ matrix.env.COQ_VERSION }}
 
     steps:
     - uses: actions/checkout@v3
