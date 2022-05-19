@@ -188,6 +188,7 @@ Crypto.Util.FSets.FMapEmpty
 Crypto.Util.FSets.FMapIso
 Crypto.Util.FSets.FMapN
 Crypto.Util.FSets.FMapOption
+Crypto.Util.FSets.FMapProd
 Crypto.Util.FSets.FMapSect
 Crypto.Util.FSets.FMapSum
 Crypto.Util.FSets.FMapUnit

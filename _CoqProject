@@ -317,6 +317,7 @@ src/Util/FSets/FMapEmpty.v
 src/Util/FSets/FMapIso.v
 src/Util/FSets/FMapN.v
 src/Util/FSets/FMapOption.v
+src/Util/FSets/FMapProd.v
 src/Util/FSets/FMapSect.v
 src/Util/FSets/FMapSum.v
 src/Util/FSets/FMapUnit.v
