@@ -314,7 +314,9 @@ src/Util/FSets/FMapBool.v
 src/Util/FSets/FMapEmpty.v
 src/Util/FSets/FMapIso.v
 src/Util/FSets/FMapN.v
+src/Util/FSets/FMapOption.v
 src/Util/FSets/FMapSect.v
+src/Util/FSets/FMapSum.v
 src/Util/FSets/FMapUnit.v
 src/Util/ListUtil/CombineExtend.v
 src/Util/ListUtil/Concat.v
