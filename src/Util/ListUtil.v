@@ -85,6 +85,7 @@ Create HintDb simpl_sum_firstn discriminated.
 Create HintDb push_map discriminated.
 Create HintDb push_combine discriminated.
 Create HintDb push_flat_map discriminated.
+Create HintDb push_rev discriminated.
 Create HintDb push_fold_right discriminated.
 Create HintDb push_partition discriminated.
 Create HintDb pull_nth_error discriminated.
@@ -112,6 +113,10 @@ Hint Rewrite
   @combine_length
   @prod_length
   : distr_length.
+
+Hint Rewrite
+     rev_involutive
+  : push_rev.
 
 Global Hint Extern 1 => progress autorewrite with distr_length in * : distr_length.
 Ltac distr_length := autorewrite with distr_length in *;
@@ -2232,6 +2237,18 @@ Hint Rewrite flat_map_app : push_flat_map.
 Lemma map_flat_map A B C (f : A -> list B) (g : B -> C) xs
   : map g (flat_map f xs) = flat_map (fun x => map g (f x)) xs.
 Proof. induction xs as [|x xs IHxs]; cbn; rewrite ?map_app; congruence. Qed.
+
+Lemma flat_map_rev A B (f : A -> list B) xs
+  : flat_map f (rev xs) = rev (flat_map (fun x => rev (f x)) xs).
+Proof.
+  induction xs as [|x xs IHxs]; cbn; autorewrite with push_flat_map; rewrite ?rev_app_distr, ?IHxs, ?rev_involutive, ?app_nil_r; reflexivity.
+Qed.
+Hint Rewrite flat_map_rev : push_flat_map.
+
+Lemma rev_flat_map A B (f : A -> list B) xs
+  : rev (flat_map f xs) = flat_map (fun x => rev (f x)) (rev xs).
+Proof. rewrite flat_map_rev; setoid_rewrite rev_involutive; reflexivity. Qed.
+Hint Rewrite rev_flat_map : push_rev.
 
 Lemma combine_map_map A B C D (f : A -> B) (g : C -> D) xs ys
   : combine (map f xs) (map g ys) = map (fun ab => (f (fst ab), g (snd ab))) (combine xs ys).
