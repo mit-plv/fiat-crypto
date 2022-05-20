@@ -2,7 +2,7 @@ include Makefile.local.common
 
 PROFILE?=
 # Remove -undeclared-scope once we stop supporting 8.9
-OTHERFLAGS += -w -notation-overridden,-undeclared-scope,-deprecated-hint-rewrite-without-locality,-deprecated-hint-constr,-fragile-hint-constr,-native-compiler-disabled,-ambiguous-paths
+OTHERFLAGS += -w -notation-overridden,-undeclared-scope,-deprecated-hint-rewrite-without-locality,-deprecated-hint-constr,-fragile-hint-constr,-native-compiler-disabled,-ambiguous-paths,-masking-absolute-name
 ifneq ($(PROFILE),)
 OTHERFLAGS += -profile-ltac
 endif
