@@ -115,7 +115,7 @@ ifneq (,$(wildcard .git/))
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
 EXISTING_COQPROJECT_CONTENTS_SORTED:=$(shell cat _CoqProject 2>&1 | $(SORT_COQPROJECT))
 WARNINGS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,unsupported-attributes
-COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-arg -w -arg $(WARNINGS)'; echo '-arg -native-compiler -arg ondemand'; ((echo "$(sort $(VERSION_DEPENDENT_FILES))" | tr ' ' '\n'; git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES)) | $(SORT_COQPROJECT)))
+COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-arg -w -arg $(WARNINGS)'; echo '-arg -native-compiler -arg ondemand'; ((echo "$(sort $(VERSION_DEPENDENT_FILES) $(SPECIAL_VERSION_DEPENDENT_FILES))" | tr ' ' '\n'; git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES)) | $(SORT_COQPROJECT)))
 NEW_COQPROJECT_CONTENTS_SORTED:=$(shell $(COQPROJECT_CMD) | $(SORT_COQPROJECT))
 
 ifneq ($(EXISTING_COQPROJECT_CONTENTS_SORTED),$(NEW_COQPROJECT_CONTENTS_SORTED))
@@ -172,7 +172,8 @@ NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/Projective.vo \
 	$(PERFTESTING_VO) \
 	$(EXCLUDED_VO)
-REGULAR_VOFILES := $(filter-out $(EXCLUDE_PATTERN) $(SPECIAL_VOFILES),$(VOFILES))
+REGULAR_WITH_BEDROCK2_VOFILES := $(filter-out $(SPECIAL_VOFILES),$(VOFILES))
+REGULAR_VOFILES := $(filter-out $(EXCLUDE_PATTERN),$(REGULAR_WITH_BEDROCK2_VOFILES))
 REGULAR_EXCEPT_BEDROCK2_VOFILES := $(filter-out $(BEDROCK2_FILES_PATTERN),$(REGULAR_VOFILES))
 BEDROCK2_VOFILES := $(filter $(BEDROCK2_FILES_PATTERN),$(REGULAR_VOFILES))
 PRE_STANDALONE_PRE_VOFILES := $(filter src/Standalone%.vo src/Bedrock/Standalone%.vo,$(REGULAR_VOFILES))
@@ -971,6 +972,29 @@ printreversedeps::
 
 etc/tscfreq: etc/tscfreq.c
 	$(CC) etc/tscfreq.c -s -Os -o etc/tscfreq
+
+REGULAR_WITH_BEDROCK2_LIBS := $(sort $(subst /,.,$(patsubst src/%.vo,Crypto/%,$(filter-out src/Bedrock/Everything.vo src/Everything.vo,$(REGULAR_WITH_BEDROCK2_VOFILES)))))
+REGULAR_EXCEPT_BEDROCK2_LIBS := $(sort $(subst /,.,$(patsubst src/%.vo,Crypto/%,$(filter-out src/Bedrock/Everything.vo src/Everything.vo,$(REGULAR_EXCEPT_BEDROCK2_VOFILES)))))
+make_Everything_v_cmd_gen = { printf 'Require Import\n'; printf '%s\n' $(1); printf '.\n'; }
+make_Everything_v_cmd := $(call make_Everything_v_cmd_gen,$(REGULAR_EXCEPT_BEDROCK2_LIBS))
+make_Bedrock_Everything_v_cmd := $(call make_Everything_v_cmd_gen,$(REGULAR_WITH_BEDROCK2_LIBS))
+EXISTING_EVERYTHING_V_CONTENTS:=$(shell cat src/Everything.v 2>&1)
+EXISTING_BEDROCK_EVERYTHING_V_CONTENTS:=$(shell cat src/Bedrock/Everything.v 2>&1)
+NEW_EVERYTHING_V_CONTENTS:=$(shell $(make_Everything_v_cmd))
+NEW_BEDROCK_EVERYTHING_V_CONTENTS:=$(shell $(make_Bedrock_Everything_v_cmd))
+ifneq ($(EXISTING_EVERYTHING_V_CONTENTS),$(NEW_EVERYTHING_V_CONTENTS))
+.PHONY: src/Everything.v
+src/Everything.v:
+	$(SHOW)'ECHO > $@'
+	$(HIDE)$(make_Everything_v_cmd) > $@
+endif
+
+ifneq ($(EXISTING_BEDROCK_EVERYTHING_V_CONTENTS),$(NEW_BEDROCK_EVERYTHING_V_CONTENTS))
+.PHONY: src/Bedrock/Everything.v
+src/Bedrock/Everything.v:
+	$(SHOW)'ECHO > $@'
+	$(HIDE)$(make_Bedrock_Everything_v_cmd) > $@
+endif
 
 GOPROXY?=https://proxy.golang.org
 GO111MODULE?=on
