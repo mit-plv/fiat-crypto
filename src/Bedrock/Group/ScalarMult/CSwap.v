@@ -39,8 +39,8 @@ Section __.
   Context (felem_size_in_words_small
     : Z.of_nat felem_size_in_words < 2^width).
   Hint Resolve @relax_bounds : compiler.
- 
-  
+
+
   Notation all_1s := (word.of_Z (-1) : word).
 
   Section Gallina.
@@ -52,13 +52,13 @@ Section __.
     Definition mask_of_bool (b : bool) :=
       if b then all_1s else word.of_Z 0.
 
-    
+
     Instance HasDefault_word : HasDefault word :=
       word.of_Z 0.
-    
+
     Instance: HasDefault (word * word) := (default, default).
     Existing Instance Convertible_Z_nat.
-    
+
     Definition cswap_low mask
                (a1: ListArray.t word.rep)
                (a2: ListArray.t word.rep) :=
@@ -80,7 +80,7 @@ Section __.
               let/n a2 := ListArray.put a2 idx r2 in
               \<a1, a2\>) \<a1, a2\> in
       \<a1, a2\>.
-    
+
 
     Definition cswap_word1 (mask nmask a b : word) :=
       word.or (word.and mask a)
@@ -88,7 +88,7 @@ Section __.
     Definition cswap_word2 (mask nmask a b : word) :=
       word.or (word.and mask b)
               (word.and nmask a).
-      
+
     Definition cswap_combine (mask : word)
                (a1: ListArray.t word.rep)
                (a2: ListArray.t word.rep) :=
@@ -110,10 +110,10 @@ Section __.
 
     Definition cswap {T} (swap: bool) (a b: T) :=
       if swap then \<b, a\> else \<a, b\>.
-    
+
   End Gallina.
 
-  
+
   Lemma foldl_dep'_funext {A B} l (a : A) (f1 f2 : A -> forall (x : B), In x l -> A) l' subl (exit : A-> bool)
     : (forall a (x : B) (pf : In x l), f1 a x pf = f2 a x pf) ->
       foldl_dep' l f1 exit l' subl a
@@ -142,7 +142,7 @@ Section __.
     apply foldl_dep'_funext.
     eauto.
   Qed.
-  
+
 
   Lemma wrap_felem_size_in_words_small
     : word.wrap (Z.of_nat felem_size_in_words) = (Z.of_nat felem_size_in_words).
@@ -151,8 +151,8 @@ Section __.
     pose proof felem_size_in_words_small.
     rewrite Z.mod_small; lia.
   Qed.
- 
-  
+
+
 Section __.
   Context {A B: Type}.
 
@@ -166,10 +166,10 @@ Section __.
 
   Context `{HasDefault A} `{HasDefault B}.
   Instance: HasDefault (A * B) := (default, default).
-  
+
   Instance Convertible_Z_nat : Convertible Z nat := Z.to_nat.
 
-  
+
   Lemma replace_nth_combine  n (la: list A) (lb: list B) a b
     :  (replace_nth n (combine la lb) (a,b))
        = combine (replace_nth n la a) (replace_nth n lb b).
@@ -190,7 +190,7 @@ Section __.
     intro H'; inversion H'; clear H'; subst.
     eauto.
   Qed.
-  
+
   Lemma snd_nth_combine n (la: list A) (lb: list B)
     : length la = length lb ->
       (snd (nth n (combine la lb) default))
@@ -201,7 +201,7 @@ Section __.
     intro H'; inversion H'; clear H'; subst.
     eauto.
   Qed.
-  
+
   Lemma nd_ranged_for_combine: forall n (lA: list A) (lB: list B) fA fB,
       length lA = length lB ->
     let '\<x,y\> := nd_ranged_for_all
@@ -253,7 +253,7 @@ Section __.
   Qed.
 
   End __.
-  
+
   Lemma cswap_low_combine_eq mask a1 a2
     : length a1 = length a2 ->
       cswap_low mask a1 a2 = cswap_combine mask a1 a2.
@@ -262,7 +262,7 @@ Section __.
     unfold cswap_low.
     unfold cswap_combine.
     unfold nlet.
-    
+
     set (List.split _).
     set (nd_ranged_for_all _ _ _ _).
     enough (p = (P2.car y, P2.cdr y)).
@@ -274,7 +274,7 @@ Section __.
     Unshelve.
     all: eauto.
   Qed.
-  
+
   Lemma split_map_combine {A B C D} (f : A * B -> C * D) a1 a2
     : List.split (List.map f (combine a1 a2))
       = (List.map (fun p => fst (f p)) (combine a1 a2), List.map (fun p => snd (f p)) (combine a1 a2)).
@@ -288,14 +288,14 @@ Section __.
     congruence.
   Qed.
 
-  
+
   Lemma z_lt_width : (0 <= width)%Z.
   Proof.
     destruct width_cases; lia.
   Qed.
-  
 
-  
+
+
   Lemma all_1s_and : forall x, word.and all_1s x = x.
   Proof.
     intros.
@@ -329,7 +329,7 @@ Section __.
     }
   Qed.
 
-  
+
   Lemma word_not_impl (x : word)
     : word.not x = word.sub (word.of_Z (-1)) x.
   Proof.
@@ -341,9 +341,9 @@ Section __.
     rewrite (word.of_Z_signed x).
     unfold Z.lnot.
     lia.
-  Qed.     
+  Qed.
 
-  
+
   Lemma word_not_zero : word.not (word.of_Z 0) = all_1s.
   Proof.
     rewrite word_not_impl.
@@ -362,7 +362,7 @@ Section __.
     reflexivity.
   Qed.
 
-  
+
   Lemma zero_or (x : word)
     : word.or (word.of_Z 0) x = x.
   Proof.
@@ -398,7 +398,7 @@ Section __.
     rewrite <- word.ring_morph_sub.
     reflexivity.
   Qed.
-  
+
   Lemma cswap_combine_eq mask a1 a2
     : (mask = word.of_Z 0) \/ (mask = word.of_Z 1) ->
       felem_size_in_words = length a1 ->
@@ -457,7 +457,7 @@ Section __.
       f_equal.
 
       unfold cswap_word1, cswap_word2.
-      
+
       destruct H; subst;
         [rewrite word.eqb_ne | rewrite word.eqb_eq by reflexivity ];
         f_equal.
@@ -471,7 +471,7 @@ Section __.
       all: rewrite ?zero_or.
       all: try rewrite or_comm, ?zero_or.
       all: try reflexivity.
-      
+
       {
         intro.
         pose proof word.unsigned_of_Z_0.
@@ -481,8 +481,8 @@ Section __.
       }
     }
   Qed.
-  
- 
+
+
   (*TODO: move to NoExprReflection.v*)
   Lemma compile_word_not
         {tr m l functions} x :
@@ -516,7 +516,7 @@ Section __.
   Hint Extern 10 (_ < _) => lia: compiler_side_conditions.
 
   Definition felem_cswap := "felem_cswap".
-  
+
     Instance spec_of_cswap : spec_of felem_cswap :=
       fnspec! felem_cswap mask ptr1 ptr2 / c1 c2 R,
         (*TODO: if b then bw should be all 1s*)
@@ -532,7 +532,7 @@ Section __.
              * sizedlistarray_value AccessWord felem_size_in_words ptr2 c2 * R)%sep mem' }.
 
   Import LoopCompiler.
-  Derive cswap_body SuchThat         
+  Derive cswap_body SuchThat
            (defn! felem_cswap ("mask", "a1", "a2") { cswap_body },
              implements cswap_low)
            As cswap_body_correct.
@@ -541,7 +541,7 @@ Section __.
     compile.
     lia.
   Qed.
-  
+
   Lemma Bignum_as_array
     : @Bignum.Bignum width word _ = sizedlistarray_value AccessWord.
   Proof.
@@ -553,7 +553,7 @@ Section __.
     unfold bytes_per_word.
     pose proof z_lt_width.
     apply Z.div_pos; try lia.
-  Qed.    
+  Qed.
 
     Lemma compile_felem_cswap {tr m l functions} swap (lhs rhs : F M_pos) :
       let v := cswap swap lhs rhs in
@@ -563,7 +563,7 @@ Section __.
         spec_of_cswap functions ->
 
         map.get l mask_var = Some (word.of_Z (Z.b2z swap)) ->
-        
+
         map.get l lhs_var = Some lhs_ptr ->
         map.get l rhs_var = Some rhs_ptr ->
 
@@ -663,7 +663,7 @@ Section __.
     }
   Qed.
   Hint Resolve compile_felem_cswap : compiler.
-  
+
 End __.
 
 
