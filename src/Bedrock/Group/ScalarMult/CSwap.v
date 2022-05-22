@@ -1,3 +1,4 @@
+Require Import Coq.Program.Tactics.
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Loops.
 Require Import bedrock2.Semantics.
@@ -269,7 +270,8 @@ Section __.
     rewrite H0; reflexivity.
     etransitivity.
     symmetry.
-    eapply nd_ranged_for_combine; eauto.
+    (* use [rapply] instead of [eapply] to work around [eapply] inferring over-tight universe constraints :-( *)
+    rapply (@nd_ranged_for_combine); eauto.
     reflexivity.
     Unshelve.
     all: eauto.
