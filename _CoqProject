@@ -7,6 +7,7 @@ src/COperationSpecifications.v
 src/CastLemmas.v
 src/CompilersTestCases.v
 src/Demo.v
+src/Everything.v
 src/MiscCompilerPasses.v
 src/MiscCompilerPassesProofs.v
 src/MiscCompilerPassesProofsExtra.v
@@ -81,6 +82,7 @@ src/Assembly/Parse/Examples/fiat_p256_square_optimised_seed6.v
 src/Assembly/WithBedrock/Proofs.v
 src/Assembly/WithBedrock/Semantics.v
 src/Assembly/WithBedrock/SymbolicProofs.v
+src/Bedrock/Everything.v
 src/Bedrock/End2End/Poly1305/Field1305.v
 src/Bedrock/End2End/RupicolaCrypto/Derive.v
 src/Bedrock/End2End/RupicolaCrypto/Low.v
