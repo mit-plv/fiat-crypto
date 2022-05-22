@@ -132,6 +132,8 @@ PERFTESTING_VO := \
 BEDROCK2_FILES_PATTERN := \
 	src/ExtractionOCaml/bedrock2_% \
 	src/ExtractionHaskell/bedrock2_% \
+	src/ExtractionOCaml/with_bedrock2_% \
+	src/ExtractionHaskell/with_bedrock2_% \
 	src/Assembly/WithBedrock/% \
 	src/Bedrock/% # it's important to catch not just the .vo files, but also the .glob files, etc, because this is used to filter FILESTOINSTALL
 EXCLUDE_PATTERN :=
@@ -570,18 +572,22 @@ Makefile.coq: Makefile _CoqProject
 	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-coq && cat Makefile-coq | sed 's/^printenv:/printenv::/g; s/^printenv:::/printenv::/g; s/^all:/all-old:/g; s/^validate:/validate-vo:/g; s/^.PHONY: validate/.PHONY: validate-vo/g' > $@ && rm -f Makefile-coq
 
 
-STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery base_conversion
-BEDROCK2_STANDALONE := $(addprefix bedrock2_,$(STANDALONE))
+BASE_STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery base_conversion
+BEDROCK2_STANDALONE := $(addprefix bedrock2_,$(BASE_STANDALONE)) $(addprefix with_bedrock2_,$(BASE_STANDALONE))
+STANDALONE := $(BASE_STANDALONE)
 ifneq ($(SKIP_BEDROCK2),1)
-STANDALONE += $(BEDROCK2_STANDALONE)
+STANDALONE += $(BEDROCK2_STANDALONE) $(WITH_BEDROCK2_STANDALONE)
 endif
 PERF_STANDALONE := perf_unsaturated_solinas perf_word_by_word_montgomery
 
 STANDALONE_OCAML := $(STANDALONE) $(PERF_STANDALONE)
 STANDALONE_HASKELL := $(STANDALONE)
 
-OCAML_BINARIES := $(STANDALONE:%=src/ExtractionOCaml/%)
-HASKELL_BINARIES := $(STANDALONE:%=src/ExtractionHaskell/%)
+OCAML_BINARIES := $(BASE_STANDALONE:%=src/ExtractionOCaml/%)
+HASKELL_BINARIES := $(BASE_STANDALONE:%=src/ExtractionHaskell/%)
+
+WITH_BEDROCK2_OCAML_BINARIES := $(BASE_STANDALONE:%=src/ExtractionOCaml/with_bedrock2_%)
+WITH_BEDROCK2_HASKELL_BINARIES := $(BASE_STANDALONE:%=src/ExtractionHaskell/with_bedrock2_%)
 
 
 $(STANDALONE:%=src/ExtractionOCaml/%.ml): src/StandaloneOCamlMain.vo
@@ -930,11 +936,12 @@ install-without-bedrock2:
 install-standalone-ocaml: standalone-ocaml
 install-standalone-haskell: standalone-haskell
 
-install-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
-install-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
-
 uninstall-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
 uninstall-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
+
+ifeq ($(SKIP_BEDROCK2),1)
+install-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
+install-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
 
 install-standalone-ocaml install-standalone-haskell:
 	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
@@ -945,6 +952,23 @@ install-standalone-ocaml install-standalone-haskell:
 	   install -m 0755 "$$f" "$(BINDIR)/" &&\
 	   echo INSTALL "$$f" "$(BINDIR)/";\
 	done
+else
+install-standalone-ocaml: FILESTOINSTALL=$(WITH_BEDROCK2_OCAML_BINARIES)
+install-standalone-haskell: FILESTOINSTALL=$(WITH_BEDROCK2_HASKELL_BINARIES)
+
+install-standalone-ocaml install-standalone-haskell:
+	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
+	 if ! [ -f "$$f" ]; then >&2 echo $$f does not exist; code=1; fi \
+	done; exit $$code
+	$(HIDE)for f in $(FILESTOINSTALL); do\
+	   fdir="$$(dirname "$$f")" &&\
+	   fname="$$(basename "$$f")" &&\
+	   df="$${fname#with_bedrock2_}" &&\
+	   install -d "$(BINDIR)/" &&\
+	   install -m 0755 "$$f" "$(BINDIR)/$$df" &&\
+	   echo INSTALL "$$f" "$(BINDIR)/$$df";\
+	done
+endif
 
 uninstall-standalone-ocaml uninstall-standalone-haskell:
 	$(HIDE)for f in $(FILESTOINSTALL); do \

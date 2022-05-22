@@ -200,6 +200,10 @@ src/ExtractionOCaml/bedrock2_saturated_solinas
 src/ExtractionOCaml/bedrock2_unsaturated_solinas
 src/ExtractionOCaml/bedrock2_word_by_word_montgomery
 src/ExtractionOCaml/bedrock2_base_conversion
+src/ExtractionOCaml/with_bedrock2_saturated_solinas
+src/ExtractionOCaml/with_bedrock2_unsaturated_solinas
+src/ExtractionOCaml/with_bedrock2_word_by_word_montgomery
+src/ExtractionOCaml/with_bedrock2_base_conversion
 src/ExtractionOCaml/perf_unsaturated_solinas
 src/ExtractionOCaml/perf_word_by_word_montgomery
 src/ExtractionOCaml/saturated_solinas.exe
@@ -210,6 +214,10 @@ src/ExtractionOCaml/bedrock2_saturated_solinas.exe
 src/ExtractionOCaml/bedrock2_unsaturated_solinas.exe
 src/ExtractionOCaml/bedrock2_word_by_word_montgomery.exe
 src/ExtractionOCaml/bedrock2_base_conversion.exe
+src/ExtractionOCaml/with_bedrock2_saturated_solinas.exe
+src/ExtractionOCaml/with_bedrock2_unsaturated_solinas.exe
+src/ExtractionOCaml/with_bedrock2_word_by_word_montgomery.exe
+src/ExtractionOCaml/with_bedrock2_base_conversion.exe
 src/ExtractionOCaml/perf_unsaturated_solinas.exe
 src/ExtractionOCaml/perf_word_by_word_montgomery.exe
 src/ExtractionOCaml/*.cmi
