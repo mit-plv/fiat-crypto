@@ -229,20 +229,25 @@ Section CompileBufPolymorphic.
     a a_var {t m l} (R: mem -> Prop),
       (buffer_at n elts a * R)%sep m ->
       length elts = n ->
-      (forall m, (elts$T@a * R)%sep m ->
-       <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+      (let v := v in
+       forall m,
+         (elts$T@a * R)%sep m ->
+         <{ Trace := t; Memory := m; Locals := l; Functions := e }>
          k_impl
-       <{ pred (nlet_eq [a_var] v k) }>) ->
-    <{ Trace := t; Memory := m; Locals := l; Functions := e }>
-      k_impl
-    <{ pred (k v eq_refl) }>.
+         <{ pred (k v eq_refl) }> ->
+         <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+         k_impl
+         <{ pred (nlet_eq [a_var] v k) }>).
   Proof.
-    intros * HA HB HC; eapply HC; subst n.
-    cbv [buffer_at] in HA.
+    intros * HA HB HC HD HE HF. eapply HF; subst n.
+  Qed.
+  (*
+intros * HA HB HC HD; eapply HC; subst n.
+    cbv [buffer_at] in HC.
     eapply sep_assoc, sep_comm, sep_assoc, sep_ex1_l  in HA; case HA as [? ?]; sepsimpl.
     destruct x; cbn [length] in *; try lia; cbn [array] in *; sepsimpl.
     ecancel_assumption.
-  Qed.
+*)
 
  Lemma compile_buf_make_stack (n:nat) :
     let v := buf_make T n in
