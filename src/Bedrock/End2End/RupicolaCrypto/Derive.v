@@ -130,12 +130,42 @@ Section Bedrock2.
     end; [shelve ..|].
     compile_buf_append.
 
+    repeat compile_step. subst v4.
+
+    simple eapply compile_w32s_of_bytes; repeat compile_step.
+    simple eapply compile_nlet_as_nlet_eq.
+
+    simple eapply compile_bytes_of_w32s with (a_ptr := key_ptr); repeat compile_step.
+    admit.
+
+    simple eapply compile_nlet_as_nlet_eq.
+    simple eapply compile_w32s_of_bytes with (a_ptr := nonce_ptr); repeat compile_step.
+
+    simple eapply compile_nlet_as_nlet_eq.
+    compile_buf_append.
+    repeat compile_step. subst v7.
+
+    simple eapply compile_w32s_of_bytes; repeat compile_step.
+    simple eapply compile_nlet_as_nlet_eq.
+    simple eapply compile_bytes_of_w32s with (a_ptr := nonce_ptr); repeat compile_step.
+    admit.
+
+    simple eapply compile_nlet_as_nlet_eq.
+    simple eapply compile_buf_as_array; repeat compile_step.
+
+    unfold buffer_at in H17.
+
+    admit.
+
+    simple eapply compile_nlet_as_nlet_eq.
+    simple eapply compile_buf_make_stack.
+
     (*
     (*simple eapply compile_buf_append; [shelve .. |].*)
     compile_step.
     compile_step.
 
-    
+     
     simple eapply compile_nlet_as_nlet_eq.
     simple eapply compile_bytes_of_w32s; repeat compile_step.
     compile_step.
