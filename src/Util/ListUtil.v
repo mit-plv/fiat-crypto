@@ -81,12 +81,14 @@ Create HintDb simpl_nth_error discriminated.
 Create HintDb simpl_firstn discriminated.
 Create HintDb simpl_skipn discriminated.
 Create HintDb simpl_fold_right discriminated.
+Create HintDb simpl_fold_left discriminated.
 Create HintDb simpl_sum_firstn discriminated.
 Create HintDb push_map discriminated.
 Create HintDb push_combine discriminated.
 Create HintDb push_flat_map discriminated.
 Create HintDb push_rev discriminated.
 Create HintDb push_fold_right discriminated.
+Create HintDb push_fold_left discriminated.
 Create HintDb push_partition discriminated.
 Create HintDb pull_nth_error discriminated.
 Create HintDb push_nth_error discriminated.
@@ -299,6 +301,30 @@ Module Export List.
     Qed.
 
   End Cutting.
+
+  Lemma fold_right_rev_left A B (f : B -> A -> B) (l : list A) (i : B)
+    : fold_left f (rev l) i = fold_right (fun x y => f y x) i l.
+  Proof.
+    now rewrite <- fold_left_rev_right, rev_involutive.
+  Qed.
+
+
+  Section FoldLeft.
+    Context {A B} (f:A->B->A).
+    Lemma fold_left_nil : forall {A B} (f:A->B->A) a,
+        List.fold_left f nil a = a.
+    Proof using Type. reflexivity. Qed.
+    Lemma fold_left_cons : forall a b bs,
+      fold_left f (b::bs) a = fold_left f bs (f a b).
+    Proof using Type. reflexivity. Qed.
+    Lemma fold_left_snoc a x ls:
+      @fold_left A B f (ls ++ [x]) a = f (fold_left f ls a) x.
+    Proof using Type.
+      rewrite <-(rev_involutive ls), <-rev_cons.
+      rewrite !fold_right_rev_left; reflexivity.
+    Qed.
+  End FoldLeft.
+  Hint Rewrite @fold_left_nil @fold_left_cons @fold_left_snoc : simpl_fold_left push_fold_left.
 
   (** new operations *)
   Definition enumerate {A} (ls : list A) : list (nat * A)
@@ -1456,12 +1482,18 @@ Lemma map_seq_succ n m :
   seq (S n) m = map (fun i => (i + 1)%nat) (seq n m).
 Proof. rewrite <- map_id at 1; symmetry; apply map_seq_ext; intros; lia. Qed.
 
+Lemma fold_right_and_Truth_forall_In_iff : forall {T} (l : list T) (P : T -> Prop) (Tr : Prop),
+    (Tr /\ forall x, In x l -> P x) <-> fold_right and Tr (map P l).
+Proof.
+  induction l as [|?? IHl]; intros; simpl; try tauto.
+  rewrite <- IHl by assumption.
+  intuition (subst; auto).
+Qed.
+
 Lemma fold_right_and_True_forall_In_iff : forall {T} (l : list T) (P : T -> Prop),
   (forall x, In x l -> P x) <-> fold_right and True (map P l).
 Proof.
-  induction l as [|?? IHl]; intros; simpl; try tauto.
-  rewrite <- IHl.
-  intuition (subst; auto).
+  intros; rewrite <- fold_right_and_Truth_forall_In_iff; tauto.
 Qed.
 
 Lemma fold_right_invariant : forall {A B} P (f: A -> B -> B) l x,
@@ -1475,6 +1507,30 @@ Proof.
   intros y in_y_l.
   apply (in_cons a) in in_y_l.
   auto.
+Qed.
+
+Lemma fold_left_and_Truth_forall_In_iff : forall {T} (l : list T) (P : T -> Prop) (Tr : Prop),
+    (Tr /\ forall x, In x l -> P x) <-> fold_left and (map P l) Tr.
+Proof.
+  induction l as [|?? IHl]; intros; simpl; try tauto.
+  rewrite <- IHl.
+  intuition (subst; auto).
+Qed.
+
+Lemma fold_left_and_True_forall_In_iff : forall {T} (l : list T) (P : T -> Prop),
+  (forall x, In x l -> P x) <-> fold_left and (map P l) True.
+Proof.
+  intros; rewrite <- fold_left_and_Truth_forall_In_iff; tauto.
+Qed.
+
+Lemma fold_left_invariant : forall {A B} P (f: B -> A -> B) l x,
+  P x -> (forall y, In y l -> forall z, P z -> P (f z y)) ->
+  P (fold_left f l x).
+Proof.
+  pose proof in_rev.
+  split_iff.
+  intros; rewrite <- fold_left_rev_right; eapply fold_right_invariant;
+    eauto.
 Qed.
 
 Lemma In_firstn : forall {T} n l (x : T), In x (firstn n l) -> In x l.
@@ -1950,6 +2006,21 @@ Hint Rewrite @firstn_update_nth : pull_update_nth.
 Hint Rewrite <- @firstn_update_nth : pull_firstn.
 Hint Rewrite <- @firstn_update_nth : push_update_nth.
 
+Global Instance fold_right_Proper {A B} : Proper (pointwise_relation _ (pointwise_relation _ eq) ==> eq ==> eq ==> eq) (@fold_right A B) | 1.
+Proof.
+  cbv [pointwise_relation]; intros f g Hfg x y ? ls ls' ?; subst y ls'; revert x.
+  induction ls as [|l ls IHls]; cbn [fold_right]; intro; rewrite ?IHls, ?Hfg; reflexivity.
+Qed.
+Global Instance fold_right_Proper_eq {A B} : Proper ((eq ==> eq ==> eq) ==> eq ==> eq ==> eq) (@fold_right A B) | 1.
+Proof. cbv [respectful]; repeat intro; subst; apply fold_right_Proper; repeat intro; eauto. Qed.
+
+Global Instance fold_left_Proper {A B} : Proper (pointwise_relation _ (pointwise_relation _ eq) ==> eq ==> eq ==> eq) (@fold_left A B) | 1.
+Proof.
+  repeat intro; rewrite <- !fold_left_rev_right; apply fold_right_Proper; cbv [pointwise_relation] in *; eauto; congruence.
+Qed.
+Global Instance fold_left_Proper_eq {A B} : Proper ((eq ==> eq ==> eq) ==> eq ==> eq ==> eq) (@fold_left A B) | 1.
+Proof. cbv [respectful]; repeat intro; subst; apply fold_left_Proper; repeat intro; eauto. Qed.
+
 Require Import Coq.Lists.SetoidList.
 Global Instance Proper_nth_default : forall A eq,
   Proper (eq==>eqlistA eq==>Logic.eq==>eq) (nth_default (A:=A)).
@@ -1971,6 +2042,21 @@ Lemma fold_right_andb_true_iff_fold_right_and_True (ls : list bool)
 Proof.
   rewrite <- (map_id ls) at 1.
   rewrite fold_right_andb_true_map_iff, fold_right_and_True_forall_In_iff; reflexivity.
+Qed.
+
+Lemma fold_left_andb_true_map_iff A (ls : list A) f
+  : List.fold_left andb (List.map f ls) true = true <-> forall i, List.In i ls -> f i = true.
+Proof.
+  rewrite <- fold_left_rev_right, <- map_rev; setoid_rewrite Bool.andb_comm.
+  rewrite fold_right_andb_true_map_iff.
+  setoid_rewrite <- in_rev; reflexivity.
+Qed.
+
+Lemma fold_left_andb_true_iff_fold_left_and_True (ls : list bool)
+  : List.fold_left andb ls true = true <-> List.fold_left and (List.map (fun b => b = true) ls) True.
+Proof.
+  rewrite <- (map_id ls) at 1.
+  rewrite fold_left_andb_true_map_iff, fold_left_and_True_forall_In_iff; reflexivity.
 Qed.
 
 Lemma Forall2_forall_iff : forall {A B} (R : A -> B -> Prop) (xs : list A) (ys : list B) d1 d2, length xs = length ys ->
@@ -2190,13 +2276,6 @@ Proof.
 Qed.
 Global Instance partition_Proper_eq {A} : Proper ((eq ==> eq) ==> eq ==> eq) (@List.partition A) | 1.
 Proof. repeat intro; subst; apply partition_Proper; repeat intro; eauto. Qed.
-Global Instance fold_right_Proper {A B} : Proper (pointwise_relation _ (pointwise_relation _ eq) ==> eq ==> eq ==> eq) (@fold_right A B) | 1.
-Proof.
-  cbv [pointwise_relation]; intros f g Hfg x y ? ls ls' ?; subst y ls'; revert x.
-  induction ls as [|l ls IHls]; cbn [fold_right]; intro; rewrite ?IHls, ?Hfg; reflexivity.
-Qed.
-Global Instance fold_right_Proper_eq {A B} : Proper ((eq ==> eq ==> eq) ==> eq ==> eq ==> eq) (@fold_right A B) | 1.
-Proof. cbv [respectful]; repeat intro; subst; apply fold_right_Proper; repeat intro; eauto. Qed.
 
 Lemma partition_map A B (f : B -> bool) (g : A -> B) xs
   : partition f (map g xs) = (map g (fst (partition (fun x => f (g x)) xs)),
@@ -2294,6 +2373,18 @@ Proof. induction xs; cbn; intro H; rewrite ?H, ?IHxs; auto. Qed.
 
 Lemma fold_right_id_ext A B f v xs : (forall x y, f x y = y) -> @fold_right A B f v xs = v.
 Proof. induction xs; cbn; intro H; rewrite ?H; auto. Qed.
+Lemma fold_left_map A B C f f' l a
+  : @fold_left A B f (@List.map C _ f' l) a = fold_left (fun x y => f x (f' y)) l a.
+Proof. revert a; induction l; cbn [List.map List.fold_left]; auto. Qed.
+Lemma fold_left_flat_map A B C (f : A -> list B) xs (F : _ -> _ -> C) v
+  : fold_left F (flat_map f xs) v = fold_left (fun x y => fold_left F (f y) x) xs v.
+Proof. revert v; induction xs; cbn; intros; rewrite ?fold_left_app; congruence. Qed.
+
+Lemma fold_left_ext A B f g v xs : (forall x y, f x y = g x y) -> @fold_left A B f v xs = fold_left g v xs.
+Proof. intros; apply fold_left_Proper; repeat intro; eauto. Qed.
+
+Lemma fold_left_id_ext A B f v xs : (forall x y, f x y = x) -> @fold_left A B f xs v = v.
+Proof. induction xs; cbn; intro H; rewrite ?H; auto. Qed.
 Lemma nth_error_repeat_alt {A} (v : A) n i
   : nth_error (repeat v n) i = if dec (i < n)%nat then Some v else None.
 Proof.
@@ -2311,6 +2402,27 @@ Lemma fold_right_if_dec_eq_seq A start len i f (x v : A)
     -> fold_right f v (seq start len) = if dec (start <= i < start + len)%nat then x else v.
 Proof.
   revert start v; induction len as [|len IHlen]; intros start v H H'; [ | rewrite seq_snoc, fold_right_app; cbn [fold_right] ].
+  { edestruct dec; try reflexivity; lia. }
+  { destruct (dec (i = (start + len)%nat)); subst; [ | rewrite H' by lia ];
+      rewrite IHlen; eauto; intros; clear IHlen;
+        repeat match goal with
+               | _ => reflexivity
+               | _ => lia
+               | _ => progress subst
+               | _ => progress specialize_by lia
+               | [ H : context[dec ?P] |- _ ] => destruct (dec P)
+               | [ |- context[dec ?P] ] => destruct (dec P)
+               | [ H : f _ _ = _ |- _ ] => rewrite H
+               | [ H : forall j, f j ?v = _ |- context[f _ ?v] ] => rewrite H
+               end. }
+Qed.
+
+Lemma fold_left_if_dec_eq_seq A start len i f (x v : A)
+  : ((start <= i < start + len)%nat -> f v i = x)
+    -> (forall j v, (i <> j)%nat -> f v j = v)
+    -> fold_left f (seq start len) v = if dec (start <= i < start + len)%nat then x else v.
+Proof.
+  revert start v; induction len as [|len IHlen]; intros start v H H'; [ | rewrite seq_snoc, fold_left_app; cbn [fold_left] ].
   { edestruct dec; try reflexivity; lia. }
   { destruct (dec (i = (start + len)%nat)); subst; [ | rewrite H' by lia ];
       rewrite IHlen; eauto; intros; clear IHlen;
@@ -2441,6 +2553,9 @@ Proof. induction ls; cbn; eauto. Qed.
 Lemma eq_fold_right_list_rect {A B} f v (ls : list _)
   : @fold_right A B f v ls = list_rect _ v (fun x _ rec => f x rec) ls.
 Proof. induction ls; cbn; eauto. Qed.
+Lemma eq_fold_left_list_rect {A B} f v (ls : list _)
+  : @fold_left A B f ls v = list_rect _ (fun v => v) (fun x _ rec v => rec (f v x)) ls v.
+Proof. revert f v; induction ls; cbn; eauto. Qed.
 Lemma eq_map_list_rect {A B} f (ls : list _)
   : @List.map A B f ls = list_rect _ nil (fun x _ rec => f x :: rec) ls.
 Proof. induction ls; cbn; eauto. Qed.
@@ -2745,10 +2860,6 @@ Proof using Type. revert xs; induction n, xs; cbn; f_equal; auto. Qed.
 
 Lemma flat_map_const_nil {A B} ls : @flat_map A B (fun _ => nil) ls = nil.
 Proof using Type. induction ls; cbn; auto. Qed.
-
-Lemma fold_left_map A B C f f' l a
-  : @fold_left A B f (@List.map C _ f' l) a = fold_left (fun x y => f x (f' y)) l a.
-Proof using Type. revert a; induction l; cbn [List.map List.fold_left]; auto. Qed.
 
 Lemma Forall_map_iff {A B} (f : A -> B) ls P
   : Forall P (List.map f ls) <-> Forall (fun x => P (f x)) ls.
