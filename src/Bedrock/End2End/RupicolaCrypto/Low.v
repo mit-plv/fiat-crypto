@@ -1,7 +1,7 @@
 (* Rewritten versions of poly1305 and chacha20 that you can compile with Rupicola *)
 Require Import Coq.Unicode.Utf8.
 Require Import Rupicola.Lib.Api.
-Require Import Rupicola.Examples.Loops.
+Require Import Rupicola.Examples.Loops Rupicola.Lib.Loops.
 Require Import Crypto.Bedrock.End2End.RupicolaCrypto.Spec.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
@@ -13,6 +13,23 @@ Import Datatypes.
 Open Scope Z_scope.
 
 (** * Properties missing from coqutil, bedrock2, or Coq's stdlib *)
+
+
+(*TODO: this statement is specialized to its use below.
+  Should it be generalized?
+ *)
+Lemma skipn_nth_0 {A} (i : nat) (l : list A) d
+  : i < length l -> skipn i l = (nth 0 (skipn i l) d):: skipn (S i) l.
+Proof using.
+  change (S i) with (1+i)%nat.
+  rewrite <- skipn_skipn.
+  intros.
+  assert (0 < length (skipn i l)) by (rewrite length_skipn;lia).
+  revert H0; generalize (skipn i l).
+  intros.
+  destruct l0; simpl in *; [lia|].
+  reflexivity.
+Qed.
 
 (** * upd **)
 
@@ -166,6 +183,379 @@ Section CompileBufPolymorphic.
   Local Notation "xs $@ a" := (array ptsto (word.of_Z 1) a%word xs%list) (at level 10, format "xs $@ a").
   Implicit Types (t : Semantics.trace) (l : locals) (m : mem) (k : Syntax.cmd).
 
+
+  (* Array broadcasting/pointwise expressions.
+     Requires some care to make sure that the array being written to can also be read.
+     allows more things to be written in a expr style rather than a statement style,
+     avoiding dealing directly with a pile of loop invariant inference.
+   *)
+  
+  (* TODO: could add knowledge about lstl, but it's not yet necessary *)
+  (* TODO: m not mentioned? *)
+  (* expr expect idx_var to hold the index
+   *)
+  (*
+    TODO: this is hardcoded to bytes right now.
+    Generalize to things that can be packed in a word
+   *)
+  Definition broadcast_expr
+             l idx_var
+             old_data ptr R
+             (expr : expr.expr) (lst : list byte) :=
+    forall m lstl,
+      length lstl < length old_data ->
+      ((lstl ++ skipn (length lstl) old_data)$@ptr * R)%sep m ->
+      DEXPR m (map.put l idx_var (word.of_Z (length lstl)))
+            expr (word_of_byte (nth (length lstl) lst x00)).
+
+  
+  Lemma length_fold_left_invariant {A B} (l : list A) (acc : list B) f
+    : (forall a acc, length (f acc a) = length acc) ->
+      length (fold_left f l acc) = length acc.
+  Proof.
+    revert acc; induction l; simpl; intros; auto.
+    rewrite IHl; congruence.
+  Qed.
+
+  
+  Lemma upd_firstn_skipn A (l old : list A) (start : nat) d
+    : start < length l ->
+      start < length old ->
+      upd (firstn start l ++ skipn start old) start (nth start l d)
+      = (firstn (S start) l ++ skipn (S start) old).
+  Proof.
+    intros.
+    unfold upd, upds.
+    repeat rewrite !firstn_app, !skipn_app,
+      !app_length,
+      !firstn_length,
+      !skipn_length,
+      !firstn_firstn,
+      !length_cons,
+      !length_nil,
+      !Nat.min_id.
+    rewrite !min_l by lia.
+    rewrite app_assoc.
+    f_equal.
+    {
+      erewrite <- firstn_nth by lia.
+      f_equal.
+      {
+        replace (start - start)%nat with 0%nat by lia.
+        simpl.
+        rewrite app_nil_r.
+        reflexivity.
+      }
+      {
+        rewrite firstn_all2; eauto.
+        simpl.
+        lia.
+      }
+    }
+    {
+      rewrite skipn_all2.
+      {
+        rewrite skipn_skipn.
+        replace (1 + start - start + start)%nat with (S start) by lia.
+        reflexivity.
+      }
+      {
+        rewrite firstn_length.
+        rewrite min_l; lia.
+      }
+    }
+  Qed.
+      
+    
+  
+  Lemma list_as_nd_ranged_for_all_helper {A} (l old : list A) d
+        (measure len start : nat)
+    : measure = (len - start)%nat ->
+      length l = len ->
+      length old = len ->
+      fold_left (λ (old0 : list A) (i : Z), upd old0 (Z.to_nat i) (nth (Z.to_nat i) l d)) (z_range start (Z.of_nat len)) ((firstn start l) ++ (skipn start old))
+      = l.
+  Proof.
+    revert start len l old.
+    induction measure; simpl; intros.
+    {
+      assert (start >=len) by lia.
+      rewrite z_range_nil by lia.
+      rewrite firstn_all2 by lia.
+      rewrite skipn_all2 by lia.
+      rewrite app_nil_r.
+      reflexivity.
+    }
+    {
+      rewrite z_range_cons by lia.
+      simpl.
+      rewrite Nat2Z.id.
+      rewrite upd_firstn_skipn by lia.
+      replace (Z.of_nat start + 1) with (Z.of_nat (S start)) by lia.
+      rewrite IHmeasure; eauto.
+      lia.
+    }
+  Qed.
+  
+  Lemma list_as_nd_ranged_for_all {A} (l old : list A) d len
+    : length l = len ->
+      length old = len ->
+      nd_ranged_for_all 0 len (fun old i => upd old (Z.to_nat i) (nth (Z.to_nat i) l d)) old = l.
+  Proof.
+    rewrite <- fold_left_as_nd_ranged_for_all.
+    intros.
+    change old with ((firstn 0 l) ++ (skipn 0 old)).
+    replace 0 with (Z.of_nat 0%nat) by lia.
+    eapply list_as_nd_ranged_for_all_helper; eauto.
+  Qed.
+
+  
+  (*TODO: should be in core bedrock*)
+  Lemma expr_locals_put m l x v exp (P : word -> Prop)
+    : map.get l x = None ->
+      WeakestPrecondition.expr m l exp P ->
+      WeakestPrecondition.expr m (map.put l x v) exp P.
+  Proof.
+    intros.
+    eapply Util.expr_only_differ_undef; eauto.
+    eapply Util.only_differ_sym; eauto.
+    eapply Util.only_differ_put; eauto.
+    unfold map.undef_on, PropSet.singleton_set.
+    unfold map.agree_on.
+    intros.
+    cbv in H1; subst.
+    compile_step.
+  Qed.
+  
+  Lemma dexpr_locals_put m l x v exp (w : word)
+    : map.get l x = None ->
+      DEXPR m l exp w ->
+      DEXPR m (map.put l x v) exp w.
+  Proof.
+    intros.
+    eapply expr_locals_put; eauto.
+  Qed.
+  
+  Lemma compile_broadcast_expr' {t m l} (len : nat) (lst scratch : array_t byte) :
+    len = length scratch ->
+    len = length lst ->
+    (*TODO: width hardcoded*)
+    len < 2^32 ->
+    let v := lst in
+    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+           (a_ptr : word) a_var lst_expr idx_var to_var R,
+      
+      DEXPR m l (expr.var a_var) a_ptr ->
+      
+      (scratch$@a_ptr * R)%sep m ->
+
+      ~idx_var = to_var ->
+      map.get l idx_var = None ->
+      map.get l to_var = None ->
+
+      broadcast_expr l idx_var scratch a_ptr R lst_expr v ->
+      (let v := v in
+       forall m,
+         (array ptsto (word.of_Z 1) a_ptr v * R)%sep m ->
+         <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+           k_impl
+         <{ pred (k v eq_refl) }>) ->
+      <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+        cmd_loop_fresh false idx_var (expr.literal 0) to_var len
+                       (cmd.store access_size.one (expr.op bopname.add a_var idx_var)
+                                  lst_expr)
+                       k_impl
+      <{ pred (nlet_eq [a_var] v k) }>.
+  Proof.
+    intros len_scratch len_lst.
+    rewrite <- (list_as_nd_ranged_for_all lst scratch x00 len ltac:(auto) ltac:(auto)).
+    rewrite nd_as_ranged_for_all.
+    rewrite ranged_for_all_as_ranged_for.
+    repeat compile_step.
+
+    assert (~ a_var = to_var) by admit.
+    assert (~ a_var = idx_var) by admit.
+    
+    eapply (compile_ranged_for_fresh false)
+      with (from_var := idx_var) (to_var := to_var) (*loop_pred := lp*).
+    repeat compile_step.
+    repeat compile_step.
+    (*Issue: in loop invariant lp from -> lp from'*)
+    let x := open_constr:(fun from' lst tr mem locals =>
+                            (lst$@a_ptr ⋆ R) mem
+                            /\ locals = map.put (map.put l idx_var (word.of_Z from'))
+                                                to_var (word.of_Z (Z.of_nat (length scratch)))) in
+    instantiate(1:= x).
+    {
+      cbn beta.
+      repeat compile_step.
+      rewrite map.get_put_diff; repeat compile_step.
+      rewrite map.get_put_same; repeat compile_step.
+      rewrite map.get_put_same; repeat compile_step.
+    }
+    {
+      cbn beta.
+      repeat compile_step.
+      rewrite map.put_comm; try compile_step.
+      f_equal.
+      rewrite map.put_put_same.
+      reflexivity.
+    }
+    {
+      cbn beta.
+      repeat compile_step.
+    }
+    {
+      repeat compile_step; try lia.
+    }
+    {
+      cbn beta.
+      repeat compile_step.
+      repeat straightline'.
+      exists (word.add a_ptr (word.of_Z from')); repeat compile_step.
+      {
+        eapply Util.dexpr_put_diff; repeat compile_step.
+        eapply Util.dexpr_put_diff; repeat compile_step.
+      }
+      {
+        eapply Util.dexpr_put_diff; repeat compile_step.
+        eapply Util.dexpr_put_same; repeat compile_step.
+      }
+      exists (word_of_byte (nth (Z.to_nat from') lst x00)); repeat compile_step.
+      {
+        unfold broadcast_expr in *.
+        subst v.
+        revert H5.
+        rewrite <- ranged_for_all_as_ranged_for.
+        rewrite <- nd_as_ranged_for_all.
+        rewrite (list_as_nd_ranged_for_all lst scratch x00 (length scratch) ltac:(auto) ltac:(auto)).
+        intro H5.
+        eapply dexpr_locals_put.
+        {
+          rewrite map.get_put_diff; auto.
+        }
+        (*TODO: need to know about the ranged_for'*)
+        specialize (H5 mem (firstn (Z.to_nat from') acc)).
+        rewrite firstn_length in H5.
+        assert (from' <= length acc) by admit.
+        rewrite Nat.min_l in H5 by lia.
+        rewrite Z2Nat.id in H5.
+        eapply H5.
+        all:try lia.
+        (*TODO: need to prove last n of scratch and acc are the same
+        ecancel_assumption.*)
+  Admitted.
+
+  Lemma compile_broadcast_expr {t m l} (len : nat) (lst scratch : array_t byte) :
+    let v := lst in
+    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+           (a_ptr : word) a_var lst_expr idx_var to_var R,
+      
+      DEXPR m l (expr.var a_var) a_ptr ->
+
+      (scratch$@a_ptr * R)%sep m ->
+
+      len = length scratch ->
+      len = length lst ->
+      (*TODO: width hardcoded*)
+      len < 2^32 ->
+      
+      ~idx_var = to_var ->
+      map.get l idx_var = None ->
+      map.get l to_var = None ->
+
+      broadcast_expr l idx_var scratch a_ptr R lst_expr v ->
+      (let v := v in
+       forall m,
+         (array ptsto (word.of_Z 1) a_ptr v * R)%sep m ->
+         <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+           k_impl
+         <{ pred (k v eq_refl) }>) ->
+      <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+        cmd_loop_fresh false idx_var (expr.literal 0) to_var len
+                       (cmd.store access_size.one (expr.op bopname.add a_var idx_var)
+                                  lst_expr)
+                       k_impl
+      <{ pred (nlet_eq [a_var] v k) }>.
+  Proof.
+    eauto using compile_broadcast_expr'.
+  Qed.
+
+  Lemma broadcast_byte_and l idx_var scratch a_ptr R l1_expr l2_expr (l1 l2 : list byte)
+    : length l1 = length l2 ->
+      broadcast_expr l idx_var scratch a_ptr R l1_expr l1 ->
+      broadcast_expr l idx_var scratch a_ptr R l2_expr l2 ->
+      broadcast_expr l idx_var scratch a_ptr R
+                     (expr.op bopname.and l1_expr l2_expr)
+                     (List.map (fun '(w1, w2) => byte.and w1 w2) (combine l1 l2)).
+  Proof.
+    unfold broadcast_expr; intuition.
+    set (op:=fun '(w1,w2) => byte.and w1 w2).
+    change x00 with (op (x00,x00)).
+    rewrite map_nth.
+    rewrite combine_nth by auto.
+    subst op; cbn beta match.
+    rewrite byte_morph_and.
+    eapply expr_compile_word_and; eauto.
+  Qed.
+
+  
+
+  Lemma broadcast_id l idx_var scratch a_ptr R
+    : broadcast_expr l idx_var scratch a_ptr R
+                     (expr.load access_size.one
+                                (expr.op bopname.add a_ptr idx_var))
+                     scratch.
+  Proof.
+    unfold broadcast_expr; intuition.
+    repeat straightline.
+    exists (word.of_Z (Z.of_nat (length lstl))).
+    intuition.
+    {
+      rewrite map.get_put_same; eauto.
+    }
+    exists (word_of_byte (nth (length lstl) scratch x00)).
+    split; auto.
+    eapply load_one_of_sep.
+    seprewrite_in bytearray_append H0.
+    replace (nth (length lstl) scratch)
+      with (nth ((length lstl)+0) scratch) by (f_equal;lia).
+    rewrite <- nth_skipn.
+    assert (0 < length (skipn (length lstl) scratch)).
+    {
+      rewrite length_skipn.
+      lia.
+    }
+    erewrite skipn_nth_0 in H0 by lia.
+    cbn [nth array] in *.
+    subst v.
+    rewrite word.of_Z_unsigned.
+    ecancel_assumption.
+  Qed.
+
+  Lemma broadcast_const l idx_var scratch a_ptr R const_list
+    : broadcast_expr l idx_var scratch a_ptr R
+                     (expr.inlinetable
+                               access_size.one
+                               const_list
+                               idx_var)
+                     const_list.
+  Proof.
+    unfold broadcast_expr.
+    intros.
+    repeat straightline.
+    exists (word.of_Z (length lstl)); split; auto.
+    {
+      rewrite map.get_put_same; eauto.
+    }
+    unfold load.
+    exists (word_of_byte (nth (length lstl) const_list x00)).
+    split; auto.
+    eapply load_one_of_sep.
+    (*TODO: preds for const list*)
+  Admitted.
+    
+  
   Definition buffer_at c b a :=
     (b$T@a *
     (Lift1Prop.ex1 (fun s => emp (sz*length b + length s = sz*c)%Z
@@ -1450,6 +1840,50 @@ Proof.
   shelve.
   eapply compile_nlet_as_nlet_eq.
   eapply compile_buf_split.
+  {
+    change v1 with (v0++(copy (fst v))).
+    ecancel_assumption.
+  }
+  shelve.
+  compile_step.
+  change v3 with (fst v3, snd v3).
+  repeat compile_step.
+  eapply compile_nlet_as_nlet_eq.
+  
+  Ltac compile_broadcast_expr :=
+  lazymatch goal with
+  | [ |- WeakestPrecondition.cmd _ _ _ _ ?locals (_ (nlet_eq [?var] ?v _)) ] =>
+      let idx_var_str := gensym locals constr:((var++"_idx")%string) in
+      let to_var_str := gensym locals constr:((var++"_to")%string) in
+      simple eapply compile_broadcast_expr
+        with (idx_var:=idx_var_str) (to_var:=to_var_str)
+  end.
+  compile_broadcast_expr.
+  shelve.
+  shelve.
+  {
+    rewrite map.remove_put_same.
+    rewrite map.remove_put_diff.
+    eapply Util.dexpr_put_same.
+    unfold gs.
+    repeat compile_step.
+  }
+  repeat compile_step.
+  shelve (*TODO: should I have the len param?*).
+  shelve (*TODO: should I have the len param?*).
+  shelve (*TODO: should I have the len param?*).
+  unfold gs; compile_step.
+  unfold gs; compile_step.
+  unfold gs; compile_step.
+  eapply broadcast_byte_and.
+  shelve (*TODO: floating param?*).
+  shelve (*TODO: floating param?*).
+  shelve (*TODO: length*).
+  admit (*TODO: eapply broadcast_id *).
+  eapply broadcast_const.
+  shelve (*TODO: floating param?*).
+  shelve (*TODO: floating param?*).
+  repeat compile_step.
 Abort.
 
 (** ** Equivalence proof **)
