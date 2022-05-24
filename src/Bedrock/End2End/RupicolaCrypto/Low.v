@@ -343,10 +343,21 @@ intros * HA HB HC HD; eapply HC; subst n.
     rewrite app_length, Nat2Z.inj_add, Hlbs, Hm in Hmm; exact Hmm. }
   Qed.
 
+  
+  (*TODO: this is a bit of a hack, is there a better way?*)
+  (* This marker is inserted to separate code from different blocks.
+     When encountered, rupicola applies compile_skip
+   *)
+  Definition skip_marker := tt.
+  Arguments skip_marker : simpl never.
+
+  Notation skip_and_then k := (nlet_eq [] skip_marker (fun _ _ => k)).
+
+  
   Lemma compile_buf_append {t m l} var ax_expr arr_var
         (buf : buffer_t T) (arr : array_t T) (c : Z) (buf_ptr : word) :
     let v := buf_append buf arr in
-    let offset := (word.of_Z (word.unsigned sz * Z.of_nat (Datatypes.length buf))) in
+    let offset := word.of_Z (sz * length buf) in
     let ax := word.add buf_ptr offset in
     (*TODO: need var_app notin l?
       Probably not, but should be checked
@@ -356,18 +367,19 @@ intros * HA HB HC HD; eapply HC; subst n.
       DEXPR m l ax_expr ax ->
       (length buf + length arr <= c) ->
       (let v := v in
-       forall (uninit : list Init.Byte.byte) (Rbuf : mem -> Prop),
-         (array pT sz buf_ptr buf ⋆ array ptsto (word.of_Z 1) ax uninit ⋆ Rbuf ⋆ R) m ->
+       forall (uninit : list Init.Byte.byte) (Rbuf : mem -> Prop) m',
+         (array pT sz buf_ptr buf ⋆ array ptsto (word.of_Z 1) ax uninit ⋆ Rbuf ⋆ R) m' ->
          Z.of_nat (length uninit) = sz * length arr ->
          let FillPred prog t m l :=
            (array pT sz buf_ptr buf ⋆ array pT sz ax arr ⋆ Rbuf ⋆ R) m /\
-             ((buffer_at c (buf++arr) buf_ptr * R)%sep m ->
-              <{ Trace := t; Memory := m; Locals := (map.remove l arr_var); Functions := e }>
+             (forall m', (buffer_at c (buf++arr) buf_ptr * R)%sep m' ->
+              <{ Trace := t; Memory := m'; Locals := (map.remove l arr_var); Functions := e }>
                 k_impl
               <{ pred prog }>) in
-         <{ Trace := t; Memory := m; Locals := map.put l arr_var ax; Functions := e }>
+         <{ Trace := t; Memory := m'; Locals := map.put l arr_var ax; Functions := e }>
            fill_impl
-         <{ FillPred (nlet_eq [arr_var] arr (fun _ _ => k v eq_refl)) }>) ->
+         <{ FillPred (nlet_eq [arr_var] arr
+                      (fun _ _ => skip_and_then (k v eq_refl))) }>) ->
       <{ Trace := t; Memory := m; Locals := l; Functions := e }>
         bedrock_func_body:($arr_var = $ax_expr;
                            $fill_impl;
@@ -408,6 +420,7 @@ intros * HA HB HC HD; eapply HC; subst n.
       nia. }
   Qed.
 
+  
   Lemma compile_buf_push {t m l} var ax_expr arr_var
         (buf : buffer_t T) (x : T) (c : Z) (buf_ptr : word) :
     let v := buf_push buf x in
@@ -421,18 +434,19 @@ intros * HA HB HC HD; eapply HC; subst n.
       DEXPR m l ax_expr ax ->
       (length buf + 1 <= c) ->
       (let v := v in
-       forall (uninit : list Init.Byte.byte) (Rbuf : mem -> Prop),
-         (array pT sz buf_ptr buf ⋆ uninit$@ax ⋆ Rbuf ⋆ R) m ->
+       forall (uninit : list Init.Byte.byte) (Rbuf : mem -> Prop) m',
+         (array pT sz buf_ptr buf ⋆ uninit$@ax ⋆ Rbuf ⋆ R) m' ->
          Z.of_nat (length uninit) = sz ->
          let FillPred prog t m l :=
            (array pT sz buf_ptr buf ⋆ pT ax x ⋆ Rbuf ⋆ R) m /\
-             ((buffer_at c (buf++[x]) buf_ptr * R)%sep m ->
-              <{ Trace := t; Memory := m; Locals := (map.remove l arr_var); Functions := e }>
+             (forall m', (buffer_at c (buf++[x]) buf_ptr * R)%sep m' ->
+              <{ Trace := t; Memory := m'; Locals := (map.remove l arr_var); Functions := e }>
                 k_impl
               <{ pred prog }>) in
-         <{ Trace := t; Memory := m; Locals := map.put l arr_var ax; Functions := e }>
+         <{ Trace := t; Memory := m'; Locals := map.put l arr_var ax; Functions := e }>
            fill_impl
-         <{ FillPred (nlet_eq [arr_var] x (fun _ _ => k v eq_refl)) }>) ->
+         <{ FillPred (nlet_eq [arr_var] x
+                      (fun _ _ => skip_and_then (k v eq_refl))) }>) ->
       <{ Trace := t; Memory := m; Locals := l; Functions := e }>
         bedrock_func_body:($arr_var = $ax_expr;
                            $fill_impl;
@@ -734,11 +748,13 @@ intros * HA HB HC HD; eapply HC; subst n.
     lia.
     lia.
   Qed.
-  
-  Lemma compile_byte_memcpy (n : nat) (bs bs2 : list byte) :
+
+Lemma compile_byte_memcpy (n : nat) (bs bs2 : list byte) :
     let v := copy bs in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
            len a a2 len_expr a_expr a2_var {t m l} (R: mem -> Prop),
+
+      map.get l a2_var = Some a2 ->
       
       (bs$@a * bs2$@a2 * R)%sep m ->
       
@@ -750,7 +766,6 @@ intros * HA HB HC HD; eapply HC; subst n.
       
       DEXPR m l a_expr a ->
       DEXPR m l len_expr len ->
-      map.get l a2_var = Some a2 ->
       
       (let v := v in
        forall m,
@@ -773,7 +788,7 @@ intros * HA HB HC HD; eapply HC; subst n.
       eapply expr_compile_var; auto.
     }
     eapply Proper_call; cycle -1.
-    eapply H0; cycle 2.
+    eapply H1; cycle 2.
     {
       cbv [Arrays.listarray_value
              Arrays.ai_width
@@ -783,14 +798,14 @@ intros * HA HB HC HD; eapply HC; subst n.
              Memory.bytes_per
              Memory.bytes_per_word].
       change (BinIntDef.Z.to_nat ((32 + 7) / 8) : Z) with 4%Z.
-      seprewrite_in @ArrayCasts.truncated_scalars_of_bytes H; cycle 1.
-      seprewrite_in @ArrayCasts.truncated_scalars_of_bytes H; cycle 1.
+      seprewrite_in @ArrayCasts.truncated_scalars_of_bytes H0; cycle 1.
+      seprewrite_in @ArrayCasts.truncated_scalars_of_bytes H0; cycle 1.
 
 
       unfold scalar.
       change (word.of_Z 4) with (word.of_Z (word:=word) (Memory.bytes_per (width:=32) access_size.word)).
 
-      refine (subrelation_refl Lift1Prop.impl1 _ _ _ m H).
+      refine (subrelation_refl Lift1Prop.impl1 _ _ _ m H0).
       cancel.
       cancel_seps_at_indices_by_implication 1%nat 0%nat.
       {
@@ -889,7 +904,7 @@ intros * HA HB HC HD; eapply HC; subst n.
           eapply Nat.div_exact; try lia.
           eapply Nat2Z.inj.
           rewrite <- (Nat2Z.id (length bs)) at 2.
-          rewrite <- !H1.
+          rewrite <- !H2.
           rewrite Z2Nat.inj_mul; try lia.
           change (Z.to_nat 4) with 4%nat.
           rewrite Nat.div_mul.
@@ -914,7 +929,7 @@ intros * HA HB HC HD; eapply HC; subst n.
           eapply Nat.div_exact; try lia.
           eapply Nat2Z.inj.
           rewrite <- (Nat2Z.id (length bs)) at 2.
-          rewrite <- !H1.
+          rewrite <- !H2.
           rewrite Z2Nat.inj_mul; try lia.
           change (Z.to_nat 4) with 4%nat.
           rewrite Nat.div_mul.
@@ -957,8 +972,18 @@ intros * HA HB HC HD; eapply HC; subst n.
     }      
   Qed.
   
-  
 End CompileBufPolymorphic.
+
+Ltac compile_buf_append:=
+  lazymatch goal with
+  | [ |- WeakestPrecondition.cmd _ _ _ _ ?locals (_ (nlet_eq [?var] ?v _)) ] =>
+      let arr_var_str := gensym locals constr:((var++"_app")%string) in
+      simple eapply compile_buf_append with (arr_var:=arr_var_str)
+  end.
+
+
+Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (buf_append _ _) _))) =>
+       compile_buf_append; shelve : compiler.
 
 Section CompileBufByte.
   Context (e : list Syntax.func).
@@ -1025,6 +1050,37 @@ Section CompileBufByte.
     { rewrite word.unsigned_of_Z_1, Z.mul_1_l.
       ecancel_assumption. }
     eauto.
+  Qed.
+
+  
+ (*Specialized to bytes.
+   TODO: necessary?
+  *)
+ Lemma compile_buf_make_stack_bytes (n:nat) :
+    let v := buf_make byte n in
+    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+    a_var {t m l} (R: mem -> Prop),
+      (sz * n) mod Memory.bytes_per_word 32 = 0 ->
+      R m ->
+      (let v:= v in
+       forall a m, (buffer_at n nil a * R)%sep m ->
+       <{ Trace := t; Memory := m; Locals := #{ … l; a_var => a }#;
+          Functions := e }>
+         k_impl
+         <{ pred_sep (Lift1Prop.ex1 (fun b => buffer_at n b a))
+                      pred (k v eq_refl) }>) ->
+    <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+      bedrock_func_body:(
+      stackalloc (sz*n) as $a_var;
+      $k_impl
+     )
+    <{ pred (nlet_eq [a_var] v k) }>.
+  Proof.
+    intros; eapply compile_buf_make_stack; eauto.
+    intro x; exists [x]; intuition (try lia).
+    unfold pT.
+    cbn [array].
+    split; intro; ecancel_assumption.
   Qed.
 End CompileBufByte.
 
@@ -1282,6 +1338,24 @@ Definition poly1305
 Definition offset base idx width :=
   (expr.op bopname.add base (expr.op bopname.mul width idx)).
 
+
+Lemma compile_skip_marker :
+  forall {P} {pred: P skip_marker -> predicate} {k: nlet_eq_k P skip_marker} {k_impl}
+         {t m l e},
+    <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+      k_impl
+    <{ pred (k skip_marker eq_refl) }> ->
+    <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+      k_impl
+    <{ pred (nlet_eq [] skip_marker k) }>.
+Proof.
+  auto.
+Qed.
+
+Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ skip_marker _))) =>
+               simple eapply compile_skip_marker;
+               simple eapply compile_skip; shelve : compiler.
+
 Lemma compile_array_split_at {tr} {mem : mem} {locals functions}
       (*TODO: not bytes*) (a : array_t _) idx a_ptr (*a_expr idx_expr*):
       let v := array_split_at idx a in
@@ -1343,32 +1417,40 @@ Proof.
   change v with (fst v, snd v).
   compile_step.
   eapply compile_nlet_as_nlet_eq.
-  eapply compile_buf_make_stack.
+  eapply compile_buf_make_stack_bytes.
 
-  (*TODO: existentials aren't friendly; what to do?*)
-  compile_step.
-  admit.
-
-  admit.
+  shelve.
   compile_step.
 
   compile_step.
 
-  
-  eapply compile_nlet_as_nlet_eq.
-  eapply compile_buf_append.
+  compile_step.
   compile_step.
   compile_step.
   shelve.
   compile_step.
-  admit.
-
+  eapply compile_byte_memcpy.
+  shelve.
   repeat compile_step.
-  (*TODO: bad*)
-  unfold nlet_eq at 1.
+  repeat compile_step.
+  admit (*TODO*).
+  shelve.
+  shelve.
+  {
+    eapply Util.dexpr_put_diff; [shelve|].
+    eapply Util.dexpr_put_diff; [shelve|].
+    eapply Util.dexpr_put_diff; [shelve|].
+    eapply Util.dexpr_put_diff; [shelve|].
+    eapply Util.dexpr_put_same.
+  }
+  shelve.
+  repeat compile_step.
+  unfold FillPred; cbn beta.
+  repeat compile_step.
+  shelve.
   eapply compile_nlet_as_nlet_eq.
   eapply compile_buf_split.
-  Abort.
+Abort.
 
 (** ** Equivalence proof **)
 
@@ -1515,16 +1597,16 @@ Definition chacha20_block' (*256bit*)key (*32bit+96bit*)nonce (*512 bits*)st :=
   let/n st := buf_push st i4 in (* the inits are the chunks of "expand …" *)
 
   let/n key := w32s_of_bytes key in
-  let/n st := buf_append st key in
+  let/n st := buf_append st (copy key) in
   let/n key := bytes_of_w32s key in
 
   let/n nonce := w32s_of_bytes nonce in
-  let/n st := buf_append st nonce in
+  let/n st := buf_append st (copy nonce) in
   let/n nonce := bytes_of_w32s nonce in
 
   let/n st := buf_as_array st in
   let/n ss := buf_make word 16 in
-  let/n ss := buf_append ss st in
+  let/n ss := buf_append ss (copy st) in
   let/n ss := buf_as_array ss in
   let/n ss := Nat.iter 10 (fun ss =>
     let/n ss := quarterround  0  4  8 12  ss in
@@ -1591,16 +1673,16 @@ Definition chacha20_block (*256bit*)key (*32bit+96bit*)nonce (*512 bits*)st :=
   let/n st := buf_push st i4 in (* the inits are the chunks of "expand …" *)
 
   let/n key := w32s_of_bytes key in
-  let/n st := buf_append st key in
+  let/n st := buf_append st (copy key) in
   let/n key := bytes_of_w32s key in
 
   let/n nonce := w32s_of_bytes nonce in
-  let/n st := buf_append st nonce in
+  let/n st := buf_append st (copy nonce) in
   let/n nonce := bytes_of_w32s nonce in
 
   let/n st := buf_as_array st in
   let/n ss := buf_make word 16 in
-  let/n ss := buf_append ss st in
+  let/n ss := buf_append ss (copy st) in
   let/n ss := buf_as_array ss in
   
   let/n qv0 := array_get ss 0 (word.of_Z 0) in
@@ -2036,7 +2118,7 @@ Definition chacha20_encrypt key start nonce plaintext :=
                                                      let scratch := buf_make word 4 in
                                                      let scratch := buf_push scratch counter in
                                                      let nonce := w32s_of_bytes nonce in
-                                                     let scratch := buf_append scratch nonce in (* FIXME? You can save a scratch buffer by doing the nonce concatenation of chacha20 here instead *)
+                                                     let scratch := buf_append scratch (copy nonce) in (* FIXME? You can save a scratch buffer by doing the nonce concatenation of chacha20 here instead *)
                                                      let nonce := bytes_of_w32s nonce in
                                                      let scratch := buf_as_array scratch in
                                                      let scratch := bytes_of_w32s scratch in
@@ -2054,7 +2136,7 @@ Lemma chacha20_encrypt_ok key start nonce plaintext :
   Spec.chacha20_encrypt key start nonce plaintext =
   chacha20_encrypt key start nonce plaintext.
 Proof.
-  unfold Spec.chacha20_encrypt, chacha20_encrypt, nlet;
+  unfold Spec.chacha20_encrypt, chacha20_encrypt, nlet, copy;
     autounfold with poly; intros.
   rewrite enumerate_offset.
   rewrite flat_map_concat_map, map_map, <- flat_map_concat_map.
@@ -2080,13 +2162,13 @@ Definition chacha20poly1305_aead_encrypt aad key iv constant plaintext tag :=
   let/n otk_nonce := buf_push otk_nonce (word.of_Z 0) in
 
   let/n constant := w32s_of_bytes constant in
-  let/n nonce := buf_append nonce constant in
-  let/n otk_nonce := buf_append otk_nonce constant in
+  let/n nonce := buf_append nonce (copy constant) in
+  let/n otk_nonce := buf_append otk_nonce (copy constant) in
   let/n constant := bytes_of_w32s constant in
 
   let/n iv := w32s_of_bytes iv in
-  let/n nonce := buf_append nonce iv in
-  let/n otk_nonce := buf_append otk_nonce iv in
+  let/n nonce := buf_append nonce (copy iv) in
+  let/n otk_nonce := buf_append otk_nonce (copy iv) in
   let/n iv := bytes_of_w32s iv in
 
   let/n nonce := buf_as_array nonce in
@@ -2301,7 +2383,7 @@ Lemma chacha20poly1305_aead_encrypt_ok' aad key iv constant plaintext tag:
   Spec.chacha20poly1305_aead_encrypt aad key iv constant plaintext =
   chacha20poly1305_aead_encrypt aad key iv constant plaintext tag.
 Proof.
-  unfold Spec.chacha20poly1305_aead_encrypt, chacha20poly1305_aead_encrypt, nlet;
+  unfold Spec.chacha20poly1305_aead_encrypt, chacha20poly1305_aead_encrypt, nlet, copy;
     autounfold with poly; intros.
 
   cbn [List.app List.map List.flat_map].
