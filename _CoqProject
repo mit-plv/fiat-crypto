@@ -335,6 +335,7 @@ src/Util/ListUtil/Permutation.v
 src/Util/ListUtil/PermutationCompat.v
 src/Util/ListUtil/RemoveN.v
 src/Util/ListUtil/SetoidList.v
+src/Util/ListUtil/SetoidListFlatMap.v
 src/Util/ListUtil/Split.v
 src/Util/ListUtil/StdlibCompat.v
 src/Util/Logic/Exists.v
