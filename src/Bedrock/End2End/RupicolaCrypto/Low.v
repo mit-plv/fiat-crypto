@@ -500,15 +500,23 @@ Section CompileBufPolymorphic.
   Qed.
 
   
-
-  Lemma broadcast_id l idx_var scratch a_ptr R
-    : broadcast_expr l idx_var scratch a_ptr R
+  (*TODO: a_ptr shouldn't really be in the signature, 
+    it should just be a_var *)
+  Lemma broadcast_id l idx_var scratch a_ptr R a_var
+    : map.get l a_var = Some a_ptr ->
+      ~a_var = idx_var ->
+      broadcast_expr l idx_var scratch a_ptr R
                      (expr.load access_size.one
-                                (expr.op bopname.add a_ptr idx_var))
+                                (expr.op bopname.add a_var idx_var))
                      scratch.
   Proof.
     unfold broadcast_expr; intuition.
     repeat straightline.
+    exists a_ptr; intuition.
+    {
+      rewrite map.get_put_diff by assumption.
+      assumption.
+    }
     exists (word.of_Z (Z.of_nat (length lstl))).
     intuition.
     {
@@ -517,7 +525,7 @@ Section CompileBufPolymorphic.
     exists (word_of_byte (nth (length lstl) scratch x00)).
     split; auto.
     eapply load_one_of_sep.
-    seprewrite_in bytearray_append H0.
+    seprewrite_in bytearray_append H2.
     replace (nth (length lstl) scratch)
       with (nth ((length lstl)+0) scratch) by (f_equal;lia).
     rewrite <- nth_skipn.
@@ -526,10 +534,8 @@ Section CompileBufPolymorphic.
       rewrite length_skipn.
       lia.
     }
-    erewrite skipn_nth_0 in H0 by lia.
+    erewrite skipn_nth_0 in H2 by lia.
     cbn [nth array] in *.
-    subst v.
-    rewrite word.of_Z_unsigned.
     ecancel_assumption.
   Qed.
 
@@ -1879,7 +1885,18 @@ Proof.
   shelve (*TODO: floating param?*).
   shelve (*TODO: floating param?*).
   shelve (*TODO: length*).
-  admit (*TODO: eapply broadcast_id *).
+  {
+    change (fst v3) with v1.
+    eapply broadcast_id.
+    shelve (*TODO: floating param?*).
+    shelve (*TODO: floating param?*).
+    rewrite map.remove_put_same.
+    rewrite map.remove_put_diff.
+    rewrite map.get_put_same.
+    reflexivity.
+    unfold gs; compile_step.
+    unfold gs; compile_step.
+  }
   eapply broadcast_const.
   shelve (*TODO: floating param?*).
   shelve (*TODO: floating param?*).
