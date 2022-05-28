@@ -2368,8 +2368,10 @@ Lemma fold_right_flat_map A B C (f : A -> list B) xs (F : _ -> _ -> C) v
   : fold_right F v (flat_map f xs) = fold_right (fun x y => fold_right F y (f x)) v xs.
 Proof. revert v; induction xs; cbn; intros; rewrite ?fold_right_app; congruence. Qed.
 
-Lemma fold_right_ext A B f g v xs : (forall x y, f x y = g x y) -> @fold_right A B f v xs = fold_right g v xs.
+Lemma fold_right_ext_in A B f g v xs : (forall x y, List.In x xs -> f x y = g x y) -> @fold_right A B f v xs = fold_right g v xs.
 Proof. induction xs; cbn; intro H; rewrite ?H, ?IHxs; auto. Qed.
+Lemma fold_right_ext A B f g v xs : (forall x y, f x y = g x y) -> @fold_right A B f v xs = fold_right g v xs.
+Proof. intros; apply fold_right_ext_in; eauto. Qed.
 
 Lemma fold_right_id_ext A B f v xs : (forall x y, f x y = y) -> @fold_right A B f v xs = v.
 Proof. induction xs; cbn; intro H; rewrite ?H; auto. Qed.
@@ -2380,8 +2382,10 @@ Lemma fold_left_flat_map A B C (f : A -> list B) xs (F : _ -> _ -> C) v
   : fold_left F (flat_map f xs) v = fold_left (fun x y => fold_left F (f y) x) xs v.
 Proof. revert v; induction xs; cbn; intros; rewrite ?fold_left_app; congruence. Qed.
 
+Lemma fold_left_ext_in A B f g v xs : (forall x y, List.In y xs -> f x y = g x y) -> @fold_left A B f xs v = fold_left g xs v.
+Proof. intros; rewrite <- !fold_left_rev_right; apply fold_right_ext_in; intros *; rewrite <- in_rev; eauto. Qed.
 Lemma fold_left_ext A B f g v xs : (forall x y, f x y = g x y) -> @fold_left A B f v xs = fold_left g v xs.
-Proof. intros; apply fold_left_Proper; repeat intro; eauto. Qed.
+Proof. intros; apply fold_left_ext_in; eauto. Qed.
 
 Lemma fold_left_id_ext A B f v xs : (forall x y, f x y = x) -> @fold_left A B f xs v = v.
 Proof. induction xs; cbn; intro H; rewrite ?H; auto. Qed.
