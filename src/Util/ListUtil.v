@@ -2559,6 +2559,15 @@ Proof. revert f v; induction ls; cbn; eauto. Qed.
 Lemma eq_map_list_rect {A B} f (ls : list _)
   : @List.map A B f ls = list_rect _ nil (fun x _ rec => f x :: rec) ls.
 Proof. induction ls; cbn; eauto. Qed.
+Lemma eq_flat_map_fold_right {A B} f (ls : list A)
+  : @flat_map A B f ls = fold_right (fun x y => f x ++ y) nil ls.
+Proof. induction ls; cbn; eauto. Qed.
+Lemma eq_flat_map_fold_left_gen {A B} f (ls : list A) ls'
+  : fold_left (fun x y => x ++ f y) ls ls' = ls' ++ @flat_map A B f ls.
+Proof. revert ls'; induction ls; cbn; intros; rewrite ?app_nil_r, ?IHls, ?app_assoc; eauto. Qed.
+Lemma eq_flat_map_fold_left {A B} f (ls : list A)
+  : @flat_map A B f ls = fold_left (fun x y => x ++ f y) ls nil.
+Proof. rewrite eq_flat_map_fold_left_gen; reflexivity. Qed.
 
 Lemma map_repeat {A B} (f : A -> B) v k
   : List.map f (List.repeat v k) = List.repeat (f v) k.
