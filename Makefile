@@ -226,7 +226,7 @@ ZIG_DIR := fiat-zig/src/
 
 # Java only really supports 32-bit builds, because we have neither 64x64->64x64 multiplication, nor uint128
 # Java also requires that class names match file names
-to_title_case = $(shell echo '$(1)' | awk '{split($0,w,"");u=1;for(i=1;i<=length(w);i++){c=tolower(w[i]);if(u)c=toupper(c);u=0;if(c~/[a-zA-Z0-9]/)printf("%s",c);if(c~/[^a-zA-Z]/)u=1;}}')
+to_title_case = $(shell echo '$(1)' | awk '{split($$0,w,"");u=1;for(i=1;i<=length(w);i++){c=tolower(w[i]);if(u)c=toupper(c);u=0;if(c~/[a-zA-Z0-9]/)printf("%s",c);if(c~/[^a-zA-Z]/)u=1;}}')
 empty=
 space=$(empty) $(empty)
 JAVA_RENAME = $(foreach i,$(patsubst %_32,%,$(filter %_32,$(1))),Fiat$(subst $(space),,$(call to_title_case,$(subst _, ,$(i)))))
