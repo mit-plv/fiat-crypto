@@ -65,6 +65,7 @@ Crypto.Assembly.WithBedrock.Proofs
 Crypto.Assembly.WithBedrock.Semantics
 Crypto.Assembly.WithBedrock.SymbolicProofs
 Crypto.Bedrock.End2End.Poly1305.Field1305
+Crypto.Bedrock.End2End.RupicolaCrypto.Broadcast
 Crypto.Bedrock.End2End.RupicolaCrypto.Derive
 Crypto.Bedrock.End2End.RupicolaCrypto.Low
 Crypto.Bedrock.End2End.RupicolaCrypto.Spec
