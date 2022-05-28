@@ -84,6 +84,7 @@ src/Assembly/WithBedrock/Semantics.v
 src/Assembly/WithBedrock/SymbolicProofs.v
 src/Bedrock/Everything.v
 src/Bedrock/End2End/Poly1305/Field1305.v
+src/Bedrock/End2End/RupicolaCrypto/Broadcast.v
 src/Bedrock/End2End/RupicolaCrypto/Derive.v
 src/Bedrock/End2End/RupicolaCrypto/Low.v
 src/Bedrock/End2End/RupicolaCrypto/Spec.v
