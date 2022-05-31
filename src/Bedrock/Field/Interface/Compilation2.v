@@ -263,7 +263,7 @@ Section Compile.
         (cmd.call [] felem_copy [expr.var out_var; expr.var x_var])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
-  Proof. 
+  Proof.
     repeat straightline'.
     unfold FElem in *.
     sepsimpl.
@@ -332,6 +332,99 @@ Section Compile.
       eauto.
   Qed.
 
+  Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_from_bytes _ _ _ _ _ _ _ _)) : typeclass_instances.
+
+  Lemma compile_from_bytes {tr m l functions} x : 
+    let v : F _ := feval_bytes x in
+    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+           Rx R x_ptr x_var out out_ptr out_var out_bound,
+
+      spec_of_from_bytes functions ->
+
+      map.get l out_var = Some out_ptr ->
+
+      (FElemBytes x_ptr x * Rx)%sep m ->
+      (FElem out_bound out_ptr out * R)%sep m ->
+      map.get l x_var = Some x_ptr ->
+
+      (let v := v in
+       forall m',
+         (FElem (Some tight_bounds) out_ptr v * R)%sep m' ->
+         (<{ Trace := tr;
+             Memory := m';
+             Locals := l;
+             Functions := functions }>
+          k_impl
+          <{ pred (k v eq_refl) }>)) ->
+      <{ Trace := tr;
+         Memory := m;
+         Locals := l;
+         Functions := functions }>
+      cmd.seq
+        (cmd.call [] from_bytes [expr.var out_var; expr.var x_var])
+        k_impl
+      <{ pred (nlet_eq [out_var] v k) }>.
+  Proof.
+    repeat straightline'.
+    unfold FElem in *.
+    sepsimpl.
+    prove_field_compilation.
+    apply H4.
+
+    eapply Proper_sep_impl1; eauto; try reflexivity.
+    eapply Lift1Prop.impl1_ex1_r.
+    intros m' H'; ssplit; eapply sep_emp_l; ssplit; eauto.
+  Qed.
+
+  Lemma compile_to_bytes {tr m l functions} x : 
+    let v : list _ := Z_to_bytes (F.to_Z x) encoded_felem_size_in_bytes in
+    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+           Rx R x_ptr x_var out out_ptr out_var,
+
+      spec_of_to_bytes functions ->
+
+      map.get l out_var = Some out_ptr ->
+
+      (FElem (Some tight_bounds) x_ptr x * Rx)%sep m ->
+      (FElemBytes out_ptr out * R)%sep m ->
+      map.get l x_var = Some x_ptr ->
+
+      (let v := v in
+       forall m',
+         (FElemBytes out_ptr v * R)%sep m' ->
+         (<{ Trace := tr;
+             Memory := m';
+             Locals := l;
+             Functions := functions }>
+          k_impl
+          <{ pred (k v eq_refl) }>)) ->
+      <{ Trace := tr;
+         Memory := m;
+         Locals := l;
+         Functions := functions }>
+      cmd.seq
+        (cmd.call [] to_bytes [expr.var out_var; expr.var x_var])
+        k_impl
+      <{ pred (nlet_eq [out_var] v k) }>.
+  Proof.
+    repeat straightline'.
+    subst v.
+    unfold FElem in *.
+    sepsimpl;
+    eapply Proper_call; [ |eapply H]; cycle 1; 
+     [ ssplit;
+        lazymatch goal with
+        | |- (_ ⋆ _) _ => ecancel_assumption
+        | |- exists R, (_ ⋆ R) _ => eexists; ecancel_assumption
+        | _ => idtac
+        end
+     | cbv[postcondition_func postcondition_func_norets] in *;
+        repeat straightline; destruct_lists_of_known_length;
+        repeat straightline ].
+    { unfold maybe_bounded in *; eauto. }
+    intros ? ? ? ?; repeat straightline'.
+    subst; eauto.
+  Qed.
 End Compile.
 
 
