@@ -323,9 +323,11 @@ src/Util/FSets/FMapProd.v
 src/Util/FSets/FMapSect.v
 src/Util/FSets/FMapSum.v
 src/Util/FSets/FMapTrie.v
+src/Util/FSets/FMapTrieEx.v
 src/Util/FSets/FMapUnit.v
 src/Util/FSets/FMapZ.v
 src/Util/FSets/FMapTrie/Shape.v
+src/Util/FSets/FMapTrie/ShapeEx.v
 src/Util/ListUtil/CombineExtend.v
 src/Util/ListUtil/Concat.v
 src/Util/ListUtil/Filter.v
