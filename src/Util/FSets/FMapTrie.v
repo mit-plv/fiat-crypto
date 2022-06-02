@@ -5,7 +5,6 @@
 (** This module implements tries.
     It follows the implementation from Coq's clib, to some extent.
 *)
-Require Import Coq.Program.Program.
 Require Import Coq.Bool.Bool.
 Require Import Coq.Lists.List.
 Require Import Coq.Structures.Orders.
@@ -38,6 +37,9 @@ Require Import Crypto.Util.Tactics.InHypUnderBindersDo.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SetoidSubst.
+Require Import Crypto.Util.FSets.FMapTrie.Shape.
+Import TrieTactics.
+Import EverythingGen.
 
 Local Set Implicit Arguments.
 Local Set Primitive Projections.
@@ -50,414 +52,6 @@ Local Open Scope bool_scope.
 Local Open Scope lazy_bool_scope.
 Local Open Scope type_scope.
 Local Open Scope list_scope.
-
-Module Type TypFunctor.
-  Parameter t : Type -> Type.
-End TypFunctor.
-
-Module Import EverythingGen.
-  Polymorphic Definition id_fix {T} (x : T) := x.
-  Polymorphic Definition id_fix_2 {T} (x : T) := x.
-  Polymorphic Definition id_case {T} (x : T) := x.
-  Section __.
-    Context (t : Type -> Type)
-            (map_key : Type)
-            (map_t : Type -> Type)
-            (map_empty : forall elt, map_t elt)
-            (map_is_empty : forall elt, map_t elt -> bool)
-            (map_fold : forall elt A : Type, (map_key -> elt -> A -> A) -> map_t elt -> A -> A)
-            (map_mapi : forall elt elt' : Type, (map_key -> elt -> elt') -> map_t elt -> map_t elt')
-            (map_map2 : forall elt elt' elt'' : Type, (option elt -> option elt' -> option elt'') -> map_t elt -> map_t elt' -> map_t elt'')
-            (map_find : forall elt : Type, map_key -> map_t elt -> option elt).
-    (*
-            (map_MapsTo : forall elt, map_key -> elt -> map_t elt -> Prop).
-    Local Notation map_Empty m := (forall a e, ~@map_MapsTo _ a e m).
-    Context (map_is_empty_1 : forall elt m, map_Empty m -> @map_is_empty elt m = true)
-            (map_key_Eq : map_key -> map_key -> Prop)
-            (map_mapi_1 : forall elt elt' (m : map_t elt) (x : map_key) (e : elt) (f : map_key -> elt -> elt'),
-                @map_MapsTo _ x e m -> exists y, map_key_Eq y x /\ @map_MapsTo _ x (f y e) (@map_mapi _ _ f m)).
-*)
-    (*Lemma map_mapi_nonEmpty : forall elt elt' f m, ~map_Empty m -> ~map_Empty (@map_mapi elt elt' f m).
-    Proof using map_mapi_1.
-      intros * H H'; apply H; clear H.
-      intros k v H; specialize (H' k).
-      eapply map_mapi_1 in H.
-      destruct H as [? [? H]].
-      apply H' in H.
-      exact H.
-    Qed.*)
-
-    Local Notation t' elt := (option (t elt)).
-    Local Notation node_NonEmpty x y := match x, y with None, None => False | _, _ => True end.
-    Local Notation node_NonEmpty' x y := match y, x with None, None => False | _, _ => True end.
-    Local Notation map_t_t elt := (map_t (t elt)).
-
-    Section step.
-      Context (Node : forall elt (d : option elt) (m : option (map_t_t elt)), node_NonEmpty d m -> t elt)
-              (t_case_nd : forall (elt : Type) (P : Type),
-                  (forall (v : option elt) (m : option (map_t_t elt)), node_NonEmpty v m -> P)
-                  -> t elt -> P)
-              (map_xmap2_l : forall elt elt' elt'', (option elt -> option elt' -> option elt'') -> map_t elt -> map_t elt'')
-              (map_xmap2_r : forall elt elt' elt'', (option elt -> option elt' -> option elt'') -> map_t elt' -> map_t elt'').
-
-      Local Arguments Node {_} _ _ _.
-
-      Definition empty' : forall elt, t' elt
-        := fun _ => None.
-
-      Definition mapi_step elt elt'
-                 (mapi : (list map_key -> elt -> elt') -> t elt -> t elt')
-                 (f : list map_key -> elt -> elt')
-        : t elt -> t elt'
-        := let d_of d := option_map (f nil) d in
-           let m_of m
-             := option_map
-                  (@map_mapi _ _ (fun k => mapi (fun ks => f (k :: ks))))
-                  m in
-           t_case_nd
-             (fun d m pf
-              => Node
-                   (d_of d) (m_of m)
-                   (match d, m return node_NonEmpty d m -> node_NonEmpty (d_of d) (m_of m) with
-                    | None, None => fun pf => pf
-                    | _, _ => fun 'I => I
-                    end pf)).
-
-      Local Notation dec_empty m := (if map_is_empty m then None else Some m).
-      (*Definition dec_empty_cps elt (m : map_t elt) T (k : option { m : map_t elt | map_NonEmpty m } -> T) : T
-        := match map_is_empty m as b return (b = false -> map_NonEmpty m) -> T with
-           | true => fun _ => k None
-           | false => fun pf => k (Some (exist _ m (pf eq_refl)))
-           end (@map_is_empty_1 _ m).
-      Local Notation dec_empty m := (@dec_empty_cps _ m _ (fun x => x)).
-      Lemma dec_empty_Some elt (m : map_t elt) v
-        : dec_empty m = Some v -> m = proj1_sig v.
-      Proof using Type.
-        cbv [dec_empty_cps].
-        generalize (@map_is_empty_1 _ m).
-        break_innermost_match; cbn; intros; inversion_option; subst; cbn; reflexivity.
-      Qed.
-      Lemma dec_empty_None elt (m : map_t elt)
-        : dec_empty m = None -> map_is_empty m = true.
-      Proof using Type.
-        cbv [dec_empty_cps].
-        generalize (@map_is_empty_1 _ m).
-        break_innermost_match; intros; inversion_option; reflexivity.
-      Qed.*)
-
-      Definition map2_step
-                 elt elt' elt'' (f : option elt -> option elt' -> option elt'')
-                 (map2_l : t elt -> t' elt'')
-                 (map2_r : t elt' -> t' elt'')
-                 (map2 : t elt -> t elt' -> t' elt'')
-                 (m1 : t elt) (m2 : t elt')
-        : t' elt''
-        := let F := (fun m1 m2
-                     => match m1, m2 with
-                        | Some m1, Some m2 => map2 m1 m2
-                        | Some m1, None => map2_l m1
-                        | None, Some m2 => map2_r m2
-                        | None, None => None
-                        end) in
-           let f' x y := match x, y with
-                         | None, None => None
-                         | x, y => f x y
-                         end in
-           t_case_nd
-             (fun d1 m1 pf1
-              => t_case_nd
-                   (fun d2 m2 pf2
-                    => let m := match m1, m2 with
-                                | Some m1, Some m2
-                                  => dec_empty (@map_map2 _ _ _ F m1 m2)
-                                | Some m1, None
-                                  => dec_empty (map_xmap2_l F m1)
-                                | None, Some m2
-                                  => dec_empty (map_xmap2_r F m2)
-                                | None, None => None
-                                end in
-                       match f' d1 d2, m with
-                       | None, None => None
-                       | d, m => Some (Node d m I)
-                       end)
-                   m2)
-             m1.
-      Definition map2_l_step
-                 elt elt' elt'' (f : option elt -> option elt' -> option elt'')
-                 (map2_l : t elt -> t' elt'')
-                 (m1 : t elt)
-        : t' elt''
-        := let f' x y := match x, y with
-                         | None, None => None
-                         | x, y => f x y
-                         end in
-           t_case_nd
-             (fun d1 m1 pf1
-              => let m := match m1 with
-                          | Some m1
-                            => dec_empty
-                                 (@map_xmap2_l
-                                    (t elt) (t elt') (t elt'')
-                                    (fun m1 _ => match m1 with
-                                                 | None => None
-                                                 | Some m1 => map2_l m1
-                                                 end)
-                                    m1)
-                          | None => None
-                          end in
-                 match f' d1 None, m with
-                 | None, None => None
-                 | d, m => Some (Node d m I)
-                 end)
-             m1.
-      Definition map2_r_step
-                 elt elt' elt'' (f : option elt -> option elt' -> option elt'')
-                 (map2_r : t elt' -> t' elt'')
-                 (m2 : t elt')
-        : t' elt''
-        := let f' x y := match x, y with
-                         | None, None => None
-                         | x, y => f x y
-                         end in
-           t_case_nd
-             (fun d2 m2 pf2
-              => let m := match m2 with
-                          | Some m2
-                            => dec_empty
-                                 (@map_xmap2_r
-                                    (t elt) (t elt') (t elt'')
-                                    (fun _ m2 => match m2 with
-                                                 | None => None
-                                                 | Some m2 => map2_r m2
-                                                 end)
-                                    m2)
-                          | None => None
-                          end in
-                 match f' None d2, m with
-                 | None, None => None
-                 | d, m => Some (Node d m I)
-                 end)
-             m2.
-      Definition fold_step elt A
-                 (fold : (list map_key -> elt -> A -> A) -> t elt -> A -> A)
-                 (f : list map_key -> elt -> A -> A)
-                 (m : t elt)
-                 (a : A)
-        : A
-        := t_case_nd
-             (fun d m pf
-              => let a := match d with
-                          | None => a
-                          | Some d => f [] d a
-                          end in
-                 match m with
-                 | Some m
-                   => @map_fold
-                        _ _
-                        (fun k => fold (fun ks => f (k :: ks)))
-                        m
-                        a
-                 | None => a
-                 end)
-             m.
-      Definition recursively_non_empty_step elt
-                 (recursively_non_empty : t elt -> bool)
-                 (m : t elt)
-        : bool
-        := t_case_nd
-             (fun d m pf
-              => match m with
-                 | Some m
-                   => @map_fold
-                        _ _
-                        (fun _ m P => andb P (recursively_non_empty m))
-                        m
-                        (negb (map_is_empty m))
-                 | None => true
-                 end)
-             m.
-    End step.
-(*(Node : forall elt (d : option elt) (m : option (map_t_t elt)), node_NonEmpty d m -> t elt)
-              (t_case_nd : forall (elt : Type) (P : Type),
-                  (forall (v : option elt) (m : option (map_t_t elt)), node_NonEmpty v m -> P)
-                  -> t elt -> P)
-              (map_xmap2_l : forall elt elt' elt'', (option elt -> option elt' -> option elt'') -> map_t elt -> map_t elt'')
-              (map_xmap2_r : forall elt elt' elt'', (option elt -> option elt' -> option elt'') -> map_t elt' -> map_t elt'').
-*)
-    Class EverythingGen
-      := { Node : forall elt (d : option elt) (m : option (map_t_t elt)), node_NonEmpty d m -> t elt
-         ; t_case : forall elt (P : t elt -> Type),
-             (forall d m pf, P (@Node elt d m pf))
-             -> forall m, P m
-         ; t_case_beta : forall elt P rec d m pf, @t_case elt P rec (@Node elt d m pf) = rec d m pf
-         ; t_case_nd
-           := fun elt P => @t_case elt (fun _ => P)
-         ; t_ind : forall elt (P : t elt -> Prop),
-             (forall d m pf, (forall k v, @map_find _ k m = Some v -> P v) -> P (@Node elt d (Some m) pf))
-             -> forall m, P m
-         ; empty : forall elt, t' elt
-           := fun _ => None
-         ; mapi : forall elt elt', id_fix_2 ((list map_key -> elt -> elt') -> t elt -> t elt')
-         ; mapi_beta : forall elt elt' f m, @mapi elt elt' f m = mapi_step Node t_case_nd (@mapi elt elt') f m
-
-         ; map_xmap2_l : forall elt elt' elt'', (option elt -> option elt' -> option elt'') -> map_t elt -> map_t elt''
-         ; map_xmap2_r : forall elt elt' elt'', (option elt -> option elt' -> option elt'') -> map_t elt' -> map_t elt''
-         ; map_xmap2_lr : forall A B (f g : option A -> option A -> option B) m,
-             (forall i j, f i j = g j i) -> map_xmap2_l f m = map_xmap2_r g m
-         ; map_xgmap2_l : forall A B C (f : option A -> option B -> option C) i m,
-             f None None = None -> @map_find _ i (map_xmap2_l f m) = f (@map_find _ i m) None
-         ; map_xgmap2_r : forall A B C (f : option A -> option B -> option C) i m,
-             f None None = None -> @map_find _ i (map_xmap2_r f m) = f None (@map_find _ i m)
-
-         ; map2_l : forall elt elt' elt'', (option elt -> option elt' -> option elt'') -> id_fix (t elt -> t' elt'')
-         ; map2_r : forall elt elt' elt'', (option elt -> option elt' -> option elt'') -> id_fix (t elt' -> t' elt'')
-         ; map2 : forall elt elt' elt'', (option elt -> option elt' -> option elt'') -> id_fix (t elt -> t elt' -> t' elt'')
-         ; map2_l_beta : forall elt elt' elt'' f m,
-             @map2_l elt elt' elt'' f m = map2_l_step Node t_case_nd map_xmap2_l f (map2_l f) m
-         ; map2_r_beta : forall elt elt' elt'' f m,
-             @map2_r elt elt' elt'' f m = map2_r_step Node t_case_nd map_xmap2_r f (map2_r f) m
-         ; map2_beta : forall elt elt' elt'' f m1 m2,
-             @map2 elt elt' elt'' f m1 m2 = map2_step Node t_case_nd map_xmap2_l map_xmap2_r f (map2_l f) (map2_r f) (map2 f) m1 m2
-         ; fold : forall elt (A : Type), id_fix_2 ((list map_key -> elt -> A -> A) -> t elt -> A -> A)
-         ; fold_beta : forall elt A f m a,
-             @fold elt A f m a = fold_step t_case_nd (@fold elt A) f m a
-         ; recursively_non_empty : forall elt, id_fix (t elt -> bool)
-         ; recursively_non_empty_beta : forall elt m,
-             @recursively_non_empty elt m = recursively_non_empty_step t_case_nd (@recursively_non_empty elt) m
-      }.
-    Definition Node' {E : EverythingGen} elt (d : option elt) (m : option (map_t_t elt)) : node_NonEmpty' d m -> t elt
-      := match d, m return node_NonEmpty' d m -> _ with
-         | None, None => fun pf => match pf with end
-         | d, (Some _ | None) as m => @Node E elt d m
-         end.
-    Definition oNode_dec_empty {E : EverythingGen} elt (d : option elt) (m : map_t (t elt)) : option (t elt)
-      := match d, (if map_is_empty m then None else Some m) with
-         | None, None => None
-         | d, (None | Some _) as m
-           => Some (Node (d:=d) (m:=m) I)
-         end.
-  End __.
-End EverythingGen.
-Global Arguments Node {t _ _ _ _ _ _ _ _ _} d m _.
-Global Arguments Node' {t _ _ _ _ _ _ _ _ _} d m _.
-
-Create HintDb trie_db discriminated.
-
-Hint Rewrite
-     t_case_beta
-     mapi_beta
-     map2_beta
-     map2_l_beta
-     map2_r_beta
-     fold_beta
-     recursively_non_empty_beta
-  : trie_db.
-
-Hint Unfold
-     id_fix
-     id_fix_2
-     id_case
-     Node'
-     oNode_dec_empty
-     empty'
-     mapi_step
-     map2_step
-     map2_l_step
-     map2_r_step
-     fold_step
-     recursively_non_empty_step
-     t_case_nd
-     empty
-  : trie_db.
-(*
-Module Type MapEmptyTyp (label : DecidableType) (map : FMapInterface.WSfun label).
-  Parameter map_NonEmpty : forall elt, map.t elt -> Prop.
-  Axiom map_NonEmpty_iff : forall elt m, @map_NonEmpty elt m <-> ~map.Empty m.
-End MapEmptyTyp.
-*)
-(*Module InnerTrieShape (label : DecidableType) (map : FMapInterface.WSfun label) (Import T : TypFunctor) (Import ME : MapEmptyTyp label map).
-  Lemma map_mapi_nonEmpty : forall elt elt' f m, @map_NonEmpty _ m -> @map_NonEmpty _ (@map.mapi elt elt' f m).
-  Proof.
-    intros *; rewrite !map_NonEmpty_iff.
-    cbv [map.Empty]; intros H H'; apply H; clear H.
-    intros k v H; specialize (H' k).
-    eapply map.mapi_1 in H.
-    destruct H as [? [? H]].
-    apply H' in H.
-    exact H.
-  Qed.
-  Lemma map_is_empty_1 : forall elt m, @map.is_empty elt m = false -> @map_NonEmpty elt m.
-  Proof.
-    intros *; rewrite !map_NonEmpty_iff; intros H H'; apply map.is_empty_1 in H'; congruence.
-  Qed.
-End InnerTrieShape.*)
-Module Type TrieShape (label : DecidableType) (map : FMapInterface.WSfun label) (Import T : TypFunctor) (*(Import ME : MapEmptyTyp label map)*).
-  (*Module Import _TrieShape := InnerTrieShape label map T ME.*)
-  Notation Everything := (@EverythingGen t map.key map.t map.is_empty map.fold map.mapi map.map2 map.find).
-End TrieShape.
-
-Module Type Trie (label : DecidableType) (map : FMapInterface.WSfun label).
-  Include TypFunctor.
-  (*Include MapEmptyTyp label map.*)
-  Include TrieShape label map.
-  Parameter Inline everything : Everything.
-  Existing Instance everything.
-End Trie.
-
-Local Ltac t_destr_conj_step :=
-  first [ progress subst
-        | progress destruct_head'_False
-        | progress destruct_head'_and
-        | progress destruct_head'_ex
-        | progress destruct_head'_True
-        | progress destruct_head'_unit
-        | progress destruct_head' sig
-        | progress inversion_option
-        | progress inversion_sigma
-        | progress inversion_list
-        | progress inversion_pair
-        | progress cbn [fst snd proj1_sig proj2_sig] in *
-        | match goal with
-          | [ H : eqlistA _ nil _ |- _ ] => inversion H; clear H
-          | [ H : eqlistA _ _ nil |- _ ] => inversion H; clear H
-          | [ H : eqlistA _ (_ :: _) _ |- _ ] => inversion H; clear H
-          | [ H : eqlistA _ _ (_ :: _) |- _ ] => inversion H; clear H
-          | [ H : InA _ _ (_ :: _) |- _ ] => inversion H; clear H
-          | [ H : InA _ _ nil |- _ ] => inversion H; clear H
-          | [ H : List.In _ (List.map _ _) |- _ ] => rewrite in_map_iff in H
-          | [ H : List.In _ (List.flat_map _ _) |- _ ] => rewrite in_flat_map in H
-          | [ H : ?x = ?x |- _ ] => clear H
-          | [ H : ?T, H' : ?T |- _ ] => clear H
-          | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
-          | [ H : ?x = None, H' : context[?x] |- _ ] => rewrite H in H'
-          | [ H : Some _ = ?x |- _ ] => symmetry in H
-          | [ H : None = ?x |- _ ] => symmetry in H
-          end
-        | discriminate ].
-Local Ltac t_destr_step :=
-  first [ t_destr_conj_step
-        | progress destruct_head'_or
-        | progress destruct_head' option
-        | break_innermost_match_hyps_step
-        | break_innermost_match_step ].
-Local Ltac t_specialize_safe_step :=
-  first [ progress specialize_by_assumption
-        | progress cbv [not] in *
-        | progress specialize_by reflexivity
-        | progress specialize_under_binders_by apply conj
-        | progress specialize_under_binders_by eapply ex_intro
-        | progress specialize_under_binders_by apply eqlistA_cons ].
-
-Ltac inversion_Node_step :=
-  match goal with
-  | [ H : Node _ _ _ = Node _ _ _ |- _ ]
-    => let H' := fresh in
-       pose proof (f_equal (t_case_nd (fun d m pf => (d, m))) H) as H';
-       clear H;
-       cbv [t_case_nd] in *;
-       autorewrite with trie_db in H'
-  end.
-Ltac inversion_Node := repeat inversion_Node_step.
 
 Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M).
   Module Type ESig := ListTyp Y <+ HasEq <+ IsEqOrig <+ HasEqDec.
@@ -478,8 +72,6 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
     Notation t'_P m := (True -> match m with None => True | Some m' => recursively_non_empty m' = true end) (only parsing).
     Notation mk m pf := (exist (fun m' => t'_P m') m (fun 'I => pf)).
     Definition t elt := { m : t' elt | t'_P m }.
-
-    (*Hint Rewrite map_NonEmpty_iff : trie_db.*)
 
     Local Ltac t_obgl :=
       repeat first [ progress intros
@@ -507,12 +99,9 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
                    | progress subst
                    | progress specialize_under_binders_by eapply M.map_1
                    | progress break_innermost_match_hyps
-                   (*| rewrite map_NonEmpty_iff in **)
                    | progress specialize_under_binders_by (match goal with |- M.MapsTo _ _ (M.map2 _ _ _) => idtac end;
                                                            eapply M.find_2;
                                                            rewrite M.map2_1) ].
-
-    Local Obligation Tactic := (*try abstract t_obgl;*) t_obgl.
 
     Local Ltac pose_MapsTo_as_find lem :=
       let H := fresh in
@@ -532,7 +121,6 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
       induction m as [d m pf IH] using (t_ind (elt:=elt)); intros.
       repeat (autounfold with trie_db; autorewrite with trie_db).
       clear pf.
-      (*destruct m as [m pf]; cbn [proj1_sig] in *; clear pf.*)
       rewrite !M.fold_1.
       erewrite fold_left_ext_in; [ f_equal; try reflexivity; break_innermost_match; eauto | ].
       intros.
@@ -1158,26 +746,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
     Hint Rewrite find_None : list_map_alt.
 
     Definition Empty_alt elt (m : t elt) : Prop := proj1_sig m = None.
-    (*Definition In_alt elt (k : key) (m : t elt) : Prop := liftKT_ (@M.In elt) (@M2.In elt).
-    Definition Equal_alt elt (m m' : t elt) : Prop := M.Equal (fst m) (fst m') /\ M2.Equal (snd m) (snd m').*)
-  (*Definition Equiv_alt elt (cmp : elt -> elt -> Prop) : t elt -> t elt -> Prop
-      := option_eq
-           (fun m m'
-            => t_case_nd
-                 (fun d m _
-                  => t_case_nd
-                       (fun d' m' _
-                        => option_eq cmp d d'
-                           /\ option_eq (fun m m' => M.Equiv (fun m m' => Equiv cmp (Some m) (Some m')) (`m) (`m')) m m')
-                       (`m'))
-                 (`m)).*)
-    (*Definition Equivb_alt elt (cmp : elt -> elt -> bool) (m m' : t elt) : Prop := M.Equivb cmp (fst m) (fst m') /\ M2.Equivb cmp (snd m) (snd m').
-     *)
 
-  (*  Lemma In_alt_iff elt k (s : t elt) : In k s <-> In_alt k s.
-    Proof. t_alt_iff. Qed.
-    Lemma Equal_alt_iff elt (s s' : t elt) : Equal s s' <-> Equal_alt s s'.
-    Proof. t_alt_iff. Qed.*)
     Lemma Empty_alt_iff elt (s : t elt) : Empty s <-> Empty_alt s.
     Proof.
       cbv [Empty Empty_alt MapsTo M.Empty not key M.key E.t find proj1_sig].
@@ -1202,52 +771,6 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
                 end ] in
       tac ().
     Qed.
-    (*Lemma Equiv_alt_iff elt eq_elt (s s' : t elt) : Equiv eq_elt s s' <-> Equiv_alt eq_elt s s'.
-    Proof.
-      cbv [Equiv Equiv_alt MapsTo In M.Equiv M2.Equiv M.In M2.In key M.key M2.key not].
-      setoid_rewrite M_find_iff; setoid_rewrite M2_find_iff.
-      split; [ pose I as FWD | pose I as BAK ].
-      all: repeat first [ progress intros
-                        | progress destruct_head'_sig
-                        | progress destruct_head'_ex
-                        | progress destruct_head'_and
-                        | progress split_iff
-                        | progress specialize_dep_under_binders_by apply pair
-                        | progress specialize_dep_under_binders_by eexists
-                        | progress cbn [fst snd proj1_sig] in *
-                        | apply conj
-                        | match goal with
-                          | [ |- context[@M.find ?a ?b ?c] ] => destruct (@M.find a b c) eqn:?
-                          | [ |- context[@M2.find ?a ?b ?c] ] => destruct (@M2.find a b c) eqn:?
-                          end
-                        | solve [ eauto ]
-                        | congruence
-                        | progress specialize_under_binders_by eassumption ].
-      all: lazymatch goal with
-           | [ H : forall t e, M2.find t ?m = Some e -> ex _, H' : M2.Empty ?m -> False |- _ ]
-             => specialize (fun t e H' => H t e ltac:(apply M2.find_1, M2.elements_2, H'));
-                let H'' := fresh in
-                let H''' := fresh in
-                pose proof H' as H'';
-                cbv [M2.Empty not] in H'';
-                specialize (fun (H''' : forall a e, ~ _) => H'' (fun a e pf => ltac:(eapply (H''' a e), M2.elements_1, pf)));
-                setoid_rewrite InA_alt in H'';
-                cbv [not M2.eq_key_elt] in H'';
-                destruct (M2.elements m);
-                cbn [List.In] in H'';
-                [ specialize (H'' ltac:(firstorder tauto));
-                  exfalso; assumption
-                | specialize_under_binders_by eapply InA_cons_hd ]
-           end.
-      all: repeat first [ progress cbv [M2.eq_key_elt] in *
-                        | progress cbn [fst snd proj1_sig] in *
-                        | progress destruct_head'_sig
-                        | progress destruct_head'_ex
-                        | progress destruct_head'_and
-                        | progress specialize_dep_under_binders_by apply conj
-                        | progress specialize_dep_under_binders_by reflexivity
-                        | congruence ].
-    Qed.*)
 
     Local Instance eq_key_equiv elt : Equivalence (@eq_key elt) | 10.
     Proof.
