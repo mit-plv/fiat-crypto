@@ -466,7 +466,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
                                                            eapply M.find_2;
                                                            rewrite M.map2_1) ].
 
-    Local Obligation Tactic := try abstract t_obgl; t_obgl.
+    Local Obligation Tactic := (*try abstract t_obgl;*) t_obgl.
 
     Local Ltac pose_MapsTo_as_find lem :=
       let H := fresh in
@@ -799,6 +799,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
                                pose proof (@M.elements_2 _ m);
                                cbv [M.Empty] in H;
                                destruct (M.elements m)
+                          | [ H : context[InA _ _ nil] |- _ ] => setoid_rewrite InA_nil in H
                           end
                         | progress in_hyp_under_binders_do (fun H => rewrite InA_nil in H)
                         | progress cbv [impl M.eq_key_elt] in *
