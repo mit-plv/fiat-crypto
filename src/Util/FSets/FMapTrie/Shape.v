@@ -225,7 +225,7 @@ Module Import EverythingGen.
          ; t_case_nd
            := fun elt P => @t_case elt (fun _ => P)
          ; t_ind : forall elt (P : t elt -> Prop),
-             (forall d m pf, (forall k v, @map_find _ k m = Some v -> P v) -> P (@Node elt d (Some m) pf))
+             (forall d m pf, (forall k v, match m with Some m => @map_find _ k m = Some v -> P v | None => True end) -> P (@Node elt d m pf))
              -> forall m, P m
          ; empty : forall elt, t' elt
            := fun _ => None

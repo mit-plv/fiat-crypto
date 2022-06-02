@@ -121,6 +121,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
       induction m as [d m pf IH] using (t_ind (elt:=elt)); intros.
       repeat (autounfold with trie_db; autorewrite with trie_db).
       clear pf.
+      break_innermost_match_hyps; try now break_innermost_match; eauto.
       rewrite !M.fold_1.
       erewrite fold_left_ext_in; [ f_equal; try reflexivity; break_innermost_match; eauto | ].
       intros.
@@ -1063,6 +1064,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
         revert i k_prefix.
         induction m' as [d m pf IH] using (t_ind (elt:=elt)); clear m'; intros.
         repeat (autounfold with trie_db; autorewrite with trie_db).
+        destruct m; try (now destruct d; cbn [List.rev]; rewrite rev_involutive); [].
         rewrite !M.fold_1.
         setoid_rewrite (@app_cons_app_app _ k_prefix).
         etransitivity;
@@ -1095,6 +1097,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
         revert prefix k_prefix.
         induction m' as [d m pf IH] using (t_ind (elt:=elt)); clear m'; intros.
         repeat (autounfold with trie_db; autorewrite with trie_db).
+        destruct m; try (now destruct d; rewrite ?app_nil_r, ?app_nil_l); [].
         rewrite !M.fold_1.
         setoid_rewrite (@app_cons_app_app _ k_prefix).
         etransitivity;
@@ -1192,6 +1195,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
         revert k_prefix k_prefix'.
         induction m' as [d m pf IH] using (t_ind (elt:=elt)); clear m'; intros.
         repeat (autounfold with trie_db; autorewrite with trie_db).
+        destruct m as [m'|]; [ | break_innermost_match; cbn; now rewrite ?app_nil_r ].
         rewrite map_app.
         apply f_equal2;
           [ now break_innermost_match; cbn; rewrite ?app_nil_r
@@ -1250,9 +1254,10 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
         cbn [proj1_sig] in *; clear pf'.
         revert f i.
         induction m' as [d m pf IH] using (t_ind (elt:=elt)); clear m'; intros.
-        specialize_under_binders_by (apply M.find_1, M.elements_2; rewrite InA_alt; eexists; repeat split; try reflexivity).
         rewrite elements'_alt.
         repeat (autounfold with trie_db; autorewrite with trie_db).
+        destruct m as [m'|]; [ | now break_innermost_match ].
+        specialize_under_binders_by (apply M.find_1, M.elements_2; rewrite InA_alt; eexists; repeat split; try reflexivity).
         clear pf.
         rewrite M.fold_1.
         rewrite fold_left_app, fold_left_flat_map.
@@ -1472,6 +1477,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
       all: repeat (autounfold with trie_db; autorewrite with trie_db).
       all: try (eexists; split; reflexivity).
       all: [ > ].
+      destruct m as [m|]; [ | now cbn; eauto ].
       cbn [option_map proj1_sig Option.bind] in *.
       clear pf.
       edestruct M_mapi_full as [? [HY H]]; rewrite H.
@@ -1745,6 +1751,7 @@ Module ListSfun_gen (Y : OrderedTypeOrig) (M : Sfun Y) (Import T : Trie Y M).
         induction m as [d m pf IH] using (t_ind (elt:=elt)).
         rewrite elements'_alt.
         repeat (autounfold with trie_db; autorewrite with trie_db).
+        destruct m as [m|]; [ | now break_innermost_match; cbn; repeat constructor ].
         eapply @SortA_app with (eqA:=@eq_key_elt _); try exact _.
         all: try solve [ break_innermost_match; repeat constructor ].
         all: try solve [
