@@ -25,7 +25,7 @@ Proof.
 Qed.
 
 Lemma SortA_rev_iff A R ls
-  : @Sorted A R ls <-> @Sorted A (flip R) (List.rev ls).
+  : @Sorted A R (List.rev ls) <-> @Sorted A (flip R) ls.
 Proof.
   rewrite <- (rev_involutive ls);
     split; intro; apply SortA_rev; rewrite ?rev_involutive in *;
