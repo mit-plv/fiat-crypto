@@ -1625,7 +1625,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
       edestruct M_mapi_full as [? [HY H]]; rewrite H.
       destruct (M.find x m) eqn:H'; rewrite ?find_None; cbn [option_map] in *.
       1: specialize_under_binders_by eassumption.
-      1: do 2 (let v := open_constr:(_) in specialize (IH v)).
+      1: do 2 (let t := open_constr:(_) in evar (v : t); specialize (IH v); subst v).
       1: destruct IH as [? [? IH]].
       1: rewrite IH.
       all: clear IH H H'.
