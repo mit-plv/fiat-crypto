@@ -320,6 +320,7 @@ src/Util/FSets/FMapOption.v
 src/Util/FSets/FMapProd.v
 src/Util/FSets/FMapSect.v
 src/Util/FSets/FMapSum.v
+src/Util/FSets/FMapTrie.v
 src/Util/FSets/FMapUnit.v
 src/Util/ListUtil/CombineExtend.v
 src/Util/ListUtil/Concat.v
