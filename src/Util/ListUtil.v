@@ -2059,6 +2059,35 @@ Proof.
   rewrite fold_left_andb_true_map_iff, fold_left_and_True_forall_In_iff; reflexivity.
 Qed.
 
+Lemma fold_right_andb_truth_map_iff A (ls : list A) f t
+  : List.fold_right andb t (List.map f ls) = true <-> (t = true /\ forall i, List.In i ls -> f i = true).
+Proof.
+  induction ls as [|a ls IHls]; simpl; [ | rewrite Bool.andb_true_iff, IHls ]; try tauto.
+  intuition (congruence || eauto).
+Qed.
+
+Lemma fold_right_andb_truth_iff_fold_right_and_Truth (ls : list bool) t
+  : List.fold_right andb t ls = true <-> List.fold_right and (t = true) (List.map (fun b => b = true) ls).
+Proof.
+  rewrite <- (map_id ls) at 1.
+  rewrite fold_right_andb_truth_map_iff, fold_right_and_Truth_forall_In_iff; reflexivity.
+Qed.
+
+Lemma fold_left_andb_truth_map_iff A (ls : list A) f t
+  : List.fold_left andb (List.map f ls) t = true <-> (t = true /\ forall i, List.In i ls -> f i = true).
+Proof.
+  rewrite <- fold_left_rev_right, <- map_rev; setoid_rewrite Bool.andb_comm.
+  rewrite fold_right_andb_truth_map_iff.
+  setoid_rewrite <- in_rev; reflexivity.
+Qed.
+
+Lemma fold_left_andb_truth_iff_fold_left_and_Truth (ls : list bool) t
+  : List.fold_left andb ls t = true <-> List.fold_left and (List.map (fun b => b = true) ls) (t = true).
+Proof.
+  rewrite <- (map_id ls) at 1.
+  rewrite fold_left_andb_truth_map_iff, fold_left_and_Truth_forall_In_iff; reflexivity.
+Qed.
+
 Lemma Forall2_forall_iff : forall {A B} (R : A -> B -> Prop) (xs : list A) (ys : list B) d1 d2, length xs = length ys ->
   (Forall2 R xs ys <-> (forall i, (i < length xs)%nat -> R (nth_default d1 xs i) (nth_default d2 ys i))).
 Proof.
