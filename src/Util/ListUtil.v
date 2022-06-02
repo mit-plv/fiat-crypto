@@ -3241,3 +3241,31 @@ Lemma map_swap_combine {A B} ls1 ls2
 Proof.
   revert ls2; induction ls1 as [|x xs IHxs], ls2 as [|y ys]; cbn [List.combine List.map fst snd]; congruence.
 Qed.
+
+Lemma fold_right_higher_order A B C f a ls (F : _ -> C)
+  : fold_right (fun x acc a => acc (f x a)) F ls a
+    = F (@fold_right A B f a (List.rev ls)).
+Proof.
+  revert F a; induction ls; cbn; try reflexivity; intros.
+  rewrite IHls, fold_right_app; cbn.
+  reflexivity.
+Qed.
+
+Lemma fold_right_rev_higher_order A B f a ls
+  : @fold_right A B f a (List.rev ls)
+    = fold_right (fun x acc a => acc (f x a)) id ls a.
+Proof. symmetry; apply fold_right_higher_order. Qed.
+
+Lemma fold_left_higher_order A B C f a ls (F : _ -> C)
+  : fold_left (fun acc x a => acc (f a x)) ls F a
+    = F (@fold_left A B f (List.rev ls) a).
+Proof.
+  revert F a; induction ls; cbn; try reflexivity; intros.
+  rewrite IHls, fold_left_app; cbn.
+  reflexivity.
+Qed.
+
+Lemma fold_left_rev_higher_order A B f a ls
+  : @fold_left A B f (List.rev ls) a
+    = fold_left (fun acc x a => acc (f a x)) ls id a.
+Proof. symmetry; apply fold_left_higher_order. Qed.
