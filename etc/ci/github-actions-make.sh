@@ -31,7 +31,9 @@ git status
 git diff
 
 cat time-of-build-pretty.log
-make "$@" ${OUTPUT_SYNC} TIMED=1 TIMING=1 VERBOSE=1 || exit $?
+if [ ! -f finished.ok ]; then
+    make "$@" ${OUTPUT_SYNC} TIMED=1 TIMING=1 VERBOSE=1 || exit $?
+fi
 
 unameOut="$(uname -s)"
 if [[ "${unameOut}" == CYGWIN* ]]; then

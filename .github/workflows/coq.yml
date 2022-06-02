@@ -68,9 +68,13 @@ jobs:
         echo "::endgroup::"
     - name: deps
       run: etc/ci/github-actions-make.sh -j2 deps
-    - name: all
-      run: etc/ci/github-actions-make.sh ${EXTRA_GH_REPORTIFY} -j2 all
+    - name: all-except-generated
+      run: etc/ci/github-actions-make.sh ${EXTRA_GH_REPORTIFY} -j2 all-except-generated
+    - name: generated-files
+      run: etc/ci/github-actions-make.sh ${EXTRA_GH_REPORTIFY} -j2 generated-files
+      if: github.event_name == 'pull_request' || ${{ matrix.env.COQ_VERSION }} != 'master'
     - run: tar -czvf generated-files.tgz fiat-*/
+      if: ${{ failure() }}
     - name: upload generated files
       uses: actions/upload-artifact@v3
       with:
