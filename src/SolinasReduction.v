@@ -170,6 +170,16 @@ Module solinas_reduction.
     Hint Resolve length_partition : push_length.
     Hint Resolve Rows.length_from_associational : push_length.
 
+    Ltac weight_comp :=
+      unfold weight, uweight, ModOps.weight;
+      rewrite !Z.div_1_r;
+      rewrite !Z.opp_involutive;
+      rewrite Nat2Z.inj_succ;
+      rewrite OrdersEx.Z_as_OT.mul_succ_r;
+      rewrite OrdersEx.Z_as_OT.pow_add_r;
+      autorewrite with zsimplify_const;
+      ring_simplify.
+
     Lemma canonical_pos n : forall (p : list Z),
         canonical_repr n p ->
         0 <= eval weight n p.
@@ -220,47 +230,177 @@ Module solinas_reduction.
         eauto. }
     Qed.
 
+    Lemma canonical_iff p n :
+      canonical_repr n p <->
+        length p = n /\
+          forall x, In x p -> 0 <= x < 2 ^ machine_wordsize.
+    Proof.
+      split.
+      { intros.
+        intuition.
+        unfold canonical_repr in *.
+        intuition.
+        eapply canonical_bounded; eauto.
+        eapply canonical_bounded; eauto. }
+      { intros.
+        unfold canonical_repr.
+        intuition.
+
+        apply uweight_partition_unique.
+        lia.
+        assumption.
+        intros.
+        rewrite Le.Z.le_sub_1_iff.
+        eauto. }
+    Qed.
+
+    Lemma canonical_cons n a p:
+      canonical_repr (S n) (a :: p) ->
+      canonical_repr n p.
+    Proof.
+      intros.
+      rewrite canonical_iff in *.
+      intuition; apply H1; simpl; eauto.
+    Qed.
+
+    Lemma canonical_app_l n n1 n2 l l1 l2 :
+      canonical_repr n l ->
+      length l1 = n1 ->
+      length l2 = n2 ->
+      n = (n1 + n2)%nat ->
+      l = l1 ++ l2 ->
+      canonical_repr n1 l1.
+    Proof.
+      intros.
+      intuition;
+        rewrite canonical_iff in *;
+        intuition; apply H5; rewrite H3; apply in_or_app; eauto.
+    Qed.
+
+    Lemma canonical_app_r n n1 n2 l l1 l2 :
+      canonical_repr n l ->
+      length l1 = n1 ->
+      length l2 = n2 ->
+      n = (n1 + n2)%nat ->
+      l = l1 ++ l2 ->
+      canonical_repr n2 l2.
+    Proof.
+      intros.
+      intuition;
+        rewrite canonical_iff in *;
+        intuition; apply H5; rewrite H3; apply in_or_app; eauto.
+    Qed.
+
+    Definition eval_weight_P p :=
+      eval (fun i : nat => weight (S i)) (Datatypes.length p) p =
+        (eval weight (Datatypes.length p) p) * weight 1.
+
+    Lemma eval_weight_S' : forall p,
+      eval_weight_P p.
+    Proof.
+      apply (ListAux.list_length_induction Z).
+      intros.
+      pose proof (@break_list_last Z l1).
+      intuition; unfold eval_weight_P in *.
+      { subst.
+        reflexivity. }
+      { destruct H1.
+        destruct H0.
+        subst.
+        rewrite app_length.
+        simpl.
+        replace (length x + 1)%nat with (S (length x)) by lia.
+        rewrite !eval_snoc_S.
+        rewrite H.
+        rewrite OrdersEx.Z_as_OT.mul_add_distr_r.
+        rewrite OrdersEx.Z_as_DT.add_cancel_l.
+        unfold weight, uweight, ModOps.weight, machine_wordsize.
+        rewrite !Z.div_1_r.
+        rewrite !Z.opp_involutive.
+        rewrite Nat2Z.inj_succ.
+        rewrite OrdersEx.Z_as_OT.mul_succ_r.
+        rewrite OrdersEx.Z_as_OT.pow_add_r.
+        lia.
+        lia.
+        lia.
+        rewrite app_length.
+        simpl.
+        lia.
+        lia.
+        lia. }
+    Qed.
+
+    Lemma eval_weight_S p n:
+      n = Datatypes.length p ->
+      eval (fun i : nat => weight (S i)) n p =
+        (eval weight n p) * weight 1.
+    Proof.
+      pose proof eval_weight_S'.
+      unfold eval_weight_P in *.
+      intros.
+      subst.
+      eauto.
+    Qed.
+
     Lemma canonical_eval_bounded n : forall (p : list Z),
         canonical_repr n p ->
         eval weight n p < weight n.
     Proof.
       intros.
       pose proof (canonical_bounded _ _ H).
-      unfold canonical_repr in *; intuition.
-      induction p; simpl.
+      assert (Hcanon: canonical_repr n p) by assumption.
+      unfold canonical_repr in H; intuition.
+      generalize dependent n.
+      induction p; intros.
       { simpl in H1; subst.
         vm_compute.
         eauto. }
       { simpl in H1; subst.
         rewrite eval_cons.
         autorewrite with zsimplify_const.
-        rewrite <-IHp.
-    Admitted.
-
-    Lemma canonical_app : forall n n1 n2 (p p1 p2: list Z),
-        p = p1 ++ p2 ->
-        length p1 = n1 ->
-        length p2 = n2 ->
-        canonical_repr (n) p ->
-        canonical_repr n1 p1 /\ canonical_repr n2 p2.
-    Proof.
-      intros.
-      unfold canonical_repr in *.
-      rewrite H in H2.
-      intuition.
-      unfold weight in H4.
-      Search (eval _ _ (_ ++ _)).
-      rewrite uweight_eval_app with (n:=n1) in H4.
-      Search (Partition.partition _ _ (_ + _)).
-      pose proof uweight_partition_app.
-      assert (eval (uweight machine_wordsize) n1 p1 =
-                eval (uweight machine_wordsize) n1 p1 mod uweight machine_wordsize n1).
-      { rewrite Z.mod_small.
+        rewrite eval_weight_S.
+        assert (a + eval weight (Datatypes.length p) p * weight 1 < 2^machine_wordsize + eval weight (Datatypes.length p) p * weight 1).
+        rewrite <-OrdersEx.Z_as_OT.add_lt_mono_r.
+        apply H0.
+        simpl.
+        left.
+        reflexivity.
+        rewrite <-Le.Z.le_sub_1_iff.
+        rewrite <-Le.Z.le_sub_1_iff in H.
+        etransitivity.
+        apply H.
+        assert (2 ^ machine_wordsize + eval weight (Datatypes.length p) p * weight 1 <= 2 ^ machine_wordsize + (weight (Datatypes.length p) - 1) * weight 1).
+        rewrite <-OrdersEx.Z_as_OT.add_le_mono_l.
+        rewrite <-OrdersEx.Z_as_OT.mul_le_mono_pos_r.
+        rewrite Le.Z.le_sub_1_iff.
+        apply IHp.
+        intros.
+        apply H0.
+        simpl.
         eauto.
-        split.
-        admit.
-
-    Admitted.
+        eapply canonical_cons; eauto.
+        reflexivity.
+        apply canonical_cons in Hcanon.
+        unfold canonical_repr in Hcanon.
+        intuition.
+        apply wprops.
+        rewrite OrdersEx.Z_as_OT.sub_le_mono_r with (p:=1) in H1.
+        etransitivity.
+        apply H1.
+        weight_comp.
+        rewrite <-OrdersEx.Z_as_OT.sub_le_mono_r.
+        rewrite Nat2Z.inj_succ.
+        rewrite OrdersEx.Z_as_OT.mul_succ_r.
+        rewrite OrdersEx.Z_as_OT.pow_add_r.
+        ring_simplify.
+        reflexivity.
+        lia.
+        lia.
+        lia.
+        lia.
+        reflexivity.
+        reflexivity. }
+    Qed.
 
     Lemma reduce_canonical_repr base s c n m : forall (p : list Z),
         canonical_repr m (reduce1 base s c n m p).
@@ -279,6 +419,96 @@ Module solinas_reduction.
       }
       { admit. }
     Admitted.
+
+    Lemma split_lt w l1 l2:
+      (forall x, In x l1 -> 0 < x < w) ->
+      length l1 = length l2 ->
+      split w (combine l1 l2) = (combine l1 l2, []).
+    Proof.
+      intros.
+      generalize dependent l2.
+      induction l1; intros.
+      { reflexivity. }
+      { simpl.
+        destruct l2 eqn:E.
+        simpl in H0.
+        discriminate.
+        match goal with
+        | [ |- context[ ?x :: ?y ] ] => replace (x :: y) with ([x] ++ y) by eauto
+        end.
+        rewrite split_app.
+        rewrite IHl1.
+        cbn [fst snd].
+        simpl.
+        assert (In a (a :: l1)) by apply in_eq.
+        apply H in H1.
+        assert (a mod w = a).
+        { apply Z.mod_small.
+          lia. }
+        rewrite H2.
+        destruct (a =? 0) eqn:E1.
+        rewrite Z.eqb_eq in E1.
+        lia.
+        reflexivity.
+        intros.
+        apply H.
+        apply in_cons.
+        assumption.
+        simpl in H0.
+        lia. }
+    Qed.
+
+    Lemma weight_mono' x :
+      weight x < weight (S x).
+    Proof.
+      intros.
+      unfold weight, uweight, ModOps.weight, machine_wordsize.
+      rewrite !Z.div_1_r.
+      rewrite !Z.opp_involutive.
+      rewrite Nat2Z.inj_succ.
+      rewrite OrdersEx.Z_as_OT.mul_succ_r.
+      rewrite OrdersEx.Z_as_OT.pow_add_r.
+      lia.
+      lia.
+      lia.
+    Qed.
+
+    Lemma weight_mono'' x1 x2 :
+      (x2 > 0)%nat
+      -> weight x1 < weight (x2 + x1).
+    Proof.
+      intros.
+      induction H.
+      { apply weight_mono'. }
+      { etransitivity.
+        apply IHle.
+        apply weight_mono'. }
+    Qed.
+
+    Lemma weight_mono x1 x2 :
+      (x1 < x2)%nat ->
+      weight x1 < weight x2.
+    Proof.
+      intros.
+      replace x2%nat with ((x2 - x1) + x1)%nat.
+      apply weight_mono''.
+      lia.
+      lia.
+    Qed.
+
+    (* helps with proving lemmas about the length of the reduction *)
+    Ltac length_q q :=
+      try match goal with
+          | [ H : canonical_repr _ q |- _ ] =>
+              unfold canonical_repr in H; intuition
+          end;
+      match goal with
+      | [ H1 : q = _ |- _ ] =>
+          apply f_equal with (f:=fun l => length l) in H1;
+          rewrite !app_length in H1;
+          try rewrite !app_length;
+          cbn [length] in H1; cbn [length]; lia
+      end.
 
     Lemma value_reduce_second base s c n (s_nz:s<>0) : forall (p : list Z) lo hi,
         p = lo ++ [hi] ->
@@ -325,7 +555,22 @@ Module solinas_reduction.
       autorewrite with push_eval zsimplify_const; cbn [fst snd].
       assert (split (weight n) (combine (map weight (seq 0 n)) lo) =
                 ((combine (map weight (seq 0 n)) lo), [])).
-      { admit. }
+      { apply split_lt.
+        intros.
+        rewrite in_map_iff in H8.
+        destruct H8.
+        intuition.
+        rewrite <-H9.
+        apply wprops.
+        rewrite <-H9.
+        rewrite in_seq in H10.
+        intuition.
+        simpl in H11.
+        apply weight_mono.
+        lia.
+        rewrite map_length.
+        rewrite seq_length.
+        length_q p. }
       rewrite H8; cbn [fst snd].
       autorewrite with push_eval zsimplify_const; cbn [fst snd].
       unfold eval, to_associational.
@@ -337,7 +582,6 @@ Module solinas_reduction.
       unfold weight.
       intuition.
       admit. (* prove value is positive *)
-      Search (_ < _ -> _ + _ < _ + _).
       apply Zplus_lt_compat_l with
         (p:=Associational.eval (Associational.sat_mul_const base [(1, uweight machine_wordsize n / s)] c) * hi) in H12.
       etransitivity.
@@ -369,6 +613,7 @@ Module solinas_reduction.
       intros.
       eapply Rows.length_from_associational; eauto.
     Admitted.
+
 
     Theorem reduce_second' base s c n (s_nz:s<>0) : forall (p : list Z) lo hi,
         p = lo ++ [hi] ->
@@ -412,7 +657,32 @@ Module solinas_reduction.
           rewrite H4.
           apply Z.div_lt_upper_bound.
           eauto.
-          admit.
+          apply Le.Z.le_sub_1_iff.
+          etransitivity.
+          apply Z.mod_le.
+          admit. (* value of reduction is positive *)
+          apply wprops.
+          rewrite OrdersEx.Z_as_OT.le_add_le_sub_r.
+          etransitivity.
+          admit. (* relationship between coef and weight *)
+          assert (weight (S (Datatypes.length q_lo)) <= weight (S (Datatypes.length q_lo)) * 2 - 1 - eval weight n lo).
+          { rewrite <-OrdersEx.Z_as_OT.le_add_le_sub_l.
+            rewrite <-OrdersEx.Z_as_OT.le_add_le_sub_l.
+            rewrite Z.add_assoc.
+            rewrite OrdersEx.Z_as_OT.le_add_le_sub_r.
+            ring_simplify.
+            eapply canonical_app_l with (l1:=lo) (n1:=n) in H5.
+            apply canonical_eval_bounded in H5.
+            rewrite Le.Z.le_add_1_iff.
+            replace (S (length q_lo)) with n by (length_q q).
+            assumption.
+            length_q p.
+            3: eauto.
+            reflexivity.
+            simpl.
+            lia. }
+          eassumption.
+
           apply f_equal with (f:=fun l => length l) in H1.
           rewrite !app_length in H1.
           rewrite H0 in H1.
@@ -430,57 +700,72 @@ Module solinas_reduction.
       rewrite H3 in H5.
       subst.
       autorewrite with zsimplify_const in H5.
-      Search (_ + _ + _).
-      (* rewrite <-Z.add_assoc in H5. *)
       apply LinearSubstitute.Z.move_L_pX in H5.
 
       remember (Associational.eval (Associational.sat_mul_const base [(1, fst (Rows.adjust_s weight (S (S (S n))) s) / s)] c)) as coef.
       pose proof
            fun pf => nth_default_partition weight 0 n (coef * hi + eval weight n lo - weight (S (Datatypes.length q_lo))) (length q_lo) pf.
-      assert (Partition.partition weight n (coef * hi + eval weight n lo - weight (S (Datatypes.length q_lo))) = q_lo ++ [q_hi1]) by admit.
+      assert (Partition.partition weight n (coef * hi + eval weight n lo - weight (S (Datatypes.length q_lo))) = q_lo ++ [q_hi1]).
+      { assert (canonical_repr n (q_lo ++ [q_hi1])).
+        { eapply canonical_app_l; eauto.
+          length_q q.
+          2: rewrite <-app_assoc; eauto.
+          simpl.
+          lia. }
+        unfold canonical_repr in H4; intuition.
+        rewrite H10.
+        f_equal.
+        rewrite H5.
+        assert (n = S (length q_lo)) by length_q q.
+        rewrite H4.
+        rewrite eval_snoc_S.
+        reflexivity.
+        reflexivity. }
 
-      (* apply LinearSubstitute.Z.move_L_pX with (y:=weight (Datatypes.length (q_lo ++ [q_hi1]))) in H5. *)
-      (* Search nth_default Partition.partition. *)
-      (* pose proof fun pf => nth_default_partition weight 0 (n) (38 * hi + eval weight n lo - weight (Datatypes.length (q_lo ++ [q_hi1]))) (length q_lo) pf. *)
-      (* assert (Partition.partition weight n (38 * hi + eval weight n lo - weight (Datatypes.length (q_lo ++ [q_hi1]))) = q_lo ++ [q_hi1]) by admit. *)
-      (* rewrite H7 in H. *)
-      (* rewrite nth_default_app in H. *)
-      (* destruct lt_dec in H. *)
-      (* lia. *)
-      (* replace (Datatypes.length q_lo - Datatypes.length q_lo)%nat with 0%nat in H by lia. *)
-      (* replace (nth_default 0 [q_hi1] 0) with (q_hi1) in H. *)
-      (* 2: { unfold nth_default. *)
-      (*      reflexivity. } *)
-      (* rewrite H. *)
-      (* Search (_ / _ = 0). *)
-      (* apply Z.div_small. *)
-      (* split. *)
-      (* admit. *)
-      (* apply Le.Z.le_sub_1_iff. *)
-      (* etransitivity. *)
-      (* apply Z.mod_le. *)
-      (* admit. *)
-      (* apply wprops. *)
-      (* { admit. } *)
-      (* unfold canonical_repr in H2. *)
-      (* intuition. *)
-      (* apply f_equal with (f:=fun l => length l) in H1. *)
-      (* rewrite !app_length in H1. *)
-      (* cbn [Datatypes.length] in H1. *)
-      (* assert (Datatypes.length q_lo = (n - 1)%nat) by lia. *)
-      (* lia. *)
-      (* rewrite app_length. *)
-      (* cbn [Datatypes.length]. *)
-      (* lia. *)
+      rewrite H4 in H.
+      rewrite nth_default_app in H.
+      destruct lt_dec in H.
+      lia.
+      replace (Datatypes.length q_lo - Datatypes.length q_lo)%nat with 0%nat in H by lia.
+      replace (nth_default 0 [q_hi1] 0) with (q_hi1) in H.
 
-      (* unfold canonical_repr in H2. *)
-      (* intuition. *)
-      (* apply f_equal with (f:=fun l => length l) in H1. *)
-      (* rewrite !app_length in *. *)
-      (* cbn [Datatypes.length] in *. *)
-      (* apply f_equal. *)
-      (* rewrite H8 in H1. *)
-      (* lia. *)
+      rewrite H.
+      apply Z.div_small.
+      split.
+      apply Z_mod_nonneg_nonneg.
+      rewrite H5.
+      etransitivity.
+      assert (canonical_repr (length q_lo) q_lo).
+      { eapply canonical_app_l.
+        eauto.
+        length_q q.
+        eauto.
+        2: eauto.
+        length_q q. }
+      apply canonical_pos in H9.
+      apply H9.
+      replace (eval weight (Datatypes.length q_lo) q_lo) with
+        (eval weight (Datatypes.length q_lo) q_lo + 0) at 1.
+      apply Zplus_le_compat_l.
+      apply OrdersEx.Z_as_DT.mul_nonneg_nonneg.
+      apply OrdersEx.Z_as_OT.lt_le_incl.
+      apply wprops.
+      pose proof (canonical_bounded _ _ H2).
+      apply H9.
+      rewrite H1.
+      apply in_or_app.
+      right.
+      apply in_or_app.
+      simpl.
+      intuition.
+      lia.
+      apply OrdersEx.Z_as_OT.lt_le_incl.
+      apply wprops.
+      admit. (* coef and weight *)
+      length_q q.
+      reflexivity.
+      length_q q.
+      length_q q.
     Admitted.
 
     Theorem reduce_second base s c n (s_nz:s<>0) : forall (p : list Z) lo hi,
