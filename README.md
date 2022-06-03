@@ -208,7 +208,7 @@ To contribute a new backend, follow the following steps (perhaps using, for exam
   - Add targets to `.PHONY` analogous to `c-files`, `lite-c-files`, `test-c-files`, `only-test-c-files`
   - Add a variables analogous to `C_DIR`, `ALL_C_FILES`, and `LITE_C_FILES` for your language's generated files
   - Add targets analogous to `c-files` and `lite-c-files` and make `generated-files` and `lite-generated-files` depend on those targets respectively
-  - Add build rules for `ALL_<YOUR-LANGUAGE>-FILES`
+  - Add build rules for `ALL_<YOUR-LANGUAGE>_FILES`
   - Add targets for `test-<your-language>-files` and `only-test-<your-language>-files`; both targets should have the same build rule, but `test-<your-language>-files` should depend on all the generated files of your language, while `only-test-<your-language>-files` should not have any build rule dependencies.
   - If you are developing a package, you can look for uses of `COPY_TO_FIAT_RUST` or `COPY_TO_FIAT_GO` to see how license files are copied
 - Run `make` to generate all the relevant files of your language, and add the generated files to git
