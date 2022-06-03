@@ -8,15 +8,25 @@ Require Import Crypto.Util.FixCoqMistakes.
 
 Local Set Implicit Arguments.
 
-Module Type IsIsoLt (E : EqLt) (Import T:EqLt) (Import I : HasIso E T).
+Module Type IsSectLt (E : EqLt) (Import T:EqLt) (Import I : HasIso E T).
   Axiom Proper_to_lt : Proper (lt ==> E.lt) to_.
-  Axiom Proper_of_lt : Proper (E.lt ==> lt) of_.
-End IsIsoLt.
+End IsSectLt.
 
-Module Type IsIsoLe (E : EqLe) (Import T:EqLe) (Import I : HasIso E T).
+Module Type IsRetrLt (E : EqLt) (Import T:EqLt) (Import I : HasIso E T).
+  Axiom Proper_of_lt : Proper (E.lt ==> lt) of_.
+End IsRetrLt.
+
+Module Type IsIsoLt (E : EqLt) (T:EqLt) (I : HasIso E T) := Nop <+ IsSectLt E T I <+ IsRetrLt E T I.
+
+Module Type IsSectLe (E : EqLe) (Import T:EqLe) (Import I : HasIso E T).
   Axiom Proper_to_le : Proper (le ==> E.le) to_.
+End IsSectLe.
+
+Module Type IsRetrLe (E : EqLe) (Import T:EqLe) (Import I : HasIso E T).
   Axiom Proper_of_le : Proper (E.le ==> le) of_.
-End IsIsoLe.
+End IsRetrLe.
+
+Module Type IsIsoLe (E : EqLe) (T:EqLe) (I : HasIso E T) := Nop <+ IsSectLe E T I <+ IsRetrLe E T I.
 
 Module Type IsoEqLt (E : EqLt) := EqLt <+ HasIso E <+ IsIso E <+ IsIsoLt E.
 Module Type IsoEqLe (E : EqLe) := EqLe <+ HasIso E <+ IsIso E <+ IsIsoLe E.
@@ -37,6 +47,38 @@ Module Type IsoMiniOrderedType (E : EqLt) := MiniOrderedType <+ HasIso E <+ IsIs
 Module Type IsoOrderedTypeOrig (E : EqLt) := OrderedTypeOrig <+ HasIso E <+ IsIso E <+ IsIsoLt E.
 Module Type IsoUsualMiniOrderedType (E : UsualEqLt) := UsualMiniOrderedType <+ HasIso E <+ IsIso E <+ IsIsoLt E.
 Module Type IsoUsualOrderedTypeOrig (E : UsualEqLt) := UsualOrderedTypeOrig <+ HasIso E <+ IsIso E <+ IsIsoLt E.
+
+Module LiftIsoHasLt (E : EqLt) (Import I : Iso E) <: HasLt I.
+  Definition lt : relation t := fun x y => E.lt (to_ x) (to_ y).
+End LiftIsoHasLt.
+
+Module LiftIsoHasLe (E : EqLe) (Import I : Iso E) <: HasLe I.
+  Definition le : relation t := fun x y => E.le (to_ x) (to_ y).
+End LiftIsoHasLe.
+
+Module LiftSectIsLt (E : EqLt) (Import I : Iso E).
+  Module Import _LiftSectIsLt.
+    Module Import I' := LiftIsoHasLt E I.
+  End _LiftSectIsLt.
+  Global Instance Proper_to_lt : Proper (I'.lt ==> E.lt) I.to_ | 5.
+  Proof. cbv; intros *; exact id. Qed.
+End LiftSectIsLt.
+
+Module LiftRetrIsLt (E : StrOrder) (Import I : IsoEqualityType E).
+  Module Import _LiftRetrIsLt.
+    Module Import I' := LiftIsoHasLt E I.
+  End _LiftRetrIsLt.
+  Global Instance Proper_of_lt : Proper (E.lt ==> I'.lt) I.of_ | 5.
+  Proof. cbv; intros *. rewrite !I.to_of. exact id. Qed.
+End LiftRetrIsLt.
+
+Module LiftUsualRetrIsLt (E : UsualEqLt) (Import I : IsoEqualityType E).
+  Module Import _LiftRetrIsLt.
+    Module Import I' := LiftIsoHasLt E I.
+  End _LiftRetrIsLt.
+  Global Instance Proper_of_lt : Proper (E.lt ==> I'.lt) I.of_ | 5.
+  Proof. cbv; intros *. rewrite !I.to_of. exact id. Qed.
+End LiftUsualRetrIsLt.
 
 Module Type SectEqLt (E : EqLt) := EqLt <+ HasIso E <+ IsSect E <+ IsIsoLt E.
 Module Type SectEqLe (E : EqLe) := EqLe <+ HasIso E <+ IsSect E <+ IsIsoLe E.
