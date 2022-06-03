@@ -563,7 +563,7 @@ clean-bedrock2-compiler:
 install-bedrock2-compiler:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) install_compiler
 
-rupicola: bedrock2
+rupicola: bedrock2 | bedrock2-compiler
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) all
 
 clean-rupicola:
