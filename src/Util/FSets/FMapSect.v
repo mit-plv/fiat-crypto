@@ -743,6 +743,7 @@ End SectSfun.
 
 Module SectS (S' : S) (E' : SectMiniOrderedType S'.E) <: S.
   Module E <: SectOrderedTypeOrig S'.E := E' <+ OT_of_MOT.
+  Global Remove Hints E.eq_refl E.eq_sym E.eq_trans : core.
   Include SectSfun S'.E S' E.
 End SectS.
 

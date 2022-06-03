@@ -59,8 +59,13 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
     Axiom eq_alt : forall x y, E.eq x y <-> eqlistA Y.eq x y.
   End ESigCompat.
   Module Y' <: DecidableTypeBoth := Y <+ UpdateEq.
+  Global Remove Hints Y'.eq_refl Y'.eq_sym Y'.eq_trans : core.
   Module ListWSfun_gen (E : ESig) (ECompat : ESigCompat E) <: WSfun E.
     Module E' <: DecidableTypeBoth := E <+ UpdateEq <+ ECompat.
+    Global Remove Hints E'.eq_refl E'.eq_sym E'.eq_trans : core.
+    Local Hint Resolve Y'.eq_refl Y'.eq_sym Y'.eq_trans
+          E'.eq_refl E'.eq_sym E'.eq_trans
+      : core.
     Local Instance M_eq_key_equiv elt : Equivalence (@M.eq_key elt) | 10. split; cbv; eauto. Qed.
     Local Instance M_eq_key_elt_equiv elt : Equivalence (@M.eq_key_elt elt) | 10. split; repeat intros [? ?]; cbv in *; subst; eauto. Qed.
 
@@ -1733,6 +1738,7 @@ Module ListSfun_gen (Y : OrderedTypeOrig) (M : Sfun Y) (Import T : Trie Y M).
   Module ListSfun_gen (E : ESig) (ECompat : ESigCompat E) <: Sfun E.
     Include ListWSfun.ListWSfun_gen E ECompat.
     Module Y' := Y <+ UpdateEq <+ UpdateStrOrder.
+    Global Remove Hints Y'.eq_refl Y'.eq_sym Y'.eq_trans : core.
     Module P' := ListStrOrder Y'.
     Local Existing Instances eq_key_equiv eq_key_elt_equiv.
     Local Instance M_lt_key_Transitive elt' : Transitive (@M.lt_key elt') | 10.

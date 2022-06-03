@@ -491,6 +491,7 @@ End IsoWSfun.
 
 Module IsoWS (W' : WS) (E : IsoDecidableTypeOrig W'.E) <: WS.
   Module E := E.
+  Global Remove Hints E.eq_refl E.eq_sym E.eq_trans : core.
   Include IsoWSfun W'.E W' E.
 End IsoWS.
 
@@ -515,6 +516,7 @@ End IsoSfun.
 
 Module IsoS (S' : S) (E' : IsoMiniOrderedType S'.E) <: S.
   Module E <: IsoOrderedTypeOrig S'.E := E' <+ OT_of_MOT.
+  Global Remove Hints E.eq_refl E.eq_sym E.eq_trans : core.
   Include IsoSfun S'.E S' E.
 End IsoS.
 

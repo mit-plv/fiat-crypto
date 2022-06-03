@@ -45,9 +45,14 @@ Module OptionWSfun_gen (E2 : DecidableTypeOrig) (M2 : WSfun E2).
   End ESigCompat.
   Module E1 <: DecidableTypeBoth := UnitDecidableTypeBoth.
   Module E2 <: DecidableTypeBoth := E2 <+ UpdateEq.
+  Global Remove Hints E2.eq_refl E2.eq_sym E2.eq_trans : core.
   Module M1 <: WSfun E1 := UnitMap.
   Module OptionWSfun_gen (E : ESig) (ECompat : ESigCompat E) <: WSfun E.
     Module E' <: DecidableTypeBoth := E <+ UpdateEq <+ ECompat.
+    Global Remove Hints E'.eq_refl E'.eq_sym E'.eq_trans : core.
+    Local Hint Resolve E2.eq_refl E2.eq_sym E2.eq_trans : core.
+    Local Hint Resolve E.eq_refl E.eq_sym E.eq_trans : core.
+
     Local Instance M1_eq_key_equiv elt : Equivalence (@M1.eq_key elt) | 10. split; cbv; repeat intro; destruct_head'_prod; destruct_head'_unit; eauto. Qed.
     Local Instance M1_eq_key_elt_equiv elt : Equivalence (@M1.eq_key_elt elt) | 10. split; repeat intros [? ?]; cbv in *; subst; eauto. Qed.
     Local Instance M2_eq_key_equiv elt : Equivalence (@M2.eq_key elt) | 10. split; cbv; eauto. Qed.
