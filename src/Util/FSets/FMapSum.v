@@ -18,6 +18,7 @@ Require Import Crypto.Util.Structures.Equalities.Sum.
 Require Import Crypto.Util.Structures.Orders.
 Require Import Crypto.Util.Structures.Orders.Prod.
 Require Import Crypto.Util.Structures.Orders.Sum.
+Require Import Crypto.Util.FSets.FMapInterface.
 Require Import Crypto.Util.Sorting.Sorted.Proper.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -629,18 +630,15 @@ Module SumWSfun (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSfun E1
   Include _SumWSfun.Inner.
 End SumWSfun.
 
-Module SumUsualWeakMap (E1 : UsualDecidableTypeOrig) (E2 : UsualDecidableTypeOrig) (M1 : WSfun E1) (M2 : WSfun E2).
-  Module SumUsualWeakMap <: WS.
-    Module Outer := SumWSfun_gen E1 E2 M1 M2.
-    Module E := SumUsualDecidableTypeOrig E1 E2.
-    Module ECompat <: Outer.ESigCompat E.
-      Lemma eq_alt : forall x y, E.eq x y <-> sumwise E1.eq E2.eq x y.
-      Proof. cbv [E.eq sumwise E1.eq E2.eq]; intros; break_innermost_match; intuition congruence. Qed.
-    End ECompat.
-    Module Inner := Outer.SumWSfun_gen E ECompat.
-    Include Inner.
-  End SumUsualWeakMap.
-  Include SumUsualWeakMap.Inner.
+Module SumUsualWeakMap (M1 : UsualWS) (M2 : UsualWS) <: UsualWS.
+  Module Outer := SumWSfun_gen M1.E M2.E M1 M2.
+  Module E := SumUsualDecidableTypeOrig M1.E M2.E.
+  Module ECompat <: Outer.ESigCompat E.
+    Lemma eq_alt : forall x y, E.eq x y <-> sumwise M1.E.eq M2.E.eq x y.
+    Proof. cbv [E.eq sumwise M1.E.eq M2.E.eq]; intros; break_innermost_match; intuition congruence. Qed.
+  End ECompat.
+  Module Inner := Outer.SumWSfun_gen E ECompat.
+  Include Inner.
 End SumUsualWeakMap.
 
 Module SumWeakMap (M1 : WS) (M2 : WS) <: WS.
@@ -703,20 +701,17 @@ Module SumSfun (E1 : OrderedTypeOrig) (E2 : OrderedTypeOrig) (M1 : Sfun E1) (M2 
   Include _SumSfun.Inner.
 End SumSfun.
 
-Module SumUsualMap (E1 : UsualOrderedTypeOrig) (E2 : UsualOrderedTypeOrig) (M1 : Sfun E1) (M2 : Sfun E2).
-  Module SumUsualMap <: S.
-    Module Outer := SumSfun_gen E1 E2 M1 M2.
-    Module E := SumUsualOrderedTypeOrig E1 E2.
-    Module ECompat <: Outer.ESigCompat E.
-      Lemma eq_alt : forall x y, E.eq x y <-> sumwise E1.eq E2.eq x y.
-      Proof. cbv [E.eq sumwise E1.eq E2.eq]; intros; break_innermost_match; intuition congruence. Qed.
-      Lemma lt_alt : forall x y, E.lt x y <-> sum_le E1.lt E2.lt x y.
-      Proof. cbv [E.lt]; reflexivity. Qed.
-    End ECompat.
-    Module Inner := Outer.SumSfun_gen E ECompat.
-    Include Inner.
-  End SumUsualMap.
-  Include SumUsualMap.Inner.
+Module SumUsualMap (M1 : UsualS) (M2 : UsualS).
+  Module Outer := SumSfun_gen M1.E M2.E M1 M2.
+  Module E := SumUsualOrderedTypeOrig M1.E M2.E.
+  Module ECompat <: Outer.ESigCompat E.
+    Lemma eq_alt : forall x y, E.eq x y <-> sumwise M1.E.eq M2.E.eq x y.
+    Proof. cbv [E.eq sumwise M1.E.eq M2.E.eq]; intros; break_innermost_match; intuition congruence. Qed.
+    Lemma lt_alt : forall x y, E.lt x y <-> sum_le M1.E.lt M2.E.lt x y.
+    Proof. cbv [E.lt]; reflexivity. Qed.
+  End ECompat.
+  Module Inner := Outer.SumSfun_gen E ECompat.
+  Include Inner.
 End SumUsualMap.
 
 Module SumMap (M1 : S) (M2 : S) <: S.
