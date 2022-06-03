@@ -223,6 +223,7 @@ Crypto.Util.ListUtil.PermutationCompat
 Crypto.Util.ListUtil.RemoveN
 Crypto.Util.ListUtil.SetoidList
 Crypto.Util.ListUtil.SetoidListFlatMap
+Crypto.Util.ListUtil.SetoidListRev
 Crypto.Util.ListUtil.Split
 Crypto.Util.ListUtil.StdlibCompat
 Crypto.Util.Listable
