@@ -314,6 +314,7 @@ src/Util/ErrorT/List.v
 src/Util/ErrorT/Show.v
 src/Util/FSets/FMapBool.v
 src/Util/FSets/FMapEmpty.v
+src/Util/FSets/FMapInterface.v
 src/Util/FSets/FMapIso.v
 src/Util/FSets/FMapN.v
 src/Util/FSets/FMapOption.v

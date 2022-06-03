@@ -19,6 +19,7 @@ Require Import Crypto.Util.Structures.Equalities.
 Require Import Crypto.Util.Structures.Equalities.Prod.
 Require Import Crypto.Util.Structures.Orders.
 Require Import Crypto.Util.Structures.Orders.Prod.
+Require Import Crypto.Util.FSets.FMapInterface.
 Require Import Crypto.Util.Sorting.Sorted.Proper.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -1130,18 +1131,15 @@ Module ProdWSfun (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSfun E
   Include _ProdWSfun.Inner.
 End ProdWSfun.
 
-Module ProdUsualWeakMap (E1 : UsualDecidableTypeOrig) (E2 : UsualDecidableTypeOrig) (M1 : WSfun E1) (M2 : WSfun E2).
-  Module ProdUsualWeakMap <: WS.
-    Module Outer := ProdWSfun_gen E1 E2 M1 M2.
-    Module E := ProdUsualDecidableTypeOrig E1 E2.
-    Module ECompat <: Outer.ESigCompat E.
-      Lemma eq_alt : forall x y, E.eq x y <-> RelProd E1.eq E2.eq x y.
-      Proof. cbv; intros; break_innermost_match; intuition congruence. Qed.
-    End ECompat.
-    Module Inner := Outer.ProdWSfun_gen E ECompat.
-    Include Inner.
-  End ProdUsualWeakMap.
-  Include ProdUsualWeakMap.Inner.
+Module ProdUsualWeakMap (M1 : UsualWS) (M2 : UsualWS) <: UsualWS.
+  Module Outer := ProdWSfun_gen M1.E M2.E M1 M2.
+  Module E := ProdUsualDecidableTypeOrig M1.E M2.E.
+  Module ECompat <: Outer.ESigCompat E.
+    Lemma eq_alt : forall x y, E.eq x y <-> RelProd M1.E.eq M2.E.eq x y.
+    Proof. cbv; intros; break_innermost_match; intuition congruence. Qed.
+  End ECompat.
+  Module Inner := Outer.ProdWSfun_gen E ECompat.
+  Include Inner.
 End ProdUsualWeakMap.
 
 Module ProdWeakMap (M1 : WS) (M2 : WS) <: WS.
@@ -1224,20 +1222,17 @@ Module ProdSfun (E1 : OrderedTypeOrig) (E2 : OrderedTypeOrig) (M1 : Sfun E1) (M2
   Include _ProdSfun.Inner.
 End ProdSfun.
 
-Module ProdUsualMap (E1 : UsualOrderedTypeOrig) (E2 : UsualOrderedTypeOrig) (M1 : Sfun E1) (M2 : Sfun E2).
-  Module ProdUsualMap <: S.
-    Module Outer := ProdSfun_gen E1 E2 M1 M2.
-    Module E := ProdUsualOrderedTypeOrig E1 E2.
-    Module ECompat <: Outer.ESigCompat E.
-      Lemma eq_alt : forall x y, E.eq x y <-> RelProd E1.eq E2.eq x y.
-      Proof. cbv; intros; break_innermost_match; intuition congruence. Qed.
-      Lemma lt_alt : forall x y, E.lt x y <-> E.lt x y.
-      Proof. cbv [E.lt]; reflexivity. Qed.
-    End ECompat.
-    Module Inner := Outer.ProdSfun_gen E ECompat.
-    Include Inner.
-  End ProdUsualMap.
-  Include ProdUsualMap.Inner.
+Module ProdUsualMap (M1 : UsualS) (M2 : UsualS) <: UsualS.
+  Module Outer := ProdSfun_gen M1.E M2.E M1 M2.
+  Module E := ProdUsualOrderedTypeOrig M1.E M2.E.
+  Module ECompat <: Outer.ESigCompat E.
+    Lemma eq_alt : forall x y, E.eq x y <-> RelProd M1.E.eq M2.E.eq x y.
+    Proof. cbv; intros; break_innermost_match; intuition congruence. Qed.
+    Lemma lt_alt : forall x y, E.lt x y <-> E.lt x y.
+    Proof. cbv [E.lt]; reflexivity. Qed.
+  End ECompat.
+  Module Inner := Outer.ProdSfun_gen E ECompat.
+  Include Inner.
 End ProdUsualMap.
 
 Module ProdMap (M1 : S) (M2 : S) <: S.

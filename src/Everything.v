@@ -185,6 +185,7 @@ Crypto.Util.ErrorT.List
 Crypto.Util.ErrorT.Show
 Crypto.Util.FSets.FMapBool
 Crypto.Util.FSets.FMapEmpty
+Crypto.Util.FSets.FMapInterface
 Crypto.Util.FSets.FMapIso
 Crypto.Util.FSets.FMapN
 Crypto.Util.FSets.FMapOption

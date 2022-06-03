@@ -19,6 +19,7 @@ Require Import Crypto.Util.Structures.Orders.
 Require Import Crypto.Util.Structures.Orders.Unit.
 Require Import Crypto.Util.Structures.Orders.Prod.
 Require Import Crypto.Util.Structures.Orders.Option.
+Require Import Crypto.Util.FSets.FMapInterface.
 Require Import Crypto.Util.FSets.FMapUnit.
 Require Import Crypto.Util.Sorting.Sorted.Proper.
 Require Import Crypto.Util.Tactics.SplitInContext.
@@ -639,18 +640,15 @@ Module OptionWSfun (E2 : DecidableTypeOrig) (M2 : WSfun E2).
   Include _OptionWSfun.Inner.
 End OptionWSfun.
 
-Module OptionUsualWeakMap (E2 : UsualDecidableTypeOrig) (M2 : WSfun E2).
-  Module OptionUsualWeakMap <: WS.
-    Module Outer := OptionWSfun_gen E2 M2.
-    Module E := OptionUsualDecidableTypeOrig E2.
-    Module ECompat <: Outer.ESigCompat E.
-      Lemma eq_alt : forall x y, E.eq x y <-> option_eq E2.eq x y.
-      Proof. cbv [E.eq option_eq E2.eq]; intros; break_innermost_match; intuition congruence. Qed.
-    End ECompat.
-    Module Inner := Outer.OptionWSfun_gen E ECompat.
-    Include Inner.
-  End OptionUsualWeakMap.
-  Include OptionUsualWeakMap.Inner.
+Module OptionUsualWeakMap (M2 : UsualWS) <: UsualWS.
+  Module Outer := OptionWSfun_gen M2.E M2.
+  Module E := OptionUsualDecidableTypeOrig M2.E.
+  Module ECompat <: Outer.ESigCompat E.
+    Lemma eq_alt : forall x y, E.eq x y <-> option_eq M2.E.eq x y.
+    Proof. cbv [E.eq option_eq M2.E.eq]; intros; break_innermost_match; intuition congruence. Qed.
+  End ECompat.
+  Module Inner := Outer.OptionWSfun_gen E ECompat.
+  Include Inner.
 End OptionUsualWeakMap.
 
 Module OptionWeakMap (M2 : WS) <: WS.
@@ -718,20 +716,17 @@ Module OptionSfun (E2 : OrderedTypeOrig) (M2 : Sfun E2).
   Include _OptionSfun.Inner.
 End OptionSfun.
 
-Module OptionUsualMap (E2 : UsualOrderedTypeOrig) (M2 : Sfun E2).
-  Module OptionUsualMap <: S.
-    Module Outer := OptionSfun_gen E2 M2.
-    Module E := OptionUsualOrderedTypeOrig E2.
-    Module ECompat <: Outer.ESigCompat E.
-      Lemma eq_alt : forall x y, E.eq x y <-> option_eq E2.eq x y.
-      Proof. cbv [E.eq option_eq E2.eq]; intros; break_innermost_match; intuition congruence. Qed.
-      Lemma lt_alt : forall x y, E.lt x y <-> E.lt x y.
-      Proof. cbv [E.lt]; reflexivity. Qed.
-    End ECompat.
-    Module Inner := Outer.OptionSfun_gen E ECompat.
-    Include Inner.
-  End OptionUsualMap.
-  Include OptionUsualMap.Inner.
+Module OptionUsualMap (M2 : UsualS) <: UsualS.
+  Module Outer := OptionSfun_gen M2.E M2.
+  Module E := OptionUsualOrderedTypeOrig M2.E.
+  Module ECompat <: Outer.ESigCompat E.
+    Lemma eq_alt : forall x y, E.eq x y <-> option_eq M2.E.eq x y.
+    Proof. cbv [E.eq option_eq M2.E.eq]; intros; break_innermost_match; intuition congruence. Qed.
+    Lemma lt_alt : forall x y, E.lt x y <-> E.lt x y.
+    Proof. cbv [E.lt]; reflexivity. Qed.
+  End ECompat.
+  Module Inner := Outer.OptionSfun_gen E ECompat.
+  Include Inner.
 End OptionUsualMap.
 
 Module OptionMap (M2 : S) <: S.
