@@ -48,15 +48,15 @@ Module Type IsoOrderedTypeOrig (E : EqLt) := OrderedTypeOrig <+ HasIso E <+ IsIs
 Module Type IsoUsualMiniOrderedType (E : UsualEqLt) := UsualMiniOrderedType <+ HasIso E <+ IsIso E <+ IsIsoLt E.
 Module Type IsoUsualOrderedTypeOrig (E : UsualEqLt) := UsualOrderedTypeOrig <+ HasIso E <+ IsIso E <+ IsIsoLt E.
 
-Module LiftIsoHasLt (E : EqLt) (Import I : Iso E) <: HasLt I.
+Module LiftIsoHasLt (E : EqLt) (Import I : Iso.Iso E) <: HasLt I.
   Definition lt : relation t := fun x y => E.lt (to_ x) (to_ y).
 End LiftIsoHasLt.
 
-Module LiftIsoHasLe (E : EqLe) (Import I : Iso E) <: HasLe I.
+Module LiftIsoHasLe (E : EqLe) (Import I : Iso.Iso E) <: HasLe I.
   Definition le : relation t := fun x y => E.le (to_ x) (to_ y).
 End LiftIsoHasLe.
 
-Module LiftSectIsLt (E : EqLt) (Import I : Iso E).
+Module LiftSectIsLt (E : EqLt) (Import I : Iso.Iso E).
   Module Import _LiftSectIsLt.
     Module Import I' := LiftIsoHasLt E I.
   End _LiftSectIsLt.
@@ -79,6 +79,38 @@ Module LiftUsualRetrIsLt (E : UsualEqLt) (Import I : IsoEqualityType E).
   Global Instance Proper_of_lt : Proper (E.lt ==> I'.lt) I.of_ | 5.
   Proof. cbv; intros *. rewrite !I.to_of. exact id. Qed.
 End LiftUsualRetrIsLt.
+
+Module LiftIsoLtTrans (E : MiniOrderedType) (Import I : Iso.Iso E).
+  Module Import _LiftSectLtTrans.
+    Module Import I' := LiftIsoHasLt E I.
+  End _LiftSectLtTrans.
+  Lemma lt_trans : forall x y z : I.t, I'.lt x y -> I'.lt y z -> I'.lt x z.
+  Proof. cbv; intros *; apply E.lt_trans. Qed.
+End LiftIsoLtTrans.
+
+Module LiftIsoLtNotEq (E : MiniOrderedType) (Import I : SectEqualityType E).
+  Module Import _LiftSectLtNotEq.
+    Module Import I' := LiftIsoHasLt E I.
+  End _LiftSectLtNotEq.
+  Lemma lt_not_eq : forall x y : t, I'.lt x y -> ~ I.eq x y.
+  Proof. cbv; intros * H H'; apply E.lt_not_eq in H; apply H. f_equiv; assumption. Qed.
+End LiftIsoLtNotEq.
+
+Module LiftSectCompareOrig (E : MiniOrderedType) (Import I : SectEqualityType E).
+  Module Import _LiftSectCompareOrig.
+    Module Import I' := LiftIsoHasLt E I.
+  End _LiftSectCompareOrig.
+  Definition compare : forall x y : t, OrderedType.Compare I'.lt I.eq x y.
+  Proof.
+    intros x y.
+    destruct (E.compare (to_ x) (to_ y)) as [H|H|H]; try (constructor; assumption).
+    apply Proper_of_ in H.
+    rewrite !of_to in H.
+    constructor; assumption.
+  Defined.
+End LiftSectCompareOrig.
+
+Module LiftSectHasMiniOrderedType (E : MiniOrderedType) (I : SectEqualityType E) := LiftIsoLtTrans E I <+ LiftIsoLtNotEq E I <+ LiftSectCompareOrig E I.
 
 Module Type SectEqLt (E : EqLt) := EqLt <+ HasIso E <+ IsSect E <+ IsIsoLt E.
 Module Type SectEqLe (E : EqLe) := EqLe <+ HasIso E <+ IsSect E <+ IsIsoLe E.
