@@ -25,6 +25,7 @@ Require Import Crypto.Util.Structures.Equalities.
 Require Import Crypto.Util.Structures.Equalities.List.
 Require Import Crypto.Util.Structures.Orders.
 Require Import Crypto.Util.Structures.Orders.List.
+Require Import Crypto.Util.FSets.FMapInterface.
 Require Import Crypto.Util.Sorting.Sorted.Proper.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -1708,18 +1709,15 @@ Module ListWSfun (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M).
   Include _ListWSfun.Inner.
 End ListWSfun.
 
-Module ListUsualWeakMap (Y : UsualDecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M).
-  Module ListUsualWeakMap <: WS.
-    Module Outer := ListWSfun_gen Y M T.
-    Module E := ListUsualDecidableTypeOrig Y.
-    Module ECompat <: Outer.ESigCompat E.
-      Lemma eq_alt : forall x y, E.eq x y <-> eqlistA Y.eq x y.
-      Proof. cbv; intros; rewrite eqlistA_eq_iff; intuition. Qed.
-    End ECompat.
-    Module Inner <: WSfun E := Outer.ListWSfun_gen E ECompat.
-    Include Inner.
-  End ListUsualWeakMap.
-  Include ListUsualWeakMap.Inner.
+Module ListUsualWeakMap (M : UsualWS) (Import T : Trie M.E M) <: UsualWS.
+  Module Outer := ListWSfun_gen M.E M T.
+  Module E := ListUsualDecidableTypeOrig M.E.
+  Module ECompat <: Outer.ESigCompat E.
+    Lemma eq_alt : forall x y, E.eq x y <-> eqlistA M.E.eq x y.
+    Proof. cbv; intros; rewrite eqlistA_eq_iff; intuition. Qed.
+  End ECompat.
+  Module Inner <: WSfun E := Outer.ListWSfun_gen E ECompat.
+  Include Inner.
 End ListUsualWeakMap.
 
 Module ListWeakMap (M : WS) (T : Trie M.E M) <: WS.
@@ -1825,20 +1823,17 @@ Module ListSfun (Y : OrderedTypeOrig) (M : Sfun Y) (T : Trie Y M).
   Include _ListSfun.Inner.
 End ListSfun.
 
-Module ListUsualMap (Y : UsualOrderedTypeOrig) (M : Sfun Y) (T : Trie Y M).
-  Module ListUsualMap <: S.
-    Module Outer := ListSfun_gen Y M T.
-    Module E := ListUsualOrderedTypeOrig Y.
-    Module ECompat <: Outer.ESigCompat E.
-      Lemma eq_alt : forall x y, E.eq x y <-> eqlistA Y.eq x y.
-      Proof. cbv; intros; rewrite eqlistA_eq_iff; intuition. Qed.
-      Lemma lt_alt : forall x y, E.lt x y <-> E.lt x y.
-      Proof. cbv [E.lt]; reflexivity. Qed.
-    End ECompat.
-    Module Inner <: Sfun E := Outer.ListSfun_gen E ECompat.
-    Include Inner.
-  End ListUsualMap.
-  Include ListUsualMap.Inner.
+Module ListUsualMap (M : UsualS) (T : Trie M.E M) <: UsualS.
+  Module Outer := ListSfun_gen M.E M T.
+  Module E := ListUsualOrderedTypeOrig M.E.
+  Module ECompat <: Outer.ESigCompat E.
+    Lemma eq_alt : forall x y, E.eq x y <-> eqlistA M.E.eq x y.
+    Proof. cbv; intros; rewrite eqlistA_eq_iff; intuition. Qed.
+    Lemma lt_alt : forall x y, E.lt x y <-> E.lt x y.
+    Proof. cbv [E.lt]; reflexivity. Qed.
+  End ECompat.
+  Module Inner <: Sfun E := Outer.ListSfun_gen E ECompat.
+  Include Inner.
 End ListUsualMap.
 
 Module ListMap (M : S) (T : Trie M.E M) <: S.
