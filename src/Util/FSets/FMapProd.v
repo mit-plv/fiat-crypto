@@ -942,7 +942,7 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
       Proof using Type. split; first [ apply M1.equal_1 | apply M1.equal_2 ]. Qed.
       Lemma M2_equal_iff elt0 cmp0 m0 m'0 : @M2.equal elt0 cmp0 m0 m'0 = true <-> M2.Equivb cmp0 m0 m'0.
       Proof using Type. split; first [ apply M2.equal_1 | apply M2.equal_2 ]. Qed.
-      Lemma equal_iff : equal cmp m m' = true <-> Equivb cmp m m'.
+      Lemma M_equal_iff : equal cmp m m' = true <-> Equivb cmp m m'.
       Proof using Type.
         clear; cbv [equal Equivb] in *.
         rewrite Equiv_alt_iff, M1_equal_iff.
@@ -951,9 +951,9 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
         rewrite M2_equal_iff; reflexivity.
       Qed.
       Lemma equal_1 : Equivb cmp m m' -> equal cmp m m' = true.
-      Proof using Type. apply equal_iff. Qed.
+      Proof using Type. apply M_equal_iff. Qed.
       Lemma equal_2 : equal cmp m m' = true -> Equivb cmp m m'.
-      Proof using Type. apply equal_iff. Qed.
+      Proof using Type. apply M_equal_iff. Qed.
     End Spec.
 
     Lemma M1_map_full : forall (elt elt':Type)(m: M1.t elt)(x:M1.key)(f:elt->elt'), M1.find x (M1.map f m) = option_map f (M1.find x m).

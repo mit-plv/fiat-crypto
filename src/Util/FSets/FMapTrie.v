@@ -1632,7 +1632,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
       Variable m m' : t elt.
       Variable cmp : elt -> elt -> bool.
 
-      Lemma equal_iff : equal cmp m m' = true <-> Equivb cmp m m'.
+      Lemma trie_equal_iff : equal cmp m m' = true <-> Equivb cmp m m'.
       Proof using Type.
         clear; cbv [equal Equivb] in *.
         cbv [Equiv In Cmp].
@@ -1689,9 +1689,9 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
         all: eassumption.
       Qed.
       Lemma equal_1 : Equivb cmp m m' -> equal cmp m m' = true.
-      Proof using Type. apply equal_iff. Qed.
+      Proof using Type. apply trie_equal_iff. Qed.
       Lemma equal_2 : equal cmp m m' = true -> Equivb cmp m m'.
-      Proof using Type. apply equal_iff. Qed.
+      Proof using Type. apply trie_equal_iff. Qed.
     End Spec_equal.
   End ListWSfun_gen.
 End ListWSfun_gen.
