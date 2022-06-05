@@ -12,6 +12,7 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SpecializeUnderBindersBy.
 Require Import Crypto.Util.Tactics.InHypUnderBindersDo.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.SetoidSubst.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.UniquePose.
@@ -63,8 +64,10 @@ Local Ltac t_destr_step :=
 Module WAdditionalFacts_fun (E:DecidableTypeOrig)(Import M:WSfun E).
   Module Import _WAdditionalFacts_fun.
     Module WFacts := WFacts_fun E M.
+    Module WProperties := WProperties_fun E M.
   End _WAdditionalFacts_fun.
   Import _WAdditionalFacts_fun.WFacts.
+  Import _WAdditionalFacts_fun.WProperties.
 
   Local Instance Proper_eq_key_elt_iff elt
     : Proper (eq ==> RelationPairs.RelProd E.eq eq ==> iff) (@M.eq_key_elt elt).
@@ -265,6 +268,49 @@ Module WAdditionalFacts_fun (E:DecidableTypeOrig)(Import M:WSfun E).
   Proof.
     rewrite forall_In_elements_iff; [ reflexivity | ].
     cbv; repeat intro; repeat t_destr_step; assumption.
+  Qed.
+
+  Lemma fold_remove elt A (eqA : relation A)
+        {EqvA : Equivalence eqA}
+        (f : key -> elt -> A -> A)
+        {f_Proper : Proper (E.eq ==> eq ==> eqA ==> eqA) f}
+        (Hf : transpose_neqkey eqA f)
+        (m : t elt) k e i
+        (Hk : find k m = Some e)
+    : eqA (fold f m i) (f k e (fold f (remove k m) i)).
+  Proof.
+    apply fold_Add; try assumption.
+    { cbv [In]; setoid_rewrite find_mapsto_iff.
+      setoid_rewrite remove_o; break_innermost_match; firstorder (try congruence; auto). }
+    { cbv [Add]; intro.
+      rewrite add_o, remove_o; break_innermost_match; setoid_subst_rel E.eq; auto. }
+  Qed.
+
+  Lemma fold_add_remove elt A (eqA : relation A)
+        {EqvA : Equivalence eqA}
+        (f : key -> elt -> A -> A)
+        {f_Proper : Proper (E.eq ==> eq ==> eqA ==> eqA) f}
+        (Hf : transpose_neqkey eqA f)
+        (m : t elt) k e i
+    : eqA (fold f (add k e m) i) (f k e (fold f (remove k m) i)).
+  Proof.
+    apply fold_Add; try assumption.
+    { cbv [In]; setoid_rewrite find_mapsto_iff.
+      setoid_rewrite remove_o; break_innermost_match; firstorder (try congruence; auto). }
+    { cbv [Add]; intro.
+      rewrite !add_o, remove_o; break_innermost_match; reflexivity. }
+  Qed.
+
+  Lemma cardinal_add elt (m : t elt) k v
+    : cardinal (add k v m) = if mem k m then cardinal m else S (cardinal m).
+  Proof.
+    rewrite !cardinal_fold.
+    break_innermost_match; rewrite <- ?not_mem_in_iff, ?mem_find_b in *.
+    all: try rewrite fold_add by (try exact _; eauto; repeat intro; subst; reflexivity).
+    all: try rewrite fold_add_remove by (try exact _; repeat intro; subst; reflexivity).
+    all: try reflexivity.
+    all: break_innermost_match_hyps; try congruence.
+    { symmetry; eapply fold_remove with (f:=fun _ _ => S); repeat split; repeat intro; try eassumption; subst; reflexivity. }
   Qed.
 End WAdditionalFacts_fun.
 
