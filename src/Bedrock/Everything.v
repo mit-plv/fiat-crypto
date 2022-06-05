@@ -262,6 +262,7 @@ Crypto.Util.ErrorT.List
 Crypto.Util.ErrorT.Show
 Crypto.Util.FSets.FMapBool
 Crypto.Util.FSets.FMapEmpty
+Crypto.Util.FSets.FMapFacts
 Crypto.Util.FSets.FMapFlip
 Crypto.Util.FSets.FMapInterface
 Crypto.Util.FSets.FMapIso
