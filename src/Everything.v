@@ -196,6 +196,8 @@ Crypto.Util.FSets.FMapSect
 Crypto.Util.FSets.FMapSum
 Crypto.Util.FSets.FMapTrie
 Crypto.Util.FSets.FMapTrie.Shape
+Crypto.Util.FSets.FMapTrie.ShapeEx
+Crypto.Util.FSets.FMapTrieEx
 Crypto.Util.FSets.FMapUnit
 Crypto.Util.FSets.FMapZ
 Crypto.Util.Factorize
