@@ -6,6 +6,7 @@ Require Import Rupicola.Examples.Loops Rupicola.Lib.Loops.
 Require Import Crypto.Bedrock.End2End.RupicolaCrypto.Broadcast.
 Require Import Crypto.Bedrock.End2End.RupicolaCrypto.Spec.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import bedrock2.BasicC32Semantics.
 Import Syntax.Coercions ProgramLogic.Coercions.
@@ -250,7 +251,8 @@ intros * HA HB HC HD; eapply HC; subst n.
     eapply sep_assoc, sep_comm, sep_assoc, sep_ex1_l  in HA; case HA as [? ?]; sepsimpl.
     destruct x; cbn [length] in *; try lia; cbn [array] in *; sepsimpl.
     ecancel_assumption.
-*)
+   *)
+
 
  Lemma compile_buf_make_stack (n:nat) :
     let v := buf_make T n in
@@ -514,6 +516,53 @@ intros * HA HB HC HD; eapply HC; subst n.
     rewrite (Radd_0_l word.ring_theory);eauto.
   Qed.
 
+  
+  Lemma compile_buf_unsplit {t m l} (n : nat) (a : array_t T) (bs : buffer_t T) :
+    let v := buf_unsplit a bs in
+    forall offset lenbs (*quantified for better sep condition resolution*),
+    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+           c a var  R,
+      let b := word.add a offset in
+      (bs$T@a * buffer_at (c - lenbs) nil b * R)%sep m ->
+
+      lenbs = length bs ->
+      offset = (word.of_Z (word.unsigned sz * Z.of_nat (length bs))) ->
+      sz * n = length bs ->
+      (let v := v in
+       forall m,
+         (buffer_at c bs a * R)%sep m ->
+         <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+           k_impl
+         <{ pred (k v eq_refl) }>) ->
+      <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+        k_impl
+      <{ pred (nlet_eq [var] v k) }>.
+  Proof.
+    intros * HA Hlen Hoff HB HC; eapply HC; clear HC.
+    subst lenbs offset.
+    unfold buffer_at in *.
+    cbn [array]; sepsimpl; trivial; [].
+    
+    refine (subrelation_refl Lift1Prop.impl1 _ _ _ m HA).
+    eapply Proper_sep_impl1; [|intro; tauto].
+    eapply Proper_sep_impl1; [ intro; tauto|].
+
+    intros m' H.
+    sepsimpl.
+    exists x.
+    cbn [length] in *.
+    sepsimpl; [lia |].
+    subst b.
+    lazymatch goal with
+    | [H : (?x$@?ptr1 * ?P)%sep ?m|- (?x$@?ptr2) ?m] =>
+        replace ptr2 with ptr1;[ecancel_assumption_impl|]
+    end.
+    rewrite <- word.add_assoc.
+    rewrite <- !word.ring_morph_add.
+    f_equal.
+    f_equal.
+    lia.
+  Qed.
 
   (*Only included to support the byte and word lemmas below. Do not use.*)
   Section Deprecated.
@@ -1180,6 +1229,48 @@ Definition uint128_as_bytes (z: Z) :=
 Definition bytes_as_uint128 (bs: list byte) :=
   le_combine bs.
 
+Instance p_field_params : FieldParameters :=
+  {|
+  M_pos := p;
+  a24 := 1%F;
+  mul := "fe1305_mul";
+  add := "fe1305_add";
+  sub := "fe1305_sub";
+  opp := "fe1305_opp";
+  square := "fe1305_square";
+  scmula24 := "fe1305_scmul1_dontuse";
+  inv := "fe1305_inv";
+  from_bytes := "fe1305_from_bytes";
+  to_bytes := "fe1305_to_bytes";
+  select_znz := "fe1305_select_znz";
+  felem_copy := "fe1305_copy";
+  from_word := "fe1305_from_word"
+           |}.
+Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
+Instance p_field_representation : FieldRepresentation := field_representation 5 (2^130) [(1,5)].
+
+(*Set Printing All.*)
+  
+Lemma compile_bytes_as_felem_inplace elts :
+  let v := bytes_as_felem_inplace elts in
+  forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+         a (a_var : string) {t m l e} (R: mem -> Prop),
+    (buffer_at byte (word.of_Z 1) ptsto felem_size_in_bytes elts a * R)%sep m ->
+    length elts = encoded_felem_size_in_bytes ->
+    (let v := v in
+     forall m,
+       (FElem (field_parameters:= p_field_params) (Some tight_bounds) a v * R)%sep m ->
+       <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+         k_impl
+       <{ pred (k v eq_refl) }>) ->
+       <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+         cmd.seq
+           (cmd.call [] "from_bytes" [expr.var a_var; expr.var a_var])
+           k_impl
+       <{ pred (nlet_eq [a_var] v k) }>.
+Admitted.
+
+
 Definition w32s_of_bytes (bs: array_t byte) : array_t word :=
   List.map word.of_Z (List.map le_combine (chunk 4 bs)).
 
@@ -1406,6 +1497,18 @@ Lemma compile_array_split_at {tr} {mem : mem} {locals functions}
       rewrite Nat.min_l in H0; auto.
     Qed.
 
+
+Existing Instance byte_ac.
+Existing Instance byte_ac_ok.
+
+
+
+Lemma poly1305_loop_nil scratch output
+  : poly1305_loop scratch output [] false = output.
+Proof.
+  reflexivity.
+Qed.
+
   Derive poly1305_body SuchThat
          (defn! "poly1305" ("k", "msg", "output") ~> "output" { poly1305_body },
           implements (poly1305))
@@ -1461,20 +1564,10 @@ Proof.
   compile_step.
   change v3 with (fst v3, snd v3).
   repeat compile_step.
-  eapply compile_nlet_as_nlet_eq.
-  
-  Ltac compile_broadcast_expr :=
-  lazymatch goal with
-  | [ |- WeakestPrecondition.cmd _ _ _ _ ?locals (_ (nlet_eq [?var] ?v _)) ] =>
-      let idx_var_str := gensym locals constr:((var++"_idx")%string) in
-      let to_var_str := gensym locals constr:((var++"_to")%string) in
-      simple eapply compile_broadcast_expr
-        with (idx_var:=idx_var_str) (to_var:=to_var_str)
-  end.
-  Existing Instance byte_ac.
-  Existing Instance byte_ac_ok.
-  compile_broadcast_expr.
-  typeclasses eauto.
+
+  Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (map _ (combine _ _)) _))) =>
+         compile_broadcast_expr; shelve : compiler.
+  compile_step. (*TODO: why does repeat compile_step break the later goal?*)
   {
     rewrite map.remove_put_same.
     rewrite map.remove_put_diff.
@@ -1507,6 +1600,61 @@ Proof.
   }
   eapply broadcast_byte_const.
   repeat compile_step.
+  eapply compile_nlet_as_nlet_eq.
+  eapply compile_buf_unsplit.
+  {
+    replace (snd v3) with (fst v).
+    (*cancel_assumption.*)
+    admit.
+    admit.
+  }
+  admit.
+  admit.
+  admit.
+  repeat compile_step.
+  eapply compile_nlet_as_nlet_eq.
+  eapply compile_buf_push_byte.
+  ecancel_assumption.
+  admit.
+  
+  repeat compile_step.
+  shelve.
+  shelve.
+  shelve.
+  repeat compile_step.
+  eapply compile_nlet_as_nlet_eq.
+  eapply compile_bytes_as_felem_inplace.
+  admit.
+  subst v5 v4 v3.
+  unfold buf_unsplit.
+  unfold buf_push.
+  rewrite app_length.
+  rewrite map_length.
+  rewrite combine_length.
+  admit.
+  clear m3 H4 m4 H5.
+  repeat compile_step.
+
+  eapply compile_nlet_as_nlet_eq.
+  change felem_init_zero with (F.of_Z M_pos 0).
+  (*eapply compile_from_word with (x:=0) (P:=fun _ => list byte).*)
+  lazymatch goal with
+    [|- ?G] =>
+      let x := open_constr:(compile_from_word 0 (fun _ => list byte) _ _ _ _ _ _ _ _ _ _ _ _ _ _) in
+      let t := type of x in
+      replace G with t; cycle 1
+  end.
+  {
+    repeat f_equal.
+  }
+  eapply compile_from_word with (x:=0) (P:=fun _ => list byte).
+  admit.
+  repeat compile_step.
+  ecancel_assumption.
+  eapply word.unsigned_of_Z_0.
+  repeat compile_step.
+  rewrite poly1305_loop_nil.
+  unfold nlet at 1.
 Abort.
 
 (** ** Equivalence proof **)

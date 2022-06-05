@@ -633,3 +633,13 @@ Section with_parameters.
   Qed.
 
 End with_parameters.
+ 
+Ltac compile_broadcast_expr :=
+  lazymatch goal with
+  | [ |- WeakestPrecondition.cmd _ _ _ _ ?locals (_ (nlet_eq [?var] ?v _)) ] =>
+      let idx_var_str := gensym locals constr:((var++"_idx")%string) in
+      let to_var_str := gensym locals constr:((var++"_to")%string) in
+      simple eapply compile_broadcast_expr
+        with (idx_var:=idx_var_str) (to_var:=to_var_str);
+      [ typeclasses eauto|..]
+  end.
