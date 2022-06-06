@@ -3,15 +3,17 @@ Require Import Coq.Lists.List.
 Require Import Coq.Structures.Orders.
 Require Import Coq.Structures.OrdersEx.
 Require Import Coq.FSets.FMapInterface.
+Require Import Coq.Program.Program.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.ListUtil.SetoidList.
 Require Import Crypto.Util.Compose.
 Require Import Crypto.Util.Logic.Forall.
 Require Import Crypto.Util.Logic.Exists.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Structures.Equalities.Iso.
-Require Import Crypto.Util.Structures.OrderedType.Iso.
-Require Import Crypto.Util.Structures.OrderedType.
+Require Import Crypto.Util.Structures.Orders.
+Require Import Crypto.Util.Structures.Orders.Iso.
 Require Import Crypto.Util.Sorting.Sorted.Proper.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -24,9 +26,12 @@ Require Import Crypto.Util.Tactics.SetoidSubst.
 Local Set Implicit Arguments.
 (* TODO: move to global settings *)
 Local Set Keyed Unification.
+Local Open Scope lazy_bool_scope.
 
-Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
-       (E : IsoDecidableTypeOrig E') <: WSfun E.
+Create HintDb fmapsect discriminated.
+
+Module WSectSfun (E' : DecidableType) (W' : WSfun E')
+       (E : SectDecidableTypeOrig E') <: WSfun E.
   Local Existing Instances E.Proper_to_ E.Proper_of_.
 
   Local Instance E_eq_equiv : Equivalence E.eq | 10. split; hnf; eauto. Qed.
@@ -38,28 +43,115 @@ Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
 
   Global Hint Transparent key : core.
 
-  Definition t := W'.t.
+  Definition is_proper_key (x : W'.key) : bool
+    := if E'.eq_dec x (E.to_ (E.of_ x)) then true else false.
+  Definition t elt := { m : W'.t elt | forall x e, W'.MapsTo x e m -> is_proper_key x = true }.
+
+  Local Obligation Tactic := cbv beta; intros.
+
+  Notation mk m' := (exist (fun m : W'.t _ => forall x e, W'.MapsTo x e m -> is_proper_key x = true) m' (fun x e pf => _)).
 
   Definition lift {A} (f : W'.key -> A) : key -> A
     := fun x => f (E.to_ x).
   Definition liftho {A B} (f : (W'.key -> A) -> B) : (key -> A) -> B
     := fun f' => f (fun x => f' (E.of_ x)).
 
-  Definition empty : forall elt, t elt := W'.empty.
-  Definition is_empty : forall elt, t elt -> bool := W'.is_empty.
-  Definition add elt : key -> elt -> t elt -> t elt := lift (@W'.add elt).
-  Definition find elt : key -> t elt -> option elt := lift (@W'.find elt).
-  Definition remove elt : key -> t elt -> t elt := lift (@W'.remove elt).
-  Definition mem elt : key -> t elt -> bool := lift (@W'.mem elt).
-  Definition map : forall elt elt', (elt -> elt') -> t elt -> t elt' := W'.map.
-  Definition mapi elt elt' : (key -> elt -> elt') -> t elt -> t elt' := liftho (@W'.mapi elt elt').
-  Definition map2 : forall elt elt' elt'', (option elt -> option elt' -> option elt'') -> t elt -> t elt' -> t elt'' := W'.map2.
-  Definition elements elt (v : t elt) : list (key * elt) := List.map (fun kv => (E.of_ (fst kv), snd kv)) (W'.elements v).
-  Definition cardinal : forall elt, t elt -> nat := W'.cardinal.
-  Definition fold elt A : (key -> elt -> A -> A) -> t elt -> A -> A := liftho (@W'.fold elt A).
-  Definition equal : forall elt, (elt -> elt -> bool) -> t elt -> t elt -> bool := W'.equal.
-  Definition MapsTo elt : key -> elt -> t elt -> Prop := lift (@W'.MapsTo elt).
-  Definition In elt : key -> t elt -> Prop := lift (@W'.In elt).
+  Lemma is_proper_key_to k : is_proper_key (E.to_ k) = true.
+  Proof.
+    cbv [is_proper_key].
+    destruct E'.eq_dec; try reflexivity.
+    rewrite E.of_to in *.
+    exfalso; eauto.
+  Qed.
+  Hint Immediate is_proper_key_to : fmapsect.
+
+  Global Instance Proper_is_proper_key : Proper (E'.eq ==> eq) is_proper_key | 10.
+  Proof.
+    repeat intro; cbv [is_proper_key].
+    do 2 destruct E'.eq_dec; setoid_subst_rel E'.eq; try reflexivity.
+    all: exfalso; eauto.
+  Qed.
+
+  Local Ltac handle_pf :=
+    repeat first [ progress intros
+                 | progress cbv beta in *
+                 | progress cbv [lift liftho] in *
+                 | progress cbn [proj1_sig] in *
+                 | exfalso; assumption
+                 | progress subst
+                 | progress inversion_option
+                 | match goal with
+                   | [ H : W'.MapsTo _ _ (W'.empty _) |- _ ] => apply W'.empty_1 in H
+                   | [ H : W'.MapsTo _ _ (W'.remove _ _) |- _ ] => apply W'.remove_3 in H
+                   | [ H : W'.MapsTo ?y ?e (W'.add ?x ?v ?m) |- _ ]
+                     => destruct (E'.eq_dec x y);
+                        [ let H' := fresh in
+                          pose proof (@W'.add_1 _ m x y v ltac:(assumption)) as H';
+                          apply W'.find_1 in H;
+                          apply W'.find_1 in H';
+                          rewrite H in H';
+                          clear H
+                        | apply W'.add_3 in H; [ | assumption ] ]
+                   | [ H : W'.MapsTo _ _ (W'.map ?f _) |- _ ]
+                     => let H' := fresh in
+                        let H'' := fresh in
+                        destruct (@W'.map_2 _ _ _ _ _ (ex_intro _ _ H)) as [? H'];
+                        pose proof (@W'.map_1 _ _ _ _ _ f H') as H'';
+                        apply W'.find_1 in H;
+                        apply W'.find_1 in H'';
+                        rewrite H in H'';
+                        clear H
+                   | [ H : W'.MapsTo _ _ (W'.mapi ?f _) |- _ ]
+                     => let H' := fresh in
+                        let H'' := fresh in
+                        destruct (@W'.mapi_2 _ _ _ _ _ (ex_intro _ _ H)) as [? H'];
+                        destruct (@W'.mapi_1 _ _ _ _ _ f H') as [? [? H'']];
+                        apply W'.find_1 in H;
+                        apply W'.find_1 in H'';
+                        rewrite H in H'';
+                        clear H
+                   end
+                 | solve [ eauto with nocore fmapsect ]
+                 | progress setoid_subst_rel E'.eq
+                 | progress destruct_head' t
+                 | match goal with
+                   | [ H : W'.MapsTo _ _ (W'.map2 ?f _ _) |- _ ]
+                     => let H' := fresh in
+                        let H'' := fresh in
+                        pose proof (@W'.map2_2 _ _ _ _ _ _ _ (ex_intro _ _ H)) as H';
+                        pose proof (@W'.map2_1 _ _ _ _ _ _ f H') as H'';
+                        apply W'.find_1 in H;
+                        rewrite H in H'';
+                        clear H;
+                        destruct H' as [[? H']|[? H']];
+                        pose proof H' as H;
+                        apply W'.find_1 in H;
+                        rewrite H in H'';
+                        clear H
+                   end ].
+
+  Local Obligation Tactic := try abstract handle_pf; handle_pf.
+
+  Program Definition empty elt : t elt := mk (@W'.empty elt).
+  Program Definition is_empty : forall elt, t elt -> bool := W'.is_empty.
+  Program Definition add elt (k : key) (v : elt) (m : t elt) : t elt
+    := mk (lift (@W'.add elt) k v m).
+  Program Definition find elt : key -> t elt -> option elt := lift (@W'.find elt).
+  Program Definition remove elt (k : key) (m : t elt) : t elt
+    := mk (lift (@W'.remove elt) k m).
+  Program Definition mem elt : key -> t elt -> bool := lift (@W'.mem elt).
+  Program Definition map elt elt' (f : elt -> elt') (m : t elt) : t elt'
+    := mk (W'.map f m).
+  Program Definition mapi elt elt' (f : key -> elt -> elt') (m : t elt) : t elt'
+    := mk (liftho (@W'.mapi elt elt') f m).
+  Program Definition map2 elt elt' elt'' (f : option elt -> option elt' -> option elt'') (m : t elt) (m' : t elt') : t elt''
+    := mk (W'.map2 f m m').
+  Program Definition elements elt (v : t elt) : list (key * elt) := List.map (fun kv => (E.of_ (fst kv), snd kv)) (W'.elements v).
+  Program Definition cardinal : forall elt, t elt -> nat := W'.cardinal.
+  Program Definition fold elt A : (key -> elt -> A -> A) -> t elt -> A -> A := liftho (@W'.fold elt A).
+  Program Definition equal : forall elt, (elt -> elt -> bool) -> t elt -> t elt -> bool := W'.equal.
+  Program Definition MapsTo elt : key -> elt -> t elt -> Prop := lift (@W'.MapsTo elt).
+  Program Definition In elt : key -> t elt -> Prop := lift (@W'.In elt).
   Definition eq_key elt (p p' : key * elt) : Prop := E.eq (fst p) (fst p'). (* W'.eq_key (E.to_ (fst p), snd p) (E.to_ (fst p'), snd p').*)
   Definition eq_key_elt elt (p p' : key * elt) : Prop := E.eq (fst p) (fst p') /\ snd p = snd p'. (*W'.eq_key_elt (E.to_ (fst p), snd p) (E.to_ (fst p'), snd p').*)
 
@@ -119,17 +211,47 @@ Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
     etransitivity; rewrite <- E.of_to; [ | reflexivity ]; f_equiv; assumption.
   Qed.
 
-  Lemma eq_to_of_iff x y
-    : E'.eq (E.to_ x) y <-> E.eq x (E.of_ y).
+  Lemma eq_to_of_impl x y
+    : E'.eq (E.to_ x) y -> E.eq x (E.of_ y).
   Proof.
-    split; intro H; (rewrite -> H || rewrite <- H);
-      (rewrite E.to_of || rewrite E.of_to);
+    intro H; (rewrite -> H || rewrite <- H);
+      rewrite E.of_to;
       reflexivity.
   Qed.
 
-  Lemma eq_to_of_iff' x y
+  Lemma eq_to_of_impl' x y
+    : E'.eq y (E.to_ x) -> E.eq (E.of_ y) x.
+  Proof. intro; symmetry; apply eq_to_of_impl; symmetry; assumption. Qed.
+
+  Lemma eq_to_of_flip_impl_proper_key x y
+        (H' : is_proper_key y = true)
+    : E.eq x (E.of_ y) -> E'.eq (E.to_ x) y.
+  Proof.
+    intro H; (rewrite -> H || rewrite <- H);
+      cbv [is_proper_key] in *;
+      break_innermost_match_hyps;
+      try congruence;
+      (idtac + symmetry); assumption.
+  Qed.
+
+  Lemma eq_to_of_flip_impl_proper_key' x y
+        (H' : is_proper_key y = true)
+    : E.eq (E.of_ y) x -> E'.eq y (E.to_ x).
+  Proof. intro; symmetry; apply eq_to_of_flip_impl_proper_key; auto; symmetry; assumption. Qed.
+
+  Lemma eq_to_of_iff_proper_key x y
+        (H' : is_proper_key y = true)
+    : E'.eq (E.to_ x) y <-> E.eq x (E.of_ y).
+  Proof.
+    split; (apply eq_to_of_impl + apply eq_to_of_flip_impl_proper_key); assumption.
+  Qed.
+
+  Lemma eq_to_of_iff_proper_key' x y
+        (H' : is_proper_key y = true)
     : E'.eq y (E.to_ x) <-> E.eq (E.of_ y) x.
-  Proof. split; symmetry; apply eq_to_of_iff; symmetry; assumption. Qed.
+  Proof.
+    split; (apply eq_to_of_impl' + apply eq_to_of_flip_impl_proper_key'); assumption.
+  Qed.
 
   Local Instance W'_Equal_Equivalence elt : Equivalence (@W'.Equal elt) | 10.
   Proof. split; cbv; firstorder eauto using eq_trans. Qed.
@@ -175,21 +297,41 @@ Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
       (forall k e e', MapsTo k e m -> MapsTo k e' m' -> eq_elt e e').
   Definition Equivb elt (cmp: elt->elt->bool) := Equiv (Cmp cmp).
 
-  Definition Empty_alt : forall elt, t elt -> Prop := W'.Empty.
-  Definition Equal_alt : forall elt, t elt -> t elt -> Prop := W'.Equal.
-  Definition Equiv_alt : forall elt, (elt -> elt -> Prop) -> t elt -> t elt -> Prop := W'.Equiv.
-  Definition Equivb_alt : forall elt, (elt->elt->bool) -> t elt -> t elt -> Prop := W'.Equivb.
+  Program Definition Empty_alt : forall elt, t elt -> Prop := W'.Empty.
+  Program Definition Equal_alt : forall elt, t elt -> t elt -> Prop := W'.Equal.
+  Program Definition Equiv_alt : forall elt, (elt -> elt -> Prop) -> t elt -> t elt -> Prop := W'.Equiv.
+  Program Definition Equivb_alt : forall elt, (elt->elt->bool) -> t elt -> t elt -> Prop := W'.Equivb.
 
   Lemma forall_lift_key_dep {A} f (P : key -> A -> Prop) R
         (f_Proper : Proper (E'.eq ==> R) f)
         (P_Proper : Proper (E.eq ==> R ==> Basics.impl) P)
-    : (forall a : key, P a (@lift A f a)) <-> (forall a : W'.key, P (E.of_ a) (f a)).
+    : (forall a : key, P a (@lift A f a)) <-> (forall a : W'.key, is_proper_key a = true -> P (E.of_ a) (f a)).
   Proof.
     cbv [lift].
-    split; intro H; intro x; [ specialize (H (E.of_ x)) | specialize (H (E.to_ x)) ].
-    all: eapply P_Proper; try eassumption.
-    all: f_equiv.
-    all: apply E.to_of + apply E.of_to.
+    split; intro H; intro x; [ intro P'; specialize (H (E.of_ x)) | specialize (H (E.to_ x)) ].
+    all: cbv [is_proper_key] in *.
+    all: break_innermost_match_hyps.
+    all: rewrite ?E.of_to in *.
+    all: cbv [not] in *.
+    all: try discriminate.
+    all: specialize_by reflexivity.
+    all: trivial.
+    all: try now exfalso.
+    eapply P_Proper; try eassumption; try reflexivity.
+    apply f_Proper.
+    (idtac + symmetry); eassumption.
+  Qed.
+
+  Lemma forall_lift_key_dep_no_proper {A} f (P : key -> A -> Prop) R
+        (f_Proper : Proper (E'.eq ==> R) f)
+        (P_Proper : Proper (E.eq ==> R ==> Basics.impl) P)
+        (H_side_cond : forall a : W'.key, is_proper_key a = false -> P (E.of_ a) (f a))
+    : (forall a : key, P a (@lift A f a)) <-> (forall a : W'.key, P (E.of_ a) (f a)).
+  Proof.
+    rewrite forall_lift_key_dep by eassumption.
+    apply pull_forall_iff; intro a.
+    specialize (H_side_cond a).
+    destruct (is_proper_key a); intuition.
   Qed.
 
   Local Ltac t_alt_iff :=
@@ -218,7 +360,7 @@ Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
         => lazymatch LHS with
            | (forall a : key, @?P a)
              => let P' := get_P (lift f) P in
-                setoid_rewrite (@forall_lift_key_dep _ f P')
+                setoid_rewrite (@forall_lift_key_dep_no_proper _ f P')
            | _ => fail 0 "unhandled" LHS (*
 |
          | [ |-                (exists a : elt, @?P a) <-> _ ]
@@ -235,12 +377,26 @@ Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
       end in
     handle_lift ();
     try exact _;
-    [ try reflexivity
+    [ try reflexivity; cbv [W'.Equal W'.Empty W'.Equiv W'.Equivb]
     | try solve [ cbv [Proper respectful Basics.impl Basics.flip option_eq];
                   intros; split_iff;
+                  destruct_head' t; cbn [proj1_sig] in *;
                   specialize_under_binders_by reflexivity;
                   specialize_all_ways; break_innermost_match_hyps; inversion_option; subst;
-                  firstorder eauto; congruence ]..
+                  firstorder eauto; congruence ];
+      lazymatch goal with
+      | [ |- context[is_proper_key _ = false] ]
+        => repeat first [ progress destruct_head' t
+                        | progress cbn [proj1_sig] in *
+                        | progress specialize_under_binders_by apply W'.find_2
+                        | congruence
+                        | progress specialize_all_ways_under_binders_by eassumption
+                        | progress intros
+                        | match goal with
+                          | [ |- context[W'.find ?x ?m] ] => destruct (W'.find x m) eqn:?
+                          end ]
+      | _ => idtac
+      end ..
     ].
 
   Lemma Equal_alt_iff elt (s s' : t elt) : Equal s s' <-> Equal_alt s s'.
@@ -252,6 +408,7 @@ Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
   Lemma Equivb_alt_iff elt cmp (s s' : t elt) : Equivb cmp s s' <-> Equivb_alt cmp s s'.
   Proof. t_alt_iff. Qed.
 
+  Create HintDb fmapsect_is_proper_key discriminated.
   Create HintDb iso_map_alt discriminated.
   Create HintDb iso_map_alt1 discriminated.
   Create HintDb iso_map_alt2 discriminated.
@@ -290,8 +447,8 @@ Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
 
   Hint Rewrite Empty_alt_iff Equal_alt_iff Equiv_alt_iff Equivb_alt_iff
        eq_to_iff
-       eq_to_of_iff
-       eq_to_of_iff'
+       (*eq_to_of_impl
+       eq_to_of_impl'*)
        (*W'.is_empty_spec
        W'.mem_spec
        W'.add_spec
@@ -312,7 +469,7 @@ Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
        W'.cardinal_1
        W'.fold_1
        E.of_to
-       E.to_of
+       (*E.to_of*)
        map_length
        fold_left_map
     : iso_map_alt.
@@ -351,6 +508,11 @@ Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
   Global Hint Extern 10 => rewrite eq_to_iff in *
              : iso_map_alt1 iso_map_alt2 iso_map_alt3.
 
+  Global Hint Immediate
+         eq_to_of_impl
+         eq_to_of_impl'
+    : iso_map_alt1 iso_map_alt2 iso_map_alt3 core.
+
   (*Local Hint Resolve
         W'.empty_spec
         W'.elements_spec2w
@@ -361,6 +523,7 @@ Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
   Local Ltac spec_t_step_quick
     := first [ progress intros
              | progress cbn [fst snd] in *
+             | progress subst
              | apply (f_equal2 (@pair _ _))
              | progress repeat autorewrite with iso_map_alt in *
              | progress repeat autounfold with iso_map_alt in *
@@ -370,7 +533,10 @@ Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
              | exact _
              | progress destruct_head'_and
              | progress destruct_head'_ex
-             | progress specialize_under_binders_by eassumption ].
+             | progress specialize_under_binders_by eassumption
+             | match goal with
+               | [ H : _ * _ |- _ ] => let H' := fresh in rename H into H'; destruct H'
+               end ].
 
   Global Hint Extern 100
          => spec_t_step_quick
@@ -384,6 +550,36 @@ Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
 
   Local Hint Extern 2 => Proper_compose_hint : typeclass_instances.
 
+  Hint Transparent W'.eq_key_elt : fmapsect_is_proper_key.
+
+  Lemma is_proper_key_of_InA_elements elt k v (m : t elt)
+        (H : InA (@W'.eq_key_elt _) (k, v) (W'.elements (` m)))
+    : is_proper_key k = true.
+  Proof.
+    destruct m as [m H']; cbn [proj1_sig] in *.
+    spec_t.
+  Qed.
+
+  Lemma is_proper_key_of_In_elements elt k v (m : t elt)
+        (H : List.In (k, v) (W'.elements (` m)))
+    : is_proper_key k = true.
+  Proof.
+    eapply is_proper_key_of_InA_elements.
+    rewrite InA_alt.
+    eexists (_, _); split; [ | eassumption ]; split; reflexivity.
+  Qed.
+
+  Hint Resolve
+       is_proper_key_of_InA_elements
+       is_proper_key_of_In_elements
+    : fmapsect_is_proper_key.
+
+  Hint Rewrite
+       eq_to_of_iff_proper_key
+       eq_to_of_iff_proper_key
+       using solve [ eauto with nocore fmapsect_is_proper_key ]
+    : iso_map_alt.
+
   Section Spec.
 
     Variable elt:Type.
@@ -393,80 +589,82 @@ Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
     Variable e e' : elt.
 
     Lemma MapsTo_1 : E.eq x y -> MapsTo x e m -> MapsTo y e m.
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
     Lemma mem_1 : In x m -> mem x m = true.
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
     Lemma mem_2 : mem x m = true -> In x m.
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
     Lemma empty_1 : Empty (@empty elt).
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
     Lemma is_empty_1 : Empty m -> is_empty m = true.
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
     Lemma is_empty_2 : is_empty m = true -> Empty m.
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
     Lemma add_1 : E.eq x y -> MapsTo y e (add x e m).
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
     Lemma add_2 : ~ E.eq x y -> MapsTo y e m -> MapsTo y e (add x e' m).
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
     Lemma add_3 : ~ E.eq x y -> MapsTo y e (add x e' m) -> MapsTo y e m.
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
     Lemma remove_1 : E.eq x y -> ~ In y (remove x m).
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
     Lemma remove_2 : ~ E.eq x y -> MapsTo y e m -> MapsTo y e (remove x m).
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
     Lemma remove_3 : MapsTo y e (remove x m) -> MapsTo y e m.
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
     Lemma find_1 : MapsTo x e m -> find x m = Some e.
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
     Lemma find_2 : find x m = Some e -> MapsTo x e m.
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
     Lemma elements_1 :
       MapsTo x e m -> InA (@eq_key_elt _) (x,e) (elements m).
-    Proof using Type. spec_t. rewrite InA_map_iff; spec_t. Qed.
+    Proof using Type. clear. spec_t. rewrite InA_map_iff_strict_InA in *; spec_t. Qed.
     Lemma elements_2 :
       InA (@eq_key_elt _) (x,e) (elements m) -> MapsTo x e m.
-    Proof using Type. spec_t. rewrite InA_map_iff in *; spec_t. Qed.
+    Proof using Type. clear. spec_t. rewrite InA_map_iff_strict_InA in *; spec_t. Qed.
     Lemma elements_3w : NoDupA (@eq_key _) (elements m).
     Proof using Type.
-      pose proof (W'.elements_3w m).
+      clear.
+      pose proof (W'.elements_3w (` m)).
       spec_t.
       apply NoDupA_map_inv with (f:=fun p => (E.to_ (fst p), snd p)) (eqB:=@W'.eq_key _); [ cbv; intros *; break_innermost_match; now spec_t | ].
       rewrite List.map_map.
       setoid_rewrite (_ : eqlistA (@W'.eq_key _) (List.map _ _) _);
-        [
-        | eapply Proper_map; [ | reflexivity ] ];
-        [ rewrite List.map_id; eassumption
-        | cbv -[fst snd]; cbn ].
+        [ instantiate (1:=List.map (fun x => x) _); rewrite List.map_id; eassumption
+        | ].
+      rewrite eqlistA_altdef, Forall2_map_map_iff, Forall2_Forall, Forall_forall.
+      cbv [W'.eq_key Proper]; cbn [fst snd].
       spec_t.
     Qed.
     Lemma cardinal_1 : cardinal m = length (elements m).
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
 
     Lemma fold_1 :
       forall (A : Type) (i : A) (f : key -> elt -> A -> A),
         fold f m i = fold_left (fun a p => f (fst p) (snd p) a) (elements m) i.
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
 
     Variable cmp : elt -> elt -> bool.
 
     Lemma equal_1 : Equivb cmp m m' -> equal cmp m m' = true.
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
     Lemma equal_2 : equal cmp m m' = true -> Equivb cmp m m'.
-    Proof using Type. spec_t. Qed.
+    Proof using Type. clear. spec_t. Qed.
   End Spec.
 
   Lemma map_1 : forall (elt elt':Type)(m: t elt)(x:key)(e:elt)(f:elt->elt'),
       MapsTo x e m -> MapsTo x (f e) (map f m).
-  Proof. spec_t. Qed.
+  Proof. clear. spec_t. Qed.
   Lemma map_2 : forall (elt elt':Type)(m: t elt)(x:key)(f:elt->elt'),
       In x (map f m) -> In x m.
-  Proof. spec_t. Qed.
+  Proof. clear. spec_t. Qed.
   Lemma mapi_1 (elt elt':Type)(m: t elt)(x:key)(e:elt)
         (f:key->elt->elt')
     : MapsTo x e m ->
       exists y, E.eq y x /\ MapsTo x (f y e) (mapi f m).
   Proof.
-    pose proof (fun x => @W'.mapi_1 elt elt' m x e (fun x => f (E.of_ x))).
+    clear.
+    pose proof (fun x => @W'.mapi_1 elt elt' (`m) x e (fun x => f (E.of_ x))).
     spec_t.
     eexists.
     split; [ | eassumption ].
@@ -475,53 +673,84 @@ Module WIsoSfun (E' : DecidableType) (W' : WSfun E')
   Lemma mapi_2
     : forall (elt elt':Type)(m: t elt)(x:key)
              (f:key->elt->elt'), In x (mapi f m) -> In x m.
-  Proof. spec_t. Qed.
+  Proof. clear. spec_t. Qed.
   Lemma map2_1
     : forall (elt elt' elt'':Type)(m: t elt)(m': t elt')
 	     (x:key)(f:option elt->option elt'->option elt''),
       In x m \/ In x m' ->
       find x (map2 f m m') = f (find x m) (find x m').
-  Proof. spec_t. Qed.
+  Proof. clear. spec_t. Qed.
   Lemma map2_2
     : forall (elt elt' elt'':Type)(m: t elt)(m': t elt')
 	     (x:key)(f:option elt->option elt'->option elt''),
       In x (map2 f m m') -> In x m \/ In x m'.
-  Proof. spec_t. Qed.
-End WIsoSfun.
+  Proof. clear. spec_t. Qed.
+End WSectSfun.
 
-Module WIsoS (W' : WS) (E : IsoDecidableTypeOrig W'.E) <: WS.
+Module WSectS (W' : WS) (E : SectDecidableTypeOrig W'.E) <: WS.
   Module E := E.
-  Include WIsoSfun W'.E W' E.
-End WIsoS.
+  Include WSectSfun W'.E W' E.
+End WSectS.
 
-Module IsoSfun (E' : OrderedType) (W' : Sfun E') (E : IsoOrderedType E') <: Sfun E.
-  Include WIsoSfun E' W' E.
+Module SectSfun (E' : OrderedTypeOrig) (W' : Sfun E') (E : SectOrderedTypeOrig E') <: Sfun E.
+  Include WSectSfun E' W' E.
+  Module E'Compat := E' <+ UpdateEq <+ UpdateStrOrder_Compat.
+  Module ECompat := E <+ UpdateEq <+ UpdateStrOrder_Compat.
   Section elt.
     Variable elt:Type.
     Definition lt_key (p p':key*elt) := E.lt (fst p) (fst p').
 
     Lemma elements_3 m : sort lt_key (elements m).
     Proof using Type.
-      pose proof (W'.elements_3 m).
+      pose proof (W'.elements_3 (`m)).
       cbv [elements lt_key W'.lt_key] in *.
       rewrite Sorted_map_iff.
       cbn [fst snd].
-      eapply Sorted_Proper_impl; [ .. | reflexivity | eassumption ].
-      cbv; intros; destruct_head'_prod; destruct_head'_and; subst.
-      apply E.Proper_of_lt; assumption.
+      destruct m as [m pf]; cbn [proj1_sig] in *.
+      specialize_under_binders_by apply W'.elements_2.
+      induction H; constructor; [ | destruct_head' HdRel; constructor ].
+      all: repeat first [ progress specialize_all_ways_under_binders_by eapply InA_cons_hd
+                        | progress specialize_all_ways_under_binders_by eapply InA_cons_tl ].
+      all: specialize_under_binders_by apply conj.
+      all: cbn [fst snd] in *.
+      all: specialize_under_binders_by reflexivity.
+      all: specialize_by_assumption.
+      all: eauto.
+      all: cbv [is_proper_key] in *; break_innermost_match_hyps; try discriminate.
+      destruct_head'_prod; cbn [fst snd] in *.
+      clear pf.
+      repeat match goal with
+             | [ H : Sorted _ _ |- _ ] => clear H
+             | [ H : context[InA] |- _ ] => clear H
+             | [ H : ?x = ?x |- _ ] => clear H
+             end.
+      match goal with
+      | [ |- E.lt ?x ?y ]
+        => destruct (E.compare x y) as [pf'|pf'|pf']; try assumption
+      end.
+      { rewrite pf' in *.
+        setoid_subst_rel E'.eq.
+        exfalso; eapply E'.lt_not_eq; (idtac + symmetry); eassumption. }
+      { apply E.Proper_to_lt in pf'.
+        repeat match goal with
+               | [ H : E'.eq ?x (E.to_ (E.of_ ?x)) |- _ ]
+                 => rewrite <- H in *
+               end.
+        exfalso; eapply E'.lt_not_eq; try reflexivity; eapply E'.lt_trans; eassumption. }
     Qed.
   End elt.
-End IsoSfun.
+End SectSfun.
 
-Module IsoS (S' : S) (E' : IsoMiniOrderedType S'.E) <: S.
-  Module E <: IsoOrderedType S'.E := E' <+ OT_of_MOT.
-  Include IsoSfun S'.E S' E.
-End IsoS.
+Module SectS (S' : S) (E' : SectMiniOrderedType S'.E) <: S.
+  Module E <: SectOrderedTypeOrig S'.E := E' <+ OT_of_MOT.
+  Global Remove Hints E.eq_refl E.eq_sym E.eq_trans : core.
+  Include SectSfun S'.E S' E.
+End SectS.
 
 (* TODO:
-Module IsoSord (S' : Sord) (Data' : IsoMiniOrderedType S'.Data) (E : IsoMiniOrderedType S'.MapS.E) (S'_iso : IsoMiniOrderedType S') <: Sord <: IsoOrderedType S'.
-  Module Data <: IsoOrderedType S'.Data := Data' <+ OT_of_MOT.
-  Module MapS <: S := IsoS S'.MapS E.
+Module SectSord (S' : Sord) (Data' : SectMiniOrderedType S'.Data) (E : SectMiniOrderedType S'.MapS.E) (S'_iso : SectMiniOrderedType S') <: Sord <: SectOrderedType S'.
+  Module Data <: SectOrderedType S'.Data := Data' <+ OT_of_MOT.
+  Module MapS <: S := SectS S'.MapS E.
   Import MapS.
 
   Definition t := MapS.t Data.t.
@@ -550,10 +779,10 @@ Module IsoSord (S' : Sord) (Data' : IsoMiniOrderedType S'.Data) (E : IsoMiniOrde
 
   Include S.
   Include OT_of_MOT.
-End IsoSord.
+End SectSord.
   Definition t := MapS.t Data.t.
 
-  Print IsoMiniOrderedType.
+  Print SectMiniOrderedType.
   Definition eq : t -> t -> Prop := S'.eq.
   Parameter lt : t -> t -> Prop.
 

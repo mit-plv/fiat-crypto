@@ -3,12 +3,25 @@ Require Export coqutil.Datatypes.List. Export Lists.List List.ListNotations.
 Require Export Coq.ZArith.BinInt. Export Zdiv. Local Open Scope Z_scope.
 Require Export coqutil.Byte coqutil.Word.LittleEndianList.
 
+
+Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+
 (* reference: https://datatracker.ietf.org/doc/html/rfc8439 *)
 
+(*
+In terms of Z:
 Definition poly1305 (p:=2^130-5) (k : list byte) (m : list byte) : list byte :=
   let r := Z.land (le_combine (firstn 16 k)) 0x0ffffffc0ffffffc0ffffffc0fffffff in
   let t := fold_left (fun a n => (a+le_combine(n++[x01]))*r mod p) (chunk 16 m) 0 in
   le_split 16 (t + le_combine (skipn 16 k)).
+
+TODO: prove equivalent to current spec
+*)
+
+Definition poly1305 (p:=(2^130-5)%positive) (k : list byte) (m : list byte) : list byte :=
+  let r := F.of_Z p (Z.land (le_combine (firstn 16 k)) 0x0ffffffc0ffffffc0ffffffc0fffffff) in
+  let t := fold_left (fun a n => (a+(F.of_Z p (le_combine(n++[x01]))))*r)%F (chunk 16 m) 0%F in
+  le_split 16 ((F.to_Z t) + le_combine (skipn 16 k)).
 
 Local Notation "a + b" := (Z.land (a+b) (Z.ones 32)).
 Local Notation "a ^ b" := (Z.lxor a b).

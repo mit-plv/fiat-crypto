@@ -114,8 +114,8 @@ GREP_EXCLUDE_SPECIAL_VOFILES := grep -v '^src/Extraction\(OCaml\|Haskell\)/'
 ifneq (,$(wildcard .git/))
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
 EXISTING_COQPROJECT_CONTENTS_SORTED:=$(shell cat _CoqProject 2>&1 | $(SORT_COQPROJECT))
-WARNINGS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive
-COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-arg -w -arg $(WARNINGS)'; echo '-arg -native-compiler -arg ondemand'; ((echo "$(sort $(VERSION_DEPENDENT_FILES))" | tr ' ' '\n'; git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES)) | $(SORT_COQPROJECT)))
+WARNINGS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,unsupported-attributes
+COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-arg -w -arg $(WARNINGS)'; echo '-arg -native-compiler -arg ondemand'; ((echo "$(sort $(VERSION_DEPENDENT_FILES) $(SPECIAL_VERSION_DEPENDENT_FILES))" | tr ' ' '\n'; git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES)) | $(SORT_COQPROJECT)))
 NEW_COQPROJECT_CONTENTS_SORTED:=$(shell $(COQPROJECT_CMD) | $(SORT_COQPROJECT))
 
 ifneq ($(EXISTING_COQPROJECT_CONTENTS_SORTED),$(NEW_COQPROJECT_CONTENTS_SORTED))
@@ -132,9 +132,28 @@ PERFTESTING_VO := \
 BEDROCK2_FILES_PATTERN := \
 	src/ExtractionOCaml/bedrock2_% \
 	src/ExtractionHaskell/bedrock2_% \
+	src/ExtractionOCaml/with_bedrock2_% \
+	src/ExtractionHaskell/with_bedrock2_% \
 	src/Assembly/WithBedrock/% \
 	src/Bedrock/% # it's important to catch not just the .vo files, but also the .glob files, etc, because this is used to filter FILESTOINSTALL
 EXCLUDE_PATTERN :=
+
+FORCE_BEDROCK2?=
+ifneq (,$(filter 8.11% 8.12% 8.13%,$(COQ_VERSION)))
+ifneq ($(SKIP_BEDROCK2),1)
+$(warning Coq version $(COQ_VERSION) is older than the minimum bedrock2 Coq version of 8.14)
+ifeq ($(FORCE_BEDROCK2),1)
+$(warning Building bedrock2 code anyway because FORCE_BEDROCK2=$(FORCE_BEDROCK2))
+else
+ifeq ($(SKIP_BEDROCK2),)
+SKIP_BEDROCK2=1
+else
+$(error Cannot build bedrock2! Pass FORCE_BEDROCK2=1 to override this error and build anyway, or pass SKIP_BEDROCK2=1 (instead of SKIP_BEDROCK2=$(SKIP_BEDROCK2)) to skip bedrock2)
+endif
+endif
+endif
+endif
+
 ifeq ($(SKIP_BEDROCK2),1)
 EXCLUDE_PATTERN += $(BEDROCK2_FILES_PATTERN)
 $(warning Skipping bedrock2)
@@ -155,7 +174,8 @@ NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/Projective.vo \
 	$(PERFTESTING_VO) \
 	$(EXCLUDED_VO)
-REGULAR_VOFILES := $(filter-out $(EXCLUDE_PATTERN) $(SPECIAL_VOFILES),$(VOFILES))
+REGULAR_WITH_BEDROCK2_VOFILES := $(filter-out $(SPECIAL_VOFILES),$(VOFILES))
+REGULAR_VOFILES := $(filter-out $(EXCLUDE_PATTERN),$(REGULAR_WITH_BEDROCK2_VOFILES))
 REGULAR_EXCEPT_BEDROCK2_VOFILES := $(filter-out $(BEDROCK2_FILES_PATTERN),$(REGULAR_VOFILES))
 BEDROCK2_VOFILES := $(filter $(BEDROCK2_FILES_PATTERN),$(REGULAR_VOFILES))
 PRE_STANDALONE_PRE_VOFILES := $(filter src/Standalone%.vo src/Bedrock/Standalone%.vo,$(REGULAR_VOFILES))
@@ -206,8 +226,7 @@ ZIG_DIR := fiat-zig/src/
 
 # Java only really supports 32-bit builds, because we have neither 64x64->64x64 multiplication, nor uint128
 # Java also requires that class names match file names
-# from https://stackoverflow.com/q/42925485/377022
-to_title_case = $(shell echo '$(1)' | sed 's/.*/\L&/; s/[a-z]*/\u&/g')
+to_title_case = $(shell echo '$(1)' | awk '{split($$0,w,"");u=1;for(i=1;i<=length(w);i++){c=tolower(w[i]);if(u)c=toupper(c);u=0;if(c~/[a-zA-Z0-9]/)printf("%s",c);if(c~/[^a-zA-Z]/)u=1;}}')
 empty=
 space=$(empty) $(empty)
 JAVA_RENAME = $(foreach i,$(patsubst %_32,%,$(filter %_32,$(1))),Fiat$(subst $(space),,$(call to_title_case,$(subst _, ,$(i)))))
@@ -273,8 +292,14 @@ $(foreach bw,64 32,$(eval $(call add_curve_keys,p384_$(bw),WORD_BY_WORD_MONTGOME
 $(foreach bw,64 32,$(eval $(call add_curve_keys,p224_$(bw),WORD_BY_WORD_MONTGOMERY,'p224',$(bw),'2^224 - 2^96 + 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 $(foreach bw,64,$(eval $(call add_curve_keys,p434_$(bw),WORD_BY_WORD_MONTGOMERY,'p434',$(bw),'2^216 * 3^137 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY))) # 32 is a bit too heavy
 
+$(foreach bw,64 32,$(eval $(call add_curve_keys,curve25519_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'25519_scalar',$(bw),'2^252 + 27742317777372353535851937790883648493',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,p256_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'p256_scalar',$(bw),'2^256 - 2^224 + 2^192 - 89188191075325690597107910205041859247',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,p384_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'p384_scalar',$(bw),'2^384 - 1388124618062372383947042015309946732620727252194336364173',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,secp256k1_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'secp256k1_scalar',$(bw),'2^256 - 432420386565659656852420866394968145599',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
+
 # Files taking 30s or less
-LITE_BASE_FILES := curve25519_64 poly1305_64 poly1305_32 p256_64 secp256k1_64 p384_64 p224_32 p434_64 p448_solinas_64 secp256k1_32 p256_32 p448_solinas_32
+LITE_BASE_FILES := curve25519_64 poly1305_64 poly1305_32 p256_64 secp256k1_64 p384_64 p224_32 p434_64 p448_solinas_64 secp256k1_32 p256_32 p448_solinas_32 \
+	curve25519_scalar_64 p256_scalar_64 secp256k1_scalar_64 p384_scalar_64 secp256k1_scalar_32 p256_scalar_32
 
 EXTRA_C_FILES := inversion/c/*_test.c
 
@@ -538,8 +563,8 @@ clean-bedrock2-compiler:
 install-bedrock2-compiler:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) install_compiler
 
-rupicola: bedrock2
-	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) lib
+rupicola: bedrock2 | bedrock2-compiler
+	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) all
 
 clean-rupicola:
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) clean
@@ -553,18 +578,22 @@ Makefile.coq: Makefile _CoqProject
 	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-coq && cat Makefile-coq | sed 's/^printenv:/printenv::/g; s/^printenv:::/printenv::/g; s/^all:/all-old:/g; s/^validate:/validate-vo:/g; s/^.PHONY: validate/.PHONY: validate-vo/g' > $@ && rm -f Makefile-coq
 
 
-STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery base_conversion
-BEDROCK2_STANDALONE := $(addprefix bedrock2_,$(STANDALONE))
+BASE_STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery base_conversion
+BEDROCK2_STANDALONE := $(addprefix bedrock2_,$(BASE_STANDALONE)) $(addprefix with_bedrock2_,$(BASE_STANDALONE))
+STANDALONE := $(BASE_STANDALONE)
 ifneq ($(SKIP_BEDROCK2),1)
-STANDALONE += $(BEDROCK2_STANDALONE)
+STANDALONE += $(BEDROCK2_STANDALONE) $(WITH_BEDROCK2_STANDALONE)
 endif
 PERF_STANDALONE := perf_unsaturated_solinas perf_word_by_word_montgomery
 
 STANDALONE_OCAML := $(STANDALONE) $(PERF_STANDALONE)
 STANDALONE_HASKELL := $(STANDALONE)
 
-OCAML_BINARIES := $(STANDALONE:%=src/ExtractionOCaml/%)
-HASKELL_BINARIES := $(STANDALONE:%=src/ExtractionHaskell/%)
+OCAML_BINARIES := $(BASE_STANDALONE:%=src/ExtractionOCaml/%)
+HASKELL_BINARIES := $(BASE_STANDALONE:%=src/ExtractionHaskell/%)
+
+WITH_BEDROCK2_OCAML_BINARIES := $(BASE_STANDALONE:%=src/ExtractionOCaml/with_bedrock2_%)
+WITH_BEDROCK2_HASKELL_BINARIES := $(BASE_STANDALONE:%=src/ExtractionHaskell/with_bedrock2_%)
 
 
 $(STANDALONE:%=src/ExtractionOCaml/%.ml): src/StandaloneOCamlMain.vo
@@ -913,11 +942,12 @@ install-without-bedrock2:
 install-standalone-ocaml: standalone-ocaml
 install-standalone-haskell: standalone-haskell
 
-install-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
-install-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
-
 uninstall-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
 uninstall-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
+
+ifeq ($(SKIP_BEDROCK2),1)
+install-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
+install-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
 
 install-standalone-ocaml install-standalone-haskell:
 	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
@@ -928,6 +958,23 @@ install-standalone-ocaml install-standalone-haskell:
 	   install -m 0755 "$$f" "$(BINDIR)/" &&\
 	   echo INSTALL "$$f" "$(BINDIR)/";\
 	done
+else
+install-standalone-ocaml: FILESTOINSTALL=$(WITH_BEDROCK2_OCAML_BINARIES)
+install-standalone-haskell: FILESTOINSTALL=$(WITH_BEDROCK2_HASKELL_BINARIES)
+
+install-standalone-ocaml install-standalone-haskell:
+	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
+	 if ! [ -f "$$f" ]; then >&2 echo $$f does not exist; code=1; fi \
+	done; exit $$code
+	$(HIDE)for f in $(FILESTOINSTALL); do\
+	   fdir="$$(dirname "$$f")" &&\
+	   fname="$$(basename "$$f")" &&\
+	   df="$${fname#with_bedrock2_}" &&\
+	   install -d "$(BINDIR)/" &&\
+	   install -m 0755 "$$f" "$(BINDIR)/$$df" &&\
+	   echo INSTALL "$$f" "$(BINDIR)/$$df";\
+	done
+endif
 
 uninstall-standalone-ocaml uninstall-standalone-haskell:
 	$(HIDE)for f in $(FILESTOINSTALL); do \
@@ -954,6 +1001,29 @@ printreversedeps::
 
 etc/tscfreq: etc/tscfreq.c
 	$(CC) etc/tscfreq.c -s -Os -o etc/tscfreq
+
+REGULAR_WITH_BEDROCK2_LIBS := $(sort $(subst /,.,$(patsubst src/%.vo,Crypto/%,$(filter-out src/Bedrock/Everything.vo src/Everything.vo,$(REGULAR_WITH_BEDROCK2_VOFILES)))))
+REGULAR_EXCEPT_BEDROCK2_LIBS := $(sort $(subst /,.,$(patsubst src/%.vo,Crypto/%,$(filter-out src/Bedrock/Everything.vo src/Everything.vo,$(REGULAR_EXCEPT_BEDROCK2_VOFILES)))))
+make_Everything_v_cmd_gen = { printf 'Require Import\n'; printf '%s\n' $(1); printf '.\n'; }
+make_Everything_v_cmd := $(call make_Everything_v_cmd_gen,$(REGULAR_EXCEPT_BEDROCK2_LIBS))
+make_Bedrock_Everything_v_cmd := $(call make_Everything_v_cmd_gen,$(REGULAR_WITH_BEDROCK2_LIBS))
+EXISTING_EVERYTHING_V_CONTENTS:=$(shell cat src/Everything.v 2>&1)
+EXISTING_BEDROCK_EVERYTHING_V_CONTENTS:=$(shell cat src/Bedrock/Everything.v 2>&1)
+NEW_EVERYTHING_V_CONTENTS:=$(shell $(make_Everything_v_cmd))
+NEW_BEDROCK_EVERYTHING_V_CONTENTS:=$(shell $(make_Bedrock_Everything_v_cmd))
+ifneq ($(EXISTING_EVERYTHING_V_CONTENTS),$(NEW_EVERYTHING_V_CONTENTS))
+.PHONY: src/Everything.v
+src/Everything.v:
+	$(SHOW)'ECHO > $@'
+	$(HIDE)$(make_Everything_v_cmd) > $@
+endif
+
+ifneq ($(EXISTING_BEDROCK_EVERYTHING_V_CONTENTS),$(NEW_BEDROCK_EVERYTHING_V_CONTENTS))
+.PHONY: src/Bedrock/Everything.v
+src/Bedrock/Everything.v:
+	$(SHOW)'ECHO > $@'
+	$(HIDE)$(make_Bedrock_Everything_v_cmd) > $@
+endif
 
 GOPROXY?=https://proxy.golang.org
 GO111MODULE?=on

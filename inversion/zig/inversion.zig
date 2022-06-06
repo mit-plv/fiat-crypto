@@ -17,17 +17,17 @@ fn fieldElement(comptime Field: type) type {
             const XLimbs = [a.limbs.len + 1]Field.Word;
 
             var d: Field.Word = 1;
-            var f: XLimbs = undefined;
-            fiat.msat(&f);
+            var f = comptime x: {
+                var f: XLimbs = undefined;
+                fiat.msat(&f);
+                break :x f;
+            };
 
             var g = mem.zeroes(XLimbs);
             fiat.fromMontgomery(g[0..a.limbs.len], a.limbs); // Assume input in Montgomery domain
 
             var r = one.limbs;
             var v = mem.zeroes(Field.Limbs);
-
-            var precomp: Field.Limbs = undefined;
-            fiat.divstepPrecomp(&precomp);
 
             var out1: Field.Word = undefined;
             var out2: XLimbs = undefined;
@@ -47,6 +47,12 @@ fn fieldElement(comptime Field: type) type {
             var v_opp: Field.Limbs = undefined;
             fiat.opp(&v_opp, v);
             fiat.selectznz(&v, @truncate(u1, f[f.len - 1] >> (std.meta.bitCount(Field.Word) - 1)), v, v_opp);
+
+            const precomp = comptime x: {
+                var precomp: Field.Limbs = undefined;
+                fiat.divstepPrecomp(&precomp);
+                break :x precomp;
+            };
             var fe: Self = undefined;
             fiat.mul(&fe.limbs, v, precomp);
             return fe;

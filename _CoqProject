@@ -1,5 +1,5 @@
 -R src Crypto
--arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive
+-arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,unsupported-attributes
 -arg -native-compiler -arg ondemand
 src/BoundsPipeline.v
 src/CLI.v
@@ -7,6 +7,7 @@ src/COperationSpecifications.v
 src/CastLemmas.v
 src/CompilersTestCases.v
 src/Demo.v
+src/Everything.v
 src/MiscCompilerPasses.v
 src/MiscCompilerPassesProofs.v
 src/MiscCompilerPassesProofsExtra.v
@@ -82,6 +83,7 @@ src/Assembly/Parse/Examples/fiat_p256_square_optimised_seed6.v
 src/Assembly/WithBedrock/Proofs.v
 src/Assembly/WithBedrock/Semantics.v
 src/Assembly/WithBedrock/SymbolicProofs.v
+src/Bedrock/Everything.v
 src/Bedrock/End2End/Poly1305/Field1305.v
 src/Bedrock/End2End/RupicolaCrypto/Derive.v
 src/Bedrock/End2End/RupicolaCrypto/Low.v
@@ -255,7 +257,6 @@ src/Util/DefaultedTypes.v
 src/Util/DynList.v
 src/Util/Equality.v
 src/Util/ErrorT.v
-src/Util/FMapN.v
 src/Util/Factorize.v
 src/Util/FixCoqMistakes.v
 src/Util/FsatzAutoLemmas.v
@@ -273,7 +274,6 @@ src/Util/ListUtil.v
 src/Util/Listable.v
 src/Util/Logic.v
 src/Util/Loops.v
-src/Util/MSetN.v
 src/Util/NatUtil.v
 src/Util/Notations.v
 src/Util/NumTheoryUtil.v
@@ -313,8 +313,23 @@ src/Util/Decidable/Bool2Prop.v
 src/Util/Decidable/Decidable2Bool.v
 src/Util/ErrorT/List.v
 src/Util/ErrorT/Show.v
-src/Util/FMapPositive/Equality.v
-src/Util/FSets/Iso.v
+src/Util/FSets/FMapBool.v
+src/Util/FSets/FMapEmpty.v
+src/Util/FSets/FMapFacts.v
+src/Util/FSets/FMapFlip.v
+src/Util/FSets/FMapInterface.v
+src/Util/FSets/FMapIso.v
+src/Util/FSets/FMapN.v
+src/Util/FSets/FMapOption.v
+src/Util/FSets/FMapProd.v
+src/Util/FSets/FMapSect.v
+src/Util/FSets/FMapSum.v
+src/Util/FSets/FMapTrie.v
+src/Util/FSets/FMapTrieEx.v
+src/Util/FSets/FMapUnit.v
+src/Util/FSets/FMapZ.v
+src/Util/FSets/FMapTrie/Shape.v
+src/Util/FSets/FMapTrie/ShapeEx.v
 src/Util/ListUtil/CombineExtend.v
 src/Util/ListUtil/Concat.v
 src/Util/ListUtil/Filter.v
@@ -330,6 +345,8 @@ src/Util/ListUtil/Permutation.v
 src/Util/ListUtil/PermutationCompat.v
 src/Util/ListUtil/RemoveN.v
 src/Util/ListUtil/SetoidList.v
+src/Util/ListUtil/SetoidListFlatMap.v
+src/Util/ListUtil/SetoidListRev.v
 src/Util/ListUtil/Split.v
 src/Util/ListUtil/StdlibCompat.v
 src/Util/Logic/Exists.v
@@ -337,12 +354,14 @@ src/Util/Logic/ExistsEqAnd.v
 src/Util/Logic/Forall.v
 src/Util/Logic/ImplAnd.v
 src/Util/Logic/ProdForall.v
-src/Util/MSetPositive/Equality.v
-src/Util/MSetPositive/Facts.v
-src/Util/MSetPositive/Show.v
-src/Util/MSets/Iso.v
+src/Util/MSets/MSetIso.v
+src/Util/MSets/MSetN.v
+src/Util/MSets/MSetSum.v
 src/Util/MSets/Show.v
-src/Util/MSets/Sum.v
+src/Util/MSets/FMapPositive/Equality.v
+src/Util/MSets/MSetPositive/Equality.v
+src/Util/MSets/MSetPositive/Facts.v
+src/Util/MSets/MSetPositive/Show.v
 src/Util/NUtil/Sorting.v
 src/Util/NUtil/Testbit.v
 src/Util/NUtil/WithoutReferenceToZ.v
@@ -370,18 +389,27 @@ src/Util/Strings/String_as_OT_old.v
 src/Util/Strings/Subscript.v
 src/Util/Strings/Superscript.v
 src/Util/Strings/Parse/Common.v
-src/Util/Structures/OrderedType.v
+src/Util/Structures/Equalities.v
 src/Util/Structures/Orders.v
+src/Util/Structures/OrdersEx.v
 src/Util/Structures/Equalities/Bool.v
+src/Util/Structures/Equalities/Empty.v
 src/Util/Structures/Equalities/Iso.v
 src/Util/Structures/Equalities/List.v
 src/Util/Structures/Equalities/Option.v
 src/Util/Structures/Equalities/Prod.v
+src/Util/Structures/Equalities/Project.v
 src/Util/Structures/Equalities/Sum.v
 src/Util/Structures/Equalities/Unit.v
-src/Util/Structures/OrderedType/Iso.v
+src/Util/Structures/Orders/Bool.v
+src/Util/Structures/Orders/Empty.v
+src/Util/Structures/Orders/Flip.v
 src/Util/Structures/Orders/Iso.v
+src/Util/Structures/Orders/List.v
+src/Util/Structures/Orders/Option.v
+src/Util/Structures/Orders/Prod.v
 src/Util/Structures/Orders/Sum.v
+src/Util/Structures/Orders/Unit.v
 src/Util/Tactics/AllInstances.v
 src/Util/Tactics/AllSuccesses.v
 src/Util/Tactics/AppendUnderscores.v
@@ -416,6 +444,7 @@ src/Util/Tactics/HasBody.v
 src/Util/Tactics/Head.v
 src/Util/Tactics/HeadConstrEq.v
 src/Util/Tactics/HeadUnderBinders.v
+src/Util/Tactics/InHypUnderBindersDo.v
 src/Util/Tactics/MoveLetIn.v
 src/Util/Tactics/NormalizeCommutativeIdentifier.v
 src/Util/Tactics/Not.v

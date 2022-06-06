@@ -23,7 +23,7 @@ Building
 This repository requires [Coq](https://coq.inria.fr/) [8.11](https://github.com/coq/coq/releases/tag/V8.11.0) or later.
 Note that if you install Coq from Ubuntu aptitude packages, you need `libcoq-ocaml-dev` in addition to `coq`.
 Note that in some cases (such as installing Coq via homebrew on Mac), you may also need to install `ocaml-findlib` (for `ocamlfind`).
-If you want to build the bedrock2 code, you need [Coq 8.13](https://github.com/coq/coq/releases/tag/V8.13.0) or later (otherwise you can pass `SKIP_BEDROCK2=1` to `make`).
+If you want to build the bedrock2 code, you need [Coq 8.14](https://github.com/coq/coq/releases/tag/V8.14.0) or later (otherwise this code will be skipped automatically; you can skip this code on newer versions of Coq by passing `SKIP_BEDROCK2=1` to `make`).
 We suggest downloading [the latest version of Coq](https://github.com/coq/coq/wiki#coq-installation).
 Generation of JSON code via the Makefile also requires `jq`.
 
@@ -208,7 +208,7 @@ To contribute a new backend, follow the following steps (perhaps using, for exam
   - Add targets to `.PHONY` analogous to `c-files`, `lite-c-files`, `test-c-files`, `only-test-c-files`
   - Add a variables analogous to `C_DIR`, `ALL_C_FILES`, and `LITE_C_FILES` for your language's generated files
   - Add targets analogous to `c-files` and `lite-c-files` and make `generated-files` and `lite-generated-files` depend on those targets respectively
-  - Add build rules for `ALL_<YOUR-LANGUAGE>-FILES`
+  - Add build rules for `ALL_<YOUR-LANGUAGE>_FILES`
   - Add targets for `test-<your-language>-files` and `only-test-<your-language>-files`; both targets should have the same build rule, but `test-<your-language>-files` should depend on all the generated files of your language, while `only-test-<your-language>-files` should not have any build rule dependencies.
   - If you are developing a package, you can look for uses of `COPY_TO_FIAT_RUST` or `COPY_TO_FIAT_GO` to see how license files are copied
 - Run `make` to generate all the relevant files of your language, and add the generated files to git

@@ -15,13 +15,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - env: { COQ_VERSION: "master"    , COQ_PACKAGE: "coq libcoq-ocaml-dev", SKIP_BEDROCK2: "" , SKIP_VALIDATE: "", COQCHKEXTRAFLAGS: "-bytecode-compiler yes", PPA: "ppa:jgross-h/coq-master-daily", EXTRA_GH_REPORTIFY: "--warnings" }
+        - env: { COQ_VERSION: "master"    , COQ_PACKAGE: "coq libcoq-ocaml-dev", SKIP_VALIDATE: "", COQCHKEXTRAFLAGS: "-bytecode-compiler yes", PPA: "ppa:jgross-h/coq-master-daily", EXTRA_GH_REPORTIFY: "--warnings" }
           os: 'ubuntu-latest'
-        - env: { COQ_VERSION: "Ubuntu LTS", COQ_PACKAGE: "coq libcoq-ocaml-dev", SKIP_BEDROCK2: "1", SKIP_VALIDATE: "", COQCHKEXTRAFLAGS: ""                      , PPA: "" }
+        - env: { COQ_VERSION: "Ubuntu LTS", COQ_PACKAGE: "coq libcoq-ocaml-dev", SKIP_VALIDATE: "", COQCHKEXTRAFLAGS: ""                      , PPA: "" }
           os: 'ubuntu-20.04'
 
     runs-on: ${{ matrix.os }}
     env: ${{ matrix.env }}
+    name: ${{ matrix.env.COQ_VERSION }}
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ matrix.env.COQ_VERSION }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
 
     steps:
     - uses: actions/checkout@v3
@@ -67,9 +72,13 @@ jobs:
         echo "::endgroup::"
     - name: deps
       run: etc/ci/github-actions-make.sh -j2 deps
-    - name: all
-      run: etc/ci/github-actions-make.sh ${EXTRA_GH_REPORTIFY} -j2 all
+    - name: all-except-generated
+      run: etc/ci/github-actions-make.sh ${EXTRA_GH_REPORTIFY} -j2 all-except-generated
+    - name: generated-files
+      run: etc/ci/github-actions-make.sh ${EXTRA_GH_REPORTIFY} -j2 generated-files
+      if: github.event_name == 'pull_request' || ${{ matrix.env.COQ_VERSION }} != 'master'
     - run: tar -czvf generated-files.tgz fiat-*/
+      if: ${{ failure() }}
     - name: upload generated files
       uses: actions/upload-artifact@v3
       with:

@@ -18,7 +18,7 @@ Require Import Crypto.Util.Tactics.SetoidSubst.
 
 Local Set Implicit Arguments.
 
-Module WIsoSetsOn (E' : Equalities.DecidableType) (W' : WSetsOn E')
+Module IsoWSetsOn (E' : Equalities.DecidableType) (W' : WSetsOn E')
        (E : IsoDecidableType E') <: WSetsOn E.
   Local Existing Instances E.Proper_to_ E.Proper_of_ W'.In_compat.
 
@@ -348,12 +348,12 @@ Module WIsoSetsOn (E' : Equalities.DecidableType) (W' : WSetsOn E')
     Lemma choose_spec2 : choose s = None -> Empty s.
     Proof using Type. spec_t; break_innermost_match_hyps; inversion_option; auto. Qed.
   End Spec.
-End WIsoSetsOn.
+End IsoWSetsOn.
 
 Module IsoSetsOn (E' : Orders.OrderedType) (W' : SetsOn E')
        (E : IsoOrderedType E') <: SetsOn E.
   Local Existing Instances E.Proper_to_ E.Proper_of_ E.Proper_of_lt E.Proper_to_lt W'.In_compat.
-  Include (WIsoSetsOn E' W' E).
+  Include (IsoWSetsOn E' W' E).
 
   Definition compare : t -> t -> comparison := W'.compare.
   Definition min_elt (v : t) : option elt := option_map E.of_ (W'.min_elt v).
@@ -443,10 +443,10 @@ Module IsoSetsOn (E' : Orders.OrderedType) (W' : SetsOn E')
   End Spec.
 End IsoSetsOn.
 
-Module WIsoSets (W' : WSets) (E0 : IsoDecidableType W'.E) <: WSets.
+Module IsoWSets (W' : WSets) (E0 : IsoDecidableType W'.E) <: WSets.
   Module E := E0.
-  Include WIsoSetsOn W'.E W' E.
-End WIsoSets.
+  Include IsoWSetsOn W'.E W' E.
+End IsoWSets.
 
 Module IsoSets (W' : Sets) (E0 : IsoOrderedType W'.E) <: Sets.
   Module E := E0.

@@ -116,26 +116,56 @@ Section Bedrock2.
     { subst v; unfold buf_backed_by. unfold buf_push. admit (*compile_step.*). }
 
     simple eapply compile_nlet_as_nlet_eq.
+    simple eapply compile_w32s_of_bytes; [repeat compile_step..|].
+
+    compile_step.
+    compile_step; [repeat compile_step ..|].
+    
+    eapply expr_compile_Z_literal with (z:= 4).
+    shelve.
+    compile_step.
+    (*TODO: need a compile words lemma comparable to compile_byte_memcpy.
+      Alternately, something generic over fixed-size elements (e.g. instances of Allocable).
+     *)
+    Fail simple eapply compile_byte_memcpy.
+    (*compile_step.
+      
+    repeat compile_step. subst v4.
+
     simple eapply compile_w32s_of_bytes; repeat compile_step.
+    simple eapply compile_nlet_as_nlet_eq.
+
+    simple eapply compile_bytes_of_w32s with (a_ptr := key_ptr); repeat compile_step.
+    admit.
 
     simple eapply compile_nlet_as_nlet_eq.
-   
+    simple eapply compile_w32s_of_bytes with (a_ptr := nonce_ptr); repeat compile_step.
 
-    (*TODO: gensym*)
-    Ltac compile_buf_append:=
-    lazymatch goal with
-    | [ |- WeakestPrecondition.cmd _ _ _ _ ?locals (_ (nlet_eq [?var] ?v _)) ] =>
-        let arr_var_str := gensym locals constr:((var++"_app")%string) in
-        simple eapply compile_buf_append with (arr_var:=arr_var_str)
-    end; [shelve ..|].
+    simple eapply compile_nlet_as_nlet_eq.
     compile_buf_append.
+    repeat compile_step. subst v7.
+
+    simple eapply compile_w32s_of_bytes; repeat compile_step.
+    simple eapply compile_nlet_as_nlet_eq.
+    simple eapply compile_bytes_of_w32s with (a_ptr := nonce_ptr); repeat compile_step.
+    admit.
+
+    simple eapply compile_nlet_as_nlet_eq.
+    simple eapply compile_buf_as_array; repeat compile_step.
+
+    unfold buffer_at in H17.
+
+    admit.
+
+    simple eapply compile_nlet_as_nlet_eq.
+    simple eapply compile_buf_make_stack.
 
     (*
     (*simple eapply compile_buf_append; [shelve .. |].*)
     compile_step.
     compile_step.
 
-    
+     
     simple eapply compile_nlet_as_nlet_eq.
     simple eapply compile_bytes_of_w32s; repeat compile_step.
     compile_step.
@@ -182,7 +212,7 @@ Section Bedrock2.
     4 : { simple eapply compile_nlet_as_nlet_eq.
           eapply compile_buf_push_word32; repeat compile_step.
 
-     *)
+     *)*)
     Abort.
   
 End Bedrock2.

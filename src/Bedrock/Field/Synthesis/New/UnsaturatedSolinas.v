@@ -442,7 +442,7 @@ Section UnsaturatedSolinas.
       repeat handle_side_conditions; [ | ]; intros.
     { (* output *value* is correct *)
       unshelve erewrite (proj1 (Hcorrect _ _)); cycle 1.
-      { rewrite map_map, Core.map_ext_id; trivial; intros.
+      { rewrite map_map, List.map_ext_id; trivial; intros.
         rewrite ?Word.Interface.word.of_Z_unsigned; trivial. }
       (* saturated_bounds on word.unsigned *) admit. }
     { (* output *bounds* are correct *)

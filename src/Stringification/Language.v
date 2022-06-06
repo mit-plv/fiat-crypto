@@ -18,8 +18,8 @@ Require Import Crypto.Util.Structures.Equalities.Sum.
 Require Import Crypto.Util.Structures.Equalities.Iso.
 Require Import Crypto.Util.Structures.Orders.Sum.
 Require Import Crypto.Util.Structures.Orders.Iso.
-Require Import Crypto.Util.MSets.Iso.
-Require Import Crypto.Util.MSets.Sum.
+Require Import Crypto.Util.MSets.MSetIso.
+Require Import Crypto.Util.MSets.MSetSum.
 Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.Strings.NamingConventions.
@@ -28,7 +28,7 @@ Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.Show.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
-Require Import Crypto.Util.MSetPositive.Show.
+Require Import Crypto.Util.MSets.MSetPositive.Show.
 Require Import Crypto.Util.MSets.Show.
 Require Import Crypto.Util.Level.
 Require Import Rewriter.Language.Language.
@@ -1204,7 +1204,7 @@ Module Compilers.
       Proof. cbv [eq SumPositiveSet.E.eq sumwise]; intros [?|?] [?|?] ?; subst; tauto. Qed.
     End IntAsDecidableType.
 
-    Module IntSet <: WSets := WIsoSets SumPositiveSet IntAsDecidableType.
+    Module IntSet <: WSets := IsoWSets SumPositiveSet IntAsDecidableType.
     Module Import IntSetShow := ShowWSets IntSet.
     Global Instance show_IntSet : Show IntSet.t := _.
     Global Instance show_lines_IntSet : ShowLines IntSet.t := _.

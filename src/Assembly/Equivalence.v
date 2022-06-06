@@ -19,7 +19,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.FoldMap.
 Require Import Crypto.Util.ListUtil.CombineExtend.
 Require Import Crypto.Util.ListUtil.RemoveN.
-Require Import Crypto.Util.MSetN.
+Require Import Crypto.Util.MSets.MSetN.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.ErrorT.List.
 Require Import Crypto.Util.OptionList.

@@ -58,3 +58,11 @@ Global Instance Symmetric_not {T:Type} (R:T->T->Prop)
 Proof. cbv [Symmetric] in *; repeat intro; eauto. Qed.
 
 Lemma not_exfalso (P:Prop) (H:P->False) : not P. auto with nocore. Qed.
+
+Global Instance respectful_subrelation_pointwise {A B} {RA : relation A} {R R' : relation B}
+  : subrelation eq RA -> subrelation R R' -> subrelation (RA ==> R)%signature (pointwise_relation A R') | 100.
+Proof. cbv; eauto. Qed.
+
+Global Instance pointwise_subrelation_respectful {A B} {RA : relation A} {R R' : relation B}
+  : subrelation RA eq -> subrelation R' R -> subrelation (pointwise_relation A R') (RA ==> R)%signature | 100.
+Proof. cbv; firstorder (subst; eauto). Qed.

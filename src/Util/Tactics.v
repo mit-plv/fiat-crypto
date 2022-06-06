@@ -34,6 +34,7 @@ Require Export Crypto.Util.Tactics.HasBody.
 Require Export Crypto.Util.Tactics.Head.
 Require Export Crypto.Util.Tactics.HeadConstrEq.
 Require Export Crypto.Util.Tactics.HeadUnderBinders.
+Require Export Crypto.Util.Tactics.InHypUnderBindersDo.
 Require Export Crypto.Util.Tactics.MoveLetIn.
 Require Export Crypto.Util.Tactics.NormalizeCommutativeIdentifier.
 Require Export Crypto.Util.Tactics.Not.
