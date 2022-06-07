@@ -226,7 +226,10 @@ ZIG_DIR := fiat-zig/src/
 
 # Java only really supports 32-bit builds, because we have neither 64x64->64x64 multiplication, nor uint128
 # Java also requires that class names match file names
-to_title_case = $(shell echo '$(1)' | awk '{split($$0,w,"");u=1;for(i=1;i<=length(w);i++){c=tolower(w[i]);if(u)c=toupper(c);u=0;if(c~/[a-zA-Z0-9]/)printf("%s",c);if(c~/[^a-zA-Z]/)u=1;}}')
+# import string; print(''.join(f'$(patsubst {i}%,{i.upper()}%,' for i in string.ascii_lowercase) + '$(1)' + ')' * len(string.ascii_lowercase))
+capitalize_first_letter = $(patsubst a%,A%,$(patsubst b%,B%,$(patsubst c%,C%,$(patsubst d%,D%,$(patsubst e%,E%,$(patsubst f%,F%,$(patsubst g%,G%,$(patsubst h%,H%,$(patsubst i%,I%,$(patsubst j%,J%,$(patsubst k%,K%,$(patsubst l%,L%,$(patsubst m%,M%,$(patsubst n%,N%,$(patsubst o%,O%,$(patsubst p%,P%,$(patsubst q%,Q%,$(patsubst r%,R%,$(patsubst s%,S%,$(patsubst t%,T%,$(patsubst u%,U%,$(patsubst v%,V%,$(patsubst w%,W%,$(patsubst x%,X%,$(patsubst y%,Y%,$(patsubst z%,Z%,$(1)))))))))))))))))))))))))))
+split_after_non_alpha = $(shell echo '$(1)' | sed 's/\([^a-zA-Z ]\)/\1 /g')
+to_title_case = $(foreach i,$(1),$(subst $(space),,$(call capitalize_first_letter,$(call split_after_non_alpha,$(i)))))
 empty=
 space=$(empty) $(empty)
 JAVA_RENAME = $(foreach i,$(patsubst %_32,%,$(filter %_32,$(1))),Fiat$(subst $(space),,$(call to_title_case,$(subst _, ,$(i)))))
