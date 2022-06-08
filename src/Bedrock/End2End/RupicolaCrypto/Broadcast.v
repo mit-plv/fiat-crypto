@@ -282,8 +282,7 @@ Section with_parameters.
     assert (~ a_var = to_var) by admit.
     assert (~ a_var = idx_var) by admit.
     
-    eapply (compile_ranged_for_fresh false)
-      with (from_var := idx_var) (to_var := to_var) (*loop_pred := lp*).
+    eapply (compile_ranged_for_fresh _ _ _ _ _ _ _ _ _ _ _ _ idx_var to_var).
     repeat compile_step.
     repeat compile_step.
     (*Issue: in loop invariant lp from -> lp from'*)
