@@ -8,8 +8,6 @@ Require Import Crypto.Util.FSets.FMapN.
 Require Import Crypto.Util.FSets.FMapZ.
 Require Import Crypto.Util.Structures.OrdersEx.
 
-(*
 Module ListPositiveMap <: UsualS := ListUsualMap PositiveMap PositiveMapTrieInd.
 Module ListNMap <: UsualS := ListUsualMap NMap NMapTrieInd.
 Module ListZMap <: UsualS := ListUsualMap ZMap ZMapTrieInd.
-*)

@@ -56,39 +56,247 @@ Local Open Scope lazy_bool_scope.
 Local Open Scope type_scope.
 Local Open Scope list_scope.
 
-Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M).
-  Module Type ESig := ListTyp Y <+ HasEq <+ IsEqOrig <+ HasEqDec.
-  Module Type ESigCompat (E : ESig).
-    Axiom eq_alt : forall x y, E.eq x y <-> eqlistA Y.eq x y.
-  End ESigCompat.
-  Module Y' <: DecidableTypeBoth := Y <+ UpdateEq.
-  Global Remove Hints Y'.eq_refl Y'.eq_sym Y'.eq_trans : core.
-  Module M' := WFacts_fun Y M <+ WAdditionalFacts_fun Y M.
-  Local Existing Instances
-        M'.eq_key_equiv M'.eq_key_elt_equiv M'.Equal_Equivalence
-  | 10.
-  Local Existing Instances
-        M'.Proper_eq_key_elt_iff M'.Proper_eq_key_elt_impl M'.Proper_eq_key_elt_flip_impl M'.Proper_eq_key_elt_iff' M'.Proper_eq_key_elt_impl' M'.Proper_eq_key_elt_flip_impl' M'.Proper_eq_key_iff M'.Proper_eq_key_impl M'.Proper_eq_key_flip_impl M'.find_Proper_eq M'.MapsTo_Proper_eq_iff M'.In_compat M'.Proper_Equiv_eq_impl M'.Proper_Equiv_eq_flip_impl M'.Proper_Equiv_eq_iff M'.Proper_Equiv_eq_impl_pointwise M'.Proper_Equiv_eq_flip_impl_pointwise M'.Proper_Equiv_eq_iff_pointwise
-  .
-  Module ListWSfun_gen (E : ESig) (ECompat : ESigCompat E) <: WSfun E.
-    Module E' <: DecidableTypeBoth := E <+ UpdateEq <+ ECompat.
-    Global Remove Hints E'.eq_refl E'.eq_sym E'.eq_trans : core.
-    Local Hint Resolve Y'.eq_refl Y'.eq_sym Y'.eq_trans
-          E'.eq_refl E'.eq_sym E'.eq_trans
-      : core.
-
-    Definition key := E.t.
-
-    Global Hint Transparent key : core.
-
+Module Import ListWSfun_gen_proofs.
+  Section __.
+    Class args :=
+      { T_t : Type -> Type
+      ; Y_t : Type
+      ; M_t : Type -> Type
+      ; E_t := list Y_t
+      ; Y_eq : relation Y_t
+      ; E_eq : relation E_t
+      ; Y_eq_refl : Reflexive Y_eq
+      ; Y_eq_sym : Symmetric Y_eq
+      ; Y_eq_trans : Transitive Y_eq
+      ; Y_eq_dec : forall x y, {Y_eq x y} + {~Y_eq x y}
+      ; E_eq_refl : Reflexive E_eq
+      ; E_eq_sym : Symmetric E_eq
+      ; E_eq_trans : Transitive E_eq
+      ; E_eq_dec : forall x y, {E_eq x y} + {~E_eq x y}
+      ; E'_eq_alt : forall x y, E_eq x y <-> eqlistA Y_eq x y
+      ; M_empty : forall elt, M_t elt
+      ; M_is_empty : forall elt, M_t elt -> bool
+      ; M_add : forall elt, Y_t -> elt -> M_t elt -> M_t elt
+      ; M_find : forall elt : Type, Y_t -> M_t elt -> option elt
+      ; M_remove : forall elt, Y_t -> M_t elt -> M_t elt
+      ; M_mem : forall elt, Y_t -> M_t elt -> bool
+      ; M_map : forall elt elt', (elt -> elt') -> M_t elt -> M_t elt'
+      ; M_mapi : forall elt elt' : Type, (Y_t -> elt -> elt') -> M_t elt -> M_t elt'
+      ; M_map2 : forall elt elt' elt'' : Type, (option elt -> option elt' -> option elt'') -> M_t elt -> M_t elt' -> M_t elt''
+      ; M_elements : forall elt, M_t elt -> list (Y_t*elt)
+      ; M_cardinal : forall elt, M_t elt -> nat
+      ; M_fold : forall elt A : Type, (Y_t -> elt -> A -> A) -> M_t elt -> A -> A
+      ; M_equal : forall elt, (elt -> elt -> bool) -> M_t elt -> M_t elt -> bool
+      ; M_MapsTo : forall elt, Y_t -> elt -> M_t elt -> Prop
+      ; M_In := fun elt (k:Y_t)(m: M_t elt)=> exists e:elt, M_MapsTo k e m
+      ; M_Empty elt m := forall (a : Y_t)(e:elt) , ~ M_MapsTo a e m
+      ; M_eq_key elt := fun (p p':Y_t*elt) => Y_eq (fst p) (fst p')
+      ; M_eq_key_elt elt := fun (p p':Y_t*elt) => Y_eq (fst p) (fst p') /\ (snd p) = (snd p')
+      ; M_MapsTo_1 : forall elt m x y (e : elt), Y_eq x y -> M_MapsTo x e m -> M_MapsTo y e m
+      ; M_mem_1 : forall elt (m : M_t elt) x, M_In x m -> M_mem x m = true
+      ; M_mem_2 : forall elt (m : M_t elt) x, M_mem x m = true -> M_In x m
+      ; M_empty_1 : forall elt, M_Empty (@M_empty elt)
+      ; M_is_empty_1 : forall elt (m : M_t elt), M_Empty m -> M_is_empty m = true
+      ; M_is_empty_2 : forall elt (m : M_t elt), M_is_empty m = true -> M_Empty m
+      ; M_add_1 : forall elt (m : M_t elt) x y (e : elt), Y_eq x y -> M_MapsTo y e (M_add x e m)
+      ; M_add_2 : forall elt (m : M_t elt) x y (e e' : elt), ~ Y_eq x y -> M_MapsTo y e m -> M_MapsTo y e (M_add x e' m)
+      ; M_add_3 : forall elt (m : M_t elt) x y (e e' : elt), ~ Y_eq x y -> M_MapsTo y e (M_add x e' m) -> M_MapsTo y e m
+      ; M_remove_1 : forall elt (m : M_t elt) x y, Y_eq x y -> ~ M_In y (M_remove x m)
+      ; M_remove_2 : forall elt (m : M_t elt) x y (e : elt), ~ Y_eq x y -> M_MapsTo y e m -> M_MapsTo y e (M_remove x m)
+      ; M_remove_3 : forall elt (m : M_t elt) x y (e : elt), M_MapsTo y e (M_remove x m) -> M_MapsTo y e m
+      ; M_find_1 : forall elt (m : M_t elt) x (e : elt), M_MapsTo x e m -> M_find x m = Some e
+      ; M_find_2 : forall elt (m : M_t elt) x (e : elt), M_find x m = Some e -> M_MapsTo x e m
+      ; M_elements_1 :
+        forall elt (m : M_t elt) x (e : elt), M_MapsTo x e m -> InA (@M_eq_key_elt _) (x,e) (M_elements m)
+      ; M_elements_2 :
+        forall elt (m : M_t elt) x (e : elt), InA (@M_eq_key_elt _) (x,e) (M_elements m) -> M_MapsTo x e m
+      ; M_elements_3w : forall elt m, NoDupA (@M_eq_key elt) (M_elements m)
+      ; M_cardinal_1 : forall elt (m : M_t elt), M_cardinal m = length (M_elements m)
+      ; M_fold_1 :
+	forall elt (m : M_t elt) (A : Type) (i : A) (f : Y_t -> elt -> A -> A),
+          M_fold f m i = fold_left (fun a p => f (fst p) (snd p) a) (M_elements m) i
+      ; M_Equal elt m m' := forall y, @M_find elt y m = @M_find elt y m'
+      ; M_Equiv elt := fun (eq_elt:elt->elt->Prop) m m' =>
+                         (forall k, M_In k m <-> M_In k m') /\
+                           (forall k e e', M_MapsTo k e m -> M_MapsTo k e' m' -> eq_elt e e')
+      ; M_Equivb elt := fun (cmp: elt->elt->bool) => M_Equiv (Cmp cmp)
+      ; M_equal_1 : forall elt (m m' : M_t elt) cmp, M_Equivb cmp m m' -> M_equal cmp m m' = true
+      ; M_equal_2 : forall elt (m m' : M_t elt) cmp, M_equal cmp m m' = true -> M_Equivb cmp m m'
+      ; M_map_1 : forall (elt elt':Type)(m: M_t elt)(x:Y_t)(e:elt)(f:elt->elt'),
+          M_MapsTo x e m -> M_MapsTo x (f e) (M_map f m)
+      ; M_map_2 : forall (elt elt':Type)(m: M_t elt)(x:Y_t)(f:elt->elt'),
+          M_In x (M_map f m) -> M_In x m
+      ; M_mapi_1 : forall (elt elt':Type)(m: M_t elt)(x:Y_t)(e:elt)
+                          (f:Y_t->elt->elt'), M_MapsTo x e m ->
+                                              exists y, Y_eq y x /\ M_MapsTo x (f y e) (M_mapi f m)
+      ; M_mapi_2 : forall (elt elt':Type)(m: M_t elt)(x:Y_t)
+                          (f:Y_t->elt->elt'), M_In x (M_mapi f m) -> M_In x m
+      ; M_map2_1 : forall (elt elt' elt'':Type)(m: M_t elt)(m': M_t elt')
+	                  (x:Y_t)(f:option elt->option elt'->option elt''),
+	  M_In x m \/ M_In x m' ->
+          M_find x (M_map2 f m m') = f (M_find x m) (M_find x m')
+      ; M_map2_2 : forall (elt elt' elt'':Type)(m: M_t elt)(m': M_t elt')
+	                  (x:Y_t)(f:option elt->option elt'->option elt''),
+          M_In x (M_map2 f m m') -> M_In x m \/ M_In x m'
+      ; M'_find_mapsto_iff : forall elt (m : M_t elt) x e, M_MapsTo x e m <-> M_find x m = Some e
+      ; M'_add_o : forall elt (m : M_t elt) x y e, M_find y (M_add x e m) = if Y_eq_dec x y then Some e else M_find y m
+      ; M'_remove_o : forall elt (m : M_t elt) x y,
+          M_find y (M_remove x m) = if Y_eq_dec x y then None else M_find y m
+      ; M'_mapi_o_ex : forall (elt elt':Type)(m: M_t elt)(x:Y_t)(f:Y_t->elt->elt'), exists y, Y_eq y x /\ M_find x (M_mapi f m) = option_map (f y) (M_find x m)
+      ; M'_mapi_o_ex_impl : forall (elt elt':Type)(m: M_t elt)(f:Y_t->elt->elt')(P:_->Prop),
+          (forall x e, M_find x (M_mapi f m) = Some e -> P e)
+          -> (forall x, exists y, Y_eq y x /\ forall e, option_map (f y) (M_find x m) = Some e -> P e)
+      ; M'_map2_o : forall (elt elt' elt'':Type)(m: M_t elt)(m': M_t elt')
+	                   (x:Y_t)(f:option elt->option elt'->option elt''),
+          M_find x (M_map2 f m m') = match M_find x m, M_find x m' with
+                                     | None, None => None
+                                     | x, y => f x y
+                                     end
+      ; M'_is_empty_iff : forall elt (m : M_t elt), M_Empty m <-> M_is_empty m = true
+      ; M'_find_empty : forall elt x, M_find x (@M_empty elt) = None
+      ; M'_forall_In_elements_snd_iff : forall elt (P : _ -> Prop) (m : M_t elt),
+          (forall i, List.In i (M_elements m) -> P (snd i))
+          <-> (forall k v, M_find k m = Some v -> P v)
+      ; M'_map_o : forall elt elt' (m : M_t elt) x (f:elt->elt'),
+          M_find x (M_map f m) = Datatypes.option_map f (M_find x m)
+      ; M'_empty_1' elt : forall x y z, False := @M_empty_1 elt
+      ; M'_Proper_eq_key_elt_iff : forall elt, Proper (eq ==> RelationPairs.RelProd Y_eq eq ==> iff) (@M_eq_key_elt elt)
+      ; M'_Proper_eq_key_elt_impl : forall elt, Proper (eq ==> RelationPairs.RelProd Y_eq eq ==> impl) (@M_eq_key_elt elt)
+      ; M'_Proper_eq_key_elt_flip_impl : forall elt, Proper (eq ==> RelationPairs.RelProd Y_eq eq ==> flip impl) (@M_eq_key_elt elt)
+      ; M'_Proper_eq_key_elt_iff' : forall elt, Proper (@M_eq_key_elt elt ==> @M_eq_key_elt elt ==> iff) (@M_eq_key_elt elt)
+      ; M'_Proper_eq_key_elt_impl' : forall elt, Proper (@M_eq_key_elt elt ==> @M_eq_key_elt elt ==> impl) (@M_eq_key_elt elt)
+      ; M'_Proper_eq_key_elt_flip_impl' : forall elt, Proper (@M_eq_key_elt elt ==> @M_eq_key_elt elt ==> flip impl) (@M_eq_key_elt elt)
+      ; M'_Proper_eq_key_iff : forall elt, Proper (@M_eq_key elt ==> @M_eq_key elt ==> iff) (@M_eq_key elt)
+      ; M'_Proper_eq_key_impl : forall elt, Proper (@M_eq_key elt ==> @M_eq_key elt ==> impl) (@M_eq_key elt)
+      ; M'_Proper_eq_key_flip_impl : forall elt, Proper (@M_eq_key elt ==> @M_eq_key elt ==> flip impl) (@M_eq_key elt)
+      ; M'_Equal_Equivalence : forall elt, Equivalence (@M_Equal elt)
+      ; M'_find_Proper_eq : forall elt, Proper (Y_eq ==> @M_Equal _ ==> eq) (@M_find elt)
+      ; M'_MapsTo_Proper_eq_iff : forall elt, Proper (Y_eq ==> eq ==> @M_Equal _ ==> iff) (@M_MapsTo elt)
+      ; M'_In_compat : forall elt, Proper (Y_eq ==> @M_Equal _ ==> iff) (@M_In elt)
+      ; M'_eq_key_equiv : forall elt, Equivalence (@M_eq_key elt)
+      ; M'_eq_key_elt_equiv : forall elt, Equivalence (@M_eq_key_elt elt)
+      ; M'_Proper_Equiv_eq_impl : forall elt, Proper ((eq ==> eq ==> impl) ==> eq ==> eq ==> impl) (@M_Equiv elt)
+      ; M'_Proper_Equiv_eq_flip_impl : forall elt, Proper ((eq ==> eq ==> flip impl) ==> eq ==> eq ==> flip impl) (@M_Equiv elt)
+      ; M'_Proper_Equiv_eq_iff : forall elt, Proper ((eq ==> eq ==> iff) ==> eq ==> eq ==> iff) (@M_Equiv elt)
+      ; M'_Proper_Equiv_eq_impl_pointwise : forall elt, Proper (pointwise_relation _ (pointwise_relation _ impl) ==> eq ==> eq ==> impl) (@M_Equiv elt)
+      ; M'_Proper_Equiv_eq_flip_impl_pointwise : forall elt, Proper (pointwise_relation _ (pointwise_relation _ (flip impl)) ==> eq ==> eq ==> flip impl) (@M_Equiv elt)
+      ; M'_Proper_Equiv_eq_iff_pointwise : forall elt, Proper (pointwise_relation _ (pointwise_relation _ iff) ==> eq ==> eq ==> iff) (@M_Equiv elt)
+      ; everything : @EverythingGen T_t Y_t M_t M_is_empty M_fold M_mapi M_map2 M_find
+      }.
+    Local Notation "'T.t'" := T_t.
+    Local Notation "'Y.t'" := Y_t.
+    Local Notation "'Y.eq'" := Y_eq.
+    Local Notation "'Y.eq_refl'" := Y_eq_refl.
+    Local Notation "'Y.eq_sym'" := Y_eq_sym.
+    Local Notation "'Y.eq_trans'" := Y_eq_trans.
+    Local Notation "'Y.eq_dec'" := Y_eq_dec.
+    Local Notation "'E.t'" := E_t.
+    Local Notation "'E.eq'" := E_eq.
+    Local Notation "'E.eq_refl'" := E_eq_refl.
+    Local Notation "'E.eq_sym'" := E_eq_sym.
+    Local Notation "'E.eq_trans'" := E_eq_trans.
+    Local Notation "'E.eq_dec'" := E_eq_dec.
+    Local Notation "'E'.eq_alt'" := E'_eq_alt.
+    Local Notation "'M.t'" := M_t.
+    Local Notation "'M.empty'" := M_empty.
+    Local Notation "'M.is_empty'" := M_is_empty.
+    Local Notation "'M.add'" := M_add.
+    Local Notation "'M.find'" := M_find.
+    Local Notation "'M.remove'" := M_remove.
+    Local Notation "'M.mem'" := M_mem.
+    Local Notation "'M.map'" := M_map.
+    Local Notation "'M.mapi'" := M_mapi.
+    Local Notation "'M.map2'" := M_map2.
+    Local Notation "'M.elements'" := M_elements.
+    Local Notation "'M.cardinal'" := M_cardinal.
+    Local Notation "'M.fold'" := M_fold.
+    Local Notation "'M.equal'" := M_equal.
+    Local Notation "'M.MapsTo'" := M_MapsTo.
+    Local Notation "'M.In'" := M_In.
+    Local Notation "'M.Empty'" := M_Empty.
+    Local Notation "'M.eq_key'" := M_eq_key.
+    Local Notation "'M.eq_key_elt'" := M_eq_key_elt.
+    Local Notation "'M.MapsTo_1'" := M_MapsTo_1.
+    Local Notation "'M.mem_1'" := M_mem_1.
+    Local Notation "'M.mem_2'" := M_mem_2.
+    Local Notation "'M.empty_1'" := M_empty_1.
+    Local Notation "'M.is_empty_1'" := M_is_empty_1.
+    Local Notation "'M.is_empty_2'" := M_is_empty_2.
+    Local Notation "'M.add_1'" := M_add_1.
+    Local Notation "'M.add_2'" := M_add_2.
+    Local Notation "'M.add_3'" := M_add_3.
+    Local Notation "'M.remove_1'" := M_remove_1.
+    Local Notation "'M.remove_2'" := M_remove_2.
+    Local Notation "'M.remove_3'" := M_remove_3.
+    Local Notation "'M.find_1'" := M_find_1.
+    Local Notation "'M.find_2'" := M_find_2.
+    Local Notation "'M.elements_1'" := M_elements_1.
+    Local Notation "'M.elements_2'" := M_elements_2.
+    Local Notation "'M.elements_3w'" := M_elements_3w.
+    Local Notation "'M.cardinal_1'" := M_cardinal_1.
+    Local Notation "'M.fold_1'" := M_fold_1.
+    Local Notation "'M.Equal'" := M_Equal.
+    Local Notation "'M.Equiv'" := M_Equiv.
+    Local Notation "'M.Equivb'" := M_Equivb.
+    Local Notation "'M.equal_1'" := M_equal_1.
+    Local Notation "'M.equal_2'" := M_equal_2.
+    Local Notation "'M.map_1'" := M_map_1.
+    Local Notation "'M.map_2'" := M_map_2.
+    Local Notation "'M.mapi_1'" := M_mapi_1.
+    Local Notation "'M.mapi_2'" := M_mapi_2.
+    Local Notation "'M.map2_1'" := M_map2_1.
+    Local Notation "'M.map2_2'" := M_map2_2.
+    Local Notation "'M'.find_mapsto_iff'" := M'_find_mapsto_iff.
+    Local Notation "'M'.add_o'" := M'_add_o.
+    Local Notation "'M'.remove_o'" := M'_remove_o.
+    Local Notation "'M'.mapi_o_ex'" := M'_mapi_o_ex.
+    Local Notation "'M'.mapi_o_ex_impl'" := M'_mapi_o_ex_impl.
+    Local Notation "'M'.map2_o'" := M'_map2_o.
+    Local Notation "'M'.is_empty_iff'" := M'_is_empty_iff.
+    Local Notation "'M'.find_empty'" := M'_find_empty.
+    Local Notation "'M'.forall_In_elements_snd_iff'" := M'_forall_In_elements_snd_iff.
+    Local Notation "'M'.map_o'" := M'_map_o.
+    Local Notation "'M'.empty_1''" := M'_empty_1'.
+    Context {args : args}.
+    Local Existing Instances everything Y_eq_refl Y_eq_sym Y_eq_trans E_eq_refl E_eq_sym E_eq_trans.
+    Local Existing Instances
+          M'_Proper_eq_key_elt_iff
+          M'_Proper_eq_key_elt_impl
+          M'_Proper_eq_key_elt_flip_impl
+          M'_Proper_eq_key_elt_iff'
+          M'_Proper_eq_key_elt_impl'
+          M'_Proper_eq_key_elt_flip_impl'
+          M'_Proper_eq_key_iff
+          M'_Proper_eq_key_impl
+          M'_Proper_eq_key_flip_impl
+          M'_Equal_Equivalence
+          M'_find_Proper_eq
+          M'_MapsTo_Proper_eq_iff
+          M'_In_compat
+          M'_eq_key_equiv
+          M'_eq_key_elt_equiv
+          M'_Proper_Equiv_eq_impl
+          M'_Proper_Equiv_eq_flip_impl
+          M'_Proper_Equiv_eq_iff
+          M'_Proper_Equiv_eq_impl_pointwise
+          M'_Proper_Equiv_eq_flip_impl_pointwise
+          M'_Proper_Equiv_eq_iff_pointwise
+    | 10.
+    Local Hint Resolve Y.eq_refl E.eq_refl : core.
+    Local Hint Immediate Y.eq_sym E.eq_sym : core.
+    Local Hint Extern 1 (ProperProxy (@M_Equal _ _) _) => apply reflexive_proper_proxy : typeclass_instances.
+    Local Instance Y_eq_equiv : Equivalence Y.eq. Proof. split; exact _. Defined.
+    Local Instance E_eq_equiv : Equivalence E.eq. Proof. split; exact _. Defined.
     Local Notation t' elt := (option (T.t elt)).
     Local Notation t'_P m := (True -> match m with None => True | Some m' => recursively_non_empty m' = true end) (only parsing).
     Local Notation mk m pf := (exist (fun m' => t'_P m') m (fun 'I => pf)).
     Definition t elt := { m : t' elt | t'_P m }.
+    Local Notation t_ind := (t_ind (EverythingGen:=@everything args)).
+    Definition key := list Y.t.
 
     Local Ltac t_obgl :=
       repeat first [ progress intros
-                   | progress cbv [M.Empty Option.value not option_map] in *
+                   | progress cbv [M_Empty Option.value not option_map] in *
                    | reflexivity
                    | congruence
                    | t_destr_step
@@ -123,35 +331,32 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
             | pose proof lem as H;
               guarded_specialize_hyp_under_binders_by guard_nondep H ltac:(eapply M.find_2) ].
 
-    Module _Extra1.
-      Global Instance fold_ext {elt A}
-        : Proper ((pointwise_relation _ (pointwise_relation _ (pointwise_relation _ eq))) ==> eq ==> eq ==> eq)
-                 (fold (elt:=elt) (A:=A))
-      | 10.
-      Proof.
-        intros f g Hfg ? m -> ? x ->; revert x.
-        cbv in Hfg.
-        revert f g Hfg.
-        induction m as [d m pf IH] using (t_ind (elt:=elt)); intros.
-        repeat (autounfold with trie_db; autorewrite with trie_db).
-        clear pf.
-        break_innermost_match_hyps; try now break_innermost_match; eauto.
-        rewrite !M.fold_1.
-        erewrite fold_left_ext_in; [ f_equal; try reflexivity; break_innermost_match; eauto | ].
-        intros.
-        pose_MapsTo_as_find M.elements_2.
-        specialize_under_binders_by (rewrite InA_alt; eexists; split; try eassumption; repeat split; try apply Y.eq_refl).
-        eapply IH; [ | intros; apply Hfg ]; eassumption.
-      Qed.
-      Global Instance fold_Proper_eq {elt A}
-        : Proper ((eq ==> eq ==> eq ==> eq) ==> eq ==> eq ==> eq)
-                 (fold (elt:=elt) (A:=A))
-      | 10.
-      Proof.
-        intros f g Hfg; repeat intro; eapply fold_ext; cbv in *; eauto.
-      Qed.
-    End _Extra1.
-
+    Global Instance fold_ext {elt A}
+      : Proper ((pointwise_relation _ (pointwise_relation _ (pointwise_relation _ eq))) ==> eq ==> eq ==> eq)
+               (fold (elt:=elt) (A:=A))
+    | 10.
+    Proof using Type.
+      intros f g Hfg ? m -> ? x ->; revert x.
+      cbv in Hfg.
+      revert f g Hfg.
+      induction m as [d m pf IH] using (t_ind (elt:=elt)); intros.
+      repeat (autounfold with trie_db; autorewrite with trie_db).
+      clear pf.
+      break_innermost_match_hyps; try now break_innermost_match; eauto.
+      rewrite !M.fold_1.
+      erewrite fold_left_ext_in; [ f_equal; try reflexivity; break_innermost_match; eauto | ].
+      intros.
+      pose_MapsTo_as_find M.elements_2.
+      specialize_under_binders_by (rewrite InA_alt; eexists; split; try eassumption; repeat split; try apply Y.eq_refl).
+      eapply IH; [ | intros; apply Hfg ]; eassumption.
+    Qed.
+    Global Instance fold_Proper_eq {elt A}
+      : Proper ((eq ==> eq ==> eq ==> eq) ==> eq ==> eq ==> eq)
+               (fold (elt:=elt) (A:=A))
+    | 10.
+    Proof using Type.
+      intros f g Hfg; repeat intro; eapply fold_ext; cbv in *; eauto.
+    Qed.
 
     Local Ltac Proper_equiv_t :=
       cbv;
@@ -160,7 +365,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
 
     Local Ltac t_full_step :=
       first [ t_destr_step
-            | progress cbv [M.In not option_map] in *
+            | progress cbv [M_In not option_map] in *
             | progress intros
             | match goal with
               | [ H : context[M.MapsTo] |- _ ] => setoid_rewrite M'.find_mapsto_iff in H
@@ -218,14 +423,14 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
                 => setoid_rewrite M'.mapi_o_ex
               | [ H : context[M.find ?k (M.mapi ?f ?m)] |- _ ]
                 => let H' := fresh in
-                   destruct (@M'.mapi_o_ex _ _ m k f) as [? [? H']];
+                   destruct (@M'_mapi_o_ex _ _ _ m k f) as [? [? H']];
                    rewrite H' in H; rewrite ?H' in *; clear H'; cbv [option_map] in *
               | [ |- context[M.find ?k (M.mapi ?f ?m)] ]
                 => let H' := fresh in
-                   destruct (@M'.mapi_o_ex _ _ m k f) as [? [? H']];
+                   destruct (@M'_mapi_o_ex _ _ _ m k f) as [? [? H']];
                    rewrite H'; rewrite ?H' in *; clear H'; cbv [option_map] in *
               | [ H : forall x e, M.find x (M.mapi ?f ?m) = Some e -> @?P e |- _ ]
-                => pose proof (@M'.mapi_o_ex_impl _ _ m f P H);
+                => pose proof (@M'_mapi_o_ex_impl _ _ _ m f P H);
                    clear H
               end ].
     Local Ltac t_non_empty_handle_map2_step :=
@@ -253,13 +458,13 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
             | reflexivity
             | progress specialize_under_binders_by exact I
             | progress intros
-            | rewrite M.fold_1 in *
+            | rewrite @M_fold_1 in *
             | rewrite <- (fun c => @fold_left_map _ _ c andb), @fold_left_andb_truth_map_iff in *
             | rewrite negb_true_iff, <- not_true_iff_false in *
-            | rewrite <- M'.is_empty_iff in *
-            | rewrite M'.find_empty in *
+            | rewrite <- @M'_is_empty_iff in *
+            | rewrite @M'_find_empty in *
             | t_destr_step
-            | progress cbv [M.Empty not] in *
+            | progress cbv [M_Empty not] in *
             | progress cbn [option_map Option.bind] in *
             | progress specialize_under_binders_by (idtac; lazymatch goal with |- True -> _ => idtac end;
                                                     intros _)
@@ -293,7 +498,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
              => Node (Some y) (m <- m; t_case_nd (fun _ m _ => m) m) I
            | x :: xs
              => let add_to d m' m := Node' d (Some (M.add x (add' xs y m') m)) I in
-                let default d := add_to d None (@M.empty _) in
+                let default d := add_to d None (@M_empty _ _) in
                 match m return T.t elt with
                 | None
                   => default None
@@ -527,7 +732,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
                    | t_specialize_safe_step
                    | progress break_innermost_match
                    | progress break_innermost_match_hyps
-                   | progress cbv [Option.is_Some Option.is_None Option.value Option.bind M.eq_key_elt] in *
+                   | progress cbv [Option.is_Some Option.is_None Option.value Option.bind M_eq_key_elt] in *
                    | progress autounfold with list_map_alt in *
                    | progress autounfold with trie_db in *
                    | match goal with
@@ -555,54 +760,51 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
                    | progress specialize_under_binders_by progress autorewrite with list_map_alt
                    | progress cbn in * ].
 
-    Module Import _Extra2.
-      Lemma find'_None elt k : @find' elt k None = None.
-      Proof. case k; t. Qed.
-      Hint Rewrite find'_None : list_map_alt.
-      Lemma find_None elt k pf : @find elt k (mk None pf) = None.
-      Proof. case k; t. Qed.
-      Hint Rewrite find_None : list_map_alt.
+    Lemma find'_None elt k : @find' elt k None = None.
+    Proof using Type. case k; t. Qed.
+    Hint Rewrite find'_None : list_map_alt.
+    Lemma find_None elt k pf : @find elt k (mk None pf) = None.
+    Proof using Type. case k; t. Qed.
+    Hint Rewrite find_None : list_map_alt.
 
-      Definition Empty_alt elt (m : t elt) : Prop := proj1_sig m = None.
+    Definition Empty_alt elt (m : t elt) : Prop := proj1_sig m = None.
 
-      Lemma Empty_alt_iff elt (s : t elt) : Empty s <-> Empty_alt s.
-      Proof.
-        cbv [Empty Empty_alt MapsTo M.Empty not key M.key E.t find proj1_sig].
-        split; repeat intro; destruct_head' t; destruct_head' option; try reflexivity; inversion_option;
-          exfalso;
-          try solve [ destruct_one_head list; inversion_option ].
-        let t := match goal with H : T.t _ |- _ => H end in
-        induction t as [d m pf] using (t_ind (elt:=elt)).
-        let H := match goal with H : forall a e, find' a _ = Some e -> False |- _ => H end in
-        pose proof (H nil); pose proof (fun x y => H (x :: y)); clear H.
-        cbn [find' Option.bind] in *.
-        repeat (autounfold with trie_db in *; autorewrite with trie_db in * ).
-        specialize_under_binders_by rewrite t_case_beta.
-        repeat t_non_empty_step.
-        let rec tac _ :=
-          first [ t_non_empty_step
-                | match goal with
-                  | [ H : _ = Some _ |- _ ]
-                    => progress specialize_under_binders_by rewrite H;
-                       solve [ repeat tac () ]
-                  | [ H : _ |- _ ] => apply H; clear H; solve [ repeat tac () ]
-                  end ] in
-        tac ().
-      Qed.
+    Lemma Empty_alt_iff elt (s : t elt) : Empty s <-> Empty_alt s.
+    Proof using Type.
+      cbv [Empty Empty_alt MapsTo M_Empty not key Y_t find proj1_sig].
+      split; repeat intro; destruct_head' t; destruct_head' option; try reflexivity; inversion_option;
+        exfalso;
+        try solve [ destruct_one_head list; inversion_option ].
+      let t := match goal with H : T.t _ |- _ => H end in
+      induction t as [d m pf] using (t_ind (elt:=elt)).
+      let H := match goal with H : forall a e, find' a _ = Some e -> False |- _ => H end in
+      pose proof (H nil); pose proof (fun x y => H (x :: y)); clear H.
+      cbn [find' Option.bind] in *.
+      repeat (autounfold with trie_db in *; autorewrite with trie_db in * ).
+      specialize_under_binders_by rewrite t_case_beta.
+      repeat t_non_empty_step.
+      let rec tac _ :=
+        first [ t_non_empty_step
+              | match goal with
+                | [ H : _ = Some _ |- _ ]
+                  => progress specialize_under_binders_by rewrite H;
+                     solve [ repeat tac () ]
+                | [ H : _ |- _ ] => apply H; clear H; solve [ repeat tac () ]
+                end ] in
+      tac ().
+    Qed.
 
-      Local Instance eq_key_equiv elt : Equivalence (@eq_key elt) | 10.
-      Proof.
-        split; cbv; intros; break_innermost_match; break_innermost_match_hyps; try ((idtac + symmetry + etransitivity + exfalso); (eassumption + reflexivity)).
-      Qed.
-      Local Instance eq_key_elt_equiv elt : Equivalence (@eq_key_elt elt) | 10.
-      Proof.
-        split; cbv; intros; break_innermost_match; break_innermost_match_hyps; destruct_head'_and; split; try ((idtac + symmetry + etransitivity + exfalso); (eassumption + reflexivity)).
-      Qed.
-    End _Extra2.
+    Local Instance eq_key_equiv elt : Equivalence (@eq_key elt) | 10.
+    Proof using Type.
+      split; cbv; intros; break_innermost_match; break_innermost_match_hyps; try ((idtac + symmetry + etransitivity + exfalso); (eassumption + reflexivity)).
+    Qed.
+    Local Instance eq_key_elt_equiv elt : Equivalence (@eq_key_elt elt) | 10.
+    Proof using Type.
+      split; cbv; intros; break_innermost_match; break_innermost_match_hyps; destruct_head'_and; split; try ((idtac + symmetry + etransitivity + exfalso); (eassumption + reflexivity)).
+    Qed.
     Local Existing Instances eq_key_equiv eq_key_elt_equiv | 10.
 
-    Global
-      Hint Unfold
+    Hint Unfold
       (*In_alt*)
       empty
       is_empty
@@ -626,8 +828,8 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
       (*Equivb_alt*)
       eq_key
       eq_key_elt
-      M.eq_key
-      M.eq_key_elt
+      M_eq_key
+      M_eq_key_elt
       option_map
       RelProd
       relation_conjunction
@@ -662,46 +864,45 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
          fold_left_app
          in_map_iff
          in_flat_map
-         ECompat.eq_alt
       : list_map_alt.
 
-    Global Hint Resolve
-           M.MapsTo_1
-           M.mem_1
-           M.empty_1
-           M'.empty_1'
-           M.is_empty_1
-           M.add_1
-           M.remove_1
-           M.find_1
-           M.elements_1
-           M.equal_1
-           M.map_1
-           M.mapi_1
-           M.map2_1
+    Hint Resolve
+         M.MapsTo_1
+         M.mem_1
+         M.empty_1
+         M'.empty_1'
+         M.is_empty_1
+         M.add_1
+         M.remove_1
+         M.find_1
+         M.elements_1
+         M.equal_1
+         M.map_1
+         M.mapi_1
+         M.map2_1
       : list_map_alt1.
-    Global Hint Resolve
-           M.mem_2
-           M.is_empty_2
-           M.add_2
-           M.remove_2
-           M.find_2
-           M.elements_2
-           M.equal_2
-           M.map_2
-           M.mapi_2
-           M.map2_2
+    Hint Resolve
+         M.mem_2
+         M.is_empty_2
+         M.add_2
+         M.remove_2
+         M.find_2
+         M.elements_2
+         M.equal_2
+         M.map_2
+         M.mapi_2
+         M.map2_2
       : list_map_alt2.
-    Global Hint Resolve
-           M.add_3
-           M.remove_3
-           M.elements_3w
+    Hint Resolve
+         M.add_3
+         M.remove_3
+         M.elements_3w
       : list_map_alt3.
 
     Hint Constructors ex and or
       : list_map_alt1 list_map_alt2 list_map_alt3.
     Hint Extern 10
-         => progress unfold M.In in *
+         => progress unfold M_In in *
              : list_map_alt1 list_map_alt2 list_map_alt3.
 
 
@@ -712,7 +913,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
                | progress destruct_head'_False
                | rewrite <- andb_lazy_alt
                | progress repeat autorewrite with list_map_alt in *
-               | progress change Y.t with M.key in *
+               (*| progress change Y.t with M.key in **)
                | progress repeat autounfold with list_map_alt in *
                | match goal with H : _ |- _ => refine H end
                | congruence
@@ -733,7 +934,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
                  end
                | progress specialize_under_binders_by apply conj ].
 
-    Global Hint Extern 100
+    Hint Extern 100
            => spec_t_step_quick
              : list_map_alt1 list_map_alt2 list_map_alt3.
 
@@ -806,7 +1007,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
             | congruence
             | solve [ eauto ]
             | match goal with
-              | [ |- context[@M.find ?elt ?x ?m] ] => destruct (@M.find elt x m) eqn:?
+              | [ |- context[@M_find ?args ?elt ?x ?m] ] => destruct (@M_find args elt x m) eqn:?
               end
             (*| (* should figure out how to generalize these into lemmas *)
               match goal with
@@ -829,12 +1030,10 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
 
     Local Ltac spec_t := repeat spec_t_step.
 
-    Module Import _Extra3.
-      Lemma find'_iff elt0 k v m0 : @MapsTo elt0 k v m0 <-> find' k (proj1_sig m0) = Some v.
-      Proof using Type. clear; spec_t. Qed.
-      Lemma find_iff elt0 k v m0 : @MapsTo elt0 k v m0 <-> find k m0 = Some v.
-      Proof using Type. clear; spec_t. Qed.
-    End _Extra3.
+    Lemma find'_iff elt0 k v m0 : @MapsTo elt0 k v m0 <-> find' k (proj1_sig m0) = Some v.
+    Proof using Type. clear; spec_t. Qed.
+    Lemma find_iff elt0 k v m0 : @MapsTo elt0 k v m0 <-> find k m0 = Some v.
+    Proof using Type. clear; spec_t. Qed.
 
     Section Spec.
 
@@ -855,10 +1054,10 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
         all: t.
         all: pose_MapsTo_as_find M.MapsTo_1.
         all: repeat match goal with
-                    | [ H : context[find' _ (@M.find ?a ?b ?c)] |- _ ]
-                      => destruct (@M.find a b c) eqn:?
-                    | [ |- context[find' _ (@M.find ?a ?b ?c)] ]
-                      => destruct (@M.find a b c) eqn:?
+                    | [ H : context[find' _ (@M_find _ ?a ?b ?c)] |- _ ]
+                      => destruct (@M_find _ a b c) eqn:?
+                    | [ |- context[find' _ (@M_find _ ?a ?b ?c)] ]
+                      => destruct (@M_find _ a b c) eqn:?
                     end.
         all: specialize_under_binders_by eassumption.
         all: t.
@@ -1146,8 +1345,8 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
                               => rewrite <- H', H
                             | [ H : forall m, find' ?ys (remove' ?xs m) = find' ?ys m, H' : remove' ?xs ?m' = None |- context[find' ?ys ?m'] ]
                               => rewrite <- H, H'
-                            | [ H : context[@M.is_empty_1 ?a ?b] |- _ ]
-                              => generalize dependent (@M.is_empty_1 a b)
+                            | [ H : context[@M_is_empty_1 _ ?a ?b] |- _ ]
+                              => generalize dependent (@M_is_empty_1 _ a b)
                             end
                           | progress break_innermost_match_step
                           | progress autorewrite with trie_db list_map_alt in *
@@ -1159,11 +1358,11 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
                             | [ H : M.is_empty (M.remove ?x ?m) = true |- context[M.find ?y ?m] ]
                               => destruct (Y.eq_dec x y); specialize_under_binders_by assumption;
                                  setoid_subst_rel Y.eq;
-                                 apply M.is_empty_2 in H;
-                                 cbv [M.Empty not] in H;
+                                 rewrite <- @M'_is_empty_iff in H;
+                                 cbv [M_Empty not] in H;
                                  try now exfalso
-                            | [ |- None = find' _ (@M.find ?a ?b ?c) ]
-                              => destruct (@M.find a b c) eqn:?
+                            | [ |- None = find' _ (@M_find _ ?a ?b ?c) ]
+                              => destruct (@M_find _ a b c) eqn:?
                             end ].
         all: specialize_all_ways.
         all: t.
@@ -1204,8 +1403,8 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
                           | progress destruct_head'_False
                           | progress subst
                           | progress cbn [List.In fst snd] in *
-                          | progress cbv [M.eq_key_elt] in *
-                          | rewrite ECompat.eq_alt in *
+                          | progress cbv [M_eq_key_elt] in *
+                          | rewrite @E'_eq_alt in *
                           | rewrite in_map_iff in *
                           | rewrite InA_alt in *
                           | progress invlist eqlistA
@@ -1256,7 +1455,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
                           | break_innermost_match_hyps_step
                           | progress destruct_head' prod
                           | progress setoid_subst_rel E.eq
-                          | rewrite ECompat.eq_alt in *
+                          | rewrite @E'_eq_alt in *
                           | progress invlist eqlistA ].
         all: [ > ].
         let x := match goal with |- NoDupA _ (flat_map _ (M.elements ?m)) => m end in
@@ -1266,7 +1465,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
         { rewrite Forall_map, Forall_forall; intros; break_innermost_match.
           eapply NoDupA_map_inv'; [ | eapply IH; eassumption ].
           spec_t. }
-        { cbv [eq_key M.eq_key]; intros; rewrite !InA_alt in *.
+        { cbv [eq_key M_eq_key]; intros; rewrite !InA_alt in *.
           repeat match goal with
                  | [ H : context[M.elements _] |- _ ] => clear H
                  | [ H : context[@elements' ?A] |- _ ] => generalize dependent (@elements' A); intros
@@ -1276,129 +1475,129 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
           repeat first [ t_destr_step
                        | progress destruct_head' prod
                        | progress setoid_subst_rel Y.eq
-                       | rewrite ECompat.eq_alt in *
+                       | rewrite @E'_eq_alt in *
                        | t_specialize_safe_step ]. }
       Qed.
       Lemma cardinal_1 : cardinal m = length (elements m).
       Proof using Type. clear; spec_t. Qed.
     End Spec.
 
-    Module Import _Extra4.
-      Lemma mapi_o_ex : forall (elt elt':Type)(m: t elt)(x:key)(f:key->elt->elt'), exists y, E.eq y x /\ find x (mapi f m) = option_map (f y) (find x m).
-      Proof.
-        cbv [mapi find].
-        intros elt elt' [[m|] pf]; [ | intros [|]; eexists; split; reflexivity ].
-        cbn [proj1_sig]; clear pf.
-        induction m as [d m pf IH] using (t_ind (elt:=elt)).
-        intros [|x xs] f.
-        all: cbn [find']; cbn [option_map Option.bind].
-        all: repeat (autounfold with trie_db; autorewrite with trie_db).
-        all: try (eexists; split; reflexivity).
-        all: [ > ].
-        destruct m as [m|]; [ | now cbn; eauto ].
-        cbn [option_map proj1_sig Option.bind] in *.
-        clear pf.
-        edestruct M'.mapi_o_ex as [? [HY H]]; rewrite H.
-        destruct (M.find x m) eqn:H'; rewrite ?find'_None; cbn [option_map] in *.
-        1: specialize_under_binders_by eassumption.
-        1: do 2 (let t := open_constr:(_) in evar (v : t); specialize (IH v); subst v).
-        1: destruct IH as [? [? IH]].
-        1: rewrite IH.
-        all: clear IH H H'.
-        all: eexists; rewrite ECompat.eq_alt in *; repeat constructor; try eassumption; reflexivity.
-      Qed.
-      Lemma map_o : forall (elt elt':Type)(m: t elt)(x:key)(f:elt->elt'), find x (map f m) = option_map f (find x m).
-      Proof.
-        cbv [map].
-        intros.
-        edestruct mapi_o_ex as [? [? H]].
-        rewrite H; reflexivity.
-      Qed.
-      Lemma map2'_o
-        : forall (elt elt' elt'':Type)(m: t' elt)(m': t' elt')
-	         (x:key)(f:option elt->option elt'->option elt''),
-          find' x (map2' f m m') = match find' x m, find' x m' with
-                                   | None, None => None
-                                   | x, y => f x y
-                                   end.
-      Proof.
-        intros elt elt' elt'' m m' x f.
-        revert m m'.
-        induction x as [|x xs IH].
-        { cbv [map2' find' Option.bind]; intros.
-          repeat first [ t_destr_conj_step
-                       | reflexivity
-                       | break_innermost_match_step
-                       | break_innermost_match_hyps_step
-                       | progress break_match_hyps
-                       | progress autounfold with trie_db in *
-                       | progress inversion_Node
-                       | match goal with
-                         | [ |- context[t_case _ ?v] ]
-                           => is_var v; induction v using (t_case (elt:=_));
-                              autorewrite with trie_db in *
-                         end
-                       | progress autorewrite with trie_db in * ]. }
-        intros [m|] [m'|]; try reflexivity;
-          try induction m as [d [m|] pf] using (t_case (elt:=elt));
-          try induction m' as [d' [m'|] pf'] using (t_case (elt:=elt'));
-          first [ specialize (IH (M.find x m)) | specialize (IH None) ];
-          first [ specialize (IH (M.find x m')) | specialize (IH None) ].
-        all: rewrite ?find'_None in *.
-        all: cbn [find']; cbv [map2' Option.bind] in *.
-        all: repeat first [ reflexivity
-                          | progress repeat (autounfold with trie_db in *; autorewrite with trie_db in * )
-                          | progress break_match
-                          | match goal with
-                            | [ |- context[t_case _ ?v] ]
-                              => is_var v; induction v using (t_case (elt:=_));
-                                 autorewrite with trie_db in *
-                            end ].
-        all: repeat first [ t_destr_conj_step
-                          | reflexivity
-                          | progress inversion_Node
-                          | match goal with
-                            | [ H : M.is_empty _ = true |- _ ]
-                              => apply M.is_empty_2 in H
-                            | [ H : M.Empty (M.map2 _ _ _) |- _ ]
-                              => cbv [M.Empty not] in H;
-                                 setoid_rewrite M'.find_mapsto_iff in H;
-                                 setoid_rewrite M'.map2_o in H;
-                                 specialize (H x)
-                            | [ H : M.Empty (map_xmap2_l _ _) |- _ ]
-                              => cbv [M.Empty not] in H;
-                                 specialize (H x);
-                                 setoid_rewrite M'.find_mapsto_iff in H;
-                                 rewrite map_xgmap2_l in H by reflexivity
-                            | [ H : M.Empty (map_xmap2_r _ _) |- _ ]
-                              => cbv [M.Empty not] in H;
-                                 specialize (H x);
-                                 setoid_rewrite M'.find_mapsto_iff in H;
-                                 rewrite map_xgmap2_r in H by reflexivity
-                            | [ H : forall e, ?x = Some e -> False |- _ ]
-                              => destruct x eqn:?; [ specialize (H _ eq_refl); exfalso; exact H | clear H ]
-                            end
-                          | rewrite M'.map2_o
-                          | rewrite map_xgmap2_l by reflexivity
-                          | rewrite map_xgmap2_r by reflexivity
-                          | rewrite find'_None in *
-                          | break_innermost_match_step
-                          | break_innermost_match_hyps_step
-                          | progress break_match_hyps
-                          | congruence ].
-      Qed.
-    End _Extra4.
+    Lemma mapi_o_ex : forall (elt elt':Type)(m: t elt)(x:key)(f:key->elt->elt'), exists y, E.eq y x /\ find x (mapi f m) = option_map (f y) (find x m).
+    Proof using Type.
+      cbv [mapi find].
+      intros elt elt' [[m|] pf]; [ | intros [|]; eexists; split; reflexivity ].
+      cbn [proj1_sig]; clear pf.
+      induction m as [d m pf IH] using (t_ind (elt:=elt)).
+      intros [|x xs] f.
+      all: cbn [find']; cbn [option_map Option.bind].
+      all: repeat (autounfold with trie_db; autorewrite with trie_db).
+      all: try (eexists; split; reflexivity).
+      all: [ > ].
+      destruct m as [m|]; [ | now cbn; eauto ].
+      cbn [option_map proj1_sig Option.bind] in *.
+      clear pf.
+      edestruct M'.mapi_o_ex as [? [HY H]]; rewrite H.
+      destruct (M.find x m) eqn:H'; rewrite ?find'_None; cbn [option_map] in *.
+      1: specialize_under_binders_by eassumption.
+      1: do 2 (let t := open_constr:(_) in evar (v : t); specialize (IH v); subst v).
+      1: destruct IH as [? [? IH]].
+      1: rewrite IH.
+      all: clear IH H H'.
+      all: eexists; rewrite E'.eq_alt in *; repeat constructor; try eassumption; reflexivity.
+    Qed.
+    Lemma map_o : forall (elt elt':Type)(m: t elt)(x:key)(f:elt->elt'), find x (map f m) = option_map f (find x m).
+    Proof using Type.
+      cbv [map].
+      intros.
+      edestruct mapi_o_ex as [? [? H]].
+      rewrite H; reflexivity.
+    Qed.
+    Lemma map2'_o
+      : forall (elt elt' elt'':Type)(m: t' elt)(m': t' elt')
+	       (x:key)(f:option elt->option elt'->option elt''),
+        find' x (map2' f m m') = match find' x m, find' x m' with
+                                 | None, None => None
+                                 | x, y => f x y
+                                 end.
+    Proof using Type.
+      intros elt elt' elt'' m m' x f.
+      revert m m'.
+      induction x as [|x xs IH].
+      { cbv [map2' find' Option.bind]; intros.
+        repeat first [ t_destr_conj_step
+                     | reflexivity
+                     | break_innermost_match_step
+                     | break_innermost_match_hyps_step
+                     | progress break_match_hyps
+                     | progress autounfold with trie_db in *
+                     | progress inversion_Node
+                     | match goal with
+                       | [ |- context[t_case _ ?v] ]
+                         => is_var v; induction v using (t_case (elt:=_));
+                            autorewrite with trie_db in *
+                       end
+                     | progress autorewrite with trie_db in * ]. }
+      intros [m|] [m'|]; try reflexivity;
+        try induction m as [d [m|] pf] using (t_case (elt:=elt));
+        try induction m' as [d' [m'|] pf'] using (t_case (elt:=elt'));
+        first [ specialize (IH (M.find x m)) | specialize (IH None) ];
+        first [ specialize (IH (M.find x m')) | specialize (IH None) ].
+      all: rewrite ?find'_None in *.
+      all: cbn [find']; cbv [map2' Option.bind] in *.
+      all: repeat first [ reflexivity
+                        | progress repeat (autounfold with trie_db in *; autorewrite with trie_db in * )
+                        | progress break_match
+                        | match goal with
+                          | [ |- context[t_case _ ?v] ]
+                            => is_var v; induction v using (t_case (elt:=_));
+                               autorewrite with trie_db in *
+                          end ].
+      all: repeat first [ t_destr_conj_step
+                        | reflexivity
+                        | progress inversion_Node
+                        | match goal with
+                          | [ H : M.is_empty ?m = true |- _ ]
+                            => pose proof (M.is_empty_2 H : M.Empty m);
+                               clear H
+                          | [ H : M.Empty (M.map2 _ _ _) |- _ ]
+                            => cbv [M_Empty not] in H;
+                               setoid_rewrite M'.find_mapsto_iff in H;
+                               setoid_rewrite M'.map2_o in H;
+                               specialize (H x)
+                          | [ H : M.Empty (map_xmap2_l _ _) |- _ ]
+                            => cbv [M_Empty not] in H;
+                               specialize (H x);
+                               setoid_rewrite M'.find_mapsto_iff in H;
+                               rewrite map_xgmap2_l in H by reflexivity
+                          | [ H : M.Empty (map_xmap2_r _ _) |- _ ]
+                            => cbv [M_Empty not] in H;
+                               specialize (H x);
+                               setoid_rewrite M'.find_mapsto_iff in H;
+                               rewrite map_xgmap2_r in H by reflexivity
+                          | [ H : forall e, ?x = Some e -> False |- _ ]
+                            => destruct x eqn:?; [ specialize (H _ eq_refl); exfalso; exact H | clear H ]
+                          end
+                        | rewrite @M'_map2_o
+                        | rewrite map_xgmap2_l by reflexivity
+                        | rewrite map_xgmap2_r by reflexivity
+                        | rewrite find'_None in *
+                        | break_innermost_match_step
+                        | break_innermost_match_hyps_step
+                        | progress break_match_hyps
+                        | congruence ].
+    Qed.
+
     Lemma map_1 : forall (elt elt':Type)(m: t elt)(x:key)(e:elt)(f:elt->elt'),
         MapsTo x e m -> MapsTo x (f e) (map f m).
-    Proof. intros *; rewrite !find_iff, map_o; cbv [option_map]; break_innermost_match; spec_t. Qed.
+    Proof using Type. intros *; rewrite !find_iff, map_o; cbv [option_map]; break_innermost_match; spec_t. Qed.
     Lemma map_2 : forall (elt elt':Type)(m: t elt)(x:key)(f:elt->elt'),
         In x (map f m) -> In x m.
-    Proof. intros *; cbv [In]; setoid_rewrite find_iff; setoid_rewrite map_o; cbv [option_map]; break_innermost_match; spec_t. Qed.
+    Proof using Type. intros *; cbv [In]; setoid_rewrite find_iff; setoid_rewrite map_o; cbv [option_map]; break_innermost_match; spec_t. Qed.
     Lemma mapi_1 (elt elt':Type)(m: t elt)(x:key)(e:elt)
           (f:key->elt->elt')
       : MapsTo x e m ->
         exists y, E.eq y x /\ MapsTo x (f y e) (mapi f m).
-    Proof.
+    Proof using Type.
       setoid_rewrite find_iff.
       edestruct mapi_o_ex as [?[? H]]; rewrite H.
       intros ->.
@@ -1407,7 +1606,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
     Lemma mapi_2
       : forall (elt elt':Type)(m: t elt)(x:key)
                (f:key->elt->elt'), In x (mapi f m) -> In x m.
-    Proof.
+    Proof using Type.
       intros *; cbv [In].
       setoid_rewrite find_iff.
       edestruct mapi_o_ex as [?[? ->]].
@@ -1418,7 +1617,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
 	       (x:key)(f:option elt->option elt'->option elt''),
         In x m \/ In x m' ->
         find x (map2 f m m') = f (find x m) (find x m').
-    Proof.
+    Proof using Type.
       cbv [In]; intros *.
       setoid_rewrite find'_iff.
       cbv [find map2 proj1_sig]; intros *.
@@ -1431,7 +1630,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
       : forall (elt elt' elt'':Type)(m: t elt)(m': t elt')
 	       (x:key)(f:option elt->option elt'->option elt''),
         In x (map2 f m m') -> In x m \/ In x m'.
-    Proof.
+    Proof using Type.
       cbv [In]; intros *.
       setoid_rewrite find'_iff.
       cbv [find map2 proj1_sig]; intros *.
@@ -1506,6 +1705,229 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
       Lemma equal_2 : equal cmp m m' = true -> Equivb cmp m m'.
       Proof using Type. apply equal_iff. Qed.
     End Spec_equal.
+
+    Section ord.
+      Class args_ord := {
+          Y_lt : relation Y_t
+        ; E_lt : relation E_t
+        ; P_lt : relation (list Y_t)
+        ; Y'_lt_compat : Proper (Y_eq ==> Y_eq ==> iff) Y_lt
+        ; P'_lt_compat : Proper (eqlistA Y_eq ==> eqlistA Y_eq ==> iff) P_lt
+        ; Y'_lt_trans : Transitive Y_lt
+        ; P'_lt_trans : Transitive P_lt
+        ; ECompat_lt_alt : forall x y, E_lt x y <-> P_lt x y
+        ; M_lt_key elt := fun (p p':Y_t*elt) => Y_lt (fst p) (fst p')
+        ; M_lt_key_Transitive : forall elt, Transitive (@M_lt_key elt)
+        ; M_elements_3 : forall elt m, sort (@M_lt_key elt) (M_elements m)
+        ; P_lt_nil_cons : forall x xs, P_lt nil (cons x xs)
+        ; P_lt_cons_cons : forall x xs y ys, P_lt (cons x xs) (cons y ys) <-> (Y_lt x y \/ (Y_eq x y /\ P_lt xs ys))
+        }.
+      Local Notation "'Y.lt'" := Y_lt.
+      Local Notation "'E.lt'" := E_lt.
+      Local Notation "'P.lt'" := P_lt.
+      Local Notation "'Y'.lt_compat'" := Y'_lt_compat.
+      Local Notation "'P'.lt_compat'" := P'_lt_compat.
+      Local Notation "'Y'.lt_trans'" := Y'_lt_trans.
+      Local Notation "'P'.lt_trans'" := P'_lt_trans.
+      Local Notation "'ECompat.lt_alt'" := ECompat_lt_alt.
+      Local Notation "'M.lt_key'" := M_lt_key.
+      Local Notation "'M.elements_3'" := M_elements_3.
+      Context {args_ord : args_ord}.
+      Local Existing Instances Y'_lt_compat P'_lt_compat | 100.
+      Local Existing Instances Y'_lt_trans P'_lt_trans M_lt_key_Transitive | 10.
+      Local Hint Resolve P_lt_nil_cons : core.
+      Section elt.
+        Variable elt:Type.
+        Definition lt_key (p p':key*elt) := E.lt (fst p) (fst p').
+
+        Lemma elements_3 m : sort lt_key (elements m).
+        Proof using Type.
+          pose proof Y'.lt_compat.
+          pose proof P'.lt_compat.
+          destruct m as [[m|] pfm]; [ | constructor ].
+          cbv [elements proj1_sig].
+          clear pfm.
+          induction m as [d m pf IH] using (t_ind (elt:=elt)).
+          rewrite elements'_alt.
+          repeat (autounfold with trie_db; autorewrite with trie_db).
+          destruct m as [m|]; [ | now break_innermost_match; cbn; repeat constructor ].
+          eapply @SortA_app with (eqA:=@eq_key_elt _); try exact _.
+          all: try solve [ break_innermost_match; repeat constructor ].
+          all: try solve [
+                   intros *; rewrite !InA_alt; cbv [eq_key_elt]; break_innermost_match;
+                   cbn [List.In]; intros;
+                   destruct_head' prod;
+                   repeat t_destr_step;
+                   cbv [lt_key]; cbn;
+                   rewrite @E'_eq_alt, @ECompat_lt_alt in *;
+                   repeat t_destr_step; cbn; auto ].
+          all: [ > ].
+          cbn [proj1_sig] in *; clear pf d.
+          eapply @SortA_flat_map with (eqA:=@eq_key _) (eqB:=eq); try eassumption; try eapply M.elements_3; try rewrite Forall_map, Forall_forall; try exact _.
+          all: [ > | ].
+          all: [ >
+               | cbv [M_lt_key lt_key eq_key]; setoid_rewrite InA_alt; intros;
+                 destruct_head' prod;
+                 repeat t_destr_step;
+                 rewrite @E'_eq_alt, @ECompat_lt_alt in *;
+                 repeat t_destr_step; cbn; rewrite P_lt_cons_cons;
+                 repeat match goal with
+                        | [ H : List.In _ _ |- _ ] => clear H
+                        end;
+                 setoid_subst_rel Y.eq;
+                 setoid_subst_rel (eqlistA Y.eq);
+                 now eauto ].
+          match goal with
+          | [ |- context[Sorted] ]
+            => intros; break_innermost_match; rewrite Sorted_map_iff
+          end.
+          eassert (H' : InA _ _ (M.elements m));
+            [ rewrite InA_alt
+            | eapply M.elements_2, M.find_1 in H' ];
+            [ repeat esplit; try eassumption; reflexivity
+            | ].
+          specialize (IH _ _ H').
+          eapply Sorted_Proper_impl; [ | | eapply IH ]; [ | reflexivity ];
+            repeat intro; break_innermost_match; cbv [lt_key eq_key_elt] in *; rewrite ECompat.lt_alt; cbn [fst snd] in *;
+            rewrite P_lt_cons_cons;
+            destruct_head'_and; subst;
+            rewrite @E'_eq_alt, @ECompat_lt_alt in *.
+          right; split; try reflexivity.
+          repeat match goal with
+                 | [ H : M.find _ _ = _ |- _ ] => clear H
+                 | [ H : List.In _ _ |- _ ] => clear H
+                 | [ H : Sorted _ _ |- _ ] => clear H
+                 | [ H : ~M.Empty _ |- _ ] => clear H
+                 end.
+          setoid_subst_rel (eqlistA Y.eq).
+          assumption.
+        Qed.
+      End elt.
+    End ord.
+  End __.
+End ListWSfun_gen_proofs.
+
+Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M).
+  Module Type ESig := ListTyp Y <+ HasEq <+ IsEqOrig <+ HasEqDec.
+  Module Type ESigCompat (E : ESig).
+    Axiom eq_alt : forall x y, E.eq x y <-> eqlistA Y.eq x y.
+  End ESigCompat.
+  Module Y' <: DecidableTypeBoth := Y <+ UpdateEq.
+  Global Remove Hints Y'.eq_refl Y'.eq_sym Y'.eq_trans : core.
+  Module M' := WFacts_fun Y M <+ WAdditionalFacts_fun Y M.
+  Local Existing Instances
+        M'.eq_key_equiv M'.eq_key_elt_equiv M'.Equal_Equivalence
+  | 10.
+  Local Existing Instances
+        M'.Proper_eq_key_elt_iff M'.Proper_eq_key_elt_impl M'.Proper_eq_key_elt_flip_impl M'.Proper_eq_key_elt_iff' M'.Proper_eq_key_elt_impl' M'.Proper_eq_key_elt_flip_impl' M'.Proper_eq_key_iff M'.Proper_eq_key_impl M'.Proper_eq_key_flip_impl M'.find_Proper_eq M'.MapsTo_Proper_eq_iff M'.In_compat M'.Proper_Equiv_eq_impl M'.Proper_Equiv_eq_flip_impl M'.Proper_Equiv_eq_iff M'.Proper_Equiv_eq_impl_pointwise M'.Proper_Equiv_eq_flip_impl_pointwise M'.Proper_Equiv_eq_iff_pointwise
+  .
+  Module ListWSfun_gen (E : ESig) (ECompat : ESigCompat E) <: WSfun E.
+    Module E' <: DecidableTypeBoth := E <+ UpdateEq <+ ECompat.
+    Global Remove Hints E'.eq_refl E'.eq_sym E'.eq_trans : core.
+    Local Hint Resolve Y'.eq_refl Y'.eq_sym Y'.eq_trans
+          E'.eq_refl E'.eq_sym E'.eq_trans
+      : core.
+
+    Import ListWSfun_gen_proofs.
+    Definition _argsv : args.
+    Proof.
+      eapply (@Build_args T.t Y.t M.t Y.eq E.eq); try exact _.
+      all: first [ exact E.eq_dec
+                 | exact E'.eq_alt
+                 | exact M.MapsTo_1
+                 | exact M.mem_1
+                 | exact M.mem_2
+                 | exact M.empty_1
+                 | exact M.is_empty_1
+                 | exact M.is_empty_2
+                 | exact M.add_1
+                 | exact M.add_2
+                 | exact M.add_3
+                 | exact M.remove_1
+                 | exact M.remove_2
+                 | exact M.remove_3
+                 | exact M.find_1
+                 | exact M.find_2
+                 | exact M.elements_1
+                 | exact M.elements_2
+                 | exact M.elements_3w
+                 | exact M.cardinal_1
+                 | exact M.fold_1
+                 | exact M.Equal
+                 | exact M.Equiv
+                 | exact M.Equivb
+                 | exact M.equal_1
+                 | exact M.equal_2
+                 | exact M.map_1
+                 | exact M.map_2
+                 | exact M.mapi_1
+                 | exact M.mapi_2
+                 | exact M.map2_1
+                 | exact M.map2_2
+                 | exact M'.find_mapsto_iff
+                 | exact M'.add_o
+                 | exact M'.remove_o
+                 | exact M'.mapi_o_ex
+                 | exact M'.mapi_o_ex_impl
+                 | exact M'.map2_o
+                 | exact M'.is_empty_iff
+                 | exact M'.find_empty
+                 | exact M'.forall_In_elements_snd_iff
+                 | exact M'.map_o
+                 | exact M'.empty_1' ].
+    Defined.
+    Local Hint Extern 0 args => (let v := (eval cbv [_argsv] in _argsv) in exact v) : typeclass_instances.
+
+    Definition key := Eval cbv in key.
+    Definition t := Eval cbv in t.
+    Definition empty := Eval cbv in empty.
+    Definition is_empty elt (m : t elt) := Eval cbv -[is_None proj1_sig] in is_empty m.
+    Definition add := add.
+    Definition find := find.
+    Definition remove := remove.
+    Definition mem := mem.
+    Definition mapi := mapi.
+    Definition map := map.
+    Definition map2 := map2.
+    Definition fold := fold.
+    Definition elements := elements.
+    Definition cardinal := cardinal.
+    Definition equal := equal.
+    Definition MapsTo := MapsTo.
+    Definition In := In.
+    Definition Empty := Empty.
+    Definition eq_key := eq_key.
+    Definition eq_key_elt := eq_key_elt.
+    Definition MapsTo_1 := MapsTo_1.
+    Definition mem_1 := mem_1.
+    Definition mem_2 := mem_2.
+    Definition empty_1 := empty_1.
+    Definition is_empty_1 := is_empty_1.
+    Definition is_empty_2 := is_empty_2.
+    Definition add_1 := add_1.
+    Definition add_2 := add_2.
+    Definition add_3 := add_3.
+    Definition remove_1 := remove_1.
+    Definition remove_2 := remove_2.
+    Definition remove_3 := remove_3.
+    Definition find_1 := find_1.
+    Definition find_2 := find_2.
+    Definition elements_1 := elements_1.
+    Definition elements_2 := elements_2.
+    Definition elements_3w := elements_3w.
+    Definition cardinal_1 := cardinal_1.
+    Definition fold_1 := fold_1.
+    Definition Equal := Equal.
+    Definition Equiv := Equiv.
+    Definition Equivb := Equivb.
+    Definition equal_1 := equal_1.
+    Definition equal_2 := equal_2.
+    Definition map_1 := map_1.
+    Definition map_2 := map_2.
+    Definition mapi_1 := mapi_1.
+    Definition mapi_2 := mapi_2.
+    Definition map2_1 := map2_1.
+    Definition map2_2 := map2_2.
   End ListWSfun_gen.
 End ListWSfun_gen.
 
@@ -1552,71 +1974,21 @@ Module ListSfun_gen (Y : OrderedTypeOrig) (M : Sfun Y) (Import T : Trie Y M).
     Module Y' := Y <+ UpdateEq <+ UpdateStrOrder.
     Global Remove Hints Y'.eq_refl Y'.eq_sym Y'.eq_trans : core.
     Module P' := ListStrOrder Y'.
-    Local Existing Instances _Extra2.eq_key_equiv _Extra2.eq_key_elt_equiv.
-    Section elt.
-      Variable elt:Type.
-      Definition lt_key (p p':key*elt) := E.lt (fst p) (fst p').
 
-      Lemma elements_3 m : sort lt_key (elements m).
-      Proof using Type.
-        pose proof Y'.lt_compat.
-        pose proof P'.lt_compat.
-        destruct m as [[m|] pfm]; [ | constructor ].
-        cbv [elements proj1_sig].
-        clear pfm.
-        induction m as [d m pf IH] using (t_ind (elt:=elt)).
-        rewrite elements'_alt.
-        repeat (autounfold with trie_db; autorewrite with trie_db).
-        destruct m as [m|]; [ | now break_innermost_match; cbn; repeat constructor ].
-        eapply @SortA_app with (eqA:=@eq_key_elt _); try exact _.
-        all: try solve [ break_innermost_match; repeat constructor ].
-        all: try solve [
-                 intros *; rewrite !InA_alt; cbv [eq_key_elt]; break_innermost_match;
-                 cbn [List.In]; intros;
-                 destruct_head' prod;
-                 repeat t_destr_step;
-                 cbv [lt_key]; cbn;
-                 rewrite ECompat.eq_alt, ECompat.lt_alt in *;
-                 repeat t_destr_step; cbn; auto ].
-        cbn [proj1_sig] in *; clear pf d.
-        eapply @SortA_flat_map with (eqA:=@eq_key _) (eqB:=eq); try eassumption; try eapply M.elements_3; try rewrite Forall_map, Forall_forall; try exact _.
-        all: [ >
-             | cbv [M.lt_key lt_key eq_key]; setoid_rewrite InA_alt; intros;
-               destruct_head' prod;
-               repeat t_destr_step;
-               rewrite ECompat.eq_alt, ECompat.lt_alt in *;
-               repeat t_destr_step; cbn;
-               repeat match goal with
-                      | [ H : List.In _ _ |- _ ] => clear H
-                      end;
-               setoid_subst_rel Y.eq;
-               setoid_subst_rel (eqlistA Y.eq);
-               now eauto ].
-        match goal with
-        | [ |- context[Sorted] ]
-          => intros; break_innermost_match; rewrite Sorted_map_iff
-        end.
-        eassert (H' : InA _ _ (M.elements m));
-          [ rewrite InA_alt
-          | eapply M.elements_2, M.find_1 in H' ];
-          [ repeat esplit; try eassumption; reflexivity
-          | ].
-        specialize (IH _ _ H').
-        eapply Sorted_Proper_impl; [ | | eapply IH ]; [ | reflexivity ];
-          repeat intro; break_innermost_match; cbv [lt_key eq_key_elt] in *; rewrite ECompat.lt_alt; cbn [fst snd P.lt] in *;
-          destruct_head'_and; subst;
-          rewrite ECompat.eq_alt, ECompat.lt_alt in *.
-        right; split; try reflexivity.
-        repeat match goal with
-               | [ H : M.find _ _ = _ |- _ ] => clear H
-               | [ H : List.In _ _ |- _ ] => clear H
-               | [ H : Sorted _ _ |- _ ] => clear H
-               | [ H : ~M.Empty _ |- _ ] => clear H
-               end.
-        setoid_subst_rel (eqlistA Y.eq).
-        assumption.
-      Qed.
-    End elt.
+    Import ListWSfun_gen_proofs.
+    Local Hint Extern 0 args => (let v := (eval cbv [_argsv] in _argsv) in exact v) : typeclass_instances.
+    Definition _args_ordv : args_ord.
+    Proof.
+      let c := constr:(@Build_args_ord _ Y.lt E.lt P.lt) in
+      eapply c; try exact _.
+      all: first [ exact ECompat.lt_alt
+                 | exact M.elements_3
+                 | cbn; intros; first [ exact I | reflexivity ] ].
+    Defined.
+    Local Hint Extern 0 args_ord => (let v := (eval cbv [_args_ordv] in _args_ordv) in exact v) : typeclass_instances.
+
+    Definition lt_key elt (p p':key*elt) := Eval cbv -[fst] in lt_key p p'.
+    Definition elements_3 := elements_3.
   End ListSfun_gen.
 End ListSfun_gen.
 
