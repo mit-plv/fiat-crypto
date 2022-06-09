@@ -1129,7 +1129,7 @@ Module solinas_reduction.
 
     Import Stringification.C.Compilers.
     Import Stringification.C.Compilers.ToString.
-p
+
     Local Existing Instances ToString.C.OutputCAPI Pipeline.show_ErrorMessage.
     Local Instance : only_signed_opt := false.
     Local Instance : no_select_opt := false.
@@ -1150,24 +1150,24 @@ p
     Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
     Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
 
-    Time Compute
-         Show.show
-         (Pipeline.BoundsPipelineToString
-            "fiat" "mul"
-            false
-            false
-            None
-            possible_values
-            machine_wordsize
-            ltac:(let n := (eval cbv in n) in
-                  let r := Reify (reduce w base s c n) in
-                  exact r)
-                   (fun _ _ => [])
-                   (Some (repeat bound (2*n)), tt)
-                   (Some (repeat bound (n)))
-                   (None, tt)
-                   (None)
-           : Pipeline.ErrorT _).
+    (* Time Compute *)
+    (*      Show.show *)
+    (*      (Pipeline.BoundsPipelineToString *)
+    (*         "fiat" "mul" *)
+    (*         false *)
+    (*         false *)
+    (*         None *)
+    (*         possible_values *)
+    (*         machine_wordsize *)
+    (*         ltac:(let n := (eval cbv in n) in *)
+    (*               let r := Reify (reduce w base s c n) in *)
+    (*               exact r) *)
+    (*                (fun _ _ => []) *)
+    (*                (Some (repeat bound (2*n)), tt) *)
+    (*                (Some (repeat bound (n))) *)
+    (*                (None, tt) *)
+    (*                (None) *)
+    (*        : Pipeline.ErrorT _). *)
 
   End compile.
 
