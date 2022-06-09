@@ -1814,7 +1814,7 @@ Module ListWSfun_gen (Y : DecidableTypeOrig) (M : WSfun Y) (Import T : Trie Y M)
   End ESigCompat.
   Module Y' <: DecidableTypeBoth := Y <+ UpdateEq.
   Global Remove Hints Y'.eq_refl Y'.eq_sym Y'.eq_trans : core.
-  Module M' := WFacts_fun Y M <+ WAdditionalFacts_fun Y M.
+  Module M' := WFacts_fun Y M <+ WFacts_fun_RemoveHints Y M <+ WAdditionalFacts_fun Y M.
   Local Existing Instances
         M'.eq_key_equiv M'.eq_key_elt_equiv M'.Equal_Equivalence
   | 10.
