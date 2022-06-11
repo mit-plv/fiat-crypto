@@ -1,3 +1,3 @@
 Require Import Crypto.Rewriter.PerfTesting.StandaloneOCamlMain.
 
-(*Redirect "/tmp/unsaturated_solinas.ml"*) Recursive Extraction UnsaturatedSolinas.main.
+Extraction "src/ExtractionOCaml/perf_unsaturated_solinas.tmp" UnsaturatedSolinas.main.

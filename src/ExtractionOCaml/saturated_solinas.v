@@ -1,3 +1,3 @@
 Require Import Crypto.StandaloneOCamlMain.
 
-(*Redirect "/tmp/saturated_solinas.ml"*) Recursive Extraction SaturatedSolinas.main.
+Extraction "src/ExtractionOCaml/saturated_solinas.tmp" SaturatedSolinas.main.
