@@ -1,3 +1,3 @@
 Require Import Crypto.StandaloneOCamlMain.
 
-(*Redirect "/tmp/word_by_word_montgomery.ml"*) Recursive Extraction WordByWordMontgomery.main.
+Extraction "src/ExtractionOCaml/word_by_word_montgomery.tmp" WordByWordMontgomery.main.
