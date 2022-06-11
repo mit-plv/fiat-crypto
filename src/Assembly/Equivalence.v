@@ -203,13 +203,13 @@ Definition symbolic_state_of_EquivalenceCheckingError (e : EquivalenceCheckingEr
        => None
      end.
 
-Definition AnnotatedLine := (Line * eager_dag)%type.
+Definition AnnotatedLine := (Line * dag.eager.t)%type.
 Definition AnnotatedLines := (Lines * symbolic_state)%type.
 
 Definition show_annotated_Line : Show AnnotatedLine
   := fun '(l, d)
      => let l := show l in
-        (l ++ match dag_description_lookup d l with
+        (l ++ match dag.eager.description_lookup d l with
               | [] => ""
               | new_idxs
                 => String.Tab ++ "; " ++ String.concat ", " (List.map (fun i => "#" ++ show i) new_idxs)
@@ -217,7 +217,7 @@ Definition show_annotated_Line : Show AnnotatedLine
 
 Global Instance show_lines_AnnotatedLines : ShowLines AnnotatedLines
   := fun '(ls, ss)
-     => let d := force_dag ss.(dag_state) in
+     => let d := dag.eager.force ss.(dag_state) in
         List.map (fun l => show_annotated_Line (l, d)) ls.
 
 Fixpoint remove_common_indices {T} (eqb : T -> T -> bool) (xs ys : list T) (start_idx : nat) : list (nat * T) * list T
@@ -259,7 +259,7 @@ Definition recursive_deps_step
   := if NSet.mem i so_far
      then so_far
      else let so_far := NSet.add i so_far in
-          match dag_lookup dag (N.to_nat i) with
+          match dag.lookup dag i with
           | Some (_op, args)
             => recursive_deps_list_step recursive_deps so_far args
           | None => so_far
@@ -301,7 +301,7 @@ Definition reveal_one_except (dag : dag) (except : idx -> bool) (e : Symbolic.ex
        (fun i revealed
         => if except i
            then (ExprRef i, revealed)
-           else match dag_lookup dag (N.to_nat i) with
+           else match dag.lookup dag i with
                 | Some (op0, args)
                   => (ExprApp (op0, List.map ExprRef args), true)
                 | None => (ExprRef i, revealed)
@@ -353,7 +353,7 @@ Definition describe_idx_from_state
        => [show idx ++ " is a special value no longer present in the symbolic machine state at the end of execution."]
      | _, _, false => []
      | _, None, true
-       => [show idx ++ " is " ++ match dag_lookup st.(dag_state) (N.to_nat idx) with
+       => [show idx ++ " is " ++ match dag.lookup st.(dag_state) idx with
                                  | Some e => show_node_lite e
                                  | None => "not in the dag"
                                  end]
@@ -366,7 +366,7 @@ Definition iteratively_describe_idxs_after
            (show_initial : bool)
            (idxs : list idx)
   : list string
-  := let deps := recursive_deps_list (S (List.length dag)) dag NSet.empty idxs in
+  := let deps := recursive_deps_list (S (N.to_nat (dag.size dag))) dag NSet.empty idxs in
      let deps := if show_initial then List.fold_right NSet.add deps idxs else deps in
      let deps := List.rev (N.sort (NSet.elements deps)) in
      let deps := match first_new_idx_after_all_old_idxs with
@@ -447,11 +447,11 @@ Definition iteratively_explain_array_unification_error_modulo_commutativity
            (show_initial : bool)
            (asm_array : list (nat * idx)) (PHOAS_array : list idx)
   : list string
-  := let recursive_deps := recursive_deps_list (S (List.length dag)) dag NSet.empty in
+  := let recursive_deps := recursive_deps_list (S (N.to_nat (dag.size dag))) dag NSet.empty in
      let asm_deps := recursive_deps (List.map snd asm_array) in
      let PHOAS_deps := recursive_deps PHOAS_array in
      let common_deps := NSet.inter asm_deps PHOAS_deps in
-     let make_iteratively_revealed_exprs := make_iteratively_revealed_exprs dag (S (List.length dag)) (fun i => NSet.mem i common_deps) in
+     let make_iteratively_revealed_exprs := make_iteratively_revealed_exprs dag (S (N.to_nat (dag.size dag))) (fun i => NSet.mem i common_deps) in
      let asm_exprs := List.map ExprRef (List.map snd asm_array) in
      let PHOAS_exprs := List.map ExprRef PHOAS_array in
      let asm_reveals := make_iteratively_revealed_exprs asm_exprs in
@@ -536,7 +536,7 @@ Fixpoint explain_idx_unification_error
                  | O => fun _ _ => ["Internal error: out of fuel in explain_expr_unification_error"]
                  | S fuel => explain_idx_unification_error first_new_idx_after_all_old_idxs left_descr right_descr st fuel
                  end in
-     let reveal_idx idx := dag_lookup st.(dag_state) (N.to_nat idx) in
+     let reveal_idx idx := dag.lookup st.(dag_state) idx in
      let reveal_show_idx idx
        := match reveal_idx idx with
           | Some n => show n
@@ -561,7 +561,7 @@ Fixpoint explain_idx_unification_error
      end%string.
 
 Definition explain_unification_default_fuel (st : symbolic_state) : nat
-  := (10 + (2 * List.length st.(dag_state)))%nat (* we since the dag is acyclic, we shouldn't have to do more recursive lookups than its length; we double and add 10 for safety *).
+  := N.to_nat (10 + (2 * dag.size st.(dag_state))) (* we since the dag is acyclic, we shouldn't have to do more recursive lookups than its length; we double and add 10 for safety *).
 
 Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list idx)) (first_new_idx_after_all_old_idxs : option idx) (start_idx : nat) (st : symbolic_state)
   : list string
@@ -670,11 +670,7 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
 Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
   := fun err => String.concat String.NewLine (show_lines err).
 
-Definition empty_dag : dag := nil.
-Definition merge_symbol {descr:description} (s:symbol) : dag.M idx := merge_node ((old 64%N s), nil).
-(** We use dag length as a source of fresh symbols *)
-Definition gensym (d : dag) : idx := N.of_nat (List.length d).
-Definition merge_fresh_symbol {descr:description} : dag.M idx := fun d => merge_symbol (gensym d) d.
+Definition merge_fresh_symbol {descr:description} : dag.M idx := fun d => merge_node (dag.gensym 64%N d) d.
 Definition merge_literal {descr:description} (l:Z) : dag.M idx := merge_node ((const l, nil)).
 
 Definition SetRegFresh {descr:description} (r : REG) : M idx :=
@@ -1372,7 +1368,7 @@ Section check_equivalence.
 
     Definition check_equivalence : ErrorT (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError) unit :=
       let reg_available := assembly_calling_registers (* registers available for calling conventions *) in
-      let d := empty_dag in
+      let d := dag.empty in
       input_types <- map_err_None (simplify_input_type t arg_bounds);
       output_types <- map_err_None (simplify_base_type (type.final_codomain t) out_bounds);
       let '(inputs, d) := build_inputs (descr:=Build_description "build_inputs" true ) input_types d in
@@ -1380,7 +1376,7 @@ Section check_equivalence.
       PHOAS_output <- map_err_None (symex_PHOAS expr inputs d);
       let '(PHOAS_output, d) := PHOAS_output in
 
-      let first_new_idx_after_all_old_idxs : option idx := Some (N.of_nat (List.length d)) in
+      let first_new_idx_after_all_old_idxs : option idx := Some (dag.size d) in
 
       _ <-- (List.map
                (fun '((fname, asm) as label)

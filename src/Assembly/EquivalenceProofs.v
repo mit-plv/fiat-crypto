@@ -793,13 +793,6 @@ Proof using Type.
 Qed.
 End WithFixedCtx.
 
-Lemma empty_gensym_dag_ok : gensym_dag_ok (fun _ => None) empty_dag.
-Proof using Type.
-  cbv [empty_dag gensym_dag_ok gensym_ok dag_ok node_ok]; repeat split; try congruence;
-    cbv [dag_lookup option_map] in *; break_match_hyps; inversion_option; subst;
-    exfalso; match goal with H : _ |- _ => apply nth_error_In in H; cbn in H end; assumption.
-Qed.
-
 
 Definition val_or_list_val_matches_spec (arg : Z + list Z) (spec : option nat)
   := match arg, spec with
@@ -1113,33 +1106,6 @@ Proof.
   subst res; cbv [merge_fresh_symbol_G]; break_innermost_match; reflexivity.
 Qed.
 
-Lemma big_old_node_absent n d w args
-      (H : forall i r, dag_lookup d (N.to_nat i) = Some r -> node_ok i r)
-      (Hn : (N.of_nat (List.length d) <= n)%N)
-  : dag_reverse_lookup d (old w n, args) = None.
-Proof.
-  revert dependent n; induction d as [|v d IHd] using List.rev_ind; [ reflexivity | ];
-    rewrite ?app_length in *; cbn [List.indexof List.length] in *; intros.
-  rewrite dag_reverse_lookup_app.
-  rewrite IHd; cbv [Crypto.Util.Option.sequence]; cbv [dag_reverse_lookup List.indexof option_map].
-  { break_innermost_match; reflect_hyps; subst; try reflexivity.
-    specialize (H (N.of_nat (List.length d))).
-    rewrite dag_lookup_app in H; break_innermost_match_hyps; try lia; [].
-    rewrite Nat2N.id, Nat.sub_diag in H; specialize (H _ eq_refl _ _ _ eq_refl).
-    lia. }
-  { intros ? ? Hi; apply H; rewrite dag_lookup_app, Hi; break_innermost_match; try reflexivity.
-    apply dag_lookup_value_length in Hi; tauto. }
-  { lia. }
-Qed.
-
-Lemma gensym_node_absent G d w args
-      (H : gensym_dag_ok G d)
-  : dag_reverse_lookup d (old w (gensym d), args) = None.
-Proof.
-  apply big_old_node_absent; try apply H.
-  cbv [gensym]; reflexivity.
-Qed.
-
 Lemma merge_fresh_symbol_G_ok {descr:description} G d v G' d' idx
       (Hd : gensym_dag_ok G d)
       (H : merge_fresh_symbol_G v (G, d) = (idx, (G', d')))
@@ -1147,55 +1113,51 @@ Lemma merge_fresh_symbol_G_ok {descr:description} G d v G' d' idx
     /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
-  cbv [merge_fresh_symbol_G merge_fresh_symbol merge_symbol merge_node] in *.
-  erewrite gensym_node_absent in * by eauto.
+  cbv [merge_fresh_symbol_G merge_fresh_symbol merge_node gensym_dag_ok dag_ok] in *.
+  destruct_head'_and.
   assert (forall e n, eval G d e n -> eval G' d' e n).
+  all: break_innermost_match_hyps; inversion_prod; subst.
   1: inversion_prod; subst; intros e n H; induction H; econstructor.
   all: repeat first [ progress inversion_prod
-                    | progress split_and
-                    | progress subst
-                    | progress destruct_head'_and
-                    | progress cbv [eval_idx_Z gensym_dag_ok gensym_ok ctx_set gensym dag_ok node_ok] in *
-                    | rewrite Nat2N.id, dag_lookup_app, Nat.sub_diag
-                    | progress break_innermost_match
-                    | progress break_innermost_match_hyps
                     | progress inversion_option
-                    | lia
-                    | progress cbn [List.map interp_op List.length fst snd] in *
-                    | progress reflect_hyps
+                    | progress subst
+                    | progress cbn [List.map interp_op fst snd] in *
                     | reflexivity
-                    | rewrite app_length
+                    | exact _
                     | progress intros
-                    | rewrite @dag_lookup_app in *
+                    | progress split_and
+                    | progress destruct_head'_and
+                    | progress cbv [eval_idx_Z gensym_dag_ok gensym_ok ctx_set dag_ok node_ok] in *
+                    | rewrite dag.fst_merge_node_gensym by assumption
+                    | rewrite @dag.lookup_merge_node in * by assumption
+                    | rewrite @dag.fst_merge_node_gensym in * by assumption
+                    | rewrite dag.size_merge_node_gensym by assumption
+                    | rewrite dag.lookup_size_error in * by first [ assumption | lia ]
+                    | rewrite @dag.reverse_lookup_gensym in * by assumption
+                    | rewrite Bool.andb_true_iff in *
+                    | rewrite Bool.andb_false_iff in *
+                    | progress reflect_hyps
                     | match goal with
-                      | [ H : dag_lookup ?d ?i = Some _, H' : ~?i < List.length ?d |- _ ]
-                        => exfalso; apply dag_lookup_value_length in H; clear -H H'; tauto
+                      | [ H : ?x = Some _ |- context[?x] ] => rewrite H
+                      | [ |- _ /\ _ ] => split
+                      | [ H : Forall2 _ ?xs _ |- Forall2 _ ?xs _ ] => eapply Forall2_weaken; [ | eassumption ]; intuition tauto
                       | [ H : interp_op _ ?op ?args = Some ?n |- interp_op _ ?op ?args = Some ?n ]
                         => revert H; destruct op; cbn [interp_op]; break_innermost_match
-                      | [ H : forall s _v, ?G s = Some _v -> (s < ?v)%N, H' : ?G ?v = Some _ |- _ ]
-                        => exfalso; specialize (H _ _ H'); clear -H
-                      | [ |- _ /\ _ ] => split
-                      | [ |- eval _ (?d ++ _) (ExprRef (N.of_nat (length ?d))) _ ] => econstructor
-                      | [ |- Forall2 _ nil _ ] => constructor
-                      | [ H : fst ?x = _ |- _ ] => is_var x; destruct x
-                      | [ H : _ = snd ?x |- _ ] => is_var x; destruct x
-                      | [ H : dag_lookup (_ :: _) ?x = Some _ |- _ ]
-                        => rewrite eta_dag_lookup in H; destruct x eqn:?; cbn [fst] in *
-                      | [ H : dag_lookup nil ?x = Some _ |- _ ]
-                        => rewrite eta_dag_lookup in H; destruct x eqn:?
-                      | [ H : old _ _ = old _ _ |- _ ] => inversion H; clear H
-                      | [ H : ?x - ?y = 0, H' : ~?x < ?y |- _ ] => assert (x = y) by lia; clear H H'
-                      | [ H : N.to_nat ?x = ?y |- _ ] => is_var x; assert (x = N.of_nat y) by lia; clear H
-                      | [ |- exists v, eval _ (?d ++ _) (ExprRef (N.of_nat (length ?d))) v ]
-                        => eexists; econstructor
-                      | [ H : Forall2 _ ?xs _ |- Forall2 _ ?xs _ ] => eapply Forall2_weaken; [ | eassumption ]; intuition tauto
-                      | [ H : forall i r, dag_lookup ?d (N.to_nat i) = Some r -> exists v, eval _ ?d (ExprRef i) v,
-                            H' : dag_lookup ?d (N.to_nat ?idx) = Some _
-                            |- exists v', eval _ (?d ++ _) (ExprRef ?idx) v' ]
-                        => let v := fresh "v" in specialize (H _ _ H'); destruct H as [v H]; exists v
                       end
+                    | progress destruct_head'_or
+                    | progress break_innermost_match
+                    | progress break_innermost_match_hyps
                     | solve [ eauto ]
-                    | solve [ firstorder lia ] ].
+                    | specialize_under_binders_by eassumption; lia
+                    | match goal with
+                      | [ |- eval _ _ (ExprRef (dag.size _)) _ ] => econstructor
+                      | [ |- exists v, eval _ _ (ExprRef (dag.size _)) v ]
+                        => eexists; econstructor
+                      | [ H : forall i r, dag.lookup ?d i = Some r -> exists v, eval _ ?d (ExprRef i) v,
+                            H' : dag.lookup ?d ?idx = Some _
+                            |- exists v', eval _ (snd (dag.merge_node _ ?d)) (ExprRef ?idx) v' ]
+                        => let v := fresh "v" in specialize (H _ _ H'); destruct H as [v H]; exists v
+                      end ].
 Qed.
 
 Local Lemma land_ones_eq_of_bounded v n
