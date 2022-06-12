@@ -151,7 +151,7 @@ Module SumWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSfu
                         f2 (fun k => f (inr k)) (snd m)).
     End _Extra1.
 
-    Definition empty elt : t elt := liftT (@M1.empty _) (@M2.empty _).
+    Definition empty elt : t elt := Eval hnf in liftT (@M1.empty _) (@M2.empty _).
     Definition is_empty elt (m : t elt) : bool := M1.is_empty (fst m) &&& M2.is_empty (snd m).
     Definition add elt : key -> elt -> t elt -> t elt := liftK_TT (@M1.add elt) (@M2.add elt).
     Definition find elt : key -> t elt -> option elt := liftKT_ (@M1.find elt) (@M2.find elt).
