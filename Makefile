@@ -609,25 +609,20 @@ $(BEDROCK2_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Bedrock/Standalone/Stan
 pre-standalone-extracted: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs)
 
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) : %.ml : %.v
-	$(SHOW)'COQC $<'
-	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $<
-	$(HIDE)cat $*.tmp.ml | tr -d '\r' > $@ && rm $*.tmp.ml
-	$(HIDE)cat $*.tmp.mli | tr -d '\r' > $*.mli && rm $*.tmp.mli
+	$(SHOW)'COQC $< > $@'
+	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
+	$(HIDE)cat $@.tmp | tr -d '\r' > $@ && rm -f $@.tmp
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/haskell.sed
 	$(SHOW)'COQC $< > $@'
 	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
-	$(HIDE)cat $@.tmp | tr -d '\r' | sed -f src/haskell.sed > $@ && rm $@.tmp
+	$(HIDE)cat $@.tmp | tr -d '\r' | sed -f src/haskell.sed > $@ && rm -f $@.tmp
 
 # pass -w -20 to disable the unused argument warning
 # unix package needed for Unix.gettimeofday for the perf_* binaries
-$(STANDALONE_OCAML:%=src/ExtractionOCaml/%.cmi) : %.cmi : %.ml
-	$(SHOW)'$(CAMLOPT_PERF_SHOW) $*.mli'
-	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -w -20 -g $*.mli
-
-$(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml %.cmi
+$(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml
 	$(SHOW)'$(CAMLOPT_PERF_SHOW) $< -o $@'
-	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -linkpkg -w -20 -g -I src/ExtractionOCaml/ -o $@ $<
+	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -linkpkg -w -20 -g -o $@ $<
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
 	$(SHOW)'GHC $< -o $@'

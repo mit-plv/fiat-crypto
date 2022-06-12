@@ -22,79 +22,66 @@ Inductive int : Set := int_O | int_S (x : int).
     this, all we care about is that there exists a model. *)
 
 Module Type OCamlPrimitivesT.
-  Axiom OCaml_in_channel : Set.
-  Notation in_channel := OCaml_in_channel.
-  Axiom OCaml_out_channel : Set.
-  Notation out_channel := OCaml_out_channel.
+  Axiom in_channel : Set.
+  Axiom out_channel : Set.
   Axiom fprintf_char : out_channel -> Ascii.ascii -> unit.
   Axiom flush : out_channel -> unit.
-  Axiom OCaml_stdin : in_channel.
-  Notation stdin := OCaml_stdin.
-  Axiom OCaml_stdout : out_channel.
-  Notation stdout := OCaml_stdout.
-  Axiom OCaml_string : Set.
-  Notation string := OCaml_string.
+  Axiom stdin : in_channel.
+  Axiom stdout : out_channel.
+  Axiom string : Set.
   Axiom string_length : string -> int.
   Axiom string_get : string -> int -> Ascii.ascii.
   Axiom sys_argv : list string.
   Axiom string_init : int -> (int -> Ascii.ascii) -> string.
   Axiom raise_Failure : string -> unit.
-  Axiom OCaml_open_in : string -> in_channel.
-  Notation open_in := OCaml_open_in.
-  Axiom OCaml_open_out : string -> out_channel.
-  Notation open_out := OCaml_open_out.
-  Axiom OCaml_close_in : in_channel -> unit.
-  Notation close_in := OCaml_close_in.
-  Axiom OCaml_close_out : out_channel -> unit.
-  Notation close_out := OCaml_close_out.
+  Axiom open_in : string -> in_channel.
+  Axiom open_out : string -> out_channel.
+  Axiom close_in : in_channel -> unit.
+  Axiom close_out : out_channel -> unit.
   Axiom read_channel_rev : in_channel -> list string.
 End OCamlPrimitivesT.
 
 Module Export OCamlPrimitives : OCamlPrimitivesT.
-  Definition OCaml_in_channel : Set := unit.
-  Notation in_channel := OCaml_in_channel.
-  Definition OCaml_out_channel : Set := unit.
-  Notation out_channel := OCaml_out_channel.
+  Definition in_channel : Set := unit.
+  Definition out_channel : Set := unit.
   Definition fprintf_char : out_channel -> Ascii.ascii -> unit := fun _ _ => tt.
   Definition flush : out_channel -> unit := fun _ => tt.
-  Definition OCaml_stdin : in_channel := tt.
-  Definition OCaml_stdout : out_channel := tt.
-  Definition OCaml_string : Set := unit.
-  Notation string := OCaml_string.
+  Definition stdin : in_channel := tt.
+  Definition stdout : out_channel := tt.
+  Definition string : Set := unit.
   Definition string_length : string -> int := fun _ => int_O.
   Definition string_get : string -> int -> Ascii.ascii := fun _ _ => "000"%char.
   Definition sys_argv : list string := nil.
   Definition string_init : int -> (int -> Ascii.ascii) -> string := fun _ _ => tt.
   Definition raise_Failure : string -> unit := fun _ => tt.
-  Definition OCaml_open_in : string -> in_channel := fun _ => tt.
-  Definition OCaml_open_out : string -> out_channel := fun _ => tt.
-  Definition OCaml_close_in : in_channel -> unit := fun _ => tt.
-  Definition OCaml_close_out : out_channel -> unit := fun _ => tt.
+  Definition open_in : string -> in_channel := fun _ => tt.
+  Definition open_out : string -> out_channel := fun _ => tt.
+  Definition close_in : in_channel -> unit := fun _ => tt.
+  Definition close_out : out_channel -> unit := fun _ => tt.
   Definition read_channel_rev : in_channel -> list string := fun _ => nil.
 End OCamlPrimitives.
 
 Extract Inductive int
-        => "Int.t" [ "0" "Pervasives.succ" ]
-                   "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
-(* We cannot inline these constants due to COQBUG(https://github.com/coq/coq/issues/16169) *)
-Extract (*Inlined*) Constant in_channel => "in_channel".
-Extract (*Inlined*) Constant out_channel => "out_channel".
+=> int [ "0" "Pervasives.succ" ]
+       "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
+Extract Inlined Constant in_channel => "in_channel".
+Extract Inlined Constant out_channel => "out_channel".
 Extract Constant fprintf_char =>
 "fun chan c -> Printf.fprintf chan ""%c%!"" c".
 Extract Constant flush =>
-"fun chan -> Printf.fprintf chan ""%!""".
-Extract (*Inlined*) Constant stdin => "stdin".
-Extract (*Inlined*) Constant stdout => "stdout".
-Extract (*Inlined*) Constant string => "string".
-Extract (*Inlined*) Constant string_length => "String.length".
-Extract (*Inlined*) Constant string_get => "String.get".
+"fun chan () -> Printf.fprintf chan ""%!""".
+Extract Inlined Constant stdin => "stdin".
+Extract Inlined Constant stdout => "stdout".
+Extract Inlined Constant string => "string".
+Extract Inlined Constant string_length => "String.length".
+Extract Inlined Constant string_get => "String.get".
 Extract Constant sys_argv => "Array.to_list Sys.argv".
-Extract (*Inlined*) Constant string_init => "String.init".
+Extract Inlined Constant string_init => "String.init".
 Extract Constant raise_Failure => "fun x -> raise (Failure x)".
-Extract (*Inlined*) Constant open_in => "open_in".
-Extract (*Inlined*) Constant open_out => "open_out".
-Extract (*Inlined*) Constant close_in => "close_in".
-Extract (*Inlined*) Constant close_out => "close_out".
+Extract Inlined Constant open_in => "open_in".
+Extract Inlined Constant open_out => "open_out".
+Extract Inlined Constant close_in => "close_in".
+Extract Inlined Constant close_out => "close_out".
 Extract Constant read_channel_rev
 => "fun chan ->
       let lines = ref [] in

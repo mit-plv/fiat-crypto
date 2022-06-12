@@ -1,3 +1,3 @@
 Require Import Crypto.StandaloneOCamlMain.
 
-Extraction "src/ExtractionOCaml/base_conversion.tmp" BaseConversion.main.
+(*Redirect "/tmp/base_conversion.ml"*) Recursive Extraction BaseConversion.main.

@@ -223,7 +223,6 @@ src/ExtractionOCaml/perf_word_by_word_montgomery.exe
 src/ExtractionOCaml/*.cmi
 src/ExtractionOCaml/*.cmx
 src/ExtractionOCaml/*.ml
-src/ExtractionOCaml/*.mli
 src/ExtractionOCaml/*.o
 src/Rewriter/PerfTesting/Specific/generated/*.v
 src/Rewriter/PerfTesting/Specific/generated/*.log
