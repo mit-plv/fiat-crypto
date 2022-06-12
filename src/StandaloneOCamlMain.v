@@ -69,7 +69,7 @@ Extract Inlined Constant out_channel => "out_channel".
 Extract Constant fprintf_char =>
 "fun chan c -> Printf.fprintf chan ""%c%!"" c".
 Extract Constant flush =>
-"fun chan () -> Printf.fprintf chan ""%!""".
+"fun chan -> Printf.fprintf chan ""%!""".
 Extract Inlined Constant stdin => "stdin".
 Extract Inlined Constant stdout => "stdout".
 Extract Inlined Constant string => "string".
