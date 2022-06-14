@@ -30,7 +30,7 @@ Definition f_rel_pos : Z.
   let x := constr:(map.get montladder_finfo fname) in
   let y := eval vm_compute in x in
   match y with
-  | Some (_, ?pos) => exact pos
+  | Some ?pos => exact pos
   end.
 Defined.
 
@@ -174,9 +174,7 @@ Lemma montladder_compiles_correctly :
          map.get (getRegs (getMachine initial)) RegisterNames.ra =
          Some ret_addr ->
          word.unsigned ret_addr mod 4 = 0 ->
-         map.getmany_of_list (getRegs (getMachine initial))
-           (firstn (Datatypes.length argnames) (reg_class.all reg_class.arg)) =
-         Some [pOUT; pK; pU] ->
+         LowerPipeline.arg_regs_contain (getRegs (getMachine initial)) [pOUT; pK; pU] ->
          getLog (getMachine initial) = t ->
          LowerPipeline.machine_ok p_funcs stack_lo stack_hi montladder_insns
            mH Rdata Rexec initial ->
@@ -185,10 +183,7 @@ Lemma montladder_compiles_correctly :
             exists
               (mH' : map.rep word.rep Init.Byte.byte mem)
             (retvals : list word.rep),
-              map.getmany_of_list (getRegs (getMachine final))
-                (firstn (Datatypes.length retnames)
-                   (reg_class.all reg_class.arg)) =
-              Some retvals /\
+              LowerPipeline.arg_regs_contain (getRegs (getMachine final)) retvals /\
               montladder_post pOUT pK pU Kbytes K U OUT R t
                  (getLog (getMachine final)) mH' retvals /\
               map.only_differ (getRegs (getMachine initial))
@@ -220,8 +215,7 @@ Proof.
       | |- getPc (getMachine _) = _ => eassumption
       | |- getLog (getMachine _) = _ => eassumption
       | |- map.get (getRegs (getMachine _)) _ = Some _ => eassumption
-      | |- map.getmany_of_list
-             (getRegs (getMachine _)) _ = Some _ => eassumption
+      | |- LowerPipeline.arg_regs_contain _ _ => eassumption
       | |- context [LowerPipeline.machine_ok] => eassumption
       | |- map.get montladder_finfo _ = Some _ => reflexivity
       | _ => idtac
