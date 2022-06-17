@@ -343,8 +343,7 @@ Module solinas_reduction.
         | _ => apply OrdersEx.Z_as_OT.mul_nonneg_nonneg
         | _ => apply OrdersEx.Z_as_DT.div_pos
 
-        | _ => apply OrdersEx.Z_as_OT.add_lt_mono_r
-
+        | |- _ + ?x < _ + ?x => apply OrdersEx.Z_as_OT.add_lt_mono_r
         | [ |- _ + _ < _ ] => apply OrdersEx.Z_as_OT.add_lt_mono
         | [ |- _ + _ <= _ ] => apply OrdersEx.Z_as_OT.add_le_mono
 
@@ -399,7 +398,7 @@ Module solinas_reduction.
               apply Zmult_le_compat_r with (p:=z) in H; eauto
           end
       end.
-    Ltac adjust_ineq H := adjust_ineq_lt H || adjust_ineq_le H.
+    Ltac adjust_ineq H := adjust_ineq_le H || adjust_ineq_lt H.
 
     Ltac canonical_app p :=
       let H' := fresh "TEMP" in
@@ -416,6 +415,13 @@ Module solinas_reduction.
           end
       end;
       clear H'.
+
+    Ltac subst_canon q :=
+      match goal with
+      | [ H : canonical_repr ?n1 ?p |- canonical_repr ?n2 ?p ] =>
+          replace n2 with n1 by (solve_length q);
+          auto
+      end.
 
     Definition eval_weight_P p :=
       eval (fun i : nat => weight (S i)) (Datatypes.length p) p =
@@ -612,6 +618,7 @@ Module solinas_reduction.
     Context (n_gt_1 : n > 1)
             (s_pos : s > 0)
             (c_pos : Associational.eval c > 0)
+            (mod_nz : s - Associational.eval c <> 0)
             (base_nz : base <> 0)
             (solinas_property : Rows.adjust_s weight (S (S n)) s = (weight n, true))
             (up_bound := 2 ^ (machine_wordsize / 4))
@@ -654,13 +661,14 @@ Module solinas_reduction.
         solve_length p. }
     Qed.
 
-    Lemma reduce_in_range : forall m,
-      up_bound * up_bound + weight m < weight (S m).
+    Lemma reduce_in_range : forall m x,
+        x < weight 1 - weight 0 ->
+        x + weight m < weight (S m).
     Proof.
       intros.
       rewrite OrdersEx.Z_as_DT.lt_add_lt_sub_r.
       induction m.
-      vm_compute; auto.
+      auto.
       etransitivity.
       apply IHm.
       unfold weight.
@@ -772,6 +780,7 @@ Module solinas_reduction.
         eauto.
         eauto.
         apply reduce_in_range.
+        vm_compute; auto.
 
         (* generated lemmas *)
         rewrite map_length.
@@ -958,11 +967,11 @@ Module solinas_reduction.
         eauto.
         solve_hi.
         eauto.
-        (* apply canonical_eval_bounded. *)
-        (* canonical_app p. *)
-        (* replace n with (length lo). *)
-        (* auto. *)
-        (* solve_length p. *)
+        apply canonical_eval_bounded.
+        canonical_app p.
+        replace n with (length lo).
+        auto.
+        solve_length p.
 
         rewrite <-Zplus_diag_eq_mult_2.
         replace (S (length q_lo)) with n by (solve_length q).
@@ -984,11 +993,6 @@ Module solinas_reduction.
         replace (64 / 4) with 16 by eauto.
         lia.
         lia.
-        apply canonical_eval_bounded.
-        canonical_app p.
-        replace n with (length lo).
-        auto.
-        solve_length p.
         lia.
         solve_length q. }
 
@@ -1087,18 +1091,410 @@ Module solinas_reduction.
       lia.
     Qed.
 
-    Lemma reduce_third : forall (p : list Z) lo hi,
+    Lemma reduce_second_correct : forall p lo hi,
         p = lo ++ [hi] ->
-        (canonical_repr (S n) p /\ hi <= 39) ->
+        canonical_repr (S n) p ->
+        hi < up_bound ->
+        let q := reduce1 base s c (S n) (S n) p in
+        (Positional.eval weight (S n) p) mod (s - Associational.eval c)
+        = (Positional.eval weight (S n) q) mod (s - Associational.eval c).
+    Proof.
+      intros.
+      pose proof (value_reduce_second _ _ _ H H0 H1) as Hval.
+      unfold q in *.
+      rewrite Hval.
+      rewrite H.
+      rewrite eval_snoc_S.
+      autorewrite with push_eval zsimplify_const.
+      cbn [fst snd].
+      apply adjust_s_finished' in solinas_property.
+      rewrite solinas_property.
+      cbn [fst].
+      rewrite Z.mul_comm with (m:=Associational.eval c) (n:=(weight n / s)).
+      rewrite (Z.add_comm _ (eval weight n lo)).
+      rewrite <-Z.mul_assoc.
+      rewrite <-reduction_rule.
+      apply Z.elim_mod.
+      rewrite Z.add_cancel_l.
+
+      rewrite Z.mul_assoc.
+      rewrite <-Z_div_exact_2.
+      lia.
+      lia.
+      pose proof (adjust_s_invariant (S (S (S n))) s) as Hinv.
+      rewrite solinas_property in Hinv.
+      cbn [fst] in Hinv.
+      apply Hinv.
+      lia.
+      lia.
+      lia.
+      solve_length p.
+    Qed.
+
+    Lemma reduce_third_canonical : forall (p : list Z) lo hi,
+        p = lo ++ [hi] ->
+        (canonical_repr (S n) p) ->
+        hi < up_bound ->
         let q := reduce1 base s c (S n) (S n) p in
         let r := reduce1 base s c (S n) n q in
         canonical_repr n r.
     Proof.
       intros.
-      pose proof
-           (reduce_second _ _ _ H H0).
-      pose proof value_reduce_second.
-    Admitted.
+      pose proof (reduce_second_canonical _ _ _ H H1 H0) as Hcanon.
+      fold q in Hcanon.
+      assert (Hcanon' := Hcanon).
+      unfold canonical_repr in Hcanon'.
+      destruct Hcanon' as [ Hlen _ ].
+      assert (exists q_lo q_hi1 q_hi2, q = q_lo ++ [q_hi1] ++ [q_hi2]) as Hq.
+      { pose proof (break_list_last q) as Hd1.
+        destruct Hd1 as [ Hd1 | Hd1 ].
+        rewrite Hd1 in Hlen.
+        cbn in Hlen.
+        lia.
+        destruct Hd1 as [ q' Hd1 ].
+        destruct Hd1 as [ q_hi2 Hd1].
+
+        pose proof (break_list_last q') as Hd2.
+        destruct Hd2 as [ Hd2 | Hd2 ].
+        subst q'.
+        rewrite Hd1 in Hlen.
+        cbn in Hlen.
+        lia.
+        destruct Hd2 as [ q_lo Hd2 ].
+        destruct Hd2 as [ q_hi1 Hd2 ].
+        rewrite Hd2 in Hd1.
+        rewrite <-app_assoc in Hd1.
+        eauto. }
+      destruct Hq as [ q_lo Hq ].
+      destruct Hq as [ q_hi1 Hq ].
+      destruct Hq as [ q_hi2 Hq ].
+
+      pose proof (reduce_second _ _ _ H H0 H1 _ _ _ Hq).
+      rewrite app_assoc in Hq.
+      intuition.
+      (* q_hi1 = 0, q_hi2 = 1 *)
+      subst q_hi1 q_hi2.
+      unfold canonical_repr.
+      split.
+      unfold r, reduce1.
+      rewrite Rows.flatten_correct.
+      cbn [fst].
+      auto with push_length.
+      auto.
+      intros.
+      eapply Rows.length_from_associational; eassumption.
+
+      unfold r, reduce1.
+      rewrite Rows.flatten_correct.
+      cbn [fst].
+      rewrite Partition.eval_partition.
+      f_equal.
+      apply Z.mod_small_sym.
+
+      rewrite Rows.eval_from_associational.
+      rewrite value_sat_reduce.
+      apply adjust_s_finished' in solinas_property.
+      rewrite solinas_property.
+      autorewrite with push_eval zsimplify_const.
+      cbn [fst snd].
+      unfold to_associational.
+      rewrite seq_snoc.
+      rewrite map_app.
+      rewrite Nat.add_0_l; cbn [map].
+      rewrite Hq.
+      rewrite combine_snoc.
+      rewrite fst_split_app, snd_split_app.
+      autorewrite with push_eval.
+      destruct (split_p _ _ _ Hq Hcanon) as [Hsplit1 Hsplit2].
+      rewrite Hsplit1, Hsplit2.
+      cbn [fst snd].
+      autorewrite with push_eval zsimplify_const.
+      destruct n eqn:En; try lia.
+      rewrite seq_snoc.
+      rewrite map_app.
+      cbn.
+      rewrite combine_snoc.
+      rewrite eval_app.
+      autorewrite with push_eval zsimplify_const.
+      split.
+
+      solve_ineq.
+      apply canonical_pos.
+      canonical_app q.
+      canonical_app (q_lo ++ [0]).
+      replace n0 with (length q_lo) by (solve_length q).
+      auto.
+      etransitivity.
+      solve_ineq.
+      eauto.
+      apply canonical_eval_bounded.
+      canonical_app q.
+      canonical_app (q_lo ++ [0]).
+      replace n0 with (length q_lo) by (solve_length q).
+      auto.
+      apply reduce_in_range.
+      vm_compute; auto.
+      rewrite map_length, seq_length.
+      solve_length q.
+      rewrite map_length, seq_length.
+      solve_length q.
+      lia.
+      lia.
+      auto.
+      lia.
+      auto.
+      auto.
+      eapply Rows.length_from_associational; eassumption.
+
+      (* q_hi2 = 0 *)
+      subst q_hi2.
+      split.
+      unfold r, reduce1.
+      rewrite Rows.flatten_correct.
+      cbn [fst].
+      auto with push_length.
+      auto.
+      intros.
+      eapply Rows.length_from_associational; eassumption.
+
+      unfold r, reduce1.
+      rewrite Rows.flatten_correct.
+      cbn [fst].
+      rewrite Partition.eval_partition.
+      f_equal.
+      apply Z.mod_small_sym.
+
+      rewrite Rows.eval_from_associational.
+      rewrite value_sat_reduce.
+      apply adjust_s_finished' in solinas_property.
+      rewrite solinas_property.
+      autorewrite with push_eval zsimplify_const.
+      cbn [fst snd].
+      unfold to_associational.
+      rewrite seq_snoc.
+      rewrite map_app.
+      rewrite Nat.add_0_l; cbn [map].
+      rewrite Hq.
+      rewrite combine_snoc.
+      rewrite fst_split_app, snd_split_app.
+      autorewrite with push_eval.
+      destruct (split_p _ _ _ Hq Hcanon) as [Hsplit1 Hsplit2].
+      rewrite Hsplit1, Hsplit2.
+      cbn [fst snd].
+      autorewrite with push_eval zsimplify_const.
+      cbn [snd].
+
+      split.
+      solve_ineq.
+      apply canonical_pos.
+      canonical_app q.
+      replace n with (length (q_lo ++ [q_hi1])) by (solve_length q).
+      auto.
+      apply canonical_eval_bounded.
+      canonical_app q.
+      replace n with (length (q_lo ++ [q_hi1])) by (solve_length q).
+      auto.
+      rewrite map_length.
+      rewrite seq_length.
+      solve_length q.
+      lia.
+      lia.
+      auto.
+      lia.
+      auto.
+      auto.
+      intros.
+      eapply Rows.length_from_associational; eassumption.
+    Qed.
+
+    Lemma value_reduce_third : forall (q : list Z) q_lo q_hi1 q_hi2,
+        q = q_lo ++ [q_hi1] ++ [q_hi2] ->
+        canonical_repr (S n) q ->
+        (q_hi2 = 1 /\ q_hi1 = 0) \/ (q_hi2 = 0) ->
+        let r := reduce1 base s c (S n) n q in
+        let s' := fst (Saturated.Rows.adjust_s weight (S (S (S n))) s) in
+        let coef := Associational.sat_mul_const base [(1, s'/s)] c in
+        eval weight n r = Associational.eval coef * q_hi2 + eval weight n (q_lo ++ [q_hi1]).
+    Proof.
+      intros.
+      unfold reduce1 in *.
+      unfold r, coef, s'.
+      rewrite app_assoc in H.
+      rewrite H.
+      rewrite Rows.flatten_mod, Rows.eval_from_associational, value_sat_reduce.
+
+      unfold to_associational.
+      rewrite seq_snoc.
+      rewrite map_app.
+      rewrite Nat.add_0_l; cbn [map].
+      rewrite combine_snoc.
+      rewrite fst_split_app, snd_split_app.
+      autorewrite with push_eval zsimplify_const.
+      apply adjust_s_finished' in solinas_property.
+      rewrite solinas_property.
+      cbn [fst snd]; autorewrite with zsimplify_const.
+      pose proof (split_p _ _ _ H H0) as Hsplit.
+      destruct Hsplit as [ Hhi Hlo ].
+      rewrite Hhi, Hlo.
+      cbn [fst snd]; autorewrite with push_eval zsimplify_const; cbn [snd].
+
+      destruct n eqn:En; try lia.
+      rewrite seq_snoc, map_app.
+      rewrite Nat.add_0_l; cbn [map].
+      rewrite combine_snoc.
+      rewrite eval_app.
+      rewrite <-En.
+      autorewrite with push_eval.
+      rewrite En.
+      cbn [fst snd].
+      autorewrite with zsimplify_const.
+      rewrite eval_snoc_S.
+
+      apply Z.mod_small.
+      assert (Hmach : 0 < machine_wordsize) by lia.
+      apply BYInv.eval_bound with (n:=n0) (f:=q_lo) in Hmach.
+      unfold eval, to_associational in Hmach.
+      destruct H1.
+
+      (* q_hi1 = 0, q_hi2 = 1 *)
+      destruct H1.
+      subst q_hi1.
+      autorewrite with zsimplify_const.
+      intuition.
+      solve_ineq.
+      apply canonical_pos.
+      canonical_app q.
+      canonical_app (q_lo ++ [0]).
+      subst_canon q.
+      etransitivity.
+      solve_ineq.
+      adjust_ineq coef_small.
+      lia.
+      apply canonical_eval_bounded.
+      canonical_app q.
+      canonical_app (q_lo ++ [0]).
+      subst_canon q.
+
+      apply reduce_in_range.
+      subst q_hi2.
+      weight_comp.
+      unfold up_bound.
+      vm_compute.
+      auto.
+      lia.
+      lia.
+
+      (* q_hi2 = 0 *)
+      subst q_hi2.
+      autorewrite with zsimplify_const.
+      erewrite <-eval_snoc; try reflexivity.
+      intuition.
+      apply canonical_pos.
+      canonical_app q.
+      subst_canon q.
+      apply canonical_eval_bounded.
+      canonical_app q.
+      subst_canon q.
+      solve_length q.
+      eapply canonical_iff.
+      canonical_app q.
+      canonical_app (q_lo ++ [q_hi1]).
+      eauto.
+      solve_length q.
+      solve_length q.
+      rewrite map_length.
+      rewrite seq_length.
+      solve_length q.
+      lia.
+      rewrite map_length.
+      rewrite seq_length.
+      solve_length q.
+      lia.
+      auto.
+      lia.
+      auto.
+      eapply Rows.length_from_associational; eauto.
+    Qed.
+
+    Lemma reduce_third_correct : forall (p : list Z) lo hi,
+        p = lo ++ [hi] ->
+        (canonical_repr (S n) p) ->
+        hi < up_bound ->
+        let q := reduce1 base s c (S n) (S n) p in
+        let r := reduce1 base s c (S n) n q in
+        (Positional.eval weight (S n) p) mod (s - Associational.eval c)
+        = (Positional.eval weight n r) mod (s - Associational.eval c).
+    Proof.
+      intros.
+      pose proof (reduce_second_canonical _ _ _ H H1 H0) as Hcanon.
+      fold q in Hcanon.
+      assert (Hcanon' := Hcanon).
+      unfold canonical_repr in Hcanon'.
+      destruct Hcanon' as [ Hlen _ ].
+      assert (exists q_lo q_hi1 q_hi2, q = q_lo ++ [q_hi1] ++ [q_hi2]) as Hq.
+      { pose proof (break_list_last q) as Hd1.
+        destruct Hd1 as [ Hd1 | Hd1 ].
+        rewrite Hd1 in Hlen.
+        cbn in Hlen.
+        lia.
+        destruct Hd1 as [ q' Hd1 ].
+        destruct Hd1 as [ q_hi2 Hd1].
+
+        pose proof (break_list_last q') as Hd2.
+        destruct Hd2 as [ Hd2 | Hd2 ].
+        subst q'.
+        rewrite Hd1 in Hlen.
+        cbn in Hlen.
+        lia.
+        destruct Hd2 as [ q_lo Hd2 ].
+        destruct Hd2 as [ q_hi1 Hd2 ].
+        rewrite Hd2 in Hd1.
+        rewrite <-app_assoc in Hd1.
+        eauto. }
+      destruct Hq as [ q_lo Hq ].
+      destruct Hq as [ q_hi1 Hq ].
+      destruct Hq as [ q_hi2 Hq ].
+
+      pose proof (reduce_second _ _ _ H H0 H1 _ _ _ Hq) as Hqhi.
+      rewrite app_assoc in Hq.
+      etransitivity.
+      eapply reduce_second_correct; eauto.
+
+      unfold r, q.
+      rewrite value_reduce_third with (q_lo:=q_lo) (q_hi1:=q_hi1) (q_hi2:=q_hi2).
+      autorewrite with push_eval zsimplify_const.
+      erewrite adjust_s_finished'; eauto.
+      cbn [fst snd].
+      rewrite Z.mul_comm with (m:=Associational.eval c) (n:=(weight n / s)).
+      rewrite Z.add_comm.
+      rewrite <-Z.mul_assoc.
+      rewrite <-reduction_rule.
+      apply Z.elim_mod.
+      fold q.
+      rewrite Hq.
+      rewrite eval_snoc_S.
+      rewrite Z.add_cancel_l.
+
+      rewrite Z.mul_assoc.
+      rewrite <-Z_div_exact_2.
+      lia.
+      lia.
+      pose proof (adjust_s_invariant (S (S (S n))) s) as Hinv.
+      erewrite adjust_s_finished' in Hinv; eauto.
+      cbn [fst] in Hinv.
+      apply Hinv.
+      lia.
+      lia.
+      solve_length q.
+      lia.
+      lia.
+      fold q.
+      rewrite Hq.
+      rewrite app_assoc.
+      auto.
+      auto.
+      lia.
+    Qed.
 
   End __.
 
