@@ -265,3 +265,25 @@ Module UsualOT_of_UsualOrig (Import O : UsualMiniOrderedType) <: UsualOrderedTyp
   Include UpdateCompare O O.
   Include HasEqDec_DecStrOrder.
 End UsualOT_of_UsualOrig.
+
+Module OrderedTypeOrigFacts (O:OrderedTypeOrig) := OrderedType.OrderedTypeFacts O.
+Module Type OrderedTypeOrigFactsT (O:OrderedTypeOrig) := Nop <+ OrderedTypeOrigFacts O.
+Module OrderedTypeOrigFacts_RemoveHints (O:OrderedTypeOrig) (F:OrderedTypeOrigFactsT O).
+  Global Remove Hints
+         F.eq_equiv
+         F.lt_compat
+         F.lt_strorder
+    : typeclass_instances.
+End OrderedTypeOrigFacts_RemoveHints.
+
+Module Type KeyOrderedTypeT (O:OrderedType) := Nop <+ KeyOrderedType O.
+Module KeyOrderedType_RemoveHints (O:OrderedTypeOrig) (F:KeyOrderedTypeT O).
+  Include OrderedTypeOrigFacts_RemoveHints O F.MO.
+  Global Remove Hints
+         F.eqk_equiv
+         F.eqke_equiv
+         F.ltk_strorder
+         F.ltk_compat
+         F.ltk_compat'
+    : typeclass_instances.
+End KeyOrderedType_RemoveHints.

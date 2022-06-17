@@ -226,7 +226,10 @@ ZIG_DIR := fiat-zig/src/
 
 # Java only really supports 32-bit builds, because we have neither 64x64->64x64 multiplication, nor uint128
 # Java also requires that class names match file names
-to_title_case = $(shell echo '$(1)' | awk '{split($$0,w,"");u=1;for(i=1;i<=length(w);i++){c=tolower(w[i]);if(u)c=toupper(c);u=0;if(c~/[a-zA-Z0-9]/)printf("%s",c);if(c~/[^a-zA-Z]/)u=1;}}')
+# import string; print(''.join(f'$(patsubst {i}%,{i.upper()}%,' for i in string.ascii_lowercase) + '$(1)' + ')' * len(string.ascii_lowercase))
+capitalize_first_letter = $(patsubst a%,A%,$(patsubst b%,B%,$(patsubst c%,C%,$(patsubst d%,D%,$(patsubst e%,E%,$(patsubst f%,F%,$(patsubst g%,G%,$(patsubst h%,H%,$(patsubst i%,I%,$(patsubst j%,J%,$(patsubst k%,K%,$(patsubst l%,L%,$(patsubst m%,M%,$(patsubst n%,N%,$(patsubst o%,O%,$(patsubst p%,P%,$(patsubst q%,Q%,$(patsubst r%,R%,$(patsubst s%,S%,$(patsubst t%,T%,$(patsubst u%,U%,$(patsubst v%,V%,$(patsubst w%,W%,$(patsubst x%,X%,$(patsubst y%,Y%,$(patsubst z%,Z%,$(1)))))))))))))))))))))))))))
+split_after_non_alpha = $(shell echo '$(1)' | sed 's/\([^a-zA-Z ]\)/\1 /g')
+to_title_case = $(foreach i,$(1),$(subst $(space),,$(call capitalize_first_letter,$(call split_after_non_alpha,$(i)))))
 empty=
 space=$(empty) $(empty)
 JAVA_RENAME = $(foreach i,$(patsubst %_32,%,$(filter %_32,$(1))),Fiat$(subst $(space),,$(call to_title_case,$(subst _, ,$(i)))))
@@ -606,20 +609,25 @@ $(BEDROCK2_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Bedrock/Standalone/Stan
 pre-standalone-extracted: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs)
 
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) : %.ml : %.v
-	$(SHOW)'COQC $< > $@'
-	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
-	$(HIDE)cat $@.tmp | tr -d '\r' > $@ && rm -f $@.tmp
+	$(SHOW)'COQC $<'
+	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $<
+	$(HIDE)cat $*.tmp.ml | tr -d '\r' > $@ && rm $*.tmp.ml
+	$(HIDE)cat $*.tmp.mli | tr -d '\r' > $*.mli && rm $*.tmp.mli
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/haskell.sed
 	$(SHOW)'COQC $< > $@'
 	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
-	$(HIDE)cat $@.tmp | tr -d '\r' | sed -f src/haskell.sed > $@ && rm -f $@.tmp
+	$(HIDE)cat $@.tmp | tr -d '\r' | sed -f src/haskell.sed > $@ && rm $@.tmp
 
 # pass -w -20 to disable the unused argument warning
 # unix package needed for Unix.gettimeofday for the perf_* binaries
-$(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml
+$(STANDALONE_OCAML:%=src/ExtractionOCaml/%.cmi) : %.cmi : %.ml
+	$(SHOW)'$(CAMLOPT_PERF_SHOW) $*.mli'
+	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -w -20 -g $*.mli
+
+$(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml %.cmi
 	$(SHOW)'$(CAMLOPT_PERF_SHOW) $< -o $@'
-	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -linkpkg -w -20 -g -o $@ $<
+	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -linkpkg -w -20 -g -I src/ExtractionOCaml/ -o $@ $<
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
 	$(SHOW)'GHC $< -o $@'
@@ -634,7 +642,7 @@ standalone-ocaml: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%)
 $(ALL_C_FILES) : $(C_DIR)%.c : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) $(C_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) $(C_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok || true) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-c-files: $(ALL_C_FILES) $(EXTRA_C_FILES)
@@ -644,7 +652,7 @@ test-c-files only-test-c-files:
 
 $(ALL_BEDROCK2_FILES) : $(BEDROCK2_DIR)%.c : $$(BEDROCK2_$$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)($(TIMER) $(BEDROCK2_$($*_BINARY_NAME)) --lang bedrock2 --static $(BEDROCK2_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(BEDROCK2_$($*_BINARY_NAME)) --lang bedrock2 --static $(BEDROCK2_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok || true) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-bedrock2-files: $(ALL_BEDROCK2_FILES)
@@ -655,7 +663,7 @@ test-bedrock2-files only-test-bedrock2-files:
 $(ALL_RUST_FILES) : $(RUST_DIR)%.rs : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang Rust $(RUST_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang Rust $(RUST_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok || true) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-rust-files: $(ALL_RUST_FILES)
@@ -672,7 +680,7 @@ fiat-rust/src/lib.rs: Makefile
 $(ALL_ZIG_FILES) : $(ZIG_DIR)%.zig : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang Zig $(ZIG_EXTRA_ARGS) --package-name $($*_DESCRIPTION) "" $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang Zig $(ZIG_EXTRA_ARGS) --package-name $($*_DESCRIPTION) "" $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok || true) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-zig-files: $(ALL_ZIG_FILES)
@@ -697,7 +705,7 @@ $(ALL_GO_FILES) : $(GO_DIR)%.go : $$($$(GO_$$(call GO_FILE_TO_KEY,$$*)_BINARY_NA
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)mkdir -p $(dir $@)
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(PERF_RECORDER) $($(GO_$(call GO_FILE_TO_KEY,$*)_BINARY_NAME)) --lang Go $(GO_EXTRA_ARGS_$(GO_$(call GO_FILE_TO_KEY,$*)_BITWIDTH)) --package-name $(GO_$(call GO_FILE_TO_KEY,$*)_PACKAGE) "" $(GO_$(call GO_FILE_TO_KEY,$*)_ARGS) $(GO_$(call GO_FILE_TO_KEY,$*)_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(PERF_RECORDER) $($(GO_$(call GO_FILE_TO_KEY,$*)_BINARY_NAME)) --lang Go $(GO_EXTRA_ARGS_$(GO_$(call GO_FILE_TO_KEY,$*)_BITWIDTH)) --package-name $(GO_$(call GO_FILE_TO_KEY,$*)_PACKAGE) "" $(GO_$(call GO_FILE_TO_KEY,$*)_ARGS) $(GO_$(call GO_FILE_TO_KEY,$*)_FUNCTIONS) && touch $@.ok || true) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_GO_FILES))
@@ -721,7 +729,7 @@ only-test-go-files: $(addprefix only-test-,$(ALL_GO_FILES))
 $(ALL_JSON_FILES) : $(JSON_DIR)%.json : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok1 $@.ok2
-	$(HIDE)(($(TIMER) $(PERF_RECORDER) $($($*_BINARY_NAME)) --lang JSON $(JSON_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok1) | jq -s . && touch $@.ok2) > $@.tmp
+	$(HIDE)(($(TIMER) $(PERF_RECORDER) $($($*_BINARY_NAME)) --lang JSON $(JSON_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok1 || true) | jq -s . && touch $@.ok2 || true) > $@.tmp
 	$(HIDE)(rm $@.ok1 $@.ok2 && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_JSON_FILES))

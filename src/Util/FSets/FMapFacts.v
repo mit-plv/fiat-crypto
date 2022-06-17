@@ -19,6 +19,57 @@ Require Import Crypto.Util.Tactics.UniquePose.
 
 Local Set Keyed Unification.
 
+
+Module Type WFacts_funT (E:DecidableTypeOrig)(M:WSfun E) := Nop <+ WFacts_fun E M.
+Module WFacts_fun_RemoveHints (E:DecidableTypeOrig)(M:WSfun E) (F : WFacts_funT E M).
+  Global Remove Hints
+         F.Empty_m_Proper
+         F.EqualSetoid
+         F.EqualSetoid_Reflexive
+         F.EqualSetoid_Symmetric
+         F.EqualSetoid_Transitive
+         F.EqualSetoid_relation
+         F.In_m_Proper
+         F.KeySetoid
+         F.KeySetoid_Reflexive
+         F.KeySetoid_Symmetric
+         F.KeySetoid_Transitive
+         F.KeySetoid_relation
+         F.MapsTo_m_Proper
+         F.add_m_Proper
+         F.find_m_Proper
+         F.is_empty_m_Proper
+         F.map_m_Proper
+         F.mem_m_Proper
+         F.remove_m_Proper
+    : typeclass_instances.
+End WFacts_fun_RemoveHints.
+Module WFacts_RemoveHints (M:WS) (F:WFacts_funT M.E M) := WFacts_fun_RemoveHints M.E M F.
+Module Facts_RemoveHints := WFacts_RemoveHints.
+
+Module Type WProperties_funT (E:DecidableTypeOrig)(M:WSfun E) := Nop <+ WProperties_fun E M.
+Module WProperties_fun_RemoveHints (E:DecidableTypeOrig)(M:WSfun E) (F : WProperties_funT E M).
+  Include WFacts_fun_RemoveHints E M F.F.
+  Global Remove Hints
+         F.Disjoint_m_Proper
+         F.Partition_m_Proper
+         F.cardinal_m_Proper
+         F.diff_m_Proper
+         F.restrict_m_Proper
+         F.update_m_Proper
+    : typeclass_instances.
+End WProperties_fun_RemoveHints.
+Module WProperties_RemoveHints (M:WS) (F:WProperties_funT M.E M) := WProperties_fun_RemoveHints M.E M F.
+Module Properties_RemoveHints := WProperties_RemoveHints.
+
+Module Type OrdPropertiesT (M:S) := Nop <+ OrdProperties M.
+Module OrdProperties_RemoveHints (M:S) (P:OrdPropertiesT M).
+  Include OrderedTypeOrigFacts_RemoveHints M.E P.ME.
+  Include KeyOrderedType_RemoveHints M.E P.O.
+  Include Properties_RemoveHints M P.P.
+End OrdProperties_RemoveHints.
+
+
 Local Ltac t_destr_conj_step :=
   first [ progress subst
         | progress destruct_head'_False
@@ -63,11 +114,32 @@ Local Ltac t_destr_step :=
 
 Module WAdditionalFacts_fun (E:DecidableTypeOrig)(Import M:WSfun E).
   Module Import _WAdditionalFacts_fun.
-    Module WFacts := WFacts_fun E M.
-    Module WProperties := WProperties_fun E M.
+    Module WFacts := WFacts_fun E M <+ WFacts_fun_RemoveHints E M.
+    Module WProperties := WProperties_fun E M <+ WProperties_fun_RemoveHints E M.
   End _WAdditionalFacts_fun.
   Import _WAdditionalFacts_fun.WFacts.
   Import _WAdditionalFacts_fun.WProperties.
+  Local Existing Instances
+        Empty_m_Proper
+        EqualSetoid
+        EqualSetoid_Reflexive
+        EqualSetoid_Symmetric
+        EqualSetoid_Transitive
+        EqualSetoid_relation
+        In_m_Proper
+        KeySetoid
+        KeySetoid_Reflexive
+        KeySetoid_Symmetric
+        KeySetoid_Transitive
+        KeySetoid_relation
+        MapsTo_m_Proper
+        add_m_Proper
+        find_m_Proper
+        is_empty_m_Proper
+        map_m_Proper
+        mem_m_Proper
+        remove_m_Proper
+  .
 
   Local Instance Proper_eq_key_elt_iff elt
     : Proper (eq ==> RelationPairs.RelProd E.eq eq ==> iff) (@M.eq_key_elt elt).

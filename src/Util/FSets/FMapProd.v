@@ -49,8 +49,12 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
   Global Remove Hints E1.eq_refl E1.eq_sym E1.eq_trans : core.
   Module E2 <: DecidableTypeBoth := E2 <+ UpdateEq.
   Global Remove Hints E2.eq_refl E2.eq_sym E2.eq_trans : core.
-  Module M1' := M1 <+ WFacts_fun E1 <+ WAdditionalFacts_fun E1.
-  Module M2' := M2 <+ WFacts_fun E2 <+ WAdditionalFacts_fun E2.
+  Module M1' := M1 <+ WFacts_fun E1 <+ WFacts_fun_RemoveHints E1 <+ WAdditionalFacts_fun E1.
+  Module M2' := M2 <+ WFacts_fun E2 <+ WFacts_fun_RemoveHints E2 <+ WAdditionalFacts_fun E2.
+  Local Existing Instances
+        M1'.Empty_m_Proper M1'.In_m_Proper M1'.MapsTo_m_Proper M1'.add_m_Proper M1'.find_m_Proper M1'.is_empty_m_Proper M1'.map_m_Proper M1'.mem_m_Proper M1'.remove_m_Proper
+        M2'.Empty_m_Proper M2'.In_m_Proper M2'.MapsTo_m_Proper M2'.add_m_Proper M2'.find_m_Proper M2'.is_empty_m_Proper M2'.map_m_Proper M2'.mem_m_Proper M2'.remove_m_Proper
+  | 10.
   Local Existing Instances
         M1'.eq_key_equiv M1'.eq_key_elt_equiv M1'.Equal_Equivalence
         M2'.eq_key_equiv M2'.eq_key_elt_equiv M2'.Equal_Equivalence
