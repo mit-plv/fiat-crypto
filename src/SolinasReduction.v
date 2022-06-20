@@ -316,7 +316,6 @@ Module solinas_reduction.
         intuition; apply H5; rewrite H3; apply in_or_app; eauto.
     Qed.
 
-    (* helps with proving lemmas about the length of the reduction *)
     Ltac solve_length q :=
       try match goal with
           | [ H : canonical_repr _ q |- _ ] =>
@@ -572,6 +571,40 @@ Module solinas_reduction.
         lia. }
     Qed.
 
+    Lemma split_gt w l1 l2:
+      (forall x, In x l1 -> x mod w = 0) ->
+      length l1 = length l2 ->
+      split w (combine l1 l2) = ([], combine (map (fun t => t / w) l1) l2).
+    Proof.
+      intros.
+      generalize dependent l2.
+      induction l1; intros.
+      reflexivity.
+      simpl.
+      break_match.
+      auto.
+      match goal with
+      | [ |- context[ ?x :: ?y ] ] => replace (x :: y) with ([x] ++ y) by eauto
+      end.
+      rewrite split_app.
+      rewrite IHl1.
+      cbn [fst snd].
+      simpl.
+      break_match; cbn.
+      reflexivity.
+      rewrite Z.eqb_neq in Heqb.
+      rewrite H in Heqb.
+      lia.
+      simpl.
+      auto.
+      intros.
+      apply H.
+      simpl.
+      auto.
+      simpl in H0.
+      lia.
+    Qed.
+
     Lemma weight_mono' x :
       weight x < weight (S x).
     Proof.
@@ -685,6 +718,151 @@ Module solinas_reduction.
       lia.
       lia.
       lia.
+    Qed.
+
+    Lemma map_weight_seq : forall m p,
+        map weight (seq 0 p) = map (fun t => t / (weight m)) (map weight (seq m p)).
+    Proof.
+      induction m; intros.
+      { generalize dependent (map weight (seq 0 p)).
+        intros.
+        erewrite map_ext.
+        symmetry.
+        eapply map_id.
+        intros.
+        rewrite weight_0.
+        rewrite Z.div_1_r.
+        lia.
+        auto. }
+      { rewrite IHm.
+        rewrite <-map_S_seq.
+        rewrite !map_map.
+        Search (map _ ?x = map _ ?x).
+        apply map_ext_Forall.
+        Search Forall In.
+        rewrite Forall_forall.
+        intros.
+        rewrite in_seq in H.
+        weight_comp.
+        rewrite <-OrdersEx.Z_as_OT.pow_add_r.
+        rewrite <- !OrdersEx.Z_as_OT.pow_sub_r.
+        f_equal.
+        lia.
+        lia.
+        lia.
+        lia.
+        lia.
+        lia.
+        lia.
+        lia.
+        lia. }
+    Qed.
+
+    Lemma split_p' : forall (p lo hi : list Z),
+        p = lo ++ hi ->
+        canonical_repr (2 * n) p ->
+        length lo = n ->
+        split (weight n) (combine (map weight (seq 0 n)) lo) = (combine (map weight (seq 0 n)) lo, []) /\
+          split (weight n) (combine (map weight (seq n n)) hi) = ([], combine (map weight (seq 0 n)) hi).
+    Proof.
+      intros.
+      intuition.
+      { apply split_lt.
+        intros.
+        rewrite in_map_iff in H2.
+        destruct H2.
+        intuition; rewrite <-H3.
+        auto.
+        rewrite in_seq in H4.
+        apply weight_mono.
+        lia.
+        rewrite map_length.
+        rewrite seq_length.
+        auto. }
+      { rewrite map_weight_seq with (m:=n).
+        apply split_gt.
+        intros.
+        rewrite in_map_iff in H2.
+        destruct H2.
+        intuition; rewrite <-H3.
+        apply Weight.weight_multiples_full.
+        auto.
+        auto.
+        rewrite in_seq in H4.
+        lia.
+        rewrite map_length, seq_length.
+        solve_length p. }
+    Qed.
+
+    Lemma value_reduce_first : forall (p lo hi : list Z),
+        p = lo ++ hi ->
+        canonical_repr (2 * n) p ->
+        length lo = n ->
+        let q := reduce1 base s c (2 * n) (S n) p in
+        let s' := fst (Saturated.Rows.adjust_s weight (S (S (S n))) s) in
+        let coef := Associational.sat_mul_const base [(1, s'/s)] c in
+        eval weight (S n) q = Associational.eval coef * eval weight n hi + eval weight n lo.
+    Proof.
+      intros.
+      pose proof (split_p' _ _ _ H H0 H1) as Hsplit.
+      destruct Hsplit as [ Hlo Hhi ].
+      canonical_app p.
+      replace (length hi) with n in * by (solve_length p).
+      replace (length lo) with n in *.
+      unfold q, reduce1.
+      rewrite H.
+      rewrite Rows.flatten_mod, Rows.eval_from_associational, value_sat_reduce.
+      unfold to_associational.
+      cbn [fst snd].
+      erewrite adjust_s_finished; try apply solinas_property.
+      replace (2 * n)%nat with (n + n)%nat by lia.
+      rewrite seq_add.
+      rewrite Nat.add_0_l.
+      rewrite map_app.
+      rewrite combine_app_samelength.
+      rewrite fst_split_app, snd_split_app.
+      cbn [fst snd].
+      rewrite Hlo, Hhi.
+      autorewrite with push_eval zsimplify_const.
+      cbn [snd].
+      unfold coef, s'.
+      autorewrite with push_eval zsimplify_const.
+      erewrite adjust_s_finished; try apply solinas_property.
+      cbn [fst snd].
+
+      rewrite Z.mod_small.
+      reflexivity.
+      split.
+      solve_ineq; apply canonical_pos; auto.
+      etransitivity.
+      solve_ineq.
+      apply Z.mul_lt_mono_nonneg.
+      solve_ineq.
+      eauto.
+      apply canonical_pos; auto.
+      apply canonical_eval_bounded; auto.
+      apply canonical_eval_bounded; auto.
+      weight_comp.
+      rewrite Z.mul_comm.
+      rewrite Zred_factor3.
+      apply Zmult_lt_compat_l.
+      lia.
+      simpl.
+      lia.
+      lia.
+      lia.
+      lia.
+      lia.
+      rewrite map_length, seq_length.
+      solve_length lo.
+      lia.
+      lia.
+      lia.
+      auto.
+      lia.
+      auto.
+      intros.
+      eapply Rows.length_from_associational; eauto.
     Qed.
 
     Lemma reduce_second_canonical : forall (p : list Z) lo hi,
@@ -1535,24 +1713,25 @@ Module solinas_reduction.
     Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
     Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
 
-    (* Time Compute *)
-    (*      Show.show *)
-    (*      (Pipeline.BoundsPipelineToString *)
-    (*         "fiat" "mul" *)
-    (*         false *)
-    (*         false *)
-    (*         None *)
-    (*         possible_values *)
-    (*         machine_wordsize *)
-    (*         ltac:(let n := (eval cbv in n) in *)
-    (*               let r := Reify (reduce w base s c n) in *)
-    (*               exact r) *)
-    (*                (fun _ _ => []) *)
-    (*                (Some (repeat bound (2*n)), tt) *)
-    (*                (Some (repeat bound (n))) *)
-    (*                (None, tt) *)
-    (*                (None) *)
-    (*        : Pipeline.ErrorT _). *)
+    Time Compute
+         Show.show
+         (Pipeline.BoundsPipelineToString
+            "fiat" "mul"
+            false
+            false
+            None
+            possible_values
+            machine_wordsize
+            ltac:(let n := (eval cbv in n) in
+                  let m := (eval cbv in m) in
+                  let r := Reify (reduce1 base s c (S n) (S n)) in
+                  exact r)
+                   (fun _ _ => [])
+                   (Some (repeat bound (S n)), tt)
+                   (Some (repeat bound (S n)))
+                   (None, tt)
+                   (None)
+           : Pipeline.ErrorT _).
 
   End compile.
 
