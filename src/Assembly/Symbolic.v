@@ -2971,7 +2971,12 @@ Definition reverse_lookup_mem (st : mem_state) (i : idx) : option (N * idx)
        (List.find (fun v => N.eqb i (fst (snd v)))
                   (List.enumerate st)).
 
+Local Unset Boolean Equality Schemes.
+Local Unset Decidable Equality Schemes.
 Record symbolic_state := { dag_state :> dag ; symbolic_reg_state :> reg_state ; symbolic_flag_state :> flag_state ; symbolic_mem_state :> mem_state }.
+Local Set Boolean Equality Schemes.
+Local Set Decidable Equality Schemes.
+
 Definition update_dag_with (st : symbolic_state) (f : dag -> dag) : symbolic_state
   := {| dag_state := f st.(dag_state); symbolic_reg_state := st.(symbolic_reg_state) ; symbolic_flag_state := st.(symbolic_flag_state) ; symbolic_mem_state := st.(symbolic_mem_state) |}.
 Definition update_reg_with (st : symbolic_state) (f : reg_state -> reg_state) : symbolic_state
