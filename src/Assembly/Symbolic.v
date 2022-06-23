@@ -3030,6 +3030,8 @@ Global Instance ShowLines_symbolic_state : ShowLines symbolic_state :=
 
 
 Module error.
+  Local Unset Boolean Equality Schemes.
+  Local Unset Decidable Equality Schemes.
   Variant error :=
   | get_flag (f : FLAG) (s : flag_state)
   | get_reg (r : nat + REG) (s : reg_state)
