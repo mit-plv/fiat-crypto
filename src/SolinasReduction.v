@@ -24,6 +24,7 @@ Require Import Crypto.Algebra.Ring.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -75,10 +76,9 @@ Module solinas_reduction.
 
   Section __.
 
-    Print weight_properties.
-
     Context (machine_wordsize := 64)
             (weight := uweight machine_wordsize)
+            (up_bound := 2 ^ (machine_wordsize / 4))
             {wprops : @weight_properties weight}.
 
     Definition sat_reduce base s c n (p : list (Z * Z)) :=
@@ -654,7 +654,6 @@ Module solinas_reduction.
             (mod_nz : s - Associational.eval c <> 0)
             (base_nz : base <> 0)
             (solinas_property : Rows.adjust_s weight (S (S n)) s = (weight n, true))
-            (up_bound := 2 ^ (machine_wordsize / 4))
             (coef_small : weight n / s * Associational.eval c < up_bound).
 
     Lemma split_p : forall p lo hi,
@@ -737,9 +736,7 @@ Module solinas_reduction.
       { rewrite IHm.
         rewrite <-map_S_seq.
         rewrite !map_map.
-        Search (map _ ?x = map _ ?x).
         apply map_ext_Forall.
-        Search Forall In.
         rewrite Forall_forall.
         intros.
         rewrite in_seq in H.
@@ -1676,7 +1673,43 @@ Module solinas_reduction.
 
   End __.
 
+  Section test_reduce_full.
+
+    Context (machine_wordsize := 64)
+            (up_bound := 2 ^ (machine_wordsize / 4)).
+
+    Definition is_bounded_by0 r v
+      := ((lower r%zrange <=? v) && (v <=? upper r%zrange)).
+    Definition is_bounded_by2 r v
+      := (let '(v1, v2) := v in is_bounded_by0 (fst r) v1 && is_bounded_by0 (snd r) v2).
+    Definition is_bounded_by0o r
+      := (match r with Some r' => fun v' => is_bounded_by0 r' v' | None => fun _ => true end).
+    Definition is_bounded_by bounds ls
+      := (fold_andb_map (fun r v'' => is_bounded_by0o r v'') bounds ls).
+
+    Definition reduce_full base s c n (p : list Z) :=
+      let r1 := reduce1 base s c (2*n) (S n) p in
+      let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange in
+      let bounds := repeat bound n ++ [Some r[0 ~> (up_bound - 1)]%zrange] in
+      if (is_bounded_by bounds r1) then
+        let r2 := reduce1 base s c (S n) (S n) r1 in
+        let r3 := reduce1 base s c (S n) (n) r2 in
+        r3
+      else r1.
+
+  End test_reduce_full.
+
   Section compile.
+
+    Definition test (x : Z) :=
+      if (Z.even x) then
+        x
+      else (x+1).
+
+    Print test.
+
+    Compute (ltac:(let r := Reify (test) in
+                   exact r)).
 
     Let s := 2^255.
     Let c := [(1, 19)].
@@ -1713,6 +1746,8 @@ Module solinas_reduction.
     Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
     Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
 
+    Let bounds := repeat bound n ++ [Some r[0 ~> (2^(machine_wordsize/4) - 1)]%zrange].
+
     Time Compute
          Show.show
          (Pipeline.BoundsPipelineToString
@@ -1723,12 +1758,11 @@ Module solinas_reduction.
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) in
-                  let m := (eval cbv in m) in
-                  let r := Reify (reduce1 base s c (S n) (S n)) in
+                  let r := Reify (reduce1 base s c (2*n) (S n)) in
                   exact r)
                    (fun _ _ => [])
-                   (Some (repeat bound (S n)), tt)
-                   (Some (repeat bound (S n)))
+                   (Some (repeat bound (2*n)), tt)
+                   (Some bounds)
                    (None, tt)
                    (None)
            : Pipeline.ErrorT _).
