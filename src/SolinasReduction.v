@@ -1701,7 +1701,12 @@ Module solinas_reduction.
       := (fold_andb_map' (fun r v'' => is_bounded_by0o r v'') bounds ls).
     Fail Compute ltac:(let r := Reify (is_bounded_by') in exact r).
 
-
+    Let s := 2^255.
+    Let c := [(1, 19)].
+    Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
+    Let m : nat := 2 * n.
+    Let w : nat -> Z := weight machine_wordsize 1.
+    Let base : Z := 2 ^ machine_wordsize.
     Definition reduce_full base s c n (p : list Z) :=
       let r1 := reduce1 base s c (2*n) (S n) p in
       let bound := Some r[0 ~> 2^machine_wordsize - 1]%zrange in
@@ -1711,48 +1716,82 @@ Module solinas_reduction.
         let r3 := reduce1 base s c (S n) (n) r2 in
         r3
       else r1.
-    Let s := 2^255.
-    Let c := [(1, 19)].
-    Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
-    Let m : nat := 2 * n.
-    Let w : nat -> Z := weight machine_wordsize 1.
-    Let base : Z := 2 ^ machine_wordsize.
     Fail Compute ltac:(let n := (eval cbv in n) in
                        let r := Reify (reduce_full base s c n) in
                        exact r).
 
+    Definition is_bounded_by'' bounds ls :=
+      fold_andb_map' (fun r v'' => (fst r <=? v'') && (v'' <=? snd r)) bounds ls.
+    Definition reduce_full' base s c n (p : list Z) :=
+      let r1 := reduce1 base s c (2*n) (S n) p in
+      let bound := (0, 2^machine_wordsize - 1) in
+      let bounds := repeat bound n ++ [(0, up_bound-1)] in
+      if (is_bounded_by'' bounds r1) then
+        let r2 := reduce1 base s c (S n) (S n) r1 in
+        let r3 := reduce1 base s c (S n) (n) r2 in
+        r3
+      else r1.
+    Print reduce_full'.
+    (*
+     = "Error Computed bounds None are not tight enough (expected bounds not looser than (Some [Some [0x0 ~> 0xffffffffffffffff], Some [0x0 ~> 0xffffffffffffffff], Some [0x0 ~> 0xffffffffffffffff], Some [0x0 ~> 0xffffffffffffffff]])).
+Found None where Some was expected
+(Unprintible syntax tree used in bounds analysis)
+
+Stringification failed on the syntax tree:
+(λ x1,
+  let x2 := Z.mul_split(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (38, Some [0x26 ~> 0x26], (x1[7], Some [0x0 ~> 0xffffffffffffffff]))) in
+  let x3 := Z.mul_split(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (38, Some [0x26 ~> 0x26], (x1[6], Some [0x0 ~> 0xffffffffffffffff]))) in
+  let x4 := Z.mul_split(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (38, Some [0x26 ~> 0x26], (x1[5], Some [0x0 ~> 0xffffffffffffffff]))) in
+  let x5 := Z.mul_split(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (38, Some [0x26 ~> 0x26], (x1[4], Some [0x0 ~> 0xffffffffffffffff]))) in
+  let x6 := x1[3] (* : uint64_t *) in
+  let x7 := x1[2] (* : uint64_t *) in
+  let x8 := x1[1] (* : uint64_t *) in
+  let x9 := x1[0] (* : uint64_t *) in
+  let x10 := Z.add_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (x8, Some [0x0 ~> 0xffffffffffffffff], (x4₁, Some [0x0 ~> 0xffffffffffffffff]))) in
+  let x11 := Z.add_with_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (x10₂, Some [0x0 ~> 0x1], (x7, Some [0x0 ~> 0xffffffffffffffff], (x3₁, Some [0x0 ~> 0xffffffffffffffff])))) in
+  let x12 := Z.add_with_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (x11₂, Some [0x0 ~> 0x1], (x6, Some [0x0 ~> 0xffffffffffffffff], (x2₁, Some [0x0 ~> 0xffffffffffffffff])))) in
+  let x13 := x12₂ + x2₂ (* : [0x0 ~> 0x26] *) in
+  let x14 := Z.add_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (x9, Some [0x0 ~> 0xffffffffffffffff], (x5₁, Some [0x0 ~> 0xffffffffffffffff]))) in
+  let x15 := Z.add_with_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (x14₂, Some [0x0 ~> 0x1], (x10₁, Some [0x0 ~> 0xffffffffffffffff], (x5₂, Some [0x0 ~> 0x25])))) in
+  let x16 := Z.add_with_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (x15₂, Some [0x0 ~> 0x1], (x11₁, Some [0x0 ~> 0xffffffffffffffff], (x4₂, Some [0x0 ~> 0x25])))) in
+  let x17 := Z.add_with_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (x16₂, Some [0x0 ~> 0x1], (x12₁, Some [0x0 ~> 0xffffffffffffffff], (x3₂, Some [0x0 ~> 0x25])))) in
+  let x18 := x17₂ + x13 (* : [0x0 ~> 0x27] *) in
+  let x19 := if if if 0 ≤ x14₁ then (λ x19, x14₁ ≤ 2^64-1) else (λ x19, false) then (λ x19, if if 0 ≤ x15₁ then (λ x20, x15₁ ≤ 2^64-1) else (λ x20, false) then (λ x20, if if 0 ≤ x16₁ then (λ x21, x16₁ ≤ 2^64-1) else (λ x21, false) then (λ x21, if if 0 ≤ x17₁ then (λ x22, x17₁ ≤ 2^64-1) else (λ x22, false) then (λ x22, if if 0 ≤ x18 then (λ x23, x18 ≤ 2^16-1) else (λ x23, false) then (λ x23, true) else (λ x23, false)) else (λ x22, false)) else (λ x21, false)) else (λ x20, false)) else (λ x19, false) then (λ x19,
+  let x20 := Z.add_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (x14₁, Some [0x0 ~> 0xffffffffffffffff], ((Z.mul_split(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (38, Some [0x26 ~> 0x26], (x18, Some [0x0 ~> 0x27]))))₁, Some [0x0 ~> 0x5ca]))) in
+  let x21 := Z.mul_split(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (38, Some [0x26 ~> 0x26], (x18, Some [0x0 ~> 0x27]))) in
+  let x22 := Z.add_with_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], ((Z.add_with_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (x20₂, Some [0x0 ~> 0x1], (x15₁, Some [0x0 ~> 0xffffffffffffffff], (0, Some [0x0 ~> 0x0])))))₂, Some [0x0 ~> 0x1], (x16₁, Some [0x0 ~> 0xffffffffffffffff], (0, Some [0x0 ~> 0x0])))) in
+  let x23 := Z.add_with_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (x22₂, Some [0x0 ~> 0x1], (x17₁, Some [0x0 ~> 0xffffffffffffffff], (0, Some [0x0 ~> 0x0])))) in
+  let x24 := Z.mul_split(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (38, Some [0x26 ~> 0x26], (x23₂, Some [0x0 ~> 0x1]))) in
+  let x25 := Z.add_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (x20₁, Some [0x0 ~> 0xffffffffffffffff], (x24₁, Some [0x0 ~> 0x26]))) in
+  let x26 := Z.add_with_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (x20₂, Some [0x0 ~> 0x1], (x15₁, Some [0x0 ~> 0xffffffffffffffff], (0, Some [0x0 ~> 0x0])))) in
+  let x27 := Z.add_with_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (x25₂, Some [0x0 ~> 0x1], (x26₁, Some [0x0 ~> 0xffffffffffffffff], (0, Some [0x0 ~> 0x0])))) in
+  let x28 := Z.add_with_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (x27₂, Some [0x0 ~> 0x1], (x22₁, Some [0x0 ~> 0xffffffffffffffff], (0, Some [0x0 ~> 0x0])))) in
+  let x29 := Z.add_with_get_carry(2^64, Some [0x10000000000000000 ~> 0x10000000000000000], (x28₂, Some [0x0 ~> 0x1], (x23₁, Some [0x0 ~> 0xffffffffffffffff], (0, Some [0x0 ~> 0x0])))) in
+  x25₁ :: x27₁ :: x28₁ :: x29₁ :: []
+) else (λ x19, x14₁ :: x15₁ :: x16₁ :: x17₁ :: x18 :: []) in
+  x19
+)
+Error in converting f to C:
+Unable to bind names for all return arguments and bounds at type [ℤ]"
+     *)
 
     Definition tmp r :=
       let '(x, y) := r in (x + y).
     Compute ltac:(let r := Reify (@combine Z Z) in exact r).
     Print IdentifiersBasicGENERATED.Compilers.ident.
-    Locate IdentifiersBasicGENERATED.Compilers.ident.
+    Locate IdentifiersBasicGENERATED.Compilers.ident_Z_cast.
+    Print ZRange.ident.option.interp_Z_cast.
+    Fail Compute ltac:(let r := Reify (ZRange.ident.option.interp_Z_cast) in exact r).
 
-    Search "zrange" "cast".
-    Locate ZRange.type.base.option.is_bounded_by.
-    Compute IdentifiersBasicGENERATED.Compilers.ident
-                     (type.base
-                        (base.type.type_base
-                           IdentifiersBasicGENERATED.Compilers.zrange) ->
-                      type.base
-                        (base.type.type_base
-                           IdentifiersBasicGENERATED.Compilers.Z) ->
-                      type.base
-                        (base.type.type_base
-                           IdentifiersBasicGENERATED.Compilers.Z)).
+    Definition proj_test (r : zrange) :=
+      r.(lower).
+    Ltac Rewriter.Language.PreCommon.Pre.reify_debug_level ::= constr:(20%nat).
+    Fail Compute ltac:(let r := Reify lower in exact r).
+    Compute ltac:(let r := (Reify (@fst Z Z)) in exact r).
+    Fail Compute ltac:(let r := (Reify (zran_rect (fun _ : zrange => Z)
+                                               (fun lower _ : Z => lower)
+                                  )) in exact r).
 
-    Let r : zrange := {| lower := 1; upper := 2 |}.
-
-    Definition test (r : zrange) :=
-      match r with
-      | {| lower := _; upper := _ |} => r
-      end.
-    Fail Compute (ltac:(let r := Reify test in
-                        exact r)).
-
-    Compute (ltac:(let r := Reify r in
-                   exact r)).
-    (* Search IdentifiersBasicGENERATED.Compilers.zrange. *)
 
   End test_reduce_full.
 
@@ -1795,7 +1834,7 @@ Module solinas_reduction.
 
     Let bounds := repeat bound n ++ [Some r[0 ~> (2^(machine_wordsize/4) - 1)]%zrange].
 
-    Fail Time Compute
+    Time Compute
          Show.show
          (Pipeline.BoundsPipelineToString
             "fiat" "mul"
@@ -1805,7 +1844,7 @@ Module solinas_reduction.
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) in
-                  let r := Reify (reduce_full base s c n) in
+                  let r := Reify (reduce_full' base s c n) in
                   exact r)
                    (fun _ _ => [])
                    (Some (repeat bound (2*n)), tt)
