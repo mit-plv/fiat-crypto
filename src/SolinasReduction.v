@@ -1678,38 +1678,85 @@ Module solinas_reduction.
     Context (machine_wordsize := 64)
             (up_bound := 2 ^ (machine_wordsize / 4)).
 
+
     Definition is_bounded_by0 r v
       := ((lower r%zrange <=? v) && (v <=? upper r%zrange)).
+    Fail Compute ltac:(let r := Reify (is_bounded_by0) in exact r).
     Definition is_bounded_by2 r v
       := (let '(v1, v2) := v in is_bounded_by0 (fst r) v1 && is_bounded_by0 (snd r) v2).
     Definition is_bounded_by0o r
       := (match r with Some r' => fun v' => is_bounded_by0 r' v' | None => fun _ => true end).
     Definition is_bounded_by bounds ls
       := (fold_andb_map (fun r v'' => is_bounded_by0o r v'') bounds ls).
+    Fail Compute ltac:(let r := Reify (is_bounded_by) in exact r).
+
+    Definition fold_andb ls :=
+      fold_right andb true ls.
+    Definition dual_map {A B : Type} (f : A -> B -> bool) (l1 : list A) (l2 : list B) :=
+      map (fun x => (f (fst x) (snd x))) (combine l1 l2).
+    Definition fold_andb_map' {A B : Type} (f : A -> B -> bool) (ls1 : list A) (ls2 : list B) :=
+      fold_andb (dual_map f ls1 ls2).
+    Succeed Compute ltac:(let r := Reify (@fold_andb_map' zrange Z) in exact r).
+    Definition is_bounded_by' bounds ls
+      := (fold_andb_map' (fun r v'' => is_bounded_by0o r v'') bounds ls).
+    Fail Compute ltac:(let r := Reify (is_bounded_by') in exact r).
+
 
     Definition reduce_full base s c n (p : list Z) :=
       let r1 := reduce1 base s c (2*n) (S n) p in
-      let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange in
-      let bounds := repeat bound n ++ [Some r[0 ~> (up_bound - 1)]%zrange] in
-      if (is_bounded_by bounds r1) then
+      let bound := Some r[0 ~> 2^machine_wordsize - 1]%zrange in
+      let bounds := repeat bound n ++ [Some r[0 ~> up_bound - 1]%zrange ] in
+      if (is_bounded_by' bounds r1) then
         let r2 := reduce1 base s c (S n) (S n) r1 in
         let r3 := reduce1 base s c (S n) (n) r2 in
         r3
       else r1.
+    Let s := 2^255.
+    Let c := [(1, 19)].
+    Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
+    Let m : nat := 2 * n.
+    Let w : nat -> Z := weight machine_wordsize 1.
+    Let base : Z := 2 ^ machine_wordsize.
+    Fail Compute ltac:(let n := (eval cbv in n) in
+                       let r := Reify (reduce_full base s c n) in
+                       exact r).
+
+
+    Definition tmp r :=
+      let '(x, y) := r in (x + y).
+    Compute ltac:(let r := Reify (@combine Z Z) in exact r).
+    Print IdentifiersBasicGENERATED.Compilers.ident.
+    Locate IdentifiersBasicGENERATED.Compilers.ident.
+
+    Search "zrange" "cast".
+    Locate ZRange.type.base.option.is_bounded_by.
+    Compute IdentifiersBasicGENERATED.Compilers.ident
+                     (type.base
+                        (base.type.type_base
+                           IdentifiersBasicGENERATED.Compilers.zrange) ->
+                      type.base
+                        (base.type.type_base
+                           IdentifiersBasicGENERATED.Compilers.Z) ->
+                      type.base
+                        (base.type.type_base
+                           IdentifiersBasicGENERATED.Compilers.Z)).
+
+    Let r : zrange := {| lower := 1; upper := 2 |}.
+
+    Definition test (r : zrange) :=
+      match r with
+      | {| lower := _; upper := _ |} => r
+      end.
+    Fail Compute (ltac:(let r := Reify test in
+                        exact r)).
+
+    Compute (ltac:(let r := Reify r in
+                   exact r)).
+    (* Search IdentifiersBasicGENERATED.Compilers.zrange. *)
 
   End test_reduce_full.
 
   Section compile.
-
-    Definition test (x : Z) :=
-      if (Z.even x) then
-        x
-      else (x+1).
-
-    Print test.
-
-    Compute (ltac:(let r := Reify (test) in
-                   exact r)).
 
     Let s := 2^255.
     Let c := [(1, 19)].
@@ -1747,6 +1794,25 @@ Module solinas_reduction.
     Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
 
     Let bounds := repeat bound n ++ [Some r[0 ~> (2^(machine_wordsize/4) - 1)]%zrange].
+
+    Fail Time Compute
+         Show.show
+         (Pipeline.BoundsPipelineToString
+            "fiat" "mul"
+            false
+            false
+            None
+            possible_values
+            machine_wordsize
+            ltac:(let n := (eval cbv in n) in
+                  let r := Reify (reduce_full base s c n) in
+                  exact r)
+                   (fun _ _ => [])
+                   (Some (repeat bound (2*n)), tt)
+                   (Some (repeat bound (n)))
+                   (None, tt)
+                   (None)
+           : Pipeline.ErrorT _).
 
     Time Compute
          Show.show
