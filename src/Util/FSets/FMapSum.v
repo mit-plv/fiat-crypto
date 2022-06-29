@@ -3,6 +3,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.Structures.Orders.
 Require Import Coq.Structures.OrdersEx.
 Require Import Coq.FSets.FMapInterface.
+Require Import Coq.FSets.FMapFacts.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.SetoidList.
 Require Import Crypto.Util.Compose.
@@ -18,6 +19,8 @@ Require Import Crypto.Util.Structures.Equalities.Sum.
 Require Import Crypto.Util.Structures.Orders.
 Require Import Crypto.Util.Structures.Orders.Prod.
 Require Import Crypto.Util.Structures.Orders.Sum.
+Require Import Crypto.Util.FSets.FMapInterface.
+Require Import Crypto.Util.FSets.FMapFacts.
 Require Import Crypto.Util.Sorting.Sorted.Proper.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -41,95 +44,122 @@ Module SumWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSfu
     Axiom eq_alt : forall x y, E.eq x y <-> sumwise E1.eq E2.eq x y.
   End ESigCompat.
   Module E1 <: DecidableTypeBoth := E1 <+ UpdateEq.
+  Global Remove Hints E1.eq_refl E1.eq_sym E1.eq_trans : core.
   Module E2 <: DecidableTypeBoth := E2 <+ UpdateEq.
+  Global Remove Hints E2.eq_refl E2.eq_sym E2.eq_trans : core.
+  Module M1' := M1 <+ WFacts_fun E1 <+ WFacts_fun_RemoveHints E1 <+ WAdditionalFacts_fun E1.
+  Module M2' := M2 <+ WFacts_fun E2 <+ WFacts_fun_RemoveHints E2 <+ WAdditionalFacts_fun E2.
+  Local Existing Instances
+        M1'.Empty_m_Proper M1'.In_m_Proper M1'.MapsTo_m_Proper M1'.add_m_Proper M1'.find_m_Proper M1'.is_empty_m_Proper M1'.map_m_Proper M1'.mem_m_Proper M1'.remove_m_Proper
+        M2'.Empty_m_Proper M2'.In_m_Proper M2'.MapsTo_m_Proper M2'.add_m_Proper M2'.find_m_Proper M2'.is_empty_m_Proper M2'.map_m_Proper M2'.mem_m_Proper M2'.remove_m_Proper
+  | 10.
+  Local Existing Instances
+        M1'.eq_key_equiv M1'.eq_key_elt_equiv M1'.Equal_Equivalence
+        M2'.eq_key_equiv M2'.eq_key_elt_equiv M2'.Equal_Equivalence
+  | 10.
+  Local Existing Instances
+        M1'.Proper_eq_key_elt_iff M1'.Proper_eq_key_elt_impl M1'.Proper_eq_key_elt_flip_impl M1'.Proper_eq_key_elt_iff' M1'.Proper_eq_key_elt_impl' M1'.Proper_eq_key_elt_flip_impl' M1'.Proper_eq_key_iff M1'.Proper_eq_key_impl M1'.Proper_eq_key_flip_impl M1'.find_Proper_eq M1'.MapsTo_Proper_eq_iff M1'.In_compat M1'.Proper_Equiv_eq_impl M1'.Proper_Equiv_eq_flip_impl M1'.Proper_Equiv_eq_iff M1'.Proper_Equiv_eq_impl_pointwise M1'.Proper_Equiv_eq_flip_impl_pointwise M1'.Proper_Equiv_eq_iff_pointwise
+        M2'.Proper_eq_key_elt_iff M2'.Proper_eq_key_elt_impl M2'.Proper_eq_key_elt_flip_impl M2'.Proper_eq_key_elt_iff' M2'.Proper_eq_key_elt_impl' M2'.Proper_eq_key_elt_flip_impl' M2'.Proper_eq_key_iff M2'.Proper_eq_key_impl M2'.Proper_eq_key_flip_impl M2'.find_Proper_eq M2'.MapsTo_Proper_eq_iff M2'.In_compat M2'.Proper_Equiv_eq_impl M2'.Proper_Equiv_eq_flip_impl M2'.Proper_Equiv_eq_iff M2'.Proper_Equiv_eq_impl_pointwise M2'.Proper_Equiv_eq_flip_impl_pointwise M2'.Proper_Equiv_eq_iff_pointwise
+  .
   Module SumWSfun_gen (E : ESig) (ECompat : ESigCompat E) <: WSfun E.
     Module E' <: DecidableTypeBoth := E <+ UpdateEq <+ ECompat.
-    Local Instance M1_eq_key_equiv elt : Equivalence (@M1.eq_key elt) | 10. split; cbv; eauto. Qed.
-    Local Instance M1_eq_key_elt_equiv elt : Equivalence (@M1.eq_key_elt elt) | 10. split; repeat intros [? ?]; cbv in *; subst; eauto. Qed.
-    Local Instance M2_eq_key_equiv elt : Equivalence (@M2.eq_key elt) | 10. split; cbv; eauto. Qed.
-    Local Instance M2_eq_key_elt_equiv elt : Equivalence (@M2.eq_key_elt elt) | 10. split; repeat intros [? ?]; cbv in *; subst; eauto. Qed.
+    Global Remove Hints E.eq_refl E.eq_sym E.eq_trans : core.
+    Local Hint Resolve E1.eq_refl E1.eq_sym E1.eq_trans
+          E2.eq_refl E2.eq_sym E2.eq_trans
+          E.eq_refl E.eq_sym E.eq_trans
+      : core.
 
     Definition key := E.t.
 
     Global Hint Transparent key : core.
 
-    Definition t elt := M1.t elt * M2.t elt.
+    (* Create a record so that the normal form of the type isn't exponentially sized when we nest things, see COQBUG(https://github.com/coq/coq/issues/16172) *)
+    Record underlying_map elt := { underlying :> M1.t elt * M2.t elt }.
+    Declare Scope underlying_map_scope.
+    Bind Scope underlying_map_scope with map.
+    Notation "( x , y , .. , z )" := {| underlying := (pair .. (pair x y) .. z) |} : underlying_map_scope.
+    Definition t := underlying_map.
+    Bind Scope underlying_map_scope with t.
+    Local Delimit Scope underlying_map_scope with t.
+    Local Open Scope underlying_map_scope.
 
-    Definition liftK {A} (f1 : M1.key -> A) (f2 : M2.key -> A) : key -> A
-      := fun x => match x with
-                  | inl x => f1 x
-                  | inr x => f2 x
-                  end.
-    Definition liftT {elt} (f1 : M1.t elt) (f2 : M2.t elt) : t elt
-      := (f1, f2).
-    Definition liftTT {elt elt'}
-               (f1 : M1.t elt -> M1.t elt')
-               (f2 : M2.t elt -> M2.t elt')
-      : t elt -> t elt'
-      := fun m => (f1 (fst m), f2 (snd m)).
-    Definition lift_TT {elt elt' A}
-               (f1 : A -> M1.t elt -> M1.t elt')
-               (f2 : A -> M2.t elt -> M2.t elt')
-      : A -> t elt -> t elt'
-      := fun a => liftTT (f1 a) (f2 a).
-    Definition liftTTT {elt elt' elt''}
-               (f1 : M1.t elt -> M1.t elt' -> M1.t elt'')
-               (f2 : M2.t elt -> M2.t elt' -> M2.t elt'')
-      : t elt -> t elt' -> t elt''
-      := fun m m' => (f1 (fst m) (fst m'), f2 (snd m) (snd m')).
-    Definition lift_TTT {elt elt' elt'' A}
-               (f1 : A -> M1.t elt -> M1.t elt' -> M1.t elt'')
-               (f2 : A -> M2.t elt -> M2.t elt' -> M2.t elt'')
-      : A -> t elt -> t elt' -> t elt''
-      := fun a => liftTTT (f1 a) (f2 a).
-    Definition liftK_TT {A elt}
-               (f1 : M1.key -> A -> M1.t elt -> M1.t elt)
-               (f2 : M2.key -> A -> M2.t elt -> M2.t elt)
-      : key -> A -> t elt -> t elt
-      := fun k a m => (match k with
-                       | inl k => f1 k a (fst m)
+    Module Import _Extra1.
+      Definition liftK {A} (f1 : M1.key -> A) (f2 : M2.key -> A) : key -> A
+        := fun x => match x with
+                    | inl x => f1 x
+                    | inr x => f2 x
+                    end.
+      Definition liftT {elt} (f1 : M1.t elt) (f2 : M2.t elt) : t elt
+        := (f1, f2).
+      Definition liftTT {elt elt'}
+                 (f1 : M1.t elt -> M1.t elt')
+                 (f2 : M2.t elt -> M2.t elt')
+        : t elt -> t elt'
+        := fun m => (f1 (fst m), f2 (snd m)).
+      Definition lift_TT {elt elt' A}
+                 (f1 : A -> M1.t elt -> M1.t elt')
+                 (f2 : A -> M2.t elt -> M2.t elt')
+        : A -> t elt -> t elt'
+        := fun a => liftTT (f1 a) (f2 a).
+      Definition liftTTT {elt elt' elt''}
+                 (f1 : M1.t elt -> M1.t elt' -> M1.t elt'')
+                 (f2 : M2.t elt -> M2.t elt' -> M2.t elt'')
+        : t elt -> t elt' -> t elt''
+        := fun m m' => (f1 (fst m) (fst m'), f2 (snd m) (snd m')).
+      Definition lift_TTT {elt elt' elt'' A}
+                 (f1 : A -> M1.t elt -> M1.t elt' -> M1.t elt'')
+                 (f2 : A -> M2.t elt -> M2.t elt' -> M2.t elt'')
+        : A -> t elt -> t elt' -> t elt''
+        := fun a => liftTTT (f1 a) (f2 a).
+      Definition liftK_TT {A elt}
+                 (f1 : M1.key -> A -> M1.t elt -> M1.t elt)
+                 (f2 : M2.key -> A -> M2.t elt -> M2.t elt)
+        : key -> A -> t elt -> t elt
+        := fun k a m => (match k with
+                         | inl k => f1 k a (fst m)
+                         | inr _ => fst m
+                         end,
+                          match k with
+                          | inl _ => snd m
+                          | inr k => f2 k a (snd m)
+                          end).
+      Definition liftKT_ {A elt}
+                 (f1 : M1.key -> M1.t elt -> A)
+                 (f2 : M2.key -> M2.t elt -> A)
+        : key -> t elt -> A
+        := fun k m => match k with
+                      | inl k => f1 k (fst m)
+                      | inr k => f2 k (snd m)
+                      end.
+      Definition liftK_T_ {A B elt}
+                 (f1 : M1.key -> A -> M1.t elt -> B)
+                 (f2 : M2.key -> A -> M2.t elt -> B)
+        : key -> A -> t elt -> B
+        := fun k a m => match k with
+                        | inl k => f1 k a (fst m)
+                        | inr k => f2 k a (snd m)
+                        end.
+      Definition liftKTT {elt}
+                 (f1 : M1.key -> M1.t elt -> M1.t elt)
+                 (f2 : M2.key -> M2.t elt -> M2.t elt)
+        : key -> t elt -> t elt
+        := fun k m => (match k with
+                       | inl k => f1 k (fst m)
                        | inr _ => fst m
                        end,
                         match k with
                         | inl _ => snd m
-                        | inr k => f2 k a (snd m)
+                        | inr k => f2 k (snd m)
                         end).
-    Definition liftKT_ {A elt}
-               (f1 : M1.key -> M1.t elt -> A)
-               (f2 : M2.key -> M2.t elt -> A)
-      : key -> t elt -> A
-      := fun k m => match k with
-                    | inl k => f1 k (fst m)
-                    | inr k => f2 k (snd m)
-                    end.
-    Definition liftK_T_ {A B elt}
-               (f1 : M1.key -> A -> M1.t elt -> B)
-               (f2 : M2.key -> A -> M2.t elt -> B)
-      : key -> A -> t elt -> B
-      := fun k a m => match k with
-                      | inl k => f1 k a (fst m)
-                      | inr k => f2 k a (snd m)
-                      end.
-    Definition liftKTT {elt}
-               (f1 : M1.key -> M1.t elt -> M1.t elt)
-               (f2 : M2.key -> M2.t elt -> M2.t elt)
-      : key -> t elt -> t elt
-      := fun k m => (match k with
-                     | inl k => f1 k (fst m)
-                     | inr _ => fst m
-                     end,
-                      match k with
-                      | inl _ => snd m
-                      | inr k => f2 k (snd m)
-                      end).
-    Definition lifthoTT {elt elt' A}
-               (f1 : (M1.key -> A) -> M1.t elt -> M1.t elt')
-               (f2 : (M2.key -> A) -> M2.t elt -> M2.t elt')
-      : (key -> A) -> t elt -> t elt'
-      := fun f m => (f1 (fun k => f (inl k)) (fst m),
-                      f2 (fun k => f (inr k)) (snd m)).
+      Definition lifthoTT {elt elt' A}
+                 (f1 : (M1.key -> A) -> M1.t elt -> M1.t elt')
+                 (f2 : (M2.key -> A) -> M2.t elt -> M2.t elt')
+        : (key -> A) -> t elt -> t elt'
+        := fun f m => (f1 (fun k => f (inl k)) (fst m),
+                        f2 (fun k => f (inr k)) (snd m)).
+    End _Extra1.
 
-    Definition empty elt : t elt := liftT (@M1.empty _) (@M2.empty _).
+    Definition empty elt : t elt := Eval hnf in liftT (@M1.empty _) (@M2.empty _).
     Definition is_empty elt (m : t elt) : bool := M1.is_empty (fst m) &&& M2.is_empty (snd m).
     Definition add elt : key -> elt -> t elt -> t elt := liftK_TT (@M1.add elt) (@M2.add elt).
     Definition find elt : key -> t elt -> option elt := liftKT_ (@M1.find elt) (@M2.find elt).
@@ -139,8 +169,8 @@ Module SumWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSfu
     Definition mapi elt elt' : (key -> elt -> elt') -> t elt -> t elt' := lifthoTT (@M1.mapi elt elt') (@M2.mapi elt elt').
     Definition map2 elt elt' elt'' : (option elt -> option elt' -> option elt'') -> t elt -> t elt' -> t elt'' := lift_TTT (@M1.map2 elt elt' elt'') (@M2.map2 elt elt' elt'').
     Definition elements elt (v : t elt) : list (key * elt)
-      := (List.map (fun kv => (inl (fst kv), snd kv)) (M1.elements (fst v)))
-           ++ List.map (fun kv => (inr (fst kv), snd kv)) (M2.elements (snd v)).
+      := (List.map (fun kv => (inl (fst kv), snd kv)%core) (M1.elements (fst v)))
+           ++ List.map (fun kv => (inr (fst kv), snd kv)%core) (M2.elements (snd v)).
     Definition cardinal elt (m : t elt) : nat := M1.cardinal (fst m) + M2.cardinal (snd m).
     Definition fold elt A (f : key -> elt -> A -> A) (m : t elt) (i : A) : A
       := M2.fold (fun k => f (inr k)) (snd m) (M1.fold (fun k => f (inl k)) (fst m) i).
@@ -151,146 +181,6 @@ Module SumWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSfu
     Definition eq_key_elt elt (p p':key*elt) :=
       E.eq (fst p) (fst p') /\ (snd p) = (snd p').
 
-    Local Instance Proper_M1_eq_key_elt_iff elt
-      : Proper (eq ==> RelationPairs.RelProd E1.eq eq ==> iff) (@M1.eq_key_elt elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M1_eq_key_elt_impl elt
-      : Proper (eq ==> RelationPairs.RelProd E1.eq eq ==> impl) (@M1.eq_key_elt elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M1_eq_key_elt_flip_impl elt
-      : Proper (eq ==> RelationPairs.RelProd E1.eq eq ==> flip impl) (@M1.eq_key_elt elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M1_eq_key_elt_iff' elt
-      : Proper (@M1.eq_key_elt elt ==> @M1.eq_key_elt elt ==> iff) (@M1.eq_key_elt elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M1_eq_key_elt_impl' elt
-      : Proper (@M1.eq_key_elt elt ==> @M1.eq_key_elt elt ==> impl) (@M1.eq_key_elt elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M1_eq_key_elt_flip_impl' elt
-      : Proper (@M1.eq_key_elt elt ==> @M1.eq_key_elt elt ==> flip impl) (@M1.eq_key_elt elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M1_eq_key_iff elt
-      : Proper (@M1.eq_key elt ==> @M1.eq_key elt ==> iff) (@M1.eq_key elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M1_eq_key_impl elt
-      : Proper (@M1.eq_key elt ==> @M1.eq_key elt ==> impl) (@M1.eq_key elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M1_eq_key_flip_impl elt
-      : Proper (@M1.eq_key elt ==> @M1.eq_key elt ==> flip impl) (@M1.eq_key elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance M1_Equal_Equivalence elt : Equivalence (@M1.Equal elt) | 10.
-    Proof. split; cbv; firstorder eauto using eq_trans. Qed.
-
-
-    Local Instance Proper_M2_eq_key_elt_iff elt
-      : Proper (eq ==> RelationPairs.RelProd E2.eq eq ==> iff) (@M2.eq_key_elt elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M2_eq_key_elt_impl elt
-      : Proper (eq ==> RelationPairs.RelProd E2.eq eq ==> impl) (@M2.eq_key_elt elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M2_eq_key_elt_flip_impl elt
-      : Proper (eq ==> RelationPairs.RelProd E2.eq eq ==> flip impl) (@M2.eq_key_elt elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M2_eq_key_elt_iff' elt
-      : Proper (@M2.eq_key_elt elt ==> @M2.eq_key_elt elt ==> iff) (@M2.eq_key_elt elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M2_eq_key_elt_impl' elt
-      : Proper (@M2.eq_key_elt elt ==> @M2.eq_key_elt elt ==> impl) (@M2.eq_key_elt elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M2_eq_key_elt_flip_impl' elt
-      : Proper (@M2.eq_key_elt elt ==> @M2.eq_key_elt elt ==> flip impl) (@M2.eq_key_elt elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M2_eq_key_iff elt
-      : Proper (@M2.eq_key elt ==> @M2.eq_key elt ==> iff) (@M2.eq_key elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M2_eq_key_impl elt
-      : Proper (@M2.eq_key elt ==> @M2.eq_key elt ==> impl) (@M2.eq_key elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance Proper_M2_eq_key_flip_impl elt
-      : Proper (@M2.eq_key elt ==> @M2.eq_key elt ==> flip impl) (@M2.eq_key elt).
-    Proof. cbv; repeat intro; subst; destruct_head'_prod; destruct_head'_and; subst; firstorder (subst; eauto). Qed.
-
-    Local Instance M2_Equal_Equivalence elt : Equivalence (@M1.Equal elt) | 10.
-    Proof. split; cbv; firstorder eauto using eq_trans. Qed.
-
-
-    Local Ltac t_Proper_helper :=
-      cbv [M1.Equal M1.In M2.Equal M2.In Proper respectful option_eq];
-      repeat first [ progress intros
-                   | progress subst
-                   | progress destruct_head'_ex
-                   | congruence
-                   | reflexivity
-                   | eassumption
-                   | progress break_innermost_match_hyps
-                   | progress break_innermost_match
-                   | apply M1.find_2
-                   | apply M2.find_2
-                   | match goal with
-                     | [ H : E1.eq ?x ?y |- _ ]
-                       => (idtac + symmetry in H); eapply M1.MapsTo_1 in H; [ | apply M1.find_2; eassumption ]
-                     | [ H : E2.eq ?x ?y |- _ ]
-                       => (idtac + symmetry in H); eapply M2.MapsTo_1 in H; [ | apply M2.find_2; eassumption ]
-                     | [ H : _ |- _ ] => apply M1.find_1 in H
-                     | [ H : _ |- _ ] => apply M2.find_1 in H
-                     | [ |- Some _ = None ] => exfalso
-                     | [ |- ?x = None ] => destruct x eqn:?
-                     | [ |- _ <-> _ ] => split
-                     | [ H : M1.find ?k ?m = Some ?v, H' : forall k', M1.find k' ?m = M1.find k' ?m' |- _ ]
-                       => unique assert (M1.find k m' = Some v) by now rewrite <- H
-                     | [ H : M2.find ?k ?m = Some ?v, H' : forall k', M2.find k' ?m = M2.find k' ?m' |- _ ]
-                       => unique assert (M2.find k m' = Some v) by now rewrite <- H
-                     | [ H : M1.find ?k ?m' = Some ?v, H' : forall k', M1.find k' ?m = M1.find k' ?m' |- _ ]
-                       => unique assert (M1.find k m = Some v) by now rewrite <- H
-                     | [ H : M2.find ?k ?m' = Some ?v, H' : forall k', M2.find k' ?m = M2.find k' ?m' |- _ ]
-                       => unique assert (M2.find k m = Some v) by now rewrite <- H
-                     end
-                   | eexists ].
-
-    Local Instance M1_find_Proper_eq elt : Proper (E1.eq ==> @M1.Equal _ ==> option_eq eq) (@M1.find elt) | 10.
-    Proof. t_Proper_helper. Qed.
-
-    Local Instance M1_MapsTo_Proper_eq_iff elt : Proper (E1.eq ==> eq ==> @M1.Equal _ ==> iff) (@M1.MapsTo elt) | 10.
-    Proof. t_Proper_helper. Qed.
-
-    Local Instance M1_In_compat elt : Proper (E1.eq ==> @M1.Equal _ ==> iff) (@M1.In elt) | 10.
-    Proof. t_Proper_helper. Qed.
-
-    Local Instance M2_find_Proper_eq elt : Proper (E2.eq ==> @M2.Equal _ ==> option_eq eq) (@M2.find elt) | 10.
-    Proof. t_Proper_helper. Qed.
-
-    Local Instance M2_MapsTo_Proper_eq_iff elt : Proper (E2.eq ==> eq ==> @M2.Equal _ ==> iff) (@M2.MapsTo elt) | 10.
-    Proof. t_Proper_helper. Qed.
-
-    Local Instance M2_In_compat elt : Proper (E2.eq ==> @M2.Equal _ ==> iff) (@M2.In elt) | 10.
-    Proof. t_Proper_helper. Qed.
-
-    Local Instance eq_key_equiv elt : Equivalence (@eq_key elt) | 10.
-    Proof.
-      split; cbv; intros; break_innermost_match; break_innermost_match_hyps; try ((idtac + symmetry + etransitivity + exfalso); (eassumption + reflexivity)).
-    Qed.
-    Local Instance eq_key_elt_equiv elt : Equivalence (@eq_key_elt elt) | 10.
-    Proof.
-      split; cbv; intros; break_innermost_match; break_innermost_match_hyps; destruct_head'_and; split; try ((idtac + symmetry + etransitivity + exfalso); (eassumption + reflexivity)).
-    Qed.
-
     Definition In elt (k : key) (m : t elt) := exists e, MapsTo k e m.
     Definition Empty elt (m : t elt) := forall a e, ~ MapsTo a e m.
     Definition Equal elt (m m' : t elt) := forall y, find y m = find y m'.
@@ -299,47 +189,60 @@ Module SumWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSfu
         (forall k e e', MapsTo k e m -> MapsTo k e' m' -> eq_elt e e').
     Definition Equivb elt (cmp: elt->elt->bool) := Equiv (Cmp cmp).
 
-    Definition In_alt elt : key -> t elt -> Prop := liftKT_ (@M1.In elt) (@M2.In elt).
-    Definition Empty_alt elt (m : t elt) : Prop := M1.Empty (fst m) /\ M2.Empty (snd m).
-    Definition Equal_alt elt (m m' : t elt) : Prop := M1.Equal (fst m) (fst m') /\ M2.Equal (snd m) (snd m').
-    Definition Equiv_alt elt (cmp : elt -> elt -> Prop) (m m' : t elt) : Prop := M1.Equiv cmp (fst m) (fst m') /\ M2.Equiv cmp (snd m) (snd m').
-    Definition Equivb_alt elt (cmp : elt -> elt -> bool) (m m' : t elt) : Prop := M1.Equivb cmp (fst m) (fst m') /\ M2.Equivb cmp (snd m) (snd m').
+    Module Import _Extra2.
+      Local Instance eq_key_equiv elt : Equivalence (@eq_key elt) | 10.
+      Proof.
+        split; cbv; intros; break_innermost_match; break_innermost_match_hyps; try ((idtac + symmetry + etransitivity + exfalso); (eassumption + reflexivity)).
+      Qed.
+      Local Instance eq_key_elt_equiv elt : Equivalence (@eq_key_elt elt) | 10.
+      Proof.
+        split; cbv; intros; break_innermost_match; break_innermost_match_hyps; destruct_head'_and; split; try ((idtac + symmetry + etransitivity + exfalso); (eassumption + reflexivity)).
+      Qed.
 
-    Local Ltac t_alt_iff :=
-      cbv [find MapsTo
-                In_alt Equal_alt Empty_alt Equiv_alt Equivb_alt
-                In Equal Empty Equiv Equivb
-                M1.In M1.Equal M1.Empty M1.Equiv M1.Equivb
-                M2.In M2.Equal M2.Empty M2.Equiv M2.Equivb
-                liftK_T_ liftKT_];
-      repeat first [ progress destruct_head' key
-                   | reflexivity
-                   | apply conj
-                   | progress intros
-                   | assumption
-                   | progress destruct_head'_and
-                   | progress destruct_head'_ex
-                   | progress destruct_head' iff
-                   | progress specialize_by eauto
-                   | progress cbv beta iota in *
-                   | match goal with
-                     | [ H : forall a : M1.key, _, k : _ |- _ ] => specialize (H k)
-                     | [ H : forall a : M2.key, _, k : _ |- _ ] => specialize (H k)
-                     | [ H : _, k : _ |- _ ] => specialize (H (inl k))
-                     | [ H : _, k : _ |- _ ] => specialize (H (inr k))
-                     end
-                   | solve [ eauto with nocore ] ].
+      Definition In_alt elt : key -> t elt -> Prop := liftKT_ (@M1.In elt) (@M2.In elt).
+      Definition Empty_alt elt (m : t elt) : Prop := M1.Empty (fst m) /\ M2.Empty (snd m).
+      Definition Equal_alt elt (m m' : t elt) : Prop := M1.Equal (fst m) (fst m') /\ M2.Equal (snd m) (snd m').
+      Definition Equiv_alt elt (cmp : elt -> elt -> Prop) (m m' : t elt) : Prop := M1.Equiv cmp (fst m) (fst m') /\ M2.Equiv cmp (snd m) (snd m').
+      Definition Equivb_alt elt (cmp : elt -> elt -> bool) (m m' : t elt) : Prop := M1.Equivb cmp (fst m) (fst m') /\ M2.Equivb cmp (snd m) (snd m').
 
-    Lemma In_alt_iff elt k (s : t elt) : In k s <-> In_alt k s.
-    Proof. t_alt_iff. Qed.
-    Lemma Equal_alt_iff elt (s s' : t elt) : Equal s s' <-> Equal_alt s s'.
-    Proof. t_alt_iff. Qed.
-    Lemma Empty_alt_iff elt (s : t elt) : Empty s <-> Empty_alt s.
-    Proof. t_alt_iff. Qed.
-    Lemma Equiv_alt_iff elt eq_elt (s s' : t elt) : Equiv eq_elt s s' <-> Equiv_alt eq_elt s s'.
-    Proof. t_alt_iff. Qed.
-    Lemma Equivb_alt_iff elt cmp (s s' : t elt) : Equivb cmp s s' <-> Equivb_alt cmp s s'.
-    Proof. t_alt_iff. Qed.
+      Local Ltac t_alt_iff :=
+        cbv [find MapsTo
+                  In_alt Equal_alt Empty_alt Equiv_alt Equivb_alt
+                  In Equal Empty Equiv Equivb
+                  M1.In M1.Equal M1.Empty M1.Equiv M1.Equivb
+                  M2.In M2.Equal M2.Empty M2.Equiv M2.Equivb
+                  liftK_T_ liftKT_];
+        repeat first [ progress destruct_head' key
+                     | reflexivity
+                     | apply conj
+                     | progress intros
+                     | assumption
+                     | progress destruct_head'_and
+                     | progress destruct_head'_ex
+                     | progress destruct_head' iff
+                     | progress specialize_by eauto
+                     | progress cbv beta iota in *
+                     | match goal with
+                       | [ H : forall a : M1.key, _, k : _ |- _ ] => specialize (H k)
+                       | [ H : forall a : M2.key, _, k : _ |- _ ] => specialize (H k)
+                       | [ H : _, k : _ |- _ ] => specialize (H (inl k))
+                       | [ H : _, k : _ |- _ ] => specialize (H (inr k))
+                       end
+                     | solve [ eauto with nocore ] ].
+
+      Lemma In_alt_iff elt k (s : t elt) : In k s <-> In_alt k s.
+      Proof. t_alt_iff. Qed.
+      Lemma Equal_alt_iff elt (s s' : t elt) : Equal s s' <-> Equal_alt s s'.
+      Proof. t_alt_iff. Qed.
+      Lemma Empty_alt_iff elt (s : t elt) : Empty s <-> Empty_alt s.
+      Proof. t_alt_iff. Qed.
+      Lemma Equiv_alt_iff elt eq_elt (s s' : t elt) : Equiv eq_elt s s' <-> Equiv_alt eq_elt s s'.
+      Proof. t_alt_iff. Qed.
+      Lemma Equivb_alt_iff elt cmp (s s' : t elt) : Equivb cmp s s' <-> Equivb_alt cmp s s'.
+      Proof. t_alt_iff. Qed.
+    End _Extra2.
+
+    Local Existing Instances eq_key_equiv eq_key_elt_equiv | 10.
 
     Create HintDb sum_map_alt discriminated.
     Create HintDb sum_map_alt1 discriminated.
@@ -470,7 +373,7 @@ Module SumWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSfu
 
     Local Ltac spec_t_step_quick
       := first [ progress intros
-               | progress cbn [fst snd] in *
+               | progress cbn [fst snd underlying] in *
                | apply (f_equal2 (@pair _ _))
                | progress destruct_head'_False
                | rewrite <- andb_lazy_alt
@@ -540,13 +443,13 @@ Module SumWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSfu
       Lemma find_2 : find x m = Some e -> MapsTo x e m.
       Proof using Type. clear; spec_t. Qed.
       Lemma elements_1 :
-        MapsTo x e m -> InA (@eq_key_elt _) (x,e) (elements m).
+        MapsTo x e m -> InA (@eq_key_elt _) (x,e)%core (elements m).
       Proof using Type.
         clear; spec_t.
         all: [ > left | right ]; rewrite InA_map_iff; spec_t.
       Qed.
       Lemma elements_2 :
-        InA (@eq_key_elt _) (x,e) (elements m) -> MapsTo x e m.
+        InA (@eq_key_elt _) (x,e)%core (elements m) -> MapsTo x e m.
       Proof using Type.
         clear; spec_t.
         all: try solve [ rewrite InA_map_iff in *; spec_t ].
@@ -629,18 +532,15 @@ Module SumWSfun (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSfun E1
   Include _SumWSfun.Inner.
 End SumWSfun.
 
-Module SumUsualWeakMap (E1 : UsualDecidableTypeOrig) (E2 : UsualDecidableTypeOrig) (M1 : WSfun E1) (M2 : WSfun E2).
-  Module SumUsualWeakMap <: WS.
-    Module Outer := SumWSfun_gen E1 E2 M1 M2.
-    Module E := SumUsualDecidableTypeOrig E1 E2.
-    Module ECompat <: Outer.ESigCompat E.
-      Lemma eq_alt : forall x y, E.eq x y <-> sumwise E1.eq E2.eq x y.
-      Proof. cbv [E.eq sumwise E1.eq E2.eq]; intros; break_innermost_match; intuition congruence. Qed.
-    End ECompat.
-    Module Inner := Outer.SumWSfun_gen E ECompat.
-    Include Inner.
-  End SumUsualWeakMap.
-  Include SumUsualWeakMap.Inner.
+Module SumUsualWeakMap (M1 : UsualWS) (M2 : UsualWS) <: UsualWS.
+  Module Outer := SumWSfun_gen M1.E M2.E M1 M2.
+  Module E := SumUsualDecidableTypeOrig M1.E M2.E.
+  Module ECompat <: Outer.ESigCompat E.
+    Lemma eq_alt : forall x y, E.eq x y <-> sumwise M1.E.eq M2.E.eq x y.
+    Proof. cbv [E.eq sumwise M1.E.eq M2.E.eq]; intros; break_innermost_match; intuition congruence. Qed.
+  End ECompat.
+  Module Inner := Outer.SumWSfun_gen E ECompat.
+  Include Inner.
 End SumUsualWeakMap.
 
 Module SumWeakMap (M1 : WS) (M2 : WS) <: WS.
@@ -657,7 +557,7 @@ Module SumSfun_gen (E1 : OrderedTypeOrig) (E2 : OrderedTypeOrig) (M1 : Sfun E1) 
   End ESigCompat.
   Module SumSfun_gen (E : ESig) (ECompat : ESigCompat E) <: Sfun E.
     Include SumWSfun.SumWSfun_gen E ECompat.
-    Local Existing Instances eq_key_equiv eq_key_elt_equiv.
+    Local Existing Instances _Extra2.eq_key_equiv _Extra2.eq_key_elt_equiv.
     Section elt.
       Variable elt:Type.
       Definition lt_key (p p':key*elt) := E.lt (fst p) (fst p').
@@ -703,20 +603,17 @@ Module SumSfun (E1 : OrderedTypeOrig) (E2 : OrderedTypeOrig) (M1 : Sfun E1) (M2 
   Include _SumSfun.Inner.
 End SumSfun.
 
-Module SumUsualMap (E1 : UsualOrderedTypeOrig) (E2 : UsualOrderedTypeOrig) (M1 : Sfun E1) (M2 : Sfun E2).
-  Module SumUsualMap <: S.
-    Module Outer := SumSfun_gen E1 E2 M1 M2.
-    Module E := SumUsualOrderedTypeOrig E1 E2.
-    Module ECompat <: Outer.ESigCompat E.
-      Lemma eq_alt : forall x y, E.eq x y <-> sumwise E1.eq E2.eq x y.
-      Proof. cbv [E.eq sumwise E1.eq E2.eq]; intros; break_innermost_match; intuition congruence. Qed.
-      Lemma lt_alt : forall x y, E.lt x y <-> sum_le E1.lt E2.lt x y.
-      Proof. cbv [E.lt]; reflexivity. Qed.
-    End ECompat.
-    Module Inner := Outer.SumSfun_gen E ECompat.
-    Include Inner.
-  End SumUsualMap.
-  Include SumUsualMap.Inner.
+Module SumUsualMap (M1 : UsualS) (M2 : UsualS).
+  Module Outer := SumSfun_gen M1.E M2.E M1 M2.
+  Module E := SumUsualOrderedTypeOrig M1.E M2.E.
+  Module ECompat <: Outer.ESigCompat E.
+    Lemma eq_alt : forall x y, E.eq x y <-> sumwise M1.E.eq M2.E.eq x y.
+    Proof. cbv [E.eq sumwise M1.E.eq M2.E.eq]; intros; break_innermost_match; intuition congruence. Qed.
+    Lemma lt_alt : forall x y, E.lt x y <-> sum_le M1.E.lt M2.E.lt x y.
+    Proof. cbv [E.lt]; reflexivity. Qed.
+  End ECompat.
+  Module Inner := Outer.SumSfun_gen E ECompat.
+  Include Inner.
 End SumUsualMap.
 
 Module SumMap (M1 : S) (M2 : S) <: S.

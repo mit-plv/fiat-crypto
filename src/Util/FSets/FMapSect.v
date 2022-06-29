@@ -694,6 +694,8 @@ End WSectS.
 
 Module SectSfun (E' : OrderedTypeOrig) (W' : Sfun E') (E : SectOrderedTypeOrig E') <: Sfun E.
   Include WSectSfun E' W' E.
+  Module E'Compat := E' <+ UpdateEq <+ UpdateStrOrder_Compat.
+  Module ECompat := E <+ UpdateEq <+ UpdateStrOrder_Compat.
   Section elt.
     Variable elt:Type.
     Definition lt_key (p p':key*elt) := E.lt (fst p) (fst p').
@@ -704,15 +706,44 @@ Module SectSfun (E' : OrderedTypeOrig) (W' : Sfun E') (E : SectOrderedTypeOrig E
       cbv [elements lt_key W'.lt_key] in *.
       rewrite Sorted_map_iff.
       cbn [fst snd].
-      eapply Sorted_Proper_impl; [ .. | reflexivity | eassumption ].
-      cbv; intros; destruct_head'_prod; destruct_head'_and; subst.
-      apply E.Proper_of_lt; assumption.
+      destruct m as [m pf]; cbn [proj1_sig] in *.
+      specialize_under_binders_by apply W'.elements_2.
+      induction H; constructor; [ | destruct_head' HdRel; constructor ].
+      all: repeat first [ progress specialize_all_ways_under_binders_by eapply InA_cons_hd
+                        | progress specialize_all_ways_under_binders_by eapply InA_cons_tl ].
+      all: specialize_under_binders_by apply conj.
+      all: cbn [fst snd] in *.
+      all: specialize_under_binders_by reflexivity.
+      all: specialize_by_assumption.
+      all: eauto.
+      all: cbv [is_proper_key] in *; break_innermost_match_hyps; try discriminate.
+      destruct_head'_prod; cbn [fst snd] in *.
+      clear pf.
+      repeat match goal with
+             | [ H : Sorted _ _ |- _ ] => clear H
+             | [ H : context[InA] |- _ ] => clear H
+             | [ H : ?x = ?x |- _ ] => clear H
+             end.
+      match goal with
+      | [ |- E.lt ?x ?y ]
+        => destruct (E.compare x y) as [pf'|pf'|pf']; try assumption
+      end.
+      { rewrite pf' in *.
+        setoid_subst_rel E'.eq.
+        exfalso; eapply E'.lt_not_eq; (idtac + symmetry); eassumption. }
+      { apply E.Proper_to_lt in pf'.
+        repeat match goal with
+               | [ H : E'.eq ?x (E.to_ (E.of_ ?x)) |- _ ]
+                 => rewrite <- H in *
+               end.
+        exfalso; eapply E'.lt_not_eq; try reflexivity; eapply E'.lt_trans; eassumption. }
     Qed.
   End elt.
 End SectSfun.
 
 Module SectS (S' : S) (E' : SectMiniOrderedType S'.E) <: S.
   Module E <: SectOrderedTypeOrig S'.E := E' <+ OT_of_MOT.
+  Global Remove Hints E.eq_refl E.eq_sym E.eq_trans : core.
   Include SectSfun S'.E S' E.
 End SectS.
 

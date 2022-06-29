@@ -84,6 +84,7 @@ src/Assembly/WithBedrock/Semantics.v
 src/Assembly/WithBedrock/SymbolicProofs.v
 src/Bedrock/Everything.v
 src/Bedrock/End2End/Poly1305/Field1305.v
+src/Bedrock/End2End/RupicolaCrypto/Broadcast.v
 src/Bedrock/End2End/RupicolaCrypto/Derive.v
 src/Bedrock/End2End/RupicolaCrypto/Low.v
 src/Bedrock/End2End/RupicolaCrypto/Spec.v
@@ -314,12 +315,21 @@ src/Util/ErrorT/List.v
 src/Util/ErrorT/Show.v
 src/Util/FSets/FMapBool.v
 src/Util/FSets/FMapEmpty.v
+src/Util/FSets/FMapFacts.v
+src/Util/FSets/FMapFlip.v
+src/Util/FSets/FMapInterface.v
 src/Util/FSets/FMapIso.v
 src/Util/FSets/FMapN.v
 src/Util/FSets/FMapOption.v
+src/Util/FSets/FMapProd.v
 src/Util/FSets/FMapSect.v
 src/Util/FSets/FMapSum.v
+src/Util/FSets/FMapTrie.v
+src/Util/FSets/FMapTrieEx.v
 src/Util/FSets/FMapUnit.v
+src/Util/FSets/FMapZ.v
+src/Util/FSets/FMapTrie/Shape.v
+src/Util/FSets/FMapTrie/ShapeEx.v
 src/Util/ListUtil/CombineExtend.v
 src/Util/ListUtil/Concat.v
 src/Util/ListUtil/Filter.v
@@ -336,6 +346,7 @@ src/Util/ListUtil/PermutationCompat.v
 src/Util/ListUtil/RemoveN.v
 src/Util/ListUtil/SetoidList.v
 src/Util/ListUtil/SetoidListFlatMap.v
+src/Util/ListUtil/SetoidListRev.v
 src/Util/ListUtil/Split.v
 src/Util/ListUtil/StdlibCompat.v
 src/Util/Logic/Exists.v

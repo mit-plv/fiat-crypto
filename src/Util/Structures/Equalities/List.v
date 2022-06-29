@@ -141,9 +141,9 @@ Module ListUsualEqualityTypeBoth (E : UsualEqualityTypeBoth) <: UsualEqualityTyp
 
 Module ListUsualDecidableType (E : UsualDecidableType) <: UsualDecidableType
 := ListUsualEq E <+ UsualIsEq <+ ListUsualHasEqDec E E.
-Module ListUsualDecidableTypeOrig (E : UsualDecidableType) <: UsualDecidableTypeOrig
+Module ListUsualDecidableTypeOrig (E : UsualDecidableTypeOrig) <: UsualDecidableTypeOrig
 := ListUsualEq E <+ UsualIsEqOrig <+ ListUsualHasEqDec E E.
-Module ListUsualDecidableTypeBoth (E : UsualDecidableType) <: UsualDecidableTypeBoth
+Module ListUsualDecidableTypeBoth (E : UsualDecidableTypeBoth) <: UsualDecidableTypeBoth
  := ListUsualDecidableType E <+ UsualIsEqOrig.
 Module ListUsualBoolEq (E : UsualBoolEq) <: UsualBoolEq
 := ListUsualEq E <+ ListUsualHasEqBool E.

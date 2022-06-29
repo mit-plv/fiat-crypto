@@ -2059,6 +2059,35 @@ Proof.
   rewrite fold_left_andb_true_map_iff, fold_left_and_True_forall_In_iff; reflexivity.
 Qed.
 
+Lemma fold_right_andb_truth_map_iff A (ls : list A) f t
+  : List.fold_right andb t (List.map f ls) = true <-> (t = true /\ forall i, List.In i ls -> f i = true).
+Proof.
+  induction ls as [|a ls IHls]; simpl; [ | rewrite Bool.andb_true_iff, IHls ]; try tauto.
+  intuition (congruence || eauto).
+Qed.
+
+Lemma fold_right_andb_truth_iff_fold_right_and_Truth (ls : list bool) t
+  : List.fold_right andb t ls = true <-> List.fold_right and (t = true) (List.map (fun b => b = true) ls).
+Proof.
+  rewrite <- (map_id ls) at 1.
+  rewrite fold_right_andb_truth_map_iff, fold_right_and_Truth_forall_In_iff; reflexivity.
+Qed.
+
+Lemma fold_left_andb_truth_map_iff A (ls : list A) f t
+  : List.fold_left andb (List.map f ls) t = true <-> (t = true /\ forall i, List.In i ls -> f i = true).
+Proof.
+  rewrite <- fold_left_rev_right, <- map_rev; setoid_rewrite Bool.andb_comm.
+  rewrite fold_right_andb_truth_map_iff.
+  setoid_rewrite <- in_rev; reflexivity.
+Qed.
+
+Lemma fold_left_andb_truth_iff_fold_left_and_Truth (ls : list bool) t
+  : List.fold_left andb ls t = true <-> List.fold_left and (List.map (fun b => b = true) ls) (t = true).
+Proof.
+  rewrite <- (map_id ls) at 1.
+  rewrite fold_left_andb_truth_map_iff, fold_left_and_Truth_forall_In_iff; reflexivity.
+Qed.
+
 Lemma Forall2_forall_iff : forall {A B} (R : A -> B -> Prop) (xs : list A) (ys : list B) d1 d2, length xs = length ys ->
   (Forall2 R xs ys <-> (forall i, (i < length xs)%nat -> R (nth_default d1 xs i) (nth_default d2 ys i))).
 Proof.
@@ -2368,8 +2397,10 @@ Lemma fold_right_flat_map A B C (f : A -> list B) xs (F : _ -> _ -> C) v
   : fold_right F v (flat_map f xs) = fold_right (fun x y => fold_right F y (f x)) v xs.
 Proof. revert v; induction xs; cbn; intros; rewrite ?fold_right_app; congruence. Qed.
 
-Lemma fold_right_ext A B f g v xs : (forall x y, f x y = g x y) -> @fold_right A B f v xs = fold_right g v xs.
+Lemma fold_right_ext_in A B f g v xs : (forall x y, List.In x xs -> f x y = g x y) -> @fold_right A B f v xs = fold_right g v xs.
 Proof. induction xs; cbn; intro H; rewrite ?H, ?IHxs; auto. Qed.
+Lemma fold_right_ext A B f g v xs : (forall x y, f x y = g x y) -> @fold_right A B f v xs = fold_right g v xs.
+Proof. intros; apply fold_right_ext_in; eauto. Qed.
 
 Lemma fold_right_id_ext A B f v xs : (forall x y, f x y = y) -> @fold_right A B f v xs = v.
 Proof. induction xs; cbn; intro H; rewrite ?H; auto. Qed.
@@ -2380,8 +2411,10 @@ Lemma fold_left_flat_map A B C (f : A -> list B) xs (F : _ -> _ -> C) v
   : fold_left F (flat_map f xs) v = fold_left (fun x y => fold_left F (f y) x) xs v.
 Proof. revert v; induction xs; cbn; intros; rewrite ?fold_left_app; congruence. Qed.
 
+Lemma fold_left_ext_in A B f g v xs : (forall x y, List.In y xs -> f x y = g x y) -> @fold_left A B f xs v = fold_left g xs v.
+Proof. intros; rewrite <- !fold_left_rev_right; apply fold_right_ext_in; intros *; rewrite <- in_rev; eauto. Qed.
 Lemma fold_left_ext A B f g v xs : (forall x y, f x y = g x y) -> @fold_left A B f v xs = fold_left g v xs.
-Proof. intros; apply fold_left_Proper; repeat intro; eauto. Qed.
+Proof. intros; apply fold_left_ext_in; eauto. Qed.
 
 Lemma fold_left_id_ext A B f v xs : (forall x y, f x y = x) -> @fold_left A B f xs v = v.
 Proof. induction xs; cbn; intro H; rewrite ?H; auto. Qed.
@@ -2559,6 +2592,15 @@ Proof. revert f v; induction ls; cbn; eauto. Qed.
 Lemma eq_map_list_rect {A B} f (ls : list _)
   : @List.map A B f ls = list_rect _ nil (fun x _ rec => f x :: rec) ls.
 Proof. induction ls; cbn; eauto. Qed.
+Lemma eq_flat_map_fold_right {A B} f (ls : list A)
+  : @flat_map A B f ls = fold_right (fun x y => f x ++ y) nil ls.
+Proof. induction ls; cbn; eauto. Qed.
+Lemma eq_flat_map_fold_left_gen {A B} f (ls : list A) ls'
+  : fold_left (fun x y => x ++ f y) ls ls' = ls' ++ @flat_map A B f ls.
+Proof. revert ls'; induction ls; cbn; intros; rewrite ?app_nil_r, ?IHls, ?app_assoc; eauto. Qed.
+Lemma eq_flat_map_fold_left {A B} f (ls : list A)
+  : @flat_map A B f ls = fold_left (fun x y => x ++ f y) ls nil.
+Proof. rewrite eq_flat_map_fold_left_gen; reflexivity. Qed.
 
 Lemma map_repeat {A B} (f : A -> B) v k
   : List.map f (List.repeat v k) = List.repeat (f v) k.
@@ -3228,3 +3270,31 @@ Lemma map_swap_combine {A B} ls1 ls2
 Proof.
   revert ls2; induction ls1 as [|x xs IHxs], ls2 as [|y ys]; cbn [List.combine List.map fst snd]; congruence.
 Qed.
+
+Lemma fold_right_higher_order A B C f a ls (F : _ -> C)
+  : fold_right (fun x acc a => acc (f x a)) F ls a
+    = F (@fold_right A B f a (List.rev ls)).
+Proof.
+  revert F a; induction ls; cbn; try reflexivity; intros.
+  rewrite IHls, fold_right_app; cbn.
+  reflexivity.
+Qed.
+
+Lemma fold_right_rev_higher_order A B f a ls
+  : @fold_right A B f a (List.rev ls)
+    = fold_right (fun x acc a => acc (f x a)) id ls a.
+Proof. symmetry; apply fold_right_higher_order. Qed.
+
+Lemma fold_left_higher_order A B C f a ls (F : _ -> C)
+  : fold_left (fun acc x a => acc (f a x)) ls F a
+    = F (@fold_left A B f (List.rev ls) a).
+Proof.
+  revert F a; induction ls; cbn; try reflexivity; intros.
+  rewrite IHls, fold_left_app; cbn.
+  reflexivity.
+Qed.
+
+Lemma fold_left_rev_higher_order A B f a ls
+  : @fold_left A B f (List.rev ls) a
+    = fold_left (fun acc x a => acc (f a x)) ls id a.
+Proof. symmetry; apply fold_left_higher_order. Qed.

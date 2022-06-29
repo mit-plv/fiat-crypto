@@ -226,8 +226,10 @@ ZIG_DIR := fiat-zig/src/
 
 # Java only really supports 32-bit builds, because we have neither 64x64->64x64 multiplication, nor uint128
 # Java also requires that class names match file names
-# from https://stackoverflow.com/q/42925485/377022
-to_title_case = $(shell echo '$(1)' | sed 's/.*/\L&/; s/[a-z]*/\u&/g')
+# import string; print(''.join(f'$(patsubst {i}%,{i.upper()}%,' for i in string.ascii_lowercase) + '$(1)' + ')' * len(string.ascii_lowercase))
+capitalize_first_letter = $(patsubst a%,A%,$(patsubst b%,B%,$(patsubst c%,C%,$(patsubst d%,D%,$(patsubst e%,E%,$(patsubst f%,F%,$(patsubst g%,G%,$(patsubst h%,H%,$(patsubst i%,I%,$(patsubst j%,J%,$(patsubst k%,K%,$(patsubst l%,L%,$(patsubst m%,M%,$(patsubst n%,N%,$(patsubst o%,O%,$(patsubst p%,P%,$(patsubst q%,Q%,$(patsubst r%,R%,$(patsubst s%,S%,$(patsubst t%,T%,$(patsubst u%,U%,$(patsubst v%,V%,$(patsubst w%,W%,$(patsubst x%,X%,$(patsubst y%,Y%,$(patsubst z%,Z%,$(1)))))))))))))))))))))))))))
+split_after_non_alpha = $(shell echo '$(1)' | sed 's/\([^a-zA-Z ]\)/\1 /g')
+to_title_case = $(foreach i,$(1),$(subst $(space),,$(call capitalize_first_letter,$(call split_after_non_alpha,$(i)))))
 empty=
 space=$(empty) $(empty)
 JAVA_RENAME = $(foreach i,$(patsubst %_32,%,$(filter %_32,$(1))),Fiat$(subst $(space),,$(call to_title_case,$(subst _, ,$(i)))))
@@ -293,8 +295,14 @@ $(foreach bw,64 32,$(eval $(call add_curve_keys,p384_$(bw),WORD_BY_WORD_MONTGOME
 $(foreach bw,64 32,$(eval $(call add_curve_keys,p224_$(bw),WORD_BY_WORD_MONTGOMERY,'p224',$(bw),'2^224 - 2^96 + 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 $(foreach bw,64,$(eval $(call add_curve_keys,p434_$(bw),WORD_BY_WORD_MONTGOMERY,'p434',$(bw),'2^216 * 3^137 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY))) # 32 is a bit too heavy
 
+$(foreach bw,64 32,$(eval $(call add_curve_keys,curve25519_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'25519_scalar',$(bw),'2^252 + 27742317777372353535851937790883648493',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,p256_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'p256_scalar',$(bw),'2^256 - 2^224 + 2^192 - 89188191075325690597107910205041859247',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,p384_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'p384_scalar',$(bw),'2^384 - 1388124618062372383947042015309946732620727252194336364173',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,secp256k1_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'secp256k1_scalar',$(bw),'2^256 - 432420386565659656852420866394968145599',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
+
 # Files taking 30s or less
-LITE_BASE_FILES := curve25519_64 poly1305_64 poly1305_32 p256_64 secp256k1_64 p384_64 p224_32 p434_64 p448_solinas_64 secp256k1_32 p256_32 p448_solinas_32
+LITE_BASE_FILES := curve25519_64 poly1305_64 poly1305_32 p256_64 secp256k1_64 p384_64 p224_32 p434_64 p448_solinas_64 secp256k1_32 p256_32 p448_solinas_32 \
+	curve25519_scalar_64 p256_scalar_64 secp256k1_scalar_64 p384_scalar_64 secp256k1_scalar_32 p256_scalar_32
 
 EXTRA_C_FILES := inversion/c/*_test.c
 
@@ -558,7 +566,7 @@ clean-bedrock2-compiler:
 install-bedrock2-compiler:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) install_compiler
 
-rupicola: bedrock2
+rupicola: bedrock2 | bedrock2-compiler
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) all
 
 clean-rupicola:
@@ -601,20 +609,25 @@ $(BEDROCK2_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Bedrock/Standalone/Stan
 pre-standalone-extracted: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs)
 
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) : %.ml : %.v
-	$(SHOW)'COQC $< > $@'
-	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
-	$(HIDE)cat $@.tmp | tr -d '\r' > $@ && rm -f $@.tmp
+	$(SHOW)'COQC $<'
+	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $<
+	$(HIDE)cat $*.tmp.ml | tr -d '\r' > $@ && rm $*.tmp.ml
+	$(HIDE)cat $*.tmp.mli | tr -d '\r' > $*.mli && rm $*.tmp.mli
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/haskell.sed
 	$(SHOW)'COQC $< > $@'
 	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
-	$(HIDE)cat $@.tmp | tr -d '\r' | sed -f src/haskell.sed > $@ && rm -f $@.tmp
+	$(HIDE)cat $@.tmp | tr -d '\r' | sed -f src/haskell.sed > $@ && rm $@.tmp
 
 # pass -w -20 to disable the unused argument warning
 # unix package needed for Unix.gettimeofday for the perf_* binaries
-$(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml
+$(STANDALONE_OCAML:%=src/ExtractionOCaml/%.cmi) : %.cmi : %.ml
+	$(SHOW)'$(CAMLOPT_PERF_SHOW) $*.mli'
+	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -w -20 -g $*.mli
+
+$(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml %.cmi
 	$(SHOW)'$(CAMLOPT_PERF_SHOW) $< -o $@'
-	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -linkpkg -w -20 -g -o $@ $<
+	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -linkpkg -w -20 -g -I src/ExtractionOCaml/ -o $@ $<
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
 	$(SHOW)'GHC $< -o $@'
@@ -629,7 +642,7 @@ standalone-ocaml: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%)
 $(ALL_C_FILES) : $(C_DIR)%.c : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) $(C_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) $(C_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok || true) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-c-files: $(ALL_C_FILES) $(EXTRA_C_FILES)
@@ -639,7 +652,7 @@ test-c-files only-test-c-files:
 
 $(ALL_BEDROCK2_FILES) : $(BEDROCK2_DIR)%.c : $$(BEDROCK2_$$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)($(TIMER) $(BEDROCK2_$($*_BINARY_NAME)) --lang bedrock2 --static $(BEDROCK2_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(BEDROCK2_$($*_BINARY_NAME)) --lang bedrock2 --static $(BEDROCK2_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok || true) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-bedrock2-files: $(ALL_BEDROCK2_FILES)
@@ -650,7 +663,7 @@ test-bedrock2-files only-test-bedrock2-files:
 $(ALL_RUST_FILES) : $(RUST_DIR)%.rs : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang Rust $(RUST_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang Rust $(RUST_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok || true) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-rust-files: $(ALL_RUST_FILES)
@@ -667,7 +680,7 @@ fiat-rust/src/lib.rs: Makefile
 $(ALL_ZIG_FILES) : $(ZIG_DIR)%.zig : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang Zig $(ZIG_EXTRA_ARGS) --package-name $($*_DESCRIPTION) "" $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang Zig $(ZIG_EXTRA_ARGS) --package-name $($*_DESCRIPTION) "" $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok || true) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-zig-files: $(ALL_ZIG_FILES)
@@ -692,7 +705,7 @@ $(ALL_GO_FILES) : $(GO_DIR)%.go : $$($$(GO_$$(call GO_FILE_TO_KEY,$$*)_BINARY_NA
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)mkdir -p $(dir $@)
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(PERF_RECORDER) $($(GO_$(call GO_FILE_TO_KEY,$*)_BINARY_NAME)) --lang Go $(GO_EXTRA_ARGS_$(GO_$(call GO_FILE_TO_KEY,$*)_BITWIDTH)) --package-name $(GO_$(call GO_FILE_TO_KEY,$*)_PACKAGE) "" $(GO_$(call GO_FILE_TO_KEY,$*)_ARGS) $(GO_$(call GO_FILE_TO_KEY,$*)_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(PERF_RECORDER) $($(GO_$(call GO_FILE_TO_KEY,$*)_BINARY_NAME)) --lang Go $(GO_EXTRA_ARGS_$(GO_$(call GO_FILE_TO_KEY,$*)_BITWIDTH)) --package-name $(GO_$(call GO_FILE_TO_KEY,$*)_PACKAGE) "" $(GO_$(call GO_FILE_TO_KEY,$*)_ARGS) $(GO_$(call GO_FILE_TO_KEY,$*)_FUNCTIONS) && touch $@.ok || true) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_GO_FILES))
@@ -716,7 +729,7 @@ only-test-go-files: $(addprefix only-test-,$(ALL_GO_FILES))
 $(ALL_JSON_FILES) : $(JSON_DIR)%.json : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok1 $@.ok2
-	$(HIDE)(($(TIMER) $(PERF_RECORDER) $($($*_BINARY_NAME)) --lang JSON $(JSON_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok1) | jq -s . && touch $@.ok2) > $@.tmp
+	$(HIDE)(($(TIMER) $(PERF_RECORDER) $($($*_BINARY_NAME)) --lang JSON $(JSON_EXTRA_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok1 || true) | jq -s . && touch $@.ok2 || true) > $@.tmp
 	$(HIDE)(rm $@.ok1 $@.ok2 && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_JSON_FILES))

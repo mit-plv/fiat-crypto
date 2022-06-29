@@ -65,6 +65,7 @@ Crypto.Assembly.WithBedrock.Proofs
 Crypto.Assembly.WithBedrock.Semantics
 Crypto.Assembly.WithBedrock.SymbolicProofs
 Crypto.Bedrock.End2End.Poly1305.Field1305
+Crypto.Bedrock.End2End.RupicolaCrypto.Broadcast
 Crypto.Bedrock.End2End.RupicolaCrypto.Derive
 Crypto.Bedrock.End2End.RupicolaCrypto.Low
 Crypto.Bedrock.End2End.RupicolaCrypto.Spec
@@ -262,12 +263,21 @@ Crypto.Util.ErrorT.List
 Crypto.Util.ErrorT.Show
 Crypto.Util.FSets.FMapBool
 Crypto.Util.FSets.FMapEmpty
+Crypto.Util.FSets.FMapFacts
+Crypto.Util.FSets.FMapFlip
+Crypto.Util.FSets.FMapInterface
 Crypto.Util.FSets.FMapIso
 Crypto.Util.FSets.FMapN
 Crypto.Util.FSets.FMapOption
+Crypto.Util.FSets.FMapProd
 Crypto.Util.FSets.FMapSect
 Crypto.Util.FSets.FMapSum
+Crypto.Util.FSets.FMapTrie
+Crypto.Util.FSets.FMapTrie.Shape
+Crypto.Util.FSets.FMapTrie.ShapeEx
+Crypto.Util.FSets.FMapTrieEx
 Crypto.Util.FSets.FMapUnit
+Crypto.Util.FSets.FMapZ
 Crypto.Util.Factorize
 Crypto.Util.FixCoqMistakes
 Crypto.Util.FsatzAutoLemmas
@@ -298,6 +308,7 @@ Crypto.Util.ListUtil.PermutationCompat
 Crypto.Util.ListUtil.RemoveN
 Crypto.Util.ListUtil.SetoidList
 Crypto.Util.ListUtil.SetoidListFlatMap
+Crypto.Util.ListUtil.SetoidListRev
 Crypto.Util.ListUtil.Split
 Crypto.Util.ListUtil.StdlibCompat
 Crypto.Util.Listable

@@ -7,7 +7,8 @@ Import ListNotations. Local Open Scope list_scope.
 (** We pull a hack to get coqchk to not report these as axioms; for
     this, all we care about is that there exists a model. *)
 Module Type OCamlPrimitivesT.
-  Axiom float : Set.
+  Axiom OCaml_float : Set.
+  Notation float := OCaml_float.
   Axiom Unix_gettimeofday : unit -> float.
   Axiom Sys_time : unit -> float.
   Axiom fsub : float -> float -> float.
@@ -15,17 +16,19 @@ Module Type OCamlPrimitivesT.
 End OCamlPrimitivesT.
 
 Module Export OCamlPrimitives : OCamlPrimitivesT.
-  Definition float : Set := unit.
+  Definition OCaml_float : Set := unit.
+  Notation float := OCaml_float.
   Definition Unix_gettimeofday : unit -> float := fun 'tt => tt.
   Definition Sys_time : unit -> float := fun 'tt => tt.
   Definition fsub : float -> float -> float := fun _ _ => tt.
   Definition printf_float : float -> unit := fun _ => tt.
 End OCamlPrimitives.
 
-Extract Inlined Constant float => "float".
-Extract Inlined Constant Unix_gettimeofday => "Unix.gettimeofday".
-Extract Inlined Constant Sys_time => "Sys.time".
-Extract Inlined Constant fsub => "(-.)".
+(* We cannot inline these constants due to COQBUG(https://github.com/coq/coq/issues/16169) *)
+Extract (*Inlined*) Constant float => "float".
+Extract (*Inlined*) Constant Unix_gettimeofday => "Unix.gettimeofday".
+Extract (*Inlined*) Constant Sys_time => "Sys.time".
+Extract (*Inlined*) Constant fsub => "(-.)".
 Extract Constant printf_float =>
 "fun f -> Printf.printf ""%f%!"" f".
 

@@ -12,13 +12,20 @@ Ltac guarded_in_hyp_term_under_binders_do' guard_tac H tac :=
   match goal with
   | _ => let __ := lazymatch goal with _ => progress tac H end in
          H
-  | _ => let v := open_constr:(_) in
-         let __ := lazymatch is_transparent with
+  | _ => let __ := lazymatch is_transparent with
                    | true => let H' := fresh in
                              rename H into H';
+                             let v := open_constr:(_) in
                              pose (H' v) as H;
                              subst H'
-                   | false => specialize (H v)
+                   | false
+                     => (* kludge for old Coq *)
+                       (*let v := open_constr:(_) in*)
+                       let t := open_constr:(_) in
+                       let v := fresh in
+                       evar (v : t);
+                       specialize (H v);
+                       subst v
                    end in
          guarded_in_hyp_term_under_binders_do' guard_tac H tac
   end.
