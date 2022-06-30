@@ -36,7 +36,6 @@ Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
-
 Require Import Coq.ZArith.Znat.
 
 Require Import Crypto.Util.Notations.
@@ -60,7 +59,7 @@ Local Coercion Z.pos : positive >-> Z.
 Local Existing Instance default_low_level_rewriter_method.
 Local Existing Instance AbstractInterpretation.default_Options.
 Local Instance : unfold_value_barrier_opt := true.
-Local Instance : assembly_hints_lines_opt := None.
+Local Instance : assembly_hints_lines_opt := [].
 Local Instance : ignore_unique_asm_names_opt := false.
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
 Local Existing Instance default_language_naming_conventions.
@@ -172,6 +171,25 @@ Module solinas_reduction.
       let r2 := reduce1 base s c (S n) (S n) (r1) in
       let r3 := reduce1 base s c (S n) (n) (r2) in
       r3.
+
+    Definition fold_andb ls :=
+      fold_right andb true ls.
+    Definition dual_map {A B : Type} (f : A -> B -> bool) (l1 : list A) (l2 : list B) :=
+      map (fun x => (f (fst x) (snd x))) (combine l1 l2).
+    Definition fold_andb_map' {A B : Type} (f : A -> B -> bool) (ls1 : list A) (ls2 : list B) :=
+      fold_andb (dual_map f ls1 ls2).
+    Definition is_bounded_by bounds ls :=
+      fold_andb_map' (fun r v'' => (fst r <=? v'') && (v'' <=? snd r)) bounds ls.
+
+    Definition reduce_full base s c n (p : list Z) :=
+      let r1 := reduce1 base s c (2*n) (S n) p in
+      let bound := (0, 2^machine_wordsize - 1) in
+      let bounds := repeat bound n ++ [(0, up_bound-1)] in
+      if (is_bounded_by bounds r1) then
+        let r2 := reduce1 base s c (S n) (S n) r1 in
+        let r3 := reduce1 base s c (S n) (n) r2 in
+        r3
+      else r1.
 
     Definition mul_no_reduce base n (p q : list Z) :=
       let p_a := Positional.to_associational weight n p in
@@ -791,6 +809,79 @@ Module solinas_reduction.
         solve_length p. }
     Qed.
 
+    Lemma reduce_first_canonical : forall (p lo hi : list Z),
+        p = lo ++ hi ->
+        canonical_repr (2 * n) p ->
+        length lo = n ->
+        canonical_repr (S n) (reduce1 base s c (2*n) (S n) p).
+    Proof.
+      intros.
+      unfold reduce1, canonical_repr.
+      split.
+      { rewrite Rows.flatten_correct.
+        cbn [fst].
+        auto with push_length.
+        auto.
+        intros.
+        eapply Rows.length_from_associational; eauto. }
+      { pose proof (split_p' _ _ _ H H0 H1) as Hsplit.
+        destruct Hsplit as [ Hlo Hhi ].
+        rewrite Rows.flatten_correct.
+        cbn [fst].
+        rewrite Partition.eval_partition.
+        f_equal.
+        apply Z.mod_small_sym.
+        rewrite Rows.eval_from_associational.
+        rewrite H.
+        rewrite value_sat_reduce.
+        erewrite adjust_s_finished; try apply solinas_property.
+        unfold to_associational.
+        replace (2 * n)%nat with (n + n)%nat by lia.
+        rewrite seq_add.
+        rewrite Nat.add_0_l.
+        rewrite map_app.
+        rewrite combine_app_samelength.
+        rewrite fst_split_app, snd_split_app.
+        cbn [fst snd].
+        rewrite Hlo, Hhi.
+        autorewrite with push_eval zsimplify_const.
+        cbn [fst snd].
+
+        canonical_app p.
+        replace (length lo) with n in Hcanon_l by (solve_length p).
+        replace (length hi) with n in Hcanon_r.
+        split.
+        solve_ineq.
+        apply canonical_pos; auto.
+        apply canonical_pos; auto.
+        etransitivity.
+        solve_ineq.
+        apply Z.mul_lt_mono_nonneg.
+        solve_ineq.
+        eauto.
+        apply canonical_pos; auto.
+        apply canonical_eval_bounded; auto.
+        apply canonical_eval_bounded; auto.
+        weight_comp.
+        rewrite Z.mul_comm.
+        rewrite Zred_factor3.
+        apply Zmult_lt_compat_l.
+        lia.
+        simpl; lia.
+        lia.
+        lia.
+        solve_length p.
+        rewrite map_length, seq_length; auto.
+        lia.
+        lia.
+        lia.
+        auto.
+        lia.
+        auto.
+        auto.
+        eapply Rows.length_from_associational; eauto. }
+    Qed.
+
     Lemma value_reduce_first : forall (p lo hi : list Z),
         p = lo ++ hi ->
         canonical_repr (2 * n) p ->
@@ -860,6 +951,135 @@ Module solinas_reduction.
       auto.
       intros.
       eapply Rows.length_from_associational; eauto.
+    Qed.
+
+    Lemma reduce_first : forall (p lo hi : list Z),
+        p = lo ++ hi ->
+        canonical_repr (2 * n) p ->
+        length lo = n ->
+        forall q_lo q_hi,
+          let q := reduce1 base s c (2*n) (S n) p in
+          q = q_lo ++ [q_hi] ->
+          q_hi < up_bound.
+    Proof.
+      intros.
+      pose proof (value_reduce_first _ _ _ H H0 H1).
+      pose proof (reduce_first_canonical _ _ _ H H0 H1) as Hcanon.
+      fold q in Hcanon.
+
+      pose proof fun pf => nth_default_partition weight 0 (S n) (eval weight (S n) q) (n) pf as Hnth.
+      assert (Hcanon' := Hcanon).
+      unfold canonical_repr in Hcanon'.
+      destruct Hcanon' as [ _ Hpart ].
+      rewrite <-Hpart in Hnth.
+      rewrite H2 in Hnth at 1.
+      rewrite nth_default_app in Hnth.
+      destruct lt_dec in Hnth.
+      solve_length q.
+      replace (length q_lo) with n in Hnth by (solve_length q).
+      rewrite Nat.sub_diag in Hnth.
+      unfold nth_default in Hnth.
+      simpl in Hnth.
+      rewrite Hnth.
+      unfold q.
+      apply Z.div_lt_upper_bound.
+      auto.
+
+      canonical_app p.
+      replace (length lo) with n in Hcanon_l.
+      replace (length hi) with n in Hcanon_r by (solve_length p).
+      rewrite H3.
+      autorewrite with push_eval zsimplify_const.
+      erewrite adjust_s_finished; try apply solinas_property.
+      cbn [fst snd].
+      rewrite <-Le.Z.le_sub_1_iff.
+      rewrite Z.mod_small.
+      etransitivity.
+      solve_ineq.
+      rewrite <-Le.Z.le_sub_1_iff in coef_small.
+      apply Z.mul_le_mono_nonneg.
+      solve_ineq.
+      eauto.
+      apply canonical_pos; auto.
+      rewrite Le.Z.le_sub_1_iff.
+      eapply canonical_eval_bounded; auto.
+      rewrite Le.Z.le_sub_1_iff.
+      apply canonical_eval_bounded; auto.
+      ring_simplify.
+      rewrite OrdersEx.Z_as_OT.le_sub_le_add_r.
+      unfold up_bound.
+      weight_comp.
+      simpl.
+      nia.
+
+      split.
+      solve_ineq.
+      apply canonical_pos; auto.
+      apply canonical_pos; auto.
+      etransitivity.
+      solve_ineq.
+      apply Z.mul_lt_mono_nonneg.
+      solve_ineq.
+      eauto.
+      apply canonical_pos; auto.
+      eapply canonical_eval_bounded; auto.
+      eapply canonical_eval_bounded; auto.
+      weight_comp.
+      unfold up_bound, machine_wordsize.
+      simpl.
+      break_match; try lia.
+      destruct Heqz; break_match; lia.
+      lia.
+      lia.
+      lia.
+      lia.
+      lia.
+    Qed.
+
+    Lemma reduce_first_correct : forall (p lo hi : list Z),
+        p = lo ++ hi ->
+        canonical_repr (2 * n) p ->
+        length lo = n ->
+        let q := reduce1 base s c (2 * n) (S n) p in
+        (Positional.eval weight (2 * n) p) mod (s - Associational.eval c)
+        = (Positional.eval weight (S n) q) mod (s - Associational.eval c).
+    Proof.
+      intros.
+      pose proof (value_reduce_first _ _ _ H H0 H1) as Hval.
+      canonical_app p.
+      replace (length hi) with n in Hcanon_r by (solve_length p).
+      replace (length lo) with n in Hcanon_l.
+      unfold q in *.
+      rewrite Hval.
+      rewrite H.
+      unfold weight.
+      replace (2 * n)%nat with (n + (length hi))%nat by (solve_length p).
+      rewrite uweight_eval_app'.
+      replace (length hi) with n by (solve_length hi).
+      fold weight.
+      autorewrite with push_eval zsimplify_const.
+      erewrite adjust_s_finished'; try apply solinas_property.
+      cbn [fst snd].
+      rewrite (Z.add_comm _ (eval weight n lo)).
+      rewrite Z.mul_comm with (m:=Associational.eval c).
+      rewrite <-Z.mul_assoc.
+      rewrite <-reduction_rule.
+      apply Z.elim_mod.
+      rewrite Z.add_cancel_l.
+      rewrite Z.mul_assoc.
+      rewrite <-Z_div_exact_2.
+      lia.
+      lia.
+      pose proof (adjust_s_invariant (S (S (S n))) s) as Hinv.
+      erewrite adjust_s_finished' in Hinv; try apply solinas_property.
+      cbn [fst] in Hinv.
+      apply Hinv.
+      lia.
+      lia.
+      lia.
+      lia.
+      lia.
+      solve_length lo.
     Qed.
 
     Lemma reduce_second_canonical : forall (p : list Z) lo hi,
@@ -1671,6 +1891,146 @@ Module solinas_reduction.
       lia.
     Qed.
 
+    (*
+      Definition reduce_full base s c n (p : list Z) :=
+      let r1 := reduce1 base s c (2*n) (S n) p in
+      let bound := (0, 2^machine_wordsize - 1) in
+      let bounds := repeat bound n ++ [(0, up_bound-1)] in
+      if (is_bounded_by bounds r1) then
+        let r2 := reduce1 base s c (S n) (S n) r1 in
+        let r3 := reduce1 base s c (S n) (n) r2 in
+        r3
+      else r1.
+     *)
+
+    Lemma exists_lists_app : forall (p : list Z) n n',
+        length p = n ->
+        (n' <= n)%nat ->
+        exists l1 l2, p = l1 ++ l2 /\
+                   length l1 = n' /\
+                   length l2 = (n - n')%nat.
+    Proof.
+      intros.
+      induction n'.
+      { exists [].
+        exists p.
+        intuition.
+        lia. }
+      { destruct IHn' as [l1 IHn'].
+        lia.
+        destruct IHn' as [l2 IHn'].
+        intuition.
+        destruct l2.
+        subst p.
+        rewrite app_length in H.
+        rewrite H3 in H.
+        simpl in H.
+        lia.
+
+        exists (l1 ++ [z]).
+        exists l2.
+        intuition.
+        rewrite H1.
+        rewrite <-app_assoc.
+        auto.
+        rewrite app_length.
+        simpl.
+        lia.
+        rewrite cons_length in H4.
+        lia. }
+    Qed.
+
+    Theorem reduce_full_canonical : forall (p : list Z),
+        canonical_repr (2 * n) p ->
+        canonical_repr n (reduce_full base s c n p).
+    Proof.
+      intros.
+      pose proof (exists_lists_app p (2*n) n ltac:(solve_length p) ltac:(lia)) as Happ.
+      destruct Happ as [lo Happ].
+      destruct Happ as [hi Happ].
+      replace (2*n-n)%nat with n in Happ by lia.
+      intuition.
+      unfold reduce_full.
+      pose proof (reduce_first_canonical _ _ _ H0 H H2) as Hcanon1.
+      assert (Hcanon' := Hcanon1).
+      unfold canonical_repr in Hcanon'.
+      destruct Hcanon' as [ Hlen _ ].
+      remember (reduce1 base s c (2 * n) (S n) p) as q.
+      pose proof (exists_lists_app q (S n) n ltac:(solve_length q) ltac:(lia)) as Happ.
+      destruct Happ as [q_lo Happ].
+      destruct Happ as [q_hi' Happ].
+      replace (S n - n)%nat with 1%nat in Happ by lia.
+      intuition.
+      assert (exists q_hi, q_hi' = [q_hi]).
+      { destruct q_hi'.
+        simpl in H6.
+        lia.
+        exists z.
+        simpl in H6.
+        replace (z :: q_hi') with ([z] ++ q_hi') by reflexivity.
+        rewrite <-app_nil_r with (l:=[z]) at 2.
+        f_equal.
+        apply length0_nil; auto. }
+      destruct H4 as [ q_hi ]; subst q_hi'.
+      rewrite Heqq in H1.
+      pose proof (reduce_first _ _ _ H0 H H2 _ _ H1).
+      rewrite <-Heqq in H1.
+      break_match.
+      pose proof (reduce_third_canonical _ _ _ H1 Hcanon1 H4).
+      auto.
+
+      (* proving second case where first reduction is not bounded *)
+      admit.
+    Admitted.
+
+    Theorem reduce_full_correct : forall (p : list Z),
+        canonical_repr (2 * n) p ->
+        let r := reduce_full base s c n p in
+        (Positional.eval weight (2 * n) p) mod (s - Associational.eval c)
+        = (Positional.eval weight n r) mod (s - Associational.eval c).
+    Proof.
+      intros.
+      pose proof (exists_lists_app p (2*n) n ltac:(solve_length p) ltac:(lia)) as Happ.
+      destruct Happ as [lo Happ].
+      destruct Happ as [hi Happ].
+      replace (2*n-n)%nat with n in Happ by lia.
+      intuition.
+      unfold r, reduce_full.
+      pose proof (reduce_first_canonical _ _ _ H0 H H2) as Hcanon1.
+      assert (Hcanon' := Hcanon1).
+      unfold canonical_repr in Hcanon'.
+      destruct Hcanon' as [ Hlen _ ].
+      remember (reduce1 base s c (2 * n) (S n) p) as q.
+      pose proof (exists_lists_app q (S n) n ltac:(solve_length q) ltac:(lia)) as Happ.
+      destruct Happ as [q_lo Happ].
+      destruct Happ as [q_hi' Happ].
+      replace (S n - n)%nat with 1%nat in Happ by lia.
+      intuition.
+      assert (exists q_hi, q_hi' = [q_hi]).
+      { destruct q_hi'.
+        simpl in H6.
+        lia.
+        exists z.
+        simpl in H6.
+        replace (z :: q_hi') with ([z] ++ q_hi') by reflexivity.
+        rewrite <-app_nil_r with (l:=[z]) at 2.
+        f_equal.
+        apply length0_nil; auto. }
+      destruct H4 as [ q_hi ]; subst q_hi'.
+      erewrite reduce_first_correct; eauto.
+      rewrite <-Heqq.
+      rewrite Heqq in H1.
+      pose proof (reduce_first _ _ _ H0 H H2 _ _ H1).
+      rewrite <-Heqq in H1.
+      break_match.
+      eapply reduce_third_correct; eauto.
+      pose proof reduce_third_correct.
+
+      (* proving second case where first reduction is not bounded *)
+      admit.
+
+    Admitted.
+
   End __.
 
   Section test_reduce_full.
@@ -1678,55 +2038,18 @@ Module solinas_reduction.
     Context (machine_wordsize := 64)
             (up_bound := 2 ^ (machine_wordsize / 4)).
 
-
-    Definition is_bounded_by0 r v
-      := ((lower r%zrange <=? v) && (v <=? upper r%zrange)).
-    Fail Compute ltac:(let r := Reify (is_bounded_by0) in exact r).
-    Definition is_bounded_by2 r v
-      := (let '(v1, v2) := v in is_bounded_by0 (fst r) v1 && is_bounded_by0 (snd r) v2).
-    Definition is_bounded_by0o r
-      := (match r with Some r' => fun v' => is_bounded_by0 r' v' | None => fun _ => true end).
-    Definition is_bounded_by bounds ls
-      := (fold_andb_map (fun r v'' => is_bounded_by0o r v'') bounds ls).
-    Fail Compute ltac:(let r := Reify (is_bounded_by) in exact r).
-
-    Definition fold_andb ls :=
-      fold_right andb true ls.
-    Definition dual_map {A B : Type} (f : A -> B -> bool) (l1 : list A) (l2 : list B) :=
-      map (fun x => (f (fst x) (snd x))) (combine l1 l2).
-    Definition fold_andb_map' {A B : Type} (f : A -> B -> bool) (ls1 : list A) (ls2 : list B) :=
-      fold_andb (dual_map f ls1 ls2).
-    Succeed Compute ltac:(let r := Reify (@fold_andb_map' zrange Z) in exact r).
-    Definition is_bounded_by' bounds ls
-      := (fold_andb_map' (fun r v'' => is_bounded_by0o r v'') bounds ls).
-    Fail Compute ltac:(let r := Reify (is_bounded_by') in exact r).
-
     Let s := 2^255.
     Let c := [(1, 19)].
     Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
     Let m : nat := 2 * n.
     Let w : nat -> Z := weight machine_wordsize 1.
     Let base : Z := 2 ^ machine_wordsize.
-    Definition reduce_full base s c n (p : list Z) :=
-      let r1 := reduce1 base s c (2*n) (S n) p in
-      let bound := Some r[0 ~> 2^machine_wordsize - 1]%zrange in
-      let bounds := repeat bound n ++ [Some r[0 ~> up_bound - 1]%zrange ] in
-      if (is_bounded_by' bounds r1) then
-        let r2 := reduce1 base s c (S n) (S n) r1 in
-        let r3 := reduce1 base s c (S n) (n) r2 in
-        r3
-      else r1.
-    Fail Compute ltac:(let n := (eval cbv in n) in
-                       let r := Reify (reduce_full base s c n) in
-                       exact r).
 
-    Definition is_bounded_by'' bounds ls :=
-      fold_andb_map' (fun r v'' => (fst r <=? v'') && (v'' <=? snd r)) bounds ls.
     Definition reduce_full' base s c n (p : list Z) :=
       let r1 := reduce1 base s c (2*n) (S n) p in
       let bound := (0, 2^machine_wordsize - 1) in
       let bounds := repeat bound n ++ [(0, up_bound-1)] in
-      if (is_bounded_by'' bounds r1) then
+      if (is_bounded_by bounds r1) then
         let r2 := reduce1 base s c (S n) (S n) r1 in
         let r3 := reduce1 base s c (S n) (n) r2 in
         r3
@@ -1774,24 +2097,6 @@ Stringification failed on the syntax tree:
 Error in converting f to C:
 Unable to bind names for all return arguments and bounds at type [ℤ]"
      *)
-
-    Definition tmp r :=
-      let '(x, y) := r in (x + y).
-    Compute ltac:(let r := Reify (@combine Z Z) in exact r).
-    Print IdentifiersBasicGENERATED.Compilers.ident.
-    Locate IdentifiersBasicGENERATED.Compilers.ident_Z_cast.
-    Print ZRange.ident.option.interp_Z_cast.
-    Fail Compute ltac:(let r := Reify (ZRange.ident.option.interp_Z_cast) in exact r).
-
-    Definition proj_test (r : zrange) :=
-      r.(lower).
-    Ltac Rewriter.Language.PreCommon.Pre.reify_debug_level ::= constr:(20%nat).
-    Fail Compute ltac:(let r := Reify lower in exact r).
-    Compute ltac:(let r := (Reify (@fst Z Z)) in exact r).
-    Fail Compute ltac:(let r := (Reify (zran_rect (fun _ : zrange => Z)
-                                               (fun lower _ : Z => lower)
-                                  )) in exact r).
-
 
   End test_reduce_full.
 
