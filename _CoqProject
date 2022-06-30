@@ -13,6 +13,7 @@ src/MiscCompilerPassesProofs.v
 src/MiscCompilerPassesProofsExtra.v
 src/SlowPrimeSynthesisExamples.v
 src/SlowPrimeSynthesisExamplesCopy.v
+src/SolinasReduction.v
 src/StandaloneDebuggingExamples.v
 src/StandaloneHaskellMain.v
 src/StandaloneOCamlMain.v

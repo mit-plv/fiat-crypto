@@ -218,6 +218,8 @@ Crypto.Rewriter.RulesProofs
 Crypto.Rewriter.TestRules
 Crypto.Rewriter.TestRulesProofs
 Crypto.SlowPrimeSynthesisExamples
+Crypto.SlowPrimeSynthesisExamplesCopy
+Crypto.SolinasReduction
 Crypto.Spec.CompleteEdwardsCurve
 Crypto.Spec.Curve25519
 Crypto.Spec.ModularArithmetic

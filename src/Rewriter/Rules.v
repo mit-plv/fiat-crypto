@@ -345,6 +345,10 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
                   -1 ∈ rlor -> -1 ∈ rm1
                   -> cstZ rlor (Z.lor (cstZ rm1 ('-1)) (cstZ rv v)) = cstZ rm1 ('-1))
 
+            ; (* edit here *)
+            (forall rx x ry y, upper (n rx) <= lower (n ry) -> (cstZ rx x <=? cstZ ry y)%Z = true)
+            ; (forall rx x ry y, lower rx <= upper rx -> lower ry <= upper ry -> upper rx <= lower ry -> (cstZ rx x <=? cstZ ry y)%Z = true)
+            
             ; (forall rx x ry y, upper (n rx) < lower (n ry) -> Z.ltz (cstZ rx x) (cstZ ry y) = 1)
             ; (forall rx x ry y, upper (n ry) <= lower (n rx) -> Z.ltz (cstZ rx x) (cstZ ry y) = 0)
             ; (forall rx x rc c, c ∈ rc -> upper (n rx) < c -> Z.ltz (cstZ rx x) (cstZ rc ('c)) = 1)

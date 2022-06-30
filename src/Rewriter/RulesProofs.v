@@ -553,6 +553,34 @@ Proof using Type.
   all: repeat interp_good_t_step_related.
   all: repeat interp_good_t_step_arith.
   all: remove_casts; try fin_with_nia.
+
+  (* edit here *)
+  unfold is_bounded_by_bool in *.
+  repeat match goal with
+         | [ H : _ && _ = true |- _ ] => apply Datatypes.andb_prop in H
+         end.
+  intuition.
+  repeat match goal with
+         | [ H : (_ <=? _) = true |- _ ] => apply Zle_bool_imp_le in H
+         end.
+  etransitivity; eauto.
+  etransitivity; eauto.
+
+  pose proof (@ZRange.normalize_id_iff_goodb rx).
+  pose proof (@ZRange.normalize_id_iff_goodb ry).
+  unfold ZRange.goodb in *.
+  unfold is_bounded_by_bool in *.
+  repeat match goal with
+         | [ H : _ && _ = true |- _ ] => apply Datatypes.andb_prop in H
+         end.
+  intuition.
+  repeat match goal with
+         | [ H : context[(_ <=? _) = true] |- _ ] => rewrite Z.leb_le in H
+         end.
+  rewrite H3 in H6, H7; auto.
+  rewrite H4 in H2, H8; auto.
+  etransitivity; eauto.
+  etransitivity; eauto.
 Qed.
 
 Lemma strip_literal_casts_rewrite_rules_proofs
