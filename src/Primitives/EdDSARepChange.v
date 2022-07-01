@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Spec.EdDSA bbv.WordScope.
-Require Import Coq.Classes.Morphisms Coq.Relations.Relation_Definitions.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Relations.Relation_Definitions.
 Require Import Crypto.Algebra.Monoid Crypto.Algebra.Group Crypto.Algebra.ScalarMult.
 Require Import Crypto.Util.Decidable Crypto.Util.Option.
 Require Import Crypto.Util.Tactics.SetEvars.

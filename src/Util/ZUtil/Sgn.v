@@ -8,5 +8,5 @@ Module Z.
     generalize (Zdiv_sgn (Z.abs a) (Z.abs b)).
     destruct a, b; simpl; lia.
   Qed.
-  Hint Resolve div_abs_sgn_nonneg : zarith.
+  Global Hint Resolve div_abs_sgn_nonneg : zarith.
 End Z.

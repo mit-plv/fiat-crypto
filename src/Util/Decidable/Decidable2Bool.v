@@ -2,6 +2,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.QArith.QArith_base.
 Require Import Coq.micromega.Lia.
 Require Import Coq.Lists.List.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.SideConditions.ReductionPackages.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Decidable.

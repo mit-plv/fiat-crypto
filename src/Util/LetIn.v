@@ -1,5 +1,5 @@
 Require Import Crypto.Util.FixCoqMistakes.
-Require Import Coq.Classes.Morphisms Coq.Relations.Relation_Definitions.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tactics.GetGoal.
 Require Import Crypto.Util.Notations.
 
@@ -51,7 +51,7 @@ Ltac let_in_to_Let_In e :=
     with fun x => @?C x => C end (* match drops the type cast *)
   | ?x => x
   end.
-Hint Extern 0 (_call_let_in_to_Let_In ?e) => (
+Global Hint Extern 0 (_call_let_in_to_Let_In ?e) => (
   let e := let_in_to_Let_In e in eexact e
 ) : typeclass_instances.
 Ltac change_let_in_with_Let_In :=

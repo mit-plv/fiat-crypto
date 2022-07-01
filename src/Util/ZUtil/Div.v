@@ -111,7 +111,7 @@ Module Z.
     { subst; simpl; autorewrite with zsimplify; reflexivity. }
     { intros; apply Z.div_le_mono; lia. }
   Qed.
-  Hint Resolve div_le_mono_nonneg : zarith.
+  Global Hint Resolve div_le_mono_nonneg : zarith.
 
   Lemma div_le_mono_pow_pos a b c e : a <= b -> a / Z.pos c ^ e <= b / Z.pos c ^ e.
   Proof. auto with zarith. Qed.
@@ -121,7 +121,7 @@ Module Z.
     destruct (Z_zerop b); subst; rewrite ?Zdiv_0_r; [ reflexivity | ].
     intros; apply Z.div_pos; lia.
   Qed.
-  Hint Resolve div_nonneg : zarith.
+  Global Hint Resolve div_nonneg : zarith.
 
   Lemma div_add_exact x y d : d <> 0 -> x mod d = 0 -> (x + y) / d = x / d + y / d.
   Proof.
@@ -151,7 +151,7 @@ Module Z.
          rewrite Z.div_add_exact by (autorewrite with pull_Zmod zsimplify; auto).
          rewrite <- Z.div_sub_mod_exact by lia; lia.
   Qed.
-  Hint Resolve div_sub_mod_cond : zarith.
+  Global Hint Resolve div_sub_mod_cond : zarith.
 
   Lemma div_add_mod_cond_l : forall x y d, d <> 0 -> (x + y) / d = (x mod d + y) / d + x / d.
   Proof.
@@ -196,7 +196,7 @@ Module Z.
 
   Lemma div_lt_upper_bound' a b q : 0 < b -> a < q * b -> a / b < q.
   Proof. intros; apply Z.div_lt_upper_bound; nia. Qed.
-  Hint Resolve div_lt_upper_bound' : zarith.
+  Global Hint Resolve div_lt_upper_bound' : zarith.
 
   Lemma div_cross_le_abs a b c' d : c' <> 0 -> d <> 0 -> a * Z.sgn c' * Z.abs d <= b * Z.sgn d * Z.abs c' -> a / c' <= b / d.
   Proof.
@@ -260,11 +260,11 @@ Module Z.
   Proof.
     intros; subst; auto with zarith.
   Qed.
-  Hint Resolve div_same' : zarith.
+  Global Hint Resolve div_same' : zarith.
 
   Lemma div_opp_r a b : a / (-b) = ((-a) / b).
   Proof. Z.div_mod_to_quot_rem; nia. Qed.
-  Hint Resolve div_opp_r : zarith.
+  Global Hint Resolve div_opp_r : zarith.
 
   Lemma div_floor : forall a b c, 0 < b -> a < b * (Z.succ c) -> a / b <= c.
   Proof.
@@ -281,7 +281,7 @@ Module Z.
     transitivity (x * z / z); [ | rewrite Z.div_mul by lia; lia ].
     apply Z_div_le; nia.
   Qed.
-  Hint Resolve mul_div_le : zarith.
+  Global Hint Resolve mul_div_le : zarith.
 
   Lemma div_mul_diff_exact a b c
         (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
@@ -334,7 +334,7 @@ Module Z.
   Proof.
     pose proof (Z.div_mul_le_le a b c); lia.
   Qed.
-  Hint Resolve div_mul_le_le_offset : zarith.
+  Global Hint Resolve div_mul_le_le_offset : zarith.
 
   Lemma div_x_y_x x y : 0 < x -> 0 < y -> x / y / x = 1 / y.
   Proof.
@@ -352,7 +352,7 @@ Module Z.
       instantiate; autorewrite with zsimplify; try reflexivity.
   Qed.
 
-  Hint Resolve (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1))
+  Global Hint Resolve (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1))
        (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)) : zarith.
 
   Lemma sub_pos_bound_div_eq a b X : 0 <= a < X -> 0 <= b < X -> (a - b) / X = if a <? b then -1 else 0.
@@ -374,11 +374,11 @@ Module Z.
 
   Lemma div_small_sym a b : 0 <= a < b -> 0 = a / b.
   Proof. intros; symmetry; apply Z.div_small; assumption. Qed.
-  Hint Resolve div_small_sym : zarith.
+  Global Hint Resolve div_small_sym : zarith.
 
   Lemma mod_eq_le_div_1 a b : 0 < a <= b -> a mod b = 0 -> a / b = 1.
   Proof. intros; Z.div_mod_to_quot_rem; nia. Qed.
-  Hint Resolve mod_eq_le_div_1 : zarith.
+  Global Hint Resolve mod_eq_le_div_1 : zarith.
   Hint Rewrite mod_eq_le_div_1 using zutil_arith : zsimplify.
 
   Lemma div_small_neg x y : 0 < -x <= y -> x / y = -1.
@@ -398,16 +398,16 @@ Module Z.
     intros [? ?] [? ?]; eapply Z.le_lt_trans; [ | eassumption ].
     auto with zarith.
   Qed.
-  Hint Resolve mul_div_lt_by_le : zarith.
+  Global Hint Resolve mul_div_lt_by_le : zarith.
 
   Definition mul_div_le'
     := fun x y z w p H0 H1 H2 H3 => @Z.le_trans _ _ w (@Z.mul_div_le x y z H0 H1 H2 H3) p.
-  Hint Resolve mul_div_le' : zarith.
+  Global Hint Resolve mul_div_le' : zarith.
   Lemma mul_div_le'' x y z w : y <= w -> 0 <= x -> 0 <= y -> 0 < z -> x <= z -> x * y / z <= w.
   Proof.
     rewrite (Z.mul_comm x y); intros; apply mul_div_le'; assumption.
   Qed.
-  Hint Resolve mul_div_le'' : zarith.
+  Global Hint Resolve mul_div_le'' : zarith.
 
   Lemma div_between n a b : 0 <= n -> b <> 0 -> n * b <= a < (1 + n) * b -> a / b = n.
   Proof. intros; Z.div_mod_to_quot_rem_in_goal; nia. Qed.
@@ -427,3 +427,37 @@ Module Z.
   Lemma div_between_0_if a b : b <> 0 -> 0 <= a < 2 * b -> a / b = if b <=? a then 1 else 0.
   Proof. intros; rewrite (div_between_if 0) by lia; autorewrite with zsimplify_const; reflexivity. Qed.
 End Z.
+Hint Rewrite Z.div_mul' using zutil_arith : zsimplify.
+Hint Rewrite Z.div_add_l' Z.div_add' using zutil_arith : zsimplify.
+Hint Rewrite Z.div_sub Z.div_sub' using zutil_arith : zsimplify.
+Hint Rewrite Z.div_add_sub Z.div_add_sub' Z.div_add_sub_l Z.div_add_sub_l' using zutil_arith : zsimplify.
+Hint Rewrite Z.div_mul_skip Z.div_mul_skip' using zutil_arith : zsimplify.
+Hint Rewrite Z.div_mul_skip_pow using zutil_arith : zsimplify.
+Hint Rewrite Z.div_mul_skip_pow' using zutil_arith : zsimplify.
+Global Hint Resolve Z.div_le_mono_nonneg : zarith.
+Global Hint Resolve Z.div_nonneg : zarith.
+Hint Rewrite Z.div_add_exact using zutil_arith : zsimplify.
+Global Hint Resolve Z.div_sub_mod_cond : zarith.
+Global Hint Resolve Z.div_lt_upper_bound' : zarith.
+Hint Rewrite Z.div_opp_l_complete using zutil_arith : pull_Zopp.
+Hint Rewrite Z.div_opp_l_complete' using zutil_arith : push_Zopp.
+Hint Rewrite Z.div_opp using zutil_arith : zsimplify.
+Hint Rewrite Z.div_sub_1_0 using zutil_arith : zsimplify.
+Global Hint Resolve Z.div_same' : zarith.
+Global Hint Resolve Z.div_opp_r : zarith.
+Global Hint Resolve Z.mul_div_le : zarith.
+Global Hint Resolve Z.div_mul_le_le_offset : zarith.
+Hint Rewrite Z.div_x_y_x using zutil_arith : zsimplify.
+Global Hint Resolve (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1))
+       (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)) : zarith.
+Hint Rewrite Z.sub_pos_bound_div_eq Z.add_opp_pos_bound_div_eq using zutil_arith : zstrip_div.
+Global Hint Resolve Z.div_small_sym : zarith.
+Global Hint Resolve Z.mod_eq_le_div_1 : zarith.
+Hint Rewrite Z.mod_eq_le_div_1 using zutil_arith : zsimplify.
+Hint Rewrite Z.div_small_neg using zutil_arith : zsimplify.
+Hint Rewrite Z.div_sub_small using zutil_arith : zsimplify.
+Global Hint Resolve Z.mul_div_lt_by_le : zarith.
+Global Hint Resolve Z.mul_div_le' : zarith.
+Global Hint Resolve Z.mul_div_le'' : zarith.
+Hint Rewrite Z.div_between using zutil_arith : zsimplify.
+Hint Rewrite Z.div_between_1 using zutil_arith : zsimplify.

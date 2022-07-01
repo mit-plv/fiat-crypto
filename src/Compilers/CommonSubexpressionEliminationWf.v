@@ -1,4 +1,5 @@
 (** * Common Subexpression Elimination for PHOAS Syntax *)
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Lists.List.
 Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.AListContext.
@@ -65,7 +66,7 @@ Section symbolic.
           (HG : forall t x y, List.In (existT _ t (x, y)) G -> snd x = snd y)
           (Hwf : wff G e1 e2)
       : @symbolize_exprf var1 t e1 = @symbolize_exprf var2 t e2.
-    Proof.
+    Proof using Type.
       induction Hwf; simpl; erewrite_hyp ?* by eassumption; reflexivity.
     Qed.
 
@@ -73,7 +74,7 @@ Section symbolic.
           (HG : forall t x y, List.In (existT _ t (x, y)) G -> snd x = snd y)
           (Hwf : wff G e1 e2)
       : @norm_symbolize_exprf var1 t e1 = @norm_symbolize_exprf var2 t e2.
-    Proof.
+    Proof using Type.
       unfold norm_symbolize_exprf; erewrite wff_symbolize_exprf by eassumption; reflexivity.
     Qed.
 
@@ -169,7 +170,7 @@ Section symbolic.
               -> exists pf : t1 = t2, wff nil (eq_rect _ exprf e1 _ pf) e2)
           (Hwf : wff G e1 e2)
       : wff G (@prepend_prefix var1' t e1 prefix1) (@prepend_prefix var2' t e2 prefix2).
-    Proof.
+    Proof using Type.
       revert dependent G; revert dependent prefix2; induction prefix1, prefix2; simpl; intros Hlen Hprefix G Hwf; try congruence.
       { pose proof (Hprefix 0) as H0; specialize (fun n => Hprefix (S n)).
         destruct_head sigT; simpl in *.
@@ -188,7 +189,7 @@ Section symbolic.
               -> nth_error prefix2 n = Some (existT _ t2 e2)
               -> exists pf : t1 = t2, wff nil (eq_rect _ exprf e1 _ pf) e2)
       : wf (@cse var1 prefix1 t e1 empty) (@cse var2 prefix2 t e2 empty).
-    Proof.
+    Proof using base_type_code_lb op_code_bl op_code_lb.
       destruct Hwf; simpl; constructor; intros.
       lazymatch goal with
       | [ |- wff (flatten_binding_list (t:=?src) ?x ?y) (csef _ (extendb _ ?n ?v)) (csef _ (extendb _ ?n' ?v')) ]
@@ -215,9 +216,9 @@ Section symbolic.
             -> exists pf : t1 = t2, wff nil (eq_rect _ exprf e1 _ pf) e2)
         (Hwf : Wf e)
     : Wf (@CSE t e prefix).
-  Proof.
+  Proof using base_type_code_lb op_code_bl op_code_lb.
     intros var1 var2; apply wf_cse; eauto.
   Qed.
 End symbolic.
 
-Hint Resolve Wf_CSE : wf.
+Global Hint Resolve Wf_CSE : wf.

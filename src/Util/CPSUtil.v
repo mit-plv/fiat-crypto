@@ -1,4 +1,5 @@
 Require Import Coq.Lists.List. Import ListNotations.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.

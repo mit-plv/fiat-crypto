@@ -1,4 +1,5 @@
 Require Crypto.Algebra.Field.
+Import Crypto.Algebra.Field.Hints.
 
 Module W.
   Section WeierstrassCurves.

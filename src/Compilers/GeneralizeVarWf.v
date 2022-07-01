@@ -74,4 +74,4 @@ Section language.
   Proof using base_type_code_lb. eapply Wf_GeneralizeVar; eassumption. Qed.
 End language.
 
-Hint Resolve Wf_GeneralizeVar Wf_GeneralizeVar_arrow : wf.
+Global Hint Resolve Wf_GeneralizeVar Wf_GeneralizeVar_arrow : wf.

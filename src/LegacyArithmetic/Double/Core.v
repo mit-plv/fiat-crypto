@@ -1,7 +1,7 @@
 (*** Implementing Large Bounded Arithmetic via pairs *)
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.LegacyArithmetic.Interface.
-Require Import Crypto.LegacyArithmetic.InterfaceProofs.
+Require Import Crypto.LegacyArithmetic.InterfaceProofs. Export InterfaceProofs.Hints.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Notations.
@@ -23,7 +23,9 @@ Definition tuple_decoder {n W} {decode : decoder n W} {k : nat} : decoder (k * n
   := {| decode w := BaseSystem.decode (Pow2Base.base_from_limb_widths (List.repeat n k))
                                       (List.map decode (List.rev (Tuple.to_list _ w))) |}.
 Global Arguments tuple_decoder : simpl never.
-Hint Extern 3 (decoder _ (tuple ?W ?k)) => let kv := (eval simpl in (Z.of_nat k)) in apply (fun n decode => (@tuple_decoder n W decode k : decoder (kv * n) (tuple W k))) : typeclass_instances.
+Module Export Hints.
+  Global Hint Extern 3 (decoder _ (tuple ?W ?k)) => let kv := (eval simpl in (Z.of_nat k)) in apply (fun n decode => (@tuple_decoder n W decode k : decoder (kv * n) (tuple W k))) : typeclass_instances.
+End Hints.
 
 Section ripple_carry_definitions.
   (** tuple is high to low ([to_list] reverses) *)

@@ -1,12 +1,14 @@
+Require Export Crypto.Util.GlobalSettings.
 (** * Declaration of Hint Databases with lemmas about ℤ from the standard library *)
 Require Import Coq.micromega.Psatz Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
+Require Export Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 (* Should we [Require Import Coq.ZArith.Zhints.]? *)
 
-Hint Extern 1 => lia : lia.
-Hint Extern 1 => lra : lra.
-Hint Extern 1 => nia : nia.
-Hint Extern 1 => lia : lia.
+Global Hint Extern 1 => lia : lia.
+Global Hint Extern 1 => lra : lra.
+Global Hint Extern 1 => nia : nia.
+Global Hint Extern 1 => lia : lia.
 
 Ltac zutil_arith := solve [ lia | lia | auto with nocore ].
 Ltac zutil_arith_more_inequalities := solve [ zutil_arith | auto with zarith ].
@@ -59,32 +61,32 @@ Create HintDb Zshift_to_pow discriminated.
 Create HintDb Zpow_to_shift discriminated.
 Create HintDb pull_Zmax discriminated.
 Create HintDb push_Zmax discriminated.
-Hint Extern 1 => progress autorewrite with push_Zopp in * : push_Zopp.
-Hint Extern 1 => progress autorewrite with pull_Zopp in * : pull_Zopp.
-Hint Extern 1 => progress autorewrite with push_Zpow in * : push_Zpow.
-Hint Extern 1 => progress autorewrite with pull_Zpow in * : pull_Zpow.
-Hint Extern 1 => progress autorewrite with push_Zmul in * : push_Zmul.
-Hint Extern 1 => progress autorewrite with pull_Zmul in * : pull_Zmul.
-Hint Extern 1 => progress autorewrite with push_Zadd in * : push_Zadd.
-Hint Extern 1 => progress autorewrite with pull_Zadd in * : pull_Zadd.
-Hint Extern 1 => progress autorewrite with push_Zsub in * : push_Zsub.
-Hint Extern 1 => progress autorewrite with pull_Zsub in * : pull_Zsub.
-Hint Extern 1 => progress autorewrite with push_Zdiv in * : push_Zmul.
-Hint Extern 1 => progress autorewrite with pull_Zdiv in * : pull_Zmul.
-Hint Extern 1 => progress autorewrite with pull_Zmod in * : pull_Zmod.
-Hint Extern 1 => progress autorewrite with push_Zmod in * : push_Zmod.
-Hint Extern 1 => progress autorewrite with pull_Zof_nat in * : pull_Zof_nat.
-Hint Extern 1 => progress autorewrite with push_Zof_nat in * : push_Zof_nat.
-Hint Extern 1 => progress autorewrite with pull_Zshift in * : pull_Zshift.
-Hint Extern 1 => progress autorewrite with push_Zshift in * : push_Zshift.
-Hint Extern 1 => progress autorewrite with Zshift_to_pow in * : Zshift_to_pow.
-Hint Extern 1 => progress autorewrite with Zpow_to_shift in * : Zpow_to_shift.
-Hint Extern 1 => progress autorewrite with pull_Zof_N in * : pull_Zof_N.
-Hint Extern 1 => progress autorewrite with push_Zof_N in * : push_Zof_N.
-Hint Extern 1 => progress autorewrite with pull_Zto_N in * : pull_Zto_N.
-Hint Extern 1 => progress autorewrite with push_Zto_N in * : push_Zto_N.
-Hint Extern 1 => progress autorewrite with push_Zmax in * : push_Zmax.
-Hint Extern 1 => progress autorewrite with pull_Zmax in * : pull_Zmax.
+Global Hint Extern 1 => progress autorewrite with push_Zopp in * : push_Zopp.
+Global Hint Extern 1 => progress autorewrite with pull_Zopp in * : pull_Zopp.
+Global Hint Extern 1 => progress autorewrite with push_Zpow in * : push_Zpow.
+Global Hint Extern 1 => progress autorewrite with pull_Zpow in * : pull_Zpow.
+Global Hint Extern 1 => progress autorewrite with push_Zmul in * : push_Zmul.
+Global Hint Extern 1 => progress autorewrite with pull_Zmul in * : pull_Zmul.
+Global Hint Extern 1 => progress autorewrite with push_Zadd in * : push_Zadd.
+Global Hint Extern 1 => progress autorewrite with pull_Zadd in * : pull_Zadd.
+Global Hint Extern 1 => progress autorewrite with push_Zsub in * : push_Zsub.
+Global Hint Extern 1 => progress autorewrite with pull_Zsub in * : pull_Zsub.
+Global Hint Extern 1 => progress autorewrite with push_Zdiv in * : push_Zmul.
+Global Hint Extern 1 => progress autorewrite with pull_Zdiv in * : pull_Zmul.
+Global Hint Extern 1 => progress autorewrite with pull_Zmod in * : pull_Zmod.
+Global Hint Extern 1 => progress autorewrite with push_Zmod in * : push_Zmod.
+Global Hint Extern 1 => progress autorewrite with pull_Zof_nat in * : pull_Zof_nat.
+Global Hint Extern 1 => progress autorewrite with push_Zof_nat in * : push_Zof_nat.
+Global Hint Extern 1 => progress autorewrite with pull_Zshift in * : pull_Zshift.
+Global Hint Extern 1 => progress autorewrite with push_Zshift in * : push_Zshift.
+Global Hint Extern 1 => progress autorewrite with Zshift_to_pow in * : Zshift_to_pow.
+Global Hint Extern 1 => progress autorewrite with Zpow_to_shift in * : Zpow_to_shift.
+Global Hint Extern 1 => progress autorewrite with pull_Zof_N in * : pull_Zof_N.
+Global Hint Extern 1 => progress autorewrite with push_Zof_N in * : push_Zof_N.
+Global Hint Extern 1 => progress autorewrite with pull_Zto_N in * : pull_Zto_N.
+Global Hint Extern 1 => progress autorewrite with push_Zto_N in * : push_Zto_N.
+Global Hint Extern 1 => progress autorewrite with push_Zmax in * : push_Zmax.
+Global Hint Extern 1 => progress autorewrite with pull_Zmax in * : pull_Zmax.
 
 (** For the occasional lemma that can remove the use of [Z.div] *)
 Create HintDb zstrip_div.
@@ -175,3 +177,5 @@ Ltac Coq.omega.PreOmega.zify_nat_op ::=
   | |- context [ Z.of_nat ?a ] =>
     pose proof (Nat2Z.is_nonneg a); Coq.omega.PreOmega.hide_Z_of_nat a
  end.
+
+Global Existing Instance Z.le_preorder.

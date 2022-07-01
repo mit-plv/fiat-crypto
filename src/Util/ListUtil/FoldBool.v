@@ -1,5 +1,6 @@
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Lists.List.
+Require Export Crypto.Util.GlobalSettings.
 Import ListNotations. Open Scope bool_scope.
 
 Lemma fold_left_orb_true ls

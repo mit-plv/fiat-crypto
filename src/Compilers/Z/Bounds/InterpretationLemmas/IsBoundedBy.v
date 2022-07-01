@@ -1,4 +1,4 @@
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Psatz.
 Require Import Crypto.Compilers.Z.Syntax.
@@ -10,10 +10,13 @@ Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Util.ZRange.CornersMonotoneBounds.
 Require Import Crypto.Util.ZUtil.Stabilization.
 Require Import Crypto.Util.ZUtil.MulSplit.
+Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Pow.
 Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
 Require Import Crypto.Util.ZUtil.Morphisms.
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.Bool.

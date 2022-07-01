@@ -1,3 +1,4 @@
+Require Export Crypto.Util.GlobalSettings.
 Require Import Coq.micromega.Lia Coq.ZArith.ZArith.
 Local Open Scope Z_scope.
 

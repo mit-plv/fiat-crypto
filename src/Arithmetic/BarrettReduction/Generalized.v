@@ -17,6 +17,7 @@ Require Import Crypto.Util.ZUtil.Tactics.SimplifyFractionsLe.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.ZSimplify.
+Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.Tactics.BreakMatch.
 
 Local Open Scope Z_scope.
@@ -149,7 +150,7 @@ Section barrett.
       Context (n_good : b ^ offset * (b^(2*k) mod n) <= b ^ (k+offset) - m) (a_good : a < n * b ^ k).
 
       Lemma helper_1 : b ^ (2 * k) * ((a / n) - 1) <= m * (n * (a / n) - b ^ (k - offset)).
-      Proof.
+      Proof using a_good a_small base_good k_big_enough k_good m_good n_good n_large n_pos n_reasonable offset_nonneg.
         pose proof (Z.mod_pos_bound (b ^ (2*k)) n).
         assert (0 < b ^ (k - offset)) by auto with zarith.
         assert (a/n < b ^ k) by auto using Z.div_lt_upper_bound with zarith.
@@ -158,7 +159,7 @@ Section barrett.
       Qed.
 
       Lemma helper_2 : n * (a / n) - b ^ (k - offset) < b ^ (k - offset) * (a / b ^ (k - offset)).
-      Proof.
+      Proof using base_good k_big_enough n_pos n_reasonable offset_nonneg r.
         pose proof (Z.mod_pos_bound a n).
         pose proof (Z.mod_pos_bound a (b ^ (k - offset))).
         assert (0 < b ^ (k - offset)) by auto with zarith.
@@ -168,13 +169,13 @@ Section barrett.
       Let epsilon := (a / n) * b ^ (k+offset) - (a / b ^ (k - offset)) * m.
 
       Lemma q_epsilon : q = (a / n) + (- epsilon) / b ^ (k + offset).
-      Proof.
+      Proof using a_small base_good k_big_enough m_good n_good n_large n_pos n_reasonable offset_nonneg r.
         subst q epsilon.
         autorewrite with push_Zpow in *; do 2 Z.div_mod_to_quot_rem_in_goal; nia.
       Qed.
 
       Lemma epsilon_lower : - b ^ (k + offset) < epsilon.
-      Proof.
+      Proof using a_good a_nonneg a_small base_good k_big_enough k_good m_good n_good n_large n_pos n_reasonable offset_nonneg r.
         pose proof q_epsilon as Hq_epsilon.
         rewrite (proj2_sig q_nice) in Hq_epsilon.
         cut (- epsilon / b ^ (k + offset) <= 0);
@@ -182,13 +183,13 @@ Section barrett.
       Qed.
 
       Lemma m_pos : 0 < m.
-      Proof.
+      Proof using a_good a_nonneg a_small base_good k_big_enough k_good m_good n_good n_large n_pos n_reasonable offset_nonneg.
         subst m. Z.zero_bounds; autorewrite with push_Zpow in *; nia.
       Qed.
 
       Lemma epsilon_bound : epsilon < b ^ (k + offset).
-      Proof.
-        subst epsilon. pose proof helper_1. pose proof helper_2. pose proof m_pos.
+      Proof using a_good a_nonneg a_small base_good k_big_enough k_good m_good n_good n_large n_pos n_reasonable offset_nonneg r.
+        pose proof helper_1. pose proof helper_2. pose proof m_pos. subst epsilon.
         replace (b ^ (2 * k)) with (b^(k - offset) * b ^ (k + offset)) in *
           by (rewrite <-Z.pow_add_r; auto with zarith).
         apply Z.mul_lt_mono_pos_l with (p:=b^(k-offset)); auto with zarith.
@@ -196,7 +197,7 @@ Section barrett.
       Qed.
 
       Lemma q_nice_strong : { b : bool | q = a / n + if b then -1 else 0}.
-      Proof.
+      Proof using a_good a_nonneg a_small base_good epsilon k_big_enough k_good m_good n_good n_large n_pos n_reasonable offset_nonneg r.
         exists (0 <? epsilon).
         rewrite q_epsilon.
         pose proof epsilon_bound. pose proof epsilon_lower.
@@ -204,13 +205,13 @@ Section barrett.
       Qed.
 
       Lemma q_bound : a / n - 1 <= q.
-      Proof.
+      Proof using a_good a_nonneg a_small base_good epsilon k_big_enough k_good m_good n_good n_large n_pos n_reasonable offset_nonneg r.
         rewrite (proj2_sig q_nice_strong).
         break_match; lia.
       Qed.
 
       Lemma r_small_strong : r < 2 * n.
-      Proof.
+      Proof using a_good a_nonneg a_small base_good epsilon k_big_enough k_good m_good n_good n_large n_pos n_reasonable offset_nonneg q.
         Hint Rewrite (Z.mul_div_eq' a n) using lia : zstrip_div.
         assert (a mod n < n) by auto with zarith lia.
         unfold r.

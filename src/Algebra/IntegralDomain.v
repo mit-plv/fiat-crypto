@@ -1,5 +1,6 @@
 Require Coq.setoid_ring.Integral_domain.
 Require Crypto.Algebra.Nsatz.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.Factorize.
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Ring.
 Require Import Crypto.Util.Tactics.RewriteHyp.

@@ -1,13 +1,17 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.Classes.RelationClasses.
+Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Local Open Scope Z_scope.
 
+Global Existing Instance Z.le_preorder.
+
 Module Z.
   Lemma positive_is_nonzero : forall x, x > 0 -> x <> 0.
   Proof. intros; lia. Qed.
-  Hint Resolve positive_is_nonzero : zarith.
+  Global Hint Resolve positive_is_nonzero : zarith.
 
   Lemma le_lt_trans n m p : n <= m -> m < p -> n < p.
   Proof. lia. Qed.

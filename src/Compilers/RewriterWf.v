@@ -58,4 +58,4 @@ Section language.
   Qed.
 End language.
 
-Hint Resolve Wf_RewriteOp : wf.
+Global Hint Resolve Wf_RewriteOp : wf.

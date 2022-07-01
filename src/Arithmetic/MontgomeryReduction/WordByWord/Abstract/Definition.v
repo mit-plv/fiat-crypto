@@ -58,4 +58,4 @@ Section WordByWordMontgomery.
 End WordByWordMontgomery.
 
 Create HintDb word_by_word_montgomery.
-Hint Unfold S4 S3 S2 q s S1 a A' A_a Let_In : word_by_word_montgomery.
+Global Hint Unfold S4 S3 S2 q s S1 a A' A_a Let_In : word_by_word_montgomery.

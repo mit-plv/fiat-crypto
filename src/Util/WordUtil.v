@@ -1,7 +1,7 @@
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.NArith.NArith.
-Require Import Coq.Classes.RelationClasses.
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Program.Program.
 Require Import Coq.Numbers.Natural.Peano.NPeano Util.NatUtil.
 Require Import Coq.micromega.Psatz.
@@ -16,12 +16,15 @@ Require Import Crypto.Util.Sigma.
 
 Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
 Require Import Crypto.Util.ZUtil.N2Z.
+Require Import Crypto.Util.ZUtil.Le.
 Require Import Crypto.Util.ZUtil.Definitions.
 
 Require Import bbv.WordScope.
 Require Import bbv.Nomega.
 
 Require Import Crypto.Util.FixCoqMistakes.
+
+Local Existing Instances N.le_preorder N.lt_strorder.
 
 Local Open Scope nat_scope.
 
@@ -30,10 +33,10 @@ Create HintDb push_wordToN discriminated.
 Create HintDb pull_ZToWord discriminated.
 Create HintDb push_ZToWord discriminated.
 
-Hint Extern 1 => autorewrite with pull_wordToN in * : pull_wordToN.
-Hint Extern 1 => autorewrite with push_wordToN in * : push_wordToN.
-Hint Extern 1 => autorewrite with pull_ZToWord in * : pull_ZToWord.
-Hint Extern 1 => autorewrite with push_ZToWord in * : push_ZToWord.
+Global Hint Extern 1 => autorewrite with pull_wordToN in * : pull_wordToN.
+Global Hint Extern 1 => autorewrite with push_wordToN in * : push_wordToN.
+Global Hint Extern 1 => autorewrite with pull_ZToWord in * : pull_ZToWord.
+Global Hint Extern 1 => autorewrite with push_ZToWord in * : push_ZToWord.
 
 Module Word.
   Fixpoint weqb_hetero sz1 sz2 (x : word sz1) (y : word sz2) : bool :=
@@ -772,7 +775,7 @@ Proof. intuition; subst; auto using split1_combine, split2_combine, combine_spli
 Class wordsize_eq (x y : nat) := wordsize_eq_to_eq : x = y.
 Ltac wordsize_eq_tac := cbv beta delta [wordsize_eq] in *; lia*.
 Ltac gt84_abstract t := t. (* TODO: when we drop Coq 8.4, use [abstract] here *)
-Hint Extern 100 (wordsize_eq _ _) => gt84_abstract wordsize_eq_tac : typeclass_instances.
+Global Hint Extern 100 (wordsize_eq _ _) => gt84_abstract wordsize_eq_tac : typeclass_instances.
 
 Fixpoint correct_wordsize_eq (x y : nat) : wordsize_eq x y -> x = y
   := match x, y with

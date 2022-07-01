@@ -65,4 +65,4 @@ Global Arguments wff {_ _ _ _} G {t} _ _.
 Global Arguments wf {_ _ _ _ t} _ _.
 Global Arguments Wf {_ _ t} _.
 
-Hint Constructors wf wff : wf.
+Global Hint Constructors wf wff : wf.

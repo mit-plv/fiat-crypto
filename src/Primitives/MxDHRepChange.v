@@ -1,3 +1,4 @@
+Require Import Coq.Lists.SetoidList.
 Require Import Crypto.Spec.MxDH.
 Require Import Crypto.Algebra.Monoid Crypto.Algebra.Group Crypto.Algebra.Ring Crypto.Algebra.Field.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod.
@@ -40,7 +41,7 @@ Section MxDHRepChange.
 
   (*Import Crypto.Util.Tactics.*)
   Import List.
-  Import Coq.Classes.Morphisms.
+  Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 
   Global Instance Proper_ladderstep :
     Proper (Keq ==> (fieldwise (n:=2) Keq) ==> fieldwise (n:=2) Keq ==> fieldwise (n:=2) (fieldwise (n:=2) Keq)) (@MxDH.ladderstep K Kadd Ksub Kmul Ka24).

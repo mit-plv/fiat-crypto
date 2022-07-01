@@ -1,3 +1,4 @@
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.NArith.NArith.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.Util.NatUtil Crypto.Util.Decidable.
@@ -119,3 +120,10 @@ Module N.
   End ZN.
 
 End N.
+Hint Rewrite
+     N.succ_double_spec
+     N.add_1_r
+     Nat2N.inj_succ
+     Nat2N.inj_mul
+     N2Nat.id: N_nat_conv
+.

@@ -1,4 +1,5 @@
 Require Import Coq.Strings.String Coq.Classes.RelationClasses.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Wf.
 Require Import Crypto.Compilers.Relations.

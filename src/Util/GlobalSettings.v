@@ -13,7 +13,7 @@ Global Set Uniform Inductive Parameters.
 (** Set Primitive Projections. *)
 
 (** Don't use non-imported hints *)
-(** Set Loose Hint Behavior "Strict". *)
+Global Set Loose Hint Behavior "Strict".
 
 (** Universes *)
 (** Set Universe Polymorphism. *)

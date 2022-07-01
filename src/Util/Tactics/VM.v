@@ -1,3 +1,4 @@
+Require Export Crypto.Util.GlobalSettings.
 (* Code by Jason Gross for COQBUG 4637: vm_compute in _ makes Defined slow *)
 
 (** First, work around COQBUG 4494, https://coq.inria.fr/bugs/show_bug.cgi?id=4494 (replace is slow and broken under binders *)

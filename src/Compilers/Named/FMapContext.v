@@ -9,6 +9,7 @@ Require Import Crypto.Util.Equality.
 Module FMapContextFun (E : DecidableType) (W : WSfun E).
   Module Import Properties := WProperties_fun E W.
   Import F.
+  Local Hint Resolve E.eq_refl : core.
   Section ctx.
     Context (E_eq_l : forall x y, E.eq x y -> x = y)
             base_type_code (var : base_type_code -> Type)

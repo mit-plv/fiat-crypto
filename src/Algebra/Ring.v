@@ -1,6 +1,6 @@
 Require Coq.setoid_ring.Ncring.
 Require Coq.setoid_ring.Cring.
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.OnSubterms.
@@ -443,6 +443,6 @@ Ltac ring_simplify_subterms_in_all :=
 Create HintDb ring_simplify discriminated.
 Create HintDb ring_simplify_subterms discriminated.
 Create HintDb ring_simplify_subterms_in_all discriminated.
-Hint Extern 1 => progress ring_simplify : ring_simplify.
-Hint Extern 1 => progress ring_simplify_subterms : ring_simplify_subterms.
-Hint Extern 1 => progress ring_simplify_subterms_in_all : ring_simplify_subterms_in_all.
+Global Hint Extern 1 => progress ring_simplify : ring_simplify.
+Global Hint Extern 1 => progress ring_simplify_subterms : ring_simplify_subterms.
+Global Hint Extern 1 => progress ring_simplify_subterms_in_all : ring_simplify_subterms_in_all.

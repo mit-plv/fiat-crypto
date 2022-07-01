@@ -1,3 +1,4 @@
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Bool.Sumbool.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Compilers.SmartMap.

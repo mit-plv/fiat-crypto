@@ -34,7 +34,7 @@ Definition Wf_MapCast_arrow
        (fun _ _ opc _ => @genericize_op _ _ _ opc _ _ _)
        s d e input_bounds b e' He' Hwf.
 
-Hint Extern 1 (Wf ?e')
+Global Hint Extern 1 (Wf ?e')
 => match goal with
    | [ He : MapCast _ _ _ = Some (existT _ _ e') |- _ ]
      => first [ refine (@Wf_MapCast _ _ _ _ _ _ He _)

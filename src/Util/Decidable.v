@@ -1,5 +1,6 @@
 (** Typeclass for decidable propositions *)
 
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.FixCoqMistakes.
@@ -84,7 +85,7 @@ Global Instance dec_iff {A B} `{Decidable A, Decidable B} : Decidable (A <-> B) 
 Lemma dec_not {A} `{Decidable A} : Decidable (~A).
 Proof. solve_decidable_transparent. Defined.
 (** Disallow infinite loops of dec_not *)
-Hint Extern 0 (Decidable (~?A)) => apply (@dec_not A) : typeclass_instances.
+Global Hint Extern 0 (Decidable (~?A)) => apply (@dec_not A) : typeclass_instances.
 Global Instance dec_eq_unit : DecidableRel (@eq unit) | 10. exact _. Defined.
 Global Instance dec_eq_bool : DecidableRel (@eq bool) | 10. exact _. Defined.
 Global Instance dec_eq_Empty_set : DecidableRel (@eq Empty_set) | 10. exact _. Defined.
@@ -201,7 +202,7 @@ Ltac vm_decide := abstract vm_decide_no_check.
 Ltac lazy_decide := abstract lazy_decide_no_check.
 
 (** For dubious compatibility with [eauto using]. *)
-Hint Extern 2 (Decidable _) => progress unfold Decidable : typeclass_instances core.
+Global Hint Extern 2 (Decidable _) => progress unfold Decidable : typeclass_instances core.
 
 Definition cast_if_eq {T} `{DecidableRel (@eq T)} {P} (t t' : T) (v : P t) : option (P t')
   := match dec (t = t'), dec (t' = t') with

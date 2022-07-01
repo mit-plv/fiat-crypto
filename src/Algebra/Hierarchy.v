@@ -2,7 +2,7 @@ Require Export Crypto.Util.FixCoqMistakes.
 Require Export Crypto.Util.Decidable.
 
 Require Coq.PArith.BinPos.
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 
 Require Coq.Numbers.Natural.Peano.NPeano.
 Require Coq.Lists.List.

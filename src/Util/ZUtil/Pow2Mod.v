@@ -3,6 +3,7 @@ Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZUtil.Hints.Core.
+Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Hints.Ztestbit.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.ZUtil.Testbit.
@@ -52,7 +53,7 @@ Module Z.
     intros; rewrite Z.pow2_mod_spec by lia.
     auto with zarith.
   Qed.
-  Hint Resolve pow2_mod_pos_bound : zarith.
+  Global Hint Resolve pow2_mod_pos_bound : zarith.
 
   Lemma pow2_mod_id_iff : forall a n, 0 <= n ->
                                       (Z.pow2_mod a n = a <-> 0 <= a < 2 ^ n).
@@ -64,3 +65,5 @@ Module Z.
     split; intros; intuition lia.
   Qed.
 End Z.
+Hint Rewrite <- Z.pow2_mod_spec using zutil_arith : convert_to_Ztestbit.
+Global Hint Resolve Z.pow2_mod_pos_bound : zarith.

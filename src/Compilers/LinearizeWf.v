@@ -1,4 +1,5 @@
 (** * Linearize: Place all and only operations in let binders *)
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Wf.
 Require Import Crypto.Compilers.ExprInversion.
@@ -176,4 +177,4 @@ Section language.
     := Wf_Linearize_gen _ e.
 End language.
 
-Hint Resolve Wf_Linearize_gen Wf_Linearize Wf_ANormal : wf.
+Global Hint Resolve Wf_Linearize_gen Wf_Linearize Wf_ANormal : wf.

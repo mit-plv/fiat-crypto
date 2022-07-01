@@ -1,3 +1,4 @@
+Require Export Crypto.Util.GlobalSettings.
 Ltac destruct_trivial_step :=
   match goal with
   | [ H : unit |- _ ] => clear H || destruct H

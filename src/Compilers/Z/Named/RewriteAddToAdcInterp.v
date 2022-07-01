@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.ContextDefinitions.
 Require Import Crypto.Compilers.Named.ContextProperties.Proper.
@@ -246,17 +247,17 @@ Section named.
         (H : invert_for_do_rewrite_step1 e = Some v)
     : e = let '((a2, c1, bw1, a, b), P) := v in
           (nlet (a2, c1) : tZ * tZ := ADD bw1 a b in P)%nexpr.
-  Proof. t_rewrite_step_correct. Qed.
+  Proof using Type. t_rewrite_step_correct. Qed.
   Lemma invert_for_do_rewrite_step2_correct {t} {e : exprf t} {v}
         (H : invert_for_do_rewrite_step2 e = Some v)
     : e = let '((s, c2, bw2, c0, a2'), P) := v in
           (nlet (s , c2) : tZ * tZ := (ADD bw2 c0 (Var a2')) in P)%nexpr.
-  Proof. t_rewrite_step_correct. Qed.
+  Proof using Type. t_rewrite_step_correct. Qed.
   Lemma invert_for_do_rewrite_step3_correct {t} {e : exprf t} {v}
         (H : invert_for_do_rewrite_step3 e = Some v)
     : e = let '((c, c1', c2'), P) := v in
           (nlet c        : tZ      := (ADX (Var c1') (Var c2')) in P)%nexpr.
-  Proof. t_rewrite_step_correct. Qed.
+  Proof using Type. t_rewrite_step_correct. Qed.
 
   Lemma invert_for_do_rewrite_correct {t} {e : exprf t} {v}
         (H : invert_for_do_rewrite e = Some v)
@@ -283,7 +284,7 @@ Section named.
                   && negb (name_list_has_duplicate (a2::c1::s::c2::nil ++ get_namesf c0 ++ get_namesf a ++ get_namesf b)%list))
                = true)
       end%core%nexpr%bool.
-  Proof.
+  Proof using Type.
     unfold invert_for_do_rewrite in H; break_innermost_match_hyps;
       repeat first [ progress subst
                    | progress inversion_option
@@ -313,7 +314,7 @@ Section named.
   Lemma interpf_do_rewrite
         {t} {e : exprf t}
     : retT e (do_rewrite e).
-  Proof.
+  Proof using InterpContextOk Name_bl Name_lb.
     unfold do_rewrite.
     pose proof (@invert_for_do_rewrite_correct t e) as H'.
     break_innermost_match; inversion_option;
@@ -396,7 +397,7 @@ Section named.
   Lemma interpf_rewrite_exprf
         {t} (e : exprf t)
     : retT e (rewrite_exprf e).
-  Proof.
+  Proof using InterpContextOk Name_bl Name_lb.
     pose t as T.
     pose (rewrite_exprf_prestep (@rewrite_exprf) e) as E.
     induction e; simpl in *;
@@ -433,7 +434,7 @@ Section named.
              v x,
       Named.interp (interp_op:=interp_op) (ctx:=ctx) (rewrite_expr e) x = Some v
       -> Named.interp (interp_op:=interp_op) (ctx:=ctx) e x = Some v.
-  Proof.
+  Proof using InterpContextOk Name_bl Name_lb.
     unfold Named.interp, rewrite_expr; destruct e; simpl.
     intros *; apply interpf_rewrite_exprf.
   Qed.
@@ -443,7 +444,7 @@ Section named.
     : forall v x,
       Named.Interp (Context:=InterpContext) (interp_op:=interp_op) (rewrite_expr e) x = Some v
       -> Named.Interp (Context:=InterpContext) (interp_op:=interp_op) e x = Some v.
-  Proof.
+  Proof using InterpContextOk Name_bl Name_lb.
     intros *; apply interp_rewrite_expr.
   Qed.
 End named.

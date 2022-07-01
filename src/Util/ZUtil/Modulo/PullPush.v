@@ -19,7 +19,7 @@ Module Z.
   Lemma mul_mod_full a b n : (a * b) mod n = ((a mod n) * (b mod n)) mod n.
   Proof. auto using Zmult_mod. Qed.
   Hint Rewrite <- mul_mod_full : pull_Zmod.
-  Hint Resolve mul_mod_full : zarith.
+  Global Hint Resolve mul_mod_full : zarith.
 
   Lemma mul_mod_l a b n : (a * b) mod n = ((a mod n) * b) mod n.
   Proof.
@@ -27,7 +27,7 @@ Module Z.
     autorewrite with zsimplify; reflexivity.
   Qed.
   Hint Rewrite <- mul_mod_l : pull_Zmod.
-  Hint Resolve mul_mod_l : zarith.
+  Global Hint Resolve mul_mod_l : zarith.
 
   Lemma mul_mod_r a b n : (a * b) mod n = (a * (b mod n)) mod n.
   Proof.
@@ -35,12 +35,12 @@ Module Z.
     autorewrite with zsimplify; reflexivity.
   Qed.
   Hint Rewrite <- mul_mod_r : pull_Zmod.
-  Hint Resolve mul_mod_r : zarith.
+  Global Hint Resolve mul_mod_r : zarith.
 
   Lemma add_mod_full a b n : (a + b) mod n = ((a mod n) + (b mod n)) mod n.
   Proof. auto using Zplus_mod. Qed.
   Hint Rewrite <- add_mod_full : pull_Zmod.
-  Hint Resolve add_mod_full : zarith.
+  Global Hint Resolve add_mod_full : zarith.
 
   Lemma add_mod_l a b n : (a + b) mod n = ((a mod n) + b) mod n.
   Proof.
@@ -48,7 +48,7 @@ Module Z.
     autorewrite with zsimplify; reflexivity.
   Qed.
   Hint Rewrite <- add_mod_l : pull_Zmod.
-  Hint Resolve add_mod_l : zarith.
+  Global Hint Resolve add_mod_l : zarith.
 
   Lemma add_mod_r a b n : (a + b) mod n = (a + (b mod n)) mod n.
   Proof.
@@ -56,7 +56,7 @@ Module Z.
     autorewrite with zsimplify; reflexivity.
   Qed.
   Hint Rewrite <- add_mod_r : pull_Zmod.
-  Hint Resolve add_mod_r : zarith.
+  Global Hint Resolve add_mod_r : zarith.
 
   Lemma opp_mod_mod a n : (-a) mod n = (-(a mod n)) mod n.
   Proof.
@@ -65,30 +65,30 @@ Module Z.
       autorewrite with zsimplify; lia.
   Qed.
   Hint Rewrite <- opp_mod_mod : pull_Zmod.
-  Hint Resolve opp_mod_mod : zarith.
+  Global Hint Resolve opp_mod_mod : zarith.
 
   (** Give alternate names for the next three lemmas, for consistency *)
   Lemma sub_mod_full a b n : (a - b) mod n = ((a mod n) - (b mod n)) mod n.
   Proof. auto using Zminus_mod. Qed.
   Hint Rewrite <- sub_mod_full : pull_Zmod.
-  Hint Resolve sub_mod_full : zarith.
+  Global Hint Resolve sub_mod_full : zarith.
 
   Lemma sub_mod_l a b n : (a - b) mod n = ((a mod n) - b) mod n.
   Proof. auto using Zminus_mod_idemp_l. Qed.
   Hint Rewrite <- sub_mod_l : pull_Zmod.
-  Hint Resolve sub_mod_l : zarith.
+  Global Hint Resolve sub_mod_l : zarith.
 
   Lemma sub_mod_r a b n : (a - b) mod n = (a - (b mod n)) mod n.
   Proof. auto using Zminus_mod_idemp_r. Qed.
   Hint Rewrite <- sub_mod_r : pull_Zmod.
-  Hint Resolve sub_mod_r : zarith.
+  Global Hint Resolve sub_mod_r : zarith.
 
   Lemma lnot_mod_mod v m : (Z.lnot (v mod m) mod m) = (Z.lnot v) mod m.
   Proof.
     cbv [Z.lnot]; etransitivity; rewrite <- !Z.sub_1_r, Z.sub_mod_full, Z.opp_mod_mod, ?Zmod_mod; reflexivity.
   Qed.
   Hint Rewrite lnot_mod_mod : pull_Zmod.
-  Hint Resolve lnot_mod_mod : zarith.
+  Global Hint Resolve lnot_mod_mod : zarith.
 
   Lemma mod_pow_full p q n : (p^q) mod n = ((p mod n)^q) mod n.
   Proof.
@@ -117,7 +117,7 @@ Module Z.
         reflexivity. } }
   Qed.
   Hint Rewrite <- mod_pow_full : pull_Zmod.
-  Hint Resolve mod_pow_full : zarith.
+  Global Hint Resolve mod_pow_full : zarith.
   Notation pow_mod_full := mod_pow_full.
 
   Definition NoZMod (x : Z) := True.
@@ -175,3 +175,43 @@ Module Z.
   Proof. intros; apply pow_mod_full. Qed.
   Hint Rewrite pow_mod_push using solve [ NoZMod ] : push_Zmod.
 End Z.
+Hint Rewrite Z.mod_r_distr_if : push_Zmod.
+Hint Rewrite <- Z.mod_r_distr_if : pull_Zmod.
+Hint Rewrite Z.mod_l_distr_if : push_Zmod.
+Hint Rewrite <- Z.mod_l_distr_if : pull_Zmod.
+Hint Rewrite <- Z.mul_mod_full : pull_Zmod.
+Global Hint Resolve Z.mul_mod_full : zarith.
+Hint Rewrite <- Z.mul_mod_l : pull_Zmod.
+Global Hint Resolve Z.mul_mod_l : zarith.
+Hint Rewrite <- Z.mul_mod_r : pull_Zmod.
+Global Hint Resolve Z.mul_mod_r : zarith.
+Hint Rewrite <- Z.add_mod_full : pull_Zmod.
+Global Hint Resolve Z.add_mod_full : zarith.
+Hint Rewrite <- Z.add_mod_l : pull_Zmod.
+Global Hint Resolve Z.add_mod_l : zarith.
+Hint Rewrite <- Z.add_mod_r : pull_Zmod.
+Global Hint Resolve Z.add_mod_r : zarith.
+Hint Rewrite <- Z.opp_mod_mod : pull_Zmod.
+Global Hint Resolve Z.opp_mod_mod : zarith.
+Hint Rewrite <- Z.sub_mod_full : pull_Zmod.
+Global Hint Resolve Z.sub_mod_full : zarith.
+Hint Rewrite <- Z.sub_mod_l : pull_Zmod.
+Global Hint Resolve Z.sub_mod_l : zarith.
+Hint Rewrite <- Z.sub_mod_r : pull_Zmod.
+Global Hint Resolve Z.sub_mod_r : zarith.
+Hint Rewrite Z.lnot_mod_mod : pull_Zmod.
+Global Hint Resolve Z.lnot_mod_mod : zarith.
+Hint Rewrite <- Z.mod_pow_full : pull_Zmod.
+Global Hint Resolve Z.mod_pow_full : zarith.
+Hint Rewrite Z.mul_mod_push using solve [ Z.NoZMod ] : push_Zmod.
+Hint Rewrite Z.add_mod_push using solve [ Z.NoZMod ] : push_Zmod.
+Hint Rewrite Z.mul_mod_l_push using solve [ Z.NoZMod ] : push_Zmod.
+Hint Rewrite Z.mul_mod_r_push using solve [ Z.NoZMod ] : push_Zmod.
+Hint Rewrite Z.add_mod_l_push using solve [ Z.NoZMod ] : push_Zmod.
+Hint Rewrite Z.add_mod_r_push using solve [ Z.NoZMod ] : push_Zmod.
+Hint Rewrite Z.sub_mod_push using solve [ Z.NoZMod ] : push_Zmod.
+Hint Rewrite Z.sub_mod_l_push using solve [ Z.NoZMod ] : push_Zmod.
+Hint Rewrite Z.sub_mod_r_push using solve [ Z.NoZMod ] : push_Zmod.
+Hint Rewrite Z.opp_mod_mod_push using solve [ Z.NoZMod ] : push_Zmod.
+Hint Rewrite Z.lnot_mod_mod_push using solve [ Z.NoZMod ] : push_Zmod.
+Hint Rewrite Z.pow_mod_push using solve [ Z.NoZMod ] : push_Zmod.

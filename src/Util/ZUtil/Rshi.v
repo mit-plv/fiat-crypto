@@ -9,6 +9,7 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Hints.PullPush.
+Require Import Crypto.Util.Decidable.
 Local Open Scope Z_scope.
 
 Module Z.

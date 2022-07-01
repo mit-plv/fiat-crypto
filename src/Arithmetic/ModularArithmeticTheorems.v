@@ -3,7 +3,7 @@ Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.Arithmetic.ModularArithmeticPre.
 
 Require Import Coq.ZArith.BinInt Coq.ZArith.Zdiv Coq.ZArith.Znumtheory Coq.NArith.NArith. (* import Zdiv before Znumtheory *)
-Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Setoids.Setoid.
 Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Ring_tac.
 
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.ScalarMult.
@@ -336,7 +336,7 @@ Module F.
 
     Lemma pow_succ_r (x:F m) n : x^(N.succ n) = x * x^n.
     Proof using Type.
-      rewrite <-N.add_1_l; 
+      rewrite <-N.add_1_l;
         destruct (F.pow_spec x); auto.
     Qed.
 
@@ -387,4 +387,9 @@ Module F.
       change 1%N with (N.succ (N.succ (N.succ 0))); repeat rewrite ?pow_succ_r, ?pow_0_r; ring.
     Qed.
   End Pow.
+  Module Export Instances.
+    Export Field.Hints.
+    Global Existing Instances eq_dec commutative_ring_modulo char_gt.
+  End Instances.
 End F.
+Export F.Instances.

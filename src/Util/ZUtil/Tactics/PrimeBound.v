@@ -1,3 +1,4 @@
+Require Export Crypto.Util.GlobalSettings.
 Require Import Coq.micromega.Lia Coq.ZArith.Znumtheory.
 
 Module Z.

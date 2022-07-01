@@ -1,3 +1,4 @@
+Require Export Crypto.Util.GlobalSettings.
 Ltac print_context _ :=
   lazymatch goal with
   | [ H : ?T |- False ]

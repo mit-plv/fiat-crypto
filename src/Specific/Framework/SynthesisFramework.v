@@ -17,6 +17,39 @@ Require Import Crypto.Specific.Framework.IntegrationTestTemporaryMiscCommon.
 Require Import Crypto.Compilers.Z.Bounds.Pipeline.
 
 Module Export Exports.
+  Export Coq.Classes.Equivalence Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop. (* hints *)
+  Export Crypto.Util.Decidable. (* hints *)
+  Module Export TupleInstances.
+    Import Crypto.Util.Tuple.
+    Global Existing Instance Reflexive_fieldwise' | 5.
+    Global Existing Instance Symmetric_fieldwise' | 5.
+    Global Existing Instance Transitive_fieldwise' | 5.
+    Global Existing Instance Equivalence_fieldwise'.
+    Global Existing Instance Reflexive_fieldwise | 5.
+    Global Existing Instance Symmetric_fieldwise | 5.
+    Global Existing Instance Transitive_fieldwise | 5.
+    Global Existing Instance Equivalence_fieldwise.
+    Global Existing Instance dec_fieldwise' | 10.
+    Global Existing Instance dec_fieldwise | 10.
+    Global Existing Instance dec_eq' | 10.
+    Global Existing Instance dec_eq | 10.
+    Global Existing Instance map'_Proper | 10.
+    Global Existing Instance map_Proper | 10.
+    Global Existing Instances
+           fieldwise'_Proper_gen
+           fieldwise_Proper_gen
+           fieldwise'_Proper_gen_eq
+           fieldwise_Proper_gen_eq
+           fieldwise'_Proper
+           fieldwise_Proper
+           fieldwise'_Proper_iff
+           fieldwise_Proper_iff
+           fieldwise'_Proper_flip_impl
+           fieldwise_Proper_flip_impl
+    | 10.
+  End TupleInstances.
+  Export ModularArithmeticTheorems.F.Instances.
+  Export Field.Hints.
   Export Pipeline.Exports.
   Export ArithmeticSynthesis.Defaults.Exports.
   Export ArithmeticSynthesis.Freeze.Exports.

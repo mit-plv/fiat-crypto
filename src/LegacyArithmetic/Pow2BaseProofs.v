@@ -1,8 +1,10 @@
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.micromega.Psatz.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.Lists.List.
 Require Import Coq.funind.Recdef.
 Require Import Crypto.Util.ListUtil Crypto.Util.NatUtil.
+Require Export Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Testbit.
 Require Import Crypto.Util.ZUtil.Pow2Mod.
@@ -28,10 +30,10 @@ Create HintDb pull_upper_bound discriminated.
 Create HintDb push_base_from_limb_widths discriminated.
 Create HintDb pull_base_from_limb_widths discriminated.
 
-Hint Extern 1 => progress autorewrite with push_upper_bound in * : push_upper_bound.
-Hint Extern 1 => progress autorewrite with pull_upper_bound in * : pull_upper_bound.
-Hint Extern 1 => progress autorewrite with push_base_from_limb_widths in * : push_base_from_limb_widths.
-Hint Extern 1 => progress autorewrite with pull_base_from_limb_widths in * : pull_base_from_limb_widths.
+Global Hint Extern 1 => progress autorewrite with push_upper_bound in * : push_upper_bound.
+Global Hint Extern 1 => progress autorewrite with pull_upper_bound in * : pull_upper_bound.
+Global Hint Extern 1 => progress autorewrite with push_base_from_limb_widths in * : push_base_from_limb_widths.
+Global Hint Extern 1 => progress autorewrite with pull_base_from_limb_widths in * : pull_base_from_limb_widths.
 
 Section Pow2BaseProofs.
   Context {limb_widths} (limb_widths_nonneg : forall w, In w limb_widths -> 0 <= w).

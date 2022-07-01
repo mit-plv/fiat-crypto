@@ -1,5 +1,6 @@
 (** NUtil that doesn't depend on ZUtil stuff *)
 (** Should probably come up with a better organization of this stuff *)
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Classes.RelationClasses.
 Require Import Coq.NArith.NArith.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.Util.NatUtil Crypto.Util.Decidable.

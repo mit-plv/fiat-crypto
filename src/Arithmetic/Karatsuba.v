@@ -51,7 +51,7 @@ Context (weight : nat -> Z)
   Definition karatsuba_mul s x y := @karatsuba_mul_cps s x y _ id.
   Lemma karatsuba_mul_id s x y R f :
     @karatsuba_mul_cps s x y R f = f (karatsuba_mul s x y).
-  Proof.
+  Proof using Type.
     cbv [karatsuba_mul karatsuba_mul_cps].
     repeat autounfold.
     autorewrite with cancel_pair push_id uncps.
@@ -62,7 +62,7 @@ Context (weight : nat -> Z)
 
   Lemma eval_karatsuba_mul s x y (s_nonzero:s <> 0) :
     eval weight (karatsuba_mul s x y) = eval weight x * eval weight y.
-  Proof.
+  Proof using n2_nonzero n_nonzero weight_0 weight_nonzero.
     cbv [karatsuba_mul karatsuba_mul_cps]; repeat autounfold.
     autorewrite with cancel_pair push_id uncps push_basesystem_eval.
     repeat match goal with
@@ -158,7 +158,7 @@ Context (weight : nat -> Z)
   Definition goldilocks_mul s xs ys := goldilocks_mul_cps s xs ys id.
   Lemma goldilocks_mul_id s xs ys R f :
     @goldilocks_mul_cps s xs ys R f = f (goldilocks_mul s xs ys).
-  Proof.
+  Proof using Type.
     cbv [goldilocks_mul goldilocks_mul_cps Let_In].
     repeat autounfold. autorewrite with uncps push_id.
     reflexivity.
@@ -173,7 +173,7 @@ Context (weight : nat -> Z)
 
   Lemma goldilocks_mul_correct (p : Z) (p_nonzero : p <> 0) s (s_nonzero : s <> 0) (s2_modp : (s^2) mod p = (s+1) mod p) xs ys :
     (eval weight (goldilocks_mul s xs ys)) mod p = (eval weight xs * eval weight ys) mod p.
-  Proof.
+  Proof using n2_nonzero n_nonzero weight_0 weight_nonzero.
     cbv [goldilocks_mul_cps goldilocks_mul Let_In].
     Zmod_to_equiv_modulo.
     progress autounfold.
@@ -206,11 +206,11 @@ Context (weight : nat -> Z)
 
   Lemma eval_goldilocks_mul (p : positive) s (s_nonzero : s <> 0) (s2_modp : mod_eq p (s^2) (s+1)) xs ys :
     mod_eq p (eval weight (goldilocks_mul s xs ys)) (eval weight xs * eval weight ys).
-  Proof.
+  Proof using n2_nonzero n_nonzero weight_0 weight_nonzero.
     apply goldilocks_mul_correct; auto; lia.
   Qed.
 End Karatsuba.
-Hint Opaque karatsuba_mul goldilocks_mul : uncps.
+Global Hint Opaque karatsuba_mul goldilocks_mul : uncps.
 Hint Rewrite karatsuba_mul_id goldilocks_mul_id : uncps.
 
 Hint Rewrite

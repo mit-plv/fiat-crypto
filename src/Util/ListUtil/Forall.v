@@ -1,5 +1,5 @@
 Require Import Coq.micromega.Lia.
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.

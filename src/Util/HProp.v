@@ -1,4 +1,5 @@
 (** * Homotopy Propositions *)
+Require Export Crypto.Util.GlobalSettings.
 (** A homotopy proposition, or hProp, is a subsingleton type, i.e., a
     type with at most one inhabitant.  The property of being an hProp,
     i.e., being irrelevant when considering propositional equality

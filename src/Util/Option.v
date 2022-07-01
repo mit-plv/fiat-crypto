@@ -1,4 +1,4 @@
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -108,7 +108,7 @@ Global Instance Proper_option_rect_nd_changebody
 Proof. cbv; repeat (intro || break_match); intuition. Qed.
 
 (* FIXME: there used to be a typeclass resolution hint here, something like
-  Hint Extern 1 (Proper _ (@option_rect ?A (fun _ => ?B))) => exact (@Proper_option_rect_nd_changebody A B _ _) : typeclass_instances.
+  Global Hint Extern 1 (Proper _ (@option_rect ?A (fun _ => ?B))) => exact (@Proper_option_rect_nd_changebody A B _ _) : typeclass_instances.
  but I could not get it working after generalizing [RB] from [Logic.eq] ~ andreser *)
 
 Global Instance Proper_option_rect_nd_changevalue

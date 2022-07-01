@@ -105,4 +105,4 @@ Section WordByWordMontgomery.
     := nonzero_cps A id.
 End WordByWordMontgomery.
 
-Hint Opaque redc pre_redc redc_body redc_loop add sub opp nonzero : uncps.
+Global Hint Opaque redc pre_redc redc_body redc_loop add sub opp nonzero : uncps.

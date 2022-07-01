@@ -1,3 +1,4 @@
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.NArith.BinNat.
@@ -8,6 +9,8 @@ Require Import Crypto.Util.WordUtil.
 Require Import Crypto.Util.ZUtil.Log2.
 Require Import Crypto.Util.ZUtil.Z2Nat.
 Require Import Crypto.Util.Tactics.BreakMatch.
+
+Local Existing Instance Z.le_preorder.
 
 Definition wordT_beq_hetero {logsz1 logsz2} : wordT logsz1 -> wordT logsz2 -> bool
   := match logsz1 return wordT logsz1 -> wordT logsz2 -> bool with

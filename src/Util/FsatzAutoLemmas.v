@@ -1,5 +1,5 @@
 Require Import Coq.Program.Program.
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Algebra.Field.

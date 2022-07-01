@@ -1,8 +1,10 @@
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.LegacyArithmetic.Interface.
 Require Import Crypto.LegacyArithmetic.InterfaceProofs.
 Require Import Crypto.LegacyArithmetic.Double.Core.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.Decode.
+Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 
 Local Open Scope Z_scope.

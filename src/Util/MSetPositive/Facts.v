@@ -1,5 +1,5 @@
 Require Import Coq.Setoids.Setoid.
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Lists.List.
 Require Import Coq.Lists.SetoidList.
 Require Import Coq.MSets.MSetPositive.
@@ -20,6 +20,7 @@ Module PositiveSetFacts.
   Module F := Facts PositiveSet.
   Include F.
   Import PositiveSet.
+  Local Existing Instances E.lt_strorder E.lt_compat POrderedType.PositiveOrder.TO.eq_equiv.
 
   Global Instance elements_Proper_Equal
     : Proper (Equal ==> Logic.eq) elements | 10.

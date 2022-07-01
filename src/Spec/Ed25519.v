@@ -6,6 +6,9 @@ Require Import Crypto.Spec.EdDSA.
 
 Require Crypto.Arithmetic.PrimeFieldTheorems. (* to know that Z mod p is a field *)
 Require Crypto.Curves.Edwards.AffineProofs.
+Import ModularArithmeticTheorems.F.Instances.
+Import Crypto.Util.Decidable.
+Import PrimeFieldTheorems.F.Instances.
 
 (* these 2 proofs can be generated using https://github.com/andres-erbsen/safecurves-primes *)
 Axiom prime_q : Znumtheory.prime (2^255-19). Global Existing Instance prime_q.
@@ -34,12 +37,12 @@ Section Ed25519.
 
   Context {SHA512: forall n : nat, Word.word n -> Word.word 512}.
 
-  Local Instance char_gt_e : 
+  Local Instance char_gt_e :
     @Ring.char_ge (@F q) eq F.zero F.one F.opp F.add F.sub F.mul
                   (BinNat.N.succ_pos BinNat.N.two).
-  Proof. eapply Hierarchy.char_ge_weaken;
+  Proof using Type. eapply Hierarchy.char_ge_weaken;
            [apply (_:Ring.char_ge q)|Decidable.vm_decide]. Qed.
-    
+
 
   Definition E : Type := E.point
                            (F:=Fq) (Feq:=Logic.eq) (Fone:=F.one) (Fadd:=F.add) (Fmul:=F.mul)
@@ -49,7 +52,7 @@ Section Ed25519.
 
   Program Definition B : E :=
     (F.of_Z q 15112221349535400772501151409588531511454012693041857206046113283949847762202,
-     F.of_Z q 4 / F.of_Z q 5).
+      F.of_Z q 4 / F.of_Z q 5).
 
   Local Infix "++" := Word.combine.
   Local Notation bit b := (Word.WS b Word.WO : Word.word 1).
@@ -80,6 +83,7 @@ Section Ed25519.
           (l:=l) (b:=b) (n:=n) (c:=c)
           (Eenc:=Eenc) (Senc:=Senc) (H:=SHA512).
   Proof using Type.
+    Import AffineProofs ScalarMult. (* hints *)
     split; try exact _.
     Crypto.Util.Decidable.vm_decide.
     Crypto.Util.Decidable.vm_decide.

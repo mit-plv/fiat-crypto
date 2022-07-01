@@ -1,3 +1,4 @@
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Bool.Sumbool.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.Syntax.
@@ -55,7 +56,7 @@ Section language.
       : wff G'
             (mapf_base_type f_var12 f_var21 failb e)
             (mapf_base_type f_var'12 f_var'21 failb' e').
-    Proof.
+    Proof using Hvar'12 Hvar12 Hwf_f_op Hwf_failb.
       revert dependent G'; induction Hwf;
         repeat first [ progress simpl in *
                      | progress intros
@@ -81,7 +82,7 @@ Section language.
       : wf
           (map_base_type f_var12 f_var21 failb e)
           (map_base_type f_var'12 f_var'21 failb' e').
-    Proof.
+    Proof using Hvar'12 Hvar12 Hwf_f_op Hwf_failb.
       destruct Hwf; constructor; simpl; intros.
       eapply wff_mapf_base_type; [ | eauto ].
       eauto using In_flatten_binding_list_untransfer_interp_flat_type.
@@ -114,4 +115,4 @@ Section language.
   End MapBaseType.
 End language.
 
-Hint Resolve @Wf_MapBaseType' : wf.
+Global Hint Resolve @Wf_MapBaseType' : wf.

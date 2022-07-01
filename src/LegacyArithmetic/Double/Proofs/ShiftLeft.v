@@ -3,6 +3,9 @@ Require Import Crypto.LegacyArithmetic.Interface.
 Require Import Crypto.LegacyArithmetic.Double.Core.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.Decode.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.ShiftLeftRightTactic.
+Require Import Crypto.Util.ZUtil.Pow2Mod.
+Require Import Crypto.Util.ZUtil.Pow.
+Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZUtil.Definitions.
 

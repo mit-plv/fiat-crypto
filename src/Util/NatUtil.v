@@ -1,18 +1,24 @@
 Require Coq.Logic.Eqdep_dec.
 Require Import Coq.Numbers.Natural.Peano.NPeano Coq.micromega.Lia.
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.micromega.Lia.
 Require Import Coq.Arith.Arith.
 Require Import Coq.NArith.NArith.
+Require Export Crypto.Util.GlobalSettings.
 Import Nat.
+
+Global Existing Instance Nat.le_preorder.
+Global Hint Resolve Nat.max_l Nat.max_r Nat.le_max_l Nat.le_max_r: arith.
+Global Hint Resolve Nat.min_l Nat.min_r Nat.le_min_l Nat.le_min_r: arith.
+
 
 Scheme Equality for nat.
 
 Create HintDb natsimplify discriminated.
 
-Hint Resolve mod_bound_pos plus_le_compat : arith.
-Hint Resolve (fun x y p q => proj1 (@Nat.mod_bound_pos x y p q)) (fun x y p q => proj2 (@Nat.mod_bound_pos x y p q)) : arith.
+Global Hint Resolve mod_bound_pos plus_le_compat : arith.
+Global Hint Resolve (fun x y p q => proj1 (@Nat.mod_bound_pos x y p q)) (fun x y p q => proj2 (@Nat.mod_bound_pos x y p q)) : arith.
 
 Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using lia : natsimplify.
 
@@ -228,7 +234,7 @@ Proof.
   intro; induction k; simpl; nia.
 Qed.
 
-Hint Resolve pow_nonzero : arith.
+Global Hint Resolve pow_nonzero : arith.
 
 Lemma S_pred_nonzero : forall a, (a > 0 -> S (pred a) = a)%nat.
 Proof.
@@ -241,7 +247,7 @@ Lemma mod_same_eq a b : a <> 0 -> a = b -> b mod a = 0.
 Proof. intros; subst; apply mod_same; assumption. Qed.
 
 Hint Rewrite @mod_same_eq using lia : natsimplify.
-Hint Resolve mod_same_eq : arith.
+Global Hint Resolve mod_same_eq : arith.
 
 Lemma mod_mod_eq a b c : a <> 0 -> b = c mod a -> b mod a = b.
 Proof. intros; subst; autorewrite with natsimplify; reflexivity. Qed.

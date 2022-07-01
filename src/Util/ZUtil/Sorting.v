@@ -1,3 +1,4 @@
+Require Export Crypto.Util.GlobalSettings.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Sorting.Mergesort Coq.Structures.Orders.
 

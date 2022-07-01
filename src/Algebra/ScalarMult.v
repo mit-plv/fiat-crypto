@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.BinInt Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Util.ZUtil.Peano.
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.Tactics.BreakMatch.
-Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Group.
+Require Import Crypto.Algebra.Monoid Crypto.Algebra.Hierarchy Crypto.Algebra.Group.
 Local Open Scope Z_scope.
 
 Section ScalarMultProperties.
@@ -21,7 +21,7 @@ Section ScalarMultProperties.
   Context `{mul_is_scalarmult:is_scalarmult}.
 
   Lemma scalarmult_succ_l n P : Z.succ n * P = P + n * P.
-  Proof.
+  Proof using groupG mul_is_scalarmult.
     induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by lia;
       repeat (rewrite ?scalarmult_0_l, ?scalarmult_succ_l_nn, ?scalarmult_pred_l_np, ?left_identity, ?right_identity, ?Z.succ_pred, ?Z.pred_succ, ?associative, ?right_inverse, ?left_inverse by lia); reflexivity.
   Qed.

@@ -1,3 +1,4 @@
+Require Export Crypto.Util.GlobalSettings.
 Ltac pose_term_with tac name :=
   let name := fresh name in
   let v := tac () in

@@ -1,3 +1,4 @@
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Classes.RelationClasses.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.ZArith.Znumtheory Coq.ZArith.Zpow_facts.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.ZSimplify.Core.
@@ -13,7 +14,6 @@ Local Open Scope Z_scope.
 Module Z.
   Lemma elim_mod : forall a b m, a = b -> a mod m = b mod m.
   Proof. intros; subst; auto. Qed.
-  Hint Resolve elim_mod : zarith.
 
   Lemma mod_add_full : forall a b c, (a + b * c) mod c = a mod c.
   Proof. intros a b c; destruct (Z_zerop c); try subst; autorewrite with zsimplify; reflexivity. Qed.
@@ -102,13 +102,13 @@ Module Z.
   Proof.
     intros H0 H1; rewrite Zmult_mod, H0, H1, <- Zmult_mod; reflexivity.
   Qed.
-  Hint Resolve f_equal_mul_mod : zarith.
+  Global Hint Resolve f_equal_mul_mod : zarith.
 
   Lemma f_equal_add_mod x y x' y' m : x mod m = x' mod m -> y mod m = y' mod m -> (x + y) mod m = (x' + y') mod m.
   Proof.
     intros H0 H1; rewrite Zplus_mod, H0, H1, <- Zplus_mod; reflexivity.
   Qed.
-  Hint Resolve f_equal_add_mod : zarith.
+  Global Hint Resolve f_equal_add_mod : zarith.
 
   Lemma f_equal_opp_mod x x' m : x mod m = x' mod m -> (-x) mod m = (-x') mod m.
   Proof.
@@ -118,13 +118,13 @@ Module Z.
     { rewrite !Z_mod_zero_opp_full by assumption; reflexivity. }
     { rewrite Z_mod_nz_opp_full, H, <- Z_mod_nz_opp_full by assumption; reflexivity. }
   Qed.
-  Hint Resolve f_equal_opp_mod : zarith.
+  Global Hint Resolve f_equal_opp_mod : zarith.
 
   Lemma f_equal_sub_mod x y x' y' m : x mod m = x' mod m -> y mod m = y' mod m -> (x - y) mod m = (x' - y') mod m.
   Proof.
     rewrite <- !Z.add_opp_r; auto with zarith.
   Qed.
-  Hint Resolve f_equal_sub_mod : zarith.
+  Global Hint Resolve f_equal_sub_mod : zarith.
 
   Lemma mul_div_eq : forall a m, m > 0 -> m * (a / m) = (a - a mod m).
   Proof.
@@ -280,7 +280,7 @@ Module Z.
 
   Lemma mod_opp_r a b : a mod (-b) = -((-a) mod b).
   Proof. pose proof (Z.div_opp_r a b); Z.div_mod_to_quot_rem; nia. Qed.
-  Hint Resolve mod_opp_r : zarith.
+  Global Hint Resolve mod_opp_r : zarith.
 
   Lemma mod_same_pow : forall a b c, 0 <= c <= b -> a ^ b mod a ^ c = 0.
   Proof.
@@ -290,7 +290,7 @@ Module Z.
     apply Z_mod_mult.
   Qed.
   Hint Rewrite mod_same_pow using zutil_arith : zsimplify.
-  Hint Resolve mod_same_pow : zarith.
+  Global Hint Resolve mod_same_pow : zarith.
 
   Lemma mod_opp_l_z_iff a b (H : b <> 0) : a mod b = 0 <-> (-a) mod b = 0.
   Proof.
@@ -300,15 +300,15 @@ Module Z.
 
   Lemma mod_small_sym a b : 0 <= a < b -> a = a mod b.
   Proof. intros; symmetry; apply Z.mod_small; assumption. Qed.
-  Hint Resolve mod_small_sym : zarith.
+  Global Hint Resolve mod_small_sym : zarith.
 
   Lemma mod_eq_le_to_eq a b : 0 < a <= b -> a mod b = 0 -> a = b.
   Proof. pose proof (Z.mod_eq_le_div_1 a b); intros; Z.div_mod_to_quot_rem; nia. Qed.
-  Hint Resolve mod_eq_le_to_eq : zarith.
+  Global Hint Resolve mod_eq_le_to_eq : zarith.
 
   Lemma mod_neq_0_le_to_neq a b : a mod b <> 0 -> a <> b.
   Proof. repeat intro; subst; autorewrite with zsimplify in *; lia. Qed.
-  Hint Resolve mod_neq_0_le_to_neq : zarith.
+  Global Hint Resolve mod_neq_0_le_to_neq : zarith.
 
   Lemma div_mod' a b : b <> 0 -> a = (a / b) * b + a mod b.
   Proof. intro; etransitivity; [ apply (Z.div_mod a b); assumption | lia ]. Qed.
@@ -326,7 +326,7 @@ Module Z.
   Proof.
     destruct (Z_zerop d); subst; push_Zmod; autorewrite with zsimplify; reflexivity.
   Qed.
-  Hint Resolve sub_mod_mod_0 : zarith.
+  Global Hint Resolve sub_mod_mod_0 : zarith.
   Hint Rewrite sub_mod_mod_0 : zsimplify.
 
   Lemma mod_small_n n a b : 0 <= n -> b <> 0 -> n * b <= a < (1 + n) * b -> a mod b = a - n * b.
@@ -335,7 +335,6 @@ Module Z.
 
   Lemma mod_small_1 a b : b <> 0 -> b <= a < 2 * b -> a mod b = a - b.
   Proof. intros; rewrite (mod_small_n 1) by lia; lia. Qed.
-  Hint Rewrite mod_small_1 using zutil_arith : zsimplify.
 
   Lemma mod_small_n_if n a b : 0 <= n -> b <> 0 -> n * b <= a < (2 + n) * b -> a mod b = a - (if (1 + n) * b <=? a then (1 + n) else n) * b.
   Proof. intros; erewrite Zmod_eq_full, Z.div_between_if by eassumption; autorewrite with zsimplify_const. reflexivity. Qed.
@@ -374,3 +373,43 @@ Module Z.
     reflexivity.
   Qed.
 End Z.
+
+Global Hint Resolve
+       Z.elim_mod
+       Z.f_equal_mul_mod
+       Z.f_equal_add_mod
+       Z.f_equal_opp_mod
+       Z.f_equal_sub_mod
+       Z.mod_opp_r
+       Z.mod_same_pow
+       Z.mod_small_sym
+       Z.mod_eq_le_to_eq
+       Z.mod_neq_0_le_to_neq
+       Z.sub_mod_mod_0
+  : zarith.
+Hint Rewrite
+     Z.mod_small_1
+     Z.mod_div_eq0
+     Z.mod_same_pow
+     Z.mod_small_n
+     using zutil_arith : zsimplify.
+Hint Rewrite
+     Z.mod_add_full
+     Z.mod_add_l_full
+     Z.mod_add'_full Z.mod_add_l'_full
+     Z.sub_mod_mod_0
+  : zsimplify.
+Hint Rewrite <-
+       Z.mod_opp_l_z_iff
+         Z.div_mod'
+         Z.div_mod''
+         Z.div_mod'''
+         using zutil_arith : zsimplify.
+Hint Rewrite
+     Z.mul_div_eq_full
+     Z.mul_div_eq Z.mul_div_eq'
+     using zutil_arith : zdiv_to_mod.
+Hint Rewrite <-
+       Z.mul_div_eq_full
+         Z.mul_div_eq'
+         using zutil_arith : zmod_to_div.

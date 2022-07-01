@@ -1,7 +1,7 @@
 Require Import Crypto.Util.Decidable Crypto.Util.Notations Crypto.Algebra.Hierarchy.
 
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.Curves.Edwards.XYZT.Basic.
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -56,7 +56,7 @@ Section ExtendedCoordinates.
     (X3, Y3, Z3, T3).
 
     Create HintDb points_as_coordinates discriminated.
-    Hint Unfold XYZT.Basic.point XYZT.Basic.coordinates XYZT.Basic.from_twisted XYZT.Basic.m1add
+    Local Hint Unfold XYZT.Basic.point XYZT.Basic.coordinates XYZT.Basic.from_twisted XYZT.Basic.m1add
          E.point E.coordinates m1add_precomputed_coordinates of_twisted precomputed_point : points_as_coordinates.
     Local Notation m1add := (Basic.m1add(nonzero_a:=nonzero_a)(square_a:=square_a)(a_eq_minus1:=a_eq_minus1)(nonsquare_d:=nonsquare_d)(k_eq_2d:=reflexivity _)).
     Local Notation XYZT_of_twisted := (Basic.from_twisted(nonzero_a:=nonzero_a)(d:=d)).
@@ -64,7 +64,7 @@ Section ExtendedCoordinates.
       let '(X1, Y1, Z1, T1) := m1add_precomputed_coordinates (XYZT.Basic.coordinates P) (of_twisted Q) in
       let '(X2, Y2, Z2, T2) := coordinates (m1add P (XYZT_of_twisted Q)) in
             Z2*X1 = Z1*X2 /\ Z2*Y1 = Z1*Y2.
-    Proof.
+    Proof using Type.
       repeat match goal with
              | _ => progress autounfold with points_as_coordinates in *
              | _ => progress destruct_head' @prod

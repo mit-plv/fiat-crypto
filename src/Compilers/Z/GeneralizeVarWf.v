@@ -27,4 +27,4 @@ Definition Wf_GeneralizeVar_arrow
        (fun _ t => Op (OpConst 0%Z) TT)
        s d e e' He'.
 
-Hint Resolve Wf_GeneralizeVar Wf_GeneralizeVar_arrow : wf.
+Global Hint Resolve Wf_GeneralizeVar Wf_GeneralizeVar_arrow : wf.

@@ -1,4 +1,5 @@
 (** * Inline: Remove some [Let] expressions, inline constants, interpret constant operations *)
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.ExprInversion.
@@ -51,7 +52,7 @@ Module Export Rewrite.
             {t} e
         : interpf interp_op (inline_const_and_op_genf (t:=t) interp_op invert_Const Const e)
           = interpf interp_op e.
-      Proof.
+      Proof using Hinvert_Const interpf_Const.
         unfold inline_const_and_op_genf;
           eapply interpf_rewrite_opf; eauto using interpf_rewrite_for_const_and_op.
       Qed.
@@ -61,7 +62,7 @@ Module Export Rewrite.
         : forall x,
           interp interp_op (inline_const_and_op_gen (t:=t) interp_op invert_Const Const e) x
           = interp interp_op e x.
-      Proof.
+      Proof using Hinvert_Const interpf_Const.
         unfold inline_const_and_op_gen;
           eapply interp_rewrite_op; eauto using interpf_rewrite_for_const_and_op.
       Qed.
@@ -89,7 +90,7 @@ Module Export Rewrite.
             {t} e
         : interpf interp_op (inline_const_and_opf (t:=t) interp_op OpConst e)
           = interpf interp_op e.
-      Proof.
+      Proof using interp_op_OpConst.
         unfold inline_const_and_opf;
           eapply interpf_rewrite_opf; eauto using interpf_rewrite_for_const_and_op, interpf_invert_ConstUnit, interpf_Const.
       Qed.
@@ -99,7 +100,7 @@ Module Export Rewrite.
         : forall x,
           interp interp_op (inline_const_and_op (t:=t) interp_op OpConst e) x
           = interp interp_op e x.
-      Proof.
+      Proof using interp_op_OpConst.
         unfold inline_const_and_op;
           eapply interp_rewrite_op; eauto using interpf_rewrite_for_const_and_op, interpf_invert_ConstUnit, interpf_Const.
       Qed.

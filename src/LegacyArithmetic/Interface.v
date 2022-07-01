@@ -4,7 +4,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ZUtil.Notations.
 
 Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.AutoRewrite.
+Require Export Crypto.Util.AutoRewrite.
 Require Import Crypto.Util.Notations.
 
 Local Open Scope type_scope.
@@ -21,14 +21,14 @@ Class is_decode {n W} (decode : decoder n W) :=
 Class bounded_in_range_cls (x y z : Z) := is_bounded_in_range : x <= y < z.
 Ltac bounded_solver_tac :=
   solve [ eassumption | typeclasses eauto | lia ].
-Hint Extern 0 (bounded_in_range_cls _ _ _) => unfold bounded_in_range_cls; bounded_solver_tac : typeclass_instances.
+Global Hint Extern 0 (bounded_in_range_cls _ _ _) => unfold bounded_in_range_cls; bounded_solver_tac : typeclass_instances.
 Global Arguments bounded_in_range_cls / _ _ _.
 Global Instance decode_range_bound {n W} {decode : decoder n W} {H : is_decode decode}
   : forall x, bounded_in_range_cls 0 (decode x) (2^n)
   := H.
 
 Class bounded_le_cls (x y : Z) := is_bounded_le : x <= y.
-Hint Extern 0 (bounded_le_cls _ _) => unfold bounded_le_cls; bounded_solver_tac : typeclass_instances.
+Global Hint Extern 0 (bounded_le_cls _ _) => unfold bounded_le_cls; bounded_solver_tac : typeclass_instances.
 Global Arguments bounded_le_cls / _ _.
 
 Inductive bounded_decode_pusher_tag := decode_tag.
@@ -418,6 +418,33 @@ Module fancy_machine.
     }.
 End fancy_machine.
 
+Global Existing Instances
+       fancy_machine.decode
+       fancy_machine.ldi
+       fancy_machine.shrd
+       fancy_machine.shl
+       fancy_machine.shr
+       fancy_machine.adc
+       fancy_machine.subc
+       fancy_machine.mulhwll
+       fancy_machine.mulhwhl
+       fancy_machine.mulhwhh
+       fancy_machine.selc
+       fancy_machine.addm
+       fancy_machine.decode_range
+       fancy_machine.load_immediate
+       fancy_machine.shift_right_doubleword_immediate
+       fancy_machine.shift_left_immediate
+       fancy_machine.shift_right_immediate
+       fancy_machine.add_with_carry
+       fancy_machine.sub_with_carry
+       fancy_machine.multiply_low_low
+       fancy_machine.multiply_high_low
+       fancy_machine.multiply_high_high
+       fancy_machine.select_conditional
+       fancy_machine.add_modulo
+.
+
 Module x86.
   Local Notation imm := Z (only parsing).
 
@@ -450,3 +477,26 @@ Module x86.
       bitwise_or_with_CF :> is_bitwise_or_with_CF orf
     }.
 End x86.
+
+Global Existing Instances
+       x86.decode
+       x86.ldi
+       x86.shrdf
+       x86.shlf
+       x86.shrf
+       x86.adc
+       x86.subc
+       x86.muldwf
+       x86.selc
+       x86.orf
+       x86.decode_range
+       x86.load_immediate
+       x86.shift_right_doubleword_immediate_with_CF
+       x86.shift_left_immediate_with_CF
+       x86.shift_right_immediate_with_CF
+       x86.add_with_carry
+       x86.sub_with_carry
+       x86.multiply_double_with_CF
+       x86.select_conditional
+       x86.bitwise_or_with_CF
+.

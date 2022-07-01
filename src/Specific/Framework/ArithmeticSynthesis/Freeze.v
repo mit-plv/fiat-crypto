@@ -15,7 +15,7 @@ Require Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.CacheTerm.
 
 Module Export Exports.
-  Hint Opaque freeze : uncps.
+  Global Hint Opaque freeze : uncps.
   Hint Rewrite freeze_id : uncps.
 End Exports.
 

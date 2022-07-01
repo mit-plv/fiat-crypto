@@ -17,6 +17,7 @@ Require Import Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Import Field.Hints.
 Local Notation "A ^ n" := (tuple A n) : type_scope.
 
 (***
@@ -142,11 +143,11 @@ Module Columns.
       B.Positional.eval weight (Tuple.map sum x).
 
     Lemma eval_unit (x:unit) : eval (n:=0) x = 0.
-    Proof. reflexivity. Qed.
+    Proof using Type. reflexivity. Qed.
     Hint Rewrite eval_unit : push_basesystem_eval.
 
     Lemma eval_single (x:list Z) : eval (n:=1) x = sum x.
-    Proof.
+    Proof using weight_0.
       cbv [eval]. simpl map. cbv - [Z.mul Z.add sum].
       rewrite weight_0; ring.
     Qed. Hint Rewrite eval_single : push_basesystem_eval.
@@ -263,12 +264,12 @@ Module Columns.
     Qed.
 
     Lemma small_mod_eq a b n: a mod n = b mod n -> 0 <= a < n -> a = b mod n.
-    Proof. intros; rewrite <-(Z.mod_small a n); auto. Qed.
+    Proof using Type. intros; rewrite <-(Z.mod_small a n); auto. Qed.
 
     (* helper for some of the modular logic in compact *)
     Lemma compact_mod_step a b c d: 0 < a -> 0 < b ->
       a * ((c / a + d) mod b) + c mod a = (a * d + c) mod (a * b).
-    Proof.
+    Proof using Type.
       clear.
       intros Ha Hb. assert (a <= a * b) by (apply Z.le_mul_diag_r; lia).
       pose proof (Z.mod_pos_bound c a Ha).
@@ -285,7 +286,7 @@ Module Columns.
 
     Lemma compact_div_step a b c d : 0 < a -> 0 < b ->
       (c / a + d) / b = (a * d + c) / (a * b).
-    Proof.
+    Proof using Type.
       clear. intros Ha Hb.
       rewrite <-Z.div_div by lia.
       rewrite Z.div_add_l' by lia.
@@ -296,7 +297,7 @@ Module Columns.
       (B.Positional.eval weight (snd (compact inp))
        = (eval inp) mod (weight n))
         /\ (fst (compact inp) = eval (n:=n) inp / weight n).
-    Proof.
+    Proof using add_get_carry_cps_id add_get_carry_div add_get_carry_mod div_correct div_cps_id modulo_correct modulo_cps_id weight_0 weight_divides weight_multiples weight_positive.
       cbv [compact compact_cps compact_step compact_step_cps];
         autorewrite with uncps push_id.
       change (fun i s a => compact_digit_cps i (s :: a) id)
@@ -332,17 +333,17 @@ Module Columns.
     Lemma compact_mod {n} inp :
       (B.Positional.eval weight (snd (compact inp))
        = (eval (n:=n) inp) mod (weight n)).
-    Proof. apply (proj1 (compact_div_mod inp)). Qed.
+    Proof using add_get_carry_cps_id add_get_carry_div add_get_carry_mod div_correct div_cps_id modulo_correct modulo_cps_id weight_0 weight_divides weight_multiples weight_positive. apply (proj1 (compact_div_mod inp)). Qed.
     Hint Rewrite @compact_mod : push_basesystem_eval.
 
     Lemma compact_div {n} inp :
       fst (compact inp) = eval (n:=n) inp / weight n.
-    Proof. apply (proj2 (compact_div_mod inp)). Qed.
+    Proof using add_get_carry_cps_id add_get_carry_div add_get_carry_mod div_correct div_cps_id modulo_correct modulo_cps_id weight_0 weight_divides weight_multiples weight_positive. apply (proj2 (compact_div_mod inp)). Qed.
     Hint Rewrite @compact_div : push_basesystem_eval.
 
     (* TODO : move to tuple *)
     Lemma hd_to_list {A n} a (t : A^(S n)) : List.hd a (to_list (S n) t) = hd t.
-    Proof.
+    Proof using Type.
       rewrite (subst_append t), to_list_append, hd_append. reflexivity.
     Qed.
 
@@ -454,7 +455,7 @@ Hint Rewrite
      @Columns.eval_nils
   using (assumption || lia): push_basesystem_eval.
 
-Hint Unfold
+Global Hint Unfold
      Columns.eval Columns.eval_from
      Columns.compact_digit_cps Columns.compact_digit
      Columns.compact_step_cps Columns.compact_step

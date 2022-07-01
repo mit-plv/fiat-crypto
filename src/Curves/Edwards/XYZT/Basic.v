@@ -1,4 +1,4 @@
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.Curves.Edwards.AffineProofs.
 
@@ -7,6 +7,7 @@ Require Export Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.UniquePose.
+Import Field.Hints.
 
 Section ExtendedCoordinates.
   Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}

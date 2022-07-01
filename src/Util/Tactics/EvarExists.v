@@ -1,3 +1,4 @@
+Require Export Crypto.Util.GlobalSettings.
 (** Like [eexists], but stuffs the new evar in a context variable *)
 Ltac evar_exists :=
   let T := fresh in

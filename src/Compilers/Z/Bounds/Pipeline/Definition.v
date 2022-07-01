@@ -168,6 +168,9 @@ Section with_round_up_list.
   Local Notation pick_typeb := (@Bounds.bounds_to_base_type (Bounds.round_up_to_in_list allowable_lgsz)) (only parsing).
   Local Notation pick_type v := (SmartFlatTypeMap pick_typeb v).
   Local Opaque to_prop InterpSideConditions.
+  (* Import Hints *)
+  Import Crypto.Compilers.Z.Syntax.Equality.
+  Import Crypto.Compilers.Z.Bounds.Interpretation.Bounds.
 
   Definition PostWfPreBoundsPipelineCorrect
              opts
@@ -229,7 +232,7 @@ Section with_round_up_list.
              (Hside : to_prop (InterpSideConditions e' v))
     : Bounds.is_bounded_by b (Interp e v)
       /\ cast_back_flat_const (Interp e'' v') = Interp e v.
-  Proof.
+  Proof using Type.
     rewrite <- (proj1 (PostWfPreBoundsPipelineCorrect opts e Hwf)) by assumption.
     eapply PostWfBoundsPipelineCorrect; eauto.
     apply PostWfPreBoundsPipelineCorrect; assumption.

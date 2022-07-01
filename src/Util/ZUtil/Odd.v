@@ -1,3 +1,5 @@
+Require Export Crypto.Util.GlobalSettings.
+Require Import Coq.Bool.Bool.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.ZArith.Znumtheory.
 Require Import Coq.micromega.Lia.

@@ -2,7 +2,7 @@ Require Export Crypto.Spec.CompleteEdwardsCurve.
 
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.ScalarMult Crypto.Util.Decidable.
 Require Import Coq.Logic.Eqdep_dec.
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tuple Crypto.Util.Notations.
 Require Import Crypto.Util.Tactics.UniquePose.
@@ -10,6 +10,8 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SetoidSubst.
 Require Export Crypto.Util.FixCoqMistakes.
+
+Local Existing Instance Monoid.is_homomorphism_phi_proper.
 
 Module E.
   Import Group Ring Field CompleteEdwardsCurve.E.
@@ -196,7 +198,7 @@ Module E.
 
       Lemma decompress_None b (H:Logic.eq (decompress b) None)
         : forall P, not (Logic.eq (compress P) b).
-      Proof.
+      Proof using Type.
         cbv [compress decompress exist_option coordinates] in *; intros.
         t'.
         { intro.
@@ -314,3 +316,11 @@ Module E.
     Qed.
   End Homomorphism.
 End E.
+
+Global Existing Instances
+       E.associative_add
+       E.edwards_curve_commutative_group
+       E.Proper_coordinates
+       E.Proper_mul
+       E.Kchar_ge_2
+.

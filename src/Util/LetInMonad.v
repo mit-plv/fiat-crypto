@@ -35,7 +35,7 @@ Definition lift2 {A B C} (f : A -> B -> C) : LetInM A -> LetInM B -> LetInM C
   := fun x y => under_lets x (fun x' => under_lets y (fun y' => ret (f x' y'))).
 
 Create HintDb push_denote discriminated.
-Hint Extern 1 => progress autorewrite with push_denote in * : push_denote.
+Global Hint Extern 1 => progress autorewrite with push_denote in * : push_denote.
 
 Ltac push_denote_step :=
   first [ progress simpl @denote in *
@@ -72,7 +72,7 @@ Module Import List.
   Definition app {A} := lift2 (@List.app A).
   Definition nil {A} := ret (@nil A).
   Definition cons {A} x := lift (@cons A x).
-  Hint Unfold app nil cons : push_denote.
+  Global Hint Unfold app nil cons : push_denote.
 
   Definition flat_map {A B} (f : A -> LetInM (list B)) (ls : LetInM (list A))
     := under_lets

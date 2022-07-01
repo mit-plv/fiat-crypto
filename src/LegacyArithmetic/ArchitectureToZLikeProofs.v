@@ -4,11 +4,14 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.LegacyArithmetic.Interface.
 Require Import Crypto.LegacyArithmetic.InterfaceProofs.
 Require Import Crypto.LegacyArithmetic.Double.Core.
+Require Import Crypto.LegacyArithmetic.Double.Proofs.Decode.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.RippleCarryAddSub.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.Multiply.
 Require Import Crypto.LegacyArithmetic.ArchitectureToZLike.
 Require Import Crypto.LegacyArithmetic.ZBounded.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Pow.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.Tactics.UniquePose.
@@ -127,3 +130,7 @@ Section fancy_machine_p256_montgomery_foundation.
     : ZLikeProperties (ZLikeOps_of_ArchitectureBoundedOps ops modulus smaller_bound_exp)
     := ZLikeProperties_of_ArchitectureBoundedOps_Factored _ _ eq_refl eq_refl modulus_in_range _ smaller_bound_smaller n_pos.
 End fancy_machine_p256_montgomery_foundation.
+
+Module Export Hints.
+  Export Double.Core.Hints.
+End Hints.

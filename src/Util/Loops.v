@@ -1,4 +1,5 @@
 Require Import Coq.micromega.Lia.
+Require Export Crypto.Util.GlobalSettings.
 
 Module Import core.
   Section Loops.
@@ -17,7 +18,7 @@ Module Import core.
         match fuel with
         | O => inl a
         | S fuel' => loop fuel' a
-        end 
+        end
       | inr b => inr b
       end.
 
@@ -27,7 +28,7 @@ Module Import core.
     Fixpoint loop_cps (fuel : nat) (s : A) {struct fuel} : forall T, (A + B -> T) -> T :=
       body_cps s _ (fun s =>
         match s with
-        | inl a => 
+        | inl a =>
           match fuel with
           | O => fun _ k => k (inl a)
           | S fuel' => loop_cps fuel' a
@@ -423,7 +424,7 @@ Module while.
                                      else P s)
       : P (while (measure s0) s0).
     Proof. eapply by_invariant_fuel; eauto. Qed.
-    
+
     Context (body_cps : state -> forall T, (state -> T) -> T).
 
     Fixpoint while_cps f s : forall T, (state -> T) -> T :=
@@ -439,7 +440,7 @@ Module while.
     Context (body_cps_ok : forall s {R} f, body_cps s R f = f (body s)).
     Lemma loop_cps_ok n s {R} f : while_cps n s R f = f (while n s).
     Proof.
-      revert s; induction n; intros s; 
+      revert s; induction n; intros s;
         repeat match goal with
                | _ => progress intros
                | _ => progress cbv [cpsreturn cpscall] in *
@@ -457,7 +458,7 @@ End while.
 Notation while := while.while.
 
 Definition for2 {state} (test : state -> bool) (increment body : state -> state)
-  := while test (fun s => let s := body s in increment s). 
+  := while test (fun s => let s := body s in increment s).
 
 Definition for3 {state} init test increment body fuel :=
   @for2 state test increment body fuel init.

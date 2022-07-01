@@ -17,7 +17,7 @@ while instantiating [?x] and [?bounds] with nicely-reduced constants.
 Module Export Exports.
   Export Glue.Exports.
   Export ReflectiveTactics.Exports.
-  Existing Instance DefaultedTypes.by_default.
+  Global Existing Instance DefaultedTypes.by_default.
 End Exports.
 
 Ltac refine_reflectively_gen allowable_bit_widths opts :=
