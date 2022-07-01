@@ -137,8 +137,8 @@ Time Compute WordByWordMontgomery.redc wordsize evaln evalN 3 [1;2;3] [0;0;3;2;0
 
 (*synthesizing code for a single Montgomery step*)
 
-Definition singl_redc := fun S A B => @WordByWordMontgomery.redc_body wordsize evaln evalN B evalm' (pred (length A)) (A, S).
-Definition predA_numlimbs := 4%nat.
+Definition singl_redc := fun S A B => snd (@WordByWordMontgomery.redc_body wordsize evaln evalN B evalm' (pred (length A)) (A, S)).
+Definition A_numlimbs := 100%nat.
 
 Time Compute
   (Pipeline.BoundsPipeline
@@ -147,8 +147,8 @@ Time Compute
                          singl_redc
                        ) in exact r))
 
-     (standard_bounds n, (standard_bounds (S predA_numlimbs), (standard_bounds n, tt)))
-       (standard_bounds predA_numlimbs, standard_bounds n)
+     (standard_bounds n, (standard_bounds A_numlimbs, (standard_bounds n, tt)))
+       (standard_bounds n)
     ).
 
 Time Compute
@@ -157,8 +157,8 @@ Time Compute
      true true None [64; 128] wordsize
      (ltac:( let r:= Reify( singl_redc ) in exact r))
            (fun _ _ => [])
-            (standard_bounds n, (standard_bounds (S predA_numlimbs), (standard_bounds n, tt)))
-            (standard_bounds predA_numlimbs,  standard_bounds n)
+            (standard_bounds n, (standard_bounds A_numlimbs, (standard_bounds n, tt)))
+            (standard_bounds n)
             (None, (None, (None, tt)))
-            (None, None)
+            (None)
     : Pipeline.ErrorT _   ).
