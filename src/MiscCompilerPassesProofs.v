@@ -147,9 +147,9 @@ Module Compilers.
     End with_ident.
   End Subst01.
 
-  Hint Resolve Subst01.Wf_Subst01 : wf.
-  Hint Opaque Subst01.Subst01 : wf interp rewrite.
-  Hint Rewrite @Subst01.Interp_Subst01 : interp.
+  #[global] Hint Resolve Subst01.Wf_Subst01 : wf.
+  #[global] Hint Opaque Subst01.Subst01 : wf interp rewrite.
+  #[global] Hint Rewrite @Subst01.Interp_Subst01 : interp.
 
   Module DeadCodeElimination.
     Import MiscCompilerPasses.Compilers.DeadCodeElimination.
@@ -186,7 +186,7 @@ Module Compilers.
     End with_ident.
   End DeadCodeElimination.
 
-  Hint Resolve DeadCodeElimination.Wf_EliminateDead : wf.
-  Hint Opaque DeadCodeElimination.EliminateDead : wf interp rewrite.
-  Hint Rewrite @DeadCodeElimination.Interp_EliminateDead : interp.
+  #[global] Hint Resolve DeadCodeElimination.Wf_EliminateDead : wf.
+  #[global] Hint Opaque DeadCodeElimination.EliminateDead : wf interp rewrite.
+  #[global] Hint Rewrite @DeadCodeElimination.Interp_EliminateDead : interp.
 End Compilers.

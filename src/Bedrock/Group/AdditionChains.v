@@ -165,12 +165,12 @@ Section FElems.
     Qed.
 
     Create HintDb F_pow.
-    Hint Rewrite @F.pow_2_r : F_pow.
-    Hint Rewrite @F.pow_add_r : F_pow.
-    Hint Rewrite @F.pow_mul_l : F_pow.
-    Hint Rewrite <- @F.pow_pow_l : F_pow.
-    Hint Rewrite @F.pow_1_r : F_pow.
-    Hint Rewrite @F.pow_3_r : F_pow.
+    #[global] Hint Rewrite @F.pow_2_r : F_pow.
+    #[global] Hint Rewrite @F.pow_add_r : F_pow.
+    #[global] Hint Rewrite @F.pow_mul_l : F_pow.
+    #[global] Hint Rewrite <- @F.pow_pow_l : F_pow.
+    #[global] Hint Rewrite @F.pow_1_r : F_pow.
+    #[global] Hint Rewrite @F.pow_3_r : F_pow.
 
     Ltac simplify_F :=
       unfold nlet;
@@ -327,17 +327,17 @@ Section FElems.
     End Lowering.
 
     Section Compilation.
-      Hint Resolve @relax_bounds : compiler.
+      #[global] Hint Resolve @relax_bounds : compiler.
 
       Create HintDb lowering.
-      Hint Unfold exp_by_squaring : lowering.
-      Hint Unfold exp_by_squaring_encoded : lowering.
-      Hint Unfold exp_from_encoding : lowering.
-      Hint Unfold exp_by_squaring_encoded_simple : lowering.
-      Hint Unfold exp_from_encoding_simple : lowering.
-      Hint Unfold run_length_encoding : lowering.
-      Hint Unfold exp_square : lowering.
-      Hint Unfold exp_square_and_multiply : lowering.
+      #[global] Hint Unfold exp_by_squaring : lowering.
+      #[global] Hint Unfold exp_by_squaring_encoded : lowering.
+      #[global] Hint Unfold exp_from_encoding : lowering.
+      #[global] Hint Unfold exp_by_squaring_encoded_simple : lowering.
+      #[global] Hint Unfold exp_from_encoding_simple : lowering.
+      #[global] Hint Unfold run_length_encoding : lowering.
+      #[global] Hint Unfold exp_square : lowering.
+      #[global] Hint Unfold exp_square_and_multiply : lowering.
 
       Ltac lower_step :=
         match goal with
@@ -390,7 +390,7 @@ Section FElems.
 
       Definition exp (e : positive) (x : F M_pos) := F.pow x (N.pos e).
 
-      Instance spec_of_exp_6
+      Global Instance spec_of_exp_6
       : spec_of "exp_6" :=
         fnspec! "exp_6" (sq_ptr x_ptr : word) / (sq x : F M_pos) R,
         { requires tr mem :=
@@ -410,7 +410,7 @@ Section FElems.
         end.
 
       Section Exp_by_squaring.
-        Hint Extern 1 => rewrite_exponentiation exp_by_squaring_correct; shelve : compiler_cleanup.
+        #[global] Hint Extern 1 => rewrite_exponentiation exp_by_squaring_correct; shelve : compiler_cleanup.
 
         Derive exp_6_body SuchThat
           (defn! "exp_6" ("res", "x") { exp_6_body },
@@ -421,7 +421,7 @@ Section FElems.
         Qed.
       End Exp_by_squaring.
 
-      Instance spec_of_exp97 : spec_of "exp_97" :=
+      Global Instance spec_of_exp97 : spec_of "exp_97" :=
         fnspec! "exp_97" (sq_ptr x_ptr : word) / (sq x : F M_pos) R,
         { requires tr mem :=
             (FElem (Some tight_bounds) x_ptr x
@@ -442,14 +442,14 @@ Section FElems.
             * FElem (Some tight_bounds) sq_ptr (exp (2^255-21) x)  * R)%sep mem'}.
 
       Import LoopCompiler.
-      Hint Resolve clean_width : compiler_side_conditions.
-      Hint Extern 10 => lia : compiler_side_conditions.
-      Hint Extern 1 => simple apply compile_square; shelve : compiler.
-      Hint Extern 1 => simple apply compile_mul; shelve : compiler.
-      Hint Extern 1 => compile_downto; shelve : compiler.
-      Hint Extern 1 => compile_try_copy_pointer; shelve : compiler.
+      #[global] Hint Resolve clean_width : compiler_side_conditions.
+      #[global] Hint Extern 10 => lia : compiler_side_conditions.
+      #[global] Hint Extern 1 => simple apply compile_square; shelve : compiler.
+      #[global] Hint Extern 1 => simple apply compile_mul; shelve : compiler.
+      #[global] Hint Extern 1 => compile_downto; shelve : compiler.
+      #[global] Hint Extern 1 => compile_try_copy_pointer; shelve : compiler.
 
-      Hint Extern 1 => rewrite_exponentiation exp_by_squaring_encoded_correct; shelve : compiler_cleanup.
+      #[global] Hint Extern 1 => rewrite_exponentiation exp_by_squaring_encoded_correct; shelve : compiler_cleanup.
 
       Derive exp_97_body SuchThat
              (defn! "exp_97" ("res", "x") { exp_97_body },
@@ -654,7 +654,7 @@ Section Extraction.
   Definition _M_pos := (2 ^ 255 - 19)%positive.
   Context (_a24: F _M_pos).
 
-  Instance fp : FieldParameters :=
+  Global Instance fp : FieldParameters :=
     {| M_pos := _M_pos;
        a24 := _a24;
        mul := "mul";

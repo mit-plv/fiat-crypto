@@ -31,10 +31,10 @@ Module BaseConversion.
       let r := add_to_nth (pred dn) carry r in
       r.
 
-    Hint Rewrite @Columns.length_from_associational
+    #[local] Hint Rewrite @Columns.length_from_associational
          @Columns.length_flatten @Columns.length_reverse
       : distr_length.
-    Hint Rewrite @Columns.eval_from_associational
+    #[local] Hint Rewrite @Columns.eval_from_associational
          @Columns.eval_reverse @Positional.eval_to_associational
          using (auto; solve [distr_length])
       : push_eval.
@@ -63,7 +63,7 @@ Module BaseConversion.
     Proof using Type.
       cbv [convert_bases]; now repeat autorewrite with distr_length.
     Qed.
-    Hint Rewrite length_convert_bases : distr_length.
+    #[local] Hint Rewrite length_convert_bases : distr_length.
 
     Lemma convert_bases_partitions sn dn p
           (dw_unique : forall i j : nat, (i <= dn)%nat -> (j <= dn)%nat -> dw i = dw j -> i = j)
@@ -82,7 +82,7 @@ Module BaseConversion.
       rewrite add_to_nth_zero. reflexivity.
     Qed.
 
-    Hint Rewrite
+    #[local] Hint Rewrite
          @Rows.eval_from_associational
          @Associational.eval_carry
          @Associational.eval_mul
@@ -110,7 +110,7 @@ Module BaseConversion.
         autorewrite with push_fold_right. break_match; push_eval.
       Qed.
     End reorder.
-    Hint Rewrite eval_reordering_carry using solve [auto with zarith] : push_eval.
+    #[local] Hint Rewrite eval_reordering_carry using solve [auto with zarith] : push_eval.
 
     (* carry at specified indices in dw, then use Rows.flatten to convert to Positional with sw *)
     Definition from_associational idxs n (p : list (Z * Z)) : list Z :=
@@ -122,13 +122,13 @@ Module BaseConversion.
       Associational.eval (fold_right (fun i acc => reordering_carry (dw i) (dw (S i) / dw i) acc) p idxs) =
       Associational.eval p.
     Proof using dwprops. apply fold_right_invariant; push_eval. Qed.
-    Hint Rewrite eval_carries: push_eval.
+    #[local] Hint Rewrite eval_carries: push_eval.
 
     Lemma eval_to_associational n m p :
       m <> 0%nat -> length p = n ->
       Associational.eval (to_associational n m p) = Positional.eval sw n p.
     Proof using dwprops. cbv [to_associational]; push_eval. Qed.
-    Hint Rewrite eval_to_associational using solve [push_eval; distr_length] : push_eval.
+    #[local] Hint Rewrite eval_to_associational using solve [push_eval; distr_length] : push_eval.
 
     Lemma eval_from_associational idxs n p :
       n <> 0%nat -> 0 <= Associational.eval p < sw n ->
@@ -139,7 +139,7 @@ Module BaseConversion.
       rewrite Associational.bind_snd_correct.
       push_eval.
     Qed.
-    Hint Rewrite eval_from_associational using solve [push_eval; distr_length] : push_eval.
+    #[local] Hint Rewrite eval_from_associational using solve [push_eval; distr_length] : push_eval.
 
     Lemma from_associational_partitions n idxs p  (_:n<>0%nat):
       from_associational idxs n p = Partition.partition sw n (Associational.eval p).
@@ -199,7 +199,7 @@ Module BaseConversion.
         0 <= (Positional.eval sw n1 p1 * Positional.eval sw n2 p2) < sw n3 ->
         Positional.eval sw n3 (mul_converted n1 n2 m1 m2 n3 idxs p1 p2) = (Positional.eval sw n1 p1) * (Positional.eval sw n2 p2).
       Proof using dwprops swprops. cbv [mul_converted]; push_eval. Qed.
-      Hint Rewrite eval_mul_converted : push_eval.
+      #[local] Hint Rewrite eval_mul_converted : push_eval.
 
       Lemma mul_converted_partitions n1 n2 m1 m2 n3 idxs p1 p2  (_:n3<>0%nat) (_:m1<>0%nat) (_:m2<>0%nat):
         length p1 = n1 -> length p2 = n2 ->
@@ -210,7 +210,7 @@ Module BaseConversion.
       Qed.
     End mul_converted.
   End BaseConversion.
-  Hint Rewrite length_convert_bases : distr_length.
+  #[global] Hint Rewrite length_convert_bases : distr_length.
 
   (* multiply two (n*k)-bit numbers by converting them to n k-bit limbs each, multiplying, then converting back *)
   Section widemul.
@@ -221,9 +221,9 @@ Module BaseConversion.
     Let mn := (m * n)%nat.
     Let nout := (m * 2)%nat.
 
-    Local Lemma mn_nonzero : mn <> 0%nat. Proof. subst mn. apply Nat.neq_mul_0. auto. Qed.
+    Local Lemma mn_nonzero : mn <> 0%nat. Proof using m_nz n_nz. subst mn. apply Nat.neq_mul_0. auto. Qed.
     Local Hint Resolve mn_nonzero : core.
-    Local Lemma nout_nonzero : nout <> 0%nat.  Proof. subst nout. apply Nat.neq_mul_0. auto. Qed.
+    Local Lemma nout_nonzero : nout <> 0%nat.  Proof using m_nz. subst nout. apply Nat.neq_mul_0. auto. Qed.
     Local Hint Resolve nout_nonzero : core.
     Local Lemma base_bounds : 0 < 1 <= log2base. Proof using log2base_pos. clear -log2base_pos; auto with zarith. Qed.
     Local Lemma dbase_bounds : 0 < 1 <= log2base / Z.of_nat n. Proof using n_nz n_le_log2base. clear -n_nz n_le_log2base; auto with zarith. Qed.
@@ -238,7 +238,7 @@ Module BaseConversion.
       length a = m ->
       length b = m ->
       widemul a b = Partition.partition sw nout (seval m a * seval m b).
-    Proof. apply mul_converted_partitions; auto with zarith. Qed.
+    Proof using dwprops m_nz swprops. apply mul_converted_partitions; auto with zarith. Qed.
 
     Derive widemul_inlined
            SuchThat (forall a b,
@@ -370,4 +370,4 @@ Section base_conversion_mod_ops.
     now (split; [ apply eval_convert_basesmod | apply convert_bases_partitions ]).
   Qed.
 End base_conversion_mod_ops.
-Hint Rewrite eval_convert_basesmod eval_convert_bases : push_eval.
+#[global] Hint Rewrite eval_convert_basesmod eval_convert_bases : push_eval.

@@ -229,7 +229,7 @@ Module Compilers.
         cbv [abstraction_relation]; induction t; cbn; cbv [respectful_hetero]; eauto.
       Qed.
 
-      Hint Resolve fill_in_bottom_for_arrows_bottom_related : core.
+      #[local] Hint Resolve fill_in_bottom_for_arrows_bottom_related : core.
 
       Local Instance fill_in_bottom_for_arrows_Proper {t} : Proper (abstract_domain_R ==> abstract_domain_R) (@fill_in_bottom_for_arrows t).
       Proof using bottom'_Proper.

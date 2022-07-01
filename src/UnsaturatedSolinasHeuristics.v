@@ -53,11 +53,11 @@ Section encode_distributed.
     rewrite (Z.mod_small (_ mod (s - _)) (weight _)) by now eauto using Z.lt_le_trans with zarith.
     pull_Zmod; now autorewrite with zsimplify_fast.
   Qed.
-  Hint Rewrite eval_encode_distributed : push_eval.
+  #[local] Hint Rewrite eval_encode_distributed : push_eval.
   Lemma length_encode_distributed minvalues x
     : length (encode_distributed minvalues x) = n.
   Proof using Type. cbv [encode_distributed]; repeat distr_length. Qed.
-  Hint Rewrite length_encode_distributed : distr_length.
+  #[local] Hint Rewrite length_encode_distributed : distr_length.
   Lemma nth_default_encode_distributed_bounded_eq'
         (** We add an extra hypothesis that is too bulky to prove *)
         (Hadd : forall x y, length x = n -> length y = n -> add weight n x y = map2 Z.add x y)
@@ -105,8 +105,8 @@ Section encode_distributed.
     apply nth_default_encode_distributed_bounded'; auto.
   Abort.
 End encode_distributed.
-Hint Rewrite @eval_encode_distributed using solve [auto; lia] : push_eval.
-Hint Rewrite @length_encode_distributed : distr_length.
+#[global] Hint Rewrite @eval_encode_distributed using solve [auto; lia] : push_eval.
+#[global] Hint Rewrite @length_encode_distributed : distr_length.
 
 Notation limbwidth n s c := (inject_Z (Z.log2_up (s - Associational.eval c)) / inject_Z (Z.of_nat n))%Q.
 
@@ -116,7 +116,7 @@ Local Coercion Z.pos : positive >-> Z.
 
 (** The fraction by which to multiply upper bounds *)
 Class tight_upperbound_fraction_opt := tight_upperbound_fraction : Q.
-Typeclasses Opaque tight_upperbound_fraction_opt.
+#[global] Typeclasses Opaque tight_upperbound_fraction_opt.
 
 Local Notation is_tighter_than0 x y
   := ((lower y <=? lower x) && (upper x <=? upper y)).
@@ -247,7 +247,7 @@ else:
   Proof using Type.
     clear; cbv [distribute_balance_step]; break_innermost_match; now autorewrite with distr_length.
   Qed.
-  Hint Rewrite length_distribute_balance_step : distr_length.
+  #[local] Hint Rewrite length_distribute_balance_step : distr_length.
 
   Lemma length_distribute_balance minvalues B
     : List.length B = n ->
@@ -256,30 +256,30 @@ else:
     clear -limbwidth p; cbv [distribute_balance]; intros.
     apply fold_right_invariant; intros; auto; now autorewrite with distr_length.
   Qed.
-  Hint Rewrite length_distribute_balance : distr_length.
+  #[local] Hint Rewrite length_distribute_balance : distr_length.
 
   Lemma length_balance : List.length balance = n.
   Proof using Type. cbv [balance]; now repeat autorewrite with distr_length. Qed.
-  Hint Rewrite length_balance : distr_length.
+  #[local] Hint Rewrite length_balance : distr_length.
 
   Lemma length_prime_upperbound_list : List.length prime_upperbound_list = n.
   Proof using Type. cbv [prime_upperbound_list]; now autorewrite with distr_length. Qed.
-  Hint Rewrite length_prime_upperbound_list : distr_length.
+  #[local] Hint Rewrite length_prime_upperbound_list : distr_length.
 
   Lemma length_tight_upperbounds : List.length tight_upperbounds = n.
   Proof using Type. cbv [tight_upperbounds]; now autorewrite with distr_length. Qed.
-  Hint Rewrite length_tight_upperbounds : distr_length.
+  #[local] Hint Rewrite length_tight_upperbounds : distr_length.
 
   Lemma length_loose_upperbounds : List.length loose_upperbounds = n.
   Proof using Type. cbv [loose_upperbounds]; now autorewrite with distr_length natsimplify. Qed.
-  Hint Rewrite length_loose_upperbounds : distr_length.
+  #[local] Hint Rewrite length_loose_upperbounds : distr_length.
 
   Lemma length_tight_bounds : List.length tight_bounds = n.
   Proof using Type. cbv [tight_bounds]; now autorewrite with distr_length. Qed.
-  Hint Rewrite length_tight_bounds : distr_length.
+  #[local] Hint Rewrite length_tight_bounds : distr_length.
   Lemma length_loose_bounds : List.length loose_bounds = n.
   Proof using Type. generalize length_loose_upperbounds; clear; cbv [loose_bounds]; autorewrite with distr_length natsimplify; lia. Qed.
-  Hint Rewrite length_loose_bounds : distr_length.
+  #[local] Hint Rewrite length_loose_bounds : distr_length.
 
   Lemma tight_bounds_tighter : is_tighter_than tight_bounds loose_bounds = true.
   Proof using Type.
@@ -379,7 +379,7 @@ else:
        | nil => false
        end.
 End __.
-Hint Rewrite @length_distribute_balance @length_distribute_balance_step @length_balance @length_prime_upperbound_list @length_tight_upperbounds @length_loose_upperbounds @length_tight_bounds @length_loose_bounds : distr_length.
+#[global] Hint Rewrite @length_distribute_balance @length_distribute_balance_step @length_balance @length_prime_upperbound_list @length_tight_upperbounds @length_loose_upperbounds @length_tight_bounds @length_loose_bounds : distr_length.
 
 Inductive MaybeLimbCount := NumLimbs (n : nat) | Auto (idx : nat).
 

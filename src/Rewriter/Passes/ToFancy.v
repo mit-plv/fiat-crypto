@@ -41,8 +41,8 @@ Module Compilers.
   End RewriteRules.
 
   Module Export Hints.
-    Hint Resolve Wf_RewriteToFancy : wf wf_extra.
-    Hint Opaque RewriteToFancy : wf wf_extra interp interp_extra rewrite.
-    Hint Rewrite @Interp_RewriteToFancy : interp interp_extra.
+    #[global] Hint Resolve Wf_RewriteToFancy : wf wf_extra.
+    #[global] Hint Opaque RewriteToFancy : wf wf_extra interp interp_extra rewrite.
+    #[global] Hint Rewrite @Interp_RewriteToFancy : interp interp_extra.
   End Hints.
 End Compilers.

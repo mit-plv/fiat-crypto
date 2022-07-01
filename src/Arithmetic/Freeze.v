@@ -132,7 +132,7 @@ Module Freeze.
     Qed.
   End Freeze.
 End Freeze.
-Hint Rewrite Freeze.length_freeze : distr_length.
+#[global] Hint Rewrite Freeze.length_freeze : distr_length.
 
 Section freeze_mod_ops.
   Import Positional.
@@ -358,4 +358,4 @@ Section freeze_mod_ops.
     now (split; [ apply eval_from_bytesmod | apply from_bytes_partitions ]).
   Qed.
 End freeze_mod_ops.
-Hint Rewrite eval_freeze_to_bytesmod eval_to_bytes eval_to_bytesmod eval_from_bytes eval_from_bytesmod : push_eval.
+#[global] Hint Rewrite eval_freeze_to_bytesmod eval_to_bytes eval_to_bytesmod eval_from_bytes eval_from_bytesmod : push_eval.

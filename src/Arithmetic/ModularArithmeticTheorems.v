@@ -320,13 +320,13 @@ Module F.
 
     (* TODO: move this somewhere? *)
     Create HintDb nat2N discriminated.
-    Hint Rewrite Nat2N.inj_iff
+    #[local] Hint Rewrite Nat2N.inj_iff
          (eq_refl _ : (0%N = N.of_nat 0))
          (eq_refl _ : (1%N = N.of_nat 1))
          (eq_refl _ : (2%N = N.of_nat 2))
          (eq_refl _ : (3%N = N.of_nat 3))
       : nat2N.
-    Hint Rewrite <- Nat2N.inj_double Nat2N.inj_succ_double Nat2N.inj_succ
+    #[local] Hint Rewrite <- Nat2N.inj_double Nat2N.inj_succ_double Nat2N.inj_succ
          Nat2N.inj_add Nat2N.inj_mul Nat2N.inj_sub Nat2N.inj_pred
          Nat2N.inj_div2 Nat2N.inj_max Nat2N.inj_min Nat2N.id
       : nat2N.

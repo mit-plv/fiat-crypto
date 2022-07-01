@@ -29,8 +29,8 @@ Module Z.
     intros; apply Z2Nat.inj...
     rewrite <- pow_Z2N_Zpow, !Nat2Z.id...
   Qed.
-  Hint Rewrite pow_Zpow : push_Zof_nat.
-  Hint Rewrite <- pow_Zpow : pull_Zof_nat.
+  #[global] Hint Rewrite pow_Zpow : push_Zof_nat.
+  #[global] Hint Rewrite <- pow_Zpow : pull_Zof_nat.
 
   Lemma Zpow_sub_1_nat_pow a v
     : (Z.pos a^Z.of_nat v - 1 = Z.of_nat (Z.to_nat (Z.pos a)^v - 1))%Z.
@@ -42,6 +42,6 @@ Module Z.
       by (change 1%nat with (Z.to_nat (Z.pos a)^0)%nat; apply Nat.pow_le_mono_r; simpl; lia).
     reflexivity.
   Qed.
-  Hint Rewrite Zpow_sub_1_nat_pow : pull_Zof_nat.
-  Hint Rewrite <- Zpow_sub_1_nat_pow : push_Zof_nat.
+  #[global] Hint Rewrite Zpow_sub_1_nat_pow : pull_Zof_nat.
+  #[global] Hint Rewrite <- Zpow_sub_1_nat_pow : push_Zof_nat.
 End Z.

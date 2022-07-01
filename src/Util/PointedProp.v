@@ -106,69 +106,69 @@ Global Hint Extern 1 => progress autorewrite with push_eq_Some_trivial in * : pu
 Lemma to_prop_and P Q : to_prop (P /\ Q)%pointed_prop
                         <-> (to_prop P /\ to_prop Q).
 Proof. destruct P, Q; simpl; tauto. Qed.
-Hint Rewrite to_prop_and : push_to_prop.
+#[global] Hint Rewrite to_prop_and : push_to_prop.
 
 Lemma to_prop_or P Q : to_prop (P \/ Q)%pointed_prop
                        <-> (to_prop P \/ to_prop Q).
 Proof. destruct P, Q; simpl; tauto. Qed.
-Hint Rewrite to_prop_or : push_to_prop.
+#[global] Hint Rewrite to_prop_or : push_to_prop.
 
 Lemma to_prop_impl P Q : to_prop (impl_pointed_Prop P Q)%pointed_prop
                          <-> (to_prop P -> to_prop Q).
 Proof. destruct P, Q; simpl; tauto. Qed.
-Hint Rewrite to_prop_impl : push_to_prop.
+#[global] Hint Rewrite to_prop_impl : push_to_prop.
 
 Lemma prop_of_option_and P Q : prop_of_option (P /\ Q)%option_pointed_prop
                                <-> (prop_of_option P /\ prop_of_option Q).
 Proof. destruct P, Q; simpl; autorewrite with push_to_prop; tauto. Qed.
-Hint Rewrite prop_of_option_and : push_prop_of_option.
+#[global] Hint Rewrite prop_of_option_and : push_prop_of_option.
 
 Lemma prop_of_option_or P Q : prop_of_option (P \/ Q)%option_pointed_prop
                                <-> (prop_of_option P \/ prop_of_option Q).
 Proof. destruct P, Q; simpl; autorewrite with push_to_prop; tauto. Qed.
-Hint Rewrite prop_of_option_or : push_prop_of_option.
+#[global] Hint Rewrite prop_of_option_or : push_prop_of_option.
 
 Lemma prop_of_option_impl P Q : prop_of_option (impl_option_pointed_Prop P Q)%option_pointed_prop
                                <-> (prop_of_option P -> prop_of_option Q).
 Proof. destruct P as [ [|P] |], Q as [ [|Q] |]; simpl; tauto. Qed.
-Hint Rewrite prop_of_option_impl : push_prop_of_option.
+#[global] Hint Rewrite prop_of_option_impl : push_prop_of_option.
 
 Lemma prop_of_option_not P : prop_of_option (~P)%option_pointed_prop
                                <-> (~prop_of_option P).
 Proof. destruct P as [ [|] | ]; simpl; tauto. Qed.
-Hint Rewrite prop_of_option_not : push_prop_of_option.
+#[global] Hint Rewrite prop_of_option_not : push_prop_of_option.
 
 Lemma eq_trivial_and P Q : (P /\ Q)%pointed_prop = trivial
                            <-> (P = trivial /\ Q = trivial).
 Proof. destruct P, Q; simpl; intuition congruence. Qed.
-Hint Rewrite eq_trivial_and : push_eq_trivial.
+#[global] Hint Rewrite eq_trivial_and : push_eq_trivial.
 
 Lemma eq_trivial_or P Q : (P \/ Q)%pointed_prop = trivial
                           <-> (P = trivial \/ Q = trivial).
 Proof. destruct P, Q; simpl; intuition congruence. Qed.
-Hint Rewrite eq_trivial_or : push_eq_trivial.
+#[global] Hint Rewrite eq_trivial_or : push_eq_trivial.
 
 Lemma eq_trivial_impl P Q : (impl_pointed_Prop P Q)%pointed_prop = trivial
                          <-> Q = trivial.
 Proof. destruct P, Q; simpl; intuition congruence. Qed.
-Hint Rewrite eq_trivial_impl : push_eq_trivial.
+#[global] Hint Rewrite eq_trivial_impl : push_eq_trivial.
 
 Lemma eq_Some_trivial_and P Q : (P /\ Q)%option_pointed_prop = Some trivial
                                <-> (P = Some trivial /\ Q = Some trivial).
 Proof. destruct P as [ []|], Q as [ []|]; simpl; intuition congruence. Qed.
-Hint Rewrite eq_Some_trivial_and : push_eq_Some_trivial.
+#[global] Hint Rewrite eq_Some_trivial_and : push_eq_Some_trivial.
 
 Lemma eq_Some_trivial_or P Q : (P \/ Q)%option_pointed_prop = Some trivial
                                <-> (P = Some trivial \/ Q = Some trivial).
 Proof. destruct P as [ []|], Q as [ []|]; simpl; intuition congruence. Qed.
-Hint Rewrite eq_Some_trivial_or : push_eq_Some_trivial.
+#[global] Hint Rewrite eq_Some_trivial_or : push_eq_Some_trivial.
 
 Lemma eq_Some_trivial_impl P Q : (impl_option_pointed_Prop P Q)%option_pointed_prop = Some trivial
                                <-> (P = None \/ Q = Some trivial).
 Proof. destruct P as [ [|P] |], Q as [ [|Q] |]; simpl; intuition congruence. Qed.
-Hint Rewrite eq_Some_trivial_impl : push_eq_Some_trivial.
+#[global] Hint Rewrite eq_Some_trivial_impl : push_eq_Some_trivial.
 
 Lemma eq_Some_trivial_not P : (~P)%option_pointed_prop = Some trivial
                                <-> P = None.
 Proof. destruct P as [ [|] | ]; simpl; intuition congruence. Qed.
-Hint Rewrite eq_Some_trivial_not : push_eq_Some_trivial.
+#[global] Hint Rewrite eq_Some_trivial_not : push_eq_Some_trivial.

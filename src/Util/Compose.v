@@ -10,7 +10,7 @@ Global Arguments compose {A B C} g f x / .
 Infix "'o'" := compose : function_scope.
 Infix "∘" := compose : function_scope.
 
-Typeclasses Opaque compose.
+#[global] Typeclasses Opaque compose.
 
 Global Instance Proper_compose {A B C}
       {RA RB RC}

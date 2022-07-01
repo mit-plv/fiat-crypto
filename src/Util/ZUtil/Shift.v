@@ -27,8 +27,8 @@ Module Z.
       [assumption || apply Z.pow_nonzero || apply Z.pow_pos_nonneg; lia].
     f_equal; ring.
   Qed.
-  Hint Rewrite Z.shiftr_add_shiftl_high using zutil_arith : pull_Zshift.
-  Hint Rewrite <- Z.shiftr_add_shiftl_high using zutil_arith : push_Zshift.
+  #[global] Hint Rewrite Z.shiftr_add_shiftl_high using zutil_arith : pull_Zshift.
+  #[global] Hint Rewrite <- Z.shiftr_add_shiftl_high using zutil_arith : push_Zshift.
 
   Lemma shiftr_add_shiftl_low : forall n m a b, 0 <= m <= n -> 0 <= a < 2 ^ n ->
                                            Z.shiftr (a + (Z.shiftl b n)) m = Z.shiftr a m + Z.shiftr b (m - n).
@@ -40,8 +40,8 @@ Module Z.
     rewrite Z.mul_assoc, Z.div_add by (apply Z.pow_nonzero; lia).
     repeat f_equal; ring.
   Qed.
-  Hint Rewrite Z.shiftr_add_shiftl_low using zutil_arith : pull_Zshift.
-  Hint Rewrite <- Z.shiftr_add_shiftl_low using zutil_arith : push_Zshift.
+  #[global] Hint Rewrite Z.shiftr_add_shiftl_low using zutil_arith : pull_Zshift.
+  #[global] Hint Rewrite <- Z.shiftr_add_shiftl_low using zutil_arith : push_Zshift.
 
   Lemma testbit_add_shiftl_high : forall i, (0 <= i) -> forall a b n, (0 <= n <= i) ->
                                                           0 <= a < 2 ^ n ->
@@ -61,7 +61,7 @@ Module Z.
     rewrite <-Z.pow_add_r by lia.
     replace (1 + (n - 1)) with n by ring; lia.
   Qed.
-  Hint Rewrite testbit_add_shiftl_high using zutil_arith : Ztestbit.
+  #[global] Hint Rewrite testbit_add_shiftl_high using zutil_arith : Ztestbit.
 
   Lemma testbit_add_shiftl i a b n
         (Ha : 0 <= a < 2^n)
@@ -79,8 +79,8 @@ Module Z.
     rewrite Z.shiftr_shiftr by lia.
     reflexivity.
   Qed.
-  Hint Rewrite Z.shiftr_succ using zutil_arith : push_Zshift.
-  Hint Rewrite <- Z.shiftr_succ using zutil_arith : pull_Zshift.
+  #[global] Hint Rewrite Z.shiftr_succ using zutil_arith : push_Zshift.
+  #[global] Hint Rewrite <- Z.shiftr_succ using zutil_arith : pull_Zshift.
 
   Lemma shiftr_1_r_le : forall a b, a <= b ->
     Z.shiftr a 1 <= Z.shiftr b 1.
@@ -89,14 +89,14 @@ Module Z.
     rewrite !Z.shiftr_div_pow2, Z.pow_1_r by lia.
     apply Z.div_le_mono; lia.
   Qed.
-  Hint Resolve shiftr_1_r_le : zarith.
+  #[global] Hint Resolve shiftr_1_r_le : zarith.
 
   Lemma shiftr_le : forall a b i : Z, 0 <= i -> a <= b -> a >> i <= b >> i.
   Proof.
     intros a b i ?; revert a b. apply natlike_ind with (x := i); intros; auto.
     rewrite !shiftr_succ, shiftr_1_r_le; eauto. reflexivity.
   Qed.
-  Hint Resolve shiftr_le : zarith.
+  #[global] Hint Resolve shiftr_le : zarith.
 
   Lemma shiftr_ones' : forall a n, 0 <= a < 2 ^ n -> forall i, (0 <= i) ->
     Z.shiftr a i <= Z.ones (n - i) \/ n <= i.
@@ -129,7 +129,7 @@ Module Z.
       - rewrite Z.shiftr_eq_0; try lia; try reflexivity.
         apply Z.log2_lt_pow2; lia.
   Qed.
-  Hint Resolve shiftr_ones : zarith.
+  #[global] Hint Resolve shiftr_ones : zarith.
 
   Lemma shiftr_upper_bound : forall a n, 0 <= n -> 0 <= a <= 2 ^ n -> Z.shiftr a n <= 1.
   Proof.
@@ -145,7 +145,7 @@ Module Z.
       assert (0 < 2 ^ n) by (apply Z.pow_pos_nonneg; lia).
       rewrite Z.div_same;  lia.
   Qed.
-  Hint Resolve shiftr_upper_bound : zarith.
+  #[global] Hint Resolve shiftr_upper_bound : zarith.
 
   Lemma lor_shiftl : forall a b n, 0 <= n -> 0 <= a < 2 ^ n ->
     Z.lor a (Z.shiftl b n) = a + (Z.shiftl b n).
@@ -165,14 +165,14 @@ Module Z.
       split; try eapply Z.lt_le_trans with (m := 2 ^ n); try lia.
       apply Z.pow_le_mono_r; lia.
   Qed.
-  Hint Rewrite <- Z.lor_shiftl using zutil_arith : convert_to_Ztestbit.
+  #[global] Hint Rewrite <- Z.lor_shiftl using zutil_arith : convert_to_Ztestbit.
 
   Lemma lor_shiftl' : forall a b n, 0 <= n -> 0 <= a < 2 ^ n ->
     Z.lor (Z.shiftl b n) a = (Z.shiftl b n) + a.
   Proof.
     intros; rewrite Z.lor_comm, Z.add_comm; apply lor_shiftl; assumption.
   Qed.
-  Hint Rewrite <- Z.lor_shiftl' using zutil_arith : convert_to_Ztestbit.
+  #[global] Hint Rewrite <- Z.lor_shiftl' using zutil_arith : convert_to_Ztestbit.
 
   Lemma shiftl_spec_full a n m
     : Z.testbit (a << n) m = if Z_lt_dec m n
@@ -183,7 +183,7 @@ Module Z.
   Proof.
     repeat break_match; auto using Z.shiftl_spec_low, Z.shiftl_spec, Z.testbit_neg_r with lia.
   Qed.
-  Hint Rewrite shiftl_spec_full : Ztestbit_full.
+  #[global] Hint Rewrite shiftl_spec_full : Ztestbit_full.
 
   Lemma shiftr_spec_full a n m
     : Z.testbit (a >> n) m = if Z_lt_dec m (-n)
@@ -194,7 +194,7 @@ Module Z.
   Proof.
     rewrite <- Z.shiftl_opp_r, shiftl_spec_full, Z.sub_opp_r; reflexivity.
   Qed.
-  Hint Rewrite shiftr_spec_full : Ztestbit_full.
+  #[global] Hint Rewrite shiftr_spec_full : Ztestbit_full.
 
   Lemma testbit_add_shiftl_full i (Hi : 0 <= i) a b n (Ha : 0 <= a < 2^n)
     : Z.testbit (a + b << n) i
@@ -204,7 +204,7 @@ Module Z.
     assert (0 <= n) by eauto 2 with zarith.
     pose proof (Zlt_cases i n); break_match; autorewrite with Ztestbit; reflexivity.
   Qed.
-  Hint Rewrite testbit_add_shiftl_full using zutil_arith : Ztestbit.
+  #[global] Hint Rewrite testbit_add_shiftl_full using zutil_arith : Ztestbit.
 
   Lemma land_add_land : forall n m a b, (m <= n)%nat ->
     Z.land ((Z.land a (Z.ones (Z.of_nat n))) + (Z.shiftl b (Z.of_nat n))) (Z.ones (Z.of_nat m)) = Z.land a (Z.ones (Z.of_nat m)).
@@ -225,23 +225,23 @@ Module Z.
 
   Lemma shiftl_add x y z : 0 <= z -> (x + y) << z = (x << z) + (y << z).
   Proof. intros; autorewrite with Zshift_to_pow; lia. Qed.
-  Hint Rewrite shiftl_add using zutil_arith : push_Zshift.
-  Hint Rewrite <- shiftl_add using zutil_arith : pull_Zshift.
+  #[global] Hint Rewrite shiftl_add using zutil_arith : push_Zshift.
+  #[global] Hint Rewrite <- shiftl_add using zutil_arith : pull_Zshift.
 
   Lemma shiftr_add x y z : z <= 0 -> (x + y) >> z = (x >> z) + (y >> z).
   Proof. intros; autorewrite with Zshift_to_pow; lia. Qed.
-  Hint Rewrite shiftr_add using zutil_arith : push_Zshift.
-  Hint Rewrite <- shiftr_add using zutil_arith : pull_Zshift.
+  #[global] Hint Rewrite shiftr_add using zutil_arith : push_Zshift.
+  #[global] Hint Rewrite <- shiftr_add using zutil_arith : pull_Zshift.
 
   Lemma shiftl_sub x y z : 0 <= z -> (x - y) << z = (x << z) - (y << z).
   Proof. intros; autorewrite with Zshift_to_pow; lia. Qed.
-  Hint Rewrite shiftl_sub using zutil_arith : push_Zshift.
-  Hint Rewrite <- shiftl_sub using zutil_arith : pull_Zshift.
+  #[global] Hint Rewrite shiftl_sub using zutil_arith : push_Zshift.
+  #[global] Hint Rewrite <- shiftl_sub using zutil_arith : pull_Zshift.
 
   Lemma shiftr_sub x y z : z <= 0 -> (x - y) >> z = (x >> z) - (y >> z).
   Proof. intros; autorewrite with Zshift_to_pow; lia. Qed.
-  Hint Rewrite shiftr_sub using zutil_arith : push_Zshift.
-  Hint Rewrite <- shiftr_sub using zutil_arith : pull_Zshift.
+  #[global] Hint Rewrite shiftr_sub using zutil_arith : push_Zshift.
+  #[global] Hint Rewrite <- shiftr_sub using zutil_arith : pull_Zshift.
 
   Lemma compare_add_shiftl : forall x1 y1 x2 y2 n, 0 <= n ->
     Z.pow2_mod x1 n = x1 -> Z.pow2_mod x2 n = x2  ->
@@ -284,8 +284,8 @@ Module Z.
       rewrite Z.div_opp_l_complete by auto with zarith.
       reflexivity. }
   Qed.
-  Hint Rewrite shiftl_opp_l : push_Zshift.
-  Hint Rewrite <- shiftl_opp_l : pull_Zshift.
+  #[global] Hint Rewrite shiftl_opp_l : push_Zshift.
+  #[global] Hint Rewrite <- shiftl_opp_l : pull_Zshift.
 
   Lemma shiftr_opp_l a n
     : Z.shiftr (-a) n = - Z.shiftr a n - (if Z_zerop (a mod 2 ^ n) then 0 else 1).
@@ -293,8 +293,8 @@ Module Z.
     unfold Z.shiftr; rewrite shiftl_opp_l at 1; rewrite Z.opp_involutive.
     reflexivity.
   Qed.
-  Hint Rewrite shiftr_opp_l : push_Zshift.
-  Hint Rewrite <- shiftr_opp_l : pull_Zshift. *)
+  #[global] Hint Rewrite shiftr_opp_l : push_Zshift.
+  #[global] Hint Rewrite <- shiftr_opp_l : pull_Zshift. *)
 
   Lemma shl_shr_lt x y n m (Hx : 0 <= x < 2^n) (Hy : 0 <= y < 2^n) (Hm : 0 <= m <= n)
     : 0 <= (x >> (n - m)) + ((y << m) mod 2^n) < 2^n.
@@ -356,7 +356,7 @@ Module Z.
       lia.
   Qed.
 
-  Hint Rewrite Z.pow2_bits_eqb using zutil_arith : Ztestbit.
+  #[global] Hint Rewrite Z.pow2_bits_eqb using zutil_arith : Ztestbit.
   Lemma pow_2_shiftr : forall n, 0 <= n -> (2 ^ n) >> n = 1.
   Proof.
     intros; apply Z.bits_inj'; intros.
@@ -400,7 +400,7 @@ Module Z.
            | _ => solve [ auto with zarith lia ]
            end.
   Qed.
-  Hint Resolve shiftr_nonneg_le : zarith.
+  #[global] Hint Resolve shiftr_nonneg_le : zarith.
 
   Lemma lor_shift_land_ones x n
     : 0 <= n -> x = Z.lor ((x >> n) << n) (Z.land x (Z.ones n)).

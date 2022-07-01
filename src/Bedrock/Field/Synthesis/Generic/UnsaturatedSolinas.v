@@ -433,9 +433,9 @@ Section __.
                sep (BignumSuchThat n pout wout (op.(postcondition) args))
                    Rout m').
 
-  Hint Unfold carry_mul carry_square carry add sub opp selectznz
+  #[global] Hint Unfold carry_mul carry_square carry add sub opp selectznz
        to_bytes from_bytes carry_scmul_const : defs.
-  Hint Unfold
+  #[global] Hint Unfold
        spec_of_carry_mul
        spec_of_carry_square
        spec_of_carry
@@ -697,9 +697,9 @@ Section __.
     Proof. setup; prove_is_correct Rout. Qed.
   End Proofs.
 End __.
-Hint Unfold carry_mul carry_square carry add sub opp selectznz
+#[global] Hint Unfold carry_mul carry_square carry add sub opp selectznz
      to_bytes from_bytes carry_scmul_const : defs.
-Hint Unfold
+#[global] Hint Unfold
      spec_of_carry_mul
      spec_of_carry_square
      spec_of_carry

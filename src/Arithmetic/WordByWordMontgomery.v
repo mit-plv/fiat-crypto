@@ -111,7 +111,7 @@ Module WordByWordMontgomery.
     End loop.
 
     Create HintDb word_by_word_montgomery.
-    Hint Unfold A'_S3 S3' S2 q s S1 a A' A_a Let_In : word_by_word_montgomery.
+    #[local] Hint Unfold A'_S3 S3' S2 q s S1 a A' A_a Let_In : word_by_word_montgomery.
 
     Definition add (A B : T R_numlimbs) : T R_numlimbs
       := conditional_sub (@addT _ A B) N.
@@ -407,7 +407,7 @@ Module WordByWordMontgomery.
     Local Opaque T addT drop_high_addT' divmod zero scmul conditional_sub sub_then_maybe_add.
     Create HintDb push_mont_eval discriminated.
     Create HintDb word_by_word_montgomery.
-    Hint Unfold A'_S3 S3' S2 q s S1 a A' A_a Let_In : word_by_word_montgomery.
+    #[local] Hint Unfold A'_S3 S3' S2 q s S1 a A' A_a Let_In : word_by_word_montgomery.
     Let r_big' := r_big. (* to put it in the context *)
     Local Ltac t_small :=
       repeat first [ assumption
@@ -427,7 +427,7 @@ Module WordByWordMontgomery.
                    | match goal with
                      | [ H : and _ _ |- _ ] => destruct H
                      end ].
-    Hint Rewrite
+    #[local] Hint Rewrite
          eval_zero
          eval_div
          eval_mod
@@ -1070,7 +1070,7 @@ Module WordByWordMontgomery.
     Qed.
 
     Lemma eval_onemod : eval onemod = 1.
-    Proof. apply onemod_correct. Qed.
+    Proof using bitwidth_big m_big m_enc n_nz. apply onemod_correct. Qed.
 
     Definition R2mod : list Z := Partition.partition weight n ((r^n * r^n) mod m).
 
@@ -1125,7 +1125,7 @@ Module WordByWordMontgomery.
       : (forall a (_ : valid a) b (_ : valid b),
             eval (from_montgomerymod (mulmod a b)) mod m
             = (eval (from_montgomerymod a) * eval (from_montgomerymod b)) mod m).
-    Proof. apply mulmod_correct. Qed.
+    Proof using bitwidth_big m'_correct m_big m_small n_nz r'_correct. apply mulmod_correct. Qed.
 
     Lemma squaremod_correct
       : (forall a (_ : valid a), eval (from_montgomerymod (squaremod a)) mod m
@@ -1139,7 +1139,7 @@ Module WordByWordMontgomery.
       : (forall a (_ : valid a),
             eval (from_montgomerymod (squaremod a)) mod m
             = (eval (from_montgomerymod a) * eval (from_montgomerymod a)) mod m).
-    Proof. apply squaremod_correct. Qed.
+    Proof using bitwidth_big m'_correct m_big m_small n_nz r'_correct. apply squaremod_correct. Qed.
 
     Local Ltac t_valid_side :=
       repeat first [ solve [ auto ]
@@ -1174,7 +1174,7 @@ Module WordByWordMontgomery.
       : forall v (_ : valid v),
         eval (from_montgomerymod (to_montgomerymod v)) mod m
         = eval v mod m.
-    Proof. apply to_montgomerymod_correct. Qed.
+    Proof using bitwidth_big m'_correct m_big m_small n_nz r'_correct. apply to_montgomerymod_correct. Qed.
 
     Definition encodemod (v : Z) : list Z
       := to_montgomerymod (Partition.partition weight n v).
@@ -1203,7 +1203,7 @@ Module WordByWordMontgomery.
     Lemma eval_encodemod
       : (forall v, 0 <= v < m
                    -> eval (from_montgomerymod (encodemod v)) mod m = v mod m).
-    Proof. apply encodemod_correct. Qed.
+    Proof using bitwidth_big m'_correct m_big m_small n_nz r'_correct. apply encodemod_correct. Qed.
 
     Lemma addmod_correct
       : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomerymod (addmod a b)) mod m
@@ -1225,7 +1225,7 @@ Module WordByWordMontgomery.
       : (forall a (_ : valid a) b (_ : valid b),
             eval (from_montgomerymod (addmod a b)) mod m
             = (eval (from_montgomerymod a) + eval (from_montgomerymod b)) mod m).
-    Proof. apply addmod_correct. Qed.
+    Proof using bitwidth_big m'_correct m_big m_small n_nz r'_correct. apply addmod_correct. Qed.
 
     Lemma submod_correct
       : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomerymod (submod a b)) mod m
@@ -1247,7 +1247,7 @@ Module WordByWordMontgomery.
       : (forall a (_ : valid a) b (_ : valid b),
             eval (from_montgomerymod (submod a b)) mod m
             = (eval (from_montgomerymod a) - eval (from_montgomerymod b)) mod m).
-    Proof. apply submod_correct. Qed.
+    Proof using bitwidth_big m'_correct m_big m_small n_nz r'_correct. apply submod_correct. Qed.
 
     Lemma oppmod_correct
       : (forall a (_ : valid a), eval (from_montgomerymod (oppmod a)) mod m
@@ -1269,7 +1269,7 @@ Module WordByWordMontgomery.
       : (forall a (_ : valid a),
             eval (from_montgomerymod (oppmod a)) mod m
             = (-eval (from_montgomerymod a)) mod m).
-    Proof. apply oppmod_correct. Qed.
+    Proof using bitwidth_big m'_correct m_big m_small n_nz r'_correct. apply oppmod_correct. Qed.
 
     Lemma nonzeromod_correct
       : (forall a (_ : valid a), (nonzeromod a = 0) <-> ((eval (from_montgomerymod a)) mod m = 0)).
@@ -1312,6 +1312,6 @@ Module WordByWordMontgomery.
       : (forall a (_ : valid a),
             Positional.eval (uweight 8) (bytes_n (2^Z.log2_up m)) (to_bytesmod a)
             = eval a mod m).
-    Proof. apply to_bytesmod_correct. Qed.
+    Proof using bitwidth_big m_big m_small n_nz. apply to_bytesmod_correct. Qed.
   End modops.
 End WordByWordMontgomery.

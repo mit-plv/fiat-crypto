@@ -41,7 +41,7 @@ Section FunctionSpecs.
   (* N.B. spec_of_scmul has only one separation-logic condition for now because
      using multiple results in problems with stack allocation. Should be further
      looked into. *)
-  Instance spec_of_scmul : spec_of scmul :=
+  Global Instance spec_of_scmul : spec_of scmul :=
     fnspec! scmul (pout px pk : word)
           / (x out : gelem) bs (X : G) R,
     { requires tr mem :=

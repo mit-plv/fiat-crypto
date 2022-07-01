@@ -10,4 +10,4 @@ Global Hint Resolve -> Z.log2_lt_pow2 Z.log2_le_pow2 : concl_log2.
 Global Hint Resolve <- Z.log2_lt_pow2 Z.log2_le_pow2 : hyp_log2.
 
 (** For the occasional lemma that can remove the use of [Z.div] *)
-Hint Rewrite Z.div_small_iff using zutil_arith : zstrip_div.
+#[global] Hint Rewrite Z.div_small_iff using zutil_arith : zstrip_div.

@@ -257,8 +257,7 @@ Module IsoWSfun (E' : DecidableType) (W' : WSfun E')
   Create HintDb iso_map_alt2 discriminated.
   Create HintDb iso_map_alt3 discriminated.
 
-  Global
-  Hint Unfold
+  Global Hint Unfold
        empty
        is_empty
        mem
@@ -288,7 +287,7 @@ Module IsoWSfun (E' : DecidableType) (W' : WSfun E')
        liftho
     : iso_map_alt.
 
-  Hint Rewrite Empty_alt_iff Equal_alt_iff Equiv_alt_iff Equivb_alt_iff
+  #[global] Hint Rewrite Empty_alt_iff Equal_alt_iff Equiv_alt_iff Equivb_alt_iff
        eq_to_iff
        eq_to_of_iff
        eq_to_of_iff'

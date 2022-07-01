@@ -248,8 +248,7 @@ Module OptionWSfun_gen (E2 : DecidableTypeOrig) (M2 : WSfun E2).
     Create HintDb option_map_alt2 discriminated.
     Create HintDb option_map_alt3 discriminated.
 
-    Global
-      Hint Unfold
+    Global Hint Unfold
       In_alt
       empty
       is_empty
@@ -294,7 +293,7 @@ Module OptionWSfun_gen (E2 : DecidableTypeOrig) (M2 : WSfun E2).
       M1.E.eq
       : option_map_alt.
 
-    Hint Rewrite In_alt_iff Empty_alt_iff Equal_alt_iff Equiv_alt_iff Equivb_alt_iff
+    #[global] Hint Rewrite In_alt_iff Empty_alt_iff Equal_alt_iff Equiv_alt_iff Equivb_alt_iff
          M1.cardinal_1
          M1.fold_1
          M2.cardinal_1
@@ -365,9 +364,9 @@ Module OptionWSfun_gen (E2 : DecidableTypeOrig) (M2 : WSfun E2).
            M2.elements_3w
       : option_map_alt3.
 
-    Hint Constructors ex and or
+    #[global] Hint Constructors ex and or
       : option_map_alt1 option_map_alt2 option_map_alt3.
-    Hint Extern 10
+    #[global] Hint Extern 10
          => progress unfold M1.In, M2.In in *
              : option_map_alt1 option_map_alt2 option_map_alt3.
 

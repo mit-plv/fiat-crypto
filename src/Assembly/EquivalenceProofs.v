@@ -2833,8 +2833,8 @@ Proof.
   destruct args; cbn [Symeval] in *; typeclasses eauto.
 Qed.
 Local Existing Instance Symeval_reg_same.
-Typeclasses Opaque Symeval.
-Typeclasses Transparent AddressSize OperationSize.
+#[global] Typeclasses Opaque Symeval.
+#[global] Typeclasses Transparent AddressSize OperationSize.
 
 (* TODO: move? *)
 Local Instance SymexNormalInstruction_reg_same {descr:description} instr : same_reg_some_of_success (SymexNormalInstruction instr).
@@ -3001,8 +3001,8 @@ Proof.
   destruct args; cbn [Symeval] in *; typeclasses eauto.
 Qed.
 Local Existing Instance Symeval_mem_same.
-Typeclasses Opaque Symeval.
-Typeclasses Transparent AddressSize OperationSize.
+#[global] Typeclasses Opaque Symeval.
+#[global] Typeclasses Transparent AddressSize OperationSize.
 
 (* TODO: move? *)
 Local Instance SymexNormalInstruction_mem_same {descr:description} instr : same_mem_addressed_of_success (SymexNormalInstruction instr).

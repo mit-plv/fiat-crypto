@@ -30,9 +30,9 @@ Module Compilers.
       := @Interp_Subst01 _ ident is_ident_always_live _ (@ident.interp) (@ident.interp_Proper) t e Hwf.
   End Subst01.
 
-  Hint Resolve Subst01.Wf_Subst01 : wf_extra.
-  Hint Opaque Subst01.Subst01 : wf_extra interp_extra.
-  Hint Rewrite @Subst01.Interp_Subst01 : interp_extra.
+  #[global] Hint Resolve Subst01.Wf_Subst01 : wf_extra.
+  #[global] Hint Opaque Subst01.Subst01 : wf_extra interp_extra.
+  #[global] Hint Rewrite @Subst01.Interp_Subst01 : interp_extra.
 
   Module DeadCodeElimination.
     Import MiscCompilerPassesProofs.Compilers.DeadCodeElimination.
@@ -41,7 +41,7 @@ Module Compilers.
       := @Interp_EliminateDead _ ident is_ident_always_live _ (@ident.interp) (@ident.interp_Proper) t e Hwf.
   End DeadCodeElimination.
 
-  Hint Resolve DeadCodeElimination.Wf_EliminateDead : wf_extra.
-  Hint Opaque DeadCodeElimination.EliminateDead : wf_extra interp_extra.
-  Hint Rewrite @DeadCodeElimination.Interp_EliminateDead : interp_extra.
+  #[global] Hint Resolve DeadCodeElimination.Wf_EliminateDead : wf_extra.
+  #[global] Hint Opaque DeadCodeElimination.EliminateDead : wf_extra interp_extra.
+  #[global] Hint Rewrite @DeadCodeElimination.Interp_EliminateDead : interp_extra.
 End Compilers.

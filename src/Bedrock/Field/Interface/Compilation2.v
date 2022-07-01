@@ -71,7 +71,7 @@ Section Compile.
   Qed.
 
   #[refine]
-   Instance felem_alloc : Allocable (FElem None) :=
+   Global Instance felem_alloc : Allocable (FElem None) :=
     {|
     size_in_bytes := felem_size_in_bytes;
     size_in_bytes_mod := felem_size_in_bytes_mod;

@@ -8,7 +8,7 @@ Require Import bedrock2.BasicC32Semantics.
 
 Section Bedrock2.
   
-  Instance spec_of_quarter : spec_of "quarter" :=
+  Global Instance spec_of_quarter : spec_of "quarter" :=
     fnspec! "quarter" (a b c d : word) ~> (a' b' c' d' : word),
     { requires tr mem := True;
       ensures tr' mem' :=
@@ -63,7 +63,7 @@ Section Bedrock2.
   Qed.
 
 
-  Instance spec_of_chacha20_block : spec_of "chacha20_block" :=
+  Global Instance spec_of_chacha20_block : spec_of "chacha20_block" :=
     fnspec! "chacha20_block" (key_ptr nonce_ptr st_ptr : word) /
           (key nonce st : ListArray.t byte) R,
     { requires tr mem :=

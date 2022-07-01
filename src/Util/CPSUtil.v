@@ -12,7 +12,7 @@ Create HintDb push_id discriminated.
 Create HintDb uncps discriminated.
 
 Lemma push_id {A} (a:A) : id a = a. reflexivity. Qed.
-Hint Rewrite @push_id : push_id.
+#[global] Hint Rewrite @push_id : push_id.
 
 Definition id_with_alt_cps' {R A} (value value_for_alt : (A -> A) -> A) (f : A -> R) : R
   := dlet z := id_with_alt (value id) (value_for_alt id) in
@@ -24,26 +24,26 @@ Definition id_with_alt_cps {R A} (value value_for_alt : forall R, (A -> R) -> R)
 Definition id_with_alt_cps'_correct {R A} value value_for_alt f
   : @id_with_alt_cps' R A value value_for_alt f = f (id_with_alt (value id) (value_for_alt id))
   := eq_refl.
-Hint Rewrite @id_with_alt_cps'_correct : uncps.
+#[global] Hint Rewrite @id_with_alt_cps'_correct : uncps.
 Definition id_with_alt_cps''_correct {R A} value value_for_alt f
   : @id_with_alt_cps'' R A value value_for_alt f = id_with_alt (value f) (value_for_alt f)
   := eq_refl.
-Hint Rewrite @id_with_alt_cps''_correct : uncps.
+#[global] Hint Rewrite @id_with_alt_cps''_correct : uncps.
 Definition id_with_alt_cps_correct {R A} value value_for_alt f
   : @id_with_alt_cps R A value value_for_alt f = f (id_with_alt (value _ id) (value_for_alt _ id))
   := eq_refl.
-Hint Rewrite @id_with_alt_cps_correct : uncps.
+#[global] Hint Rewrite @id_with_alt_cps_correct : uncps.
 Definition id_with_alt_cps'_correct_gen {R A} (value value_for_alt : forall R, (A -> R) -> R) f
   : @id_with_alt_cps' R A (value _) (value_for_alt _) f = f (id_with_alt (value _ id) (value_for_alt _ id))
   := eq_refl.
-Hint Rewrite @id_with_alt_cps'_correct_gen : uncps.
+#[global] Hint Rewrite @id_with_alt_cps'_correct_gen : uncps.
 Definition id_with_alt_cps''_correct_gen {R A} (value value_for_alt : forall R, (A -> R) -> R) f
            (Hvalue : value _ f = f (value _ id))
   : @id_with_alt_cps'' R A (value _) (value_for_alt _) f = f (id_with_alt (value _ id) (value_for_alt _ id)).
 Proof.
   cbv [id_with_alt_cps'' id_with_alt]; assumption.
 Defined.
-Hint Rewrite @id_with_alt_cps''_correct_gen : uncps.
+#[global] Hint Rewrite @id_with_alt_cps''_correct_gen : uncps.
 
 Definition id_tuple'_with_alt_cps' {R A n}
            (value value_for_alt : (Tuple.tuple' A n -> Tuple.tuple' A n) -> Tuple.tuple' A n)
@@ -61,12 +61,12 @@ Definition id_tuple_with_alt_cps' {R A n}
 Definition id_tuple'_with_alt_cps'_correct {R A n} value value_for_alt f
   : @id_tuple'_with_alt_cps' R A n value value_for_alt f = f (id_tuple'_with_alt (value id) (value_for_alt id))
   := eq_refl.
-Hint Rewrite @id_tuple'_with_alt_cps'_correct : uncps.
+#[global] Hint Rewrite @id_tuple'_with_alt_cps'_correct : uncps.
 
 Definition id_tuple_with_alt_cps'_correct {R A n} value value_for_alt f
   : @id_tuple_with_alt_cps' R A n value value_for_alt f = f (id_tuple_with_alt (value id) (value_for_alt id))
   := eq_refl.
-Hint Rewrite @id_tuple_with_alt_cps'_correct : uncps.
+#[global] Hint Rewrite @id_tuple_with_alt_cps'_correct : uncps.
 
 Definition id_tuple'_with_alt_cps'' {R A n}
            (value value_for_alt : (Tuple.tuple' A n -> R) -> R)
@@ -82,12 +82,12 @@ Definition id_tuple_with_alt_cps'' {R A n}
 Definition id_tuple'_with_alt_cps''_correct {R A n} value value_for_alt f
   : @id_tuple'_with_alt_cps'' R A n value value_for_alt f = id_with_alt (value f) (value_for_alt f)
   := eq_refl.
-Hint Rewrite @id_tuple'_with_alt_cps''_correct : uncps.
+#[global] Hint Rewrite @id_tuple'_with_alt_cps''_correct : uncps.
 
 Definition id_tuple_with_alt_cps''_correct {R A n} value value_for_alt f
   : @id_tuple_with_alt_cps'' R A n value value_for_alt f = id_with_alt (value f) (value_for_alt f)
   := eq_refl.
-Hint Rewrite @id_tuple_with_alt_cps''_correct : uncps.
+#[global] Hint Rewrite @id_tuple_with_alt_cps''_correct : uncps.
 
 Definition id_tuple'_with_alt_cps''_correct_gen {R A n}
            (value value_for_alt : forall R, (_ -> R) -> R) f
@@ -98,7 +98,7 @@ Proof.
   rewrite ?unfold_id_tuple'_with_alt, ?unfold_id_tuple_with_alt, ?unfold_id_with_alt, Hvalue.
   reflexivity.
 Qed.
-Hint Rewrite @id_tuple'_with_alt_cps''_correct_gen : uncps.
+#[global] Hint Rewrite @id_tuple'_with_alt_cps''_correct_gen : uncps.
 
 Definition id_tuple_with_alt_cps''_correct_gen {R A n}
            (value value_for_alt : forall R, (_ -> R) -> R) f
@@ -109,7 +109,7 @@ Proof.
   rewrite ?unfold_id_tuple_with_alt, ?unfold_id_tuple_with_alt, ?unfold_id_with_alt, Hvalue.
   reflexivity.
 Qed.
-Hint Rewrite @id_tuple_with_alt_cps''_correct_gen : uncps.
+#[global] Hint Rewrite @id_tuple_with_alt_cps''_correct_gen : uncps.
 
 Definition id_tuple'_with_alt_cps {R A n}
            (value value_for_alt : forall R, (Tuple.tuple' A n -> R) -> R)
@@ -125,12 +125,12 @@ Definition id_tuple_with_alt_cps {R A n}
 Definition id_tuple'_with_alt_cps_correct {R A n} value value_for_alt f
   : @id_tuple'_with_alt_cps R A n value value_for_alt f = f (id_tuple'_with_alt (value _ id) (value_for_alt _ id))
   := eq_refl.
-Hint Rewrite @id_tuple'_with_alt_cps_correct : uncps.
+#[global] Hint Rewrite @id_tuple'_with_alt_cps_correct : uncps.
 
 Definition id_tuple_with_alt_cps_correct {R A n} value value_for_alt f
   : @id_tuple_with_alt_cps R A n value value_for_alt f = f (id_tuple_with_alt (value _ id) (value_for_alt _ id))
   := eq_refl.
-Hint Rewrite @id_tuple_with_alt_cps_correct : uncps.
+#[global] Hint Rewrite @id_tuple_with_alt_cps_correct : uncps.
 
 Lemma update_nth_id {T} i (xs:list T) : ListUtil.update_nth i id xs = xs.
 Proof.
@@ -172,7 +172,7 @@ Fixpoint map_cps {A B} (g : A->B) ls
 Lemma map_cps_correct {A B} g ls: forall {T} f,
     @map_cps A B g ls T f = f (map g ls).
 Proof. induction ls as [|?? IHls]; simpl; intros; rewrite ?IHls; reflexivity. Qed.
-Hint Rewrite @map_cps_correct : uncps.
+#[global] Hint Rewrite @map_cps_correct : uncps.
 
 Fixpoint map_cps2 {A B} (g : A->forall T, (B -> T) -> T) ls
          {T} (f:list B->T) : T:=
@@ -195,7 +195,7 @@ Definition firstn_cps {A} (n:nat) (l:list A) {T} (f:list A->T) :=
 Lemma firstn_cps_correct {A} n l T f :
   @firstn_cps A n l T f = f (firstn n l).
 Proof. induction n; destruct l; reflexivity. Qed.
-Hint Rewrite @firstn_cps_correct : uncps.
+#[global] Hint Rewrite @firstn_cps_correct : uncps.
 
 Fixpoint flat_map_cps_specialized {T A B} (g:A->(list B->T)->T) (ls : list A) (f:list B->T)  :=
   match ls with
@@ -222,7 +222,7 @@ Proof.
   rewrite H; erewrite IHls by eassumption.
   reflexivity.
 Qed.
-Hint Rewrite @flat_map_cps_correct using (intros; autorewrite with uncps; auto): uncps.
+#[global] Hint Rewrite @flat_map_cps_correct using (intros; autorewrite with uncps; auto): uncps.
 
 Fixpoint from_list_default'_cps {A} (d y:A) n xs {T}:
   (Tuple.tuple' A n -> T) -> T:=
@@ -256,7 +256,7 @@ Proof.
   destruct n; intros; simpl; [reflexivity|].
   break_match; auto using from_list_default'_cps_correct.
 Qed.
-Hint Rewrite @from_list_default_cps_correct : uncps.
+#[global] Hint Rewrite @from_list_default_cps_correct : uncps.
 Fixpoint to_list'_cps {A} n
          {T} (f:list A -> T) : Tuple.tuple' A n -> T :=
   match n as n0 return (Tuple.tuple' A n0 -> T) with
@@ -282,7 +282,7 @@ Definition to_list_cps {A} n t {T} f :=
 Lemma to_list_cps_correct {A} n t {T} f :
   @to_list_cps A n t T f = f (Tuple.to_list n t).
 Proof. cbv [to_list_cps to_list_cps' Tuple.to_list]; break_match; auto using to_list'_cps_correct. Qed.
-Hint Rewrite @to_list_cps_correct : uncps.
+#[global] Hint Rewrite @to_list_cps_correct : uncps.
 
 Definition on_tuple_cps {A B} (d:B) (g:list A ->forall {T},(list B->T)->T) {n m}
            (xs : Tuple.tuple A n) {T} (f:tuple B m ->T) :=
@@ -314,7 +314,7 @@ Fixpoint update_nth_cps {A} n (g:A->A) xs {T} (f:list A->T) :=
 Lemma update_nth_cps_correct {A} n g: forall xs T f,
     @update_nth_cps A n g xs T f = f (update_nth n g xs).
 Proof. induction n; intros; simpl; break_match; try apply IHn; reflexivity. Qed.
-Hint Rewrite @update_nth_cps_correct : uncps.
+#[global] Hint Rewrite @update_nth_cps_correct : uncps.
 
 Fixpoint combine_cps {A B} (la :list A) (lb : list B)
          {T} (f:list (A*B)->T) :=
@@ -332,7 +332,7 @@ Proof.
   induction la; simpl combine_cps; simpl combine; intros;
     try break_match; try apply IHla; reflexivity.
 Qed.
-Hint Rewrite @combine_cps_correct: uncps.
+#[global] Hint Rewrite @combine_cps_correct: uncps.
 
 (* differs from fold_right_cps in that the functional argument `g` is also a CPS function *)
 Local Set Universe Polymorphism.
@@ -365,7 +365,7 @@ Proof.
   rewrite H; erewrite IHl by eassumption.
   rewrite H; reflexivity.
 Qed.
-Hint Rewrite @fold_right_cps2_correct using (intros; autorewrite with uncps; auto): uncps.
+#[global] Hint Rewrite @fold_right_cps2_correct using (intros; autorewrite with uncps; auto): uncps.
 
 Definition fold_right_no_starter {A} (f:A->A->A) ls : option A :=
   match ls with
@@ -398,7 +398,7 @@ Fixpoint fold_right_cps {A B} (g:B->A->A) (a0:A) (l:list B) {T} (f:A->T) :=
 Lemma fold_right_cps_correct {A B} g a0 l: forall {T} f,
     @fold_right_cps A B g a0 l T f = f (List.fold_right g a0 l).
 Proof. induction l as [|? l IHl]; intros; simpl; rewrite ?IHl; auto. Qed.
-Hint Rewrite @fold_right_cps_correct : uncps.
+#[global] Hint Rewrite @fold_right_cps_correct : uncps.
 
 Definition fold_right_no_starter_cps {A} g ls {T} (f:option A->T) :=
   match ls with
@@ -410,7 +410,7 @@ Lemma fold_right_no_starter_cps_correct {A} g ls {T} f :
 Proof.
   cbv [fold_right_no_starter_cps fold_right_no_starter]; break_match; reflexivity.
 Qed.
-Hint Rewrite @fold_right_no_starter_cps_correct : uncps.
+#[global] Hint Rewrite @fold_right_no_starter_cps_correct : uncps.
 
 Import Tuple.
 
@@ -492,7 +492,7 @@ Module Tuple.
   (H:forall i s a R (ret:_->R), f i s a R ret = ret (f i s a _ id))
   : @mapi_with_cps S A B n f start xs T ret = ret (mapi_with (fun i s a => f i s a _ id) start xs).
   Proof. destruct n; simpl; rewrite ?mapi_with'_cps_correct by assumption; reflexivity. Qed.
-  Hint Rewrite @mapi_with_cps_correct @mapi_with'_cps_correct
+  #[global] Hint Rewrite @mapi_with_cps_correct @mapi_with'_cps_correct
        using (intros; autorewrite with uncps; auto): uncps.
 
   Section internal_mapi_with_cps2.
@@ -545,7 +545,7 @@ Module Tuple.
   (H:forall i s a R (ret:_->R), f i s a R ret = ret (f i s a _ id))
   : @mapi_with_cps2 S A B n f start xs T ret = ret (mapi_with (fun i s a => f i s a _ id) start xs).
   Proof. destruct n; simpl; rewrite ?mapi_with'_cps2_correct by assumption; reflexivity. Qed.
-  Hint Rewrite @mapi_with_cps2_correct @mapi_with'_cps2_correct
+  #[global] Hint Rewrite @mapi_with_cps2_correct @mapi_with'_cps2_correct
        using (intros; autorewrite with uncps; auto): uncps.
 
   Fixpoint left_append_cps {A n} (x:A) (xs:tuple A n) {R} :
@@ -659,6 +659,6 @@ Module Tuple.
     destruct p; simpl in *; rewrite IHn; simpl; reflexivity.
   Qed.
 End Tuple.
-Hint Rewrite @Tuple.map_cps_correct @Tuple.left_append_cps_correct @Tuple.left_tl_cps_correct @Tuple.left_hd_cps_correct @Tuple.tl_cps_correct @Tuple.hd_cps_correct : uncps.
-Hint Rewrite @Tuple.mapi_with_cps_correct @Tuple.mapi_with'_cps_correct @Tuple.mapi_with_cps2_correct @Tuple.mapi_with'_cps2_correct
+#[global] Hint Rewrite @Tuple.map_cps_correct @Tuple.left_append_cps_correct @Tuple.left_tl_cps_correct @Tuple.left_hd_cps_correct @Tuple.tl_cps_correct @Tuple.hd_cps_correct : uncps.
+#[global] Hint Rewrite @Tuple.mapi_with_cps_correct @Tuple.mapi_with'_cps_correct @Tuple.mapi_with_cps2_correct @Tuple.mapi_with'_cps2_correct
      using (intros; autorewrite with uncps; auto): uncps.

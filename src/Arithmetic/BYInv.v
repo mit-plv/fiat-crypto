@@ -205,7 +205,7 @@ Proof.
   apply (uwprops machine_wordsize mw0).
   intros row H; destruct H as [|[H|[]]]; subst; auto. Qed.
 
-Hint Rewrite length_sat_add : length_distr.
+#[global] Hint Rewrite length_sat_add : length_distr.
 
 Lemma sat_add_bounds machine_wordsize n f g
       (mw0 : 0 < machine_wordsize)
@@ -359,7 +359,7 @@ Lemma length_sat_one n (Hn : (0 < n)%nat) :
   length (sat_one n) = n.
 Proof. unfold sat_one; simpl; rewrite length_zeros; lia. Qed.
 
-Hint Rewrite length_sat_one : distr_length.
+#[global] Hint Rewrite length_sat_one : distr_length.
 
 Lemma eval_sat_one n machine_wordsize
       (Hn : (0 < n)%nat)
@@ -388,7 +388,7 @@ Lemma length_sat_opp machine_wordsize n f
   length (sat_opp machine_wordsize n f) = n.
 Proof. unfold sat_opp; rewrite length_sat_add; auto with distr_length. Qed.
 
-Hint Rewrite length_sat_opp : distr_length.
+#[global] Hint Rewrite length_sat_opp : distr_length.
 
 Lemma eval_sat_opp machine_wordsize n f
       (mw0 : 0 < machine_wordsize)
@@ -664,7 +664,7 @@ Proof.
   assert (0 < 2 ^ bw) by (apply Z.pow_pos_nonneg; lia).
   assert (2 ^ (bw - 2) <= 2 ^ (bw - 1)) by (apply Z.pow_le_mono; lia).
 
-  Hint Rewrite length_sat_add length_sat_opp length_select : distr_length.
+  #[global] Hint Rewrite length_sat_add length_sat_opp length_select : distr_length.
 
   rewrite eval_twos_complement_sat_arithmetic_shiftr1; distr_length; autorewrite with distr_length; try nia.
   rewrite eval_twos_complement_sat_add; auto; try (autorewrite with distr_length; lia).

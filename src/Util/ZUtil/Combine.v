@@ -20,15 +20,15 @@ Module Z.
       rewrite ?Z.shiftl_mul_pow2, ?Z.shiftl_div_pow2, ?Z.pow_0_r by lia; cbn [Z.opp]; try nia;
         Z.div_mod_to_quot_rem; nia.
   Qed.
-  Hint Resolve combine_at_bitwidth_Proper : zarith.
+  #[global] Hint Resolve combine_at_bitwidth_Proper : zarith.
 
   Lemma combine_at_bitwidth_Proper1 bitwidth x
     : Proper (Z.le ==> Z.le) (Z.combine_at_bitwidth bitwidth x).
   Proof. repeat intro; eapply combine_at_bitwidth_Proper; (eassumption + reflexivity). Qed.
-  Hint Resolve combine_at_bitwidth_Proper1 : zarith.
+  #[global] Hint Resolve combine_at_bitwidth_Proper1 : zarith.
 
   Lemma combine_at_bitwidth_Proper2 bitwidth x
     : Proper (Z.le ==> Z.le) (fun y => Z.combine_at_bitwidth bitwidth y x).
   Proof. repeat intro; eapply combine_at_bitwidth_Proper; (eassumption + reflexivity). Qed.
-  Hint Resolve combine_at_bitwidth_Proper2 : zarith.
+  #[global] Hint Resolve combine_at_bitwidth_Proper2 : zarith.
 End Z.

@@ -63,7 +63,7 @@ Module WSectSfun (E' : DecidableType) (W' : WSfun E')
     rewrite E.of_to in *.
     exfalso; eauto.
   Qed.
-  Hint Immediate is_proper_key_to : fmapsect.
+  #[global] Hint Immediate is_proper_key_to : fmapsect.
 
   Global Instance Proper_is_proper_key : Proper (E'.eq ==> eq) is_proper_key | 10.
   Proof.
@@ -414,8 +414,7 @@ Module WSectSfun (E' : DecidableType) (W' : WSfun E')
   Create HintDb iso_map_alt2 discriminated.
   Create HintDb iso_map_alt3 discriminated.
 
-  Global
-  Hint Unfold
+  Global Hint Unfold
        empty
        is_empty
        mem
@@ -445,7 +444,7 @@ Module WSectSfun (E' : DecidableType) (W' : WSfun E')
        liftho
     : iso_map_alt.
 
-  Hint Rewrite Empty_alt_iff Equal_alt_iff Equiv_alt_iff Equivb_alt_iff
+  #[global] Hint Rewrite Empty_alt_iff Equal_alt_iff Equiv_alt_iff Equivb_alt_iff
        eq_to_iff
        (*eq_to_of_impl
        eq_to_of_impl'*)
@@ -550,7 +549,7 @@ Module WSectSfun (E' : DecidableType) (W' : WSfun E')
 
   Local Hint Extern 2 => Proper_compose_hint : typeclass_instances.
 
-  Hint Transparent W'.eq_key_elt : fmapsect_is_proper_key.
+  #[global] Hint Transparent W'.eq_key_elt : fmapsect_is_proper_key.
 
   Lemma is_proper_key_of_InA_elements elt k v (m : t elt)
         (H : InA (@W'.eq_key_elt _) (k, v) (W'.elements (` m)))
@@ -569,12 +568,12 @@ Module WSectSfun (E' : DecidableType) (W' : WSfun E')
     eexists (_, _); split; [ | eassumption ]; split; reflexivity.
   Qed.
 
-  Hint Resolve
+  #[global] Hint Resolve
        is_proper_key_of_InA_elements
        is_proper_key_of_In_elements
     : fmapsect_is_proper_key.
 
-  Hint Rewrite
+  #[global] Hint Rewrite
        eq_to_of_iff_proper_key
        eq_to_of_iff_proper_key
        using solve [ eauto with nocore fmapsect_is_proper_key ]

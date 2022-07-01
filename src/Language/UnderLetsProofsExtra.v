@@ -27,9 +27,9 @@ Module Compilers.
       := @Interp_SubstVarOrIdent _ ident _ (@ident.interp) (@ident.interp_Proper) t e Hwf.
   End SubstVarLike.
 
-  Hint Resolve SubstVarLike.Wf_SubstVar SubstVarLike.Wf_SubstVarLike SubstVarLike.Wf_SubstVarOrIdent : wf_extra.
-  Hint Opaque SubstVarLike.SubstVar SubstVarLike.SubstVarLike SubstVarLike.SubstVarOrIdent : wf_extra interp_extra.
-  Hint Rewrite @SubstVarLike.Interp_SubstVar @SubstVarLike.Interp_SubstVarLike @SubstVarLike.Interp_SubstVarOrIdent : interp_extra.
+  #[global] Hint Resolve SubstVarLike.Wf_SubstVar SubstVarLike.Wf_SubstVarLike SubstVarLike.Wf_SubstVarOrIdent : wf_extra.
+  #[global] Hint Opaque SubstVarLike.SubstVar SubstVarLike.SubstVarLike SubstVarLike.SubstVarOrIdent : wf_extra interp_extra.
+  #[global] Hint Rewrite @SubstVarLike.Interp_SubstVar @SubstVarLike.Interp_SubstVarLike @SubstVarLike.Interp_SubstVarOrIdent : interp_extra.
 
   Module UnderLets.
     Import UnderLetsProofs.Compilers.UnderLets.
@@ -55,7 +55,7 @@ Module Compilers.
            t e Hwf.
   End UnderLets.
 
-  Hint Resolve UnderLets.Wf_LetBindReturn : wf_extra.
-  Hint Opaque UnderLets.LetBindReturn : wf_extra interp_extra.
-  Hint Rewrite @UnderLets.Interp_LetBindReturn : interp_extra.
+  #[global] Hint Resolve UnderLets.Wf_LetBindReturn : wf_extra.
+  #[global] Hint Opaque UnderLets.LetBindReturn : wf_extra interp_extra.
+  #[global] Hint Rewrite @UnderLets.Interp_LetBindReturn : interp_extra.
 End Compilers.

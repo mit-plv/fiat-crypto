@@ -376,7 +376,7 @@ Section Expr.
   Qed.
 
   (** TODO: Find a better place for this *)
-  Hint Rewrite word.testbit_wrap : Ztestbit_full.
+  #[global] Hint Rewrite word.testbit_wrap : Ztestbit_full.
   Lemma translate_expr_correct' {t}
         (* three exprs, representing the same Expr with different vars *)
         (e1 : @API.expr (fun _ => unit) (type.base t))

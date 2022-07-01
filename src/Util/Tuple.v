@@ -144,13 +144,13 @@ Qed.
 
 Lemma length_to_list' T n t : length (@to_list' T n t) = S n.
 Proof using Type. induction n; simpl in *; trivial; destruct t; simpl; congruence. Qed.
-Hint Rewrite length_to_list' : distr_length.
+#[global] Hint Rewrite length_to_list' : distr_length.
 
 Lemma length_to_list : forall {T} {n} (xs:tuple T n), length (to_list n xs) = n.
 Proof using Type.
   destruct n; [ reflexivity | apply length_to_list' ].
 Qed.
-Hint Rewrite @length_to_list : distr_length.
+#[global] Hint Rewrite @length_to_list : distr_length.
 
 Lemma from_list'_to_list' : forall T n (xs:tuple' T n),
     forall x xs' pf, to_list' n xs = cons x xs' ->

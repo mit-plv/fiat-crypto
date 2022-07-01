@@ -104,7 +104,7 @@ Section barrett.
 
     Lemma r_small : r < 2 * n.
     Proof using a_nonneg a_small k_good m_good n_pos n_reasonable q.
-      Hint Rewrite (Z.mul_div_eq' a n) using lia : zstrip_div.
+      #[local] Hint Rewrite (Z.mul_div_eq' a n) using lia : zstrip_div.
       assert (a mod n < n) by auto with zarith lia.
       unfold r; rewrite (proj2_sig q_nice); generalize (proj1_sig q_nice); intro; subst q m.
       autorewrite with push_Zmul zsimplify zstrip_div.

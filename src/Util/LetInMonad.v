@@ -54,25 +54,25 @@ Local Ltac t := repeat t_step.
 
 Lemma denote_bind A B v f : denote (@bind A B v f) = denote (f (denote v)).
 Proof. induction v; t. Qed.
-Hint Rewrite denote_bind : push_denote.
+#[global] Hint Rewrite denote_bind : push_denote.
 
 Lemma denote_under_lets A B v f : denote (@under_lets A B v f) = denote (f (denote v)).
 Proof. induction v; t. Qed.
-Hint Rewrite denote_under_lets : push_denote.
+#[global] Hint Rewrite denote_under_lets : push_denote.
 
 Lemma denote_lift A B (f : A -> B) v : denote (lift f v) = f (denote v).
 Proof. unfold lift; t. Qed.
-Hint Rewrite denote_lift : push_denote.
+#[global] Hint Rewrite denote_lift : push_denote.
 
 Lemma denote_lift2 A B C (f : A -> B -> C) x y : denote (lift2 f x y) = f (denote x) (denote y).
 Proof. unfold lift2; t. Qed.
-Hint Rewrite denote_lift2 : push_denote.
+#[global] Hint Rewrite denote_lift2 : push_denote.
 
 Module Import List.
   Definition app {A} := lift2 (@List.app A).
   Definition nil {A} := ret (@nil A).
   Definition cons {A} x := lift (@cons A x).
-  Hint Unfold app nil cons : push_denote.
+  #[global] Hint Unfold app nil cons : push_denote.
 
   Definition flat_map {A B} (f : A -> LetInM (list B)) (ls : LetInM (list A))
     := under_lets
@@ -85,7 +85,7 @@ Module Import List.
 
   Lemma denote_flat_map A B f ls : denote (@flat_map A B f ls) = Lists.List.flat_map (fun x => denote (f x)) (denote ls).
   Proof. unfold flat_map; t; induction (denote ls); t. Qed.
-  Hint Rewrite denote_flat_map : push_denote.
+  #[global] Hint Rewrite denote_flat_map : push_denote.
 End List.
 
 Infix "++" := List.app : letinm_scope.

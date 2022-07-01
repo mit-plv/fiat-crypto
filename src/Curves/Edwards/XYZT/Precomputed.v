@@ -56,7 +56,7 @@ Section ExtendedCoordinates.
     (X3, Y3, Z3, T3).
 
     Create HintDb points_as_coordinates discriminated.
-    Hint Unfold XYZT.Basic.point XYZT.Basic.coordinates XYZT.Basic.from_twisted XYZT.Basic.m1add
+    #[local] Hint Unfold XYZT.Basic.point XYZT.Basic.coordinates XYZT.Basic.from_twisted XYZT.Basic.m1add
          E.point E.coordinates m1add_precomputed_coordinates of_twisted precomputed_point : points_as_coordinates.
     Local Notation m1add := (Basic.m1add(nonzero_a:=nonzero_a)(square_a:=square_a)(a_eq_minus1:=a_eq_minus1)(nonsquare_d:=nonsquare_d)(k_eq_2d:=reflexivity _)).
     Local Notation XYZT_of_twisted := (Basic.from_twisted(nonzero_a:=nonzero_a)(d:=d)).

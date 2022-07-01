@@ -50,7 +50,7 @@ Module MontgomeryReduction.
       Z.add_modulo (fst lo''_carry) 0 N.
 
     Local Lemma Hw : forall i, w i = R ^ Z.of_nat i.
-    Proof.
+    Proof using R_big_enough R_two_pow.
       clear -R_big_enough R_two_pow; cbv [w uweight weight]; intro.
       autorewrite with zsimplify.
       rewrite Z.pow_mul_r, R_two_pow by lia; reflexivity.
@@ -70,20 +70,20 @@ Module MontgomeryReduction.
              end.
 
     Local Lemma eval2 x y : Positional.eval w 2 [x;y] = x + R * y.
-    Proof. cbn. change_weight. ring. Qed.
+    Proof using R_big_enough R_two_pow. cbn. change_weight. ring. Qed.
     Local Lemma eval1 x : Positional.eval w 1 [x] = x.
-    Proof. cbn. change_weight. ring. Qed.
+    Proof using R_big_enough R_two_pow. cbn. change_weight. ring. Qed.
 
-    Hint Rewrite BaseConversion.widemul_inlined_reverse_correct BaseConversion.widemul_inlined_correct
+    #[local] Hint Rewrite BaseConversion.widemul_inlined_reverse_correct BaseConversion.widemul_inlined_correct
          using (autorewrite with widemul push_nth_default; solve [solve_range]) : widemul.
 
     (* TODO: move *)
-    Hint Rewrite Nat.mul_1_l : natsimplify.
+    #[local] Hint Rewrite Nat.mul_1_l : natsimplify.
 
     Lemma montred'_eq lo hi T (HT_range: 0 <= T < R * N)
           (Hlo: lo = T mod R) (Hhi: hi = T / R):
       montred' lo hi = reduce_via_partial N R N' T.
-    Proof.
+    Proof using HN'_range HN_nz HN_range Hn_nz R_big_enough R_gt_1 R_two_pow.
       rewrite <-reduce_via_partial_alt_eq by nia.
       cbv [montred' partial_reduce_alt reduce_via_partial_alt prereduce Let_In].
       rewrite Hlo, Hhi.
@@ -120,7 +120,7 @@ Module MontgomeryReduction.
 
     Lemma montred'_correct lo hi T (HT_range: 0 <= T < R * N)
           (Hlo: lo = T mod R) (Hhi: hi = T / R): montred' lo hi = (T * R') mod N.
-    Proof.
+    Proof using HN'_range HN_nz HN_range Hn_nz N'_good R'_good R_big_enough R_gt_1 R_two_pow.
       erewrite montred'_eq by eauto.
       apply Z.equiv_modulo_mod_small; auto using reduce_via_partial_correct.
       replace 0 with (Z.min 0 (R-N)) by (apply Z.min_l; lia).

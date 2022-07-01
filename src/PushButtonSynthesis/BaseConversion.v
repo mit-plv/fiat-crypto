@@ -276,7 +276,7 @@ Section __.
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
 
-  Hint Rewrite
+  #[local] Hint Rewrite
        eval_convert_basesmod
        using solve [ auto | congruence | solve_extra_bounds_side_conditions ] : push_eval.
 
@@ -343,10 +343,11 @@ Section __.
 End __.
 
 Module Export Hints.
-  Hint Opaque
+  Export Primitives.Hints.
+  #[export] Hint Opaque
        convert_bases
   : wf_op_cache.
-  Hint Immediate
+  #[export] Hint Immediate
        Wf_convert_bases
   : wf_op_cache.
 End Hints.

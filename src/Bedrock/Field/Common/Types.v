@@ -87,7 +87,7 @@ Module rep.
 
     (* store a list in local variables; each element of the list is
        represented as a separate variable *)
-    Instance listZ_local {zrep : rep base_Z} : rep base_listZ :=
+    Global Instance listZ_local {zrep : rep base_Z} : rep base_listZ :=
       { ltype := list ltype;
         rtype := list rtype;
         size := size;
@@ -106,7 +106,7 @@ Module rep.
 
     (* store a list in memory; the list is represented by one Z, which
          is the location of the head of the list *)
-    Instance listZ_mem {zrep : rep base_Z} : rep base_listZ :=
+    Global Instance listZ_mem {zrep : rep base_Z} : rep base_listZ :=
       { ltype := ltype;
         rtype := rtype;
         size := Syntax.access_size;
@@ -139,7 +139,7 @@ Module rep.
                                  (map word.unsigned ws))))
       }.
 
-    Instance Z : rep base_Z :=
+    Global Instance Z : rep base_Z :=
       { ltype := String.string;
         rtype := Syntax.expr.expr;
         size := unit;

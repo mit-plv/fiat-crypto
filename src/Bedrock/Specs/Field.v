@@ -155,7 +155,7 @@ Section FunctionSpecs.
           /\ bounded_by un_outbounds out
           /\ (FElem pout out * Rr)%sep mem' }.
 
-  Instance spec_of_UnOp {name} (op: UnOp name) : spec_of name :=
+  Global Instance spec_of_UnOp {name} (op: UnOp name) : spec_of name :=
     unop_spec op.
 
   Class BinOp (name: string) :=
@@ -179,25 +179,25 @@ Section FunctionSpecs.
           /\ bounded_by bin_outbounds out
           /\ (FElem pout out * Rr)%sep mem' }.
 
-  Instance spec_of_BinOp {name} (op: BinOp name) : spec_of name :=
+  Global Instance spec_of_BinOp {name} (op: BinOp name) : spec_of name :=
     binop_spec op.
 
-  Instance bin_mul : BinOp mul :=
+  Global Instance bin_mul : BinOp mul :=
     {| bin_model := F.mul; bin_xbounds := loose_bounds; bin_ybounds := loose_bounds; bin_outbounds := tight_bounds |}.
-  Instance un_square : UnOp square :=
+  Global Instance un_square : UnOp square :=
     {| un_model := fun x => F.pow x 2; un_xbounds := loose_bounds; un_outbounds := tight_bounds |}.
-  Instance bin_add : BinOp add :=
+  Global Instance bin_add : BinOp add :=
     {| bin_model := F.add; bin_xbounds := tight_bounds; bin_ybounds := tight_bounds; bin_outbounds := loose_bounds |}.
-  Instance bin_sub : BinOp sub :=
+  Global Instance bin_sub : BinOp sub :=
     {| bin_model := F.sub; bin_xbounds := tight_bounds; bin_ybounds := tight_bounds; bin_outbounds := loose_bounds |}.
-  Instance un_scmula24 : UnOp scmula24 :=
+  Global Instance un_scmula24 : UnOp scmula24 :=
     {| un_model := F.mul a24; un_xbounds := loose_bounds; un_outbounds := tight_bounds |}.
-  Instance un_inv : UnOp inv := (* TODO: what are the bounds for inv? *)
+  Global Instance un_inv : UnOp inv := (* TODO: what are the bounds for inv? *)
     {| un_model := F.inv; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.
-  Instance un_opp : UnOp opp :=
+  Global Instance un_opp : UnOp opp :=
     {| un_model := F.opp; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.
 
-  Instance spec_of_from_bytes : spec_of from_bytes :=
+  Global Instance spec_of_from_bytes : spec_of from_bytes :=
     fnspec! from_bytes (pout px : word) / out (bs : list byte) Rr,
     { requires tr mem :=
         (exists Ra, (FElemBytes px bs * Ra)%sep mem)
@@ -208,7 +208,7 @@ Section FunctionSpecs.
              /\ bounded_by tight_bounds X
              /\ (FElem pout X * Rr)%sep mem' }.
 
-  Instance spec_of_to_bytes : spec_of to_bytes :=
+  Global Instance spec_of_to_bytes : spec_of to_bytes :=
     fnspec! to_bytes (pout px : word) / (out : list byte) (x : felem) Rr,
     { requires tr mem :=
         bounded_by tight_bounds x /\
@@ -220,7 +220,7 @@ Section FunctionSpecs.
                                 encoded_felem_size_in_bytes in
            (FElemBytes pout bs * Rr)%sep mem' }.
 
-  Instance spec_of_felem_copy : spec_of felem_copy :=
+  Global Instance spec_of_felem_copy : spec_of felem_copy :=
     fnspec! felem_copy (pout px : word) / (out x : felem) R,
     { requires tr mem :=
         (FElem px x * FElem pout out * R)%sep mem;
@@ -228,7 +228,7 @@ Section FunctionSpecs.
         tr = tr' /\
         (FElem px x * FElem pout x * R)%sep mem' }.
 
-  Instance spec_of_from_word : spec_of from_word :=
+  Global Instance spec_of_from_word : spec_of from_word :=
     fnspec! from_word (pout x : word) / out R,
     { requires tr mem :=
         (FElem pout out * R)%sep mem;
@@ -240,7 +240,7 @@ Section FunctionSpecs.
 
     Local Notation bit_range := {|ZRange.lower := 0; ZRange.upper := 1|}.
 
-    Instance spec_of_selectznz  : spec_of select_znz :=
+    Global Instance spec_of_selectznz  : spec_of select_znz :=
     fnspec! select_znz (pout pc px py : word) / out Rout Rx Ry x y,
     {
         requires tr mem :=
@@ -262,10 +262,10 @@ Section FunctionSpecs.
     Definition from_mont_model x := F.mul x (@F.of_Z M_pos (r' ^ (Z.of_nat felem_size_in_words)%Z)).
     Definition to_mont_model x := F.mul x (@F.of_Z M_pos (r ^ (Z.of_nat felem_size_in_words)%Z)).
   
-    Instance un_from_mont {from_mont : string} : UnOp from_mont :=
+    Global Instance un_from_mont {from_mont : string} : UnOp from_mont :=
       {| un_model := from_mont_model; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.
   
-    Instance un_to_mont {to_mont : string} : UnOp to_mont :=
+    Global Instance un_to_mont {to_mont : string} : UnOp to_mont :=
       {| un_model := to_mont_model; un_xbounds := tight_bounds; un_outbounds := loose_bounds|}.
 
 End FunctionSpecs.

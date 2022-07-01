@@ -33,13 +33,13 @@ Module Z.
     if (i <? 0) then false else if i =? (m - 1) then Z.testbit a (m - 1) else Z.testbit a (i + 1).
   Proof. unfold Z.arithmetic_shiftr1; Z.solve_testbit. Qed.
 
-  Hint Rewrite arithmetic_shiftr1_testbit_spec_full : testbit_rewrite.
+  #[global] Hint Rewrite arithmetic_shiftr1_testbit_spec_full : testbit_rewrite.
 
   Lemma arithmetic_shiftr1_bound m a (Ha : 0 <= a < 2 ^ m) :
     0 <= Z.arithmetic_shiftr1 m a < 2 ^ m.
   Proof. unfold Z.arithmetic_shiftr1; Z.solve_range. Qed.
 
-  Hint Resolve arithmetic_shiftr1_bound : zarith.
+  #[global] Hint Resolve arithmetic_shiftr1_bound : zarith.
 
   Lemma arithmetic_shiftr1_spec m a
         (Hm : 0 < m)
@@ -57,7 +57,7 @@ Module Z.
     destruct (dec (Z.sign_bit m a = 0)); [Z.solve_range|].
     destruct (dec (m - k <= 0)); Z.solve_range. Qed.
 
-  Hint Resolve arithmetic_shiftr_bound : zarith.
+  #[global] Hint Resolve arithmetic_shiftr_bound : zarith.
 
   Lemma arithmetic_shiftr_testbit_spec m a k i
         (Hm : 0 < m)
@@ -70,7 +70,7 @@ Module Z.
     rewrite (Z.testbit_b2z a), Z.sign_bit_testbit by lia.
     destruct (Z.testbit a (m - 1)); Z.solve_testbit. Qed.
 
-  Hint Rewrite arithmetic_shiftr_testbit_spec : testbit_rewrite.
+  #[global] Hint Rewrite arithmetic_shiftr_testbit_spec : testbit_rewrite.
 
   Lemma arithmetic_shiftr_1 m a
         (Hm : 0 < m)

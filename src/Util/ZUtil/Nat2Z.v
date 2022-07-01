@@ -13,8 +13,8 @@ Module Nat2Z.
       autorewrite with push_Zof_nat.
       reflexivity. }
   Qed.
-  Hint Rewrite inj_pow : push_Zof_nat.
-  Hint Rewrite <- inj_pow : pull_Zof_nat.
+  #[global] Hint Rewrite inj_pow : push_Zof_nat.
+  #[global] Hint Rewrite <- inj_pow : pull_Zof_nat.
 End Nat2Z.
-Hint Rewrite Nat2Z.inj_pow : push_Zof_nat.
-Hint Rewrite <- Nat2Z.inj_pow : pull_Zof_nat.
+#[global] Hint Rewrite Nat2Z.inj_pow : push_Zof_nat.
+#[global] Hint Rewrite <- Nat2Z.inj_pow : pull_Zof_nat.

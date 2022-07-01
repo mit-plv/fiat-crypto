@@ -12,9 +12,9 @@ Scheme Equality for nat.
 Create HintDb natsimplify discriminated.
 
 Global Hint Resolve mod_bound_pos plus_le_compat : arith.
-Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using lia : natsimplify.
+#[global] Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using lia : natsimplify.
 
-Hint Rewrite sub_diag add_0_l add_0_r sub_0_r sub_succ : natsimplify.
+#[global] Hint Rewrite sub_diag add_0_l add_0_r sub_0_r sub_succ : natsimplify.
 
 Local Open Scope nat_scope.
 
@@ -243,18 +243,18 @@ Proof.
   destruct a; simpl; lia.
 Qed.
 
-Hint Rewrite S_pred_nonzero using lia : natsimplify.
+#[global] Hint Rewrite S_pred_nonzero using lia : natsimplify.
 
 Lemma mod_same_eq a b : a <> 0 -> a = b -> b mod a = 0.
 Proof. intros; subst; apply mod_same; assumption. Qed.
 
-Hint Rewrite @mod_same_eq using lia : natsimplify.
+#[global] Hint Rewrite @mod_same_eq using lia : natsimplify.
 Global Hint Resolve mod_same_eq : arith.
 
 Lemma mod_mod_eq a b c : a <> 0 -> b = c mod a -> b mod a = b.
 Proof. intros; subst; autorewrite with natsimplify; reflexivity. Qed.
 
-Hint Rewrite @mod_mod_eq using (reflexivity || lia) : natsimplify.
+#[global] Hint Rewrite @mod_mod_eq using (reflexivity || lia) : natsimplify.
 
 Local Arguments minus !_ !_.
 
@@ -270,7 +270,7 @@ Proof.
       try congruence; try reflexivity.
 Qed.
 
-Hint Rewrite S_mod_full using lia : natsimplify.
+#[global] Hint Rewrite S_mod_full using lia : natsimplify.
 
 Lemma S_mod a b : a <> 0 -> S (b mod a) <> a -> (S b) mod a = S (b mod a).
 Proof.
@@ -278,7 +278,7 @@ Proof.
   edestruct eq_nat_dec; lia.
 Qed.
 
-Hint Rewrite S_mod using (lia || autorewrite with natsimplify; lia) : natsimplify.
+#[global] Hint Rewrite S_mod using (lia || autorewrite with natsimplify; lia) : natsimplify.
 
 Lemma eq_nat_dec_refl x : eq_nat_dec x x = left (Logic.eq_refl x).
 Proof.
@@ -286,7 +286,7 @@ Proof.
   apply f_equal, Eqdep_dec.UIP_dec, eq_nat_dec.
 Qed.
 
-Hint Rewrite eq_nat_dec_refl : natsimplify.
+#[global] Hint Rewrite eq_nat_dec_refl : natsimplify.
 
 (** Helper to get around the lack of function extensionality *)
 Definition eq_nat_dec_right_val n m (pf0 : n <> m) : { pf | eq_nat_dec n m = right pf }.
@@ -307,16 +307,16 @@ Proof.
   edestruct eq_nat_dec_right_val; assumption.
 Qed.
 
-Hint Rewrite eq_nat_dec_S_n : natsimplify.
+#[global] Hint Rewrite eq_nat_dec_S_n : natsimplify.
 
 Lemma eq_nat_dec_n_S n : eq_nat_dec n (S n) = right (proj1_sig (@eq_nat_dec_right_val _ _ (n_Sn n))).
 Proof.
   edestruct eq_nat_dec_right_val; assumption.
 Qed.
 
-Hint Rewrite eq_nat_dec_n_S : natsimplify.
+#[global] Hint Rewrite eq_nat_dec_n_S : natsimplify.
 
-Hint Rewrite Max.max_0_l Max.max_0_r Max.max_idempotent Min.min_0_l Min.min_0_r Min.min_idempotent : natsimplify.
+#[global] Hint Rewrite Max.max_0_l Max.max_0_r Max.max_idempotent Min.min_0_l Min.min_0_r Min.min_idempotent : natsimplify.
 
 (** Helper to get around the lack of function extensionality *)
 Definition le_dec_right_val n m (pf0 : ~n <= m) : { pf | le_dec n m = right pf }.
@@ -331,28 +331,28 @@ Definition lt_dec_right_val n m (pf0 : ~n < m) : { pf | lt_dec n m = right pf }
 
 Lemma lt_dec_irrefl n : lt_dec n n = right (proj1_sig (@lt_dec_right_val _ _ (lt_irrefl n))).
 Proof. edestruct lt_dec_right_val; assumption. Qed.
-Hint Rewrite lt_dec_irrefl : natsimplify.
+#[global] Hint Rewrite lt_dec_irrefl : natsimplify.
 
 Lemma not_lt_n_pred_n n : ~n < pred n.
 Proof. destruct n; simpl; lia. Qed.
 
 Lemma lt_dec_n_pred_n n : lt_dec n (pred n) = right (proj1_sig (@lt_dec_right_val _ _ (not_lt_n_pred_n n))).
 Proof. edestruct lt_dec_right_val; assumption. Qed.
-Hint Rewrite lt_dec_n_pred_n : natsimplify.
+#[global] Hint Rewrite lt_dec_n_pred_n : natsimplify.
 
 Lemma le_dec_refl n : le_dec n n = left (le_refl n).
 Proof.
   edestruct le_dec; try ((idtac + exfalso); lia).
   apply f_equal, le_unique.
 Qed.
-Hint Rewrite le_dec_refl : natsimplify.
+#[global] Hint Rewrite le_dec_refl : natsimplify.
 
 Lemma le_dec_pred_l n : le_dec (pred n) n = left (le_pred_l n).
 Proof.
   edestruct le_dec; [ | destruct n; simpl in *; (idtac + exfalso); lia ].
   apply f_equal, le_unique.
 Qed.
-Hint Rewrite le_dec_pred_l : natsimplify.
+#[global] Hint Rewrite le_dec_pred_l : natsimplify.
 
 Lemma le_pred_plus_same n : n <= pred (n + n).
 Proof. destruct n; simpl; lia. Qed.
@@ -362,19 +362,19 @@ Proof.
   edestruct le_dec; [ | destruct n; simpl in *; (idtac + exfalso); lia ].
   apply f_equal, le_unique.
 Qed.
-Hint Rewrite le_dec_pred_plus_same : natsimplify.
+#[global] Hint Rewrite le_dec_pred_plus_same : natsimplify.
 
 Lemma minus_S_diag x : (S x - x = 1)%nat.
 Proof. lia. Qed.
-Hint Rewrite minus_S_diag : natsimplify.
+#[global] Hint Rewrite minus_S_diag : natsimplify.
 
 Lemma min_idempotent_S_l x : min (S x) x = x.
 Proof. lia *. Qed.
-Hint Rewrite min_idempotent_S_l : natsimplify.
+#[global] Hint Rewrite min_idempotent_S_l : natsimplify.
 
 Lemma min_idempotent_S_r x : min x (S x) = x.
 Proof. lia *. Qed.
-Hint Rewrite min_idempotent_S_r : natsimplify.
+#[global] Hint Rewrite min_idempotent_S_r : natsimplify.
 
 Lemma mod_pow_same b e : b <> 0 -> e <> 0 -> b^e mod b = 0.
 Proof.
@@ -454,35 +454,35 @@ Qed.
 
 Lemma min_x_xy x y : Nat.min x (Nat.min x y) = Nat.min x y.
 Proof. now rewrite Nat.min_assoc; autorewrite with natsimplify. Qed.
-Hint Rewrite min_x_xy : natsimplify.
+#[global] Hint Rewrite min_x_xy : natsimplify.
 
 Lemma min_x_yx x y : Nat.min x (Nat.min y x) = Nat.min x y.
 Proof. now rewrite Nat.min_comm, <- Nat.min_assoc, Nat.min_comm; autorewrite with natsimplify. Qed.
-Hint Rewrite min_x_yx : natsimplify.
+#[global] Hint Rewrite min_x_yx : natsimplify.
 
 Lemma min_xy_x x y : Nat.min (Nat.min x y) x = Nat.min x y.
 Proof. now rewrite Nat.min_comm, Nat.min_assoc; autorewrite with natsimplify. Qed.
-Hint Rewrite min_xy_x : natsimplify.
+#[global] Hint Rewrite min_xy_x : natsimplify.
 
 Lemma min_yx_x x y : Nat.min (Nat.min y x) x = Nat.min y x.
 Proof. now rewrite <- Nat.min_assoc; autorewrite with natsimplify. Qed.
-Hint Rewrite min_yx_x : natsimplify.
+#[global] Hint Rewrite min_yx_x : natsimplify.
 
 Lemma max_x_xy x y : Nat.max x (Nat.max x y) = Nat.max x y.
 Proof. now rewrite Nat.max_assoc; autorewrite with natsimplify. Qed.
-Hint Rewrite max_x_xy : natsimplify.
+#[global] Hint Rewrite max_x_xy : natsimplify.
 
 Lemma max_x_yx x y : Nat.max x (Nat.max y x) = Nat.max x y.
 Proof. now rewrite Nat.max_comm, <- Nat.max_assoc, Nat.max_comm; autorewrite with natsimplify. Qed.
-Hint Rewrite max_x_yx : natsimplify.
+#[global] Hint Rewrite max_x_yx : natsimplify.
 
 Lemma max_xy_x x y : Nat.max (Nat.max x y) x = Nat.max x y.
 Proof. now rewrite Nat.max_comm, Nat.max_assoc; autorewrite with natsimplify. Qed.
-Hint Rewrite max_xy_x : natsimplify.
+#[global] Hint Rewrite max_xy_x : natsimplify.
 
 Lemma max_yx_x x y : Nat.max (Nat.max y x) x = Nat.max y x.
 Proof. now rewrite <- Nat.max_assoc; autorewrite with natsimplify. Qed.
-Hint Rewrite max_yx_x : natsimplify.
+#[global] Hint Rewrite max_yx_x : natsimplify.
 
 Ltac inversion_nat_eq_step :=
   match goal with

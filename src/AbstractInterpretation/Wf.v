@@ -1183,8 +1183,8 @@ Module Compilers.
       Qed.
     End specialized.
   End partial.
-  Hint Resolve Wf_Eval Wf_EvalWithBound Wf_EtaExpandWithBound Wf_EtaExpandWithListInfoFromBound Wf_StripAllAnnotations Wf_StripAnnotations : wf.
-  Hint Opaque partial.Eval partial.EvalWithBound partial.EtaExpandWithBound partial.EtaExpandWithListInfoFromBound partial.StripAnnotations partial.StripAllAnnotations : wf interp rewrite.
+  #[global] Hint Resolve Wf_Eval Wf_EvalWithBound Wf_EtaExpandWithBound Wf_EtaExpandWithListInfoFromBound Wf_StripAllAnnotations Wf_StripAnnotations : wf.
+  #[global] Hint Opaque partial.Eval partial.EvalWithBound partial.EtaExpandWithBound partial.EtaExpandWithListInfoFromBound partial.StripAnnotations partial.StripAllAnnotations : wf interp rewrite.
   Import API.
 
   Lemma Wf_PartialEvaluateWithListInfoFromBounds
@@ -1195,8 +1195,8 @@ Module Compilers.
         {b_in_Proper : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R base.type ZRange.type.base.option.interp (fun t0 : base.type => eq))) b_in}
     : Wf (PartialEvaluateWithListInfoFromBounds E b_in).
   Proof. cbv [PartialEvaluateWithListInfoFromBounds]; eauto with wf. Qed.
-  Hint Resolve Wf_PartialEvaluateWithListInfoFromBounds : wf.
-  Hint Opaque PartialEvaluateWithListInfoFromBounds : wf interp rewrite.
+  #[global] Hint Resolve Wf_PartialEvaluateWithListInfoFromBounds : wf.
+  #[global] Hint Opaque PartialEvaluateWithListInfoFromBounds : wf interp rewrite.
 
   Lemma Wf_PartialEvaluateWithBounds
         {opts : AbstractInterpretation.Options}
@@ -1206,6 +1206,6 @@ Module Compilers.
         {b_in_Proper : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R base.type ZRange.type.base.option.interp (fun t0 : base.type => eq))) b_in}
     : Wf (PartialEvaluateWithBounds relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations E b_in).
   Proof. cbv [PartialEvaluateWithBounds]; eauto with wf. Qed.
-  Hint Resolve Wf_PartialEvaluateWithBounds : wf.
-  Hint Opaque PartialEvaluateWithBounds : wf interp rewrite.
+  #[global] Hint Resolve Wf_PartialEvaluateWithBounds : wf.
+  #[global] Hint Opaque PartialEvaluateWithBounds : wf interp rewrite.
 End Compilers.

@@ -202,7 +202,7 @@ Module selectznz.
       -> list_Z_bounded_by saturated_bounds y
       -> (selectznz cond x y) = (if Decidable.dec (cond = 0) then x else y)
       /\ list_Z_bounded_by saturated_bounds (selectznz cond x y).
-         
+
   End __.
 
 
@@ -425,10 +425,10 @@ Module Solinas.
                 (F m') (fun _ => True) eq 1%F F.add F.mul
                 Fdecode.
 
-      Hint Rewrite ->@F.to_Z_add : push_FtoZ.
-      Hint Rewrite ->@F.to_Z_mul : push_FtoZ.
-      Hint Rewrite ->@F.to_Z_opp : push_FtoZ.
-      Hint Rewrite ->@F.to_Z_of_Z : push_FtoZ.
+      #[local] Hint Rewrite ->@F.to_Z_add : push_FtoZ.
+      #[local] Hint Rewrite ->@F.to_Z_mul : push_FtoZ.
+      #[local] Hint Rewrite ->@F.to_Z_opp : push_FtoZ.
+      #[local] Hint Rewrite ->@F.to_Z_of_Z : push_FtoZ.
 
       Lemma Fm_bounded_alt (x : F m')
         : is_bounded_by0 prime_bound (F.to_Z x) = true.
@@ -702,10 +702,10 @@ Module WordByWordMontgomery.
                 (F m') (fun _ => True) eq 1%F F.add F.mul
                 Fdecode.
 
-      Hint Rewrite ->@F.to_Z_add : push_FtoZ.
-      Hint Rewrite ->@F.to_Z_mul : push_FtoZ.
-      Hint Rewrite ->@F.to_Z_opp : push_FtoZ.
-      Hint Rewrite ->@F.to_Z_of_Z : push_FtoZ.
+      #[local] Hint Rewrite ->@F.to_Z_add : push_FtoZ.
+      #[local] Hint Rewrite ->@F.to_Z_mul : push_FtoZ.
+      #[local] Hint Rewrite ->@F.to_Z_opp : push_FtoZ.
+      #[local] Hint Rewrite ->@F.to_Z_of_Z : push_FtoZ.
 
       Lemma Fm_bounded_alt (x : F m')
         : is_bounded_by0 prime_bound (F.to_Z x) = true.

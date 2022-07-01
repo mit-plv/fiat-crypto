@@ -42,10 +42,10 @@ Section __.
   Context {field_parameters : FieldParameters}
           {field_representaton : FieldRepresentation}
           {field_representation_ok : FieldRepresentation_ok}.
-  Hint Resolve relax_bounds : compiler.
+  #[global] Hint Resolve relax_bounds : compiler.
   Existing Instance felem_alloc.
 
-  Instance spec_of_ladderstep : spec_of "ladderstep" :=
+  Global Instance spec_of_ladderstep : spec_of "ladderstep" :=
     fnspec! "ladderstep"
           (pX1 pX2 pZ2 pX3 pZ3 : word)
           / (X1 X2 Z2 X3 Z3 : F M_pos) R,
@@ -137,7 +137,7 @@ End __.
 
 Existing Instance spec_of_ladderstep.
 
-Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (ladderstep_gallina _ _ _ _ _ _ _) _))) =>
+#[global] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (ladderstep_gallina _ _ _ _ _ _ _) _))) =>
        simple eapply compile_ladderstep; shelve : compiler.
 
 Import Syntax.

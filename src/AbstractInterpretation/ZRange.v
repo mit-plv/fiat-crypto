@@ -18,7 +18,7 @@ Module Compilers.
   Module ZRange.
     Module Export Settings.
       Class shiftr_avoid_uint1_opt := shiftr_avoid_uint1 : bool.
-      Typeclasses Opaque shiftr_avoid_uint1_opt.
+      #[global] Typeclasses Opaque shiftr_avoid_uint1_opt.
       Module AbstractInterpretation.
         Local Set Primitive Projections.
         Class Options
@@ -219,7 +219,7 @@ Module Compilers.
                              | Datatypes.Some v => @is_neg (base.type.type_base base.type.Z) v
                              | Datatypes.None => false
                              end
-               | t => fun _ => false
+               | _t => fun _ => false
                end.
           Fixpoint is_tighter_than {t} : interp t -> interp t -> bool
             := match t with

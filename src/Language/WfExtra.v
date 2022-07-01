@@ -11,17 +11,17 @@ Module Compilers.
 
   Create HintDb wf_extra discriminated.
   Create HintDb interp_extra discriminated.
-  Hint Constants Opaque : wf_extra interp_extra.
+  #[global] Hint Constants Opaque : wf_extra interp_extra.
 
-  Hint Opaque expr.interp expr.Interp : interp_extra.
-  Hint Opaque expr.Wf expr.Wf3 : wf_extra interp_extra.
+  #[global] Hint Opaque expr.interp expr.Interp : interp_extra.
+  #[global] Hint Opaque expr.Wf expr.Wf3 : wf_extra interp_extra.
 
   Module expr.
     Import Language.Wf.Compilers.expr.
     Global Hint Constructors wf : wf_extra.
     Global Hint Resolve Wf_APP : wf_extra.
     Global Hint Opaque expr.APP : wf_extra interp_extra.
-    Hint Rewrite @expr.Interp_APP : interp_extra.
+    #[global] Hint Rewrite @expr.Interp_APP : interp_extra.
     Global Hint Immediate Wf_of_Wf3 : wf_extra.
     Global Hint Resolve Wf3_of_Wf : wf_extra.
 
@@ -56,16 +56,16 @@ Module Compilers.
       := @Wf_Interp_Proper_gen _ ident _ _ (@ident.interp) (@ident.interp_Proper) t e Hwf.
   End expr.
 
-  Hint Constructors expr.wf : wf_extra.
-  Hint Resolve expr.Wf_APP expr.Wf_Reify_as expr.Wf_base_Reify_as expr.Wf_reify expr.Wf_base_reify : wf_extra.
+  #[global] Hint Constructors expr.wf : wf_extra.
+  #[global] Hint Resolve expr.Wf_APP expr.Wf_Reify_as expr.Wf_base_Reify_as expr.Wf_reify expr.Wf_base_reify : wf_extra.
   (** Work around COQBUG(https://github.com/coq/coq/issues/11536) *)
-  Hint Extern 0 (expr.Wf (GallinaReify.base.Reify_as _ _)) => simple apply (@expr.Wf_base_Reify) : wf_extra.
-  Hint Extern 0 (expr.Wf (GallinaReify.Reify_as _ _)) => simple apply (@expr.Wf_Reify) : wf_extra.
+  #[global] Hint Extern 0 (expr.Wf (GallinaReify.base.Reify_as _ _)) => simple apply (@expr.Wf_base_Reify) : wf_extra.
+  #[global] Hint Extern 0 (expr.Wf (GallinaReify.Reify_as _ _)) => simple apply (@expr.Wf_Reify) : wf_extra.
   (** Work around COQBUG(https://github.com/coq/coq/issues/11536) *)
-  Hint Extern 0 (expr.Wf (fun var => GallinaReify.base.reify _)) => simple apply (@expr.Wf_base_reify) : wf_extra.
-  Hint Extern 0 (expr.Wf (fun var => GallinaReify.reify _)) => simple apply (@expr.Wf_reify) : wf_extra.
-  Hint Opaque expr.APP GallinaReify.Reify_as GallinaReify.base.reify : wf_extra interp_extra.
-  Hint Rewrite @expr.Interp_Reify_as @expr.interp_reify @expr.interp_reify_list @expr.interp_reify_option @expr.Interp_reify @expr.Interp_APP : interp_extra.
+  #[global] Hint Extern 0 (expr.Wf (fun var => GallinaReify.base.reify _)) => simple apply (@expr.Wf_base_reify) : wf_extra.
+  #[global] Hint Extern 0 (expr.Wf (fun var => GallinaReify.reify _)) => simple apply (@expr.Wf_reify) : wf_extra.
+  #[global] Hint Opaque expr.APP GallinaReify.Reify_as GallinaReify.base.reify : wf_extra interp_extra.
+  #[global] Hint Rewrite @expr.Interp_Reify_as @expr.interp_reify @expr.interp_reify_list @expr.interp_reify_option @expr.Interp_reify @expr.Interp_APP : interp_extra.
 
   Module GeneralizeVar.
     Import Language.Wf.Compilers.GeneralizeVar.
@@ -84,7 +84,7 @@ Module Compilers.
   End GeneralizeVar.
 
   Global Hint Extern 0 (?x == ?x) => apply expr.Wf_Interp_Proper_gen : wf_extra interp_extra.
-  Hint Resolve GeneralizeVar.Wf_FromFlat_ToFlat GeneralizeVar.Wf_GeneralizeVar : wf_extra.
-  Hint Opaque GeneralizeVar.FromFlat GeneralizeVar.ToFlat GeneralizeVar.GeneralizeVar : wf_extra interp_extra.
-  Hint Rewrite @GeneralizeVar.Interp_GeneralizeVar @GeneralizeVar.Interp_FromFlat_ToFlat : interp_extra.
+  #[global] Hint Resolve GeneralizeVar.Wf_FromFlat_ToFlat GeneralizeVar.Wf_GeneralizeVar : wf_extra.
+  #[global] Hint Opaque GeneralizeVar.FromFlat GeneralizeVar.ToFlat GeneralizeVar.GeneralizeVar : wf_extra interp_extra.
+  #[global] Hint Rewrite @GeneralizeVar.Interp_GeneralizeVar @GeneralizeVar.Interp_FromFlat_ToFlat : interp_extra.
 End Compilers.

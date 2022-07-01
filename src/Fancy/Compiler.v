@@ -297,7 +297,7 @@ Section of_prefancy.
         (type.try_transport
            _ _ tZ e) = Some e' /\
         API.interp (t:=tZ) e' = r.
-    Proof.
+    Proof using Type.
       clear. cbv [interp_if_Z option_map].
       break_match; inversion 1; intros.
       subst; eexists. tauto.
@@ -339,7 +339,7 @@ Section of_prefancy.
       | tZ => fun n => ctx n
       | (tZ * tZ)%etype =>
         fun v => (ctx (fst v), Z.b2z (cctx (snd v)))
-      | (a * b)%etype =>
+      | (_a * _b)%etype =>
         fun _ => DefaultValue.type.base.default
       | _ => fun _ : unit =>
                DefaultValue.type.base.default
@@ -475,7 +475,7 @@ Section of_prefancy.
     .
 
     Lemma wordmax_nonneg : 0 <= wordmax.
-    Proof. cbv; congruence. Qed.
+    Proof using Type. cbv; congruence. Qed.
 
     Lemma of_prefancy_scalar_correct'
           (e1 : @cexpr var (type.base tZ))
@@ -490,7 +490,7 @@ Section of_prefancy.
       (forall v1 v2, In (existZZ (v1, v2)) G -> ctx (fst v1) = fst v2) ->
       (forall v1 v2, In (existZZ (v1, v2)) G -> Z.b2z (cctx (snd v1)) = snd v2) ->
       ctx (of_prefancy_scalar e1) = cinterp e2.
-    Proof.
+    Proof using Type.
       inversion 1; inversion 1;
         cbv [interp_if_Z option_map];
         cbn [of_prefancy_scalar interp_base]; intros.
@@ -545,7 +545,7 @@ Section of_prefancy.
       (forall t v1 v2, In (existT _ (type.base t) (v1, v2)) G -> interp_base ctx cc v1 = v2) ->
       (forall n, ctx n mod wordmax = ctx n) ->
       ctx (of_prefancy_scalar e1) = cinterp e2.
-    Proof.
+    Proof using Type.
       intros; match goal with H : context [interp_base _ _ _ = _] |- _ =>
                               pose proof (H tZ);
                                 pose proof (H (tZ * tZ)%etype); cbn [interp_base] in *
@@ -566,7 +566,7 @@ Section of_prefancy.
         => fun idc x => of_prefancy_ident idc x <> None
       | _, _ => fun idc x => False
       end idc x.
-    Proof.
+    Proof using Type.
       destruct 1; intros;
         repeat first [
                  progress HProp.eliminate_hprop_eq
@@ -584,7 +584,7 @@ Section of_prefancy.
     Lemma of_prefancy_ident_Some {s d} idc r rf x:
       @valid_ident (type.base s) (type.base d) r rf idc x ->
       of_prefancy_ident idc x <> None.
-    Proof. exact (@of_prefancy_ident_Some_gen _ _ idc r rf x). Qed.
+    Proof using Type. exact (@of_prefancy_ident_Some_gen _ _ idc r rf x). Qed.
 
     Ltac name_eqb_to_eq :=
       repeat match goal with
@@ -640,17 +640,17 @@ Section of_prefancy.
     Lemma cast_mod u v :
       0 <= u ->
       ident.cast r[0~>u] v = v mod (u + 1).
-    Proof. apply ident.cast_out_of_bounds_simple_0_mod. Qed.
+    Proof using Type. apply ident.cast_out_of_bounds_simple_0_mod. Qed.
 
     Lemma cc_spec_c v :
       Z.b2z (cc_spec CC.C v) = (v / wordmax) mod 2.
-    Proof. cbv [cc_spec]; apply Z.testbit_spec'. lia. Qed.
+    Proof using Type. cbv [cc_spec]; apply Z.testbit_spec'. lia. Qed.
 
     Lemma cc_m_zselect x z nz :
       x mod wordmax = x ->
       (if (if cc_spec CC.M x then 1 else 0) =? 1 then nz else z) =
       Z.zselect (x >> 255) z nz.
-    Proof.
+    Proof using Type.
       intro Hx_small.
       transitivity (if (Z.b2z (cc_spec CC.M x) =? 1) then nz else z); [ reflexivity | ].
       cbv [cc_spec Z.zselect].
@@ -662,7 +662,7 @@ Section of_prefancy.
 
     Lemma cc_l_zselect x z nz :
       (if (if cc_spec CC.L x then 1 else 0) =? 1 then nz else z) = Z.zselect (x &' 1) z nz.
-    Proof.
+    Proof using Type.
       transitivity (if (Z.b2z (cc_spec CC.L x) =? 1) then nz else z); [ reflexivity | ].
       transitivity (Z.zselect (x &' Z.ones 1) z nz); [ | reflexivity ].
       cbv [cc_spec Z.zselect]. rewrite Z.testbit_spec', Z.land_ones by lia.
@@ -671,7 +671,7 @@ Section of_prefancy.
     Qed.
 
     Lemma b2z_range b : 0<= Z.b2z b < 2.
-    Proof. cbv [Z.b2z]. break_match; lia. Qed.
+    Proof using Type. cbv [Z.b2z]. break_match; lia. Qed.
 
 
     Lemma of_prefancy_scalar_carry
@@ -684,7 +684,7 @@ Section of_prefancy.
       (forall n1, consts 1 = Some n1 -> cctx n1 = true) ->
       (forall t v1 v2, In (existT _ (type.base t) (v1, v2)) G -> interp_base ctx cctx v1 = v2) ->
       Z.b2z (cctx (of_prefancy_scalar c)) = cinterp e.
-    Proof.
+    Proof using Type.
       destruct 1; intros; hammer; cbn;
       repeat match goal with
              | H : context [ _ = false] |- Z.b2z _ = 0 => rewrite H; reflexivity
@@ -756,7 +756,7 @@ Section of_prefancy.
                 spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod wordmax = (cinterp f (cinterp x2))
         | _, _ => fun _ _ _ => True
         end idc x rf.
-    Proof.
+    Proof using Type.
       destruct 1; try exact I; cbn [of_prefancy_ident]; cbn [GallinaReify.base.reify ident.ident_Literal ident.buildIdent] in *; hammer; intros; inversion_option; (simplify_ident; [ ]).
       all:
         rewrite cast_mod by lia;
@@ -803,7 +803,7 @@ Section of_prefancy.
         of_prefancy_ident idc x = Some i ->
         (spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod wordmax = spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod (u+1)) ->
         spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod wordmax = (cinterp f (cinterp x2)).
-    Proof. apply (@of_prefancy_identZ_loosen_correct_gen (type.base s) (type.base tZ)). Qed.
+    Proof using Type. apply (@of_prefancy_identZ_loosen_correct_gen (type.base s) (type.base tZ)). Qed.
     Lemma of_prefancy_identZ_correct {s} idc:
       forall (x : @cexpr var _) i ctx G cc cctx x2 r rf f,
         @valid_ident (type.base s) tZ r rf idc x ->
@@ -815,7 +815,7 @@ Section of_prefancy.
         (forall n, ctx n mod wordmax = ctx n) ->
         of_prefancy_ident idc x = Some i ->
         spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod wordmax = (cinterp f (cinterp x2)).
-    Proof.
+    Proof using Type.
       intros; eapply of_prefancy_identZ_loosen_correct; try eassumption; [ | ].
       { cbn; lia. } { intros; f_equal; ring. }
     Qed.
@@ -1211,9 +1211,9 @@ Section Proofs.
     |}.
 
 
-  Hint Resolve Pos.lt_trans Pos.lt_irrefl Pos.lt_succ_diag_r Pos.eqb_refl : core.
-  Hint Resolve in_or_app : core.
-  Hint Resolve make_consts_ok make_pairs_ok make_ctx_ok no_pairs : core.
+  #[local] Hint Resolve Pos.lt_trans Pos.lt_irrefl Pos.lt_succ_diag_r Pos.eqb_refl : core.
+  #[local] Hint Resolve in_or_app : core.
+  #[local] Hint Resolve make_consts_ok make_pairs_ok make_ctx_ok no_pairs : core.
   (* TODO : probably not all of these preconditions are necessary -- prune them sometime *)
   Lemma of_Expr_correct next_name consts_list arg_list error
         (carry_flag : bool)

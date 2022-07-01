@@ -76,8 +76,8 @@ Module Z.
          rewrite Z.twos_complement_cond_equiv by assumption.
          destruct (Z.testbit a (m - 1)); Z.solve_testbit. Qed.
 
-  Hint Rewrite twos_complement_testbit_spec_full : testbit_pos_rewrite.
-  Hint Rewrite twos_complement_testbit_spec_full : testbit_rewrite.
+  #[global] Hint Rewrite twos_complement_testbit_spec_full : testbit_pos_rewrite.
+  #[global] Hint Rewrite twos_complement_testbit_spec_full : testbit_rewrite.
 
   Lemma twos_complement_one m (Hm : 1 < m) :
     Z.twos_complement m 1 = 1.
@@ -111,7 +111,7 @@ Module Z.
     assert (2 ^ m = 2 * 2 ^ (m - 1)) by (rewrite Z.pow_mul_base by lia; apply f_equal2; lia).
     pose proof (Z.mod_pos_bound a (2 ^ m) H); destruct_ltb (a mod 2 ^ m) (2 ^ (m - 1)); lia. Qed.
 
-  Hint Resolve twos_complement_bounds : zarith.
+  #[global] Hint Resolve twos_complement_bounds : zarith.
 
   Lemma twos_complement_add_full a b m
       (Hm : 0 < m)

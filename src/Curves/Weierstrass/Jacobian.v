@@ -66,8 +66,8 @@ Module Jacobian.
     Ltac t := prept; trivial; try contradiction; fsatz.
 
     Create HintDb points_as_coordinates discriminated.
-    Hint Unfold Proper respectful Reflexive Symmetric Transitive : points_as_coordinates.
-    Hint Unfold point eq W.eq W.point W.coordinates proj1_sig fst snd : points_as_coordinates.
+    #[local] Hint Unfold Proper respectful Reflexive Symmetric Transitive : points_as_coordinates.
+    #[local] Hint Unfold point eq W.eq W.point W.coordinates proj1_sig fst snd : points_as_coordinates.
 
     Global Instance Equivalence_eq : Equivalence eq.
     Proof. t. Qed.
@@ -87,7 +87,7 @@ Module Jacobian.
       end.
     Next Obligation. Proof. t. Qed.
 
-    Hint Unfold to_affine of_affine : points_as_coordinates.
+    #[local] Hint Unfold to_affine of_affine : points_as_coordinates.
     Global Instance Proper_of_affine : Proper (W.eq ==> eq) of_affine. Proof. t. Qed.
     Global Instance Proper_to_affine : Proper (eq ==> W.eq) to_affine. Proof. t. Qed.
     Lemma to_affine_of_affine P : W.eq (to_affine (of_affine P)) P. Proof. t. Qed.
@@ -463,7 +463,7 @@ Module Jacobian.
                   end;
                   fsatz ].
 
-    Hint Unfold double negb andb add_precondition z_is_zero_or_one : points_as_coordinates.
+    #[local] Hint Unfold double negb andb add_precondition z_is_zero_or_one : points_as_coordinates.
     Program Definition add_impl (mixed : bool) (P Q : point)
             (H : add_precondition Q mixed) : point :=
       match proj1_sig P, proj1_sig Q return F*F*F with
@@ -528,7 +528,7 @@ Module Jacobian.
     Definition add_mixed (P : point) (Q : point) (H : z_is_zero_or_one Q) :=
       add_impl true P Q H.
 
-    Hint Unfold W.eq W.add to_affine add add_mixed add_impl : points_as_coordinates.
+    #[local] Hint Unfold W.eq W.add to_affine add add_mixed add_impl : points_as_coordinates.
 
     Lemma Proper_double : Proper (eq ==> eq) double. Proof. faster_t_noclear. Qed.
     Lemma to_affine_double P :
@@ -582,7 +582,7 @@ Module Jacobian.
         end.
       Next Obligation. Proof. t. Qed.
 
-      Hint Unfold double_minus_3 : points_as_coordinates.
+      #[local] Hint Unfold double_minus_3 : points_as_coordinates.
 
       Lemma double_minus_3_eq_double (P : point) :
         eq (double P) (double_minus_3 P).

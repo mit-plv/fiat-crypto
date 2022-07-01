@@ -341,7 +341,7 @@ Module WSumSetsOn (E1 : Equalities.DecidableType) (E2 : Equalities.DecidableType
 
   Create HintDb sum_set_alt discriminated.
 
-  Hint Unfold
+  #[global] Hint Unfold
        empty
        is_empty
        mem
@@ -380,7 +380,7 @@ Module WSumSetsOn (E1 : Equalities.DecidableType) (E2 : Equalities.DecidableType
        Empty_alt Equal_alt
     : sum_set_alt.
 
-  Hint Rewrite Empty_alt_iff Equal_alt_iff Subset_alt_iff For_all_alt_iff Exists_alt_iff
+  #[global] Hint Rewrite Empty_alt_iff Equal_alt_iff Subset_alt_iff For_all_alt_iff Exists_alt_iff
        W1.is_empty_spec
        W1.mem_spec
        W1.add_spec
@@ -560,9 +560,9 @@ Module SumSetsOn (E1 : Orders.OrderedType) (E2 : Orders.OrderedType)
   Definition min_elt : t -> option elt := lift_tT choose_option_sum W1.min_elt W2.min_elt.
   Definition max_elt : t -> option elt := lift_tT choose_option_sum_rev W1.max_elt W2.max_elt.
   Definition lt : t -> t -> Prop := prod_lt W1.eq W1.lt W2.lt.
-  Hint Unfold compare min_elt max_elt lt W1.eq prod_lt : sum_set_alt.
+  #[global] Hint Unfold compare min_elt max_elt lt W1.eq prod_lt : sum_set_alt.
 
-  Instance lt_strorder : StrictOrder lt | 1.
+  Global Instance lt_strorder : StrictOrder lt | 1.
   Proof.
     destruct W1.eq_equiv, W1.lt_strorder, W2.lt_strorder.
     cbv [W1.eq lt prod_lt] in *.
@@ -581,7 +581,7 @@ Module SumSetsOn (E1 : Orders.OrderedType) (E2 : Orders.OrderedType)
       destruct_head'_or; destruct_head'_and; eauto 5. }
   Qed.
 
-  Instance lt_compat : Proper (eq==>eq==>iff) lt | 1.
+  Global Instance lt_compat : Proper (eq==>eq==>iff) lt | 1.
   Proof.
     pose proof W1.lt_compat as H1; pose proof W2.lt_compat as H2.
     pose proof (@reflexivity _ W1.Equal _).

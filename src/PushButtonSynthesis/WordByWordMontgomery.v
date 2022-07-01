@@ -185,8 +185,8 @@ Section __.
     := larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
   Definition montgomery_domain_bounds := saturated_bounds.
   Definition non_montgomery_domain_bounds := saturated_bounds.
-  Typeclasses Opaque montgomery_domain_bounds.
-  Typeclasses Opaque non_montgomery_domain_bounds.
+  #[local] Typeclasses Opaque montgomery_domain_bounds.
+  #[local] Typeclasses Opaque non_montgomery_domain_bounds.
   Global Instance montgomery_domain_bounds_typedef : typedef (t:=base.type.list base.type.Z) (Some montgomery_domain_bounds)
     := { name := "montgomery_domain_field_element"
          ; description name := (text_before_type_name ++ name ++ " is a field element in the Montgomery domain.")%string }.
@@ -840,7 +840,7 @@ Section __.
           | now apply weight_bounded_of_bytes_valid
           | eapply length_of_valid; eassumption ].
 
-  Hint Rewrite
+  #[local] Hint Rewrite
        (@eval_mulmod machine_wordsize n m r' m')
        (@eval_squaremod machine_wordsize n m r' m')
        (@eval_addmod machine_wordsize n m r' m')
@@ -864,7 +864,7 @@ Section __.
         WordByWordMontgomery.WordByWordMontgomery.submod
         WordByWordMontgomery.WordByWordMontgomery.oppmod
         WordByWordMontgomery.WordByWordMontgomery.to_bytesmod.
-  Hint Unfold eval zeromod onemod : push_eval.
+  #[local] Hint Unfold eval zeromod onemod : push_eval.
 
   Local Ltac prove_correctness op_correct :=
     let dont_clear H := first [ constr_eq H curve_good ] in
@@ -1137,7 +1137,8 @@ Section __.
 End __.
 
 Module Export Hints.
-  Hint Opaque
+  Export Primitives.Hints.
+  #[export] Hint Opaque
        mul
        square
        add
@@ -1155,7 +1156,7 @@ Module Export Hints.
        selectznz
        copy
   : wf_op_cache.
-  Hint Immediate
+  #[export] Hint Immediate
        Wf_mul
        Wf_square
        Wf_add

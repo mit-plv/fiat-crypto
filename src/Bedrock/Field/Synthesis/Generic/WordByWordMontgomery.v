@@ -464,10 +464,10 @@ Section __.
                       n pout wout (op.(postcondition) args))
                    Rout m').
 
-  Hint Unfold mul square add sub opp to_montgomery from_montgomery
+  #[global] Hint Unfold mul square add sub opp to_montgomery from_montgomery
        nonzero selectznz to_bytes from_bytes : defs.
 
-  Hint Unfold
+  #[global] Hint Unfold
        spec_of_mul
        spec_of_square
        spec_of_add
@@ -794,9 +794,9 @@ Section __.
     Proof. setup; prove_is_correct Rout. Qed.
   End Proofs.
 End __.
-Hint Unfold mul square add sub opp to_montgomery from_montgomery
+#[global] Hint Unfold mul square add sub opp to_montgomery from_montgomery
      nonzero selectznz to_bytes from_bytes : defs.
-Hint Unfold
+#[global] Hint Unfold
      spec_of_mul
      spec_of_square
      spec_of_add

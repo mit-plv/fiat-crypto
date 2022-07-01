@@ -43,7 +43,7 @@ Module Associational.
                | _ => ring_simplify; lia
                end.
     Qed.
-    Hint Rewrite eval_map_sat_multerm using (lia || assumption) : push_eval.
+    #[local] Hint Rewrite eval_map_sat_multerm using (lia || assumption) : push_eval.
 
     Lemma eval_sat_mul s p q (s_nonzero:s<>0):
       Associational.eval (sat_mul s p q) = Associational.eval p * Associational.eval q.
@@ -55,7 +55,7 @@ Module Associational.
              | _ => ring_simplify; lia
              end.
     Qed.
-    Hint Rewrite eval_sat_mul : push_eval.
+    #[local] Hint Rewrite eval_sat_mul : push_eval.
 
     Definition sat_multerm_const s (t t' : (Z * Z)) : list (Z * Z) :=
       if snd t =? 1
@@ -86,7 +86,7 @@ Module Associational.
                | _ => ring_simplify; lia
                end.
     Qed.
-    Hint Rewrite eval_map_sat_multerm_const using (lia || assumption) : push_eval.
+    #[local] Hint Rewrite eval_map_sat_multerm_const using (lia || assumption) : push_eval.
 
     Lemma eval_sat_mul_const s p q (s_nonzero:s<>0):
       Associational.eval (sat_mul_const s p q) = Associational.eval p * Associational.eval q.
@@ -98,7 +98,7 @@ Module Associational.
              | _ => ring_simplify; lia
              end.
     Qed.
-    Hint Rewrite eval_sat_mul_const : push_eval.
+    #[local] Hint Rewrite eval_sat_mul_const : push_eval.
   End Associational.
 End Associational.
 
@@ -111,7 +111,7 @@ Module Columns.
 
     Lemma eval_nil n : eval n [] = 0.
     Proof using Type. cbv [eval]; simpl. apply Positional.eval_nil. Qed.
-    Hint Rewrite eval_nil : push_eval.
+    #[local] Hint Rewrite eval_nil : push_eval.
     Lemma eval_snoc n x y : n = length x -> eval (S n) (x ++ [y]) = eval n x + weight n * sum y.
     Proof using Type.
       cbv [eval]; intros; subst. rewrite map_app. simpl map.
@@ -132,7 +132,7 @@ Module Columns.
                  forall s x y, fst (add_split s x y) = (x + y) mod s)
               (add_split_div :
                  forall s x y, snd (add_split s x y) = (x + y) / s).
-      Hint Rewrite add_split_mod add_split_div : to_div_mod.
+      #[local] Hint Rewrite add_split_mod add_split_div : to_div_mod.
 
       Section flatten_column.
         Context (fw : Z). (* maximum size of the result *)
@@ -202,7 +202,7 @@ Module Columns.
         snd (flatten_column fw xs)  = sum xs / fw.
       Proof using add_split_div add_split_mod.
         (* this hint is already in the database but Z.div_add_l' is triggered first and that screws things up *)
-        Hint Rewrite <- Z.div_add' using zutil_arith : pull_Zdiv.
+        #[local] Hint Rewrite <- Z.div_add' using zutil_arith : pull_Zdiv.
         induction xs; simpl flatten_column; cbv [Let_In];
           repeat match goal with
                  | _ => rewrite IHxs
@@ -212,17 +212,17 @@ Module Columns.
                  end.
       Qed. Hint Rewrite flatten_column_div using auto with zarith : to_div_mod.
 
-      Hint Rewrite Positional.eval_nil : push_eval.
+      #[local] Hint Rewrite Positional.eval_nil : push_eval.
 
       Lemma length_flatten_step digit state :
         length (fst (flatten_step digit state)) = S (length (fst state)).
       Proof using add_split_mod. cbv [flatten_step]; push. Qed.
-      Hint Rewrite length_flatten_step : distr_length.
+      #[local] Hint Rewrite length_flatten_step : distr_length.
       Lemma length_flatten inp : length (fst (flatten inp)) = length inp.
       Proof using add_split_mod.
         cbv [flatten]. induction inp using rev_ind; push.
       Qed.
-      Hint Rewrite length_flatten : distr_length.
+      #[local] Hint Rewrite length_flatten : distr_length.
 
       Lemma flatten_snoc x inp : flatten (inp ++ [x]) = flatten_step x (flatten inp).
       Proof using Type. cbv [flatten]. rewrite rev_unit. reflexivity. Qed.
@@ -271,14 +271,14 @@ Module Columns.
       Proof using wprops add_split_mod add_split_div.
         apply flatten_div_mod.
       Qed.
-      Hint Rewrite @flatten_mod : push_eval.
+      #[local] Hint Rewrite @flatten_mod : push_eval.
 
       Lemma flatten_div {n} inp :
         length inp = n -> snd (flatten inp) = eval n inp / weight n.
       Proof using wprops add_split_mod add_split_div.
         apply flatten_div_mod.
       Qed.
-      Hint Rewrite @flatten_div : push_eval.
+      #[local] Hint Rewrite @flatten_div : push_eval.
 
       Lemma flatten_same_sum p q :
         Forall2 (fun x y => sum x = sum y) p q ->
@@ -296,7 +296,7 @@ Module Columns.
       (* nils *)
       Definition nils n : list (list Z) := repeat nil n.
       Lemma length_nils n : length (nils n) = n. Proof using Type. cbv [nils]. distr_length. Qed.
-      Hint Rewrite length_nils : distr_length.
+      #[local] Hint Rewrite length_nils : distr_length.
       Lemma eval_nils n : eval n (nils n) = 0.
       Proof using Type.
         erewrite <-Positional.eval_zeros by eauto.
@@ -308,7 +308,7 @@ Module Columns.
         ListUtil.update_nth i (fun y => cons x y) xs.
       Lemma length_cons_to_nth i x xs : length (cons_to_nth i x xs) = length xs.
       Proof using Type. cbv [cons_to_nth]. distr_length. Qed.
-      Hint Rewrite length_cons_to_nth : distr_length.
+      #[local] Hint Rewrite length_cons_to_nth : distr_length.
       Lemma cons_to_nth_add_to_nth xs : forall i x,
           map sum (cons_to_nth i x xs) = Positional.add_to_nth i x (map sum xs).
       Proof using Type.
@@ -322,8 +322,8 @@ Module Columns.
         apply Positional.eval_add_to_nth; distr_length.
       Qed. Hint Rewrite eval_cons_to_nth using (solve [distr_length]) : push_eval.
 
-      Hint Rewrite Positional.eval_zeros : push_eval.
-      Hint Rewrite Positional.eval_add_to_nth using (solve [distr_length]): push_eval.
+      #[local] Hint Rewrite Positional.eval_zeros : push_eval.
+      #[local] Hint Rewrite Positional.eval_add_to_nth using (solve [distr_length]): push_eval.
 
       (* from_associational *)
       Definition from_associational n (p:list (Z*Z)) : list (list Z) :=
@@ -332,7 +332,7 @@ Module Columns.
                            cons_to_nth (fst p) (snd p) ls ) (nils n) p.
       Lemma length_from_associational n p : length (from_associational n p) = n.
       Proof using Type. cbv [from_associational Let_In]. apply fold_right_invariant; intros; distr_length. Qed.
-      Hint Rewrite length_from_associational: distr_length.
+      #[local] Hint Rewrite length_from_associational: distr_length.
       Lemma eval_from_associational n p (n_nonzero:n<>0%nat\/p=nil) :
         eval n (from_associational n p) = Associational.eval p.
       Proof using wprops.
@@ -366,7 +366,7 @@ Module Columns.
 
       Lemma eval_reverse n p :
         eval n (reverse p) = eval n p.
-      Proof.
+      Proof using Type.
         cbv [eval reverse]. rewrite map_map.
         f_equal. apply map_ext; intros.
         autorewrite with push_sum. reflexivity.
@@ -374,12 +374,12 @@ Module Columns.
 
       Lemma length_reverse p :
         length (reverse p) = length p.
-      Proof. cbv [reverse]; distr_length. Qed.
-      Hint Rewrite @length_reverse : distr_length.
+      Proof using Type. cbv [reverse]; distr_length. Qed.
+      #[local] Hint Rewrite @length_reverse : distr_length.
 
       Lemma reverse_same_sum p :
         Forall2 (fun x y => sum x = sum y) (reverse p) p.
-      Proof.
+      Proof using Type.
         cbv [reverse].
         induction p; cbn [rev map]; constructor;
           autorewrite with push_sum; auto.
@@ -395,25 +395,25 @@ Module Rows.
     Local Notation rows := (list (list Z)) (only parsing).
     Local Notation cols := (list (list Z)) (only parsing).
 
-    Hint Rewrite Positional.eval_nil Positional.eval0 @Positional.eval_snoc
+    #[local] Hint Rewrite Positional.eval_nil Positional.eval0 @Positional.eval_snoc
          Positional.eval_to_associational
          Columns.eval_nil Columns.eval_snoc using (auto; solve [distr_length]) : push_eval.
-    Hint Resolve in_eq in_cons : core.
+    #[local] Hint Resolve in_eq in_cons : core.
 
     Definition eval n (inp : rows) :=
       sum (map (Positional.eval weight n) inp).
     Lemma eval_nil n : eval n nil = 0.
     Proof using Type. cbv [eval]. rewrite map_nil, sum_nil; reflexivity. Qed.
-    Hint Rewrite eval_nil : push_eval.
+    #[local] Hint Rewrite eval_nil : push_eval.
     Lemma eval0 x : eval 0 x = 0.
     Proof using Type. cbv [eval]. induction x; autorewrite with push_map push_sum push_eval; lia. Qed.
-    Hint Rewrite eval0 : push_eval.
+    #[local] Hint Rewrite eval0 : push_eval.
     Lemma eval_cons n r inp : eval n (r :: inp) = Positional.eval weight n r + eval n inp.
     Proof using Type. cbv [eval]; autorewrite with push_map push_sum; reflexivity. Qed.
-    Hint Rewrite eval_cons : push_eval.
+    #[local] Hint Rewrite eval_cons : push_eval.
     Lemma eval_app n x y : eval n (x ++ y) = eval n x + eval n y.
     Proof using Type. cbv [eval]; autorewrite with push_map push_sum; reflexivity. Qed.
-    Hint Rewrite eval_app : push_eval.
+    #[local] Hint Rewrite eval_app : push_eval.
 
     Ltac In_cases :=
       repeat match goal with
@@ -452,19 +452,19 @@ Module Rows.
       Lemma length_fst_extract_row (inp : cols) :
         length (fst (extract_row inp)) = length inp.
       Proof using Type. cbv [extract_row]; autorewrite with cancel_pair; distr_length. Qed.
-      Hint Rewrite length_fst_extract_row : distr_length.
+      #[local] Hint Rewrite length_fst_extract_row : distr_length.
 
       Lemma length_snd_extract_row (inp : cols) :
         length (snd (extract_row inp)) = length inp.
       Proof using Type. cbv [extract_row]; autorewrite with cancel_pair; distr_length. Qed.
-      Hint Rewrite length_snd_extract_row : distr_length.
+      #[local] Hint Rewrite length_snd_extract_row : distr_length.
 
       (* max column size *)
       Definition max_column_size (x:cols) := fold_right (fun a b => Nat.max a b) 0%nat (map (fun c => length c) x).
 
       (* TODO: move to where list is defined *)
-      Hint Rewrite @app_nil_l : list.
-      Hint Rewrite <-@app_comm_cons: list.
+      #[local] Hint Rewrite @app_nil_l : list.
+      #[local] Hint Rewrite <-@app_comm_cons: list.
 
       Lemma max_column_size_nil : max_column_size nil = 0%nat.
       Proof using Type. reflexivity. Qed. Hint Rewrite max_column_size_nil : push_max_column_size.
@@ -474,7 +474,7 @@ Module Rows.
       Lemma max_column_size_app (x y : cols) :
         max_column_size (x ++ y) = Nat.max (max_column_size x) (max_column_size y).
       Proof using Type. induction x; autorewrite with list push_max_column_size; lia. Qed.
-      Hint Rewrite max_column_size_app : push_max_column_size.
+      #[local] Hint Rewrite max_column_size_app : push_max_column_size.
       Lemma max_column_size0 (inp : cols) :
         forall n,
           length inp = n -> (* this is not needed to make the lemma true, but prevents reliance on the implementation of Columns.eval*)
@@ -524,18 +524,18 @@ Module Rows.
       Lemma length_fst_from_columns' m st :
         length (fst (from_columns' m st)) = length (fst st).
       Proof using Type. apply length_from_columns'; reflexivity. Qed.
-      Hint Rewrite length_fst_from_columns' : distr_length.
+      #[local] Hint Rewrite length_fst_from_columns' : distr_length.
       Lemma length_snd_from_columns' m st :
         (forall r, In r (snd st) -> length r = length (fst st)) ->
         forall r, In r (snd (from_columns' m st)) -> length r = length (fst st).
       Proof using Type. apply length_from_columns'; reflexivity. Qed.
-      Hint Rewrite length_snd_from_columns' : distr_length.
+      #[local] Hint Rewrite length_snd_from_columns' : distr_length.
       Lemma eval_from_columns' m st n :
         (length (fst st) = n) ->
         eval n (snd (from_columns' m st)) = Columns.eval weight n (fst st) + eval n (snd st)
                                                                              - Columns.eval weight n (fst (from_columns' m st)).
       Proof using Type. apply eval_from_columns'_with_length. Qed.
-      Hint Rewrite eval_from_columns' using (auto; solve [distr_length]) : push_eval.
+      #[local] Hint Rewrite eval_from_columns' using (auto; solve [distr_length]) : push_eval.
 
       Lemma max_column_size_extract_row inp :
         max_column_size (fst (extract_row inp)) = (max_column_size inp - 1)%nat.
@@ -545,7 +545,7 @@ Module Rows.
         autorewrite with push_max_column_size push_map distr_length.
         rewrite IHinp. auto using Nat.sub_max_distr_r.
       Qed.
-      Hint Rewrite max_column_size_extract_row : push_max_column_size.
+      #[local] Hint Rewrite max_column_size_extract_row : push_max_column_size.
 
       Lemma max_column_size_from_columns' m st :
         max_column_size (fst (from_columns' m st)) = (max_column_size (fst st) - m)%nat.
@@ -553,7 +553,7 @@ Module Rows.
         cbv [from_columns']; induction m; intros; cbn - [max_column_size extract_row];
           autorewrite with push_max_column_size; lia.
       Qed.
-      Hint Rewrite max_column_size_from_columns' : push_max_column_size.
+      #[local] Hint Rewrite max_column_size_from_columns' : push_max_column_size.
 
       Lemma eval_from_columns (inp : cols) :
         forall n, length inp = n -> eval n (from_columns inp) = Columns.eval weight n inp.
@@ -566,7 +566,7 @@ Module Rows.
                  | _ => lia
                  end.
       Qed.
-      Hint Rewrite eval_from_columns using (auto; solve [distr_length]) : push_eval.
+      #[local] Hint Rewrite eval_from_columns using (auto; solve [distr_length]) : push_eval.
 
       Lemma length_from_columns inp:
         forall r, In r (from_columns inp) -> length r = length inp.
@@ -576,7 +576,7 @@ Module Rows.
         eapply length_snd_from_columns'; eauto.
         autorewrite with cancel_pair; intros; In_cases.
       Qed.
-      Hint Rewrite length_from_columns using eassumption : distr_length.
+      #[local] Hint Rewrite length_from_columns using eassumption : distr_length.
 
       (* from associational *)
       Definition from_associational n (p : list (Z * Z)) := from_columns (Columns.from_associational weight n p).
@@ -693,7 +693,7 @@ Module Rows.
           sum_rows' state nil nil = state.
         Proof using Type. reflexivity. Qed.
 
-        Hint Rewrite sum_rows'_cons sum_rows'_nil : push_sum_rows.
+        #[local] Hint Rewrite sum_rows'_cons sum_rows'_nil : push_sum_rows.
 
         Lemma sum_rows'_correct row1 :
           forall start_state nm row2 row1' row2',
@@ -763,8 +763,8 @@ Module Rows.
           cbn [fst]. distr_length.
         Qed. Hint Rewrite length_sum_rows : distr_length.
       End SumRows.
-      Hint Resolve length_sum_rows : core.
-      Hint Rewrite sum_rows_mod using (auto; solve [distr_length; auto]) : push_eval.
+      #[local] Hint Resolve length_sum_rows : core.
+      #[local] Hint Rewrite sum_rows_mod using (auto; solve [distr_length; auto]) : push_eval.
 
       Definition flatten' (start_state : list Z * Z) (inp : rows) : list Z * Z :=
         fold_right (fun next_row (state : list Z * Z)=>
@@ -784,7 +784,7 @@ Module Rows.
         flatten' state (inp ++ r :: nil) = flatten' (fst (sum_rows (fst state) r), snd state + snd (sum_rows (fst state) r)) inp.
       Proof using Type. cbv [flatten']; autorewrite with list push_fold_right. reflexivity. Qed.
       Lemma flatten'_nil state : flatten' state [] = state. Proof using Type. reflexivity. Qed.
-      Hint Rewrite flatten'_cons flatten'_snoc flatten'_nil : push_flatten.
+      #[local] Hint Rewrite flatten'_cons flatten'_snoc flatten'_nil : push_flatten.
 
       Ltac push :=
         repeat match goal with
@@ -823,8 +823,8 @@ Module Rows.
                  end.
       Qed.
 
-      Hint Rewrite (@Positional.length_zeros) : distr_length.
-      Hint Rewrite (@Positional.eval_zeros) using auto : push_eval.
+      #[local] Hint Rewrite (@Positional.length_zeros) : distr_length.
+      #[local] Hint Rewrite (@Positional.eval_zeros) using auto : push_eval.
 
       Lemma flatten_correct inp n :
         (forall row, In row inp -> length row = n) ->
@@ -845,7 +845,7 @@ Module Rows.
         length (fst (flatten n inp)) = n.
       Proof using wprops. intros; rewrite flatten_correct by assumption; push. Qed.
     End Flatten.
-    Hint Rewrite length_flatten : distr_length.
+    #[local] Hint Rewrite length_flatten : distr_length.
 
     Section Ops.
       Definition add n p q := flatten n [p; q].
@@ -876,7 +876,7 @@ Module Rows.
         let '(res, c') := add n p_minus_q rr in
         (res, c' - c).
 
-      Hint Rewrite eval_cons eval_nil using solve [auto] : push_eval.
+      #[local] Hint Rewrite eval_cons eval_nil using solve [auto] : push_eval.
 
       Definition mul base n m (p q : list Z) :=
         let p_a := Positional.to_associational weight n p in
@@ -919,8 +919,8 @@ Module Rows.
         let r_a := repeat_sat_reduce base s c pq_a nreductions in
         flatten n (from_associational n r_a).
 
-      Hint Rewrite Associational.eval_sat_mul_const Associational.eval_sat_mul Associational.eval_split using solve [auto] : push_eval.
-      Hint Rewrite eval_from_associational using solve [auto] : push_eval.
+      #[local] Hint Rewrite Associational.eval_sat_mul_const Associational.eval_sat_mul Associational.eval_split using solve [auto] : push_eval.
+      #[local] Hint Rewrite eval_from_associational using solve [auto] : push_eval.
       Ltac solver :=
         intros; cbv [sub add mul mulmod sat_reduce];
         rewrite ?flatten_correct by (intros; In_cases; subst; distr_length; eauto using length_from_associational);
@@ -1056,7 +1056,7 @@ Module Rows.
         autorewrite with zsimplify_const; rewrite !Z.mul_assoc, Z.mul_div_eq_full, Hmod by auto.
         autorewrite with zsimplify_const push_eval; trivial.
       Qed.
-      Hint Rewrite eval_sat_reduce using auto : push_eval.
+      #[local] Hint Rewrite eval_sat_reduce using auto : push_eval.
 
       Lemma eval_repeat_sat_reduce base s c p n :
         base <> 0 -> s - Associational.eval c <> 0 -> s <> 0 ->
@@ -1066,7 +1066,7 @@ Module Rows.
         intros; cbv [repeat_sat_reduce].
         apply fold_right_invariant; intros; autorewrite with push_eval; auto.
       Qed.
-      Hint Rewrite eval_repeat_sat_reduce using auto : push_eval.
+      #[local] Hint Rewrite eval_repeat_sat_reduce using auto : push_eval.
 
       Lemma eval_mulmod base s c n nreductions p q :
         base <> 0 -> s <> 0 -> s - Associational.eval c <> 0 ->
@@ -1086,7 +1086,7 @@ Module Rows.
         := (tl p, hd 0 p).
     End Ops.
   End Rows.
-  Hint Rewrite length_from_columns using eassumption : distr_length.
-  Hint Rewrite length_sum_rows using solve [ reflexivity | eassumption | distr_length; eauto ] : distr_length.
-  Hint Rewrite length_fst_extract_row length_snd_extract_row length_flatten length_fst_from_columns' length_snd_from_columns' : distr_length.
+  #[global] Hint Rewrite length_from_columns using eassumption : distr_length.
+  #[global] Hint Rewrite length_sum_rows using solve [ reflexivity | eassumption | distr_length; eauto ] : distr_length.
+  #[global] Hint Rewrite length_fst_extract_row length_snd_extract_row length_flatten length_fst_from_columns' length_snd_from_columns' : distr_length.
 End Rows.

@@ -39,7 +39,7 @@ Section __.
    *)
   Context (felem_size_in_words_small
     : Z.of_nat felem_size_in_words < 2^width).
-  Hint Resolve @relax_bounds : compiler.
+  #[global] Hint Resolve @relax_bounds : compiler.
 
 
   Notation all_1s := (word.of_Z (-1) : word).
@@ -54,7 +54,7 @@ Section __.
       if b then all_1s else word.of_Z 0.
 
 
-    Instance HasDefault_word : HasDefault word :=
+    Global Instance HasDefault_word : HasDefault word :=
       word.of_Z 0.
 
     Instance: HasDefault (word * word) := (default, default).
@@ -168,7 +168,7 @@ Section __.
   Context `{HasDefault A} `{HasDefault B}.
   Instance: HasDefault (A * B) := (default, default).
 
-  Instance Convertible_Z_nat : Convertible Z nat := Z.to_nat.
+  Global Instance Convertible_Z_nat : Convertible Z nat := Z.to_nat.
 
 
   Lemma replace_nth_combine  n (la: list A) (lb: list B) a b
@@ -511,15 +511,15 @@ Section __.
     repeat (eexists; split; eauto).
     apply word_not_impl.
   Qed.
-  Hint Extern 10 => simple eapply compile_word_not; shelve : compiler.
+  #[global] Hint Extern 10 => simple eapply compile_word_not; shelve : compiler.
 
   Import SizedListArrayCompiler.
   Import LoopCompiler.
-  Hint Extern 10 (_ < _) => lia: compiler_side_conditions.
+  #[global] Hint Extern 10 (_ < _) => lia: compiler_side_conditions.
 
   Definition felem_cswap := "felem_cswap".
 
-    Instance spec_of_cswap : spec_of felem_cswap :=
+    Global Instance spec_of_cswap : spec_of felem_cswap :=
       fnspec! felem_cswap mask ptr1 ptr2 / c1 c2 R,
         (*TODO: if b then bw should be all 1s*)
         { requires tr mem :=
@@ -664,13 +664,13 @@ Section __.
       }
     }
   Qed.
-  Hint Resolve compile_felem_cswap : compiler.
+  #[global] Hint Resolve compile_felem_cswap : compiler.
 
 End __.
 
 
-Hint Resolve compile_felem_cswap : compiler.
+#[global] Hint Resolve compile_felem_cswap : compiler.
 
 (* TODO: why doesn't `Existing Instance` work? *)
-Hint Extern 1 (spec_of felem_cswap) =>
+#[global] Hint Extern 1 (spec_of felem_cswap) =>
        (simple refine (spec_of_cswap)) : typeclass_instances.

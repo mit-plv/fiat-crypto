@@ -36,8 +36,8 @@ Module Compilers.
   End RewriteRules.
 
   Module Export Hints.
-    Hint Resolve Wf_RewriteRelaxBitwidthAdcSbb : wf wf_extra.
-    Hint Opaque RewriteRelaxBitwidthAdcSbb : wf wf_extra interp interp_extra rewrite.
-    Hint Rewrite @Interp_RewriteRelaxBitwidthAdcSbb : interp interp_extra.
+    #[global] Hint Resolve Wf_RewriteRelaxBitwidthAdcSbb : wf wf_extra.
+    #[global] Hint Opaque RewriteRelaxBitwidthAdcSbb : wf wf_extra interp interp_extra rewrite.
+    #[global] Hint Rewrite @Interp_RewriteRelaxBitwidthAdcSbb : interp interp_extra.
   End Hints.
 End Compilers.

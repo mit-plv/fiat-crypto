@@ -97,7 +97,7 @@ Definition ladderstep : Syntax.func :=
       $mul (Z2, E, Z2)        (* pair4 X2 Z2 X3 Z3 *)
   ))).
 
-Instance spec_of_ladderstep : spec_of ladderstep :=
+Global Instance spec_of_ladderstep : spec_of ladderstep :=
   fun functions =>
     forall (X1 X2 Z2 X3 Z3 A AA B BB E C D DA CB : list word)
            (pX1 pX2 pZ2 pX3 pZ3
@@ -164,15 +164,15 @@ Instance spec_of_ladderstep : spec_of ladderstep :=
                  * Bignum n pDA DA'
                  * Bignum n pCB CB')%sep m').
 
-Instance spec_of_curve25519_carry_mul :
+Global Instance spec_of_curve25519_carry_mul :
   spec_of "curve25519_carry_mul" := spec_of_carry_mul.
-Instance spec_of_curve25519_carry_square :
+Global Instance spec_of_curve25519_carry_square :
   spec_of "curve25519_carry_square" := spec_of_carry_square.
-Instance spec_of_curve25519_add :
+Global Instance spec_of_curve25519_add :
   spec_of "curve25519_add" := spec_of_add.
-Instance spec_of_curve25519_sub :
+Global Instance spec_of_curve25519_sub :
   spec_of "curve25519_sub" := spec_of_sub.
-Instance spec_of_curve25519_carry_scmul_const121665 :
+Global Instance spec_of_curve25519_carry_scmul_const121665 :
   spec_of "curve25519_carry_scmul_const121665"
   := @spec_of_carry_scmul_const _ curve25519_bedrock2_scmul121665_spec.
 

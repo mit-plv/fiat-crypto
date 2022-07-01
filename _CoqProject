@@ -1,5 +1,5 @@
 -R src Crypto
--arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,unsupported-attributes
+-arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+unexpected-implicit-declaration,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,+deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality,+undeclared-scope,+deprecated-typeclasses-transparency-without-locality,unsupported-attributes
 -arg -native-compiler -arg ondemand
 src/BoundsPipeline.v
 src/CLI.v

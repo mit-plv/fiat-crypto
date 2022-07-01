@@ -762,10 +762,10 @@ Module Import ListWSfun_gen_proofs.
 
     Lemma find'_None elt k : @find' elt k None = None.
     Proof using Type. case k; t. Qed.
-    Hint Rewrite find'_None : list_map_alt.
+    #[local] Hint Rewrite find'_None : list_map_alt.
     Lemma find_None elt k pf : @find elt k (mk None pf) = None.
     Proof using Type. case k; t. Qed.
-    Hint Rewrite find_None : list_map_alt.
+    #[local] Hint Rewrite find_None : list_map_alt.
 
     Definition Empty_alt elt (m : t elt) : Prop := proj1_sig m = None.
 
@@ -804,7 +804,7 @@ Module Import ListWSfun_gen_proofs.
     Qed.
     Local Existing Instances eq_key_equiv eq_key_elt_equiv | 10.
 
-    Hint Unfold
+    #[local] Hint Unfold
       (*In_alt*)
       empty
       is_empty
@@ -846,7 +846,7 @@ Module Import ListWSfun_gen_proofs.
       oNode_dec_empty
       : list_map_alt.
 
-    Hint Rewrite Empty_alt_iff (*Equiv_alt_iff*)
+    #[local] Hint Rewrite Empty_alt_iff (*Equiv_alt_iff*)
          M.cardinal_1
          M.fold_1
          M'.find_mapsto_iff
@@ -866,7 +866,7 @@ Module Import ListWSfun_gen_proofs.
          in_flat_map
       : list_map_alt.
 
-    Hint Resolve
+    #[local] Hint Resolve
          M.MapsTo_1
          M.mem_1
          M.empty_1
@@ -881,7 +881,7 @@ Module Import ListWSfun_gen_proofs.
          M.mapi_1
          M.map2_1
       : list_map_alt1.
-    Hint Resolve
+    #[local] Hint Resolve
          M.mem_2
          M.is_empty_2
          M.add_2
@@ -893,15 +893,15 @@ Module Import ListWSfun_gen_proofs.
          M.mapi_2
          M.map2_2
       : list_map_alt2.
-    Hint Resolve
+    #[local] Hint Resolve
          M.add_3
          M.remove_3
          M.elements_3w
       : list_map_alt3.
 
-    Hint Constructors ex and or
+    #[local] Hint Constructors ex and or
       : list_map_alt1 list_map_alt2 list_map_alt3.
-    Hint Extern 10
+    #[local] Hint Extern 10
          => progress unfold M_In in *
              : list_map_alt1 list_map_alt2 list_map_alt3.
 
@@ -934,7 +934,7 @@ Module Import ListWSfun_gen_proofs.
                  end
                | progress specialize_under_binders_by apply conj ].
 
-    Hint Extern 100
+    #[local] Hint Extern 100
            => spec_t_step_quick
              : list_map_alt1 list_map_alt2 list_map_alt3.
 
@@ -1076,7 +1076,7 @@ Module Import ListWSfun_gen_proofs.
       Proof using Type. apply find_iff. Qed.
       Lemma find_2 : find x m = Some e -> MapsTo x e m.
       Proof using Type. apply find_iff. Qed.
-      Hint Rewrite fold_left_flat_map fold_left_map : list_map_alt.
+      #[local] Hint Rewrite fold_left_flat_map fold_left_map : list_map_alt.
       Lemma elements_alt_1 (m0 : t' elt) k_prefix i : elements_with_key_prefix_and m0 k_prefix (List.rev i) = fold' (fun k v rest => rest ++ [(k_prefix ++ k, v)]) m0 i.
       Proof using Type.
         clear.

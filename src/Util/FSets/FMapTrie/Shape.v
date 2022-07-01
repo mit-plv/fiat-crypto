@@ -275,7 +275,7 @@ Global Arguments Node' {t _ _ _ _ _ _ _ _ _} d m _.
 
 Create HintDb trie_db discriminated.
 
-Hint Rewrite
+#[global] Hint Rewrite
      t_case_beta
      mapi_beta
      map2_beta
@@ -285,7 +285,7 @@ Hint Rewrite
      recursively_non_empty_beta
   : trie_db.
 
-Hint Unfold
+#[global] Hint Unfold
      id_fix
      id_fix_2
      id_case
@@ -310,7 +310,7 @@ Module Type Trie (label : DecidableType) (map : FMapInterface.WSfun label).
   Include TypFunctor.
   Include TrieShape label map.
   Parameter Inline everything : Everything.
-  Existing Instance everything.
+  Global Existing Instance everything.
 End Trie.
 
 Module TrieTactics.

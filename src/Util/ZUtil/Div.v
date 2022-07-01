@@ -16,7 +16,7 @@ Local Open Scope Z_scope.
 Module Z.
   Lemma div_mul' : forall a b : Z, b <> 0 -> (b * a) / b = a.
   Proof. intros. rewrite Z.mul_comm. apply Z.div_mul; auto. Qed.
-  Hint Rewrite div_mul' using zutil_arith : zsimplify.
+  #[global] Hint Rewrite div_mul' using zutil_arith : zsimplify.
 
   Local Ltac replace_to_const c :=
     repeat match goal with
@@ -48,9 +48,9 @@ Module Z.
   Proof. intro; rewrite <- Z.div_add, (Z.mul_comm c); try lia. Qed.
   Lemma div_add_l' a b c : b <> 0 -> (b * a + c) / b = a + c / b.
   Proof. intro; rewrite <- Z.div_add_l, (Z.mul_comm b); lia. Qed.
-  Hint Rewrite Z.div_add' Z.div_add_l' using zutil_arith : push_Zdiv.
-  Hint Rewrite <- Z.div_add' Z.div_add_l' using zutil_arith : pull_Zdiv.
-  Hint Rewrite div_add_l' div_add' using zutil_arith : zsimplify.
+  #[global] Hint Rewrite Z.div_add' Z.div_add_l' using zutil_arith : push_Zdiv.
+  #[global] Hint Rewrite <- Z.div_add' Z.div_add_l' using zutil_arith : pull_Zdiv.
+  #[global] Hint Rewrite div_add_l' div_add' using zutil_arith : zsimplify.
 
   Lemma div_sub a b c : c <> 0 -> (a - b * c) / c = a / c - b.
   Proof. intros; rewrite <- !Z.add_opp_r, <- Z.div_add by lia; apply f_equal2; lia. Qed.
@@ -58,7 +58,7 @@ Module Z.
   Lemma div_sub' a b c : c <> 0 -> (a - c * b) / c = a / c - b.
   Proof. intro; rewrite <- div_sub, (Z.mul_comm c); try lia. Qed.
 
-  Hint Rewrite div_sub div_sub' using zutil_arith : zsimplify.
+  #[global] Hint Rewrite div_sub div_sub' using zutil_arith : zsimplify.
 
   Lemma div_add_sub_l a b c d : b <> 0 -> (a * b + c - d) / b = a + (c - d) / b.
   Proof. rewrite <- Z.add_sub_assoc; apply Z.div_add_l. Qed.
@@ -72,7 +72,7 @@ Module Z.
   Lemma div_add_sub' a b c d : c <> 0 -> (a + c * b - d) / c = (a - d) / c + b.
   Proof. rewrite (Z.add_comm _ (_ * _)), (Z.add_comm (_ / _)); apply Z.div_add_sub_l'. Qed.
 
-  Hint Rewrite Z.div_add_sub Z.div_add_sub' Z.div_add_sub_l Z.div_add_sub_l' using zutil_arith : zsimplify.
+  #[global] Hint Rewrite Z.div_add_sub Z.div_add_sub' Z.div_add_sub_l Z.div_add_sub_l' using zutil_arith : zsimplify.
 
   Lemma div_mul_skip a b k : 0 < b -> 0 < k -> a * b / k / b = a / k.
   Proof.
@@ -86,7 +86,7 @@ Module Z.
     autorewrite with zsimplify; reflexivity.
   Qed.
 
-  Hint Rewrite Z.div_mul_skip Z.div_mul_skip' using zutil_arith : zsimplify.
+  #[global] Hint Rewrite Z.div_mul_skip Z.div_mul_skip' using zutil_arith : zsimplify.
 
   Lemma div_mul_skip_pow base e0 e1 x y : 0 < y -> 0 < base -> 0 <= e1 <= e0 -> x * base^e0 / y / base^e1 = x * base^(e0 - e1) / y.
   Proof.
@@ -96,7 +96,7 @@ Module Z.
     rewrite !Z.mul_assoc.
     autorewrite with zsimplify; lia.
   Qed.
-  Hint Rewrite div_mul_skip_pow using zutil_arith : zsimplify.
+  #[global] Hint Rewrite div_mul_skip_pow using zutil_arith : zsimplify.
 
   Lemma div_mul_skip_pow' base e0 e1 x y : 0 < y -> 0 < base -> 0 <= e1 <= e0 -> base^e0 * x / y / base^e1 = base^(e0 - e1) * x / y.
   Proof.
@@ -104,7 +104,7 @@ Module Z.
     rewrite (Z.mul_comm (base^e0) x), div_mul_skip_pow by lia.
     auto using f_equal2 with lia.
   Qed.
-  Hint Rewrite div_mul_skip_pow' using zutil_arith : zsimplify.
+  #[global] Hint Rewrite div_mul_skip_pow' using zutil_arith : zsimplify.
 
   Lemma div_le_mono_nonneg a b c : 0 <= c -> a <= b -> a / c <= b / c.
   Proof.
@@ -112,7 +112,7 @@ Module Z.
     { subst; simpl; autorewrite with zsimplify; reflexivity. }
     { intros; apply Z.div_le_mono; lia. }
   Qed.
-  Hint Resolve div_le_mono_nonneg : zarith.
+  #[global] Hint Resolve div_le_mono_nonneg : zarith.
 
   Lemma div_le_mono_pow_pos a b c e : a <= b -> a / Z.pos c ^ e <= b / Z.pos c ^ e.
   Proof. auto with zarith. Qed.
@@ -122,14 +122,14 @@ Module Z.
     destruct (Z_zerop b); subst; rewrite ?Zdiv_0_r; [ reflexivity | ].
     intros; apply Z.div_pos; lia.
   Qed.
-  Hint Resolve div_nonneg : zarith.
+  #[global] Hint Resolve div_nonneg : zarith.
 
   Lemma div_add_exact x y d : d <> 0 -> x mod d = 0 -> (x + y) / d = x / d + y / d.
   Proof.
     intros; rewrite (Z_div_exact_full_2 x d) at 1 by assumption.
     rewrite Z.div_add_l' by assumption; lia.
   Qed.
-  Hint Rewrite div_add_exact using zutil_arith : zsimplify.
+  #[global] Hint Rewrite div_add_exact using zutil_arith : zsimplify.
 
   Lemma Z_divide_div_mul_exact' a b c : b <> 0 -> (b | a) -> a * c / b = c * (a / b).
   Proof. intros. rewrite Z.mul_comm. auto using Z.divide_div_mul_exact. Qed.
@@ -152,7 +152,7 @@ Module Z.
          rewrite Z.div_add_exact by (autorewrite with pull_Zmod zsimplify; auto).
          rewrite <- Z.div_sub_mod_exact by lia; lia.
   Qed.
-  Hint Resolve div_sub_mod_cond : zarith.
+  #[global] Hint Resolve div_sub_mod_cond : zarith.
 
   Lemma div_add_mod_cond_l : forall x y d, d <> 0 -> (x + y) / d = (x mod d + y) / d + x / d.
   Proof.
@@ -197,7 +197,7 @@ Module Z.
 
   Lemma div_lt_upper_bound' a b q : 0 < b -> a < q * b -> a / b < q.
   Proof. intros; apply Z.div_lt_upper_bound; nia. Qed.
-  Hint Resolve div_lt_upper_bound' : zarith.
+  #[global] Hint Resolve div_lt_upper_bound' : zarith.
 
   Lemma div_cross_le_abs a b c' d : c' <> 0 -> d <> 0 -> a * Z.sgn c' * Z.abs d <= b * Z.sgn d * Z.abs c' -> a / c' <= b / d.
   Proof.
@@ -242,30 +242,30 @@ Module Z.
     destruct (Z_zerop (a mod b)); autorewrite with zsimplify pull_Zopp; lia.
   Qed.
 
-  Hint Rewrite Z.div_opp_l_complete using zutil_arith : pull_Zopp.
-  Hint Rewrite Z.div_opp_l_complete' using zutil_arith : push_Zopp.
+  #[global] Hint Rewrite Z.div_opp_l_complete using zutil_arith : pull_Zopp.
+  #[global] Hint Rewrite Z.div_opp_l_complete' using zutil_arith : push_Zopp.
 
   Lemma div_opp a : a <> 0 -> -a / a = -1.
   Proof.
     intros; autorewrite with pull_Zopp zsimplify; lia.
   Qed.
 
-  Hint Rewrite Z.div_opp using zutil_arith : zsimplify.
+  #[global] Hint Rewrite Z.div_opp using zutil_arith : zsimplify.
 
   Lemma div_sub_1_0 x : x > 0 -> (x - 1) / x = 0.
   Proof. auto with zarith lia. Qed.
 
-  Hint Rewrite div_sub_1_0 using zutil_arith : zsimplify.
+  #[global] Hint Rewrite div_sub_1_0 using zutil_arith : zsimplify.
 
   Lemma div_same' a b : b <> 0 -> a = b -> a / b = 1.
   Proof.
     intros; subst; auto with zarith.
   Qed.
-  Hint Resolve div_same' : zarith.
+  #[global] Hint Resolve div_same' : zarith.
 
   Lemma div_opp_r a b : a / (-b) = ((-a) / b).
   Proof. Z.div_mod_to_quot_rem; nia. Qed.
-  Hint Resolve div_opp_r : zarith.
+  #[global] Hint Resolve div_opp_r : zarith.
 
   Lemma div_floor : forall a b c, 0 < b -> a < b * (Z.succ c) -> a / b <= c.
   Proof.
@@ -282,7 +282,7 @@ Module Z.
     transitivity (x * z / z); [ | rewrite Z.div_mul by lia; lia ].
     apply Z_div_le; nia.
   Qed.
-  Hint Resolve mul_div_le : zarith.
+  #[global] Hint Resolve mul_div_le : zarith.
 
   Lemma div_mul_diff_exact a b c
         (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
@@ -335,14 +335,14 @@ Module Z.
   Proof.
     pose proof (Z.div_mul_le_le a b c); lia.
   Qed.
-  Hint Resolve div_mul_le_le_offset : zarith.
+  #[global] Hint Resolve div_mul_le_le_offset : zarith.
 
   Lemma div_x_y_x x y : 0 < x -> 0 < y -> x / y / x = 1 / y.
   Proof.
     intros; rewrite Z.div_div, (Z.mul_comm y x), <- Z.div_div, Z.div_same by lia.
     reflexivity.
   Qed.
-  Hint Rewrite div_x_y_x using zutil_arith : zsimplify.
+  #[global] Hint Rewrite div_x_y_x using zutil_arith : zsimplify.
 
   Lemma sub_pos_bound_div a b X : 0 <= a < X -> 0 <= b < X -> -1 <= (a - b) / X <= 0.
   Proof.
@@ -350,10 +350,10 @@ Module Z.
     assert (Hn : -X <= a - b) by lia.
     assert (Hp : a - b <= X - 1) by lia.
     split; etransitivity; [ | apply Z_div_le, Hn; lia | apply Z_div_le, Hp; lia | ];
-      instantiate; autorewrite with zsimplify; try reflexivity.
+      autorewrite with zsimplify; try reflexivity.
   Qed.
 
-  Hint Resolve (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1))
+  #[global] Hint Resolve (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1))
        (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)) : zarith.
 
   Lemma sub_pos_bound_div_eq a b X : 0 <= a < X -> 0 <= b < X -> (a - b) / X = if a <? b then -1 else 0.
@@ -371,20 +371,20 @@ Module Z.
     apply Z.sub_pos_bound_div_eq.
   Qed.
 
-  Hint Rewrite Z.sub_pos_bound_div_eq Z.add_opp_pos_bound_div_eq using zutil_arith : zstrip_div.
+  #[global] Hint Rewrite Z.sub_pos_bound_div_eq Z.add_opp_pos_bound_div_eq using zutil_arith : zstrip_div.
 
   Lemma div_small_sym a b : 0 <= a < b -> 0 = a / b.
   Proof. intros; symmetry; apply Z.div_small; assumption. Qed.
-  Hint Resolve div_small_sym : zarith.
+  #[global] Hint Resolve div_small_sym : zarith.
 
   Lemma mod_eq_le_div_1 a b : 0 < a <= b -> a mod b = 0 -> a / b = 1.
   Proof. intros; Z.div_mod_to_quot_rem; nia. Qed.
-  Hint Resolve mod_eq_le_div_1 : zarith.
-  Hint Rewrite mod_eq_le_div_1 using zutil_arith : zsimplify.
+  #[global] Hint Resolve mod_eq_le_div_1 : zarith.
+  #[global] Hint Rewrite mod_eq_le_div_1 using zutil_arith : zsimplify.
 
   Lemma div_small_neg x y : 0 < -x <= y -> x / y = -1.
   Proof. intros; Z.div_mod_to_quot_rem; nia. Qed.
-  Hint Rewrite div_small_neg using zutil_arith : zsimplify.
+  #[global] Hint Rewrite div_small_neg using zutil_arith : zsimplify.
 
   Lemma div_sub_small x y z : 0 <= x < z -> 0 <= y <= z -> (x - y) / z = if x <? y then -1 else 0.
   Proof.
@@ -392,31 +392,31 @@ Module Z.
     (destruct (x <? y) eqn:?);
       intros; autorewrite with zsimplify; try lia.
   Qed.
-  Hint Rewrite div_sub_small using zutil_arith : zsimplify.
+  #[global] Hint Rewrite div_sub_small using zutil_arith : zsimplify.
 
   Lemma mul_div_lt_by_le x y z b : 0 <= y < z -> 0 <= x < b -> x * y / z < b.
   Proof.
     intros [? ?] [? ?]; eapply Z.le_lt_trans; [ | eassumption ].
     auto with zarith.
   Qed.
-  Hint Resolve mul_div_lt_by_le : zarith.
+  #[global] Hint Resolve mul_div_lt_by_le : zarith.
 
   Definition mul_div_le'
     := fun x y z w p H0 H1 H2 H3 => @Z.le_trans _ _ w (@Z.mul_div_le x y z H0 H1 H2 H3) p.
-  Hint Resolve mul_div_le' : zarith.
+  #[global] Hint Resolve mul_div_le' : zarith.
   Lemma mul_div_le'' x y z w : y <= w -> 0 <= x -> 0 <= y -> 0 < z -> x <= z -> x * y / z <= w.
   Proof.
     rewrite (Z.mul_comm x y); intros; apply mul_div_le'; assumption.
   Qed.
-  Hint Resolve mul_div_le'' : zarith.
+  #[global] Hint Resolve mul_div_le'' : zarith.
 
   Lemma div_between n a b : 0 <= n -> b <> 0 -> n * b <= a < (1 + n) * b -> a / b = n.
   Proof. intros; Z.div_mod_to_quot_rem_in_goal; nia. Qed.
-  Hint Rewrite div_between using zutil_arith : zsimplify.
+  #[global] Hint Rewrite div_between using zutil_arith : zsimplify.
 
   Lemma div_between_1 a b : b <> 0 -> b <= a < 2 * b -> a / b = 1.
   Proof. intros; rewrite (div_between 1) by lia; reflexivity. Qed.
-  Hint Rewrite div_between_1 using zutil_arith : zsimplify.
+  #[global] Hint Rewrite div_between_1 using zutil_arith : zsimplify.
 
   Lemma div_between_if n a b : 0 <= n -> b <> 0 -> n * b <= a < (2 + n) * b -> (a / b = if (1 + n) * b <=? a then 1 + n else n)%Z.
   Proof.

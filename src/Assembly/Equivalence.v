@@ -31,7 +31,7 @@ Local Open Scope list_scope.
 
 (** List of registers used for outputs/inputs *)
 Class assembly_calling_registers_opt := assembly_calling_registers' : option (list REG).
-Typeclasses Opaque assembly_calling_registers_opt.
+#[global] Typeclasses Opaque assembly_calling_registers_opt.
 Definition default_assembly_calling_registers := [rdi;rsi;rdx;rcx;r8;r9].
 Definition assembly_calling_registers {v : assembly_calling_registers_opt} : list REG
   := Option.value v default_assembly_calling_registers.
@@ -60,13 +60,13 @@ Definition assembly_callee_saved_registers {v : assembly_callee_saved_registers_
      end.
 (** Are output arrays considered to come before input arrays, or after them? *)
 Class assembly_output_first_opt := assembly_output_first : bool.
-Typeclasses Opaque assembly_output_first_opt.
+#[global] Typeclasses Opaque assembly_output_first_opt.
 (** Should we assign registers to the arguments in left-to-right or right-to-left order? *)
 Class assembly_argument_registers_left_to_right_opt := assembly_argument_registers_left_to_right : bool.
-Typeclasses Opaque assembly_argument_registers_left_to_right_opt.
+#[global] Typeclasses Opaque assembly_argument_registers_left_to_right_opt.
 (** Stack size (in bytes) *)
 Class assembly_stack_size_opt := assembly_stack_size' : option N.
-Typeclasses Opaque assembly_stack_size_opt.
+#[global] Typeclasses Opaque assembly_stack_size_opt.
 Definition extra_assembly_stack_size := 0%N.
 (** The stack size is taken to be the given command line argument, or
     else inferred to be extra_assembly_stack_size plus the maximum

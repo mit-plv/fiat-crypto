@@ -21,7 +21,7 @@ Section Field.
   Definition prefix : string := "fe1305_"%string.
 
   (* Define Poly1305 field *)
-  Instance field_parameters : FieldParameters.
+  Global Instance field_parameters : FieldParameters.
   Proof using Type.
     let M := (eval vm_compute in (Z.to_pos (UnsaturatedSolinas.m s c))) in
     (* dummy 'A' parameter since we don't care about scmula24 here *)
@@ -33,7 +33,7 @@ Section Field.
   Defined.
 
   (* Call fiat-crypto pipeline on all field operations *)
-  Instance fe1305_ops : unsaturated_solinas_ops n s c.
+  Global Instance fe1305_ops : unsaturated_solinas_ops n s c.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
   (**** Translate each field operation into bedrock2 and apply bedrock2 backend

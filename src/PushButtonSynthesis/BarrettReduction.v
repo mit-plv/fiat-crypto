@@ -217,10 +217,11 @@ Section rbarrett_red.
 End rbarrett_red.
 
 Module Export Hints.
-  Hint Opaque
+  Export Primitives.Hints.
+  #[export] Hint Opaque
        barrett_red
   : wf_op_cache.
-  Hint Immediate
+  #[export] Hint Immediate
        Wf_barrett_red
   : wf_op_cache.
 End Hints.

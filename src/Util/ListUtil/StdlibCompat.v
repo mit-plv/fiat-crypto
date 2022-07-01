@@ -584,8 +584,7 @@ Module Export List.
     now apply in_map, Hincl.
   Qed.
 
-  #[global]
-   Hint Resolve incl_refl incl_tl incl_tran incl_appl incl_appr incl_cons
+  #[global] Hint Resolve incl_refl incl_tl incl_tran incl_appl incl_appr incl_cons
    incl_app incl_map: datatypes.
 
 
@@ -739,8 +738,7 @@ Module Export List.
 
       Variable P:A->Prop.
 
-      #[local]
-       Hint Constructors Exists : core.
+      #[local] Hint Constructors Exists : core.
 
       Local Notation Exists := (@Exists A P).
 
@@ -787,8 +785,7 @@ Module Export List.
         apply Exists_exists; exists a; intuition.
       Qed.
 
-      #[local]
-       Hint Constructors Forall : core.
+      #[local] Hint Constructors Forall : core.
 
       Local Notation Forall := (@Forall A P).
 
@@ -1453,8 +1450,7 @@ Module Export Sorting.
 
     End Permutation_map.
 
-    #[global]
-     Instance Permutation_list_sum : Proper (@Permutation nat ==> eq) list_sum | 10.
+    #[global] Instance Permutation_list_sum : Proper (@Permutation nat ==> eq) list_sum | 10.
     Proof using Type.
       intros l1 l2 HP; induction HP; simpl; intuition.
       - rewrite 2 (Nat.add_comm x).
@@ -1462,8 +1458,7 @@ Module Export Sorting.
       - now transitivity (list_sum l').
     Qed.
 
-    #[global]
-     Instance Permutation_list_max : Proper (@Permutation nat ==> eq) list_max | 10.
+    #[global] Instance Permutation_list_max : Proper (@Permutation nat ==> eq) list_max | 10.
     Proof using Type.
       intros l1 l2 HP; induction HP; simpl; intuition.
       - rewrite 2 (Nat.max_comm x).
@@ -1482,7 +1477,7 @@ Module Export Sorting.
       | perm_t_trans l l' l'' :
         Permutation_transp l l' -> Permutation_transp l' l'' -> Permutation_transp l l''.
 
-      Instance Permutation_transp_sym : Symmetric Permutation_transp.
+      Global Instance Permutation_transp_sym : Symmetric Permutation_transp.
       Proof using Type.
         intros l1 l2 HP; induction HP; subst; try (now constructor).
         now apply (perm_t_trans IHHP2).

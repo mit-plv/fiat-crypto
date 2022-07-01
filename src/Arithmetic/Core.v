@@ -37,7 +37,7 @@ Module Associational.
   Proof. induction p; rewrite <-?List.app_comm_cons;
            rewrite ?eval_nil, ?eval_cons; nsatz.              Qed.
 
-  Hint Rewrite eval_nil eval_cons eval_app : push_eval.
+  #[global] Hint Rewrite eval_nil eval_cons eval_app : push_eval.
   Local Ltac push := autorewrite with
       push_eval push_map push_partition push_flat_map
       push_fold_right push_nth_default cancel_pair.
@@ -45,7 +45,7 @@ Module Associational.
   Lemma eval_map_mul (a x:Z) (p:list (Z*Z))
   : eval (List.map (fun t => (a*fst t, x*snd t)) p) = a*x*eval p.
   Proof. induction p; push; nsatz.                            Qed.
-  Hint Rewrite eval_map_mul : push_eval.
+  #[global] Hint Rewrite eval_map_mul : push_eval.
 
   Definition mul (p q:list (Z*Z)) : list (Z*Z) :=
     flat_map (fun t =>
@@ -54,7 +54,7 @@ Module Associational.
     q) p.
   Lemma eval_mul p q : eval (mul p q) = eval p * eval q.
   Proof. induction p; cbv [mul]; push; nsatz.                 Qed.
-  Hint Rewrite eval_mul : push_eval.
+  #[global] Hint Rewrite eval_mul : push_eval.
 
   Definition square (p:list (Z*Z)) : list (Z*Z) :=
     list_rect
@@ -70,13 +70,13 @@ Module Associational.
       p.
   Lemma eval_square p : eval (square p) = eval p * eval p.
   Proof. induction p; cbv [square list_rect Let_In]; push; nsatz. Qed.
-  Hint Rewrite eval_square : push_eval.
+  #[global] Hint Rewrite eval_square : push_eval.
 
   Definition negate_snd (p:list (Z*Z)) : list (Z*Z) :=
     map (fun cx => (fst cx, -snd cx)) p.
   Lemma eval_negate_snd p : eval (negate_snd p) = - eval p.
   Proof. induction p; cbv [negate_snd]; push; nsatz.          Qed.
-  Hint Rewrite eval_negate_snd : push_eval.
+  #[global] Hint Rewrite eval_negate_snd : push_eval.
 
   Example base10_2digit_mul (a0:Z) (a1:Z) (b0:Z) (b1:Z) :
     {ab| eval ab = eval [(10,a1);(1,a0)] * eval [(10,b1);(1,b0)]}.
@@ -91,12 +91,12 @@ Module Associational.
   Lemma eval_partition f (p:list (Z*Z)) :
     eval (snd (partition f p)) + eval (fst (partition f p)) = eval p.
   Proof. induction p; cbn [partition]; eta_expand; break_match; cbn [fst snd]; push; nsatz. Qed.
-  Hint Rewrite eval_partition : push_eval.
+  #[global] Hint Rewrite eval_partition : push_eval.
 
   Lemma eval_partition' f (p:list (Z*Z)) :
     eval (fst (partition f p)) + eval (snd (partition f p)) = eval p.
   Proof. rewrite Z.add_comm, eval_partition; reflexivity. Qed.
-  Hint Rewrite eval_partition' : push_eval.
+  #[global] Hint Rewrite eval_partition' : push_eval.
 
   Lemma eval_fst_partition f p : eval (fst (partition f p)) = eval p - eval (snd (partition f p)).
   Proof. rewrite <- (eval_partition f p); nsatz. Qed.
@@ -135,7 +135,7 @@ Module Associational.
     eval (reduce s c p) mod (s - eval c) = eval p mod (s - eval c).
   Proof using Type. cbv [reduce]; push.
          rewrite <-reduction_rule, eval_split; trivial.      Qed.
-  Hint Rewrite eval_reduce : push_eval.
+  #[global] Hint Rewrite eval_reduce : push_eval.
 
   Lemma eval_reduce_adjusted s c p w c' (s_nz:s<>0) (modulus_nz:s-eval c<>0)
         (w_mod:w mod s = 0) (w_nz:w <> 0) (Hc' : eval c' = (w / s) * eval c) :
@@ -176,7 +176,7 @@ Module Associational.
         [ reflexivity | rewrite IHn ].
     now rewrite eval_reduce.
   Qed.
-  Hint Rewrite eval_repeat_reduce : push_eval.
+  #[global] Hint Rewrite eval_repeat_reduce : push_eval.
 
   Lemma eval_repeat_reduce_adjusted n s c p w c' (s_nz:s<>0) (modulus_nz:s-eval c<>0)
         (w_mod:w mod s = 0) (w_nz:w <> 0) (Hc' : eval c' = (w / s) * eval c) :
@@ -213,7 +213,7 @@ Module Associational.
    *)
   Lemma eval_rev p : eval (rev p) = eval p.
   Proof using Type. induction p; cbn [rev]; push; lia. Qed.
-  Hint Rewrite eval_rev : push_eval.
+  #[global] Hint Rewrite eval_rev : push_eval.
   (*
   Lemma eval_permutation (p q : list (Z * Z)) : Permutation p q -> eval p = eval q.
   Proof using Type. induction 1; push; nsatz.                          Qed.
@@ -236,7 +236,7 @@ Module Associational.
 
   Lemma eval_sort p : eval (RevWeightSort.sort p) = eval p.
   Proof using Type. symmetry; apply eval_permutation, RevWeightSort.Permuted_sort. Qed.
-  Hint Rewrite eval_sort : push_eval.
+  #[global] Hint Rewrite eval_sort : push_eval.
   *)
   (* rough template (we actually have to do things a bit differently to account for duplicate weights):
 [ dlet fi_c := c * fi in
@@ -297,12 +297,12 @@ Module Associational.
     rewrite !Z.Z_divide_div_mul_exact' by auto using Znumtheory.Zmod_divide.
     f_equal; nia.
   Qed.
-  Hint Rewrite eval_map_mul_div using solve [ auto ] : push_eval.
+  #[global] Hint Rewrite eval_map_mul_div using solve [ auto ] : push_eval.
 
   Lemma eval_map_mul_div' s a b c (s_nz:s <> 0) (a_mod : (a*a) mod s = 0)
     : eval (map (fun x => (((a * a) * fst x) / s, (b * b) * snd x)) c) = ((a * a) / s) * (b * b) * eval c.
   Proof using Type. rewrite <- eval_map_mul_div by assumption; f_equal; apply map_ext; intro; Z.div_mod_to_quot_rem_in_goal; f_equal; nia. Qed.
-  Hint Rewrite eval_map_mul_div' using solve [ auto ] : push_eval.
+  #[global] Hint Rewrite eval_map_mul_div' using solve [ auto ] : push_eval.
 
   Lemma eval_flat_map_if A (f : A -> bool) g h p
     : eval (flat_map (fun x => if f x then g x else h x) p)
@@ -315,7 +315,7 @@ Module Associational.
 
   Lemma eval_if (b : bool) p q : eval (if b then p else q) = if b then eval p else eval q.
   Proof using Type. case b; reflexivity. Qed.
-  Hint Rewrite eval_if : push_eval.
+  #[global] Hint Rewrite eval_if : push_eval.
 
   Lemma split_app s p q :
     split s (p ++ q) = (fst (split s p) ++ fst (split s q), snd (split s p) ++ snd (split s q)).
@@ -329,7 +329,7 @@ Module Associational.
   Lemma snd_split_app s p q :
     snd (split s (p ++ q)) = snd (split s p) ++ snd (split s q).
   Proof using Type. rewrite split_app; reflexivity. Qed.
-  Hint Rewrite fst_split_app snd_split_app : push_eval.
+  #[global] Hint Rewrite fst_split_app snd_split_app : push_eval.
 
   Lemma eval_reduce_list_rect_app A s c N C p :
     eval (reduce s c (@list_rect A _ N (fun x xs acc => C x xs ++ acc) p))
@@ -338,24 +338,24 @@ Module Associational.
     cbv [reduce]; induction p as [|p ps IHps]; cbn [list_rect]; push; [ nsatz | rewrite <- IHps; clear IHps ].
     push; nsatz.
   Qed.
-  Hint Rewrite eval_reduce_list_rect_app : push_eval.
+  #[global] Hint Rewrite eval_reduce_list_rect_app : push_eval.
 
   Lemma eval_list_rect_app A N C p :
     eval (@list_rect A _ N (fun x xs acc => C x xs ++ acc) p)
     = @list_rect A _ (eval N) (fun x xs acc => eval (C x xs) + acc) p.
   Proof using Type. induction p; cbn [list_rect]; push; nsatz. Qed.
-  Hint Rewrite eval_list_rect_app : push_eval.
+  #[global] Hint Rewrite eval_list_rect_app : push_eval.
 
   Local Existing Instances list_rect_Proper pointwise_map flat_map_Proper.
   Local Hint Extern 0 (Proper _ _) => solve_Proper_eq : typeclass_instances.
 
   Lemma reduce_nil s c : reduce s c nil = nil.
   Proof using Type. cbv [reduce]; induction c; cbn; intuition auto. Qed.
-  Hint Rewrite reduce_nil : push_eval.
+  #[global] Hint Rewrite reduce_nil : push_eval.
 
   Lemma eval_reduce_app s c p q : eval (reduce s c (p ++ q)) = eval (reduce s c p) + eval (reduce s c q).
   Proof using Type. cbv [reduce]; push; nsatz. Qed.
-  Hint Rewrite eval_reduce_app : push_eval.
+  #[global] Hint Rewrite eval_reduce_app : push_eval.
 
   Lemma eval_reduce_cons s c p q :
     eval (reduce s c (p :: q))
@@ -365,7 +365,7 @@ Module Associational.
     cbv [reduce split]; cbn [partition fst snd]; eta_expand; push.
     break_innermost_match; cbn [fst snd map]; push; nsatz.
   Qed.
-  Hint Rewrite eval_reduce_cons : push_eval.
+  #[global] Hint Rewrite eval_reduce_cons : push_eval.
 
   Lemma mul_cons_l t ts p :
     mul (t::ts) p = map (fun t' => (fst t * fst t', snd t * snd t')) p ++ mul ts p.
@@ -374,14 +374,14 @@ Module Associational.
   Proof using Type. reflexivity. Qed.
   Lemma mul_nil_r p : mul p nil = nil.
   Proof using Type. cbv [mul]; induction p; cbn; intuition auto. Qed.
-  Hint Rewrite mul_nil_l mul_nil_r : push_eval.
+  #[global] Hint Rewrite mul_nil_l mul_nil_r : push_eval.
   Lemma mul_app_l p p' q :
     mul (p ++ p') q = mul p q ++ mul p' q.
   Proof using Type. cbv [mul]; rewrite flat_map_app; reflexivity. Qed.
   Lemma mul_singleton_l_app_r p q q' :
     mul [p] (q ++ q') = mul [p] q ++ mul [p] q'.
   Proof using Type. cbv [mul flat_map]; rewrite !map_app, !app_nil_r; reflexivity. Qed.
-  Hint Rewrite mul_singleton_l_app_r : push_eval.
+  #[global] Hint Rewrite mul_singleton_l_app_r : push_eval.
   Lemma mul_singleton_singleton p q :
     mul [p] [q] = [(fst p * fst q, snd p * snd q)].
   Proof using Type. reflexivity. Qed.
@@ -453,7 +453,7 @@ Module Associational.
     : eval (reduce_square s c p) mod (s - eval c)
       = (eval p * eval p) mod (s - eval c).
   Proof using Type. rewrite eval_reduce_square_exact by assumption; push; auto. Qed.
-  Hint Rewrite eval_reduce_square : push_eval.
+  #[global] Hint Rewrite eval_reduce_square : push_eval.
 
   Definition bind_snd (p : list (Z*Z)) :=
     map (fun t => dlet_nd t2 := snd t in (fst t, t2)) p.
@@ -488,7 +488,7 @@ Module Associational.
     Lemma eval_carry w fw p (fw_nonzero:fw<>0):
       eval (carry w fw p) = eval p.
     Proof using Type*. cbv [carry]; induction p; push; nsatz. Qed.
-    Hint Rewrite eval_carry using auto : push_eval.
+    #[local] Hint Rewrite eval_carry using auto : push_eval.
   End Carries.
 End Associational.
 
@@ -570,13 +570,13 @@ Module Positional.
   Lemma eval_to_associational n x :
     Associational.eval (@to_associational n x) = eval n x.
   Proof using Type. trivial.                                             Qed.
-  Hint Rewrite @eval_to_associational : push_eval.
+  #[local] Hint Rewrite @eval_to_associational : push_eval.
   Lemma eval_nil n : eval n [] = 0.
   Proof using Type. cbv [eval to_associational]. rewrite combine_nil_r. reflexivity. Qed.
-  Hint Rewrite eval_nil : push_eval.
+  #[local] Hint Rewrite eval_nil : push_eval.
   Lemma eval0 p : eval 0 p = 0.
   Proof using Type. cbv [eval to_associational]. reflexivity. Qed.
-  Hint Rewrite eval0 : push_eval.
+  #[local] Hint Rewrite eval0 : push_eval.
 
   Lemma eval_snoc n m x y : n = length x -> m = S n -> eval m (x ++ [y]) = eval n x + weight n * y.
   Proof using Type.
@@ -589,14 +589,14 @@ Module Positional.
 
   Lemma eval_snoc_S n x y : n = length x -> eval (S n) (x ++ [y]) = eval n x + weight n * y.
   Proof using Type. intros; erewrite eval_snoc; eauto. Qed.
-  Hint Rewrite eval_snoc_S using (solve [distr_length]) : push_eval.
+  #[local] Hint Rewrite eval_snoc_S using (solve [distr_length]) : push_eval.
 
   (* SKIP over this: zeros, add_to_nth *)
   Local Ltac push := autorewrite with push_eval push_map distr_length
     push_flat_map push_fold_right push_nth_default cancel_pair natsimplify.
   Definition zeros n : list Z := repeat 0 n.
   Lemma length_zeros n : length (zeros n) = n. Proof using Type. clear; cbv [zeros]; distr_length. Qed.
-  Hint Rewrite length_zeros : distr_length.
+  #[local] Hint Rewrite length_zeros : distr_length.
   Lemma eval_combine_zeros ls n : Associational.eval (List.combine ls (zeros n)) = 0.
   Proof using Type.
     clear; cbv [Associational.eval zeros].
@@ -607,7 +607,7 @@ Module Positional.
     := ListUtil.update_nth i (fun y => x + y) ls.
   Lemma length_add_to_nth i x ls : length (add_to_nth i x ls) = length ls.
   Proof using Type. clear; cbv [add_to_nth]; distr_length. Qed.
-  Hint Rewrite length_add_to_nth : distr_length.
+  #[local] Hint Rewrite length_add_to_nth : distr_length.
   Lemma eval_add_to_nth (n:nat) (i:nat) (x:Z) (xs:list Z) (H:(i<length xs)%nat)
         (Hn : length xs = n) (* N.B. We really only need [i < Nat.min n (length xs)] *) :
     eval n (add_to_nth i x xs) = weight i * x + eval n xs.
@@ -624,9 +624,9 @@ Module Positional.
            | _ => progress (apply Zminus_eq; ring_simplify)
            | _ => rewrite <-ListUtil.map_nth_default_always
            end; lia.                                          Qed.
-  Hint Rewrite @eval_add_to_nth eval_zeros eval_combine_zeros : push_eval.
+  #[local] Hint Rewrite @eval_add_to_nth eval_zeros eval_combine_zeros : push_eval.
   Lemma add_to_nth_zero i l : add_to_nth i 0 l = l.
-  Proof. cbv [add_to_nth]. apply update_nth_id_eq. reflexivity. Qed.
+  Proof using Type. cbv [add_to_nth]. apply update_nth_id_eq. reflexivity. Qed.
 
   Lemma zeros_ext_map {A} n (p : list A) : length p = n -> zeros n = map (fun _ => 0) p.
   Proof using Type. cbv [zeros]; intro; subst; induction p; cbn; congruence. Qed.
@@ -641,7 +641,7 @@ Module Positional.
       f_equal; apply map_ext; intros; f_equal; nsatz. }
     { rewrite Associational.eval_map_mul, eval_to_associational; nsatz. }
   Qed.
-  Hint Rewrite eval_mul_each : push_eval.
+  #[local] Hint Rewrite eval_mul_each : push_eval.
 
   Definition place (t:Z*Z) (i:nat) : nat * Z :=
     nat_rect
@@ -662,7 +662,7 @@ Module Positional.
     repeat match goal with |- context[?a/?b] =>
       unique pose proof (Z_div_exact_full_2 a b ltac:(auto) ltac:(auto))
            end; nsatz.                                        Qed.
-  Hint Rewrite weight_place : push_eval.
+  #[local] Hint Rewrite weight_place : push_eval.
   Lemma weight_add_mod (weight_mul : forall i, weight (S i) mod weight i = 0) i j
     : weight (i + j) mod weight i = 0.
   Proof using weight_nz.
@@ -738,10 +738,10 @@ Module Positional.
   apply fold_right_invariant; cbv [zeros add_to_nth];
   intros; rewrite ?map_length, ?List.repeat_length, ?seq_length, ?length_update_nth;
   destruct n; cbn [pred] in *; try lia.                     Qed.
-  Hint Rewrite @eval_from_associational : push_eval.
+  #[local] Hint Rewrite @eval_from_associational : push_eval.
   Lemma length_from_associational n p : length (from_associational n p) = n.
   Proof using Type. cbv [from_associational Let_In]. apply fold_right_invariant; intros; distr_length. Qed.
-  Hint Rewrite length_from_associational : distr_length.
+  #[local] Hint Rewrite length_from_associational : distr_length.
 
   Definition extend_to_length (n_in n_out : nat) (p:list Z) : list Z :=
     p ++ zeros (n_out - n_in).
@@ -754,19 +754,19 @@ Module Positional.
     rewrite seq_add, map_app, combine_app_samelength, Associational.eval_app;
       push; lia.
   Qed.
-  Hint Rewrite eval_extend_to_length : push_eval.
+  #[local] Hint Rewrite eval_extend_to_length : push_eval.
   Lemma length_extend_to_length n_in n_out p :
     length p = n_in -> (n_in <= n_out)%nat ->
     length (extend_to_length n_in n_out p) = n_out.
   Proof using Type. clear; cbv [extend_to_length]; intros; distr_length.        Qed.
-  Hint Rewrite length_extend_to_length : distr_length.
+  #[local] Hint Rewrite length_extend_to_length : distr_length.
 
   Definition drop_high_to_length (n : nat) (p:list Z) : list Z :=
     firstn n p.
   Lemma length_drop_high_to_length n p :
     length (drop_high_to_length n p) = Nat.min n (length p).
   Proof using Type. clear; cbv [drop_high_to_length]; intros; distr_length.        Qed.
-  Hint Rewrite length_drop_high_to_length : distr_length.
+  #[local] Hint Rewrite length_drop_high_to_length : distr_length.
 
   Section mulmod.
     Context (s:Z) (s_nz:s <> 0)
@@ -799,7 +799,7 @@ Module Positional.
     Proof using m_nz s_nz weight_0 weight_nz. cbv [squaremod]; push; trivial.
     destruct f; simpl in *; [ right; subst n; reflexivity | left; try lia.. ]. Qed.
   End mulmod.
-  Hint Rewrite @eval_mulmod @eval_squaremod : push_eval.
+  #[local] Hint Rewrite @eval_mulmod @eval_squaremod : push_eval.
 
   Definition add (n:nat) (a b:list Z) : list Z
     := let a_a := to_associational n a in
@@ -809,12 +809,12 @@ Module Positional.
         (Hf : length f = n) (Hg : length g = n) :
     eval n (add n f g) = (eval n f + eval n g).
   Proof using weight_0 weight_nz. cbv [add]; push; trivial. destruct n; auto.          Qed.
-  Hint Rewrite @eval_add : push_eval.
+  #[local] Hint Rewrite @eval_add : push_eval.
   Lemma length_add n f g
         (Hf : length f = n) (Hg : length g = n) :
     length (add n f g) = n.
   Proof using Type. clear -Hf Hf; cbv [add]; distr_length.               Qed.
-  Hint Rewrite @length_add : distr_length.
+  #[local] Hint Rewrite @length_add : distr_length.
 
   Section Carries.
     Definition carry n m (index:nat) (p:list Z) : list Z :=
@@ -825,7 +825,7 @@ Module Positional.
 
     Lemma length_carry n m index p : length (carry n m index p) = m.
     Proof using Type. cbv [carry]; distr_length. Qed.
-    Hint Rewrite length_carry : distr_length.
+    #[local] Hint Rewrite length_carry : distr_length.
     Lemma eval_carry n m i p: (n <> 0%nat) -> (m <> 0%nat) ->
                               weight (S i) / weight i <> 0 ->
       eval m (carry n m i p) = eval n p.
@@ -847,11 +847,11 @@ Module Positional.
       eval n (carry_reduce n s c index p) mod (s - Associational.eval c)
       = eval n p mod (s - Associational.eval c).
     Proof using weight_0 weight_nz. cbv [carry_reduce]; intros; push; auto.            Qed.
-    Hint Rewrite @eval_carry_reduce : push_eval.
+    #[local] Hint Rewrite @eval_carry_reduce : push_eval.
     Lemma length_carry_reduce n s c index p
       : length p = n -> length (carry_reduce n s c index p) = n.
     Proof using Type. cbv [carry_reduce]; distr_length.                  Qed.
-    Hint Rewrite @length_carry_reduce : distr_length.
+    #[local] Hint Rewrite @length_carry_reduce : distr_length.
 
     (* N.B. It is important to reverse [idxs] here, because fold_right is
       written such that the first terms in the list are actually used
@@ -894,8 +894,8 @@ Module Positional.
       : length (encode n s c x) = n.
     Proof using Type. cbv [encode]; repeat distr_length.                 Qed.
   End Carries.
-  Hint Rewrite @eval_encode @eval_carry @eval_carry_reduce @eval_chained_carries : push_eval.
-  Hint Rewrite @length_encode @length_carry @length_carry_reduce @length_chained_carries : distr_length.
+  #[local] Hint Rewrite @eval_encode @eval_carry @eval_carry_reduce @eval_chained_carries : push_eval.
+  #[local] Hint Rewrite @length_encode @length_carry @length_carry_reduce @length_chained_carries : distr_length.
 
   Section sub.
     Context (n:nat)
@@ -923,7 +923,7 @@ Module Positional.
 
     Lemma length_scmul x a : length (scmul x a) = n.
     Proof using Type. cbv [scmul]; now push. Qed.
-    Hint Rewrite length_scmul : distr_length.
+    #[local] Hint Rewrite length_scmul : distr_length.
 
     Lemma eval_scmul x a : eval n (scmul x a) = x * eval n a.
     Proof using weight_0 weight_nz.
@@ -931,9 +931,9 @@ Module Positional.
       destruct (zerop n) as [->|]; [ cbn; lia | ].
       cbv [scmul]; push; try lia.
     Qed.
-    Hint Rewrite eval_scmul : push_eval.
+    #[local] Hint Rewrite eval_scmul : push_eval.
 
-    Hint Rewrite eval_balance : push_eval.
+    #[local] Hint Rewrite eval_balance : push_eval.
     Lemma eval_sub a b
       : (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
         (List.length a = n) -> (List.length b = n) ->
@@ -945,12 +945,12 @@ Module Positional.
         eauto with lia.
       push_Zmod; push; pull_Zmod; push_Zmod; pull_Zmod; distr_length; eauto.
     Qed.
-    Hint Rewrite eval_sub : push_eval.
+    #[local] Hint Rewrite eval_sub : push_eval.
     Lemma length_sub a b
       : length a = n -> length b = n ->
         length (sub a b) = n.
     Proof using length_balance. intros; cbv [sub scmul negate_snd]; repeat distr_length. Qed.
-    Hint Rewrite length_sub : distr_length.
+    #[local] Hint Rewrite length_sub : distr_length.
     Definition opp (a:list Z) : list Z
       := sub (zeros n) a.
     Lemma eval_opp
@@ -964,8 +964,8 @@ Module Positional.
       : length a = n -> length (opp a) = n.
     Proof using length_balance. cbv [opp]; intros; repeat distr_length.            Qed.
   End sub.
-  Hint Rewrite @eval_scmul @eval_opp @eval_sub : push_eval.
-  Hint Rewrite @length_scmul @length_sub @length_opp : distr_length.
+  #[local] Hint Rewrite @eval_scmul @eval_opp @eval_sub : push_eval.
+  #[local] Hint Rewrite @length_scmul @length_sub @length_opp : distr_length.
 
   Section select.
     Definition zselect (mask cond:Z) (p:list Z) :=
@@ -1022,7 +1022,7 @@ Module Positional.
     Lemma length_select_min cond p q :
       length (select cond p q) = Nat.min (length p) (length q).
     Proof using Type. clear dependent weight. cbv [select Let_In]; distr_length. Qed.
-    Hint Rewrite length_select_min : distr_length.
+    #[local] Hint Rewrite length_select_min : distr_length.
     Lemma length_select n cond p q :
       length p = n -> length q = n ->
       length (select cond p q) = n.
@@ -1037,8 +1037,8 @@ Module Positional.
   End select.
 End Positional.
 (* Hint Rewrite disappears after the end of a section *)
-Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_carry @length_chained_carries @length_encode @length_scmul @length_sub @length_opp @length_select @length_zselect @length_select_min @length_extend_to_length @length_drop_high_to_length : distr_length.
-Hint Rewrite @eval_zeros @eval_nil @eval_snoc_S @eval_select @eval_zselect @eval_extend_to_length using solve [auto; distr_length]: push_eval.
+#[global] Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_carry @length_chained_carries @length_encode @length_scmul @length_sub @length_opp @length_select @length_zselect @length_select_min @length_extend_to_length @length_drop_high_to_length : distr_length.
+#[global] Hint Rewrite @eval_zeros @eval_nil @eval_snoc_S @eval_select @eval_zselect @eval_extend_to_length using solve [auto; distr_length]: push_eval.
 Section Positional_nonuniform.
   Context (weight weight' : nat -> Z).
 
@@ -1067,7 +1067,7 @@ Section Positional_nonuniform.
     erewrite <- !map_S_seq, IHxs; [ reflexivity | ]; cbn; eauto with lia.
   Qed.
 End Positional_nonuniform.
-Hint Rewrite @eval_cons using solve [auto; distr_length]: push_eval.
+#[global] Hint Rewrite @eval_cons using solve [auto; distr_length]: push_eval.
 End Positional.
 
 Record weight_properties {weight : nat -> Z} :=
@@ -1078,7 +1078,7 @@ Record weight_properties {weight : nat -> Z} :=
     weight_divides : forall i : nat, 0 < weight (S i) / weight i;
   }.
 Global Hint Resolve weight_0 weight_positive weight_multiples weight_divides : core.
-Hint Rewrite @weight_0 @weight_multiples using solve [auto]: push_eval.
+#[global] Hint Rewrite @weight_0 @weight_multiples using solve [auto]: push_eval.
 Lemma weight_nz {weight : nat -> Z} {wprops : @weight_properties weight}
   : forall i, weight i <> 0.
 Proof. intro i; pose proof (@weight_positive _ wprops i); lia. Qed.

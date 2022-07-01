@@ -12,7 +12,7 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Local Open Scope Z_scope.
 
 Module Z.
-  Hint Rewrite Z.log2_pow2 Z.pow_1_r using solve [auto using Z.log2_nonneg with zarith] : push_Zpow.
+  #[global] Hint Rewrite Z.log2_pow2 Z.pow_1_r using solve [auto using Z.log2_nonneg with zarith] : push_Zpow.
 
   Lemma cc_m_eq_full : forall s x, Z.cc_m s x = if (s =? 1) then x * 2 else x / (s / 2).
   Proof.
@@ -55,26 +55,26 @@ Module Z.
     all: intros x0 x1 H; rewrite !cc_m_eq_full; break_innermost_match; Z.ltb_to_lt; [ nia | ].
     all: Z.div_mod_to_quot_rem; nia.
   Qed.
-  Hint Resolve cc_m_Proper_le_r_gen : zarith.
+  #[global] Hint Resolve cc_m_Proper_le_r_gen : zarith.
 
   Lemma cc_m_Proper_le_r s
     : Proper (Z.le ==> Z.le) (Definitions.Z.cc_m s)
       \/ Proper (Basics.flip Z.le ==> Z.le) (Definitions.Z.cc_m s).
   Proof. pose proof (cc_m_Proper_le_r_gen s); tauto. Qed.
-  Hint Resolve cc_m_Proper_le_r : zarith.
+  #[global] Hint Resolve cc_m_Proper_le_r : zarith.
 
   Lemma cc_m_Proper_le_r_pos s
     : Proper (Z.le ==> Z.le) (Definitions.Z.cc_m (Z.pos s)).
   Proof. pose proof (cc_m_Proper_le_r_gen (Z.pos s)); intuition lia. Qed.
-  Hint Resolve cc_m_Proper_le_r_pos : zarith.
+  #[global] Hint Resolve cc_m_Proper_le_r_pos : zarith.
 
   Lemma cc_m_Proper_le_r_neg s
     : Proper (Basics.flip Z.le ==> Z.le) (Definitions.Z.cc_m (Z.neg s)).
   Proof. pose proof (cc_m_Proper_le_r_gen (Z.neg s)); intuition lia. Qed.
-  Hint Resolve cc_m_Proper_le_r_neg : zarith.
+  #[global] Hint Resolve cc_m_Proper_le_r_neg : zarith.
 
   Lemma cc_m_Proper_le_r_0
     : Proper (Z.le ==> Z.le) (Definitions.Z.cc_m 0).
   Proof. pose proof (cc_m_Proper_le_r_gen 0); intuition lia. Qed.
-  Hint Resolve cc_m_Proper_le_r_0 : zarith.
+  #[global] Hint Resolve cc_m_Proper_le_r_0 : zarith.
 End Z.

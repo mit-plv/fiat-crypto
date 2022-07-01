@@ -289,7 +289,7 @@ Section WordByWordMontgomery.
        | _ => eauto with helpers
        end).
 
-  Hint Resolve relax_list_Z_bounded_by partition_bounded_by : bounds.
+  #[global] Hint Resolve relax_list_Z_bounded_by partition_bounded_by : bounds.
 
   Ltac simpl_map_unsigned :=
     lazymatch goal with
@@ -770,7 +770,7 @@ Require Import bedrock2.ProgramLogic.
   Existing Instances no_select_size split_mul_to split_multiret_to.
   Definition n := Eval vm_compute in (WordByWordMontgomery.n m machine_wordsize).
 
-  Instance field_parameters : FieldParameters.
+  Global Instance field_parameters : FieldParameters.
   Proof using Type.
     let M := (eval vm_compute in (Z.to_pos (m))) in
     (* Curve25519 "A" parameter (see section 4.1 of RFC 7748) *)
@@ -781,7 +781,7 @@ Require Import bedrock2.ProgramLogic.
          M ((a - F.of_Z _ 2) / F.of_Z _ 4)%F prefix).
   Defined.
 
-  Instance p224_ops : word_by_word_Montgomery_ops n m.
+  Global Instance p224_ops : word_by_word_Montgomery_ops n m.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
   Local Ltac begin_derive_bedrock2_func :=

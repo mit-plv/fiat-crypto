@@ -485,7 +485,7 @@ Section with_parameters.
     
   End WithAccessSize.
 
-  Instance byte_ac : FitsInLocal byte :=
+  Global Instance byte_ac : FitsInLocal byte :=
     {|
       predT := ptsto;
       szT := access_size.one;
@@ -514,7 +514,7 @@ Section with_parameters.
   Qed.
         
   
-  Instance byte_ac_ok : FitsInLocal_ok byte byte_ac.
+  Global Instance byte_ac_ok : FitsInLocal_ok byte byte_ac.
   Proof.
     constructor; unfold word_of_T, szT, predT, byte_ac.
     {
@@ -541,14 +541,14 @@ Section with_parameters.
   Qed.
 
   
-  Instance word_ac : FitsInLocal word :=
+  Global Instance word_ac : FitsInLocal word :=
     {|
       predT := scalar;
       szT := access_size.word;
       word_of_T b := b;
     |}.
   
-  Instance word_ac_ok : FitsInLocal_ok word word_ac.
+  Global Instance word_ac_ok : FitsInLocal_ok word word_ac.
   Proof.
     constructor; unfold word_of_T, szT, predT, word_ac.
     {

@@ -9,13 +9,11 @@ Module Type UsualEqualityTypeBoth <: EqualityTypeBoth
 
 Local Coercion is_true : bool >-> Sortclass.
 Module Type IsEqb (Import E : Typ) (Import Eb:HasEqb E).
-#[global]
-  Declare Instance eqb_equiv : Equivalence eqb.
+#[global] Declare Instance eqb_equiv : Equivalence eqb.
 End IsEqb.
 
 Module IsEqbFacts (Import E : Typ) (Import Eb:HasEqb E) (Import E' : IsEqb E Eb).
-  #[global]
-   Instance eqb_Proper : Proper (eqb ==> eqb ==> eq) eqb | 10.
+  #[global] Instance eqb_Proper : Proper (eqb ==> eqb ==> eq) eqb | 10.
   Proof.
     intros x x' Hx y y' Hy; destruct (eqb x y) eqn:Hxy, (eqb x' y') eqn:Hxy'; try reflexivity;
       (rewrite <- Hxy + rewrite <- Hxy'); (idtac + symmetry);

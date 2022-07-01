@@ -271,7 +271,7 @@ Ltac solve_reflect :=
   | false => repeat solve_reflect_step
   end.
 
-Hint Constructors reflect : typeclass_instances.
+#[global] Hint Constructors reflect : typeclass_instances.
 
 Local Hint Resolve -> Bool.eqb_true_iff : core.
 Local Hint Resolve <- Bool.eqb_true_iff : core.

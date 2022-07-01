@@ -58,7 +58,7 @@ Module Type TotalOrderBool := StrOrderBool <+ HasLeb <+ LebIsLtbEqb <+ LebIsTota
 Module Type TotalOrderBool' := TotalOrderBool <+ EqLtLeBoolNotation.
 
 Module TransitiveLeBool_of_TotalOrderBool (Import T : TotalOrderBool') <: LebIsTransitive T.
-  Instance leb_trans : Transitive T.leb | 10.
+  Global Instance leb_trans : Transitive T.leb | 10.
   Proof.
     intros x y z.
     pose proof (_ : Transitive ltb) as ltb_trans.
@@ -159,7 +159,7 @@ Module BackportCompare (Import E : EqLt) (C : HasCmp E) (CS : CmpSpec E C) <: Ha
   Defined.
 End BackportCompare.
 Module UpdateStrOrder_StrOrder (Import E : EqLt) (EE : IsEqOrig E) (S : IsStrOrderOrig E).
-  Instance lt_strorder : StrictOrder lt | 100.
+  Global Instance lt_strorder : StrictOrder lt | 100.
   Proof.
     pose proof S.lt_trans.
     pose proof S.lt_not_eq.
@@ -168,7 +168,7 @@ Module UpdateStrOrder_StrOrder (Import E : EqLt) (EE : IsEqOrig E) (S : IsStrOrd
   Qed.
 End UpdateStrOrder_StrOrder.
 Module UpdateStrOrder_Compat (Import E : EqLt) (EE : IsEqOrig E) (S : IsStrOrderOrig E) (C : HasCompareOrig E).
-  Instance lt_compat : Proper (eq ==> eq ==> iff) lt | 100.
+  Global Instance lt_compat : Proper (eq ==> eq ==> iff) lt | 100.
   Proof.
     cbv.
     intros x y H x' y' H'.

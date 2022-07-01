@@ -192,10 +192,10 @@ Section __.
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
 
-  Hint Rewrite
+  #[local] Hint Rewrite
        (fun pf => @Rows.eval_mulmod (weight machine_wordsize 1) (@wprops _ _ pf))
        using solve [ auto with zarith | congruence | solve_extra_bounds_side_conditions ] : push_eval.
-  Hint Unfold mulmod : push_eval.
+  #[local] Hint Unfold mulmod : push_eval.
 
   Local Ltac prove_correctness _ := Primitives.prove_correctness use_curve_good.
 
@@ -234,10 +234,11 @@ Section __.
 End __.
 
 Module Export Hints.
-  Hint Opaque
+  Export Primitives.Hints.
+  #[export] Hint Opaque
        mul
   : wf_op_cache.
-  Hint Immediate
+  #[export] Hint Immediate
        Wf_mul
   : wf_op_cache.
 End Hints.

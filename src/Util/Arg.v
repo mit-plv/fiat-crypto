@@ -592,4 +592,4 @@ Definition show_list_parse_error {should_block_indent : ShouldBlockIndent} (spec
        => mk_usage prog_name [prog_name ++ ": Internal fatal error while parsing command line arguments: Out of fuel (probably a bugged command line argument specification)"]%string
      end.
 
-Instance default_should_block_indent : ShouldBlockIndent := ArbitraryIndent.
+Global Instance default_should_block_indent : ShouldBlockIndent := ArbitraryIndent.

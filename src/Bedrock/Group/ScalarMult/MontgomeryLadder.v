@@ -84,13 +84,13 @@ Section __.
   Context {field_parameters : FieldParameters}.
   Context {field_representaton : FieldRepresentation}.
   Context {field_representation_ok : FieldRepresentation_ok}.
-  Hint Resolve @relax_bounds : compiler.
+  #[global] Hint Resolve @relax_bounds : compiler.
 
   Section MontLadder.
     Context scalarbits (scalarbits_small : word.wrap (Z.of_nat scalarbits) = Z.of_nat scalarbits).
     Local Notation "bs $@ a" := (array ptsto (word.of_Z 1) a bs) (at level 20).
 
-    Instance spec_of_montladder : spec_of "montladder" :=
+    Global Instance spec_of_montladder : spec_of "montladder" :=
       fnspec! "montladder"
             (pOUT pK pU : word)
             / Kbytes (K : Z) (U : F M_pos) (* inputs *)
@@ -116,7 +116,7 @@ Section __.
     Proof. exact word.unsigned_of_Z_1. Qed.
     Lemma unsigned_of_Z_0 : word.unsigned (@word.of_Z _ word 0) = 0.
     Proof. exact word.unsigned_of_Z_0. Qed.
-    Hint Resolve unsigned_of_Z_0 unsigned_of_Z_1 : compiler.
+    #[global] Hint Resolve unsigned_of_Z_0 unsigned_of_Z_1 : compiler.
     Import bedrock2.NotationsCustomEntry.
  Lemma compile_sctestbit : forall {tr mem locals functions} bs x i,
    let v := Z.testbit x (Z.of_nat i) in
@@ -190,7 +190,7 @@ Section __.
    rewrite Nat2Z.inj_div. Lia.lia.
  Qed.
 
-  Hint Extern 8
+  #[global] Hint Extern 8
        (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (Z.testbit _ _) _))) =>
   simple eapply compile_sctestbit; shelve : compiler.
 
@@ -217,11 +217,11 @@ Section __.
 
   (* TODO: why doesn't `Existing Instance` work?
   Existing Instance spec_of_sctestbit.*)
-  Hint Extern 1 (spec_of "ladderstep") =>
+  #[global] Hint Extern 1 (spec_of "ladderstep") =>
   (simple refine (@spec_of_ladderstep _ _ _ _ _ _ _ _)) : typeclass_instances.
 
   
-  Hint Extern 1 (spec_of "cswap") =>
+  #[global] Hint Extern 1 (spec_of "cswap") =>
   (simple refine (spec_of_cswap)) : typeclass_instances.
     
   (* TODO: this seems a bit delicate*)
@@ -236,7 +236,7 @@ Section __.
         destruct v
       end].
   
-  Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (cswap _ _ _) _))) =>
+  #[global] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (cswap _ _ _) _))) =>
   compile_cswap; shelve : compiler.
   
   
@@ -248,7 +248,7 @@ Section __.
     rewrite word.wrap_small; auto.
   Qed.
 
-  Hint Extern 8 (word.unsigned (word.of_Z _) = _) =>
+  #[global] Hint Extern 8 (word.unsigned (word.of_Z _) = _) =>
   simple eapply word_unsigned_of_Z_eq; [ ZnWords |] : compiler.
 
   (*TODO: should this go in core rupicola?*)
@@ -278,15 +278,15 @@ Section __.
     repeat straightline.
     eauto.
   Qed.
-  Hint Extern 10 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ ?v _))) =>
+  #[global] Hint Extern 10 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ ?v _))) =>
   is_var v; simple eapply compile_copy_bool; shelve : compiler.
 
 
-  Hint Resolve unsigned_of_Z_0 : compiler_side_conditions.
-  Hint Resolve unsigned_of_Z_1 : compiler_side_conditions.
-  Hint Unfold F.one F.zero : compiler_cleanup.
+  #[global] Hint Resolve unsigned_of_Z_0 : compiler_side_conditions.
+  #[global] Hint Resolve unsigned_of_Z_1 : compiler_side_conditions.
+  #[global] Hint Unfold F.one F.zero : compiler_cleanup.
 
-  Hint Extern 10 (_ < _) => lia : compiler_side_conditions.
+  #[global] Hint Extern 10 (_ < _) => lia : compiler_side_conditions.
 
   (* TODO: update the original definition in bedrock2 *)
   Ltac find_implication xs y ::=
@@ -301,7 +301,7 @@ Section __.
 
   Context { F_M_pos : Z.pos M_pos = 2^255-19 }.
 
-  Hint Extern 1 (spec_of "fe25519_inv") =>
+  #[global] Hint Extern 1 (spec_of "fe25519_inv") =>
   (simple refine (spec_of_exp_large)) : typeclass_instances.
   
     Derive montladder_body SuchThat

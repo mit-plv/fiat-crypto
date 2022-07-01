@@ -29,7 +29,7 @@ Section PartitionProofs.
 
   Lemma length_partition n x : length (partition n x) = n.
   Proof using Type. cbv [partition]; distr_length. Qed.
-  Hint Rewrite length_partition : distr_length.
+  #[local] Hint Rewrite length_partition : distr_length.
 
   Lemma eval_partition n x :
     Positional.eval weight n (partition n x) = x mod (weight n).
@@ -130,7 +130,7 @@ Section PartitionProofs.
   Qed.
 
   Lemma partition_0 n : partition n 0 = Positional.zeros n.
-  Proof.
+  Proof using Type.
     cbv [partition].
     erewrite Positional.zeros_ext_map with (p:=seq 0 n) by distr_length.
     apply map_ext; intros.
@@ -138,6 +138,6 @@ Section PartitionProofs.
   Qed.
 
 End PartitionProofs.
-Hint Rewrite length_partition length_recursive_partition : distr_length.
-Hint Rewrite eval_partition using (solve [auto; distr_length]) : push_eval.
-Hint Rewrite nth_default_partition_full : push_nth_default.
+#[global] Hint Rewrite length_partition length_recursive_partition : distr_length.
+#[global] Hint Rewrite eval_partition using (solve [auto; distr_length]) : push_eval.
+#[global] Hint Rewrite nth_default_partition_full : push_nth_default.

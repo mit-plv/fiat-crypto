@@ -275,8 +275,7 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
     Create HintDb prod_map_alt2 discriminated.
     Create HintDb prod_map_alt3 discriminated.
 
-    Global
-      Hint Unfold
+    Global Hint Unfold
       (*In_alt*)
       empty
       is_empty
@@ -316,7 +315,7 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
       not
       : prod_map_alt.
 
-    Hint Rewrite (*In_alt_iff*) Empty_alt_iff (*Equal_alt_iff*) Equiv_alt_iff (*Equivb_alt_iff*)
+    #[global] Hint Rewrite (*In_alt_iff*) Empty_alt_iff (*Equal_alt_iff*) Equiv_alt_iff (*Equivb_alt_iff*)
          M1.cardinal_1
          M1.fold_1
          M2.cardinal_1
@@ -403,9 +402,9 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
            M2.elements_3w
       : prod_map_alt3.
 
-    Hint Constructors ex and or
+    #[global] Hint Constructors ex and or
       : prod_map_alt1 prod_map_alt2 prod_map_alt3.
-    Hint Extern 10
+    #[global] Hint Extern 10
          => progress unfold M1.In, M2.In in *
              : prod_map_alt1 prod_map_alt2 prod_map_alt3.
 
@@ -704,7 +703,7 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
       Lemma cardinal_1 : cardinal m = length (elements m).
       Proof using Type. clear; spec_t. Qed.
 
-      Hint Rewrite fold_left_flat_map fold_left_map : prod_map_alt.
+      #[local] Hint Rewrite fold_left_flat_map fold_left_map : prod_map_alt.
       Lemma fold_1 :
         forall (A : Type) (i : A) (f : key -> elt -> A -> A),
           fold f m i = fold_left (fun a p => f (fst p) (snd p) a) (elements m) i.

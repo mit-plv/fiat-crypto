@@ -276,7 +276,7 @@ Section UnsaturatedSolinas.
        | _ => eauto with helpers
        end).
 
-  Hint Resolve relax_list_Z_bounded_by partition_bounded_by : bounds.
+  #[global] Hint Resolve relax_list_Z_bounded_by partition_bounded_by : bounds.
 
   Ltac simpl_map_unsigned :=
     lazymatch goal with
@@ -585,7 +585,7 @@ Section Tests.
   Existing Instances no_select_size split_mul_to split_multiret_to.
   Definition prefix : string := "fe25519_"%string.
 
-  Instance field_parameters : FieldParameters.
+  Global Instance field_parameters : FieldParameters.
   Proof using Type.
     let M := (eval vm_compute in (Z.to_pos (m s c))) in
     (* Curve25519 "A" parameter (see section 4.1 of RFC 7748) *)
@@ -596,7 +596,7 @@ Section Tests.
          M ((a - F.of_Z _ 2) / F.of_Z _ 4)%F prefix).
   Defined.
 
-  Instance fe25519_ops : unsaturated_solinas_ops n s c.
+  Global Instance fe25519_ops : unsaturated_solinas_ops n s c.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
   Derive fe25519_mul

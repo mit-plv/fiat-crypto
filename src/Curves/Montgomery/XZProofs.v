@@ -120,23 +120,23 @@ Module M.
     Ltac t := t_fast; maybefast; fsatz.
 
     Create HintDb points_as_coordinates discriminated.
-    Hint Unfold Proper respectful Reflexive Symmetric Transitive : points_as_coordinates.
-    Hint Unfold Let_In : points_as_coordinates.
-    Hint Unfold fst snd proj1_sig : points_as_coordinates.
-    Hint Unfold fieldwise fieldwise' : points_as_coordinates.
-    Hint Unfold M.add M.opp M.point M.coordinates M.xzladderstep M.donnaladderstep M.boringladderstep M.to_xz : points_as_coordinates.
+    #[local] Hint Unfold Proper respectful Reflexive Symmetric Transitive : points_as_coordinates.
+    #[local] Hint Unfold Let_In : points_as_coordinates.
+    #[local] Hint Unfold fst snd proj1_sig : points_as_coordinates.
+    #[local] Hint Unfold fieldwise fieldwise' : points_as_coordinates.
+    #[local] Hint Unfold M.add M.opp M.point M.coordinates M.xzladderstep M.donnaladderstep M.boringladderstep M.to_xz : points_as_coordinates.
 
     Lemma donnaladderstep_same x1 Q Q' :
       fieldwise (n:=2) (fieldwise (n:=2) Feq)
                 (xzladderstep x1 Q Q')
                 (M.donnaladderstep(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul) x1 Q Q').
-    Proof. t. Qed.
+    Proof using Feq_dec a24_correct b_nonzero field. t. Qed.
 
     Lemma boringladderstep_same (ap2d4:F) (ap2d4_correct:(1+1+1+1)*a24 = a+1+1) x1 Q Q' :
       fieldwise (n:=2) (fieldwise (n:=2) Feq)
                 (xzladderstep x1 Q Q')
                 (M.boringladderstep(ap2d4:=ap2d4)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul) x1 Q Q').
-    Proof. t. Qed.
+    Proof using Feq_dec a24_correct b_nonzero field. t. Qed.
 
     Definition projective (P:F*F) :=
       if dec (snd P = 0) then fst P <> 0 else True.
@@ -146,7 +146,7 @@ Module M.
       | ∞ => False                  (* Q <> Q' *)
       | (x,y) => x = x1 /\ x1 <> 0  (* Q-Q' <> (0, 0) *)
       end.
-    Hint Unfold projective eq ladder_invariant : points_as_coordinates.
+    #[local] Hint Unfold projective eq ladder_invariant : points_as_coordinates.
 
     Lemma to_xz_add_coordinates (x1:F) (xz x'z':F*F)
           (Hxz:projective xz) (Hz'z':projective x'z')
@@ -224,7 +224,7 @@ Module M.
 
     Definition to_x (xz:F*F) : F :=
       if dec (snd xz = 0) then 0 else fst xz / snd xz.
-    Hint Unfold to_x : points_as_coordinates.
+    #[local] Hint Unfold to_x : points_as_coordinates.
 
     Lemma to_x_to_xz Q : to_x (to_xz Q) = match M.coordinates Q with
                                           | ∞ => 0
@@ -240,7 +240,7 @@ Module M.
     Lemma to_x_zero x : to_x (pair x 0) = 0.
     Proof. t. Qed.
 
-    Hint Unfold M.eq : points_as_coordinates.
+    #[local] Hint Unfold M.eq : points_as_coordinates.
     Global Instance Proper_to_xz : Proper (M.eq ==> eq) to_xz.
     Proof. t. Qed.
 

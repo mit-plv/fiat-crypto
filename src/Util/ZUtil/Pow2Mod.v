@@ -16,7 +16,7 @@ Module Z.
     unfold Z.pow2_mod.
     rewrite Z.land_ones; auto.
   Qed.
-  Hint Rewrite <- Z.pow2_mod_spec using zutil_arith : convert_to_Ztestbit.
+  #[global] Hint Rewrite <- Z.pow2_mod_spec using zutil_arith : convert_to_Ztestbit.
 
   Lemma pow2_mod_0_r : forall a, Z.pow2_mod a 0 = 0.
   Proof.
@@ -52,7 +52,7 @@ Module Z.
     intros; rewrite Z.pow2_mod_spec by lia.
     auto with zarith.
   Qed.
-  Hint Resolve pow2_mod_pos_bound : zarith.
+  #[global] Hint Resolve pow2_mod_pos_bound : zarith.
 
   Lemma pow2_mod_id_iff : forall a n, 0 <= n ->
                                       (Z.pow2_mod a n = a <-> 0 <= a < 2 ^ n).

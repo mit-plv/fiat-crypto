@@ -53,22 +53,22 @@ Module Compilers.
   Module Export Options.
     (** How to relax zranges *)
     Class relax_zrange_opt := relax_zrange : zrange -> zrange.
-    Typeclasses Opaque relax_zrange_opt.
+    #[global] Typeclasses Opaque relax_zrange_opt.
     (** What's the package name? *)
     Class package_name_opt := internal_package_name : option string.
-    Typeclasses Opaque package_name_opt.
+    #[global] Typeclasses Opaque package_name_opt.
     (** What's the class name? *)
     Class class_name_opt := internal_class_name : option string.
-    Typeclasses Opaque class_name_opt.
+    #[global] Typeclasses Opaque class_name_opt.
     (** Should we emit typedefs or not? *)
     Class skip_typedefs_opt := skip_typedefs : bool.
-    Typeclasses Opaque skip_typedefs_opt.
+    #[global] Typeclasses Opaque skip_typedefs_opt.
     (** Which adc/sbb bitwidth-split-carries should be relaxed to bitwidth *)
     Class relax_adc_sbb_return_carry_to_bitwidth_opt := relax_adc_sbb_return_carry_to_bitwidth : list Z.
-    Typeclasses Opaque relax_adc_sbb_return_carry_to_bitwidth_opt.
+    #[global] Typeclasses Opaque relax_adc_sbb_return_carry_to_bitwidth_opt.
     (** Do language-specific cast adjustment *)
     Class language_specific_cast_adjustment_opt := language_specific_cast_adjustment : bool.
-    Typeclasses Opaque language_specific_cast_adjustment_opt.
+    #[global] Typeclasses Opaque language_specific_cast_adjustment_opt.
     Class language_naming_conventions_opt :=
       { public_function_naming_convention : option capitalization_convention
         ; private_function_naming_convention : option capitalization_convention
@@ -360,7 +360,7 @@ Module Compilers.
           := fun idc
              => match idc with
                 | ident.Literal base.type.Z v => show_lvl_compact_Z v
-                | ident.Literal t v => show_lvl v
+                | ident.Literal _t v => show_lvl v
                 | ident.value_barrier => neg_wrap_parens "value_barrier"
                 | ident.comment _ => neg_wrap_parens "comment"
                 | ident.comment_no_keep _ => neg_wrap_parens "comment_no_keep"
@@ -833,7 +833,7 @@ Module Compilers.
                                  ++ show_f term_lvl
                           end%list),
                       fr)
-             | expr.LetIn A B x f
+             | expr.LetIn A _B x f
                => fun args
                   => let n := "x" ++ Decimal.Pos.to_string idx in
                      let '(_, show_x, xr) := show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen with_casts var to_string of_string t e args idx) idx x in
@@ -1538,7 +1538,7 @@ Module Compilers.
              => fun '(v, vs) '(arg, args)
                 => (bound_to_string v arg)
                      ++ @input_bounds_to_string skip_typedefs d vs args
-           | type.arrow s d
+           | type.arrow _s _d
              => fun '(absurd, _) => match absurd : Empty_set with end
            end%list.
     End OfPHOAS.

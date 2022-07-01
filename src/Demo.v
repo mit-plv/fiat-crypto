@@ -25,7 +25,7 @@ Module Associational.
   Proof. induction p; rewrite <-?List.app_comm_cons;
            rewrite ?eval_nil, ?eval_cons; nsatz.              Qed.
 
-  Hint Rewrite eval_nil eval_cons eval_app : push_eval.
+  #[global] Hint Rewrite eval_nil eval_cons eval_app : push_eval.
   Local Ltac push := autorewrite with
       push_eval push_map push_partition push_flat_map
       push_fold_right push_nth_default cancel_pair.
@@ -33,7 +33,7 @@ Module Associational.
   Lemma eval_map_mul (a x:Z) (p:list (Z*Z))
   : eval (List.map (fun t => (a*fst t, x*snd t)) p) = a*x*eval p.
   Proof. induction p; push; nsatz.                            Qed.
-  Hint Rewrite eval_map_mul : push_eval.
+  #[global] Hint Rewrite eval_map_mul : push_eval.
 
   Definition mul (p q:list (Z*Z)) : list (Z*Z) :=
     flat_map (fun t =>
@@ -42,7 +42,7 @@ Module Associational.
     q) p.
   Lemma eval_mul p q : eval (mul p q) = eval p * eval q.
   Proof. induction p; cbv [mul]; push; nsatz.                 Qed.
-  Hint Rewrite eval_mul : push_eval.
+  #[global] Hint Rewrite eval_mul : push_eval.
 
   Example base10_2digit_mul (a0:Z) (a1:Z) (b0:Z) (b1:Z) :
     {ab| eval ab = eval [(10,a1);(1,a0)] * eval [(10,b1);(1,b0)]}.
@@ -79,7 +79,7 @@ Module Associational.
     eval (reduce s c p) mod (s - eval c) = eval p mod (s - eval c).
   Proof. cbv [reduce]; push.
          rewrite <-reduction_rule, eval_split; trivial.      Qed.
-  Hint Rewrite eval_reduce : push_eval.
+  #[global] Hint Rewrite eval_reduce : push_eval.
 End Associational.
 
 Module Positional. Section Positional.
@@ -124,7 +124,7 @@ Module Positional. Section Positional.
            | _ => progress (apply Zminus_eq; ring_simplify)
            | _ => rewrite <-ListUtil.map_nth_default_always
            end; lia.                                          Qed.
-  Hint Rewrite @eval_add_to_nth eval_zeros : push_eval.
+  #[local] Hint Rewrite @eval_add_to_nth eval_zeros : push_eval.
 
   Fixpoint place (t:Z*Z) (i:nat) : nat * Z :=
     if dec (fst t mod weight i = 0)
@@ -137,7 +137,7 @@ Module Positional. Section Positional.
     repeat match goal with |- context[?a/?b] =>
       unique pose proof (Z_div_exact_full_2 a b ltac:(auto) ltac:(auto))
            end; nsatz.                                        Qed.
-  Hint Rewrite weight_place : push_eval.
+  #[local] Hint Rewrite weight_place : push_eval.
 
   Definition from_associational n (p:list (Z*Z)) :=
     List.fold_right (fun t =>
@@ -147,7 +147,7 @@ Module Positional. Section Positional.
     eval (from_associational n p) = Associational.eval p.
   Proof. induction p; cbv [from_associational] in *; push; try
   pose proof place_in_range a (pred n); destruct n; cbn [pred] in *; try lia; try nsatz. Qed.
-  Hint Rewrite @eval_from_associational : push_eval.
+  #[local] Hint Rewrite @eval_from_associational : push_eval.
 
   Section mulmod.
     Context (m:Z) (m_nz:m <> 0) (s:Z) (s_nz:s <> 0)

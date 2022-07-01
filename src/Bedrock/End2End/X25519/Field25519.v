@@ -28,16 +28,16 @@ Section Field.
      will eventually want to plug in FE310CSemantics.ext_spec. TODO: is there a
      way to prove the ext_spec doesn't matter here, since we're not using any MMIO? *)
   (* Parameters for the fiat-crypto bedrock2 backend *)
-  Instance translation_parameters : Types.parameters
+  Global Instance translation_parameters : Types.parameters
     (word := BasicC32Semantics.word)
     (varname_gen := default_varname_gen)
     (error := Syntax.expr.var Defaults.ERROR)
     := tt.
-  Instance translation_parameters_ok : Types.ok.
+  Global Instance translation_parameters_ok : Types.ok.
   Proof. constructor; try exact _; apply prefix_name_gen_unique. Qed.
 
   (* Define Curve25519 field *)
-  Instance field_parameters : FieldParameters.
+  Global Instance field_parameters : FieldParameters.
   Proof using Type.
     let M := (eval vm_compute in (Z.to_pos (UnsaturatedSolinas.m s c))) in
     (* curve 'A' parameter *)
@@ -49,7 +49,7 @@ Section Field.
   Defined.
 
   (* Call fiat-crypto pipeline on all field operations *)
-  Instance fe25519_ops : unsaturated_solinas_ops (ext_spec:=ext_spec) n s c.
+  Global Instance fe25519_ops : unsaturated_solinas_ops (ext_spec:=ext_spec) n s c.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
   (**** Translate each field operation into bedrock2 and apply bedrock2 backend

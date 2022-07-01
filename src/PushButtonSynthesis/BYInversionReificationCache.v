@@ -36,9 +36,9 @@ Module Export WordByWordMontgomeryInversion.
          SuchThat (is_reification_of reified_divstep_gen divstep)
          As reified_divstep_gen_correct.
   Proof. Time cache_reify (). Time Qed.
-  Hint Extern 1 (_ = _) => apply_cached_reification divstep (proj1 reified_divstep_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_divstep_gen_correct) : wf_gen_cache.
-  Hint Rewrite (proj1 reified_divstep_gen_correct) : interp_gen_cache.
+  #[global] Hint Extern 1 (_ = _) => apply_cached_reification divstep (proj1 reified_divstep_gen_correct) : reify_cache_gen.
+  #[global] Hint Immediate (proj2 reified_divstep_gen_correct) : wf_gen_cache.
+  #[global] Hint Rewrite (proj1 reified_divstep_gen_correct) : interp_gen_cache.
   Local Opaque reified_divstep_gen. (* needed for making [autorewrite] not take a very long time *)
 
   Derive reified_msat_gen
@@ -47,17 +47,17 @@ Module Export WordByWordMontgomeryInversion.
   Proof.
     Time cache_reify ().
     Time Qed.
-  Hint Extern 1 (_ = _) => apply_cached_reification msat (proj1 reified_msat_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_msat_gen_correct) : wf_gen_cache.
-  Hint Rewrite (proj1 reified_msat_gen_correct) : interp_gen_cache.
+  #[global] Hint Extern 1 (_ = _) => apply_cached_reification msat (proj1 reified_msat_gen_correct) : reify_cache_gen.
+  #[global] Hint Immediate (proj2 reified_msat_gen_correct) : wf_gen_cache.
+  #[global] Hint Rewrite (proj1 reified_msat_gen_correct) : interp_gen_cache.
   Local Opaque reified_msat_gen. (* needed for making [autorewrite] not take a very long time *)
 
   Derive reified_eval_twos_complement_gen
          SuchThat (is_reification_of reified_eval_twos_complement_gen eval_twos_complement)
          As reified_eval_twos_complement_gen_correct.
   Proof. Time cache_reify (). Time Qed.
-  Hint Extern 1 (_ = _) => apply_cached_reification eval_twos_complement (proj1 reified_eval_twos_complement_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_eval_twos_complement_gen_correct) : wf_gen_cache.
-  Hint Rewrite (proj1 reified_eval_twos_complement_gen_correct) : interp_gen_cache.
+  #[global] Hint Extern 1 (_ = _) => apply_cached_reification eval_twos_complement (proj1 reified_eval_twos_complement_gen_correct) : reify_cache_gen.
+  #[global] Hint Immediate (proj2 reified_eval_twos_complement_gen_correct) : wf_gen_cache.
+  #[global] Hint Rewrite (proj1 reified_eval_twos_complement_gen_correct) : interp_gen_cache.
   Local Opaque reified_eval_twos_complement_gen. (* needed for making [autorewrite] not take a very long time *)
 End WordByWordMontgomeryInversion.

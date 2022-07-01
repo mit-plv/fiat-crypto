@@ -13,19 +13,19 @@ Local Definition s := 2^255.
 Local Definition c := [(1, 19)].
 Local Definition prefix := "curve25519_"%string. (* placed before function names *)
 
-Instance names : names_of_operations.
+Global Instance names : names_of_operations.
   make_names_of_operations prefix. Defined.
 
 Definition ops : unsaturated_solinas_reified_ops n s c.
 Proof. make_reified_ops. Time Defined.
 
-Instance curve25519_bedrock2_funcs : bedrock2_unsaturated_solinas_funcs.
+Global Instance curve25519_bedrock2_funcs : bedrock2_unsaturated_solinas_funcs.
 Proof. funcs_from_ops ops. Defined.
 
-Instance curve25519_bedrock2_specs : bedrock2_unsaturated_solinas_specs.
+Global Instance curve25519_bedrock2_specs : bedrock2_unsaturated_solinas_specs.
 Proof. specs_from_ops ops n s c. Defined.
 
-Instance curve25519_bedrock2_correctness :
+Global Instance curve25519_bedrock2_correctness :
   bedrock2_unsaturated_solinas_correctness.
 Proof. prove_correctness ops n s c. Qed.
 

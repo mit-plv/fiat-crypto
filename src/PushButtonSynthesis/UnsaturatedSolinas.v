@@ -180,13 +180,13 @@ Section __.
 
   Lemma length_prime_bytes_upperbound_list : List.length prime_bytes_upperbound_list = n_bytes.
   Proof using Type. cbv [prime_bytes_upperbound_list]; now autorewrite with distr_length. Qed.
-  Hint Rewrite length_prime_bytes_upperbound_list : distr_length.
+  #[local] Hint Rewrite length_prime_bytes_upperbound_list : distr_length.
   Lemma length_saturated_bounds : List.length saturated_bounds = n.
   Proof using Type. cbv [saturated_bounds]; now autorewrite with distr_length. Qed.
-  Hint Rewrite length_saturated_bounds : distr_length.
+  #[local] Hint Rewrite length_saturated_bounds : distr_length.
   Lemma length_m_enc : List.length m_enc = n.
   Proof using Type. cbv [m_enc]; repeat distr_length. Qed.
-  Hint Rewrite length_m_enc : distr_length.
+  #[local] Hint Rewrite length_m_enc : distr_length.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
@@ -680,7 +680,7 @@ Section __.
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
 
-  Hint Rewrite
+  #[local] Hint Rewrite
        eval_carry_mulmod
        eval_carry_squaremod
        eval_carry_scmulmod
@@ -696,7 +696,7 @@ Section __.
        eval_from_bytesmod
        eval_encodemod
        using solve [ auto using eval_balance, length_balance | congruence | solve_extra_bounds_side_conditions ] : push_eval.
-  Hint Unfold zeromod onemod : push_eval.
+  #[local] Hint Unfold zeromod onemod : push_eval.
 
   Local Ltac prove_correctness _ :=
     Primitives.prove_correctness use_curve_good;
@@ -999,7 +999,8 @@ Section __.
 End __.
 
 Module Export Hints.
-  Hint Opaque
+  Export Primitives.Hints.
+  #[export] Hint Opaque
        carry_mul
        carry_square
        carry_scmul_const
@@ -1018,7 +1019,7 @@ Module Export Hints.
        one
        copy
   : wf_op_cache.
-  Hint Immediate
+  #[export] Hint Immediate
        Wf_carry_mul
        Wf_carry_square
        Wf_carry_scmul_const

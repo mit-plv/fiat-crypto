@@ -32,7 +32,7 @@ Section Field.
   Definition prefix : string := "p224_"%string.
 
   (* Define p224 field *)
-  Instance field_parameters : FieldParameters.
+  Global Instance field_parameters : FieldParameters.
   Proof using Type.
     let M := (eval vm_compute in (Z.to_pos (m))) in
     (* curve 'A' parameter *)
@@ -47,7 +47,7 @@ Section Field.
   Definition from_mont_string := prefix ++ "from_mont".
 
   (* Call fiat-crypto pipeline on all field operations *)
-  Instance p224_ops : @word_by_word_Montgomery_ops from_mont_string to_mont_string _ _ _ _ _ _ _ _ _ _ _ (WordByWordMontgomery.n m machine_wordsize) m.
+  Global Instance p224_ops : @word_by_word_Montgomery_ops from_mont_string to_mont_string _ _ _ _ _ _ _ _ _ _ _ (WordByWordMontgomery.n m machine_wordsize) m.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
 

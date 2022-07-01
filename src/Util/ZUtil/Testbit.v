@@ -25,7 +25,7 @@ Module Z.
     + apply Z.ones_spec_low. lia.
     + apply Z.ones_spec_high. lia.
   Qed.
-  Hint Rewrite ones_spec using zutil_arith : Ztestbit.
+  #[global] Hint Rewrite ones_spec using zutil_arith : Ztestbit.
 
   Lemma ones_spec' n m (Hn : 0 <= n) (Hm : 0 <= m) :
     Z.testbit (Z.ones n) m = if (m <? n) then true else false.
@@ -48,7 +48,7 @@ Module Z.
     destruct m; simpl in *; try reflexivity.
     exfalso; auto using Zlt_neg_0.
   Qed.
-  Hint Rewrite ones_spec_full : Ztestbit_full.
+  #[global] Hint Rewrite ones_spec_full : Ztestbit_full.
 
   Lemma testbit_pow2_mod : forall a n i, 0 <= n ->
   Z.testbit (Z.pow2_mod a n) i = if Z_lt_dec i n then Z.testbit a i else false.
@@ -62,7 +62,7 @@ Module Z.
           | |- _ => progress autorewrite with Ztestbit
           end.
   Qed.
-  Hint Rewrite testbit_pow2_mod using zutil_arith : Ztestbit.
+  #[global] Hint Rewrite testbit_pow2_mod using zutil_arith : Ztestbit.
 
   Lemma testbit_pow2_mod_full : forall a n i,
       Z.testbit (Z.pow2_mod a n) i = if Z_lt_dec n 0
@@ -76,7 +76,7 @@ Module Z.
       autorewrite with Ztestbit;
       reflexivity.
   Qed.
-  Hint Rewrite testbit_pow2_mod_full : Ztestbit_full.
+  #[global] Hint Rewrite testbit_pow2_mod_full : Ztestbit_full.
 
   Lemma bits_above_pow2 a n : 0 <= a < 2^n -> Z.testbit a n = false.
   Proof using Type.
@@ -84,7 +84,7 @@ Module Z.
     destruct (Z_zerop a); subst; autorewrite with Ztestbit; trivial.
     apply Z.bits_above_log2; auto with zarith concl_log2.
   Qed.
-  Hint Rewrite bits_above_pow2 using zutil_arith : Ztestbit.
+  #[global] Hint Rewrite bits_above_pow2 using zutil_arith : Ztestbit.
 
   Lemma testbit_low : forall n x i, (0 <= i < n) ->
     Z.testbit x i = Z.testbit (Z.land x (Z.ones n)) i.
@@ -105,7 +105,7 @@ Module Z.
     rewrite Z.mod_add by (pose proof (Z.pow_pos_nonneg 2 n); lia).
     auto using Z.mod_pow2_bits_low.
   Qed.
-  Hint Rewrite testbit_add_shiftl_low using zutil_arith : Ztestbit.
+  #[global] Hint Rewrite testbit_add_shiftl_low using zutil_arith : Ztestbit.
 
   Lemma testbit_sub_pow2 n i x (i_range:0 <= i < n) (x_range:0 < x < 2 ^ n) :
     Z.testbit (2 ^ n - x) i = negb (Z.testbit (x - 1)  i).
@@ -146,13 +146,13 @@ Module Z.
   Proof using Type.
     break_innermost_match; Z.ltb_to_lt; now autorewrite with Ztestbit.
   Qed.
-  Hint Rewrite shiftl_spec_full : Ztestbit_full.
+  #[global] Hint Rewrite shiftl_spec_full : Ztestbit_full.
 
   Lemma shiftr_spec_full a n m : Z.testbit (a >> n) m = if (0 <=? m) then Z.testbit a (m + n) else false.
   Proof using Type.
     break_innermost_match; Z.ltb_to_lt; now autorewrite with Ztestbit.
   Qed.
-  Hint Rewrite shiftr_spec_full : Ztestbit_full.
+  #[global] Hint Rewrite shiftr_spec_full : Ztestbit_full.
 
   Lemma mod_pow2_ones a m :
     a mod 2 ^ m = if (Z_lt_dec m 0) then ltac:(match eval hnf in (1 mod 0) with | 0 => exact 0 | _ => exact a end) else a &' Z.ones m.
@@ -192,7 +192,7 @@ Module Z.
 
   Lemma bit_compare_refl (b  : bool) : bit_compare b b = Eq.
   Proof using Type. now destruct b. Qed.
-  Hint Rewrite bit_compare_refl : Ztestbit.
+  #[global] Hint Rewrite bit_compare_refl : Ztestbit.
 
   Lemma bit_compare_eq_iff (b1 b2 : bool)
     : bit_compare b1 b2 = Eq <-> b1 = b2.
