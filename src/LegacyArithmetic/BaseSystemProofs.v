@@ -1,7 +1,7 @@
-Require Import Coq.Lists.List Coq.micromega.Psatz.
+Require Import Coq.Lists.List Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.ListUtil.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
-Require Import Coq.micromega.Lia Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.LegacyArithmetic.BaseSystem.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Notations.

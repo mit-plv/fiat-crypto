@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith Coq.ZArith.BinIntDef.
 Require Import Coq.Lists.List. Import ListNotations.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.QArith.QArith_base.
 Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Specific.Framework.CurveParameters.

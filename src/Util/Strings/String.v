@@ -1,4 +1,4 @@
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Strings.String.
 Require Import Coq.Strings.Ascii.
 Require Import Crypto.Util.Strings.Equality.

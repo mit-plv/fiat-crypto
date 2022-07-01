@@ -1,6 +1,6 @@
 (*** Word-By-Word Montgomery Multiplication Proofs *)
 Require Import Coq.Arith.Arith.
-Require Import Coq.ZArith.BinInt Coq.ZArith.ZArith Coq.ZArith.Zdiv Coq.micromega.Lia.
+Require Import Coq.ZArith.BinInt Coq.ZArith.ZArith Coq.ZArith.Zdiv Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.NatUtil.
@@ -487,6 +487,7 @@ Section WordByWordMontgomery.
         (small_A : small A)
     : 0 <= eval (redc A) < eval N + eval B + if eval N <=? eval (pre_redc A) then -eval N else 0.
   Proof using B_bounds N_lt_R Npos_correct R_correct eval_addT eval_addT' eval_conditional_sub eval_div eval_drop_high eval_mod eval_scmul eval_zero r_big small_B small_N small_addT small_addT' small_div small_drop_high small_scmul small_zero.
+    clear -B_bounds N_lt_R Npos_correct R_correct eval_addT eval_addT' eval_conditional_sub eval_div eval_drop_high eval_mod eval_scmul eval_zero r_big small_B small_N small_addT small_addT' small_div small_drop_high small_scmul small_zero small_A.
     pose proof (@small_pre_redc _ A small_A).
     pose proof (@pre_redc_bound _ A small_A).
     unfold redc.

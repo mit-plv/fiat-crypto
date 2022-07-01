@@ -1,6 +1,6 @@
 (*** Word-By-Word Montgomery Multiplication Proofs *)
 Require Import Coq.Arith.Arith.
-Require Import Coq.ZArith.BinInt Coq.ZArith.ZArith Coq.ZArith.Zdiv Coq.micromega.Lia.
+Require Import Coq.ZArith.BinInt Coq.ZArith.ZArith Coq.ZArith.Zdiv Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.NatUtil.

@@ -240,7 +240,7 @@ reasonable time, so this is not really an option.
 
 *****)
 
-Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.micromega.Lia.
+Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.BinIntDef.
 Local Open Scope Z_scope.
 

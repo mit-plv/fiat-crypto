@@ -1,6 +1,6 @@
 Require Export Crypto.Util.GlobalSettings.
 (** * Declaration of Hint Databases with lemmas about ℤ from the standard library *)
-Require Import Coq.micromega.Psatz Coq.micromega.Lia.
+Require Import Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
 Require Export Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 (* Should we [Require Import Coq.ZArith.Zhints.]? *)

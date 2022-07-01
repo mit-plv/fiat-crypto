@@ -1,6 +1,6 @@
-Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Algebra.Hierarchy.
+Import Crypto.Algebra.Hierarchy.Hints.
 
 Section Monoid.
   Context {T eq op id} {monoid:@monoid T eq op id}.
@@ -80,3 +80,9 @@ Section HomomorphismComposition.
     : @is_homomorphism G EQ OP K eqK opK (fun x => phi' (phi x))
     := is_homomorphism_compose (fun x => reflexivity _).
 End HomomorphismComposition.
+
+Module Export Hints.
+  Export Crypto.Algebra.Hierarchy.Hints.
+  Global Existing Instance is_homomorphism_phi_proper.
+  Global Existing Instance is_homomorphism_compose_refl.
+End Hints.

@@ -1,5 +1,5 @@
 (** * Common Subexpression Elimination for PHOAS Syntax *)
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Sorting.Mergesort.
 Require Import Coq.Structures.Orders.

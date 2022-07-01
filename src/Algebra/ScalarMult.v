@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.BinInt Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Util.ZUtil.Peano.
+Require Import Coq.ZArith.BinInt Coq.ZArith.ZArith Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Crypto.Util.ZUtil.Peano.
 Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Algebra.Monoid Crypto.Algebra.Hierarchy Crypto.Algebra.Group.
@@ -165,3 +165,10 @@ Proof.
     rewrite <-?Z.succ'_succ, <-?Z.pred'_pred, ?Z.peano_rect_succ, ?Z.peano_rect_pred in * by lia;
     reflexivity.
 Qed.
+
+Module Export Hints.
+  Export Crypto.Algebra.Monoid.Hints Crypto.Algebra.Hierarchy.Hints Crypto.Algebra.Group.Hints.
+  Global Existing Instance scalarmult_Proper.
+  Global Existing Instance Proper_scalarmult_ref.
+  Global Existing Instance scalarmult_ref_is_scalarmult.
+End Hints.

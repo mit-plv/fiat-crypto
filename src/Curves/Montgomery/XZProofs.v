@@ -18,7 +18,7 @@ Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
 Require Import Crypto.Curves.Montgomery.AffineInstances.
 Require Import Crypto.Curves.Montgomery.XZ BinPos.
 Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 
 Module M.
   Section MontgomeryCurve.

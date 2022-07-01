@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Classes.RelationClasses.
 Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Local Open Scope Z_scope.
@@ -66,3 +66,8 @@ Module Z.
   Lemma le_add_1_iff x y : x + 1 <= y <-> x < y.
   Proof. lia. Qed.
 End Z.
+Global Hint Resolve Z.positive_is_nonzero : zarith.
+Hint Rewrite Z.leb_add_same : zsimplify.
+Hint Rewrite Z.ltb_add_same : zsimplify.
+Hint Rewrite Z.geb_add_same : zsimplify.
+Hint Rewrite Z.gtb_add_same : zsimplify.

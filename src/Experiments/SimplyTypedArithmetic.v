@@ -1,5 +1,5 @@
 (* Following http://adam.chlipala.net/theses/andreser.pdf chapter 3 *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Algebra.Nsatz.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Crypto.Algebra.Nsatz.
 Require Import Coq.Strings.String.
 Require Import Coq.MSets.MSetPositive.
 Require Import Coq.FSets.FMapPositive.
@@ -67,11 +67,11 @@ Module Associational.
     fold_right (fun x y => x + y) 0%Z (map (fun t => fst t * snd t) p).
 
   Lemma eval_nil : eval nil = 0.
-  Proof. trivial.                                             Qed.
+  Proof using Type. trivial.                                             Qed.
   Lemma eval_cons p q : eval (p::q) = fst p * snd p + eval q.
-  Proof. trivial.                                             Qed.
+  Proof using Type. trivial.                                             Qed.
   Lemma eval_app p q: eval (p++q) = eval p + eval q.
-  Proof. induction p; rewrite <-?List.app_comm_cons;
+  Proof using Type. induction p; rewrite <-?List.app_comm_cons;
            rewrite ?eval_nil, ?eval_cons; nsatz.              Qed.
 
   Hint Rewrite eval_nil eval_cons eval_app : push_eval.
@@ -81,7 +81,7 @@ Module Associational.
 
   Lemma eval_map_mul (a x:Z) (p:list (Z*Z))
   : eval (List.map (fun t => (a*fst t, x*snd t)) p) = a*x*eval p.
-  Proof. induction p; push; nsatz.                            Qed.
+  Proof using Type. induction p; push; nsatz.                            Qed.
   Hint Rewrite eval_map_mul : push_eval.
 
   Definition mul (p q:list (Z*Z)) : list (Z*Z) :=
@@ -90,13 +90,13 @@ Module Associational.
         (fst t * fst t', snd t * snd t'))
     q) p.
   Lemma eval_mul p q : eval (mul p q) = eval p * eval q.
-  Proof. induction p; cbv [mul]; push; nsatz.                 Qed.
+  Proof using Type. induction p; cbv [mul]; push; nsatz.                 Qed.
   Hint Rewrite eval_mul : push_eval.
 
   Definition negate_snd (p:list (Z*Z)) : list (Z*Z) :=
     map (fun cx => (fst cx, -snd cx)) p.
   Lemma eval_negate_snd p : eval (negate_snd p) = - eval p.
-  Proof. induction p; cbv [negate_snd]; push; nsatz.          Qed.
+  Proof using Type. induction p; cbv [negate_snd]; push; nsatz.          Qed.
   Hint Rewrite eval_negate_snd : push_eval.
 
   Example base10_2digit_mul (a0:Z) (a1:Z) (b0:Z) (b1:Z) :
@@ -114,7 +114,7 @@ Module Associational.
        (snd hi_lo, map (fun t => (fst t / s, snd t)) (fst hi_lo)).
   Lemma eval_split s p (s_nz:s<>0) :
     eval (fst (split s p)) + s * eval (snd (split s p)) = eval p.
-  Proof. cbv [Let_In split]; induction p;
+  Proof using Type. cbv [Let_In split]; induction p;
     repeat match goal with
     | |- context[?a/?b] =>
       unique pose proof (Z_div_exact_full_2 a b ltac:(trivial) ltac:(trivial))
@@ -124,7 +124,7 @@ Module Associational.
 
   Lemma reduction_rule a b s c (modulus_nz:s-c<>0) :
     (a + s * b) mod (s - c) = (a + c * b) mod (s - c).
-  Proof. replace (a + s * b) with ((a + c*b) + b*(s-c)) by nsatz.
+  Proof using Type. replace (a + s * b) with ((a + c*b) + b*(s-c)) by nsatz.
     rewrite Z.add_mod,Z_mod_mult,Z.add_0_r,Z.mod_mod;trivial. Qed.
 
   Definition reduce (s:Z) (c:list _) (p:list _) : list (Z*Z) :=
@@ -132,7 +132,7 @@ Module Associational.
 
   Lemma eval_reduce s c p (s_nz:s<>0) (modulus_nz:s-eval c<>0) :
     eval (reduce s c p) mod (s - eval c) = eval p mod (s - eval c).
-  Proof. cbv [reduce]; push.
+  Proof using Type. cbv [reduce]; push.
          rewrite <-reduction_rule, eval_split; trivial.      Qed.
   Hint Rewrite eval_reduce : push_eval.
 
@@ -140,13 +140,13 @@ Module Associational.
     map (fun t => dlet_nd t2 := snd t in (fst t, t2)) p.
 
   Lemma bind_snd_correct p : bind_snd p = p.
-  Proof.
+  Proof using Type.
     cbv [bind_snd]; induction p as [| [? ?] ];
       push; [|rewrite IHp]; reflexivity.
   Qed.
 
   Lemma eval_rev p : eval (rev p) = eval p.
-  Proof. induction p; cbn [rev]; push; lia. Qed.
+  Proof using Type. induction p; cbn [rev]; push; lia. Qed.
 
   Section Carries.
     Definition carryterm (w fw:Z) (t:Z * Z) :=
@@ -684,7 +684,7 @@ Module Saturated.
 
       Lemma eval_map_sat_multerm s a q (s_nonzero:s<>0):
         Associational.eval (flat_map (sat_multerm s a) q) = fst a * snd a * Associational.eval q.
-      Proof.
+      Proof using Type.
         cbv [sat_multerm Let_In]; induction q;
           repeat match goal with
                  | _ => progress autorewrite with cancel_pair push_eval to_div_mod in *
@@ -698,7 +698,7 @@ Module Saturated.
 
       Lemma eval_sat_mul s p q (s_nonzero:s<>0):
         Associational.eval (sat_mul s p q) = Associational.eval p * Associational.eval q.
-      Proof.
+      Proof using Type.
         cbv [sat_mul]; induction p; [reflexivity|].
         repeat match goal with
                | _ => progress (autorewrite with push_flat_map push_eval in * )
@@ -723,7 +723,7 @@ Module Saturated.
 
       Lemma eval_map_sat_multerm_const s a q (s_nonzero:s<>0):
         Associational.eval (flat_map (sat_multerm_const s a) q) = fst a * snd a * Associational.eval q.
-      Proof.
+      Proof using Type.
         cbv [sat_multerm_const Let_In]; induction q;
           repeat match goal with
                  | _ => progress autorewrite with cancel_pair push_eval to_div_mod in *
@@ -741,7 +741,7 @@ Module Saturated.
 
       Lemma eval_sat_mul_const s p q (s_nonzero:s<>0):
         Associational.eval (sat_mul_const s p q) = Associational.eval p * Associational.eval q.
-      Proof.
+      Proof using Type.
         cbv [sat_mul_const]; induction p; [reflexivity|].
         repeat match goal with
                | _ => progress (autorewrite with push_flat_map push_eval in * )
@@ -756,21 +756,21 @@ Module Saturated.
   Section DivMod.
     Lemma mod_step a b c d: 0 < a -> 0 < b ->
                             c mod a + a * ((c / a + d) mod b) = (a * d + c) mod (a * b).
-    Proof.
+    Proof using Type.
       intros; rewrite Z.rem_mul_r by lia. push_Zmod.
       autorewrite with zsimplify pull_Zmod. repeat (f_equal; try ring).
     Qed.
 
     Lemma div_step a b c d : 0 < a -> 0 < b ->
                              (c / a + d) / b = (a * d + c) / (a * b).
-    Proof. intros; Z.div_mod_to_quot_rem_in_goal; nia. Qed.
+    Proof using Type. intros; Z.div_mod_to_quot_rem_in_goal; nia. Qed.
 
     Lemma add_mod_div_multiple a b n m:
       n > 0 ->
       0 <= m / n ->
       m mod n = 0 ->
       (a / n + b) mod (m / n) = (a + n * b) mod m / n.
-    Proof.
+    Proof using Type.
       intros. rewrite <-!Z.div_add' by auto using Z.positive_is_nonzero.
       rewrite Z.mod_pull_div, Z.mul_div_eq' by auto using Z.gt_lt.
       repeat (f_equal; try lia).
@@ -779,7 +779,7 @@ Module Saturated.
     Lemma add_mod_l_multiple a b n m:
       0 < n / m -> m <> 0 -> n mod m = 0 ->
       (a mod n + b) mod m = (a + b) mod m.
-    Proof.
+    Proof using Type.
       intros.
       rewrite (proj2 (Z.div_exact n m ltac:(auto))) by auto.
       rewrite Z.rem_mul_r by auto.
@@ -799,7 +799,7 @@ Module Saturated.
       y2 = y1 + n1 * x ->
       @is_div_mod T evalf1 dm1 y1 n1 ->
       @is_div_mod T evalf2 dm2 y2 n2.
-    Proof.
+    Proof using Type.
       intros; subst y2; cbv [is_div_mod] in *.
       repeat match goal with
              | H: _ /\ _ |- _ => destruct H
@@ -816,7 +816,7 @@ Module Saturated.
       y1 = y2 ->
       @is_div_mod T evalf dm y1 n ->
       @is_div_mod T evalf dm y2 n.
-    Proof. congruence. Qed.
+    Proof using Type. congruence. Qed.
   End DivMod.
 End Saturated.
 
@@ -1999,12 +1999,12 @@ Module Import MOVEME.
   Lemma fold_andb_map_map {A B C} f g ls1 ls2
     : @fold_andb_map A B f ls1 (@List.map C _ g ls2)
       = fold_andb_map (fun a b => f a (g b)) ls1 ls2.
-  Proof. revert ls1 ls2; induction ls1, ls2; cbn; congruence. Qed.
+  Proof using Type. revert ls1 ls2; induction ls1, ls2; cbn; congruence. Qed.
 
   Lemma fold_andb_map_length A B f ls1 ls2
         (H : @fold_andb_map A B f ls1 ls2 = true)
     : length ls1 = length ls2.
-  Proof.
+  Proof using Type.
     revert ls1 ls2 H; induction ls1, ls2; cbn; intros; Bool.split_andb; f_equal;
       try congruence; auto.
   Qed.
@@ -2014,7 +2014,7 @@ Definition expanding_id (n : nat) (ls : list Z) := expand_list (-1)%Z ls n.
 
 Lemma expanding_id_id n ls (H : List.length ls = n)
   : expanding_id n ls = ls.
-Proof.
+Proof using Type.
   unfold expanding_id. rewrite expand_list_correct by assumption; reflexivity.
 Qed.
 
@@ -2030,7 +2030,7 @@ Module Ring.
 
   Lemma length_is_bounded_by bounds ls
     : is_bounded_by bounds ls = true -> length ls = length bounds.
-  Proof.
+  Proof using Type.
     intro H.
     apply fold_andb_map_length in H; congruence.
   Qed.
@@ -3148,7 +3148,7 @@ Module Compilers.
           End gen.
 
           Definition cast_outside_of_range (r : zrange) (v : BinInt.Z) : BinInt.Z.
-          Proof. exact v. Qed.
+          Proof using Type. exact v. Qed.
 
           (** Interpret identifiers where [Z_cast] is an opaque
               identity function when the value is not inside the range
@@ -3799,7 +3799,7 @@ Module Compilers.
 
   Lemma interp_reify_list {t} ls
     : interp (@reify_list _ t ls) = List.map interp ls.
-  Proof.
+  Proof using Type.
     unfold reify_list.
     induction ls as [|x xs IHxs]; cbn in *; [ reflexivity | ].
     rewrite IHxs; reflexivity.
@@ -4828,7 +4828,7 @@ Module Compilers.
 
         Lemma is_bounded_by_Some {t} r val
           : is_bounded_by (@Some t r) val = type.is_bounded_by r val.
-        Proof.
+        Proof using Type.
           induction t;
             repeat first [ reflexivity
                          | progress cbn in *
@@ -4848,7 +4848,7 @@ Module Compilers.
               (Htight : @is_tighter_than t r1 r2 = true)
               (Hbounds : is_bounded_by r1 val = true)
           : is_bounded_by r2 val = true.
-        Proof.
+        Proof using Type.
           induction t;
             repeat first [ progress destruct_head'_prod
                          | progress destruct_head'_and
@@ -4874,7 +4874,7 @@ Module Compilers.
               (Htight : @is_tighter_than t r1 (Some r2) = true)
               (Hbounds : is_bounded_by r1 val = true)
           : type.is_bounded_by r2 val = true.
-        Proof.
+        Proof using Type.
           rewrite <- is_bounded_by_Some.
           eapply is_tighter_than_is_bounded_by; eassumption.
         Qed.
@@ -6206,7 +6206,7 @@ Module Compilers.
              (Harg : ZRange.type.option.is_bounded_by b_in arg = true),
       Interp rv arg = Interp e arg
       /\ ZRange.type.option.is_bounded_by b_out (Interp rv arg) = true.
-  Proof.
+  Proof using Type.
     cbv [CheckedPartialEvaluateWithBounds1 CheckPartialEvaluateWithBounds1 Let_In] in *;
       break_innermost_match_hyps; inversion_sum; subst.
     intros arg Harg.
@@ -6228,7 +6228,7 @@ Module Compilers.
           rv (Hrv : CheckedPartialEvaluateWithBounds0 relax_zrange e b_out = inl rv)
     : Interp rv = Interp e
       /\ ZRange.type.option.is_bounded_by b_out (Interp rv) = true.
-  Proof.
+  Proof using Type.
     cbv [CheckedPartialEvaluateWithBounds0 CheckPartialEvaluateWithBounds0 Let_In] in *;
       break_innermost_match_hyps; inversion_sum; subst.
     split.
@@ -6526,7 +6526,7 @@ Notation "x * y"
 Notation "x" := (Var x) (only printing, at level 9) : expr_scope.
 
 Example test1 : True.
-Proof.
+Proof using Type.
   let v := Reify ((fun x => 2^x) 255)%Z in
   pose v as E.
   vm_compute in E.
@@ -6539,7 +6539,7 @@ Proof.
 Qed.
 Module test2.
   Example test2 : True.
-  Proof.
+  Proof using Type.
     let v := Reify (fun y : Z
                     => (fun k : Z * Z -> Z * Z
                         => dlet_nd x := (y * y) in
@@ -6572,7 +6572,7 @@ Module test2.
 End test2.
 Module test3.
   Example test3 : True.
-  Proof.
+  Proof using Type.
     let v := Reify (fun y : Z
                     => dlet_nd x := dlet_nd x := (y * y) in
                         (x * x) in
@@ -6611,7 +6611,7 @@ Module test3.
 End test3.
 Module test4.
   Example test4 : True.
-  Proof.
+  Proof using Type.
     let v := Reify (fun y : (list Z * list Z)
                     => dlet_nd x := List.nth_default (-1) (fst y) 0 in
                         dlet_nd z := List.nth_default (-1) (snd y) 0 in
@@ -6640,7 +6640,7 @@ Module test4.
 End test4.
 Module test5.
   Example test5 : True.
-  Proof.
+  Proof using Type.
     let v := Reify (fun y : (Z * Z)
                     => dlet_nd x := (13 * (fst y * snd y)) in
                         x) in
@@ -6662,7 +6662,7 @@ End test5.
 Module test6.
   (* check for no dead code with if *)
   Example test6 : True.
-  Proof.
+  Proof using Type.
     let v := Reify (fun y : Z
                     => if 0 =? 1
                        then dlet_nd x := (y * y) in
@@ -6684,7 +6684,7 @@ Module test6.
 End test6.
 Module test7.
   Example test7 : True.
-  Proof.
+  Proof using Type.
     let v := Reify (fun y : Z
                     => dlet_nd x := y + y in
                         dlet_nd z := x in
@@ -6707,7 +6707,7 @@ Module test7.
 End test7.
 Module test8.
   Example test8 : True.
-  Proof.
+  Proof using Type.
     let v := Reify (fun y : Z
                     => dlet_nd x := y + y in
                         dlet_nd z := x in
@@ -6727,7 +6727,7 @@ Module test8.
 End test8.
 Module test9.
   Example test9 : True.
-  Proof.
+  Proof using Type.
     let v := Reify (fun y : list Z => (hd 0%Z y, tl y)) in
     pose v as E.
     vm_compute in E.
@@ -6754,7 +6754,7 @@ Module test9.
 End test9.
 Module test10.
   Example test10 : True.
-  Proof.
+  Proof using Type.
     let v := Reify (fun (f : Z -> Z -> Z) x y => f (x + y) (x * y))%Z in
     pose v as E.
     vm_compute in E.
@@ -6774,7 +6774,7 @@ Module test10.
 End test10.
 Module test11.
   Example test11 : True.
-  Proof.
+  Proof using Type.
     let v := Reify (fun x y => (fun f a b => f a b) (fun a b => a + b) (x + y) (x * y))%Z in
     pose v as E.
     vm_compute in E.
@@ -7033,7 +7033,7 @@ Module Pipeline.
              (Harg : ZRange.type.option.is_bounded_by arg_bounds arg = true),
       ZRange.type.option.is_bounded_by out_bounds (Interp rv arg) = true
       /\ Interp rv arg = app_curried (Interp e) arg.
-  Proof.
+  Proof using Type.
     cbv [BoundsPipeline Let_In] in *;
       repeat match goal with
              | [ H : match ?x with _ => _ end = Success _ |- _ ]
@@ -7086,7 +7086,7 @@ Module Pipeline.
         rv
         (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 relax_zrange e arg_bounds out_bounds = Success rv)
     : BoundsPipeline_correct_transT arg_bounds out_bounds InterpE rv.
-  Proof.
+  Proof using Type.
     intros arg Harg; rewrite <- InterpE_correct by assumption.
     eapply @BoundsPipeline_correct; eassumption.
   Qed.
@@ -7123,7 +7123,7 @@ Module Pipeline.
              (Harg : ZRange.type.option.is_bounded_by arg_bounds arg = true),
       ZRange.type.option.is_bounded_by out_bounds (Interp rv arg) = true
       /\ Interp rv arg = app_curried (for_reification.Interp E) arg.
-  Proof.
+  Proof using Type.
     cbv [BoundsPipeline_full] in *.
     eapply BoundsPipeline_correct_trans; [ eassumption | | eassumption.. ].
     intros; erewrite PrePipeline_correct; reflexivity.
@@ -7142,7 +7142,7 @@ Definition round_up_bitwidth_gen (possible_values : list Z) (bitwidth : Z) : opt
 Lemma round_up_bitwidth_gen_le possible_values bitwidth v
   : round_up_bitwidth_gen possible_values bitwidth = Some v
     -> bitwidth <= v.
-Proof.
+Proof using Type.
   cbv [round_up_bitwidth_gen].
   induction possible_values as [|x xs IHxs]; cbn; intros; inversion_option.
   break_innermost_match_hyps; Z.ltb_to_lt; inversion_option; subst; trivial.
@@ -7160,7 +7160,7 @@ Lemma relax_zrange_gen_good
       (possible_values : list Z)
   : forall r r' z : zrange,
     (z <=? r)%zrange = true -> relax_zrange_gen possible_values r = Some r' -> (z <=? r')%zrange = true.
-Proof.
+Proof using Type.
   cbv [is_tighter_than_bool relax_zrange_gen]; intros *.
   pose proof (Z.log2_up_nonneg (upper r + 1)).
   rewrite !Bool.andb_true_iff; destruct_head' zrange; cbn [ZRange.lower ZRange.upper] in *.
@@ -7755,7 +7755,7 @@ Module X25519_64.
   Proof. Time solve_rone machine_wordsize. Time Qed.
   Lemma base_51_curve_good
     : check_args n s c machine_wordsize (Pipeline.Success tt) = Pipeline.Success tt.
-  Proof. vm_compute; reflexivity. Qed.
+  Proof using Type. vm_compute; reflexivity. Qed.
 
   Definition base_51_good : GoodT n s c
     := Good n s c machine_wordsize
@@ -8330,11 +8330,11 @@ Module Straightline.
 
       Lemma interp_cast_correct r (x : uexpr type.Z) :
         ident.cast ident.cast_outside_of_range r (uinterp x) = uinterp (AppIdent (ident.Z.cast r) x).
-      Proof. reflexivity. Qed.
+      Proof using Type. reflexivity. Qed.
 
       Lemma interp_cast2_correct r (x : uexpr (type.prod type.Z type.Z)) :
         @interp_cast2 (ident.cast ident.cast_outside_of_range) r (uinterp x) = uinterp (AppIdent (ident.Z.cast2 r) x).
-      Proof. cbn; break_match; reflexivity. Qed.
+      Proof using Type. cbn; break_match; reflexivity. Qed.
 
       Ltac invert H :=
         inversion H; subst;
@@ -8354,14 +8354,14 @@ Module Straightline.
       Lemma invert_AppIdent_correct {d} (e : uexpr d) x p :
         invert_AppIdent e = Some (existT (fun s : type => (ident s d * default.expr s)%type) x p) ->
         e = AppIdent (fst p) (snd p).
-      Proof.
+      Proof using Type.
         cbv [invert_AppIdent].
         break_match; try discriminate.
         intro H; invert H. reflexivity.
       Qed.
 
       Lemma depth_positive {var t} dummy_var (e : Uncurried.expr.expr t) : 0 < depth var dummy_var e.
-      Proof. destruct e; cbn [depth]; rewrite Nat2Z.inj_succ; lia. Qed.
+      Proof using Type. destruct e; cbn [depth]; rewrite Nat2Z.inj_succ; lia. Qed.
 
       Lemma of_uncurried_scalar_ident_correct {s d} (idc : ident s d) args args':
         ok_scalar_ident idc ->
@@ -8370,7 +8370,7 @@ Module Straightline.
         exists s,
           of_uncurried_scalar_ident idc args' = Some s
           /\ interp_scalar s = uinterp (AppIdent idc args).
-      Proof.
+      Proof using Type.
         destruct 1; intros;
           repeat match goal with
                  | _ => eexists; split; [ reflexivity | cbn [interp_scalar] ]
@@ -8387,7 +8387,7 @@ Module Straightline.
         exists s,
           of_uncurried_scalar e = Some s
           /\ interp_scalar s = uinterp  e.
-      Proof.
+      Proof using Type.
         induction 1; cbn [of_uncurried_scalar]; intros;
           repeat match goal with
                  | _ => progress cbn [interp_scalar]
@@ -9838,7 +9838,7 @@ Module PreFancy.
   Lemma interp_cast_mod_correct w r x :
     lower r <= x <= upper r ->
     interp_cast_mod w r x = x.
-  Proof.
+  Proof using Type.
     cbv [interp_cast_mod].
     intros; break_match; rewrite ?andb_true_iff in *; intuition; Z.ltb_to_lt;
       apply Z.mod_small; lia.
@@ -9856,7 +9856,7 @@ Module PreFancy.
             (of_uncurried (dummy_arrow:=dummy_arrow) (depth (fun _ : type => unit) (fun _ : type => tt) (e _)) (e' x)) ->
     (depth type.interp (@DefaultValue.type.default) (e' x) <= depth (fun _ : type => unit) (fun _ : type => tt) (e _))%nat ->
     @interp log2wordmax (interp_cast_mod log2wordmax) _ (of_Expr log2wordmax consts e type.interp x dummy_arrow) = @Uncurried.expr.interp _ (@ident.interp) _ (e type.interp) x.
-  Proof.
+  Proof using Type.
     intro He'; intros; cbv [of_Expr Straightline.of_Expr].
     rewrite He'; cbn [invert_Abs expr.interp].
     assert (forall r z, lower r <= z <= upper r -> ident.cast ident.cast_outside_of_range r z = z) as interp_cast_correct.
@@ -10218,9 +10218,9 @@ Module Fancy.
     Definition reg_eqb x y := if reg_dec x y then true else false.
 
     Lemma reg_eqb_neq x y : x <> y -> reg_eqb x y = false.
-    Proof. cbv [reg_eqb]; break_match; congruence. Qed.
+    Proof using Type. cbv [reg_eqb]; break_match; congruence. Qed.
     Lemma reg_eqb_refl x : reg_eqb x x = true.
-    Proof. cbv [reg_eqb]; break_match; congruence. Qed.
+    Proof using Type. cbv [reg_eqb]; break_match; congruence. Qed.
   End Registers.
 
   Section of_prefancy.
@@ -10339,7 +10339,7 @@ Module Fancy.
                           then x2
                           else 0).
   Lemma test_prog_ok : expected = actual.
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Definition of_Expr {s d} next_name (consts : Z -> option positive) (consts_list : list Z) (e : Expr (s -> d)) (x : var positive s) dummy_arrow : positive -> @expr positive :=
     fun error =>
@@ -10414,13 +10414,13 @@ Module ProdEquiv.
       let result := spec i (Tuple.map ctx args) cc in
       let new_cc := CC.update (writes_conditions i) result cc_spec cc in
       let new_ctx := fun n => if reg_eqb n rd then result mod wordmax else ctx n in interp256 cont new_cc new_ctx.
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma interp_state_equiv e :
     forall cc ctx cc' ctx',
     cc = cc' -> (forall r, ctx r = ctx' r) ->
     interp256 e cc ctx = interp256 e cc' ctx'.
-  Proof.
+  Proof using Type.
     induction e; intros; subst; cbn; [solve[auto]|].
     apply IHe; rewrite Tuple.map_ext with (g:=ctx') by auto;
       [reflexivity|].
@@ -10428,7 +10428,7 @@ Module ProdEquiv.
   Qed.
   Lemma cc_overwrite_full x1 x2 l1 cc :
     CC.update [CC.C; CC.M; CC.L; CC.Z] x2 cc_spec (CC.update l1 x1 cc_spec cc) = CC.update [CC.C; CC.M; CC.L; CC.Z] x2 cc_spec cc.
-  Proof.
+  Proof using Type.
     cbv [CC.update]. cbn [CC.cc_c CC.cc_m CC.cc_l CC.cc_z].
     break_match; try match goal with H : ~ In _ _ |- _ => cbv [In] in H; tauto end.
     reflexivity.
@@ -10441,7 +10441,7 @@ Module ProdEquiv.
     r <> rd ->
     (~ In r (Tuple.to_list _ args)) ->
     value_unused r (Instr i rd args cont).
-  Proof.
+  Proof using Type.
     cbv [value_unused] in *; intros.
     rewrite !interp_step; cbv zeta.
     rewrite Hcont with (x:=x).
@@ -10457,7 +10457,7 @@ Module ProdEquiv.
   Lemma value_unused_overwrite r i args cont :
     (~ In r (Tuple.to_list _ args)) ->
     value_unused r (Instr i r args cont).
-  Proof.
+  Proof using Type.
     cbv [value_unused]; intros; rewrite !interp_step; cbv zeta.
     match goal with |- ?lhs = ?rhs =>
                     match lhs with context [Tuple.map ?f ?t] =>
@@ -10471,7 +10471,7 @@ Module ProdEquiv.
   Lemma value_unused_ret r r' :
     r <> r' ->
     value_unused r (Ret r').
-  Proof.
+  Proof using Type.
     cbv - [reg_dec]; intros.
     break_match; congruence.
   Qed.
@@ -10510,7 +10510,7 @@ Module ProdEquiv.
                      (Instr MUL128LL out (src1, src2)
                                  (Instr (ADD 128) out (out, tmp2)
                                         (Instr (ADD 128) out (out, tmp) cont))))) cc ctx.
-  Proof.
+  Proof using Type.
     intros; cbv [Prod.Mul256].
     repeat (do_interp_step; cbn [spec MUL128LL MUL128UL MUL128LU ADD] in * ).
 
@@ -10551,7 +10551,7 @@ Module ProdEquiv.
                                           (Instr (ADDC (-128)) outHigh (outHigh, tmp2)
                                                  (Instr (ADD 128) out (out, tmp)
                                                         (Instr (ADDC (-128)) outHigh (outHigh, tmp) cont)))))))) cc ctx.
-  Proof.
+  Proof using Type.
     intros; cbv [Prod.Mul256x256].
     repeat (do_interp_step; cbn [spec MUL128LL MUL128UL MUL128LU MUL128UU ADD ADDC] in * ).
 
@@ -10570,21 +10570,21 @@ Module ProdEquiv.
 
   Lemma mulll_comm rd x y cont cc ctx :
     ProdEquiv.interp256 (Fancy.Instr Fancy.MUL128LL rd (x, y) cont) cc ctx = ProdEquiv.interp256 (Fancy.Instr Fancy.MUL128LL rd (y, x) cont) cc ctx.
-  Proof. rewrite !ProdEquiv.interp_step. cbn - [Fancy.interp]. rewrite Z.mul_comm. reflexivity. Qed.
+  Proof using Type. rewrite !ProdEquiv.interp_step. cbn - [Fancy.interp]. rewrite Z.mul_comm. reflexivity. Qed.
 
   Lemma mulhh_comm rd x y cont cc ctx :
     ProdEquiv.interp256 (Fancy.Instr Fancy.MUL128UU rd (x, y) cont) cc ctx = ProdEquiv.interp256 (Fancy.Instr Fancy.MUL128UU rd (y, x) cont) cc ctx.
-  Proof. rewrite !ProdEquiv.interp_step. cbn - [Fancy.interp]. rewrite Z.mul_comm. reflexivity. Qed.
+  Proof using Type. rewrite !ProdEquiv.interp_step. cbn - [Fancy.interp]. rewrite Z.mul_comm. reflexivity. Qed.
 
   Lemma mullh_mulhl rd x y cont cc ctx :
     ProdEquiv.interp256 (Fancy.Instr Fancy.MUL128LU rd (x, y) cont) cc ctx = ProdEquiv.interp256 (Fancy.Instr Fancy.MUL128UL rd (y, x) cont) cc ctx.
-  Proof. rewrite !ProdEquiv.interp_step. cbn - [Fancy.interp]. rewrite Z.mul_comm. reflexivity. Qed.
+  Proof using Type. rewrite !ProdEquiv.interp_step. cbn - [Fancy.interp]. rewrite Z.mul_comm. reflexivity. Qed.
 
   Lemma add_comm rd x y cont cc ctx :
     0 <= ctx x < 2^256 ->
     0 <= ctx y < 2^256 ->
     ProdEquiv.interp256 (Fancy.Instr (Fancy.ADD 0) rd (x, y) cont) cc ctx = ProdEquiv.interp256 (Fancy.Instr (Fancy.ADD 0) rd (y, x) cont) cc ctx.
-  Proof.
+  Proof using Type.
     intros; rewrite !ProdEquiv.interp_step. cbn - [Fancy.interp]. rewrite Z.add_comm.
     rewrite !(Z.mod_small (ctx _)) by (cbn in *; lia). reflexivity.
   Qed.
@@ -10593,7 +10593,7 @@ Module ProdEquiv.
     0 <= ctx x < 2^256 ->
     0 <= ctx y < 2^256 ->
     ProdEquiv.interp256 (Fancy.Instr (Fancy.ADDC 0) rd (x, y) cont) cc ctx = ProdEquiv.interp256 (Fancy.Instr (Fancy.ADDC 0) rd (y, x) cont) cc ctx.
-  Proof.
+  Proof using Type.
     intros; rewrite !ProdEquiv.interp_step. cbn - [Fancy.interp]. rewrite (Z.add_comm (ctx x)).
     rewrite !(Z.mod_small (ctx _)) by (cbn in *; lia). reflexivity.
   Qed.
@@ -10645,13 +10645,13 @@ Module Fancy_PreFancy_Equiv.
   Import Fancy.Registers.
 
   Lemma interp_cast_mod_eq w u x: u = 2^w - 1 -> PreFancy.interp_cast_mod w r[0 ~> u] x = x mod 2^w.
-  Proof.
+  Proof using Type.
     cbv [PreFancy.interp_cast_mod upper lower]; intros; subst.
     rewrite !Z.eqb_refl.
     reflexivity.
   Qed.
   Lemma interp_cast_mod_flag w x: PreFancy.interp_cast_mod w r[0 ~> 1] x = x mod 2.
-  Proof.
+  Proof using Type.
     cbv [PreFancy.interp_cast_mod upper lower].
     break_match; Z.ltb_to_lt; subst; try lia.
     f_equal; lia.
@@ -10668,7 +10668,7 @@ Module Fancy_PreFancy_Equiv.
     Fancy.interp reg_eqb (2^w) Fancy.cc_spec (Fancy.Instr i rd regs e) cc ctx
     = PreFancy.interp (t:=type.Z) (interp_cast:=PreFancy.interp_cast_mod w) w
                       (@Straightline.expr.LetInAppIdentZ _ _ s _ (r[0~>2^w-1])%zrange idc args f).
-  Proof.
+  Proof using Type.
     cbv zeta; intros spec_eq next_eq.
     cbn [Fancy.interp PreFancy.interp].
     rewrite next_eq.
@@ -10691,7 +10691,7 @@ Module Fancy_PreFancy_Equiv.
     Fancy.interp reg_eqb (2^w) Fancy.cc_spec (Fancy.Instr i rd regs e) cc ctx
     = PreFancy.interp (t:=type.Z) (interp_cast:=PreFancy.interp_cast_mod w) w
                       (@Straightline.expr.LetInAppIdentZZ _ _ s _ (r[0~>u], r[0~>1])%zrange idc args f).
-  Proof.
+  Proof using Type.
     cbv zeta; intros spec_eq1 spec_eq2 next_eq.
     cbn [Fancy.interp PreFancy.interp].
     cbv [Straightline.expr.interp_cast2]. cbn [fst snd].
@@ -10766,13 +10766,14 @@ Module BarrettReduction.
       cond_sub2 q3 M.
 
     Lemma looser_bound : M * 2 ^ k < 2 ^ (2*k).
-    Proof using M_nz M_range k_pos. clear -M_range M_nz x_range k_pos; rewrite <-Z.add_diag, Z.pow_add_r; nia. Qed.
+    Proof using M_nz M_range k_pos. clear -M_range M_nz k_pos; assert (0 < 2^k) by auto with zarith; rewrite <-Z.add_diag, Z.pow_add_r; nia. Qed.
 
     Lemma pow_2k_eq : 2 ^ (2*k) = 2 ^ (k - 1) * 2 ^ (k + 1).
     Proof using k_pos. clear -k_pos; rewrite <-Z.pow_add_r by lia. f_equal; ring. Qed.
 
     Lemma mu_bounds : 2 ^ k <= mu < 2^(k+1).
     Proof using M_nz M_range k_pos.
+      clear -M_nz M_range k_pos mu.
       pose proof looser_bound.
       subst mu. split.
       { apply Z.div_le_lower_bound; lia. }
@@ -10802,7 +10803,7 @@ Module BarrettReduction.
     Local Hint Resolve q_correct.
 
     Lemma x_mod_small : x mod 2 ^ (k - 1) <= M.
-    Proof using M_range k_pos. transitivity (2 ^ (k - 1)); auto with zarith. Qed.
+    Proof using M_range k_pos. clear -M_range k_pos. transitivity (2 ^ (k - 1)); auto with zarith. Qed.
     Local Hint Resolve x_mod_small.
 
     Lemma q_bounds : 0 <= q < 2 ^ k.
@@ -10887,11 +10888,12 @@ Module BarrettReduction.
 
     Lemma represents_low_range t x :
       represents t x -> 0 <= x mod 2^k < 2^k.
-    Proof using Hn_nz Hnout k_bound. auto with zarith. Qed.
+    Proof using Hn_nz Hnout k_bound. clear -Hn_nz Hnout k_bound. auto with zarith. Qed.
 
     Lemma represents_high_range t x :
       represents t x -> 0 <= x / 2^k < 2^k.
     Proof using Hn_nz Hnout k_bound.
+      clear -Hn_nz Hnout k_bound.
       destruct 1 as [? [? ?] ]; intros.
       auto using Z.div_lt_upper_bound with zarith.
     Qed.
@@ -10925,6 +10927,7 @@ Module BarrettReduction.
       0 <= i <= k ->
       represents (shiftr a i) (x / 2 ^ i).
     Proof using Hn_nz Hnout M_bound1 k_bound muLow_bounds.
+      clear -Hn_nz Hnout M_bound1 k_bound muLow_bounds w.
       cbv [shiftr]; intros; push_rep.
       match goal with H : _ |- _ => pose proof (represents_range _ _ H) end.
       assert (0 < 2 ^ i) by auto with zarith.
@@ -10971,6 +10974,7 @@ Module BarrettReduction.
     Lemma eval_represents t x :
       represents t x -> eval w 2 t = x.
     Proof using Hn_nz Hnout Hw M_bound1 k_bound muLow_bounds.
+      clear -Hn_nz Hnout Hw M_bound1 k_bound muLow_bounds.
       intros; rewrite (represents_eq t x) by assumption.
       cbn. change_weight; push_rep.
       autorewrite with zsimplify. reflexivity.
@@ -10997,6 +11001,7 @@ Module BarrettReduction.
       0 <= x - y < 2^k*2^k ->
       represents (widesub t1 t2) (x - y).
     Proof using Hn_nz Hnout M_bound1 k_bound muLow_bounds.
+      clear -Hn_nz Hnout M_bound1 k_bound muLow_bounds w.
       intros; cbv [widesub Let_In].
       rewrite (represents_eq t1 x) by assumption.
       rewrite (represents_eq t2 y) by assumption.
@@ -11064,6 +11069,7 @@ Module BarrettReduction.
       0 <= y < 2 ^ k ->
       represents [x;y] (x + 2^k*y).
     Proof using Hn_nz Hnout M_bound1 k_bound n_le_k.
+      clear -Hn_nz Hnout M_bound1 k_bound n_le_k.
       intros; cbv [represents]; autorewrite with zsimplify.
       repeat split; (reflexivity || nia).
     Qed.
@@ -11072,6 +11078,7 @@ Module BarrettReduction.
       0 <= x < 2^k ->
       represents [x; 0] x.
     Proof using Hn_nz Hnout M_bound1 k_bound n_le_k.
+      clear -Hn_nz Hnout M_bound1 k_bound n_le_k w props.
       intros.
       eapply represents_trans.
       { eauto using represents_add with zarith. }
@@ -11086,6 +11093,7 @@ Module BarrettReduction.
       a0b1 = x mod 2^k * (y / 2^k) ->
       represents (mul_high a b a0b1) ((x * y) / 2^k).
     Proof using Hw M_bound1 muLow_bounds n_le_k props.
+      clear -Hw M_bound1 muLow_bounds n_le_k props.
       cbv [mul_high Let_In]; rewrite Z.pow_add_r, Z.pow_1_r by lia; intros.
       assert (4 <= 2 ^ k) by (transitivity (Z.pow 2 2); auto with zarith).
       assert (0 <= x * y / 2^k < 2^k*2^k) by (Z.div_mod_to_quot_rem_in_goal; nia).
@@ -11118,6 +11126,7 @@ Module BarrettReduction.
 
     Lemma cc_l_only_bit : forall x s, 0 <= x < 2 * s -> Z.cc_l (x / s) = 0 <-> x < s.
     Proof using Hn_nz Hnout k_bound.
+      clear -Hn_nz Hnout k_bound.
       cbv [Z.cc_l]; intros.
       rewrite Z.div_between_0_if by lia.
       break_match; Z.ltb_to_lt; Z.rewrite_mod_small; lia.
@@ -11129,6 +11138,7 @@ Module BarrettReduction.
       0 <= y < 2 ^ k ->
       cond_sub1 a y = if (x <? 2 ^ k) then x else x - y.
     Proof using Hn_nz Hnout M_bound1 M_pos k_bound muLow_bounds.
+      clear -Hn_nz Hnout M_bound1 M_pos k_bound muLow_bounds w props.
       intros; cbv [cond_sub1 Let_In]. rewrite Z.zselect_correct. push_rep.
       break_match; Z.ltb_to_lt; rewrite cc_l_only_bit in *; try lia;
         autorewrite with zsimplify_fast to_div_mod pull_Zmod; auto with zarith.
@@ -11138,6 +11148,7 @@ Module BarrettReduction.
     Lemma cond_sub2_correct x y :
       cond_sub2 x y = if (x <? y) then x else x - y.
     Proof using Hn_nz Hnout k.
+      clear -Hn_nz Hnout k.
       cbv [cond_sub2]. rewrite Z.add_modulo_correct.
       autorewrite with zsimplify_fast. break_match; Z.ltb_to_lt; lia.
     Qed.
@@ -11148,10 +11159,10 @@ Module BarrettReduction.
       Let x := xLow + 2^k * xHigh.
 
       Lemma x_rep : represents xt x.
-      Proof using Hn_nz Hnout M_bound1 M_pos k_bound n_le_k xHigh_bounds xLow_bounds. cbv [represents]; subst xt x; autorewrite with cancel_pair zsimplify; repeat split; nia. Qed.
+      Proof using Hn_nz Hnout M_bound1 M_pos k_bound n_le_k xHigh_bounds xLow_bounds. clear -Hn_nz Hnout M_bound1 M_pos k_bound n_le_k xHigh_bounds xLow_bounds. cbv [represents]; subst xt x; autorewrite with cancel_pair zsimplify; repeat split; nia. Qed.
 
       Lemma x_bounds : 0 <= x < M * 2 ^ k.
-      Proof using Hn_nz Hnout M_bound1 k_bound muLow_bounds n_le_k xHigh_bounds xLow_bounds. subst x; nia. Qed.
+      Proof using Hn_nz Hnout M_bound1 k_bound muLow_bounds n_le_k xHigh_bounds xLow_bounds. clear -Hn_nz Hnout M_bound1 k_bound muLow_bounds n_le_k xHigh_bounds xLow_bounds. subst x; nia. Qed.
 
       Definition muSelect := Z.zselect (Z.cc_m (2 ^ k) xHigh) 0 muLow.
 
@@ -11181,7 +11192,7 @@ Module BarrettReduction.
       Qed.
 
       Lemma mu_rep : represents [muLow; 1] (2 ^ (2 * k) / M).
-      Proof using Hn_nz Hnout M_bound1 k_bound muLow_bounds muLow_eq n_le_k x. rewrite <-muLow_eq. eapply represents_trans; auto with zarith. Qed.
+      Proof using Hn_nz Hnout M_bound1 k_bound muLow_bounds muLow_eq n_le_k x. clear -Hn_nz Hnout M_bound1 k_bound muLow_bounds muLow_eq n_le_k x w props. rewrite <-muLow_eq. eapply represents_trans; auto with zarith. Qed.
 
       Derive barrett_reduce
              SuchThat (barrett_reduce = x mod M)
@@ -11312,7 +11323,7 @@ Module Barrett256.
       0 <= xLow < 2 ^ machine_wordsize ->
       0 <= xHigh < M ->
       BarrettReduction.barrett_reduce machine_wordsize M muLow 2 2 xLow xHigh = (xLow + 2 ^ machine_wordsize * xHigh) mod M.
-  Proof.
+  Proof using Type.
     intros.
     apply BarrettReduction.barrett_reduce_correct; cbv [machine_wordsize M muLow] in *;
       try lia;
@@ -11329,7 +11340,7 @@ Module Barrett256.
         (Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange, Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange)
         xy = true ->
        expr.Interp (@ident.interp) barrett_red256 xy = app_curried (t:=type.arrow (type.prod type.Z type.Z) type.Z) (fun xy => BarrettReduction.barrett_reduce machine_wordsize M muLow 2 2 (fst xy) (snd xy)) xy.
-  Proof. intros; destruct (barrett_red256_correct xy); assumption. Qed.
+  Proof using Type. intros; destruct (barrett_red256_correct xy); assumption. Qed.
   Lemma barrett_red256_correct_proj2' :
     forall x y : Z,
       ZRange.type.option.is_bounded_by
@@ -11337,14 +11348,14 @@ Module Barrett256.
         (Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange, Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange)
         (x, y) = true ->
        expr.Interp (@ident.interp) barrett_red256 (x, y) = BarrettReduction.barrett_reduce machine_wordsize M muLow 2 2 x y.
-  Proof. intros; rewrite barrett_red256_correct_proj2 by assumption; unfold app_curried; exact eq_refl. Qed.
+  Proof using Type. intros; rewrite barrett_red256_correct_proj2 by assumption; unfold app_curried; exact eq_refl. Qed.
 
   Lemma barrett_red256_correct_full  :
     forall (xLow xHigh : Z),
       0 <= xLow < 2 ^ machine_wordsize ->
       0 <= xHigh < M ->
       expr.interp (@ident.interp) (barrett_red256 type.interp) (xLow, xHigh) = (xLow + 2 ^ machine_wordsize * xHigh) mod M.
-  Proof.
+  Proof using Type.
     intros.
     rewrite <-barrett_reduce_correct_specialized by assumption.
     rewrite <-barrett_red256_correct_proj2'.
@@ -11360,7 +11371,7 @@ Module Barrett256.
       0 <= xLow < 2 ^ machine_wordsize ->
       0 <= xHigh < M ->
       @PreFancy.interp machine_wordsize (PreFancy.interp_cast_mod machine_wordsize) type.Z (barrett_red256_prefancy (xLow, xHigh) dummy_arrow) = (xLow + 2 ^ machine_wordsize * xHigh) mod M.
-  Proof.
+  Proof using Type.
     intros. rewrite barrett_red256_prefancy_eq; cbv [barrett_red256_prefancy'].
     erewrite PreFancy.of_Expr_correct.
     { apply barrett_red256_correct_full; try assumption; reflexivity. }
@@ -11532,7 +11543,7 @@ Module Barrett256.
              cc_start_state.(Fancy.CC.cc_m) = (Z.cc_m (2^256) (start_context xHigh) =? 1) ->
              let X := start_context x + 2^machine_wordsize * start_context xHigh in
              ProdEquiv.interp256 (Prod.MulMod x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5) cc_start_state start_context = X mod M.
-  Proof.
+  Proof using Type.
     intros. subst X.
     assert (0 <= start_context xHigh < 2^machine_wordsize) by (cbv [M] in *; cbn; lia).
     let r := (eval compute in (2 ^ machine_wordsize)) in
@@ -11731,7 +11742,7 @@ Module SaturatedSolinas.
 
     Let weight := weight log2base 1.
     Let props : @weight_properties weight := wprops log2base 1 ltac:(lia).
-    Local Lemma base_nz : 2 ^ log2base <> 0. Proof using log2base_pos n_nz s_nz. auto with zarith. Qed.
+    Local Lemma base_nz : 2 ^ log2base <> 0. Proof using log2base_pos n_nz s_nz. clear -log2base_pos n_nz s_nz weight props. auto with zarith. Qed.
 
     Derive mulmod
            SuchThat (forall (f g : list Z)
@@ -12298,7 +12309,7 @@ Module Montgomery256.
     forall (lo hi : Z),
       0 <= lo < R -> 0 <= hi < R -> 0 <= lo + R * hi < R * N ->
       MontgomeryReduction.montred' N R N' (Z.log2 R) 2 2 (lo, hi) = ((lo + R * hi) * R') mod N.
-  Proof.
+  Proof using Type.
     intros.
     apply MontgomeryReduction.montred'_correct with (T:=lo + R * hi) (R':=R');
       try match goal with
@@ -12316,7 +12327,7 @@ Module Montgomery256.
         (Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange, Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange)
         xy = true ->
        expr.Interp (@ident.interp) montred256 xy = app_curried (t:=type.arrow (type.prod type.Z type.Z) type.Z) (MontgomeryReduction.montred' N R N' (Z.log2 R) 2 2) xy.
-  Proof. intros; destruct (montred256_correct xy); assumption. Qed.
+  Proof using Type. intros; destruct (montred256_correct xy); assumption. Qed.
   Lemma montred256_correct_proj2' :
     forall xy : type.interp (type.prod type.Z type.Z),
       ZRange.type.option.is_bounded_by
@@ -12324,13 +12335,13 @@ Module Montgomery256.
         (Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange, Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange)
         xy = true ->
        expr.Interp (@ident.interp) montred256 xy = MontgomeryReduction.montred' N R N' (Z.log2 R) 2 2 xy.
-  Proof. intros; rewrite montred256_correct_proj2 by assumption; unfold app_curried; exact eq_refl. Qed.
+  Proof using Type. intros; rewrite montred256_correct_proj2 by assumption; unfold app_curried; exact eq_refl. Qed.
 
   Lemma montred256_correct_full  R' (R'_correct : Z.equiv_modulo N (R * R') 1) :
     forall (lo hi : Z),
       0 <= lo < R -> 0 <= hi < R -> 0 <= lo + R * hi < R * N ->
       expr.interp (@ident.interp) (montred256 type.interp) (lo, hi) = ((lo + R * hi) * R') mod N.
-  Proof.
+  Proof using Type.
     intros.
     rewrite <-montred'_correct_specialized by assumption.
     rewrite <-montred256_correct_proj2'.
@@ -12380,7 +12391,7 @@ Module Montgomery256.
     forall (lo hi : Z) dummy_arrow,
       0 <= lo < R -> 0 <= hi < R -> 0 <= lo + R * hi < R * N ->
       @PreFancy.interp machine_wordsize (PreFancy.interp_cast_mod machine_wordsize) type.Z (montred256_prefancy (lo,hi) dummy_arrow) = ((lo + R * hi) * R') mod N.
-  Proof.
+  Proof using Type.
     intros. rewrite montred256_prefancy_eq; cbv [montred256_prefancy'].
     erewrite PreFancy.of_Expr_correct.
     { apply montred256_correct_full; try assumption; reflexivity. }
@@ -12466,7 +12477,7 @@ Module Montgomery256.
                                               then start_context RegPInv
                                               else start_context r)
     = ProdEquiv.interp256 (Prod.MontRed256 lo hi y t1 t2 scratch RegPInv) cc_start_state start_context.
-  Proof.
+  Proof using Type.
     intros. cbv [R] in *.
     cbv [Prod.MontRed256 montred256_alloc].
 
@@ -12567,7 +12578,7 @@ Module Montgomery256.
       let x := (start_context lo) + R * (start_context hi) in (* x is the input (split into two registers) *)
       (0 <= x < R * N) -> (* input precondition *)
       (ProdEquiv.interp256 (Prod.MontRed256 lo hi y t1 t2 scratch RegPInv) cc_start_state start_context = (x * R') mod N).
-  Proof.
+  Proof using Type.
     intros. subst x. cbv [N R N'] in *.
     rewrite <-montred256_prefancy_correct with (dummy_arrow := fun s d _ => DefaultValue.type.default) by auto.
     rewrite <-montred256_alloc_equivalent with (errorR := RegZero) (errorP := 1%positive) (extra_reg:=extra_reg)

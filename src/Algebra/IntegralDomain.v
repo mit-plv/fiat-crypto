@@ -200,3 +200,10 @@ Ltac dropRingSyntax :=
         Ncring.eq_notation
     ] in *.
 Ltac nsatz := Algebra.Nsatz.nsatz; dropRingSyntax.
+
+Module Export Hints.
+  Export Crypto.Algebra.Nsatz.Hints.
+  Export Crypto.Algebra.Hierarchy.Hints.
+  Export Crypto.Algebra.Ring.Hints.
+  Global Existing Instance IntegralDomain.Integral_domain.
+End Hints.

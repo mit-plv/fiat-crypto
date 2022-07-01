@@ -1,12 +1,13 @@
 Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Classes.RelationClasses.
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.ZArith.Znumtheory Coq.ZArith.Zpow_facts.
-Require Import Crypto.Util.ZUtil.Hints.Core.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.ZArith.Znumtheory Coq.ZArith.Zpow_facts.
+Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.ZSimplify.Core.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Le.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Local Open Scope Z_scope.
@@ -84,6 +85,7 @@ Module Z.
   Qed.
 
   Lemma mod_to_nat x m (Hm:(0 < m)%Z) (Hx:(0 <= x)%Z) : (Z.to_nat x mod Z.to_nat m = Z.to_nat (x mod m))%nat.
+  Proof.
     pose proof Zdiv.mod_Zmod (Z.to_nat x) (Z.to_nat m) as H;
       rewrite !Z2Nat.id in H by lia.
     rewrite <-H by (change 0%nat with (Z.to_nat 0); rewrite Z2Nat.inj_iff; lia).

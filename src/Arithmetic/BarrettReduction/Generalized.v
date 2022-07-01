@@ -8,7 +8,7 @@
     ± 1] to [k ± offset]).  This leads to weaker conditions on the
     base ([b]), exponent ([k]), and the [offset] than those given in
     the HAC. *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
+Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.ZUtil.Pow.
@@ -151,6 +151,7 @@ Section barrett.
 
       Lemma helper_1 : b ^ (2 * k) * ((a / n) - 1) <= m * (n * (a / n) - b ^ (k - offset)).
       Proof using a_good a_small base_good k_big_enough k_good m_good n_good n_large n_pos n_reasonable offset_nonneg.
+        clear -a_good a_small base_good k_big_enough k_good m_good n_good n_large n_pos n_reasonable offset_nonneg.
         pose proof (Z.mod_pos_bound (b ^ (2*k)) n).
         assert (0 < b ^ (k - offset)) by auto with zarith.
         assert (a/n < b ^ k) by auto using Z.div_lt_upper_bound with zarith.
@@ -169,8 +170,9 @@ Section barrett.
       Let epsilon := (a / n) * b ^ (k+offset) - (a / b ^ (k - offset)) * m.
 
       Lemma q_epsilon : q = (a / n) + (- epsilon) / b ^ (k + offset).
-      Proof using a_small base_good k_big_enough m_good n_good n_large n_pos n_reasonable offset_nonneg r.
+      Proof using a_small base_good k_big_enough m_good n_good n_large n_pos n_reasonable offset_nonneg r k_good.
         subst q epsilon.
+        clear a_good a_nonneg.
         autorewrite with push_Zpow in *; do 2 Z.div_mod_to_quot_rem_in_goal; nia.
       Qed.
 

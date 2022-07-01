@@ -1,10 +1,11 @@
 (*** ℤ can be a bounded ℤ-Like type *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
+Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.LegacyArithmetic.ZBounded.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Pow2Mod.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
+Require Import Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.

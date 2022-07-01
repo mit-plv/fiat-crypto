@@ -1,10 +1,10 @@
 Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
-Require Import Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.micromega.Psatz.
+Require Import Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.Lists.List.
 Require Import Coq.funind.Recdef.
 Require Import Crypto.Util.ListUtil Crypto.Util.NatUtil.
-Require Export Crypto.Util.ZUtil.Hints.Core.
+Require Export Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Testbit.
 Require Import Crypto.Util.ZUtil.Pow2Mod.

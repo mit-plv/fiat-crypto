@@ -4,7 +4,7 @@ Require Import Coq.NArith.NArith.
 Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Program.Program.
 Require Import Coq.Numbers.Natural.Peano.NPeano Util.NatUtil.
-Require Import Coq.micromega.Psatz.
+Require Import Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Bool.Bool.
 
 Require Import Crypto.Util.Bool.

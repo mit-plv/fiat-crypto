@@ -3,7 +3,7 @@ Require Export Crypto.Arithmetic.ModularArithmeticTheorems.
 Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Field_theory Coq.setoid_ring.Field_tac.
 
 Require Import Coq.nsatz.Nsatz.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Arithmetic.ModularArithmeticPre.
 Require Import Crypto.Util.NumTheoryUtil.
 Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Setoids.Setoid.

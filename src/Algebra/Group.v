@@ -1,5 +1,6 @@
 Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Crypto.Util.Relations (*Crypto.Util.Tactics*).
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Monoid.
+Export Hierarchy.Hints Monoid.Hints.
 
 Section BasicProperties.
   Context {T eq op id inv} `{@group T eq op id inv}.
@@ -181,3 +182,17 @@ Section CommutativeGroupByIsomorphism.
            end.
   Qed.
 End CommutativeGroupByIsomorphism.
+
+Module Export Hints.
+  Export Hierarchy.Hints Monoid.Hints.
+  Global Existing Instances
+           isomorphic_groups_group_G
+           isomorphic_groups_group_H
+           isomorphic_groups_hom_GH
+           isomorphic_groups_hom_HG
+           isomorphic_commutative_groups_group_G
+           isomorphic_commutative_groups_group_H
+           isomorphic_commutative_groups_hom_GH
+           isomorphic_commutative_groups_hom_HG
+  .
+End Hints.

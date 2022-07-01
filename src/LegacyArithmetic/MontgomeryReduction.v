@@ -1,7 +1,7 @@
 (*** Montgomery Multiplication *)
 (** This file implements Montgomery Form, Montgomery Reduction, and
     Montgomery Multiplication on [ZLikeOps].  We follow [Montgomery/Z.v]. *)
-Require Import Coq.ZArith.ZArith Coq.Lists.List Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.micromega.Psatz.
+Require Import Coq.ZArith.ZArith Coq.Lists.List Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Definition.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
 Require Import Crypto.LegacyArithmetic.ZBounded.

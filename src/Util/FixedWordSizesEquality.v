@@ -1,11 +1,13 @@
 Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.NArith.BinNat.
 Require Import Coq.Arith.Arith.
 Require Import bbv.WordScope.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Util.WordUtil.
+Require Import Crypto.Util.ZUtil.Hints.ZArith.
+Require Import Crypto.Util.ZUtil.Le.
 Require Import Crypto.Util.ZUtil.Log2.
 Require Import Crypto.Util.ZUtil.Z2Nat.
 Require Import Crypto.Util.Tactics.BreakMatch.

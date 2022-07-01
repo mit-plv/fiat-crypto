@@ -1,6 +1,6 @@
 (** * A Fancy Machine with 256-bit registers *)
 Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
-Require Import Coq.PArith.BinPos Coq.micromega.Psatz.
+Require Import Coq.PArith.BinPos Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Export Coq.ZArith.ZArith Coq.Lists.List.
 Require Import Crypto.Util.Decidable.
 Require Export Crypto.LegacyArithmetic.Interface.

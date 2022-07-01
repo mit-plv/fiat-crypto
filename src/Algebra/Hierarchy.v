@@ -1,3 +1,4 @@
+Require Import Coq.Classes.Equivalence Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Export Crypto.Util.Decidable.
 
@@ -159,3 +160,36 @@ Section ZeroNeqOne.
     intro HH; symmetry in HH. auto using zero_neq_one.
   Qed.
 End ZeroNeqOne.
+
+Module Export Hints.
+  Export Coq.Classes.Equivalence Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.Decidable.
+  Global Existing Instance monoid_is_associative.
+  Global Existing Instance monoid_is_left_identity.
+  Global Existing Instance monoid_is_right_identity.
+  Global Existing Instance monoid_Equivalence.
+  Global Existing Instance monoid_op_Proper.
+  Global Existing Instance group_monoid.
+  Global Existing Instance group_is_left_inverse.
+  Global Existing Instance group_is_right_inverse.
+  Global Existing Instance group_inv_Proper.
+  Global Existing Instance commutative_group_group.
+  Global Existing Instance commutative_group_is_commutative.
+  Global Existing Instance ring_commutative_group_add.
+  Global Existing Instance ring_monoid_mul.
+  Global Existing Instance ring_is_left_distributive.
+  Global Existing Instance ring_is_right_distributive.
+  Global Existing Instance ring_mul_Proper.
+  Global Existing Instance ring_sub_Proper.
+  Global Existing Instance commutative_ring_ring.
+  Global Existing Instance commutative_ring_is_commutative.
+  Global Existing Instance integral_domain_commutative_ring.
+  Global Existing Instance integral_domain_is_zero_product_zero_factor.
+  Global Existing Instance integral_domain_is_zero_neq_one.
+  Global Existing Instance field_commutative_ring.
+  Global Existing Instance field_is_left_multiplicative_inverse.
+  Global Existing Instance field_is_zero_neq_one.
+  Global Existing Instance field_inv_Proper.
+  Global Existing Instance field_div_Proper.
+End Hints.

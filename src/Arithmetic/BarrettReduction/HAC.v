@@ -8,7 +8,7 @@
     does reduction modulo [b^(k+offset)] early (ensuring that we don't
     have to carry around extra precision), but requires more stringint
     conditions on the base ([b]), exponent ([k]), and the [offset]. *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
+Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.

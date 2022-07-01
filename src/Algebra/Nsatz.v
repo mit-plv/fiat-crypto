@@ -4,7 +4,7 @@
 
 Require Coq.nsatz.Nsatz.
 Require Import Coq.Lists.List.
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 
 (** For compat with https://github.com/coq/coq/pull/12073 *)
 Module Nsatz.
@@ -174,6 +174,7 @@ Ltac nsatz_contradict :=
       end).
 
 Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
   Global Existing Instances
          Ncring_tac.Ifind0
          Ncring_tac.Iclosed_nil

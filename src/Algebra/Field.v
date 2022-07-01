@@ -5,6 +5,10 @@ Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Mor
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Monoid Crypto.Algebra.Ring Crypto.Algebra.IntegralDomain.
 Require Coq.setoid_ring.Field_theory.
 Module Export Hints1.
+  Export Crypto.Algebra.Monoid.Hints.
+  Export Crypto.Algebra.Hierarchy.Hints.
+  Export Crypto.Algebra.Ring.Hints.
+  Export Crypto.Algebra.IntegralDomain.Hints.
   Global Existing Instances
          Ncring_tac.Ifind0
          Ncring_tac.Iclosed_nil
@@ -33,7 +37,6 @@ Module Export Hints1.
          Ncring_tac.reifyZneg
   | 11.
   Global Existing Instance Ncring_tac.reify_var | 100.
-  Global Existing Instance IntegralDomain.Integral_domain.
 End Hints1.
 
 Section Field.
@@ -363,33 +366,6 @@ Module Export Hints.
   Export Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
   Export Hints1.
   Global Existing Instances is_mul_nonzero_nonzero integral_domain.
-  Global Existing Instance monoid_is_associative.
-  Global Existing Instance monoid_is_left_identity.
-  Global Existing Instance monoid_is_right_identity.
-  Global Existing Instance monoid_Equivalence.
-  Global Existing Instance monoid_op_Proper.
-  Global Existing Instance group_monoid.
-  Global Existing Instance group_is_left_inverse.
-  Global Existing Instance group_is_right_inverse.
-  Global Existing Instance group_inv_Proper.
-  Global Existing Instance commutative_group_group.
-  Global Existing Instance commutative_group_is_commutative.
-  Global Existing Instance ring_commutative_group_add.
-  Global Existing Instance ring_monoid_mul.
-  Global Existing Instance ring_is_left_distributive.
-  Global Existing Instance ring_is_right_distributive.
-  Global Existing Instance ring_mul_Proper.
-  Global Existing Instance ring_sub_Proper.
-  Global Existing Instance commutative_ring_ring.
-  Global Existing Instance commutative_ring_is_commutative.
-  Global Existing Instance integral_domain_commutative_ring.
-  Global Existing Instance integral_domain_is_zero_product_zero_factor.
-  Global Existing Instance integral_domain_is_zero_neq_one.
-  Global Existing Instance field_commutative_ring.
-  Global Existing Instance field_is_left_multiplicative_inverse.
-  Global Existing Instance field_is_zero_neq_one.
-  Global Existing Instance field_inv_Proper.
-  Global Existing Instance field_div_Proper.
   Global Existing Instances
          Ncring.zero_notation
          Ncring.one_notation
@@ -404,18 +380,5 @@ Module Export Hints.
          Ncring.ring_sub_comp
          Ncring.ring_opp_comp
          Ncring.power_ring
-         Ring.is_left_distributive_sub
-         Ring.is_right_distributive_sub
-         Ring.Ncring_Ring_ops
-         Ring.Ncring_Ring
-         Ring.homomorphism_is_homomorphism
-         Ring.monoid_homomorphism_mul
-         Ring.Cring_Cring_commutative_ring
-         Ring.ring_Z
-         Ring.commutative_ring_Z
-         Ring.integral_domain_Z
-         Ring.homomorphism_of_Z
-         Ring.integral_domain_Z
-         Ring.homomorphism_of_Z
   .
 End Hints.

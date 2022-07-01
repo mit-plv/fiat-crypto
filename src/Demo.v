@@ -1,5 +1,5 @@
 (* Following http://adam.chlipala.net/theses/andreser.pdf chapter 3 *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Algebra.Nsatz.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Crypto.Algebra.Nsatz.
 Require Import Crypto.Util.Tactics.UniquePose Crypto.Util.Decidable.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.

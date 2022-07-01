@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.Znumtheory.
 Require Import Crypto.Util.ZUtil.Tactics.CompareToSgn.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.

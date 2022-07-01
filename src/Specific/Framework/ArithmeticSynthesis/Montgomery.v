@@ -1,4 +1,4 @@
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Definition.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Proofs.
 Require Import Crypto.Arithmetic.Core. Import B.

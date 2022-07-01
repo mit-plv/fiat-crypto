@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith Coq.Lists.List Coq.micromega.Psatz.
+Require Import Coq.ZArith.ZArith Coq.Lists.List Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.LegacyArithmetic.Interface.
 Require Import Crypto.LegacyArithmetic.InterfaceProofs.
 Require Import Crypto.LegacyArithmetic.Double.Core.

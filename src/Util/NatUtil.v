@@ -1,8 +1,8 @@
 Require Coq.Logic.Eqdep_dec.
-Require Import Coq.Numbers.Natural.Peano.NPeano Coq.micromega.Lia.
+Require Import Coq.Numbers.Natural.Peano.NPeano Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Relations.Relation_Definitions.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Arith.Arith.
 Require Import Coq.NArith.NArith.
 Require Export Crypto.Util.GlobalSettings.

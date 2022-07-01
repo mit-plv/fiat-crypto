@@ -2,7 +2,7 @@
 (** This file implements the proofs for Montgomery Form, Montgomery
     Reduction, and Montgomery Multiplication on [Z].  We follow
     Wikipedia. *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.Structures.Equalities.
+Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Structures.Equalities.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Definition.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.EquivModulo.

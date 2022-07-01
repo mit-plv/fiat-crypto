@@ -1,5 +1,5 @@
 Require Export Crypto.Util.GlobalSettings.
-Require Import Coq.micromega.Lia Coq.ZArith.Znumtheory.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.ZArith.Znumtheory.
 
 Module Z.
   Ltac prime_bound := match goal with
