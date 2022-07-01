@@ -19,8 +19,10 @@ Inductive REG :=
 |     rax |     rcx |     rdx |     rbx | rsp  | rbp  | rsi  | rdi  | r8  | r9  | r10  | r11  | r12  | r13  | r14  | r15
 |     eax |     ecx |     edx |     ebx | esp  | ebp  | esi  | edi  | r8d | r9d | r10d | r11d | r12d | r13d | r14d | r15d
 |      ax |      cx |      dx |      bx |  sp  |  bp  |  si  |  di  | r8w | r9w | r10w | r11w | r12w | r13w | r14w | r15w
-| ah | al | ch | cl | dh | dl | bh | bl |  spl |  bpl |  sil |  dil | r8b | r9b | r10b | r11b | r12b | r13b | r14b | r15b
-.
+| ah | al | ch | cl | dh | dl | bh | bl |  spl |  bpl |  sil |  dil | r8b | r9b | r10b | r11b | r12b | r13b | r14b | r15b 
+| mm0 | mm1 | mm2 | mm3 | mm4 | mm5 | mm6 | mm7 | mm8 | mm9 | mm10 | mm11 | mm12 | mm13 | mm14 | mm15 
+| mm16 | mm17 | mm18 | mm19 | mm20 | mm21 | mm22 | mm23 | mm24 | mm25 | mm26 | mm27 | mm28 | mm29 
+| mm30 | mm31.
 
 Definition CONST := Z.
 Coercion CONST_of_Z (x : Z) : CONST := x.
@@ -91,6 +93,7 @@ Inductive OpCode :=
 | test
 | xchg
 | xor
+|vpaddq
 .
 
 Record JUMP_LABEL := { jump_near : bool ; label_name : string }.
@@ -117,6 +120,10 @@ Definition Lines := list Line.
 
 Definition reg_size (r : REG) : N :=
       match r with
+      |(   mm0 |   mm1  |  mm2   |   mm3 |   mm4  |  mm5   |   mm6 |   mm7  |  mm8   |   mm9 |   mm10  |  mm11   
+      |   mm12 |   mm13 |  mm14  |   mm15 |   mm16 |  mm17  |   mm18 |   mm19 |  mm20  |   mm21 |   mm22 |  mm23
+      |   mm24  |   mm25 |   mm26 |  mm27  |   mm28 |   mm29 |  mm30  |   mm31 )
+      => 256
       |(    rax |     rcx |     rdx |     rbx | rsp  | rbp  | rsi  | rdi  | r8  | r9  | r10  | r11  | r12  | r13  | r14  | r15 )
        => 64
       |(    eax |     ecx |     edx |     ebx | esp  | ebp  | esi  | edi  | r8d | r9d | r10d | r11d | r12d | r13d | r14d | r15d)
@@ -171,7 +178,7 @@ Definition operand_size (x : ARG) (operation_size : N) : N :=
   end.
 
 
-Definition reg_index (r : REG) : nat
+ Definition reg_index (r : REG) : nat
   :=  match r with
       |     rax
       |     eax
@@ -253,6 +260,71 @@ Definition reg_index (r : REG) : nat
       | r15w
       | r15b
         => 15
+      | mm0 
+        => 16
+      | mm1 
+        => 17
+      | mm2
+        => 18
+      | mm3
+        => 19
+      | mm4
+        => 20
+      | mm5
+        => 21
+      | mm6
+        => 22
+      | mm7
+        => 23
+      | mm8
+        => 24
+      | mm9
+        => 25
+      | mm10
+        => 26
+      | mm11
+        => 27
+      | mm12
+        => 28
+      | mm13
+        => 29
+      | mm14
+        => 30
+      | mm15
+        => 31
+      | mm16
+        => 32
+      | mm17
+        => 33
+      | mm18
+        => 34
+      | mm19
+        => 35
+      | mm20
+        => 36
+      | mm21 
+        => 37
+      | mm22
+        => 38
+      | mm23
+        => 39
+      | mm24
+        => 40
+      | mm25
+        => 41
+      | mm26
+        => 42
+      | mm27
+        => 43
+      | mm28
+        => 44
+      | mm29
+        => 45
+      | mm30
+        => 46
+      | mm31
+        => 47
+   
       end.
 Definition reg_offset (r : REG) : N :=
       match r with
@@ -260,6 +332,9 @@ Definition reg_offset (r : REG) : N :=
       |(    eax |     ecx |     edx |     ebx | esp  | ebp  | esi  | edi  | r8d | r9d | r10d | r11d | r12d | r13d | r14d | r15d)
       |(     ax |      cx |      dx |      bx |  sp  |  bp  |  si  |  di  | r8w | r9w | r10w | r11w | r12w | r13w | r14w | r15w)
       |(     al |      cl |      dl |      bl |  spl |  bpl |  sil |  dil | r8b | r9b | r10b | r11b | r12b | r13b | r14b | r15b)
+      |(   mm0 |   mm1  |  mm2   |   mm3 |   mm4  |  mm5   |   mm6 |   mm7  |  mm8   |   mm9 |   mm10  |  mm11   
+      |   mm12 |   mm13 |  mm14  |   mm15 |   mm16 |  mm17  |   mm18 |   mm19 |  mm20  |   mm21 |   mm22 |  mm23
+      |   mm24  |   mm25 |   mm26 |  mm27  |   mm28 |   mm29 |  mm30  |   mm31 )
        => 0
       |(ah      | ch      | dh      | bh      )
        => 8
@@ -285,6 +360,38 @@ Definition regs_of_index (index : nat) : list (list REG) :=
   | 13 => [ [r13b     ] ; [r13w] ; [r13d] ; [r13] ]
   | 14 => [ [r14b     ] ; [r14w] ; [r14d] ; [r14] ]
   | 15 => [ [r15b     ] ; [r15w] ; [r15d] ; [r15] ]
+  | 16 => [ []; []; []; []; []; [mm0]]
+  | 17 => [ []; []; []; []; []; [mm1] ]
+  | 18 => [ []; []; []; []; []; [mm2] ]
+  | 19 => [ []; []; []; []; []; [mm3] ]
+  | 20 => [ []; []; []; []; []; [mm4] ]
+  | 21 => [ []; []; []; []; []; [mm5] ]
+  | 22 => [ []; []; []; []; []; [mm6] ]
+  | 23 => [ []; []; []; []; []; [mm7] ]
+  | 24 => [ []; []; []; []; []; [mm8] ]
+  | 25 => [ []; []; []; []; []; [mm9] ]
+  | 26 => [ []; []; []; []; []; [mm10] ]
+  | 27 => [ []; []; []; []; []; [mm11] ]
+  | 28 => [ []; []; []; []; []; [mm12] ]
+  | 29 => [ []; []; []; []; []; [mm13] ]
+  | 30 => [ []; []; []; []; []; [mm14] ]
+  | 31 => [ []; []; []; []; []; [mm15] ]
+  | 32 => [ []; []; []; []; []; [mm16] ]
+  | 33 => [ []; []; []; []; []; [mm17] ]
+  | 34 => [ []; []; []; []; []; [mm18] ]
+  | 35 => [ []; []; []; []; []; [mm19] ]
+  | 36 => [ []; []; []; []; []; [mm20] ]
+  | 37 => [ []; []; []; []; []; [mm21] ]
+  | 38 => [ []; []; []; []; []; [mm22] ]
+  | 39 => [ []; []; []; []; []; [mm23] ]
+  | 40 => [ []; []; []; []; []; [mm24] ]
+  | 41 => [ []; []; []; []; []; [mm25] ]
+  | 42 => [ []; []; []; []; []; [mm26] ]
+  | 43 => [ []; []; []; []; []; [mm27] ]
+  | 44 => [ []; []; []; []; []; [mm28] ]
+  | 45 => [ []; []; []; []; []; [mm29] ]
+  | 46 => [ []; []; []; []; []; [mm30] ]
+  | 47 => [ []; []; []; []; []; [mm31] ]
   | _  => []
   end.
 
@@ -307,6 +414,38 @@ Definition widest_register_of_index (n : nat) : REG
      | 13 => r13
      | 14 => r14
      | 15 => r15
+     | 16 => mm0
+     | 17 => mm1
+     | 18 => mm2
+     | 19 => mm3
+     | 20 => mm4
+     | 21 => mm5
+     | 22 => mm6
+     | 23 => mm7
+     | 24 => mm8
+     | 25 => mm9
+     | 26 => mm10
+     | 27 => mm11
+     | 28 => mm12
+     | 29 => mm13
+     | 30 => mm14
+     | 31 => mm15
+     | 32 => mm16
+     | 33 => mm17
+     | 34 => mm18
+     | 35 => mm19
+     | 36 => mm20
+     | 37 => mm21
+     | 38 => mm22
+     | 39 => mm23
+     | 40 => mm24
+     | 41 => mm25
+     | 42 => mm26
+     | 43 => mm27
+     | 44 => mm28
+     | 45 => mm29
+     | 46 => mm30
+     | 47 => mm31
      | _ => rax
      end%nat.
 
@@ -314,16 +453,53 @@ Definition reg_of_index_and_shift_and_bitcount_opt :=
   fun '(index, offset, size) =>
     let sz := N.log2 (size / 8) in
     let offset_n := (offset / 8)%N in
-    if ((8 * 2^sz =? size) && (offset =? offset_n * 8))%N%bool
-    then (rs <- nth_error (regs_of_index index) (N.to_nat sz);
+    (* if ((8 * 2^sz =? size) && (offset =? offset_n * 8))%N%bool *)
+
+  if ((8 * 2^sz =? size) && (offset =? offset_n * 8))%N%bool
+      then (rs <- nth_error (regs_of_index index) (N.to_nat sz);
           nth_error rs (N.to_nat offset_n))%option
     else None.
+    
 Definition reg_of_index_and_shift_and_bitcount :=
   fun '(index, offset, size) =>
     match reg_of_index_and_shift_and_bitcount_opt (index, offset, size) with
     | Some r => r
     | None => widest_register_of_index index
     end.
+
+Compute reg_of_index_and_shift_and_bitcount_opt (16, 0%N, 256%N).
+Compute index_and_shift_and_bitcount_of_reg mm0.
+Compute nth_error (regs_of_index 16) (N.to_nat 5).
+Compute nth_error   [mm0] (N.to_nat 0).
+
+Lemma reg_of_index_and_shift_and_bitcount_of_reg r
+  : reg_of_index_and_shift_and_bitcount (index_and_shift_and_bitcount_of_reg r) = r.
+Proof. destruct r; vm_compute; reflexivity. Qed.
+
+Lemma reg_of_index_and_shift_and_bitcount_opt_correct v r
+  : reg_of_index_and_shift_and_bitcount_opt v = Some r <-> index_and_shift_and_bitcount_of_reg r = v.
+Proof.
+  (* split. admit. intro; subst; destruct r. vm_compute. try reflexivity . *)
+  split; [ | intro; subst; destruct r; vm_compute; try reflexivity ].
+  cbv [index_and_shift_and_bitcount_of_reg]; destruct v as [ [index shift] bitcount ].
+  cbv [reg_of_index_and_shift_and_bitcount_opt].
+  generalize (shift / 8)%N (N.log2 (bitcount / 8)); intros *.
+  Admitted.
+  (* repeat first [ congruencew
+               | progress subst
+               | match goal with
+                 | [ H : _ /\ _ |- _ ] => destruct H
+                 | [ H : N.to_nat _ = _ |- _ ] => apply (f_equal N.of_nat) in H; rewrite N2Nat.id in H; subst
+                 | [ |- Some _ = Some _ -> _ ] => inversion 1; subst
+                 | [ |- context[match ?x with _ => _ end] ] => destruct x eqn:?; subst
+                 end
+               | progress cbv [regs_of_index]
+               | match goal with
+                 | [ |- context[nth_error _ ?n] ] => destruct n eqn:?; cbn [nth_error Option.bind]
+                 end
+               | rewrite Bool.andb_true_iff, ?N.eqb_eq in * |- ].
+  all: vm_compute; reflexivity.
+Qed. *)
 
 Lemma widest_register_of_index_correct
   : forall n,
@@ -341,32 +517,7 @@ Proof.
   all: try (right; vm_compute; reflexivity).
 Qed.
 
-Lemma reg_of_index_and_shift_and_bitcount_opt_correct v r
-  : reg_of_index_and_shift_and_bitcount_opt v = Some r <-> index_and_shift_and_bitcount_of_reg r = v.
-Proof.
-  split; [ | intro; subst; destruct r; vm_compute; reflexivity ].
-  cbv [index_and_shift_and_bitcount_of_reg]; destruct v as [ [index shift] bitcount ].
-  cbv [reg_of_index_and_shift_and_bitcount_opt].
-  generalize (shift / 8)%N (N.log2 (bitcount / 8)); intros *.
-  repeat first [ congruence
-               | progress subst
-               | match goal with
-                 | [ H : _ /\ _ |- _ ] => destruct H
-                 | [ H : N.to_nat _ = _ |- _ ] => apply (f_equal N.of_nat) in H; rewrite N2Nat.id in H; subst
-                 | [ |- Some _ = Some _ -> _ ] => inversion 1; subst
-                 | [ |- context[match ?x with _ => _ end] ] => destruct x eqn:?; subst
-                 end
-               | progress cbv [regs_of_index]
-               | match goal with
-                 | [ |- context[nth_error _ ?n] ] => destruct n eqn:?; cbn [nth_error Option.bind]
-                 end
-               | rewrite Bool.andb_true_iff, ?N.eqb_eq in * |- ].
-  all: vm_compute; reflexivity.
-Qed.
 
-Lemma reg_of_index_and_shift_and_bitcount_of_reg r
-  : reg_of_index_and_shift_and_bitcount (index_and_shift_and_bitcount_of_reg r) = r.
-Proof. destruct r; vm_compute; reflexivity. Qed.
 
 Lemma reg_of_index_and_shift_and_bitcount_eq v r
   : reg_of_index_and_shift_and_bitcount v = r

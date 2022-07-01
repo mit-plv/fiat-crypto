@@ -1,7 +1,7 @@
 Require Crypto.Assembly.Parse.
 Require Import Coq.Program.Tactics.
 Require Import Coq.derive.Derive.
-Require Import Coq.Lists.List.
+Require Import Coq.Lists.List. 
 Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.NArith.NArith.
@@ -82,7 +82,7 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 
 Section S.
 Implicit Type s : OperationSize.
-Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | subborrow s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
+Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | subborrow s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero | vpaddq s (* | ... *)
   | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | xorZ | addcarryZ s | subborrowZ s.
 Definition op_beq a b := if op_eq_dec a b then true else false.
 End S.
@@ -118,6 +118,7 @@ Global Instance Show_op : Show op := fun o =>
   | xorZ => "xorZ"
   | addcarryZ s => "addcarryZ " ++ show s
   | subborrowZ s => "subborrowZ " ++ show s
+  | vpaddq s => "vpaddq" ++ show s
   end%string.
 
 Definition show_op_subscript : Show op := fun o =>
@@ -151,6 +152,7 @@ Definition show_op_subscript : Show op := fun o =>
   | xorZ => "xorℤ"
   | addcarryZ s => "addcarryℤ" ++ String.to_subscript (show s)
   | subborrowZ s => "subborrowℤ" ++ String.to_subscript (show s)
+  | vpaddq s => "vpaddq" ++ String.to_subscript (show s)
   end%string.
 
 Module FMapOp.
@@ -486,6 +488,20 @@ Section WithContext.
     | xorZ, args => Some (List.fold_right Z.lxor 0 args)
     | addcarryZ s, args => Some (Z.shiftr (List.fold_right Z.add 0 args) (Z.of_N s))
     | subborrowZ s, cons a args' => Some (- Z.shiftr (a - List.fold_right Z.add 0 args') (Z.of_N s))
+    | vpaddq s, [a; b] => Some (
+    let a1 := keep 64%N (Z.shiftr a 192%Z) in
+    let a2 := keep 64%N (Z.shiftr a 128%Z) in
+    let a3 := keep 64%N (Z.shiftr a 64%Z) in 
+    let a4 := keep 64%N (Z.shiftr a 0%Z) in
+    let b1 := keep 64%N (Z.shiftr b 192%Z) in
+    let b2 := keep 64%N (Z.shiftr b 128%Z) in
+    let b3 := keep 64%N (Z.shiftr b 64%Z) in
+    let b4 := keep 64%N (Z.shiftr b 0%Z) in
+    List.fold_right Z.lor 0 
+    [(Z.shiftl (keep 64%N (List.fold_right Z.add 0 [a1; b1])) 192%Z); 
+    (Z.shiftl (keep 64%N (List.fold_right Z.add 0 [a2; b2])) 128%Z) ; 
+    (Z.shiftl (keep 64%N (List.fold_right Z.add 0 [a3; b3])) 64%Z) ; 
+    ((keep 64%N (List.fold_right Z.add 0 [a4; b4])))])
     | _, _ => None
     end%Z.
 End WithContext.
