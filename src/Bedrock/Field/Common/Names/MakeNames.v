@@ -15,10 +15,10 @@ Require Import Crypto.Util.Tactics.BreakMatch.
 Import Language.API.Compilers.
 Import Types.Notations.
 Import ListNotations.
-Existing Instances rep.Z rep.listZ_mem.
+Global Existing Instances rep.Z rep.listZ_mem.
 
 Section with_parameters.
-  Context 
+  Context
     {width BW word mem locals env ext_spec varname_gen error}
    `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
   Context {inname_gen outname_gen : nat -> string}.
@@ -71,7 +71,7 @@ Section with_parameters.
       forall nextn n,
         ~ varname_set_base (snd (make_names name_gen1 nextn t))
           (name_gen2 n).
-    Proof.
+    Proof using Type.
       intro Hdisjoint; induction t; intros;
         cbn [varname_set_base rep.varname_set rep.Z rep.listZ_mem
                               make_names fst snd ];
@@ -89,7 +89,7 @@ Section with_parameters.
       forall nextn n,
         ~ varname_set_args
           (snd (make_innames' nextn t)) (varname_gen n).
-    Proof.
+    Proof using inname_gen_varname_gen_ok.
       induction t; intros;
         repeat match goal with
                | _ => progress
@@ -107,16 +107,16 @@ Section with_parameters.
       forall n,
         ~ varname_set_args (make_innames t)
           (varname_gen n).
-    Proof. apply make_innames'_varname_gen_disjoint. Qed.
+    Proof using inname_gen_varname_gen_ok. apply make_innames'_varname_gen_disjoint. Qed.
 
     Lemma make_outnames_varname_gen_disjoint t :
       forall n,
         ~ varname_set_base (make_outnames t) (varname_gen n).
-    Proof. apply make_names_no_collision; auto. Qed.
+    Proof using outname_gen_varname_gen_ok. apply make_names_no_collision; auto. Qed.
 
     Lemma fst_make_names_lower_bound name_gen t :
       forall nextn, (nextn <= fst (make_names name_gen nextn t))%nat.
-    Proof.
+    Proof using Type.
       induction t; intros;
         repeat match goal with
                | _ => progress intros
@@ -133,7 +133,7 @@ Section with_parameters.
                 (snd (make_names name_gen nextn t))) ->
         exists n, x = name_gen n
                   /\ (nextn <= n < fst (make_names name_gen nextn t))%nat.
-    Proof.
+    Proof using Type.
       induction t; intros;
         repeat match goal with
                | _ => progress intros
@@ -166,7 +166,7 @@ Section with_parameters.
       forall nextn,
         NoDup (flatten_base_ltype
                  (snd (make_names name_gen nextn t))).
-    Proof.
+    Proof using Type.
       intro name_gen_unique.
       induction t; intros;
         repeat match goal with
@@ -192,7 +192,7 @@ Section with_parameters.
     Lemma fst_make_innames'_lower_bound t :
       forall nextn,
         (nextn <= fst (make_innames' nextn t))%nat.
-    Proof.
+    Proof using Type.
       induction t; intros;
         repeat match goal with
                | _ => progress intros
@@ -212,7 +212,7 @@ Section with_parameters.
         exists n,
           x = inname_gen n
           /\ (nextn <= n < fst (make_innames' nextn t))%nat.
-    Proof.
+    Proof using Type.
       induction t; intros;
         repeat match goal with
                | _ => progress intros
@@ -241,7 +241,7 @@ Section with_parameters.
     Lemma flatten_make_innames'_NoDup t :
       forall nextn,
         NoDup (flatten_argnames (snd (make_innames' nextn t))).
-    Proof.
+    Proof using inname_gen_unique.
       induction t; intros;
         repeat match goal with
                | _ => progress intros
@@ -267,12 +267,12 @@ Section with_parameters.
     Lemma flatten_make_innames_NoDup t :
       NoDup
         (flatten_argnames (make_innames t)).
-    Proof. apply flatten_make_innames'_NoDup. Qed.
+    Proof using inname_gen_unique. apply flatten_make_innames'_NoDup. Qed.
 
     Lemma flatten_make_innames_exists t x :
       In x (flatten_argnames (make_innames t)) ->
       exists n : nat, x = inname_gen n.
-    Proof.
+    Proof using Type.
       cbv [make_innames]; intros.
       destruct (flatten_make_innames'_range t _ _ ltac:(eassumption)).
       cleanup. eexists; eauto.
@@ -281,7 +281,7 @@ Section with_parameters.
     Lemma flatten_make_outnames_exists t x :
       In x (flatten_base_ltype (make_outnames t)) ->
       exists n : nat, x = outname_gen n.
-    Proof.
+    Proof using Type.
       cbv [make_outnames]; intros.
       destruct (flatten_make_names_range
                   outname_gen t _ _ ltac:(eassumption)).
@@ -290,13 +290,13 @@ Section with_parameters.
 
     Lemma flatten_make_outnames_NoDup t :
       NoDup (flatten_base_ltype (make_outnames t)).
-    Proof. apply flatten_make_names_NoDup; auto. Qed.
+    Proof using outname_gen_unique. apply flatten_make_names_NoDup; auto. Qed.
 
     Lemma make_innames_make_outnames_disjoint t1 t2 :
       PropSet.disjoint
         (varname_set_args (make_innames t1))
         (varname_set_base (make_outnames t2)).
-    Proof.
+    Proof using inname_gen_unique outname_gen_inname_gen_ok outname_gen_unique.
       rewrite varname_set_args_flatten.
       rewrite varname_set_flatten.
       apply NoDup_disjoint, NoDup_app_iff.

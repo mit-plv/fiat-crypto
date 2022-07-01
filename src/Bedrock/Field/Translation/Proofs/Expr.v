@@ -30,7 +30,7 @@ Import Wf.Compilers.expr.
 Import Types.Notations.
 
 Section Expr.
-  Context 
+  Context
     {width BW word mem locals env ext_spec varname_gen error}
    `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
   Context {ok : ok}.
@@ -190,7 +190,7 @@ Section Expr.
             (word.of_Z (f x1 x2))
       | _ => fun _ _ _ _ => False
        end) op (Compilers.ident_interp i) xargs yargs.
-  Proof.
+  Proof using ok.
     cbv [translate_binop]; intros *.
     break_match; try congruence; intros.
     all:repeat match goal with
@@ -246,7 +246,7 @@ Section Expr.
     WeakestPrecondition.dexpr
       map.empty l
       (op y1 y2) (word.of_Z (Compilers.ident_interp i x1 x2)).
-  Proof.
+  Proof using ok.
     intros.
     apply (translate_binop_correct'
              i (x1, (x2, tt)) (y1, (y2, tt)));
@@ -293,7 +293,7 @@ Section Expr.
     forall x y locals,
       locally_equivalent (t:=type.base t) x y locals ->
       locally_equivalent_nobounds x y locals.
-  Proof.
+  Proof using ok.
     cbv [locally_equivalent equivalent locally_equivalent_nobounds].
     induction t;
       cbn [equivalent_base
@@ -308,7 +308,7 @@ Section Expr.
     forall i : ident.ident t,
       translate_binop i <> None ->
       require_cast_for_arg (width:=width) (var:=var) (expr.Ident i) = true.
-  Proof.
+  Proof using Type.
     destruct i;
       cbn [translate_binop require_cast_for_arg];
       congruence.
@@ -318,7 +318,7 @@ Section Expr.
     forall (i : ident.ident (s -> d)) x,
       translate_binop i <> None ->
       require_cast_for_arg (width:=width) (var:=var) (expr.App (expr.Ident i) x) = true.
-  Proof.
+  Proof using Type.
     (* destruct is too weak *)
     intro i.
     refine match i with
@@ -332,7 +332,7 @@ Section Expr.
     forall i : ident.ident t,
       translate_binop i <> None ->
       translate_binop i = Some (translate_ident i).
-  Proof.
+  Proof using Type.
     destruct i;
       cbn [translate_binop]; try congruence.
     all:cbn [translate_ident translate_binop].
@@ -343,7 +343,7 @@ Section Expr.
     forall i : ident.ident t,
       translate_binop i <> None ->
       cast_exempt (var:=var) (expr.Ident i) = false.
-  Proof.
+  Proof using Type.
     destruct i;
       cbn [translate_binop cast_exempt];
       congruence.
@@ -352,7 +352,7 @@ Section Expr.
   Lemma is_bounded_by_bool_max_range n :
     0 <= n < 2 ^ width ->
     is_bounded_by_bool n (max_range(width:=width)) = true.
-  Proof.
+  Proof using Type.
     intros; cbv [is_bounded_by_bool upper lower max_range].
     apply Bool.andb_true_iff; split; apply Z.leb_le; lia.
   Qed.
@@ -360,23 +360,23 @@ Section Expr.
   Lemma is_bounded_by_bool_width_range n :
     0 <= n < width ->
     is_bounded_by_bool n (@width_range width) = true.
-  Proof.
+  Proof using Type.
     intros; cbv [is_bounded_by_bool upper lower width_range].
     apply Bool.andb_true_iff; split; apply Z.leb_le; lia.
   Qed.
 
   (* useful fact to say anything in width_range is also in max_range *)
   Lemma width_lt_pow2width : width < 2 ^ width.
-  Proof. pose proof word.width_pos. apply Z.pow_gt_lin_r; lia. Qed.
+  Proof using ok. pose proof word.width_pos. apply Z.pow_gt_lin_r; lia. Qed.
 
   Lemma pow2width_pos : 0 < 2 ^ width.
-  Proof.
+  Proof using ok.
     pose proof word.width_pos.
     apply Z.pow_pos_nonneg; lia.
   Qed.
 
   (** TODO: Find a better place for this *)
-  #[global] Hint Rewrite word.testbit_wrap : Ztestbit_full.
+  #[local] Hint Rewrite word.testbit_wrap : Ztestbit_full.
   Lemma translate_expr_correct' {t}
         (* three exprs, representing the same Expr with different vars *)
         (e1 : @API.expr (fun _ => unit) (type.base t))
@@ -392,7 +392,7 @@ Section Expr.
       if require_cast
       then locally_equivalent (API.interp e2) out locals
       else locally_equivalent_nobounds (API.interp e2) out locals.
-  Proof.
+  Proof using ok.
     cbv zeta.
     pose proof width_lt_pow2width.
     pose proof pow2width_pos.
@@ -756,7 +756,7 @@ Section Expr.
       let out := translate_expr true e3 in
       context_equiv G locals ->
       locally_equivalent (API.interp e2) out locals.
-  Proof.
+  Proof using ok.
     apply (translate_expr_correct' _ _ _ true).
   Qed.
 End Expr.

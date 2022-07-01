@@ -85,9 +85,9 @@ Section BignumToFieldRepresentationAdapterLemmas.
 
   Lemma felem_size_in_bytes_mod :
          felem_size_in_bytes mod Memory.bytes_per_word width = 0.
-  Proof. apply Z_mod_mult. Qed.
+  Proof using Type. apply Z_mod_mult. Qed.
   Lemma FElem_from_bytes p : Lift1Prop.iff1 (Placeholder p) (Lift1Prop.ex1 (FElem p)).
-  Proof.
+  Proof using map_ok word_ok.
     cbv [Placeholder FElem felem_size_in_bytes].
     repeat intro.
     cbv [Lift1Prop.ex1]; split; intros;
@@ -258,19 +258,19 @@ Section FunctionSpecs.
     Definition r := 2 ^ width.
     Definition m' := Z.modinv (- M) r.
     Definition r' := Z.modinv (r) M.
-  
+
     Definition from_mont_model x := F.mul x (@F.of_Z M_pos (r' ^ (Z.of_nat felem_size_in_words)%Z)).
     Definition to_mont_model x := F.mul x (@F.of_Z M_pos (r ^ (Z.of_nat felem_size_in_words)%Z)).
-  
+
     Global Instance un_from_mont {from_mont : string} : UnOp from_mont :=
       {| un_model := from_mont_model; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.
-  
+
     Global Instance un_to_mont {to_mont : string} : UnOp to_mont :=
       {| un_model := to_mont_model; un_xbounds := tight_bounds; un_outbounds := loose_bounds|}.
 
 End FunctionSpecs.
 
-Existing Instances spec_of_UnOp spec_of_BinOp bin_mul un_square bin_add bin_sub
+Global Existing Instances spec_of_UnOp spec_of_BinOp bin_mul un_square bin_add bin_sub
          un_scmula24 un_inv spec_of_felem_copy spec_of_from_word.
 
 Section SpecProperties.
@@ -288,11 +288,11 @@ Section SpecProperties.
 
   Lemma FElem_to_bytes px x :
     Lift1Prop.impl1 (FElem px x) (Placeholder px).
-  Proof.
+  Proof using mem_ok word_ok.
     rewrite FElem_from_bytes.
     repeat intro; eexists; eauto.
   Qed.
 
   Lemma M_nonzero : M <> 0.
-  Proof. cbv [M]. congruence. Qed.
+  Proof using Type. cbv [M]. congruence. Qed.
 End SpecProperties.

@@ -15,13 +15,13 @@ Section Field.
   Definition s : Z := 2^130.
   Definition c : list (Z * Z) := [(1, 5)]%Z.
 
-  Existing Instances Defaults32.default_parameters
+  Local Existing Instances Defaults32.default_parameters
            Defaults32.default_parameters_ok.
-  Existing Instances no_select_size split_mul_to split_multiret_to.
+  Local Existing Instances no_select_size split_mul_to split_multiret_to.
   Definition prefix : string := "fe1305_"%string.
 
   (* Define Poly1305 field *)
-  Global Instance field_parameters : FieldParameters.
+  Local Instance field_parameters : FieldParameters.
   Proof using Type.
     let M := (eval vm_compute in (Z.to_pos (UnsaturatedSolinas.m s c))) in
     (* dummy 'A' parameter since we don't care about scmula24 here *)
@@ -33,7 +33,7 @@ Section Field.
   Defined.
 
   (* Call fiat-crypto pipeline on all field operations *)
-  Global Instance fe1305_ops : unsaturated_solinas_ops n s c.
+  Local Instance fe1305_ops : unsaturated_solinas_ops n s c.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
   (**** Translate each field operation into bedrock2 and apply bedrock2 backend

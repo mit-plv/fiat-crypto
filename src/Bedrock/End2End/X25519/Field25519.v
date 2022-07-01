@@ -11,8 +11,8 @@ Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults32.
 Require Import Crypto.Bedrock.Specs.Field.
 Import ListNotations.
 
-Existing Instances BW32.
-Existing Instances no_select_size split_mul_to split_multiret_to.
+Global Existing Instances BW32.
+Global Existing Instances no_select_size split_mul_to split_multiret_to.
 
 (* Parameters for Curve25519 field (32-bit machine). *)
 Section Field.
@@ -34,7 +34,7 @@ Section Field.
     (error := Syntax.expr.var Defaults.ERROR)
     := tt.
   Global Instance translation_parameters_ok : Types.ok.
-  Proof. constructor; try exact _; apply prefix_name_gen_unique. Qed.
+  Proof using ext_spec_ok. constructor; try exact _; apply prefix_name_gen_unique. Qed.
 
   (* Define Curve25519 field *)
   Global Instance field_parameters : FieldParameters.

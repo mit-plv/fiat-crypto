@@ -46,7 +46,7 @@ Qed.
     rewrite IHl; congruence.
   Qed.
 
-  
+
   Lemma upd_firstn_skipn A (l old : list A) (start : nat) d
     : start < length l ->
       start < length old ->
@@ -94,9 +94,9 @@ Qed.
       }
     }
   Qed.
-      
-    
-  
+
+
+
   Lemma list_as_nd_ranged_for_all_helper {A} (l old : list A) d
         (measure len start : nat)
     : measure = (len - start)%nat ->
@@ -125,7 +125,7 @@ Qed.
       lia.
     }
   Qed.
-  
+
   Lemma list_as_nd_ranged_for_all {A} (l old : list A) d len
     : length l = len ->
       length old = len ->
@@ -150,13 +150,13 @@ Section with_parameters.
   Context {env_ok : map.ok env}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
 
-  
+
      (*TODO: should be in core bedrock*)
   Lemma expr_locals_put m l x v exp (P : word -> Prop)
     : map.get l x = None ->
       WeakestPrecondition.expr m l exp P ->
       WeakestPrecondition.expr m (map.put l x v) exp P.
-  Proof.
+  Proof using locals_ok word_ok.
     intros.
     eapply Util.expr_only_differ_undef; eauto.
     eapply Util.only_differ_sym; eauto.
@@ -167,12 +167,12 @@ Section with_parameters.
     cbv in H1; subst.
     rewrite map.get_empty; auto.
   Qed.
-  
+
   Lemma dexpr_locals_put m l x v exp (w : word)
     : map.get l x = None ->
       DEXPR m l exp w ->
       DEXPR m (map.put l x v) exp w.
-  Proof.
+  Proof using locals_ok word_ok.
     intros.
     eapply expr_locals_put; eauto.
   Qed.
@@ -202,15 +202,15 @@ Section with_parameters.
     Notation szT := (@szT T T_Fits).
     Notation word_of_T := (@word_of_T T T_Fits).
 
-    
+
     Declare Scope word_scope.
     Delimit Scope word_scope with word.
     Local Infix "+" := word.add : word_scope.
     Local Infix "*" := word.mul : word_scope.
 
-    
+
     Definition sz_word : word := (word.of_Z (Z.of_nat (Memory.bytes_per (width:=width) szT))).
-    
+
     Local Notation "xs $@ a" :=
       (array predT sz_word a%word xs%list) (at level 10, format "xs $@ a").
 
@@ -219,7 +219,7 @@ Section with_parameters.
      allows more things to be written in a expr style rather than a statement style,
      avoiding dealing directly with a pile of loop invariant inference.
    *)
-  
+
   (* TODO: could add knowledge about lstl, but it's not yet necessary *)
   (* TODO: m not mentioned? *)
   (* expr expect idx_var to hold the index
@@ -241,17 +241,17 @@ Section with_parameters.
 
 
 
-    
+
   Lemma compile_broadcast_expr' {t m l e} (len : nat) (lst scratch : list T) :
     len = length scratch ->
     len = length lst ->
     len < 2^width ->
     let v := lst in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
            (a_ptr : word) a_var lst_expr idx_var to_var R,
-      
+
       DEXPR m l (expr.var a_var) a_ptr ->
-      
+
       (scratch$@a_ptr * R)%sep m ->
 
       ~idx_var = to_var ->
@@ -281,7 +281,7 @@ Section with_parameters.
 
     assert (~ a_var = to_var) by admit.
     assert (~ a_var = idx_var) by admit.
-    
+
     eapply (compile_ranged_for_fresh _ _ _ _ _ _ _ _ _ _ _ _ idx_var to_var).
     repeat compile_step.
     repeat compile_step.
@@ -354,11 +354,11 @@ Section with_parameters.
 
     Lemma compile_broadcast_expr {t m l e} (len : nat) (lst scratch : list T) :
       let v := lst in
-      forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+      forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
              (a_ptr : word) a_var lst_expr idx_var to_var R,
-        
+
         DEXPR m l (expr.var a_var) a_ptr ->
-        
+
         (scratch$@a_ptr * R)%sep m ->
 
         len = length scratch ->
@@ -383,7 +383,7 @@ Section with_parameters.
                                     lst_expr)
                          k_impl
         <{ pred (nlet_eq [a_var] v k) }>.
-    Proof.
+    Proof using T_Fits_ok env_ok ext_spec_ok locals_ok mem_ok word_ok.
       eauto using compile_broadcast_expr'.
     Qed.
 
@@ -402,9 +402,9 @@ Section with_parameters.
 
     (*TODO: generalize to a DEXPR goal instead of bop?*)
       Lemma broadcast_binop l idx_var scratch a_ptr R l1_expr l2_expr (l1 l2 : list T)
-        : (*TODO: not necessary, just makes proof easier*) 
+        : (*TODO: not necessary, just makes proof using expr_compile_word_op word_morph easier*)
         op default default = default ->
-        
+
         length l1 = length l2 ->
         broadcast_expr l idx_var scratch a_ptr R l1_expr l1 ->
         broadcast_expr l idx_var scratch a_ptr R l2_expr l2 ->
@@ -426,7 +426,7 @@ Section with_parameters.
 
     (*TODO: this is awkward*)
     Local Definition predT_to_tw := @predT_to_truncated_word T T_Fits T_Fits_ok.
-          
+
     Local Hint Resolve predT_to_tw : ecancel_impl.
 
   Lemma broadcast_id l idx_var scratch a_ptr R a_var
@@ -437,7 +437,7 @@ Section with_parameters.
                                 (expr.op bopname.add a_var
                                                  (expr.op bopname.mul idx_var sz_word)))
                      scratch.
-  Proof.
+  Proof using T_Fits_ok locals_ok mem_ok word_ok.
     unfold broadcast_expr; intuition idtac.
     repeat straightline.
     exists a_ptr; intuition idtac.
@@ -458,7 +458,7 @@ Section with_parameters.
     erewrite load_of_sep.
     {
       erewrite truncate_of_T.
-      reflexivity.                                                    
+      reflexivity.
     }
     seprewrite_in (array_append (T:=T) predT sz_word) H3.
     replace (nth (length lstl) scratch)
@@ -474,7 +474,7 @@ Section with_parameters.
     lazymatch goal with
     | [H : context [predT ?ptr1] |- context [ truncated_word _ ?ptr2]] =>
         replace ptr2 with ptr1
-    end.    
+    end.
     ecancel_assumption_impl.
     f_equal.
     rewrite Z.mul_comm.
@@ -482,7 +482,7 @@ Section with_parameters.
     reflexivity.
   Qed.
 
-    
+
   End WithAccessSize.
 
   Global Instance byte_ac : FitsInLocal byte :=
@@ -493,7 +493,7 @@ Section with_parameters.
     |}.
 
   Lemma byte_and_xff b : byte.and b xff = b.
-  Proof.
+  Proof using Type.
     destruct b; reflexivity.
   Qed.
 
@@ -502,7 +502,7 @@ Section with_parameters.
 
   Lemma byte_in_word_bounds t
     : 0 <= byte.unsigned t < 2 ^ width.
-  Proof.
+  Proof using Type.
     assert (256 <= 2^width).
     {
       assert (256 <= 2^8) by (compute; congruence).
@@ -512,10 +512,10 @@ Section with_parameters.
     }
     destruct t; cbv [byte.unsigned Byte.to_N Z.of_N]; lia.
   Qed.
-        
-  
+
+
   Global Instance byte_ac_ok : FitsInLocal_ok byte byte_ac.
-  Proof.
+  Proof using BW mem_ok word_ok.
     constructor; unfold word_of_T, szT, predT, byte_ac.
     {
       intros; unfold truncate_word.
@@ -536,18 +536,18 @@ Section with_parameters.
       rewrite word.unsigned_of_Z_nowrap.
       rewrite word.byte_of_Z_unsigned.
       ecancel_assumption.
-      apply byte_in_word_bounds.      
+      apply byte_in_word_bounds.
     }
   Qed.
 
-  
+
   Global Instance word_ac : FitsInLocal word :=
     {|
       predT := scalar;
       szT := access_size.word;
       word_of_T b := b;
     |}.
-  
+
   Global Instance word_ac_ok : FitsInLocal_ok word word_ac.
   Proof.
     constructor; unfold word_of_T, szT, predT, word_ac.
@@ -572,8 +572,8 @@ Section with_parameters.
     }
   Admitted.
 
-  
-                                   
+
+
 
   (*TODO: define in general*)
   Lemma broadcast_byte_const l (idx_var : string) scratch a_ptr R (const_list : list byte)
@@ -597,9 +597,9 @@ Section with_parameters.
     eapply load_one_of_sep.
     (*TODO: preds for const list*)
   Admitted.
-  
 
-  
+
+
   Lemma broadcast_byte_and l idx_var scratch a_ptr R l1_expr l2_expr (l1 l2 : list byte)
     : length l1 = length l2 ->
       broadcast_expr byte l idx_var scratch a_ptr R l1_expr l1 ->
@@ -607,14 +607,14 @@ Section with_parameters.
       broadcast_expr byte l idx_var scratch a_ptr R
                      (expr.op bopname.and l1_expr l2_expr)
                      (List.map (fun '(w1, w2) => byte.and w1 w2) (combine l1 l2)).
-  Proof.
+  Proof using BW word_ok.
     eapply broadcast_binop.
     - exact byte_morph_and.
     - intros; eapply expr_compile_word_and; eauto.
     - reflexivity.
   Qed.
 
-  
+
   Lemma broadcast_word_add l idx_var scratch a_ptr R l1_expr l2_expr (l1 l2 : list word)
     : length l1 = length l2 ->
       broadcast_expr word l idx_var scratch a_ptr R l1_expr l1 ->
@@ -622,7 +622,7 @@ Section with_parameters.
       broadcast_expr word l idx_var scratch a_ptr R
                      (expr.op bopname.add l1_expr l2_expr)
                      (List.map (fun '(w1, w2) => word.add w1 w2) (combine l1 l2)).
-  Proof.
+  Proof using word_ok.
     eapply broadcast_binop.
     - intros; reflexivity.
     - intros; eapply expr_compile_word_add; eauto.
@@ -632,7 +632,7 @@ Section with_parameters.
   Qed.
 
 End with_parameters.
- 
+
 Ltac compile_broadcast_expr :=
   lazymatch goal with
   | [ |- WeakestPrecondition.cmd _ _ _ _ ?locals (_ (nlet_eq [?var] ?v _)) ] =>

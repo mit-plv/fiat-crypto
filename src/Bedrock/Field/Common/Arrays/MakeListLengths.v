@@ -7,10 +7,10 @@ Require Import Crypto.Util.Option.
 
 Import Language.API.Compilers AbstractInterpretation.Compilers.
 Import Types.Notations.
-Existing Instances rep.Z rep.listZ_mem.
+Global Existing Instances rep.Z rep.listZ_mem.
 
 Section with_parameters.
-  Context 
+  Context
     {width BW word mem locals env ext_spec varname_gen error}
    `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
 
@@ -27,7 +27,7 @@ Section with_parameters.
     | type.base b => tt
     | type.arrow (type.base s) d =>
       (list_lengths_repeat_base n s, list_lengths_repeat_args n d)
-    | type.arrow s d => (tt, list_lengths_repeat_args n d)
+    | type.arrow _s d => (tt, list_lengths_repeat_args n d)
     end.
 
   (* mostly a duplicate of list_lengths_from_value, just with ZRange interp *)
@@ -56,6 +56,6 @@ Section with_parameters.
         (x1 <- list_lengths_from_bounds (fst x);
            x2 <- list_lengths_from_argbounds (snd x);
            Some (x1, x2))%option
-    | type.arrow a b => fun _ => None
+    | type.arrow _a _b => fun _ => None
     end.
 End with_parameters.

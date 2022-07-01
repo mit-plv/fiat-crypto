@@ -30,7 +30,7 @@ Section Compile.
   Lemma drop_bounds_FElem x_ptr x bounds
     : Lift1Prop.impl1 (FElem bounds x_ptr x)
                       (FElem None x_ptr x).
-  Proof.
+  Proof using mem_ok word_ok.
     unfold FElem.
     intros m H.
     sepsimpl.
@@ -41,18 +41,18 @@ Section Compile.
   Lemma relax_bounds_FElem x_ptr x
     : Lift1Prop.impl1 (FElem (Some tight_bounds) x_ptr x)
                       (FElem (Some loose_bounds) x_ptr x).
-  Proof.
+  Proof using field_representation_ok mem_ok word_ok.
     unfold FElem.
     intros m H.
     sepsimpl.
     exists x0.
     sepsimpl; simpl in *; eauto using relax_bounds.
   Qed.
-  
+
   Lemma FElem'_from_bytes
     : forall px : word.rep,
       Lift1Prop.iff1 (Placeholder px) (Lift1Prop.ex1 (FElem None px)).
-  Proof.
+  Proof using mem_ok word_ok.
     unfold FElem.
     intros.
     split; intros.
@@ -65,7 +65,7 @@ Section Compile.
     {
       destruct H as [? [? ?]].
       sepsimpl.
-      
+
       eapply FElem_to_bytes; eauto.
     }
   Qed.
@@ -82,7 +82,7 @@ Section Compile.
       apply FElem'_from_bytes.
       eexists.
       eapply drop_bounds_FElem; eauto.
-    }      
+    }
     {
       intros; intros m H.
       apply FElem'_from_bytes.
@@ -99,14 +99,14 @@ Section Compile.
     end; eauto;
     sepsimpl; repeat straightline'; subst; eauto.
 
-  
+
   Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_BinOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
   Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_UnOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
 
   Lemma compile_binop {name} {op: BinOp name}
         {tr m l functions} x y:
     let v := bin_model x y in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
            Rin Rout out x_ptr x_var y_ptr y_var out_ptr out_var
            bound_out,
 
@@ -144,7 +144,7 @@ Section Compile.
     sepsimpl.
     prove_field_compilation.
     apply H5.
-    
+
     eapply Proper_sep_impl1; eauto.
     2:exact(fun a b => b).
     intros m' H'.
@@ -189,7 +189,7 @@ Section Compile.
     sepsimpl.
     prove_field_compilation.
     apply H4.
-    
+
     eapply Proper_sep_impl1; eauto.
     2:exact(fun a b => b).
     intros m' H'.
@@ -233,8 +233,8 @@ Section Compile.
   Definition compile_scmula24 := make_un_lemma un_scmula24.
 
   Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_felem_copy _ _ _ _ _ _ _ _)) : typeclass_instances.
-  
-  Lemma compile_felem_copy {tr m l functions} x : 
+
+  Lemma compile_felem_copy {tr m l functions} x :
     let v := x in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
            R x_ptr x_var out out_ptr out_var x_bound out_bound,
@@ -269,7 +269,7 @@ Section Compile.
     sepsimpl.
     prove_field_compilation.
     apply H3.
-    
+
     eapply Proper_sep_impl1; eauto.
     2:exact(fun a b => b).
     intros m' H'.
@@ -320,7 +320,7 @@ Section Compile.
     sepsimpl.
     prove_field_compilation.
     apply H3.
-    
+
     eapply Proper_sep_impl1; eauto.
     2:exact(fun a b => b).
     intros m' H'.
@@ -334,7 +334,7 @@ Section Compile.
 
   Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_from_bytes _ _ _ _ _ _ _ _)) : typeclass_instances.
 
-  Lemma compile_from_bytes {tr m l functions} x : 
+  Lemma compile_from_bytes {tr m l functions} x :
     let v : F _ := feval_bytes x in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
            Rx R x_ptr x_var out out_ptr out_var out_bound,
@@ -376,7 +376,7 @@ Section Compile.
     intros m' H'; ssplit; eapply sep_emp_l; ssplit; eauto.
   Qed.
 
-  Lemma compile_to_bytes {tr m l functions} x : 
+  Lemma compile_to_bytes {tr m l functions} x :
     let v : list _ := Z_to_bytes (F.to_Z x) encoded_felem_size_in_bytes in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
            Rx R x_ptr x_var out out_ptr out_var,
@@ -411,7 +411,7 @@ Section Compile.
     subst v.
     unfold FElem in *.
     sepsimpl;
-    eapply Proper_call; [ |eapply H]; cycle 1; 
+    eapply Proper_call; [ |eapply H]; cycle 1;
      [ ssplit;
         lazymatch goal with
         | |- (_ ⋆ _) _ => ecancel_assumption

@@ -163,7 +163,7 @@ Section UnsaturatedSolinas.
   Lemma loose_bounds_eq : Field.loose_bounds = loose_bounds n s c.
   Proof using Type. reflexivity. Qed.
   Lemma tight_bounds_eq : Field.tight_bounds = tight_bounds n s c.
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   (* TODO: move to coqutil.Datatypes.List *)
   Lemma Forall_repeat : forall {A} (R : A -> Prop) n x,
@@ -276,7 +276,7 @@ Section UnsaturatedSolinas.
        | _ => eauto with helpers
        end).
 
-  #[global] Hint Resolve relax_list_Z_bounded_by partition_bounded_by : bounds.
+  #[local] Hint Resolve relax_list_Z_bounded_by partition_bounded_by : bounds.
 
   Ltac simpl_map_unsigned :=
     lazymatch goal with
@@ -316,7 +316,7 @@ Section UnsaturatedSolinas.
     eapply list_binop_correct with (res:=res mul_op);
     handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
-      intros. 
+      intros.
       specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ; congruence. }

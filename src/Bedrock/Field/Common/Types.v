@@ -41,7 +41,7 @@ Class parameters
   {error : Syntax.expr.expr} := parameters_sentinel : unit.
 
 Section WithParameters.
-  Context 
+  Context
     {width BW word mem locals env ext_spec varname_gen error}
    `{parameters_sentinel : @parameters
      width BW word mem locals env ext_spec varname_gen error}.
@@ -68,7 +68,7 @@ End WithParameters.
 
 Module rep.
   Section rep.
-    Context 
+    Context
       {width BW word mem locals env ext_spec varname_gen error}
      `{parameters_sentinel : @parameters
        width BW word mem locals env ext_spec varname_gen error}.
@@ -87,7 +87,7 @@ Module rep.
 
     (* store a list in local variables; each element of the list is
        represented as a separate variable *)
-    Global Instance listZ_local {zrep : rep base_Z} : rep base_listZ :=
+    Local Instance listZ_local {zrep : rep base_Z} : rep base_listZ :=
       { ltype := list ltype;
         rtype := list rtype;
         size := size;
@@ -106,7 +106,7 @@ Module rep.
 
     (* store a list in memory; the list is represented by one Z, which
          is the location of the head of the list *)
-    Global Instance listZ_mem {zrep : rep base_Z} : rep base_listZ :=
+    Local Instance listZ_mem {zrep : rep base_Z} : rep base_listZ :=
       { ltype := ltype;
         rtype := rtype;
         size := Syntax.access_size;
@@ -139,7 +139,7 @@ Module rep.
                                  (map word.unsigned ws))))
       }.
 
-    Global Instance Z : rep base_Z :=
+    Local Instance Z : rep base_Z :=
       { ltype := String.string;
         rtype := Syntax.expr.expr;
         size := unit;
