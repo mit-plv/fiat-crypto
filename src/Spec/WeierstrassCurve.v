@@ -74,6 +74,7 @@ Module W.
   End WeierstrassCurves.
 End W.
 
+Declare Scope W_scope.
 Delimit Scope W_scope with W.
 Infix "+" := W.add : W_scope.
 Infix "*" := W.mul : W_scope.

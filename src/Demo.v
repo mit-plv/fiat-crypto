@@ -9,6 +9,7 @@ Import ListNotations. Local Open Scope Z_scope.
 
 Definition runtime_mul := Z.mul.
 Definition runtime_add := Z.add.
+Declare Scope runtime_scope.
 Delimit Scope runtime_scope with RT.
 Infix "*" := runtime_mul : runtime_scope.
 Infix "+" := runtime_add : runtime_scope.
@@ -92,7 +93,7 @@ Module Positional. Section Positional.
   Definition eval {n} x := Associational.eval (@to_associational n x).
   Lemma eval_to_associational {n} x :
     Associational.eval (@to_associational n x) = eval x.
-  Proof. trivial.                                             Qed.
+  Proof using Type. trivial.                                             Qed.
 
   (* SKIP over this: zeros, add_to_nth *)
   Local Ltac push := autorewrite with push_eval push_map distr_length
@@ -101,7 +102,7 @@ Module Positional. Section Positional.
     := Tuple.from_list n (List.map (fun _ => 0) (List.seq 0 n)) _.
   Next Obligation. push; reflexivity. Qed.
   Lemma eval_zeros n : eval (zeros n) = 0.
-  Proof.
+  Proof using weight_0.
     cbv [eval Associational.eval to_associational zeros];
       rewrite Tuple.to_list_from_list.
     generalize dependent (List.seq 0 n); intro xs.
@@ -111,7 +112,7 @@ Module Positional. Section Positional.
   Next Obligation. apply ListUtil.length_update_nth. Defined.
   Lemma eval_add_to_nth {n} (i:nat) (H:(i<n)%nat) (x:Z) (xs:tuple Z n) :
     eval (add_to_nth i x xs) = weight i * x + eval xs.
-  Proof.
+  Proof using Type.
     cbv [eval to_associational add_to_nth Tuple.on_tuple runtime_add].
     rewrite !Tuple.to_list_from_list.
     rewrite ListUtil.combine_update_nth_r at 1.
@@ -131,9 +132,9 @@ Module Positional. Section Positional.
     then (i, let c := fst t / weight i in (c * snd t)%RT)
     else match i with S i' => place t i' | O => (O, fst t * snd t)%RT end.
   Lemma place_in_range (t:Z*Z) (n:nat) : (fst (place t n) < S n)%nat.
-  Proof. induction n; cbv [place] in *; break_match; autorewrite with cancel_pair; try lia. Qed.
+  Proof using Type. induction n; cbv [place] in *; break_match; autorewrite with cancel_pair; try lia. Qed.
   Lemma weight_place t i : weight (fst (place t i)) * snd (place t i) = fst t * snd t.
-  Proof. induction i; cbv [place] in *; break_match; push;
+  Proof using weight_0 weight_nz. induction i; cbv [place] in *; break_match; push;
     repeat match goal with |- context[?a/?b] =>
       unique pose proof (Z_div_exact_full_2 a b ltac:(auto) ltac:(auto))
            end; nsatz.                                        Qed.
@@ -145,7 +146,7 @@ Module Positional. Section Positional.
       add_to_nth (fst p) (snd p)    ) (zeros n) p.
   Lemma eval_from_associational {n} p (n_nz:n<>O) :
     eval (from_associational n p) = Associational.eval p.
-  Proof. induction p; cbv [from_associational] in *; push; try
+  Proof using weight_0 weight_nz. induction p; cbv [from_associational] in *; push; try
   pose proof place_in_range a (pred n); destruct n; cbn [pred] in *; try lia; try nsatz. Qed.
   Hint Rewrite @eval_from_associational : push_eval.
 
@@ -160,7 +161,7 @@ Module Positional. Section Positional.
          from_associational n abm_a.
     Lemma eval_mulmod {n} (H:(n<>0)%nat) (f g:tuple Z n) :
       eval (mulmod f g) mod m = (eval f * eval g) mod m.
-    Proof. cbv [mulmod]; rewrite Hm in *; push; trivial.      Qed.
+    Proof using Hm m_nz s_nz weight_0 weight_nz. cbv [mulmod]; rewrite Hm in *; push; trivial.      Qed.
   End mulmod.
 End Positional. End Positional.
 

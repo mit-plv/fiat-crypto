@@ -6,6 +6,7 @@ Inductive LetInM : Type -> Type :=
 | ret {T} (v : T) : LetInM T
 | let_in {A B} (v : A) (f : A -> LetInM B) : LetInM B.
 
+Declare Scope letinm_scope.
 Bind Scope letinm_scope with LetInM.
 Delimit Scope letinm_scope with letinm.
 Notation "'mlet' x := y 'in' f" := (let_in y (fun x => f%letinm)) : letinm_scope.

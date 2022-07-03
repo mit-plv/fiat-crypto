@@ -77,6 +77,7 @@ Definition Z_to_u64 := @to_word 64.
 Definition to_u32' {bits : Z} (a : word bits) : u32 :=
   Z_to_u32 ((to_Z a) - 2^32).
 
+Declare Scope word_scope.
 Delimit Scope word_scope with word.
 Bind Scope word_scope with word.
 Infix "+" := word_add : word_scope.
