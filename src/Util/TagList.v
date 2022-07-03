@@ -97,8 +97,9 @@ Module Tag.
   Notation empty := (@nil tagged).
 
   Module Export TagNotations.
-    Bind Scope tagged_scope with tagged.
+    Declare Scope tagged_scope.
     Delimit Scope tagged_scope with tagged.
+    Bind Scope tagged_scope with tagged.
     Notation "t[ k ~> v ]" := {| key := k ; value := v ; local := _ |} : tagged_scope.
     Notation "l[ k ~> v ]" := {| key := k ; value := v ; local := true |} : tagged_scope.
   End TagNotations.

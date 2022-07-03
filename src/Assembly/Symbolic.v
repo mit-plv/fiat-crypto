@@ -1102,6 +1102,7 @@ Global Strategy 1000 [
         dag.gensym
     ].
 Notation dag := dag.t.
+Declare Scope dagM_scope.
 Delimit Scope dagM_scope with dagM.
 Bind Scope dagM_scope with dag.M.
 Notation "x <- y ; f" := (dag.bind y (fun x => f%dagM)) : dagM_scope.

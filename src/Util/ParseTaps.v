@@ -8,6 +8,8 @@ Local Open Scope Z_scope.
 
 Definition tap := (Z * Z)%type.
 Definition taps := list tap.
+Declare Scope tap_scope.
+Declare Scope taps_scope.
 Delimit Scope tap_scope with tap.
 Delimit Scope taps_scope with taps.
 Bind Scope tap_scope with tap.

@@ -7,7 +7,7 @@ Require Import Crypto.Bedrock.End2End.RupicolaCrypto.Low.
 Require Import bedrock2.BasicC32Semantics.
 
 Section Bedrock2.
-  
+
   Instance spec_of_quarter : spec_of "quarter" :=
     fnspec! "quarter" (a b c d : word) ~> (a' b' c' d' : word),
     { requires tr mem := True;
@@ -28,7 +28,7 @@ Section Bedrock2.
   Lemma compile_quarter : forall {tr mem locals functions} a b c d,
       let v := quarter a b c d in
 
-      forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+      forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
              a_var b_var c_var d_var,
 
         spec_of_quarter functions ->
@@ -102,7 +102,7 @@ Section Bedrock2.
     subst v; unfold buf_backed_by. unfold buf_push.
     admit.
 
-    
+
   (*compile_step.*)
 
     simple eapply compile_nlet_as_nlet_eq.
@@ -120,7 +120,7 @@ Section Bedrock2.
 
     compile_step.
     compile_step; [repeat compile_step ..|].
-    
+
     eapply expr_compile_Z_literal with (z:= 4).
     shelve.
     compile_step.
@@ -129,7 +129,7 @@ Section Bedrock2.
      *)
     Fail simple eapply compile_byte_memcpy.
     (*compile_step.
-      
+
     repeat compile_step. subst v4.
 
     simple eapply compile_w32s_of_bytes; repeat compile_step.
@@ -165,23 +165,23 @@ Section Bedrock2.
     compile_step.
     compile_step.
 
-     
+
     simple eapply compile_nlet_as_nlet_eq.
     simple eapply compile_bytes_of_w32s; repeat compile_step.
     compile_step.
     simple eapply compile_buf_append; [shelve..|].
 
-    
+
     [ repeat compile_step.. |].
     admit.
     intros.
     repeat compile_step.
     {
-      use_sep_assumption. cancel. 
+      use_sep_assumption. cancel.
 
 
 
-    
+
     subst v. unfold buffer_at. unfold buf_push. progress simpl. eauto.
 
     simpl.
@@ -189,17 +189,17 @@ Section Bedrock2.
     progress sepsimpl.
 
     compile_step.
-    
+
 
     unfold buf_backed_by.
     unfold Datatypes.length. lia.
 
     instantiate (1 := "st").
-    
+
     unfold buffer_at in H1
 
     unfold buffer_at.
-    
+
     simpl.
     Set Printing Parentheses.
     eapply sep_assoc.
@@ -214,5 +214,5 @@ Section Bedrock2.
 
      *)*)
     Abort.
-  
+
 End Bedrock2.

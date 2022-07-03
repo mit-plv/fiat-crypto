@@ -16,6 +16,7 @@ Module Level.
   .
   Notation t := Level (only parsing).
   Module Export Exports1.
+    Declare Scope level_scope.
     Delimit Scope level_scope with level.
     Bind Scope level_scope with Level.
     Global Coercion level : Z >-> Level.

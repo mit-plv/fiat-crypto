@@ -119,7 +119,7 @@ Section __.
     : (forall a (x : B) (pf : In x l), f1 a x pf = f2 a x pf) ->
       foldl_dep' l f1 exit l' subl a
       = foldl_dep' l f2 exit l' subl a.
-  Proof.
+  Proof using Type.
     revert subl a.
     induction l';
       simpl; intros; auto.
@@ -136,7 +136,7 @@ Section __.
        init1 = init2 ->
        ranged_for from1 to1 f1 init1
        = ranged_for from2 to2 f2 init2.
-  Proof.
+  Proof using Type.
     intros; subst.
     unfold ranged_for,ranged_for', ranged_for_break.
     f_equal.
@@ -147,7 +147,7 @@ Section __.
 
   Lemma wrap_felem_size_in_words_small
     : word.wrap (Z.of_nat felem_size_in_words) = (Z.of_nat felem_size_in_words).
-  Proof.
+  Proof using felem_size_in_words_small.
     unfold word.wrap.
     pose proof felem_size_in_words_small.
     rewrite Z.mod_small; lia.
@@ -174,7 +174,7 @@ Section __.
   Lemma replace_nth_combine  n (la: list A) (lb: list B) a b
     :  (replace_nth n (combine la lb) (a,b))
        = combine (replace_nth n la a) (replace_nth n lb b).
-  Proof.
+  Proof using Type.
     revert lb n; induction la; destruct lb; simpl; auto;
       destruct n; simpl; auto.
     f_equal.
@@ -185,7 +185,7 @@ Section __.
     : length la = length lb ->
       (fst (nth n (combine la lb) default))
       = (nth n la default).
-  Proof.
+  Proof using a0 body field_representaton.
     revert lb n; induction la; destruct lb; simpl; auto;
       destruct n; simpl; try tauto; try lia.
     intro H'; inversion H'; clear H'; subst.
@@ -196,7 +196,7 @@ Section __.
     : length la = length lb ->
       (snd (nth n (combine la lb) default))
       = (nth n lb default).
-  Proof.
+  Proof using a0 body field_representaton.
     revert lb n; induction la; destruct lb; simpl; auto;
       destruct n; simpl; try tauto; try lia.
     intro H'; inversion H'; clear H'; subst.
@@ -226,7 +226,7 @@ Section __.
             let/d ab := ListArray.put ab idx yab in
             ab)
          (combine lA lB)).
-  Proof.
+  Proof using a0 body field_representaton.
     intros n la lb fa fb leq.
     rewrite <- !fold_left_as_nd_ranged_for_all.
     generalize (z_range 0 (Z.of_nat n)).
@@ -258,7 +258,7 @@ Section __.
   Lemma cswap_low_combine_eq mask a1 a2
     : length a1 = length a2 ->
       cswap_low mask a1 a2 = cswap_combine mask a1 a2.
-  Proof.
+  Proof using Type.
     intros.
     unfold cswap_low.
     unfold cswap_combine.
@@ -280,7 +280,7 @@ Section __.
   Lemma split_map_combine {A B C D} (f : A * B -> C * D) a1 a2
     : List.split (List.map f (combine a1 a2))
       = (List.map (fun p => fst (f p)) (combine a1 a2), List.map (fun p => snd (f p)) (combine a1 a2)).
-  Proof.
+  Proof using Type.
     revert a2; induction a1; destruct a2; intros; simpl in *; auto.
     rewrite (surjective_pairing (f (a,b))).
     rewrite (surjective_pairing (List.split _)).
@@ -292,14 +292,14 @@ Section __.
 
 
   Lemma z_lt_width : (0 <= width)%Z.
-  Proof.
+  Proof using field_representaton.
     destruct width_cases; lia.
   Qed.
 
 
 
   Lemma all_1s_and : forall x, word.and all_1s x = x.
-  Proof.
+  Proof using field_representaton word_ok.
     intros.
     rewrite <- (word.of_Z_unsigned (word.of_Z (-1))).
     rewrite -> word.unsigned_of_Z_minus1.
@@ -314,7 +314,7 @@ Section __.
   Qed.
 
   Lemma word_not_all1s : word.not all_1s = word.of_Z 0.
-  Proof.
+  Proof using field_representaton word_ok.
     rewrite <- (word.of_Z_signed (word.not all_1s)).
     rewrite word.signed_not.
     rewrite word.signed_of_Z.
@@ -334,7 +334,7 @@ Section __.
 
   Lemma word_not_impl (x : word)
     : word.not x = word.sub (word.of_Z (-1)) x.
-  Proof.
+  Proof using field_representaton word_ok.
     rewrite <- (word.of_Z_signed (word.not x)).
     rewrite word.signed_not_nowrap.
     rewrite <- (word.of_Z_signed x).
@@ -347,7 +347,7 @@ Section __.
 
 
   Lemma word_not_zero : word.not (word.of_Z 0) = all_1s.
-  Proof.
+  Proof using field_representaton word_ok.
     rewrite word_not_impl.
     rewrite <- (word.of_Z_unsigned (word.sub _ _)).
     rewrite <- word.ring_morph_sub.
@@ -357,7 +357,7 @@ Section __.
 
   Lemma zero_and (x : word)
     : word.and (word.of_Z 0) x = word.of_Z 0.
-  Proof.
+  Proof using word_ok.
     rewrite <- (word.of_Z_unsigned x) at 1.
     rewrite <- word.morph_and.
     rewrite Z.land_0_l.
@@ -367,7 +367,7 @@ Section __.
 
   Lemma zero_or (x : word)
     : word.or (word.of_Z 0) x = x.
-  Proof.
+  Proof using word_ok.
     rewrite <- (word.of_Z_unsigned x) at 1.
     rewrite <- word.morph_or.
     rewrite Z.lor_0_l.
@@ -376,7 +376,7 @@ Section __.
   Qed.
 
   Lemma or_comm (a b : word) : word.or a b = word.or b a.
-  Proof.
+  Proof using word_ok.
     rewrite <- (word.of_Z_signed a).
     rewrite <- (word.of_Z_signed b).
     rewrite <-word.morph_or.
@@ -386,7 +386,7 @@ Section __.
   Qed.
 
   Lemma sub_zero (a : word) : word.sub a (word.of_Z 0) = a.
-  Proof.
+  Proof using field_representaton word_ok.
     rewrite <- (word.of_Z_signed a).
     rewrite <-word.ring_morph_sub.
     replace (word.signed a - 0) with (word.signed a) by lia.
@@ -396,7 +396,7 @@ Section __.
 
   Lemma zero_minus_one
     : (word.sub (word.of_Z 0) (word.of_Z 1)) = all_1s.
-  Proof.
+  Proof using word_ok.
     rewrite <- word.ring_morph_sub.
     reflexivity.
   Qed.
@@ -406,7 +406,7 @@ Section __.
       felem_size_in_words = length a1 ->
       felem_size_in_words = length a2 ->
       cswap_combine mask a1 a2 = cswap (word.eqb mask (word.of_Z 1)) a1 a2.
-  Proof.
+  Proof using word_ok.
     unfold cswap,cswap_combine, nlet; intros.
     assert (felem_size_in_words = (length (combine a1 a2))).
     {
@@ -489,8 +489,8 @@ Section __.
   Lemma compile_word_not
         {tr m l functions} x :
     let v := word.not x in
-    forall {P} {pred: P v -> predicate}
-      {k: nlet_eq_k P v} {k_impl}
+    forall P (pred: P v -> predicate)
+      (k: nlet_eq_k P v) k_impl
       x_var var,
       map.get l x_var = Some x ->
       (let v := v in
@@ -507,7 +507,7 @@ Section __.
       cmd.seq (cmd.set var (expr.op bopname.sub (expr.literal (-1)) (expr.var x_var)))
               k_impl
       <{ pred (nlet_eq [var] v k) }>.
-  Proof.
+  Proof using field_representaton word_ok.
     repeat (eexists; split; eauto).
     apply word_not_impl.
   Qed.
@@ -546,7 +546,7 @@ Section __.
 
   Lemma Bignum_as_array
     : @Bignum.Bignum width word _ = sizedlistarray_value AccessWord.
-  Proof.
+  Proof using field_representaton.
     unfold Bignum.Bignum, sizedlistarray_value.
     unfold listarray_value.
     simpl.
@@ -559,7 +559,7 @@ Section __.
 
     Lemma compile_felem_cswap {tr m l functions} swap (lhs rhs : F M_pos) :
       let v := cswap swap lhs rhs in
-      forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+      forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
              R mask_var bounds lhs_ptr lhs_var rhs_ptr rhs_var,
 
         spec_of_cswap functions ->
@@ -588,7 +588,7 @@ Section __.
           (cmd.call [] felem_cswap [expr.var mask_var; expr.var lhs_var; expr.var rhs_var])
           k_impl
         <{ pred (nlet_eq [lhs_var; rhs_var] v k) }>.
-  Proof.
+  Proof using env_ok ext_spec_ok locals_ok mem_ok word_ok.
     unfold FElem, Field.FElem.
     rewrite !Bignum_as_array.
     repeat straightline' locals.

@@ -952,6 +952,7 @@ Module G.
   Definition bind {A B} (v : M A) (f : A -> M B) : M B
     := fun s => (v <- v s; let '(v, s) := v in f v s)%option.
 End G.
+Declare Scope GM_scope.
 Delimit Scope GM_scope with GM.
 Bind Scope GM_scope with G.M.
 Notation "x <- y ; f" := (G.bind y (fun x => f%GM)) : GM_scope.

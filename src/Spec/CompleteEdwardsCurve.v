@@ -49,6 +49,7 @@ Module E.
   End TwistedEdwardsCurves.
 End E.
 
+Declare Scope E_scope.
 Delimit Scope E_scope with E.
 Infix "=" := E.eq : E_scope.
 Infix "+" := E.add : E_scope.

@@ -11,7 +11,7 @@ Require Import Numbers.DecimalString.
 Local Open Scope Z_scope.
 
 Section Utils.
-  
+
     Lemma Nat_iter_plus_one :
       forall A f k (x : A), Nat.iter k f (f x) = Nat.iter (S k) f x.
     Proof.
@@ -29,7 +29,7 @@ Section FElems.
 
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
-  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}. 
+  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
   Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
   Context {locals_ok : map.ok locals}.
@@ -148,18 +148,18 @@ Section FElems.
 
   Section Proofs.
     Context (m : positive).
-   
+
 
     Lemma F_mul_1_r : forall x : F m,
         (x * 1)%F = x.
-    Proof.
+    Proof using Type.
       intros.
       F_lia.
     Qed.
 
     Lemma F_mul_1_l : forall x : F m,
         (1 * x)%F = x.
-    Proof.
+    Proof using Type.
       intros.
       F_lia.
     Qed.
@@ -180,13 +180,13 @@ Section FElems.
       try reflexivity;
       try F_lia.
 
-    
+
     Definition Pos2N_pos_xI n : N.pos n~1 = (2 * N.pos n + 1)%N := eq_refl.
     Definition Pos2N_pos_xO n : N.pos n~0 = (2 * N.pos n)%N := eq_refl.
 
      Lemma exp_by_squaring_correct :
       forall n x, exp_by_squaring m x n = (x ^ N.pos n)%F.
-    Proof.
+    Proof using Type.
       induction n; intros; cbn [exp_by_squaring]; unfold nlet;
         rewrite (Pos2N_pos_xI n) || rewrite (Pos2N_pos_xO n) || idtac.
       all: try rewrite IHn.
@@ -196,7 +196,7 @@ Section FElems.
 
      Lemma run_length_encoding_nonempty:
       forall n, run_length_encoding n <> [].
-    Proof.
+    Proof using Type.
       destruct n eqn : H'; simpl.
       + destruct (run_length_encoding p).
         { inversion 1. }
@@ -209,7 +209,7 @@ Section FElems.
 
     Lemma exp_by_squaring_encoded_simple_correct :
       forall n x, exp_by_squaring_encoded_simple m x n = (x ^ N.pos n)%F.
-    Proof.
+    Proof using Type.
       intros. rewrite <- exp_by_squaring_correct; eauto.
       unfold exp_by_squaring_encoded_simple; induction n; simpl.
       - destruct (run_length_encoding n) eqn : Heq.
@@ -248,7 +248,7 @@ Section FElems.
     Lemma exp_by_squaring_encoded_correct :
       forall n x, exp_by_squaring_encoded m x n = (x ^ N.pos n)%F.
 
-    Proof.
+    Proof using Type.
       intros. rewrite <- exp_by_squaring_encoded_simple_correct; eauto.
       unfold exp_by_squaring_encoded. unfold exp_by_squaring_encoded_simple.
       induction (run_length_encoding n).
@@ -292,10 +292,10 @@ Section FElems.
 
     Lemma clean_width :
       forall x, x < 2 ^ 32 -> x < 2 ^ width.
-    Proof.
+    Proof using ext_spec_ok locals_ok mem_ok word_ok.
       intros; destruct width_cases as [ -> | -> ]; lia.
     Qed.
-    
+
   End Proofs.
 
   Section Bedrock2.
@@ -304,7 +304,7 @@ Section FElems.
         forall A B (val : A) (body_l body_r : A -> B) (var : string),
           (let x := val in body_l x = body_r x)
           -> (let/n x as var := val in body_l x) = (let/n y as var := val in body_r y).
-      Proof.
+      Proof using Type.
         intros. assumption.
       Qed.
 
@@ -312,7 +312,7 @@ Section FElems.
         forall A B C (a : C) (val1 : A) (body1 : A -> B) (body2 : B -> C) (var var' : string),
           a = (let/n x as var' := val1 in let/n y as var := body1 x in body2 y)
           -> a = (let/n y as var := let/n x as var' := val1 in body1 x in body2 y).
-      Proof.
+      Proof using Type.
         intros. assumption.
       Qed.
 
@@ -320,7 +320,7 @@ Section FElems.
         forall A B (a : A) (val : A) (body_r : A -> B) (var : string) left,
           left = (let/n y as var := val in (a, body_r y))
           -> left = (a, let/n y as var := val in body_r y).
-      Proof.
+      Proof using Type.
         intros.
         rewrite H. reflexivity.
       Qed.
@@ -461,7 +461,7 @@ Section FElems.
 
       Print Assumptions exp_6_body. (* does not depend on [width] or [word] *)
       Print Assumptions exp_97_body. (* depends on [width] and  [word] :/ *)
-      
+
       Derive fe25519_inv SuchThat
              (defn! "fe25519_inv" ("res", "x") { fe25519_inv },
               implements (exp (2^255-21)) using [square; mul])
@@ -475,30 +475,30 @@ Section FElems.
 
       Lemma compile_inv : forall m l tr functions x,
             let v := F.inv x in
-            forall {P} (pred : P v -> predicate) (k : nlet_eq_k P v) {k_impl}
-                   (R : map.rep -> Prop) (out : F M_pos) 
+            forall P (pred : P v -> predicate) (k : nlet_eq_k P v) k_impl
+                   (R : map.rep -> Prop) (out : F M_pos)
                    (x_ptr : word.rep) (x_var : string) (out_ptr : word.rep) (out_var : string)
                    (out_bounds : option bounds),
-              
+
               spec_of_exp_large functions ->
-              
+
               map.get l out_var = Some out_ptr ->
               map.get l x_var = Some x_ptr ->
               (FElem out_bounds out_ptr out ⋆ FElem (Some tight_bounds) x_ptr x ⋆ R) m ->
-              
+
               (let v := v in
                forall m',
                  (FElem (Some loose_bounds) out_ptr v ⋆ FElem (Some tight_bounds) x_ptr x ⋆ R) m' ->
                  <{ Trace := tr; Memory := m'; Locals := l; Functions := functions }>
                  k_impl
                  <{ pred (k v eq_refl) }>) ->
-              
+
               <{ Trace := tr; Memory := m; Locals := l; Functions := functions }>
-              
+
               cmd.seq (cmd.call [] "fe25519_inv" [expr.var out_var; expr.var x_var]) k_impl
-                      
+
               <{ pred (let/n x as out_var eq:Heq := v in k x Heq) }>.
-      Proof.
+      Proof using F_M_pos env_ok ext_spec_ok field_representation_ok locals_ok mem_ok word_ok.
         repeat straightline.
         repeat (eexists; split; eauto).
         straightline_call.
@@ -518,11 +518,11 @@ Section FElems.
         }
         ecancel_assumption.
       Qed.
-      
+
       (*
       Context { F_M_pos : Z.pos M_pos = 2^255-19 }.
       Require Import Crypto.Spec.Curve25519.
-     
+
       Derive fe25519_inv SuchThat
              (defn! inv ("res", "x") { fe25519_inv },
              implements (exp (2^255-21)) using [square; mul])
@@ -546,7 +546,7 @@ Section FElems.
         destruct H3.
         destruct H3.
 
-       
+
 
         eassert ((FElem _ px _ * _) mem0)%sep.
         unfold FElem.
@@ -579,7 +579,7 @@ Section FElems.
 
         compile_step.
         compile_step.
-        
+
         Set Typeclasses Debug.
         compile_step.
         Set Typeclasses Debug.
@@ -597,20 +597,20 @@ Section FElems.
 
         eapply H6.
         compile_step.
-        
+
         let x := open_constr:(Some _) in instantiate(2:=pout).
         simpl.
         eapply H2.
         eapply H3.
         compile_step.
-        
+
         ecancel_assumption.
 
         compile_step.
         compile_step.
         compile_step.
         compile_step.
-        
+
 
         Set Typeclasses Debug.
         repeat compile_step.
@@ -619,8 +619,8 @@ Section FElems.
 
         3: { instantiate (2 := "x"). repeat compile_step. }
         3: { instantiate (1 := "x"). repeat compile_step. }
-        
-        change (fun x => ?c x) with c.  
+
+        change (fun x => ?c x) with c.
 
     Global Instance spec_of_fe25519_inv : spec_of "fe25519_inv" :=
       fnspec! "fe25519_inv" (sq_ptr x_ptr : word) / (sq x : F M_pos) R,
@@ -630,13 +630,13 @@ Section FElems.
         ensures tr' mem' :=
           tr = tr'
           /\ (FElem (Some tight_bounds) x_ptr x
-          * FElem (Some tight_bounds) sq_ptr (F.inv x)  * R)%sep mem'}. 
+          * FElem (Some tight_bounds) sq_ptr (F.inv x)  * R)%sep mem'}.
 
     Require Import Crypto.Spec.Curve25519. *)
-    Lemma fe_inv_correct : 
+    Lemma fe_inv_correct :
       Z.pos M_pos = 2^255-19 ->
       program_logic_goal_for_function! fe25519_inv.
-    Proof.
+    Proof using env_ok ext_spec_ok field_representation_ok locals_ok mem_ok word_ok.
       intros Hm HmPrime ? ** ? **.
       eapply Proper_call; [|eapply fe25519_inv_correct_exp; eauto 1; exact I].
       intros ? ** ? ** ? ** ?; intuition idtac.

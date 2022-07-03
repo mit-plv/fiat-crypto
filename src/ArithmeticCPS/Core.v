@@ -34,6 +34,7 @@ Reserved Notation "'dlet_list_pair' x := v 'in' f"
          (at level 200, f at level 200, format "'dlet_list_pair'  x  :=  v  'in' '//' f").
 Reserved Notation "'dlet_list' x := v 'in' f"
          (at level 200, f at level 200, format "'dlet_list'  x  :=  v  'in' '//' f").
+Declare Scope runtime_scope.
 Delimit Scope runtime_scope with RT.
 Import CPSBindNotations.
 Local Open Scope cps_scope.

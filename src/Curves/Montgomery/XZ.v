@@ -14,6 +14,7 @@ Module M.
             {field:@Algebra.Hierarchy.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {Feq_dec:Decidable.DecidableRel Feq}
             {char_ge_5:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 5}.
+    Declare Scope F_scope.
     Delimit Scope F_scope with F.
     Local Open Scope F_scope.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
@@ -36,7 +37,7 @@ Module M.
       end.
 
     Let char_ge_3:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos (BinNat.N.two)).
-    Proof. eapply Algebra.Hierarchy.char_ge_weaken; eauto; vm_decide. Qed.
+    Proof using char_ge_5. eapply Algebra.Hierarchy.char_ge_weaken; eauto; vm_decide. Qed.
 
     (* From Curve25519 paper by djb, appendix B. Credited to Montgomery *)
     Context {a24:F} {a24_correct:(1+1+1+1)*a24 = a-(1+1)}.

@@ -297,7 +297,7 @@ Section of_prefancy.
         (type.try_transport
            _ _ tZ e) = Some e' /\
         API.interp (t:=tZ) e' = r.
-    Proof.
+    Proof using Type.
       clear. cbv [interp_if_Z option_map].
       break_match; inversion 1; intros.
       subst; eexists. tauto.
@@ -339,7 +339,7 @@ Section of_prefancy.
       | tZ => fun n => ctx n
       | (tZ * tZ)%etype =>
         fun v => (ctx (fst v), Z.b2z (cctx (snd v)))
-      | (a * b)%etype =>
+      | (_a * _b)%etype =>
         fun _ => DefaultValue.type.base.default
       | _ => fun _ : unit =>
                DefaultValue.type.base.default
@@ -475,7 +475,7 @@ Section of_prefancy.
     .
 
     Lemma wordmax_nonneg : 0 <= wordmax.
-    Proof. cbv; congruence. Qed.
+    Proof using Type. cbv; congruence. Qed.
 
     Lemma of_prefancy_scalar_correct'
           (e1 : @cexpr var (type.base tZ))
@@ -490,7 +490,7 @@ Section of_prefancy.
       (forall v1 v2, In (existZZ (v1, v2)) G -> ctx (fst v1) = fst v2) ->
       (forall v1 v2, In (existZZ (v1, v2)) G -> Z.b2z (cctx (snd v1)) = snd v2) ->
       ctx (of_prefancy_scalar e1) = cinterp e2.
-    Proof.
+    Proof using Type.
       inversion 1; inversion 1;
         cbv [interp_if_Z option_map];
         cbn [of_prefancy_scalar interp_base]; intros.
@@ -545,7 +545,7 @@ Section of_prefancy.
       (forall t v1 v2, In (existT _ (type.base t) (v1, v2)) G -> interp_base ctx cc v1 = v2) ->
       (forall n, ctx n mod wordmax = ctx n) ->
       ctx (of_prefancy_scalar e1) = cinterp e2.
-    Proof.
+    Proof using Type.
       intros; match goal with H : context [interp_base _ _ _ = _] |- _ =>
                               pose proof (H tZ);
                                 pose proof (H (tZ * tZ)%etype); cbn [interp_base] in *
@@ -566,7 +566,7 @@ Section of_prefancy.
         => fun idc x => of_prefancy_ident idc x <> None
       | _, _ => fun idc x => False
       end idc x.
-    Proof.
+    Proof using Type.
       destruct 1; intros;
         repeat first [
                  progress HProp.eliminate_hprop_eq
@@ -584,7 +584,7 @@ Section of_prefancy.
     Lemma of_prefancy_ident_Some {s d} idc r rf x:
       @valid_ident (type.base s) (type.base d) r rf idc x ->
       of_prefancy_ident idc x <> None.
-    Proof. exact (@of_prefancy_ident_Some_gen _ _ idc r rf x). Qed.
+    Proof using Type. exact (@of_prefancy_ident_Some_gen _ _ idc r rf x). Qed.
 
     Ltac name_eqb_to_eq :=
       repeat match goal with
@@ -640,17 +640,17 @@ Section of_prefancy.
     Lemma cast_mod u v :
       0 <= u ->
       ident.cast r[0~>u] v = v mod (u + 1).
-    Proof. apply ident.cast_out_of_bounds_simple_0_mod. Qed.
+    Proof using Type. apply ident.cast_out_of_bounds_simple_0_mod. Qed.
 
     Lemma cc_spec_c v :
       Z.b2z (cc_spec CC.C v) = (v / wordmax) mod 2.
-    Proof. cbv [cc_spec]; apply Z.testbit_spec'. lia. Qed.
+    Proof using Type. cbv [cc_spec]; apply Z.testbit_spec'. lia. Qed.
 
     Lemma cc_m_zselect x z nz :
       x mod wordmax = x ->
       (if (if cc_spec CC.M x then 1 else 0) =? 1 then nz else z) =
       Z.zselect (x >> 255) z nz.
-    Proof.
+    Proof using Type.
       intro Hx_small.
       transitivity (if (Z.b2z (cc_spec CC.M x) =? 1) then nz else z); [ reflexivity | ].
       cbv [cc_spec Z.zselect].
@@ -662,7 +662,7 @@ Section of_prefancy.
 
     Lemma cc_l_zselect x z nz :
       (if (if cc_spec CC.L x then 1 else 0) =? 1 then nz else z) = Z.zselect (x &' 1) z nz.
-    Proof.
+    Proof using Type.
       transitivity (if (Z.b2z (cc_spec CC.L x) =? 1) then nz else z); [ reflexivity | ].
       transitivity (Z.zselect (x &' Z.ones 1) z nz); [ | reflexivity ].
       cbv [cc_spec Z.zselect]. rewrite Z.testbit_spec', Z.land_ones by lia.
@@ -671,7 +671,7 @@ Section of_prefancy.
     Qed.
 
     Lemma b2z_range b : 0<= Z.b2z b < 2.
-    Proof. cbv [Z.b2z]. break_match; lia. Qed.
+    Proof using Type. cbv [Z.b2z]. break_match; lia. Qed.
 
 
     Lemma of_prefancy_scalar_carry
@@ -684,7 +684,7 @@ Section of_prefancy.
       (forall n1, consts 1 = Some n1 -> cctx n1 = true) ->
       (forall t v1 v2, In (existT _ (type.base t) (v1, v2)) G -> interp_base ctx cctx v1 = v2) ->
       Z.b2z (cctx (of_prefancy_scalar c)) = cinterp e.
-    Proof.
+    Proof using Type.
       destruct 1; intros; hammer; cbn;
       repeat match goal with
              | H : context [ _ = false] |- Z.b2z _ = 0 => rewrite H; reflexivity
@@ -756,7 +756,7 @@ Section of_prefancy.
                 spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod wordmax = (cinterp f (cinterp x2))
         | _, _ => fun _ _ _ => True
         end idc x rf.
-    Proof.
+    Proof using Type.
       destruct 1; try exact I; cbn [of_prefancy_ident]; cbn [GallinaReify.base.reify ident.ident_Literal ident.buildIdent] in *; hammer; intros; inversion_option; (simplify_ident; [ ]).
       all:
         rewrite cast_mod by lia;
@@ -803,7 +803,7 @@ Section of_prefancy.
         of_prefancy_ident idc x = Some i ->
         (spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod wordmax = spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod (u+1)) ->
         spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod wordmax = (cinterp f (cinterp x2)).
-    Proof. apply (@of_prefancy_identZ_loosen_correct_gen (type.base s) (type.base tZ)). Qed.
+    Proof using Type. apply (@of_prefancy_identZ_loosen_correct_gen (type.base s) (type.base tZ)). Qed.
     Lemma of_prefancy_identZ_correct {s} idc:
       forall (x : @cexpr var _) i ctx G cc cctx x2 r rf f,
         @valid_ident (type.base s) tZ r rf idc x ->
@@ -815,7 +815,7 @@ Section of_prefancy.
         (forall n, ctx n mod wordmax = ctx n) ->
         of_prefancy_ident idc x = Some i ->
         spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod wordmax = (cinterp f (cinterp x2)).
-    Proof.
+    Proof using Type.
       intros; eapply of_prefancy_identZ_loosen_correct; try eassumption; [ | ].
       { cbn; lia. } { intros; f_equal; ring. }
     Qed.
@@ -831,7 +831,7 @@ Section of_prefancy.
         of_prefancy_ident idc x = Some i ->
         spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod wordmax = fst (cinterp f (cinterp x2)) /\
         Z.b2z (cc_spec CC.C (spec (projT1 i) (Tuple.map ctx (projT2 i)) cc)) = snd (cinterp f (cinterp x2)).
-    Proof.
+    Proof using Type.
       inversion 1; inversion 1; cbn [of_prefancy_ident]; intros; hammer; (simplify_ident; [ ]);
         cbn - [Z.div Z.modulo]; cbv [Z.sub_with_borrow Z.add_with_carry];
           cbv [cc_good] in *; destruct_head'_and; autorewrite with zsimplify_fast.
@@ -869,7 +869,7 @@ Section of_prefancy.
         (forall n, ctx n mod wordmax = ctx n) ->
         of_prefancy_ident idc x = Some i ->
         spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod wordmax = fst (cinterp f (cinterp x2)).
-    Proof. apply of_prefancy_identZZ_correct'. Qed.
+    Proof using Type. apply of_prefancy_identZZ_correct'. Qed.
     Lemma of_prefancy_identZZ_correct_carry {s} idc:
       forall (x : @cexpr var _) i ctx G cc cctx x2 r rf f,
         @valid_ident (type.base s) (tZ * tZ) r rf idc x ->
@@ -881,13 +881,13 @@ Section of_prefancy.
         (forall n, ctx n mod wordmax = ctx n) ->
         of_prefancy_ident idc x = Some i ->
         Z.b2z (cc_spec CC.C (spec (projT1 i) (Tuple.map ctx (projT2 i)) cc)) = snd (cinterp f (cinterp x2)).
-    Proof. apply of_prefancy_identZZ_correct'. Qed.
+    Proof using Type. apply of_prefancy_identZZ_correct'. Qed.
 
     Lemma identZZ_writes {s} idc r rf x:
       @valid_ident (type.base s) (tZ * tZ) r rf idc x ->
       forall i, of_prefancy_ident idc x = Some i ->
                   In CC.C (writes_conditions (projT1 i)).
-    Proof.
+    Proof using Type.
       inversion 1;
         repeat match goal with
                | _ => progress intros
@@ -925,7 +925,7 @@ Section of_prefancy.
            ((existZ (next_name, x)%zrange) :: G) ->
         interp_base (fun n : name => if name_eqb n next_name then x else ctx n)
                     (fun n : name => if name_eqb n next_name then xc else cctx n) v1 = v2.
-    Proof.
+    Proof using name_eqb_eq name_eqb_neq name_lt_irr.
       intros.
       repeat match goal with
              | H: In _ (_ :: _) |- _ => cbn [In] in H; destruct H; [ solve [side_cond] | ]
@@ -936,24 +936,24 @@ Section of_prefancy.
     Qed.
 
     Lemma name_eqb_refl n : name_eqb n n = true.
-    Proof. case_eq (name_eqb n n); intros; name_eqb_to_eq; auto. Qed.
+    Proof using name_eqb_eq name_eqb_neq. case_eq (name_eqb n n); intros; name_eqb_to_eq; auto. Qed.
 
     Lemma valid_ident_new_cc_to_name s d r rf idc x y n :
       @valid_ident (type.base s) (type.base d) r rf idc x ->
       of_prefancy_ident idc x = Some y ->
       rf n = new_cc_to_name r (projT1 y) n.
-    Proof. inversion 1; intros; hammer; simplify_ident. Qed.
+    Proof using Type. inversion 1; intros; hammer; simplify_ident. Qed.
 
     Lemma new_cc_to_name_Z_cases r i n x :
       new_cc_to_name (d:=tZ) r i n x
       = if in_dec CC.code_dec x (writes_conditions i)
         then n else r x.
-    Proof. reflexivity. Qed.
+    Proof using Type. reflexivity. Qed.
     Lemma new_cc_to_name_ZZ_cases r i n x :
       new_cc_to_name (d:=tZ * tZ) r i n x
       = if in_dec CC.code_dec x (writes_conditions i)
         then fst n else r x.
-    Proof. reflexivity. Qed.
+    Proof using Type. reflexivity. Qed.
 
     Lemma cc_good_helper cc cctx ctx r i x next_name :
       (forall c, name_lt (r c) next_name) ->
@@ -966,7 +966,7 @@ Section of_prefancy.
                  else cctx n)
               (fun n : name => if name_eqb n next_name then x mod wordmax else ctx n)
               (new_cc_to_name (d:=tZ) r i next_name).
-    Proof.
+    Proof using name_eqb_eq name_eqb_neq name_lt_irr.
       cbv [cc_good]; intros; destruct_head'_and.
       rewrite !new_cc_to_name_Z_cases.
       cbv [CC.update CC.cc_c CC.cc_m CC.cc_l CC.cc_z].
@@ -1002,7 +1002,7 @@ Section of_prefancy.
           (forall n v2, In (existZZ (n, v2)) G -> name_lt (fst n) next_name) ->
           (interp_if_Z e2 = Some result) ->
           interp (@of_prefancy next_name t e1) cc ctx = result.
-    Proof.
+    Proof using name_eqb_eq name_eqb_neq name_lt_irr name_lt_succ name_lt_trans.
       induction 1; inversion 1; cbv [interp_if_Z];
         cbn [of_prefancy of_prefancy_step]; intros;
           match goal with H : context [interp_base _ _ _ = _] |- _ =>
@@ -1297,13 +1297,13 @@ Section Equivalence.
     let result := spec i (Tuple.map ctx args) cc in
     let new_cc := CC.update (writes_conditions i) result cc_spec cc in
     let new_ctx := fun n => if name_eqb n rd then result mod wordmax else ctx n in interp cont new_cc new_ctx.
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma interp_state_equiv e :
     forall cc ctx cc' ctx',
       cc = cc' -> (forall r, ctx r = ctx' r) ->
       interp e cc ctx = interp e cc' ctx'.
-  Proof.
+  Proof using name_eqb wordmax.
     induction e; intros; subst; cbn; [solve[auto]|].
     apply IHe; rewrite Tuple.map_ext with (g:=ctx') by auto;
       [reflexivity|].
@@ -1317,24 +1317,24 @@ Section Equivalence.
   Lemma mulll_comm rd x y cont cc ctx :
     interp (Instr MUL128LL rd (x, y) cont) cc ctx =
     interp (Instr MUL128LL rd (y, x) cont) cc ctx.
-  Proof. prove_comm Z.mul_comm. Qed.
+  Proof using name_eqb wordmax. prove_comm Z.mul_comm. Qed.
 
   Lemma mulhh_comm rd x y cont cc ctx :
     interp (Instr MUL128UU rd (x, y) cont) cc ctx =
     interp (Instr MUL128UU rd (y, x) cont) cc ctx.
-  Proof. prove_comm Z.mul_comm. Qed.
+  Proof using name_eqb wordmax. prove_comm Z.mul_comm. Qed.
 
   Lemma mullh_mulhl rd x y cont cc ctx :
     interp (Instr MUL128LU rd (x, y) cont) cc ctx =
     interp (Instr MUL128UL rd (y, x) cont) cc ctx.
-  Proof. prove_comm Z.mul_comm. Qed.
+  Proof using name_eqb wordmax. prove_comm Z.mul_comm. Qed.
 
   Lemma add_comm rd x y cont cc ctx :
     0 <= ctx x < 2^256 ->
     0 <= ctx y < 2^256 ->
     interp (Instr (ADD 0) rd (x, y) cont) cc ctx =
     interp (Instr (ADD 0) rd (y, x) cont) cc ctx.
-  Proof.
+  Proof using name_eqb wordmax.
     prove_comm Z.add_comm.
     rewrite !(Z.mod_small (ctx _)) by lia.
     reflexivity.
@@ -1345,7 +1345,7 @@ Section Equivalence.
     0 <= ctx y < 2^256 ->
     interp (Instr (ADDC 0) rd (x, y) cont) cc ctx =
     interp (Instr (ADDC 0) rd (y, x) cont) cc ctx.
-  Proof.
+  Proof using name_eqb wordmax.
     prove_comm (Z.add_comm (ctx x)).
     rewrite !(Z.mod_small (ctx _)) by lia.
     reflexivity.
