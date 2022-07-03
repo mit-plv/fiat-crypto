@@ -1,4 +1,5 @@
 (** * Isomorphisms *)
+Require Export Crypto.Util.GlobalSettings.
 (** Following the category-theoretic definition, [f : A → B] is an
     isomorphism when it has an inverse [f⁻¹ : B → A] which is both a
     left and a right inverse.  In the language of homotopy type

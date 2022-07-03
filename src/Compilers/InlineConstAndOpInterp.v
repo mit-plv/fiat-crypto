@@ -1,4 +1,5 @@
 (** * Inline: Remove some [Let] expressions, inline constants, interpret constant operations *)
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Wf.
 Require Import Crypto.Compilers.SmartMap.
@@ -41,7 +42,7 @@ Section language.
                 (exprf_of_inline_directive
                    (postprocess_for_const_and_op interp_op invert_Const Const e))
         = interpf interp_op e.
-    Proof.
+    Proof using Hinvert_Const interpf_Const.
       induction e; try reflexivity; simpl in *.
       all:repeat first [ reflexivity
                        | break_innermost_match_step
@@ -67,7 +68,7 @@ Section language.
               -> interpf interp_op x = x')
       : interpf interp_op (inline_const_and_op_genf (t:=t) interp_op invert_Const Const e1)
         = interpf interp_op e2.
-    Proof.
+    Proof using Hinvert_Const interpf_Const.
       unfold inline_const_and_op_genf;
         eapply interpf_inline_const_genf; eauto using interpf_postprocess_for_const_and_op.
     Qed.
@@ -78,7 +79,7 @@ Section language.
       : forall x,
         interp interp_op (inline_const_and_op_gen (t:=t) interp_op invert_Const Const e1) x
         = interp interp_op e2 x.
-    Proof.
+    Proof using Hinvert_Const interpf_Const.
       unfold inline_const_and_op_gen;
         eapply interp_inline_const_gen; eauto using interpf_postprocess_for_const_and_op.
     Qed.
@@ -112,7 +113,7 @@ Section language.
               -> interpf interp_op x = x')
       : interpf interp_op (inline_const_and_opf (t:=t) interp_op OpConst e1)
         = interpf interp_op e2.
-    Proof.
+    Proof using interp_op_OpConst.
       unfold inline_const_and_opf;
         eapply interpf_inline_const_genf; eauto using interpf_postprocess_for_const_and_op, interpf_invert_ConstUnit, interpf_Const.
     Qed.
@@ -123,7 +124,7 @@ Section language.
       : forall x,
         interp interp_op (inline_const_and_op (t:=t) interp_op OpConst e1) x
         = interp interp_op e2 x.
-    Proof.
+    Proof using interp_op_OpConst.
       unfold inline_const_and_op;
         eapply interp_inline_const_gen; eauto using interpf_postprocess_for_const_and_op, interpf_invert_ConstUnit, interpf_Const.
     Qed.

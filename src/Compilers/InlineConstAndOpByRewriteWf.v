@@ -167,5 +167,5 @@ Module Export Rewrite.
     Qed.
   End language.
 
-  Hint Resolve Wf_InlineConstAndOpGen Wf_InlineConstAndOp : wf.
+  Global Hint Resolve Wf_InlineConstAndOpGen Wf_InlineConstAndOp : wf.
 End Rewrite.

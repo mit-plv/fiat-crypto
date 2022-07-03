@@ -79,12 +79,12 @@ Lemma dec_eq_flat_type {base_type_code} `{DecidableRel (@eq base_type_code)}
 Proof.
   repeat intro; hnf; decide equality; apply dec; auto.
 Defined.
-Hint Extern 1 (Decidable (@eq (flat_type ?base_type_code) ?x ?y))
+Global Hint Extern 1 (Decidable (@eq (flat_type ?base_type_code) ?x ?y))
 => simple apply (@dec_eq_flat_type base_type_code) : typeclass_instances.
 Lemma dec_eq_type {base_type_code} `{DecidableRel (@eq base_type_code)}
   : DecidableRel (@eq (type base_type_code)).
 Proof.
   repeat intro; hnf; decide equality; apply dec; typeclasses eauto.
 Defined.
-Hint Extern 1 (Decidable (@eq (type ?base_type_code) ?x ?y))
+Global Hint Extern 1 (Decidable (@eq (type ?base_type_code) ?x ?y))
 => simple apply (@dec_eq_type base_type_code) : typeclass_instances.

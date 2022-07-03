@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+Require Import Coq.Classes.RelationClasses.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.ZUtil.Hints.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
@@ -8,12 +9,14 @@ Require Import Crypto.Util.ZUtil.ZSimplify.Core.
 Require Import Crypto.Util.ZUtil.ZSimplify.Simple.
 Local Open Scope Z_scope.
 
+Local Existing Instance Z.le_preorder.
+
 Module Z.
   Lemma log2_nonneg' n a : n <= 0 -> n <= Z.log2 a.
   Proof.
     intros; transitivity 0; auto with zarith.
   Qed.
-  Hint Resolve log2_nonneg' : zarith.
+  Global Hint Resolve log2_nonneg' : zarith.
 
   Lemma le_lt_to_log2 x y z : 0 <= z -> 0 < y -> 2^x <= y < 2^z -> x <= Z.log2 y < z.
   Proof.

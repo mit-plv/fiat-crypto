@@ -1,5 +1,6 @@
+Require Export Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.Wf.

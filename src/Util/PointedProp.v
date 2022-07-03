@@ -3,6 +3,7 @@
     computationally reduce things like [True /\ True], but can still
     express equality of types. *)
 Require Import Coq.Setoids.Setoid.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.Notations.
 
 Delimit Scope pointed_prop_scope with pointed_prop.
@@ -98,10 +99,10 @@ Create HintDb push_prop_of_option discriminated.
 Create HintDb push_to_prop discriminated.
 Create HintDb push_eq_trivial discriminated.
 Create HintDb push_eq_Some_trivial discriminated.
-Hint Extern 1 => progress autorewrite with push_prop_of_option in * : push_prop_of_option.
-Hint Extern 1 => progress autorewrite with push_to_prop in * : push_to_prop.
-Hint Extern 1 => progress autorewrite with push_eq_trivial in * : push_eq_trivial.
-Hint Extern 1 => progress autorewrite with push_eq_Some_trivial in * : push_eq_Some_trivial.
+Global Hint Extern 1 => progress autorewrite with push_prop_of_option in * : push_prop_of_option.
+Global Hint Extern 1 => progress autorewrite with push_to_prop in * : push_to_prop.
+Global Hint Extern 1 => progress autorewrite with push_eq_trivial in * : push_eq_trivial.
+Global Hint Extern 1 => progress autorewrite with push_eq_Some_trivial in * : push_eq_Some_trivial.
 
 Lemma to_prop_and P Q : to_prop (P /\ Q)%pointed_prop
                         <-> (to_prop P /\ to_prop Q).

@@ -1,5 +1,5 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Lists.List.
 Local Open Scope Z_scope.
 
@@ -643,7 +643,7 @@ Section API.
 End API.
 Hint Rewrite nonzero_id join0_id divmod_id drop_high_id scmul_id add_id add_S1_id add_S2_id sub_then_maybe_add_id conditional_sub_id : uncps.
 
-Hint Unfold
+Global Hint Unfold
      nonzero_cps
      nonzero
      scmul_cps

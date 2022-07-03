@@ -1,4 +1,4 @@
-Require Import Coq.Lists.List Coq.Classes.RelationClasses Coq.Classes.Morphisms.
+Require Import Coq.Lists.List Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.Wf.

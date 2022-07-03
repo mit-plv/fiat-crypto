@@ -1,9 +1,43 @@
 Require Import Crypto.Util.Relations Crypto.Util.Notations.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.DebugPrint.
-Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms.
-Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Ring Crypto.Algebra.IntegralDomain.
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
+Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Monoid Crypto.Algebra.Ring Crypto.Algebra.IntegralDomain.
 Require Coq.setoid_ring.Field_theory.
+Module Export Hints1.
+  Export Crypto.Algebra.Monoid.Hints.
+  Export Crypto.Algebra.Hierarchy.Hints.
+  Export Crypto.Algebra.Ring.Hints.
+  Export Crypto.Algebra.IntegralDomain.Hints.
+  Global Existing Instances
+         Ncring_tac.Ifind0
+         Ncring_tac.Iclosed_nil
+         Ncring_tac.Iclosed_cons
+         Ncring_tac.reify_zero
+         Ncring_tac.reify_one
+         Ncring_tac.reify_add
+         Ncring_tac.reify_sub
+         Ncring_tac.reify_opp
+         Ncring_tac.reify_nil
+         Ncring_tac.reify_cons
+  .
+  Global Existing Instances
+         Ncring_tac.IfindS
+         Ncring_tac.reify_pow
+  | 1.
+  Global Existing Instances
+         Ncring_tac.reify_mul_ext
+  | 9.
+  Global Existing Instances
+         Ncring_tac.reify_mul
+  | 10.
+  Global Existing Instances
+         Ncring_tac.reifyZ0
+         Ncring_tac.reifyZpos
+         Ncring_tac.reifyZneg
+  | 11.
+  Global Existing Instance Ncring_tac.reify_var | 100.
+End Hints1.
 
 Section Field.
   Context {T eq zero one opp add mul sub inv div} `{@field T eq zero one opp add sub mul inv div}.
@@ -327,3 +361,24 @@ Section FieldSquareRoot.
     fsatz.
   Qed.
 End FieldSquareRoot.
+
+Module Export Hints.
+  Export Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
+  Export Hints1.
+  Global Existing Instances is_mul_nonzero_nonzero integral_domain.
+  Global Existing Instances
+         Ncring.zero_notation
+         Ncring.one_notation
+         Ncring.add_notation
+         Ncring.mul_notation
+         Ncring.sub_notation
+         Ncring.opp_notation
+         Ncring.eq_notation
+         Ncring.ring_setoid
+         Ncring.ring_plus_comp
+         Ncring.ring_mult_comp
+         Ncring.ring_sub_comp
+         Ncring.ring_opp_comp
+         Ncring.power_ring
+  .
+End Hints.

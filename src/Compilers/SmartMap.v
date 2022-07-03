@@ -1,4 +1,4 @@
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Tuple.
 Require Import Crypto.Util.Tactics.RewriteHyp.

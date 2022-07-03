@@ -1,3 +1,4 @@
+Require Export Crypto.Util.GlobalSettings.
 Require Import Coq.ZArith.ZArith.
 Module Z.
   Ltac compare_to_sgn :=

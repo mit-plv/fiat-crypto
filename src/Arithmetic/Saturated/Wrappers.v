@@ -47,13 +47,13 @@ Module Columns.
 
   End Wrappers.
 End Columns.
-Hint Unfold
+Global Hint Unfold
      Columns.conditional_add_cps
      Columns.add_cps
      Columns.unbalanced_sub_cps
      Columns.mul_cps.
 
-Hint Unfold
+Global Hint Unfold
      Columns.add_cps Columns.unbalanced_sub_cps Columns.mul_cps Columns.conditional_add_cps
   : basesystem_partial_evaluation_unfolder.
 

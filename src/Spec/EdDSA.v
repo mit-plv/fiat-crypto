@@ -6,6 +6,8 @@ Require Coq.Numbers.Natural.Peano.NPeano.
 
 Require Import Crypto.Spec.ModularArithmetic.
 
+Import Algebra.ScalarMult.Hints.
+
 Local Infix "-" := BinInt.Z.sub.
 Local Infix "^" := BinInt.Z.pow.
 Local Infix "mod" := BinInt.Z.modulo.

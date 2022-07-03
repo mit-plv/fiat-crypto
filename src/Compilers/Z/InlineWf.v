@@ -12,4 +12,4 @@ Definition Wf_InlineConst {t} (e : Expr t) (Hwf : Wf e)
   : Wf (InlineConst e)
   := @Wf_InlineConst _ _ _ t e Hwf.
 
-Hint Resolve Wf_InlineConstAndOpp Wf_InlineConst : wf.
+Global Hint Resolve Wf_InlineConstAndOpp Wf_InlineConst : wf.

@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Local Open Scope Z_scope.
 
@@ -8,5 +8,5 @@ Module Z.
     generalize (Zdiv_sgn (Z.abs a) (Z.abs b)).
     destruct a, b; simpl; lia.
   Qed.
-  Hint Resolve div_abs_sgn_nonneg : zarith.
+  Global Hint Resolve div_abs_sgn_nonneg : zarith.
 End Z.

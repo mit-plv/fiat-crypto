@@ -1,5 +1,5 @@
 (** * Basic Peano-arithmetic-like properties of ℤ *)
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.BinInt.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.HProp.

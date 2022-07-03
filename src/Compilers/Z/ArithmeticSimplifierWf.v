@@ -13,6 +13,7 @@ Require Import Crypto.Compilers.Z.Syntax.Util.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.Prod.
+Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeBy.
@@ -215,4 +216,4 @@ Proof.
          end.
 Qed.
 
-Hint Resolve Wf_SimplifyArith : wf.
+Global Hint Resolve Wf_SimplifyArith : wf.

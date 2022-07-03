@@ -1,3 +1,4 @@
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Named.Syntax.
 Require Import Crypto.Compilers.Named.Context.
@@ -22,7 +23,7 @@ Section language.
   Lemma snd_interpf_side_conditions_gen_eq {t} {ctx : Context} {e}
     : interpf (t:=t) (ctx:=ctx) (interp_op:=interp_op) e
       = option_map (@snd _ _) (interpf_side_conditions_gen interp_op interped_op_side_conditions ctx e).
-  Proof.
+  Proof using Type.
     revert ctx; induction e; intros;
       repeat first [ reflexivity
                    | progress subst
@@ -41,5 +42,5 @@ Section language.
   Lemma snd_interpf_side_conditions_gen_Some {t} {ctx : Context} {e v}
     : interpf (t:=t) (ctx:=ctx) (interp_op:=interp_op) e = Some v
       <-> option_map (@snd _ _) (interpf_side_conditions_gen interp_op interped_op_side_conditions ctx e) = Some v.
-  Proof. rewrite snd_interpf_side_conditions_gen_eq; reflexivity. Qed.
+  Proof using Type. rewrite snd_interpf_side_conditions_gen_eq; reflexivity. Qed.
 End language.

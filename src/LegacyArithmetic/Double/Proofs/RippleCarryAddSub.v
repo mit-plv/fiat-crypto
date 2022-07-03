@@ -1,4 +1,5 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
+Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.LegacyArithmetic.Interface.
 Require Import Crypto.LegacyArithmetic.InterfaceProofs.
 Require Import Crypto.LegacyArithmetic.Double.Core.
@@ -150,9 +151,9 @@ Section ripple_carry_adc.
 
 End ripple_carry_adc.
 
-Hint Extern 2 (@is_add_with_carry _ (tuple ?W ?k) (@tuple_decoder ?n _ ?decode _) (@ripple_carry_adc _ ?adc _))
+Global Hint Extern 2 (@is_add_with_carry _ (tuple ?W ?k) (@tuple_decoder ?n _ ?decode _) (@ripple_carry_adc _ ?adc _))
 => apply (@ripple_carry_is_add_with_carry n W decode adc k) : typeclass_instances.
-Hint Resolve (fun n W decode adc isdecode isadc
+Global Hint Resolve (fun n W decode adc isdecode isadc
               => @ripple_carry_is_add_with_carry n W decode adc 2 isdecode isadc
                  : @is_add_with_carry (Z.of_nat 2 * n) (W * W) (@tuple_decoder n W decode 2) (@ripple_carry_adc W adc 2))
   : typeclass_instances.
@@ -195,9 +196,9 @@ Section ripple_carry_subc.
 
 End ripple_carry_subc.
 
-Hint Extern 2 (@is_sub_with_carry _ (tuple ?W ?k) (@tuple_decoder ?n _ ?decode _) (@ripple_carry_subc _ ?subc _))
+Global Hint Extern 2 (@is_sub_with_carry _ (tuple ?W ?k) (@tuple_decoder ?n _ ?decode _) (@ripple_carry_subc _ ?subc _))
 => apply (@ripple_carry_is_sub_with_carry n W decode subc k) : typeclass_instances.
-Hint Resolve (fun n W decode subc isdecode issubc
+Global Hint Resolve (fun n W decode subc isdecode issubc
               => @ripple_carry_is_sub_with_carry n W decode subc 2 isdecode issubc
                  : @is_sub_with_carry (Z.of_nat 2 * n) (W * W) (@tuple_decoder n W decode 2) (@ripple_carry_subc W subc 2))
   : typeclass_instances.

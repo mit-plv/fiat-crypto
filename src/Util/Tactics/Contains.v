@@ -1,3 +1,4 @@
+Require Export Crypto.Util.GlobalSettings.
 (** [contains x expr] succeeds iff [x] appears in [expr] *)
 Ltac contains search_for in_term :=
   idtac;

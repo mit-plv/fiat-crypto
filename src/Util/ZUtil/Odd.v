@@ -1,6 +1,8 @@
+Require Export Crypto.Util.GlobalSettings.
+Require Import Coq.Bool.Bool.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.ZArith.Znumtheory.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Local Open Scope Z_scope.
 
 Module Z.

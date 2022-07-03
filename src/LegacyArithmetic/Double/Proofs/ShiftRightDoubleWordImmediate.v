@@ -4,6 +4,7 @@ Require Import Crypto.LegacyArithmetic.Double.Core.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.Decode.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.ShiftLeftRightTactic.
 Require Import Crypto.Util.ZUtil.Hints.Core.
+Require Import Crypto.Util.ZUtil.Pow2Mod.
 Require Import Crypto.Util.ZUtil.Definitions.
 
 Local Open Scope Z_scope.

@@ -1,6 +1,6 @@
 (*** XXX TODO MOVE ALL THINGS IN THIS FILE TO BETTER PLACES *)
 Require Import Coq.ZArith.BinInt.
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.BoundedWord.
 Require Import Crypto.Util.Sigma.Lift.

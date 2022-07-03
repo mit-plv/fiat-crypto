@@ -1,4 +1,5 @@
 Require Import Coq.Numbers.BinNums.
+Require Export Crypto.Util.GlobalSettings.
 
 Local Generalizable All Variables.
 

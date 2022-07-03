@@ -1,5 +1,5 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Tactics.BreakMatch.

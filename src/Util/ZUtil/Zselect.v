@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.Tactics.BreakMatch.

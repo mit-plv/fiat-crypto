@@ -1,3 +1,4 @@
+Require Export Crypto.Util.GlobalSettings.
 Require Import Coq.Classes.RelationClasses.
 
 (** We call Coq's [etransitivity] for compatibility

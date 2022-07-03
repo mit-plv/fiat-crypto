@@ -1,4 +1,4 @@
-Require Import Coq.micromega.Lia Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.ZArith.ZArith.
 Require Import Crypto.Util.Tactics.Contains.
 Require Import Crypto.Util.Tactics.Not.
 Local Open Scope Z_scope.

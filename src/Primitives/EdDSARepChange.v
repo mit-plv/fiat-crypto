@@ -1,14 +1,14 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Spec.EdDSA bbv.WordScope.
-Require Import Coq.Classes.Morphisms Coq.Relations.Relation_Definitions.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Relations.Relation_Definitions.
 Require Import Crypto.Algebra.Monoid Crypto.Algebra.Group Crypto.Algebra.ScalarMult.
 Require Import Crypto.Util.Decidable Crypto.Util.Option.
 Require Import Crypto.Util.Tactics.SetEvars.
 Require Import Crypto.Util.Tactics.SubstEvars.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SpecializeBy.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Option Crypto.Util.Logic Crypto.Util.Relations Crypto.Util.WordUtil Util.LetIn Util.NatUtil.
 Require Import Crypto.Spec.ModularArithmetic Crypto.Arithmetic.PrimeFieldTheorems.

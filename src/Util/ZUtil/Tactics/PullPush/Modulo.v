@@ -1,11 +1,12 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Crypto.Util.ZUtil.Hints.Core.
-Require Import Crypto.Util.ZUtil.Modulo.PullPush.
+Require Export Crypto.Util.ZUtil.Hints.Core.
+Require Export Crypto.Util.ZUtil.Hints.PullPush.
+Require Export Crypto.Util.ZUtil.Modulo.PullPush.
 Local Open Scope Z_scope.
 
 Ltac push_Zmod_step :=
   match goal with
-  | _ => progress autorewrite with push_Zmod
+  | _ => rewrite Z_mod_same_full
   | [ |- context[(?x * ?y) mod ?z] ]
     => first [ rewrite (Z.mul_mod_push x y z) by Z.NoZMod
             | rewrite (Z.mul_mod_l_push x y z) by Z.NoZMod
@@ -22,6 +23,7 @@ Ltac push_Zmod_step :=
     => rewrite (Z.opp_mod_mod_push y z) by Z.NoZMod
   | [ |- context[(?p^?q) mod ?z] ]
     => rewrite (Z.pow_mod_push p q z) by Z.NoZMod
+  | _ => progress autorewrite with push_Zmod
   end.
 Ltac push_Zmod := repeat push_Zmod_step.
 

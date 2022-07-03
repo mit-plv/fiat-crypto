@@ -2,6 +2,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.NArith.BinNat.
 Require Import Coq.Arith.Arith.
 Require Import bbv.WordScope.
+Require Export Crypto.Util.GlobalSettings.
 
 Definition word32 := word 32. (* 2^5 *)
 Definition word64 := word 64. (* 2^6 *)
@@ -112,7 +113,7 @@ Definition wlor {logsz}
                    logsz wlor32 wlor64 wlor128 (fun _ => @wor _).
 
 Create HintDb fixed_size_constants discriminated.
-Hint Unfold word32 word64 word128
+Global Hint Unfold word32 word64 word128
      wadd wadd32 wadd64 wadd128
      wsub wsub32 wsub64 wsub128
      wmul wmul32 wmul64 wmul128

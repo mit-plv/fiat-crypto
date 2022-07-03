@@ -1,8 +1,14 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.LegacyArithmetic.Interface.
+Require Import Crypto.LegacyArithmetic.InterfaceProofs.
 Require Import Crypto.LegacyArithmetic.Double.Core.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.Decode.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.ShiftLeftRightTactic.
+Require Import Crypto.Util.ZUtil.Pow.
+Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Pow2Mod.
+Require Import Crypto.Util.ZUtil.Hints.ZArith.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Local Open Scope Z_scope.
 

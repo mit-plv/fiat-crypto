@@ -368,9 +368,9 @@ Ltac do_reifyf_goal _ :=
   debug_leave_reify_rec e;
   eexact e.
 
-Hint Extern 0 (reify (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
+Global Hint Extern 0 (reify (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
 => do_reifyf_goal () : typeclass_instances.
-Hint Extern 0 (reify_internal (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
+Global Hint Extern 0 (reify_internal (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
 => do_reifyf_goal () : typeclass_instances.
 
 (** For reification including [Abs] *)
@@ -426,9 +426,9 @@ Ltac do_reify_abs_goal _ :=
   debug_leave_reify_rec e;
   eexact e.
 
-Hint Extern 0 (reify_abs (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
+Global Hint Extern 0 (reify_abs (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
 => do_reify_abs_goal () : typeclass_instances.
-Hint Extern 0 (reify_abs_internal (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
+Global Hint Extern 0 (reify_abs_internal (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
 => do_reify_abs_goal () : typeclass_instances.
 
 Ltac Reify' base_type_code interp_base_type op e :=

@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.Zpower Coq.ZArith.Znumtheory Coq.ZArith.ZArith Coq.ZArith.Zdiv.
-Require Import Coq.micromega.Lia Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
+Require Import Coq.Bool.Bool Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.ZUtil.Divide.
 Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.ZUtil.Odd.

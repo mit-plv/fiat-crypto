@@ -1,5 +1,6 @@
 Require Import Coq.Strings.Ascii Coq.Strings.String.
 Require Import Coq.Numbers.BinNums.
+Require Export Crypto.Util.GlobalSettings.
 Import BinNatDef.
 Import BinIntDef.
 Import BinPosDef.

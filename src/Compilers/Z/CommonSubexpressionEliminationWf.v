@@ -26,4 +26,4 @@ Proof.
   { destruct n; simpl; try congruence. }
 Qed.
 
-Hint Resolve Wf_CSE : wf.
+Global Hint Resolve Wf_CSE : wf.

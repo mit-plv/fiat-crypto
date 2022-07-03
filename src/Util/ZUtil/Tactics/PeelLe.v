@@ -1,5 +1,5 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Crypto.Util.ZUtil.Hints.Core.
+Require Export Crypto.Util.ZUtil.Hints.Core.
 
 Local Open Scope Z.
 

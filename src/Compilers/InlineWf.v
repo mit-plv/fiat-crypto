@@ -1,4 +1,5 @@
 (** * Inline: Remove some [Let] expressions *)
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Wf.
 Require Import Crypto.Compilers.TypeInversion.
@@ -228,4 +229,4 @@ Section language.
   Qed.
 End language.
 
-Hint Resolve Wf_InlineConstGen Wf_InlineConst : wf.
+Global Hint Resolve Wf_InlineConstGen Wf_InlineConst : wf.

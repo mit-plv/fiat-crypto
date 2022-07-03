@@ -1,3 +1,4 @@
+Require Export Crypto.Util.GlobalSettings.
 (** [forward H] specializes non-dependent binders in a hypothesis [H]
     with side-conditions.  Side-conditions come after the main goal,
     like with [replace] and [rewrite].

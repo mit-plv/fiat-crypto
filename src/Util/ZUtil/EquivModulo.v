@@ -1,6 +1,6 @@
-Require Import Coq.Classes.Morphisms.
+Require Export Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Structures.Equalities.
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
@@ -20,30 +20,30 @@ Module Z.
     Local Instance equiv_modulo_Transitive : Transitive equiv_modulo := fun _ _ _ => @Logic.eq_trans _ _ _ _.
 
     Local Instance mul_mod_Proper : Proper (equiv_modulo ==> equiv_modulo ==> equiv_modulo) Z.mul.
-    Proof. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
+    Proof using Type. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
 
     Local Instance add_mod_Proper : Proper (equiv_modulo ==> equiv_modulo ==> equiv_modulo) Z.add.
-    Proof. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
+    Proof using Type. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
 
     Local Instance sub_mod_Proper : Proper (equiv_modulo ==> equiv_modulo ==> equiv_modulo) Z.sub.
-    Proof. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
+    Proof using Type. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
 
     Local Instance opp_mod_Proper : Proper (equiv_modulo ==> equiv_modulo) Z.opp.
-    Proof. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
+    Proof using Type. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
 
     Local Instance pow_mod_Proper : Proper (equiv_modulo ==> eq ==> equiv_modulo) Z.pow.
-    Proof.
+    Proof using Type.
       intros ?? H ???; subst; hnf in H |- *.
       rewrite Z.mod_pow_full, H, <- Z.mod_pow_full; reflexivity.
     Qed.
 
     Local Instance modulo_equiv_modulo_Proper
       : Proper (equiv_modulo ==> (fun x y => x = N /\ N = y) ==> Logic.eq) Z.modulo.
-    Proof.
+    Proof using Type.
       repeat intro; hnf in *; intuition congruence.
     Qed.
     Local Instance eq_to_ProperProxy : ProperProxy (fun x y : Z => x = N /\ N = y) N.
-    Proof. split; reflexivity. Qed.
+    Proof using Type. split; reflexivity. Qed.
 
     Lemma div_to_inv_modulo a x x' : x > 0 -> x * x' mod N = 1 mod N -> (a / x) == ((a - a mod x) * x').
     Proof using Type.
@@ -57,22 +57,22 @@ Module Z.
     Qed.
 
     Lemma equiv_modulo_mod_small x y : x  == y -> 0 <= x < N -> x = y mod N.
-    Proof. transitivity (x mod N); [rewrite Z.mod_small|]; auto. Qed.
+    Proof using Type. transitivity (x mod N); [rewrite Z.mod_small|]; auto. Qed.
   End equiv_modulo.
   Hint Rewrite div_to_inv_modulo using solve [ eassumption | lia ] : zstrip_div.
 
   Module EquivModuloInstances (dummy : Nop). (* work around https://coq.inria.fr/bugs/show_bug.cgi?id=4973 *)
-    Existing Instance equiv_modulo_Reflexive.
-    Existing Instance eq_Reflexive. (* prioritize [Reflexive eq] *)
-    Existing Instance equiv_modulo_Symmetric.
-    Existing Instance equiv_modulo_Transitive.
-    Existing Instance mul_mod_Proper.
-    Existing Instance add_mod_Proper.
-    Existing Instance sub_mod_Proper.
-    Existing Instance opp_mod_Proper.
-    Existing Instance pow_mod_Proper.
-    Existing Instance modulo_equiv_modulo_Proper.
-    Existing Instance eq_to_ProperProxy.
+    Global Existing Instance equiv_modulo_Reflexive.
+    Global Existing Instance eq_Reflexive. (* prioritize [Reflexive eq] *)
+    Global Existing Instance equiv_modulo_Symmetric.
+    Global Existing Instance equiv_modulo_Transitive.
+    Global Existing Instance mul_mod_Proper.
+    Global Existing Instance add_mod_Proper.
+    Global Existing Instance sub_mod_Proper.
+    Global Existing Instance opp_mod_Proper.
+    Global Existing Instance pow_mod_Proper.
+    Global Existing Instance modulo_equiv_modulo_Proper.
+    Global Existing Instance eq_to_ProperProxy.
   End EquivModuloInstances.
   Module RemoveEquivModuloInstances (dummy : Nop).
     Global Remove Hints equiv_modulo_Reflexive equiv_modulo_Symmetric equiv_modulo_Transitive mul_mod_Proper add_mod_Proper sub_mod_Proper opp_mod_Proper pow_mod_Proper modulo_equiv_modulo_Proper eq_to_ProperProxy : typeclass_instances.

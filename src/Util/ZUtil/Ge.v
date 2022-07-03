@@ -1,8 +1,10 @@
-Require Import Coq.ZArith.ZArith Coq.Classes.RelationClasses.
+Require Export Crypto.Util.GlobalSettings.
+Require Import Coq.ZArith.ZArith Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 
 Local Open Scope Z_scope.
 
 Module Z.
+  Local Existing Instance Z.le_preorder.
   Lemma ge_refl x : x >= x.
   Proof. rewrite !Z.ge_le_iff; reflexivity. Qed.
   Lemma ge_trans n m p : n >= m -> m >= p -> n >= p.

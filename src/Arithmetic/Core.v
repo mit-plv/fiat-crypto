@@ -240,7 +240,7 @@ reasonable time, so this is not really an option.
 
 *****)
 
-Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.micromega.Lia.
+Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.BinIntDef.
 Local Open Scope Z_scope.
 
@@ -347,7 +347,7 @@ Module B.
     Definition mul (p q:list limb) := mul_cps p q id.
     Lemma mul_cps_id p q: forall {T} f, @mul_cps p q T f = f (mul p q).
     Proof. cbv [mul_cps mul]; prove_id. Qed.
-    Hint Opaque mul : uncps.
+    Local Hint Opaque mul : uncps.
     Hint Rewrite mul_cps_id : uncps.
 
     Lemma eval_mul p q: eval (mul p q) = eval p * eval q.
@@ -382,7 +382,7 @@ Module B.
                | _ => progress (cbv [split]; prove_id)
                end.
     Qed.
-    Hint Opaque split : uncps.
+    Local Hint Opaque split : uncps.
     Hint Rewrite split_cps_id : uncps.
 
     Lemma eval_split s p (s_nonzero:s<>0):
@@ -405,7 +405,7 @@ Module B.
     Lemma reduce_cps_id s c p {T} f:
       @reduce_cps s c p T f = f (reduce s c p).
     Proof. cbv [reduce_cps reduce]; prove_id. Qed.
-    Hint Opaque reduce : uncps.
+    Local Hint Opaque reduce : uncps.
     Hint Rewrite reduce_cps_id : uncps.
 
     Lemma reduction_rule a b s c m (m_eq:Z.pos m = s - c):
@@ -432,7 +432,7 @@ Module B.
     Definition negate_snd p := negate_snd_cps p id.
     Lemma negate_snd_id p {T} f : @negate_snd_cps p T f = f (negate_snd p).
     Proof. cbv [negate_snd_cps negate_snd]; prove_id. Qed.
-    Hint Opaque negate_snd : uncps.
+    Local Hint Opaque negate_snd : uncps.
     Hint Rewrite negate_snd_id : uncps.
 
     Lemma eval_negate_snd p : eval (negate_snd p) = - eval p.
@@ -468,7 +468,7 @@ Module B.
       Proof using div_cps_id modulo_cps_id.
         cbv [carryterm_cps carryterm Let_In]; prove_id.
       Qed.
-      Hint Opaque carryterm : uncps.
+      Local Hint Opaque carryterm : uncps.
       Hint Rewrite carryterm_cps_id : uncps.
 
 
@@ -489,7 +489,7 @@ Module B.
       Proof using div_cps_id modulo_cps_id.
         cbv [carry_cps carry]; prove_id.
       Qed.
-      Hint Opaque carry : uncps.
+      Local Hint Opaque carry : uncps.
       Hint Rewrite carry_cps_id : uncps.
 
       Lemma eval_carry w fw p (fw_nonzero:fw<>0):
@@ -532,17 +532,17 @@ Module B.
       Lemma to_associational_cps_id {n} x {T} f:
         @to_associational_cps n x T f = f (to_associational x).
       Proof using Type. cbv [to_associational_cps to_associational]; prove_id. Qed.
-      Hint Opaque to_associational : uncps.
+      Local Hint Opaque to_associational : uncps.
       Hint Rewrite @to_associational_cps_id : uncps.
 
       Definition eval {n} x :=
         @to_associational_cps n x _ Associational.eval.
 
       Lemma eval_single (x:Z) : eval (n:=1) x = weight 0%nat * x.
-      Proof. cbv - [Z.mul Z.add]. ring. Qed.
+      Proof using Type. cbv - [Z.mul Z.add]. ring. Qed.
 
       Lemma eval_unit : eval (n:=0) tt = 0.
-      Proof. reflexivity. Qed.
+      Proof using Type. reflexivity. Qed.
       Hint Rewrite eval_unit eval_single : push_basesystem_eval.
 
       Lemma eval_to_associational {n} x :
@@ -583,7 +583,7 @@ Module B.
         Unshelve.
         intros; subst. autorewrite with uncps push_id. distr_length.
       Qed.
-      Hint Opaque add_to_nth : uncps.
+      Local Hint Opaque add_to_nth : uncps.
       Hint Rewrite @add_to_nth_cps_id : uncps.
 
       Lemma eval_add_to_nth {n} (i:nat) (x:Z) (H:(i<n)%nat) (xs:tuple Z n):
@@ -621,7 +621,7 @@ Module B.
       Lemma place_cps_id t i {T} f :
         @place_cps T t i f = f (place t i).
       Proof using Type. cbv [place]; induction i; prove_id. Qed.
-      Hint Opaque place : uncps.
+      Local Hint Opaque place : uncps.
       Hint Rewrite place_cps_id : uncps.
 
       Lemma place_cps_in_range (t:limb) (n:nat)
@@ -652,7 +652,7 @@ Module B.
       Proof using Type.
         cbv [from_associational_cps from_associational]; prove_id.
       Qed.
-      Hint Opaque from_associational : uncps.
+      Local Hint Opaque from_associational : uncps.
       Hint Rewrite @from_associational_cps_id : uncps.
 
       Lemma eval_from_associational {n} p (n_nonzero:n<>O):
@@ -753,15 +753,15 @@ Module B.
         Definition carry {n m} i p := @carry_cps n m i p _ id.
         Lemma carry_cps_id {n m} i p {T} f:
           @carry_cps n m i p T f = f (carry i p).
-        Proof.
+        Proof using div_cps_id modulo_cps_id.
           cbv [carry_cps carry]; prove_id; rewrite carry_cps_id; reflexivity.
         Qed.
-        Hint Opaque carry : uncps. Hint Rewrite @carry_cps_id : uncps.
+        Local Hint Opaque carry : uncps. Hint Rewrite @carry_cps_id : uncps.
 
         Lemma eval_carry {n m} i p: (n <> 0%nat) -> (m <> 0%nat) ->
                                   weight (S i) / weight i <> 0 ->
           eval (carry (n:=n) (m:=m) i p) = eval p.
-        Proof.
+        Proof using div_cps_id div_mod modulo_cps_id weight_0 weight_nonzero.
           cbv [carry_cps carry]; intros. prove_eval.
           rewrite @eval_carry by eauto.
           apply eval_to_associational.
@@ -773,7 +773,7 @@ Module B.
                    {T} (f: tuple Z n ->T) :=
           carry_cps (n:=n) (m:=S n) (pred n) p
             (fun r => reduce_cps (m:=S n) (n:=n) s c r f).
-        Hint Unfold carry_reduce_cps.
+        Local Hint Unfold carry_reduce_cps.
 
         (* N.B. It is important to reverse [idxs] here. Like
         [fold_right], [fold_right_cps2] is written such that the first
@@ -793,7 +793,7 @@ Module B.
         Proof using modulo_cps_id div_cps_id.
           cbv [chained_carries_cps chained_carries]; prove_id.
         Qed.
-        Hint Opaque chained_carries : uncps.
+        Local Hint Opaque chained_carries : uncps.
         Hint Rewrite @chained_carries_id : uncps.
 
         Lemma eval_chained_carries {n} (p:tuple Z n) idxs :
@@ -845,7 +845,7 @@ Module B.
                      (fun r => carry_reduce_cps (n:=n) s c r
                      (fun r' => chained_carries_reduce_cps s c r' carry_chains f))
               end.
-        Proof.
+        Proof using Type.
           destruct carry_chains; reflexivity.
         Qed.
 
@@ -856,7 +856,7 @@ Module B.
         Lemma chained_carries_reduce_id {n} s c {T} p carry_chains f
           : @chained_carries_reduce_cps n s c T p carry_chains f
             = f (@chained_carries_reduce n s c p carry_chains).
-        Proof.
+        Proof using div_cps_id modulo_cps_id.
           destruct carry_chains as [|carry_chain carry_chains]; [ reflexivity | ].
           cbv [chained_carries_reduce].
           revert p carry_chain; induction carry_chains as [|? carry_chains IHcarry_chains]; intros.
@@ -867,7 +867,7 @@ Module B.
             rewrite !IHcarry_chains.
             reflexivity. }
         Qed.
-        Hint Opaque chained_carries_reduce : uncps.
+        Local Hint Opaque chained_carries_reduce : uncps.
         Hint Rewrite @chained_carries_reduce_id : uncps.
 
         Lemma eval_chained_carries_reduce {n} (s:Z) (c:list limb) (p:tuple Z n) carry_chains
@@ -909,7 +909,7 @@ Module B.
         Hint Rewrite @eval_encode : push_basesystem_eval.
 
       End Carries.
-      Hint Unfold carry_reduce_cps.
+      Local Hint Unfold carry_reduce_cps.
 
       Section Subtraction.
         Context {m n} {coef : tuple Z n}
@@ -923,7 +923,7 @@ Module B.
         Definition sub p q := sub_cps p q id.
         Lemma sub_id p q {T} f : @sub_cps p q T f = f (sub p q).
         Proof using Type. cbv [sub_cps sub]; autounfold; prove_id. Qed.
-        Hint Opaque sub : uncps.
+        Local Hint Opaque sub : uncps.
         Hint Rewrite sub_id : uncps.
 
         Lemma eval_sub p q : mod_eq m (eval (sub p q)) (eval p - eval q).
@@ -1023,14 +1023,14 @@ Module B.
       Definition select {n} mask cond p := @select_cps n mask cond p _ id.
       Lemma select_id {n} mask cond p T f :
         @select_cps n mask cond p T f = f (select mask cond p).
-      Proof.
+      Proof using Type.
         cbv [select select_cps Let_In]; autorewrite with uncps push_id;
           reflexivity.
       Qed.
-      Hint Opaque select : uncps.
+      Local Hint Opaque select : uncps.
 
       Lemma map_and_0 {n} (p:tuple Z n) : Tuple.map (Z.land 0) p = zeros n.
-      Proof.
+      Proof using Type.
         induction n as [|n IHn]; [destruct p; reflexivity | ].
         rewrite (Tuple.subst_append p), Tuple.map_append, Z.land_0_l, IHn.
         reflexivity.
@@ -1039,7 +1039,7 @@ Module B.
       Lemma eval_select {n} mask cond x (H:Tuple.map (Z.land mask) x = x) :
         B.Positional.eval weight (@select n mask cond x) =
         if dec (cond = 0) then 0 else  B.Positional.eval weight x.
-      Proof.
+      Proof using Type.
         cbv [select select_cps Let_In].
         autorewrite with uncps push_id.
         rewrite Z.zselect_correct; break_match.
@@ -1051,7 +1051,7 @@ Module B.
 
   End Positional.
 
-  Hint Unfold
+  Global Hint Unfold
       Positional.add_cps
       Positional.mul_cps
       Positional.reduce_cps
@@ -1121,13 +1121,13 @@ Section DivMod.
   Lemma modulo_id {T} a b f
     : @modulo_cps T a b f = f (modulo a b).
   Proof. cbv [modulo_cps modulo]; autorewrite with uncps; break_match; reflexivity. Qed.
-  Hint Opaque modulo : uncps.
+  Local Hint Opaque modulo : uncps.
   Hint Rewrite @modulo_id : uncps.
 
   Lemma div_id {T} a b f
     : @div_cps T a b f = f (div a b).
   Proof. cbv [div_cps div]; autorewrite with uncps; break_match; reflexivity. Qed.
-  Hint Opaque div : uncps.
+  Local Hint Opaque div : uncps.
   Hint Rewrite @div_id : uncps.
 
   Lemma div_cps_correct {T} a b f : @div_cps T a b f = f (Z.div a b).
@@ -1153,14 +1153,14 @@ Section DivMod.
   Qed.
 End DivMod.
 
-Hint Opaque div modulo : uncps.
+Global Hint Opaque div modulo : uncps.
 Hint Rewrite @div_id @modulo_id : uncps.
 
 Import B.
 
 Create HintDb basesystem_partial_evaluation_unfolder.
 
-Hint Unfold
+Global Hint Unfold
      id
      Associational.eval
      Associational.multerm
@@ -1215,7 +1215,7 @@ Hint Unfold
      Z.add_get_carry_full Z.add_get_carry_full_cps
   : basesystem_partial_evaluation_unfolder.
 
-Hint Unfold
+Global Hint Unfold
      B.limb ListUtil.sum ListUtil.sum_firstn
      CPSUtil.Tuple.mapi_with_cps CPSUtil.Tuple.mapi_with'_cps CPSUtil.flat_map_cps CPSUtil.on_tuple_cps CPSUtil.fold_right_cps2
      Decidable.dec Decidable.dec_eq_Z

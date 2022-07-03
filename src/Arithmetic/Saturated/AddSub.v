@@ -1,4 +1,4 @@
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Local Open Scope Z_scope.
@@ -59,7 +59,7 @@ Module B.
 
         Lemma chain_op'_id {n} : forall c p q T f,
           @chain_op'_cps T n c p q f = f (chain_op' c p q).
-        Proof.
+        Proof using op_get_carry_id op_with_carry_id.
           cbv [chain_op']; induction n; intros; destruct c;
             simpl chain_op'_cps; cbv [Let_In]; try reflexivity;
               autorewrite with uncps.
@@ -69,7 +69,7 @@ Module B.
 
         Lemma chain_op_id {n} p q T f :
           @chain_op_cps n p q T f = f (chain_op p q).
-        Proof. apply (@chain_op'_id n None). Qed.
+        Proof using op_get_carry_id op_with_carry_id. apply (@chain_op'_id n None). Qed.
       End GenericOp.
       Hint Opaque chain_op chain_op' : uncps.
       Hint Rewrite @chain_op_id @chain_op'_id using (assumption || (intros; autorewrite with uncps; reflexivity)) : uncps.
@@ -96,12 +96,12 @@ Module B.
 
         Lemma sat_add_id n p q T f :
           @sat_add_cps n p q T f = f (sat_add p q).
-        Proof. cbv [sat_add sat_add_cps]. autorewrite with uncps. reflexivity. Qed.
+        Proof using Type. cbv [sat_add sat_add_cps]. autorewrite with uncps. reflexivity. Qed.
 
         Lemma sat_add_mod_step n c d :
           c mod s + s * ((d + c / s) mod (uweight s n))
           = (s * d + c) mod (s * uweight s n).
-        Proof.
+        Proof using s_pos.
           assert (0 < uweight s n) as wt_pos
               by auto using Z.lt_gt, Z.gt_lt, uweight_positive.
           rewrite <-(Columns.compact_mod_step s (uweight s n) c d s_pos wt_pos).
@@ -110,7 +110,7 @@ Module B.
 
         Lemma sat_add_div_step n c d :
           (d + c / s) / uweight s n =  (s * d + c) / (s * uweight s n).
-        Proof.
+        Proof using s_pos.
           assert (0 < uweight s n) as wt_pos
               by auto using Z.lt_gt, Z.gt_lt, uweight_positive.
           rewrite <-(Columns.compact_div_step s (uweight s n) c d s_pos wt_pos).
@@ -120,7 +120,7 @@ Module B.
         Lemma sat_add_divmod n p q :
           eval (snd (@sat_add n p q)) = (eval p + eval q) mod (uweight s n)
           /\ fst (@sat_add n p q) = (eval p + eval q) / (uweight s n).
-        Proof.
+        Proof using s_pos.
           cbv [sat_add sat_add_cps chain_op_cps].
           remember None as c.
           replace (eval p + eval q) with
@@ -148,14 +148,14 @@ Module B.
 
         Lemma sat_add_mod n p q :
           eval (snd (@sat_add n p q)) = (eval p + eval q) mod (uweight s n).
-        Proof. exact (proj1 (sat_add_divmod n p q)). Qed.
+        Proof using s_pos. exact (proj1 (sat_add_divmod n p q)). Qed.
 
         Lemma sat_add_div n p q :
           fst (@sat_add n p q) = (eval p + eval q) / (uweight s n).
-        Proof. exact (proj2 (sat_add_divmod n p q)). Qed.
+        Proof using s_pos. exact (proj2 (sat_add_divmod n p q)). Qed.
 
         Lemma small_sat_add n p q : small (snd (@sat_add n p q)).
-        Proof.
+        Proof using s_pos.
           cbv [small UniformWeight.small sat_add sat_add_cps chain_op_cps].
           remember None as c. destruct Heqc. revert c.
           induction n; intros;
@@ -186,11 +186,11 @@ Module B.
 
         Lemma sat_sub_id n p q T f :
           @sat_sub_cps n p q T f = f (sat_sub p q).
-        Proof. cbv [sat_sub sat_sub_cps]. autorewrite with uncps. reflexivity. Qed.
+        Proof using Type. cbv [sat_sub sat_sub_cps]. autorewrite with uncps. reflexivity. Qed.
         Lemma sat_sub_divmod n p q :
           eval (snd (@sat_sub n p q)) = (eval p - eval q) mod (uweight s n)
           /\ fst (@sat_sub n p q) = - ((eval p - eval q) / (uweight s n)).
-        Proof.
+        Proof using s_pos.
           cbv [sat_sub sat_sub_cps chain_op_cps].
           remember None as c.
           replace (eval p - eval q) with
@@ -218,14 +218,14 @@ Module B.
 
         Lemma sat_sub_mod n p q :
           eval (snd (@sat_sub n p q)) = (eval p - eval q) mod (uweight s n).
-        Proof. exact (proj1 (sat_sub_divmod n p q)). Qed.
+        Proof using s_pos. exact (proj1 (sat_sub_divmod n p q)). Qed.
 
         Lemma sat_sub_div n p q :
           fst (@sat_sub n p q) = - ((eval p - eval q) / uweight s n).
-        Proof. exact (proj2 (sat_sub_divmod n p q)). Qed.
+        Proof using s_pos. exact (proj2 (sat_sub_divmod n p q)). Qed.
 
         Lemma small_sat_sub n p q : small (snd (@sat_sub n p q)).
-        Proof.
+        Proof using s_pos.
           cbv [small UniformWeight.small sat_sub sat_sub_cps chain_op_cps].
           remember None as c. destruct Heqc. revert c.
           induction n; intros;
@@ -251,12 +251,12 @@ Module B.
     End Positional.
   End Positional.
 End B.
-Hint Opaque B.Positional.sat_sub B.Positional.sat_add B.Positional.chain_op B.Positional.chain_op' : uncps.
+Global Hint Opaque B.Positional.sat_sub B.Positional.sat_add B.Positional.chain_op B.Positional.chain_op' : uncps.
 Hint Rewrite @B.Positional.sat_sub_id @B.Positional.sat_add_id : uncps.
 Hint Rewrite @B.Positional.chain_op_id @B.Positional.chain_op' using (assumption || (intros; autorewrite with uncps; reflexivity)) : uncps.
 Hint Rewrite @B.Positional.sat_sub_mod @B.Positional.sat_sub_div @B.Positional.sat_add_mod @B.Positional.sat_add_div using (lia || assumption) : push_basesystem_eval.
 
-Hint Unfold
+Global Hint Unfold
      B.Positional.chain_op'_cps
      B.Positional.chain_op'
      B.Positional.chain_op_cps

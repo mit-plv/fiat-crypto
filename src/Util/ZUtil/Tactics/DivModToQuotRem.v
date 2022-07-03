@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ZUtil.Div.Bootstrap.
 Require Import Crypto.Util.ZUtil.Modulo.Bootstrap.
-Require Import Crypto.Util.ZUtil.Hints.Core.
+Require Export Crypto.Util.ZUtil.Hints.Core.
 Local Open Scope Z_scope.
 
 Module Z.

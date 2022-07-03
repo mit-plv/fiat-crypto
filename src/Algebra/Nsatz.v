@@ -4,6 +4,7 @@
 
 Require Coq.nsatz.Nsatz.
 Require Import Coq.Lists.List.
+Require Export Crypto.Util.FixCoqMistakes.
 
 (** For compat with https://github.com/coq/coq/pull/12073 *)
 Module Nsatz.
@@ -171,3 +172,50 @@ Ltac nsatz_contradict :=
         [nsatz; nsatz_nonzero
         |destruct (Integral_domain.integral_domain_one_zero (Integral_domain:=domain) Hbad)]
       end).
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Global Existing Instances
+         Ncring_tac.Ifind0
+         Ncring_tac.Iclosed_nil
+         Ncring_tac.Iclosed_cons
+         Ncring_tac.reify_zero
+         Ncring_tac.reify_one
+         Ncring_tac.reify_add
+         Ncring_tac.reify_sub
+         Ncring_tac.reify_opp
+         Ncring_tac.reify_nil
+         Ncring_tac.reify_cons
+  .
+  Global Existing Instances
+         Ncring_tac.IfindS
+         Ncring_tac.reify_pow
+  | 1.
+  Global Existing Instances
+         Ncring_tac.reify_mul_ext
+  | 9.
+  Global Existing Instances
+         Ncring_tac.reify_mul
+  | 10.
+  Global Existing Instances
+         Ncring_tac.reifyZ0
+         Ncring_tac.reifyZpos
+         Ncring_tac.reifyZneg
+  | 11.
+  Global Existing Instance Ncring_tac.reify_var | 100.
+  Global Existing Instances
+         Ncring_initial.Zops
+         Ncring_initial.Zr
+         Ncring_initial.gen_phiZ_morph
+         Ncring_initial.multiplication_phi_ring
+  .
+  Import nsatz.Nsatz.
+  Global Existing Instances
+         Qops
+         Qri
+         Qcri
+         Qdi
+         Zcri
+         Zdi
+  .
+End Hints.

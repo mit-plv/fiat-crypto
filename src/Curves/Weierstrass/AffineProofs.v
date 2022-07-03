@@ -1,5 +1,5 @@
 Require Import Coq.Numbers.BinNums.
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Spec.WeierstrassCurve Crypto.Curves.Weierstrass.Affine.
 Require Import Crypto.Algebra.Field Crypto.Algebra.Hierarchy.
 Require Import Crypto.Util.Decidable Crypto.Util.Tactics.DestructHead Crypto.Util.Tactics.BreakMatch.

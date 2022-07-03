@@ -1,5 +1,6 @@
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Notations.
@@ -50,7 +51,7 @@ Section with_bitwidth.
 
   Lemma is_bounded_by_repeat_In_iff {n} vs bound
     : is_bounded_by (Tuple.repeat bound n) vs <-> (forall x, List.In x (Tuple.to_list _ vs) -> is_bounded_by' bound x).
-  Proof. apply fieldwise_In_to_list_repeat_l_iff. Qed.
+  Proof using Type. apply fieldwise_In_to_list_repeat_l_iff. Qed.
 End with_bitwidth.
 
 Lemma is_bounded_by_None_repeat_In_iff {n} vs l u

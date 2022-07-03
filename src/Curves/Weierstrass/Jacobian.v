@@ -1,4 +1,4 @@
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 
 Require Import Crypto.Spec.WeierstrassCurve.
 Require Import Crypto.Util.Decidable Crypto.Algebra.Field.
@@ -66,11 +66,11 @@ Module Jacobian.
     Ltac t := prept; trivial; try contradiction; fsatz.
 
     Create HintDb points_as_coordinates discriminated.
-    Hint Unfold Proper respectful Reflexive Symmetric Transitive : points_as_coordinates.
-    Hint Unfold point eq W.eq W.point W.coordinates proj1_sig fst snd : points_as_coordinates.
+    Local Hint Unfold Proper respectful Reflexive Symmetric Transitive : points_as_coordinates.
+    Local Hint Unfold point eq W.eq W.point W.coordinates proj1_sig fst snd : points_as_coordinates.
 
     Global Instance Equivalence_eq : Equivalence eq.
-    Proof. t. Qed.
+    Proof using field. t. Qed.
 
     Program Definition of_affine (P:Wpoint) : point :=
       match W.coordinates P return F*F*F with
@@ -87,11 +87,11 @@ Module Jacobian.
       end.
     Next Obligation. Proof. t. Qed.
 
-    Hint Unfold to_affine of_affine : points_as_coordinates.
-    Global Instance Proper_of_affine : Proper (W.eq ==> eq) of_affine. Proof. t. Qed.
-    Global Instance Proper_to_affine : Proper (eq ==> W.eq) to_affine. Proof. t. Qed.
-    Lemma to_affine_of_affine P : W.eq (to_affine (of_affine P)) P. Proof. t. Qed.
-    Lemma of_affine_to_affine P : eq (of_affine (to_affine P)) P. Proof. t. Qed.
+    Local Hint Unfold to_affine of_affine : points_as_coordinates.
+    Global Instance Proper_of_affine : Proper (W.eq ==> eq) of_affine. Proof using Type. t. Qed.
+    Global Instance Proper_to_affine : Proper (eq ==> W.eq) to_affine. Proof using Type. t. Qed.
+    Lemma to_affine_of_affine P : W.eq (to_affine (of_affine P)) P. Proof using Type. t. Qed.
+    Lemma of_affine_to_affine P : eq (of_affine (to_affine P)) P. Proof using Type. t. Qed.
 
     Program Definition opp (P:point) : point :=
       match proj1_sig P return F*F*F with
@@ -463,7 +463,7 @@ Module Jacobian.
                   end;
                   fsatz ].
 
-    Hint Unfold double negb andb add_precondition z_is_zero_or_one : points_as_coordinates.
+    Local Hint Unfold double negb andb add_precondition z_is_zero_or_one : points_as_coordinates.
     Program Definition add_impl (mixed : bool) (P Q : point)
             (H : add_precondition Q mixed) : point :=
       match proj1_sig P, proj1_sig Q return F*F*F with
@@ -528,22 +528,22 @@ Module Jacobian.
     Definition add_mixed (P : point) (Q : point) (H : z_is_zero_or_one Q) :=
       add_impl true P Q H.
 
-    Hint Unfold W.eq W.add to_affine add add_mixed add_impl : points_as_coordinates.
+    Local Hint Unfold W.eq W.add to_affine add add_mixed add_impl : points_as_coordinates.
 
-    Lemma Proper_double : Proper (eq ==> eq) double. Proof. faster_t_noclear. Qed.
+    Lemma Proper_double : Proper (eq ==> eq) double. Proof using char_ge_3. faster_t_noclear. Qed.
     Lemma to_affine_double P :
       W.eq (to_affine (double P)) (W.add (to_affine P) (to_affine P)).
-    Proof. faster_t_noclear. Qed.
+    Proof using Type. faster_t_noclear. Qed.
 
     Lemma add_mixed_eq_add (P : point) (Q : point) (H : z_is_zero_or_one Q) :
       eq (add P Q) (add_mixed P Q H).
-    Proof. faster_t. Qed.
+    Proof using Type. faster_t. Qed.
 
-    Lemma Proper_add : Proper (eq ==> eq ==> eq) add. Proof. faster_t_noclear. Qed.
+    Lemma Proper_add : Proper (eq ==> eq ==> eq) add. Proof using Type. faster_t_noclear. Qed.
     Import BinPos.
     Lemma to_affine_add P Q
       : W.eq (to_affine (add P Q)) (W.add (to_affine P) (to_affine Q)).
-    Proof.
+    Proof using Type.
       Time prept; try contradiction; speed_up_fsatz; clean_up_speed_up_fsatz. (* 15.009 secs (14.871u,0.048s) *)
       Time all: fsatz. (* 6.335 secs (6.172u,0.163s) *)
       Time Qed. (* 1.924 secs (1.928u,0.s) *)
@@ -582,11 +582,11 @@ Module Jacobian.
         end.
       Next Obligation. Proof. t. Qed.
 
-      Hint Unfold double_minus_3 : points_as_coordinates.
+      Local Hint Unfold double_minus_3 : points_as_coordinates.
 
       Lemma double_minus_3_eq_double (P : point) :
         eq (double P) (double_minus_3 P).
-      Proof. faster_t. Qed.
+      Proof using char_ge_3. faster_t. Qed.
     End AEqMinus3.
   End Jacobian.
 End Jacobian.

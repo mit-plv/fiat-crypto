@@ -1,3 +1,4 @@
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.ContextProperties.
@@ -79,4 +80,4 @@ Section language.
   Qed.
 End language.
 
-Hint Resolve wf_from_unit Wf_from_unit wff_from_unit : wf.
+Global Hint Resolve wf_from_unit Wf_from_unit wff_from_unit : wf.

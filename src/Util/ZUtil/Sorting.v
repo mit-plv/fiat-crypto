@@ -1,4 +1,5 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
+Require Export Crypto.Util.GlobalSettings.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Sorting.Mergesort Coq.Structures.Orders.
 
 Module Z.

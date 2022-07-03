@@ -1,8 +1,10 @@
+Require Import Coq.Classes.RelationClasses.
 Require Import Crypto.Algebra.Field.
 Require Import Crypto.Algebra.ScalarMult.
 Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Shift.
@@ -15,9 +17,8 @@ Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
 Require Import Crypto.Curves.Montgomery.AffineInstances.
 Require Import Crypto.Curves.Montgomery.XZ BinPos.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.micromega.Lia.
-Require Import Coq.micromega.Lia.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 
 Module M.
   Section MontgomeryCurve.
@@ -120,23 +121,23 @@ Module M.
     Ltac t := t_fast; maybefast; fsatz.
 
     Create HintDb points_as_coordinates discriminated.
-    Hint Unfold Proper respectful Reflexive Symmetric Transitive : points_as_coordinates.
-    Hint Unfold Let_In : points_as_coordinates.
-    Hint Unfold fst snd proj1_sig : points_as_coordinates.
-    Hint Unfold fieldwise fieldwise' : points_as_coordinates.
-    Hint Unfold M.add M.opp M.point M.coordinates M.xzladderstep M.donnaladderstep M.boringladderstep M.to_xz : points_as_coordinates.
+    Local Hint Unfold Proper respectful Reflexive Symmetric Transitive : points_as_coordinates.
+    Local Hint Unfold Let_In : points_as_coordinates.
+    Local Hint Unfold fst snd proj1_sig : points_as_coordinates.
+    Local Hint Unfold fieldwise fieldwise' : points_as_coordinates.
+    Local Hint Unfold M.add M.opp M.point M.coordinates M.xzladderstep M.donnaladderstep M.boringladderstep M.to_xz : points_as_coordinates.
 
     Lemma donnaladderstep_same x1 Q Q' :
       fieldwise (n:=2) (fieldwise (n:=2) Feq)
                 (xzladderstep x1 Q Q')
                 (M.donnaladderstep(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul) x1 Q Q').
-    Proof. t. Qed.
+    Proof using Feq_dec a24_correct b_nonzero field. t. Qed.
 
     Lemma boringladderstep_same (ap2d4:F) (ap2d4_correct:(1+1+1+1)*a24 = a+1+1) x1 Q Q' :
       fieldwise (n:=2) (fieldwise (n:=2) Feq)
                 (xzladderstep x1 Q Q')
                 (M.boringladderstep(ap2d4:=ap2d4)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul) x1 Q Q').
-    Proof. t. Qed.
+    Proof using Feq_dec a24_correct b_nonzero field. t. Qed.
 
     Definition projective (P:F*F) :=
       if dec (snd P = 0) then fst P <> 0 else True.
@@ -146,7 +147,7 @@ Module M.
       | ∞ => False                  (* Q <> Q' *)
       | (x,y) => x = x1 /\ x1 <> 0  (* Q-Q' <> (0, 0) *)
       end.
-    Hint Unfold projective eq ladder_invariant : points_as_coordinates.
+    Local Hint Unfold projective eq ladder_invariant : points_as_coordinates.
 
     Lemma to_xz_add_coordinates (x1:F) (xz x'z':F*F)
           (Hxz:projective xz) (Hz'z':projective x'z')
@@ -156,26 +157,26 @@ Module M.
       :  projective (snd (xzladderstep x1 xz x'z'))
       /\ eq (fst (xzladderstep x1 xz x'z')) (to_xz (Madd Q Q ))
       /\ eq (snd (xzladderstep x1 xz x'z')) (to_xz (Madd Q Q')).
-    Proof. Time t_fast. Time par: abstract (maybefast; fsatz). Time Qed.
+    Proof using a24_correct char_ge_12 char_ge_28 char_ge_5. Time t_fast. Time par: abstract (maybefast; fsatz). Time Qed.
     (* 12 ;; 24 ;; 3 *)
 
     Context {a2m4_nonsquare:forall r, r*r <> a*a - (1+1+1+1)}.
 
     Lemma projective_fst_xzladderstep x1 Q (HQ:projective Q) Q'
       :  projective (fst (xzladderstep x1 Q Q')).
-    Proof.
+    Proof using a24_correct a2m4_nonsquare b_nonzero char_ge_28 field.
       specialize (a2m4_nonsquare (fst Q/snd Q  - fst Q/snd Q)).
       destruct (dec (snd Q = 0)); t.
     Qed.
 
     Local Definition a2m4_nz : a*a - (1+1+1+1) <> 0.
-    Proof. specialize (a2m4_nonsquare 0). fsatz. Qed.
+    Proof using Feq_dec a24_correct a2m4_nonsquare b_nonzero field. specialize (a2m4_nonsquare 0). fsatz. Qed.
 
     Lemma difference_preserved Q Q' :
           M.eq
             (Madd (Madd Q Q) (Mopp (Madd Q Q')))
             (Madd Q (Mopp Q')).
-    Proof.
+    Proof using a24_correct a2m4_nonsquare char_ge_12 char_ge_28.
       pose proof (let (_, h, _, _) := AffineInstances.M.MontgomeryWeierstrassIsomorphism b_nonzero (a:=a) a2m4_nz in h) as commutative_group.
       rewrite Group.inv_op.
       rewrite <-Hierarchy.associative.
@@ -189,7 +190,7 @@ Module M.
 
     Lemma ladder_invariant_preserved x1 Q Q' (H:ladder_invariant x1 Q Q')
       : ladder_invariant x1 (Madd Q Q) (Madd Q Q').
-    Proof.
+    Proof using a24_correct a2m4_nonsquare char_ge_12 char_ge_28.
       cbv [ladder_invariant] in *.
       pose proof difference_preserved Q Q' as Hrw.
       (* FIXME: what we actually want to do here is to rewrite with in
@@ -206,7 +207,7 @@ Module M.
 
     Lemma ladder_invariant_swap x1 Q Q' (H:ladder_invariant x1 Q Q')
       : ladder_invariant x1 Q' Q.
-    Proof. t. Qed.
+    Proof using a24_correct char_ge_28. t. Qed.
 
     Lemma to_xz_add x1 xz x'z' Q Q'
           (Hxz : projective xz) (Hx'z' : projective x'z')
@@ -217,45 +218,45 @@ Module M.
         /\ eq (fst (xzladderstep x1 xz x'z')) (to_xz (Madd Q Q ))
         /\ eq (snd (xzladderstep x1 xz x'z')) (to_xz (Madd Q Q'))
         /\ ladder_invariant x1 (Madd Q Q) (Madd Q Q').
-    Proof.
+    Proof using a24_correct a2m4_nonsquare char_ge_12 char_ge_28 char_ge_5.
       destruct (to_xz_add_coordinates x1 xz x'z' Hxz Hx'z' Q Q' HQ HQ' HI) as [? [? ?]].
       eauto 99 using projective_fst_xzladderstep, ladder_invariant_preserved.
     Qed.
 
     Definition to_x (xz:F*F) : F :=
       if dec (snd xz = 0) then 0 else fst xz / snd xz.
-    Hint Unfold to_x : points_as_coordinates.
+    Local Hint Unfold to_x : points_as_coordinates.
 
     Lemma to_x_to_xz Q : to_x (to_xz Q) = match M.coordinates Q with
                                           | ∞ => 0
                                           | (x,y) => x
                                           end.
-    Proof. t. Qed.
+    Proof using a24_correct b_nonzero field. t. Qed.
 
     Lemma proper_to_x_projective xz x'z'
            (Hxz:projective xz) (Hx'z':projective x'z')
            (H:eq xz x'z') : Feq (to_x xz) (to_x x'z').
-    Proof. destruct (dec (snd xz = 0)), (dec(snd x'z' = 0)); t. Qed.
+    Proof using a24_correct b_nonzero field. destruct (dec (snd xz = 0)), (dec(snd x'z' = 0)); t. Qed.
 
     Lemma to_x_zero x : to_x (pair x 0) = 0.
-    Proof. t. Qed.
+    Proof using a24_correct b_nonzero field. t. Qed.
 
-    Hint Unfold M.eq : points_as_coordinates.
+    Local Hint Unfold M.eq : points_as_coordinates.
     Global Instance Proper_to_xz : Proper (M.eq ==> eq) to_xz.
-    Proof. t. Qed.
+    Proof using Feq_dec a24_correct b_nonzero field. t. Qed.
 
     Global Instance  Reflexive_eq : Reflexive eq.
-    Proof. t. Qed.
+    Proof using Feq_dec a24_correct b_nonzero field. t. Qed.
     Global Instance  Symmetric_eq : Symmetric eq.
-    Proof. t. Qed.
+    Proof using Feq_dec a24_correct b_nonzero field. t. Qed.
     Lemma transitive_eq {p} q {r} : projective q -> eq p q -> eq q r -> eq p r.
-    Proof. t. Qed.
+    Proof using a24_correct b_nonzero field. t. Qed.
 
     Lemma projective_to_xz Q : projective (to_xz Q).
-    Proof. t. Qed.
+    Proof using a24_correct b_nonzero field. t. Qed.
 
     Global Instance Proper_ladder_invariant : Proper (Feq ==> M.eq ==> M.eq ==> iff) ladder_invariant.
-    Proof. t. Qed.
+    Proof using a24_correct char_ge_28. t. Qed.
 
     Local Notation montladder := (M.montladder(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)(Fzero:=Fzero)(Fone:=Fone)(Finv:=Finv)(cswap:=fun b x y => if b then pair y x else pair x y)).
     Local Notation scalarmult := (@ScalarMult.scalarmult_ref Mpoint Madd M.zero Mopp).
@@ -264,10 +265,10 @@ Module M.
     Import Coq.ZArith.BinInt.
 
     Lemma to_x_inv00 (HFinv:Finv 0 = 0) x z : to_x (pair x z) = x * Finv z.
-    Proof. t_fast; setoid_subst_rel Feq; rewrite ?HFinv in *; fsatz. Qed.
+    Proof using a24_correct b_nonzero field. t_fast; setoid_subst_rel Feq; rewrite ?HFinv in *; fsatz. Qed.
 
     Lemma Z_shiftr_testbit_1 n i: Logic.eq (n>>i)%Z (Z.div2 (n >> i) + Z.div2 (n >> i) + Z.b2z (Z.testbit n i))%Z.
-    Proof. rewrite ?Z.testbit_odd, ?Z.add_diag, <-?Z.div2_odd; reflexivity. Qed.
+    Proof using Type. rewrite ?Z.testbit_odd, ?Z.add_diag, <-?Z.div2_odd; reflexivity. Qed.
 
     (* We prove montladder correct by considering the zero and non-zero case
        separately. *)
@@ -280,7 +281,7 @@ Module M.
           (Hn : (0 <= n < 2^scalarbits)%Z)
           (Hscalarbits : (0 <= scalarbits)%Z)
       : montladder scalarbits (Z.testbit n) point = 0.
-    Proof.
+    Proof using Feq_dec a24_correct b_nonzero field.
       cbv beta delta [M.montladder].
       (* [while.by_invariant] expects a goal like [?P (while _ _ _ _)], make it so: *)
       lazymatch goal with |- context [while ?t ?b ?l ?ii] => pattern (while t b l ii) end.
@@ -322,7 +323,7 @@ Module M.
           (Hscalarbits : (0 <= scalarbits)%Z)
           (Hpoint : point = to_x (to_xz P))
       : montladder scalarbits (Z.testbit n) point = to_x (to_xz (scalarmult n P)).
-    Proof.
+    Proof using a24_correct a2m4_nonsquare char_ge_12 char_ge_28 char_ge_5.
       pose proof (let (_, h, _, _) := AffineInstances.M.MontgomeryWeierstrassIsomorphism b_nonzero (a:=a) a2m4_nz in h) as commutative_group.
       cbv beta delta [M.montladder].
       (* [while.by_invariant] expects a goal like [?P (while _ _ _ _)], make it so: *)
@@ -396,20 +397,20 @@ Module M.
           (P : M.point)
           (H : 0 = to_x (to_xz P))
       : 0 = to_x (to_xz (Mopp P)).
-    Proof. t. Qed.
+    Proof using Type. t. Qed.
 
     Lemma add_to_x_to_xz_0
           (P Q : M.point)
           (HP : 0 = to_x (to_xz P))
           (HQ : 0 = to_x (to_xz Q))
       : 0 = to_x (to_xz (Madd P Q)).
-    Proof. t. Qed.
+    Proof using a24_correct char_ge_28. t. Qed.
 
     Lemma scalarmult_to_x_to_xz_0
           (n : Z) (P : M.point)
           (H : 0 = to_x (to_xz P))
       : 0 = to_x (to_xz (scalarmult n P)).
-    Proof.
+    Proof using a24_correct char_ge_28.
       induction n using Z.peano_rect_strong.
       { cbn. t. }
       { (* Induction case from n to Z.succ n. *)
@@ -436,7 +437,7 @@ Module M.
           (Hscalarbits : (0 <= scalarbits)%Z)
           (Hpoint : point = to_x (to_xz P))
       : montladder scalarbits (Z.testbit n) point = to_x (to_xz (scalarmult n P)).
-    Proof.
+    Proof using a24_correct a2m4_nonsquare char_ge_12 char_ge_28 char_ge_5.
       destruct (dec (point = 0)) as [Hz|Hnz].
       { rewrite (montladder_correct_0 HFinv _ _ _ Hz Hn Hscalarbits).
         setoid_subst_rel Feq.

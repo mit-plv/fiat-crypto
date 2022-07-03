@@ -1,6 +1,7 @@
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
+Require Import Coq.Classes.RelationClasses.
 Local Open Scope Z_scope.
 
 Require Import Crypto.Arithmetic.Core.
@@ -54,7 +55,7 @@ Section Freeze.
     @freeze_cps n mask m p _ id.
   Lemma freeze_id {n} mask m p T f:
     @freeze_cps n mask m p T f = f (freeze mask m p).
-  Proof.
+  Proof using Type.
     cbv [freeze_cps freeze]; repeat progress autounfold;
       autorewrite with uncps push_id; reflexivity.
   Qed.
@@ -72,7 +73,7 @@ Section Freeze.
     z0 = z + (if (dec (c0 = 0)) then 0 else m) ->
     a = z0 mod s ->
     a mod m = y0 mod m.
-  Proof.
+  Proof using Type.
     clear. intros. subst. break_match.
     { rewrite Z.add_0_r, Z.mod_mod by lia.
       assert (-(s-c) <= y - (s-c) < s-c) by lia.
@@ -99,7 +100,7 @@ Section Freeze.
       mod_eq modulus
              (B.Positional.eval weight (@freeze n mask m p))
              (B.Positional.eval weight p).
-  Proof.
+  Proof using weight_0 weight_divides weight_multiples weight_nonzero weight_positive.
     cbv [freeze_cps freeze].
     repeat progress autounfold.
     pose proof Z.add_get_carry_full_mod.
@@ -126,12 +127,12 @@ Section Freeze.
       reflexivity. }
   Qed.
 End Freeze.
-Hint Opaque freeze_cps : uncps.
+Global Hint Opaque freeze_cps : uncps.
 Hint Rewrite @freeze_id : uncps.
 Hint Rewrite @eval_freeze
      using (assumption || reflexivity || auto || eassumption || lia) : push_basesystem_eval.
 
-Hint Unfold
+Global Hint Unfold
      freeze freeze_cps
   : basesystem_partial_evaluation_unfolder.
 

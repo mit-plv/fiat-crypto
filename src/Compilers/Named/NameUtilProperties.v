@@ -1,6 +1,7 @@
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Arith.Arith.
 Require Import Coq.Lists.List.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.CountLets.
 Require Import Crypto.Compilers.Named.NameUtil.

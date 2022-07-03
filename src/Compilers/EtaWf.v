@@ -1,3 +1,4 @@
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Wf.
 Require Import Crypto.Compilers.Eta.
@@ -119,4 +120,4 @@ Section language.
   Definition Wf_ExprEta' {t e} : Wf e -> Wf (ExprEta' e) := proj2 (@Wf_ExprEta'_iff t e).
 End language.
 
-Hint Resolve Wf_ExprEta Wf_ExprEta' : wf.
+Global Hint Resolve Wf_ExprEta Wf_ExprEta' : wf.

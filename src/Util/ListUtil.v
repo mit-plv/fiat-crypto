@@ -1,9 +1,9 @@
 Require Import Coq.Lists.List.
 Require Import Coq.Arith.Arith.
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Arith.Peano_dec.
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Pointed.
@@ -80,7 +80,7 @@ Hint Rewrite
   @prod_length
   : distr_length.
 
-Hint Extern 1 => progress autorewrite with distr_length in * : distr_length.
+Global Hint Extern 1 => progress autorewrite with distr_length in * : distr_length.
 Ltac distr_length := autorewrite with distr_length in *;
   try solve [simpl in *; (idtac + exfalso); lia].
 
@@ -311,7 +311,7 @@ Definition set_nth {T} n x (xs:list T)
   := update_nth n (fun _ => x) xs.
 
 Definition splice_nth {T} n (x:T) xs := firstn n xs ++ x :: skipn (S n) xs.
-Hint Unfold splice_nth.
+Global Hint Unfold splice_nth.
 
 Fixpoint take_while {T} (f : T -> bool) (ls : list T) : list T
   := match ls with
@@ -416,7 +416,7 @@ Lemma nth_error_length_error : forall A i (xs:list A),
 Proof.
   induction i as [|? IHi]; destruct xs; nth_tac'; rewrite IHi by lia; auto.
 Qed.
-Hint Resolve nth_error_length_error.
+Global Hint Resolve nth_error_length_error.
 Hint Rewrite @nth_error_length_error using lia : simpl_nth_error.
 
 Lemma map_nth_default : forall (A B : Type) (f : A -> B) n x y l,
@@ -1180,7 +1180,7 @@ Proof.
   assumption.
 Qed.
 
-Hint Resolve @nth_default_in_bounds : simpl_nth_default.
+Global Hint Resolve @nth_default_in_bounds : simpl_nth_default.
 
 Lemma cons_eq_head : forall {T} (x y:T) xs ys, x::xs = y::ys -> x=y.
 Proof.
@@ -1488,7 +1488,7 @@ Proof.
       intuition auto with zarith. }
 Qed.
 
-Hint Resolve sum_firstn_nonnegative : znonzero.
+Global Hint Resolve sum_firstn_nonnegative : znonzero.
 
 Lemma sum_firstn_app : forall xs ys n,
   sum_firstn (xs ++ ys) n = (sum_firstn xs n + sum_firstn ys (n - length xs))%Z.

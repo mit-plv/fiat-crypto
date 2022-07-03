@@ -1,9 +1,10 @@
 Require Import Coq.Bool.Sumbool.
-Require Import Coq.micromega.Psatz.
+Require Import Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.NArith.NArith.
 Require Import Coq.PArith.PArith.
 Require Import Coq.Lists.List.
 Require Import Coq.Init.Wf.
+Require Export Crypto.Util.GlobalSettings.
 
 Local Open Scope positive_scope.
 

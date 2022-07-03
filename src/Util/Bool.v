@@ -1,5 +1,6 @@
 (*** Boolean Utility Lemmas and Databases *)
 Require Import Coq.Bool.Bool.
+Require Export Crypto.Util.GlobalSettings.
 
 (** For equalities of booleans *)
 Create HintDb bool_congr discriminated.
@@ -8,10 +9,10 @@ Create HintDb bool_congr_setoid discriminated.
 (** For generic simplifications of things involving booleans, e.g., if-statements *)
 Create HintDb boolsimplify discriminated.
 
-Hint Extern 1 => progress autorewrite with boolsimplify in * : boolsimplify.
-Hint Extern 1 => progress autorewrite with bool_congr in * : bool_congr.
-Hint Extern 1 => progress autorewrite with bool_congr_setoid in * : bool_congr_setoid.
-Hint Extern 2 => progress rewrite_strat topdown hints bool_congr_setoid : bool_congr_setoid.
+Global Hint Extern 1 => progress autorewrite with boolsimplify in * : boolsimplify.
+Global Hint Extern 1 => progress autorewrite with bool_congr in * : bool_congr.
+Global Hint Extern 1 => progress autorewrite with bool_congr_setoid in * : bool_congr_setoid.
+Global Hint Extern 2 => progress rewrite_strat topdown hints bool_congr_setoid : bool_congr_setoid.
 
 Hint Rewrite Bool.andb_diag Bool.orb_diag Bool.eqb_reflx Bool.negb_involutive Bool.eqb_negb1 Bool.eqb_negb2 Bool.orb_true_r Bool.orb_true_l Bool.orb_false_r Bool.orb_false_l Bool.orb_negb_r Bool.andb_false_r Bool.andb_false_l Bool.andb_true_r Bool.andb_false_r Bool.andb_negb_r Bool.xorb_false_r Bool.xorb_false_l Bool.xorb_true_r Bool.xorb_true_l Bool.xorb_nilpotent : bool_congr.
 Hint Rewrite Bool.negb_if : boolsimplify.
@@ -24,12 +25,12 @@ Create HintDb push_andb discriminated.
 Create HintDb pull_andb discriminated.
 Create HintDb push_negb discriminated.
 Create HintDb pull_negb discriminated.
-Hint Extern 1 => progress autorewrite with push_orb in * : push_orb.
-Hint Extern 1 => progress autorewrite with pull_orb in * : pull_orb.
-Hint Extern 1 => progress autorewrite with push_andb in * : push_andb.
-Hint Extern 1 => progress autorewrite with pull_andb in * : pull_andb.
-Hint Extern 1 => progress autorewrite with push_negb in * : push_negb.
-Hint Extern 1 => progress autorewrite with pull_negb in * : pull_negb.
+Global Hint Extern 1 => progress autorewrite with push_orb in * : push_orb.
+Global Hint Extern 1 => progress autorewrite with pull_orb in * : pull_orb.
+Global Hint Extern 1 => progress autorewrite with push_andb in * : push_andb.
+Global Hint Extern 1 => progress autorewrite with pull_andb in * : pull_andb.
+Global Hint Extern 1 => progress autorewrite with push_negb in * : push_negb.
+Global Hint Extern 1 => progress autorewrite with pull_negb in * : pull_negb.
 Hint Rewrite Bool.negb_orb Bool.negb_andb : push_negb.
 Hint Rewrite Bool.xorb_negb_negb : pull_negb.
 Hint Rewrite <- Bool.negb_orb Bool.negb_andb Bool.negb_xorb_l Bool.negb_xorb_r : pull_negb.

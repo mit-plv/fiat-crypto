@@ -48,6 +48,7 @@
       -> option pointed_Prop] *)
 
 Require Import Coq.Arith.Arith Coq.Logic.Eqdep_dec.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Util.Notations Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod Crypto.Util.Decidable Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.RewriteHyp.

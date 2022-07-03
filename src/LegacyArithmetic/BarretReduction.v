@@ -1,10 +1,11 @@
 (*** Barrett Reduction *)
 (** This file implements Barrett Reduction on [ZLikeOps].  We follow
     [BarretReduction/ZHandbook.v]. *)
-Require Import Coq.ZArith.ZArith Coq.Lists.List Coq.Classes.Morphisms Coq.micromega.Psatz.
+Require Import Coq.ZArith.ZArith Coq.Lists.List Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Arithmetic.BarrettReduction.HAC.
 Require Import Crypto.LegacyArithmetic.ZBounded.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.ZUtil.Hints.ZArith.
 
 Local Open Scope small_zlike_scope.
 Local Open Scope large_zlike_scope.

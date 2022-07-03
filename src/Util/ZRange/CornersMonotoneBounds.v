@@ -1,6 +1,6 @@
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Psatz.
+Require Import Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
 Require Import Crypto.Util.ZUtil.Stabilization.
 Require Import Crypto.Util.ZUtil.MulSplit.
@@ -16,7 +16,7 @@ Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.SpecializeBy.
-
+Local Existing Instance Z.le_preorder.
 Local Open Scope Z_scope.
 
 Module ZRange.

@@ -1,6 +1,6 @@
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
-Require Import Coq.micromega.Lia Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Notations.
 Require Export Crypto.Util.FixCoqMistakes.

@@ -1,4 +1,5 @@
 (** * Common Subexpression Elimination for PHOAS Syntax *)
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Lists.List.
 Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.AListContext.
@@ -75,7 +76,7 @@ Section symbolic.
   Lemma interpf_flatten_binding_list T t x y v s
         (H : List.In (existT _ t (x, y)) (flatten_binding_list (var2:=interp_base_type) (t:=T) (symbolicify_smart_var v s) v))
     : fst x = y.
-  Proof.
+  Proof using Type.
     revert dependent s; induction T;
       repeat first [ progress simpl in *
                    | reflexivity
@@ -183,7 +184,7 @@ Section symbolic.
 
   Lemma interpf_prepend_prefix t e prefix
     : interpf interp_op (@prepend_prefix _ t e prefix) = interpf interp_op e.
-  Proof.
+  Proof using Type.
     induction prefix; simpl; [ reflexivity | unfold LetIn.Let_In; assumption ].
   Qed.
 
@@ -210,7 +211,7 @@ Section symbolic.
             -> exists pf : t1 = t2, wff nil (eq_rect _ exprf e1 _ pf) e2)*)
         (Hwf : Wf e)
     : forall x, Interp interp_op (@CSE t e prefix) x = Interp interp_op e x.
-  Proof.
+  Proof using base_type_code_lb denote_op op_code_bl op_code_lb.
     apply interp_cse; auto.
   Qed.
 End symbolic.

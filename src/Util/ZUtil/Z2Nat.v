@@ -1,4 +1,6 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Classes.RelationClasses.
+Require Export Crypto.Util.GlobalSettings.
 
 Local Open Scope Z_scope.
 Module Z2Nat.

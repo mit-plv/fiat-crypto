@@ -26,6 +26,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *)
 
+Require Export Crypto.Util.GlobalSettings.
+
 Ltac subst_max := idtac "VerdiTactics is deprecated in fiat-crypto";
   repeat match goal with
            | [ H : ?X = _ |- _ ]  => subst X

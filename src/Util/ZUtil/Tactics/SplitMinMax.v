@@ -1,5 +1,6 @@
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.BinInt.
+Require Export Crypto.Util.GlobalSettings.
 
 Ltac rewrite_min_max_side_condition_t := lia.
 

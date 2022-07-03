@@ -1,5 +1,5 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.ZUtil.Pow2.
 Require Import Crypto.Util.ZUtil.Log2.
 Require Import Crypto.Util.ZUtil.Lnot.
@@ -19,14 +19,14 @@ Module Z.
   Proof.
     rewrite !Z.ones_equiv; auto with zarith.
   Qed.
-  Hint Resolve ones_le : zarith.
+  Global Hint Resolve ones_le : zarith.
 
   Lemma ones_lt_pow2 x y : 0 <= x <= y -> Z.ones x < 2^y.
   Proof.
     rewrite Z.ones_equiv, Z.lt_pred_le.
     auto with zarith.
   Qed.
-  Hint Resolve ones_lt_pow2 : zarith.
+  Global Hint Resolve ones_lt_pow2 : zarith.
 
   Lemma log2_ones_full x : Z.log2 (Z.ones x) = Z.max 0 (Z.pred x).
   Proof.
@@ -38,19 +38,19 @@ Module Z.
   Proof.
     rewrite log2_ones_full; apply Z.max_case_strong; lia.
   Qed.
-  Hint Resolve log2_ones_lt : zarith.
+  Global Hint Resolve log2_ones_lt : zarith.
 
   Lemma log2_ones_le x y : 0 <= x <= y -> Z.log2 (Z.ones x) <= y.
   Proof.
     rewrite log2_ones_full; apply Z.max_case_strong; lia.
   Qed.
-  Hint Resolve log2_ones_le : zarith.
+  Global Hint Resolve log2_ones_le : zarith.
 
   Lemma log2_ones_lt_nonneg x y : 0 < y -> x <= y -> Z.log2 (Z.ones x) < y.
   Proof.
     rewrite log2_ones_full; apply Z.max_case_strong; lia.
   Qed.
-  Hint Resolve log2_ones_lt_nonneg : zarith.
+  Global Hint Resolve log2_ones_lt_nonneg : zarith.
 
   Lemma ones_pred : forall i, 0 < i -> Z.ones (Z.pred i) = Z.shiftr (Z.ones i) 1.
   Proof.
@@ -86,7 +86,7 @@ Module Z.
       rewrite Z.ones_succ by assumption.
       Z.zero_bounds.
   Qed.
-  Hint Resolve ones_nonneg : zarith.
+  Global Hint Resolve ones_nonneg : zarith.
 
   Lemma ones_pos_pos : forall i, (0 < i) -> 0 < Z.ones i.
   Proof.
@@ -96,7 +96,7 @@ Module Z.
     apply Z.lt_succ_lt_pred.
     apply Z.pow_gt_1; lia.
   Qed.
-  Hint Resolve ones_pos_pos : zarith.
+  Global Hint Resolve ones_pos_pos : zarith.
 
   Lemma lnot_ones_equiv n : Z.lnot (Z.ones n) = -2^n.
   Proof. rewrite Z.ones_equiv, Z.lnot_equiv, <- ?Z.sub_1_r; lia. Qed.

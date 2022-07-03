@@ -1,12 +1,13 @@
 Require Import Coq.ZArith.ZArith Coq.ZArith.BinIntDef.
 Require Import Coq.Lists.List. Import ListNotations.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.QArith.QArith_base.
 Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Specific.Framework.CurveParameters.
 Require Import Crypto.Specific.Framework.ArithmeticSynthesis.HelperTactics.
 Require Import Crypto.Util.QUtil.
-Require Import Crypto.Util.Decidable.
+Require Export Crypto.Util.Decidable.
+Require Import Crypto.Util.Relations.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.CacheTerm.
@@ -280,3 +281,7 @@ Ltac pose_m_enc_bounded sz bitwidth m_enc m_enc_bounded :=
     (Tuple.map (n:=sz) (BinInt.Z.land (Z.ones bitwidth)) m_enc = m_enc)
     ltac:(vm_compute; reflexivity)
            m_enc_bounded.
+
+Module Export Exports.
+  Export Crypto.Util.Decidable.
+End Exports.

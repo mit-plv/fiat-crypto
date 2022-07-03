@@ -1,6 +1,6 @@
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Definitions.
@@ -32,7 +32,7 @@ Module Z.
            | |- _ => solve [apply Z.lor_nonneg; intuition auto]
            end.
   Qed.
-  Hint Resolve lor_range : zarith.
+  Global Hint Resolve lor_range : zarith.
 
   Lemma lor_shiftl_bounds : forall x y n m,
       (0 <= n)%Z -> (0 <= m)%Z ->
@@ -363,3 +363,4 @@ Module Z.
     destruct (0 <=? x), (x <? 0); try lia.
   Qed.
 End Z.
+Global Hint Resolve Z.lor_range : zarith.

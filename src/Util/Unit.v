@@ -1,4 +1,5 @@
-Require Import Coq.Classes.Morphisms.
+Require Export Crypto.Util.GlobalSettings.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Relations.Relation_Definitions.
 
 (* an equivalence for a relation on trivial things, like [unit] *)

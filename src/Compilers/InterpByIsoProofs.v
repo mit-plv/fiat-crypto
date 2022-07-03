@@ -1,4 +1,5 @@
 (** * PHOAS interpretation function for any retract of [var:=interp_base_type] *)
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.InterpByIso.
 Require Import Crypto.Compilers.Relations.

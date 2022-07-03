@@ -1,9 +1,11 @@
 (*** ℤ can be a bounded ℤ-Like type *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
+Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.LegacyArithmetic.ZBounded.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Pow2Mod.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Hints.ZArith.
+Require Import Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
@@ -29,7 +31,7 @@ Global Instance ZZLikeOps small_bound_exp smaller_bound_exp modulus : ZLikeOps (
 Local Arguments Z.mul !_ !_.
 
 Class cls_is_true (x : bool) := build_is_true : x = true.
-Hint Extern 1 (cls_is_true ?b) => vm_compute; reflexivity : typeclass_instances.
+Global Hint Extern 1 (cls_is_true ?b) => vm_compute; reflexivity : typeclass_instances.
 
 Local Ltac pre_t :=
   unfold cls_is_true, Let_In in *; Z.ltb_to_lt;

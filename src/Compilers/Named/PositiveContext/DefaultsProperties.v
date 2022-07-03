@@ -1,3 +1,4 @@
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Lists.List.
 Require Import Coq.Numbers.BinNums.
 Require Import Crypto.Compilers.Syntax.

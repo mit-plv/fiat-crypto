@@ -1,4 +1,4 @@
-Require Import Coq.micromega.Psatz.
+Require Import Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.SmartMap.

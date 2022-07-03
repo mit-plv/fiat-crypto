@@ -1,6 +1,6 @@
 Require Coq.setoid_ring.Ncring.
 Require Coq.setoid_ring.Cring.
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.OnSubterms.
 Require Import Crypto.Util.Tactics.Revert.

@@ -1,5 +1,5 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Psatz.
+Require Import Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Compilers.Z.Syntax.Util.
 Require Import Crypto.Compilers.Z.Syntax.Equality.

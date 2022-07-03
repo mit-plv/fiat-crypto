@@ -1,3 +1,4 @@
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Relations.
 Require Import Crypto.Compilers.SmartMap.
@@ -227,7 +228,7 @@ Section with_context2.
            f_base (fun _ (n : Name) => n)
            N)
       = option_map f_base (find_Name1 (T:=T) n N).
-  Proof.
+  Proof using Type.
     induction T; simpl in *;
       [ | | specialize (IHT1 (fst N));
             specialize (IHT2 (snd N)) ];
@@ -271,7 +272,7 @@ Section with_context2.
                 (fun _ (n : Name) => n) N)
              N'
              default').
-  Proof.
+  Proof using Type.
     revert default default'; induction T; intros;
       [ | | specialize (IHT1 (fst N') (fst N));
             specialize (IHT2 (snd N') (snd N)) ];
@@ -290,7 +291,7 @@ Section with_context2.
         N'
         default'
       = default'.
-  Proof.
+  Proof using Type.
     revert default'; induction T; intros;
       [ | | specialize (IHT1 (fst N') (fst N));
             specialize (IHT2 (snd N') (snd N)) ];

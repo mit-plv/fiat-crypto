@@ -1,3 +1,4 @@
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Wf.
 Require Import Crypto.Compilers.WfInversion.
@@ -164,7 +165,7 @@ Section language.
       : wff G (t:=t) (var1:=var1) (var2:=var2)
             (SmartPairf (SmartVarfMap f v))
             (SmartPairf (SmartVarfMap (var:=var) g v)).
-    Proof.
+    Proof using Type.
       induction t; try solve [ cbv [SmartPairf]; simpl; auto ].
       rewrite !SmartVarfMap_Pair, !SmartPairf_Pair; auto.
     Qed.
@@ -174,7 +175,7 @@ Section language.
       : wff G (t:=t) (var1:=var1) (var2:=var2)
             (SmartPairf (SmartValf (fun t => exprf (Tbase t)) f _))
             (SmartPairf (SmartValf (fun t => exprf (Tbase t)) g _)).
-    Proof.
+    Proof using Type.
       induction t; try solve [ cbv [SmartPairf]; simpl; auto ].
     Qed.
   End with_var.
@@ -203,7 +204,7 @@ Section language.
         -> List.In
              (existT _ (f_base t) (f_var12 t x, f_var'12 t x'))
              (flatten_binding_list x1 x2).
-    Proof.
+    Proof using Type.
       induction T;
         repeat first [ progress simpl in *
                      | progress intros
@@ -448,7 +449,7 @@ Section language.
                           base_type_code _ _ T
                           (SmartVarfMap2 (fun t (a : var1 t) (b : var3 t) => (a, b)) x z)
                           (SmartVarfMap2 (fun t (a : var1' t) (b : var3' t) => (a, b)) x' z'))).
-  Proof.
+  Proof using op.
     induction T;
       repeat first [ progress intros
                    | progress subst
@@ -470,4 +471,4 @@ Section language.
   Qed.
 End language.
 
-Hint Resolve wff_SmartVarf wff_SmartVarVarf wff_SmartVarVarf_nil : wf.
+Global Hint Resolve wff_SmartVarf wff_SmartVarVarf wff_SmartVarVarf_nil : wf.

@@ -1,5 +1,6 @@
 Require Coq.setoid_ring.Integral_domain.
 Require Crypto.Algebra.Nsatz.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.Factorize.
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Ring.
 Require Import Crypto.Util.Tactics.RewriteHyp.
@@ -199,3 +200,10 @@ Ltac dropRingSyntax :=
         Ncring.eq_notation
     ] in *.
 Ltac nsatz := Algebra.Nsatz.nsatz; dropRingSyntax.
+
+Module Export Hints.
+  Export Crypto.Algebra.Nsatz.Hints.
+  Export Crypto.Algebra.Hierarchy.Hints.
+  Export Crypto.Algebra.Ring.Hints.
+  Global Existing Instance IntegralDomain.Integral_domain.
+End Hints.

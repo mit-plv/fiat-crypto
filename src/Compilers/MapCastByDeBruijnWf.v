@@ -105,4 +105,4 @@ Section language.
   Proof using base_type_code_lb. exact (@Wf_MapCast (Arrow s d) e input_bounds). Qed.
 End language.
 
-Hint Resolve Wf_MapCast Wf_MapCast_arrow : wf.
+Global Hint Resolve Wf_MapCast Wf_MapCast_arrow : wf.

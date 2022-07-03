@@ -1,7 +1,6 @@
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.Classes.RelationClasses.
-Require Import Coq.micromega.Lia.
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
@@ -11,6 +10,7 @@ Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Tactics.DestructHead.
+Local Existing Instance Z.le_preorder.
 
 Module ZRange.
   Import Operations.ZRange.

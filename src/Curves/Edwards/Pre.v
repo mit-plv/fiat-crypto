@@ -1,4 +1,4 @@
-Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid Crypto.Util.Relations.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop. Require Coq.Setoids.Setoid Crypto.Util.Relations.
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Ring Crypto.Algebra.Field.
 Require Import Crypto.Util.Notations Crypto.Util.Decidable (*Crypto.Util.Tactics*).
 Require Import Coq.PArith.BinPos.

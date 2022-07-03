@@ -1,7 +1,7 @@
 (*** Bounded ℤ-Like Types *)
 (** This file specifies a ℤ-like type of bounded integers, with
     operations for Montgomery Reduction and Barrett Reduction. *)
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -95,7 +95,7 @@ Arguments ZLikeProperties [small_bound smaller_bound modulus] Zops, small_bound 
 Existing Class large_valid.
 Existing Class medium_valid.
 Existing Class small_valid.
-Existing Instances Mod_SmallBound_valid DivBy_SmallerBound_valid DivBy_SmallBound_valid Mul_valid CarryAdd_valid CarrySubSmall_valid ConditionalSubtract_valid ConditionalSubtractModulus_valid modulus_digits_valid medium_to_large_valid.
+Global Existing Instances Mod_SmallBound_valid DivBy_SmallerBound_valid DivBy_SmallBound_valid Mul_valid CarryAdd_valid CarrySubSmall_valid ConditionalSubtract_valid ConditionalSubtractModulus_valid modulus_digits_valid medium_to_large_valid.
 
 Lemma ConditionalSubtractModulus_correct'
       {small_bound smaller_bound modulus : Z} {Zops : ZLikeOps small_bound smaller_bound modulus}

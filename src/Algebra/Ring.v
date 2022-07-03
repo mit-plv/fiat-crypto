@@ -1,14 +1,14 @@
 Require Coq.setoid_ring.Ncring.
 Require Coq.setoid_ring.Cring.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.micromega.Lia.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.OnSubterms.
 Require Import Crypto.Util.Tactics.Revert.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Group Crypto.Algebra.Monoid.
 Require Coq.ZArith.ZArith Coq.PArith.PArith.
-
+Export Crypto.Algebra.Hierarchy.Hints Crypto.Algebra.Group.Hints Crypto.Algebra.Monoid.Hints.
 
 Section Ring.
   Context {T eq zero one opp add sub mul} `{@ring T eq zero one opp add sub mul}.
@@ -443,6 +443,23 @@ Ltac ring_simplify_subterms_in_all :=
 Create HintDb ring_simplify discriminated.
 Create HintDb ring_simplify_subterms discriminated.
 Create HintDb ring_simplify_subterms_in_all discriminated.
-Hint Extern 1 => progress ring_simplify : ring_simplify.
-Hint Extern 1 => progress ring_simplify_subterms : ring_simplify_subterms.
-Hint Extern 1 => progress ring_simplify_subterms_in_all : ring_simplify_subterms_in_all.
+
+Module Export Hints.
+  Export Crypto.Algebra.Hierarchy.Hints Crypto.Algebra.Group.Hints Crypto.Algebra.Monoid.Hints.
+  Global Existing Instances
+         is_left_distributive_sub
+         is_right_distributive_sub
+         Ncring_Ring_ops
+         Ncring_Ring
+         homomorphism_is_homomorphism
+         monoid_homomorphism_mul
+         Cring_Cring_commutative_ring
+         ring_Z
+         commutative_ring_Z
+         integral_domain_Z
+         homomorphism_of_Z
+  .
+  Global Hint Extern 1 => progress ring_simplify : ring_simplify.
+  Global Hint Extern 1 => progress ring_simplify_subterms : ring_simplify_subterms.
+  Global Hint Extern 1 => progress ring_simplify_subterms_in_all : ring_simplify_subterms_in_all.
+End Hints.

@@ -1,4 +1,4 @@
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Compilers.Z.Bounds.Interpretation.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Tactics.BreakMatch.

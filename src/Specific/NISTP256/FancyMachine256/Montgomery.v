@@ -1,4 +1,4 @@
-Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Specific.NISTP256.FancyMachine256.Core.
 Require Import Crypto.LegacyArithmetic.MontgomeryReduction.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.

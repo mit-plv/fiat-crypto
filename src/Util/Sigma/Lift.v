@@ -1,3 +1,4 @@
+Require Export Crypto.Util.GlobalSettings.
 (** * Lift foralls out of sig proofs *)
 
 Definition lift1_sig {A C} (P:A->C->Prop)

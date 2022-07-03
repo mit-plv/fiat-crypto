@@ -1,5 +1,5 @@
 (** * Alternate forms for Interface for bounded arithmetic *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
+Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.LegacyArithmetic.Interface.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZUtil.Hints.
@@ -196,13 +196,15 @@ Section adc_subc.
   Qed.
 End adc_subc.
 
-Hint Extern 2 (rewrite_right_to_left_eq decode_tag _ (_ <=? (@decode ?n ?W ?decoder ?x + @decode _ _ _ ?y)))
-=> apply @fst_add_with_carry_false_leb : typeclass_instances.
-Hint Extern 2 (rewrite_right_to_left_eq decode_tag _ (_ <=? (@decode ?n ?W ?decoder ?x + @decode _ _ _ ?y + 1)))
-=> apply @fst_add_with_carry_true_leb : typeclass_instances.
-Hint Extern 2 (rewrite_right_to_left_eq decode_tag _ (_ <=? (@decode ?n ?W ?decoder ?x + @decode _ _ _ ?y + if ?c then _ else _)))
-=> apply @fst_add_with_carry_leb : typeclass_instances.
-
+Module Export Hints.
+  Export ZUtil.Hints.ZArith.
+  Global Hint Extern 2 (rewrite_right_to_left_eq decode_tag _ (_ <=? (@decode ?n ?W ?decoder ?x + @decode _ _ _ ?y)))
+         => apply @fst_add_with_carry_false_leb : typeclass_instances.
+  Global Hint Extern 2 (rewrite_right_to_left_eq decode_tag _ (_ <=? (@decode ?n ?W ?decoder ?x + @decode _ _ _ ?y + 1)))
+         => apply @fst_add_with_carry_true_leb : typeclass_instances.
+  Global Hint Extern 2 (rewrite_right_to_left_eq decode_tag _ (_ <=? (@decode ?n ?W ?decoder ?x + @decode _ _ _ ?y + if ?c then _ else _)))
+         => apply @fst_add_with_carry_leb : typeclass_instances.
+End Hints.
 
 (* We take special care to handle the case where the decoder is
    syntactically different but the decoded expression is judgmentally

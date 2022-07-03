@@ -1,3 +1,4 @@
+Require Export Crypto.Util.GlobalSettings.
 (*** Compute the modular inverse of a ℤ *)
 Require Import Coq.ZArith.ZArith.
 Local Open Scope Z_scope.
