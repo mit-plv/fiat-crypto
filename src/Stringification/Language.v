@@ -360,7 +360,7 @@ Module Compilers.
           := fun idc
              => match idc with
                 | ident.Literal base.type.Z v => show_lvl_compact_Z v
-                | ident.Literal t v => show_lvl v
+                | ident.Literal _t v => show_lvl v
                 | ident.value_barrier => neg_wrap_parens "value_barrier"
                 | ident.comment _ => neg_wrap_parens "comment"
                 | ident.comment_no_keep _ => neg_wrap_parens "comment_no_keep"
@@ -726,7 +726,10 @@ Module Compilers.
                      (positive * (list string * (Level -> list string))) * ZRange.type.base.option.interp (type.final_codomain t))
               s d (idx : positive) (f : var s -> @API.expr var d)
             : (positive * (list string * (Level -> list string))) * ZRange.type.base.option.interp (type.final_codomain d)
-            := let n := "x" ++ Decimal.Pos.to_string idx in
+            := let n := match s with
+                        | type.base base.type.unit => "()_" ++ Decimal.Pos.to_string idx
+                        | _ => "x" ++ Decimal.Pos.to_string idx
+                        end in
                match of_string s n with
                | Some n'
                  => let '(_, (args, show_f), r) := aux d (Pos.succ idx) (f n') in
