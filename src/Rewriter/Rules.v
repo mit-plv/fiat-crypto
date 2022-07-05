@@ -306,6 +306,8 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
            dont_do_again
            [(forall A B x y, @fst A B (x, y) = x)
             ; (forall A B x y, @snd A B (x, y) = y)
+            ; (forall P t f, @Thunked.bool_rect P t f true = t tt)
+            ; (forall P t f, @Thunked.bool_rect P t f false = f tt)
             ; (forall r v, lower r = upper r -> cstZ r v = cstZ r ('(lower r)))
             ; (forall r0 v, 0 ∈ r0 -> cstZ r0 0 + v = v)
             ; (forall r0 v, 0 ∈ r0 -> v + cstZ r0 0 = v)
