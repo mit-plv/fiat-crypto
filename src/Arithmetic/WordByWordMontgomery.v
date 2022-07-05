@@ -78,10 +78,25 @@ Module WordByWordMontgomery.
            dlet q := fst (Z.mul_split r s k) in
            dlet S2 := @drop_high_addT' _ S1 (@scmul _ q N) in
            dlet S3 := fst (@divmod _ S2) in
-           (A', S3).
+                          (A', S3).
 
       Lemma A'_S3_alt : A'_S3 = (A', S3').
       Proof using Type. cbv [A'_S3 A' S3' Let_In S2 q s S1 A' a A_a]; reflexivity. Qed.
+
+      (*Nathan nonsense begins here*)
+      Context (a' : Z).
+
+      Local Definition a'_S3
+        := dlet S1 := @addT _ S (@scmul _ a' B) in
+            dlet s := snd (@divmod _ S1) in
+           dlet q := fst (Z.mul_split r s k) in
+           dlet S2 := @drop_high_addT' _ S1 (@scmul _ q N) in
+                  fst (@divmod _ S2).
+
+      Lemma a_S3: a' = a  -> a'_S3 = snd A'_S3.
+      Proof using Type. intros; cbv [a'_S3 A'_S3 Let_In];  subst; reflexivity. Qed.
+      (*Nathan nonsense ends here*)
+      
     End Iteration.
 
     Section loop.
@@ -106,9 +121,20 @@ Module WordByWordMontgomery.
       Definition pre_redc : T (S R_numlimbs)
         := snd (redc_loop A_numlimbs (A, @zero (1 + R_numlimbs)%nat)).
 
+      Locate conditional_sub.
+      Check conditional_sub.
       Definition redc : T R_numlimbs
         := conditional_sub pre_redc N.
+
+      (*Nathan nonsense begins here*)
+
+      Definition redc_body_alt: Z * T (S R_numlimbs) -> T (S R_numlimbs)
+        := fun '(a, S') => a'_S3 B k S' a.
+
+      (*Nathan nonsense ends here*)
+          
     End loop.
+    
 
     Create HintDb word_by_word_montgomery.
     Hint Unfold A'_S3 S3' S2 q s S1 a A' A_a Let_In : word_by_word_montgomery.
