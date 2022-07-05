@@ -275,7 +275,7 @@ Module NMapTrieInd <: Trie NOrderedTypeBits NMap.
     induction m as [d m pf] using NMapTypFunctor.t_rect.
     specialize (H d m pf).
     apply H; clear H.
-    destruct m as [[[m0 m]]|]; [ | intros; exact I ].
+    destruct m as [[m0 m]|]; [ | intros; exact I ].
     intros [|k]; [ | revert k ].
     { cbn.
       destruct m0 as [m0|]; [ | clear; intros; inversion_option ].
@@ -437,7 +437,7 @@ Module ZMapTrieInd <: Trie ZOrderedTypeBits ZMap.
     induction m as [d m pf] using ZMapTypFunctor.t_rect.
     specialize (H d m pf).
     apply H; clear H.
-    destruct m as [[[mn [[m0 m]]]]|]; [ | intros; exact I ].
+    destruct m as [[mn [m0 m]]|]; [ | intros; exact I ].
     intros [|k|k]; [ | revert k | revert k ].
     all: cbv -[PositiveMap.find t].
     { destruct m0 as [m0|]; [ | clear; intros; inversion_option ].
