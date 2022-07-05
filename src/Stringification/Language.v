@@ -608,16 +608,17 @@ Module Compilers.
              | ident.Z_lxor as idc
              | ident.Z_div as idc
              | ident.Z_modulo as idc
-             | ident.Z_eqb as idc
-             | ident.Z_ltb as idc
-             | ident.Z_leb as idc
-             | ident.Z_gtb as idc
-             | ident.Z_geb as idc
              | ident.Z_shiftr as idc
              | ident.Z_shiftl as idc
              | ident.Z_land as idc
              | ident.Z_lor as idc
                => fun '((x, xr), ((y, yr), tt)) => (show_lvl_binop idc x y, ZRange.type.base.option.None)
+             | ident.Z_eqb as idc
+             | ident.Z_ltb as idc
+             | ident.Z_leb as idc
+             | ident.Z_gtb as idc
+             | ident.Z_geb as idc
+               => fun '(x, (y, tt)) => (show_lvl_binop idc (maybe_wrap_cast with_casts x) (maybe_wrap_cast with_casts y), ZRange.type.base.option.None)
              | ident.pair _ _ as idc
                => fun '((x, xr), ((y, yr), tt)) => (show_lvl_binop_no_space idc x y, ZRange.type.base.option.None)
              | ident.fst _ _ as idc
