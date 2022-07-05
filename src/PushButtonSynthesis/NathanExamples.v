@@ -153,7 +153,7 @@ Time Compute
 
 Time Compute
   (Pipeline.BoundsPipelineToString
-     "nathantest_" "nathantest_one_redc_25519_5to4"
+     "nathantest_" "nathantest_one_redc_25519"
      true true None [64; 128] wordsize
      (ltac:( let r:= Reify( singl_redc ) in exact r))
            (fun _ _ => [])
@@ -162,3 +162,10 @@ Time Compute
             (None, (None, (None, tt)))
             (None)
     : Pipeline.ErrorT _   ).
+
+(*Synthesizing code for an alternate Montgomery step*)
+
+
+Check WordByWordMontgomery.redc_body_alt.
+
+Definition singl_redc_alt := fun S a B => @WordByWordMontgomery.
