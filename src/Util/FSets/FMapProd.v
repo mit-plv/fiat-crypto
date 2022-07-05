@@ -75,12 +75,16 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
 
     Global Hint Transparent key : core.
 
-    Definition t elt := M1.t { m : M2.t elt | ~M2.Empty m }.
+    (* Create a record so that the normal form of the type isn't exponentially sized when we nest things, see COQBUG(https://github.com/coq/coq/issues/16172) *)
+    Record M2_t_NonEmpty elt := { M2_m :> M2.t elt ; M2_NonEmpty :> ~M2.Empty M2_m }.
+    Global Arguments Build_M2_t_NonEmpty [elt] _ _.
+    Local Notation M2_mk := (@Build_M2_t_NonEmpty _).
+    Definition t elt := M1.t (M2_t_NonEmpty elt).
 
     Local Ltac t_obgl :=
       repeat first [ progress intros
                    | progress cbv [M2.Empty Option.value not option_map] in *
-                   | progress cbn [proj1_sig] in *
+                   | progress cbn [M2_m] in *
                    | reflexivity
                    | exfalso; assumption
                    | congruence
@@ -103,7 +107,7 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
                      end
                    | progress subst
                    | progress specialize_under_binders_by eapply M2.map_1
-                   | progress destruct_head'_sig
+                   | progress destruct_head' M2_t_NonEmpty
                    | progress destruct_head'_and
                    | progress destruct_head' option
                    | progress break_innermost_match_hyps
@@ -116,10 +120,10 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
     Definition empty elt : t elt := @M1.empty _.
     Definition is_empty elt : t elt -> bool := @M1.is_empty _.
     Program Definition add elt (k : key) (v : elt) (m : t elt) : t elt
-      := let m2 := M2.add (snd k) v (Option.value (option_map (@proj1_sig _ _) (M1.find (fst k) m)) (@M2.empty _)) in
-         M1.add (fst k) (exist _ m2 _) m.
+      := let m2 := M2.add (snd k) v (Option.value (option_map (@M2_m _) (M1.find (fst k) m)) (@M2.empty _)) in
+         M1.add (fst k) (M2_mk m2 _) m.
     Definition find elt (k : key) (m : t elt) : option elt
-      := m2 <- M1.find (fst k) m; M2.find (snd k) (`m2).
+      := m2 <- M1.find (fst k) m; M2.find (snd k) (M2_m m2).
     Program Definition remove elt (k : key) (m : t elt) : t elt
       := match M1.find (fst k) m with
          | None => m
@@ -127,15 +131,15 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
            => let m2 := M2.remove (snd k) m2 in
               match M2.is_empty m2 with
               | true => M1.remove (fst k) m
-              | false => M1.add (fst k) (exist _ m2 _) m
+              | false => M1.add (fst k) (M2_mk m2 _) m
               end
          end.
     Definition mem elt (k : key) (m : t elt) : bool
       := match find k m with Some _ => true | _ => false end.
     Program Definition map elt elt' (f : elt -> elt') : t elt -> t elt'
-      := M1.map (fun m => exist _ (M2.map f (`m)) _).
+      := M1.map (fun m => M2_mk (M2.map f (M2_m m)) _).
     Program Definition mapi elt elt' (f : key -> elt -> elt') : t elt -> t elt'
-      := M1.mapi (fun k1 m => exist _ (M2.mapi (fun k2 => f (k1, k2)) (`m)) _).
+      := M1.mapi (fun k1 m => M2_mk (M2.mapi (fun k2 => f (k1, k2)) (M2_m m)) _).
     Program Definition map2 elt elt' elt'' (f : option elt -> option elt' -> option elt'')
             (f' := match f None None with
                    | None => f
@@ -149,22 +153,22 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
                   => if match m1, m2 with None, None => true | _, _ => false end
                      then None
                      else
-                       let m1' := Option.value (option_map (@proj1_sig _ _) m1) (M2.empty _) in
-                       let m2' := Option.value (option_map (@proj1_sig _ _) m2) (M2.empty _) in
+                       let m1' := Option.value (option_map (@M2_m _) m1) (M2.empty _) in
+                       let m2' := Option.value (option_map (@M2_m _) m2) (M2.empty _) in
                        let m' := M2.map2 f' m1' m2' in
                        match M2.is_empty m' with
                        | true => None
-                       | false => Some (exist _ m' _)
+                       | false => Some (M2_mk m' _)
                        end).
     Definition elements elt (m : t elt) : list (key * elt)
-      := List.flat_map (fun '(k1, m) => List.map (fun '(k2, v) => ((k1, k2), v)) (M2.elements (`m))) (M1.elements m).
+      := List.flat_map (fun '(k1, m) => List.map (fun '(k2, v) => ((k1, k2), v)) (M2.elements (M2_m m))) (M1.elements m).
     Definition cardinal elt (m : t elt) : nat := List.length (elements m).
     Definition fold elt A (f : key -> elt -> A -> A) : t elt -> A -> A
-      := M1.fold (fun k1 m => M2.fold (fun k2 => f (k1, k2)) (`m)).
+      := M1.fold (fun k1 m => M2.fold (fun k2 => f (k1, k2)) (M2_m m)).
     Definition equal elt (eqb : elt -> elt -> bool) : t elt -> t elt -> bool
-      := M1.equal (fun m m' => M2.equal eqb (`m) (`m')).
+      := M1.equal (fun m m' => M2.equal eqb (M2_m m) (M2_m m')).
     Definition MapsTo elt (k : key) (v : elt) (m : t elt) : Prop
-      := exists m2, M1.MapsTo (fst k) m2 m /\ M2.MapsTo (snd k) v (`m2).
+      := exists m2, M1.MapsTo (fst k) m2 m /\ M2.MapsTo (snd k) v (M2_m m2).
     Definition eq_key elt (p p':key*elt) := E.eq (fst p) (fst p').
     Definition eq_key_elt elt (p p':key*elt) :=
       E.eq (fst p) (fst p') /\ (snd p) = (snd p').
@@ -190,7 +194,7 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
       Definition Empty_alt elt (m : t elt) : Prop := M1.Empty m.
       (*Definition In_alt elt (k : key) (m : t elt) : Prop := liftKT_ (@M1.In elt) (@M2.In elt).
     Definition Equal_alt elt (m m' : t elt) : Prop := M1.Equal (fst m) (fst m') /\ M2.Equal (snd m) (snd m').*)
-      Definition Equiv_alt elt (cmp : elt -> elt -> Prop) (m m' : t elt) : Prop := M1.Equiv (fun m m' => M2.Equiv cmp (`m) (`m')) m m'.
+      Definition Equiv_alt elt (cmp : elt -> elt -> Prop) (m m' : t elt) : Prop := M1.Equiv (fun m m' => M2.Equiv cmp (M2_m m) (M2_m m')) m m'.
       (*Definition Equivb_alt elt (cmp : elt -> elt -> bool) (m m' : t elt) : Prop := M1.Equivb cmp (fst m) (fst m') /\ M2.Equivb cmp (snd m) (snd m').
        *)
 
@@ -202,7 +206,7 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
       Proof.
         cbv [Empty Empty_alt MapsTo M1.Empty M2.Empty not M2.key key M1.key E.t].
         split; repeat intro.
-        all: repeat first [ progress destruct_head'_sig
+        all: repeat first [ progress destruct_head' M2_t_NonEmpty
                           | progress destruct_head'_ex
                           | progress destruct_head'_and
                           | progress specialize_dep_under_binders_by apply pair
@@ -217,13 +221,14 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
         setoid_rewrite M1'.find_mapsto_iff; setoid_rewrite M2'.find_mapsto_iff.
         split; [ pose I as FWD | pose I as BAK ].
         all: repeat first [ progress intros
-                          | progress destruct_head'_sig
+                          | progress destruct_head' M2_t_NonEmpty
                           | progress destruct_head'_ex
                           | progress destruct_head'_and
                           | progress split_iff
                           | progress specialize_dep_under_binders_by apply pair
                           | progress specialize_dep_under_binders_by eexists
-                          | progress cbn [fst snd proj1_sig] in *
+                          | progress cbn [fst snd ProdWSfun_gen.M2_m] in *
+                          | progress cbv [not] in *
                           | apply conj
                           | match goal with
                             | [ |- context[@M1.find ?a ?b ?c] ] => destruct (@M1.find a b c) eqn:?
@@ -250,7 +255,7 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
              end.
         all: repeat first [ progress cbv [M2.eq_key_elt] in *
                           | progress cbn [fst snd proj1_sig] in *
-                          | progress destruct_head'_sig
+                          | progress destruct_head' M2_t_NonEmpty
                           | progress destruct_head'_ex
                           | progress destruct_head'_and
                           | progress specialize_dep_under_binders_by apply conj
@@ -854,7 +859,7 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
       all: cbv [option_map Option.bind Option.value] in *.
       all: repeat first [ progress inversion_option
                         | progress subst
-                        | progress cbn [proj1_sig] in *
+                        | progress cbn [M2_m] in *
                         | progress break_match_hyps ].
       all: lazymatch goal with
            | [ H : context[M2.find _ (M2.map2 _ _ _)] |- _ ]
