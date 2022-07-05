@@ -76,7 +76,6 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
     Global Hint Transparent key : core.
 
     (* Create a record so that the normal form of the type isn't exponentially sized when we nest things, see COQBUG(https://github.com/coq/coq/issues/16172) *)
-    Local Set Primitive Projections.
     Record M2_t_NonEmpty elt := { M2_m :> M2.t elt ; M2_NonEmpty :> ~M2.Empty M2_m }.
     Global Arguments Build_M2_t_NonEmpty [elt] _ _.
     Local Notation M2_mk := (@Build_M2_t_NonEmpty _).
