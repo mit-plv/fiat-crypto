@@ -344,16 +344,21 @@ Module Compilers.
            | _, _ => fst xr lvl
            end.
 
-      Definition show_application (with_casts : bool) {t : type} (f : Level.Level -> string) (args : type.for_each_lhs_of_arrow (fun t => (Level.Level -> string) * ZRange.type.option.interp t)%type t)
-        : Level.Level -> string
-        := match t return type.for_each_lhs_of_arrow (fun t => (Level.Level -> string) * ZRange.type.option.interp t)%type t -> Level.Level -> string with
-           | type.base _ => fun 'tt lvl => f lvl
-           | type.arrow s d
-             => fun xs lvl
-                => let _ : forall t, Show ((Level.Level -> string) * ZRange.type.option.interp t)%type
+      Section without_prod.
+        Local Remove Hints show_lvl_prod : typeclass_instances.
+        Definition show_application (with_casts : bool) {t : type} (f : Level.Level -> string) (args : type.for_each_lhs_of_arrow (fun t => (Level.Level -> string) * ZRange.type.option.interp t)%type t)
+          : Level.Level -> string
+          := match t return type.for_each_lhs_of_arrow (fun t => (Level.Level -> string) * ZRange.type.option.interp t)%type t -> Level.Level -> string with
+             | type.base _ => fun 'tt lvl => f lvl
+             | type.arrow s d
+               => fun xs lvl
+                  => let _ : forall t, Show ((Level.Level -> string) * ZRange.type.option.interp t)%type
                        := (fun t x => maybe_wrap_cast with_casts x app_lvl) in
-                   maybe_wrap_parens (Level.ltb lvl (Level.prev app_lvl)) (f (Level.prev app_lvl) ++ show_lvl xs (-∞))
-           end args.
+                     let _ : forall t, ShowLevel ((Level.Level -> string) * ZRange.type.option.interp t)%type
+                       := fun t => ShowLevel_of_Show in
+                     maybe_wrap_parens (Level.ltb lvl (Level.prev app_lvl)) (f (Level.prev app_lvl) ++ show_lvl xs (-∞))
+             end args.
+      End without_prod.
 
       Module ident.
         Global Instance show_lvl_ident {t} : ShowLevel (ident.ident t)
