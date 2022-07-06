@@ -99,7 +99,7 @@ Module solinas_reduction.
       let lo_hi := Associational.split s' p in
       Associational.eval (sat_reduce base s c n p) =
         Associational.eval coef * Associational.eval (snd lo_hi) + Associational.eval (fst lo_hi).
-    Proof.
+    Proof using Type.
       intros; cbv [sat_reduce] in *; cbv [s' lo_hi coef].
       autorewrite with push_eval; lia.
     Qed.
@@ -201,7 +201,7 @@ Module solinas_reduction.
 
     Definition mulmod base s c n (p q : list Z) :=
       let prod := mul_no_reduce base n p q in
-      let red := reduce base s c n prod in
+      let red := reduce_full base s c n prod in
       red.
 
     Definition canonical_repr n (p : list Z) : Prop :=
@@ -1710,7 +1710,7 @@ Module solinas_reduction.
         let s' := fst (Saturated.Rows.adjust_s weight (S (S (S n))) s) in
         let coef := Associational.sat_mul_const base [(1, s'/s)] c in
         eval weight n r = Associational.eval coef * q_hi2 + eval weight n (q_lo ++ [q_hi1]).
-    Proof.
+    Proof using base_nz c_pos coef_small n_gt_1 s_pos solinas_property wprops.
       intros.
       unfold reduce1 in *.
       unfold r, coef, s'.
@@ -1891,18 +1891,6 @@ Module solinas_reduction.
       lia.
     Qed.
 
-    (*
-      Definition reduce_full base s c n (p : list Z) :=
-      let r1 := reduce1 base s c (2*n) (S n) p in
-      let bound := (0, 2^machine_wordsize - 1) in
-      let bounds := repeat bound n ++ [(0, up_bound-1)] in
-      if (is_bounded_by bounds r1) then
-        let r2 := reduce1 base s c (S n) (S n) r1 in
-        let r3 := reduce1 base s c (S n) (n) r2 in
-        r3
-      else r1.
-     *)
-
     Lemma exists_lists_app : forall (p : list Z) n n',
         length p = n ->
         (n' <= n)%nat ->
@@ -1938,6 +1926,76 @@ Module solinas_reduction.
         lia.
         rewrite cons_length in H4.
         lia. }
+    Qed.
+
+    Lemma fold_right_andb_false : forall d l,
+      fold_right andb d l = false ->
+      fold_right andb true l = false \/ d = false.
+    Proof.
+      intros.
+      induction l; auto.
+      cbn in *.
+      rewrite andb_false_iff in H.
+      intuition.
+      rewrite H0.
+      auto.
+      rewrite H1.
+      rewrite andb_false_r.
+      auto.
+    Qed.
+
+    Lemma is_bounded_by_false : forall lo_bound hi_bound lo hi,
+        length lo_bound = length lo ->
+        is_bounded_by (lo_bound ++ [hi_bound]) (lo ++ [hi]) = false ->
+        is_bounded_by lo_bound lo = false \/ (hi < fst hi_bound \/ hi > snd hi_bound).
+    Proof using Type.
+      intros.
+      unfold is_bounded_by, fold_andb_map', fold_andb, dual_map in H0.
+      rewrite combine_app_samelength in H0.
+      rewrite map_app in H0.
+      rewrite fold_right_app in H0.
+      apply fold_right_andb_false in H0.
+      intuition.
+      right.
+      simpl in H1.
+      rewrite andb_false_iff in H1.
+      intuition.
+      rewrite andb_false_iff in H0.
+      intuition.
+      rewrite Z.leb_gt in H1; auto.
+      rewrite Z.leb_gt in H1; auto.
+      rewrite <-Z.gt_lt_iff in H1; auto.
+      discriminate.
+      auto.
+    Qed.
+
+    Lemma canonical_is_bounded_by : forall n p,
+        canonical_repr n p ->
+          is_bounded_by (repeat (0, 2 ^ machine_wordsize - 1) n) p = true.
+    Proof.
+      intros.
+      rewrite canonical_iff in H.
+      intuition.
+      generalize dependent n0.
+      induction p; intros.
+      replace n0 with 0%nat.
+      auto.
+      unfold is_bounded_by, fold_andb_map', fold_andb, dual_map.
+      rewrite cons_length in H0.
+      rewrite <-H0.
+      cbn [repeat combine map fold_right fst snd].
+      apply andb_true_intro.
+      intuition.
+      specialize (H1 a).
+      apply andb_true_intro.
+      intuition; rewrite Z.leb_le.
+      apply H1; simpl; auto.
+      rewrite Le.Z.le_sub_1_iff.
+      apply H1; simpl; auto.
+      apply IHp.
+      intros.
+      apply H1; simpl; auto.
+      auto.
     Qed.
 
     Theorem reduce_full_canonical : forall (p : list Z),
@@ -1980,15 +2038,28 @@ Module solinas_reduction.
       auto.
 
       (* proving second case where first reduction is not bounded *)
-      admit.
-    Admitted.
+      rewrite H1 in Heqb.
+      apply is_bounded_by_false in Heqb.
+      canonical_app q.
+      replace (length q_lo) with n in Hcanon_l.
+      apply canonical_is_bounded_by in Hcanon_l.
+      pose proof (canonical_bounded _ _ Hcanon1 q_hi ltac:(solve_in)).
+      intuition.
+      rewrite Hcanon_l in H7; discriminate.
+      cbn [fst] in H10.
+      lia.
+      cbn [snd] in H10.
+      lia.
+      rewrite repeat_length.
+      solve_length q.
+    Qed.
 
     Theorem reduce_full_correct : forall (p : list Z),
         canonical_repr (2 * n) p ->
         let r := reduce_full base s c n p in
         (Positional.eval weight (2 * n) p) mod (s - Associational.eval c)
         = (Positional.eval weight n r) mod (s - Associational.eval c).
-    Proof.
+    Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
       intros.
       pose proof (exists_lists_app p (2*n) n ltac:(solve_length p) ltac:(lia)) as Happ.
       destruct Happ as [lo Happ].
@@ -2024,12 +2095,23 @@ Module solinas_reduction.
       rewrite <-Heqq in H1.
       break_match.
       eapply reduce_third_correct; eauto.
-      pose proof reduce_third_correct.
 
       (* proving second case where first reduction is not bounded *)
-      admit.
-
-    Admitted.
+      rewrite H1 in Heqb.
+      apply is_bounded_by_false in Heqb.
+      canonical_app q.
+      replace (length q_lo) with n in Hcanon_l.
+      apply canonical_is_bounded_by in Hcanon_l.
+      pose proof (canonical_bounded _ _ Hcanon1 q_hi ltac:(solve_in)).
+      intuition.
+      rewrite Hcanon_l in H7; discriminate.
+      cbn [fst] in H10.
+      lia.
+      cbn [snd] in H10.
+      lia.
+      rewrite repeat_length.
+      solve_length q.
+    Qed.
 
   End __.
 
@@ -2149,7 +2231,7 @@ Unable to bind names for all return arguments and bounds at type [ℤ]"
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) in
-                  let r := Reify (reduce_full' base s c n) in
+                  let r := Reify (reduce_full base s c n) in
                   exact r)
                    (fun _ _ => [])
                    (Some (repeat bound (2*n)), tt)
