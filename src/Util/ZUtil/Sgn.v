@@ -10,3 +10,9 @@ Module Z.
   Qed.
   Global Hint Resolve div_abs_sgn_nonneg : zarith.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Global Hint Resolve Z.div_abs_sgn_nonneg : zarith.
+End Hints.

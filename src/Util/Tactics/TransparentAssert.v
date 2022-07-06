@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 (** [transparent assert (H : T)] is like [assert (H : T)], but leaves the body transparent. *)
 Tactic Notation "transparent" "assert" "(" ident(name) ":" constr(type) ")" :=
   simple refine (let name := (_ : type) in _).

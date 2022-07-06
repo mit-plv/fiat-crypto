@@ -313,3 +313,11 @@ Proof.
   rewrite Zodd_mod, <-Zeq_is_eq_bool; intro H_1; rewrite <-H_1.
   apply Z_div_mod_eq; reflexivity.
 Qed.
+
+Module Export Hints.
+  Export Crypto.Util.ZUtil.Divide.Hints.
+  Export Crypto.Util.ZUtil.Modulo.Hints.
+  Export Crypto.Util.ZUtil.Odd.Hints.
+  Export Crypto.Util.NatUtil.Hints.
+  Export Crypto.Util.ZUtil.Tactics.PrimeBound.Hints.
+End Hints.

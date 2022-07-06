@@ -51,3 +51,9 @@ Module Z.
   Ltac div_mod_to_quot_rem := repeat first [ div_mod_to_quot_rem_step | div_mod_to_quot_rem_hyps_step ]; intros.
   Ltac div_mod_to_quot_rem_in_goal := repeat div_mod_to_quot_rem_step; intros.
 End Z.
+
+Module Export Hints.
+  Export ZUtil.Div.Bootstrap.Hints.
+  Export ZUtil.Modulo.Bootstrap.Hints.
+  Export ZUtil.Hints.Core.
+End Hints.

@@ -5,17 +5,17 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Arith.Arith.
 Require Import Coq.NArith.NArith.
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 Import Nat.
+
+Scheme Equality for nat.
+
+Create HintDb natsimplify discriminated.
 
 Global Existing Instance Nat.le_preorder.
 Global Hint Resolve Nat.max_l Nat.max_r Nat.le_max_l Nat.le_max_r: arith.
 Global Hint Resolve Nat.min_l Nat.min_r Nat.le_min_l Nat.le_min_r: arith.
 
-
-Scheme Equality for nat.
-
-Create HintDb natsimplify discriminated.
 
 Global Hint Resolve mod_bound_pos plus_le_compat : arith.
 Global Hint Resolve (fun x y p q => proj1 (@Nat.mod_bound_pos x y p q)) (fun x y p q => proj2 (@Nat.mod_bound_pos x y p q)) : arith.
@@ -449,3 +449,38 @@ Proof.
   revert v; induction n as [|n IHn]; cbn [nat_rect]; [ reflexivity | ]; intro.
   rewrite HS; apply PS'_Proper; eauto.
 Qed.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Global Existing Instance Nat.le_preorder.
+  Global Hint Resolve Nat.max_l Nat.max_r Nat.le_max_l Nat.le_max_r: arith.
+  Global Hint Resolve Nat.min_l Nat.min_r Nat.le_min_l Nat.le_min_r: arith.
+  Global Hint Resolve mod_bound_pos plus_le_compat : arith.
+  Global Hint Resolve (fun x y p q => proj1 (@Nat.mod_bound_pos x y p q)) (fun x y p q => proj2 (@Nat.mod_bound_pos x y p q)) : arith.
+  Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using lia : natsimplify.
+  Hint Rewrite sub_diag add_0_l add_0_r sub_0_r sub_succ : natsimplify.
+  Global Existing Instances
+         nat_rect_Proper
+         nat_rect_Proper_nondep
+  .
+  Global Existing Instance nat_rect_Proper_nondep_gen | 100.
+  Global Hint Resolve pow_nonzero : arith.
+  Hint Rewrite S_pred_nonzero using lia : natsimplify.
+  Hint Rewrite @mod_same_eq using lia : natsimplify.
+  Global Hint Resolve mod_same_eq : arith.
+  Hint Rewrite @mod_mod_eq using (reflexivity || lia) : natsimplify.
+  Hint Rewrite S_mod_full using lia : natsimplify.
+  Hint Rewrite S_mod using (lia || autorewrite with natsimplify; lia) : natsimplify.
+  Hint Rewrite eq_nat_dec_refl : natsimplify.
+  Hint Rewrite eq_nat_dec_S_n : natsimplify.
+  Hint Rewrite eq_nat_dec_n_S : natsimplify.
+  Hint Rewrite Max.max_0_l Max.max_0_r Max.max_idempotent Min.min_0_l Min.min_0_r Min.min_idempotent : natsimplify.
+  Hint Rewrite lt_dec_irrefl : natsimplify.
+  Hint Rewrite lt_dec_n_pred_n : natsimplify.
+  Hint Rewrite le_dec_refl : natsimplify.
+  Hint Rewrite le_dec_pred_l : natsimplify.
+  Hint Rewrite le_dec_pred_plus_same : natsimplify.
+  Hint Rewrite minus_S_diag : natsimplify.
+  Hint Rewrite min_idempotent_S_l : natsimplify.
+  Hint Rewrite min_idempotent_S_r : natsimplify.
+End Hints.

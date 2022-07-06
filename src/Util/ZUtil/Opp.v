@@ -9,3 +9,10 @@ Module Z.
   Proof. lia. Qed.
   Hint Rewrite opp_eq_0_iff : zsimplify.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Export Crypto.Util.ZUtil.ZSimplify.Core.
+  Hint Rewrite Z.opp_eq_0_iff : zsimplify.
+End Hints.

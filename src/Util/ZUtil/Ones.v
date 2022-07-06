@@ -195,7 +195,7 @@ Module Z.
   Proof. rewrite Z.lor_comm; apply lor_pow2_mod_pow2_r; assumption. Qed.
   Hint Rewrite lor_pow2_mod_pow2_l using zutil_arith : zsimplify.
   Hint Rewrite lor_pow2_mod_pow2_l using assumption : zsimplify_fast.
-  
+
   Lemma lor_pow2_div_pow2_r x e (He : 0 <= e) : (Z.lor x (2^e-1)) / (2^e) = x / 2^e.
   Proof.
     destruct (Z_zerop e).
@@ -213,3 +213,33 @@ Module Z.
   Hint Rewrite lor_pow2_div_pow2_l using zutil_arith : zsimplify.
   Hint Rewrite lor_pow2_div_pow2_l using assumption : zsimplify_fast.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.ZUtil.Pow2.Hints.
+  Export Crypto.Util.ZUtil.Log2.Hints.
+  Export Crypto.Util.ZUtil.Lnot.Hints.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Export Crypto.Util.ZUtil.Hints.ZArith.
+  Export Crypto.Util.ZUtil.ZSimplify.Simple.Hints.
+  Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+  Export Crypto.Util.ZUtil.Tactics.ZeroBounds.Hints.
+  Global Hint Resolve Z.ones_le : zarith.
+  Global Hint Resolve Z.ones_lt_pow2 : zarith.
+  Hint Rewrite Z.log2_ones_full : zsimplify.
+  Global Hint Resolve Z.log2_ones_lt : zarith.
+  Global Hint Resolve Z.log2_ones_le : zarith.
+  Global Hint Resolve Z.log2_ones_lt_nonneg : zarith.
+  Hint Rewrite <- Z.ones_pred using zutil_arith : push_Zshift.
+  Global Hint Resolve Z.ones_nonneg : zarith.
+  Global Hint Resolve Z.ones_pos_pos : zarith.
+  Hint Rewrite Z.land_ones_ones : zsimplify.
+  Hint Rewrite Z.lor_ones_ones : zsimplify.
+  Hint Rewrite Z.lor_pow2_mod_pow2_r using zutil_arith : zsimplify.
+  Hint Rewrite Z.lor_pow2_mod_pow2_r using assumption : zsimplify_fast.
+  Hint Rewrite Z.lor_pow2_mod_pow2_l using zutil_arith : zsimplify.
+  Hint Rewrite Z.lor_pow2_mod_pow2_l using assumption : zsimplify_fast.
+  Hint Rewrite Z.lor_pow2_div_pow2_r using zutil_arith : zsimplify.
+  Hint Rewrite Z.lor_pow2_div_pow2_r using assumption : zsimplify_fast.
+  Hint Rewrite Z.lor_pow2_div_pow2_l using zutil_arith : zsimplify.
+  Hint Rewrite Z.lor_pow2_div_pow2_l using assumption : zsimplify_fast.
+End Hints.

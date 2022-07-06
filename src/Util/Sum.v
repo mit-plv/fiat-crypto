@@ -1,7 +1,7 @@
 Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Decidable.
-Require Import Crypto.Util.GlobalSettings.
+Require Import Crypto.Util.FixCoqMistakes.
 
 Definition sumwise {A B} (RA:relation A) (RB : relation B) : relation (A + B)
   := fun x y => match x, y with

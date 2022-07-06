@@ -65,5 +65,13 @@ Module Z.
     split; intros; intuition lia.
   Qed.
 End Z.
-Hint Rewrite <- Z.pow2_mod_spec using zutil_arith : convert_to_Ztestbit.
-Global Hint Resolve Z.pow2_mod_pos_bound : zarith.
+
+Module Export Hints.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Export Crypto.Util.ZUtil.Hints.ZArith.
+  Export Crypto.Util.ZUtil.Hints.Ztestbit.
+  Export Crypto.Util.ZUtil.Tactics.ZeroBounds.Hints.
+  Export Crypto.Util.ZUtil.Testbit.Hints.
+  Hint Rewrite <- Z.pow2_mod_spec using zutil_arith : convert_to_Ztestbit.
+  Global Hint Resolve Z.pow2_mod_pos_bound : zarith.
+End Hints.

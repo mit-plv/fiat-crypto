@@ -34,3 +34,10 @@ Module Z.
     }
   Qed.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Export Crypto.Util.ZUtil.Div.Hints.
+  Export Crypto.Util.ZUtil.Tactics.DivideExistsMul.Hints.
+End Hints.

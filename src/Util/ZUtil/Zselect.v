@@ -3,6 +3,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Export Crypto.Util.FixCoqMistakes.
 Local Open Scope Z_scope.
 
 Module Z.
@@ -15,3 +16,7 @@ Module Z.
     rewrite <-Z.eqb_neq in *; congruence.
   Qed.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+End Hints.

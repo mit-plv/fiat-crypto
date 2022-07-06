@@ -88,18 +88,24 @@ Module B.
     End Associational.
   End Associational.
 End B.
-Global Hint Opaque B.Associational.sat_mul B.Associational.sat_multerm : uncps.
-Hint Rewrite @B.Associational.sat_mul_id @B.Associational.sat_multerm_id using (assumption || (intros; autorewrite with uncps; reflexivity)) : uncps.
-Hint Rewrite @B.Associational.eval_sat_mul @B.Associational.eval_map_sat_multerm using (lia || assumption) : push_basesystem_eval.
-
-Global Hint Unfold
-     B.Associational.sat_multerm_cps B.Associational.sat_multerm B.Associational.sat_mul_cps B.Associational.sat_mul
-  : basesystem_partial_evaluation_unfolder.
 
 Ltac basesystem_partial_evaluation_unfolder t :=
   let t := (eval cbv delta [B.Associational.sat_multerm_cps B.Associational.sat_multerm B.Associational.sat_mul_cps B.Associational.sat_mul] in t) in
   let t := Arithmetic.Core.basesystem_partial_evaluation_unfolder t in
   t.
 
-Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
-  basesystem_partial_evaluation_unfolder t.
+Module Export Hints.
+  Export Crypto.Arithmetic.Core.Hints.
+  Export Crypto.Util.LetIn.Hints Crypto.Util.CPSUtil.Hints.
+
+  Global Hint Opaque B.Associational.sat_mul B.Associational.sat_multerm : uncps.
+  Hint Rewrite @B.Associational.sat_mul_id @B.Associational.sat_multerm_id using (assumption || (intros; autorewrite with uncps; reflexivity)) : uncps.
+  Hint Rewrite @B.Associational.eval_sat_mul @B.Associational.eval_map_sat_multerm using (lia || assumption) : push_basesystem_eval.
+
+  Global Hint Unfold
+         B.Associational.sat_multerm_cps B.Associational.sat_multerm B.Associational.sat_mul_cps B.Associational.sat_mul
+    : basesystem_partial_evaluation_unfolder.
+
+  Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
+    basesystem_partial_evaluation_unfolder t.
+End Hints.

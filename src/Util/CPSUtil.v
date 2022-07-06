@@ -6,7 +6,7 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.IdfunWithAlt.
 Require Import Crypto.Util.LetIn.
-Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
+Require Crypto.Util.Tuple. Import Tuple.Hints. Local Notation tuple := Tuple.tuple.
 Local Open Scope Z_scope.
 
 Create HintDb push_id discriminated.
@@ -651,3 +651,44 @@ End Tuple.
 Hint Rewrite @Tuple.map_cps_correct @Tuple.left_append_cps_correct @Tuple.left_tl_cps_correct @Tuple.left_hd_cps_correct @Tuple.tl_cps_correct @Tuple.hd_cps_correct : uncps.
 Hint Rewrite @Tuple.mapi_with_cps_correct @Tuple.mapi_with'_cps_correct @Tuple.mapi_with_cps2_correct @Tuple.mapi_with'_cps2_correct
      using (intros; autorewrite with uncps; auto): uncps.
+
+Module Export Hints.
+  Export Crypto.Util.ListUtil.Hints.
+  Export Crypto.Util.LetIn.Hints.
+  Export Crypto.Util.Tuple.Hints.
+
+  Hint Rewrite @push_id : push_id.
+  Hint Rewrite @id_with_alt_cps'_correct : uncps.
+  Hint Rewrite @id_with_alt_cps''_correct : uncps.
+  Hint Rewrite @id_with_alt_cps_correct : uncps.
+  Hint Rewrite @id_with_alt_cps'_correct_gen : uncps.
+  Hint Rewrite @id_with_alt_cps''_correct_gen : uncps.
+  Hint Rewrite @id_tuple'_with_alt_cps'_correct : uncps.
+  Hint Rewrite @id_tuple_with_alt_cps'_correct : uncps.
+  Hint Rewrite @id_tuple'_with_alt_cps''_correct : uncps.
+  Hint Rewrite @id_tuple_with_alt_cps''_correct : uncps.
+  Hint Rewrite @id_tuple'_with_alt_cps''_correct_gen : uncps.
+  Hint Rewrite @id_tuple_with_alt_cps''_correct_gen : uncps.
+  Hint Rewrite @id_tuple'_with_alt_cps_correct : uncps.
+  Hint Rewrite @id_tuple_with_alt_cps_correct : uncps.
+  Hint Rewrite @map_cps_correct : uncps.
+  Hint Rewrite @firstn_cps_correct : uncps.
+  Hint Rewrite @flat_map_cps_correct using (intros; autorewrite with uncps; auto): uncps.
+  Hint Rewrite @from_list_default_cps_correct : uncps.
+  Hint Rewrite @to_list_cps_correct : uncps.
+  Hint Rewrite @on_tuple_cps_correct using (intros; autorewrite with uncps; auto): uncps.
+  Hint Rewrite @update_nth_cps_correct : uncps.
+  Hint Rewrite @combine_cps_correct: uncps.
+  Hint Rewrite @fold_right_cps2_correct using (intros; autorewrite with uncps; auto): uncps.
+  Hint Rewrite @fold_right_cps_correct : uncps.
+  Hint Rewrite @fold_right_no_starter_cps_correct : uncps.
+  Hint Rewrite @Tuple.map_cps_correct : uncps.
+  Hint Rewrite @Tuple.map2_cps_correct : uncps.
+  Hint Rewrite @Tuple.mapi_with_cps_correct @Tuple.mapi_with'_cps_correct
+       using (intros; autorewrite with uncps; auto): uncps.
+  Hint Rewrite @Tuple.mapi_with_cps2_correct @Tuple.mapi_with'_cps2_correct
+       using (intros; autorewrite with uncps; auto): uncps.
+  Hint Rewrite @Tuple.map_cps_correct @Tuple.left_append_cps_correct @Tuple.left_tl_cps_correct @Tuple.left_hd_cps_correct @Tuple.tl_cps_correct @Tuple.hd_cps_correct : uncps.
+  Hint Rewrite @Tuple.mapi_with_cps_correct @Tuple.mapi_with'_cps_correct @Tuple.mapi_with_cps2_correct @Tuple.mapi_with'_cps2_correct
+       using (intros; autorewrite with uncps; auto): uncps.
+End Hints.

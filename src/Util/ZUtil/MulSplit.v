@@ -29,3 +29,11 @@ Module Z.
   Qed.
   Hint Rewrite mul_split_div : to_div_mod.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+  Hint Rewrite Z.mul_split_mod : to_div_mod.
+  Hint Rewrite Z.mul_split_div : to_div_mod.
+End Hints.

@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Local Open Scope Z_scope.
 
@@ -13,3 +13,7 @@ Module Z.
   | [ |- (?a | ?b) ] => apply Z.mod_divide; try apply Zmod_divides
   end; (lia || auto).
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+End Hints.

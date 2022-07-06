@@ -175,43 +175,48 @@ Module Z.
   Proof. intros; apply pow_mod_full. Qed.
   Hint Rewrite pow_mod_push using solve [ NoZMod ] : push_Zmod.
 End Z.
-Hint Rewrite Z.mod_r_distr_if : push_Zmod.
-Hint Rewrite <- Z.mod_r_distr_if : pull_Zmod.
-Hint Rewrite Z.mod_l_distr_if : push_Zmod.
-Hint Rewrite <- Z.mod_l_distr_if : pull_Zmod.
-Hint Rewrite <- Z.mul_mod_full : pull_Zmod.
-Global Hint Resolve Z.mul_mod_full : zarith.
-Hint Rewrite <- Z.mul_mod_l : pull_Zmod.
-Global Hint Resolve Z.mul_mod_l : zarith.
-Hint Rewrite <- Z.mul_mod_r : pull_Zmod.
-Global Hint Resolve Z.mul_mod_r : zarith.
-Hint Rewrite <- Z.add_mod_full : pull_Zmod.
-Global Hint Resolve Z.add_mod_full : zarith.
-Hint Rewrite <- Z.add_mod_l : pull_Zmod.
-Global Hint Resolve Z.add_mod_l : zarith.
-Hint Rewrite <- Z.add_mod_r : pull_Zmod.
-Global Hint Resolve Z.add_mod_r : zarith.
-Hint Rewrite <- Z.opp_mod_mod : pull_Zmod.
-Global Hint Resolve Z.opp_mod_mod : zarith.
-Hint Rewrite <- Z.sub_mod_full : pull_Zmod.
-Global Hint Resolve Z.sub_mod_full : zarith.
-Hint Rewrite <- Z.sub_mod_l : pull_Zmod.
-Global Hint Resolve Z.sub_mod_l : zarith.
-Hint Rewrite <- Z.sub_mod_r : pull_Zmod.
-Global Hint Resolve Z.sub_mod_r : zarith.
-Hint Rewrite Z.lnot_mod_mod : pull_Zmod.
-Global Hint Resolve Z.lnot_mod_mod : zarith.
-Hint Rewrite <- Z.mod_pow_full : pull_Zmod.
-Global Hint Resolve Z.mod_pow_full : zarith.
-Hint Rewrite Z.mul_mod_push using solve [ Z.NoZMod ] : push_Zmod.
-Hint Rewrite Z.add_mod_push using solve [ Z.NoZMod ] : push_Zmod.
-Hint Rewrite Z.mul_mod_l_push using solve [ Z.NoZMod ] : push_Zmod.
-Hint Rewrite Z.mul_mod_r_push using solve [ Z.NoZMod ] : push_Zmod.
-Hint Rewrite Z.add_mod_l_push using solve [ Z.NoZMod ] : push_Zmod.
-Hint Rewrite Z.add_mod_r_push using solve [ Z.NoZMod ] : push_Zmod.
-Hint Rewrite Z.sub_mod_push using solve [ Z.NoZMod ] : push_Zmod.
-Hint Rewrite Z.sub_mod_l_push using solve [ Z.NoZMod ] : push_Zmod.
-Hint Rewrite Z.sub_mod_r_push using solve [ Z.NoZMod ] : push_Zmod.
-Hint Rewrite Z.opp_mod_mod_push using solve [ Z.NoZMod ] : push_Zmod.
-Hint Rewrite Z.lnot_mod_mod_push using solve [ Z.NoZMod ] : push_Zmod.
-Hint Rewrite Z.pow_mod_push using solve [ Z.NoZMod ] : push_Zmod.
+
+Module Export Hints.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Export Crypto.Util.ZUtil.ZSimplify.Core.
+  Hint Rewrite Z.mod_r_distr_if : push_Zmod.
+  Hint Rewrite <- Z.mod_r_distr_if : pull_Zmod.
+  Hint Rewrite Z.mod_l_distr_if : push_Zmod.
+  Hint Rewrite <- Z.mod_l_distr_if : pull_Zmod.
+  Hint Rewrite <- Z.mul_mod_full : pull_Zmod.
+  Global Hint Resolve Z.mul_mod_full : zarith.
+  Hint Rewrite <- Z.mul_mod_l : pull_Zmod.
+  Global Hint Resolve Z.mul_mod_l : zarith.
+  Hint Rewrite <- Z.mul_mod_r : pull_Zmod.
+  Global Hint Resolve Z.mul_mod_r : zarith.
+  Hint Rewrite <- Z.add_mod_full : pull_Zmod.
+  Global Hint Resolve Z.add_mod_full : zarith.
+  Hint Rewrite <- Z.add_mod_l : pull_Zmod.
+  Global Hint Resolve Z.add_mod_l : zarith.
+  Hint Rewrite <- Z.add_mod_r : pull_Zmod.
+  Global Hint Resolve Z.add_mod_r : zarith.
+  Hint Rewrite <- Z.opp_mod_mod : pull_Zmod.
+  Global Hint Resolve Z.opp_mod_mod : zarith.
+  Hint Rewrite <- Z.sub_mod_full : pull_Zmod.
+  Global Hint Resolve Z.sub_mod_full : zarith.
+  Hint Rewrite <- Z.sub_mod_l : pull_Zmod.
+  Global Hint Resolve Z.sub_mod_l : zarith.
+  Hint Rewrite <- Z.sub_mod_r : pull_Zmod.
+  Global Hint Resolve Z.sub_mod_r : zarith.
+  Hint Rewrite Z.lnot_mod_mod : pull_Zmod.
+  Global Hint Resolve Z.lnot_mod_mod : zarith.
+  Hint Rewrite <- Z.mod_pow_full : pull_Zmod.
+  Global Hint Resolve Z.mod_pow_full : zarith.
+  Hint Rewrite Z.mul_mod_push using solve [ Z.NoZMod ] : push_Zmod.
+  Hint Rewrite Z.add_mod_push using solve [ Z.NoZMod ] : push_Zmod.
+  Hint Rewrite Z.mul_mod_l_push using solve [ Z.NoZMod ] : push_Zmod.
+  Hint Rewrite Z.mul_mod_r_push using solve [ Z.NoZMod ] : push_Zmod.
+  Hint Rewrite Z.add_mod_l_push using solve [ Z.NoZMod ] : push_Zmod.
+  Hint Rewrite Z.add_mod_r_push using solve [ Z.NoZMod ] : push_Zmod.
+  Hint Rewrite Z.sub_mod_push using solve [ Z.NoZMod ] : push_Zmod.
+  Hint Rewrite Z.sub_mod_l_push using solve [ Z.NoZMod ] : push_Zmod.
+  Hint Rewrite Z.sub_mod_r_push using solve [ Z.NoZMod ] : push_Zmod.
+  Hint Rewrite Z.opp_mod_mod_push using solve [ Z.NoZMod ] : push_Zmod.
+  Hint Rewrite Z.lnot_mod_mod_push using solve [ Z.NoZMod ] : push_Zmod.
+  Hint Rewrite Z.pow_mod_push using solve [ Z.NoZMod ] : push_Zmod.
+End Hints.

@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 (** Work around "Cannot create self-referring hypothesis" coming from
     [change x with y in *] *)
 Ltac change_in_all from to :=

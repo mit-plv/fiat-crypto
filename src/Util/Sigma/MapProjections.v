@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Definition projT2_map {A P Q} (f : forall a, P a -> Q a) (x : @sigT A P) : @sigT A Q
   := let 'existT a p := x in existT Q a (f a p).

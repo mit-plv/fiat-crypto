@@ -1,6 +1,6 @@
 Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.BinInt.
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Ltac rewrite_min_max_side_condition_t := lia.
 
@@ -41,3 +41,7 @@ Ltac split_min_max_step :=
   | _ => only_split_min_max_step
   end.
 Ltac split_min_max := repeat split_min_max_step.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+End Hints.

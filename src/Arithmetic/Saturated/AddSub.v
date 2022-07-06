@@ -251,21 +251,6 @@ Module B.
     End Positional.
   End Positional.
 End B.
-Global Hint Opaque B.Positional.sat_sub B.Positional.sat_add B.Positional.chain_op B.Positional.chain_op' : uncps.
-Hint Rewrite @B.Positional.sat_sub_id @B.Positional.sat_add_id : uncps.
-Hint Rewrite @B.Positional.chain_op_id @B.Positional.chain_op' using (assumption || (intros; autorewrite with uncps; reflexivity)) : uncps.
-Hint Rewrite @B.Positional.sat_sub_mod @B.Positional.sat_sub_div @B.Positional.sat_add_mod @B.Positional.sat_add_div using (lia || assumption) : push_basesystem_eval.
-
-Global Hint Unfold
-     B.Positional.chain_op'_cps
-     B.Positional.chain_op'
-     B.Positional.chain_op_cps
-     B.Positional.chain_op
-     B.Positional.sat_add_cps
-     B.Positional.sat_add
-     B.Positional.sat_sub_cps
-     B.Positional.sat_sub
-     : basesystem_partial_evaluation_unfolder.
 
 Ltac basesystem_partial_evaluation_unfolder t :=
   let t := (eval cbv delta [
@@ -282,5 +267,32 @@ Ltac basesystem_partial_evaluation_unfolder t :=
   let t := Arithmetic.Core.basesystem_partial_evaluation_unfolder t in
   t.
 
-Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
-  basesystem_partial_evaluation_unfolder t.
+Module Export Hints.
+  Export Crypto.Arithmetic.Core.Hints.
+  Export Crypto.Arithmetic.Saturated.Core.Hints.
+  Export Crypto.Arithmetic.Saturated.UniformWeight.Hints.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  Export Crypto.Util.ZUtil.CPS.Hints.
+  Export Crypto.Util.ZUtil.AddGetCarry.Hints.
+  Export Crypto.Util.Tuple.Hints Crypto.Util.LetIn.Hints.
+
+  Global Hint Opaque B.Positional.sat_sub B.Positional.sat_add B.Positional.chain_op B.Positional.chain_op' : uncps.
+  Hint Rewrite @B.Positional.sat_sub_id @B.Positional.sat_add_id : uncps.
+  Hint Rewrite @B.Positional.chain_op_id @B.Positional.chain_op' using (assumption || (intros; autorewrite with uncps; reflexivity)) : uncps.
+  Hint Rewrite @B.Positional.sat_sub_mod @B.Positional.sat_sub_div @B.Positional.sat_add_mod @B.Positional.sat_add_div using (lia || assumption) : push_basesystem_eval.
+
+  Global Hint Unfold
+         B.Positional.chain_op'_cps
+         B.Positional.chain_op'
+         B.Positional.chain_op_cps
+         B.Positional.chain_op
+         B.Positional.sat_add_cps
+         B.Positional.sat_add
+         B.Positional.sat_sub_cps
+         B.Positional.sat_sub
+    : basesystem_partial_evaluation_unfolder.
+
+
+  Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
+    basesystem_partial_evaluation_unfolder t.
+End Hints.

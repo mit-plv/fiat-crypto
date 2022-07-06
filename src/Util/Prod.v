@@ -8,7 +8,7 @@
 Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.IffT.
 Require Import Crypto.Util.Equality.
-Require Import Crypto.Util.GlobalSettings.
+Require Import Crypto.Util.FixCoqMistakes.
 
 Local Arguments fst {_ _} _.
 Local Arguments snd {_ _} _.
@@ -18,7 +18,7 @@ Scheme Equality for prod.
 
 Definition fst_pair {A B} (a:A) (b:B) : fst (a,b) = a := eq_refl.
 Definition snd_pair {A B} (a:A) (b:B) : snd (a,b) = b := eq_refl.
-Create HintDb cancel_pair discriminated. Hint Rewrite @fst_pair @snd_pair : cancel_pair.
+Create HintDb cancel_pair discriminated.
 
 (** ** Equality for [prod] *)
 Section prod.
@@ -95,9 +95,6 @@ Global Instance iffTp_iffTp_prod_Proper
 Proof.
   intros ?? [?] ?? [?]; constructor; tauto.
 Defined.
-Global Hint Extern 2 (Proper _ prod) => apply iffTp_iffTp_prod_Proper : typeclass_instances.
-Global Hint Extern 2 (Proper _ (fun A => prod A)) => refine iff_iffTp_prod_Proper : typeclass_instances.
-Global Hint Extern 2 (Proper _ (fun A B => prod A B)) => refine iff_prod_Proper : typeclass_instances.
 
 (** ** Useful Tactics *)
 (** *** [inversion_prod] *)
@@ -160,3 +157,16 @@ Ltac subst_prod_step :=
   | [ H : @pair ?A ?B ?x ?y = _ |- _ ] => do_subst_prod A B x y
   end.
 Ltac subst_prod := repeat subst_prod_step.
+
+Module Export Hints.
+  Hint Rewrite @fst_pair @snd_pair : cancel_pair.
+  Global Hint Extern 2 (Proper _ prod) => apply iffTp_iffTp_prod_Proper : typeclass_instances.
+  Global Hint Extern 2 (Proper _ (fun A => prod A)) => refine iff_iffTp_prod_Proper : typeclass_instances.
+  Global Hint Extern 2 (Proper _ (fun A B => prod A B)) => refine iff_prod_Proper : typeclass_instances.
+  Global Existing Instance iff_prod_Proper.
+  Global Existing Instances
+         iff_iffTp_prod_Proper
+         iffTp_iff_prod_Proper
+         iffTp_iffTp_prod_Proper
+  | 1.
+End Hints.

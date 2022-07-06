@@ -289,18 +289,39 @@ Module Z.
   Lemma lor_round_bound_pos_r' v x : Z.lor v (Z.pos x) <= Z.lor v (Z.round_lor_land_bound (Z.pos x)). Proof. auto with zarith. Qed.
   Lemma lor_round_bound_pos_l' v x : Z.lor (Z.pos x) v <= Z.lor (Z.round_lor_land_bound (Z.pos x)) v. Proof. auto with zarith. Qed.
 End Z.
-Global Hint Resolve Z.round_lor_land_bound_bounds : zarith.
-Global Hint Resolve Z.round_lor_land_bound_bounds_pos : zarith.
-Global Hint Resolve Z.round_lor_land_bound_bounds_neg : zarith.
-Hint Rewrite Z.land_round_lor_land_bound_r : zsimplify_fast zsimplify.
-Hint Rewrite Z.land_round_lor_land_bound_l : zsimplify_fast zsimplify.
-Hint Rewrite Z.lor_round_lor_land_bound_r : zsimplify_fast zsimplify.
-Hint Rewrite Z.lor_round_lor_land_bound_l : zsimplify_fast zsimplify.
-Global Hint Resolve Z.land_round_bound_pos_r (fun v x => proj1 (Z.land_round_bound_pos_r v x)) (fun v x => proj2 (Z.land_round_bound_pos_r v x)) : zarith.
-Global Hint Resolve Z.land_round_bound_pos_l (fun v x => proj1 (Z.land_round_bound_pos_l v x)) (fun v x => proj2 (Z.land_round_bound_pos_l v x)) : zarith.
-Global Hint Resolve Z.land_round_bound_neg_r (fun v x => proj1 (Z.land_round_bound_neg_r v x)) (fun v x => proj2 (Z.land_round_bound_neg_r v x)) : zarith.
-Global Hint Resolve Z.land_round_bound_neg_l (fun v x => proj1 (Z.land_round_bound_neg_l v x)) (fun v x => proj2 (Z.land_round_bound_neg_l v x)) : zarith.
-Global Hint Resolve Z.lor_round_bound_neg_r (fun v x => proj1 (Z.lor_round_bound_neg_r v x)) (fun v x => proj2 (Z.lor_round_bound_neg_r v x)) : zarith.
-Global Hint Resolve Z.lor_round_bound_neg_l (fun v x => proj1 (Z.lor_round_bound_neg_l v x)) (fun v x => proj2 (Z.lor_round_bound_neg_l v x)) : zarith.
-Global Hint Resolve Z.lor_round_bound_pos_r (fun v x => proj1 (Z.lor_round_bound_pos_r v x)) (fun v x => proj2 (Z.lor_round_bound_pos_r v x)) : zarith.
-Global Hint Resolve Z.lor_round_bound_pos_l (fun v x => proj1 (Z.lor_round_bound_pos_l v x)) (fun v x => proj2 (Z.lor_round_bound_pos_l v x)) : zarith.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  Export Crypto.Util.ZUtil.Pow.Hints.
+  Export Crypto.Util.ZUtil.Pow2.Hints.
+  Export Crypto.Util.ZUtil.Log2.Hints.
+  Export Crypto.Util.ZUtil.Tactics.PeelLe.Hints.
+  Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+  Export Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.Hints.
+  Export Crypto.Util.ZUtil.Tactics.DivModToQuotRem.Hints.
+  Export Crypto.Util.ZUtil.Tactics.RewriteModSmall.Hints.
+  Export Crypto.Util.ZUtil.Tactics.LinearSubstitute.Hints.
+  Export Crypto.Util.ZUtil.Tactics.SplitMinMax.Hints.
+  Export Crypto.Util.ZUtil.Modulo.PullPush.Hints.
+  Export Crypto.Util.ZUtil.LandLorShiftBounds.Hints.
+  Export Crypto.Util.ZUtil.Modulo.Hints.
+  Export Crypto.Util.ZUtil.Ones.Hints.
+  Export Crypto.Util.ZUtil.Lnot.Hints.
+  Export Crypto.Util.ZUtil.Land.Hints.
+  Global Hint Resolve Z.round_lor_land_bound_bounds : zarith.
+  Global Hint Resolve Z.round_lor_land_bound_bounds_pos : zarith.
+  Global Hint Resolve Z.round_lor_land_bound_bounds_neg : zarith.
+  Hint Rewrite Z.land_round_lor_land_bound_r : zsimplify_fast zsimplify.
+  Hint Rewrite Z.land_round_lor_land_bound_l : zsimplify_fast zsimplify.
+  Hint Rewrite Z.lor_round_lor_land_bound_r : zsimplify_fast zsimplify.
+  Hint Rewrite Z.lor_round_lor_land_bound_l : zsimplify_fast zsimplify.
+  Global Hint Resolve Z.land_round_bound_pos_r (fun v x => proj1 (Z.land_round_bound_pos_r v x)) (fun v x => proj2 (Z.land_round_bound_pos_r v x)) : zarith.
+  Global Hint Resolve Z.land_round_bound_pos_l (fun v x => proj1 (Z.land_round_bound_pos_l v x)) (fun v x => proj2 (Z.land_round_bound_pos_l v x)) : zarith.
+  Global Hint Resolve Z.land_round_bound_neg_r (fun v x => proj1 (Z.land_round_bound_neg_r v x)) (fun v x => proj2 (Z.land_round_bound_neg_r v x)) : zarith.
+  Global Hint Resolve Z.land_round_bound_neg_l (fun v x => proj1 (Z.land_round_bound_neg_l v x)) (fun v x => proj2 (Z.land_round_bound_neg_l v x)) : zarith.
+  Global Hint Resolve Z.lor_round_bound_neg_r (fun v x => proj1 (Z.lor_round_bound_neg_r v x)) (fun v x => proj2 (Z.lor_round_bound_neg_r v x)) : zarith.
+  Global Hint Resolve Z.lor_round_bound_neg_l (fun v x => proj1 (Z.lor_round_bound_neg_l v x)) (fun v x => proj2 (Z.lor_round_bound_neg_l v x)) : zarith.
+  Global Hint Resolve Z.lor_round_bound_pos_r (fun v x => proj1 (Z.lor_round_bound_pos_r v x)) (fun v x => proj2 (Z.lor_round_bound_pos_r v x)) : zarith.
+  Global Hint Resolve Z.lor_round_bound_pos_l (fun v x => proj1 (Z.lor_round_bound_pos_l v x)) (fun v x => proj2 (Z.lor_round_bound_pos_l v x)) : zarith.
+End Hints.

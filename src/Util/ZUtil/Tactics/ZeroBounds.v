@@ -3,7 +3,6 @@ Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.Classes.Morphisms Coq.Cla
 Require Import Crypto.Util.ZUtil.Tactics.PrimeBound.
 Require Import Crypto.Util.ZUtil.Div.
 Local Open Scope Z_scope.
-Global Existing Instance Z.le_preorder.
 
 Module Z.
   (* prove that combinations of known positive/nonnegative numbers are positive/nonnegative *)
@@ -27,4 +26,9 @@ Module Z.
   Ltac zero_bounds := try lia; try Z.prime_bound; zero_bounds'.
 End Z.
 
-Global Hint Extern 1 => progress Z.zero_bounds : zero_bounds.
+Module Export Hints.
+  Export Coq.Classes.RelationClasses.
+  Export ZUtil.Div.Hints.
+  Global Existing Instance Z.le_preorder.
+  Global Hint Extern 1 => progress Z.zero_bounds : zero_bounds.
+End Hints.

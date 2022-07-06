@@ -2,8 +2,6 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.ZUtil.ZSimplify.
-Require Import Crypto.Util.ZUtil.ZSimplify.Core.
-Require Import Crypto.Util.ZUtil.ZSimplify.Simple.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
@@ -54,3 +52,13 @@ Module Z.
   Qed.
 
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.ZSimplify.Hints.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+  Export Crypto.Util.ZUtil.Tactics.PullPush.Modulo.Hints.
+  Export Crypto.Util.ZUtil.Tactics.DivModToQuotRem.Hints.
+  Export Crypto.Util.ZUtil.Hints.PullPush.
+End Hints.

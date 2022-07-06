@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 (*** Compute the modular inverse of a ℤ *)
 Require Import Coq.ZArith.ZArith.
 Local Open Scope Z_scope.
@@ -97,3 +97,7 @@ def modinv(a, m):
   Definition modinv (a m : Z) : option Z
     := modinv_by_wf (Acc_intro_generator (S (S (Z.to_nat (Z.log2_up (Z.abs a) + Z.log2_up (Z.abs m))))) (Z.lt_wf 0)) a m.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+End Hints.

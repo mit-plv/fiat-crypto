@@ -128,3 +128,17 @@ Module Z.
       reflexivity. }
   Qed.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.ZUtil.Hints.
+  Export Crypto.Util.ZUtil.Lnot.Hints.
+  Export Crypto.Util.ZUtil.Div.Hints.
+  Export Crypto.Util.ZUtil.Tactics.ZeroBounds.Hints.
+  Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+  Hint Rewrite Z.ones_spec using zutil_arith : Ztestbit.
+  Hint Rewrite Z.ones_spec_full : Ztestbit_full.
+  Hint Rewrite Z.testbit_pow2_mod using zutil_arith : Ztestbit.
+  Hint Rewrite Z.testbit_pow2_mod_full : Ztestbit_full.
+  Hint Rewrite Z.bits_above_pow2 using zutil_arith : Ztestbit.
+  Hint Rewrite Z.testbit_add_shiftl_low using zutil_arith : Ztestbit.
+End Hints.

@@ -3,7 +3,6 @@ Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Pro
 Require Export Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.ZUtil.Div.
-Require Export Crypto.Util.ZUtil.Le. (* for hints *)
 Local Open Scope Z_scope.
 
 Module Z.
@@ -133,3 +132,9 @@ Module Z.
     [ repeat split_comparison; split_comparison_fin; Z.zero_bounds..
     | simplify_fractions ].
 End Z.
+
+Module Export Hints.
+  Export Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
+  Export ZeroBounds.Hints.
+  Export ZUtil.Div.Hints.
+End Hints.

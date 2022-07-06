@@ -12,8 +12,8 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Decidable.
 Local Open Scope Z_scope.
 
-Hint Rewrite Z.log2_pow2 Z.pow_1_r using solve [auto using Z.log2_nonneg with zarith] : push_Zpow.
 Module Z.
+  Hint Rewrite Z.log2_pow2 Z.pow_1_r using solve [auto using Z.log2_nonneg with zarith] : push_Zpow.
   Lemma cc_m_eq_full : forall s x, Z.cc_m s x = if (s =? 1) then x * 2 else x / (s / 2).
   Proof.
     intros; cbv [Z.cc_m].
@@ -78,8 +78,21 @@ Module Z.
   Proof. pose proof (cc_m_Proper_le_r_gen 0); intuition lia. Qed.
   Global Hint Resolve cc_m_Proper_le_r_0 : zarith.
 End Z.
-Global Hint Resolve Z.cc_m_Proper_le_r_gen : zarith.
-Global Hint Resolve Z.cc_m_Proper_le_r : zarith.
-Global Hint Resolve Z.cc_m_Proper_le_r_pos : zarith.
-Global Hint Resolve Z.cc_m_Proper_le_r_neg : zarith.
-Global Hint Resolve Z.cc_m_Proper_le_r_0 : zarith.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  Export Crypto.Util.ZUtil.Hints.PullPush.
+  Export Crypto.Util.ZUtil.ZSimplify.Core.
+  Export Crypto.Util.ZUtil.ZSimplify.Simple.Hints.
+  Export Crypto.Util.ZUtil.Tactics.DivModToQuotRem.Hints.
+  Export Crypto.Util.ZUtil.Tactics.ZeroBounds.Hints.
+  Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+  Export Crypto.Util.ZUtil.Hints.PullPush.
+  Hint Rewrite Z.log2_pow2 Z.pow_1_r using solve [auto using Z.log2_nonneg with zarith] : push_Zpow.
+  Global Hint Resolve Z.cc_m_Proper_le_r_gen : zarith.
+  Global Hint Resolve Z.cc_m_Proper_le_r : zarith.
+  Global Hint Resolve Z.cc_m_Proper_le_r_pos : zarith.
+  Global Hint Resolve Z.cc_m_Proper_le_r_neg : zarith.
+  Global Hint Resolve Z.cc_m_Proper_le_r_0 : zarith.
+End Hints.

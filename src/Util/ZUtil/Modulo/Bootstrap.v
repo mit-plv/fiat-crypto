@@ -5,11 +5,9 @@ Require Import Crypto.Util.ZUtil.Hints.Core.
 Local Open Scope Z_scope.
 
 Module Z.
-  Lemma mod_0_r_eq a b : b = 0 -> a mod b = 
+  Lemma mod_0_r_eq a b : b = 0 -> a mod b =
     ltac:(match eval hnf in (1 mod 0) with | 0 => exact 0 | _ => exact a end).
   Proof. intro; subst; auto with zarith. Qed.
-  Global Hint Resolve mod_0_r_eq : zarith.
-  Hint Rewrite mod_0_r_eq using assumption : zsimplify.
 
   Lemma div_mod_cases x y : ((x = y * (x / y) + x mod y /\ (y < x mod y <= 0 \/ 0 <= x mod y < y))
                              \/ (y = 0 /\ x / y = 0 /\ x mod y = ltac:(match eval hnf in (1 mod 0) with | 0 => exact 0 | _ => exact x end))).
@@ -21,3 +19,10 @@ Module Z.
     { apply Z.mod_pos_bound; assumption. }
   Qed.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Global Hint Resolve Z.mod_0_r_eq : zarith.
+  Hint Rewrite Z.mod_0_r_eq using assumption : zsimplify.
+End Hints.

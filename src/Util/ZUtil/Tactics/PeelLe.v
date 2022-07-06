@@ -53,3 +53,8 @@ Module Z.
     end.
   Ltac peel_le := repeat peel_le_step.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Hints.Core.
+End Hints.

@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 (** Like [Coq.Program.Tactics.revert_last], but only for non-dependent hypotheses *)
 Ltac revert_last_nondep :=
   match goal with

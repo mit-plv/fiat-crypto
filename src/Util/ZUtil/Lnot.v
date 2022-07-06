@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Local Open Scope Z_scope.
@@ -15,3 +15,7 @@ Module Z.
     rewrite <-Z.lnot_involutive, lnot_sub1; reflexivity.
   Qed.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+End Hints.

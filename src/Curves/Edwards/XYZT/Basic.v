@@ -2,7 +2,7 @@ Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.Curves.Edwards.AffineProofs.
 
-Require Import Crypto.Util.Notations Crypto.Util.GlobalSettings.
+Require Import Crypto.Util.Notations Crypto.Util.FixCoqMistakes.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Tactics.DestructHead.

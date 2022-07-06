@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 Ltac debuglevel := constr:(0%nat).
 
 Ltac solve_debugfail tac :=

@@ -302,4 +302,12 @@ Module F.
     Global Existing Instance field_modulo.
   End Instances.
 End F.
-Export F.Instances.
+Module Export Hints.
+  Export Crypto.Util.NumTheoryUtil.Hints.
+  Export Crypto.Util.ZUtil.Odd.Hints.
+  Export Crypto.Util.ZUtil.Modulo.Hints.
+  Export Crypto.Util.ZUtil.Tactics.ZeroBounds.Hints.
+  Export Crypto.Util.Decidable.Hints.
+  Export Crypto.Algebra.Hierarchy.Hints Crypto.Algebra.Field.Hints.
+  Export F.Instances.
+End Hints.

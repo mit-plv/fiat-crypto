@@ -99,3 +99,7 @@ Module Z.
     Qed.
   End rect.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+End Hints.

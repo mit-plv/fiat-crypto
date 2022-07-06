@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 (** Like [eexists], but stuffs the new evar in a context variable *)
 Ltac evar_exists :=
   let T := fresh in

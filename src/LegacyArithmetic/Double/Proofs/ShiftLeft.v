@@ -44,3 +44,16 @@ Section shl.
     shift_left_right_t.
   Qed.
 End shl.
+
+Module Export Hints.
+  Export Crypto.LegacyArithmetic.Interface.Hints.
+  Export Crypto.LegacyArithmetic.Double.Core.Hints.
+  Export Crypto.LegacyArithmetic.Double.Proofs.Decode.Hints.
+  Export Crypto.LegacyArithmetic.Double.Proofs.ShiftLeftRightTactic.Hints.
+  Export Crypto.Util.ZUtil.Pow2Mod.Hints.
+  Export Crypto.Util.ZUtil.Pow.Hints.
+  Export Crypto.Util.ZUtil.Hints.ZArith.
+  Export Crypto.Util.ZUtil.Notations.Hints.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  Global Existing Instance is_shift_left_immediate_double.
+End Hints.

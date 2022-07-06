@@ -24,3 +24,11 @@ Module Z.
   Lemma sub_1_lt_le x y : (x - 1 < y) <-> (x <= y).
   Proof. lia. Qed.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Notations.Hints.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  Hint Rewrite Z.land_m1_l Z.land_m1'_l : zsimplify_const zsimplify zsimplify_fast.
+  Hint Rewrite Z.land_m1_r Z.land_m1'_r : zsimplify_const zsimplify zsimplify_fast.
+End Hints.

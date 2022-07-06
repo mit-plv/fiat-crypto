@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 (** [contains x expr] succeeds iff [x] appears in [expr] *)
 Ltac contains search_for in_term :=
   idtac;

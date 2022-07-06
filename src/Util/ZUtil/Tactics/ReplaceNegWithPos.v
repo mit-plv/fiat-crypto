@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.ZArith.ZArith.
 Local Open Scope Z_scope.
 
@@ -56,3 +56,7 @@ Module Z.
            | [ H : 0 >= ?x |- _ ] => replace_with_neg x
            end.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+End Hints.

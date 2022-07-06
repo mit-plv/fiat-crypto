@@ -118,19 +118,19 @@ Section API.
       reflexivity.
 
     Lemma nonzero_id n p {cpsT} f : @nonzero_cps n p cpsT f = f (@nonzero n p).
-    Proof. cbv [nonzero nonzero_cps]. prove_id. Qed.
+    Proof using Type. cbv [nonzero nonzero_cps]. prove_id. Qed.
 
     Lemma join0_id n p R f :
       @join0_cps n p R f = f (join0 p).
-    Proof. cbv [join0_cps join0]. prove_id. Qed.
+    Proof using Type. cbv [join0_cps join0]. prove_id. Qed.
 
     Lemma divmod_id n p R f :
       @divmod_cps n p R f = f (divmod p).
-    Proof. cbv [divmod_cps divmod]; prove_id. Qed.
+    Proof using Type. cbv [divmod_cps divmod]; prove_id. Qed.
 
     Lemma drop_high_id n p R f :
       @drop_high_cps n p R f = f (drop_high p).
-    Proof. cbv [drop_high_cps drop_high]; prove_id. Qed.
+    Proof using Type. cbv [drop_high_cps drop_high]; prove_id. Qed.
     Hint Rewrite drop_high_id : uncps.
 
     Lemma scmul_id n c p R f :
@@ -641,26 +641,6 @@ Section API.
     Qed.
   End Proofs.
 End API.
-Hint Rewrite nonzero_id join0_id divmod_id drop_high_id scmul_id add_id add_S1_id add_S2_id sub_then_maybe_add_id conditional_sub_id : uncps.
-
-Global Hint Unfold
-     nonzero_cps
-     nonzero
-     scmul_cps
-     scmul
-     add_cps
-     add
-     add_S1_cps
-     add_S1
-     add_S2_cps
-     add_S2
-     sub_then_maybe_add_cps
-     sub_then_maybe_add
-     conditional_sub_cps
-     conditional_sub
-     eval
-     encode
-  : basesystem_partial_evaluation_unfolder.
 
 Ltac basesystem_partial_evaluation_unfolder t :=
   let t := (eval cbv delta [
@@ -687,5 +667,49 @@ Ltac basesystem_partial_evaluation_unfolder t :=
   let t := Arithmetic.Core.basesystem_partial_evaluation_unfolder t in
   t.
 
-Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
-  basesystem_partial_evaluation_unfolder t.
+Module Export Hints.
+  Export Crypto.Arithmetic.Core.Hints.
+  Export Crypto.Arithmetic.Saturated.Core.Hints.
+  Export Crypto.Arithmetic.Saturated.UniformWeight.Hints.
+  Export Crypto.Arithmetic.Saturated.Wrappers.Hints.
+  Export Crypto.Arithmetic.Saturated.AddSub.Hints.
+  Export Crypto.Util.LetIn.Hints Crypto.Util.CPSUtil.Hints.
+  Export Crypto.Util.Tuple.Hints Crypto.Util.LetIn.Hints.
+  Export Crypto.Util.Decidable.Hints.
+  Export Crypto.Util.ListUtil.Hints.
+  Export Crypto.Util.ZUtil.Tactics.ZeroBounds.Hints.
+  Export Crypto.Util.ZUtil.Tactics.DivModToQuotRem.Hints.
+  Export Crypto.Util.ZUtil.Modulo.Hints.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  Export Crypto.Util.ZUtil.CPS.Hints.
+  Export Crypto.Util.ZUtil.Zselect.Hints.
+  Export Crypto.Util.ZUtil.AddGetCarry.Hints.
+  Export Crypto.Util.ZUtil.MulSplit.Hints.
+  Export Crypto.Util.ZUtil.Div.Hints.
+  Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+  Export Crypto.Util.ZUtil.Opp.Hints.
+
+  Hint Rewrite nonzero_id join0_id divmod_id drop_high_id scmul_id add_id add_S1_id add_S2_id sub_then_maybe_add_id conditional_sub_id : uncps.
+
+  Global Hint Unfold
+         nonzero_cps
+         nonzero
+         scmul_cps
+         scmul
+         add_cps
+         add
+         add_S1_cps
+         add_S1
+         add_S2_cps
+         add_S2
+         sub_then_maybe_add_cps
+         sub_then_maybe_add
+         conditional_sub_cps
+         conditional_sub
+         eval
+         encode
+    : basesystem_partial_evaluation_unfolder.
+
+  Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
+    basesystem_partial_evaluation_unfolder t.
+End Hints.

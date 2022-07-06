@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Classes.RelationClasses.
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Local Open Scope Z_scope.
 Module Z2Nat.
@@ -47,3 +47,11 @@ Module Z.
   Hint Rewrite Zpow_sub_1_nat_pow : pull_Zof_nat.
   Hint Rewrite <- Zpow_sub_1_nat_pow : push_Zof_nat.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Hint Rewrite Z.pow_Zpow : push_Zof_nat.
+  Hint Rewrite <- Z.pow_Zpow : pull_Zof_nat.
+  Hint Rewrite Z.Zpow_sub_1_nat_pow : pull_Zof_nat.
+  Hint Rewrite <- Z.Zpow_sub_1_nat_pow : push_Zof_nat.
+End Hints.

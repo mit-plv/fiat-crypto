@@ -1,11 +1,13 @@
 Require Import Coq.Numbers.BinNums.
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Local Generalizable All Variables.
 
 Class pointed (T : Type) := point : T.
 
-Global Hint Extern 5 (pointed _) => solve [ constructor ] : typeclass_instances.
+Module Export Hints1.
+  Global Hint Extern 5 (pointed _) => solve [ constructor ] : typeclass_instances.
+End Hints1.
 
 Ltac step_pointed _ :=
   (constructor + (unshelve (econstructor; revgoals); revgoals));
@@ -53,3 +55,40 @@ Global Instance pointed_impl {A} {B : A -> Type} {f : forall a : pointed A, poin
 Global Instance pointed_Prop : pointed Prop := True.
 Global Instance pointed_Set : pointed Set := True.
 Global Instance pointed_Type : pointed Type := True.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Hints1.
+  Global Existing Instances
+         pointed_True
+         pointed_unit
+         pointed_bool
+         pointed_list
+         pointed_nat
+         pointed_N
+         pointed_positive
+         pointed_Z
+         pointed_inhabited
+         pointed_prod
+         pointed_and
+         pointed_sig
+         pointed_sigT
+         pointed_sig2
+         pointed_sigT2
+         pointed_ex
+         pointed_ex2
+         pointed_ex_inhab
+         pointed_ex2_inhab
+         pointed_eq_refl
+         pointed_Prop
+         pointed_Set
+         pointed_Type
+  .
+  Global Existing Instances
+         pointed_sum_l
+         pointed_sum_r
+         pointed_or_l
+         pointed_or_r
+  | 2.
+  Global Existing Instance pointed_impl | 3.
+End Hints.

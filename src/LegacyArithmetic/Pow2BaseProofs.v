@@ -30,10 +30,12 @@ Create HintDb pull_upper_bound discriminated.
 Create HintDb push_base_from_limb_widths discriminated.
 Create HintDb pull_base_from_limb_widths discriminated.
 
-Global Hint Extern 1 => progress autorewrite with push_upper_bound in * : push_upper_bound.
-Global Hint Extern 1 => progress autorewrite with pull_upper_bound in * : pull_upper_bound.
-Global Hint Extern 1 => progress autorewrite with push_base_from_limb_widths in * : push_base_from_limb_widths.
-Global Hint Extern 1 => progress autorewrite with pull_base_from_limb_widths in * : pull_base_from_limb_widths.
+Module Import Hints1.
+  Global Hint Extern 1 => progress autorewrite with push_upper_bound in * : push_upper_bound.
+  Global Hint Extern 1 => progress autorewrite with pull_upper_bound in * : pull_upper_bound.
+  Global Hint Extern 1 => progress autorewrite with push_base_from_limb_widths in * : push_base_from_limb_widths.
+  Global Hint Extern 1 => progress autorewrite with pull_base_from_limb_widths in * : pull_base_from_limb_widths.
+End Hints1.
 
 Section Pow2BaseProofs.
   Context {limb_widths} (limb_widths_nonneg : forall w, In w limb_widths -> 0 <= w).
@@ -423,21 +425,23 @@ Section Pow2BaseProofs.
   Qed.
 
 End Pow2BaseProofs.
-Hint Rewrite base_from_limb_widths_cons base_from_limb_widths_nil : push_base_from_limb_widths.
-Hint Rewrite <- base_from_limb_widths_cons : pull_base_from_limb_widths.
+Module Import Hints2.
+  Hint Rewrite base_from_limb_widths_cons base_from_limb_widths_nil : push_base_from_limb_widths.
+  Hint Rewrite <- base_from_limb_widths_cons : pull_base_from_limb_widths.
 
-Hint Rewrite <- @firstn_base_from_limb_widths : push_base_from_limb_widths.
-Hint Rewrite <- @firstn_base_from_limb_widths : pull_firstn.
-Hint Rewrite @firstn_base_from_limb_widths : pull_base_from_limb_widths.
-Hint Rewrite @firstn_base_from_limb_widths : push_firstn.
-Hint Rewrite <- @skipn_base_from_limb_widths : push_base_from_limb_widths.
-Hint Rewrite <- @skipn_base_from_limb_widths : pull_skipn.
-Hint Rewrite @skipn_base_from_limb_widths : pull_base_from_limb_widths.
-Hint Rewrite @skipn_base_from_limb_widths : push_skipn.
+  Hint Rewrite <- @firstn_base_from_limb_widths : push_base_from_limb_widths.
+  Hint Rewrite <- @firstn_base_from_limb_widths : pull_firstn.
+  Hint Rewrite @firstn_base_from_limb_widths : pull_base_from_limb_widths.
+  Hint Rewrite @firstn_base_from_limb_widths : push_firstn.
+  Hint Rewrite <- @skipn_base_from_limb_widths : push_base_from_limb_widths.
+  Hint Rewrite <- @skipn_base_from_limb_widths : pull_skipn.
+  Hint Rewrite @skipn_base_from_limb_widths : pull_base_from_limb_widths.
+  Hint Rewrite @skipn_base_from_limb_widths : push_skipn.
 
-Hint Rewrite @base_from_limb_widths_length : distr_length.
-Hint Rewrite @upper_bound_nil @upper_bound_cons @upper_bound_app using solve [ eauto with znonzero ] : push_upper_bound.
-Hint Rewrite <- @upper_bound_cons @upper_bound_app using solve [ eauto with znonzero ] : pull_upper_bound.
+  Hint Rewrite @base_from_limb_widths_length : distr_length.
+  Hint Rewrite @upper_bound_nil @upper_bound_cons @upper_bound_app using solve [ eauto with znonzero ] : push_upper_bound.
+  Hint Rewrite <- @upper_bound_cons @upper_bound_app using solve [ eauto with znonzero ] : pull_upper_bound.
+End Hints2.
 
 Section UniformBase.
   Context {width : Z} (limb_width_nonneg : 0 <= width).
@@ -564,3 +568,17 @@ Section UniformBase.
     reflexivity.
   Qed.
 End UniformBase.
+
+Module Export Hints.
+  Export Crypto.Util.ListUtil.Hints Crypto.Util.NatUtil.Hints.
+  Export Crypto.Util.ZUtil.Hints.ZArith.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  Export Crypto.Util.ZUtil.Testbit.Hints.
+  Export Crypto.Util.ZUtil.Pow2Mod.Hints.
+  Export Crypto.Util.ZUtil.Notations.Hints.
+  Export Crypto.Util.ZUtil.Shift.Hints.
+  Export Crypto.Util.ZUtil.Tactics.ZeroBounds.Hints.
+  Export Crypto.Util.Bool.Hints.
+  Export Hints1.
+  Export Hints2.
+End Hints.

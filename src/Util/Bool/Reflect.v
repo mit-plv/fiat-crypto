@@ -1,6 +1,6 @@
 (** * Some lemmas about [Bool.reflect] *)
 Require Import Coq.Bool.Bool.
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Lemma reflect_to_dec_iff {P b1 b2} : reflect P b1 -> (b1 = b2) <-> (if b2 then P else ~P).
 Proof.

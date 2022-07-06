@@ -94,3 +94,34 @@ Module Z.
   Proof. reflexivity. Qed.
   Hint Rewrite minus_minus_one : zsimplify zsimplify_fast zsimplify_const.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Hint Rewrite Z.pow_1_l_Zpos : zsimplify_fast zsimplify_const zsimplify.
+  Hint Rewrite Z.pow_1_l_0 : zsimplify_fast zsimplify_const zsimplify.
+  Hint Rewrite Z.pow_r_Zneg : zsimplify_fast zsimplify_const zsimplify.
+  Hint Rewrite Z.pow_1_l_Zof_nat : zsimplify_fast zsimplify_const zsimplify.
+  Hint Rewrite Z.pow_0_l_Zpos : zsimplify_fast zsimplify_const zsimplify.
+  Hint Rewrite Z.sub_same_minus : zsimplify.
+  Hint Rewrite Z.sub_same_plus : zsimplify.
+  Hint Rewrite Z.sub_same_minus_plus : zsimplify.
+  Hint Rewrite Z.sub_same_plus_plus : zsimplify.
+  Hint Rewrite Z.sub_same_minus_minus : zsimplify.
+  Hint Rewrite Z.sub_same_plus_minus : zsimplify.
+  Hint Rewrite Z.sub_same_minus_then_plus : zsimplify.
+  Hint Rewrite Z.sub_same_plus_then_plus : zsimplify.
+  Hint Rewrite Z.sub_same_minus_plus_then_plus : zsimplify.
+  Hint Rewrite Z.sub_same_plus_plus_then_plus : zsimplify.
+  Hint Rewrite Z.sub_same_minus_minus : zsimplify.
+  Hint Rewrite Z.sub_same_plus_minus_then_plus : zsimplify.
+  Hint Rewrite Z.simplify_twice_sub_sub : zsimplify.
+  Hint Rewrite Z.simplify_twice_sub_add : zsimplify.
+  Hint Rewrite Z.simplify_2XmX : zsimplify.
+  Hint Rewrite Z.simplify_add_pos : zsimplify_Z_to_pos.
+  Hint Rewrite Z.simplify_add_pos10 : zsimplify_Z_to_pos.
+  Hint Rewrite Z.simplify_mul_pos : zsimplify_Z_to_pos.
+  Hint Rewrite Z.simplify_mul_pos10 : zsimplify_Z_to_pos.
+  Hint Rewrite Z.simplify_sub_pos : zsimplify_Z_to_pos.
+  Hint Rewrite Z.two_sub_sub_inner_sub : zsimplify.
+  Hint Rewrite Z.minus_minus_one : zsimplify zsimplify_fast zsimplify_const.
+End Hints.

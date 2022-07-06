@@ -155,3 +155,24 @@ Module Z.
   Proof. prove_cps_correct (). Qed.
   Hint Rewrite @mul_split_cps'_correct : uncps.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+  Hint Rewrite @Z.eq_dec_cps_correct : uncps.
+  Hint Rewrite @Z.eqb_cps_correct : uncps.
+  Hint Rewrite @Z.get_carry_cps_correct : uncps.
+  Hint Rewrite @Z.add_with_get_carry_cps_correct : uncps.
+  Hint Rewrite @Z.add_get_carry_cps_correct : uncps.
+  Hint Rewrite @Z.get_borrow_cps_correct : uncps.
+  Hint Rewrite @Z.sub_with_get_borrow_cps_correct : uncps.
+  Hint Rewrite @Z.sub_get_borrow_cps_correct : uncps.
+  Hint Rewrite @Z.add_get_carry_full_cps_correct : uncps.
+  Hint Rewrite @Z.add_with_get_carry_full_cps_correct : uncps.
+  Hint Rewrite @Z.sub_get_borrow_full_cps_correct : uncps.
+  Hint Rewrite @Z.sub_with_get_borrow_full_cps_correct : uncps.
+  Hint Rewrite @Z.mul_split_at_bitwidth_cps_correct : uncps.
+  Hint Rewrite @Z.mul_split_cps_correct : uncps.
+  Hint Rewrite @Z.mul_split_cps'_correct : uncps.
+End Hints.

@@ -23,9 +23,9 @@ Definition tuple_decoder {n W} {decode : decoder n W} {k : nat} : decoder (k * n
   := {| decode w := BaseSystem.decode (Pow2Base.base_from_limb_widths (List.repeat n k))
                                       (List.map decode (List.rev (Tuple.to_list _ w))) |}.
 Global Arguments tuple_decoder : simpl never.
-Module Export Hints.
+Module Export Hints1.
   Global Hint Extern 3 (decoder _ (tuple ?W ?k)) => let kv := (eval simpl in (Z.of_nat k)) in apply (fun n decode => (@tuple_decoder n W decode k : decoder (kv * n) (tuple W k))) : typeclass_instances.
-End Hints.
+End Hints1.
 
 Section ripple_carry_definitions.
   (** tuple is high to low ([to_list] reverses) *)
@@ -253,3 +253,12 @@ Section tuple2.
 End tuple2.
 
 Global Arguments mul_double half_n {_ _ _ _ _ _ _} _ _.
+
+Module Export Hints.
+  Export Crypto.LegacyArithmetic.Interface.Hints.
+  Export Crypto.LegacyArithmetic.InterfaceProofs.Hints.
+  Export Crypto.Util.Tuple.Hints.
+  Export Crypto.Util.ListUtil.Hints.
+  Export Crypto.Util.LetIn.Hints.
+  Export Hints1.
+End Hints.

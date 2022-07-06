@@ -102,3 +102,12 @@ Module Z.
                    | progress autorewrite with zsimplify ].
   Qed.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Export Crypto.Util.ZUtil.Sgn.Hints.
+  Export Crypto.Util.ZUtil.Modulo.Hints.
+  Export Crypto.Util.ZUtil.Div.Hints.
+  Export Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.Hints.
+End Hints.

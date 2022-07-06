@@ -91,3 +91,16 @@ Module Z.
     { subst; cbv -[Z.le]; split; lia. }
   Qed.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.ZUtil.Hints.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Export Crypto.Util.ZUtil.Hints.ZArith.
+  Export Crypto.Util.ZUtil.Pow.Hints.
+  Export Crypto.Util.ZUtil.ZSimplify.Core.
+  Export Crypto.Util.ZUtil.ZSimplify.Simple.Hints.
+  Global Hint Resolve Z.log2_nonneg' : zarith.
+  Hint Rewrite Z.log2_pred_pow2_full : zsimplify.
+  Hint Rewrite Z.max_log2_up : push_Zmax.
+  Hint Rewrite <- Z.max_log2_up : pull_Zmax.
+End Hints.

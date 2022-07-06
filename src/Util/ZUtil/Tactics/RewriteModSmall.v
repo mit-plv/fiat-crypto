@@ -45,3 +45,10 @@ Module Z.
   Ltac rewrite_mod_small_more :=
     repeat (rewrite_mod_small || rewrite_mod_mod_small).
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Export Crypto.Util.ZUtil.Hints.ZArith.
+  Export Crypto.Util.ZUtil.Tactics.DivModToQuotRem.Hints.
+End Hints.

@@ -1178,3 +1178,37 @@ Proof. intros; apply @fieldwise'_Proper_gen_eq; compute; tauto. Qed.
 Global Instance fieldwise_Proper_flip_impl
   : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ (flip impl)) ==> eq ==> eq ==> flip impl) (@fieldwise A B n) | 10.
 Proof. intros; apply @fieldwise_Proper_gen_eq; compute; tauto. Qed.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.Decidable.Hints.
+  Export Crypto.Util.ListUtil.Hints.
+  Hint Rewrite length_to_list' : distr_length.
+  Hint Rewrite @length_to_list : distr_length.
+  Global Existing Instance Reflexive_fieldwise' | 5.
+  Global Existing Instance Symmetric_fieldwise' | 5.
+  Global Existing Instance Transitive_fieldwise' | 5.
+  Global Existing Instance Equivalence_fieldwise'.
+  Global Existing Instance Reflexive_fieldwise | 5.
+  Global Existing Instance Symmetric_fieldwise | 5.
+  Global Existing Instance Transitive_fieldwise | 5.
+  Global Existing Instance Equivalence_fieldwise.
+  Global Existing Instance dec_fieldwise' | 10.
+  Global Existing Instance dec_fieldwise | 10.
+  Global Existing Instance dec_eq' | 10.
+  Global Existing Instance dec_eq | 10.
+  Global Existing Instance map'_Proper | 10.
+  Global Existing Instance map_Proper | 10.
+  Global Existing Instances
+         fieldwise'_Proper_gen
+         fieldwise_Proper_gen
+         fieldwise'_Proper_gen_eq
+         fieldwise_Proper_gen_eq
+         fieldwise'_Proper
+         fieldwise_Proper
+         fieldwise'_Proper_iff
+         fieldwise_Proper_iff
+         fieldwise'_Proper_flip_impl
+         fieldwise_Proper_flip_impl
+  | 10.
+End Hints.

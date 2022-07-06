@@ -261,7 +261,7 @@ Require Import Crypto.Util.IdfunWithAlt.
 Require Import Crypto.Util.Notations.
 
 Require Import Coq.Lists.List. Import ListNotations.
-Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
+Require Crypto.Util.Tuple. Import Tuple.Hints. Local Notation tuple := Tuple.tuple.
 
 Local Ltac prove_id :=
   repeat match goal with
@@ -503,15 +503,16 @@ Module B.
   Ltac div_mod_cps_t :=
     intros; autorewrite with uncps push_id; try reflexivity.
 
-  Hint Rewrite
-      @Associational.reduce_cps_id
-      @Associational.split_cps_id
-      @Associational.mul_cps_id : uncps.
-  Hint Rewrite
-       @Associational.carry_cps_id
-       @Associational.carryterm_cps_id
-       using div_mod_cps_t : uncps.
-
+  Module Import Hints1.
+    Hint Rewrite
+         @Associational.reduce_cps_id
+         @Associational.split_cps_id
+         @Associational.mul_cps_id : uncps.
+    Hint Rewrite
+         @Associational.carry_cps_id
+         @Associational.carryterm_cps_id
+         using div_mod_cps_t : uncps.
+  End Hints1.
 
   Module Positional.
     Section Positional.
@@ -1051,54 +1052,57 @@ Module B.
 
   End Positional.
 
-  Global Hint Unfold
-      Positional.add_cps
-      Positional.mul_cps
-      Positional.reduce_cps
-      Positional.carry_reduce_cps
-      Positional.negate_snd_cps
-      Positional.split_cps
-      Positional.scmul_cps
-      Positional.unbalanced_sub_cps
-      Positional.opp_cps
-  .
-  Hint Rewrite
-      @Associational.reduce_cps_id
-      @Associational.split_cps_id
-      @Associational.mul_cps_id
-      @Positional.from_associational_cps_id
-      @Positional.place_cps_id
-      @Positional.add_to_nth_cps_id
-      @Positional.to_associational_cps_id
-      @Positional.sub_id
-      @Positional.select_id
-    : uncps.
-  Hint Rewrite
-       @Associational.carry_cps_id
-       @Associational.carryterm_cps_id
-       @Positional.carry_cps_id
-       @Positional.chained_carries_id
-       @Positional.chained_carries_reduce_id
-       using div_mod_cps_t : uncps.
-  Hint Rewrite
-       @Associational.eval_mul
-       @Positional.eval_single
-       @Positional.eval_unit
-       @Positional.eval_to_associational
-       @Positional.eval_left_append
-       @Associational.eval_carry
-       @Associational.eval_carryterm
-       @Associational.eval_reduce
-       @Associational.eval_split
-       @Positional.eval_zeros
-       @Positional.eval_carry
-       @Positional.eval_from_associational
-       @Positional.eval_add_to_nth
-       @Positional.eval_chained_carries
-       @Positional.eval_chained_carries_reduce
-       @Positional.eval_sub
-       @Positional.eval_select
-       using (assumption || (div_mod_cps_t; auto) || vm_decide) : push_basesystem_eval.
+  Module Export Hints.
+    Export Hints1.
+    Global Hint Unfold
+           Positional.add_cps
+           Positional.mul_cps
+           Positional.reduce_cps
+           Positional.carry_reduce_cps
+           Positional.negate_snd_cps
+           Positional.split_cps
+           Positional.scmul_cps
+           Positional.unbalanced_sub_cps
+           Positional.opp_cps
+    .
+    Hint Rewrite
+         @Associational.reduce_cps_id
+         @Associational.split_cps_id
+         @Associational.mul_cps_id
+         @Positional.from_associational_cps_id
+         @Positional.place_cps_id
+         @Positional.add_to_nth_cps_id
+         @Positional.to_associational_cps_id
+         @Positional.sub_id
+         @Positional.select_id
+      : uncps.
+    Hint Rewrite
+         @Associational.carry_cps_id
+         @Associational.carryterm_cps_id
+         @Positional.carry_cps_id
+         @Positional.chained_carries_id
+         @Positional.chained_carries_reduce_id
+         using div_mod_cps_t : uncps.
+    Hint Rewrite
+         @Associational.eval_mul
+         @Positional.eval_single
+         @Positional.eval_unit
+         @Positional.eval_to_associational
+         @Positional.eval_left_append
+         @Associational.eval_carry
+         @Associational.eval_carryterm
+         @Associational.eval_reduce
+         @Associational.eval_split
+         @Positional.eval_zeros
+         @Positional.eval_carry
+         @Positional.eval_from_associational
+         @Positional.eval_add_to_nth
+         @Positional.eval_chained_carries
+         @Positional.eval_chained_carries_reduce
+         @Positional.eval_sub
+         @Positional.eval_select
+         using (assumption || (div_mod_cps_t; auto) || vm_decide) : push_basesystem_eval.
+  End Hints.
 End B.
 
 (* Modulo and div that do shifts if possible, otherwise normal mod/div *)
@@ -1153,76 +1157,14 @@ Section DivMod.
   Qed.
 End DivMod.
 
-Global Hint Opaque div modulo : uncps.
-Hint Rewrite @div_id @modulo_id : uncps.
+Module Export Hints1.
+  Global Hint Opaque div modulo : uncps.
+  Hint Rewrite @div_id @modulo_id : uncps.
+End Hints1.
 
 Import B.
 
 Create HintDb basesystem_partial_evaluation_unfolder.
-
-Global Hint Unfold
-     id
-     Associational.eval
-     Associational.multerm
-     Associational.mul_cps
-     Associational.mul
-     Associational.split_cps
-     Associational.split
-     Associational.reduce_cps
-     Associational.reduce
-     Associational.negate_snd_cps
-     Associational.negate_snd
-     Associational.carryterm_cps
-     Associational.carryterm
-     Associational.carry_cps
-     Associational.carry
-     Positional.to_associational_cps
-     Positional.to_associational
-     Positional.eval
-     Positional.zeros
-     Positional.add_to_nth_cps
-     Positional.add_to_nth
-     Positional.place_cps
-     Positional.place
-     Positional.from_associational_cps
-     Positional.from_associational
-     Positional.carry_cps
-     Positional.carry
-     Positional.chained_carries_cps
-     Positional.chained_carries
-     Positional.chained_carries_reduce_cps_step
-     Positional.chained_carries_reduce_cps
-     Positional.chained_carries_reduce
-     Positional.encode
-     Positional.add_cps
-     Positional.mul_cps
-     Positional.reduce_cps
-     Positional.carry_reduce_cps
-     Positional.negate_snd_cps
-     Positional.split_cps
-     Positional.scmul_cps
-     Positional.unbalanced_sub_cps
-     Positional.sub_cps
-     Positional.sub
-     Positional.opp_cps
-     Positional.Fencode
-     Positional.Fdecode
-     Positional.eval_from
-     Positional.select_cps
-     Positional.select
-     modulo div modulo_cps div_cps
-     id_tuple_with_alt id_tuple'_with_alt id_tuple_with_alt_cps'
-     Z.add_get_carry_full Z.add_get_carry_full_cps
-  : basesystem_partial_evaluation_unfolder.
-
-Global Hint Unfold
-     B.limb ListUtil.sum ListUtil.sum_firstn
-     CPSUtil.Tuple.mapi_with_cps CPSUtil.Tuple.mapi_with'_cps CPSUtil.flat_map_cps CPSUtil.on_tuple_cps CPSUtil.fold_right_cps2
-     Decidable.dec Decidable.dec_eq_Z
-     id_tuple_with_alt id_tuple'_with_alt id_tuple_with_alt_cps'
-     Z.add_get_carry_full Z.add_get_carry_full_cps Z.mul_split Z.mul_split_cps Z.mul_split_cps'
-  : basesystem_partial_evaluation_unfolder.
-
 
 Ltac basesystem_partial_evaluation_unfolder t :=
   eval
@@ -1407,11 +1349,6 @@ Proof.
     [rewrite Z.opp_mod_mod|]; reflexivity.
 Qed.
 
-Hint Rewrite <-@F.of_Z_add : pull_FofZ.
-Hint Rewrite <-@F.of_Z_mul : pull_FofZ.
-Hint Rewrite <-@F.of_Z_sub : pull_FofZ.
-Hint Rewrite <-@F_of_Z_opp : pull_FofZ.
-
 Ltac F_mod_eq :=
   cbv [Positional.Fdecode]; autorewrite with pull_FofZ;
   apply mod_eq_Z2F_iff.
@@ -1430,3 +1367,102 @@ Ltac solve_op_mod_eq wt x :=
 
 Ltac solve_op_F wt x := F_mod_eq; solve_op_mod_eq wt x.
 Ltac presolve_op_F wt x := F_mod_eq; presolve_op_mod_eq wt x.
+
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Algebra.Nsatz.Hints.
+  Export Crypto.Util.Decidable.Hints Crypto.Util.LetIn.Hints.
+  Export Crypto.Util.ListUtil.Hints.
+  Export Crypto.Util.CPSUtil.Hints Crypto.Util.Prod.Hints.
+  Export Crypto.Util.ZUtil.Modulo.PullPush.Hints.
+  Export Crypto.Util.ZUtil.Zselect.Hints.
+  Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  Export Crypto.Util.ZUtil.CPS.Hints.
+  Export Crypto.Arithmetic.PrimeFieldTheorems.Hints.
+  Export Tuple.Hints.
+  Global Existing Instance mod_eq_equiv.
+  Hint Rewrite Associational.eval_nil Associational.eval_cons Associational.eval_app : push_basesystem_eval.
+  Hint Rewrite Associational.eval_map_multerm : push_basesystem_eval.
+  Hint Rewrite Associational.mul_cps_id : uncps.
+  Hint Rewrite Associational.eval_mul : push_basesystem_eval.
+  Hint Rewrite Associational.split_cps_id : uncps.
+  Hint Rewrite @Associational.eval_split using auto : push_basesystem_eval.
+  Hint Rewrite Associational.reduce_cps_id : uncps.
+  Hint Rewrite Associational.eval_reduce using (lia || assumption) : push_basesystem_eval.
+  Hint Rewrite Associational.negate_snd_id : uncps.
+  Hint Rewrite Associational.eval_negate_snd : push_basesystem_eval.
+  Hint Rewrite Positional.eval_unit Positional.eval_single : push_basesystem_eval.
+  Export B.Hints.
+  Global Hint Opaque div modulo : uncps.
+  Hint Rewrite @div_id @modulo_id : uncps.
+
+  Global Hint Unfold
+         id
+         Associational.eval
+         Associational.multerm
+         Associational.mul_cps
+         Associational.mul
+         Associational.split_cps
+         Associational.split
+         Associational.reduce_cps
+         Associational.reduce
+         Associational.negate_snd_cps
+         Associational.negate_snd
+         Associational.carryterm_cps
+         Associational.carryterm
+         Associational.carry_cps
+         Associational.carry
+         Positional.to_associational_cps
+         Positional.to_associational
+         Positional.eval
+         Positional.zeros
+         Positional.add_to_nth_cps
+         Positional.add_to_nth
+         Positional.place_cps
+         Positional.place
+         Positional.from_associational_cps
+         Positional.from_associational
+         Positional.carry_cps
+         Positional.carry
+         Positional.chained_carries_cps
+         Positional.chained_carries
+         Positional.chained_carries_reduce_cps_step
+         Positional.chained_carries_reduce_cps
+         Positional.chained_carries_reduce
+         Positional.encode
+         Positional.add_cps
+         Positional.mul_cps
+         Positional.reduce_cps
+         Positional.carry_reduce_cps
+         Positional.negate_snd_cps
+         Positional.split_cps
+         Positional.scmul_cps
+         Positional.unbalanced_sub_cps
+         Positional.sub_cps
+         Positional.sub
+         Positional.opp_cps
+         Positional.Fencode
+         Positional.Fdecode
+         Positional.eval_from
+         Positional.select_cps
+         Positional.select
+         modulo div modulo_cps div_cps
+         id_tuple_with_alt id_tuple'_with_alt id_tuple_with_alt_cps'
+         Z.add_get_carry_full Z.add_get_carry_full_cps
+    : basesystem_partial_evaluation_unfolder.
+
+  Global Hint Unfold
+         B.limb ListUtil.sum ListUtil.sum_firstn
+         CPSUtil.Tuple.mapi_with_cps CPSUtil.Tuple.mapi_with'_cps CPSUtil.flat_map_cps CPSUtil.on_tuple_cps CPSUtil.fold_right_cps2
+         Decidable.dec Decidable.dec_eq_Z
+         id_tuple_with_alt id_tuple'_with_alt id_tuple_with_alt_cps'
+         Z.add_get_carry_full Z.add_get_carry_full_cps Z.mul_split Z.mul_split_cps Z.mul_split_cps'
+    : basesystem_partial_evaluation_unfolder.
+
+  Hint Rewrite <-@F.of_Z_add : pull_FofZ.
+  Hint Rewrite <-@F.of_Z_mul : pull_FofZ.
+  Hint Rewrite <-@F.of_Z_sub : pull_FofZ.
+  Hint Rewrite <-@F_of_Z_opp : pull_FofZ.
+End Hints.
