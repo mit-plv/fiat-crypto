@@ -1102,6 +1102,7 @@ Global Strategy 1000 [
         dag.gensym
     ].
 Notation dag := dag.t.
+Declare Scope dagM_scope.
 Delimit Scope dagM_scope with dagM.
 Bind Scope dagM_scope with dag.M.
 Notation "x <- y ; f" := (dag.bind y (fun x => f%dagM)) : dagM_scope.
@@ -2971,7 +2972,12 @@ Definition reverse_lookup_mem (st : mem_state) (i : idx) : option (N * idx)
        (List.find (fun v => N.eqb i (fst (snd v)))
                   (List.enumerate st)).
 
+Local Unset Boolean Equality Schemes.
+Local Unset Decidable Equality Schemes.
 Record symbolic_state := { dag_state :> dag ; symbolic_reg_state :> reg_state ; symbolic_flag_state :> flag_state ; symbolic_mem_state :> mem_state }.
+Local Set Boolean Equality Schemes.
+Local Set Decidable Equality Schemes.
+
 Definition update_dag_with (st : symbolic_state) (f : dag -> dag) : symbolic_state
   := {| dag_state := f st.(dag_state); symbolic_reg_state := st.(symbolic_reg_state) ; symbolic_flag_state := st.(symbolic_flag_state) ; symbolic_mem_state := st.(symbolic_mem_state) |}.
 Definition update_reg_with (st : symbolic_state) (f : reg_state -> reg_state) : symbolic_state
@@ -3025,6 +3031,8 @@ Global Instance ShowLines_symbolic_state : ShowLines symbolic_state :=
 
 
 Module error.
+  Local Unset Boolean Equality Schemes.
+  Local Unset Decidable Equality Schemes.
   Variant error :=
   | get_flag (f : FLAG) (s : flag_state)
   | get_reg (r : nat + REG) (s : reg_state)

@@ -11,6 +11,7 @@ Local Open Scope char_scope.
 Local Open Scope string_scope.
 
 Definition ParserAction T := string -> list (T * string).
+Declare Scope parse_scope.
 Delimit Scope parse_scope with parse.
 Bind Scope parse_scope with ParserAction.
 Definition parse_impossible {T} : ParserAction T

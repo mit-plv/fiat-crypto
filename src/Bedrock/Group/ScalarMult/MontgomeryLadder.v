@@ -113,14 +113,14 @@ Section __.
        preconditions. This is a hacky workaround. *)
     (* TODO: figure out a cleaner way to do this *)
     Lemma unsigned_of_Z_1 : word.unsigned (@word.of_Z _ word 1) = 1.
-    Proof. exact word.unsigned_of_Z_1. Qed.
+    Proof using word_ok. exact word.unsigned_of_Z_1. Qed.
     Lemma unsigned_of_Z_0 : word.unsigned (@word.of_Z _ word 0) = 0.
-    Proof. exact word.unsigned_of_Z_0. Qed.
+    Proof using word_ok. exact word.unsigned_of_Z_0. Qed.
     Hint Resolve unsigned_of_Z_0 unsigned_of_Z_1 : compiler.
     Import bedrock2.NotationsCustomEntry.
  Lemma compile_sctestbit : forall {tr mem locals functions} bs x i,
    let v := Z.testbit x (Z.of_nat i) in
-   forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+   forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
      R x_ptr x_var wi i_var out_var,
 
      (bs$@x_ptr * R)%sep mem ->
@@ -146,7 +146,7 @@ Section __.
         Functions := functions }>
      bedrock_cmd:($out_var = (load1($x_var+$i_var>>coq:(3))>>($i_var&coq:(7)))&coq:(1); coq:(k_impl))
      <{ pred (nlet_eq [out_var] v k) }>.
- Proof.
+ Proof using mem_ok scalarbits word_ok.
    repeat straightline.
    repeat (eexists; split; repeat straightline'; eauto); cbn [Semantics.interp_binop].
 
@@ -199,14 +199,14 @@ Section __.
 
 
   Lemma cswap_same {A} b (a : A): cswap b a a = \<a,a\>.
-  Proof.
+  Proof using Type.
     destruct b; reflexivity.
   Qed.
-  
+
   Local Ltac ecancel_assumption ::= ecancel_assumption_impl.
 
   Lemma scalarbits_bound : Z.of_nat scalarbits < 2 ^ width.
-  Proof.
+  Proof using scalarbits_small.
     rewrite <- scalarbits_small.
     unfold word.wrap.
     apply Z_mod_lt.
@@ -242,7 +242,7 @@ Section __.
   
   Lemma word_unsigned_of_Z_eq z
     : 0 <= z < 2 ^ width -> word.unsigned (word.of_Z z : word) = z.
-  Proof.
+  Proof using word_ok.
     intros.
     rewrite word.unsigned_of_Z.
     rewrite word.wrap_small; auto.
@@ -254,8 +254,8 @@ Section __.
   (*TODO: should this go in core rupicola?*)
   Lemma compile_copy_bool {tr m l functions} (x: bool) :
     let v := x in
-    forall {P} {pred: P v -> predicate}
-           {k: nlet_eq_k P v} {k_impl}
+    forall P (pred: P v -> predicate)
+           (k: nlet_eq_k P v) k_impl
            x_expr var,
 
       WeakestPrecondition.dexpr m l x_expr (word.of_Z (Z.b2z v)) ->
@@ -273,7 +273,7 @@ Section __.
          Functions := functions }>
       cmd.seq (cmd.set var x_expr) k_impl
       <{ pred (nlet_eq [var] v k) }>.
-  Proof.
+  Proof using Type.
     intros.
     repeat straightline.
     eauto.
@@ -317,13 +317,13 @@ Section __.
       repeat compile_step.
       eapply compile_nlet_as_nlet_eq.
       eapply compile_felem_cswap; repeat compile_step.
-      
+
       eapply compile_nlet_as_nlet_eq.
       eapply compile_felem_cswap; repeat compile_step.
 
       compile_step.
     Qed.
-    
+
   End MontLadder.
 End __.
 

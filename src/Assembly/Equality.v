@@ -28,6 +28,7 @@ Local Ltac t_dec :=
             | exfalso; assumption
             | apply unreflect_bool; reflexivity ].
 
+Declare Scope REG_scope.
 Delimit Scope REG_scope with REG.
 Bind Scope REG_scope with REG.
 
@@ -46,6 +47,7 @@ Definition CONST_dec_bl (x y : CONST) : CONST_beq x y = true -> x = y := proj1 (
 Definition CONST_dec_lb (x y : CONST) : x = y -> CONST_beq x y = true := proj2 (Z.eqb_eq x y).
 Definition CONST_eq_dec (x y : CONST) : {x = y} + {x <> y} := Z.eq_dec x y.
 
+Declare Scope CONST_scope.
 Delimit Scope CONST_scope with CONST.
 Bind Scope CONST_scope with CONST.
 
@@ -59,6 +61,7 @@ Proof. rewrite <- CONST_beq_eq; destruct (x =? y)%CONST; intuition congruence. Q
 Global Instance CONST_beq_compat : Proper (eq ==> eq ==> eq) CONST_beq | 10.
 Proof. repeat intro; subst; reflexivity. Qed.
 
+Declare Scope JUMP_LABEL_scope.
 Delimit Scope JUMP_LABEL_scope with JUMP_LABEL.
 Bind Scope JUMP_LABEL_scope with JUMP_LABEL.
 
@@ -85,6 +88,7 @@ Lemma JUMP_LABEL_beq_neq x y : (x =? y)%JUMP_LABEL = false <-> x <> y.
 Proof. rewrite <- JUMP_LABEL_beq_eq; destruct (x =? y)%JUMP_LABEL; intuition congruence. Qed.
 Global Instance JUMP_LABEL_beq_compat : Proper (eq ==> eq ==> eq) JUMP_LABEL_beq | 10.
 Proof. repeat intro; subst; reflexivity. Qed.
+Declare Scope AccessSize_scope.
 Delimit Scope AccessSize_scope with AccessSize.
 Bind Scope AccessSize_scope with AccessSize.
 
@@ -98,6 +102,7 @@ Proof. rewrite <- AccessSize_beq_eq; destruct (x =? y)%AccessSize; intuition con
 Global Instance AccessSize_beq_compat : Proper (eq ==> eq ==> eq) AccessSize_beq | 10.
 Proof. repeat intro; subst; reflexivity. Qed.
 
+Declare Scope MEM_scope.
 Delimit Scope MEM_scope with MEM.
 Bind Scope MEM_scope with MEM.
 
@@ -129,6 +134,7 @@ Proof. rewrite <- MEM_beq_eq; destruct (x =? y)%MEM; intuition congruence. Qed.
 Global Instance MEM_beq_compat : Proper (eq ==> eq ==> eq) MEM_beq | 10.
 Proof. repeat intro; subst; reflexivity. Qed.
 
+Declare Scope FLAG_scope.
 Delimit Scope FLAG_scope with FLAG.
 Bind Scope FLAG_scope with FLAG.
 
@@ -142,6 +148,7 @@ Proof. rewrite <- FLAG_beq_eq; destruct (x =? y)%FLAG; intuition congruence. Qed
 Global Instance FLAG_beq_compat : Proper (eq ==> eq ==> eq) FLAG_beq | 10.
 Proof. repeat intro; subst; reflexivity. Qed.
 
+Declare Scope OpCode_scope.
 Delimit Scope OpCode_scope with OpCode.
 Bind Scope OpCode_scope with OpCode.
 
@@ -155,6 +162,7 @@ Proof. rewrite <- OpCode_beq_eq; destruct (x =? y)%OpCode; intuition congruence.
 Global Instance OpCode_beq_compat : Proper (eq ==> eq ==> eq) OpCode_beq | 10.
 Proof. repeat intro; subst; reflexivity. Qed.
 
+Declare Scope OpPrefix_scope.
 Delimit Scope OpPrefix_scope with OpPrefix.
 Bind Scope OpPrefix_scope with OpPrefix.
 
@@ -168,6 +176,7 @@ Proof. rewrite <- OpPrefix_beq_eq; destruct (x =? y)%OpPrefix; intuition congrue
 Global Instance OpPrefix_beq_compat : Proper (eq ==> eq ==> eq) OpPrefix_beq | 10.
 Proof. repeat intro; subst; reflexivity. Qed.
 
+Declare Scope ARG_scope.
 Delimit Scope ARG_scope with ARG.
 Bind Scope ARG_scope with ARG.
 
@@ -205,6 +214,7 @@ Proof. rewrite <- ARG_beq_eq; destruct (x =? y)%ARG; intuition congruence. Qed.
 Global Instance ARG_beq_compat : Proper (eq ==> eq ==> eq) ARG_beq | 10.
 Proof. repeat intro; subst; reflexivity. Qed.
 
+Declare Scope NormalInstruction_scope.
 Delimit Scope NormalInstruction_scope with NormalInstruction.
 Bind Scope NormalInstruction_scope with NormalInstruction.
 
@@ -234,6 +244,7 @@ Proof. rewrite <- NormalInstruction_beq_eq; destruct (x =? y)%NormalInstruction;
 Global Instance NormalInstruction_beq_compat : Proper (eq ==> eq ==> eq) NormalInstruction_beq | 10.
 Proof. repeat intro; subst; reflexivity. Qed.
 
+Declare Scope RawLine_scope.
 Delimit Scope RawLine_scope with RawLine.
 Bind Scope RawLine_scope with RawLine.
 
@@ -277,6 +288,7 @@ Proof. rewrite <- RawLine_beq_eq; destruct (x =? y)%RawLine; intuition congruenc
 Global Instance RawLine_beq_compat : Proper (eq ==> eq ==> eq) RawLine_beq | 10.
 Proof. repeat intro; subst; reflexivity. Qed.
 
+Declare Scope Line_scope.
 Delimit Scope Line_scope with Line.
 Bind Scope Line_scope with Line.
 
@@ -307,6 +319,7 @@ Proof. rewrite <- Line_beq_eq; destruct (x =? y)%Line; intuition congruence. Qed
 Global Instance Line_beq_compat : Proper (eq ==> eq ==> eq) Line_beq | 10.
 Proof. repeat intro; subst; reflexivity. Qed.
 
+Declare Scope Lines_scope.
 Delimit Scope Lines_scope with Lines.
 Bind Scope Lines_scope with Lines.
 

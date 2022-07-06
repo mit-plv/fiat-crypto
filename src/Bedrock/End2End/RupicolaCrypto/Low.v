@@ -168,8 +168,8 @@ Section CompileBufPolymorphic.
   Local Notation "xs $T@ a" := (array pT sz a%word xs%list) (at level 10, format "xs $T@ a").
   Local Notation "xs $@ a" := (array ptsto (word.of_Z 1) a%word xs%list) (at level 10, format "xs $@ a").
   Implicit Types (t : Semantics.trace) (l : locals) (m : mem) (k : Syntax.cmd).
-    
-  
+
+
   Definition buffer_at c b a :=
     (b$T@a *
     (Lift1Prop.ex1 (fun s => emp (sz*length b + length s = sz*c)%Z
@@ -180,7 +180,7 @@ Section CompileBufPolymorphic.
     length bs = sz :>Z /\ forall a, Lift1Prop.iff1 (pT a x) (bs$@a)).
   Lemma _dealloc_array_T xs : exists bs, length bs = sz * length xs :>Z
     /\ forall a, Lift1Prop.iff1 (xs$T@a) (bs$@a).
-  Proof.
+  Proof using dealloc_T.
     induction xs as [|x xs'].
     { exists nil; cbn; split; eauto; rewrite ?Z.mul_0_r; reflexivity. }
     { destruct IHxs' as [bs' [Hlbs' Hbs'] ].
@@ -207,8 +207,8 @@ Section CompileBufPolymorphic.
 
   Lemma compile_buf_backed_by (n : nat) (bs : list byte) :
     let v := buf_backed_by T n bs in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-           a a_var {t m l} (R: mem -> Prop),
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
+           a a_var t m l (R: mem -> Prop),
       (bs$@a * R)%sep m ->
       sz * n = length bs ->
       (let v := v in
@@ -220,7 +220,7 @@ Section CompileBufPolymorphic.
       <{ Trace := t; Memory := m; Locals := l; Functions := e }>
       k_impl
       <{ pred (nlet_eq [a_var] v k) }>.
-  Proof.
+  Proof using Type.
     intros * HA HB HC; eapply HC.
     cbv [buffer_at]; cbn [array]; sepsimpl; trivial; [].
     eexists; sepsimpl; cbn [length]; rewrite Z.mul_0_r, ?Z.add_0_l, ?HB; trivial; [].
@@ -229,8 +229,8 @@ Section CompileBufPolymorphic.
 
   Lemma compile_buf_as_array (n : nat) elts :
     let v := buf_as_array elts in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-    a a_var {t m l} (R: mem -> Prop),
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
+    a a_var t m l (R: mem -> Prop),
       (buffer_at n elts a * R)%sep m ->
       length elts = n ->
       (let v := v in
@@ -242,7 +242,7 @@ Section CompileBufPolymorphic.
          <{ Trace := t; Memory := m; Locals := l; Functions := e }>
          k_impl
          <{ pred (nlet_eq [a_var] v k) }>).
-  Proof.
+  Proof using Type.
     intros * HA HB HC HD HE HF. eapply HF; subst n.
   Qed.
   (*
@@ -256,8 +256,8 @@ intros * HA HB HC HD; eapply HC; subst n.
 
  Lemma compile_buf_make_stack (n:nat) :
     let v := buf_make T n in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-    a_var {t m l} (R: mem -> Prop),
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
+    a_var t m l (R: mem -> Prop),
       (sz * n) mod Memory.bytes_per_word 32 = 0 ->
       R m ->
       (let v:= v in
@@ -273,7 +273,7 @@ intros * HA HB HC HD; eapply HC; subst n.
       $k_impl
      )
     <{ pred (nlet_eq [a_var] v k) }>.
-  Proof.
+  Proof using dealloc_T.
     repeat straightline; split; eauto.
     intros.
     (* straightline_stackalloc with lia for length *)
@@ -348,7 +348,7 @@ intros * HA HB HC HD; eapply HC; subst n.
     rewrite app_length, Nat2Z.inj_add, Hlbs, Hm in Hmm; exact Hmm. }
   Qed.
 
-  
+
   (*TODO: this is a bit of a hack, is there a better way?*)
   (* This marker is inserted to separate code from different blocks.
      When encountered, rupicola applies compile_skip
@@ -358,7 +358,7 @@ intros * HA HB HC HD; eapply HC; subst n.
 
   Notation skip_and_then k := (nlet_eq [] skip_marker (fun _ _ => k)).
 
-  
+
   Lemma compile_buf_append {t m l} var ax_expr arr_var
         (buf : buffer_t T) (arr : array_t T) (c : Z) (buf_ptr : word) :
     let v := buf_append buf arr in
@@ -367,7 +367,7 @@ intros * HA HB HC HD; eapply HC; subst n.
     (*TODO: need var_app notin l?
       Probably not, but should be checked
      *)
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {fill_impl k_impl} R,
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) fill_impl k_impl R,
       (buffer_at c buf buf_ptr * R)%sep m ->
       DEXPR m l ax_expr ax ->
       (length buf + length arr <= c) ->
@@ -391,8 +391,8 @@ intros * HA HB HC HD; eapply HC; subst n.
                            $(cmd.unset arr_var);
                            $k_impl
                           )
-                          <{ pred (nlet_eq [var] v k) }>.  
-  Proof.
+                          <{ pred (nlet_eq [var] v k) }>.
+  Proof using Type.
     repeat straightline.
     eexists; split; eauto.
     repeat straightline.
@@ -412,7 +412,7 @@ intros * HA HB HC HD; eapply HC; subst n.
     eapply Hk; clear Hk.
     seprewrite open_constr:(array_append _ _ buf arr).
     rewrite app_length, Nat2Z.inj_add, Z.mul_add_distr_l.
-     
+
     sepsimpl. eexists. sepsimpl; cycle 1.
     1: { use_sep_assumption. cancel; repeat ecancel_step.
       f_equiv. f_equiv. f_equal.
@@ -421,11 +421,11 @@ intros * HA HB HC HD; eapply HC; subst n.
       pose proof word.unsigned_range sz.
       nia. }
     { pose proof word.unsigned_range sz.
-      rewrite skipn_length. 
+      rewrite skipn_length.
       nia. }
   Qed.
 
-  
+
   Lemma compile_buf_push {t m l} var ax_expr arr_var
         (buf : buffer_t T) (x : T) (c : Z) (buf_ptr : word) :
     let v := buf_push buf x in
@@ -434,7 +434,7 @@ intros * HA HB HC HD; eapply HC; subst n.
     (*TODO: need var_app notin l?
       Probably not, but should be checked
      *)
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {fill_impl k_impl} R,
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) fill_impl k_impl R,
       (buffer_at c buf buf_ptr * R)%sep m ->
       DEXPR m l ax_expr ax ->
       (length buf + 1 <= c) ->
@@ -459,7 +459,7 @@ intros * HA HB HC HD; eapply HC; subst n.
                            $k_impl
                           )
                           <{ pred (nlet_eq [var] v k) }>.
-  Proof.
+  Proof using dealloc_T.
     intros.  eapply compile_buf_append with (arr:=[x]).
     { ecancel_assumption. }
     all: try eassumption.
@@ -481,7 +481,7 @@ intros * HA HB HC HD; eapply HC; subst n.
   Lemma compile_buf_split {t m l} (n : nat) (bs : buffer_t T) :
     let v := buf_split bs in
     let offset := (word.of_Z (word.unsigned sz * Z.of_nat (length bs))) in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
            c a a_var b_var  R,
       let b := word.add a offset in
       (buffer_at c bs a * R)%sep m ->
@@ -495,11 +495,11 @@ intros * HA HB HC HD; eapply HC; subst n.
       <{ Trace := t; Memory := m; Locals := l; Functions := e }>
         k_impl
       <{ pred (nlet_eq [a_var; b_var] v k) }>.
-  Proof.
+  Proof using Type.
     intros * HA HB HC; eapply HC; clear HC.
     unfold buffer_at in *.
     cbn [array]; sepsimpl; trivial; [].
-    
+
     refine (subrelation_refl Lift1Prop.impl1 _ _ _ m HA).
     cancel.
     eapply Proper_sep_impl1; [intro; tauto|].
@@ -516,11 +516,11 @@ intros * HA HB HC HD; eapply HC; subst n.
     rewrite (Radd_0_l word.ring_theory);eauto.
   Qed.
 
-  
+
   Lemma compile_buf_unsplit {t m l} (n : nat) (a : array_t T) (bs : buffer_t T) :
     let v := buf_unsplit a bs in
     forall offset lenbs (*quantified for better sep condition resolution*),
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
            c a var  R,
       let b := word.add a offset in
       (bs$T@a * buffer_at (c - lenbs) nil b * R)%sep m ->
@@ -537,12 +537,12 @@ intros * HA HB HC HD; eapply HC; subst n.
       <{ Trace := t; Memory := m; Locals := l; Functions := e }>
         k_impl
       <{ pred (nlet_eq [var] v k) }>.
-  Proof.
+  Proof using Type.
     intros * HA Hlen Hoff HB HC; eapply HC; clear HC.
     subst lenbs offset.
     unfold buffer_at in *.
     cbn [array]; sepsimpl; trivial; [].
-    
+
     refine (subrelation_refl Lift1Prop.impl1 _ _ _ m HA).
     eapply Proper_sep_impl1; [|intro; tauto].
     eapply Proper_sep_impl1; [ intro; tauto|].
@@ -568,7 +568,7 @@ intros * HA HB HC HD; eapply HC; subst n.
   Section Deprecated.
     Local Lemma deprecated_do_not_use_compile_buf_append {t m l} var (buf : buffer_t T) (arr : array_t T) (c : Z) (a : word) :
     let v := buf_append buf arr in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {fill_impl k_impl} R,
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) fill_impl k_impl R,
     (buffer_at c buf a * R)%sep m ->
     (length buf + length arr <= c) ->
     (forall uninit Rbuf,
@@ -586,7 +586,7 @@ intros * HA HB HC HD; eapply HC; subst n.
     <{ Trace := t; Memory := m; Locals := l; Functions := e }>
       bedrock_cmd:($fill_impl; $k_impl)
     <{ pred (nlet_eq [var] v k) }>.
-  Proof.
+  Proof using Type.
     repeat straightline.
     unfold buffer_at in *.
     eapply sep_comm, sep_assoc, sep_comm in H; sepsimpl.
@@ -609,13 +609,13 @@ intros * HA HB HC HD; eapply HC; subst n.
       pose proof word.unsigned_range sz.
       nia. }
     { pose proof word.unsigned_range sz.
-      rewrite skipn_length. 
+      rewrite skipn_length.
       nia. }
   Qed.
 
   Lemma deprecated_do_not_use_compile_buf_push {t m l} var (buf : buffer_t T) (x : T) (c : Z) (a : word) :
     let v := buf_push buf x in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {fill_impl k_impl} R,
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) fill_impl k_impl R,
     (buffer_at c buf a * R)%sep m ->
     (length buf + 1 <= c) ->
     (forall uninit Rbuf,
@@ -633,7 +633,7 @@ intros * HA HB HC HD; eapply HC; subst n.
     <{ Trace := t; Memory := m; Locals := l; Functions := e }>
       bedrock_cmd:($fill_impl; $k_impl)
     <{ pred (nlet_eq [var] v k) }>.
-  Proof.
+  Proof using dealloc_T.
     intros.  eapply deprecated_do_not_use_compile_buf_append with (arr:=[x]).  {
     ecancel_assumption. } { eassumption. } intros.  eapply Proper_cmd;
     [eapply Proper_call| |eapply H1].  2:{ ecancel_assumption. } 2:{ cbn
@@ -648,7 +648,7 @@ intros * HA HB HC HD; eapply HC; subst n.
     :0 <= z < length l1 ->
      (firstn (Z.to_nat z) l1 ++ [Arrays.ListArray.get l1 z])
      = firstn (Z.to_nat (z + 1)) l1.
-  Proof.
+  Proof using Type.
     unfold Arrays.ListArray.get.
     unfold cast, Convertible_Z_nat.
     intros.
@@ -674,7 +674,7 @@ intros * HA HB HC HD; eapply HC; subst n.
            (λ tok_acc : Loops.ExitToken.t * Arrays.ListArray.t word,
                Loops.ExitToken.get (fst tok_acc)) (Loops.z_range z len)
            (false, firstn (Z.to_nat z) l1 ++ skipn (Z.to_nat z) l2)) = l1.
-  Proof.
+  Proof using Type.
     intros Hlen1 Hlen2 Hlen_bound Hz.
     remember (Loops.z_range z len) as lst.
     revert z Hz Heqlst.
@@ -749,7 +749,7 @@ intros * HA HB HC HD; eapply HC; subst n.
           rewrite Nat.min_l; try lia.
           rewrite word.unsigned_of_Z.
           rewrite word.wrap_small by lia; auto.
-          change (@Naive.rep 32) with (@word.rep 32 word).          
+          change (@Naive.rep 32) with (@word.rep 32 word).
           erewrite <- (Nat2Z.id (length l1)).
           apply Z2Nat.inj_le; lia.
         }
@@ -757,12 +757,12 @@ intros * HA HB HC HD; eapply HC; subst n.
     }
   Qed.
 
-  
+
   Lemma memcpy_identity (l1 l2 : list word) len
     : word.unsigned len = length l1 ->
       word.unsigned len = length l2 ->
       list_memcpy len l1 l2 = (l1, l1).
-  Proof.
+  Proof using Type.
     unfold list_memcpy, Loops.ranged_for_u, Loops.ranged_for_w.
     unfold Loops.w_body_tok.
     rewrite <- Loops.nd_as_ranged_for.
@@ -803,22 +803,22 @@ intros * HA HB HC HD; eapply HC; subst n.
 
 Lemma compile_byte_memcpy (n : nat) (bs bs2 : list byte) :
     let v := copy bs in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-           len a a2 len_expr a_expr a2_var {t m l} (R: mem -> Prop),
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
+           len a a2 len_expr a_expr a2_var t m l (R: mem -> Prop),
 
       map.get l a2_var = Some a2 ->
-      
+
       (bs$@a * bs2$@a2 * R)%sep m ->
-      
+
       spec_of_unsizedlist_memcpy e ->
 
-      
+
       (word.unsigned len) * 4 = Z.of_nat (List.length bs) ->
       (word.unsigned len) * 4 = Z.of_nat (List.length bs2) ->
-      
+
       DEXPR m l a_expr a ->
       DEXPR m l len_expr len ->
-      
+
       (let v := v in
        forall m,
          (bs$@a * bs$@a2 * R)%sep m ->
@@ -831,7 +831,7 @@ Lemma compile_byte_memcpy (n : nat) (bs bs2 : list byte) :
                   [len_expr; a_expr; expr.var a2_var])
         k_impl
       <{ pred (nlet_eq [a2_var] v k) }>.
-  Proof.
+  Proof using Type.
     repeat straightline.
     exists [len; a; a2]; split.
     {
@@ -920,7 +920,7 @@ Lemma compile_byte_memcpy (n : nat) (bs bs2 : list byte) :
     intuition subst.
     exists l; intuition.
 
-    
+
     eapply H6.
     revert H10.
     rewrite !memcpy_identity.
@@ -941,10 +941,10 @@ Lemma compile_byte_memcpy (n : nat) (bs bs2 : list byte) :
       eapply Proper_sep_impl1.
       {
         clear m' m'' H''.
-        intros m'' H''. 
+        intros m'' H''.
         eapply (ArrayCasts.words_of_bytes a bs); eauto.
-        {          
-          cbn.         
+        {
+          cbn.
           cbv [Arrays.listarray_value
                  Arrays.ai_width
                  Arrays.ai_repr
@@ -966,10 +966,10 @@ Lemma compile_byte_memcpy (n : nat) (bs bs2 : list byte) :
       }
       {
         clear m' m'' H''.
-        intros m'' H''. 
+        intros m'' H''.
         eapply (ArrayCasts.words_of_bytes a2 bs); eauto.
-        {          
-          cbn.         
+        {
+          cbn.
           cbv [Arrays.listarray_value
                  Arrays.ai_width
                  Arrays.ai_repr
@@ -1021,9 +1021,9 @@ Lemma compile_byte_memcpy (n : nat) (bs bs2 : list byte) :
       assert (length bs2 = (Z.to_nat len * 4)%nat) as H7 by lia.
       rewrite H7.
       rewrite Nat.mod_mul; lia.
-    }      
+    }
   Qed.
-  
+
 End CompileBufPolymorphic.
 
 Ltac compile_buf_append:=
@@ -1054,7 +1054,7 @@ Section CompileBufByte.
 
   Lemma compile_buf_push_byte {t m l} var buf_expr len_expr x_expr (buf : buffer_t T) (x : T) (c : Z) (a : word) :
     let v := buf_push buf x in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl} R,
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl R,
     (buffer_at c buf a * R)%sep m ->
     (length buf + 1 <= c) ->
 
@@ -1071,7 +1071,7 @@ Section CompileBufByte.
     <{ Trace := t; Memory := m; Locals := l; Functions := e }>
       bedrock_cmd:(store1($buf_expr+$len_expr, $x_expr); $k_impl)
     <{ pred (nlet_eq [var] v k) }>.
-  Proof.
+  Proof using Type.
     intros.
     eapply deprecated_do_not_use_compile_buf_push with (pT := pT) (sz:=sz).
     { clear. subst pT; subst sz. intros x.
@@ -1104,14 +1104,14 @@ Section CompileBufByte.
     eauto.
   Qed.
 
-  
+
  (*Specialized to bytes.
    TODO: necessary?
   *)
  Lemma compile_buf_make_stack_bytes (n:nat) :
     let v := buf_make byte n in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-    a_var {t m l} (R: mem -> Prop),
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
+    a_var t m l (R: mem -> Prop),
       (sz * n) mod Memory.bytes_per_word 32 = 0 ->
       R m ->
       (let v:= v in
@@ -1127,7 +1127,7 @@ Section CompileBufByte.
       $k_impl
      )
     <{ pred (nlet_eq [a_var] v k) }>.
-  Proof.
+  Proof using Type.
     intros; eapply compile_buf_make_stack; eauto.
     intro x; exists [x]; intuition (try lia).
     unfold pT.
@@ -1153,7 +1153,7 @@ Section CompileBufWord32.
 
   Lemma compile_buf_push_word32 {t m l} var buf_expr len_expr x_expr (buf : buffer_t T) (x : T) (c : Z) (a : word) :
     let v := buf_push buf x in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl} R,
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl R,
     (buffer_at c buf a * R)%sep m ->
     (length buf + 1 <= c) ->
 
@@ -1171,7 +1171,7 @@ Section CompileBufWord32.
     <{ Trace := t; Memory := m; Locals := l; Functions := e }>
       bedrock_cmd:(store($buf_expr+$len_expr<<$2,$x_expr); $k_impl)
     <{ pred (nlet_eq [var] v k) }>.
-  Proof.
+  Proof using Type.
     intros.
     eapply deprecated_do_not_use_compile_buf_push with (pT := pT) (sz:=sz).
     { clear. subst pT; subst sz. intros x.
@@ -1250,11 +1250,11 @@ Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
 Instance p_field_representation : FieldRepresentation := field_representation 5 (2^130) [(1,5)].
 
 (*Set Printing All.*)
-  
+
 Lemma compile_bytes_as_felem_inplace elts :
   let v := bytes_as_felem_inplace elts in
-  forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-         a (a_var : string) {t m l e} (R: mem -> Prop),
+  forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
+         a (a_var : string) t m l e (R: mem -> Prop),
     (buffer_at byte (word.of_Z 1) ptsto felem_size_in_bytes elts a * R)%sep m ->
     length elts = encoded_felem_size_in_bytes ->
     (let v := v in
@@ -1280,7 +1280,7 @@ Definition bytes_of_w32s (w32s: array_t word) : array_t byte :=
 
 Lemma compile_bytes_of_w32s {tr mem locals functions} w32s :
       let v := bytes_of_w32s w32s in
-      forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl : cmd}
+      forall P (pred: P v -> predicate) (k: nlet_eq_k P v) (k_impl : cmd)
         R (var : string) a_ptr,
 
         (*Note: hardcoded length of words here*)
@@ -1311,7 +1311,7 @@ Admitted.
 
 Lemma compile_w32s_of_bytes {tr mem locals functions} bytes :
       let v := w32s_of_bytes bytes in
-      forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl : cmd}
+      forall P (pred: P v -> predicate) (k: nlet_eq_k P v) (k_impl : cmd)
         R (var : string) a_ptr,
 
         (*Note: hardcoded length of words here*)
@@ -1453,7 +1453,7 @@ Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ skip_marker _))) 
 Lemma compile_array_split_at {tr} {mem : mem} {locals functions}
       (*TODO: not bytes*) (a : array_t _) idx a_ptr (*a_expr idx_expr*):
       let v := array_split_at idx a in
-      forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl: cmd}
+      forall P (pred: P v -> predicate) (k: nlet_eq_k P v) (k_impl: cmd)
         R (varfst varsnd: string),
 
       (idx <= Datatypes.length a)%nat ->
@@ -1616,7 +1616,7 @@ Proof.
   eapply compile_buf_push_byte.
   ecancel_assumption.
   admit.
-  
+
   repeat compile_step.
   shelve.
   shelve.
@@ -1862,7 +1862,7 @@ Notation "'let/n' ( x0 , y0 , z0 , t0 , x1 , y1 , z1 , t1 , x2 , y2 , z2 , t2 , 
       body at level 200,
       only parsing).
 
-(* This is the function that should be compiled by Rupicola. 
+(* This is the function that should be compiled by Rupicola.
    TODO: either prove this equivalent to the above older version
    or directly adapt the proof below to fit this function.
  *)
@@ -1889,7 +1889,7 @@ Definition chacha20_block (*256bit*)key (*32bit+96bit*)nonce (*512 bits*)st :=
   let/n ss := buf_make word 16 in
   let/n ss := buf_append ss (copy st) in
   let/n ss := buf_as_array ss in
-  
+
   let/n qv0 := array_get ss 0 (word.of_Z 0) in
   let/n qv1 := array_get ss 1 (word.of_Z 0) in
   let/n qv2 := array_get ss 2 (word.of_Z 0) in
@@ -2142,7 +2142,7 @@ Lemma chacha20_blocks_equiv :
         qv4,qv5,qv6,qv7,
         qv8,qv9,qv10,qv11,
         qv12,qv13,qv14,qv15\> in
-     
+
      let/n ss := array_put ss 0 qv0 in
      let/n ss := array_put ss 1 qv1 in
      let/n ss := array_put ss 2 qv2 in
@@ -2203,7 +2203,7 @@ Proof.
     fold p1.
     set (Nat.iter 10 p0 p1).
     unfold l1, nlet; reflexivity.
-    
+
   - intros.
     unfold l, put_ss.
     destruct a as (?&?&?&?&?&?&?&?&?&?&?&?&?&?&?&?) in *.
@@ -2215,7 +2215,7 @@ Proof.
     lazymatch goal with
     | [ |- ?x = _ ] => set x
     end.
-   
+
     destruct (quarter car car3 car7 car11) as (?&?&?&?) eqn:q.
     destruct (quarter car0 car4 car8 car12) as (?&?&?&?) eqn:q0.
     destruct (quarter car1 car5 car9 car13) as (?&?&?&?) eqn:q1.
@@ -2231,7 +2231,7 @@ Proof.
     rewrite_r_auto.
     rewrite q; clear q.
     repeat straightline.
-    
+
     rewrite_quarter.
     unfold l0 in l1.
     unfold l1 in l2.
@@ -2284,7 +2284,7 @@ Proof.
     unfold l0.
     unfold l2.
     unfold l.
-    
+
     admit.
 
   - unfold p1; fold p1.
@@ -2295,7 +2295,7 @@ Proof.
       unfold array_get.
       admit.
     }
-    
+
     unfold p1, put_ss, nlet; cbn [P2.cdr P2.car].
     repeat rewrite <- H1; easy.
     *)
@@ -2548,7 +2548,7 @@ Proof.
     rewrite app_length, skipn_length, repeat_length; do 3 f_equal.
     symmetry.
     erewrite (app_assoc (repeat _ _) (repeat _ _)).
-    rewrite 
+    rewrite
       <- repeat_app.
     do 4 f_equal.
     lia.

@@ -53,6 +53,7 @@ Notation value := sequence_return (only parsing).
 Notation get_default := sequence_return (only parsing).
 
 Module Export Notations.
+  Declare Scope option_scope.
   Delimit Scope option_scope with option.
   Bind Scope option_scope with option.
 

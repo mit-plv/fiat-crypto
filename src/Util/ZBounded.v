@@ -10,6 +10,7 @@ Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Notations.
 
+Declare Scope zbounded_scope.
 Delimit Scope zbounded_scope with zbounded.
 Local Open Scope Z_scope.
 Local Set Primitive Projections.

@@ -137,6 +137,7 @@ Module Thunked.
   Definition eq : bool -> bool -> Prop := fun a b => a tt = b tt.
 
   Module Export Notations.
+    Declare Scope thunked_bool_scope.
     Delimit Scope thunked_bool_scope with thunked_bool.
     Bind Scope thunked_bool_scope with bool.
     Infix "&&" := andb : thunked_bool_scope.

@@ -73,7 +73,15 @@ Module OptionWSfun_gen (E2 : DecidableTypeOrig) (M2 : WSfun E2).
 
     Global Hint Transparent key : core.
 
-    Definition t elt := M1.t elt * M2.t elt.
+    (* Create a record so that the normal form of the type isn't exponentially sized when we nest things, see COQBUG(https://github.com/coq/coq/issues/16172) *)
+    Record underlying_map elt := { underlying :> M1.t elt * M2.t elt }.
+    Declare Scope underlying_map_scope.
+    Bind Scope underlying_map_scope with map.
+    Notation "( x , y , .. , z )" := {| underlying := (pair .. (pair x y) .. z) |} : underlying_map_scope.
+    Definition t := underlying_map.
+    Bind Scope underlying_map_scope with t.
+    Local Delimit Scope underlying_map_scope with t.
+    Local Open Scope underlying_map_scope.
 
     Module Import _Extra1.
       Definition liftK {A} (f1 : M1.key -> A) (f2 : M2.key -> A) : key -> A
@@ -161,8 +169,8 @@ Module OptionWSfun_gen (E2 : DecidableTypeOrig) (M2 : WSfun E2).
     Definition mapi elt elt' : (key -> elt -> elt') -> t elt -> t elt' := lifthoTT (@M1.mapi elt elt') (@M2.mapi elt elt').
     Definition map2 elt elt' elt'' : (option elt -> option elt' -> option elt'') -> t elt -> t elt' -> t elt'' := lift_TTT (@M1.map2 elt elt' elt'') (@M2.map2 elt elt' elt'').
     Definition elements elt (v : t elt) : list (key * elt)
-      := (List.map (fun kv => (None, snd kv)) (M1.elements (fst v)))
-           ++ List.map (fun kv => (Some (fst kv), snd kv)) (M2.elements (snd v)).
+      := (List.map (fun kv => (None, snd kv)%core) (M1.elements (fst v)))
+           ++ List.map (fun kv => (Some (fst kv), snd kv)%core) (M2.elements (snd v)).
     Definition cardinal elt (m : t elt) : nat := M1.cardinal (fst m) + M2.cardinal (snd m).
     Definition fold elt A (f : key -> elt -> A -> A) (m : t elt) (i : A) : A
       := M2.fold (fun k => f (Some k)) (snd m) (M1.fold (fun k => f (None)) (fst m) i).
@@ -365,7 +373,7 @@ Module OptionWSfun_gen (E2 : DecidableTypeOrig) (M2 : WSfun E2).
 
     Local Ltac spec_t_step_quick
       := first [ progress intros
-               | progress cbn [fst snd] in *
+               | progress cbn [fst snd underlying] in *
                | apply (f_equal2 (@pair _ _))
                | progress destruct_head'_False
                | rewrite <- andb_lazy_alt
@@ -438,14 +446,14 @@ Module OptionWSfun_gen (E2 : DecidableTypeOrig) (M2 : WSfun E2).
       Lemma find_2 : find x m = Some e -> MapsTo x e m.
       Proof using Type. clear; spec_t. Qed.
       Lemma elements_1 :
-        MapsTo x e m -> InA (@eq_key_elt _) (x,e) (elements m).
+        MapsTo x e m -> InA (@eq_key_elt _) (x,e)%core (elements m).
       Proof using Type.
         clear; spec_t.
         all: [ > right | left ]; rewrite InA_map_iff; spec_t.
         intuition eauto.
       Qed.
       Lemma elements_2 :
-        InA (@eq_key_elt _) (x,e) (elements m) -> MapsTo x e m.
+        InA (@eq_key_elt _) (x,e)%core (elements m) -> MapsTo x e m.
       Proof using Type.
         clear; spec_t.
         all: (apply M1.elements_2 + apply M2.elements_2).

@@ -2,6 +2,7 @@ Require Import Coq.Lists.List.
 Require Export Crypto.Util.FixCoqMistakes.
 Local Set Universe Polymorphism.
 Inductive dyn_list := nil | cons {T} (x : T) (xs : dyn_list).
+Declare Scope dyn_list_scope.
 Delimit Scope dyn_list_scope with dyn_list.
 Bind Scope dyn_list_scope with dyn_list.
 Infix "::" := cons : dyn_list_scope.

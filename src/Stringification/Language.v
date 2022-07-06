@@ -344,23 +344,28 @@ Module Compilers.
            | _, _ => fst xr lvl
            end.
 
-      Definition show_application (with_casts : bool) {t : type} (f : Level.Level -> string) (args : type.for_each_lhs_of_arrow (fun t => (Level.Level -> string) * ZRange.type.option.interp t)%type t)
-        : Level.Level -> string
-        := match t return type.for_each_lhs_of_arrow (fun t => (Level.Level -> string) * ZRange.type.option.interp t)%type t -> Level.Level -> string with
-           | type.base _ => fun 'tt lvl => f lvl
-           | type.arrow s d
-             => fun xs lvl
-                => let _ : forall t, Show ((Level.Level -> string) * ZRange.type.option.interp t)%type
+      Section without_prod.
+        Local Remove Hints show_lvl_prod : typeclass_instances.
+        Definition show_application (with_casts : bool) {t : type} (f : Level.Level -> string) (args : type.for_each_lhs_of_arrow (fun t => (Level.Level -> string) * ZRange.type.option.interp t)%type t)
+          : Level.Level -> string
+          := match t return type.for_each_lhs_of_arrow (fun t => (Level.Level -> string) * ZRange.type.option.interp t)%type t -> Level.Level -> string with
+             | type.base _ => fun 'tt lvl => f lvl
+             | type.arrow s d
+               => fun xs lvl
+                  => let _ : forall t, Show ((Level.Level -> string) * ZRange.type.option.interp t)%type
                        := (fun t x => maybe_wrap_cast with_casts x app_lvl) in
-                   maybe_wrap_parens (Level.ltb lvl (Level.prev app_lvl)) (f (Level.prev app_lvl) ++ show_lvl xs (-∞))
-           end args.
+                     let _ : forall t, ShowLevel ((Level.Level -> string) * ZRange.type.option.interp t)%type
+                       := fun t => ShowLevel_of_Show in
+                     maybe_wrap_parens (Level.ltb lvl (Level.prev app_lvl)) (f (Level.prev app_lvl) ++ show_lvl xs (-∞))
+             end args.
+      End without_prod.
 
       Module ident.
         Global Instance show_lvl_ident {t} : ShowLevel (ident.ident t)
           := fun idc
              => match idc with
                 | ident.Literal base.type.Z v => show_lvl_compact_Z v
-                | ident.Literal t v => show_lvl v
+                | ident.Literal _t v => show_lvl v
                 | ident.value_barrier => neg_wrap_parens "value_barrier"
                 | ident.comment _ => neg_wrap_parens "comment"
                 | ident.comment_no_keep _ => neg_wrap_parens "comment_no_keep"
@@ -608,16 +613,17 @@ Module Compilers.
              | ident.Z_lxor as idc
              | ident.Z_div as idc
              | ident.Z_modulo as idc
-             | ident.Z_eqb as idc
-             | ident.Z_ltb as idc
-             | ident.Z_leb as idc
-             | ident.Z_gtb as idc
-             | ident.Z_geb as idc
              | ident.Z_shiftr as idc
              | ident.Z_shiftl as idc
              | ident.Z_land as idc
              | ident.Z_lor as idc
                => fun '((x, xr), ((y, yr), tt)) => (show_lvl_binop idc x y, ZRange.type.base.option.None)
+             | ident.Z_eqb as idc
+             | ident.Z_ltb as idc
+             | ident.Z_leb as idc
+             | ident.Z_gtb as idc
+             | ident.Z_geb as idc
+               => fun '(x, (y, tt)) => (show_lvl_binop idc (maybe_wrap_cast with_casts x) (maybe_wrap_cast with_casts y), ZRange.type.base.option.None)
              | ident.pair _ _ as idc
                => fun '((x, xr), ((y, yr), tt)) => (show_lvl_binop_no_space idc x y, ZRange.type.base.option.None)
              | ident.fst _ _ as idc
@@ -726,7 +732,10 @@ Module Compilers.
                      (positive * (list string * (Level -> list string))) * ZRange.type.base.option.interp (type.final_codomain t))
               s d (idx : positive) (f : var s -> @API.expr var d)
             : (positive * (list string * (Level -> list string))) * ZRange.type.base.option.interp (type.final_codomain d)
-            := let n := "x" ++ Decimal.Pos.to_string idx in
+            := let n := match s with
+                        | type.base base.type.unit => "()_" ++ Decimal.Pos.to_string idx
+                        | _ => "x" ++ Decimal.Pos.to_string idx
+                        end in
                match of_string s n with
                | Some n'
                  => let '(_, (args, show_f), r) := aux d (Pos.succ idx) (f n') in

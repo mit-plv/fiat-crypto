@@ -6,6 +6,8 @@ Require Import Crypto.Util.ZUtil.EquivModulo.
 Require Import Crypto.Util.Notations.
 
 Local Open Scope Z_scope.
+Declare Scope montgomery_naive_scope.
+Declare Scope montgomery_scope.
 Delimit Scope montgomery_naive_scope with montgomery_naive.
 Delimit Scope montgomery_scope with montgomery.
 Definition montgomeryZ := Z.

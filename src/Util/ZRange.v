@@ -7,6 +7,7 @@ Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Notations.
 
+Declare Scope zrange_scope.
 Delimit Scope zrange_scope with zrange.
 Local Set Nonrecursive Elimination Schemes.
 (* COQBUG(https://github.com/coq/coq/issues/7835) *)
@@ -118,6 +119,7 @@ Proof.
 Qed.
 
 Module Export Notations.
+  Declare Scope zrange_scope.
   Delimit Scope zrange_scope with zrange.
   Notation "r[ l ~> u ]" := {| lower := l ; upper := u |} : zrange_scope.
   Infix "<=?" := is_tighter_than_bool : zrange_scope.

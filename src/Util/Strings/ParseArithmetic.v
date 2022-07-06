@@ -188,6 +188,7 @@ Redirect "log" Compute parse_num false "0xffffffff00000000ffffffffffffffffbce6fa
 
 Inductive Qexpr_poly {var : Type} := Qvar (v : var) | Qv (_ : Q) | Qeopp (a : Qexpr_poly) | Qeadd (a b : Qexpr_poly) | Qesub (a b : Qexpr_poly) | Qemul (a b : Qexpr_poly) | Qediv (a b : Qexpr_poly) | Qepow (b e : Qexpr_poly).
 Global Arguments Qexpr_poly var : clear implicits.
+Declare Scope Qexpr_scope.
 Delimit Scope Qexpr_scope with Qexpr.
 Bind Scope Qexpr_scope with Qexpr_poly.
 Infix "^" := Qepow : Qexpr_scope.

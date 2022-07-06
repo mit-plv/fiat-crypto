@@ -684,6 +684,7 @@ Definition symex_return {T} (v : T) : symexM T := fun st => Success (v, st).
 Definition symex_error {T} err : symexM T := fun st => Error err.
 Definition symex_bind {A B} (v : symexM A) (f : A -> symexM B) : symexM B
   := fun st => (v <- v st; let '(a, st) := v in f a st)%error.
+Declare Scope symex_scope.
 Delimit Scope symex_scope with symex.
 Bind Scope symex_scope with symexM.
 Notation "'slet' x .. y <- X ; B"  := (symex_bind X (fun x => .. (fun y => B%symex) .. )) : symex_scope.
