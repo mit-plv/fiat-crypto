@@ -83,7 +83,6 @@ Module WordByWordMontgomery.
       Lemma A'_S3_alt : A'_S3 = (A', S3').
       Proof using Type. cbv [A'_S3 A' S3' Let_In S2 q s S1 A' a A_a]; reflexivity. Qed.
 
-      (*Nathan nonsense begins here*)
       Context (a' : Z).
 
       Local Definition a'_S3
@@ -95,7 +94,6 @@ Module WordByWordMontgomery.
 
       Lemma a_S3: a' = a  -> a'_S3 = snd A'_S3.
       Proof using Type. intros; cbv [a'_S3 A'_S3 Let_In];  subst; reflexivity. Qed.
-      (*Nathan nonsense ends here*)
       
     End Iteration.
 
