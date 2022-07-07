@@ -43,7 +43,8 @@ jobs:
         uname -a
         lsb_release -a
         coqc --version
-        echo | coqtop
+        coqc -config
+        true | coqtop
     - uses: actions/checkout@v2
     - name: submodules-init
       uses: snickerbockers/submodules-init@v4
