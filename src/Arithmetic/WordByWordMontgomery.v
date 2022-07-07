@@ -126,8 +126,6 @@ Module WordByWordMontgomery.
       Definition redc : T R_numlimbs
         := conditional_sub pre_redc N.
 
-      (*Nathan nonsense begins here*)
-
       Definition pre_redc_from (S': T (S R_numlimbs)) : T (S R_numlimbs)
         := snd (redc_loop A_numlimbs (A, S')).
       
@@ -143,28 +141,6 @@ Module WordByWordMontgomery.
       Definition redc_alt: T (R_numlimbs) :=
         conditional_sub redc_loop_alt N.
 
-      (*
-      Fixpoint atIndex {len: nat} (l : T len) (index : nat) : Z :=
-        match len with
-        | O => 0
-        | S len' =>
-            match index with
-            | O => snd (@divmod len' l)
-            | S pred_index => atIndex (fst (@divmod len' l)) pred_index
-            end
-        end.
-      
-      Fixpoint redc_loop_alt' (count: nat) : T (S R_numlimbs) :=
-        match count with
-        |O => @zero (1 + R_numlimbs)%nat
-        |S pred_count => redc_body_alt (atIndex A (count - 1), redc_loop_alt pred_count)
-        end.
-
-      Definition redc_alt' : T (R_numlimbs) :=
-        conditional_sub (redc_loop_alt A_numlimbs) N.
-       *)
-      
-      (*Nathan nonsense ends here*)
     End loop.
 
     Lemma redc_loop_alt_from_eq:
@@ -199,23 +175,6 @@ Module WordByWordMontgomery.
       intros. cbv [redc redc_alt]. f_equal. rewrite pre_redc_from_zero. rewrite redc_loop_alt_from_zero.
       symmetry. apply redc_loop_alt_from_eq.
     Qed.
-    
-    
-    (*
-    Example redc_alt'_eq_3:  forall (A : T _) (B : T R_numlimbs) (k : Z),
-        redc 3 A B k = redc_alt' 3 A B k.
-    Proof. intros. reflexivity. Qed.
-    
-    Theorem redc_alt'_eq:
-        forall (count : nat) (A : T _) (B : T R_numlimbs) (k : Z),
-        redc count A B k = redc_alt' count A B k.
-    Proof.
-      intros. cbv [redc redc_alt pre_redc redc_alt']. f_equal.
-      induction count as [|count' IHcount].
-      - reflexivity. 
-      - simpl. rewrite Nat.sub_diag. Abort.
-      *)
-
 
     Create HintDb word_by_word_montgomery.
     Hint Unfold A'_S3 S3' S2 q s S1 a A' A_a Let_In : word_by_word_montgomery.
