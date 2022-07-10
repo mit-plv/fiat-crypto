@@ -64,6 +64,8 @@ static FIAT_FIAT_INLINE void bitcoin_mul_u64(uint64_t out1[5], const uint64_t ar
 }
 
 int main() {
+    srand(time(NULL));
+
     uint64_t arg1[5] = {rand(), rand(), rand(), rand(), rand()};
     uint64_t arg2[5] = {rand(), rand(), rand(), rand(), rand()};
     uint64_t out[5];
