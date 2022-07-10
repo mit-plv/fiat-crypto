@@ -53,6 +53,8 @@ Import ListNotations. Local Open Scope Z_scope.
 Notation "a ** b" := (Zpower_nat a b)
   (at level 41, right associativity).
 
+Section Stuff.
+
 Context 
         (e : nat)
         (c : Z)
@@ -63,9 +65,9 @@ Context
         (e_small : (e <= limb_size * limbs)%nat)
         (e_big : (limb_size * (limbs - 1) <= e)%nat).
 
-Definition s := 2 ** e.
+Let s := (2 ** e).
 
-Definition base := 2 ** limb_size.
+Let base := (2 ** limb_size).
 
 Lemma base_nz : base <> 0.
 Proof. cbv [base]. rewrite Zpower_nat_Z. apply Z.pow_nonzero; lia. Qed.
@@ -73,7 +75,7 @@ Proof. cbv [base]. rewrite Zpower_nat_Z. apply Z.pow_nonzero; lia. Qed.
 Lemma s_nz : s <> 0.
 Proof. cbv [s]. rewrite Zpower_nat_Z. apply Z.pow_nonzero; lia. Qed.
 
-Definition weight n : Z := base ** n.
+Let weight n : Z := base ** n.
 
 Lemma weight_0 : weight 0 = 1.
 Proof. reflexivity. Qed.
@@ -102,12 +104,12 @@ Proof.
       -- apply H1.
       -- apply H2.
     + apply Z_div_same. apply H1.
-  - symmetry. apply Z.lt_neq. Search ((_ <= _) -> (_ < _)). apply Z.lt_le_trans with 1.
+  - symmetry. apply Z.lt_neq. apply Z.lt_le_trans with 1.
     + reflexivity.
     + apply H.
 Qed.
 
-Lemma pow_mul a b c : (a ** b) ** c = a ** (b * c).
+Lemma pow_mul x y z : (x ** y) ** z = x ** (y * z).
 Proof.
   repeat rewrite Zpower_nat_Z. rewrite Nat2Z.inj_mul. rewrite Z.pow_mul_r.
   - reflexivity.
@@ -145,7 +147,7 @@ Definition loop_body i before :=
   let after := carry' (weight i) (weight 1) middle2 in
   after.
 
-Lemma eval_mod_loop_body i before :
+Lemma eval_loop_body i before :
   (Associational.eval (loop_body i before) mod (s - c) =
   Associational.eval before mod (s - c))%Z.
 Proof.
@@ -173,12 +175,12 @@ Compute (from_n_to_one 2).
 Definition loop' start :=
   fold_right loop_body start (from_n_to_one (limbs - 2 - 1)).
 
-Lemma eval_mod_loop' start :
+Lemma eval_loop' start :
   ((Associational.eval (loop' start)) mod (s - c) = (Associational.eval start) mod (s - c))%Z.
 Proof.
   cbv [loop']. induction (from_n_to_one (limbs - 2 - 1)) as [| i l' IHl'].
   - reflexivity.
-  - simpl. rewrite eval_mod_loop_body. apply IHl'.
+  - simpl. rewrite eval_loop_body. apply IHl'.
 Qed.
 
 Definition mulmod_general a b :=
@@ -205,7 +207,7 @@ Definition mulmod_general a b :=
 
 Local Open Scope Z_scope.
 
-Theorem eval_mod_mulmod_general a b :
+Theorem eval_mulmod_general a b :
   (Positional.eval weight limbs a * Positional.eval weight limbs b) mod (s - c) =
   (Positional.eval weight limbs (mulmod_general a b)) mod (s - c).
 Proof.
@@ -216,7 +218,7 @@ Proof.
           try rewrite eval_reduce_one;
           try rewrite eval_carry_down;
           try rewrite eval_collect_terms;
-          try rewrite eval_mod_loop').
+          try rewrite eval_loop').
   rewrite Associational.eval_mul. repeat rewrite Positional.eval_to_associational. reflexivity.
   all:
       cbv [weight s base];
@@ -235,7 +237,7 @@ Proof.
       -- remember e_small as H. lia.
       -- lia.
       -- lia.
-  - repeat rewrite pow_mul. Search (_ mod (_ / _)). Search ((_ ^ _) / (_ ^ _)). repeat rewrite Zpower_nat_Z.
+  - repeat rewrite pow_mul. Search (_ mod (_ / _)). repeat rewrite Zpower_nat_Z.
     rewrite <- Z.pow_sub_r.
     + rewrite <- Nat2Z.inj_sub. repeat rewrite <- Zpower_nat_Z. apply mod_is_zero.
       -- lia.
@@ -251,66 +253,4 @@ Proof.
       -- lia.
 Qed.
 
-(*
-Definition s := 2 ** 256.
-
-Definition c := 2 ** 32 + 977.
-
-Definition prime : Z := s - c.
-
-Definition limbs : nat := 5.
-
-Definition weight n := (2 ** 52) ** n.
-
-Definition a := repeat (2 ** 47) 5.
-Definition b := repeat 3 5.
-
-Import OriginalMultiplicationAlgorithm.
-
-Compute (mulmod_general limbs weight s c a b).
-
-Compute (mulmod a b).
-
-Compute (Positional.eval weight limbs (mulmod a b) mod prime).
-Compute (Positional.eval weight limbs (mulmod_general limbs weight s c a b) mod prime).
-Compute ((Positional.eval weight limbs a * Positional.eval weight limbs b) mod prime).*)
-
-Local Instance : split_mul_to_opt := None.
-Local Instance : split_multiret_to_opt := None.
-Local Instance : unfold_value_barrier_opt := true.
-Local Instance : assembly_hints_lines_opt := [].
-Local Instance : ignore_unique_asm_names_opt := false.
-Local Instance : only_signed_opt := false.
-Local Instance : no_select_size_opt := None.
-Local Existing Instance default_low_level_rewriter_method.
-
-Local Existing Instance ToString.C.OutputCAPI.
-Local Existing Instance default_language_naming_conventions.
-Local Existing Instance default_documentation_options.
-Local Existing Instance default_output_options.
-Local Existing Instance AbstractInterpretation.default_Options.
-Local Instance : package_name_opt := None.
-Local Instance : class_name_opt := None.
-Local Instance : static_opt := true.
-Local Instance : internal_static_opt := true.
-Local Instance : inline_opt := true.
-Local Instance : inline_internal_opt := true.
-Local Instance : emit_primitives_opt := true.
-
-Definition input_bounds := Some ((repeat (Some r[0 ~> 2 * m * (2^52 - 1)]%zrange) 4) ++ [Some r[0 ~> 2 * m * (2^48 - 1)]%zrange]).
-Definition output_bounds := Some ((repeat (Some r[0 ~> 2 * M * (2^52 - 1)]%zrange) 4) ++ [Some r[0 ~> 2 * M * (2^48 - 1)]%zrange]).
-
-Definition thing := mulmod_general.
-
-Time Redirect "log" Compute
-  (Pipeline.BoundsPipelineToString
-     "fiat_" "bitcoin_mul_u64"
-        true true None [64; 128] 64
-        ltac:(let r := Reify (mulmod_general) in
-              exact r)
-               (fun _ _ => [])
-               (input_bounds, (input_bounds, tt))
-               output_bounds
-               (None, (None, tt))
-               None
-   : Pipeline.ErrorT _).
+End Stuff.
