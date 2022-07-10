@@ -59,9 +59,9 @@ Notation "a ** b" := (Zpower_nat a b)
 
 Definition s := 2 ** 256.
 
-Definition c := [(2 ** 32 + 977, 1)].
+Definition c := 2 ** 32 + 977.
 
-Definition prime : Z := s - Associational.eval c.
+Definition prime : Z := s - c.
 
 Definition limbs : nat := 5.
 
@@ -80,7 +80,7 @@ Qed.
 Lemma s_nz : s <> 0.
 Proof. discriminate. Qed.
 
-Lemma p_nz : s - Associational.eval c <> 0.
+Lemma p_nz : s - c <> 0.
 Proof. discriminate. Qed.
 
 Lemma mod_is_zero : forall base (n m : nat), base <> 0 -> le n m -> (base ** m) mod (base ** n) = 0.
@@ -119,8 +119,8 @@ Definition mulmod (a b : list Z) (*: list Z*) :=
   Positional.from_associational weight limbs r18.
 
 Theorem mulmod_works (a b : list Z) :
-        (Positional.eval weight limbs a * Positional.eval weight limbs b) mod (s - Associational.eval c) =
-        (Positional.eval weight limbs (mulmod a b)) mod (s - Associational.eval c).
+        (Positional.eval weight limbs a * Positional.eval weight limbs b) mod (s - c) =
+        (Positional.eval weight limbs (mulmod a b)) mod (s - c).
 Proof.
   cbv [mulmod].
   repeat (try rewrite Positional.eval_from_associational;
