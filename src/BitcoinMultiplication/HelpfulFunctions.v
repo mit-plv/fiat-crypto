@@ -220,9 +220,9 @@ Lemma reduction_rule a b s c (modulus_nz:s-c<>0) :
 Proof using Type. apply Z.add_mod_Proper; [ reflexivity | apply reduction_rule', modulus_nz ]. Qed.
 
 (*assumes that (H1 : w mod fw = 0) (H2 : fw mod s = 0) *)
-Definition reduce_one (s:Z) (w fw : Z) (c:list _) (p:list _) : list (Z*Z) :=
+Definition reduce_one (s:Z) (w fw : Z) (c: Z) (p:list _) : list (Z*Z) :=
   let lo_hi := split_one s w fw p in
-  fst lo_hi ++ map (fun thing => (fst thing, snd thing * (Associational.eval c * (fw / s)))) (snd lo_hi).
+  fst lo_hi ++ map (fun thing => (fst thing, snd thing * (c * (fw / s)))) (snd lo_hi).
 
 Local Ltac push := autorewrite with
       push_eval push_map push_partition push_flat_map
@@ -233,9 +233,9 @@ Lemma eval_map_mul_snd (x:Z) (p:list (Z*Z))
 Proof. induction p; push; nsatz. Qed.
 
 Lemma eval_reduce_one s w fw c p (s_nz:s<>0) (fw_nz:fw<>0) (w_fw : w mod fw = 0) (fw_s : fw mod s = 0) 
-                             (modulus_nz: s - Associational.eval c<>0) :
-            Associational.eval (reduce_one s w fw c p) mod (s - Associational.eval c) = 
-            Associational.eval p mod (s - Associational.eval c).
+                             (modulus_nz: s - c<>0) :
+            Associational.eval (reduce_one s w fw c p) mod (s - c) = 
+            Associational.eval p mod (s - c).
 Proof using Type.
   cbv [reduce_one]; push.
   rewrite eval_map_mul_snd. rewrite <- Z.mul_assoc.
