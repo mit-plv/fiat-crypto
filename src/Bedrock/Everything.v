@@ -139,6 +139,11 @@ Crypto.Bedrock.Specs.Field
 Crypto.Bedrock.Specs.Group
 Crypto.Bedrock.Standalone.StandaloneHaskellMain
 Crypto.Bedrock.Standalone.StandaloneOCamlMain
+Crypto.BitcoinMultiplication.CompilationOfGeneralAlgorithm_2_512_569
+Crypto.BitcoinMultiplication.CompilationOfOriginalAlgorithm
+Crypto.BitcoinMultiplication.GeneralizedMultiplicationAlgorithm
+Crypto.BitcoinMultiplication.HelpfulFunctions
+Crypto.BitcoinMultiplication.OriginalMultiplicationAlgorithm
 Crypto.BoundsPipeline
 Crypto.CLI
 Crypto.COperationSpecifications
@@ -183,6 +188,8 @@ Crypto.PushButtonSynthesis.BarrettReduction
 Crypto.PushButtonSynthesis.BarrettReductionReificationCache
 Crypto.PushButtonSynthesis.BaseConversion
 Crypto.PushButtonSynthesis.BaseConversionReificationCache
+Crypto.PushButtonSynthesis.BitcoinMultiplicationReificationCache
+Crypto.PushButtonSynthesis.BitcoinSynthesis
 Crypto.PushButtonSynthesis.FancyMontgomeryReduction
 Crypto.PushButtonSynthesis.FancyMontgomeryReductionReificationCache
 Crypto.PushButtonSynthesis.InvertHighLow
