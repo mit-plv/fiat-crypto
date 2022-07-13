@@ -50,51 +50,52 @@ Import Compilers.API.
 Import Associational Positional HelpfulFunctions.
 Import ListNotations. Local Open Scope Z_scope.
 
-Notation "a ** b" := (Zpower_nat a b)
-  (at level 41, right associativity).
+Local Coercion Z.of_nat : nat >-> Z.
+Local Coercion Z.pos : positive >-> Z.
 
 Section Stuff.
 
 Context 
         (e : nat)
-        (c : Z)
-        (p_nz : 2 ** e - c <> 0)
+        (c_ : list (Z*Z))
+        (p_nz : 2 ^ e - Associational.eval c_ <> 0)
         (limbs : nat)
         (limb_size : nat)
-        (limbs_gteq_3 : (limbs >= 3)%nat)
+        (limbs_gteq_3 : (3 <= limbs)%nat)
         (e_small : (e <= limb_size * limbs)%nat)
         (e_big : (limb_size * (limbs - 1) <= e)%nat).
 
-Let s := (2 ** e).
+Let s := (2 ^ e).
 
-Let base := (2 ** limb_size).
+Let c := Associational.eval c_.
+
+Let base := (2 ^ limb_size).
 
 Lemma base_nz : base <> 0.
-Proof. cbv [base]. rewrite Zpower_nat_Z. apply Z.pow_nonzero; lia. Qed.
+Proof. cbv [base]. (*rewrite Zpower_nat_Z.*) apply Z.pow_nonzero; lia. Qed.
 
 Lemma s_nz : s <> 0.
-Proof. cbv [s]. rewrite Zpower_nat_Z. apply Z.pow_nonzero; lia. Qed.
+Proof. cbv [s]. (*rewrite Zpower_nat_Z.*) apply Z.pow_nonzero; lia. Qed.
 
-Let weight n : Z := base ** n.
+Let weight (n : nat) := base ^ n.
 
 Lemma weight_0 : weight 0 = 1.
 Proof. reflexivity. Qed.
 
 Lemma weight_nz : forall i, weight i <> 0.
 Proof.
-  intros i. cbv [weight]. rewrite Zpower_nat_Z. apply Z.pow_nonzero.
+  intros i. cbv [weight]. (*rewrite Zpower_nat_Z.*) apply Z.pow_nonzero.
   - apply base_nz.
   - lia.
 Qed.
 
-Lemma mod_is_zero : forall b (n m : nat), b <> 0 -> le n m -> (b ** m) mod (b ** n) = 0.
+Lemma mod_is_zero : forall b (n m : nat), b <> 0 -> le n m -> (b ^ m) mod (b ^ n) = 0.
   intros b n m H1 H2. induction H2.
   - rewrite Z_mod_same_full. constructor.
-  - rewrite Zpower_nat_succ_r. rewrite Z.mul_mod_full. rewrite IHle. rewrite Z.mul_0_r.
-    apply Z.mod_0_l. rewrite Zpower_nat_Z. apply Z.pow_nonzero; lia.
+  - rewrite Nat2Z.inj_succ. cbv [Z.succ]. rewrite <- Pow.Z.pow_mul_base.
+    + rewrite Z.mul_mod_full. rewrite IHle. rewrite Z.mul_0_r. apply Z.mod_0_l. apply Z.pow_nonzero; lia.
+    + lia.
 Qed.
-
-Check Z_div_le.
 
 Lemma div_nz a b : b > 0 -> b <= a -> a / b <> 0.
 Proof.
@@ -119,9 +120,11 @@ Qed.
 
 Lemma limbs_mod_s_0 : (weight limbs) mod s = 0.
 Proof.
-  cbv [weight base s]. rewrite pow_mul. apply mod_is_zero.
+  cbv [weight base s]. rewrite <- Z.pow_mul_r. rewrite <- Nat2Z.inj_mul. apply mod_is_zero.
   - lia.
   - apply e_small.
+  - lia.
+  - lia.
 Qed.
 
 Local Open Scope nat_scope.
@@ -232,25 +235,31 @@ Proof.
       try (remember limbs_gteq_3 as H; lia);
       try apply base_nz.
   - apply div_nz.
-    + rewrite Zpower_nat_Z. lia.
-    + rewrite pow_mul. repeat rewrite Zpower_nat_Z. rewrite Nat2Z.inj_mul. rewrite <- Z.pow_le_mono_r_iff.
+    + lia.
+    + rewrite <- Z.pow_mul_r. rewrite <- Nat2Z.inj_mul. rewrite <- Z.pow_le_mono_r_iff.
       -- remember e_small as H. lia.
       -- lia.
       -- lia.
-  - repeat rewrite pow_mul. Search (_ mod (_ / _)). repeat rewrite Zpower_nat_Z.
-    rewrite <- Z.pow_sub_r.
-    + rewrite <- Nat2Z.inj_sub. repeat rewrite <- Zpower_nat_Z. apply mod_is_zero.
+      -- lia.
+      -- lia.
+  - repeat rewrite <- Z.pow_mul_r. rewrite <- Z.pow_sub_r.
+    + rewrite <- Nat2Z.inj_mul. rewrite <- Nat2Z.inj_sub. apply mod_is_zero.
       -- lia.
       -- lia.
       -- apply e_small.
     + lia.
     + remember e_small as H. lia.
+    + lia.
+    + lia.
   - apply div_nz.
     + repeat rewrite Zpower_nat_Z. lia.
-    + rewrite pow_mul. repeat rewrite Zpower_nat_Z. rewrite Nat2Z.inj_mul. rewrite <- Z.pow_le_mono_r_iff.
+    + rewrite <- Z.pow_mul_r. rewrite <- Nat2Z.inj_mul. rewrite <- Z.pow_le_mono_r_iff.
       -- remember e_big as H. lia.
+      -- lia.
+      -- lia.
       -- lia.
       -- lia.
 Qed.
 
 End Stuff.
+

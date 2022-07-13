@@ -48,6 +48,8 @@ Import
   Stringification.C.Compilers.
 Import Compilers.API.
 
+Local Coercion Z.of_nat : nat >-> Z.
+
 Check mulmod_general.
 (*
   The prime is 2^512 - 569. 
@@ -55,14 +57,11 @@ Check mulmod_general.
   
 *)
 
-Notation "a ** b" := (Zpower_nat a b)
-  (at level 41, right associativity).
-
 Local Open Scope Z_scope.
 
 Definition e : nat := 512.
-Definition c : Z := 569.
-Lemma p_nz : 2 ** e - c <> 0.
+Definition c : list (Z*Z) := [(1, 569)].
+Lemma p_nz : 2 ^ e - Associational.eval c <> 0.
 Proof. discriminate. Qed.
 Definition limbs : nat := 9.
 Definition limb_size : nat := 57.
@@ -78,8 +77,8 @@ Check mulmod.
 
 Check eval_mulmod_general e c p_nz limbs limb_size limbs_gteq_3 e_small e_big.
 
-Definition weight := fun n => (2 ** limb_size) ** n.
-Definition prime := 2 ** e - c.
+Definition weight := fun n => (2 ^ limb_size) ^ n.
+Definition prime := 2 ^ e - Associational.eval c.
 
 Definition eval_mulmod : forall a b,
   (Positional.eval weight limbs a * Positional.eval weight limbs b) mod (prime) =

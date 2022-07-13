@@ -20,6 +20,7 @@ Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
 Require Crypto.PushButtonSynthesis.BaseConversion.
+Require Crypto.PushButtonSynthesis.BitcoinSynthesis.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Stringification.C.
@@ -70,6 +71,8 @@ Module ForExtraction.
   (* Workaround for lack of notation in 8.8 *)
   Local Notation "x =? y" := (if string_dec x y then true else false) : string_scope.
 
+  Print MaybeLimbCount.
+
   Definition parse_n (n : string) : option MaybeLimbCount
     := match parse_nat n with
        | Some n => Some (NumLimbs n)
@@ -87,11 +90,23 @@ Module ForExtraction.
             else None
        end.
 
+  Definition parse_n_nat (s : string) : option nat
+    := parse_nat s.
+
   Definition parse_sc (s : string) : option (Z * list (Z * Z))
     := parseZ_arith_to_taps s.
 
+  Compute (parse_sc "35").
+
   Definition parse_machine_wordsize (s : string) : option Z
     := parse_Z s.
+
+  Definition parse_nat_limbwidth (s : string) : option nat
+    := parse_nat s.
+
+  Definition parse_input_magnitude (s : string) : option nat
+    := parse_nat s.
+
   Definition parse_m (s : string) : option Z
     := parse_Z s.
 
@@ -332,6 +347,19 @@ Module ForExtraction.
     := ("n",
         Arg.Custom (parse_string_and parse_n) "an ℕ or the literal '(auto)' or '(autoN)' for a non-negative number N",
         ["The number of limbs, or the literal '(auto)' or '(autoN)' for a non-negative number N, to automatically guess the number of limbs"]).
+  Definition n_nat_spec : anon_argT
+    := ("n",
+        Arg.Custom (parse_string_and parse_n_nat) "ℕ",
+        ["The number of limbs"]).
+  Definition limbwidth_spec : anon_argT
+    := ("limbwidth",
+        Arg.Custom (parse_string_and parse_nat_limbwidth) "ℕ",
+        ["The limb width"]).
+  Definition input_magnitude_spec : anon_argT
+    := ("input_magnitude",
+        Arg.Custom (parse_string_and parse_input_magnitude) "ℕ",
+        ["I should really put a helpful message here."]).
+  (* FIXME : Documentation above. *)
   Definition sc_spec : anon_argT
     := ("s-c",
         Arg.Custom (parse_string_and parse_sc) "an integer expression",
@@ -1010,6 +1038,8 @@ Module ForExtraction.
       := Parameterized.PipelineMain argv.
   End WordByWordMontgomery.
 
+  Check inl.
+
   Module SaturatedSolinas.
     Local Instance api : PipelineAPI
       := {
@@ -1044,6 +1074,50 @@ Module ForExtraction.
       : A
       := Parameterized.PipelineMain argv.
   End SaturatedSolinas.
+
+  Module BitcoinMultiplication.
+    Print PipelineAPI.
+    Print Arg.arg_spec.
+    Print BitcoinSynthesis.Synthesize.
+    Check BitcoinSynthesis.Synthesize.
+    Print PowersOfTwo.show_Z.
+    Local Instance api : PipelineAPI
+      := {
+          spec :=
+            {| Arg.named_args := []
+               ; Arg.anon_args := [n_nat_spec; limbwidth_spec; sc_spec; input_magnitude_spec]
+               ; Arg.anon_opt_args := []
+               ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec BitcoinSynthesis.valid_names) |};
+
+          parse_args opts args
+          := let '(tt, ((str_n, n), (str_limbwidth, limbwidth), (str_sc, (s, c)), (str_input_magnitude, input_magnitude)),
+                   tt, requests) := args in
+             let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
+             inl ((str_n, str_limbwidth, str_sc, str_input_magnitude, show_requests),
+                  (n, limbwidth, s, c, input_magnitude, requests));
+
+          show_lines_args :=
+            fun '((str_n, str_limbwidth, str_sc, str_input_magnitude, show_requests),
+                  (n, limbwidth, s, c, input_magnitude, requests))
+            => ["requested operations: " ++ show_requests;
+                "n = " ++ show n ++ " (from """ ++ str_n ++ """)";
+                "limbwidth = " ++ show limbwidth ++ " (from """ ++ str_limbwidth ++ """)";
+                "s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ " (from """ ++ str_sc ++ """)";
+                "input magnitude: " ++ show input_magnitude ++ " (from """ ++ str_input_magnitude ++ """)"];
+
+          Synthesize
+          := fun _ opts '(n, limbwidth, s, c, input_magnitude, requests) comment_header prefix
+             => BitcoinSynthesis.Synthesize machine_wordsize s c n limbwidth input_magnitude comment_header prefix requests
+        }.
+
+    Definition PipelineMain
+               {supported_languages : supported_languagesT}
+               {A}
+               {io_driver : IODriverAPI A}
+               (argv : list string)
+      : A
+      := Parameterized.PipelineMain argv.
+  End BitcoinMultiplication.
 
   Module BaseConversion.
     Local Instance api : PipelineAPI

@@ -494,6 +494,27 @@ Module SaturatedSolinas.
   End __.
 End SaturatedSolinas.
 
+Module BitcoinMultiplication.
+  Section __.
+    Context (wt : nat -> Z)
+            (n : nat)
+            (m : Z)
+            (input_bounds : list (option zrange))
+            (output_bounds : list (option zrange))
+            (length_input_bounds : length input_bounds = n)
+            (length_output_bounds : length output_bounds = n).
+    Local Notation eval := (Positional.eval wt n).
+
+    Definition mul_correct
+               (mul : list Z -> list Z -> list Z)
+      := forall x y,
+        list_Z_bounded_by input_bounds x
+        -> list_Z_bounded_by input_bounds y
+        -> eval (mul x y) mod m = ((eval x) * (eval y)) mod m
+           /\ list_Z_bounded_by output_bounds (mul x y).
+  End __.
+End BitcoinMultiplication.
+
 Module WordByWordMontgomery.
   Import Arithmetic.WordByWordMontgomery.
   Local Coercion Z.of_nat : nat >-> Z.

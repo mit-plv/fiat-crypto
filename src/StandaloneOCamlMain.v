@@ -212,6 +212,11 @@ Module SaturatedSolinas.
     := main_gen ForExtraction.SaturatedSolinas.PipelineMain.
 End SaturatedSolinas.
 
+Module BitcoinMultiplication.
+  Definition main : unit
+    := main_gen ForExtraction.BitcoinMultiplication.PipelineMain.
+End BitcoinMultiplication.
+
 Module BaseConversion.
   Definition main : unit
     := main_gen ForExtraction.BaseConversion.PipelineMain.

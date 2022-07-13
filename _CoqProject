@@ -158,6 +158,11 @@ src/Bedrock/Specs/Field.v
 src/Bedrock/Specs/Group.v
 src/Bedrock/Standalone/StandaloneHaskellMain.v
 src/Bedrock/Standalone/StandaloneOCamlMain.v
+src/BitcoinMultiplication/CompilationOfGeneralAlgorithm_2_512_569.v
+src/BitcoinMultiplication/CompilationOfOriginalAlgorithm.v
+src/BitcoinMultiplication/GeneralizedMultiplicationAlgorithm.v
+src/BitcoinMultiplication/HelpfulFunctions.v
+src/BitcoinMultiplication/OriginalMultiplicationAlgorithm.v
 src/Curves/EdwardsMontgomery.v
 src/Curves/Edwards/AffineProofs.v
 src/Curves/Edwards/Pre.v
@@ -193,6 +198,8 @@ src/PushButtonSynthesis/BarrettReduction.v
 src/PushButtonSynthesis/BarrettReductionReificationCache.v
 src/PushButtonSynthesis/BaseConversion.v
 src/PushButtonSynthesis/BaseConversionReificationCache.v
+src/PushButtonSynthesis/BitcoinMultiplicationReificationCache.v
+src/PushButtonSynthesis/BitcoinSynthesis.v
 src/PushButtonSynthesis/FancyMontgomeryReduction.v
 src/PushButtonSynthesis/FancyMontgomeryReductionReificationCache.v
 src/PushButtonSynthesis/InvertHighLow.v
