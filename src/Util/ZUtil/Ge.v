@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 Require Import Coq.ZArith.ZArith Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 
 Local Open Scope Z_scope.
@@ -13,3 +13,8 @@ Module Z.
   Global Instance ge_preorder : PreOrder Z.ge.
   Proof. constructor; hnf; [ apply ge_refl | apply ge_trans ]. Defined.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Global Existing Instances Z.le_preorder Z.ge_preorder.
+End Hints.

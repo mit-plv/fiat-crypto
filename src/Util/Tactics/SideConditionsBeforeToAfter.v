@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 (** If [tac_in H] operates in [H] and leaves side-conditions before
     the original goal, then
     [side_conditions_before_to_side_conditions_after tac_in H] does

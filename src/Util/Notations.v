@@ -1,6 +1,6 @@
 (** * Reserved Notations *)
 Require Export Crypto.Util.FixCoqMistakes.
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 
 (** Putting them all together in one file prevents conflicts.  Coq's
     parser (camlpX) is really bad at conflicting notation levels and

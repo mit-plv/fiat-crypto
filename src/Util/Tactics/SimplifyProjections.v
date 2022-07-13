@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 (** [simplify_projections] reduces terms of the form [fst (_, _)] (for
     any projection from [prod], [sig], [sigT], or [and]) *)
 Ltac pre_simplify_projection proj proj' uproj' :=

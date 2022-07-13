@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 (** * Lift foralls out of sig proofs *)
 
 Definition lift1_sig {A C} (P:A->C->Prop)

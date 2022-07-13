@@ -87,3 +87,12 @@ Ltac Zmod_to_equiv_modulo :=
          | [ |- context T[?x mod ?M = ?y mod ?M] ]
            => let T' := context T[Z.equiv_modulo M x y] in change T'
          end.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Export Crypto.Util.ZUtil.Hints.ZArith.
+  Export Crypto.Util.ZUtil.Modulo.Hints.
+  Export Crypto.Util.ZUtil.Modulo.PullPush.Hints.
+  Hint Rewrite Z.div_to_inv_modulo using solve [ eassumption | lia ] : zstrip_div.
+End Hints.

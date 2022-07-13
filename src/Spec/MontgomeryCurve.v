@@ -1,5 +1,5 @@
 Require Crypto.Algebra.Field.
-Require Crypto.Util.GlobalSettings.
+Require Crypto.Util.FixCoqMistakes.
 Require Crypto.Util.Tactics.DestructHead Crypto.Util.Sum Crypto.Util.Prod.
 Import Crypto.Algebra.Field.Hints.
 

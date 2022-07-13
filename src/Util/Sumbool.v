@@ -1,6 +1,6 @@
 (** * Classification of the [{_} + {_}] Type *)
 (** In this file, we classify the basic structure of [sumbool] types. *)
-Require Import Crypto.Util.GlobalSettings.
+Require Import Crypto.Util.FixCoqMistakes.
 
 (*Local Set Keep Proof Equalities.
 Scheme Equality for sumbool.*)

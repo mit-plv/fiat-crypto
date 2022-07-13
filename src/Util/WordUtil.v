@@ -33,10 +33,12 @@ Create HintDb push_wordToN discriminated.
 Create HintDb pull_ZToWord discriminated.
 Create HintDb push_ZToWord discriminated.
 
-Global Hint Extern 1 => autorewrite with pull_wordToN in * : pull_wordToN.
-Global Hint Extern 1 => autorewrite with push_wordToN in * : push_wordToN.
-Global Hint Extern 1 => autorewrite with pull_ZToWord in * : pull_ZToWord.
-Global Hint Extern 1 => autorewrite with push_ZToWord in * : push_ZToWord.
+Module Export Hints1.
+  Global Hint Extern 1 => autorewrite with pull_wordToN in * : pull_wordToN.
+  Global Hint Extern 1 => autorewrite with push_wordToN in * : push_wordToN.
+  Global Hint Extern 1 => autorewrite with pull_ZToWord in * : pull_ZToWord.
+  Global Hint Extern 1 => autorewrite with push_ZToWord in * : push_ZToWord.
+End Hints1.
 
 Module Word.
   Fixpoint weqb_hetero sz1 sz2 (x : word sz1) (y : word sz2) : bool :=
@@ -743,7 +745,9 @@ Section WordBounds.
   Qed.
 End WordBounds.
 
-Hint Rewrite NToWord_wordToN : pull_wordToN.
+Module Export Hints2.
+  Hint Rewrite NToWord_wordToN : pull_wordToN.
+End Hints2.
 
 Lemma bound_check_nat_N : forall x n, (Z.to_nat x < 2 ^ n)%nat -> (Z.to_N x < Npow2 n)%N.
 Proof.
@@ -775,7 +779,9 @@ Proof. intuition; subst; auto using split1_combine, split2_combine, combine_spli
 Class wordsize_eq (x y : nat) := wordsize_eq_to_eq : x = y.
 Ltac wordsize_eq_tac := cbv beta delta [wordsize_eq] in *; lia*.
 Ltac gt84_abstract t := t. (* TODO: when we drop Coq 8.4, use [abstract] here *)
-Global Hint Extern 100 (wordsize_eq _ _) => gt84_abstract wordsize_eq_tac : typeclass_instances.
+Module Export Hints3.
+  Global Hint Extern 100 (wordsize_eq _ _) => gt84_abstract wordsize_eq_tac : typeclass_instances.
+End Hints3.
 
 Fixpoint correct_wordsize_eq (x y : nat) : wordsize_eq x y -> x = y
   := match x, y with
@@ -805,7 +811,9 @@ Proof. destruct pf; rewrite cast_word_refl; trivial. Qed.
 Lemma wordToN_cast_word {n} (w:word n) m pf :
   wordToN (@cast_word n m pf w) = wordToN w.
 Proof. destruct pf; rewrite cast_word_refl; trivial. Qed.
-Hint Rewrite @wordToN_cast_word : push_wordToN.
+Module Export Hints4.
+  Hint Rewrite @wordToN_cast_word : push_wordToN.
+End Hints4.
 
 Import NPeano Nat.
 Local Infix "++" := combine.
@@ -1048,20 +1056,22 @@ Section Bounds.
   Qed.
 End Bounds.
 
-Hint Rewrite @wordToN_wplus using word_util_arith : push_wordToN.
-Hint Rewrite <- @wordToN_wplus using word_util_arith : pull_wordToN.
+Module Export Hints5.
+  Hint Rewrite @wordToN_wplus using word_util_arith : push_wordToN.
+  Hint Rewrite <- @wordToN_wplus using word_util_arith : pull_wordToN.
 
-Hint Rewrite @wordToN_wminus using word_util_arith : push_wordToN.
-Hint Rewrite <- @wordToN_wminus using word_util_arith : pull_wordToN.
+  Hint Rewrite @wordToN_wminus using word_util_arith : push_wordToN.
+  Hint Rewrite <- @wordToN_wminus using word_util_arith : pull_wordToN.
 
-Hint Rewrite @wordToN_wmult using word_util_arith : push_wordToN.
-Hint Rewrite <- @wordToN_wmult using word_util_arith : pull_wordToN.
+  Hint Rewrite @wordToN_wmult using word_util_arith : push_wordToN.
+  Hint Rewrite <- @wordToN_wmult using word_util_arith : pull_wordToN.
 
-Hint Rewrite @wordToN_wand using word_util_arith : push_wordToN.
-Hint Rewrite <- @wordToN_wand using word_util_arith : pull_wordToN.
+  Hint Rewrite @wordToN_wand using word_util_arith : push_wordToN.
+  Hint Rewrite <- @wordToN_wand using word_util_arith : pull_wordToN.
 
-Hint Rewrite @wordToN_wor using word_util_arith : push_wordToN.
-Hint Rewrite <- @wordToN_wor using word_util_arith : pull_wordToN.
+  Hint Rewrite @wordToN_wor using word_util_arith : push_wordToN.
+  Hint Rewrite <- @wordToN_wor using word_util_arith : pull_wordToN.
+End Hints5.
 
 Section Updates.
   Local Notation bound n lower value upper := (
@@ -1363,3 +1373,15 @@ Proof.
   apply Z.pow_le_mono; [|assumption].
   split; simpl; lia.
 Qed.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.NatUtil.Hints.
+  Export Crypto.Util.ZUtil.LandLorShiftBounds.Hints.
+  Export Crypto.Util.ZUtil.N2Z.Hints.
+  Export Crypto.Util.ZUtil.Le.Hints.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  (*Export bbv.WordScope.Hints *)
+  (*Export bbv.Nomega.Hints *)
+  Export Hints1 Hints2 Hints3 Hints4 Hints5.
+End Hints.

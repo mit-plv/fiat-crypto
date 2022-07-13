@@ -91,3 +91,8 @@ Module Z.
        then 2^(Z.log2_up (x+1))-1
        else -2^(Z.log2_up (-x)).
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Notations.Hints.
+End Hints.

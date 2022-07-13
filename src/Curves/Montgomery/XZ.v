@@ -1,7 +1,7 @@
 Require Import Coq.PArith.BinPosDef.
 Require Import Coq.ZArith.BinIntDef.
 Require Import Crypto.Algebra.Field.
-Require Import Crypto.Util.GlobalSettings Crypto.Util.Notations.
+Require Import Crypto.Util.FixCoqMistakes Crypto.Util.Notations.
 Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Loops.

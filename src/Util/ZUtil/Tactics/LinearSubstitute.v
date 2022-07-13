@@ -72,3 +72,7 @@ Module Z.
            | [ v : Z |- _ ] => linear_substitute v
            end.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+End Hints.

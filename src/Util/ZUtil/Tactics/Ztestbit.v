@@ -20,3 +20,9 @@ Ltac Ztestbit_step :=
   | _ => progress Ztestbit_full_step
   end.
 Ltac Ztestbit := repeat Ztestbit_step.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Testbit.Hints.
+  Export Crypto.Util.ZUtil.Hints.Core.
+End Hints.

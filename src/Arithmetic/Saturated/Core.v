@@ -437,33 +437,6 @@ Module Columns.
     Qed.
   End Columns.
 End Columns.
-Hint Rewrite
-     @Columns.compact_digit_id
-     @Columns.compact_step_id
-     @Columns.compact_id
-     using (assumption || (intros; autorewrite with uncps; reflexivity))
-  : uncps.
-Hint Rewrite
-     @Columns.cons_to_nth_id
-     @Columns.from_associational_id
-  : uncps.
-Hint Rewrite
-     @Columns.compact_mod
-     @Columns.compact_div
-     @Columns.eval_cons_to_nth
-     @Columns.eval_from_associational
-     @Columns.eval_nils
-  using (assumption || lia): push_basesystem_eval.
-
-Global Hint Unfold
-     Columns.eval Columns.eval_from
-     Columns.compact_digit_cps Columns.compact_digit
-     Columns.compact_step_cps Columns.compact_step
-     Columns.compact_cps Columns.compact
-     Columns.cons_to_nth_cps Columns.cons_to_nth
-     Columns.nils
-     Columns.from_associational_cps Columns.from_associational
-  : basesystem_partial_evaluation_unfolder.
 
 Ltac basesystem_partial_evaluation_unfolder t :=
   let t :=
@@ -484,3 +457,46 @@ Ltac basesystem_partial_evaluation_unfolder t :=
 
 Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
   basesystem_partial_evaluation_unfolder t.
+
+Module Export Hints.
+  Export Crypto.Algebra.Nsatz.Hints.
+  Export Crypto.Arithmetic.Core.Hints.
+  Export Crypto.Util.LetIn.Hints Crypto.Util.CPSUtil.Hints.
+  Export Crypto.Util.Tuple.Hints Crypto.Util.ListUtil.Hints.
+  Export Crypto.Util.Decidable.Hints.
+  Export Crypto.Util.ZUtil.Modulo.PullPush.Hints.
+  Export Crypto.Util.ZUtil.Le.Hints.
+  Export Crypto.Util.ZUtil.Modulo.Hints.
+  Export Crypto.Util.ZUtil.Div.Hints.
+  Export Crypto.Util.ZUtil.Tactics.ZeroBounds.Hints.
+  Export Crypto.Util.NatUtil.Hints.
+  Export Field.Hints.
+
+  Hint Rewrite
+       @Columns.compact_digit_id
+       @Columns.compact_step_id
+       @Columns.compact_id
+       using (assumption || (intros; autorewrite with uncps; reflexivity))
+    : uncps.
+  Hint Rewrite
+       @Columns.cons_to_nth_id
+       @Columns.from_associational_id
+    : uncps.
+  Hint Rewrite
+       @Columns.compact_mod
+       @Columns.compact_div
+       @Columns.eval_cons_to_nth
+       @Columns.eval_from_associational
+       @Columns.eval_nils
+       using (assumption || lia): push_basesystem_eval.
+
+  Global Hint Unfold
+         Columns.eval Columns.eval_from
+         Columns.compact_digit_cps Columns.compact_digit
+         Columns.compact_step_cps Columns.compact_step
+         Columns.compact_cps Columns.compact
+         Columns.cons_to_nth_cps Columns.cons_to_nth
+         Columns.nils
+         Columns.from_associational_cps Columns.from_associational
+    : basesystem_partial_evaluation_unfolder.
+End Hints.

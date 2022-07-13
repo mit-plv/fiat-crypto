@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Sorting.Mergesort Coq.Structures.Orders.
 
@@ -20,3 +20,7 @@ Module Z.
   Notation StronglySorted_sort := Sort.StronglySorted_sort.
   Notation Permuted_sort := Sort.Permuted_sort.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+End Hints.

@@ -110,3 +110,18 @@ Module Z.
   Hint Rewrite sub_with_get_borrow_full_div : to_div_mod.
 
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.ZUtil.Hints.ZArith.
+  Export Crypto.Util.ZUtil.Tactics.PullPush.Modulo.Hints.
+  Export Crypto.Util.ZUtil.Tactics.DivModToQuotRem.Hints.
+  Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+  Hint Rewrite Z.add_get_carry_full_mod : to_div_mod.
+  Hint Rewrite Z.add_get_carry_full_div : to_div_mod.
+  Hint Rewrite Z.add_with_get_carry_full_mod : to_div_mod.
+  Hint Rewrite Z.add_with_get_carry_full_div : to_div_mod.
+  Hint Rewrite Z.sub_get_borrow_full_mod : to_div_mod.
+  Hint Rewrite Z.sub_get_borrow_full_div : to_div_mod.
+  Hint Rewrite Z.sub_with_get_borrow_full_mod : to_div_mod.
+  Hint Rewrite Z.sub_with_get_borrow_full_div : to_div_mod.
+End Hints.

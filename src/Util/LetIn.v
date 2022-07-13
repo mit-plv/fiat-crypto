@@ -58,3 +58,17 @@ Ltac change_let_in_with_Let_In :=
   let g := get_goal in
   let g' := let_in_to_Let_In g in
   change g'.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Strategy 100 [Let_In Let_In_pf].
+
+  Global Existing Instances
+         Proper_Let_In_nd_changebody
+         Proper_Let_In_nd_changevalue
+  .
+  Global Hint Extern 0 (_call_let_in_to_Let_In ?e)
+         => (
+             let e := let_in_to_Let_In e in eexact e
+           ) : typeclass_instances.
+End Hints.

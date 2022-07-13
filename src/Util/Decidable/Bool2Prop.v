@@ -1,5 +1,5 @@
 Require Coq.ZArith.ZArith.
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Lemma unit_eq (x y:unit) : x = y. destruct x, y; reflexivity. Qed.
 Global Hint Resolve unit_eq.

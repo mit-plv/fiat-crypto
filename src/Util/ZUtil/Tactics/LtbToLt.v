@@ -1,6 +1,7 @@
 Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.Bool.
+Require Import Crypto.Util.FixCoqMistakes.
 Local Open Scope Z_scope.
 
 Module Z.
@@ -74,4 +75,7 @@ Module Z.
     repeat autorewrite with ltb_to_lt in *;
     cbv beta iota in *.
 End Z.
-Hint Rewrite Z.ltb_lt_iff Z.leb_le_iff Z.gtb_gt_iff Z.geb_ge_iff Z.eqb_eq_iff : ltb_to_lt.
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Hint Rewrite Z.ltb_lt_iff Z.leb_le_iff Z.gtb_gt_iff Z.geb_ge_iff Z.eqb_eq_iff : ltb_to_lt.
+End Hints.

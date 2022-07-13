@@ -197,7 +197,15 @@ Section adc_subc.
 End adc_subc.
 
 Module Export Hints.
-  Export ZUtil.Hints.ZArith.
+  Export Crypto.Util.ZUtil.Notations.Hints.
+  Export Crypto.Util.ZUtil.Hints.
+  Export Crypto.Util.ZUtil.Hints.ZArith.
+  Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+  Export Crypto.Util.ZUtil.Tactics.RewriteModSmall.Hints.
+  Export Crypto.Util.ZUtil.Div.Hints.
+  Export Crypto.Util.ZUtil.EquivModulo.Hints.
+  Export Crypto.Util.Tuple.Hints.
+
   Global Hint Extern 2 (rewrite_right_to_left_eq decode_tag _ (_ <=? (@decode ?n ?W ?decoder ?x + @decode _ _ _ ?y)))
          => apply @fst_add_with_carry_false_leb : typeclass_instances.
   Global Hint Extern 2 (rewrite_right_to_left_eq decode_tag _ (_ <=? (@decode ?n ?W ?decoder ?x + @decode _ _ _ ?y + 1)))

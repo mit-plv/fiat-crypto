@@ -6,7 +6,9 @@ Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Local Open Scope Z_scope.
 
-Global Existing Instance Z.le_preorder.
+Module Export LePreorderHint.
+  Global Existing Instance Z.le_preorder.
+End LePreorderHint.
 
 Module Z.
   Lemma positive_is_nonzero : forall x, x > 0 -> x <> 0.
@@ -66,8 +68,14 @@ Module Z.
   Lemma le_add_1_iff x y : x + 1 <= y <-> x < y.
   Proof. lia. Qed.
 End Z.
-Global Hint Resolve Z.positive_is_nonzero : zarith.
-Hint Rewrite Z.leb_add_same : zsimplify.
-Hint Rewrite Z.ltb_add_same : zsimplify.
-Hint Rewrite Z.geb_add_same : zsimplify.
-Hint Rewrite Z.gtb_add_same : zsimplify.
+
+Module Export Hints.
+  Export LePreorderHint.
+  Export ZUtil.Hints.Core.
+  Export LtbToLt.Hints.
+  Global Hint Resolve Z.positive_is_nonzero : zarith.
+  Hint Rewrite Z.leb_add_same : zsimplify.
+  Hint Rewrite Z.ltb_add_same : zsimplify.
+  Hint Rewrite Z.geb_add_same : zsimplify.
+  Hint Rewrite Z.gtb_add_same : zsimplify.
+End Hints.

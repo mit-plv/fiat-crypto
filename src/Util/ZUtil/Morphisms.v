@@ -1,8 +1,6 @@
 (** * [Proper] morphisms for ℤ constants *)
 Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
-Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Classes.RelationPairs.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Div.
@@ -319,98 +317,107 @@ Module Z.
   Global Hint Resolve shiftl_Zneg_Z0_le_Proper_r : zarith.
 End Z.
 
-Global Hint Resolve Z.succ_le_Proper : zarith.
-Global Hint Resolve Z.add_le_Proper : zarith.
-Global Hint Resolve Z.add_le_Proper' : zarith.
-Global Hint Resolve Z.sub_le_ge_Proper : zarith.
-Global Hint Resolve Z.sub_le_flip_le_Proper : zarith.
-Global Hint Resolve Z.sub_le_eq_Proper : zarith.
-Global Hint Resolve Z.mul_Zpos_le_Proper : zarith.
-Global Hint Resolve Z.log2_up_le_Proper : zarith.
-Global Hint Resolve Z.log2_le_Proper : zarith.
-Global Hint Resolve Z.pow_Zpos_le_Proper : zarith.
-Global Hint Resolve Z.lt_le_flip_Proper_flip_impl : zarith.
-Global Hint Resolve Z.le_Proper_ge_le_flip_impl : zarith.
-Global Hint Resolve Z.add_le_Proper_flip : zarith.
-Global Hint Resolve Z.sub_le_ge_Proper_flip : zarith.
-Global Hint Resolve Z.sub_flip_le_le_Proper_flip : zarith.
-Global Hint Resolve Z.sub_le_eq_Proper_flip : zarith.
-Global Hint Resolve Z.log2_up_le_Proper_flip : zarith.
-Global Hint Resolve Z.log2_le_Proper_flip : zarith.
-Global Hint Resolve Z.pow_Zpos_le_Proper_flip : zarith.
-Global Hint Resolve Z.add_with_carry_le_Proper : zarith.
-Global Hint Resolve Z.sub_with_borrow_le_Proper : zarith.
-Global Hint Resolve Z.opp_flip_le_le_Proper : zarith.
-Global Hint Resolve Z.opp_le_flip_le_Proper : zarith.
-Global Hint Resolve Z.opp_le_ge_Proper : zarith.
-Global Hint Resolve Z.opp_ge_le_Proper : zarith.
-Global Hint Resolve Z.add_le_Proper'' : zarith.
-Global Hint Resolve Z.sub_le_ge_Proper_r : zarith.
-Global Hint Resolve Z.sub_le_le_Proper_l : zarith.
-Global Hint Resolve Z.sub_le_flip_le_Proper_r : zarith.
-Global Hint Resolve Z.sub_flip_le_le_Proper_r : zarith.
-Global Hint Resolve Z.sub_ge_le_Proper_r : zarith.
-Global Hint Resolve Z.mul_Z0_le_Proper : zarith.
-Global Hint Resolve Z.mul_Zneg_le_flip_le_Proper : zarith.
-Global Hint Resolve Z.mul_Zneg_le_ge_Proper : zarith.
-Global Hint Resolve Z.mul_Zneg_flip_le_le_Proper : zarith.
-Global Hint Resolve Z.mul_Zneg_ge_le_Proper : zarith.
-Global Hint Resolve Z.mul_Zpos_le_Proper' : zarith.
-Global Hint Resolve Z.mul_Z0_le_Proper' : zarith.
-Global Hint Resolve Z.mul_Zneg_le_flip_le_Proper' : zarith.
-Global Hint Resolve Z.mul_Zneg_le_ge_Proper' : zarith.
-Global Hint Resolve Z.mul_Zneg_flip_le_le_Proper' : zarith.
-Global Hint Resolve Z.mul_Zneg_ge_le_Proper' : zarith.
-Global Hint Resolve Z.div_Zpos_le_Proper_r : zarith.
-Global Hint Resolve Z.div_Z0_le_Proper_r : zarith.
-Global Hint Resolve Z.div_Zneg_le_flip_le_Proper_r : zarith.
-Global Hint Resolve Z.div_Zneg_flip_le_le_Proper_r : zarith.
-Global Hint Resolve Z.div_Z0_le_Proper_l : zarith.
-Global Hint Resolve Z.div_Zpos_Zpos_le_Proper_l : zarith.
-Global Hint Resolve Z.div_Zpos_Zneg_le_Proper_l : zarith.
-Global Hint Resolve Z.div_Zneg_Zpos_le_Proper_l : zarith.
-Global Hint Resolve Z.div_Zneg_Zneg_le_Proper_l : zarith.
-Global Hint Resolve Z.div_Z0_Zpos_le_Proper_l : zarith.
-Global Hint Resolve Z.div_Z0_Zneg_le_Proper_l : zarith.
-Global Hint Resolve Z.div_Zpos_Zpos_le_Proper_r : zarith.
-Global Hint Resolve Z.div_Zpos_Zneg_le_Proper_r : zarith.
-Global Hint Resolve Z.div_Zneg_Zpos_le_Proper_r : zarith.
-Global Hint Resolve Z.div_Zneg_Zneg_le_Proper_r : zarith.
-Global Hint Resolve Z.div_Zpos_Z0_le_Proper_r : zarith.
-Global Hint Resolve Z.div_Zneg_Z0_le_Proper_r : zarith.
-Global Hint Resolve Z.shiftr_le_Proper_l : zarith.
-Global Hint Resolve Z.shiftl_le_Proper_l : zarith.
-Global Hint Resolve Z.shiftr_le_Proper_r : zarith.
-Global Hint Resolve Z.shiftl_le_Proper_r : zarith.
-Global Hint Resolve Z.shiftr_Zpos_Zpos_le_Proper_l : zarith.
-Global Hint Resolve Z.shiftr_Zpos_Zneg_le_Proper_l : zarith.
-Global Hint Resolve Z.shiftr_Zneg_Zpos_le_Proper_l : zarith.
-Global Hint Resolve Z.shiftr_Zneg_Zneg_le_Proper_l : zarith.
-Global Hint Resolve Z.shiftr_Z0_Zpos_le_Proper_l : zarith.
-Global Hint Resolve Z.shiftr_Z0_Zneg_le_Proper_l : zarith.
-Global Hint Resolve Z.shiftr_Zpos_Zpos_le_Proper_r : zarith.
-Global Hint Resolve Z.shiftr_Zpos_Zneg_le_Proper_r : zarith.
-Global Hint Resolve Z.shiftr_Zneg_Zpos_le_Proper_r : zarith.
-Global Hint Resolve Z.shiftr_Zneg_Zneg_le_Proper_r : zarith.
-Global Hint Resolve Z.shiftr_Zpos_Z0_le_Proper_r : zarith.
-Global Hint Resolve Z.shiftr_Zneg_Z0_le_Proper_r : zarith.
-Global Hint Resolve Z.shiftl_Zpos_Zpos_le_Proper_l : zarith.
-Global Hint Resolve Z.shiftl_Zpos_Zneg_le_Proper_l : zarith.
-Global Hint Resolve Z.shiftl_Zneg_Zpos_le_Proper_l : zarith.
-Global Hint Resolve Z.shiftl_Zneg_Zneg_le_Proper_l : zarith.
-Global Hint Resolve Z.shiftl_Z0_Zpos_le_Proper_l : zarith.
-Global Hint Resolve Z.shiftl_Z0_Zneg_le_Proper_l : zarith.
-Global Hint Resolve Z.shiftl_Zpos_Zpos_le_Proper_r : zarith.
-Global Hint Resolve Z.shiftl_Zpos_Zneg_le_Proper_r : zarith.
-Global Hint Resolve Z.shiftl_Zneg_Zpos_le_Proper_r : zarith.
-Global Hint Resolve Z.shiftl_Zneg_Zneg_le_Proper_r : zarith.
-Global Hint Resolve Z.shiftl_Zpos_Z0_le_Proper_r : zarith.
-Global Hint Resolve Z.shiftl_Zneg_Z0_le_Proper_r : zarith.
-Global Hint Resolve Z.land_round_Proper_pos_r : zarith.
-Global Hint Resolve Z.land_round_Proper_pos_l : zarith.
-Global Hint Resolve Z.lor_round_Proper_pos_r : zarith.
-Global Hint Resolve Z.lor_round_Proper_pos_l : zarith.
-Global Hint Resolve Z.land_round_Proper_neg_r : zarith.
-Global Hint Resolve Z.land_round_Proper_neg_l : zarith.
-Global Hint Resolve Z.lor_round_Proper_neg_r : zarith.
-Global Hint Resolve Z.lor_round_Proper_neg_l : zarith.
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  Export Crypto.Util.ZUtil.Div.Hints.
+  Export Crypto.Util.ZUtil.LandLorBounds.Hints.
+  Export Crypto.Util.ZUtil.Tactics.PeelLe.Hints.
+  Export Crypto.Util.ZUtil.Tactics.DivModToQuotRem.Hints.
+  Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+  Global Hint Resolve Z.succ_le_Proper : zarith.
+  Global Hint Resolve Z.add_le_Proper : zarith.
+  Global Hint Resolve Z.add_le_Proper' : zarith.
+  Global Hint Resolve Z.sub_le_ge_Proper : zarith.
+  Global Hint Resolve Z.sub_le_flip_le_Proper : zarith.
+  Global Hint Resolve Z.sub_le_eq_Proper : zarith.
+  Global Hint Resolve Z.mul_Zpos_le_Proper : zarith.
+  Global Hint Resolve Z.log2_up_le_Proper : zarith.
+  Global Hint Resolve Z.log2_le_Proper : zarith.
+  Global Hint Resolve Z.pow_Zpos_le_Proper : zarith.
+  Global Hint Resolve Z.lt_le_flip_Proper_flip_impl : zarith.
+  Global Hint Resolve Z.le_Proper_ge_le_flip_impl : zarith.
+  Global Hint Resolve Z.add_le_Proper_flip : zarith.
+  Global Hint Resolve Z.sub_le_ge_Proper_flip : zarith.
+  Global Hint Resolve Z.sub_flip_le_le_Proper_flip : zarith.
+  Global Hint Resolve Z.sub_le_eq_Proper_flip : zarith.
+  Global Hint Resolve Z.log2_up_le_Proper_flip : zarith.
+  Global Hint Resolve Z.log2_le_Proper_flip : zarith.
+  Global Hint Resolve Z.pow_Zpos_le_Proper_flip : zarith.
+  Global Hint Resolve Z.add_with_carry_le_Proper : zarith.
+  Global Hint Resolve Z.sub_with_borrow_le_Proper : zarith.
+  Global Hint Resolve Z.opp_flip_le_le_Proper : zarith.
+  Global Hint Resolve Z.opp_le_flip_le_Proper : zarith.
+  Global Hint Resolve Z.opp_le_ge_Proper : zarith.
+  Global Hint Resolve Z.opp_ge_le_Proper : zarith.
+  Global Hint Resolve Z.add_le_Proper'' : zarith.
+  Global Hint Resolve Z.sub_le_ge_Proper_r : zarith.
+  Global Hint Resolve Z.sub_le_le_Proper_l : zarith.
+  Global Hint Resolve Z.sub_le_flip_le_Proper_r : zarith.
+  Global Hint Resolve Z.sub_flip_le_le_Proper_r : zarith.
+  Global Hint Resolve Z.sub_ge_le_Proper_r : zarith.
+  Global Hint Resolve Z.mul_Z0_le_Proper : zarith.
+  Global Hint Resolve Z.mul_Zneg_le_flip_le_Proper : zarith.
+  Global Hint Resolve Z.mul_Zneg_le_ge_Proper : zarith.
+  Global Hint Resolve Z.mul_Zneg_flip_le_le_Proper : zarith.
+  Global Hint Resolve Z.mul_Zneg_ge_le_Proper : zarith.
+  Global Hint Resolve Z.mul_Zpos_le_Proper' : zarith.
+  Global Hint Resolve Z.mul_Z0_le_Proper' : zarith.
+  Global Hint Resolve Z.mul_Zneg_le_flip_le_Proper' : zarith.
+  Global Hint Resolve Z.mul_Zneg_le_ge_Proper' : zarith.
+  Global Hint Resolve Z.mul_Zneg_flip_le_le_Proper' : zarith.
+  Global Hint Resolve Z.mul_Zneg_ge_le_Proper' : zarith.
+  Global Hint Resolve Z.div_Zpos_le_Proper_r : zarith.
+  Global Hint Resolve Z.div_Z0_le_Proper_r : zarith.
+  Global Hint Resolve Z.div_Zneg_le_flip_le_Proper_r : zarith.
+  Global Hint Resolve Z.div_Zneg_flip_le_le_Proper_r : zarith.
+  Global Hint Resolve Z.div_Z0_le_Proper_l : zarith.
+  Global Hint Resolve Z.div_Zpos_Zpos_le_Proper_l : zarith.
+  Global Hint Resolve Z.div_Zpos_Zneg_le_Proper_l : zarith.
+  Global Hint Resolve Z.div_Zneg_Zpos_le_Proper_l : zarith.
+  Global Hint Resolve Z.div_Zneg_Zneg_le_Proper_l : zarith.
+  Global Hint Resolve Z.div_Z0_Zpos_le_Proper_l : zarith.
+  Global Hint Resolve Z.div_Z0_Zneg_le_Proper_l : zarith.
+  Global Hint Resolve Z.div_Zpos_Zpos_le_Proper_r : zarith.
+  Global Hint Resolve Z.div_Zpos_Zneg_le_Proper_r : zarith.
+  Global Hint Resolve Z.div_Zneg_Zpos_le_Proper_r : zarith.
+  Global Hint Resolve Z.div_Zneg_Zneg_le_Proper_r : zarith.
+  Global Hint Resolve Z.div_Zpos_Z0_le_Proper_r : zarith.
+  Global Hint Resolve Z.div_Zneg_Z0_le_Proper_r : zarith.
+  Global Hint Resolve Z.shiftr_le_Proper_l : zarith.
+  Global Hint Resolve Z.shiftl_le_Proper_l : zarith.
+  Global Hint Resolve Z.shiftr_le_Proper_r : zarith.
+  Global Hint Resolve Z.shiftl_le_Proper_r : zarith.
+  Global Hint Resolve Z.shiftr_Zpos_Zpos_le_Proper_l : zarith.
+  Global Hint Resolve Z.shiftr_Zpos_Zneg_le_Proper_l : zarith.
+  Global Hint Resolve Z.shiftr_Zneg_Zpos_le_Proper_l : zarith.
+  Global Hint Resolve Z.shiftr_Zneg_Zneg_le_Proper_l : zarith.
+  Global Hint Resolve Z.shiftr_Z0_Zpos_le_Proper_l : zarith.
+  Global Hint Resolve Z.shiftr_Z0_Zneg_le_Proper_l : zarith.
+  Global Hint Resolve Z.shiftr_Zpos_Zpos_le_Proper_r : zarith.
+  Global Hint Resolve Z.shiftr_Zpos_Zneg_le_Proper_r : zarith.
+  Global Hint Resolve Z.shiftr_Zneg_Zpos_le_Proper_r : zarith.
+  Global Hint Resolve Z.shiftr_Zneg_Zneg_le_Proper_r : zarith.
+  Global Hint Resolve Z.shiftr_Zpos_Z0_le_Proper_r : zarith.
+  Global Hint Resolve Z.shiftr_Zneg_Z0_le_Proper_r : zarith.
+  Global Hint Resolve Z.shiftl_Zpos_Zpos_le_Proper_l : zarith.
+  Global Hint Resolve Z.shiftl_Zpos_Zneg_le_Proper_l : zarith.
+  Global Hint Resolve Z.shiftl_Zneg_Zpos_le_Proper_l : zarith.
+  Global Hint Resolve Z.shiftl_Zneg_Zneg_le_Proper_l : zarith.
+  Global Hint Resolve Z.shiftl_Z0_Zpos_le_Proper_l : zarith.
+  Global Hint Resolve Z.shiftl_Z0_Zneg_le_Proper_l : zarith.
+  Global Hint Resolve Z.shiftl_Zpos_Zpos_le_Proper_r : zarith.
+  Global Hint Resolve Z.shiftl_Zpos_Zneg_le_Proper_r : zarith.
+  Global Hint Resolve Z.shiftl_Zneg_Zpos_le_Proper_r : zarith.
+  Global Hint Resolve Z.shiftl_Zneg_Zneg_le_Proper_r : zarith.
+  Global Hint Resolve Z.shiftl_Zpos_Z0_le_Proper_r : zarith.
+  Global Hint Resolve Z.shiftl_Zneg_Z0_le_Proper_r : zarith.
+  Global Hint Resolve Z.land_round_Proper_pos_r : zarith.
+  Global Hint Resolve Z.land_round_Proper_pos_l : zarith.
+  Global Hint Resolve Z.lor_round_Proper_pos_r : zarith.
+  Global Hint Resolve Z.lor_round_Proper_pos_l : zarith.
+  Global Hint Resolve Z.land_round_Proper_neg_r : zarith.
+  Global Hint Resolve Z.land_round_Proper_neg_l : zarith.
+  Global Hint Resolve Z.lor_round_Proper_neg_r : zarith.
+  Global Hint Resolve Z.lor_round_Proper_neg_l : zarith.
+End Hints.

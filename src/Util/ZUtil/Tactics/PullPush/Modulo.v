@@ -94,3 +94,9 @@ Ltac pull_Zmod_step :=
   | _ => progress autorewrite with pull_Zmod
   end.
 Ltac pull_Zmod := repeat pull_Zmod_step.
+
+Module Export Hints.
+  Export ZUtil.Hints.Core.
+  Export ZUtil.Hints.PullPush.
+  Export ZUtil.Modulo.PullPush.Hints.
+End Hints.

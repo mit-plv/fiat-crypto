@@ -52,3 +52,16 @@ Module N2Z.
   Hint Rewrite inj_shiftr : push_Zof_N.
   Hint Rewrite <- inj_shiftr : pull_Zof_N.
 End N2Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Hint Rewrite N2Z.inj_land : push_Zof_N.
+  Hint Rewrite <- N2Z.inj_land : pull_Zof_N.
+  Hint Rewrite N2Z.inj_lor : push_Zof_N.
+  Hint Rewrite <- N2Z.inj_lor : pull_Zof_N.
+  Hint Rewrite N2Z.inj_shiftl : push_Zof_N.
+  Hint Rewrite <- N2Z.inj_shiftl : pull_Zof_N.
+  Hint Rewrite N2Z.inj_shiftr : push_Zof_N.
+  Hint Rewrite <- N2Z.inj_shiftr : pull_Zof_N.
+End Hints.

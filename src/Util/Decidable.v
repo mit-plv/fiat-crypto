@@ -216,3 +216,52 @@ Proof.
   compute; clear; destruct (H t t) as [ [] |e];
     [ reflexivity | destruct (e eq_refl) ].
 Qed.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.HProp.Hints.
+  Global Existing Instance hprop_eq_dec | 10.
+  Global Existing Instance eq_dec_hprop | 5.
+  Global Existing Instance dec_True | 10.
+  Global Existing Instance dec_False | 10.
+  Global Existing Instance dec_or | 10.
+  Global Existing Instance dec_and | 10.
+  Global Existing Instance dec_impl | 10.
+  Global Existing Instance dec_impl_simple | 10.
+  Global Existing Instance dec_iff | 10.
+  Global Hint Extern 0 (Decidable (~?A)) => apply (@dec_not A) : typeclass_instances.
+  Global Existing Instance dec_eq_unit | 10.
+  Global Existing Instance dec_eq_bool | 10.
+  Global Existing Instance dec_eq_Empty_set | 10.
+  Global Existing Instance dec_eq_prod | 10.
+  Global Existing Instance dec_eq_option | 10.
+  Global Existing Instance dec_eq_list | 10.
+  Global Existing Instance dec_eq_list_nil_r | 10.
+  Global Existing Instance dec_eq_list_nil_l | 10.
+  Global Existing Instance dec_eq_sum | 10.
+  Global Existing Instance dec_eq_sigT_hprop | 10.
+  Global Existing Instance dec_eq_sig_hprop | 10.
+  Global Existing Instance dec_eq_comparison | 10.
+  Global Existing Instance dec_eq_nat | 10.
+  Global Existing Instance dec_le_nat.
+  Global Existing Instance dec_lt_nat.
+  Global Existing Instance dec_ge_nat.
+  Global Existing Instance dec_gt_nat.
+  Global Existing Instance dec_eq_N | 10.
+  Global Existing Instance dec_eq_Z | 10.
+  Global Existing Instance dec_lt_Z.
+  Global Existing Instance dec_le_Z.
+  Global Existing Instance dec_gt_Z.
+  Global Existing Instance dec_ge_Z.
+  Global Existing Instance dec_Forall | 10.
+  Global Existing Instance dec_Exists | 10.
+  Global Existing Instance dec_match_pair | 1.
+  Global Existing Instance dec_if_bool | 10.
+  Global Existing Instance dec_ex_forall_not.
+  Global Existing Instance dec_eq_positive | 10.
+  Global Existing Instance dec_lt_positive.
+  Global Existing Instance dec_le_positive.
+  Global Existing Instance dec_gt_positive.
+  Global Existing Instance dec_ge_positive.
+  Global Hint Extern 2 (Decidable _) => progress unfold Decidable : typeclass_instances core.
+End Hints.

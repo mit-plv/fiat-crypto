@@ -1,5 +1,5 @@
 (** * Homotopy Propositions *)
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 (** A homotopy proposition, or hProp, is a subsingleton type, i.e., a
     type with at most one inhabitant.  The property of being an hProp,
     i.e., being irrelevant when considering propositional equality
@@ -69,3 +69,17 @@ Ltac eliminate_hprop_eq :=
   repeat match goal with
          | [ H : ?x = ?x :> ?T |- _ ] => clear H || (progress eliminate_hprop_eq_at T)
          end.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Global Existing Instances
+         ishprop_unit
+         ishprop_True
+         ishprop_Empty_set
+         ishprop_False
+         ishprop_prod
+         ishprop_and
+         ishprop_sigT
+         ishprop_sig
+  .
+End Hints.

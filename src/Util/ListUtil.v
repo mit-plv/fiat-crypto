@@ -67,20 +67,22 @@ Create HintDb pull_update_nth discriminated.
 Create HintDb push_update_nth discriminated.
 Create HintDb znonzero discriminated.
 
-Hint Rewrite
-  @app_length
-  @rev_length
-  @map_length
-  @seq_length
-  @fold_left_length
-  @split_length_l
-  @split_length_r
-  @firstn_length
-  @combine_length
-  @prod_length
-  : distr_length.
+Module Export Hints1.
+  Hint Rewrite
+       @app_length
+       @rev_length
+       @map_length
+       @seq_length
+       @fold_left_length
+       @split_length_l
+       @split_length_r
+       @firstn_length
+       @combine_length
+       @prod_length
+    : distr_length.
 
-Global Hint Extern 1 => progress autorewrite with distr_length in * : distr_length.
+  Global Hint Extern 1 => progress autorewrite with distr_length in * : distr_length.
+End Hints1.
 Ltac distr_length := autorewrite with distr_length in *;
   try solve [simpl in *; (idtac + exfalso); lia].
 
@@ -2208,3 +2210,143 @@ Proof using Type.
                       | [ IH : forall n : nat, _, H : forall v1, nth_error ?l ?n = Some v1 -> _ |- _ ] => specialize (IH n H)
                       end ].
 Qed.
+
+Module Export Hints.
+  Export Crypto.Util.NatUtil.Hints.
+  Export Crypto.Util.Pointed.Hints.
+  Export Crypto.Util.Decidable.Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Global Existing Instance list_rect_Proper_dep | 1.
+  Global Existing Instance list_case_Proper_dep | 1.
+  Global Existing Instance list_rect_Proper.
+  Global Existing Instance list_case_Proper.
+  Export Hints1.
+  Hint Rewrite @map_cons @map_nil @map_repeat : push_map.
+  Hint Rewrite @map_app : push_map.
+  Hint Rewrite @flat_map_cons @flat_map_nil : push_flat_map.
+  Hint Rewrite @rev_cons : list.
+  Hint Rewrite @fold_right_nil @fold_right_cons @fold_right_snoc : simpl_fold_right push_fold_right.
+  Hint Rewrite @partition_nil @partition_cons : push_partition.
+  Hint Rewrite @firstn_skipn : simpl_firstn.
+  Hint Rewrite @firstn_skipn : simpl_skipn.
+  Hint Rewrite @firstn_nil @firstn_cons @List.firstn_all @firstn_O @firstn_app_2 @List.firstn_firstn : push_firstn.
+  Hint Rewrite @firstn_nil @firstn_cons @List.firstn_all @firstn_O @firstn_app_2 @List.firstn_firstn : simpl_firstn.
+  Hint Rewrite @firstn_app : push_firstn.
+  Hint Rewrite <- @firstn_cons @firstn_app @List.firstn_firstn : pull_firstn.
+  Hint Rewrite @firstn_all2 @removelast_firstn @firstn_removelast using lia : push_firstn.
+  Hint Rewrite @firstn_all2 @removelast_firstn @firstn_removelast using lia : simpl_firstn.
+  Global Hint Unfold splice_nth.
+  Hint Rewrite @nth_default_cons : simpl_nth_default.
+  Hint Rewrite @nth_default_cons : push_nth_default.
+  Hint Rewrite @nth_default_cons_S : simpl_nth_default.
+  Hint Rewrite @nth_default_cons_S : push_nth_default.
+  Hint Rewrite @nth_default_nil : simpl_nth_default.
+  Hint Rewrite @nth_default_nil : push_nth_default.
+  Hint Rewrite @nth_error_nil_error : simpl_nth_error.
+  Global Hint Resolve nth_error_length_error.
+  Hint Rewrite @nth_error_length_error using lia : simpl_nth_error.
+  Hint Rewrite @map_nth_default using lia : push_nth_default.
+  Hint Rewrite @simpl_set_nth_S @simpl_set_nth_0 : simpl_set_nth.
+  Global Existing Instance update_nth_Proper.
+  Global Existing Instance update_nth_Proper_eq | 1.
+  Hint Rewrite @update_nth_id_eq_specific using congruence : simpl_update_nth.
+  Hint Rewrite @update_nth_id_eq using congruence : simpl_update_nth.
+  Hint Rewrite @update_nth_id : simpl_update_nth.
+  Hint Rewrite @nth_update_nth : push_nth_error.
+  Hint Rewrite <- @nth_update_nth : pull_nth_error.
+  Hint Rewrite @length_update_nth : distr_length.
+  Hint Rewrite @nth_set_nth : push_nth_error.
+  Hint Rewrite @length_set_nth : distr_length.
+  Hint Rewrite @nth_error_value_eq_nth_default using eassumption : simpl_nth_default.
+  Hint Rewrite @nth_default_app : push_nth_default.
+  Hint Rewrite @map_fst_combine @map_snd_combine : push_map.
+  Hint Rewrite @skipn_nil : simpl_skipn.
+  Hint Rewrite @skipn_nil : push_skipn.
+  Hint Rewrite @skipn_0 : simpl_skipn.
+  Hint Rewrite @skipn_0 : push_skipn.
+  Hint Rewrite @skipn_cons_S : simpl_skipn.
+  Hint Rewrite @skipn_cons_S : push_skipn.
+  Hint Rewrite @skipn_app : push_skipn.
+  Hint Rewrite @skipn_skipn : simpl_skipn.
+  Hint Rewrite <- @skipn_skipn : push_skipn.
+  Hint Rewrite @skipn_skipn : pull_skipn.
+  Hint Rewrite <- @firstn_skipn_add @firstn_skipn_add' : simpl_firstn.
+  Hint Rewrite <- @firstn_skipn_add @firstn_skipn_add' : simpl_skipn.
+  Hint Rewrite @firstn_app_inleft using solve [ distr_length ] : simpl_firstn.
+  Hint Rewrite @firstn_app_inleft using solve [ distr_length ] : push_firstn.
+  Hint Rewrite @skipn_app_inleft using solve [ distr_length ] : push_skipn.
+  Hint Rewrite @firstn_map : push_firstn.
+  Hint Rewrite <- @firstn_map : pull_firstn.
+  Hint Rewrite @skipn_map : push_skipn.
+  Hint Rewrite <- @skipn_map : pull_skipn.
+  Hint Rewrite @firstn_all using solve [ distr_length ] : simpl_firstn.
+  Hint Rewrite @firstn_all using solve [ distr_length ] : push_firstn.
+  Hint Rewrite @skipn_all using solve [ distr_length ] : simpl_skipn.
+  Hint Rewrite @skipn_all using solve [ distr_length ] : push_skipn.
+  Hint Rewrite @firstn_app_sharp using solve [ distr_length ] : simpl_firstn.
+  Hint Rewrite @firstn_app_sharp using solve [ distr_length ] : push_firstn.
+  Hint Rewrite @skipn_app_sharp using solve [ distr_length ] : simpl_skipn.
+  Hint Rewrite @skipn_app_sharp using solve [ distr_length ] : push_skipn.
+  Hint Rewrite @skipn_length : distr_length.
+  Hint Rewrite @length_cons : distr_length.
+  Hint Rewrite @length_tl : distr_length.
+  Hint Rewrite @combine_cons : push_combine.
+  Hint Rewrite @firstn_combine : push_firstn.
+  Hint Rewrite <- @firstn_combine : pull_firstn.
+  Hint Rewrite @combine_nil_r : push_combine.
+  Hint Rewrite @combine_snoc using (solve [distr_length]) : push_combine.
+  Hint Rewrite @skipn_combine : push_skipn.
+  Hint Rewrite <- @skipn_combine : pull_skipn.
+  Hint Rewrite @nil_length0 : distr_length.
+  Hint Rewrite @update_nth_cons : simpl_update_nth.
+  Hint Rewrite @set_nth_cons : simpl_set_nth.
+  Hint Rewrite <- @cons_update_nth : simpl_update_nth.
+  Hint Rewrite @update_nth_nil : simpl_update_nth.
+  Hint Rewrite <- @cons_set_nth : simpl_set_nth.
+  Hint Rewrite @set_nth_nil : simpl_set_nth.
+  Hint Rewrite @nth_default_out_of_bounds using lia : simpl_nth_default.
+  Global Hint Resolve @nth_default_in_bounds : simpl_nth_default.
+  Hint Rewrite @map_nth_default_always : push_nth_default.
+  Hint Rewrite @firstn_firstn using lia : push_firstn.
+  Hint Rewrite @firstn_seq : push_firstn.
+  Hint Rewrite @update_nth_out_of_bounds using lia : simpl_update_nth.
+  Hint Rewrite @update_nth_nth_default_full : push_nth_default.
+  Hint Rewrite @update_nth_nth_default using (lia || distr_length; lia) : push_nth_default.
+  Hint Rewrite @set_nth_nth_default_full : push_nth_default.
+  Hint Rewrite @set_nth_nth_default using (lia || distr_length; lia) : push_nth_default.
+  Hint Rewrite @sum_firstn_all_succ using lia : simpl_sum_firstn.
+  Hint Rewrite @sum_firstn_all using lia : simpl_sum_firstn.
+  Hint Rewrite @sum_firstn_succ_default : simpl_sum_firstn.
+  Hint Rewrite @sum_firstn_0 : simpl_sum_firstn.
+  Hint Rewrite @sum_firstn_succ using congruence : simpl_sum_firstn.
+  Hint Rewrite @sum_firstn_succ_cons : simpl_sum_firstn.
+  Hint Rewrite @sum_firstn_nil : simpl_sum_firstn.
+  Global Hint Resolve sum_firstn_nonnegative : znonzero.
+  Hint Rewrite @sum_firstn_app_sum : simpl_sum_firstn.
+  Hint Rewrite sum_cons : push_sum.
+  Hint Rewrite sum_nil : push_sum.
+  Hint Rewrite sum_app : push_sum.
+  Hint Rewrite @nth_error_skipn : push_nth_error.
+  Hint Rewrite @nth_default_skipn : push_nth_default.
+  Hint Rewrite @nth_default_seq_inbounds using lia : push_nth_default.
+  Hint Rewrite sum_firstn_app_hint using solve [ NotSum ] : simpl_sum_firstn.
+  Hint Rewrite @map2_length : distr_length.
+  Hint Rewrite @firstn_update_nth : push_firstn.
+  Hint Rewrite @firstn_update_nth : pull_update_nth.
+  Hint Rewrite <- @firstn_update_nth : pull_firstn.
+  Hint Rewrite <- @firstn_update_nth : push_update_nth.
+  Global Existing Instance Proper_nth_default.
+  Hint Rewrite @nth_default_firstn : push_nth_default.
+  Hint Rewrite repeat_length : distr_length.
+  Hint Rewrite @firstn_repeat : push_firstn.
+  Hint Rewrite @skipn_repeat : push_skipn.
+  Global Existing Instance Proper_map.
+  Global Existing Instance flat_map_Proper.
+  Global Existing Instance map_Proper_eq | 1.
+  Global Existing Instance flat_map_Proper_eq | 1.
+  Global Existing Instance partition_Proper.
+  Global Existing Instance partition_Proper_eq | 1.
+  Global Existing Instance fold_right_Proper | 1.
+  Global Existing Instance fold_right_Proper_eq | 1.
+  Hint Rewrite flat_map_app : push_flat_map.
+End Hints.

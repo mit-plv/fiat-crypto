@@ -47,15 +47,6 @@ Module Columns.
 
   End Wrappers.
 End Columns.
-Global Hint Unfold
-     Columns.conditional_add_cps
-     Columns.add_cps
-     Columns.unbalanced_sub_cps
-     Columns.mul_cps.
-
-Global Hint Unfold
-     Columns.add_cps Columns.unbalanced_sub_cps Columns.mul_cps Columns.conditional_add_cps
-  : basesystem_partial_evaluation_unfolder.
 
 Ltac basesystem_partial_evaluation_unfolder t :=
   let t := (eval cbv delta [Columns.add_cps Columns.unbalanced_sub_cps Columns.mul_cps Columns.conditional_add_cps] in t) in
@@ -64,5 +55,23 @@ Ltac basesystem_partial_evaluation_unfolder t :=
   let t := Arithmetic.Core.basesystem_partial_evaluation_unfolder t in
   t.
 
-Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
-  basesystem_partial_evaluation_unfolder t.
+Module Export Hints.
+  Export Crypto.Arithmetic.Core.Hints.
+  Export Crypto.Arithmetic.Saturated.Core.Hints.
+  Export Crypto.Arithmetic.Saturated.MulSplit.Hints.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  Export Crypto.Util.ZUtil.MulSplit.Hints.
+  Export Crypto.Util.ZUtil.CPS.Hints.
+  Export Crypto.Util.Tuple.Hints.
+  Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
+    basesystem_partial_evaluation_unfolder t.
+  Global Hint Unfold
+         Columns.conditional_add_cps
+         Columns.add_cps
+         Columns.unbalanced_sub_cps
+         Columns.mul_cps.
+
+  Global Hint Unfold
+         Columns.add_cps Columns.unbalanced_sub_cps Columns.mul_cps Columns.conditional_add_cps
+    : basesystem_partial_evaluation_unfolder.
+End Hints.

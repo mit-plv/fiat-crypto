@@ -122,3 +122,11 @@ Proof.
       clear H.
       apply stabilizes_bounded_pos in H'; auto; lia. } }
 Qed.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Export Crypto.Util.ZUtil.Hints.ZArith.
+  Export Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.Hints.
+  Export Crypto.Util.ZUtil.Testbit.Hints.
+End Hints.

@@ -363,4 +363,19 @@ Module Z.
     destruct (0 <=? x), (x <? 0); try lia.
   Qed.
 End Z.
-Global Hint Resolve Z.lor_range : zarith.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Export Crypto.Util.ZUtil.Hints.ZArith.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  Export Crypto.Util.ZUtil.Pow.Hints.
+  Export Crypto.Util.ZUtil.Pow2.Hints.
+  Export Crypto.Util.ZUtil.Div.Hints.
+  Export Crypto.Util.ZUtil.Testbit.Hints.
+  Export Crypto.Util.ZUtil.Tactics.ZeroBounds.Hints.
+  Export Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.Hints.
+  Export Crypto.Util.ZUtil.Tactics.DivModToQuotRem.Hints.
+  Export Crypto.Util.ZUtil.Tactics.PeelLe.Hints.
+  Global Hint Resolve Z.lor_range : zarith.
+End Hints.

@@ -392,29 +392,43 @@ Module Z.
   Qed.
   Global Hint Resolve shiftr_nonneg_le : zarith.
 End Z.
-Hint Rewrite Z.shiftr_add_shiftl_high using zutil_arith : pull_Zshift.
-Hint Rewrite <- Z.shiftr_add_shiftl_high using zutil_arith : push_Zshift.
-Hint Rewrite Z.shiftr_add_shiftl_low using zutil_arith : pull_Zshift.
-Hint Rewrite <- Z.shiftr_add_shiftl_low using zutil_arith : push_Zshift.
-Hint Rewrite Z.testbit_add_shiftl_high using zutil_arith : Ztestbit.
-Hint Rewrite Z.shiftr_succ using zutil_arith : push_Zshift.
-Hint Rewrite <- Z.shiftr_succ using zutil_arith : pull_Zshift.
-Global Hint Resolve Z.shiftr_1_r_le : zarith.
-Global Hint Resolve Z.shiftr_le : zarith.
-Global Hint Resolve Z.shiftr_ones : zarith.
-Global Hint Resolve Z.shiftr_upper_bound : zarith.
-Hint Rewrite <- Z.lor_shiftl using zutil_arith : convert_to_Ztestbit.
-Hint Rewrite <- Z.lor_shiftl' using zutil_arith : convert_to_Ztestbit.
-Hint Rewrite Z.shiftl_spec_full : Ztestbit_full.
-Hint Rewrite Z.shiftr_spec_full : Ztestbit_full.
-Hint Rewrite Z.testbit_add_shiftl_full using zutil_arith : Ztestbit.
-Hint Rewrite Z.shiftl_add using zutil_arith : push_Zshift.
-Hint Rewrite <- Z.shiftl_add using zutil_arith : pull_Zshift.
-Hint Rewrite Z.shiftr_add using zutil_arith : push_Zshift.
-Hint Rewrite <- Z.shiftr_add using zutil_arith : pull_Zshift.
-Hint Rewrite Z.shiftl_sub using zutil_arith : push_Zshift.
-Hint Rewrite <- Z.shiftl_sub using zutil_arith : pull_Zshift.
-Hint Rewrite Z.shiftr_sub using zutil_arith : push_Zshift.
-Hint Rewrite <- Z.shiftr_sub using zutil_arith : pull_Zshift.
-Hint Rewrite Z.pow2_bits_eqb using zutil_arith : Ztestbit.
-Global Hint Resolve Z.shiftr_nonneg_le : zarith.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export Crypto.Util.ZUtil.Hints.ZArith.
+  Export Crypto.Util.ZUtil.Ones.Hints.
+  Export Crypto.Util.ZUtil.Definitions.Hints.
+  Export Crypto.Util.ZUtil.Testbit.Hints.
+  Export Crypto.Util.ZUtil.Pow.Hints.
+  Export Crypto.Util.ZUtil.Pow2Mod.Hints.
+  Export Crypto.Util.ZUtil.Le.Hints.
+  Export Crypto.Util.ZUtil.Div.Hints.
+  Export Crypto.Util.ZUtil.Tactics.ZeroBounds.Hints.
+  Export Crypto.Util.ZUtil.Notations.Hints.
+  Hint Rewrite Z.shiftr_add_shiftl_high using zutil_arith : pull_Zshift.
+  Hint Rewrite <- Z.shiftr_add_shiftl_high using zutil_arith : push_Zshift.
+  Hint Rewrite Z.shiftr_add_shiftl_low using zutil_arith : pull_Zshift.
+  Hint Rewrite <- Z.shiftr_add_shiftl_low using zutil_arith : push_Zshift.
+  Hint Rewrite Z.testbit_add_shiftl_high using zutil_arith : Ztestbit.
+  Hint Rewrite Z.shiftr_succ using zutil_arith : push_Zshift.
+  Hint Rewrite <- Z.shiftr_succ using zutil_arith : pull_Zshift.
+  Global Hint Resolve Z.shiftr_1_r_le : zarith.
+  Global Hint Resolve Z.shiftr_le : zarith.
+  Global Hint Resolve Z.shiftr_ones : zarith.
+  Global Hint Resolve Z.shiftr_upper_bound : zarith.
+  Hint Rewrite <- Z.lor_shiftl using zutil_arith : convert_to_Ztestbit.
+  Hint Rewrite <- Z.lor_shiftl' using zutil_arith : convert_to_Ztestbit.
+  Hint Rewrite Z.shiftl_spec_full : Ztestbit_full.
+  Hint Rewrite Z.shiftr_spec_full : Ztestbit_full.
+  Hint Rewrite Z.testbit_add_shiftl_full using zutil_arith : Ztestbit.
+  Hint Rewrite Z.shiftl_add using zutil_arith : push_Zshift.
+  Hint Rewrite <- Z.shiftl_add using zutil_arith : pull_Zshift.
+  Hint Rewrite Z.shiftr_add using zutil_arith : push_Zshift.
+  Hint Rewrite <- Z.shiftr_add using zutil_arith : pull_Zshift.
+  Hint Rewrite Z.shiftl_sub using zutil_arith : push_Zshift.
+  Hint Rewrite <- Z.shiftl_sub using zutil_arith : pull_Zshift.
+  Hint Rewrite Z.shiftr_sub using zutil_arith : push_Zshift.
+  Hint Rewrite <- Z.shiftr_sub using zutil_arith : pull_Zshift.
+  Hint Rewrite Z.pow2_bits_eqb using zutil_arith : Ztestbit.
+  Global Hint Resolve Z.shiftr_nonneg_le : zarith.
+End Hints.

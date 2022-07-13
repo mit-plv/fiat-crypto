@@ -1,4 +1,4 @@
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 (** Rewrite with the commutative property to ensure that all appearences of an identifier show up the same way *)
 
 Ltac rewrite_with_comm id clem x y :=

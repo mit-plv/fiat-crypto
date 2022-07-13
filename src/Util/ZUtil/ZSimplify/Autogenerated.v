@@ -588,3 +588,138 @@ for name in names:
   Proof. lia. Qed.
   Hint Rewrite simplify_m2XpXpX : zsimplify.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.ZUtil.Hints.Core.
+  Export DivModToQuotRem.Hints.
+  Hint Rewrite Z.simplify_div_ppX_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pXp_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppX_pdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pXp_pdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppX_ppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pXp_ppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppX_pppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pXp_pppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppX_ppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pXp_ppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppX_pppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pXp_pppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppX_ppppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pXp_ppppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppX_pppppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pXp_pppppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppX_ppppppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pXp_ppppppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppX_pppppppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pXp_pppppppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_pX_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_Xp_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_pX_pdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_Xp_pdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_pX_ppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_Xp_ppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_pX_pppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_Xp_pppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_pX_ppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_Xp_ppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_pX_pppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_Xp_pppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_pX_ppppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_Xp_ppppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_pX_pppppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_Xp_pppppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_pX_ppppppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_Xp_ppppppppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pX__c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_Xp__c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pX_p_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_Xp_p_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pX_pp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_Xp_pp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pX_ppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_Xp_ppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pX_pppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_Xp_pppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pX_ppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_Xp_ppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pX_pppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_Xp_pppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pX_ppppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_Xp_ppppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pX_pppppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_Xp_pppppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pX_ppppppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_Xp_ppppppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_pX__c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_Xp__c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_pX_p_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_Xp_p_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_pX_pp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_Xp_pp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_pX_ppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_Xp_ppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_pX_pppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_Xp_pppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_pX_ppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_Xp_ppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_pX_pppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_Xp_pppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_pX_ppppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_Xp_ppppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_pX_pppppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_Xp_pppppppp_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_p_o_pp_pX__c_p_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_p_o_pp_Xp__c_p_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_o_pp_pX__c_pdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_o_pp_Xp__c_pdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pppp_pXp_ppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pppp_Xpp_ppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_pXp_ppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_ppp_Xpp_ppdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_p_o_pp_pXp__c_p_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_p_o_pp_Xpp__c_p_c_dX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_pXp__c_pdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_div_pp_o_pp_Xpp__c_pdX using zutil_arith : zsimplify.
+  Hint Rewrite Z.simplify_mXmmX : zsimplify.
+  Hint Rewrite Z.simplify_mXmpX : zsimplify.
+  Hint Rewrite Z.simplify_mXpmX : zsimplify.
+  Hint Rewrite Z.simplify_mXppX : zsimplify.
+  Hint Rewrite Z.simplify_pXmmX : zsimplify.
+  Hint Rewrite Z.simplify_pXmpX : zsimplify.
+  Hint Rewrite Z.simplify_pXpmX : zsimplify.
+  Hint Rewrite Z.simplify_pXppX : zsimplify.
+  Hint Rewrite Z.simplify_mXm_Xm : zsimplify.
+  Hint Rewrite Z.simplify_mXm_Xp : zsimplify.
+  Hint Rewrite Z.simplify_mXp_Xm : zsimplify.
+  Hint Rewrite Z.simplify_mXp_Xp : zsimplify.
+  Hint Rewrite Z.simplify_pXm_Xm : zsimplify.
+  Hint Rewrite Z.simplify_pXm_Xp : zsimplify.
+  Hint Rewrite Z.simplify_pXp_Xm : zsimplify.
+  Hint Rewrite Z.simplify_pXp_Xp : zsimplify.
+  Hint Rewrite Z.simplify_Xmm_Xm : zsimplify.
+  Hint Rewrite Z.simplify_Xmm_Xp : zsimplify.
+  Hint Rewrite Z.simplify_Xmp_Xm : zsimplify.
+  Hint Rewrite Z.simplify_Xmp_Xp : zsimplify.
+  Hint Rewrite Z.simplify_Xpm_Xm : zsimplify.
+  Hint Rewrite Z.simplify_Xpm_Xp : zsimplify.
+  Hint Rewrite Z.simplify_Xpp_Xm : zsimplify.
+  Hint Rewrite Z.simplify_Xpp_Xp : zsimplify.
+  Hint Rewrite Z.simplify_mXm_mX : zsimplify.
+  Hint Rewrite Z.simplify_mXm_pX : zsimplify.
+  Hint Rewrite Z.simplify_mXp_mX : zsimplify.
+  Hint Rewrite Z.simplify_mXp_pX : zsimplify.
+  Hint Rewrite Z.simplify_pXm_mX : zsimplify.
+  Hint Rewrite Z.simplify_pXm_pX : zsimplify.
+  Hint Rewrite Z.simplify_pXp_mX : zsimplify.
+  Hint Rewrite Z.simplify_pXp_pX : zsimplify.
+  Hint Rewrite Z.simplify_Xmm_mX : zsimplify.
+  Hint Rewrite Z.simplify_Xmm_pX : zsimplify.
+  Hint Rewrite Z.simplify_Xmp_mX : zsimplify.
+  Hint Rewrite Z.simplify_Xmp_pX : zsimplify.
+  Hint Rewrite Z.simplify_Xpm_mX : zsimplify.
+  Hint Rewrite Z.simplify_Xpm_pX : zsimplify.
+  Hint Rewrite Z.simplify_Xpp_mX : zsimplify.
+  Hint Rewrite Z.simplify_Xpp_pX : zsimplify.
+  Hint Rewrite Z.simplify_m2XpX : zsimplify.
+  Hint Rewrite Z.simplify_m2XpXpX : zsimplify.
+End Hints.

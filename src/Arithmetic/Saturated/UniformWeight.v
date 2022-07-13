@@ -92,3 +92,12 @@ Section UniformWeight.
     forall x, In x (to_list _ p) -> 0 <= x < bound.
 
 End UniformWeight.
+
+Module Export Hints.
+  Export Crypto.Arithmetic.Core.Hints.
+  Export Crypto.Arithmetic.Saturated.Core.Hints.
+  Export Crypto.Util.ZUtil.Le.Hints.
+  Export Crypto.Util.ZUtil.Modulo.Hints.
+  Export Crypto.Util.ZUtil.Tactics.PeelLe.Hints.
+  Export Crypto.Util.LetIn.Hints Crypto.Util.Tuple.Hints.
+End Hints.

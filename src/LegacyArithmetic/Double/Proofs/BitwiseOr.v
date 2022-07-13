@@ -30,3 +30,12 @@ Section bitwise_or.
     { rewrite !(tuple_decoder_n_neg (W:=W) 2); easy. }
   Qed.
 End bitwise_or.
+
+Module Export Hints.
+  Export Crypto.LegacyArithmetic.Interface.Hints.
+  Export Crypto.LegacyArithmetic.Double.Core.Hints.
+  Export Crypto.LegacyArithmetic.Double.Proofs.Decode.Hints.
+  Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+  Export Crypto.Util.ZUtil.LandLorShiftBounds.Hints.
+  Global Existing Instance is_bitwise_or_double.
+End Hints.

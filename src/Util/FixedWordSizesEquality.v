@@ -638,7 +638,16 @@ Section pull_ZToWord_log.
   Lemma wshr_def_ZToWord_log : pull_ZToWordT_log_2op (@wshr) (@Z.shiftr).
   Proof. t (@wshr_def_ZToWord). Qed.
 End pull_ZToWord_log.
-Hint Rewrite wadd_def_ZToWord wsub_def_ZToWord wmul_def_ZToWord wland_def_ZToWord wlor_def_ZToWord wshl_def_ZToWord wshr_def_ZToWord : pull_ZToWord.
-Hint Rewrite <- wadd_def_ZToWord wsub_def_ZToWord wmul_def_ZToWord wland_def_ZToWord wlor_def_ZToWord wshl_def_ZToWord wshr_def_ZToWord : push_ZToWord.
-Hint Rewrite wadd_def_ZToWord_log wsub_def_ZToWord wmul_def_ZToWord_log wland_def_ZToWord_log wlor_def_ZToWord_log wshl_def_ZToWord_log wshr_def_ZToWord_log : pull_ZToWord_log.
-Hint Rewrite <- wadd_def_ZToWord_log wsub_def_ZToWord wmul_def_ZToWord_log wland_def_ZToWord_log wlor_def_ZToWord_log wshl_def_ZToWord_log wshr_def_ZToWord_log : push_ZToWord_log.
+
+Module Export Hints.
+  Export Crypto.Util.FixedWordSizes.Hints.
+  Export Crypto.Util.WordUtil.Hints.
+  Export Crypto.Util.ZUtil.Hints.ZArith.
+  Export Crypto.Util.ZUtil.Le.Hints.
+  Export Crypto.Util.ZUtil.Log2.Hints.
+  Export Crypto.Util.ZUtil.Z2Nat.Hints.
+  Hint Rewrite wadd_def_ZToWord wsub_def_ZToWord wmul_def_ZToWord wland_def_ZToWord wlor_def_ZToWord wshl_def_ZToWord wshr_def_ZToWord : pull_ZToWord.
+  Hint Rewrite <- wadd_def_ZToWord wsub_def_ZToWord wmul_def_ZToWord wland_def_ZToWord wlor_def_ZToWord wshl_def_ZToWord wshr_def_ZToWord : push_ZToWord.
+  Hint Rewrite wadd_def_ZToWord_log wsub_def_ZToWord wmul_def_ZToWord_log wland_def_ZToWord_log wlor_def_ZToWord_log wshl_def_ZToWord_log wshr_def_ZToWord_log : pull_ZToWord_log.
+  Hint Rewrite <- wadd_def_ZToWord_log wsub_def_ZToWord wmul_def_ZToWord_log wland_def_ZToWord_log wlor_def_ZToWord_log wshl_def_ZToWord_log wshr_def_ZToWord_log : push_ZToWord_log.
+End Hints.

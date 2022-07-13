@@ -150,3 +150,20 @@ Section tuple2.
     Qed.
   End full_from_half.
 End tuple2.
+
+Module Export Hints.
+  Export Crypto.LegacyArithmetic.Interface.Hints.
+  Export Crypto.LegacyArithmetic.InterfaceProofs.Hints.
+  Export Crypto.LegacyArithmetic.Double.Core.Hints.
+  Export Crypto.LegacyArithmetic.Double.Proofs.Decode.Hints.
+  Export Crypto.Util.ZUtil.Notations.Hints.
+  Export Crypto.Util.ZUtil.Tactics.RewriteModSmall.Hints.
+  Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+  Export Crypto.Util.ZUtil.Div.Hints.
+  Export Crypto.Util.ZUtil.Modulo.Hints.
+  Export Crypto.Util.LetIn.Hints.
+  Global Existing Instances
+         decode_is_spread_left_immediate
+         is_spread_left_from_shift
+  .
+End Hints.

@@ -376,42 +376,52 @@ Module Z.
   Qed.
 End Z.
 
-Global Hint Resolve
-       Z.elim_mod
-       Z.f_equal_mul_mod
-       Z.f_equal_add_mod
-       Z.f_equal_opp_mod
-       Z.f_equal_sub_mod
-       Z.mod_opp_r
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+  Export ZUtil.Hints.ZArith.
+  Export ZUtil.ZSimplify.Core.
+  Export DivModToQuotRem.Hints.
+  Export LtbToLt.Hints.
+  Export Tactics.PullPush.Modulo.Hints.
+  Export ZUtil.Div.Hints.
+  Export ZUtil.Le.Hints.
+  Global Hint Resolve
+         Z.elim_mod
+         Z.f_equal_mul_mod
+         Z.f_equal_add_mod
+         Z.f_equal_opp_mod
+         Z.f_equal_sub_mod
+         Z.mod_opp_r
+         Z.mod_same_pow
+         Z.mod_small_sym
+         Z.mod_eq_le_to_eq
+         Z.mod_neq_0_le_to_neq
+         Z.sub_mod_mod_0
+    : zarith.
+  Hint Rewrite
+       Z.mod_small_1
+       Z.mod_div_eq0
        Z.mod_same_pow
-       Z.mod_small_sym
-       Z.mod_eq_le_to_eq
-       Z.mod_neq_0_le_to_neq
+       Z.mod_small_n
+       using zutil_arith : zsimplify.
+  Hint Rewrite
+       Z.mod_add_full
+       Z.mod_add_l_full
+       Z.mod_add'_full Z.mod_add_l'_full
        Z.sub_mod_mod_0
-  : zarith.
-Hint Rewrite
-     Z.mod_small_1
-     Z.mod_div_eq0
-     Z.mod_same_pow
-     Z.mod_small_n
-     using zutil_arith : zsimplify.
-Hint Rewrite
-     Z.mod_add_full
-     Z.mod_add_l_full
-     Z.mod_add'_full Z.mod_add_l'_full
-     Z.sub_mod_mod_0
-  : zsimplify.
-Hint Rewrite <-
-       Z.mod_opp_l_z_iff
-         Z.div_mod'
-         Z.div_mod''
-         Z.div_mod'''
-         using zutil_arith : zsimplify.
-Hint Rewrite
-     Z.mul_div_eq_full
-     Z.mul_div_eq Z.mul_div_eq'
-     using zutil_arith : zdiv_to_mod.
-Hint Rewrite <-
+    : zsimplify.
+  Hint Rewrite <-
+         Z.mod_opp_l_z_iff
+           Z.div_mod'
+           Z.div_mod''
+           Z.div_mod'''
+           using zutil_arith : zsimplify.
+  Hint Rewrite
        Z.mul_div_eq_full
-         Z.mul_div_eq'
-         using zutil_arith : zmod_to_div.
+       Z.mul_div_eq Z.mul_div_eq'
+       using zutil_arith : zdiv_to_mod.
+  Hint Rewrite <-
+         Z.mul_div_eq_full
+           Z.mul_div_eq'
+           using zutil_arith : zmod_to_div.
+End Hints.

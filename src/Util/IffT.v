@@ -1,5 +1,5 @@
 Require Import Coq.Classes.RelationClasses.
-Require Export Crypto.Util.GlobalSettings.
+Require Export Crypto.Util.FixCoqMistakes.
 Notation iffT A B := (((A -> B) * (B -> A)))%type.
 Notation iffTp := (fun A B => inhabited (iffT A B)).
 

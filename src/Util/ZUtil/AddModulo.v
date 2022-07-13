@@ -7,3 +7,7 @@ Module Z.
     Z.add_modulo x y modulus =  if (modulus <=? x + y) then (x + y) - modulus else (x + y).
   Proof. reflexivity. Qed.
 End Z.
+
+Module Export Hints.
+  Export Crypto.Util.FixCoqMistakes.
+End Hints.

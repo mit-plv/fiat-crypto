@@ -187,3 +187,44 @@ Proof.
   generalize (@tuple_decoder_div n W decode 0 isdecode w).
   autorewrite with simpl_tuple_decoder; trivial.
 Qed.
+
+Module Export Hints.
+  Export Crypto.LegacyArithmetic.Interface.Hints.
+  Export Crypto.LegacyArithmetic.InterfaceProofs.Hints.
+  Export Crypto.LegacyArithmetic.Double.Core.Hints.
+  Export Crypto.Util.Tuple.Hints.
+  Export Crypto.Util.ZUtil.Notations.Hints.
+  Export Crypto.Util.ListUtil.Hints.
+  Export Crypto.LegacyArithmetic.Pow2BaseProofs.Hints.
+  Global Existing Instances
+         tuple_is_decode
+         tuple_decoder_O
+         tuple_decoder_m1
+         tuple_decoder_2'
+         tuple_decoder_2
+         tuple_decoder_n_O
+  .
+  Global Hint Extern 1 (@is_add_with_carry _ _ (@tuple_decoder ?n ?W ?decode 1) ?adc)
+         => apply (@is_add_with_carry_1tuple n W decode adc) : typeclass_instances.
+
+  Global Hint Resolve (fun n W decode pf => (@tuple_is_decode n W decode 2 pf : @is_decode (2 * n) (tuple W 2) (@tuple_decoder n W decode 2))) : typeclass_instances.
+  Global Hint Extern 3 (@is_decode _ (tuple ?W ?k) _) => let kv := (eval simpl in (Z.of_nat k)) in apply (fun n decode pf => (@tuple_is_decode n W decode k pf : @is_decode (kv * n) (tuple W k) (@tuple_decoder n W decode k : decoder (kv * n)%Z (tuple W k)))) : typeclass_instances.
+
+  Hint Rewrite @tuple_decoder_S @tuple_decoder_O @tuple_decoder_m1 @tuple_decoder_n_O using solve [ auto with zarith ] : simpl_tuple_decoder.
+  Hint Rewrite Z.mul_1_l : simpl_tuple_decoder.
+  Hint Rewrite
+       (fun n W (decode : decoder n W) w pf => (@tuple_decoder_S n W decode 0 w pf : @Interface.decode (2 * n) (tuple W 2) (@tuple_decoder n W decode 2) w = _))
+       (fun n W (decode : decoder n W) w pf => (@tuple_decoder_S n W decode 0 w pf : @Interface.decode (2 * n) (W * W) (@tuple_decoder n W decode 2) w = _))
+       (fun n W decode w => @tuple_decoder_m1 n W decode w : @Interface.decode (Z.of_nat 0 * n) unit (@tuple_decoder n W decode 0) w = _)
+       using solve [ auto with zarith ]
+    : simpl_tuple_decoder.
+
+  Hint Rewrite @tuple_decoder_S @tuple_decoder_O @tuple_decoder_m1 using solve [ auto with zarith ] : simpl_tuple_decoder.
+
+  Global Existing Instances
+         tuple_decoder_mod
+         tuple_decoder_div
+         tuple2_decoder_mod
+         tuple2_decoder_div
+  .
+End Hints.

@@ -38,9 +38,12 @@ Module Z.
   Lemma two_p_two_eq_four : 2^(2) = 4.
   Proof. reflexivity. Qed.
 End Z.
-Hint Rewrite Z.base_pow_neg using zutil_arith : zsimplify.
-Hint Rewrite <- Z.two_p_two_eq_four : push_Zpow.
-Global Hint Resolve Z.pow_sub_r' Z.pow_sub_r'_sym Z.eq_le_incl : zarith.
-Global Hint Resolve (fun b => f_equal (fun e => b ^ e)) (fun e => f_equal (fun b => b ^ e)) : zarith.
-Global Hint Resolve Z.nonneg_pow_pos (fun n => Z.nonneg_pow_pos 2 n Z.lt_0_2) : zarith.
-Global Hint Resolve Z.nonneg_pow_pos_helper (fun n dummy => Z.nonneg_pow_pos_helper 2 n dummy Z.lt_0_2) : zarith.
+Module Export Hints.
+  Export ZUtil.Hints.Core.
+  Hint Rewrite Z.base_pow_neg using zutil_arith : zsimplify.
+  Hint Rewrite <- Z.two_p_two_eq_four : push_Zpow.
+  Global Hint Resolve Z.pow_sub_r' Z.pow_sub_r'_sym Z.eq_le_incl : zarith.
+  Global Hint Resolve (fun b => f_equal (fun e => b ^ e)) (fun e => f_equal (fun b => b ^ e)) : zarith.
+  Global Hint Resolve Z.nonneg_pow_pos (fun n => Z.nonneg_pow_pos 2 n Z.lt_0_2) : zarith.
+  Global Hint Resolve Z.nonneg_pow_pos_helper (fun n dummy => Z.nonneg_pow_pos_helper 2 n dummy Z.lt_0_2) : zarith.
+End Hints.
