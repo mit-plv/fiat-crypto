@@ -90,6 +90,44 @@ Module solinas_reduction.
       autorewrite with zsimplify_const;
       ring_simplify.
 
+    Ltac solve_ineq :=
+      repeat
+        match goal with
+        | [ |- 0 <= _ + _ ] => apply OrdersEx.Z_as_OT.add_nonneg_nonneg
+        | _ => apply OrdersEx.Z_as_OT.mul_nonneg_nonneg
+        | _ => apply OrdersEx.Z_as_DT.div_pos
+
+        | |- _ + ?x < _ + ?x => apply OrdersEx.Z_as_OT.add_lt_mono_r
+        | [ |- _ + _ < _ ] => apply OrdersEx.Z_as_OT.add_lt_mono
+        | [ |- _ + _ <= _ ] => apply OrdersEx.Z_as_OT.add_le_mono
+
+        | [ |- 0 <= weight _ ] => apply OrdersEx.Z_as_OT.lt_le_incl;
+                               apply wprops
+        | _ => lia
+        end.
+
+    Hint Rewrite Saturated.Associational.eval_sat_mul : push_eval.
+    Hint Rewrite Saturated.Associational.eval_sat_mul_const using (lia || assumption) : push_eval.
+    Hint Rewrite eval_split using solve [auto] : push_eval.
+    Hint Rewrite Saturated.Rows.eval_from_associational using auto : push_eval.
+    Hint Rewrite Rows.flatten_mod using auto : push_eval.
+
+
+    Hint Rewrite app_length : push_length.
+    Hint Rewrite (@ListUtil.length_snoc Z) : push_length.
+    Hint Rewrite (@nil_length0 Z) : push_length.
+    Hint Rewrite seq_length : push_length.
+    Hint Rewrite map_length : push_length.
+    Hint Rewrite firstn_length : push_length.
+
+    Hint Rewrite map_app : push_misc.
+    Hint Rewrite (@combine_app_samelength Z) using (autorewrite with push_length; lia) : push_misc.
+    Hint Rewrite fold_right_app : push_misc.
+    Hint Rewrite (@firstn_map nat) : push_misc.
+    Hint Rewrite firstn_seq : push_misc.
+    Hint Rewrite map_map : push_misc.
+    Hint Rewrite <-seq_shift : push_misc.
+
     Section canon.
 
       Definition canonical_repr n (p : list Z) : Prop :=
@@ -207,55 +245,69 @@ Module solinas_reduction.
           intuition; apply H5; rewrite H3; apply in_or_app; eauto.
       Qed.
 
+      Lemma fold_right_add : forall l x,
+          fold_right Z.add x l = x + fold_right Z.add 0 l.
+      Proof.
+        induction l; intros; cbn; try rewrite IHl; lia.
+      Qed.
+
       Definition eval_weight_P p :=
-        eval (fun i : nat => weight (S i)) (Datatypes.length p) p =
-          (eval weight (Datatypes.length p) p) * weight 1.
+        forall n,
+        eval (fun i : nat => weight (S i)) (n) p =
+          (eval weight (n) p) * weight 1.
 
       Lemma eval_weight_S' : forall p,
           eval_weight_P p.
       Proof.
         apply (ListAux.list_length_induction Z).
+        unfold eval_weight_P.
         intros.
         pose proof (@break_list_last Z l1).
-        intuition; unfold eval_weight_P in *.
-        { subst.
-          reflexivity. }
-        { destruct H1.
-          destruct H0.
-          subst.
-          rewrite app_length.
-          simpl.
-          replace (length x + 1)%nat with (S (length x)) by lia.
-          rewrite !eval_snoc_S.
-          rewrite H.
-          rewrite OrdersEx.Z_as_OT.mul_add_distr_r.
-          rewrite OrdersEx.Z_as_DT.add_cancel_l.
-          unfold weight, uweight, ModOps.weight, machine_wordsize.
-          rewrite !Z.div_1_r.
-          rewrite !Z.opp_involutive.
-          rewrite Nat2Z.inj_succ.
-          rewrite OrdersEx.Z_as_OT.mul_succ_r.
-          rewrite OrdersEx.Z_as_OT.pow_add_r.
-          lia.
-          lia.
-          lia.
-          rewrite app_length.
-          simpl.
-          lia.
-          lia.
-          lia. }
+        intuition;
+          repeat match goal with
+                 | H : context[exists _, _] |- _ => destruct H
+                 | _ => rewrite eval_nil
+                 | _ => progress subst
+                 | _ => lia || auto
+                 end.
+        cbv [eval_weight_P eval Associational.eval to_associational] in *.
+        destruct (n <=? length x)%nat eqn:E.
+        rewrite Nat.leb_le in E.
+        rewrite combine_truncate_r.
+        rewrite combine_truncate_r with (xs:=map weight (seq 0 (n))).
+        autorewrite with push_length.
+        apply H.
+        autorewrite with push_length.
+        rewrite Nat.min_l; lia.
+
+        rewrite Nat.leb_gt in E.
+        rewrite combine_truncate_l.
+        rewrite combine_truncate_l with (xs:=map weight (seq 0 n)).
+        autorewrite with push_length push_misc.
+        rewrite Nat.min_l.
+        rewrite seq_snoc.
+        autorewrite with push_misc.
+        cbn.
+
+        rewrite fold_right_add.
+        rewrite fold_right_add with (x:=weight (Datatypes.length x) * x0 + 0).
+        rewrite H.
+        ring_simplify.
+        unfold weight, machine_wordsize.
+        rewrite uweight_S.
+        cbn; break_match; try lia.
+        lia.
+        autorewrite with push_length; lia.
+        lia.
       Qed.
 
       Lemma eval_weight_S p n:
-        n = Datatypes.length p ->
         eval (fun i : nat => weight (S i)) n p =
           (eval weight n p) * weight 1.
       Proof.
         pose proof eval_weight_S'.
         unfold eval_weight_P in *.
-        intros.
-        subst.
-        eauto.
+        auto.
       Qed.
 
       Lemma canonical_eval_bounded n : forall (p : list Z),
@@ -314,8 +366,7 @@ Module solinas_reduction.
         lia.
         lia.
         lia.
-        reflexivity.
-        reflexivity. }
+        lia. }
       Qed.
 
       Definition dual_map {A B : Type} (f : A -> B -> bool) (l1 : list A) (l2 : list B) :=
@@ -365,6 +416,66 @@ Module solinas_reduction.
                  end.
       Qed.
 
+      Lemma eval_is_bounded_by_pos n : forall p,
+          is_bounded_by (repeat (0, 2 ^ machine_wordsize - 1) n) p = true ->
+          0 <= eval weight n p.
+      Proof.
+        intros.
+        pose proof eval_weight_S as Heval.
+        cbv [is_bounded_by fold_andb_map' dual_map eval Associational.eval to_associational] in *;
+          generalize dependent n; induction p; intros; destruct n;
+          repeat multimatch goal with
+                 | H : context[fold_right _ _ _] |- _ => progress cbn in H
+                 | H : context[_ && _] |- _ => rewrite andb_true_iff in H
+                 | H : context[_ <=? _] |- _ => rewrite Z.leb_le in H
+                 | _ => solve_ineq
+                 | _ => autorewrite with push_misc
+                 | _ => autorewrite with push_eval
+                 | _ => rewrite combine_nil, map_nil, fold_right_nil
+                 | _ => rewrite Heval
+                 | _ => progress cbn || intuition
+                 | _ => break_match
+                 | _ => lia || auto || reflexivity || discriminate
+                 end.
+      Qed.
+
+      Lemma eval_is_bounded_by n : forall p,
+          is_bounded_by (repeat (0, 2 ^ machine_wordsize - 1) n) p = true ->
+          0 <= eval weight n p < weight n.
+      Proof.
+        intros.
+        split.
+        apply eval_is_bounded_by_pos; auto.
+        pose proof eval_weight_S as Heval.
+        cbv [is_bounded_by fold_andb_map' dual_map eval Associational.eval to_associational] in *;
+          generalize dependent n; induction p; intros; destruct n;
+          repeat multimatch goal with
+                 | H : context[fold_right _ _ _] |- _ => progress cbn in H
+                 | H : context[_ && _] |- _ => rewrite andb_true_iff in H
+                 | H : context[_ <=? _] |- _ => rewrite Z.leb_le in H
+                 | _ => solve_ineq
+                 | _ => autorewrite with push_misc
+                 | _ => autorewrite with push_eval
+                 | _ => rewrite combine_nil, map_nil, fold_right_nil
+                 | _ => rewrite Heval
+                 | _ => progress cbn || intuition
+                 | _ => lia || auto || reflexivity || discriminate
+                 end.
+        rewrite <-Le.Z.le_sub_1_iff.
+        etransitivity.
+        solve_ineq.
+        break_match; eauto.
+        apply OrdersEx.Z_as_OT.mul_le_mono_nonneg_r.
+        lia.
+        rewrite Le.Z.le_sub_1_iff.
+        apply IHp; auto.
+        weight_comp.
+        unfold machine_wordsize.
+        lia.
+        lia.
+        lia.
+      Qed.
+
     End canon.
 
     Ltac solve_length q :=
@@ -385,22 +496,6 @@ Module solinas_reduction.
           try rewrite !app_length;
           cbn [length] in H; cbn [length]; lia
       end.
-
-    Ltac solve_ineq :=
-      repeat
-        match goal with
-        | [ |- 0 <= _ + _ ] => apply OrdersEx.Z_as_OT.add_nonneg_nonneg
-        | _ => apply OrdersEx.Z_as_OT.mul_nonneg_nonneg
-        | _ => apply OrdersEx.Z_as_DT.div_pos
-
-        | |- _ + ?x < _ + ?x => apply OrdersEx.Z_as_OT.add_lt_mono_r
-        | [ |- _ + _ < _ ] => apply OrdersEx.Z_as_OT.add_lt_mono
-        | [ |- _ + _ <= _ ] => apply OrdersEx.Z_as_OT.add_le_mono
-
-        | [ |- 0 <= weight _ ] => apply OrdersEx.Z_as_OT.lt_le_incl;
-                               apply wprops
-        | _ => lia
-        end.
 
     Ltac solve_in :=
       repeat
@@ -488,12 +583,12 @@ Module solinas_reduction.
         else
           add_to_nth 0 (weight n * snd pq) (fst pq).
 
-      Hint Rewrite eval_app : push_eval.
-      Hint Rewrite Saturated.Associational.eval_sat_mul : push_eval.
-      Hint Rewrite Saturated.Associational.eval_sat_mul_const using (lia || assumption) : push_eval.
-      Hint Rewrite eval_split using solve [auto] : push_eval.
-      Hint Rewrite Saturated.Rows.eval_from_associational using auto : push_eval.
-      Hint Rewrite Rows.flatten_mod using auto : push_eval.
+
+
+      Let p := [1; 1; 1].
+      Let q := p.
+      Compute Positional.eval weight 8 (mul_no_reduce (2^256) 4 p q).
+      Compute Positional.eval weight 4 p * Positional.eval weight 4 q.
 
       Theorem eval_mul_no_reduce base n : forall p q,
           Positional.eval weight (2 * n) (mul_no_reduce base n p q) =
@@ -505,9 +600,21 @@ Module solinas_reduction.
         (* properly bounded *)
         autorewrite with push_eval.
         apply Z.mod_small.
-        intuition.
-        rewrite andb_true_iff in Heqb.
-        intuition.
+        Search (_ * _ < _ * _) "mono".
+        repeat match goal with
+               | H : context[_ && _] |- _ => rewrite andb_true_iff in Heqb
+               | H : is_bounded_by _ _ = true |- _ => apply eval_is_bounded_by in H
+               | _ => progress intuition
+               | _ => solve_ineq
+               end.
+        rewrite <-Le.Z.le_sub_1_iff.
+        etransitivity.
+        apply OrdersEx.Z_as_OT.mul_le_mono_nonneg; eauto; rewrite Le.Z.le_sub_1_iff; eauto.
+        weight_comp.
+        unfold machine_wordsize.
+        ring_simplify.
+        cbn; break_match; try lia.
+
         all: admit.
         (* rewrite <-canonical_is_bounded_by in H. *)
         (* solve_ineq; apply canonical_pos; auto. *)
