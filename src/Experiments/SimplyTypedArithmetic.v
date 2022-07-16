@@ -174,7 +174,15 @@ Module Associational.
     Proof using Type*. cbv [carry]; induction p; push; nsatz. Qed.
     Hint Rewrite eval_carry using auto : push_eval.
   End Carries.
+  Module Export Hints.
+    Hint Rewrite eval_nil eval_cons eval_app : push_eval.
+    Hint Rewrite eval_map_mul : push_eval.
+    Hint Rewrite eval_mul : push_eval.
+    Hint Rewrite eval_negate_snd : push_eval.
+    Hint Rewrite eval_reduce : push_eval.
+  End Hints.
 End Associational.
+Export Associational.Hints.
 
 Module Positional. Section Positional.
   Context (weight : nat -> Z)
@@ -467,8 +475,11 @@ Module Positional. Section Positional.
   Hint Rewrite @length_sub @length_opp : distr_length.
 End Positional.
 (* Hint Rewrite disappears after the end of a section *)
-Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_chained_carries @length_encode @length_sub @length_opp : distr_length.
+Module Export Hints.
+  Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_chained_carries @length_encode @length_sub @length_opp : distr_length.
+End Hints.
 End Positional.
+Export Positional.Hints.
 
 Record weight_properties {weight : nat -> Z} :=
   {
