@@ -81,3 +81,9 @@ jobs:
     - name: selected-test selected-bench
       run: ALLOW_DIFF=1 SKIP_ICC="$(etc/assert-adx.sh || echo 1)" etc/ci/github-actions-make.sh -j2 selected-test selected-bench
       if: env.SKIP_DISPLAY_TEST != '1'
+
+  check-all:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - run: true
