@@ -73,6 +73,133 @@ Module solinas_reduction.
 
   Import Crypto.Arithmetic.Saturated.
 
+  Module tmp.
+
+    Section __.
+
+      Context (machine_wordsize := 64)
+              (weight := uweight machine_wordsize)
+              (up_bound := 2 ^ (machine_wordsize / 4))
+              {wprops : @weight_properties weight}.
+
+      Definition dual_map {A B : Type} (f : A -> B -> bool) (l1 : list A) (l2 : list B) :=
+        map (fun x => (f (fst x) (snd x))) (combine l1 l2).
+      Definition fold_andb_map' {A B : Type} (f : A -> B -> bool) (ls1 : list A) (ls2 : list B) :=
+        fold_right andb true (dual_map f ls1 ls2).
+      Definition is_bounded_by bounds ls :=
+        fold_andb_map' (fun r v'' => (fst r <=? v'') && (v'' <=? snd r)) bounds ls.
+
+      Definition mul_no_reduce base n (p q : list Z) :=
+        let p_a := Positional.to_associational weight n p in
+        let q_a := Positional.to_associational weight n q in
+        let pq_a := Saturated.Associational.sat_mul base p_a q_a in
+        let pq_rows := Saturated.Rows.from_associational weight (2*n) pq_a in
+        let pq := Saturated.Rows.flatten weight (2*n) pq_rows in
+        let bound := (0, 2^machine_wordsize - 1) in
+        if (is_bounded_by (repeat bound n) p && is_bounded_by (repeat bound n) q) then
+          fst pq
+        else
+          add_to_nth 0 (weight (2 * n) * snd pq) (fst pq).
+
+      Definition sat_reduce base s c n (p : list (Z * Z)) :=
+        let s' := fst (Saturated.Rows.adjust_s weight (S (S n)) s) in
+        let lo_hi := Associational.split s' p in
+        let coef := Saturated.Associational.sat_mul_const base [(1, s'/s)] c in
+        let hi := Saturated.Associational.sat_mul_const base coef (snd lo_hi) in
+        let r := (fst lo_hi) ++ hi in
+        r.
+
+      (* n is input width *)
+      Definition reduce1 base s c n m (p : list Z) :=
+        let p_a := Positional.to_associational weight n p in
+        let r_a := sat_reduce base s c n p_a in
+        let r_rows := Saturated.Rows.from_associational weight m r_a in
+        let r_flat := Saturated.Rows.flatten weight m r_rows in
+        fst r_flat.
+
+      Definition reduce_full base s c n (p : list Z) :=
+        let r1 := reduce1 base s c (2*n) (S n) p in
+        let bound := (0, 2^machine_wordsize - 1) in
+        let bounds := repeat bound n ++ [(0, up_bound-1)] in
+        if (is_bounded_by bounds r1) then
+          let r2 := reduce1 base s c (S n) (S n) r1 in
+          let r3 := reduce1 base s c (S n) (n) r2 in
+          r3
+        else r1.
+
+      (* Definition mulmod base s c n (p q : list Z) := *)
+      (*   let prod := mul_no_reduce base n p q in *)
+      (*   let red := reduce_full base s c n prod in *)
+      (*   red. *)
+
+      Definition mulmod base s c n (p q : list Z) :=
+        let mul := mul_no_reduce base n p q in
+        let r1 := reduce1 base s c (2*n) (S n) mul in
+        let r2 := reduce1 base s c (S n) (S n) r1 in
+        let r3 := reduce1 base s c (S n) (n) r2 in
+        r3.
+
+    End __.
+
+    Section __.
+
+      Let s := 2^255.
+      Let c := [(1, 19)].
+      Let machine_wordsize := 64.
+      Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
+      Let m : nat := 2 * n.
+      Let w : nat -> Z := weight machine_wordsize 1.
+      Let base : Z := 2 ^ machine_wordsize.
+
+      Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
+      Let boundsn : list (ZRange.type.option.interp base.type.Z)
+          := repeat bound (n).
+
+      Import Stringification.C.Compilers.
+      Import Stringification.C.Compilers.ToString.
+
+      Local Existing Instances ToString.C.OutputCAPI Pipeline.show_ErrorMessage.
+      Local Instance : only_signed_opt := false.
+      Local Instance : no_select_opt := false.
+      Local Instance : static_opt := true.
+      Local Instance : internal_static_opt := true.
+      Local Instance : inline_opt := true.
+      Local Instance : inline_internal_opt := true.
+      Local Instance : use_mul_for_cmovznz_opt := false.
+      Local Instance : emit_primitives_opt := true.
+      Local Instance : should_split_mul_opt := false.
+      Local Instance : should_split_multiret_opt := false.
+      Local Instance : widen_carry_opt := false.
+      Local Instance : widen_bytes_opt := true. (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
+      Let possible_values := prefix_with_carry [machine_wordsize].
+      Local Instance : machine_wordsize_opt := machine_wordsize. (* for show *)
+      Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
+      Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
+      Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+
+      (* Time Compute *)
+      (*      Show.show *)
+      (*      (Pipeline.BoundsPipelineToString *)
+      (*         "fiat" "mul" *)
+      (*         false *)
+      (*         false *)
+      (*         None *)
+      (*         possible_values *)
+      (*         machine_wordsize *)
+      (*         ltac:(let n := (eval cbv in n) in *)
+      (*               let r := Reify (mulmod base s c n) in *)
+      (*               exact r) *)
+      (*                (fun _ _ => []) *)
+      (*                (Some (repeat bound n), (Some (repeat bound n), tt)) *)
+      (*                (Some (repeat bound (n))) *)
+      (*                (None, (None, tt)) *)
+      (*                (None) *)
+      (*        : Pipeline.ErrorT _). *)
+
+    End __.
+
+  End tmp.
+
   Section __.
 
     Context (machine_wordsize := 64)
@@ -95,38 +222,49 @@ Module solinas_reduction.
         match goal with
         | [ |- 0 <= _ + _ ] => apply OrdersEx.Z_as_OT.add_nonneg_nonneg
         | _ => apply OrdersEx.Z_as_OT.mul_nonneg_nonneg
-        | _ => apply OrdersEx.Z_as_DT.div_pos
+        | _ => apply OrdersEx.Z_as_OT.mul_pos_pos
+        | _ => apply OrdersEx.Z_as_OT.div_pos
+        | _ => apply OrdersEx.Z_as_OT.div_lt_upper_bound
+        | |- _ mod (?x * ?y) < (?y * ?x) => rewrite Z.mul_comm with (n:=x)
+        | _ => apply OrdersEx.Z_as_OT.mod_pos_bound
 
         | |- _ + ?x < _ + ?x => apply OrdersEx.Z_as_OT.add_lt_mono_r
         | [ |- _ + _ < _ ] => apply OrdersEx.Z_as_OT.add_lt_mono
         | [ |- _ + _ <= _ ] => apply OrdersEx.Z_as_OT.add_le_mono
 
-        | [ |- 0 <= weight _ ] => apply OrdersEx.Z_as_OT.lt_le_incl;
-                               apply wprops
+        | [ |- 0 <= weight _ ] => apply OrdersEx.Z_as_OT.lt_le_incl; auto
+        | [ |- 0 <= _ mod _ ] => apply Z_mod_nonneg_nonneg
         | _ => lia
         end.
 
-    Hint Rewrite Saturated.Associational.eval_sat_mul : push_eval.
-    Hint Rewrite Saturated.Associational.eval_sat_mul_const using (lia || assumption) : push_eval.
-    Hint Rewrite eval_split using solve [auto] : push_eval.
-    Hint Rewrite Saturated.Rows.eval_from_associational using auto : push_eval.
-    Hint Rewrite Rows.flatten_mod using auto : push_eval.
-
+    Hint Rewrite Associational.eval_sat_mul using lia : push_eval.
+    Hint Rewrite Associational.eval_sat_mul_const using lia : push_eval.
+    Hint Rewrite eval_split using auto : push_eval.
+    Hint Rewrite Rows.eval_from_associational using (auto || lia) : push_eval.
+    Hint Rewrite Rows.flatten_mod using (eauto using Rows.length_from_associational) : push_eval.
+    Hint Rewrite Rows.flatten_correct using (eauto using Rows.length_from_associational) : push_eval.
+    Hint Rewrite eval_add_to_nth using auto : push_eval.
+    Hint Rewrite (@fst_pair) : push_eval.
+    Hint Rewrite (@snd_pair) : push_eval.
 
     Hint Rewrite app_length : push_length.
-    Hint Rewrite (@ListUtil.length_snoc Z) : push_length.
-    Hint Rewrite (@nil_length0 Z) : push_length.
+    Hint Rewrite (@ListUtil.length_snoc) : push_length.
+    Hint Rewrite (@nil_length0) : push_length.
     Hint Rewrite seq_length : push_length.
     Hint Rewrite map_length : push_length.
     Hint Rewrite firstn_length : push_length.
+    Hint Rewrite Rows.length_flatten using (eauto using Rows.length_from_associational) : push_length.
+    Hint Rewrite length_partition : push_length.
 
     Hint Rewrite map_app : push_misc.
-    Hint Rewrite (@combine_app_samelength Z) using (autorewrite with push_length; lia) : push_misc.
+    Hint Rewrite (@combine_app_samelength) using (autorewrite with push_length; lia) : push_misc.
     Hint Rewrite fold_right_app : push_misc.
-    Hint Rewrite (@firstn_map nat) : push_misc.
+    Hint Rewrite (@firstn_map) : push_misc.
     Hint Rewrite firstn_seq : push_misc.
     Hint Rewrite map_map : push_misc.
     Hint Rewrite <-seq_shift : push_misc.
+
+    Ltac push := autorewrite with push_eval push_length push_misc.
 
     Section canon.
 
@@ -137,75 +275,63 @@ Module solinas_reduction.
       Lemma canonical_pos n : forall (p : list Z),
           canonical_repr n p ->
           0 <= eval weight n p.
-      Proof.
-        intros.
-        unfold canonical_repr in *.
-        intuition.
-        pose proof Partition.eval_partition.
-        specialize (H weight wprops n (eval weight n p)).
-        rewrite <-H1 in H.
-        rewrite H.
-        apply Z.mod_pos_bound.
-        eauto.
+      Proof using wprops.
+        intros;
+          repeat match goal with
+                 | H : canonical_repr _ _ |- _ =>
+                     unfold canonical_repr in H;
+                     destruct H as [ _ H ];
+                     rewrite H;
+                     rewrite Partition.eval_partition
+                 | _ => apply Z.mod_pos_bound
+                 | _ => auto
+                 end.
       Qed.
 
       Lemma canonical_bounded n : forall (p : list Z),
           canonical_repr n p ->
           forall x, In x p -> 0 <= x < 2 ^ machine_wordsize.
-      Proof.
-        intros.
-        pose proof (canonical_pos n p H).
-        unfold canonical_repr, Partition.partition in H.
-        destruct H.
-        rewrite H2 in H0.
-        rewrite in_map_iff in H0.
-        destruct H0.
-        intuition.
-        { rewrite <-H3.
-          apply Z.div_nonneg.
-          apply Z_mod_nonneg_nonneg.
-          assumption.
-          eauto using Z.lt_le_incl.
-          eauto using Z.lt_le_incl. }
-        { rewrite <-H3.
-          apply OrdersEx.Z_as_OT.div_lt_upper_bound; eauto.
-          assert (weight (S x0) = weight x0 * 2 ^ machine_wordsize).
-          { unfold weight, uweight, ModOps.weight.
-            rewrite !Z.div_1_r.
-            rewrite !Z.opp_involutive.
-            rewrite Nat2Z.inj_succ.
-            rewrite OrdersEx.Z_as_OT.mul_succ_r.
-            rewrite OrdersEx.Z_as_OT.pow_add_r.
-            reflexivity.
-            lia.
-            lia. }
-          rewrite <-H0.
-          apply OrdersEx.Z_as_OT.mod_pos_bound.
-          eauto. }
+      Proof using wprops.
+        intros;
+          repeat multimatch goal with
+                 | H : canonical_repr ?n ?p |- _ =>
+                     pose proof (canonical_pos n p H);
+                     cbv [canonical_repr Partition.partition] in H;
+                     destruct H as [ Hlen Hpart ]
+                 | H1 : In _ ?p, H2 : ?p = _ |- _ =>
+                     rewrite H2 in H1;
+                     rewrite in_map_iff in H1
+                 | H : context[exists _, _] |- _ => destruct H
+                 | H : _ = ?x |- 0 <= ?x => rewrite <-H
+                 | H : _ = ?x |- ?x < _ => rewrite <-H
+                 | _ => unfold weight; rewrite uweight_S; fold weight
+                 | _ => solve_ineq
+                 | _ => progress intuition
+                 | _ => auto || lia
+                 end.
       Qed.
 
       Lemma canonical_iff p n :
         canonical_repr n p <->
           length p = n /\
             forall x, In x p -> 0 <= x < 2 ^ machine_wordsize.
-      Proof.
-        split.
-        { intros.
-          intuition.
-          unfold canonical_repr in *.
-          intuition.
-          eapply canonical_bounded; eauto.
-          eapply canonical_bounded; eauto. }
-        { intros.
-          unfold canonical_repr.
-          intuition.
-
-          apply uweight_partition_unique.
-          lia.
-          assumption.
-          intros.
-          rewrite Le.Z.le_sub_1_iff.
-          eauto. }
+      Proof using wprops.
+        split; intros;
+          repeat multimatch goal with
+                 | H : length _ = _ |- _ => rewrite H
+                 | |- length _ = _ => unfold canonical_repr in *
+                 | |- _ = Partition.partition _ _ _ => unfold canonical_repr in *
+                 | |- canonical_repr _ _ => unfold canonical_repr
+                 | _ => eapply canonical_bounded
+                 | _ => progress intuition
+                 | _ => eauto || lia
+                 end.
+        apply uweight_partition_unique.
+        lia.
+        lia.
+        intros.
+        rewrite Le.Z.le_sub_1_iff.
+        auto.
       Qed.
 
       Lemma canonical_cons n a p:
@@ -568,86 +694,6 @@ Module solinas_reduction.
           auto
       end.
 
-    Section __.
-
-      Definition mul_no_reduce base n (p q : list Z) :=
-        let p_a := Positional.to_associational weight n p in
-        let q_a := Positional.to_associational weight n q in
-        let pq_a := Saturated.Associational.sat_mul base p_a q_a in
-        let pq_rows := Saturated.Rows.from_associational weight (2*n) pq_a in
-        let pq := Saturated.Rows.flatten weight (2*n) pq_rows in
-
-        let bound := (0, 2^machine_wordsize - 1) in
-        if (is_bounded_by (repeat bound n) p && is_bounded_by (repeat bound n) q) then
-          fst pq
-        else
-          add_to_nth 0 (weight n * snd pq) (fst pq).
-
-
-
-      Let p := [1; 1; 1].
-      Let q := p.
-      Compute Positional.eval weight 8 (mul_no_reduce (2^256) 4 p q).
-      Compute Positional.eval weight 4 p * Positional.eval weight 4 q.
-
-      Theorem eval_mul_no_reduce base n : forall p q,
-          Positional.eval weight (2 * n) (mul_no_reduce base n p q) =
-            Positional.eval weight n p * Positional.eval weight n q.
-      Proof.
-        intros.
-        cbv [mul_no_reduce].
-        break_match.
-        (* properly bounded *)
-        autorewrite with push_eval.
-        apply Z.mod_small.
-        Search (_ * _ < _ * _) "mono".
-        repeat match goal with
-               | H : context[_ && _] |- _ => rewrite andb_true_iff in Heqb
-               | H : is_bounded_by _ _ = true |- _ => apply eval_is_bounded_by in H
-               | _ => progress intuition
-               | _ => solve_ineq
-               end.
-        rewrite <-Le.Z.le_sub_1_iff.
-        etransitivity.
-        apply OrdersEx.Z_as_OT.mul_le_mono_nonneg; eauto; rewrite Le.Z.le_sub_1_iff; eauto.
-        weight_comp.
-        unfold machine_wordsize.
-        ring_simplify.
-        cbn; break_match; try lia.
-
-        all: admit.
-        (* rewrite <-canonical_is_bounded_by in H. *)
-        (* solve_ineq; apply canonical_pos; auto. *)
-        (* rewrite <-Le.Z.le_sub_1_iff. *)
-        (* etransitivity. *)
-        (* apply OrdersEx.Z_as_OT.mul_le_mono_nonneg. *)
-        (* apply canonical_pos; auto. *)
-        (* rewrite Le.Z.le_sub_1_iff. *)
-        (* apply canonical_eval_bounded; auto. *)
-        (* apply canonical_pos; auto. *)
-        (* rewrite Le.Z.le_sub_1_iff. *)
-        (* apply canonical_eval_bounded; auto. *)
-        (* rewrite Le.Z.le_sub_1_iff. *)
-        (* replace (weight (2 * n)) with (weight n * weight n). *)
-        (* solve_ineq. *)
-        (* apply OrdersEx.Z_as_OT.mul_lt_mono_nonneg. *)
-        (* weight_comp; simpl; break_match; lia. *)
-        (* lia. *)
-        (* weight_comp; simpl; break_match; lia. *)
-        (* lia. *)
-        (* weight_comp. *)
-        (* rewrite <-OrdersEx.Z_as_OT.pow_mul_r. *)
-        (* f_equal. *)
-        (* lia. *)
-        (* lia. *)
-        (* lia. *)
-        (* lia. *)
-        (* lia. *)
-        (* apply Rows.length_from_associational. *)
-      Admitted.
-
-    End __.
-
     Definition sat_reduce base s c n (p : list (Z * Z)) :=
       let s' := fst (Saturated.Rows.adjust_s weight (S (S n)) s) in
       let lo_hi := Associational.split s' p in
@@ -655,11 +701,6 @@ Module solinas_reduction.
       let hi := Saturated.Associational.sat_mul_const base coef (snd lo_hi) in
       let r := (fst lo_hi) ++ hi in
       r.
-
-    Hint Rewrite eval_app : push_eval.
-    Hint Rewrite Saturated.Associational.eval_sat_mul : push_eval.
-    Hint Rewrite Saturated.Associational.eval_sat_mul_const using (lia || assumption) : push_eval.
-    Hint Rewrite eval_split using solve [auto] : push_eval.
 
     Lemma value_sat_reduce base s c n (p : list (Z * Z)) (basenz:base<>0):
       let s' := fst (Saturated.Rows.adjust_s weight (S (S n)) s) in
@@ -725,6 +766,18 @@ Module solinas_reduction.
       autorewrite with zsimplify_const push_eval; trivial.
     Qed.
     Hint Rewrite eval_sat_reduce using auto : push_eval.
+
+    Definition mul_no_reduce base n (p q : list Z) :=
+      let p_a := Positional.to_associational weight n p in
+      let q_a := Positional.to_associational weight n q in
+      let pq_a := Saturated.Associational.sat_mul base p_a q_a in
+      let pq_rows := Saturated.Rows.from_associational weight (2*n) pq_a in
+      let pq := Saturated.Rows.flatten weight (2*n) pq_rows in
+      let bound := (0, 2^machine_wordsize - 1) in
+      if (is_bounded_by (repeat bound n) p && is_bounded_by (repeat bound n) q) then
+        fst pq
+      else
+        add_to_nth 0 (weight (2 * n) * snd pq) (fst pq).
 
     (* n is input width *)
     Definition reduce1 base s c n m (p : list Z) :=
@@ -881,45 +934,47 @@ Module solinas_reduction.
             (solinas_property : Rows.adjust_s weight (S (S n)) s = (weight n, true))
             (coef_small : weight n / s * Associational.eval c < up_bound).
 
-    (* Theorem eval_mul_no_reduce : forall p q, *)
-    (*     canonical_repr n p -> *)
-    (*     canonical_repr n q -> *)
-    (*     Positional.eval weight (2 * n) (mul_no_reduce base n p q) = *)
-    (*       Positional.eval weight n p * Positional.eval weight n q. *)
-    (* Proof. *)
-    (*   intros. *)
-    (*   cbv [mul_no_reduce]. *)
-    (*   autorewrite with push_eval. *)
-    (*   apply Z.mod_small. *)
-    (*   intuition. *)
-    (*   solve_ineq; apply canonical_pos; auto. *)
-    (*   rewrite <-Le.Z.le_sub_1_iff. *)
-    (*   etransitivity. *)
-    (*   apply OrdersEx.Z_as_OT.mul_le_mono_nonneg. *)
-    (*   apply canonical_pos; auto. *)
-    (*   rewrite Le.Z.le_sub_1_iff. *)
-    (*   apply canonical_eval_bounded; auto. *)
-    (*   apply canonical_pos; auto. *)
-    (*   rewrite Le.Z.le_sub_1_iff. *)
-    (*   apply canonical_eval_bounded; auto. *)
-    (*   rewrite Le.Z.le_sub_1_iff. *)
-    (*   replace (weight (2 * n)) with (weight n * weight n). *)
-    (*   solve_ineq. *)
-    (*   apply OrdersEx.Z_as_OT.mul_lt_mono_nonneg. *)
-    (*   weight_comp; simpl; break_match; lia. *)
-    (*   lia. *)
-    (*   weight_comp; simpl; break_match; lia. *)
-    (*   lia. *)
-    (*   weight_comp. *)
-    (*   rewrite <-OrdersEx.Z_as_OT.pow_mul_r. *)
-    (*   f_equal. *)
-    (*   lia. *)
-    (*   lia. *)
-    (*   lia. *)
-    (*   lia. *)
-    (*   lia. *)
-    (*   apply Rows.length_from_associational. *)
-    (* Qed. *)
+    Theorem eval_mul_no_reduce : forall p q,
+        Positional.eval weight (2 * n) (mul_no_reduce base n p q) =
+          Positional.eval weight n p * Positional.eval weight n q.
+    Proof using base_nz n_gt_1 wprops.
+      intros.
+      cbv [mul_no_reduce].
+      break_match.
+      (* properly bounded *)
+      autorewrite with push_eval.
+      apply Z.mod_small.
+      repeat match goal with
+             | H : context[_ && _] |- _ => rewrite andb_true_iff in Heqb
+             | H : is_bounded_by _ _ = true |- _ => apply eval_is_bounded_by in H
+             | _ => progress intuition
+             | _ => solve_ineq
+             end.
+      rewrite <-Le.Z.le_sub_1_iff.
+      etransitivity.
+      apply OrdersEx.Z_as_OT.mul_le_mono_nonneg; eauto; rewrite Le.Z.le_sub_1_iff; eauto.
+      rewrite Le.Z.le_sub_1_iff.
+      replace (weight (2 * n)) with (weight n * weight n).
+      solve_ineq.
+      weight_comp.
+      rewrite <-OrdersEx.Z_as_OT.pow_mul_r.
+      f_equal.
+      lia.
+      lia.
+      lia.
+
+      (* not bounded *)
+      push.
+      ring_simplify.
+      rewrite <-Z_div_mod_eq.
+      auto.
+      rewrite Z.gt_lt_iff.
+      auto.
+      push.
+      lia.
+      push.
+      lia.
+    Qed.
 
     Lemma split_p : forall p lo hi,
         p = lo ++ [hi] ->
@@ -2263,6 +2318,11 @@ Module solinas_reduction.
       apply canonical_is_bounded_by in Hcanon_l.
       pose proof (canonical_bounded _ _ Hcanon1 q_hi ltac:(solve_in)).
       intuition.
+      rewrite H7 in H9.
+      discriminate.
+      cbn in H12.
+      lia.
+      cbn in H12.
       (* rewrite Hcanon_l in H7; discriminate. *)
       (* cbn [fst] in H10. *)
       (* lia. *)
@@ -2339,6 +2399,8 @@ Module solinas_reduction.
         Positional.eval weight n (mulmod base s c n p q) mod (s - Associational.eval c) =
           (Positional.eval weight n p * Positional.eval weight n q) mod (s - Associational.eval c).
     Proof.
+      intros.
+
       admit.
     Admitted.
 
@@ -2353,15 +2415,6 @@ Module solinas_reduction.
     Let m : nat := 2 * n.
     Let w : nat -> Z := weight machine_wordsize 1.
     Let base : Z := 2 ^ machine_wordsize.
-
-    Let p := [2^64].
-    Let q := [2^64].
-    Compute (
-        Positional.eval w 1 (mulmod base s c n p q) mod (s - Associational.eval c)
-      ).
-    Compute (
-        (Positional.eval w 1 p * Positional.eval w 1 q) mod (s - Associational.eval c)
-      ).
 
     Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
     Let boundsn : list (ZRange.type.option.interp base.type.Z)
