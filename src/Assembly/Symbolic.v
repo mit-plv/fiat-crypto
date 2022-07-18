@@ -62,6 +62,7 @@ Require Import Crypto.Util.Tactics.SetEvars.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.SpecializeUnderBindersBy.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.ZUtil.Lxor.
@@ -522,7 +523,294 @@ Lemma new_node_ok n (pf : match n with (old _ _, _) => False | _ => True end) i 
 Proof. repeat intro; subst; assumption. Qed.
 Existing Class node_ok.
 Hint Extern 1 (node_ok ?i ?n) => exact (@new_node_ok n I i) : typeclass_instances.
+Module Old.
+Module dag.
+  Definition t : Type := list (node idx * description).
+  Definition empty : t := nil.
+  Definition size (d : t) : N := N.of_nat (List.length d).
+  Definition lookup (d : t) (i : idx) : option (node idx)
+    := option_map fst (List.nth_error d (N.to_nat i)).
+  Definition reverse_lookup (d : t) (i : node idx) : option idx
+    := option_map N.of_nat (List.indexof (fun '(n', _) => node_beq N.eqb i n') d).
+  Definition size_ok (d : t) : Prop
+    := True.
+  Definition all_nodes_ok (d : t) : Prop
+    := forall i r, lookup d i = Some r -> node_ok i r.
+  Definition ok (d : t) : Prop
+  := size_ok d
+     /\ (forall i n, reverse_lookup d n = Some i <-> lookup d i = Some n)
+     /\ (forall i n, lookup d i = Some n -> (i < size d)%N).
+  Definition merge_node {descr : description} (n : node idx) (d : t) : idx * t
+    := match reverse_lookup d n with
+       | Some i => (i, d)
+       | None
+         => (size d, d ++ [(n, descr)])
+       end.
+  Definition gensym (s:OperationSize) (d : t) : node idx
+    := (old s (size d), []).
+  Existing Class ok.
+  Existing Class all_nodes_ok.
 
+  Definition get_eager_description_description (d : eager_description) : option string
+    := option_map fst d.
+  Definition get_eager_description_always_show (d : eager_description) : bool
+    := match d with Some (_, always_show) => always_show | None => false end.
+  Definition force_description : description -> eager_description
+    := option_map (fun '(descr, always_show) => (descr tt, always_show)).
+
+  Module eager.
+    Definition t := list (idx * node idx * eager_description).
+    Definition force (d : dag.t) : eager.t
+      := List.map (fun '(idx, (n, descr)) => (N.of_nat idx, n, force_description descr))
+                  (List.enumerate d).
+    Definition description_lookup (d : eager.t) (descr : string) : list idx
+      := List.map (fun '(idx, _, _) => idx) (List.filter (fun '(_, _, descr') => match get_eager_description_description descr' with Some descr' => String.eqb descr descr' | _ => false end) d).
+  End eager.
+
+  Definition M T := t -> T * t.
+  Definition bind {A B} (v : M A) (f : A -> M B) : M B
+    := fun d => let '(v, d) := v d in f v d.
+  Definition ret {A} (v : A) : M A
+    := fun d => (v, d).
+
+  Lemma iff_reverse_lookup_lookup d {ok : ok d}
+    : forall i n, reverse_lookup d n = Some i <-> lookup d i = Some n.
+  Proof. apply ok. Qed.
+
+  Lemma lookup_value_size d {ok : ok d}
+    : forall i n, lookup d i = Some n -> (i < size d)%N.
+  Proof. apply ok. Qed.
+
+  Lemma lookup_size_error d {ok : ok d}
+    : forall i, (size d <= i)%N -> lookup d i = None.
+  Proof.
+    intro i; generalize (lookup_value_size d i); destruct lookup; intuition.
+    specialize_under_binders_by reflexivity.
+    lia.
+  Qed.
+
+  Lemma lookup_merge_node {descr : description} (n : node idx) (d : t) i
+        {ok : ok d}
+    : dag.lookup (snd (dag.merge_node n d)) i = match dag.lookup d i with
+                                                | Some v => Some v
+                                                | None
+                                                  => if (i =? size d)%N && Option.is_None (reverse_lookup d n)
+                                                     then Some n
+                                                     else None
+                                                end.
+  Proof.
+    cbv [dag.merge_node andb is_None lookup dag.ok size] in *;
+      repeat first [ assumption
+                   | reflexivity
+                   | lia
+                   | progress specialize_under_binders_by eassumption
+                   | progress subst
+                   | progress destruct_head'_and
+                   | progress reflect_hyps
+                   | progress cbn [fst snd option_map List.nth_error] in *
+                   | progress cbv [option_map] in *
+                   | rewrite Nat2N.id in *
+                   | rewrite nth_error_app in *
+                   | rewrite Nat.sub_diag in *
+                   | rewrite nth_error_length_error in * by lia
+                   | rewrite @nth_error_nil_error in *
+                   | congruence
+                   | break_innermost_match_step
+                   | match goal with
+                     | [ H : nth_error (_ :: _) ?x = _ |- _ ] => destruct x eqn:?; cbn [nth_error] in H
+                     end ].
+  Qed.
+
+  Lemma reverse_lookup_merge_node {d : t}
+        {ok : ok d} {descr : description} (n n' : node idx)
+    : dag.reverse_lookup (snd (dag.merge_node n d)) n'
+      = if node_beq N.eqb n' n
+        then Some (fst (dag.merge_node n d))
+        else dag.reverse_lookup d n'.
+  Proof.
+    cbv [dag.merge_node andb is_None reverse_lookup dag.ok size] in *;
+      repeat first [ assumption
+                   | reflexivity
+                   | lia
+                   | congruence
+                   | progress inversion_option
+                   | progress specialize_under_binders_by eassumption
+                   | progress subst
+                   | progress destruct_head'_and
+                   | progress reflect_hyps
+                   | rewrite @indexof_app in *
+                   | progress cbv [option_map Option.value Option.sequence idx] in *
+                   | progress cbn [fst snd option_map indexof] in *
+                   | rewrite Nat.add_0_r
+                   | congruence
+                   | break_innermost_match_step
+                   | progress break_match
+                   | progress break_match_hyps ].
+  Qed.
+
+  Lemma fst_merge_node {descr : description} (n : node idx) (d : t)
+    : fst (dag.merge_node n d) = match reverse_lookup d n with
+                                 | Some i => i
+                                 | None => size d
+                                 end.
+  Proof. cbv [merge_node]; break_innermost_match; reflexivity. Qed.
+
+  Lemma reverse_lookup_gensym s (d : t)
+        {ok : ok d}
+        {all_nodes_ok : all_nodes_ok d}
+    : dag.reverse_lookup d (gensym s d) = None.
+  Proof.
+    cbv [dag.all_nodes_ok] in *.
+    destruct (reverse_lookup d (gensym s d)) as [i|] eqn:H; [ | reflexivity ].
+    rewrite iff_reverse_lookup_lookup in H by assumption.
+    cbv [node_ok gensym] in *.
+    specialize_under_binders_by eassumption.
+    specialize_under_binders_by reflexivity.
+    apply lookup_value_size in H; trivial.
+    lia.
+  Qed.
+
+  Lemma lookup_merge_node_gensym {descr : description} s (d : t) i
+        {ok : ok d}
+        {all_nodes_ok : all_nodes_ok d}
+    : dag.lookup (snd (dag.merge_node (gensym s d) d)) i
+      = if (i =? size d)%N
+        then Some (gensym s d)
+        else dag.lookup d i.
+  Proof.
+    rewrite lookup_merge_node, reverse_lookup_gensym by assumption.
+    cbv [andb is_None].
+    break_innermost_match; try reflexivity; reflect_hyps; subst.
+    rewrite lookup_size_error in * by first [ assumption | lia ].
+    congruence.
+  Qed.
+
+  Lemma fst_merge_node_gensym {descr : description} s (d : t)
+        {ok : ok d}
+        {all_nodes_ok : all_nodes_ok d}
+    : fst (dag.merge_node (gensym s d) d) = size d.
+  Proof.
+    rewrite fst_merge_node, reverse_lookup_gensym by assumption; reflexivity.
+  Qed.
+
+  Lemma lookup_empty i : lookup empty i = None.
+  Proof. cbv [empty lookup]; now rewrite nth_error_nil_error. Qed.
+  Lemma reverse_lookup_empty n : reverse_lookup empty n = None.
+  Proof. reflexivity. Qed.
+  Lemma size_empty : size empty = 0%N.
+  Proof. reflexivity. Qed.
+
+  Lemma size_merge_node {descr:description} n (d:t)
+    : size (snd (merge_node n d)) = match reverse_lookup d n with Some _ => size d | None => N.succ (size d) end.
+  Proof.
+    cbv [merge_node size]; break_innermost_match; cbn [snd] in *; inversion_pair; subst; rewrite ?app_length; cbn [List.length]; lia.
+  Qed.
+
+  Lemma size_merge_node_le {descr:description} n (d:t)
+    : (size d <= size (snd (merge_node n d)))%N.
+  Proof.
+    rewrite size_merge_node; break_innermost_match; lia.
+  Qed.
+
+  Lemma size_merge_node_gensym {descr:description} s (d:t)
+        {ok : ok d}
+        {all_nodes_ok : all_nodes_ok d}
+    : size (snd (merge_node (gensym s d) d)) = N.succ (size d).
+  Proof. rewrite size_merge_node, reverse_lookup_gensym by assumption; reflexivity. Qed.
+
+  Global Instance empty_ok : ok empty | 10.
+  Proof.
+    repeat apply conj; cbv [size empty]; intros *; cbv [lookup];
+      rewrite ?nth_error_nil_error; cbn; try exact I;
+      intuition first [ congruence | lia ].
+  Qed.
+  Global Instance empty_all_nodes_ok : all_nodes_ok empty | 10.
+  Proof.
+    repeat intro; subst; rewrite lookup_empty in *; congruence.
+  Qed.
+  Global Instance merge_node_ok {descr:description} {n:node idx} {d : t} {dok : ok d} : ok (snd (merge_node n d)) | 10.
+  Proof.
+    repeat apply conj; cbv [size empty size_ok]; intros *.
+    all: rewrite ?lookup_merge_node, ?reverse_lookup_merge_node by assumption.
+    all: let tac :=
+           repeat first [ progress cbv [ok size_ok size merge_node lookup reverse_lookup] in *
+                        | progress destruct_head'_and
+                        | progress inversion_option
+                        | progress subst
+                        | exfalso; assumption
+                        | progress inversion_pair
+                        | progress cbn [fst snd List.length] in *
+                        | break_innermost_match_step
+                        | progress intros
+                        | progress destruct_head'_ex
+                        | progress destruct_head'_and
+                        | progress reflect_hyps
+                        | progress split_iff
+                        | apply conj
+                        | exact I
+                        | progress cbv [option_map idx] in *
+                        | progress break_match
+                        | progress break_match_hyps
+                        | lia
+                        | congruence
+                        | rewrite Nat2N.id in *
+                        | rewrite N2Nat.id in *
+                        | rewrite app_length
+                        | progress specialize_under_binders_by reflexivity
+                        | progress specialize_under_binders_by rewrite Nat2N.id
+                        | progress destruct_head'_prod
+                        | match goal with
+                          | [ H : forall i n, match nth_error _ (N.to_nat i) with _ => _ end = _ -> _ |- _ ]
+                            => specialize (fun i => H (N.of_nat i))
+                          | [ H : _ = Some _ |- _ ] => rewrite H in *
+                          | [ H : N.of_nat _ = N.of_nat _ |- _ ] => apply (f_equal N.to_nat) in H
+                          end
+                        | solve [ exfalso; auto ] ] in
+         tac;
+         repeat match goal with
+                | [ H : _ = Some _ |- _ ] => progress specialize_all_ways_under_binders_by rewrite H
+                end;
+         tac.
+  Qed.
+  Global Instance merge_node_all_nodes_ok {descr:description} {n:node idx} {d : t} {dok : ok d} {dnok : all_nodes_ok d} {nok : node_ok (size d) n}
+    : all_nodes_ok (snd (merge_node n d)) | 10.
+  Proof.
+    cbv [all_nodes_ok] in *; intros i r; specialize (dnok i r).
+    rewrite lookup_merge_node in * by assumption.
+    cbv [andb is_None]; break_innermost_match; intros; inversion_option; reflect_hyps; subst; auto.
+  Qed.
+  Global Instance gensym_node_ok s d : node_ok (size d) (gensym s d) | 10.
+  Proof.
+    cbv [node_ok]; intros * H.
+    inversion H; subst; reflexivity.
+  Qed.
+  Global Hint Extern 1 (node_ok (size _) (gensym _ _)) => exact (@gensym_node_ok _ _) : typeclass_instances.
+
+  Lemma eq_fst_merge_node_change_descr {descr1 descr2 : description} (n : node idx) (d : t)
+    : fst (@merge_node descr1 n d) = fst (@merge_node descr2 n d).
+  Proof.
+    cbv [merge_node]; break_innermost_match; reflexivity.
+  Qed.
+
+  (* lemmas below here don't unfold the definitions *)
+  Lemma lookup_merge_node' {descr1 descr2 : description} (n : node idx) (d : t)
+        {ok : ok d}
+    : dag.lookup (snd (@dag.merge_node descr1 n d)) (fst (@dag.merge_node descr2 n d)) = Some n.
+  Proof.
+    rewrite lookup_merge_node, fst_merge_node by assumption.
+    cbv [andb is_None].
+    repeat first [ rewrite iff_reverse_lookup_lookup in * by assumption
+                 | rewrite lookup_size_error in * by first [ assumption | lia ]
+                 | progress inversion_option
+                 | progress subst
+                 | reflexivity
+                 | progress reflect_hyps
+                 | lia
+                 | break_innermost_match_step ].
+  Qed.
+End dag.
+End Old.
+Module New.
 Module dag.
   Module IdxMap <: UsualS := NMap <+ FMapFacts.Facts <+ Facts_RemoveHints <+ FMapFacts.AdditionalFacts.
   Module ListIdxMap <: UsualS := ListNMap.
@@ -791,6 +1079,8 @@ Module dag.
                  | break_innermost_match_step ].
   Qed.
 End dag.
+End New.
+Export Old.
 Global Arguments dag.t : simpl never.
 Global Arguments dag.empty : simpl never.
 Global Arguments dag.size : simpl never.
