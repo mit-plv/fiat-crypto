@@ -5,6 +5,8 @@
 Require Import Coq.Setoids.Setoid.
 Require Import Crypto.Util.Notations.
 
+Declare Scope pointed_prop_scope.
+Declare Scope option_pointed_prop_scope.
 Delimit Scope pointed_prop_scope with pointed_prop.
 Delimit Scope option_pointed_prop_scope with option_pointed_prop.
 Inductive pointed_Prop := trivial | inject (_ : Prop).

@@ -70,7 +70,7 @@ Section __.
   Lemma compile_ladderstep {tr m l functions}
         (x1 x2 z2 x3 z3 : F M_pos) :
     let v := ladderstep_gallina M_pos a24 x1 x2 z2 x3 z3 in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
            Rout
            X1_ptr X1_var X2_ptr X2_var Z2_ptr Z2_var
            X3_ptr X3_var Z3_ptr Z3_var,
@@ -115,7 +115,7 @@ Section __.
       <{ pred (nlet_eq
                  [X2_var; Z2_var; X3_var; Z3_var]
                  v k) }>.
-  Proof.
+  Proof using env_ok ext_spec_ok locals_ok mem_ok word_ok.
     repeat straightline'.
     handle_call.
     apply H6.
@@ -124,7 +124,7 @@ Section __.
   Qed.
 
   Local Ltac ecancel_assumption ::=  ecancel_assumption_impl.
-  
+
   Derive ladderstep_body SuchThat
          (defn! "ladderstep" ("X1", "X2", "Z2", "X3", "Z3")
               { ladderstep_body },

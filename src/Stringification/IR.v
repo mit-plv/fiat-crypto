@@ -48,6 +48,7 @@ Module Compilers.
         Inductive type := type_primitive (t : primitive) | prod (A B : type) | unit.
         Module Export Notations.
           Global Coercion type_primitive : primitive >-> type.
+          Declare Scope Ctype_scope.
           Delimit Scope Ctype_scope with Ctype.
 
           Bind Scope Ctype_scope with type.
@@ -111,6 +112,7 @@ Module Compilers.
       Module Export Notations.
         Export int.Notations.
         Export type.Notations.
+        Declare Scope Cexpr_scope.
         Delimit Scope Cexpr_scope with Cexpr.
         Bind Scope Cexpr_scope with expr.
         Bind Scope Cexpr_scope with stmt.
@@ -635,6 +637,7 @@ Module Compilers.
                                             | inl x => f
                                             | inr err => inr err
                                             end).
+            Declare Scope err_scope.
             (*Local*) Delimit Scope err_scope with err.
             Local Notation "x <- v ; f" := (match v with
                                             | inl x => f

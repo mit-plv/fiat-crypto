@@ -8,6 +8,7 @@ Inductive ErrorT {ErrT T} :=
 | Error (msg : ErrT).
 
 Global Arguments ErrorT : clear implicits.
+Declare Scope error_scope.
 Delimit Scope error_scope with error.
 Bind Scope error_scope with ErrorT.
 

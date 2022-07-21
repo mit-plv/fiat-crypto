@@ -5,6 +5,7 @@ Section BasicProperties.
   Context {T eq op id inv} `{@group T eq op id inv}.
   Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
   Local Infix "*" := op.
+  Declare Scope eq_scope.
   Local Infix "=" := eq : eq_scope.
   Local Open Scope eq_scope.
 

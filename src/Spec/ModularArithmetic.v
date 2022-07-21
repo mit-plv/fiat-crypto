@@ -78,6 +78,7 @@ Module F.
 End F.
 
 Notation F := F.F.
+Declare Scope F_scope.
 Delimit Scope F_scope with F.
 Bind Scope F_scope with F.F.
 Infix "+" := F.add : F_scope.

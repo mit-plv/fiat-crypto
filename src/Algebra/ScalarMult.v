@@ -21,7 +21,7 @@ Section ScalarMultProperties.
   Context `{mul_is_scalarmult:is_scalarmult}.
 
   Lemma scalarmult_succ_l n P : Z.succ n * P = P + n * P.
-  Proof.
+  Proof using groupG mul_is_scalarmult.
     induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by lia;
       repeat (rewrite ?scalarmult_0_l, ?scalarmult_succ_l_nn, ?scalarmult_pred_l_np, ?left_identity, ?right_identity, ?Z.succ_pred, ?Z.pred_succ, ?associative, ?right_inverse, ?left_inverse by lia); reflexivity.
   Qed.
@@ -143,6 +143,7 @@ End ScalarMultProperties.
 Section ScalarMultHomomorphism.
   Context {G EQ ADD ZERO OPP} {groupG:@group G EQ ADD ZERO OPP}.
   Context {H eq add zero opp} {groupH:@group H eq add zero opp}.
+  Declare Scope eq_scope.
   Local Infix "=" := eq : type_scope. Local Infix "=" := eq : eq_scope.
   Context {MUL} {MUL_is_scalarmult:@is_scalarmult G EQ ADD ZERO OPP MUL}.
   Context {mul} {mul_is_scalarmult:@is_scalarmult H eq add zero opp mul}.
