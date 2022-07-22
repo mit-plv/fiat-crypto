@@ -38,6 +38,10 @@ Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Coq.ZArith.Znat.
 
+Require Import Crypto.Util.CPSUtil.
+Require Import Crypto.Util.CPSNotations.
+Local Open Scope cps_scope.
+
 Require Import Crypto.Util.Notations.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
@@ -97,41 +101,49 @@ Module solinas_reduction.
         let r := (fst lo_hi) ++ hi in
         r.
 
-      (* n is input width *)
-      Definition reduce1 base s c n m (p : list Z) :=
-        let p_a := Positional.to_associational weight n p in
-        let r_a := sat_reduce base s c n p_a in
-        let r_rows := Saturated.Rows.from_associational weight m r_a in
-        let r_flat := Saturated.Rows.flatten weight m r_rows in
-        fst r_flat.
-
-      Definition reduce_full base s c n (p : list Z) :=
-        let bound := (0, 2^machine_wordsize - 1) in
-        if (is_bounded_by (repeat bound (2*n)) p) then
-          let r1 := reduce1 base s c (2*n) (S n) p in
-          if (is_bounded_by (repeat bound n ++ [(0, up_bound-1)]) r1) then
-            let r2 := reduce1 base s c (S n) (S n) r1 in
-            let r3 := reduce1 base s c (S n) (n) r2 in
-            r3
-          else r1
-        else
-          (* reduce down to n limbs *)
-          let p_a := Positional.to_associational weight n p in
-          let r_a := sat_reduce base s c n p_a in
-          let r_rows := Saturated.Rows.from_associational weight n r_a in
-          let r_flat := Saturated.Rows.flatten weight n r_rows in
-          add_to_nth 0 (weight (n) * snd r_flat) (fst r_flat).
-
-      Definition reduce1' base s c n m (p : list Z) :=
+      Definition reduce1_cps base s c n m (p : list Z) {T} (f : list Z -> T) :=
         let p_a := Positional.to_associational weight n p in
         let r_a := sat_reduce base s c n p_a in
         let r_rows := Saturated.Rows.from_associational weight m r_a in
         let r_flat := Saturated.Rows.flatten weight m r_rows in
         let bound := (0, 2^machine_wordsize - 1) in
         if (is_bounded_by (repeat bound n) p) then
-          fst r_flat
+          f (fst r_flat)
         else
-          add_to_nth 0 (weight (m) * snd r_flat) (fst r_flat).
+          f (add_to_nth 0 (weight (m) * snd r_flat) (fst r_flat)).
+      Check reduce1_cps.
+
+      Definition reduce_full_cps base s c n (p : list Z) : ~> list Z :=
+        (r1 <- @reduce1_cps base s c (2*n) (S n) p;
+         (let bound := (0, 2^machine_wordsize) in
+          if (is_bounded_by (repeat bound (S n)) r1) then
+            fun T => (r2 <- @reduce1_cps base s c (S n) (S n) r1;
+                   reduce1_cps base s c (S n) n r2)
+          else
+            return r1)).
+      Check reduce_full_cps.
+
+      Definition mul_no_reduce_cps base n (p q : list Z) {T} (f : list Z -> T):=
+      let p_a := Positional.to_associational weight n p in
+      let q_a := Positional.to_associational weight n q in
+      let pq_a := Saturated.Associational.sat_mul base p_a q_a in
+      let pq_rows := Saturated.Rows.from_associational weight (2*n) pq_a in
+      let pq := Saturated.Rows.flatten weight (2*n) pq_rows in
+      let bound := (0, 2^machine_wordsize - 1) in
+      if (is_bounded_by (repeat bound n) p && is_bounded_by (repeat bound n) q) then
+        f (fst pq)
+      else
+        f (add_to_nth 0 (weight (2 * n) * snd pq) (fst pq)).
+      Check mul_no_reduce_cps.
+
+      Definition mulmod_cps base s c n (p q : list Z) : ~> list Z :=
+        (mul <- @mul_no_reduce_cps base n p q;
+         @reduce_full_cps base s c n mul).
+      Check mulmod_cps.
+
+      Definition mulmod base s c n (p q : list Z) :=
+        mulmod_cps base s c n p q _ id.
+      Check mulmod.
 
     End __.
 
@@ -170,7 +182,7 @@ Module solinas_reduction.
 
       Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
       Let bound' := Some (repeat bound (n) ++ [Some r[0 ~> 1]%zrange]).
-      Time Compute
+      Fail Time Compute
            Show.show
            (Pipeline.BoundsPipelineToString
               "fiat" "mul"
@@ -180,25 +192,7 @@ Module solinas_reduction.
               possible_values
               machine_wordsize
               ltac:(let n := (eval cbv in n) in
-                    let r := Reify (reduce1' base s c (2*n) (S n)) in
-                    exact r)
-                     (fun _ _ => [])
-                     (Some (repeat bound (2*n)), tt)
-                     (Some (repeat bound (S n)))
-                     (None, tt)
-                     (None)
-             : Pipeline.ErrorT _).
-      Time Compute
-           Show.show
-           (Pipeline.BoundsPipelineToString
-              "fiat" "mul"
-              false
-              false
-              None
-              possible_values
-              machine_wordsize
-              ltac:(let n := (eval cbv in n) in
-                    let r := Reify (reduce_full base s c n) in
+                    let r := Reify (mulmod base s c n) in
                     exact r)
                      (fun _ _ => [])
                      (Some (repeat bound (2*n)), tt)
@@ -206,26 +200,6 @@ Module solinas_reduction.
                      (None, tt)
                      (None)
              : Pipeline.ErrorT _).
-(* first reduction unnecessarily scales one of the limbs twice
-  fiatmulx_u64(&x1, &x2, UINT8_C(0x26), (arg1[6]));
-  fiatmulx_u64(&x3, &x4, UINT8_C(0x26), (arg1[5]));
-  fiatmulx_u64(&x5, &x6, UINT8_C(0x26), (arg1[4]));
-  x7 = (arg1[3]);
-  x8 = (arg1[2]);
-  x9 = (arg1[1]);
-  x10 = (arg1[0]);
-  fiataddcarryx_u64(&x11, &x12, 0x0, x9, x3);
-  fiataddcarryx_u64(&x13, &x14, x12, x8, x1);
-  fiatmulx_u64(&x15, &x16, UINT8_C(0x26), (arg1[7]));
-  fiataddcarryx_u64(&x17, &x18, x14, x7, x15);
-  fiatmulx_u64(&x19, &x20, UINT8_C(0x26), (arg1[7]));
-  x21 = (x18 + x20);
-  fiataddcarryx_u64(&x22, &x23, 0x0, x10, x5);
-  fiataddcarryx_u64(&x24, &x25, x23, x11, x6);
-  fiataddcarryx_u64(&x26, &x27, x25, x13, x4);
-  fiataddcarryx_u64(&x28, &x29, x27, x17, x2);
-  x30 = (x29 + x21);
-       *)
 
     End __.
 
@@ -283,43 +257,36 @@ Module solinas_reduction.
     Hint Rewrite Rows.flatten_correct using (eauto using Rows.length_from_associational) : push_eval.
     Hint Rewrite eval_add_to_nth using auto : push_eval.
 
-    Hint Rewrite cons_length : push_length.
-    Hint Rewrite app_length : push_length.
+    Hint Rewrite @nil_length0 cons_length app_length seq_length map_length firstn_length @skipn_length length_partition length_add_to_nth : push_length.
     Hint Rewrite (@ListUtil.length_snoc) : push_length.
-    Hint Rewrite (@nil_length0) : push_length.
-    Hint Rewrite seq_length : push_length.
-    Hint Rewrite map_length : push_length.
-    Hint Rewrite firstn_length : push_length.
-    Hint Rewrite @skipn_length : push_length.
     Hint Rewrite Rows.length_flatten using (eauto using Rows.length_from_associational) : push_length.
-    Hint Rewrite length_partition : push_length.
-    Hint Rewrite length_add_to_nth : push_length.
 
-    Hint Rewrite map_app : push_misc.
+    Hint Rewrite map_cons map_app map_map in_map_iff : push_misc.
     Hint Rewrite (@combine_app_samelength) using (autorewrite with push_length; lia) : push_misc.
-    Hint Rewrite @combine_nil_r : push_misc.
-    Hint Rewrite fold_right_app : push_misc.
-    Hint Rewrite (@firstn_map) : push_misc.
-    Hint Rewrite firstn_seq : push_misc.
-    Hint Rewrite seq_add : push_misc.
-    Hint Rewrite map_map : push_misc.
-    Hint Rewrite <-seq_shift : push_misc.
-    Hint Rewrite in_map_iff : push_misc.
-    Hint Rewrite firstn_app : push_misc.
-    Hint Rewrite @skipn_app : push_misc.
-    Hint Rewrite @skipn_0 : push_misc.
-    Hint Rewrite (@fst_pair) : push_misc.
-    Hint Rewrite (@snd_pair) : push_misc.
+    Hint Rewrite @combine_nil_r @combine_cons : push_misc.
+    Hint Rewrite @fold_right_cons fold_right_app : push_misc.
+    Hint Rewrite <-seq_shift seq_add : push_misc.
+    Hint Rewrite @nth_default_cons_S : push_misc.
+    Hint Rewrite @firstn_map firstn_seq firstn_app : push_misc.
+    Hint Rewrite @skipn_app @skipn_0 : push_misc.
+    Hint Rewrite @fst_pair @snd_pair : push_misc.
+    Hint Rewrite app_nil_r app_nil_l : push_misc.
     Hint Rewrite Nat.sub_diag : push_misc.
-    Hint Rewrite app_nil_r : push_misc.
-    Hint Rewrite app_nil_l : push_misc.
 
     Hint Resolve in_or_app : core.
     Hint Resolve in_eq : core.
     Hint Resolve in_cons : core.
 
+    Hint Unfold eval : unfold_eval.
+    Hint Unfold Associational.eval : unfold_eval.
+    Hint Unfold to_associational : unfold_eval.
+
     Ltac push :=
       autorewrite with push_eval push_length push_misc zsimplify_const;
+      auto.
+
+    Ltac push' H :=
+      autorewrite with push_eval push_length push_misc zsimplify_const in H;
       auto.
 
     Lemma seq_double : forall n,
@@ -552,16 +519,18 @@ Module solinas_reduction.
         fold_right andb true (dual_map f ls1 ls2).
       Definition is_bounded_by bounds ls :=
         fold_andb_map' (fun r v'' => (fst r <=? v'') && (v'' <=? snd r)) bounds ls.
+      Hint Unfold is_bounded_by : core.
+      Hint Unfold fold_andb_map' : core.
+      Hint Unfold dual_map : core.
 
       Lemma canonical_is_bounded_by : forall n p,
-        let bound := (0, 2 ^ machine_wordsize - 1) in
         canonical_repr n p <->
           length p = n /\
-          is_bounded_by (repeat bound n) p = true.
+          is_bounded_by (repeat (0, 2^machine_wordsize-1) n) p = true.
       Proof.
         intros.
         rewrite canonical_iff.
-        cbv [is_bounded_by fold_andb_map' dual_map bound].
+        autounfold.
         split.
         intuition.
         generalize dependent n.
@@ -599,8 +568,8 @@ Module solinas_reduction.
       Proof.
         intros.
         pose proof eval_weight_S as Heval.
-        cbv [is_bounded_by fold_andb_map' dual_map eval Associational.eval to_associational] in *;
-          generalize dependent n; induction p; intros; destruct n;
+        autounfold with * in *.
+        generalize dependent n; induction p; intros; destruct n;
           repeat multimatch goal with
                  | H : context[fold_right _ _ _] |- _ => progress cbn in H
                  | H : context[_ && _] |- _ => rewrite andb_true_iff in H
@@ -624,8 +593,8 @@ Module solinas_reduction.
         split.
         apply eval_is_bounded_by_pos; auto.
         pose proof eval_weight_S as Heval.
-        cbv [is_bounded_by fold_andb_map' dual_map eval Associational.eval to_associational] in *;
-          generalize dependent n; induction p; intros; destruct n;
+        autounfold with * in *.
+        generalize dependent n; induction p; intros; destruct n;
           repeat multimatch goal with
                  | H : context[fold_right _ _ _] |- _ => progress cbn in H
                  | H : context[_ && _] |- _ => rewrite andb_true_iff in H
@@ -647,6 +616,79 @@ Module solinas_reduction.
         apply IHp; auto.
         weight_comp; unfold machine_wordsize; lia.
       Qed.
+      Hint Resolve eval_is_bounded_by : ibb.
+
+      Lemma is_bounded_by_cons1 : forall b bounds p' p,
+          is_bounded_by (b :: bounds) (p' :: p) = true ->
+          is_bounded_by bounds p = true.
+      Proof.
+        intros; autounfold in *; match goal with | H : _ |- _ => push' H end.
+      Qed.
+      Hint Resolve is_bounded_by_cons1 : ibb.
+
+      Lemma is_bounded_by_cons2 : forall b bounds p' p,
+          is_bounded_by (b :: bounds) (p' :: p) = true ->
+          fst b <= p' <= snd b.
+      Proof.
+        intros; autounfold in *; match goal with | H : _ |- _ => push' H end.
+      Qed.
+      Hint Resolve is_bounded_by_cons2 : ibb.
+
+      Lemma is_bounded_by_cons : forall b bounds p' p,
+          is_bounded_by (b :: bounds) (p' :: p) = true ->
+          is_bounded_by bounds p = true /\
+            fst b <= p' <= snd b.
+      Proof.
+        intros; autounfold in *; match goal with | H : _ |- _ => push' H end.
+      Qed.
+      Hint Resolve is_bounded_by_cons : ibb.
+
+      Lemma is_bounded_by_nth n : forall p bounds,
+          is_bounded_by bounds p = true ->
+          (n < length p)%nat ->
+          (n < length bounds)%nat ->
+          fst (nth_default (0,0) bounds n) <= nth_default 0 p n <= snd (nth_default (0,0) bounds n).
+      Proof.
+        intros.
+        generalize dependent n.
+        generalize dependent p.
+        induction bounds as [ | b bounds IHbounds ];
+          intros p ? n; destruct n; destruct p; intros;
+          repeat multimatch goal with
+                 | H : _ |- _ => autorewrite with push_length in H
+                 | _ => apply IHbounds
+                 | _ => autorewrite with push_misc
+                 | _ => cbn
+                 | _ => eauto with ibb
+                 | _ => lia
+                 end.
+      Qed.
+      Hint Resolve is_bounded_by_nth : ibb.
+
+      Lemma is_bounded_by_app_l : forall bound1 bound2 l1 l2,
+          is_bounded_by (bound1 ++ bound2) (l1 ++ l2) = true ->
+          length bound1 = length l1 ->
+          is_bounded_by bound1 l1 = true.
+      Proof.
+        intros b1 b2 l1 l2 H H1.
+        generalize dependent b1.
+        generalize dependent b2.
+        generalize dependent l2.
+        induction l1 as [ | ? ? IHl1 ]; intros; destruct b1;
+          repeat multimatch goal with
+                 | _ => autounfold in *
+                 | _ => eapply IHl1
+                 | _ => rewrite Z.leb_le
+                 | H : _ |- _ => rewrite <-!app_comm_cons in H; push' H
+                 | H : _ |- _ => rewrite andb_true_iff in H
+                 | _ => rewrite andb_true_iff
+                 | _ => intuition
+                 | _ => push
+                 | _ => lia
+                 | _ => eauto
+                 end.
+      Qed.
+      Hint Resolve is_bounded_by_app_l : ibb.
 
     End canon.
 
@@ -826,13 +868,16 @@ Module solinas_reduction.
       else
         add_to_nth 0 (weight (2 * n) * snd pq) (fst pq).
 
-    (* n is input width *)
     Definition reduce1 base s c n m (p : list Z) :=
       let p_a := Positional.to_associational weight n p in
       let r_a := sat_reduce base s c n p_a in
       let r_rows := Saturated.Rows.from_associational weight m r_a in
       let r_flat := Saturated.Rows.flatten weight m r_rows in
-      fst r_flat.
+      let bound := (0, 2^machine_wordsize - 1) in
+      if (is_bounded_by (repeat bound n) p) then
+        fst r_flat
+      else
+        add_to_nth 0 (weight (m) * snd r_flat) (fst r_flat).
 
     Definition reduce_full base s c n (p : list Z) :=
       let r1 := reduce1 base s c (2*n) (S n) p in
