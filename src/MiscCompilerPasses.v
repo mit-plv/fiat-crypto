@@ -93,7 +93,7 @@ Module Compilers.
                        | Some n => should_subst n
                        | None => true
                        end
-                    then (Pos.succ cur_idx, eC' (doing_subst _ _ ex' (Pos.succ cur_idx, PositiveMap.elements live)))
+                    then (Pos.succ cur_idx, eC' (doing_subst _ _ ex' (Pos.succ cur_idx, live)))
                     else (Pos.succ cur_idx, expr.LetIn ex' (fun v => eC' (expr.Var v)))
                end.
 
