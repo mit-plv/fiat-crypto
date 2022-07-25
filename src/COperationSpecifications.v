@@ -494,7 +494,7 @@ Module SaturatedSolinas.
   End __.
 End SaturatedSolinas.
 
-Module BitcoinMultiplication.
+Module DettmanMultiplication.
   Section __.
     Context (wt : nat -> Z)
             (n : nat)
@@ -513,7 +513,7 @@ Module BitcoinMultiplication.
         -> eval (mul x y) mod m = ((eval x) * (eval y)) mod m
            /\ list_Z_bounded_by output_bounds (mul x y).
   End __.
-End BitcoinMultiplication.
+End DettmanMultiplication.
 
 Module WordByWordMontgomery.
   Import Arithmetic.WordByWordMontgomery.
