@@ -116,10 +116,10 @@ Module SaturatedSolinas.
     := main_gen ForExtraction.SaturatedSolinas.PipelineMain.
 End SaturatedSolinas.
 
-Module BitcoinMultiplication.
+Module DettmanMultiplication.
   Definition main : IO_unit
-    := main_gen ForExtraction.BitcoinMultiplication.PipelineMain.
-End BitcoinMultiplication.
+    := main_gen ForExtraction.DettmanMultiplication.PipelineMain.
+End DettmanMultiplication.
 
 Module BaseConversion.
   Definition main : IO_unit

@@ -20,7 +20,7 @@ Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
 Require Crypto.PushButtonSynthesis.BaseConversion.
-Require Crypto.PushButtonSynthesis.BitcoinSynthesis.
+Require Crypto.PushButtonSynthesis.DettmanMultiplication.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Stringification.C.
@@ -71,8 +71,6 @@ Module ForExtraction.
   (* Workaround for lack of notation in 8.8 *)
   Local Notation "x =? y" := (if string_dec x y then true else false) : string_scope.
 
-  Print MaybeLimbCount.
-
   Definition parse_n (n : string) : option MaybeLimbCount
     := match parse_nat n with
        | Some n => Some (NumLimbs n)
@@ -95,8 +93,6 @@ Module ForExtraction.
 
   Definition parse_sc (s : string) : option (Z * list (Z * Z))
     := parseZ_arith_to_taps s.
-
-  Compute (parse_sc "35").
 
   Definition parse_machine_wordsize (s : string) : option Z
     := parse_Z s.
@@ -1038,8 +1034,6 @@ Module ForExtraction.
       := Parameterized.PipelineMain argv.
   End WordByWordMontgomery.
 
-  Check inl.
-
   Module SaturatedSolinas.
     Local Instance api : PipelineAPI
       := {
@@ -1075,19 +1069,19 @@ Module ForExtraction.
       := Parameterized.PipelineMain argv.
   End SaturatedSolinas.
 
-  Module BitcoinMultiplication.
-    Print PipelineAPI.
+  Module DettmanMultiplication.
+    (* Print PipelineAPI.
     Print Arg.arg_spec.
-    Print BitcoinSynthesis.Synthesize.
-    Check BitcoinSynthesis.Synthesize.
-    Print PowersOfTwo.show_Z.
+    Print DettmanMultiplication.Synthesize.
+    Check DettmanMultiplication.Synthesize.
+    Print PowersOfTwo.show_Z. *)
     Local Instance api : PipelineAPI
       := {
           spec :=
             {| Arg.named_args := []
                ; Arg.anon_args := [n_nat_spec; limbwidth_spec; sc_spec; input_magnitude_spec]
                ; Arg.anon_opt_args := []
-               ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec BitcoinSynthesis.valid_names) |};
+               ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec DettmanMultiplication.valid_names) |};
 
           parse_args opts args
           := let '(tt, ((str_n, n), (str_limbwidth, limbwidth), (str_sc, (s, c)), (str_input_magnitude, input_magnitude)),
@@ -1107,7 +1101,7 @@ Module ForExtraction.
 
           Synthesize
           := fun _ opts '(n, limbwidth, s, c, input_magnitude, requests) comment_header prefix
-             => BitcoinSynthesis.Synthesize machine_wordsize s c n limbwidth input_magnitude comment_header prefix requests
+             => DettmanMultiplication.Synthesize machine_wordsize s c n limbwidth input_magnitude comment_header prefix requests
         }.
 
     Definition PipelineMain
@@ -1117,7 +1111,7 @@ Module ForExtraction.
                (argv : list string)
       : A
       := Parameterized.PipelineMain argv.
-  End BitcoinMultiplication.
+  End DettmanMultiplication.
 
   Module BaseConversion.
     Local Instance api : PipelineAPI

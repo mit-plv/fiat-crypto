@@ -269,21 +269,21 @@ endef
 UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes relax
 FUNCTIONS_FOR_25519 := $(UNSATURATED_SOLINAS_FUNCTIONS) carry_scmul121666
 WORD_BY_WORD_MONTGOMERY_FUNCTIONS := mul square add sub opp from_montgomery to_montgomery nonzero selectznz to_bytes from_bytes one msat divstep divstep_precomp
-BITCOIN_MULTIPLICATION_FUNCTIONS := mul
+DETTMAN_MULTIPLICATION_FUNCTIONS := mul
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
 WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/word_by_word_montgomery
-BITCOIN_MULTIPLICATION := src/ExtractionOCaml/bitcoin_multiplication
+DETTMAN_MULTIPLICATION := src/ExtractionOCaml/dettman_multiplication
 
 UNSATURATED_SOLINAS_BASE_FILES := # p224_solinas_64
 WORD_BY_WORD_MONTGOMERY_BASE_FILES := # p434_32
-BITCOIN_MULTIPLICATION_BASE_FILES := # i wrote this line, idk what it does
-ALL_BASE_FILES := $(UNSATURATED_SOLINAS_BASE_FILES) $(WORD_BY_WORD_MONTGOMERY_BASE_FILES) $(BITCOIN_MULTIPLICATION_BASE_FILES)
+DETTMAN_MULTIPLICATION_BASE_FILES := # i wrote this line, idk what it does
+ALL_BASE_FILES := $(UNSATURATED_SOLINAS_BASE_FILES) $(WORD_BY_WORD_MONTGOMERY_BASE_FILES) $(DETTMAN_MULTIPLICATION_BASE_FILES)
 
 BASE_FILES_NEEDING_INT128 := p448_solinas_32
 
 GO_EXTRA_UNSATURATED_SOLINAS_FUNCTIONS := carry_add carry_sub carry_opp
 GO_EXTRA_WORD_BY_WORD_MONTGOMERY_FUNCTIONS :=
-GO_EXTRA_BITCOIN_MULTIPLICATION_FUNCTIONS :=
+GO_EXTRA_DETTMAN_MULTIPLICATION_FUNCTIONS :=
 
 $(foreach bw,64 32,$(eval $(call add_curve_keys,curve25519_$(bw),UNSATURATED_SOLINAS,'25519',$(bw),'(auto)' '2^255 - 19',$(FUNCTIONS_FOR_25519),UNSATURATED_SOLINAS)))
 $(eval $(call add_curve_keys,poly1305_64,UNSATURATED_SOLINAS,'poly1305',64,'3' '2^130 - 5',$(UNSATURATED_SOLINAS_FUNCTIONS),UNSATURATED_SOLINAS))
@@ -304,7 +304,7 @@ $(foreach bw,64 32,$(eval $(call add_curve_keys,p256_scalar_$(bw),WORD_BY_WORD_M
 $(foreach bw,64 32,$(eval $(call add_curve_keys,p384_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'p384_scalar',$(bw),'2^384 - 1388124618062372383947042015309946732620727252194336364173',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 $(foreach bw,64 32,$(eval $(call add_curve_keys,secp256k1_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'secp256k1_scalar',$(bw),'2^256 - 432420386565659656852420866394968145599',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 
-$(foreach bw,64,$(eval $(call add_curve_keys,bitcoin_prime_$(bw),BITCOIN_MULTIPLICATION,'bitcoin_prime',$(bw),5 52 '2^256 - 4294968273' 1,$(BITCOIN_MULTIPLICATION_FUNCTIONS),BITCOIN_MULTIPLICATION)))
+$(foreach bw,64,$(eval $(call add_curve_keys,bitcoin_prime_$(bw),DETTMAN_MULTIPLICATION,'bitcoin_prime',$(bw),5 52 '2^256 - 4294968273' 1,$(DETTMAN_MULTIPLICATION_FUNCTIONS),DETTMAN_MULTIPLICATION)))
 
 # Files taking 30s or less
 LITE_BASE_FILES := curve25519_64 poly1305_64 poly1305_32 p256_64 secp256k1_64 p384_64 p224_32 p434_64 p448_solinas_64 secp256k1_32 p256_32 p448_solinas_32 \
@@ -331,7 +331,7 @@ LITE_ZIG_FILES := $(patsubst %,$(ZIG_DIR)%.zig,$(LITE_BASE_FILES))
 
 BEDROCK2_UNSATURATED_SOLINAS := src/ExtractionOCaml/bedrock2_unsaturated_solinas
 BEDROCK2_WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/bedrock2_word_by_word_montgomery
-BEDROCK2_BITCOIN_MULTIPLICATION := src/ExtractionOCaml/bedrock2_bitcoin_multiplication
+BEDROCK2_DETTMAN_MULTIPLICATION := src/ExtractionOCaml/bedrock2_dettman_multiplication
 
 C_EXTRA_ARGS := --inline --static --use-value-barrier
 
@@ -588,7 +588,7 @@ Makefile.coq: Makefile _CoqProject
 	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-coq && cat Makefile-coq | sed 's/^printenv:/printenv::/g; s/^printenv:::/printenv::/g; s/^all:/all-old:/g; s/^validate:/validate-vo:/g; s/^.PHONY: validate/.PHONY: validate-vo/g' > $@ && rm -f Makefile-coq
 
 
-BASE_STANDALONE := unsaturated_solinas saturated_solinas bitcoin_multiplication word_by_word_montgomery base_conversion
+BASE_STANDALONE := unsaturated_solinas saturated_solinas dettman_multiplication word_by_word_montgomery base_conversion
 BEDROCK2_STANDALONE := $(addprefix bedrock2_,$(BASE_STANDALONE)) $(addprefix with_bedrock2_,$(BASE_STANDALONE))
 STANDALONE := $(BASE_STANDALONE)
 ifneq ($(SKIP_BEDROCK2),1)
