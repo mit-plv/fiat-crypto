@@ -59,6 +59,8 @@ Create HintDb reify_gen_cache discriminated.
 Create HintDb wf_gen_cache discriminated.
 
 Module Export Hints.
+#[global]
   Hint Resolve conj : reify_gen_cache wf_gen_cache.
+#[global]
   Hint Unfold Wf.Compilers.Wf : wf_gen_cache.
 End Hints.

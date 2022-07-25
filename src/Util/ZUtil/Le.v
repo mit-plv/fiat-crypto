@@ -7,6 +7,7 @@ Local Open Scope Z_scope.
 Module Z.
   Lemma positive_is_nonzero : forall x, x > 0 -> x <> 0.
   Proof. intros; lia. Qed.
+#[global]
   Hint Resolve positive_is_nonzero : zarith.
 
   Lemma le_lt_trans n m p : n <= m -> m < p -> n < p.
@@ -39,18 +40,22 @@ Module Z.
 
   Lemma leb_add_same x y : (x <=? y + x) = (0 <=? y).
   Proof. destruct (x <=? y + x) eqn:?, (0 <=? y) eqn:?; Z.ltb_to_lt; try reflexivity; lia. Qed.
+#[global]
   Hint Rewrite leb_add_same : zsimplify.
 
   Lemma ltb_add_same x y : (x <? y + x) = (0 <? y).
   Proof. destruct (x <? y + x) eqn:?, (0 <? y) eqn:?; Z.ltb_to_lt; try reflexivity; lia. Qed.
+#[global]
   Hint Rewrite ltb_add_same : zsimplify.
 
   Lemma geb_add_same x y : (x >=? y + x) = (0 >=? y).
   Proof. destruct (x >=? y + x) eqn:?, (0 >=? y) eqn:?; Z.ltb_to_lt; try reflexivity; lia. Qed.
+#[global]
   Hint Rewrite geb_add_same : zsimplify.
 
   Lemma gtb_add_same x y : (x >? y + x) = (0 >? y).
   Proof. destruct (x >? y + x) eqn:?, (0 >? y) eqn:?; Z.ltb_to_lt; try reflexivity; lia. Qed.
+#[global]
   Hint Rewrite gtb_add_same : zsimplify.
 
   Lemma sub_pos_bound a b X : 0 <= a < X -> 0 <= b < X -> -X < a - b < X.

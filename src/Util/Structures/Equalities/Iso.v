@@ -58,6 +58,7 @@ Module LiftIsoEq (E : Eq) (I : Iso E) <: IsoEq E := I <+ LiftIsoHasEq E I.
 
 Module LiftIsoIsEq (E : EqualityType) (Import I : Iso E).
   Module Import I' := LiftIsoEq E I.
+#[global]
   Instance eq_equiv : Equivalence eq | 5.
   Proof.
     cbv [eq]; split; repeat intro.

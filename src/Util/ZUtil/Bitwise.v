@@ -27,6 +27,7 @@ Module Import Bitlist.
        then false
        else List.nth_default (Z.testbit (signbit v) n) (internal_bitlist v) (Z.to_nat n).
   Definition bitcount (v : t) : nat := List.length (internal_bitlist v).
+#[global]
   Hint Transparent bitcount : rewrite bitlist.
   Definition bitlist (v : t) (len : nat) : list bool
     := firstn len (internal_bitlist v) ++ repeat (Z.testbit (signbit v) 0) (len - bitcount v).
@@ -47,14 +48,17 @@ Module Import Bitlist.
     cbv [bitlist bitcount]; autorewrite with distr_length.
     apply Nat.min_case_strong; try lia.
   Qed.
+#[global]
   Hint Rewrite length_bitlist : distr_length bitlist.
 
   Lemma bitcount_of_Z_len v len : bitcount (of_Z_len v len) = Z.to_nat len.
   Proof. cbv [bitcount of_Z_len internal_bitlist]; now autorewrite with distr_length. Qed.
+#[global]
   Hint Rewrite bitcount_of_Z_len : distr_length bitlist.
 
   Lemma bitcount_of_Z v : bitcount (of_Z v) = Z.to_nat (Z.stabilization_time v + 1).
   Proof. apply bitcount_of_Z_len. Qed.
+#[global]
   Hint Rewrite bitcount_of_Z : distr_length bitlist.
 
   Lemma enumerate_bitlist_default_eq v
@@ -101,6 +105,7 @@ Module Import Bitlist.
         lia. }
       rewrite nth_default_cons_S; reflexivity. }
   Qed.
+#[global]
   Hint Rewrite testbit_to_Z : bitlist Ztestbit.
 
   Lemma testbit_of_Z_len v n len
@@ -133,6 +138,7 @@ Module Import Bitlist.
                         end
                       | progress zify ].
   Qed.
+#[global]
   Hint Rewrite testbit_of_Z_len : bitlist Ztestbit.
 
   Lemma testbit_of_Z v n : testbit (of_Z v) n = Z.testbit v n.
@@ -153,6 +159,7 @@ Module Import Bitlist.
       destruct b; [ cut (v < 0); [ lia | ] | reflexivity ].
       apply H''; eexists; eassumption. }
   Qed.
+#[global]
   Hint Rewrite testbit_of_Z : bitlist Ztestbit.
 
   Lemma path_t (v1 v2 : t) : internal_bitlist v1 = internal_bitlist v2 -> test_signbit v1 = test_signbit v2 -> v1 = v2.
@@ -169,6 +176,7 @@ Module Import Bitlist.
     { now rewrite Z.bits_m1. }
     { now rewrite Z.testbit_0_l. }
   Qed.
+#[global]
   Hint Rewrite testbit_signbit : bitlist Ztestbit.
 
   Lemma testbit_bitwise f v1 v2 n : testbit (bitwise f v1 v2) n = if n <? 0 then false else f (testbit v1 n) (testbit v2 n).
@@ -192,10 +200,14 @@ Module Import Bitlist.
                         | [ H : context[nth_error _ _] |- _ ] => rewrite nth_error_length_error in H by lia
                         end ].
   Qed.
+#[global]
   Hint Rewrite testbit_bitwise : bitlist Ztestbit.
 End Bitlist.
+#[global]
 Hint Rewrite length_bitlist bitcount_of_Z_len bitcount_of_Z : distr_length bitlist.
+#[global]
 Hint Rewrite testbit_to_Z testbit_of_Z_len testbit_of_Z testbit_bitwise testbit_signbit : bitlist Ztestbit.
+#[global]
 Hint Transparent bitcount : rewrite.
 
 Module Z2Bitlist.
@@ -208,6 +220,7 @@ Definition bitwise (f : bool -> bool -> bool) (v1 v2 : Z) : Z
 
 Lemma testbit_bitwise f v1 v2 n : Z.testbit (bitwise f v1 v2) n = if n <? 0 then false else f (Z.testbit v1 n) (Z.testbit v2 n).
 Proof. now cbv [bitwise]; autorewrite with bitlist. Qed.
+#[global]
 Hint Rewrite testbit_bitwise : Ztestbit.
 
 Lemma bitwise_land v1 v2 : bitwise andb v1 v2 = Z.land v1 v2.

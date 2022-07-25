@@ -41,6 +41,7 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Language.API.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
 
+#[global]
 Existing Instances rep.Z rep.listZ_mem.
 
 Import Language.Compilers.
@@ -794,8 +795,10 @@ Section __.
     Proof. setup; prove_is_correct Rout. Qed.
   End Proofs.
 End __.
+#[global]
 Hint Unfold mul square add sub opp to_montgomery from_montgomery
      nonzero selectznz to_bytes from_bytes : defs.
+#[global]
 Hint Unfold
      spec_of_mul
      spec_of_square

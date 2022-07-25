@@ -343,9 +343,11 @@ Section __.
 End __.
 
 Module Export Hints.
+#[global]
   Hint Opaque
        convert_bases
   : wf_op_cache.
+#[global]
   Hint Immediate
        Wf_convert_bases
   : wf_op_cache.

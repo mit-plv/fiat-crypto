@@ -15,6 +15,7 @@ Require Import Crypto.Util.Tactics.BreakMatch.
 Import Language.API.Compilers.
 Import Types.Notations.
 Import ListNotations.
+#[global]
 Existing Instances rep.Z rep.listZ_mem.
 
 Section with_parameters.

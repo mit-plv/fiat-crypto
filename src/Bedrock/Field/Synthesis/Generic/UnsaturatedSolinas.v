@@ -40,6 +40,7 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Language.API.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
 
+#[global]
 Existing Instances rep.Z rep.listZ_mem.
 
 Import Language.Compilers.
@@ -697,8 +698,10 @@ Section __.
     Proof. setup; prove_is_correct Rout. Qed.
   End Proofs.
 End __.
+#[global]
 Hint Unfold carry_mul carry_square carry add sub opp selectznz
      to_bytes from_bytes carry_scmul_const : defs.
+#[global]
 Hint Unfold
      spec_of_carry_mul
      spec_of_carry_square

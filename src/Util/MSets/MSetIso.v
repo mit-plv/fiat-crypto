@@ -206,6 +206,7 @@ Module IsoWSetsOn (E' : Equalities.DecidableType) (W' : WSetsOn E')
 
   Create HintDb iso_set_alt discriminated.
 
+#[global]
   Hint Unfold
        empty
        is_empty
@@ -233,6 +234,7 @@ Module IsoWSetsOn (E' : Equalities.DecidableType) (W' : WSetsOn E')
        Empty_alt Equal_alt
     : iso_set_alt.
 
+#[global]
   Hint Rewrite Empty_alt_iff Equal_alt_iff Subset_alt_iff For_all_alt_iff Exists_alt_iff
        eq_to_iff
        W'.is_empty_spec
@@ -359,7 +361,9 @@ Module IsoSetsOn (E' : Orders.OrderedType) (W' : SetsOn E')
   Definition min_elt (v : t) : option elt := option_map E.of_ (W'.min_elt v).
   Definition max_elt (v : t) : option elt := option_map E.of_ (W'.max_elt v).
   Definition lt : t -> t -> Prop := W'.lt.
+#[global]
   Instance lt_strorder : StrictOrder lt | 1 := W'.lt_strorder.
+#[global]
   Instance lt_compat : Proper (eq==>eq==>iff) lt | 1.
   Proof.
     cbv [eq]; intros ?? H ?? H'; apply W'.lt_compat;
@@ -367,6 +371,7 @@ Module IsoSetsOn (E' : Orders.OrderedType) (W' : SetsOn E')
       assumption.
   Qed.
 
+#[global]
   Hint Unfold compare min_elt max_elt lt : iso_set_alt.
 
   Local Ltac spec_t'

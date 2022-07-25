@@ -147,8 +147,11 @@ Module Compilers.
     End with_ident.
   End Subst01.
 
+#[global]
   Hint Resolve Subst01.Wf_Subst01 : wf.
+#[global]
   Hint Opaque Subst01.Subst01 : wf interp rewrite.
+#[global]
   Hint Rewrite @Subst01.Interp_Subst01 : interp.
 
   Module DeadCodeElimination.
@@ -186,7 +189,10 @@ Module Compilers.
     End with_ident.
   End DeadCodeElimination.
 
+#[global]
   Hint Resolve DeadCodeElimination.Wf_EliminateDead : wf.
+#[global]
   Hint Opaque DeadCodeElimination.EliminateDead : wf interp rewrite.
+#[global]
   Hint Rewrite @DeadCodeElimination.Interp_EliminateDead : interp.
 End Compilers.

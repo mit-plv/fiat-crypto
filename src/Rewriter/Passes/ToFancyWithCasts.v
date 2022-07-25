@@ -43,8 +43,11 @@ Module Compilers.
   End RewriteRules.
 
   Module Export Hints.
+#[global]
     Hint Resolve Wf_RewriteToFancyWithCasts : wf wf_extra.
+#[global]
     Hint Opaque RewriteToFancyWithCasts : wf wf_extra interp interp_extra rewrite.
+#[global]
     Hint Rewrite @Interp_RewriteToFancyWithCasts : interp interp_extra.
   End Hints.
 End Compilers.

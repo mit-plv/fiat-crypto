@@ -70,7 +70,7 @@ Proof using Type. rewrite prod_beq_hetero_uniform; now apply internal_prod_dec_l
 
 Definition fst_pair {A B} (a:A) (b:B) : fst (a,b) = a := eq_refl.
 Definition snd_pair {A B} (a:A) (b:B) : snd (a,b) = b := eq_refl.
-Create HintDb cancel_pair discriminated. Hint Rewrite @fst_pair @snd_pair : cancel_pair.
+Create HintDb cancel_pair discriminated. #[global] Hint Rewrite @fst_pair @snd_pair : cancel_pair.
 
 (** ** Equality for [prod] *)
 Section prod.

@@ -73,21 +73,25 @@ Module Z.
   Lemma add_get_carry_full_mod s x y :
     fst (Z.add_get_carry_full s x y)  = (x + y) mod s.
   Proof. easypeasy. Qed.
+#[global]
   Hint Rewrite add_get_carry_full_mod : to_div_mod.
 
   Lemma add_get_carry_full_div s x y :
     snd (Z.add_get_carry_full s x y)  = (x + y) / s.
   Proof. easypeasy. Qed.
+#[global]
   Hint Rewrite add_get_carry_full_div : to_div_mod.
 
   Lemma add_with_get_carry_full_mod s c x y :
     fst (Z.add_with_get_carry_full s c x y)  = (c + x + y) mod s.
   Proof. easypeasy. Qed.
+#[global]
   Hint Rewrite add_with_get_carry_full_mod : to_div_mod.
 
   Lemma add_with_get_carry_full_div s c x y :
     snd (Z.add_with_get_carry_full s c x y)  = (c + x + y) / s.
   Proof. easypeasy. Qed.
+#[global]
   Hint Rewrite add_with_get_carry_full_div : to_div_mod.
 
   Lemma sub_with_borrow_to_add_get_carry c x y
@@ -97,21 +101,25 @@ Module Z.
   Lemma sub_get_borrow_full_mod s x y :
     fst (Z.sub_get_borrow_full s x y)  = (x - y) mod s.
   Proof. easypeasy. Qed.
+#[global]
   Hint Rewrite sub_get_borrow_full_mod : to_div_mod.
 
   Lemma sub_get_borrow_full_div s x y :
     snd (Z.sub_get_borrow_full s x y)  = - ((x - y) / s).
   Proof. easypeasy. Qed.
+#[global]
   Hint Rewrite sub_get_borrow_full_div : to_div_mod.
 
   Lemma sub_with_get_borrow_full_mod s c x y :
     fst (Z.sub_with_get_borrow_full s c x y)  = (x - y - c) mod s.
   Proof. easypeasy. Qed.
+#[global]
   Hint Rewrite sub_with_get_borrow_full_mod : to_div_mod.
 
   Lemma sub_with_get_borrow_full_div s c x y :
     snd (Z.sub_with_get_borrow_full s c x y)  = - ((x - y - c) / s).
   Proof. easypeasy. Qed.
+#[global]
   Hint Rewrite sub_with_get_borrow_full_div : to_div_mod.
 
   Lemma add_get_carry_full_ltz_1 s x y :

@@ -33,6 +33,7 @@ Module Z.
            | |- _ => solve [apply Z.lor_nonneg; intuition auto]
            end.
   Qed.
+#[global]
   Hint Resolve lor_range : zarith.
 
   Lemma lor_shiftl_bounds : forall x y n m,

@@ -70,6 +70,7 @@ Module Z.
     Lemma geb_ge_iff : R_Rb Z.geb Z.ge Z.lt. Proof. t. Qed.
     Lemma eqb_eq_iff : R_Rb Z.eqb (@Logic.eq Z) (fun x y => x <> y). Proof. t. Qed.
   End R_Rb.
+#[global]
   Hint Rewrite ltb_lt_iff leb_le_iff gtb_gt_iff geb_ge_iff eqb_eq_iff : ltb_to_lt.
   Ltac ltb_to_lt_in_context :=
     repeat autorewrite with ltb_to_lt in *;

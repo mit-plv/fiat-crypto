@@ -172,63 +172,83 @@ Definition default_low_level_rewriter_method : low_level_rewriter_method_opt
   := precomputed_decision_tree.
 (** What's the bitwidth? *)
 Class machine_wordsize_opt := machine_wordsize : Z.
+#[global]
 Typeclasses Opaque machine_wordsize_opt.
 (** Prefix function definitions with static/non-public? *)
 Class static_opt := static : bool.
+#[global]
 Typeclasses Opaque static_opt.
 (** Prefix internal/helper function definitions with inline? *)
 Class inline_internal_opt := inline_internal : bool.
+#[global]
 Typeclasses Opaque inline_internal_opt.
 (** Prefix all function definitions with inline? *)
 Class inline_opt := inline : bool.
+#[global]
 Typeclasses Opaque inline_opt.
 (** Prefix internal function definitions with static/non-public? *)
 Class internal_static_opt := internal_static : bool.
+#[global]
 Typeclasses Opaque internal_static_opt.
 (** Use the alternate cmovznz implementation using mul? *)
 Class use_mul_for_cmovznz_opt := use_mul_for_cmovznz : bool.
+#[global]
 Typeclasses Opaque use_mul_for_cmovznz_opt.
 (** Emit the primitive operations? *)
 Class emit_primitives_opt := emit_primitives : bool.
+#[global]
 Typeclasses Opaque emit_primitives_opt.
 (** Only allow signed integers in the output *)
 Class only_signed_opt := only_signed : bool.
+#[global]
 Typeclasses Opaque only_signed_opt.
 (** Rewrite zselect into expressions that don't require cmov? *)
 Class no_select_opt := no_select : bool.
+#[global]
 Typeclasses Opaque no_select_opt.
 (** If [None], don't rewrite zselects. If [Some w], rewrite zselects assuming w-bit words *)
 Class no_select_size_opt := no_select_size : option Z.
+#[global]
 Typeclasses Opaque no_select_size_opt.
 (** Split apart multiplications? *)
 Class should_split_mul_opt := should_split_mul : bool.
+#[global]
 Typeclasses Opaque should_split_mul_opt.
 (** If [None], don't split apart multiplications; if [Some (w, wc)], split apart multiplications to use wordsize [w] and widen carries to width [wc] *)
 Class split_mul_to_opt := split_mul_to : option (Z * Z).
+#[global]
 Typeclasses Opaque split_mul_to_opt.
 (** Split apart multi-return functions? *)
 Class should_split_multiret_opt := should_split_multiret : bool.
+#[global]
 Typeclasses Opaque should_split_multiret_opt.
 (** If [None], don't split apart multi-return functions; if [Some (w, wc)], split apart multi-return functions to use wordsize [w] and widen carries to width [wc] *)
 Class split_multiret_to_opt := split_multiret_to : option (Z * Z).
+#[global]
 Typeclasses Opaque split_multiret_to_opt.
 (** Widen carries to the machine wordsize? *)
 Class widen_carry_opt := widen_carry : bool.
+#[global]
 Typeclasses Opaque widen_carry_opt.
 (** Widen uint8 / bytes types to machine wordsize? *)
 Class widen_bytes_opt := widen_bytes : bool.
+#[global]
 Typeclasses Opaque widen_bytes_opt.
 (** Unfold value_barrier *)
 Class unfold_value_barrier_opt := unfold_value_barrier : bool.
+#[global]
 Typeclasses Opaque unfold_value_barrier_opt.
 (** Lines of assembly code (implicitly separated by \n) *)
 Class assembly_hints_lines_opt := assembly_hints_lines : list (string (* file name *) * list string).
+#[global]
 Typeclasses Opaque assembly_hints_lines_opt.
 (** Error if there are un-requested assembly functions *)
 Class error_on_unused_assembly_functions_opt := error_on_unused_assembly_functions : bool.
+#[global]
 Typeclasses Opaque error_on_unused_assembly_functions_opt.
 (** Ignore function-name mismatch errors when there's only one assembly function and only one actual function requested *)
 Class ignore_unique_asm_names_opt := ignore_unique_asm_names : bool.
+#[global]
 Typeclasses Opaque ignore_unique_asm_names_opt.
 Inductive synthesis_output_kind := normal_output | assembly_output.
 Notation no_select_size_of_no_select machine_wordsize
@@ -939,6 +959,7 @@ Module Pipeline.
   Class type_goodT (t : type.type base.type)
     := type_good : type.andb_each_lhs_of_arrow type.is_base t = true.
 
+#[global]
   Hint Extern 1 (type_goodT _) => vm_compute; reflexivity : typeclass_instances.
 
   Lemma Wf_RewriteAndEliminateDeadAndInline {t} DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return
@@ -963,6 +984,7 @@ Module Pipeline.
       repeat (wf_interp_t || rewrite !Interp_DoRewrite).
   Qed.
 
+#[global]
   Hint Rewrite @Interp_RewriteAndEliminateDeadAndInline : interp interp_extra.
 
   Local Notation interp_correctT V1 V2 arg_bounds
@@ -1239,6 +1261,7 @@ Module Export Hints.
   Create HintDb wf_op_cache discriminated.
 
   Export Pipeline.Instances.
+#[global]
   Hint Extern 1 (@Pipeline.bounds_goodT _ _) => solve [ Pipeline.solve_bounds_good ] : typeclass_instances.
   Global Strategy -100 [type.interp ZRange.type.option.interp ZRange.type.base.option.interp GallinaReify.Reify_as GallinaReify.reify type_base].
   Global Strategy -10 [type.app_curried type.for_each_lhs_of_arrow type.and_for_each_lhs_of_arrow type.related type.interp Language.Compilers.base.interp base.base_interp type.andb_bool_for_each_lhs_of_arrow fst snd ZRange.type.option.is_bounded_by].
@@ -1286,6 +1309,7 @@ Module PipelineTactics.
     end.
 
   Create HintDb relax_zrange_gen_good discriminated.
+#[global]
   Hint Resolve relax_zrange_gen_good : relax_zrange_gen_good.
 
   Ltac use_compilers_correctness Hres :=

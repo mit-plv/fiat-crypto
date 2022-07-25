@@ -24,6 +24,7 @@ Import ListNotations.
 Import Syntax.Coercions.
 Local Open Scope Z_scope.
 
+#[global]
 Existing Instances
          Defaults64.default_parameters names
          curve25519_bedrock2_funcs curve25519_bedrock2_specs
@@ -61,6 +62,7 @@ Definition mul_twice : func :=
 
 (* TODO: update to have three separation-logic preconditions, one for each input
    and one for output *)
+#[global]
 Instance spec_of_mul_twice : spec_of mul_twice :=
   fun functions =>
     forall x y old_out px py pout t m
@@ -84,6 +86,7 @@ Instance spec_of_mul_twice : spec_of mul_twice :=
              /\ (Bignum n px x * Bignum n py y
                  * Bignum n pout out * R)%sep m').
 
+#[global]
 Instance spec_of_curve25519_carry_mul :
   spec_of "curve25519_carry_mul" := spec_of_carry_mul.
 

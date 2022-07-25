@@ -25,10 +25,12 @@ Module Z.
 
   Lemma stabilization_time_nonneg x : 0 <= stabilization_time x.
   Proof. rewrite Z.max_le_iff; constructor; apply Z.log2_nonneg. Qed.
+#[global]
   Hint Resolve Z.stabilization_time_nonneg : zarith.
 
   Lemma stabilization_time_weaker_nonneg x : 0 <= stabilization_time_weaker x.
   Proof. apply Z.log2_up_nonneg. Qed.
+#[global]
   Hint Resolve Z.stabilization_time_weaker_nonneg : zarith.
 End Z.
 Global Hint Resolve Z.stabilization_time_nonneg Z.stabilization_time_weaker_nonneg : zarith.

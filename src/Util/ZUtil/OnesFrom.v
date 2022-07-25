@@ -18,6 +18,7 @@ Module Z.
     Z.testbit (Z.ones_from m k) i = if (i <? 0) then false else ((m - k) <=? i) && ((i <? m) || (k <? 0)).
   Proof. unfold Z.ones_from; Z.solve_testbit. Qed.
 
+#[global]
   Hint Rewrite ones_from_spec : testbit_rewrite.
 
   Lemma ones_from_0 m : Z.ones_from m 0 = 0.

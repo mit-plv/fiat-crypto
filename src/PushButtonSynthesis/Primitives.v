@@ -91,7 +91,9 @@ Derive reified_id_gen
        As reified_id_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Global Hint Extern 1 (_ = _) => apply_cached_reification (@id (list Z)) (proj1 reified_id_gen_correct) : reify_cache_gen.
+#[global]
 Hint Immediate (proj2 reified_id_gen_correct) : wf_gen_cache.
+#[global]
 Hint Rewrite (proj1 reified_id_gen_correct) : interp_gen_cache.
 Local Opaque reified_id_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -100,7 +102,9 @@ Derive reified_selectznz_gen
        As reified_selectznz_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Global Hint Extern 1 (_ = _) => apply_cached_reification Positional.select (proj1 reified_selectznz_gen_correct) : reify_cache_gen.
+#[global]
 Hint Immediate (proj2 reified_selectznz_gen_correct) : wf_gen_cache.
+#[global]
 Hint Rewrite (proj1 reified_selectznz_gen_correct) : interp_gen_cache.
 Local Opaque reified_selectznz_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -109,7 +113,9 @@ Derive reified_mulx_gen
        As reified_mulx_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Global Hint Extern 1 (_ = _) => apply_cached_reification mulx (proj1 reified_mulx_gen_correct) : reify_cache_gen.
+#[global]
 Hint Immediate (proj2 reified_mulx_gen_correct) : wf_gen_cache.
+#[global]
 Hint Rewrite (proj1 reified_mulx_gen_correct) : interp_gen_cache.
 Local Opaque reified_mulx_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -118,7 +124,9 @@ Derive reified_addcarryx_gen
        As reified_addcarryx_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Global Hint Extern 1 (_ = _) => apply_cached_reification addcarryx (proj1 reified_addcarryx_gen_correct) : reify_cache_gen.
+#[global]
 Hint Immediate (proj2 reified_addcarryx_gen_correct) : wf_gen_cache.
+#[global]
 Hint Rewrite (proj1 reified_addcarryx_gen_correct) : interp_gen_cache.
 Local Opaque reified_addcarryx_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -127,7 +135,9 @@ Derive reified_subborrowx_gen
        As reified_subborrowx_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Global Hint Extern 1 (_ = _) => apply_cached_reification subborrowx (proj1 reified_subborrowx_gen_correct) : reify_cache_gen.
+#[global]
 Hint Immediate (proj2 reified_subborrowx_gen_correct) : wf_gen_cache.
+#[global]
 Hint Rewrite (proj1 reified_subborrowx_gen_correct) : interp_gen_cache.
 Local Opaque reified_subborrowx_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -136,7 +146,9 @@ Derive reified_value_barrier_gen
        As reified_value_barrier_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Global Hint Extern 1 (_ = _) => apply_cached_reification Z.value_barrier (proj1 reified_value_barrier_gen_correct) : reify_cache_gen.
+#[global]
 Hint Immediate (proj2 reified_value_barrier_gen_correct) : wf_gen_cache.
+#[global]
 Hint Rewrite (proj1 reified_value_barrier_gen_correct) : interp_gen_cache.
 Local Opaque reified_value_barrier_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -145,7 +157,9 @@ Derive reified_cmovznz_gen
        As reified_cmovznz_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Global Hint Extern 1 (_ = _) => apply_cached_reification cmovznz (proj1 reified_cmovznz_gen_correct) : reify_cache_gen.
+#[global]
 Hint Immediate (proj2 reified_cmovznz_gen_correct) : wf_gen_cache.
+#[global]
 Hint Rewrite (proj1 reified_cmovznz_gen_correct) : interp_gen_cache.
 Local Opaque reified_cmovznz_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -154,7 +168,9 @@ Derive reified_cmovznz_by_mul_gen
        As reified_cmovznz_by_mul_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Global Hint Extern 1 (_ = _) => apply_cached_reification cmovznz_by_mul (proj1 reified_cmovznz_by_mul_gen_correct) : reify_cache_gen.
+#[global]
 Hint Immediate (proj2 reified_cmovznz_by_mul_gen_correct) : wf_gen_cache.
+#[global]
 Hint Rewrite (proj1 reified_cmovznz_by_mul_gen_correct) : interp_gen_cache.
 Local Opaque reified_cmovznz_by_mul_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -1331,6 +1347,7 @@ Notation "'all_typedefs!'" :=
    end) (only parsing).
 
 Module Export Hints.
+#[global]
   Hint Opaque
        mulx
        addcarryx
@@ -1341,6 +1358,7 @@ Module Export Hints.
        selectznz
        copy
   : wf_op_cache.
+#[global]
   Hint Immediate
        Wf_mulx
        Wf_addcarryx

@@ -999,6 +999,7 @@ Section __.
 End __.
 
 Module Export Hints.
+#[global]
   Hint Opaque
        carry_mul
        carry_square
@@ -1018,6 +1019,7 @@ Module Export Hints.
        one
        copy
   : wf_op_cache.
+#[global]
   Hint Immediate
        Wf_carry_mul
        Wf_carry_square

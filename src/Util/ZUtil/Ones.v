@@ -19,6 +19,7 @@ Module Z.
   Proof using Type.
     rewrite !Z.ones_equiv; auto with zarith.
   Qed.
+#[global]
   Hint Resolve ones_le : zarith.
 
   Lemma ones_lt_pow2 x y : 0 <= x <= y -> Z.ones x < 2^y.
@@ -26,30 +27,35 @@ Module Z.
     rewrite Z.ones_equiv, Z.lt_pred_le.
     auto with zarith.
   Qed.
+#[global]
   Hint Resolve ones_lt_pow2 : zarith.
 
   Lemma log2_ones_full x : Z.log2 (Z.ones x) = Z.max 0 (Z.pred x).
   Proof using Type.
     rewrite Z.ones_equiv, Z.log2_pred_pow2_full; reflexivity.
   Qed.
+#[global]
   Hint Rewrite log2_ones_full : zsimplify.
 
   Lemma log2_ones_lt x y : 0 < x <= y -> Z.log2 (Z.ones x) < y.
   Proof using Type.
     rewrite log2_ones_full; apply Z.max_case_strong; lia.
   Qed.
+#[global]
   Hint Resolve log2_ones_lt : zarith.
 
   Lemma log2_ones_le x y : 0 <= x <= y -> Z.log2 (Z.ones x) <= y.
   Proof using Type.
     rewrite log2_ones_full; apply Z.max_case_strong; lia.
   Qed.
+#[global]
   Hint Resolve log2_ones_le : zarith.
 
   Lemma log2_ones_lt_nonneg x y : 0 < y -> x <= y -> Z.log2 (Z.ones x) < y.
   Proof using Type.
     rewrite log2_ones_full; apply Z.max_case_strong; lia.
   Qed.
+#[global]
   Hint Resolve log2_ones_lt_nonneg : zarith.
 
   Lemma ones_pred : forall i, 0 < i -> Z.ones (Z.pred i) = Z.shiftr (Z.ones i) 1.
@@ -65,6 +71,7 @@ Module Z.
     rewrite <-Z.pow_add_r by (pose proof (Pos2Z.is_pos p); lia).
     f_equal. lia.
   Qed.
+#[global]
   Hint Rewrite <- ones_pred using zutil_arith : push_Zshift.
 
   Lemma ones_succ : forall x, (0 <= x) ->
@@ -86,6 +93,7 @@ Module Z.
       rewrite Z.ones_succ by assumption.
       Z.zero_bounds.
   Qed.
+#[global]
   Hint Resolve ones_nonneg : zarith.
 
   Lemma ones_bound m (Hm : 0 <= m) :
@@ -100,6 +108,7 @@ Module Z.
     apply Z.lt_succ_lt_pred.
     apply Z.pow_gt_1; lia.
   Qed.
+#[global]
   Hint Resolve ones_pos_pos : zarith.
 
   Lemma lnot_ones_equiv n : Z.lnot (Z.ones n) = -2^n.
@@ -139,6 +148,7 @@ Module Z.
                    | [ |- context[2^?x] ] => unique pose proof (Z.pow2_gt_0 x ltac:(lia))
                    end ].
   Qed.
+#[global]
   Hint Rewrite land_ones_ones : zsimplify.
 
   Lemma lor_ones_ones n m
@@ -177,6 +187,7 @@ Module Z.
                      | [ |- context[2^?x] ] => unique pose proof (Z.pow2_gt_0 x ltac:(lia))
                      end ].
   Qed.
+#[global]
   Hint Rewrite lor_ones_ones : zsimplify.
 
   Lemma lor_pow2_mod_pow2_r x e (He : 0 <= e) : Z.lor x (2^e-1) mod (2^e) = 2^e-1.
@@ -192,12 +203,16 @@ Module Z.
     rewrite Z.land_ones by assumption.
     rewrite Z.lor_ones_low; auto with zarith.
   Qed.
+#[global]
   Hint Rewrite lor_pow2_mod_pow2_r using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite lor_pow2_mod_pow2_r using assumption : zsimplify_fast.
 
   Lemma lor_pow2_mod_pow2_l x e (He : 0 <= e) : Z.lor (2^e-1) x mod (2^e) = 2^e-1.
   Proof using Type. rewrite Z.lor_comm; apply lor_pow2_mod_pow2_r; assumption. Qed.
+#[global]
   Hint Rewrite lor_pow2_mod_pow2_l using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite lor_pow2_mod_pow2_l using assumption : zsimplify_fast.
 
   Lemma lor_pow2_div_pow2_r x e (He : 0 <= e) : (Z.lor x (2^e-1)) / (2^e) = x / 2^e.
@@ -209,12 +224,16 @@ Module Z.
     rewrite (Z.div_small (_-1) _), Z.lor_0_r by lia.
     reflexivity.
   Qed.
+#[global]
   Hint Rewrite lor_pow2_div_pow2_r using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite lor_pow2_div_pow2_r using assumption : zsimplify_fast.
 
   Lemma lor_pow2_div_pow2_l x e (He : 0 <= e) : (Z.lor (2^e-1) x) / (2^e) = x / 2^e.
   Proof using Type. rewrite Z.lor_comm; apply lor_pow2_div_pow2_r; assumption. Qed.
+#[global]
   Hint Rewrite lor_pow2_div_pow2_l using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite lor_pow2_div_pow2_l using assumption : zsimplify_fast.
 
   Lemma land_ones_low_alt a n : 0 <= a < 2^n -> Z.land a (Z.ones n) = a.
@@ -222,21 +241,29 @@ Module Z.
     destruct (Z_zerop a); subst; [ intros; now rewrite Z.land_0_l | ].
     intros; apply Z.land_ones_low; try lia; apply Z.log2_lt_pow2; try lia.
   Qed.
+#[global]
   Hint Rewrite land_ones_low_alt using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite land_ones_low_alt using (idtac + split); assumption : zsimplify_fast.
 
   Lemma land_ones_low_alt_ones a n : 0 <= a <= Z.ones n -> Z.land a (Z.ones n) = a.
   Proof using Type. rewrite Z.ones_equiv at 1; intro H; rewrite land_ones_low_alt; lia. Qed.
+#[global]
   Hint Rewrite land_ones_low_alt_ones using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite land_ones_low_alt_ones using (idtac + split); assumption : zsimplify_fast.
 
   Lemma shiftr_ones_sub n m : 0 <= m <= n -> Z.shiftr (Z.ones n) m = Z.ones (n - m).
   Proof using Type. intro; now rewrite Z.shiftr_div_pow2, Z.ones_div_pow2 by lia. Qed.
+#[global]
   Hint Rewrite shiftr_ones_sub using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite shiftr_ones_sub using (idtac + split); assumption : zsimplify_fast.
 
   Lemma shiftr_ones_same n : 0 <= n -> Z.shiftr (Z.ones n) n = 0.
   Proof using Type. intro; rewrite shiftr_ones_sub, Z.sub_diag by lia; reflexivity. Qed.
+#[global]
   Hint Rewrite shiftr_ones_same using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite shiftr_ones_same using assumption : zsimplify_fast.
 End Z.
