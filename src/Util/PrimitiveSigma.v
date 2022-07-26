@@ -99,7 +99,7 @@ Local Arguments f_equal {_ _} _ {_ _} _.
 
 Definition projT1_existT {A B} (a:A) (b:B a) : projT1 (existT B a b) = a := eq_refl.
 Definition projT2_existT {A B} (a:A) (b:B a) : projT2 (existT B a b) = b := eq_refl.
-Create HintDb cancel_primsig discriminated. Hint Rewrite @projT1_existT @projT2_existT : cancel_primsig.
+Create HintDb cancel_primsig discriminated. #[global] Hint Rewrite @projT1_existT @projT2_existT : cancel_primsig.
 
 (** ** Equality for [sigT] *)
 Section sigT.

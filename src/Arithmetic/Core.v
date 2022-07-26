@@ -37,6 +37,7 @@ Module Associational.
   Proof. induction p; rewrite <-?List.app_comm_cons;
            rewrite ?eval_nil, ?eval_cons; nsatz.              Qed.
 
+#[global]
   Hint Rewrite eval_nil eval_cons eval_app : push_eval.
   Local Ltac push := autorewrite with
       push_eval push_map push_partition push_flat_map
@@ -45,6 +46,7 @@ Module Associational.
   Lemma eval_map_mul (a x:Z) (p:list (Z*Z))
   : eval (List.map (fun t => (a*fst t, x*snd t)) p) = a*x*eval p.
   Proof. induction p; push; nsatz.                            Qed.
+#[global]
   Hint Rewrite eval_map_mul : push_eval.
 
   Definition mul (p q:list (Z*Z)) : list (Z*Z) :=
@@ -54,6 +56,7 @@ Module Associational.
     q) p.
   Lemma eval_mul p q : eval (mul p q) = eval p * eval q.
   Proof. induction p; cbv [mul]; push; nsatz.                 Qed.
+#[global]
   Hint Rewrite eval_mul : push_eval.
 
   Definition square (p:list (Z*Z)) : list (Z*Z) :=
@@ -70,12 +73,14 @@ Module Associational.
       p.
   Lemma eval_square p : eval (square p) = eval p * eval p.
   Proof. induction p; cbv [square list_rect Let_In]; push; nsatz. Qed.
+#[global]
   Hint Rewrite eval_square : push_eval.
 
   Definition negate_snd (p:list (Z*Z)) : list (Z*Z) :=
     map (fun cx => (fst cx, -snd cx)) p.
   Lemma eval_negate_snd p : eval (negate_snd p) = - eval p.
   Proof. induction p; cbv [negate_snd]; push; nsatz.          Qed.
+#[global]
   Hint Rewrite eval_negate_snd : push_eval.
 
   Example base10_2digit_mul (a0:Z) (a1:Z) (b0:Z) (b1:Z) :
@@ -91,11 +96,13 @@ Module Associational.
   Lemma eval_partition f (p:list (Z*Z)) :
     eval (snd (partition f p)) + eval (fst (partition f p)) = eval p.
   Proof. induction p; cbn [partition]; eta_expand; break_match; cbn [fst snd]; push; nsatz. Qed.
+#[global]
   Hint Rewrite eval_partition : push_eval.
 
   Lemma eval_partition' f (p:list (Z*Z)) :
     eval (fst (partition f p)) + eval (snd (partition f p)) = eval p.
   Proof. rewrite Z.add_comm, eval_partition; reflexivity. Qed.
+#[global]
   Hint Rewrite eval_partition' : push_eval.
 
   Lemma eval_fst_partition f p : eval (fst (partition f p)) = eval p - eval (snd (partition f p)).
@@ -135,6 +142,7 @@ Module Associational.
     eval (reduce s c p) mod (s - eval c) = eval p mod (s - eval c).
   Proof using Type. cbv [reduce]; push.
          rewrite <-reduction_rule, eval_split; trivial.      Qed.
+#[global]
   Hint Rewrite eval_reduce : push_eval.
 
   Lemma eval_reduce_adjusted s c p w c' (s_nz:s<>0) (modulus_nz:s-eval c<>0)
@@ -176,6 +184,7 @@ Module Associational.
         [ reflexivity | rewrite IHn ].
     now rewrite eval_reduce.
   Qed.
+#[global]
   Hint Rewrite eval_repeat_reduce : push_eval.
 
   Lemma eval_repeat_reduce_adjusted n s c p w c' (s_nz:s<>0) (modulus_nz:s-eval c<>0)
@@ -213,6 +222,7 @@ Module Associational.
    *)
   Lemma eval_rev p : eval (rev p) = eval p.
   Proof using Type. induction p; cbn [rev]; push; lia. Qed.
+#[global]
   Hint Rewrite eval_rev : push_eval.
   (*
   Lemma eval_permutation (p q : list (Z * Z)) : Permutation p q -> eval p = eval q.
@@ -297,11 +307,13 @@ Module Associational.
     rewrite !Z.Z_divide_div_mul_exact' by auto using Znumtheory.Zmod_divide.
     f_equal; nia.
   Qed.
+#[global]
   Hint Rewrite eval_map_mul_div using solve [ auto ] : push_eval.
 
   Lemma eval_map_mul_div' s a b c (s_nz:s <> 0) (a_mod : (a*a) mod s = 0)
     : eval (map (fun x => (((a * a) * fst x) / s, (b * b) * snd x)) c) = ((a * a) / s) * (b * b) * eval c.
   Proof using Type. rewrite <- eval_map_mul_div by assumption; f_equal; apply map_ext; intro; Z.div_mod_to_quot_rem_in_goal; f_equal; nia. Qed.
+#[global]
   Hint Rewrite eval_map_mul_div' using solve [ auto ] : push_eval.
 
   Lemma eval_flat_map_if A (f : A -> bool) g h p
@@ -315,6 +327,7 @@ Module Associational.
 
   Lemma eval_if (b : bool) p q : eval (if b then p else q) = if b then eval p else eval q.
   Proof using Type. case b; reflexivity. Qed.
+#[global]
   Hint Rewrite eval_if : push_eval.
 
   Lemma split_app s p q :
@@ -329,6 +342,7 @@ Module Associational.
   Lemma snd_split_app s p q :
     snd (split s (p ++ q)) = snd (split s p) ++ snd (split s q).
   Proof using Type. rewrite split_app; reflexivity. Qed.
+#[global]
   Hint Rewrite fst_split_app snd_split_app : push_eval.
 
   Lemma eval_reduce_list_rect_app A s c N C p :
@@ -338,12 +352,14 @@ Module Associational.
     cbv [reduce]; induction p as [|p ps IHps]; cbn [list_rect]; push; [ nsatz | rewrite <- IHps; clear IHps ].
     push; nsatz.
   Qed.
+#[global]
   Hint Rewrite eval_reduce_list_rect_app : push_eval.
 
   Lemma eval_list_rect_app A N C p :
     eval (@list_rect A _ N (fun x xs acc => C x xs ++ acc) p)
     = @list_rect A _ (eval N) (fun x xs acc => eval (C x xs) + acc) p.
   Proof using Type. induction p; cbn [list_rect]; push; nsatz. Qed.
+#[global]
   Hint Rewrite eval_list_rect_app : push_eval.
 
   Local Existing Instances list_rect_Proper pointwise_map flat_map_Proper.
@@ -351,10 +367,12 @@ Module Associational.
 
   Lemma reduce_nil s c : reduce s c nil = nil.
   Proof using Type. cbv [reduce]; induction c; cbn; intuition auto. Qed.
+#[global]
   Hint Rewrite reduce_nil : push_eval.
 
   Lemma eval_reduce_app s c p q : eval (reduce s c (p ++ q)) = eval (reduce s c p) + eval (reduce s c q).
   Proof using Type. cbv [reduce]; push; nsatz. Qed.
+#[global]
   Hint Rewrite eval_reduce_app : push_eval.
 
   Lemma eval_reduce_cons s c p q :
@@ -365,6 +383,7 @@ Module Associational.
     cbv [reduce split]; cbn [partition fst snd]; eta_expand; push.
     break_innermost_match; cbn [fst snd map]; push; nsatz.
   Qed.
+#[global]
   Hint Rewrite eval_reduce_cons : push_eval.
 
   Lemma mul_cons_l t ts p :
@@ -374,6 +393,7 @@ Module Associational.
   Proof using Type. reflexivity. Qed.
   Lemma mul_nil_r p : mul p nil = nil.
   Proof using Type. cbv [mul]; induction p; cbn; intuition auto. Qed.
+#[global]
   Hint Rewrite mul_nil_l mul_nil_r : push_eval.
   Lemma mul_app_l p p' q :
     mul (p ++ p') q = mul p q ++ mul p' q.
@@ -381,6 +401,7 @@ Module Associational.
   Lemma mul_singleton_l_app_r p q q' :
     mul [p] (q ++ q') = mul [p] q ++ mul [p] q'.
   Proof using Type. cbv [mul flat_map]; rewrite !map_app, !app_nil_r; reflexivity. Qed.
+#[global]
   Hint Rewrite mul_singleton_l_app_r : push_eval.
   Lemma mul_singleton_singleton p q :
     mul [p] [q] = [(fst p * fst q, snd p * snd q)].
@@ -453,6 +474,7 @@ Module Associational.
     : eval (reduce_square s c p) mod (s - eval c)
       = (eval p * eval p) mod (s - eval c).
   Proof using Type. rewrite eval_reduce_square_exact by assumption; push; auto. Qed.
+#[global]
   Hint Rewrite eval_reduce_square : push_eval.
 
   Definition bind_snd (p : list (Z*Z)) :=
@@ -1037,7 +1059,9 @@ Module Positional.
   End select.
 End Positional.
 (* Hint Rewrite disappears after the end of a section *)
+#[global]
 Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_carry @length_chained_carries @length_encode @length_scmul @length_sub @length_opp @length_select @length_zselect @length_select_min @length_extend_to_length @length_drop_high_to_length : distr_length.
+#[global]
 Hint Rewrite @eval_zeros @eval_nil @eval_snoc_S @eval_select @eval_zselect @eval_extend_to_length using solve [auto; distr_length]: push_eval.
 Section Positional_nonuniform.
   Context (weight weight' : nat -> Z).
@@ -1067,6 +1091,7 @@ Section Positional_nonuniform.
     erewrite <- !map_S_seq, IHxs; [ reflexivity | ]; cbn; eauto with lia.
   Qed.
 End Positional_nonuniform.
+#[global]
 Hint Rewrite @eval_cons using solve [auto; distr_length]: push_eval.
 End Positional.
 
@@ -1078,6 +1103,7 @@ Record weight_properties {weight : nat -> Z} :=
     weight_divides : forall i : nat, 0 < weight (S i) / weight i;
   }.
 Global Hint Resolve weight_0 weight_positive weight_multiples weight_divides : core.
+#[global]
 Hint Rewrite @weight_0 @weight_multiples using solve [auto]: push_eval.
 Lemma weight_nz {weight : nat -> Z} {wprops : @weight_properties weight}
   : forall i, weight i <> 0.

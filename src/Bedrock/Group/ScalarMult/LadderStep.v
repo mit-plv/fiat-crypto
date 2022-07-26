@@ -135,8 +135,10 @@ Section __.
 
 End __.
 
+#[global]
 Existing Instance spec_of_ladderstep.
 
+#[global]
 Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (ladderstep_gallina _ _ _ _ _ _ _) _))) =>
        simple eapply compile_ladderstep; shelve : compiler.
 

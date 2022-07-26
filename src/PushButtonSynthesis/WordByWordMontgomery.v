@@ -1137,6 +1137,7 @@ Section __.
 End __.
 
 Module Export Hints.
+#[global]
   Hint Opaque
        mul
        square
@@ -1155,6 +1156,7 @@ Module Export Hints.
        selectznz
        copy
   : wf_op_cache.
+#[global]
   Hint Immediate
        Wf_mul
        Wf_square

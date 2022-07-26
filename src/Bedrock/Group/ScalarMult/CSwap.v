@@ -668,9 +668,10 @@ Section __.
 
 End __.
 
-
+#[global]
 Hint Resolve compile_felem_cswap : compiler.
 
 (* TODO: why doesn't `Existing Instance` work? *)
+#[global]
 Hint Extern 1 (spec_of felem_cswap) =>
        (simple refine (spec_of_cswap)) : typeclass_instances.

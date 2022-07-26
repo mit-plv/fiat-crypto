@@ -512,6 +512,7 @@ Global Instance reflect_node_beq {A : Set} {arg_eqb} {H : reflect_rel (@eq A) ar
   : reflect_rel eq (@node_beq A arg_eqb) | 10 := _.
 
 Class description := descr : option ((unit -> string) * bool (* always show *)).
+#[global]
 Typeclasses Opaque description.
 Definition eager_description := option (string * bool).
 Notation Build_description descr always_show := (Some (fun 'tt => descr, always_show)) (only parsing).
@@ -522,6 +523,7 @@ Definition node_ok (i : idx) (n : node idx) := forall w s args, n = (old w s, ar
 Lemma new_node_ok n (pf : match n with (old _ _, _) => False | _ => True end) i : node_ok i n.
 Proof. repeat intro; subst; assumption. Qed.
 Existing Class node_ok.
+#[global]
 Hint Extern 1 (node_ok ?i ?n) => exact (@new_node_ok n I i) : typeclass_instances.
 Module Old.
 Module dag.
@@ -1919,6 +1921,7 @@ Proof using Type.
   split; try (eapply Z.pow_lt_mono_r; Lia.lia).
   eapply Z.pow_nonneg; Lia.lia.
 Qed.
+#[global]
 Hint Rewrite signed_0 : zsimplify_const zsimplify zsimplify_fast.
 Global Hint Resolve signed_0 : zarith.
 

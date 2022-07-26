@@ -41,5 +41,6 @@ Module Z.
 
   Ltac zero_bounds := try lia; try Z.prime_bound; zero_bounds'.
 
+#[global]
   Hint Extern 1 => progress zero_bounds : zero_bounds.
 End Z.

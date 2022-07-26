@@ -13,6 +13,7 @@ Module Z.
   Proof.
     intros; transitivity 0; auto with zarith.
   Qed.
+#[global]
   Hint Resolve log2_nonneg' : zarith.
 
   Lemma le_lt_to_log2 x y z : 0 <= z -> 0 < y -> 2^x <= y < 2^z -> x <= Z.log2 y < z.
@@ -30,6 +31,7 @@ Module Z.
     }
     { subst; compute; reflexivity. }
   Qed.
+#[global]
   Hint Rewrite log2_pred_pow2_full : zsimplify.
 
   Lemma log2_up_le_full a : a <= 2^Z.log2_up a.
@@ -59,7 +61,9 @@ Module Z.
 
   Lemma max_log2_up x y : Z.max (Z.log2_up x) (Z.log2_up y) = Z.log2_up (Z.max x y).
   Proof. apply Z.max_monotone; intros ??; apply Z.log2_up_le_mono. Qed.
+#[global]
   Hint Rewrite max_log2_up : push_Zmax.
+#[global]
   Hint Rewrite <- max_log2_up : pull_Zmax.
 
   Lemma log2_up_le_full_max a : Z.max a 1 <= 2^Z.log2_up a.

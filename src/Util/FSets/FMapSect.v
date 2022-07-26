@@ -63,6 +63,7 @@ Module WSectSfun (E' : DecidableType) (W' : WSfun E')
     rewrite E.of_to in *.
     exfalso; eauto.
   Qed.
+#[global]
   Hint Immediate is_proper_key_to : fmapsect.
 
   Global Instance Proper_is_proper_key : Proper (E'.eq ==> eq) is_proper_key | 10.
@@ -445,6 +446,7 @@ Module WSectSfun (E' : DecidableType) (W' : WSfun E')
        liftho
     : iso_map_alt.
 
+#[global]
   Hint Rewrite Empty_alt_iff Equal_alt_iff Equiv_alt_iff Equivb_alt_iff
        eq_to_iff
        (*eq_to_of_impl
@@ -550,6 +552,7 @@ Module WSectSfun (E' : DecidableType) (W' : WSfun E')
 
   Local Hint Extern 2 => Proper_compose_hint : typeclass_instances.
 
+#[global]
   Hint Transparent W'.eq_key_elt : fmapsect_is_proper_key.
 
   Lemma is_proper_key_of_InA_elements elt k v (m : t elt)
@@ -569,11 +572,13 @@ Module WSectSfun (E' : DecidableType) (W' : WSfun E')
     eexists (_, _); split; [ | eassumption ]; split; reflexivity.
   Qed.
 
+#[global]
   Hint Resolve
        is_proper_key_of_InA_elements
        is_proper_key_of_In_elements
     : fmapsect_is_proper_key.
 
+#[global]
   Hint Rewrite
        eq_to_of_iff_proper_key
        eq_to_of_iff_proper_key

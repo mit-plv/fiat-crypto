@@ -196,9 +196,11 @@ Section rmontred.
 End rmontred.
 
 Module Export Hints.
+#[global]
   Hint Opaque
        montred
   : wf_op_cache.
+#[global]
   Hint Immediate
        Wf_montred
   : wf_op_cache.

@@ -1034,6 +1034,7 @@ Ltac compile_buf_append:=
   end.
 
 
+#[global]
 Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (buf_append _ _) _))) =>
        compile_buf_append; shelve : compiler.
 
@@ -1229,6 +1230,7 @@ Definition uint128_as_bytes (z: Z) :=
 Definition bytes_as_uint128 (bs: list byte) :=
   le_combine bs.
 
+#[global]
 Instance p_field_params : FieldParameters :=
   {|
   M_pos := p;
@@ -1247,6 +1249,7 @@ Instance p_field_params : FieldParameters :=
   from_word := "fe1305_from_word"
            |}.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
+#[global]
 Instance p_field_representation : FieldRepresentation := field_representation 5 (2^130) [(1,5)].
 
 (*Set Printing All.*)
@@ -1412,7 +1415,7 @@ Definition poly1305
   let/n output := uint128_as_bytes output in
   output.
 
-
+  #[global]
   Instance spec_of_poly1305 : spec_of "poly1305" :=
     fnspec! "poly1305" (key_ptr msg_ptr out_ptr : word) /
           (k msg output : array_t byte) (*(output : Z (*felem*))*) R,
@@ -1446,6 +1449,7 @@ Proof.
   auto.
 Qed.
 
+#[global]
 Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ skip_marker _))) =>
                simple eapply compile_skip_marker;
                simple eapply compile_skip; shelve : compiler.
@@ -1498,7 +1502,9 @@ Lemma compile_array_split_at {tr} {mem : mem} {locals functions}
     Qed.
 
 
+#[global]
 Existing Instance byte_ac.
+#[global]
 Existing Instance byte_ac_ok.
 
 
@@ -1565,6 +1571,7 @@ Proof.
   change v3 with (fst v3, snd v3).
   repeat compile_step.
 
+  #[global]
   Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (map _ (combine _ _)) _))) =>
          compile_broadcast_expr; shelve : compiler.
   compile_step. (*TODO: why does repeat compile_step break the later goal?*)
@@ -1706,8 +1713,11 @@ Definition quarter a b c d : \<< word, word, word, word \>> :=
   let/n c := c + d in  let/n b := b ^ c in  let/n b := b <<< word.of_Z 7 in
   \< a, b, c, d \>.
 
+#[global]
 Hint Rewrite word.Z_land_ones_rotate using (split; reflexivity) : quarter.
+#[global]
 Hint Rewrite <- word.unsigned_xor_nowrap : quarter.
+#[global]
 Hint Rewrite word.Z_land_ones_word_add : quarter.
 
 Lemma quarter_ok0 a b c d:

@@ -2834,7 +2834,9 @@ Proof.
   destruct args; cbn [Symeval] in *; typeclasses eauto.
 Qed.
 Local Existing Instance Symeval_reg_same.
+#[global]
 Typeclasses Opaque Symeval.
+#[global]
 Typeclasses Transparent AddressSize OperationSize.
 
 (* TODO: move? *)
@@ -3002,7 +3004,9 @@ Proof.
   destruct args; cbn [Symeval] in *; typeclasses eauto.
 Qed.
 Local Existing Instance Symeval_mem_same.
+#[global]
 Typeclasses Opaque Symeval.
+#[global]
 Typeclasses Transparent AddressSize OperationSize.
 
 (* TODO: move? *)

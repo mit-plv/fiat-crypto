@@ -36,6 +36,7 @@ Definition ladderstep_gallina
            (X1 : F) (P1 P2 : F * F) : F * F * (F * F) :=
   @MxDH.ladderstep F F.add F.sub F.mul a24 X1 P1 P2.
 
+#[global]
 Existing Instances
          default_parameters default_parameters_ok
          curve25519_bedrock2_funcs curve25519_bedrock2_specs
@@ -60,6 +61,7 @@ Local Open Scope string_scope.
 Local Infix "*" := sep : sep_scope.
 Delimit Scope sep_scope with sep.
 
+#[global]
 Existing Instances
   curve25519_bedrock2_scmul121665_func
   curve25519_bedrock2_scmul121665_spec
@@ -97,6 +99,7 @@ Definition ladderstep : Syntax.func :=
       $mul (Z2, E, Z2)        (* pair4 X2 Z2 X3 Z3 *)
   ))).
 
+#[global]
 Instance spec_of_ladderstep : spec_of ladderstep :=
   fun functions =>
     forall (X1 X2 Z2 X3 Z3 A AA B BB E C D DA CB : list word)
@@ -164,14 +167,19 @@ Instance spec_of_ladderstep : spec_of ladderstep :=
                  * Bignum n pDA DA'
                  * Bignum n pCB CB')%sep m').
 
+#[global]
 Instance spec_of_curve25519_carry_mul :
   spec_of "curve25519_carry_mul" := spec_of_carry_mul.
+#[global]
 Instance spec_of_curve25519_carry_square :
   spec_of "curve25519_carry_square" := spec_of_carry_square.
+#[global]
 Instance spec_of_curve25519_add :
   spec_of "curve25519_add" := spec_of_add.
+#[global]
 Instance spec_of_curve25519_sub :
   spec_of "curve25519_sub" := spec_of_sub.
+#[global]
 Instance spec_of_curve25519_carry_scmul_const121665 :
   spec_of "curve25519_carry_scmul_const121665"
   := @spec_of_carry_scmul_const _ curve25519_bedrock2_scmul121665_spec.

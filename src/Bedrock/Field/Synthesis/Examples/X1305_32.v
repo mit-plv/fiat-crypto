@@ -13,18 +13,22 @@ Local Definition s := 2^130.
 Local Definition c := [(1, 5)].
 Local Definition prefix := "poly1305_"%string.
 
+#[global]
 Instance names : names_of_operations.
   make_names_of_operations prefix. Defined.
 
 Definition ops : unsaturated_solinas_reified_ops n s c.
 Proof. make_reified_ops. Time Defined.
 
+#[global]
 Instance poly1305_bedrock2_funcs : bedrock2_unsaturated_solinas_funcs.
 Proof. funcs_from_ops ops. Defined.
 
+#[global]
 Instance poly1305_bedrock2_specs : bedrock2_unsaturated_solinas_specs.
 Proof. specs_from_ops ops n s c. Defined.
 
+#[global]
 Instance poly1305_bedrock2_correctness :
   bedrock2_unsaturated_solinas_correctness.
 Proof. prove_correctness ops n s c. Qed.

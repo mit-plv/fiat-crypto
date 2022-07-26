@@ -210,6 +210,7 @@ Module BaseConversion.
       Qed.
     End mul_converted.
   End BaseConversion.
+#[global]
   Hint Rewrite length_convert_bases : distr_length.
 
   (* multiply two (n*k)-bit numbers by converting them to n k-bit limbs each, multiplying, then converting back *)
@@ -370,4 +371,5 @@ Section base_conversion_mod_ops.
     now (split; [ apply eval_convert_basesmod | apply convert_bases_partitions ]).
   Qed.
 End base_conversion_mod_ops.
+#[global]
 Hint Rewrite eval_convert_basesmod eval_convert_bases : push_eval.

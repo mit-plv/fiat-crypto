@@ -294,6 +294,7 @@ Module SumWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSfu
       sumwise
       : sum_map_alt.
 
+#[global]
     Hint Rewrite In_alt_iff Empty_alt_iff Equal_alt_iff Equiv_alt_iff Equivb_alt_iff
          M1.cardinal_1
          M1.fold_1
@@ -365,8 +366,10 @@ Module SumWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSfu
            M2.elements_3w
       : sum_map_alt3.
 
+#[global]
     Hint Constructors ex and or
       : sum_map_alt1 sum_map_alt2 sum_map_alt3.
+#[global]
     Hint Extern 10
          => progress unfold M1.In, M2.In in *
              : sum_map_alt1 sum_map_alt2 sum_map_alt3.
