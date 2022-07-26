@@ -166,6 +166,30 @@ Time Compute
 (*Synthesizing code for an alternate Montgomery step*)
 
 
-Check WordByWordMontgomery.redc_body_alt.
+Check WordByWordMontgomery.redc_body_alt : Z -> nat -> list Z -> list Z -> Z -> Z * list Z -> list Z.
+Check WordByWordMontgomery.redc_body : Z -> nat -> list Z -> list Z -> Z -> nat -> list Z * list Z -> list Z * list Z.
 
-Definition singl_redc_alt := fun S a B => @WordByWordMontgomery.
+Definition singl_redc_alt := fun S a B => @WordByWordMontgomery.redc_body_alt wordsize evaln evalN B evalm' (a, S).
+
+Time Compute
+  (Pipeline.BoundsPipeline
+     true None [64;128]
+     (ltac:( let r:= Reify(
+                         singl_redc_alt
+                       ) in exact r))
+
+     (standard_bounds n, (Some r[0 ~> 2^wordsize-1]%zrange , (standard_bounds n, tt)))
+       (standard_bounds n)
+    ).
+
+Time Compute
+  (Pipeline.BoundsPipelineToString
+     "nathantest_" "nathantest_one_redc_25519"
+     true true None [64; 128] wordsize
+     (ltac:( let r:= Reify( singl_redc_alt ) in exact r))
+           (fun _ _ => [])
+            (standard_bounds n, (Some r[0 ~> 2^wordsize-1]%zrange , (standard_bounds n, tt)))
+            (standard_bounds n)
+            (None, (None, (None, tt)))
+            (None)
+    : Pipeline.ErrorT _   ).
