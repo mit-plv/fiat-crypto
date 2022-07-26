@@ -1,17 +1,17 @@
-Require Import Crypto.Util.Tactics.TransparentAssert.
 Require Import Crypto.Util.Tactics.EvarNormalize.
 
 Ltac cache_term_with_type_by_gen ty abstract_tac id :=
   let id' := fresh id in
-  let dummy := match goal with
-               | _ => transparent assert ( id' : ty );
-                      [ abstract_tac id'
-                      | ]
-               end in
+  let __ := lazymatch goal with
+            | [ |- ?T ]
+              => simple notypeclasses refine (match _ : ty return T with id' => _ end);
+                 [ abstract_tac id'
+                 | ]
+            end in
   let ret := (eval cbv [id'] in id') in
-  let dummy := match goal with
-               | _ => clear id'
-               end in
+  let __ := match goal with
+            | _ => clear id'
+            end in
   ret.
 Ltac cache_term_with_type_by ty tac id :=
   cache_term_with_type_by_gen ty ltac:(fun id' => transparent_abstract tac using id') id.
