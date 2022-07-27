@@ -420,6 +420,7 @@ src/Util/Tactics/CacheTerm.v
 src/Util/Tactics/ChangeInAll.v
 src/Util/Tactics/ClearAll.v
 src/Util/Tactics/ClearDuplicates.v
+src/Util/Tactics/ClearFree.v
 src/Util/Tactics/ClearHead.v
 src/Util/Tactics/ClearbodyAll.v
 src/Util/Tactics/ConstrFail.v
