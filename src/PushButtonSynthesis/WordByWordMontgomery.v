@@ -319,6 +319,28 @@ Section __.
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements in the Montgomery domain."]%string)
              (mul_correct machine_wordsize n m valid from_montgomery_res)).
 
+  Definition redc_step
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_redc_step_gen
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+         (Some montgomery_domain_bounds, (Some montgomery_domain_bounds, (Some r[0 ~> 2^machine_wordsize-1]%zrange, tt)))
+         (Some montgomery_domain_bounds).
+
+  (*
+  Definition sredc_step (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "redc_step" redc_step
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements in the Montgomery domain."]%string)
+             (redc_step_correct machine_wordsize n m valid from_montgomery_res)).
+  *)
+          
   Definition square
     := Pipeline.BoundsPipeline
          false (* subst01 *)
