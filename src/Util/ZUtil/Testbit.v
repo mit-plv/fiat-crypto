@@ -25,6 +25,7 @@ Module Z.
     + apply Z.ones_spec_low. lia.
     + apply Z.ones_spec_high. lia.
   Qed.
+#[global]
   Hint Rewrite ones_spec using zutil_arith : Ztestbit.
 
   Lemma ones_spec' n m (Hn : 0 <= n) (Hm : 0 <= m) :
@@ -48,6 +49,7 @@ Module Z.
     destruct m; simpl in *; try reflexivity.
     exfalso; auto using Zlt_neg_0.
   Qed.
+#[global]
   Hint Rewrite ones_spec_full : Ztestbit_full.
 
   Lemma testbit_pow2_mod : forall a n i, 0 <= n ->
@@ -62,6 +64,7 @@ Module Z.
           | |- _ => progress autorewrite with Ztestbit
           end.
   Qed.
+#[global]
   Hint Rewrite testbit_pow2_mod using zutil_arith : Ztestbit.
 
   Lemma testbit_pow2_mod_full : forall a n i,
@@ -76,6 +79,7 @@ Module Z.
       autorewrite with Ztestbit;
       reflexivity.
   Qed.
+#[global]
   Hint Rewrite testbit_pow2_mod_full : Ztestbit_full.
 
   Lemma bits_above_pow2 a n : 0 <= a < 2^n -> Z.testbit a n = false.
@@ -84,6 +88,7 @@ Module Z.
     destruct (Z_zerop a); subst; autorewrite with Ztestbit; trivial.
     apply Z.bits_above_log2; auto with zarith concl_log2.
   Qed.
+#[global]
   Hint Rewrite bits_above_pow2 using zutil_arith : Ztestbit.
 
   Lemma testbit_low : forall n x i, (0 <= i < n) ->
@@ -105,6 +110,7 @@ Module Z.
     rewrite Z.mod_add by (pose proof (Z.pow_pos_nonneg 2 n); lia).
     auto using Z.mod_pow2_bits_low.
   Qed.
+#[global]
   Hint Rewrite testbit_add_shiftl_low using zutil_arith : Ztestbit.
 
   Lemma testbit_sub_pow2 n i x (i_range:0 <= i < n) (x_range:0 < x < 2 ^ n) :
@@ -146,12 +152,14 @@ Module Z.
   Proof using Type.
     break_innermost_match; Z.ltb_to_lt; now autorewrite with Ztestbit.
   Qed.
+#[global]
   Hint Rewrite shiftl_spec_full : Ztestbit_full.
 
   Lemma shiftr_spec_full a n m : Z.testbit (a >> n) m = if (0 <=? m) then Z.testbit a (m + n) else false.
   Proof using Type.
     break_innermost_match; Z.ltb_to_lt; now autorewrite with Ztestbit.
   Qed.
+#[global]
   Hint Rewrite shiftr_spec_full : Ztestbit_full.
 
   Lemma mod_pow2_ones a m :
@@ -192,6 +200,7 @@ Module Z.
 
   Lemma bit_compare_refl (b  : bool) : bit_compare b b = Eq.
   Proof using Type. now destruct b. Qed.
+#[global]
   Hint Rewrite bit_compare_refl : Ztestbit.
 
   Lemma bit_compare_eq_iff (b1 b2 : bool)

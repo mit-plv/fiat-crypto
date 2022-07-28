@@ -44,6 +44,7 @@ Module Z.
     = if (i <? 0) then false else if (orb (i <? m) ((1 mod 0 =? 1) && (m <? 0))) then Z.testbit a (i - k) else false.
   Proof. unfold Z.truncating_shiftl. Z.solve_testbit. Qed.
 
+#[global]
   Hint Rewrite truncating_shiftl_testbit_spec_full : testbit_rewrite.
 
   Lemma truncating_shiftl_truncating_shiftl m a p q
@@ -70,6 +71,7 @@ Module Z.
     0 <= Z.truncating_shiftl m a k < 2 ^ m.
   Proof. unfold Z.truncating_shiftl; apply Z.mod_pos_bound; apply Z.pow_pos_nonneg; lia. Qed.
 
+#[global]
   Hint Resolve truncating_shiftl_range : zarith.
 
   Lemma truncating_shiftl_nonneg m a k (Hm : 0 <= m) :

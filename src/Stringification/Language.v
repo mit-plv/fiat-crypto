@@ -53,21 +53,27 @@ Module Compilers.
   Module Export Options.
     (** How to relax zranges *)
     Class relax_zrange_opt := relax_zrange : zrange -> zrange.
+#[global]
     Typeclasses Opaque relax_zrange_opt.
     (** What's the package name? *)
     Class package_name_opt := internal_package_name : option string.
+#[global]
     Typeclasses Opaque package_name_opt.
     (** What's the class name? *)
     Class class_name_opt := internal_class_name : option string.
+#[global]
     Typeclasses Opaque class_name_opt.
     (** Should we emit typedefs or not? *)
     Class skip_typedefs_opt := skip_typedefs : bool.
+#[global]
     Typeclasses Opaque skip_typedefs_opt.
     (** Which adc/sbb bitwidth-split-carries should be relaxed to bitwidth *)
     Class relax_adc_sbb_return_carry_to_bitwidth_opt := relax_adc_sbb_return_carry_to_bitwidth : list Z.
+#[global]
     Typeclasses Opaque relax_adc_sbb_return_carry_to_bitwidth_opt.
     (** Do language-specific cast adjustment *)
     Class language_specific_cast_adjustment_opt := language_specific_cast_adjustment : bool.
+#[global]
     Typeclasses Opaque language_specific_cast_adjustment_opt.
     Class language_naming_conventions_opt :=
       { public_function_naming_convention : option capitalization_convention

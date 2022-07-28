@@ -1,22 +1,25 @@
-Require Import Crypto.Util.Tactics.TransparentAssert.
 Require Import Crypto.Util.Tactics.EvarNormalize.
+Require Import Crypto.Util.Tactics.ClearFree.
 
 Ltac cache_term_with_type_by_gen ty abstract_tac id :=
   let id' := fresh id in
-  let dummy := match goal with
-               | _ => transparent assert ( id' : ty );
-                      [ abstract_tac id'
-                      | ]
-               end in
+  let __ := lazymatch goal with
+            | [ |- ?T ]
+              => simple notypeclasses refine (match _ : ty return T with id' => _ end);
+                 [ abstract_tac id'
+                 | ]
+            end in
   let ret := (eval cbv [id'] in id') in
-  let dummy := match goal with
-               | _ => clear id'
-               end in
+  let __ := match goal with
+            | _ => clear id'
+            end in
   ret.
-Ltac cache_term_with_type_by ty tac id :=
-  cache_term_with_type_by_gen ty ltac:(fun id' => transparent_abstract tac using id') id.
-Ltac cache_proof_with_type_by ty tac id :=
-  cache_term_with_type_by_gen ty ltac:(fun id' => abstract tac using id') id.
+Ltac clear_cache_term_with_type_by do_clear ty tac id :=
+  cache_term_with_type_by_gen ty ltac:(fun id' => do_clear (); transparent_abstract tac using id') id.
+Ltac clear_cache_proof_with_type_by do_clear ty tac id :=
+  cache_term_with_type_by_gen ty ltac:(fun id' => do_clear (); abstract tac using id') id.
+Ltac cache_term_with_type_by ty tac id := clear_cache_term_with_type_by ltac:(fun _ => idtac) ty tac id.
+Ltac cache_proof_with_type_by ty tac id := clear_cache_proof_with_type_by ltac:(fun _ => idtac) ty tac id.
 Ltac cache_term_by tac id :=
   let ty := open_constr:(_) in
   cache_term_with_type_by ty tac id.
@@ -26,7 +29,7 @@ Ltac cache_proof_by ty tac id :=
 Ltac cache_term term id :=
   let ty := type of term in
   let term := evar_normalize term in (* COQBUG(https://github.com/coq/coq/issues/10044) *)
-  cache_term_with_type_by ty ltac:(exact_no_check term) id.
+  clear_cache_term_with_type_by ltac:(fun _ => clear_free term) ty ltac:(exact_no_check term) id.
 
 Ltac cache_sig_red_with_type_by ty tac red_tac red_cast_no_check id :=
   let id' := fresh id in

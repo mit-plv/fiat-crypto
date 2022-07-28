@@ -11,7 +11,7 @@ on:
 jobs:
   build-macos:
 
-    runs-on: macOS-10.15
+    runs-on: macOS-11
 
     concurrency:
       group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}

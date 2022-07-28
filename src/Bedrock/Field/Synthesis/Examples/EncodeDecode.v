@@ -26,6 +26,7 @@ Import ListNotations.
 Import Syntax.Coercions.
 Local Open Scope Z_scope.
 
+#[global]
 Existing Instances
          default_parameters default_parameters_ok names
          curve25519_bedrock2_funcs curve25519_bedrock2_specs
@@ -61,6 +62,7 @@ Definition encode_decode : func :=
        (cmd.call [] "curve25519_to_bytes" [expr.var tmp; expr.var x])
        (cmd.call [] "curve25519_from_bytes" [expr.var x; expr.var tmp])))).
 
+#[global]
 Instance spec_of_encode_decode : spec_of encode_decode :=
   fun functions =>
     forall x old_tmp px ptmp t m R,
@@ -82,8 +84,10 @@ Instance spec_of_encode_decode : spec_of encode_decode :=
 
 (* TODO: currently this extra step is required so the literal string isn't
   hidden *)
+#[global]
 Instance spec_of_curve25519_to_bytes :
   spec_of "curve25519_to_bytes" := spec_of_to_bytes.
+#[global]
 Instance spec_of_curve25519_from_bytes :
   spec_of "curve25519_from_bytes" := spec_of_from_bytes.
 

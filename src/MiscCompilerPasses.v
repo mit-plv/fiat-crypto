@@ -71,7 +71,13 @@ Module Compilers.
         Definition ComputeLiveCounts {t} (e : expr.Expr t) := compute_live_counts (e _).
 
         Section with_var.
-          Context (doing_subst : forall T1 T2, T1 -> T2 -> T1)
+          (* [doing_subst_debug] is a hook for something like
+             reduction-effects debug print, or for catching bad
+             substitutions as in [OUGHT_TO_BE_UNUSED] below, so we can
+             debug subst01; we forcibly stuff its second argument into
+             a thunk so that it does not impact performance in cbv nor
+             in extraction *)
+          Context (doing_subst_debug : forall T1 T2, T1 -> (unit -> T2) -> T1)
                   {var : type -> Type}
                   (should_subst : t -> bool)
                   (live : PositiveMap.t t).
@@ -93,7 +99,7 @@ Module Compilers.
                        | Some n => should_subst n
                        | None => true
                        end
-                    then (Pos.succ cur_idx, eC' (doing_subst _ _ ex' (Pos.succ cur_idx, PositiveMap.elements live)))
+                    then (Pos.succ cur_idx, eC' (doing_subst_debug _ _ ex' (fun 'tt => (Pos.succ cur_idx, PositiveMap.elements live))))
                     else (Pos.succ cur_idx, expr.LetIn ex' (fun v => eC' (expr.Var v)))
                end.
 
@@ -101,8 +107,8 @@ Module Compilers.
             := snd (@subst0n' t e 1).
         End with_var.
 
-        Definition Subst0n (doing_subst : forall T1 T2, T1 -> T2 -> T1) (should_subst : t -> bool) {t} (e : expr.Expr t) : expr.Expr t
-          := fun var => subst0n doing_subst should_subst (ComputeLiveCounts e) (e _).
+        Definition Subst0n (doing_subst_debug : forall T1 T2, T1 -> (unit -> T2) -> T1) (should_subst : t -> bool) {t} (e : expr.Expr t) : expr.Expr t
+          := fun var => subst0n doing_subst_debug should_subst (ComputeLiveCounts e) (e _).
       End with_ident.
     End with_counter.
 
@@ -143,7 +149,7 @@ Module Compilers.
         := negb (is_live map idx).
 
       Definition EliminateDead {t} (e : expr.Expr t) : expr.Expr t
-        := @Subst01.Subst0n unit tt (fun _ => tt) (fun _ => tt) base_type ident is_ident_always_live (@OUGHT_TO_BE_UNUSED) (fun _ => false) t e.
+        := @Subst01.Subst0n unit tt (fun _ => tt) (fun _ => tt) base_type ident is_ident_always_live (fun T1 T2 => OUGHT_TO_BE_UNUSED) (fun _ => false) t e.
     End with_ident.
   End DeadCodeElimination.
 End Compilers.

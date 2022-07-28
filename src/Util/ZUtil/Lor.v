@@ -11,10 +11,12 @@ Local Open Scope bool_scope. Local Open Scope Z_scope.
 Module Z.
   Lemma lor_m1'_r x : Z.lor x (-1) = -1.
   Proof. apply Z.lor_m1_r. Qed.
+#[global]
   Hint Rewrite lor_m1'_r : zsimplify_const zsimplify zsimplify_fast.
 
   Lemma lor_m1'_l x : Z.lor (-1) x = -1.
   Proof. apply Z.lor_m1_l. Qed.
+#[global]
   Hint Rewrite lor_m1'_l : zsimplify_const zsimplify zsimplify_fast.
 
   Lemma lor_add a b (Hand : a &' b = 0) : a |' b = a + b.

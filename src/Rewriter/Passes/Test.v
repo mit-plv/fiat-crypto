@@ -34,8 +34,11 @@ Module Compilers.
   End RewriteRules.
 
   Module Export Hints.
+#[global]
     Hint Resolve Wf_RewriteTest : wf wf_extra.
+#[global]
     Hint Opaque RewriteTest : wf wf_extra interp interp_extra rewrite.
+#[global]
     Hint Rewrite @Interp_RewriteTest : interp interp_extra.
   End Hints.
 End Compilers.

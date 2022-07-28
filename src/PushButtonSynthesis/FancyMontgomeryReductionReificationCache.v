@@ -17,8 +17,11 @@ Module Export MontgomeryReduction.
          As reified_montred_gen_correct.
   Proof. Time cache_reify (). Time Qed.
   Module Export ReifyHints.
+#[global]
     Hint Extern 1 (_ = _) => apply_cached_reification montred' (proj1 reified_montred_gen_correct) : reify_cache_gen.
+#[global]
     Hint Immediate (proj2 reified_montred_gen_correct) : wf_gen_cache.
+#[global]
     Hint Rewrite (proj1 reified_montred_gen_correct) : interp_gen_cache.
   End ReifyHints.
   Local Opaque reified_montred_gen. (* needed for making [autorewrite] not take a very long time *)

@@ -44,29 +44,29 @@ Module Compilers.
         Local Notation expr := (@expr.expr base_type ident).
 
         Section with_var.
-          Context {doing_subst : forall T1 T2, T1 -> T2 -> T1}
+          Context {doing_subst_debug : forall T1 T2, T1 -> (unit -> T2) -> T1}
                   {should_subst : T -> bool}
-                  (Hdoing_subst : forall T1 T2 x y, doing_subst T1 T2 x y = x)
+                  (Hdoing_subst_debug : forall T1 T2 x y, doing_subst_debug T1 T2 x y = x)
                   {var1 var2 : type -> Type}
                   (live : PositiveMap.t T).
           Local Notation expr1 := (@expr.expr base_type ident var1).
           Local Notation expr2 := (@expr.expr base_type ident var2).
-          Local Notation subst0n'1 := (@subst0n' T base_type ident doing_subst var1 should_subst live).
-          Local Notation subst0n'2 := (@subst0n' T base_type ident doing_subst var2 should_subst live).
-          Local Notation subst0n1 := (@subst0n T base_type ident doing_subst var1 should_subst live).
-          Local Notation subst0n2 := (@subst0n T base_type ident doing_subst var2 should_subst live).
+          Local Notation subst0n'1 := (@subst0n' T base_type ident doing_subst_debug var1 should_subst live).
+          Local Notation subst0n'2 := (@subst0n' T base_type ident doing_subst_debug var2 should_subst live).
+          Local Notation subst0n1 := (@subst0n T base_type ident doing_subst_debug var1 should_subst live).
+          Local Notation subst0n2 := (@subst0n T base_type ident doing_subst_debug var2 should_subst live).
 
           Lemma wf_subst0n' G1 G2 t e1 e2 p
                 (HG1G2 : forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> expr.wf G2 v1 v2)
             : expr.wf G1 (t:=t) e1 e2 -> expr.wf G2 (snd (subst0n'1 e1 p)) (snd (subst0n'2 e2 p))
                                          /\ fst (subst0n'1 e1 p) = fst (subst0n'2 e2 p).
-          Proof using Hdoing_subst.
+          Proof using Hdoing_subst_debug.
             intro Hwf; revert dependent G2; revert p; induction Hwf;
               cbn [subst0n'];
               repeat first [ progress wf_safe_t
                            | simplifier_t_step
                            | progress split_and
-                           | rewrite Hdoing_subst
+                           | rewrite Hdoing_subst_debug
                            | apply conj
                            | match goal with
                              | [ H : context[fst _ = fst _] |- _ ] => progress erewrite H by eauto
@@ -77,15 +77,15 @@ Module Compilers.
 
           Lemma wf_subst0n t e1 e2
             : expr.wf nil (t:=t) e1 e2 -> expr.wf nil (subst0n1 e1) (subst0n2 e2).
-          Proof using Hdoing_subst. clear -Hdoing_subst; intro Hwf; apply wf_subst0n' with (G1:=nil); cbn [In]; eauto with nocore; tauto. Qed.
+          Proof using Hdoing_subst_debug. clear -Hdoing_subst_debug; intro Hwf; apply wf_subst0n' with (G1:=nil); cbn [In]; eauto with nocore; tauto. Qed.
         End with_var.
 
         Lemma Wf_Subst0n
-              {doing_subst : forall T1 T2, T1 -> T2 -> T1}
+              {doing_subst_debug : forall T1 T2, T1 -> (unit -> T2) -> T1}
               {should_subst : T -> bool}
-              (Hdoing_subst : forall T1 T2 x y, doing_subst T1 T2 x y = x)
+              (Hdoing_subst_debug : forall T1 T2 x y, doing_subst_debug T1 T2 x y = x)
               {t} (e : @expr.Expr base_type ident t)
-          : expr.Wf e -> expr.Wf (Subst0n one incr incr_always_live is_ident_always_live doing_subst should_subst e).
+          : expr.Wf e -> expr.Wf (Subst0n one incr incr_always_live is_ident_always_live doing_subst_debug should_subst e).
         Proof using Type. intros Hwf var1 var2; eapply wf_subst0n, Hwf; assumption. Qed.
 
         Section interp.
@@ -93,34 +93,34 @@ Module Compilers.
                   {interp_ident : forall t, ident t -> type.interp base_interp t}
                   {interp_ident_Proper : forall t, Proper (eq ==> type.eqv) (interp_ident t)}.
 
-          Section with_doing_subst.
-            Context {doing_subst : forall T1 T2, T1 -> T2 -> T1}
+          Section with_doing_subst_debug.
+            Context {doing_subst_debug : forall T1 T2, T1 -> (unit -> T2) -> T1}
                     {should_subst : T -> bool}
-                    (Hdoing_subst : forall T1 T2 x y, doing_subst T1 T2 x y = x).
+                    (Hdoing_subst_debug : forall T1 T2 x y, doing_subst_debug T1 T2 x y = x).
 
             Lemma interp_subst0n'_gen (live : PositiveMap.t T) G t (e1 e2 : expr t)
                   (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> expr.interp interp_ident v1 == v2)
                   (Hwf : expr.wf G e1 e2)
                   p
-              : expr.interp interp_ident (snd (subst0n' doing_subst should_subst live e1 p)) == expr.interp interp_ident e2.
-            Proof using Hdoing_subst interp_ident_Proper.
+              : expr.interp interp_ident (snd (subst0n' doing_subst_debug should_subst live e1 p)) == expr.interp interp_ident e2.
+            Proof using Hdoing_subst_debug interp_ident_Proper.
               revert p; induction Hwf; cbn [subst0n']; cbv [Proper respectful] in *;
                 repeat first [ progress interp_safe_t
                              | simplifier_t_step
-                             | rewrite Hdoing_subst
+                             | rewrite Hdoing_subst_debug
                              | break_innermost_match_step
                              | interp_unsafe_t_step ].
             Qed.
 
             Lemma interp_subst0n live t (e1 e2 : expr t)
                   (Hwf : expr.wf nil e1 e2)
-              : expr.interp interp_ident (subst0n doing_subst should_subst live e1) == expr.interp interp_ident e2.
-            Proof using Hdoing_subst interp_ident_Proper. clear -Hwf Hdoing_subst interp_ident_Proper. apply interp_subst0n'_gen with (G:=nil); cbn [In]; eauto with nocore; tauto. Qed.
+              : expr.interp interp_ident (subst0n doing_subst_debug should_subst live e1) == expr.interp interp_ident e2.
+            Proof using Hdoing_subst_debug interp_ident_Proper. clear -Hwf Hdoing_subst_debug interp_ident_Proper. apply interp_subst0n'_gen with (G:=nil); cbn [In]; eauto with nocore; tauto. Qed.
 
             Lemma Interp_Subst0n {t} (e : @expr.Expr base_type ident t) (Hwf : expr.Wf e)
-              : expr.Interp interp_ident (Subst0n one incr incr_always_live is_ident_always_live doing_subst should_subst e) == expr.Interp interp_ident e.
-            Proof using Hdoing_subst interp_ident_Proper. apply interp_subst0n, Hwf. Qed.
-          End with_doing_subst.
+              : expr.Interp interp_ident (Subst0n one incr incr_always_live is_ident_always_live doing_subst_debug should_subst e) == expr.Interp interp_ident e.
+            Proof using Hdoing_subst_debug interp_ident_Proper. apply interp_subst0n, Hwf. Qed.
+          End with_doing_subst_debug.
         End interp.
       End with_ident.
     End with_counter.
@@ -147,8 +147,11 @@ Module Compilers.
     End with_ident.
   End Subst01.
 
+#[global]
   Hint Resolve Subst01.Wf_Subst01 : wf.
+#[global]
   Hint Opaque Subst01.Subst01 : wf interp rewrite.
+#[global]
   Hint Rewrite @Subst01.Interp_Subst01 : interp.
 
   Module DeadCodeElimination.
@@ -159,7 +162,7 @@ Module Compilers.
             rely on the fact that DCE in fact just inlines code it
             believes to be dead. *)
     Local Transparent OUGHT_TO_BE_UNUSED.
-    Lemma OUGHT_TO_BE_UNUSED_id {T1 T2} (v : T1) (v' : T2) : OUGHT_TO_BE_UNUSED v v' = v.
+    Lemma OUGHT_TO_BE_UNUSED_id {T1 T2} v v' : @OUGHT_TO_BE_UNUSED T1 T2 v v' = v.
     Proof. exact eq_refl. Qed.
     Local Opaque OUGHT_TO_BE_UNUSED.
 
@@ -172,7 +175,7 @@ Module Compilers.
 
       Lemma Wf_EliminateDead {t} (e : @expr.Expr base_type ident t)
         : expr.Wf e -> expr.Wf (EliminateDead is_ident_always_live e).
-      Proof using Type. apply Subst01.Wf_Subst0n, @OUGHT_TO_BE_UNUSED_id. Qed.
+      Proof using Type. apply Subst01.Wf_Subst0n; intros; apply @OUGHT_TO_BE_UNUSED_id. Qed.
 
       Section interp.
         Context {base_interp : base_type -> Type}
@@ -186,7 +189,10 @@ Module Compilers.
     End with_ident.
   End DeadCodeElimination.
 
+#[global]
   Hint Resolve DeadCodeElimination.Wf_EliminateDead : wf.
+#[global]
   Hint Opaque DeadCodeElimination.EliminateDead : wf interp rewrite.
+#[global]
   Hint Rewrite @DeadCodeElimination.Interp_EliminateDead : interp.
 End Compilers.

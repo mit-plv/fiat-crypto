@@ -59,19 +59,31 @@ Module Z.
     Lemma equiv_modulo_mod_small x y : x  == y -> 0 <= x < N -> x = y mod N.
     Proof. transitivity (x mod N); [rewrite Z.mod_small|]; auto. Qed.
   End equiv_modulo.
+#[global]
   Hint Rewrite div_to_inv_modulo using solve [ eassumption | lia ] : zstrip_div.
 
   Module EquivModuloInstances (dummy : Nop). (* work around https://coq.inria.fr/bugs/show_bug.cgi?id=4973 *)
+#[global]
     Existing Instance equiv_modulo_Reflexive.
+#[global]
     Existing Instance eq_Reflexive. (* prioritize [Reflexive eq] *)
+#[global]
     Existing Instance equiv_modulo_Symmetric.
+#[global]
     Existing Instance equiv_modulo_Transitive.
+#[global]
     Existing Instance mul_mod_Proper.
+#[global]
     Existing Instance add_mod_Proper.
+#[global]
     Existing Instance sub_mod_Proper.
+#[global]
     Existing Instance opp_mod_Proper.
+#[global]
     Existing Instance pow_mod_Proper.
+#[global]
     Existing Instance modulo_equiv_modulo_Proper.
+#[global]
     Existing Instance eq_to_ProperProxy.
   End EquivModuloInstances.
   Module RemoveEquivModuloInstances (dummy : Nop).

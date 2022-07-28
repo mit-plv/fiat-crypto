@@ -138,6 +138,9 @@ Section PartitionProofs.
   Qed.
 
 End PartitionProofs.
+#[global]
 Hint Rewrite length_partition length_recursive_partition : distr_length.
+#[global]
 Hint Rewrite eval_partition using (solve [auto; distr_length]) : push_eval.
+#[global]
 Hint Rewrite nth_default_partition_full : push_nth_default.

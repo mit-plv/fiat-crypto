@@ -21,16 +21,19 @@ Module Z.
     unfold Z.mul_split; break_match; Z.ltb_to_lt;
       [ rewrite mul_split_at_bitwidth_mod; congruence | reflexivity ].
   Qed.
+#[global]
   Hint Rewrite mul_split_mod : to_div_mod.
   Lemma mul_split_div s x y : snd (Z.mul_split s x y)  = (x * y) / s.
   Proof.
     unfold Z.mul_split; break_match; Z.ltb_to_lt;
       [ rewrite mul_split_at_bitwidth_div; congruence | reflexivity ].
   Qed.
+#[global]
   Hint Rewrite mul_split_div : to_div_mod.
 
   Lemma mul_high_div s x y : Z.mul_high s x y = (x * y) / s.
   Proof. cbv [Z.mul_high]; now apply mul_split_div. Qed.
+#[global]
   Hint Rewrite mul_high_div : to_div_mod.
 
   Lemma mul_split_high s x y : snd (Z.mul_split s x y) = Z.mul_high s x y.

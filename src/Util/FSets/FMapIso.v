@@ -288,6 +288,7 @@ Module IsoWSfun (E' : DecidableType) (W' : WSfun E')
        liftho
     : iso_map_alt.
 
+#[global]
   Hint Rewrite Empty_alt_iff Equal_alt_iff Equiv_alt_iff Equivb_alt_iff
        eq_to_iff
        eq_to_of_iff
