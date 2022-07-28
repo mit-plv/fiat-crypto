@@ -136,6 +136,15 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
   Hint Rewrite (proj1 reified_mul_gen_correct) : interp_gen_cache.
   Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very long time *)
 
+  Derive reified_redc_step_gen
+    SuchThat (is_reification_of reified_redc_step_gen redc_step)
+    As reified_redc_step_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+  Hint Extern 1 (_ = _) => apply_cached_reification redc_step (proj1 reified_redc_step_gen_correct) : reify_cache_gen.
+  Hint Immediate (proj2 reified_redc_step_gen_correct) : wf_gen_cache.
+  Hint Rewrite (proj1 reified_redc_step_gen_correct) : interp_gen_cache.
+  Local Opaque reified_redc_step_gen. (* needed for making [autorewrite] not take a very long time *)
+  
   Derive reified_add_gen
          SuchThat (is_reification_of reified_add_gen addmod)
          As reified_add_gen_correct.

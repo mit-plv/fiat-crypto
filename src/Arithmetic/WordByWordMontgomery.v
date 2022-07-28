@@ -1102,6 +1102,7 @@ Module WordByWordMontgomery.
              end.
 
     Definition mulmod (a b : list Z) : list Z := @redc bitwidth n m_enc n a b m'.
+    Definition redc_step (b s : list Z) (a : Z) : list Z := @redc_body_alt bitwidth n m_enc b m' (a, s).
     Definition squaremod (a : list Z) : list Z := mulmod a a.
     Definition addmod (a b : list Z) : list Z := @add bitwidth n m_enc a b.
     Definition submod (a b : list Z) : list Z := @sub bitwidth n m_enc a b.
@@ -1124,7 +1125,7 @@ Module WordByWordMontgomery.
         | rewrite !m_enc_correct_montgomery; eapply redc_mod_N ];
         t_fin.
     Qed.
-
+        
     Definition onemod : list Z := Partition.partition weight n 1.
 
     Definition onemod_correct : eval onemod = 1 /\ valid onemod.
