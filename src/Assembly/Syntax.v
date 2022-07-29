@@ -75,6 +75,7 @@ Inductive OpCode :=
 | movzx
 | mul
 | mulx
+| or
 | pop
 | push
 | rcr

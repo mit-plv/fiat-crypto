@@ -3361,6 +3361,11 @@ Definition SymexNormalInstruction {descr:description} (instr : NormalInstruction
     _ <- SetOperand dst v;
     _ <- HavocFlags;
     zero <- Symeval (PreApp (const 0) nil); _ <- SetFlag CF zero; SetFlag OF zero
+  | Syntax.or, [dst; src] => (* side effects of "or" are identical to side effects of "and" and "xor", according to https://en.wikibooks.org/wiki/X86_Assembly/Logic *)
+    v <- Symeval (orZ@(dst,src));
+    _ <- SetOperand dst v;
+    _ <- HavocFlags;
+    zero <- Symeval (PreApp (const 0) nil); _ <- SetFlag CF zero; SetFlag OF zero
   | Syntax.bzhi, [dst; src; cnt] =>
     cnt <- GetOperand cnt;
     cnt <- RevealConst cnt;
