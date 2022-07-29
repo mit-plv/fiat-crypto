@@ -100,6 +100,7 @@ Local Existing Instance ToString.C.OutputCAPI.
 Local Existing Instance default_language_naming_conventions.
 Local Existing Instance default_documentation_options.
 Local Existing Instance default_output_options.
+Print default_output_options.
 (* Print default_output_options. *)
 Local Existing Instance AbstractInterpretation.default_Options.
 Local Instance : package_name_opt := None.
@@ -119,7 +120,7 @@ Definition output_bounds := Some ((repeat (Some r[0 ~> 2 * M * (2^52 - 1)]%zrang
 Time Redirect "log" Compute
   (Pipeline.BoundsPipelineToString
      "fiat_" "bitcoin_mul_u64"
-        true true None [64; 128] 64
+        true true None [0; 64; 128] 64
         ltac:(let r := Reify (mulmod) in
               exact r)
                (fun _ _ => [])

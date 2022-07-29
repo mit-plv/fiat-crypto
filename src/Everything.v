@@ -62,6 +62,7 @@ Crypto.Assembly.Parse.Examples.fiat_p256_square_optimised_seed6
 Crypto.Assembly.Parse.TestAsm
 Crypto.Assembly.Symbolic
 Crypto.Assembly.Syntax
+Crypto.AttemptToCompileToBedrock2
 Crypto.BoundsPipeline
 Crypto.CLI
 Crypto.COperationSpecifications
