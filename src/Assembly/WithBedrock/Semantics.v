@@ -328,8 +328,8 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
       let st := if cnt =? 1 then SetFlag st OF signchange else st in
       let st := SetFlag st CF (Z.testbit l (cnt-1)) in
       Some (HavocFlag st AF)
-  | (and | xor) as opc, [dst; src] =>
-    let f := match opc with and => Z.land | _ => Z.lxor end in
+  | (and | xor | or) as opc, [dst; src] =>
+    let f := match opc with and => Z.land | xor => Z.lxor | _ => Z.lor end in
     v1 <- DenoteOperand sa s st dst;
     v2 <- DenoteOperand sa s st src;
     let v := f v1 v2 in
@@ -396,6 +396,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | lea, _
   | mov, _
   | movzx, _
+  | or, _
   | imul, _
   | inc, _
   | push, _

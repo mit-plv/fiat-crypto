@@ -151,6 +151,7 @@ Global Instance show_OpCode : Show OpCode
         | movzx => "movzx"
         | mul => "mul"
         | mulx => "mulx"
+        | or => "or"
         | pop => "pop"
         | push => "push"
         | rcr => "rcr"
