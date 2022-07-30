@@ -294,7 +294,7 @@ $(eval $(call add_curve_keys,p521_64,UNSATURATED_SOLINAS,'p521',64,'9' '2^521 - 
 $(eval $(call add_curve_keys,p448_solinas_64,UNSATURATED_SOLINAS,'p448',64,'8' '2^448 - 2^224 - 1',$(UNSATURATED_SOLINAS_FUNCTIONS),UNSATURATED_SOLINAS))
 $(eval $(call add_curve_keys,p448_solinas_32,UNSATURATED_SOLINAS,'p448',32,'16' '2^448 - 2^224 - 1',$(UNSATURATED_SOLINAS_FUNCTIONS),UNSATURATED_SOLINAS))
 $(foreach bw,64 32,$(eval $(call add_curve_keys,p256_$(bw),WORD_BY_WORD_MONTGOMERY,'p256',$(bw),'2^256 - 2^224 + 2^192 + 2^96 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
-$(foreach bw,64 32,$(eval $(call add_curve_keys,secp256k1_$(bw),WORD_BY_WORD_MONTGOMERY,'secp256k1',$(bw),'2^256 - 2^32 - 977',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,secp256k1_montgomery_$(bw),WORD_BY_WORD_MONTGOMERY,'secp256k1_montgomery',$(bw),'2^256 - 2^32 - 977',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 $(foreach bw,64 32,$(eval $(call add_curve_keys,p384_$(bw),WORD_BY_WORD_MONTGOMERY,'p384',$(bw),'2^384 - 2^128 - 2^96 + 2^32 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 $(foreach bw,64 32,$(eval $(call add_curve_keys,p224_$(bw),WORD_BY_WORD_MONTGOMERY,'p224',$(bw),'2^224 - 2^96 + 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 $(foreach bw,64,$(eval $(call add_curve_keys,p434_$(bw),WORD_BY_WORD_MONTGOMERY,'p434',$(bw),'2^216 * 3^137 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY))) # 32 is a bit too heavy
@@ -302,9 +302,9 @@ $(foreach bw,64,$(eval $(call add_curve_keys,p434_$(bw),WORD_BY_WORD_MONTGOMERY,
 $(foreach bw,64 32,$(eval $(call add_curve_keys,curve25519_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'25519_scalar',$(bw),'2^252 + 27742317777372353535851937790883648493',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 $(foreach bw,64 32,$(eval $(call add_curve_keys,p256_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'p256_scalar',$(bw),'2^256 - 2^224 + 2^192 - 89188191075325690597107910205041859247',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 $(foreach bw,64 32,$(eval $(call add_curve_keys,p384_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'p384_scalar',$(bw),'2^384 - 1388124618062372383947042015309946732620727252194336364173',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
-$(foreach bw,64 32,$(eval $(call add_curve_keys,secp256k1_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'secp256k1_scalar',$(bw),'2^256 - 432420386565659656852420866394968145599',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,secp256k1_montgomery_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'secp256k1_montgomery_scalar',$(bw),'2^256 - 432420386565659656852420866394968145599',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 
-$(foreach bw,64,$(eval $(call add_curve_keys,bitcoin_prime_$(bw),DETTMAN_MULTIPLICATION,'bitcoin_prime',$(bw),5 52 '2^256 - 4294968273' 1,$(DETTMAN_MULTIPLICATION_FUNCTIONS),DETTMAN_MULTIPLICATION)))
+$(foreach bw,64,$(eval $(call add_curve_keys,secp256k1_dettman_$(bw),DETTMAN_MULTIPLICATION,'secp256k1_dettman',$(bw),5 52 '2^256 - 4294968273' 1,$(DETTMAN_MULTIPLICATION_FUNCTIONS),DETTMAN_MULTIPLICATION)))
 
 # Files taking 30s or less
 LITE_BASE_FILES := curve25519_64 poly1305_64 poly1305_32 p256_64 secp256k1_64 p384_64 p224_32 p434_64 p448_solinas_64 secp256k1_32 p256_32 p448_solinas_32 \
