@@ -108,8 +108,6 @@ Section __.
 
   Definition m := s - c.
 
-(*   Definition n := Z.to_nat (Qceiling (e / limb_size)). (* I put this here. *) *)
-
   Let possible_values := possible_values_of_machine_wordsize.
 
   Definition output_magnitude : nat := input_magnitude / 2 + 1.
@@ -135,8 +133,7 @@ Section __.
             (fun v => (true, v))
             [(negb (s - c =? 0)%Z, Pipeline.Value_not_ltZ "s - c <> 0" (s - c) 0)
              ; (negb (s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s ≠ 0" s 0)
-             ; ((3 <=? n)%nat, Pipeline.Value_not_leZ "n < 3" 3 n) (* I modified this. *)
-(*              ; (0 <? machine_wordsize, Pipeline.Value_not_ltZ "0 < machine_wordsize" 0 machine_wordsize) *)
+             ; ((3 <=? n)%nat, Pipeline.Value_not_leZ "n < 3" 3 n)
              ; ((e <=? limb_size * n)%nat, Pipeline.Value_not_leZ "e <= limb_size * limbs" e (limb_size * n))
              ; ((limb_size * (n - 1) <=? e)%nat, Pipeline.Value_not_leZ "limb_size * (limbs - 1) <= e" (limb_size * (n - 1)) e)
              ; ((s_ =? s)%Z, Pipeline.Values_not_provably_equalZ "s not a power of 2" s_ s)

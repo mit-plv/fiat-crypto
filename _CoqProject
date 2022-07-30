@@ -1,7 +1,6 @@
 -R src Crypto
 -arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,unsupported-attributes
 -arg -native-compiler -arg ondemand
-src/AttemptToCompileToBedrock2.v
 src/BoundsPipeline.v
 src/CLI.v
 src/COperationSpecifications.v
