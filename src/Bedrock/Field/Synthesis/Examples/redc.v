@@ -43,7 +43,7 @@ Section WithParameters.
          (r * @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned ri) ) mod prime = 1 ->
         
         WeakestPrecondition.call functions
-          "redc_alt" t m []
+          "redc_alt" t m (Astart :: Bstart :: len :: nil )
           (fun t' m' rets => t=t' /\ word.unsigned len = Z.of_nat (List.length rets) /\
                                ( @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned A) *
                                  @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned B) *
@@ -72,8 +72,6 @@ t' : trace
 m' : map.rep
 rets : list word.rep
 
-?word : "Interface.word ?width"
-
-?word0 : "Interface.word ?width0" *)
+?word : "Interface.word ?width"*)
   
 End WithParameters.
