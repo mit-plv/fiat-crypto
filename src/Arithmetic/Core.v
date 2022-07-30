@@ -218,7 +218,6 @@ Module Associational.
         rewrite <- IHp'. ring.
   Qed.
 
-  (*assumes that (H1 : w mod fw = 0) (H2 : fw mod s = 0) *)
   Definition reduce_one (s:Z) (w fw : Z) (c: Z) (p:list _) : list (Z*Z) :=
     let lo_hi := split_one s w fw p in
     fst lo_hi ++ map (fun thing => (fst thing, snd thing * (c * (fw / s)))) (snd lo_hi).
