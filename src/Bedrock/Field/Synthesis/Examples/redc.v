@@ -3,9 +3,10 @@ Require Import bedrock2.NotationsCustomEntry.
 Import Syntax BinInt String List.ListNotations.
 Local Open Scope string_scope. Local Open Scope Z_scope. Local Open Scope list_scope.
 
-Require bedrock2.WeakestPrecondition.
-Require Import bedrock2.Semantics bedrock2.FE310CSemantics.
+Require Import bedrock2.WeakestPrecondition bedrock2.ProgramLogic.
+Require Import bedrock2.Semantics.
 Require Import coqutil.Map.Interface bedrock2.Map.Separation bedrock2.Map.SeparationLogic.
+From bedrock2 Require Import BasicC64Semantics.
 
 Require bedrock2.WeakestPreconditionProperties.
 Require Import coqutil.Tactics.Tactics.
@@ -13,6 +14,10 @@ From coqutil.Tactics Require Import letexists eabstract.
 Require Import bedrock2.ProgramLogic bedrock2.Scalars bedrock2.Array bedrock2.Loops.
 Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import bedrock2.ZnWords.
+
+Require Import Coq.ZArith.ZArith coqutil.Z.div_mod_to_equations.
+Import ZArith.
+Require Import coqutil.Z.Lia.
 
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
 
@@ -25,7 +30,7 @@ Section WithParameters.
   Import List.
   Import WordByWordMontgomery.
 
-    (* redc_alt ought to take in small arrays A and B, and output an array S *)
+  (* redc_alt ought to take in small arrays A and B, and output an array S *)
   (* S should be between 0 and the prime, and should evaluate mod the prime to the same thing as 
      A * B * R^-1 *)
 
@@ -33,7 +38,7 @@ Section WithParameters.
   (* S' should be small, and should eval to the same as (a * B + S) * R^-1 modulo the prime *)
   
   Fail Instance spec_of_redc_alt : spec_of "redc_alt" := fun functions =>
-       forall Astart A Bstart B len prime r ri t m,
+       forall Astart A Bstart B Sstart len prime r ri t m,
          (* A and B are lists of length len, they correspond to arrays starting at Astart and Bstart respectively *)
          word.unsigned len = Z.of_nat (List.length A) ->
          (array scalar (word.of_Z 8) Astart A m) ->
@@ -48,8 +53,8 @@ Section WithParameters.
                                ( @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned A) *
                                  @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned B) *
                                  @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned ri) ) mod prime =
-                                 @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned rets) mod prime) .
-
+                                 @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned rets) mod prime /\
+                                 sep (fun m'' => array scalar (word.of_Z 8) Sstart rets m) (fun m'' => m'' = m) m' ).
 
 (* Error:
 Unable to satisfy the following constraints:
