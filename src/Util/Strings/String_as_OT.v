@@ -17,11 +17,13 @@ Module Ascii_as_OT <: UsualOrderedType.
   Definition compare (a b : ascii) := N_as_OT.compare (N_of_ascii a) (N_of_ascii b).
   Definition lt (a b : ascii) := N_as_OT.lt (N_of_ascii a) (N_of_ascii b).
 
+#[global]
   Instance lt_compat : Proper (eq==>eq==>iff) lt.
   Proof.
     intros x x' Hx y y' Hy. rewrite Hx, Hy; intuition.
   Qed.
 
+#[global]
   Instance lt_strorder : StrictOrder lt.
   Proof.
     split; unfold lt; [ intro | intros ??? ]; eapply N_as_OT.lt_strorder.
@@ -59,6 +61,7 @@ Module String_as_OT <: UsualOrderedType.
 
   Definition lt (a b : string) := compare a b = Lt.
 
+#[global]
   Instance lt_compat : Proper (eq==>eq==>iff) lt.
   Proof.
     intros x x' Hx y y' Hy. rewrite Hx, Hy; intuition.
@@ -74,6 +77,7 @@ Module String_as_OT <: UsualOrderedType.
     all: exfalso; eapply irreflexivity; (idtac + etransitivity); eassumption.
   Qed.
 
+#[global]
   Instance lt_strorder : StrictOrder lt.
   Proof.
     split; unfold lt; [ intro x | intros x y z ]; unfold complement.

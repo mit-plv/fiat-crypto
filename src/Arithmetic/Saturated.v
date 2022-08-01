@@ -1086,7 +1086,10 @@ Module Rows.
         := (tl p, hd 0 p).
     End Ops.
   End Rows.
+#[global]
   Hint Rewrite length_from_columns using eassumption : distr_length.
+#[global]
   Hint Rewrite length_sum_rows using solve [ reflexivity | eassumption | distr_length; eauto ] : distr_length.
+#[global]
   Hint Rewrite length_fst_extract_row length_snd_extract_row length_flatten length_fst_from_columns' length_snd_from_columns' : distr_length.
 End Rows.

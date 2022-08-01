@@ -5,6 +5,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Language.PreExtra.
 Require Import Rewriter.Language.Language.
+Require Import Rewriter.Language.Reify.
 Require Import Crypto.Language.IdentifiersBasicGENERATED.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
@@ -30,6 +31,7 @@ Import EqNotations.
 Module Compilers.
   Export Language.Pre.
   Export Language.Compilers.
+  Export Reify.Compilers.
   Import IdentifiersBasicLibrary.Compilers.
   Import IdentifiersBasicLibrary.Compilers.Basic.
   Import IdentifiersBasicGenerate.Compilers.Basic.Tactic.

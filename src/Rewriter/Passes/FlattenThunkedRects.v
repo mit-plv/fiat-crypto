@@ -33,8 +33,11 @@ Module Compilers.
   End RewriteRules.
 
   Module Export Hints.
+#[global]
     Hint Resolve Wf_RewriteFlattenThunkedRects : wf wf_extra.
+#[global]
     Hint Opaque RewriteFlattenThunkedRects : wf wf_extra interp interp_extra rewrite.
+#[global]
     Hint Rewrite @Interp_RewriteFlattenThunkedRects : interp interp_extra.
   End Hints.
 End Compilers.

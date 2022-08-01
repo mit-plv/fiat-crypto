@@ -14,8 +14,10 @@ Import Notations.
 
 Module Z.
 
+#[global]
   Hint Rewrite Z.bits_opp_full Z.shiftl_spec_full Z.shiftr_spec_full Z.lor_spec Z.land_spec Z.ones_spec_full Z.bits_0 Z.bits_1 andb_false_r andb_true_r orb_false_r orb_true_r Z.mod_pow2_ones : testbit_rewrite.
 
+#[global]
   Hint Rewrite <- Z.ones_equiv : testbit_rewrite.
 
 

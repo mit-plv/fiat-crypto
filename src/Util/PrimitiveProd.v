@@ -76,7 +76,7 @@ Local Arguments f_equal {_ _} _ {_ _} _.
 
 Definition fst_pair {A B} (a:A) (b:B) : fst (a,b) = a := eq_refl.
 Definition snd_pair {A B} (a:A) (b:B) : snd (a,b) = b := eq_refl.
-Create HintDb cancel_primpair discriminated. Hint Rewrite @fst_pair @snd_pair : cancel_primpair.
+Create HintDb cancel_primpair discriminated. #[global] Hint Rewrite @fst_pair @snd_pair : cancel_primpair.
 
 (** ** Equality for [prod] *)
 Section prod.

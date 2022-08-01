@@ -105,7 +105,9 @@ Section encode_distributed.
     apply nth_default_encode_distributed_bounded'; auto.
   Abort.
 End encode_distributed.
+#[global]
 Hint Rewrite @eval_encode_distributed using solve [auto; lia] : push_eval.
+#[global]
 Hint Rewrite @length_encode_distributed : distr_length.
 
 Notation limbwidth n s c := (inject_Z (Z.log2_up (s - Associational.eval c)) / inject_Z (Z.of_nat n))%Q.
@@ -116,6 +118,7 @@ Local Coercion Z.pos : positive >-> Z.
 
 (** The fraction by which to multiply upper bounds *)
 Class tight_upperbound_fraction_opt := tight_upperbound_fraction : Q.
+#[global]
 Typeclasses Opaque tight_upperbound_fraction_opt.
 
 Local Notation is_tighter_than0 x y
@@ -379,6 +382,7 @@ else:
        | nil => false
        end.
 End __.
+#[global]
 Hint Rewrite @length_distribute_balance @length_distribute_balance_step @length_balance @length_prime_upperbound_list @length_tight_upperbounds @length_loose_upperbounds @length_tight_bounds @length_loose_bounds : distr_length.
 
 Inductive MaybeLimbCount := NumLimbs (n : nat) | Auto (idx : nat).

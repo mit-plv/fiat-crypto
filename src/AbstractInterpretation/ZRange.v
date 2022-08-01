@@ -18,6 +18,7 @@ Module Compilers.
   Module ZRange.
     Module Export Settings.
       Class shiftr_avoid_uint1_opt := shiftr_avoid_uint1 : bool.
+#[global]
       Typeclasses Opaque shiftr_avoid_uint1_opt.
       Module AbstractInterpretation.
         Local Set Primitive Projections.

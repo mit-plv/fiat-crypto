@@ -217,9 +217,11 @@ Section rbarrett_red.
 End rbarrett_red.
 
 Module Export Hints.
+#[global]
   Hint Opaque
        barrett_red
   : wf_op_cache.
+#[global]
   Hint Immediate
        Wf_barrett_red
   : wf_op_cache.

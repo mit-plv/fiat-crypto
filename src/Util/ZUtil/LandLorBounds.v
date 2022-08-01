@@ -32,16 +32,19 @@ Module Z.
     all: match goal with |- context[2^Z.log2_up ?x] => pose proof (Z.log2_up_le_full x) end.
     all: lia.
   Qed.
+#[global]
   Hint Resolve round_lor_land_bound_bounds : zarith.
 
   Lemma round_lor_land_bound_bounds_pos x
   : (0 <= Z.pos x <= Z.round_lor_land_bound (Z.pos x)).
   Proof. generalize (round_lor_land_bound_bounds (Z.pos x)); lia. Qed.
+#[global]
   Hint Resolve round_lor_land_bound_bounds_pos : zarith.
 
   Lemma round_lor_land_bound_bounds_neg x
   : Z.round_lor_land_bound (Z.neg x) <= Z.neg x <= -1.
   Proof. generalize (round_lor_land_bound_bounds (Z.neg x)); lia. Qed.
+#[global]
   Hint Resolve round_lor_land_bound_bounds_neg : zarith.
 
   Local Ltac saturate :=
@@ -199,19 +202,23 @@ Module Z.
   Lemma land_round_lor_land_bound_r x
     : Z.land x (Z.round_lor_land_bound x) = if (0 <=? x) then x else Z.round_lor_land_bound x.
   Proof. t. Qed.
+#[global]
   Hint Rewrite land_round_lor_land_bound_r : zsimplify_fast zsimplify.
   Lemma land_round_lor_land_bound_l x
     : Z.land (Z.round_lor_land_bound x) x = if (0 <=? x) then x else Z.round_lor_land_bound x.
   Proof. rewrite Z.land_comm, land_round_lor_land_bound_r; reflexivity. Qed.
+#[global]
   Hint Rewrite land_round_lor_land_bound_l : zsimplify_fast zsimplify.
 
   Lemma lor_round_lor_land_bound_r x
     : Z.lor x (Z.round_lor_land_bound x) = if (0 <=? x) then Z.round_lor_land_bound x else x.
   Proof. t. Qed.
+#[global]
   Hint Rewrite lor_round_lor_land_bound_r : zsimplify_fast zsimplify.
   Lemma lor_round_lor_land_bound_l x
     : Z.lor (Z.round_lor_land_bound x) x = if (0 <=? x) then Z.round_lor_land_bound x else x.
   Proof. rewrite Z.lor_comm, lor_round_lor_land_bound_r; reflexivity. Qed.
+#[global]
   Hint Rewrite lor_round_lor_land_bound_l : zsimplify_fast zsimplify.
 
   Lemma land_round_bound_pos_r v x
@@ -223,10 +230,12 @@ Module Z.
     rewrite (Z.land_comm (Z.pos x)), Z.land_assoc.
     apply Z.land_upper_bound_l; rewrite ?Z.land_nonneg; t.
   Qed.
+#[global]
   Hint Resolve land_round_bound_pos_r (fun v x => proj1 (land_round_bound_pos_r v x)) (fun v x => proj2 (land_round_bound_pos_r v x)) : zarith.
   Lemma land_round_bound_pos_l v x
     : 0 <= Z.land (Z.pos x) v <= Z.land (Z.round_lor_land_bound (Z.pos x)) v.
   Proof. rewrite <- !(Z.land_comm v); apply land_round_bound_pos_r. Qed.
+#[global]
   Hint Resolve land_round_bound_pos_l (fun v x => proj1 (land_round_bound_pos_l v x)) (fun v x => proj2 (land_round_bound_pos_l v x)) : zarith.
 
   Lemma land_round_bound_neg_r v x
@@ -239,10 +248,12 @@ Module Z.
     rewrite !Z.land_assoc.
     etransitivity; [ apply Z.land_le; cbn; lia | ]; lia.
   Qed.
+#[global]
   Hint Resolve land_round_bound_neg_r (fun v x => proj1 (land_round_bound_neg_r v x)) (fun v x => proj2 (land_round_bound_neg_r v x)) : zarith.
   Lemma land_round_bound_neg_l v x
     : Z.land (Z.round_lor_land_bound (Z.neg x)) v <= Z.land (Z.neg x) v <= v.
   Proof. rewrite <- !(Z.land_comm v); apply land_round_bound_neg_r. Qed.
+#[global]
   Hint Resolve land_round_bound_neg_l (fun v x => proj1 (land_round_bound_neg_l v x)) (fun v x => proj2 (land_round_bound_neg_l v x)) : zarith.
 
   Lemma lor_round_bound_neg_r v x
@@ -257,10 +268,12 @@ Module Z.
     Z.peel_le.
     apply Z.land_upper_bound_l; rewrite ?Z.land_nonneg; t.
   Qed.
+#[global]
   Hint Resolve lor_round_bound_neg_r (fun v x => proj1 (lor_round_bound_neg_r v x)) (fun v x => proj2 (lor_round_bound_neg_r v x)) : zarith.
   Lemma lor_round_bound_neg_l v x
     : Z.lor (Z.round_lor_land_bound (Z.neg x)) v <= Z.lor (Z.neg x) v <= -1.
   Proof. rewrite <- !(Z.lor_comm v); apply lor_round_bound_neg_r. Qed.
+#[global]
   Hint Resolve lor_round_bound_neg_l (fun v x => proj1 (lor_round_bound_neg_l v x)) (fun v x => proj2 (lor_round_bound_neg_l v x)) : zarith.
 
   Lemma lor_round_bound_pos_r v x
@@ -273,10 +286,12 @@ Module Z.
     rewrite !Z.lor_assoc.
     etransitivity; [ | apply Z.lor_lower; rewrite ?Z.lor_nonneg; cbn; lia ]; lia.
   Qed.
+#[global]
   Hint Resolve lor_round_bound_pos_r (fun v x => proj1 (lor_round_bound_pos_r v x)) (fun v x => proj2 (lor_round_bound_pos_r v x)) : zarith.
   Lemma lor_round_bound_pos_l v x
     : v <= Z.lor (Z.pos x) v <= Z.lor (Z.round_lor_land_bound (Z.pos x)) v.
   Proof. rewrite <- !(Z.lor_comm v); apply lor_round_bound_pos_r. Qed.
+#[global]
   Hint Resolve lor_round_bound_pos_l (fun v x => proj1 (lor_round_bound_pos_l v x)) (fun v x => proj2 (lor_round_bound_pos_l v x)) : zarith.
 
   Lemma land_round_bound_pos_r' v x : Z.land v (Z.pos x) <= Z.land v (Z.round_lor_land_bound (Z.pos x)). Proof. auto with zarith. Qed.

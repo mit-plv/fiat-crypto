@@ -270,6 +270,7 @@ Section FunctionSpecs.
 
 End FunctionSpecs.
 
+#[global]
 Existing Instances spec_of_UnOp spec_of_BinOp bin_mul un_square bin_add bin_sub
          un_scmula24 un_inv spec_of_felem_copy spec_of_from_word.
 

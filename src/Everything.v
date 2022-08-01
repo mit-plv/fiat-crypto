@@ -330,6 +330,7 @@ Crypto.Util.Tactics.CacheTerm
 Crypto.Util.Tactics.ChangeInAll
 Crypto.Util.Tactics.ClearAll
 Crypto.Util.Tactics.ClearDuplicates
+Crypto.Util.Tactics.ClearFree
 Crypto.Util.Tactics.ClearHead
 Crypto.Util.Tactics.ClearbodyAll
 Crypto.Util.Tactics.ConstrFail

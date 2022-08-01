@@ -6,12 +6,16 @@ Local Open Scope Z_scope.
 Module N2Z.
   Lemma inj_land n m : Z.of_N (N.land n m) = Z.land (Z.of_N n) (Z.of_N m).
   Proof. destruct n, m; reflexivity. Qed.
+#[global]
   Hint Rewrite inj_land : push_Zof_N.
+#[global]
   Hint Rewrite <- inj_land : pull_Zof_N.
 
   Lemma inj_lor n m : Z.of_N (N.lor n m) = Z.lor (Z.of_N n) (Z.of_N m).
   Proof. destruct n, m; reflexivity. Qed.
+#[global]
   Hint Rewrite inj_lor : push_Zof_N.
+#[global]
   Hint Rewrite <- inj_lor : pull_Zof_N.
 
   Lemma inj_shiftl: forall x y, Z.of_N (N.shiftl x y) = Z.shiftl (Z.of_N x) (Z.of_N y).
@@ -36,7 +40,9 @@ Module N2Z.
         rewrite Z2N.id in g; [symmetry|assumption].
         apply Z.testbit_neg_r; lia.
   Qed.
+#[global]
   Hint Rewrite inj_shiftl : push_Zof_N.
+#[global]
   Hint Rewrite <- inj_shiftl : pull_Zof_N.
 
   Lemma inj_shiftr: forall x y, Z.of_N (N.shiftr x y) = Z.shiftr (Z.of_N x) (Z.of_N y).
@@ -49,6 +55,8 @@ Module N2Z.
     rewrite N2Z.inj_add; f_equal.
     apply Z2N.id; assumption.
   Qed.
+#[global]
   Hint Rewrite inj_shiftr : push_Zof_N.
+#[global]
   Hint Rewrite <- inj_shiftr : pull_Zof_N.
 End N2Z.
