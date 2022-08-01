@@ -41,6 +41,7 @@ Require Import Coq.ZArith.Znat.
 Require Import Crypto.Util.CPSUtil.
 Require Import Crypto.Util.CPSNotations.
 Local Open Scope cps_scope.
+Notation "x' <- v ; C" := (v (fun x' => C)) (only parsing).
 
 Require Import Crypto.Util.Notations.
 Local Open Scope string_scope.
@@ -101,7 +102,7 @@ Module solinas_reduction.
         let r := (fst lo_hi) ++ hi in
         r.
 
-      Definition reduce1_cps base s c n m (p : list Z) {T} (f : list Z -> T) : T :=
+      Definition reduce1_cps {T} base s c n m (p : list Z) (f : list Z -> T) :=
         let p_a := Positional.to_associational weight n p in
         let r_a := sat_reduce base s c n p_a in
         let r_rows := Saturated.Rows.from_associational weight m r_a in
@@ -113,17 +114,17 @@ Module solinas_reduction.
           f (add_to_nth 0 (weight (m) * snd r_flat) (fst r_flat)).
       Check reduce1_cps.
 
-      Definition reduce_full_cps base s c n (p : list Z) : ~> list Z :=
-        (r1 <- @reduce1_cps base s c (2*n) (S n) p;
+      Definition reduce_full_cps {T} base s c n (p : list Z) (f : list Z -> T):=
+        (r1 <- reduce1_cps base s c (2*n) (S n) p;
          (let bound := (0, 2^machine_wordsize) in
           if (is_bounded_by (repeat bound (S n)) r1) then
-            fun T => (r2 <- @reduce1_cps base s c (S n) (S n) r1;
-                   reduce1_cps base s c (S n) n r2)
+            (r2 <- reduce1_cps base s c (S n) (S n) r1;
+             reduce1_cps base s c (S n) n r2 f)
           else
-            return r1)).
+            f r1)).
       Check reduce_full_cps.
 
-      Definition mul_no_reduce_cps base n (p q : list Z) {T} (f : list Z -> T):=
+      Definition mul_no_reduce_cps {T} base n (p q : list Z) (f : list Z -> T):=
       let p_a := Positional.to_associational weight n p in
       let q_a := Positional.to_associational weight n q in
       let pq_a := Saturated.Associational.sat_mul base p_a q_a in
@@ -136,20 +137,18 @@ Module solinas_reduction.
         f (add_to_nth 0 (weight (2 * n) * snd pq) (fst pq)).
       Check mul_no_reduce_cps.
 
-      Definition mulmod_cps base s c n (p q : list Z) : ~> list Z :=
-        (mul <- @mul_no_reduce_cps base n p q;
-         @reduce_full_cps base s c n mul).
+      Definition mulmod_cps {T} base s c n (p q : list Z) (f : list Z -> T) :=
+        (mul <- mul_no_reduce_cps base n p q;
+         reduce_full_cps base s c n mul f).
       Check mulmod_cps.
 
       Definition mulmod base s c n (p q : list Z) :=
-        mulmod_cps base s c n p q _ id.
+        mulmod_cps (T := list Z) base s c n p q (id).
       Check mulmod.
 
-      Definition reduce1 base s c n m p :=
-        reduce1_cps base s c n m p id.
-
-      Definition x := ltac:(let y := (eval cbv [reduce1_cps] in reduce1)
-                            in exact y).
+      Definition x base s c n p q := ltac:(let y := (eval cbv beta delta [mulmod mulmod_cps mul_no_reduce_cps reduce_full_cps reduce1_cps id] in (mulmod base s c n p q)) in exact y).
+      Print x.
+      Check x.
 
     End __.
 
@@ -187,23 +186,23 @@ Module solinas_reduction.
       Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
 
       Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
-      Let bound' := Some (repeat bound (n) ++ [Some r[0 ~> 1]%zrange]).
-      Fail Time Compute
+
+      Time Compute
            Show.show
            (Pipeline.BoundsPipelineToString
-              "fiat" "mul"
+              "fiat_p25519_" "fiat_p25519_mul"
               false
               false
               None
               possible_values
               machine_wordsize
               ltac:(let n := (eval cbv in n) in
-                    let r := Reify (mulmod base s c n) in
+                    let r := Reify (x base s c n) in
                     exact r)
                      (fun _ _ => [])
-                     (Some (repeat bound (2*n)), tt)
+                     (Some (repeat bound (n)), (Some (repeat bound n), tt))
                      (Some (repeat bound (n)))
-                     (None, tt)
+                     (None, (None, tt))
                      (None)
              : Pipeline.ErrorT _).
 
