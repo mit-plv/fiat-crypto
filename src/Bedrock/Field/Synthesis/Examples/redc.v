@@ -63,7 +63,7 @@ Section WithParameters.
           @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned S) = sval;
         ensures t' m' := t=t' /\ exists S',
             m' =* array scalar (word.of_Z 4) Sstart S' * R /\
-              ((word.unsigned a) * bval * ri + sval) mod prime =
+              ((word.unsigned a) * bval + sval) * ri mod prime =
                 @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned S') mod prime
       }.
   
