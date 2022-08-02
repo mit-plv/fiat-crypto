@@ -22,61 +22,80 @@ Require Import coqutil.Z.Lia.
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
 
 Section WithParameters.
-  Context {word: word.word 32} {mem: map.map word Byte.byte}.
-  Context {word_ok: word.ok word} {mem_ok: map.ok mem}.
-
-  Local Infix "*" := sep. Local Infix "*" := sep : type_scope.
   
   Import List.
   Import WordByWordMontgomery.
-
-  (* redc_alt ought to take in small arrays A and B, and output an array S *)
-  (* S should be between 0 and the prime, and should evaluate mod the prime to the same thing as 
-     A * B * R^-1 *)
-
-  (* redc_step ought to take in small arrays B and S, and value a, and output an array S' *)
-  (* S' should be small, and should eval to the same as (a * B + S) * R^-1 modulo the prime *)
   
+  Context {prime: Z} (r := 32) {ri : Z}.
+  Context {ri_correct: (ri * r) mod prime = 1}.
+  (* prime is the modulus; r is the word size; ri is the inverse of r mod prime *)
+  Context {word: word.word r} {mem: map.map word Byte.byte}.
+  Context {word_ok: word.ok word} {mem_ok: map.ok mem}.
+ 
+  (* Old notation:
+
+  Local Infix "*" := sep. Local Infix "*" := sep : type_scope.
+
   Fail Instance spec_of_redc_alt : spec_of "redc_alt" := fun functions =>
-       forall Astart A Bstart B Sstart len prime r ri t m,
+       forall Astart A Bstart B Sstart S (len: word) t m R,
          (* A and B are lists of length len, they correspond to arrays starting at Astart and Bstart respectively *)
          word.unsigned len = Z.of_nat (List.length A) ->
          (array scalar (word.of_Z 8) Astart A m) ->
          word.unsigned len = Z.of_nat (List.length B) ->
          (array scalar (word.of_Z 8) Bstart B m) ->
-         (* prime is the modulus; r is the word size; ri is the inverse of r mod prime *)
-         (r * @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned ri) ) mod prime = 1 ->
-        
+         word.unsigned len = Z.of_nat (List.length S) ->
+         (array scalar (word.of_Z 8) Sstart S * R)%sep m ->
+         
         WeakestPrecondition.call functions
           "redc_alt" t m (Astart :: Bstart :: len :: nil )
           (fun t' m' rets => t=t' /\ word.unsigned len = Z.of_nat (List.length rets) /\
                                ( @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned A) *
                                  @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned B) *
-                                 @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned ri) ) mod prime =
+                                  ri ) mod prime =
                                  @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned rets) mod prime /\
-                                 sep (fun m'' => array scalar (word.of_Z 8) Sstart rets m) (fun m'' => m'' = m) m' ).
+                               (array scalar (word.of_Z 8) Sstart rets * R )%sep m' ).
+*)
+  
+  Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
 
-(* Error:
-Unable to satisfy the following constraints:
-In environment:
-word : Interface.word 32
-mem : map.map word.rep (Init.Byte.byte : Type)
-word_ok : word.ok word
-mem_ok : map.ok mem
-functions : list (prod String.string (prod (prod (list String.string) (list String.string)) cmd))
-Astart : word.rep
-A : list word.rep
-Bstart : word.rep
-B : list word.rep
-len : word.rep
-prime, r : Z
-ri : list word.rep
-t : trace
-m : map.rep
-t' : trace
-m' : map.rep
-rets : list word.rep
+  (* redc_alt ought to take in small arrays A and B, and output an array S *)
+  (* S should be small, and should evaluate mod the prime to the same thing as 
+     A * B * R^-1 *)
+  
+  Fail Instance spec_of_redc_alt : spec_of "redc_alt" :=
+    fnspec! "redc_alt" Astart Bstart Sstart (len: word) / A (aval: Z) B (bval: Z) S Ra Rb R,
+    { requires t m :=
+        m =* array scalar (word.of_Z 8) Astart A * Ra /\
+        m =* array scalar (word.of_Z 4) Bstart B * Rb /\
+        m =* array scalar (word.of_Z 4) Sstart S * R /\
+        word.unsigned len = Z.of_nat (List.length A)  /\
+        word.unsigned len = Z.of_nat (List.length B)  /\
+        word.unsigned len = Z.of_nat (List.length S) /\
+        @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned A) = aval /\
+        @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned B) = bval;                                       
+      ensures t' m' := t=t' /\ exists S',
+          m' =* array scalar (word.of_Z 4) Sstart S' * R /\
+          ( aval * bval * ri ) mod prime =
+            @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned S') mod prime
+    }.
 
-?word : "Interface.word ?width"*)
+  (* redc_step ought to take in small arrays B and S, and value a, and output an array S' *)
+  (* S' should be small, and should eval to the same as (a * B + S) * R^-1 modulo the prime *)
+  
+  Fail Instance spec_of_redc_step : spec_of "redc_step" := 
+    fnspec! "redc_step" a Bstart Sstart (len: word) / B (bval: Z) S (sval: Z) R Rb,
+      { requires t m :=
+          m =* array scalar (word.of_Z 4) Bstart B * Rb /\
+          m =* array scalar (word.of_Z 4) Sstart S * R /\
+          word.unsigned len = Z.of_nat (List.length B) /\
+          word.unsigned len = Z.of_nat (List.length S) /\
+          @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned B) = bval /\
+          @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned S) = sval;
+        ensures t' m' := t=t' /\ exists S',
+            m' =* array scalar (word.of_Z 4) Sstart S' * R /\
+              ((word.unsigned a) * bval * ri + sval) mod prime =
+                @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned S') mod prime
+      }.
+  
   
 End WithParameters.
