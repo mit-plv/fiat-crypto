@@ -35,7 +35,7 @@ Section WithParameters.
   Fail Instance spec_of_redc_alt : spec_of "redc_alt" :=
     fnspec! "redc_alt" Astart Bstart Sstart (len: word) / A (aval: Z) B (bval: Z) S Ra Rb R,
     { requires t m :=
-        m =* array scalar (word.of_Z 8) Astart A * Ra /\
+        m =* array scalar (word.of_Z 4) Astart A * Ra /\
         m =* array scalar (word.of_Z 4) Bstart B * Rb /\
         m =* array scalar (word.of_Z 4) Sstart S * R /\
         word.unsigned len = Z.of_nat (List.length A)  /\
