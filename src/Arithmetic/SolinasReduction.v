@@ -8,11 +8,8 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
-Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
-Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Arithmetic.UniformWeight.
-Require Crypto.PushButtonSynthesis.SaturatedSolinas.
-Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
+Require Import Crypto.Arithmetic.Saturated.
 Require Crypto.Stringification.C.
 Require Crypto.Stringification.Go.
 Require Crypto.Stringification.Java.
@@ -61,154 +58,10 @@ Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
-Local Existing Instance default_low_level_rewriter_method.
-Local Existing Instance AbstractInterpretation.default_Options.
-Local Instance : unfold_value_barrier_opt := true.
-Local Instance : assembly_hints_lines_opt := [].
-Local Instance : ignore_unique_asm_names_opt := false.
-Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
-Local Existing Instance default_language_naming_conventions.
-Local Existing Instance default_documentation_options.
-Local Instance : package_name_opt := None.
-Local Instance : class_name_opt := None.
-
-Local Existing Instance default_output_options.
-
 Module solinas_reduction.
 
-  Import Crypto.Arithmetic.Saturated.
-
-  Module tmp.
-
-    Section __.
-
-      Context (machine_wordsize := 64)
-              (weight := uweight machine_wordsize)
-              (up_bound := 2 ^ (machine_wordsize / 4))
-              {wprops : @weight_properties weight}.
-
-      Definition dual_map {A B : Type} (f : A -> B -> bool) (l1 : list A) (l2 : list B) :=
-        map (fun x => (f (fst x) (snd x))) (combine l1 l2).
-      Definition fold_andb_map' {A B : Type} (f : A -> B -> bool) (ls1 : list A) (ls2 : list B) :=
-        fold_right andb true (dual_map f ls1 ls2).
-      Definition is_bounded_by bounds ls :=
-        fold_andb_map' (fun r v'' => (fst r <=? v'') && (v'' <=? snd r)) bounds ls.
-
-      Definition sat_reduce base s c n (p : list (Z * Z)) :=
-        let s' := fst (Saturated.Rows.adjust_s weight (S (S n)) s) in
-        let lo_hi := Associational.split s' p in
-        let coef := Saturated.Associational.sat_mul_const base [(1, s'/s)] c in
-        let hi := Saturated.Associational.sat_mul_const base coef (snd lo_hi) in
-        let r := (fst lo_hi) ++ hi in
-        r.
-
-      Definition reduce1_cps {T} base s c n m (p : list Z) (f : list Z -> T) :=
-        let p_a := Positional.to_associational weight n p in
-        let r_a := sat_reduce base s c n p_a in
-        let r_rows := Saturated.Rows.from_associational weight m r_a in
-        let r_flat := Saturated.Rows.flatten weight m r_rows in
-        let bound := (0, 2^machine_wordsize - 1) in
-        if (is_bounded_by (repeat bound n) p) then
-          f (fst r_flat)
-        else
-          f (add_to_nth 0 (weight (m) * snd r_flat) (fst r_flat)).
-      Check reduce1_cps.
-
-      Definition reduce_full_cps {T} base s c n (p : list Z) (f : list Z -> T):=
-        (r1 <- reduce1_cps base s c (2*n) (S n) p;
-         (let bound := (0, 2^machine_wordsize) in
-          if (is_bounded_by (repeat bound (S n)) r1) then
-            (r2 <- reduce1_cps base s c (S n) (S n) r1;
-             reduce1_cps base s c (S n) n r2 f)
-          else
-            f r1)).
-      Check reduce_full_cps.
-
-      Definition mul_no_reduce_cps {T} base n (p q : list Z) (f : list Z -> T):=
-      let p_a := Positional.to_associational weight n p in
-      let q_a := Positional.to_associational weight n q in
-      let pq_a := Saturated.Associational.sat_mul base p_a q_a in
-      let pq_rows := Saturated.Rows.from_associational weight (2*n) pq_a in
-      let pq := Saturated.Rows.flatten weight (2*n) pq_rows in
-      let bound := (0, 2^machine_wordsize - 1) in
-      if (is_bounded_by (repeat bound n) p && is_bounded_by (repeat bound n) q) then
-        f (fst pq)
-      else
-        f (add_to_nth 0 (weight (2 * n) * snd pq) (fst pq)).
-      Check mul_no_reduce_cps.
-
-      Definition mulmod_cps {T} base s c n (p q : list Z) (f : list Z -> T) :=
-        (mul <- mul_no_reduce_cps base n p q;
-         reduce_full_cps base s c n mul f).
-      Check mulmod_cps.
-
-      Definition mulmod base s c n (p q : list Z) :=
-        mulmod_cps (T := list Z) base s c n p q (id).
-      Check mulmod.
-
-      Definition x base s c n p q := ltac:(let y := (eval cbv beta delta [mulmod mulmod_cps mul_no_reduce_cps reduce_full_cps reduce1_cps id] in (mulmod base s c n p q)) in exact y).
-      Print x.
-      Check x.
-
-    End __.
-
-    Section __.
-
-      Let s := 2^255.
-      Let c := [(1, 19)].
-      Let machine_wordsize := 64.
-      Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
-      Let m : nat := 2 * n.
-      Let w : nat -> Z := weight machine_wordsize 1.
-      Let up_bound := 2 ^ (machine_wordsize / 4).
-      Let base : Z := 2 ^ machine_wordsize.
-
-      Import Stringification.C.Compilers.
-      Import Stringification.C.Compilers.ToString.
-
-      Local Existing Instances ToString.C.OutputCAPI Pipeline.show_ErrorMessage.
-      Local Instance : only_signed_opt := false.
-      Local Instance : no_select_opt := false.
-      Local Instance : static_opt := true.
-      Local Instance : internal_static_opt := true.
-      Local Instance : inline_opt := true.
-      Local Instance : inline_internal_opt := true.
-      Local Instance : use_mul_for_cmovznz_opt := false.
-      Local Instance : emit_primitives_opt := true.
-      Local Instance : should_split_mul_opt := false.
-      Local Instance : should_split_multiret_opt := false.
-      Local Instance : widen_carry_opt := false.
-      Local Instance : widen_bytes_opt := true. (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
-      Let possible_values := prefix_with_carry [machine_wordsize].
-      Local Instance : machine_wordsize_opt := machine_wordsize. (* for show *)
-      Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
-      Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
-      Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
-
-      Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
-
-      Time Compute
-           Show.show
-           (Pipeline.BoundsPipelineToString
-              "fiat_p25519_" "fiat_p25519_mul"
-              false
-              false
-              None
-              possible_values
-              machine_wordsize
-              ltac:(let n := (eval cbv in n) in
-                    let r := Reify (x base s c n) in
-                    exact r)
-                     (fun _ _ => [])
-                     (Some (repeat bound (n)), (Some (repeat bound n), tt))
-                     (Some (repeat bound (n)))
-                     (None, (None, tt))
-                     (None)
-             : Pipeline.ErrorT _).
-
-    End __.
-
-  End tmp.
+  Import Core.Associational.
+  Import Core.Positional.
 
   Section __.
 
@@ -276,8 +129,8 @@ Module solinas_reduction.
       autorewrite with const_simpl in *.
 
     Hint Rewrite eval_cons using auto : push_eval.
-    Hint Rewrite Associational.eval_sat_mul using lia : push_eval.
-    Hint Rewrite Associational.eval_sat_mul_const using lia : push_eval.
+    Hint Rewrite eval_sat_mul using lia : push_eval.
+    Hint Rewrite eval_sat_mul_const using lia : push_eval.
     Hint Rewrite eval_split using auto : push_eval.
     Hint Rewrite Rows.eval_from_associational using (auto || lia) : push_eval.
     Hint Rewrite Rows.flatten_mod using (eauto using Rows.length_from_associational) : push_eval.
@@ -2010,6 +1863,17 @@ Module solinas_reduction.
     Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
     Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
     Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+
+    Local Existing Instance default_low_level_rewriter_method.
+    Local Existing Instance AbstractInterpretation.default_Options.
+    Local Instance : unfold_value_barrier_opt := true.
+    Local Instance : assembly_hints_lines_opt := [].
+    Local Instance : ignore_unique_asm_names_opt := false.
+    Local Existing Instance default_language_naming_conventions.
+    Local Existing Instance default_documentation_options.
+    Local Instance : package_name_opt := None.
+    Local Instance : class_name_opt := None.
+    Local Existing Instance default_output_options.
 
     Let bounds := repeat bound n ++ [Some r[0 ~> (2^(machine_wordsize/4) - 1)]%zrange].
 

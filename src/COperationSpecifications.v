@@ -494,6 +494,25 @@ Module SaturatedSolinas.
   End __.
 End SaturatedSolinas.
 
+Module SolinasReduction.
+  Section __.
+    Context (wt : nat -> Z)
+            (n : nat)
+            (m : Z)
+            (saturated_bounds : list (option zrange))
+            (length_saturated_bouns : length saturated_bounds = n).
+    Local Notation eval := (Positional.eval wt n).
+
+    Definition mulmod_correct
+               (mulmod : list Z -> list Z -> list Z) :=
+      forall x y,
+        list_Z_bounded_by saturated_bounds x ->
+        list_Z_bounded_by saturated_bounds y ->
+        ((eval (mulmod x y)) mod m = (eval x * eval y) mod m) /\
+          (is_bounded_by saturated_bounds (mulmod x y) = true).
+  End __.
+End SolinasReduction.
+
 Module WordByWordMontgomery.
   Import Arithmetic.WordByWordMontgomery.
   Local Coercion Z.of_nat : nat >-> Z.
