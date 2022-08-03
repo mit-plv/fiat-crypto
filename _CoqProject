@@ -13,13 +13,11 @@ src/MiscCompilerPassesProofs.v
 src/MiscCompilerPassesProofsExtra.v
 src/SlowPrimeSynthesisExamples.v
 src/SlowPrimeSynthesisExamplesCopy.v
-src/SolinasReduction.v
 src/StandaloneDebuggingExamples.v
 src/StandaloneHaskellMain.v
 src/StandaloneOCamlMain.v
 src/TAPSort.v
 src/UnsaturatedSolinasHeuristics.v
-src/tmp.v
 src/AbstractInterpretation/AbstractInterpretation.v
 src/AbstractInterpretation/Proofs.v
 src/AbstractInterpretation/Wf.v
@@ -51,6 +49,7 @@ src/Arithmetic/Partition.v
 src/Arithmetic/PrimeFieldTheorems.v
 src/Arithmetic/Primitives.v
 src/Arithmetic/Saturated.v
+src/Arithmetic/SolinasReduction.v
 src/Arithmetic/UniformWeight.v
 src/Arithmetic/WordByWordMontgomery.v
 src/Arithmetic/BarrettReduction/Generalized.v
@@ -204,6 +203,7 @@ src/PushButtonSynthesis/ReificationCache.v
 src/PushButtonSynthesis/SaturatedSolinas.v
 src/PushButtonSynthesis/SaturatedSolinasReificationCache.v
 src/PushButtonSynthesis/SmallExamples.v
+src/PushButtonSynthesis/SolinasReduction.v
 src/PushButtonSynthesis/UnsaturatedSolinas.v
 src/PushButtonSynthesis/UnsaturatedSolinasReificationCache.v
 src/PushButtonSynthesis/WordByWordMontgomery.v

@@ -36,6 +36,7 @@ Crypto.Arithmetic.Partition
 Crypto.Arithmetic.PrimeFieldTheorems
 Crypto.Arithmetic.Primitives
 Crypto.Arithmetic.Saturated
+Crypto.Arithmetic.SolinasReduction
 Crypto.Arithmetic.UniformWeight
 Crypto.Arithmetic.WordByWordMontgomery
 Crypto.ArithmeticCPS.BaseConversion
@@ -191,6 +192,7 @@ Crypto.PushButtonSynthesis.ReificationCache
 Crypto.PushButtonSynthesis.SaturatedSolinas
 Crypto.PushButtonSynthesis.SaturatedSolinasReificationCache
 Crypto.PushButtonSynthesis.SmallExamples
+Crypto.PushButtonSynthesis.SolinasReduction
 Crypto.PushButtonSynthesis.UnsaturatedSolinas
 Crypto.PushButtonSynthesis.UnsaturatedSolinasReificationCache
 Crypto.PushButtonSynthesis.WordByWordMontgomery
@@ -219,7 +221,6 @@ Crypto.Rewriter.TestRules
 Crypto.Rewriter.TestRulesProofs
 Crypto.SlowPrimeSynthesisExamples
 Crypto.SlowPrimeSynthesisExamplesCopy
-Crypto.SolinasReduction
 Crypto.Spec.CompleteEdwardsCurve
 Crypto.Spec.Curve25519
 Crypto.Spec.ModularArithmetic
