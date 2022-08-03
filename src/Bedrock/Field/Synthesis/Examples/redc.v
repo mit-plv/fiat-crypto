@@ -4,7 +4,7 @@ Import Syntax BinInt String List.ListNotations.
 Local Open Scope string_scope. Local Open Scope Z_scope. Local Open Scope list_scope.
 
 From bedrock2 Require Import WeakestPrecondition WeakestPreconditionProperties
-  Semantics BasicC64Semantics ProgramLogic Scalars Array Loops ZnWords.
+  Syntax Semantics BasicC64Semantics ProgramLogic Scalars Array Loops ZnWords.
 From bedrock2.Map Require Import Separation SeparationLogic.
 Require Import coqutil.Map.Interface.
 From coqutil.Word Require Import Interface Properties.
@@ -66,5 +66,34 @@ Section WithParameters.
               ((word.unsigned a) * bval + sval) * ri mod prime =
                 @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned S') mod prime
       }.  
+  
+  Definition redc_alt : func :=
+    let redc_step : String.string := "redc_step" in 
+    ("redc_alt", (["Astart"; "Bstart"; "Sstart"; "len"], [], bedrock_func_body:(
+    i = $0;
+    while (i < len) { 
+         store4(Sstart + $4*i, $0);
+         i = i << $1          
+    };
+    i = $0;       
+    while (i < len) {
+        redc_step ( load4(Astart + $4*i), Bstart, Sstart, len );
+        i = i << $1
+      }
+    ))).
+  
+  Section OuterLoop.
+    
+    Context {redc_step_body : cmd}.
+    Definition redc_step : func
+      := ("redc_step", (["a"; "Bstart"; "Sstart"; "len"], [],  redc_step_body  )).
+    Fail Context {redc_step_ok : program_logic_goal_for_function! redc_step}.
+             (* "No matching clauses for match." *)
+    
+    Theorem redc_alt_ok :
+      program_logic_goal_for_function! redc_alt.
+    Proof. Admitted. 
+    
+  End OuterLoop.
   
 End WithParameters.
