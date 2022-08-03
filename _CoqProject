@@ -19,6 +19,7 @@ src/StandaloneHaskellMain.v
 src/StandaloneOCamlMain.v
 src/TAPSort.v
 src/UnsaturatedSolinasHeuristics.v
+src/tmp.v
 src/AbstractInterpretation/AbstractInterpretation.v
 src/AbstractInterpretation/Proofs.v
 src/AbstractInterpretation/Wf.v
