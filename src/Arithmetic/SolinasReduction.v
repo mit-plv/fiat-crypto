@@ -58,7 +58,7 @@ Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
-Module solinas_reduction.
+Module SolinasReduction.
 
   Import Core.Associational.
   Import Core.Positional.
@@ -959,8 +959,9 @@ Module solinas_reduction.
     Qed.
 
     Definition mulmod base s c n (p q : list Z) :=
-      ltac:(let x := (eval cbv beta delta [mulmod_cps mul_no_reduce_cps reduce_full_cps reduce1_cps] in (@mulmod_cps (list Z) base s c n p q id)) in
+      ltac:(let x := (eval cbv beta delta [mulmod_cps mul_no_reduce_cps reduce_full_cps reduce1_cps id] in (@mulmod_cps (list Z) base s c n p q id)) in
             exact x).
+    Print mulmod.
 
     Lemma mulmod_unfold base s c n : forall p q,
         mulmod' base s c n p q = mulmod_cps base s c n p q id.
@@ -2130,4 +2131,4 @@ Finished transaction in 25.313 secs (25.202u,0.107s) (successful)
 
   End compile.
 
-End solinas_reduction.
+End SolinasReduction.

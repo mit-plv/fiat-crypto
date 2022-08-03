@@ -26,12 +26,12 @@ Require Import Crypto.Stringification.Language.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Saturated.
-(* Require Import Crypto.Arithmetic.SolinasReduction. *)
+Require Import Crypto.Arithmetic.SolinasReduction.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
-Require Import Crypto.PushButtonSynthesis.SaturatedSolinasReificationCache.
+(* Require Import Crypto.PushButtonSynthesis.SaturatedSolinasReificationCache. *)
 Require Import Crypto.Assembly.Equivalence.
 Import ListNotations.
 Local Open Scope string_scope. Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
@@ -45,7 +45,7 @@ Import Compilers.API.
 
 Import COperationSpecifications.Primitives.
 Import COperationSpecifications.Solinas.
-Import COperationSpecifications.SaturatedSolinas.
+Import COperationSpecifications.SolinasReduction.
 
 Import Associational Positional.
 
