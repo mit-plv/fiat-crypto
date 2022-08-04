@@ -9,25 +9,24 @@ Require Import Crypto.Arithmetic.SolinasReduction.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Local Open Scope Z_scope.
 
-(* Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *) *)
+Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
 Module Export SolinasReductionCache.
 
-  Print SolinasReduction.mulmod.
+  Import SolinasReduction.SolinasReduction.
 
-  Compute ltac:(let t := SolinasReduction.mulmod' in exact t).
-
-  Definition mulmod
-             (base s : Z)
+  Definition mul
+             (base : Z)
+             (s : Z)
              (c : list (Z * Z))
-             (n : nat)
-    := @SolinasReduction.mulmod base s c n.
-  Print mulmod.
-  Time Compute ltac:(let t := mulmod in exact t).
+             (n: nat)
+    := mulmod base s c n.
+  Check mul.
+  Print mul.
 
-  Derive reified_mul_gen
-         SuchThat (is_reification_of reified_mul_gen mulmod)
-         As reified_mul_gen_correct.
+  Derive reified_solred_gen
+         SuchThat (is_reification_of reified_solred_gen mul)
+         As reified_solred_gen_correct.
   Proof. Time cache_reify (). Time Qed.
 #[global]
   Hint Extern 1 (_ = _) => apply_cached_reification mulmod (proj1 reified_mul_gen_correct) : reify_cache_gen.
