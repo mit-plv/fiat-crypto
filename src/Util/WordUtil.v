@@ -746,6 +746,7 @@ Section WordBounds.
 End WordBounds.
 
 Module Export Hints2.
+#[global]
   Hint Rewrite NToWord_wordToN : pull_wordToN.
 End Hints2.
 
@@ -812,6 +813,7 @@ Lemma wordToN_cast_word {n} (w:word n) m pf :
   wordToN (@cast_word n m pf w) = wordToN w.
 Proof. destruct pf; rewrite cast_word_refl; trivial. Qed.
 Module Export Hints4.
+#[global]
   Hint Rewrite @wordToN_cast_word : push_wordToN.
 End Hints4.
 
@@ -1057,19 +1059,29 @@ Section Bounds.
 End Bounds.
 
 Module Export Hints5.
+#[global]
   Hint Rewrite @wordToN_wplus using word_util_arith : push_wordToN.
+#[global]
   Hint Rewrite <- @wordToN_wplus using word_util_arith : pull_wordToN.
 
+#[global]
   Hint Rewrite @wordToN_wminus using word_util_arith : push_wordToN.
+#[global]
   Hint Rewrite <- @wordToN_wminus using word_util_arith : pull_wordToN.
 
+#[global]
   Hint Rewrite @wordToN_wmult using word_util_arith : push_wordToN.
+#[global]
   Hint Rewrite <- @wordToN_wmult using word_util_arith : pull_wordToN.
 
+#[global]
   Hint Rewrite @wordToN_wand using word_util_arith : push_wordToN.
+#[global]
   Hint Rewrite <- @wordToN_wand using word_util_arith : pull_wordToN.
 
+#[global]
   Hint Rewrite @wordToN_wor using word_util_arith : push_wordToN.
+#[global]
   Hint Rewrite <- @wordToN_wor using word_util_arith : pull_wordToN.
 End Hints5.
 

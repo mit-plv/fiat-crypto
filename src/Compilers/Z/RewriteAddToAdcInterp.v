@@ -68,4 +68,5 @@ Section language.
   Qed.
 End language.
 
+#[global]
 Hint Rewrite @InterpRewriteAdc using solve_wf_side_condition : reflective_interp.

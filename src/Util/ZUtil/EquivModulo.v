@@ -59,6 +59,7 @@ Module Z.
     Lemma equiv_modulo_mod_small x y : x  == y -> 0 <= x < N -> x = y mod N.
     Proof using Type. transitivity (x mod N); [rewrite Z.mod_small|]; auto. Qed.
   End equiv_modulo.
+#[global]
   Hint Rewrite div_to_inv_modulo using solve [ eassumption | lia ] : zstrip_div.
 
   Module EquivModuloInstances (dummy : Nop). (* work around https://coq.inria.fr/bugs/show_bug.cgi?id=4973 *)
@@ -94,5 +95,6 @@ Module Export Hints.
   Export Crypto.Util.ZUtil.Hints.ZArith.
   Export Crypto.Util.ZUtil.Modulo.Hints.
   Export Crypto.Util.ZUtil.Modulo.PullPush.Hints.
+#[global]
   Hint Rewrite Z.div_to_inv_modulo using solve [ eassumption | lia ] : zstrip_div.
 End Hints.

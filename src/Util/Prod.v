@@ -159,6 +159,7 @@ Ltac subst_prod_step :=
 Ltac subst_prod := repeat subst_prod_step.
 
 Module Export Hints.
+#[global]
   Hint Rewrite @fst_pair @snd_pair : cancel_pair.
   Global Hint Extern 2 (Proper _ prod) => apply iffTp_iffTp_prod_Proper : typeclass_instances.
   Global Hint Extern 2 (Proper _ (fun A => prod A)) => refine iff_iffTp_prod_Proper : typeclass_instances.

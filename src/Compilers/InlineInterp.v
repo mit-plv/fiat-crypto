@@ -135,4 +135,5 @@ Section language.
   Qed.
 End language.
 
+#[global]
 Hint Rewrite @InterpInlineConst @interp_inline_const @interpf_inline_constf using solve_wf_side_condition : reflective_interp.

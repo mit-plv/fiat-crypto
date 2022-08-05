@@ -74,6 +74,7 @@ Module Associational.
   Proof using Type. induction p; rewrite <-?List.app_comm_cons;
            rewrite ?eval_nil, ?eval_cons; nsatz.              Qed.
 
+#[global]
   Hint Rewrite eval_nil eval_cons eval_app : push_eval.
   Local Ltac push := autorewrite with
       push_eval push_map push_partition push_flat_map
@@ -82,6 +83,7 @@ Module Associational.
   Lemma eval_map_mul (a x:Z) (p:list (Z*Z))
   : eval (List.map (fun t => (a*fst t, x*snd t)) p) = a*x*eval p.
   Proof using Type. induction p; push; nsatz.                            Qed.
+#[global]
   Hint Rewrite eval_map_mul : push_eval.
 
   Definition mul (p q:list (Z*Z)) : list (Z*Z) :=
@@ -91,12 +93,14 @@ Module Associational.
     q) p.
   Lemma eval_mul p q : eval (mul p q) = eval p * eval q.
   Proof using Type. induction p; cbv [mul]; push; nsatz.                 Qed.
+#[global]
   Hint Rewrite eval_mul : push_eval.
 
   Definition negate_snd (p:list (Z*Z)) : list (Z*Z) :=
     map (fun cx => (fst cx, -snd cx)) p.
   Lemma eval_negate_snd p : eval (negate_snd p) = - eval p.
   Proof using Type. induction p; cbv [negate_snd]; push; nsatz.          Qed.
+#[global]
   Hint Rewrite eval_negate_snd : push_eval.
 
   Example base10_2digit_mul (a0:Z) (a1:Z) (b0:Z) (b1:Z) :
@@ -134,6 +138,7 @@ Module Associational.
     eval (reduce s c p) mod (s - eval c) = eval p mod (s - eval c).
   Proof using Type. cbv [reduce]; push.
          rewrite <-reduction_rule, eval_split; trivial.      Qed.
+#[global]
   Hint Rewrite eval_reduce : push_eval.
 
   Definition bind_snd (p : list (Z*Z)) :=
@@ -175,10 +180,15 @@ Module Associational.
     Hint Rewrite eval_carry using auto : push_eval.
   End Carries.
   Module Export Hints.
+#[global]
     Hint Rewrite eval_nil eval_cons eval_app : push_eval.
+#[global]
     Hint Rewrite eval_map_mul : push_eval.
+#[global]
     Hint Rewrite eval_mul : push_eval.
+#[global]
     Hint Rewrite eval_negate_snd : push_eval.
+#[global]
     Hint Rewrite eval_reduce : push_eval.
   End Hints.
 End Associational.
@@ -476,6 +486,7 @@ Module Positional. Section Positional.
 End Positional.
 (* Hint Rewrite disappears after the end of a section *)
 Module Export Hints.
+#[global]
   Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_chained_carries @length_encode @length_sub @length_opp : distr_length.
 End Hints.
 End Positional.

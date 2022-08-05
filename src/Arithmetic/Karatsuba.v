@@ -211,8 +211,10 @@ Context (weight : nat -> Z)
   Qed.
 End Karatsuba.
 Global Hint Opaque karatsuba_mul goldilocks_mul : uncps.
+#[global]
 Hint Rewrite karatsuba_mul_id goldilocks_mul_id : uncps.
 
+#[global]
 Hint Rewrite
      @eval_karatsuba_mul
      @eval_goldilocks_mul

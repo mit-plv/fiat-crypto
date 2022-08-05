@@ -133,5 +133,6 @@ Module Export Rewrite.
     Qed.
   End language.
 
+#[global]
   Hint Rewrite @InterpInlineConstAndOp @InterpInlineConstAndOpGen using assumption : reflective_interp.
 End Rewrite.

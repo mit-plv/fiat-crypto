@@ -25,6 +25,7 @@ Module Associational.
   Proof. induction p; rewrite <-?List.app_comm_cons;
            rewrite ?eval_nil, ?eval_cons; nsatz.              Qed.
 
+#[global]
   Hint Rewrite eval_nil eval_cons eval_app : push_eval.
   Local Ltac push := autorewrite with
       push_eval push_map push_partition push_flat_map
@@ -33,6 +34,7 @@ Module Associational.
   Lemma eval_map_mul (a x:Z) (p:list (Z*Z))
   : eval (List.map (fun t => (a*fst t, x*snd t)) p) = a*x*eval p.
   Proof. induction p; push; nsatz.                            Qed.
+#[global]
   Hint Rewrite eval_map_mul : push_eval.
 
   Definition mul (p q:list (Z*Z)) : list (Z*Z) :=
@@ -42,6 +44,7 @@ Module Associational.
     q) p.
   Lemma eval_mul p q : eval (mul p q) = eval p * eval q.
   Proof. induction p; cbv [mul]; push; nsatz.                 Qed.
+#[global]
   Hint Rewrite eval_mul : push_eval.
 
   Example base10_2digit_mul (a0:Z) (a1:Z) (b0:Z) (b1:Z) :
@@ -79,11 +82,16 @@ Module Associational.
     eval (reduce s c p) mod (s - eval c) = eval p mod (s - eval c).
   Proof. cbv [reduce]; push.
          rewrite <-reduction_rule, eval_split; trivial.      Qed.
+#[global]
   Hint Rewrite eval_reduce : push_eval.
 End Associational.
+#[global]
 Hint Rewrite Associational.eval_nil Associational.eval_cons Associational.eval_app : push_eval.
+#[global]
 Hint Rewrite Associational.eval_map_mul : push_eval.
+#[global]
 Hint Rewrite Associational.eval_mul : push_eval.
+#[global]
 Hint Rewrite Associational.eval_reduce : push_eval.
 
 Module Positional. Section Positional.

@@ -426,20 +426,33 @@ Section Pow2BaseProofs.
 
 End Pow2BaseProofs.
 Module Import Hints2.
+#[global]
   Hint Rewrite base_from_limb_widths_cons base_from_limb_widths_nil : push_base_from_limb_widths.
+#[global]
   Hint Rewrite <- base_from_limb_widths_cons : pull_base_from_limb_widths.
 
+#[global]
   Hint Rewrite <- @firstn_base_from_limb_widths : push_base_from_limb_widths.
+#[global]
   Hint Rewrite <- @firstn_base_from_limb_widths : pull_firstn.
+#[global]
   Hint Rewrite @firstn_base_from_limb_widths : pull_base_from_limb_widths.
+#[global]
   Hint Rewrite @firstn_base_from_limb_widths : push_firstn.
+#[global]
   Hint Rewrite <- @skipn_base_from_limb_widths : push_base_from_limb_widths.
+#[global]
   Hint Rewrite <- @skipn_base_from_limb_widths : pull_skipn.
+#[global]
   Hint Rewrite @skipn_base_from_limb_widths : pull_base_from_limb_widths.
+#[global]
   Hint Rewrite @skipn_base_from_limb_widths : push_skipn.
 
+#[global]
   Hint Rewrite @base_from_limb_widths_length : distr_length.
+#[global]
   Hint Rewrite @upper_bound_nil @upper_bound_cons @upper_bound_app using solve [ eauto with znonzero ] : push_upper_bound.
+#[global]
   Hint Rewrite <- @upper_bound_cons @upper_bound_app using solve [ eauto with znonzero ] : pull_upper_bound.
 End Hints2.
 

@@ -20,4 +20,5 @@ Proof.
   apply InterpCSE_gen; auto.
 Qed.
 
+#[global]
 Hint Rewrite @InterpCSE using solve_wf_side_condition : reflective_interp.

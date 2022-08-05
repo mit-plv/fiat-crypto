@@ -11,5 +11,6 @@ Module Export Rewrite.
     clear; abstract (intros []; intros; reflexivity).
   Defined.
 
+#[global]
   Hint Rewrite @InterpInlineConstAndOp : reflective_interp.
 End Rewrite.

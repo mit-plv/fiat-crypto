@@ -18,6 +18,7 @@ Module Z.
     + apply Z.ones_spec_low. lia.
     + apply Z.ones_spec_high. lia.
   Qed.
+#[global]
   Hint Rewrite ones_spec using zutil_arith : Ztestbit.
 
   Lemma ones_spec_full : forall n m, Z.testbit (Z.ones n) m
@@ -34,6 +35,7 @@ Module Z.
     destruct m; simpl in *; try reflexivity.
     exfalso; auto using Zlt_neg_0.
   Qed.
+#[global]
   Hint Rewrite ones_spec_full : Ztestbit_full.
 
   Lemma testbit_pow2_mod : forall a n i, 0 <= n ->
@@ -48,6 +50,7 @@ Module Z.
           | |- _ => progress autorewrite with Ztestbit
           end.
   Qed.
+#[global]
   Hint Rewrite testbit_pow2_mod using zutil_arith : Ztestbit.
 
   Lemma testbit_pow2_mod_full : forall a n i,
@@ -62,6 +65,7 @@ Module Z.
       autorewrite with Ztestbit;
       reflexivity.
   Qed.
+#[global]
   Hint Rewrite testbit_pow2_mod_full : Ztestbit_full.
 
   Lemma bits_above_pow2 a n : 0 <= a < 2^n -> Z.testbit a n = false.
@@ -70,6 +74,7 @@ Module Z.
     destruct (Z_zerop a); subst; autorewrite with Ztestbit; trivial.
     apply Z.bits_above_log2; auto with zarith concl_log2.
   Qed.
+#[global]
   Hint Rewrite bits_above_pow2 using zutil_arith : Ztestbit.
 
   Lemma testbit_low : forall n x i, (0 <= i < n) ->
@@ -91,6 +96,7 @@ Module Z.
     rewrite Z.mod_add by (pose proof (Z.pow_pos_nonneg 2 n); lia).
     auto using Z.mod_pow2_bits_low.
   Qed.
+#[global]
   Hint Rewrite testbit_add_shiftl_low using zutil_arith : Ztestbit.
 
   Lemma testbit_sub_pow2 n i x (i_range:0 <= i < n) (x_range:0 < x < 2 ^ n) :
@@ -135,10 +141,16 @@ Module Export Hints.
   Export Crypto.Util.ZUtil.Div.Hints.
   Export Crypto.Util.ZUtil.Tactics.ZeroBounds.Hints.
   Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+#[global]
   Hint Rewrite Z.ones_spec using zutil_arith : Ztestbit.
+#[global]
   Hint Rewrite Z.ones_spec_full : Ztestbit_full.
+#[global]
   Hint Rewrite Z.testbit_pow2_mod using zutil_arith : Ztestbit.
+#[global]
   Hint Rewrite Z.testbit_pow2_mod_full : Ztestbit_full.
+#[global]
   Hint Rewrite Z.bits_above_pow2 using zutil_arith : Ztestbit.
+#[global]
   Hint Rewrite Z.testbit_add_shiftl_low using zutil_arith : Ztestbit.
 End Hints.

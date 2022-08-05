@@ -54,18 +54,22 @@ Local Ltac t := repeat t_step.
 
 Lemma denote_bind A B v f : denote (@bind A B v f) = denote (f (denote v)).
 Proof. induction v; t. Qed.
+#[global]
 Hint Rewrite denote_bind : push_denote.
 
 Lemma denote_under_lets A B v f : denote (@under_lets A B v f) = denote (f (denote v)).
 Proof. induction v; t. Qed.
+#[global]
 Hint Rewrite denote_under_lets : push_denote.
 
 Lemma denote_lift A B (f : A -> B) v : denote (lift f v) = f (denote v).
 Proof. unfold lift; t. Qed.
+#[global]
 Hint Rewrite denote_lift : push_denote.
 
 Lemma denote_lift2 A B C (f : A -> B -> C) x y : denote (lift2 f x y) = f (denote x) (denote y).
 Proof. unfold lift2; t. Qed.
+#[global]
 Hint Rewrite denote_lift2 : push_denote.
 
 Module Import List.
@@ -85,6 +89,7 @@ Module Import List.
 
   Lemma denote_flat_map A B f ls : denote (@flat_map A B f ls) = Lists.List.flat_map (fun x => denote (f x)) (denote ls).
   Proof. unfold flat_map; t; induction (denote ls); t. Qed.
+#[global]
   Hint Rewrite denote_flat_map : push_denote.
 End List.
 

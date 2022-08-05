@@ -326,4 +326,5 @@ Section WordByWordMontgomery.
   End nonzero.
 End WordByWordMontgomery.
 
+#[global]
 Hint Rewrite redc_body_cps_id redc_loop_cps_id pre_redc_cps_id redc_cps_id add_cps_id sub_cps_id opp_cps_id : uncps.

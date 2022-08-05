@@ -99,7 +99,9 @@ Module Export Hints.
   Export Crypto.Util.LetIn.Hints Crypto.Util.CPSUtil.Hints.
 
   Global Hint Opaque B.Associational.sat_mul B.Associational.sat_multerm : uncps.
+#[global]
   Hint Rewrite @B.Associational.sat_mul_id @B.Associational.sat_multerm_id using (assumption || (intros; autorewrite with uncps; reflexivity)) : uncps.
+#[global]
   Hint Rewrite @B.Associational.eval_sat_mul @B.Associational.eval_map_sat_multerm using (lia || assumption) : push_basesystem_eval.
 
   Global Hint Unfold

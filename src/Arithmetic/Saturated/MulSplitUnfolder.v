@@ -21,24 +21,28 @@ echo "End B."
     Definition sat_multerm_cps := parameterize_from_sig sat_multerm_cps_sig.
     Definition sat_multerm_cps_eq := parameterize_eq sat_multerm_cps sat_multerm_cps_sig.
     Global Hint Unfold sat_multerm_cps : basesystem_partial_evaluation_unfolder.
+#[global]
     Hint Rewrite <- sat_multerm_cps_eq : pattern_runtime.
 
     Definition sat_multerm_sig := parameterize_sig (@MulSplit.B.Associational.sat_multerm).
     Definition sat_multerm := parameterize_from_sig sat_multerm_sig.
     Definition sat_multerm_eq := parameterize_eq sat_multerm sat_multerm_sig.
     Global Hint Unfold sat_multerm : basesystem_partial_evaluation_unfolder.
+#[global]
     Hint Rewrite <- sat_multerm_eq : pattern_runtime.
 
     Definition sat_mul_cps_sig := parameterize_sig (@MulSplit.B.Associational.sat_mul_cps).
     Definition sat_mul_cps := parameterize_from_sig sat_mul_cps_sig.
     Definition sat_mul_cps_eq := parameterize_eq sat_mul_cps sat_mul_cps_sig.
     Global Hint Unfold sat_mul_cps : basesystem_partial_evaluation_unfolder.
+#[global]
     Hint Rewrite <- sat_mul_cps_eq : pattern_runtime.
 
     Definition sat_mul_sig := parameterize_sig (@MulSplit.B.Associational.sat_mul).
     Definition sat_mul := parameterize_from_sig sat_mul_sig.
     Definition sat_mul_eq := parameterize_eq sat_mul sat_mul_sig.
     Global Hint Unfold sat_mul : basesystem_partial_evaluation_unfolder.
+#[global]
     Hint Rewrite <- sat_mul_eq : pattern_runtime.
 
   End Associational.

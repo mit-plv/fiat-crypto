@@ -244,4 +244,5 @@ Proof.
                      | progress pull_Zmod ].
 Qed.
 
+#[global]
 Hint Rewrite @InterpSimplifyArith : reflective_interp.

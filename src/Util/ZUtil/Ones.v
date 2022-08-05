@@ -32,6 +32,7 @@ Module Z.
   Proof.
     rewrite Z.ones_equiv, Z.log2_pred_pow2_full; reflexivity.
   Qed.
+#[global]
   Hint Rewrite log2_ones_full : zsimplify.
 
   Lemma log2_ones_lt x y : 0 < x <= y -> Z.log2 (Z.ones x) < y.
@@ -65,6 +66,7 @@ Module Z.
     rewrite <-Z.pow_add_r by (pose proof (Pos2Z.is_pos p); lia).
     f_equal. lia.
   Qed.
+#[global]
   Hint Rewrite <- ones_pred using zutil_arith : push_Zshift.
 
   Lemma ones_succ : forall x, (0 <= x) ->
@@ -135,6 +137,7 @@ Module Z.
                    | [ |- context[2^?x] ] => unique pose proof (Z.pow2_gt_0 x ltac:(lia))
                    end ].
   Qed.
+#[global]
   Hint Rewrite land_ones_ones : zsimplify.
 
   Lemma lor_ones_ones n m
@@ -173,6 +176,7 @@ Module Z.
                      | [ |- context[2^?x] ] => unique pose proof (Z.pow2_gt_0 x ltac:(lia))
                      end ].
   Qed.
+#[global]
   Hint Rewrite lor_ones_ones : zsimplify.
 
   Lemma lor_pow2_mod_pow2_r x e (He : 0 <= e) : Z.lor x (2^e-1) mod (2^e) = 2^e-1.
@@ -188,12 +192,16 @@ Module Z.
     rewrite Z.land_ones by assumption.
     rewrite Z.lor_ones_low; auto with zarith.
   Qed.
+#[global]
   Hint Rewrite lor_pow2_mod_pow2_r using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite lor_pow2_mod_pow2_r using assumption : zsimplify_fast.
 
   Lemma lor_pow2_mod_pow2_l x e (He : 0 <= e) : Z.lor (2^e-1) x mod (2^e) = 2^e-1.
   Proof. rewrite Z.lor_comm; apply lor_pow2_mod_pow2_r; assumption. Qed.
+#[global]
   Hint Rewrite lor_pow2_mod_pow2_l using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite lor_pow2_mod_pow2_l using assumption : zsimplify_fast.
 
   Lemma lor_pow2_div_pow2_r x e (He : 0 <= e) : (Z.lor x (2^e-1)) / (2^e) = x / 2^e.
@@ -205,12 +213,16 @@ Module Z.
     rewrite (Z.div_small (_-1) _), Z.lor_0_r by lia.
     reflexivity.
   Qed.
+#[global]
   Hint Rewrite lor_pow2_div_pow2_r using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite lor_pow2_div_pow2_r using assumption : zsimplify_fast.
 
   Lemma lor_pow2_div_pow2_l x e (He : 0 <= e) : (Z.lor (2^e-1) x) / (2^e) = x / 2^e.
   Proof. rewrite Z.lor_comm; apply lor_pow2_div_pow2_r; assumption. Qed.
+#[global]
   Hint Rewrite lor_pow2_div_pow2_l using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite lor_pow2_div_pow2_l using assumption : zsimplify_fast.
 End Z.
 
@@ -225,21 +237,33 @@ Module Export Hints.
   Export Crypto.Util.ZUtil.Tactics.ZeroBounds.Hints.
   Global Hint Resolve Z.ones_le : zarith.
   Global Hint Resolve Z.ones_lt_pow2 : zarith.
+#[global]
   Hint Rewrite Z.log2_ones_full : zsimplify.
   Global Hint Resolve Z.log2_ones_lt : zarith.
   Global Hint Resolve Z.log2_ones_le : zarith.
   Global Hint Resolve Z.log2_ones_lt_nonneg : zarith.
+#[global]
   Hint Rewrite <- Z.ones_pred using zutil_arith : push_Zshift.
   Global Hint Resolve Z.ones_nonneg : zarith.
   Global Hint Resolve Z.ones_pos_pos : zarith.
+#[global]
   Hint Rewrite Z.land_ones_ones : zsimplify.
+#[global]
   Hint Rewrite Z.lor_ones_ones : zsimplify.
+#[global]
   Hint Rewrite Z.lor_pow2_mod_pow2_r using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite Z.lor_pow2_mod_pow2_r using assumption : zsimplify_fast.
+#[global]
   Hint Rewrite Z.lor_pow2_mod_pow2_l using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite Z.lor_pow2_mod_pow2_l using assumption : zsimplify_fast.
+#[global]
   Hint Rewrite Z.lor_pow2_div_pow2_r using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite Z.lor_pow2_div_pow2_r using assumption : zsimplify_fast.
+#[global]
   Hint Rewrite Z.lor_pow2_div_pow2_l using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite Z.lor_pow2_div_pow2_l using assumption : zsimplify_fast.
 End Hints.

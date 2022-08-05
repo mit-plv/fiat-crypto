@@ -277,8 +277,11 @@ Module Export Hints.
   Export Crypto.Util.Tuple.Hints Crypto.Util.LetIn.Hints.
 
   Global Hint Opaque B.Positional.sat_sub B.Positional.sat_add B.Positional.chain_op B.Positional.chain_op' : uncps.
+#[global]
   Hint Rewrite @B.Positional.sat_sub_id @B.Positional.sat_add_id : uncps.
+#[global]
   Hint Rewrite @B.Positional.chain_op_id @B.Positional.chain_op' using (assumption || (intros; autorewrite with uncps; reflexivity)) : uncps.
+#[global]
   Hint Rewrite @B.Positional.sat_sub_mod @B.Positional.sat_sub_div @B.Positional.sat_add_mod @B.Positional.sat_add_div using (lia || assumption) : push_basesystem_eval.
 
   Global Hint Unfold

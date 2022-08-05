@@ -115,4 +115,5 @@ Section language.
   Proof using Type. apply eq_interp_eta. Qed.
 End language.
 
+#[global]
 Hint Rewrite @eq_interp_flat_type_eta @eq_interp_flat_type_eta' @interpf_exprf_eta @interpf_exprf_eta' @interp_expr_eta @interp_expr_eta' @InterpExprEta @InterpExprEta' @InterpExprEta_arrow @InterpExprEta'_arrow @eq_interp_eta @eq_InterpEta : reflective_interp.

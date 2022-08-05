@@ -85,6 +85,7 @@ Ltac refresh x :=
   not_x.
 Class reify_internal {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify_internal : T.
 Class reify {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify : T.
+#[global]
 Typeclasses Opaque reify_internal reify.
 Definition reify_var_for_in_is base_type_code {T} (x : T) (t : flat_type base_type_code) {eT} (e : eT) := False.
 Arguments reify_var_for_in_is _ {T} _ _ {eT} _.
@@ -376,6 +377,7 @@ Global Hint Extern 0 (reify_internal (@exprf ?base_type_code ?interp_base_type ?
 (** For reification including [Abs] *)
 Class reify_abs_internal {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify_abs_internal : T.
 Class reify_abs {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify_abs : T.
+#[global]
 Typeclasses Opaque reify_abs_internal reify_abs.
 Ltac reify_abs base_type_code interp_base_type op var e :=
   let reify_rec e := reify_abs base_type_code interp_base_type op var e in

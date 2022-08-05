@@ -128,7 +128,9 @@ Section Freeze.
   Qed.
 End Freeze.
 Global Hint Opaque freeze_cps : uncps.
+#[global]
 Hint Rewrite @freeze_id : uncps.
+#[global]
 Hint Rewrite @eval_freeze
      using (assumption || reflexivity || auto || eassumption || lia) : push_basesystem_eval.
 

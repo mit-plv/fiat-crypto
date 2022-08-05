@@ -13,6 +13,7 @@ Require Import Crypto.Util.Decidable.
 Local Open Scope Z_scope.
 
 Module Z.
+#[global]
   Hint Rewrite Z.log2_pow2 Z.pow_1_r using solve [auto using Z.log2_nonneg with zarith] : push_Zpow.
   Lemma cc_m_eq_full : forall s x, Z.cc_m s x = if (s =? 1) then x * 2 else x / (s / 2).
   Proof.
@@ -89,6 +90,7 @@ Module Export Hints.
   Export Crypto.Util.ZUtil.Tactics.ZeroBounds.Hints.
   Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
   Export Crypto.Util.ZUtil.Hints.PullPush.
+#[global]
   Hint Rewrite Z.log2_pow2 Z.pow_1_r using solve [auto using Z.log2_nonneg with zarith] : push_Zpow.
   Global Hint Resolve Z.cc_m_Proper_le_r_gen : zarith.
   Global Hint Resolve Z.cc_m_Proper_le_r : zarith.

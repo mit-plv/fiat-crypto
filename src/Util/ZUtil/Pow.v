@@ -40,7 +40,9 @@ Module Z.
 End Z.
 Module Export Hints.
   Export ZUtil.Hints.Core.
+#[global]
   Hint Rewrite Z.base_pow_neg using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite <- Z.two_p_two_eq_four : push_Zpow.
   Global Hint Resolve Z.pow_sub_r' Z.pow_sub_r'_sym Z.eq_le_incl : zarith.
   Global Hint Resolve (fun b => f_equal (fun e => b ^ e)) (fun e => f_equal (fun b => b ^ e)) : zarith.

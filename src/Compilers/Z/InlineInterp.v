@@ -12,4 +12,5 @@ Definition InterpInlineConst {interp_base_type interp_op} {t} (e : Expr t) (Hwf 
   : forall x, Compilers.Syntax.Interp interp_op (InlineConst e) x = Compilers.Syntax.Interp interp_op e x
   := @InterpInlineConst _ interp_base_type _ _ _ t e Hwf.
 
+#[global]
 Hint Rewrite @InterpInlineConstAndOpp @InterpInlineConst using solve_wf_side_condition : reflective_interp.

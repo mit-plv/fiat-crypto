@@ -330,6 +330,7 @@ Module B.
     Lemma eval_cons p q : eval (p::q) = (fst p) * (snd p) + eval q. Proof. reflexivity. Qed.
     Lemma eval_app p q: eval (p++q) = eval p + eval q.
     Proof. induction p; simpl eval; rewrite ?eval_nil, ?eval_cons; nsatz. Qed.
+#[global]
     Hint Rewrite eval_nil eval_cons eval_app : push_basesystem_eval.
 
     Definition multerm (t t' : limb) : limb :=
@@ -339,6 +340,7 @@ Module B.
     Proof.
       induction q; cbv [multerm]; simpl List.map;
         autorewrite with push_basesystem_eval cancel_pair; nsatz.
+#[global]
     Qed. Hint Rewrite eval_map_multerm : push_basesystem_eval.
 
     Definition mul_cps (p q:list limb) {T} (f : list limb->T) :=
@@ -348,10 +350,12 @@ Module B.
     Lemma mul_cps_id p q: forall {T} f, @mul_cps p q T f = f (mul p q).
     Proof. cbv [mul_cps mul]; prove_id. Qed.
     Local Hint Opaque mul : uncps.
+#[global]
     Hint Rewrite mul_cps_id : uncps.
 
     Lemma eval_mul p q: eval (mul p q) = eval p * eval q.
     Proof. cbv [mul mul_cps]; induction p; prove_eval. Qed.
+#[global]
     Hint Rewrite eval_mul : push_basesystem_eval.
 
     Section split_cps.
@@ -383,6 +387,7 @@ Module B.
                end.
     Qed.
     Local Hint Opaque split : uncps.
+#[global]
     Hint Rewrite split_cps_id : uncps.
 
     Lemma eval_split s p (s_nonzero:s<>0):
@@ -393,6 +398,7 @@ Module B.
         H:_ |- _ =>
         unique pose proof (Z_div_exact_full_2 _ _ s_nonzero H)
         end; nsatz.
+#[global]
     Qed. Hint Rewrite @eval_split using auto : push_basesystem_eval.
 
     Definition reduce_cps (s:Z) (c:list limb) (p:list limb)
@@ -406,6 +412,7 @@ Module B.
       @reduce_cps s c p T f = f (reduce s c p).
     Proof. cbv [reduce_cps reduce]; prove_id. Qed.
     Local Hint Opaque reduce : uncps.
+#[global]
     Hint Rewrite reduce_cps_id : uncps.
 
     Lemma reduction_rule a b s c m (m_eq:Z.pos m = s - c):
@@ -422,6 +429,7 @@ Module B.
       cbv [reduce reduce_cps mod_eq]; prove_eval.
         erewrite <-reduction_rule by eauto; prove_eval.
     Qed.
+#[global]
     Hint Rewrite eval_reduce using (lia || assumption) : push_basesystem_eval.
     (* Why TF does this hint get picked up outside the section (while other eval_ hints do not?) *)
 
@@ -433,11 +441,13 @@ Module B.
     Lemma negate_snd_id p {T} f : @negate_snd_cps p T f = f (negate_snd p).
     Proof. cbv [negate_snd_cps negate_snd]; prove_id. Qed.
     Local Hint Opaque negate_snd : uncps.
+#[global]
     Hint Rewrite negate_snd_id : uncps.
 
     Lemma eval_negate_snd p : eval (negate_snd p) = - eval p.
     Proof.
       cbv [negate_snd_cps negate_snd]; induction p; prove_eval.
+#[global]
     Qed. Hint Rewrite eval_negate_snd : push_basesystem_eval.
 
     Section Carries.
@@ -504,10 +514,12 @@ Module B.
     intros; autorewrite with uncps push_id; try reflexivity.
 
   Module Import Hints1.
+#[global]
     Hint Rewrite
          @Associational.reduce_cps_id
          @Associational.split_cps_id
          @Associational.mul_cps_id : uncps.
+#[global]
     Hint Rewrite
          @Associational.carry_cps_id
          @Associational.carryterm_cps_id
@@ -971,6 +983,7 @@ Module B.
 
 
     End Positional.
+#[global]
     Hint Rewrite eval_unit eval_single : push_basesystem_eval.
 
     (* Helper lemmas and definitions for [eval] that to be in a
@@ -1065,6 +1078,7 @@ Module B.
            Positional.unbalanced_sub_cps
            Positional.opp_cps
     .
+#[global]
     Hint Rewrite
          @Associational.reduce_cps_id
          @Associational.split_cps_id
@@ -1076,6 +1090,7 @@ Module B.
          @Positional.sub_id
          @Positional.select_id
       : uncps.
+#[global]
     Hint Rewrite
          @Associational.carry_cps_id
          @Associational.carryterm_cps_id
@@ -1083,6 +1098,7 @@ Module B.
          @Positional.chained_carries_id
          @Positional.chained_carries_reduce_id
          using div_mod_cps_t : uncps.
+#[global]
     Hint Rewrite
          @Associational.eval_mul
          @Positional.eval_single
@@ -1159,6 +1175,7 @@ End DivMod.
 
 Module Export Hints1.
   Global Hint Opaque div modulo : uncps.
+#[global]
   Hint Rewrite @div_id @modulo_id : uncps.
 End Hints1.
 
@@ -1383,19 +1400,31 @@ Module Export Hints.
   Export Crypto.Arithmetic.PrimeFieldTheorems.Hints.
   Export Tuple.Hints.
   Global Existing Instance mod_eq_equiv.
+#[global]
   Hint Rewrite Associational.eval_nil Associational.eval_cons Associational.eval_app : push_basesystem_eval.
+#[global]
   Hint Rewrite Associational.eval_map_multerm : push_basesystem_eval.
+#[global]
   Hint Rewrite Associational.mul_cps_id : uncps.
+#[global]
   Hint Rewrite Associational.eval_mul : push_basesystem_eval.
+#[global]
   Hint Rewrite Associational.split_cps_id : uncps.
+#[global]
   Hint Rewrite @Associational.eval_split using auto : push_basesystem_eval.
+#[global]
   Hint Rewrite Associational.reduce_cps_id : uncps.
+#[global]
   Hint Rewrite Associational.eval_reduce using (lia || assumption) : push_basesystem_eval.
+#[global]
   Hint Rewrite Associational.negate_snd_id : uncps.
+#[global]
   Hint Rewrite Associational.eval_negate_snd : push_basesystem_eval.
+#[global]
   Hint Rewrite Positional.eval_unit Positional.eval_single : push_basesystem_eval.
   Export B.Hints.
   Global Hint Opaque div modulo : uncps.
+#[global]
   Hint Rewrite @div_id @modulo_id : uncps.
 
   Global Hint Unfold
@@ -1461,8 +1490,12 @@ Module Export Hints.
          Z.add_get_carry_full Z.add_get_carry_full_cps Z.mul_split Z.mul_split_cps Z.mul_split_cps'
     : basesystem_partial_evaluation_unfolder.
 
+#[global]
   Hint Rewrite <-@F.of_Z_add : pull_FofZ.
+#[global]
   Hint Rewrite <-@F.of_Z_mul : pull_FofZ.
+#[global]
   Hint Rewrite <-@F.of_Z_sub : pull_FofZ.
+#[global]
   Hint Rewrite <-@F_of_Z_opp : pull_FofZ.
 End Hints.

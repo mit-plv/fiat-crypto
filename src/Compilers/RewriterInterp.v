@@ -47,4 +47,5 @@ Section language.
   Qed.
 End language.
 
+#[global]
 Hint Rewrite @InterpRewriteOp using assumption : reflective_interp.

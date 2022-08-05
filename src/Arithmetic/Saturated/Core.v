@@ -472,16 +472,19 @@ Module Export Hints.
   Export Crypto.Util.NatUtil.Hints.
   Export Field.Hints.
 
+#[global]
   Hint Rewrite
        @Columns.compact_digit_id
        @Columns.compact_step_id
        @Columns.compact_id
        using (assumption || (intros; autorewrite with uncps; reflexivity))
     : uncps.
+#[global]
   Hint Rewrite
        @Columns.cons_to_nth_id
        @Columns.from_associational_id
     : uncps.
+#[global]
   Hint Rewrite
        @Columns.compact_mod
        @Columns.compact_div

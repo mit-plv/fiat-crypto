@@ -18,16 +18,19 @@ Module Z.
 
   Lemma mod_add_full : forall a b c, (a + b * c) mod c = a mod c.
   Proof. intros a b c; destruct (Z_zerop c); try subst; autorewrite with zsimplify; reflexivity. Qed.
+#[global]
   Hint Rewrite mod_add_full : zsimplify.
 
   Lemma mod_add_l_full : forall a b c, (a * b + c) mod b = c mod b.
   Proof. intros a b c; rewrite (Z.add_comm _ c); autorewrite with zsimplify; reflexivity. Qed.
+#[global]
   Hint Rewrite mod_add_l_full : zsimplify.
 
   Lemma mod_add'_full : forall a b c, (a + b * c) mod b = a mod b.
   Proof. intros a b c; rewrite (Z.mul_comm _ c); autorewrite with zsimplify; reflexivity. Qed.
   Lemma mod_add_l'_full : forall a b c, (a * b + c) mod a = c mod a.
   Proof. intros a b c; rewrite (Z.mul_comm _ b); autorewrite with zsimplify; reflexivity. Qed.
+#[global]
   Hint Rewrite mod_add'_full mod_add_l'_full : zsimplify.
 
   Lemma mod_add_l : forall a b c, b <> 0 -> (a * b + c) mod b = c mod b.
@@ -97,7 +100,9 @@ Module Z.
     intros a m H. rewrite (Z_div_mod_eq_full a m) at 2 by auto. ring.
   Qed.
 
+#[global]
   Hint Rewrite mul_div_eq_full using zutil_arith : zdiv_to_mod.
+#[global]
   Hint Rewrite <-mul_div_eq_full using zutil_arith : zmod_to_div.
 
   Lemma f_equal_mul_mod x y x' y' m : x mod m = x' mod m -> y mod m = y' mod m -> (x * y) mod m = (x' * y') mod m.
@@ -142,7 +147,9 @@ Module Z.
     ring.
   Qed.
 
+#[global]
   Hint Rewrite mul_div_eq mul_div_eq' using zutil_arith : zdiv_to_mod.
+#[global]
   Hint Rewrite <- mul_div_eq' using zutil_arith : zmod_to_div.
 
   Lemma mod_div_eq0 : forall a b, 0 < b -> (a mod b) / b = 0.
@@ -151,6 +158,7 @@ Module Z.
     apply Z.div_small.
     auto using Z.mod_pos_bound.
   Qed.
+#[global]
   Hint Rewrite mod_div_eq0 using zutil_arith : zsimplify.
 
   Local Lemma mod_pull_div_helper a b c X
@@ -291,6 +299,7 @@ Module Z.
     rewrite Z.pow_add_r by lia.
     apply Z_mod_mult.
   Qed.
+#[global]
   Hint Rewrite mod_same_pow using zutil_arith : zsimplify.
   Global Hint Resolve mod_same_pow : zarith.
 
@@ -298,6 +307,7 @@ Module Z.
   Proof.
     split; intro H'; apply Z.mod_opp_l_z in H'; rewrite ?Z.opp_involutive in H'; assumption.
   Qed.
+#[global]
   Hint Rewrite <- mod_opp_l_z_iff using zutil_arith : zsimplify.
 
   Lemma mod_small_sym a b : 0 <= a < b -> a = a mod b.
@@ -314,14 +324,17 @@ Module Z.
 
   Lemma div_mod' a b : b <> 0 -> a = (a / b) * b + a mod b.
   Proof. intro; etransitivity; [ apply (Z.div_mod a b); assumption | lia ]. Qed.
+#[global]
   Hint Rewrite <- div_mod' using zutil_arith : zsimplify.
 
   Lemma div_mod'' a b : b <> 0 -> a = a mod b + b * (a / b).
   Proof. intro; etransitivity; [ apply (Z.div_mod a b); assumption | lia ]. Qed.
+#[global]
   Hint Rewrite <- div_mod'' using zutil_arith : zsimplify.
 
   Lemma div_mod''' a b : b <> 0 -> a = a mod b + (a / b) * b.
   Proof. intro; etransitivity; [ apply (Z.div_mod a b); assumption | lia ]. Qed.
+#[global]
   Hint Rewrite <- div_mod''' using zutil_arith : zsimplify.
 
   Lemma sub_mod_mod_0 x d : (x - x mod d) mod d = 0.
@@ -329,10 +342,12 @@ Module Z.
     destruct (Z_zerop d); subst; push_Zmod; autorewrite with zsimplify; reflexivity.
   Qed.
   Global Hint Resolve sub_mod_mod_0 : zarith.
+#[global]
   Hint Rewrite sub_mod_mod_0 : zsimplify.
 
   Lemma mod_small_n n a b : 0 <= n -> b <> 0 -> n * b <= a < (1 + n) * b -> a mod b = a - n * b.
   Proof. intros; erewrite Zmod_eq_full, Z.div_between by eassumption. reflexivity. Qed.
+#[global]
   Hint Rewrite mod_small_n using zutil_arith : zsimplify.
 
   Lemma mod_small_1 a b : b <> 0 -> b <= a < 2 * b -> a mod b = a - b.
@@ -398,28 +413,33 @@ Module Export Hints.
          Z.mod_neq_0_le_to_neq
          Z.sub_mod_mod_0
     : zarith.
+#[global]
   Hint Rewrite
        Z.mod_small_1
        Z.mod_div_eq0
        Z.mod_same_pow
        Z.mod_small_n
        using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite
        Z.mod_add_full
        Z.mod_add_l_full
        Z.mod_add'_full Z.mod_add_l'_full
        Z.sub_mod_mod_0
     : zsimplify.
+#[global]
   Hint Rewrite <-
          Z.mod_opp_l_z_iff
            Z.div_mod'
            Z.div_mod''
            Z.div_mod'''
            using zutil_arith : zsimplify.
+#[global]
   Hint Rewrite
        Z.mul_div_eq_full
        Z.mul_div_eq Z.mul_div_eq'
        using zutil_arith : zdiv_to_mod.
+#[global]
   Hint Rewrite <-
          Z.mul_div_eq_full
            Z.mul_div_eq'

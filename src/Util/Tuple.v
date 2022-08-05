@@ -144,12 +144,14 @@ Qed.
 
 Lemma length_to_list' T n t : length (@to_list' T n t) = S n.
 Proof. induction n; simpl in *; trivial; destruct t; simpl; congruence. Qed.
+#[global]
 Hint Rewrite length_to_list' : distr_length.
 
 Lemma length_to_list : forall {T} {n} (xs:tuple T n), length (to_list n xs) = n.
 Proof.
   destruct n; [ reflexivity | apply length_to_list' ].
 Qed.
+#[global]
 Hint Rewrite @length_to_list : distr_length.
 
 Lemma from_list'_to_list' : forall T n (xs:tuple' T n),
@@ -1183,7 +1185,9 @@ Module Export Hints.
   Export Crypto.Util.FixCoqMistakes.
   Export Crypto.Util.Decidable.Hints.
   Export Crypto.Util.ListUtil.Hints.
+#[global]
   Hint Rewrite length_to_list' : distr_length.
+#[global]
   Hint Rewrite @length_to_list : distr_length.
   Global Existing Instance Reflexive_fieldwise' | 5.
   Global Existing Instance Symmetric_fieldwise' | 5.

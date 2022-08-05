@@ -22,24 +22,28 @@ echo "End Columns."
   Definition add_cps := parameterize_from_sig add_cps_sig.
   Definition add_cps_eq := parameterize_eq add_cps add_cps_sig.
   Global Hint Unfold add_cps : basesystem_partial_evaluation_unfolder.
+#[global]
   Hint Rewrite <- add_cps_eq : pattern_runtime.
 
   Definition unbalanced_sub_cps_sig := parameterize_sig (@Wrappers.Columns.unbalanced_sub_cps).
   Definition unbalanced_sub_cps := parameterize_from_sig unbalanced_sub_cps_sig.
   Definition unbalanced_sub_cps_eq := parameterize_eq unbalanced_sub_cps unbalanced_sub_cps_sig.
   Global Hint Unfold unbalanced_sub_cps : basesystem_partial_evaluation_unfolder.
+#[global]
   Hint Rewrite <- unbalanced_sub_cps_eq : pattern_runtime.
 
   Definition mul_cps_sig := parameterize_sig (@Wrappers.Columns.mul_cps).
   Definition mul_cps := parameterize_from_sig mul_cps_sig.
   Definition mul_cps_eq := parameterize_eq mul_cps mul_cps_sig.
   Global Hint Unfold mul_cps : basesystem_partial_evaluation_unfolder.
+#[global]
   Hint Rewrite <- mul_cps_eq : pattern_runtime.
 
   Definition conditional_add_cps_sig := parameterize_sig (@Wrappers.Columns.conditional_add_cps).
   Definition conditional_add_cps := parameterize_from_sig conditional_add_cps_sig.
   Definition conditional_add_cps_eq := parameterize_eq conditional_add_cps conditional_add_cps_sig.
   Global Hint Unfold conditional_add_cps : basesystem_partial_evaluation_unfolder.
+#[global]
   Hint Rewrite <- conditional_add_cps_eq : pattern_runtime.
 
 End Columns.
