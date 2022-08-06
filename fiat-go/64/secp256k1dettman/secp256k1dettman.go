@@ -132,47 +132,47 @@ func Mul(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
 	x66, _ = bits.Add64(x63, x61, uint64(uint1(x65)))
 	x68 := ((x64 >> 52) | ((x66 << 12) & 0xffffffffffffffff))
 	x69 := (x64 & 0xfffffffffffff)
-	var x70 uint64
-	var x71 uint64
-	x71, x70 = bits.Mul64(arg1[1], arg2[4])
+	x70 := (x69 >> 48)
+	x71 := (x69 & 0xffffffffffff)
 	var x72 uint64
 	var x73 uint64
-	x73, x72 = bits.Mul64(arg1[2], arg2[3])
+	x73, x72 = bits.Mul64(arg1[1], arg2[4])
 	var x74 uint64
 	var x75 uint64
-	x75, x74 = bits.Mul64(arg1[3], arg2[2])
+	x75, x74 = bits.Mul64(arg1[2], arg2[3])
 	var x76 uint64
 	var x77 uint64
-	x77, x76 = bits.Mul64(arg1[4], arg2[1])
+	x77, x76 = bits.Mul64(arg1[3], arg2[2])
 	var x78 uint64
 	var x79 uint64
-	x78, x79 = bits.Add64(x76, x74, uint64(0x0))
+	x79, x78 = bits.Mul64(arg1[4], arg2[1])
 	var x80 uint64
-	x80, _ = bits.Add64(x77, x75, uint64(uint1(x79)))
+	var x81 uint64
+	x80, x81 = bits.Add64(x78, x76, uint64(0x0))
 	var x82 uint64
-	var x83 uint64
-	x82, x83 = bits.Add64(x78, x72, uint64(0x0))
+	x82, _ = bits.Add64(x79, x77, uint64(uint1(x81)))
 	var x84 uint64
-	x84, _ = bits.Add64(x80, x73, uint64(uint1(x83)))
+	var x85 uint64
+	x84, x85 = bits.Add64(x80, x74, uint64(0x0))
 	var x86 uint64
-	var x87 uint64
-	x86, x87 = bits.Add64(x82, x70, uint64(0x0))
+	x86, _ = bits.Add64(x82, x75, uint64(uint1(x85)))
 	var x88 uint64
-	x88, _ = bits.Add64(x84, x71, uint64(uint1(x87)))
+	var x89 uint64
+	x88, x89 = bits.Add64(x84, x72, uint64(0x0))
 	var x90 uint64
-	var x91 uint64
-	x90, x91 = bits.Add64(x68, x86, uint64(0x0))
-	x92 := (uint64(uint1(x91)) + x88)
-	x93 := ((x90 >> 52) | ((x92 << 12) & 0xffffffffffffffff))
-	x94 := (x90 & 0xfffffffffffff)
-	x95 := (x69 >> 48)
-	x96 := (x69 & 0xffffffffffff)
+	x90, _ = bits.Add64(x86, x73, uint64(uint1(x89)))
+	var x92 uint64
+	var x93 uint64
+	x92, x93 = bits.Add64(x68, x88, uint64(0x0))
+	x94 := (uint64(uint1(x93)) + x90)
+	x95 := ((x92 >> 52) | ((x94 << 12) & 0xffffffffffffffff))
+	x96 := (x92 & 0xfffffffffffff)
 	var x97 uint64
 	var x98 uint64
 	x98, x97 = bits.Mul64(arg1[0], arg2[0])
 	var x99 uint64
 	var x100 uint64
-	x100, x99 = bits.Mul64((x95 + (x94 << 4)), 0x1000003d1)
+	x100, x99 = bits.Mul64((x70 + (x96 << 4)), 0x1000003d1)
 	var x101 uint64
 	var x102 uint64
 	x101, x102 = bits.Add64(x99, x97, uint64(0x0))
@@ -201,7 +201,7 @@ func Mul(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
 	x119, _ = bits.Add64(x115, x108, uint64(uint1(x118)))
 	var x121 uint64
 	var x122 uint64
-	x121, x122 = bits.Add64(x93, x117, uint64(0x0))
+	x121, x122 = bits.Add64(x95, x117, uint64(0x0))
 	x123 := (uint64(uint1(x122)) + x119)
 	x124 := ((x121 >> 52) | ((x123 << 12) & 0xffffffffffffffff))
 	x125 := (x121 & 0xfffffffffffff)
@@ -289,7 +289,7 @@ func Mul(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
 	x187 := (uint64(uint1(x186)) + x184)
 	x188 := ((x185 >> 52) | ((x187 << 12) & 0xffffffffffffffff))
 	x189 := (x185 & 0xfffffffffffff)
-	x190 := (x188 + x96)
+	x190 := (x188 + x71)
 	out1[0] = x106
 	out1[1] = x144
 	out1[2] = x182
