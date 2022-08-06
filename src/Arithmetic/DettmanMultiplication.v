@@ -144,11 +144,11 @@ Definition mulmod_general a b :=
   let r3 := carry' (weight (l - 2)) (weight 1) r2 in
   let r4 := reduce' s (weight (2 * l - 1)) (weight l) c r3 in
   let r5 := carry' (weight (l - 1)) (weight 1) r4 in
-  let r6 := carry' (weight l) (weight 1) r5 in
-  let r7 := carry_down (weight l) (weight l / s) r6 in
-  let r7' := dedup_weights r7 in
-  let r8 := carry' (weight (l - 1)) (Z.div s (weight (l - 1))) r7' in
-  let r9 := reduce' s s s c r8 in
+  let r6 := carry' (weight (l - 1)) (Z.div s (weight (l - 1))) r5 in
+  let r7 := carry' (weight l) (weight 1) r6 in
+  let r8 := carry_down (weight l) (weight l / s) r7 in
+  let r8' := dedup_weights r8 in
+  let r9 := reduce' s s s c r8' in
   let r10 := carry' (weight 0) (weight 1) r9 in
   let r11 := loop' r10 in
   let r12 := reduce' s (weight (2 * l - 2)) (weight l) c r11 in
@@ -189,6 +189,14 @@ Proof.
       -- lia.
       -- lia.
       -- lia.
+  - apply div_nz.
+    + lia.
+    + rewrite <- Z.pow_mul_r. rewrite <- Nat2Z.inj_mul. rewrite <- Z.pow_le_mono_r_iff.
+      -- remember e_big as H. lia.
+      -- lia.
+      -- lia.
+      -- lia.
+      -- lia.
   - repeat rewrite <- Z.pow_mul_r. rewrite <- Z.pow_sub_r.
     + rewrite <- Nat2Z.inj_mul. rewrite <- Nat2Z.inj_sub. apply mod_is_zero.
       -- lia.
@@ -198,14 +206,6 @@ Proof.
     + remember e_small as H. lia.
     + lia.
     + lia.
-  - apply div_nz.
-    + repeat rewrite Zpower_nat_Z. lia.
-    + rewrite <- Z.pow_mul_r. rewrite <- Nat2Z.inj_mul. rewrite <- Z.pow_le_mono_r_iff.
-      -- remember e_big as H. lia.
-      -- lia.
-      -- lia.
-      -- lia.
-      -- lia.
 Qed.
 
 End Stuff.
