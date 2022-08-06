@@ -112,7 +112,7 @@ Inductive RawLine :=
 | INSTR (instr : NormalInstruction)
 .
 Coercion INSTR : NormalInstruction >-> RawLine.
-Record Line := { indent : string ; rawline :> RawLine ; pre_comment_whitespace : string ; comment : option string }.
+Record Line := { indent : string ; rawline :> RawLine ; pre_comment_whitespace : string ; comment : option string ; line_number : nat}.
 Definition Lines := list Line.
 
 Definition reg_size (r : REG) : N :=

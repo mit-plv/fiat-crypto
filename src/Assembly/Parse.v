@@ -354,7 +354,7 @@ Definition parse_RawLine : ParserAction RawLine
                       parsed_prefix
                end.
 
-Definition parse_Line : ParserAction Line
+Definition parse_Line n : ParserAction Line
   := fun s
      => let '(indentv, rest_linev) := take_while_drop_while Ascii.is_whitespace s in
         let '(precommentv, commentv)
@@ -367,15 +367,15 @@ Definition parse_Line : ParserAction Line
         let rawlinev := String.rev rev_rawlinev in
         let trailing_whitespacev := String.rev rev_trailing_whitespacev in
         List.map
-          (fun '(r, rem) => ({| indent := indentv ; rawline := r ; pre_comment_whitespace := trailing_whitespacev ; comment := commentv |}, rem))
+          (fun '(r, rem) => ({| indent := indentv ; rawline := r ; pre_comment_whitespace := trailing_whitespacev ; comment := commentv ; line_number := n |}, rem))
           (parse_RawLine rawlinev).
 
 (* the error is the unparsable lines *)
-Fixpoint parse_Lines' (l : list string) : ErrorT (list string) Lines
+Fixpoint parse_Lines' (l : list (string*nat)) : ErrorT (list string) Lines
   := match l with
      | [] => Success []
-     | l :: ls
-       => match finalize parse_Line l, parse_Lines' ls with
+     | (l, n) :: ls
+       => match finalize (parse_Line n) l, parse_Lines' ls with
           | None, Error ls => Error (l :: ls)
           | None, Success _ => Error (l :: nil)
           | Some _, Error ls => Error ls
@@ -383,7 +383,7 @@ Fixpoint parse_Lines' (l : list string) : ErrorT (list string) Lines
           end
      end.
 
-Definition parse_Lines (l : list string) := parse_Lines' (String.split_newlines l).
+Definition parse_Lines (l : list string) := parse_Lines' (List.combine (String.split_newlines l) (seq 1 (length l))).
 
 Notation parse := parse_Lines (only parsing).
 
@@ -465,6 +465,10 @@ Global Instance show_Line : Show Line
                                                                         | Some c => ";" ++ c
                                                                         | None => ""
                                                                         end.
+
+Definition show_Line_with_line_number : Show Line
+  := fun l => show l ++ "; (line " ++ show l.(line_number) ++ ")".
+
 Global Instance show_lines_Lines : ShowLines Lines
   := fun ls => List.map show ls.
 

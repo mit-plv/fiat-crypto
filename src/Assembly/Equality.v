@@ -284,7 +284,8 @@ Definition Line_beq (x y : Line) : bool
   := ((x.(indent) =? y.(indent))%string
       && (x.(rawline) =? y.(rawline))%RawLine
       && (x.(pre_comment_whitespace) =? y.(pre_comment_whitespace))%string
-      && option_beq String.eqb x.(comment) y.(comment))%bool.
+      && option_beq String.eqb x.(comment) y.(comment))%bool
+      && (x.(line_number) =? y.(line_number)).
 Global Arguments Line_beq !_ !_ / .
 
 Infix "=?" := Line_beq : Line_scope.
