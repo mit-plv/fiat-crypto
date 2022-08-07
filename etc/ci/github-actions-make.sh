@@ -21,7 +21,7 @@ if [ ! -z "$(git diff)" ]; then
     git submodule foreach --recursive git diff
     git submodule foreach --recursive git status
     git diff
-    if [ "${ALLOW_DIFF}" != "1" ]; then
+    if [ -z "${ALLOW_DIFF}" ] || [ "${ALLOW_DIFF}" == "0" ]; then
         exit 1
     fi
 fi

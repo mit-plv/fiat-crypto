@@ -14,16 +14,16 @@ jobs:
     strategy:
       matrix:
         env:
-        - { COQ_VERSION: "master", COQ_PACKAGE: "coq"       , PPA: "ppa:jgross-h/coq-master-daily"            , SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: ""  }
-        - { COQ_VERSION: "8.15.2", COQ_PACKAGE: "coq-8.15.2", PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-08", SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: ""  }
-        - { COQ_VERSION: "8.14.1", COQ_PACKAGE: "coq-8.14.1", PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-08", SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: ""  }
-        - { COQ_VERSION: "8.13.2", COQ_PACKAGE: "coq-8.13.2", PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05", SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: ""  }
-        - { COQ_VERSION: "8.12.2", COQ_PACKAGE: "coq-8.12.2", PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05", SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: ""  }
-        - { COQ_VERSION: "8.11.2", COQ_PACKAGE: "coq-8.11.2", PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05", SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: ""  }
-        - { COQ_VERSION: "8.10.2", COQ_PACKAGE: "coq-8.10.2", PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05", SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: "1" }
-        - { COQ_VERSION: "8.9.1" , COQ_PACKAGE: "coq-8.9.1" , PPA: "ppa:jgross-h/many-coq-versions"           , SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: "1" }
-        - { COQ_VERSION: "8.8.2" , COQ_PACKAGE: "coq-8.8.2" , PPA: "ppa:jgross-h/many-coq-versions"           , SKIP_DISPLAY_TEST: "" , CC: "gcc", REMOVE_GLOBAL_ATTR: "1" }
-        - { COQ_VERSION: "8.7.2" , COQ_PACKAGE: "coq-8.7.2" , PPA: "ppa:jgross-h/many-coq-versions"           , SKIP_DISPLAY_TEST: "" , CC: "gcc", REMOVE_GLOBAL_ATTR: "1" }
+        - { COQ_VERSION: "master", COQ_PACKAGE: "coq"       , PPA: "ppa:jgross-h/coq-master-daily"            , SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: "" , ALLOW_DIFF: ""  }
+        - { COQ_VERSION: "8.15.2", COQ_PACKAGE: "coq-8.15.2", PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-08", SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: "" , ALLOW_DIFF: ""  }
+        - { COQ_VERSION: "8.14.1", COQ_PACKAGE: "coq-8.14.1", PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-08", SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: "" , ALLOW_DIFF: ""  }
+        - { COQ_VERSION: "8.13.2", COQ_PACKAGE: "coq-8.13.2", PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05", SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: "" , ALLOW_DIFF: ""  }
+        - { COQ_VERSION: "8.12.2", COQ_PACKAGE: "coq-8.12.2", PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05", SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: "" , ALLOW_DIFF: ""  }
+        - { COQ_VERSION: "8.11.2", COQ_PACKAGE: "coq-8.11.2", PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05", SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: "" , ALLOW_DIFF: ""  }
+        - { COQ_VERSION: "8.10.2", COQ_PACKAGE: "coq-8.10.2", PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05", SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: "1", ALLOW_DIFF: "1" }
+        - { COQ_VERSION: "8.9.1" , COQ_PACKAGE: "coq-8.9.1" , PPA: "ppa:jgross-h/many-coq-versions"           , SKIP_DISPLAY_TEST: "1", CC: "gcc", REMOVE_GLOBAL_ATTR: "1", ALLOW_DIFF: "1" }
+        - { COQ_VERSION: "8.8.2" , COQ_PACKAGE: "coq-8.8.2" , PPA: "ppa:jgross-h/many-coq-versions"           , SKIP_DISPLAY_TEST: "" , CC: "gcc", REMOVE_GLOBAL_ATTR: "1", ALLOW_DIFF: "1" }
+        - { COQ_VERSION: "8.7.2" , COQ_PACKAGE: "coq-8.7.2" , PPA: "ppa:jgross-h/many-coq-versions"           , SKIP_DISPLAY_TEST: "" , CC: "gcc", REMOVE_GLOBAL_ATTR: "1", ALLOW_DIFF: "1" }
 
     env: ${{ matrix.env }}
     name: ${{ matrix.env.COQ_VERSION }}
@@ -68,7 +68,7 @@ jobs:
     - name: curves-proofs
       run: etc/ci/github-actions-make.sh -j2 curves-proofs
     - name: selected-specific selected-specific-display
-      run: ALLOW_DIFF="${SKIP_DISPLAY_TEST}" etc/ci/github-actions-make.sh -j2 selected-specific selected-specific-display
+      run: ALLOW_DIFF="${SKIP_DISPLAY_TEST}${REMOVE_GLOBAL_ATTR}" etc/ci/github-actions-make.sh -j2 selected-specific selected-specific-display
     - name: selected-specific-display-test
       run: etc/ci/github-actions-make.sh -j2 selected-specific-display-test
       if: env.SKIP_DISPLAY_TEST != '1'
