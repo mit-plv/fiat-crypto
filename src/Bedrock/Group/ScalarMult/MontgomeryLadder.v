@@ -181,13 +181,6 @@ Section __.
    all : try match goal with |- 0 <= byte.unsigned ?x < _ => epose proof byte.unsigned_range x end.
    all : try (destruct Bitwidth.width_cases as [E|E]; rewrite ?E in *; Lia.lia).
    all : try (destruct Bitwidth.width_cases as [E|E]; rewrite ?E in *; cbn in *; Lia.lia).
-
-   (*
-      Z.testbit (LittleEndianList.le_combine bs) (Z.of_nat i) =
-      Z.testbit (byte.unsigned
-        (nth_default (byte.of_Z 0) bs (Z.to_nat (Z.of_nat i) / Z.to_nat 8)))
-        (Z.of_nat i mod 8)
-   *)
    rewrite <-(LittleEndianList.split_le_combine bs) at 2.
    rewrite LittleEndianList.nth_default_le_split, byte.unsigned_of_Z, Nat2Z.id
      by (eapply Nat.div_lt_upper_bound; Lia.nia).
@@ -335,19 +328,10 @@ Section __.
     Local Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.of_Z M_pos _) _))) =>
     epose proof compile_from_word as Hword; eapply Hword; clear Hword : compiler.
 
-    (* Local Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (_ * _)%F _))) =>
-    let Hmul := (fresh "Hmul") in epose proof compile_mul as Hmul; cbv [Fmul] in Hmul;
-    eapply Hmul; clear Hmul; compile_step; simpl : compiler. *)
-
     Local Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (_ * _)%F _))) =>
     let Hmul := (fresh "Hmul") in pose proof compile_mul as Hmul;
     cbv [Compilation2.field_parameters PrimeField.prime_field_parameters] in Hmul;
     eapply Hmul; [| | | try (eapply sep_assoc; eapply relax_bounds_FElem_R; ecancel_assumption) | | |]; clear Hmul; shelve : compiler.
-
-    (* Local Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.inv _) _))) =>
-    let Hinv := (fresh "Hinv") in pose proof compile_inv as Hinv;
-    cbv [Compilation2.field_parameters PrimeField.prime_field_parameters] in Hinv;
-    eapply Hinv; [| | | try (ecancel_assumption) | |]; clear Hinv; shelve : compiler. *)
 
     Local Hint Extern 6 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (stack _) _))) =>
     simple eapply (@compile_stack _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
@@ -363,8 +347,6 @@ Section __.
     let Hcopy := (fresh "Hcopy") in epose proof compile_felem_copy as Hcopy;
     cbv [Compilation2.field_parameters PrimeField.prime_field_parameters] in Hcopy;
     eapply Hcopy; [repeat compile_step| repeat compile_step | try ecancel_assumption | repeat compile_step | ]; clear Hcopy; shelve : compiler.
-
-
 
     (*hint for cleanup phase of compilation*)
     Ltac clear_pred_seps' :=   
@@ -392,6 +374,18 @@ Section __.
       cbv [Compilation2.field_parameters PrimeField.prime_field_parameters] in *.
       pose proof scalarbits_bound.
       compile_setup.
+      compile_step.
+      compile_step.
+      compile_step.
+      compile_step.
+      compile_step.
+      compile_step.
+      compile_step.
+      compile_step.
+      compile_step.
+      compile_step.
+      compile_step.
+      
       repeat compile_step.
       eapply compile_nlet_as_nlet_eq.
       eapply compile_felem_cswap; compile_step.

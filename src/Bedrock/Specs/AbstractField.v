@@ -11,6 +11,8 @@ Import bedrock2.Memory.
 
 Section FieldSpecs.
 
+  (*The classes here generel enough to accomodate finite fields of prime order as well as higher degree extensions, e.g. the quadratic extensions used for the BLS12-381 curves.*)
+
   Class FieldParameters :=
     { F : Type;
       Fzero : F; Fone : F;
@@ -30,16 +32,6 @@ Section FieldSpecs.
       square : string; scmula24 : string; inv : string;
       from_bytes : string; to_bytes : string;
       select_znz : string;
-
-      (* felem_small_literal p x :=
-          store p (expr.literal x);
-          store (p+4) (expr.literal 0);
-          ...
-
-        felem_copy pX pY :=
-          store pX (load pY);
-          store (pX+4) (load (pY+4));
-          ... *)
       felem_copy : string;
       from_word : string;
     }.

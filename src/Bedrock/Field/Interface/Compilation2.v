@@ -1,7 +1,6 @@
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Alloc.
 Require Import Crypto.Bedrock.Specs.AbstractField.
-Require Import Crypto.Bedrock.Specs.PrimeField.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Local Open Scope Z_scope.
 
@@ -14,9 +13,11 @@ Section Compile.
   Context {locals_ok : map.ok locals}.
   Context {env_ok : map.ok env}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
-  Context {prime_field_parameters : PrimeFieldParameters}.
 
-  Local Instance field_parameters : FieldParameters := PrimeField.prime_field_parameters.
+  (*Ideally, we would like to use just an instance of AbstractField.FieldParameters, rather than PrimeFieldParameters.
+    However, since generalizing from_word to general fields is on the To-Do list, we leave this as is for now.
+    See the comments on from_word in Bedrock/Specs/PrimeField.v*)
+  Context {field_parameters : AbstractField.FieldParameters}.
 
   Context {field_representaton : FieldRepresentation}
           {field_representation_ok : FieldRepresentation_ok}.
@@ -289,7 +290,7 @@ Section Compile.
   Lemma compile_from_word {tr m l functions} x:
     let v := F.of_Z _ x in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-           R (wx : word) out out_ptr out_var out_bounds,
+          R (wx : word) out out_ptr out_var out_bounds,
 
       spec_of_from_word functions ->
 
@@ -299,18 +300,18 @@ Section Compile.
       word.unsigned wx = x ->
 
       (let v := v in
-       forall m',
-         (FElem (Some tight_bounds) out_ptr v * R)%sep m' ->
-         (<{ Trace := tr;
-             Memory := m';
-             Locals := l;
-             Functions := functions }>
+      forall m',
+        (FElem (Some tight_bounds) out_ptr v * R)%sep m' ->
+        (<{ Trace := tr;
+            Memory := m';
+            Locals := l;
+            Functions := functions }>
           k_impl
           <{ pred (k v eq_refl) }>)) ->
       <{ Trace := tr;
-         Memory := m;
-         Locals := l;
-         Functions := functions }>
+        Memory := m;
+        Locals := l;
+        Functions := functions }>
       cmd.seq
         (cmd.call [] from_word
                   [expr.var out_var; expr.literal x])
@@ -335,12 +336,13 @@ Section Compile.
         sepsimpl;
         eauto. 
   Qed.
-
+  
 End Compile.
 
+(*Older versions of compilation Hints. For some reason, these do not work with the new specs.*)
 
 (*must be higher priority than compile_mul*)
-(* #[export] Hint Extern 6 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (a24 * _)%F _))) =>
+#[export] Hint Extern 6 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (a24 * _)%F _))) =>
 simple eapply compile_scmula24; shelve : compiler.
 
 #[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (_ * _)%F _))) =>
@@ -354,7 +356,7 @@ simple eapply compile_square; shelve : compiler.
 #[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.of_Z M_pos _) _))) =>
 simple eapply compile_from_word; shelve : compiler.
 #[export] Hint Extern 10 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ ?v _))) =>
-is_var v; simple eapply compile_felem_copy; shelve : compiler. *)
+is_var v; simple eapply compile_felem_copy; shelve : compiler.
 
 
 #[export] Hint Immediate relax_bounds_FElem : ecancel_impl.

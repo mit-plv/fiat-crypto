@@ -123,7 +123,7 @@ Section WordByWordMontgomery.
 
   Lemma gcd_aux' : forall n m (e : nat), (Z.gcd n m = 1)%Z -> (Z.gcd (n ^ (Z.of_nat e)) m = 1)%Z.
   Proof.
-    intros. induction e; auto.
+    intros ? m0 e ?. induction e; auto.
       - destruct m0; auto.
       - apply Znumtheory.Zgcd_1_rel_prime.
         apply Znumtheory.rel_prime_sym.
@@ -324,12 +324,12 @@ Section WordByWordMontgomery.
 
 Lemma valid_max_bounds n0 : forall x, @WordByWordMontgomery.valid width n0 m x ->list_Z_bounded_by (@MaxBounds.max_bounds width n0) x.
 Proof.
-    intros. destruct H. rewrite H. eapply MaxBounds.partition_bounded_by.
+    intros ? H. destruct H as [H H']. rewrite H. eapply MaxBounds.partition_bounded_by.
 Qed.
 
   Lemma valid_length : forall x, WordByWordMontgomery.valid width n m x -> length x = n.
   Proof.
-      intros. destruct H. erewrite WordByWordMontgomery.length_small; eauto.
+      intros ? H. destruct H. erewrite WordByWordMontgomery.length_small; eauto.
   Qed.
 
   Lemma mul_func_correct :
@@ -346,7 +346,7 @@ Qed.
     try handle_side_conditions; [| | eapply valid_max_bounds; eauto | apply valid_length].
     {   
     (* output *value* is correct *)
-      intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+      intros x y H0 H1. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
       cbv [feval feval_bytes bounded_by bytes_in_bounds AbstractField.loose_bounds
                field_representation Signature.field_representation
                Representation.frep Representation.eval_bytes
@@ -377,7 +377,7 @@ Qed.
     eapply list_unop_correct with (res:=res square_op);
       handle_side_conditions; [ | | apply valid_max_bounds | apply valid_length ].
     { (* output *value* is correct *)
-    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+    intros x H0. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
     cbv [feval feval_bytes bounded_by bytes_in_bounds AbstractField.loose_bounds
              field_representation Signature.field_representation
              Representation.frep Representation.eval_bytes
@@ -408,7 +408,7 @@ Qed.
     eapply list_binop_correct with (res:=res add_op);
     handle_side_conditions; [ | | apply valid_max_bounds | apply valid_length ].
     { (* output *value* is correct *)
-    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+    intros x y H0 H1. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
     cbv [feval feval_bytes bounded_by bytes_in_bounds AbstractField.loose_bounds
              field_representation Signature.field_representation
              Representation.frep Representation.eval_bytes
@@ -440,7 +440,7 @@ Qed.
     eapply list_binop_correct with (res:=res sub_op);
     handle_side_conditions; [ | | apply valid_max_bounds| apply valid_length ].
     { (* output *value* is correct *)
-    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+    intros x y H0 H1. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
     cbv [feval feval_bytes bounded_by bytes_in_bounds AbstractField.loose_bounds
              field_representation Signature.field_representation
              Representation.frep Representation.eval_bytes
@@ -472,7 +472,7 @@ Qed.
     eapply list_unop_correct with (res:=res opp_op);
       handle_side_conditions; [ | | apply valid_max_bounds | apply valid_length ].
     { (* output *value* is correct *)
-    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+    intros x H0. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
     cbv [feval feval_bytes bounded_by bytes_in_bounds AbstractField.loose_bounds
              field_representation Signature.field_representation
              Representation.frep Representation.eval_bytes
@@ -504,7 +504,7 @@ Qed.
     eapply Signature.from_bytes_correct with (res:=res from_bytes_op);
       handle_side_conditions; [ apply valid_max_bounds | apply valid_length | | ].
     { (* output *value* is correct *)
-    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+    intros bs H0. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
     cbv [feval feval_bytes bounded_by bytes_in_bounds AbstractField.loose_bounds
              field_representation Signature.field_representation
              Representation.frep Representation.eval_bytes
@@ -537,7 +537,7 @@ Proof using check_args_ok.
   clear - check_args_ok. apply use_curve_good in check_args_ok; rename check_args_ok into H.
   vm_compute Primitives.request_present in H.
   destruct_head'_and.
-  specialize_by reflexivity. cbv [uweight] in *. Search ModOps.weight.
+  specialize_by reflexivity. cbv [uweight] in *.
   {
     assert (m <= s m)%Z by lia. split; try lia.
   }
@@ -556,16 +556,16 @@ Qed. (*Copied from UnsaturatedSolinas.v; move to common location*)
     eapply Signature.to_bytes_correct with (res:=res to_bytes_op);
       handle_side_conditions; cbv [list_in_bounds]; [ | | | | ].
     {
-      intros. apply byte_bounds_range_iff; split; eauto.
+      intros x H0. apply byte_bounds_range_iff; split; eauto.
         - destruct H0. eapply WordByWordMontgomery.length_small; eauto.
-        - destruct H0. cbv [WordByWordMontgomery.small] in *.
+        - destruct H0 as [H0 ?]. cbv [WordByWordMontgomery.small] in *.
           rewrite H0. apply partition_bytes_range.
     }
     {
-      intros. destruct H0. apply WordByWordMontgomery.length_small in H0. rewrite H0. eauto.
+      intros. destruct H0 as [H0 ?]. apply WordByWordMontgomery.length_small in H0. rewrite H0. eauto.
     }
     { (* output *value* is correct *)
-    intros. cbv [feval]. simpl. 
+    intros x H0. cbv [feval]. simpl. 
     cbv [feval feval_bytes bounded_by bytes_in_bounds AbstractField.loose_bounds
              field_representation Signature.field_representation
              Representation.frep Representation.eval_bytes
@@ -592,22 +592,22 @@ Qed. (*Copied from UnsaturatedSolinas.v; move to common location*)
     }
       (*TODO: use valid_partition_small*)
       {
-        intros; rewrite Hcorrect by auto; split.
+        intros x H0; rewrite Hcorrect by auto; split.
         - unfold WordByWordMontgomery.small. unfold WordByWordMontgomery.eval. rewrite Partition.eval_partition.
           2: {
             apply uwprops. lia.
           }
         rewrite Zmod_small.
-        2: { destruct H0. unfold WordByWordMontgomery.eval in H1. auto. }
+        2: { destruct H0 as [? H1]. unfold WordByWordMontgomery.eval in H1. auto. }
           cbv [uweight].
           rewrite Zmod_small; auto. split.
-            + destruct H0. cbv [WordByWordMontgomery.eval] in H1. cbv [uweight] in H1. lia.
-            + destruct H0. cbv [WordByWordMontgomery.eval] in H1. cbv [uweight] in H1. destruct H1.
+            + destruct H0 as [? H1]. cbv [WordByWordMontgomery.eval] in H1. cbv [uweight] in H1. lia.
+            + destruct H0 as [? H1]. cbv [WordByWordMontgomery.eval] in H1. cbv [uweight] in H1. destruct H1.
               assert ( m < ModOps.weight 8 1 (n_bytes m))%Z.
               {
                 pose proof (use_curve_good _ _ _ check_args_ok).
                 assert (m < s m)%Z by lia.
-                cbv [uweight] in H3. lia.
+                cbv [uweight] in *. lia.
               }
             lia.
           - cbv [WordByWordMontgomery.eval]. rewrite Partition.eval_partition.
@@ -647,14 +647,9 @@ Qed. (*Copied from UnsaturatedSolinas.v; move to common location*)
         _ _ _ ltac:(eassumption) _ (res_eq from_mont_op)
       as Hcorrect.
 
-    eapply list_unop_correct with (res:=res from_mont_op).
-      - handle_side_conditions.
-      - handle_side_conditions.
-      - handle_side_conditions.
-      - handle_side_conditions.
-      - handle_side_conditions.
-      - intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
-      cbv [feval feval_bytes bounded_by bytes_in_bounds AbstractField.loose_bounds
+    eapply list_unop_correct with (res:=res from_mont_op); try handle_side_conditions.
+      - intros x H0. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+        cbv [feval feval_bytes bounded_by bytes_in_bounds AbstractField.loose_bounds
               field_representation Signature.field_representation
               Representation.frep Representation.eval_bytes
               Representation.eval_words
@@ -666,12 +661,12 @@ Qed. (*Copied from UnsaturatedSolinas.v; move to common location*)
       2: {
         eapply valid_max_bounds; eauto. destruct Hcorrect; eauto.
       }
-      destruct Hcorrect. FtoZ. pose proof (WordByWordMontgomery.from_montgomerymod_correct width n m (@PrimeField.r' prime_field_parameters width) (m' m width)) as Hcorrect.
+      destruct Hcorrect as [H1 H2]. FtoZ. pose proof (WordByWordMontgomery.from_montgomerymod_correct width n m (@PrimeField.r' prime_field_parameters width) (m' m width)) as Hcorrect.
       cbv [WordByWordMontgomery.eval] in *.
       edestruct Hcorrect as [Hvalue Hvalid]; [| | | | | | eapply H2| ]; try eapply use_curve_good; try eassumption; [pose proof r'_correct as Htemp; cbv [r' M] in Htemp; rewrite M_eq in Htemp; eauto |].
       simpl in Hvalue. simpl.  cbv [res]. destruct from_mont_op. simpl in *.
       simpl in Hvalue. simpl.
-      assert ((Positional.eval (uweight width) n
+      assert (H3 : (Positional.eval (uweight width) n
       (WordByWordMontgomery.from_montgomerymod width n m 
          (m' m width)
          (expr.Interp (@Compilers.ident_interp) res
@@ -690,8 +685,7 @@ Qed. (*Copied from UnsaturatedSolinas.v; move to common location*)
       auto.
       - intros. apply Hcorrect. auto.
       - intros; eapply valid_max_bounds; auto.
-      - intros. simpl in H0. destruct H0. rewrite H0. eapply Partition.length_partition.
-      - handle_side_conditions.
+      - intros. simpl in H0. destruct H0 as [H0 ?]. rewrite H0. eapply Partition.length_partition.
   Qed.
 
   Lemma to_mont_func_correct :
@@ -704,13 +698,8 @@ Qed. (*Copied from UnsaturatedSolinas.v; move to common location*)
         _ _ _ ltac:(eassumption) _ (res_eq to_mont_op)
       as Hcorrect.
 
-    eapply list_unop_correct with (res:=res to_mont_op).
-      - handle_side_conditions.
-      - handle_side_conditions.
-      - handle_side_conditions.
-      - handle_side_conditions.
-      - handle_side_conditions.
-      - intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+    eapply list_unop_correct with (res:=res to_mont_op); try handle_side_conditions.
+      - intros x H0. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
       cbv [feval feval_bytes bounded_by bytes_in_bounds AbstractField.loose_bounds
               field_representation Signature.field_representation
               Representation.frep Representation.eval_bytes
@@ -723,7 +712,7 @@ Qed. (*Copied from UnsaturatedSolinas.v; move to common location*)
       2: {
         eapply valid_max_bounds; eauto. destruct Hcorrect; eauto.
       }
-      destruct Hcorrect. FtoZ.
+      destruct Hcorrect as [H1 H2]. FtoZ.
       cbv [WordByWordMontgomery.eval] in *.
       assert ((Positional.eval (uweight width) n
       (WordByWordMontgomery.from_montgomerymod width n m 
@@ -733,7 +722,7 @@ Qed. (*Copied from UnsaturatedSolinas.v; move to common location*)
             (WordByWordMontgomery.from_montgomerymod width n m 
                (m' m width)
                (expr.interp (@Compilers.ident_interp) (res to_mont_op API.interp_type)
-                  (map Interface.word.unsigned x))) mod m)%Z) by reflexivity.
+                  (map Interface.word.unsigned x))) mod m)%Z) as H3 by reflexivity.
       rewrite <- H3.
       rewrite H1.
       pose proof (WordByWordMontgomery.from_montgomerymod_correct width n m (@PrimeField.r' prime_field_parameters width) (m' m width)) as Hcorrect.
@@ -759,8 +748,7 @@ Qed. (*Copied from UnsaturatedSolinas.v; move to common location*)
         rewrite H1'. rewrite Z.mul_1_r. rewrite Zmod_mod. auto.
       - intros; apply Hcorrect; auto.
       - intros; eapply valid_max_bounds; auto.
-      - intros. destruct H0. rewrite H0. eapply Partition.length_partition.
-      - handle_side_conditions.
+      - intros x H0. destruct H0. rewrite H0. eapply Partition.length_partition.
   Qed.
 
   Lemma select_znz_func_correct :

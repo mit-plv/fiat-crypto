@@ -430,16 +430,6 @@ Section FElems.
           eapply sep_comm, sep_assoc. eapply relax_bounds_FElem_R. ecancel_assumption.
         Qed.
 
-        Local Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (_ ^ 2)%F _))) =>
-          let Hsquare := (fresh "Hsquare") in pose proof compile_square as Hsquare;
-          repeat rewrite F.pow_2_r; cbv [Compilation2.field_parameters PrimeField.prime_field_parameters] in Hsquare;
-          eapply Hsquare; [| | |eapply relax_bounds_FElem_R; ecancel_assumption | | ]; clear Hsquare; shelve : compiler.
-
-        Local Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (_ * _)%F _))) =>
-          let Hmul := (fresh "Hmul") in pose proof compile_mul as Hmul;
-          cbv [Compilation2.field_parameters PrimeField.prime_field_parameters] in Hmul;
-          eapply Hmul; [| | |eapply relax_bounds_binop; ecancel_assumption | | |]; clear Hmul; shelve : compiler.
-
 
       Section Exp_by_squaring.
         Hint Extern 1 => rewrite_exponentiation exp_by_squaring_correct; shelve : compiler_cleanup.
@@ -462,7 +452,38 @@ Section FElems.
           implements (exp 6) using [@square prime_field_parameters; @mul prime_field_parameters])
           As exp_6_body_correct.
         Proof with autounfold.
-          compile.
+          compile_setup.
+          compile_step.
+          pose proof compile_square as Hsquare.
+          eapply compile_nlet_as_nlet_eq.
+          repeat rewrite F.pow_2_r.
+          rewrite <- square_eq.
+          eapply Hsquare; compile_step.
+          clear Hsquare.
+
+          compile_step.
+
+          pose proof compile_mul as Hmul. simpl in Hmul.
+          remember (@AbstractField.Fsquare my_field_parameters x) as xeyy.
+          eapply compile_nlet_as_nlet_eq.
+
+          cbv [my_field_parameters] in *.
+          Set Printing All.
+          simpl.
+          simpl in Hmul.
+          simpl.
+          cbv [PrimeField.prime_field_parameters] in *.
+
+          eapply Hmul.
+          eapply compile_mul.
+          compile_step.
+          compile_step.
+          eapply compile_square.
+          cbv [Compilation2.field_parameters] in Hsquare.
+
+          compile_step.
+          rewrite square_eq.
+          compile_step.
         Qed.
       End Exp_by_squaring.
 

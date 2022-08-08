@@ -83,6 +83,8 @@ Class PrimeFieldParameters :=
             {field_representation : FieldRepresentation}
             {field_representation_ok : FieldRepresentation_ok}.
       
+    (*Potentially; move this to AbstractField.v
+      Arbitrary fields are not supported by general fields, but this could be done using the canonical homomorphism of rings Z -> F.*)
     Instance spec_of_from_word : spec_of from_word :=
       fnspec! from_word (pout x : word) / out R,
       { requires tr mem0 :=

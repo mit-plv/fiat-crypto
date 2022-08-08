@@ -233,7 +233,7 @@ Module M.
       Lemma scmul_func_correct :
         program_logic_goal_for_function! scmul_func.
       Proof.
-        (* straightline doesn't work properly for setup, so the first step
+        (* straightline fials, and is very slow, so the first step
            is inlined and changed here *)
         (* Fail straightline. *)
         cbv [program_logic_goal_for scmul_func spec_of_scmul]; intros.
