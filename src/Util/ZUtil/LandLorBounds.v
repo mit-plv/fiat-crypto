@@ -200,19 +200,23 @@ Module Z.
   Lemma land_round_lor_land_bound_r x
     : Z.land x (Z.round_lor_land_bound x) = if (0 <=? x) then x else Z.round_lor_land_bound x.
   Proof. t. Qed.
+#[global]
   Hint Rewrite land_round_lor_land_bound_r : zsimplify_fast zsimplify.
   Lemma land_round_lor_land_bound_l x
     : Z.land (Z.round_lor_land_bound x) x = if (0 <=? x) then x else Z.round_lor_land_bound x.
   Proof. rewrite Z.land_comm, land_round_lor_land_bound_r; reflexivity. Qed.
+#[global]
   Hint Rewrite land_round_lor_land_bound_l : zsimplify_fast zsimplify.
 
   Lemma lor_round_lor_land_bound_r x
     : Z.lor x (Z.round_lor_land_bound x) = if (0 <=? x) then Z.round_lor_land_bound x else x.
   Proof. t. Qed.
+#[global]
   Hint Rewrite lor_round_lor_land_bound_r : zsimplify_fast zsimplify.
   Lemma lor_round_lor_land_bound_l x
     : Z.lor (Z.round_lor_land_bound x) x = if (0 <=? x) then Z.round_lor_land_bound x else x.
   Proof. rewrite Z.lor_comm, lor_round_lor_land_bound_r; reflexivity. Qed.
+#[global]
   Hint Rewrite lor_round_lor_land_bound_l : zsimplify_fast zsimplify.
 
   Lemma land_round_bound_pos_r v x
@@ -312,9 +316,13 @@ Module Export Hints.
   Global Hint Resolve Z.round_lor_land_bound_bounds : zarith.
   Global Hint Resolve Z.round_lor_land_bound_bounds_pos : zarith.
   Global Hint Resolve Z.round_lor_land_bound_bounds_neg : zarith.
+#[global]
   Hint Rewrite Z.land_round_lor_land_bound_r : zsimplify_fast zsimplify.
+#[global]
   Hint Rewrite Z.land_round_lor_land_bound_l : zsimplify_fast zsimplify.
+#[global]
   Hint Rewrite Z.lor_round_lor_land_bound_r : zsimplify_fast zsimplify.
+#[global]
   Hint Rewrite Z.lor_round_lor_land_bound_l : zsimplify_fast zsimplify.
   Global Hint Resolve Z.land_round_bound_pos_r (fun v x => proj1 (Z.land_round_bound_pos_r v x)) (fun v x => proj2 (Z.land_round_bound_pos_r v x)) : zarith.
   Global Hint Resolve Z.land_round_bound_pos_l (fun v x => proj1 (Z.land_round_bound_pos_l v x)) (fun v x => proj2 (Z.land_round_bound_pos_l v x)) : zarith.

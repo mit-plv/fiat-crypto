@@ -11,4 +11,5 @@ Proof.
   clear; abstract (intros []; intros; reflexivity).
 Defined.
 
+#[global]
 Hint Rewrite @InterpInlineConstAndOp using solve_wf_side_condition : reflective_interp.

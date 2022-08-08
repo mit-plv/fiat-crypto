@@ -28,6 +28,7 @@ Module N.
     auto.
   Qed.
 
+#[global]
   Hint Rewrite
     N.succ_double_spec
     N.add_1_r
@@ -120,6 +121,7 @@ Module N.
   End ZN.
 
 End N.
+#[global]
 Hint Rewrite
      N.succ_double_spec
      N.add_1_r

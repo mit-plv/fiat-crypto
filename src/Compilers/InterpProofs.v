@@ -62,5 +62,7 @@ Section language.
   Qed.
 End language.
 
+#[global]
 Hint Rewrite @interpf_LetIn @interpf_SmartVarf : reflective_interp.
+#[global]
 Hint Rewrite @interpf_SmartVarVarf using assumption : reflective_interp.

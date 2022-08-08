@@ -71,7 +71,7 @@ endif
 
 .DEFAULT_GOAL := coq
 
-WARNINGS := -deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality
+WARNINGS := -deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality,unsupported-attributes
 
 update-_CoqProject::
 	$(SHOW)'ECHO > _CoqProject'

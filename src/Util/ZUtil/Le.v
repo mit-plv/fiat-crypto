@@ -45,18 +45,22 @@ Module Z.
 
   Lemma leb_add_same x y : (x <=? y + x) = (0 <=? y).
   Proof. destruct (x <=? y + x) eqn:?, (0 <=? y) eqn:?; Z.ltb_to_lt; try reflexivity; lia. Qed.
+#[global]
   Hint Rewrite leb_add_same : zsimplify.
 
   Lemma ltb_add_same x y : (x <? y + x) = (0 <? y).
   Proof. destruct (x <? y + x) eqn:?, (0 <? y) eqn:?; Z.ltb_to_lt; try reflexivity; lia. Qed.
+#[global]
   Hint Rewrite ltb_add_same : zsimplify.
 
   Lemma geb_add_same x y : (x >=? y + x) = (0 >=? y).
   Proof. destruct (x >=? y + x) eqn:?, (0 >=? y) eqn:?; Z.ltb_to_lt; try reflexivity; lia. Qed.
+#[global]
   Hint Rewrite geb_add_same : zsimplify.
 
   Lemma gtb_add_same x y : (x >? y + x) = (0 >? y).
   Proof. destruct (x >? y + x) eqn:?, (0 >? y) eqn:?; Z.ltb_to_lt; try reflexivity; lia. Qed.
+#[global]
   Hint Rewrite gtb_add_same : zsimplify.
 
   Lemma sub_pos_bound a b X : 0 <= a < X -> 0 <= b < X -> -X < a - b < X.
@@ -74,8 +78,12 @@ Module Export Hints.
   Export ZUtil.Hints.Core.
   Export LtbToLt.Hints.
   Global Hint Resolve Z.positive_is_nonzero : zarith.
+#[global]
   Hint Rewrite Z.leb_add_same : zsimplify.
+#[global]
   Hint Rewrite Z.ltb_add_same : zsimplify.
+#[global]
   Hint Rewrite Z.geb_add_same : zsimplify.
+#[global]
   Hint Rewrite Z.gtb_add_same : zsimplify.
 End Hints.

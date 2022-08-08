@@ -68,6 +68,7 @@ Create HintDb push_update_nth discriminated.
 Create HintDb znonzero discriminated.
 
 Module Export Hints1.
+#[global]
   Hint Rewrite
        @app_length
        @rev_length
@@ -117,7 +118,9 @@ Module Export List.
     Lemma map_repeat x n : map f (List.repeat x n) = List.repeat (f x) n.
     Proof using Type. induction n; simpl List.repeat; simpl map; congruence. Qed.
   End Map.
+#[global]
   Hint Rewrite @map_cons @map_nil @map_repeat : push_map.
+#[global]
   Hint Rewrite @map_app : push_map.
 
   Section FlatMap.
@@ -127,9 +130,11 @@ Module Export List.
       (List.flat_map f (x::xs) = (f x++List.flat_map f xs))%list.
     Proof. reflexivity. Qed.
   End FlatMap.
+#[global]
   Hint Rewrite @flat_map_cons @flat_map_nil : push_flat_map.
 
   Lemma rev_cons {A} x ls : @rev A (x :: ls) = rev ls ++ [x]. Proof. reflexivity. Qed.
+#[global]
   Hint Rewrite @rev_cons : list.
 
   Section FoldRight.
@@ -147,6 +152,7 @@ Module Export List.
       rewrite !fold_left_rev_right; reflexivity.
     Qed.
   End FoldRight.
+#[global]
   Hint Rewrite @fold_right_nil @fold_right_cons @fold_right_snoc : simpl_fold_right push_fold_right.
 
   Section Partition.
@@ -158,6 +164,7 @@ Module Export List.
                                              else ((fst (partition f xs)), x :: (snd (partition f xs))).
     Proof. cbv [partition]; break_match; reflexivity.           Qed.
   End Partition.
+#[global]
   Hint Rewrite @partition_nil @partition_cons : push_partition.
 
   Lemma in_seq len start n :
@@ -266,13 +273,21 @@ Module Export List.
 
 End List.
 
+#[global]
 Hint Rewrite @firstn_skipn : simpl_firstn.
+#[global]
 Hint Rewrite @firstn_skipn : simpl_skipn.
+#[global]
 Hint Rewrite @firstn_nil @firstn_cons @List.firstn_all @firstn_O @firstn_app_2 @List.firstn_firstn : push_firstn.
+#[global]
 Hint Rewrite @firstn_nil @firstn_cons @List.firstn_all @firstn_O @firstn_app_2 @List.firstn_firstn : simpl_firstn.
+#[global]
 Hint Rewrite @firstn_app : push_firstn.
+#[global]
 Hint Rewrite <- @firstn_cons @firstn_app @List.firstn_firstn : pull_firstn.
+#[global]
 Hint Rewrite @firstn_all2 @removelast_firstn @firstn_removelast using lia : push_firstn.
+#[global]
 Hint Rewrite @firstn_all2 @removelast_firstn @firstn_removelast using lia : simpl_firstn.
 
 Local Arguments value / _ _.
@@ -347,25 +362,32 @@ Ltac boring_list :=
 Lemma nth_default_cons : forall {T} (x u0 : T) us, nth_default x (u0 :: us) 0 = u0.
 Proof. auto. Qed.
 
+#[global]
 Hint Rewrite @nth_default_cons : simpl_nth_default.
+#[global]
 Hint Rewrite @nth_default_cons : push_nth_default.
 
 Lemma nth_default_cons_S : forall {A} us (u0 : A) n d,
   nth_default d (u0 :: us) (S n) = nth_default d us n.
 Proof. boring. Qed.
 
+#[global]
 Hint Rewrite @nth_default_cons_S : simpl_nth_default.
+#[global]
 Hint Rewrite @nth_default_cons_S : push_nth_default.
 
 Lemma nth_default_nil : forall {T} n (d : T), nth_default d nil n = d.
 Proof. induction n; boring. Qed.
 
+#[global]
 Hint Rewrite @nth_default_nil : simpl_nth_default.
+#[global]
 Hint Rewrite @nth_default_nil : push_nth_default.
 
 Lemma nth_error_nil_error : forall {A} n, nth_error (@nil A) n = None.
 Proof. induction n; boring. Qed.
 
+#[global]
 Hint Rewrite @nth_error_nil_error : simpl_nth_error.
 
 Ltac nth_tac' :=
@@ -419,6 +441,7 @@ Proof.
   induction i as [|? IHi]; destruct xs; nth_tac'; rewrite IHi by lia; auto.
 Qed.
 Global Hint Resolve nth_error_length_error.
+#[global]
 Hint Rewrite @nth_error_length_error using lia : simpl_nth_error.
 
 Lemma map_nth_default : forall (A B : Type) (f : A -> B) n x y l,
@@ -434,6 +457,7 @@ Proof.
   lia.
 Qed.
 
+#[global]
 Hint Rewrite @map_nth_default using lia : push_nth_default.
 
 Ltac nth_tac :=
@@ -481,6 +505,7 @@ Lemma simpl_set_nth_S {T} x n
       end.
 Proof. intro; rewrite unfold_set_nth; reflexivity. Qed.
 
+#[global]
 Hint Rewrite @simpl_set_nth_S @simpl_set_nth_0 : simpl_set_nth.
 
 Lemma update_nth_ext {T} f g n
@@ -508,18 +533,21 @@ Proof.
       try congruence; assumption.
 Qed.
 
+#[global]
 Hint Rewrite @update_nth_id_eq_specific using congruence : simpl_update_nth.
 
 Lemma update_nth_id_eq : forall {T} f (H : forall x, f x = x) n (xs : list T),
     update_nth n f xs = xs.
 Proof. intros; apply update_nth_id_eq_specific; trivial. Qed.
 
+#[global]
 Hint Rewrite @update_nth_id_eq using congruence : simpl_update_nth.
 
 Lemma update_nth_id : forall {T} n (xs : list T),
     update_nth n (fun x => x) xs = xs.
 Proof. intros; apply update_nth_id_eq; trivial. Qed.
 
+#[global]
 Hint Rewrite @update_nth_id : simpl_update_nth.
 
 Lemma nth_update_nth : forall m {T} (xs:list T) (n:nat) (f:T -> T),
@@ -535,7 +563,9 @@ Proof.
         edestruct eq_nat_dec; reflexivity. }
 Qed.
 
+#[global]
 Hint Rewrite @nth_update_nth : push_nth_error.
+#[global]
 Hint Rewrite <- @nth_update_nth : pull_nth_error.
 
 Lemma length_update_nth : forall {T} i f (xs:list T), length (update_nth i f xs) = length xs.
@@ -543,6 +573,7 @@ Proof.
   induction i, xs; boring.
 Qed.
 
+#[global]
 Hint Rewrite @length_update_nth : distr_length.
 
 Lemma nth_set_nth : forall m {T} (xs:list T) (n:nat) x,
@@ -558,11 +589,13 @@ Proof.
           | exfalso; apply p; congruence ].
 Qed.
 
+#[global]
 Hint Rewrite @nth_set_nth : push_nth_error.
 
 Lemma length_set_nth : forall {T} i x (xs:list T), length (set_nth i x xs) = length xs.
 Proof. intros; apply length_update_nth. Qed.
 
+#[global]
 Hint Rewrite @length_set_nth : distr_length.
 
 Lemma nth_error_length_exists_value : forall {A} (i : nat) (xs : list A),
@@ -584,6 +617,7 @@ Proof.
   unfold nth_default; boring.
 Qed.
 
+#[global]
 Hint Rewrite @nth_error_value_eq_nth_default using eassumption : simpl_nth_default.
 
 Lemma skipn0 : forall {T} (xs:list T), skipn 0 xs = xs.
@@ -770,6 +804,7 @@ Proof.
   destruct (lt_dec n (length xs)); auto.
 Qed.
 
+#[global]
 Hint Rewrite @nth_default_app : push_nth_default.
 
 Lemma combine_truncate_r : forall {A B} (xs : list A) (ys : list B),
@@ -800,24 +835,31 @@ Lemma map_snd_combine {A B} (xs:list A) (ys:list B) : List.map snd (List.combine
 Proof.
   revert xs; induction ys; destruct xs; simpl; solve [ trivial | congruence ].
 Qed.
+#[global]
 Hint Rewrite @map_fst_combine @map_snd_combine : push_map.
 
 Lemma skipn_nil : forall {A} n, skipn n nil = @nil A.
 Proof. destruct n; auto. Qed.
 
+#[global]
 Hint Rewrite @skipn_nil : simpl_skipn.
+#[global]
 Hint Rewrite @skipn_nil : push_skipn.
 
 Lemma skipn_0 : forall {A} xs, @skipn A 0 xs = xs.
 Proof. reflexivity. Qed.
 
+#[global]
 Hint Rewrite @skipn_0 : simpl_skipn.
+#[global]
 Hint Rewrite @skipn_0 : push_skipn.
 
 Lemma skipn_cons_S : forall {A} n x xs, @skipn A (S n) (x::xs) = @skipn A n xs.
 Proof. reflexivity. Qed.
 
+#[global]
 Hint Rewrite @skipn_cons_S : simpl_skipn.
+#[global]
 Hint Rewrite @skipn_cons_S : push_skipn.
 
 Lemma skipn_app : forall {A} n (xs ys : list A),
@@ -826,6 +868,7 @@ Proof.
   induction n, xs, ys; boring.
 Qed.
 
+#[global]
 Hint Rewrite @skipn_app : push_skipn.
 
 Lemma skipn_skipn {A} n1 n2 (ls : list A)
@@ -836,8 +879,11 @@ Proof.
       boring.
 Qed.
 
+#[global]
 Hint Rewrite @skipn_skipn : simpl_skipn.
+#[global]
 Hint Rewrite <- @skipn_skipn : push_skipn.
+#[global]
 Hint Rewrite @skipn_skipn : pull_skipn.
 
 Lemma skipn_firstn {A} (ls : list A) n m
@@ -853,7 +899,9 @@ Qed.
 Lemma firstn_skipn_add' {A} (ls : list A) n m
   : firstn n (skipn m ls) = skipn m (firstn (n + m) ls).
 Proof. rewrite firstn_skipn_add; do 2 f_equal; auto with arith. Qed.
+#[global]
 Hint Rewrite <- @firstn_skipn_add @firstn_skipn_add' : simpl_firstn.
+#[global]
 Hint Rewrite <- @firstn_skipn_add @firstn_skipn_add' : simpl_skipn.
 
 Lemma firstn_app_inleft : forall {A} n (xs ys : list A), (n <= length xs)%nat ->
@@ -862,7 +910,9 @@ Proof.
   induction n, xs, ys; boring; try lia.
 Qed.
 
+#[global]
 Hint Rewrite @firstn_app_inleft using solve [ distr_length ] : simpl_firstn.
+#[global]
 Hint Rewrite @firstn_app_inleft using solve [ distr_length ] : push_firstn.
 
 Lemma skipn_app_inleft : forall {A} n (xs ys : list A), (n <= length xs)%nat ->
@@ -871,18 +921,23 @@ Proof.
   induction n, xs, ys; boring; try lia.
 Qed.
 
+#[global]
 Hint Rewrite @skipn_app_inleft using solve [ distr_length ] : push_skipn.
 
 Lemma firstn_map : forall {A B} (f : A -> B) n (xs : list A), firstn n (map f xs) = map f (firstn n xs).
 Proof. induction n, xs; boring. Qed.
 
+#[global]
 Hint Rewrite @firstn_map : push_firstn.
+#[global]
 Hint Rewrite <- @firstn_map : pull_firstn.
 
 Lemma skipn_map : forall {A B} (f : A -> B) n (xs : list A), skipn n (map f xs) = map f (skipn n xs).
 Proof. induction n, xs; boring. Qed.
 
+#[global]
 Hint Rewrite @skipn_map : push_skipn.
+#[global]
 Hint Rewrite <- @skipn_map : pull_skipn.
 
 Lemma firstn_all : forall {A} n (xs:list A), n = length xs -> firstn n xs = xs.
@@ -890,7 +945,9 @@ Proof.
   induction n, xs; boring; lia.
 Qed.
 
+#[global]
 Hint Rewrite @firstn_all using solve [ distr_length ] : simpl_firstn.
+#[global]
 Hint Rewrite @firstn_all using solve [ distr_length ] : push_firstn.
 
 Lemma skipn_all : forall {T} n (xs:list T),
@@ -900,7 +957,9 @@ Proof.
   induction n, xs; boring; lia.
 Qed.
 
+#[global]
 Hint Rewrite @skipn_all using solve [ distr_length ] : simpl_skipn.
+#[global]
 Hint Rewrite @skipn_all using solve [ distr_length ] : push_skipn.
 
 Lemma firstn_app_sharp : forall {A} n (l l': list A),
@@ -911,7 +970,9 @@ Proof.
   rewrite firstn_app_inleft; auto using firstn_all; lia.
 Qed.
 
+#[global]
 Hint Rewrite @firstn_app_sharp using solve [ distr_length ] : simpl_firstn.
+#[global]
 Hint Rewrite @firstn_app_sharp using solve [ distr_length ] : push_firstn.
 
 Lemma skipn_app_sharp : forall {A} n (l l': list A),
@@ -922,7 +983,9 @@ Proof.
   rewrite skipn_app_inleft; try rewrite skipn_all; auto; lia.
 Qed.
 
+#[global]
 Hint Rewrite @skipn_app_sharp using solve [ distr_length ] : simpl_skipn.
+#[global]
 Hint Rewrite @skipn_app_sharp using solve [ distr_length ] : push_skipn.
 
 Lemma skipn_length : forall {A} n (xs : list A),
@@ -931,12 +994,14 @@ Proof.
   induction n, xs; boring.
 Qed.
 
+#[global]
 Hint Rewrite @skipn_length : distr_length.
 
 Lemma length_cons : forall {T} (x:T) xs, length (x::xs) = S (length xs).
   reflexivity.
 Qed.
 
+#[global]
 Hint Rewrite @length_cons : distr_length.
 
 Lemma length_cons_full {T} n (x:list T) (t:T) (H: length (t :: x) = S n)
@@ -955,6 +1020,7 @@ Qed.
 
 Lemma length_tl {A} ls : length (@tl A ls) = (length ls - 1)%nat.
 Proof. destruct ls; cbn [tl length]; lia. Qed.
+#[global]
 Hint Rewrite @length_tl : distr_length.
 
 Lemma length_snoc : forall {T} xs (x:T),
@@ -966,6 +1032,7 @@ Qed.
 Lemma combine_cons : forall {A B} a b (xs:list A) (ys:list B),
   combine (a :: xs) (b :: ys) = (a,b) :: combine xs ys.
 Proof. reflexivity. Qed.
+#[global]
 Hint Rewrite @combine_cons : push_combine.
 
 Lemma firstn_combine : forall {A B} n (xs:list A) (ys:list B),
@@ -974,7 +1041,9 @@ Proof.
   induction n, xs, ys; boring.
 Qed.
 
+#[global]
 Hint Rewrite @firstn_combine : push_firstn.
+#[global]
 Hint Rewrite <- @firstn_combine : pull_firstn.
 
 Lemma combine_nil_r : forall {A B} (xs:list A),
@@ -982,6 +1051,7 @@ Lemma combine_nil_r : forall {A B} (xs:list A),
 Proof.
   induction xs; boring.
 Qed.
+#[global]
 Hint Rewrite @combine_nil_r : push_combine.
 
 Lemma combine_snoc {A B} xs : forall ys x y,
@@ -991,6 +1061,7 @@ Proof.
   induction xs; intros; destruct ys; distr_length; cbn;
     try rewrite IHxs by lia; reflexivity.
 Qed.
+#[global]
 Hint Rewrite @combine_snoc using (solve [distr_length]) : push_combine.
 
 Lemma skipn_combine : forall {A B} n (xs:list A) (ys:list B),
@@ -1000,7 +1071,9 @@ Proof.
   rewrite combine_nil_r; reflexivity.
 Qed.
 
+#[global]
 Hint Rewrite @skipn_combine : push_skipn.
+#[global]
 Hint Rewrite <- @skipn_combine : pull_skipn.
 
 Lemma break_list_last: forall {T} (xs:list T),
@@ -1036,6 +1109,7 @@ Proof.
   auto.
 Qed.
 
+#[global]
 Hint Rewrite @nil_length0 : distr_length.
 
 Lemma nth_error_Some_nth_default : forall {T} i x (l : list T), (i < length l)%nat ->
@@ -1051,11 +1125,13 @@ Qed.
 Lemma update_nth_cons : forall {T} f (u0 : T) us, update_nth 0 f (u0 :: us) = (f u0) :: us.
 Proof. reflexivity. Qed.
 
+#[global]
 Hint Rewrite @update_nth_cons : simpl_update_nth.
 
 Lemma set_nth_cons : forall {T} (x u0 : T) us, set_nth 0 x (u0 :: us) = x :: us.
 Proof. intros; apply update_nth_cons. Qed.
 
+#[global]
 Hint Rewrite @set_nth_cons : simpl_set_nth.
 
 Lemma cons_update_nth : forall {T} n f (y : T) us,
@@ -1064,6 +1140,7 @@ Proof.
   induction n; boring.
 Qed.
 
+#[global]
 Hint Rewrite <- @cons_update_nth : simpl_update_nth.
 
 Lemma update_nth_nil : forall {T} n f, update_nth n f (@nil T) = @nil T.
@@ -1071,17 +1148,20 @@ Proof.
   induction n; boring.
 Qed.
 
+#[global]
 Hint Rewrite @update_nth_nil : simpl_update_nth.
 
 Lemma cons_set_nth : forall {T} n (x y : T) us,
   y :: set_nth n x us = set_nth (S n) x (y :: us).
 Proof. intros; apply cons_update_nth. Qed.
 
+#[global]
 Hint Rewrite <- @cons_set_nth : simpl_set_nth.
 
 Lemma set_nth_nil : forall {T} n (x : T), set_nth n x nil = nil.
 Proof. intros; apply update_nth_nil. Qed.
 
+#[global]
 Hint Rewrite @set_nth_nil : simpl_set_nth.
 
 Lemma skipn_nth_default : forall {T} n us (d : T), (n < length us)%nat ->
@@ -1105,6 +1185,7 @@ Proof.
   congruence.
 Qed.
 
+#[global]
 Hint Rewrite @nth_default_out_of_bounds using lia : simpl_nth_default.
 
 Ltac nth_error_inbounds :=
@@ -1200,6 +1281,7 @@ Proof.
   nth_tac.
 Qed.
 
+#[global]
 Hint Rewrite @map_nth_default_always : push_nth_default.
 
 Lemma map_S_seq {A} (f:nat->A) len : forall start,
@@ -1282,6 +1364,7 @@ Proof.
   assert (n = m) by lia; subst; reflexivity.
 Qed.
 
+#[global]
 Hint Rewrite @firstn_firstn using lia : push_firstn.
 
 Lemma firstn_succ : forall {A} (d : A) n l, (n < length l)%nat ->
@@ -1301,6 +1384,7 @@ Proof.
   revert k a; induction b as [|? IHb], k; simpl; try reflexivity.
   intros; rewrite IHb; reflexivity.
 Qed.
+#[global]
 Hint Rewrite @firstn_seq : push_firstn.
 
 Lemma skipn_seq k a b
@@ -1316,6 +1400,7 @@ Proof.
   rewrite IHn by lia; reflexivity.
 Qed.
 
+#[global]
 Hint Rewrite @update_nth_out_of_bounds using lia : simpl_update_nth.
 
 
@@ -1335,6 +1420,7 @@ Proof.
                    | lia ].
 Qed.
 
+#[global]
 Hint Rewrite @update_nth_nth_default_full : push_nth_default.
 
 Lemma update_nth_nth_default : forall {A} (d:A) n f l i, (0 <= i < length l)%nat ->
@@ -1342,6 +1428,7 @@ Lemma update_nth_nth_default : forall {A} (d:A) n f l i, (0 <= i < length l)%nat
   if (eq_nat_dec i n) then f (nth_default d l i) else nth_default d l i.
 Proof. intros; rewrite update_nth_nth_default_full; repeat break_match; boring. Qed.
 
+#[global]
 Hint Rewrite @update_nth_nth_default using (lia || distr_length; lia) : push_nth_default.
 
 Lemma set_nth_nth_default_full : forall {A} (d:A) n v l i,
@@ -1352,6 +1439,7 @@ Lemma set_nth_nth_default_full : forall {A} (d:A) n v l i,
   else d.
 Proof. intros; apply update_nth_nth_default_full; assumption. Qed.
 
+#[global]
 Hint Rewrite @set_nth_nth_default_full : push_nth_default.
 
 Lemma set_nth_nth_default : forall {A} (d:A) n x l i, (0 <= i < length l)%nat ->
@@ -1359,6 +1447,7 @@ Lemma set_nth_nth_default : forall {A} (d:A) n x l i, (0 <= i < length l)%nat ->
   if (eq_nat_dec i n) then x else nth_default d l i.
 Proof. intros; apply update_nth_nth_default; assumption. Qed.
 
+#[global]
 Hint Rewrite @set_nth_nth_default using (lia || distr_length; lia) : push_nth_default.
 
 Lemma nth_default_preserves_properties : forall {A} (P : A -> Prop) l n d,
@@ -1414,6 +1503,7 @@ Proof.
   autorewrite with push_firstn; reflexivity.
 Qed.
 
+#[global]
 Hint Rewrite @sum_firstn_all_succ using lia : simpl_sum_firstn.
 
 Lemma sum_firstn_all : forall n l, (length l <= n)%nat ->
@@ -1423,6 +1513,7 @@ Proof.
   autorewrite with push_firstn; reflexivity.
 Qed.
 
+#[global]
 Hint Rewrite @sum_firstn_all using lia : simpl_sum_firstn.
 
 Lemma sum_firstn_succ_default : forall l i,
@@ -1434,6 +1525,7 @@ Proof.
   rewrite IHl; lia.
 Qed.
 
+#[global]
 Hint Rewrite @sum_firstn_succ_default : simpl_sum_firstn.
 
 Lemma sum_firstn_0 : forall xs,
@@ -1442,6 +1534,7 @@ Proof.
   destruct xs; reflexivity.
 Qed.
 
+#[global]
 Hint Rewrite @sum_firstn_0 : simpl_sum_firstn.
 
 Lemma sum_firstn_succ : forall l i x,
@@ -1452,6 +1545,7 @@ Proof.
   erewrite nth_error_value_eq_nth_default by eassumption; reflexivity.
 Qed.
 
+#[global]
 Hint Rewrite @sum_firstn_succ using congruence : simpl_sum_firstn.
 
 Lemma sum_firstn_succ_cons : forall x xs i,
@@ -1460,12 +1554,14 @@ Proof.
   unfold sum_firstn; simpl; reflexivity.
 Qed.
 
+#[global]
 Hint Rewrite @sum_firstn_succ_cons : simpl_sum_firstn.
 
 Lemma sum_firstn_nil : forall i,
   sum_firstn nil i = 0%Z.
 Proof. destruct i; reflexivity. Qed.
 
+#[global]
 Hint Rewrite @sum_firstn_nil : simpl_sum_firstn.
 
 Lemma sum_firstn_succ_default_rev : forall l i,
@@ -1508,18 +1604,22 @@ Proof.
   intros; rewrite sum_firstn_app; autorewrite with simpl_sum_firstn.
   do 2 f_equal; lia.
 Qed.
+#[global]
 Hint Rewrite @sum_firstn_app_sum : simpl_sum_firstn.
 
 Lemma sum_cons xs x : sum (x :: xs) = (x + sum xs)%Z.
 Proof. reflexivity. Qed.
+#[global]
 Hint Rewrite sum_cons : push_sum.
 
 Lemma sum_nil : sum nil = 0%Z.
 Proof. reflexivity. Qed.
+#[global]
 Hint Rewrite sum_nil : push_sum.
 
 Lemma sum_app x y : sum (x ++ y) = (sum x + sum y)%Z.
 Proof. induction x; rewrite ?app_nil_l, <-?app_comm_cons; autorewrite with push_sum; lia. Qed.
+#[global]
 Hint Rewrite sum_app : push_sum.
 
 Lemma nth_error_skipn : forall {A} n (l : list A) m,
@@ -1528,6 +1628,7 @@ Proof.
 induction n as [|n IHn]; destruct l; boring.
 apply nth_error_nil_error.
 Qed.
+#[global]
 Hint Rewrite @nth_error_skipn : push_nth_error.
 
 Lemma nth_default_skipn : forall {A} (l : list A) d n m, nth_default d (skipn n l) m = nth_default d l (n + m).
@@ -1536,6 +1637,7 @@ cbv [nth_default]; intros.
 rewrite nth_error_skipn.
 reflexivity.
 Qed.
+#[global]
 Hint Rewrite @nth_default_skipn : push_nth_default.
 
 Lemma sum_firstn_skipn : forall l n m, sum_firstn l (n + m) = (sum_firstn l n + sum_firstn (skipn n l) m)%Z.
@@ -1554,6 +1656,7 @@ Proof.
   rewrite nth_error_seq.
   break_innermost_match; solve [ trivial | lia ].
 Qed.
+#[global]
 Hint Rewrite @nth_default_seq_inbounds using lia : push_nth_default.
 
 Lemma sum_firstn_prefix_le' : forall l n m, (forall x, In x l -> (0 <= x)%Z) ->
@@ -1618,6 +1721,7 @@ Lemma sum_firstn_app_hint : forall xs ys n, NotSum xs n ->
   sum_firstn (xs ++ ys) n = (sum_firstn xs n + sum_firstn ys (n - length xs))%Z.
 Proof. auto using sum_firstn_app. Qed.
 
+#[global]
 Hint Rewrite sum_firstn_app_hint using solve [ NotSum ] : simpl_sum_firstn.
 
 
@@ -1707,9 +1811,13 @@ Proof.
     congruence.
 Qed.
 
+#[global]
 Hint Rewrite @firstn_update_nth : push_firstn.
+#[global]
 Hint Rewrite @firstn_update_nth : pull_update_nth.
+#[global]
 Hint Rewrite <- @firstn_update_nth : pull_firstn.
+#[global]
 Hint Rewrite <- @firstn_update_nth : push_update_nth.
 
 Require Import Coq.Lists.SetoidList.
@@ -1775,6 +1883,7 @@ Proof.
   + rewrite firstn_all2 by lia.
     auto.
 Qed.
+#[global]
 Hint Rewrite @nth_default_firstn : push_nth_default.
 
 Lemma nth_error_repeat {T} x n i v : nth_error (@repeat T x n) i = Some v -> v = x.
@@ -1782,6 +1891,7 @@ Proof.
   revert n x v; induction i as [|i IHi]; destruct n; simpl in *; eauto; congruence.
 Qed.
 
+#[global]
 Hint Rewrite repeat_length : distr_length.
 
 Lemma repeat_spec_iff : forall {A} (ls : list A) x n,
@@ -1806,11 +1916,13 @@ Proof. destruct n; reflexivity. Qed.
 Lemma firstn_repeat : forall {A} x n k, firstn k (@repeat A x n) = repeat x (min k n).
 Proof. induction n, k; boring. Qed.
 
+#[global]
 Hint Rewrite @firstn_repeat : push_firstn.
 
 Lemma skipn_repeat : forall {A} x n k, skipn k (@repeat A x n) = repeat x (n - k).
 Proof. induction n, k; boring. Qed.
 
+#[global]
 Hint Rewrite @skipn_repeat : push_skipn.
 
 Global Instance Proper_map {A B} {RA RB} {Equivalence_RB:Equivalence RB}
@@ -1996,6 +2108,7 @@ Proof. induction ls as [|x xs IHxs]; cbn; [ | rewrite IHxs ]; reflexivity. Qed.
 Lemma flat_map_app A B (f : A -> list B) xs ys
   : flat_map f (xs ++ ys) = flat_map f xs ++ flat_map f ys.
 Proof. induction xs as [|x xs IHxs]; cbn; rewrite ?IHxs, <- ?app_assoc; reflexivity. Qed.
+#[global]
 Hint Rewrite flat_map_app : push_flat_map.
 Lemma map_flat_map A B C (f : A -> list B) (g : B -> C) xs
   : map g (flat_map f xs) = flat_map (fun x => map g (f x)) xs.
@@ -2221,124 +2334,236 @@ Module Export Hints.
   Global Existing Instance list_rect_Proper.
   Global Existing Instance list_case_Proper.
   Export Hints1.
+#[global]
   Hint Rewrite @map_cons @map_nil @map_repeat : push_map.
+#[global]
   Hint Rewrite @map_app : push_map.
+#[global]
   Hint Rewrite @flat_map_cons @flat_map_nil : push_flat_map.
+#[global]
   Hint Rewrite @rev_cons : list.
+#[global]
   Hint Rewrite @fold_right_nil @fold_right_cons @fold_right_snoc : simpl_fold_right push_fold_right.
+#[global]
   Hint Rewrite @partition_nil @partition_cons : push_partition.
+#[global]
   Hint Rewrite @firstn_skipn : simpl_firstn.
+#[global]
   Hint Rewrite @firstn_skipn : simpl_skipn.
+#[global]
   Hint Rewrite @firstn_nil @firstn_cons @List.firstn_all @firstn_O @firstn_app_2 @List.firstn_firstn : push_firstn.
+#[global]
   Hint Rewrite @firstn_nil @firstn_cons @List.firstn_all @firstn_O @firstn_app_2 @List.firstn_firstn : simpl_firstn.
+#[global]
   Hint Rewrite @firstn_app : push_firstn.
+#[global]
   Hint Rewrite <- @firstn_cons @firstn_app @List.firstn_firstn : pull_firstn.
+#[global]
   Hint Rewrite @firstn_all2 @removelast_firstn @firstn_removelast using lia : push_firstn.
+#[global]
   Hint Rewrite @firstn_all2 @removelast_firstn @firstn_removelast using lia : simpl_firstn.
   Global Hint Unfold splice_nth.
+#[global]
   Hint Rewrite @nth_default_cons : simpl_nth_default.
+#[global]
   Hint Rewrite @nth_default_cons : push_nth_default.
+#[global]
   Hint Rewrite @nth_default_cons_S : simpl_nth_default.
+#[global]
   Hint Rewrite @nth_default_cons_S : push_nth_default.
+#[global]
   Hint Rewrite @nth_default_nil : simpl_nth_default.
+#[global]
   Hint Rewrite @nth_default_nil : push_nth_default.
+#[global]
   Hint Rewrite @nth_error_nil_error : simpl_nth_error.
   Global Hint Resolve nth_error_length_error.
+#[global]
   Hint Rewrite @nth_error_length_error using lia : simpl_nth_error.
+#[global]
   Hint Rewrite @map_nth_default using lia : push_nth_default.
+#[global]
   Hint Rewrite @simpl_set_nth_S @simpl_set_nth_0 : simpl_set_nth.
   Global Existing Instance update_nth_Proper.
   Global Existing Instance update_nth_Proper_eq | 1.
+#[global]
   Hint Rewrite @update_nth_id_eq_specific using congruence : simpl_update_nth.
+#[global]
   Hint Rewrite @update_nth_id_eq using congruence : simpl_update_nth.
+#[global]
   Hint Rewrite @update_nth_id : simpl_update_nth.
+#[global]
   Hint Rewrite @nth_update_nth : push_nth_error.
+#[global]
   Hint Rewrite <- @nth_update_nth : pull_nth_error.
+#[global]
   Hint Rewrite @length_update_nth : distr_length.
+#[global]
   Hint Rewrite @nth_set_nth : push_nth_error.
+#[global]
   Hint Rewrite @length_set_nth : distr_length.
+#[global]
   Hint Rewrite @nth_error_value_eq_nth_default using eassumption : simpl_nth_default.
+#[global]
   Hint Rewrite @nth_default_app : push_nth_default.
+#[global]
   Hint Rewrite @map_fst_combine @map_snd_combine : push_map.
+#[global]
   Hint Rewrite @skipn_nil : simpl_skipn.
+#[global]
   Hint Rewrite @skipn_nil : push_skipn.
+#[global]
   Hint Rewrite @skipn_0 : simpl_skipn.
+#[global]
   Hint Rewrite @skipn_0 : push_skipn.
+#[global]
   Hint Rewrite @skipn_cons_S : simpl_skipn.
+#[global]
   Hint Rewrite @skipn_cons_S : push_skipn.
+#[global]
   Hint Rewrite @skipn_app : push_skipn.
+#[global]
   Hint Rewrite @skipn_skipn : simpl_skipn.
+#[global]
   Hint Rewrite <- @skipn_skipn : push_skipn.
+#[global]
   Hint Rewrite @skipn_skipn : pull_skipn.
+#[global]
   Hint Rewrite <- @firstn_skipn_add @firstn_skipn_add' : simpl_firstn.
+#[global]
   Hint Rewrite <- @firstn_skipn_add @firstn_skipn_add' : simpl_skipn.
+#[global]
   Hint Rewrite @firstn_app_inleft using solve [ distr_length ] : simpl_firstn.
+#[global]
   Hint Rewrite @firstn_app_inleft using solve [ distr_length ] : push_firstn.
+#[global]
   Hint Rewrite @skipn_app_inleft using solve [ distr_length ] : push_skipn.
+#[global]
   Hint Rewrite @firstn_map : push_firstn.
+#[global]
   Hint Rewrite <- @firstn_map : pull_firstn.
+#[global]
   Hint Rewrite @skipn_map : push_skipn.
+#[global]
   Hint Rewrite <- @skipn_map : pull_skipn.
+#[global]
   Hint Rewrite @firstn_all using solve [ distr_length ] : simpl_firstn.
+#[global]
   Hint Rewrite @firstn_all using solve [ distr_length ] : push_firstn.
+#[global]
   Hint Rewrite @skipn_all using solve [ distr_length ] : simpl_skipn.
+#[global]
   Hint Rewrite @skipn_all using solve [ distr_length ] : push_skipn.
+#[global]
   Hint Rewrite @firstn_app_sharp using solve [ distr_length ] : simpl_firstn.
+#[global]
   Hint Rewrite @firstn_app_sharp using solve [ distr_length ] : push_firstn.
+#[global]
   Hint Rewrite @skipn_app_sharp using solve [ distr_length ] : simpl_skipn.
+#[global]
   Hint Rewrite @skipn_app_sharp using solve [ distr_length ] : push_skipn.
+#[global]
   Hint Rewrite @skipn_length : distr_length.
+#[global]
   Hint Rewrite @length_cons : distr_length.
+#[global]
   Hint Rewrite @length_tl : distr_length.
+#[global]
   Hint Rewrite @combine_cons : push_combine.
+#[global]
   Hint Rewrite @firstn_combine : push_firstn.
+#[global]
   Hint Rewrite <- @firstn_combine : pull_firstn.
+#[global]
   Hint Rewrite @combine_nil_r : push_combine.
+#[global]
   Hint Rewrite @combine_snoc using (solve [distr_length]) : push_combine.
+#[global]
   Hint Rewrite @skipn_combine : push_skipn.
+#[global]
   Hint Rewrite <- @skipn_combine : pull_skipn.
+#[global]
   Hint Rewrite @nil_length0 : distr_length.
+#[global]
   Hint Rewrite @update_nth_cons : simpl_update_nth.
+#[global]
   Hint Rewrite @set_nth_cons : simpl_set_nth.
+#[global]
   Hint Rewrite <- @cons_update_nth : simpl_update_nth.
+#[global]
   Hint Rewrite @update_nth_nil : simpl_update_nth.
+#[global]
   Hint Rewrite <- @cons_set_nth : simpl_set_nth.
+#[global]
   Hint Rewrite @set_nth_nil : simpl_set_nth.
+#[global]
   Hint Rewrite @nth_default_out_of_bounds using lia : simpl_nth_default.
   Global Hint Resolve @nth_default_in_bounds : simpl_nth_default.
+#[global]
   Hint Rewrite @map_nth_default_always : push_nth_default.
+#[global]
   Hint Rewrite @firstn_firstn using lia : push_firstn.
+#[global]
   Hint Rewrite @firstn_seq : push_firstn.
+#[global]
   Hint Rewrite @update_nth_out_of_bounds using lia : simpl_update_nth.
+#[global]
   Hint Rewrite @update_nth_nth_default_full : push_nth_default.
+#[global]
   Hint Rewrite @update_nth_nth_default using (lia || distr_length; lia) : push_nth_default.
+#[global]
   Hint Rewrite @set_nth_nth_default_full : push_nth_default.
+#[global]
   Hint Rewrite @set_nth_nth_default using (lia || distr_length; lia) : push_nth_default.
+#[global]
   Hint Rewrite @sum_firstn_all_succ using lia : simpl_sum_firstn.
+#[global]
   Hint Rewrite @sum_firstn_all using lia : simpl_sum_firstn.
+#[global]
   Hint Rewrite @sum_firstn_succ_default : simpl_sum_firstn.
+#[global]
   Hint Rewrite @sum_firstn_0 : simpl_sum_firstn.
+#[global]
   Hint Rewrite @sum_firstn_succ using congruence : simpl_sum_firstn.
+#[global]
   Hint Rewrite @sum_firstn_succ_cons : simpl_sum_firstn.
+#[global]
   Hint Rewrite @sum_firstn_nil : simpl_sum_firstn.
   Global Hint Resolve sum_firstn_nonnegative : znonzero.
+#[global]
   Hint Rewrite @sum_firstn_app_sum : simpl_sum_firstn.
+#[global]
   Hint Rewrite sum_cons : push_sum.
+#[global]
   Hint Rewrite sum_nil : push_sum.
+#[global]
   Hint Rewrite sum_app : push_sum.
+#[global]
   Hint Rewrite @nth_error_skipn : push_nth_error.
+#[global]
   Hint Rewrite @nth_default_skipn : push_nth_default.
+#[global]
   Hint Rewrite @nth_default_seq_inbounds using lia : push_nth_default.
+#[global]
   Hint Rewrite sum_firstn_app_hint using solve [ NotSum ] : simpl_sum_firstn.
+#[global]
   Hint Rewrite @map2_length : distr_length.
+#[global]
   Hint Rewrite @firstn_update_nth : push_firstn.
+#[global]
   Hint Rewrite @firstn_update_nth : pull_update_nth.
+#[global]
   Hint Rewrite <- @firstn_update_nth : pull_firstn.
+#[global]
   Hint Rewrite <- @firstn_update_nth : push_update_nth.
   Global Existing Instance Proper_nth_default.
+#[global]
   Hint Rewrite @nth_default_firstn : push_nth_default.
+#[global]
   Hint Rewrite repeat_length : distr_length.
+#[global]
   Hint Rewrite @firstn_repeat : push_firstn.
+#[global]
   Hint Rewrite @skipn_repeat : push_skipn.
   Global Existing Instance Proper_map.
   Global Existing Instance flat_map_Proper.
@@ -2348,5 +2573,6 @@ Module Export Hints.
   Global Existing Instance partition_Proper_eq | 1.
   Global Existing Instance fold_right_Proper | 1.
   Global Existing Instance fold_right_Proper_eq | 1.
+#[global]
   Hint Rewrite flat_map_app : push_flat_map.
 End Hints.

@@ -26,7 +26,9 @@ Module Z.
       [assumption || apply Z.pow_nonzero || apply Z.pow_pos_nonneg; lia].
     f_equal; ring.
   Qed.
+#[global]
   Hint Rewrite Z.shiftr_add_shiftl_high using zutil_arith : pull_Zshift.
+#[global]
   Hint Rewrite <- Z.shiftr_add_shiftl_high using zutil_arith : push_Zshift.
 
   Lemma shiftr_add_shiftl_low : forall n m a b, 0 <= m <= n -> 0 <= a < 2 ^ n ->
@@ -39,7 +41,9 @@ Module Z.
     rewrite Z.mul_assoc, Z.div_add by (apply Z.pow_nonzero; lia).
     repeat f_equal; ring.
   Qed.
+#[global]
   Hint Rewrite Z.shiftr_add_shiftl_low using zutil_arith : pull_Zshift.
+#[global]
   Hint Rewrite <- Z.shiftr_add_shiftl_low using zutil_arith : push_Zshift.
 
   Lemma testbit_add_shiftl_high : forall i, (0 <= i) -> forall a b n, (0 <= n <= i) ->
@@ -60,6 +64,7 @@ Module Z.
     rewrite <-Z.pow_add_r by lia.
     replace (1 + (n - 1)) with n by ring; lia.
   Qed.
+#[global]
   Hint Rewrite testbit_add_shiftl_high using zutil_arith : Ztestbit.
 
   Lemma shiftr_succ : forall n x,
@@ -69,7 +74,9 @@ Module Z.
     rewrite Z.shiftr_shiftr by lia.
     reflexivity.
   Qed.
+#[global]
   Hint Rewrite Z.shiftr_succ using zutil_arith : push_Zshift.
+#[global]
   Hint Rewrite <- Z.shiftr_succ using zutil_arith : pull_Zshift.
 
   Lemma shiftr_1_r_le : forall a b, a <= b ->
@@ -155,6 +162,7 @@ Module Z.
       split; try eapply Z.lt_le_trans with (m := 2 ^ n); try lia.
       apply Z.pow_le_mono_r; lia.
   Qed.
+#[global]
   Hint Rewrite <- Z.lor_shiftl using zutil_arith : convert_to_Ztestbit.
 
   Lemma lor_shiftl' : forall a b n, 0 <= n -> 0 <= a < 2 ^ n ->
@@ -162,6 +170,7 @@ Module Z.
   Proof.
     intros; rewrite Z.lor_comm, Z.add_comm; apply lor_shiftl; assumption.
   Qed.
+#[global]
   Hint Rewrite <- Z.lor_shiftl' using zutil_arith : convert_to_Ztestbit.
 
   Lemma shiftl_spec_full a n m
@@ -173,6 +182,7 @@ Module Z.
   Proof.
     repeat break_match; auto using Z.shiftl_spec_low, Z.shiftl_spec, Z.testbit_neg_r with lia.
   Qed.
+#[global]
   Hint Rewrite shiftl_spec_full : Ztestbit_full.
 
   Lemma shiftr_spec_full a n m
@@ -184,6 +194,7 @@ Module Z.
   Proof.
     rewrite <- Z.shiftl_opp_r, shiftl_spec_full, Z.sub_opp_r; reflexivity.
   Qed.
+#[global]
   Hint Rewrite shiftr_spec_full : Ztestbit_full.
 
   Lemma testbit_add_shiftl_full i (Hi : 0 <= i) a b n (Ha : 0 <= a < 2^n)
@@ -194,6 +205,7 @@ Module Z.
     assert (0 <= n) by eauto 2 with zarith.
     pose proof (Zlt_cases i n); break_match; autorewrite with Ztestbit; reflexivity.
   Qed.
+#[global]
   Hint Rewrite testbit_add_shiftl_full using zutil_arith : Ztestbit.
 
   Lemma land_add_land : forall n m a b, (m <= n)%nat ->
@@ -215,22 +227,30 @@ Module Z.
 
   Lemma shiftl_add x y z : 0 <= z -> (x + y) << z = (x << z) + (y << z).
   Proof. intros; autorewrite with Zshift_to_pow; lia. Qed.
+#[global]
   Hint Rewrite shiftl_add using zutil_arith : push_Zshift.
+#[global]
   Hint Rewrite <- shiftl_add using zutil_arith : pull_Zshift.
 
   Lemma shiftr_add x y z : z <= 0 -> (x + y) >> z = (x >> z) + (y >> z).
   Proof. intros; autorewrite with Zshift_to_pow; lia. Qed.
+#[global]
   Hint Rewrite shiftr_add using zutil_arith : push_Zshift.
+#[global]
   Hint Rewrite <- shiftr_add using zutil_arith : pull_Zshift.
 
   Lemma shiftl_sub x y z : 0 <= z -> (x - y) << z = (x << z) - (y << z).
   Proof. intros; autorewrite with Zshift_to_pow; lia. Qed.
+#[global]
   Hint Rewrite shiftl_sub using zutil_arith : push_Zshift.
+#[global]
   Hint Rewrite <- shiftl_sub using zutil_arith : pull_Zshift.
 
   Lemma shiftr_sub x y z : z <= 0 -> (x - y) >> z = (x >> z) - (y >> z).
   Proof. intros; autorewrite with Zshift_to_pow; lia. Qed.
+#[global]
   Hint Rewrite shiftr_sub using zutil_arith : push_Zshift.
+#[global]
   Hint Rewrite <- shiftr_sub using zutil_arith : pull_Zshift.
 
   Lemma compare_add_shiftl : forall x1 y1 x2 y2 n, 0 <= n ->
@@ -346,6 +366,7 @@ Module Z.
       lia.
   Qed.
 
+#[global]
   Hint Rewrite Z.pow2_bits_eqb using zutil_arith : Ztestbit.
   Lemma pow_2_shiftr : forall n, 0 <= n -> (2 ^ n) >> n = 1.
   Proof.
@@ -405,30 +426,51 @@ Module Export Hints.
   Export Crypto.Util.ZUtil.Div.Hints.
   Export Crypto.Util.ZUtil.Tactics.ZeroBounds.Hints.
   Export Crypto.Util.ZUtil.Notations.Hints.
+#[global]
   Hint Rewrite Z.shiftr_add_shiftl_high using zutil_arith : pull_Zshift.
+#[global]
   Hint Rewrite <- Z.shiftr_add_shiftl_high using zutil_arith : push_Zshift.
+#[global]
   Hint Rewrite Z.shiftr_add_shiftl_low using zutil_arith : pull_Zshift.
+#[global]
   Hint Rewrite <- Z.shiftr_add_shiftl_low using zutil_arith : push_Zshift.
+#[global]
   Hint Rewrite Z.testbit_add_shiftl_high using zutil_arith : Ztestbit.
+#[global]
   Hint Rewrite Z.shiftr_succ using zutil_arith : push_Zshift.
+#[global]
   Hint Rewrite <- Z.shiftr_succ using zutil_arith : pull_Zshift.
   Global Hint Resolve Z.shiftr_1_r_le : zarith.
   Global Hint Resolve Z.shiftr_le : zarith.
   Global Hint Resolve Z.shiftr_ones : zarith.
   Global Hint Resolve Z.shiftr_upper_bound : zarith.
+#[global]
   Hint Rewrite <- Z.lor_shiftl using zutil_arith : convert_to_Ztestbit.
+#[global]
   Hint Rewrite <- Z.lor_shiftl' using zutil_arith : convert_to_Ztestbit.
+#[global]
   Hint Rewrite Z.shiftl_spec_full : Ztestbit_full.
+#[global]
   Hint Rewrite Z.shiftr_spec_full : Ztestbit_full.
+#[global]
   Hint Rewrite Z.testbit_add_shiftl_full using zutil_arith : Ztestbit.
+#[global]
   Hint Rewrite Z.shiftl_add using zutil_arith : push_Zshift.
+#[global]
   Hint Rewrite <- Z.shiftl_add using zutil_arith : pull_Zshift.
+#[global]
   Hint Rewrite Z.shiftr_add using zutil_arith : push_Zshift.
+#[global]
   Hint Rewrite <- Z.shiftr_add using zutil_arith : pull_Zshift.
+#[global]
   Hint Rewrite Z.shiftl_sub using zutil_arith : push_Zshift.
+#[global]
   Hint Rewrite <- Z.shiftl_sub using zutil_arith : pull_Zshift.
+#[global]
   Hint Rewrite Z.shiftr_sub using zutil_arith : push_Zshift.
+#[global]
   Hint Rewrite <- Z.shiftr_sub using zutil_arith : pull_Zshift.
+#[global]
   Hint Rewrite Z.pow2_bits_eqb using zutil_arith : Ztestbit.
   Global Hint Resolve Z.shiftr_nonneg_le : zarith.
 End Hints.

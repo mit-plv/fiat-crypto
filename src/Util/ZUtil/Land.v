@@ -15,10 +15,12 @@ Module Z.
 
   Lemma land_m1'_l a : Z.land (-1) a = a.
   Proof. apply Z.land_m1_l. Qed.
+#[global]
   Hint Rewrite Z.land_m1_l land_m1'_l : zsimplify_const zsimplify zsimplify_fast.
 
   Lemma land_m1'_r a : Z.land a (-1) = a.
   Proof. apply Z.land_m1_r. Qed.
+#[global]
   Hint Rewrite Z.land_m1_r land_m1'_r : zsimplify_const zsimplify zsimplify_fast.
 
   Lemma sub_1_lt_le x y : (x - 1 < y) <-> (x <= y).
@@ -29,6 +31,8 @@ Module Export Hints.
   Export Crypto.Util.FixCoqMistakes.
   Export Crypto.Util.ZUtil.Notations.Hints.
   Export Crypto.Util.ZUtil.Definitions.Hints.
+#[global]
   Hint Rewrite Z.land_m1_l Z.land_m1'_l : zsimplify_const zsimplify zsimplify_fast.
+#[global]
   Hint Rewrite Z.land_m1_r Z.land_m1'_r : zsimplify_const zsimplify zsimplify_fast.
 End Hints.

@@ -8,5 +8,6 @@ Module Export Rewrite.
   : forall x, Interp (InlineConstAndOp e) x = Interp e x
     := @InterpInlineConstAndOp _ _ _ _ _ t e Syntax.Util.make_const_correct.
 
+#[global]
   Hint Rewrite @InterpInlineConstAndOp : reflective_interp.
 End Rewrite.

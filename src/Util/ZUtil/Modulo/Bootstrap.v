@@ -24,5 +24,6 @@ Module Export Hints.
   Export Crypto.Util.FixCoqMistakes.
   Export Crypto.Util.ZUtil.Hints.Core.
   Global Hint Resolve Z.mod_0_r_eq : zarith.
+#[global]
   Hint Rewrite Z.mod_0_r_eq using assumption : zsimplify.
 End Hints.

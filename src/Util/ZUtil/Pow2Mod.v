@@ -17,6 +17,7 @@ Module Z.
     unfold Z.pow2_mod.
     rewrite Z.land_ones; auto.
   Qed.
+#[global]
   Hint Rewrite <- Z.pow2_mod_spec using zutil_arith : convert_to_Ztestbit.
 
   Lemma pow2_mod_0_r : forall a, Z.pow2_mod a 0 = 0.
@@ -72,6 +73,7 @@ Module Export Hints.
   Export Crypto.Util.ZUtil.Hints.Ztestbit.
   Export Crypto.Util.ZUtil.Tactics.ZeroBounds.Hints.
   Export Crypto.Util.ZUtil.Testbit.Hints.
+#[global]
   Hint Rewrite <- Z.pow2_mod_spec using zutil_arith : convert_to_Ztestbit.
   Global Hint Resolve Z.pow2_mod_pos_bound : zarith.
 End Hints.

@@ -216,4 +216,5 @@ Section symbolic.
   Qed.
 End symbolic.
 
+#[global]
 Hint Rewrite @InterpCSE using solve_wf_side_condition : reflective_interp.

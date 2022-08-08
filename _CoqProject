@@ -1,6 +1,6 @@
 -R src Crypto
 -R bbv/src/bbv bbv
--arg -w -arg -deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality
+-arg -w -arg -deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality,unsupported-attributes
 bbv/src/bbv/BinNotation.v
 bbv/src/bbv/BinNotationZ.v
 bbv/src/bbv/DepEq.v

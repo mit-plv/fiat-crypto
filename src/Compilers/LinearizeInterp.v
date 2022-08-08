@@ -132,5 +132,7 @@ Section language.
     := InterpLinearize_gen_ind _ P.
 End language.
 
+#[global]
 Hint Rewrite @interpf_under_letsf : reflective_interp.
+#[global]
 Hint Rewrite @InterpLinearize_gen @interp_linearize_gen @interpf_linearizef_gen @InterpLinearize @interp_linearize @interpf_linearizef @InterpANormal @interp_a_normal @interpf_a_normalf : reflective_interp.

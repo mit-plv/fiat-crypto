@@ -70,6 +70,7 @@ Module Import BoundedRewriteNotations.
 End BoundedRewriteNotations.
 
 (** This is required for typeclass resolution to be fast. *)
+#[global]
 Typeclasses Opaque decode.
 
 Section InstructionGallery.
@@ -459,6 +460,7 @@ Module Export Hints.
   Global Existing Instance decode_range_bound.
   Global Hint Extern 0 (bounded_le_cls _ _) => unfold bounded_le_cls; bounded_solver_tac : typeclass_instances.
   Global Arguments bounded_le_cls / _ _.
+#[global]
   Typeclasses Opaque decode.
   Global Existing Instances
          fancy_machine.decode

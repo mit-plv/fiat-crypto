@@ -646,8 +646,12 @@ Module Export Hints.
   Export Crypto.Util.ZUtil.Le.Hints.
   Export Crypto.Util.ZUtil.Log2.Hints.
   Export Crypto.Util.ZUtil.Z2Nat.Hints.
+#[global]
   Hint Rewrite wadd_def_ZToWord wsub_def_ZToWord wmul_def_ZToWord wland_def_ZToWord wlor_def_ZToWord wshl_def_ZToWord wshr_def_ZToWord : pull_ZToWord.
+#[global]
   Hint Rewrite <- wadd_def_ZToWord wsub_def_ZToWord wmul_def_ZToWord wland_def_ZToWord wlor_def_ZToWord wshl_def_ZToWord wshr_def_ZToWord : push_ZToWord.
+#[global]
   Hint Rewrite wadd_def_ZToWord_log wsub_def_ZToWord wmul_def_ZToWord_log wland_def_ZToWord_log wlor_def_ZToWord_log wshl_def_ZToWord_log wshr_def_ZToWord_log : pull_ZToWord_log.
+#[global]
   Hint Rewrite <- wadd_def_ZToWord_log wsub_def_ZToWord wmul_def_ZToWord_log wland_def_ZToWord_log wlor_def_ZToWord_log wshl_def_ZToWord_log wshr_def_ZToWord_log : push_ZToWord_log.
 End Hints.

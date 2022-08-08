@@ -21,12 +21,14 @@ Module Z.
     unfold Z.mul_split; break_match; Z.ltb_to_lt;
       [ rewrite mul_split_at_bitwidth_mod; congruence | reflexivity ].
   Qed.
+#[global]
   Hint Rewrite mul_split_mod : to_div_mod.
   Lemma mul_split_div s x y : snd (Z.mul_split s x y)  = (x * y) / s.
   Proof.
     unfold Z.mul_split; break_match; Z.ltb_to_lt;
       [ rewrite mul_split_at_bitwidth_div; congruence | reflexivity ].
   Qed.
+#[global]
   Hint Rewrite mul_split_div : to_div_mod.
 End Z.
 
@@ -34,6 +36,8 @@ Module Export Hints.
   Export Crypto.Util.FixCoqMistakes.
   Export Crypto.Util.ZUtil.Definitions.Hints.
   Export Crypto.Util.ZUtil.Tactics.LtbToLt.Hints.
+#[global]
   Hint Rewrite Z.mul_split_mod : to_div_mod.
+#[global]
   Hint Rewrite Z.mul_split_div : to_div_mod.
 End Hints.

@@ -77,5 +77,6 @@ Module Z.
 End Z.
 Module Export Hints.
   Export Crypto.Util.FixCoqMistakes.
+#[global]
   Hint Rewrite Z.ltb_lt_iff Z.leb_le_iff Z.gtb_gt_iff Z.geb_ge_iff Z.eqb_eq_iff : ltb_to_lt.
 End Hints.

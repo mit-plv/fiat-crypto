@@ -33,6 +33,7 @@ Module Z.
     }
     { subst; compute; reflexivity. }
   Qed.
+#[global]
   Hint Rewrite log2_pred_pow2_full : zsimplify.
 
   Lemma log2_up_le_full a : a <= 2^Z.log2_up a.
@@ -62,7 +63,9 @@ Module Z.
 
   Lemma max_log2_up x y : Z.max (Z.log2_up x) (Z.log2_up y) = Z.log2_up (Z.max x y).
   Proof. apply Z.max_monotone; intros ??; apply Z.log2_up_le_mono. Qed.
+#[global]
   Hint Rewrite max_log2_up : push_Zmax.
+#[global]
   Hint Rewrite <- max_log2_up : pull_Zmax.
 
   Lemma log2_up_le_full_max a : Z.max a 1 <= 2^Z.log2_up a.
@@ -100,7 +103,10 @@ Module Export Hints.
   Export Crypto.Util.ZUtil.ZSimplify.Core.
   Export Crypto.Util.ZUtil.ZSimplify.Simple.Hints.
   Global Hint Resolve Z.log2_nonneg' : zarith.
+#[global]
   Hint Rewrite Z.log2_pred_pow2_full : zsimplify.
+#[global]
   Hint Rewrite Z.max_log2_up : push_Zmax.
+#[global]
   Hint Rewrite <- Z.max_log2_up : pull_Zmax.
 End Hints.
