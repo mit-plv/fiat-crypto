@@ -11,25 +11,110 @@ Local Open Scope Z_scope.
 
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
+Require Import Coq.Relations.Relation_Definitions.
+Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.Tactics.SubstEvars.
+Require Import Crypto.Language.API.
+Require Import Rewriter.Language.Wf.
+
+Require Import Coq.Strings.String.
+Require Import Coq.ZArith.ZArith.
+Require Import Crypto.Util.ListUtil Coq.Lists.List.
+Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Language.PreExtra.
+
+(* Require Import Rewriter.Language.Reify. *)
+(* Require Import Crypto.Language.APINotations. *)
+
+Import
+  Language.API.Compilers
+  Language.Wf.Compilers.
+
 Module Export SolinasReductionCache.
 
   Import SolinasReduction.SolinasReduction.
+  Ltac reify := API.Compilers.API.Reify.
+  (* Ltac PreCommon.Pre.reify_debug_level ::= constr:(2%nat). *)
 
-  Definition mul
-             (base : Z)
-             (s : Z)
-             (c : list (Z * Z))
-             (n: nat)
-    := mulmod base s c n.
-  Check mul.
-  Print mul.
+  (* Time Compute ltac:(let x := reify (reduce_full) in exact x). *)
+
+  Ltac cache_reify' _ :=
+    intros;
+    etransitivity;
+    [
+    | repeat match goal with |- _ = ?f' ?x => is_var x; apply (f_equal (fun f => f _)) end;
+      Reify_rhs ();
+      reflexivity ];
+    subst_evars;
+    reflexivity.
+
+  Print reduce2'.
+
+  Strategy -500 [Crypto.Arithmetic.SolinasReduction.SolinasReduction.is_bounded_by
+                   Crypto.Arithmetic.Saturated.Columns.cons_to_nth
+                   Coq.ZArith.BinInt.Z.to_hex_int
+                   Crypto.Arithmetic.Saturated.Rows.extract_row
+                   Crypto.Arithmetic.Saturated.Associational.sat_multerm
+                   Crypto.Arithmetic.Saturated.Rows.flatten'
+                   Coq.Init.Nat.to_hex_uint
+                   Coq.ZArith.BinInt.Z.to_int
+                   Coq.Init.Nat.to_little_hex_uint
+                   Crypto.Arithmetic.Saturated.Rows.from_columns
+                   Crypto.Arithmetic.Saturated.Rows.adjust_s
+                   Crypto.Arithmetic.SolinasReduction.SolinasReduction.fold_andb_map'
+                   Coq.Init.Nat.to_uint
+                   Crypto.Arithmetic.Core.Associational.split
+                   Coq.Init.Decimal.rev
+                   Coq.Init.Hexadecimal.revapp
+                   Crypto.Arithmetic.Saturated.Columns.from_associational
+                   Crypto.Arithmetic.SolinasReduction.SolinasReduction.sat_reduce
+                   Coq.Init.Datatypes.andb
+                   Coq.PArith.BinPos.Pos.to_little_hex_uint
+                   Coq.PArith.BinPos.Pos.to_little_uint
+                   Crypto.Arithmetic.SolinasReduction.SolinasReduction.mulmod
+                   Coq.Init.Decimal.Little.double
+                   Coq.Lists.List.tl
+                   Crypto.Arithmetic.Core.Positional.place
+                   Crypto.Arithmetic.Saturated.Rows.sum_rows'
+                   Crypto.Arithmetic.Core.Positional.add_to_nth
+                   Coq.Init.Decimal.Little.succ
+                   Crypto.Arithmetic.Core.Positional.to_associational
+                   Coq.Init.Nat.to_num_uint
+                   Coq.Init.Hexadecimal.Little.succ
+                   Coq.Init.Nat.to_num_hex_uint
+                   Crypto.Arithmetic.SolinasReduction.SolinasReduction.dual_map
+                   Crypto.Arithmetic.Saturated.Rows.from_columns'
+                   Coq.Init.Hexadecimal.Little.double
+                   Crypto.Arithmetic.UniformWeight.uweight
+                   Crypto.Arithmetic.Saturated.Associational.sat_mul
+                   Coq.Init.Datatypes.nat_rect
+                   Coq.Init.Nat.to_little_uint
+                   Crypto.Arithmetic.Saturated.Associational.sat_multerm_const
+                   Crypto.Arithmetic.Saturated.Columns.nils
+                   Crypto.Arithmetic.Saturated.Rows.max_column_size
+                   Crypto.Arithmetic.Saturated.Rows.sum_rows
+                   Crypto.Arithmetic.ModOps.weight
+                   Coq.Init.Decimal.revapp
+                   Crypto.Arithmetic.Saturated.Associational.sat_mul_const
+                   Coq.Lists.List.hd
+                   Coq.ZArith.BinInt.Z.to_num_int
+                   Crypto.Arithmetic.Saturated.Rows.from_associational
+                   Coq.PArith.BinPos.Pos.to_uint
+                   Rewriter.Util.LetIn.Let_In
+                   Crypto.Arithmetic.Core.Positional.zeros
+                   Coq.PArith.BinPos.Pos.to_hex_uint
+                   Coq.ZArith.BinInt.Z.to_num_hex_int
+                   Coq.Init.Hexadecimal.rev
+                   Crypto.Arithmetic.Saturated.Rows.flatten].
 
   Derive reified_solred_gen
-         SuchThat (is_reification_of reified_solred_gen mul)
+         SuchThat (is_reification_of reified_solred_gen reduce_full')
          As reified_solred_gen_correct.
   Proof. Time cache_reify (). Time Qed.
+
 #[global]
-  Hint Extern 1 (_ = _) => apply_cached_reification mulmod (proj1 reified_mul_gen_correct) : reify_cache_gen.
+  Hint Extern 1 (_ = _) => apply_cached_reification mulmod (proj1 reified_solred_gen) : reify_cache_gen.
 #[global]
   Hint Immediate (proj2 reified_mul_gen_correct) : wf_gen_cache.
 #[global]

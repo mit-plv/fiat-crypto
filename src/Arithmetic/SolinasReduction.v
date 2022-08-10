@@ -899,6 +899,20 @@ Module SolinasReduction.
       else
         f (add_to_nth 0 (weight (m) * snd r_flat) (fst r_flat)).
 
+    Definition reduce1' base s c n m p :=
+      ltac:(let x := (eval cbv beta delta [reduce1_cps id] in (@reduce1_cps (list Z) base s c n m p id)) in
+            exact x).
+    Print reduce1'.
+
+    Definition reduce2_cps {T} base s c n (p : list Z) (f : list Z -> T):=
+      (r1 <- reduce1_cps base s c (2*n) (S n) p;
+       reduce1_cps base s c (S n) (S n) r1 f).
+
+    Definition reduce2' base s c n p :=
+      ltac:(let x := (eval cbv beta delta [reduce2_cps reduce1_cps id] in (@reduce2_cps (list Z) base s c n p id)) in
+            exact x).
+    Print reduce2'.
+
     Lemma reduce1_cps_ok {T} base s c n m (f : list Z -> T) : forall p,
         reduce1_cps base s c n m p f = f (reduce1 base s c n m p).
     Proof.
@@ -916,6 +930,11 @@ Module SolinasReduction.
            reduce1_cps base s c (S n) n r2 f)
         else
           f (add_to_nth 0 (weight n * nth_default 0 r1 n) (firstn n r1)))).
+
+    Definition reduce_full' base s c n p :=
+      ltac:(let x := (eval cbv beta delta [reduce_full_cps reduce1_cps id] in (@reduce_full_cps (list Z) base s c n p id)) in
+            exact x).
+    Print reduce_full'.
 
     Lemma reduce_full_cps_ok {T} base s c n (f : list Z -> T) : forall p,
         reduce_full_cps base s c n p f = f (reduce_full base s c n p).
@@ -1828,6 +1847,7 @@ Module SolinasReduction.
 
   End __.
 
+  (*
   Section compile.
 
     Let s := 2^255.
@@ -2130,5 +2150,6 @@ Finished transaction in 25.313 secs (25.202u,0.107s) (successful)
      *)
 
   End compile.
+   *)
 
 End SolinasReduction.
