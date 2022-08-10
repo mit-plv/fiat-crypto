@@ -204,6 +204,7 @@ src/PushButtonSynthesis/SaturatedSolinas.v
 src/PushButtonSynthesis/SaturatedSolinasReificationCache.v
 src/PushButtonSynthesis/SmallExamples.v
 src/PushButtonSynthesis/SolinasReduction.v
+src/PushButtonSynthesis/SolinasReductionReificationCache.v
 src/PushButtonSynthesis/UnsaturatedSolinas.v
 src/PushButtonSynthesis/UnsaturatedSolinasReificationCache.v
 src/PushButtonSynthesis/WordByWordMontgomery.v
