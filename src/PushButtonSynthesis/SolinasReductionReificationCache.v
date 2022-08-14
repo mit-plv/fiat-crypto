@@ -11,22 +11,6 @@ Local Open Scope Z_scope.
 
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
-Require Import Coq.Relations.Relation_Definitions.
-Require Import Crypto.Util.Tactics.Head.
-Require Import Crypto.Util.Tactics.SubstEvars.
-Require Import Crypto.Language.API.
-Require Import Rewriter.Language.Wf.
-
-Require Import Coq.Strings.String.
-Require Import Coq.ZArith.ZArith.
-Require Import Crypto.Util.ListUtil Coq.Lists.List.
-Require Import Crypto.Util.ZRange.
-Require Import Crypto.Util.ZUtil.Definitions.
-Require Import Crypto.Language.PreExtra.
-
-(* Require Import Rewriter.Language.Reify. *)
-(* Require Import Crypto.Language.APINotations. *)
-
 Import
   Language.API.Compilers
   Language.Wf.Compilers.
@@ -34,22 +18,6 @@ Import
 Module Export SolinasReductionCache.
 
   Import SolinasReduction.SolinasReduction.
-  Ltac reify := API.Compilers.API.Reify.
-  (* Ltac PreCommon.Pre.reify_debug_level ::= constr:(2%nat). *)
-
-  (* Time Compute ltac:(let x := reify (reduce_full) in exact x). *)
-
-  Ltac cache_reify' _ :=
-    intros;
-    etransitivity;
-    [
-    | repeat match goal with |- _ = ?f' ?x => is_var x; apply (f_equal (fun f => f _)) end;
-      Reify_rhs ();
-      reflexivity ];
-    subst_evars;
-    reflexivity.
-
-  Print reduce2'.
 
   Strategy -500 [Crypto.Arithmetic.SolinasReduction.SolinasReduction.is_bounded_by
                    Crypto.Arithmetic.Saturated.Columns.cons_to_nth
@@ -108,16 +76,16 @@ Module Export SolinasReductionCache.
                    Coq.Init.Hexadecimal.rev
                    Crypto.Arithmetic.Saturated.Rows.flatten].
 
-  Derive reified_solred_gen
-         SuchThat (is_reification_of reified_solred_gen reduce_full')
-         As reified_solred_gen_correct.
+  Derive reified_solmul_gen
+         SuchThat (is_reification_of reified_solmul_gen mulmod)
+         As reified_solmul_gen_correct.
   Proof. Time cache_reify (). Time Qed.
 
 #[global]
-  Hint Extern 1 (_ = _) => apply_cached_reification mulmod (proj1 reified_solred_gen) : reify_cache_gen.
+  Hint Extern 1 (_ = _) => apply_cached_reification mulmod (proj1 reified_solmul_gen) : reify_cache_gen.
 #[global]
-  Hint Immediate (proj2 reified_mul_gen_correct) : wf_gen_cache.
+  Hint Immediate (proj2 reified_solmul_gen_correct) : wf_gen_cache.
 #[global]
-  Hint Rewrite (proj1 reified_mul_gen_correct) : interp_gen_cache.
-  Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very long time *)
-End SolinasReduction.
+  Hint Rewrite (proj1 reified_solmul_gen_correct) : interp_gen_cache.
+  Local Opaque reified_solmul_gen. (* needed for making [autorewrite] not take a very long time *)
+End SolinasReductionCache.
