@@ -87,8 +87,10 @@ endef
 UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes relax
 FUNCTIONS_FOR_25519 := $(UNSATURATED_SOLINAS_FUNCTIONS) carry_scmul121666
 WORD_BY_WORD_MONTGOMERY_FUNCTIONS := mul square add sub opp from_montgomery to_montgomery nonzero selectznz to_bytes from_bytes one msat divstep divstep_precomp
+SOLINAS_REDUCTION_FUNCTIONS := mul
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
 WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/word_by_word_montgomery
+SOLINAS_REDUCTION := src/ExtractionOCaml/solinas_reduction
 
 UNSATURATED_SOLINAS_BASE_FILES := # p224_solinas_64
 WORD_BY_WORD_MONTGOMERY_BASE_FILES := # p434_32
@@ -118,6 +120,8 @@ $(foreach bw,64 32,$(eval $(call add_curve_keys,p256_scalar_$(bw),WORD_BY_WORD_M
 $(foreach bw,64 32,$(eval $(call add_curve_keys,p384_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'p384_scalar',$(bw),'2^384 - 1388124618062372383947042015309946732620727252194336364173',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 $(foreach bw,64 32,$(eval $(call add_curve_keys,secp256k1_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'secp256k1_scalar',$(bw),'2^256 - 432420386565659656852420866394968145599',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 
+$(foreach bw,64,$(eval $(call add_curve_keys,curve25519_solinas_$(bw),SOLINAS_REDUCTION,'curve25519_solinas',$(bw),'2^255 - 19',$(SOLINAS_REDUCTION_FUNCTIONS),SOLINAS_REDUCTION)))
+
 # Files taking 30s or less
 LITE_BASE_FILES := curve25519_64 poly1305_64 poly1305_32 p256_64 secp256k1_64 p384_64 p224_32 p434_64 p448_solinas_64 secp256k1_32 p256_32 p448_solinas_32 \
 	curve25519_scalar_64 p256_scalar_64 secp256k1_scalar_64 p384_scalar_64 secp256k1_scalar_32 p256_scalar_32
@@ -143,6 +147,7 @@ LITE_ZIG_FILES := $(patsubst %,$(ZIG_DIR)%.zig,$(LITE_BASE_FILES))
 
 BEDROCK2_UNSATURATED_SOLINAS := src/ExtractionOCaml/bedrock2_unsaturated_solinas
 BEDROCK2_WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/bedrock2_word_by_word_montgomery
+BEDROCK2_SOLINAS_REDUCTION := src/ExtractionOCaml/bedrock2_solinas_reduction
 
 C_EXTRA_ARGS := --inline --static --use-value-barrier
 
