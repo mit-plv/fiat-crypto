@@ -509,7 +509,8 @@ Module SolinasReduction.
         list_Z_bounded_by saturated_bounds x ->
         list_Z_bounded_by saturated_bounds y ->
         ((eval (mulmod x y)) mod m = (eval x * eval y) mod m) /\
-          (is_bounded_by saturated_bounds (mulmod x y) = true).
+          (list_Z_bounded_by saturated_bounds (mulmod x y)).
+
   End __.
 End SolinasReduction.
 
