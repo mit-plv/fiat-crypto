@@ -4,6 +4,7 @@ pub mod curve25519_32;
 pub mod curve25519_64;
 pub mod curve25519_scalar_32;
 pub mod curve25519_scalar_64;
+pub mod curve25519_solinas_64;
 pub mod p224_32;
 pub mod p224_64;
 pub mod p256_32;

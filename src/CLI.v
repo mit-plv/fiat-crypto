@@ -1118,28 +1118,28 @@ Module ForExtraction.
   Module SolinasReduction.
     Local Instance api : PipelineAPI
       := {
-          spec :=
-            {| Arg.named_args := []
-               ; Arg.anon_args := [sc_spec]
-               ; Arg.anon_opt_args := []
-               ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec SolinasReduction.valid_names) |};
+        spec :=
+        {| Arg.named_args := []
+        ; Arg.anon_args := [sc_spec]
+        ; Arg.anon_opt_args := []
+        ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec SolinasReduction.valid_names) |};
 
-          parse_args opts args
-          := let '(tt, (str_sc, (s, c)), tt, requests) := args in
-             let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
-             inl ((str_sc, show_requests),
-                  (s, c, requests));
+        parse_args opts args
+        := let '(tt, (str_sc, (s, c)), tt, requests) := args in
+           let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
+           inl ((str_sc, show_requests),
+                 (s, c, requests));
 
-          show_lines_args :=
-            fun '((str_sc, show_requests),
-                  (s, c, requests))
-            => ["requested operations: " ++ show_requests;
-               "s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ " (from """ ++ str_sc ++ """)"];
+        show_lines_args :=
+        fun '((str_sc, show_requests),
+             (s, c, requests))
+        => ["requested operations: " ++ show_requests;
+           "s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ " (from """ ++ str_sc ++ """)"];
 
-          Synthesize
-          := fun _ opts '(s, c, requests) comment_header prefix
-             => SolinasReduction.Synthesize s c comment_header prefix requests
-        }.
+        Synthesize
+        := fun _ opts '(s, c, requests) comment_header prefix
+           => SolinasReduction.Synthesize s c comment_header prefix requests
+      }.
 
     Definition PipelineMain
                {supported_languages : supported_languagesT}

@@ -102,7 +102,7 @@ Section __.
   Definition m := s - Associational.eval c.
   Definition weight := UniformWeight.uweight machine_wordsize.
   Definition up_bound := 2 ^ (machine_wordsize / 4).
-  Definition base := 2 ^ machine_wordsize.
+  Definition base : Z := 2 ^ machine_wordsize.
 
   Let possible_values := possible_values_of_machine_wordsize.
   Definition bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
@@ -132,7 +132,6 @@ Section __.
              ; (weight n / s * Associational.eval c <? up_bound, Pipeline.Value_not_ltZ "weight n / s * Associational.eval c < up_bound" (weight n / s * Associational.eval c) up_bound)
          ])
          res.
-Locate ErrorMessage.
 
   Local Ltac use_curve_good_t :=
     repeat first [ use_requests_to_prove_curve_good_t_step
@@ -171,7 +170,7 @@ Locate ErrorMessage.
   Local Notation evalf := (eval weight n).
   Local Notation notations_for_docstring
     := (CorrectnessStringification.dyn_context.cons
-          evalf "eval"
+          evalf "evalf"
           (CorrectnessStringification.dyn_context.cons
              weight "weight"
              CorrectnessStringification.dyn_context.nil))%string.
@@ -182,7 +181,7 @@ Locate ErrorMessage.
           correctness)
          (only parsing, at level 10, summary at next level, correctness at next level).
 
-  Definition mul
+  Definition mulmod
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          None (* fancy *)
@@ -195,11 +194,11 @@ Locate ErrorMessage.
          (Some boundsn, (Some boundsn, tt))
          (Some boundsn).
 
-  Definition smul (prefix : string)
+  Definition smulmod (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "mul" mul
+          machine_wordsize prefix "mulmod" mulmod
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements."]%string)
              (mulmod_correct weight n m boundsn)).
@@ -213,12 +212,12 @@ Locate ErrorMessage.
 
   Local Ltac prove_correctness _ := Primitives.prove_correctness use_curve_good.
 
-  Lemma mul_correct res
-        (Hres : mul = Success res)
+  Lemma mulmod_correct res
+        (Hres : mulmod = Success res)
     : mulmod_correct weight n m boundsn (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
-  Lemma Wf_mul res (Hres : mul = Success res) : Wf res.
+  Lemma Wf_mulmod res (Hres : mulmod = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
   Section for_stringification.
@@ -226,7 +225,7 @@ Locate ErrorMessage.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("mul", wrap_s smul)].
+      := [("mulmod", wrap_s smulmod)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 
@@ -249,10 +248,10 @@ End __.
 Module Export Hints.
 #[global]
   Hint Opaque
-       mul
+       mulmod
   : wf_op_cache.
 #[global]
   Hint Immediate
-       Wf_mul
+       Wf_mulmod
   : wf_op_cache.
 End Hints.
