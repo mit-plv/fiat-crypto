@@ -354,7 +354,7 @@ Definition parse_RawLine : ParserAction RawLine
                       parsed_prefix
                end.
 
-Definition parse_Line n : ParserAction Line
+Definition parse_Line (line_num : N) : ParserAction Line
   := fun s
      => let '(indentv, rest_linev) := take_while_drop_while Ascii.is_whitespace s in
         let '(precommentv, commentv)
@@ -367,23 +367,24 @@ Definition parse_Line n : ParserAction Line
         let rawlinev := String.rev rev_rawlinev in
         let trailing_whitespacev := String.rev rev_trailing_whitespacev in
         List.map
-          (fun '(r, rem) => ({| indent := indentv ; rawline := r ; pre_comment_whitespace := trailing_whitespacev ; comment := commentv ; line_number := n |}, rem))
+          (fun '(r, rem) => ({| indent := indentv ; rawline := r ; pre_comment_whitespace := trailing_whitespacev ; comment := commentv ; line_number := line_num |}, rem))
           (parse_RawLine rawlinev).
 
 (* the error is the unparsable lines *)
-Fixpoint parse_Lines' (l : list (string*nat)) : ErrorT (list string) Lines
+Fixpoint parse_Lines' (l : list string) (line_num : N) : ErrorT (list string) Lines
   := match l with
      | [] => Success []
-     | (l, n) :: ls
-       => match finalize (parse_Line n) l, parse_Lines' ls with
-          | None, Error ls => Error (l :: ls)
-          | None, Success _ => Error (l :: nil)
+     | l :: ls
+       => match finalize (parse_Line line_num) l, parse_Lines' ls (line_num + 1) with
+          | None, Error ls => Error (("Line " ++ show line_num ++ ": " ++ l) :: ls)
+          | None, Success _ => Error (("Line " ++ show line_num ++ ": " ++ l) :: nil)
           | Some _, Error ls => Error ls
           | Some l, Success ls => Success (l :: ls)
           end
      end.
 
-Definition parse_Lines (l : list string) := parse_Lines' (List.combine (String.split_newlines l) (seq 1 (length l))).
+Definition parse_Lines (l : list string) : ErrorT (list string) Lines
+  := parse_Lines' (String.split_newlines l) 1.
 
 Notation parse := parse_Lines (only parsing).
 
