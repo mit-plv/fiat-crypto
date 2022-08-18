@@ -74,26 +74,86 @@ Section WithParameters.
     while (i < len) { 
          store4(Sstart + $4*i, $0);
          i = i << $1          
-    };
+      };
     i = $0;       
     while (i < len) {
-        redc_step ( load4(Astart + $4*i), Bstart, Sstart, len );
-        i = i << $1
+         redc_step ( load4(Astart + $4*i), Bstart, Sstart, len ); 
+          i = i << $1
       }
     ))).
+
+  Require Import Coq.Lists.List.
+(*
+  Let wordy_zero (n : word) :=
+        repeat (@word.of_Z _ word 0) (Z.to_nat (word.unsigned n)). *)
+
   
-  Section OuterLoop.
-    
-    Context {redc_step_body : cmd}.
-    Definition redc_step : func
-      := ("redc_step", (["a"; "Bstart"; "Sstart"; "len"], [],  redc_step_body  )).
-    Fail Context {redc_step_ok : program_logic_goal_for_function! redc_step}.
-             (* "No matching clauses for match." *)
-    
-    Theorem redc_alt_ok :
+  Theorem redc_alt_ok :
       program_logic_goal_for_function! redc_alt.
-    Proof. Admitted. 
-    
-  End OuterLoop.
-  
-End WithParameters.
+    Proof.
+      repeat straightline. 
+
+      refine ( tailrec (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ HList.polymorphic_list.nil))))))))
+               ("Astart":: "Bstart" :: "Sstart" :: "len" :: "i" :: nil)
+               (fun l A aval B bval S Ra Rb R t m Astart Bstart Sstart len i => PrimitivePair.pair.mk
+                                    (m =* array scalar (word.of_Z 4) Astart A * Ra /\
+                                     m =* array scalar (word.of_Z 4) Bstart B * Rb /\
+                                     m =* array scalar (word.of_Z 4) Sstart S * R /\
+                                     word.unsigned len = Z.of_nat (List.length A)  /\
+                                     word.unsigned len = Z.of_nat (List.length B)  /\
+                                     word.unsigned len = Z.of_nat (List.length S) /\
+                                     @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned A) = aval /\ 
+                                     @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned B) = bval /\
+                                     @eval r (Z.to_nat (word.unsigned i)) (List.map word.unsigned S) = 0)
+                                    (fun t' m' Astart' Bstart' Sstart' len' i' =>
+                                       (
+                                     t = t' /\
+                                     m' =* array scalar (word.of_Z 4) Astart A * Ra /\
+                                     m' =* array scalar (word.of_Z 4) Bstart B * Rb /\
+                                     word.unsigned len = Z.of_nat (List.length A)  /\
+                                     word.unsigned len = Z.of_nat (List.length B)  /\
+                                     @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned A) = aval /\ 
+                                     @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned B) = bval /\
+                                     exists S',
+                                     m' =* array scalar (word.of_Z 4) Sstart S' * R  /\
+                                     word.unsigned len = Z.of_nat (List.length S') /\
+                                     @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned S') = 0
+                                     )
+                                    )
+               )
+               lt _ _ _ _ _ _ _ _ _ _ _ _ _);
+        cbn [reconstruct map.putmany_of_list HList.tuple.to_list
+         HList.hlist.foralls HList.tuple.foralls
+         HList.hlist.existss HList.tuple.existss
+         HList.hlist.apply  HList.tuple.apply
+         HList.hlist
+         List.repeat Datatypes.length
+         HList.polymorphic_list.repeat HList.polymorphic_list.length
+         PrimitivePair.pair._1 PrimitivePair.pair._2] in *.
+      
+      { repeat straightline. }
+      { exact Wf_nat.lt_wf. }
+      { apply O. }
+      { repeat straightline. repeat split; try eauto.}
+      { repeat straightline.
+        (* on exit *)
+        2: {
+          repeat split; try assumption.
+          exists x3. repeat split; auto.
+          subst br. destruct (word.ltu x11 x10) eqn: Hi.
+          - inversion H17.
+          - clear H17; cbv [eval] in *.
+            rename x10 into len'; rename x11 into i'.
+
+    Abort.
+    (*
+        }
+        (*step*)
+       
+        }
+     
+       { }
+    Qed.
+*)
+
+    End WithParameters.
