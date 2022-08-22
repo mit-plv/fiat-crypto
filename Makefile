@@ -303,7 +303,6 @@ $(foreach bw,64 32,$(eval $(call add_curve_keys,curve25519_scalar_$(bw),WORD_BY_
 $(foreach bw,64 32,$(eval $(call add_curve_keys,p256_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'p256_scalar',$(bw),'2^256 - 2^224 + 2^192 - 89188191075325690597107910205041859247',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 $(foreach bw,64 32,$(eval $(call add_curve_keys,p384_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'p384_scalar',$(bw),'2^384 - 1388124618062372383947042015309946732620727252194336364173',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 $(foreach bw,64 32,$(eval $(call add_curve_keys,secp256k1_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'secp256k1_scalar',$(bw),'2^256 - 432420386565659656852420866394968145599',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
-$(foreach bw,64,$(eval $(call add_curve_keys,curve25519_solinas_$(bw),SOLINAS_REDUCTION,'curve25519_solinas',$(bw),'2^255 - 19',$(SOLINAS_REDUCTION_FUNCTIONS),SOLINAS_REDUCTION)))
 
 # Files taking 30s or less
 LITE_BASE_FILES := curve25519_64 poly1305_64 poly1305_32 p256_64 secp256k1_64 p384_64 p224_32 p434_64 p448_solinas_64 secp256k1_32 p256_32 p448_solinas_32 \
@@ -311,8 +310,11 @@ LITE_BASE_FILES := curve25519_64 poly1305_64 poly1305_32 p256_64 secp256k1_64 p3
 
 EXTRA_C_FILES := inversion/c/*_test.c
 
-ALL_C_FILES := $(patsubst %,$(C_DIR)%.c,$(ALL_BASE_FILES))
 ALL_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES)))
+
+$(foreach bw,64,$(eval $(call add_curve_keys,curve25519_solinas_$(bw),SOLINAS_REDUCTION,'curve25519_solinas',$(bw),'2^255 - 19',$(SOLINAS_REDUCTION_FUNCTIONS),SOLINAS_REDUCTION)))
+
+ALL_C_FILES := $(patsubst %,$(C_DIR)%.c,$(ALL_BASE_FILES))
 ALL_RUST_FILES := $(patsubst %,$(RUST_DIR)%.rs,$(ALL_BASE_FILES))
 ALL_RUST_MODS := $(ALL_BASE_FILES)
 ALL_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(call GO_RENAME_TO_FILE,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES))))
@@ -330,7 +332,6 @@ LITE_ZIG_FILES := $(patsubst %,$(ZIG_DIR)%.zig,$(LITE_BASE_FILES))
 
 BEDROCK2_UNSATURATED_SOLINAS := src/ExtractionOCaml/bedrock2_unsaturated_solinas
 BEDROCK2_WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/bedrock2_word_by_word_montgomery
-BEDROCK2_SOLINAS_REDUCTION := src/ExtractionOCaml/bedrock2_solinas_reduction
 
 C_EXTRA_ARGS := --inline --static --use-value-barrier
 
@@ -587,8 +588,9 @@ Makefile.coq: Makefile _CoqProject
 	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-coq && cat Makefile-coq | sed 's/^printenv:/printenv::/g; s/^printenv:::/printenv::/g; s/^all:/all-old:/g; s/^validate:/validate-vo:/g; s/^.PHONY: validate/.PHONY: validate-vo/g' > $@ && rm -f Makefile-coq
 
 
-BASE_STANDALONE := unsaturated_solinas saturated_solinas solinas_reduction word_by_word_montgomery base_conversion
+BASE_STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery base_conversion
 BEDROCK2_STANDALONE := $(addprefix bedrock2_,$(BASE_STANDALONE)) $(addprefix with_bedrock2_,$(BASE_STANDALONE))
+BASE_STANDALONE := $(BASE_STANDALONE) solinas_reduction
 STANDALONE := $(BASE_STANDALONE)
 ifneq ($(SKIP_BEDROCK2),1)
 STANDALONE += $(BEDROCK2_STANDALONE) $(WITH_BEDROCK2_STANDALONE)

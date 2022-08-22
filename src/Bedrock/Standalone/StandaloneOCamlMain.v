@@ -32,11 +32,6 @@ Module Bedrock2First.
       := main_gen ForExtraction.SaturatedSolinas.PipelineMain.
   End SaturatedSolinas.
 
-  Module SolinasReduction.
-    Definition main : unit
-      := main_gen ForExtraction.SolinasReduction.PipelineMain.
-  End SolinasReduction.
-
   Module BaseConversion.
     Definition main : unit
       := main_gen ForExtraction.BaseConversion.PipelineMain.
@@ -65,11 +60,6 @@ Module Bedrock2Later.
     Definition main : unit
       := main_gen ForExtraction.SaturatedSolinas.PipelineMain.
   End SaturatedSolinas.
-
-  Module SolinasReduction.
-    Definition main : unit
-      := main_gen ForExtraction.SolinasReduction.PipelineMain.
-  End SolinasReduction.
 
   Module BaseConversion.
     Definition main : unit
