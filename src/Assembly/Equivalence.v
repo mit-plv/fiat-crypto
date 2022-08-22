@@ -212,8 +212,9 @@ Definition AnnotatedLines := (Lines * symbolic_state)%type.
 
 Definition show_annotated_Line : Show AnnotatedLine
   := fun '(l, d)
-     => let l := show l in
-        (l ++ match dag.eager.description_lookup d l with
+     => let l_n := show_Line_with_line_number l in
+        let l := show l in
+        (l ++ match dag.eager.description_lookup d l_n with
               | [] => ""
               | new_idxs
                 => String.Tab ++ "; " ++ String.concat ", " (List.map (fun i => "#" ++ show i) new_idxs)

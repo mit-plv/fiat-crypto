@@ -3484,7 +3484,7 @@ Definition SymexRawLine {descr:description} (rawline : RawLine) : M unit :=
   end.
 
 Definition SymexLine line :=
-  let descr:description := Build_description (show line) false in
+  let descr:description := Build_description (Parse.show_Line_with_line_number line) false in
   SymexRawLine line.(rawline).
 
 Fixpoint SymexLines (lines : Lines) : M unit
