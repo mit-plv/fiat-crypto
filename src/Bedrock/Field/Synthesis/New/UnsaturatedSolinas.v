@@ -536,10 +536,9 @@ Definition field_parameters_prefixed
     (prefix ++ "inv")
     (prefix ++ "from_bytes")
     (prefix ++ "to_bytes")
-    (prefix ++ "copy")
-    (prefix ++ "small_literal")
     (prefix ++ "select_znz")
-    (* (prefix ++ "from_word") *)
+    (prefix ++ "copy")
+    (prefix ++ "from_word")
 .
 
 Local Ltac begin_derive_bedrock2_func :=

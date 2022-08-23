@@ -58,23 +58,23 @@ Definition x25519_base : func := ("x25519_base", (["out"; "sk"], [], bedrock_fun
 
 Definition is_udp : func := ("is_udp", (["buf"], ["r"], bedrock_func_body:(
   ethertype = (((load1(buf + $12))&$0xff) << $8) | ((load1(buf + $13))&$0xff);
-  require ($(1536 - 1) < ethertype);
+  require ($(1536 - 1) < ethertype) else { r = $0 };
   protocol = (load1(buf+$23))&$0xff;
   r = (protocol == $0x11)
 ))).
 
 Definition memcpy : func := ("memcpy", (["dst"; "src"; "n"], [], bedrock_func_body:(
-  while len {
+  while n {
     store1(dst, load1(src));
 
     dst = dst + $1;
     src = src + $1;
-    len = len - $1
+    n = n - $1
   }
 ))).
 
-Definition memswap : func := ("memswap", (["x"; "y"; "len"], [], bedrock_func_body:(
-  while len {
+Definition memswap : func := ("memswap", (["x"; "y"; "n"], [], bedrock_func_body:(
+  while n {
     vx = load1(x);
     vy = load1(y);
     store1(x, vy);
@@ -82,18 +82,18 @@ Definition memswap : func := ("memswap", (["x"; "y"; "len"], [], bedrock_func_bo
 
     x = x + $1;
     y = y + $1;
-    len = len - $1
+    n = n - $1
   }
 ))).
 
-Definition memequal : func := ("memequal", (["x"; "y"; "len"], ["r"], bedrock_func_body:(
+Definition memequal : func := ("memequal", (["x"; "y"; "n"], ["r"], bedrock_func_body:(
   r = $0;
-  while len {
+  while n {
     r = r | (load1(x) ^ load1(y));
 
     x = x + $1;
     y = y + $1;
-    len = len - $1
+    n = n - $1
   };
   r = r == $0
 ))).
@@ -106,7 +106,7 @@ Definition loop : func := ("loop", (["buf"; "seed"; "theirpk"], [], bedrock_func
   require t;
 
   stackalloc 64 as st;
-  chacha20_block(seed, (*nonce*)st, st);
+  chacha20_block(st, seed, (*nonce*)st, $0); (* TODO: another impl? *)
   memcpy(seed, st, $16);
   x25519_base(buf+$42, st+$16); (* TODO: from_bytes / to_bytes *)
   memswap(buf, buf+$6, $6);
@@ -128,8 +128,12 @@ Definition loop : func := ("loop", (["buf"; "seed"; "theirpk"], [], bedrock_func
   output! MMIOWRITE($0x1001200c, mmio_val | (set1<<$1 | set0) << $22)
 ))).
 
+Require Import bedrock2Examples.LAN9250.
+Require Import bedrock2Examples.lightbulb.
+Require Import bedrock2Examples.chacha20.
+
 Definition funcs : list func :=
-  [ loop; is_udp; memcpy; memswap; memequal; x25519; x25519_base;
+  [ loop; is_udp; memcpy; memswap; memequal; x25519; x25519_base; lan9250_tx;
 
     montladder;
     fe25519_to_bytes;
@@ -143,12 +147,12 @@ Definition funcs : list func :=
     fe25519_add;
     fe25519_sub;
     fe25519_square;
-    fe25519_scmula24 ].
+    fe25519_scmula24 ]
+    ++ lightbulb.function_impls
+    ++ [chacha20_quarter; chacha20_block].
 
-(*
 Require Import bedrock2.ToCString.
 Compute c_module funcs.
-*)
 
 Derive montladder_compiler_result SuchThat
        (compile
