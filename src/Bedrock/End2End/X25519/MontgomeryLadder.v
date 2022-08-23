@@ -37,8 +37,100 @@ Derive montladder SuchThat
        As montladder_defn.
 Proof. vm_compute. subst; exact eq_refl. Qed.
 
+Import String.
+Require Import bedrock2.NotationsCustomEntry.
+
+Definition x25519 : func := ("x25519", (["out"; "sk"; "pk"], [], bedrock_func_body:(
+  stackalloc 40 as U;
+  fe25519_from_bytes(U, pk);
+  stackalloc 40 as OUT;
+  montladder(OUT, sk, U);
+  fe25519_to_bytes(out, OUT)
+))).
+
+Definition x25519_base : func := ("x25519_base", (["out"; "sk"], [], bedrock_func_body:(
+  stackalloc 40 as U;
+  fe25519_from_word(U, $9);
+  stackalloc 40 as OUT;
+  montladder(OUT, sk, U);
+  fe25519_to_bytes(out, OUT)
+))).
+
+Definition is_udp : func := ("is_udp", (["buf"], ["r"], bedrock_func_body:(
+  ethertype = (((load1(buf + $12))&$0xff) << $8) | ((load1(buf + $13))&$0xff);
+  require ($(1536 - 1) < ethertype);
+  protocol = (load1(buf+$23))&$0xff;
+  r = (protocol == $0x11)
+))).
+
+Definition memcpy : func := ("memcpy", (["dst"; "src"; "n"], [], bedrock_func_body:(
+  while len {
+    store1(dst, load1(src));
+
+    dst = dst + $1;
+    src = src + $1;
+    len = len - $1
+  }
+))).
+
+Definition memswap : func := ("memswap", (["x"; "y"; "len"], [], bedrock_func_body:(
+  while len {
+    vx = load1(x);
+    vy = load1(y);
+    store1(x, vy);
+    store1(y, vx);
+
+    x = x + $1;
+    y = y + $1;
+    len = len - $1
+  }
+))).
+
+Definition memequal : func := ("memequal", (["x"; "y"; "len"], ["r"], bedrock_func_body:(
+  r = $0;
+  while len {
+    r = r | (load1(x) ^ load1(y));
+
+    x = x + $1;
+    y = y + $1;
+    len = len - $1
+  };
+  r = r == $0
+))).
+
+Definition loop : func := ("loop", (["buf"; "seed"; "theirpk"], [], bedrock_func_body:(
+  unpack! l, err = recvEthernet(buf);
+  require !err;
+  require $(42+32) == l;
+  unpack! t = is_udp(buf);
+  require t;
+
+  stackalloc 64 as st;
+  chacha20_block(seed, (*nonce*)st, st);
+  memcpy(seed, st, $16);
+  x25519_base(buf+$42, st+$16); (* TODO: from_bytes / to_bytes *)
+  memswap(buf, buf+$6, $6);
+  memswap(buf+$(18+12), buf+$(18+16), $4);
+  memswap(buf+$(18+20), buf+$(18+22), $2);
+  lan9250_tx(buf, $(42+32));
+
+  x25519(st, st+$16, theirpk);
+  unpack! l, err = recvEthernet(buf);
+  require !err;
+  require $(42+16) == l;
+  unpack! t = is_udp(buf);
+  require t;
+  unpack! set0 = memequal(st, buf+$42, $16);
+  unpack! set1 = memequal(st+$16, buf+$42, $16);
+
+  io! mmio_val = MMIOREAD($0x1001200c);
+  mmio_val = mmio_val & coq:(Z.clearbit (Z.clearbit (2^32-1) 23) 22); (* TODO: pin numbering, init *)
+  output! MMIOWRITE($0x1001200c, mmio_val | (set1<<$1 | set0) << $22)
+))).
+
 Definition funcs : list func :=
-  [
+  [ loop; is_udp; memcpy; memswap; memequal; x25519; x25519_base;
+
     montladder;
     fe25519_to_bytes;
     fe25519_from_bytes;
@@ -64,5 +156,12 @@ Derive montladder_compiler_result SuchThat
          (map.of_list funcs) = Success montladder_compiler_result)
        As montladder_compiler_result_ok.
 Proof.
+  (*
+error:("The register allocator replaced source variable" "len" "by target variable" 22 "but when the checker encountered this pair," "its current mapping of source to target variables" 
+[("x1101", 21); ("src", 9); ("x0101", 20); ("dst", 8); 
+("x1001", 19); ("x0001", 18)] "did not contain the pair" 
+("len", 22)) = Success ?Goal
+   *)
+
   vm_compute. apply f_equal. subst; exact eq_refl.
 Qed.
