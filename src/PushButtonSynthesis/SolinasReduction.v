@@ -187,10 +187,10 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_solmul_gen
-            @GallinaReify.Reify base
-            @GallinaReify.Reify s
-            @GallinaReify.Reify c
-            @GallinaReify.Reify n )
+            @ GallinaReify.Reify base
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n )
          (Some boundsn, (Some boundsn, tt))
          (Some boundsn).
 
