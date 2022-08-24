@@ -98,7 +98,7 @@ Module SolinasReduction.
         | _ => apply Z.mod_small
         | |- _ mod (?x * ?y) < (?y * ?x) => rewrite Z.mul_comm with (n:=x)
         | _ => apply OrdersEx.Z_as_OT.mod_pos_bound
-        | [ |- 0 <= _ mod _ ] => apply Z_mod_nonneg_nonneg
+        (* | [ |- 0 <= _ mod _ ] => apply Z_mod_nonneg_nonneg *)
         | [ |- 0 <= weight _ ] => apply OrdersEx.Z_as_OT.lt_le_incl; auto
 
         | _ => split
@@ -180,7 +180,7 @@ Module SolinasReduction.
     Lemma map_weight_seq : forall m p,
         map weight (seq 0 p) = map (fun t => t / (weight m)) (map weight (seq m p)).
     Proof.
-      induction m; intros; push.
+      induction m as [| m IHm]; intros; push.
       erewrite map_ext.
       eauto.
       intros.
@@ -191,13 +191,12 @@ Module SolinasReduction.
       rewrite IHm.
       rewrite <-seq_shift.
       push.
-      apply map_ext_Forall.
-      rewrite Forall_forall.
-      intros.
+      apply map_ext_in.
+      intros a H.
       rewrite in_seq in H.
       weight_comp; try lia.
-      rewrite <-!OrdersEx.Z_as_OT.pow_add_r; try lia.
-      rewrite <-!OrdersEx.Z_as_OT.pow_sub_r; try lia.
+      rewrite <-!Z.pow_add_r; try lia.
+      rewrite <-!Z.pow_sub_r; try lia.
       f_equal.
       lia.
     Qed.
@@ -454,7 +453,7 @@ Module SolinasReduction.
     Proof.
       intros.
       rewrite canonical_iff.
-      autounfold.
+      repeat autounfold.
       split.
       intuition.
       generalize dependent n.
@@ -480,7 +479,8 @@ Module SolinasReduction.
                | H : In _ _ |- _ => cbn in H
                | H : context[S _] |- _ => cbn in H
                | H : context[_ && _] |- _ => rewrite andb_true_iff in H
-               | _ => progress cbn || intuition
+               | H : context[_ <=? _] |- _ => rewrite <-Zle_is_le_bool in H
+               | _ => progress cbn || intuition || subst
                | _ => lia
                | _ => eapply IHp
                end.
@@ -492,10 +492,12 @@ Module SolinasReduction.
     Proof using Type.
       intros.
       pose proof eval_weight_S as Heval.
-      autounfold with * in *.
+      repeat autounfold with * in *.
       generalize dependent n; induction p; intros; destruct n;
         repeat multimatch goal with
                | H : context[fold_right _ _ _] |- _ => cbn in H
+               | H : context[_ && _] |- _ => rewrite andb_true_iff in H
+               | H : context[_ <=? _] |- _ => rewrite <-Zle_is_le_bool in H
                | _ => solve_ineq
                | _ => rewrite Heval
                | _ => push
@@ -514,7 +516,7 @@ Module SolinasReduction.
       split.
       apply eval_is_bounded_by_pos; auto.
       pose proof eval_weight_S as Heval.
-      autounfold with * in *.
+      repeat autounfold with * in *.
       generalize dependent n; induction p; intros; destruct n;
         repeat multimatch goal with
                | H : context[fold_right _ _ _] |- _ => progress cbn in H
@@ -530,7 +532,7 @@ Module SolinasReduction.
       etransitivity.
       solve_ineq.
       break_match; eauto.
-      apply OrdersEx.Z_as_OT.mul_le_mono_nonneg_r; try lia.
+      apply Z.mul_le_mono_nonneg_r; try lia.
       le_lt.
       apply IHp; auto.
       weight_comp; unfold machine_wordsize; lia.
@@ -541,7 +543,7 @@ Module SolinasReduction.
         is_bounded_by (b :: bounds) (p' :: p) = true ->
         is_bounded_by bounds p = true.
     Proof.
-      intros; autounfold in *; match goal with | H : _ |- _ => push' H end.
+      intros; repeat autounfold in *; match goal with | H : _ |- _ => push' H end.
     Qed.
     Hint Resolve is_bounded_by_cons1 : ibb.
 
@@ -549,7 +551,7 @@ Module SolinasReduction.
         is_bounded_by (b :: bounds) (p' :: p) = true ->
         fst b <= p' <= snd b.
     Proof.
-      intros; autounfold in *; match goal with | H : _ |- _ => push' H end.
+      intros; repeat autounfold in *; match goal with | H : _ |- _ => push' H end.
     Qed.
     Hint Resolve is_bounded_by_cons2 : ibb.
 
@@ -558,7 +560,7 @@ Module SolinasReduction.
         is_bounded_by bounds p = true /\
           fst b <= p' <= snd b.
     Proof.
-      intros; autounfold in *; match goal with | H : _ |- _ => push' H end.
+      intros; repeat autounfold in *; match goal with | H : _ |- _ => push' H end.
     Qed.
     Hint Resolve is_bounded_by_cons : ibb.
 
@@ -652,7 +654,7 @@ Module SolinasReduction.
       intros.
       generalize dependent bound1.
       generalize dependent bound2.
-      autounfold.
+      repeat autounfold.
       induction l as [ | ? ? IHl]; intros; destruct bound1; destruct bound2;
         repeat match goal with
                | H : context[length _] |- _ => progress autorewrite with push_length in H
@@ -673,7 +675,7 @@ Module SolinasReduction.
         fold_andb_map' (fun x y => (fst y <=? fst x) && (snd x <=? snd y)) b b = true.
     Proof.
       intros.
-      autounfold.
+      repeat autounfold.
       induction b;
         repeat match goal with
                | _ => progress push
@@ -902,7 +904,11 @@ Module SolinasReduction.
     Definition reduce1' base s c n m p :=
       ltac:(let x := (eval cbv beta delta [reduce1_cps id] in (@reduce1_cps (list Z) base s c n m p id)) in
             exact x).
-    Print reduce1'.
+
+    Definition reduce2 base s c n (p : list Z) :=
+      let r1 := reduce1 base s c (2*n) (S n) p in
+      let r2 := reduce1 base s c (S n) (S n) r1 in
+      r2.
 
     Definition reduce2_cps {T} base s c n (p : list Z) (f : list Z -> T):=
       (r1 <- reduce1_cps base s c (2*n) (S n) p;
@@ -911,7 +917,6 @@ Module SolinasReduction.
     Definition reduce2' base s c n p :=
       ltac:(let x := (eval cbv beta delta [reduce2_cps reduce1_cps id] in (@reduce2_cps (list Z) base s c n p id)) in
             exact x).
-    Print reduce2'.
 
     Lemma reduce1_cps_ok {T} base s c n m (f : list Z -> T) : forall p,
         reduce1_cps base s c n m p f = f (reduce1 base s c n m p).
@@ -934,7 +939,6 @@ Module SolinasReduction.
     Definition reduce_full' base s c n p :=
       ltac:(let x := (eval cbv beta delta [reduce_full_cps reduce1_cps id] in (@reduce_full_cps (list Z) base s c n p id)) in
             exact x).
-    Print reduce_full'.
 
     Lemma reduce_full_cps_ok {T} base s c n (f : list Z -> T) : forall p,
         reduce_full_cps base s c n p f = f (reduce_full base s c n p).
@@ -980,7 +984,6 @@ Module SolinasReduction.
     Definition mulmod base s c n (p q : list Z) :=
       ltac:(let x := (eval cbv beta delta [mulmod_cps mul_no_reduce_cps reduce_full_cps reduce1_cps id] in (@mulmod_cps (list Z) base s c n p q id)) in
             exact x).
-    Print mulmod.
 
     Lemma mulmod_unfold base s c n : forall p q,
         mulmod' base s c n p q = mulmod_cps base s c n p q id.
@@ -1014,6 +1017,7 @@ Module SolinasReduction.
         specialize (IHl1 ltac:(auto));
         specialize (H a ltac:(auto));
         repeat multimatch goal with
+               | H : context[_ =? _] |- _ => rewrite DecidableClass.Decidable_eq_Z_obligation_1 in H
                | |- context[_ mod _] => rewrite Z.mod_small
                | _ => rewrite IHl1
                | _ => push
@@ -1028,7 +1032,7 @@ Module SolinasReduction.
       (forall x, In x l1 -> x mod w = 0) ->
       split w (combine l1 l2) = ([], combine (map (fun t => t / w) l1) l2).
     Proof.
-      intros.
+      intros H.
       generalize dependent l2.
       induction l1; intros; destruct l2; push;
         match goal with
@@ -1037,19 +1041,26 @@ Module SolinasReduction.
         specialize (IHl1 ltac:(auto));
         specialize (H _ ltac:(auto));
         repeat multimatch goal with
+               | H : ?x = 0, H1 : (?x =? 0) = false |- _ => rewrite H in H1
                | _ => rewrite IHl1
                | _ => push
                | _ => cbn
                | _ => lia
                | _ => auto
                | _ => break_match
+               | _ => discriminate
                end.
     Qed.
 
     Lemma weight_mono' x :
       weight x < weight (S x).
     Proof.
-      weight_comp; lia.
+      weight_comp.
+      rewrite Zred_factor0 at 1.
+      rewrite Z.mul_comm.
+      apply Zmult_lt_compat_r.
+      apply Z.pow_pos_nonneg.
+      all: lia.
     Qed.
 
     Lemma weight_mono'' x1 x2 :
@@ -1116,7 +1127,7 @@ Module SolinasReduction.
       rewrite uweight_S with (n:=S (S n)); [ | lia].
       fold weight.
       rewrite <-!Z.mul_sub_distr_l.
-      apply Zmult_lt_compat_l; lia.
+      apply Zmult_lt_compat_l; unfold machine_wordsize; lia.
     Qed.
 
     Lemma weight_dif_mono : forall n m,
@@ -1298,7 +1309,7 @@ Module SolinasReduction.
       push.
       rewrite <-(firstn_skipn n p) in Heqb.
       replace m1 with (n + (m1 - n))%nat in Heqb by lia.
-      rewrite repeat_app in Heqb.
+      rewrite StdlibCompat.List.repeat_app in Heqb.
       solve_ineq.
       solve_ibb.
       solve_ibb.
@@ -1318,6 +1329,7 @@ Module SolinasReduction.
       push.
       rewrite <-Z_div_mod_eq_full.
       reflexivity.
+      push.
       push.
       push.
     Qed.
@@ -1408,7 +1420,7 @@ Module SolinasReduction.
       rewrite <-(firstn_skipn n p) in H.
       replace (2*n-n)%nat with n by lia.
       replace (2 * n)%nat with (n + n)%nat in H by lia.
-      rewrite repeat_app in H.
+      rewrite StdlibCompat.List.repeat_app in H.
       solve_ineq.
 
       solve_ibb.
@@ -1425,6 +1437,7 @@ Module SolinasReduction.
       weight_comp.
       rewrite <-Z.mul_succ_l.
       apply Zmult_lt_compat_r.
+      apply Z.pow_pos_nonneg; lia.
       all: cbn; break_match; lia.
     Qed.
 
@@ -1694,6 +1707,7 @@ Module SolinasReduction.
       rewrite <-Z_div_mod_eq_full.
       auto.
       push.
+      push.
       lia.
       push.
     Qed.
@@ -1786,14 +1800,16 @@ Module SolinasReduction.
                end.
       weight_comp; try lia.
       rewrite <-Z.mul_succ_l.
-      apply Zmult_lt_compat_r; cbn; break_match; lia.
+      apply Zmult_lt_compat_r.
+      apply Z.pow_pos_nonneg; cbn; break_match; lia.
+      cbn; lia.
       rewrite Z.lt_add_lt_sub_r.
       etransitivity; [| apply (weight_dif_mono 1); lia].
       weight_comp; cbn; break_match; lia.
       cbn; const_simpl; lia.
       replace (S n) with (n+1)%nat.
-      rewrite repeat_app.
-      autounfold.
+      rewrite StdlibCompat.List.repeat_app.
+      repeat autounfold.
       push.
       cbn.
       apply bounds_same.
@@ -1821,7 +1837,9 @@ Module SolinasReduction.
       cbv [up_bound].
       weight_comp; try lia.
       rewrite <-Z.mul_succ_l.
-      apply Zmult_lt_compat_r; cbn; break_match; lia.
+      apply Zmult_lt_compat_r.
+      apply Z.pow_pos_nonneg; cbn; break_match; lia.
+      cbn; lia.
     Qed.
     (* END SECTION REDUCE_FULL *)
 
@@ -1847,309 +1865,139 @@ Module SolinasReduction.
 
   End __.
 
-  (*
-  Section compile.
+  (* Strategy -500 [Crypto.Arithmetic.Core.Positional.add_to_nth *)
+  (*                Coq.Init.Datatypes.andb *)
+  (*                Coq.ZArith.BinInt.Z.to_int *)
+  (*                Crypto.Arithmetic.SolinasReduction.SolinasReduction.dual_map *)
+  (*                Coq.PArith.BinPos.Pos.to_uint *)
+  (*                Coq.Init.Decimal.revapp *)
+  (*                Coq.Init.Datatypes.nat_rect *)
+  (*                Crypto.Arithmetic.Saturated.Rows.max_column_size *)
+  (*                Crypto.Arithmetic.Saturated.Rows.sum_rows' *)
+  (*                Crypto.Arithmetic.Core.Associational.split *)
+  (*                Coq.PArith.BinPos.Pos.to_little_uint *)
+  (*                Coq.Init.Nat.to_uint *)
+  (*                Crypto.Arithmetic.SolinasReduction.SolinasReduction.mulmod *)
+  (*                Crypto.Arithmetic.ModOps.weight *)
+  (*                Crypto.Arithmetic.SolinasReduction.SolinasReduction.sat_reduce *)
+  (*                Coq.Lists.List.tl *)
+  (*                Crypto.Arithmetic.Saturated.Rows.adjust_s *)
+  (*                Crypto.Arithmetic.Core.Positional.to_associational *)
+  (*                Coq.Init.Nat.to_little_uint *)
+  (*                Crypto.Arithmetic.Saturated.Columns.cons_to_nth *)
+  (*                Crypto.Arithmetic.Saturated.Rows.extract_row *)
+  (*                Crypto.Arithmetic.Saturated.Rows.from_columns *)
+  (*                Crypto.Arithmetic.Saturated.Associational.sat_multerm_const *)
+  (*                Coq.Init.Decimal.rev *)
+  (*                Crypto.Arithmetic.Saturated.Associational.sat_mul *)
+  (*                Crypto.Arithmetic.Saturated.Rows.from_columns' *)
+  (*                Crypto.Arithmetic.Core.Positional.place *)
+  (*                Crypto.Arithmetic.Core.Positional.zeros *)
+  (*                Crypto.Arithmetic.Saturated.Rows.flatten' *)
+  (*                Crypto.Arithmetic.Saturated.Rows.sum_rows *)
+  (*                Crypto.Arithmetic.Saturated.Associational.sat_mul_const *)
+  (*                Coq.Lists.List.hd *)
+  (*                Crypto.Arithmetic.Saturated.Associational.sat_multerm *)
+  (*                Crypto.Arithmetic.SolinasReduction.SolinasReduction.is_bounded_by *)
+  (*                Crypto.Arithmetic.Saturated.Columns.nils *)
+  (*                Coq.Init.Decimal.Little.succ *)
+  (*                Crypto.Arithmetic.UniformWeight.uweight *)
+  (*                Crypto.Arithmetic.Saturated.Rows.flatten *)
+  (*                (* Rewriter.Util.LetIn.Let_In *) *)
+  (*                Crypto.Arithmetic.Saturated.Rows.from_associational *)
+  (*                Crypto.Arithmetic.SolinasReduction.SolinasReduction.fold_andb_map' *)
+  (*                Crypto.Arithmetic.Saturated.Columns.from_associational *)
+  (*                Coq.Init.Decimal.Little.double]. *)
 
-    Let s := 2^255.
-    Let c := [(1, 19)].
-    Let machine_wordsize := 64.
-    Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
-    Let m : nat := 2 * n.
-    Let w : nat -> Z := weight machine_wordsize 1.
-    Let base : Z := 2 ^ machine_wordsize.
 
-    Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
-    Let boundsn : list (ZRange.type.option.interp base.type.Z)
-        := repeat bound (n).
+  (* Section compile. *)
 
-    Import Stringification.C.Compilers.
-    Import Stringification.C.Compilers.ToString.
+  (*   Let s := 2^255. *)
+  (*   Let c := [(1, 19)]. *)
+  (*   Let machine_wordsize := 64. *)
+  (*   Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)). *)
+  (*   Let m : nat := 2 * n. *)
+  (*   Let w : nat -> Z := weight machine_wordsize 1. *)
+  (*   Let base : Z := 2 ^ machine_wordsize. *)
 
-    Local Existing Instances ToString.C.OutputCAPI Pipeline.show_ErrorMessage.
-    Local Instance : only_signed_opt := false.
-    Local Instance : no_select_opt := false.
-    Local Instance : static_opt := true.
-    Local Instance : internal_static_opt := true.
-    Local Instance : inline_opt := true.
-    Local Instance : inline_internal_opt := true.
-    Local Instance : use_mul_for_cmovznz_opt := false.
-    Local Instance : emit_primitives_opt := true.
-    Local Instance : should_split_mul_opt := false.
-    Local Instance : should_split_multiret_opt := false.
-    Local Instance : widen_carry_opt := false.
-    Local Instance : widen_bytes_opt := true. (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
+  (*   Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange. *)
+  (*   Let boundsn : list (ZRange.type.option.interp base.type.Z) *)
+  (*       := repeat bound (n). *)
 
-    Let possible_values := prefix_with_carry [machine_wordsize].
-    Local Instance : machine_wordsize_opt := machine_wordsize. (* for show *)
-    Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
-    Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
-    Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+  (*   Import Stringification.C.Compilers. *)
+  (*   Import Stringification.C.Compilers.ToString. *)
 
-    Local Existing Instance default_low_level_rewriter_method.
-    Local Existing Instance AbstractInterpretation.default_Options.
-    Local Instance : unfold_value_barrier_opt := true.
-    Local Instance : assembly_hints_lines_opt := [].
-    Local Instance : ignore_unique_asm_names_opt := false.
-    Local Existing Instance default_language_naming_conventions.
-    Local Existing Instance default_documentation_options.
-    Local Instance : package_name_opt := None.
-    Local Instance : class_name_opt := None.
-    Local Existing Instance default_output_options.
+  (*   Local Existing Instances ToString.C.OutputCAPI Pipeline.show_ErrorMessage. *)
+  (*   Local Instance : only_signed_opt := false. *)
+  (*   Local Instance : no_select_opt := false. *)
+  (*   Local Instance : static_opt := true. *)
+  (*   Local Instance : internal_static_opt := true. *)
+  (*   Local Instance : inline_opt := true. *)
+  (*   Local Instance : inline_internal_opt := true. *)
+  (*   Local Instance : use_mul_for_cmovznz_opt := false. *)
+  (*   Local Instance : emit_primitives_opt := true. *)
+  (*   Local Instance : should_split_mul_opt := false. *)
+  (*   Local Instance : should_split_multiret_opt := false. *)
+  (*   Local Instance : widen_carry_opt := false. *)
+  (*   Local Instance : widen_bytes_opt := true. (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *) *)
 
-    Let bounds := repeat bound n ++ [Some r[0 ~> (2^(machine_wordsize/4) - 1)]%zrange].
+  (*   Let possible_values := prefix_with_carry [machine_wordsize]. *)
+  (*   Local Instance : machine_wordsize_opt := machine_wordsize. (* for show *) *)
+  (*   Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize. *)
+  (*   Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values. *)
+  (*   Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values. *)
 
-    Time Compute
-           Show.show
-           (Pipeline.BoundsPipelineToString
-              "fiat_p25519_" "fiat_p25519_mul"
-              false
-              false
-              None
-              possible_values
-              machine_wordsize
-              ltac:(let n := (eval cbv in n) in
-                    let r := Reify (mulmod base s c n) in
-                    exact r)
-                     (fun _ _ => [])
-                     (Some (repeat bound (n)), (Some (repeat bound n), tt))
-                     (Some (repeat bound (n)))
-                     (None, (None, tt))
-                     (None)
-             : Pipeline.ErrorT _).
+  (*   Local Existing Instance default_low_level_rewriter_method. *)
+  (*   Local Existing Instance AbstractInterpretation.default_Options. *)
+  (*   Local Instance : unfold_value_barrier_opt := true. *)
+  (*   Local Instance : assembly_hints_lines_opt := []. *)
+  (*   Local Instance : ignore_unique_asm_names_opt := false. *)
+  (*   Local Existing Instance default_language_naming_conventions. *)
+  (*   Local Existing Instance default_documentation_options. *)
+  (*   Local Instance : package_name_opt := None. *)
+  (*   Local Instance : class_name_opt := None. *)
+  (*   Local Existing Instance default_output_options. *)
 
-    (*
-     = "Success (""/*
- * Input Bounds:
- *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
- *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
- */
-static void fiat_p25519_mul(uint64_t out1[4], const uint64_t arg1[4], const uint64_t arg2[4]) {
-  uint64_t x1;
-  uint64_t x2;
-  uint64_t x3;
-  uint64_t x4;
-  uint64_t x5;
-  uint64_t x6;
-  uint64_t x7;
-  uint64_t x8;
-  uint64_t x9;
-  uint64_t x10;
-  uint64_t x11;
-  uint64_t x12;
-  uint64_t x13;
-  uint64_t x14;
-  uint64_t x15;
-  uint64_t x16;
-  uint64_t x17;
-  uint64_t x18;
-  uint64_t x19;
-  uint64_t x20;
-  uint64_t x21;
-  uint64_t x22;
-  uint64_t x23;
-  uint64_t x24;
-  uint64_t x25;
-  uint64_t x26;
-  uint64_t x27;
-  uint64_t x28;
-  uint64_t x29;
-  uint64_t x30;
-  uint64_t x31;
-  uint64_t x32;
-  uint64_t x33;
-  fiat_p25519_uint1 x34;
-  uint64_t x35;
-  fiat_p25519_uint1 x36;
-  uint64_t x37;
-  uint64_t x38;
-  fiat_p25519_uint1 x39;
-  uint64_t x40;
-  fiat_p25519_uint1 x41;
-  uint64_t x42;
-  fiat_p25519_uint1 x43;
-  uint64_t x44;
-  uint64_t x45;
-  fiat_p25519_uint1 x46;
-  uint64_t x47;
-  fiat_p25519_uint1 x48;
-  uint64_t x49;
-  fiat_p25519_uint1 x50;
-  uint64_t x51;
-  fiat_p25519_uint1 x52;
-  uint64_t x53;
-  fiat_p25519_uint1 x54;
-  uint64_t x55;
-  uint64_t x56;
-  fiat_p25519_uint1 x57;
-  uint64_t x58;
-  fiat_p25519_uint1 x59;
-  uint64_t x60;
-  fiat_p25519_uint1 x61;
-  uint64_t x62;
-  fiat_p25519_uint1 x63;
-  uint64_t x64;
-  fiat_p25519_uint1 x65;
-  uint64_t x66;
-  fiat_p25519_uint1 x67;
-  uint64_t x68;
-  fiat_p25519_uint1 x69;
-  uint64_t x70;
-  fiat_p25519_uint1 x71;
-  uint64_t x72;
-  fiat_p25519_uint1 x73;
-  uint64_t x74;
-  fiat_p25519_uint1 x75;
-  uint64_t x76;
-  fiat_p25519_uint1 x77;
-  uint64_t x78;
-  fiat_p25519_uint1 x79;
-  uint64_t x80;
-  fiat_p25519_uint1 x81;
-  uint64_t x82;
-  fiat_p25519_uint1 x83;
-  uint64_t x84;
-  fiat_p25519_uint1 x85;
-  uint64_t x86;
-  fiat_p25519_uint1 x87;
-  uint64_t x88;
-  fiat_p25519_uint1 x89;
-  uint64_t x90;
-  fiat_p25519_uint1 x91;
-  uint64_t x92;
-  fiat_p25519_uint1 x93;
-  uint64_t x94;
-  fiat_p25519_uint1 x95;
-  uint64_t x96;
-  uint64_t x97;
-  uint64_t x98;
-  uint64_t x99;
-  uint64_t x100;
-  uint64_t x101;
-  uint64_t x102;
-  fiat_p25519_uint1 x103;
-  uint64_t x104;
-  fiat_p25519_uint1 x105;
-  uint64_t x106;
-  uint64_t x107;
-  uint64_t x108;
-  fiat_p25519_uint1 x109;
-  uint64_t x110;
-  uint64_t x111;
-  uint64_t x112;
-  uint64_t x113;
-  fiat_p25519_uint1 x114;
-  uint64_t x115;
-  fiat_p25519_uint1 x116;
-  uint64_t x117;
-  fiat_p25519_uint1 x118;
-  uint64_t x119;
-  fiat_p25519_uint1 x120;
-  uint64_t x121;
-  uint64_t x122;
-  uint64_t x123;
-  uint64_t x124;
-  fiat_p25519_uint1 x125;
-  uint64_t x126;
-  fiat_p25519_uint1 x127;
-  uint64_t x128;
-  fiat_p25519_uint1 x129;
-  uint64_t x130;
-  fiat_p25519_uint1 x131;
-  uint64_t x132;
-  uint64_t x133;
-  uint64_t x134;
-  fiat_p25519_uint1 x135;
-  uint64_t x136;
-  fiat_p25519_uint1 x137;
-  uint64_t x138;
-  fiat_p25519_uint1 x139;
-  uint64_t x140;
-  fiat_p25519_uint1 x141;
-  fiat_p25519_mulx_u64(&x1, &x2, (arg1[3]), (arg2[3]));
-  fiat_p25519_mulx_u64(&x3, &x4, (arg1[3]), (arg2[2]));
-  fiat_p25519_mulx_u64(&x5, &x6, (arg1[3]), (arg2[1]));
-  fiat_p25519_mulx_u64(&x7, &x8, (arg1[3]), (arg2[0]));
-  fiat_p25519_mulx_u64(&x9, &x10, (arg1[2]), (arg2[3]));
-  fiat_p25519_mulx_u64(&x11, &x12, (arg1[2]), (arg2[2]));
-  fiat_p25519_mulx_u64(&x13, &x14, (arg1[2]), (arg2[1]));
-  fiat_p25519_mulx_u64(&x15, &x16, (arg1[2]), (arg2[0]));
-  fiat_p25519_mulx_u64(&x17, &x18, (arg1[1]), (arg2[3]));
-  fiat_p25519_mulx_u64(&x19, &x20, (arg1[1]), (arg2[2]));
-  fiat_p25519_mulx_u64(&x21, &x22, (arg1[1]), (arg2[1]));
-  fiat_p25519_mulx_u64(&x23, &x24, (arg1[1]), (arg2[0]));
-  fiat_p25519_mulx_u64(&x25, &x26, (arg1[0]), (arg2[3]));
-  fiat_p25519_mulx_u64(&x27, &x28, (arg1[0]), (arg2[2]));
-  fiat_p25519_mulx_u64(&x29, &x30, (arg1[0]), (arg2[1]));
-  fiat_p25519_mulx_u64(&x31, &x32, (arg1[0]), (arg2[0]));
-  fiat_p25519_addcarryx_u64(&x33, &x34, 0x0, x28, x7);
-  fiat_p25519_addcarryx_u64(&x35, &x36, x34, x26, x5);
-  x37 = (x36 + x18);
-  fiat_p25519_addcarryx_u64(&x38, &x39, 0x0, x33, x13);
-  fiat_p25519_addcarryx_u64(&x40, &x41, x39, x35, x8);
-  fiat_p25519_addcarryx_u64(&x42, &x43, x41, x37, 0x0);
-  x44 = (x43 + x10);
-  fiat_p25519_addcarryx_u64(&x45, &x46, 0x0, x30, x15);
-  fiat_p25519_addcarryx_u64(&x47, &x48, x46, x38, x16);
-  fiat_p25519_addcarryx_u64(&x49, &x50, x48, x40, x11);
-  fiat_p25519_addcarryx_u64(&x51, &x52, x50, x42, x3);
-  fiat_p25519_addcarryx_u64(&x53, &x54, x52, x44, 0x0);
-  x55 = (x54 + x2);
-  fiat_p25519_addcarryx_u64(&x56, &x57, 0x0, x45, x21);
-  fiat_p25519_addcarryx_u64(&x58, &x59, x57, x47, x19);
-  fiat_p25519_addcarryx_u64(&x60, &x61, x59, x49, x14);
-  fiat_p25519_addcarryx_u64(&x62, &x63, x61, x51, x6);
-  fiat_p25519_addcarryx_u64(&x64, &x65, x63, x53, 0x0);
-  fiat_p25519_addcarryx_u64(&x66, &x67, x65, x55, 0x0);
-  fiat_p25519_addcarryx_u64(&x68, &x69, 0x0, x32, x23);
-  fiat_p25519_addcarryx_u64(&x70, &x71, x69, x56, x24);
-  fiat_p25519_addcarryx_u64(&x72, &x73, x71, x58, x22);
-  fiat_p25519_addcarryx_u64(&x74, &x75, x73, x60, x17);
-  fiat_p25519_addcarryx_u64(&x76, &x77, x75, x62, x9);
-  fiat_p25519_addcarryx_u64(&x78, &x79, x77, x64, x1);
-  fiat_p25519_addcarryx_u64(&x80, &x81, x79, x66, 0x0);
-  fiat_p25519_addcarryx_u64(&x82, &x83, 0x0, x68, x29);
-  fiat_p25519_addcarryx_u64(&x84, &x85, x83, x70, x27);
-  fiat_p25519_addcarryx_u64(&x86, &x87, x85, x72, x25);
-  fiat_p25519_addcarryx_u64(&x88, &x89, x87, x74, x20);
-  fiat_p25519_addcarryx_u64(&x90, &x91, x89, x76, x12);
-  fiat_p25519_addcarryx_u64(&x92, &x93, x91, x78, x4);
-  fiat_p25519_addcarryx_u64(&x94, &x95, x93, x80, 0x0);
-  fiat_p25519_mulx_u64(&x96, &x97, UINT8_C(0x26), x92);
-  fiat_p25519_mulx_u64(&x98, &x99, UINT8_C(0x26), x90);
-  fiat_p25519_mulx_u64(&x100, &x101, UINT8_C(0x26), x88);
-  fiat_p25519_addcarryx_u64(&x102, &x103, 0x0, x82, x98);
-  fiat_p25519_addcarryx_u64(&x104, &x105, x103, x84, x96);
-  fiat_p25519_mulx_u64(&x106, &x107, UINT8_C(0x26), x94);
-  fiat_p25519_addcarryx_u64(&x108, &x109, x105, x86, x106);
-  fiat_p25519_mulx_u64(&x110, &x111, UINT8_C(0x26), x94);
-  x112 = (x109 + x111);
-  fiat_p25519_addcarryx_u64(&x113, &x114, 0x0, x31, x100);
-  fiat_p25519_addcarryx_u64(&x115, &x116, x114, x102, x101);
-  fiat_p25519_addcarryx_u64(&x117, &x118, x116, x104, x99);
-  fiat_p25519_addcarryx_u64(&x119, &x120, x118, x108, x97);
-  x121 = (x120 + x112);
-  fiat_p25519_mulx_u64(&x122, &x123, UINT8_C(0x26), x121);
-  fiat_p25519_addcarryx_u64(&x124, &x125, 0x0, x113, x122);
-  fiat_p25519_addcarryx_u64(&x126, &x127, x125, x115, 0x0);
-  fiat_p25519_addcarryx_u64(&x128, &x129, x127, x117, 0x0);
-  fiat_p25519_addcarryx_u64(&x130, &x131, x129, x119, 0x0);
-  fiat_p25519_mulx_u64(&x132, &x133, UINT8_C(0x26), x131);
-  fiat_p25519_addcarryx_u64(&x134, &x135, 0x0, x124, x132);
-  fiat_p25519_addcarryx_u64(&x136, &x137, x135, x126, 0x0);
-  fiat_p25519_addcarryx_u64(&x138, &x139, x137, x128, 0x0);
-  fiat_p25519_addcarryx_u64(&x140, &x141, x139, x130, 0x0);
-  out1[0] = x134;
-  out1[1] = x136;
-  out1[2] = x138;
-  out1[3] = x140;
-}"", {| bitwidths_used := [uint1, uint64] ; addcarryx_lg_splits := [64] ; mulx_lg_splits := [64] ; cmovznz_bitwidths := [] ; value_barrier_bitwidths := [] ; typedefs_used := [] |})"
-     : string
-Finished transaction in 25.313 secs (25.202u,0.107s) (successful)
-     *)
+  (*   Let bounds := repeat bound n ++ [Some r[0 ~> (2^(machine_wordsize/4) - 1)]%zrange]. *)
 
-  End compile.
-   *)
+  (*   Time Compute *)
+  (*          Show.show *)
+  (*          (Pipeline.BoundsPipelineToString *)
+  (*             "fiat_p25519_" "fiat_p25519_mul" *)
+  (*             false *)
+  (*             false *)
+  (*             None *)
+  (*             possible_values *)
+  (*             machine_wordsize *)
+  (*             ltac:(let n := (eval cbv in n) in *)
+  (*                   let r := Reify (reduce_full base s c n) in *)
+  (*                   exact r) *)
+  (*                    (fun _ _ => []) *)
+  (*                    (Some (repeat bound (2 * n)), tt) *)
+  (*                    (Some (repeat bound (n))) *)
+  (*                    (None, tt) *)
+  (*                    (None) *)
+  (*            : Pipeline.ErrorT _). *)
+
+  (*   Time Compute *)
+  (*          Show.show *)
+  (*          (Pipeline.BoundsPipelineToString *)
+  (*             "fiat_p25519_" "fiat_p25519_mul" *)
+  (*             false *)
+  (*             false *)
+  (*             None *)
+  (*             possible_values *)
+  (*             machine_wordsize *)
+  (*             ltac:(let n := (eval cbv in n) in *)
+  (*                   let r := Reify (mulmod' base s c n) in *)
+  (*                   exact r) *)
+  (*                    (fun _ _ => []) *)
+  (*                    (Some (repeat bound (n)), (Some (repeat bound n), tt)) *)
+  (*                    (Some (repeat bound (n))) *)
+  (*                    (None, (None, tt)) *)
+  (*                    (None) *)
+  (*            : Pipeline.ErrorT _). *)
+
+  (* End compile. *)
 
 End SolinasReduction.
