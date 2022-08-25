@@ -223,9 +223,9 @@ Section WithParameters.
                ("Astart":: "Bstart" :: "Sstart" :: "len" :: "i" :: nil)
                (fun l A aval B bval S Ra Rb R t m Astart Bstart Sstart len i => PrimitivePair.pair.mk
                                            (
-                                            (*m =* array scalar (word.of_Z 8) Astart A * Ra /\
-                                            m =* array scalar (word.of_Z 8) Bstart B * Rb /\*)
-                                            m =* array scalar (word.of_Z 8) Sstart S * R /\
+                                            m =* array scalar (word.of_Z 8) Astart A *
+                                              array scalar (word.of_Z 8) Bstart B *
+                                              array scalar (word.of_Z 8) Sstart S * R /\
                                             (*word.unsigned len = Z.of_nat (List.length A)  /\
                                             word.unsigned len = Z.of_nat (List.length B)  /\*)
                                             word.unsigned len = Z.of_nat (List.length S) /\
@@ -264,7 +264,8 @@ Section WithParameters.
           { repeat straightline.
             subst i i0. replace (word.add x1 (word.mul (word.of_Z 8) (word.of_Z 0))) with (x1) in H13 by ring. 
             rewrite word.unsigned_of_Z_0 in H13. replace (word.unsigned x2 - 0) with (word.unsigned x2) in H13 by ring.
-            repeat split; eauto. 
+            repeat split. 
+            - apply H13.
             - cbv [zeros]. rewrite repeat_length. rewrite H5. rewrite Nat2Z.id. trivial. 
             - rewrite word.unsigned_of_Z_0.
               
@@ -302,75 +303,17 @@ Section WithParameters.
                 assert (word.unsigned x15 = word.unsigned x16) by Lia.lia.
                 rewrite H10 in *. apply H11.              
             }
-
+            
             (*loop body good*)
-            repeat straightline.
+            repeat (repeat eexists; straightline).
+            
+            - eapply load_word_of_sep.
+              
 
-
-            (*at this point, straightline doesn't go any farther, but we're left with*)
-            (*something with this whole "exists args" thing at the beginning that I*)
-            (*don't know how to deal with*)
-
-(* exists args : list word.rep,
-    dexprs m1 localsmap
-      [bedrock_expr:(load($(expr.var "Astart") + $(expr.literal 8) * $(expr.var "i"))); 
-      expr.var "Bstart"; expr.var "Sstart"; expr.var "len"] args /\
-    call functions "redc_step" t m1 args
-      (fun (t0 : trace) (m2 : map.rep) (rets : list word.rep) =>
-       exists l : map.rep,
-         map.putmany_of_list_zip [] rets localsmap = Some l /\
-         WeakestPrecondition.cmd (call functions) bedrock_func_body:(
-             $"i" = $(expr.var "i") + $(expr.literal 1)) t0 m2 l
-           (fun (t' : trace) (m' localsmap' : map.rep) =>
-            unique
-              (left
-                 (exists x17 x18 x19 x20 x21 : word.rep,
-                    Markers.split
-                      (enforce ["Astart"; "Bstart"; "Sstart"; "len"; "i"]
-                         {|
-                           PrimitivePair.pair._1 := x17;
-                           PrimitivePair.pair._2 :=
-                             {|
-                               PrimitivePair.pair._1 := x18;
-                               PrimitivePair.pair._2 :=
-                                 {|
-                                   PrimitivePair.pair._1 := x19;
-                                   PrimitivePair.pair._2 :=
-                                     {|
-                                       PrimitivePair.pair._1 := x20;
-                                       PrimitivePair.pair._2 :=
-                                         {| PrimitivePair.pair._1 := x21; PrimitivePair.pair._2 := tt |}
-                                     |}
-                                 |}
-                             |}
-                         |} localsmap' /\
-                       right
-                         (unique
-                            (left
-                               (exists
-                                  (x22 : list word.rep) (x23 : Z) (_ : ?Goal12) 
-                                (x25 : Z) (x26 : list word.rep) (_ : ?Goal13) 
-                                (_ : ?Goal14) (x29 : map.rep -> Prop) (v' : nat),
-                                  Markers.split
-                                    (((array scalar (word.of_Z 8) x19 x26 ⋆ x29)%sep m' /\
-                                      word.unsigned x20 = Z.of_nat (length x26) /\
-                                      eval r (map word.unsigned x22) = x23 /\
-                                      eval r (map word.unsigned x26) mod prime =
-                                      (eval r (map word.unsigned x22) * x25 * ri ^ word.unsigned x21)
-                                      mod prime /\
-                                      word.unsigned x21 <= word.unsigned x20 /\
-                                      v' = Z.to_nat (word.unsigned x20 - word.unsigned x21)) /\
-                                     right
-                                       (Markers.split
-                                          ((v' < v)%nat /\
-                                           (forall (T : trace) (M : map.rep) (x30 x31 x32 x33 : word.rep),
-                                            word.rep ->
-                                            t' = T /\
-                                            x17 = x30 /\
-                                            x18 = x31 /\ x19 = x32 /\ x20 = x33 /\ (exists ..., ...) ->
-                                            t = T /\
-                                            x12 = x30 /\
-                                            x13 = x31 /\ x14 = x32 /\ x15 = x33 /\ (exists ..., ...))))))))))))) *)
+              destruct x8.
+              + simpl in H9.
+              + cbn [array] in H8.
+            - 
         }
 
           {  }
