@@ -91,10 +91,17 @@ Section WithParameters.
   Let zeros (n: Z) :=
         repeat (@word.of_Z _ word 0) (Z.to_nat n).
 
+  Ltac nathans_handy_wordhammer :=
+    match goal with
+    | [H : 1 = 0 |- _ ] => inversion H
+    | _ => try rewrite word.unsigned_of_Z_0 in *; try rewrite word.unsigned_of_Z_1 in *; try rewrite word.of_Z_unsigned in *
+    end.
+      
+  
  Theorem redc_alt_ok :
       program_logic_goal_for_function! redc_alt.
-    Proof.
-      repeat straightline.
+ Proof.
+   repeat straightline.
       (*after the first loop, our output array is full of zeros*)
       refine ( tailrec (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ HList.polymorphic_list.nil))))))))
                ("Astart":: "Bstart" :: "Sstart" :: "len" :: "i" :: nil)
@@ -124,12 +131,9 @@ Section WithParameters.
       { repeat straightline. }
       { exact Wf_nat.lt_wf. }
       { repeat straightline.
-        assert (Hwords: (word.add Sstart (word.mul (word.of_Z 8) i)) = Sstart).
-        { subst i. rewrite <-  word.ring_morph_mul. rewrite Z.mul_0_r.
-          assert (HstartZ: Sstart = word.of_Z (word.unsigned Sstart)) by (rewrite word.of_Z_unsigned; reflexivity).
-          rewrite HstartZ. rewrite <- word.ring_morph_add. rewrite Z.add_0_r. reflexivity.
-        }
-        rewrite Hwords. repeat split; try eauto. subst i. rewrite word.unsigned_of_Z_0. rewrite H5. ring. }
+        subst i.
+        replace (word.add Sstart (word.mul (word.of_Z 8) (word.of_Z 0))) with (Sstart) by ring.
+        repeat split; try eauto. rewrite word.unsigned_of_Z_0. Lia.lia. }
 
       { repeat straightline. eexists. split. { repeat straightline. } repeat straightline. split.
 
@@ -138,8 +142,9 @@ Section WithParameters.
           repeat straightline; repeat split.
           rename x3 into S'; rename x9 into Sstart'; rename x10 into len'; rename x11 into i'; rename x6 into R'.
 
-          destruct (word.ltu i' len') eqn: Hbreak; try inversion H10; clear H10.
-          destruct (length S') eqn: HS.
+          destruct (word.ltu i' len') eqn: Hbreak.
+          - rewrite word.unsigned_of_Z_1 in H10; try inversion H10; clear H10.
+          - destruct (length S') eqn: HS.
           (*length cannot be nonzero*)
           2: { rewrite word.unsigned_ltu in Hbreak. Lia.lia. }
           (*if length is zero, all arrays are the same*)
@@ -159,12 +164,9 @@ Section WithParameters.
         - cbn [array] in H8. repeat straightline.
           repeat split; try trivial. exists (S'). repeat split; try trivial. exists ( (scalar (word.add Sstart' (word.mul (word.of_Z 8) i')) (word.of_Z 0)) * R')%sep. exists (length S').
           repeat split; subst v0 a.
-          all: try (repeat (destruct H12 as [solver H12]; try assumption; clear solver)).
-          + replace (word.mul (word.of_Z 8) i) with (word.add (word.mul (word.of_Z 8) i') (word.of_Z 8)).
-            { rewrite word.add_assoc. apply sep_comm. apply sep_assoc. ecancel_assumption. }
-            { subst i. ring. } 
-          + subst i. 
-            destruct (word.unsigned i' + 1 <? 2^64) eqn: Hisize.
+          all: try (repeat (destruct H12 as [solver H12]; try assumption; clear solver)); subst i.
+          + replace (word.mul (word.of_Z 8) (word.add i' (word.of_Z 1))) with (word.add (word.mul (word.of_Z 8) i') (word.of_Z 8)) by ring. rewrite word.add_assoc. apply sep_comm. apply sep_assoc. ecancel_assumption.
+          + destruct (word.unsigned i' + 1 <? 2^64) eqn: Hisize.
             2: { assert (2^64 - 1 <= word.unsigned i') by Lia.lia; clear Hisize.
                  assert (word.unsigned i' < 2^64) by apply word.unsigned_range.
                  assert (Hi': word.unsigned i' = 2^64 - 1) by Lia.lia; clear H12 H13.
@@ -184,9 +186,8 @@ Section WithParameters.
             assert (0 <= (Z.of_nat(length S'))) by apply Zle_0_nat.
             Lia.lia.
           + subst v.  auto.
-          + assert (Hhead: zeros (word.unsigned len' - word.unsigned i') = word.of_Z 0 :: zeros (word.unsigned len' - word.unsigned i) ).
+          + assert (Hhead: zeros (word.unsigned len' - word.unsigned i') = word.of_Z 0 :: zeros (word.unsigned len' - word.unsigned (word.add i' (word.of_Z 1))) ).
             {
-              subst i. 
             destruct (word.unsigned i' + 1 <? 2^64) eqn: Hisize.
             2: { assert (2^64 - 1 <= word.unsigned i') by Lia.lia; clear Hisize.
                  assert (word.unsigned i' < 2^64) by apply word.unsigned_range.
@@ -211,13 +212,13 @@ Section WithParameters.
             cbv [zeros]. rewrite Z2Nat.inj_succ; try assumption. cbn [repeat]. trivial.
             }
             rewrite Hhead; clear Hhead.
-            cbn [array]. subst i. 
+            cbn [array]. 
             replace (word.add (word.add Sstart' (word.mul (word.of_Z 8) i')) (word.of_Z 8)) with  (word.add Sstart' (word.mul (word.of_Z 8) (word.add i' (word.of_Z 1)))) by ring. ecancel_assumption.
         }
      
         {
           repeat straightline.
-          
+          (*then, the second loop does the multiplication properly*)
           refine ( tailrec (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ (HList.polymorphic_list.cons _ HList.polymorphic_list.nil))))))))
                ("Astart":: "Bstart" :: "Sstart" :: "len" :: "i" :: nil)
                (fun l A aval B bval S Ra Rb R t m Astart Bstart Sstart len i => PrimitivePair.pair.mk
@@ -304,8 +305,72 @@ Section WithParameters.
 
             (*loop body good*)
             repeat straightline.
-            eexists. repeat straightline.
-            
+
+
+            (*at this point, straightline doesn't go any farther, but we're left with*)
+            (*something with this whole "exists args" thing at the beginning that I*)
+            (*don't know how to deal with*)
+
+(* exists args : list word.rep,
+    dexprs m1 localsmap
+      [bedrock_expr:(load($(expr.var "Astart") + $(expr.literal 8) * $(expr.var "i"))); 
+      expr.var "Bstart"; expr.var "Sstart"; expr.var "len"] args /\
+    call functions "redc_step" t m1 args
+      (fun (t0 : trace) (m2 : map.rep) (rets : list word.rep) =>
+       exists l : map.rep,
+         map.putmany_of_list_zip [] rets localsmap = Some l /\
+         WeakestPrecondition.cmd (call functions) bedrock_func_body:(
+             $"i" = $(expr.var "i") + $(expr.literal 1)) t0 m2 l
+           (fun (t' : trace) (m' localsmap' : map.rep) =>
+            unique
+              (left
+                 (exists x17 x18 x19 x20 x21 : word.rep,
+                    Markers.split
+                      (enforce ["Astart"; "Bstart"; "Sstart"; "len"; "i"]
+                         {|
+                           PrimitivePair.pair._1 := x17;
+                           PrimitivePair.pair._2 :=
+                             {|
+                               PrimitivePair.pair._1 := x18;
+                               PrimitivePair.pair._2 :=
+                                 {|
+                                   PrimitivePair.pair._1 := x19;
+                                   PrimitivePair.pair._2 :=
+                                     {|
+                                       PrimitivePair.pair._1 := x20;
+                                       PrimitivePair.pair._2 :=
+                                         {| PrimitivePair.pair._1 := x21; PrimitivePair.pair._2 := tt |}
+                                     |}
+                                 |}
+                             |}
+                         |} localsmap' /\
+                       right
+                         (unique
+                            (left
+                               (exists
+                                  (x22 : list word.rep) (x23 : Z) (_ : ?Goal12) 
+                                (x25 : Z) (x26 : list word.rep) (_ : ?Goal13) 
+                                (_ : ?Goal14) (x29 : map.rep -> Prop) (v' : nat),
+                                  Markers.split
+                                    (((array scalar (word.of_Z 8) x19 x26 ⋆ x29)%sep m' /\
+                                      word.unsigned x20 = Z.of_nat (length x26) /\
+                                      eval r (map word.unsigned x22) = x23 /\
+                                      eval r (map word.unsigned x26) mod prime =
+                                      (eval r (map word.unsigned x22) * x25 * ri ^ word.unsigned x21)
+                                      mod prime /\
+                                      word.unsigned x21 <= word.unsigned x20 /\
+                                      v' = Z.to_nat (word.unsigned x20 - word.unsigned x21)) /\
+                                     right
+                                       (Markers.split
+                                          ((v' < v)%nat /\
+                                           (forall (T : trace) (M : map.rep) (x30 x31 x32 x33 : word.rep),
+                                            word.rep ->
+                                            t' = T /\
+                                            x17 = x30 /\
+                                            x18 = x31 /\ x19 = x32 /\ x20 = x33 /\ (exists ..., ...) ->
+                                            t = T /\
+                                            x12 = x30 /\
+                                            x13 = x31 /\ x14 = x32 /\ x15 = x33 /\ (exists ..., ...))))))))))))) *)
         }
 
           {  }
