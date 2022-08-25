@@ -89,7 +89,7 @@ Section __.
           {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
           (s : Z)
           (c : list (Z * Z)).
-  Context (machine_wordsize := 64).
+  Context (machine_wordsize : machine_wordsize_opt).
 
   Local Existing Instance widen_bytes.
 
@@ -122,10 +122,11 @@ Section __.
             (fun v => (true, v))
             [((0 <? s)%Z, Pipeline.Value_not_ltZ "0 < s" 0 s)
              ; ((0 <? Associational.eval c)%Z, Pipeline.Value_not_ltZ "0 < Associational.eval c" 0 (Associational.eval c))
-             ; ((0 <? s - Associational.eval c)%Z, Pipeline.Value_not_ltZ "s - Associational.eval c ≤ 0" 0 (s - Associational.eval c))
+             ; ((0 <? s - Associational.eval c)%Z, Pipeline.Value_not_ltZ "0 < s - Associational.eval c" 0 (s - Associational.eval c))
              ; (negb (s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s ≠ 0" s 0)
              ; (negb (n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n ≠ 0" n 0)
              ; (0 <? machine_wordsize, Pipeline.Value_not_ltZ "0 < machine_wordsize" 0 machine_wordsize)
+             ; (machine_wordsize =? 64, Pipeline.Values_not_provably_equalZ "machine_wordsize = 64" machine_wordsize 64)
              ; ((1 <? n)%nat, Pipeline.Value_not_ltZ "1 < n" 1 n)
              ; (fst (Rows.adjust_s weight (S (S n)) s) =? weight n, Pipeline.Values_not_provably_equalZ "fst (Rows.adjust_s weight (S (S n)) s) = weight n" (fst (Rows.adjust_s weight (S (S n)) s)) (weight n))
              ; (snd (Rows.adjust_s weight (S (S n)) s), Pipeline.Invalid_argument "tmp")
@@ -148,6 +149,7 @@ Section __.
         s > 0 /\
         Associational.eval c > 0 /\
         s - Associational.eval c <> 0 /\
+        machine_wordsize = 64 /\
         base <> 0 /\
         Rows.adjust_s weight (S (S n)) s = (weight n, true) /\
         weight n / s * Associational.eval c < up_bound.
@@ -155,8 +157,9 @@ Section __.
     prepare_use_curve_good ().
     { use_curve_good_t. }
     { use_curve_good_t. }
+    { use_curve_good_t. }
     { unfold base.
-      use_curve_good_t. }
+      apply Z.pow_nonzero; use_curve_good_t. }
     { lazymatch goal with
       | |- ?x = _ => rewrite surjective_pairing with (p:=x)
       end.
@@ -168,11 +171,12 @@ Section __.
   Qed.
 
   Local Notation evalf := (eval weight n).
+  Local Notation weightf := weight.
   Local Notation notations_for_docstring
     := (CorrectnessStringification.dyn_context.cons
           evalf "evalf"
           (CorrectnessStringification.dyn_context.cons
-             weight "weight"
+             weightf "weightf"
              CorrectnessStringification.dyn_context.nil))%string.
   Local Notation "'docstring_with_summary_from_lemma!' summary correctness"
     := (docstring_with_summary_from_lemma_with_ctx!
@@ -215,7 +219,14 @@ Section __.
   Lemma mulmod_correct res
         (Hres : mulmod = Success res)
     : mulmod_correct weight n m boundsn (Interp res).
-  Proof using curve_good. prove_correctness (). Qed.
+  Proof using curve_good.
+    prove_correctness ().
+    cbv [evalf weightf weight up_bound] in *.
+    match goal with
+    | H : machine_wordsize = _ |- _ => rewrite H in *
+    end.
+    apply (fun pf => @SolinasReduction.SolinasReduction.mulmod_correct (@wprops _ _ pf)); auto; lia.
+  Qed.
 
   Lemma Wf_mulmod res (Hres : mulmod = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.

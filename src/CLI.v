@@ -1138,7 +1138,7 @@ Module ForExtraction.
 
         Synthesize
         := fun _ opts '(s, c, requests) comment_header prefix
-           => SolinasReduction.Synthesize s c comment_header prefix requests
+           => SolinasReduction.Synthesize s c machine_wordsize comment_header prefix requests
       }.
 
     Definition PipelineMain
