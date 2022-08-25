@@ -1329,9 +1329,7 @@ Module SolinasReduction.
       push.
       rewrite <-Z_div_mod_eq_full.
       reflexivity.
-      push.
-      push.
-      push.
+      all: push.
     Qed.
 
     Lemma eval_seq_start : forall a b p,
