@@ -1,3 +1,3 @@
 Require Import Crypto.Rewriter.PerfTesting.StandaloneOCamlMain.
 
-Extraction "src/ExtractionOCaml/perf_word_by_word_montgomery.tmp" WordByWordMontgomery.main.
+(*Redirect "/tmp/perf_word_by_word_montgomery.ml"*) Recursive Extraction WordByWordMontgomery.main.

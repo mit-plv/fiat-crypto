@@ -1,4 +1,4 @@
 Require Import Crypto.Bedrock.Standalone.StandaloneOCamlMain.
 Import Bedrock2First.
 
-Extraction "src/ExtractionOCaml/bedrock2_saturated_solinas.tmp" SaturatedSolinas.main.
+(*Redirect "/tmp/bedrock2_saturated_solinas.ml"*) Recursive Extraction SaturatedSolinas.main.
