@@ -3387,352 +3387,352 @@ Module debugging_remove_mul_split.
           λ x x0 : var (type.base (base.type.list (base.type.type_base base.type.Z))),
           expr_let x1 := ((#uint64,uint64)%expr @
                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                           ((#uint64)%expr @ ($x [[4]])) @
-                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[4]]))%expr_pat * ##19))))%expr_pat in
+                           ((#uint64)%expr @ ($$x [[4]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($$x0 [[4]]))%expr_pat * ##19))))%expr_pat in
           expr_let x2 := ((#uint64,uint64)%expr @
                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                           ((#uint64)%expr @ ($x [[4]])) @
-                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[3]]))%expr_pat * ##19))))%expr_pat in
+                           ((#uint64)%expr @ ($$x [[4]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($$x0 [[3]]))%expr_pat * ##19))))%expr_pat in
           expr_let x3 := ((#uint64,uint64)%expr @
                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                           ((#uint64)%expr @ ($x [[4]])) @
-                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[2]]))%expr_pat * ##19))))%expr_pat in
+                           ((#uint64)%expr @ ($$x [[4]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($$x0 [[2]]))%expr_pat * ##19))))%expr_pat in
           expr_let x4 := ((#uint64,uint64)%expr @
                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                           ((#uint64)%expr @ ($x [[4]])) @
-                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[1]]))%expr_pat * ##19))))%expr_pat in
+                           ((#uint64)%expr @ ($$x [[4]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($$x0 [[1]]))%expr_pat * ##19))))%expr_pat in
           expr_let x5 := ((#uint64,uint64)%expr @
                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                           ((#uint64)%expr @ ($x [[3]])) @
-                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[4]]))%expr_pat * ##19))))%expr_pat in
+                           ((#uint64)%expr @ ($$x [[3]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($$x0 [[4]]))%expr_pat * ##19))))%expr_pat in
           expr_let x6 := ((#uint64,uint64)%expr @
                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                           ((#uint64)%expr @ ($x [[3]])) @
-                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[3]]))%expr_pat * ##19))))%expr_pat in
+                           ((#uint64)%expr @ ($$x [[3]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($$x0 [[3]]))%expr_pat * ##19))))%expr_pat in
           expr_let x7 := ((#uint64,uint64)%expr @
                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                           ((#uint64)%expr @ ($x [[3]])) @
-                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[2]]))%expr_pat * ##19))))%expr_pat in
+                           ((#uint64)%expr @ ($$x [[3]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($$x0 [[2]]))%expr_pat * ##19))))%expr_pat in
           expr_let x8 := ((#uint64,uint64)%expr @
                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                           ((#uint64)%expr @ ($x [[2]])) @
-                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[4]]))%expr_pat * ##19))))%expr_pat in
+                           ((#uint64)%expr @ ($$x [[2]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($$x0 [[4]]))%expr_pat * ##19))))%expr_pat in
           expr_let x9 := ((#uint64,uint64)%expr @
                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                           ((#uint64)%expr @ ($x [[2]])) @
-                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[3]]))%expr_pat * ##19))))%expr_pat in
+                           ((#uint64)%expr @ ($$x [[2]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($$x0 [[3]]))%expr_pat * ##19))))%expr_pat in
           expr_let x10 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[1]])) @
-                            ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[4]]))%expr_pat * ##19))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[1]])) @
+                            ((#uint64)%expr @ (((#uint64)%expr @ ($$x0 [[4]]))%expr_pat * ##19))))%expr_pat in
           expr_let x11 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[4]])) @ ((#uint64)%expr @ ($x0 [[0]]))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[4]])) @ ((#uint64)%expr @ ($$x0 [[0]]))))%expr_pat in
           expr_let x12 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[3]])) @ ((#uint64)%expr @ ($x0 [[1]]))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[3]])) @ ((#uint64)%expr @ ($$x0 [[1]]))))%expr_pat in
           expr_let x13 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[3]])) @ ((#uint64)%expr @ ($x0 [[0]]))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[3]])) @ ((#uint64)%expr @ ($$x0 [[0]]))))%expr_pat in
           expr_let x14 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[2]])) @ ((#uint64)%expr @ ($x0 [[2]]))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[2]])) @ ((#uint64)%expr @ ($$x0 [[2]]))))%expr_pat in
           expr_let x15 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[2]])) @ ((#uint64)%expr @ ($x0 [[1]]))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[2]])) @ ((#uint64)%expr @ ($$x0 [[1]]))))%expr_pat in
           expr_let x16 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[2]])) @ ((#uint64)%expr @ ($x0 [[0]]))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[2]])) @ ((#uint64)%expr @ ($$x0 [[0]]))))%expr_pat in
           expr_let x17 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[1]])) @ ((#uint64)%expr @ ($x0 [[3]]))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[1]])) @ ((#uint64)%expr @ ($$x0 [[3]]))))%expr_pat in
           expr_let x18 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[1]])) @ ((#uint64)%expr @ ($x0 [[2]]))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[1]])) @ ((#uint64)%expr @ ($$x0 [[2]]))))%expr_pat in
           expr_let x19 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[1]])) @ ((#uint64)%expr @ ($x0 [[1]]))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[1]])) @ ((#uint64)%expr @ ($$x0 [[1]]))))%expr_pat in
           expr_let x20 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[1]])) @ ((#uint64)%expr @ ($x0 [[0]]))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[1]])) @ ((#uint64)%expr @ ($$x0 [[0]]))))%expr_pat in
           expr_let x21 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[0]])) @ ((#uint64)%expr @ ($x0 [[4]]))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[0]])) @ ((#uint64)%expr @ ($$x0 [[4]]))))%expr_pat in
           expr_let x22 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[0]])) @ ((#uint64)%expr @ ($x0 [[3]]))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[0]])) @ ((#uint64)%expr @ ($$x0 [[3]]))))%expr_pat in
           expr_let x23 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[0]])) @ ((#uint64)%expr @ ($x0 [[2]]))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[0]])) @ ((#uint64)%expr @ ($$x0 [[2]]))))%expr_pat in
           expr_let x24 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[0]])) @ ((#uint64)%expr @ ($x0 [[1]]))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[0]])) @ ((#uint64)%expr @ ($$x0 [[1]]))))%expr_pat in
           expr_let x25 := ((#uint64,uint64)%expr @
                            ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ($x [[0]])) @ ((#uint64)%expr @ ($x0 [[0]]))))%expr_pat in
+                            ((#uint64)%expr @ ($$x [[0]])) @ ((#uint64)%expr @ ($$x0 [[0]]))))%expr_pat in
           expr_let x26 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x7)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x4))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x7)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x4))))%expr_pat in
           expr_let x27 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x26)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x7)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x4))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x26)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x7)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x4))))%expr_pat in
           expr_let x28 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x9)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x26))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x9)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x26))))%expr_pat in
           expr_let x29 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x28)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x9)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x27))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x28)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x9)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x27))))%expr_pat in
           expr_let x30 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x10)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x28))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x10)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x28))))%expr_pat in
           expr_let x31 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x30)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x10)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x29))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x30)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x10)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x29))))%expr_pat in
           expr_let x32 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x25)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x30))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x25)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x30))))%expr_pat in
           expr_let x33 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x32)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x25)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x31))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x32)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x25)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x31))))%expr_pat in
           expr_let x34 := ((#uint64)%expr @
                            (((#uint64)%expr @
-                             (((#uint64)%expr @ ((#ident.fst)%expr @ $x32))%expr_pat >> ##51))%expr_pat
+                             (((#uint64)%expr @ ((#ident.fst)%expr @ $$x32))%expr_pat >> ##51))%expr_pat
                             || ((#uint64)%expr @
                                 ((#ident.Z_truncating_shiftl)%expr @ ##64 @
-                                 ((#uint64)%expr @ ((#ident.fst)%expr @ $x33)) @ ##13))%expr_pat))%expr_pat in
+                                 ((#uint64)%expr @ ((#ident.fst)%expr @ $$x33)) @ ##13))%expr_pat))%expr_pat in
           expr_let x35 := ((#uint64)%expr @
-                           (((#uint64)%expr @ ((#ident.fst)%expr @ $x32))%expr_pat &'
+                           (((#uint64)%expr @ ((#ident.fst)%expr @ $$x32))%expr_pat &'
                             ##2251799813685247))%expr_pat in
           expr_let x36 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x12)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x11))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x12)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x11))))%expr_pat in
           expr_let x37 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x36)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x12)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x11))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x36)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x12)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x11))))%expr_pat in
           expr_let x38 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x14)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x36))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x14)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x36))))%expr_pat in
           expr_let x39 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x38)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x14)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x37))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x38)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x14)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x37))))%expr_pat in
           expr_let x40 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x17)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x38))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x17)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x38))))%expr_pat in
           expr_let x41 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x40)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x17)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x39))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x40)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x17)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x39))))%expr_pat in
           expr_let x42 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x21)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x40))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x21)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x40))))%expr_pat in
           expr_let x43 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x42)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x21)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x41))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x42)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x21)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x41))))%expr_pat in
           expr_let x44 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x13)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x1))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x13)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x1))))%expr_pat in
           expr_let x45 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x44)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x13)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x1))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x44)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x13)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x1))))%expr_pat in
           expr_let x46 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x15)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x44))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x15)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x44))))%expr_pat in
           expr_let x47 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x46)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x15)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x45))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x46)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x15)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x45))))%expr_pat in
           expr_let x48 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x18)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x46))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x18)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x46))))%expr_pat in
           expr_let x49 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x48)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x18)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x47))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x48)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x18)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x47))))%expr_pat in
           expr_let x50 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x22)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x48))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x22)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x48))))%expr_pat in
           expr_let x51 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x50)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x22)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x49))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x50)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x22)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x49))))%expr_pat in
           expr_let x52 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x5)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x2))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x5)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x2))))%expr_pat in
           expr_let x53 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x52)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x5)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x2))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x52)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x5)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x2))))%expr_pat in
           expr_let x54 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x16)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x52))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x16)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x52))))%expr_pat in
           expr_let x55 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x54)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x16)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x53))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x54)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x16)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x53))))%expr_pat in
           expr_let x56 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x19)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x54))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x19)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x54))))%expr_pat in
           expr_let x57 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x56)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x19)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x55))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x56)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x19)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x55))))%expr_pat in
           expr_let x58 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x23)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x56))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x23)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x56))))%expr_pat in
           expr_let x59 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x58)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x23)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x57))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x58)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x23)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x57))))%expr_pat in
           expr_let x60 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x6)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x3))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x6)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x3))))%expr_pat in
           expr_let x61 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x60)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x6)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x3))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x60)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x6)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x3))))%expr_pat in
           expr_let x62 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x8)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x60))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x8)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x60))))%expr_pat in
           expr_let x63 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x62)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x8)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x61))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x62)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x8)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x61))))%expr_pat in
           expr_let x64 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x20)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x62))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x20)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x62))))%expr_pat in
           expr_let x65 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x64)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x20)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x63))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x64)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x20)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x63))))%expr_pat in
           expr_let x66 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x24)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x64))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x24)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x64))))%expr_pat in
           expr_let x67 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x66)) @
-                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x24)) @
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x65))))%expr_pat in
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x66)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $$x24)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x65))))%expr_pat in
           expr_let x68 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ $x34) @ ((#uint64)%expr @ ((#ident.fst)%expr @ $x66))))%expr_pat in
+                            ((#uint64)%expr @ $$x34) @ ((#uint64)%expr @ ((#ident.fst)%expr @ $$x66))))%expr_pat in
           expr_let x69 := ((#uint64)%expr @
-                           (((#uint64)%expr @ ((#ident.snd)%expr @ $x68))%expr_pat +
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x67))%expr_pat))%expr_pat in
+                           (((#uint64)%expr @ ((#ident.snd)%expr @ $$x68))%expr_pat +
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x67))%expr_pat))%expr_pat in
           expr_let x70 := ((#uint64)%expr @
                            (((#uint64)%expr @
-                             (((#uint64)%expr @ ((#ident.fst)%expr @ $x68))%expr_pat >> ##51))%expr_pat
+                             (((#uint64)%expr @ ((#ident.fst)%expr @ $$x68))%expr_pat >> ##51))%expr_pat
                             || ((#uint64)%expr @
-                                ((#ident.Z_truncating_shiftl)%expr @ ##64 @ ((#uint64)%expr @ $x69) @
+                                ((#ident.Z_truncating_shiftl)%expr @ ##64 @ ((#uint64)%expr @ $$x69) @
                                  ##13))%expr_pat))%expr_pat in
           expr_let x71 := ((#uint64)%expr @
-                           (((#uint64)%expr @ ((#ident.fst)%expr @ $x68))%expr_pat &'
+                           (((#uint64)%expr @ ((#ident.fst)%expr @ $$x68))%expr_pat &'
                             ##2251799813685247))%expr_pat in
           expr_let x72 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ $x70) @ ((#uint64)%expr @ ((#ident.fst)%expr @ $x58))))%expr_pat in
+                            ((#uint64)%expr @ $$x70) @ ((#uint64)%expr @ ((#ident.fst)%expr @ $$x58))))%expr_pat in
           expr_let x73 := ((#uint64)%expr @
-                           (((#uint64)%expr @ ((#ident.snd)%expr @ $x72))%expr_pat +
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x59))%expr_pat))%expr_pat in
+                           (((#uint64)%expr @ ((#ident.snd)%expr @ $$x72))%expr_pat +
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x59))%expr_pat))%expr_pat in
           expr_let x74 := ((#uint64)%expr @
                            (((#uint64)%expr @
-                             (((#uint64)%expr @ ((#ident.fst)%expr @ $x72))%expr_pat >> ##51))%expr_pat
+                             (((#uint64)%expr @ ((#ident.fst)%expr @ $$x72))%expr_pat >> ##51))%expr_pat
                             || ((#uint64)%expr @
-                                ((#ident.Z_truncating_shiftl)%expr @ ##64 @ ((#uint64)%expr @ $x73) @
+                                ((#ident.Z_truncating_shiftl)%expr @ ##64 @ ((#uint64)%expr @ $$x73) @
                                  ##13))%expr_pat))%expr_pat in
           expr_let x75 := ((#uint64)%expr @
-                           (((#uint64)%expr @ ((#ident.fst)%expr @ $x72))%expr_pat &'
+                           (((#uint64)%expr @ ((#ident.fst)%expr @ $$x72))%expr_pat &'
                             ##2251799813685247))%expr_pat in
           expr_let x76 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ $x74) @ ((#uint64)%expr @ ((#ident.fst)%expr @ $x50))))%expr_pat in
+                            ((#uint64)%expr @ $$x74) @ ((#uint64)%expr @ ((#ident.fst)%expr @ $$x50))))%expr_pat in
           expr_let x77 := ((#uint64)%expr @
-                           (((#uint64)%expr @ ((#ident.snd)%expr @ $x76))%expr_pat +
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x51))%expr_pat))%expr_pat in
+                           (((#uint64)%expr @ ((#ident.snd)%expr @ $$x76))%expr_pat +
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x51))%expr_pat))%expr_pat in
           expr_let x78 := ((#uint64)%expr @
                            (((#uint64)%expr @
-                             (((#uint64)%expr @ ((#ident.fst)%expr @ $x76))%expr_pat >> ##51))%expr_pat
+                             (((#uint64)%expr @ ((#ident.fst)%expr @ $$x76))%expr_pat >> ##51))%expr_pat
                             || ((#uint64)%expr @
-                                ((#ident.Z_truncating_shiftl)%expr @ ##64 @ ((#uint64)%expr @ $x77) @
+                                ((#ident.Z_truncating_shiftl)%expr @ ##64 @ ((#uint64)%expr @ $$x77) @
                                  ##13))%expr_pat))%expr_pat in
           expr_let x79 := ((#uint64)%expr @
-                           (((#uint64)%expr @ ((#ident.fst)%expr @ $x76))%expr_pat &'
+                           (((#uint64)%expr @ ((#ident.fst)%expr @ $$x76))%expr_pat &'
                             ##2251799813685247))%expr_pat in
           expr_let x80 := ((#uint64,uint64)%expr @
                            ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
-                            ((#uint64)%expr @ $x78) @ ((#uint64)%expr @ ((#ident.fst)%expr @ $x42))))%expr_pat in
+                            ((#uint64)%expr @ $$x78) @ ((#uint64)%expr @ ((#ident.fst)%expr @ $$x42))))%expr_pat in
           expr_let x81 := ((#uint64)%expr @
-                           (((#uint64)%expr @ ((#ident.snd)%expr @ $x80))%expr_pat +
-                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x43))%expr_pat))%expr_pat in
+                           (((#uint64)%expr @ ((#ident.snd)%expr @ $$x80))%expr_pat +
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $$x43))%expr_pat))%expr_pat in
           expr_let x82 := ((#uint64)%expr @
                            (((#uint64)%expr @
-                             (((#uint64)%expr @ ((#ident.fst)%expr @ $x80))%expr_pat >> ##51))%expr_pat
+                             (((#uint64)%expr @ ((#ident.fst)%expr @ $$x80))%expr_pat >> ##51))%expr_pat
                             || ((#uint64)%expr @
-                                ((#ident.Z_truncating_shiftl)%expr @ ##64 @ ((#uint64)%expr @ $x81) @
+                                ((#ident.Z_truncating_shiftl)%expr @ ##64 @ ((#uint64)%expr @ $$x81) @
                                  ##13))%expr_pat))%expr_pat in
           expr_let x83 := ((#uint64)%expr @
-                           (((#uint64)%expr @ ((#ident.fst)%expr @ $x80))%expr_pat &'
+                           (((#uint64)%expr @ ((#ident.fst)%expr @ $$x80))%expr_pat &'
                             ##2251799813685247))%expr_pat in
-          expr_let x84 := ((#uint64)%expr @ (((#uint64)%expr @ $x82)%expr_pat * ##19))%expr_pat in
+          expr_let x84 := ((#uint64)%expr @ (((#uint64)%expr @ $$x82)%expr_pat * ##19))%expr_pat in
           expr_let x85 := ((#uint64)%expr @
-                           (((#uint64)%expr @ $x35)%expr_pat + ((#uint64)%expr @ $x84)%expr_pat))%expr_pat in
-          expr_let x86 := ((#uint64)%expr @ (((#uint64)%expr @ $x85)%expr_pat >> ##51))%expr_pat in
-          expr_let x87 := ((#uint64)%expr @ (((#uint64)%expr @ $x85)%expr_pat &' ##2251799813685247))%expr_pat in
+                           (((#uint64)%expr @ $$x35)%expr_pat + ((#uint64)%expr @ $$x84)%expr_pat))%expr_pat in
+          expr_let x86 := ((#uint64)%expr @ (((#uint64)%expr @ $$x85)%expr_pat >> ##51))%expr_pat in
+          expr_let x87 := ((#uint64)%expr @ (((#uint64)%expr @ $$x85)%expr_pat &' ##2251799813685247))%expr_pat in
           expr_let x88 := ((#uint64)%expr @
-                           (((#uint64)%expr @ $x86)%expr_pat + ((#uint64)%expr @ $x71)%expr_pat))%expr_pat in
-          expr_let x89 := ((#uint64)%expr @ (((#uint64)%expr @ $x88)%expr_pat >> ##51))%expr_pat in
-          expr_let x90 := ((#uint64)%expr @ (((#uint64)%expr @ $x88)%expr_pat &' ##2251799813685247))%expr_pat in
+                           (((#uint64)%expr @ $$x86)%expr_pat + ((#uint64)%expr @ $$x71)%expr_pat))%expr_pat in
+          expr_let x89 := ((#uint64)%expr @ (((#uint64)%expr @ $$x88)%expr_pat >> ##51))%expr_pat in
+          expr_let x90 := ((#uint64)%expr @ (((#uint64)%expr @ $$x88)%expr_pat &' ##2251799813685247))%expr_pat in
           expr_let x91 := ((#uint64)%expr @
-                           (((#uint64)%expr @ $x89)%expr_pat + ((#uint64)%expr @ $x75)%expr_pat))%expr_pat in
-          [((#uint64)%expr @ $x87)%expr_pat; ((#uint64)%expr @ $x90)%expr_pat;
-          ((#uint64)%expr @ $x91)%expr_pat; ((#uint64)%expr @ $x79)%expr_pat;
-          ((#uint64)%expr @ $x83)%expr_pat])
+                           (((#uint64)%expr @ $$x89)%expr_pat + ((#uint64)%expr @ $$x75)%expr_pat))%expr_pat in
+          [((#uint64)%expr @ $$x87)%expr_pat; ((#uint64)%expr @ $$x90)%expr_pat;
+          ((#uint64)%expr @ $$x91)%expr_pat; ((#uint64)%expr @ $$x79)%expr_pat;
+          ((#uint64)%expr @ $$x83)%expr_pat])
      : Pipeline.ErrorT
          (Expr
             (type.base (base.type.list (base.type.type_base base.type.Z)) ->
