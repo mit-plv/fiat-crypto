@@ -4,30 +4,127 @@ Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Language.PreExtra.
+Require Import Ltac2.Ltac2.
+Require Import Ltac2.Bool.
+Import Ltac2.Constr.Unsafe.
 Require Rewriter.Util.InductiveHList.
 Require Rewriter.Util.LetIn.
 Import InductiveHList.Notations.
+Require Import Ltac2.Printf.
+(*
+Ltac2 Set reify_preprocess_extra :=
+  fun ctx_tys term
+  => let rec reify_preprocess_extra term
+       := match kind term with
+          | Cast term _ _ => reify_preprocess_extra term
+          | App f args
+            => match kind f with
+               | Constant _ _
+                 => if Int.equal (Array.length args) 4 && Constr.equal f '@Crypto.Util.LetIn.Let_In
+                    then make (App '@Rewriter.Util.LetIn.Let_In args)
+                    else term
+               | _ => term
+               end
+          | Case _cinfo return_ty _cinv discriminee branches
+            => if Int.equal (Array.length branches) 1
+               then let f := Array.get branches 0 in
+                    match kind return_ty with
+                    | Lambda x t
+                      => if Constr.equal (Constr.Binder.type x) 'zrange
+                         then let t := substnl [discriminee] 0 t in
+                              make (App '@ZRange.zrange_rect_nodep (Array.of_list [t; f; discriminee]))
+                         else term
+                    | _ => term
+                    end
+               else term
+          | _ => term
+          end in
+     reify_preprocess_extra term.
+ *)
+Ltac2 Set reify_preprocess_extra :=
+  fun ctx_tys term
+  => lazy_match! term with
+     | @Crypto.Util.LetIn.Let_In ?a ?b ?x ?f
+       => '(@Rewriter.Util.LetIn.Let_In $a $b $x $f)
+     | match ?x with ZRange.Build_zrange a b => @?f a b end
+       => let t := Constr.type term in
+          '(@ZRange.zrange_rect_nodep $t $f $x)
+     | _ => term
+     end.
 
-Ltac reify_preprocess_extra term ::=
-  lazymatch term with
-  | @Crypto.Util.LetIn.Let_In ?A ?B ?x ?f
-    => constr:(@Rewriter.Util.LetIn.Let_In A B x f)
-  | match ?x with ZRange.Build_zrange a b => @?f a b end
-    => let T := type of term in
-       constr:(@ZRange.zrange_rect_nodep T f x)
-  | _ => term
-  end.
-
-Ltac reify_ident_preprocess_extra term ::=
-  lazymatch term with
-  | @ZRange.zrange_rect ?T0
-    => lazymatch (eval cbv beta in T0) with
-       | fun _ => ?T => constr:(@ZRange.zrange_rect_nodep T)
-       | T0 => term
-       | ?T' => constr:(@ZRange.zrange_rect T')
-       end
-  | _ => term
-  end.
+Ltac2 Set reify_ident_preprocess_extra :=
+  fun ctx_tys term
+  => lazy_match! term with
+     | @ZRange.zrange_rect ?t0
+       => lazy_match! (eval cbv beta in $t0) with
+          | fun _ => ?t => '(@ZRange.zrange_rect_nodep $t)
+          | ?t' => if Constr.equal t0 t'
+                   then term
+                   else '(@ZRange.zrange_rect $t')
+          end
+     | _ => term
+     end.
+(*
+Ltac2 Set reify_ident_preprocess_extra :=
+  fun ctx_tys term
+  => let rec reify_ident_preprocess_extra term
+       := match kind term with
+          | Cast term _ _ => reify_ident_preprocess_extra term
+          | App f args
+            => match kind f with
+               | Constant _ _
+                 => if Int.equal (Array.length args) 1 && Constr.equal f '@ZRange.zrange_rect
+                    then
+                      match kind
+                      let term' :=
+                        let c := constr:(_) with s :=
+    {
+    Std.rBeta
+    :=
+    true;
+    Std.rMatch
+    :=
+    false;
+    Std.rFix
+    :=
+    false;
+    Std.rCofix
+    :=
+    false;
+    Std.rZeta
+    :=
+    false;
+    Std.rDelta
+    :=
+    false;
+    Std.rConst
+    :=
+    []
+    } in
+  Std.eval_cbv s c
+                      term
+                    else term
+               | _ => term
+               end
+          | _ => term
+          end in
+     reify_ident_preprocess_extra term.
+          | Case _cinfo return_ty _cinv discriminee branches
+            => if Int.equal (Array.length branches) 1
+               then let f := Array.get branches 0 in
+                    match kind return_ty with
+                    | Lambda x t
+                      => if Constr.equal (Constr.Binder.type x) 'zrange
+                         then let t := substnl [discriminee] 0 t in
+                              make (App '@ZRange.zrange_rect_nodep (Array.of_list [t; f; discriminee]))
+                         else term
+                    | _ => term
+                    end
+               else term
+          | _ => term
+          end in
+     reify_preprocess_extra term.
+ *)
 
 Definition var_like_idents : InductiveHList.hlist
   := [@ident.literal
