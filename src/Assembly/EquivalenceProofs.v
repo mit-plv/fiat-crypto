@@ -521,7 +521,7 @@ Proof using Type.
 Qed.
 
 Lemma symex_expr_App_curried {descr:description} {t} (e : API.expr t) input_var_data d
-  : symex_expr (invert_expr.App_curried e (type.map_for_each_lhs_of_arrow (fun t v => ($v)%expr) input_var_data)) d
+  : symex_expr (invert_expr.App_curried e (type.map_for_each_lhs_of_arrow (fun t v => ($$v)%expr) input_var_data)) d
     = symex_T_app_curried (symex_expr e) input_var_data d.
 Proof using Type.
   induction t; cbn [invert_expr.App_curried symex_T_app_curried type.map_for_each_lhs_of_arrow];

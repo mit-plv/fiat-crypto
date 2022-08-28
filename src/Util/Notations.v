@@ -117,7 +117,6 @@ Reserved Notation "≤" (at level 71).
 Reserved Notation "≥" (at level 71).
 Reserved Notation "a !== b" (at level 70, no associativity).
 Reserved Notation "a ≢ b" (at level 70, no associativity).
-Reserved Notation "$$ v" (at level 40).
 Reserved Notation "& x" (at level 30).
 Reserved Notation "** x" (at level 30).
 Reserved Notation "A <- X ; B" (at level 70, X at next level, right associativity, format "'[v' A  <-  X ; '/' B ']'").
@@ -189,7 +188,8 @@ Reserved Notation "A ~> R" (at level 99).
 Reserved Notation "A --->" (left associativity, at level 65).
 Reserved Notation "'return' x" (at level 70, format "'return'  x").
 Reserved Notation "f x" (only printing, at level 10, left associativity).
-Reserved Notation "$ x" (at level 9, x at level 9, format "$ x").
+(* N.B. $ x conflicts with Ltac2's antiquotations, cf https://coq.inria.fr/refman/proof-engine/ltac2.html#dynamic-semantics *)
+Reserved Notation "$$ x" (at level 9, x at level 9, format "$$ x").
 Reserved Notation "# x" (at level 9, x at level 9, format "# x").
 Reserved Notation "## x" (at level 9, x at level 9, format "## x").
 Reserved Notation "### x" (at level 9, x at level 9, format "### x").
