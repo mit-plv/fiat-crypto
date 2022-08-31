@@ -396,7 +396,7 @@ Module Compilers.
   Ltac2 reify (var : constr) (term : constr) : constr :=
     let reify_base_type := mk_reify_base_type () in
     let reify_ident_opt := mk_reify_ident_opt () in
-    expr.reify 'base.type 'ident reify_base_type reify_ident_opt var term.
+    expr.reify 'base.type 'ident reify_base_type reify_ident_opt var term None.
   Ltac2 _Reify (term : constr) : constr :=
     let reify_base_type := mk_reify_base_type () in
     let reify_ident_opt := mk_reify_ident_opt () in
