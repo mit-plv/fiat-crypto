@@ -1095,22 +1095,23 @@ Module ForExtraction.
     Coercion inject_Z : Z >-> Q.
 
     Definition get_n_and_limbwidth (n limbwidth : MaybeNat) (s : Z) (machine_wordsize : Z) : nat * nat :=
+    let e := Z.log2 s in
     match n with
     | ActualNat n' =>
       match limbwidth with
       | ActualNat limbwidth' => (n', limbwidth')
       | AutoNat =>
-        let suggestion := Z.to_nat (Qceiling (s / n')) in (* should this be s + 1?  something else? *)
+        let suggestion := Z.to_nat (Qceiling ((e + 1) / n')) in (* should this be e + 1?  something else? *)
         (n', suggestion)
       end
     | AutoNat =>
       match limbwidth with
       | ActualNat limbwidth' => 
-        let suggestion := Z.to_nat (Qceiling (s / limbwidth')) in
+        let suggestion := Z.to_nat (Qceiling ((e + 1) / limbwidth')) in
         (suggestion, limbwidth')
       | AutoNat =>
-        let n' := Z.to_nat (Qceiling (s / machine_wordsize)) in
-        let limbwidth' := Z.to_nat (Qceiling(s / n')) in
+        let n' := Z.to_nat (Qceiling ((e + 1) / machine_wordsize)) in
+        let limbwidth' := Z.to_nat (Qceiling((e + 1) / n')) in
         (n', limbwidth')
       end
     end.
