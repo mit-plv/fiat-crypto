@@ -27,6 +27,7 @@ jobs:
       COQCHKEXTRAFLAGS: ""
       OPAMYES: "true"
       OPAMCONFIRMLEVEL: "unsafe-yes"
+      SKIP_BEDROCK2: "1" # TEMP HACK AROUND https://github.com/mit-plv/bedrock2/issues/273
 
     steps:
     - uses: actions/checkout@v3
