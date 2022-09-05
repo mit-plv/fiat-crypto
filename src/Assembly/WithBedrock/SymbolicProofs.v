@@ -721,8 +721,8 @@ Proof using Type.
     split; eauto; [].
     split; eauto; [].
     rewrite Z.shiftr_0_r in Hi by lia.
-    eapply Bool.negb_false_iff, Bool.orb_true_iff in E; case E as [E|E];
-      eapply Ndec.Neqb_complete in E; rewrite E in *; simpl Z.of_N in *.
+    case E as [E|E];
+      rewrite E in *; simpl Z.of_N in *.
     { cbv [get_mem Crypto.Util.Option.bind] in *.
       destruct_one_match_hyp; Option.inversion_option.
       epose proof length_load_bytes _ _ _ _ E0.
@@ -830,8 +830,7 @@ Proof using Type.
     { repeat (eauto || econstructor). }
     { repeat (eauto || econstructor). }
     rewrite !Z.shiftl_0_r, ?Z.shiftr_0_r, <-Z.land_assoc, Z.land_diag in *.
-    eapply Bool.negb_false_iff, Bool.orb_true_iff in E; case E as [E|E];
-      eapply Ndec.Neqb_complete in E; rewrite E in *; simpl Z.of_N in *.
+    case E as [E|E]; rewrite E in *; simpl Z.of_N in *.
     { eapply Store64_R with (v':=Z.lor (Z.land v (Z.ones 8)) (Z.ldiff x (Z.ones 8))) in H;
         try eassumption; eauto with nocore; try solve [rewrite H5; bitblast.Z.bitblast].
       destruct_head'_ex; destruct_head'_and.
