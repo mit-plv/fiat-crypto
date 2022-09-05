@@ -109,20 +109,12 @@ Section ByteBounds.
     rewrite map_map. apply map_ext. exact byte.unsigned_of_Z.
   Qed.
 
-  (* TODO: this should be upstreamed (maybe move to Util for now) *)
-  Lemma byte_of_Z_unsigned b : byte.of_Z (byte.unsigned b) = b.
-  Proof.
-    apply byte.unsigned_inj.
-    rewrite byte.unsigned_of_Z.
-    apply byte.wrap_unsigned.
-  Qed.
-
   Lemma byte_map_of_Z_unsigned x :
     map byte.of_Z (map byte.unsigned x) = x.
   Proof.
     rewrite map_map.
     erewrite map_ext; [ apply map_id | ].
-    auto using byte_of_Z_unsigned.
+    auto using byte.of_Z_unsigned.
   Qed.
 
   Lemma partition_bytes_range :
