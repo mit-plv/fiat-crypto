@@ -10,17 +10,13 @@ Require Import coqutil.Map.Z_keyed_SortedListMap.
 Require Import coqutil.Word.Bitwidth32.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.End2End.X25519.Field25519.
-Require Import Crypto.Bedrock.End2End.X25519.MontgomeryLadder.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
+Require Import Crypto.Bedrock.End2End.X25519.MontgomeryLadder.
 
 Local Arguments map.rep: clear implicits.
-
-Definition montladder_insns := fst (fst montladder_compiler_result).
-Definition montladder_finfo := snd (fst montladder_compiler_result).
-Definition montladder_stack_size := snd montladder_compiler_result.
 
 Definition fname := fst montladder.
 Definition argnames := fst (fst (snd montladder)).
@@ -54,7 +50,7 @@ Definition montladder_post (pOUT pK pU : word.rep (word:=BasicC32Semantics.word)
          (BW:=BW32)
          (field_representaton:=field_representation n s c)
          (Some Field.tight_bounds) pOUT
-         (montladder_gallina Field.M_pos Field.a24 (Z.to_nat (Z.log2_up Curve25519.l)) K U)
+         (montladder_gallina Field.M_pos Field.a24 (Z.to_nat (Z.log2 Curve25519.order)) K U)
          ⋆ Array.array ptsto (word.of_Z 1) pK Kbytes
          ⋆ FElem (BW:=BW32)
                  (field_representaton:=field_representation n s c)

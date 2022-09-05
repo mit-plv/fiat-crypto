@@ -5,6 +5,7 @@ Require Import Crypto.Spec.Curve25519.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Syntax.
 Require Import compiler.Pipeline.
+Require Import compiler.Symbols.
 Require Import compiler.MMIO.
 Require Import coqutil.Word.Bitwidth32.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
@@ -31,7 +32,7 @@ Derive montladder SuchThat
        (montladder
         = montladder_body
             (BW:=BW32)
-            (Z.to_nat (Z.log2_up Curve25519.l))
+            (Z.to_nat (Z.log2 Curve25519.order))
             (field_parameters:=field_parameters)
             (field_representaton:=field_representation n s c))
        As montladder_defn.
@@ -64,16 +65,6 @@ Definition is_udp : func := ("is_udp", (["buf"], ["r"], bedrock_func_body:(
   r = (protocol == $0x11)
 ))).
 
-Definition memcpy : func := ("memcpy", (["dst"; "src"; "n"], [], bedrock_func_body:(
-  while n {
-    store1(dst, load1(src));
-
-    dst = dst + $1;
-    src = src + $1;
-    n = n - $1
-  }
-))).
-
 Definition memswap : func := ("memswap", (["x"; "y"; "n"], [], bedrock_func_body:(
   while n {
     vx = load1(x);
@@ -99,22 +90,43 @@ Definition memequal : func := ("memequal", (["x"; "y"; "n"], ["r"], bedrock_func
   r = r == $0
 ))).
 
+Import Syntax.Coercions.
+Local Coercion Z.of_nat : nat >-> Z.
+
+Definition from_const ident bs : func :=
+  ("from_const_"++ident, (["p"], [], bedrock_func_body:(
+    i = $0; while i < $(length bs) {
+      store1(p, $(expr.inlinetable access_size.one bs "i"));
+      p = p + $1;
+      i = i + $1
+    }
+  ))).
+
+Import Coq.Init.Byte.
+Definition garageowner : list byte :=
+  [x7b; x06; x18; x0c; x54; x0c; xca; x9f; xa3; x16; x0b; x2f; x2b; x69; x89; x63; x77; x4c; xc1; xef; xdc; x04; x91; x46; x76; x8b; xb2; xbf; x43; x0e; x34; x34].
+
+Definition st : expr := 0x8000000.
+Definition pk : expr := 0x8000040.
+Definition buf : expr := 0x8000060.
+
 Definition init : func :=
   ("init", ([], [], bedrock_func_body:(
+    $(from_const "pk" garageowner)($pk);
     output! MMIOWRITE($0x10012038, $(Z.lor (Z.shiftl (0xf) 2) (Z.shiftl 1 9)));
     output! MMIOWRITE($0x10012008, $(Z.lor (Z.shiftl 1 11) (Z.shiftl 1 12)));
     output! MMIOWRITE($0x10024010, $2);
     unpack! err = lan9250_init()
   ))).
 
-
-Definition loop : func := ("loop", (["buf"; "st"(*seed+k0+k1*); "theirpk"], [], bedrock_func_body:(
+Definition loop : func := ("loop", ([], [], bedrock_func_body:(
+  st=$st; pk=$pk; buf=$buf;
   unpack! l, err = recvEthernet(buf);
   require !err;
   if $(14+20+8 +32 +2+4) == l {
     unpack! t = is_udp(buf);
     require t;
-    chacha20_block(st, st, (*nonce*)theirpk, $0); (* NOTE: another impl? *)
+    chacha20_block(st, st, (*nonce*)pk, $0); (* NOTE: another impl? *)
     x25519_base(buf+$42, st+$32);
 
     memswap(buf, buf+$6, $6); (* ethernet address *)
@@ -134,7 +146,7 @@ Definition loop : func := ("loop", (["buf"; "st"(*seed+k0+k1*); "theirpk"], [], 
     store1(buf+$(14+10), chk);
 
     lan9250_tx(buf, $(14+20+8+32+2));
-    x25519(st+$32, st+$32, theirpk)
+    x25519(st+$32, st+$32, pk)
   } else if $(14+20+8 +16 +2+4) == l {
     unpack! t = is_udp(buf);
     require t;
@@ -146,7 +158,7 @@ Definition loop : func := ("loop", (["buf"; "st"(*seed+k0+k1*); "theirpk"], [], 
     output! MMIOWRITE($0x1001200c, mmio_val | (set1<<$1 | set0) << $11);
 
     if (set0|set1) {
-        chacha20_block(st, st, (*nonce*)theirpk, $0) (* NOTE: another impl? *)
+        chacha20_block(st, st, (*nonce*)pk, $0) (* NOTE: another impl? *)
     }
   }
 ))).
@@ -157,7 +169,8 @@ Require Import bedrock2Examples.chacha20.
 
 Definition funcs : list func :=
   [ init;
-    loop; is_udp; memcpy; memswap; memequal; x25519; x25519_base; lan9250_tx;
+    loop; is_udp; memswap; memequal; x25519; x25519_base; lan9250_tx;
+    from_const "pk" garageowner;
 
     montladder;
     fe25519_to_bytes;
@@ -176,8 +189,38 @@ Definition funcs : list func :=
     ++ [chacha20_quarter; chacha20_block]
     ++ [ip_checksum_br2fn].
 
-Require Import bedrock2.ToCString.
-Compute ToCString.c_module funcs.
+
+Definition montladder_c_module := ToCString.c_module funcs.
+
+Require compiler.ToplevelLoop.
+Definition ml: MemoryLayout.MemoryLayout(word:=BasicC32Semantics.word) := {|
+  MemoryLayout.code_start    := word.of_Z 0x20400000;
+  MemoryLayout.code_pastend  := word.of_Z 0x21400000;
+  MemoryLayout.heap_start    := word.of_Z 0x80000000;
+  MemoryLayout.heap_pastend  := word.of_Z 0x80002000;
+  MemoryLayout.stack_start   := word.of_Z 0x80002000;
+  MemoryLayout.stack_pastend := word.of_Z 0x80004000;
+|}.
+
+
+
+Derive garagedoor_compiler_result SuchThat
+  (ToplevelLoop.compile_prog (string_keyed_map:=@SortedListString.map) MMIO.compile_ext_call ml (map.of_list funcs)
+  = Success garagedoor_compiler_result)
+  As garagedoor_compiler_result_ok.
+Proof.
+  match goal with x := _ |- _ => cbv delta [x]; clear x end.
+  vm_compute.
+  match goal with |- @Success ?A ?x = Success ?e => is_evar e;
+    exact (@eq_refl (result A) (@Success A x)) end.
+Qed.
+
+Set Printing Implicit.
+Definition garagedoor_stack_size := snd garagedoor_compiler_result.
+Definition garagedoor_finfo := snd (fst garagedoor_compiler_result).
+Definition garagedoor_insns := fst (fst garagedoor_compiler_result).
+Definition garagedoor_bytes := Pipeline.instrencode garagedoor_insns.
+Definition garagedoor_symbols : list byte := Symbols.symbols garagedoor_finfo.
 
 Derive montladder_compiler_result SuchThat
        (compile
@@ -185,5 +228,14 @@ Derive montladder_compiler_result SuchThat
          (map.of_list funcs) = Success montladder_compiler_result)
        As montladder_compiler_result_ok.
 Proof.
-  vm_compute. apply f_equal. subst; exact eq_refl.
+  match goal with x := _ |- _ => cbv delta [x]; clear x end.
+  vm_compute.
+  match goal with |- @Success ?A ?x = Success ?e => is_evar e;
+    exact (@eq_refl (result A) (@Success A x)) end.
 Qed.
+
+Definition montladder_stack_size := snd montladder_compiler_result.
+Definition montladder_finfo := snd (fst montladder_compiler_result).
+Definition montladder_insns := fst (fst montladder_compiler_result).
+Definition montladder_bytes := Pipeline.instrencode montladder_insns.
+Definition montladder_symbols : list byte := Symbols.symbols montladder_finfo.
