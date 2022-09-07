@@ -40,6 +40,12 @@ Proof. vm_compute. subst; exact eq_refl. Qed.
 
 Import String.
 Require Import bedrock2.NotationsCustomEntry.
+Require Import bedrock2Examples.LAN9250.
+Require Import bedrock2Examples.lightbulb.
+Require Import bedrock2Examples.chacha20.
+Require Import bedrock2Examples.memequal.
+Require Import bedrock2Examples.memswap.
+Require Import bedrock2Examples.memconst.
 Require Import Rupicola.Examples.Net.IPChecksum.IPChecksum.
 
 Definition x25519 : func := ("x25519", (["out"; "sk"; "pk"], [], bedrock_func_body:(
@@ -65,42 +71,8 @@ Definition is_udp : func := ("is_udp", (["buf"], ["r"], bedrock_func_body:(
   r = (protocol == $0x11)
 ))).
 
-Definition memswap : func := ("memswap", (["x"; "y"; "n"], [], bedrock_func_body:(
-  while n {
-    vx = load1(x);
-    vy = load1(y);
-    store1(x, vy);
-    store1(y, vx);
-
-    x = x + $1;
-    y = y + $1;
-    n = n - $1
-  }
-))).
-
-Definition memequal : func := ("memequal", (["x"; "y"; "n"], ["r"], bedrock_func_body:(
-  r = $0;
-  while n {
-    r = r | (load1(x) ^ load1(y));
-
-    x = x + $1;
-    y = y + $1;
-    n = n - $1
-  };
-  r = r == $0
-))).
-
 Import Syntax.Coercions.
 Local Coercion Z.of_nat : nat >-> Z.
-
-Definition from_const ident bs : func :=
-  ("from_const_"++ident, (["p"], [], bedrock_func_body:(
-    i = $0; while i < $(length bs) {
-      store1(p, $(expr.inlinetable access_size.one bs "i"));
-      p = p + $1;
-      i = i + $1
-    }
-  ))).
 
 Import Coq.Init.Byte.
 Definition garageowner : list byte :=
@@ -112,7 +84,7 @@ Definition buf : expr := 0x8000060.
 
 Definition init : func :=
   ("init", ([], [], bedrock_func_body:(
-    $(from_const "pk" garageowner)($pk);
+    $(memconst "pk" garageowner)($pk);
     output! MMIOWRITE($0x10012038, $(Z.lor (Z.shiftl (0xf) 2) (Z.shiftl 1 9)));
     output! MMIOWRITE($0x10012008, $(Z.lor (Z.shiftl 1 11) (Z.shiftl 1 12)));
     output! MMIOWRITE($0x10024010, $2);
@@ -163,14 +135,10 @@ Definition loop : func := ("loop", ([], [], bedrock_func_body:(
   }
 ))).
 
-Require Import bedrock2Examples.LAN9250.
-Require Import bedrock2Examples.lightbulb.
-Require Import bedrock2Examples.chacha20.
-
 Definition funcs : list func :=
   [ init;
     loop; is_udp; memswap; memequal; x25519; x25519_base; lan9250_tx;
-    from_const "pk" garageowner;
+    memconst "pk" garageowner;
 
     montladder;
     fe25519_to_bytes;
