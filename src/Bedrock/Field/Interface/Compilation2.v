@@ -334,6 +334,7 @@ Section Compile.
 
   Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_from_bytes _ _ _ _ _ _ _ _)) : typeclass_instances.
 
+  (*
   Lemma compile_from_bytes {tr m l functions} x :
     let v : F _ := feval_bytes x in
     forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
@@ -425,6 +426,7 @@ Section Compile.
     intros ? ? ? ?; repeat straightline'.
     subst; eauto.
   Qed.
+   *)
 End Compile.
 
 
