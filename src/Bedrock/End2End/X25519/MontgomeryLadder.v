@@ -173,18 +173,11 @@ Require Import bedrock2Examples.memswap.
 Require Import bedrock2Examples.memconst.
 Require Import Rupicola.Examples.Net.IPChecksum.IPChecksum.
 
-Import Syntax.Coercions.
-
-Definition is_udp : func := ("is_udp", (["buf"], ["r"], bedrock_func_body:(
-  ethertype = (((load1(buf + $12))&$0xff) << $8) | ((load1(buf + $13))&$0xff);
-  require ($(1536 - 1) < ethertype) else { r = $0 };
-  protocol = (load1(buf+$23))&$0xff;
-  r = (protocol == $0x11)
-))).
-
 Import Coq.Init.Byte.
 Definition garageowner : list byte :=
   [x7b; x06; x18; x0c; x54; x0c; xca; x9f; xa3; x16; x0b; x2f; x2b; x69; x89; x63; x77; x4c; xc1; xef; xdc; x04; x91; x46; x76; x8b; xb2; xbf; x43; x0e; x34; x34].
+
+Import Syntax.Coercions.
 
 Definition st : expr := 0x8000000.
 Definition pk : expr := 0x8000040.
@@ -203,10 +196,14 @@ Definition loop : func := ("loop", ([], [], bedrock_func_body:(
   st=$st; pk=$pk; buf=$buf;
   unpack! l, err = recvEthernet(buf);
   require !err;
-  if $(14+20+8 +32 +2+4) == l { (* getpk *)
-    unpack! t = is_udp(buf);
-    require t;
+  require ($63 < l);
 
+  ethertype = (((load1(buf + $12))&$0xff) << $8) | ((load1(buf + $13))&$0xff);
+  require ($(1536 - 1) < ethertype);
+  protocol = (load1(buf+$23))&$0xff;
+  require (protocol == $0x11);
+
+  if $(14+20+8 +2+32 +4) == l { (* getpk *)
     memswap(buf, buf+$6, $6); (* ethernet address *)
     memswap(buf+$(14+12), buf+$(14+16), $4); (* IP address *)
     memswap(buf+$(14+20+0), buf+$(14+20+2), $2); (* UDP port *)
@@ -224,16 +221,13 @@ Definition loop : func := ("loop", ([], [], bedrock_func_body:(
     store1(buf+$(14+20+6), $0); (* udp checksum *)
     store1(buf+$(14+20+7), $0); (* udp checksum *)
 
-    x25519_base(buf+$42, st+$32);
-    lan9250_tx(buf, $(14+20+8+32+2))
-  } else if $(14+20+8 +16 +2+4) == l { (* operate *)
-    unpack! t = is_udp(buf);
-    require t;
-
+    x25519_base(buf+$(14+20+8 +2), st+$32);
+    lan9250_tx(buf, $(14+20+8 +2+32))
+  } else if $(14+20+8 +2+16 +4) == l { (* operate *)
     stackalloc 32 as tmp;
     x25519(tmp, st+$32, pk);
-    unpack! set0 = memequal(tmp, buf+$(14+20+8), $16);
-    unpack! set1 = memequal(tmp+$16, buf+$(14+20+8), $16);
+    unpack! set0 = memequal(tmp, buf+$(14+20+8 +2), $16);
+    unpack! set1 = memequal(tmp+$16, buf+$(14+20+8 +2), $16);
 
     io! mmio_val = MMIOREAD($0x1001200c);
     mmio_val = mmio_val & coq:(Z.clearbit (Z.clearbit (2^32-1) 11) 12);
@@ -247,7 +241,7 @@ Definition loop : func := ("loop", ([], [], bedrock_func_body:(
 
 Definition funcs : list func :=
   [ init;
-    loop; is_udp; memswap; memequal; x25519; x25519_base; lan9250_tx;
+    loop; memswap; memequal; x25519; x25519_base; lan9250_tx;
     memconst "pk" garageowner;
 
     montladder;
