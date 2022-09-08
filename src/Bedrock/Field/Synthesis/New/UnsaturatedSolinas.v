@@ -470,7 +470,8 @@ Section UnsaturatedSolinas.
       as Hcorrect.
 
     eapply Signature.from_bytes_correct with (res:=res from_bytes_op);
-      handle_side_conditions; [ loosen_bounds | bounds_length | | ].
+      handle_side_conditions; [ loosen_bounds | bounds_length | | | ].
+    { intros. erewrite length_list_Z_bounded_by, length_byte_bounds; trivial. }
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       destruct Hcorrect.
