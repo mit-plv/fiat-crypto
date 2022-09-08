@@ -503,7 +503,11 @@ Qed.
       as Hcorrect.
 
     eapply Signature.from_bytes_correct with (res:=res from_bytes_op);
-      handle_side_conditions; [ apply valid_max_bounds | apply valid_length | | ].
+      handle_side_conditions; [ apply valid_max_bounds | apply valid_length | | | ].
+    { (* output length *)
+      cbv [list_in_bounds WordByWordMontgomery.valid WordByWordMontgomery.small ] in *.
+      intuition idtac. rewrite H1. rewrite Partition.length_partition; trivial. }
+    
     { (* output *value* is correct *)
     intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
     cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
@@ -513,7 +517,6 @@ Qed.
              bin_model bin_xbounds bin_ybounds
              un_model un_xbounds eval_trans
     ] in *.
-    
     specialize (Hcorrect (map Byte.byte.unsigned bs) H0).
     rewrite map_unsigned_of_Z. erewrite (MaxBounds.map_word_wrap_bounded).
     2: {
