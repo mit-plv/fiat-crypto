@@ -1,4 +1,4 @@
-Require Import coqutil.Byte.
+Require Import coqutil.Byte coqutil.Word.LittleEndianList.
 Require Import Rupicola.Lib.Api.
 Require Import Crypto.Algebra.Hierarchy.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
@@ -113,16 +113,6 @@ Section BignumToFieldRepresentationAdapterLemmas.
   Qed.
 End BignumToFieldRepresentationAdapterLemmas.
 
-Section ToFromBytes.
-  Definition nth_byte (x : Z) (n : nat) : byte :=
-    byte.of_Z (Z.shiftr x (8 * Z.of_nat n)).
-  Definition Z_to_bytes (x : Z) (n : nat) : list byte :=
-    List.map (nth_byte x) (seq 0 n).
-  Definition Z_from_bytes (bs : list byte) : Z :=
-    List.fold_right
-      (fun b acc => Z.shiftl acc 8 + byte.unsigned b) 0 bs.
-End ToFromBytes.
-
 Section FunctionSpecs.
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
@@ -200,8 +190,9 @@ Section FunctionSpecs.
   Instance spec_of_from_bytes : spec_of from_bytes :=
     fnspec! from_bytes (pout px : word) / out (bs : list byte) Rr,
     { requires tr mem :=
-        (exists Ra, (FElemBytes px bs * Ra)%sep mem)
-        /\ (FElem pout out * Rr)%sep mem;
+        (exists Ra, (array ptsto (word.of_Z 1) px bs * Ra)%sep mem)
+        /\ (FElem pout out * Rr)%sep mem
+        /\ Field.bytes_in_bounds bs;
       ensures tr' mem' :=
         tr = tr' /\
         exists X, feval X = feval_bytes bs
@@ -211,14 +202,14 @@ Section FunctionSpecs.
   Instance spec_of_to_bytes : spec_of to_bytes :=
     fnspec! to_bytes (pout px : word) / (out : list byte) (x : felem) Rr,
     { requires tr mem :=
-        bounded_by tight_bounds x /\
-        (exists Ra, (FElem px x * Ra)%sep mem)
-        /\ (FElemBytes pout out * Rr)%sep mem;
-      ensures tr' mem' :=
-        tr = tr'
-        /\ let bs := Z_to_bytes (F.to_Z (feval x))
-                                encoded_felem_size_in_bytes in
-           (FElemBytes pout bs * Rr)%sep mem' }.
+        (array ptsto (word.of_Z 1) pout out * Rr)%sep mem /\
+        length out = encoded_felem_size_in_bytes /\
+        (exists Ra, (FElem px x * Ra)%sep mem) /\
+        bounded_by tight_bounds x;
+      ensures tr' mem' := tr = tr' /\
+        let bs := le_split encoded_felem_size_in_bytes (F.to_Z (feval x)) in
+        (array ptsto (word.of_Z 1) pout bs * Rr)%sep mem' /\
+        Field.bytes_in_bounds bs }.
 
   Instance spec_of_felem_copy : spec_of felem_copy :=
     fnspec! felem_copy (pout px : word) / (out x : felem) R,
