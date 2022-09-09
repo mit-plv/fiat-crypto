@@ -1122,6 +1122,7 @@ Proof.
                     | progress inversion_option
                     | progress subst
                     | progress cbn [List.map interp_op fst snd] in *
+                    | progress apply merge_node_bounds_ok
                     | reflexivity
                     | exact _
                     | progress intros
