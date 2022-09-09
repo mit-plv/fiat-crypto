@@ -34,13 +34,13 @@ Local Instance mem : map.map (word.rep (width:=32)) Init.Byte.byte := SortedList
 Local Existing Instance BW32.
 
 (* Postcondition extracted from spec_of_montladder *)
-Definition montladder_post (pOUT pK pU : word.rep (word:=BasicC32Semantics.word))
+Definition montladder_post (pOUT pK pU : word.rep (word:=Naive.word32))
           (Kbytes : list Byte.byte) (K : Z)
           (U : F (Field.M_pos (FieldParameters:=field_parameters)))
           (OUT : F (Field.M_pos (FieldParameters:=field_parameters)))
           (R : map.rep word.rep Init.Byte.byte mem -> Prop)
           (tr : Semantics.trace) :
-  Semantics.trace -> map.rep _ _ mem -> list (word.rep (word:=BasicC32Semantics.word)) -> Prop :=
+  Semantics.trace -> map.rep _ _ mem -> list (word.rep (word:=Naive.word32)) -> Prop :=
    (fun (tr' : Semantics.trace)
         (mem' : map.rep word.rep Init.Byte.byte mem)
         (rets : list word.rep) =>
@@ -57,7 +57,7 @@ Definition montladder_post (pOUT pK pU : word.rep (word:=BasicC32Semantics.word)
                  (Some Field.tight_bounds) pU U ⋆ R)%sep
         mem').
 
-Local Instance Registers : map.map Z (@word.rep 32 BasicC32Semantics.word)
+Local Instance Registers : map.map Z (@word.rep 32 Naive.word32)
   := Zkeyed_map _.
 
 Require Import riscv.Spec.Decode.
@@ -125,7 +125,7 @@ Section Generic.
 End Generic.
 
 Local Instance naive_word_riscv_ok :
-  RiscvWordProperties.word.riscv_ok BasicC32Semantics.word := naive_word_riscv_ok 5.
+  RiscvWordProperties.word.riscv_ok Naive.word32 := naive_word_riscv_ok 5.
 
 Lemma weaken_bounded_by :
 forall X : list Z,

@@ -520,7 +520,6 @@ End UnsaturatedSolinas.
 (* Prototyping full pipeline: *)
 
 Require Import Coq.Strings.String.
-Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults64.
 Require Import Crypto.Bedrock.Field.Translation.Proofs.ValidComputable.Func.
 
 (* TODO: move somewhere common *)
@@ -576,6 +575,8 @@ Ltac derive_bedrock2_func op :=
   end.
 
 (*
+Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults64.
+
 Section Tests.
   Definition n := 5%nat.
   Definition s := (2^255)%Z.

@@ -646,6 +646,10 @@ Section FElems.
   End Bedrock2.
 End FElems.
 
+#[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.inv _) _))) =>
+simple eapply compile_inv; shelve : compiler.
+
+(*
 (* LATER: Make a separate compilation lemma for (loop) *)
 
 Require Import bedrock2.BasicC64Semantics.
@@ -670,6 +674,4 @@ Section Extraction.
        felem_copy := "felem_copy";
        from_word := "from_word" |}.
 End Extraction.
-
-#[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.inv _) _))) =>
-simple eapply compile_inv; shelve : compiler.
+*)

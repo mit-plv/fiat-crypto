@@ -69,6 +69,7 @@ Crypto.Bedrock.End2End.RupicolaCrypto.Derive
 Crypto.Bedrock.End2End.RupicolaCrypto.Low
 Crypto.Bedrock.End2End.RupicolaCrypto.Spec
 Crypto.Bedrock.End2End.X25519.Field25519
+Crypto.Bedrock.End2End.X25519.GarageDoor
 Crypto.Bedrock.End2End.X25519.MontgomeryLadder
 Crypto.Bedrock.End2End.X25519.MontgomeryLadderProperties
 Crypto.Bedrock.Field.Common.Arrays.ByteBounds
@@ -114,6 +115,7 @@ Crypto.Bedrock.Field.Translation.LoadStoreList
 Crypto.Bedrock.Field.Translation.Parameters.Defaults
 Crypto.Bedrock.Field.Translation.Parameters.Defaults32
 Crypto.Bedrock.Field.Translation.Parameters.Defaults64
+Crypto.Bedrock.Field.Translation.Parameters.FE310
 Crypto.Bedrock.Field.Translation.Proofs.Cmd
 Crypto.Bedrock.Field.Translation.Proofs.Equivalence
 Crypto.Bedrock.Field.Translation.Proofs.EquivalenceProperties
