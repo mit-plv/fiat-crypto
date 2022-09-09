@@ -98,6 +98,7 @@ src/Bedrock/End2End/RupicolaCrypto/Derive.v
 src/Bedrock/End2End/RupicolaCrypto/Low.v
 src/Bedrock/End2End/RupicolaCrypto/Spec.v
 src/Bedrock/End2End/X25519/Field25519.v
+src/Bedrock/End2End/X25519/GarageDoor.v
 src/Bedrock/End2End/X25519/MontgomeryLadder.v
 src/Bedrock/End2End/X25519/MontgomeryLadderProperties.v
 src/Bedrock/Field/Common/Tactics.v
@@ -143,6 +144,7 @@ src/Bedrock/Field/Translation/LoadStoreList.v
 src/Bedrock/Field/Translation/Parameters/Defaults.v
 src/Bedrock/Field/Translation/Parameters/Defaults32.v
 src/Bedrock/Field/Translation/Parameters/Defaults64.v
+src/Bedrock/Field/Translation/Parameters/FE310.v
 src/Bedrock/Field/Translation/Proofs/Cmd.v
 src/Bedrock/Field/Translation/Proofs/Equivalence.v
 src/Bedrock/Field/Translation/Proofs/EquivalenceProperties.v
