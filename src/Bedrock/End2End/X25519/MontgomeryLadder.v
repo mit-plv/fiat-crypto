@@ -222,6 +222,11 @@ Definition garagedoor_insns := fst (fst garagedoor_compiler_result).
 Definition garagedoor_bytes := Pipeline.instrencode garagedoor_insns.
 Definition garagedoor_symbols : list byte := Symbols.symbols garagedoor_finfo.
 
+(*
+Compute garagedoor_finfo.
+Compute ToCString.c_func fe25519_to_bytes. (* contains big constants that are used many times, could save some instructions by assigning them to a variable, otherwise it requires two instructions (instead of 0) each time the constant is reused *)
+*)
+
 Derive montladder_compiler_result SuchThat
        (compile
          (compile_ext_call (funname_env:=SortedListString.map))
@@ -239,3 +244,15 @@ Definition montladder_finfo := snd (fst montladder_compiler_result).
 Definition montladder_insns := fst (fst montladder_compiler_result).
 Definition montladder_bytes := Pipeline.instrencode montladder_insns.
 Definition montladder_symbols : list byte := Symbols.symbols montladder_finfo.
+
+
+Require riscv.Utility.InstructionNotations.
+Require riscv.Utility.InstructionCoercions.
+Module PrintAssembly.
+  Import riscv.Utility.InstructionNotations.
+  Import riscv.Utility.InstructionCoercions.
+  Unset Printing Coercions.
+
+  (* Compute garagedoor_finfo. (* fe25519_mul is more than 10KB in just one function *) *)
+  Goal True. let r := eval cbv in garagedoor_insns in idtac (* r *). Abort.
+End PrintAssembly.
