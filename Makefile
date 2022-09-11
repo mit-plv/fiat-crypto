@@ -451,12 +451,17 @@ ifneq ($(EXTERNAL_DEPENDENCIES),1)
 
 REWRITER_FOLDER := rewriter
 REWRITER_SRC := $(REWRITER_FOLDER)/src
+REWRITER_NAME := Rewriter
 COQPRIME_FOLDER := coqprime
 COQPRIME_SRC := $(COQPRIME_FOLDER)/src
+COQPRIME_NAME := Coqprime
 BEDROCK2_ROOT_FOLDER := rupicola/bedrock2
 BEDROCK2_FOLDER := $(BEDROCK2_ROOT_FOLDER)/bedrock2
 BEDROCK2_SRC := $(BEDROCK2_FOLDER)/src
 BEDROCK2_NAME := bedrock2
+BEDROCK2_EXAMPLES_FOLDER := $(BEDROCK2_ROOT_FOLDER)/bedrock2
+BEDROCK2_EXAMPLES_SRC := $(BEDROCK2_EXAMPLES_FOLDER)/src
+BEDROCK2_EXAMPLES_NAME := bedrock2Examples
 BEDROCK2_COMPILER_FOLDER := $(BEDROCK2_ROOT_FOLDER)/compiler
 BEDROCK2_COMPILER_SRC := $(BEDROCK2_COMPILER_FOLDER)/src
 BEDROCK2_COMPILER_NAME := compiler
@@ -468,18 +473,12 @@ RISCV_SRC := $(RISCV_FOLDER)/src
 RISCV_NAME := riscv
 RUPICOLA_FOLDER := rupicola
 RUPICOLA_SRC := $(RUPICOLA_FOLDER)/src
-RUPICOLA_NAME := rupicola
-# Work around COQBUG(https://github.com/coq/coq/issues/11834)
-SYS_OS_TYPE := $(shell "$(OCAMLFIND)" ocamlc etc/sys_os_type.ml -o etc/sys_os_type.exe && etc/sys_os_type.exe)
-COQPATH_TEMP:=
-ifeq ($(SYS_OS_TYPE),Win32)
-COQPATH_SEP:=;
-else
-COQPATH_SEP:=:
-endif
+RUPICOLA_NAME := Rupicola
+# dependency flags (-Q ...) separated by \n (Note: \n is not interpreted by make)
+DEPFLAGS_NL :=
 
 ifneq ($(EXTERNAL_REWRITER),1)
-COQPATH_TEMP:=${CURDIR_SAFE}/$(REWRITER_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
+DEPFLAGS_NL:=-Q ${CURDIR_SAFE}/$(REWRITER_SRC)/$(REWRITER_NAME) $(REWRITER_NAME)\n-I ${CURDIR_SAFE}/$(REWRITER_SRC)/$(REWRITER_NAME)/Util/plugins\n$(DEPFLAGS_NL)
 deps: rewriter
 $(VOFILES): | rewriter
 $(ALLDFILES): | rewriter
@@ -489,7 +488,7 @@ endif
 
 ifneq ($(SKIP_BEDROCK2),1)
 ifneq ($(EXTERNAL_BEDROCK2),1)
-COQPATH_TEMP:=${CURDIR_SAFE}/$(RUPICOLA_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(BEDROCK2_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(BEDROCK2_COMPILER_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(RISCV_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
+DEPFLAGS_NL:=-Q ${CURDIR_SAFE}/$(RUPICOLA_SRC)/$(RUPICOLA_NAME) $(RUPICOLA_NAME) \n-Q ${CURDIR_SAFE}/$(BEDROCK2_SRC)/$(BEDROCK2_NAME) $(BEDROCK2_NAME)\n-Q ${CURDIR_SAFE}/$(BEDROCK2_EXAMPLES_SRC)/$(BEDROCK2_EXAMPLES_NAME) $(BEDROCK2_EXAMPLES_NAME)\n-Q ${CURDIR_SAFE}/$(BEDROCK2_COMPILER_SRC)/$(BEDROCK2_COMPILER_NAME) $(BEDROCK2_COMPILER_NAME)\n-Q ${CURDIR_SAFE}/$(RISCV_SRC)/$(RISCV_NAME) $(RISCV_NAME)\n$(DEPFLAGS_NL)
 deps: bedrock2 bedrock2-compiler rupicola
 $(VOFILES): | bedrock2 bedrock2-compiler rupicola
 $(ALLDFILES): | bedrock2 bedrock2-compiler rupicola
@@ -499,7 +498,7 @@ endif
 endif
 
 ifneq ($(EXTERNAL_COQUTIL),1)
-COQPATH_TEMP:=${CURDIR_SAFE}/$(COQUTIL_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
+DEPFLAGS_NL:=-Q ${CURDIR_SAFE}/$(COQUTIL_SRC)/$(COQUTIL_NAME) $(COQUTIL_NAME)\n$(DEPFLAGS_NL)
 deps: coqutil
 $(VOFILES): | coqutil
 $(ALLDFILES): | coqutil
@@ -508,7 +507,7 @@ install: install-coqutil
 endif
 
 ifneq ($(EXTERNAL_COQPRIME),1)
-COQPATH_TEMP:=${CURDIR_SAFE}/$(COQPRIME_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
+DEPFLAGS_NL:=-Q ${CURDIR_SAFE}/$(COQPRIME_SRC)/$(COQPRIME_NAME) $(COQPRIME_NAME)\n$(DEPFLAGS_NL)
 deps: coqprime
 $(VOFILES): | coqprime
 $(ALLDFILES): | coqprime
@@ -516,8 +515,7 @@ cleanall:: clean-coqprime
 install: install-coqprime
 endif
 
-COQPATH?=$(patsubst %$(COQPATH_SEP),%,$(COQPATH_TEMP))
-export COQPATH
+DEPFLAGS:=$(subst \n, ,$(DEPFLAGS_NL))
 
 coqprime:
 	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) src/Coqprime/PrimalityTest/Zp.vo src/Coqprime/PrimalityTest/PocklingtonCertificat.vo
@@ -580,7 +578,7 @@ endif
 
 Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
-	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-coq && cat Makefile-coq | sed 's/^printenv:/printenv::/g; s/^printenv:::/printenv::/g; s/^all:/all-old:/g; s/^validate:/validate-vo:/g; s/^.PHONY: validate/.PHONY: validate-vo/g' > $@ && rm -f Makefile-coq
+	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject $(DEPFLAGS) INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-coq && cat Makefile-coq | sed 's/^printenv:/printenv::/g; s/^printenv:::/printenv::/g; s/^all:/all-old:/g; s/^validate:/validate-vo:/g; s/^.PHONY: validate/.PHONY: validate-vo/g' > $@ && rm -f Makefile-coq
 
 
 BASE_STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery base_conversion
@@ -1000,8 +998,10 @@ uninstall-standalone: uninstall-standalone-ocaml # uninstall-standalone-haskell
 validate: Makefile.coq
 	$(MAKE) -f Makefile.coq validate-vo VOFILES="$(REGULAR_VOFILES)"
 
-printenv::
-	@echo "COQPATH =        $$COQPATH"
+.PHONY: print_DEPFLAGS
+print_DEPFLAGS:
+	@echo "DEPFLAGS_NL ="
+	@printf -- '$(DEPFLAGS_NL)'
 
 printdeps::
 	$(HIDE)$(foreach vo,$(filter %.vo,$(MAKECMDGOALS)),echo '$(vo): $(call vo_closure,$(vo))'; )
