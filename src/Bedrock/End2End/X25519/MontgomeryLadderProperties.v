@@ -23,10 +23,10 @@ Definition argnames := fst (fst (snd montladder)).
 Definition retnames := snd (fst (snd montladder)).
 Definition fbody := snd (snd montladder).
 Definition f_rel_pos : Z.
-  let x := constr:(map.get montladder_finfo fname) in
+  let x := constr:(List.find (fun '(name, pos) => String.eqb name fname) montladder_finfo) in
   let y := eval vm_compute in x in
   match y with
-  | Some ?pos => exact pos
+  | Some (_, ?pos) => exact pos
   end.
 Defined.
 
@@ -124,14 +124,6 @@ Section Generic.
 
 End Generic.
 
-Lemma valid_funs_funcs : ExprImp.valid_funs (map.of_list funcs).
-Proof.
-  unfold ExprImp.valid_funs. unfold funcs.
-  (* TODO: need lemma/tactic to break down map.get (map.of_list [...]) into a
-     case for each function, then valid_fun is just proving there are no
-     duplicates in arg/ret names *)
-Admitted.
-
 Local Instance naive_word_riscv_ok :
   RiscvWordProperties.word.riscv_ok BasicC32Semantics.word := naive_word_riscv_ok 5.
 
@@ -213,7 +205,7 @@ Proof.
       | |- map.get (getRegs (getMachine _)) _ = Some _ => eassumption
       | |- LowerPipeline.arg_regs_contain _ _ => eassumption
       | |- context [LowerPipeline.machine_ok] => eassumption
-      | |- map.get montladder_finfo _ = Some _ => reflexivity
+      | |- map.get _ "montladder" = Some _ => reflexivity
       | _ => idtac
       end.
 
@@ -221,7 +213,7 @@ Proof.
   { eapply (compile_ext_call_correct (funname_env_ok:=SortedListString.ok)). }
   { intros. cbv [compile_ext_call compile_interact].
     repeat (destruct_one_match; try reflexivity). }
-  { apply valid_funs_funcs. }
+  { vm_compute. reflexivity. }
   { lazy. repeat constructor; cbn [In]; intuition idtac; congruence. }
   { unfold funcs.
     (* montladder is not at the front of the function list; remove everything

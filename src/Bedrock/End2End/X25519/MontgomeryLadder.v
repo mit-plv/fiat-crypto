@@ -205,7 +205,7 @@ Definition ml: MemoryLayout.MemoryLayout(word:=BasicC32Semantics.word) := {|
 
 
 Derive garagedoor_compiler_result SuchThat
-  (ToplevelLoop.compile_prog (string_keyed_map:=@SortedListString.map) MMIO.compile_ext_call ml (map.of_list funcs)
+  (ToplevelLoop.compile_prog (string_keyed_map:=@SortedListString.map) MMIO.compile_ext_call ml funcs
   = Success garagedoor_compiler_result)
   As garagedoor_compiler_result_ok.
 Proof.
@@ -225,7 +225,7 @@ Definition garagedoor_symbols : list byte := Symbols.symbols garagedoor_finfo.
 Derive montladder_compiler_result SuchThat
        (compile
          (compile_ext_call (funname_env:=SortedListString.map))
-         (map.of_list funcs) = Success montladder_compiler_result)
+         funcs = Success montladder_compiler_result)
        As montladder_compiler_result_ok.
 Proof.
   match goal with x := _ |- _ => cbv delta [x]; clear x end.
