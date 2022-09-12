@@ -529,7 +529,7 @@ install-coqutil:
 	$(MAKE) --no-print-directory -C $(COQUTIL_FOLDER) install
 
 bedrock2: coqutil
-	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) bedrock2_noex
+	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) bedrock2_ex
 
 clean-bedrock2:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) clean_bedrock2
