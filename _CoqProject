@@ -1,4 +1,13 @@
 -R src Crypto
+-Q coqprime/src/Coqprime Coqprime
+-Q rupicola/bedrock2/deps/coqutil/src/coqutil coqutil
+-Q rupicola/src/Rupicola Rupicola
+-Q rupicola/bedrock2/bedrock2/src/bedrock2 bedrock2
+-Q rupicola/bedrock2/bedrock2/src/bedrock2Examples bedrock2Examples
+-Q rupicola/bedrock2/compiler/src/compiler compiler
+-Q rupicola/bedrock2/deps/riscv-coq/src/riscv riscv
+-Q rewriter/src/Rewriter Rewriter
+-I rewriter/src/Rewriter/Util/plugins
 -arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+unexpected-implicit-declaration,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,+undeclared-scope,+deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality,+deprecated-typeclasses-transparency-without-locality,unsupported-attributes
 -arg -native-compiler -arg ondemand
 
