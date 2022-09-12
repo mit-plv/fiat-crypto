@@ -109,25 +109,6 @@ SPECIAL_VOFILES := \
 	src/ExtractionHaskell/%.vo
 GREP_EXCLUDE_SPECIAL_VOFILES := grep -v '^src/Extraction\(OCaml\|Haskell\)/'
 
-# This target is used to update the _CoqProject file.
-# But it only works if we have git
-ifneq (,$(wildcard .git/))
-SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
-EXISTING_COQPROJECT_CONTENTS_SORTED:=$(shell cat _CoqProject 2>&1 | $(SORT_COQPROJECT))
-WARNINGS_PLUS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+unexpected-implicit-declaration,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,+undeclared-scope,+deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality,+deprecated-typeclasses-transparency-without-locality
-# Remove unsupported-attributes once we stop supporting < 8.14
-WARNINGS := $(WARNINGS_PLUS),unsupported-attributes
-COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-arg -w -arg $(WARNINGS)'; echo '-arg -native-compiler -arg ondemand'; ((echo "$(sort $(VERSION_DEPENDENT_FILES) $(SPECIAL_VERSION_DEPENDENT_FILES))" | tr ' ' '\n'; git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES)) | $(SORT_COQPROJECT)))
-NEW_COQPROJECT_CONTENTS_SORTED:=$(shell $(COQPROJECT_CMD) | $(SORT_COQPROJECT))
-
-ifneq ($(EXISTING_COQPROJECT_CONTENTS_SORTED),$(NEW_COQPROJECT_CONTENTS_SORTED))
-.PHONY: _CoqProject
-_CoqProject:
-	$(SHOW)'ECHO > $@'
-	$(HIDE)$(COQPROJECT_CMD) > $@
-endif
-endif
-
 PERFTESTING_VO := \
 	src/Rewriter/PerfTesting/Core.vo \
 	src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
@@ -478,7 +459,7 @@ RUPICOLA_NAME := Rupicola
 DEPFLAGS_NL :=
 
 ifneq ($(EXTERNAL_REWRITER),1)
-DEPFLAGS_NL:=-Q ${CURDIR_SAFE}/$(REWRITER_SRC)/$(REWRITER_NAME) $(REWRITER_NAME)\n-I ${CURDIR_SAFE}/$(REWRITER_SRC)/$(REWRITER_NAME)/Util/plugins\n$(DEPFLAGS_NL)
+DEPFLAGS_NL:=-Q $(REWRITER_SRC)/$(REWRITER_NAME) $(REWRITER_NAME)\n-I $(REWRITER_SRC)/$(REWRITER_NAME)/Util/plugins\n$(DEPFLAGS_NL)
 deps: rewriter
 $(VOFILES): | rewriter
 $(ALLDFILES): | rewriter
@@ -488,7 +469,7 @@ endif
 
 ifneq ($(SKIP_BEDROCK2),1)
 ifneq ($(EXTERNAL_BEDROCK2),1)
-DEPFLAGS_NL:=-Q ${CURDIR_SAFE}/$(RUPICOLA_SRC)/$(RUPICOLA_NAME) $(RUPICOLA_NAME) \n-Q ${CURDIR_SAFE}/$(BEDROCK2_SRC)/$(BEDROCK2_NAME) $(BEDROCK2_NAME)\n-Q ${CURDIR_SAFE}/$(BEDROCK2_EXAMPLES_SRC)/$(BEDROCK2_EXAMPLES_NAME) $(BEDROCK2_EXAMPLES_NAME)\n-Q ${CURDIR_SAFE}/$(BEDROCK2_COMPILER_SRC)/$(BEDROCK2_COMPILER_NAME) $(BEDROCK2_COMPILER_NAME)\n-Q ${CURDIR_SAFE}/$(RISCV_SRC)/$(RISCV_NAME) $(RISCV_NAME)\n$(DEPFLAGS_NL)
+DEPFLAGS_NL:=-Q $(RUPICOLA_SRC)/$(RUPICOLA_NAME) $(RUPICOLA_NAME)\n-Q $(BEDROCK2_SRC)/$(BEDROCK2_NAME) $(BEDROCK2_NAME)\n-Q $(BEDROCK2_EXAMPLES_SRC)/$(BEDROCK2_EXAMPLES_NAME) $(BEDROCK2_EXAMPLES_NAME)\n-Q $(BEDROCK2_COMPILER_SRC)/$(BEDROCK2_COMPILER_NAME) $(BEDROCK2_COMPILER_NAME)\n-Q $(RISCV_SRC)/$(RISCV_NAME) $(RISCV_NAME)\n$(DEPFLAGS_NL)
 deps: bedrock2 bedrock2-compiler rupicola
 $(VOFILES): | bedrock2 bedrock2-compiler rupicola
 $(ALLDFILES): | bedrock2 bedrock2-compiler rupicola
@@ -498,7 +479,7 @@ endif
 endif
 
 ifneq ($(EXTERNAL_COQUTIL),1)
-DEPFLAGS_NL:=-Q ${CURDIR_SAFE}/$(COQUTIL_SRC)/$(COQUTIL_NAME) $(COQUTIL_NAME)\n$(DEPFLAGS_NL)
+DEPFLAGS_NL:=-Q $(COQUTIL_SRC)/$(COQUTIL_NAME) $(COQUTIL_NAME)\n$(DEPFLAGS_NL)
 deps: coqutil
 $(VOFILES): | coqutil
 $(ALLDFILES): | coqutil
@@ -507,7 +488,7 @@ install: install-coqutil
 endif
 
 ifneq ($(EXTERNAL_COQPRIME),1)
-DEPFLAGS_NL:=-Q ${CURDIR_SAFE}/$(COQPRIME_SRC)/$(COQPRIME_NAME) $(COQPRIME_NAME)\n$(DEPFLAGS_NL)
+DEPFLAGS_NL:=-Q $(COQPRIME_SRC)/$(COQPRIME_NAME) $(COQPRIME_NAME)\n$(DEPFLAGS_NL)
 deps: coqprime
 $(VOFILES): | coqprime
 $(ALLDFILES): | coqprime
@@ -1002,6 +983,25 @@ validate: Makefile.coq
 print_DEPFLAGS:
 	@echo "DEPFLAGS_NL ="
 	@printf -- '$(DEPFLAGS_NL)'
+
+# This target is used to update the _CoqProject file.
+# But it only works if we have git
+ifneq (,$(wildcard .git/))
+SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
+EXISTING_COQPROJECT_CONTENTS_SORTED:=$(shell cat _CoqProject 2>&1 | $(SORT_COQPROJECT))
+WARNINGS_PLUS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+unexpected-implicit-declaration,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,+undeclared-scope,+deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality,+deprecated-typeclasses-transparency-without-locality
+# Remove unsupported-attributes once we stop supporting < 8.14
+WARNINGS := $(WARNINGS_PLUS),unsupported-attributes
+COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; printf -- '$(DEPFLAGS_NL)'; echo '-arg -w -arg $(WARNINGS)'; echo '-arg -native-compiler -arg ondemand'; ((echo "$(sort $(VERSION_DEPENDENT_FILES) $(SPECIAL_VERSION_DEPENDENT_FILES))" | tr ' ' '\n'; git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES)) | $(SORT_COQPROJECT)))
+NEW_COQPROJECT_CONTENTS_SORTED:=$(shell $(COQPROJECT_CMD) | $(SORT_COQPROJECT))
+
+ifneq ($(EXISTING_COQPROJECT_CONTENTS_SORTED),$(NEW_COQPROJECT_CONTENTS_SORTED))
+.PHONY: _CoqProject
+_CoqProject:
+	$(SHOW)'ECHO > $@'
+	$(HIDE)$(COQPROJECT_CMD) > $@
+endif
+endif
 
 printdeps::
 	$(HIDE)$(foreach vo,$(filter %.vo,$(MAKECMDGOALS)),echo '$(vo): $(call vo_closure,$(vo))'; )
