@@ -54,6 +54,7 @@ src/Arithmetic/BarrettReduction/Generalized.v
 src/Arithmetic/BarrettReduction/HAC.v
 src/Arithmetic/BarrettReduction/RidiculousFish.v
 src/Arithmetic/BarrettReduction/Wikipedia.v
+src/Arithmetic/BinaryExtendedGCD.v
 src/Arithmetic/MontgomeryReduction/Definition.v
 src/Arithmetic/MontgomeryReduction/Proofs.v
 src/ArithmeticCPS/BaseConversion.v
