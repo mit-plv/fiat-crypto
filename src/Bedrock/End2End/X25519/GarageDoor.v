@@ -94,28 +94,98 @@ Definition loop : func := ("loop", ([], [], bedrock_func_body:(
 ))).
 
 Import WeakestPrecondition ProgramLogic SeparationLogic.
-Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
-Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
-
-Global Instance spec_of_loop : spec_of loop :=
-  fnspec! "loop" / (seed sk pk bs : list Byte.byte) (R : map.rep -> Prop),
-  { requires t m := m =* 
-      seed$@(word.of_Z ST) *
-      sk$@(word.add (word.of_Z ST) (word.of_Z 32)) *
-      pk$@(word.of_Z PK) *
-      bs $@(word.of_Z BUF) * R
-    /\ length seed = 32%nat
-    /\ length sk = 32%nat
-    /\ length bs = 1520%nat;
-    ensures t' m := R m }.
-
-Import ZnWords.
-Import coqutil.Tactics.autoforward.
 Local Instance spec_of_recvEthernet : spec_of "recvEthernet" := spec_of_recvEthernet.
 Local Instance spec_of_lan9250_tx : spec_of "lan9250_tx" := spec_of_lan9250_tx.
 Local Instance spec_of_memswap : spec_of "memswap" := spec_of_memswap.
 Local Instance spec_of_memequal : spec_of "memequal" := spec_of_memequal.
-Local Instance spec_of_chacha20 : spec_of "chacha20_block". Admitted.
+
+Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
+Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
+
+Require Crypto.Bedrock.End2End.RupicolaCrypto.Spec.
+Local Instance spec_of_chacha20 : spec_of "chacha20_block" :=
+  fnspec! "chacha20_block" out key nonce counter / (pt k n : list Byte.byte) (R Rk Rn : map.rep -> Prop),
+  { requires t m :=
+      m =* pt$@out * R /\ length pt = 64%nat /\
+      m =* k$@key * Rk /\ length k = 32%nat /\
+      m =* n$@nonce * Rn /\ length n = 12%nat;
+    ensures T m := T = t /\ exists ct, m =* ct$@out * R /\ length ct = 64%nat /\
+      ct = RupicolaCrypto.Spec.chacha20_encrypt k (Z.to_nat (word.unsigned counter)) n pt }.
+
+Import Tuple LittleEndianList.
+Local Definition be2 z := rev (le_split 2 z).
+Local Coercion to_list : tuple >-> list.
+Local Coercion Z.b2z : bool >-> Z.
+Global Instance spec_of_loop : spec_of loop :=
+  fnspec! "loop" / (seed sk bs : list Byte.byte) (R : map.rep -> Prop),
+  { requires t m := m =* 
+      seed$@(word.of_Z ST) *
+      sk$@(word.add (word.of_Z ST) (word.of_Z 32)) *
+      garageowner$@(word.of_Z PK) *
+      bs $@(word.of_Z BUF) * R
+    /\ length seed = 32%nat
+    /\ length sk = 32%nat
+    /\ length bs = 1520%nat;
+    ensures T M :=
+    exists SEED SK BS, M =*
+      SEED$@(word.of_Z ST) *
+      SK$@(word.add (word.of_Z ST) (word.of_Z 32)) *
+      garageowner$@(word.of_Z PK) *
+      BS $@(word.of_Z BUF) * R
+    /\ length SEED = 32%nat
+    /\ length SK = 32%nat
+    /\ exists iol, T = iol ++ t /\ exists ioh, SPI.mmio_trace_abstraction_relation ioh iol /\ (
+    (lightbulb_spec.lan9250_recv_no_packet _ ioh \/
+      lightbulb_spec.lan9250_recv_packet_too_long _ ioh \/
+      TracePredicate.concat TracePredicate.any (lightbulb_spec.spi_timeout _) ioh) \/
+    (exists incoming, lightbulb_spec.lan9250_recv _ incoming ioh /\
+    let ethertype := le_combine (rev (firstn 2 (skipn 12 incoming))) in ethertype < 1536 \/ 
+    let ipproto := nth 23 incoming x00 in ipproto <> x11 \/
+    (length incoming <> 14+20+8 +2+16 +4 /\ length incoming <> 14+20+8 +2+32 +4)%nat) \/
+    exists (mac_local mac_remote : tuple byte 6),
+    exists (ethertype : Z) (ih_const : tuple byte 2) (ip_length : Z) (ip_idff : tuple byte 5),
+    exists (ipproto := x11) (ip_checksum : Z) (ip_local ip_remote : tuple byte 4),
+    exists (udp_local udp_remote : tuple byte 2) (udp_length : Z) (udp_checksum : Z),
+    exists (garagedoor_header : tuple byte 2) (garagedoor_payload : list byte),
+    let incoming :=
+      (mac_local ++ mac_remote ++ be2 ethertype ++
+       ih_const ++ be2 ip_length ++
+       ip_idff ++ [ipproto] ++ le_split 2 ip_checksum ++
+       ip_remote ++ ip_local ++
+       udp_remote ++ udp_local ++
+       be2 udp_length ++ be2 udp_checksum ++
+       garagedoor_header ++ garagedoor_payload) in
+    (exists doorstate action : Naive.word32,
+    TracePredicate.concat
+        (lightbulb_spec.lan9250_recv _ incoming) (TracePredicate.concat
+        (TracePredicate.one ("ld", lightbulb_spec.GPIO_DATA_ADDR _, doorstate))
+        (TracePredicate.one ("st", lightbulb_spec.GPIO_DATA_ADDR _, action))) ioh
+     /\ (
+      let m := firstn 16 garagedoor_payload in
+      let v := le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (Field.feval_bytes(FieldRepresentation:=frep25519) garageowner))) in
+      exists set0 set1 : Naive.word32,
+      (word.unsigned set0 = 1 <-> firstn 16 v = m) /\
+      (word.unsigned set1 = 1 <->  skipn 16 v = m) /\
+      action = word.or (word.and doorstate (word.of_Z (Z.clearbit (Z.clearbit (2^32-1) 11) 12))) (word.slu (word.or (word.slu set1 (word.of_Z 1)) set0) (word.of_Z 11)) /\
+      (word.unsigned set1 = 0 -> word.unsigned set0 = 0 -> SEED=seed /\ SK=sk))) \/
+    TracePredicate.concat (lightbulb_spec.lan9250_recv _ incoming)
+    (lightbulb_spec.lan9250_send _
+      (let ip_length := 62 in
+       let udp_length := 42 in
+       mac_remote ++ mac_local ++ be2 ethertype ++
+       let ih C := ih_const ++ be2 ip_length ++
+                   ip_idff ++ [ipproto] ++ le_split 2 C ++
+                   ip_local ++ ip_remote in
+       ih (Spec.ip_checksum (ih 0)) ++
+       udp_local ++ udp_remote ++
+       be2 udp_length ++ be2 0 ++
+       garagedoor_header ++
+       le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (F.of_Z Field.M_pos 9)))))
+    ioh /\ SEED=seed /\ SK=sk)
+  }.
+
+Import ZnWords.
+Import coqutil.Tactics.autoforward.
 Lemma loop_ok : program_logic_goal_for_function! loop.
 Proof.
   repeat straightline.
@@ -123,13 +193,27 @@ Proof.
   straightline_call; try ecancel_assumption; trivial; repeat straightline.
   intuition idtac; repeat straightline;
   eexists; split; repeat straightline; split; intros; try contradiction; [|]; repeat straightline.
-  2:admit.
+  2: {
+    ssplit; trivial.
+    eexists _,_,_; ssplit; try ecancel_assumption; try ZnWords.
+    eexists; ssplit; [reflexivity|].
+    eexists; ssplit; [eassumption|].
+    left. intuition idtac. }
+
+  pose proof H12 as Hbuf.
+  seprewrite_in @bytearray_index_merge Hbuf. { ZnWords. }
 
   eexists; split; repeat straightline.
   rewrite word.unsigned_ltu, ?word.unsigned_of_Z_nowrap by ZnWords.ZnWords;
-  destr Z.ltb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate.
+  destr Z.ltb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate;
   autoforward with typeclass_instances in E.
-  2:admit.
+  2: {
+    repeat straightline.
+    ssplit; trivial.
+    eexists _,_,_; ssplit; try ecancel_assumption; try ZnWords.
+    eexists; ssplit; [reflexivity|].
+    eexists; ssplit; [eassumption|].
+    right. left. eexists; ssplit; try eassumption; intuition try ZnWords. }
 
   repeat straightline.
   eapply WeakestPreconditionProperties.dexpr_expr.
@@ -168,10 +252,17 @@ Proof.
 
   eexists; split; repeat straightline.
   rewrite word.unsigned_ltu, ?word.unsigned_of_Z_nowrap by ZnWords.ZnWords;
-  destr Z.ltb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate.
+  destr Z.ltb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate;
   autoforward with typeclass_instances in E0.
-  2:admit.
-  repeat straightline.
+  2: {
+    repeat straightline.
+    ssplit; trivial.
+    eexists _,_,_; ssplit; try ecancel_assumption; try ZnWords.
+    eexists; ssplit; [reflexivity|].
+    eexists; ssplit; [eassumption|].
+    right. left. eexists. ssplit; try eassumption. left.
+    rewrite skipn_app, skipn_all2, ?Lpp, ?app_nil_l by ZnWords.
+    cbn [List.skipn minus firstn List.app rev]. ZnWords. }
 
   case (SepAutoArray.list_expose_nth pp 9 ltac:(ZnWords)) as (Hppp&Lppp).
   forget (List.firstn 9 pp) as ih_l.
@@ -187,17 +278,288 @@ Proof.
 
   repeat straightline.
   eexists; split; repeat straightline.
-  subst v6.
+  subst protocol.
   pose proof byte.unsigned_range ipproto.
   rewrite word.unsigned_eqb, ?word.unsigned_and_nowrap, ?word.unsigned_of_Z_nowrap by ZnWords.ZnWords.
   change (255) with (Z.ones 8); rewrite Z.land_ones, Z.mod_small by ZnWords.
   destr Z.eqb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate; autoforward with typeclass_instances in E1.
-  2: admit.
+  2: {
+    repeat straightline.
+    split; trivial.
+    eexists _,_,_; ssplit; try ecancel_assumption; try ZnWords.
+    eexists; ssplit; [reflexivity|].
+    eexists; ssplit; [eassumption|].
+    right. left. eexists. ssplit; try eassumption. right. left.
+    rewrite app_nth2 by ZnWords.
+    rewrite app_comm_cons.
+    rewrite app_nth2 by SepAutoArray.listZnWords.
+    rewrite app_nth2 by SepAutoArray.listZnWords.
+    rewrite app_nth1 by SepAutoArray.listZnWords.
+    match goal with |- context[nth ?x] => replace x with O by SepAutoArray.listZnWords end.
+    cbn. intro. subst. apply E1. reflexivity. }
 
   repeat straightline.
   eexists; split; repeat straightline.
   rewrite word.unsigned_eqb, ?word.unsigned_of_Z_nowrap by ZnWords.ZnWords.
   destr Z.eqb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate; autoforward with typeclass_instances in E2.
+
+  2: {
+    repeat straightline.
+    eexists; split; repeat straightline.
+    rewrite word.unsigned_eqb, ?word.unsigned_of_Z_nowrap by ZnWords.ZnWords.
+    destr Z.eqb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate; autoforward with typeclass_instances in E3.
+    2: {
+      repeat straightline. ssplit; trivial.
+      eexists _,_,_; ssplit; try ecancel_assumption; try ZnWords.
+      eexists; ssplit; [reflexivity|].
+      eexists; ssplit; [eassumption|].
+      right. left. eexists. ssplit; try eassumption. right. right. SepAutoArray.listZnWords. }
+    repeat straightline.
+    straightline_call; ssplit; try ecancel_assumption; try trivial; try ZnWords.
+    { cbv. inversion 1. }
+
+    rename Lppp into Lihl; assert (List.length ppp = 40)%nat as Lppp by ZnWords.
+
+    repeat straightline.
+    pose proof (List.firstn_skipn (14+20+8 +2 - 12-2-9-1) ppp) as HH.
+    pose proof (@firstn_length_le _ ppp (14+20+8 +2 - 12-2-9-1) ltac:(ZnWords)).
+    pose proof skipn_length (14+20+8 +2 - 12-2-9-1) ppp; rewrite Lppp in *.
+    forget (List.firstn (14+20+8 +2 - 12-2-9-1) ppp) as pPP.
+    forget (List.skipn (14+20+8 +2 - 12-2-9-1) ppp) as pPPP.
+    simpl minus in H31, H32.
+    subst ppp.
+    repeat rewrite ?(app_assoc _ _ pPPP), ?app_comm_cons in H33.
+    do 3 (seprewrite_in @Array.bytearray_append H33; cbn [Array.array] in H33).
+
+    change (unsigned x) with (@word.unsigned _ word32 x) in H32.
+    repeat straightline.
+    pose proof (List.firstn_skipn 16 pPPP) as HH.
+    pose proof (@firstn_length_le _ pPPP 16 ltac:(ZnWords)).
+    pose proof skipn_length 16 pPPP. rewrite H32 in *.
+    forget (List.firstn 16 pPPP) as cmp1.
+    forget (List.skipn 16 pPPP) as trailer.
+    subst pPPP.
+    seprewrite_in_by (Array.bytearray_append cmp1) H33 SepAutoArray.listZnWords.
+
+    remember (le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (Field.feval_bytes _)))) as vv.
+    repeat straightline.
+    pose proof (List.firstn_skipn 16 vv) as Hvv.
+    pose proof (@firstn_length_le _ vv 16 ltac:(subst vv; rewrite ?length_le_split; ZnWords)).
+    pose proof skipn_length 16 vv.
+    forget (List.firstn 16 vv) as vv0.
+    forget (List.skipn 16 vv) as vv1.
+    subst vv.
+    rewrite <-Hvv in H33.
+    rewrite length_le_split in *.
+    seprewrite_in_by (Array.bytearray_append vv0) H33 SepAutoArray.listZnWords.
+
+    repeat straightline.
+    straightline_call; ssplit.
+    { ecancel_assumption. }
+    { use_sep_assumption. cancel. cancel_seps_at_indices 2%nat 0%nat.
+      { Morphisms.f_equiv. SepAutoArray.listZnWords. }
+      ecancel_done. }
+    { ZnWords. }
+    { ZnWords. }
+    repeat straightline.
+
+    repeat straightline.
+    straightline_call; ssplit.
+    { use_sep_assumption. cancel. cancel_seps_at_indices 1%nat 0%nat.
+      { Morphisms.f_equiv. SepAutoArray.listZnWords. }
+      ecancel_done. }
+    { use_sep_assumption. cancel. cancel_seps_at_indices 2%nat 0%nat.
+      { Morphisms.f_equiv. SepAutoArray.listZnWords. }
+      ecancel_done. }
+    { ZnWords. }
+    { ZnWords. }
+
+    repeat straightline.
+    eexists. split. repeat straightline.
+    eexists _, _; split; [eapply map.split_empty_r; reflexivity|].
+    eexists; ssplit; trivial.
+    { cbv. clear. intuition congruence. }
+    
+    repeat straightline.
+    eexists. split. repeat straightline.
+    eexists _, _; split; [eapply map.split_empty_r; reflexivity|].
+    eexists; ssplit; trivial.
+    eexists; ssplit; trivial.
+    { cbv. clear. intuition congruence. }
+    repeat straightline.
+
+    eapply map.split_empty_r in H38; destruct H38.
+    eapply map.split_empty_r in H39; destruct H39.
+    seprewrite_in_by @bytearray_index_merge H33 SepAutoArray.listZnWords.
+    seprewrite_in_by @bytearray_index_merge H33 SepAutoArray.listZnWords.
+    seprewrite_in_by @bytearray_index_merge H33 SepAutoArray.listZnWords.
+    seprewrite_in_by @bytearray_index_merge H33 SepAutoArray.listZnWords.
+    seprewrite_in_by @bytearray_index_merge H33 SepAutoArray.listZnWords.
+    assert (length (vv0 ++ vv1) = 32%nat) by SepAutoArray.listZnWords.
+
+
+    change (word.of_Z 134217728) with st in H33.
+    repeat straightline.
+    eexists; ssplit; repeat straightline.
+    { (* chacha20 *)
+      (* NOTE: viewing the same memory in two different ways, ++ combined and split *)
+      straightline_call; ssplit.
+      { seprewrite_in_by @bytearray_index_merge H33 SepAutoArray.listZnWords.
+        ecancel_assumption. }
+      { SepAutoArray.listZnWords. }
+      { ecancel_assumption. }
+      { SepAutoArray.listZnWords. }
+      { rewrite <-(List.firstn_skipn 12 garageowner) in H33.
+        seprewrite_in_by (Array.bytearray_append (List.firstn 12 garageowner)) H33 SepAutoArray.listZnWords.
+        ecancel_assumption. }
+      { SepAutoArray.listZnWords. }
+      repeat straightline.
+
+      rewrite <-(List.firstn_skipn 32 x6) in H46.
+      seprewrite_in_by (Array.bytearray_append (List.firstn 32 x6)) H46 SepAutoArray.listZnWords.
+      replace (word.of_Z (BinInt.Z.of_nat (Datatypes.length (List.firstn 32 x6)))) with (word.of_Z 32 : word32) in * by SepAutoArray.listZnWords.
+
+      ssplit; trivial.
+      eexists _, _, _; ssplit; try ecancel_assumption; try SepAutoArray.listZnWords.
+
+    eexists; ssplit.
+    { subst a0 a. change (?x::?y::?t) with ([x;y]++t). rewrite app_assoc. trivial. }
+    eexists; ssplit.
+    { eapply Forall2_app; try eassumption.
+      eapply Forall2_cons. 2:eapply Forall2_cons. 3:eapply Forall2_nil.
+      all:[>left|right]; eexists _, _; ssplit; trivial. }
+    right.
+    right.
+    eexists _, _, _, _, _, _, _, _, _, _, _, _, _, _, _. left; ssplit; trivial.
+    eexists _, _.
+    split.
+    {
+    eapply TracePredicate.concat_app.
+    1: match goal with |- _ ?x _ => eplace x with _ end; [|eassumption].
+
+    symmetry. (* NOTE: systematic list cancellation *)
+    rewrite <-(firstn_skipn 6 mac) at 1; rewrite <-?app_assoc.
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    change ([?x]++?y::?z) with ([x;y]++z).
+    eapply (f_equal2 app).
+    { cbv [be2]. progress change 2%nat with (List.length [ethertype_lo; ethertype_hi]).
+      setoid_rewrite split_le_combine; trivial. }
+    rewrite <-(firstn_skipn 2 ih_l) at 1; rewrite <-?app_assoc.
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    rewrite <-(firstn_skipn 2 (List.skipn _ _)) at 1; rewrite <-?app_assoc, ?List.skipn_skipn.
+    eapply (f_equal2 app).
+    { cbv [be2]. eplace 2%nat with _ at 3; cycle 1.
+      rewrite split_le_combine, rev_involutive; trivial.
+      rewrite rev_length. SepAutoArray.listZnWords. }
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    eapply (f_equal2 app). { f_equal. eapply byte.unsigned_inj. rewrite E1. trivial. }
+    rewrite <-(firstn_skipn 2 pPP) at 1; rewrite <-?app_assoc.
+    eapply (f_equal2 app).
+    { eplace 2%nat with _ at 2; cycle 1.
+      rewrite split_le_combine; trivial.
+      SepAutoArray.listZnWords. }
+    rewrite <-(firstn_skipn 4 (List.skipn _ _)) at 1; rewrite <-?app_assoc, ?List.skipn_skipn.
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    rewrite <-(firstn_skipn 4 (List.skipn _ _)) at 1; rewrite <-?app_assoc, ?List.skipn_skipn.
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    rewrite <-(firstn_skipn 2 (List.skipn _ _)) at 1; rewrite <-?app_assoc, ?List.skipn_skipn.
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    rewrite <-(firstn_skipn 2 (List.skipn _ _)) at 1; rewrite <-?app_assoc, ?List.skipn_skipn.
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    rewrite <-(firstn_skipn 2 (List.skipn _ _)) at 1; rewrite <-?app_assoc, ?List.skipn_skipn.
+    eapply (f_equal2 app).
+    { cbv [be2]. eplace 2%nat with _ at 7; cycle 1.
+      rewrite split_le_combine, rev_involutive; trivial.
+      rewrite rev_length. SepAutoArray.listZnWords. }
+    rewrite <-(firstn_skipn 2 (List.skipn _ _)) at 1; rewrite <-?app_assoc, ?List.skipn_skipn.
+    eapply (f_equal2 app).
+    { cbv [be2]. eplace 2%nat with _ at 8; cycle 1.
+      rewrite split_le_combine, rev_involutive; trivial.
+      rewrite rev_length. SepAutoArray.listZnWords. }
+    eapply (f_equal2 app). { rewrite to_list_from_list; trivial. }
+    reflexivity.
+
+    change [?x;?y] with ([x]++[y]).
+    eapply TracePredicate.concat_app; cbv [TracePredicate.one]; f_equal. }
+
+    rewrite <- Hvv.
+    rewrite !ListUtil.firstn_app_sharp by ZnWords.
+    rewrite !ListUtil.skipn_app_sharp by ZnWords.
+    eexists _, _; ssplit; try eassumption; subst mmio_val; eauto.
+    
+    intros; exfalso. apply H39.
+    rewrite word.unsigned_or_nowrap. apply Z.lor_eq_0_iff; auto.
+    (* end chacha20*) }
+
+    ssplit; trivial.
+    eexists _, _, _; ssplit; try ecancel_assumption; try ZnWords.
+    eexists; ssplit.
+    { subst a. change (?x::?y::?t) with ([x;y]++t). rewrite app_assoc. trivial. }
+    eexists; ssplit.
+    { eapply Forall2_app; try eassumption.
+      eapply Forall2_cons. 2:eapply Forall2_cons. 3:eapply Forall2_nil.
+      all:[>left|right]; eexists _, _; ssplit; trivial. }
+    right.
+    right.
+    eexists _, _, _, _, _, _, _, _, _, _, _, _, _, _, _. left; ssplit; trivial.
+    eexists _, _.
+    split.
+    {
+    eapply TracePredicate.concat_app.
+    1: match goal with |- _ ?x _ => eplace x with _ end; [|eassumption].
+
+    symmetry. (* NOTE: systematic list cancellation *)
+    rewrite <-(firstn_skipn 6 mac) at 1; rewrite <-?app_assoc.
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    change ([?x]++?y::?z) with ([x;y]++z).
+    eapply (f_equal2 app).
+    { cbv [be2]. progress change 2%nat with (List.length [ethertype_lo; ethertype_hi]).
+      setoid_rewrite split_le_combine; trivial. }
+    rewrite <-(firstn_skipn 2 ih_l) at 1; rewrite <-?app_assoc.
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    rewrite <-(firstn_skipn 2 (List.skipn _ _)) at 1; rewrite <-?app_assoc, ?List.skipn_skipn.
+    eapply (f_equal2 app).
+    { cbv [be2]. eplace 2%nat with _ at 3; cycle 1.
+      rewrite split_le_combine, rev_involutive; trivial.
+      rewrite rev_length. SepAutoArray.listZnWords. }
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    eapply (f_equal2 app). { f_equal. eapply byte.unsigned_inj. rewrite E1. trivial. }
+    rewrite <-(firstn_skipn 2 pPP) at 1; rewrite <-?app_assoc.
+    eapply (f_equal2 app).
+    { eplace 2%nat with _ at 2; cycle 1.
+      rewrite split_le_combine; trivial.
+      SepAutoArray.listZnWords. }
+    rewrite <-(firstn_skipn 4 (List.skipn _ _)) at 1; rewrite <-?app_assoc, ?List.skipn_skipn.
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    rewrite <-(firstn_skipn 4 (List.skipn _ _)) at 1; rewrite <-?app_assoc, ?List.skipn_skipn.
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    rewrite <-(firstn_skipn 2 (List.skipn _ _)) at 1; rewrite <-?app_assoc, ?List.skipn_skipn.
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    rewrite <-(firstn_skipn 2 (List.skipn _ _)) at 1; rewrite <-?app_assoc, ?List.skipn_skipn.
+    eapply (f_equal2 app); [rewrite to_list_from_list; trivial|].
+    rewrite <-(firstn_skipn 2 (List.skipn _ _)) at 1; rewrite <-?app_assoc, ?List.skipn_skipn.
+    eapply (f_equal2 app).
+    { cbv [be2]. eplace 2%nat with _ at 7; cycle 1.
+      rewrite split_le_combine, rev_involutive; trivial.
+      rewrite rev_length. SepAutoArray.listZnWords. }
+    rewrite <-(firstn_skipn 2 (List.skipn _ _)) at 1; rewrite <-?app_assoc, ?List.skipn_skipn.
+    eapply (f_equal2 app).
+    { cbv [be2]. eplace 2%nat with _ at 8; cycle 1.
+      rewrite split_le_combine, rev_involutive; trivial.
+      rewrite rev_length. SepAutoArray.listZnWords. }
+    eapply (f_equal2 app). { rewrite to_list_from_list; trivial. }
+    reflexivity.
+
+    change [?x;?y] with ([x]++[y]).
+    eapply TracePredicate.concat_app; cbv [TracePredicate.one]; f_equal. }
+
+    rewrite <- Hvv.
+    rewrite !ListUtil.firstn_app_sharp by ZnWords.
+    rewrite !ListUtil.skipn_app_sharp by ZnWords.
+    eexists _, _; ssplit; try eassumption; subst mmio_val; eauto.
+  }
 
   {
     repeat straightline.
@@ -432,9 +794,67 @@ Proof.
   { rewrite ?app_length, ?length_le_split. SepAutoArray.listZnWords. }
   { ZnWords. }
 
-  repeat straightline.
+  pose proof length_le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (F.of_Z Field.M_pos 9))) as Hpkl.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
 
-Admitted.
+  repeat straightline.
+  destruct H35; repeat straightline; [intuition idtac | ].
+  { eexists; ssplit. eexists _, _; ssplit; try ecancel_assumption; try ZnWords.
+    eexists; ssplit. subst a4. subst a. rewrite app_assoc. reflexivity.
+    eexists; ssplit. eapply Forall2_app; eassumption.
+    eauto using TracePredicate.any_app_more. }
+
+  ssplit; trivial.
+  eexists _, _, _; ssplit; try ecancel_assumption; try ZnWords.
+  eexists; ssplit. subst a4. subst a. rewrite app_assoc. reflexivity.
+  eexists; ssplit. eapply Forall2_app; eassumption.
+  right. right.
+
+  exists (from_list 6 mac_local ltac:(assumption)); rewrite to_list_from_list.
+  exists (from_list 6 mac_remote ltac:(assumption)); rewrite to_list_from_list.
+  cbv beta delta [be2].
+  exists (le_combine [ethertype_lo; ethertype_hi]); rewrite split_le_combine' by trivial.
+  exists (from_list 2 ih_const ltac:(assumption)); rewrite to_list_from_list.
+  exists (le_combine [ip_length_lo; ip_length_hi]); rewrite split_le_combine' by trivial.
+  exists (from_list 5 ip_idff ltac:(ZnWords)); rewrite to_list_from_list.
+  exists (le_combine [ip_checksum_0; ip_checksum_1]); rewrite split_le_combine' by trivial.
+  exists (from_list 4 ip_local ltac:(assumption)); rewrite to_list_from_list.
+  exists (from_list 4 ip_remote ltac:(assumption)); rewrite to_list_from_list.
+  exists (from_list 2 udp_local ltac:(assumption)); rewrite to_list_from_list.
+  exists (from_list 2 udp_remote ltac:(assumption)); rewrite to_list_from_list.
+  exists (le_combine [b0; b]); rewrite split_le_combine' by trivial.
+  exists (le_combine [b2; b1]); rewrite split_le_combine' by trivial.
+  exists (from_list 2 [b3;b4] eq_refl); rewrite to_list_from_list.
+  exists (_pkpad ++ pPPP).
+
+  assert (x11 = ipproto) as Hp. { eapply byte.unsigned_inj. rewrite E1. trivial. }
+  destruct Hp.
+
+  right.
+  ssplit; trivial.
+  eapply TracePredicate.concat_app.
+  all : match goal with |- _ ?x _ => eplace x with _; try eassumption; [] end.
+  assert (app_singleton_l : forall {A} (x:A) xs, [x] ++ xs = x :: xs) by (intros; reflexivity).
+  2 : simpl le_split at 1.
+  all : cbn [rev].
+  all : repeat (rewrite <-?app_assoc, ?app_nil_l, ?app_singleton_l, <-?app_comm_cons).
+  all : trivial; repeat (f_equal; []).
+
+  match goal with c := Impl.ip_checksum_impl ?y |- context[Spec.ip_checksum ?x] =>
+    progress rewrite <-(Impl.ip_checksum_impl_ok' y : _ = word.unsigned c) in *;
+    progress replace x with y in * end.
+  2: {
+    repeat (rewrite <-?app_assoc, ?app_nil_l, ?app_singleton_l, <-?app_comm_cons).
+    trivial. }
+  remember (Spec.ip_checksum _) as chk.
+  unfold le_split at 1.
+  repeat (rewrite <-?app_assoc, ?app_nil_l, ?app_singleton_l, <-?app_comm_cons).
+  trivial. }
+
+  Unshelve.
+  all : try SepAutoArray.listZnWords.
+Qed.
 
 Definition funcs : list Syntax.func :=
   [ init; loop;
@@ -455,6 +875,16 @@ Definition ml: MemoryLayout.MemoryLayout(word:=word32) := {|
   MemoryLayout.stack_pastend := word.of_Z 0x80004000;
 |}.
 
+Lemma ml_ok : MemoryLayout.MemoryLayoutOk ml. Proof. split; cbv; trivial; inversion 1. Qed.
+
+Import ExprImpEventLoopSpec.
+Definition garagedoor_spec : ExprImpEventLoopSpec.ProgramSpec := {|
+  datamem_start := MemoryLayout.heap_start ml;
+  datamem_pastend := MemoryLayout.heap_pastend ml;
+  goodTrace t := True;
+  isReady t m := True |}.
+
+Local Instance : FlatToRiscvCommon.bitwidth_iset 32 Decode.RV32IM := eq_refl.
 Derive garagedoor_compiler_result SuchThat
   (ToplevelLoop.compile_prog (string_keyed_map:=@SortedListString.map) MMIO.compile_ext_call ml funcs
   = Success garagedoor_compiler_result)
@@ -471,3 +901,49 @@ Definition garagedoor_finfo := snd (fst garagedoor_compiler_result).
 Definition garagedoor_insns := fst (fst garagedoor_compiler_result).
 Definition garagedoor_bytes := Pipeline.instrencode garagedoor_insns.
 Definition garagedoor_symbols : list byte := Symbols.symbols garagedoor_finfo.
+
+Require Import compiler.CompilerInvariant.
+Require Import compiler.NaiveRiscvWordProperties.
+Local Existing Instance SortedListString.map.
+
+Lemma compiler_emitted_valid_instructions :
+  Forall (fun i : Decode.Instruction => verify i Decode.RV32IM) garagedoor_insns.
+Admitted.
+
+Lemma initial_conditions : 
+  forall initial : MetricRiscvMachine,
+    getPc (getMachine initial) = MemoryLayout.code_start ml ->
+    getNextPc (getMachine initial) = word.add (getPc (getMachine initial)) (word.of_Z 4)->
+    regs_initialized.regs_initialized (getRegs (getMachine initial)) ->
+    getLog (getMachine initial) = [] ->
+    (forall a, word.unsigned (MemoryLayout.code_start ml) <= word.unsigned a < word.unsigned (MemoryLayout.code_pastend ml) -> In a (getXAddrs (getMachine initial))) ->
+    valid_machine initial ->
+    (imem (MemoryLayout.code_start ml) (MemoryLayout.code_pastend ml) garagedoor_insns *
+     LowerPipeline.mem_available (MemoryLayout.heap_start ml) (MemoryLayout.heap_pastend ml) *
+     LowerPipeline.mem_available (MemoryLayout.stack_start ml) (MemoryLayout.stack_pastend ml))%sep (getMem (getMachine initial)) ->
+    initial_conditions compile_ext_call ml garagedoor_spec initial.
+Proof.
+  intros.
+  econstructor.
+  eexists garagedoor_insns.
+  eexists garagedoor_finfo.
+  eexists garagedoor_stack_size.
+  rewrite garagedoor_compiler_result_ok; ssplit; trivial using compiler_emitted_valid_instructions.
+  2,3:vm_compute; inversion 1.
+  econstructor (* ProgramSatisfiesSpec *).
+  1: vm_compute; reflexivity.
+  1: instantiate (1:=snd (snd init)).
+  3: instantiate (1:=snd (snd loop)).
+  1,3: exact eq_refl.
+  1,2: cbv [hl_inv]; intros; eapply WeakestPreconditionProperties.sound_cmd.
+  1,3: eapply Crypto.Util.Bool.Reflect.reflect_bool; vm_compute; reflexivity.
+Abort.
+
+Goal True.
+  unshelve epose proof compiler_invariant_proofs _ _ _ _ _ garagedoor_spec ; shelve_unifiable; try exact _.
+  { exact (naive_word_riscv_ok 5%nat). }
+  { eapply SortedListString.ok. }
+  { eapply compile_ext_call_correct. }
+  { intros. cbv [compile_ext_call compile_interact]; BreakMatch.break_match; trivial. }
+  { exact ml_ok. }
+  case H as (?&?&?).
