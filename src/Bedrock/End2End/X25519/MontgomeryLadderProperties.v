@@ -135,6 +135,54 @@ COperationSpecifications.list_Z_bounded_by
   (UnsaturatedSolinasHeuristics.loose_bounds n s c) X.
 Admitted.
 
+Lemma link_montladder : spec_of_montladder funcs.
+Proof.
+    unfold spec_of_montladder, ScalarMult.MontgomeryLadder.spec_of_montladder.
+    unfold funcs.
+    (* montladder is not at the front of the function list; remove everything
+       that doesn't match the name *)
+    prepare_call.
+    (* use montladder correctness proof *)
+    rewrite montladder_defn.
+    eapply @montladder_correct; try (typeclasses eauto).
+    { apply Signature.field_representation_ok.
+      apply UnsaturatedSolinas.relax_valid. }
+    { reflexivity. }
+    { cbv [Core.__rupicola_program_marker]. tauto. }
+    { exact I. }
+    { eapply CSwap.cswap_body_correct; [|exact I].
+      unfold field_representation, Signature.field_representation, Representation.frep; cbn; unfold n; cbv; trivial. }
+    { eapply fe25519_copy_correct. }
+    { eapply fe25519_from_word_correct. }
+    {
+      cbv [LadderStep.spec_of_ladderstep]; intros.
+      prepare_call. rewrite ladderstep_defn.
+      eapply @LadderStep.ladderstep_correct; try (typeclasses eauto).
+      { apply Signature.field_representation_ok.
+        apply UnsaturatedSolinas.relax_valid. }
+      { cbv [Core.__rupicola_program_marker]; tauto. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_mul_correct. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_add_correct. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_sub_correct. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_square_correct. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_scmula24_correct. }
+      { ecancel_assumption. } }
+    { repeat (apply peel_func_unop; [ lazy; congruence | ]).
+      unshelve eapply AdditionChains.fe25519_inv_correct_exp; try exact I.
+      { unshelve eapply Signature.field_representation_ok, weaken_bounded_by. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_square_correct. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_mul_correct. } }
+    { repeat (apply peel_func_unop; [ lazy; congruence | ]).
+      apply fe25519_mul_correct. }
+Qed.
+
 Lemma montladder_compiles_correctly :
   forall (t : Semantics.trace)
          (mH : map.rep word.rep Init.Byte.byte mem)
@@ -215,52 +263,10 @@ Proof.
     repeat (destruct_one_match; try reflexivity). }
   { vm_compute. reflexivity. }
   { lazy. repeat constructor; cbn [In]; intuition idtac; congruence. }
-  { unfold funcs.
-    (* montladder is not at the front of the function list; remove everything
-       that doesn't match the name *)
-    prepare_call.
-    (* use montladder correctness proof *)
-    rewrite montladder_defn.
-    eapply @montladder_correct; try (typeclasses eauto).
-    { apply Signature.field_representation_ok.
-      apply UnsaturatedSolinas.relax_valid. }
-    { reflexivity. }
-    { cbv [Core.__rupicola_program_marker]. tauto. }
-    { exact I. }
-    { eapply CSwap.cswap_body_correct; [|exact I].
-      unfold field_representation, Signature.field_representation, Representation.frep; cbn; unfold n; cbv; trivial. }
-    { eapply fe25519_copy_correct. }
-    { eapply fe25519_from_word_correct. }
-    {
-      cbv [LadderStep.spec_of_ladderstep]; intros.
-      prepare_call. rewrite ladderstep_defn.
-      eapply @LadderStep.ladderstep_correct; try (typeclasses eauto).
-      { apply Signature.field_representation_ok.
-        apply UnsaturatedSolinas.relax_valid. }
-      { cbv [Core.__rupicola_program_marker]; tauto. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_mul_correct. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_add_correct. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_sub_correct. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_square_correct. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_scmula24_correct. }
-      { ecancel_assumption. } }
-    { repeat (apply peel_func_unop; [ lazy; congruence | ]).
-      unshelve eapply AdditionChains.fe25519_inv_correct_exp; try exact I.
-      { unshelve eapply Signature.field_representation_ok, weaken_bounded_by. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_square_correct. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_mul_correct. } }
-    { repeat (apply peel_func_unop; [ lazy; congruence | ]).
-      apply fe25519_mul_correct. }
-    { ssplit; try eassumption; [ ].
-      lazymatch goal with H : length Kbytes = _ |- _ => rewrite H end.
-      lazy; congruence. } }
+  { eapply link_montladder.
+    ssplit; try eassumption; [ ].
+    lazymatch goal with H : length Kbytes = _ |- _ => rewrite H end.
+    lazy; congruence. }
   { assumption. }
   { assumption. }
   { assumption. }
