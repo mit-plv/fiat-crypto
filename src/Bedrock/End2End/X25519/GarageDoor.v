@@ -856,14 +856,33 @@ Proof.
   all : try SepAutoArray.listZnWords.
 Qed.
 
+Require Import Crypto.Bedrock.End2End.X25519.MontgomeryLadderProperties.
+
 Definition funcs : list Syntax.func :=
   [ init; loop;
     memswap; memequal; memconst "pk" garageowner;
+    ip_checksum_br2fn;
+    chacha20_block; chacha20_quarter;
     lan9250_tx ]
-    ++ MontgomeryLadder.funcs
-    ++ lightbulb.function_impls
-    ++ [chacha20_quarter; chacha20_block]
-    ++ [ip_checksum_br2fn].
+    ++lightbulb.function_impls
+    ++MontgomeryLadder.funcs.
+
+Lemma chacha20_ok: forall functions, spec_of_chacha20 (chacha20_block::chacha20_quarter::functions).
+Admitted.
+
+Import SPI.
+Lemma link_loop : spec_of_loop funcs.
+Proof.
+  eapply loop_ok; try eapply memswap.memswap_ok; try eapply memequal_ok.
+    repeat (eapply recvEthernet_ok || eapply lightbulb_handle_ok);
+        eapply lan9250_readword_ok; eapply spi_xchg_ok;
+        (eapply spi_write_ok || eapply spi_read_ok).
+    eapply ip_checksum_br2fn_ok; exact I.
+    eapply x25519_base_ok; try eapply fe25519_from_word_correct; try eapply link_montladder; try eapply fe25519_to_bytes_correct.
+    eapply lan9250_tx_ok; try eapply lan9250_writeword_ok; try eapply spi_xchg_ok; (eapply spi_write_ok || eapply spi_read_ok).
+    eapply x25519_ok; try eapply fe25519_from_bytes_correct; try eapply link_montladder; try eapply fe25519_to_bytes_correct.
+    eapply chacha20_ok.
+Qed.
 
 Require compiler.ToplevelLoop.
 Definition ml: MemoryLayout.MemoryLayout(word:=word32) := {|
@@ -906,11 +925,37 @@ Require Import compiler.CompilerInvariant.
 Require Import compiler.NaiveRiscvWordProperties.
 Local Existing Instance SortedListString.map.
 
+Ltac pp :=
+  repeat (apply Forall_cons||apply Forall_nil);
+  lazymatch goal with
+  | |- verify (Decode.InvalidInstruction ?z) _ \/ _ => right; exists z
+  | _ => left
+  end; vm_compute; try intuition discriminate.
+Ltac p n :=
+  erewrite <-(List.firstn_skipn n); eapply Forall_app; split; [
+    match goal with |-Forall ?P ?xs =>
+      let ys := eval vm_compute in xs in change (Forall P ys) end;
+      pp |].
 Lemma compiler_emitted_valid_instructions :
-  Forall (fun i : Decode.Instruction => verify i Decode.RV32IM) garagedoor_insns.
-Admitted.
+  Forall (fun i : Decode.Instruction => verify i Decode.RV32IM \/ valid_InvalidInstruction i) garagedoor_insns.
+Proof.
+  Time do 20 p 50%nat.
+  Time do 20 p 50%nat.
+  Time do 20 p 50%nat.
+  Time do 20 p 50%nat.
+  Time do 20 p 50%nat.
+  Time do 20 p 50%nat.
+  Time do 20 p 50%nat.
+  Time do 10 p 50%nat.
+  Time do 10 p 50%nat.
+  match goal with |- Forall _ ?l => replace l with (@nil Decode.Instruction) end.
+  { trivial. }
+  { vm_compute. trivial. }
+Time Qed.
 
-Lemma initial_conditions : 
+Import ToplevelLoop GoFlatToRiscv .
+Local Notation invariant := (ll_inv compile_ext_call ml garagedoor_spec).
+Lemma invariant_proof : 
   forall initial : MetricRiscvMachine,
     getPc (getMachine initial) = MemoryLayout.code_start ml ->
     getNextPc (getMachine initial) = word.add (getPc (getMachine initial)) (word.of_Z 4)->
@@ -921,9 +966,21 @@ Lemma initial_conditions :
     (imem (MemoryLayout.code_start ml) (MemoryLayout.code_pastend ml) garagedoor_insns *
      LowerPipeline.mem_available (MemoryLayout.heap_start ml) (MemoryLayout.heap_pastend ml) *
      LowerPipeline.mem_available (MemoryLayout.stack_start ml) (MemoryLayout.stack_pastend ml))%sep (getMem (getMachine initial)) ->
-    initial_conditions compile_ext_call ml garagedoor_spec initial.
+
+     invariant initial /\
+     (forall st, invariant st -> mcomp_sat (run1 Decode.RV32IM) st invariant /\
+       exists extend, goodTrace garagedoor_spec (extend ++ getLog (getMachine st))).
 Proof.
   intros.
+
+  unshelve epose proof compiler_invariant_proofs _ _ _ _ _ garagedoor_spec as HCI; shelve_unifiable; try exact _.
+  { exact (naive_word_riscv_ok 5%nat). }
+  { eapply SortedListString.ok. }
+  { eapply compile_ext_call_correct. }
+  { intros. cbv [compile_ext_call compile_interact]; BreakMatch.break_match; trivial. }
+  { exact ml_ok. }
+  ssplit; intros; ssplit; eapply HCI; eauto; [].
+
   econstructor.
   eexists garagedoor_insns.
   eexists garagedoor_finfo.
@@ -937,13 +994,13 @@ Proof.
   1,3: exact eq_refl.
   1,2: cbv [hl_inv]; intros; eapply WeakestPreconditionProperties.sound_cmd.
   1,3: eapply Crypto.Util.Bool.Reflect.reflect_bool; vm_compute; reflexivity.
-Abort.
+  Require Import AdmitAxiom.
+  all : exfalso; clear; case proof_admitted.
+  Unshelve.
+  all : trivial using SortedListString.ok.
+Qed.
 
-Goal True.
-  unshelve epose proof compiler_invariant_proofs _ _ _ _ _ garagedoor_spec ; shelve_unifiable; try exact _.
-  { exact (naive_word_riscv_ok 5%nat). }
-  { eapply SortedListString.ok. }
-  { eapply compile_ext_call_correct. }
-  { intros. cbv [compile_ext_call compile_interact]; BreakMatch.break_match; trivial. }
-  { exact ml_ok. }
-  case H as (?&?&?).
+(*
+Print Assumptions link_loop. (* chacha20_ok *)
+Print Assumptions invariant_proof. (* 2x invariant_proof, propositional_extensionality, functional_extensionality_dep *)
+*)

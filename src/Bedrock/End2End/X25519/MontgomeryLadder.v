@@ -190,6 +190,9 @@ Definition funcs : list func :=
 
 Definition montladder_c_module := ToCString.c_module funcs.
 
+#[export]
+Instance BWM_RV32IM : FlatToRiscvCommon.bitwidth_iset 32 Decode.RV32IM := eq_refl.
+
 Derive montladder_compiler_result SuchThat
        (compile
          (compile_ext_call (funname_env:=SortedListString.map))
@@ -197,6 +200,7 @@ Derive montladder_compiler_result SuchThat
        As montladder_compiler_result_ok.
 Proof.
   match goal with x := _ |- _ => cbv delta [x]; clear x end.
+  match goal with |- ?a = _ => set a end.
   vm_compute.
   match goal with |- @Success ?A ?x = Success ?e => is_evar e;
     exact (@eq_refl (result A) (@Success A x)) end.
