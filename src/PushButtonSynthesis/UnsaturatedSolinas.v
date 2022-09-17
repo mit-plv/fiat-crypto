@@ -880,6 +880,15 @@ Section __.
   Lemma Wf_encode res (Hres : encode = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
+  Strategy -1000 [encode_word]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
+  Lemma encode_word_correct res
+        (Hres : encode_word = Success res)
+    : encode_word_correct machine_wordsize (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds (Interp res).
+  Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_encode_word res (Hres : encode_word = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Strategy -1000 [zero]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma zero_correct res
         (Hres : zero = Success res)
@@ -1015,6 +1024,7 @@ Module Export Hints.
        from_bytes
        to_bytes
        encode
+       encode_word
        zero
        one
        copy
@@ -1035,6 +1045,7 @@ Module Export Hints.
        Wf_from_bytes
        Wf_to_bytes
        Wf_encode
+       Wf_encode_word
        Wf_zero
        Wf_one
        Wf_copy
