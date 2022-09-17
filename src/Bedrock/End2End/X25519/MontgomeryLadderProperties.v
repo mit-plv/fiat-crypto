@@ -62,8 +62,6 @@ Local Instance Registers : map.map Z (@word.rep 32 Naive.word32)
 
 Require Import riscv.Spec.Decode.
 
-Local Existing Instance RV32I_bitwidth.
-
 (* TODO: does something like this already exist? *)
 (* when the function name being called is not first in the list of functions,
    peel off non-matching names *)
@@ -127,14 +125,6 @@ End Generic.
 Local Instance naive_word_riscv_ok :
   RiscvWordProperties.word.riscv_ok Naive.word32 := naive_word_riscv_ok 5.
 
-Lemma weaken_bounded_by :
-forall X : list Z,
-COperationSpecifications.list_Z_bounded_by
-  (UnsaturatedSolinasHeuristics.tight_bounds n s c) X ->
-COperationSpecifications.list_Z_bounded_by
-  (UnsaturatedSolinasHeuristics.loose_bounds n s c) X.
-Admitted.
-
 Lemma link_montladder : spec_of_montladder funcs.
 Proof.
     unfold spec_of_montladder, ScalarMult.MontgomeryLadder.spec_of_montladder.
@@ -174,7 +164,7 @@ Proof.
       { ecancel_assumption. } }
     { repeat (apply peel_func_unop; [ lazy; congruence | ]).
       unshelve eapply AdditionChains.fe25519_inv_correct_exp; try exact I.
-      { unshelve eapply Signature.field_representation_ok, weaken_bounded_by. }
+      { unshelve eapply Signature.field_representation_ok, UnsaturatedSolinas.relax_valid. }
       { repeat (apply peel_func_binop; [ lazy; congruence | ]).
         apply fe25519_square_correct. }
       { repeat (apply peel_func_binop; [ lazy; congruence | ]).

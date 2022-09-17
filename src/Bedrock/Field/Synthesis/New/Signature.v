@@ -511,14 +511,14 @@ Section WithParameters.
             (res_valid :
                valid_func (res (fun _ : API.type => unit)))
             (res_Wf : API.Wf res).
-    Context (res_eq : forall w,
+    Context (res_eq : forall w:word,
                 feval (map word.of_Z
-                           (API.interp (res _) w))
-                = F.of_Z _ w)
-            (res_bounds : forall w,
+                           (API.interp (res _) (word.unsigned w)))
+                = F.of_Z _ (word.unsigned w))
+            (res_bounds : forall w:word,
                 list_in_bounds
                   tight_bounds
-                  (API.interp (res _) w)).
+                  (API.interp (res _) (word.unsigned w))).
     Context (tight_bounds_tighter_than_max : forall x,
                 list_in_bounds tight_bounds x -> list_Z_bounded_by (@MaxBounds.max_bounds width n) x).
 
@@ -655,30 +655,46 @@ Section WithParameters.
       cbv beta; intros; subst f. cbv [make_bedrock_func].
       cleanup. eapply Proper_call.
       2: {
-        Set Ltac Backtrace.
         rename R into Rr.
         use_translate_func_correct constr:((map word.unsigned x, tt)) (FElem px x * Rr)%sep.
         all:try translate_func_precondition_hammer.
-
-
-      autounfold with types access_sizes;
-      first [ eapply MaxBounds.max_bounds_range_iff
-            | eapply ByteBounds.byte_bounds_range_iff ];
-      cbn [type.app_curried fst snd].
-apply res_bounds.
-rewrite max_bounds_range_iff.
-(* note: need to constrain length of x, extract that from H0 *)
-admit.
+        { autounfold with types access_sizes;
+          first [ eapply MaxBounds.max_bounds_range_iff
+                | eapply ByteBounds.byte_bounds_range_iff ];
+          cbn [type.app_curried fst snd].
+          apply res_bounds.
+          rewrite max_bounds_range_iff.
+          seprewrite_in @FElem_array_truncated_scalar_iff1 H0; extract_ex1_and_emp_in H0.
+          ssplit; rewrite ?map_length; trivial.
+          eapply List.Forall_map, Forall_forall; intros.
+          rewrite MakeAccessSizes.bits_per_word_eq_width.
+          eapply Properties.word.unsigned_range. }
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.
-          all:try solve_equivalence_side_conditions.
+          all:try solve_equivalence_side_conditions;
+          seprewrite_in (FElem_array_truncated_scalar_iff1 pout) H0; extract_ex1_and_emp_in H0; try eassumption.
+          seprewrite_in (FElem_array_truncated_scalar_iff1 px) H0; extract_ex1_and_emp_in H0.
           setoid_rewrite max_bounds_range_iff in res_bounds.
-          rewrite (fun x pf => proj1 (res_bounds x pf)).
-          admit. admit.
-      use_sep_assumption.
-      cancel; unfold seps.
-      admit.
-        Admitted.
+          rewrite (fun x pf => proj1 (res_bounds x pf)), ?map_length; trivial.
+          ssplit; rewrite ?map_length; trivial.
+          eapply List.Forall_map, Forall_forall; intros.
+          rewrite MakeAccessSizes.bits_per_word_eq_width.
+          eapply Properties.word.unsigned_range. } }
+      postcondition_simplify.
+      eapply sep_assoc,sep_comm, sep_assoc. eapply Proper_sep_iff1.
+      { eapply FElem_array_truncated_scalar_iff1. }
+      { reflexivity. }
+      cbn [List.hd] in *. rewrite MakeAccessSizes.bytes_per_word_eq.
+      extract_ex1_and_emp_in_goal; ssplit;
+        try (use_sep_assumption; cancel; cbv [seps]);
+        seprewrite_in (FElem_array_truncated_scalar_iff1 px) H0; extract_ex1_and_emp_in H0; trivial.
+      Morphisms.f_equiv.
+      rewrite H4.
+      rewrite <-(res_eq x) at 2 by trivial.
+      rewrite Util.map_unsigned_of_Z.
+      erewrite map_word_wrap_bounded; trivial.
+      eapply max_bounds_range_iff; ssplit; eauto.
+    Qed.
   End FelemCopy.
 
   Section FromBytes.

@@ -217,6 +217,7 @@ Section UnsaturatedSolinas.
   Local Hint Unfold
         Solinas.selectznz_correct
         Solinas.from_bytes_correct
+        Solinas.encode_word_correct
         Solinas.to_bytes_correct
         Solinas.carry_mul_correct
         Solinas.carry_square_correct
@@ -428,12 +429,29 @@ Section UnsaturatedSolinas.
       intros. apply Hcorrect; auto. }
   Qed.
 
+  Lemma list_Z_bounded_by_unsigned (xs : list (@Interface.word.rep _ word)) : 
+    list_Z_bounded_by
+      (Primitives.saturated_bounds (List.length xs) width)
+      (map Interface.word.unsigned xs).
+  Proof using parameters_sentinel ok.
+    induction xs; cbn; [reflexivity|].
+    eapply list_Z_bounded_by_cons; split; [|assumption].
+    eapply Bool.andb_true_iff; split; eapply Z.leb_le;
+    cbv [Primitives.word_bound]; cbn.
+    { eapply Properties.word.unsigned_range. }
+    { eapply Le.Z.le_sub_1_iff, Properties.word.unsigned_range. }
+  Qed.
+
   Lemma felem_copy_func_correct :
     valid_func (res felem_copy_op _) ->
     forall functions,
       spec_of_felem_copy (felem_copy_func :: functions).
   Proof using M_eq check_args_ok ok felem_copy_func_eq
-        tight_bounds_tighter_than.
+        tight_bounds_tighter_than parameters_sentinel ok
+to_bytes_func_eq to_bytes_func sub_func_eq sub_func square_func_eq
+square_func scmula24_func_eq scmula24_func opp_func_eq opp_func mul_func_eq
+mul_func loose_bounds_tighter_than from_word_func_eq from_word_func
+from_bytes_func_eq from_bytes_func add_func_eq.
     intros. cbv [spec_of_felem_copy]. rewrite felem_copy_func_eq.
     pose proof copy_correct _ _ _ _ _ ltac:(eassumption) _ (res_eq felem_copy_op)
       as Hcorrect.
@@ -444,10 +462,10 @@ Section UnsaturatedSolinas.
       unshelve erewrite (proj1 (Hcorrect _ _)); cycle 1.
       { rewrite map_map, List.map_ext_id; trivial; intros.
         rewrite ?Word.Interface.word.of_Z_unsigned; trivial. }
-      (* saturated_bounds on word.unsigned *) admit. }
+      { subst n. exact (list_Z_bounded_by_unsigned x). } }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-  Admitted.
+  Qed.
 
   Lemma from_word_func_correct :
     valid_func (res from_word_op _) ->
@@ -456,7 +474,39 @@ Section UnsaturatedSolinas.
   Proof using M_eq check_args_ok from_word_func_eq ok
         tight_bounds_tighter_than.
     intros. cbv [spec_of_from_word]. rewrite from_word_func_eq.
-  Admitted.
+    epose proof encode_word_correct _ _ _ _ _ ltac:(eassumption) _ (res_eq from_word_op)
+      as Hcorrect.
+    cbv [expr.Interp] in *; autounfold with solinas_specs in *; cbn [ZRange.lower ZRange.upper] in *.
+
+    eapply from_word_correct;
+      repeat handle_side_conditions.
+    { (* value *)
+      intros.
+      destruct (Hcorrect (Interface.word.unsigned w)); clear Hcorrect.
+      { pose proof Properties.word.unsigned_range w.
+        eapply Bool.andb_true_iff; split; eapply Zle_is_le_bool; Lia.lia. }
+      rewrite <- M_eq in *; cbv [M] in *; eapply F.eq_of_Z_iff in H0.
+      rewrite <-H0.
+      unfold feval.
+      unfold Signature.field_representation.
+      unfold Representation.eval_words, Representation.frep.
+      cbv [Representation.eval_words].
+      Morphisms.f_equiv. Morphisms.f_equiv.
+      rewrite map_unsigned_of_Z, List.map_ext_id; trivial.
+      intros x Hx.
+      eapply relax_list_Z_bounded_by, MaxBounds.max_bounds_range_iff in H1;
+        try eapply tight_bounds_tighter_than; destruct H1.
+      eapply List.Forall_In in H2; eauto.
+      rewrite MakeAccessSizes.bits_per_word_eq_width in H2.
+      unfold Interface.word.wrap; rewrite Z.mod_small; trivial. }
+    { intros.
+      destruct (Hcorrect (Interface.word.unsigned w)); clear Hcorrect.
+      { pose proof Properties.word.unsigned_range w.
+        eapply Bool.andb_true_iff; split; eapply Zle_is_le_bool; Lia.lia. }
+      rewrite <- M_eq in *; cbv [M] in *; eapply F.eq_of_Z_iff in H0.
+      trivial. }
+    { eauto using relax_list_Z_bounded_by, tight_bounds_tighter_than. }
+  Qed.
 
   Lemma from_bytes_func_correct :
     valid_func (res from_bytes_op _) ->
