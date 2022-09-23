@@ -24,21 +24,21 @@ Require Import bedrock2Examples.memequal.
 Require Import bedrock2Examples.memswap.
 Require Import bedrock2Examples.memconst.
 Require Import Rupicola.Examples.Net.IPChecksum.IPChecksum.
-Local Open Scope string_scope.
-Import ListNotations.
 
+Local Open Scope string_scope.
+Import Syntax Syntax.Coercions NotationsCustomEntry.
+Import ListNotations.
 Import Coq.Init.Byte.
+
 Definition garageowner : list byte :=
   [x7b; x06; x18; x0c; x54; x0c; xca; x9f; xa3; x16; x0b; x2f; x2b; x69; x89; x63; x77; x4c; xc1; xef; xdc; x04; x91; x46; x76; x8b; xb2; xbf; x43; x0e; x34; x34].
 
-Import Syntax Syntax.Coercions NotationsCustomEntry.
+Local Notation ST := 0x80000000.
+Local Notation PK := 0x80000040.
+Local Notation BUF:= 0x80000060.
 
-Local Notation ST := 0x8000000.
-Local Notation PK := 0x8000040.
-Local Notation BUF:= 0x8000060.
-
-Definition init : func :=
-  ("init", ([], [], bedrock_func_body:(
+Definition initfn : func :=
+  ("initfn", ([], [], bedrock_func_body:(
     $(memconst "pk" garageowner)($PK);
     output! MMIOWRITE($0x10012038, $(Z.lor (Z.shiftl (0xf) 2) (Z.shiftl 1 9)));
     output! MMIOWRITE($0x10012008, $(Z.lor (Z.shiftl 1 11) (Z.shiftl 1 12)));
@@ -46,7 +46,7 @@ Definition init : func :=
     unpack! err = lan9250_init()
   ))).
 
-Definition loop : func := ("loop", ([], [], bedrock_func_body:(
+Definition loopfn : func := ("loopfn", ([], [], bedrock_func_body:(
   st=$ST; pk=$PK; buf=$BUF;
   unpack! l, err = recvEthernet(buf);
   require !err;
@@ -93,16 +93,129 @@ Definition loop : func := ("loop", ([], [], bedrock_func_body:(
   }
 ))).
 
+Import TracePredicate TracePredicateNotations SPI lightbulb_spec.
+Notation OP := (lightbulb_spec.OP _).
+Definition iocfg : list OP -> Prop :=
+  one ("st", word.of_Z (0x10012038), word.of_Z (Z.lor (Z.shiftl (0xf) 2) (Z.shiftl 1 9))) +++
+  one ("st", word.of_Z (0x10012008), word.of_Z (Z.lor (Z.shiftl 1 11) (Z.shiftl 1 12))) +++
+  one ("st", word.of_Z (0x10024010), word.of_Z 2).
+Definition BootSeq : list OP -> Prop :=
+  iocfg +++ (lan9250_init_trace _
+               ||| lan9250_boot_timeout _
+               ||| (any+++spi_timeout _)).
+
 Import WeakestPrecondition ProgramLogic SeparationLogic.
+Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
+Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
+Global Instance spec_of_initfn : spec_of initfn :=
+  fnspec! "initfn" / bs R,
+  { requires t m := m =* bs $@(word.of_Z PK) * R /\ length bs = 32%nat;
+    ensures t' m' := m' =* garageowner$@(word.of_Z PK) * R /\
+      exists iol, t' = iol ++ t /\
+      exists ioh, mmio_trace_abstraction_relation ioh iol /\
+      BootSeq ioh }.
+
+Ltac fwd :=
+  repeat match goal with
+         | |- _ /\ _ => split
+         | |- exists _, _ => eexists
+         | _ => straightline
+         end; trivial.
+Ltac slv := try solve [ trivial | ecancel_assumption | SepAutoArray.listZnWords | intuition idtac | reflexivity | eassumption].
+
+Local Instance spec_of_memconst_pk : spec_of "memconst_pk" := spec_of_memconst "pk" garageowner.
+Local Instance WHY_spec_of_lan9250_init : spec_of lan9250_init := spec_of_lan9250_init.
+Lemma initfn_ok : program_logic_goal_for_function! initfn.
+Proof.
+  repeat straightline.
+  straightline_call.
+  { ssplit. eassumption. rewrite H2. all : vm_compute; trivial. }
+  repeat straightline.
+  eapply WeakestPreconditionProperties.interact_nomem; repeat straightline.
+  eexists; fwd; slv.
+  { vm_compute. intuition congruence. }
+  eapply WeakestPreconditionProperties.interact_nomem; repeat straightline.
+  eexists; fwd; slv.
+  { vm_compute. intuition congruence. }
+  eapply WeakestPreconditionProperties.interact_nomem; repeat straightline.
+  eexists; fwd; slv.
+  { vm_compute. intuition congruence. }
+  straightline_call; repeat straightline; fwd.
+  { repeat (eapply align_trace_cons || exact (eq_sym (List.app_nil_l _)) || eapply align_trace_app). }
+  { repeat (eapply List.Forall2_cons || eapply List.Forall2_refl || eapply List.Forall2_app; eauto). all: cbv[mmio_event_abstraction_relation]; eauto. }
+  cbv [BootSeq ].
+  eapply TracePredicate.concat_app.
+  2: solve[cbv [choice]; intuition eauto].
+  cbv [iocfg].
+  eapply (TracePredicate.concat_app _ _ [_;_] [_]); [|cbv [one]; trivial].
+  eapply (TracePredicate.concat_app _ _ [_] [_]); cbv [one]; trivial.
+Qed.
+
+Local Open Scope list_scope.
+Require Crypto.Bedrock.End2End.RupicolaCrypto.Spec.
+Import Tuple LittleEndianList.
+Local Definition be2 z := rev (le_split 2 z).
+Local Coercion to_list : tuple >-> list.
+Local Coercion Z.b2z : bool >-> Z.
+
+Definition state : Type := list byte * list byte. (* seed, xs25519 secret key *)
+
+Definition garagedoor_iteration : state -> list (lightbulb_spec.OP _) -> state -> Prop :=
+  fun '(seed, sk) ioh '(SEED, SK) =>
+  (lightbulb_spec.lan9250_recv_no_packet _ ioh \/
+    lightbulb_spec.lan9250_recv_packet_too_long _ ioh \/
+    TracePredicate.concat TracePredicate.any (lightbulb_spec.spi_timeout _) ioh) \/
+  (exists incoming, lightbulb_spec.lan9250_recv _ incoming ioh /\
+  let ethertype := le_combine (rev (firstn 2 (skipn 12 incoming))) in ethertype < 1536 \/ 
+  let ipproto := nth 23 incoming x00 in ipproto <> x11 \/
+  (length incoming <> 14+20+8 +2+16 +4 /\ length incoming <> 14+20+8 +2+32 +4)%nat) \/
+  exists (mac_local mac_remote : tuple byte 6),
+  exists (ethertype : Z) (ih_const : tuple byte 2) (ip_length : Z) (ip_idff : tuple byte 5),
+  exists (ipproto := x11) (ip_checksum : Z) (ip_local ip_remote : tuple byte 4),
+  exists (udp_local udp_remote : tuple byte 2) (udp_length : Z) (udp_checksum : Z),
+  exists (garagedoor_header : tuple byte 2) (garagedoor_payload : list byte),
+  let incoming : list byte :=
+    (mac_local ++ mac_remote ++ be2 ethertype ++
+     ih_const ++ be2 ip_length ++
+     ip_idff ++ [ipproto] ++ le_split 2 ip_checksum ++
+     ip_remote ++ ip_local ++
+     udp_remote ++ udp_local ++
+     be2 udp_length ++ be2 udp_checksum ++
+     garagedoor_header ++ garagedoor_payload) in
+  (exists doorstate action : Naive.word32,
+  TracePredicate.concat
+      (lightbulb_spec.lan9250_recv _ incoming) (TracePredicate.concat
+      (TracePredicate.one ("ld", lightbulb_spec.GPIO_DATA_ADDR _, doorstate))
+      (TracePredicate.one ("st", lightbulb_spec.GPIO_DATA_ADDR _, action))) ioh
+   /\ (
+    let m := firstn 16 garagedoor_payload in
+    let v := le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (Field.feval_bytes(FieldRepresentation:=frep25519) garageowner))) in
+    exists set0 set1 : Naive.word32,
+    (word.unsigned set0 = 1 <-> firstn 16 v = m) /\
+    (word.unsigned set1 = 1 <->  skipn 16 v = m) /\
+    action = word.or (word.and doorstate (word.of_Z (Z.clearbit (Z.clearbit (2^32-1) 11) 12))) (word.slu (word.or (word.slu set1 (word.of_Z 1)) set0) (word.of_Z 11)) /\
+    (* /\ (word.unsigned set0 <> 0 \/ word.unsigned set1 <> 0 -> SEED++SK = RupicolaCrypto.Spec.chacha20_encrypt k (Z.to_nat (word.unsigned counter)) _ _) *)
+    (word.unsigned set1 = 0 -> word.unsigned set0 = 0 -> SEED=seed /\ SK=sk))) \/
+  TracePredicate.concat (lightbulb_spec.lan9250_recv _ incoming)
+  (lightbulb_spec.lan9250_send _
+    (let ip_length := 62 in
+     let udp_length := 42 in
+     mac_remote ++ mac_local ++ be2 ethertype ++
+     let ih C := ih_const ++ be2 ip_length ++
+                 ip_idff ++ [ipproto] ++ le_split 2 C ++
+                 ip_local ++ ip_remote in
+     ih (Spec.ip_checksum (ih 0)) ++
+     udp_local ++ udp_remote ++
+     be2 udp_length ++ be2 0 ++
+     garagedoor_header ++
+     le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (F.of_Z Field.M_pos 9)))))
+  ioh /\ SEED=seed /\ SK=sk.
+
 Local Instance spec_of_recvEthernet : spec_of "recvEthernet" := spec_of_recvEthernet.
 Local Instance spec_of_lan9250_tx : spec_of "lan9250_tx" := spec_of_lan9250_tx.
 Local Instance spec_of_memswap : spec_of "memswap" := spec_of_memswap.
 Local Instance spec_of_memequal : spec_of "memequal" := spec_of_memequal.
 
-Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
-Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
-
-Require Crypto.Bedrock.End2End.RupicolaCrypto.Spec.
 Local Instance spec_of_chacha20 : spec_of "chacha20_block" :=
   fnspec! "chacha20_block" out key nonce counter / (pt k n : list Byte.byte) (R Rk Rn : map.rep -> Prop),
   { requires t m :=
@@ -112,93 +225,39 @@ Local Instance spec_of_chacha20 : spec_of "chacha20_block" :=
     ensures T m := T = t /\ exists ct, m =* ct$@out * R /\ length ct = 64%nat /\
       ct = RupicolaCrypto.Spec.chacha20_encrypt k (Z.to_nat (word.unsigned counter)) n pt }.
 
-Import Tuple LittleEndianList.
-Local Definition be2 z := rev (le_split 2 z).
-Local Coercion to_list : tuple >-> list.
-Local Coercion Z.b2z : bool >-> Z.
-Global Instance spec_of_loop : spec_of loop :=
-  fnspec! "loop" / (seed sk bs : list Byte.byte) (R : map.rep -> Prop),
-  { requires t m := m =* 
-      seed$@(word.of_Z ST) *
-      sk$@(word.add (word.of_Z ST) (word.of_Z 32)) *
-      garageowner$@(word.of_Z PK) *
-      bs $@(word.of_Z BUF) * R
-    /\ length seed = 32%nat
-    /\ length sk = 32%nat
-    /\ length bs = 1520%nat;
-    ensures T M :=
-    exists SEED SK BS, M =*
-      SEED$@(word.of_Z ST) *
-      SK$@(word.add (word.of_Z ST) (word.of_Z 32)) *
-      garageowner$@(word.of_Z PK) *
-      BS $@(word.of_Z BUF) * R
-    /\ length SEED = 32%nat
-    /\ length SK = 32%nat
-    /\ exists iol, T = iol ++ t /\ exists ioh, SPI.mmio_trace_abstraction_relation ioh iol /\ (
-    (lightbulb_spec.lan9250_recv_no_packet _ ioh \/
-      lightbulb_spec.lan9250_recv_packet_too_long _ ioh \/
-      TracePredicate.concat TracePredicate.any (lightbulb_spec.spi_timeout _) ioh) \/
-    (exists incoming, lightbulb_spec.lan9250_recv _ incoming ioh /\
-    let ethertype := le_combine (rev (firstn 2 (skipn 12 incoming))) in ethertype < 1536 \/ 
-    let ipproto := nth 23 incoming x00 in ipproto <> x11 \/
-    (length incoming <> 14+20+8 +2+16 +4 /\ length incoming <> 14+20+8 +2+32 +4)%nat) \/
-    exists (mac_local mac_remote : tuple byte 6),
-    exists (ethertype : Z) (ih_const : tuple byte 2) (ip_length : Z) (ip_idff : tuple byte 5),
-    exists (ipproto := x11) (ip_checksum : Z) (ip_local ip_remote : tuple byte 4),
-    exists (udp_local udp_remote : tuple byte 2) (udp_length : Z) (udp_checksum : Z),
-    exists (garagedoor_header : tuple byte 2) (garagedoor_payload : list byte),
-    let incoming :=
-      (mac_local ++ mac_remote ++ be2 ethertype ++
-       ih_const ++ be2 ip_length ++
-       ip_idff ++ [ipproto] ++ le_split 2 ip_checksum ++
-       ip_remote ++ ip_local ++
-       udp_remote ++ udp_local ++
-       be2 udp_length ++ be2 udp_checksum ++
-       garagedoor_header ++ garagedoor_payload) in
-    (exists doorstate action : Naive.word32,
-    TracePredicate.concat
-        (lightbulb_spec.lan9250_recv _ incoming) (TracePredicate.concat
-        (TracePredicate.one ("ld", lightbulb_spec.GPIO_DATA_ADDR _, doorstate))
-        (TracePredicate.one ("st", lightbulb_spec.GPIO_DATA_ADDR _, action))) ioh
-     /\ (
-      let m := firstn 16 garagedoor_payload in
-      let v := le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (Field.feval_bytes(FieldRepresentation:=frep25519) garageowner))) in
-      exists set0 set1 : Naive.word32,
-      (word.unsigned set0 = 1 <-> firstn 16 v = m) /\
-      (word.unsigned set1 = 1 <->  skipn 16 v = m) /\
-      action = word.or (word.and doorstate (word.of_Z (Z.clearbit (Z.clearbit (2^32-1) 11) 12))) (word.slu (word.or (word.slu set1 (word.of_Z 1)) set0) (word.of_Z 11)) /\
-      (word.unsigned set1 = 0 -> word.unsigned set0 = 0 -> SEED=seed /\ SK=sk))) \/
-    TracePredicate.concat (lightbulb_spec.lan9250_recv _ incoming)
-    (lightbulb_spec.lan9250_send _
-      (let ip_length := 62 in
-       let udp_length := 42 in
-       mac_remote ++ mac_local ++ be2 ethertype ++
-       let ih C := ih_const ++ be2 ip_length ++
-                   ip_idff ++ [ipproto] ++ le_split 2 C ++
-                   ip_local ++ ip_remote in
-       ih (Spec.ip_checksum (ih 0)) ++
-       udp_local ++ udp_remote ++
-       be2 udp_length ++ be2 0 ++
-       garagedoor_header ++
-       le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (F.of_Z Field.M_pos 9)))))
-    ioh /\ SEED=seed /\ SK=sk)
-  }.
+Definition memrep bs R : state -> map.rep(map:=SortedListWord.map _ _) -> Prop := fun '(seed, sk) m =>
+  m =*
+    seed$@(word.of_Z ST) *
+    sk$@(word.add (word.of_Z ST) (word.of_Z 32)) *
+    garageowner$@(word.of_Z PK) *
+    bs $@(word.of_Z BUF) * R /\
+  length seed = 32%nat /\
+  length sk = 32%nat /\
+  length bs = 1520%nat.
+
+Global Instance spec_of_loopfn : spec_of loopfn :=
+  fnspec! "loopfn" / seed sk bs R,
+  { requires t m := memrep bs R (seed, sk) m;
+    ensures T M := exists SEED SK BS, memrep BS R (SEED, SK) M /\
+    exists iol, T = iol ++ t /\
+    exists ioh, SPI.mmio_trace_abstraction_relation ioh iol /\ 
+    garagedoor_iteration (seed, sk) ioh (SEED, SK) }.
 
 Import ZnWords.
 Import coqutil.Tactics.autoforward.
-Lemma loop_ok : program_logic_goal_for_function! loop.
+
+Import Crypto.Util.FixCoqMistakes.
+
+Lemma loopfn_ok : program_logic_goal_for_function! loopfn.
 Proof.
+  straightline.
+  cbv [memrep garagedoor_iteration] in *.
   repeat straightline.
   rename H11 into Lseed. rename H12 into Lsk. rename H13 into H11.
   straightline_call; try ecancel_assumption; trivial; repeat straightline.
   intuition idtac; repeat straightline;
   eexists; split; repeat straightline; split; intros; try contradiction; [|]; repeat straightline.
-  2: {
-    ssplit; trivial.
-    eexists _,_,_; ssplit; try ecancel_assumption; try ZnWords.
-    eexists; ssplit; [reflexivity|].
-    eexists; ssplit; [eassumption|].
-    left. intuition idtac. }
+  2: fwd; slv.
 
   pose proof H12 as Hbuf.
   seprewrite_in @bytearray_index_merge Hbuf. { ZnWords. }
@@ -207,13 +266,7 @@ Proof.
   rewrite word.unsigned_ltu, ?word.unsigned_of_Z_nowrap by ZnWords.ZnWords;
   destr Z.ltb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate;
   autoforward with typeclass_instances in E.
-  2: {
-    repeat straightline.
-    ssplit; trivial.
-    eexists _,_,_; ssplit; try ecancel_assumption; try ZnWords.
-    eexists; ssplit; [reflexivity|].
-    eexists; ssplit; [eassumption|].
-    right. left. eexists; ssplit; try eassumption; intuition try ZnWords. }
+  2: { fwd; slv. right. left. fwd; slv; intuition try ZnWords. }
 
   repeat straightline.
   eapply WeakestPreconditionProperties.dexpr_expr.
@@ -255,14 +308,10 @@ Proof.
   destr Z.ltb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate;
   autoforward with typeclass_instances in E0.
   2: {
-    repeat straightline.
-    ssplit; trivial.
-    eexists _,_,_; ssplit; try ecancel_assumption; try ZnWords.
-    eexists; ssplit; [reflexivity|].
-    eexists; ssplit; [eassumption|].
+    fwd; slv; [].
     right. left. eexists. ssplit; try eassumption. left.
     rewrite skipn_app, skipn_all2, ?Lpp, ?app_nil_l by ZnWords.
-    cbn [List.skipn minus firstn List.app rev]. ZnWords. }
+    cbn [List.skipn minus firstn List.firstn List.app rev]. ZnWords. }
 
   case (SepAutoArray.list_expose_nth pp 9 ltac:(ZnWords)) as (Hppp&Lppp).
   forget (List.firstn 9 pp) as ih_l.
@@ -284,11 +333,7 @@ Proof.
   change (255) with (Z.ones 8); rewrite Z.land_ones, Z.mod_small by ZnWords.
   destr Z.eqb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate; autoforward with typeclass_instances in E1.
   2: {
-    repeat straightline.
-    split; trivial.
-    eexists _,_,_; ssplit; try ecancel_assumption; try ZnWords.
-    eexists; ssplit; [reflexivity|].
-    eexists; ssplit; [eassumption|].
+    fwd; slv; [].
     right. left. eexists. ssplit; try eassumption. right. left.
     rewrite app_nth2 by ZnWords.
     rewrite app_comm_cons.
@@ -309,10 +354,7 @@ Proof.
     rewrite word.unsigned_eqb, ?word.unsigned_of_Z_nowrap by ZnWords.ZnWords.
     destr Z.eqb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate; autoforward with typeclass_instances in E3.
     2: {
-      repeat straightline. ssplit; trivial.
-      eexists _,_,_; ssplit; try ecancel_assumption; try ZnWords.
-      eexists; ssplit; [reflexivity|].
-      eexists; ssplit; [eassumption|].
+      fwd; slv.
       right. left. eexists. ssplit; try eassumption. right. right. SepAutoArray.listZnWords. }
     repeat straightline.
     straightline_call; ssplit; try ecancel_assumption; try trivial; try ZnWords.
@@ -483,7 +525,7 @@ Proof.
     change [?x;?y] with ([x]++[y]).
     eapply TracePredicate.concat_app; cbv [TracePredicate.one]; f_equal. }
 
-    rewrite <- Hvv.
+    rewrite <-Hvv.
     rewrite !ListUtil.firstn_app_sharp by ZnWords.
     rewrite !ListUtil.skipn_app_sharp by ZnWords.
     eexists _, _; ssplit; try eassumption; subst mmio_val; eauto.
@@ -493,7 +535,7 @@ Proof.
     (* end chacha20*) }
 
     ssplit; trivial.
-    eexists _, _, _; ssplit; try ecancel_assumption; try ZnWords.
+    eexists _, _, _; ssplit; try ecancel_assumption; try SepAutoArray.listZnWords.
     eexists; ssplit.
     { subst a. change (?x::?y::?t) with ([x;y]++t). rewrite app_assoc. trivial. }
     eexists; ssplit.
@@ -555,7 +597,7 @@ Proof.
     change [?x;?y] with ([x]++[y]).
     eapply TracePredicate.concat_app; cbv [TracePredicate.one]; f_equal. }
 
-    rewrite <- Hvv.
+    rewrite <-Hvv.
     rewrite !ListUtil.firstn_app_sharp by ZnWords.
     rewrite !ListUtil.skipn_app_sharp by ZnWords.
     eexists _, _; ssplit; try eassumption; subst mmio_val; eauto.
@@ -800,13 +842,13 @@ Proof.
 
   repeat straightline.
   destruct H35; repeat straightline; [intuition idtac | ].
-  { eexists; ssplit. eexists _, _; ssplit; try ecancel_assumption; try ZnWords.
+  { eexists; ssplit. eexists _, _; ssplit; slv.
     eexists; ssplit. subst a4. subst a. rewrite app_assoc. reflexivity.
     eexists; ssplit. eapply Forall2_app; eassumption.
     eauto using TracePredicate.any_app_more. }
 
   ssplit; trivial.
-  eexists _, _, _; ssplit; try ecancel_assumption; try ZnWords.
+  eexists _, _, _; ssplit; slv.
   eexists; ssplit. subst a4. subst a. rewrite app_assoc. reflexivity.
   eexists; ssplit. eapply Forall2_app; eassumption.
   right. right.
@@ -857,9 +899,15 @@ Proof.
 Qed.
 
 Require Import Crypto.Bedrock.End2End.X25519.MontgomeryLadderProperties.
+Import bedrock2.Syntax.
+
+(* these wrappers exist because CompilerInvariant requires execution proofs with arbitrary locals in the starting state, which ProgramLogic does not support *)
+Definition init : func := ("init", ([], [], (cmd.call [] "initfn" []))).
+Definition loop : func := ("loop", ([], [], (cmd.call [] "loopfn" []))).
 
 Definition funcs : list Syntax.func :=
   [ init; loop;
+    initfn; loopfn;
     memswap; memequal; memconst "pk" garageowner;
     ip_checksum_br2fn;
     chacha20_block; chacha20_quarter;
@@ -871,9 +919,9 @@ Lemma chacha20_ok: forall functions, spec_of_chacha20 (chacha20_block::chacha20_
 Admitted.
 
 Import SPI.
-Lemma link_loop : spec_of_loop funcs.
+Lemma link_loopfn : spec_of_loopfn funcs.
 Proof.
-  eapply loop_ok; try eapply memswap.memswap_ok; try eapply memequal_ok.
+  eapply loopfn_ok; try eapply memswap.memswap_ok; try eapply memequal_ok.
     repeat (eapply recvEthernet_ok || eapply lightbulb_handle_ok);
         eapply lan9250_readword_ok; eapply spi_xchg_ok;
         (eapply spi_write_ok || eapply spi_read_ok).
@@ -885,7 +933,7 @@ Proof.
 Qed.
 
 Require compiler.ToplevelLoop.
-Definition ml: MemoryLayout.MemoryLayout(word:=word32) := {|
+Definition ml: MemoryLayout.MemoryLayout(word:=Naive.word32) := {|
   MemoryLayout.code_start    := word.of_Z 0x20400000;
   MemoryLayout.code_pastend  := word.of_Z 0x21400000;
   MemoryLayout.heap_start    := word.of_Z 0x80000000;
@@ -895,13 +943,6 @@ Definition ml: MemoryLayout.MemoryLayout(word:=word32) := {|
 |}.
 
 Lemma ml_ok : MemoryLayout.MemoryLayoutOk ml. Proof. split; cbv; trivial; inversion 1. Qed.
-
-Import ExprImpEventLoopSpec.
-Definition garagedoor_spec : ExprImpEventLoopSpec.ProgramSpec := {|
-  datamem_start := MemoryLayout.heap_start ml;
-  datamem_pastend := MemoryLayout.heap_pastend ml;
-  goodTrace t := True;
-  isReady t m := True |}.
 
 Local Instance : FlatToRiscvCommon.bitwidth_iset 32 Decode.RV32IM := eq_refl.
 Derive garagedoor_compiler_result SuchThat
@@ -953,6 +994,35 @@ Proof.
   { vm_compute. trivial. }
 Time Qed.
 
+Definition good_trace s t s' := 
+  exists ioh, SPI.mmio_trace_abstraction_relation ioh t /\ 
+  (BootSeq +++ stateful garagedoor_iteration s s') ioh.
+Import ExprImpEventLoopSpec.
+Definition garagedoor_spec : ProgramSpec := {|
+  datamem_start := MemoryLayout.heap_start ml;
+  datamem_pastend := MemoryLayout.heap_pastend ml;
+  goodTrace t := exists s0 s, good_trace s0 t s;
+  isReady t m := exists s0 s, good_trace s0 t s /\ exists bs R, memrep bs R s m |}.
+
+Lemma good_trace_from_isRead a a0 : isReady garagedoor_spec a a0 ->
+  isReady garagedoor_spec a a0 /\
+  ExprImpEventLoopSpec.goodTrace garagedoor_spec a.
+Proof.
+  cbv [isReady goodTrace garagedoor_spec]; intuition eauto.
+  case H as (?&?&?&?&?&H); eauto.
+Qed.
+
+Lemma link_initfn : spec_of_initfn funcs.
+Proof.
+  eapply initfn_ok.
+  eapply memconst_ok.
+  eapply lan9250_init_ok;
+    try (eapply lan9250_wait_for_boot_ok || eapply lan9250_mac_write_ok);
+    (eapply lan9250_readword_ok || eapply lan9250_writeword_ok);
+        eapply spi_xchg_ok;
+        (eapply spi_write_ok || eapply spi_read_ok).
+Qed.
+
 Import ToplevelLoop GoFlatToRiscv .
 Local Notation invariant := (ll_inv compile_ext_call ml garagedoor_spec).
 Lemma invariant_proof : 
@@ -969,7 +1039,7 @@ Lemma invariant_proof :
 
      invariant initial /\
      (forall st, invariant st -> mcomp_sat (run1 Decode.RV32IM) st invariant /\
-       exists extend, goodTrace garagedoor_spec (extend ++ getLog (getMachine st))).
+       exists extend s0 s1, good_trace s0 (extend ++ getLog (getMachine st)) s1).
 Proof.
   intros.
 
@@ -994,13 +1064,57 @@ Proof.
   1,3: exact eq_refl.
   1,2: cbv [hl_inv]; intros; eapply WeakestPreconditionProperties.sound_cmd.
   1,3: eapply Crypto.Util.Bool.Reflect.reflect_bool; vm_compute; reflexivity.
-  Require Import AdmitAxiom.
-  all : exfalso; clear; case proof_admitted.
+
+  all : repeat straightline; subst args.
+  { repeat straightline.
+    cbv [LowerPipeline.mem_available LowerPipeline.ptsto_bytes] in *.
+    cbv [datamem_pastend datamem_start garagedoor_spec heap_start heap_pastend ml] in H6.
+    SeparationLogic.extract_ex1_and_emp_in H6.
+    change (BinIntDef.Z.of_nat (Datatypes.length anybytes) = 0x2000) in H6_emp0.
+    Tactics.rapply WeakestPreconditionProperties.Proper_call;
+      [|eapply link_initfn]; try eassumption.
+    2: { 
+      rewrite <-(List.firstn_skipn 0x40 anybytes) in H6.
+      rewrite <-(List.firstn_skipn 0x20 (List.skipn _ anybytes)) in H6.
+      do 2 seprewrite_in @Array.bytearray_append H6.
+      rewrite 2firstn_length, skipn_length, 2Nat2Z.inj_min, Nat2Z.inj_sub, H6_emp0 in H6.
+      split.
+      { use_sep_assumption. cancel. cancel_seps_at_indices 0%nat 0%nat; [|ecancel_done].
+        Morphisms.f_equiv. }
+      { rewrite firstn_length, skipn_length. Lia.lia. }
+      { Lia.lia. } }
+    intros ? ? ? ?; repeat straightline; eapply good_trace_from_isRead.
+    subst a; rewrite app_nil_r.
+    rewrite <-(List.firstn_skipn 0x20 (List.firstn _ anybytes)) in H11.
+    rewrite <-(List.firstn_skipn 1520 (skipn 32 (skipn 64 anybytes))) in H11.
+    do 2 seprewrite_in @Array.bytearray_append H11.
+    rewrite ?firstn_length, ?skipn_length, ?Nat2Z.inj_min, ?Nat2Z.inj_sub, H6_emp0 in H11.
+    cbv [isReady garagedoor_spec good_trace]. eexists (_,_), (_,_); fwd. eauto.
+    { rewrite <-app_nil_l. eapply TracePredicate.concat_app; eauto. econstructor. }
+    cbv [memrep]. ssplit.
+    { use_sep_assumption. cancel.
+      cancel_seps_at_indices 0%nat 0%nat; [reflexivity|].
+      cancel_seps_at_indices 0%nat 0%nat; [reflexivity|].
+      cancel_seps_at_indices 0%nat 0%nat; [reflexivity|].
+      ecancel_done. }
+    all : repeat rewrite ?firstn_length, ?skipn_length; try Lia.lia. }
+
+  {  match goal with H : goodTrace _ _ |- _ => clear H end.
+    cbv [isReady goodTrace good_trace garagedoor_spec] in *; repeat straightline.
+    DestructHead.destruct_head' state.
+    Tactics.rapply WeakestPreconditionProperties.Proper_call;
+      [|eapply link_loopfn]; try eassumption.
+    intros ? ? ? ?; repeat straightline; eapply good_trace_from_isRead.
+    eexists; fwd; try eassumption.
+    cbv [good_trace] in *; repeat straightline.
+    { subst a.  (eexists; split; [eapply Forall2_app; eauto|]).
+      eapply stateful_app_r, stateful_singleton; eauto. } }
+
   Unshelve.
   all : trivial using SortedListString.ok.
 Qed.
 
 (*
-Print Assumptions link_loop. (* chacha20_ok *)
-Print Assumptions invariant_proof. (* 2x invariant_proof, propositional_extensionality, functional_extensionality_dep *)
+Print Assumptions link_loopfn. (* chacha20_ok *)
+Print Assumptions invariant_proof. (* chacha20_ok, propositional_extensionality, functional_extensionality_dep *)
 *)
