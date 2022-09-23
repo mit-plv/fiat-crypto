@@ -73,3 +73,5 @@ Definition chacha20poly1305_aead_encrypt aad key iv constant plaintext :=
   let mac_data := mac_data ++ le_split 8 (Z.of_nat (length ciphertext)) in
   let tag := poly1305 otk mac_data in
   (ciphertext, tag).
+
+(* For memory layout, see: spec_of_chacha20 in GarageDoor.v *)
