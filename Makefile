@@ -32,7 +32,7 @@ NORMAL:=$(shell tput sgr0)
 
 WITH_PERF?=
 
-.PHONY: coq clean update-_CoqProject cleanall install \
+.PHONY: coq clean cleanall install \
 	coq-without-bedrock2 install-without-bedrock2 \
 	install-rewriter clean-rewriter rewriter \
 	install-coqprime clean-coqprime coqprime coqprime-all \
@@ -79,9 +79,6 @@ COQ_VERSION:=$(shell $(COQC) --print-version | cut -d " " -f 1)
 endif
 endif
 
-# This include is meant to be safe
-include Makefile.local.common
-
 # in case we didn't include Makefile.coq
 OCAMLFIND?=ocamlfind
 OCAMLOPT?="$(OCAMLFIND)" ocamlopt
@@ -106,8 +103,9 @@ endif
 # coq .vo files that are not compiled using coq_makefile
 SPECIAL_VOFILES := \
 	src/ExtractionOCaml/%.vo \
-	src/ExtractionHaskell/%.vo
-GREP_EXCLUDE_SPECIAL_VOFILES := grep -v '^src/Extraction\(OCaml\|Haskell\)/'
+	src/ExtractionHaskell/%.vo \
+	src/Rewriter/PerfTesting/Specific/generated/%.v
+GREP_EXCLUDE_SPECIAL := grep -v '^\(src/Extraction\(OCaml\|Haskell\)/\|src/Rewriter/PerfTesting/Specific/generated/\)'
 
 PERFTESTING_VO := \
 	src/Rewriter/PerfTesting/Core.vo \
@@ -120,22 +118,6 @@ BEDROCK2_FILES_PATTERN := \
 	src/Assembly/WithBedrock/% \
 	src/Bedrock/% # it's important to catch not just the .vo files, but also the .glob files, etc, because this is used to filter FILESTOINSTALL
 EXCLUDE_PATTERN :=
-
-FORCE_BEDROCK2?=
-ifneq (,$(filter 8.11% 8.12% 8.13%,$(COQ_VERSION)))
-ifneq ($(SKIP_BEDROCK2),1)
-$(warning Coq version $(COQ_VERSION) is older than the minimum bedrock2 Coq version of 8.14)
-ifeq ($(FORCE_BEDROCK2),1)
-$(warning Building bedrock2 code anyway because FORCE_BEDROCK2=$(FORCE_BEDROCK2))
-else
-ifeq ($(SKIP_BEDROCK2),)
-SKIP_BEDROCK2=1
-else
-$(error Cannot build bedrock2! Pass FORCE_BEDROCK2=1 to override this error and build anyway, or pass SKIP_BEDROCK2=1 (instead of SKIP_BEDROCK2=$(SKIP_BEDROCK2)) to skip bedrock2)
-endif
-endif
-endif
-endif
 
 ifeq ($(SKIP_BEDROCK2),1)
 EXCLUDE_PATTERN += $(BEDROCK2_FILES_PATTERN)
@@ -559,7 +541,7 @@ endif
 
 Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
-	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject $(DEPFLAGS) INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-coq && cat Makefile-coq | sed 's/^printenv:/printenv::/g; s/^printenv:::/printenv::/g; s/^all:/all-old:/g; s/^validate:/validate-vo:/g; s/^.PHONY: validate/.PHONY: validate-vo/g' > $@ && rm -f Makefile-coq
+	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o $@
 
 
 BASE_STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery base_conversion
@@ -749,11 +731,7 @@ javadoc only-javadoc:
 	mkdir -p $(JAVADOC_DIR)
 	(cd $(JAVADOC_DIR); javadoc $(addprefix $(realpath .)/,$(ALL_JAVA_FILES)))
 
-ifneq (,$(wildcard .git/))
-AMD64_ASM_FILES := $(sort $(shell git ls-files "fiat-amd64/*.asm"))
-else
 AMD64_ASM_FILES := $(sort $(wildcard fiat-amd64/*.asm))
-endif
 
 Makefile.test-amd64-files.mk: fiat-amd64/gentest.py $(AMD64_ASM_FILES)
 	$(SHOW)'GENTEST --makefile fiat-amd64/*.asm > $@'
@@ -985,14 +963,12 @@ print_DEPFLAGS:
 	@printf -- '$(DEPFLAGS_NL)'
 
 # This target is used to update the _CoqProject file.
-# But it only works if we have git
-ifneq (,$(wildcard .git/))
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
 EXISTING_COQPROJECT_CONTENTS_SORTED:=$(shell cat _CoqProject 2>&1 | $(SORT_COQPROJECT))
 WARNINGS_PLUS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+unexpected-implicit-declaration,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,+undeclared-scope,+deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality,+deprecated-typeclasses-transparency-without-locality
 # Remove unsupported-attributes once we stop supporting < 8.14
 WARNINGS := $(WARNINGS_PLUS),unsupported-attributes
-COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; printf -- '$(DEPFLAGS_NL)'; echo '-arg -w -arg $(WARNINGS)'; echo '-arg -native-compiler -arg ondemand'; ((echo "$(sort $(VERSION_DEPENDENT_FILES) $(SPECIAL_VERSION_DEPENDENT_FILES))" | tr ' ' '\n'; git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES)) | $(SORT_COQPROJECT)))
+COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; printf -- '$(DEPFLAGS_NL)'; echo '-arg -w -arg $(WARNINGS)'; echo '-arg -native-compiler -arg ondemand'; find src -type f -name '*.v' | $(GREP_EXCLUDE_SPECIAL) | $(SORT_COQPROJECT))
 NEW_COQPROJECT_CONTENTS_SORTED:=$(shell $(COQPROJECT_CMD) | $(SORT_COQPROJECT))
 
 ifneq ($(EXISTING_COQPROJECT_CONTENTS_SORTED),$(NEW_COQPROJECT_CONTENTS_SORTED))
@@ -1000,7 +976,6 @@ ifneq ($(EXISTING_COQPROJECT_CONTENTS_SORTED),$(NEW_COQPROJECT_CONTENTS_SORTED))
 _CoqProject:
 	$(SHOW)'ECHO > $@'
 	$(HIDE)$(COQPROJECT_CMD) > $@
-endif
 endif
 
 printdeps::

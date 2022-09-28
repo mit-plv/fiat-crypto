@@ -1,0 +1,23 @@
+PROFILE?=
+OTHERFLAGS += -w -notation-overridden,-deprecated-hint-constr,-fragile-hint-constr,-native-compiler-disabled,-ambiguous-paths,-masking-absolute-name
+ifneq ($(PROFILE),)
+OTHERFLAGS += -profile-ltac
+endif
+
+SORT_TACTICS := env LC_COLLATE=C sort
+TACTICS_V_FILE := src/Util/Tactics.v
+EXISTING_TACTICS_CONTENTS_SORTED:=$(shell cat $(TACTICS_V_FILE) 2>&1 | $(SORT_TACTICS))
+NEW_TACTICS_CONTENTS_SORTED:=$(shell src/Util/make_tactics.sh | $(SORT_TACTICS))
+
+ifneq ($(EXISTING_TACTICS_CONTENTS_SORTED),$(NEW_TACTICS_CONTENTS_SORTED))
+.PHONY: $(TACTICS_V_FILE)
+$(TACTICS_V_FILE):
+	$(SHOW)'ECHO > $@'
+	$(HIDE)src/Util/make_tactics.sh > $@
+endif
+
+.PHONY: post-all
+post-all::
+	@grep '^\(\w\+/\)\+\w\+\.v$$' _CoqProject \
+		| ( xargs git ls-files --error-unmatch -- 2>&1 >/dev/null || true) \
+		| sed -e 's/error: pathspec/note: _CoqProject entry/' -e '/Did you forget to .git add.?/d'
