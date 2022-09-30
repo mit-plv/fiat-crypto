@@ -12,7 +12,6 @@ Crypto.Algebra.Hierarchy
 Crypto.Algebra.IntegralDomain
 Crypto.Algebra.Monoid
 Crypto.Algebra.Nsatz
-Crypto.Algebra.NsatzTactic
 Crypto.Algebra.Ring
 Crypto.Algebra.ScalarMult
 Crypto.Algebra.SubsetoidRing

@@ -2,12 +2,12 @@
   periodically check whether we still need it -- once enough bugs get fixed
   in mailine, we hope to drop this implementation *)
 
-Require Crypto.Algebra.NsatzTactic.
+Require Coq.nsatz.NsatzTactic.
 Require Import Coq.Lists.List.
 
 (** For compat with https://github.com/coq/coq/pull/12073 *)
 Module Nsatz.
-  Import Algebra.NsatzTactic.
+  Import Coq.nsatz.NsatzTactic.
   Notation check_correct := check_correct.
   Notation PEevalR := PEevalR.
   Notation psos_r1 := psos_r1.
@@ -53,7 +53,7 @@ Ltac nsatz_get_reified_goal reified_package :=
 Require Import Coq.setoid_ring.Ring_polynom.
 (* Kludge for 8.4/8.5 compatibility *)
 Module Import mynsatz_compute.
-  Import Algebra.NsatzTactic.
+  Import Coq.nsatz.NsatzTactic.
   Global Ltac mynsatz_compute x := nsatz_compute x.
 End mynsatz_compute.
 Ltac nsatz_compute x := mynsatz_compute x.

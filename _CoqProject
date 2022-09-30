@@ -1,6 +1,7 @@
 -R src Crypto
 -arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+unexpected-implicit-declaration,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,+undeclared-scope,+deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality,+deprecated-typeclasses-transparency-without-locality,unsupported-attributes
 -arg -native-compiler -arg ondemand
+
 src/BoundsPipeline.v
 src/CLI.v
 src/COperationSpecifications.v
@@ -30,7 +31,6 @@ src/Algebra/Hierarchy.v
 src/Algebra/IntegralDomain.v
 src/Algebra/Monoid.v
 src/Algebra/Nsatz.v
-src/Algebra/NsatzTactic.v
 src/Algebra/Ring.v
 src/Algebra/ScalarMult.v
 src/Algebra/SubsetoidRing.v
