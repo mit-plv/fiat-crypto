@@ -117,6 +117,9 @@ setup.log
 _opam/
 
 # compilation outputs
+src/Everything.v
+src/Bedrock/Everything.v
+
 *.exe
 *.perf.data
 /*.o
