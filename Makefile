@@ -41,7 +41,7 @@ WITH_PERF?=
 	rupicola clean-rupicola install-rupicola \
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	uninstall-standalone uninstall-standalone-ocaml uninstall-standalone-haskell \
-	util all-except-generated \
+	util all-except-generated all \
 	c-files bedrock2-files rust-files go-files json-files java-files zig-files generated-files \
 	lite-c-files lite-bedrock2-files lite-rust-files lite-go-files lite-json-files lite-java-files lite-zig-files lite-generated-files \
 	bedrock2-backend \
@@ -61,6 +61,7 @@ TIMEFMT?="$@ (real: %e, user: %U, sys: %S, mem: %M ko)"
 SKIP_INCLUDE?=
 SKIP_COQSCRIPTS_INCLUDE?=
 ifneq ($(SKIP_INCLUDE),1)
+# this include must be before all: and validate: which are overriden below
 -include Makefile.coq
 ifneq ($(SKIP_COQSCRIPTS_INCLUDE),1)
 include etc/coq-scripts/Makefile.vo_closure
@@ -104,7 +105,7 @@ endif
 SPECIAL_VOFILES := \
 	src/ExtractionOCaml/%.vo \
 	src/ExtractionHaskell/%.vo \
-	src/Rewriter/PerfTesting/Specific/generated/%.v
+	src/Rewriter/PerfTesting/Specific/generated/%.vo
 GREP_EXCLUDE_SPECIAL := grep -v '^\(src/Extraction\(OCaml\|Haskell\)/\|src/Rewriter/PerfTesting/Specific/generated/\)'
 
 PERFTESTING_VO := \
@@ -347,7 +348,8 @@ generated-files: c-files rust-files go-files json-files java-files zig-files
 lite-generated-files: lite-c-files lite-rust-files lite-go-files lite-json-files lite-java-files lite-zig-files
 all-except-compiled: coq pre-standalone-extracted check-output
 all-except-generated: standalone-ocaml perf-standalone all-except-compiled
-all: all-except-generated generated-files
+all: all-except-generated generated-files copy-to-fiat-rust copy-to-fiat-go
+	@true
 ifneq ($(SKIP_BEDROCK2),1)
 generated-files: bedrock2-files
 lite-generated-files: lite-bedrock2-files
@@ -652,8 +654,10 @@ test-zig-files: $(ALL_ZIG_FILES)
 test-zig-files only-test-zig-files:
 	cd fiat-zig; $(ZIG_BUILD)
 
-all: $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST))
-all: $(addprefix fiat-go/,$(COPY_TO_FIAT_GO))
+.PHONY: copy-to-fiat-rust
+copy-to-fiat-rust: $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST))
+.PHONY: copy-to-fiat-go
+copy-to-fiat-go: $(addprefix fiat-go/,$(COPY_TO_FIAT_GO))
 
 # make these .PHONY, so that we copy by contents, not by modification date
 # this ensures that these files are always in sync as long as we run make
@@ -956,7 +960,7 @@ uninstall-standalone: uninstall-standalone-ocaml # uninstall-standalone-haskell
 
 .PHONY: validate
 validate: Makefile.coq
-	$(MAKE) -f Makefile.coq validate-vo VOFILES="$(REGULAR_VOFILES)"
+	$(MAKE) -f Makefile.coq validate VOFILES="$(REGULAR_VOFILES)"
 
 .PHONY: print_DEPFLAGS
 print_DEPFLAGS:
