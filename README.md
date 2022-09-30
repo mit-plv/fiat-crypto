@@ -20,10 +20,10 @@ Building
 [pkg.go-shield]: https://pkg.go.dev/badge/github.com/mit-plv/fiat-crypto/fiat-go.svg
 [pkg.go-link]: https://pkg.go.dev/github.com/mit-plv/fiat-crypto/fiat-go
 
-This repository requires [Coq](https://coq.inria.fr/) [8.11](https://github.com/coq/coq/releases/tag/V8.11.0) or later.
+This repository requires [Coq](https://coq.inria.fr/) [8.15](https://github.com/coq/coq/releases/tag/V8.15.0) or later.
 Note that if you install Coq from Ubuntu aptitude packages, you need `libcoq-ocaml-dev` in addition to `coq`.
 Note that in some cases (such as installing Coq via homebrew on Mac), you may also need to install `ocaml-findlib` (for `ocamlfind`).
-If you want to build the bedrock2 code, you need [Coq 8.14](https://github.com/coq/coq/releases/tag/V8.14.0) or later (otherwise this code will be skipped automatically; you can skip this code on newer versions of Coq by passing `SKIP_BEDROCK2=1` to `make`).
+If you want to build the bedrock2 code, you need [Coq 8.15](https://github.com/coq/coq/releases/tag/V8.15.0) or later (otherwise this code will be skipped automatically; you can skip this code on newer versions of Coq by passing `SKIP_BEDROCK2=1` to `make`).
 We suggest downloading [the latest version of Coq](https://github.com/coq/coq/wiki#coq-installation).
 Generation of JSON code via the Makefile also requires `jq`.
 

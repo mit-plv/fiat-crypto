@@ -4,30 +4,66 @@ Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Language.PreExtra.
+Require Import Ltac2.Ltac2.
+Require Import Ltac2.Printf.
+Require Import Ltac2.Bool.
+Import Ltac2.Constr.Unsafe.
 Require Rewriter.Util.InductiveHList.
 Require Rewriter.Util.LetIn.
 Import InductiveHList.Notations.
+Require Import Ltac2.Printf.
 
-Ltac reify_preprocess_extra term ::=
-  lazymatch term with
-  | @Crypto.Util.LetIn.Let_In ?A ?B ?x ?f
-    => constr:(@Rewriter.Util.LetIn.Let_In A B x f)
-  | match ?x with ZRange.Build_zrange a b => @?f a b end
-    => let T := type of term in
-       constr:(@ZRange.zrange_rect_nodep T f x)
-  | _ => term
-  end.
+(* TODO: move to Util *)
+Ltac2 mkApp (f : constr) (args : constr list) :=
+  Constr.Unsafe.make (Constr.Unsafe.App f (Array.of_list args)).
 
-Ltac reify_ident_preprocess_extra term ::=
-  lazymatch term with
-  | @ZRange.zrange_rect ?T0
-    => lazymatch (eval cbv beta in T0) with
-       | fun _ => ?T => constr:(@ZRange.zrange_rect_nodep T)
-       | T0 => term
-       | ?T' => constr:(@ZRange.zrange_rect T')
-       end
-  | _ => term
-  end.
+Ltac2 Set reify_preprocess_extra :=
+  fun ctx_tys term
+  => lazy_match! term with
+     | @Crypto.Util.LetIn.Let_In ?a ?b ?x ?f
+       => mkApp '@Rewriter.Util.LetIn.Let_In [a; b; x; f]
+     | ?term
+       => (* kludge around COQBUG(https://github.com/coq/coq/issues/16421) *)
+         (* match ?x with ZRange.Build_zrange a b => @?f a b end
+            => let t := Constr.type term in
+            '(@ZRange.zrange_rect_nodep $t $f $x) *)
+         match Constr.Unsafe.kind term with
+         | Constr.Unsafe.Case cinfo ret_ty cinv x branches
+           => match Constr.Unsafe.kind ret_ty with
+              | Constr.Unsafe.Lambda xb ret_ty
+                => let ty := Constr.Unsafe.substnl [x] 0 ret_ty in
+                   lazy_match! Constr.Binder.type xb with
+                   | zrange
+                     => mkApp '@ZRange.zrange_rect_nodep [ty; Array.get branches 0; x]
+                   | _ => term
+                   end
+              | _ => printf "Warning: non-Lambda case return type %t in %t" ret_ty term;
+                     term
+              end
+         | _ => term
+         end
+     end.
+
+(* TODO: Move to util *)
+Ltac2 eval_cbv_beta (c : constr) :=
+  Std.eval_cbv { Std.rBeta := true; Std.rMatch := false;
+                 Std.rFix := false; Std.rCofix := false;
+                 Std.rZeta := false; Std.rDelta := false;
+                 Std.rConst := [] }
+               c.
+
+Ltac2 Set reify_ident_preprocess_extra :=
+  fun ctx_tys term
+  => lazy_match! term with
+     | @ZRange.zrange_rect ?t0
+       => lazy_match! eval_cbv_beta t0 with
+          | fun _ => ?t => mkApp '@ZRange.zrange_rect_nodep [t]
+          | ?t' => if Constr.equal t0 t'
+                   then term
+                   else mkApp '@ZRange.zrange_rect [t']
+          end
+     | _ => term
+     end.
 
 Definition var_like_idents : InductiveHList.hlist
   := [@ident.literal

@@ -368,7 +368,7 @@ OUTPUT_PREOUTS := \
 	Crypto.UnsaturatedSolinasHeuristics.Tests.get_possible_limbs \
 	Crypto.UnsaturatedSolinasHeuristics.Tests.get_balances
 
-ifneq ($(SKIP_BEDROCK2), 1)
+ifneq ($(SKIP_BEDROCK2),1)
 OUTPUT_VOS += \
 	src/Bedrock/Group/ScalarMult/LadderStep.vo \
 	src/Bedrock/Group/ScalarMult/MontgomeryLadder.vo
