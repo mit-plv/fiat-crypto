@@ -239,9 +239,6 @@ fiat-amd64/*.description
 fiat-amd64/*.invocation
 /Makefile.test-amd64-files.mk
 
-# Version-Specific Generated Files
-src/Algebra/NsatzTactic.v
-
 # Rust
 /fiat-rust/Cargo.lock
 /fiat-rust/target/

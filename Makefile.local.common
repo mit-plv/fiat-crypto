@@ -1,3 +1,2 @@
 VERSION_DEPENDENT_FILES := \
-	src/Algebra/NsatzTactic.v \
 	#
