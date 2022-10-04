@@ -589,10 +589,12 @@ $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/haskell.sed
 # unix package needed for Unix.gettimeofday for the perf_* binaries
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.cmi) : %.cmi : %.ml
 	$(SHOW)'$(CAMLOPT_PERF_SHOW) $*.mli'
+	$(HIDE)etc/check_stack_limit.sh || true
 	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -w -20 -g $*.mli
 
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml %.cmi
 	$(SHOW)'$(CAMLOPT_PERF_SHOW) $< -o $@'
+	$(HIDE)etc/check_stack_limit.sh || true
 	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -linkpkg -w -20 -g -I src/ExtractionOCaml/ -o $@ $<
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
