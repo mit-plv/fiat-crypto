@@ -1017,7 +1017,7 @@ Module SolinasReduction.
         specialize (IHl1 ltac:(auto));
         specialize (H a ltac:(auto));
         repeat multimatch goal with
-               | H : context[_ =? _] |- _ => rewrite DecidableClass.Decidable_eq_Z_obligation_1 in H
+               (*| H : context[_ =? _] |- _ => rewrite DecidableClass.Decidable_eq_Z_obligation_1 in H*)
                | |- context[_ mod _] => rewrite Z.mod_small
                | _ => rewrite IHl1
                | _ => push
