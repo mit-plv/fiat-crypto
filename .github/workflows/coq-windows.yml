@@ -97,13 +97,17 @@ jobs:
       run: |
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} standalone-ocaml'
       shell: cmd
-    - name: all-except-generated
+    - name: coq
       run: |
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 coq'
       shell: cmd
-    - name: all
+    - name: all-except-generated
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} all'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 all-except-generated'
+      shell: cmd
+    - name: c-files
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} c-files'
       shell: cmd
     - name: only-test-amd64-files
       run: |
