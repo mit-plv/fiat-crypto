@@ -42,34 +42,7 @@ jobs:
         ghc-version: 'latest'
         cabal-version: 'latest'
     - name: echo build params
-      run: |
-        echo "::group::lscpu"
-        lscpu
-        echo "::endgroup::"
-        echo "::group::uname -a"
-        uname -a
-        echo "::endgroup::"
-        echo "::group::lsb_release -a"
-        lsb_release -a
-        echo "::endgroup::"
-        echo "::group::ghc --version"
-        ghc --version
-        echo "::endgroup::"
-        echo "::group::gcc -v"
-        gcc -v
-        echo "::endgroup::"
-        echo "::group::ocamlc -config"
-        ocamlc -config
-        echo "::endgroup::"
-        echo "::group::coqc --config"
-        coqc --config
-        echo "::endgroup::"
-        echo "::group::coqc --version"
-        coqc --version
-        echo "::endgroup::"
-        echo "::group::true | coqtop"
-        true | coqtop
-        echo "::endgroup::"
+      run: etc/ci/describe-system-config.sh
     - name: deps
       run: etc/ci/github-actions-make.sh -j2 deps
     - name: all-except-generated

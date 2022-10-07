@@ -50,36 +50,7 @@ jobs:
     - name: echo build params
       run: |
         eval $(opam env)
-        echo "::group::sysctl -n machdep.cpu.brand_string"
-        sysctl -n machdep.cpu.brand_string
-        echo "::endgroup::"
-        echo "::group::sysctl -a | grep machdep.cpu"
-        sysctl -a | grep machdep.cpu
-        echo "::endgroup::"
-        echo "::group::uname -a"
-        uname -a
-        echo "::endgroup::"
-        echo "::group::sw_vers -productVersion"
-        sw_vers -productVersion
-        echo "::endgroup::"
-        echo "::group::system_profiler SPSoftwareDataType"
-        system_profiler SPSoftwareDataType
-        echo "::endgroup::"
-        echo "::group::opam list"
-        opam list
-        echo "::endgroup::"
-        echo "::group::ocamlc -config"
-        ocamlc -config
-        echo "::endgroup::"
-        echo "::group::coqc --config"
-        coqc --config
-        echo "::endgroup::"
-        echo "::group::coqc --version"
-        coqc --version
-        echo "::endgroup::"
-        echo "::group::true | coqtop"
-        true | coqtop
-        echo "::endgroup::"
+        etc/ci/describe-system-config-macos.sh
     - name: deps
       run: |
         eval $(opam env)
