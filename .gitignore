@@ -120,6 +120,8 @@ _opam/
 src/Everything.v
 src/Bedrock/Everything.v
 
+/_CoqProject
+
 *.exe
 *.perf.data
 /*.o
