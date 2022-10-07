@@ -92,7 +92,7 @@ Section rmontred.
            /\ (forall s v v' : Z, ih s v = Some v' -> v = Z.shiftr v' (s/2))
       | None => True
       end.
-  Proof.
+  Proof using consts_list value_range.
     cbv [fancy_args invert_low invert_high constant_to_scalar constant_to_scalar_single consts_list fold_right];
       split; intros; break_innermost_match_hyps; Z.ltb_to_lt; subst; congruence.
   Qed.
@@ -178,7 +178,7 @@ Section rmontred.
            | progress Z.rewrite_mod_small ].
 
   Local Strategy -100 [montred]. (* needed for making Qed not take forever *)
-  Local Strategy -100 [montred' reified_montred_gen]. (* needed for making prove_correctness not take forever *)
+  Local Strategy -100 [montred']. (* needed for making prove_correctness not take forever *)
   Lemma montred_correct res (Hres : montred = Success res)
     : montred_correct N R R' (API.Interp res).
   Proof using n curve_good.

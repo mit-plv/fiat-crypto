@@ -1338,10 +1338,12 @@ Module PipelineTactics.
         clear H1 H2 Hres
       | .. ];
       solve_side_conditions_of_BoundsPipeline_correct
-    | match goal with
-      | [ |- Wf _ ]
-        => repeat apply expr.Wf_APP; try typeclasses eauto with nocore wf_extra wf_gen_cache; try typeclasses eauto with nocore wf wf_gen_cache
-      end ].
+    | lazymatch goal with |- Wf _ => idtac end;
+      repeat match goal with
+             | [ |- Wf (expr.APP _ _) ] => apply expr.Wf_APP
+             end;
+      try typeclasses eauto with nocore wf_extra wf_gen_cache;
+      try typeclasses eauto with nocore wf wf_gen_cache ].
 
   Ltac prove_pipeline_wf _ :=
     lazymatch goal with

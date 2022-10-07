@@ -256,9 +256,10 @@ Ltac prove_correctness' should_not_clear use_curve_good :=
   intros;
   try split; PipelineTactics.use_compilers_correctness Hres;
   [ pose_proof_length_list_Z_bounded_by;
-    repeat first [ reflexivity
+    repeat first [ match goal with |- ?x = ?x => reflexivity end
                  | progress autorewrite with interp_extra interp_gen_cache
                  | progress autorewrite with push_eval
+                 | reflexivity
                  | erewrite select_eq
                  | progress autounfold with push_eval
                  | progress autorewrite with distr_length in *
