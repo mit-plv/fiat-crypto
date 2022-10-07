@@ -15,6 +15,17 @@
 #include <stdint.h>
 #include <string.h>
 
+static __attribute__((always_inline)) inline uintptr_t
+_br2_mulhuu(uintptr_t a, uintptr_t b) {
+#if (UINTPTR_MAX == (1LLU<<31) - 1 + (1LLU<<31))
+	return ((uint64_t)a * b) >> 32;
+#elif (UINTPTR_MAX == (1LLU<<63) - 1 + (1LLU<<63))
+	return ((__uint128_t)a * b) >> 64;
+#else
+#error "32-bit or 64-bit uintptr_t required"
+#endif
+}
+
 // We use memcpy to work around -fstrict-aliasing.
 // A plain memcpy is enough on clang 10, but not on gcc 10, which fails
 // to infer the bounds on an integer loaded by memcpy.
@@ -60,23 +71,23 @@ void internal_fiat_poly1305_carry_mul(uintptr_t out0, uintptr_t in0, uintptr_t i
   /*skip*/
   /*skip*/
   x6 = (x2)*((x5)*((uintptr_t)5ULL));
-  x7 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*((x5)*((uintptr_t)5ULL)))>>32 : ((__uint128_t)(x2)*((x5)*((uintptr_t)5ULL)))>>64);
+  x7 = _br2_mulhuu((x2), ((x5)*((uintptr_t)5ULL)));
   x8 = (x2)*((x4)*((uintptr_t)10ULL));
-  x9 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*((x4)*((uintptr_t)10ULL)))>>32 : ((__uint128_t)(x2)*((x4)*((uintptr_t)10ULL)))>>64);
+  x9 = _br2_mulhuu((x2), ((x4)*((uintptr_t)10ULL)));
   x10 = (x1)*((x5)*((uintptr_t)10ULL));
-  x11 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*((x5)*((uintptr_t)10ULL)))>>32 : ((__uint128_t)(x1)*((x5)*((uintptr_t)10ULL)))>>64);
+  x11 = _br2_mulhuu((x1), ((x5)*((uintptr_t)10ULL)));
   x12 = (x2)*(x3);
-  x13 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*(x3))>>32 : ((__uint128_t)(x2)*(x3))>>64);
+  x13 = _br2_mulhuu((x2), (x3));
   x14 = (x1)*((x4)*((uintptr_t)2ULL));
-  x15 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*((x4)*((uintptr_t)2ULL)))>>32 : ((__uint128_t)(x1)*((x4)*((uintptr_t)2ULL)))>>64);
+  x15 = _br2_mulhuu((x1), ((x4)*((uintptr_t)2ULL)));
   x16 = (x1)*(x3);
-  x17 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*(x3))>>32 : ((__uint128_t)(x1)*(x3))>>64);
+  x17 = _br2_mulhuu((x1), (x3));
   x18 = (x0)*(x5);
-  x19 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x5))>>32 : ((__uint128_t)(x0)*(x5))>>64);
+  x19 = _br2_mulhuu((x0), (x5));
   x20 = (x0)*(x4);
-  x21 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x4))>>32 : ((__uint128_t)(x0)*(x4))>>64);
+  x21 = _br2_mulhuu((x0), (x4));
   x22 = (x0)*(x3);
-  x23 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x3))>>32 : ((__uint128_t)(x0)*(x3))>>64);
+  x23 = _br2_mulhuu((x0), (x3));
   x24 = (x10)+(x8);
   x25 = (uintptr_t)((x24)<(x10));
   x26 = (x25)+(x11);
@@ -157,17 +168,17 @@ void internal_fiat_poly1305_carry_square(uintptr_t out0, uintptr_t in0) {
   x5 = (x2)*((uintptr_t)2ULL);
   x6 = (x1)*((uintptr_t)2ULL);
   x7 = (x2)*(x3);
-  x8 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*(x3))>>32 : ((__uint128_t)(x2)*(x3))>>64);
+  x8 = _br2_mulhuu((x2), (x3));
   x9 = (x1)*((x4)*((uintptr_t)2ULL));
-  x10 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*((x4)*((uintptr_t)2ULL)))>>32 : ((__uint128_t)(x1)*((x4)*((uintptr_t)2ULL)))>>64);
+  x10 = _br2_mulhuu((x1), ((x4)*((uintptr_t)2ULL)));
   x11 = (x1)*((x1)*((uintptr_t)2ULL));
-  x12 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*((x1)*((uintptr_t)2ULL)))>>32 : ((__uint128_t)(x1)*((x1)*((uintptr_t)2ULL)))>>64);
+  x12 = _br2_mulhuu((x1), ((x1)*((uintptr_t)2ULL)));
   x13 = (x0)*(x5);
-  x14 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x5))>>32 : ((__uint128_t)(x0)*(x5))>>64);
+  x14 = _br2_mulhuu((x0), (x5));
   x15 = (x0)*(x6);
-  x16 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x6))>>32 : ((__uint128_t)(x0)*(x6))>>64);
+  x16 = _br2_mulhuu((x0), (x6));
   x17 = (x0)*(x0);
-  x18 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x0))>>32 : ((__uint128_t)(x0)*(x0))>>64);
+  x18 = _br2_mulhuu((x0), (x0));
   x19 = (x17)+(x9);
   x20 = (uintptr_t)((x19)<(x17));
   x21 = (x20)+(x18);
