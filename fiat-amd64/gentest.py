@@ -2,6 +2,7 @@
 # USAGE: ./fiat-amd64/gentest.py fiat-amd64/*.asm | while IFS= read -r line; do eval $line 2>/dev/null > /dev/null && echo "$line" || echo "# $line" ; done
 import shlex
 import sys
+import math
 from collections import OrderedDict
 
 # in Python 3.9 and newer, this is primitive as str.removesuffix
@@ -51,12 +52,20 @@ def asm_op_names_key(val):
     prime = eval(prime.replace('^', '**'))
     return (kind, n, prime, op, name, fnames)
 
+def is_small(val):
+    (kind, n, prime, op, name, fnames) = asm_op_names_key(val)
+    return math.log2(prime) / 64 <= 4
+
 asm_op_names_items = tuple(sorted(asm_op_names.items(), key=asm_op_names_key))
+small_asm_op_names_items = tuple(val for val in asm_op_names_items if is_small(val))
 
 status_file_stems = [f'fiat-amd64/{name}-{op}' for (name, op), _fnames in asm_op_names_items]
+small_status_file_stems = [f'fiat-amd64/{name}-{op}' for (name, op), _fnames in small_asm_op_names_items]
 
 status_files = [stem + '.status' for stem in status_file_stems]
 only_status_files = [stem + '.only-status' for stem in status_file_stems]
+small_status_files = [stem + '.status' for stem in small_status_file_stems]
+small_only_status_files = [stem + '.only-status' for stem in small_status_file_stems]
 
 if output_makefile:
     print(f'''
@@ -69,6 +78,8 @@ if output_makefile:
 
 AMD64_ASM_STATUS_FILES := $(if $(SLOWEST_FIRST),{' '.join(reversed(status_files))},{' '.join(status_files)})
 AMD64_ASM_ONLY_STATUS_FILES := $(if $(SLOWEST_FIRST),{' '.join(reversed(only_status_files))},{' '.join(only_status_files)})
+AMD64_ASM_SMALL_STATUS_FILES := $(if $(SLOWEST_FIRST),{' '.join(reversed(small_status_files))},{' '.join(small_status_files)})
+AMD64_ASM_SMALL_ONLY_STATUS_FILES := $(if $(SLOWEST_FIRST),{' '.join(reversed(small_only_status_files))},{' '.join(small_only_status_files)})
 
 ''')
 
