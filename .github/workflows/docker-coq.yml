@@ -1,0 +1,96 @@
+name: CI (Coq, docker, dev)
+
+on:
+  push:
+    branches: [ master , sp2019latest , v8.6 , v8.8 , v8.10 ]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  master:
+    runs-on: ubuntu-latest
+
+    concurrency:
+      group: ${{ github.workflow }}-master-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+
+    env:
+      SKIP_VALIDATE: ""
+      COQCHKEXTRAFLAGS: "-bytecode-compiler yes"
+      EXTRA_GH_REPORTIFY: "--warnings"
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: echo host build params
+      run: etc/ci/describe-system-config.sh
+    - name: all
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: dev
+        ocaml_version: default
+        export: SKIP_VALIDATE COQCHKEXTRAFLAGS EXTRA_GH_REPORTIFY CI
+        custom_script: |
+          sudo chmod -R a+rw .
+          echo '::group::install general dependencies'
+          sudo apt-get update -y
+          sudo apt-get install -y python python3 ghc
+          eval $(opam env)
+          echo '::endgroup::'
+          echo '::remove-matcher owner=coq-problem-matcher::'
+          etc/ci/describe-system-config.sh
+          echo '::group::deps'
+          etc/ci/github-actions-make.sh -j2 deps
+          echo '::endgroup::'
+          echo '::group::all-except-generated'
+          etc/ci/github-actions-make.sh ${EXTRA_GH_REPORTIFY} -j2 all-except-generated
+          echo '::endgroup::'
+          echo '::group::standalone-haskell'
+          etc/ci/github-actions-make.sh -j1 standalone-haskell GHCFLAGS='+RTS -M6G -RTS'
+          echo '::endgroup::'
+          echo '::group::validate'
+          if [ "${SKIP_VALIDATE}" == "" ] && ${{ github.event_name != 'pull_request' }}; then
+            make TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"
+          else
+            echo "Skipping validate (SKIP_VALIDATE == ${SKIP_VALIDATE}, github.event_name == ${{ github.event_name }}, (github.event_name != 'pull_request') == ${{ github.event_name != 'pull_request' }})"
+          fi
+          echo '::endgroup::'
+
+    - name: generated-files
+      run: etc/ci/github-actions-make.sh ${EXTRA_GH_REPORTIFY} -j2 -f Makefile.examples generated-files
+      if: github.event_name == 'pull_request'
+    - run: tar -czvf generated-files.tgz fiat-*/
+      if: ${{ failure() }}
+    - name: upload generated files
+      uses: actions/upload-artifact@v3
+      with:
+        name: generated-files-master
+        path: generated-files.tgz
+      if: ${{ failure() }}
+    - name: only-test-amd64-files
+      run: etc/ci/github-actions-make.sh -j2 -f Makefile.examples only-test-amd64-files SLOWEST_FIRST=1
+    - name: upload OCaml files
+      uses: actions/upload-artifact@v3
+      with:
+        name: ExtractionOCaml-master
+        path: src/ExtractionOCaml
+      if: always ()
+    - name: upload Haskell files
+      uses: actions/upload-artifact@v3
+      with:
+        name: ExtractionHaskell-master
+        path: src/ExtractionHaskell
+      if: always ()
+    - name: display timing info
+      run: cat time-of-build-pretty.log
+    - name: display per-line timing info
+      run: etc/ci/github-actions-display-per-line-timing.sh
+#    - name: upload timing and .vo info
+#      uses: actions/upload-artifact@v3
+#      with:
+#        name: build-outputs-master
+#        path: .
+#      if: always ()
