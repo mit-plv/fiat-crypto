@@ -79,18 +79,24 @@ Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBU
 (* needed for making [autorewrite] not take a very long time *)
 Local Opaque
       reified_mul_gen
+      reified_square_gen
       reified_add_gen
       reified_sub_gen
       reified_opp_gen
-      reified_to_bytes_gen
-      reified_from_bytes_gen
-      reified_nonzero_gen
-      reified_square_gen
-      reified_encode_gen
       reified_from_montgomery_gen
       reified_to_montgomery_gen
+      reified_to_bytes_gen
+      reified_from_bytes_gen
+      reified_encode_gen
       reified_zero_gen
       reified_one_gen
+      reified_eval_gen
+      reified_bytes_eval_gen
+      reified_eval_twos_complement_gen
+      reified_msat_gen
+      reified_encode_gen
+      reified_divstep_gen
+      reified_nonzero_gen
       expr.Interp.
 
 Section __.
@@ -1036,7 +1042,7 @@ Section __.
   Lemma selectznz_correct res
         (Hres : selectznz = Success res)
     : selectznz_correct saturated_bounds (Interp res).
-  Proof using curve_good. Primitives.prove_correctness use_curve_good. Qed.
+  Proof using curve_good. apply Primitives.selectznz_correct, Hres. Qed.
 
   Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
   Proof using Type. revert Hres; cbv [selectznz]; apply Wf_selectznz. Qed.
