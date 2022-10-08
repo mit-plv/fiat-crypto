@@ -62,21 +62,26 @@ Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBU
 
 (* needed for making [autorewrite] not take a very long time *)
 Local Opaque
+      reified_carry_mul_gen
       reified_carry_square_gen
       reified_carry_scmul_gen
       reified_carry_gen
-      reified_encode_gen
       reified_add_gen
       reified_sub_gen
       reified_opp_gen
+      reified_carry_add_gen
+      reified_carry_sub_gen
+      reified_carry_opp_gen
       reified_id_gen
-      reified_zero_gen
-      reified_one_gen
-      reified_prime_gen
-      reified_eval_gen
-      reified_bytes_eval_gen
       reified_to_bytes_gen
       reified_from_bytes_gen
+      reified_encode_gen
+      reified_encode_gen
+      reified_zero_gen
+      reified_one_gen
+      reified_eval_gen
+      reified_bytes_eval_gen
+      reified_prime_gen
       expr.Interp.
 
 Section __.
