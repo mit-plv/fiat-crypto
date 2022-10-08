@@ -18,7 +18,14 @@ online_governors() {
   fi
 }
 
-printf "$(hostname)"
+# hostname is not on arch
+if command -v hostname >/dev/null 2>/dev/null; then
+    printf "$(hostname)"
+elif command -v hostnamectl >/dev/null 2>/dev/null; then
+    printf "$(hostnamectl --static)"
+else
+    printf "unknown_host"
+fi
 printf -
 if ls /sys/devices/system/cpu/cpu[0-9]*/topology/thread_siblings_list >/dev/null 2>/dev/null; then
   grep -q '[^0-9]' /sys/devices/system/cpu/cpu[0-9]*/topology/thread_siblings_list && printf ht || printf noht
@@ -40,5 +47,5 @@ fi
 printf -
 printf "$(printf "%s" "$(online_governors | uniq)" | tr '\n' '_')"
 printf -
-printf "$(gcc -march=native -Q --help=target|grep march | cut -d= -f2 | grep -ow '\S*')"
+printf "$(gcc -march=native -Q --help=target | grep -v 'Known valid arguments' | grep march | cut -d= -f2 | grep -ow '\S*')"
 printf '\n'
