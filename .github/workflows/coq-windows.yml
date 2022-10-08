@@ -72,13 +72,13 @@ jobs:
       run: |
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 all-except-generated'
       shell: cmd
-    - name: c-files
+    - name: c-files lite-generated-files
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} c-files'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} c-files lite-generated-files'
       shell: cmd
-    - name: only-test-amd64-files
+    - name: only-test-amd64-files-lite
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} only-test-amd64-files SLOWEST_FIRST=1'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} only-test-amd64-files-lite SLOWEST_FIRST=1'
       shell: cmd
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
