@@ -1,0 +1,93 @@
+# IMPORTANT: This file MUST NOT introduce dependencies of the .ml/.hs
+# files on .v files, so that we can compile them by invoking this
+# makefile directly even when Coq is not available
+
+include Makefile.config
+
+GHC?=ghc
+GHCFLAGS?= # -XStrict
+
+# in case we didn't include Makefile.coq
+OCAMLFIND?=ocamlfind
+OCAMLOPT?="$(OCAMLFIND)" ocamlopt
+OCAMLOPTP?="$(OCAMLFIND)" ocamloptp
+ifneq ($(WITH_PERF),1)
+CAMLOPT_PERF ?= $(OCAMLOPT)
+CAMLOPT_PERF_SHOW:=OCAMLOPT
+else
+CAMLOPT_PERF ?= $(OCAMLOPTP)
+CAMLOPT_PERF_SHOW:=OCAMLOPTP
+endif
+
+.PHONY: \
+	perf-standalone \
+	standalone install-standalone uninstall-standalone \
+	standalone-ocaml install-standalone-ocaml uninstall-standalone-ocaml \
+	standalone-haskell install-standalone-haskell uninstall-standalone-haskell \
+	#
+
+# pass -w -20 to disable the unused argument warning
+# unix package needed for Unix.gettimeofday for the perf_* binaries
+$(STANDALONE_OCAML:%=src/ExtractionOCaml/%.cmi) : %.cmi : %.ml
+	$(SHOW)'$(CAMLOPT_PERF_SHOW) $*.mli'
+	$(HIDE)etc/check_stack_limit.sh || true
+	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -w -20 -g $*.mli
+
+$(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml %.cmi
+	$(SHOW)'$(CAMLOPT_PERF_SHOW) $< -o $@'
+	$(HIDE)etc/check_stack_limit.sh || true
+	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -linkpkg -w -20 -g -I src/ExtractionOCaml/ -o $@ $<
+
+$(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
+	$(SHOW)'GHC $< -o $@'
+	$(HIDE)$(TIMER) $(GHC) $(GHCFLAGS) -o $@ $<
+
+standalone: standalone-haskell standalone-ocaml
+perf-standalone: $(PERF_STANDALONE:%=src/ExtractionOCaml/%)
+
+standalone-ocaml: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%)
+standalone-haskell: $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%)
+
+uninstall-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
+uninstall-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
+
+ifeq ($(SKIP_BEDROCK2),1)
+install-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
+install-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
+
+install-standalone-ocaml install-standalone-haskell:
+	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
+	 if ! [ -f "$$f" ]; then >&2 echo $$f does not exist; code=1; fi \
+	done; exit $$code
+	$(HIDE)for f in $(FILESTOINSTALL); do\
+	   install -d "$(BINDIR)/" &&\
+	   install -m 0755 "$$f" "$(BINDIR)/" &&\
+	   echo INSTALL "$$f" "$(BINDIR)/";\
+	done
+else
+install-standalone-ocaml: FILESTOINSTALL=$(WITH_BEDROCK2_OCAML_BINARIES)
+install-standalone-haskell: FILESTOINSTALL=$(WITH_BEDROCK2_HASKELL_BINARIES)
+
+install-standalone-ocaml install-standalone-haskell:
+	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
+	 if ! [ -f "$$f" ]; then >&2 echo $$f does not exist; code=1; fi \
+	done; exit $$code
+	$(HIDE)for f in $(FILESTOINSTALL); do\
+	   fdir="$$(dirname "$$f")" &&\
+	   fname="$$(basename "$$f")" &&\
+	   df="$${fname#with_bedrock2_}" &&\
+	   install -d "$(BINDIR)/" &&\
+	   install -m 0755 "$$f" "$(BINDIR)/$$df" &&\
+	   echo INSTALL "$$f" "$(BINDIR)/$$df";\
+	done
+endif
+
+uninstall-standalone-ocaml uninstall-standalone-haskell:
+	$(HIDE)for f in $(FILESTOINSTALL); do \
+	 instf="$(BINDIR)/`basename $$f`" &&\
+	 rm -f "$$instf" &&\
+	 echo RM "$$instf"; \
+	done
+
+install-standalone: install-standalone-ocaml # install-standalone-haskell
+uninstall-standalone: uninstall-standalone-ocaml # uninstall-standalone-haskell
