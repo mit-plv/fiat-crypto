@@ -17,4 +17,5 @@ eval $(opam env)
 echo '::endgroup::'
 echo '::remove-matcher owner=coq-problem-matcher::'
 etc/ci/describe-system-config.sh
+ulimit -S -s 32768
 etc/ci/github-actions-make.sh "$@"
