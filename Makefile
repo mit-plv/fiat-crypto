@@ -1,20 +1,5 @@
 .SUFFIXES:
 
-MOD_NAME := Crypto
-SRC_DIR  := src
-
-BINDIR?=/usr/local/bin
-# or $(shell opam config var bin) ?
-
-GHC?=ghc
-GHCFLAGS?= # -XStrict
-
-INSTALLDEFAULTROOT := Crypto
-
-PERF_RECORD?=perf record -g -o "$@.perf.data" --
-
-WITH_PERF?=
-
 .PHONY: coq clean cleanall install \
 	coq-without-bedrock2 install-without-bedrock2 \
 	install-rewriter clean-rewriter rewriter \
@@ -22,15 +7,13 @@ WITH_PERF?=
 	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
 	bedrock2-compiler clean-bedrock2-compiler install-bedrock2-compiler \
 	rupicola clean-rupicola install-rupicola \
-	install-standalone install-standalone-ocaml install-standalone-haskell \
-	uninstall-standalone uninstall-standalone-ocaml uninstall-standalone-haskell \
 	util all-except-generated all \
 	bedrock2-backend \
 	deps \
 	nobigmem print-nobigmem \
 	lite only-heavy printlite \
 	all-except-compiled \
-	some-early pre-standalone pre-standalone-extracted standalone standalone-haskell standalone-ocaml \
+	some-early pre-standalone pre-standalone-extracted \
 	check-output accept-output
 
 include Makefile.config
@@ -57,17 +40,6 @@ COQ_VERSION:=$(shell $(COQC) --print-version | cut -d " " -f 1)
 endif
 endif
 
-# in case we didn't include Makefile.coq
-OCAMLFIND?=ocamlfind
-OCAMLOPT?="$(OCAMLFIND)" ocamlopt
-OCAMLOPTP?="$(OCAMLFIND)" ocamloptp
-ifneq ($(WITH_PERF),1)
-CAMLOPT_PERF ?= $(OCAMLOPT)
-CAMLOPT_PERF_SHOW:=OCAMLOPT
-else
-CAMLOPT_PERF ?= $(OCAMLOPTP)
-CAMLOPT_PERF_SHOW:=OCAMLOPTP
-endif
 
 PERF_TESTS?=
 ifneq ($(PERF_TESTS),1)
@@ -358,7 +330,7 @@ Makefile.coq: Makefile _CoqProject
 	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o $@
 
 include Makefile.examples
-
+include Makefile.standalone
 
 $(STANDALONE:%=src/ExtractionOCaml/%.ml): src/StandaloneOCamlMain.vo
 $(BEDROCK2_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Bedrock/Standalone/StandaloneOCamlMain.vo
@@ -380,26 +352,6 @@ $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/haskell.sed
 	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
 	$(HIDE)cat $@.tmp | tr -d '\r' | sed -f src/haskell.sed > $@ && rm $@.tmp
 
-# pass -w -20 to disable the unused argument warning
-# unix package needed for Unix.gettimeofday for the perf_* binaries
-$(STANDALONE_OCAML:%=src/ExtractionOCaml/%.cmi) : %.cmi : %.ml
-	$(SHOW)'$(CAMLOPT_PERF_SHOW) $*.mli'
-	$(HIDE)etc/check_stack_limit.sh || true
-	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -w -20 -g $*.mli
-
-$(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml %.cmi
-	$(SHOW)'$(CAMLOPT_PERF_SHOW) $< -o $@'
-	$(HIDE)etc/check_stack_limit.sh || true
-	$(HIDE)$(TIMER) $(CAMLOPT_PERF) -package unix -linkpkg -w -20 -g -I src/ExtractionOCaml/ -o $@ $<
-
-$(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
-	$(SHOW)'GHC $< -o $@'
-	$(HIDE)$(TIMER) $(GHC) $(GHCFLAGS) -o $@ $<
-
-standalone: standalone-haskell standalone-ocaml
-standalone-haskell: $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%)
-standalone-ocaml: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%)
-
 .SECONDEXPANSION:
 
 # Perf testing
@@ -418,13 +370,11 @@ PERF_TIMEOUT?=timeout $(PERF_MAX_TIME) # etc/timeout/timeout -m $(PERF_MAX_MEM) 
 # apparently ulimit -m doesn't work anymore https://superuser.com/a/1497437/59575 / https://thirld.com/blog/2012/02/09/things-to-remember-when-using-ulimit/
 PERF_SET_LIMITS = ulimit -S -s $(PERF_MAX_STACK); ulimit -S -m $(PERF_MAX_MEM); ulimit -S -v $(PERF_MAX_MEM);
 
-.PHONY: perf perf-vos perf-extraction perf-standalone
+.PHONY: perf perf-vos perf-extraction
 PERF_VOLOGS := $(PERF_PRIME_VOS:.vo=.log)
 PERF_SHLOGS := $(PERF_PRIME_SHS:.sh=.log)
 PERF_LOGS := $(PERF_VOLOGS) $(PERF_SHLOGS)
 ALL_PERF_LOGS := $(PERF_LOGS) $(PERF_LOGS:.log=.log.tmp)
-
-perf-standalone: $(PERF_STANDALONE:%=src/ExtractionOCaml/%)
 
 perf-vos: $(PERF_VOLOGS) \
 	$(PERF_MAKEFILE) \
@@ -533,50 +483,6 @@ install-without-bedrock2:
 
 install-standalone-ocaml: standalone-ocaml
 install-standalone-haskell: standalone-haskell
-
-uninstall-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
-uninstall-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
-
-ifeq ($(SKIP_BEDROCK2),1)
-install-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
-install-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
-
-install-standalone-ocaml install-standalone-haskell:
-	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
-	 if ! [ -f "$$f" ]; then >&2 echo $$f does not exist; code=1; fi \
-	done; exit $$code
-	$(HIDE)for f in $(FILESTOINSTALL); do\
-	   install -d "$(BINDIR)/" &&\
-	   install -m 0755 "$$f" "$(BINDIR)/" &&\
-	   echo INSTALL "$$f" "$(BINDIR)/";\
-	done
-else
-install-standalone-ocaml: FILESTOINSTALL=$(WITH_BEDROCK2_OCAML_BINARIES)
-install-standalone-haskell: FILESTOINSTALL=$(WITH_BEDROCK2_HASKELL_BINARIES)
-
-install-standalone-ocaml install-standalone-haskell:
-	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
-	 if ! [ -f "$$f" ]; then >&2 echo $$f does not exist; code=1; fi \
-	done; exit $$code
-	$(HIDE)for f in $(FILESTOINSTALL); do\
-	   fdir="$$(dirname "$$f")" &&\
-	   fname="$$(basename "$$f")" &&\
-	   df="$${fname#with_bedrock2_}" &&\
-	   install -d "$(BINDIR)/" &&\
-	   install -m 0755 "$$f" "$(BINDIR)/$$df" &&\
-	   echo INSTALL "$$f" "$(BINDIR)/$$df";\
-	done
-endif
-
-uninstall-standalone-ocaml uninstall-standalone-haskell:
-	$(HIDE)for f in $(FILESTOINSTALL); do \
-	 instf="$(BINDIR)/`basename $$f`" &&\
-	 rm -f "$$instf" &&\
-	 echo RM "$$instf"; \
-	done
-
-install-standalone: install-standalone-ocaml # install-standalone-haskell
-uninstall-standalone: uninstall-standalone-ocaml # uninstall-standalone-haskell
 
 .PHONY: validate
 validate: Makefile.coq

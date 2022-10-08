@@ -1,3 +1,9 @@
+# IMPORTANT: This file MUST NOT introduce dependencies of the
+# generated .c/.rs/etc files on the source for the standalone
+# binaries, as we should be able to generate the files by invoking
+# this makefile directly as long as the compiled binaries are lying
+# around
+
 include Makefile.config
 
 CFLAGS?=
@@ -6,8 +12,8 @@ CFLAGS?=
 	c-files bedrock2-files rust-files go-files json-files java-files zig-files generated-files \
 	lite-c-files lite-bedrock2-files lite-rust-files lite-go-files lite-json-files lite-java-files lite-zig-files lite-generated-files \
 	update-go-pkg-cache \
-	test-c-files test-bedrock2-files test-rust-files test-go-files test-json-files test-java-files test-zig-files test-amd64-files \
-	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-json-files only-test-java-files only-test-zig-files only-test-amd64-files \
+	test-c-files test-bedrock2-files test-rust-files test-go-files test-json-files test-java-files test-zig-files test-amd64-files test-amd64-files-lite \
+	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-json-files only-test-java-files only-test-zig-files only-test-amd64-files only-test-amd64-files-lite \
 	test-go-module only-test-go-module \
 	javadoc only-javadoc \
 	#
@@ -185,24 +191,6 @@ lite-json-files: $(LITE_JSON_FILES)
 lite-java-files: $(LITE_JAVA_FILES)
 lite-zig-files: $(LITE_ZIG_FILES)
 
-BASE_STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery base_conversion
-BEDROCK2_STANDALONE := $(addprefix bedrock2_,$(BASE_STANDALONE)) $(addprefix with_bedrock2_,$(BASE_STANDALONE))
-STANDALONE := $(BASE_STANDALONE)
-ifneq ($(SKIP_BEDROCK2),1)
-STANDALONE += $(BEDROCK2_STANDALONE) $(WITH_BEDROCK2_STANDALONE)
-endif
-PERF_STANDALONE := perf_unsaturated_solinas perf_word_by_word_montgomery
-
-STANDALONE_OCAML := $(STANDALONE) $(PERF_STANDALONE)
-STANDALONE_HASKELL := $(STANDALONE)
-
-OCAML_BINARIES := $(BASE_STANDALONE:%=src/ExtractionOCaml/%)
-HASKELL_BINARIES := $(BASE_STANDALONE:%=src/ExtractionHaskell/%)
-
-WITH_BEDROCK2_OCAML_BINARIES := $(BASE_STANDALONE:%=src/ExtractionOCaml/with_bedrock2_%)
-WITH_BEDROCK2_HASKELL_BINARIES := $(BASE_STANDALONE:%=src/ExtractionHaskell/with_bedrock2_%)
-
-
 .SECONDEXPANSION:
 
 $(ALL_C_FILES) : $(C_DIR)%.c : $$($$($$*_BINARY_NAME))
@@ -344,11 +332,20 @@ Makefile.test-amd64-files.mk: fiat-amd64/gentest.py $(AMD64_ASM_FILES)
 
 include Makefile.test-amd64-files.mk
 
-.PHONY: test-amd64-files-print-report only-test-amd64-files-print-report
+.PHONY: test-amd64-files-print-report test-amd64-files-lite-print-report only-test-amd64-files-print-report only-test-amd64-files-lite-print-report
 
-test-amd64-files-print-report::
-	@ export passed=$$(cat $(AMD64_ASM_STATUS_FILES) 2>/dev/null | grep -c '^0$$'); \
-	  export total=$(words $(AMD64_ASM_STATUS_FILES)); \
+test-amd64-files-print-report:: STATUS_FILES=$(AMD64_ASM_STATUS_FILES)
+only-test-amd64-files-print-report:: STATUS_FILES=$(AMD64_ASM_ONLY_STATUS_FILES)
+test-amd64-files-lite-print-report:: STATUS_FILES=$(AMD64_ASM_SMALL_STATUS_FILES)
+only-test-amd64-files-lite-print-report:: STATUS_FILES=$(AMD64_ASM_SMALL_ONLY_STATUS_FILES)
+test-amd64-files-status: STATUS_FILES=$(AMD64_ASM_STATUS_FILES)
+only-test-amd64-files-status: STATUS_FILES=$(AMD64_ASM_ONLY_STATUS_FILES)
+test-amd64-files-lite-status: STATUS_FILES=$(AMD64_ASM_SMALL_STATUS_FILES)
+only-test-amd64-files-lite-status: STATUS_FILES=$(AMD64_ASM_SMALL_ONLY_STATUS_FILES)
+
+test-amd64-files-print-report only-test-amd64-files-print-report test-amd64-files-lite-print-report only-test-amd64-files-lite-print-report::
+	@ export passed=$$(cat $(STATUS_FILES) 2>/dev/null | grep -c '^0$$'); \
+	  export total=$(words $(STATUS_FILES)); \
 	  export failed=$$(expr $${total} - $${passed}); \
 	  if [ $${passed} -eq $${total} ]; then \
 	      echo "$(GREEN)$(BOLD)ALL $${total} AMD64 ASM TESTS PASSED$(NC)"; \
@@ -357,30 +354,20 @@ test-amd64-files-print-report::
 	      echo "$(RED)$(BOLD)FAILED:$(NORMAL) $(RED)$${failed}$(NC) / $${total}"; \
 	  fi
 
-only-test-amd64-files-print-report::
-	@ export passed=$$(cat $(AMD64_ASM_ONLY_STATUS_FILES) 2>/dev/null | grep -c '^0$$'); \
-	  export total=$(words $(AMD64_ASM_ONLY_STATUS_FILES)); \
-	  export failed=$$(expr $${total} - $${passed}); \
-	  if [ $${passed} -eq $${total} ]; then \
-	      echo "$(GREEN)$(BOLD)ALL $${total} AMD64 ASM TESTS PASSED$(NC)"; \
-	  else \
-	      echo "$(GREEN)$(BOLD)PASSED:$(NORMAL) $(GREEN)$${passed}$(NC) / $${total}"; \
-	      echo "$(RED)$(BOLD)FAILED:$(NORMAL) $(RED)$${failed}$(NC) / $${total}"; \
-	  fi
+test-amd64-files-status only-test-amd64-files-status test-amd64-files-lite-status only-test-amd64-files-lite-status: $$(STATUS_FILES)
+	$(HIDE)! grep -q -v '^0$$' $(STATUS_FILES)
 
-test-amd64-files-status: $(AMD64_ASM_STATUS_FILES)
-	$(HIDE)! grep -q -v '^0$$' $^
+.PHONY: test-amd64-files-status only-test-amd64-files-status test-amd64-files-lite-status only-test-amd64-files-lite-status
 
-only-test-amd64-files-status: $(AMD64_ASM_ONLY_STATUS_FILES)
-	$(HIDE)! grep -q -v '^0$$' $^
-
-.PHONY: test-amd64-files-status only-test-amd64-files-status
-
-test-amd64-files: $(UNSATURATED_SOLINAS) $(WORD_BY_WORD_MONTGOMERY)
+test-amd64-files test-amd64-files-lite: $(UNSATURATED_SOLINAS) $(WORD_BY_WORD_MONTGOMERY)
 
 test-amd64-files: test-amd64-files-print-report test-amd64-files-status
 
 only-test-amd64-files: only-test-amd64-files-print-report only-test-amd64-files-status
+
+test-amd64-files-lite: test-amd64-files-lite-print-report test-amd64-files-lite-status
+
+only-test-amd64-files-lite: only-test-amd64-files-lite-print-report only-test-amd64-files-lite-status
 
 etc/tscfreq: etc/tscfreq.c
 	$(CC) etc/tscfreq.c -s -Os -o etc/tscfreq
