@@ -20,6 +20,8 @@ fi
 group lscpu
 group uname -a
 group lsb_release -a
+group ulimit -aH
+group ulimit -aS
 group ghc --version
 group gcc -v
 group ocamlc -config

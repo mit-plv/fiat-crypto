@@ -52,7 +52,12 @@ if [ ! -z "$(git diff)" ]; then
     git submodule foreach --recursive git diff
     git submodule foreach --recursive git status
     git diff
+    diff_msg="$(git diff 2>&1; git submodule foreach --recursive git diff 2>&1; git submodule foreach --recursive git status 2>&1)"
+    diff_msg="$(printf "Non-empty-diff:\n%s\n" "${diff_msg}" | sed -z 's/\n/%0A/g')"
     if [ "${ALLOW_DIFF}" != "1" ]; then
+        printf "::error::%s" "${diff_msg}"
         exit 1
+    else
+        printf "::warning::%s" "${diff_msg}"
     fi
 fi
