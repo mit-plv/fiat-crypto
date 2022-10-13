@@ -980,15 +980,15 @@ Ltac p n :=
 Lemma compiler_emitted_valid_instructions :
   Forall (fun i : Decode.Instruction => verify i Decode.RV32IM \/ valid_InvalidInstruction i) garagedoor_insns.
 Proof.
-  Time do 20 p 50%nat.
-  Time do 20 p 50%nat.
-  Time do 20 p 50%nat.
-  Time do 20 p 50%nat.
-  Time do 20 p 50%nat.
-  Time do 20 p 50%nat.
-  Time do 20 p 50%nat.
-  Time do 10 p 50%nat.
-  Time do 10 p 50%nat.
+  Time do 20 p 50%nat. Time Optimize Proof.
+  Time do 20 p 50%nat. Time Optimize Proof.
+  Time do 20 p 50%nat. Time Optimize Proof.
+  Time do 20 p 50%nat. Time Optimize Proof.
+  Time do 20 p 50%nat. Time Optimize Proof.
+  Time do 20 p 50%nat. Time Optimize Proof.
+  Time do 20 p 50%nat. Time Optimize Proof.
+  Time do 10 p 50%nat. Time Optimize Proof.
+  Time do 10 p 50%nat. Time Optimize Proof.
   match goal with |- Forall _ ?l => replace l with (@nil Decode.Instruction) end.
   { trivial. }
   { vm_compute. trivial. }
