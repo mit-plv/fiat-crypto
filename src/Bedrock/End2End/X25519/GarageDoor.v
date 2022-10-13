@@ -979,7 +979,7 @@ Local Existing Instance SortedListString.map.
 
 Lemma compiler_emitted_valid_instructions :
   bverify.bvalidInstructions Decode.RV32IM garagedoor_insns = true.
-Proof. vm_compute. reflexivity. Qed.
+Proof. vm_cast_no_check (eq_refl true). Qed.
 
 Definition good_trace s t s' :=
   exists ioh, SPI.mmio_trace_abstraction_relation ioh t /\
