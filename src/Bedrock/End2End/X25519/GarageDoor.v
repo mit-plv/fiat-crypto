@@ -534,6 +534,8 @@ Proof.
     rewrite word.unsigned_or_nowrap. apply Z.lor_eq_0_iff; auto.
     (* end chacha20*) }
 
+Optimize Proof. Optimize Heap.
+
     ssplit; trivial.
     eexists _, _, _; ssplit; try ecancel_assumption; try SepAutoArray.listZnWords.
     eexists; ssplit.
@@ -742,6 +744,8 @@ Proof.
     { f_equal.  ring. }
     rewrite Z.mod_small; trivial; eapply word.unsigned_range. }
 
+Optimize Proof. Optimize Heap.
+
   repeat seprewrite_in @ptsto_to_array H39.
   rewrite ?word.unsigned_of_Z_nowrap in H39 by ZnWords.
   seprewrite_in_by (@bytearray_address_merge _ _ _ _ _ ih_const) H39 ZnWords.
@@ -765,6 +769,8 @@ Proof.
     change (Z.of_nat 1) with 1%Z in *;
     try ecancel_assumption;
     try SepAutoArray.listZnWords.
+
+Optimize Proof. Optimize Heap.
 
   repeat straightline.
 
@@ -805,6 +811,8 @@ Proof.
   repeat eplace (word.add (word.add buf _) _) with (word.add buf _) in H29 by (ring_simplify; trivial).
   straightline_call; ssplit; try ecancel_assumption; trivial.
 
+Optimize Proof. Optimize Heap.
+
   repeat straightline.
 
   revert H37.
@@ -818,15 +826,18 @@ Proof.
   seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
   seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
   seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+Optimize Proof. Optimize Heap.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+Optimize Proof. Optimize Heap.
   seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
   seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
   seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
   seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
   seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+Optimize Proof. Optimize Heap.
 
   subst v6 v7 v8 v9 v10.
   rename x3 into ipchk.
@@ -930,7 +941,7 @@ Proof.
     eapply lan9250_tx_ok; try eapply lan9250_writeword_ok; try eapply spi_xchg_ok; (eapply spi_write_ok || eapply spi_read_ok).
     eapply x25519_ok; try eapply fe25519_from_bytes_correct; try eapply link_montladder; try eapply fe25519_to_bytes_correct.
     eapply chacha20_ok.
-Qed.
+Qed. Optimize Heap.
 
 Require compiler.ToplevelLoop.
 Definition ml: MemoryLayout.MemoryLayout(word:=Naive.word32) := {|
@@ -954,7 +965,7 @@ Proof.
   vm_compute.
   match goal with |- @Success ?A ?x = Success ?e => is_evar e;
     exact (@eq_refl (result A) (@Success A x)) end.
-Qed.
+Qed. Optimize Heap.
 
 Definition garagedoor_stack_size := snd garagedoor_compiler_result.
 Definition garagedoor_finfo := snd (fst garagedoor_compiler_result).
@@ -997,7 +1008,7 @@ Proof.
     (eapply lan9250_readword_ok || eapply lan9250_writeword_ok);
         eapply spi_xchg_ok;
         (eapply spi_write_ok || eapply spi_read_ok).
-Qed.
+Qed. Optimize Heap.
 
 Import ToplevelLoop GoFlatToRiscv .
 Local Notation invariant := (ll_inv compile_ext_call ml garagedoor_spec).
