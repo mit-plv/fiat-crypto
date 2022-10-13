@@ -166,7 +166,7 @@ Definition garagedoor_iteration : state -> list (lightbulb_spec.OP _) -> state -
     lightbulb_spec.lan9250_recv_packet_too_long _ ioh \/
     TracePredicate.concat TracePredicate.any (lightbulb_spec.spi_timeout _) ioh) \/
   (exists incoming, lightbulb_spec.lan9250_recv _ incoming ioh /\
-  let ethertype := le_combine (rev (firstn 2 (skipn 12 incoming))) in ethertype < 1536 \/ 
+  let ethertype := le_combine (rev (firstn 2 (skipn 12 incoming))) in ethertype < 1536 \/
   let ipproto := nth 23 incoming x00 in ipproto <> x11 \/
   (length incoming <> 14+20+8 +2+16 +4 /\ length incoming <> 14+20+8 +2+32 +4)%nat) \/
   exists (mac_local mac_remote : tuple byte 6),
@@ -240,7 +240,7 @@ Global Instance spec_of_loopfn : spec_of loopfn :=
   { requires t m := memrep bs R (seed, sk) m;
     ensures T M := exists SEED SK BS, memrep BS R (SEED, SK) M /\
     exists iol, T = iol ++ t /\
-    exists ioh, SPI.mmio_trace_abstraction_relation ioh iol /\ 
+    exists ioh, SPI.mmio_trace_abstraction_relation ioh iol /\
     garagedoor_iteration (seed, sk) ioh (SEED, SK) }.
 
 Import ZnWords.
@@ -421,7 +421,7 @@ Proof.
     eexists _, _; split; [eapply map.split_empty_r; reflexivity|].
     eexists; ssplit; trivial.
     { cbv. clear. intuition congruence. }
-    
+
     repeat straightline.
     eexists. split. repeat straightline.
     eexists _, _; split; [eapply map.split_empty_r; reflexivity|].
@@ -529,7 +529,7 @@ Proof.
     rewrite !ListUtil.firstn_app_sharp by ZnWords.
     rewrite !ListUtil.skipn_app_sharp by ZnWords.
     eexists _, _; ssplit; try eassumption; subst mmio_val; eauto.
-    
+
     intros; exfalso. apply H39.
     rewrite word.unsigned_or_nowrap. apply Z.lor_eq_0_iff; auto.
     (* end chacha20*) }
@@ -741,7 +741,7 @@ Proof.
     transitivity (word.unsigned b mod 2^width).
     { f_equal.  ring. }
     rewrite Z.mod_small; trivial; eapply word.unsigned_range. }
-    
+
   repeat seprewrite_in @ptsto_to_array H39.
   rewrite ?word.unsigned_of_Z_nowrap in H39 by ZnWords.
   seprewrite_in_by (@bytearray_address_merge _ _ _ _ _ ih_const) H39 ZnWords.
@@ -966,36 +966,12 @@ Require Import compiler.CompilerInvariant.
 Require Import compiler.NaiveRiscvWordProperties.
 Local Existing Instance SortedListString.map.
 
-Ltac pp :=
-  repeat (apply Forall_cons||apply Forall_nil);
-  lazymatch goal with
-  | |- verify (Decode.InvalidInstruction ?z) _ \/ _ => right; exists z
-  | _ => left
-  end; vm_compute; try intuition discriminate.
-Ltac p n :=
-  erewrite <-(List.firstn_skipn n); eapply Forall_app; split; [
-    match goal with |-Forall ?P ?xs =>
-      let ys := eval vm_compute in xs in change (Forall P ys) end;
-      pp |].
 Lemma compiler_emitted_valid_instructions :
-  Forall (fun i : Decode.Instruction => verify i Decode.RV32IM \/ valid_InvalidInstruction i) garagedoor_insns.
-Proof.
-  Time do 20 p 50%nat.
-  Time do 20 p 50%nat.
-  Time do 20 p 50%nat.
-  Time do 20 p 50%nat.
-  Time do 20 p 50%nat.
-  Time do 20 p 50%nat.
-  Time do 20 p 50%nat.
-  Time do 10 p 50%nat.
-  Time do 10 p 50%nat.
-  match goal with |- Forall _ ?l => replace l with (@nil Decode.Instruction) end.
-  { trivial. }
-  { vm_compute. trivial. }
-Time Qed.
+  bverify.bvalidInstructions Decode.RV32IM garagedoor_insns = true.
+Proof. vm_compute. reflexivity. Qed.
 
-Definition good_trace s t s' := 
-  exists ioh, SPI.mmio_trace_abstraction_relation ioh t /\ 
+Definition good_trace s t s' :=
+  exists ioh, SPI.mmio_trace_abstraction_relation ioh t /\
   (BootSeq +++ stateful garagedoor_iteration s s') ioh.
 Import ExprImpEventLoopSpec.
 Definition garagedoor_spec : ProgramSpec := {|
@@ -1025,7 +1001,7 @@ Qed.
 
 Import ToplevelLoop GoFlatToRiscv .
 Local Notation invariant := (ll_inv compile_ext_call ml garagedoor_spec).
-Lemma invariant_proof : 
+Lemma invariant_proof :
   forall initial : MetricRiscvMachine,
     getPc (getMachine initial) = MemoryLayout.code_start ml ->
     getNextPc (getMachine initial) = word.add (getPc (getMachine initial)) (word.of_Z 4)->
@@ -1073,7 +1049,7 @@ Proof.
     change (BinIntDef.Z.of_nat (Datatypes.length anybytes) = 0x2000) in H6_emp0.
     Tactics.rapply WeakestPreconditionProperties.Proper_call;
       [|eapply link_initfn]; try eassumption.
-    2: { 
+    2: {
       rewrite <-(List.firstn_skipn 0x40 anybytes) in H6.
       rewrite <-(List.firstn_skipn 0x20 (List.skipn _ anybytes)) in H6.
       do 2 seprewrite_in @Array.bytearray_append H6.
