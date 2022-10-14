@@ -145,7 +145,7 @@ Here are some examples of ways to invoke the binaries (from the directories that
     ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '64' '3' '2^130 - 5' > poly1305_64.c
     ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '32' '5' '2^130 - 5' > poly1305_32.c
 
-You can find more examples in the [`Makefile`](./Makefile).
+You can find more examples in [`Makefile.examples`](./Makefile.examples).
 
 License
 -------
