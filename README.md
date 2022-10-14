@@ -121,7 +121,7 @@ Just the compilers generating these bedrock2/C files can be made with
     make standalone-ocaml
 
 or `make standalone-haskell` for binaries generated with Haskell, or `make standalone` for both the Haskell and OCaml binaries.
-The binaries are located in `src/ExtractionOcaml/` and `src/ExtractionHaskell` respectively.
+The binaries are located in `src/ExtractionOcaml/` and `src/ExtractionHaskell/` respectively.
 
 There is a separate compiler binary for each implementation strategy:
 
