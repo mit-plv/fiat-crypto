@@ -155,14 +155,6 @@ Fiat-Crypto is distributed under the terms of the MIT License, the Apache Licens
 See [`COPYRIGHT`](./COPYRIGHT), [`LICENSE-MIT`](./LICENSE-MIT), [`LICENSE-APACHE`](./LICENSE-APACHE), and [`LICENSE-BSD-1`](./LICENSE-BSD-1) for details.
 
 
-Extended Build Instructions
----------------------------
-
-If your `COQPATH` variable is not empty, you can build with:
-
-    export COQPATH="$(pwd)/rewriter/src:$(pwd)/coqprime/src:$(pwd)/bedrock2/bedrock2/src:$(pwd)/bedrock2/deps/coqutil/src${COQPATH:+:}$COQPATH"
-    make
-
 Reading About The Code
 ----------------------
 
