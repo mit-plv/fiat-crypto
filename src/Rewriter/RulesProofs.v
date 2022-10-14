@@ -55,6 +55,7 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Bool.Reflect.
 Require Crypto.Util.PrimitiveProd.
 Require Crypto.Util.PrimitiveHList.
 Require Import Crypto.Language.PreExtra.
@@ -553,6 +554,7 @@ Proof using Type.
   all: repeat interp_good_t_step_related.
   all: repeat interp_good_t_step_arith.
   all: remove_casts; try fin_with_nia.
+  all: try (reflect_hyps; lia).
 Qed.
 
 Lemma strip_literal_casts_rewrite_rules_proofs
