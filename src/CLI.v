@@ -16,6 +16,8 @@ Require Import Crypto.Util.Strings.NamingConventions.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Strings.Show.
+Require Import Crypto.Util.Strings.ParseDebugOptions.
+Require Import Crypto.Util.DebugMonad.
 Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
@@ -186,42 +188,55 @@ Module ForExtraction.
        then "'" ++ String.replace "'" "'""'""'" s ++ "'"
        else s.
 
+  Definition known_debug_options_with_spec : list (string * string)
+    := [("on-success", "In addition to printing the debug information when synthesis fails, also print it when synthesis succeeds.")
+        ; ("rewriting", "Print the AST before and after each rewriting pass.")
+    ].
+  Definition known_debug_options : list string
+    := Eval compute in List.map fst known_debug_options_with_spec.
+  Definition special_debug_options : list (string * debug_option_kind)
+    := [("all", all)
+    ].
+  (** This string gets parsed as the initial argument to --debug, to be updated by subsequent arguments *)
+  Definition default_debug : string := "".
+
   Definition CollectErrors
              {machine_wordsize : machine_wordsize_opt}
              {output_language_api : ToString.OutputLanguageAPI}
-             (res : list (synthesis_output_kind * string * Pipeline.ErrorT (list string)) + list string)
-    : ((* normal *) list (list string) * (* asm output *) list (list string)) + (* error *) list (list string)
-    := match res with
-       | inl res
-         => let header := hd "" (List.map (@snd _ _) (List.map (@fst _ _) res)) in
-            let res :=
-                List.fold_right
-                  (fun '(kind, name, res) rest
-                   => match kind, res, rest with
-                      | _, ErrorT.Error err, rest
-                        => let in_name := ("In " ++ name ++ ":") in
-                           let cur :=
-                               match show_lines err with
-                               | [serr] => [in_name ++ " " ++ serr]
-                               | serr => in_name::serr
-                               end in
-                           let rest := match rest with inl _ => nil | inr rest => rest end in
-                           inr (cur :: rest)
-                      | _, ErrorT.Success v, inr ls => inr ls
-                      | normal_output, ErrorT.Success v_normal, inl (ls_normal, ls_asm)
-                        => inl (v_normal :: ls_normal, ls_asm)
-                      | assembly_output, ErrorT.Success v_asm, inl (ls_normal, ls_asm)
-                        => inl (ls_normal, v_asm :: ls_asm)
-                      end)
-                  (inl (nil, nil))
-                  res in
-            match res with
-            | inl ls => inl ls
-            | inr err => inr ([header]::err)
-            end
-       | inr res
-         => inr [res]
-       end.
+             (res : list (synthesis_output_kind * string * Pipeline.M (list string)))
+    : Pipeline.DebugM (((* normal *) list (list string)) * ((* asm output *) list (list string))) + (* error *) list (Pipeline.DebugM (list string))
+    := (let header := hd "" (List.map (@snd _ _) (List.map (@fst _ _) res)) in
+        let res :=
+          List.fold_right
+            (fun '(kind, name, res) rest
+             => match Debug.eval_result res, rest with
+                | ErrorT.Error err, rest
+                  => let in_name := ("In " ++ name ++ ":") in
+                     let cur :=
+                       match show_lines err with
+                       | [serr] => [in_name ++ " " ++ serr]
+                       | serr => in_name::serr
+                       end in
+                     let rest := match rest with inl _ => nil | inr rest => rest end in
+                     inr ((Debug.with_debug_info res (Debug.ret cur)) :: rest)
+                | ErrorT.Success v, inr ls => inr ls
+                | ErrorT.Success v, inl ls
+                  => inl (Debug.copy_debug_info res;;
+                          ls <- ls;
+                          Debug.ret
+                            (match kind, ls with
+                             | normal_output  , (ls_normal, ls_asm)
+                               => (v :: ls_normal, ls_asm)
+                             | assembly_output, (ls_normal, ls_asm)
+                               => (ls_normal, v :: ls_asm)
+                             end))
+                end)
+            (inl (Debug.ret (nil, nil)))
+            res in
+        match res with
+        | inl ls => inl ls
+        | inr err => inr (Debug.ret [header]::err)
+        end)%debugM.
 
   Class supported_languagesT := supported_languages : list (string * ToString.OutputLanguageAPI).
 
@@ -453,7 +468,30 @@ Module ForExtraction.
     := ([Arg.long_key "doc-prepend-header"],
         Arg.String,
         ["Documentation Option: Prepend a line at the beginning of the documentation header at the top of the file.  This argument can be passed multiple times to insert multiple lines.  Lines will be automatically commented."]).
-
+  Definition debug_spec : named_argT
+    := let len := List.fold_right Nat.max 0%nat (List.map String.length (known_debug_options ++ List.map fst special_debug_options)) in
+       let fill s := (s ++ String.repeat " " (len - String.length s))%string in
+       ([Arg.long_key "debug"; Arg.short_key "d"],
+         Arg.String,
+         (["A comma-separated list of debug options to turn on.  Use - to disable an option.  Default debug options: " ++ (if default_debug =? "" then "(none)" else default_debug)
+           ; "Valid debug options:"]%string)
+           ++ (List.flat_map
+                 (fun '(opt, k)
+                  => match k with
+                     | all => ["- " ++ fill opt ++ String.Tab ++ "Turn all debugging on"]
+                     | alias _ => []
+                     end)%string
+                 special_debug_options)
+           ++ (List.map
+                 (fun '(opt, descr) => "- " ++ fill opt ++ String.Tab ++ descr)%string
+                 known_debug_options_with_spec)
+           ++ (List.flat_map
+                 (fun '(opt, k)
+                  => match k with
+                     | all => []
+                     | alias ls => ["- " ++ fill opt ++ String.Tab ++ "an alias for " ++ String.concat "," ls]
+                     end)%string
+                 special_debug_options))%list.
 
   Definition collapse_list_default {A} (default : A) (ls : list A)
     := List.hd default (List.rev ls).
@@ -527,6 +565,10 @@ Module ForExtraction.
       ; before_header_lines : list string
       (** Extra lines at the beginning of the documentation header *)
       ; extra_early_header_lines : list string
+      (** Debug rewriting *)
+      ; debug_rewriting :> debug_rewriting_opt
+      (** Print debug info on success too *)
+      ; debug_on_success : bool
     }.
   Class SynthesizeOptions :=
     {
@@ -608,6 +650,7 @@ Module ForExtraction.
         ; doc_newline_in_typedef_bounds_spec
         ; doc_prepend_header_raw_spec
         ; doc_prepend_header_spec
+        ; debug_spec
        ].
 
   (* We follow the standard convention of giving precedence to the final option passed *)
@@ -662,7 +705,9 @@ Module ForExtraction.
              , doc_newline_in_typedef_boundsv
              , doc_prepend_header_rawv
              , doc_prepend_headerv
+             , debugv
             ) := data in
+       let debug_to_bool x := bool_of_full_debug_status x false in
        let to_bool ls := (0 <? List.length ls)%nat in
        let to_string_list ls := List.map (@snd _ _) ls in
        let to_N_list ls := List.map (@snd _ _) (List.map (@snd _ _) ls) in
@@ -681,6 +726,7 @@ Module ForExtraction.
        let to_capitalization_convention_opt ls
            := option_map (fun d => {| capitalization_convention_data := d ; only_lower_first_letters := true |})
                          (to_capitalization_data_opt ls) in
+       let '(_, unknown_debug_options, (debug_on_successv, debug_rewritingv)) := parse_debug_opts special_debug_options known_debug_options (default_debug :: List.map snd debugv) in
        let res
            := ({|
                   hint_file_names := to_string_list hint_file_namesv
@@ -737,11 +783,15 @@ Module ForExtraction.
                        |}
                   ; before_header_lines := to_string_list doc_prepend_header_rawv
                   ; extra_early_header_lines := to_string_list doc_prepend_headerv
+                  ; debug_rewriting := debug_to_bool debug_rewritingv
+                  ; debug_on_success := debug_to_bool debug_on_successv
                |},
                snd (List.hd lang_default langv)) in
-       match langv with
-       | [] | [_] => inl res
-       | opts => inr ["Only one language specification with --lang is allowed; multiple languages were requested: " ++ String.concat ", " (List.map (@fst _ _) opts)]
+       match langv, unknown_debug_options with
+       | ([] | [_]), [] => inl res
+       | _ :: _ :: _, _ => inr ["Only one language specification with --lang is allowed; multiple languages were requested: " ++ String.concat ", " (List.map (@fst _ _) langv)]
+       | _, _ :: _
+         => inr ["Unrecognized debug option" ++ (if (1 <? List.length unknown_debug_options)%nat then "s" else "") ++ ": " ++ String.concat ", " (List.map fst unknown_debug_options)]
        end.
 
   (** We define a class for the various operations that are specific to a pipeline *)
@@ -771,7 +821,7 @@ Module ForExtraction.
           {output_language_api : ToString.OutputLanguageAPI}
           {synthesize_opts : SynthesizeOptions}
           (args : ParsedArgsT) (comment_header : list string) (function_name_prefix : string),
-          list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
+          list (synthesis_output_kind * string * Pipeline.M (list string))
     }.
 
   (** API for performing IO *)
@@ -802,7 +852,7 @@ Module ForExtraction.
                  (curve_description : string)
                  (str_machine_wordsize : string)
                  (args : ArgsT)
-        : list (synthesis_output_kind * string * Pipeline.ErrorT (list string)) + list string
+        : list (synthesis_output_kind * string * Pipeline.M (list string))
         := let prefix := ((if no_prefix_fiat then "" else "fiat_")
                             ++ (if (curve_description =? "") then "" else (curve_description ++ "_")))%string in
            let header :=
@@ -819,7 +869,10 @@ Module ForExtraction.
                          end
                        ; "machine_wordsize = " ++ show (machine_wordsize:Z) ++ " (from """ ++ str_machine_wordsize ++ """)"]%string)
                   ++ show_lines_args args)%list in
-           inl (Synthesize (snd args) header prefix).
+           Synthesize (snd args) header prefix.
+
+      Local Notation debug_to_lines v
+        := (List.flat_map (fun f => String.NewLine :: f tt) (Debug.get_debug_info v)).
 
       Definition ProcessedLines
                  {output_language_api : ToString.OutputLanguageAPI}
@@ -828,22 +881,30 @@ Module ForExtraction.
                  (curve_description : string)
                  (str_machine_wordsize : string)
                  (args : ArgsT)
-        : ((* normal *) list string * (* asm *) list string) + list string
+        : Pipeline.DebugM ((* normal *) list string * (* asm *) list string) + list string
         := match CollectErrors (PipelineLines invocation curve_description str_machine_wordsize args) with
-           | inl (ls_normal, ls_asm)
-             => let before_header := List.map (fun s => s ++ String.NewLine) before_header_lines in
+           | inl ls
+             => let '(ls_normal, ls_asm) := Debug.eval_result ls in
+                let before_header := List.map (fun s => s ++ String.NewLine) before_header_lines in
                 let postprocess_lines ls
                     := String.strip_trailing_newlines
                          (List.flat_map (fun s => ((List.map (fun s => s ++ String.NewLine) (List.map String.strip_trailing_spaces s))%string)
                                                     ++ [String.NewLine])
                                         ls)%list in
-                inl (before_header ++ postprocess_lines ls_normal, postprocess_lines ls_asm)%list
+                inl
+                  (Debug.copy_debug_info ls;;
+                   Debug.ret (before_header ++ postprocess_lines ls_normal, postprocess_lines ls_asm)%list)
            | inr nil => inr nil
            | inr (l :: ls)
-             => inr (l ++ (List.flat_map
-                             (fun e => String.NewLine :: e)
+             => let flatten_debug_info (ls : DebugM (list string))
+                  := let dbg := debug_to_lines ls in
+                     let ls := Debug.eval_result ls in
+                     (dbg ++ ls)%list in
+                inr ((flatten_debug_info l)
+                       ++ (List.flat_map
+                             (fun e => String.NewLine :: flatten_debug_info e)
                              ls))%list
-           end.
+           end%debugM.
 
       Definition Pipeline
                  {A}
@@ -853,11 +914,15 @@ Module ForExtraction.
                  (curve_description : string)
                  (str_machine_wordsize : string)
                  (args : ArgsT)
-                 (success : list string * list string -> A)
+                 (success : list string (* stderr *) * list string (* normal lines *) * list string (* asm lines *) -> A)
                  (error : list string -> A)
         : A
         := match ProcessedLines invocation curve_description str_machine_wordsize args with
-           | inl s => success s
+           | inl s => let stderr := if debug_on_success
+                                    then debug_to_lines s
+                                    else [] in
+                      let '(normal_ls, asm_ls) := Debug.eval_result s in
+                      success (stderr, normal_ls, asm_ls)
            | inr s => error s
            end.
 
@@ -889,18 +954,21 @@ Module ForExtraction.
                        hint_file_names
                        (fun assembly_hints_linesv
                         => let success :=
-                               fun '(normal_lines, asm_lines)
-                               => write_file_then
-                                    output_file_name
-                                    normal_lines
+                               fun '(stderr, normal_lines, asm_lines)
+                               => write_stderr_then
+                                    stderr
                                     (fun 'tt
-                                     => match asm_lines, assembly_hints_linesv with
-                                        | nil, [] => ret tt
-                                        | _, _ => write_file_then
-                                                    asm_output_file_name
-                                                    asm_lines
-                                                    ret
-                                        end) in
+                                     => write_file_then
+                                          output_file_name
+                                          normal_lines
+                                          (fun 'tt
+                                           => match asm_lines, assembly_hints_linesv with
+                                              | nil, [] => ret tt
+                                              | _, _ => write_file_then
+                                                          asm_output_file_name
+                                                          asm_lines
+                                                          ret
+                                              end)) in
                            let opts := {|
                                  parsed_synthesize_options := opts
                                  ; assembly_hints_lines := assembly_hints_linesv

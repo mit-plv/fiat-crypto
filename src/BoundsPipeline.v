@@ -31,6 +31,7 @@ Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.AllInstances.
 Require Import Crypto.Util.Tactics.PrintContext.
 Require Import Crypto.Util.Tactics.PrintGoal.
+Require Import Crypto.Util.DebugMonad.
 Require Rewriter.Language.Language.
 Require Crypto.Language.API.
 Require Rewriter.Language.UnderLets.
@@ -53,9 +54,12 @@ Require Crypto.Assembly.Parse.
 Require Crypto.Assembly.Equivalence.
 Require Import Crypto.Util.Notations.
 Import Coq.Lists.List. Import ListNotations. Local Open Scope Z_scope.
+Local Open Scope string_scope.
+Local Open Scope list_scope.
 
 Local Set Implicit Arguments.
 Local Set Primitive Projections.
+Local Set Keyed Unification.
 
 Import
   Rewriter.Language.Wf
@@ -235,6 +239,18 @@ Typeclasses Opaque widen_carry_opt.
 Class widen_bytes_opt := widen_bytes : bool.
 #[global]
 Typeclasses Opaque widen_bytes_opt.
+(** Display rewriting pass information *)
+Class debug_rewriting_opt := debug_rewriting : bool.
+#[global]
+ Typeclasses Opaque debug_rewriting_opt.
+(** Display rewriting pass information on success *)
+Class debug_rewriting_on_success_opt := debug_rewriting_on_success : bool.
+#[global]
+ Typeclasses Opaque debug_rewriting_on_success_opt.
+(** Display rewriting pass information on failure *)
+Class debug_rewriting_on_failure_opt := debug_rewriting_on_failure : bool.
+#[global]
+ Typeclasses Opaque debug_rewriting_on_failure_opt.
 (** Fancy Output *)
 Record to_fancy_args := { invert_low : Z (*log2wordmax*) -> Z -> option Z ; invert_high : Z (*log2wordmax*) -> Z -> option Z ; value_range : zrange ; flag_range : zrange }.
 Class translate_to_fancy_opt := translate_to_fancy : option to_fancy_args.
@@ -298,8 +314,12 @@ Definition typedef_info_of_typedef {relax_zrange : relax_zrange_opt} {t bounds} 
   := (typedef.name,
       typedef.description,
       ToString.int.option.interp.to_union (ToString.int.option.interp.of_zrange_relaxed (ZRange.type.base.option.map_ranges relax_zrange bounds)),
-      existT _ t bounds).
+       existT _ t bounds).
 
+#[global]
+ Declare Scope pipelineM_scope.
+#[global]
+ Delimit Scope pipelineM_scope with pipelineM.
 Module Pipeline.
   Import GeneralizeVar.
 
@@ -313,6 +333,7 @@ Module Pipeline.
     ; unfold_value_barrier : unfold_value_barrier_opt
     ; relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt
     ; translate_to_fancy : translate_to_fancy_opt
+    ; debug_rewriting : debug_rewriting_opt
     ; with_dead_code_elimination : bool := true
     ; with_let_bind_return : bool := true
     (** convert adc/sbb which generates no carry to add/sub iff we're not fancy *)
@@ -328,6 +349,7 @@ Module Pipeline.
     ; unfold_value_barrier := true
     ; relax_adc_sbb_return_carry_to_bitwidth := []
     ; translate_to_fancy := default_translate_to_fancy
+    ; debug_rewriting := false
     |}.
 
   Global Existing Instances
@@ -341,6 +363,7 @@ Module Pipeline.
          unfold_value_barrier
          relax_adc_sbb_return_carry_to_bitwidth
          translate_to_fancy
+         debug_rewriting
   .
   #[global]
    Hint Cut [
@@ -354,6 +377,7 @@ Module Pipeline.
         | unfold_value_barrier
         | relax_adc_sbb_return_carry_to_bitwidth
         | translate_to_fancy
+        | debug_rewriting
         ) ( _ * )
         (Build_BoundsPipelineOptions
         )
@@ -386,7 +410,28 @@ Module Pipeline.
       (msg : Assembly.Equivalence.EquivalenceCheckingError)
   .
 
+  Notation DebugM := (@DebugM string) (only parsing).
   Notation ErrorT := (ErrorT ErrorMessage).
+  Notation M T := (DebugM (ErrorT T)).
+
+  Module M.
+    Definition bind {A B} (x : M A) (k : A -> M B) : M B
+      := (x <- x;
+          match x with
+          | Success x => k x
+          | Error err => Debug.ret (Error err)
+          end)%debugM.
+    Global Arguments bind {A B}%type_scope (x k)%pipelineM_scope.
+    Notation sequence x y := (@bind unit _ x%pipelineM (fun 'tt => y%pipelineM)).
+    Notation ret x := (@Debug.ret string _ (@Success ErrorMessage _ x)).
+    Notation err msg := (@Debug.ret string _ (@Error ErrorMessage _ msg)).
+    Notation debug msg := (Debug.sequence (Debug.debug msg) (ret tt)).
+    Module Export Notations.
+      Notation "x <- y ; f" := (bind y%pipelineM (fun x => f%pipelineM)) : pipelineM_scope.
+      Notation "f ;; g" := (sequence f%pipelineM g%pipelineM) : pipelineM_scope.
+    End Notations.
+  End M.
+  Export M.Notations.
 
   Record ExtendedSynthesisResult t :=
     { lines : list string
@@ -581,29 +626,65 @@ Module Pipeline.
       := fun err => String.concat String.NewLine (show_lines err).
   End show.
 
-  Definition RewriteAndEliminateDeadAndInline {t}
+  Definition debug_after_rewrite {debug_rewriting : debug_rewriting_opt} {t}
+             (descr : string)
+             (E : Expr t)
+    : DebugM unit
+    := if debug_rewriting
+       then Debug.debug ((["After rewriting " ++ descr ++ ":"]%string)
+                           ++ (let _ : PHOAS.with_all_casts := true in show_lines E))
+       else Debug.ret tt.
+
+  Definition wrap_debug_rewrite {debug_rewriting : debug_rewriting_opt} {t}
+             (descr : string)
+             (DoRewrite : Expr t -> Expr t)
+             (E : Expr t)
+    : DebugM (Expr t)
+    := (let E := DoRewrite E in
+        debug_after_rewrite descr E;;
+        Debug.ret E).
+
+  (* version where the rewriter is already wrapped with debug info *)
+  Definition RewriteAndEliminateDeadAndInline_gen {debug_rewriting : debug_rewriting_opt} {t}
+             (descr : string)
+             (DoRewrite : Expr t -> DebugM (Expr t))
+             (with_dead_code_elimination : bool)
+             (with_subst01 : bool)
+             (with_let_bind_return : bool)
+             (E : Expr t)
+    : DebugM (Expr t)
+    := (E <- DoRewrite E;
+        (* Note that DCE evaluates the expr with two different [var]
+           arguments, and so results in a pipeline that is 2x slower
+           unless we pass through a uniformly concrete [var] type
+           first *)
+        dlet_nd e := ToFlat E in
+        let E := FromFlat e in
+        E <- if with_subst01 return DebugM (Expr t)
+             then wrap_debug_rewrite ("subst01 for " ++ descr) (Subst01.Subst01 ident.is_comment) E
+             else if with_dead_code_elimination return DebugM (Expr t)
+                  then wrap_debug_rewrite ("DCE for " ++ descr) (DeadCodeElimination.EliminateDead ident.is_comment) E
+                  else Debug.ret E;
+        E <- if with_let_bind_return
+             then wrap_debug_rewrite ("LetBindReturn for " ++ descr) (UnderLets.LetBindReturn (@ident.is_var_like)) E
+             else Debug.ret E;
+        E <- DoRewrite E; (* after inlining, see if any new rewrite redexes are available *)
+        dlet_nd e := ToFlat E in
+        let E := FromFlat e in
+        E <- if with_dead_code_elimination
+             then wrap_debug_rewrite ("DCE after " ++ descr) (DeadCodeElimination.EliminateDead ident.is_comment) E
+             else Debug.ret E;
+        Debug.ret E)%debugM.
+
+  Definition RewriteAndEliminateDeadAndInline {debug_rewriting : debug_rewriting_opt} {t}
+             (descr : string)
              (DoRewrite : Expr t -> Expr t)
              (with_dead_code_elimination : bool)
              (with_subst01 : bool)
              (with_let_bind_return : bool)
              (E : Expr t)
-    : Expr t
-    := let E := DoRewrite E in
-       (* Note that DCE evaluates the expr with two different [var]
-          arguments, and so results in a pipeline that is 2x slower
-          unless we pass through a uniformly concrete [var] type
-          first *)
-       dlet_nd e := ToFlat E in
-       let E := FromFlat e in
-       let E := if with_subst01 then Subst01.Subst01 ident.is_comment E
-                else if with_dead_code_elimination then DeadCodeElimination.EliminateDead ident.is_comment E
-                     else E in
-       let E := if with_let_bind_return then UnderLets.LetBindReturn (@ident.is_var_like) E else E in
-       let E := DoRewrite E in (* after inlining, see if any new rewrite redexes are available *)
-       dlet_nd e := ToFlat E in
-       let E := FromFlat e in
-       let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead ident.is_comment E else E in
-       E.
+    : DebugM (Expr t)
+    := RewriteAndEliminateDeadAndInline_gen descr (wrap_debug_rewrite descr DoRewrite) with_dead_code_elimination with_subst01 with_let_bind_return E.
 
   Definition opts_of_method
              {low_level_rewriter_method : low_level_rewriter_method_opt}
@@ -626,38 +707,144 @@ Module Pipeline.
              {only_signed : only_signed_opt}
              {unfold_value_barrier : unfold_value_barrier_opt}
              {translate_to_fancy : translate_to_fancy_opt}
+             {debug_rewriting : debug_rewriting_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (with_let_bind_return : bool)
              {t}
              (E : Expr t)
-             arg_bounds
-  : Expr t
-    := (*let E := expr.Uncurry E in*)
+             (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+  : DebugM (Expr t)
+    := ((*let E := expr.Uncurry E in*)
       let opts := opts_of_method in
       let E := PartialEvaluateWithListInfoFromBounds E arg_bounds in
-      let E := PartialEvaluate opts E in
-      let E := if unfold_value_barrier then RewriteRules.RewriteUnfoldValueBarrier opts E else E in
-      let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArith 0 opts) with_dead_code_elimination with_subst01 with_let_bind_return E in
-      let E := RewriteRules.RewriteArith (2^8) opts E in (* reassociate small consts *)
-      let E := match translate_to_fancy with
-               | Some {| invert_low := invert_low ; invert_high := invert_high |} => RewriteRules.RewriteToFancy invert_low invert_high opts E
-               | None => E
-               end in
+      E <- wrap_debug_rewrite "PartialEvaluate" (PartialEvaluate opts) E;
+      E <- if unfold_value_barrier
+           then wrap_debug_rewrite "RewriteUnfoldValueBarrier" (RewriteRules.RewriteUnfoldValueBarrier opts) E
+           else Debug.ret E;
+      E <- RewriteAndEliminateDeadAndInline "RewriteArith_0" (RewriteRules.RewriteArith 0 opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
+      E <- wrap_debug_rewrite "RewriteArith_2⁸" (RewriteRules.RewriteArith (2^8) opts) E; (* reassociate small consts *)
+      E <- match translate_to_fancy with
+           | Some {| invert_low := invert_low ; invert_high := invert_high |}
+             => wrap_debug_rewrite "RewriteToFancy" (RewriteRules.RewriteToFancy invert_low invert_high opts) E
+           | None => Debug.ret E
+           end;
       dlet_nd e := ToFlat E in
       let E := FromFlat e in
-      E.
+      Debug.ret E)%debugM.
 
   (** Useful for rewriting to a prettier form sometimes *)
-  Definition RepeatRewriteAddAssocLeftAndFlattenThunkedRects
+  Definition RepeatRewriteAddAssocLeftAndFlattenThunkedRectsWithDebug
              {low_level_rewriter_method : low_level_rewriter_method_opt}
+             {debug_rewriting : debug_rewriting_opt}
              (n : nat)
              {t}
-             (E : Expr t)
+             (E : DebugM (Expr t))
+    : DebugM (Expr t)
+    := (let opts := Pipeline.opts_of_method in
+        E <- E;
+        E <- wrap_debug_rewrite "RewriteFlattenThunkedRects" (RewriteRules.RewriteFlattenThunkedRects opts) E;
+        E <- wrap_debug_rewrite ("repeat " ++ show n ++ " RewriteAddAssocLeft") (fun E => List.fold_right (fun f v => f v) E (List.repeat (RewriteRules.RewriteAddAssocLeft opts) n)) E;
+        Debug.ret E)%debugM.
+
+  Definition RepeatRewriteAddAssocLeftAndFlattenThunkedRects
+             {low_level_rewriter_method : low_level_rewriter_method_opt}
+             {debug_rewriting : debug_rewriting_opt}
+             (n : nat)
+             {t}
+             (E : DebugM (Expr t))
     : Expr t
-    := let opts := Pipeline.opts_of_method in
-       let E := RewriteRules.RewriteFlattenThunkedRects opts E in
-       List.fold_right (fun f v => f v) E (List.repeat (RewriteRules.RewriteAddAssocLeft opts) n).
+    := Debug.eval_result (RepeatRewriteAddAssocLeftAndFlattenThunkedRectsWithDebug n E).
+
+  Definition BoundsPipelineWithDebug
+             {opts : BoundsPipelineOptions}
+             (with_subst01 : bool)
+             (possible_values : list Z)
+             (relax_zrange := relax_zrange_gen only_signed possible_values)
+             {t}
+             (E : Expr t)
+             arg_bounds
+             out_bounds
+  : M (Expr t)
+    := ((*let E := expr.Uncurry E in*)
+      let assume_cast_truncates := false in
+      let opts := opts_of_method in
+      E <- PreBoundsPipeline (* with_dead_code_elimination *) with_subst01 with_let_bind_return E arg_bounds;
+      (** We first do bounds analysis with no relaxation so that we
+          can do rewriting with casts, and then once that's out of the
+          way, we do bounds analysis again to relax the bounds. *)
+      (** To get better error messages, we don't check bounds until
+          after doing some extra rewriting *)
+      let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) false E arg_bounds ZRange.type.base.option.None in
+      E' <- match E' with
+            | inl E
+              => (debug_after_rewrite "CheckedPartialEvaluateWithBounds" E;;
+                  E <- RewriteAndEliminateDeadAndInline "RewriteArithWithCasts" (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
+                  dlet_nd e := ToFlat E in
+                  let E := FromFlat e in
+                  (** to give good error messages, we first look at
+                      the version of the syntax tree annotated with
+                      unrelaxed ranges *)
+                  let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                  match E' with
+                    | inl E
+                      => debug_after_rewrite "CheckedPartialEvaluateWithBounds 2" E;;
+                         dlet_nd e := ToFlat E in
+                         let E := FromFlat e in
+                         let E' := CheckedPartialEvaluateWithBounds relax_zrange assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                         match E' with
+                         | inl E
+                           => debug_after_rewrite "CheckedPartialEvaluateWithBounds 3" E;;
+                              Debug.ret (inl E)
+                         | inr E
+                           => Debug.ret (inr E)
+                         end
+                    | inr v => Debug.ret (inr v)
+                    end)
+            | inr v => Debug.ret (inr v)
+            end;
+      match E' with
+      | inl E
+        => (E <- match split_mul_to with
+                 | Some (max_bitwidth, lgcarrymax)
+                   => wrap_debug_rewrite "RewriteMulSplit" (RewriteRules.RewriteMulSplit max_bitwidth lgcarrymax opts) E
+                 | None => Debug.ret E
+                 end;
+            E <- match split_multiret_to with
+                 | Some (max_bitwidth, lgcarrymax)
+                   => RewriteAndEliminateDeadAndInline "RewriteMultiRetSplit" (RewriteRules.RewriteMultiRetSplit max_bitwidth lgcarrymax opts) with_dead_code_elimination with_subst01 with_let_bind_return E
+                 | None => Debug.ret E
+                 end;
+            let rewrote_E_so_should_rewrite_arith_again
+              := match split_mul_to, split_multiret_to with
+                 | Some _, _ | _, Some _ => true
+                 | None, None => false
+                 end in
+            E <- if rewrote_E_so_should_rewrite_arith_again
+                 then RewriteAndEliminateDeadAndInline "RewriteArithWithCasts" (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 with_let_bind_return E
+                 else Debug.ret E;
+            E <- match relax_adc_sbb_return_carry_to_bitwidth with
+                 | [] => Debug.ret E
+                 | _ => wrap_debug_rewrite "RewriteRelaxBitwidthAdcSbb" (RewriteRules.RewriteRelaxBitwidthAdcSbb relax_adc_sbb_return_carry_to_bitwidth opts) E
+                 end;
+
+            E <- match translate_to_fancy with
+                 | Some {| invert_low := invert_low ; invert_high := invert_high ; value_range := value_range ; flag_range := flag_range |}
+                   => wrap_debug_rewrite "RewriteToFancyWithCasts" (RewriteRules.RewriteToFancyWithCasts invert_low invert_high value_range flag_range opts) E
+                 | None => Debug.ret E
+                 end;
+            E <- match no_select_size with
+                 | Some bitwidth
+                   => wrap_debug_rewrite "RewriteNoSelect" (RewriteRules.RewriteNoSelect bitwidth opts) E
+                 | None => Debug.ret E
+                 end;
+            E <- wrap_debug_rewrite "RewriteStripLiteralCasts" (RewriteRules.RewriteStripLiteralCasts opts) E;
+            M.ret E)
+      | inr (inl (b, E))
+        => M.err (Computed_bounds_are_not_tight_enough b out_bounds E arg_bounds)
+      | inr (inr unsupported_casts)
+        => M.err (Unsupported_casts_in_input E (@List.map { _ & forall var, _ } _ (fun '(existT t e) => existT _ t (e _)) unsupported_casts))
+      end)%debugM.
 
   Definition BoundsPipeline
              {opts : BoundsPipelineOptions}
@@ -668,79 +855,8 @@ Module Pipeline.
              (E : Expr t)
              arg_bounds
              out_bounds
-  : ErrorT (Expr t)
-    := (*let E := expr.Uncurry E in*)
-      let assume_cast_truncates := false in
-      let opts := opts_of_method in
-      dlet E := PreBoundsPipeline (* with_dead_code_elimination *) with_subst01 with_let_bind_return E arg_bounds in
-      (** We first do bounds analysis with no relaxation so that we
-          can do rewriting with casts, and then once that's out of the
-          way, we do bounds analysis again to relax the bounds. *)
-      (** To get better error messages, we don't check bounds until
-          after doing some extra rewriting *)
-      let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) false E arg_bounds ZRange.type.base.option.None in
-      let E'
-          := match E' with
-             | inl E
-               => let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 with_let_bind_return E in
-                  dlet_nd e := ToFlat E in
-                  let E := FromFlat e in
-                  (** to give good error messages, we first look at
-                      the version of the syntax tree annotated with
-                      unrelaxed ranges *)
-                  let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
-                  match E' with
-                  | inl E
-                    => dlet_nd e := ToFlat E in
-                       let E := FromFlat e in
-                       let E' := CheckedPartialEvaluateWithBounds relax_zrange assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
-                       E'
-                  | inr v => inr v
-                  end
-             | inr v => inr v
-             end in
-      match E' with
-      | inl E
-        => let E := match split_mul_to with
-                    | Some (max_bitwidth, lgcarrymax)
-                      => RewriteRules.RewriteMulSplit max_bitwidth lgcarrymax opts E
-                    | None => E
-                    end in
-           let E := match split_multiret_to with
-                    | Some (max_bitwidth, lgcarrymax)
-                      => RewriteAndEliminateDeadAndInline (RewriteRules.RewriteMultiRetSplit max_bitwidth lgcarrymax opts) with_dead_code_elimination with_subst01 with_let_bind_return E
-                    | None => E
-                    end in
-           let rewrote_E_so_should_rewrite_arith_again
-               := match split_mul_to, split_multiret_to with
-                  | Some _, _ | _, Some _ => true
-                  | None, None => false
-                  end in
-           let E := if rewrote_E_so_should_rewrite_arith_again
-                    then RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 with_let_bind_return E
-                    else E in
-
-           let E := match relax_adc_sbb_return_carry_to_bitwidth with
-                    | [] => E
-                    | _ => RewriteRules.RewriteRelaxBitwidthAdcSbb relax_adc_sbb_return_carry_to_bitwidth opts E
-                    end in
-
-           let E := match translate_to_fancy with
-                    | Some {| invert_low := invert_low ; invert_high := invert_high ; value_range := value_range ; flag_range := flag_range |}
-                      => RewriteRules.RewriteToFancyWithCasts invert_low invert_high value_range flag_range opts E
-                    | None => E
-                    end in
-           let E := match no_select_size with
-                    | Some bitwidth =>
-                      RewriteRules.RewriteNoSelect bitwidth opts E
-                    | None => E end in
-           let E := RewriteRules.RewriteStripLiteralCasts opts E in
-           Success E
-      | inr (inl (b, E))
-        => Error (Computed_bounds_are_not_tight_enough b out_bounds E arg_bounds)
-      | inr (inr unsupported_casts)
-        => Error (Unsupported_casts_in_input E (@List.map { _ & forall var, _ } _ (fun '(existT t e) => existT _ t (e _)) unsupported_casts))
-      end.
+    : ErrorT (Expr t)
+    := Debug.eval_result (BoundsPipelineWithDebug with_subst01 possible_values E arg_bounds out_bounds).
 
   Definition BoundsPipelineToExtendedResult
              {opts : BoundsPipelineOptions}
@@ -766,21 +882,54 @@ Module Pipeline.
              (out_bounds : ZRange.type.base.option.interp (type.final_codomain t))
              (arg_typedefs : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_typedef_data t)
              (out_typedefs : ToString.OfPHOAS.base_var_typedef_data (type.final_codomain t))
-    : ErrorT (ExtendedSynthesisResult t)
-    := dlet_nd E := BoundsPipeline
-                      with_subst01
-                      possible_values
-                      E arg_bounds out_bounds in
-       match E with
-       | Success E' => let E := ToString.ToFunctionLines
-                                  machine_wordsize true (orb internal_static static) static all_static inline type_prefix name E' comment None arg_bounds out_bounds arg_typedefs out_typedefs in
-                      match E with
-                      | inl (lines, infos)
-                        => Success {| lines := lines; ident_infos := infos; arg_bounds := arg_bounds; out_bounds := out_bounds; arg_typedefs := arg_typedefs ; out_typedefs := out_typedefs ; expr := E' |}
-                      | inr err => Error (Stringification_failed E' err)
-                      end
-       | Error err => Error err
-       end.
+    : M (ExtendedSynthesisResult t)
+    := (E' <- BoundsPipelineWithDebug
+                with_subst01
+                possible_values
+                E arg_bounds out_bounds;
+        let E := ToString.ToFunctionLines
+                   machine_wordsize true (orb internal_static static) static all_static inline type_prefix name E' comment None arg_bounds out_bounds arg_typedefs out_typedefs in
+        match E with
+        | inl (lines, infos)
+          => M.ret {| lines := lines; ident_infos := infos; arg_bounds := arg_bounds; out_bounds := out_bounds; arg_typedefs := arg_typedefs ; out_typedefs := out_typedefs ; expr := E' |}
+        | inr err => M.err (Stringification_failed E' err)
+        end)%pipelineM.
+
+  Definition BoundsPipelineToStringsWithDebug
+             {opts : BoundsPipelineOptions}
+             {output_language_api : ToString.OutputLanguageAPI}
+             {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
+             {output_options : output_options_opt}
+             {internal_static : internal_static_opt}
+             {static : static_opt}
+             {all_static : static_opt}
+             (type_prefix : string)
+             (name : string)
+             (with_dead_code_elimination : bool := true)
+             (with_subst01 : bool)
+             (inline : bool)
+             (possible_values : list Z)
+             (relax_zrangef : relax_zrange_opt
+              := fun r => Option.value (relax_zrange_gen only_signed possible_values r) r)
+             (machine_wordsize : Z)
+             {t}
+             (E : Expr t)
+             (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t -> ToString.OfPHOAS.var_data (type.final_codomain t) -> list string)
+             arg_bounds
+             out_bounds
+             arg_typedefs
+             out_typedefs
+    : M (list string * ToString.ident_infos)
+    := (v <- BoundsPipelineToExtendedResult
+               (static:=static) (all_static:=all_static)
+               type_prefix name
+               with_subst01
+               inline
+               possible_values
+               machine_wordsize
+               E comment arg_bounds out_bounds arg_typedefs out_typedefs;
+        M.ret (v.(lines), v.(ident_infos)))%pipelineM.
 
   Definition BoundsPipelineToStrings
              {opts : BoundsPipelineOptions}
@@ -807,18 +956,41 @@ Module Pipeline.
              arg_typedefs
              out_typedefs
     : ErrorT (list string * ToString.ident_infos)
-    := let E := BoundsPipelineToExtendedResult
-                  (static:=static) (all_static:=all_static)
-                  type_prefix name
-                  with_subst01
-                  inline
-                  possible_values
-                  machine_wordsize
-                  E comment arg_bounds out_bounds arg_typedefs out_typedefs in
-       match E with
-       | Success v => Success (v.(lines), v.(ident_infos))
-       | Error err => Error err
-       end.
+    := Debug.eval_result (BoundsPipelineToStringsWithDebug (static:=static) (all_static:=all_static) type_prefix name with_subst01 inline possible_values machine_wordsize E comment arg_bounds out_bounds arg_typedefs out_typedefs).
+
+  Definition BoundsPipelineToStringWithDebug
+             {opts : BoundsPipelineOptions}
+             {output_language_api : ToString.OutputLanguageAPI}
+             {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
+             {output_options : output_options_opt}
+             {internal_static : internal_static_opt}
+             {static : static_opt}
+             {all_static : static_opt}
+             (type_prefix : string)
+             (name : string)
+             (with_subst01 : bool)
+             (inline : bool)
+             (possible_values : list Z)
+             (machine_wordsize : Z)
+             {t}
+             (E : Expr t)
+             (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t -> ToString.OfPHOAS.var_data (type.final_codomain t) -> list string)
+             arg_bounds
+             out_bounds
+             arg_typedefs
+             out_typedefs
+    : M (string * ToString.ident_infos)
+    := (E <- BoundsPipelineToStringsWithDebug
+               (static:=static) (all_static:=all_static)
+               type_prefix name
+               with_subst01
+               inline
+               possible_values
+               machine_wordsize
+               E comment arg_bounds out_bounds arg_typedefs out_typedefs;
+        let '(E, types_used) := E in
+        M.ret (ToString.LinesToString E, types_used))%pipelineM.
 
   Definition BoundsPipelineToString
              {opts : BoundsPipelineOptions}
@@ -828,6 +1000,7 @@ Module Pipeline.
              {output_options : output_options_opt}
              {internal_static : internal_static_opt}
              {static : static_opt}
+             {all_static : static_opt}
              (type_prefix : string)
              (name : string)
              (with_subst01 : bool)
@@ -842,17 +1015,7 @@ Module Pipeline.
              arg_typedefs
              out_typedefs
     : ErrorT (string * ToString.ident_infos)
-    := let E := BoundsPipelineToStrings
-                  type_prefix name
-                  with_subst01
-                  inline
-                  possible_values
-                  machine_wordsize
-                  E comment arg_bounds out_bounds arg_typedefs out_typedefs in
-       match E with
-       | Success (E, types_used) => Success (ToString.LinesToString E, types_used)
-       | Error err => Error err
-       end.
+    := Debug.eval_result (BoundsPipelineToStringWithDebug (static:=static) (all_static:=all_static) type_prefix name with_subst01 inline possible_values machine_wordsize E comment arg_bounds out_bounds arg_typedefs out_typedefs).
 
   Ltac typedef_var_data_of_bounds t bounds :=
     let t := (eval cbv [type.interp type.for_each_lhs_of_arrow ZRange.type.option.interp type.final_codomain] in t) in
@@ -914,49 +1077,55 @@ Module Pipeline.
                    let v := (eval cbv in v) in
                    exact v)
         end) (only parsing).
+  Notation extend_pipeline_with_debug_info result
+    := ((fun a b possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b possible_values t E arg_bounds out_bounds = result') => @Pipeline.BoundsPipelineWithDebug a b possible_values t E arg_bounds out_bounds) _ _ _ _ _ _ _ result eq_refl)
+         (only parsing).
 
   Notation FromPipelineToString_gen machine_wordsize is_internal prefix name result
     := (fun comment
         => ((prefix ++ name)%string,
-            match result with
-            | Success E'
-              => let static : static_opt := _ in
-                 let internal_static : internal_static_opt := _ in
-                 let internal_static := orb static internal_static in
-                 let is_internal' := match is_internal return bool with
-                                     | true => internal_static
-                                     | false => static
-                                     end in
-                 let inline : inline_opt := _ in
-                 let inline_internal : inline_internal_opt := _ in
-                 let inline_internal := orb inline_internal inline in
-                 let inline' := match is_internal return bool with
-                                | true => inline_internal
-                                | false => inline
-                                end in
-                 let adjust_name := convert_to_naming_convention (if is_internal' then private_function_naming_convention else public_function_naming_convention) in
-                 let arg_bounds := arg_bounds_of_pipeline result in
-                 let out_bounds := out_bounds_of_pipeline result in
-                 let arg_typedefs := arg_typedefs_via_tc_of_pipeline result in
-                 let out_typedefs := out_typedefs_via_tc_of_pipeline result in
-                 let E := ToString.ToFunctionLines
-                            (relax_zrange
-                             := fun r => Option.value (relax_zrange_gen (_ : only_signed_opt) (possible_values_of_pipeline result) r) r)
-                            machine_wordsize
-                            true internal_static is_internal' static inline'
-                            prefix (adjust_name (prefix ++ name)%string)
-                            E'
-                            (comment (adjust_name (prefix ++ name)%string))
-                            None
-                            arg_bounds
-                            out_bounds arg_typedefs out_typedefs in
-                 match E with
-                 | inl (lines, infos)
-                   => Success {| lines := lines; ident_infos := infos; arg_bounds := arg_bounds; out_bounds := out_bounds; arg_typedefs := arg_typedefs ; out_typedefs := out_typedefs ; expr := E' |}
-                 | inr err => Error (Pipeline.Stringification_failed E' err)
-                 end
-            | Error err => Error err
-            end))
+             Debug.bind
+               (extend_pipeline_with_debug_info result)
+               (fun E'
+                => match E' with
+                   | Success E'
+                     => let static : static_opt := _ in
+                        let internal_static : internal_static_opt := _ in
+                        let internal_static := orb static internal_static in
+                        let is_internal' := match is_internal return bool with
+                                            | true => internal_static
+                                            | false => static
+                                            end in
+                        let inline : inline_opt := _ in
+                        let inline_internal : inline_internal_opt := _ in
+                        let inline_internal := orb inline_internal inline in
+                        let inline' := match is_internal return bool with
+                                       | true => inline_internal
+                                       | false => inline
+                                       end in
+                        let adjust_name := convert_to_naming_convention (if is_internal' then private_function_naming_convention else public_function_naming_convention) in
+                        let arg_bounds := arg_bounds_of_pipeline result in
+                        let out_bounds := out_bounds_of_pipeline result in
+                        let arg_typedefs := arg_typedefs_via_tc_of_pipeline result in
+                        let out_typedefs := out_typedefs_via_tc_of_pipeline result in
+                        let E := ToString.ToFunctionLines
+                                   (relax_zrange
+                                    := fun r => Option.value (relax_zrange_gen (_ : only_signed_opt) (possible_values_of_pipeline result) r) r)
+                                   machine_wordsize
+                                   true internal_static is_internal' static inline'
+                                   prefix (adjust_name (prefix ++ name)%string)
+                                   E'
+                                   (comment (adjust_name (prefix ++ name)%string))
+                                   None
+                                   arg_bounds
+                                   out_bounds arg_typedefs out_typedefs in
+                        match E with
+                        | inl (lines, infos)
+                          => Debug.ret (Success {| lines := lines; ident_infos := infos; arg_bounds := arg_bounds; out_bounds := out_bounds; arg_typedefs := arg_typedefs ; out_typedefs := out_typedefs ; expr := E' |})
+                        | inr err => Debug.ret (Error (Pipeline.Stringification_failed E' err))
+                        end
+                   | Error err => Debug.ret (Error err)
+                   end)))
          (only parsing).
 
   Notation FromPipelineToString machine_wordsize prefix name result
@@ -974,12 +1143,12 @@ Module Pipeline.
   Local Ltac wf_interp_t_step :=
     first [ progress destruct_head'_and
           | progress cbv [Classes.base Classes.ident Classes.ident_interp Classes.base_interp Classes.exprInfo] in *
+          | progress intros
           | progress rewrite_strat repeat topdown hints interp
           | solve [ typeclasses eauto with nocore interp_extra wf_extra ]
           | solve [ typeclasses eauto ]
           | break_innermost_match_step
-          | solve [ typeclasses eauto 100 with nocore wf_extra ]
-          | progress intros ].
+          | solve [ typeclasses eauto 100 with nocore wf_extra ] ].
 
   Local Ltac wf_interp_t := repeat wf_interp_t_step.
 
@@ -991,33 +1160,95 @@ Module Pipeline.
   Class type_goodT (t : type.type base.type)
     := type_good : type.andb_each_lhs_of_arrow type.is_base t = true.
 
-#[global]
-  Hint Extern 1 (type_goodT _) => vm_compute; reflexivity : typeclass_instances.
+  #[global]
+   Hint Extern 1 (type_goodT _) => vm_compute; reflexivity : typeclass_instances.
 
-  Lemma Wf_RewriteAndEliminateDeadAndInline {t} DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return
+  Local Ltac handle_debug_step_t :=
+    first [ progress cbv [Debug.bind Debug.ret wrap_debug_rewrite Debug.sequence fst snd] in *
+          | progress cbn [Debug.eval_result fst snd] in *
+          | match goal with
+            | [ H : ?x = (?y, tt) :> DebugM unit |- _ ]
+              => clear H y
+            | [ H : ?x = (?y, ?z) :> DebugM _ |- _ ]
+              => assert (Debug.eval_result x = z) by (now rewrite H);
+                 clear H; subst z; clear y
+            end ].
+  Local Ltac handle_debug_t := repeat handle_debug_step_t.
+
+  Lemma Wf_wrap_debug_rewrite {debug_rewriting : debug_rewriting_opt} {t} descr DoRewrite
         (Wf_DoRewrite : forall E, Wf E -> Wf (DoRewrite E))
         E
         (Hwf : Wf E)
-    : Wf (@RewriteAndEliminateDeadAndInline t DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return E).
+    : Wf (Debug.eval_result (@wrap_debug_rewrite debug_rewriting t descr DoRewrite E)).
+  Proof. cbv [wrap_debug_rewrite Let_In] in *; repeat (wf_interp_t; handle_debug_t). Qed.
+
+  Global Hint Resolve @Wf_wrap_debug_rewrite : wf wf_extra.
+  Global Hint Opaque wrap_debug_rewrite : wf wf_extra.
+
+  Lemma Interp_wrap_debug_rewrite {debug_rewriting : debug_rewriting_opt} {t} descr DoRewrite
+        (Interp_DoRewrite : forall E, Wf E -> Interp (DoRewrite E) == Interp E)
+        (Wf_DoRewrite : forall E, Wf E -> Wf (DoRewrite E))
+        E
+        (Hwf : Wf E)
+    : Interp (Debug.eval_result (@wrap_debug_rewrite debug_rewriting t descr DoRewrite E))
+      == Interp E.
+  Proof.
+    cbv [wrap_debug_rewrite Let_In];
+      repeat (wf_interp_t || rewrite !Interp_DoRewrite || handle_debug_t).
+  Qed.
+
+  #[global]
+   Hint Rewrite @Interp_wrap_debug_rewrite : interp interp_extra.
+
+  Lemma Wf_RewriteAndEliminateDeadAndInline_gen {debug_rewriting : debug_rewriting_opt} {t} descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return
+        (Wf_DoRewrite : forall E, Wf E -> Wf (Debug.eval_result (DoRewrite E)))
+        E
+        (Hwf : Wf E)
+    : Wf (Debug.eval_result (@RewriteAndEliminateDeadAndInline_gen debug_rewriting t descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return E)).
+  Proof. cbv [RewriteAndEliminateDeadAndInline_gen Let_In] in *; repeat (wf_interp_t; handle_debug_t). Qed.
+
+  Global Hint Resolve @Wf_RewriteAndEliminateDeadAndInline_gen : wf wf_extra.
+  Global Hint Opaque RewriteAndEliminateDeadAndInline_gen : wf wf_extra.
+
+  Lemma Interp_RewriteAndEliminateDeadAndInline_gen {debug_rewriting : debug_rewriting_opt} {t} descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return
+        (Interp_DoRewrite : forall E, Wf E -> Interp (Debug.eval_result (DoRewrite E)) == Interp E)
+        (Wf_DoRewrite : forall E, Wf E -> Wf (Debug.eval_result (DoRewrite E)))
+        E
+        (Hwf : Wf E)
+    : Interp (Debug.eval_result (@RewriteAndEliminateDeadAndInline_gen debug_rewriting t descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return E))
+      == Interp E.
+  Proof.
+    cbv [RewriteAndEliminateDeadAndInline_gen Let_In];
+      repeat (wf_interp_t || rewrite !Interp_DoRewrite || handle_debug_t).
+  Qed.
+
+  #[global]
+   Hint Rewrite @Interp_RewriteAndEliminateDeadAndInline_gen : interp interp_extra.
+
+  Lemma Wf_RewriteAndEliminateDeadAndInline {debug_rewriting : debug_rewriting_opt} {t} descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return
+        (Wf_DoRewrite : forall E, Wf E -> Wf (DoRewrite E))
+        E
+        (Hwf : Wf E)
+    : Wf (Debug.eval_result (@RewriteAndEliminateDeadAndInline debug_rewriting t descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return E)).
   Proof. cbv [RewriteAndEliminateDeadAndInline Let_In]; wf_interp_t. Qed.
 
   Global Hint Resolve @Wf_RewriteAndEliminateDeadAndInline : wf wf_extra.
   Global Hint Opaque RewriteAndEliminateDeadAndInline : wf wf_extra.
 
-  Lemma Interp_RewriteAndEliminateDeadAndInline {t} DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return
+  Lemma Interp_RewriteAndEliminateDeadAndInline {debug_rewriting : debug_rewriting_opt} {t} descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return
         (Interp_DoRewrite : forall E, Wf E -> Interp (DoRewrite E) == Interp E)
         (Wf_DoRewrite : forall E, Wf E -> Wf (DoRewrite E))
         E
         (Hwf : Wf E)
-    : Interp (@RewriteAndEliminateDeadAndInline t DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return E)
+    : Interp (Debug.eval_result (@RewriteAndEliminateDeadAndInline debug_rewriting t descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return E))
       == Interp E.
   Proof.
     cbv [RewriteAndEliminateDeadAndInline Let_In];
       repeat (wf_interp_t || rewrite !Interp_DoRewrite).
   Qed.
 
-#[global]
-  Hint Rewrite @Interp_RewriteAndEliminateDeadAndInline : interp interp_extra.
+  #[global]
+   Hint Rewrite @Interp_RewriteAndEliminateDeadAndInline : interp interp_extra.
 
   Local Notation interp_correctT V1 V2 arg_bounds
     := (forall arg1 arg2
@@ -1069,7 +1300,8 @@ Module Pipeline.
       share subterms, though, so we carefully build the proof term
       with forward reasoning *)
   Local Ltac fwd Hrv Hwf Hinterp :=
-    cbv beta iota in Hrv;
+    cbv beta iota delta [Debug.sequence] in Hrv;
+    (*let t := type of Hrv in idtac t;*)
     lazymatch type of Hrv with
     | Success ?x = Success ?y
       => let H' := fresh in
@@ -1079,6 +1311,21 @@ Module Pipeline.
       => let G' := context G[let x : T := v in F x y] in
          let G' := (eval cbv beta in G') in
          change G' in Hrv;
+         fwd Hrv Hwf Hinterp
+    | context G[Debug.eval_result (let x := ?y in @?F x)]
+      => let G' := context G[let x := y in Debug.eval_result (F x)] in
+         let G' := (eval cbv beta in G') in
+         change G' in Hrv;
+         fwd Hrv Hwf Hinterp
+    | context G[Debug.eval_result (Debug.ret ?v)]
+      => let G' := context G[v] in
+         change G' in Hrv;
+         fwd Hrv Hwf Hinterp
+    | Debug.eval_result (@Debug.bind ?dbg ?A ?B ?x ?y) = _
+      => rewrite (@Debug.eval_result_bind dbg A B x y) in Hrv;
+         fwd Hrv Hwf Hinterp
+    | (let z := Debug.eval_result (@Debug.bind ?dbg ?A ?B ?x ?y) in _) = _
+      => rewrite (@Debug.eval_result_bind dbg A B x y) in Hrv;
          fwd Hrv Hwf Hinterp
     | (let x := @inl ?A ?B ?v in ?F) = Success ?rv
       => let x' := fresh in
@@ -1092,42 +1339,59 @@ Module Pipeline.
       => change ((let y := v in let x := F1 in F2 x) = rhs) in Hrv;
          fwd Hrv Hwf Hinterp
     | (let x : Expr _ := ?v in ?F) = Success ?rv
-      => let e' := fresh "e" in
-         pose v as e';
-         change (match e' with x => F end = Success rv) in Hrv;
-         let e := lazymatch type of Hwf with Wf ?e => e | ?T => constr_fail_with ltac:(fun _ => fail 1 "Expected Wf, got" T) end in
-         let Hwf' := fresh "Hwf" in
-         let Hinterp' := fresh "Hinterp" in
-         lazymatch type of Hinterp with
-         | interp_correctT _ ?rhs ?arg_bounds
-           => assert (Hwf' : Wf e');
-              [ | assert (Hinterp' : interp_correctT (Interp e') rhs arg_bounds) ];
-              [ clear Hrv; subst e' ..
-              | lazymatch type of Hrv with
-                | context[e] => idtac (* keep interp and wf *)
-                | _ => clear Hwf Hinterp; try clear e
-                end;
-                fwd Hrv Hwf' Hinterp' ]
-         | ?T => constr_fail_with ltac:(fun _ => fail 1 "Expected related, got" T)
-         end
+      => (tryif is_var v
+           then (change (match v with x => F end = Success rv) in Hrv;
+                 fwd Hrv Hwf Hinterp)
+           else
+             (let e' := fresh "e" in
+              pose v as e';
+              change (match e' with x => F end = Success rv) in Hrv;
+              let e := lazymatch type of Hwf with Wf ?e => e | ?T => constr_fail_with ltac:(fun _ => fail 1 "Expected Wf, got" T) end in
+              let Hwf' := fresh "Hwf" in
+              let Hinterp' := fresh "Hinterp" in
+              lazymatch type of Hinterp with
+              | interp_correctT _ ?rhs ?arg_bounds
+                => assert (Hwf' : Wf e');
+                   [ | assert (Hinterp' : interp_correctT (Interp e') rhs arg_bounds) ];
+                   [ clear Hrv; subst e' ..
+                   | lazymatch type of Hrv with
+                     | context[e] => idtac (* keep interp and wf *)
+                     | _ => clear Hwf Hinterp; try clear e
+                     end;
+                     fwd Hrv Hwf' Hinterp' ]
+              | ?T => constr_fail_with ltac:(fun _ => fail 1 "Expected related, got" T)
+              end))
     | (let x : Expr _ + _ := ?v in ?F) = Success ?rv
-      => let H := fresh in
-         let e' := fresh "e" in
-         destruct v as [e'|e'] eqn:H;
-         cbv beta iota in Hrv;
-         [ apply CheckedPartialEvaluateWithBounds_Correct in H;
-           [ let Hwf' := fresh "Hwf" in
-             rewrite (correct_of_final_iff_correct_of_initial Hinterp) in H by assumption;
-             destruct H as [? Hwf']; split_and;
-             lazymatch type of Hinterp with
-             | interp_correctT _ ?rhs ?arg_bounds
-               => let Hinterp' := fresh "Hinterp" in
-                  assert (Hinterp' : interp_correctT (Interp e') rhs arg_bounds) by assumption;
-                  fwd Hrv Hwf' Hinterp'
-             end
-           | clear H; try solve [ assumption | congruence | apply relax_zrange_gen_good ] .. ]
-         | cbv beta iota zeta in Hrv;
-           try (clear -Hrv; break_innermost_match_hyps; discriminate) ]
+      => (tryif is_var v
+           then (change (match v with x => F end = Success rv) in Hrv;
+                 fwd Hrv Hwf Hinterp)
+           else
+             (let H := fresh in
+              let e' := fresh "e" in
+              destruct v as [e'|e'] eqn:H;
+              cbv beta iota in Hrv;
+              [ apply CheckedPartialEvaluateWithBounds_Correct in H;
+                [ let Hwf' := fresh "Hwf" in
+                  rewrite (correct_of_final_iff_correct_of_initial Hinterp) in H by assumption;
+                  destruct H as [? Hwf']; split_and;
+                  lazymatch type of Hinterp with
+                  | interp_correctT _ ?rhs ?arg_bounds
+                    => let Hinterp' := fresh "Hinterp" in
+                       assert (Hinterp' : interp_correctT (Interp e') rhs arg_bounds) by assumption;
+                       fwd Hrv Hwf' Hinterp'
+                  end
+                | clear H; try solve [ assumption | congruence | apply relax_zrange_gen_good ] .. ]
+              | cbv beta iota zeta in Hrv;
+                first [ clear -Hrv;
+                        repeat (rewrite ?Debug.eval_result_bind in Hrv; cbv [Debug.ret] in Hrv; cbn [fst snd Debug.eval_result] in Hrv);
+                        break_innermost_match_hyps;
+                        discriminate
+                      | let T := type of Hrv in
+                        idtac "WARNING: Could not discriminate on" T ] ]))
+    | (let x : unit := ?v in ?F) = Success ?rv
+      => (tryif unify v tt then idtac else destruct v);
+         change (match tt with x => F end = Success rv) in Hrv;
+         fwd Hrv Hwf Hinterp
     | (let x : ?T := ?v in ?F) = Success ?rv
       => let rec good_ty T
              := lazymatch T with
@@ -1147,7 +1411,13 @@ Module Pipeline.
     | ?T => idtac T
     end.
   Local Ltac fwd_side_condition_step :=
-    first [ assumption
+    first [ match goal with
+            | [ |- Wf (Debug.eval_result (RewriteAndEliminateDeadAndInline _ _ _ _ _ _))]
+              => apply Wf_RewriteAndEliminateDeadAndInline
+            | [ |- type.app_curried (expr.Interp _ (Debug.eval_result (RewriteAndEliminateDeadAndInline _ _ _ _ _ _))) _ = _ ]
+              => rewrite Interp_RewriteAndEliminateDeadAndInline
+            end
+          | assumption
           | progress intros
           | solve [ auto with nocore wf wf_extra ]
           | progress (rewrite_strat repeat topdown hints interp_extra)
@@ -1163,6 +1433,7 @@ Module Pipeline.
           | progress cbv beta zeta in *
           | progress destruct_head'_and ].
 
+  Local Strategy -100 [Debug.eval_result Debug.bind Debug.sequence fst snd Debug.map Debug.ret].
   Lemma BoundsPipeline_correct
              {opts : BoundsPipelineOptions}
              {translate_to_fancy_correct : translate_to_fancy_opt_correct}
@@ -1190,7 +1461,8 @@ Module Pipeline.
     rewrite (correct_of_final_iff_correct_of_initial Hinterp) by assumption.
     pose proof Hwf as Hwf'. (* keep an extra copy so it's not cleared *)
     cbv [translate_to_fancy_opt_correct] in *.
-    cbv beta iota delta [BoundsPipeline PreBoundsPipeline Let_In] in Hrv.
+    cbv beta iota delta [BoundsPipeline BoundsPipelineWithDebug PreBoundsPipeline Let_In] in Hrv.
+    cbv beta iota delta [Debug.sequence] in Hrv.
     fwd Hrv Hwf Hinterp; [ repeat fwd_side_condition_step .. | subst ].
     solve [ eauto using conj with nocore ].
   Qed.
@@ -1232,6 +1504,7 @@ Module Pipeline.
     split; [ intros arg1 arg2 Harg12 Harg1; erewrite <- InterpE_correct | ]; try eapply @BoundsPipeline_correct;
       lazymatch goal with
       | [ |- type.andb_bool_for_each_lhs_of_arrow _ _ _ = true ] => eassumption
+      | [ |- _ = Success _ ] => eassumption
       | _ => try assumption
       end; try eassumption.
     etransitivity; try eassumption; symmetry; assumption.
@@ -1260,6 +1533,7 @@ Module Pipeline.
     Proof. solve_bounds_good. Qed.
   End Instances.
 End Pipeline.
+Export Pipeline.M.Notations.
 
 Module Export Hints.
   (* for storing the results of prove_pipeline_wf *)
@@ -1270,6 +1544,7 @@ Module Export Hints.
   Hint Extern 1 (@Pipeline.bounds_goodT _ _) => solve [ Pipeline.solve_bounds_good ] : typeclass_instances.
   Global Strategy -100 [type.interp ZRange.type.option.interp ZRange.type.base.option.interp GallinaReify.Reify_as GallinaReify.reify type_base].
   Global Strategy -10 [type.app_curried type.for_each_lhs_of_arrow type.and_for_each_lhs_of_arrow type.related type.interp Language.Compilers.base.interp base.base_interp type.andb_bool_for_each_lhs_of_arrow fst snd ZRange.type.option.is_bounded_by].
+  Global Strategy 1000 [Pipeline.BoundsPipeline].
 End Hints.
 
 Module PipelineTactics.
