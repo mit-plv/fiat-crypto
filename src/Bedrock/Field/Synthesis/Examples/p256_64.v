@@ -5,7 +5,7 @@ Require Import Crypto.Bedrock.Field.Synthesis.Specialized.WordByWordMontgomery.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults64.
 Local Open Scope Z_scope.
 
-Local Existing Instances default_parameters default_parameters_ok.
+Local Existing Instances machine_wordsize default_parameters default_parameters_ok.
 Local Definition m := 2^256 - 2^224 + 2^192 + 2^96 - 1.
 Local Definition prefix := "p256_"%string. (* placed before function names *)
 

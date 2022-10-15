@@ -100,33 +100,10 @@ Local Opaque
       expr.Interp.
 
 Section __.
-  Context {output_language_api : ToString.OutputLanguageAPI}
-          {language_naming_conventions : language_naming_conventions_opt}
-          {documentation_options : documentation_options_opt}
-          {output_options : output_options_opt}
-          {opts : AbstractInterpretation.Options}
-          {package_namev : package_name_opt}
-          {class_namev : class_name_opt}
-          {static : static_opt}
-          {internal_static : internal_static_opt}
-          {inline : inline_opt}
-          {inline_internal : inline_internal_opt}
-          {low_level_rewriter_method : low_level_rewriter_method_opt}
-          {only_signed : only_signed_opt}
-          {no_select : no_select_opt}
-          {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
-          {emit_primitives : emit_primitives_opt}
-          {should_split_mul : should_split_mul_opt}
-          {should_split_multiret : should_split_multiret_opt}
-          {unfold_value_barrier : unfold_value_barrier_opt}
-          {assembly_hints_lines : assembly_hints_lines_opt}
-          {ignore_unique_asm_names : ignore_unique_asm_names_opt}
-          {widen_carry : widen_carry_opt}
-          {widen_bytes : widen_bytes_opt}
-          {assembly_conventions : assembly_conventions_opt}
-          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
-          (m : Z)
-          (machine_wordsize : machine_wordsize_opt).
+  Context {Pipeline_Options : Pipeline.BaseOptions}
+          {Pipeline_ExtendedOptions : Pipeline.ExtendedOptions}
+          {extra_opts : ExtraOptions}
+          (m : Z).
 
   Definition s := 2^Z.log2_up m.
   Definition c := s - m.
@@ -156,9 +133,8 @@ Section __.
     := List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list.
   Definition prime_bytes_bounds : list (ZRange.type.option.interp (base.type.Z))
     := List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list.
-  Local Notation word_bound := (word_bound machine_wordsize).
-  Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
-  Local Notation larger_saturated_bounds := (Primitives.saturated_bounds sat_limbs machine_wordsize).
+  Local Notation saturated_bounds := (saturated_bounds n).
+  Local Notation larger_saturated_bounds := (Primitives.saturated_bounds sat_limbs).
 
 
   Definition divstep_input :=
@@ -201,9 +177,7 @@ Section __.
          ; description name := (text_before_type_name ++ name ++ " is a field element NOT in the Montgomery domain.")%string }.
 
 
-  Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
-  Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
-  Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+  Local Existing Instance Primitives.DerivedOptions.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
@@ -308,7 +282,6 @@ Section __.
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_mul_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -319,7 +292,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "mul" mul
+          prefix "mul" mul
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements in the Montgomery domain."]%string)
@@ -328,7 +301,6 @@ Section __.
   Definition square
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_square_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -339,7 +311,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "square" square
+          prefix "square" square
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " squares a field element in the Montgomery domain."]%string)
@@ -348,7 +320,6 @@ Section __.
   Definition add
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_add_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
@@ -359,7 +330,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "add" add
+          prefix "add" add
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " adds two field elements in the Montgomery domain."]%string)
@@ -368,7 +339,6 @@ Section __.
   Definition sub
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_sub_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
@@ -379,7 +349,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "sub" sub
+          prefix "sub" sub
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " subtracts two field elements in the Montgomery domain."]%string)
@@ -388,7 +358,6 @@ Section __.
   Definition opp
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_opp_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
@@ -399,7 +368,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "opp" opp
+          prefix "opp" opp
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " negates a field element in the Montgomery domain."]%string)
@@ -408,7 +377,6 @@ Section __.
   Definition from_montgomery
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_from_montgomery_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -419,7 +387,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "from_montgomery" from_montgomery
+          prefix "from_montgomery" from_montgomery
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " translates a field element out of the Montgomery domain."]%string)
@@ -428,7 +396,6 @@ Section __.
   Definition to_montgomery
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_to_montgomery_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -439,7 +406,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "to_montgomery" to_montgomery
+          prefix "to_montgomery" to_montgomery
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " translates a field element into the Montgomery domain."]%string)
@@ -448,7 +415,6 @@ Section __.
   Definition nonzero
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          reified_nonzero_gen
          (Some bounds, tt)
@@ -458,7 +424,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "nonzero" nonzero
+          prefix "nonzero" nonzero
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " outputs a single non-zero word if the input is non-zero and zero otherwise."]%string)
@@ -467,7 +433,6 @@ Section __.
   Definition to_bytes
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_to_bytes_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
@@ -478,7 +443,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "to_bytes" to_bytes
+          prefix "to_bytes" to_bytes
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " serializes a field element NOT in the Montgomery domain to bytes in little-endian order."]%string)
@@ -487,7 +452,6 @@ Section __.
   Definition from_bytes
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_from_bytes_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify 1 @ GallinaReify.Reify s @ GallinaReify.Reify n)
@@ -498,7 +462,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "from_bytes" from_bytes
+          prefix "from_bytes" from_bytes
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " deserializes a field element NOT in the Montgomery domain from bytes in little-endian order."]%string)
@@ -507,7 +471,6 @@ Section __.
   Definition encode
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -518,7 +481,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "encode" encode
+          prefix "encode" encode
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " encodes an integer as a field element in the Montgomery domain."]%string)
@@ -528,7 +491,6 @@ Section __.
   Definition encode_word
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -539,7 +501,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "encode_word" encode_word
+          prefix "encode_word" encode_word
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " encodes an integer as a field element in the Montgomery domain."]%string)
@@ -548,7 +510,6 @@ Section __.
   Definition zero
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_zero_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -559,7 +520,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "zero" zero
+          prefix "zero" zero
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname => [text_before_function_name ++ fname ++ " returns the field element zero in the Montgomery domain."]%string)
@@ -568,7 +529,6 @@ Section __.
   Definition one
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_one_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -579,7 +539,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "set_one" one (* to avoid conflict with boringSSL *)
+          prefix "set_one" one (* to avoid conflict with boringSSL *)
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname => [text_before_function_name ++ fname ++ " returns the field element one in the Montgomery domain."]%string)
@@ -591,7 +551,6 @@ Section __.
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
             false (* let_bind_return *)
-            None (* fancy *)
             (reified_eval_gen
                @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n)
             (Some montgomery_domain_bounds, tt)).
@@ -605,7 +564,6 @@ Section __.
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
             false (* let_bind_return *)
-            None (* fancy *)
             (reified_bytes_eval_gen
                @ GallinaReify.Reify s)
             (Some prime_bytes_bounds, tt)).
@@ -619,7 +577,6 @@ Section __.
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
             false (* let_bind_return *)
-            None (* fancy *)
             (reified_eval_twos_complement_gen
                @ GallinaReify.Reify (machine_wordsize:Z)
                @ GallinaReify.Reify n)
@@ -628,20 +585,19 @@ Section __.
   Definition seval_twos_complement (arg_name : string) (* s for string *)
     := Show.show (invert_expr.smart_App_curried (reval_twos_complement _) (arg_name, tt)).
 
-  Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
+  Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n.
   Definition sselectznz (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
-    := Primitives.sselectznz n machine_wordsize prefix.
+    := Primitives.sselectznz n prefix.
 
-  Definition copy : Pipeline.ErrorT _ := Primitives.copy n machine_wordsize.
+  Definition copy : Pipeline.ErrorT _ := Primitives.copy n.
   Definition scopy (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
-    := Primitives.scopy n machine_wordsize prefix.
+    := Primitives.scopy n prefix.
 
   Definition msat
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_msat_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify m)
@@ -652,7 +608,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "msat" msat
+          prefix "msat" msat
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname => [text_before_function_name ++ fname ++ " returns the saturated representation of the prime modulus."]%string)
@@ -661,7 +617,6 @@ Section __.
   Definition divstep_precomp
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m' @ GallinaReify.Reify divstep_precompmod)
@@ -672,7 +627,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "divstep_precomp" divstep_precomp
+          prefix "divstep_precomp" divstep_precomp
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname => [text_before_function_name ++ fname ++ " returns the precomputed value for Bernstein-Yang-inversion (in montgomery form)."]%string)
@@ -681,7 +636,6 @@ Section __.
   Definition divstep
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_divstep_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify n @ GallinaReify.Reify m)
@@ -692,7 +646,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "divstep" divstep
+          prefix "divstep" divstep
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " computes a divstep."]%string)
@@ -1127,7 +1081,7 @@ Section __.
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
-           machine_wordsize valid_names known_functions (fun _ => nil) all_typedefs!
+           valid_names known_functions (fun _ => nil) all_typedefs!
            check_args
            (ToString.comment_file_header_block
               (comment_header

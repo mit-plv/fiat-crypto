@@ -1,5 +1,6 @@
 Require Import Coq.Bool.Bool.
 Require Import Coq.derive.Derive.
+Require Import Coq.Program.Tactics.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import Rewriter.Language.Language. Import Language.Compilers.
@@ -22,10 +23,15 @@ Module Montgomery256.
   Definition N':= (115792089210356248768974548684794254293921932838497980611635986753331132366849).
   Definition R := Eval lazy in (2^256).
   Definition R' := 115792089183396302114378112356516095823261736990586219612555396166510339686400.
-  Definition machine_wordsize := 256.
+  Local Instance machine_wordsize : BoundsPipeline.machine_wordsize_opt := 256.
+  Local Existing Instance BoundsPipeline.Pipeline.default_BaseOptions.
+  Local Instance : Primitives.ExtraOptions :=
+    let _ := Primitives.default_ExtraOptions in
+    {| Primitives.widen_carry := false
+    ; Primitives.widen_bytes := true |}.
 
   Derive montred256
-         SuchThat (montred N R N' machine_wordsize = ErrorT.Success montred256)
+         SuchThat (montred N R N' = ErrorT.Success montred256)
          As montred256_eq.
   Proof. lazy; reflexivity. Qed.
 
@@ -35,7 +41,7 @@ Module Montgomery256.
   Lemma montred256_correct :
     COperationSpecifications.MontgomeryReduction.montred_correct N R R' (API.Interp montred256).
   Proof.
-    apply montred_correct with (n:=2%nat) (machine_wordsize:=machine_wordsize) (N':=N') (requests:=[]).
+    rapply (montred_correct N R N' 2 []).
     { lazy. reflexivity. }
     { apply montred256_eq. }
   Qed.

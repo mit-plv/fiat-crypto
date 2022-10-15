@@ -96,53 +96,53 @@ Class names_of_operations :=
     name_of_from_bytes : string }.
 
 Record wbwmontgomery_reified_ops
-  {width BW word mem locals env ext_spec varname_gen error}
+  {width : BoundsPipeline.machine_wordsize_opt} {BW word mem locals env ext_spec varname_gen error}
   {parameters_sentinel : @Types.parameters width BW word mem locals env ext_spec varname_gen error}
        {names : names_of_operations} {m} :=
   { reified_mul :
       reified_op name_of_mul
                  (Generic.WordByWordMontgomery.mul m)
-                 (PushButtonSynthesis.WordByWordMontgomery.mul m width);
+                 (PushButtonSynthesis.WordByWordMontgomery.mul m);
     reified_square :
       reified_op name_of_square
                  (Generic.WordByWordMontgomery.square m)
-                 (PushButtonSynthesis.WordByWordMontgomery.square m width);
+                 (PushButtonSynthesis.WordByWordMontgomery.square m);
     reified_add :
       reified_op name_of_add
                  (Generic.WordByWordMontgomery.add m)
-                 (PushButtonSynthesis.WordByWordMontgomery.add m width);
+                 (PushButtonSynthesis.WordByWordMontgomery.add m);
     reified_sub :
       reified_op name_of_sub
                  (Generic.WordByWordMontgomery.sub m)
-                 (PushButtonSynthesis.WordByWordMontgomery.sub m width);
+                 (PushButtonSynthesis.WordByWordMontgomery.sub m);
     reified_opp :
       reified_op name_of_opp
                  (Generic.WordByWordMontgomery.opp m)
-                 (PushButtonSynthesis.WordByWordMontgomery.opp m width);
+                 (PushButtonSynthesis.WordByWordMontgomery.opp m);
     reified_to_montgomery :
       reified_op name_of_to_montgomery
                  (Generic.WordByWordMontgomery.to_montgomery m)
-                 (PushButtonSynthesis.WordByWordMontgomery.to_montgomery m width);
+                 (PushButtonSynthesis.WordByWordMontgomery.to_montgomery m);
     reified_from_montgomery :
       reified_op name_of_from_montgomery
                  (Generic.WordByWordMontgomery.from_montgomery m)
-                 (PushButtonSynthesis.WordByWordMontgomery.from_montgomery m width);
+                 (PushButtonSynthesis.WordByWordMontgomery.from_montgomery m);
     reified_nonzero :
       reified_op name_of_nonzero
                  (Generic.WordByWordMontgomery.nonzero m)
-                 (PushButtonSynthesis.WordByWordMontgomery.nonzero m width);
+                 (PushButtonSynthesis.WordByWordMontgomery.nonzero m);
     reified_selectznz :
       reified_op name_of_selectznz
                  (Generic.WordByWordMontgomery.selectznz m)
-                 (PushButtonSynthesis.WordByWordMontgomery.selectznz m width);
+                 (PushButtonSynthesis.WordByWordMontgomery.selectznz m);
     reified_to_bytes :
       reified_op name_of_to_bytes
                  (Generic.WordByWordMontgomery.to_bytes m)
-                 (PushButtonSynthesis.WordByWordMontgomery.to_bytes m width);
+                 (PushButtonSynthesis.WordByWordMontgomery.to_bytes m);
     reified_from_bytes :
       reified_op name_of_from_bytes
                  (Generic.WordByWordMontgomery.from_bytes m)
-                 (PushButtonSynthesis.WordByWordMontgomery.from_bytes m width) }.
+                 (PushButtonSynthesis.WordByWordMontgomery.from_bytes m) }.
 Arguments wbwmontgomery_reified_ops {_ _ _ _ _ _ _ _ _ _ _} m.
 
 (*** Helpers ***)
@@ -383,7 +383,7 @@ Ltac change_with_computed_func ops :=
 Ltac prove_correctness ops m :=
   let width := lazymatch type of ops with wbwmontgomery_reified_ops(width:=?width) _ => width end in
   assert (WordByWordMontgomery.check_args
-            m width [] (ErrorT.Success tt) =
+            m [] (ErrorT.Success tt) =
           ErrorT.Success tt) by abstract (native_compute; reflexivity);
   lazymatch goal with
     | |- bedrock2_wbwmontgomery_correctness => econstructor end;

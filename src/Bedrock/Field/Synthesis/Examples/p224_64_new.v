@@ -26,7 +26,9 @@ Section Field.
   Definition n : nat := 4.
   Definition m : Z := (2^224 - 2^96 + 1)%Z.
 
-  Existing Instances Defaults32.default_parameters
+  Existing Instances
+           Defaults32.machine_wordsize
+           Defaults32.default_parameters
            Defaults32.default_parameters_ok.
   Existing Instances no_select_size split_mul_to split_multiret_to.
   Definition prefix : string := "p224_"%string.
@@ -47,7 +49,7 @@ Section Field.
   Definition from_mont_string := prefix ++ "from_mont".
 
   (* Call fiat-crypto pipeline on all field operations *)
-  Instance p224_ops : @word_by_word_Montgomery_ops from_mont_string to_mont_string _ _ _ _ _ _ _ _ _ _ _ (WordByWordMontgomery.n m machine_wordsize) m.
+  Instance p224_ops : @word_by_word_Montgomery_ops from_mont_string to_mont_string _ _ _ _ _ _ _ _ _ _ _ (WordByWordMontgomery.n m) m.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
 
@@ -65,7 +67,7 @@ Section Field.
         | |- context [spec_of_from_bytes] => eapply from_bytes_func_correct
         | |- context [spec_of_to_bytes] => eapply to_bytes_func_correct
         end.
-      
+
       Ltac derive_bedrock2_func op :=
         begin_derive_bedrock2_func;
         (* this goal fills in the evar, so do it first for [abstract] to be happy *)

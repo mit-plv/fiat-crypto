@@ -56,27 +56,30 @@ Module debugging_go_bits_add.
     Local Instance : language_specific_cast_adjustment_opt := true.
     Local Existing Instance Build_output_options_opt.
     Local Instance static : static_opt := false.
+    Local Instance : all_static_opt := false.
     Local Instance : internal_static_opt := false.
-    Local Instance : inline_opt := false.
-    Local Instance : inline_internal_opt := false.
     Local Instance : emit_primitives_opt := true.
-    Local Instance : use_mul_for_cmovznz_opt := true.
     Local Instance : widen_carry_opt := true.
     Local Instance : widen_bytes_opt := true.
     Local Instance : only_signed_opt := false.
     Local Instance : no_select_opt := false.
     Local Instance : should_split_mul_opt := true. (* only for x64 *)
     Local Instance : should_split_multiret_opt := false.
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := false
+         ; Primitives.use_mul_for_cmovznz := true |}.
 
     Context (s := 2^127)
             (c :=  [(1,1)])
-            (machine_wordsize := 64).
+            (machine_wordsize : machine_wordsize_opt := 64).
+    Local Existing Instance machine_wordsize.
 
     Goal True.
-      pose (WordByWordMontgomery.smul (s - Associational.eval c) machine_wordsize "p256_") as v.
+      pose (WordByWordMontgomery.smul (s - Associational.eval c) "p256_") as v.
       vm_compute Z.sub in v.
       cbv [WordByWordMontgomery.smul] in v.
-      set (k := WordByWordMontgomery.mul _ _) in (value of v).
+      set (k := WordByWordMontgomery.mul _) in (value of v).
       vm_compute in v.
       clear v; cbv [WordByWordMontgomery.mul] in k.
       cbv beta delta [Pipeline.BoundsPipeline] in k.
@@ -94,10 +97,6 @@ Module debugging_go_bits_add.
              | [ H := @inl ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inl A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
              | [ H := @inr ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inr A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
              end.
-      vm_compute WordByWordMontgomery.no_select_size in k.
-      vm_compute WordByWordMontgomery.split_mul_to in k.
-      vm_compute WordByWordMontgomery.split_multiret_to in k.
-      vm_compute WordByWordMontgomery.split_multiret_to in k.
       cbv beta iota in k.
       set (v := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
       vm_compute in v.
@@ -106,6 +105,11 @@ Module debugging_go_bits_add.
              | [ H := @inl ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inl A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
              | [ H := @inr ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inr A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
              end.
+      vm_compute Pipeline.no_select_size in k.
+      vm_compute Pipeline.split_mul_to in k.
+      vm_compute Pipeline.split_multiret_to in k.
+      vm_compute Pipeline.split_multiret_to in k.
+      cbv beta iota in k.
       vm_compute relax_adc_sbb_return_carry_to_bitwidth_ in k.
       cbv beta iota in k.
       set (v' := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _ _) in (value of k).
@@ -347,6 +351,7 @@ Module debugging_typedefs.
   Section __.
     Local Existing Instance C.OutputCAPI.
     Local Instance static : static_opt := false.
+    Local Instance : all_static_opt := false.
     Local Instance : internal_static_opt := true.
     Local Instance : inline_opt := true.
     Local Instance : inline_internal_opt := true.
@@ -357,32 +362,37 @@ Module debugging_typedefs.
     Local Instance : only_signed_opt := false.
     Local Instance : no_select_opt := false.
     Local Instance : should_split_mul_opt := false.
-    Local Instance : should_split_multiret_opt :=false.
+    Local Instance : should_split_multiret_opt := false.
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := _ |}.
+
 
     Definition n := 3%nat (*5%nat*).
     Definition s := 2^127 (* 255*).
     Definition c := [(1, 1(*9*))].
-    Definition machine_wordsize := 64.
+    Local Instance machine_wordsize : machine_wordsize_opt := 64.
 
     Import IR.Compilers.ToString.
     Redirect "log"
-             Compute match (sadd n s c machine_wordsize "1271") return (string * Pipeline.ErrorT _) with
+             Compute match (sadd n s c "1271") return (string * Pipeline.ErrorT _) with
                      | (name, ErrorT.Success {| Pipeline.lines := v |}) => (name, ErrorT.Success (String.concat String.NewLine v))
                      | v => _
                      end.
     Redirect "log"
-             Compute Synthesize n s c machine_wordsize [] "curve" ["add"].
+             Compute Synthesize n s c [] "curve" ["add"].
 
     Goal True.
-      pose (sadd n s c machine_wordsize "1271") as v.
+      pose (sadd n s c "1271") as v.
       cbv [sadd] in v.
       vm_compute add in v.
       cbv beta iota zeta in v.
       cbv [Language.Compilers.ToString.ToFunctionLines] in v.
-      cbv [C.OutputCAPI] in v.
+      cbv [C.OutputCAPI Pipeline.AbstractInterpretation_opts AbstractInterpretation.default_Options Pipeline.output_language_api] in v.
       cbv [ToFunctionLines] in v.
-      vm_compute IR.OfPHOAS.ExprOfPHOAS in v.
-      cbv beta iota zeta in v.
+      set (k := IR.OfPHOAS.ExprOfPHOAS _ _ _ _ _ _) in (value of v).
+      vm_compute in k.
+      subst k; cbv beta iota zeta in v.
       (*vm_compute in v.*)
       set (k := ToString.OfPHOAS.input_bounds_to_string _ _) in (value of v).
       clear v.
@@ -399,6 +409,7 @@ Module debugging_21271_from_bytes.
   Section __.
     Local Existing Instance C.OutputCAPI.
     Local Instance static : static_opt := false.
+    Local Instance : all_static_opt := false.
     Local Instance : internal_static_opt := true.
     Local Instance : inline_opt := true.
     Local Instance : inline_internal_opt := true.
@@ -410,22 +421,25 @@ Module debugging_21271_from_bytes.
     Local Instance : no_select_opt := false.
     Local Instance : should_split_mul_opt := false.
     Local Instance : should_split_multiret_opt :=false.
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := _ |}.
 
     Definition n := 3%nat (*5%nat*).
     Definition s := 2^127 (* 255*).
     Definition c := [(1, 1(*9*))].
-    Definition machine_wordsize := 64.
+    Local Instance machine_wordsize : machine_wordsize_opt := 64.
 
     Import IR.Compilers.ToString.
 
     Goal True.
-      pose (sfrom_bytes n s c machine_wordsize "1271") as v.
+      pose (sfrom_bytes n s c "1271") as v.
       cbv [sfrom_bytes] in v.
-      set (k := from_bytes _ _ _ _) in (value of v).
+      set (k := from_bytes _ _ _) in (value of v).
       clear v.
       cbv [from_bytes] in k.
       cbv [Pipeline.BoundsPipeline] in k.
-      set (k' := Pipeline.PreBoundsPipeline _ _ _ _ _) in (value of k).
+      set (k' := Pipeline.PreBoundsPipeline _ _ _ _) in (value of k).
       vm_compute in k'.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
       set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
@@ -488,6 +502,7 @@ Module debugging_sat_solinas_25519.
     Local Instance : only_signed_opt := false.
     Local Instance : no_select_opt := false.
     Local Instance : static_opt := true.
+    Local Instance : all_static_opt := true.
     Local Instance : internal_static_opt := true.
     Local Instance : inline_opt := true.
     Local Instance : inline_internal_opt := true.
@@ -508,6 +523,10 @@ Module debugging_sat_solinas_25519.
     Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
     Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
     Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := _ |}.
+    Local Existing Instance Pipeline.default_DerivedPipelineSpecificOptions.
     Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
     Let m := s - Associational.eval c.
     (* Number of reductions is calculated as follows :
@@ -525,17 +544,14 @@ Module debugging_sat_solinas_25519.
     else Z.to_nat (Qceiling (Z.of_nat n / (Z.of_nat n - i - 1))).
     Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
     Let boundsn : list (ZRange.type.option.interp base.type.Z)
-      := repeat bound n.
+        := repeat bound n.
 
     Time Redirect "log" Compute
          Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
          (Pipeline.BoundsPipelineToString
             "fiat" "mul"
             false (* subst01 *)
-            false (* inline *)
-            None (* fancy *)
             possible_values
-            machine_wordsize
             ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
                   let nreductions := (eval cbv in nreductions) (* needs to be reduced to reify correctly *) in
                   let r := Reify (@Saturated.Rows.mulmod (weight machine_wordsize 1) (2^machine_wordsize) s c n nreductions) in
@@ -706,6 +722,7 @@ Module debugging_sat_solinas_25519_expanded_straightforward.
     Local Instance : only_signed_opt := false.
     Local Instance : no_select_opt := false.
     Local Instance : static_opt := true.
+    Local Instance : all_static_opt := true.
     Local Instance : internal_static_opt := true.
     Local Instance : inline_opt := true.
     Local Instance : inline_internal_opt := true.
@@ -726,6 +743,10 @@ Module debugging_sat_solinas_25519_expanded_straightforward.
     Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
     Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
     Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := _ |}.
+    Local Existing Instance Pipeline.default_DerivedPipelineSpecificOptions.
     Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
     Let m := s - Associational.eval c.
     (* Number of reductions is calculated as follows :
@@ -743,7 +764,7 @@ Module debugging_sat_solinas_25519_expanded_straightforward.
       else Z.to_nat (Qceiling (Z.of_nat n / (Z.of_nat n - i - 1))).
     Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
     Let boundsn : list (ZRange.type.option.interp base.type.Z)
-      := repeat bound n.
+        := repeat bound n.
 
     Time Redirect "log"
          Compute
@@ -751,10 +772,7 @@ Module debugging_sat_solinas_25519_expanded_straightforward.
          (Pipeline.BoundsPipelineToString
             "fiat" "mul"
             false (* subst01 *)
-            false (* inline *)
-            None (* fancy *)
             possible_values
-            machine_wordsize
             ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
                   let nreductions := (eval cbv in nreductions) (* needs to be reduced to reify correctly *) in
                   let r := Reify (@Saturated.Rows.mulmod (weight machine_wordsize 1) (2^machine_wordsize) s c n nreductions) in
@@ -932,6 +950,7 @@ Module debugging_sat_solinas_25519_expanded.
     Local Instance : only_signed_opt := false.
     Local Instance : no_select_opt := false.
     Local Instance : static_opt := true.
+    Local Instance : all_static_opt := true.
     Local Instance : internal_static_opt := true.
     Local Instance : inline_opt := true.
     Local Instance : inline_internal_opt := true.
@@ -952,6 +971,10 @@ Module debugging_sat_solinas_25519_expanded.
     Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
     Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
     Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := _ |}.
+    Local Existing Instance Pipeline.default_DerivedPipelineSpecificOptions.
     Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
     Let m := s - Associational.eval c.
     (* Number of reductions is calculated as follows :
@@ -973,10 +996,7 @@ Module debugging_sat_solinas_25519_expanded.
          (Pipeline.BoundsPipelineToString
             "fiat" "mul"
             false (* subst01 *)
-            false (* inline *)
-            None (* fancy *)
             possible_values
-            machine_wordsize
             ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
                   let nreductions := (eval cbv in nreductions) (* needs to be reduced to reify correctly *) in
                   let r := Reify (@Saturated.Rows.mulmod (weight machine_wordsize 1) (2^machine_wordsize) s c n nreductions) in
@@ -1216,6 +1236,7 @@ Module debugging_p256_mul_bedrock2.
   Section __.
     Local Existing Instance (*OutputBedrock2API*) C.OutputCAPI.
     Local Instance static : static_opt := false.
+    Local Instance : all_static_opt := false.
     Local Instance : internal_static_opt := true.
     Local Instance : inline_opt := true.
     Local Instance : inline_internal_opt := true.
@@ -1227,17 +1248,21 @@ Module debugging_p256_mul_bedrock2.
     Local Instance : no_select_opt := false.
     Local Instance : should_split_mul_opt := true.
     Local Instance : should_split_multiret_opt := true.
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := _ |}.
+    Local Existing Instance Pipeline.default_DerivedPipelineSpecificOptions.
 
     Definition m := (2^64 - 1)%Z. (*(2^256 - 2^224 + 2^192 + 2^96 - 1)%Z.*)
-    Definition machine_wordsize := 64.
+    Local Instance machine_wordsize : machine_wordsize_opt := 64.
 
     Import IR.Compilers.ToString.
 
     Goal True.
-      pose (smul m machine_wordsize "p256") as v.
+      pose (smul m "p256") as v.
       Import IdentifiersBasicGENERATED.Compilers.
       cbv [smul] in v.
-      set (k := mul _ _) in (value of v).
+      set (k := mul _) in (value of v).
       vm_compute in v.
       clear v.
       cbv [mul] in k.
@@ -1285,6 +1310,7 @@ Module debugging_25519_to_bytes_bedrock2.
   Section __.
     Local Existing Instance C.OutputCAPI.
     Local Instance static : static_opt := false.
+    Local Instance : all_static_opt := false.
     Local Instance : internal_static_opt := true.
     Local Instance : inline_opt := true.
     Local Instance : inline_internal_opt := true.
@@ -1296,18 +1322,22 @@ Module debugging_25519_to_bytes_bedrock2.
     Local Instance : no_select_opt := false.
     Local Instance : should_split_mul_opt := true.
     Local Instance : should_split_multiret_opt := true.
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := _ |}.
+    Local Existing Instance Pipeline.default_DerivedPipelineSpecificOptions.
 
     Definition n := 2%nat (*5%nat*).
     Definition s := 2^127 (* 255*).
     Definition c := [(1, 1(*9*))].
-    Definition machine_wordsize := 64.
+    Local Instance machine_wordsize : machine_wordsize_opt := 64.
 
     Import IR.Compilers.ToString.
 
     Goal True.
-      pose (sto_bytes n s c machine_wordsize "curve25519") as v.
+      pose (sto_bytes n s c "curve25519") as v.
       cbv [sto_bytes] in v.
-      set (k := to_bytes _ _ _ _) in (value of v).
+      set (k := to_bytes _ _ _) in (value of v).
       clear v.
       (*
       cbv [to_bytes] in k.
@@ -1738,6 +1768,7 @@ Module debugging_25519_to_bytes_java.
   Section __.
     Local Existing Instance Java.OutputJavaAPI.
     Local Instance static : static_opt := false.
+    Local Instance : all_static_opt := false.
     Local Instance : internal_static_opt := true.
     Local Instance : inline_opt := true.
     Local Instance : inline_internal_opt := true.
@@ -1748,25 +1779,29 @@ Module debugging_25519_to_bytes_java.
     Local Instance : only_signed_opt := true.
     Local Instance : no_select_opt := false.
     Local Instance : should_split_mul_opt := false. (* only for x64 *)
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := _ |}.
+    Local Existing Instance Pipeline.default_DerivedPipelineSpecificOptions.
 
     Definition n := 2%nat (*10%nat*).
     Definition s := 2^51 (* 255*).
     Definition c := [(1, 19)].
-    Definition machine_wordsize := 32.
+    Local Instance machine_wordsize : machine_wordsize_opt := 32.
 
     Import IR.Compilers.ToString.
 
     Goal True.
-      pose (sto_bytes n s c machine_wordsize "curve25519") as v.
+      pose (sto_bytes n s c "curve25519") as v.
       cbv [sto_bytes] in v.
-      set (k := to_bytes _ _ _ _) in (value of v).
+      set (k := to_bytes _ _ _) in (value of v).
       vm_compute in k.
       subst k.
       cbv beta iota zeta in v.
       set (k := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) in (value of v).
       clear v.
       cbv [Language.Compilers.ToString.ToFunctionLines] in k.
-      cbv [Java.OutputJavaAPI] in k.
+      cbv [Java.OutputJavaAPI Pipeline.AbstractInterpretation_opts AbstractInterpretation.default_Options Pipeline.output_language_api] in k.
       cbv [Language.Compilers.ToString.ToFunctionLines] in k.
       cbv [Java.ToFunctionLines] in k.
       set (k' := IR.OfPHOAS.ExprOfPHOAS _ _ _ _ _ _) in (value of k).
@@ -1785,9 +1820,9 @@ Module debugging_25519_to_bytes_java.
       cbv [invert_expr.invert_Abs] in k'.
       cbv [IR.OfPHOAS.expr_of_base_PHOAS] in k'.
       set (k := IR.OfPHOAS.make_assign_expr_of_PHOAS _ _) in (value of k') at 1.
-      cbv [IR.OfPHOAS.make_assign_expr_of_PHOAS] in k.
       clear k'.
-      set (k' := type.try_transport _ _ _) in (value of k).
+      (*Time cbv [IR.OfPHOAS.make_assign_expr_of_PHOAS] in k.
+      Time set (k' := type.try_transport _ _ _) in (value of k).
       vm_compute in k'.
       subst k'.
       cbv beta iota zeta in k.
@@ -1799,7 +1834,7 @@ Module debugging_25519_to_bytes_java.
       set (k' := invert_expr.invert_AppIdent_curried _) in (value of k); vm_compute in k'; subst k'.
       cbv beta iota in k.
       set (k' := IR.OfPHOAS.arith_expr_of_PHOAS_args _) in (value of k).
-      cbv [IR.OfPHOAS.arith_expr_of_PHOAS_args] in k'.
+      cbv [IR.OfPHOAS.arith_expr_of_PHOAS_args] in k'.*)
       (*clear k.
       set (k := IR.OfPHOAS.arith_expr_of_base_PHOAS _ _) in (value of k') at 1.
       cbv [Language.Compilers.ToString.int.option.None] in k.
@@ -1809,7 +1844,7 @@ Module debugging_25519_to_bytes_java.
       cbv [IR.OfPHOAS.arith_expr_of_PHOAS_ident] in k.
       cbv [IR.OfPHOAS.arith_expr_of_PHOAS_literal_Z] in k.
       vm_compute in k.*)
-      vm_compute in k'.
+      (*vm_compute in k'.
       subst k'.
       cbv beta iota zeta in k.
       set (k' := Crypto.Util.Option.bind _ _) in (value of k) at 1; vm_compute in k'; subst k'.
@@ -1823,7 +1858,7 @@ Module debugging_25519_to_bytes_java.
       set (k' := Language.Compilers.ToString.int.of_zrange_relaxed _) in (value of k) at 1; vm_compute in k'; subst k'.
       set (k' := Language.Compilers.ToString.int.of_zrange_relaxed _) in (value of k) at 1; vm_compute in k'; subst k'.
       set (k' := IR.OfPHOAS.bounds_check _ _ _ _ _ _) in (value of k) at 1; vm_compute in k'; subst k'.
-      cbv beta iota zeta in k.
+      cbv beta iota zeta in k.*)
       (*
       set (k' := IR.OfPHOAS.bounds_check _ _ _ _ _ _) in (value of k) at 1; vm_compute in k'; subst k'.
       cbv beta iota zeta in k.
@@ -1895,6 +1930,7 @@ Module debugging_p256_uint1.
   Section __.
     Local Existing Instance Java.OutputJavaAPI.
     Local Instance static : static_opt := false.
+    Local Instance : all_static_opt := false.
     Local Instance : internal_static_opt := true.
     Local Instance : inline_opt := true.
     Local Instance : inline_internal_opt := true.
@@ -1903,14 +1939,19 @@ Module debugging_p256_uint1.
     Local Instance : widen_carry_opt := true.
     Local Instance : widen_bytes_opt := true.
     Local Instance : should_split_mul_opt := false. (* only for x64 *)
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := _ |}.
+    Local Existing Instance Pipeline.default_DerivedPipelineSpecificOptions.
 
     Context (m : Z := 2^256 - 2^224 + 2^192 + 2^96 - 1)
-            (machine_wordsize : Z := 128).
+            (machine_wordsize : machine_wordsize_opt := 128).
+    Local Existing Instance machine_wordsize.
 
     Goal True.
-      pose (smul m machine_wordsize "p256") as v.
+      pose (smul m "p256") as v.
       cbv [smul] in v.
-      set (k := WordByWordMontgomery.mul m machine_wordsize) in (value of v).
+      set (k := WordByWordMontgomery.mul m) in (value of v).
       cbv [WordByWordMontgomery.mul] in k.
       cbv [possible_values_of_machine_wordsize] in k.
       cbv [widen_carry] in k.
@@ -1954,6 +1995,7 @@ Module debugging_go_build0.
   Section __.
     Local Existing Instance Go.OutputGoAPI.
     Local Instance static : static_opt := false.
+    Local Instance : all_static_opt := false.
     Local Instance : internal_static_opt := false.
     Local Instance : inline_opt := false.
     Local Instance : inline_internal_opt := false.
@@ -1962,11 +2004,16 @@ Module debugging_go_build0.
     Local Instance : widen_carry_opt := true.
     Local Instance : widen_bytes_opt := true.
     Local Instance : should_split_mul_opt := true. (* only for x64 *)
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := _ |}.
+    Local Existing Instance Pipeline.default_DerivedPipelineSpecificOptions.
 
     Context (n : nat := 3%nat)
             (s : Z := 2^448)
             (c : list (Z * Z) := [(2^224,1);(1,1)])
-            (machine_wordsize : Z := 512/3).
+            (machine_wordsize : machine_wordsize_opt := 512/3).
+    Local Existing Instance machine_wordsize.
     (*
     Goal True.
       pose (scarry_mul n s c machine_wordsize "p448_") as v.
@@ -2067,6 +2114,7 @@ Module debugging_go_build.
   Section __.
     Local Existing Instance Go.OutputGoAPI.
     Local Instance static : static_opt := false.
+    Local Instance : all_static_opt := false.
     Local Instance : internal_static_opt := false.
     Local Instance : inline_opt := false.
     Local Instance : inline_internal_opt := false.
@@ -2075,6 +2123,10 @@ Module debugging_go_build.
     Local Instance : widen_carry_opt := true.
     Local Instance : widen_bytes_opt := true.
     Local Instance : should_split_mul_opt := true. (* only for x64 *)
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := _ |}.
+    Local Existing Instance Pipeline.default_DerivedPipelineSpecificOptions.
 
     Context (m : Z := 2^256 - 2^224 + 2^192 + 2^96 - 1)
             (machine_wordsize : Z := 64).
@@ -2894,6 +2946,7 @@ Module debugging_go_output.
   Section __.
     Local Existing Instance Go.OutputGoAPI.
     Local Instance static : static_opt := false.
+    Local Instance : all_static_opt := false.
     Local Instance : internal_static_opt := false.
     Local Instance : inline_opt := false.
     Local Instance : inline_internal_opt := false.
@@ -2902,6 +2955,10 @@ Module debugging_go_output.
     Local Instance : widen_carry_opt := true.
     Local Instance : widen_bytes_opt := true.
     Local Instance : should_split_mul_opt := true. (* only for x64 *)
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := _ |}.
+    Local Existing Instance Pipeline.default_DerivedPipelineSpecificOptions.
 
     Context (m : Z := 2^256 - 2^224 + 2^192 + 2^96 - 1)
             (machine_wordsize : Z := 64).
@@ -3013,11 +3070,13 @@ Import Stringification.C.Compilers.
 
 Local Existing Instance ToString.C.OutputCAPI.
 Local Instance static : static_opt := true.
+Local Instance : all_static_opt := true.
 Local Instance : internal_static_opt := true.
 Local Instance : inline_opt := true.
 Local Instance : inline_internal_opt := true.
 Local Instance : use_mul_for_cmovznz_opt := false.
 Local Instance : emit_primitives_opt := true.
+Local Existing Instance Pipeline.default_DerivedPipelineSpecificOptions.
 
 Module debugging_remove_mul_split_to_C_uint1_carry.
   Import PreExtra.
@@ -3026,12 +3085,12 @@ Module debugging_remove_mul_split_to_C_uint1_carry.
     Context (n : nat := 5%nat)
             (s : Z := 2^255)
             (c : list (Z * Z) := [(1,19)])
-            (machine_wordsize : Z := 64)
+            (machine_wordsize : machine_wordsize_opt := 64)
             (should_split_mul : should_split_mul_opt := true)
             (widen_carry : widen_carry_opt := true)
             (widen_bytes : widen_bytes_opt := false).
 
-    Local Existing Instances should_split_mul widen_carry widen_bytes.
+    Local Existing Instances machine_wordsize should_split_mul widen_carry widen_bytes.
 
     Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
     Let idxs := (List.seq 0 n ++ [0; 1])%list%nat.
@@ -3042,6 +3101,9 @@ Module debugging_remove_mul_split_to_C_uint1_carry.
     Let possible_values := possible_values_of_machine_wordsize.
 
     Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := _ |}.
 
     Let prime_upperbound_list : list Z
       := Partition.partition (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
@@ -3067,10 +3129,7 @@ Module debugging_remove_mul_split_to_C_uint1_carry.
       "" (* prefix *)
       "mul"
       false (* subst01 *)
-      false (* inline *)
-      None (* fancy *)
       possible_values
-      machine_wordsize
       ltac:(let r := Reify ((fun f g => dlet _ := ident.comment ("foo", f, g) in carry_mulmod limbwidth_num limbwidth_den s c n idxs f g)) in
             exact r)
              (fun _ _ => []) (* comment *)
@@ -3333,12 +3392,12 @@ Module debugging_remove_mul_split.
     Context (n : nat := 5%nat)
             (s : Z := 2^255)
             (c : list (Z * Z) := [(1,19)])
-            (machine_wordsize : Z := 64)
+            (machine_wordsize : machine_wordsize_opt := 64)
             (should_split_mul : should_split_mul_opt := true)
             (widen_carry : widen_carry_opt := true)
             (widen_bytes : widen_bytes_opt := true).
 
-    Local Existing Instances should_split_mul widen_carry widen_bytes.
+    Local Existing Instances machine_wordsize should_split_mul widen_carry widen_bytes.
 
     Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
     Let idxs := (List.seq 0 n ++ [0; 1])%list%nat.
@@ -3349,6 +3408,9 @@ Module debugging_remove_mul_split.
     Let possible_values := possible_values_of_machine_wordsize.
 
     Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := _ |}.
 
     Let prime_upperbound_list : list Z
       := Partition.partition (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
@@ -3373,10 +3435,10 @@ Module debugging_remove_mul_split.
     Local Notation "'uint64'" := (ident.Z_cast r[0 ~> 18446744073709551615]%zrange) : expr_scope.
     Local Open Scope expr_scope.
     Local Open Scope core_scope.
+
     Redirect "log" Compute
       Pipeline.BoundsPipeline
       false (* subst01 *)
-      None (* fancy *)
       possible_values
       ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n idxs)) in
             exact r)
@@ -3747,12 +3809,12 @@ Module debugging_remove_mul_split2.
   Import Crypto.Arithmetic.WordByWordMontgomery.WordByWordMontgomery.
   Section __.
     Context (m : Z := 2^224 - 2^96 + 1)
-            (machine_wordsize : Z := 64)
+            (machine_wordsize : machine_wordsize_opt := 64)
             (should_split_mul : should_split_mul_opt := true)
             (widen_carry : widen_carry_opt := true)
             (widen_bytes : widen_bytes_opt := true).
 
-    Local Existing Instances should_split_mul widen_carry widen_bytes.
+    Local Existing Instances machine_wordsize should_split_mul widen_carry widen_bytes.
 
     Let s := 2^Z.log2_up m.
     Let c := s - m.
@@ -3761,7 +3823,7 @@ Module debugging_remove_mul_split2.
     Let r' := Z.modinv r m.
     Let m' := Eval vm_compute in Z.modinv (-m) r.
 
-    Local Notation saturated_bounds := (Primitives.saturated_bounds n machine_wordsize).
+    Local Notation saturated_bounds := (Primitives.saturated_bounds n).
 
     Definition bounds : list (ZRange.type.option.interp base.type.Z)
       := saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
@@ -3771,6 +3833,9 @@ Module debugging_remove_mul_split2.
     Let possible_values := possible_values_of_machine_wordsize.
 
     Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
+    Local Instance : Primitives.ExtraOptions
+      := let _ := Primitives.default_ExtraOptions in
+         {| Primitives.inline_internal := _ |}.
 
     (*
     Time Definition foo :=
@@ -3796,14 +3861,15 @@ Module debugging_remove_mul_split2.
       (Some bounds).
 *)
     Redirect "log" Check (fun with_mul_split => with_mul_split).
-    Time Redirect "log" Compute smul m machine_wordsize "" (* prefix *).
+    Time Redirect "log" Compute smul m "" (* prefix *).
     Redirect "log" Check (fun without_mul_split => without_mul_split).
-    Time Redirect "log" Compute smul m machine_wordsize "" (* prefix *).
+    Time Redirect "log" Compute smul m "" (* prefix *).
     Goal True.
-      pose (smul m machine_wordsize "") as v; clear -v.
-      cbv in m; subst m machine_wordsize.
+      pose (smul m "") as v; clear -v.
+      cbv in m; subst m.
+      cbv [machine_wordsize] in *.
       cbv [smul] in v.
-      set (k := mul _ _) in (value of v).
+      set (k := mul _) in (value of v).
       clear v.
       cbv [mul] in k.
       Import WordByWordMontgomeryReificationCache.
@@ -3843,7 +3909,8 @@ Module debugging_rewriting.
     Context (n : nat := 2%nat)
             (s : Z := 2^127)
             (c : list (Z * Z) := [(1,1)])
-            (machine_wordsize : Z := 64).
+            (machine_wordsize : machine_wordsize_opt := 64).
+    Local Existing Instance machine_wordsize.
 
     Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
     Let idxs := (List.seq 0 n ++ [0; 1])%list%nat.
@@ -3871,7 +3938,7 @@ Module debugging_rewriting.
 
     Redirect "log" Compute
       (Pipeline.BoundsPipeline
-         true None [64; 128]
+         true [64; 128]
          ltac:(let r := Reify (fun f g
                                => (  (addmod limbwidth_num limbwidth_den n f g)
                               )) in
@@ -3881,7 +3948,7 @@ Module debugging_rewriting.
 
     Redirect "log" Compute
       (Pipeline.BoundsPipeline
-         true None [64; 128]
+         true [64; 128]
          ltac:(let r := Reify (fun f g
                                => (  (add (weight limbwidth_num limbwidth_den) n f g)
                               )) in
@@ -3891,7 +3958,7 @@ Module debugging_rewriting.
 
     Redirect "log" Compute
       (Pipeline.BoundsPipeline
-         true None [64; 128]
+         true [64; 128]
          ltac:(let r := Reify (fun f g
                                => let a_a := to_associational (weight limbwidth_num limbwidth_den) n f in
                                   let b_a := to_associational (weight limbwidth_num limbwidth_den) n g in from_associational (weight limbwidth_num limbwidth_den) n (a_a ++ b_a)
@@ -3902,7 +3969,7 @@ Module debugging_rewriting.
 
     Redirect "log" Compute
       (Pipeline.BoundsPipeline
-         true None [64; 128]
+         true [64; 128]
          ltac:(let r := Reify (fun f (g : list Z)
                                => let a_a := to_associational (weight limbwidth_num limbwidth_den) n f in
                                   a_a) in
@@ -3912,7 +3979,7 @@ Module debugging_rewriting.
 
     Redirect "log" Compute
       (Pipeline.BoundsPipeline
-         true None [64; 128]
+         true [64; 128]
          ltac:(let r := Reify (fun (f g : list Z)
                                => let a_a := combine (map (weight limbwidth_num limbwidth_den) (seq 0 n)) f in
                                   a_a) in
@@ -3921,7 +3988,7 @@ Module debugging_rewriting.
                 ZRange.type.base.option.None).
 
     Definition foo := (Pipeline.BoundsPipeline
-                         true None [64; 128]
+                         true [64; 128]
                          ltac:(let r := Reify (combine [1; 2] [1; 2]) in
                                exact r)
                                 tt
@@ -3950,7 +4017,8 @@ Section debugging_p448.
   Context (n : nat := 8%nat)
           (s : Z := 2^448)
           (c : list (Z * Z) := [(2^224,1);(1,1)])
-          (machine_wordsize : Z := 64).
+          (machine_wordsize : machine_wordsize_opt := 64).
+  Local Existing Instance machine_wordsize.
 
   Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
   Let idxs := (List.seq 0 n ++ [0; 1])%list%nat.
@@ -3981,7 +4049,7 @@ Section debugging_p448.
   Redirect "log" Print squaremod.
   Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
-        true None [64; 128]
+        true [64; 128]
         ltac:(let r := Reify (fun f
                               => (  (squaremod (weight limbwidth_num limbwidth_den) s c n f)
                                     )) in
@@ -3994,9 +4062,7 @@ Section debugging_p448.
        "" (* prefix *)
        "mul"
        false (* subst01 *)
-       false (* inline *)
-       None (* fancy *)
-       possible_values machine_wordsize
+       possible_values
        ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n [3; 7; 4; 0; 5; 1; 6; 2; 7; 3; 4; 0]%nat)) in
              exact r)
               (fun _ _ => []) (* comment *)
@@ -4009,7 +4075,6 @@ Section debugging_p448.
   Time Redirect "log" Compute
        Pipeline.BoundsPipeline
        false (* subst01 *)
-       None (* fancy *)
        possible_values
        ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n [3; 7; 4; 0; 5; 1; 6; 2; 7; 3; 4; 0]%nat)) in
              exact r)
@@ -4018,7 +4083,7 @@ Section debugging_p448.
 
   Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
-        true None [64; 128]
+        true [64; 128]
         ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n [3; 7; 4; 0; 5; 1; 6; 2; 7; 3; 4; 0]%nat)) in
               exact r)
                (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
@@ -4026,7 +4091,7 @@ Section debugging_p448.
 
   Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
-        true None [64; 128]
+        true [64; 128]
         ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n []%nat)) in
               exact r)
                (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
@@ -4034,7 +4099,7 @@ Section debugging_p448.
 
   Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
-        true None [64; 128]
+        true [64; 128]
         ltac:(let r := Reify (fun f g
                               => (  (mulmod (weight limbwidth_num limbwidth_den) s c n f g)
                                     )) in
@@ -4044,7 +4109,7 @@ Section debugging_p448.
 
   Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
-        true None [64; 128]
+        true [64; 128]
         ltac:(let r := Reify (fun a b
                               => (let weight := weight limbwidth_num limbwidth_den in
                                   let a_a := to_associational weight n a in
@@ -4072,7 +4137,7 @@ Module X25519_64.
   Definition n := 5%nat.
   Definition s := 2^255.
   Definition c := [(1, 19)].
-  Definition machine_wordsize := 64.
+  Local Instance machine_wordsize : machine_wordsize_opt := 64.
   Local Notation tight_bounds := (tight_bounds n s c).
   Local Notation loose_bounds := (loose_bounds n s c).
   Local Notation prime_bound := (prime_bound s c).
@@ -4244,7 +4309,7 @@ Module X25519_32.
   Definition n := 10%nat.
   Definition s := 2^255.
   Definition c := [(1, 19)].
-  Definition machine_wordsize := 32.
+  Local Instance machine_wordsize : machine_wordsize_opt := 32.
 
   Derive base_25p5_relax
          SuchThat (rrelax_correctT n s c machine_wordsize base_25p5_relax)
@@ -4486,7 +4551,7 @@ Import Language.Compilers.
 Module P192_64.
   Definition s := 2^192.
   Definition c :=  [(2^64, 1); (1,1)].
-  Definition machine_wordsize := 64.
+  Local Instance machine_wordsize : machine_wordsize_opt := 64.
 
   Derive mulmod
          SuchThat (SaturatedSolinas.rmulmod_correctT s c machine_wordsize mulmod)
@@ -4556,7 +4621,7 @@ End P192_64.
 Module P192_32.
   Definition s := 2^192.
   Definition c :=  [(2^64, 1); (1,1)].
-  Definition machine_wordsize := 32.
+  Local Instance machine_wordsize : machine_wordsize_opt := 32.
 
   Derive mulmod
          SuchThat (SaturatedSolinas.rmulmod_correctT s c machine_wordsize mulmod)
@@ -4751,7 +4816,7 @@ End P192_32.
 Module P384_32.
   Definition s := 2^384.
   Definition c :=  [(2^128, 1); (2^96, 1); (2^32,-1); (1,1)].
-  Definition machine_wordsize := 32.
+  Local Instance machine_wordsize : machine_wordsize_opt := 32.
   Import PrintingNotations.
   Open Scope expr_scope.
   Set Printing Depth 100000.
@@ -4787,7 +4852,7 @@ End P384_32.
 Module P256_32.
   Definition s := 2^256.
   Definition c :=  [(2^224, 1); (2^192, -1); (2^96, -1); (1,1)].
-  Definition machine_wordsize := 32.
+  Local Instance machine_wordsize : machine_wordsize_opt := 32.
 
   Derive mulmod
          SuchThat (SaturatedSolinas.rmulmod_correctT s c machine_wordsize mulmod)

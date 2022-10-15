@@ -27,54 +27,54 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Import ListNotations API.Compilers Types.Notations.
 
 Class unsaturated_solinas_ops
-  {width BW word mem locals env ext_spec varname_gen error}
+  {width : machine_wordsize_opt} {BW word mem locals env ext_spec varname_gen error}
   {parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
   {field_parameters : FieldParameters}
   {n s c} : Type :=
   { mul_op :
       computed_op
-        (UnsaturatedSolinas.carry_mul n s c width) Field.mul
+        (UnsaturatedSolinas.carry_mul n s c) Field.mul
         list_binop_insizes list_binop_outsizes (list_binop_inlengths n);
     add_op :
       computed_op
-        (UnsaturatedSolinas.add n s c width) Field.add
+        (UnsaturatedSolinas.add n s c) Field.add
         list_binop_insizes list_binop_outsizes (list_binop_inlengths n);
     sub_op :
       computed_op
-        (UnsaturatedSolinas.sub n s c width) Field.sub
+        (UnsaturatedSolinas.sub n s c) Field.sub
         list_binop_insizes list_binop_outsizes (list_binop_inlengths n);
     opp_op :
       computed_op
-        (UnsaturatedSolinas.opp n s c width) Field.opp
+        (UnsaturatedSolinas.opp n s c) Field.opp
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
     square_op :
       computed_op
-        (UnsaturatedSolinas.carry_square n s c width)
+        (UnsaturatedSolinas.carry_square n s c)
         Field.square
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
     scmula24_op :
       computed_op
-        (UnsaturatedSolinas.carry_scmul_const n s c width
+        (UnsaturatedSolinas.carry_scmul_const n s c
                                               (F.to_Z a24)) Field.scmula24
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
     felem_copy_op :
       computed_op
-        (UnsaturatedSolinas.copy n width) Field.felem_copy
+        (UnsaturatedSolinas.copy n) Field.felem_copy
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
     from_word_op :
       computed_op
-        (UnsaturatedSolinas.encode_word n s c width)
+        (UnsaturatedSolinas.encode_word n s c)
         Field.from_word
         from_word_insizes from_word_outsizes from_word_inlengths;
     from_bytes_op :
       computed_op
-        (UnsaturatedSolinas.from_bytes n s c width)
+        (UnsaturatedSolinas.from_bytes n s c)
         Field.from_bytes
         from_bytes_insizes from_bytes_outsizes (from_bytes_inlengths
                                                   (n_bytes s));
     to_bytes_op :
       computed_op
-        (UnsaturatedSolinas.to_bytes n s c width)
+        (UnsaturatedSolinas.to_bytes n s c)
         Field.to_bytes
         to_bytes_insizes to_bytes_outsizes (to_bytes_inlengths n);
   }.
@@ -89,11 +89,12 @@ Section UnsaturatedSolinas.
   {parameters_sentinel : @parameters width BW word mem locals env ext_spec default_varname_gen error}
   {field_parameters : FieldParameters}
   {ok : Types.ok}.
+  Local Hint Extern 0 machine_wordsize_opt => exact width : typeclass_instances.
 
   Context (n : nat) (s : Z) (c : list (Z * Z))
           (M_eq : M = m s c)
           (check_args_ok :
-             check_args n s c width necessary_requests (ErrorT.Success tt)
+             check_args n s c necessary_requests (ErrorT.Success tt)
              = ErrorT.Success tt)
           (* TODO: prove a transitivity lemma for list_Z_tighter_than and use
              loose_bounds_tighter_than to prove tight_bounds_tighter_than *)
@@ -163,7 +164,7 @@ Section UnsaturatedSolinas.
   Lemma loose_bounds_eq : Field.loose_bounds = loose_bounds n s c.
   Proof using Type. reflexivity. Qed.
   Lemma tight_bounds_eq : Field.tight_bounds = tight_bounds n s c.
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   (* TODO: move to coqutil.Datatypes.List *)
   Lemma Forall_repeat : forall {A} (R : A -> Prop) n x,
@@ -312,12 +313,12 @@ Section UnsaturatedSolinas.
         tight_bounds_tighter_than.
     intros. cbv [spec_of_BinOp bin_mul]. rewrite mul_func_eq.
     pose proof carry_mul_correct
-         _ _ _ _ _ ltac:(eassumption) _ (res_eq mul_op)
+         _ _ _ _ ltac:(eassumption) _ (res_eq mul_op)
       as Hcorrect.
     eapply list_binop_correct with (res:=res mul_op);
     handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
-      intros. 
+      intros.
       specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ; congruence. }
@@ -333,7 +334,7 @@ Section UnsaturatedSolinas.
         tight_bounds_tighter_than.
     intros. cbv [spec_of_UnOp un_square]. rewrite square_func_eq.
     pose proof carry_square_correct
-         _ _ _ _ _ ltac:(eassumption) _ (res_eq square_op)
+         _ _ _ _ ltac:(eassumption) _ (res_eq square_op)
       as Hcorrect.
     eapply list_unop_correct with (res:=res square_op);
       handle_side_conditions; [ | | loosen_bounds| bounds_length ].
@@ -353,12 +354,12 @@ Section UnsaturatedSolinas.
         tight_bounds_tighter_than loose_bounds_tighter_than.
     intros. cbv [spec_of_BinOp bin_add]. rewrite add_func_eq.
     pose proof add_correct
-         _ _ _ _ _ ltac:(eassumption) _ (res_eq add_op)
+         _ _ _ _ ltac:(eassumption) _ (res_eq add_op)
       as Hcorrect.
     eapply list_binop_correct with (res:=res add_op);
     handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
-      intros. 
+      intros.
       specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ; congruence. }
@@ -374,12 +375,12 @@ Section UnsaturatedSolinas.
         tight_bounds_tighter_than loose_bounds_tighter_than.
     intros. cbv [spec_of_BinOp bin_sub]. rewrite sub_func_eq.
     pose proof sub_correct
-         _ _ _ _ _ ltac:(eassumption) _ (res_eq sub_op)
+         _ _ _ _ ltac:(eassumption) _ (res_eq sub_op)
       as Hcorrect.
     eapply list_binop_correct with (res:=res sub_op);
     handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
-      intros. 
+      intros.
       specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       rewrite <-F.of_Z_sub. FtoZ. congruence. }
@@ -394,7 +395,7 @@ Section UnsaturatedSolinas.
   Proof using M_eq check_args_ok loose_bounds_tighter_than opp_func_eq ok.
     intros. cbv [spec_of_UnOp un_opp]. rewrite opp_func_eq.
     pose proof opp_correct
-         _ _ _ _ _ ltac:(eassumption) _ (res_eq opp_op)
+         _ _ _ _ ltac:(eassumption) _ (res_eq opp_op)
       as Hcorrect.
 
     eapply list_unop_correct with (res:=res opp_op);
@@ -415,7 +416,7 @@ Section UnsaturatedSolinas.
         tight_bounds_tighter_than.
     intros. cbv [spec_of_UnOp un_scmula24]. rewrite scmula24_func_eq.
     pose proof carry_scmul_const_correct
-         _ _ _ _ _ (ltac:(eassumption)) (F.to_Z a24) _
+         _ _ _ _ (ltac:(eassumption)) (F.to_Z a24) _
          (res_eq scmula24_op)
       as Hcorrect.
 
@@ -429,9 +430,9 @@ Section UnsaturatedSolinas.
       intros. apply Hcorrect; auto. }
   Qed.
 
-  Lemma list_Z_bounded_by_unsigned (xs : list (@Interface.word.rep _ word)) : 
+  Lemma list_Z_bounded_by_unsigned (xs : list (@Interface.word.rep _ word)) :
     list_Z_bounded_by
-      (Primitives.saturated_bounds (List.length xs) width)
+      (Primitives.saturated_bounds (List.length xs))
       (map Interface.word.unsigned xs).
   Proof using parameters_sentinel ok.
     induction xs; cbn; [reflexivity|].
@@ -453,7 +454,7 @@ square_func scmula24_func_eq scmula24_func opp_func_eq opp_func mul_func_eq
 mul_func loose_bounds_tighter_than from_word_func_eq from_word_func
 from_bytes_func_eq from_bytes_func add_func_eq.
     intros. cbv [spec_of_felem_copy]. rewrite felem_copy_func_eq.
-    pose proof copy_correct _ _ _ _ _ ltac:(eassumption) _ (res_eq felem_copy_op)
+    pose proof copy_correct _ _ _ _ ltac:(eassumption) _ (res_eq felem_copy_op)
       as Hcorrect.
 
     eapply felem_copy_correct;
@@ -474,7 +475,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
   Proof using M_eq check_args_ok from_word_func_eq ok
         tight_bounds_tighter_than.
     intros. cbv [spec_of_from_word]. rewrite from_word_func_eq.
-    epose proof encode_word_correct _ _ _ _ _ ltac:(eassumption) _ (res_eq from_word_op)
+    epose proof encode_word_correct _ _ _ _ ltac:(eassumption) _ (res_eq from_word_op)
       as Hcorrect.
     cbv [expr.Interp] in *; autounfold with solinas_specs in *; cbn [ZRange.lower ZRange.upper] in *.
 
@@ -484,6 +485,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
       intros.
       destruct (Hcorrect (Interface.word.unsigned w)); clear Hcorrect.
       { pose proof Properties.word.unsigned_range w.
+        replace machine_wordsize with width in * by reflexivity.
         eapply Bool.andb_true_iff; split; eapply Zle_is_le_bool; Lia.lia. }
       rewrite <- M_eq in *; cbv [M] in *; eapply F.eq_of_Z_iff in H0.
       rewrite <-H0.
@@ -502,6 +504,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
     { intros.
       destruct (Hcorrect (Interface.word.unsigned w)); clear Hcorrect.
       { pose proof Properties.word.unsigned_range w.
+        replace machine_wordsize with width in * by reflexivity.
         eapply Bool.andb_true_iff; split; eapply Zle_is_le_bool; Lia.lia. }
       rewrite <- M_eq in *; cbv [M] in *; eapply F.eq_of_Z_iff in H0.
       trivial. }
@@ -516,7 +519,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
         tight_bounds_tighter_than.
     intros. cbv [spec_of_from_bytes]. rewrite from_bytes_func_eq.
     pose proof UnsaturatedSolinas.from_bytes_correct
-         _ _ _ _ _ ltac:(eassumption) _ (res_eq from_bytes_op) (eq_refl true)
+         _ _ _ _ ltac:(eassumption) _ (res_eq from_bytes_op) (eq_refl true)
       as Hcorrect.
 
     eapply Signature.from_bytes_correct with (res:=res from_bytes_op);
@@ -537,7 +540,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
   Proof using M_eq check_args_ok ok to_bytes_func_eq.
     intros. cbv [spec_of_to_bytes]. rewrite to_bytes_func_eq.
     pose proof UnsaturatedSolinas.to_bytes_correct
-         _ _ _ _ _ ltac:(eassumption) _ (res_eq to_bytes_op) (eq_refl true)
+         _ _ _ _ ltac:(eassumption) _ (res_eq to_bytes_op) (eq_refl true)
       as Hcorrect.
 
     eapply Signature.to_bytes_correct with (res:=res to_bytes_op);

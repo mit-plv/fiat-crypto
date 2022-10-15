@@ -21,7 +21,7 @@ Local Open Scope string_scope.
 a 32-bit word size. *)
 
 Section Defaults_32.
-  Definition machine_wordsize := 32.
+  Instance machine_wordsize : machine_wordsize_opt := 32.
 
   (* Define how to split mul/multi-return functions *)
   Definition possible_values

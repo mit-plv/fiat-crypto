@@ -99,59 +99,59 @@ Class names_of_operations :=
     name_of_carry_scmul_const : Z -> string }.
 
 Record unsaturated_solinas_reified_ops
-  {width BW word mem locals env ext_spec varname_gen error}
+  {width : BoundsPipeline.machine_wordsize_opt} {BW word mem locals env ext_spec varname_gen error}
   {parameters_sentinel : @Types.parameters width BW word mem locals env ext_spec varname_gen error}
   {names : names_of_operations} {n s c} :=
-  { 
+  {
     reified_carry_mul :
       reified_op name_of_carry_mul
                  (Generic.UnsaturatedSolinas.carry_mul n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.carry_mul
-                    n s c width);
+                    n s c);
     reified_carry_square :
       reified_op name_of_carry_square
                  (Generic.UnsaturatedSolinas.carry_square n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.carry_square
-                    n s c width);
+                    n s c);
     reified_carry :
       reified_op name_of_carry
                  (Generic.UnsaturatedSolinas.carry n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.carry
-                    n s c width);
+                    n s c);
     reified_add :
       reified_op name_of_add
                  (Generic.UnsaturatedSolinas.add n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.add
-                    n s c width);
+                    n s c);
     reified_sub :
       reified_op name_of_sub
                  (Generic.UnsaturatedSolinas.sub n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.sub
-                    n s c width);
+                    n s c);
     reified_opp :
       reified_op name_of_opp
                  (Generic.UnsaturatedSolinas.opp n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.opp
-                    n s c width);
+                    n s c);
     reified_selectznz :
       reified_op name_of_selectznz
                  (Generic.UnsaturatedSolinas.selectznz n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.selectznz
-                    n width);
+                    n);
     reified_to_bytes :
       reified_op name_of_to_bytes
                  (Generic.UnsaturatedSolinas.to_bytes n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.to_bytes
-                    n s c width);
+                    n s c);
     reified_from_bytes :
       reified_op name_of_from_bytes
                  (Generic.UnsaturatedSolinas.from_bytes n s c)
                  (PushButtonSynthesis.UnsaturatedSolinas.from_bytes
-                    n s c width) }.
+                    n s c) }.
 Arguments unsaturated_solinas_reified_ops {_ _ _ _ _ _ _ _ _ _ _ } n s c.
 
 Record unsaturated_solinas_reified_scmul
-  {width BW word mem locals env ext_spec varname_gen error}
+  {width : BoundsPipeline.machine_wordsize_opt} { BW word mem locals env ext_spec varname_gen error}
   {parameters_sentinel : @Types.parameters width BW word mem locals env ext_spec varname_gen error}
   {names : names_of_operations} {n s c} {x : Z} :=
   { scmul_params : Types.parameters;
@@ -161,7 +161,7 @@ Record unsaturated_solinas_reified_scmul
                  (Generic.UnsaturatedSolinas.carry_scmul_const
                     n s c x)
                  (PushButtonSynthesis.UnsaturatedSolinas.carry_scmul_const
-                    n s c width x) }.
+                    n s c x) }.
 Arguments unsaturated_solinas_reified_scmul {_ _ _ _ _ _ _ _ _ _ _} n s c x.
 
 (*** Helpers ***)
@@ -394,7 +394,7 @@ Ltac prove_correctness ops n s c :=
   let p := lazymatch type of ops with unsaturated_solinas_reified_ops(parameters_sentinel:=?p) _ _ _ => p end in
   let width := lazymatch type of ops with unsaturated_solinas_reified_ops(width:=?width) _ _ _ => width end in
   assert (UnsaturatedSolinas.check_args
-            n s c width necessary_requests (ErrorT.Success tt) =
+            n s c necessary_requests (ErrorT.Success tt) =
           ErrorT.Success tt) by abstract (native_compute; reflexivity);
   lazymatch goal with
     | |- bedrock2_unsaturated_solinas_correctness => econstructor end;
@@ -406,7 +406,7 @@ Ltac prove_correctness_scmul ops n s c :=
   let p := lazymatch type of ops with unsaturated_solinas_reified_scmul(parameters_sentinel:=?p) _ _ _ _ => p end in
   let width := lazymatch type of ops with unsaturated_solinas_reified_scmul(width:=?width) _ _ _ _ => width end in
   assert (UnsaturatedSolinas.check_args
-            n s c width necessary_requests (ErrorT.Success tt) =
+            n s c necessary_requests (ErrorT.Success tt) =
           ErrorT.Success tt) by abstract (native_compute; reflexivity);
   lazymatch goal with
   | |- bedrock2_unsaturated_solinas_scmul_correctness =>

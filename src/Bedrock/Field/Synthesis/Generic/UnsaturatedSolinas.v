@@ -93,11 +93,12 @@ Ltac apply_correctness_in H :=
 Notation necessary_requests := ["to_bytes"; "from_bytes"]%string (only parsing).
 
 Section __.
-  Context 
+  Context
     {width BW word mem locals env ext_spec varname_gen error}
    `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
           {inname_gen outname_gen : nat -> string}
           (n : nat) (s : Z) (c : list (Z * Z)).
+  Local Hint Extern 0 machine_wordsize_opt => exact width : typeclass_instances.
   Local Notation is_correct :=
     (is_correct (parameters_sentinel:=parameters_sentinel) (inname_gen:=inname_gen) (outname_gen:=outname_gen)).
   Local Notation loose_bounds :=
@@ -106,7 +107,7 @@ Section __.
     (UnsaturatedSolinasHeuristics.tight_bounds n s c).
   Local Notation bit_range := {|ZRange.lower := 0; ZRange.upper := 1|}.
   Local Notation saturated_bounds :=
-    (Primitives.saturated_bounds n width).
+    (Primitives.saturated_bounds n).
   Local Notation prime_bytes_bounds :=
     (UnsaturatedSolinas.prime_bytes_bounds s).
   Local Notation n_bytes := (UnsaturatedSolinas.n_bytes s).
@@ -158,78 +159,76 @@ Section __.
               t inbounds insizes outsizes inlengths outlengths)
     with (pipeline_out:=out)
          (check_args_ok:=
-            check_args n s c machine_wordsize necessary_requests (ErrorT.Success tt)
+            check_args n s c necessary_requests (ErrorT.Success tt)
             = ErrorT.Success tt).
 
   Definition carry_mul
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.carry_mul n s c width).
+    make_operation (UnsaturatedSolinas.carry_mul n s c).
     prove_operation_correctness.
   Defined.
 
   Definition carry_square
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.carry_square n s c width).
+    make_operation (UnsaturatedSolinas.carry_square n s c).
     prove_operation_correctness.
   Defined.
 
   Definition carry
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.carry n s c width).
+    make_operation (UnsaturatedSolinas.carry n s c).
     prove_operation_correctness.
   Defined.
 
   Definition add
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.add n s c width).
+    make_operation (UnsaturatedSolinas.add n s c).
     prove_operation_correctness.
   Defined.
 
   Definition sub
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.sub n s c width).
+    make_operation (UnsaturatedSolinas.sub n s c).
     prove_operation_correctness.
   Defined.
 
   Definition opp
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.opp n s c width).
+    make_operation (UnsaturatedSolinas.opp n s c).
     prove_operation_correctness.
   Defined.
 
   Definition selectznz
     : operation (type_Z -> type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.selectznz n width).
+    make_operation (UnsaturatedSolinas.selectznz n).
     prove_operation_correctness.
-    Unshelve.
-    { apply width. }
   Defined.
 
   Definition to_bytes
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.to_bytes n s c width).
+    make_operation (UnsaturatedSolinas.to_bytes n s c).
     prove_operation_correctness.
   Defined.
 
   Definition from_bytes
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.from_bytes n s c width).
+    make_operation (UnsaturatedSolinas.from_bytes n s c).
     prove_operation_correctness.
   Defined.
 
   Definition carry_scmul_const (x : Z)
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (UnsaturatedSolinas.carry_scmul_const n s c width x).
+    make_operation (UnsaturatedSolinas.carry_scmul_const n s c x).
     prove_operation_correctness.
   Defined.
 
@@ -469,7 +468,7 @@ Section __.
     Lemma relax_to_max_bounds x :
       list_Z_bounded_by loose_bounds x ->
       list_Z_bounded_by (@max_bounds width n) x.
-    Proof. apply relax_list_Z_bounded_by; auto. Qed.
+    Proof using loose_bounds_ok. apply relax_list_Z_bounded_by; auto. Qed.
 
     (* TODO: move to coqutil.Datatypes.List *)
     Local Lemma Forall_repeat : forall {A} (R : A -> Prop) n x,
@@ -482,7 +481,7 @@ Section __.
     Lemma relax_to_byte_bounds x :
       list_Z_bounded_by prime_bytes_bounds x ->
       list_Z_bounded_by (byte_bounds n_bytes) x.
-    Proof.
+    Proof using Type.
       cbv [prime_bytes_bounds prime_bytes_upperbound_list].
       intros; eapply relax_to_bounded_upperbounds;
         eauto using ByteBounds.partition_bounded_by; [ ].
@@ -491,14 +490,14 @@ Section __.
 
     Lemma bounded_by_loose_bounds_length x :
       list_Z_bounded_by loose_bounds x -> length x = n.
-    Proof.
+    Proof using Type.
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
       autorewrite with distr_length in *; lia.
     Qed.
 
     Lemma bounded_by_saturated_bounds_length x :
       list_Z_bounded_by saturated_bounds x -> length x = n.
-    Proof.
+    Proof using Type.
       cbv [max_bounds].
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
       rewrite length_saturated_bounds in *. lia.
@@ -506,7 +505,7 @@ Section __.
 
     Lemma bounded_by_prime_bytes_bounds_length x :
       list_Z_bounded_by prime_bytes_bounds x -> length x = n_bytes.
-    Proof.
+    Proof using Type.
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
       cbv [prime_bytes_bounds prime_bytes_upperbound_list] in *.
       rewrite map_length, length_partition in *. lia.
@@ -514,7 +513,7 @@ Section __.
 
     Lemma bounded_by_byte_bounds_length x :
       list_Z_bounded_by (byte_bounds n_bytes) x -> length x = n_bytes.
-    Proof. eapply byte_bounds_range_iff. Qed.
+    Proof using Type. eapply byte_bounds_range_iff. Qed.
 
     (* TODO: maybe make a generalized prove_bounds tactic that takes a list of
     bounds? *)
@@ -581,6 +580,10 @@ Section __.
 
     Ltac setup :=
       autounfold with defs specs;
+      (let machine_wordsize := constr:(machine_wordsize) in
+       let width := (eval vm_compute in machine_wordsize) in
+       replace machine_wordsize with width in * by reflexivity);
+      cbv [machine_wordsize_opt] in *;
       begin_proof;
       match goal with
         H1 : precondition _ _, H2 : precondition _ _ -> _ |- _ =>
@@ -634,68 +637,68 @@ Section __.
       | setup_lists_reserved; solve_lists_reserved out_ptrs ].
 
     Context (check_args_ok :
-               check_args n s c width necessary_requests (ErrorT.Success tt)
+               check_args n s c necessary_requests (ErrorT.Success tt)
                = ErrorT.Success tt).
 
     Lemma carry_mul_correct name :
       is_correct
-        (UnsaturatedSolinas.carry_mul n s c width)
+        (UnsaturatedSolinas.carry_mul n s c)
         carry_mul (spec_of_carry_mul name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma carry_square_correct name :
       is_correct
-        (UnsaturatedSolinas.carry_square n s c width)
+        (UnsaturatedSolinas.carry_square n s c)
         carry_square (spec_of_carry_square name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma carry_correct name :
       is_correct
-        (UnsaturatedSolinas.carry n s c width)
+        (UnsaturatedSolinas.carry n s c)
         carry (spec_of_carry name).
-    Proof. setup. prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup. prove_is_correct Rout. Qed.
 
     Lemma add_correct name :
       is_correct
-        (UnsaturatedSolinas.add n s c width)
+        (UnsaturatedSolinas.add n s c)
         add (spec_of_add name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma sub_correct name :
       is_correct
-        (UnsaturatedSolinas.sub n s c width)
+        (UnsaturatedSolinas.sub n s c)
         sub (spec_of_sub name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma opp_correct name :
       is_correct
-        (UnsaturatedSolinas.opp n s c width)
+        (UnsaturatedSolinas.opp n s c)
         opp (spec_of_opp name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma selectznz_correct name :
       is_correct
-        (UnsaturatedSolinas.selectznz n width)
+        (UnsaturatedSolinas.selectznz n)
         selectznz (spec_of_selectznz name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma to_bytes_correct name :
       is_correct
-        (UnsaturatedSolinas.to_bytes n s c width)
+        (UnsaturatedSolinas.to_bytes n s c)
         to_bytes (spec_of_to_bytes name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma from_bytes_correct name :
       is_correct
-        (UnsaturatedSolinas.from_bytes n s c width)
+        (UnsaturatedSolinas.from_bytes n s c)
         from_bytes (spec_of_from_bytes name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma carry_scmul_const_correct (x : Z) name :
       is_correct
-        (UnsaturatedSolinas.carry_scmul_const n s c width x)
+        (UnsaturatedSolinas.carry_scmul_const n s c x)
         (carry_scmul_const x) (spec_of_carry_scmul_const x name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
   End Proofs.
 End __.
 #[global]

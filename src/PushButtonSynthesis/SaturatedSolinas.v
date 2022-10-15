@@ -59,36 +59,13 @@ Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very
 Local Opaque expr.Interp.
 
 Section __.
-  Context {output_language_api : ToString.OutputLanguageAPI}
-          {language_naming_conventions : language_naming_conventions_opt}
-          {documentation_options : documentation_options_opt}
-          {output_options : output_options_opt}
-          {opts : AbstractInterpretation.Options}
-          {package_namev : package_name_opt}
-          {class_namev : class_name_opt}
-          {static : static_opt}
-          {internal_static : internal_static_opt}
-          {inline : inline_opt}
-          {inline_internal : inline_internal_opt}
-          {low_level_rewriter_method : low_level_rewriter_method_opt}
-          {only_signed : only_signed_opt}
-          {no_select : no_select_opt}
-          {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
-          {emit_primitives : emit_primitives_opt}
-          {should_split_mul : should_split_mul_opt}
-          {should_split_multiret : should_split_multiret_opt}
-          {unfold_value_barrier : unfold_value_barrier_opt}
-          {assembly_hints_lines : assembly_hints_lines_opt}
-          {ignore_unique_asm_names : ignore_unique_asm_names_opt}
-          {widen_carry : widen_carry_opt}
+  Context {opts : Options}
           (widen_bytes : widen_bytes_opt := true) (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
-          {assembly_conventions : assembly_conventions_opt}
-          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
           (s : Z)
-          (c : list (Z * Z))
-          (machine_wordsize : machine_wordsize_opt).
+          (c : list (Z * Z)).
 
-  Local Existing Instance widen_bytes.
+  Local Instance : Options
+    := {| Primitives.extra_opts := {| Primitives.widen_bytes := widen_bytes |} |}.
 
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
@@ -115,9 +92,13 @@ Section __.
   Definition boundsn : list (ZRange.type.option.interp base.type.Z)
     := repeat bound n.
 
-  Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
-  Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
-  Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+  Local Instance : Pipeline.DerivedOptions
+    := let _ := Primitives.DerivedOptions in
+       {| Pipeline.DerivedRewriteConfiguration_opts
+         := {| Pipeline.no_select_size := no_select_size_of_no_select machine_wordsize
+            ; Pipeline.split_mul_to := split_mul_to_of_should_split_mul machine_wordsize possible_values
+            ; Pipeline.split_multiret_to := split_multiret_to_of_should_split_multiret machine_wordsize possible_values |}
+       |}.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
@@ -173,7 +154,6 @@ Section __.
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_mul_gen
             @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify nreductions)
@@ -184,7 +164,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "mul" mul
+          prefix "mul" mul
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements."]%string)
              (mul_correct weightf n m boundsn)).
@@ -221,7 +201,7 @@ Section __.
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
-           machine_wordsize valid_names known_functions (fun _ => nil) all_typedefs!
+           valid_names known_functions (fun _ => nil) all_typedefs!
            check_args
            ((ToString.comment_file_header_block
                (comment_header

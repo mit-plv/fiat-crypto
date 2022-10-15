@@ -79,11 +79,11 @@ Module debugging_no_asm.
     set (k' := (_ =? _)%string) in (value of k) at 1; vm_compute in k'; subst k'; cbv beta iota in k.
     cbn [fold_right map List.app] in k.
     cbv [UnsaturatedSolinas.extra_special_synthesis UnsaturatedSolinas.scarry_mul] in k.
-    set (cm := UnsaturatedSolinas.carry_mul _ _ _ _) in (value of k).
+    set (cm := UnsaturatedSolinas.carry_mul _ _ _) in (value of k).
     vm_compute in cm.
     set (cmv := (fun var => Language.Compilers.expr.Abs _)) in (value of cm).
     subst cm; cbv beta iota in k.
-    set (cml := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _ _ _ _ _ _) in (value of k).
+    set (cml := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) in (value of k).
     vm_compute in cml.
     set (cmlv := _ :: _) in (value of cml) at 1.
     subst cml.
@@ -92,6 +92,9 @@ Module debugging_no_asm.
     cbn [ErrorT.bind] in k.
     vm_compute String.append in k.
     subst k.
+    cbv [Primitives.assembly_hints_lines] in v.
+    set (k := Parse.parse_validated _) in (value of v).
+    vm_compute in k; subst k; cbv beta iota in v.
     cbn [ErrorT.bind] in v.
     set (k := Primitives.split_to_assembly_functions _ _) in (value of v).
     clear -k.
@@ -160,7 +163,7 @@ Module debugging_typedef_bounds.
     cbv [UnsaturatedSolinas.known_functions] in k'.
     cbn [map] in k'.
     repeat (set (k'' := (_ =? _)%string) in (value of k') at 1; vm_compute in k''; subst k''; cbv beta iota zeta in k').
-    set (k'' := UnsaturatedSolinas.sadd _ _ _ _ _) in (value of k').
+    set (k'' := UnsaturatedSolinas.sadd _ _ _ _) in (value of k').
     clear -k''; rename k'' into v.
     cbn -[UnsaturatedSolinas.sadd] in v.
     cbv [ForExtraction.low_level_rewriter_method] in v.
@@ -169,9 +172,11 @@ Module debugging_typedef_bounds.
     vm_compute UnsaturatedSolinas.add in v.
     cbv beta iota zeta in v.
     cbv [Language.Compilers.ToString.ToFunctionLines] in v.
-    cbv [C.Compilers.ToString.C.OutputCAPI] in v.
+    cbv [C.Compilers.ToString.C.OutputCAPI BoundsPipeline.Pipeline.output_language_api] in v.
     cbv [C.Compilers.ToString.C.ToFunctionLines] in v.
-    vm_compute IR.Compilers.ToString.IR.OfPHOAS.ExprOfPHOAS in v.
+    set (k := IR.Compilers.ToString.IR.OfPHOAS.ExprOfPHOAS _ _ _ _ _ _) in (value of v).
+    vm_compute in k.
+    subst k.
     cbv beta iota zeta in v.
     set (k := Language.Compilers.ToString.OfPHOAS.input_bounds_to_string _ _) in (value of v).
     cbv [Language.Compilers.ToString.OfPHOAS.input_bounds_to_string] in k; clear -k.

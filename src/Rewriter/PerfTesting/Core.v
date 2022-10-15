@@ -44,28 +44,11 @@ Import
   Rewriter.All.Compilers.
 
 Local Existing Instance Stringification.C.Compilers.ToString.C.OutputCAPI.
-Local Existing Instance default_language_naming_conventions.
-Local Existing Instance default_documentation_options.
-Local Existing Instance default_output_options.
-Local Existing Instance AbstractInterpretation.default_Options.
-Local Instance : package_name_opt := None.
-Local Instance : class_name_opt := None.
-Local Instance : static_opt := true.
-Local Instance : internal_static_opt := true.
-Local Instance : inline_opt := true.
-Local Instance : inline_internal_opt := true.
-Local Instance : use_mul_for_cmovznz_opt := false.
-Local Instance : emit_primitives_opt := true.
-Local Instance : only_signed_opt := false.
-Local Instance : no_select_opt := false.
-Local Instance : should_split_mul_opt := false.
-Local Instance : should_split_multiret_opt := false.
-Local Instance : unfold_value_barrier_opt := true.
-Local Instance : assembly_hints_lines_opt := [].
-Local Instance : ignore_unique_asm_names_opt := false.
-Local Instance : widen_bytes_opt := false.
-Local Instance : widen_carry_opt := false.
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
+Local Existing Instance Pipeline.default_BaseOptions.
+Local Existing Instance Pipeline.default_DerivedOptions.
+Local Existing Instance Pipeline.default_ExtendedOptions.
+Local Existing Instance Primitives.default_ExtraOptions.
 
 Import API.
 
@@ -94,7 +77,9 @@ Module Import UnsaturatedSolinas.
       c : list (Z * Z);
       idxs : list nat;
       limbwidth := limbwidth n s c;
-      machine_wordsize : Z }.
+      machine_wordsize : machine_wordsize_opt }.
+  Local Existing Instance machine_wordsize.
+  #[local] Hint Unfold machine_wordsize_opt : typeclass_instances.
 
   Global Instance show_lvl_params : ShowLevel params
     := fun p => neg_wrap_parens ("{| n := " ++ show_lvl n term_lvl ++ "; s := " ++ show_lvl s term_lvl ++ "; c := " ++ show_lvl c term_lvl ++ "; idxs := " ++ show_lvl idxs term_lvl ++ "; machine_wordsize := " ++ show_lvl machine_wordsize term_lvl ++ "|}")%string.
@@ -115,9 +100,9 @@ Module Import UnsaturatedSolinas.
     := dyn (fun f g : list Z => ModOpsDef.carry_mulmod (Qnum limbwidth) (Zpos (Qden limbwidth)) s c n idxs (RT_ExtraDef.expand_list 0 f n) (RT_ExtraDef.expand_list 0 g n)).
 
   Definition PipelineFullOf : params * low_level_rewriter_method_opt -> Pipeline.ErrorT (Expr _)
-    := fun '(p, method) => PushButtonSynthesis.UnsaturatedSolinas.carry_mul n s c machine_wordsize.
+    := fun '(p, method) => PushButtonSynthesis.UnsaturatedSolinas.carry_mul n s c.
   Definition PipelineFullToStringsOf : params * low_level_rewriter_method_opt -> string * _
-    := fun '(p, method) => PushButtonSynthesis.UnsaturatedSolinas.scarry_mul n s c machine_wordsize "".
+    := fun '(p, method) => PushButtonSynthesis.UnsaturatedSolinas.scarry_mul n s c "".
   Section pipeline.
     Context (p_opts : params * low_level_rewriter_method_opt).
     Let p := fst p_opts.
@@ -299,11 +284,13 @@ Module Import WordByWordMontgomery.
   Local Coercion Z.pos : positive >-> Z.
   Class params :=
     { m : Z;
-      machine_wordsize : Z;
+      machine_wordsize : machine_wordsize_opt;
       s := 2^Z.log2_up m;
       n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize));
       r := 2^machine_wordsize;
       m' := Z.modinv (-m) r }.
+  Local Existing Instance machine_wordsize.
+  #[local] Hint Unfold machine_wordsize_opt : typeclass_instances.
 
   Global Instance show_lvl_params : ShowLevel params
     := fun p => neg_wrap_parens ("{| m := " ++ show_lvl m term_lvl ++ "; machine_wordsize := " ++ show_lvl machine_wordsize term_lvl ++ "|}")%string.
@@ -322,9 +309,9 @@ Module Import WordByWordMontgomery.
     := dyn (fun f g : list Z => WordByWordMontgomeryDef.mulmod machine_wordsize n m m' (RT_ExtraDef.expand_list 0 f n) (RT_ExtraDef.expand_list 0 g n)).
 
   Definition PipelineFullOf : params * low_level_rewriter_method_opt -> Pipeline.ErrorT (Expr _)
-    := fun '(p, method) => PushButtonSynthesis.WordByWordMontgomery.mul m machine_wordsize.
+    := fun '(p, method) => PushButtonSynthesis.WordByWordMontgomery.mul m.
   Definition PipelineFullToStringsOf : params * low_level_rewriter_method_opt -> string * _
-    := fun '(p, method) => PushButtonSynthesis.WordByWordMontgomery.smul m machine_wordsize "".
+    := fun '(p, method) => PushButtonSynthesis.WordByWordMontgomery.smul m "".
   Section pipeline.
     Context (p_opts : params * low_level_rewriter_method_opt).
     Let p := fst p_opts.
@@ -332,7 +319,7 @@ Module Import WordByWordMontgomery.
     Local Existing Instance p.
 
     Let E := (reified_mul_gen
-                @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')%Expr.
+                @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')%Expr.
 
     Let E2 := let E := PartialEvaluateWithListInfoFromBounds E (Some (List.repeat None n), (Some (List.repeat None n), tt)) in
               let E := PartialEvaluate opts E in

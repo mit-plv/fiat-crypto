@@ -471,6 +471,8 @@ Module ForExtraction.
     {
       (** Is the code static / private *)
       static :> static_opt
+      (** Dummy alias; the lower levels have a separate variable for this, but we don't (backwards compat? TODO: explain better) *)
+      ; all_static :> all_static_opt := static
       (** Is the internal code static / private *)
       ; internal_static :> internal_static_opt
       (** Is the code inlined *)
@@ -957,7 +959,7 @@ Module ForExtraction.
 
           Synthesize
           := fun _ opts '(n, s, c, tight_bounds_multiplier, requests) comment_header prefix
-             => UnsaturatedSolinas.Synthesize n s c machine_wordsize comment_header prefix requests;
+             => UnsaturatedSolinas.Synthesize n s c comment_header prefix requests;
         }.
 
     Definition PipelineMain
@@ -999,7 +1001,7 @@ Module ForExtraction.
 
           Synthesize
           := fun _ opts '(m, requests) comment_header prefix
-             => WordByWordMontgomery.Synthesize m machine_wordsize comment_header prefix requests
+             => WordByWordMontgomery.Synthesize m comment_header prefix requests
         }.
 
     Definition PipelineMain
@@ -1034,7 +1036,7 @@ Module ForExtraction.
 
           Synthesize
           := fun _ opts '(s, c, requests) comment_header prefix
-             => SaturatedSolinas.Synthesize s c machine_wordsize comment_header prefix requests
+             => SaturatedSolinas.Synthesize s c comment_header prefix requests
         }.
 
     Definition PipelineMain
@@ -1102,7 +1104,7 @@ Module ForExtraction.
 
           Synthesize
           := fun _ opts '(src_n, s, c, src_limbwidth, dst_limbwidth, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests) comment_header prefix
-             => BaseConversion.Synthesize s c src_n src_limbwidth dst_limbwidth machine_wordsize inbounds_multiplier outbounds_multiplier inbounds outbounds comment_header prefix requests
+             => BaseConversion.Synthesize s c src_n src_limbwidth dst_limbwidth inbounds_multiplier outbounds_multiplier inbounds outbounds comment_header prefix requests
         }.
 
     Definition PipelineMain

@@ -12,6 +12,8 @@ Require Import Crypto.Bedrock.Specs.Field.
 Import ListNotations.
 
 #[export]
+ Hint Extern 0 BoundsPipeline.machine_wordsize_opt => exact 32%Z : typeclass_instances.
+#[export]
 Existing Instances Naive.word Naive.word32_ok BW32.
 #[export]
 Existing Instances no_select_size split_mul_to split_multiret_to.
@@ -37,7 +39,7 @@ Section Field.
     (error := Syntax.expr.var Defaults.ERROR)
     := tt.
   Instance translation_parameters_ok : Types.ok.
-  Proof. constructor; try exact _; apply prefix_name_gen_unique. Qed.
+  Proof using ext_spec_ok. constructor; try exact _; apply prefix_name_gen_unique. Qed.
 
   (* Define Curve25519 field *)
   Instance field_parameters : FieldParameters.

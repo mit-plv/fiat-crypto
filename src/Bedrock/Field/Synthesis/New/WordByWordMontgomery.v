@@ -30,55 +30,55 @@ Import ListNotations API.Compilers Types.Notations.
 
 Class word_by_word_Montgomery_ops
   {from_mont to_mont : string}
-  {width BW word mem locals env ext_spec varname_gen error}
+  {width : machine_wordsize_opt} {BW word mem locals env ext_spec varname_gen error}
   {parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
   {field_parameters : FieldParameters}
   {n m} : Type :=
   { mul_op :
       computed_op
-        (WordByWordMontgomery.mul m width) Field.mul
+        (WordByWordMontgomery.mul m) Field.mul
         list_binop_insizes list_binop_outsizes (list_binop_inlengths n);
     add_op :
       computed_op
-        (WordByWordMontgomery.add m width) Field.add
+        (WordByWordMontgomery.add m) Field.add
         list_binop_insizes list_binop_outsizes (list_binop_inlengths n);
     sub_op :
       computed_op
-        (WordByWordMontgomery.sub m width) Field.sub
+        (WordByWordMontgomery.sub m) Field.sub
         list_binop_insizes list_binop_outsizes (list_binop_inlengths n);
     opp_op :
       computed_op
-        (WordByWordMontgomery.opp m width) Field.opp
+        (WordByWordMontgomery.opp m) Field.opp
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
     square_op :
       computed_op
-        (WordByWordMontgomery.square m width)
+        (WordByWordMontgomery.square m)
         Field.square
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
     from_bytes_op :
       computed_op
-        (WordByWordMontgomery.from_bytes m width)
+        (WordByWordMontgomery.from_bytes m)
         Field.from_bytes
         from_bytes_insizes from_bytes_outsizes (from_bytes_inlengths
                                                   (n_bytes m));
     to_bytes_op :
       computed_op
-        (WordByWordMontgomery.to_bytes m width)
+        (WordByWordMontgomery.to_bytes m)
         Field.to_bytes
         to_bytes_insizes to_bytes_outsizes (to_bytes_inlengths n);
     from_mont_op :
       computed_op
-        (WordByWordMontgomery.from_montgomery m width)
+        (WordByWordMontgomery.from_montgomery m)
         from_mont
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
     to_mont_op :
       computed_op
-        (WordByWordMontgomery.to_montgomery m width)
+        (WordByWordMontgomery.to_montgomery m)
         to_mont
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
-    select_znz_op : 
+    select_znz_op :
         computed_op
-        (WordByWordMontgomery.selectznz m width)
+        (WordByWordMontgomery.selectznz m)
         Field.select_znz
         list_selectznz_insizes list_selectznz_outsizes (list_selectznz_inlengths n)
   }.
@@ -95,32 +95,33 @@ Section WordByWordMontgomery.
   {field_parameters : FieldParameters}
   {field_parameters_ok : FieldParameters_ok}
   {ok : Types.ok}.
+  Local Hint Extern 0 machine_wordsize_opt => exact width : typeclass_instances.
 
   Context (m : Z)
           (M_eq : M = m)
           (check_args_ok :
-             check_args m width necessary_requests (ErrorT.Success tt)
+             check_args m necessary_requests (ErrorT.Success tt)
              = ErrorT.Success tt)
                                  .
   Definition r' := @Field.r' width field_parameters.
 
   Lemma m_big : (2 < m)%Z.
-  Proof.
-    pose proof (use_curve_good m width _ check_args_ok) as H.
+  Proof using check_args_ok.
+    pose proof (use_curve_good m _ check_args_ok) as H.
     apply (OrdersEx.Z_as_DT.le_neq 2 m). split; try lia.
     destruct (m =? 2)%Z eqn:eq; try lia.
-    assert (H' : ((r width * PushButtonSynthesis.WordByWordMontgomery.r' m width) mod m)%Z =
+    assert (H' : ((r * PushButtonSynthesis.WordByWordMontgomery.r' m) mod m)%Z =
     1%Z) by apply H.
     apply Z.eqb_eq in eq. clear H.
     rewrite Z.mul_mod in H'; try lia. rewrite eq in H'. cbv [r] in H'.
     rewrite PullPush.Z.pow_mod_push in H'; [| cbv; auto].
     rewrite Z_mod_same in H'; try lia.
     rewrite Z.pow_0_l in H'; try lia.
-    pose proof (use_curve_good m width _ check_args_ok); lia. 
-    Qed.
+    pose proof (use_curve_good m _ check_args_ok); lia.
+  Qed.
 
   Lemma gcd_aux' : forall n m (e : nat), (Z.gcd n m = 1)%Z -> (Z.gcd (n ^ (Z.of_nat e)) m = 1)%Z.
-  Proof.
+  Proof using Type.
     intros. induction e; auto.
       - destruct m0; auto.
       - apply Znumtheory.Zgcd_1_rel_prime.
@@ -130,7 +131,7 @@ Section WordByWordMontgomery.
         apply Znumtheory.Zgcd_1_rel_prime. auto.
   Qed.
 
-  Lemma r'_correct : ((2 ^ (width) * r' ) mod M = 1)%Z. (*Not very elegant proof...*)
+  Lemma r'_correct : ((2 ^ (width) * r' ) mod M = 1)%Z. (*Not very elegant proof using M_eq check_args_ok using M_eq check_args_ok using M_eq check_args_ok using M_eq check_args_ok...*)
   Proof.
     cbv [r' Field.r' Field.r].
     assert (H1mod : (1 = 1 mod M)%Z).
@@ -139,18 +140,18 @@ Section WordByWordMontgomery.
     }
     rewrite H1mod.
     apply (ModInv.Z.modinv_correct).
-      - rewrite M_eq. pose proof (use_curve_good m width _ check_args_ok). try lia.
+      - rewrite M_eq. pose proof (use_curve_good m _ check_args_ok). try lia.
       - rewrite Z.gcd_abs_l. apply Z.bezout_1_gcd. cbv [Z.Bezout].
-        pose proof (use_curve_good _ _ _ check_args_ok) as H'.
+        pose proof (use_curve_good _ _ check_args_ok) as H'.
         do 11 destruct H' as [_ H']. destruct H' as [H' _].
-        pose proof (Modulo.Z.div_mod'' (r width * PushButtonSynthesis.WordByWordMontgomery.r' m width) m) as H.
+        pose proof (Modulo.Z.div_mod'' (r * PushButtonSynthesis.WordByWordMontgomery.r' m) m) as H.
         assert (H1 : (m <> 0)%Z).
         {
-          pose proof (use_curve_good _ _ _ check_args_ok); lia.
+          pose proof (use_curve_good _ _ check_args_ok); lia.
         }
         specialize(H H1). eexists. eexists. cbv [r] in *.
         apply (f_equal (fun y => y - m *
-        (2 ^ width * PushButtonSynthesis.WordByWordMontgomery.r' m width / m))%Z) in H.
+        (2 ^ width * PushButtonSynthesis.WordByWordMontgomery.r' m / m))%Z) in H.
         rewrite OrdersEx.Z_as_DT.add_simpl_r in H.
         rewrite <- H in H'. clear H1 H.
         assert (H0 : (forall x y, x - y = x + (- y))%Z) by auto with zarith.
@@ -159,7 +160,7 @@ Section WordByWordMontgomery.
         rewrite H in H'. rewrite Z.mul_comm in H'. rewrite M_eq. apply H'.
   Qed.
 
-  Local Notation n := (WordByWordMontgomery.n m width).
+  Local Notation n := (WordByWordMontgomery.n m).
 
   Context (from_mont : string)
           (to_mont : string)
@@ -179,8 +180,8 @@ Section WordByWordMontgomery.
           (select_znz_func_eq : select_znz_func = b2_func (@select_znz_op from_mont to_mont _ _ _ _ _ _ _ _ _ _ _ _ _ _)).
 
   Local Notation weight := (uweight width) (only parsing).
-  Definition eval_trans := (WordByWordMontgomery.from_montgomerymod width n m (WordByWordMontgomery.m' m width)).
-  Definition eval_raw : (list Z -> list Z) := fun x => x. 
+  Definition eval_trans := (WordByWordMontgomery.from_montgomerymod width n m (WordByWordMontgomery.m' m)).
+  Definition eval_raw : (list Z -> list Z) := fun x => x.
 
   Inductive bounds_type := (*Bounds type for WBW. must distinguish between bounds for lists of words and lists of bytes*)
   | wordlist
@@ -208,7 +209,7 @@ Section WordByWordMontgomery.
          wordlist
          bytelist
          list_in_bounds eval_trans.
-  
+
   Local Ltac specialize_correctness_hyp Hcorrect :=
     cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
                field_representation Signature.field_representation
@@ -233,7 +234,7 @@ Section WordByWordMontgomery.
   Lemma loose_bounds_eq : Field.loose_bounds = wordlist.
   Proof using Type. reflexivity. Qed.
   Lemma tight_bounds_eq : Field.tight_bounds = wordlist.
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   (* TODO: move to coqutil.Datatypes.List *)
   Lemma Forall_repeat : forall {A} (R : A -> Prop) n x,
@@ -307,44 +308,44 @@ Section WordByWordMontgomery.
   Ltac FtoZ :=
     apply F.eq_of_Z_iff; rewrite ?F.to_Z_of_Z;
     cbv [M] in M_eq; rewrite ?M_eq; pull_Zmod.
-  
+
     (* Ltac bounds_length := simpl; intros; erewrite length_list_Z_bounded_by; eauto; try apply length_tight_bounds; try apply length_loose_bounds.   *)
     Lemma valid_bounded_by_prime_bounds x :
-      (check_args m width [] (ErrorT.Success tt)
+      (check_args m [] (ErrorT.Success tt)
        = ErrorT.Success tt) ->
       WordByWordMontgomery.valid width n m x ->
-      list_Z_bounded_by (prime_bounds m width) x.
-    Proof.
+      list_Z_bounded_by (prime_bounds m) x.
+    Proof using Type.
       intros; unshelve eapply bounded_by_prime_bounds_of_valid; eauto.
     Qed.
 
     Ltac maxbounds_from_valid := intros _ Hvalid; destruct Hvalid as [Hsmall _]; rewrite Hsmall; apply MaxBounds.partition_bounded_by.
 
 Lemma valid_max_bounds n0 : forall x, @WordByWordMontgomery.valid width n0 m x ->list_Z_bounded_by (@MaxBounds.max_bounds width n0) x.
-Proof.
+Proof using ok.
     intros. destruct H. rewrite H. eapply MaxBounds.partition_bounded_by.
 Qed.
 
   Lemma valid_length : forall x, WordByWordMontgomery.valid width n m x -> length x = n.
-  Proof.
+  Proof using Type.
       intros. destruct H. erewrite WordByWordMontgomery.length_small; eauto.
   Qed.
 
   Lemma mul_func_correct :
     valid_func (res mul_op _) ->
     forall functions,
-      spec_of_BinOp bin_mul (mul_func :: functions). Set Printing All.
+      spec_of_BinOp bin_mul (mul_func :: functions).
   Proof using M_eq check_args_ok mul_func_eq ok.
         (* tight_bounds_tighter_than. *)
     intros. cbv [spec_of_BinOp bin_mul]. rewrite mul_func_eq.
     pose proof mul_correct
-         m width _ ltac:(eassumption) _ (res_eq mul_op)     
+         m _ ltac:(eassumption) _ (res_eq mul_op)
       as Hcorrect.
     eapply list_binop_correct with (res:=res mul_op);
     try handle_side_conditions; [| | eapply valid_max_bounds; eauto | apply valid_length].
-    {   
+    {
     (* output *value* is correct *)
-      intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+      intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.
       cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
                field_representation Signature.field_representation
                Representation.frep Representation.eval_bytes
@@ -358,7 +359,7 @@ Qed.
         eapply valid_max_bounds; eauto. destruct Hcorrect; eauto.
       }
       destruct Hcorrect. auto.
-    } 
+    }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
   Qed.
@@ -370,12 +371,12 @@ Qed.
   Proof using M_eq check_args_ok ok square_func_eq.
     intros. cbv [spec_of_UnOp un_square]. rewrite square_func_eq.
     pose proof square_correct
-         _ _ _ ltac:(eassumption) _ (res_eq square_op)
+         _ _ ltac:(eassumption) _ (res_eq square_op)
       as Hcorrect.
     eapply list_unop_correct with (res:=res square_op);
       handle_side_conditions; [ | | apply valid_max_bounds | apply valid_length ].
     { (* output *value* is correct *)
-    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.
     cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
              field_representation Signature.field_representation
              Representation.frep Representation.eval_bytes
@@ -388,7 +389,7 @@ Qed.
     2: {
       eapply valid_max_bounds; eauto. destruct Hcorrect; eauto.
     }
-    destruct Hcorrect. auto. assert ( forall (x : Z), (x ^ 2 = x * x)%Z) by auto with zarith.
+    destruct Hcorrect. auto. assert ( forall (x : Z), (x ^ 2 = x * x)%Z) by (clear; auto with zarith).
     rewrite F.pow_2_r. rewrite <- F.of_Z_mul. FtoZ.
     auto.
     }
@@ -403,12 +404,12 @@ Qed.
   Proof using M_eq check_args_ok add_func_eq ok.
     intros. cbv [spec_of_BinOp bin_add]. rewrite add_func_eq.
     pose proof add_correct
-         _ _ _ ltac:(eassumption) _ (res_eq add_op)
+         _ _ ltac:(eassumption) _ (res_eq add_op)
       as Hcorrect.
     eapply list_binop_correct with (res:=res add_op);
     handle_side_conditions; [ | | apply valid_max_bounds | apply valid_length ].
     { (* output *value* is correct *)
-    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.
     cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
              field_representation Signature.field_representation
              Representation.frep Representation.eval_bytes
@@ -435,12 +436,12 @@ Qed.
   Proof using M_eq check_args_ok sub_func_eq ok.
     intros. cbv [spec_of_BinOp bin_sub]. rewrite sub_func_eq.
     pose proof sub_correct
-         _ _ _ ltac:(eassumption) _ (res_eq sub_op)
+         _ _ ltac:(eassumption) _ (res_eq sub_op)
       as Hcorrect.
     eapply list_binop_correct with (res:=res sub_op);
     handle_side_conditions; [ | | apply valid_max_bounds| apply valid_length ].
     { (* output *value* is correct *)
-    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.
     cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
              field_representation Signature.field_representation
              Representation.frep Representation.eval_bytes
@@ -466,13 +467,13 @@ Qed.
   Proof using M_eq check_args_ok opp_func_eq ok.
     intros. cbv [spec_of_UnOp un_opp]. rewrite opp_func_eq.
     pose proof opp_correct
-         _ _ _ ltac:(eassumption) _ (res_eq opp_op)
+         _ _ ltac:(eassumption) _ (res_eq opp_op)
       as Hcorrect.
 
     eapply list_unop_correct with (res:=res opp_op);
       handle_side_conditions; [ | | apply valid_max_bounds | apply valid_length ].
     { (* output *value* is correct *)
-    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.
     cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
              field_representation Signature.field_representation
              Representation.frep Representation.eval_bytes
@@ -499,7 +500,7 @@ Qed.
   Proof using M_eq check_args_ok from_bytes_func_eq ok.
     intros. cbv [spec_of_from_bytes]. rewrite from_bytes_func_eq.
     pose proof from_bytes_correct
-         _ _ _ ltac:(eassumption) _ (res_eq from_bytes_op)
+         _ _ ltac:(eassumption) _ (res_eq from_bytes_op)
       as Hcorrect.
 
     eapply Signature.from_bytes_correct with (res:=res from_bytes_op);
@@ -507,9 +508,9 @@ Qed.
     { (* output length *)
       cbv [list_in_bounds WordByWordMontgomery.valid WordByWordMontgomery.small ] in *.
       intuition idtac. rewrite H1. rewrite Partition.length_partition; trivial. }
-    
+
     { (* output *value* is correct *)
-    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.
     cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
              field_representation Signature.field_representation
              Representation.frep Representation.eval_bytes
@@ -536,7 +537,7 @@ Qed.
   Proof using M_eq check_args_ok ok to_bytes_func_eq.
     intros. cbv [spec_of_to_bytes]. rewrite to_bytes_func_eq.
     pose proof to_bytes_correct
-         _ _ _ ltac:(eassumption) _ (res_eq to_bytes_op)
+         _ _ ltac:(eassumption) _ (res_eq to_bytes_op)
       as Hcorrect.
 
     eapply Signature.to_bytes_correct with (res:=res to_bytes_op);
@@ -551,7 +552,7 @@ Qed.
       intros. destruct H0. apply WordByWordMontgomery.length_small in H0. rewrite H0. eauto.
     }
     { (* output *value* is correct *)
-    intros. cbv [feval]. simpl. 
+    intros. cbv [feval]. simpl.
     cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
              field_representation Signature.field_representation
              Representation.frep Representation.eval_bytes
@@ -559,7 +560,7 @@ Qed.
              bin_model bin_xbounds bin_ybounds
              un_model un_xbounds eval_trans
     ] in *.
-    
+
     specialize (Hcorrect (map Interface.word.unsigned x) H0).
     rewrite Hcorrect. cbv [M] in M_eq. rewrite M_eq. auto.
      }
@@ -582,15 +583,15 @@ Qed.
         2: { destruct H0. unfold WordByWordMontgomery.eval in H1. auto. }
           cbv [uweight].
           rewrite Zmod_small; auto. split.
-            + destruct H0. cbv [WordByWordMontgomery.eval] in H1. cbv [uweight] in H1. lia.
+            + destruct H0. cbv [WordByWordMontgomery.eval] in H1. cbv [uweight] in H1. vm_compute machine_wordsize in *. lia.
             + destruct H0. cbv [WordByWordMontgomery.eval] in H1. cbv [uweight] in H1. destruct H1.
               assert ( m < ModOps.weight 8 1 (n_bytes m))%Z.
               {
-                pose proof (use_curve_good _ _ _ check_args_ok).
+                pose proof (use_curve_good _ _ check_args_ok).
                 assert (m < s m)%Z by lia.
                 cbv [uweight] in H3. lia.
               }
-            lia.
+            vm_compute machine_wordsize in *. lia.
           - cbv [WordByWordMontgomery.eval]. rewrite Partition.eval_partition.
             2: {
               apply uwprops; lia.
@@ -599,14 +600,14 @@ Qed.
                 + apply Z_mod_lt. destruct (uwprops 8); try lia.
                   cbv [uweight] in *. specialize (weight_positive (n_bytes m)). lia.
                 + rewrite Zmod_small; [| split].
-                  * apply Z_mod_lt. pose proof (use_curve_good _ _ _ check_args_ok); lia.
-                  * apply Z_mod_lt. pose proof (use_curve_good _ _ _ check_args_ok); lia.
-                  * pose proof (use_curve_good _ _ _ check_args_ok).
+                  * apply Z_mod_lt. pose proof (use_curve_good _ _ check_args_ok); lia.
+                  * apply Z_mod_lt. pose proof (use_curve_good _ _ check_args_ok); lia.
+                  * pose proof (use_curve_good _ _ check_args_ok).
                     assert (m < s m)%Z by lia.
                     cbv [uweight] in *.
                     eapply Z.lt_trans.
                     {
-                      apply Z_mod_lt. pose proof (use_curve_good _ _ _ check_args_ok). lia.
+                      apply Z_mod_lt. pose proof (use_curve_good _ _ check_args_ok). lia.
                     }
                      lia.
       }
@@ -614,8 +615,8 @@ Qed.
   Qed.
 
   Lemma m_nz : m <> 0%Z.
-  Proof.
-    epose proof (use_curve_good _ _ _ check_args_ok). lia.
+  Proof using check_args_ok.
+    epose proof (use_curve_good _ _ check_args_ok). lia.
   Qed.
 
   (*Correctness proof of from- and to_montgomery are somewhat messy. *)
@@ -627,13 +628,14 @@ Qed.
     clear field_parameters_ok.
     intros. cbv [spec_of_UnOp un_from_mont]. rewrite from_mont_func_eq.
     pose proof from_montgomery_correct
-        _ _ _ ltac:(eassumption) _ (res_eq from_mont_op)
+        _ _ ltac:(eassumption) _ (res_eq from_mont_op)
       as Hcorrect.
+    pose proof (use_curve_good m) as use_curve_good.
 
     eapply list_unop_correct with (res:=res from_mont_op);
       handle_side_conditions; [ | | apply valid_max_bounds | apply valid_length ].
     { (* output *value* is correct *)
-    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.
     cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
             field_representation Signature.field_representation
             Representation.frep Representation.eval_bytes
@@ -646,11 +648,12 @@ Qed.
     2: {
       eapply valid_max_bounds; eauto. destruct Hcorrect; eauto.
     }
-    destruct Hcorrect. FtoZ. pose proof (WordByWordMontgomery.from_montgomerymod_correct width n m (@Field.r' width field_parameters) (m' m width)) as Hcorrect.
+    destruct Hcorrect. FtoZ. pose proof (let _ : machine_wordsize_opt := width in WordByWordMontgomery.from_montgomerymod_correct width n m (@Field.r' width field_parameters) (m' m)) as Hcorrect.
     cbv [WordByWordMontgomery.eval] in *.
-    edestruct Hcorrect as [Hvalue Hvalid]; [| | | | | | eapply H2| ]; try eapply use_curve_good; try eassumption; [pose proof r'_correct as Htemp; cbv [r' M] in Htemp; rewrite M_eq in Htemp; eauto |].
-    rewrite Hvalue. rewrite Z.mul_mod; try apply m_nz. rewrite H1. rewrite <- Z.mul_mod; try apply m_nz.
+    edestruct Hcorrect as [Hvalue Hvalid]; [| | | | | | eapply H2| ]; try eapply use_curve_good; try eassumption; [pose proof r'_correct as Htemp; cbv [r' M] in Htemp; rewrite M_eq in Htemp; eauto | ].
+    rewrite Hvalue. rewrite Z.mul_mod; try apply m_nz. replace machine_wordsize with width in * by reflexivity. rewrite H1. rewrite <- Z.mul_mod; try apply m_nz.
     symmetry. rewrite Z.mul_mod; try apply m_nz. cbv [list_in_bounds] in *. clear H2.
+
     edestruct Hcorrect as [Hvalue' _]; [| | | | | | eapply H0 |]; try eapply use_curve_good; try eassumption; [pose proof r'_correct as Htemp; cbv [r' M] in Htemp; rewrite M_eq in Htemp; eauto |].
     rewrite Hvalue'. rewrite <- Z.mul_mod; try apply m_nz.
     cbv [Field.r' PushButtonSynthesis.WordByWordMontgomery.r' Field.r r M felem_size_in_words]. rewrite M_eq.
@@ -667,13 +670,14 @@ Qed.
     Proof using M_eq check_args_ok ok to_mont_func_eq.
     intros. cbv [spec_of_UnOp un_to_mont]. rewrite to_mont_func_eq.
     pose proof to_montgomery_correct
-        _ _ _ ltac:(eassumption) _ (res_eq to_mont_op)
+        _ _ ltac:(eassumption) _ (res_eq to_mont_op)
       as Hcorrect.
+    pose proof (use_curve_good m) as use_curve_good.
 
     eapply list_unop_correct with (res:=res to_mont_op);
       handle_side_conditions; [ | | apply valid_max_bounds | apply valid_length].
     { (* output *value* is correct *)
-    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl. 
+    intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.
     cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
             field_representation Signature.field_representation
             Representation.frep Representation.eval_bytes
@@ -688,8 +692,8 @@ Qed.
     }
     destruct Hcorrect. FtoZ.
     cbv [WordByWordMontgomery.eval] in *.
-    rewrite H1.
-    pose proof (WordByWordMontgomery.from_montgomerymod_correct width n m (@Field.r' width field_parameters) (m' m width)) as Hcorrect.
+    replace machine_wordsize with width in * by reflexivity. rewrite H1.
+    pose proof (let _ : machine_wordsize_opt := width in WordByWordMontgomery.from_montgomerymod_correct width n m (@Field.r' width field_parameters) (m' m)) as Hcorrect.
     cbv [WordByWordMontgomery.eval] in *.
     edestruct Hcorrect as [Hvalue _]; [ | | | | | | apply H0 |]; try eapply use_curve_good; try eassumption;
     [pose proof r'_correct as Htemp; cbv [r' M] in Htemp; rewrite M_eq in Htemp; auto| ].
@@ -719,10 +723,10 @@ Qed.
   valid_func (res select_znz_op _) ->
   forall functions,
     spec_of_selectznz (select_znz_func :: functions).
-Proof using M_eq check_args_ok select_znz_func_eq ok.
+  Proof using M_eq check_args_ok select_znz_func_eq ok.
   intros. cbv [spec_of_selectznz]. rewrite select_znz_func_eq.
   pose proof selectznz_correct
-       _ _ _ ltac:(eassumption) _ (res_eq select_znz_op)
+       _ _ ltac:(eassumption) _ (res_eq select_znz_op)
     as Hcorrect.
   eapply Signature.select_znz_correct with (res:=res select_znz_op);
     handle_side_conditions. intros x y c H0 H1 H2.

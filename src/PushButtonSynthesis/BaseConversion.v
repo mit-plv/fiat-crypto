@@ -77,36 +77,11 @@ Global Instance show_bounds : Show bounds
 Definition default_bounds : bounds := use_prime.
 
 Section __.
-  Context {output_language_api : ToString.OutputLanguageAPI}
-          {language_naming_conventions : language_naming_conventions_opt}
-          {documentation_options : documentation_options_opt}
-          {output_options : output_options_opt}
-          {opts : AbstractInterpretation.Options}
-          {package_namev : package_name_opt}
-          {class_namev : class_name_opt}
-          {static : static_opt}
-          {internal_static : internal_static_opt}
-          {inline : inline_opt}
-          {inline_internal : inline_internal_opt}
-          {low_level_rewriter_method : low_level_rewriter_method_opt}
-          {only_signed : only_signed_opt}
-          {no_select : no_select_opt}
-          {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
-          {emit_primitives : emit_primitives_opt}
-          {should_split_mul : should_split_mul_opt}
-          {should_split_multiret : should_split_multiret_opt}
-          {unfold_value_barrier : unfold_value_barrier_opt}
-          {assembly_hints_lines : assembly_hints_lines_opt}
-          {ignore_unique_asm_names : ignore_unique_asm_names_opt}
-          {widen_carry : widen_carry_opt}
-          {widen_bytes : widen_bytes_opt}
-          {assembly_conventions : assembly_conventions_opt}
-          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
+  Context {opts : Options}
           (s : Z) (c : list (Z * Z))
           (src_n : nat)
           (src_limbwidth : Q)
           (dst_limbwidth : Q)
-          (machine_wordsize : machine_wordsize_opt)
           (inbounds_multiplier : option Q)
           (outbounds_multiplier : option Q)
           (inbounds : bounds)
@@ -159,9 +134,12 @@ Section __.
   Definition out_bounds : list (ZRange.type.option.interp base.type.Z)
     := List.map (fun u => Some r[0~>u]%zrange) out_upperbounds.
 
-  Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
-  Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values_of_machine_wordsize_with_bytes.
-  Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values_of_machine_wordsize_with_bytes.
+  Local Instance : Pipeline.DerivedOptions
+    := let _ := Primitives.DerivedOptions in
+       {| Pipeline.DerivedRewriteConfiguration_opts
+         := {| Pipeline.split_mul_to := split_mul_to_of_should_split_mul machine_wordsize possible_values_of_machine_wordsize_with_bytes
+            ; Pipeline.split_multiret_to := split_multiret_to_of_should_split_multiret machine_wordsize possible_values_of_machine_wordsize_with_bytes |}
+       |}.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
@@ -254,7 +232,6 @@ Section __.
   Definition convert_bases
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_convert_bases_gen
             @ GallinaReify.Reify (Qnum src_limbwidth) @ GallinaReify.Reify (Z.pos (Qden src_limbwidth))
@@ -268,7 +245,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "convert_bases" convert_bases
+          prefix "convert_bases" convert_bases
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " converts a field element from base " ++ Decimal.show_Q src_limbwidth ++ " to base " ++ Decimal.show_Q dst_limbwidth ++ " in little-endian order."]%string)
              (convert_bases_correct src_weight dst_weight src_n dst_n in_bounds)).
@@ -331,7 +308,7 @@ Section __.
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
-           machine_wordsize valid_names known_functions (fun _ => nil) all_typedefs!
+           valid_names known_functions (fun _ => nil) all_typedefs!
            check_args
            ((ToString.comment_file_header_block
                (comment_header

@@ -44,13 +44,10 @@ Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBU
 Local Opaque reified_montred_gen. (* needed for making [autorewrite] not take a very long time *)
 
 Section rmontred.
-  Context {output_language_api : ToString.OutputLanguageAPI}
-          {static : static_opt}
-          {internal_static : internal_static_opt}
-          {inline : inline_opt}
-          {inline_internal : inline_internal_opt}
-          (N R N' : Z) (n : nat)
-          (machine_wordsize : machine_wordsize_opt).
+  Context {Pipeline_Options : Pipeline.BaseOptions}
+          {Pipeline_ExtendedOptions : Pipeline.ExtendedOptions}
+          {extra_opts : ExtraOptions}
+          (N R N' : Z) (n : nat).
 
   Let value_range := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
   Let flag_range := r[0 ~> 1]%zrange.
@@ -64,30 +61,17 @@ Section rmontred.
 
   Let possible_values := possible_values_of_machine_wordsize.
 
-  Local Existing Instance default_language_naming_conventions.
-  Local Existing Instance default_documentation_options.
-  Local Existing Instance default_output_options.
-  Local Existing Instance AbstractInterpretation.default_Options.
-  Local Instance widen_carry : widen_carry_opt := false.
-  Local Instance widen_bytes : widen_bytes_opt := true.
-  Local Instance only_signed : only_signed_opt := false.
-  Local Instance no_select_size : no_select_size_opt := None.
-  Local Instance split_mul_to : split_mul_to_opt := None.
-  Local Instance split_multiret_to : split_multiret_to_opt := None.
-  Local Instance unfold_value_barrier : unfold_value_barrier_opt := true.
-  Local Instance assembly_hints_lines : assembly_hints_lines_opt := [].
-  Local Instance ignore_unique_asm_names : ignore_unique_asm_names_opt := false.
-  Local Instance low_level_rewriter_method : low_level_rewriter_method_opt := default_low_level_rewriter_method.
+  Local Existing Instance Primitives.DerivedRewriteConfiguration_opts.
 
-  Let fancy_args
-    := (Some {| Pipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;
-                Pipeline.invert_high log2wordsize := invert_high log2wordsize consts_list;
-                Pipeline.value_range := value_range;
-                Pipeline.flag_range := flag_range |}).
+  Local Instance fancy_args : translate_to_fancy_opt
+    := (Some {| BoundsPipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;
+                BoundsPipeline.invert_high log2wordsize := invert_high log2wordsize consts_list;
+                BoundsPipeline.value_range := value_range;
+                BoundsPipeline.flag_range := flag_range |}).
 
   Lemma fancy_args_good
     : match fancy_args with
-      | Some {| Pipeline.invert_low := il ; Pipeline.invert_high := ih |}
+      | Some {| BoundsPipeline.invert_low := il ; BoundsPipeline.invert_high := ih |}
         => (forall s v v' : Z, il s v = Some v' -> v = Z.land v' (2^(s/2)-1))
            /\ (forall s v v' : Z, ih s v = Some v' -> v = Z.shiftr v' (s/2))
       | None => True
@@ -154,7 +138,6 @@ Section rmontred.
   Definition montred
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         fancy_args (* fancy *)
          possible_values
          (reified_montred_gen
             @ GallinaReify.Reify N @ GallinaReify.Reify R @ GallinaReify.Reify N' @ GallinaReify.Reify (machine_wordsize:Z))
@@ -165,7 +148,7 @@ Section rmontred.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "montred" montred
+          prefix "montred" montred
           (fun _ _ _ => @nil string).
 
   Local Ltac solve_montred_preconditions :=

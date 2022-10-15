@@ -7,7 +7,7 @@ Require Import Crypto.Bedrock.Field.Synthesis.Specialized.UnsaturatedSolinas.
 Local Open Scope Z_scope.
 Import ListNotations.
 
-Local Existing Instances default_parameters default_parameters_ok.
+Local Existing Instances machine_wordsize default_parameters default_parameters_ok.
 Local Definition n := 10%nat.
 Local Definition s := 2^255.
 Local Definition c := [(1, 19)].

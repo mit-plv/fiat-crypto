@@ -1,5 +1,6 @@
 Require Import Coq.Bool.Bool.
 Require Import Coq.derive.Derive.
+Require Import Coq.Program.Tactics.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.COperationSpecifications. Import COperationSpecifications.BarrettReduction.
@@ -19,10 +20,15 @@ Local Open Scope Z_scope.
 Module Barrett256.
 
   Definition M := Eval lazy in (2^256-2^224+2^192+2^96-1).
-  Definition machine_wordsize := 256.
+  Local Instance machine_wordsize : BoundsPipeline.machine_wordsize_opt := 256.
+  Local Existing Instance BoundsPipeline.Pipeline.default_BaseOptions.
+  Local Instance : Primitives.ExtraOptions :=
+    let _ := Primitives.default_ExtraOptions in
+    {| Primitives.widen_carry := false
+    ; Primitives.widen_bytes := true |}.
 
   Derive barrett_red256
-         SuchThat (barrett_red M machine_wordsize = ErrorT.Success barrett_red256)
+         SuchThat (barrett_red M = ErrorT.Success barrett_red256)
          As barrett_red256_eq.
   Proof. lazy; reflexivity. Qed.
 
@@ -32,7 +38,7 @@ Module Barrett256.
   Lemma barrett_red256_correct :
     COperationSpecifications.BarrettReduction.barrett_red_correct machine_wordsize M (API.Interp barrett_red256).
   Proof.
-    apply barrett_red_correct with (machine_wordsize:=machine_wordsize) (requests:=[]).
+    rapply (barrett_red_correct M []).
     { lazy. reflexivity. }
     { apply barrett_red256_eq. }
   Qed.
@@ -177,7 +183,6 @@ Module Barrett256.
     let r := eval compute in (2^machine_wordsize) in
         replace (2^machine_wordsize) with r in * by reflexivity.
     cbv [Prod.MulMod barrett_red256_alloc].
-
     (* Extract proofs that no registers are equal to each other *)
     repeat match goal with
            | H : NoDup _ |- _ => inversion H; subst; clear H

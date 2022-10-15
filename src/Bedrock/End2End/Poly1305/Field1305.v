@@ -15,7 +15,9 @@ Section Field.
   Definition s : Z := 2^130.
   Definition c : list (Z * Z) := [(1, 5)]%Z.
 
-  Existing Instances Defaults32.default_parameters
+  Existing Instances
+           Defaults32.machine_wordsize
+           Defaults32.default_parameters
            Defaults32.default_parameters_ok.
   Existing Instances no_select_size split_mul_to split_multiret_to.
   Definition prefix : string := "fe1305_"%string.

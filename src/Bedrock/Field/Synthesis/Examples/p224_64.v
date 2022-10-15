@@ -6,7 +6,7 @@ Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults64.
 Local Open Scope Z_scope.
 
 Local Definition m := 2^224 - 2^96 + 1.
-Local Existing Instances default_parameters default_parameters_ok.
+Local Existing Instances machine_wordsize default_parameters default_parameters_ok.
 Local Definition prefix := "p224_"%string. (* placed before function names *)
 
 #[global]
