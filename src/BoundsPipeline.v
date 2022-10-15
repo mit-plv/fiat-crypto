@@ -486,7 +486,12 @@ Module Pipeline.
               => ["Unsupported casts in input syntax tree:"]
                    ++ show_lines e
                    ++ ["Unsupported casts: " ++ @show_list _ (fun v => show (projT2 v)) ls]%string
-            | Stringification_failed t e err => ["Stringification failed on the syntax tree:"] ++ show_lines e ++ [err]
+            | Stringification_failed t e err
+              => ["Stringification failed on the syntax tree:"]
+                   ++ (let _ : PHOAS.with_all_casts := true in show_lines e)
+                   ++ ["Which with some casts elided is:"]
+                   ++ (let _ : PHOAS.with_all_casts := false in show_lines e)
+                   ++ [err]
             | Invalid_argument msg
               => ["Invalid argument: " ++ msg]%string
             | Assembly_parsing_error fname msgs

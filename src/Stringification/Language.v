@@ -61,7 +61,7 @@ Module Compilers.
       #[global] Typeclasses Opaque with_all_casts.
 
       Definition default_with_casts : with_casts := true.
-      Definition default_with_all_casts : with_all_casts := true.
+      Definition default_with_all_casts : with_all_casts := false.
     End PHOAS.
     #[global] Typeclasses Opaque PHOAS.with_casts PHOAS.with_all_casts.
     #[global] Existing Instances PHOAS.default_with_casts PHOAS.default_with_all_casts.
