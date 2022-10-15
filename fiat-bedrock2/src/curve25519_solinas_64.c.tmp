@@ -11,6 +11,17 @@ check_args
 #include <stdint.h>
 #include <string.h>
 
+static __attribute__((always_inline)) inline uintptr_t
+_br2_mulhuu(uintptr_t a, uintptr_t b) {
+#if (UINTPTR_MAX == (1LLU<<31) - 1 + (1LLU<<31))
+	return ((uint64_t)a * b) >> 32;
+#elif (UINTPTR_MAX == (1LLU<<63) - 1 + (1LLU<<63))
+	return ((__uint128_t)a * b) >> 64;
+#else
+#error "32-bit or 64-bit uintptr_t required"
+#endif
+}
+
 // We use memcpy to work around -fstrict-aliasing.
 // A plain memcpy is enough on clang 10, but not on gcc 10, which fails
 // to infer the bounds on an integer loaded by memcpy.
@@ -39,6 +50,212 @@ _br2_store(uintptr_t a, uintptr_t v, uintptr_t sz) {
 
 In fiat_curve25519_solinas_mulmod:
 Stringification failed on the syntax tree:
+(λ x1 x2,
+  let x3 := (uint64_t)((uint64_t)(x1[3]) * (uint64_t)(x2[3])) (* : uint64_t *) in
+  let x4 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[3]), (uint64_t)(x2[3])))) (* : uint64_t *) in
+  let x5 := (uint64_t)((uint64_t)(x1[3]) * (uint64_t)(x2[2])) (* : uint64_t *) in
+  let x6 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[3]), (uint64_t)(x2[2])))) (* : uint64_t *) in
+  let x7 := (uint64_t)((uint64_t)(x1[3]) * (uint64_t)(x2[1])) (* : uint64_t *) in
+  let x8 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[3]), (uint64_t)(x2[1])))) (* : uint64_t *) in
+  let x9 := (uint64_t)((uint64_t)(x1[3]) * (uint64_t)(x2[0])) (* : uint64_t *) in
+  let x10 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[3]), (uint64_t)(x2[0])))) (* : uint64_t *) in
+  let x11 := (uint64_t)((uint64_t)(x1[2]) * (uint64_t)(x2[3])) (* : uint64_t *) in
+  let x12 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[2]), (uint64_t)(x2[3])))) (* : uint64_t *) in
+  let x13 := (uint64_t)((uint64_t)(x1[2]) * (uint64_t)(x2[2])) (* : uint64_t *) in
+  let x14 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[2]), (uint64_t)(x2[2])))) (* : uint64_t *) in
+  let x15 := (uint64_t)((uint64_t)(x1[2]) * (uint64_t)(x2[1])) (* : uint64_t *) in
+  let x16 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[2]), (uint64_t)(x2[1])))) (* : uint64_t *) in
+  let x17 := (uint64_t)((uint64_t)(x1[2]) * (uint64_t)(x2[0])) (* : uint64_t *) in
+  let x18 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[2]), (uint64_t)(x2[0])))) (* : uint64_t *) in
+  let x19 := (uint64_t)((uint64_t)(x1[1]) * (uint64_t)(x2[3])) (* : uint64_t *) in
+  let x20 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[1]), (uint64_t)(x2[3])))) (* : uint64_t *) in
+  let x21 := (uint64_t)((uint64_t)(x1[1]) * (uint64_t)(x2[2])) (* : uint64_t *) in
+  let x22 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[1]), (uint64_t)(x2[2])))) (* : uint64_t *) in
+  let x23 := (uint64_t)((uint64_t)(x1[1]) * (uint64_t)(x2[1])) (* : uint64_t *) in
+  let x24 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[1]), (uint64_t)(x2[1])))) (* : uint64_t *) in
+  let x25 := (uint64_t)((uint64_t)(x1[1]) * (uint64_t)(x2[0])) (* : uint64_t *) in
+  let x26 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[1]), (uint64_t)(x2[0])))) (* : uint64_t *) in
+  let x27 := (uint64_t)((uint64_t)(x1[0]) * (uint64_t)(x2[3])) (* : uint64_t *) in
+  let x28 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[0]), (uint64_t)(x2[3])))) (* : uint64_t *) in
+  let x29 := (uint64_t)((uint64_t)(x1[0]) * (uint64_t)(x2[2])) (* : uint64_t *) in
+  let x30 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[0]), (uint64_t)(x2[2])))) (* : uint64_t *) in
+  let x31 := (uint64_t)((uint64_t)(x1[0]) * (uint64_t)(x2[1])) (* : uint64_t *) in
+  let x32 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[0]), (uint64_t)(x2[1])))) (* : uint64_t *) in
+  let x33 := (uint64_t)((uint64_t)(x1[0]) * (uint64_t)(x2[0])) (* : uint64_t *) in
+  let x34 := (uint64_t)(Z.mul_high((2^64), ((uint64_t)(x1[0]), (uint64_t)(x2[0])))) (* : uint64_t *) in
+  let x35 := (uint64_t)((uint64_t)x30 + (uint64_t)x9) (* : uint64_t *) in
+  let x36 := (uint64_t)(Z.ltz((uint64_t)x35, (uint64_t)x30)) (* : uint64_t *) in
+  let x37 := (uint64_t)((uint64_t)x36 + (uint64_t)x28) (* : uint64_t *) in
+  let x38 := (uint64_t)(Z.ltz((uint64_t)x37, (uint64_t)x28)) (* : uint64_t *) in
+  let x39 := (uint64_t)((uint64_t)x37 + (uint64_t)x7) (* : uint64_t *) in
+  let x40 := (uint64_t)(Z.ltz((uint64_t)x39, (uint64_t)x7)) (* : uint64_t *) in
+  let x41 := (uint64_t)((uint64_t)x38 + (uint64_t)x40) (* : uint64_t *) in
+  let x42 := (uint64_t)((uint64_t)x41 + (uint64_t)x20) (* : uint64_t *) in
+  let x43 := (uint64_t)((uint64_t)x35 + (uint64_t)x15) (* : uint64_t *) in
+  let x44 := (uint64_t)(Z.ltz((uint64_t)x43, (uint64_t)x35)) (* : uint64_t *) in
+  let x45 := (uint64_t)((uint64_t)x44 + (uint64_t)x39) (* : uint64_t *) in
+  let x46 := (uint64_t)(Z.ltz((uint64_t)x45, (uint64_t)x39)) (* : uint64_t *) in
+  let x47 := (uint64_t)((uint64_t)x45 + (uint64_t)x10) (* : uint64_t *) in
+  let x48 := (uint64_t)(Z.ltz((uint64_t)x47, (uint64_t)x10)) (* : uint64_t *) in
+  let x49 := (uint64_t)((uint64_t)x46 + (uint64_t)x48) (* : uint64_t *) in
+  let x50 := (uint64_t)((uint64_t)x49 + (uint64_t)x42) (* : uint64_t *) in
+  let x51 := (uint64_t)(Z.ltz((uint64_t)x50, (uint64_t)x42)) (* : uint64_t *) in
+  let x52 := (uint64_t)((uint64_t)x51 + (uint64_t)x12) (* : uint64_t *) in
+  let x53 := (uint64_t)((uint64_t)x32 + (uint64_t)x17) (* : uint64_t *) in
+  let x54 := (uint64_t)(Z.ltz((uint64_t)x53, (uint64_t)x32)) (* : uint64_t *) in
+  let x55 := (uint64_t)((uint64_t)x54 + (uint64_t)x43) (* : uint64_t *) in
+  let x56 := (uint64_t)(Z.ltz((uint64_t)x55, (uint64_t)x43)) (* : uint64_t *) in
+  let x57 := (uint64_t)((uint64_t)x55 + (uint64_t)x18) (* : uint64_t *) in
+  let x58 := (uint64_t)(Z.ltz((uint64_t)x57, (uint64_t)x18)) (* : uint64_t *) in
+  let x59 := (uint64_t)((uint64_t)x56 + (uint64_t)x58) (* : uint64_t *) in
+  let x60 := (uint64_t)((uint64_t)x59 + (uint64_t)x47) (* : uint64_t *) in
+  let x61 := (uint64_t)(Z.ltz((uint64_t)x60, (uint64_t)x47)) (* : uint64_t *) in
+  let x62 := (uint64_t)((uint64_t)x60 + (uint64_t)x13) (* : uint64_t *) in
+  let x63 := (uint64_t)(Z.ltz((uint64_t)x62, (uint64_t)x13)) (* : uint64_t *) in
+  let x64 := (uint64_t)((uint64_t)x61 + (uint64_t)x63) (* : uint64_t *) in
+  let x65 := (uint64_t)((uint64_t)x64 + (uint64_t)x50) (* : uint64_t *) in
+  let x66 := (uint64_t)(Z.ltz((uint64_t)x65, (uint64_t)x50)) (* : uint64_t *) in
+  let x67 := (uint64_t)((uint64_t)x65 + (uint64_t)x5) (* : uint64_t *) in
+  let x68 := (uint64_t)(Z.ltz((uint64_t)x67, (uint64_t)x5)) (* : uint64_t *) in
+  let x69 := (uint64_t)((uint64_t)x66 + (uint64_t)x68) (* : uint64_t *) in
+  let x70 := (uint64_t)((uint64_t)x69 + (uint64_t)x52) (* : uint64_t *) in
+  let x71 := (uint64_t)(Z.ltz((uint64_t)x70, (uint64_t)x52)) (* : uint64_t *) in
+  let x72 := (uint64_t)((uint64_t)x71 + (uint64_t)x4) (* : uint64_t *) in
+  let x73 := (uint64_t)((uint64_t)x53 + (uint64_t)x23) (* : uint64_t *) in
+  let x74 := (uint64_t)(Z.ltz((uint64_t)x73, (uint64_t)x53)) (* : uint64_t *) in
+  let x75 := (uint64_t)((uint64_t)x74 + (uint64_t)x57) (* : uint64_t *) in
+  let x76 := (uint64_t)(Z.ltz((uint64_t)x75, (uint64_t)x57)) (* : uint64_t *) in
+  let x77 := (uint64_t)((uint64_t)x75 + (uint64_t)x21) (* : uint64_t *) in
+  let x78 := (uint64_t)(Z.ltz((uint64_t)x77, (uint64_t)x21)) (* : uint64_t *) in
+  let x79 := (uint64_t)((uint64_t)x76 + (uint64_t)x78) (* : uint64_t *) in
+  let x80 := (uint64_t)((uint64_t)x79 + (uint64_t)x62) (* : uint64_t *) in
+  let x81 := (uint64_t)(Z.ltz((uint64_t)x80, (uint64_t)x62)) (* : uint64_t *) in
+  let x82 := (uint64_t)((uint64_t)x80 + (uint64_t)x16) (* : uint64_t *) in
+  let x83 := (uint64_t)(Z.ltz((uint64_t)x82, (uint64_t)x16)) (* : uint64_t *) in
+  let x84 := (uint64_t)((uint64_t)x81 + (uint64_t)x83) (* : uint64_t *) in
+  let x85 := (uint64_t)((uint64_t)x84 + (uint64_t)x67) (* : uint64_t *) in
+  let x86 := (uint64_t)(Z.ltz((uint64_t)x85, (uint64_t)x67)) (* : uint64_t *) in
+  let x87 := (uint64_t)((uint64_t)x85 + (uint64_t)x8) (* : uint64_t *) in
+  let x88 := (uint64_t)(Z.ltz((uint64_t)x87, (uint64_t)x8)) (* : uint64_t *) in
+  let x89 := (uint64_t)((uint64_t)x86 + (uint64_t)x88) (* : uint64_t *) in
+  let x90 := (uint64_t)((uint64_t)x89 + (uint64_t)x70) (* : uint64_t *) in
+  let x91 := (uint64_t)(Z.ltz((uint64_t)x90, (uint64_t)x70)) (* : uint64_t *) in
+  let x92 := (uint64_t)((uint64_t)x91 + (uint64_t)x72) (* : uint64_t *) in
+  let x93 := (uint64_t)((uint64_t)x34 + (uint64_t)x25) (* : uint64_t *) in
+  let x94 := (uint64_t)(Z.ltz((uint64_t)x93, (uint64_t)x34)) (* : uint64_t *) in
+  let x95 := (uint64_t)((uint64_t)x94 + (uint64_t)x73) (* : uint64_t *) in
+  let x96 := (uint64_t)(Z.ltz((uint64_t)x95, (uint64_t)x73)) (* : uint64_t *) in
+  let x97 := (uint64_t)((uint64_t)x95 + (uint64_t)x26) (* : uint64_t *) in
+  let x98 := (uint64_t)(Z.ltz((uint64_t)x97, (uint64_t)x26)) (* : uint64_t *) in
+  let x99 := (uint64_t)((uint64_t)x96 + (uint64_t)x98) (* : uint64_t *) in
+  let x100 := (uint64_t)((uint64_t)x99 + (uint64_t)x77) (* : uint64_t *) in
+  let x101 := (uint64_t)(Z.ltz((uint64_t)x100, (uint64_t)x77)) (* : uint64_t *) in
+  let x102 := (uint64_t)((uint64_t)x100 + (uint64_t)x24) (* : uint64_t *) in
+  let x103 := (uint64_t)(Z.ltz((uint64_t)x102, (uint64_t)x24)) (* : uint64_t *) in
+  let x104 := (uint64_t)((uint64_t)x101 + (uint64_t)x103) (* : uint64_t *) in
+  let x105 := (uint64_t)((uint64_t)x104 + (uint64_t)x82) (* : uint64_t *) in
+  let x106 := (uint64_t)(Z.ltz((uint64_t)x105, (uint64_t)x82)) (* : uint64_t *) in
+  let x107 := (uint64_t)((uint64_t)x105 + (uint64_t)x19) (* : uint64_t *) in
+  let x108 := (uint64_t)(Z.ltz((uint64_t)x107, (uint64_t)x19)) (* : uint64_t *) in
+  let x109 := (uint64_t)((uint64_t)x106 + (uint64_t)x108) (* : uint64_t *) in
+  let x110 := (uint64_t)((uint64_t)x109 + (uint64_t)x87) (* : uint64_t *) in
+  let x111 := (uint64_t)(Z.ltz((uint64_t)x110, (uint64_t)x87)) (* : uint64_t *) in
+  let x112 := (uint64_t)((uint64_t)x110 + (uint64_t)x11) (* : uint64_t *) in
+  let x113 := (uint64_t)(Z.ltz((uint64_t)x112, (uint64_t)x11)) (* : uint64_t *) in
+  let x114 := (uint64_t)((uint64_t)x111 + (uint64_t)x113) (* : uint64_t *) in
+  let x115 := (uint64_t)((uint64_t)x114 + (uint64_t)x90) (* : uint64_t *) in
+  let x116 := (uint64_t)(Z.ltz((uint64_t)x115, (uint64_t)x90)) (* : uint64_t *) in
+  let x117 := (uint64_t)((uint64_t)x115 + (uint64_t)x3) (* : uint64_t *) in
+  let x118 := (uint64_t)(Z.ltz((uint64_t)x117, (uint64_t)x3)) (* : uint64_t *) in
+  let x119 := (uint64_t)((uint64_t)x116 + (uint64_t)x118) (* : uint64_t *) in
+  let x120 := (uint64_t)((uint64_t)x119 + (uint64_t)x92) (* : uint64_t *) in
+  let x121 := (uint64_t)((uint64_t)x93 + (uint64_t)x31) (* : uint64_t *) in
+  let x122 := (uint64_t)(Z.ltz((uint64_t)x121, (uint64_t)x93)) (* : uint64_t *) in
+  let x123 := (uint64_t)((uint64_t)x122 + (uint64_t)x97) (* : uint64_t *) in
+  let x124 := (uint64_t)(Z.ltz((uint64_t)x123, (uint64_t)x97)) (* : uint64_t *) in
+  let x125 := (uint64_t)((uint64_t)x123 + (uint64_t)x29) (* : uint64_t *) in
+  let x126 := (uint64_t)(Z.ltz((uint64_t)x125, (uint64_t)x29)) (* : uint64_t *) in
+  let x127 := (uint64_t)((uint64_t)x124 + (uint64_t)x126) (* : uint64_t *) in
+  let x128 := (uint64_t)((uint64_t)x127 + (uint64_t)x102) (* : uint64_t *) in
+  let x129 := (uint64_t)(Z.ltz((uint64_t)x128, (uint64_t)x102)) (* : uint64_t *) in
+  let x130 := (uint64_t)((uint64_t)x128 + (uint64_t)x27) (* : uint64_t *) in
+  let x131 := (uint64_t)(Z.ltz((uint64_t)x130, (uint64_t)x27)) (* : uint64_t *) in
+  let x132 := (uint64_t)((uint64_t)x129 + (uint64_t)x131) (* : uint64_t *) in
+  let x133 := (uint64_t)((uint64_t)x132 + (uint64_t)x107) (* : uint64_t *) in
+  let x134 := (uint64_t)(Z.ltz((uint64_t)x133, (uint64_t)x107)) (* : uint64_t *) in
+  let x135 := (uint64_t)((uint64_t)x133 + (uint64_t)x22) (* : uint64_t *) in
+  let x136 := (uint64_t)(Z.ltz((uint64_t)x135, (uint64_t)x22)) (* : uint64_t *) in
+  let x137 := (uint64_t)((uint64_t)x134 + (uint64_t)x136) (* : uint64_t *) in
+  let x138 := (uint64_t)((uint64_t)x137 + (uint64_t)x112) (* : uint64_t *) in
+  let x139 := (uint64_t)(Z.ltz((uint64_t)x138, (uint64_t)x112)) (* : uint64_t *) in
+  let x140 := (uint64_t)((uint64_t)x138 + (uint64_t)x14) (* : uint64_t *) in
+  let x141 := (uint64_t)(Z.ltz((uint64_t)x140, (uint64_t)x14)) (* : uint64_t *) in
+  let x142 := (uint64_t)((uint64_t)x139 + (uint64_t)x141) (* : uint64_t *) in
+  let x143 := (uint64_t)((uint64_t)x142 + (uint64_t)x117) (* : uint64_t *) in
+  let x144 := (uint64_t)(Z.ltz((uint64_t)x143, (uint64_t)x117)) (* : uint64_t *) in
+  let x145 := (uint64_t)((uint64_t)x143 + (uint64_t)x6) (* : uint64_t *) in
+  let x146 := (uint64_t)(Z.ltz((uint64_t)x145, (uint64_t)x6)) (* : uint64_t *) in
+  let x147 := (uint64_t)((uint64_t)x144 + (uint64_t)x146) (* : uint64_t *) in
+  let x148 := (uint64_t)((uint64_t)x147 + (uint64_t)x120) (* : uint64_t *) in
+  let x149 := (uint64_t)(38 * (uint64_t)x145) (* : uint64_t *) in
+  let x150 := (uint64_t)(Z.mul_high((2^64), (38, (uint64_t)x145))) (* : uint64_t *) in
+  let x151 := (uint64_t)(38 * (uint64_t)x140) (* : uint64_t *) in
+  let x152 := (uint64_t)(Z.mul_high((2^64), (38, (uint64_t)x140))) (* : uint64_t *) in
+  let x153 := (uint64_t)(38 * (uint64_t)x135) (* : uint64_t *) in
+  let x154 := (uint64_t)(Z.mul_high((2^64), (38, (uint64_t)x135))) (* : uint64_t *) in
+  let x155 := (uint64_t)((uint64_t)x121 + (uint64_t)x151) (* : uint64_t *) in
+  let x156 := (uint64_t)(Z.ltz((uint64_t)x155, (uint64_t)x121)) (* : uint64_t *) in
+  let x157 := (uint64_t)((uint64_t)x156 + (uint64_t)x125) (* : uint64_t *) in
+  let x158 := (uint64_t)(Z.ltz((uint64_t)x157, (uint64_t)x125)) (* : uint64_t *) in
+  let x159 := (uint64_t)((uint64_t)x157 + (uint64_t)x149) (* : uint64_t *) in
+  let x160 := (uint64_t)(Z.ltz((uint64_t)x159, (uint64_t)x149)) (* : uint64_t *) in
+  let x161 := (uint64_t)((uint64_t)x158 + (uint64_t)x160) (* : uint64_t *) in
+  let x162 := (uint64_t)(38 * (uint64_t)x148) (* : uint64_t *) in
+  let x163 := (uint64_t)((uint64_t)x161 + (uint64_t)x130) (* : uint64_t *) in
+  let x164 := (uint64_t)(Z.ltz((uint64_t)x163, (uint64_t)x130)) (* : uint64_t *) in
+  let x165 := (uint64_t)((uint64_t)x163 + (uint64_t)x162) (* : uint64_t *) in
+  let x166 := (uint64_t)(Z.ltz((uint64_t)x165, (uint64_t)x162)) (* : uint64_t *) in
+  let x167 := (uint64_t)((uint64_t)x164 + (uint64_t)x166) (* : uint64_t *) in
+  let x168 := (uint64_t)(Z.mul_high((2^64), (38, (uint64_t)x148))) (* : uint64_t *) in
+  let x169 := (uint64_t)((uint64_t)x167 + (uint64_t)x168) (* : uint64_t *) in
+  let x170 := (uint64_t)((uint64_t)x33 + (uint64_t)x153) (* : uint64_t *) in
+  let x171 := (uint64_t)(Z.ltz((uint64_t)x170, (uint64_t)x33)) (* : uint64_t *) in
+  let x172 := (uint64_t)((uint64_t)x171 + (uint64_t)x155) (* : uint64_t *) in
+  let x173 := (uint64_t)(Z.ltz((uint64_t)x172, (uint64_t)x155)) (* : uint64_t *) in
+  let x174 := (uint64_t)((uint64_t)x172 + (uint64_t)x154) (* : uint64_t *) in
+  let x175 := (uint64_t)(Z.ltz((uint64_t)x174, (uint64_t)x154)) (* : uint64_t *) in
+  let x176 := (uint64_t)((uint64_t)x173 + (uint64_t)x175) (* : uint64_t *) in
+  let x177 := (uint64_t)((uint64_t)x176 + (uint64_t)x159) (* : uint64_t *) in
+  let x178 := (uint64_t)(Z.ltz((uint64_t)x177, (uint64_t)x159)) (* : uint64_t *) in
+  let x179 := (uint64_t)((uint64_t)x177 + (uint64_t)x152) (* : uint64_t *) in
+  let x180 := (uint64_t)(Z.ltz((uint64_t)x179, (uint64_t)x152)) (* : uint64_t *) in
+  let x181 := (uint64_t)((uint64_t)x178 + (uint64_t)x180) (* : uint64_t *) in
+  let x182 := (uint64_t)((uint64_t)x181 + (uint64_t)x165) (* : uint64_t *) in
+  let x183 := (uint64_t)(Z.ltz((uint64_t)x182, (uint64_t)x165)) (* : uint64_t *) in
+  let x184 := (uint64_t)((uint64_t)x182 + (uint64_t)x150) (* : uint64_t *) in
+  let x185 := (uint64_t)(Z.ltz((uint64_t)x184, (uint64_t)x150)) (* : uint64_t *) in
+  let x186 := (uint64_t)((uint64_t)x183 + (uint64_t)x185) (* : uint64_t *) in
+  let x187 := (uint64_t)((uint64_t)x186 + (uint64_t)x169) (* : uint64_t *) in
+  let x188 := (uint64_t, uint0_t)(Z.mul_split((2^64), (38, (uint64_t)x187))) (* : uint64_t, uint0_t *) in
+  let x189 := (uint64_t)((uint64_t)x170 + (uint64_t)(uint64_t, uint0_t)x188₁) (* : uint64_t *) in
+  let x190 := (uint64_t)(Z.ltz((uint64_t)x189, (uint64_t)x170)) (* : uint64_t *) in
+  let x191 := (uint64_t)((uint64_t)x190 + (uint64_t)x174) (* : uint64_t *) in
+  let x192 := (uint64_t)(Z.ltz((uint64_t)x191, (uint64_t)x174)) (* : uint64_t *) in
+  let x193 := (uint64_t)((uint64_t)x192 + (uint64_t)x179) (* : uint64_t *) in
+  let x194 := (uint64_t)(Z.ltz((uint64_t)x193, (uint64_t)x179)) (* : uint64_t *) in
+  let x195 := (uint64_t)((uint64_t)x194 + (uint64_t)x184) (* : uint64_t *) in
+  let x196 := (uint64_t)(Z.ltz((uint64_t)x195, (uint64_t)x184)) (* : uint64_t *) in
+  let x197 := (uint64_t, uint0_t)(Z.mul_split((2^64), (38, (uint64_t)x196))) (* : uint64_t, uint0_t *) in
+  let x198 := (uint64_t)((uint64_t)x189 + (uint64_t)(uint64_t, uint0_t)x197₁) (* : uint64_t *) in
+  let x199 := (uint64_t)(Z.ltz((uint64_t)x198, (uint64_t)x189)) (* : uint64_t *) in
+  let x200 := (uint64_t)((uint64_t)x199 + (uint64_t)x191) (* : uint64_t *) in
+  let x201 := (uint64_t)(Z.ltz((uint64_t)x200, (uint64_t)x191)) (* : uint64_t *) in
+  let x202 := (uint64_t)((uint64_t)x201 + (uint64_t)x193) (* : uint64_t *) in
+  let x203 := (uint64_t)(Z.ltz((uint64_t)x202, (uint64_t)x193)) (* : uint64_t *) in
+  let x204 := (uint64_t)((uint64_t)x203 + (uint64_t)x195) (* : uint64_t *) in
+  (uint64_t)x198 :: (uint64_t)x200 :: (uint64_t)x202 :: (uint64_t)x204 :: []
+)
+Which with some casts elided is:
 (λ x1 x2,
   let x3 := x1[3] * x2[3] (* : uint64_t *) in
   let x4 := Z.mul_high((2^64), ((uint64_t)(x1[3]), (uint64_t)(x2[3]))) (* : uint64_t *) in
@@ -225,7 +442,7 @@ Stringification failed on the syntax tree:
   let x185 := Z.ltz((uint64_t)x184, (uint64_t)x150) (* : uint64_t *) in
   let x186 := x183 + x185 (* : uint64_t *) in
   let x187 := x186 + x169 (* : uint64_t *) in
-  let x188 := Z.mul_split((2^64), (38, (uint64_t)x187)) in
+  let x188 := Z.mul_split((2^64), (38, (uint64_t)x187)) (* : uint64_t, uint0_t *) in
   let x189 := x170 + x188₁ (* : uint64_t *) in
   let x190 := Z.ltz((uint64_t)x189, (uint64_t)x170) (* : uint64_t *) in
   let x191 := x190 + x174 (* : uint64_t *) in
@@ -234,7 +451,7 @@ Stringification failed on the syntax tree:
   let x194 := Z.ltz((uint64_t)x193, (uint64_t)x179) (* : uint64_t *) in
   let x195 := x194 + x184 (* : uint64_t *) in
   let x196 := Z.ltz((uint64_t)x195, (uint64_t)x184) (* : uint64_t *) in
-  let x197 := Z.mul_split((2^64), (38, (uint64_t)x196)) in
+  let x197 := Z.mul_split((2^64), (38, (uint64_t)x196)) (* : uint64_t, uint0_t *) in
   let x198 := x189 + x197₁ (* : uint64_t *) in
   let x199 := Z.ltz((uint64_t)x198, (uint64_t)x189) (* : uint64_t *) in
   let x200 := x199 + x191 (* : uint64_t *) in
@@ -266,37 +483,37 @@ void internal_fiat_curve25519_solinas_mulmod(uintptr_t out0, uintptr_t in0, uint
   /*skip*/
   /*skip*/
   x8 = (x3)*(x7);
-  x9 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x3)*(x7))>>32 : ((__uint128_t)(x3)*(x7))>>64);
+  x9 = _br2_mulhuu((x3), (x7));
   x10 = (x3)*(x6);
-  x11 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x3)*(x6))>>32 : ((__uint128_t)(x3)*(x6))>>64);
+  x11 = _br2_mulhuu((x3), (x6));
   x12 = (x3)*(x5);
-  x13 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x3)*(x5))>>32 : ((__uint128_t)(x3)*(x5))>>64);
+  x13 = _br2_mulhuu((x3), (x5));
   x14 = (x3)*(x4);
-  x15 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x3)*(x4))>>32 : ((__uint128_t)(x3)*(x4))>>64);
+  x15 = _br2_mulhuu((x3), (x4));
   x16 = (x2)*(x7);
-  x17 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*(x7))>>32 : ((__uint128_t)(x2)*(x7))>>64);
+  x17 = _br2_mulhuu((x2), (x7));
   x18 = (x2)*(x6);
-  x19 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*(x6))>>32 : ((__uint128_t)(x2)*(x6))>>64);
+  x19 = _br2_mulhuu((x2), (x6));
   x20 = (x2)*(x5);
-  x21 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*(x5))>>32 : ((__uint128_t)(x2)*(x5))>>64);
+  x21 = _br2_mulhuu((x2), (x5));
   x22 = (x2)*(x4);
-  x23 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*(x4))>>32 : ((__uint128_t)(x2)*(x4))>>64);
+  x23 = _br2_mulhuu((x2), (x4));
   x24 = (x1)*(x7);
-  x25 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*(x7))>>32 : ((__uint128_t)(x1)*(x7))>>64);
+  x25 = _br2_mulhuu((x1), (x7));
   x26 = (x1)*(x6);
-  x27 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*(x6))>>32 : ((__uint128_t)(x1)*(x6))>>64);
+  x27 = _br2_mulhuu((x1), (x6));
   x28 = (x1)*(x5);
-  x29 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*(x5))>>32 : ((__uint128_t)(x1)*(x5))>>64);
+  x29 = _br2_mulhuu((x1), (x5));
   x30 = (x1)*(x4);
-  x31 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*(x4))>>32 : ((__uint128_t)(x1)*(x4))>>64);
+  x31 = _br2_mulhuu((x1), (x4));
   x32 = (x0)*(x7);
-  x33 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x7))>>32 : ((__uint128_t)(x0)*(x7))>>64);
+  x33 = _br2_mulhuu((x0), (x7));
   x34 = (x0)*(x6);
-  x35 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x6))>>32 : ((__uint128_t)(x0)*(x6))>>64);
+  x35 = _br2_mulhuu((x0), (x6));
   x36 = (x0)*(x5);
-  x37 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x5))>>32 : ((__uint128_t)(x0)*(x5))>>64);
+  x37 = _br2_mulhuu((x0), (x5));
   x38 = (x0)*(x4);
-  x39 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x4))>>32 : ((__uint128_t)(x0)*(x4))>>64);
+  x39 = _br2_mulhuu((x0), (x4));
   x40 = (x35)+(x14);
   x41 = (uintptr_t)((x40)<(x35));
   x42 = (x41)+(x33);
@@ -412,11 +629,11 @@ void internal_fiat_curve25519_solinas_mulmod(uintptr_t out0, uintptr_t in0, uint
   x152 = (x149)+(x151);
   x153 = (x152)+(x125);
   x154 = ((uintptr_t)38ULL)*(x150);
-  x155 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)((uintptr_t)38ULL)*(x150))>>32 : ((__uint128_t)((uintptr_t)38ULL)*(x150))>>64);
+  x155 = _br2_mulhuu(((uintptr_t)38ULL), (x150));
   x156 = ((uintptr_t)38ULL)*(x145);
-  x157 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)((uintptr_t)38ULL)*(x145))>>32 : ((__uint128_t)((uintptr_t)38ULL)*(x145))>>64);
+  x157 = _br2_mulhuu(((uintptr_t)38ULL), (x145));
   x158 = ((uintptr_t)38ULL)*(x140);
-  x159 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)((uintptr_t)38ULL)*(x140))>>32 : ((__uint128_t)((uintptr_t)38ULL)*(x140))>>64);
+  x159 = _br2_mulhuu(((uintptr_t)38ULL), (x140));
   x160 = (x126)+(x156);
   x161 = (uintptr_t)((x160)<(x126));
   x162 = (x161)+(x130);
@@ -430,7 +647,7 @@ void internal_fiat_curve25519_solinas_mulmod(uintptr_t out0, uintptr_t in0, uint
   x170 = (x168)+(x167);
   x171 = (uintptr_t)((x170)<(x167));
   x172 = (x169)+(x171);
-  x173 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)((uintptr_t)38ULL)*(x153))>>32 : ((__uint128_t)((uintptr_t)38ULL)*(x153))>>64);
+  x173 = _br2_mulhuu(((uintptr_t)38ULL), (x153));
   x174 = (x172)+(x173);
   x175 = (x38)+(x158);
   x176 = (uintptr_t)((x175)<(x38));

@@ -11,6 +11,7 @@ const std = @import("std");
 const mode = @import("builtin").mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels
 
 inline fn cast(comptime DestType: type, target: anytype) DestType {
+    @setEvalBranchQuota(10000);
     if (@typeInfo(@TypeOf(target)) == .Int) {
         const dest = @typeInfo(DestType).Int;
         const source = @typeInfo(@TypeOf(target)).Int;
