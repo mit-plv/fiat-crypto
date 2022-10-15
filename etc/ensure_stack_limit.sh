@@ -3,7 +3,7 @@
 set -eu
 
 recstacksize=32768
-if command -v ulimit &>/dev/null; then
+if command -v ulimit >/dev/null 2>/dev/null; then
     (
         stacksize="$(ulimit -S -s)"
         test ! -z "$stacksize" || { >&2 printf "Warning: Could not determine stack size.\n"; exit 1; }
