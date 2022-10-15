@@ -10,10 +10,15 @@ Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.UniformWeight.
 Require Import Crypto.Arithmetic.Saturated.
+Require Import Crypto.Util.ListUtil.StdlibCompat.
+(*
 Require Crypto.Stringification.C.
 Require Crypto.Stringification.Go.
 Require Crypto.Stringification.Java.
 Require Import Crypto.BoundsPipeline.
+ *)
+Require Coq.btauto.Btauto.
+Require Coq.Structures.OrdersEx.
 Require Import Crypto.Util.ZUtil.ModInv.
 
 Require Import Coq.micromega.Lia.
@@ -45,13 +50,14 @@ Local Open Scope string_scope.
 Local Open Scope list_scope.
 Import ListNotations. Local Open Scope Z_scope.
 
+(*
 Import
   AbstractInterpretation.Compilers
   Language.Compilers
   Language.API.Compilers.
 
 Import Language.API.Compilers.API.
-
+*)
 Import Associational Positional.
 
 Local Coercion Z.of_nat : nat >-> Z.
@@ -1309,7 +1315,7 @@ Module SolinasReduction.
       push.
       rewrite <-(firstn_skipn n p) in Heqb.
       replace m1 with (n + (m1 - n))%nat in Heqb by lia.
-      rewrite StdlibCompat.List.repeat_app in Heqb.
+      rewrite List.repeat_app in Heqb.
       solve_ineq.
       solve_ibb.
       solve_ibb.
@@ -1418,7 +1424,7 @@ Module SolinasReduction.
       rewrite <-(firstn_skipn n p) in H.
       replace (2*n-n)%nat with n by lia.
       replace (2 * n)%nat with (n + n)%nat in H by lia.
-      rewrite StdlibCompat.List.repeat_app in H.
+      rewrite List.repeat_app in H.
       solve_ineq.
 
       solve_ibb.
@@ -1806,7 +1812,7 @@ Module SolinasReduction.
       weight_comp; cbn; break_match; lia.
       cbn; const_simpl; lia.
       replace (S n) with (n+1)%nat.
-      rewrite StdlibCompat.List.repeat_app.
+      rewrite List.repeat_app.
       repeat autounfold.
       push.
       cbn.
