@@ -17,7 +17,11 @@ Global Unset Extraction Optimize.
 Module Type HaskellPrimitivesT.
   Axiom IO_unit : Set.
   Axiom _IO : Set -> Set.
-  Axiom printf_string : string -> _IO unit.
+  Axiom Handle : Set.
+  Axiom stdin : Handle.
+  Axiom stdout : Handle.
+  Axiom stderr : Handle.
+  Axiom hPutStr : Handle -> string -> _IO unit.
   Axiom getArgs : _IO (list string).
   Axiom getProgName : _IO string.
   Axiom raise_failure : string -> _IO unit.
@@ -33,7 +37,11 @@ End HaskellPrimitivesT.
 Module Export HaskellPrimitives : HaskellPrimitivesT.
   Definition IO_unit : Set := unit.
   Definition _IO : Set -> Set := fun T => T.
-  Definition printf_string : string -> _IO unit := fun _ => tt.
+  Definition Handle : Set := unit.
+  Definition stdin : Handle := tt.
+  Definition stdout : Handle := tt.
+  Definition stderr : Handle := tt.
+  Definition hPutStr : Handle -> string -> _IO unit := fun _ _ => tt.
   Definition getArgs : _IO (list string) := nil.
   Definition getProgName : _IO string := "".
   Definition raise_failure : string -> _IO unit := fun _ => tt.
@@ -46,9 +54,12 @@ Module Export HaskellPrimitives : HaskellPrimitivesT.
   Definition writeFile : string -> string -> _IO unit := fun _ _ => tt.
 End HaskellPrimitives.
 
-Extract Constant printf_string =>
-"\s -> Text.Printf.printf ""%s"" s".
 Extract Constant _IO "a" => "GHC.Base.IO a".
+Extract Inlined Constant Handle => "System.IO.Handle".
+Extract Inlined Constant stdin => "System.IO.stdin".
+Extract Inlined Constant stdout => "System.IO.stdout".
+Extract Inlined Constant stderr => "System.IO.stderr".
+Extract Inlined Constant hPutStr => "System.IO.hPutStr".
 Extract Inlined Constant getArgs => "System.Environment.getArgs".
 Extract Inlined Constant getProgName => "System.Environment.getProgName".
 Extract Constant raise_failure => "\x -> Prelude.error x".
@@ -66,7 +77,7 @@ Extract Inlined Constant String.eqb => "((Prelude.==) :: Prelude.String -> Prelu
 Local Notation "x <- y ; f" := (_IO_bind _ _ y (fun x => f)).
 
 Definition raise_failure (msg : list String.string) : _IO unit
-  := (_ <- printf_string (String.concat String.NewLine msg);
+  := (_ <- hPutStr stdout (String.concat String.NewLine msg);
       raise_failure "Synthesis failed").
 
 Global Instance HaskellIODriver : ForExtraction.IODriverAPI (_IO unit)
@@ -77,7 +88,10 @@ Global Instance HaskellIODriver : ForExtraction.IODriverAPI (_IO unit)
            (lines <- getContents;
            k (String.split String.NewLine lines))
        ; ForExtraction.write_stdout_then lines k
-         := (_ <- printf_string (String.concat "" lines);
+         := (_ <- hPutStr stdout (String.concat "" lines);
+            k tt)
+       ; ForExtraction.write_stderr_then lines k
+         := (_ <- hPutStr stdout (String.concat "" lines);
             k tt)
        ; ForExtraction.with_read_file fname k
          := (lines <- readFile fname;

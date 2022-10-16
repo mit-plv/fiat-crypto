@@ -32,6 +32,8 @@ Module Type OCamlPrimitivesT.
   Notation stdin := OCaml_stdin.
   Axiom OCaml_stdout : out_channel.
   Notation stdout := OCaml_stdout.
+  Axiom OCaml_stderr : out_channel.
+  Notation stderr := OCaml_stderr.
   Axiom OCaml_string : Set.
   Notation string := OCaml_string.
   Axiom string_length : string -> int.
@@ -59,6 +61,7 @@ Module Export OCamlPrimitives : OCamlPrimitivesT.
   Definition flush : out_channel -> unit := fun _ => tt.
   Definition OCaml_stdin : in_channel := tt.
   Definition OCaml_stdout : out_channel := tt.
+  Definition OCaml_stderr : out_channel := tt.
   Definition OCaml_string : Set := unit.
   Notation string := OCaml_string.
   Definition string_length : string -> int := fun _ => int_O.
@@ -85,6 +88,7 @@ Extract Constant flush =>
 "fun chan -> Printf.fprintf chan ""%!""".
 Extract (*Inlined*) Constant stdin => "stdin".
 Extract (*Inlined*) Constant stdout => "stdout".
+Extract (*Inlined*) Constant stderr => "stderr".
 Extract (*Inlined*) Constant string => "string".
 Extract (*Inlined*) Constant string_length => "String.length".
 Extract (*Inlined*) Constant string_get => "String.get".
@@ -171,6 +175,9 @@ Global Instance OCamlIODriver : ForExtraction.IODriverAPI unit
                 (fun rev_lines => k (List.map string_to_Coq_string (List.rev_append rev_lines nil)))
        ; ForExtraction.write_stdout_then lines k
          := seq (fun _ => fprintf_list_string stdout lines)
+                k
+       ; ForExtraction.write_stderr_then lines k
+         := seq (fun _ => fprintf_list_string stderr lines)
                 k
        ; ForExtraction.with_read_file fname k
          := seq (fun 'tt => open_in (string_of_Coq_string fname))

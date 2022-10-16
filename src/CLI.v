@@ -781,6 +781,7 @@ Module ForExtraction.
       ; ret : unit -> A
       ; with_read_stdin : (list string -> A) -> A
       ; write_stdout_then : list string (* lines, to be joined with "" *) -> (unit -> A) -> A
+      ; write_stderr_then : list string (* lines, to be joined with "" *) -> (unit -> A) -> A
       ; with_read_file : string (* fname *) -> (list string -> A) -> A
       ; write_file_then : string (* fname *) -> list string (* lines, to be joined with "" *) -> (unit -> A) -> A
     }.
