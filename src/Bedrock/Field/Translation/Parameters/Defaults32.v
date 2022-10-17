@@ -39,7 +39,7 @@ Section Defaults_32.
     (error := expr.var Defaults.ERROR)
     := tt.
   Instance default_parameters_ok : Types.ok.
-  Proof. constructor; try exact _; try apply prefix_name_gen_unique. Qed.
+  Proof using Type. constructor; try exact _; try apply prefix_name_gen_unique. Qed.
 End Defaults_32.
 
 Module Notations.

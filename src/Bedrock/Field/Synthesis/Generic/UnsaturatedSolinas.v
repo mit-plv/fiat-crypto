@@ -93,7 +93,7 @@ Ltac apply_correctness_in H :=
 Notation necessary_requests := ["to_bytes"; "from_bytes"]%string (only parsing).
 
 Section __.
-  Context 
+  Context
     {width BW word mem locals env ext_spec varname_gen error}
    `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
           {inname_gen outname_gen : nat -> string}
@@ -469,7 +469,7 @@ Section __.
     Lemma relax_to_max_bounds x :
       list_Z_bounded_by loose_bounds x ->
       list_Z_bounded_by (@max_bounds width n) x.
-    Proof. apply relax_list_Z_bounded_by; auto. Qed.
+    Proof using loose_bounds_ok. apply relax_list_Z_bounded_by; auto. Qed.
 
     (* TODO: move to coqutil.Datatypes.List *)
     Local Lemma Forall_repeat : forall {A} (R : A -> Prop) n x,
@@ -482,7 +482,7 @@ Section __.
     Lemma relax_to_byte_bounds x :
       list_Z_bounded_by prime_bytes_bounds x ->
       list_Z_bounded_by (byte_bounds n_bytes) x.
-    Proof.
+    Proof using Type.
       cbv [prime_bytes_bounds prime_bytes_upperbound_list].
       intros; eapply relax_to_bounded_upperbounds;
         eauto using ByteBounds.partition_bounded_by; [ ].
@@ -491,14 +491,14 @@ Section __.
 
     Lemma bounded_by_loose_bounds_length x :
       list_Z_bounded_by loose_bounds x -> length x = n.
-    Proof.
+    Proof using Type.
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
       autorewrite with distr_length in *; lia.
     Qed.
 
     Lemma bounded_by_saturated_bounds_length x :
       list_Z_bounded_by saturated_bounds x -> length x = n.
-    Proof.
+    Proof using Type.
       cbv [max_bounds].
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
       rewrite length_saturated_bounds in *. lia.
@@ -506,7 +506,7 @@ Section __.
 
     Lemma bounded_by_prime_bytes_bounds_length x :
       list_Z_bounded_by prime_bytes_bounds x -> length x = n_bytes.
-    Proof.
+    Proof using Type.
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
       cbv [prime_bytes_bounds prime_bytes_upperbound_list] in *.
       rewrite map_length, length_partition in *. lia.
@@ -514,7 +514,7 @@ Section __.
 
     Lemma bounded_by_byte_bounds_length x :
       list_Z_bounded_by (byte_bounds n_bytes) x -> length x = n_bytes.
-    Proof. eapply byte_bounds_range_iff. Qed.
+    Proof using Type. eapply byte_bounds_range_iff. Qed.
 
     (* TODO: maybe make a generalized prove_bounds tactic that takes a list of
     bounds? *)
@@ -641,61 +641,61 @@ Section __.
       is_correct
         (UnsaturatedSolinas.carry_mul n s c width)
         carry_mul (spec_of_carry_mul name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma carry_square_correct name :
       is_correct
         (UnsaturatedSolinas.carry_square n s c width)
         carry_square (spec_of_carry_square name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma carry_correct name :
       is_correct
         (UnsaturatedSolinas.carry n s c width)
         carry (spec_of_carry name).
-    Proof. setup. prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup. prove_is_correct Rout. Qed.
 
     Lemma add_correct name :
       is_correct
         (UnsaturatedSolinas.add n s c width)
         add (spec_of_add name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma sub_correct name :
       is_correct
         (UnsaturatedSolinas.sub n s c width)
         sub (spec_of_sub name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma opp_correct name :
       is_correct
         (UnsaturatedSolinas.opp n s c width)
         opp (spec_of_opp name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma selectznz_correct name :
       is_correct
         (UnsaturatedSolinas.selectznz n width)
         selectznz (spec_of_selectznz name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma to_bytes_correct name :
       is_correct
         (UnsaturatedSolinas.to_bytes n s c width)
         to_bytes (spec_of_to_bytes name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma from_bytes_correct name :
       is_correct
         (UnsaturatedSolinas.from_bytes n s c width)
         from_bytes (spec_of_from_bytes name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma carry_scmul_const_correct (x : Z) name :
       is_correct
         (UnsaturatedSolinas.carry_scmul_const n s c width x)
         (carry_scmul_const x) (spec_of_carry_scmul_const x name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok loose_bounds_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
   End Proofs.
 End __.
 #[global]

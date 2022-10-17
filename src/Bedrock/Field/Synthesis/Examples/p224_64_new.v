@@ -65,7 +65,7 @@ Section Field.
         | |- context [spec_of_from_bytes] => eapply from_bytes_func_correct
         | |- context [spec_of_to_bytes] => eapply to_bytes_func_correct
         end.
-      
+
       Ltac derive_bedrock2_func op :=
         begin_derive_bedrock2_func;
         (* this goal fills in the evar, so do it first for [abstract] to be happy *)
