@@ -163,7 +163,7 @@ Section UnsaturatedSolinas.
   Lemma loose_bounds_eq : Field.loose_bounds = loose_bounds n s c.
   Proof using Type. reflexivity. Qed.
   Lemma tight_bounds_eq : Field.tight_bounds = tight_bounds n s c.
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   (* TODO: move to coqutil.Datatypes.List *)
   Lemma Forall_repeat : forall {A} (R : A -> Prop) n x,

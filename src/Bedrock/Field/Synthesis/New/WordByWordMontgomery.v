@@ -105,7 +105,7 @@ Section WordByWordMontgomery.
   Definition r' := @Field.r' width field_parameters.
 
   Lemma m_big : (2 < m)%Z.
-  Proof.
+  Proof using check_args_ok.
     pose proof (use_curve_good m width _ check_args_ok) as H.
     apply (OrdersEx.Z_as_DT.le_neq 2 m). split; try lia.
     destruct (m =? 2)%Z eqn:eq; try lia.
@@ -120,7 +120,7 @@ Section WordByWordMontgomery.
     Qed.
 
   Lemma gcd_aux' : forall n m (e : nat), (Z.gcd n m = 1)%Z -> (Z.gcd (n ^ (Z.of_nat e)) m = 1)%Z.
-  Proof.
+  Proof using Type.
     intros. induction e; auto.
       - destruct m0; auto.
       - apply Znumtheory.Zgcd_1_rel_prime.
@@ -130,7 +130,7 @@ Section WordByWordMontgomery.
         apply Znumtheory.Zgcd_1_rel_prime. auto.
   Qed.
 
-  Lemma r'_correct : ((2 ^ (width) * r' ) mod M = 1)%Z. (*Not very elegant proof...*)
+  Lemma r'_correct : ((2 ^ (width) * r' ) mod M = 1)%Z. (*Not very elegant proof using M_eq check_args_ok...*)
   Proof.
     cbv [r' Field.r' Field.r].
     assert (H1mod : (1 = 1 mod M)%Z).
@@ -233,7 +233,7 @@ Section WordByWordMontgomery.
   Lemma loose_bounds_eq : Field.loose_bounds = wordlist.
   Proof using Type. reflexivity. Qed.
   Lemma tight_bounds_eq : Field.tight_bounds = wordlist.
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   (* TODO: move to coqutil.Datatypes.List *)
   Lemma Forall_repeat : forall {A} (R : A -> Prop) n x,
@@ -314,19 +314,19 @@ Section WordByWordMontgomery.
        = ErrorT.Success tt) ->
       WordByWordMontgomery.valid width n m x ->
       list_Z_bounded_by (prime_bounds m width) x.
-    Proof.
+    Proof using Type.
       intros; unshelve eapply bounded_by_prime_bounds_of_valid; eauto.
     Qed.
 
     Ltac maxbounds_from_valid := intros _ Hvalid; destruct Hvalid as [Hsmall _]; rewrite Hsmall; apply MaxBounds.partition_bounded_by.
 
 Lemma valid_max_bounds n0 : forall x, @WordByWordMontgomery.valid width n0 m x ->list_Z_bounded_by (@MaxBounds.max_bounds width n0) x.
-Proof.
+Proof using ok.
     intros. destruct H. rewrite H. eapply MaxBounds.partition_bounded_by.
 Qed.
 
   Lemma valid_length : forall x, WordByWordMontgomery.valid width n m x -> length x = n.
-  Proof.
+  Proof using Type.
       intros. destruct H. erewrite WordByWordMontgomery.length_small; eauto.
   Qed.
 
@@ -614,7 +614,7 @@ Qed.
   Qed.
 
   Lemma m_nz : m <> 0%Z.
-  Proof.
+  Proof using check_args_ok.
     epose proof (use_curve_good _ _ _ check_args_ok). lia.
   Qed.
 
