@@ -21,6 +21,7 @@ Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.SpecializeUnderBindersBy.
 Require Import Rewriter.Language.Wf.
 Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
@@ -184,6 +185,9 @@ Section __.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
 
+  Local Notation weightf := (weight (Qnum limbwidth) (QDen limbwidth)).
+  Local Notation evalf := (eval weightf n).
+
   Lemma length_prime_bytes_upperbound_list : List.length prime_bytes_upperbound_list = n_bytes.
   Proof using Type. cbv [prime_bytes_upperbound_list]; now autorewrite with distr_length. Qed.
   Hint Rewrite length_prime_bytes_upperbound_list : distr_length.
@@ -193,6 +197,33 @@ Section __.
   Lemma length_m_enc : List.length m_enc = n.
   Proof using Type. cbv [m_enc]; repeat distr_length. Qed.
   Hint Rewrite length_m_enc : distr_length.
+  Lemma eval_list_Z_bounded_by_tight_bounds
+        (Hwt : 0 < QDen limbwidth <= Qnum limbwidth)
+        x
+        (Hx : list_Z_bounded_by tight_bounds x)
+    : 0 <= evalf x <= evalf tight_upperbounds.
+  Proof using Type.
+    Local Opaque UnsaturatedSolinasHeuristics.tight_upperbounds.
+    cbv [tight_bounds] in *.
+    intros.
+    lazymatch goal with
+    | [ H1 : list_Z_bounded_by (List.map (fun y => Some (@?f y)) ?b) ?x
+        |- context[eval ?wt ?n ?x] ]
+      => unshelve epose proof (eval_list_Z_bounded_by wt n (List.map (fun x => Some (f x)) b) (List.map f b) x H1 _ _ (fun A B => Z.lt_le_incl _ _ (weight_positive _ _))); clear H1
+    end.
+    all: repeat first [ reflexivity
+                      | apply wprops
+                      | progress rewrite ?map_map in *
+                      | progress rewrite ?map_id in *
+                      | progress cbn [upper lower] in *
+                      | assumption
+                      | progress autorewrite with distr_length
+                      | lia
+                      | match goal with
+                        | [ H : context[List.map (fun _ => 0) _] |- _ ] => erewrite <- zeros_ext_map, ?eval_zeros in H by reflexivity; autorewrite with distr_length push_eval in H
+                        end ].
+    Local Transparent UnsaturatedSolinasHeuristics.tight_upperbounds.
+  Qed.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
@@ -306,8 +337,18 @@ Section __.
     { use_curve_good_t. }
   Qed.
 
-  Local Notation weightf := (weight (Qnum limbwidth) (QDen limbwidth)).
-  Local Notation evalf := (eval weightf n).
+  Lemma use_curve_good_extra
+    : (request_present requests "to_bytes" = true -> forall x, list_Z_bounded_by tight_bounds x -> 0 <= evalf x < 2 * (s - Associational.eval c)).
+  Proof using curve_good.
+    pose proof use_curve_good; cbv beta zeta in *; destruct_head'_and.
+    pose proof eval_list_Z_bounded_by_tight_bounds.
+    repeat match goal with |- _ /\ _ => split end.
+    { intros.
+      specialize_by auto.
+      specialize_all_ways_under_binders_by eassumption.
+      lia. }
+  Qed.
+
   Local Notation notations_for_docstring
     := (CorrectnessStringification.dyn_context.cons
           m "m"
@@ -685,9 +726,11 @@ Section __.
        using solve [ auto using eval_balance, length_balance | congruence | solve_extra_bounds_side_conditions ] : push_eval.
   Hint Unfold zeromod onemod : push_eval.
 
+  Local Ltac solve_prove_correctness_side_conditions _ :=
+    solve [ auto | congruence | now autorewrite with distr_length | solve_extra_bounds_side_conditions ].
   Local Ltac prove_correctness _ :=
-    Primitives.prove_correctness use_curve_good;
-    try solve [ auto | congruence | solve_extra_bounds_side_conditions ].
+    Primitives.prove_correctness (conj use_curve_good use_curve_good_extra);
+    try solve_prove_correctness_side_conditions ().
 
   (** Work around COQBUG(https://github.com/coq/coq/issues/9286) *)
   Local Opaque
@@ -834,25 +877,7 @@ Section __.
   Proof using curve_good.
     prove_correctness (); [].
     erewrite freeze_to_bytesmod_partitions; [ reflexivity | .. ].
-    all: repeat apply conj; autorewrite with distr_length; (congruence || auto).
-    all: cbv [tight_bounds] in *.
-    all: lazymatch goal with
-         | [ H1 : list_Z_bounded_by (List.map (fun y => Some (@?f y)) ?b) ?x, H2 : eval ?wt ?n ?b < _
-             |- context[eval ?wt ?n ?x] ]
-           => unshelve epose proof (eval_list_Z_bounded_by wt n (List.map (fun x => Some (f x)) b) (List.map f b) x H1 _ _ (fun A B => Z.lt_le_incl _ _ (weight_positive _ _))); clear H1
-         end.
-    all: congruence || auto.
-    all: repeat first [ reflexivity
-                      | apply wprops
-                      | progress rewrite ?map_map in *
-                      | progress rewrite ?map_id in *
-                      | progress cbn [upper lower] in *
-                      | lia
-                      | match goal with
-                        | [ H : context[List.map (fun _ => 0) _] |- _ ] => erewrite <- zeros_ext_map, ?eval_zeros in H by reflexivity
-                        end
-                      | progress autorewrite with distr_length push_eval in *
-                      | progress cbv [tight_upperbounds] in * ].
+    all: try solve_prove_correctness_side_conditions ().
   Qed.
 
   Lemma Wf_to_bytes res (Hres : to_bytes = Success res) : Wf res.
