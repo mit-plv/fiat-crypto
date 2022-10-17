@@ -20,15 +20,7 @@ Import Compilers.API.
 
 Import Associational Positional.
 
-Local Instance : split_mul_to_opt := None.
-Local Instance : split_multiret_to_opt := None.
-Local Instance : unfold_value_barrier_opt := true.
-Local Instance : assembly_hints_lines_opt := [].
-Local Instance : ignore_unique_asm_names_opt := false.
-Local Instance : only_signed_opt := false.
-Local Instance : no_select_size_opt := None.
-Local Existing Instance default_translate_to_fancy.
-Local Existing Instance default_low_level_rewriter_method.
+Local Existing Instance Pipeline.default_BoundsPipelineOptions.
 
 Time Redirect "log" Compute
      (Pipeline.BoundsPipeline

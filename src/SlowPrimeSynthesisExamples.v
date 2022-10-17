@@ -95,10 +95,11 @@ Module debugging_go_bits_add.
              | [ H := @inl ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inl A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
              | [ H := @inr ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inr A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
              end.
-      vm_compute WordByWordMontgomery.no_select_size in k.
-      vm_compute WordByWordMontgomery.split_mul_to in k.
-      vm_compute WordByWordMontgomery.split_multiret_to in k.
-      vm_compute WordByWordMontgomery.split_multiret_to in k.
+      vm_compute Pipeline.no_select_size in k.
+      vm_compute Pipeline.split_mul_to in k.
+      vm_compute Pipeline.split_multiret_to in k.
+      vm_compute Pipeline.split_multiret_to in k.
+      vm_compute Pipeline.translate_to_fancy in k.
       cbv beta iota in k.
       set (v := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
       vm_compute in v.
@@ -107,7 +108,7 @@ Module debugging_go_bits_add.
              | [ H := @inl ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inl A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
              | [ H := @inr ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inr A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
              end.
-      vm_compute relax_adc_sbb_return_carry_to_bitwidth_ in k.
+      vm_compute Pipeline.relax_adc_sbb_return_carry_to_bitwidth in k.
       cbv beta iota in k.
       set (v' := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _ _) in (value of k).
       vm_compute in v'; clear -k.
