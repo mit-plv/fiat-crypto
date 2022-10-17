@@ -201,6 +201,7 @@ Section __.
          ; description name := (text_before_type_name ++ name ++ " is a field element NOT in the Montgomery domain.")%string }.
 
 
+  Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
@@ -308,7 +309,6 @@ Section __.
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_mul_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -328,7 +328,6 @@ Section __.
   Definition square
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_square_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -348,7 +347,6 @@ Section __.
   Definition add
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_add_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
@@ -368,7 +366,6 @@ Section __.
   Definition sub
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_sub_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
@@ -388,7 +385,6 @@ Section __.
   Definition opp
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_opp_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
@@ -408,7 +404,6 @@ Section __.
   Definition from_montgomery
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_from_montgomery_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -428,7 +423,6 @@ Section __.
   Definition to_montgomery
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_to_montgomery_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -448,7 +442,6 @@ Section __.
   Definition nonzero
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          reified_nonzero_gen
          (Some bounds, tt)
@@ -467,7 +460,6 @@ Section __.
   Definition to_bytes
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_to_bytes_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
@@ -487,7 +479,6 @@ Section __.
   Definition from_bytes
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_from_bytes_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify 1 @ GallinaReify.Reify s @ GallinaReify.Reify n)
@@ -507,7 +498,6 @@ Section __.
   Definition encode
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -528,7 +518,6 @@ Section __.
   Definition encode_word
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -548,7 +537,6 @@ Section __.
   Definition zero
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_zero_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -568,7 +556,6 @@ Section __.
   Definition one
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_one_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -591,7 +578,6 @@ Section __.
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
             false (* let_bind_return *)
-            None (* fancy *)
             (reified_eval_gen
                @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n)
             (Some montgomery_domain_bounds, tt)).
@@ -605,7 +591,6 @@ Section __.
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
             false (* let_bind_return *)
-            None (* fancy *)
             (reified_bytes_eval_gen
                @ GallinaReify.Reify s)
             (Some prime_bytes_bounds, tt)).
@@ -619,7 +604,6 @@ Section __.
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
             false (* let_bind_return *)
-            None (* fancy *)
             (reified_eval_twos_complement_gen
                @ GallinaReify.Reify (machine_wordsize:Z)
                @ GallinaReify.Reify n)
@@ -641,7 +625,6 @@ Section __.
   Definition msat
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_msat_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify m)
@@ -661,7 +644,6 @@ Section __.
   Definition divstep_precomp
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m' @ GallinaReify.Reify divstep_precompmod)
@@ -681,7 +663,6 @@ Section __.
   Definition divstep
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_divstep_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify n @ GallinaReify.Reify m)

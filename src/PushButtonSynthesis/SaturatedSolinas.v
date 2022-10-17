@@ -115,6 +115,7 @@ Section __.
   Definition boundsn : list (ZRange.type.option.interp base.type.Z)
     := repeat bound n.
 
+  Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
@@ -173,7 +174,6 @@ Section __.
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_mul_gen
             @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify nreductions)

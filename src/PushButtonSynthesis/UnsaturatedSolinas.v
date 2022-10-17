@@ -179,6 +179,7 @@ Section __.
   Let possible_values := possible_values_of_machine_wordsize.
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
 
+  Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
@@ -325,7 +326,6 @@ Section __.
   Definition carry_mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_carry_mul_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
@@ -344,7 +344,6 @@ Section __.
   Definition carry_square
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_carry_square_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
@@ -363,7 +362,6 @@ Section __.
   Definition carry_scmul_const (x : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_carry_scmul_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs @ GallinaReify.Reify x)
@@ -382,7 +380,6 @@ Section __.
   Definition carry
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_carry_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
@@ -401,7 +398,6 @@ Section __.
   Definition add
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_add_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n)
@@ -420,7 +416,6 @@ Section __.
   Definition sub
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_sub_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n @ GallinaReify.Reify balance)
@@ -439,7 +434,6 @@ Section __.
   Definition opp
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_opp_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n @ GallinaReify.Reify balance)
@@ -458,7 +452,6 @@ Section __.
   Definition carry_add
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_carry_add_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
@@ -477,7 +470,6 @@ Section __.
   Definition carry_sub
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_carry_sub_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs @ GallinaReify.Reify balance)
@@ -496,7 +488,6 @@ Section __.
   Definition carry_opp
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_carry_opp_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs @ GallinaReify.Reify balance)
@@ -515,7 +506,6 @@ Section __.
   Definition relax
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          reified_id_gen
          (Some tight_bounds, tt)
@@ -533,7 +523,6 @@ Section __.
   Definition to_bytes
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_to_bytes_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify n @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify m_enc)
@@ -552,7 +541,6 @@ Section __.
   Definition from_bytes
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_from_bytes_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify n)
@@ -571,7 +559,6 @@ Section __.
   Definition encode
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n)
@@ -590,7 +577,6 @@ Section __.
   Definition encode_word
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n)
@@ -609,7 +595,6 @@ Section __.
   Definition zero
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_zero_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n)
@@ -628,7 +613,6 @@ Section __.
   Definition one
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_one_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n)
@@ -650,7 +634,6 @@ Section __.
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
             false (* let_bind_return *)
-            None (* fancy *)
             (reified_eval_gen
                @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n)
             (Some loose_bounds, tt)).
@@ -664,7 +647,6 @@ Section __.
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
             false (* let_bind_return *)
-            None (* fancy *)
             (reified_bytes_eval_gen
                @ GallinaReify.Reify s)
             (Some prime_bytes_bounds, tt)).

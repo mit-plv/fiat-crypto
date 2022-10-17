@@ -159,6 +159,7 @@ Section __.
   Definition out_bounds : list (ZRange.type.option.interp base.type.Z)
     := List.map (fun u => Some r[0~>u]%zrange) out_upperbounds.
 
+  Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values_of_machine_wordsize_with_bytes.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values_of_machine_wordsize_with_bytes.
@@ -254,7 +255,6 @@ Section __.
   Definition convert_bases
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_convert_bases_gen
             @ GallinaReify.Reify (Qnum src_limbwidth) @ GallinaReify.Reify (Z.pos (Qden src_limbwidth))

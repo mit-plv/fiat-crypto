@@ -55,6 +55,7 @@ Require Import Crypto.Util.Notations.
 Import Coq.Lists.List. Import ListNotations. Local Open Scope Z_scope.
 
 Local Set Implicit Arguments.
+Local Set Primitive Projections.
 
 Import
   Rewriter.Language.Wf
@@ -234,6 +235,26 @@ Typeclasses Opaque widen_carry_opt.
 Class widen_bytes_opt := widen_bytes : bool.
 #[global]
 Typeclasses Opaque widen_bytes_opt.
+(** Fancy Output *)
+Record to_fancy_args := { invert_low : Z (*log2wordmax*) -> Z -> option Z ; invert_high : Z (*log2wordmax*) -> Z -> option Z ; value_range : zrange ; flag_range : zrange }.
+Class translate_to_fancy_opt := translate_to_fancy : option to_fancy_args.
+#[global]
+Typeclasses Opaque translate_to_fancy_opt.
+Definition default_translate_to_fancy : translate_to_fancy_opt := None.
+Class translate_to_fancy_opt_correct {translate_to_fancy : translate_to_fancy_opt}
+  := translate_to_fancy_correct
+    : match translate_to_fancy with
+      | Some {| invert_low := il ; invert_high := ih |}
+        => (forall s v v' : Z, il s v = Some v' -> v = Z.land v' (2^(s/2)-1))
+           /\ (forall s v v' : Z, ih s v = Some v' -> v = Z.shiftr v' (s/2))
+      | None => True
+      end.
+Global Arguments translate_to_fancy_opt_correct {_}, _.
+#[global]
+Typeclasses Opaque translate_to_fancy_opt_correct.
+#[global]
+Hint Mode translate_to_fancy_opt_correct + : typeclass_instances.
+Global Instance default_translate_to_fancy_correct : translate_to_fancy_opt_correct default_translate_to_fancy := I.
 (** Unfold value_barrier *)
 Class unfold_value_barrier_opt := unfold_value_barrier : bool.
 #[global]
@@ -498,15 +519,6 @@ Module Pipeline.
       := fun err => String.concat String.NewLine (show_lines err).
   End show.
 
-  Definition invert_result {T} (v : ErrorT T)
-    := match v return match v with Success _ => T | _ => ErrorMessage end with
-       | Success v => v
-       | Error msg => msg
-       end.
-
-  Local Set Primitive Projections.
-  Record to_fancy_args := { invert_low : Z (*log2wordmax*) -> Z -> option Z ; invert_high : Z (*log2wordmax*) -> Z -> option Z ; value_range : zrange ; flag_range : zrange }.
-
   Definition RewriteAndEliminateDeadAndInline {t}
              (DoRewrite : Expr t -> Expr t)
              (with_dead_code_elimination : bool)
@@ -551,10 +563,10 @@ Module Pipeline.
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {only_signed : only_signed_opt}
              {unfold_value_barrier : unfold_value_barrier_opt}
+             {translate_to_fancy : translate_to_fancy_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (with_let_bind_return : bool)
-             (translate_to_fancy : option to_fancy_args)
              {t}
              (E : Expr t)
              arg_bounds
@@ -594,10 +606,10 @@ Module Pipeline.
              {split_multiret_to : split_multiret_to_opt}
              {unfold_value_barrier : unfold_value_barrier_opt}
              {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
+             {translate_to_fancy : translate_to_fancy_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (with_let_bind_return : bool := true)
-             (translate_to_fancy : option to_fancy_args)
              (possible_values : list Z)
              (relax_zrange := relax_zrange_gen only_signed possible_values)
              ((** convert adc/sbb which generates no carry to add/sub iff we're not fancy *)
@@ -610,7 +622,7 @@ Module Pipeline.
     := (*let E := expr.Uncurry E in*)
       let assume_cast_truncates := false in
       let opts := opts_of_method in
-      dlet E := PreBoundsPipeline (* with_dead_code_elimination *) with_subst01 with_let_bind_return translate_to_fancy E arg_bounds in
+      dlet E := PreBoundsPipeline (* with_dead_code_elimination *) with_subst01 with_let_bind_return E arg_bounds in
       (** We first do bounds analysis with no relaxation so that we
           can do rewriting with casts, and then once that's out of the
           way, we do bounds analysis again to relax the bounds. *)
@@ -695,12 +707,12 @@ Module Pipeline.
              {split_mul_to : split_mul_to_opt}
              {split_multiret_to : split_multiret_to_opt}
              {unfold_value_barrier : unfold_value_barrier_opt}
+             {translate_to_fancy : translate_to_fancy_opt}
              (type_prefix : string)
              (name : string)
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (inline : bool)
-             (translate_to_fancy : option to_fancy_args)
              (possible_values : list Z)
              (relax_zrangef : relax_zrange_opt
               := fun r => Option.value (relax_zrange_gen only_signed possible_values r) r)
@@ -716,7 +728,6 @@ Module Pipeline.
     := dlet_nd E := BoundsPipeline
                       (*with_dead_code_elimination*)
                       with_subst01
-                      translate_to_fancy
                       possible_values
                       E arg_bounds out_bounds in
        match E with
@@ -745,12 +756,12 @@ Module Pipeline.
              {split_mul_to : split_mul_to_opt}
              {split_multiret_to : split_multiret_to_opt}
              {unfold_value_barrier : unfold_value_barrier_opt}
+             {translate_to_fancy : translate_to_fancy_opt}
              (type_prefix : string)
              (name : string)
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (inline : bool)
-             (translate_to_fancy : option to_fancy_args)
              (possible_values : list Z)
              (relax_zrangef : relax_zrange_opt
               := fun r => Option.value (relax_zrange_gen only_signed possible_values r) r)
@@ -769,7 +780,6 @@ Module Pipeline.
                   (*with_dead_code_elimination*)
                   with_subst01
                   inline
-                  translate_to_fancy
                   possible_values
                   machine_wordsize
                   E comment arg_bounds out_bounds arg_typedefs out_typedefs in
@@ -792,12 +802,12 @@ Module Pipeline.
              {split_mul_to : split_mul_to_opt}
              {split_multiret_to : split_multiret_to_opt}
              {unfold_value_barrier : unfold_value_barrier_opt}
+             {translate_to_fancy : translate_to_fancy_opt}
              (type_prefix : string)
              (name : string)
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (inline : bool)
-             (translate_to_fancy : option to_fancy_args)
              (possible_values : list Z)
              (machine_wordsize : Z)
              {t}
@@ -813,7 +823,6 @@ Module Pipeline.
                   (*with_dead_code_elimination*)
                   with_subst01
                   inline
-                  translate_to_fancy
                   possible_values
                   machine_wordsize
                   E comment arg_bounds out_bounds arg_typedefs out_typedefs in
@@ -1140,9 +1149,10 @@ Module Pipeline.
              {split_multiret_to : split_multiret_to_opt}
              {unfold_value_barrier : unfold_value_barrier_opt}
              {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
+             {translate_to_fancy : translate_to_fancy_opt}
+             {translate_to_fancy_correct : translate_to_fancy_opt_correct}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
-             (translate_to_fancy : option to_fancy_args)
              (possible_values : list Z)
              {t}
              (e : Expr t)
@@ -1150,14 +1160,8 @@ Module Pipeline.
              out_bounds
              {type_good : type_goodT t}
              rv
-             (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 translate_to_fancy possible_values e arg_bounds out_bounds = Success rv)
+             (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 possible_values e arg_bounds out_bounds = Success rv)
              (Hwf : Wf e)
-             (Hfancy : match translate_to_fancy with
-                       | Some {| invert_low := il ; invert_high := ih |}
-                         => (forall s v v' : Z, il s v = Some v' -> v = Z.land v' (2^(s/2)-1))
-                           /\ (forall s v v' : Z, ih s v = Some v' -> v = Z.shiftr v' (s/2))
-                       | None => True
-                       end)
     : (forall arg1 arg2
               (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
               (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
@@ -1171,6 +1175,7 @@ Module Pipeline.
     (* talk about initial interp rather than final one *)
     rewrite (correct_of_final_iff_correct_of_initial Hinterp) by assumption.
     pose proof Hwf as Hwf'. (* keep an extra copy so it's not cleared *)
+    cbv [translate_to_fancy_opt_correct] in *.
     cbv beta delta [BoundsPipeline PreBoundsPipeline Let_In] in Hrv.
     fwd Hrv Hwf Hinterp; [ repeat fwd_side_condition_step .. | subst ].
     solve [ eauto using conj with nocore ].
@@ -1198,15 +1203,10 @@ Module Pipeline.
         {split_multiret_to : split_multiret_to_opt}
         {unfold_value_barrier : unfold_value_barrier_opt}
         {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
+        {translate_to_fancy : translate_to_fancy_opt}
+        {translate_to_fancy_correct : translate_to_fancy_opt_correct}
         (with_dead_code_elimination : bool := true)
         (with_subst01 : bool)
-        (translate_to_fancy : option to_fancy_args)
-        (Hfancy : match translate_to_fancy with
-                  | Some {| invert_low := il ; invert_high := ih |}
-                    => (forall s v v' : Z, il s v = Some v' -> v = Z.land v' (2^(s/2)-1))
-                      /\ (forall s v v' : Z, ih s v = Some v' -> v = Z.shiftr v' (s/2))
-                  | None => True
-                  end)
         (possible_values : list Z)
         {t}
         (e : Expr t)
@@ -1220,7 +1220,7 @@ Module Pipeline.
                type.app_curried (Interp e) arg1 = type.app_curried InterpE arg2)
            /\ Wf e)
         rv
-        (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 translate_to_fancy possible_values e arg_bounds out_bounds = Success rv)
+        (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 possible_values e arg_bounds out_bounds = Success rv)
     : BoundsPipeline_correct_transT arg_bounds out_bounds InterpE rv.
   Proof.
     destruct InterpE_correct_and_Wf as [InterpE_correct Hwf].

@@ -76,29 +76,22 @@ Section rbarrett_red.
   Local Instance ignore_unique_asm_names : ignore_unique_asm_names_opt := false.
   Local Instance low_level_rewriter_method : low_level_rewriter_method_opt := default_low_level_rewriter_method.
 
-  Let fancy_args
-    := (Some {| Pipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;
-                Pipeline.invert_high log2wordsize := invert_high log2wordsize consts_list;
-                Pipeline.value_range := value_range;
-                Pipeline.flag_range := flag_range |}).
+  Local Instance fancy_args : translate_to_fancy_opt
+    := (Some {| BoundsPipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;
+                BoundsPipeline.invert_high log2wordsize := invert_high log2wordsize consts_list;
+                BoundsPipeline.value_range := value_range;
+                BoundsPipeline.flag_range := flag_range |}).
 
-  Lemma fancy_args_good
-    : match fancy_args with
-      | Some {| Pipeline.invert_low := il ; Pipeline.invert_high := ih |}
-        => (forall s v v' : Z, il s v = Some v' -> v = Z.land v' (2^(s/2)-1))
-           /\ (forall s v v' : Z, ih s v = Some v' -> v = Z.shiftr v' (s/2))
-      | None => True
-      end.
-  Proof.
-    cbv [fancy_args invert_low invert_high constant_to_scalar constant_to_scalar_single consts_list fold_right];
+  Local Instance fancy_args_good : translate_to_fancy_opt_correct.
+  Proof using Type.
+    cbv [translate_to_fancy_opt_correct translate_to_fancy fancy_args invert_low invert_high constant_to_scalar constant_to_scalar_single consts_list fold_right];
       split; intros; break_innermost_match_hyps; Z.ltb_to_lt; subst; congruence.
   Qed.
-  Local Hint Extern 1 => apply fancy_args_good: typeclass_instances. (* This is a kludge *)
 
   Lemma mut_correct :
     0 < machine_wordsize ->
     Partition.partition (uweight machine_wordsize) (1 + 1) (muLow + 2 ^ machine_wordsize) = [muLow; 1].
-  Proof.
+  Proof using mu.
     intros; cbn. subst muLow.
     assert (0 < 2^machine_wordsize) by ZeroBounds.Z.zero_bounds.
     pose proof (Z.mod_pos_bound mu (2^machine_wordsize) ltac:(lia)).
@@ -113,7 +106,7 @@ Section rbarrett_red.
     0 < machine_wordsize ->
     2^(machine_wordsize - 1) < M < 2^machine_wordsize ->
     Partition.partition (uweight machine_wordsize) 1 M = [M].
-  Proof.
+  Proof using Type.
     intros; cbn. assert (0 < 2^(machine_wordsize-1)) by ZeroBounds.Z.zero_bounds.
     rewrite !uweight_S, weight_0; auto using uwprops with lia.
     autorewrite with zsimplify. RewriteModSmall.Z.rewrite_mod_small.
@@ -164,7 +157,6 @@ Section rbarrett_red.
   Definition barrett_red
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         fancy_args (* fancy *)
          possible_values
          (reified_barrett_red_gen
             @ GallinaReify.Reify M
@@ -213,7 +205,7 @@ Section rbarrett_red.
   Qed.
 
   Lemma Wf_barrett_red res (Hres : barrett_red = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). apply fancy_args_good. Qed.
+  Proof using Type. prove_pipeline_wf (). Qed.
 End rbarrett_red.
 
 Module Export Hints.

@@ -79,24 +79,17 @@ Section rmontred.
   Local Instance ignore_unique_asm_names : ignore_unique_asm_names_opt := false.
   Local Instance low_level_rewriter_method : low_level_rewriter_method_opt := default_low_level_rewriter_method.
 
-  Let fancy_args
-    := (Some {| Pipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;
-                Pipeline.invert_high log2wordsize := invert_high log2wordsize consts_list;
-                Pipeline.value_range := value_range;
-                Pipeline.flag_range := flag_range |}).
+  Local Instance fancy_args : translate_to_fancy_opt
+    := (Some {| BoundsPipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;
+                BoundsPipeline.invert_high log2wordsize := invert_high log2wordsize consts_list;
+                BoundsPipeline.value_range := value_range;
+                BoundsPipeline.flag_range := flag_range |}).
 
-  Lemma fancy_args_good
-    : match fancy_args with
-      | Some {| Pipeline.invert_low := il ; Pipeline.invert_high := ih |}
-        => (forall s v v' : Z, il s v = Some v' -> v = Z.land v' (2^(s/2)-1))
-           /\ (forall s v v' : Z, ih s v = Some v' -> v = Z.shiftr v' (s/2))
-      | None => True
-      end.
+  Local Instance fancy_args_good : translate_to_fancy_opt_correct.
   Proof using consts_list value_range.
-    cbv [fancy_args invert_low invert_high constant_to_scalar constant_to_scalar_single consts_list fold_right];
+    cbv [translate_to_fancy_opt_correct translate_to_fancy fancy_args invert_low invert_high constant_to_scalar constant_to_scalar_single consts_list fold_right];
       split; intros; break_innermost_match_hyps; Z.ltb_to_lt; subst; congruence.
   Qed.
-  Local Hint Extern 1 => apply fancy_args_good: typeclass_instances. (* This is a kludge *)
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
@@ -154,7 +147,6 @@ Section rmontred.
   Definition montred
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         fancy_args (* fancy *)
          possible_values
          (reified_montred_gen
             @ GallinaReify.Reify N @ GallinaReify.Reify R @ GallinaReify.Reify N' @ GallinaReify.Reify (machine_wordsize:Z))
@@ -192,7 +184,7 @@ Section rmontred.
   Qed.
 
   Lemma Wf_montred res (Hres : montred = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). apply fancy_args_good. Qed.
+  Proof using Type. prove_pipeline_wf (). Qed.
 End rmontred.
 
 Module Export Hints.

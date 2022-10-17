@@ -36,6 +36,7 @@ Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
+Local Existing Instance default_translate_to_fancy.
 Local Existing Instance default_low_level_rewriter_method.
 Local Existing Instance AbstractInterpretation.default_Options.
 Local Instance : unfold_value_barrier_opt := true.
@@ -425,7 +426,7 @@ Module debugging_21271_from_bytes.
       clear v.
       cbv [from_bytes] in k.
       cbv [Pipeline.BoundsPipeline] in k.
-      set (k' := Pipeline.PreBoundsPipeline _ _ _ _ _) in (value of k).
+      set (k' := Pipeline.PreBoundsPipeline _ _ _ _) in (value of k).
       vm_compute in k'.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
       set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
@@ -533,7 +534,6 @@ Module debugging_sat_solinas_25519.
             "fiat" "mul"
             false (* subst01 *)
             false (* inline *)
-            None (* fancy *)
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
@@ -752,7 +752,6 @@ Module debugging_sat_solinas_25519_expanded_straightforward.
             "fiat" "mul"
             false (* subst01 *)
             false (* inline *)
-            None (* fancy *)
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
@@ -974,7 +973,6 @@ Module debugging_sat_solinas_25519_expanded.
             "fiat" "mul"
             false (* subst01 *)
             false (* inline *)
-            None (* fancy *)
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
@@ -3068,7 +3066,6 @@ Module debugging_remove_mul_split_to_C_uint1_carry.
       "mul"
       false (* subst01 *)
       false (* inline *)
-      None (* fancy *)
       possible_values
       machine_wordsize
       ltac:(let r := Reify ((fun f g => dlet _ := ident.comment ("foo", f, g) in carry_mulmod limbwidth_num limbwidth_den s c n idxs f g)) in
@@ -3376,7 +3373,6 @@ Module debugging_remove_mul_split.
     Redirect "log" Compute
       Pipeline.BoundsPipeline
       false (* subst01 *)
-      None (* fancy *)
       possible_values
       ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n idxs)) in
             exact r)
@@ -3788,7 +3784,6 @@ Module debugging_remove_mul_split2.
       false (* subst01 *)
       false (* inline *)
       None
-      None (* fancy *)
       possible_values
       foo
       (fun _ _ => []) (* comment *)
@@ -3871,7 +3866,7 @@ Module debugging_rewriting.
 
     Redirect "log" Compute
       (Pipeline.BoundsPipeline
-         true None [64; 128]
+         true [64; 128]
          ltac:(let r := Reify (fun f g
                                => (  (addmod limbwidth_num limbwidth_den n f g)
                               )) in
@@ -3881,7 +3876,7 @@ Module debugging_rewriting.
 
     Redirect "log" Compute
       (Pipeline.BoundsPipeline
-         true None [64; 128]
+         true [64; 128]
          ltac:(let r := Reify (fun f g
                                => (  (add (weight limbwidth_num limbwidth_den) n f g)
                               )) in
@@ -3891,7 +3886,7 @@ Module debugging_rewriting.
 
     Redirect "log" Compute
       (Pipeline.BoundsPipeline
-         true None [64; 128]
+         true [64; 128]
          ltac:(let r := Reify (fun f g
                                => let a_a := to_associational (weight limbwidth_num limbwidth_den) n f in
                                   let b_a := to_associational (weight limbwidth_num limbwidth_den) n g in from_associational (weight limbwidth_num limbwidth_den) n (a_a ++ b_a)
@@ -3902,7 +3897,7 @@ Module debugging_rewriting.
 
     Redirect "log" Compute
       (Pipeline.BoundsPipeline
-         true None [64; 128]
+         true [64; 128]
          ltac:(let r := Reify (fun f (g : list Z)
                                => let a_a := to_associational (weight limbwidth_num limbwidth_den) n f in
                                   a_a) in
@@ -3912,7 +3907,7 @@ Module debugging_rewriting.
 
     Redirect "log" Compute
       (Pipeline.BoundsPipeline
-         true None [64; 128]
+         true [64; 128]
          ltac:(let r := Reify (fun (f g : list Z)
                                => let a_a := combine (map (weight limbwidth_num limbwidth_den) (seq 0 n)) f in
                                   a_a) in
@@ -3921,7 +3916,7 @@ Module debugging_rewriting.
                 ZRange.type.base.option.None).
 
     Definition foo := (Pipeline.BoundsPipeline
-                         true None [64; 128]
+                         true [64; 128]
                          ltac:(let r := Reify (combine [1; 2] [1; 2]) in
                                exact r)
                                 tt
@@ -3981,7 +3976,7 @@ Section debugging_p448.
   Redirect "log" Print squaremod.
   Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
-        true None [64; 128]
+        true [64; 128]
         ltac:(let r := Reify (fun f
                               => (  (squaremod (weight limbwidth_num limbwidth_den) s c n f)
                                     )) in
@@ -3995,7 +3990,6 @@ Section debugging_p448.
        "mul"
        false (* subst01 *)
        false (* inline *)
-       None (* fancy *)
        possible_values machine_wordsize
        ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n [3; 7; 4; 0; 5; 1; 6; 2; 7; 3; 4; 0]%nat)) in
              exact r)
@@ -4009,7 +4003,6 @@ Section debugging_p448.
   Time Redirect "log" Compute
        Pipeline.BoundsPipeline
        false (* subst01 *)
-       None (* fancy *)
        possible_values
        ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n [3; 7; 4; 0; 5; 1; 6; 2; 7; 3; 4; 0]%nat)) in
              exact r)
@@ -4018,7 +4011,7 @@ Section debugging_p448.
 
   Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
-        true None [64; 128]
+        true [64; 128]
         ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n [3; 7; 4; 0; 5; 1; 6; 2; 7; 3; 4; 0]%nat)) in
               exact r)
                (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
@@ -4026,7 +4019,7 @@ Section debugging_p448.
 
   Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
-        true None [64; 128]
+        true [64; 128]
         ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n []%nat)) in
               exact r)
                (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
@@ -4034,7 +4027,7 @@ Section debugging_p448.
 
   Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
-        true None [64; 128]
+        true [64; 128]
         ltac:(let r := Reify (fun f g
                               => (  (mulmod (weight limbwidth_num limbwidth_den) s c n f g)
                                     )) in
@@ -4044,7 +4037,7 @@ Section debugging_p448.
 
   Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
-        true None [64; 128]
+        true [64; 128]
         ltac:(let r := Reify (fun a b
                               => (let weight := weight limbwidth_num limbwidth_den in
                                   let a_a := to_associational weight n a in
