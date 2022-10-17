@@ -839,6 +839,7 @@ Section __.
     := prefix_with_carry_bytes [machine_wordsize; 2 * machine_wordsize]%Z.
   Let possible_values := possible_values_of_machine_wordsize.
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
+  Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
@@ -867,7 +868,6 @@ Section __.
   Definition selectznz
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          reified_selectznz_gen
          (Some r[0~>1], (Some saturated_bounds, (Some saturated_bounds, tt)))%zrange
@@ -883,7 +883,6 @@ Section __.
   Definition mulx (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_mulx_gen
             @ GallinaReify.Reify s)
@@ -900,7 +899,6 @@ Section __.
   Definition addcarryx (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_addcarryx_gen
             @ GallinaReify.Reify s)
@@ -918,7 +916,6 @@ Section __.
   Definition subborrowx (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_subborrowx_gen
             @ GallinaReify.Reify s)
@@ -936,7 +933,6 @@ Section __.
   Definition value_barrier (s : int.type)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          reified_value_barrier_gen
          (Some (int.to_zrange s), tt)
@@ -953,7 +949,6 @@ Section __.
   Definition cmovznz (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_cmovznz_gen
             @ GallinaReify.Reify s)
@@ -970,7 +965,6 @@ Section __.
   Definition cmovznz_by_mul (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_cmovznz_by_mul_gen
             @ GallinaReify.Reify s)
@@ -988,7 +982,6 @@ Section __.
   Definition copy
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          reified_id_gen
          (Some saturated_bounds, tt)%zrange
