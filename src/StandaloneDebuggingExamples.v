@@ -66,7 +66,7 @@ Module debugging_no_asm.
     cbv [Primitives.parse_asm_hints] in v.
     cbv [Primitives.Synthesize] in v.
     cbv beta delta [Primitives.parse_asm_hints Primitives.parse_asm_files_lines] in v.
-    vm_compute ForExtraction.assembly_hints_lines in v.
+    vm_compute Primitives.Options.assembly_hints_lines in v.
     cbv beta iota in v.
     vm_compute Parse.parse_validated in v.
     cbv beta iota in v.
@@ -145,7 +145,7 @@ Module debugging_typedef_bounds.
     cbv [Primitives.parse_asm_hints] in v.
     cbv [Primitives.Synthesize] in v.
     cbv [Primitives.parse_asm_hints] in v.
-    vm_compute ForExtraction.assembly_hints_lines in v.
+    vm_compute Primitives.Options.assembly_hints_lines in v.
     cbv beta iota in v.
     cbv beta iota delta [Primitives.Synthesize] in v.
     set (k := ForExtraction.CollectErrors _) in (value of v).

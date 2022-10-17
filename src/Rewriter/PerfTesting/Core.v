@@ -44,27 +44,9 @@ Import
   Rewriter.All.Compilers.
 
 Local Existing Instance Stringification.C.Compilers.ToString.C.OutputCAPI.
-Local Existing Instance default_language_naming_conventions.
-Local Existing Instance default_documentation_options.
-Local Existing Instance default_output_options.
-Local Existing Instance AbstractInterpretation.default_Options.
-Local Instance : package_name_opt := None.
-Local Instance : class_name_opt := None.
-Local Instance : static_opt := true.
-Local Instance : internal_static_opt := true.
-Local Instance : inline_opt := true.
-Local Instance : inline_internal_opt := true.
-Local Instance : use_mul_for_cmovznz_opt := false.
-Local Instance : emit_primitives_opt := true.
-Local Instance : only_signed_opt := false.
-Local Instance : no_select_opt := false.
-Local Instance : should_split_mul_opt := false.
-Local Instance : should_split_multiret_opt := false.
-Local Instance : unfold_value_barrier_opt := true.
-Local Instance : assembly_hints_lines_opt := [].
-Local Instance : ignore_unique_asm_names_opt := false.
-Local Instance : widen_bytes_opt := false.
-Local Instance : widen_carry_opt := false.
+Local Existing Instance Primitives.Options.default_PipelineOptions.
+Local Existing Instance Primitives.Options.default_PipelineToStringOptions.
+Local Existing Instance Primitives.Options.default_SynthesisOptions.
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
 
 Import API.

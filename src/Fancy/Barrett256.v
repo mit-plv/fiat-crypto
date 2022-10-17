@@ -21,6 +21,12 @@ Module Barrett256.
   Definition M := Eval lazy in (2^256-2^224+2^192+2^96-1).
   Definition machine_wordsize := 256.
 
+  Local Instance : Primitives.Options.PipelineOptions
+    := let _ := Primitives.Options.default_PipelineOptions in
+       {| Primitives.Options.widen_carry := false
+       ; Primitives.Options.widen_bytes := true
+       ; Primitives.Options.unfold_value_barrier := true |}.
+
   Derive barrett_red256
          SuchThat (barrett_red M machine_wordsize = ErrorT.Success barrett_red256)
          As barrett_red256_eq.

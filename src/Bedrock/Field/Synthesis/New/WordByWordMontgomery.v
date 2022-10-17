@@ -770,7 +770,6 @@ Require Import bedrock2.ProgramLogic.
   Definition prefix : string := "p224_"%string.
 
   Existing Instances Defaults64.default_parameters default_parameters_ok.
-  Existing Instances no_select_size split_mul_to split_multiret_to.
   Definition n := Eval vm_compute in (WordByWordMontgomery.n m machine_wordsize).
 
   Instance field_parameters : FieldParameters.

@@ -24,6 +24,12 @@ Module Montgomery256.
   Definition R' := 115792089183396302114378112356516095823261736990586219612555396166510339686400.
   Definition machine_wordsize := 256.
 
+  Local Instance : Primitives.Options.PipelineOptions
+    := let _ := Primitives.Options.default_PipelineOptions in
+       {| Primitives.Options.widen_carry := false
+       ; Primitives.Options.widen_bytes := true
+       ; Primitives.Options.unfold_value_barrier := true |}.
+
   Derive montred256
          SuchThat (montred N R N' machine_wordsize = ErrorT.Success montred256)
          As montred256_eq.

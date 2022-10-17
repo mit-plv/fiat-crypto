@@ -79,7 +79,7 @@ Ltac apply_correctness_in H :=
   | context [WordByWordMontgomery.nonzero] =>
     eapply WordByWordMontgomery.nonzero_correct in H
   | context [WordByWordMontgomery.selectznz] =>
-    eapply Primitives.selectznz_correct in H
+    eapply WordByWordMontgomery.selectznz_correct in H
   | context [WordByWordMontgomery.to_bytes] =>
     eapply WordByWordMontgomery.to_bytes_correct in H
   | context [WordByWordMontgomery.from_bytes] =>
@@ -226,8 +226,6 @@ Section __.
   Proof.
     make_operation (WordByWordMontgomery.selectznz m width).
     prove_operation_correctness.
-    Unshelve.
-    { apply width. }
   Defined.
 
   Definition to_bytes

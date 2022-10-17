@@ -17,7 +17,6 @@ Section Field.
 
   Existing Instances Defaults32.default_parameters
            Defaults32.default_parameters_ok.
-  Existing Instances no_select_size split_mul_to split_multiret_to.
   Definition prefix : string := "fe1305_"%string.
 
   (* Define Poly1305 field *)

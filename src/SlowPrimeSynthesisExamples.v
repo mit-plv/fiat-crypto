@@ -37,37 +37,31 @@ Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
 Local Existing Instance default_translate_to_fancy.
-Local Existing Instance default_low_level_rewriter_method.
-Local Existing Instance AbstractInterpretation.default_Options.
+Local Existing Instances
+      Primitives.Options.default_PipelineOptions
+      Primitives.Options.default_PipelineToStringOptions
+      Primitives.Options.default_SynthesisOptions
+| 100.
 Local Instance : unfold_value_barrier_opt := true.
-Local Instance : assembly_hints_lines_opt := [].
-Local Instance : ignore_unique_asm_names_opt := false.
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
-Local Existing Instance default_language_naming_conventions.
-Local Existing Instance default_documentation_options.
-Local Instance : package_name_opt := None.
-Local Instance : class_name_opt := None.
 
 Module debugging_go_bits_add.
   Import Stringification.Go.
   Section __.
     Local Existing Instance Go.OutputGoAPI.
-    Local Instance : relax_adc_sbb_return_carry_to_bitwidth_opt := [32; 64].
-    Local Instance : skip_typedefs_opt := true.
-    Local Instance : language_specific_cast_adjustment_opt := true.
-    Local Existing Instance Build_output_options_opt.
-    Local Instance static : static_opt := false.
-    Local Instance : internal_static_opt := false.
-    Local Instance : inline_opt := false.
-    Local Instance : inline_internal_opt := false.
-    Local Instance : emit_primitives_opt := true.
-    Local Instance : use_mul_for_cmovznz_opt := true.
-    Local Instance : widen_carry_opt := true.
-    Local Instance : widen_bytes_opt := true.
-    Local Instance : only_signed_opt := false.
-    Local Instance : no_select_opt := false.
-    Local Instance : should_split_mul_opt := true. (* only for x64 *)
-    Local Instance : should_split_multiret_opt := false.
+    Local Instance : Primitives.Options.PipelineOptions :=
+      {| Primitives.Options.output_options :=
+        {| relax_adc_sbb_return_carry_to_bitwidth_ := [32; 64]
+        ; skip_typedefs_ := true
+        ; language_specific_cast_adjustment_ := true
+        |}
+      ; Primitives.Options.widen_carry := true
+      ; Primitives.Options.widen_bytes := true
+      ; Primitives.Options.only_signed := false
+      ; Primitives.Options.no_select := false
+      ; Primitives.Options.should_split_mul := true (* only for x64 *)
+      ; Primitives.Options.should_split_multiret := false
+      |}.
 
     Context (s := 2^127)
             (c :=  [(1,1)])
@@ -95,10 +89,11 @@ Module debugging_go_bits_add.
              | [ H := @inl ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inl A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
              | [ H := @inr ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inr A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
              end.
-      vm_compute WordByWordMontgomery.no_select_size in k.
-      vm_compute WordByWordMontgomery.split_mul_to in k.
-      vm_compute WordByWordMontgomery.split_multiret_to in k.
-      vm_compute WordByWordMontgomery.split_multiret_to in k.
+      vm_compute Pipeline.no_select_size in k.
+      vm_compute Pipeline.split_mul_to in k.
+      vm_compute Pipeline.split_multiret_to in k.
+      vm_compute Pipeline.split_multiret_to in k.
+      vm_compute Pipeline.translate_to_fancy in k.
       cbv beta iota in k.
       set (v := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
       vm_compute in v.
@@ -107,7 +102,7 @@ Module debugging_go_bits_add.
              | [ H := @inl ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inl A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
              | [ H := @inr ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inr A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
              end.
-      vm_compute relax_adc_sbb_return_carry_to_bitwidth_ in k.
+      vm_compute Pipeline.relax_adc_sbb_return_carry_to_bitwidth in k.
       cbv beta iota in k.
       set (v' := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _ _) in (value of k).
       vm_compute in v'; clear -k.
@@ -174,7 +169,7 @@ Module debugging_go_bits_add.
          | context T[let a := ?v in @?f a]  => do_set a v f
          | context T[dlet a := ?v in @?f a] => do_set a v f
          end; cbv beta iota in * ).
-      vm_compute WordByWordMontgomery.possible_values_of_machine_wordsize in relax_zrange.
+      vm_compute Primitives.possible_values_of_machine_wordsize in relax_zrange.
       cbv [only_signed_opt_instance_0] in relax_zrange.
       cbv [Pipeline.opts_of_method] in E1; subst E0.
       cbv [default_low_level_rewriter_method] in E1.
@@ -319,7 +314,7 @@ Module debugging_go_bits_add.
 
       clear v; rename v' into v.
       cbv [WordByWordMontgomery.add] in k.
-      cbv [possible_values_of_machine_wordsize] in k.
+      cbv [Primitives.possible_values_of_machine_wordsize] in k.
       cbv [widen_carry] in k.
       cbv [widen_carry_opt_instance_0] in k.
       cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
@@ -1682,8 +1677,8 @@ Module debugging_25519_to_bytes_bedrock2.
       cbv -[Language.Compilers.ToString.ToFunctionLines] in v.
       clear v.
       cbv [to_bytes] in k.
-      cbv [possible_values_of_machine_wordsize] in k.
-      cbv [possible_values_of_machine_wordsize_with_bytes] in k.
+      cbv [Primitives.possible_values_of_machine_wordsize] in k.
+      cbv [Primitives.possible_values_of_machine_wordsize_with_bytes] in k.
       cbv [widen_bytes] in k.
       cbv [widen_bytes_opt_instance_0] in k.
       cbv [widen_carry] in k.
@@ -1838,8 +1833,8 @@ Module debugging_25519_to_bytes_java.
       cbv -[Language.Compilers.ToString.ToFunctionLines] in v.
       clear v.
       cbv [to_bytes] in k.
-      cbv [possible_values_of_machine_wordsize] in k.
-      cbv [possible_values_of_machine_wordsize_with_bytes] in k.
+      cbv [Primitives.possible_values_of_machine_wordsize] in k.
+      cbv [Primitives.possible_values_of_machine_wordsize_with_bytes] in k.
       cbv [widen_bytes] in k.
       cbv [widen_bytes_opt_instance_0] in k.
       cbv [widen_carry] in k.
@@ -1910,7 +1905,7 @@ Module debugging_p256_uint1.
       cbv [smul] in v.
       set (k := WordByWordMontgomery.mul m machine_wordsize) in (value of v).
       cbv [WordByWordMontgomery.mul] in k.
-      cbv [possible_values_of_machine_wordsize] in k.
+      cbv [Primitives.possible_values_of_machine_wordsize] in k.
       cbv [widen_carry] in k.
       cbv [widen_carry_opt_instance_0] in k.
       cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
@@ -2038,7 +2033,7 @@ Module debugging_go_build0.
 
       clear v; rename v' into v.
       cbv [WordByWordMontgomery.add] in k.
-      cbv [possible_values_of_machine_wordsize] in k.
+      cbv [Primitives.possible_values_of_machine_wordsize] in k.
       cbv [widen_carry] in k.
       cbv [widen_carry_opt_instance_0] in k.
       cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
@@ -2083,7 +2078,7 @@ Module debugging_go_build.
       cbv [sadd] in v.
       set (k := WordByWordMontgomery.add m machine_wordsize) in (value of v).
       cbv [WordByWordMontgomery.add] in k.
-      cbv [possible_values_of_machine_wordsize] in k.
+      cbv [Primitives.possible_values_of_machine_wordsize] in k.
       cbv [widen_carry] in k.
       cbv [widen_carry_opt_instance_0] in k.
       cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.

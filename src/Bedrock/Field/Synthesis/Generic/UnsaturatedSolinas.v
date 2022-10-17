@@ -74,7 +74,7 @@ Ltac apply_correctness_in H :=
   | context [UnsaturatedSolinas.opp] =>
     eapply UnsaturatedSolinas.opp_correct in H
   | context [UnsaturatedSolinas.selectznz] =>
-    eapply Primitives.selectznz_correct in H
+    eapply UnsaturatedSolinas.selectznz_correct in H
   | context [UnsaturatedSolinas.to_bytes] =>
     eapply UnsaturatedSolinas.to_bytes_correct in H
   | context [UnsaturatedSolinas.from_bytes] =>
@@ -208,8 +208,6 @@ Section __.
   Proof.
     make_operation (UnsaturatedSolinas.selectznz n width).
     prove_operation_correctness.
-    Unshelve.
-    { apply width. }
   Defined.
 
   Definition to_bytes

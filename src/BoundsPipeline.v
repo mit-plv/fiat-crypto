@@ -302,6 +302,63 @@ Definition typedef_info_of_typedef {relax_zrange : relax_zrange_opt} {t bounds} 
 
 Module Pipeline.
   Import GeneralizeVar.
+
+  Class BoundsPipelineOptions :=
+    { AbstractInterpretation_opts : AbstractInterpretation.Options
+    ; low_level_rewriter_method : low_level_rewriter_method_opt
+    ; only_signed : only_signed_opt
+    ; no_select_size : no_select_size_opt
+    ; split_mul_to : split_mul_to_opt
+    ; split_multiret_to : split_multiret_to_opt
+    ; unfold_value_barrier : unfold_value_barrier_opt
+    ; relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt
+    ; translate_to_fancy : translate_to_fancy_opt
+    ; with_dead_code_elimination : bool := true
+    ; with_let_bind_return : bool := true
+    (** convert adc/sbb which generates no carry to add/sub iff we're not fancy *)
+    ; adc_no_carry_to_add := match translate_to_fancy with Some _ => false | None => true end
+    }.
+  Definition default_BoundsPipelineOptions : BoundsPipelineOptions :=
+    {| AbstractInterpretation_opts := AbstractInterpretation.default_Options
+    ; low_level_rewriter_method := default_low_level_rewriter_method
+    ; only_signed := false
+    ; no_select_size := None
+    ; split_mul_to := None
+    ; split_multiret_to := None
+    ; unfold_value_barrier := true
+    ; relax_adc_sbb_return_carry_to_bitwidth := []
+    ; translate_to_fancy := default_translate_to_fancy
+    |}.
+
+  Global Existing Instances
+         Build_BoundsPipelineOptions
+         AbstractInterpretation_opts
+         low_level_rewriter_method
+         only_signed
+         no_select_size
+         split_mul_to
+         split_multiret_to
+         unfold_value_barrier
+         relax_adc_sbb_return_carry_to_bitwidth
+         translate_to_fancy
+  .
+  #[global]
+   Hint Cut [
+      ( _ * )
+        (AbstractInterpretation_opts
+        | low_level_rewriter_method
+        | only_signed
+        | no_select_size
+        | split_mul_to
+        | split_multiret_to
+        | unfold_value_barrier
+        | relax_adc_sbb_return_carry_to_bitwidth
+        | translate_to_fancy
+        ) ( _ * )
+        (Build_BoundsPipelineOptions
+        )
+    ] : typeclass_instances.
+
   Inductive ErrorMessage :=
   | Computed_bounds_are_not_tight_enough
       {t} (computed_bounds expected_bounds : ZRange.type.base.option.interp (type.final_codomain t))
@@ -603,22 +660,10 @@ Module Pipeline.
        List.fold_right (fun f v => f v) E (List.repeat (RewriteRules.RewriteAddAssocLeft opts) n).
 
   Definition BoundsPipeline
-             {opts : AbstractInterpretation.Options}
-             {low_level_rewriter_method : low_level_rewriter_method_opt}
-             {only_signed : only_signed_opt}
-             {no_select_size : no_select_size_opt}
-             {split_mul_to : split_mul_to_opt}
-             {split_multiret_to : split_multiret_to_opt}
-             {unfold_value_barrier : unfold_value_barrier_opt}
-             {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
-             {translate_to_fancy : translate_to_fancy_opt}
-             (with_dead_code_elimination : bool := true)
+             {opts : BoundsPipelineOptions}
              (with_subst01 : bool)
-             (with_let_bind_return : bool := true)
              (possible_values : list Z)
              (relax_zrange := relax_zrange_gen only_signed possible_values)
-             ((** convert adc/sbb which generates no carry to add/sub iff we're not fancy *)
-               adc_no_carry_to_add := match translate_to_fancy with Some _ => false | None => true end)
              {t}
              (E : Expr t)
              arg_bounds
@@ -698,7 +743,7 @@ Module Pipeline.
       end.
 
   Definition BoundsPipelineToExtendedResult
-             {opts : AbstractInterpretation.Options}
+             {opts : BoundsPipelineOptions}
              {output_language_api : ToString.OutputLanguageAPI}
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
@@ -706,16 +751,8 @@ Module Pipeline.
              {internal_static : internal_static_opt}
              {static : static_opt}
              {all_static : static_opt}
-             {low_level_rewriter_method : low_level_rewriter_method_opt}
-             {only_signed : only_signed_opt}
-             {no_select_size : no_select_size_opt}
-             {split_mul_to : split_mul_to_opt}
-             {split_multiret_to : split_multiret_to_opt}
-             {unfold_value_barrier : unfold_value_barrier_opt}
-             {translate_to_fancy : translate_to_fancy_opt}
              (type_prefix : string)
              (name : string)
-             (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (inline : bool)
              (possible_values : list Z)
@@ -731,7 +768,6 @@ Module Pipeline.
              (out_typedefs : ToString.OfPHOAS.base_var_typedef_data (type.final_codomain t))
     : ErrorT (ExtendedSynthesisResult t)
     := dlet_nd E := BoundsPipeline
-                      (*with_dead_code_elimination*)
                       with_subst01
                       possible_values
                       E arg_bounds out_bounds in
@@ -747,7 +783,7 @@ Module Pipeline.
        end.
 
   Definition BoundsPipelineToStrings
-             {opts : AbstractInterpretation.Options}
+             {opts : BoundsPipelineOptions}
              {output_language_api : ToString.OutputLanguageAPI}
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
@@ -755,16 +791,8 @@ Module Pipeline.
              {internal_static : internal_static_opt}
              {static : static_opt}
              {all_static : static_opt}
-             {low_level_rewriter_method : low_level_rewriter_method_opt}
-             {only_signed : only_signed_opt}
-             {no_select_size : no_select_size_opt}
-             {split_mul_to : split_mul_to_opt}
-             {split_multiret_to : split_multiret_to_opt}
-             {unfold_value_barrier : unfold_value_barrier_opt}
-             {translate_to_fancy : translate_to_fancy_opt}
              (type_prefix : string)
              (name : string)
-             (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (inline : bool)
              (possible_values : list Z)
@@ -782,7 +810,6 @@ Module Pipeline.
     := let E := BoundsPipelineToExtendedResult
                   (static:=static) (all_static:=all_static)
                   type_prefix name
-                  (*with_dead_code_elimination*)
                   with_subst01
                   inline
                   possible_values
@@ -794,23 +821,15 @@ Module Pipeline.
        end.
 
   Definition BoundsPipelineToString
-             {opts : AbstractInterpretation.Options}
+             {opts : BoundsPipelineOptions}
              {output_language_api : ToString.OutputLanguageAPI}
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
              {output_options : output_options_opt}
              {internal_static : internal_static_opt}
              {static : static_opt}
-             {low_level_rewriter_method : low_level_rewriter_method_opt}
-             {only_signed : only_signed_opt}
-             {no_select_size : no_select_size_opt}
-             {split_mul_to : split_mul_to_opt}
-             {split_multiret_to : split_multiret_to_opt}
-             {unfold_value_barrier : unfold_value_barrier_opt}
-             {translate_to_fancy : translate_to_fancy_opt}
              (type_prefix : string)
              (name : string)
-             (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (inline : bool)
              (possible_values : list Z)
@@ -825,7 +844,6 @@ Module Pipeline.
     : ErrorT (string * ToString.ident_infos)
     := let E := BoundsPipelineToStrings
                   type_prefix name
-                  (*with_dead_code_elimination*)
                   with_subst01
                   inline
                   possible_values
@@ -867,16 +885,16 @@ Module Pipeline.
     end.
 
   Notation type_of_pipeline result
-    := ((fun a b c d e f g h i j possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h i j possible_values t E arg_bounds out_bounds = result') => t) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b possible_values t E arg_bounds out_bounds = result') => t) _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Notation arg_bounds_of_pipeline result
-    := ((fun a b c d e f g h i j possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h i j possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Notation out_bounds_of_pipeline result
-    := ((fun a b c d e f g h i j possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h i j possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Notation possible_values_of_pipeline result
-    := ((fun a b c d e f g h i j possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h i j possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Notation arg_typedefs_via_tc_of_pipeline result
     := (match type_of_pipeline result, arg_bounds_of_pipeline result return _ with
@@ -1146,17 +1164,8 @@ Module Pipeline.
           | progress destruct_head'_and ].
 
   Lemma BoundsPipeline_correct
-             {opts : AbstractInterpretation.Options}
-             {low_level_rewriter_method : low_level_rewriter_method_opt}
-             {only_signed : only_signed_opt}
-             {no_select_size : no_select_size_opt}
-             {split_mul_to : split_mul_to_opt}
-             {split_multiret_to : split_multiret_to_opt}
-             {unfold_value_barrier : unfold_value_barrier_opt}
-             {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
-             {translate_to_fancy : translate_to_fancy_opt}
+             {opts : BoundsPipelineOptions}
              {translate_to_fancy_correct : translate_to_fancy_opt_correct}
-             (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (possible_values : list Z)
              {t}
@@ -1165,7 +1174,7 @@ Module Pipeline.
              out_bounds
              {type_good : type_goodT t}
              rv
-             (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 possible_values e arg_bounds out_bounds = Success rv)
+             (Hrv : BoundsPipeline with_subst01 possible_values e arg_bounds out_bounds = Success rv)
              (Hwf : Wf e)
     : (forall arg1 arg2
               (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
@@ -1181,7 +1190,7 @@ Module Pipeline.
     rewrite (correct_of_final_iff_correct_of_initial Hinterp) by assumption.
     pose proof Hwf as Hwf'. (* keep an extra copy so it's not cleared *)
     cbv [translate_to_fancy_opt_correct] in *.
-    cbv beta delta [BoundsPipeline PreBoundsPipeline Let_In] in Hrv.
+    cbv beta iota delta [BoundsPipeline PreBoundsPipeline Let_In] in Hrv.
     fwd Hrv Hwf Hinterp; [ repeat fwd_side_condition_step .. | subst ].
     solve [ eauto using conj with nocore ].
   Qed.
@@ -1200,17 +1209,8 @@ Module Pipeline.
        /\ Wf rv.
 
   Lemma BoundsPipeline_correct_trans
-        {opts : AbstractInterpretation.Options}
-        {low_level_rewriter_method : low_level_rewriter_method_opt}
-        {only_signed : only_signed_opt}
-        {no_select_size : no_select_size_opt}
-        {split_mul_to : split_mul_to_opt}
-        {split_multiret_to : split_multiret_to_opt}
-        {unfold_value_barrier : unfold_value_barrier_opt}
-        {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
-        {translate_to_fancy : translate_to_fancy_opt}
+        {opts : BoundsPipelineOptions}
         {translate_to_fancy_correct : translate_to_fancy_opt_correct}
-        (with_dead_code_elimination : bool := true)
         (with_subst01 : bool)
         (possible_values : list Z)
         {t}

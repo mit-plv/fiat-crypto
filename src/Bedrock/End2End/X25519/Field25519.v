@@ -14,8 +14,6 @@ Import ListNotations.
 #[export]
 Existing Instances Naive.word Naive.word32_ok BW32.
 #[export]
-Existing Instances no_select_size split_mul_to split_multiret_to.
-#[export]
 Existing Instances SortedListWord.map SortedListWord.ok.
 
 (* Parameters for Curve25519 field (32-bit machine). *)
