@@ -86,31 +86,10 @@ Local Opaque
 
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
-          {language_naming_conventions : language_naming_conventions_opt}
-          {documentation_options : documentation_options_opt}
-          {output_options : output_options_opt}
-          {opts : AbstractInterpretation.Options}
-          {package_namev : package_name_opt}
-          {class_namev : class_name_opt}
-          {static : static_opt}
-          {internal_static : internal_static_opt}
-          {inline : inline_opt}
-          {inline_internal : inline_internal_opt}
-          {low_level_rewriter_method : low_level_rewriter_method_opt}
-          {only_signed : only_signed_opt}
-          {no_select : no_select_opt}
-          {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
-          {emit_primitives : emit_primitives_opt}
-          {should_split_mul : should_split_mul_opt}
-          {should_split_multiret : should_split_multiret_opt}
-          {unfold_value_barrier : unfold_value_barrier_opt}
-          {assembly_hints_lines : assembly_hints_lines_opt}
-          {ignore_unique_asm_names : ignore_unique_asm_names_opt}
-          {widen_carry : widen_carry_opt}
-          {widen_bytes : widen_bytes_opt}
+          {pipeline_opts : PipelineOptions}
+          {pipeline_to_string_opts : PipelineToStringOptions}
+          {synthesis_opts : SynthesisOptions}
           {tight_upperbound_fraction : tight_upperbound_fraction_opt}
-          {assembly_conventions : assembly_conventions_opt}
-          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
           (n : nat)
           (s : Z)
           (c : list (Z * Z))
@@ -168,16 +147,8 @@ Section __.
     let M := encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c m in
     distribute_balance n s c m_enc_min M.
 
-  (* We include [0], so that even after bounds relaxation, we can
-       notice where the constant 0s are, and remove them. *)
-  Definition possible_values_of_machine_wordsize
-    := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
-
-  Definition possible_values_of_machine_wordsize_with_bytes
-    := prefix_with_carry_bytes [machine_wordsize; 2 * machine_wordsize]%Z.
-
-  Let possible_values := possible_values_of_machine_wordsize.
-  Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
+  Local Notation possible_values := (possible_values_of_machine_wordsize machine_wordsize).
+  Local Notation possible_values_with_bytes := (possible_values_of_machine_wordsize_with_bytes machine_wordsize).
 
   Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
@@ -902,6 +873,14 @@ Section __.
   Lemma Wf_copy res (Hres : copy = Success res) : Wf res.
   Proof using Type. revert Hres; cbv [copy]; apply Wf_copy. Qed.
 
+  Lemma selectznz_correct res
+        (Hres : selectznz = Success res)
+    : selectznz_correct saturated_bounds (Interp res).
+  Proof using curve_good. apply Primitives.selectznz_correct, Hres. Qed.
+
+  Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
+  Proof using Type. revert Hres; cbv [selectznz]; apply Wf_selectznz. Qed.
+
   Section ring.
     Context carry_mul_res (Hcarry_mul : carry_mul = Success carry_mul_res)
             add_res       (Hadd       : add       = Success add_res)
@@ -1015,6 +994,7 @@ Module Export Hints.
        zero
        one
        copy
+       selectznz
   : wf_op_cache.
 #[global]
   Hint Immediate
@@ -1036,5 +1016,6 @@ Module Export Hints.
        Wf_zero
        Wf_one
        Wf_copy
+       Wf_selectznz
   : wf_op_cache.
 End Hints.

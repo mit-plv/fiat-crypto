@@ -45,10 +45,9 @@ Local Opaque reified_montred_gen. (* needed for making [autorewrite] not take a 
 
 Section rmontred.
   Context {output_language_api : ToString.OutputLanguageAPI}
-          {static : static_opt}
-          {internal_static : internal_static_opt}
-          {inline : inline_opt}
-          {inline_internal : inline_internal_opt}
+          {pipeline_opts : PipelineOptions}
+          {pipeline_to_string_opts : PipelineToStringOptions}
+          {synthesis_opts : SynthesisOptions}
           (N R N' : Z) (n : nat)
           (machine_wordsize : machine_wordsize_opt).
 
@@ -62,22 +61,11 @@ Section rmontred.
     := [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
   Local Arguments possible_values_of_machine_wordsize / .
 
-  Let possible_values := possible_values_of_machine_wordsize.
+  Local Notation possible_values := possible_values_of_machine_wordsize.
 
-  Local Existing Instance default_language_naming_conventions.
-  Local Existing Instance default_documentation_options.
-  Local Existing Instance default_output_options.
-  Local Existing Instance AbstractInterpretation.default_Options.
-  Local Instance widen_carry : widen_carry_opt := false.
-  Local Instance widen_bytes : widen_bytes_opt := true.
-  Local Instance only_signed : only_signed_opt := false.
-  Local Instance no_select_size : no_select_size_opt := None.
-  Local Instance split_mul_to : split_mul_to_opt := None.
-  Local Instance split_multiret_to : split_multiret_to_opt := None.
-  Local Instance unfold_value_barrier : unfold_value_barrier_opt := true.
-  Local Instance assembly_hints_lines : assembly_hints_lines_opt := [].
-  Local Instance ignore_unique_asm_names : ignore_unique_asm_names_opt := false.
-  Local Instance low_level_rewriter_method : low_level_rewriter_method_opt := default_low_level_rewriter_method.
+  Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
+  Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
+  Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
 
   Local Instance fancy_args : translate_to_fancy_opt
     := (Some {| BoundsPipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;

@@ -633,7 +633,6 @@ Section Tests.
   Definition c := [(1, 19)]%Z.
 
   Existing Instances Defaults64.default_parameters default_parameters_ok.
-  Existing Instances no_select_size split_mul_to split_multiret_to.
   Definition prefix : string := "fe25519_"%string.
 
   Instance field_parameters : FieldParameters.
