@@ -29,7 +29,8 @@ Module Compilers.
           := {| shiftr_avoid_uint1 := false |}.
         Module Export Exports.
           Global Existing Instance Build_Options.
-          Global Hint Immediate shiftr_avoid_uint1 : typeclass_instances.
+          Global Existing Instance shiftr_avoid_uint1.
+          Global Hint Cut [ ( _ * ) shiftr_avoid_uint1 ( _ * ) Build_Options ] : typeclass_instances.
           Global Coercion shiftr_avoid_uint1 : Options >-> shiftr_avoid_uint1_opt.
         End Exports.
       End AbstractInterpretation.

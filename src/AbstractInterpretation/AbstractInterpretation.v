@@ -91,7 +91,7 @@ Module Compilers.
                 => if annotate_with_state
                    then annotate is_let_bound t st v
                    else if is_let_bound
-                        then UnderLets.UnderLet v (fun v' => UnderLets.Base ($v'))
+                        then UnderLets.UnderLet v (fun v' => UnderLets.Base ($$v'))
                         else UnderLets.Base v
            | type.arrow s d
              => fun f_e '(sv, dv)
@@ -225,7 +225,7 @@ Module Compilers.
                           | None => e
                           end%expr*) in
              if is_let_bound
-             then UnderLet cst_e (fun v => Base ($v)%expr)
+             then UnderLet cst_e (fun v => Base ($$v)%expr)
              else Base cst_e.
 
         Definition annotate_base (is_let_bound : bool) {t : base.type.base}
@@ -240,7 +240,7 @@ Module Compilers.
                => fun _ e
                   => (* we need to keep let-bound unit expressions around for comments *)
                     if is_let_bound
-                    then UnderLet e (fun v => Base ($v)%expr)
+                    then UnderLet e (fun v => Base ($$v)%expr)
                     else Base e
              | base.type.prod A B
                => fun st e

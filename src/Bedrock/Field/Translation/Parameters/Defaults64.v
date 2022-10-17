@@ -23,15 +23,6 @@ a 64-bit word size. *)
 Section Defaults_64.
   Definition machine_wordsize := 64.
 
-  (* Define how to split mul/multi-return functions *)
-  Definition possible_values
-    := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
-  Instance no_select_size : no_select_size_opt :=
-    no_select_size_of_no_select machine_wordsize.
-  Instance split_mul_to : split_mul_to_opt :=
-    split_mul_to_of_should_split_mul machine_wordsize possible_values.
-  Instance split_multiret_to : split_multiret_to_opt :=
-    split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
   Let wordsize_bytes := Eval vm_compute in (machine_wordsize / 8)%Z.
   Instance default_parameters : Types.parameters
     (word := BasicC64Semantics.word)
@@ -39,7 +30,7 @@ Section Defaults_64.
     (error := expr.var Defaults.ERROR)
     := tt.
   Instance default_parameters_ok : Types.ok.
-  Proof. constructor; try exact _; try apply prefix_name_gen_unique. Qed.
+  Proof using Type. constructor; try exact _; try apply prefix_name_gen_unique. Qed.
 End Defaults_64.
 
 Module Notations.

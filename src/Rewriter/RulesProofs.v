@@ -55,6 +55,7 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Bool.Reflect.
 Require Crypto.Util.PrimitiveProd.
 Require Crypto.Util.PrimitiveHList.
 Require Import Crypto.Language.PreExtra.
@@ -553,14 +554,7 @@ Proof using Type.
   all: repeat interp_good_t_step_related.
   all: repeat interp_good_t_step_arith.
   all: remove_casts; try fin_with_nia.
-
-  unfold is_bounded_by_bool in *.
-  repeat match goal with
-         | [ H : _ && _ = true |- _ ] => apply Datatypes.andb_prop in H
-         | [ H : (_ <=? _) = true |- _ ] => apply Zle_bool_imp_le in H
-         | _ => progress intuition
-         end;
-    repeat (etransitivity; eauto).
+  all: try (reflect_hyps; lia).
 Qed.
 
 Lemma strip_literal_casts_rewrite_rules_proofs

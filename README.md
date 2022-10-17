@@ -20,10 +20,11 @@ Building
 [pkg.go-shield]: https://pkg.go.dev/badge/github.com/mit-plv/fiat-crypto/fiat-go.svg
 [pkg.go-link]: https://pkg.go.dev/github.com/mit-plv/fiat-crypto/fiat-go
 
-This repository requires [Coq](https://coq.inria.fr/) [8.11](https://github.com/coq/coq/releases/tag/V8.11.0) or later.
+This repository requires [Coq](https://coq.inria.fr/) [8.15](https://github.com/coq/coq/releases/tag/V8.15.0) or later.
 Note that if you install Coq from Ubuntu aptitude packages, you need `libcoq-ocaml-dev` in addition to `coq`.
 Note that in some cases (such as installing Coq via homebrew on Mac), you may also need to install `ocaml-findlib` (for `ocamlfind`).
-If you want to build the bedrock2 code, you need [Coq 8.14](https://github.com/coq/coq/releases/tag/V8.14.0) or later (otherwise this code will be skipped automatically; you can skip this code on newer versions of Coq by passing `SKIP_BEDROCK2=1` to `make`).
+If you want to build the bedrock2 code, you need [Coq 8.15](https://github.com/coq/coq/releases/tag/V8.15.0) or later (otherwise this code will be skipped automatically; you can skip this code on newer versions of Coq by passing `SKIP_BEDROCK2=1` to `make`).
+The extracted OCaml code for the standalone binaries requires [OCaml](https://ocaml.org/) [4.08](https://ocaml.org/p/ocaml/4.08.0) or later.
 We suggest downloading [the latest version of Coq](https://github.com/coq/coq/wiki#coq-installation).
 Generation of JSON code via the Makefile also requires `jq`.
 
@@ -120,7 +121,7 @@ Just the compilers generating these bedrock2/C files can be made with
     make standalone-ocaml
 
 or `make standalone-haskell` for binaries generated with Haskell, or `make standalone` for both the Haskell and OCaml binaries.
-The binaries are located in `src/ExtractionOcaml/` and `src/ExtractionHaskell` respectively.
+The binaries are located in `src/ExtractionOcaml/` and `src/ExtractionHaskell/` respectively.
 
 There is a separate compiler binary for each implementation strategy:
 
@@ -144,7 +145,7 @@ Here are some examples of ways to invoke the binaries (from the directories that
     ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '64' '3' '2^130 - 5' > poly1305_64.c
     ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '32' '5' '2^130 - 5' > poly1305_32.c
 
-You can find more examples in the [`Makefile`](./Makefile).
+You can find more examples in [`Makefile.examples`](./Makefile.examples).
 
 License
 -------
@@ -153,14 +154,6 @@ Fiat-Crypto is distributed under the terms of the MIT License, the Apache Licens
 
 See [`COPYRIGHT`](./COPYRIGHT), [`LICENSE-MIT`](./LICENSE-MIT), [`LICENSE-APACHE`](./LICENSE-APACHE), and [`LICENSE-BSD-1`](./LICENSE-BSD-1) for details.
 
-
-Extended Build Instructions
----------------------------
-
-If your `COQPATH` variable is not empty, you can build with:
-
-    export COQPATH="$(pwd)/rewriter/src:$(pwd)/coqprime/src:$(pwd)/bedrock2/bedrock2/src:$(pwd)/bedrock2/deps/coqutil/src${COQPATH:+:}$COQPATH"
-    make
 
 Reading About The Code
 ----------------------

@@ -23,9 +23,16 @@ if [ ! -z "${reportify}" ]; then
     reportify="COQC='$(pwd)/etc/coq-scripts/github/reportify-coq.sh'${reportify} ${COQBIN}coqc"
 fi
 
+make_one_time_file_real=""
+unameOut="$(uname -s)"
+if [[ "${unameOut}" == CYGWIN* ]]; then
+    # time on cygwin doesn't report accurate user times, so we use real times
+    make_one_time_file_real="--real"
+fi
+
 rm -f finished.ok
 (make "$@" ${OUTPUT_SYNC} TIMED=1 TIMING=1 "${reportify}" 2>&1 && touch finished.ok) | tee -a time-of-build.log
-python "./etc/coq-scripts/timing/make-one-time-file.py" "time-of-build.log" "time-of-build-pretty.log" || exit $?
+python "./etc/coq-scripts/timing/make-one-time-file.py" ${make_one_time_file_real} "time-of-build.log" "time-of-build-pretty.log" || exit $?
 
 git status
 git diff
@@ -45,7 +52,12 @@ if [ ! -z "$(git diff)" ]; then
     git submodule foreach --recursive git diff
     git submodule foreach --recursive git status
     git diff
+    diff_msg="$(git diff 2>&1; git submodule foreach --recursive git diff 2>&1; git submodule foreach --recursive git status 2>&1)"
+    diff_msg="$(printf "Non-empty-diff:\n%s\n" "${diff_msg}" | sed -z 's/\n/%0A/g')"
     if [ "${ALLOW_DIFF}" != "1" ]; then
+        printf "::error::%s" "${diff_msg}"
         exit 1
+    else
+        printf "::warning::%s" "${diff_msg}"
     fi
 fi

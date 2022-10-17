@@ -7,14 +7,14 @@ Require Import Crypto.Bedrock.Field.Common.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Field.Interface.Representation.
 Require Import Crypto.Bedrock.Field.Synthesis.New.ComputedOp.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
-Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults32.
+Require Import Crypto.Bedrock.Field.Translation.Parameters.FE310.
 Require Import Crypto.Bedrock.Specs.Field.
 Import ListNotations.
 
-#[global]
-Existing Instances BW32.
-#[global]
-Existing Instances no_select_size split_mul_to split_multiret_to.
+#[export]
+Existing Instances Naive.word Naive.word32_ok BW32.
+#[export]
+Existing Instances SortedListWord.map SortedListWord.ok.
 
 (* Parameters for Curve25519 field (32-bit machine). *)
 Section Field.
@@ -31,12 +31,11 @@ Section Field.
      way to prove the ext_spec doesn't matter here, since we're not using any MMIO? *)
   (* Parameters for the fiat-crypto bedrock2 backend *)
   Instance translation_parameters : Types.parameters
-    (word := BasicC32Semantics.word)
     (varname_gen := default_varname_gen)
     (error := Syntax.expr.var Defaults.ERROR)
     := tt.
   Instance translation_parameters_ok : Types.ok.
-  Proof. constructor; try exact _; apply prefix_name_gen_unique. Qed.
+  Proof using ext_spec_ok. constructor; try exact _; apply prefix_name_gen_unique. Qed.
 
   (* Define Curve25519 field *)
   Instance field_parameters : FieldParameters.

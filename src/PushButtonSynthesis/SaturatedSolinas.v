@@ -60,35 +60,16 @@ Local Opaque expr.Interp.
 
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
-          {language_naming_conventions : language_naming_conventions_opt}
-          {documentation_options : documentation_options_opt}
-          {output_options : output_options_opt}
-          {opts : AbstractInterpretation.Options}
-          {package_namev : package_name_opt}
-          {class_namev : class_name_opt}
-          {static : static_opt}
-          {internal_static : internal_static_opt}
-          {inline : inline_opt}
-          {inline_internal : inline_internal_opt}
-          {low_level_rewriter_method : low_level_rewriter_method_opt}
-          {only_signed : only_signed_opt}
-          {no_select : no_select_opt}
-          {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
-          {emit_primitives : emit_primitives_opt}
-          {should_split_mul : should_split_mul_opt}
-          {should_split_multiret : should_split_multiret_opt}
-          {unfold_value_barrier : unfold_value_barrier_opt}
-          {assembly_hints_lines : assembly_hints_lines_opt}
-          {ignore_unique_asm_names : ignore_unique_asm_names_opt}
-          {widen_carry : widen_carry_opt}
-          (widen_bytes : widen_bytes_opt := true) (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
-          {assembly_conventions : assembly_conventions_opt}
-          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
+          {pipeline_opts : PipelineOptions}
+          {pipeline_to_string_opts : PipelineToStringOptions}
+          {synthesis_opts : SynthesisOptions}
           (s : Z)
           (c : list (Z * Z))
           (machine_wordsize : machine_wordsize_opt).
 
-  Local Existing Instance widen_bytes.
+  Local Instance override_pipeline_opts : PipelineOptions
+    := {| widen_bytes := true (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
+       |}.
 
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
@@ -110,11 +91,10 @@ Section __.
     if Z.of_nat n - i <=? 1
     then n
     else Z.to_nat (Qceiling (Z.of_nat n / (Z.of_nat n - i - 1))).
-  Let possible_values := possible_values_of_machine_wordsize.
-  Definition bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
-  Definition boundsn : list (ZRange.type.option.interp base.type.Z)
-    := repeat bound n.
+  Local Notation possible_values := possible_values_of_machine_wordsize.
+  Local Notation boundsn := (saturated_bounds n machine_wordsize).
 
+  Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
@@ -173,7 +153,6 @@ Section __.
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_mul_gen
             @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify nreductions)

@@ -1,3 +1,5 @@
+Require Import Ltac2.Ltac2.
+Require Import Ltac2.Printf.
 Require Import Crypto.Language.APINotations.
 
 Export Language.Pre.
@@ -40,10 +42,27 @@ Compute API.type. (* to figure out what goes into a type *)
     (** [interp : forall {t}, @expr interp_type t -> interp_type t] is the [expr] denotation function *)
     Notation interp := (@expr.interp base.type ident base.interp (@ident_interp)).
 
-    Ltac reify_type ty := type.reify ltac:(reify_base_type) constr:(base.type) ty.
+    Ltac2 reify_type (ty : constr) : constr := type.reify reify_base_type 'base.type ty.
+    Ltac reify_type ty :=
+      let f := ltac2:(ty
+                      |- let get_to_constr name x
+                           := match Ltac1.to_constr x with
+                              | Some x => x
+                              | None => Control.zero (Not_a_constr "API.reify_type" name x)
+                              end in
+                         let v := reify_type (get_to_constr "ty" ty) in
+                         Control.refine (fun () => v)) in
+      constr:(ltac:(f ty)).
+
+    (* Avoid COQBUG(https://github.com/coq/coq/issues/16425)
+    Notation reify_type t := (ltac2:(let rt := reify_type (Constr.pretype t) in exact $rt)) (only parsing).
+     *)
     Notation reify_type t := (ltac:(let rt := reify_type t in exact rt)) (only parsing).
     Notation reify_type_of e := (reify_type ((fun t (_ : t) => t) _ e)) (only parsing).
 
+    Ltac2 reify (var : constr) (term : constr) : constr := Compilers.reify var term.
+    Ltac2 _Reify (term : constr) : constr := Compilers._Reify term.
+    Ltac2 _Reify_rhs () : unit := Compilers._Reify_rhs ().
     Ltac reify var term := Compilers.reify var term.
     Ltac Reify term := Compilers.Reify term.
     Ltac Reify_rhs _ := Compilers.Reify_rhs ().

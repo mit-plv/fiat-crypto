@@ -256,9 +256,10 @@ Ltac prove_correctness' should_not_clear use_curve_good :=
   intros;
   try split; PipelineTactics.use_compilers_correctness Hres;
   [ pose_proof_length_list_Z_bounded_by;
-    repeat first [ reflexivity
+    repeat first [ match goal with |- ?x = ?x => reflexivity end
                  | progress autorewrite with interp_extra interp_gen_cache
                  | progress autorewrite with push_eval
+                 | reflexivity
                  | erewrite select_eq
                  | progress autounfold with push_eval
                  | progress autorewrite with distr_length in *
@@ -798,34 +799,142 @@ Notation "'docstring_with_summary_from_lemma!' summary correctness"
   := (CorrectnessStringification.docstring_with_summary_from_lemma summary correctness) (only parsing, at level 10, summary at next level, correctness at next level).
 (** Used to sigma up the output of stringified pipelines *)
 Notation wrap_s v := (fun s => existT (fun t => prod string (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t))) _ (v s)) (only parsing).
+
+(** We stick this in a module to work around COQBUG(https://github.com/coq/coq/issues/16677) *)
+Module Export Options.
+  (** The options which are passed from higher levels for synthesizing
+      individual pipeline operations as an AST *)
+  Class PipelineOptions :=
+    { absint_opts : AbstractInterpretation.Options
+    ; widen_carry : widen_carry_opt
+    ; widen_bytes : widen_bytes_opt
+    ; unfold_value_barrier : unfold_value_barrier_opt
+    ; should_split_multiret : should_split_multiret_opt
+    ; should_split_mul : should_split_mul_opt
+    ; output_options : output_options_opt
+    ; only_signed : only_signed_opt
+    ; no_select : no_select_opt
+    ; low_level_rewriter_method : low_level_rewriter_method_opt
+    }.
+  Definition default_PipelineOptions : PipelineOptions
+    := let _ := Pipeline.default_BoundsPipelineOptions in
+       {| widen_carry := false
+       ; widen_bytes := false
+       ; should_split_multiret := false
+       ; should_split_mul := false
+       ; no_select := false
+       ; output_options := default_output_options |}.
+  (** The additional options which are passed from higher levels for
+      stringifying synthesized operations.  We do not include
+      [OutputLanguageAPI] for lack of a good default. *)
+  Class PipelineToStringOptions :=
+    { static : static_opt
+    ; language_naming_conventions : language_naming_conventions_opt
+    ; internal_static : internal_static_opt
+    ; inline_internal : inline_internal_opt
+    ; inline : inline_opt
+    ; documentation_options : documentation_options_opt }.
+  Definition default_PipelineToStringOptions : PipelineToStringOptions :=
+    {| static := false
+    ; language_naming_conventions := default_language_naming_conventions
+    ; internal_static := false
+    ; inline_internal := false
+    ; inline := false
+    ; documentation_options := default_documentation_options |}.
+  (** The additional options used for invoking [Synthesize], the entire
+      field pipeline *)
+  Class SynthesisOptions :=
+    { use_mul_for_cmovznz : use_mul_for_cmovznz_opt
+    ; package_namev : package_name_opt
+    ; ignore_unique_asm_names : ignore_unique_asm_names_opt
+    ; error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt
+    ; emit_primitives : emit_primitives_opt
+    ; class_namev : class_name_opt
+    ; assembly_hints_lines : assembly_hints_lines_opt
+    ; assembly_conventions : assembly_conventions_opt }.
+  Definition default_SynthesisOptions : SynthesisOptions :=
+    {| use_mul_for_cmovznz := false
+    ; package_namev := None
+    ; ignore_unique_asm_names := true
+    ; error_on_unused_assembly_functions := true
+    ; emit_primitives := true
+    ; class_namev := None
+    ; assembly_hints_lines := []
+    ; assembly_conventions := default_assembly_conventions |}.
+End Options.
+Module Import PipelineHints.
+  Global Existing Instances
+         Build_PipelineOptions
+         Build_PipelineToStringOptions
+         Build_SynthesisOptions
+         absint_opts
+         widen_carry
+         widen_bytes
+         unfold_value_barrier
+         should_split_multiret
+         should_split_mul
+         output_options
+         only_signed
+         no_select
+         low_level_rewriter_method
+         static
+         language_naming_conventions
+         internal_static
+         inline_internal
+         inline
+         documentation_options
+         use_mul_for_cmovznz
+         package_namev
+         ignore_unique_asm_names
+         error_on_unused_assembly_functions
+         emit_primitives
+         class_namev
+         assembly_hints_lines
+         assembly_conventions
+  .
+  #[global]
+   Hint Cut [
+      ( _ * )
+        (absint_opts
+        | widen_carry
+        | widen_bytes
+        | unfold_value_barrier
+        | should_split_multiret
+        | should_split_mul
+        | output_options
+        | only_signed
+        | no_select
+        | low_level_rewriter_method
+        | static
+        | language_naming_conventions
+        | internal_static
+        | inline_internal
+        | inline
+        | documentation_options
+        | use_mul_for_cmovznz
+        | package_namev
+        | ignore_unique_asm_names
+        | error_on_unused_assembly_functions
+        | emit_primitives
+        | class_namev
+        | assembly_hints_lines
+        | assembly_conventions
+        ) ( _ * )
+        (Build_PipelineOptions
+        | Build_PipelineToStringOptions
+        | Build_SynthesisOptions
+        )
+    ] : typeclass_instances.
+End PipelineHints.
+
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
-          {language_naming_conventions : language_naming_conventions_opt}
-          {documentation_options : documentation_options_opt}
-          {output_options : output_options_opt}
-          {absint_opts : AbstractInterpretation.Options}
-          {package_namev : package_name_opt}
-          {class_namev : class_name_opt}
-          {static : static_opt}
-          {internal_static : internal_static_opt}
-          {inline : inline_opt}
-          {inline_internal : inline_internal_opt}
-          {low_level_rewriter_method : low_level_rewriter_method_opt}
-          {only_signed : only_signed_opt}
-          {no_select : no_select_opt}
-          {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
-          {emit_primitives : emit_primitives_opt}
-          {should_split_mul : should_split_mul_opt}
-          {should_split_multiret : should_split_multiret_opt}
-          {unfold_value_barrier : unfold_value_barrier_opt}
-          {assembly_hints_lines : assembly_hints_lines_opt}
-          {widen_carry : widen_carry_opt}
-          {widen_bytes : widen_bytes_opt}
-          {assembly_conventions : assembly_conventions_opt}
-          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
-          {ignore_unique_asm_names : ignore_unique_asm_names_opt}
+          {pipeline_opts : PipelineOptions}
+          {pipeline_to_string_opts : PipelineToStringOptions}
+          {synthesis_opts : SynthesisOptions}
           (n : nat)
           (machine_wordsize : machine_wordsize_opt).
+
   Definition word_bound : ZRange.type.interp base.type.Z
     := r[0 ~> 2^machine_wordsize-1]%zrange.
   Definition saturated_bounds : list (ZRange.type.option.interp base.type.Z)
@@ -838,6 +947,7 @@ Section __.
     := prefix_with_carry_bytes [machine_wordsize; 2 * machine_wordsize]%Z.
   Let possible_values := possible_values_of_machine_wordsize.
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
+  Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
@@ -866,7 +976,6 @@ Section __.
   Definition selectznz
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          reified_selectznz_gen
          (Some r[0~>1], (Some saturated_bounds, (Some saturated_bounds, tt)))%zrange
@@ -882,7 +991,6 @@ Section __.
   Definition mulx (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_mulx_gen
             @ GallinaReify.Reify s)
@@ -899,7 +1007,6 @@ Section __.
   Definition addcarryx (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_addcarryx_gen
             @ GallinaReify.Reify s)
@@ -917,7 +1024,6 @@ Section __.
   Definition subborrowx (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_subborrowx_gen
             @ GallinaReify.Reify s)
@@ -935,7 +1041,6 @@ Section __.
   Definition value_barrier (s : int.type)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          reified_value_barrier_gen
          (Some (int.to_zrange s), tt)
@@ -952,7 +1057,6 @@ Section __.
   Definition cmovznz (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_cmovznz_gen
             @ GallinaReify.Reify s)
@@ -969,7 +1073,6 @@ Section __.
   Definition cmovznz_by_mul (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_cmovznz_by_mul_gen
             @ GallinaReify.Reify s)
@@ -987,7 +1090,6 @@ Section __.
   Definition copy
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          reified_id_gen
          (Some saturated_bounds, tt)%zrange
@@ -1347,7 +1449,8 @@ Notation "'all_typedefs!'" :=
    end) (only parsing).
 
 Module Export Hints.
-#[global]
+  Export PipelineHints.
+  #[global]
   Hint Opaque
        mulx
        addcarryx
@@ -1358,7 +1461,7 @@ Module Export Hints.
        selectznz
        copy
   : wf_op_cache.
-#[global]
+  #[global]
   Hint Immediate
        Wf_mulx
        Wf_addcarryx

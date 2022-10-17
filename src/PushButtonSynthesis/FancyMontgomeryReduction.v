@@ -45,10 +45,9 @@ Local Opaque reified_montred_gen. (* needed for making [autorewrite] not take a 
 
 Section rmontred.
   Context {output_language_api : ToString.OutputLanguageAPI}
-          {static : static_opt}
-          {internal_static : internal_static_opt}
-          {inline : inline_opt}
-          {inline_internal : inline_internal_opt}
+          {pipeline_opts : PipelineOptions}
+          {pipeline_to_string_opts : PipelineToStringOptions}
+          {synthesis_opts : SynthesisOptions}
           (N R N' : Z) (n : nat)
           (machine_wordsize : machine_wordsize_opt).
 
@@ -62,41 +61,23 @@ Section rmontred.
     := [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
   Local Arguments possible_values_of_machine_wordsize / .
 
-  Let possible_values := possible_values_of_machine_wordsize.
+  Local Notation possible_values := possible_values_of_machine_wordsize.
 
-  Local Existing Instance default_language_naming_conventions.
-  Local Existing Instance default_documentation_options.
-  Local Existing Instance default_output_options.
-  Local Existing Instance AbstractInterpretation.default_Options.
-  Local Instance widen_carry : widen_carry_opt := false.
-  Local Instance widen_bytes : widen_bytes_opt := true.
-  Local Instance only_signed : only_signed_opt := false.
-  Local Instance no_select_size : no_select_size_opt := None.
-  Local Instance split_mul_to : split_mul_to_opt := None.
-  Local Instance split_multiret_to : split_multiret_to_opt := None.
-  Local Instance unfold_value_barrier : unfold_value_barrier_opt := true.
-  Local Instance assembly_hints_lines : assembly_hints_lines_opt := [].
-  Local Instance ignore_unique_asm_names : ignore_unique_asm_names_opt := false.
-  Local Instance low_level_rewriter_method : low_level_rewriter_method_opt := default_low_level_rewriter_method.
+  Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
+  Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
+  Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
 
-  Let fancy_args
-    := (Some {| Pipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;
-                Pipeline.invert_high log2wordsize := invert_high log2wordsize consts_list;
-                Pipeline.value_range := value_range;
-                Pipeline.flag_range := flag_range |}).
+  Local Instance fancy_args : translate_to_fancy_opt
+    := (Some {| BoundsPipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;
+                BoundsPipeline.invert_high log2wordsize := invert_high log2wordsize consts_list;
+                BoundsPipeline.value_range := value_range;
+                BoundsPipeline.flag_range := flag_range |}).
 
-  Lemma fancy_args_good
-    : match fancy_args with
-      | Some {| Pipeline.invert_low := il ; Pipeline.invert_high := ih |}
-        => (forall s v v' : Z, il s v = Some v' -> v = Z.land v' (2^(s/2)-1))
-           /\ (forall s v v' : Z, ih s v = Some v' -> v = Z.shiftr v' (s/2))
-      | None => True
-      end.
-  Proof.
-    cbv [fancy_args invert_low invert_high constant_to_scalar constant_to_scalar_single consts_list fold_right];
+  Local Instance fancy_args_good : translate_to_fancy_opt_correct.
+  Proof using consts_list value_range.
+    cbv [translate_to_fancy_opt_correct translate_to_fancy fancy_args invert_low invert_high constant_to_scalar constant_to_scalar_single consts_list fold_right];
       split; intros; break_innermost_match_hyps; Z.ltb_to_lt; subst; congruence.
   Qed.
-  Local Hint Extern 1 => apply fancy_args_good: typeclass_instances. (* This is a kludge *)
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
@@ -154,7 +135,6 @@ Section rmontred.
   Definition montred
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         fancy_args (* fancy *)
          possible_values
          (reified_montred_gen
             @ GallinaReify.Reify N @ GallinaReify.Reify R @ GallinaReify.Reify N' @ GallinaReify.Reify (machine_wordsize:Z))
@@ -178,7 +158,7 @@ Section rmontred.
            | progress Z.rewrite_mod_small ].
 
   Local Strategy -100 [montred]. (* needed for making Qed not take forever *)
-  Local Strategy -100 [montred' reified_montred_gen]. (* needed for making prove_correctness not take forever *)
+  Local Strategy -100 [montred']. (* needed for making prove_correctness not take forever *)
   Lemma montred_correct res (Hres : montred = Success res)
     : montred_correct N R R' (API.Interp res).
   Proof using n curve_good.
@@ -192,7 +172,7 @@ Section rmontred.
   Qed.
 
   Lemma Wf_montred res (Hres : montred = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). apply fancy_args_good. Qed.
+  Proof using Type. prove_pipeline_wf (). Qed.
 End rmontred.
 
 Module Export Hints.

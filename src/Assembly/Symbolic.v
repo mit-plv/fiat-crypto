@@ -1738,8 +1738,9 @@ Definition set_slice0_small :=
 Global Instance set_slice0_small_ok : Ok set_slice0_small.
 Proof using Type.
   t.
-  eapply Zle_bool_imp_le in H0; rewrite Z.ones_equiv in H0; eapply Z.lt_le_pred in H0.
-  eapply Zle_bool_imp_le in H1; rewrite Z.ones_equiv in H1; eapply Z.lt_le_pred in H1.
+  destruct E1 as [H0 H1'].
+  rewrite Z.ones_equiv in H0; eapply Z.lt_le_pred in H0.
+  rewrite Z.ones_equiv in H1'; eapply Z.lt_le_pred in H1'.
   assert ((0 <= y < 2^Z.of_N sz)%Z) by Lia.lia; clear dependent z.
   assert ((0 <= y0 < 2^Z.of_N sz)%Z) by Lia.lia; clear dependent z0.
   rewrite ?Z.shiftl_0_r, Z.land_ones, Z.mod_small by Lia.lia.
@@ -2857,6 +2858,7 @@ Proof using Type.
   end.
   eapply Permutation_Forall2 in Hs; [ | symmetry; exact Hg ].
   destruct Hs as [? [? Hs] ].
+  repeat match goal with H : _ /\ _ |- _ => destruct H end.
   let H := match goal with H : interp_op _ _ _ = Some _ |- _ => H end in
   eapply permute_commutative in H; [ | eassumption .. ].
   rewrite Forall2_concat_l_ex_iff in Hs.

@@ -79,46 +79,31 @@ Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBU
 (* needed for making [autorewrite] not take a very long time *)
 Local Opaque
       reified_mul_gen
+      reified_square_gen
       reified_add_gen
       reified_sub_gen
       reified_opp_gen
-      reified_to_bytes_gen
-      reified_from_bytes_gen
-      reified_nonzero_gen
-      reified_square_gen
-      reified_encode_gen
       reified_from_montgomery_gen
       reified_to_montgomery_gen
+      reified_to_bytes_gen
+      reified_from_bytes_gen
+      reified_encode_gen
       reified_zero_gen
       reified_one_gen
+      reified_eval_gen
+      reified_bytes_eval_gen
+      reified_eval_twos_complement_gen
+      reified_msat_gen
+      reified_encode_gen
+      reified_divstep_gen
+      reified_nonzero_gen
       expr.Interp.
 
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
-          {language_naming_conventions : language_naming_conventions_opt}
-          {documentation_options : documentation_options_opt}
-          {output_options : output_options_opt}
-          {opts : AbstractInterpretation.Options}
-          {package_namev : package_name_opt}
-          {class_namev : class_name_opt}
-          {static : static_opt}
-          {internal_static : internal_static_opt}
-          {inline : inline_opt}
-          {inline_internal : inline_internal_opt}
-          {low_level_rewriter_method : low_level_rewriter_method_opt}
-          {only_signed : only_signed_opt}
-          {no_select : no_select_opt}
-          {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
-          {emit_primitives : emit_primitives_opt}
-          {should_split_mul : should_split_mul_opt}
-          {should_split_multiret : should_split_multiret_opt}
-          {unfold_value_barrier : unfold_value_barrier_opt}
-          {assembly_hints_lines : assembly_hints_lines_opt}
-          {ignore_unique_asm_names : ignore_unique_asm_names_opt}
-          {widen_carry : widen_carry_opt}
-          {widen_bytes : widen_bytes_opt}
-          {assembly_conventions : assembly_conventions_opt}
-          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
+          {pipeline_opts : PipelineOptions}
+          {pipeline_to_string_opts : PipelineToStringOptions}
+          {synthesis_opts : SynthesisOptions}
           (m : Z)
           (machine_wordsize : machine_wordsize_opt).
 
@@ -169,16 +154,9 @@ Section __.
      Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) n),
      Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) n))%zrange.
 
-  (* We include [0], so that even after bounds relaxation, we can
-       notice where the constant 0s are, and remove them. *)
-  Definition possible_values_of_machine_wordsize
-    := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
+  Local Notation possible_values := (possible_values_of_machine_wordsize machine_wordsize).
+  Local Notation possible_values_with_bytes := (possible_values_of_machine_wordsize_with_bytes machine_wordsize).
 
-  Definition possible_values_of_machine_wordsize_with_bytes
-    := prefix_with_carry_bytes [machine_wordsize; 2 * machine_wordsize]%Z.
-
-  Let possible_values := possible_values_of_machine_wordsize.
-  Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
   Definition bounds : list (ZRange.type.option.interp base.type.Z)
     := saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
   Definition larger_bounds : list (ZRange.type.option.interp base.type.Z)
@@ -195,6 +173,7 @@ Section __.
          ; description name := (text_before_type_name ++ name ++ " is a field element NOT in the Montgomery domain.")%string }.
 
 
+  Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
@@ -302,7 +281,6 @@ Section __.
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_mul_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -322,7 +300,6 @@ Section __.
   Definition square
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_square_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -342,7 +319,6 @@ Section __.
   Definition add
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_add_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
@@ -362,7 +338,6 @@ Section __.
   Definition sub
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_sub_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
@@ -382,7 +357,6 @@ Section __.
   Definition opp
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_opp_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
@@ -402,7 +376,6 @@ Section __.
   Definition from_montgomery
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_from_montgomery_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -422,7 +395,6 @@ Section __.
   Definition to_montgomery
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_to_montgomery_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -442,7 +414,6 @@ Section __.
   Definition nonzero
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          reified_nonzero_gen
          (Some bounds, tt)
@@ -461,7 +432,6 @@ Section __.
   Definition to_bytes
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_to_bytes_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
@@ -481,7 +451,6 @@ Section __.
   Definition from_bytes
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_from_bytes_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify 1 @ GallinaReify.Reify s @ GallinaReify.Reify n)
@@ -501,7 +470,6 @@ Section __.
   Definition encode
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -522,7 +490,6 @@ Section __.
   Definition encode_word
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -542,7 +509,6 @@ Section __.
   Definition zero
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_zero_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -562,7 +528,6 @@ Section __.
   Definition one
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_one_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
@@ -585,7 +550,6 @@ Section __.
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
             false (* let_bind_return *)
-            None (* fancy *)
             (reified_eval_gen
                @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n)
             (Some montgomery_domain_bounds, tt)).
@@ -599,7 +563,6 @@ Section __.
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
             false (* let_bind_return *)
-            None (* fancy *)
             (reified_bytes_eval_gen
                @ GallinaReify.Reify s)
             (Some prime_bytes_bounds, tt)).
@@ -613,7 +576,6 @@ Section __.
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
             false (* let_bind_return *)
-            None (* fancy *)
             (reified_eval_twos_complement_gen
                @ GallinaReify.Reify (machine_wordsize:Z)
                @ GallinaReify.Reify n)
@@ -635,7 +597,6 @@ Section __.
   Definition msat
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_msat_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify m)
@@ -655,7 +616,6 @@ Section __.
   Definition divstep_precomp
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m' @ GallinaReify.Reify divstep_precompmod)
@@ -675,7 +635,6 @@ Section __.
   Definition divstep
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_divstep_gen
             @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify n @ GallinaReify.Reify m)
@@ -1036,7 +995,7 @@ Section __.
   Lemma selectznz_correct res
         (Hres : selectznz = Success res)
     : selectznz_correct saturated_bounds (Interp res).
-  Proof using curve_good. Primitives.prove_correctness use_curve_good. Qed.
+  Proof using curve_good. apply Primitives.selectznz_correct, Hres. Qed.
 
   Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
   Proof using Type. revert Hres; cbv [selectznz]; apply Wf_selectznz. Qed.

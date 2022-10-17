@@ -78,30 +78,9 @@ Definition default_bounds : bounds := use_prime.
 
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
-          {language_naming_conventions : language_naming_conventions_opt}
-          {documentation_options : documentation_options_opt}
-          {output_options : output_options_opt}
-          {opts : AbstractInterpretation.Options}
-          {package_namev : package_name_opt}
-          {class_namev : class_name_opt}
-          {static : static_opt}
-          {internal_static : internal_static_opt}
-          {inline : inline_opt}
-          {inline_internal : inline_internal_opt}
-          {low_level_rewriter_method : low_level_rewriter_method_opt}
-          {only_signed : only_signed_opt}
-          {no_select : no_select_opt}
-          {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
-          {emit_primitives : emit_primitives_opt}
-          {should_split_mul : should_split_mul_opt}
-          {should_split_multiret : should_split_multiret_opt}
-          {unfold_value_barrier : unfold_value_barrier_opt}
-          {assembly_hints_lines : assembly_hints_lines_opt}
-          {ignore_unique_asm_names : ignore_unique_asm_names_opt}
-          {widen_carry : widen_carry_opt}
-          {widen_bytes : widen_bytes_opt}
-          {assembly_conventions : assembly_conventions_opt}
-          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
+          {pipeline_opts : PipelineOptions}
+          {pipeline_to_string_opts : PipelineToStringOptions}
+          {synthesis_opts : SynthesisOptions}
           (s : Z) (c : list (Z * Z))
           (src_n : nat)
           (src_limbwidth : Q)
@@ -148,20 +127,17 @@ Section __.
           | use_bitwidth => encode (dst_weight dst_n - 1)
           end).
 
-  (* We include [0], so that even after bounds relaxation, we can
-       notice where the constant 0s are, and remove them. *)
-  Definition possible_values_of_machine_wordsize_with_bytes
-    := prefix_with_carry_bytes [machine_wordsize; 2 * machine_wordsize]%Z.
+  Local Notation possible_values_with_bytes := (possible_values_of_machine_wordsize_with_bytes machine_wordsize).
 
-  Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
   Definition in_bounds : list (ZRange.type.option.interp base.type.Z)
     := List.map (fun u => Some r[0~>u]%zrange) in_upperbounds.
   Definition out_bounds : list (ZRange.type.option.interp base.type.Z)
     := List.map (fun u => Some r[0~>u]%zrange) out_upperbounds.
 
+  Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
-  Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values_of_machine_wordsize_with_bytes.
-  Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values_of_machine_wordsize_with_bytes.
+  Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values_with_bytes.
+  Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values_with_bytes.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
@@ -254,7 +230,6 @@ Section __.
   Definition convert_bases
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_convert_bases_gen
             @ GallinaReify.Reify (Qnum src_limbwidth) @ GallinaReify.Reify (Z.pos (Qden src_limbwidth))

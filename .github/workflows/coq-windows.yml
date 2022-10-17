@@ -22,7 +22,7 @@ jobs:
 
     env:
       NJOBS: "2"
-      COQ_VERSION: "8.12.0" # https://packages.debian.org/stable/coq
+      COQ_VERSION: "8.15.2" # https://packages.debian.org/testing/coq
       COQEXTRAFLAGS: "-async-proofs-j 1"
       COQCHKEXTRAFLAGS: ""
       OPAMYES: "true"
@@ -40,6 +40,7 @@ jobs:
       uses: ocaml/setup-ocaml@v2
       with:
         ocaml-compiler: 4.11.1
+    - run: opam depext coq.${{ env.COQ_VERSION }}
     - run: opam pin add --kind=version coq ${{ env.COQ_VERSION }}
 
     - name: Install System Dependencies
@@ -53,40 +54,7 @@ jobs:
       shell: cmd
 
     - name: echo build params
-      run: |
-        ECHO ::group::wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-        ECHO ::endgroup::
-        ECHO ::group::wmic cpu list /format:list
-        wmic cpu list /format:list
-        ECHO ::endgroup::
-        ECHO ::group::git config -l
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'git config -l'
-        ECHO ::endgroup::
-        ECHO ::group::git config --global -l
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'git config --global -l'
-        ECHO ::endgroup::
-        ECHO ::group::opam list
-        opam list
-        ECHO ::endgroup::
-        ECHO ::group::ocamlc -config
-        opam exec -- ocamlc -config
-        ECHO ::endgroup::
-        ECHO ::group::coqc --config
-        opam exec -- coqc --config
-        ECHO ::endgroup::
-        ECHO ::group::coqc --version
-        opam exec -- coqc --version
-        ECHO ::endgroup::
-        ECHO ::group::coqtop version
-        echo | opam exec -- coqtop
-        ECHO ::endgroup::
-        ECHO ::group::make printenv
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- make printenv'
-        ECHO ::endgroup::
-        ECHO ::group::PATH
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; echo "${PATH}"'
-        ECHO ::endgroup::
+      run: etc/ci/describe-system-config-win.bat
       shell: cmd
     - name: deps
       run: |
@@ -96,17 +64,21 @@ jobs:
       run: |
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} standalone-ocaml'
       shell: cmd
-    - name: all-except-generated
+    - name: coq
       run: |
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 coq'
       shell: cmd
-    - name: all
+    - name: all-except-generated
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} all'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 all-except-generated'
       shell: cmd
-    - name: only-test-amd64-files
+    - name: c-files lite-generated-files
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} only-test-amd64-files SLOWEST_FIRST=1'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} c-files lite-generated-files'
+      shell: cmd
+    - name: only-test-amd64-files-lite
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} only-test-amd64-files-lite SLOWEST_FIRST=1'
       shell: cmd
     - name: upload OCaml files
       uses: actions/upload-artifact@v3

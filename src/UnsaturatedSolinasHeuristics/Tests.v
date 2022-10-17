@@ -80,7 +80,7 @@ Definition single_tap_primes : list string :=
   "2^511 - 481";
   "2^511 - 187";
   "2^512 - 569";
-  "2^521 - 1" (* p512 *)
+  "2^521 - 1" (* p521 *)
   ].
 
 Definition two_tap_golden_ratio_primes : list string :=

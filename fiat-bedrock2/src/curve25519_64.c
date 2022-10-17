@@ -15,6 +15,17 @@
 #include <stdint.h>
 #include <string.h>
 
+static __attribute__((always_inline)) inline uintptr_t
+_br2_mulhuu(uintptr_t a, uintptr_t b) {
+#if (UINTPTR_MAX == (1LLU<<31) - 1 + (1LLU<<31))
+	return ((uint64_t)a * b) >> 32;
+#elif (UINTPTR_MAX == (1LLU<<63) - 1 + (1LLU<<63))
+	return ((__uint128_t)a * b) >> 64;
+#else
+#error "32-bit or 64-bit uintptr_t required"
+#endif
+}
+
 // We use memcpy to work around -fstrict-aliasing.
 // A plain memcpy is enough on clang 10, but not on gcc 10, which fails
 // to infer the bounds on an integer loaded by memcpy.
@@ -64,55 +75,55 @@ void internal_fiat_25519_carry_mul(uintptr_t out0, uintptr_t in0, uintptr_t in1)
   /*skip*/
   /*skip*/
   x10 = (x4)*((x9)*((uintptr_t)19ULL));
-  x11 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x4)*((x9)*((uintptr_t)19ULL)))>>32 : ((__uint128_t)(x4)*((x9)*((uintptr_t)19ULL)))>>64);
+  x11 = _br2_mulhuu((x4), ((x9)*((uintptr_t)19ULL)));
   x12 = (x4)*((x8)*((uintptr_t)19ULL));
-  x13 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x4)*((x8)*((uintptr_t)19ULL)))>>32 : ((__uint128_t)(x4)*((x8)*((uintptr_t)19ULL)))>>64);
+  x13 = _br2_mulhuu((x4), ((x8)*((uintptr_t)19ULL)));
   x14 = (x4)*((x7)*((uintptr_t)19ULL));
-  x15 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x4)*((x7)*((uintptr_t)19ULL)))>>32 : ((__uint128_t)(x4)*((x7)*((uintptr_t)19ULL)))>>64);
+  x15 = _br2_mulhuu((x4), ((x7)*((uintptr_t)19ULL)));
   x16 = (x4)*((x6)*((uintptr_t)19ULL));
-  x17 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x4)*((x6)*((uintptr_t)19ULL)))>>32 : ((__uint128_t)(x4)*((x6)*((uintptr_t)19ULL)))>>64);
+  x17 = _br2_mulhuu((x4), ((x6)*((uintptr_t)19ULL)));
   x18 = (x3)*((x9)*((uintptr_t)19ULL));
-  x19 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x3)*((x9)*((uintptr_t)19ULL)))>>32 : ((__uint128_t)(x3)*((x9)*((uintptr_t)19ULL)))>>64);
+  x19 = _br2_mulhuu((x3), ((x9)*((uintptr_t)19ULL)));
   x20 = (x3)*((x8)*((uintptr_t)19ULL));
-  x21 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x3)*((x8)*((uintptr_t)19ULL)))>>32 : ((__uint128_t)(x3)*((x8)*((uintptr_t)19ULL)))>>64);
+  x21 = _br2_mulhuu((x3), ((x8)*((uintptr_t)19ULL)));
   x22 = (x3)*((x7)*((uintptr_t)19ULL));
-  x23 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x3)*((x7)*((uintptr_t)19ULL)))>>32 : ((__uint128_t)(x3)*((x7)*((uintptr_t)19ULL)))>>64);
+  x23 = _br2_mulhuu((x3), ((x7)*((uintptr_t)19ULL)));
   x24 = (x2)*((x9)*((uintptr_t)19ULL));
-  x25 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*((x9)*((uintptr_t)19ULL)))>>32 : ((__uint128_t)(x2)*((x9)*((uintptr_t)19ULL)))>>64);
+  x25 = _br2_mulhuu((x2), ((x9)*((uintptr_t)19ULL)));
   x26 = (x2)*((x8)*((uintptr_t)19ULL));
-  x27 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*((x8)*((uintptr_t)19ULL)))>>32 : ((__uint128_t)(x2)*((x8)*((uintptr_t)19ULL)))>>64);
+  x27 = _br2_mulhuu((x2), ((x8)*((uintptr_t)19ULL)));
   x28 = (x1)*((x9)*((uintptr_t)19ULL));
-  x29 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*((x9)*((uintptr_t)19ULL)))>>32 : ((__uint128_t)(x1)*((x9)*((uintptr_t)19ULL)))>>64);
+  x29 = _br2_mulhuu((x1), ((x9)*((uintptr_t)19ULL)));
   x30 = (x4)*(x5);
-  x31 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x4)*(x5))>>32 : ((__uint128_t)(x4)*(x5))>>64);
+  x31 = _br2_mulhuu((x4), (x5));
   x32 = (x3)*(x6);
-  x33 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x3)*(x6))>>32 : ((__uint128_t)(x3)*(x6))>>64);
+  x33 = _br2_mulhuu((x3), (x6));
   x34 = (x3)*(x5);
-  x35 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x3)*(x5))>>32 : ((__uint128_t)(x3)*(x5))>>64);
+  x35 = _br2_mulhuu((x3), (x5));
   x36 = (x2)*(x7);
-  x37 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*(x7))>>32 : ((__uint128_t)(x2)*(x7))>>64);
+  x37 = _br2_mulhuu((x2), (x7));
   x38 = (x2)*(x6);
-  x39 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*(x6))>>32 : ((__uint128_t)(x2)*(x6))>>64);
+  x39 = _br2_mulhuu((x2), (x6));
   x40 = (x2)*(x5);
-  x41 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*(x5))>>32 : ((__uint128_t)(x2)*(x5))>>64);
+  x41 = _br2_mulhuu((x2), (x5));
   x42 = (x1)*(x8);
-  x43 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*(x8))>>32 : ((__uint128_t)(x1)*(x8))>>64);
+  x43 = _br2_mulhuu((x1), (x8));
   x44 = (x1)*(x7);
-  x45 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*(x7))>>32 : ((__uint128_t)(x1)*(x7))>>64);
+  x45 = _br2_mulhuu((x1), (x7));
   x46 = (x1)*(x6);
-  x47 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*(x6))>>32 : ((__uint128_t)(x1)*(x6))>>64);
+  x47 = _br2_mulhuu((x1), (x6));
   x48 = (x1)*(x5);
-  x49 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*(x5))>>32 : ((__uint128_t)(x1)*(x5))>>64);
+  x49 = _br2_mulhuu((x1), (x5));
   x50 = (x0)*(x9);
-  x51 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x9))>>32 : ((__uint128_t)(x0)*(x9))>>64);
+  x51 = _br2_mulhuu((x0), (x9));
   x52 = (x0)*(x8);
-  x53 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x8))>>32 : ((__uint128_t)(x0)*(x8))>>64);
+  x53 = _br2_mulhuu((x0), (x8));
   x54 = (x0)*(x7);
-  x55 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x7))>>32 : ((__uint128_t)(x0)*(x7))>>64);
+  x55 = _br2_mulhuu((x0), (x7));
   x56 = (x0)*(x6);
-  x57 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x6))>>32 : ((__uint128_t)(x0)*(x6))>>64);
+  x57 = _br2_mulhuu((x0), (x6));
   x58 = (x0)*(x5);
-  x59 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x5))>>32 : ((__uint128_t)(x0)*(x5))>>64);
+  x59 = _br2_mulhuu((x0), (x5));
   x60 = (x22)+(x16);
   x61 = (uintptr_t)((x60)<(x22));
   x62 = (x61)+(x23);
@@ -269,35 +280,35 @@ void internal_fiat_25519_carry_square(uintptr_t out0, uintptr_t in0) {
   x11 = (x2)*((uintptr_t)2ULL);
   x12 = (x1)*((uintptr_t)2ULL);
   x13 = (x4)*(x5);
-  x14 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x4)*(x5))>>32 : ((__uint128_t)(x4)*(x5))>>64);
+  x14 = _br2_mulhuu((x4), (x5));
   x15 = (x3)*(x6);
-  x16 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x3)*(x6))>>32 : ((__uint128_t)(x3)*(x6))>>64);
+  x16 = _br2_mulhuu((x3), (x6));
   x17 = (x3)*(x8);
-  x18 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x3)*(x8))>>32 : ((__uint128_t)(x3)*(x8))>>64);
+  x18 = _br2_mulhuu((x3), (x8));
   x19 = (x2)*(x6);
-  x20 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*(x6))>>32 : ((__uint128_t)(x2)*(x6))>>64);
+  x20 = _br2_mulhuu((x2), (x6));
   x21 = (x2)*(x9);
-  x22 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*(x9))>>32 : ((__uint128_t)(x2)*(x9))>>64);
+  x22 = _br2_mulhuu((x2), (x9));
   x23 = (x2)*(x2);
-  x24 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x2)*(x2))>>32 : ((__uint128_t)(x2)*(x2))>>64);
+  x24 = _br2_mulhuu((x2), (x2));
   x25 = (x1)*(x6);
-  x26 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*(x6))>>32 : ((__uint128_t)(x1)*(x6))>>64);
+  x26 = _br2_mulhuu((x1), (x6));
   x27 = (x1)*(x10);
-  x28 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*(x10))>>32 : ((__uint128_t)(x1)*(x10))>>64);
+  x28 = _br2_mulhuu((x1), (x10));
   x29 = (x1)*(x11);
-  x30 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*(x11))>>32 : ((__uint128_t)(x1)*(x11))>>64);
+  x30 = _br2_mulhuu((x1), (x11));
   x31 = (x1)*(x1);
-  x32 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x1)*(x1))>>32 : ((__uint128_t)(x1)*(x1))>>64);
+  x32 = _br2_mulhuu((x1), (x1));
   x33 = (x0)*(x7);
-  x34 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x7))>>32 : ((__uint128_t)(x0)*(x7))>>64);
+  x34 = _br2_mulhuu((x0), (x7));
   x35 = (x0)*(x10);
-  x36 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x10))>>32 : ((__uint128_t)(x0)*(x10))>>64);
+  x36 = _br2_mulhuu((x0), (x10));
   x37 = (x0)*(x11);
-  x38 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x11))>>32 : ((__uint128_t)(x0)*(x11))>>64);
+  x38 = _br2_mulhuu((x0), (x11));
   x39 = (x0)*(x12);
-  x40 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x12))>>32 : ((__uint128_t)(x0)*(x12))>>64);
+  x40 = _br2_mulhuu((x0), (x12));
   x41 = (x0)*(x0);
-  x42 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)(x0)*(x0))>>32 : ((__uint128_t)(x0)*(x0))>>64);
+  x42 = _br2_mulhuu((x0), (x0));
   x43 = (x25)+(x21);
   x44 = (uintptr_t)((x43)<(x25));
   x45 = (x44)+(x26);
@@ -1055,15 +1066,15 @@ void internal_fiat_25519_carry_scmul_121666(uintptr_t out0, uintptr_t in0) {
   /*skip*/
   /*skip*/
   x5 = ((uintptr_t)121666ULL)*(x4);
-  x6 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)((uintptr_t)121666ULL)*(x4))>>32 : ((__uint128_t)((uintptr_t)121666ULL)*(x4))>>64);
+  x6 = _br2_mulhuu(((uintptr_t)121666ULL), (x4));
   x7 = ((uintptr_t)121666ULL)*(x3);
-  x8 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)((uintptr_t)121666ULL)*(x3))>>32 : ((__uint128_t)((uintptr_t)121666ULL)*(x3))>>64);
+  x8 = _br2_mulhuu(((uintptr_t)121666ULL), (x3));
   x9 = ((uintptr_t)121666ULL)*(x2);
-  x10 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)((uintptr_t)121666ULL)*(x2))>>32 : ((__uint128_t)((uintptr_t)121666ULL)*(x2))>>64);
+  x10 = _br2_mulhuu(((uintptr_t)121666ULL), (x2));
   x11 = ((uintptr_t)121666ULL)*(x1);
-  x12 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)((uintptr_t)121666ULL)*(x1))>>32 : ((__uint128_t)((uintptr_t)121666ULL)*(x1))>>64);
+  x12 = _br2_mulhuu(((uintptr_t)121666ULL), (x1));
   x13 = ((uintptr_t)121666ULL)*(x0);
-  x14 = (uintptr_t)(sizeof(intptr_t) == 4 ? ((uint64_t)((uintptr_t)121666ULL)*(x0))>>32 : ((__uint128_t)((uintptr_t)121666ULL)*(x0))>>64);
+  x14 = _br2_mulhuu(((uintptr_t)121666ULL), (x0));
   x15 = ((x13)>>((uintptr_t)51ULL))|((x14)<<((uintptr_t)13ULL));
   x16 = (x13)&((uintptr_t)2251799813685247ULL);
   x17 = (x15)+(x11);

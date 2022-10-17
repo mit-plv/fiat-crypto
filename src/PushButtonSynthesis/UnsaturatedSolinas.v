@@ -21,6 +21,7 @@ Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.SpecializeUnderBindersBy.
 Require Import Rewriter.Language.Wf.
 Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
@@ -62,50 +63,34 @@ Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBU
 
 (* needed for making [autorewrite] not take a very long time *)
 Local Opaque
+      reified_carry_mul_gen
       reified_carry_square_gen
       reified_carry_scmul_gen
       reified_carry_gen
-      reified_encode_gen
       reified_add_gen
       reified_sub_gen
       reified_opp_gen
+      reified_carry_add_gen
+      reified_carry_sub_gen
+      reified_carry_opp_gen
       reified_id_gen
-      reified_zero_gen
-      reified_one_gen
-      reified_prime_gen
-      reified_eval_gen
-      reified_bytes_eval_gen
       reified_to_bytes_gen
       reified_from_bytes_gen
+      reified_encode_gen
+      reified_encode_gen
+      reified_zero_gen
+      reified_one_gen
+      reified_eval_gen
+      reified_bytes_eval_gen
+      reified_prime_gen
       expr.Interp.
 
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
-          {language_naming_conventions : language_naming_conventions_opt}
-          {documentation_options : documentation_options_opt}
-          {output_options : output_options_opt}
-          {opts : AbstractInterpretation.Options}
-          {package_namev : package_name_opt}
-          {class_namev : class_name_opt}
-          {static : static_opt}
-          {internal_static : internal_static_opt}
-          {inline : inline_opt}
-          {inline_internal : inline_internal_opt}
-          {low_level_rewriter_method : low_level_rewriter_method_opt}
-          {only_signed : only_signed_opt}
-          {no_select : no_select_opt}
-          {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
-          {emit_primitives : emit_primitives_opt}
-          {should_split_mul : should_split_mul_opt}
-          {should_split_multiret : should_split_multiret_opt}
-          {unfold_value_barrier : unfold_value_barrier_opt}
-          {assembly_hints_lines : assembly_hints_lines_opt}
-          {ignore_unique_asm_names : ignore_unique_asm_names_opt}
-          {widen_carry : widen_carry_opt}
-          {widen_bytes : widen_bytes_opt}
+          {pipeline_opts : PipelineOptions}
+          {pipeline_to_string_opts : PipelineToStringOptions}
+          {synthesis_opts : SynthesisOptions}
           {tight_upperbound_fraction : tight_upperbound_fraction_opt}
-          {assembly_conventions : assembly_conventions_opt}
-          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
           (n : nat)
           (s : Z)
           (c : list (Z * Z))
@@ -163,20 +148,16 @@ Section __.
     let M := encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c m in
     distribute_balance n s c m_enc_min M.
 
-  (* We include [0], so that even after bounds relaxation, we can
-       notice where the constant 0s are, and remove them. *)
-  Definition possible_values_of_machine_wordsize
-    := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
+  Local Notation possible_values := (possible_values_of_machine_wordsize machine_wordsize).
+  Local Notation possible_values_with_bytes := (possible_values_of_machine_wordsize_with_bytes machine_wordsize).
 
-  Definition possible_values_of_machine_wordsize_with_bytes
-    := prefix_with_carry_bytes [machine_wordsize; 2 * machine_wordsize]%Z.
-
-  Let possible_values := possible_values_of_machine_wordsize.
-  Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
-
+  Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+
+  Local Notation weightf := (weight (Qnum limbwidth) (QDen limbwidth)).
+  Local Notation evalf := (eval weightf n).
 
   Lemma length_prime_bytes_upperbound_list : List.length prime_bytes_upperbound_list = n_bytes.
   Proof using Type. cbv [prime_bytes_upperbound_list]; now autorewrite with distr_length. Qed.
@@ -187,6 +168,33 @@ Section __.
   Lemma length_m_enc : List.length m_enc = n.
   Proof using Type. cbv [m_enc]; repeat distr_length. Qed.
   Hint Rewrite length_m_enc : distr_length.
+  Lemma eval_list_Z_bounded_by_tight_bounds
+        (Hwt : 0 < QDen limbwidth <= Qnum limbwidth)
+        x
+        (Hx : list_Z_bounded_by tight_bounds x)
+    : 0 <= evalf x <= evalf tight_upperbounds.
+  Proof using Type.
+    Local Opaque UnsaturatedSolinasHeuristics.tight_upperbounds.
+    cbv [tight_bounds] in *.
+    intros.
+    lazymatch goal with
+    | [ H1 : list_Z_bounded_by (List.map (fun y => Some (@?f y)) ?b) ?x
+        |- context[eval ?wt ?n ?x] ]
+      => unshelve epose proof (eval_list_Z_bounded_by wt n (List.map (fun x => Some (f x)) b) (List.map f b) x H1 _ _ (fun A B => Z.lt_le_incl _ _ (weight_positive _ _))); clear H1
+    end.
+    all: repeat first [ reflexivity
+                      | apply wprops
+                      | progress rewrite ?map_map in *
+                      | progress rewrite ?map_id in *
+                      | progress cbn [upper lower] in *
+                      | assumption
+                      | progress autorewrite with distr_length
+                      | lia
+                      | match goal with
+                        | [ H : context[List.map (fun _ => 0) _] |- _ ] => erewrite <- zeros_ext_map, ?eval_zeros in H by reflexivity; autorewrite with distr_length push_eval in H
+                        end ].
+    Local Transparent UnsaturatedSolinasHeuristics.tight_upperbounds.
+  Qed.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
@@ -300,8 +308,18 @@ Section __.
     { use_curve_good_t. }
   Qed.
 
-  Local Notation weightf := (weight (Qnum limbwidth) (QDen limbwidth)).
-  Local Notation evalf := (eval weightf n).
+  Lemma use_curve_good_extra
+    : (request_present requests "to_bytes" = true -> forall x, list_Z_bounded_by tight_bounds x -> 0 <= evalf x < 2 * (s - Associational.eval c)).
+  Proof using curve_good.
+    pose proof use_curve_good; cbv beta zeta in *; destruct_head'_and.
+    pose proof eval_list_Z_bounded_by_tight_bounds.
+    repeat match goal with |- _ /\ _ => split end.
+    { intros.
+      specialize_by auto.
+      specialize_all_ways_under_binders_by eassumption.
+      lia. }
+  Qed.
+
   Local Notation notations_for_docstring
     := (CorrectnessStringification.dyn_context.cons
           m "m"
@@ -320,7 +338,6 @@ Section __.
   Definition carry_mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_carry_mul_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
@@ -339,7 +356,6 @@ Section __.
   Definition carry_square
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_carry_square_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
@@ -358,7 +374,6 @@ Section __.
   Definition carry_scmul_const (x : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_carry_scmul_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs @ GallinaReify.Reify x)
@@ -377,7 +392,6 @@ Section __.
   Definition carry
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_carry_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
@@ -396,7 +410,6 @@ Section __.
   Definition add
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_add_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n)
@@ -415,7 +428,6 @@ Section __.
   Definition sub
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_sub_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n @ GallinaReify.Reify balance)
@@ -434,7 +446,6 @@ Section __.
   Definition opp
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_opp_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n @ GallinaReify.Reify balance)
@@ -453,7 +464,6 @@ Section __.
   Definition carry_add
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_carry_add_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
@@ -472,7 +482,6 @@ Section __.
   Definition carry_sub
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_carry_sub_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs @ GallinaReify.Reify balance)
@@ -491,7 +500,6 @@ Section __.
   Definition carry_opp
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_carry_opp_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs @ GallinaReify.Reify balance)
@@ -510,7 +518,6 @@ Section __.
   Definition relax
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          reified_id_gen
          (Some tight_bounds, tt)
@@ -528,7 +535,6 @@ Section __.
   Definition to_bytes
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_to_bytes_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify n @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify m_enc)
@@ -547,7 +553,6 @@ Section __.
   Definition from_bytes
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values_with_bytes
          (reified_from_bytes_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify n)
@@ -566,7 +571,6 @@ Section __.
   Definition encode
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n)
@@ -585,7 +589,6 @@ Section __.
   Definition encode_word
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n)
@@ -604,7 +607,6 @@ Section __.
   Definition zero
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_zero_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n)
@@ -623,7 +625,6 @@ Section __.
   Definition one
     := Pipeline.BoundsPipeline
          true (* subst01 *)
-         None (* fancy *)
          possible_values
          (reified_one_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n)
@@ -645,7 +646,6 @@ Section __.
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
             false (* let_bind_return *)
-            None (* fancy *)
             (reified_eval_gen
                @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n)
             (Some loose_bounds, tt)).
@@ -659,7 +659,6 @@ Section __.
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
             false (* let_bind_return *)
-            None (* fancy *)
             (reified_bytes_eval_gen
                @ GallinaReify.Reify s)
             (Some prime_bytes_bounds, tt)).
@@ -698,9 +697,11 @@ Section __.
        using solve [ auto using eval_balance, length_balance | congruence | solve_extra_bounds_side_conditions ] : push_eval.
   Hint Unfold zeromod onemod : push_eval.
 
+  Local Ltac solve_prove_correctness_side_conditions _ :=
+    solve [ auto | congruence | now autorewrite with distr_length | solve_extra_bounds_side_conditions ].
   Local Ltac prove_correctness _ :=
-    Primitives.prove_correctness use_curve_good;
-    try solve [ auto | congruence | solve_extra_bounds_side_conditions ].
+    Primitives.prove_correctness (conj use_curve_good use_curve_good_extra);
+    try solve_prove_correctness_side_conditions ().
 
   (** Work around COQBUG(https://github.com/coq/coq/issues/9286) *)
   Local Opaque
@@ -847,25 +848,7 @@ Section __.
   Proof using curve_good.
     prove_correctness (); [].
     erewrite freeze_to_bytesmod_partitions; [ reflexivity | .. ].
-    all: repeat apply conj; autorewrite with distr_length; (congruence || auto).
-    all: cbv [tight_bounds] in *.
-    all: lazymatch goal with
-         | [ H1 : list_Z_bounded_by (List.map (fun y => Some (@?f y)) ?b) ?x, H2 : eval ?wt ?n ?b < _
-             |- context[eval ?wt ?n ?x] ]
-           => unshelve epose proof (eval_list_Z_bounded_by wt n (List.map (fun x => Some (f x)) b) (List.map f b) x H1 _ _ (fun A B => Z.lt_le_incl _ _ (weight_positive _ _))); clear H1
-         end.
-    all: congruence || auto.
-    all: repeat first [ reflexivity
-                      | apply wprops
-                      | progress rewrite ?map_map in *
-                      | progress rewrite ?map_id in *
-                      | progress cbn [upper lower] in *
-                      | lia
-                      | match goal with
-                        | [ H : context[List.map (fun _ => 0) _] |- _ ] => erewrite <- zeros_ext_map, ?eval_zeros in H by reflexivity
-                        end
-                      | progress autorewrite with distr_length push_eval in *
-                      | progress cbv [tight_upperbounds] in * ].
+    all: try solve_prove_correctness_side_conditions ().
   Qed.
 
   Lemma Wf_to_bytes res (Hres : to_bytes = Success res) : Wf res.
@@ -878,6 +861,15 @@ Section __.
   Proof using curve_good. prove_correctness (). Qed.
 
   Lemma Wf_encode res (Hres : encode = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
+  Strategy -1000 [encode_word]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
+  Lemma encode_word_correct res
+        (Hres : encode_word = Success res)
+    : encode_word_correct machine_wordsize (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds (Interp res).
+  Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_encode_word res (Hres : encode_word = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
   Strategy -1000 [zero]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
@@ -905,6 +897,14 @@ Section __.
 
   Lemma Wf_copy res (Hres : copy = Success res) : Wf res.
   Proof using Type. revert Hres; cbv [copy]; apply Wf_copy. Qed.
+
+  Lemma selectznz_correct res
+        (Hres : selectznz = Success res)
+    : selectznz_correct saturated_bounds (Interp res).
+  Proof using curve_good. apply Primitives.selectznz_correct, Hres. Qed.
+
+  Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
+  Proof using Type. revert Hres; cbv [selectznz]; apply Wf_selectznz. Qed.
 
   Section ring.
     Context carry_mul_res (Hcarry_mul : carry_mul = Success carry_mul_res)
@@ -1015,9 +1015,11 @@ Module Export Hints.
        from_bytes
        to_bytes
        encode
+       encode_word
        zero
        one
        copy
+       selectznz
   : wf_op_cache.
 #[global]
   Hint Immediate
@@ -1035,8 +1037,10 @@ Module Export Hints.
        Wf_from_bytes
        Wf_to_bytes
        Wf_encode
+       Wf_encode_word
        Wf_zero
        Wf_one
        Wf_copy
+       Wf_selectznz
   : wf_op_cache.
 End Hints.

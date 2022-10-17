@@ -122,6 +122,13 @@ Class assembly_conventions_opt :=
   ; assembly_argument_registers_left_to_right_ :> assembly_argument_registers_left_to_right_opt
   ; assembly_callee_saved_registers_ :> assembly_callee_saved_registers_opt
   }.
+Definition default_assembly_conventions : assembly_conventions_opt
+  := {| assembly_calling_registers_ := None
+     ; assembly_stack_size_ := None
+     ; assembly_output_first_ := true
+     ; assembly_argument_registers_left_to_right_ := true
+     ; assembly_callee_saved_registers_ := default_assembly_callee_saved_registers
+     |}.
 
 Global Instance show_assembly_callee_saved_registers_opt : Show assembly_callee_saved_registers_opt | 10
   := fun v => match v with

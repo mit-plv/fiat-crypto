@@ -12,7 +12,6 @@ src/MiscCompilerPasses.v
 src/MiscCompilerPassesProofs.v
 src/MiscCompilerPassesProofsExtra.v
 src/SlowPrimeSynthesisExamples.v
-src/SlowPrimeSynthesisExamplesCopy.v
 src/StandaloneDebuggingExamples.v
 src/StandaloneHaskellMain.v
 src/StandaloneOCamlMain.v

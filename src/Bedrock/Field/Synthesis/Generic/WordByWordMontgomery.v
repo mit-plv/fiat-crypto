@@ -79,7 +79,7 @@ Ltac apply_correctness_in H :=
   | context [WordByWordMontgomery.nonzero] =>
     eapply WordByWordMontgomery.nonzero_correct in H
   | context [WordByWordMontgomery.selectznz] =>
-    eapply Primitives.selectznz_correct in H
+    eapply WordByWordMontgomery.selectznz_correct in H
   | context [WordByWordMontgomery.to_bytes] =>
     eapply WordByWordMontgomery.to_bytes_correct in H
   | context [WordByWordMontgomery.from_bytes] =>
@@ -226,8 +226,6 @@ Section __.
   Proof.
     make_operation (WordByWordMontgomery.selectznz m width).
     prove_operation_correctness.
-    Unshelve.
-    { apply width. }
   Defined.
 
   Definition to_bytes
@@ -493,7 +491,7 @@ Section __.
     Lemma relax_to_max_bounds x :
       list_Z_bounded_by bounds x ->
       list_Z_bounded_by (@max_bounds width n) x.
-    Proof.
+    Proof using Type.
       apply relax_list_Z_bounded_by. cbn.
       cbv [bounds Primitives.saturated_bounds Primitives.word_bound max_bounds list_Z_tighter_than].
       induction n; [ reflexivity | ].
@@ -513,7 +511,7 @@ Section __.
     Lemma relax_prime_bounds x :
       list_Z_bounded_by prime_bounds x ->
       list_Z_bounded_by bounds x.
-    Proof.
+    Proof using ok.
       cbv [prime_bounds prime_upperbound_list].
       intros; eapply relax_to_bounded_upperbounds;
         eauto; [ | solve [apply MaxBounds.partition_bounded_by] ].
@@ -523,7 +521,7 @@ Section __.
     Lemma relax_to_byte_bounds x :
       list_Z_bounded_by prime_bytes_bounds x ->
       list_Z_bounded_by (byte_bounds n_bytes) x.
-    Proof.
+    Proof using Type.
       cbv [prime_bytes_bounds prime_bytes_upperbound_list].
       intros; eapply relax_to_bounded_upperbounds;
         eauto using ByteBounds.partition_bounded_by; [ ].
@@ -531,21 +529,21 @@ Section __.
     Qed.
 
     Lemma length_bounds : length bounds = n.
-    Proof. apply repeat_length. Qed.
+    Proof using Type. apply repeat_length. Qed.
 
     Lemma bounded_by_bounds_length x :
       list_Z_bounded_by bounds x -> length x = n.
-    Proof.
+    Proof using Type.
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
       rewrite <-length_bounds. cbn - [bounds]. congruence.
     Qed.
 
     Lemma length_saturated_bounds : length saturated_bounds = n.
-    Proof. apply repeat_length. Qed.
+    Proof using Type. apply repeat_length. Qed.
 
     Lemma bounded_by_saturated_bounds_length x :
       list_Z_bounded_by saturated_bounds x -> length x = n.
-    Proof.
+    Proof using Type.
       cbv [max_bounds].
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
       rewrite Primitives.length_saturated_bounds in *. lia.
@@ -553,7 +551,7 @@ Section __.
 
     Lemma bounded_by_prime_bounds_length x :
       list_Z_bounded_by prime_bounds x -> length x = n.
-    Proof.
+    Proof using Type.
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
       cbv [prime_bounds prime_upperbound_list] in *.
       rewrite map_length, length_partition in *. lia.
@@ -561,7 +559,7 @@ Section __.
 
     Lemma bounded_by_prime_bytes_bounds_length x :
       list_Z_bounded_by prime_bytes_bounds x -> length x = n_bytes.
-    Proof.
+    Proof using Type.
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
       cbv [prime_bytes_bounds prime_bytes_upperbound_list] in *.
       rewrite map_length, length_partition in *. lia.
@@ -569,14 +567,14 @@ Section __.
 
     Lemma bounded_by_byte_bounds_length x :
       list_Z_bounded_by (byte_bounds n_bytes) x -> length x = n_bytes.
-    Proof. eapply byte_bounds_range_iff. Qed.
+    Proof using Type. eapply byte_bounds_range_iff. Qed.
 
     Lemma valid_bounded_by_prime_bounds x :
       (check_args m width [] (ErrorT.Success tt)
        = ErrorT.Success tt) ->
       WordByWordMontgomery.valid width n m x ->
       list_Z_bounded_by prime_bounds x.
-    Proof.
+    Proof using Type.
       intros; unshelve eapply bounded_by_prime_bounds_of_valid; eauto.
     Qed.
 
@@ -585,7 +583,7 @@ Section __.
        = ErrorT.Success tt) ->
       WordByWordMontgomery.valid 8 n_bytes m x ->
       list_Z_bounded_by prime_bytes_bounds x.
-    Proof.
+    Proof using Type.
       intros; eapply bounded_by_prime_bytes_bounds_of_bytes_valid; eauto.
     Qed.
 
@@ -732,67 +730,67 @@ Section __.
       is_correct
         (WordByWordMontgomery.mul m width)
         mul (spec_of_mul name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma square_correct name :
       is_correct
         (WordByWordMontgomery.square m width)
         square (spec_of_square name).
-    Proof. setup. prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup. prove_is_correct Rout. Qed.
 
     Lemma add_correct name :
       is_correct
         (WordByWordMontgomery.add m width)
         add (spec_of_add name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma sub_correct name :
       is_correct
         (WordByWordMontgomery.sub m width)
         sub (spec_of_sub name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma opp_correct name :
       is_correct
         (WordByWordMontgomery.opp m width)
         opp (spec_of_opp name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma to_montgomery_correct name :
       is_correct
         (WordByWordMontgomery.to_montgomery m width)
         to_montgomery (spec_of_to_montgomery name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma from_montgomery_correct name :
       is_correct
         (WordByWordMontgomery.from_montgomery m width)
         from_montgomery (spec_of_from_montgomery name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma nonzero_correct name :
       is_correct
         (WordByWordMontgomery.nonzero m width)
         nonzero (spec_of_nonzero name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma selectznz_correct name :
       is_correct
         (WordByWordMontgomery.selectznz m width)
         selectznz (spec_of_selectznz name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma to_bytes_correct name :
       is_correct
         (WordByWordMontgomery.to_bytes m width)
         to_bytes (spec_of_to_bytes name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
 
     Lemma from_bytes_correct name :
       is_correct
         (WordByWordMontgomery.from_bytes m width)
         from_bytes (spec_of_from_bytes name).
-    Proof. setup; prove_is_correct Rout. Qed.
+    Proof using check_args_ok inname_gen_unique inname_gen_varname_gen_ok ok outname_gen_inname_gen_ok outname_gen_unique outname_gen_varname_gen_ok. setup; prove_is_correct Rout. Qed.
   End Proofs.
 End __.
 #[global]

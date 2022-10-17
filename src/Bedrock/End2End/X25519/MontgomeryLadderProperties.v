@@ -10,27 +10,23 @@ Require Import coqutil.Map.Z_keyed_SortedListMap.
 Require Import coqutil.Word.Bitwidth32.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.End2End.X25519.Field25519.
-Require Import Crypto.Bedrock.End2End.X25519.MontgomeryLadder.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
+Require Import Crypto.Bedrock.End2End.X25519.MontgomeryLadder.
 
 Local Arguments map.rep: clear implicits.
-
-Definition montladder_insns := fst (fst montladder_compiler_result).
-Definition montladder_finfo := snd (fst montladder_compiler_result).
-Definition montladder_stack_size := snd montladder_compiler_result.
 
 Definition fname := fst montladder.
 Definition argnames := fst (fst (snd montladder)).
 Definition retnames := snd (fst (snd montladder)).
 Definition fbody := snd (snd montladder).
 Definition f_rel_pos : Z.
-  let x := constr:(map.get montladder_finfo fname) in
+  let x := constr:(List.find (fun '(name, pos) => String.eqb name fname) montladder_finfo) in
   let y := eval vm_compute in x in
   match y with
-  | Some ?pos => exact pos
+  | Some (_, ?pos) => exact pos
   end.
 Defined.
 
@@ -38,13 +34,13 @@ Local Instance mem : map.map (word.rep (width:=32)) Init.Byte.byte := SortedList
 Local Existing Instance BW32.
 
 (* Postcondition extracted from spec_of_montladder *)
-Definition montladder_post (pOUT pK pU : word.rep (word:=BasicC32Semantics.word))
+Definition montladder_post (pOUT pK pU : word.rep (word:=Naive.word32))
           (Kbytes : list Byte.byte) (K : Z)
           (U : F (Field.M_pos (FieldParameters:=field_parameters)))
           (OUT : F (Field.M_pos (FieldParameters:=field_parameters)))
           (R : map.rep word.rep Init.Byte.byte mem -> Prop)
           (tr : Semantics.trace) :
-  Semantics.trace -> map.rep _ _ mem -> list (word.rep (word:=BasicC32Semantics.word)) -> Prop :=
+  Semantics.trace -> map.rep _ _ mem -> list (word.rep (word:=Naive.word32)) -> Prop :=
    (fun (tr' : Semantics.trace)
         (mem' : map.rep word.rep Init.Byte.byte mem)
         (rets : list word.rep) =>
@@ -54,19 +50,17 @@ Definition montladder_post (pOUT pK pU : word.rep (word:=BasicC32Semantics.word)
          (BW:=BW32)
          (field_representaton:=field_representation n s c)
          (Some Field.tight_bounds) pOUT
-         (montladder_gallina Field.M_pos Field.a24 (Z.to_nat (Z.log2_up Curve25519.l)) K U)
+         (montladder_gallina Field.M_pos Field.a24 (Z.to_nat (Z.log2 Curve25519.order)) K U)
          ⋆ Array.array ptsto (word.of_Z 1) pK Kbytes
          ⋆ FElem (BW:=BW32)
                  (field_representaton:=field_representation n s c)
                  (Some Field.tight_bounds) pU U ⋆ R)%sep
         mem').
 
-Local Instance Registers : map.map Z (@word.rep 32 BasicC32Semantics.word)
+Local Instance Registers : map.map Z (@word.rep 32 Naive.word32)
   := Zkeyed_map _.
 
 Require Import riscv.Spec.Decode.
-
-Local Existing Instance RV32I_bitwidth.
 
 (* TODO: does something like this already exist? *)
 (* when the function name being called is not first in the list of functions,
@@ -128,24 +122,56 @@ Section Generic.
 
 End Generic.
 
-Lemma valid_funs_funcs : ExprImp.valid_funs (map.of_list funcs).
-Proof.
-  unfold ExprImp.valid_funs. unfold funcs.
-  (* TODO: need lemma/tactic to break down map.get (map.of_list [...]) into a
-     case for each function, then valid_fun is just proving there are no
-     duplicates in arg/ret names *)
-Admitted.
-
 Local Instance naive_word_riscv_ok :
-  RiscvWordProperties.word.riscv_ok BasicC32Semantics.word := naive_word_riscv_ok 5.
+  RiscvWordProperties.word.riscv_ok Naive.word32 := naive_word_riscv_ok 5.
 
-Lemma weaken_bounded_by :
-forall X : list Z,
-COperationSpecifications.list_Z_bounded_by
-  (UnsaturatedSolinasHeuristics.tight_bounds n s c) X ->
-COperationSpecifications.list_Z_bounded_by
-  (UnsaturatedSolinasHeuristics.loose_bounds n s c) X.
-Admitted.
+Lemma link_montladder : spec_of_montladder funcs.
+Proof.
+    unfold spec_of_montladder, ScalarMult.MontgomeryLadder.spec_of_montladder.
+    unfold funcs.
+    (* montladder is not at the front of the function list; remove everything
+       that doesn't match the name *)
+    prepare_call.
+    (* use montladder correctness proof *)
+    rewrite montladder_defn.
+    eapply @montladder_correct; try (typeclasses eauto).
+    { apply Signature.field_representation_ok.
+      apply UnsaturatedSolinas.relax_valid. }
+    { reflexivity. }
+    { cbv [Core.__rupicola_program_marker]. tauto. }
+    { exact I. }
+    { eapply CSwap.cswap_body_correct; [|exact I].
+      unfold field_representation, Signature.field_representation, Representation.frep; cbn; unfold n; cbv; trivial. }
+    { eapply fe25519_copy_correct. }
+    { eapply fe25519_from_word_correct. }
+    {
+      cbv [LadderStep.spec_of_ladderstep]; intros.
+      prepare_call. rewrite ladderstep_defn.
+      eapply @LadderStep.ladderstep_correct; try (typeclasses eauto).
+      { apply Signature.field_representation_ok.
+        apply UnsaturatedSolinas.relax_valid. }
+      { cbv [Core.__rupicola_program_marker]; tauto. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_mul_correct. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_add_correct. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_sub_correct. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_square_correct. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_scmula24_correct. }
+      { ecancel_assumption. } }
+    { repeat (apply peel_func_unop; [ lazy; congruence | ]).
+      unshelve eapply AdditionChains.fe25519_inv_correct_exp; try exact I.
+      { unshelve eapply Signature.field_representation_ok, UnsaturatedSolinas.relax_valid. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_square_correct. }
+      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
+        apply fe25519_mul_correct. } }
+    { repeat (apply peel_func_unop; [ lazy; congruence | ]).
+      apply fe25519_mul_correct. }
+Qed.
 
 Lemma montladder_compiles_correctly :
   forall (t : Semantics.trace)
@@ -217,7 +243,7 @@ Proof.
       | |- map.get (getRegs (getMachine _)) _ = Some _ => eassumption
       | |- LowerPipeline.arg_regs_contain _ _ => eassumption
       | |- context [LowerPipeline.machine_ok] => eassumption
-      | |- map.get montladder_finfo _ = Some _ => reflexivity
+      | |- map.get _ "montladder" = Some _ => reflexivity
       | _ => idtac
       end.
 
@@ -225,54 +251,12 @@ Proof.
   { eapply (compile_ext_call_correct (funname_env_ok:=SortedListString.ok)). }
   { intros. cbv [compile_ext_call compile_interact].
     repeat (destruct_one_match; try reflexivity). }
-  { apply valid_funs_funcs. }
+  { vm_compute. reflexivity. }
   { lazy. repeat constructor; cbn [In]; intuition idtac; congruence. }
-  { unfold funcs.
-    (* montladder is not at the front of the function list; remove everything
-       that doesn't match the name *)
-    prepare_call.
-    (* use montladder correctness proof *)
-    rewrite montladder_defn.
-    eapply @montladder_correct; try (typeclasses eauto).
-    { apply Signature.field_representation_ok.
-      apply UnsaturatedSolinas.relax_valid. }
-    { reflexivity. }
-    { cbv [Core.__rupicola_program_marker]. tauto. }
-    { exact I. }
-    { eapply CSwap.cswap_body_correct; [|exact I].
-      unfold field_representation, Signature.field_representation, Representation.frep; cbn; unfold n; cbv; trivial. }
-    { eapply fe25519_copy_correct. }
-    { eapply fe25519_from_word_correct. }
-    {
-      cbv [LadderStep.spec_of_ladderstep]; intros.
-      prepare_call. rewrite ladderstep_defn.
-      eapply @LadderStep.ladderstep_correct; try (typeclasses eauto).
-      { apply Signature.field_representation_ok.
-        apply UnsaturatedSolinas.relax_valid. }
-      { cbv [Core.__rupicola_program_marker]; tauto. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_mul_correct. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_add_correct. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_sub_correct. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_square_correct. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_scmula24_correct. }
-      { ecancel_assumption. } }
-    { repeat (apply peel_func_unop; [ lazy; congruence | ]).
-      unshelve eapply AdditionChains.fe25519_inv_correct_exp; try exact I.
-      { unshelve eapply Signature.field_representation_ok, weaken_bounded_by. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_square_correct. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_mul_correct. } }
-    { repeat (apply peel_func_unop; [ lazy; congruence | ]).
-      apply fe25519_mul_correct. }
-    { ssplit; try eassumption; [ ].
-      lazymatch goal with H : length Kbytes = _ |- _ => rewrite H end.
-      lazy; congruence. } }
+  { eapply link_montladder.
+    ssplit; try eassumption; [ ].
+    lazymatch goal with H : length Kbytes = _ |- _ => rewrite H end.
+    lazy; congruence. }
   { assumption. }
   { assumption. }
   { assumption. }
