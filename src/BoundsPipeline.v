@@ -1159,17 +1159,8 @@ Module Pipeline.
           | progress destruct_head'_and ].
 
   Lemma BoundsPipeline_correct
-             {opts : AbstractInterpretation.Options}
-             {low_level_rewriter_method : low_level_rewriter_method_opt}
-             {only_signed : only_signed_opt}
-             {no_select_size : no_select_size_opt}
-             {split_mul_to : split_mul_to_opt}
-             {split_multiret_to : split_multiret_to_opt}
-             {unfold_value_barrier : unfold_value_barrier_opt}
-             {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
-             {translate_to_fancy : translate_to_fancy_opt}
+             {opts : BoundsPipelineOptions}
              {translate_to_fancy_correct : translate_to_fancy_opt_correct}
-             (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (possible_values : list Z)
              {t}
@@ -1178,7 +1169,7 @@ Module Pipeline.
              out_bounds
              {type_good : type_goodT t}
              rv
-             (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 possible_values e arg_bounds out_bounds = Success rv)
+             (Hrv : BoundsPipeline with_subst01 possible_values e arg_bounds out_bounds = Success rv)
              (Hwf : Wf e)
     : (forall arg1 arg2
               (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
@@ -1194,7 +1185,7 @@ Module Pipeline.
     rewrite (correct_of_final_iff_correct_of_initial Hinterp) by assumption.
     pose proof Hwf as Hwf'. (* keep an extra copy so it's not cleared *)
     cbv [translate_to_fancy_opt_correct] in *.
-    cbv beta iota delta [BoundsPipeline PreBoundsPipeline Let_In Pipeline.translate_to_fancy] in Hrv.
+    cbv beta iota delta [BoundsPipeline PreBoundsPipeline Let_In] in Hrv.
     fwd Hrv Hwf Hinterp; [ repeat fwd_side_condition_step .. | subst ].
     solve [ eauto using conj with nocore ].
   Qed.
@@ -1213,17 +1204,8 @@ Module Pipeline.
        /\ Wf rv.
 
   Lemma BoundsPipeline_correct_trans
-        {opts : AbstractInterpretation.Options}
-        {low_level_rewriter_method : low_level_rewriter_method_opt}
-        {only_signed : only_signed_opt}
-        {no_select_size : no_select_size_opt}
-        {split_mul_to : split_mul_to_opt}
-        {split_multiret_to : split_multiret_to_opt}
-        {unfold_value_barrier : unfold_value_barrier_opt}
-        {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
-        {translate_to_fancy : translate_to_fancy_opt}
+        {opts : BoundsPipelineOptions}
         {translate_to_fancy_correct : translate_to_fancy_opt_correct}
-        (with_dead_code_elimination : bool := true)
         (with_subst01 : bool)
         (possible_values : list Z)
         {t}
