@@ -15,7 +15,7 @@ if command -v ulimit >/dev/null 2>/dev/null; then
         test "$stacksize" -ge "$recstacksize" || { >&2 printf "Warning: Stack size (%s) may be too small.\n" "$stacksize"; exit 1; }
     ) || {
         >&2 printf "Warning: To avoid stack overflows in OCaml compilation, setting stack size to the recommended minimum of %s kbytes\n" "$recstacksize"
-        ulimit -S -s "$recstacksize" || { >&2 printf "Warning: Failed to set stack size to %s, possibly because the hard stack size limit is %s.\n" "$recstacksize" "$hardstacksize"; }
+        ulimit -S -s "$recstacksize" || { >&2 printf "Warning: Failed to set stack size to %s, possibly because the hard stack size limit is %s.\n" "$recstacksize" "$hardstacksize"; exit 1; }
     }
 else
     >&2 printf "Warning: Could not determine stack size because ulimit was not found.\nWarning: We recommend a stack size of at least %s kbytes to avoid stack overflows in OCaml compilation.\n" "$recstacksize"
