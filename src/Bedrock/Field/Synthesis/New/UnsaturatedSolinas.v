@@ -317,7 +317,7 @@ Section UnsaturatedSolinas.
     eapply list_binop_correct with (res:=res mul_op);
     handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
-      intros. 
+      intros.
       specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ; congruence. }
@@ -358,7 +358,7 @@ Section UnsaturatedSolinas.
     eapply list_binop_correct with (res:=res add_op);
     handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
-      intros. 
+      intros.
       specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ; congruence. }
@@ -379,7 +379,7 @@ Section UnsaturatedSolinas.
     eapply list_binop_correct with (res:=res sub_op);
     handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
-      intros. 
+      intros.
       specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       rewrite <-F.of_Z_sub. FtoZ. congruence. }
@@ -429,7 +429,7 @@ Section UnsaturatedSolinas.
       intros. apply Hcorrect; auto. }
   Qed.
 
-  Lemma list_Z_bounded_by_unsigned (xs : list (@Interface.word.rep _ word)) : 
+  Lemma list_Z_bounded_by_unsigned (xs : list (@Interface.word.rep _ word)) :
     list_Z_bounded_by
       (Primitives.saturated_bounds (List.length xs) width)
       (map Interface.word.unsigned xs).

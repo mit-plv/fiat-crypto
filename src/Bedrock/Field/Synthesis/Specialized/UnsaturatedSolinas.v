@@ -102,7 +102,7 @@ Record unsaturated_solinas_reified_ops
   {width BW word mem locals env ext_spec varname_gen error}
   {parameters_sentinel : @Types.parameters width BW word mem locals env ext_spec varname_gen error}
   {names : names_of_operations} {n s c} :=
-  { 
+  {
     reified_carry_mul :
       reified_op name_of_carry_mul
                  (Generic.UnsaturatedSolinas.carry_mul n s c)

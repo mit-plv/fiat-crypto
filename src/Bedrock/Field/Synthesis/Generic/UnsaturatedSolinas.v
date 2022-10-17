@@ -93,7 +93,7 @@ Ltac apply_correctness_in H :=
 Notation necessary_requests := ["to_bytes"; "from_bytes"]%string (only parsing).
 
 Section __.
-  Context 
+  Context
     {width BW word mem locals env ext_spec varname_gen error}
    `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
           {inname_gen outname_gen : nat -> string}
