@@ -51,6 +51,21 @@ Module Compilers.
   Local Notation tZ := (base.type.type_base base.type.Z).
 
   Module Export Options.
+    Module PHOAS.
+      (** Print casts in PHOAS? *)
+      Class with_casts := with_castsv : bool.
+      #[global] Typeclasses Opaque with_casts.
+
+      (** Print all casts in PHOAS? *)
+      Class with_all_casts := with_all_castsv : bool.
+      #[global] Typeclasses Opaque with_all_casts.
+
+      Definition default_with_casts : with_casts := true.
+      Definition default_with_all_casts : with_all_casts := false.
+    End PHOAS.
+    #[global] Typeclasses Opaque PHOAS.with_casts PHOAS.with_all_casts.
+    #[global] Existing Instances PHOAS.default_with_casts PHOAS.default_with_all_casts.
+
     (** How to relax zranges *)
     Class relax_zrange_opt := relax_zrange : zrange -> zrange.
 #[global]
@@ -592,9 +607,10 @@ Module Compilers.
         Local Notation show_lvl_preop idc := (lookup_show_lvl_preop conservative_preop_precedence_table (ident_to_op_string idc)).
         Local Notation show_lvl_postop idc := (lookup_show_lvl_postop conservative_postop_precedence_table (ident_to_op_string idc)).
 
-        Definition show_ident_lvl (with_casts : bool) {t} (idc : ident.ident t)
+        Definition show_ident_lvl (with_casts : bool) (with_all_casts : bool) {t} (idc : ident.ident t)
           : type.for_each_lhs_of_arrow (fun t => (Level.Level -> string) * ZRange.type.option.interp t)%type t -> (Level.Level -> string) * ZRange.type.base.option.interp (type.final_codomain t)
-          := match idc in ident.ident t return type.for_each_lhs_of_arrow (fun t => (Level.Level -> string) * ZRange.type.option.interp t)%type t -> (Level.Level -> string) * ZRange.type.base.option.interp (type.final_codomain t) with
+          := let with_casts := (with_casts && negb with_all_casts)%bool in
+             match idc in ident.ident t return type.for_each_lhs_of_arrow (fun t => (Level.Level -> string) * ZRange.type.option.interp t)%type t -> (Level.Level -> string) * ZRange.type.base.option.interp (type.final_codomain t) with
              | ident.Literal base.type.Z v => fun 'tt => (show_lvl_compact_Z v, ZRange.type.base.option.None)
              | ident.Literal t v => fun 'tt => (show_lvl v, ZRange.type.base.option.Some (t:=t) v)
              | ident.tt => fun _ => (fun _ => "()", tt)
@@ -630,8 +646,7 @@ Module Compilers.
              | ident.Z_gtb as idc
              | ident.Z_geb as idc
                => fun '(x, (y, tt)) => (show_lvl_binop idc (maybe_wrap_cast with_casts x) (maybe_wrap_cast with_casts y), ZRange.type.base.option.None)
-             | ident.pair _ _ as idc
-               => fun '((x, xr), ((y, yr), tt)) => (show_lvl_binop_no_space idc x y, ZRange.type.base.option.None)
+             | ident.pair _ _ as idc => fun '((x, xr), ((y, yr), tt)) => (show_lvl_binop_no_space idc x y, (xr, yr))
              | ident.fst _ _ as idc
                => fun '((x, xr), tt) => (show_lvl_postop idc x, fst xr)
              | ident.snd _ _ as idc
@@ -647,10 +662,22 @@ Module Compilers.
              | ident.List_nth_default _
                => fun '((d, dr), ((ls, lsr), ((i, ir), tt))) => (fun lvl => maybe_wrap_parens (Level.ltb lvl app_lvl) (show_lvl ls app_lvl ++ "[" ++ show_lvl i term_lvl ++ "]"), ZRange.type.base.option.None)
              | ident.Z_lnot_modulo => fun '((x, xr), ((m, mr), tt)) => (fun lvl => maybe_wrap_parens (Level.ltb lvl 75) ("~" ++ show_lvl x 75 ++ (if with_casts then " (mod " ++ show_lvl m term_lvl ++ ")" else "")), ZRange.type.base.option.None)
-             | ident.Z_cast
-             | ident.Z_cast2
-               => fun '((_, range), ((x, xr), tt)) => (x, range)
-             | ident.Build_zrange => fun '((x, xr), ((y, yr), tt)) => (neg_wrap_parens ("r[" ++ show_lvl x 60 ++ " ~> " ++ show_lvl y term_lvl), ZRange.type.base.option.None)
+             | ident.Z_cast as idc
+             | ident.Z_cast2 as idc
+               => fun '((srange, range), ((x, xr), tt))
+                  => let t := (fun t (idc : ident.ident (_ -> t -> _)) => t) _ idc in
+                     (* if we don't do the above, we pick up the wrong type in maybe_wrap_cast below *)
+                     (if with_all_casts && Option.is_None (ZRange.type.base.option.lift_Some range)
+                      then (fun _ => "(" ++ srange term_lvl ++ ")" ++ x 0)
+                      else maybe_wrap_cast (t:=t) with_all_casts (x, range),
+                       range)
+             | ident.Build_zrange
+               => fun '((x, xr), ((y, yr), tt))
+                  => (neg_wrap_parens ("r[" ++ show_lvl x 60 ++ " ~> " ++ show_lvl y term_lvl),
+                       match ZRange.ident.option.to_literal xr, ZRange.ident.option.to_literal yr with
+                       | Some l, Some h => Some r[l ~> h]
+                       | _, _ => (*ZRange.type.base.option.*)None
+                       end)
              | ident.comment _ as idc
              | ident.comment_no_keep _ as idc
              | ident.value_barrier as idc
@@ -799,45 +826,46 @@ Module Compilers.
                 end r).
         End helper.
 
-        Fixpoint show_expr_lines_gen (with_casts : bool) {var} (to_string : forall t, var t -> string) (of_string : forall t, string -> option (var t)) {t} (e : @API.expr var t) (args : type.for_each_lhs_of_arrow (fun t => (Level -> string) * ZRange.type.option.interp t)%type t) (idx : positive) {struct e} : (positive * (Level -> list string)) * ZRange.type.base.option.interp (type.final_codomain t)
-          := match e in expr.expr t return type.for_each_lhs_of_arrow (fun t => (Level -> string) * ZRange.type.option.interp t)%type t -> (positive * (Level -> list string)) * ZRange.type.base.option.interp (type.final_codomain t) with
+        Fixpoint show_expr_lines_gen (with_casts : bool) (with_all_casts : bool) {var} (to_string : forall t, var t -> string) (of_string : forall t, string -> option (var t)) {t} (e : @API.expr var t) (args : type.for_each_lhs_of_arrow (fun t => (Level -> string) * ZRange.type.option.interp t)%type t) (idx : positive) {struct e} : (positive * (Level -> list string)) * ZRange.type.base.option.interp (type.final_codomain t)
+          := let show_expr_lines_gen := @show_expr_lines_gen with_casts with_all_casts var to_string of_string in
+             match e in expr.expr t return type.for_each_lhs_of_arrow (fun t => (Level -> string) * ZRange.type.option.interp t)%type t -> (positive * (Level -> list string)) * ZRange.type.base.option.interp (type.final_codomain t) with
              | expr.Ident t idc
-               => fun args => let '(v, r) := @show_ident_lvl with_casts t idc args in
+               => fun args => let '(v, r) := @show_ident_lvl with_casts with_all_casts t idc args in
                               (idx, fun lvl => [v lvl], r)
              | expr.Var t v
                => fun args => (idx, fun lvl => [show_application with_casts (fun _ => to_string _ v) args lvl], ZRange.type.base.option.None)
              | expr.Abs s d f
                => fun args
-                  => show_eta_abs_cps of_string (fun t e args idx => let '(idx, v, r) := @show_expr_lines_gen with_casts var to_string of_string t e args idx in (idx, fun _ => v term_lvl, r)) with_casts idx f args
+                  => show_eta_abs_cps of_string (fun t e args idx => let '(idx, v, r) := @show_expr_lines_gen t e args idx in (idx, fun _ => v term_lvl, r)) with_casts idx f args
              | expr.App s d f x
                => fun args
-                  => let '(idx', x', xr) := show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen with_casts var to_string of_string t e args idx) idx x in
+                  => let '(idx', x', xr) := show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen t e args idx) idx x in
                      @show_expr_lines_gen
-                       with_casts var to_string of_string _ f
+                       _ f
                        (((fun lvl => String.concat String.NewLine (x' lvl)), xr),
-                        args)
+                         args)
                        idx
              | expr.LetIn A (type.base B) x f
                => fun 'tt
                   => let n := "x" ++ Decimal.Pos.to_string idx in
-                     let '(_, show_x, xr) := show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen with_casts var to_string of_string t e args idx) idx x in
+                     let '(_, show_x, xr) := show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen t e args idx) idx x in
                      let '(idx, show_f, fr)
-                         := match of_string A n with
-                            | Some n' => show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen with_casts var to_string of_string t e args idx) (Pos.succ idx) (f n')
-                            | None => (idx, (fun _ => ["_"]), ZRange.type.option.None)
-                            end in
+                       := match of_string A n with
+                          | Some n' => show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen t e args idx) (Pos.succ idx) (f n')
+                          | None => (idx, (fun _ => ["_"]), ZRange.type.option.None)
+                          end in
                      let '(ty_str, comment_ty_str, space_comment_ty_str)
-                         := match make_cast xr with
-                            | Some c => let ty_str := " : " ++ c in
-                                        let comment_ty_str := "(*" ++ ty_str ++ " *)" in
-                                        (ty_str, comment_ty_str, " " ++ comment_ty_str)
-                            | None => ("", "", "")
-                            end in
+                       := match make_cast xr with
+                          | Some c => let ty_str := " : " ++ c in
+                                      let comment_ty_str := "(*" ++ ty_str ++ " *)" in
+                                      (ty_str, comment_ty_str, " " ++ comment_ty_str)
+                          | None => ("", "", "")
+                          end in
                      let expr_let_line := "let " ++ n ++ " := " in
                      (idx,
-                      (fun lvl
-                       => match show_x term_lvl with
-                          | nil => [expr_let_line ++ "(* NOTHING‽ *)" ++ space_comment_ty_str ++ " in"]%string ++ show_f term_lvl
+                       (fun lvl
+                        => match show_x term_lvl with
+                           | nil => [expr_let_line ++ "(* NOTHING‽ *)" ++ space_comment_ty_str ++ " in"]%string ++ show_f term_lvl
                           | show_x::nil => [expr_let_line ++ show_x ++ "" ++ space_comment_ty_str ++ " in"]%string ++ show_f term_lvl
                           | show_x::rest
                             => ([expr_let_line ++ show_x]%string)
@@ -851,10 +879,10 @@ Module Compilers.
              | expr.LetIn A B x f
                => fun args
                   => let n := "x" ++ Decimal.Pos.to_string idx in
-                     let '(_, show_x, xr) := show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen with_casts var to_string of_string t e args idx) idx x in
+                     let '(_, show_x, xr) := show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen t e args idx) idx x in
                      let '(idx, show_f, fr)
                          := match of_string A n with
-                            | Some n' => show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen with_casts var to_string of_string t e args idx) (Pos.succ idx) (f n')
+                            | Some n' => show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen t e args idx) (Pos.succ idx) (f n')
                             | None => (idx, (fun _ => ["_"]), ZRange.type.option.None)
                             end in
                      let '(ty_str, comment_ty_str, space_comment_ty_str)
@@ -884,8 +912,8 @@ Module Compilers.
                              ++ [")"; show_application with_casts (fun _ => "") args (Level.prev app_lvl)])%list),
                       ZRange.type.base.option.None)
              end args.
-        Definition show_expr_lines (with_casts : bool) {t} (e : @API.expr (fun _ => string) t) (args : type.for_each_lhs_of_arrow (fun t => (Level -> string) * ZRange.type.option.interp t)%type t) (idx : positive) : (positive * (Level -> list string)) * ZRange.type.base.option.interp (type.final_codomain t)
-          := @show_expr_lines_gen with_casts (fun _ => string) (fun _ x => x) (fun _ x => Some x) t e args idx.
+        Definition show_expr_lines (with_casts : bool) (with_all_casts : bool) {t} (e : @API.expr (fun _ => string) t) (args : type.for_each_lhs_of_arrow (fun t => (Level -> string) * ZRange.type.option.interp t)%type t) (idx : positive) : (positive * (Level -> list string)) * ZRange.type.base.option.interp (type.final_codomain t)
+          := @show_expr_lines_gen with_casts with_all_casts (fun _ => string) (fun _ x => x) (fun _ x => Some x) t e args idx.
         Definition show_lvl_var_expr : forall {var t}, ShowLevel (@API.expr var t)
           := fix show_lvl_var_expr {var t} (e : @API.expr var t) : Level -> string
                := match e with
@@ -898,24 +926,25 @@ Module Compilers.
                   end%string.
         Definition show_var_expr {var t} : Show (@API.expr var t) := show_lvl_var_expr.
         Definition partially_show_expr {var t} : Show (@API.expr var t) := show_var_expr.
-        Local Notation default_with_casts := true.
         Section Show_gen.
-          Context {var : API.type -> Type}
+          Context {with_casts : PHOAS.with_casts}
+                  {with_all_casts : PHOAS.with_all_casts}
+                  {var : API.type -> Type}
                   (to_string : forall t, var t -> string)
                   (of_string : forall t, string -> option (var t)).
 
           Definition show_lines_expr_gen {t} : ShowLines (@API.expr var t)
-            := fun e => let '(_, v, _) := show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen default_with_casts var to_string of_string t e args idx) 1%positive e in v (Level.prev term_lvl).
+            := fun e => let '(_, v, _) := show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen with_casts with_all_casts var to_string of_string t e args idx) 1%positive e in v (Level.prev term_lvl).
           Definition show_expr_gen {t} : Show (@API.expr var t)
             := fun e => String.concat String.NewLine (show_lines_expr_gen e).
         End Show_gen.
-        Global Instance show_lines_expr {t} : ShowLines (@API.expr (fun _ => string) t)
-          := @show_lines_expr_gen (fun _ => string) (fun _ x => x) (fun _ x => Some x) t.
-        Global Instance show_lines_Expr {t} : ShowLines (@API.Expr t)
+        Global Instance show_lines_expr {with_casts : PHOAS.with_casts} {with_all_casts : PHOAS.with_all_casts} {t} : ShowLines (@API.expr (fun _ => string) t)
+          := @show_lines_expr_gen with_casts with_all_casts (fun _ => string) (fun _ x => x) (fun _ x => Some x) t.
+        Global Instance show_lines_Expr {with_casts : PHOAS.with_casts} {with_all_casts : PHOAS.with_all_casts} {t} : ShowLines (@API.Expr t)
           := fun e => show_lines (e _).
-        Global Instance show_expr {t} : Show (@API.expr (fun _ => string) t)
+        Global Instance show_expr {with_casts : PHOAS.with_casts} {with_all_casts : PHOAS.with_all_casts} {t} : Show (@API.expr (fun _ => string) t)
           := fun e => String.concat String.NewLine (show_lines e).
-        Global Instance show_Expr {t} : Show (@API.Expr t)
+        Global Instance show_Expr {with_casts : PHOAS.with_casts} {with_all_casts : PHOAS.with_all_casts} {t} : Show (@API.Expr t)
           := fun e => show (e _).
       End expr.
     End PHOAS.
