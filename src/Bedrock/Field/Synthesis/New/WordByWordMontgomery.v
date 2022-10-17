@@ -130,8 +130,8 @@ Section WordByWordMontgomery.
         apply Znumtheory.Zgcd_1_rel_prime. auto.
   Qed.
 
-  Lemma r'_correct : ((2 ^ (width) * r' ) mod M = 1)%Z. (*Not very elegant proof using M_eq check_args_ok...*)
-  Proof.
+  Lemma r'_correct : ((2 ^ (width) * r' ) mod M = 1)%Z. (*Not very elegant proof...*)
+  Proof using M_eq check_args_ok.
     cbv [r' Field.r' Field.r].
     assert (H1mod : (1 = 1 mod M)%Z).
     {
