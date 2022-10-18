@@ -476,7 +476,7 @@
     ]
   },
   {
-    "operation": "fiat_curve25519_solinas_mulmod",
+    "operation": "fiat_curve25519_solinas_mul",
     "arguments": [
       {
         "datatype": "u64[4]",

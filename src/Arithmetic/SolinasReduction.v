@@ -10,15 +10,9 @@ Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.UniformWeight.
 Require Import Crypto.Arithmetic.Saturated.
-Require Import Crypto.Util.ListUtil.StdlibCompat.
-(*
-Require Crypto.Stringification.C.
-Require Crypto.Stringification.Go.
-Require Crypto.Stringification.Java.
-Require Import Crypto.BoundsPipeline.
- *)
 Require Coq.btauto.Btauto.
 Require Coq.Structures.OrdersEx.
+Require Import Crypto.Util.ListUtil.StdlibCompat.
 Require Import Crypto.Util.ZUtil.ModInv.
 
 Require Import Coq.micromega.Lia.
@@ -50,14 +44,6 @@ Local Open Scope string_scope.
 Local Open Scope list_scope.
 Import ListNotations. Local Open Scope Z_scope.
 
-(*
-Import
-  AbstractInterpretation.Compilers
-  Language.Compilers
-  Language.API.Compilers.
-
-Import Language.API.Compilers.API.
-*)
 Import Associational Positional.
 
 Local Coercion Z.of_nat : nat >-> Z.
@@ -1868,140 +1854,5 @@ Module SolinasReduction.
     (* END SECTION MULMOD *)
 
   End __.
-
-  (* Strategy -500 [Crypto.Arithmetic.Core.Positional.add_to_nth *)
-  (*                Coq.Init.Datatypes.andb *)
-  (*                Coq.ZArith.BinInt.Z.to_int *)
-  (*                Crypto.Arithmetic.SolinasReduction.SolinasReduction.dual_map *)
-  (*                Coq.PArith.BinPos.Pos.to_uint *)
-  (*                Coq.Init.Decimal.revapp *)
-  (*                Coq.Init.Datatypes.nat_rect *)
-  (*                Crypto.Arithmetic.Saturated.Rows.max_column_size *)
-  (*                Crypto.Arithmetic.Saturated.Rows.sum_rows' *)
-  (*                Crypto.Arithmetic.Core.Associational.split *)
-  (*                Coq.PArith.BinPos.Pos.to_little_uint *)
-  (*                Coq.Init.Nat.to_uint *)
-  (*                Crypto.Arithmetic.SolinasReduction.SolinasReduction.mulmod *)
-  (*                Crypto.Arithmetic.ModOps.weight *)
-  (*                Crypto.Arithmetic.SolinasReduction.SolinasReduction.sat_reduce *)
-  (*                Coq.Lists.List.tl *)
-  (*                Crypto.Arithmetic.Saturated.Rows.adjust_s *)
-  (*                Crypto.Arithmetic.Core.Positional.to_associational *)
-  (*                Coq.Init.Nat.to_little_uint *)
-  (*                Crypto.Arithmetic.Saturated.Columns.cons_to_nth *)
-  (*                Crypto.Arithmetic.Saturated.Rows.extract_row *)
-  (*                Crypto.Arithmetic.Saturated.Rows.from_columns *)
-  (*                Crypto.Arithmetic.Saturated.Associational.sat_multerm_const *)
-  (*                Coq.Init.Decimal.rev *)
-  (*                Crypto.Arithmetic.Saturated.Associational.sat_mul *)
-  (*                Crypto.Arithmetic.Saturated.Rows.from_columns' *)
-  (*                Crypto.Arithmetic.Core.Positional.place *)
-  (*                Crypto.Arithmetic.Core.Positional.zeros *)
-  (*                Crypto.Arithmetic.Saturated.Rows.flatten' *)
-  (*                Crypto.Arithmetic.Saturated.Rows.sum_rows *)
-  (*                Crypto.Arithmetic.Saturated.Associational.sat_mul_const *)
-  (*                Coq.Lists.List.hd *)
-  (*                Crypto.Arithmetic.Saturated.Associational.sat_multerm *)
-  (*                Crypto.Arithmetic.SolinasReduction.SolinasReduction.is_bounded_by *)
-  (*                Crypto.Arithmetic.Saturated.Columns.nils *)
-  (*                Coq.Init.Decimal.Little.succ *)
-  (*                Crypto.Arithmetic.UniformWeight.uweight *)
-  (*                Crypto.Arithmetic.Saturated.Rows.flatten *)
-  (*                (* Rewriter.Util.LetIn.Let_In *) *)
-  (*                Crypto.Arithmetic.Saturated.Rows.from_associational *)
-  (*                Crypto.Arithmetic.SolinasReduction.SolinasReduction.fold_andb_map' *)
-  (*                Crypto.Arithmetic.Saturated.Columns.from_associational *)
-  (*                Coq.Init.Decimal.Little.double]. *)
-
-
-  (* Section compile. *)
-
-  (*   Let s := 2^255. *)
-  (*   Let c := [(1, 19)]. *)
-  (*   Let machine_wordsize := 64. *)
-  (*   Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)). *)
-  (*   Let m : nat := 2 * n. *)
-  (*   Let w : nat -> Z := weight machine_wordsize 1. *)
-  (*   Let base : Z := 2 ^ machine_wordsize. *)
-
-  (*   Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange. *)
-  (*   Let boundsn : list (ZRange.type.option.interp base.type.Z) *)
-  (*       := repeat bound (n). *)
-
-  (*   Import Stringification.C.Compilers. *)
-  (*   Import Stringification.C.Compilers.ToString. *)
-
-  (*   Local Existing Instances ToString.C.OutputCAPI Pipeline.show_ErrorMessage. *)
-  (*   Local Instance : only_signed_opt := false. *)
-  (*   Local Instance : no_select_opt := false. *)
-  (*   Local Instance : static_opt := true. *)
-  (*   Local Instance : internal_static_opt := true. *)
-  (*   Local Instance : inline_opt := true. *)
-  (*   Local Instance : inline_internal_opt := true. *)
-  (*   Local Instance : use_mul_for_cmovznz_opt := false. *)
-  (*   Local Instance : emit_primitives_opt := true. *)
-  (*   Local Instance : should_split_mul_opt := false. *)
-  (*   Local Instance : should_split_multiret_opt := false. *)
-  (*   Local Instance : widen_carry_opt := false. *)
-  (*   Local Instance : widen_bytes_opt := true. (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *) *)
-
-  (*   Let possible_values := prefix_with_carry [machine_wordsize]. *)
-  (*   Local Instance : machine_wordsize_opt := machine_wordsize. (* for show *) *)
-  (*   Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize. *)
-  (*   Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values. *)
-  (*   Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values. *)
-
-  (*   Local Existing Instance default_low_level_rewriter_method. *)
-  (*   Local Existing Instance AbstractInterpretation.default_Options. *)
-  (*   Local Instance : unfold_value_barrier_opt := true. *)
-  (*   Local Instance : assembly_hints_lines_opt := []. *)
-  (*   Local Instance : ignore_unique_asm_names_opt := false. *)
-  (*   Local Existing Instance default_language_naming_conventions. *)
-  (*   Local Existing Instance default_documentation_options. *)
-  (*   Local Instance : package_name_opt := None. *)
-  (*   Local Instance : class_name_opt := None. *)
-  (*   Local Existing Instance default_output_options. *)
-
-  (*   Let bounds := repeat bound n ++ [Some r[0 ~> (2^(machine_wordsize/4) - 1)]%zrange]. *)
-
-  (*   Time Compute *)
-  (*          Show.show *)
-  (*          (Pipeline.BoundsPipelineToString *)
-  (*             "fiat_p25519_" "fiat_p25519_mul" *)
-  (*             false *)
-  (*             false *)
-  (*             None *)
-  (*             possible_values *)
-  (*             machine_wordsize *)
-  (*             ltac:(let n := (eval cbv in n) in *)
-  (*                   let r := Reify (reduce_full base s c n) in *)
-  (*                   exact r) *)
-  (*                    (fun _ _ => []) *)
-  (*                    (Some (repeat bound (2 * n)), tt) *)
-  (*                    (Some (repeat bound (n))) *)
-  (*                    (None, tt) *)
-  (*                    (None) *)
-  (*            : Pipeline.ErrorT _). *)
-
-  (*   Time Compute *)
-  (*          Show.show *)
-  (*          (Pipeline.BoundsPipelineToString *)
-  (*             "fiat_p25519_" "fiat_p25519_mul" *)
-  (*             false *)
-  (*             false *)
-  (*             None *)
-  (*             possible_values *)
-  (*             machine_wordsize *)
-  (*             ltac:(let n := (eval cbv in n) in *)
-  (*                   let r := Reify (mulmod' base s c n) in *)
-  (*                   exact r) *)
-  (*                    (fun _ _ => []) *)
-  (*                    (Some (repeat bound (n)), (Some (repeat bound n), tt)) *)
-  (*                    (Some (repeat bound (n))) *)
-  (*                    (None, (None, tt)) *)
-  (*                    (None) *)
-  (*            : Pipeline.ErrorT _). *)
-
-  (* End compile. *)
 
 End SolinasReduction.
