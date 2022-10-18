@@ -1,4 +1,13 @@
 -R src Crypto
+-Q /Users/swtian/Documents/tmp/fiat-crypto/coqprime/src/Coqprime Coqprime
+-Q /Users/swtian/Documents/tmp/fiat-crypto/rupicola/bedrock2/deps/coqutil/src/coqutil coqutil
+-Q /Users/swtian/Documents/tmp/fiat-crypto/rupicola/src/Rupicola Rupicola 
+-Q /Users/swtian/Documents/tmp/fiat-crypto/rupicola/bedrock2/bedrock2/src/bedrock2 bedrock2
+-Q /Users/swtian/Documents/tmp/fiat-crypto/rupicola/bedrock2/bedrock2/src/bedrock2Examples bedrock2Examples
+-Q /Users/swtian/Documents/tmp/fiat-crypto/rupicola/bedrock2/compiler/src/compiler compiler
+-Q /Users/swtian/Documents/tmp/fiat-crypto/rupicola/bedrock2/deps/riscv-coq/src/riscv riscv
+-Q /Users/swtian/Documents/tmp/fiat-crypto/rewriter/src/Rewriter Rewriter
+-I /Users/swtian/Documents/tmp/fiat-crypto/rewriter/src/Rewriter/Util/plugins
 -arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+unexpected-implicit-declaration,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,+undeclared-scope,+deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality,+deprecated-typeclasses-transparency-without-locality,unsupported-attributes
 -arg -native-compiler -arg ondemand
 src/BoundsPipeline.v
@@ -30,7 +39,6 @@ src/Algebra/Hierarchy.v
 src/Algebra/IntegralDomain.v
 src/Algebra/Monoid.v
 src/Algebra/Nsatz.v
-src/Algebra/NsatzTactic.v
 src/Algebra/Ring.v
 src/Algebra/ScalarMult.v
 src/Algebra/SubsetoidRing.v
@@ -90,6 +98,7 @@ src/Bedrock/End2End/RupicolaCrypto/Derive.v
 src/Bedrock/End2End/RupicolaCrypto/Low.v
 src/Bedrock/End2End/RupicolaCrypto/Spec.v
 src/Bedrock/End2End/X25519/Field25519.v
+src/Bedrock/End2End/X25519/GarageDoor.v
 src/Bedrock/End2End/X25519/MontgomeryLadder.v
 src/Bedrock/End2End/X25519/MontgomeryLadderProperties.v
 src/Bedrock/Field/Common/Tactics.v
@@ -135,6 +144,7 @@ src/Bedrock/Field/Translation/LoadStoreList.v
 src/Bedrock/Field/Translation/Parameters/Defaults.v
 src/Bedrock/Field/Translation/Parameters/Defaults32.v
 src/Bedrock/Field/Translation/Parameters/Defaults64.v
+src/Bedrock/Field/Translation/Parameters/FE310.v
 src/Bedrock/Field/Translation/Proofs/Cmd.v
 src/Bedrock/Field/Translation/Proofs/Equivalence.v
 src/Bedrock/Field/Translation/Proofs/EquivalenceProperties.v
@@ -169,6 +179,7 @@ src/Curves/Montgomery/AffineInstances.v
 src/Curves/Montgomery/AffineProofs.v
 src/Curves/Montgomery/XZ.v
 src/Curves/Montgomery/XZProofs.v
+src/Curves/TableMult/TableMult.v
 src/Curves/Weierstrass/Affine.v
 src/Curves/Weierstrass/AffineProofs.v
 src/Curves/Weierstrass/Jacobian.v

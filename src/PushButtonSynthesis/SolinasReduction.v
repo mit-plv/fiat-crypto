@@ -57,41 +57,22 @@ Local Coercion Z.pos : positive >-> Z.
 
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
-Local Opaque reified_solmul_gen. (* needed for making [autorewrite] not take a very long time *)
+Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very long time *)
 (* needed for making [autorewrite] with [Set Keyed Unification] fast *)
 Local Opaque expr.Interp.
 
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
-          {language_naming_conventions : language_naming_conventions_opt}
-          {documentation_options : documentation_options_opt}
-          {output_options : output_options_opt}
-          {opts : AbstractInterpretation.Options}
-          {package_namev : package_name_opt}
-          {class_namev : class_name_opt}
-          {static : static_opt}
-          {internal_static : internal_static_opt}
-          {inline : inline_opt}
-          {inline_internal : inline_internal_opt}
-          {low_level_rewriter_method : low_level_rewriter_method_opt}
-          {only_signed : only_signed_opt}
-          {no_select : no_select_opt}
-          {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
-          {emit_primitives : emit_primitives_opt}
-          {should_split_mul : should_split_mul_opt}
-          {should_split_multiret : should_split_multiret_opt}
-          {unfold_value_barrier : unfold_value_barrier_opt}
-          {assembly_hints_lines : assembly_hints_lines_opt}
-          {ignore_unique_asm_names : ignore_unique_asm_names_opt}
-          {widen_carry : widen_carry_opt}
-          (widen_bytes : widen_bytes_opt := true) (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
-          {assembly_conventions : assembly_conventions_opt}
-          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
+          {pipeline_opts : PipelineOptions}
+          {pipeline_to_string_opts : PipelineToStringOptions}
+          {synthesis_opts : SynthesisOptions}
           (s : Z)
           (c : list (Z * Z)).
   Context (machine_wordsize : machine_wordsize_opt).
 
-  Local Existing Instance widen_bytes.
+  Local Instance override_pipeline_opts : PipelineOptions
+    := {| widen_bytes := true (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
+       |}.
 
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
@@ -104,11 +85,10 @@ Section __.
   Definition up_bound := 2 ^ (machine_wordsize / 4).
   Definition base : Z := 2 ^ machine_wordsize.
   
-  Let possible_values := possible_values_of_machine_wordsize.
-  Definition bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
-  Definition boundsn : list (ZRange.type.option.interp base.type.Z)
-    := repeat bound n.
+  Local Notation possible_values := possible_values_of_machine_wordsize.
+  Local Notation boundsn := (saturated_bounds n machine_wordsize).
 
+  Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
@@ -185,40 +165,39 @@ Section __.
           correctness)
          (only parsing, at level 10, summary at next level, correctness at next level).
 
-  Definition mulmod
+  Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
-         None (* fancy *)
          possible_values
-         (reified_solmul_gen
+         (reified_mul_gen
             @ GallinaReify.Reify base
             @ GallinaReify.Reify s
             @ GallinaReify.Reify c
-            @ GallinaReify.Reify n )
+            @ GallinaReify.Reify n)
          (Some boundsn, (Some boundsn, tt))
          (Some boundsn).
 
-  Definition smulmod (prefix : string)
+  Definition smul (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix "mulmod" mulmod
+          machine_wordsize prefix "mul" mul
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements."]%string)
-             (mulmod_correct weight n m boundsn)).
+             (mul_correct weight n m boundsn)).
 
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
 
   Hint Rewrite
        (fun pf => @SolinasReduction.SolinasReduction.mulmod_correct (@wprops _ _ pf)) using solve [ auto with zarith | congruence | solve_extra_bounds_side_conditions ] : push_eval.
-  Hint Unfold mulmod : push_eval.
+  Hint Unfold mul : push_eval.
 
   Local Ltac prove_correctness _ := Primitives.prove_correctness use_curve_good.
 
-  Lemma mulmod_correct res
-        (Hres : mulmod = Success res)
-    : mulmod_correct weight n m boundsn (Interp res).
+  Lemma mul_correct res
+        (Hres : mul = Success res)
+    : mul_correct weight n m boundsn (Interp res).
   Proof using curve_good.
     prove_correctness ().
     cbv [evalf weightf weight up_bound] in *.
@@ -228,7 +207,7 @@ Section __.
     apply (fun pf => @SolinasReduction.SolinasReduction.mulmod_correct (@wprops _ _ pf)); auto; lia.
   Qed.
 
-  Lemma Wf_mulmod res (Hres : mulmod = Success res) : Wf res.
+  Lemma Wf_mul res (Hres : mul = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
   Section for_stringification.
@@ -236,7 +215,7 @@ Section __.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("mulmod", wrap_s smulmod)].
+      := [("mul", wrap_s smul)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 
@@ -259,10 +238,10 @@ End __.
 Module Export Hints.
 #[global]
   Hint Opaque
-       mulmod
+       mul
   : wf_op_cache.
 #[global]
   Hint Immediate
-       Wf_mulmod
+       Wf_mul
   : wf_op_cache.
 End Hints.

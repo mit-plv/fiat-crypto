@@ -503,13 +503,13 @@ Module SolinasReduction.
             (length_saturated_bouns : length saturated_bounds = n).
     Local Notation eval := (Positional.eval wt n).
 
-    Definition mulmod_correct
-               (mulmod : list Z -> list Z -> list Z) :=
+    Definition mul_correct
+               (mul : list Z -> list Z -> list Z) :=
       forall x y,
         list_Z_bounded_by saturated_bounds x ->
         list_Z_bounded_by saturated_bounds y ->
-        ((eval (mulmod x y)) mod m = (eval x * eval y) mod m) /\
-          (list_Z_bounded_by saturated_bounds (mulmod x y)).
+        ((eval (mul x y)) mod m = (eval x * eval y) mod m) /\
+          (list_Z_bounded_by saturated_bounds (mul x y)).
 
   End __.
 End SolinasReduction.

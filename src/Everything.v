@@ -12,7 +12,6 @@ Crypto.Algebra.Hierarchy
 Crypto.Algebra.IntegralDomain
 Crypto.Algebra.Monoid
 Crypto.Algebra.Nsatz
-Crypto.Algebra.NsatzTactic
 Crypto.Algebra.Ring
 Crypto.Algebra.ScalarMult
 Crypto.Algebra.SubsetoidRing
@@ -77,6 +76,7 @@ Crypto.Curves.Montgomery.AffineInstances
 Crypto.Curves.Montgomery.AffineProofs
 Crypto.Curves.Montgomery.XZ
 Crypto.Curves.Montgomery.XZProofs
+Crypto.Curves.TableMult.TableMult
 Crypto.Curves.Weierstrass.Affine
 Crypto.Curves.Weierstrass.AffineProofs
 Crypto.Curves.Weierstrass.Jacobian
