@@ -12,7 +12,7 @@ fi
 sudo chmod -R a+rw .
 echo '::group::install general dependencies'
 sudo apt-get update -y
-sudo apt-get install -y python python3 ${EXTRA_PACKAGES}
+sudo apt-get install -y python python3 bsdmainutils ${EXTRA_PACKAGES}
 eval $(opam env)
 echo '::endgroup::'
 echo '::remove-matcher owner=coq-problem-matcher::'
