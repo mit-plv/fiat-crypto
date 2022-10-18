@@ -1,0 +1,15 @@
+{
+    "problemMatcher": [
+        {
+            "owner": "make-problem-matcher",
+            "pattern": [
+                {
+                    "regexp": "^make(|\\[\\d+\\]): \\*+ \\[(.*?)o?] (Error) (\\d+)",
+                    "file": 2,
+                    "severity": 3,
+                    "code": 4
+                }
+            ]
+        }
+    ]
+}
