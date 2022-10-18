@@ -1355,12 +1355,12 @@ Module PipelineTactics.
     | [ Hres : _ = Success _ |- Wf _ ]
       => eapply Pipeline.BoundsPipeline_correct
     end;
-    repeat first [ exact _
-                 | exact I
-                 | solve [ auto with wf_gen_cache ]
-                 | match goal with
+    repeat first [ match goal with
                    | [ Hres : _ = Success ?res |- _ = Success ?res ] => refine Hres (* eassumption is too slow *)
                    | [ |- Wf (expr.APP _ _) ] => apply expr.Wf_APP
                    | [ |- Wf (GallinaReify.Reify_as _ _) ] => apply expr.Wf_Reify_as
-                   end ].
+                   end
+                 | exact I
+                 | exact _
+                 | solve [ auto with wf_gen_cache ] ].
 End PipelineTactics.
