@@ -6,6 +6,7 @@
                 {
                     "regexp": "^make(|\\[\\d+\\]): \\*+ \\[(.*?)o?] (Error) (\\d+)",
                     "file": 2,
+                    "message": 2,
                     "severity": 3,
                     "code": 4
                 }
