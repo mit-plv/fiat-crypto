@@ -198,7 +198,7 @@ Module ForExtraction.
     := [("all", all)
     ].
   (** This string gets parsed as the initial argument to --debug, to be updated by subsequent arguments *)
-  Definition default_debug : string := "".
+  Definition default_debug : string := "rewriting".
 
   Definition CollectErrors
              {machine_wordsize : machine_wordsize_opt}
