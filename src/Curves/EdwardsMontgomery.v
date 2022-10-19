@@ -204,23 +204,22 @@ Module M.
       { eapply (E.edwards_curve_commutative_group(a:=ae)(d:=de)(nonzero_a:=nonzero_ae)(square_a:=square_ae)(nonsquare_d:=nonsquare_de)). }   
       { (* Bijection, not automated due to non-local case analysis *)
         t; split.
-        all: try solve [t2].
+        all: try solve [t2]. Optimize Proof. Optimize Heap.
         all: assert (f <> 0) by t2; assert (f0 <> 1) by fsatz; destruct H1; split; fsatz.
-      }
+      } Optimize Proof. Optimize Heap.
       { (* Equality *)
         t.
         7: t5.
         all: try split; t3.
-      }
+      } Optimize Proof. Optimize Heap.
       { (* Addition: numerous calls to clear below are needed to make fsatz run in reasonable time *)
         t.
 
-        4, 21-25: split; fsatz.
-        7, 13-15, 19: split; t5; fsatz.
-        10, 13-14: t5; destruct H0; split; fsatz.
-        8-9: clear H1; t4.
-        2-3, 5-6: t4.
-
+        4, 21-25: split; fsatz. Optimize Proof. Optimize Heap.
+        7, 13-15, 19: split; t5; fsatz. Optimize Proof. Optimize Heap.
+        10, 13-14: t5; destruct H0; split; fsatz. Optimize Proof. Optimize Heap.
+        8-9: clear H1; t4. Optimize Proof. Optimize Heap.
+        2-3, 5-6: t4. Optimize Proof. Optimize Heap.
         {
           split.
           - fsatz.
@@ -228,11 +227,13 @@ Module M.
             destruct square_ae; assert (x <> 0) by fsatz.
             sqrt_de_witness (f0 ^ 2 / (f ^ 2 * x)).
         }
+        Optimize Proof. Optimize Heap.
         {
           split.
           - field_simpl_fsatz; fsatz.
           - fsatz.
-        }
+        } 
+        Optimize Proof. Optimize Heap.
         {
           rewrite H in * |-.
           assert (f2 = f0) by fsatz.
@@ -244,6 +245,7 @@ Module M.
             + destruct square_ae; assert (x <> 0) by fsatz.
               sqrt_de_witness (f0 ^ 2 / (f ^ 2 * x)).
         }
+        Optimize Proof. Optimize Heap.
         {
           assert (Epoint1: ae * (f1 / f2) ^ 2 + ((f1 - 1) / (f1 + 1)) ^ 2 = 1 + de * (f1 / f2) ^ 2 * ((f1 - 1) / (f1 + 1)) ^ 2). {
             clear y H H2 H3 H0 H5 f f0.
@@ -256,6 +258,7 @@ Module M.
           pose proof (Pre.denominator_nonzero_x _ nonzero_ae square_ae _ nonsquare_de _ _ Epoint1 _ _ Epoint) as denom_nonzero_x.
           pose proof (Pre.denominator_nonzero_y _ nonzero_ae square_ae _ nonsquare_de _ _ Epoint1 _ _ Epoint) as denom_nonzero_y.
           assert (f - f1 <> 0) by fsatz.
+          Optimize Proof. Optimize Heap.
           split; rewrite Hae, Hde in *; 
           clear Epoint Epoint1 square_ae nonzero_ae nonsquare_de Hae Hde ae de;
           field_simpl_fsatz.
@@ -264,6 +267,7 @@ Module M.
           - t_destruct denom_nonzero_y.
           - t_destruct H0.
         }
+        Optimize Proof. Optimize Heap.
         { 
           remember (b * ((f0 - f2) / (f - f1)) ^ 2 - a - f1 - f) as u.
           remember ((2 * f1 + f + a) * ((f0 - f2) / (f - f1)) - b * ((f0 - f2) / (f - f1)) ^ 3 - f2) as v.
@@ -293,6 +297,7 @@ Module M.
           - t_destruct denom_nonzero_y.
         }
       }
+      Optimize Proof. Optimize Heap.
       { (* Inverses *)
         t.
         2-3: t4.
