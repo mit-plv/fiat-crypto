@@ -38,18 +38,14 @@ Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
-Local Existing Instance default_low_level_rewriter_method.
-Local Existing Instance AbstractInterpretation.default_Options.
+Local Existing Instance default_translate_to_fancy.
+Local Existing Instances
+      Primitives.Options.default_PipelineOptions
+      Primitives.Options.default_PipelineToStringOptions
+      Primitives.Options.default_SynthesisOptions
+| 100.
 Local Instance : unfold_value_barrier_opt := true.
-Local Instance : assembly_hints_lines_opt := [].
-Local Instance : ignore_unique_asm_names_opt := false.
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
-Local Existing Instance default_language_naming_conventions.
-Local Existing Instance default_documentation_options.
-Local Instance : package_name_opt := None.
-Local Instance : class_name_opt := None.
-
-Local Existing Instance default_output_options.
 
 Module compiling_mul.
 
@@ -95,7 +91,6 @@ Module compiling_mul.
           "fiat" "mul"
           false
           false
-          None
           possible_values
           machine_wordsize
           ltac:(let n := (eval cbv in n) in
@@ -199,12 +194,12 @@ Module compiling_reduce_flatten.
       red.
 
   End single_reduction.
-
+(*
   Search Saturated.Rows.sum_rows.
   Search Partition.partition.
   Search Partition.partition app.
   Search Saturated.Rows.flatten.
-
+*)
   Let v := (2^64-1).
   Let p := repeat v (2*n).
   Let r' := reduce' w base s c n p.
@@ -219,7 +214,6 @@ Module compiling_reduce_flatten.
           "fiat" "mul"
           false
           false
-          None
           possible_values
           machine_wordsize
           ltac:(let n := (eval cbv in n) in
@@ -515,7 +509,6 @@ Module compiling_red.
             "fiat" "mul"
             false
             false
-            None
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) in
