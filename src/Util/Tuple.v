@@ -42,6 +42,11 @@ Fixpoint rsnoc' T n {struct n} : forall (x : rtuple' T n) (y : T), rtuple' T (S 
      | S n' => fun x y => (fst x, @rsnoc' T n' (snd x) y)
      end.
 Global Arguments rsnoc' {T n} _ _.
+Definition rsnoc {T n} : rtuple T n -> T -> rtuple T (S n)
+  := match n with
+     | O => fun _ y => y
+     | S n' => @rsnoc' T n'
+     end.
 
 Fixpoint cons' T n {struct n} : forall (y : T) (x : tuple' T n), tuple' T (S n)
   := match n return forall (y : T) (x : tuple' T n), tuple' T (S n) with
@@ -49,6 +54,11 @@ Fixpoint cons' T n {struct n} : forall (y : T) (x : tuple' T n), tuple' T (S n)
      | S n' => fun y x => (@cons' T n' y (fst x), snd x)
      end.
 Global Arguments cons' {T n} _ _.
+Definition cons {T n} : T -> tuple T n -> tuple T (S n)
+  := match n with
+     | O => fun x _ => x
+     | S n' => @cons' T n'
+     end.
 
 Fixpoint assoc_right' {n T} {struct n}
   : tuple' T n -> rtuple' T n
@@ -116,7 +126,7 @@ Program Fixpoint from_list' {T} (y:T) (n:nat) (xs:list T) : length xs = n -> tup
     end
   | S n' =>
     match xs return (length xs = S n' -> tuple' T (S n')) with
-    | cons x xs' => fun _ => (from_list' x n' xs' _, y)
+    | x :: xs' => fun _ => (from_list' x n' xs' _, y)
     | _ => _ (* impossible *)
     end
   end.
@@ -130,7 +140,7 @@ match n return _ with
     end
 | S n' =>
     match xs return (length xs = S n' -> tuple T (S n')) with
-    | cons x xs' => fun _ => from_list' x n' xs' _
+    | x :: xs' => fun _ => from_list' x n' xs' _
     | _ => _ (* impossible *)
     end
 end.
@@ -155,7 +165,7 @@ Qed.
 Hint Rewrite @length_to_list : distr_length.
 
 Lemma from_list'_to_list' : forall T n (xs:tuple' T n),
-    forall x xs' pf, to_list' n xs = cons x xs' ->
+    forall x xs' pf, to_list' n xs = x :: xs' ->
       from_list' x n xs' pf = xs.
 Proof using Type.
   induction n; intros xs x xs' pf H.
@@ -647,7 +657,7 @@ Fixpoint from_list_default' {T} (d y:T) (n:nat) (xs:list T) : tuple' T n :=
   | 0 => y (* ignore high digits *)
   | S n' =>
          match xs return _ with
-         | cons x xs' => (from_list_default' d x n' xs', y)
+         | x :: xs' => (from_list_default' d x n' xs', y)
          | nil => (from_list_default' d d n' nil, y)
          end
   end.
@@ -657,7 +667,7 @@ match n return tuple T n with
 | 0 => tt
 | S n' =>
     match xs return _ with
-    | cons x xs' => (from_list_default' d x n' xs')
+    | x :: xs' => (from_list_default' d x n' xs')
     | nil => (from_list_default' d d n' nil)
     end
 end.
