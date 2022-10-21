@@ -5,6 +5,7 @@ Require Import Rupicola.Lib.Gensym.
 Require Import coqutil.Word.LittleEndianList.
 Require Import Crypto.Bedrock.End2End.RupicolaCrypto.Low.
 Require Import bedrock2.BasicC32Semantics.
+Require Import Crypto.Bedrock.End2End.RupicolaCrypto.Broadcast.
 
 Section Bedrock2.
 
@@ -62,6 +63,7 @@ Section Bedrock2.
     handle_call; eauto.
   Qed.
 
+ 
 
   Instance spec_of_chacha20_block : spec_of "chacha20_block" :=
     fnspec! "chacha20_block" (key_ptr nonce_ptr st_ptr : word) /
@@ -76,10 +78,10 @@ Section Bedrock2.
         (array ptsto (word.of_Z 1) key_ptr key ⋆
                                                 array ptsto (word.of_Z 1) nonce_ptr nonce ⋆
                                                 array ptsto (word.of_Z 1) st_ptr (chacha20_block key nonce st) ⋆ R) mem }.
-
+  
   Derive chacha20_block_body SuchThat
          (defn! "chacha20_block" ("key", "nonce", "st") ~> "st" { chacha20_block_body },
-          implements (chacha20_block) using [ "quarter" ])
+          implements (chacha20_block) using [ "quarter" (*; "unsizedlist_memcpy"*)])
          As chacha20_block_body_correct.
   Proof.
     compile_setup.
@@ -127,92 +129,152 @@ Section Bedrock2.
     (*TODO: need a compile words lemma comparable to compile_byte_memcpy.
       Alternately, something generic over fixed-size elements (e.g. instances of Allocable).
      *)
-    Fail simple eapply compile_byte_memcpy.
-    (*compile_step.
-
-    repeat compile_step. subst v4.
-
-    simple eapply compile_w32s_of_bytes; repeat compile_step.
-    simple eapply compile_nlet_as_nlet_eq.
-
-    simple eapply compile_bytes_of_w32s with (a_ptr := key_ptr); repeat compile_step.
-    admit.
-
-    simple eapply compile_nlet_as_nlet_eq.
-    simple eapply compile_w32s_of_bytes with (a_ptr := nonce_ptr); repeat compile_step.
-
-    simple eapply compile_nlet_as_nlet_eq.
-    compile_buf_append.
-    repeat compile_step. subst v7.
-
-    simple eapply compile_w32s_of_bytes; repeat compile_step.
-    simple eapply compile_nlet_as_nlet_eq.
-    simple eapply compile_bytes_of_w32s with (a_ptr := nonce_ptr); repeat compile_step.
-    admit.
-
-    simple eapply compile_nlet_as_nlet_eq.
-    simple eapply compile_buf_as_array; repeat compile_step.
-
-    unfold buffer_at in H17.
-
-    admit.
-
-    simple eapply compile_nlet_as_nlet_eq.
-    simple eapply compile_buf_make_stack.
-
-    (*
-    (*simple eapply compile_buf_append; [shelve .. |].*)
-    compile_step.
-    compile_step.
-
-
-    simple eapply compile_nlet_as_nlet_eq.
-    simple eapply compile_bytes_of_w32s; repeat compile_step.
-    compile_step.
-    simple eapply compile_buf_append; [shelve..|].
-
-
-    [ repeat compile_step.. |].
-    admit.
-    intros.
+    simple eapply compile_word_memcpy.
+    shelve (*TODO: what is this?*).
     repeat compile_step.
     {
-      use_sep_assumption. cancel.
+      unfold buf_push.
+      rewrite !app_length.
+      unfold buf_backed_by.
+      cbn [length Nat.add].
+      replace (Datatypes.length v3) with 4%nat in H1 by reflexivity.
+      admit.
+    }
+    admit.
+    admit.
+    admit.
+    admit.
+    admit.
+    compile_step.
+    eapply compile_skip_marker.
+    simple eapply compile_nlet_as_nlet_eq.
+    eapply compile_bytes_of_w32s; repeat compile_step.
+    admit.
+    simple eapply compile_nlet_as_nlet_eq.
+    eapply compile_w32s_of_bytes; repeat compile_step.
+    admit.
+    admit.
+    admit.
+    admit.
+    eapply compile_skip_marker.
+    simple eapply compile_nlet_as_nlet_eq.
+    eapply compile_bytes_of_w32s; repeat compile_step.
+    admit.
+    simple eapply compile_nlet_as_nlet_eq.
+    eapply compile_buf_as_array; repeat compile_step.
+    admit.
+    admit.
+    simple eapply compile_nlet_as_nlet_eq.
+    eapply compile_buf_make_stack; repeat compile_step; [shelve ..|].
+    eapply compile_buf_as_array; [shelve ..|].
+    eapply compile_skip_marker.
+    
+    simple eapply compile_nlet_as_nlet_eq.
+    eapply compile_buf_as_array; [shelve ..|].
 
-
-
-
-    subst v. unfold buffer_at. unfold buf_push. progress simpl. eauto.
-
-    simpl.
-
-    progress sepsimpl.
-
+    repeat lazymatch goal with
+    | |- context [array_get ?a ?b (word.of_Z 0)] =>
+        replace (array_get a b (word.of_Z 0)) with
+        (ListArray.get a b) by admit
+           end.
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
+    eapply compile_nlet_as_nlet_eq.
+    eapply compile_word_unsizedlistarray_get; [shelve .. |].
     compile_step.
 
+    rewrite  Nat_iter_as_nd_ranged_for_all with (i:=0).
+    change (0 + Z.of_nat 10) with 10%Z.
+    
+    simple eapply compile_nlet_as_nlet_eq.
+    eapply compile_nd_ranged_for_all_fresh.
+    shelve.
+    shelve.
+    shelve.
+    shelve.
+    shelve.
+    shelve.
 
-    unfold buf_backed_by.
-    unfold Datatypes.length. lia.
+    {
+      compile_step.
+      simple eapply compile_nlet_as_nlet_eq.
+      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      simple eapply compile_nlet_as_nlet_eq.
+      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      simple eapply compile_nlet_as_nlet_eq.
+      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      simple eapply compile_nlet_as_nlet_eq.
+      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      simple eapply compile_nlet_as_nlet_eq.
+      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      simple eapply compile_nlet_as_nlet_eq.
+      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      simple eapply compile_nlet_as_nlet_eq.
+      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      simple eapply compile_nlet_as_nlet_eq.
+      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      admit.
+    }
+    compile_step.
+    
+    repeat lazymatch goal with
+    | |- context [array_put ?a ?b ?c] =>
+        replace (array_put a b c) with
+        (ListArray.put a b c) by admit;
+        simple eapply compile_nlet_as_nlet_eq;
+        eapply compile_word_unsizedlistarray_put; [shelve ..| compile_step]
+           end.
 
-    instantiate (1 := "st").
+    eapply compile_nlet_as_nlet_eq.
+      lazymatch goal with
+  | [ |- WeakestPrecondition.cmd _ _ _ _ ?locals (_ (nlet_eq [?var] ?v _)) ] =>
+      let idx_var_str := gensym locals constr:((var++"_idx")%string) in
+      let to_var_str := gensym locals constr:((var++"_to")%string) in
+      simple eapply compile_broadcast_expr
+        with (idx_var:=idx_var_str) (to_var:=to_var_str)
+      end; [shelve .. | |].
+      {
+        eapply broadcast_word_add.
+        shelve.
+        eapply broadcast_id; shelve.
+        admit (*TODO: need one more broadcast lemma? double check*).
+      }
+      compile_step.
+    eapply compile_nlet_as_nlet_eq.
+      eapply compile_bytes_of_w32s; [shelve.. |].
+      compile_step.
+      eapply compile_nlet_as_nlet_eq.
+      eapply compile_buf_as_array; [shelve.. |].
+      compile_step.      
 
-    unfold buffer_at in H1
-
-    unfold buffer_at.
-
-    simpl.
-    Set Printing Parentheses.
-    eapply sep_assoc.
-    Check (proj2(sep_emp_True_l (_ : _) mem) _).
-    refine (proj2(sep_emp_True_l (_ : _) mem) _); repeat compile_step.
-    replace (4 mod (Z.pow_pos 2 32)) with 4 by lia.
-    replace (0 mod (Z.pow_pos 2 32)) with 0 by lia.
-    Search Lift1Prop.ex1.
-
-    4 : { simple eapply compile_nlet_as_nlet_eq.
-          eapply compile_buf_push_word32; repeat compile_step.
-
-     *)*)
-    Abort.
-
+  Abort.
+  
 End Bedrock2.
