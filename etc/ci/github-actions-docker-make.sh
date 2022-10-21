@@ -9,7 +9,7 @@ if [ -z "${EXTRA_PACKAGES+x}" ]; then
     EXTRA_PACKAGES=""
 fi
 
-sudo chmod -R a+rw .
+sudo chmod -R a=u .
 echo '::group::install general dependencies'
 sudo apt-get update -y
 sudo apt-get install -y python python3 bsdmainutils ${EXTRA_PACKAGES}
