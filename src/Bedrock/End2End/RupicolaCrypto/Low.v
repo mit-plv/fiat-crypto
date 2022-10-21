@@ -1024,7 +1024,64 @@ Lemma compile_byte_memcpy (n : nat) (bs bs2 : list byte) :
     }
   Qed.
 
+  
+Lemma compile_word_memcpy (n : nat) (bs bs2 : list word) :
+  let v := copy bs in
+  forall (e : list Syntax.func) P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
+         len a a2 len_expr a_expr a2_var t m l (R: mem -> Prop),
+
+    map.get l a2_var = Some a2 ->
+
+    (Arrays.listarray_value access_size.word a bs
+     *Arrays.listarray_value access_size.word a2 bs2 * R)%sep m ->
+
+    spec_of_unsizedlist_memcpy e ->
+
+
+    (word.unsigned len) = Z.of_nat (List.length bs) ->
+    (word.unsigned len) = Z.of_nat (List.length bs2) ->
+
+    DEXPR m l a_expr a ->
+    DEXPR m l len_expr len ->
+
+    (let v := v in
+     forall m,
+       (Arrays.listarray_value access_size.word a bs
+        * Arrays.listarray_value access_size.word a2 bs * R)%sep m ->
+       <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+         k_impl
+       <{ pred (k v eq_refl) }>) ->
+    <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+      cmd.seq
+        (cmd.call [] "unsizedlist_memcpy"
+           [len_expr; a_expr; expr.var a2_var])
+        k_impl
+    <{ pred (nlet_eq [a2_var] v k) }>.
+Proof using Type.
+  repeat straightline.
+  exists [len; a; a2]; split.
+  {
+    cbv [dexprs list_map list_map_body].
+    repeat (eapply WeakestPrecondition_dexpr_expr; eauto).
+    eapply expr_compile_var; auto.
+  }
+  eapply Proper_call; cycle -1.
+  eapply H1; cycle 2; eauto; try lia.
+  unfold pointwise_relation.
+  intros.
+  intro.
+  intuition subst.
+  exists l; split; [ reflexivity|].
+  eapply H6.
+  rewrite !memcpy_identity in H10; eauto.
+Qed.
+
+  
 End CompileBufPolymorphic.
+
+
+
+  
 
 Ltac compile_buf_append:=
   lazymatch goal with
@@ -1631,13 +1688,43 @@ Proof.
   repeat compile_step.
   eapply compile_nlet_as_nlet_eq.
   eapply compile_bytes_as_felem_inplace.
-  admit.
+  {
+    unfold buf_push.
+    ecancel_assumption.
+  }
   subst v5 v4 v3.
   unfold buf_unsplit.
   unfold buf_push.
   rewrite app_length.
   rewrite map_length.
   rewrite combine_length.
+  simpl.
+  {
+    unfold UnsaturatedSolinas.n_bytes.
+    unfold Freeze.bytes_n.
+    rewrite Z.pow_pos_fold.
+    rewrite Z.log2_up_pow2 by lia.
+    rewrite min_r.
+    lia.
+    cbv [v1 v0 buf_make buf_append app copy v fst].
+    admit.
+  }
+  repeat compile_step.
+  change felem_init_zero with (F.of_Z M_pos 0).
+  eapply compile_nlet_as_nlet_eq.
+  eapply compile_from_word.
+  Fail compile_step.
+  replace (F.of_Z M_pos _) with (@F.zero M_pos) by lia
+  compile_step.
+  eapply compile_from_word.
+  (*
+  simple eapply compile_from_word with (x:=0).
+  repeat compile_step.
+
+  unfold *)
+  
+  Abort.
+(*  lia.
   admit.
   clear m3 H4 m4 H5.
   repeat compile_step.
@@ -1661,8 +1748,8 @@ Proof.
   eapply word.unsigned_of_Z_0.
   repeat compile_step.
   rewrite poly1305_loop_nil.
-  unfold nlet at 1.
-Abort.
+  unfold nlet at 1.*)
+  
 
 (** ** Equivalence proof **)
 
