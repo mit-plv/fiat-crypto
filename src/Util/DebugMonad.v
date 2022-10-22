@@ -41,13 +41,16 @@ Module Debug.
   Notation debug v := (debug' (fun 'tt => v)).
   Local Notation eta x := (fst x, snd x).
   Definition bind {dbg A B} (x : DebugM A) (k : A -> DebugM B) : @DebugM dbg B
-    := let '(dbg1, a) := eta x in
-       let '(dbg2, b) := eta (k a) in
+    := let x := x in
+       let '(dbg1, a) := eta x in
+       let ka := k a in
+       let '(dbg2, b) := eta ka in
        (tree.smart_app dbg1 dbg2, b).
   Definition sequence {dbg A} (x : DebugM unit) (k : DebugM A) : @DebugM dbg A
     := bind x (fun 'tt => k).
   Definition map {dbg A B} (f : A -> B) (x : DebugM A) : @DebugM dbg B
-    := let '(dbg, a) := eta x in
+    := let x := x in
+       let '(dbg, a) := eta x in
        (dbg, f a).
   Definition ret {dbg A} (a : A) : @DebugM dbg A
     := (tree.empty, a).
