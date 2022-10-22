@@ -16,6 +16,16 @@ Global Unset Extraction Optimize.
 (** Work around COQBUG(https://github.com/coq/coq/issues/4875) / COQBUG(https://github.com/coq/coq/issues/7954) / COQBUG(https://github.com/coq/coq/issues/7954) / https://discuss.ocaml.org/t/why-wont-ocaml-specialize-weak-type-variables-in-dead-code/7776 *)
 Extraction Inline Show.ShowLevel_of_Show.
 
+(** Performance hacks *)
+Extraction Inline DebugMonad.Debug.debug'.
+Extraction Inline DebugMonad.Debug.bind.
+Extraction Inline DebugMonad.Debug.sequence.
+Extraction Inline DebugMonad.Debug.map.
+Extraction Inline DebugMonad.Debug.ret.
+Extraction Inline DebugMonad.Debug.eval_result.
+Extraction Inline BoundsPipeline.Pipeline.debug_after_rewrite.
+Extraction Inline BoundsPipeline.Pipeline.wrap_debug_rewrite.
+
 Inductive int : Set := int_O | int_S (x : int).
 
 (** We pull a hack to get coqchk to not report these as axioms; for
