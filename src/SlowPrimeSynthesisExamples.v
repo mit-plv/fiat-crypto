@@ -397,8 +397,8 @@ Module debugging_typedefs.
       cbv [Language.Compilers.ToString.ToFunctionLines] in v.
       cbv [C.OutputCAPI] in v.
       cbv [ToFunctionLines] in v.
-      set (dbg := tree.smart_app _ _) in (value of v) at 1.
-      vm_compute in dbg; subst dbg.
+      try (set (dbg := tree.smart_app _ _) in (value of v) at 1;
+           vm_compute in dbg; subst dbg).
       vm_compute IR.OfPHOAS.ExprOfPHOAS in v.
       cbv beta iota zeta in v.
       (*vm_compute in v.*)
@@ -1265,7 +1265,7 @@ Module debugging_p256_mul_bedrock2.
       cbv [mul] in k.
       cbv -[Pipeline.BoundsPipelineWithDebug WordByWordMontgomeryReificationCache.WordByWordMontgomery.reified_mul_gen] in k.
       cbv [Pipeline.BoundsPipelineWithDebug Pipeline.PreBoundsPipeline Rewriter.Util.LetIn.Let_In] in k.
-      let k' := fresh in rename k into k'; pose (DebugMonad.Debug.eval_result k') as k; subst k'.
+      let k' := fresh in rename k into k'; epose (DebugMonad.Debug.eval_result k') as k; subst k'.
       cbv [Rewriter.Util.LetIn.Let_In DebugMonad.Debug.eval_result DebugMonad.Debug.sequence Pipeline.debug_after_rewrite DebugMonad.Debug.ret] in k.
       vm_compute Pipeline.debug_rewriting in k.
       unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
@@ -3846,7 +3846,7 @@ Module debugging_remove_mul_split2.
       Import WordByWordMontgomeryReificationCache.
       cbv -[Pipeline.BoundsPipelineWithDebug reified_mul_gen] in k.
       cbv [Pipeline.BoundsPipelineWithDebug Pipeline.PreBoundsPipeline LetIn.Let_In] in k.
-      let k' := fresh in rename k into k'; pose (DebugMonad.Debug.eval_result k') as k; subst k'.
+      let k' := fresh in rename k into k'; epose (DebugMonad.Debug.eval_result k') as k; subst k'.
       cbv [Rewriter.Util.LetIn.Let_In DebugMonad.Debug.eval_result DebugMonad.Debug.sequence Pipeline.debug_after_rewrite DebugMonad.Debug.ret] in k.
       vm_compute Pipeline.debug_rewriting in k.
       unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
