@@ -9,6 +9,7 @@ Require Crypto.Util.ZUtil.DistrIf.
 Require Crypto.Util.ZUtil.Div.
 Require Crypto.Util.ZUtil.Div.Bootstrap.
 Require Crypto.Util.ZUtil.Divide.
+Require Crypto.Util.ZUtil.Divide.Bool.
 Require Crypto.Util.ZUtil.EquivModulo.
 Require Crypto.Util.ZUtil.Ge.
 Require Crypto.Util.ZUtil.Hints.
