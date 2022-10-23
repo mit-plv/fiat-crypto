@@ -15,7 +15,7 @@ Module debugging_no_asm.
     pose main as v.
     cbv beta iota zeta delta [main main_gen] in v.
     set (k := map _ sys_argv) in (value of v).
-    assert (k = ["./src/ExtractionOCaml/unsaturated_solinas"; "25519"; "64"; "5"; "2^255-19"; "carry_mul"; "--no-primitives"; "--hints-file"; "t.asm"]) by admit.
+    assert (k = ["./src/ExtractionOCaml/unsaturated_solinas"; "25519"; "64"; "5"; "2^255-19"; "carry_mul"; "--no-primitives"; "--debug"; "-all"; "--hints-file"; "t.asm"]) by admit.
     clearbody k; subst k.
     cbv beta iota zeta delta [ForExtraction.UnsaturatedSolinas.PipelineMain ForExtraction.Parameterized.PipelineMain] in v.
     vm_compute Arg.parse_argv in v.
@@ -112,7 +112,7 @@ Module debugging_typedef_bounds.
     pose main as v.
     cbv beta iota zeta delta [main main_gen] in v.
     set (k := map _ sys_argv) in (value of v).
-    assert (k = ["./src/ExtractionOCaml/unsaturated_solinas"; "curve25519"; "64"; "5"; "2^255-19"; "add"; "--no-primitives"]) by admit.
+    assert (k = ["./src/ExtractionOCaml/unsaturated_solinas"; "curve25519"; "64"; "5"; "2^255-19"; "add"; "--no-primitives"; "--debug"; "-all"]) by admit.
     clearbody k; subst k.
     cbv beta iota zeta delta [ForExtraction.UnsaturatedSolinas.PipelineMain ForExtraction.Parameterized.PipelineMain] in v.
     vm_compute Arg.parse_argv in v.
