@@ -1,5 +1,5 @@
 Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
+Require Import Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
@@ -9,6 +9,7 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Import Crypto.Util.ZUtil.Tactics.RewriteModDivide.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.ZUtil.Tactics.LinearSubstitute.
 Require Import Crypto.Util.ZUtil.Hints.
@@ -31,6 +32,7 @@ Require Import Crypto.Util.ZUtil.Land.
 Require Import Crypto.Util.ZUtil.Lor.
 Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
 Require Import Crypto.Util.ZUtil.Shift.
+Require Import Crypto.Util.ZUtil.Divide.Bool.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.BasicLemmas.
@@ -797,7 +799,8 @@ Proof using Type.
   start_proof; auto; intros; try lia.
   all: repeat interp_good_t_step_related.
   all: systematically_handle_casts; autorewrite with zsimplify_fast; try reflexivity.
-  all: rewrite !ident.platform_specific_cast_0_is_mod, ?Z.sub_add, ?Z.mod_mod by lia; try reflexivity.
+  all: subst; rewrite !ident.platform_specific_cast_0_is_mod, ?Z.sub_add, ?Z.mod_mod by lia; try reflexivity.
+  all: autorewrite with zsimplify_fast in *; Z.rewrite_mod_divide_in_all; try reflexivity.
   all: progress specialize_by lia.
   all: try match goal with
            | H : ?x = 2 ^ Z.log2 ?x |- _ =>

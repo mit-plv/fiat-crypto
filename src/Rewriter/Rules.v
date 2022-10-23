@@ -928,7 +928,8 @@ Section with_bitwidth.
   Context (bitwidth : Z)
           (lgcarrymax : Z).
 
-  Local Notation singlewidth_range := r[0~>2^bitwidth - 1]%zrange.
+  Local Notation singlewidth_upperbound := (2^bitwidth - 1).
+  Local Notation singlewidth_range := r[0~>singlewidth_upperbound]%zrange.
   Local Notation doublewidth := (cstZ r[0~>2^(2*bitwidth) - 1]).
   Local Notation singlewidth := (cstZ singlewidth_range).
   Local Notation carrymax := (2^lgcarrymax-1).
@@ -1183,6 +1184,15 @@ Section with_bitwidth.
                do_again
                [ (* [do_again], so that if one of the arguments is concrete, we automatically get the rewrite rule for [Z_cast] applying to it *)
                  (forall rx ry x y, cstZZ rx ry (x, y) = (cstZ rx x, cstZ ry y))
+                 ; (* handle things other than pairsinglewidth on Z.mul_split, most importantly r[0~>0] *)
+                 (* N.B. we need to abstract over ranges, not just their upper bounds, due to https://github.com/mit-plv/rewriter/issues/84 *)
+                 (forall r1 r2 s x y,
+                     lower r1 = 0 -> lower r2 = 0 -> 0 <= singlewidth_upperbound -> 0 <= upper r1 -> 0 <= upper r2
+                     -> ((upper r1+1) | (singlewidth_upperbound+1))
+                     -> ((upper r2+1) | (singlewidth_upperbound+1))
+                     -> (upper r1 <> singlewidth_upperbound \/ upper r2 <> singlewidth_upperbound)
+                     -> cstZZ r1 r2 (Z.mul_split s x y)
+                        = cstZZ r1 r2 (pairsinglewidth (Z.mul_split s x y)))
                ]
           ]%Z%zrange.
 
