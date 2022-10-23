@@ -58,6 +58,7 @@ Require Crypto.Util.ZUtil.Tactics.PullPush.
 Require Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.
 Require Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Crypto.Util.ZUtil.Tactics.RewriteModDivide.
 Require Crypto.Util.ZUtil.Tactics.SimplifyFractionsLe.
 Require Crypto.Util.ZUtil.Tactics.SplitMinMax.
 Require Crypto.Util.ZUtil.Tactics.ZeroBounds.
