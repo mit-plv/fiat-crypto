@@ -4,6 +4,7 @@ Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Tactics.DivideExistsMul.
+Require Import Crypto.Util.Tactics.DestructHead.
 Local Open Scope Z_scope.
 
 Module Z.
@@ -40,4 +41,20 @@ Module Z.
     rewrite Z.pow_add_r by lia.
     apply Z.divide_factor_l.
   Qed.
+
+  Lemma mod_divide_full a b : (a mod b = 0) <-> (b | a).
+  Proof.
+    destruct (Z_zerop b); auto using Z.mod_divide; subst; [].
+    rewrite Zmod_0_r; cbv [Z.divide]; intuition (destruct_head'_ex; subst; try exists 0; lia).
+  Qed.
+
+  Lemma mod_div_mod_full a m n : (n | m) -> a mod n = (a mod m) mod n.
+  Proof.
+    intros (p,Hp); rewrite (Z_div_mod_eq_full a m) at 1.
+    rewrite Hp at 1.
+    destruct (Z_zerop n); subst; try now autorewrite with zsimplify_const.
+    rewrite Z.mul_shuffle0, Z.add_comm, Z.mod_add; auto.
+  Qed.
+  #[global]
+   Hint Rewrite <- mod_div_mod_full using assumption : zsimplify push_Zmod.
 End Z.
