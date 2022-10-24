@@ -154,9 +154,9 @@ Section __.
   Local Notation weightf := weight.
   Local Notation notations_for_docstring
     := (CorrectnessStringification.dyn_context.cons
-          evalf "evalf"
+          weightf "weight"
           (CorrectnessStringification.dyn_context.cons
-             weightf "weightf"
+             evalf "eval"
              CorrectnessStringification.dyn_context.nil))%string.
   Local Notation "'docstring_with_summary_from_lemma!' summary correctness"
     := (docstring_with_summary_from_lemma_with_ctx!
@@ -178,13 +178,13 @@ Section __.
          (Some boundsn).
 
   Definition smul (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "mul" mul
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements."]%string)
-             (mul_correct weight n m boundsn)).
+             (mul_correct weightf n m boundsn)).
 
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
@@ -222,7 +222,7 @@ Section __.
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
-      : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
+      : list (synthesis_output_kind * string * Pipeline.M (list string))
       := Primitives.Synthesize
            machine_wordsize valid_names known_functions (fun _ => nil) all_typedefs!
            check_args

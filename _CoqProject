@@ -266,6 +266,7 @@ src/Util/CPSUtil.v
 src/Util/Comparison.v
 src/Util/Compose.v
 src/Util/Curry.v
+src/Util/DebugMonad.v
 src/Util/Decidable.v
 src/Util/DefaultedTypes.v
 src/Util/DynList.v
@@ -337,6 +338,7 @@ src/Util/FSets/FMapN.v
 src/Util/FSets/FMapOption.v
 src/Util/FSets/FMapProd.v
 src/Util/FSets/FMapSect.v
+src/Util/FSets/FMapString.v
 src/Util/FSets/FMapSum.v
 src/Util/FSets/FMapTrie.v
 src/Util/FSets/FMapTrieEx.v
@@ -370,6 +372,7 @@ src/Util/Logic/ImplAnd.v
 src/Util/Logic/ProdForall.v
 src/Util/MSets/MSetIso.v
 src/Util/MSets/MSetN.v
+src/Util/MSets/MSetString.v
 src/Util/MSets/MSetSum.v
 src/Util/MSets/Show.v
 src/Util/MSets/FMapPositive/Equality.v
@@ -394,6 +397,7 @@ src/Util/Strings/Decimal.v
 src/Util/Strings/NamingConventions.v
 src/Util/Strings/ParseArithmetic.v
 src/Util/Strings/ParseArithmeticToTaps.v
+src/Util/Strings/ParseDebugOptions.v
 src/Util/Strings/Show.v
 src/Util/Strings/Sorting.v
 src/Util/Strings/String.v
@@ -557,6 +561,7 @@ src/Util/ZUtil/Z2Nat.v
 src/Util/ZUtil/ZSimplify.v
 src/Util/ZUtil/Zselect.v
 src/Util/ZUtil/Div/Bootstrap.v
+src/Util/ZUtil/Divide/Bool.v
 src/Util/ZUtil/Hints/Core.v
 src/Util/ZUtil/Hints/PullPush.v
 src/Util/ZUtil/Hints/ZArith.v
@@ -572,6 +577,7 @@ src/Util/ZUtil/Tactics/PeelLe.v
 src/Util/ZUtil/Tactics/PrimeBound.v
 src/Util/ZUtil/Tactics/PullPush.v
 src/Util/ZUtil/Tactics/ReplaceNegWithPos.v
+src/Util/ZUtil/Tactics/RewriteModDivide.v
 src/Util/ZUtil/Tactics/RewriteModSmall.v
 src/Util/ZUtil/Tactics/SimplifyFractionsLe.v
 src/Util/ZUtil/Tactics/SolveRange.v

@@ -177,6 +177,7 @@ Crypto.Util.CPSUtil
 Crypto.Util.Comparison
 Crypto.Util.Compose
 Crypto.Util.Curry
+Crypto.Util.DebugMonad
 Crypto.Util.Decidable
 Crypto.Util.Decidable.Bool2Prop
 Crypto.Util.Decidable.Decidable2Bool
@@ -196,6 +197,7 @@ Crypto.Util.FSets.FMapN
 Crypto.Util.FSets.FMapOption
 Crypto.Util.FSets.FMapProd
 Crypto.Util.FSets.FMapSect
+Crypto.Util.FSets.FMapString
 Crypto.Util.FSets.FMapSum
 Crypto.Util.FSets.FMapTrie
 Crypto.Util.FSets.FMapTrie.Shape
@@ -250,6 +252,7 @@ Crypto.Util.MSets.MSetN
 Crypto.Util.MSets.MSetPositive.Equality
 Crypto.Util.MSets.MSetPositive.Facts
 Crypto.Util.MSets.MSetPositive.Show
+Crypto.Util.MSets.MSetString
 Crypto.Util.MSets.MSetSum
 Crypto.Util.MSets.Show
 Crypto.Util.NUtil.Sorting
@@ -289,6 +292,7 @@ Crypto.Util.Strings.NamingConventions
 Crypto.Util.Strings.Parse.Common
 Crypto.Util.Strings.ParseArithmetic
 Crypto.Util.Strings.ParseArithmeticToTaps
+Crypto.Util.Strings.ParseDebugOptions
 Crypto.Util.Strings.Show
 Crypto.Util.Strings.Sorting
 Crypto.Util.Strings.String
@@ -420,6 +424,7 @@ Crypto.Util.ZUtil.DistrIf
 Crypto.Util.ZUtil.Div
 Crypto.Util.ZUtil.Div.Bootstrap
 Crypto.Util.ZUtil.Divide
+Crypto.Util.ZUtil.Divide.Bool
 Crypto.Util.ZUtil.EquivModulo
 Crypto.Util.ZUtil.Ge
 Crypto.Util.ZUtil.Hints
@@ -474,6 +479,7 @@ Crypto.Util.ZUtil.Tactics.PrimeBound
 Crypto.Util.ZUtil.Tactics.PullPush
 Crypto.Util.ZUtil.Tactics.PullPush.Modulo
 Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos
+Crypto.Util.ZUtil.Tactics.RewriteModDivide
 Crypto.Util.ZUtil.Tactics.RewriteModSmall
 Crypto.Util.ZUtil.Tactics.SimplifyFractionsLe
 Crypto.Util.ZUtil.Tactics.SolveRange
