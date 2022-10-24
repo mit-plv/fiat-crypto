@@ -150,9 +150,9 @@ Section __.
   Local Notation weightf := weight.
   Local Notation notations_for_docstring
     := (CorrectnessStringification.dyn_context.cons
-          evalf "evalf"
+          weightf "weight"
           (CorrectnessStringification.dyn_context.cons
-             weightf "weightf"
+             evalf "eval"
              CorrectnessStringification.dyn_context.nil))%string.
   Local Notation "'docstring_with_summary_from_lemma!' summary correctness"
     := (docstring_with_summary_from_lemma_with_ctx!
@@ -180,7 +180,7 @@ Section __.
           machine_wordsize prefix "mul" mul
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements."]%string)
-             (mul_correct weight n m boundsn)).
+             (mul_correct weightf n m boundsn)).
 
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
