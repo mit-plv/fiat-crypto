@@ -288,7 +288,7 @@ Section __.
          (Some montgomery_domain_bounds).
 
   Definition smul (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "mul" mul
@@ -307,7 +307,7 @@ Section __.
          (Some montgomery_domain_bounds).
 
   Definition ssquare (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "square" square
@@ -326,7 +326,7 @@ Section __.
          (Some montgomery_domain_bounds).
 
   Definition sadd (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "add" add
@@ -345,7 +345,7 @@ Section __.
          (Some montgomery_domain_bounds).
 
   Definition ssub (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "sub" sub
@@ -364,7 +364,7 @@ Section __.
          (Some montgomery_domain_bounds).
 
   Definition sopp (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "opp" opp
@@ -383,7 +383,7 @@ Section __.
          (Some non_montgomery_domain_bounds).
 
   Definition sfrom_montgomery (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "from_montgomery" from_montgomery
@@ -402,7 +402,7 @@ Section __.
          (Some montgomery_domain_bounds).
 
   Definition sto_montgomery (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "to_montgomery" to_montgomery
@@ -420,7 +420,7 @@ Section __.
          (Some r[0~>r-1]%zrange).
 
   Definition snonzero (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "nonzero" nonzero
@@ -439,7 +439,7 @@ Section __.
          (Some prime_bytes_bounds).
 
   Definition sto_bytes (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "to_bytes" to_bytes
@@ -458,7 +458,7 @@ Section __.
          (Some prime_bounds).
 
   Definition sfrom_bytes (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "from_bytes" from_bytes
@@ -477,7 +477,7 @@ Section __.
          (Some montgomery_domain_bounds).
 
   Definition sencode (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "encode" encode
@@ -497,7 +497,7 @@ Section __.
          (Some saturated_bounds).
 
   Definition sencode_word (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "encode_word" encode_word
@@ -516,7 +516,7 @@ Section __.
          (Some montgomery_domain_bounds).
 
   Definition szero (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "zero" zero
@@ -535,7 +535,7 @@ Section __.
          (Some montgomery_domain_bounds).
 
   Definition sone (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "set_one" one (* to avoid conflict with boringSSL *)
@@ -586,12 +586,12 @@ Section __.
 
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Primitives.sselectznz n machine_wordsize prefix.
 
   Definition copy : Pipeline.ErrorT _ := Primitives.copy n machine_wordsize.
   Definition scopy (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Primitives.scopy n machine_wordsize prefix.
 
   Definition msat
@@ -604,7 +604,7 @@ Section __.
          (Some larger_bounds).
 
  Definition smsat (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "msat" msat
@@ -623,7 +623,7 @@ Section __.
          (Some bounds).
 
   Definition sdivstep_precomp (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "divstep_precomp" divstep_precomp
@@ -642,7 +642,7 @@ Section __.
          (divstep_output).
 
   Definition sdivstep (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "divstep" divstep
@@ -1078,7 +1078,7 @@ Section __.
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
-      : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
+      : list (synthesis_output_kind * string * Pipeline.M (list string))
       := Primitives.Synthesize
            machine_wordsize valid_names known_functions (fun _ => nil) all_typedefs!
            check_args

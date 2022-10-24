@@ -16,6 +16,7 @@ Require Crypto.Stringification.C.
 Require Crypto.Stringification.Go.
 Require Crypto.Stringification.Java.
 Require Import Crypto.BoundsPipeline.
+Require Import Crypto.Util.DebugMonad.
 Require Import Crypto.Util.ZUtil.ModInv.
 
 Require Import Crypto.Util.Notations.
@@ -71,17 +72,24 @@ Module debugging_go_bits_add.
       pose (WordByWordMontgomery.smul (s - Associational.eval c) machine_wordsize "p256_") as v.
       vm_compute Z.sub in v.
       cbv [WordByWordMontgomery.smul] in v.
-      set (k := WordByWordMontgomery.mul _ _) in (value of v).
+      set (k := Pipeline.BoundsPipelineWithDebug _ _ _ _ _) in (value of v).
       vm_compute in v.
-      clear v; cbv [WordByWordMontgomery.mul] in k.
-      cbv beta delta [Pipeline.BoundsPipeline] in k.
-      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      clear v.
+      cbv beta delta [Pipeline.BoundsPipelineWithDebug] in k.
+      rename k into k'; pose (DebugMonad.Debug.eval_result k') as k; subst k'.
+      cbv [Rewriter.Util.LetIn.Let_In DebugMonad.Debug.eval_result DebugMonad.Debug.sequence Pipeline.debug_after_rewrite DebugMonad.Debug.ret] in k.
+      vm_compute Pipeline.debug_rewriting in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
       set (v := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
       vm_compute in v.
       repeat match goal with
              | [ H := @inl ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inl A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
              | [ H := @inr ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inr A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
              end.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      set (v' := DebugMonad.Debug.bind _) in (value of k) at 1.
+      vm_compute in v'; subst v'; cbn [snd] in k.
       set (v' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
       vm_compute in v'.
       clear -k.
@@ -95,6 +103,7 @@ Module debugging_go_bits_add.
       vm_compute Pipeline.split_multiret_to in k.
       vm_compute Pipeline.translate_to_fancy in k.
       cbv beta iota in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
       set (v := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
       vm_compute in v.
       clear -k.
@@ -104,8 +113,14 @@ Module debugging_go_bits_add.
              end.
       vm_compute Pipeline.relax_adc_sbb_return_carry_to_bitwidth in k.
       cbv beta iota in k.
-      set (v' := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _ _) in (value of k).
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      set (v' := DebugMonad.Debug.bind _) in (value of k) at 1.
+      vm_compute in v'; subst v'; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      set (v' := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _ _ _) in (value of k).
       vm_compute in v'; clear -k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; subst v'; cbn [snd] in k.
+      cbv [Pipeline.wrap_debug_rewrite] in k.
       set (v := RelaxBitwidthAdcSbb.Compilers.RewriteRules.RewriteRelaxBitwidthAdcSbb _ _ _) in (value of k).
       Notation uint64 := r[0~>18446744073709551615]%zrange.
       Import IdentifiersBasicGENERATED.Compilers.
@@ -363,8 +378,11 @@ Module debugging_typedefs.
     Import IR.Compilers.ToString.
     Redirect "log"
              Compute match (sadd n s c machine_wordsize "1271") return (string * Pipeline.ErrorT _) with
-                     | (name, ErrorT.Success {| Pipeline.lines := v |}) => (name, ErrorT.Success (String.concat String.NewLine v))
-                     | v => _
+                     | (name, v)
+                       => match Debug.eval_result v with
+                          | ErrorT.Success {| Pipeline.lines := v |} => (name, ErrorT.Success (String.concat String.NewLine v))
+                          | _ => _
+                          end
                      end.
     Redirect "log"
              Compute Synthesize n s c machine_wordsize [] "curve" ["add"].
@@ -372,11 +390,15 @@ Module debugging_typedefs.
     Goal True.
       pose (sadd n s c machine_wordsize "1271") as v.
       cbv [sadd] in v.
-      vm_compute add in v.
+      vm_compute Pipeline.BoundsPipelineWithDebug in v.
       cbv beta iota zeta in v.
+      unfold Debug.bind in (value of v) at 1.
+      cbn [fst snd] in v.
       cbv [Language.Compilers.ToString.ToFunctionLines] in v.
       cbv [C.OutputCAPI] in v.
       cbv [ToFunctionLines] in v.
+      try (set (dbg := tree.smart_app _ _) in (value of v) at 1;
+           vm_compute in dbg; subst dbg).
       vm_compute IR.OfPHOAS.ExprOfPHOAS in v.
       cbv beta iota zeta in v.
       (*vm_compute in v.*)
@@ -417,13 +439,17 @@ Module debugging_21271_from_bytes.
     Goal True.
       pose (sfrom_bytes n s c machine_wordsize "1271") as v.
       cbv [sfrom_bytes] in v.
-      set (k := from_bytes _ _ _ _) in (value of v).
+      set (k := Pipeline.BoundsPipelineWithDebug _ _ _ _ _) in (value of v).
       clear v.
       cbv [from_bytes] in k.
-      cbv [Pipeline.BoundsPipeline] in k.
+      cbv [Pipeline.BoundsPipelineWithDebug] in k.
       set (k' := Pipeline.PreBoundsPipeline _ _ _ _) in (value of k).
       vm_compute in k'.
-      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      cbv beta delta [Pipeline.BoundsPipelineWithDebug] in k.
+      let k' := fresh in rename k into k'; pose (DebugMonad.Debug.eval_result k') as k; subst k'.
+      cbv [Rewriter.Util.LetIn.Let_In DebugMonad.Debug.eval_result DebugMonad.Debug.sequence Pipeline.debug_after_rewrite DebugMonad.Debug.ret] in k.
+      vm_compute Pipeline.debug_rewriting in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
       set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
       vm_compute in k''.
       lazymatch (eval cbv [k''] in k'') with
@@ -431,6 +457,9 @@ Module debugging_21271_from_bytes.
       end.
       cbv beta iota zeta in k.
       clear k''.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
       set (e := GeneralizeVar.FromFlat _) in (value of k).
       vm_compute in e.
       set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
@@ -1230,12 +1259,16 @@ Module debugging_p256_mul_bedrock2.
       pose (smul m machine_wordsize "p256") as v.
       Import IdentifiersBasicGENERATED.Compilers.
       cbv [smul] in v.
-      set (k := mul _ _) in (value of v).
+      set (k := Pipeline.BoundsPipelineWithDebug _ _ _ _ _) in (value of v).
       vm_compute in v.
       clear v.
       cbv [mul] in k.
-      cbv -[Pipeline.BoundsPipeline WordByWordMontgomeryReificationCache.WordByWordMontgomery.reified_mul_gen] in k.
-      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline Rewriter.Util.LetIn.Let_In] in k.
+      cbv -[Pipeline.BoundsPipelineWithDebug WordByWordMontgomeryReificationCache.WordByWordMontgomery.reified_mul_gen] in k.
+      cbv [Pipeline.BoundsPipelineWithDebug Pipeline.PreBoundsPipeline Rewriter.Util.LetIn.Let_In] in k.
+      let k' := fresh in rename k into k'; epose (DebugMonad.Debug.eval_result k') as k; subst k'.
+      cbv [Rewriter.Util.LetIn.Let_In DebugMonad.Debug.eval_result DebugMonad.Debug.sequence Pipeline.debug_after_rewrite DebugMonad.Debug.ret] in k.
+      vm_compute Pipeline.debug_rewriting in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
       set (k' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
       vm_compute in k'.
       subst k'; cbv beta iota zeta in k.
@@ -1300,11 +1333,11 @@ Module debugging_25519_to_bytes_bedrock2.
     Goal True.
       pose (sto_bytes n s c machine_wordsize "curve25519") as v.
       cbv [sto_bytes] in v.
-      set (k := to_bytes _ _ _ _) in (value of v).
+      set (k := Pipeline.BoundsPipelineWithDebug _ _ _ _ _) in (value of v).
       clear v.
       (*
       cbv [to_bytes] in k.
-      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
+      cbv [Pipeline.BoundsPipelineWithDebug Pipeline.PreBoundsPipeline] in k.
       set (k' := Arith.Compilers.RewriteRules.RewriteArith _ _ _) in (value of k).
       vm_compute in k'.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
@@ -1313,7 +1346,7 @@ Module debugging_25519_to_bytes_bedrock2.
       set (uint64 := r[0 ~> 18446744073709551615]%zrange) in (value of k'').
       subst k''.
       cbv beta iota zeta in k.
-      set (k'' := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _ _) in (value of k).
+      set (k'' := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _ _ _) in (value of k).
       vm_compute in k''.
       Compute Z.log2 9223372036854775808.
       clear -k''.
@@ -1683,7 +1716,7 @@ Module debugging_25519_to_bytes_bedrock2.
       cbv [widen_bytes_opt_instance_0] in k.
       cbv [widen_carry] in k.
       cbv [widen_carry_opt_instance_0] in k.
-      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
+      cbv [Pipeline.BoundsPipelineWithDebug Pipeline.PreBoundsPipeline] in k.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
       set (k' := GeneralizeVar.FromFlat _) in (value of k); vm_compute in k'; subst k'.
       cbv [CheckedPartialEvaluateWithBounds] in k.
@@ -1752,10 +1785,14 @@ Module debugging_25519_to_bytes_java.
     Goal True.
       pose (sto_bytes n s c machine_wordsize "curve25519") as v.
       cbv [sto_bytes] in v.
-      set (k := to_bytes _ _ _ _) in (value of v).
+      set (k := Pipeline.BoundsPipelineWithDebug _ _ _ _ _) in (value of v).
       vm_compute in k.
       subst k.
       cbv beta iota zeta in v.
+      let k' := fresh in rename v into k'; pose (DebugMonad.Debug.eval_result (snd k')) as v; subst k'.
+      cbv [Rewriter.Util.LetIn.Let_In DebugMonad.Debug.eval_result DebugMonad.Debug.sequence Pipeline.debug_after_rewrite DebugMonad.Debug.ret] in v.
+      vm_compute Pipeline.debug_rewriting in v.
+      unfold DebugMonad.Debug.bind in (value of v) at 1; cbn [snd] in v.
       set (k := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) in (value of v).
       clear v.
       cbv [Language.Compilers.ToString.ToFunctionLines] in k.
@@ -1839,7 +1876,7 @@ Module debugging_25519_to_bytes_java.
       cbv [widen_bytes_opt_instance_0] in k.
       cbv [widen_carry] in k.
       cbv [widen_carry_opt_instance_0] in k.
-      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
+      cbv [Pipeline.BoundsPipelineWithDebug Pipeline.PreBoundsPipeline] in k.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
       set (k' := GeneralizeVar.FromFlat _) in (value of k); vm_compute in k'; subst k'.
       cbv [CheckedPartialEvaluateWithBounds] in k.
@@ -1903,15 +1940,22 @@ Module debugging_p256_uint1.
     Goal True.
       pose (smul m machine_wordsize "p256") as v.
       cbv [smul] in v.
-      set (k := WordByWordMontgomery.mul m machine_wordsize) in (value of v).
+      set (k := Pipeline.BoundsPipelineWithDebug _ _ _ _ _) in (value of v).
       cbv [WordByWordMontgomery.mul] in k.
       cbv [Primitives.possible_values_of_machine_wordsize] in k.
       cbv [widen_carry] in k.
       cbv [widen_carry_opt_instance_0] in k.
-      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
+      cbv [Pipeline.BoundsPipelineWithDebug Pipeline.PreBoundsPipeline] in k.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
       clear v.
-      set (k' := GeneralizeVar.FromFlat _) in (value of k); vm_compute in k'; subst k'.
+      let k' := fresh in rename k into k'; pose (DebugMonad.Debug.eval_result k') as k; subst k'.
+      cbv [Rewriter.Util.LetIn.Let_In DebugMonad.Debug.eval_result DebugMonad.Debug.sequence Pipeline.debug_after_rewrite DebugMonad.Debug.ret] in k.
+      vm_compute Pipeline.debug_rewriting in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      match (eval cbv delta [k] in k) with
+      | context[CheckedPartialEvaluateWithBounds _ _ _ _ ?e _ _]
+        => set (k' := e) in (value of k)
+      end; vm_compute in k'; subst k'.
       cbv [CheckedPartialEvaluateWithBounds] in k.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
       set (k' := GeneralizeVar.FromFlat (GeneralizeVar.ToFlat _)) in (value of k).
@@ -1927,6 +1971,9 @@ Module debugging_p256_uint1.
       cbv [split_mul_to] in k.
       cbv [should_split_mul] in k.
       cbv [should_split_mul_opt_instance_0] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
       set (k' := ZRange.type.base.option.is_tighter_than _ _) in (value of k).
       vm_compute in k'; subst k'.
       cbv beta iota in k.
@@ -1964,7 +2011,7 @@ Module debugging_go_build0.
     Goal True.
       pose (scarry_mul n s c machine_wordsize "p448_") as v.
       cbv [scarry_mul] in v.
-      set (k := carry_mul n s c machine_wordsize) in (value of v).
+      set (k := Pipeline.BoundsPipelineWithDebug _ _ _ _ _) in (value of v).
       vm_compute in k.
       subst k.
       cbv beta iota in v.
@@ -2036,7 +2083,7 @@ Module debugging_go_build0.
       cbv [Primitives.possible_values_of_machine_wordsize] in k.
       cbv [widen_carry] in k.
       cbv [widen_carry_opt_instance_0] in k.
-      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
+      cbv [Pipeline.BoundsPipelineWithDebug Pipeline.PreBoundsPipeline] in k.
       set (k' := GeneralizeVar.ToFlat _) in (value of k).
       vm_compute in k'; subst k'.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
@@ -2076,12 +2123,12 @@ Module debugging_go_build.
     Goal True.
       pose (sadd m machine_wordsize "p256") as v.
       cbv [sadd] in v.
-      set (k := WordByWordMontgomery.add m machine_wordsize) in (value of v).
+      set (k := Pipeline.BoundsPipelineWithDebug _ _ _ _ _) in (value of v).
       cbv [WordByWordMontgomery.add] in k.
       cbv [Primitives.possible_values_of_machine_wordsize] in k.
       cbv [widen_carry] in k.
       cbv [widen_carry_opt_instance_0] in k.
-      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
+      cbv [Pipeline.BoundsPipelineWithDebug Pipeline.PreBoundsPipeline] in k.
       set (k' := GeneralizeVar.ToFlat _) in (value of k).
       vm_compute in k'; subst k'.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
@@ -3793,12 +3840,16 @@ Module debugging_remove_mul_split2.
       pose (smul m machine_wordsize "") as v; clear -v.
       cbv in m; subst m machine_wordsize.
       cbv [smul] in v.
-      set (k := mul _ _) in (value of v).
+      set (k := Pipeline.BoundsPipelineWithDebug _ _ _ _ _) in (value of v).
       clear v.
       cbv [mul] in k.
       Import WordByWordMontgomeryReificationCache.
-      cbv -[Pipeline.BoundsPipeline reified_mul_gen] in k.
-      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline LetIn.Let_In] in k.
+      cbv -[Pipeline.BoundsPipelineWithDebug reified_mul_gen] in k.
+      cbv [Pipeline.BoundsPipelineWithDebug Pipeline.PreBoundsPipeline LetIn.Let_In] in k.
+      let k' := fresh in rename k into k'; epose (DebugMonad.Debug.eval_result k') as k; subst k'.
+      cbv [Rewriter.Util.LetIn.Let_In DebugMonad.Debug.eval_result DebugMonad.Debug.sequence Pipeline.debug_after_rewrite DebugMonad.Debug.ret] in k.
+      vm_compute Pipeline.debug_rewriting in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
       set (v := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
       Notation INL := (inl _).
       vm_compute in v.
@@ -3807,7 +3858,9 @@ Module debugging_remove_mul_split2.
       | @inl ?A ?B ?x => pose (id x) as v'; change v with (@inl A B v') in (value of k); clear v
       end.
       cbv beta iota in k.
-      set (v := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _ _) in (value of k) at 1.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      set (v := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _ _ _) in (value of k) at 1.
       vm_compute in v; clear v';
       lazymatch (eval cbv [v] in v) with
       | ?x => pose (id x) as v'; change v with v' in (value of k); clear v
@@ -3921,7 +3974,7 @@ Module debugging_rewriting.
   Goal True.
     pose foo as X; cbv [foo] in X.
     clear -X.
-    cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline LetIn.Let_In] in X.
+    cbv [Pipeline.BoundsPipelineWithDebug Pipeline.PreBoundsPipeline LetIn.Let_In] in X.
     set (Y := (PartialEvaluateWithListInfoFromBounds _ _)) in (value of X).
     vm_compute in Y.
     subst Y; set (Y := (Rewriter.Compilers.PartialEvaluate _)) in (value of X).

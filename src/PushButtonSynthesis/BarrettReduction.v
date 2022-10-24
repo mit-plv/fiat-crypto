@@ -157,7 +157,7 @@ Section rbarrett_red.
          bound.
 
   Definition sbarrett_red (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "barrett_red" barrett_red

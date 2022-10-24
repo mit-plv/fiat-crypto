@@ -160,7 +160,7 @@ Section __.
          (Some boundsn, None (* Should be: Some r[0~>0]%zrange, but bounds analysis is not good enough *) ).
 
   Definition smul (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "mul" mul
@@ -198,7 +198,7 @@ Section __.
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
-      : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
+      : list (synthesis_output_kind * string * Pipeline.M (list string))
       := Primitives.Synthesize
            machine_wordsize valid_names known_functions (fun _ => nil) all_typedefs!
            check_args

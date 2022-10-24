@@ -15,7 +15,7 @@ Module debugging_no_asm.
     pose main as v.
     cbv beta iota zeta delta [main main_gen] in v.
     set (k := map _ sys_argv) in (value of v).
-    assert (k = ["./src/ExtractionOCaml/unsaturated_solinas"; "25519"; "64"; "5"; "2^255-19"; "carry_mul"; "--no-primitives"; "--hints-file"; "t.asm"]) by admit.
+    assert (k = ["./src/ExtractionOCaml/unsaturated_solinas"; "25519"; "64"; "5"; "2^255-19"; "carry_mul"; "--no-primitives"; "--debug"; "-all"; "--hints-file"; "t.asm"]) by admit.
     clearbody k; subst k.
     cbv beta iota zeta delta [ForExtraction.UnsaturatedSolinas.PipelineMain ForExtraction.Parameterized.PipelineMain] in v.
     vm_compute Arg.parse_argv in v.
@@ -25,6 +25,8 @@ Module debugging_no_asm.
     cbv [ForExtraction.parse_common_optional_options] in v.
     cbv [ForExtraction.hint_file_names] in v.
     cbn [map fst snd] in v.
+    vm_compute ParseDebugOptions.parse_debug_opts in v.
+    cbv beta iota in v.
     cbn [ForExtraction.with_read_concat_asm_files_cps] in v.
     set (k := ForExtraction.with_read_file "t.asm") in (value of v).
     assert (k = (fun k => k ["SECTION .text"
@@ -79,10 +81,14 @@ Module debugging_no_asm.
     set (k' := (_ =? _)%string) in (value of k) at 1; vm_compute in k'; subst k'; cbv beta iota in k.
     cbn [fold_right map List.app] in k.
     cbv [UnsaturatedSolinas.extra_special_synthesis UnsaturatedSolinas.scarry_mul] in k.
-    set (cm := UnsaturatedSolinas.carry_mul _ _ _ _) in (value of k).
+    set (cm := BoundsPipeline.Pipeline.BoundsPipelineWithDebug _ _ _ _ _) in (value of k).
     vm_compute in cm.
     set (cmv := (fun var => Language.Compilers.expr.Abs _)) in (value of cm).
     subst cm; cbv beta iota in k.
+    let k' := fresh in rename k into k'; pose (List.map DebugMonad.Debug.eval_result (List.map snd k')) as k; subst k'.
+    cbv [DebugMonad.Debug.eval_result] in k; cbn [List.map snd] in k.
+    unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+    unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
     set (cml := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _ _ _ _ _ _) in (value of k).
     vm_compute in cml.
     set (cmlv := _ :: _) in (value of cml) at 1.
@@ -106,7 +112,7 @@ Module debugging_typedef_bounds.
     pose main as v.
     cbv beta iota zeta delta [main main_gen] in v.
     set (k := map _ sys_argv) in (value of v).
-    assert (k = ["./src/ExtractionOCaml/unsaturated_solinas"; "curve25519"; "64"; "5"; "2^255-19"; "add"; "--no-primitives"]) by admit.
+    assert (k = ["./src/ExtractionOCaml/unsaturated_solinas"; "curve25519"; "64"; "5"; "2^255-19"; "add"; "--no-primitives"; "--debug"; "-all"]) by admit.
     clearbody k; subst k.
     cbv beta iota zeta delta [ForExtraction.UnsaturatedSolinas.PipelineMain ForExtraction.Parameterized.PipelineMain] in v.
     vm_compute Arg.parse_argv in v.
@@ -118,6 +124,8 @@ Module debugging_typedef_bounds.
     cbv [ForExtraction.parse_common_optional_options] in v.
     cbv [ForExtraction.hint_file_names] in v.
     cbn [map] in v.
+    vm_compute ParseDebugOptions.parse_debug_opts in v.
+    cbv beta iota in v.
     cbn [ForExtraction.with_read_concat_asm_files_cps] in v.
     vm_compute ForExtraction.parse_args in v.
     cbv beta iota zeta in v.
@@ -166,8 +174,11 @@ Module debugging_typedef_bounds.
     cbv [ForExtraction.low_level_rewriter_method] in v.
     cbn -[UnsaturatedSolinas.sadd] in v.
     cbv [UnsaturatedSolinas.sadd] in v.
-    vm_compute UnsaturatedSolinas.add in v.
+    vm_compute BoundsPipeline.Pipeline.BoundsPipelineWithDebug in v.
     cbv beta iota zeta in v.
+    let k' := fresh in rename v into k'; pose (DebugMonad.Debug.eval_result (snd k')) as v; subst k'.
+    cbv [DebugMonad.Debug.eval_result] in v; cbn [List.map snd] in v.
+    unfold DebugMonad.Debug.bind in (value of v) at 1; cbn [snd] in v.
     cbv [Language.Compilers.ToString.ToFunctionLines] in v.
     cbv [C.Compilers.ToString.C.OutputCAPI] in v.
     cbv [C.Compilers.ToString.C.ToFunctionLines] in v.

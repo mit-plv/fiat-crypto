@@ -107,7 +107,7 @@ Section Compile.
         {tr m l functions} x y:
     let v := bin_model x y in
     forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
-           Rin Rout out x_ptr x_var y_ptr y_var out_ptr out_var
+           Rx Ry Rout out x_ptr x_var y_ptr y_var out_ptr out_var
            bound_out,
 
       (_: spec_of name) functions ->
@@ -115,9 +115,8 @@ Section Compile.
       map.get l out_var = Some out_ptr ->
       (FElem bound_out out_ptr out * Rout)%sep m ->
 
-      (FElem (Some bin_xbounds) x_ptr x
-       * FElem (Some bin_ybounds) y_ptr y
-       * Rin)%sep m ->
+      (FElem (Some bin_xbounds) x_ptr x * Rx)%sep m ->
+      (FElem (Some bin_ybounds) y_ptr y * Ry)%sep m ->
       map.get l x_var = Some x_ptr ->
       map.get l y_var = Some y_ptr ->
 
@@ -143,7 +142,7 @@ Section Compile.
     unfold FElem in *.
     sepsimpl.
     prove_field_compilation.
-    apply H5.
+    apply H6.
 
     eapply Proper_sep_impl1; eauto.
     2:exact(fun a b => b).

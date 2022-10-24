@@ -5,6 +5,11 @@ Require Import Crypto.Util.LetIn.
 Local Open Scope Z_scope.
 
 Module Z.
+  Definition divideb (x y : Z) : bool
+    := if x =? 0
+       then y =? 0
+       else y mod x =? 0.
+
   Definition pow2_mod n i := (n &' (Z.ones i)).
 
   Definition zselect (cond zero_case nonzero_case : Z) :=
@@ -119,7 +124,7 @@ Module Z.
 
   (** Special identity function for constant-time cmov *)
   Definition value_barrier (x : Z) := x.
-  
+
   (* arithmetic right shift *)
   Definition arithmetic_shiftr1 (m a : Z) :=
     (a &' 2^(m - 1)) |' (a >> 1).
@@ -138,7 +143,7 @@ Module Z.
           q |' (a >> k).
 
   (** Note that the following definition may be inconvenient to reason about,
-      and [(a + 2^(m-1)) mod 2^m - 2^(m-1)] may prove simpler to reason about arithmetically. 
+      and [(a + 2^(m-1)) mod 2^m - 2^(m-1)] may prove simpler to reason about arithmetically.
       See also https://github.com/mit-plv/coqutil/blob/c8006ceca816076b117c31d7feaefb5bbb850754/src/coqutil/Word/Naive.v#L15
       and https://github.com/mit-plv/coqutil/blob/c8006ceca816076b117c31d7feaefb5bbb850754/src/coqutil/Word/Properties.v#L190 *)
 
@@ -162,3 +167,7 @@ Module Z.
   Definition twos_complement_mul ma mb a b :=
     (sign_extend ma (ma + mb) a) * (sign_extend mb (ma + mb) b).
 End Z.
+
+Module Export Notations.
+  Notation "( x | ? y )" := (Z.divideb x y) : Z_scope.
+End Notations.

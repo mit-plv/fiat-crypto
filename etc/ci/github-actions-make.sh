@@ -30,6 +30,8 @@ if [[ "${unameOut}" == CYGWIN* ]]; then
     make_one_time_file_real="--real"
 fi
 
+echo "::add-matcher::.github/make.json"
+
 rm -f finished.ok
 (make "$@" ${OUTPUT_SYNC} TIMED=1 TIMING=1 "${reportify}" 2>&1 && touch finished.ok) | tee -a time-of-build.log
 python "./etc/coq-scripts/timing/make-one-time-file.py" ${make_one_time_file_real} "time-of-build.log" "time-of-build-pretty.log" || exit $?
@@ -39,7 +41,12 @@ git diff
 
 cat time-of-build-pretty.log
 if [ ! -f finished.ok ]; then
-    make "$@" ${OUTPUT_SYNC} TIMED=1 TIMING=1 VERBOSE=1 || exit $?
+    # see https://stackoverflow.com/a/15394738/377022 for more alternatives
+    if [[ ! " $* " =~ " validate " ]]; then
+        make "$@" ${OUTPUT_SYNC} TIMED=1 TIMING=1 VERBOSE=1 || exit $?
+    else
+        exit 1
+    fi
 fi
 
 unameOut="$(uname -s)"

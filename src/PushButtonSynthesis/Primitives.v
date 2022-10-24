@@ -35,6 +35,7 @@ Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.Util.ErrorT.List.
 Require Import Crypto.Util.ListUtil.GroupAllBy.
 Require Import Crypto.Util.Strings.Show.
+Require Import Crypto.Util.DebugMonad.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Crypto.Assembly.Parse.
 Require Import Crypto.Assembly.Equivalence.
@@ -798,7 +799,7 @@ Notation "'docstring_with_summary_from_lemma_with_ctx!' ctx summary correctness"
 Notation "'docstring_with_summary_from_lemma!' summary correctness"
   := (CorrectnessStringification.docstring_with_summary_from_lemma summary correctness) (only parsing, at level 10, summary at next level, correctness at next level).
 (** Used to sigma up the output of stringified pipelines *)
-Notation wrap_s v := (fun s => existT (fun t => prod string (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t))) _ (v s)) (only parsing).
+Notation wrap_s v := (fun s => existT (fun t => prod string (Pipeline.M (Pipeline.ExtendedSynthesisResult t))) _ (v s)) (only parsing).
 
 (** We stick this in a module to work around COQBUG(https://github.com/coq/coq/issues/16677) *)
 Module Export Options.
@@ -815,6 +816,7 @@ Module Export Options.
     ; only_signed : only_signed_opt
     ; no_select : no_select_opt
     ; low_level_rewriter_method : low_level_rewriter_method_opt
+    ; debug_rewriting : debug_rewriting_opt
     }.
   Definition default_PipelineOptions : PipelineOptions
     := let _ := Pipeline.default_BoundsPipelineOptions in
@@ -877,6 +879,7 @@ Module Import PipelineHints.
          only_signed
          no_select
          low_level_rewriter_method
+         debug_rewriting
          static
          language_naming_conventions
          internal_static
@@ -905,6 +908,7 @@ Module Import PipelineHints.
         | only_signed
         | no_select
         | low_level_rewriter_method
+        | debug_rewriting
         | static
         | language_naming_conventions
         | internal_static
@@ -981,13 +985,14 @@ Section __.
          (Some r[0~>1], (Some saturated_bounds, (Some saturated_bounds, tt)))%zrange
          (Some saturated_bounds).
   Definition sselectznz (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "selectznz" selectznz
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a multi-limb conditional select."]%string)
              (selectznz_correct saturated_bounds)).
+
   Definition mulx (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -997,7 +1002,7 @@ Section __.
          (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt))%zrange
          (Some r[0~>2^s-1], Some r[0~>2^s-1])%zrange.
   Definition smulx (prefix : string) (s : Z)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToInternalString!
           machine_wordsize prefix ("mulx_u" ++ Decimal.Z.to_string s)%string (mulx s)
@@ -1013,7 +1018,7 @@ Section __.
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
          (Some r[0~>2^s-1], Some (adc_sbb_return_carry_range s))%zrange.
   Definition saddcarryx (prefix : string) (s : Z)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToInternalString!
           machine_wordsize prefix ("addcarryx_u" ++ Decimal.Z.to_string s)%string (addcarryx s)
@@ -1030,7 +1035,7 @@ Section __.
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
          (Some r[0~>2^s-1], Some (adc_sbb_return_carry_range s))%zrange.
   Definition ssubborrowx (prefix : string) (s : Z)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToInternalString!
           machine_wordsize prefix ("subborrowx_u" ++ Decimal.Z.to_string s)%string (subborrowx s)
@@ -1046,7 +1051,7 @@ Section __.
          (Some (int.to_zrange s), tt)
          (Some (int.to_zrange s)).
   Definition svalue_barrier (prefix : string) (s : int.type)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToInternalString!
           machine_wordsize prefix ("value_barrier_" ++ (if int.is_unsigned s then "u" else "") ++ Decimal.Z.to_string (int.bitwidth_of s))%string (value_barrier s)
@@ -1063,7 +1068,7 @@ Section __.
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
          (Some r[0~>2^s-1])%zrange.
   Definition scmovznz (prefix : string) (s : Z)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToInternalString!
           machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s)%string (cmovznz s)
@@ -1079,7 +1084,7 @@ Section __.
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
          (Some r[0~>2^s-1])%zrange.
   Definition scmovznz_by_mul (prefix : string) (s : Z)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToInternalString!
           machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s)%string (cmovznz_by_mul s)
@@ -1095,7 +1100,7 @@ Section __.
          (Some saturated_bounds, tt)%zrange
          (Some saturated_bounds).
   Definition scopy (prefix : string)
-    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
           machine_wordsize prefix "copy" copy
@@ -1189,33 +1194,33 @@ Section __.
             (known_functions : list (string
                                      * (string
                                         -> { t : _
-                                                 & string * Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t) }%type)))
+                                                 & string * Pipeline.M (Pipeline.ExtendedSynthesisResult t) }%type)))
             (extra_special_synthesis : string ->
                                        list
                                          (option
                                             { t : _
-                                                  & string * Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t) }%type)).
+                                                  & string * Pipeline.M (Pipeline.ExtendedSynthesisResult t) }%type)).
 
-    Definition aggregate_infos (ls : list (string * Pipeline.ErrorT { t : _ & Pipeline.ExtendedSynthesisResult t })) : ToString.ident_infos
+    Definition aggregate_infos (ls : list (string * Pipeline.M { t : _ & Pipeline.ExtendedSynthesisResult t })) : ToString.ident_infos
       := fold_right
            ToString.ident_info_union
            ToString.ident_info_empty
            (List.map
-              (fun '(_, res) => match res with
+              (fun '(_, res) => match Debug.eval_result res with
                                 | Success (existT _ v) => v.(Pipeline.ident_infos)
                                 | Error _ => ToString.ident_info_empty
                                 end)
               ls).
 
-    Definition push_sig_type (v : { t : _ & string * Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t) }%type)
-      : string * Pipeline.ErrorT { t : _ & Pipeline.ExtendedSynthesisResult t }
+    Definition push_sig_type (v : { t : _ & string * Pipeline.M (Pipeline.ExtendedSynthesisResult t) }%type)
+      : string * Pipeline.M { t : _ & Pipeline.ExtendedSynthesisResult t }
       := let '(existT t (n, v)) := v in
-         (n, (v <- v; Success (existT _ t v))%error).
+         (n, (v <- v; Debug.ret (v <- v; Success (existT _ t v))%error)%debugM).
 
     Definition extra_synthesis (function_name_prefix : string) (infos : ToString.ident_infos)
-      : list { t : _ & string * Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t) }%type * ToString.ident_infos
+      : list { t : _ & string * Pipeline.M (Pipeline.ExtendedSynthesisResult t) }%type * ToString.ident_infos
       := let infos := ToString.strip_special_infos machine_wordsize infos in
-         let mk := existT (fun t => string * Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t))%type in
+         let mk := existT (fun t => string * Pipeline.M (Pipeline.ExtendedSynthesisResult t))%type in
          let ls_addcarryx := List.flat_map
                                (fun lg_split:positive
                                 => [mk _ (saddcarryx function_name_prefix lg_split)
@@ -1251,18 +1256,19 @@ Section __.
               infos).
 
     Definition synthesize_of_name (function_name_prefix : string) (name : string)
-      : string * Pipeline.ErrorT { t : _ & Pipeline.ExtendedSynthesisResult t }%type
+      : string * Pipeline.M { t : _ & Pipeline.ExtendedSynthesisResult t }%type
       := fold_right
            (fun v default
             => match v with
                | Some (existT t (n, res))
-                 => (n, (res <- res; Success (existT _ t res))%error)
+                 => (n, (res <- res; Debug.ret (res <- res; Success (existT _ t res))%error)%debugM)
                | None => default
                end)
            (name,
-            Error
-              (Pipeline.Invalid_argument
-                 ("Unrecognized request to synthesize """ ++ name ++ """; valid names are " ++ valid_names ++ ".")))
+             Debug.ret
+               (Error
+                  (Pipeline.Invalid_argument
+                     ("Unrecognized request to synthesize """ ++ name ++ """; valid names are " ++ valid_names ++ "."))))
            ((List.map
                (fun '(expected_name, resf)
                 => if (name =? expected_name)%string
@@ -1350,92 +1356,92 @@ Section __.
                (all_typedefs : list ToString.typedef_info)
                (check_args : list string -> Pipeline.ErrorT (list string) -> Pipeline.ErrorT (list string))
                (comment_header : list string) (function_name_prefix : string) (requests : list string)
-      : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
+      : list (synthesis_output_kind * string * Pipeline.M (list string))
       := let requests := match requests with
                          | nil => List.map (@fst _ _) known_functions
                          | _ => requests
                          end in
          let ls := List.map (synthesize_of_name function_name_prefix) requests in
          let '(asm_ls, ls)
-             := match parse_asm_hints with
-                | Success [] => ([], ls)
-                | Success asm_hints
-                  => (* TODO: Currently we just pass the prefix/header through unchanged; maybe we should instead generate a better header? *)
-                     let asm_ls_prefix
-                       := List.map (fun '(fname, (prefix, _)) => (assembly_output, "header-prefix for " ++ fname, Success (Show.show_lines prefix)))%string asm_hints in
-                     let function_asms := List.map (fun '(fname, (_prefix, function_asms)) => (fname, function_asms)) asm_hints in
-                     let valid_function_names := List.map fst ls in
-                     let '(asm_ls, ls, unused_asm_ls, asm_missing_globals) := split_to_assembly_functions function_asms ls in
-                     let asm_ls_check
-                       := if negb (List.length asm_missing_globals =? 0)%nat
-                          then [(assembly_output, "check", Error (Pipeline.Assembly_without_any_global_labels asm_missing_globals))]
-                          else [] in
-                     let asm_ls_check
-                       := asm_ls_check
-                            ++ if (error_on_unused_assembly_functions && (0 <? List.length unused_asm_ls))%nat
-                               then [(assembly_output, "check", Error (Pipeline.Unused_global_assembly_labels
-                                                                         (List.map (fun '(file_name, labels) => (file_name, List.map (@fst _ _) labels)) unused_asm_ls)
-                                                                         valid_function_names))]
-                               else [] in
-                     let asm_ls
-                         := List.map
-                              (fun '(name, (asm_fname_and_lines, synthesis_res))
-                               => (name,
-                                   (synthesis_res <- synthesis_res;
-                                   let 'existT _ synthesis_res := synthesis_res in
-                                   match Assembly.Equivalence.generate_assembly_of_hinted_expr
-                                           asm_fname_and_lines
-                                           (synthesis_res.(Pipeline.expr))
-                                           (synthesis_res.(Pipeline.arg_bounds))
-                                           (synthesis_res.(Pipeline.out_bounds))
-                                   with
-                                   | Success lines => Success (List.flat_map (fun '(_fname, lines) => Show.show_lines lines) lines)
-                                   | Error (Some (fname, asm_lines), err)
-                                     => Error
-                                          (Pipeline.Equivalence_checking_failure
-                                             (synthesis_res.(Pipeline.expr))
-                                             fname
-                                             asm_lines
-                                             (synthesis_res.(Pipeline.arg_bounds))
-                                             err)
-                                   | Error (None, err)
-                                     => Error
-                                          (Pipeline.Equivalence_checking_failure_pre_asm
-                                             (synthesis_res.(Pipeline.expr))
-                                             (synthesis_res.(Pipeline.arg_bounds))
-                                             err)
-                                   end)%error))
-                              asm_ls in
-                     let asm_ls := List.map (fun '(name, lines) => (assembly_output, name, lines)) asm_ls in
-                     (match asm_ls with
-                      | [] => asm_ls_check
-                      | _ => asm_ls_check ++ asm_ls_prefix ++ asm_ls
-                      end,
-                      ls)
-                | Error err => ([(assembly_output, "parsing", Error err)], ls)
-                end in
+           := match parse_asm_hints with
+              | Success [] => ([], ls)
+              | Success asm_hints
+                => (* TODO: Currently we just pass the prefix/header through unchanged; maybe we should instead generate a better header? *)
+                  let asm_ls_prefix
+                    := List.map (fun '(fname, (prefix, _)) => (assembly_output, "header-prefix for " ++ fname, Pipeline.M.ret (Show.show_lines prefix)))%string asm_hints in
+                  let function_asms := List.map (fun '(fname, (_prefix, function_asms)) => (fname, function_asms)) asm_hints in
+                  let valid_function_names := List.map fst ls in
+                  let '(asm_ls, ls, unused_asm_ls, asm_missing_globals) := split_to_assembly_functions function_asms ls in
+                  let asm_ls_check
+                    := if negb (List.length asm_missing_globals =? 0)%nat
+                       then [(assembly_output, "check", Pipeline.M.err (Pipeline.Assembly_without_any_global_labels asm_missing_globals))]
+                       else [] in
+                  let asm_ls_check
+                    := asm_ls_check
+                         ++ if (error_on_unused_assembly_functions && (0 <? List.length unused_asm_ls))%nat
+                            then [(assembly_output, "check", Pipeline.M.err (Pipeline.Unused_global_assembly_labels
+                                                                               (List.map (fun '(file_name, labels) => (file_name, List.map (@fst _ _) labels)) unused_asm_ls)
+                                                                               valid_function_names))]
+                            else [] in
+                  let asm_ls
+                    := List.map
+                         (fun '(name, (asm_fname_and_lines, synthesis_res))
+                          => (name,
+                               (synthesis_res <- synthesis_res;
+                                let 'existT _ synthesis_res := synthesis_res in
+                                match Assembly.Equivalence.generate_assembly_of_hinted_expr
+                                        asm_fname_and_lines
+                                        (synthesis_res.(Pipeline.expr))
+                                        (synthesis_res.(Pipeline.arg_bounds))
+                                        (synthesis_res.(Pipeline.out_bounds))
+                                with
+                                | Success lines => Pipeline.M.ret (List.flat_map (fun '(_fname, lines) => Show.show_lines lines) lines)
+                                | Error (Some (fname, asm_lines), err)
+                                  => Pipeline.M.err
+                                       (Pipeline.Equivalence_checking_failure
+                                          (synthesis_res.(Pipeline.expr))
+                                          fname
+                                          asm_lines
+                                          (synthesis_res.(Pipeline.arg_bounds))
+                                          err)
+                                | Error (None, err)
+                                  => Pipeline.M.err
+                                       (Pipeline.Equivalence_checking_failure_pre_asm
+                                          (synthesis_res.(Pipeline.expr))
+                                          (synthesis_res.(Pipeline.arg_bounds))
+                                          err)
+                                end)%pipelineM))
+                         asm_ls in
+                  let asm_ls := List.map (fun '(name, lines) => (assembly_output, name, lines)) asm_ls in
+                  (match asm_ls with
+                   | [] => asm_ls_check
+                   | _ => asm_ls_check ++ asm_ls_prefix ++ asm_ls
+                   end,
+                    ls)
+              | Error err => ([(assembly_output, "parsing", Pipeline.M.err err)], ls)
+              end in
          let infos := aggregate_infos ls in
          let infos := union_extra_infos_of_extra_synthesis infos in
          let '(extra_ls, extra_infos) := extra_synthesis function_name_prefix infos in
          let extra_bit_widths := ToString.bitwidths_used extra_infos in
          let res := (if emit_primitives then List.map push_sig_type extra_ls else nil) ++ ls in
-         let res := List.map (fun '(name, res) => (normal_output, name, (res <- res; Success (projT2 res).(Pipeline.lines))%error)) res in
+         let res := List.map (fun '(name, res) => (normal_output, name, (res <- res; Pipeline.M.ret (projT2 res).(Pipeline.lines))%pipelineM)) res in
          let infos := ToString.ident_info_union
                         infos
                         (ToString.ident_info_of_bitwidths_used extra_bit_widths) in
          let header :=
-             (comment_header
-                ++ ToString.header machine_wordsize (orb internal_static static) static function_name_prefix infos all_typedefs) in
+           (comment_header
+              ++ ToString.header machine_wordsize (orb internal_static static) static function_name_prefix infos all_typedefs) in
          let footer :=
-             ToString.footer machine_wordsize (orb internal_static static) static function_name_prefix infos in
+           ToString.footer machine_wordsize (orb internal_static static) static function_name_prefix infos in
          [(normal_output,
-           "check_args" ++ String.NewLine ++ String.concat String.NewLine header,
-           check_args requests (ErrorT.Success header))%string]
+            "check_args" ++ String.NewLine ++ String.concat String.NewLine header,
+            Debug.ret (check_args requests (ErrorT.Success header)))%string]
            ++ asm_ls
            ++ res
            ++ match footer with
               | nil => nil
-              | _ => [(normal_output, "footer", ErrorT.Success footer)]
+              | _ => [(normal_output, "footer", Pipeline.M.ret footer)]
               end.
   End for_stringification.
 End __.

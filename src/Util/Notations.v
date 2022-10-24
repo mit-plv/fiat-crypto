@@ -196,3 +196,5 @@ Reserved Notation "### x" (at level 9, x at level 9, format "### x").
 Reserved Notation "#### x" (at level 9, x at level 9, format "#### x").
 Reserved Notation "##### x" (at level 9, x at level 9, format "##### x").
 Reserved Notation "\ x .. y , t" (at level 200, x binder, y binder, right associativity, format "\  x .. y , '//' t").
+(** If we use "( x |? y )", it conflicts with things like [destruct x as [?|?]; ...] *)
+Reserved Notation "( x | ? y )" (format "(  x  | ?  y  )").
