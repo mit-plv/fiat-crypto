@@ -107,15 +107,15 @@ Module SolinasReduction.
     Lemma S_sub_1 : forall (n : nat),
         (n > 0)%nat ->
         S (n - 1)%nat = n.
-    Proof. lia. Qed.
+    Proof using Type. lia. Qed.
     Hint Rewrite S_sub_1 using lia : const_simpl.
     Lemma Sn_sub_n : forall (n : nat),
         (S n - n)%nat = 1%nat.
-    Proof. lia. Qed.
+    Proof using Type. lia. Qed.
     Hint Rewrite Sn_sub_n : const_simpl.
     Lemma n2_sub : forall (n : nat),
         (2 * n - n)%nat = n.
-    Proof. lia. Qed.
+    Proof using Type. lia. Qed.
     Hint Rewrite n2_sub : const_simpl.
     Ltac const_simpl :=
       autorewrite with const_simpl in *.
@@ -164,14 +164,14 @@ Module SolinasReduction.
 
     Lemma seq_double : forall n,
         seq 0 (2 * n) = seq 0 n ++ seq n n.
-    Proof.
+    Proof using Type.
       intros n; replace (2*n)%nat with (n+n)%nat; push; lia.
     Qed.
     Hint Rewrite seq_double : push_misc.
 
     Lemma map_weight_seq : forall m p,
         map weight (seq 0 p) = map (fun t => t / (weight m)) (map weight (seq m p)).
-    Proof.
+    Proof using wprops.
       induction m as [| m IHm]; intros; push.
       erewrite map_ext.
       eauto.
@@ -196,7 +196,7 @@ Module SolinasReduction.
 
     Lemma seq_shift_1 : forall len,
         map S (seq 0 len) = seq 1 len.
-    Proof.
+    Proof using Type.
       intros.
       apply seq_shift.
     Qed.
@@ -273,7 +273,7 @@ Module SolinasReduction.
     Lemma canonical_cons n a p:
       canonical_repr (S n) (a :: p) ->
       canonical_repr n p.
-    Proof.
+    Proof using wprops.
       intros.
       rewrite canonical_iff in *.
       intuition;
@@ -291,7 +291,7 @@ Module SolinasReduction.
       n = (n1 + n2)%nat ->
       l = l1 ++ l2 ->
       canonical_repr n1 l1.
-    Proof.
+    Proof using wprops.
       intros.
       rewrite canonical_iff in *; intuition;
         repeat multimatch goal with
@@ -309,7 +309,7 @@ Module SolinasReduction.
       n = (n1 + n2)%nat ->
       l = l1 ++ l2 ->
       canonical_repr n2 l2.
-    Proof.
+    Proof using wprops.
       intros.
       rewrite canonical_iff in *; intuition;
         repeat multimatch goal with
@@ -336,7 +336,7 @@ Module SolinasReduction.
     Proof.
       apply (ListAux.list_length_induction Z).
       unfold eval_weight_P.
-      intros l1 H n.
+      intros l1 H n b.
       pose proof (@break_list_last Z l1).
       cbv [eval_weight_P eval Associational.eval to_associational] in *.
       intuition;
@@ -365,7 +365,10 @@ Module SolinasReduction.
       autorewrite with push_misc.
       push.
       rewrite fold_right_add.
-      rewrite fold_right_add with (x:=weight (n + Datatypes.length x) * x0).
+      symmetry.
+      rewrite fold_right_add.
+      symmetry.
+      rewrite fold_right_add.
       rewrite H.
       ring_simplify.
       unfold weight, machine_wordsize.
@@ -397,34 +400,22 @@ Module SolinasReduction.
     Lemma canonical_eval_bounded n : forall (p : list Z),
         canonical_repr n p ->
         eval weight n p < weight n.
-    Proof.
+    Proof using wprops.
       intros p.
       generalize dependent n.
-      induction p; intros; destruct n;
-        repeat multimatch goal with
-               | H : canonical_repr _ (_ :: _) |- _ =>
-                   let H' := fresh "H" in
-                   assert (H' := H);
-                   pose proof (canonical_bounded _ _ H');
-                   unfold canonical_repr in H';
-                   apply canonical_cons in H
-               | H : context[length _] |- _ => autorewrite with push_length in H; rewrite <-H
-               | _ => push
-               | _ => intuition
-               | _ => ring_simplify
-               | _ => auto || lia
-               end.
-      cbn; lia.
+      induction p as [| a p IHp]; intros n H; destruct n; push; try lia;
+        assert (H' := H); unfold canonical_repr in H'; push' H'.
+      lia.
       le_lt.
       etransitivity.
       solve_ineq.
       le_lt.
-      apply H1; auto.
-      rewrite <-OrdersEx.Z_as_OT.mul_le_mono_pos_r; auto.
-      le_lt; auto.
-      ring_simplify.
-      solve_ineq.
-      rewrite H2.
+      eapply canonical_bounded; eauto.
+      rewrite <-OrdersEx.Z_as_OT.mul_le_mono_pos_r; eauto.
+      le_lt.
+      apply IHp.
+      eapply canonical_app_r with (l1:=[a]); eauto.
+      all: try lia.
       weight_comp; lia.
     Qed.
 
@@ -442,14 +433,16 @@ Module SolinasReduction.
         canonical_repr n p <->
           length p = n /\
             is_bounded_by (repeat (0, 2^machine_wordsize-1) n) p = true.
-    Proof.
-      intros.
+    Proof using wprops.
+      intros n p.
       rewrite canonical_iff.
       repeat autounfold.
       split.
+      intros H.
+      destruct H as [H H1].
       intuition.
       generalize dependent n.
-      induction p; intros;
+      induction p as [| a p IHp]; intros;
         repeat multimatch goal with
                | H : length _ = ?x |- _ => progress cbn in H; subst x
                | _ => apply andb_true_intro
@@ -481,11 +474,11 @@ Module SolinasReduction.
     Lemma eval_is_bounded_by_pos n : forall p,
         is_bounded_by (repeat (0, 2 ^ machine_wordsize - 1) n) p = true ->
         0 <= eval weight n p.
-    Proof using Type.
-      intros.
+    Proof.
+      intros p.
       pose proof eval_weight_S as Heval.
       repeat autounfold with * in *.
-      generalize dependent n; induction p; intros; destruct n;
+      generalize dependent n; induction p; intros n; destruct n;
         repeat multimatch goal with
                | H : context[fold_right _ _ _] |- _ => cbn in H
                | H : context[_ && _] |- _ => rewrite andb_true_iff in H
@@ -503,13 +496,13 @@ Module SolinasReduction.
     Lemma eval_is_bounded_by n : forall p,
         is_bounded_by (repeat (0, 2 ^ machine_wordsize - 1) n) p = true ->
         0 <= eval weight n p < weight n.
-    Proof.
-      intros.
+    Proof using wprops.
+      intros p.
       split.
       apply eval_is_bounded_by_pos; auto.
       pose proof eval_weight_S as Heval.
       repeat autounfold with * in *.
-      generalize dependent n; induction p; intros; destruct n;
+      generalize dependent n; induction p; intros n; destruct n;
         repeat multimatch goal with
                | H : context[fold_right _ _ _] |- _ => progress cbn in H
                | H : context[_ && _] |- _ => rewrite andb_true_iff in H
@@ -527,7 +520,7 @@ Module SolinasReduction.
       apply Z.mul_le_mono_nonneg_r; try lia.
       le_lt.
       apply IHp; auto.
-      weight_comp; unfold machine_wordsize; lia.
+      weight_comp; lia.
     Qed.
     Hint Resolve eval_is_bounded_by : ibb.
 
@@ -562,7 +555,7 @@ Module SolinasReduction.
         (n < length bounds)%nat ->
         fst (nth_default (0,0) bounds n) <= nth_default 0 p n <= snd (nth_default (0,0) bounds n).
     Proof.
-      intros.
+      intros p bounds H H0 H1.
       generalize dependent n.
       generalize dependent p.
       induction bounds as [ | b bounds IHbounds ];
@@ -643,7 +636,7 @@ Module SolinasReduction.
         fold_andb_map' (fun x y => (fst y <=? fst x) && (snd x <=? snd y)) bound1 bound2 = true ->
         is_bounded_by bound2 l = true.
     Proof.
-      intros.
+      intros l bound1 bound2 H H0 H1.
       generalize dependent bound1.
       generalize dependent bound2.
       repeat autounfold.
@@ -666,7 +659,7 @@ Module SolinasReduction.
     Lemma bounds_same : forall b,
         fold_andb_map' (fun x y => (fst y <=? fst x) && (snd x <=? snd y)) b b = true.
     Proof.
-      intros.
+      intros b.
       repeat autounfold.
       induction b;
         repeat match goal with
@@ -784,7 +777,7 @@ Module SolinasReduction.
       let lo_hi := Associational.split s' p in
       Associational.eval (sat_reduce base s c n p) =
         Associational.eval coef * Associational.eval (snd lo_hi) + Associational.eval (fst lo_hi).
-    Proof using Type.
+    Proof.
       intros; cbv [sat_reduce] in *; cbv [s' lo_hi coef].
       autorewrite with push_eval; lia.
     Qed.
@@ -809,7 +802,7 @@ Module SolinasReduction.
       replace (rev (seq 0 (S fuel))) with (fuel :: rev (seq 0 fuel)).
       generalize (rev (seq 0 fuel)).
       cbn in *.
-      intros.
+      intros l.
       induction l;
         break_match; auto; discriminate.
       rewrite seq_snoc.
@@ -893,10 +886,6 @@ Module SolinasReduction.
       else
         f (add_to_nth 0 (weight (m) * snd r_flat) (fst r_flat)).
 
-    Definition reduce1' base s c n m p :=
-      ltac:(let x := (eval cbv beta delta [reduce1_cps id] in (@reduce1_cps (list Z) base s c n m p id)) in
-            exact x).
-
     Definition reduce2 base s c n (p : list Z) :=
       let r1 := reduce1 base s c (2*n) (S n) p in
       let r2 := reduce1 base s c (S n) (S n) r1 in
@@ -905,10 +894,6 @@ Module SolinasReduction.
     Definition reduce2_cps {T} base s c n (p : list Z) (f : list Z -> T):=
       (r1 <- reduce1_cps base s c (2*n) (S n) p;
        reduce1_cps base s c (S n) (S n) r1 f).
-
-    Definition reduce2' base s c n p :=
-      ltac:(let x := (eval cbv beta delta [reduce2_cps reduce1_cps id] in (@reduce2_cps (list Z) base s c n p id)) in
-            exact x).
 
     Lemma reduce1_cps_ok {T} base s c n m (f : list Z -> T) : forall p,
         reduce1_cps base s c n m p f = f (reduce1 base s c n m p).
@@ -1002,14 +987,13 @@ Module SolinasReduction.
     Proof.
       intros H.
       generalize dependent l2.
-      induction l1; intros; destruct l2; push;
+      induction l1 as [| ? ? IHl1]; intros l2; destruct l2; push;
         match goal with
         | [ |- context[ ?x :: ?y ] ] => replace (x :: y) with ([x] ++ y) by auto
         end;
         specialize (IHl1 ltac:(auto));
-        specialize (H a ltac:(auto));
+        specialize (H _ ltac:(auto));
         repeat multimatch goal with
-               | H : context[_ =? _] |- _ => rewrite DecidableClass.Decidable_eq_Z_obligation_1 in H
                | |- context[_ mod _] => rewrite Z.mod_small
                | _ => rewrite IHl1
                | _ => push
@@ -1026,7 +1010,7 @@ Module SolinasReduction.
     Proof.
       intros H.
       generalize dependent l2.
-      induction l1; intros; destruct l2; push;
+      induction l1 as [| ? ? IHl1]; intros l2; destruct l2; push;
         match goal with
         | [ |- context[ ?x :: ?y ] ] => replace (x :: y) with ([x] ++ y) by eauto
         end;
@@ -1060,7 +1044,7 @@ Module SolinasReduction.
       -> weight x1 < weight (x2 + x1).
     Proof.
       intros H.
-      induction H;
+      induction H as [| ? ? IHle];
         repeat match goal with
                | _ => apply IHle
                | _ => apply weight_mono'
@@ -1093,7 +1077,7 @@ Module SolinasReduction.
           map (fun t => t * weight a) (map weight (seq 0 b)).
     Proof.
       intros a b.
-      induction b;
+      induction b as [| ? IHb];
         repeat multimatch goal with
                | _ => rewrite IHb
                | _ => rewrite seq_snoc
@@ -1110,7 +1094,7 @@ Module SolinasReduction.
     Lemma weight_dif_mono' : forall n,
         weight (S n) - weight n < weight (S (S n)) - weight (S n).
     Proof.
-      intros.
+      intros n.
       induction n.
       weight_comp; lia.
       cbv [weight].
@@ -1154,7 +1138,7 @@ Module SolinasReduction.
         eval weight (2 * n) (mul_no_reduce base n p q) =
           eval weight n p * Positional.eval weight n q.
     Proof using base_nz n_gt_1 wprops.
-      intros.
+      intros p q.
       cbv [mul_no_reduce].
       break_match.
       (* properly bounded *)
@@ -1181,7 +1165,6 @@ Module SolinasReduction.
 
       (* not bounded *)
       push.
-      ring_simplify.
       rewrite <-Z_div_mod_eq.
       auto.
       rewrite Z.gt_lt_iff.
@@ -1194,7 +1177,7 @@ Module SolinasReduction.
 
     Theorem length_mul_no_reduce : forall p q,
         length (mul_no_reduce base n p q) = (2 * n)%nat.
-    Proof.
+    Proof using base_nz n_gt_1 wprops.
       intros; unfold mul_no_reduce; break_match; push.
     Qed.
     Hint Rewrite length_mul_no_reduce : push_length.
@@ -1215,7 +1198,7 @@ Module SolinasReduction.
         split (weight n) (combine (map weight (seq 0 n)) (firstn n p)) =
           (combine (map weight (seq 0 n)) (firstn n p), []).
     Proof using wprops.
-      intros p Hlen.
+      intros.
       rewrite split_lt;
         repeat multimatch goal with
                | H : _ |- _ => autorewrite with push_misc in H
@@ -1236,7 +1219,7 @@ Module SolinasReduction.
         split (weight n) (combine (map weight (seq n (m1 - n))) (skipn n p)) =
           ([], combine (map weight (seq 0 (m1 - n))) (skipn n p)).
     Proof using wprops.
-      intros p m1 Hlen.
+      intros.
       rewrite split_gt;
         repeat multimatch goal with
                | H : _ |- _ => autorewrite with push_misc in H
@@ -1256,8 +1239,8 @@ Module SolinasReduction.
         split (weight n) (combine (map weight (seq 0 m1)) p) =
           (combine (map weight (seq 0 n)) (firstn n p),
             (combine (map weight (seq 0 (m1 - n))) (skipn n p))).
-    Proof.
-      intros.
+    Proof using n_gt_1 wprops.
+      intros m1 p ? ?.
       replace m1 with (n + (m1 - n))%nat at 1 by lia.
       rewrite <-(firstn_skipn n p) at 1.
       push.
@@ -1285,6 +1268,7 @@ Module SolinasReduction.
         eval weight m2 (reduce1 base s c m1 m2 p) =
           Associational.eval coef * eval weight (m1 - n) (skipn n p) + eval weight n (firstn n p).
     Proof using base_nz c_pos coef_small n_gt_1 s_pos solinas_property wprops.
+      intros p m1 m2 H.
       intros.
       assert (Rows.adjust_s weight (S (S m1)) s =
                 Rows.adjust_s weight (S (S n)) s) as Hadjust.
@@ -1294,7 +1278,8 @@ Module SolinasReduction.
         eapply adjust_s_finished; try apply solinas_property.
         lia.
         lia. }
-      cbv [s' coef reduce1]; break_match; push.
+      cbv [s' coef reduce1].
+      destruct (is_bounded_by (repeat (0, 2 ^ machine_wordsize - 1) m1) p) eqn:Heqb; push.
       rewrite Hadjust.
       rewrite solinas_property.
       cbv [to_associational].
@@ -1328,7 +1313,7 @@ Module SolinasReduction.
         Associational.eval (combine (map weight (seq a b)) p) =
           weight a * Associational.eval (combine (map weight (seq 0 b)) p).
     Proof using n_gt_1 wprops.
-      intros.
+      intros a b p.
       generalize dependent a.
       generalize dependent b.
       induction p as [ | x p IHp ]; intros.
@@ -1351,7 +1336,7 @@ Module SolinasReduction.
         (Positional.eval weight m1 p) mod (s - Associational.eval c)
         = (Positional.eval weight m2 q) mod (s - Associational.eval c).
     Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
-      intros.
+      intros p m1 m2; intros.
       cbv [q].
       rewrite value_reduce1; try lia.
       push.
@@ -1394,7 +1379,7 @@ Module SolinasReduction.
         length p = (2 * n)%nat ->
         is_bounded_by (repeat (0, 2 ^ machine_wordsize - 1) (2 * n)) p = true->
         canonical_repr (S n) (reduce1 base s c (2*n) (S n) p).
-    Proof.
+    Proof using base_nz c_pos coef_small n_gt_1 s_pos solinas_property wprops.
       intros p Hlen H.
       cbv [reduce1 canonical_repr].
       rewrite H.
@@ -1410,7 +1395,7 @@ Module SolinasReduction.
       rewrite <-(firstn_skipn n p) in H.
       replace (2*n-n)%nat with n by lia.
       replace (2 * n)%nat with (n + n)%nat in H by lia.
-      rewrite StdlibCompat.List.repeat_app in H.
+      rewrite repeat_app in H.
       solve_ineq.
       
       solve_ibb.
@@ -1438,8 +1423,8 @@ Module SolinasReduction.
     Lemma reduce_second_canonical : forall p,
         canonical_repr (S n) p ->
         canonical_repr (S n) (reduce1 base s c (S n) (S n) p).
-    Proof.
-      intros.
+    Proof using base_nz c_pos coef_small n_gt_1 s_pos solinas_property wprops.
+      intros p H.
       cbv [canonical_repr].
       push.
       assert (Hcanon := H).
@@ -1481,8 +1466,8 @@ Module SolinasReduction.
         let q := reduce1 base s c (S n) (S n) p in
         (nth_default 0 q (n-1) = 0 /\ nth_default 0 q n = 1) \/
           nth_default 0 q n = 0.
-    Proof.
-      intros.
+    Proof using base_nz c_pos coef_small n_gt_1 s_pos solinas_property wprops.
+      intros p ? ? q.
       pose proof (reduce_second_canonical p ltac:(auto)) as Hcanonq.
       fold q in Hcanonq.
       pose proof (firstn_skipn n p) as Hp; symmetry in Hp.
@@ -1636,7 +1621,7 @@ Module SolinasReduction.
         let s' := fst (Saturated.Rows.adjust_s weight (S (S (S n))) s) in
         let coef := Associational.sat_mul_const base [(1, s'/s)] c in
         eval weight n q = Associational.eval coef * (nth_default 0 p n) + eval weight n (firstn n p).
-    Proof.
+    Proof using base_nz c_pos coef_small n_gt_1 s_pos solinas_property wprops.
       intros p ? ? Hbounds ? ? ?.
       pose proof (firstn_skipn n p) as Hp; symmetry in Hp.
       canonical_app p.
@@ -1709,7 +1694,8 @@ Module SolinasReduction.
            nth_default 0 p n = 0) ->
         (Positional.eval weight (S n) p) mod (s - Associational.eval c)
         = (Positional.eval weight n q) mod (s - Associational.eval c).
-    Proof.
+    Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
+      intros p.
       intros.
       pose proof (firstn_skipn n p) as Hp; symmetry in Hp.
       rewrite Hp at 1.
@@ -1755,8 +1741,8 @@ Module SolinasReduction.
         let r := reduce_full base s c n p in
         (Positional.eval weight (2 * n) p) mod (s - Associational.eval c)
         = (Positional.eval weight n r) mod (s - Associational.eval c).
-    Proof.
-      intros; cbv [r reduce_full]; break_match.
+    Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
+      intros p ? r; cbv [r reduce_full]; break_match.
       (* bounds are good *)
       pose proof (is_bounded_by_nth n _ _ Heqb ltac:(push) ltac:(push)) as Hnth.
       repeat match goal with
@@ -1837,7 +1823,7 @@ Module SolinasReduction.
     Theorem mulmod'_correct : forall p q,
         Positional.eval weight n (mulmod' base s c n p q) mod (s - Associational.eval c) =
           (Positional.eval weight n p * Positional.eval weight n q) mod (s - Associational.eval c).
-    Proof.
+    Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
       intros.
       cbv [mulmod'].
       rewrite <-reduce_full_correct; push; lia.
@@ -1846,7 +1832,7 @@ Module SolinasReduction.
     Theorem mulmod_correct : forall p q,
         Positional.eval weight n (mulmod base s c n p q) mod (s - Associational.eval c) =
           (Positional.eval weight n p * Positional.eval weight n q) mod (s - Associational.eval c).
-    Proof.
+    Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
       intros.
       rewrite mulmod_cps_conv.
       apply mulmod'_correct.
