@@ -5,7 +5,10 @@ Require Import Coq.Strings.String.
 Require Import Coq.derive.Derive.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZUtil.Zselect.
+Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.SolinasReduction.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
@@ -45,6 +48,107 @@ Local Existing Instances
 | 100.
 Local Instance : unfold_value_barrier_opt := true.
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
+
+Module debugging_solinas_reduction.
+
+  Section __.
+
+    Context (machine_wordsize := 64)
+            (weight := UniformWeight.uweight machine_wordsize)
+            (up_bound := 2 ^ (machine_wordsize / 4))
+            {wprops : @weight_properties weight}.
+
+    Definition dual_map {A B : Type} (f : A -> B -> bool) (l1 : list A) (l2 : list B) :=
+      map (fun x => (f (fst x) (snd x))) (combine l1 l2).
+    Definition fold_andb_map' {A B : Type} (f : A -> B -> bool) (ls1 : list A) (ls2 : list B) :=
+      fold_right andb true (dual_map f ls1 ls2).
+    Definition is_bounded_by bounds ls :=
+      fold_andb_map' (fun r v'' => (fst r <=? v'') && (v'' <=? snd r)) bounds ls.
+
+    Definition reduce3 weight base s c n (p : list Z) :=
+      let bound := (0, 2^machine_wordsize-1) in
+      let bounds := (repeat bound n) ++ [(0, 1)] in
+      let s' := fst (Saturated.Rows.adjust_s weight (S (S n)) s) in
+      let coef_a := Saturated.Associational.sat_mul_const base [(1, s'/s)] c in
+      let coef := Associational.eval coef_a in
+      if (is_bounded_by bounds p) then
+        let hi := Z.zselect (nth_default 0 p n) 0 coef in
+        add_to_nth 0 hi (firstn n p)
+      else
+        let hi := coef * (nth_default 0 p n) in
+        add_to_nth 0 hi (firstn n p).
+
+  End __.
+
+  Section compile.
+
+    Let s := 2^255.
+    Let c := [(1, 19)].
+    Let machine_wordsize := 64.
+    Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
+    Let m : nat := 2 * n.
+    Let w : nat -> Z := weight machine_wordsize 1.
+    Let base : Z := 2 ^ machine_wordsize.
+
+    Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
+    Let bound' := Some r[0 ~> (2^machine_wordsize +39)]%zrange.
+    Let boundsn : list (ZRange.type.option.interp base.type.Z)
+        := repeat bound (n).
+
+    Import Stringification.C.Compilers.
+    Import Stringification.C.Compilers.ToString.
+
+    Local Existing Instances ToString.C.OutputCAPI Pipeline.show_ErrorMessage.
+
+    Let possible_values := prefix_with_carry [machine_wordsize].
+    Local Instance : use_mul_for_cmovznz_opt := false.
+    Local Instance : machine_wordsize_opt := machine_wordsize. (* for show *)
+    Local Instance : no_select_size_opt := None.
+    Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
+    Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+
+    Let bounds := repeat bound n ++ [Some r[0 ~> 1]%zrange].
+
+    Time Compute
+         Show.show
+         (Pipeline.BoundsPipelineToString
+            "fiat" "mul"
+            false
+            false
+            possible_values
+            machine_wordsize
+            ltac:(let n := (eval cbv in n) in
+                  let r := Reify (reduce3 w base s c n) in
+                  exact r)
+                   (fun _ _ => [])
+                   (Some (repeat bound (n) ++ [Some r[0~>1]%zrange]), tt)
+                   (Some (repeat bound' n))
+                   (None, tt)
+                   (None)
+           : Pipeline.ErrorT _).
+
+    Time Compute
+         Show.show
+         (Pipeline.BoundsPipelineToString
+            "fiat" "mul"
+            false
+            false
+            None
+            possible_values
+            machine_wordsize
+            ltac:(let n := (eval cbv in n) in
+                  let r := Reify (reduce1 base s c (2*n) (S n)) in
+                  exact r)
+                   (fun _ _ => [])
+                   (Some (repeat bound (2*n)), tt)
+                   (Some bounds)
+                   (None, tt)
+                   (None)
+           : Pipeline.ErrorT _).
+
+  End compile.
+
+End debugging_solinas_reduction.
 
 Module debugging_go_bits_add.
   Import Stringification.Go.
