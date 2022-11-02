@@ -844,8 +844,11 @@ Module SolinasReduction.
       let pq_rows := Saturated.Rows.from_associational weight (2*n) pq_a in
       let pq := Saturated.Rows.flatten weight (2*n) pq_rows in
       let bound := (0, 2^machine_wordsize - 1) in
-      if (is_bounded_by (repeat bound n) p && is_bounded_by (repeat bound n) q) then
-        fst pq
+      if (is_bounded_by (repeat bound n) p) then
+        if (is_bounded_by (repeat bound n) q) then
+          fst pq
+        else
+          add_to_nth 0 (weight (2 * n) * snd pq) (fst pq)
       else
         add_to_nth 0 (weight (2 * n) * snd pq) (fst pq).
 
@@ -867,8 +870,8 @@ Module SolinasReduction.
       let s' := fst (Saturated.Rows.adjust_s weight (S (S n)) s) in
       let coef_a := Saturated.Associational.sat_mul_const base [(1, s'/s)] c in
       let coef := Associational.eval coef_a in
+      dlet_nd hi := Z.zselect (nth_default 0 p n) 0 coef in
       if (is_bounded_by bounds p) then
-        let hi := Z.zselect (nth_default 0 p n) 0 coef in
         add_to_nth 0 hi (firstn n p)
       else
         let hi := coef * (nth_default 0 p n) in
@@ -914,8 +917,8 @@ Module SolinasReduction.
       let s' := fst (Saturated.Rows.adjust_s weight (S (S n)) s) in
       let coef_a := Saturated.Associational.sat_mul_const base [(1, s'/s)] c in
       let coef := Associational.eval coef_a in
+      dlet_nd hi := Z.zselect (nth_default 0 p n) 0 coef in
       if (is_bounded_by bounds p) then
-        let hi := Z.zselect (nth_default 0 p n) 0 coef in
         f (add_to_nth 0 hi (firstn n p))
       else
         let hi := coef * (nth_default 0 p n) in
@@ -961,8 +964,11 @@ Module SolinasReduction.
       let pq_rows := Saturated.Rows.from_associational weight (2*n) pq_a in
       let pq := Saturated.Rows.flatten weight (2*n) pq_rows in
       let bound := (0, 2^machine_wordsize - 1) in
-      if (is_bounded_by (repeat bound n) p && is_bounded_by (repeat bound n) q) then
-        f (fst pq)
+      if (is_bounded_by (repeat bound n) p) then
+        if (is_bounded_by (repeat bound n) q) then
+          f (fst pq)
+        else
+          f (add_to_nth 0 (weight (2 * n) * snd pq) (fst pq))
       else
         f (add_to_nth 0 (weight (2 * n) * snd pq) (fst pq)).
 
@@ -988,7 +994,7 @@ Module SolinasReduction.
     Qed.
 
     Definition mulmod base s c n (p q : list Z) :=
-      ltac:(let x := (eval cbv beta delta [mulmod_cps mul_no_reduce_cps reduce_full_cps reduce1_cps id] in (@mulmod_cps (list Z) base s c n p q id)) in
+      ltac:(let x := (eval cbv beta delta [mulmod_cps mul_no_reduce_cps reduce_full_cps reduce1_cps reduce3_cps id] in (@mulmod_cps (list Z) base s c n p q id)) in
             exact x).
 
     Lemma mulmod_unfold base s c n : forall p q,
@@ -1193,6 +1199,15 @@ Module SolinasReduction.
       lia.
 
       (* not bounded *)
+      push.
+      rewrite <-Z_div_mod_eq.
+      auto.
+      rewrite Z.gt_lt_iff.
+      auto.
+      push.
+      lia.
+      push.
+
       push.
       rewrite <-Z_div_mod_eq.
       auto.
@@ -1421,7 +1436,7 @@ Module SolinasReduction.
       const_simpl.
       rewrite skipn_nth_default with (d:=0) by lia.
       rewrite skipn_all by lia.
-      cbv [q reduce3].
+      cbv [q reduce3 Let_In].
       break_match.
 
       push.
@@ -1439,9 +1454,13 @@ Module SolinasReduction.
       rewrite H.
       assert (nth_default 0 p n = 0 \/ nth_default 0 p n = 1) by lia.
       intuition.
-      rewrite H4.
+      match goal with
+      | H : nth_default _ _ _ = _ |- _ => rewrite H
+      end.
       push.
-      rewrite H4.
+      match goal with
+      | H : nth_default _ _ _ = _ |- _ => rewrite H
+      end.
       push.
       cbv [Z.zselect].
       simpl.

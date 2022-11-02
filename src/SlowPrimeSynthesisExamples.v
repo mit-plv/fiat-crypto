@@ -4,6 +4,7 @@ Require Import Coq.QArith.Qround.
 Require Import Coq.Strings.String.
 Require Import Coq.derive.Derive.
 Require Import Coq.Lists.List.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Definitions.
@@ -51,6 +52,8 @@ Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fract
 
 Module debugging_solinas_reduction.
 
+  Import SolinasReduction.SolinasReduction.
+
   Section __.
 
     Context (machine_wordsize := 64)
@@ -64,19 +67,6 @@ Module debugging_solinas_reduction.
       fold_right andb true (dual_map f ls1 ls2).
     Definition is_bounded_by bounds ls :=
       fold_andb_map' (fun r v'' => (fst r <=? v'') && (v'' <=? snd r)) bounds ls.
-
-    Definition reduce3 weight base s c n (p : list Z) :=
-      let bound := (0, 2^machine_wordsize-1) in
-      let bounds := (repeat bound n) ++ [(0, 1)] in
-      let s' := fst (Saturated.Rows.adjust_s weight (S (S n)) s) in
-      let coef_a := Saturated.Associational.sat_mul_const base [(1, s'/s)] c in
-      let coef := Associational.eval coef_a in
-      if (is_bounded_by bounds p) then
-        let hi := Z.zselect (nth_default 0 p n) 0 coef in
-        add_to_nth 0 hi (firstn n p)
-      else
-        let hi := coef * (nth_default 0 p n) in
-        add_to_nth 0 hi (firstn n p).
 
   End __.
 
@@ -103,11 +93,12 @@ Module debugging_solinas_reduction.
     Let possible_values := prefix_with_carry [machine_wordsize].
     Local Instance : use_mul_for_cmovznz_opt := false.
     Local Instance : machine_wordsize_opt := machine_wordsize. (* for show *)
-    Local Instance : no_select_size_opt := None.
+    Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
     Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
     Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
 
     Let bounds := repeat bound n ++ [Some r[0 ~> 1]%zrange].
+    Let bound1 := Some r[0~>1]%zrange.
 
     Time Compute
          Show.show
@@ -118,33 +109,234 @@ Module debugging_solinas_reduction.
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) in
-                  let r := Reify (reduce3 w base s c n) in
+                  let r := Reify (mulmod base s c n) in
                   exact r)
                    (fun _ _ => [])
-                   (Some (repeat bound (n) ++ [Some r[0~>1]%zrange]), tt)
-                   (Some (repeat bound' n))
-                   (None, tt)
+                   (Some (repeat bound (n)), (Some (repeat bound (n)), tt))
+                   (Some (repeat bound (n)))
+                   (None, (None, tt))
                    (None)
            : Pipeline.ErrorT _).
+(*
+/*
+ * Input Bounds:
+ *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
+ *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
+ * Output Bounds:
+ *   out1: None
+ */
+void f(uint128 out1[4], const uint64_t arg1[4], const uint64_t arg2[4]) {
+  uint64_t x1;
+  uint64_t x2;
+  uint64_t x3;
+  uint64_t x4;
+  uint64_t x5;
+  uint64_t x6;
+  uint64_t x7;
+  uint64_t x8;
+  uint64_t x9;
+  uint64_t x10;
+  uint64_t x11;
+  uint64_t x12;
+  uint64_t x13;
+  uint64_t x14;
+  uint64_t x15;
+  uint64_t x16;
+  uint64_t x17;
+  uint64_t x18;
+  uint64_t x19;
+  uint64_t x20;
+  uint64_t x21;
+  uint64_t x22;
+  uint64_t x23;
+  uint64_t x24;
+  uint64_t x25;
+  uint64_t x26;
+  uint64_t x27;
+  uint64_t x28;
+  uint64_t x29;
+  uint64_t x30;
+  uint64_t x31;
+  uint64_t x32;
+  uint64_t x33;
+  uint1 x34;
+  uint64_t x35;
+  uint1 x36;
+  uint64_t x37;
+  uint64_t x38;
+  uint1 x39;
+  uint64_t x40;
+  uint1 x41;
+  uint64_t x42;
+  uint1 x43;
+  uint64_t x44;
+  uint64_t x45;
+  uint1 x46;
+  uint64_t x47;
+  uint1 x48;
+  uint64_t x49;
+  uint1 x50;
+  uint64_t x51;
+  uint1 x52;
+  uint64_t x53;
+  uint1 x54;
+  uint64_t x55;
+  uint64_t x56;
+  uint1 x57;
+  uint64_t x58;
+  uint1 x59;
+  uint64_t x60;
+  uint1 x61;
+  uint64_t x62;
+  uint1 x63;
+  uint64_t x64;
+  uint1 x65;
+  uint64_t x66;
+  uint1 x67;
+  uint64_t x68;
+  uint1 x69;
+  uint64_t x70;
+  uint1 x71;
+  uint64_t x72;
+  uint1 x73;
+  uint64_t x74;
+  uint1 x75;
+  uint64_t x76;
+  uint1 x77;
+  uint64_t x78;
+  uint1 x79;
+  uint64_t x80;
+  uint1 x81;
+  uint64_t x82;
+  uint1 x83;
+  uint64_t x84;
+  uint1 x85;
+  uint64_t x86;
+  uint1 x87;
+  uint64_t x88;
+  uint1 x89;
+  uint64_t x90;
+  uint1 x91;
+  uint64_t x92;
+  uint1 x93;
+  uint64_t x94;
+  uint1 x95;
+  uint64_t x96;
+  uint64_t x97;
+  uint64_t x98;
+  uint64_t x99;
+  uint64_t x100;
+  uint64_t x101;
+  uint64_t x102;
+  uint64_t x103;
+  uint64_t x104;
+  uint1 x105;
+  uint64_t x106;
+  uint1 x107;
+  uint64_t x108;
+  uint1 x109;
+  uint8_t x110;
+  uint64_t x111;
+  uint1 x112;
+  uint64_t x113;
+  uint1 x114;
+  uint64_t x115;
+  uint1 x116;
+  uint64_t x117;
+  uint1 x118;
+  uint8_t x119;
+  uint64_t x120;
+  uint64_t x121;
+  uint64_t x122;
+  uint1 x123;
+  uint64_t x124;
+  uint1 x125;
+  uint64_t x126;
+  uint1 x127;
+  uint64_t x128;
+  uint1 x129;
+  uint8_t x130;
+  uint128 x131;
+  mulx_u64(&x1, &x2, (arg1[3]), (arg2[3]));
+  mulx_u64(&x3, &x4, (arg1[3]), (arg2[2]));
+  mulx_u64(&x5, &x6, (arg1[3]), (arg2[1]));
+  mulx_u64(&x7, &x8, (arg1[3]), (arg2[0]));
+  mulx_u64(&x9, &x10, (arg1[2]), (arg2[3]));
+  mulx_u64(&x11, &x12, (arg1[2]), (arg2[2]));
+  mulx_u64(&x13, &x14, (arg1[2]), (arg2[1]));
+  mulx_u64(&x15, &x16, (arg1[2]), (arg2[0]));
+  mulx_u64(&x17, &x18, (arg1[1]), (arg2[3]));
+  mulx_u64(&x19, &x20, (arg1[1]), (arg2[2]));
+  mulx_u64(&x21, &x22, (arg1[1]), (arg2[1]));
+  mulx_u64(&x23, &x24, (arg1[1]), (arg2[0]));
+  mulx_u64(&x25, &x26, (arg1[0]), (arg2[3]));
+  mulx_u64(&x27, &x28, (arg1[0]), (arg2[2]));
+  mulx_u64(&x29, &x30, (arg1[0]), (arg2[1]));
+  mulx_u64(&x31, &x32, (arg1[0]), (arg2[0]));
+  addcarryx_u64(&x33, &x34, 0x0, x28, x7);
+  addcarryx_u64(&x35, &x36, x34, x26, x5);
+  x37 = (x36 + x18);
+  addcarryx_u64(&x38, &x39, 0x0, x33, x13);
+  addcarryx_u64(&x40, &x41, x39, x35, x8);
+  addcarryx_u64(&x42, &x43, x41, x37, 0x0);
+  x44 = (x43 + x10);
+  addcarryx_u64(&x45, &x46, 0x0, x30, x15);
+  addcarryx_u64(&x47, &x48, x46, x38, x16);
+  addcarryx_u64(&x49, &x50, x48, x40, x11);
+  addcarryx_u64(&x51, &x52, x50, x42, x3);
+  addcarryx_u64(&x53, &x54, x52, x44, 0x0);
+  x55 = (x54 + x2);
+  addcarryx_u64(&x56, &x57, 0x0, x45, x21);
+  addcarryx_u64(&x58, &x59, x57, x47, x19);
+  addcarryx_u64(&x60, &x61, x59, x49, x14);
+  addcarryx_u64(&x62, &x63, x61, x51, x6);
+  addcarryx_u64(&x64, &x65, x63, x53, 0x0);
+  addcarryx_u64(&x66, &x67, x65, x55, 0x0);
+  addcarryx_u64(&x68, &x69, 0x0, x32, x23);
+  addcarryx_u64(&x70, &x71, x69, x56, x24);
+  addcarryx_u64(&x72, &x73, x71, x58, x22);
+  addcarryx_u64(&x74, &x75, x73, x60, x17);
+  addcarryx_u64(&x76, &x77, x75, x62, x9);
+  addcarryx_u64(&x78, &x79, x77, x64, x1);
+  addcarryx_u64(&x80, &x81, x79, x66, 0x0);
+  addcarryx_u64(&x82, &x83, 0x0, x68, x29);
+  addcarryx_u64(&x84, &x85, x83, x70, x27);
+  addcarryx_u64(&x86, &x87, x85, x72, x25);
+  addcarryx_u64(&x88, &x89, x87, x74, x20);
+  addcarryx_u64(&x90, &x91, x89, x76, x12);
+  addcarryx_u64(&x92, &x93, x91, x78, x4);
+  addcarryx_u64(&x94, &x95, x93, x80, 0x0);
+  mulx_u64(&x96, &x97, UINT8_C(0x26), x94);
+  mulx_u64(&x98, &x99, UINT8_C(0x26), x92);
+  mulx_u64(&x100, &x101, UINT8_C(0x26), x90);
+  mulx_u64(&x102, &x103, UINT8_C(0x26), x88);
+  addcarryx_u64(&x104, &x105, 0x0, x82, x100);
+  addcarryx_u64(&x106, &x107, x105, x84, x98);
+  addcarryx_u64(&x108, &x109, x107, x86, x96);
+  x110 = (uint8_t)(x109 + (uint8_t)x97);
+  addcarryx_u64(&x111, &x112, 0x0, x31, x102);
+  addcarryx_u64(&x113, &x114, x112, x104, (uint8_t)x103);
+  addcarryx_u64(&x115, &x116, x114, x106, (uint8_t)x101);
+  addcarryx_u64(&x117, &x118, x116, x108, (uint8_t)x99);
+  x119 = (uint8_t)(x118 + x110);
+  mulx_u64(&x120, &x121, UINT8_C(0x26), x119);
+  addcarryx_u64(&x122, &x123, 0x0, x111, (uint16_t)x120);
+  addcarryx_u64(&x124, &x125, x123, x113, 0x0);
+  addcarryx_u64(&x126, &x127, x125, x115, 0x0);
+  addcarryx_u64(&x128, &x129, x127, x117, 0x0);
+  cmovznz_u8(&x130, x129, 0x0, UINT8_C(0x26));
+  x131 = (x130 + (uint128)x122);
+  out1[0] = x131;
+  out1[1] = x124;
+  out1[2] = x126;
+  out1[3] = x128;
+}
 
-    Time Compute
-         Show.show
-         (Pipeline.BoundsPipelineToString
-            "fiat" "mul"
-            false
-            false
-            None
-            possible_values
-            machine_wordsize
-            ltac:(let n := (eval cbv in n) in
-                  let r := Reify (reduce1 base s c (2*n) (S n)) in
-                  exact r)
-                   (fun _ _ => [])
-                   (Some (repeat bound (2*n)), tt)
-                   (Some bounds)
-                   (None, tt)
-                   (None)
-           : Pipeline.ErrorT _).
+with input bounds (Some [Some [0x0 ~> 0xffffffffffffffff], Some [0x0 ~> 0xffffffffffffffff], Some [0x0 ~> 0xffffffffffffffff], Some [0x0 ~> 0xffffffffffffffff]], Some [Some [0x0 ~> 0xffffffffffffffff], Some [0x0 ~> 0xffffffffffffffff], Some [0x0 ~> 0xffffffffffffffff], Some [0x0 ~> 0xffffffffffffffff]]).
+"
+     : string
+Finished transaction in 8.123 secs (7.909u,0.142s) (successful)
+*)
 
   End compile.
 
