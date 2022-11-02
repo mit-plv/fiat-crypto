@@ -871,11 +871,12 @@ Module SolinasReduction.
       let coef_a := Saturated.Associational.sat_mul_const base [(1, s'/s)] c in
       let coef := Associational.eval coef_a in
       dlet_nd hi := Z.zselect (nth_default 0 p n) 0 coef in
-      if (is_bounded_by bounds p) then
-        add_to_nth 0 hi (firstn n p)
-      else
-        let hi := coef * (nth_default 0 p n) in
-        add_to_nth 0 hi (firstn n p).
+          let lo := Z.add_get_carry machine_wordsize hi (nth_default 0 p 0) in
+          if (is_bounded_by bounds p) then
+            [fst lo] ++ (skipn 1 (firstn n p))
+          else
+            let hi' := coef * (nth_default 0 p n) in
+            add_to_nth 0 hi' (firstn n p).
 
     Definition reduce_full base s c n (p : list Z) :=
       let r1 := reduce1 base s c (2*n) (S n) p in
@@ -918,11 +919,12 @@ Module SolinasReduction.
       let coef_a := Saturated.Associational.sat_mul_const base [(1, s'/s)] c in
       let coef := Associational.eval coef_a in
       dlet_nd hi := Z.zselect (nth_default 0 p n) 0 coef in
-      if (is_bounded_by bounds p) then
-        f (add_to_nth 0 hi (firstn n p))
-      else
-        let hi := coef * (nth_default 0 p n) in
-        f (add_to_nth 0 hi (firstn n p)).
+          let lo := Z.add_get_carry machine_wordsize hi (nth_default 0 p 0) in
+          if (is_bounded_by bounds p) then
+            f ([fst lo] ++ (skipn 1 (firstn n p)))
+          else
+            let hi' := coef * (nth_default 0 p n) in
+            f (add_to_nth 0 hi' (firstn n p)).
 
     Lemma reduce3_cps_ok {T} base s c n (f : list Z -> T) : forall p,
         reduce3_cps base s c n p f = f (reduce3 base s c n p).
@@ -1330,7 +1332,7 @@ Module SolinasReduction.
       push.
       rewrite <-(firstn_skipn n p) in Heqb.
       replace m1 with (n + (m1 - n))%nat in Heqb by lia.
-      rewrite List.repeat_app in Heqb.
+      rewrite repeat_app in Heqb.
       solve_ineq.
       solve_ibb.
       solve_ibb.
@@ -1419,6 +1421,125 @@ Module SolinasReduction.
 
     (* SECTION REDUCE3 *)
 
+    Lemma value_reduce1' : forall p m,
+        m = n ->
+        length p = S m ->
+        nth_default 0 p n <= 1 ->
+        weight n / s * Associational.eval c + eval weight n (firstn n p) < weight n ->
+        let s' := fst (Saturated.Rows.adjust_s weight (S (S n)) s) in
+        let coef := Associational.sat_mul_const base [(1, s'/s)] c in
+        eval weight m (reduce1 base s c (S m) m p) =
+          Associational.eval coef * nth_default 0 p n + eval weight n (firstn n p).
+    Proof.
+      intros p m H H1 H2 H3.
+      cbv [reduce1].
+      rewrite H.
+      push.
+      erewrite adjust_s_finished'; try apply solinas_property.
+      rewrite solinas_property.
+      cbv [to_associational].
+      push.
+      const_simpl.
+      rewrite skipn_nth_default with (d:=0) by lia.
+      rewrite skipn_all.
+      cbn [seq map].
+      push.
+
+      break_match.
+      push.
+      rewrite Z.mod_small.
+      reflexivity.
+      solve_ineq.
+      apply is_bounded_by_nth with (n:=n) in Heqb.
+      etransitivity.
+      2: apply Heqb.
+      rewrite nth_default_repeat.
+      break_match; try lia.
+      reflexivity.
+      lia.
+      push.
+      rewrite <-firstn_skipn with (l:=p) (n:=n) in Heqb.
+      replace (S n) with (n + 1)%nat in Heqb by lia.
+      rewrite repeat_app in Heqb.
+      solve_ibb.
+      le_lt.
+      etransitivity.
+      solve_ineq.
+      apply Z.mul_le_mono_nonneg_l.
+      solve_ineq.
+      eauto.
+      apply Z.le_refl.
+      le_lt.
+      push.
+
+      push.
+      rewrite <-Z_div_mod_eq_full.
+      all: push; lia.
+    Qed.
+
+    Lemma eval_reduce1' : forall p m,
+        m = n ->
+        length p = S m ->
+        nth_default 0 p n <= 1 ->
+        weight n / s * Associational.eval c + eval weight n (firstn n p) < weight n ->
+        let s' := fst (Saturated.Rows.adjust_s weight (S (S n)) s) in
+        let coef := Associational.sat_mul_const base [(1, s'/s)] c in
+        let q := reduce1 base s c (S m) m p in
+        (Positional.eval weight (S m) p) mod (s - Associational.eval c)
+        = (Positional.eval weight m q) mod (s - Associational.eval c).
+    Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
+      intros p m H H1 H2 H3 s' coef q.
+      cbv [q].
+      rewrite value_reduce1'; try lia.
+      push.
+      rewrite solinas_property.
+      cbn [fst snd].
+      match goal with
+      | |- context[_ mod (_ - ?c)] =>
+          lazymatch goal with
+          | |- context[?x * ?c * ?y] => replace (x * c * y) with (c * (x * y)) by lia
+          end
+      end.
+      rewrite Z.add_comm.
+      rewrite <-reduction_rule.
+      apply Z.elim_mod.
+      rewrite <-(firstn_skipn n p) at 1.
+      replace (S m) with (m+1)%nat by lia.
+      cbv [eval to_associational].
+      push.
+      rewrite Z.mul_assoc.
+      rewrite <-Z_div_exact_2.
+      rewrite H.
+      rewrite Z.add_cancel_l.
+      const_simpl.
+      rewrite eval_seq_start.
+      f_equal.
+      rewrite skipn_nth_default with (d:=0).
+      rewrite skipn_all.
+      cbn.
+      break_match; lia.
+
+      lia.
+      lia.
+      lia.
+      pose proof (adjust_s_invariant (S (S n)) s ltac:(lia)) as Hadj.
+      rewrite solinas_property in Hadj.
+      intuition.
+      push; lia.
+      lia.
+    Qed.
+
+    Lemma firstn_nth_default_0 : forall p,
+        length p > 0 ->
+        firstn 1 p = [nth_default 0 p 0].
+    Proof.
+      intros p H.
+      induction p as [| a p IHp].
+      push' H.
+      lia.
+      push.
+    Qed.
+
     Lemma eval_reduce3 : forall p m,
         (m = n)%nat ->
         length p = S m ->
@@ -1428,18 +1549,19 @@ Module SolinasReduction.
     Proof.
       intros p m H.
       intros.
-      rewrite eval_reduce1 with (m2:=m%nat).
-      rewrite value_reduce1.
+      rewrite eval_reduce1' with (m:=m%nat).
+      rewrite value_reduce1'.
       rewrite solinas_property.
       rewrite H.
       push.
       const_simpl.
-      rewrite skipn_nth_default with (d:=0) by lia.
-      rewrite skipn_all by lia.
       cbv [q reduce3 Let_In].
       break_match.
 
       push.
+      cbv [Z.add_get_carry Z.add_with_get_carry Z.add_with_carry Z.get_carry Let_In].
+      push.
+
       match goal with
       | H : context[is_bounded_by _ _] |- _ => pose proof (is_bounded_by_nth m _ _ H) as Hnth
       end.
@@ -1452,33 +1574,73 @@ Module SolinasReduction.
       simpl in Hnth.
       rewrite H in Hnth.
       rewrite H.
+
+      rewrite <-firstn_skipn with (l:=(firstn n p)) (n:=1%nat) at 1.
+      rewrite firstn_firstn.
+      rewrite firstn_nth_default_0.
+      repeat f_equal.
+      apply is_bounded_by_nth with (n:=0%nat) in Heqb.
+      rewrite nth_default_app in Heqb.
+      rewrite nth_default_repeat in Heqb.
+      push' Heqb.
+      destruct (lt_dec); try lia.
+      destruct dec; try lia.
+      push' Heqb.
+
       assert (nth_default 0 p n = 0 \/ nth_default 0 p n = 1) by lia.
       intuition.
       match goal with
       | H : nth_default _ _ _ = _ |- _ => rewrite H
       end.
       push.
+      repeat f_equal.
+      rewrite Z.mod_small; lia.
+
       match goal with
       | H : nth_default _ _ _ = _ |- _ => rewrite H
       end.
       push.
       cbv [Z.zselect].
-      simpl.
+      destruct (1 =? 0) eqn:E1.
+      lia.
       rewrite solinas_property.
       push.
+      unfold weight.
+      erewrite uweight_eval_app with (n:=1%nat).
+      erewrite uweight_eval_app with (n:=1%nat).
+      fold weight.
+      push.
+      rewrite min_l; try lia.
+      rewrite Z.add_assoc.
+      f_equal.
+      rewrite Z.mod_small.
+      lia.
+      admit.
+      lia.
+      push.
       push; lia.
+      lia.
+      push.
       push; lia.
+      lia.
+      push; lia.
+      lia.
+      lia.
 
       rewrite H.
       rewrite solinas_property.
       push.
       push; lia.
       push; lia.
-      all: try lia.
-      admit. (* up_bound * weight (S m - n) + weight n < weight m *)
-      (* needs stricter restraints for value_reduce1 *)
-      admit. (* up_bound * weight (S m - n) + weight n < weight m *)
-      (* needs stricter restraints for value_reduce1 *)
+
+      lia.
+      lia.
+      admit.
+      admit.
+      lia.
+      lia.
+      admit.
+      admit.
     Admitted.
 
     (* END SECTION REDUCE3 *)
