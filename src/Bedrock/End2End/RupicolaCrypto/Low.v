@@ -157,7 +157,7 @@ Definition buf_pad {T} (buf: buffer_t T) (len: nat) (t: T) : buffer_t T := buf +
 Require Import bedrock2.NotationsCustomEntry.
 Section CompileBufPolymorphic.
   Import ProgramLogic.Coercions WeakestPrecondition.
-  Context (e : list Syntax.func).
+  Context (e : list (String.string * Syntax.func)).
   Context (T : Type) (sz : word) (pT : word -> T -> mem -> Prop).
 
   Declare Scope word_scope.
@@ -1039,7 +1039,7 @@ Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (buf_append _ _) 
        compile_buf_append; shelve : compiler.
 
 Section CompileBufByte.
-  Context (e : list Syntax.func).
+  Context (e : list (String.string * Syntax.func)).
   Context (T := byte) (sz : word := word.of_Z 1) (pT := ptsto(map:=mem)).
 
   Declare Scope word_scope.
@@ -1138,7 +1138,7 @@ Section CompileBufByte.
 End CompileBufByte.
 
 Section CompileBufWord32.
-  Context (e : list Syntax.func).
+  Context (e : list (String.string  * Syntax.func)).
   Context (T := word) (sz : word := word.of_Z 4) (pT := scalar32(word:=word)).
 
   Declare Scope word_scope.

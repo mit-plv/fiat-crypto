@@ -333,7 +333,7 @@ Qed.
   Lemma mul_func_correct :
     valid_func (res mul_op _) ->
     forall functions,
-      spec_of_BinOp bin_mul (mul_func :: functions). Set Printing All.
+      spec_of_BinOp bin_mul ((Field.mul, mul_func) :: functions). Set Printing All.
   Proof using M_eq check_args_ok mul_func_eq ok.
         (* tight_bounds_tighter_than. *)
     intros. cbv [spec_of_BinOp bin_mul]. rewrite mul_func_eq.
@@ -366,7 +366,7 @@ Qed.
   Lemma square_func_correct :
     valid_func (res square_op _) ->
     forall functions,
-      spec_of_UnOp un_square (square_func :: functions).
+      spec_of_UnOp un_square ((Field.square, square_func) :: functions).
   Proof using M_eq check_args_ok ok square_func_eq.
     intros. cbv [spec_of_UnOp un_square]. rewrite square_func_eq.
     pose proof square_correct
@@ -399,7 +399,7 @@ Qed.
   Lemma add_func_correct :
     valid_func (res add_op _) ->
     forall functions,
-      spec_of_BinOp bin_add (add_func :: functions).
+      spec_of_BinOp bin_add ((Field.add, add_func) :: functions).
   Proof using M_eq check_args_ok add_func_eq ok.
     intros. cbv [spec_of_BinOp bin_add]. rewrite add_func_eq.
     pose proof add_correct
@@ -431,7 +431,7 @@ Qed.
   Lemma sub_func_correct :
     valid_func (res sub_op _) ->
     forall functions,
-      spec_of_BinOp bin_sub (sub_func :: functions).
+      spec_of_BinOp bin_sub ((Field.sub, sub_func) :: functions).
   Proof using M_eq check_args_ok sub_func_eq ok.
     intros. cbv [spec_of_BinOp bin_sub]. rewrite sub_func_eq.
     pose proof sub_correct
@@ -462,7 +462,7 @@ Qed.
   Lemma opp_func_correct :
     valid_func (res opp_op _) ->
     forall functions,
-      spec_of_UnOp un_opp (opp_func :: functions).
+      spec_of_UnOp un_opp ((Field.opp, opp_func) :: functions).
   Proof using M_eq check_args_ok opp_func_eq ok.
     intros. cbv [spec_of_UnOp un_opp]. rewrite opp_func_eq.
     pose proof opp_correct
@@ -495,7 +495,7 @@ Qed.
   Lemma from_bytes_func_correct :
     valid_func (res from_bytes_op _) ->
     forall functions,
-      (@spec_of_from_bytes _ _ _ _ _ _ _ field_representation_raw) (from_bytes_func :: functions).
+      (@spec_of_from_bytes _ _ _ _ _ _ _ field_representation_raw) ((Field.from_bytes, from_bytes_func) :: functions).
   Proof using M_eq check_args_ok from_bytes_func_eq ok.
     intros. cbv [spec_of_from_bytes]. rewrite from_bytes_func_eq.
     pose proof from_bytes_correct
@@ -532,7 +532,7 @@ Qed.
   Lemma to_bytes_func_correct :
     valid_func (res to_bytes_op _) ->
     forall functions,
-      (@spec_of_to_bytes _ _ _ _ _ _ _ field_representation_raw) (to_bytes_func :: functions).
+      (@spec_of_to_bytes _ _ _ _ _ _ _ field_representation_raw) ((Field.to_bytes, to_bytes_func) :: functions).
   Proof using M_eq check_args_ok ok to_bytes_func_eq.
     intros. cbv [spec_of_to_bytes]. rewrite to_bytes_func_eq.
     pose proof to_bytes_correct
@@ -622,7 +622,7 @@ Qed.
   Lemma from_mont_func_correct :
   valid_func (res from_mont_op _) ->
   forall functions,
-    (@spec_of_UnOp _ _ _ _ _ _ _ _ from_mont) un_from_mont (from_mont_func :: functions).
+    (@spec_of_UnOp _ _ _ _ _ _ _ _ from_mont) un_from_mont ((from_mont, from_mont_func) :: functions).
     Proof using M_eq check_args_ok ok from_mont_func_eq.
     clear field_parameters_ok.
     intros. cbv [spec_of_UnOp un_from_mont]. rewrite from_mont_func_eq.
@@ -663,7 +663,7 @@ Qed.
   Lemma to_mont_func_correct :
   valid_func (res to_mont_op _) ->
   forall functions,
-    (@spec_of_UnOp _ _ _ _ _ _ _ _ to_mont) un_to_mont (to_mont_func :: functions).
+    (@spec_of_UnOp _ _ _ _ _ _ _ _ to_mont) un_to_mont ((to_mont, to_mont_func) :: functions).
     Proof using M_eq check_args_ok ok to_mont_func_eq.
     intros. cbv [spec_of_UnOp un_to_mont]. rewrite to_mont_func_eq.
     pose proof to_montgomery_correct
@@ -718,7 +718,7 @@ Qed.
   Lemma select_znz_func_correct :
   valid_func (res select_znz_op _) ->
   forall functions,
-    spec_of_selectznz (select_znz_func :: functions).
+    spec_of_selectznz ((select_znz, select_znz_func) :: functions).
 Proof using M_eq check_args_ok select_znz_func_eq ok.
   intros. cbv [spec_of_selectznz]. rewrite select_znz_func_eq.
   pose proof selectznz_correct

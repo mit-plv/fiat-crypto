@@ -37,16 +37,15 @@ Local Notation ST := 0x80000000.
 Local Notation PK := 0x80000040.
 Local Notation BUF:= 0x80000060.
 
-Definition initfn : func :=
-  ("initfn", ([], [], bedrock_func_body:(
-    $(memconst "pk" garageowner)($PK);
-    output! MMIOWRITE($0x10012038, $(Z.lor (Z.shiftl (0xf) 2) (Z.shiftl 1 9)));
-    output! MMIOWRITE($0x10012008, $(Z.lor (Z.shiftl 1 11) (Z.shiftl 1 12)));
-    output! MMIOWRITE($0x10024010, $2);
-    unpack! err = lan9250_init()
-  ))).
+Definition initfn := func! {
+  memconst_pk($PK);
+  output! MMIOWRITE($0x10012038, $(Z.lor (Z.shiftl (0xf) 2) (Z.shiftl 1 9)));
+  output! MMIOWRITE($0x10012008, $(Z.lor (Z.shiftl 1 11) (Z.shiftl 1 12)));
+  output! MMIOWRITE($0x10024010, $2);
+  unpack! err = lan9250_init()
+}.
 
-Definition loopfn : func := ("loopfn", ([], [], bedrock_func_body:(
+Definition loopfn := func! {
   st=$ST; pk=$PK; buf=$BUF;
   unpack! l, err = recvEthernet(buf);
   require !err;
@@ -91,7 +90,7 @@ Definition loopfn : func := ("loopfn", ([], [], bedrock_func_body:(
         chacha20_block(st, st, (*nonce*)pk, $0) (* NOTE: another impl? *)
     }
   }
-))).
+}.
 
 Import TracePredicate TracePredicateNotations SPI lightbulb_spec.
 Notation OP := (lightbulb_spec.OP _).
@@ -107,7 +106,7 @@ Definition BootSeq : list OP -> Prop :=
 Import WeakestPrecondition ProgramLogic SeparationLogic.
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
 Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
-Global Instance spec_of_initfn : spec_of initfn :=
+Global Instance spec_of_initfn : spec_of "initfn" :=
   fnspec! "initfn" / bs R,
   { requires t m := m =* bs $@(word.of_Z PK) * R /\ length bs = 32%nat;
     ensures t' m' := m' =* garageowner$@(word.of_Z PK) * R /\
@@ -123,8 +122,8 @@ Ltac fwd :=
          end; trivial.
 Ltac slv := try solve [ trivial | ecancel_assumption | SepAutoArray.listZnWords | intuition idtac | reflexivity | eassumption].
 
-Local Instance spec_of_memconst_pk : spec_of "memconst_pk" := spec_of_memconst "pk" garageowner.
-Local Instance WHY_spec_of_lan9250_init : spec_of lan9250_init := spec_of_lan9250_init.
+Local Instance spec_of_memconst_pk : spec_of "memconst_pk" := spec_of_memconst "memconst_pk" garageowner.
+Local Instance WHY_spec_of_lan9250_init : spec_of "lan9250_init" := spec_of_lan9250_init.
 Lemma initfn_ok : program_logic_goal_for_function! initfn.
 Proof.
   repeat straightline.
@@ -235,7 +234,7 @@ Definition memrep bs R : state -> map.rep(map:=SortedListWord.map _ _) -> Prop :
   length sk = 32%nat /\
   length bs = 1520%nat.
 
-Global Instance spec_of_loopfn : spec_of loopfn :=
+Global Instance spec_of_loopfn : spec_of "loopfn" :=
   fnspec! "loopfn" / seed sk bs R,
   { requires t m := memrep bs R (seed, sk) m;
     ensures T M := exists SEED SK BS, memrep BS R (SEED, SK) M /\
@@ -911,22 +910,25 @@ Qed.
 
 Require Import Crypto.Bedrock.End2End.X25519.MontgomeryLadderProperties.
 Import bedrock2.Syntax.
+Import coqutil.Macros.WithBaseName.
 
 (* these wrappers exist because CompilerInvariant requires execution proofs with arbitrary locals in the starting state, which ProgramLogic does not support *)
-Definition init : func := ("init", ([], [], (cmd.call [] "initfn" []))).
-Definition loop : func := ("loop", ([], [], (cmd.call [] "loopfn" []))).
+Definition init := func! { initfn() } .
+Definition loop := func! { loopfn() } .
+Definition memconst_pk := memconst garageowner.
+Definition ip_checksum := ip_checksum_br2fn.
 
-Definition funcs : list Syntax.func :=
-  [ init; loop;
+Definition funcs :=
+  &[, init; loop;
     initfn; loopfn;
-    memswap; memequal; memconst "pk" garageowner;
-    ip_checksum_br2fn;
+    memswap; memequal; memconst_pk;
+    ip_checksum;
     chacha20_block; chacha20_quarter;
     lan9250_tx ]
     ++lightbulb.function_impls
     ++MontgomeryLadder.funcs.
 
-Lemma chacha20_ok: forall functions, spec_of_chacha20 (chacha20_block::chacha20_quarter::functions).
+Lemma chacha20_ok: forall functions, spec_of_chacha20 (&,chacha20_block::&,chacha20_quarter::functions).
 Admitted.
 
 Import SPI.
@@ -1046,8 +1048,8 @@ Proof.
   2,3:vm_compute; inversion 1.
   econstructor (* ProgramSatisfiesSpec *).
   1: vm_compute; reflexivity.
-  1: instantiate (1:=snd (snd init)).
-  3: instantiate (1:=snd (snd loop)).
+  1: instantiate (1:=snd init).
+  3: instantiate (1:=snd loop).
   1,3: exact eq_refl.
   1,2: cbv [hl_inv]; intros; eapply WeakestPreconditionProperties.sound_cmd.
   1,3: eapply Crypto.Util.Bool.Reflect.reflect_bool; vm_compute; reflexivity.

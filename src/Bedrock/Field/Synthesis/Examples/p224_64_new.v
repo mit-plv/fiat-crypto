@@ -137,7 +137,7 @@ Section Field.
                         (p224_from_mont :: functions))
          As p224_from_mont_correct.
   Proof.
-    eapply (from_mont_func_correct _ _ _ from_mont_string to_mont_string); auto.
+    eapply (from_mont_func_correct _ _ _ from_mont_string to_mont_string).
         - vm_compute; reflexivity.
         - eapply Func.valid_func_bool_iff. abstract vm_cast_no_check (eq_refl true).
           Unshelve.
@@ -152,7 +152,7 @@ Section Field.
                         (p224_to_mont :: functions))
          As to_from_mont_correct.
   Proof.
-    eapply (to_mont_func_correct _ _ _ from_mont_string to_mont_string); auto.
+    eapply (to_mont_func_correct _ _ _ from_mont_string to_mont_string).
         - vm_compute; reflexivity.
         - eapply Func.valid_func_bool_iff. abstract vm_cast_no_check (eq_refl true).
           Unshelve. all: auto.
@@ -165,7 +165,7 @@ Section Field.
                         (p224_select_znz :: functions))
          As select_znz_correct.
   Proof.
-    eapply select_znz_func_correct; auto.
+    eapply select_znz_func_correct. 1,2:auto.
         - vm_compute; reflexivity.
         - eapply Func.valid_func_bool_iff. abstract vm_cast_no_check (eq_refl true).
      Qed.
