@@ -39,14 +39,11 @@ Section Generic.
   Context 
     {width BW word mem locals env ext_spec varname_gen error}
    `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
-  Definition make_bedrock_func {t} (name : string)
-             insizes outsizes inlengths (res : API.Expr t)
+  Definition make_bedrock_func {t} insizes outsizes inlengths (res : API.Expr t)
   : func :=
     let innames := make_innames (inname_gen:=default_inname_gen) _ in
     let outnames := make_outnames (outname_gen:=default_outname_gen) _ in
-    let body := fst (translate_func
-                       res innames inlengths insizes outnames outsizes) in
-    (name, body).
+    fst (translate_func res innames inlengths insizes outnames outsizes).
 End Generic.
 
 Local Hint Unfold fst snd : pairs.
@@ -381,8 +378,8 @@ Section WithParameters.
     Let inlengths := list_binop_inlengths.
 
     Lemma list_binop_correct f :
-      f = make_bedrock_func name insizes outsizes inlengths res ->
-      forall functions, (binop_spec _ (f :: functions)).
+      f = make_bedrock_func insizes outsizes inlengths res ->
+      forall functions, (binop_spec _ ((name, f) :: functions)).
     Proof.
       subst inlengths insizes outsizes.
       cbv [binop_spec list_binop_insizes list_binop_outsizes list_binop_inlengths].
@@ -465,8 +462,8 @@ Section WithParameters.
     Let inlengths := list_unop_inlengths.
 
     Lemma list_unop_correct f :
-      f = make_bedrock_func name insizes outsizes inlengths res ->
-      forall functions, unop_spec _ (f :: functions).
+      f = make_bedrock_func insizes outsizes inlengths res ->
+      forall functions, unop_spec _ ((name, f) :: functions).
     Proof using inname_gen_varname_gen_disjoint outbounds_length
           outbounds_tighter_than_max outname_gen_varname_gen_disjoint
           ok relax_bounds res_Wf res_bounds res_eq res_valid.
@@ -539,9 +536,9 @@ Section WithParameters.
     Let inlengths := from_word_inlengths.
 
     Lemma from_word_correct f :
-      f = make_bedrock_func from_word insizes outsizes inlengths res ->
+      f = make_bedrock_func insizes outsizes inlengths res ->
       forall functions,
-        spec_of_from_word (f :: functions).
+        spec_of_from_word ((from_word, f) :: functions).
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok relax_bounds res_Wf
           res_bounds res_eq res_valid tight_bounds_tighter_than_max.
@@ -647,8 +644,8 @@ Section WithParameters.
     Let inlengths := felem_copy_inlengths.
 
     Lemma felem_copy_correct f :
-      f = make_bedrock_func felem_copy insizes outsizes inlengths res ->
-      forall functions, spec_of_felem_copy (f :: functions).
+      f = make_bedrock_func insizes outsizes inlengths res ->
+      forall functions, spec_of_felem_copy ((felem_copy, f) :: functions).
     Proof.
       subst inlengths insizes outsizes.
       cbv [spec_of_felem_copy felem_copy_insizes felem_copy_outsizes felem_copy_inlengths].
@@ -757,9 +754,9 @@ Section WithParameters.
 
     Import coqutil.Macros.symmetry.
     Lemma from_bytes_correct f :
-      f = make_bedrock_func from_bytes insizes outsizes inlengths res ->
+      f = make_bedrock_func insizes outsizes inlengths res ->
       forall functions,
-        spec_of_from_bytes (f :: functions).
+        spec_of_from_bytes ((from_bytes, f) :: functions).
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok relax_bounds res_Wf
           res_bounds res_eq res_valid tight_bounds_length
@@ -897,9 +894,9 @@ Section WithParameters.
 
     Import coqutil.Macros.symmetry.
     Lemma to_bytes_correct f :
-      f = make_bedrock_func to_bytes insizes outsizes inlengths res ->
+      f = make_bedrock_func insizes outsizes inlengths res ->
       forall functions,
-        spec_of_to_bytes (f :: functions).
+        spec_of_to_bytes ((to_bytes, f) :: functions).
     Proof using byte_bounds_length byte_bounds_tighter_than_max
           inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok res_Wf
@@ -1025,9 +1022,9 @@ Context
     Qed. 
 
     Lemma select_znz_correct f :
-      f = make_bedrock_func select_znz insizes outsizes inlengths res ->
+      f = make_bedrock_func insizes outsizes inlengths res ->
       forall functions,
-        spec_of_selectznz (f :: functions).
+        spec_of_selectznz ((select_znz, f) :: functions).
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok res_Wf
           res_eq res_valid.

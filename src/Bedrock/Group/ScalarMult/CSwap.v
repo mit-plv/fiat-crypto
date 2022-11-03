@@ -517,10 +517,8 @@ Section __.
   Import LoopCompiler.
   Hint Extern 10 (_ < _) => lia: compiler_side_conditions.
 
-  Definition felem_cswap := "felem_cswap".
-
-    Instance spec_of_cswap : spec_of felem_cswap :=
-      fnspec! felem_cswap mask ptr1 ptr2 / c1 c2 R,
+    Instance spec_of_cswap : spec_of "felem_cswap" :=
+      fnspec! "felem_cswap" mask ptr1 ptr2 / c1 c2 R,
         (*TODO: if b then bw should be all 1s*)
         { requires tr mem :=
             (mask = word.of_Z 0 \/ mask = word.of_Z 1) /\
@@ -534,8 +532,8 @@ Section __.
              * sizedlistarray_value AccessWord felem_size_in_words ptr2 c2 * R)%sep mem' }.
 
   Import LoopCompiler.
-  Derive cswap_body SuchThat
-           (defn! felem_cswap ("mask", "a1", "a2") { cswap_body },
+  Derive felem_cswap SuchThat
+           (defn! "felem_cswap" ("mask", "a1", "a2") { felem_cswap },
              implements cswap_low)
            As cswap_body_correct.
   Proof.
@@ -585,7 +583,7 @@ Section __.
            Locals := l;
            Functions := functions }>
         cmd.seq
-          (cmd.call [] felem_cswap [expr.var mask_var; expr.var lhs_var; expr.var rhs_var])
+          (cmd.call [] "felem_cswap" [expr.var mask_var; expr.var lhs_var; expr.var rhs_var])
           k_impl
         <{ pred (nlet_eq [lhs_var; rhs_var] v k) }>.
   Proof using env_ok ext_spec_ok locals_ok mem_ok word_ok.
