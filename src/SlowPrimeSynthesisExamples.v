@@ -68,6 +68,43 @@ Module debugging_solinas_reduction.
     Definition is_bounded_by bounds ls :=
       fold_andb_map' (fun r v'' => (fst r <=? v'') && (v'' <=? snd r)) bounds ls.
 
+    Import Associational.
+    Import Positional.
+
+    Definition sqr_indiv' base (state : list (Z * Z)) (p : list (Z * Z)) :=
+      fold_right (fun a b => b ++ Saturated.Associational.sat_mul base [a] [a]) state p.
+
+    Definition sqr_indiv base (p : list (Z * Z)) :=
+      sqr_indiv' base [] p.
+
+    Definition square_no_reduce base (p : list Z) :=
+      let p_a := Positional.to_associational weight 4 p in
+      (* a0 * [a1, a2, a3] *)
+      let prod0 := Saturated.Associational.sat_mul base (firstn 1 p_a) (skipn 1 p_a) in
+      (* a3 * [a1, a2] *)
+      let prod1 := Saturated.Associational.sat_mul base (skipn 3 p_a) (firstn 2 (skipn 1 p_a)) in
+      (* first carry chain *)
+      let carry1_a := prod0 ++ prod1 in
+      let carry1_rows := Saturated.Rows.from_associational weight 7 carry1_a in
+      let carry1 := Saturated.Rows.flatten weight 7 carry1_rows in
+      (* a1 * [a2], second carry chain *)
+      let prod2 := Saturated.Associational.sat_mul base (firstn 1 (skipn 1 p_a)) (firstn 1 (skipn 2 p_a)) in
+      let carry2_rows := Saturated.Rows.from_associational weight 7 prod2 in
+      let carry2 := Saturated.Rows.flatten' weight carry1 carry2_rows in
+      (* doubling, third carry chain *)
+      let carry2 := (fst carry2) ++ [snd carry2] in
+      let double := Saturated.Rows.flatten weight 8 [carry2; carry2] in
+      (* squaring, fourth carry chain *)
+      let square_a := sqr_indiv base p_a in
+      let square_rows := Saturated.Rows.from_associational weight 8 square_a in
+      let square := Saturated.Rows.flatten weight 8 square_rows in
+      fst square.
+
+    Definition squaremod base s c (n : Z) (p : list Z) :=
+      let sqr := square_no_reduce base p in
+      let r := reduce_full' base s c 4 sqr in
+      r.
+
   End __.
 
   Section compile.
@@ -79,6 +116,10 @@ Module debugging_solinas_reduction.
     Let m : nat := 2 * n.
     Let w : nat -> Z := weight machine_wordsize 1.
     Let base : Z := 2 ^ machine_wordsize.
+
+    Let p := [2^64-1; 2^64-1; 2^64-1; 2^64-1].
+    Compute (square_no_reduce base p).
+    Compute (mul_no_reduce base 4 p p).
 
     Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
     Let bound' := Some r[0 ~> (2^machine_wordsize +39)]%zrange.
@@ -109,14 +150,186 @@ Module debugging_solinas_reduction.
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) in
-                  let r := Reify (reduce3 base s c n) in
+                  let r := Reify (squaremod base s c n) in
                   exact r)
                    (fun _ _ => [])
-                   (Some (repeat bound (n) ++ [bound1]), tt)
-                   (Some (repeat bound (n)))
+                   (Some (repeat bound (4)), tt)
+                   (Some (repeat bound (4)))
                    (None, tt)
                    (None)
            : Pipeline.ErrorT _).
+
+(*
+"Success (""/*
+ * Input Bounds:
+ *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
+ * Output Bounds:
+ *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
+ */
+void mul(uint64_t out1[4], const uint64_t arg1[4]) {
+  uint64_t x1;
+  uint64_t x2;
+  uint64_t x3;
+  uint64_t x4;
+  uint64_t x5;
+  uint64_t x6;
+  uint64_t x7;
+  uint64_t x8;
+  uint64_t x9;
+  uint64_t x10;
+  uint64_t x11;
+  fiatuint1 x12;
+  uint64_t x13;
+  fiatuint1 x14;
+  uint64_t x15;
+  fiatuint1 x16;
+  uint64_t x17;
+  fiatuint1 x18;
+  uint64_t x19;
+  uint64_t x20;
+  uint64_t x21;
+  uint64_t x22;
+  fiatuint1 x23;
+  uint64_t x24;
+  fiatuint1 x25;
+  uint64_t x26;
+  fiatuint1 x27;
+  uint64_t x28;
+  fiatuint1 x29;
+  uint64_t x30;
+  fiatuint1 x31;
+  uint64_t x32;
+  fiatuint1 x33;
+  uint64_t x34;
+  fiatuint1 x35;
+  uint64_t x36;
+  fiatuint1 x37;
+  uint64_t x38;
+  fiatuint1 x39;
+  uint64_t x40;
+  fiatuint1 x41;
+  uint64_t x42;
+  uint64_t x43;
+  uint64_t x44;
+  uint64_t x45;
+  uint64_t x46;
+  uint64_t x47;
+  uint64_t x48;
+  uint64_t x49;
+  uint64_t x50;
+  uint64_t x51;
+  fiatuint1 x52;
+  uint64_t x53;
+  fiatuint1 x54;
+  uint64_t x55;
+  fiatuint1 x56;
+  uint64_t x57;
+  fiatuint1 x58;
+  uint64_t x59;
+  fiatuint1 x60;
+  uint64_t x61;
+  fiatuint1 x62;
+  uint64_t x63;
+  fiatuint1 x64;
+  uint64_t x65;
+  uint64_t x66;
+  uint64_t x67;
+  uint64_t x68;
+  uint64_t x69;
+  uint64_t x70;
+  uint64_t x71;
+  uint64_t x72;
+  uint64_t x73;
+  fiatuint1 x74;
+  uint64_t x75;
+  fiatuint1 x76;
+  uint64_t x77;
+  fiatuint1 x78;
+  uint64_t x79;
+  uint64_t x80;
+  fiatuint1 x81;
+  uint64_t x82;
+  fiatuint1 x83;
+  uint64_t x84;
+  fiatuint1 x85;
+  uint64_t x86;
+  fiatuint1 x87;
+  uint64_t x88;
+  uint64_t x89;
+  uint64_t x90;
+  uint64_t x91;
+  fiatuint1 x92;
+  uint64_t x93;
+  fiatuint1 x94;
+  uint64_t x95;
+  fiatuint1 x96;
+  uint64_t x97;
+  fiatuint1 x98;
+  uint64_t x99;
+  fiatuint128 x100;
+  uint64_t x101;
+  fiatmulx_u64(&x1, &x2, (arg1[0]), (arg1[3]));
+  fiatmulx_u64(&x3, &x4, (arg1[0]), (arg1[2]));
+  fiatmulx_u64(&x5, &x6, (arg1[0]), (arg1[1]));
+  fiatmulx_u64(&x7, &x8, (arg1[3]), (arg1[2]));
+  fiatmulx_u64(&x9, &x10, (arg1[3]), (arg1[1]));
+  fiataddcarryx_u64(&x11, &x12, 0x0, x6, x3);
+  fiataddcarryx_u64(&x13, &x14, x12, x4, x1);
+  fiataddcarryx_u64(&x15, &x16, x14, x2, x9);
+  fiataddcarryx_u64(&x17, &x18, x16, x10, x7);
+  x19 = (x18 + x8);
+  fiatmulx_u64(&x20, &x21, (arg1[1]), (arg1[2]));
+  fiataddcarryx_u64(&x22, &x23, 0x0, x13, x20);
+  fiataddcarryx_u64(&x24, &x25, x23, x15, x21);
+  fiataddcarryx_u64(&x26, &x27, x25, x17, 0x0);
+  fiataddcarryx_u64(&x28, &x29, x27, x19, 0x0);
+  fiataddcarryx_u64(&x30, &x31, 0x0, x5, x5);
+  fiataddcarryx_u64(&x32, &x33, x31, x11, x11);
+  fiataddcarryx_u64(&x34, &x35, x33, x22, x22);
+  fiataddcarryx_u64(&x36, &x37, x35, x24, x24);
+  fiataddcarryx_u64(&x38, &x39, x37, x26, x26);
+  fiataddcarryx_u64(&x40, &x41, x39, x28, x28);
+  x42 = (((uint64_t)x41 + x29) + (uint64_t)x29);
+  fiatmulx_u64(&x43, &x44, (arg1[3]), (arg1[3]));
+  fiatmulx_u64(&x45, &x46, (arg1[2]), (arg1[2]));
+  fiatmulx_u64(&x47, &x48, (arg1[1]), (arg1[1]));
+  fiatmulx_u64(&x49, &x50, (arg1[0]), (arg1[0]));
+  fiataddcarryx_u64(&x51, &x52, 0x0, x50, x30);
+  fiataddcarryx_u64(&x53, &x54, x52, x47, x32);
+  fiataddcarryx_u64(&x55, &x56, x54, x48, x34);
+  fiataddcarryx_u64(&x57, &x58, x56, x45, x36);
+  fiataddcarryx_u64(&x59, &x60, x58, x46, x38);
+  fiataddcarryx_u64(&x61, &x62, x60, x43, x40);
+  fiataddcarryx_u64(&x63, &x64, x62, x44, x42);
+  fiatmulx_u64(&x65, &x66, UINT8_C(0x26), x63);
+  fiatmulx_u64(&x67, &x68, UINT8_C(0x26), x61);
+  fiatmulx_u64(&x69, &x70, UINT8_C(0x26), x59);
+  fiatmulx_u64(&x71, &x72, UINT8_C(0x26), x57);
+  fiataddcarryx_u64(&x73, &x74, 0x0, x51, x69);
+  fiataddcarryx_u64(&x75, &x76, x74, x53, x67);
+  fiataddcarryx_u64(&x77, &x78, x76, x55, x65);
+  x79 = (x78 + x66);
+  fiataddcarryx_u64(&x80, &x81, 0x0, x49, x71);
+  fiataddcarryx_u64(&x82, &x83, x81, x73, x72);
+  fiataddcarryx_u64(&x84, &x85, x83, x75, x70);
+  fiataddcarryx_u64(&x86, &x87, x85, x77, x68);
+  x88 = (x87 + x79);
+  fiatmulx_u64(&x89, &x90, UINT8_C(0x26), x88);
+  fiataddcarryx_u64(&x91, &x92, 0x0, x80, x89);
+  fiataddcarryx_u64(&x93, &x94, x92, x82, 0x0);
+  fiataddcarryx_u64(&x95, &x96, x94, x84, 0x0);
+  fiataddcarryx_u64(&x97, &x98, x96, x86, 0x0);
+  fiatcmovznz_u64(&x99, x98, 0x0, UINT8_C(0x26));
+  x100 = ((fiatuint128)x99 + x91);
+  x101 = (uint64_t)(x100 & UINT64_C(0xffffffffffffffff));
+  out1[0] = x101;
+  out1[1] = x93;
+  out1[2] = x95;
+  out1[3] = x97;
+}"", {| bitwidths_used := [uint128, uint1, uint64] ; addcarryx_lg_splits := [64] ; mulx_lg_splits := [64] ; cmovznz_bitwidths := [uint64] ; value_barrier_bitwidths := [] ; typedefs_used := [] |})"
+     : string
+Finished transaction in 4.494 secs (4.41u,0.066s) (successful)
+*)
 
     Time Compute
          Show.show
