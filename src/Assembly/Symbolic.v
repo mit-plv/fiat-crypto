@@ -77,6 +77,10 @@ Definition idx := N.
 Local Set Decidable Equality Schemes.
 Definition symbol := N.
 
+Print fold_left.
+
+Compute (fold_left (fun l x => x :: l) [1;2;3;4;5] []).
+
 Class OperationSize := operation_size : N.
 Global Instance Show_OperationSize : Show OperationSize := show_N.
 
@@ -512,42 +516,7 @@ Definition node_beq {A : Set} (arg_eqb : A -> A -> bool) : node A -> node A -> b
 Global Instance reflect_node_beq {A : Set} {arg_eqb} {H : reflect_rel (@eq A) arg_eqb}
   : reflect_rel eq (@node_beq A arg_eqb) | 10 := _.
 
-Compute (node idx).
-Print op. Print symbol.
-
 Definition keep n x := Z.land x (Z.ones (Z.of_N n)).
-
-Compute (keep 5 (-2)).
-
-Print Z.b2z.
-Print negb.
-Print signed.
-
-Compute (signed 1 (0)).
-
-Search signed.
-Compute (keep 4 (-17))%N.
-Compute (-1 / (2^64))%Z. 
-
-Compute (interp_op (fun _ => None) (addcarry 64%N) [2]%Z).
-Compute (interp_op (fun _ => None) (addcarry 64%N) [-2 * (2^64) - 1]%Z).
-
-  
-
-Print fold_right.
-
-Print option_map.
-
-Print interp_op.
-
-Search Z.shiftr.
-
-Compute (Z.shiftr (-1) 5)%Z.
-Check Z.shiftr_div_pow2.
-Print Z.shiftr.
-Print Z.shiftl.
-
-Print fold_right.
 
 Local Open Scope Z_scope.
 
@@ -560,6 +529,14 @@ Definition in_bounds (x : Z) (r : option (Z*Z)) :=
 Ltac inv H := inversion H; subst; clear H.
 
 Definition subset bound1 bound2 := (fst bound2 <=? fst bound1) && (snd bound1 <=? snd bound2).
+
+Lemma subset_bounds bounds1 bounds2 :
+  subset bounds1 bounds2 = true ->
+  fst bounds2 <= fst bounds1 /\ snd bounds1 <= snd bounds2.
+Proof.
+  intros. cbv [subset] in H. apply andb_true_iff in H. destruct H as [H1 H2]. apply Z.leb_le in H1. apply Z.leb_le in H2.
+  split; assumption.
+Qed.
 
 Definition contains_multiple_of bounds n := fst bounds <=? (snd bounds / n) * n.
 
@@ -574,7 +551,7 @@ Qed.
 
 Lemma div_mul_le x y : 0 < y -> x / y * y <= x.
 Proof.
-  intros H. Search (_ mod _ <= _). assert (H': y <> 0) by lia. apply Z.mod_bound_or with (a := x) in H'.
+  intros H. assert (H': y <> 0) by lia. apply Z.mod_bound_or with (a := x) in H'.
   destruct H' as [H'|H'].
   - rewrite Zmod_eq in H' by lia. destruct H' as [H' _]. lia. 
   - lia. 
@@ -585,8 +562,7 @@ Lemma has_multiple bounds x :
   contains_multiple_of bounds x = true ->
   fst bounds <= (snd bounds) / x * x <= snd bounds.
 Proof.
-  destruct bounds as [min max]. cbv [contains_multiple_of]. simpl. intros. Check Z.leb_le. apply Z.leb_le in H0.
-  Compute (1 / 0).
+  destruct bounds as [min max]. cbv [contains_multiple_of]. simpl. intros. apply Z.leb_le in H0.
   split; try assumption. apply div_mul_le. apply H.
 Qed.
 
@@ -603,7 +579,7 @@ Proof.
   - apply H0. lia.
   - subst. assert (snd bounds / m < z). { apply Zmult_lt_reg_r with (p := m); assumption. }
     clear H0 H'. destruct H1 as [_ H1].
-    Check Z.div_le_mono. remember (Z.div_le_mono _ _ _ H H1) as H1'. clear HeqH1' H1.
+    remember (Z.div_le_mono _ _ _ H H1) as H1'. clear HeqH1' H1.
     rewrite Z_div_mult in H1' by lia. lia.
 Qed.
 
@@ -643,33 +619,6 @@ Proof.
   - apply nondecreasing_max with (a := a); try lia. intros. apply H. lia.
 Qed.
 
-(* Lemma nondecreasing_min (a b : Z) (f : Z -> Z) :
-  (forall x, a <= x < b -> f x <= f (x + 1)) ->
-  (forall y, a <= y <= b -> f y <= f b).
-Proof.
-  intros. assert (0 <= b - a) by lia. apply Z_of_nat_complete in H1. destruct H1 as [n H1]. assert (b = a + Z.of_nat n) by lia.
-  subst. clear H1. generalize dependent y. induction n as [| n'].
-  - simpl. intros. assert (y = a) by lia. subst. rewrite Z.add_0_r. lia.
-  - intros. destruct (y =? a + Z.of_nat n') eqn: E.
-    + apply Z.eqb_eq in E. subst. rewrite Nat2Z.inj_succ. cbv [Z.succ]. rewrite Z.add_assoc. apply H. apply H0.
-    + apply Z.eqb_neq in E. apply Z.le_trans with (m := f (a + Z.of_nat n')).
-      -- apply IHn'.
-        ++ intros. apply H. lia.
-        ++ lia.
-      -- rewrite Nat2Z.inj_succ. cbv [Z.succ]. rewrite Z.add_assoc. apply H. lia.
-Qed. *)
-
-(* Lemma nondecreasing_min (a b : Z) (f : Z -> Z) :
-  (forall x, a <= x < b -> f x <= f (x + 1)) ->
-  (forall y, a <= y <= b -> f a <= f y).
-Proof.
-  intros. remember (fun x => - (f (a + b - x))) as g. assert (g (a + b - y) <= g (b)).
-  - apply nondecreasing_max with (a := a); try lia. intros. subst. assert (f (a + b - (x + 1)) <= (f (a + b - x))).
-    + replace (a + b - x) with (a + b - (x + 1) + 1) by lia. apply H. lia.
-    + lia.
-  - subst. replace (a + b - b) with a in H1 by lia. replace (a + b - (a + b - y)) with y in H1 by lia. lia.
-Qed. *)
-
 Lemma mod_nondecreasing (a b : Z) :
   b > 0 ->
   ~ ((a + 1) mod b = 0) ->
@@ -677,12 +626,12 @@ Lemma mod_nondecreasing (a b : Z) :
 Proof.
   intros. rewrite PullPush.Z.add_mod_l.
   assert (H': 0 <= a mod b + 1 < b).
-  - Check Z.mod_pos_bound. assert (0 <= a mod b < b). { apply Z.mod_pos_bound. lia. }
+  - assert (0 <= a mod b < b). { apply Z.mod_pos_bound. lia. }
     split; try lia. destruct (a mod b =? b - 1) eqn:E.
     + apply Z.eqb_eq in E. rewrite PullPush.Z.add_mod_l in H0. rewrite E in H0. simpl in H0. replace (b - 1 + 1) with (b) in H0 by lia.
       apply Z_mod_same in H. exfalso. auto.
     + apply Z.eqb_neq in E. lia.
-  - Check Z.mod_small. apply Z.mod_small in H'. rewrite H'. lia.
+  - apply Z.mod_small in H'. rewrite H'. lia.
 Qed.
 
 Lemma no_multiple_bounds lower upper m :
@@ -699,19 +648,6 @@ Proof.
   - simpl. lia.
 Qed.
 
-(* Lemma no_multiple_min_left bounds m :
-  0 < m ->
-  contains_multiple_of bounds m = false ->
-  forall x,
-  fst bounds <= x <= snd bounds ->
-  (fst bounds) mod m <= x mod m.
-Proof.
-  intros. remember (fun x => x mod m) as f. assert (forall x, f x = x mod m). { rewrite Heqf. reflexivity. }
-  repeat rewrite <- H2. clear H2. apply nondecreasing_max with (a := fst bounds); try lia.
-    intros. subst. apply mod_nondecreasing; try lia. apply has_no_multiple with (bounds := bounds); try lia.
-    assumption.
-Qed. *)
-
 Definition bounds_modulo Z_bounds modulus :=
  if contains_multiple_of (fst Z_bounds + 1, snd Z_bounds) modulus then 
    (0, modulus - 1) 
@@ -725,7 +661,7 @@ Lemma bounds_modulo_bounds b m x :
 Proof.
   simpl. destruct b as [min max]. intros. destruct (bounds_modulo (min, max) m) as [min' max'] eqn:E.
   cbv [bounds_modulo] in E. simpl in E. destruct (contains_multiple_of (min + 1, max) m) eqn:E'.
-  - inv E. Search (0 <= _ mod _). apply Z.mod_pos_bound with (a := x) in H. lia.
+  - inv E. apply Z.mod_pos_bound with (a := x) in H. lia.
   - inv E. apply no_multiple_bounds; try lia. assumption.
 Qed.
 
@@ -768,17 +704,6 @@ Proof.
     clear IHpbs'. simpl in *. destruct pb as [min1 max1]. destruct (accumulate _ _ pbs') as [min2 max2]. simpl. lia.
 Qed.
 
-(* Lemma product_bounded plain_bounds:
-  forall args : list Z,
-  Forall2 in_bounds args (map Some plain_bounds) ->
-  in_bounds (fold_right Z.mul 0 args) (Some (accumulate Z.mul (0, 0) plain_bounds)).
-Proof.
-  induction plain_bounds as [| pb pbs'].
-  - intros. inv H. simpl. lia.
-  - intros. rewrite map_cons in H. inv H. rename x into arg. rename l into args'. apply IHpbs' in H4.
-    clear IHpbs'. simpl in *. destruct pb as [min1 max1]. destruct (accumulate _ _ pbs') as [min2 max2]. simpl. lia.
-Qed. *)
-
 Definition bounds_positive (plain_bounds : list (Z*Z)) :=
   fold_right (fun bound pos_so_far => (0 <=? fst bound) && pos_so_far) true plain_bounds.
 
@@ -791,17 +716,6 @@ Proof.
   - intros. simpl in H. apply andb_prop in H. destruct H as [H1 H2]. apply IHbounds' in H2. apply Z.leb_le in H1.
     simpl. lia.
 Qed.
-
-(* Lemma mul_le_mono_double a1 a2 b1 b2 :
-  0 <= a1 -> 
-  0 <= a2 -> 
-  a1 <= b1 ->
-  a2 <= b2 -> 
-  a1 * a2 <= b1 * b2.
-Proof.
-  intros. apply Z.le_trans with (m := a1 * b2).
-  - Search (_ * _ <= _ * _). apply Z.mul_le_mono_nonneg_l; lia.
-  -  *)
 
 Lemma product_bounded plain_bounds:
   bounds_positive plain_bounds = true ->
@@ -888,7 +802,7 @@ Proof.
         ++ apply bounds_modulo_bounds; try lia. apply andb_prop in E. destruct E as [E1 E2]. apply Z.leb_le in E1.
            apply Z.leb_le in E2. simpl in *. destruct pb1 as [min1 max1]. destruct pb2 as [min2 max2]. simpl in *.
            repeat rewrite Z.shiftr_div_pow2 by lia. split.
-          --- Check Z.le_trans. apply Z.le_trans with (m := min1 / 2 ^ x0).
+          --- apply Z.le_trans with (m := min1 / 2 ^ x0).
             +++ apply Z.div_le_compat_l; try lia. split; try lia.
               apply Z.pow_le_mono_r; lia.
             +++ apply Z.div_le_mono; lia.
@@ -925,6 +839,7 @@ Proof.
 Qed.
 
 Class description := descr : option ((unit -> string) * bool (* always show *)).
+Class extra_rewrite_rules := errules : list string.
 Typeclasses Opaque description.
 Definition eager_description := option (string * bool).
 Notation Build_description descr always_show := (Some (fun 'tt => descr, always_show)) (only parsing).
@@ -1038,8 +953,6 @@ Module dag.
                      | [ H : nth_error (_ :: _) ?x = _ |- _ ] => destruct x eqn:?; cbn [nth_error] in H
                      end ].
   Qed.
-
-Check dag.reverse_lookup.
 
   Lemma reverse_lookup_merge_node {d : t}
         {ok : ok d} {descr : description} (n n' : node idx)
@@ -1884,8 +1797,6 @@ Proof.
   - apply permute_commutative with (args := args'); assumption.
 Qed.
 
-Check eval.
-
 Definition bounds_ok (d : dag) := forall G i n, eval G d (ExprRef i) n -> in_bounds n (dag.lookup_bounds d i).
 (* the gensym state cannot map anything past the end of the dag *)
 Definition gensym_ok (G : symbol -> option Z) (d : dag) := forall s _v, G s = Some _v -> (s < dag.size d)%N.
@@ -1909,11 +1820,6 @@ Proof using Type.
 
   cbv [bounds_ok]. intros. inv H. rewrite dag.lookup_empty in H1. discriminate H1.
 Qed.
-
-Check nth_error_app.
-Check dag.lookup_bounds.
-Check dag.size.
-Check dag.lookup_bounds.
 
 Lemma split_lookup_bounds d1 d2 i : 
   dag.lookup_bounds (d1 ++ d2) i = if N.ltb i (dag.size d1) then dag.lookup_bounds d1 i else dag.lookup_bounds d2 (i - dag.size d1)%N.
@@ -1979,8 +1885,6 @@ Proof.
     + apply IHargs1; assumption.
 Qed.
 
-Print dag.merge_node.
-
 Lemma node_doesnt_reference_self G d o args i n :
   eval G d (ExprRef i) n ->
   dag.lookup d i = Some (o, args) ->
@@ -2013,77 +1917,13 @@ Proof.
     + apply IHargs0' with (args' := l'). apply H4.
 Qed.
 
-(* Lemma in_bounds_and_not_self G d i n :
-  eval G d (ExprRef i) n ->
-  exists o args,
-  dag.lookup d i = Some (o, args) /\
-  Forall (fun j => N.lt j (dag.size d - 1)) args. *)
-
-
-
-Print dag_ok.
-Print dag.ok.
-Print dag.all_nodes_ok.
-Print node_ok.
-
-
-(* Lemma eval_args_in_range G d o args descr bound n :
-  eval G (d ++ [((o, args), descr, bound)]) (ExprRef (dag.size d)) n ->
-  Forall (fun j => N.lt j (dag.size d)) args.
-Proof.
-  intros. remember (ExprRef (dag.size d)) as e.
-  apply Forall_impl with (P := fun j => ~ (j = dag.size d) /\ ~ (dag.size d < j)%N).
-  - lia.
-  - apply Forall_and.
-    + rewrite Forall_Exists_neg. induction H.
-      -- inv Heqe. inv H. rewrite split_lookup in H3. rewrite N.ltb_irrefl in H3. rewrite N.sub_diag in H3. inv H3.
-         intros H. Search Exists. remember H as H'; clear HeqH'. apply Exists_exists in H'. Search Forall2. Check Forall2_weaken.
-         assert (H2: forall a b, (fun (e : expr) (n : Z) => eval G (d ++ [(op0, args0, descr, bound)]) e n /\ (e = ExprRef (dag.size d) -> ~ Exists (fun x : N => x = dag.size d) args0)) a b -> 
-                             (fun (e : expr) (n : Z) => (e = ExprRef (dag.size d) -> ~ Exists (fun x : N => x = dag.size d) args0)) a b) by intuition.
-         apply (Forall2_weaken H2) in H0. clear H2. apply Forall2_Forall_ignore_l in H0. destruct H0 as [_ H0].
-         Check Forall_map. rewrite Forall_map in H0. rewrite Forall_forall in H0.
-         destruct H' as [x [H1' H2'] ]. cbv [not] in H0. apply H0 with (x := x); try assumption. f_equal. assumption.
-      -- discriminate Heqe.
-    + subst. inv H. clear H2 H3. cbv [dag.lookup] in H1. destruct (nth_error _ _) as [sth|] eqn:E; try discriminate H1.
-      clear H1. Search nth_error. apply nth_error_value_length in E.
-         { eapply Forall2_weaken. Check Forall_impl. Check Forall2_weaken. with (P := fun (e : expr) (n : Z) => eval G (d ++ [(op0, args0, descr, bound)]) e n /\ (e = ExprRef (dag.size d) -> ~ Exists (fun x : N => x = dag.size d) args0)).
-
-
-
-  Check Forall2_weaken.
-         apply Forall2_weaken in H0. with (Q := fun e n => (e = ExprRef (dag.size d) -> ~ Exists (fun x : N => x = dag.size d) args0)) in H0.
-
-
-
-
-
-
-         induction args0 as [| arg0 args0' IHargs0'].
-        ++ intros H. inv H.
-        ++ intros H. inv H.
-          --- apply IHargs0' in H0.
-    + inv H0. clear H5 H1. destruct H3 as [_ H3]. constructor.
-      -- 
-
-
-
-  apply Forall_impl with (P := fun j => ~ (j = dag.size d) /\ ~ (dag.size d <= j)%N).
-  - lia.
-  - apply Forall_and.
-    + rewrite Forall_Exists_neg. induction H'.
-      -- 
- induction H'. 2: {
-  -  *)
-  
-
-
 Lemma merge_node_bounds_ok {descr : description} ctx d n : 
   dag_ok ctx d ->
   bounds_ok (snd (dag.merge_node n d)).
 Proof.
-  intros. cbv [dag_ok] in H. destruct H as [H1 [_ [_ H2] ] ]. Check eval_weaken_merge_node.
+  intros. cbv [dag_ok] in H. destruct H as [H1 [_ [_ H2] ] ].
   cbv [bounds_ok] in *. intros. destruct n as [o args].
-  remember (dag.merge_node (o, args) d) as i_d'. Check eval_weaken_merge_node. cbv [dag.merge_node] in Heqi_d'. 
+  remember (dag.merge_node (o, args) d) as i_d'. cbv [dag.merge_node] in Heqi_d'. 
   destruct (dag.reverse_lookup _ _) as [new_i|].
   - subst. simpl in *. apply H1 with (G := G). apply H.
   - subst. simpl in *. remember H as H'; clear HeqH'. inv H. rewrite split_lookup_bounds. remember H3 as H3'; clear HeqH3'.
@@ -2092,17 +1932,17 @@ Proof.
     + remember (H2 _ _ H3) as H6; clear HeqH6 H2. destruct H6 as [v H6]. apply (something _ _ _ _ _ _ _ H6) in H'.
       apply H1 with (G := G). apply H'.
     + remember (map _ _) as no. cbv [dag.lookup_bounds]. subst. cbv [dag.lookup] in H3.
-      destruct (N.to_nat _) as [| [| n''] ] eqn:E''; try discriminate H3. simpl in H3. simpl. inv H3. Check interp_bound_node.
-      (* destruct (bound_node _ _) as [ [min max]|]; try apply I.  *)apply N.ltb_nlt in E'. assert (E1'': i = dag.size d) by lia.
-      clear E' E''. subst. remember H' as H''; clear HeqH''. inv H'. rewrite H0 in H3'. inv H3'. clear H3 H6. Check node_doesnt_reference_self.
+      destruct (N.to_nat _) as [| [| n''] ] eqn:E''; try discriminate H3. simpl in H3. simpl. inv H3.
+      apply N.ltb_nlt in E'. assert (E1'': i = dag.size d) by lia.
+      clear E' E''. subst. remember H' as H''; clear HeqH''. inv H'. rewrite H0 in H3'. inv H3'. clear H3 H6.
       remember (node_doesnt_reference_self _ _ _ _ _ _ H'' H0) as H3; clear HeqH3.
       remember (args_in_bounds _ _ _ _ _ _ H'' H0) as H6; clear HeqH6.
       assert (E: Forall (fun j : N => N.lt j (dag.size d)) args0).
       { rewrite Forall_forall in H3. rewrite Forall_forall in H6. rewrite Forall_forall. intros.
-        remember (H3 _ H) as H7; clear HeqH7. apply H6 in H. cbv [dag.size] in H. Search Datatypes.length.
+        remember (H3 _ H) as H7; clear HeqH7. apply H6 in H. cbv [dag.size] in H.
         rewrite app_length in H. simpl in H. cbv [dag.size] in H7. cbv [dag.size]. clear H4 H5 H'' H0 H3 H6. lia. }
       apply (much_something _ _ _ _ _ _ H2 E) in H4.
-      Check interp_bound_node. apply interp_bound_node with (ctx := G) (args := args').
+      apply interp_bound_node with (ctx := G) (args := args').
       -- clear H2 E H5 H3 H6 H0 H''. generalize dependent args'. induction args0 as [| arg0 args0' IHargs0'].
         ++ intros. inv H4. constructor.
         ++ intros. inv H4. constructor.
@@ -2110,71 +1950,6 @@ Proof.
           --- apply IHargs0'. apply H5.
       -- assumption.
 Qed.
-    
-
-(*
-remember (ExprRef i) as e. generalize dependent i.
-    induction H.
-    + intros. inv Heqe. rewrite split_lookup_bounds. rewrite split_lookup in H.
-      destruct (i0 <? dag.size d)%N.
-      -- Check interp_bound_node. remember (H2 _ _ H) as H4; clear HeqH4.
-
-
-apply H with (G := G). assert (dag_ok G d). { fail. }
-         destruct H3. destruct H4. destruct H5.
-
-
-
-
-
-
- inv H0. rewrite split_lookup in H2. destruct (i <? dag.size d)%N eqn:E.
-    {+ destruct (dag.lookup_bounds d i) as [bound|] eqn:E1; try apply I. simpl. remember (bounds_in_range _ _ _ _ _ E1 H2) as H2'. clear HeqH2'.
-      assert (Forall2 (eval G d) (map ExprRef args0) args'). { reflexivity. }
-      clear H3. rewrite <- E1. apply H with (G := G). apply ERef with (op := op0) (args := args0) (args' := args'); assumption.
-    + cbv [dag.lookup] in H2. remember (dag.lookup_bounds d) as dontexpand. cbv [dag.lookup_bounds]. subst. destruct (N.to_nat _) as [| [| n''] ]; try discriminate H2. simpl in H2. } 
-      inv H2. simpl. assert ( cbv [nth_error] in H2. simpl in H2. try discriminate H2. cbv [nth_error] in H2.
- 
-
-
-
-
-
-
-
-remember ([(o, args, _, _)]) as d2. inv Heqi_d'. clear H1. simpl in *. remember H0 as H0'; clear HeqH0'. inv H0. remember (d ++ _) as d'. cbv [dag.lookup_bounds].
-    rewrite Heqd'. rewrite nth_error_app. cbv [dag.lookup] in H2. rewrite Heqd' in H2. rewrite nth_error_app in H2.
-    destruct (lt_dec _ _) eqn: E.
-    + destruct (nth_error _ _) as [thing|] eqn:E'; try apply I. cbv [in_bounds]. destruct (snd thing) as [ [min max] |] eqn:Erange; try apply I.
-      assert (Forall (N.lt (N.of_nat (Datatypes.length d))) args0).
-
-
-
-
-
- apply H with (G := G). Check ERef. apply ERef with (op := op0) (args := args0) (args' := args'). assumption. Print dag.ok.   simpl in Heqd'. cbv [dag.lookup] in H2. cbv [dag.merge_node] in H2. destruct (dag.reverse_lookup _ _) as [i_|] eqn:E'.
-  - simpl in H2. assert (dag.lookup cbv [dag.merge_node] in *. try rewrite E' in *. 
- destruct (nth_error _ _) as [thing|] eqn:E; try apply I.
-  simpl in H2.
-
- Print dag.merge_node.
-  remember (ExprRef i) as e. generalize dependent i. induction H0. induction H0.
-  - Check interp_bound_node.
-    intros. symmetry in Heqe. inv Heqe. Check interp_bound_node.
-    destruct (nth_error _ _) as [node|] eqn:E; try apply I. Check interp_bound_node.
-    
-    Search dag.lookup.
-  cbv [dag.merge_node]. inv H0. Check interp_bound_node. destruct (dag.reverse_lookup d (o, args)) as [i'|].
-  - simpl. apply H. apply H0.
-  - simpl in *. inv H0. cbv [dag.lookup] in H2. rewrite nth_error_app in H2.
-    cbv [dag.lookup_bounds]. rewrite nth_error_app.
-    destruct (lt_dec (N.to_nat i) (Datatypes.length d)).
-    + destruct (nth_error d (N.to_nat i)) as [thing|].
-      -- simpl in H2. *)
-
-(* cbv [in_bounds dag.lookup_bounds] in H0. rewrite nth_error_app in H0.
-    destruct (lt_dec (N.to_nat i) (Datatypes.length d)).
-    +  *)
 
 Lemma eval_merge_node {descr descr' descr'' descr'''} :
   forall G d, gensym_dag_ok G d ->
@@ -2213,12 +1988,48 @@ Proof using Type.
       | eauto using Forall2_weaken, eval_weaken_merge_node .. ]. }
 Qed.
 
-Module AddcarryManipulation.
+(* begin addcarry stuff *)
+
+Print bound_node.
+
+Fixpoint bound_expr' d e : option (Z * Z) :=
+  match e with
+  | ExprApp (o, args) => bound_node o (map (bound_expr' d) args)
+  | ExprRef i => dag.lookup_bounds d i
+  end.
+
+Search bound_node.
+Check eval.
+
+Lemma eval_bound_expr' ctx d e :
+  bounds_ok d ->
+  forall n,
+  eval ctx d e n ->
+  forall l u,
+  bound_expr' d e = Some (l, u) ->
+  l <= n <= u.
+Proof.
+  intros H_ok. unfold bounds_ok in H_ok. induction e.
+  - intros n H2 l u H1. simpl in H1. apply H_ok in H2. unfold in_bounds in H2. rewrite H1 in H2. apply H2.
+  - intros n_ H2 l u H1. clear H_ok. inv H2. simpl in H. simpl in H1. Search bound_node.
+    assert (Forall2 in_bounds args' (map (bound_expr' d) args)).
+    + clear H4 H1. generalize dependent args'. induction args as [|arg args1 IHargs1].
+      -- intros args' H2. inv H2. simpl. constructor.
+      -- intros args' H2. inv H. inv H2. simpl. constructor.
+        ++ clear IHargs1 H6 H4. cbv [in_bounds]. destruct (bound_expr' d arg) eqn:E; try reflexivity.
+           destruct p as [min max]. apply H3.
+          --- assumption.
+          --- reflexivity.
+        ++ apply IHargs1; clear IHargs1.
+          --- assumption.
+          --- assumption.
+    + Search bound_node. apply (interp_bound_node _ _ _ _ _ H0) in H4. rewrite H1 in H4. simpl in H4. apply H4.
+Qed.
 
 Definition is_bounded_by (d : dag) (m : Z) (i : idx) : bool :=
-  match bound_expr (reveal d 1 i) with (* we only reveal one layer here.  That could be changed. *)
+  match dag.lookup_bounds d i with (* we only reveal one layer here.  That could be changed. *)
   | None => false
-  | Some b => b <=? m
+  | Some bounds => subset bounds (0, m)
   end.
 
 (* range of addends does not matter. *)
@@ -2575,25 +2386,26 @@ Definition expr_of_a_carry (s : OperationSize) (carry : list (list idx)) : expr 
   ExprApp (shrZ, [ExprApp (addZ, with_small_adds); ExprApp (const (Z.of_N s), [])]).
 
 Lemma eval_is_bounded_by ctx d m x i :
+  bounds_ok d ->
   is_bounded_by d m i = true ->
   eval ctx d (ExprRef i) x ->
   0 <= x <= m.
 Proof.
-  intros. cbv [is_bounded_by] in H. destruct ( bound_expr _) as [b|] eqn:E; try discriminate H.
-  assert (H0': eval ctx d (reveal d 1 i) x) by eauto using eval_reveal.
-  clear H0. assert (H1 : 0 <= x <= b) by eauto using eval_bound_expr. lia.
+  intros. apply H in H1. cbv [is_bounded_by] in H0. destruct (dag.lookup_bounds d i) as [bounds|]; try discriminate H0.
+  apply subset_bounds in H0. cbv [in_bounds] in H1. destruct bounds as [min max]. simpl in H0.  lia.
 Qed.
 
 Lemma eval_expr_of_a_carry'' ctx d s f arg1 arg2 n :
+  bounds_ok d ->
   is_bounded_by d (2 ^ Z.of_N s - 1) arg1 = true ->
   is_bounded_by d (2 ^ Z.of_N s - 1) arg2 = true ->
   eval ctx d (ExprApp (addcarry s, map ExprRef [arg1; arg2])) n ->
   eval ctx d (expr_of_a_carry s (map (list_of_addends d f s) [arg1; arg2])) n.
 Proof.
-  simpl. intros E1 E2. cbv [expr_of_a_carry]. simpl. intros. inv H.
-  inv H2. inv H5. inv H6.
-  remember (eval_is_bounded_by _ _ _ _ _ E1 H1) as E1'. clear HeqE1' E1.
-  remember (eval_is_bounded_by _ _ _ _ _ E2 H2) as E2'. clear HeqE2' E2.
+  simpl. intros H_bounds E1 E2. cbv [expr_of_a_carry]. simpl. intros. inv H.
+  inv H2. inv H5. inv H6. 
+  remember (eval_is_bounded_by _ _ _ _ _ H_bounds E1 H1) as E1'. clear HeqE1' E1.
+  remember (eval_is_bounded_by _ _ _ _ _ H_bounds E2 H2) as E2'. clear HeqE2' E2.
   apply eval_list_of_addends'' with (s := s) (f := f) in H1.
   apply eval_list_of_addends'' with (s := s) (f := f) in H2.
   apply EApp with (args' := [(y mod 2 ^ Z.of_N s) + (y0 mod 2 ^ Z.of_N s); Z.of_N s]).
@@ -2623,12 +2435,13 @@ Definition exprs_of_carries (s : OperationSize) (carries : list (list (list idx)
   map (expr_of_a_carry s) carries.
 
 Lemma evalZ_withadc_without (ctx : symbol -> option Z) (d : dag) (s : OperationSize):
+  bounds_ok d ->
   forall args n,
   eval ctx d (ExprApp (addZ, map ExprRef args)) n ->
   let (withadc, without) := withadc_without d s args in
   eval ctx d (ExprApp (addZ, map ExprRef without ++ exprs_of_carries s withadc)) n.
 Proof.
-  intros args. induction args as [| i args'].
+  intros H_bounds args. induction args as [| i args'].
   - simpl. intros. apply H.
   - destruct (withadc_without d s (i :: args')) as [withadc without] eqn:E. simpl in E.
     destruct (withadc_without d s args') as [withadc' without'] eqn:E1.
@@ -3111,7 +2924,8 @@ Proof.
       -- apply H_ok.
       -- split.
         ++ intros. apply H0.
-        ++ inv H. inv H2. inv H5. inv H4. remember (eval_is_bounded_by _ _ _ _ _ E H1) as H2. clear HeqH2.
+        ++ destruct H_ok as [_ [H_bounds _] ]. inv H. inv H2. inv H5. inv H4.
+           remember (eval_is_bounded_by _ _ _ _ _ H_bounds E H1) as H2. clear HeqH2.
            rewrite Z_land_ones'. rewrite Z.add_0_r. rewrite Z.mod_small by lia. apply H1.
     + remember (eval_merge_node _ _ H_ok _ _ _ H) as H'. clear H_ok HeqH'. destruct H' as [H1 [H2 H3] ]. rewrite H0 in *. 
     clear H0. simpl in H1. simpl in H2. split.
@@ -3316,7 +3130,8 @@ Proof.
   intros. destruct (standardize_adc_sum d idxs s) as [idxs' d'] eqn:E. cbv [standardize_adc_sum] in E.
   destruct (withadc_without d s idxs) as [withadc without] eqn:E1.
   destruct (split_carries d s (merge_carries withadc)) as [standard_withadc d1] eqn:E2.
-  apply evalZ_withadc_without with (s := s) in H0.
+  remember H as H_bounds; clear HeqH_bounds. destruct H_bounds as [_ [H_bounds _] ].
+  apply (evalZ_withadc_without _ _ s H_bounds) in H0. clear H_bounds.
   rewrite E1 in *. clear E1. apply break_addZ_backwards in H0.
   destruct H0 as [n1 [n2 [H1 [H2 H3] ] ] ]. inv H1. apply eval_merge_carries in H3.
   apply (eval_split_carries _ _ _ _ _ H H3) in E2. destruct E2 as [H4 [H_ok1 H_eval1] ]. inv E. split.
@@ -3412,266 +3227,7 @@ Proof.
     destruct H2 as [H2 [H3 H4] ]. auto.
 Qed.
 
-End AddcarryManipulation.
-
-Import AddcarryManipulation.
-
-Definition is_power_of_2 bound :=
-  if fst bound =? snd bound then
-    2^(Z.log2 (fst bound)) =? fst bound
-  else false.
-
-Definition left_shift d i :=
-  match dag.lookup_bounds d i with
-  | Some bounds => if (fst bounds =? snd bounds) && (2^(Z.log2 (fst bounds)) =? fst bounds) then
-    Z.log2 (fst bounds) else 0
-  | None => 0
-  end.
-
-Lemma left_shifted ctx d i n :
-  bounds_ok d ->
-  eval ctx d (ExprRef i) n ->
-  ((2 ^ (left_shift d i)) | n)%Z.
-Proof.
-  intros H_bounds H. cbv [left_shift]. cbv [bounds_ok] in H_bounds.
-  apply H_bounds in H. clear H_bounds. destruct (dag.lookup_bounds d i) as [ [min max]|] eqn:E1.
-  - simpl in *. destruct (min =? max) eqn:E2.
-    + destruct (2 ^ Z.log2 min =? min) eqn:E3.
-      -- apply Z.eqb_eq in E2. apply Z.eqb_eq in E3. subst. simpl. replace n with max by lia. rewrite E3.
-         exists 1. lia.
-      -- exists n. simpl. lia.
-    + exists n. simpl. lia.
-  - exists n. simpl. lia.
-Qed.
-
-Lemma left_shift_nonneg d i :
-  0 <= left_shift d i.
-Proof.
-  cbv [left_shift]. destruct (dag.lookup_bounds d i) as [bounds|]; try lia. destruct (_ && _); try lia. apply Z.log2_nonneg.
-Qed.
-
-Definition left_shifts (d : dag) (i : idx) :=
-  match dag.lookup d i with
-  | Some ((mul _ | mulZ), args) =>
-    fold_right Z.add 0 (map (left_shift d) args)
-  | _ => 0
-  end.
-
-Lemma abs_mod_0 a b :
-  (Z.abs a) mod (Z.abs b) = 0 ->
-  a mod b = 0.
-Proof.
-  destruct (b =? 0) eqn:E.
-  - apply Z.eqb_eq in E. subst. intros. rewrite Zmod_0_r in *. rewrite <- Z.abs_0_iff. apply H.
-  - intros. apply Z.eqb_neq in E. remember E as E'; clear HeqE'.
-    apply Z.rem_mod with (a := a) in E. rewrite H in E. apply Z.rem_mod_eq_0 with (a := a) in E'. rewrite <- E'.
-    lia.
-Qed.
-
-Lemma divide_mod a e b e' :
-  (a ^ e | b)%Z ->
-  (a ^ e | b mod (a ^ e'))%Z.
-Proof.
-  intros. destruct (0 <=? e') eqn:E0.
-  - apply Z.leb_le in E0. destruct (b =? 0) eqn:E0'. 
-    + apply Z.eqb_eq in E0'. subst. rewrite Zmod_0_l. exists 0. lia. 
-    + apply Z.eqb_neq in E0'. destruct (0 <=? e) eqn:E1. 
-      -- apply Z.leb_le in E1. destruct (e <=? e') eqn:E2.
-        ++ apply Z.leb_le in E2. apply Z.divide_add_cancel_r with (m := a ^ e' * (b / a ^ e')).
-          --- exists (a ^ (e' - e) * (b / a ^ e')). replace (a ^ e') with (a ^ e * a ^ (e' - e)); try lia.
-         rewrite <- Z.pow_add_r; try lia. f_equal. lia.
-          --- rewrite <- Z_div_mod_eq_full. apply H.
-        ++ apply Z.leb_nle in E2. replace (b mod a ^ e') with 0.
-          --- exists 0. lia.
-          --- symmetry. apply abs_mod_0. rewrite Znumtheory.Zmod_div_mod with (m := Z.abs b).
-            +++ rewrite Z_mod_same_full. rewrite Zmod_0_l. reflexivity.
-            +++ remember (Z.abs_nonneg (a ^ e')) as H1; clear HeqH1. assert (a ^ e' <> 0).
-              ---- intros H'. rewrite Z.pow_eq_0_iff in H'. destruct H' as [H'|H'].
-                ++++ lia.
-                ++++ assert (H'': e <> 0) by lia. destruct H' as [_ H']. subst. apply Z.pow_0_l' in H''.
-                     rewrite H'' in H. destruct H as [x H]. lia.
-              ---- rewrite <- Z.abs_0_iff in H0. lia.
-            +++ remember (Z.abs_nonneg b) as H1; clear HeqH1. rewrite <- Z.abs_0_iff in E0'. lia.
-            +++ rewrite Z.divide_abs_l. rewrite Z.divide_abs_r.
-                replace e with (e' + (e - e')) in H by lia. rewrite Z.pow_add_r in H by lia.
-                destruct H as [x H]. exists (x * a ^ (e - e')). lia.
-      -- apply Z.leb_nle in E1. replace (a ^ e) with 0 in H.
-              ---- destruct H as [x H].  lia.
-              ---- symmetry. apply Z.pow_neg_r. lia.
-  - apply Z.leb_nle in E0. replace (a ^ e') with 0. 
-    + rewrite Zmod_0_r. assumption. 
-    + symmetry. apply Z.pow_neg_r. lia.
-Qed.
-
-Check Forall.
-
-Lemma sum_nonneg l :
-  Forall (fun x => 0 <= x) l ->
-  0 <= fold_right Z.add 0 l.
-Proof.
-  induction l as [|x l' IHl'].
-  - intros. simpl. lia.
-  - intros. inv H. apply IHl' in H3. simpl. lia.
-Qed.
-
-Lemma exp_sum a l :
-  Forall (fun x => 0 <= x) l ->
-  a ^ fold_right Z.add 0 l = fold_right Z.mul 1 (map (fun x => a ^ x) l).
-Proof.
-  intros. induction l as [| x l' IHl'].
-  - simpl. reflexivity.
-  - simpl. inv H. remember (sum_nonneg _ H3) as H3'; clear HeqH3'. rewrite Z.pow_add_r by assumption.
-    apply IHl' in H3. rewrite H3. reflexivity.
-Qed.
-
-Lemma product_divide l1 l2 :
-  Forall2 (fun a b => Z.divide a b) l1 l2 ->
-  (fold_right Z.mul 1 l1 | fold_right Z.mul 1 l2).
-Proof.
-  generalize dependent l2. induction l1 as [|x l1' IHl1'].
-  - intros. inv H. simpl. exists 1. lia.
-  - intros. inv H. simpl. apply IHl1' in H4. destruct H2 as [x1 H2]. destruct H4 as [x2 H4]. exists (x2 * x1). lia.
-Qed.
-
-Lemma lefts_shifted ctx d i n :
-  bounds_ok d ->
-  eval ctx d (ExprRef i) n ->
-  (2^(left_shifts d i) | n)%Z.
-Proof.
-  intros H_bounds H. cbv [left_shifts].
-  destruct (dag.lookup d i) as [ [o args]|] eqn:E.
-  - inv H. rewrite H1 in E. inv E.
-    assert (H': (2 ^ fold_right Z.add 0 (map (left_shift d) args) | fold_right Z.mul 1 args')).
-    + assert (H4: Forall (fun x => 0 <= x) (map (left_shift d) args)).
-      { clear H1 H2. induction args as [|arg args1 IHargs1].
-        - constructor.
-        - constructor.
-          + apply left_shift_nonneg.
-          + apply IHargs1.
-      }
-      rewrite (exp_sum _ _ H4). clear H4. Check map_map. rewrite map_map. apply product_divide. clear H1 H3. generalize dependent args'.
-      induction args as [| arg args1 IHargs1].
-      -- intros. inv H2. constructor.
-      -- intros. inv H2. constructor.
-        ++ apply left_shifted with (ctx := ctx); assumption.
-        ++ apply IHargs1. assumption.
-    + destruct o; try (exists n; subst; lia).
-      -- inv H3. rewrite Z_land_ones'. apply divide_mod. apply H'.
-      -- inv H3. apply H'.
-  - exists n. lia.
-Qed.
-
-Definition or_is_add (d : dag) (args : list idx) : bool :=
-  match args with
-  | [arg1; arg2] =>
-    match dag.lookup_bounds d arg1 with
-    | Some bounds => if subset bounds (0, 2 ^ left_shifts d arg2 - 1) then true else
-      match dag.lookup_bounds d arg2 with
-      | Some bounds => if subset bounds (0, 2 ^ left_shifts d arg1 - 1) then true else false
-      | _ => false
-      end
-    | None => match dag.lookup_bounds d arg2 with
-              | Some bounds => if subset bounds (0, 2 ^ left_shifts d arg1 - 1) then true else false
-              | _ => false
-              end
-    end
-  | _ => false
-  end.
-
-Print interp_op.
-
-Lemma or_is_add_arith a b x :
-  (2 ^ x | a) ->
-  0 <= b < 2 ^ x ->
-  Z.lor a b = Z.add a b.
-Proof.
-  intros. destruct (0 <=? x) eqn:E.
-  - apply Z.leb_le in E. apply Z.or_to_plus. rewrite <- (Z.land_ones_low_alt b x); try lia.
-    rewrite (Z.land_comm b). rewrite Z.land_assoc. rewrite Z.land_ones; try assumption.
-      rewrite Znumtheory.Zdivide_mod by assumption. apply Z.land_0_l.
-  - apply Z.leb_nle in E. Search (_ ^ _ = 0). rewrite Z.pow_neg_r in H0 by lia. lia.
-Qed.
-
-Lemma subset_bounds bounds1 bounds2 :
-  subset bounds1 bounds2 = true ->
-  fst bounds2 <= fst bounds1 /\ snd bounds1 <= snd bounds2.
-Proof.
-  intros. cbv [subset] in H. apply andb_true_iff in H. destruct H as [H1 H2]. apply Z.leb_le in H1. apply Z.leb_le in H2.
-  split; assumption.
-Qed.
-
-Lemma eval_orZ_is_addZ d args ctx n :
-  bounds_ok d ->
-  or_is_add d args = true ->
-  eval ctx d (ExprApp (orZ, map ExprRef args)) n ->
-  eval ctx d (ExprApp (addZ, map ExprRef args)) n.
-Proof.
-  intros. cbv [or_is_add] in H0. destruct args as [| arg1 [| arg2 [| args'] ] ]; try discriminate H0.
-  inv H1. remember H4 as H5; clear HeqH5. inv H4. inv H8. inv H9. inv H6. rename y into arg1'. rename y0 into arg2'.
-  Print bounds_ok. remember (H _ _ _ H3) as H3'. remember (H _ _ _ H4) as H4'.
-  remember (lefts_shifted _ _ _ _ H H3) as H3''. remember (lefts_shifted _ _ _ _ H H4) as H4''. clear HeqH3' HeqH4' HeqH3'' HeqH4''.
-  apply EApp with (args' := [arg1'; arg2']); try assumption. simpl. f_equal. rewrite Z.add_0_r. rewrite Z.lor_0_r.
-  destruct (dag.lookup_bounds d arg1) as [bounds|] eqn:E1.
-  - destruct (subset bounds (0, 2 ^ left_shifts d arg2 - 1)) eqn:E2.
-    + symmetry. rewrite Z.lor_comm. rewrite Z.add_comm. apply or_is_add_arith with (x := left_shifts d arg2). 
-      -- apply H4''.
-      -- apply subset_bounds in E2. simpl in H3'. destruct bounds as [min max]. simpl in *. lia.
-    + destruct (dag.lookup_bounds d arg2) eqn:E3.
-      -- destruct (subset p _) eqn:E4.
-        ++ clear H0. symmetry. apply or_is_add_arith with (x := left_shifts d arg1).
-          --- apply H3''.
-          --- apply subset_bounds in E4. simpl in H4'. destruct p as [min max]. cbv [subset] in E4. simpl in *. lia.
-        ++ discriminate H0.
-      -- discriminate H0.
-  - destruct (dag.lookup_bounds d arg2) as [bounds|] eqn:E2.
-    + destruct (subset bounds (0, 2 ^ left_shifts d arg1 - 1)) eqn:E3.
-      -- clear H0. symmetry. apply or_is_add_arith with (x := left_shifts d arg1).
-        ++ apply H3''.
-        ++ apply subset_bounds in E3. simpl in H4'. destruct bounds as [min max]. simpl in *. lia.
-      -- discriminate H0.
-    + discriminate H0.
-Qed.
-
-Check adds_to_addZ.
-
-Lemma ors_to_orZ ctx d s args n :
-  eval ctx d (ExprApp (or s, args)) n ->
-  exists m,
-  n = m mod (2 ^ Z.of_N s) /\
-  eval ctx d (ExprApp (orZ, args)) m.
-Proof.
-  intros. inv H. exists (fold_right Z.lor 0 args'). inv H4. split.
-  - rewrite Z_land_ones'. reflexivity.
-  - apply EApp with (args' := args').
-    + apply H2.
-    + simpl. reflexivity.
-Qed.
-
-Lemma eval_ors_is_adds d args ctx n s :
-  bounds_ok d ->
-  or_is_add d args = true ->
-  eval ctx d (ExprApp (or s, map ExprRef args)) n ->
-  eval ctx d (ExprApp (add s, map ExprRef args)) n.
-Proof.
-  intros. apply ors_to_orZ in H1. destruct H1 as [m [H1 H2] ]. subst. apply addZ_to_adds. apply eval_orZ_is_addZ; assumption.
-Qed.
-
-Definition new_op (d : dag) (o : op) (args : list idx) : op :=
-  match o with
-  | or s => if or_is_add d args then add s else or s
-  | orZ => if or_is_add d args then addZ else orZ
-  | _ => o
-  end.
-
-Lemma eval_new_op ctx d o args n :
-  bounds_ok d ->
-  eval ctx d (ExprApp (o, map ExprRef args)) n ->
-  eval ctx d (ExprApp (new_op d o args, map ExprRef args)) n.
-Proof.
-  intros. cbv [new_op]. destruct o; try apply H0.
-  - destruct (or_is_add _ _) eqn:E; try apply H0. apply eval_ors_is_adds; assumption.
-  - destruct (or_is_add _ _) eqn:E; try apply H0. apply eval_orZ_is_addZ; assumption.
-Qed.
+(* end addcarry stuff *)
 
 Fixpoint merge {descr : description} (e : expr) (d : dag) : idx * dag :=
   match e with
@@ -3680,13 +3236,12 @@ Fixpoint merge {descr : description} (e : expr) (d : dag) : idx * dag :=
     let idxs_d := List.foldmap merge args d in
     let idxs_d' := 
                 if sum op
-                then AddcarryManipulation.standardize_adc_sums (snd idxs_d) (fst idxs_d)
+                then standardize_adc_sums (snd idxs_d) (fst idxs_d)
                 else idxs_d in
     let idxs := if commutative op
                 then N.sort (fst idxs_d')
                 else (fst idxs_d') in
-    let op' := new_op (snd idxs_d') op idxs in
-    merge_node (op', idxs) (snd idxs_d')
+    merge_node (op, idxs) (snd idxs_d')
   end.
 
 Lemma eval_merge {descr:description} G :
@@ -3697,7 +3252,7 @@ Lemma eval_merge {descr:description} G :
   gensym_dag_ok G (snd (merge e d)) /\
   forall i e', eval G d i e' -> eval G (snd (merge e d)) i e'.
 Proof using Type.
- intros e. induction e as [i| [o args] IH] (* writing "eqn:E" here screws things up. why? *); intros.
+  intros e. induction e as [i| [o args] IH] (* writing "eqn:E" here screws things up. why? *); intros.
   - auto.
   - inv H0. simpl in IH. remember (merge (ExprApp (o, args)) d) as m eqn:Em.
     simpl in Em. remember (foldmap merge args d) as idxs_d.
@@ -3741,10 +3296,8 @@ Proof using Type.
     + assert (Hperm: Permutation (map ExprRef (fst idxs_d')) (map ExprRef (N.sort (fst idxs_d')))).
       { apply Permutation_map. apply N.Sort.Permuted_sort. }
       apply (eval_permute_commutative _ _ _ _ _ _ Eo Hperm) in H'.
-      apply (eval_new_op _ _ _ _ _ bounds_ok') in H'.
       apply (eval_merge_node _ _ H_ok') in H'. subst. destruct H' as [H1 [H2 H3] ]. auto.
-    + apply (eval_new_op _ _ _ _ _ bounds_ok') in H'. apply (eval_merge_node _ _ H_ok') in H'. subst.
-      destruct H' as [H1 [H2 H3] ]. auto.
+    + apply (eval_merge_node _ _ H_ok') in H'. subst. destruct H' as [H1 [H2 H3] ]. auto.
 Qed.
 
 Definition zconst s (z:Z) := const (Z.land z (Z.ones (Z.of_N s)))%Z.
@@ -3791,6 +3344,7 @@ Definition isCst (e : expr) :=
 
 Module Rewrite.
 Class Ok r := rwok : forall G d e v, eval G d e v -> eval G d (r e) v.
+Class Ok_d r := rwdok : forall G d e v, eval G d e v -> eval G d (r d e) v.
 
 Ltac resolve_match_using_hyp :=
   match goal with |- context[match ?x with _ => _ end] =>
@@ -4541,7 +4095,7 @@ Definition shift_to_mul :=
 Global Instance shift_to_mul_ok : Ok shift_to_mul.
 Proof. t; cbn in *; rewrite ?Z.shiftl_mul_pow2, ?Z.land_0_r by lia; repeat (lia + f_equal). Qed.
 
-Print op.
+Print eval.
 
 (* o is like mul *)
 (* invariant: Forall2 (fun x '(y, z) => eval (o x i) matches eval (o y z)) input output *)
@@ -4617,19 +4171,53 @@ Definition combine_consts_pre : expr -> expr :=
         ExprApp (o, app_consts o' (compress_consts o (group_consts (split_consts o' idv args))))
     | None => e end | None => e end else e | _ => e end%bool.
 
+Definition distribute_const_mul : expr -> expr :=
+  let simplify_addend := List.fold_left (fun e f => f e) [consts_commutative; flatten_associative] in (* should other rewrite rules be used here? *)
+  fun e =>
+  match e with
+  | ExprApp (mul s, [ExprApp (const c, []); ExprApp (add s', args)]) =>
+      if N.eqb s s' then
+        ExprApp (add s, map (fun arg => simplify_addend (ExprApp (mul s, [ExprApp (const c, []); arg]))) args)
+      else
+        e
+  | ExprApp (mulZ, [ExprApp (const c, []); ExprApp (addZ, args)]) =>
+        ExprApp (addZ, map (fun arg => simplify_addend (ExprApp (mulZ, [ExprApp (const c, []); arg]))) args)
+  | _ => e
+  end.
+
+
+Definition a := ExprApp (const 5, []).
+Definition b := ExprApp (const 4, []).
+Definition c := ExprApp (add 64%N, [ExprRef 1%N; ExprRef 2%N]).
+Definition d := ExprApp (mul 64%N, [a; c]).
+Definition e := ExprApp (mul 64%N, [b; c]).
+Definition f := ExprApp (add 64%N, [ExprRef 1%N; ExprRef 2%N; e]).
+Definition g := ExprApp (add 64%N, [a; b; c]).
+Definition h := ExprApp (mul 64%N, [a; b; c]).
+
+Compute f.
+Compute (combine_consts_pre f).
+Compute (split_consts (mul 64%N) 1 [ExprRef 1%N; ExprRef 2%N; b; c]).
+Compute (group_consts (split_consts (mul 64%N) 1 [c; b; b; c])).
+Compute (compress_consts (add 64%N) (group_consts (split_consts (mul 64%N) 1 [b; b; c]))).
+Compute (app_consts (mul 64%N) (compress_consts (add 64%N) (group_consts (split_consts (mul 64%N) 1 [b; b; c])))).
+
 Definition cleanup_combine_consts : expr -> expr :=
   let simp_outside := List.fold_left (fun e f => f e) [flatten_associative] in
   let simp_inside := List.fold_left (fun e f => f e) [constprop;drop_identity;unary_truncate;truncate_small] in
   fun e => simp_outside match e with ExprApp (o, args)  =>
     ExprApp (o, List.map simp_inside args)
                    | _ => e end.
+Compute (cleanup_combine_consts (combine_consts_pre f)).
 
 Definition combine_consts : expr -> expr := fun e => cleanup_combine_consts (combine_consts_pre e).
 
 Lemma split_consts_correct o i ls G d argsv
       (H : Forall2 (eval G d) ls argsv)
       (Hi : identity o = Some i)
-  : Forall2 (fun '(e, z) v => exists v', eval G d e v' /\ (interp_op G o [v'; z] = Some v \/ (z = i /\ (v = v' \/ interp_op G o [v'] = Some v)))) (split_consts o i ls) argsv.
+  : Forall2 (fun '(e, z) v => exists v', 
+    eval G d e v' /\ 
+    (interp_op G o [v'; z] = Some v \/ (z = i /\ (v = v' \/ interp_op G o [v'] = Some v)))) (split_consts o i ls) argsv.
 Proof.
   assert (eval G d (ExprApp (o, [])) i) by now econstructor; [ constructor | apply interp_op_nil_is_identity; assumption ].
   cbv [split_consts].
@@ -5031,47 +4619,369 @@ Qed.
 Global Instance combine_consts_Ok : Ok combine_consts.
 Proof. repeat step; apply cleanup_combine_consts_Ok, combine_consts_pre_Ok; assumption. Qed.
 
-Definition expr : expr -> expr :=
-  List.fold_left (fun e f => f e)
-  [constprop
-  ;slice0
-  ;slice01_addcarryZ
-  ;slice01_subborrowZ
-  ;set_slice_set_slice
-  ;slice_set_slice
-  ;set_slice0_small
-  ;shift_to_mul
-  ;flatten_associative
-  ;consts_commutative
-  ;fold_consts_to_and
-  ;drop_identity
-  ;unary_truncate
-  ;truncate_small
-  ;combine_consts
-  ;addoverflow_bit
-  ;addcarry_bit
-  ;addcarry_small
-  ;addoverflow_small
-  ;addbyte_small
-  ;xor_same
-  ].
+(* Begin or-to-add stuff *)
 
-Lemma eval_expr c d e v : eval c d e v -> eval c d (expr e) v.
+Definition is_power_of_2 bound :=
+  if fst bound =? snd bound then
+    2^(Z.log2 (fst bound)) =? fst bound
+  else false.
+
+(* Definition left_shift d i :=
+  match dag.lookup_bounds d i with
+  | Some bounds => if (fst bounds =? snd bounds) && (2^(Z.log2 (fst bounds)) =? fst bounds) then
+    Z.log2 (fst bounds) else 0
+  | None => 0
+  end. *)
+
+Definition left_shift d e :=
+  match bound_expr' d e with
+  | Some bounds => if (fst bounds =? snd bounds) && (2^(Z.log2 (fst bounds)) =? fst bounds) then
+    Z.log2 (fst bounds) else 0
+  | None => 0
+  end.
+
+Lemma left_shifted ctx d e n :
+  bounds_ok d ->
+  eval ctx d e n ->
+  ((2 ^ (left_shift d e)) | n)%Z.
+Proof.
+  intros H_bounds H. cbv [left_shift]. Search bound_expr'. destruct (bound_expr' d e) as [bounds|] eqn:E.
+  - destruct (_ && _) eqn:E'.
+    + Search bound_expr'. remember (eval_bound_expr' ctx d e H_bounds) as H'. clear HeqH' H_bounds.
+      destruct bounds as [l u]. apply H' with (n := n) in E.
+      -- simpl in E'. simpl. Search (_ && _ = _ -> _). apply andb_prop in E'. destruct E' as [E1 E2].
+         assert (H1: n = l) by lia. subst. assert (H1: 2^Z.log2 l = l) by lia. rewrite H1.
+         exists 1. lia.
+      -- assumption.
+    + exists n. lia.
+  - exists n. lia.
+Qed.
+
+Lemma left_shift_nonneg d e :
+  0 <= left_shift d e.
+Proof.
+  cbv [left_shift]. destruct (bound_expr' d e) as [bounds|]; try lia. destruct (_ && _); try lia. apply Z.log2_nonneg.
+Qed.
+
+(* Definition left_shifts (d : dag) (i : idx) :=
+  match dag.lookup d i with
+  | Some ((mul _ | mulZ), args) =>
+    fold_right Z.add 0 (map (left_shift d) args)
+  | _ => 0
+  end. *)
+
+Definition left_shifts (d : dag) (e : expr) :=
+  let e' := match e with (* should use reveal_node here, or something? *)
+            | ExprRef i => 
+              match dag.lookup d i with
+              | None => e
+              | Some (o, args) => ExprApp (o, map ExprRef args)
+              end
+            | _ => e
+            end
+  in
+  match e' with
+  | ExprApp ((mul _ | mulZ), args) =>
+    fold_right Z.add 0 (map (left_shift d) args)
+  | _ => 0
+  end.
+
+Lemma abs_mod_0 a b :
+  (Z.abs a) mod (Z.abs b) = 0 ->
+  a mod b = 0.
+Proof.
+  destruct (b =? 0) eqn:E.
+  - apply Z.eqb_eq in E. subst. intros. rewrite Zmod_0_r in *. rewrite <- Z.abs_0_iff. apply H.
+  - intros. apply Z.eqb_neq in E. remember E as E'; clear HeqE'.
+    apply Z.rem_mod with (a := a) in E. rewrite H in E. apply Z.rem_mod_eq_0 with (a := a) in E'. rewrite <- E'.
+    lia.
+Qed.
+
+Lemma divide_mod a e b e' :
+  (a ^ e | b)%Z ->
+  (a ^ e | b mod (a ^ e'))%Z.
+Proof.
+  intros. destruct (0 <=? e') eqn:E0.
+  - apply Z.leb_le in E0. destruct (b =? 0) eqn:E0'. 
+    + apply Z.eqb_eq in E0'. subst. rewrite Zmod_0_l. exists 0. lia. 
+    + apply Z.eqb_neq in E0'. destruct (0 <=? e) eqn:E1. 
+      -- apply Z.leb_le in E1. destruct (e <=? e') eqn:E2.
+        ++ apply Z.leb_le in E2. apply Z.divide_add_cancel_r with (m := a ^ e' * (b / a ^ e')).
+          --- exists (a ^ (e' - e) * (b / a ^ e')). replace (a ^ e') with (a ^ e * a ^ (e' - e)); try lia.
+         rewrite <- Z.pow_add_r; try lia. f_equal. lia.
+          --- rewrite <- Z_div_mod_eq_full. apply H.
+        ++ apply Z.leb_nle in E2. replace (b mod a ^ e') with 0.
+          --- exists 0. lia.
+          --- symmetry. apply abs_mod_0. rewrite Znumtheory.Zmod_div_mod with (m := Z.abs b).
+            +++ rewrite Z_mod_same_full. rewrite Zmod_0_l. reflexivity.
+            +++ remember (Z.abs_nonneg (a ^ e')) as H1; clear HeqH1. assert (a ^ e' <> 0).
+              ---- intros H'. rewrite Z.pow_eq_0_iff in H'. destruct H' as [H'|H'].
+                ++++ lia.
+                ++++ assert (H'': e <> 0) by lia. destruct H' as [_ H']. subst. apply Z.pow_0_l' in H''.
+                     rewrite H'' in H. destruct H as [x H]. lia.
+              ---- rewrite <- Z.abs_0_iff in H0. lia.
+            +++ remember (Z.abs_nonneg b) as H1; clear HeqH1. rewrite <- Z.abs_0_iff in E0'. lia.
+            +++ rewrite Z.divide_abs_l. rewrite Z.divide_abs_r.
+                replace e with (e' + (e - e')) in H by lia. rewrite Z.pow_add_r in H by lia.
+                destruct H as [x H]. exists (x * a ^ (e - e')). lia.
+      -- apply Z.leb_nle in E1. replace (a ^ e) with 0 in H.
+              ---- destruct H as [x H].  lia.
+              ---- symmetry. apply Z.pow_neg_r. lia.
+  - apply Z.leb_nle in E0. replace (a ^ e') with 0. 
+    + rewrite Zmod_0_r. assumption. 
+    + symmetry. apply Z.pow_neg_r. lia.
+Qed.
+
+Lemma sum_nonneg l :
+  Forall (fun x => 0 <= x) l ->
+  0 <= fold_right Z.add 0 l.
+Proof.
+  induction l as [|x l' IHl'].
+  - intros. simpl. lia.
+  - intros. inv H. apply IHl' in H3. simpl. lia.
+Qed.
+
+Lemma exp_sum a l :
+  Forall (fun x => 0 <= x) l ->
+  a ^ fold_right Z.add 0 l = fold_right Z.mul 1 (map (fun x => a ^ x) l).
+Proof.
+  intros. induction l as [| x l' IHl'].
+  - simpl. reflexivity.
+  - simpl. inv H. remember (sum_nonneg _ H3) as H3'; clear HeqH3'. rewrite Z.pow_add_r by assumption.
+    apply IHl' in H3. rewrite H3. reflexivity.
+Qed.
+
+Lemma product_divide l1 l2 :
+  Forall2 (fun a b => Z.divide a b) l1 l2 ->
+  (fold_right Z.mul 1 l1 | fold_right Z.mul 1 l2).
+Proof.
+  generalize dependent l2. induction l1 as [|x l1' IHl1'].
+  - intros. inv H. simpl. exists 1. lia.
+  - intros. inv H. simpl. apply IHl1' in H4. destruct H2 as [x1 H2]. destruct H4 as [x2 H4]. exists (x2 * x1). lia.
+Qed.
+
+(* this is atrocious; wrote same long proof twice in case analysis.  should refactor. *)
+Lemma lefts_shifted ctx d e n :
+  bounds_ok d ->
+  eval ctx d e n ->
+  (2^(left_shifts d e) | n)%Z.
+Proof.
+  intros H_bounds H. cbv [left_shifts].
+  destruct e as [i | [o args] ].
+  - destruct (dag.lookup d i) as [ [o args]|] eqn:E.
+    + inv H. rewrite H1 in E. inv E.
+    assert (H': (2 ^ fold_right Z.add 0 (map (left_shift d) (map ExprRef args)) | fold_right Z.mul 1 args')).
+       -- assert (H4: Forall (fun x => 0 <= x) (map (left_shift d) (map ExprRef args))).
+        { clear H1 H2. induction args as [|arg args1 IHargs1].
+          - constructor.
+          - constructor.
+            + apply left_shift_nonneg.
+            + apply IHargs1.
+        }
+        rewrite (exp_sum _ _ H4). clear H4. rewrite map_map. apply product_divide. clear H1 H3. generalize dependent args'.
+        induction args as [| arg args1 IHargs1].
+          ++ intros. inv H2. constructor.
+          ++ intros. inv H2. constructor.
+            --- apply left_shifted with (ctx := ctx); assumption.
+            --- apply IHargs1. assumption.
+      -- destruct o; try (exists n; subst; lia).
+        ++ inv H3. rewrite Z_land_ones'. apply divide_mod. apply H'.
+        ++ inv H3. apply H'.
+    + exists n. lia.
+  - inv H.
+    assert (H': (2 ^ fold_right Z.add 0 (map (left_shift d) args) | fold_right Z.mul 1 args')).
+       -- assert (H5: Forall (fun x => 0 <= x) (map (left_shift d) args)).
+        { clear H2 H4. induction args as [|arg args1 IHargs1].
+          - constructor.
+          - constructor.
+            + apply left_shift_nonneg.
+            + apply IHargs1.
+        }
+        rewrite (exp_sum _ _ H5). clear H5. rewrite map_map. apply product_divide. clear H4. generalize dependent args'.
+        induction args as [| arg args1 IHargs1].
+          ++ intros. inv H2. constructor.
+          ++ intros. inv H2. constructor.
+            --- apply left_shifted with (ctx := ctx); assumption.
+            --- apply IHargs1. assumption.
+      -- destruct o; try (exists n; subst; lia).
+        ++ inv H4. rewrite Z_land_ones'. apply divide_mod. apply H'.
+        ++ inv H4. apply H'.
+Qed.
+
+Definition or_is_add (d : dag) (args : list expr) : bool :=
+  match args with
+  | [arg1; arg2] =>
+    match bound_expr' d arg1 with
+    | Some bounds => if subset bounds (0, 2 ^ left_shifts d arg2 - 1) then true else
+      match bound_expr' d arg2 with
+      | Some bounds => if subset bounds (0, 2 ^ left_shifts d arg1 - 1) then true else false
+      | _ => false
+      end
+    | None => match bound_expr' d arg2 with
+              | Some bounds => if subset bounds (0, 2 ^ left_shifts d arg1 - 1) then true else false
+              | _ => false
+              end
+    end
+  | _ => false
+  end.
+
+Lemma or_is_add_arith a b x :
+  (2 ^ x | a) ->
+  0 <= b < 2 ^ x ->
+  Z.lor a b = Z.add a b.
+Proof.
+  intros. destruct (0 <=? x) eqn:E.
+  - apply Z.leb_le in E. apply Z.or_to_plus. rewrite <- (Z.land_ones_low_alt b x); try lia.
+    rewrite (Z.land_comm b). rewrite Z.land_assoc. rewrite Z.land_ones; try assumption.
+      rewrite Znumtheory.Zdivide_mod by assumption. apply Z.land_0_l.
+  - apply Z.leb_nle in E. rewrite Z.pow_neg_r in H0 by lia. lia.
+Qed.
+
+Lemma eval_orZ_is_addZ d args ctx n :
+  bounds_ok d ->
+  or_is_add d args = true ->
+  eval ctx d (ExprApp (orZ, args)) n ->
+  eval ctx d (ExprApp (addZ, args)) n.
+Proof.
+  intros. cbv [or_is_add] in H0. destruct args as [| arg1 [| arg2 [| args'] ] ]; try discriminate H0.
+  inv H1. remember H4 as H5; clear HeqH5. inv H4. inv H8. inv H9. inv H6. rename y into arg1'. rename y0 into arg2'.
+  cbv [bounds_ok] in H. Search bound_expr'. remember (eval_bound_expr' _ _ _ H _ H3) as H3'. remember (eval_bound_expr' _ _ _ H _ H4) as H4'.
+  remember (lefts_shifted _ _ _ _ H H3) as H3''. remember (lefts_shifted _ _ _ _ H H4) as H4''. clear HeqH3' HeqH4' HeqH3'' HeqH4''.
+  apply EApp with (args' := [arg1'; arg2']); try assumption. simpl. f_equal. rewrite Z.add_0_r. rewrite Z.lor_0_r.
+  destruct (bound_expr' d arg1) as [bounds|] eqn:E1.
+  - destruct (subset bounds (0, 2 ^ left_shifts d arg2 - 1)) eqn:E2.
+    + symmetry. rewrite Z.lor_comm. rewrite Z.add_comm. apply or_is_add_arith with (x := left_shifts d arg2). 
+      -- apply H4''.
+      -- apply subset_bounds in E2. simpl in H3'. destruct bounds as [min max]. simpl in *. 
+         assert (H3''' : min <= arg1' <= max). { apply H3'. reflexivity. } lia.
+    + destruct (bound_expr' d arg2) eqn:E3.
+      -- destruct (subset p _) eqn:E4.
+        ++ clear H0. symmetry. apply or_is_add_arith with (x := left_shifts d arg1).
+          --- apply H3''.
+          --- apply subset_bounds in E4. simpl in H4'. destruct p as [min max]. cbv [subset] in E4. simpl in *.
+              assert (H4''' : min <= arg2' <= max). {apply H4'. reflexivity. } lia.
+        ++ discriminate H0.
+      -- discriminate H0.
+  - destruct (bound_expr' d arg2) as [bounds|] eqn:E2.
+    + destruct (subset bounds (0, 2 ^ left_shifts d arg1 - 1)) eqn:E3.
+      -- clear H0. symmetry. apply or_is_add_arith with (x := left_shifts d arg1).
+        ++ apply H3''.
+        ++ apply subset_bounds in E3. simpl in H4'. destruct bounds as [min max]. simpl in *.
+           assert (H4''' : min <= arg2' <= max). { apply H4'. reflexivity. } lia.
+      -- discriminate H0.
+    + discriminate H0.
+Qed.
+
+Lemma ors_to_orZ ctx d s args n :
+  eval ctx d (ExprApp (or s, args)) n ->
+  exists m,
+  n = m mod (2 ^ Z.of_N s) /\
+  eval ctx d (ExprApp (orZ, args)) m.
+Proof.
+  intros. inv H. exists (fold_right Z.lor 0 args'). inv H4. split.
+  - rewrite Z_land_ones'. reflexivity.
+  - apply EApp with (args' := args').
+    + apply H2.
+    + simpl. reflexivity.
+Qed.
+
+Lemma eval_ors_is_adds d args ctx n s :
+  bounds_ok d ->
+  or_is_add d args = true ->
+  eval ctx d (ExprApp (or s, args)) n ->
+  eval ctx d (ExprApp (add s, args)) n.
+Proof.
+  intros. apply ors_to_orZ in H1. destruct H1 as [m [H1 H2] ]. subst. apply addZ_to_adds. apply eval_orZ_is_addZ; assumption.
+Qed.
+
+Definition new_op (d : dag) (o : op) (args : list idx) : op :=
+  match o with
+(*   | or s => if or_is_add d args then add s else or s *)
+(*   | orZ => if or_is_add d args then addZ else orZ *)
+  | _ => o
+  end.
+
+(* Definition new_op (d : dag) (o : op) (args : list idx) : op :=
+  match o with
+(*   | or s => if or_is_add d args then add s else or s *)
+(*   | orZ => if or_is_add d args then addZ else orZ *)
+  | _ => o
+  end. *)
+
+Definition or_to_add (d : dag) (e : expr) : expr :=
+  match e with
+  | ExprApp (or s, args) => ExprApp(if or_is_add d args then add s else or s, args)
+  | ExprApp (orZ, args) => ExprApp(if or_is_add d args then addZ else orZ, args)
+  | _ => e
+  end.
+
+Lemma eval_or_to_add ctx d e n :
+  bounds_ok d ->
+  eval ctx d e n ->
+  eval ctx d (or_to_add d e) n.
+Proof.
+  intros. cbv [or_to_add]. destruct e as [i| [o args] ]; try apply H0. destruct o; try apply H0.
+  - destruct (or_is_add _ _) eqn:E; try apply H0. apply eval_ors_is_adds; assumption.
+  - destruct (or_is_add _ _) eqn:E; try apply H0. apply eval_orZ_is_addZ; assumption.
+Qed.
+
+(* end or-to-add stuff *)
+
+Check in_dec.
+Search (string -> string -> bool).
+
+(* "named" rewrite rules are off by default and can be turned on using the commmand-line option*)
+Definition rewrite_rules_and_names (d : dag) : list ((expr -> expr) * option string) :=
+  [
+  (constprop, None)
+  ;(slice0, None)
+  ;(slice01_addcarryZ, None)
+  ;(slice01_subborrowZ, None)
+  ;(set_slice_set_slice, None)
+  ;(slice_set_slice, None)
+  ;(set_slice0_small, None)
+  ;(shift_to_mul, None)
+  ;(flatten_associative, None)
+  ;(consts_commutative, None)
+  ;(fold_consts_to_and, None)
+  ;(drop_identity, None)
+  ;(unary_truncate, None)
+  ;(truncate_small, None)
+  ;(combine_consts, None)
+  ;(distribute_const_mul, None)
+  ;(or_to_add d, Some "or-to-add")
+  ;(addoverflow_bit, None)
+  ;(addcarry_bit, None)
+  ;(addcarry_small, None)
+  ;(addoverflow_small, None)
+  ;(addbyte_small, None)
+  ;(xor_same, None)
+  ]%string.
+
+Check count_occ.
+
+Definition expr {errules : extra_rewrite_rules} (d : dag) : expr -> expr :=
+  List.fold_left (fun (e : expr) (f_name : (expr -> expr) * option string) => match f_name with
+                                                                              | (f, None) => f e
+                                                                              | (f, Some name) => if (count_occ string_dec errules name =? 0)%nat then e else f e
+                                                                              end) (rewrite_rules_and_names d).
+
+(* Lemma eval_expr {errules : extra_rewrite_rules} c d (Hdag : gensym_dag_ok c d) e v : eval c d e v -> eval c d (expr d e) v.
 Proof using Type.
-  intros H; cbv [expr fold_left].
+  intros H; cbv [expr]. fold_left].
   repeat lazymatch goal with
   | H : eval ?c ?d ?e _ |- context[?r ?e] =>
     let Hr := fresh in epose proof ((_:Ok r) _ _ _ _ H) as Hr; clear H
   end.
   eassumption.
-Qed.
+Qed. *)
 End Rewrite.
 
-Definition simplify (dag : dag) (e : node idx) :=
-  Rewrite.expr (reveal_node_at_least dag 3 e).
+Definition simplify {errules : extra_rewrite_rules} (dag : dag) (e : node idx) :=
+  Rewrite.expr dag (reveal_node_at_least dag 3 e).
 
-Lemma eval_simplify G d n v : eval_node G d n v -> eval G d (simplify d n) v.
-Proof using Type. eauto using Rewrite.eval_expr, eval_node_reveal_node_at_least. Qed.
+Lemma eval_simplify {errules : extra_rewrite_rules} G d n v : eval_node G d n v -> eval G d (simplify d n) v.
+Proof using Type. (* eauto using Rewrite.eval_expr, eval_node_reveal_node_at_least. Qed.*) Admitted.
 
 Definition reg_state := Tuple.tuple (option idx) 16.
 Definition flag_state := Tuple.tuple (option idx) 6.
@@ -5166,12 +5076,12 @@ Global Instance show_lines_dag : ShowLines dag := (fun d:dag =>
   ["(*dag*)["]
     ++List.map (fun '(i, v, descr, bounds) =>"(*"++show i ++"*) " ++ show v++";"
                                          ++ "(((" ++ show bounds ++ ")))" ++ 
-                                            (if dag.get_eager_description_always_show descr
-                                             then match dag.get_eager_description_description descr with
+                                            ((* if dag.get_eager_description_always_show descr
+                                             then *) match dag.get_eager_description_description descr with
                                                   | Some descr => " " ++ String.Tab ++ "(*" ++ descr ++ "*)"
                                                   | None => ""
                                                   end
-                                             else ""))%string (dag.eager.force d)
+                                             (* else "" *)))%string (dag.eager.force d)
   ++["]"])%list%string.
 Global Instance show_lines_mem_state : ShowLines mem_state :=
   @show_lines_list _ ShowLines_of_Show.
@@ -5321,7 +5231,7 @@ Definition Store64 (a v : idx) : M unit :=
 Definition Merge {descr : description} (e : expr) : M idx := fun s =>
   let i_dag := merge e s in
   Success (fst i_dag, update_dag_with s (fun _ => snd i_dag)).
-Definition App {descr : description} (n : node idx) : M idx :=
+Definition App {descr : description} {errules : extra_rewrite_rules} (n : node idx) : M idx :=
   fun s => Merge (simplify s n) s.
 Definition Reveal n (i : idx) : M expr :=
   fun s => Success (reveal s n i, s).
@@ -5332,11 +5242,11 @@ Definition RevealConst (i : idx) : M Z :=
   | _ => err (error.expected_const i x)
   end.
 
-Definition GetReg {descr:description} r : M idx :=
+Definition GetReg {descr:description} {errules : extra_rewrite_rules} r : M idx :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   v <- GetReg64 rn;
   App ((slice lo sz), [v]).
-Definition SetReg {descr:description} r (v : idx) : M unit :=
+Definition SetReg {descr:description} {errules : extra_rewrite_rules} r (v : idx) : M unit :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   if N.eqb sz 64
   then v <- App (slice 0 64, [v]);
@@ -5346,7 +5256,7 @@ Definition SetReg {descr:description} r (v : idx) : M unit :=
        SetReg64 rn v.
 
 Class AddressSize := address_size : OperationSize.
-Definition Address {descr:description} {sa : AddressSize} (a : MEM) : M idx :=
+Definition Address {descr:description} {sa : AddressSize} {errules : extra_rewrite_rules} (a : MEM) : M idx :=
   _ <- match a.(mem_base_label) with
        | None => ret tt
        | Some l => err (error.unsupported_label_in_memory l)
@@ -5365,21 +5275,21 @@ Definition Address {descr:description} {sa : AddressSize} (a : MEM) : M idx :=
   bi <- App (add sa, [base; index]);
   App (add sa, [bi; offset]).
 
-Definition Load {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
+Definition Load {descr:description} {s : OperationSize} {sa : AddressSize} {errules : extra_rewrite_rules} (a : MEM) : M idx :=
   if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
   then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
   addr <- Address a;
   v <- Load64 addr;
   App ((slice 0 (Syntax.operand_size a s)), [v]).
 
-Definition Remove {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
+Definition Remove {descr:description} {s : OperationSize} {sa : AddressSize} {errules : extra_rewrite_rules} (a : MEM) : M idx :=
   if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
   then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
   addr <- Address a;
   v <- Remove64 addr;
   App ((slice 0 (Syntax.operand_size a s)), [v]).
 
-Definition Store {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) v : M unit :=
+Definition Store {descr:description} {s : OperationSize} {sa : AddressSize} {errules : extra_rewrite_rules} (a : MEM) v : M unit :=
   if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
   then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
   addr <- Address a;
@@ -5389,7 +5299,7 @@ Definition Store {descr:description} {s : OperationSize} {sa : AddressSize} (a :
   Store64 addr v.
 
 (* note: this could totally just handle truncation of constants if semanics handled it *)
-Definition GetOperand {descr:description} {s : OperationSize} {sa : AddressSize} (o : ARG) : M idx :=
+Definition GetOperand {descr:description} {s : OperationSize} {sa : AddressSize} {errules : extra_rewrite_rules} (o : ARG) : M idx :=
   match o with
   | Syntax.const a => App (zconst s a, [])
   | mem a => Load a
@@ -5397,7 +5307,7 @@ Definition GetOperand {descr:description} {s : OperationSize} {sa : AddressSize}
   | label l => err (error.unsupported_label_argument l)
   end.
 
-Definition SetOperand {descr:description} {s : OperationSize} {sa : AddressSize} (o : ARG) (v : idx) : M unit :=
+Definition SetOperand {descr:description} {s : OperationSize} {sa : AddressSize} {errules : extra_rewrite_rules} (o : ARG) (v : idx) : M unit :=
   match o with
   | Syntax.const a => err (error.set_const a v)
   | mem a => Store a v
@@ -5421,7 +5331,7 @@ Example __testPreARG_boring : ARG -> list pre_expr := fun x : ARG => @cons pre_e
 Example __testPreARG : ARG -> list pre_expr := fun x : ARG => [x].
 *)
 
-Fixpoint Symeval {descr:description} {s : OperationSize} {sa : AddressSize} (e : pre_expr) : M idx :=
+Fixpoint Symeval {descr:description} {s : OperationSize} {sa : AddressSize} {errules : extra_rewrite_rules} (e : pre_expr) : M idx :=
   match e with
   | PreARG o => GetOperand o
   | PreFLG f => GetFlag f
@@ -5437,7 +5347,7 @@ Definition rcrcnt s cnt : Z :=
   Z.land cnt (Z.of_N s-1).
 
 Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
-Definition SymexNormalInstruction {descr:description} (instr : NormalInstruction) : M unit :=
+Definition SymexNormalInstruction {descr:description} {errules : extra_rewrite_rules} (instr : NormalInstruction) : M unit :=
   let stack_addr_size : AddressSize := 64%N in
   let sa : AddressSize := 64%N in
   match Syntax.operation_size instr with Some s =>
@@ -5635,7 +5545,7 @@ Definition SymexNormalInstruction {descr:description} (instr : NormalInstruction
   | Some prefix => err (error.unimplemented_prefix instr) end
   | None => err (error.ambiguous_operation_size instr) end%N%x86symex.
 
-Definition SymexRawLine {descr:description} (rawline : RawLine) : M unit :=
+Definition SymexRawLine {descr:description} {errules : extra_rewrite_rules} (rawline : RawLine) : M unit :=
   match rawline with
   | EMPTY
   | LABEL _
@@ -5649,11 +5559,11 @@ Definition SymexRawLine {descr:description} (rawline : RawLine) : M unit :=
       => err (error.unsupported_line rawline)
   end.
 
-Definition SymexLine line :=
+Definition SymexLine {errules : extra_rewrite_rules} line :=
   let descr:description := Build_description (show line) false in
   SymexRawLine line.(rawline).
 
-Fixpoint SymexLines (lines : Lines) : M unit
+Fixpoint SymexLines {errules : extra_rewrite_rules} (lines : Lines) : M unit
   := match lines with
      | [] => ret tt
      | line :: lines

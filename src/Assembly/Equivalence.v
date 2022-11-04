@@ -673,7 +673,7 @@ Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
 Definition merge_fresh_symbol {descr:description} : dag.M idx := fun d => merge_node (dag.gensym 64%N d) d.
 Definition merge_literal {descr:description} (l:Z) : dag.M idx := merge_node ((const l, nil)).
 
-Definition SetRegFresh {descr:description} (r : REG) : M idx :=
+Definition SetRegFresh {descr:description} {errules : extra_rewrite_rules} (r : REG) : M idx :=
   (idx <- lift_dag merge_fresh_symbol;
   _ <- SetReg r idx;
   Symbolic.ret idx).
@@ -689,7 +689,7 @@ Bind Scope symex_scope with symexM.
 Notation "'slet' x .. y <- X ; B"  := (symex_bind X (fun x => .. (fun y => B%symex) .. )) : symex_scope.
 Notation "A <- X ; B" := (symex_bind X (fun A => B%symex)) : symex_scope.
 (* light alias *)
-Definition App {descr:description} (e : Symbolic.node idx) : symexM idx := fun st => Success (merge (simplify st e) st).
+Definition App {descr:description} {errules : extra_rewrite_rules} (e : Symbolic.node idx) : symexM idx := fun st => Success (merge (simplify st e) st).
 Definition RevealConstant (i : idx) : symexM N := fun st =>
   match reveal st 1 i with
   | ExprApp (const n, nil) =>
@@ -766,17 +766,17 @@ Fixpoint build_inputs {descr:description} (types : type_spec) : dag.M (list (idx
      end%dagM.
 
 (* we factor this out so that conversion is not slow when proving things about this *)
-Definition compute_array_address {descr:description} (base : idx) (i : nat)
+Definition compute_array_address {descr:description} {errules : extra_rewrite_rules} (base : idx) (i : nat)
   := (offset <- Symbolic.App (zconst 64%N (8 * Z.of_nat i), nil);
       Symbolic.App (add 64%N, [base; offset]))%x86symex.
 
-Definition build_merge_array_addresses {descr:description} (base : idx) (items : list idx) : M (list idx)
+Definition build_merge_array_addresses {descr:description} {errules : extra_rewrite_rules} (base : idx) (items : list idx) : M (list idx)
   := mapM (fun '(i, idx) =>
              (addr <- compute_array_address base i;
               (fun s => Success (addr, update_mem_with s (cons (addr,idx)))))
           )%x86symex (List.enumerate items).
 
-Fixpoint build_merge_base_addresses {descr:description} {dereference_scalar:bool} (items : list (idx + list idx)) (reg_available : list REG) : M (list ((REG + idx) + idx))
+Fixpoint build_merge_base_addresses {descr:description} {dereference_scalar:bool} {errules : extra_rewrite_rules} (items : list (idx + list idx)) (reg_available : list REG) : M (list ((REG + idx) + idx))
   := match items, reg_available with
      | [], _ | _, [] => Symbolic.ret []
      | inr idxs :: xs, r :: reg_available
@@ -966,7 +966,7 @@ Fixpoint symex_T_app_curried {t : API.type} : symex_T t -> type.for_each_lhs_of_
 
 Bind Scope symex_scope with symex_T.
 
-Definition symex_ident {descr:description} {t} (idc : ident t) : symex_T t.
+Definition symex_ident {descr:description} {t} {errules : extra_rewrite_rules} (idc : ident t) : symex_T t.
 Proof.
   refine (let symex_mod_zrange idx '(ZRange.Build_zrange l u) :=
             let u := Z.succ u in
@@ -1158,7 +1158,7 @@ Proof.
   all: cbn in *.
 Defined.
 
-Fixpoint symex_expr {descr:description} {t} (e : API.expr (var:=var) t) : symex_T t
+Fixpoint symex_expr {descr:description} {t} {errules : extra_rewrite_rules} (e : API.expr (var:=var) t) : symex_T t
   := let _ := @Compilers.ToString.PHOAS.expr.partially_show_expr in
      match e in expr.expr t return symex_T t with
      | expr.Ident _ idc => symex_ident idc
@@ -1181,7 +1181,7 @@ Fixpoint symex_expr {descr:description} {t} (e : API.expr (var:=var) t) : symex_
      end.
 
 (* takes and returns PHOAS-style things *)
-Definition symex_PHOAS_PHOAS {t} (expr : API.Expr t) (input_var_data : type.for_each_lhs_of_arrow _ t) (d : dag)
+Definition symex_PHOAS_PHOAS {t} {errules : extra_rewrite_rules} (expr : API.Expr t) (input_var_data : type.for_each_lhs_of_arrow _ t) (d : dag)
   : ErrorT EquivalenceCheckingError (base_var (type.final_codomain t) * dag)
   := let ast : API.expr (type.base (type.final_codomain t))
          := invert_expr.smart_App_curried (expr _) input_var_data in
@@ -1189,7 +1189,7 @@ Definition symex_PHOAS_PHOAS {t} (expr : API.Expr t) (input_var_data : type.for_
 
 (* takes and returns assembly/list style things *)
 Definition symex_PHOAS
-           {t} (expr : API.Expr t)
+           {t} {errules : extra_rewrite_rules} (expr : API.Expr t)
            (inputs : list (idx + list idx))
            (d : dag)
   : ErrorT EquivalenceCheckingError (list (idx + list idx) * dag)
@@ -1215,25 +1215,25 @@ Definition init_symbolic_state (d : dag) : symbolic_state
        symbolic_flag_state := Tuple.repeat None 6;
      |}.
 
-Definition compute_stack_base {descr:description} (stack_size : nat) : M idx
+Definition compute_stack_base {descr:description} {errules : extra_rewrite_rules} (stack_size : nat) : M idx
   := (rsp_val <- SetRegFresh rsp;
       stack_size <- Symbolic.App (zconst 64 (-8 * Z.of_nat stack_size), []);
       Symbolic.App (add 64%N, [rsp_val; stack_size]))%x86symex.
 
-Definition build_merge_stack_placeholders {descr:description} (stack_size : nat)
+Definition build_merge_stack_placeholders {descr:description} {errules : extra_rewrite_rules} (stack_size : nat)
   : M idx
   := (stack_placeholders <- lift_dag (build_inputarray stack_size);
       stack_base <- compute_stack_base stack_size;
       _ <- build_merge_array_addresses stack_base stack_placeholders;
       ret stack_base)%x86symex.
 
-Definition LoadArray {descr:description} (base : idx) (len : nat) : M (list idx)
+Definition LoadArray {descr:description} {errules : extra_rewrite_rules} (base : idx) (len : nat) : M (list idx)
   := mapM (fun i =>
              (addr <- compute_array_address base i;
               Remove64 addr)%x86symex)
           (seq 0 len).
 
-Definition LoadOutputs_internal {descr:description} {dereference_scalar:bool} (outputaddrs : list ((REG + idx) + idx)) (output_types : type_spec)
+Definition LoadOutputs_internal {descr:description} {dereference_scalar:bool} {errules : extra_rewrite_rules} (outputaddrs : list ((REG + idx) + idx)) (output_types : type_spec)
   : M (list (idx + list idx))
   := (mapM (fun '(ocells, spec) =>
             match ocells, spec with
@@ -1252,7 +1252,7 @@ Definition LoadOutputs_internal {descr:description} {dereference_scalar:bool} (o
                   ret (inr v))
             end) (List.combine outputaddrs output_types))%N%x86symex.
 
-Definition LoadOutputs {descr:description} {dereference_scalar:bool} (outputaddrs : list ((REG + idx) + idx)) (output_types : type_spec)
+Definition LoadOutputs {descr:description} {dereference_scalar:bool} {errules : extra_rewrite_rules} (outputaddrs : list ((REG + idx) + idx)) (output_types : type_spec)
   : M (ErrorT EquivalenceCheckingError (list (idx + list idx)))
   := (* In the following line, we match on the result so we can emit Internal_error_output_load_failed in the calling function, rather than passing through the placeholder error from LoadOutputs *)
   fun s => if (List.length outputaddrs =? List.length output_types)%nat
@@ -1269,7 +1269,10 @@ Definition LoadOutputs {descr:description} {dereference_scalar:bool} (outputaddr
            else
              Success (Error (Internal_error_LoadOutputs_length_mismatch outputaddrs output_types), s).
 
+Check SymexLines.
+
 Definition symex_asm_func_M
+           {errules : extra_rewrite_rules}
            (dereference_input_scalars:=false)
            {dereference_output_scalars:bool}
            (callee_saved_registers : list REG)
@@ -1307,6 +1310,7 @@ Definition symex_asm_func_M
                     s)))%N%x86symex.
 
 Definition symex_asm_func
+           {errules : extra_rewrite_rules}
            {dereference_output_scalars:bool}
            (d : dag) (callee_saved_registers : list REG) (output_types : type_spec) (stack_size : nat)
            (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
@@ -1341,7 +1345,8 @@ Section check_equivalence.
           {assembly_stack_size' : assembly_stack_size_opt}
           {assembly_output_first : assembly_output_first_opt}
           {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
-          {assembly_callee_saved_registers' : assembly_callee_saved_registers_opt}.
+          {assembly_callee_saved_registers' : assembly_callee_saved_registers_opt}
+          {errules : extra_rewrite_rules}.
 
   Section with_expr.
     Context {t}

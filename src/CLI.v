@@ -7,6 +7,7 @@ Require Import Coq.Strings.HexString.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Parse.
+Require Import Crypto.Assembly.Symbolic.
 Require Import Crypto.Assembly.Equivalence.
 Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.ParseArithmetic.
@@ -470,6 +471,10 @@ Module ForExtraction.
     := ([Arg.long_key "asm-reg-rtl"],
         Arg.Unit,
         ["By default, registers are assumed to be assigned to function arguments from left to right in the hints file.  This flag reverses that convention to be right-to-left.  Note that this flag interacts with --asm-input-first, which determines whether the output pointers are to the left or to the right of the input arguments."]).
+  Definition asm_extra_rewrite_rules_spec : named_argT
+    := ([Arg.long_key "extra-rewrite-rule"],
+        Arg.String,
+        ["Enables optional rewriting features of the assembly checker.  Only relevant when --hints-file is specified.  Valid options for this argument are: or-to-add.  To specify multiple optional rules, pass this argument multiple times."]).
   Definition asm_error_on_unique_names_mismatch_spec : named_argT
     := ([Arg.long_key "asm-error-on-unique-name-mismatch"],
         Arg.Unit,
@@ -565,6 +570,8 @@ Module ForExtraction.
       (** assembly convention options *)
       ; assembly_conventions :> assembly_conventions_opt
       (** error if there are un-requested assembly functions *)
+      ; extra_rewrite_rules :> extra_rewrite_rules
+      (** optional rewrite rules to be used in assembly equivalence checker *)
       ; error_on_unused_assembly_functions :> error_on_unused_assembly_functions_opt
       (** don't prepend fiat to prefix *)
       ; no_prefix_fiat : bool
@@ -646,6 +653,7 @@ Module ForExtraction.
         ; no_error_on_unused_asm_functions_spec
         ; asm_input_first_spec
         ; asm_reg_rtl_spec
+        ; asm_extra_rewrite_rules_spec
         ; asm_error_on_unique_names_mismatch_spec
         ; doc_text_before_function_name_spec
         ; doc_text_before_type_name_spec
@@ -658,6 +666,10 @@ Module ForExtraction.
   (* We follow the standard convention of giving precedence to the final option passed *)
   Definition choose_one_of_many {A} (args : list A) : option A
     := List.nth_error (List.rev args) 0.
+  Compute (Arg.keyed_spec_list_data [asm_extra_rewrite_rules_spec; asm_extra_rewrite_rules_spec]).
+  Compute (Arg.keyed_spec_list_data common_optional_options).
+  Print unit.
+
 
   Definition parse_common_optional_options
              {supported_languages : supported_languagesT}
@@ -700,6 +712,7 @@ Module ForExtraction.
              , no_error_on_unused_asm_functionsv
              , asm_input_firstv
              , asm_reg_rtlv
+             , asm_extra_rewrite_rulev
              , asm_error_on_unique_names_mismatchv
              , doc_text_before_function_namev
              , doc_text_before_type_namev
@@ -765,13 +778,14 @@ Module ForExtraction.
                       ; relax_adc_sbb_return_carry_to_bitwidth_ := to_Z_flat_list relax_primitive_carry_to_bitwidthv
                       ; language_specific_cast_adjustment_ := negb (to_bool emit_all_castsv)
                       |}
-                  ; assembly_conventions :=
+                  ; assembly_conventions := 
                     {| assembly_calling_registers_ := to_reg_list asm_regv
                     ; assembly_callee_saved_registers_ := to_assembly_callee_saved_registers_default asm_callee_saved_registersv default_assembly_callee_saved_registers
                     ; assembly_stack_size_ := to_N_opt asm_stack_sizev
                     ; assembly_output_first_ := negb (to_bool asm_input_firstv)
                     ; assembly_argument_registers_left_to_right_ := negb (to_bool asm_reg_rtlv)
                     |}
+                  ; extra_rewrite_rules := to_string_list asm_extra_rewrite_rulev
                   ; ignore_unique_asm_names := negb (to_bool asm_error_on_unique_names_mismatchv)
                   ; error_on_unused_assembly_functions := negb (to_bool no_error_on_unused_asm_functionsv)
                   ; documentation_options

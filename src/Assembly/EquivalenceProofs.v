@@ -300,7 +300,7 @@ Local Ltac saturate_eval_merge_step :=
         | solve [ eauto 100 ] ].
 Local Ltac saturate_eval_merge := repeat saturate_eval_merge_step.
 
-Lemma App_correct {descr:description} n d (Hdag : gensym_dag_ok G d) i d' (H : App n d = Success (i, d'))
+Lemma App_correct {descr:description} {errules : extra_rewrite_rules} n d (Hdag : gensym_dag_ok G d) i d' (H : App n d = Success (i, d'))
   v (Heval : eval_node G d n v)
   : eval G d' (ExprRef i) v /\ gensym_dag_ok G d' /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof using Type.
@@ -322,6 +322,7 @@ Proof using Type. exact eq_refl. Qed.
 
 Theorem symex_ident_correct
         {descr:description}
+        {errules : extra_rewrite_rules}
         {t} (idc : ident t)
         (d : dag)
         (input_var_data : type.for_each_lhs_of_arrow var t)
@@ -421,6 +422,7 @@ Qed.
 
 Theorem symex_expr_correct
         {descr:description}
+        {errules : extra_rewrite_rules}
         {t} (expr1 : API.expr (var:=var) t) (expr2 : API.expr (var:=API.interp_type) t)
         (d : dag)
         (input_var_data : type.for_each_lhs_of_arrow var t) (input_runtime_var : type.for_each_lhs_of_arrow API.interp_type t)
@@ -520,7 +522,7 @@ Proof using Type.
                     | progress specialize_under_binders_by eauto using lift_eval_var_impl ].
 Qed.
 
-Lemma symex_expr_App_curried {descr:description} {t} (e : API.expr t) input_var_data d
+Lemma symex_expr_App_curried {descr:description} {t} {errules : extra_rewrite_rules} (e : API.expr t) input_var_data d
   : symex_expr (invert_expr.App_curried e (type.map_for_each_lhs_of_arrow (fun t v => ($v)%expr) input_var_data)) d
     = symex_T_app_curried (symex_expr e) input_var_data d.
 Proof using Type.
@@ -537,7 +539,7 @@ Proof using Type.
   all: destruct_head'_or; destruct_head'_ex; destruct_head'_and; congruence.
 Qed.
 
-Lemma symex_expr_smart_App_curried {descr:description} {t} (e : API.expr t) input_var_data d
+Lemma symex_expr_smart_App_curried {descr:description} {t} {errules : extra_rewrite_rules} (e : API.expr t) input_var_data d
   : symex_expr (invert_expr.smart_App_curried e input_var_data) d
     = symex_T_app_curried (symex_expr e) input_var_data d.
 Proof using Type.
@@ -548,7 +550,7 @@ Proof using Type.
 Qed.
 
 Theorem symex_PHOAS_PHOAS_correct
-        {t} (expr : API.Expr t)
+        {t} {errules : extra_rewrite_rules} (expr : API.Expr t)
         (d : dag)
         (input_var_data : type.for_each_lhs_of_arrow var t) (input_runtime_var : type.for_each_lhs_of_arrow API.interp_type t)
         (Hinputs : type.and_for_each_lhs_of_arrow (@eval_var d) input_var_data input_runtime_var)
@@ -729,7 +731,7 @@ Proof using Type.
 Qed.
 
 Theorem symex_PHOAS_correct
-        {t} (expr : API.Expr t)
+        {t} {errules : extra_rewrite_rules} (expr : API.Expr t)
         (d : dag)
         (inputs : list (idx + list idx)) (runtime_inputs : list (Z + list Z))
         (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
@@ -751,7 +753,7 @@ Proof using Type.
   all: lazymatch goal with
        | [ H : symex_PHOAS_PHOAS _ _ _ = Success _,
                input_runtime_var : type.for_each_lhs_of_arrow API.interp_type _
-           |- _ ] => apply (@symex_PHOAS_PHOAS_correct _ _ _ _ input_runtime_var) in H; try assumption; [ | clear H .. ]
+           |- _ ] => apply (@symex_PHOAS_PHOAS_correct _ _ _ _ _ input_runtime_var) in H; try assumption; [ | clear H .. ]
        | [ |- False ] => idtac
        end.
   all: repeat first [ progress break_innermost_match_hyps
@@ -960,13 +962,14 @@ Definition lift_dag_G {A} (v : dagG.M A) : G.M A
   := fun '(G, s) => let '(v, (G, d)) := v (G, s.(dag_state)) in
                     Some (v, (G, update_dag_with s (fun _ => d))).
 
-Definition SetRegFresh_G {descr:description} (r : REG) (v : Z) : G.M idx
+Definition SetRegFresh_G {descr:description} {errules : extra_rewrite_rules} (r : REG) (v : Z) : G.M idx
   := (idx <- lift_dag_G (merge_fresh_symbol_G v);
       _ <- G.lift (SetReg r idx);
       G.ret idx)%GM.
 
 Fixpoint build_merge_base_addresses_G
          {descr:description}
+         {errules : extra_rewrite_rules}
          {dereference_scalar:bool}
          (items : list (idx + list idx)) (reg_available : list REG) (runtime_reg : list Z) {struct items}
   : G.M (list ((REG + idx) + idx))
@@ -991,13 +994,13 @@ Fixpoint build_merge_base_addresses_G
            G.ret (inl addr :: rest))
      end%GM%N%x86symex.
 
-Definition compute_stack_base_G {descr:description} (rsp_val : Z) (stack_size : nat)
+Definition compute_stack_base_G {descr:description} {errules : extra_rewrite_rules} (rsp_val : Z) (stack_size : nat)
   : G.M idx
   := (rsp_idx <- SetRegFresh_G rsp rsp_val;
       stack_size <- G.lift (Symbolic.App (zconst 64 (-8 * Z.of_nat stack_size), []));
       G.lift (Symbolic.App (add 64%N, [rsp_idx; stack_size])))%GM.
 
-Definition build_merge_stack_placeholders_G {descr:description} (rsp_val : Z) (stack_vals : list Z)
+Definition build_merge_stack_placeholders_G {descr:description} {errules : extra_rewrite_rules} (rsp_val : Z) (stack_vals : list Z)
   : G.M idx
   := (let stack_size := List.length stack_vals in
       stack_placeholders <- lift_dag_G (build_inputarray_G stack_vals);
@@ -1122,7 +1125,7 @@ Proof.
                     | progress inversion_option
                     | progress subst
                     | progress cbn [List.map interp_op fst snd] in *
-                    | progress apply merge_node_bounds_ok
+                    | progress apply merge_node_bounds_ok with (ctx := G)
                     | reflexivity
                     | exact _
                     | progress intros
@@ -1395,7 +1398,7 @@ Proof.
   eexists; reflexivity.
 Qed.
 
-Lemma SetRegFresh_eq_G {descr:description} G r s v idx s'
+Lemma SetRegFresh_eq_G {descr:description} {errules : extra_rewrite_rules} G r s v idx s'
       (H : SetRegFresh r s = Success (idx, s'))
   : exists G',
     SetRegFresh_G r v (G, s) = Some (idx, (G', s')).
@@ -1422,7 +1425,7 @@ Proof.
                | progress destruct_head'_prod ].
 Qed.
 
-Lemma build_merge_base_addresses_eq_G {descr:description} {dereference_scalar:bool}
+Lemma build_merge_base_addresses_eq_G {descr:description} {dereference_scalar:bool} {errules : extra_rewrite_rules}
       G items reg_available runtime_reg s res s'
       (Hreg : Nat.min (List.length items) (List.length reg_available) <= List.length runtime_reg)
       (H : build_merge_base_addresses (dereference_scalar:=dereference_scalar) items reg_available s = Success (res, s'))
@@ -1457,7 +1460,7 @@ Proof.
                       | [ H : Forall2 _ [] _ |- _ ] => inversion H; clear H
                       | [ H : S ?x <= S ?y |- _ ] => assert (x <= y) by lia; clear H
                       | [ H : build_merge_base_addresses _ _ _ = _ |- _ ]
-                        => specialize (IH _ _ _ _ _ H)
+                        => specialize (IH _ _ _ _ _ _ H)
                       | [ IH : forall G rr, _ -> exists G', build_merge_base_addresses_G ?it ?ra rr (G, ?s) = _,
                             H' : build_merge_base_addresses_G ?it ?ra ?rrv (?Gv, ?s) = _ |- _ ]
                         => specialize (IH Gv rrv)
@@ -1468,7 +1471,7 @@ Proof.
                     | progress destruct_head'_prod ].
 Qed.
 
-Lemma compute_stack_base_eq_G {descr:description} G rsp_val stack_size s res s'
+Lemma compute_stack_base_eq_G {descr:description} {errules : extra_rewrite_rules} G rsp_val stack_size s res s'
       (H : compute_stack_base stack_size s = Success (res, s'))
   : exists G',
     compute_stack_base_G rsp_val stack_size (G, s) = Some (res, (G', s')).
@@ -1494,7 +1497,7 @@ Proof.
                | break_innermost_match_step ].
 Qed.
 
-Lemma build_merge_stack_placeholders_eq_G {descr:description} G rsp_val stack_vals s res s'
+Lemma build_merge_stack_placeholders_eq_G {descr:description} {errules : extra_rewrite_rules} G rsp_val stack_vals s res s'
       (H : build_merge_stack_placeholders (List.length stack_vals) s = Success (res, s'))
   : exists G',
     build_merge_stack_placeholders_G rsp_val stack_vals (G, s) = Some (res, (G', s')).
@@ -1525,7 +1528,7 @@ Proof.
                | break_innermost_match_step ].
 Qed.
 
-Lemma SetReg_ok {descr:description} G s s' reg idx rn lo sz v
+Lemma SetReg_ok {descr:description} {errules : extra_rewrite_rules} G s s' reg idx rn lo sz v
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
       (H64 : sz = 64%N)
       (H : SetReg reg idx s = Success (tt, s'))
@@ -1567,7 +1570,7 @@ Proof.
   (* need to do this early to deal with conversion slowness *)
   repeat match goal with
          | [ H : context[simplify ?s ?n] |- _ ]
-           => unshelve epose proof (@eval_simplify _ s n _ _); shelve_unifiable;
+           => unshelve epose proof (@eval_simplify _ _ s n _ _); shelve_unifiable;
               [ solve [ repeat first [ eassumption | exactly_once econstructor ] ] | ];
               generalize dependent (simplify s n); intros
          | [ H : context[merge ?e ?d] |- _ ]
@@ -1585,7 +1588,7 @@ Proof.
                | eapply ex_intro ].
 Qed.
 
-Lemma SetReg_ok_bounded {descr:description} G s s' reg idx rn lo sz v
+Lemma SetReg_ok_bounded {descr:description} {errules : extra_rewrite_rules} G s s' reg idx rn lo sz v
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
       (H64 : sz = 64%N)
       (H : SetReg reg idx s = Success (tt, s'))
@@ -1612,7 +1615,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma SetRegFresh_G_ok {descr:description} G G' s s' reg idx rn lo sz v
+Lemma SetRegFresh_G_ok {descr:description} {errules : extra_rewrite_rules} G G' s s' reg idx rn lo sz v
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
       (H64 : sz = 64%N)
       (H : SetRegFresh_G reg v (G, s) = Some (idx, (G', s')))
@@ -1658,7 +1661,7 @@ Proof.
                | eapply ex_intro ].
 Qed.
 
-Lemma SetRegFresh_G_ok_bounded {descr:description} G G' s s' reg idx rn lo sz v
+Lemma SetRegFresh_G_ok_bounded {descr:description} {errules : extra_rewrite_rules} G G' s s' reg idx rn lo sz v
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
       (H64 : sz = 64%N)
       (H : SetRegFresh_G reg v (G, s) = Some (idx, (G', s')))
@@ -1685,7 +1688,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma GetReg_ok {descr:description} G s s' reg idx rn lo sz v
+Lemma GetReg_ok {descr:description} {errules : extra_rewrite_rules} G s s' reg idx rn lo sz v
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
       (H64 : sz = 64%N)
       (H : GetReg reg s = Success (idx, s'))
@@ -1722,7 +1725,7 @@ Proof.
   (* need to do this early to deal with conversion slowness *)
   repeat match goal with
          | [ H : context[simplify ?s ?n] |- _ ]
-           => unshelve epose proof (@eval_simplify _ s n _ _); shelve_unifiable;
+           => unshelve epose proof (@eval_simplify _ _ s n _ _); shelve_unifiable;
               [ solve [ repeat first [ eassumption | exactly_once econstructor ] ] | ];
               generalize dependent (simplify s n); intros
          | [ H : context[merge ?e ?d] |- _ ]
@@ -1744,7 +1747,7 @@ Proof.
                     | eapply ex_intro ].
 Qed.
 
-Lemma GetReg_ok_bounded {descr:description} G s s' reg idx rn lo sz v
+Lemma GetReg_ok_bounded {descr:description} {errules : extra_rewrite_rules} G s s' reg idx rn lo sz v
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
       (H64 : sz = 64%N)
       (H : GetReg reg s = Success (idx, s'))
@@ -1861,7 +1864,7 @@ Proof.
   rewrite get_reg_set_reg_full; break_innermost_match; reflect_hyps; cbv beta in *; try reflexivity; lia.
 Qed.
 
-Lemma compute_array_address_ok {descr:description} G s s' base i idx base_val
+Lemma compute_array_address_ok {descr:description} {errules : extra_rewrite_rules} G s s' base i idx base_val
       (H : compute_array_address base i s = Success (idx, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -1900,7 +1903,7 @@ Proof.
   (* need to do this early to deal with conversion slowness *)
   repeat first [ match goal with
                  | [ H : context[simplify ?s ?n] |- _ ]
-                   => unshelve epose proof (@eval_simplify _ s n _ _); shelve_unifiable;
+                   => unshelve epose proof (@eval_simplify _ _ s n _ _); shelve_unifiable;
                       [ solve [ repeat first [ eassumption | solve [ eauto ] | exactly_once econstructor ] ] | ];
                       generalize dependent (simplify s n); intros
                  | [ H : context[merge ?e ?d] |- _ ]
@@ -1928,7 +1931,7 @@ Proof.
                     | progress (push_Zmod; pull_Zmod) ].
 Qed.
 
-Lemma compute_array_address_ok_bounded {descr:description} G s s' base i idx base_val
+Lemma compute_array_address_ok_bounded {descr:description} {errules : extra_rewrite_rules} G s s' base i idx base_val
       (H : compute_array_address base i s = Success (idx, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -1953,7 +1956,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma build_merge_array_addresses_ok {descr:description} G s s'
+Lemma build_merge_array_addresses_ok {descr:description} {errules : extra_rewrite_rules} G s s'
       base base_val items addrs
       (H : build_merge_array_addresses base items s = Success (addrs, s'))
       (d := s.(dag_state))
@@ -2025,7 +2028,7 @@ Proof.
     eauto 20. }
 Qed.
 
-Lemma compute_stack_base_G_ok {descr:description} G G' s s' rv
+Lemma compute_stack_base_G_ok {descr:description} {errules : extra_rewrite_rules} G G' s s' rv
       (rsp_val : Z) (stack_size : nat)
       (H : compute_stack_base_G rsp_val stack_size (G, s) = Some (rv, (G', s')))
       (d := s.(dag_state))
@@ -2072,7 +2075,7 @@ Proof.
                       | [ H : (tt, (?y, ?z)) = (tt, (?y', ?z')) |- _ ]
                         => is_var y; is_var z; is_var y'; is_var z'; inversion H; clear H
                       | [ H : context[simplify ?s ?n] |- _ ]
-                        => unshelve epose proof (@eval_simplify _ s n _ _); shelve_unifiable;
+                        => unshelve epose proof (@eval_simplify _ _ s n _ _); shelve_unifiable;
                            [ solve [ repeat first [ eassumption | solve [ eauto ] | exactly_once econstructor ] ] | ];
                            generalize dependent (simplify s n); intros
                       | [ H : context[merge ?e ?d] |- _ ]
@@ -2099,7 +2102,7 @@ Proof.
                     | f_equal; lia ].
 Qed.
 
-Lemma build_merge_stack_placeholders_G_ok {descr:description} G G' s s'
+Lemma build_merge_stack_placeholders_G_ok {descr:description} {errules : extra_rewrite_rules} G G' s s'
       (rsp_val : Z) (stack_vals : list Z) stack_base
       (H : build_merge_stack_placeholders_G rsp_val stack_vals (G, s) = Some (stack_base, (G', s')))
       (d := s.(dag_state))
@@ -2192,7 +2195,7 @@ Ltac handle_eval_eval :=
          end.
 
 Lemma build_merge_base_addresses_G_ok
-      {descr:description} {dereference_scalar:bool}
+      {descr:description} {errules : extra_rewrite_rules} {dereference_scalar:bool}
   : forall (idxs : list (idx + list idx))
            (reg_available : list REG)
            (runtime_reg : list Z)
@@ -2414,7 +2417,7 @@ Proof.
                  end ].
 Qed.
 
-Lemma compute_stack_ok {descr:description} G s s' base
+Lemma compute_stack_ok {descr:description} {errules : extra_rewrite_rules} G s s' base
       (rsp_val : Z) (stack_size : nat)
       (H : compute_stack_base stack_size s = Success (base, s'))
       (d := s.(dag_state))
@@ -2441,7 +2444,7 @@ Proof.
   eapply compute_stack_base_G_ok in H; try eassumption.
 Qed.
 
-Lemma build_merge_stack_placeholders_ok {descr:description} G s s'
+Lemma build_merge_stack_placeholders_ok {descr:description} {errules : extra_rewrite_rules} G s s'
       (rsp_val : Z) (stack_vals : list Z) stack_base
       (H : build_merge_stack_placeholders (List.length stack_vals) s = Success (stack_base, s'))
       (d := s.(dag_state))
@@ -2474,7 +2477,7 @@ Proof.
 Qed.
 
 Lemma build_merge_base_addresses_ok
-      {descr:description} {dereference_scalar:bool}
+      {descr:description} {errules : extra_rewrite_rules} {dereference_scalar:bool}
       (idxs : list (idx + list idx))
       (reg_available : list REG)
       (runtime_reg : list Z)
@@ -2594,7 +2597,7 @@ Proof.
 Qed.
 
 
-Lemma mapM_GetReg_ok_bounded {descr:description} G
+Lemma mapM_GetReg_ok_bounded {descr:description} {errules : extra_rewrite_rules} G
   : forall regs idxs reg_vals s s'
            (H : mapM GetReg regs s = Success (idxs, s'))
            (d := s.(dag_state))
@@ -2769,19 +2772,19 @@ Local Instance Merge_reg_same {descr:description} x : same_reg_some_of_success (
 Proof. same_reg_some_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance App_reg_same {descr:description} x : same_reg_some_of_success (Symbolic.App x).
+Local Instance App_reg_same {descr:description} {errules : extra_rewrite_rules} x : same_reg_some_of_success (Symbolic.App x).
 Proof. same_reg_some_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance GetReg_reg_same {descr:description} r : same_reg_some_of_success (GetReg r).
+Local Instance GetReg_reg_same {descr:description} {errules : extra_rewrite_rules} r : same_reg_some_of_success (GetReg r).
 Proof. same_reg_some_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance Address_reg_same {descr:description} {sa:AddressSize} a : same_reg_some_of_success (Address a).
+Local Instance Address_reg_same {descr:description} {sa:AddressSize} {errules : extra_rewrite_rules} a : same_reg_some_of_success (Address a).
 Proof. same_reg_some_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance GetOperand_reg_same {descr:description} {sz:OperationSize} {sa:AddressSize} arg : same_reg_some_of_success (GetOperand arg).
+Local Instance GetOperand_reg_same {descr:description} {sz:OperationSize} {sa:AddressSize} {errules : extra_rewrite_rules} arg : same_reg_some_of_success (GetOperand arg).
 Proof. same_reg_some_of_success_t. Qed.
 
 (* TODO: move? *)
@@ -2789,7 +2792,7 @@ Local Instance GetFlag_reg_same f : same_reg_some_of_success (GetFlag f).
 Proof. same_reg_some_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance SetOperand_reg_same {descr:description} {sz:OperationSize} {sa:AddressSize} arg v : same_reg_some_of_success (SetOperand arg v).
+Local Instance SetOperand_reg_same {descr:description} {sz:OperationSize} {sa:AddressSize} {errules : extra_rewrite_rules} arg v : same_reg_some_of_success (SetOperand arg v).
 Proof. same_reg_some_of_success_t. Qed.
 
 (* TODO: move? *)
@@ -2829,7 +2832,7 @@ Proof.
 Defined.
 
 (* TODO: move? *)
-Fixpoint Symeval_reg_same descr sz sa args {struct args} : same_reg_some_of_success (@Symeval descr sz sa args).
+Fixpoint Symeval_reg_same descr errules sz sa args {struct args} : same_reg_some_of_success (@Symeval descr errules sz sa args).
 Proof.
   destruct args; cbn [Symeval] in *; typeclasses eauto.
 Qed.
@@ -2838,7 +2841,7 @@ Typeclasses Opaque Symeval.
 Typeclasses Transparent AddressSize OperationSize.
 
 (* TODO: move? *)
-Local Instance SymexNormalInstruction_reg_same {descr:description} instr : same_reg_some_of_success (SymexNormalInstruction instr).
+Local Instance SymexNormalInstruction_reg_same {descr:description} {errules : extra_rewrite_rules} instr : same_reg_some_of_success (SymexNormalInstruction instr).
 Proof.
   destruct instr; cbv [SymexNormalInstruction err Symbolic.bind ret Syntax.op Syntax.args ErrorT.bind same_reg_some_of_success] in *; intros.
   same_reg_some_of_success_t.
@@ -2851,14 +2854,14 @@ Proof.
 Qed.
 
 (* TODO: move? *)
-Local Instance SymexLine_reg_same line : same_reg_some_of_success (SymexLine line).
+Local Instance SymexLine_reg_same {errules : extra_rewrite_rules} line : same_reg_some_of_success (SymexLine line).
 Proof.
   cbv [SymexLine SymexRawLine err ret] in *; break_innermost_match; try congruence.
   apply SymexNormalInstruction_reg_same.
 Qed.
 
 (* TODO: move? *)
-Lemma SymexLines_reg_same lines s s'
+Lemma SymexLines_reg_same {errules : extra_rewrite_rules} lines s s'
       (H : SymexLines lines s = Success (tt, s'))
   : same_reg_some s s'.
 Proof.
@@ -2929,19 +2932,19 @@ Local Instance Merge_mem_same {descr:description} x : same_mem_addressed_of_succ
 Proof. same_mem_addressed_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance App_mem_same {descr:description} x : same_mem_addressed_of_success (Symbolic.App x).
+Local Instance App_mem_same {descr:description} {errules : extra_rewrite_rules} x : same_mem_addressed_of_success (Symbolic.App x).
 Proof. same_mem_addressed_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance GetReg_mem_same {descr:description} r : same_mem_addressed_of_success (GetReg r).
+Local Instance GetReg_mem_same {descr:description} {errules : extra_rewrite_rules} r : same_mem_addressed_of_success (GetReg r).
 Proof. same_mem_addressed_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance Address_mem_same descr sa a : same_mem_addressed_of_success (@Address descr sa a).
+Local Instance Address_mem_same descr errules sa a : same_mem_addressed_of_success (@Address descr errules sa a).
 Proof. same_mem_addressed_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance GetOperand_mem_same descr sz sa arg : same_mem_addressed_of_success (@GetOperand descr sz sa arg).
+Local Instance GetOperand_mem_same descr errules sz sa arg : same_mem_addressed_of_success (@GetOperand descr errules sz sa arg).
 Proof. same_mem_addressed_of_success_t. Qed.
 
 (* TODO: move? *)
@@ -2949,7 +2952,7 @@ Local Instance GetFlag_mem_same f : same_mem_addressed_of_success (GetFlag f).
 Proof. same_mem_addressed_of_success_t. Qed.
 
 (* TODO: move? *)
-Local Instance SetOperand_mem_same descr sz sa arg v : same_mem_addressed_of_success (@SetOperand descr sz sa arg v).
+Local Instance SetOperand_mem_same descr errules sz sa arg v : same_mem_addressed_of_success (@SetOperand descr errules sz sa arg v).
 Proof. same_mem_addressed_of_success_t. Qed.
 
 (* TODO: move? *)
@@ -2997,7 +3000,7 @@ Proof.
 Defined.
 
 (* TODO: move? *)
-Fixpoint Symeval_mem_same descr sz sa args {struct args} : same_mem_addressed_of_success (@Symeval descr sz sa args).
+Fixpoint Symeval_mem_same descr errules sz sa args {struct args} : same_mem_addressed_of_success (@Symeval descr errules sz sa args).
 Proof.
   destruct args; cbn [Symeval] in *; typeclasses eauto.
 Qed.
@@ -3006,21 +3009,21 @@ Typeclasses Opaque Symeval.
 Typeclasses Transparent AddressSize OperationSize.
 
 (* TODO: move? *)
-Local Instance SymexNormalInstruction_mem_same {descr:description} instr : same_mem_addressed_of_success (SymexNormalInstruction instr).
+Local Instance SymexNormalInstruction_mem_same {descr:description} {errules : extra_rewrite_rules} instr : same_mem_addressed_of_success (SymexNormalInstruction instr).
 Proof.
   destruct instr; cbv [SymexNormalInstruction err Symbolic.bind ret Syntax.op Syntax.args ErrorT.bind same_mem_addressed_of_success] in *; intros.
   same_mem_addressed_of_success_t.
 Qed.
 
 (* TODO: move? *)
-Local Instance SymexLine_mem_same line : same_mem_addressed_of_success (SymexLine line).
+Local Instance SymexLine_mem_same {errules : extra_rewrite_rules} line : same_mem_addressed_of_success (SymexLine line).
 Proof.
   cbv [SymexLine SymexRawLine err ret] in *; break_innermost_match; try congruence.
   apply SymexNormalInstruction_mem_same.
 Qed.
 
 (* TODO: move? *)
-Lemma SymexLines_mem_same lines s s'
+Lemma SymexLines_mem_same {errules : extra_rewrite_rules} lines s s'
       (H : SymexLines lines s = Success (tt, s'))
   : same_mem_addressed s s'.
 Proof.
@@ -3335,7 +3338,7 @@ Proof.
 Qed.
 
 Local Existing Instance Permutation_cons | 0.
-Lemma LoadArray_ok {descr:description} G s s' base base_val len idxs
+Lemma LoadArray_ok {descr:description} {errules : extra_rewrite_rules} G s s' base base_val len idxs
       (H : LoadArray base len s = Success (idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -3443,7 +3446,7 @@ Ltac saturate_lengths_step :=
   end.
 Ltac saturate_lengths := repeat saturate_lengths_step.
 
-Lemma LoadOutputs_ok {descr:description} {dereference_scalar:bool} G s s' outputaddrs output_types output_vals idxs
+Lemma LoadOutputs_ok {descr:description} {dereference_scalar:bool} {errules : extra_rewrite_rules} G s s' outputaddrs output_types output_vals idxs
       (H : LoadOutputs (dereference_scalar:=dereference_scalar) outputaddrs output_types s = Success (Success idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
