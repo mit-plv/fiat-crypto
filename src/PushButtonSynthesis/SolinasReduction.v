@@ -146,14 +146,17 @@ Section __.
       congruence. }
   Qed.
 
+  Local Notation eval4f := (eval weight 4).
   Local Notation evalf := (eval weight n).
   Local Notation weightf := weight.
   Local Notation notations_for_docstring
     := (CorrectnessStringification.dyn_context.cons
-          weightf "weight"
+          eval4f "eval4"
           (CorrectnessStringification.dyn_context.cons
-             evalf "eval"
-             CorrectnessStringification.dyn_context.nil))%string.
+             weightf "weight"
+             (CorrectnessStringification.dyn_context.cons
+                evalf "eval"
+                CorrectnessStringification.dyn_context.nil)))%string.
   Local Notation "'docstring_with_summary_from_lemma!' summary correctness"
     := (docstring_with_summary_from_lemma_with_ctx!
           notations_for_docstring
@@ -173,6 +176,17 @@ Section __.
          (Some boundsn, (Some boundsn, tt))
          (Some boundsn).
 
+  Definition square
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         possible_values
+         (reified_square_gen
+            @ GallinaReify.Reify base
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c)
+         (Some boundsn, tt)
+         (Some boundsn).
+
   Definition smul (prefix : string)
     : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
@@ -181,6 +195,15 @@ Section __.
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements."]%string)
              (mul_correct weightf n m boundsn)).
+
+  Definition ssquare (prefix : string)
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "square" square
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " squares a field element."]%string)
+             (square_correct weightf m boundsn)).
 
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
@@ -206,12 +229,20 @@ Section __.
   Lemma Wf_mul res (Hres : mul = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
+  Lemma square_correct res
+        (Hres : square = Success res)
+    : square_correct weight m boundsn (Interp res).
+  Proof. Admitted.
+
+  Lemma Wf_square res (Hres : square = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Section for_stringification.
     Local Open Scope string_scope.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("mul", wrap_s smul)].
+      := [("mul", wrap_s smul); ("square", wrap_s ssquare)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 
@@ -239,5 +270,14 @@ Module Export Hints.
 #[global]
   Hint Immediate
        Wf_mul
+  : wf_op_cache.
+
+#[global]
+  Hint Opaque
+       square
+  : wf_op_cache.
+#[global]
+  Hint Immediate
+       Wf_square
   : wf_op_cache.
 End Hints.

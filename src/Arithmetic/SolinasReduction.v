@@ -2005,6 +2005,76 @@ Module SolinasReduction.
     Qed.
     (* END SECTION MULMOD *)
 
+    Section squaremod.
+
+      Definition sqr_indiv' base (state : list (Z * Z)) (p : list (Z * Z)) :=
+        fold_right (fun a b => b ++ Associational.sat_mul base [a] [a]) state p.
+
+      Definition sqr_indiv base (p : list (Z * Z)) :=
+        sqr_indiv' base [] p.
+
+      Definition square_no_reduce base (p : list Z) :=
+        let p_a := Positional.to_associational weight 4 p in
+        (* a0 * [a1, a2, a3] *)
+        let prod0 := Saturated.Associational.sat_mul base (firstn 1 p_a) (skipn 1 p_a) in
+        (* a3 * [a1, a2] *)
+        let prod1 := Saturated.Associational.sat_mul base (skipn 3 p_a) (firstn 2 (skipn 1 p_a)) in
+        (* first carry chain *)
+        let carry1_a := prod0 ++ prod1 in
+        let carry1_rows := Saturated.Rows.from_associational weight 8 carry1_a in
+        let carry1 := Saturated.Rows.flatten weight 8 carry1_rows in
+        (* a1 * [a2], second carry chain *)
+        let prod2 := Saturated.Associational.sat_mul base (firstn 1 (skipn 1 p_a)) (firstn 1 (skipn 2 p_a)) in
+        let carry2_rows := Saturated.Rows.from_associational weight 8 prod2 in
+        let carry2 := Saturated.Rows.flatten' weight carry1 carry2_rows in
+        (* doubling, third carry chain *)
+        let carry2 := (fst carry2) ++ [snd carry2] in
+        let double := Saturated.Rows.flatten weight 8 [carry2; carry2] in
+        (* squaring, fourth carry chain *)
+        let square_a := sqr_indiv base p_a in
+        let square_rows := Saturated.Rows.from_associational weight 8 square_a in
+        let square := Saturated.Rows.flatten' weight double square_rows in
+        fst square.
+
+      Definition squaremod base s c (p : list Z) :=
+        let sqr := square_no_reduce base p in
+        let r := reduce_full' base s c 4 sqr in
+        r.
+
+      Lemma sat_mul_comm (p q : list (Z * Z)) :
+        Associational.eval (Associational.sat_mul s p q) =
+          Associational.eval (Associational.sat_mul s q p).
+      Proof using n_gt_1 s_pos. push; lia. Qed.
+
+      Lemma sat_mul_distr (p q1 q2 : list (Z * Z)) :
+        Associational.eval (Associational.sat_mul s p (q1 ++ q2)) =
+          Associational.eval (Associational.sat_mul s p q1) +
+            Associational.eval (Associational.sat_mul s p q2).
+      Proof. push; lia. Qed.
+
+      Definition slice' (state p : list (Z*Z)) (inds : list nat) :=
+        fold_right (fun a b => [nth_default (0,0) p a] ++ b) state inds.
+
+      Definition slice (a b : nat) (p : list (Z*Z)) :=
+        let inds := seq a b in
+        slice' [] p inds.
+
+      Lemma skipn_firstn_decomp (p : list (Z*Z)) (a b : nat) :
+        firstn b (skipn a p) = slice a (a + b) p.
+      Proof.
+        induction p.
+        rewrite skipn_nil.
+        rewrite firstn_nil.
+      Admitted.
+
+      Theorem square_no_reduce_correct (p : list Z) :
+        eval weight 4 (square_no_reduce base p) = (eval weight 4 p) * (eval weight 4 p).
+      Proof.
+        cbv [square_no_reduce].
+      Admitted.
+
+    End squaremod.
+
   End __.
 
 End SolinasReduction.
