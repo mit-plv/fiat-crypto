@@ -240,7 +240,79 @@ Section with_parameters.
 
 
 
+  Lemma ranged_for'_length_helper (from' : nat) scratch lst
+    :  length (snd (ranged_for' 0 from'
+                      (λ (acc : list T) (tok : ExitToken.t) (idx : Z) (_ : 0 - 1 < idx < from'),
+                        (tok, upd acc (Z.to_nat idx) (nth (Z.to_nat idx) lst default))) scratch : 
+                   ExitToken.t * list T)) = length scratch.
+  Proof.
+    revert scratch lst.
+    induction from'.
+    {
+      simpl.
+      lia.
+    }
+    {
+      intros.
+      replace (Z.of_nat (S from')) with ((Z.of_nat from') + 1) by lia.
+      erewrite ranged_for'_unfold_r; try lia.
+      simpl.
+      set (fst _).
+      destruct y; simpl; eauto.
+      rewrite upd_length.
+      eauto.
+    }
+  Qed.
 
+  
+  
+  Lemma ranged_for'_invariant {A} n m (f : _ -> _ -> _ -> _) acc (P : A -> Prop)
+    : (forall acc' tok idx, fst (f acc' tok idx) = tok) ->
+      P acc ->
+      (forall acc' tok idx, n - 1 < idx < m -> P acc' -> P (snd (f acc' tok idx))) ->
+      P (snd (nd_ranged_for' n m f acc)).
+  Proof.
+    intro Htok.
+    unfold nd_ranged_for'.
+    unfold nd_ranged_for_break.
+    intros H0 Hn.
+    revert acc H0.
+    pose proof (z_range_sound n m) as H'; revert H'.
+    generalize ((z_range n m)).
+    
+    induction l; simpl; intros; eauto.
+    specialize (IHl ltac:(eauto)).
+    specialize (H' a ltac:(tauto)).
+    rewrite (surjective_pairing (f acc ExitToken.new a)).
+    rewrite Htok.
+    eapply IHl.
+    eapply Hn; eauto.
+  Qed.
+
+  
+  Lemma skipn_ranged_for'_upd (from' : nat) scratch lst
+    : skipn from'
+        (snd
+           (ranged_for' 0 from'
+              (λ (acc0 : list T) (tok : ExitToken.t) (idx : Z) (_ : 0 - 1 < idx < from'),
+                (tok, upd acc0 (Z.to_nat idx) (nth (Z.to_nat idx) lst default))) scratch))
+      = skipn from' scratch.
+  Proof.
+    rewrite <- nd_as_ranged_for'.
+    eapply ranged_for'_invariant; eauto.
+    intros.
+    simpl in *.
+    eapply nth_error_ext.
+    intro i.
+    rewrite ListUtil.nth_error_skipn.
+    rewrite nth_error_upd_diff.
+    {
+      rewrite <- !ListUtil.nth_error_skipn.
+      congruence.
+    }
+    lia.
+  Qed.    
+    
 
   Lemma compile_broadcast_expr' {t m l e} (len : nat) (lst scratch : list T) :
     len = length scratch ->
@@ -278,10 +350,27 @@ Section with_parameters.
     rewrite nd_as_ranged_for_all.
     rewrite ranged_for_all_as_ranged_for.
     repeat compile_step.
-
-    assert (~ a_var = to_var) by admit.
-    assert (~ a_var = idx_var) by admit.
-
+    
+    assert (~ a_var = to_var).
+    {
+      intro; subst.
+      revert H1.
+      unfold DEXPR.
+      simpl.
+      unfold WeakestPrecondition.get.
+      rewrite H5.
+      intro H'; destruct H' as [? [? ?]]; congruence.
+    }
+    assert (~ a_var = idx_var).
+    {
+      intro; subst.
+      revert H1.
+      unfold DEXPR.
+      simpl.
+      unfold WeakestPrecondition.get.
+      rewrite H4.
+      intro H'; destruct H' as [? [? ?]]; congruence.
+    }
     eapply (compile_ranged_for_fresh _ _ _ _ _ _ _ _ _ _ _ _ idx_var to_var).
     repeat compile_step.
     repeat compile_step.
@@ -343,13 +432,46 @@ Section with_parameters.
         (*TODO: need to know about the ranged_for'*)
         specialize (H' mem0 (firstn (Z.to_nat from') acc)).
         rewrite firstn_length in H'.
-        assert (from' <= length acc) by admit.
+        assert (from' <= length acc).
+        {
+          unfold acc.
+          unfold a.
+          replace (from') with (Z.of_nat (Z.to_nat from')) by lia.
+          rewrite ranged_for'_length_helper.
+          lia.
+        }
         rewrite Nat.min_l in H' by lia.
         rewrite Z2Nat.id in H'.
         eapply H'.
         all:try lia.
-  (*TODO: need to prove last n of scratch and acc are the same
-        ecancel_assumption.*)
+        replace (firstn (Z.to_nat from') acc ++ skipn (Z.to_nat from') scratch) with acc; eauto.
+        rewrite <- firstn_skipn with (n:=Z.to_nat from') (l:=acc) at 1.
+        f_equal.
+        unfold acc, a.
+        replace (from') with (Z.of_nat (Z.to_nat from')) by lia.
+        rewrite Nat2Z.id.
+        apply skipn_ranged_for'_upd.
+      }
+      {
+        assert ((array (truncated_word szT)
+                   sz_word a_ptr (map word_of_T acc) * R) mem0)%sep.
+        (*
+        1:admit.
+        eapply array_store_of_sep in H11.
+        destruct H11 as [? [? ?]].
+        
+        eexists; split.
+        {
+          eapply array_store_of_sep in H12.
+        }
+        {
+          unfold lp.
+          simpl.
+          split; eauto.
+          
+          eauto.
+        simpl.
+      }*)
   Admitted.
 
     Lemma compile_broadcast_expr {t m l e} (len : nat) (lst scratch : list T) :
@@ -481,6 +603,20 @@ Section with_parameters.
     rewrite word.ring_morph_mul.
     reflexivity.
   Qed.
+
+  
+  Lemma broadcast_var l idx_var scratch a_ptr b_ptr R a_var a_data
+    : map.get l a_var = Some a_ptr ->
+      ~a_var = idx_var ->
+      let R' := (a_data$@a_ptr ⋆ R)
+      in
+      broadcast_expr l idx_var scratch b_ptr R'
+        (expr.load szT
+           (expr.op bopname.add a_var
+              (expr.op bopname.mul idx_var sz_word)))
+        a_data.
+  Proof using T_Fits_ok locals_ok mem_ok word_ok.
+  Admitted.
 
 
   End WithAccessSize.
