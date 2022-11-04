@@ -408,7 +408,7 @@ Ltac step_Merge :=
 Ltac step_symex2 := first [step_symex1 | step_Merge].
 Ltac step_symex ::= step_symex2.
 
-Lemma App_R {descr:description} s m (HR : R s m) e v (H : eval_node G s e v) :
+Lemma App_R {descr:description} {errules : extra_rewrite_rules} s m (HR : R s m) e v (H : eval_node G s e v) :
   forall i s', Symbolic.App e s = Success (i, s') ->
   R s' m /\ s :< s' /\ eval s' i v.
 Proof using Type.
@@ -470,7 +470,7 @@ Ltac step_SetFlag :=
     [eassumption|..|clear H]
   end.
 
-Lemma GetReg_R {descr:description} s m (HR: R s m) r i s'
+Lemma GetReg_R {descr:description} {errules : extra_rewrite_rules} s m (HR: R s m) r i s'
   (H : GetReg r s = Success (i, s'))
   : R s' m  /\ s :< s' /\ eval s' i (get_reg m r).
 Proof using Type.
@@ -492,7 +492,7 @@ Ltac step_GetReg :=
     [eassumption|..|clear H]
   end.
 
-Lemma Address_R {descr:description} s m (HR : R s m) (sa:AddressSize) o a s' (H : Symbolic.Address o s = Success (a, s'))
+Lemma Address_R {descr:description} {errules : extra_rewrite_rules} s m (HR : R s m) (sa:AddressSize) o a s' (H : Symbolic.Address o s = Success (a, s'))
   : R s' m /\ s :< s' /\ exists v, eval s' a v /\ @DenoteAddress sa m o = v.
 Proof using Type.
   destruct o as [? ? ? ?]; cbv [Address DenoteAddress Syntax.mem_base_reg Syntax.mem_offset Syntax.mem_scale_reg err ret] in *; repeat step_symex.
@@ -706,7 +706,7 @@ Proof using Type.
 Qed.
 
 
-Lemma GetOperand_R {descr:description} s m (HR: R s m) (so:OperationSize) (sa:AddressSize) a i s'
+Lemma GetOperand_R {descr:description} {errules : extra_rewrite_rules} s m (HR: R s m) (so:OperationSize) (sa:AddressSize) a i s'
   (H : GetOperand a s = Success (i, s'))
   : R s' m /\ s :< s' /\ exists v, eval s' i v /\ DenoteOperand sa so m a = Some v.
 Proof using Type.
@@ -761,7 +761,7 @@ Ltac step_GetOperand :=
   end.
 
 (* note: do the two SetOperand both truncate inputs or not?... *)
-Lemma R_SetOperand {descr:description} s m (HR : R s m)
+Lemma R_SetOperand {descr:description} {errules : extra_rewrite_rules} s m (HR : R s m)
   (sz:OperationSize) (sa:AddressSize) a i _tt s' (H : Symbolic.SetOperand a i s = Success (_tt, s'))
   v (Hv : eval s i v)
   : exists m', SetOperand sa sz m a v = Some m' /\ R s' m' /\ s :< s'.
@@ -1103,7 +1103,7 @@ Proof using Type.
 Qed.
 
 
-Lemma SymexNornalInstruction_R {descr:description} s m (HR : R s m) instr :
+Lemma SymexNornalInstruction_R {descr:description} {errules : extra_rewrite_rules} s m (HR : R s m) instr :
   forall _tt s', Symbolic.SymexNormalInstruction instr s = Success (_tt, s') ->
   exists m', Semantics.DenoteNormalInstruction m instr = Some m' /\ R s' m' /\ s :< s'.
 Proof using Type.
@@ -1354,7 +1354,7 @@ Proof using Type.
   all: fail_if_goals_remain ().
 Qed.
 
-Lemma SymexLines_R s m (HR : R s m) asm :
+Lemma SymexLines_R {errules : extra_rewrite_rules} s m (HR : R s m) asm :
   forall _tt s', Symbolic.SymexLines asm s = Success (_tt, s') ->
   exists m', Semantics.DenoteLines m asm = Some m' /\ R s' m' /\ s :< s'.
 Proof using Type.

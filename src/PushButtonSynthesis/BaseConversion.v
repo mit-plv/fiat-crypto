@@ -38,6 +38,7 @@ Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
 Require Import Crypto.PushButtonSynthesis.BaseConversionReificationCache.
 Require Import Crypto.Assembly.Equivalence.
+Require Import Crypto.Assembly.Symbolic.
 Import ListNotations.
 Local Open Scope string_scope. Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
@@ -101,6 +102,7 @@ Section __.
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
           {assembly_conventions : assembly_conventions_opt}
+          {errules : extra_rewrite_rules}
           {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
           (s : Z) (c : list (Z * Z))
           (src_n : nat)
