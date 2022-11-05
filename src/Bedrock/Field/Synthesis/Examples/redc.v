@@ -29,8 +29,8 @@ Section WithParameters.
   Import WordByWordMontgomery.
   
   Context {prime: Z} (r := 64) {ri : Z}.
-  Context {ri_correct: (ri * r) mod prime = 1}.
-  (* prime is the modulus; r is the word size; ri is the inverse of r mod prime *)
+  Context {ri_correct: (ri * 2^r) mod prime = 1}.
+  (* prime is the modulus; r is the word size; ri is the inverse of 2^r mod prime *)
   (*Context {word: word.word r} {mem: map.map word Byte.byte}.
   Context {word_ok: word.ok word} {mem_ok: map.ok mem}.*)
   
@@ -52,7 +52,10 @@ Section WithParameters.
         @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned A) = aval /\ 
         @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned B) = bval;                                       
       ensures t' m' :=  t=t' /\ exists S', 
-          m' =* array scalar (word.of_Z 8) Sstart S' * R /\
+          m' =*
+             array scalar (word.of_Z 8) Astart A * 
+             array scalar (word.of_Z 8) Bstart B *
+            array scalar (word.of_Z 8) Sstart S' * R /\
           ( aval * bval * ri^(word.unsigned len) ) mod prime =
             @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned S') mod prime
     }.
@@ -97,131 +100,73 @@ Section WithParameters.
   Let zeros (n: Z) :=
         repeat (@word.of_Z _ word 0) (Z.to_nat n).
 
-  Ltac nathans_handy_wordhammer :=
-    match goal with
-    | [H : 1 = 0 |- _ ] => inversion H
-    | _ => try rewrite word.unsigned_of_Z_0 in *; try rewrite word.unsigned_of_Z_1 in *; try rewrite word.of_Z_unsigned in *
-    end.
+  Theorem eval_firstn:
+    forall modulus depth number,
+      @Core.Positional.eval (UniformWeight.uweight modulus) depth number = @Core.Positional.eval (UniformWeight.uweight modulus) depth (firstn depth number) .
+    Proof.
+      intros. cbv [Core.Positional.eval Core.Positional.to_associational Core.Associational.eval].
+      rewrite combine_firstn_l. rewrite map_length. rewrite seq_length. reflexivity.
+    Qed.
 
-  (*stolen from insertionsort*)
-
-  Lemma ptsto_nonaliasing: forall addr b1 b2 m (R: mem -> Prop),
-      (ptsto addr b1 * ptsto addr b2 * R)%sep m ->
-      False.
-  Proof.
-    intros. unfold ptsto, sep, map.split, map.disjoint in *.
-    repeat match goal with
-           | H: exists _, _ |- _ => destruct H
-           | H: _ /\ _ |- _ => destruct H
-           end.
-    subst.
-    specialize (H4 addr b1 b2). rewrite ?map.get_put_same in H4. auto.
-  Qed.
-
-      Lemma scalar_nonoverlapping: forall addr x1 x2 (R: mem -> Prop) m,
-          (scalar addr x1 * scalar addr x2 * R)%sep m -> False.
-      Proof.
-        clear; intros.
-        unfold scalar in *.
-        unfold truncated_word in *.
-        unfold truncated_scalar in *.
-        unfold littleendian in *.
-        unfold LittleEndianList.le_split in *.
-        unfold ptsto_bytes.ptsto_bytes in *.
-        rewrite !HList.tuple.to_list_of_list in H.
-        simpl in H.
-        assert (exists (R': mem -> Prop), (ptsto addr ((Byte.byte.of_Z (Naive.unsigned x1))) * ptsto addr ((Byte.byte.of_Z (Naive.unsigned x2))) * R')%sep m).
-        { eexists. ecancel_assumption. }
-        apply ptsto_nonaliasing in H.
-
-
-        
-        clear. intros. unfold sep, map.split, map.disjoint in H.
-        repeat match goal with
-           | H: exists _, _ |- _ => destruct H
-           | H: _ /\ _ |- _ => destruct H
-           end.
-        subst.
-        specialize (H4 addr x1 x2).
-        unfold scalar, truncated_word, truncated_scalar in *.
-    specialize (H4 addr x1 x2). rewrite ?map.get_put_same in H4. auto.
-      Qed.
-
+    Theorem eval_single:
+      forall modulus x,
+        Core.Positional.eval (UniformWeight.uweight modulus) (length [x]) [x] = x.
+    Proof.
+      intros. cbv [length].
+      cbv [Core.Positional.eval Core.Positional.to_associational Core.Associational.eval].
+      cbv [seq map UniformWeight.uweight ModOps.weight]. simpl.
+      rewrite Z.mul_0_r. rewrite Zdiv_0_l. replace (-0) with 0 by Lia.lia.
+      rewrite Z.pow_0_r. Lia.lia.
+    Qed.
       
-    Lemma array_scalar64_max_size: forall addr xs (R: mem -> Prop) m,
-      (array scalar (word.of_Z 8) addr xs * R)%sep m ->
-      8 * Z.of_nat (Datatypes.length xs) <= 2 ^ 64.
+  Theorem eval_one_further:
+    forall modulus depth number,  Z.of_nat (length number) > Z.of_nat depth -> 0 <= modulus -> 
+                                  @eval modulus (depth + 1) number =
+                                  @eval modulus depth number + ((2 ^ modulus) ^ Z.of_nat depth) * hd 0 (skipn depth number).
   Proof.
-    intros.
-    assert (8 * Z.of_nat (Datatypes.length xs) <= 2 ^ 64 \/ 2 ^ 64 < 8 * Z.of_nat (Datatypes.length xs))
-      as C by Lia.lia. destruct C as [C | C]; [exact C | exfalso].
-    pose proof (List.firstn_skipn (Z.to_nat (2 ^ 64 / 8)) xs) as E.
-    pose proof @List.firstn_length_le _ xs (Z.to_nat (2 ^ 64 / 8)) as A.
-    assert (Z.to_nat (2 ^ 64 / 8) <= Datatypes.length xs)%nat as B by ZnWords.
-    specialize (A B). clear B.
-    destruct (List.firstn (Z.to_nat (2 ^ 64 / 8)) xs) as [|h1 t1] eqn: E1. {
-      cbv [length] in A. ZnWords. 
-    }
-    destruct (List.skipn (Z.to_nat (2 ^ 64 / 8)) xs) as [|h2 t2] eqn: E2. {
-      pose proof @List.skipn_length _ (Z.to_nat (2 ^ 64 / 8)) xs as B.
-      rewrite E2 in B. cbn [List.length] in B. ZnWords.
-    }
-    rewrite <- E in H.
-    SeparationLogic.seprewrite_in @array_append H.
-    SeparationLogic.seprewrite_in @array_cons H.
-    SeparationLogic.seprewrite_in @array_cons H.
-    replace (word.add addr (word.of_Z (word.unsigned (word.of_Z 8) * Z.of_nat (Datatypes.length (h1 :: t1)))))
-      with addr in H by ZnWords.
-    (*
-    assert (exists R', (scalar addr h1 * scalar addr h2 * R')%sep m).
-    { exists (fun m' => ((array scalar (word.of_Z 8) (word.add addr (word.of_Z 8)) t2)
-       ⋆  (array scalar (word.of_Z 8) (word.add addr (word.of_Z 8)) t1) ⋆ R)%sep m'). ecancel_assumption. }
-     *)
-    
-    unfold scalar at 1 3 in H.
-    unfold truncated_word in H.
-    unfold truncated_scalar in H.
-    unfold littleendian in H.
-    unfold ptsto_bytes.ptsto_bytes in H.
-    cbn in H. rewrite !HList.tuple.to_list_of_list in H.
-    eapply (ptsto_nonaliasing addr (List.hd Byte.x00 (LittleEndianList.le_split (Pos.to_nat 8) (word.unsigned h2))) (List.hd Byte.x00 (LittleEndianList.le_split (Pos.to_nat 8) (word.unsigned h1))) m).
-    unfold List.hd.
-    unfold LittleEndianList.le_split.
-    unfold List.hd.
-    unfold LittleEndianList.le_split in H. unfold List.hd in H.
-    unfold array at 1 3 in H.
-
-
-    unfold truncated_word, truncated_scalar, littleendian, ptsto_bytes.ptsto_bytes in H.
-    cbn in H.
-    rewrite !HList.tuple.to_list_of_list in H.
-    eapply (ptsto_nonaliasing addr (List.hd Byte.x00 (LittleEndianList.le_split 8 (word.unsigned h2))) (List.hd Byte.x00 (LittleEndianList.le_split 8 (word.unsigned h1))) m).
-    unfold LittleEndianList.le_split, List.hd, array in *.
-    ecancel_assumption.
-  Qed.
-   *)
-
-
-  
- Lemma array_scalar_max_size: forall wordsize arrwidth addr xs (R: mem -> Prop) m,
-                      (array scalar arrwidth addr xs * R)%sep m ->
-                      (word.unsigned arrwidth) * Z.of_nat (Datatypes.length xs) <= wordsize.
- Proof.
-   clear; intros.
-   assert ((word.unsigned arrwidth) * Z.of_nat (Datatypes.length xs) <= wordsize \/ wordsize < (word.unsigned arrwidth) * Z.of_nat (Datatypes.length xs))
-     as C by Lia.lia. destruct C as [C | C]; [exact C | exfalso].
-    pose proof (List.firstn_skipn (Z.to_nat (wordsize / (word.unsigned arrwidth))) xs) as E.
-    pose proof @List.firstn_length_le _ xs (Z.to_nat (wordsize / word.unsigned arrwidth)) as A.
-    assert (Z.to_nat (wordsize / word.unsigned arrwidth) <= Datatypes.length xs)%nat as B by ZnWords.
-    specialize (A B). clear B.
-    destruct (List.firstn (Z.to_nat (2 ^ 64 / 8)) xs) as [|h1 t1] eqn: E1. {
-      ZnWordsL.
-    }
-    destruct (List.skipn (Z.to_nat (2 ^ 64 / 8)) xs) as [|h2 t2] eqn: E2. {
-      pose proof @List.skipn_length _ (Z.to_nat (2 ^ 64 / 8)) xs as B.
-      rewrite E2 in B. cbn [List.length] in B. ZnWords.
-    }
+    intros. cbv [eval].
+    assert ((firstn depth number ++ skipn depth number) = number) by (apply firstn_skipn). 
+    destruct (skipn depth number) as [|new junk].
+    - assert (length (firstn depth number ++ []) = length number) by (rewrite H1; reflexivity).
+      rewrite app_length in H2. simpl in H2. assert ((length (firstn depth number)) <= depth)%nat by apply firstn_le_length. Lia.lia.
+    - cbv [hd]. replace (Core.Positional.eval (UniformWeight.uweight modulus) (depth + 1) number) with (Core.Positional.eval (UniformWeight.uweight modulus) (depth + 1) (firstn depth number ++ [new])).
+      2: {
+        symmetry. rewrite eval_firstn. rewrite <- H1.
+        replace (firstn (depth + 1) (firstn depth number ++ new :: junk)) with (firstn depth (firstn depth number ++ new :: junk) ++ [new]).
+        1: { reflexivity. }
+        replace (depth + 1)%nat with (S depth) by Lia.lia.
+        rewrite <- firstn_nth with (d := 0).
+        2: { rewrite app_length. replace (length (firstn depth number)) with depth.
+             - assert (length (new::junk) = S (length junk)) by apply ListUtil.cons_length. Lia.lia.
+             - rewrite ListUtil.List.firstn_length_le; Lia.lia.
+        }
+        f_equal. assert (depth = length (firstn depth number)) by (rewrite ListUtil.List.firstn_length_le; Lia.lia).
+        remember (firstn depth number) as plz_dont_rewrite_me.
+        rewrite H2. rewrite nth_middle. reflexivity.
+      }
+      rewrite UniformWeight.uweight_eval_app with (n := depth).
+      + rewrite <- eval_firstn. f_equal. rewrite eval_single. f_equal.
+        cbv [UniformWeight.uweight ModOps.weight]. rewrite Z.div_1_r.
+        rewrite <- Z.pow_mul_r; try Lia.lia.
+        f_equal. Lia.lia.
+    + Lia.lia.
+    + rewrite ListUtil.List.firstn_length_le; Lia.lia.
+    + reflexivity.
  Qed.
+
+  Theorem prime_positive:
+    1 < prime.
+  Proof.
+  Admitted.
+
+  Theorem array_small:
+  forall start arr R m,
+    m =* array scalar (word.of_Z 8) start arr * R  -> 
+   Z.of_nat (@length (@word.rep 64 word) arr) * 8 < 2 ^ 64
+  .
+  Proof.
+    Admitted.
+  
  Theorem redc_alt_ok :
       program_logic_goal_for_function! redc_alt.
  Proof.
@@ -360,7 +305,7 @@ Section WithParameters.
                                             @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned S) mod prime =
                                             @eval r (Z.to_nat (word.unsigned i)) (List.map word.unsigned A)
                                             * bval * ri^(word.unsigned i) mod prime /\
-                                             word.unsigned i <= word.unsigned len /\
+                                             0 <= word.unsigned i <= word.unsigned len /\
                                              l = Z.to_nat (word.unsigned len - word.unsigned i)
                                            )
                                     (fun t' m' Astart' Bstart' Sstart' len' i' =>
@@ -369,8 +314,8 @@ Section WithParameters.
                                      exists S',
                                        m' =* array scalar (word.of_Z 8) Astart A *
                                               array scalar (word.of_Z 8) Bstart B *
-                                              array scalar (word.of_Z 8) Sstart S * R /\
-                                       @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned S) mod prime =
+                                              array scalar (word.of_Z 8) Sstart S' * R /\
+                                       @eval r (Z.to_nat (word.unsigned len)) (List.map word.unsigned S') mod prime =
                                        aval * bval * ri^(word.unsigned len) mod prime
                                      )
                                     )
@@ -418,6 +363,9 @@ Section WithParameters.
               }
               rewrite eval_in_name_only. eexists.
 
+            - rewrite word.unsigned_of_Z_0. reflexivity.
+              
+
             - rewrite word.unsigned_of_Z_0. rewrite H3. apply Nat2Z.is_nonneg.
               
           }
@@ -426,7 +374,8 @@ Section WithParameters.
 
             (*loop exits properly*)
             2: { 
-              repeat straightline; repeat split; eauto.
+              repeat straightline; repeat split; eauto. eexists. split.
+              1: { ecancel_assumption. }
               destruct (word.ltu x16 x15) eqn: Hbreak.
               - rewrite word.unsigned_of_Z_1 in H15; inversion H15.
               - subst x5.  rewrite word.unsigned_ltu in Hbreak.
@@ -446,15 +395,16 @@ Section WithParameters.
               rewrite word.unsigned_ltu in Hbreak; assert (Hiupper : word.unsigned x16 < Z.of_nat (length x4)) by Lia.lia;
                 clear H14 H15 Hbreak.
                  assert (Hilower: 0 <= word.unsigned x16) by apply word.unsigned_range.
-                 ZnWords. (*why does ZnWords take so much longer the first time??*)  }
+                 ZnWords. }
                
-               { ZnWords. }
+               { clear. ZnWords. }
 
+               
                {
                  replace (word.sub (word.add x12 (word.mul (word.of_Z 8) x16)) x12)
                    with (word.mul (word.of_Z 8) x16) by ring.
                  eexists. }
-              
+
             - straightline_call.
               { repeat split.
                 - ecancel_assumption.
@@ -469,8 +419,8 @@ Section WithParameters.
               rename x11 into R'. rename x17 into Snew.
 
               exists A'. exists aval'. exists B'. exists bval'. exists Snew.
-              exists "what is this".
-              exists "o_O".
+              exists "duopus".
+              exists "voltaire".
               eexists. 
               exists (Z.to_nat (word.unsigned len - word.unsigned i)).
               split.
@@ -480,11 +430,10 @@ Section WithParameters.
                 split. {  ecancel_assumption. } repeat split; eauto.
                 2: { clear - Hiupper. ZnWords. }
                 {
-                  rewrite <- H20.
-                  
-                  clear - H19 Hiupper.
-                  clear H0 H1 H2 H3 H4 H5 A aval B bval S R m m0 m1 H11 zeros functions
-                  H x3 x2 x1 x0 x x9 x10  i1 i0 R' H14. subst. 
+                  rewrite <- H21.
+
+                  assert ( no_overflow: (Z.of_nat (length Snew))*8 < 2^64).
+                  2: {
 
                   rename H7 into HAlen; rename H8 into HBlen; rename H9 into HSoldlen;
                   rename H19 into HSnewlen; rename H13 into Holdeval.
@@ -492,55 +441,130 @@ Section WithParameters.
                   assert (Hivalid: word.unsigned (word.add i' (word.of_Z 1)) = word.unsigned i' + 1) by
                     (clear - Hiupper; ZnWords).
 
-                  rewrite Hivalid.
-                  
-                  (*rewrite <-  Pow.Z.pow_mul_base by ZnWords. *)
+                  rewrite Hivalid. assert (8*(word.unsigned i') < 2^64) by Lia.lia.
 
-                  Set Printing Implicit.
-                  
-                  assert (
-                         (@eval r (Z.to_nat (@word.unsigned 64 word i' + 1))
-                         (@map (@word.rep 64 word) Z (@word.unsigned 64 word) A')) * ri
-                       =
+                  replace (@word.unsigned 64 word (@word.mul 64 word (@word.of_Z 64 word 8) i') /
+                             @word.unsigned 64 word (@word.of_Z 64 word 8)) with (@word.unsigned 64 word i').
 
-                         (@word.unsigned 64 word
-                            (@hd (@word.rep 64 word)
-                               ?default@{x4:=A';
-                           x5:=@eval r (Z.to_nat (@word.unsigned 64 word len))
-                         (@map (@word.rep 64 word) Z (@word.unsigned 64 word) A'); x6:=B';
-                   x7:=@eval r (Z.to_nat (@word.unsigned 64 word len))
-                         (@map (@word.rep 64 word) Z (@word.unsigned 64 word) B'); x8:=S'; x12:=Astart';
-                   x13:=Bstart'; x14:=Sstart'; x15:=len; x16:=i'; H7:=HAlen; H8:=HBlen; H9:=HSoldlen;
-                   H13:=Holdeval}
-         (@skipn (@word.rep 64 word)
-            (Z.to_nat
-               (@word.unsigned 64 word (@word.mul 64 word (@word.of_Z 64 word 8) i') /
-                @word.unsigned 64 word (@word.of_Z 64 word 8))) A')) 
+                  2:{
+                    rewrite word.unsigned_mul. 
+                    rewrite word.unsigned_of_Z. cbv [word.wrap]. 
+                    replace (8 mod 2^64) with 8 by reflexivity.
+                    replace ((8 * word.unsigned i') mod 2 ^ 64) with (8 * word.unsigned i') by 
+                        (symmetry; apply Z.mod_small; Lia.lia).
+                    rewrite Z.mul_comm.
+                    symmetry; apply Z_div_mult. reflexivity.
+                  }
 
-                         +
-                           (@eval r (Z.to_nat (@word.unsigned 64 word i'))
-                              (@map (@word.rep 64 word) Z (@word.unsigned 64 word) A'))
-                    ).
-                              
-                              
-                  cbv [eval Core.Positional.eval Core.Associational.eval Core.Positional.to_associational].
-                  
-                  assert ((word.unsigned (word.mul (word.of_Z 8) i') / word.unsigned (word.of_Z 8)) =  word.unsigned i').
-                  
-                }
+                  rewrite H12.
 
+                  instantiate (1 := (word.of_Z 0)).
+
+                  rewrite Z2Nat.inj_add; try Lia.lia.
+                  
+                  rewrite eval_one_further. 
+
+                  2: { rewrite map_length. rewrite Z2Nat.id; Lia.lia. }
+                  2: { Lia.lia. }
+
+                  rewrite Z.mul_mod_l. rewrite Z.add_mod_r. rewrite Holdeval.
+                  rewrite <- Z.add_mod_r. rewrite <- Z.mul_mod_l.
+                  rewrite Z2Nat.id; try Lia.lia.
+                  rewrite Z.mul_add_distr_r.
+                  repeat rewrite <- Z.mul_assoc.
+                  replace (ri ^ word.unsigned i' * ri) with (ri * ri ^ word.unsigned i') by apply Z.mul_comm.
+                  rewrite Pow.Z.pow_mul_base; try Lia.lia.
+                  repeat rewrite Z.mul_assoc.
+                  rewrite ListUtil.skipn_map. rewrite <- hd_map. rewrite word.unsigned_of_Z_0.
+
+                  pose (Abig := hd 0 (map word.unsigned (skipn (Z.to_nat (word.unsigned i')) A')) ).
+                  replace (hd 0 (map word.unsigned (skipn (Z.to_nat (word.unsigned i')) A'))) with Abig; try trivial.
+                  pose (Arest := @eval r (Z.to_nat (@word.unsigned 64 word i')) (@map (@word.rep 64 word) Z (@word.unsigned 64 word) A')).
+                  replace (@eval r (Z.to_nat (@word.unsigned 64 word i')) (@map (@word.rep 64 word) Z (@word.unsigned 64 word) A')) with Arest; try trivial.
+
+                  rewrite Z.mul_add_distr_r. rewrite Z.mul_add_distr_r. rewrite Z.add_comm.
+    
+                  repeat rewrite <- Z.mul_assoc.
+                  replace ((2^r) ^ word.unsigned i' * (Abig * (bval' * ri ^ (word.unsigned i' + 1)))) with ((Abig * (bval' * ri ^ (word.unsigned i' + 1)))*(2^r)^word.unsigned i') by apply Z.mul_comm.
+                  repeat rewrite <- Z.mul_assoc.
+
+                  replace ((ri ^ (word.unsigned i' + 1) * (2^r) ^ word.unsigned i')) with ( ri * (ri*(2^r)) ^ (word.unsigned i')).
+                  2: {
+                    rewrite <- Pow.Z.pow_mul_base; try rewrite Z.pow_mul_l; Lia.lia.
+                  }
+
+                  rewrite Z.add_mod_r. symmetry. rewrite Z.add_mod_r.
+
+                  replace ((Abig * (bval' * (ri * (ri * (2^r)) ^ word.unsigned i'))) mod prime) with ((Abig * (bval' * ri)) mod prime).
+                  1: {trivial.}
+
+                    rewrite Z.mul_mod_r. symmetry. rewrite Z.mul_mod_r.
+
+                  replace (((bval' * (ri * (ri * (2^r)) ^ word.unsigned i')) mod prime)) with ((bval' * ri) mod prime).
+                  1: {trivial.}
+
+                  rewrite Z.mul_mod_r. symmetry. rewrite Z.mul_mod_r.
+
+                  replace ((ri * (ri * (2^r)) ^ word.unsigned i') mod prime) with (ri mod prime).
+                  1: {trivial. }
+
+                  rewrite Z.mul_mod_r. replace ((ri * (2^r)) ^ word.unsigned i' mod prime) with 1.
+                  1: { rewrite Z.mul_1_r. reflexivity. }
+
+                  rewrite Z.mod_pow_full. rewrite ri_correct. rewrite Z.pow_1_l; try Lia.lia. rewrite Zmod_1_l; try Lia.lia.
+                  apply prime_positive. 
+                  }
+                  assert (exists Rsnew, a0 =* array scalar (word.of_Z 8) Sstart' Snew * Rsnew).
+                  2: {
+                    destruct H17 as [Rsnew H17]. apply array_small with (start := Sstart') (m := a0) (R := Rsnew). apply H17.
+                  }
+                  eexists. ecancel_assumption.
               }
               
               {
-
-
+                clear -Hbreak.
+                assert (word.unsigned i' < word.unsigned len) by Lia.lia.
+                ZnWords.                
               }
               
+              }
+              
+              {
+                 destruct (word.ltu i' len) eqn: Hbreak; try (rewrite word.unsigned_of_Z_0 in H15; contradiction);
+                     rewrite word.unsigned_ltu in Hbreak; assert (Hiupper : word.unsigned i' < word.unsigned len) by Lia.lia;
+                  subst i.
+                repeat split.
+                 - clear -Hiupper H14. ZnWords.
+                 - repeat (destruct H17 as [maybewin H17]; try trivial; clear maybewin).
+                 - repeat (destruct H17 as [maybewin H17]; try trivial; clear maybewin).
+                 - repeat (destruct H17 as [maybewin H17]; try trivial; clear maybewin).
+                 - repeat (destruct H17 as [maybewin H17]; try trivial; clear maybewin).
+                 - repeat (destruct H17 as [maybewin H17]; try trivial; clear maybewin).
+                 - destruct H17 as [_ H17]. destruct H17 as [_ H17]. destruct H17 as [_ H17].
+                   destruct H17 as [_ H17]. destruct H17 as [_ H17]. destruct H17 as [Ssss H17].
+                   destruct H17 as [Hmem Heval]. exists Ssss. split.
+                   + ecancel_assumption.
+                   + trivial.
+      
+              }
+              }
+              repeat straightline. repeat split; trivial. exists x9. split.
+          - ecancel_assumption.
+          - symmetry. subst aval. subst bval. trivial.
         }
+        Unshelve.
+   - eauto.
+   - eauto.
+   - eauto.
+   - eauto.
+   - eauto.
+   - eauto.
+   - exact String.HelloWorld.
+   - exact "yay we did it!".
 
-          {  }
-          
-        }
     Qed.
     
-    End WithParameters.
+End WithParameters.
+
+
+
