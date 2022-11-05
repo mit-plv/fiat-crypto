@@ -29,7 +29,7 @@ Section WithParameters.
   Import WordByWordMontgomery.
   
   Context {prime: Z} (r := 64) {ri : Z}.
-  Context {ri_correct: (ri * 2^r) mod prime = 1}.
+  Context {ri_correct: (ri * 2^r) mod prime = 1} {prime_reasonable: 1 < prime}.
   (* prime is the modulus; r is the word size; ri is the inverse of 2^r mod prime *)
   (*Context {word: word.word r} {mem: map.map word Byte.byte}.
   Context {word_ok: word.ok word} {mem_ok: map.ok mem}.*)
@@ -153,11 +153,6 @@ Section WithParameters.
     + rewrite ListUtil.List.firstn_length_le; Lia.lia.
     + reflexivity.
  Qed.
-
-  Theorem prime_positive:
-    1 < prime.
-  Proof.
-  Admitted.
 
   Theorem array_small:
   forall start arr R m,
@@ -512,7 +507,7 @@ Section WithParameters.
                   1: { rewrite Z.mul_1_r. reflexivity. }
 
                   rewrite Z.mod_pow_full. rewrite ri_correct. rewrite Z.pow_1_l; try Lia.lia. rewrite Zmod_1_l; try Lia.lia.
-                  apply prime_positive. 
+
                   }
                   assert (exists Rsnew, a0 =* array scalar (word.of_Z 8) Sstart' Snew * Rsnew).
                   2: {
