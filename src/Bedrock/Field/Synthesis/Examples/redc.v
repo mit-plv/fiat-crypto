@@ -31,14 +31,12 @@ Section WithParameters.
   Context {prime: Z} (r := 64) {ri : Z}.
   Context {ri_correct: (ri * 2^r) mod prime = 1} {prime_reasonable: 1 < prime}.
   (* prime is the modulus; r is the word size; ri is the inverse of 2^r mod prime *)
-  (*Context {word: word.word r} {mem: map.map word Byte.byte}.
-  Context {word_ok: word.ok word} {mem_ok: map.ok mem}.*)
   
   Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
 
   (* redc_alt ought to take in small arrays A and B, and output an array S *)
   (* S should be small, and should evaluate mod the prime to the same thing as 
-     A * B * R^-1 *)
+     A * B * ri *)
   
   Instance spec_of_redc_alt : spec_of "redc_alt" :=
     fnspec! "redc_alt" Astart Bstart Sstart len / A (aval: Z) B (bval: Z) S R,
@@ -61,7 +59,7 @@ Section WithParameters.
     }.
 
   (* redc_step ought to take in small arrays B and S, and value a, and output an array S' *)
-  (* S' should be small, and should eval to the same as (a * B + S) * R^-1 modulo the prime *)
+  (* S' should be small, and should eval to the same as (a * B + S) * ri modulo the prime *)
   
   Instance spec_of_redc_step : spec_of "redc_step" := 
     fnspec! "redc_step" a Bstart Sstart len / B (bval: Z) S (sval: Z) R,
@@ -555,7 +553,7 @@ Section WithParameters.
    - eauto.
    - eauto.
    - exact String.HelloWorld.
-   - exact "yay we did it!".
+   - exact " :) ".
 
     Qed.
     
