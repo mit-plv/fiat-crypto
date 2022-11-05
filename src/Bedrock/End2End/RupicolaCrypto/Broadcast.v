@@ -189,7 +189,7 @@ Section with_parameters.
       truncate_of_T : forall t, truncate_word szT (word_of_T t) = word_of_T t;
       predT_to_truncated_word
       : forall ptr t,
-        Lift1Prop.impl1 (predT ptr t) (truncated_word szT ptr (word_of_T t));
+        Lift1Prop.iff1 (predT ptr t) (truncated_word szT ptr (word_of_T t));
     }.
 
   Section WithAccessSize.
@@ -225,8 +225,7 @@ Section with_parameters.
   (* expr expect idx_var to hold the index
    *)
   (*
-    TODO: this is hardcoded to bytes right now.
-    Generalize to things that can be packed in a word
+    TODO: generalize to things that don't fit in a word by allocating scratch space
    *)
   Definition broadcast_expr
              l idx_var
@@ -311,8 +310,59 @@ Section with_parameters.
       congruence.
     }
     lia.
-  Qed.    
-    
+  Qed.
+  
+  Lemma map_predT_to_truncated_word ptr t
+    : Lift1Prop.iff1 (t$@ptr) (array (truncated_word szT) sz_word ptr (map word_of_T t)).
+  Proof.
+    revert ptr; induction t;
+      simpl.
+    1: cbv; eauto.
+    intros ptr m.
+    split; intro H'.
+    2:{
+      seprewrite IHt.
+      seprewrite predT_to_truncated_word.
+      auto.
+    }
+    {
+      symmetry in IHt.
+      seprewrite IHt.
+      pose proof predT_to_truncated_word as Hpred;
+        symmetry in Hpred;
+        seprewrite Hpred.
+      auto.
+    }
+  Qed.
+
+  
+  Lemma map_upd A B (f : A -> B) i (a : A) l 
+    : map f (upd l i a) = upd (map f l) i (f a).
+  Proof.
+    eapply nth_error_ext;
+      intros.
+    destruct (Nat.compare_spec i0 (length l)); subst.
+    1,3: rewrite !ListUtil.nth_error_length_error; eauto;
+    repeat rewrite ?List.map_length, ?List.upd_length; lia.
+    assert A as default.
+    {
+      destruct l; simpl in*; try lia; auto.
+    }
+    rewrite !nth_error_nth' with (d:= f default)
+      by (repeat rewrite ?List.map_length, ?List.upd_length; lia).
+    f_equal.
+    destruct (Nat.eq_dec i i0); subst.
+    {
+      repeat rewrite ?nth_upd_same, ?map_nth
+        by (repeat rewrite ?List.map_length, ?List.upd_length; lia).
+      auto.
+    }
+    {
+      repeat rewrite ?nth_upd_diff, ?map_nth
+        by (repeat rewrite ?List.map_length, ?List.upd_length; lia).
+      auto. 
+    }
+  Qed.
 
   Lemma compile_broadcast_expr' {t m l e} (len : nat) (lst scratch : list T) :
     len = length scratch ->
@@ -435,7 +485,7 @@ Section with_parameters.
         assert (from' <= length acc).
         {
           unfold acc.
-          unfold a.
+          unfold a. 
           replace (from') with (Z.of_nat (Z.to_nat from')) by lia.
           rewrite ranged_for'_length_helper.
           lia.
@@ -453,25 +503,47 @@ Section with_parameters.
         apply skipn_ranged_for'_upd.
       }
       {
-        assert ((array (truncated_word szT)
-                   sz_word a_ptr (map word_of_T acc) * R) mem0)%sep.
-        (*
-        1:admit.
-        eapply array_store_of_sep in H11.
-        destruct H11 as [? [? ?]].
+        
+        seprewrite_in map_predT_to_truncated_word H12.
+        eapply array_store_of_sep in H12.
+        destruct H12 as [? [? ?]].
         
         eexists; split.
-        {
-          eapply array_store_of_sep in H12.
-        }
+        { apply H11. }
         {
           unfold lp.
           simpl.
           split; eauto.
-          
+        }
+        {
+          instantiate (1:=Z.to_nat from').
+          f_equal.
+          rewrite Z2Nat.id by lia.
+          rewrite Z.mul_comm.
+          rewrite word.ring_morph_mul.
+          rewrite word.of_Z_unsigned.
+          reflexivity.
+        }
+        {
+          rewrite List.map_length.
+          unfold acc, a.
+          replace (from') with (Z.of_nat (Z.to_nat from')) by lia.
+          rewrite ranged_for'_length_helper.
+          lia.
+        }
+        {
+          intros.          
+          seprewrite map_predT_to_truncated_word.
+          rewrite <- map_upd in H11.
           eauto.
-        simpl.
-      }*)
+        }
+      }
+    }
+    {
+      simpl.
+      intros.
+      destruct H10.
+      eapply H7 in H10.
   Admitted.
 
     Lemma compile_broadcast_expr {t m l e} (len : nat) (lst scratch : list T) :
