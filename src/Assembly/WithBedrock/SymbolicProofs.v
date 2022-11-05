@@ -413,7 +413,7 @@ Lemma App_R {descr:description} {errules : extra_rewrite_rules} s m (HR : R s m)
   R s' m /\ s :< s' /\ eval s' i v.
 Proof using Type.
   cbv [Symbolic.App]; intros.
-  eapply Merge_R in H0; intuition eauto using eval_simplify.
+  eapply Merge_R in H0; intuition eauto. cbv [R] in HR. destruct s. intuition eauto using eval_simplify.
 Qed.
 
 Ltac step_App :=

@@ -308,7 +308,7 @@ Proof using Type.
   do 2
   match goal with
   | H : context [simplify ?d ?n] |- _ =>
-      unique pose proof (eval_simplify _ d n _ ltac:(eassumption))
+      unique pose proof (eval_simplify _ d n _ ltac:(eassumption) ltac:(eassumption))
   | H : context [merge ?e ?d] |- _ =>
       case (eval_merge _ e _ d ltac:(eassumption) ltac:(eassumption)) as (?&?&?)
   end.
@@ -1570,7 +1570,7 @@ Proof.
   (* need to do this early to deal with conversion slowness *)
   repeat match goal with
          | [ H : context[simplify ?s ?n] |- _ ]
-           => unshelve epose proof (@eval_simplify _ _ s n _ _); shelve_unifiable;
+           => unshelve epose proof (@eval_simplify _ _ s n _ ltac:(eassumption) _); shelve_unifiable;
               [ solve [ repeat first [ eassumption | exactly_once econstructor ] ] | ];
               generalize dependent (simplify s n); intros
          | [ H : context[merge ?e ?d] |- _ ]
@@ -1725,7 +1725,7 @@ Proof.
   (* need to do this early to deal with conversion slowness *)
   repeat match goal with
          | [ H : context[simplify ?s ?n] |- _ ]
-           => unshelve epose proof (@eval_simplify _ _ s n _ _); shelve_unifiable;
+           => unshelve epose proof (@eval_simplify _ _ s n _ ltac:(eassumption) _); shelve_unifiable;
               [ solve [ repeat first [ eassumption | exactly_once econstructor ] ] | ];
               generalize dependent (simplify s n); intros
          | [ H : context[merge ?e ?d] |- _ ]
@@ -1903,7 +1903,7 @@ Proof.
   (* need to do this early to deal with conversion slowness *)
   repeat first [ match goal with
                  | [ H : context[simplify ?s ?n] |- _ ]
-                   => unshelve epose proof (@eval_simplify _ _ s n _ _); shelve_unifiable;
+                   => unshelve epose proof (@eval_simplify _ _ s n _ ltac:(eassumption) _); shelve_unifiable;
                       [ solve [ repeat first [ eassumption | solve [ eauto ] | exactly_once econstructor ] ] | ];
                       generalize dependent (simplify s n); intros
                  | [ H : context[merge ?e ?d] |- _ ]
@@ -2075,7 +2075,7 @@ Proof.
                       | [ H : (tt, (?y, ?z)) = (tt, (?y', ?z')) |- _ ]
                         => is_var y; is_var z; is_var y'; is_var z'; inversion H; clear H
                       | [ H : context[simplify ?s ?n] |- _ ]
-                        => unshelve epose proof (@eval_simplify _ _ s n _ _); shelve_unifiable;
+                        => unshelve epose proof (@eval_simplify _ _ s n _ ltac:(eassumption) _); shelve_unifiable;
                            [ solve [ repeat first [ eassumption | solve [ eauto ] | exactly_once econstructor ] ] | ];
                            generalize dependent (simplify s n); intros
                       | [ H : context[merge ?e ?d] |- _ ]
