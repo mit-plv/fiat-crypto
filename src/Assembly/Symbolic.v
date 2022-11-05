@@ -4171,7 +4171,7 @@ Definition combine_consts_pre : expr -> expr :=
         ExprApp (o, app_consts o' (compress_consts o (group_consts (split_consts o' idv args))))
     | None => e end | None => e end else e | _ => e end%bool.
 
-Definition distribute_const_mul : expr -> expr :=
+(* Definition distribute_const_mul : expr -> expr :=
   let simplify_addend := List.fold_left (fun e f => f e) [consts_commutative; flatten_associative] in (* should other rewrite rules be used here? *)
   fun e =>
   match e with
@@ -4183,7 +4183,7 @@ Definition distribute_const_mul : expr -> expr :=
   | ExprApp (mulZ, [ExprApp (const c, []); ExprApp (addZ, args)]) =>
         ExprApp (addZ, map (fun arg => simplify_addend (ExprApp (mulZ, [ExprApp (const c, []); arg]))) args)
   | _ => e
-  end.
+  end. *)
 
 
 Definition a := ExprApp (const 5, []).
@@ -4948,7 +4948,7 @@ Definition rewrite_rules_and_names (d : dag) : list ((expr -> expr) * option str
   ;(unary_truncate, None)
   ;(truncate_small, None)
   ;(combine_consts, None)
-  ;(distribute_const_mul, None)
+(*   ;(distribute_const_mul, None) *)
   ;(or_to_add d, Some "or-to-add")
   ;(addoverflow_bit, None)
   ;(addcarry_bit, None)
@@ -4958,30 +4958,59 @@ Definition rewrite_rules_and_names (d : dag) : list ((expr -> expr) * option str
   ;(xor_same, None)
   ]%string.
 
-Check count_occ.
+Search (map (filter _)).
+
+Check List.fold_right.
+
+Definition rules_to_use {errules : extra_rewrite_rules} d : list (expr -> expr) :=
+  map fst (filter (fun f_name => match f_name with
+                        | (f, None) => true
+                        | (f, Some name) => (0 <? count_occ string_dec errules name)%nat
+                        end) (rewrite_rules_and_names d)).
 
 Definition expr {errules : extra_rewrite_rules} (d : dag) : expr -> expr :=
-  List.fold_left (fun (e : expr) (f_name : (expr -> expr) * option string) => match f_name with
-                                                                              | (f, None) => f e
-                                                                              | (f, Some name) => if (count_occ string_dec errules name =? 0)%nat then e else f e
-                                                                              end) (rewrite_rules_and_names d).
+  List.fold_left (fun e f => f e) (rules_to_use d).
 
-(* Lemma eval_expr {errules : extra_rewrite_rules} c d (Hdag : gensym_dag_ok c d) e v : eval c d e v -> eval c d (expr d e) v.
+Lemma property_fold_left {X} (P : X -> Prop) fs :
+  Forall (fun f => (forall e : X, P e -> P (f e))) fs ->
+  forall e : X,
+  P e -> P (fold_left (fun e' f => f e') fs e).
+Proof.
+  intros H. induction fs as [|f fs' IHfs'].
+  - simpl. intros. assumption.
+  - simpl. intros. inv H. apply IHfs'; auto.
+Qed.
+
+Lemma rules_subset {errules : extra_rewrite_rules} d :
+  incl (rules_to_use d) (map fst (rewrite_rules_and_names d)).
+Proof.
+  apply incl_map. apply incl_filter.
+Qed.
+
+Lemma all_rewrite_rules_ok ctx d n :
+  gensym_dag_ok ctx d ->
+  Forall (fun f => forall e, eval ctx d e n -> eval ctx d (f e) n) (map fst (rewrite_rules_and_names d)).
+Proof.
+  intros Hdag. repeat constructor. all: intros; simpl; try apply ((_:Ok _) _ _ _ _ H).
+  - cbv [gensym_dag_ok dag_ok] in Hdag. apply eval_or_to_add; intuition.
+Qed.
+
+Lemma eval_expr {errules : extra_rewrite_rules} c d (Hdag : gensym_dag_ok c d) e v : eval c d e v -> eval c d (expr d e) v.
 Proof using Type.
-  intros H; cbv [expr]. fold_left].
-  repeat lazymatch goal with
-  | H : eval ?c ?d ?e _ |- context[?r ?e] =>
-    let Hr := fresh in epose proof ((_:Ok r) _ _ _ _ H) as Hr; clear H
-  end.
-  eassumption.
-Qed. *)
+  intros H; cbv [expr]. apply property_fold_left; try assumption. Check incl_Forall.
+  apply (incl_Forall (rules_subset d)). apply all_rewrite_rules_ok. assumption.
+Qed.
+
 End Rewrite.
 
 Definition simplify {errules : extra_rewrite_rules} (dag : dag) (e : node idx) :=
   Rewrite.expr dag (reveal_node_at_least dag 3 e).
 
-Lemma eval_simplify {errules : extra_rewrite_rules} G d n v : eval_node G d n v -> eval G d (simplify d n) v.
-Proof using Type. (* eauto using Rewrite.eval_expr, eval_node_reveal_node_at_least. Qed.*) Admitted.
+Lemma eval_simplify {errules : extra_rewrite_rules} G d n v :
+  gensym_dag_ok G d ->
+  eval_node G d n v ->
+  eval G d (simplify d n) v.
+Proof using Type. eauto using Rewrite.eval_expr, eval_node_reveal_node_at_least. Qed.
 
 Definition reg_state := Tuple.tuple (option idx) 16.
 Definition flag_state := Tuple.tuple (option idx) 6.
