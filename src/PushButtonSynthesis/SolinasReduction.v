@@ -87,6 +87,7 @@ Section __.
 
   Local Notation possible_values := possible_values_of_machine_wordsize.
   Local Notation boundsn := (saturated_bounds n machine_wordsize).
+  Local Notation bounds4 := (saturated_bounds 4 machine_wordsize).
 
   Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
@@ -111,6 +112,9 @@ Section __.
              ; (fst (Rows.adjust_s weight (S (S n)) s) =? weight n, Pipeline.Values_not_provably_equalZ "fst (Rows.adjust_s weight (S (S n)) s) = weight n" (fst (Rows.adjust_s weight (S (S n)) s)) (weight n))
              ; (snd (Rows.adjust_s weight (S (S n)) s), Pipeline.Invalid_argument "tmp")
              ; (weight n / s * Associational.eval c <? up_bound, Pipeline.Value_not_ltZ "weight n / s * Associational.eval c < up_bound" (weight n / s * Associational.eval c) up_bound)
+             ; (fst (Rows.adjust_s weight (S (S 4)) s) =? weight 4, Pipeline.Values_not_provably_equalZ "fst (Rows.adjust_s weight (S (S 4)) s) = weight 4" (fst (Rows.adjust_s weight (S (S 4)) s)) (weight 4))
+             ; (snd (Rows.adjust_s weight (S (S 4)) s), Pipeline.Invalid_argument "tmp")
+             ; (weight 4 / s * Associational.eval c <? up_bound, Pipeline.Value_not_ltZ "weight n / s * Associational.eval c < up_bound" (weight 4 / s * Associational.eval c) up_bound)
          ])
          res.
 
@@ -132,7 +136,9 @@ Section __.
         machine_wordsize = 64 /\
         base <> 0 /\
         Rows.adjust_s weight (S (S n)) s = (weight n, true) /\
-        weight n / s * Associational.eval c < up_bound.
+        weight n / s * Associational.eval c < up_bound /\
+        Rows.adjust_s weight (S (S 4)) s = (weight 4, true) /\
+        weight 4 / s * Associational.eval c < up_bound.
   Proof using curve_good.
     prepare_use_curve_good ().
     { use_curve_good_t. }
@@ -140,6 +146,10 @@ Section __.
     { use_curve_good_t. }
     { unfold base.
       apply Z.pow_nonzero; use_curve_good_t. }
+    { lazymatch goal with
+      | |- ?x = _ => rewrite surjective_pairing with (p:=x)
+      end.
+      congruence. }
     { lazymatch goal with
       | |- ?x = _ => rewrite surjective_pairing with (p:=x)
       end.
@@ -184,8 +194,8 @@ Section __.
             @ GallinaReify.Reify base
             @ GallinaReify.Reify s
             @ GallinaReify.Reify c)
-         (Some boundsn, tt)
-         (Some boundsn).
+         (Some bounds4, tt)
+         (Some bounds4).
 
   Definition smul (prefix : string)
     : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
@@ -203,7 +213,7 @@ Section __.
           machine_wordsize prefix "square" square
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " squares a field element."]%string)
-             (square_correct weightf m boundsn)).
+             (square_correct weightf m bounds4)).
 
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
@@ -232,7 +242,15 @@ Section __.
   Lemma square_correct res
         (Hres : square = Success res)
     : square_correct weight m boundsn (Interp res).
-  Proof. Admitted.
+  Proof using curve_good.
+
+    prove_correctness ().
+    cbv [evalf weightf eval4f weight up_bound] in *.
+    match goal with
+    | H : machine_wordsize = _ |- _ => rewrite H in *
+    end.
+    apply (fun pf => @SolinasReduction.SolinasReduction.squaremod_correct (@wprops _ _ pf)); auto; lia.
+  Admitted.
 
   Lemma Wf_square res (Hres : square = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.

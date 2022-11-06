@@ -71,59 +71,6 @@ Module debugging_solinas_reduction.
     Import Associational.
     Import Positional.
 
-    Definition sqr_indiv' base (state : list (Z * Z)) (p : list (Z * Z)) :=
-      fold_right (fun a b => b ++ Saturated.Associational.sat_mul base [a] [a]) state p.
-
-    Definition sqr_indiv base (p : list (Z * Z)) :=
-      sqr_indiv' base [] p.
-
-    Definition square_no_reduce base (p : list Z) :=
-      let p_a := Positional.to_associational weight 4 p in
-      (* a0 * [a1, a2, a3] *)
-      let prod0 := Saturated.Associational.sat_mul base (firstn 1 p_a) (skipn 1 p_a) in
-      (* a3 * [a1, a2] *)
-      let prod1 := Saturated.Associational.sat_mul base (skipn 3 p_a) (firstn 2 (skipn 1 p_a)) in
-      (* first carry chain *)
-      let carry1_a := prod0 ++ prod1 in
-      let carry1_rows := Saturated.Rows.from_associational weight 8 carry1_a in
-      let carry1 := Saturated.Rows.flatten weight 8 carry1_rows in
-      (* a1 * [a2], second carry chain *)
-      let prod2 := Saturated.Associational.sat_mul base (firstn 1 (skipn 1 p_a)) (firstn 1 (skipn 2 p_a)) in
-      let carry2_rows := Saturated.Rows.from_associational weight 8 prod2 in
-      let carry2 := Saturated.Rows.flatten' weight carry1 carry2_rows in
-      (* doubling, third carry chain *)
-      let carry2 := (fst carry2) ++ [snd carry2] in
-      let double := Saturated.Rows.flatten weight 8 [carry2; carry2] in
-      (* squaring, fourth carry chain *)
-      let square_a := sqr_indiv base p_a in
-      let square_rows := Saturated.Rows.from_associational weight 8 square_a in
-      let square := Saturated.Rows.flatten' weight double square_rows in
-      fst square.
-
-    Definition squaremod base s c (n : Z) (p : list Z) :=
-      let sqr := square_no_reduce base p in
-      let r := reduce_full' base s c 4 sqr in
-      r.
-
-    Print Z.add_with_get_carry.
-    Print Z.add_with_carry.
-    Print Z.get_carry.
-
-    Definition reduce3 base s c n (p : list Z) :=
-      let bound := (0, 2^machine_wordsize-1) in
-      let bounds := (repeat bound n) ++ [(0, 1)] in
-      let s' := fst (Saturated.Rows.adjust_s weight (S (S n)) s) in
-      let coef_a := Saturated.Associational.sat_mul_const base [(1, s'/s)] c in
-      let coef := Associational.eval coef_a in
-      dlet_nd hi := Z.zselect (nth_default 0 p n) 0 coef in
-          let lo := Z.add_get_carry machine_wordsize hi (nth_default 0 p 0) in
-          if (is_bounded_by bounds p) then
-            [fst lo] ++ (skipn 1 (firstn n p))
-          else
-            let hi' := coef * (nth_default 0 p n) in
-            add_to_nth 0 hi' (firstn n p).
-
-
   End __.
 
   Section compile.
@@ -190,12 +137,12 @@ Module debugging_solinas_reduction.
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) in
-                  let r := Reify (mulmod base s c n) in
+                  let r := Reify (squaremod base s c) in
                   exact r)
                    (fun _ _ => [])
-                   (Some (repeat bound (n)), (Some (repeat bound (n)), tt))
-                   (Some (repeat bound (n)))
-                   (None, (None, tt))
+                   (Some (repeat bound n), tt)
+                   (Some (repeat bound n))
+                   (None, tt)
                    (None)
            : Pipeline.ErrorT _).
 
