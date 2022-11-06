@@ -853,14 +853,18 @@ Module SolinasReduction.
         add_to_nth 0 (weight (2 * n) * snd pq) (fst pq).
 
     Definition reduce1 base s c n m (p : list Z) :=
-      let p_a := Positional.to_associational weight n p in
-      let r_a := sat_reduce base s c n p_a in
-      let r_rows := Saturated.Rows.from_associational weight m r_a in
-      let r_flat := Saturated.Rows.flatten weight m r_rows in
       let bound := (0, 2^machine_wordsize - 1) in
       if (is_bounded_by (repeat bound n) p) then
+        let p_a := Positional.to_associational weight n p in
+        let r_a := sat_reduce base s c n p_a in
+        let r_rows := Saturated.Rows.from_associational weight m r_a in
+        let r_flat := Saturated.Rows.flatten weight m r_rows in
         fst r_flat
       else
+        let p_a := Positional.to_associational weight n p in
+        let r_a := sat_reduce base s c n p_a in
+        let r_rows := Saturated.Rows.from_associational weight m r_a in
+        let r_flat := Saturated.Rows.flatten weight m r_rows in
         add_to_nth 0 (weight (m) * snd r_flat) (fst r_flat).
 
     (* S n -> n limbs *)
@@ -882,10 +886,9 @@ Module SolinasReduction.
       let r1 := reduce1 base s c (2*n) (S n) p in
       let bound := (0, 2^machine_wordsize - 1) in
       let bounds := repeat bound n ++ [(0, up_bound-1)] in
-      if (is_bounded_by bounds r1) then
-        let r2 := reduce1 base s c (S n) (S n) r1 in
-        let r3 := reduce3 base s c n r2 in
-        r3
+      let r2 := reduce1 base s c (S n) (S n) r1 in
+      let r3 := reduce3 base s c n r2 in
+      if (is_bounded_by bounds r1) then r3
       else add_to_nth 0 (weight n * nth_default 0 r1 n) (firstn n r1).
 
     Definition mulmod' base s c n (p q : list Z) :=
@@ -894,14 +897,18 @@ Module SolinasReduction.
       red.
 
     Definition reduce1_cps {T} base s c n m (p : list Z) (f : list Z -> T) :=
-      let p_a := Positional.to_associational weight n p in
-      let r_a := sat_reduce base s c n p_a in
-      let r_rows := Saturated.Rows.from_associational weight m r_a in
-      let r_flat := Saturated.Rows.flatten weight m r_rows in
       let bound := (0, 2^machine_wordsize - 1) in
       if (is_bounded_by (repeat bound n) p) then
+        let p_a := Positional.to_associational weight n p in
+        let r_a := sat_reduce base s c n p_a in
+        let r_rows := Saturated.Rows.from_associational weight m r_a in
+        let r_flat := Saturated.Rows.flatten weight m r_rows in
         f (fst r_flat)
       else
+        let p_a := Positional.to_associational weight n p in
+        let r_a := sat_reduce base s c n p_a in
+        let r_rows := Saturated.Rows.from_associational weight m r_a in
+        let r_flat := Saturated.Rows.flatten weight m r_rows in
         f (add_to_nth 0 (weight (m) * snd r_flat) (fst r_flat)).
 
     Lemma reduce1_cps_ok {T} base s c n m (f : list Z -> T) : forall p,
@@ -938,11 +945,11 @@ Module SolinasReduction.
       (r1 <- reduce1_cps base s c (2*n) (S n) p;
        (let bound := (0, 2^machine_wordsize - 1) in
         let bounds := repeat bound n ++ [(0, up_bound-1)] in
-        if (is_bounded_by bounds r1) then
-          (r2 <- reduce1_cps base s c (S n) (S n) r1;
-           reduce3_cps base s c n r2 f)
-        else
-          f (add_to_nth 0 (weight n * nth_default 0 r1 n) (firstn n r1)))).
+        r2 <- reduce1_cps base s c (S n) (S n) r1;
+        (if (is_bounded_by bounds r1) then
+           reduce3_cps base s c n r2 f
+         else
+           f (add_to_nth 0 (weight n * nth_default 0 r1 n) (firstn n r1))))).
 
     Definition reduce_full' base s c n p :=
       ltac:(let x := (eval cbv beta delta [reduce_full_cps reduce1_cps reduce3_cps id] in (@reduce_full_cps (list Z) base s c n p id)) in
@@ -1617,6 +1624,10 @@ Module SolinasReduction.
         f_equal.
         rewrite Z.mod_small.
         lia.
+        (* solve_ineq. *)
+        (* etransitivity. *)
+        (* Search (_ + _ < _). *)
+
         admit.
         lia.
         push.
@@ -1738,7 +1749,7 @@ Module SolinasReduction.
           canonical_repr (S n) p ->
           (nth_default 0 p n) < up_bound ->
           let q := reduce1 base s c (S n) (S n) p in
-          (nth_default 0 q (n-1) = 0 /\ nth_default 0 q n = 1) \/
+          (nth_default 0 q (n-1) = 0 /\ nth_default 0 q n = 1 (* /\ nth_default 0 q 0 < up_bound *)) \/
             nth_default 0 q n = 0.
       Proof using base_nz c_pos coef_small n_gt_1 s_pos solinas_property wprops.
         intros p ? ? q.
@@ -1801,6 +1812,7 @@ Module SolinasReduction.
         destruct Hnth as [Hnth1 | Hnth2].
         intuition.
         left.
+
         intuition.
         assert (Hcanonq' := Hcanonq).
         destruct Hcanonq' as [_ Hpart].
@@ -1880,6 +1892,48 @@ Module SolinasReduction.
         auto.
         auto.
         lia.
+
+        (* destruct Hcanonq as [ _ Hpartq]. *)
+        (* rewrite Hpartq. *)
+        (* push. *)
+        (* cbv [q]. *)
+        (* rewrite value_reduce1. *)
+        (* rewrite solinas_property. *)
+        (* push. *)
+        (* const_simpl. *)
+
+        (* assert *)
+        (* assert (H' : eval weight (S n) q - weight n < up_bound * up_bound + 1). *)
+        (* cbv [q]. *)
+        (* rewrite value_reduce1. *)
+        (* rewrite solinas_property. *)
+        (* push. *)
+        (* const_simpl. *)
+        (* rewrite skipn_nth_default with (d:=0). *)
+        (* rewrite skipn_all. *)
+        (* etransitivity. *)
+        (* apply Z.add_lt_mono_r. *)
+        (* apply OrdersEx.Z_as_DT.add_lt_mono. *)
+        (* cbv [eval to_associational]. *)
+        (* cbn [seq map combine]. *)
+        (* apply OrdersEx.Z_as_OT.mul_lt_mono_nonneg. *)
+        (* solve_ineq. *)
+        (* eauto. *)
+        (* push. *)
+        (* admit. *)
+        (* push. *)
+        (* eauto. *)
+        (* apply canonical_eval_bounded; auto. *)
+        (* rewrite <-Z.add_assoc. *)
+        (* rewrite Z.add_opp_diag_r. *)
+        (* all: try lia. *)
+        (* all: try (solve_length p). *)
+        (* const_simpl. *)
+        (* admit. *)
+
+        (* destruct Hcanonq as [_ Hqpart]. *)
+        (* rewrite Hqpart in H'. *)
+        (* push' H'. *)
       Qed.
 
       (* END SECTION REDUCE_SECOND *)
@@ -2029,87 +2083,131 @@ Module SolinasReduction.
         let carry2 := (fst carry2) ++ [snd carry2] in
         carry2.
 
-      Definition square_no_reduce base (p : list Z) :=
-        if ((length p =? 4)%nat) then
-          let bound := (0, 2^machine_wordsize-1) in
-          if (is_bounded_by (repeat bound 4) p) then
-            let p_a := Positional.to_associational weight 4 p in
-            let carry2 := square1 base p_a in
-            let double := Saturated.Rows.flatten weight 8 [carry2; carry2] in
-            let square_a := sqr_indiv base p_a in
-            let square_rows := Saturated.Rows.from_associational weight 8 square_a in
-            let square := Saturated.Rows.flatten' weight double square_rows in
-            fst square
+      Definition square_no_reduce base n (p : list Z) :=
+        let p_a := Positional.to_associational weight 4 p in
+        let carry2 := square1 base p_a in
+        let double := Saturated.Rows.flatten weight 8 [carry2; carry2] in
+        let square_a := sqr_indiv base p_a in
+        let square_rows := Saturated.Rows.from_associational weight 8 square_a in
+        let square := Saturated.Rows.flatten' weight double square_rows in
+        let bound := (0, 2^machine_wordsize-1) in
+        if ((n =? 4)%nat) then
+          if ((length p =? 4)%nat) then
+            if (is_bounded_by (repeat bound 4) p) then
+              fst square
+            else
+              mul_no_reduce base n p p
           else
-            let e := eval weight 4 p in
-            [e * e; 0; 0; 0; 0; 0; 0; 0]
+            mul_no_reduce base n p p
         else
-          let e := eval weight 4 p in
-          [e * e; 0; 0; 0; 0; 0; 0; 0].
+          mul_no_reduce base n p p.
 
-      Definition square_no_reduce_cps {T} base (p : list Z) (f : list Z -> T) :=
-        if ((length p =? 4)%nat) then
-          let bound := (0, 2^machine_wordsize-1) in
-          if (is_bounded_by (repeat bound 4) p) then
-            let p_a := Positional.to_associational weight 4 p in
-            let carry2 := square1 base p_a in
-            let double := Saturated.Rows.flatten weight 8 [carry2; carry2] in
-            let square_a := sqr_indiv base p_a in
-            let square_rows := Saturated.Rows.from_associational weight 8 square_a in
-            let square := Saturated.Rows.flatten' weight double square_rows in
-            f (fst square)
+      Definition square_no_reduce_cps {T} base n (p : list Z) (f : list Z -> T) :=
+        let p_a := Positional.to_associational weight 4 p in
+        let carry2 := square1 base p_a in
+        let double := Saturated.Rows.flatten weight 8 [carry2; carry2] in
+        let square_a := sqr_indiv base p_a in
+        let square_rows := Saturated.Rows.from_associational weight 8 square_a in
+        let square := Saturated.Rows.flatten' weight double square_rows in
+        let bound := (0, 2^machine_wordsize-1) in
+        if ((n =? 4)%nat) then
+          if ((length p =? 4)%nat) then
+            if (is_bounded_by (repeat bound 4) p) then
+              f (fst square)
+            else
+              mul_no_reduce_cps base n p p f
           else
-            let e := eval weight 4 p in
-            f ([e * e; 0; 0; 0; 0; 0; 0; 0])
+            mul_no_reduce_cps base n p p f
         else
-          let e := eval weight 4 p in
-          f ([e * e; 0; 0; 0; 0; 0; 0; 0]).
+          mul_no_reduce_cps base n p p f.
 
-      Definition squaremod' base s c (p : list Z) :=
-        let sqr := square_no_reduce base p in
-        let r := reduce_full base s c 4 sqr in
+      Definition squaremod' base s c n (p : list Z) :=
+        let sqr := square_no_reduce base n p in
+        let r := reduce_full base s c n sqr in
         r.
 
-      Definition squaremod_cps {T} base s c (p : list Z) (f : list Z -> T) :=
-        (sqr <- square_no_reduce_cps base p;
-         reduce_full_cps base s c 4 sqr f).
+      Definition squaremod_cps {T} base s c n (p : list Z) (f : list Z -> T) :=
+        (sqr <- square_no_reduce_cps base n p;
+         reduce_full_cps base s c n sqr f).
 
-      Definition squaremod base s c (p : list Z) :=
-        ltac:(let x := (eval cbv beta delta [squaremod_cps reduce_full_cps reduce1_cps reduce3_cps id] in (@squaremod_cps (list Z) base s c p id)) in
+      Definition squaremod base s c n (p : list Z) :=
+        ltac:(let x := (eval cbv beta delta [squaremod_cps square_no_reduce_cps mul_no_reduce_cps reduce_full_cps reduce1_cps reduce3_cps id] in (@squaremod_cps (list Z) base s c n p id)) in
               exact x).
 
       Context (base : Z)
               (s : Z)
-              (c : list (Z * Z)).
+              (c : list (Z * Z))
+              (n : nat).
 
-      Context (s_pos : s > 0)
+      Context (n_gt_1 : (n > 1)%nat)
+              (s_pos : s > 0)
               (c_pos : Associational.eval c > 0)
-              (base_nz : base <> 0).
+              (mod_nz : s - Associational.eval c <> 0)
+              (base_nz : base <> 0)
+              (solinas_property : Rows.adjust_s weight (S (S n)) s = (weight n, true))
+              (coef_small : weight n / s * Associational.eval c < up_bound).
+
+      Lemma square_no_reduce_cps_ok {T} (f : list Z -> T) : forall p,
+          square_no_reduce_cps base n p f = f (square_no_reduce base n p).
+      Proof.
+        intros.
+        cbv [square_no_reduce square_no_reduce_cps].
+        break_match.
+        reflexivity.
+        apply mul_no_reduce_cps_ok.
+        apply mul_no_reduce_cps_ok.
+        apply mul_no_reduce_cps_ok.
+      Qed.
+
+      Lemma squaremod_cps_ok : forall {T} p (f : list Z -> T),
+          squaremod_cps base s c n p f = f (squaremod' base s c n p).
+      Proof.
+        intros.
+        cbv [squaremod' squaremod_cps].
+        rewrite square_no_reduce_cps_ok, reduce_full_cps_ok.
+        reflexivity.
+      Qed.
+
+      Lemma squaremod_unfold : forall p,
+          squaremod' base s c n p = squaremod_cps base s c n p id.
+      Proof.
+        intros.
+        rewrite squaremod_cps_ok.
+        reflexivity.
+      Qed.
+
+      Lemma squaremod_cps_conv : forall p,
+          squaremod base s c n p = squaremod' base s c n p.
+      Proof.
+        intros.
+        rewrite squaremod_unfold.
+        reflexivity.
+      Qed.
 
       Lemma sat_mul_comm (p q : list (Z * Z)) :
         Associational.eval (Associational.sat_mul base p q) =
           Associational.eval (Associational.sat_mul base q p).
-      Proof using base_nz. push; lia. Qed.
+      Proof using base_nz n_gt_1. push; lia. Qed.
 
       Lemma sat_mul_distr (p q1 q2 : list (Z * Z)) :
         Associational.eval (Associational.sat_mul base p (q1 ++ q2)) =
           Associational.eval (Associational.sat_mul base p q1) +
             Associational.eval (Associational.sat_mul base p q2).
-      Proof using base_nz. push; lia. Qed.
+      Proof using base_nz n_gt_1. push; lia. Qed.
 
       Lemma cons_to_app {A} a (p : list A) :
         a :: p = [a] ++ p.
       Proof. reflexivity. Qed.
 
-      Lemma flatten'_mod state (inp : list (list Z)) (n : nat) :
+      Lemma flatten'_mod state (inp : list (list Z)) (m : nat) :
         inp <> [] ->
-        Datatypes.length (fst state) = n ->
-        (forall row : list Z, In row inp -> Datatypes.length row = n) ->
-        eval weight n (fst (Rows.flatten' weight state inp)) =
-          (Rows.eval weight n inp + eval weight n (fst state) + weight n * snd state) mod weight n.
-      Proof using wprops.
+        Datatypes.length (fst state) = m ->
+        (forall row : list Z, In row inp -> Datatypes.length row = m) ->
+        eval weight m (fst (Rows.flatten' weight state inp)) =
+          (Rows.eval weight m inp + eval weight m (fst state) + weight m * snd state) mod weight m.
+      Proof using n_gt_1 wprops.
         intros.
-        rewrite Rows.flatten'_correct with (n:=n) by auto.
+        rewrite Rows.flatten'_correct with (n:=m) by auto.
         push.
         f_equal.
         lia.
@@ -2117,30 +2215,6 @@ Module SolinasReduction.
 
       Hint Rewrite Nat.sub_diag : const_simpl.
       Hint Rewrite Z.sub_diag : const_simpl.
-
-      Lemma eval_done n p :
-        (n <= length p)%nat ->
-        eval weight n p = eval weight n (firstn n p).
-      Proof using wprops.
-        intros.
-        generalize dependent n.
-        induction p; intros n H.
-        rewrite firstn_nil.
-        push.
-        destruct n.
-        push.
-        push' H.
-        cbv [eval to_associational].
-        rewrite firstn_cons.
-        cbn [seq map combine].
-        rewrite Associational.eval_cons.
-        rewrite Associational.eval_cons.
-        rewrite !eval_seq_start with (a:=1%nat).
-        cbv [eval to_associational] in IHp.
-        rewrite IHp.
-        lia.
-        lia.
-      Qed.
 
       Lemma sum_one x :
         sum [x] = x.
@@ -2150,7 +2224,7 @@ Module SolinasReduction.
         Associational.eval (sqr_indiv base (a :: p)) =
           Associational.eval (sqr_indiv base [a]) +
             Associational.eval (sqr_indiv base p).
-      Proof using base_nz.
+      Proof using base_nz n_gt_1.
         cbv [sqr_indiv sqr_indiv'].
         cbn [fold_right].
         push.
@@ -2160,7 +2234,7 @@ Module SolinasReduction.
       Lemma square_indiv_app (p q : list (Z * Z)) :
         Associational.eval (sqr_indiv base (p ++ q)) =
           Associational.eval (sqr_indiv base p) + Associational.eval (sqr_indiv base q).
-      Proof using base_nz.
+      Proof using base_nz n_gt_1.
         generalize dependent q.
         induction p as [| a p IHp] using rev_ind; intros q.
         push.
@@ -2177,7 +2251,7 @@ Module SolinasReduction.
                                                                                (Associational.eval (sat_mul base [(weight 1, x0)] [(weight 1, x0)]) +
                                                                                   (Associational.eval (sat_mul base [(weight 2, x1)] [(weight 2, x1)]) +
                                                                                      Associational.eval (sat_mul base [(weight 3, x2)] [(weight 3, x2)])))).
-      Proof using base_nz wprops.
+      Proof using base_nz wprops n_gt_1.
         intros x x0 x1 x2 q H.
         rewrite H.
         cbv [to_associational].
@@ -2199,7 +2273,7 @@ Module SolinasReduction.
       Lemma length_square1 (p : list Z) : forall x x0 x1 x2 q,
         p = x :: x0 :: x1 :: x2 :: q ->
         length (square1 base (to_associational weight 4 p)) = 8%nat.
-      Proof using base_nz wprops.
+      Proof using base_nz wprops n_gt_1.
         intros x x0 x1 x2 q H.
         cbv [square1].
         push.
@@ -2227,7 +2301,7 @@ Module SolinasReduction.
                     Associational.eval (sat_mul base [(weight 0, x)] [(weight 3, x2)])) +
                  (Associational.eval (sat_mul base [(weight 3, x2)] [(weight 1, x0)]) +
                     Associational.eval (sat_mul base [(weight 3, x2)] [(weight 2, x1)]))).
-      Proof using base_nz wprops.
+      Proof using base_nz wprops n_gt_1.
         intros x x0 x1 x2 q bound H H1.
         rewrite H1.
         cbv [to_associational].
@@ -2292,7 +2366,7 @@ Module SolinasReduction.
         is_bounded_by (repeat bound 4) p = true ->
         p = x :: x0 :: x1 :: x2 :: q ->
         0 <= eval weight 8 (square1 base (to_associational weight 4 p)) < weight 7.
-      Proof using base_nz wprops.
+      Proof using base_nz wprops n_gt_1.
         intros x x0 x1 x2 q bound H H0.
         erewrite eval_square1; [| eauto | eauto].
         rewrite H0 in H.
@@ -2314,16 +2388,17 @@ Module SolinasReduction.
       Qed.
 
       Theorem eval_square_no_reduce (p : list Z) :
-        eval weight 8 (square_no_reduce base p) = (eval weight 4 p) * (eval weight 4 p).
-      Proof using base_nz wprops.
+        eval weight (2 * n) (square_no_reduce base n p) = (eval weight n p) * (eval weight n p).
+      Proof using base_nz wprops n_gt_1.
         rewrite <-eval_mul_no_reduce with (base:=base) by lia.
         cbv [square_no_reduce].
         break_match.
 
+        rewrite Nat.eqb_eq in Heqb.
+        rewrite Heqb.
         assert (exists p1 p2 p3 p4, p = p1 :: p2 :: p3 :: p4 :: nil).
-        { rewrite Nat.eqb_eq in Heqb.
-          repeat (destruct p; [cbn in Heqb; lia|]).
-          destruct p; [| cbn in Heqb; lia].
+        { repeat (destruct p; [cbn in Heqb0; lia|]).
+          destruct p; [| cbn in Heqb0; lia].
           eauto. }
         destruct H; destruct H; destruct H; destruct H.
 
@@ -2380,8 +2455,8 @@ Module SolinasReduction.
                         intros; eapply Rows.length_from_associational; eassumption
                     | _ => auto
                     end.
-        rewrite H in Heqb0.
-        rewrite Heqb0 in Heqb1.
+        rewrite H in Heqb1.
+        rewrite Heqb1 in Heqb2.
         lia.
         repeat match goal with
                | H : In _ (_ :: _) |- _ =>
@@ -2404,33 +2479,22 @@ Module SolinasReduction.
                | _ => eapply length_square1; eauto
                | _ => intuition
                end.
-
-
-        push.
-        rewrite eval_mul_no_reduce.
-        lia.
-        lia.
-        lia.
-        push.
-        rewrite eval_mul_no_reduce.
-        lia.
-        lia.
-        lia.
       Qed.
 
       Theorem length_square_no_reduce (p : list Z):
-        length (square_no_reduce base p) = 8%nat.
-      Proof using base_nz wprops.
+        length (square_no_reduce base n p) = (2 * n)%nat.
+      Proof using base_nz wprops n_gt_1.
         cbv [square_no_reduce].
         break_match.
+        rewrite Nat.eqb_eq in Heqb.
         assert (exists p1 p2 p3 p4, p = p1 :: p2 :: p3 :: p4 :: nil).
-        { rewrite Nat.eqb_eq in Heqb.
-          repeat (destruct p; [cbn in Heqb; lia|]).
-          destruct p; [| cbn in Heqb; lia].
+        { repeat (destruct p; [cbn in Heqb0; lia|]).
+          destruct p; [| cbn in Heqb0; lia].
           eauto. }
         destruct H; destruct H; destruct H; destruct H.
         rewrite Rows.flatten'_correct with (n:=8%nat).
         push.
+        lia.
         repeat match goal with
                | H : In _ (_ :: _) |- _ =>
                    apply in_inv in H
@@ -2454,51 +2518,15 @@ Module SolinasReduction.
         lia.
         rewrite H.
         discriminate.
-        push.
-        push.
-      Qed.
-
-      Context (mod_nz : s - Associational.eval c <> 0)
-              (solinas_property : Rows.adjust_s weight (S (S 4)) s = (weight 4, true))
-              (coef_small : weight 4 / s * Associational.eval c < up_bound).
-
-      Lemma square_no_reduce_cps_ok {T} (f : list Z -> T) : forall p,
-          square_no_reduce_cps base p f = f (square_no_reduce base p).
-      Proof.
-        intros.
-        cbv [square_no_reduce square_no_reduce_cps].
-        break_match; reflexivity.
-      Qed.
-
-      Lemma squaremod_cps_ok : forall {T} p (f : list Z -> T),
-          squaremod_cps base s c p f = f (squaremod' base s c p).
-      Proof.
-        intros.
-        cbv [squaremod' squaremod_cps].
-        rewrite square_no_reduce_cps_ok, reduce_full_cps_ok.
-        reflexivity.
-      Qed.
-
-      Lemma squaremod_unfold : forall p,
-          squaremod' base s c p = squaremod_cps base s c p id.
-      Proof.
-        intros.
-        rewrite squaremod_cps_ok.
-        reflexivity.
-      Qed.
-
-      Lemma squaremod_cps_conv : forall p,
-          squaremod base s c p = squaremod' base s c p.
-      Proof.
-        intros.
-        rewrite squaremod_unfold.
-        reflexivity.
+        apply length_mul_no_reduce; auto.
+        apply length_mul_no_reduce; auto.
+        apply length_mul_no_reduce; auto.
       Qed.
 
       Lemma squaremod'_correct : forall p,
-          Positional.eval weight 4 (squaremod' base s c p) mod (s - Associational.eval c) =
-            (Positional.eval weight 4 p * Positional.eval weight 4 p) mod (s - Associational.eval c).
-      Proof using base_nz c_pos coef_small mod_nz s_pos solinas_property wprops.
+          Positional.eval weight n (squaremod' base s c n p) mod (s - Associational.eval c) =
+            (Positional.eval weight n p * Positional.eval weight n p) mod (s - Associational.eval c).
+      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
         intros.
         cbv [squaremod'].
         rewrite <-reduce_full_correct.
@@ -2510,9 +2538,9 @@ Module SolinasReduction.
       Qed.
 
       Theorem squaremod_correct : forall p ,
-          Positional.eval weight 4 (squaremod base s c p) mod (s - Associational.eval c) =
-            (Positional.eval weight 4 p * Positional.eval weight 4 p) mod (s - Associational.eval c).
-      Proof using base_nz c_pos coef_small mod_nz s_pos solinas_property wprops.
+          Positional.eval weight n (squaremod base s c n p) mod (s - Associational.eval c) =
+            (Positional.eval weight n p * Positional.eval weight n p) mod (s - Associational.eval c).
+      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
         intros.
         rewrite squaremod_cps_conv.
         apply squaremod'_correct.

@@ -58,6 +58,7 @@ Local Coercion Z.pos : positive >-> Z.
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
 Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very long time *)
+Local Opaque reified_square_gen.
 (* needed for making [autorewrite] with [Set Keyed Unification] fast *)
 Local Opaque expr.Interp.
 
@@ -106,15 +107,13 @@ Section __.
              ; ((0 <? s - Associational.eval c)%Z, Pipeline.Value_not_ltZ "0 < s - Associational.eval c" 0 (s - Associational.eval c))
              ; (negb (s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s ≠ 0" s 0)
              ; (negb (n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n ≠ 0" n 0)
+             ; ((n =? 4)%Z, Pipeline.Values_not_provably_equalZ "n = 4" n 4)
              ; (0 <? machine_wordsize, Pipeline.Value_not_ltZ "0 < machine_wordsize" 0 machine_wordsize)
              ; (machine_wordsize =? 64, Pipeline.Values_not_provably_equalZ "machine_wordsize = 64" machine_wordsize 64)
              ; ((1 <? n)%nat, Pipeline.Value_not_ltZ "1 < n" 1 n)
              ; (fst (Rows.adjust_s weight (S (S n)) s) =? weight n, Pipeline.Values_not_provably_equalZ "fst (Rows.adjust_s weight (S (S n)) s) = weight n" (fst (Rows.adjust_s weight (S (S n)) s)) (weight n))
              ; (snd (Rows.adjust_s weight (S (S n)) s), Pipeline.Invalid_argument "tmp")
              ; (weight n / s * Associational.eval c <? up_bound, Pipeline.Value_not_ltZ "weight n / s * Associational.eval c < up_bound" (weight n / s * Associational.eval c) up_bound)
-             ; (fst (Rows.adjust_s weight (S (S 4)) s) =? weight 4, Pipeline.Values_not_provably_equalZ "fst (Rows.adjust_s weight (S (S 4)) s) = weight 4" (fst (Rows.adjust_s weight (S (S 4)) s)) (weight 4))
-             ; (snd (Rows.adjust_s weight (S (S 4)) s), Pipeline.Invalid_argument "tmp")
-             ; (weight 4 / s * Associational.eval c <? up_bound, Pipeline.Value_not_ltZ "weight n / s * Associational.eval c < up_bound" (weight 4 / s * Associational.eval c) up_bound)
          ])
          res.
 
@@ -136,9 +135,7 @@ Section __.
         machine_wordsize = 64 /\
         base <> 0 /\
         Rows.adjust_s weight (S (S n)) s = (weight n, true) /\
-        weight n / s * Associational.eval c < up_bound /\
-        Rows.adjust_s weight (S (S 4)) s = (weight 4, true) /\
-        weight 4 / s * Associational.eval c < up_bound.
+        weight n / s * Associational.eval c < up_bound.
   Proof using curve_good.
     prepare_use_curve_good ().
     { use_curve_good_t. }
@@ -150,23 +147,16 @@ Section __.
       | |- ?x = _ => rewrite surjective_pairing with (p:=x)
       end.
       congruence. }
-    { lazymatch goal with
-      | |- ?x = _ => rewrite surjective_pairing with (p:=x)
-      end.
-      congruence. }
   Qed.
 
-  Local Notation eval4f := (eval weight 4).
   Local Notation evalf := (eval weight n).
   Local Notation weightf := weight.
   Local Notation notations_for_docstring
     := (CorrectnessStringification.dyn_context.cons
-          eval4f "eval4"
+          weightf "weight"
           (CorrectnessStringification.dyn_context.cons
-             weightf "weight"
-             (CorrectnessStringification.dyn_context.cons
-                evalf "eval"
-                CorrectnessStringification.dyn_context.nil)))%string.
+             evalf "eval"
+             CorrectnessStringification.dyn_context.nil))%string.
   Local Notation "'docstring_with_summary_from_lemma!' summary correctness"
     := (docstring_with_summary_from_lemma_with_ctx!
           notations_for_docstring
@@ -193,9 +183,10 @@ Section __.
          (reified_square_gen
             @ GallinaReify.Reify base
             @ GallinaReify.Reify s
-            @ GallinaReify.Reify c)
-         (Some bounds4, tt)
-         (Some bounds4).
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n)
+         (Some boundsn, tt)
+         (Some boundsn).
 
   Definition smul (prefix : string)
     : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
@@ -213,7 +204,7 @@ Section __.
           machine_wordsize prefix "square" square
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " squares a field element."]%string)
-             (square_correct weightf m bounds4)).
+             (sqr_correct weightf n m boundsn)).
 
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
@@ -241,16 +232,16 @@ Section __.
 
   Lemma square_correct res
         (Hres : square = Success res)
-    : square_correct weight m boundsn (Interp res).
+    : sqr_correct weight n m boundsn (Interp res).
   Proof using curve_good.
 
     prove_correctness ().
-    cbv [evalf weightf eval4f weight up_bound] in *.
+    cbv [evalf weightf weight up_bound] in *.
     match goal with
     | H : machine_wordsize = _ |- _ => rewrite H in *
     end.
     apply (fun pf => @SolinasReduction.SolinasReduction.squaremod_correct (@wprops _ _ pf)); auto; lia.
-  Admitted.
+  Qed.
 
   Lemma Wf_square res (Hres : square = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.

@@ -70,6 +70,7 @@ Module debugging_solinas_reduction.
 
     Import Associational.
     Import Positional.
+    Import SolinasReduction.
 
   End __.
 
@@ -82,13 +83,6 @@ Module debugging_solinas_reduction.
     Let m : nat := 2 * n.
     Let w : nat -> Z := weight machine_wordsize 1.
     Let base : Z := 2 ^ machine_wordsize.
-
-    Let p := [2^64-1; 2^64-1; 2^64-1; 2^64-1].
-    Compute (square_no_reduce base p).
-    Compute (mul_no_reduce base 4 p p).
-    Let p' := [100; 200; 300; 400].
-    Compute (square_no_reduce base p').
-    Compute (mul_no_reduce base 4 p' p').
 
     Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
     Let bound' := Some r[0 ~> (2^machine_wordsize +39)]%zrange.
@@ -119,25 +113,25 @@ Module debugging_solinas_reduction.
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) in
-                  let r := Reify (square_no_reduce base) in
+                  let r := Reify (SolinasReduction.mulmod base s c n) in
                   exact r)
                    (fun _ _ => [])
-                   (Some (repeat bound (4)), tt)
-                   (Some (repeat bound (8)))
-                   (None, tt)
+                   (Some (repeat bound n), (Some (repeat bound n), tt))
+                   (Some (repeat bound n))
+                   (None, (None, tt))
                    (None)
            : Pipeline.ErrorT _).
 
     Time Compute
          Show.show
          (Pipeline.BoundsPipelineToString
-            "fiat" "mul"
+            "fiat" "sqr"
             false
             false
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) in
-                  let r := Reify (squaremod base s c) in
+                  let r := Reify (SolinasReduction.squaremod base s c n) in
                   exact r)
                    (fun _ _ => [])
                    (Some (repeat bound n), tt)
