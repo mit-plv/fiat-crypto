@@ -27,28 +27,45 @@ Import
   Language.Wf.Compilers.
 Import SolinasReduction.SolinasReduction.
 
-Derive reified_mul_gen
-       SuchThat (is_reification_of reified_mul_gen mulmod)
-       As reified_mul_gen_correct.
-Proof. Time cache_reify (). Time Qed.
+Module Export SolinasReduction.
 
-Derive reified_square_gen
-       SuchThat (is_reification_of reified_square_gen squaremod)
-       As reified_square_gen_correct.
-Proof. Time cache_reify (). Time Qed.
+  Derive reified_mul_gen
+         SuchThat (is_reification_of reified_mul_gen mulmod)
+         As reified_mul_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
 
-#[global]
- Hint Extern 1 (_ = _) => apply_cached_reification mulmod (proj1 reified_mul_gen) : reify_cache_gen.
-#[global]
- Hint Immediate (proj2 reified_mul_gen_correct) : wf_gen_cache.
-#[global]
- Hint Rewrite (proj1 reified_mul_gen_correct) : interp_gen_cache.
-Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very long time *)
+  Derive reified_mul2_gen
+         SuchThat (is_reification_of reified_mul2_gen mulmod2)
+         As reified_mul2_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
 
-#[global]
- Hint Extern 1 (_ = _) => apply_cached_reification squaremod (proj1 reified_square_gen) : reify_cache_gen.
-#[global]
- Hint Immediate (proj2 reified_square_gen_correct) : wf_gen_cache.
-#[global]
- Hint Rewrite (proj1 reified_square_gen_correct) : interp_gen_cache.
-Local Opaque reified_square_gen. (* needed for making [autorewrite] not take a very long time *)
+  Derive reified_square_gen
+         SuchThat (is_reification_of reified_square_gen squaremod)
+         As reified_square_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+
+  #[global]
+   Hint Extern 1 (_ = _) => apply_cached_reification mulmod (proj1 reified_mul_gen) : reify_cache_gen.
+  #[global]
+   Hint Immediate (proj2 reified_mul_gen_correct) : wf_gen_cache.
+  #[global]
+   Hint Rewrite (proj1 reified_mul_gen_correct) : interp_gen_cache.
+  Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very long time *)
+
+  #[global]
+   Hint Extern 1 (_ = _) => apply_cached_reification mulmod2 (proj1 reified_mul2_gen) : reify_cache_gen.
+  #[global]
+   Hint Immediate (proj2 reified_mul2_gen_correct) : wf_gen_cache.
+  #[global]
+   Hint Rewrite (proj1 reified_mul2_gen_correct) : interp_gen_cache.
+  Local Opaque reified_mul2_gen. (* needed for making [autorewrite] not take a very long time *)
+
+  #[global]
+   Hint Extern 1 (_ = _) => apply_cached_reification squaremod (proj1 reified_square_gen) : reify_cache_gen.
+  #[global]
+   Hint Immediate (proj2 reified_square_gen_correct) : wf_gen_cache.
+  #[global]
+   Hint Rewrite (proj1 reified_square_gen_correct) : interp_gen_cache.
+  Local Opaque reified_square_gen. (* needed for making [autorewrite] not take a very long time *)
+
+End SolinasReduction.

@@ -58,6 +58,7 @@ Local Coercion Z.pos : positive >-> Z.
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
 Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very long time *)
+Local Opaque reified_mul2_gen.
 Local Opaque reified_square_gen.
 (* needed for making [autorewrite] with [Set Keyed Unification] fast *)
 Local Opaque expr.Interp.
@@ -176,6 +177,18 @@ Section __.
          (Some boundsn, (Some boundsn, tt))
          (Some boundsn).
 
+  Definition mul2
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         possible_values
+         (reified_mul2_gen
+            @ GallinaReify.Reify base
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n)
+         (Some boundsn, (Some boundsn, (Some boundsn, (Some boundsn, tt))))
+         (Some boundsn, Some boundsn).
+
   Definition square
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -197,6 +210,15 @@ Section __.
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements."]%string)
              (mul_correct weightf n m boundsn)).
 
+  Definition smul2 (prefix : string)
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "mul2" mul2
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements."]%string)
+             (mul2_correct weightf n m boundsn)).
+
   Definition ssquare (prefix : string)
     : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
@@ -208,10 +230,6 @@ Section __.
 
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
-
-  Hint Rewrite
-       (fun pf => @SolinasReduction.SolinasReduction.mulmod_correct (@wprops _ _ pf)) using solve [ auto with zarith | congruence | solve_extra_bounds_side_conditions ] : push_eval.
-  Hint Unfold mul : push_eval.
 
   Local Ltac prove_correctness _ := Primitives.prove_correctness use_curve_good.
 
@@ -228,6 +246,15 @@ Section __.
   Qed.
 
   Lemma Wf_mul res (Hres : mul = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
+  Lemma mul2_correct res
+        (Hres : mul2 = Success res)
+    : mul2_correct weight n m boundsn (Interp res).
+  Proof using curve_good.
+  Admitted.
+
+  Lemma Wf_mul2 res (Hres : mul2 = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma square_correct res
@@ -251,7 +278,7 @@ Section __.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("mul", wrap_s smul); ("square", wrap_s ssquare)].
+      := [("mul", wrap_s smul); ("mul2", wrap_s smul2); ("square", wrap_s ssquare)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 

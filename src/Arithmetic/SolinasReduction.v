@@ -2754,6 +2754,59 @@ Module SolinasReduction.
 
     End squaremod.
 
+    Section mulmod2.
+
+      Definition mulmod2 base s c n (p q x y : list Z) :=
+        let ans1 := mulmod base s c n p q in
+        let ans2 := mulmod base s c n x y in
+        (ans1, ans2).
+
+      Context (base : Z)
+              (s : Z)
+              (c : list (Z * Z))
+              (n : nat).
+
+      Context (n_gt_1 : (n > 1)%nat)
+              (s_pos : s > 0)
+              (c_pos : Associational.eval c > 0)
+              (mod_nz : s - Associational.eval c <> 0)
+              (base_nz : base <> 0)
+              (solinas_property : Rows.adjust_s weight (S (S n)) s = (weight n, true))
+              (coef_small : weight n / s * Associational.eval c < up_bound).
+
+      Lemma fst_mulmod2 (p q x y : list Z) :
+        fst (mulmod2 base s c n p q x y) = mulmod base s c n p q.
+      Proof.
+        cbv [mulmod2].
+        cbn.
+        reflexivity.
+      Qed.
+
+      Lemma snd_mulmod2 (p q x y : list Z) :
+        snd (mulmod2 base s c n p q x y) = mulmod base s c n x y.
+      Proof.
+        cbv [mulmod2].
+        cbn.
+        reflexivity.
+      Qed.
+
+      Theorem mulmod2_correct (p q x y : list Z) :
+        let m := mulmod2 base s c n p q x y in
+        Positional.eval weight n (fst m) mod (s - Associational.eval c) =
+          (Positional.eval weight n p * Positional.eval weight n q) mod (s - Associational.eval c) /\
+          Positional.eval weight n (snd m) mod (s - Associational.eval c) =
+            (Positional.eval weight n x * Positional.eval weight n y) mod (s - Associational.eval c).
+      Proof.
+        intros m.
+        cbv [m].
+        rewrite fst_mulmod2, snd_mulmod2.
+        intuition.
+        apply mulmod_correct; auto.
+        apply mulmod_correct; auto.
+      Qed.
+
+    End mulmod2.
+
   End __.
 
 End SolinasReduction.
