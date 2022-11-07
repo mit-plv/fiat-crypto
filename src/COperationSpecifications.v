@@ -511,6 +511,16 @@ Module SolinasReduction.
         ((eval (mul x y)) mod m = (eval x * eval y) mod m) /\
           (list_Z_bounded_by saturated_bounds (mul x y)).
 
+    Definition mul2_correct
+               (mul2 : list Z -> list Z -> list Z -> list Z -> ((list Z) * (list Z))) :=
+      forall x y z w,
+        list_Z_bounded_by saturated_bounds x ->
+        list_Z_bounded_by saturated_bounds y ->
+        list_Z_bounded_by saturated_bounds z ->
+        list_Z_bounded_by saturated_bounds w ->
+        ((eval (fst (mul2 x y z w))) mod m = (eval x * eval y) mod m) /\
+          ((eval (snd (mul2 x y z w))) mod m = (eval z * eval w) mod m).
+
     Definition sqr_correct
                (sqr : list Z -> list Z) :=
       forall x,
