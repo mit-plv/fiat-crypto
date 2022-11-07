@@ -1027,7 +1027,7 @@ Lemma compile_byte_memcpy (n : nat) (bs bs2 : list byte) :
   
 Lemma compile_word_memcpy (n : nat) (bs bs2 : list word) :
   let v := copy bs in
-  forall (e : list Syntax.func) P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
+  forall (e : list (String.string  * Syntax.func)) P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
          len a a2 len_expr a_expr a2_var t m l (R: mem -> Prop),
 
     map.get l a2_var = Some a2 ->
@@ -1663,6 +1663,8 @@ Proof.
     unfold gs; compile_step.
   }
   eapply broadcast_byte_const.
+  admit.
+  admit.
   repeat compile_step.
   eapply compile_nlet_as_nlet_eq.
   eapply compile_buf_unsplit.
@@ -1712,6 +1714,7 @@ Proof.
   repeat compile_step.
   change felem_init_zero with (F.of_Z M_pos 0).
   eapply compile_nlet_as_nlet_eq.
+  (*TODO: ought to work
   eapply compile_from_word.
   Fail compile_step.
   replace (F.of_Z M_pos _) with (@F.zero M_pos) by lia
@@ -1722,6 +1725,7 @@ Proof.
   repeat compile_step.
 
   unfold *)
+   *)
   
   Abort.
 (*  lia.
