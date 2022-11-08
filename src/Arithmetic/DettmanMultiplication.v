@@ -10,7 +10,7 @@ Import ListNotations. Local Open Scope Z_scope.
 Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion Z.pos : positive >-> Z.
 
-Section Stuff.
+Section __.
 
 Context
         (e : nat)
@@ -40,27 +40,20 @@ Lemma weight_0 : weight 0 = 1.
 Proof. reflexivity. Qed.
 
 Lemma weight_nz : forall i, weight i <> 0.
-Proof.
-  intros i. cbv [weight]. apply Z.pow_nonzero.
-  - apply base_nz.
-  - lia.
-Qed.
+Proof. intros i. cbv [weight]. apply Z.pow_nonzero; lia. Qed.
 
 Lemma mod_is_zero : forall b (n m : nat), b <> 0 -> le n m -> (b ^ m) mod (b ^ n) = 0.
-  intros b n m H1 H2. induction H2.
+  intros b n m H1 H2. induction H2 as [|m' nlem' IHm'].
   - rewrite Z_mod_same_full. constructor.
-  - rewrite Nat2Z.inj_succ. cbv [Z.succ]. rewrite <- Pow.Z.pow_mul_base.
-    + rewrite Z.mul_mod_full. rewrite IHle. rewrite Z.mul_0_r. apply Z.mod_0_l. apply Z.pow_nonzero; lia.
-    + lia.
+  - rewrite Nat2Z.inj_succ. cbv [Z.succ]. rewrite <- Pow.Z.pow_mul_base by lia.
+    rewrite Z.mul_mod_full. rewrite IHm'. rewrite Z.mul_0_r. apply Z.mod_0_l. apply Z.pow_nonzero; lia.
 Qed.
 
 Lemma div_nz a b : b > 0 -> b <= a -> a / b <> 0.
 Proof.
-  intros H1 H2. assert (1 <= a / b).
+  intros H1 H2. assert (H: 1 <= a / b).
   - replace 1 with (b / b).
-    + apply Z_div_le.
-      -- apply H1.
-      -- apply H2.
+    + apply Z_div_le; assumption.
     + apply Z_div_same. apply H1.
   - symmetry. apply Z.lt_neq. apply Z.lt_le_trans with 1.
     + reflexivity.
@@ -69,26 +62,10 @@ Qed.
 
 Lemma limbs_mod_s_0 : (weight limbs) mod s = 0.
 Proof.
-  cbv [weight base s]. rewrite <- Z.pow_mul_r. rewrite <- Nat2Z.inj_mul. apply mod_is_zero.
-  - lia.
-  - apply e_small.
-  - lia.
-  - lia.
+  cbv [weight base s]. rewrite <- Z.pow_mul_r by lia. rewrite <- Nat2Z.inj_mul. apply mod_is_zero; lia.
 Qed.
 
 Local Open Scope nat_scope.
-
-(* want to start with i = 1 (up to l - 2, excludsive), so want to start with l_minus_2_minus_i = l - 2 - 1 *)
-Fixpoint loop l weight s c l_minus_2_minus_i r0 :=
-  match l_minus_2_minus_i with
-  | O => r0
-  | S l_minus_2_minus_i' =>
-    let i := (l - 2) - l_minus_2_minus_i in
-    let r1 := Associational.carry (weight (i + l)) (weight 1) r0 in
-    let r2 := reduce_one s (weight (i + l)) (weight l) c r1 in
-    let r3 := Associational.carry (weight i) (weight 1) r2 in
-    loop l weight s c l_minus_2_minus_i' r3
-  end.
 
 Definition reduce' x1 x2 x3 x4 x5 := dedup_weights (reduce_one x1 x2 x3 x4 x5).
 Definition carry' x1 x2 x3 := dedup_weights (Associational.carry x1 x2 x3).
@@ -99,15 +76,13 @@ Definition loop_body i before :=
   let after := carry' (weight i) (weight 1) middle2 in
   after.
 
+Hint Rewrite eval_reduce_one Associational.eval_carry eval_dedup_weights: push_eval.
+
 Lemma eval_loop_body i before :
   (Associational.eval (loop_body i before) mod (s - c) =
   Associational.eval before mod (s - c))%Z.
 Proof.
-  cbv [loop_body carry' reduce'].
-  repeat (try rewrite eval_reduce_one;
-          try rewrite Associational.eval_carry;
-          try rewrite eval_dedup_weights).
-  reflexivity.
+  cbv [loop_body carry' reduce']. autorewrite with push_eval. reflexivity.
   - apply weight_nz.
   - apply s_nz.
   - apply weight_nz.
@@ -155,21 +130,15 @@ Definition mulmod_general a b :=
   let r13 := carry' (weight (l - 2)) (weight 1) r12 in
   Positional.from_associational weight l r13.
 
+Hint Rewrite Positional.eval_from_associational Positional.eval_to_associational eval_carry_down eval_loop': push_eval.
+
 Local Open Scope Z_scope.
 
 Theorem eval_mulmod_general a b :
   (Positional.eval weight limbs a * Positional.eval weight limbs b) mod (s - c) =
   (Positional.eval weight limbs (mulmod_general a b)) mod (s - c).
 Proof.
-  cbv [mulmod_general carry' reduce'].
-  repeat (try rewrite Positional.eval_from_associational;
-          try rewrite Positional.eval_to_associational;
-          try rewrite Associational.eval_carry;
-          try rewrite eval_reduce_one;
-          try rewrite eval_carry_down;
-          try rewrite eval_dedup_weights;
-          try rewrite eval_loop').
-  rewrite Associational.eval_mul. repeat rewrite Positional.eval_to_associational. reflexivity.
+  cbv [mulmod_general carry' reduce']. autorewrite with push_eval. reflexivity.
   all:
       cbv [weight s base];
       try apply weight_nz;
@@ -181,31 +150,12 @@ Proof.
       try apply mod_is_zero;
       try (remember limbs_gteq_3 as H; lia);
       try apply base_nz.
-  - apply div_nz.
-    + lia.
-    + rewrite <- Z.pow_mul_r. rewrite <- Nat2Z.inj_mul. rewrite <- Z.pow_le_mono_r_iff.
-      -- remember e_small as H. lia.
-      -- lia.
-      -- lia.
-      -- lia.
-      -- lia.
-  - apply div_nz.
-    + lia.
-    + rewrite <- Z.pow_mul_r. rewrite <- Nat2Z.inj_mul. rewrite <- Z.pow_le_mono_r_iff.
-      -- remember e_big as H. lia.
-      -- lia.
-      -- lia.
-      -- lia.
-      -- lia.
-  - repeat rewrite <- Z.pow_mul_r. rewrite <- Z.pow_sub_r.
-    + rewrite <- Nat2Z.inj_mul. rewrite <- Nat2Z.inj_sub. apply mod_is_zero.
-      -- lia.
-      -- lia.
-      -- apply e_small.
-    + lia.
-    + remember e_small as H. lia.
-    + lia.
-    + lia.
+  - apply div_nz; try lia. rewrite <- Z.pow_mul_r by lia. rewrite <- Nat2Z.inj_mul.
+    rewrite <- Z.pow_le_mono_r_iff by lia. lia.
+  - apply div_nz; try lia. rewrite <- Z.pow_mul_r by lia. rewrite <- Nat2Z.inj_mul.
+    rewrite <- Z.pow_le_mono_r_iff by lia. lia.
+  - repeat rewrite <- Z.pow_mul_r by lia. rewrite <- Z.pow_sub_r by lia.
+    rewrite <- Nat2Z.inj_mul. rewrite <- Nat2Z.inj_sub by lia. apply mod_is_zero; lia.
 Qed.
 
-End Stuff.
+End __.

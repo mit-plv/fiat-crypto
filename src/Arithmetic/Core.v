@@ -206,7 +206,7 @@ Module Associational.
   Proof.
     remember (Z_div_exact_full_2 _ _ fw_nz w_fw) as H2.
     clear HeqH2 fw_nz w_fw.
-    induction p as [|t p'].
+    induction p as [|t p' IHp'].
     - simpl. cbv [Associational.eval]. simpl. lia.
     - cbv [split_one]. simpl. destruct (fst t =? w) eqn:E.
       + simpl in IHp'. remember (partition (fun t0 : Z * Z => fst t0 =? w) p') as thing.
@@ -532,9 +532,9 @@ Module Associational.
   Lemma value_at_weight_works a d : d * (value_at_weight a d) = Associational.eval (filter (fun p => d =? fst p) a).
   Proof.
     induction a as [| a0 a' IHa'].
-    - cbv [Associational.eval]. simpl. ring.
+    - cbv [Associational.eval]. simpl. lia.
     - simpl. destruct (d =? fst a0) eqn:E.
-      + rewrite Associational.eval_cons. rewrite <- IHa'. apply Z.eqb_eq in E. rewrite E. ring.
+      + rewrite Associational.eval_cons. rewrite <- IHa'. apply Z.eqb_eq in E. rewrite E. lia.
       + apply IHa'.
   Qed.
 
@@ -567,16 +567,16 @@ Module Associational.
 
   Theorem eval_dedup_weights a : Associational.eval (dedup_weights a) = Associational.eval a.
   Proof.
-    induction a as [| a0 a'].
+    induction a as [| a0 a' IHa'].
     - reflexivity.
     - cbv [dedup_weights]. simpl. destruct (is_in Z.eqb (fst a0) (just_once Z.eqb (firsts a'))) eqn:E.
       + apply (is_in_true_iff Z.eqb Z.eqb_eq) in E. rewrite <- (just_once_in_iff Z.eqb Z.eqb_eq) in E. apply (just_once_split Z.eqb Z.eqb_eq) in E.
         destruct E as [l1 [l2 [H1 [H2 H3] ] ] ]. rewrite H1. repeat rewrite map_app. rewrite <- (map_eq _ _ _ _ H2).
         rewrite <- (map_eq _ _ _ _ H3). repeat rewrite Associational.eval_app. simpl. rewrite Z.eqb_refl. repeat rewrite Associational.eval_cons.
         rewrite <- IHa'. simpl. rewrite Associational.eval_nil. cbv [dedup_weights]. rewrite H1.
-        repeat rewrite map_app. repeat rewrite Associational.eval_app. cbv [Associational.eval]. simpl. ring.
+        repeat rewrite map_app. repeat rewrite Associational.eval_app. cbv [Associational.eval]. simpl. lia.
       + simpl. rewrite Z.eqb_refl. apply (is_in_false_iff Z.eqb Z.eqb_eq) in E. rewrite <- (map_eq _ _ _ _ E). repeat rewrite Associational.eval_cons.
-        simpl. rewrite <- IHa'. cbv [dedup_weights]. f_equal. f_equal. rewrite <- (just_once_in_iff Z.eqb Z.eqb_eq) in E. rewrite (not_in_value_0 _ _ E). ring.
+        simpl. rewrite <- IHa'. cbv [dedup_weights]. f_equal. f_equal. rewrite <- (just_once_in_iff Z.eqb Z.eqb_eq) in E. rewrite (not_in_value_0 _ _ E). lia.
   Qed.
 
   Section Carries.
@@ -627,11 +627,11 @@ Module Associational.
   Lemma eval_carry_down w fw p (fw_nz:fw<>0) (w_fw:w mod fw = 0):
         Associational.eval (carry_down w fw p) = Associational.eval p.
   Proof using Type*.
-    cbv [carry_down carryterm_down]. induction p.
+    cbv [carry_down carryterm_down]. induction p as [| a p' IHp'].
     - trivial.
     - push. destruct (fst a =? w) eqn:E.
       + rewrite Z.mul_comm. rewrite <- Z.mul_assoc. rewrite <- Z_div_exact_full_2; lia.
-      + rewrite IHp. lia.
+      + rewrite IHp'. lia.
   Qed.
 
   End Carries.
