@@ -136,6 +136,7 @@ Global Instance show_OpCode : Show OpCode
         | cmovb => "cmovb"
         | cmovc => "cmovc"
         | cmovnz => "cmovnz"
+        | cmovo => "cmovo"
         | cmp => "cmp"
         | db => "db"
         | dd => "dd"
