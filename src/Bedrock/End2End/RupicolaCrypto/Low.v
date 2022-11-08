@@ -1066,7 +1066,7 @@ Proof using Type.
     eapply expr_compile_var; auto.
   }
   eapply Proper_call; cycle -1.
-  eapply H1; cycle 2; eauto; try lia.
+  eapply H1; cycle 2; try ecancel_assumption; eauto; try lia.
   unfold pointwise_relation.
   intros.
   intro.

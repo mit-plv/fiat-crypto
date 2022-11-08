@@ -47,16 +47,17 @@ Definition initfn := func! {
 
 Definition loopfn := func! {
   st=$ST; pk=$PK; buf=$BUF;
-  unpack! l, err = recvEthernet(buf);
-  require !err;
-  require ($63 < l);
 
-  ethertype = (((load1(buf + $12))&$0xff) << $8) | ((load1(buf + $13))&$0xff);
-  require ($(1536 - 1) < ethertype);
-  protocol = (load1(buf+$23))&$0xff;
+  unpack! pktlen, err = recvEthernet(buf);
+  require !err;
+  require ($63 < pktlen);
+
+  ethertype = load1(buf + $12) << $8 | load1(buf + $13);
+  require ($1535 < ethertype);
+  protocol = load1(buf+$23);
   require (protocol == $0x11);
 
-  if $(14+20+8 +2+32 +4) == l { (* getpk *)
+  if $(14+20+8 +2+32 +4) == pktlen { (* getpk *)
     memswap(buf, buf+$6, $6); (* ethernet address *)
     memswap(buf+$(14+12), buf+$(14+16), $4); (* IP address *)
     memswap(buf+$(14+20+0), buf+$(14+20+2), $2); (* UDP port *)
@@ -76,7 +77,7 @@ Definition loopfn := func! {
 
     x25519_base(buf+$(14+20+8 +2), st+$32);
     unpack! err = lan9250_tx(buf, $(14+20+8 +2+32))
-  } else if $(14+20+8 +2+16 +4) == l { (* operate *)
+  } else if $(14+20+8 +2+16 +4) == pktlen { (* operate *)
     stackalloc 32 as tmp;
     x25519(tmp, st+$32, pk);
     unpack! set0 = memequal(tmp, buf+$(14+20+8 +2), $16);
@@ -288,17 +289,16 @@ Proof.
   eplace (word.add (word.add buf _) _) with (word.add buf _) in H12 by (ring_simplify; trivial).
   repeat straightline.
 
-  let v := constr:(word.or (word.slu (word.and v0 v1) v2) (word.and v4 v5)) in
+  let v := match goal with l := map.put _ "ethertype" ?v |- _ => v end in
   remember v as ethertype in *;
   assert (word.unsigned ethertype = le_combine [ethertype_lo; ethertype_hi]);
    [ rewrite Heqethertype | ]; clear Heqethertype.
   { pose proof byte.unsigned_range ethertype_hi.
     pose proof byte.unsigned_range ethertype_lo.
-    subst v0 v1 v2 v3 v4 v5.
-    cbn [le_combine]; rewrite ?Z.shiftl_0_l, ?Z.lor_0_r.
+    subst_words.
+    cbn [le_combine]. rewrite ?Z.shiftl_0_l, ?Z.lor_0_r.
     rewrite_strat (bottomup (terms word.unsigned_or_nowrap word.unsigned_and_nowrap word.unsigned_of_Z word.unsigned_slu)).
     2: ZnWords.
-    change (word.wrap 255) with (Z.ones 8) in *; rewrite !Z.land_ones by Lia.lia.
     cbv [word.wrap]; (rewrite_strat (bottomup (terms (Zmod_small)))); try ZnWords.ZnWords.
     { rewrite Z.lor_comm; reflexivity. } }
 
@@ -329,7 +329,6 @@ Proof.
   subst protocol.
   pose proof byte.unsigned_range ipproto.
   rewrite word.unsigned_eqb, ?word.unsigned_and_nowrap, ?word.unsigned_of_Z_nowrap by ZnWords.ZnWords.
-  change (255) with (Z.ones 8); rewrite Z.land_ones, Z.mod_small by ZnWords.
   destr Z.eqb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate; autoforward with typeclass_instances in E1.
   2: {
     fwd; slv; [].
@@ -716,7 +715,6 @@ Optimize Proof. Optimize Heap.
     straightline.
     straightline.
     repeat straightline.
-    subst a7 a6 a5 a1 v9 v8 v7 v6.
     assert (ptsto_to_array :
       forall {width : Z} {word : Interface.word width},
       word.ok word ->
@@ -773,7 +771,10 @@ Optimize Proof. Optimize Heap.
 
   repeat straightline.
 
-  replace  ((ih_const ++ [byte.of_Z 0] ++ [byte.of_Z 62] ++ ip_idff ++ [ipproto] ++ [byte.of_Z 0] ++ [byte.of_Z 0] ++ ip_local) ++ ip_remote)%list
+  repeat match goal with x := word.of_Z 0 |- _ => subst x end.
+  repeat match goal with x := word.of_Z 62 |- _ => subst x end.
+  rewrite !word.unsigned_of_Z_nowrap in H43 by Lia.lia.
+  progress replace  ((ih_const ++ [byte.of_Z 0] ++ [byte.of_Z 62] ++ ip_idff ++ [ipproto] ++ [byte.of_Z 0] ++ [byte.of_Z 0] ++ ip_local) ++ ip_remote)%list
     with ((ih_const ++ [byte.of_Z 0] ++ [byte.of_Z 62] ++ ip_idff ++ [ipproto]) ++ [byte.of_Z 0] ++ [byte.of_Z 0] ++ ip_local ++ ip_remote)%list
     in * by (rewrite ?app_assoc; trivial).
   seprewrite_in @Array.bytearray_append H43.
@@ -789,7 +790,7 @@ Optimize Proof. Optimize Heap.
   seprewrite_in (symmetry! (fun a=>@ptsto_to_array _ _ _ _ _ a (byte.of_Z 0))) H43.
 
   repeat straightline.
-  revert H40.
+  match goal with H : ?P ?m |- store _ ?m _ _ _ => revert H end.
   repeat match goal with H : sep _ _ _ |- _ => clear H end.
   repeat straightline.
 
@@ -838,9 +839,9 @@ Optimize Proof. Optimize Heap.
   seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
 Optimize Proof. Optimize Heap.
 
-  subst v6 v7 v8 v9 v10.
   rename x3 into ipchk.
-  rewrite ?word.unsigned_sru_nowrap, ?word.unsigned_of_Z_nowrap in H37 by ZnWords.
+  match goal with x := word.sru ipchk _ |- _ => subst x end.
+  progress rewrite ?word.unsigned_sru_nowrap, ?word.unsigned_of_Z_nowrap in H37 by ZnWords.
 
   straightline_call; [ssplit; cycle -1|]; try ecancel_assumption.
   { rewrite ?app_length, ?length_le_split. SepAutoArray.listZnWords. }
