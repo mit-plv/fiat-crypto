@@ -3615,40 +3615,6 @@ Lemma eval_expr {rewriting_passes : rewriting_passes_opt} c d e v : gensym_dag_o
 Proof.
   apply expr_Ok.
 Qed.
-
-Compute option_map (fun v => (v, 2^64-1-v.(upper))) (bound_expr
-           (ExprApp
-              (addZ,
-              [ExprApp (shr 64%N, [ExprApp (mulZ, [ExprApp (old 64%N 3%N, []); ExprApp (old 64%N 5%N, [])]); ExprApp (const 64%Z, [])]);
-              ExprApp
-                (addcarry 64%N,
-                [ExprApp (mul 64%N, [ExprRef 3%N; ExprRef 5%N]);
-                ExprApp
-                  (add 64%N,
-                  [ExprApp (shr 64%N, [ExprRef 19%N; ExprApp (const 64%Z, [])]);
-                  ExprApp (addcarry 64%N, [ExprRef 20%N; ExprRef 26%N])])])]))).
-
-Goal True.
-  pose (expr (ExprApp (addcarry 64, [ExprRef 12; ExprApp (add 64, [ExprApp (shr 64, [ExprRef 15; ExprRef 10]); ExprApp (addcarry 64, [ExprApp (mul 64, [ExprRef 3; ExprRef 5]); ExprApp (add 64, [ExprApp (shr 64, [ExprRef 19; ExprRef 10]); ExprApp (addcarry 64, [ExprRef 20; ExprRef 26])])])])]))%N) as e.
-  cbv [expr] in e.
-  cbn [fold_left] in e.
-  Set Printing Depth 10000.
-  vm_compute constprop in e.
-  vm_compute slice0 in e.
-  vm_compute drop_identity in e.
-  set (e' := flatten_bounded_associative _) in (value of e).
-  clear e.
-  cbv [flatten_bounded_associative] in e'.
-  cbn [flat_map] in e'.
-  set (e'' := bounds_for_drop_inner_associative _ _) in (value of e').
-  vm_compute in e''.
-  subst e''.
-  cbv beta iota zeta in e'.
-  set (e'' := bound_expr _) in (value of e').
-  Compute 2^64-18446744073709551615.
-  vm_compute in e''.
-  cbv
-
 End Rewrite.
 
 Definition simplify {opts : symbolic_options_computed_opt} (dag : dag) (e : node idx) :=
