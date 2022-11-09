@@ -179,12 +179,14 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     SetOperand sa s st dst (Z.b2z b)
   | clc, [] => Some (update_flag_with st (fun fs =>
     set_flag fs CF false))
-  | cmovc, [dst; src] (* Flags Affected: None *)
-  | cmovb, [dst; src] (* Flags Affected: None *)
+  | cmovc, [dst; src] (* CMOVcc: Flags Affected: None *)
+  | cmovb, [dst; src]
+  | cmovo, [dst; src]
     =>
+    let flag := match instr.(op) with cmovc|cmovb => CF | cmovo => OF | _ => PF end in
     v <- DenoteOperand sa s st src;
-    cf <- get_flag st CF;
-    if cf
+    cc <- get_flag st flag;
+    if cc
     then SetOperand sa s st dst v
     else Some st
   | cmovnz, [dst; src] => (* Flags Affected: None *)
@@ -193,7 +195,6 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     if negb zf
     then SetOperand sa s st dst v
     else Some st
-
   | lea, [reg dst; mem src] => (* Flags Affected: None *)
     Some (update_reg_with st (fun rs => set_reg rs dst (DenoteAddress sa st src)))
   | (add | adc) as opc, [dst; src] =>
@@ -388,6 +389,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | jmp, _
   | cmovc, _
   | cmovb, _
+  | cmovo, _
   | cmovnz, _
   | setc, _
   | seto, _
