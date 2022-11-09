@@ -22,8 +22,6 @@ import "math/bits"
 type uint1 uint64 // We use uint64 instead of a more narrow type for performance reasons; see https://github.com/mit-plv/fiat-crypto/pull/1006#issuecomment-892625927
 type int1 int64 // We use uint64 instead of a more narrow type for performance reasons; see https://github.com/mit-plv/fiat-crypto/pull/1006#issuecomment-892625927
 
-var _ = error_Go_output_does_not_support_128_bit_integers___instead_use_rewriting_rules_for_removing_128_bit_integers
-
 // cmovznzU64 is a single-word conditional move.
 //
 // Postconditions:
@@ -241,9 +239,9 @@ func Mul(out1 *[4]uint64, arg1 *[4]uint64, arg2 *[4]uint64) {
 	x128, x129 = bits.Add64(x117, uint64(0x0), uint64(uint1(x127)))
 	var x130 uint64
 	cmovznzU64(&x130, uint1(x129), uint64(0x0), 0x26)
-	x131 := (uint128(x130) + uint128(x122))
-	x132 := (uint64(x131) & 0xffffffffffffffff)
-	out1[0] = x132
+	var x131 uint64
+	x131, _ = bits.Add64(x130, x122, uint64(0x0))
+	out1[0] = x131
 	out1[1] = x124
 	out1[2] = x126
 	out1[3] = x128
@@ -592,8 +590,8 @@ func Mul2(out1 *[4]uint64, out2 *[4]uint64, arg1 *[4]uint64, arg2 *[4]uint64, ar
 	x225, x226 = bits.Add64(x214, uint64(0x0), uint64(uint1(x224)))
 	var x227 uint64
 	cmovznzU64(&x227, uint1(x226), uint64(0x0), 0x26)
-	x228 := (uint128(x227) + uint128(x219))
-	x229 := (uint64(x228) & 0xffffffffffffffff)
+	var x228 uint64
+	x228, _ = bits.Add64(x227, x219, uint64(0x0))
 	var x230 uint64
 	var x231 uint64
 	x231, x230 = bits.Mul64(0x26, x189)
@@ -645,13 +643,13 @@ func Mul2(out1 *[4]uint64, out2 *[4]uint64, arg1 *[4]uint64, arg2 *[4]uint64, ar
 	x262, x263 = bits.Add64(x251, uint64(0x0), uint64(uint1(x261)))
 	var x264 uint64
 	cmovznzU64(&x264, uint1(x263), uint64(0x0), 0x26)
-	x265 := (uint128(x264) + uint128(x256))
-	x266 := (uint64(x265) & 0xffffffffffffffff)
-	out1[0] = x229
+	var x265 uint64
+	x265, _ = bits.Add64(x264, x256, uint64(0x0))
+	out1[0] = x228
 	out1[1] = x221
 	out1[2] = x223
 	out1[3] = x225
-	out2[0] = x266
+	out2[0] = x265
 	out2[1] = x258
 	out2[2] = x260
 	out2[3] = x262
@@ -812,9 +810,9 @@ func Square(out1 *[4]uint64, arg1 *[4]uint64) {
 	x97, x98 = bits.Add64(x86, uint64(0x0), uint64(uint1(x96)))
 	var x99 uint64
 	cmovznzU64(&x99, uint1(x98), uint64(0x0), 0x26)
-	x100 := (uint128(x99) + uint128(x91))
-	x101 := (uint64(x100) & 0xffffffffffffffff)
-	out1[0] = x101
+	var x100 uint64
+	x100, _ = bits.Add64(x99, x91, uint64(0x0))
+	out1[0] = x100
 	out1[1] = x93
 	out1[2] = x95
 	out1[3] = x97

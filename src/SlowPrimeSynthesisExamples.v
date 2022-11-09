@@ -107,19 +107,19 @@ Module debugging_solinas_reduction.
     Time Compute
          Show.show
          (Pipeline.BoundsPipelineToString
-            "fiat" "mul2"
+            "fiat" "mul"
             false
             false
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) in
-                  let r := Reify (mulmod2 base s c n) in
+                  let r := Reify (SolinasReduction.reduce3 base s c n) in
                   exact r)
                    (fun _ _ => [])
-                   (Some (repeat bound n), (Some (repeat bound n), (Some (repeat bound n), (Some (repeat bound n), tt))))
-                   (Some (repeat bound n), Some (repeat bound n))
-                   (None, (None, (None, (None, tt))))
-                   (None, None)
+                   (Some (repeat bound n ++ [bound1]), tt)
+                   (Some (repeat bound n))
+                   (None, tt)
+                   (None)
            : Pipeline.ErrorT _).
 
     Time Compute
