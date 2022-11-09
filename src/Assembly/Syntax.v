@@ -59,6 +59,7 @@ Inductive OpCode :=
 | cmovb
 | cmovc
 | cmovnz
+| cmovo
 | cmp
 | db
 | dd

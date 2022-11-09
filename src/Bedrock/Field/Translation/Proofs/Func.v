@@ -88,7 +88,7 @@ Section Func.
       forall (tr : Semantics.trace)
              (locals : locals)
              (mem : mem)
-             (functions : list func),
+             (functions : list (string*func)),
         (* locals doesn't contain variables we could overwrite *)
         (forall n nvars,
             (nextn <= n)%nat ->
@@ -505,14 +505,14 @@ Section Func.
          (function arguments, function return variable names, body) *)
       let out := translate_func
                    e argnames arglengths argsizes retnames retsizes in
-      let f : func := (fname, fst out) in
+      let f : string*func := (fname, fst out) in
       let lengths := snd out in
       forall tr
              (mem : mem)
              (flat_args : list word)
              (out_ptrs : list word)
              (argvalues : list word)
-             (functions : list func)
+             (functions : list (string*func))
              (R : _ -> Prop),
         (* argument values are the concatenation of true argument values
            and output pointer values *)

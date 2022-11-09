@@ -1,7 +1,6 @@
 ladderstep_body = 
 fun (width : Z) (BW : Bitwidth width) (word : word width) (mem : map.map word byte) (word_ok : word.ok word) (mem_ok : map.ok mem)
   (field_parameters : FieldParameters) (field_representaton : FieldRepresentation) =>
-("ladderstep",
 (["X1"; "X2"; "Z2"; "X3"; "Z3"], [],
 noreassign
   (noskips
@@ -26,8 +25,8 @@ noreassign
                                                            (cmd.seq (cmd.call [] add ["Z2"; "A"; "Z2"])
                                                               (cmd.seq (cmd.call [] mul ["Z2"; "E"; "Z2"])
                                                                  (fold_right (fun (v : string) (c : Syntax.cmd) => cmd.seq (cmd.unset v) c)
-                                                                    cmd.skip []))))))))))))))))))))))))
+                                                                    cmd.skip [])))))))))))))))))))))))
      : forall (width : Z) (BW : Bitwidth width) (word : word width) (mem : map.map word byte),
-       word.ok word -> map.ok mem -> forall field_parameters : FieldParameters, FieldRepresentation -> bedrock_func
+       word.ok word -> map.ok mem -> forall field_parameters : FieldParameters, FieldRepresentation -> Syntax.func
 
 Arguments ladderstep_body {width}%Z_scope {BW word mem word_ok mem_ok field_parameters field_representaton}
