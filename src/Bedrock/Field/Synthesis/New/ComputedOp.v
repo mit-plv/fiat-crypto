@@ -15,9 +15,7 @@ Record computed_op
   { res : API.Expr t;
     b2_func : func;
     res_eq : op = ErrorT.Success res;
-    func_eq :
-      b2_func = make_bedrock_func
-                  name insizes outsizes inlengths res;
+    func_eq : b2_func = make_bedrock_func insizes outsizes inlengths res;
   }.
 Global Arguments computed_op {_ _ _ _ _ _ _ _ _ _ t}.
 

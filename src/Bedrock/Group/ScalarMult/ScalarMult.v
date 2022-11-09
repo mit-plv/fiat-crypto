@@ -117,11 +117,10 @@ Module M.
             cmd.stackalloc n size (repeat_stackalloc size names' post)
         end.
 
-      (* TODO: make rupicola and stack allocation play nicer together so
-         Montgomery ladder doesn't need so many arguments *)
-      Definition scmul_func : Syntax.func :=
-        (scmul, (["out"; "x_bytes"; "k"], [],
-                 repeat_stackalloc
+      Import NotationsCustomEntry.
+      Definition scmul_func := func! (out, x_bytes, k) {
+        (* TODO: remove stack allocation of temporaries, it is no longer needed for Rupicola *)
+                 $(repeat_stackalloc
                    felem_size_in_bytes
                    ["X1"; "Z1"; "X2"; "Z2"; "A"; "AA"; "B"; "BB"; "E"; "C"; "D"; "DA"; "CB"; "x"; "r"]
                    (cmd.seq
@@ -132,7 +131,7 @@ Module M.
                                       expr.var "Z1"; expr.var "X2"; expr.var "Z2"; expr.var "A";
                                         expr.var "AA"; expr.var "B"; expr.var "BB"; expr.var "E";
                                           expr.var "C"; expr.var "D"; expr.var "DA"; expr.var "CB"])
-                         (cmd.call [] to_bytes [expr.var "out"; expr.var "r"]))))).
+                         (cmd.call [] to_bytes [expr.var "out"; expr.var "r"]))))}.
 
       Lemma and_iff1_l (X : Prop) (P : mem -> Prop) :
         X ->
@@ -224,13 +223,10 @@ Module M.
       (* speedier proof if straightline doesn't try to compute the stack
          allocation sizes *)
       Local Opaque felem_size_in_bytes.
-      Lemma scmul_func_correct :
-        program_logic_goal_for_function! scmul_func.
+      Lemma scmul_func_correct : forall functions, spec_of_scmul ((scmul, scmul_func)::functions).
       Proof.
         (* straightline doesn't work properly for setup, so the first step
            is inlined and changed here *)
-        Fail straightline.
-        cbv [program_logic_goal_for].
         enter scmul_func. intros.
         WeakestPrecondition.unfold1_call_goal.
         (cbv beta match delta [WeakestPrecondition.call_body]).

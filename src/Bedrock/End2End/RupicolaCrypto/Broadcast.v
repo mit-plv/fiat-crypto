@@ -189,7 +189,7 @@ Section with_parameters.
       truncate_of_T : forall t, truncate_word szT (word_of_T t) = word_of_T t;
       predT_to_truncated_word
       : forall ptr t,
-        Lift1Prop.impl1 (predT ptr t) (truncated_word szT ptr (word_of_T t));
+        Lift1Prop.iff1 (predT ptr t) (truncated_word szT ptr (word_of_T t));
     }.
 
   Section WithAccessSize.
@@ -225,8 +225,7 @@ Section with_parameters.
   (* expr expect idx_var to hold the index
    *)
   (*
-    TODO: this is hardcoded to bytes right now.
-    Generalize to things that can be packed in a word
+    TODO: generalize to things that don't fit in a word by allocating scratch space
    *)
   Definition broadcast_expr
              l idx_var
@@ -240,7 +239,130 @@ Section with_parameters.
 
 
 
+  Lemma ranged_for'_length_helper (from' : nat) scratch lst
+    :  length (snd (ranged_for' 0 from'
+                      (λ (acc : list T) (tok : ExitToken.t) (idx : Z) (_ : 0 - 1 < idx < from'),
+                        (tok, upd acc (Z.to_nat idx) (nth (Z.to_nat idx) lst default))) scratch : 
+                   ExitToken.t * list T)) = length scratch.
+  Proof.
+    revert scratch lst.
+    induction from'.
+    {
+      simpl.
+      lia.
+    }
+    {
+      intros.
+      replace (Z.of_nat (S from')) with ((Z.of_nat from') + 1) by lia.
+      erewrite ranged_for'_unfold_r; try lia.
+      simpl.
+      set (fst _).
+      destruct y; simpl; eauto.
+      rewrite upd_length.
+      eauto.
+    }
+  Qed.
 
+  
+  
+  Lemma ranged_for'_invariant {A} n m (f : _ -> _ -> _ -> _) acc (P : A -> Prop)
+    : (forall acc' tok idx, fst (f acc' tok idx) = tok) ->
+      P acc ->
+      (forall acc' tok idx, n - 1 < idx < m -> P acc' -> P (snd (f acc' tok idx))) ->
+      P (snd (nd_ranged_for' n m f acc)).
+  Proof.
+    intro Htok.
+    unfold nd_ranged_for'.
+    unfold nd_ranged_for_break.
+    intros H0 Hn.
+    revert acc H0.
+    pose proof (z_range_sound n m) as H'; revert H'.
+    generalize ((z_range n m)).
+    
+    induction l; simpl; intros; eauto.
+    specialize (IHl ltac:(eauto)).
+    specialize (H' a ltac:(tauto)).
+    rewrite (surjective_pairing (f acc ExitToken.new a)).
+    rewrite Htok.
+    eapply IHl.
+    eapply Hn; eauto.
+  Qed.
+
+  
+  Lemma skipn_ranged_for'_upd (from' : nat) scratch lst
+    : skipn from'
+        (snd
+           (ranged_for' 0 from'
+              (λ (acc0 : list T) (tok : ExitToken.t) (idx : Z) (_ : 0 - 1 < idx < from'),
+                (tok, upd acc0 (Z.to_nat idx) (nth (Z.to_nat idx) lst default))) scratch))
+      = skipn from' scratch.
+  Proof.
+    rewrite <- nd_as_ranged_for'.
+    eapply ranged_for'_invariant; eauto.
+    intros.
+    simpl in *.
+    eapply nth_error_ext.
+    intro i.
+    rewrite ListUtil.nth_error_skipn.
+    rewrite nth_error_upd_diff.
+    {
+      rewrite <- !ListUtil.nth_error_skipn.
+      congruence.
+    }
+    lia.
+  Qed.
+  
+  Lemma map_predT_to_truncated_word ptr t
+    : Lift1Prop.iff1 (t$@ptr) (array (truncated_word szT) sz_word ptr (map word_of_T t)).
+  Proof.
+    revert ptr; induction t;
+      simpl.
+    1: cbv; eauto.
+    intros ptr m.
+    split; intro H'.
+    2:{
+      seprewrite IHt.
+      seprewrite predT_to_truncated_word.
+      auto.
+    }
+    {
+      symmetry in IHt.
+      seprewrite IHt.
+      pose proof predT_to_truncated_word as Hpred;
+        symmetry in Hpred;
+        seprewrite Hpred.
+      auto.
+    }
+  Qed.
+
+  
+  Lemma map_upd A B (f : A -> B) i (a : A) l 
+    : map f (upd l i a) = upd (map f l) i (f a).
+  Proof.
+    eapply nth_error_ext;
+      intros.
+    destruct (Nat.compare_spec i0 (length l)); subst.
+    1,3: rewrite !ListUtil.nth_error_length_error; eauto;
+    repeat rewrite ?List.map_length, ?List.upd_length; lia.
+    assert A as default.
+    {
+      destruct l; simpl in*; try lia; auto.
+    }
+    rewrite !nth_error_nth' with (d:= f default)
+      by (repeat rewrite ?List.map_length, ?List.upd_length; lia).
+    f_equal.
+    destruct (Nat.eq_dec i i0); subst.
+    {
+      repeat rewrite ?nth_upd_same, ?map_nth
+        by (repeat rewrite ?List.map_length, ?List.upd_length; lia).
+      auto.
+    }
+    {
+      repeat rewrite ?nth_upd_diff, ?map_nth
+        by (repeat rewrite ?List.map_length, ?List.upd_length; lia).
+      auto. 
+    }
+  Qed.
 
   Lemma compile_broadcast_expr' {t m l e} (len : nat) (lst scratch : list T) :
     len = length scratch ->
@@ -260,9 +382,9 @@ Section with_parameters.
 
      broadcast_expr l idx_var scratch a_ptr R lst_expr v ->
       (let v := v in
-       forall m,
+       forall tr idx to m,
          (v$@a_ptr* R)%sep m ->
-         <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+         <{ Trace := tr; Memory := m; Locals := map.put (map.put l idx_var idx) to_var to; Functions := e }>
            k_impl
          <{ pred (k v eq_refl) }>) ->
       <{ Trace := t; Memory := m; Locals := l; Functions := e }>
@@ -278,10 +400,27 @@ Section with_parameters.
     rewrite nd_as_ranged_for_all.
     rewrite ranged_for_all_as_ranged_for.
     repeat compile_step.
-
-    assert (~ a_var = to_var) by admit.
-    assert (~ a_var = idx_var) by admit.
-
+    
+    assert (~ a_var = to_var).
+    {
+      intro; subst.
+      revert H1.
+      unfold DEXPR.
+      simpl.
+      unfold WeakestPrecondition.get.
+      rewrite H5.
+      intro H'; destruct H' as [? [? ?]]; congruence.
+    }
+    assert (~ a_var = idx_var).
+    {
+      intro; subst.
+      revert H1.
+      unfold DEXPR.
+      simpl.
+      unfold WeakestPrecondition.get.
+      rewrite H4.
+      intro H'; destruct H' as [? [? ?]]; congruence.
+    }
     eapply (compile_ranged_for_fresh _ _ _ _ _ _ _ _ _ _ _ _ idx_var to_var).
     repeat compile_step.
     repeat compile_step.
@@ -343,49 +482,109 @@ Section with_parameters.
         (*TODO: need to know about the ranged_for'*)
         specialize (H' mem0 (firstn (Z.to_nat from') acc)).
         rewrite firstn_length in H'.
-        assert (from' <= length acc) by admit.
+        assert (from' <= length acc).
+        {
+          unfold acc.
+          unfold a. 
+          replace (from') with (Z.of_nat (Z.to_nat from')) by lia.
+          rewrite ranged_for'_length_helper.
+          lia.
+        }
         rewrite Nat.min_l in H' by lia.
         rewrite Z2Nat.id in H'.
         eapply H'.
         all:try lia.
-  (*TODO: need to prove last n of scratch and acc are the same
-        ecancel_assumption.*)
-  Admitted.
+        replace (firstn (Z.to_nat from') acc ++ skipn (Z.to_nat from') scratch) with acc; eauto.
+        rewrite <- firstn_skipn with (n:=Z.to_nat from') (l:=acc) at 1.
+        f_equal.
+        unfold acc, a.
+        replace (from') with (Z.of_nat (Z.to_nat from')) by lia.
+        rewrite Nat2Z.id.
+        apply skipn_ranged_for'_upd.
+      }
+      {
+        
+        seprewrite_in map_predT_to_truncated_word H12.
+        eapply array_store_of_sep in H12.
+        destruct H12 as [? [? ?]].
+        
+        eexists; split.
+        { apply H11. }
+        {
+          unfold lp.
+          simpl.
+          split; eauto.
+        }
+        {
+          instantiate (1:=Z.to_nat from').
+          f_equal.
+          rewrite Z2Nat.id by lia.
+          rewrite Z.mul_comm.
+          rewrite word.ring_morph_mul.
+          rewrite word.of_Z_unsigned.
+          reflexivity.
+        }
+        {
+          rewrite List.map_length.
+          unfold acc, a.
+          replace (from') with (Z.of_nat (Z.to_nat from')) by lia.
+          rewrite ranged_for'_length_helper.
+          lia.
+        }
+        {
+          intros.          
+          seprewrite map_predT_to_truncated_word.
+          rewrite <- map_upd in H11.
+          eauto.
+        }
+      }
+    }
+    {
+      simpl.
+      intros.
+      destruct H10.
+      eapply H7 in H10.
+      change (-1) with (0-1).
+      unfold v in H10.
+      subst locals0.
+      exact H10.
+    }
+  Qed.
 
-    Lemma compile_broadcast_expr {t m l e} (len : nat) (lst scratch : list T) :
-      let v := lst in
-      forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
-             (a_ptr : word) a_var lst_expr idx_var to_var R,
+  Lemma compile_broadcast_expr {t m l e} (len : nat) (lst scratch : list T) :
+    let v := lst in
+    forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
+           (a_ptr : word) a_var lst_expr idx_var to_var R,
 
-        DEXPR m l (expr.var a_var) a_ptr ->
+      DEXPR m l (expr.var a_var) a_ptr ->
 
-        (scratch$@a_ptr * R)%sep m ->
+      (scratch$@a_ptr * R)%sep m ->
 
-        len = length scratch ->
-        len = length lst ->
-        len < 2^width ->
+      len = length scratch ->
+      len = length lst ->
+      len < 2^width ->
 
-        ~idx_var = to_var ->
-        map.get l idx_var = None ->
-        map.get l to_var = None ->
+      ~idx_var = to_var ->
+      map.get l idx_var = None ->
+      map.get l to_var = None ->
 
-        broadcast_expr l idx_var scratch a_ptr R lst_expr v ->
-        (let v := v in
-         forall m,
-           (v$@a_ptr* R)%sep m ->
-           <{ Trace := t; Memory := m; Locals := l; Functions := e }>
-             k_impl
-           <{ pred (k v eq_refl) }>) ->
-        <{ Trace := t; Memory := m; Locals := l; Functions := e }>
-          cmd_loop_fresh false idx_var (expr.literal 0) to_var len
-                         (cmd.store szT (expr.op bopname.add a_var
-                                                 (expr.op bopname.mul idx_var sz_word))
-                                    lst_expr)
-                         k_impl
-        <{ pred (nlet_eq [a_var] v k) }>.
-    Proof using T_Fits_ok env_ok ext_spec_ok locals_ok mem_ok word_ok.
-      eauto using compile_broadcast_expr'.
-    Qed.
+      broadcast_expr l idx_var scratch a_ptr R lst_expr v ->
+      (let v := v in
+       forall tr idx to m,
+         (v$@a_ptr* R)%sep m ->
+         <{ Trace := tr; Memory := m; Locals :=  map.put (map.put l idx_var idx) to_var to; Functions := e }>
+           k_impl
+         <{ pred (k v eq_refl) }>) ->
+      <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+        cmd_loop_fresh false idx_var (expr.literal 0) to_var len
+          (cmd.store szT (expr.op bopname.add a_var
+                            (expr.op bopname.mul idx_var sz_word))
+             lst_expr)
+          k_impl
+      <{ pred (nlet_eq [a_var] v k) }>.
+  Proof using T_Fits_ok env_ok ext_spec_ok locals_ok mem_ok word_ok.
+    eauto using compile_broadcast_expr'.
+  Qed.
 
     Section Binops.
 
@@ -475,13 +674,76 @@ Section with_parameters.
     | [H : context [predT ?ptr1] |- context [ truncated_word _ ?ptr2]] =>
         replace ptr2 with ptr1
     end.
-    ecancel_assumption_impl.
+    seprewrite_in predT_to_truncated_word H3.
+    ecancel_assumption.
     f_equal.
     rewrite Z.mul_comm.
     rewrite word.ring_morph_mul.
     reflexivity.
   Qed.
 
+  
+  Lemma split_hd_tl {A} (a:A) (l:list A)
+    : 0 < length l ->
+      l = hd a l :: tl l.
+  Proof.
+    destruct l; simpl in *; [lia | auto].
+  Qed.
+          
+  Lemma broadcast_var l idx_var scratch a_ptr b_ptr R a_var a_data
+    : map.get l a_var = Some a_ptr ->
+      ~a_var = idx_var ->
+      length scratch <= length a_data ->
+      let R' := (a_data$@a_ptr ⋆ R)
+      in
+      broadcast_expr l idx_var scratch b_ptr R'
+        (expr.load szT
+           (expr.op bopname.add a_var
+              (expr.op bopname.mul idx_var sz_word)))
+        a_data.
+  Proof using T_Fits_ok locals_ok mem_ok word_ok.
+    unfold broadcast_expr; intuition idtac.
+    repeat straightline.
+    exists a_ptr; intuition idtac.
+    {
+      rewrite map.get_put_diff by assumption.
+      assumption.
+    }
+    exists (word.of_Z (Z.of_nat (length lstl))).
+    intuition idtac.
+    {
+      rewrite map.get_put_same; eauto.
+    }
+    simpl.
+    unfold WeakestPrecondition.literal.
+    cbv [dlet].
+    exists (word_of_T (nth (length lstl) a_data default)).
+    split; auto.
+    erewrite load_of_sep.
+    {
+      erewrite truncate_of_T.
+      reflexivity.
+    }
+    seprewrite_in (array_append (T:=T) predT sz_word) H4.
+    replace (nth (length lstl) scratch)
+      with (nth ((length lstl)+0) scratch) by (f_equal;lia).
+    seprewrite_in map_predT_to_truncated_word H4.
+    seprewrite_in map_predT_to_truncated_word H4.
+    seprewrite_in map_predT_to_truncated_word H4.
+    rewrite <- (firstn_skipn (length lstl) a_data) in H4.
+    rewrite map_app in H4.   
+    seprewrite_in (array_append (T:=word)) H4.
+    rewrite map_length in H4.
+    rewrite firstn_length in H4.
+    replace ((Init.Nat.min (length lstl) (length a_data))) with (length lstl) in H4 by lia.
+    rewrite (split_hd_tl default (skipn (length lstl) a_data)) in H4 by (rewrite skipn_length; lia).
+    simpl in H4.
+    rewrite Z.mul_comm in H4.
+    rewrite word.ring_morph_mul in H4.
+    rewrite <- hd_skipn_nth_default in H4.
+    rewrite nth_default_eq in H4.
+    ecancel_assumption.
+  Qed.
 
   End WithAccessSize.
 
@@ -529,8 +791,10 @@ Section with_parameters.
       rewrite byte_and_xff.
       reflexivity.
     }
+    intros ptr t m.
+    split.
     {
-      intros ptr t m H.
+      intro H.
       unfold  truncated_word, truncated_scalar.
       cbn.
       rewrite word.unsigned_of_Z_nowrap.
@@ -538,6 +802,15 @@ Section with_parameters.
       ecancel_assumption.
       apply byte_in_word_bounds.
     }
+    {
+      intro H.
+      unfold truncated_word, truncated_scalar in H.
+      cbn in H.
+      rewrite word.unsigned_of_Z_nowrap in H.
+      rewrite word.byte_of_Z_unsigned in H.
+      ecancel_assumption.
+      apply byte_in_word_bounds.
+    }          
   Qed.
 
 
@@ -548,6 +821,9 @@ Section with_parameters.
       word_of_T b := b;
     |}.
 
+  (*TODO: where to get this fact from?*)
+  Axiom width_mul_8 : exists x, width = x * 8.
+  
   Instance word_ac_ok : FitsInLocal_ok word word_ac.
   Proof.
     constructor; unfold word_of_T, szT, predT, word_ac.
@@ -561,23 +837,38 @@ Section with_parameters.
       rewrite !word.of_Z_unsigned.
       rewrite Z2Nat.id.
       unfold Memory.bytes_per_word.
-      replace ((width + 7) / 8 * 8) with width by admit.
-      admit (*TODO: a similar proof lives in CSwap.v*).
-      admit (*easy*).
+      replace ((width + 7) / 8 * 8) with width.
+      {
+        rewrite <- (word.of_Z_unsigned t).
+        rewrite <- word.morph_and.
+        rewrite word.of_Z_land_ones.
+        auto.
+      }
+      {
+        pose proof width_mul_8 as Hw; destruct Hw as [x Hw]; subst.
+        lia.
+      }
+      {
+        unfold Memory.bytes_per_word.
+        pose proof (word.width_pos).
+        pose proof width_mul_8 as Hw; destruct Hw as [x Hw]; subst.
+        lia.
+      }
     }
     {
-      intros ptr t m H.
-      unfold scalar in *.
-      assumption.
+      intros ptr t m;
+        split;
+        unfold scalar in *;
+        auto.
     }
-  Admitted.
-
-
+  Qed.
 
 
   (*TODO: define in general*)
   Lemma broadcast_byte_const l (idx_var : string) scratch a_ptr R (const_list : list byte)
-    : broadcast_expr byte l idx_var scratch a_ptr R
+    : length scratch <= length const_list ->
+      length scratch <= 2^width ->
+      broadcast_expr byte l idx_var scratch a_ptr R
                      (expr.inlinetable
                                access_size.one
                                const_list
@@ -595,9 +886,27 @@ Section with_parameters.
     exists (word_of_byte (nth (length lstl) const_list x00)).
     split; auto.
     eapply load_one_of_sep.
-    (*TODO: preds for const list*)
-  Admitted.
+    instantiate (1:= fun _ => True).
 
+    exists (map.put map.empty (word.of_Z (Z.of_nat (length lstl))) (nth (length lstl) const_list x00)).
+    exists (map.remove (OfListWord.map.of_list_word const_list) (word.of_Z (Z.of_nat (length lstl)))). 
+    intuition idtac.
+    {
+      eapply map.split_comm.
+      eapply map.split_remove_put.
+      rewrite map.split_empty_r; auto.
+      rewrite OfListWord.map.get_of_list_word.
+      rewrite word.unsigned_of_Z.
+      rewrite word.wrap_small.
+      rewrite Nat2Z.id.
+      eapply nth_error_nth'.
+      lia.
+      split; try lia.
+    }
+    {
+      reflexivity.
+    }
+  Qed.
 
 
   Lemma broadcast_byte_and l idx_var scratch a_ptr R l1_expr l2_expr (l1 l2 : list byte)

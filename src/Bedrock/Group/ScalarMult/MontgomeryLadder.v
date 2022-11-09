@@ -301,14 +301,14 @@ Section __.
 
   Context { F_M_pos : Z.pos M_pos = 2^255-19 }.
 
-  Hint Extern 1 (spec_of "fe25519_inv") =>
-  (simple refine (spec_of_exp_large)) : typeclass_instances.
+  Hint Extern 1 (spec_of "fe25519_inv") => (simple refine (spec_of_exp_large)) : typeclass_instances.
+  Hint Extern 1 (spec_of "felem_cswap") => (simple refine (spec_of_cswap)) : typeclass_instances.
   
     Derive montladder_body SuchThat
            (defn! "montladder" ("OUT", "K", "U")
                 { montladder_body },
              implements montladder_gallina
-                        using [felem_cswap; felem_copy; from_word;
+                        using ["felem_cswap"; felem_copy; from_word;
                                "ladderstep"; "fe25519_inv"; mul])
            As montladder_correct.
     Proof.
@@ -338,4 +338,4 @@ Local Set Printing Width 160.
 (*
 Import NotationsCustomEntry.
 *)
-Redirect "Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body" Eval cbv [montladder_body cmd_downto_fresh cmd_downto gs fold_right] in montladder_body 253.
+Redirect "Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body" Eval cbv [montladder_body cmd_downto_fresh cmd_downto gs fold_right] in ("montladder", montladder_body 253).

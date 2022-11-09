@@ -19,16 +19,13 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 
-static __attribute__((always_inline)) inline uintptr_t
-_br2_mulhuu(uintptr_t a, uintptr_t b) {
-#if (UINTPTR_MAX == (1LLU<<31) - 1 + (1LLU<<31))
-	return ((uint64_t)a * b) >> 32;
-#elif (UINTPTR_MAX == (1LLU<<63) - 1 + (1LLU<<63))
-	return ((__uint128_t)a * b) >> 64;
-#else
-#error "32-bit or 64-bit uintptr_t required"
-#endif
+static __attribute__((constructor)) void _br2_preconditions(void) {
+  static_assert(~(intptr_t)0 == -(intptr_t)1, "two's complement");
+  assert(((void)"two's complement", ~(intptr_t)0 == -(intptr_t)1));
+  assert(((void)"little-endian", 1 == *(unsigned char *)&(const uintptr_t){1}));
+  assert(((void)"little-endian", 1 == *(unsigned char *)&(const intptr_t){1}));
 }
 
 // We use memcpy to work around -fstrict-aliasing.
@@ -39,8 +36,8 @@ _br2_mulhuu(uintptr_t a, uintptr_t b) {
 // on clang and sometimes on GCC, but other times GCC inlines individual
 // byte operations without reconstructing wider accesses.
 // The little-endian idiom below seems fast in gcc 9+ and clang 10.
-static __attribute__((always_inline)) inline uintptr_t
-_br2_load(uintptr_t a, uintptr_t sz) {
+static inline  __attribute__((always_inline, unused))
+uintptr_t _br2_load(uintptr_t a, uintptr_t sz) {
   switch (sz) {
   case 1: { uint8_t  r = 0; memcpy(&r, (void*)a, 1); return r; }
   case 2: { uint16_t r = 0; memcpy(&r, (void*)a, 2); return r; }
@@ -50,9 +47,37 @@ _br2_load(uintptr_t a, uintptr_t sz) {
   }
 }
 
-static __attribute__((always_inline)) inline void
-_br2_store(uintptr_t a, uintptr_t v, uintptr_t sz) {
+static inline __attribute__((always_inline, unused))
+void _br2_store(uintptr_t a, uintptr_t v, uintptr_t sz) {
   memcpy((void*)a, &v, sz);
+}
+
+static inline __attribute__((always_inline, unused))
+uintptr_t _br2_mulhuu(uintptr_t a, uintptr_t b) {
+  #if (UINTPTR_MAX == (UINTMAX_C(1)<<31) - 1 + (UINTMAX_C(1)<<31))
+	  return ((uint64_t)a * b) >> 32;
+  #elif (UINTPTR_MAX == (UINTMAX_C(1)<<63) - 1 + (UINTMAX_C(1)<<63))
+    return ((unsigned __int128)a * b) >> 64;
+  #else
+    #error "32-bit or 64-bit uintptr_t required"
+  #endif
+}
+
+static inline __attribute__((always_inline, unused))
+uintptr_t _br2_divu(uintptr_t a, uintptr_t b) {
+  if (!b) return -1;
+  return a/b;
+}
+
+static inline __attribute__((always_inline, unused))
+uintptr_t _br2_remu(uintptr_t a, uintptr_t b) {
+  if (!b) return a;
+  return a%b;
+}
+
+static inline __attribute__((always_inline, unused))
+uintptr_t _br2_shamt(uintptr_t a) {
+  return a&(sizeof(uintptr_t)*8-1);
 }
 
 
@@ -66,15 +91,15 @@ _br2_store(uintptr_t a, uintptr_t v, uintptr_t sz) {
 static
 void internal_fiat_secp256k1_scalar_mul(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
   uintptr_t x1, x2, x3, x0, x11, x16, x19, x21, x17, x22, x14, x23, x25, x26, x15, x27, x12, x28, x30, x31, x13, x33, x38, x41, x43, x39, x44, x36, x45, x47, x48, x37, x49, x34, x50, x52, x53, x35, x40, x55, x18, x56, x20, x57, x42, x58, x60, x61, x24, x62, x46, x63, x65, x66, x29, x67, x51, x68, x70, x71, x32, x72, x54, x73, x75, x8, x81, x84, x86, x82, x87, x79, x88, x90, x91, x80, x92, x77, x93, x95, x96, x78, x83, x59, x99, x64, x100, x85, x101, x103, x104, x69, x105, x89, x106, x108, x109, x74, x110, x94, x111, x113, x114, x76, x115, x97, x116, x118, x120, x125, x128, x130, x126, x131, x123, x132, x134, x135, x124, x136, x121, x137, x139, x140, x122, x127, x142, x98, x143, x102, x144, x129, x145, x147, x148, x107, x149, x133, x150, x152, x153, x112, x154, x138, x155, x157, x158, x117, x159, x141, x160, x162, x163, x119, x9, x169, x172, x174, x170, x175, x167, x176, x178, x179, x168, x180, x165, x181, x183, x184, x166, x171, x146, x187, x151, x188, x173, x189, x191, x192, x156, x193, x177, x194, x196, x197, x161, x198, x182, x199, x201, x202, x164, x203, x185, x204, x206, x208, x213, x216, x218, x214, x219, x211, x220, x222, x223, x212, x224, x209, x225, x227, x228, x210, x215, x230, x186, x231, x190, x232, x217, x233, x235, x236, x195, x237, x221, x238, x240, x241, x200, x242, x226, x243, x245, x246, x205, x247, x229, x248, x250, x251, x207, x7, x6, x5, x10, x4, x257, x260, x262, x258, x263, x255, x264, x266, x267, x256, x268, x253, x269, x271, x272, x254, x259, x234, x275, x239, x276, x261, x277, x279, x280, x244, x281, x265, x282, x284, x285, x249, x286, x270, x287, x289, x290, x252, x291, x273, x292, x294, x296, x301, x304, x306, x302, x307, x299, x308, x310, x311, x300, x312, x297, x313, x315, x316, x298, x303, x318, x274, x319, x278, x320, x305, x321, x323, x324, x283, x325, x309, x326, x328, x329, x288, x330, x314, x331, x333, x334, x293, x335, x317, x336, x338, x339, x295, x342, x343, x344, x346, x347, x348, x349, x351, x352, x353, x354, x356, x357, x340, x358, x322, x360, x341, x361, x327, x363, x345, x364, x332, x366, x350, x367, x359, x337, x369, x355, x370, x362, x365, x368, x371, x372, x373, x374, x375;
-  x0 = _br2_load((in0)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x1 = _br2_load((in0)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x2 = _br2_load((in0)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x3 = _br2_load((in0)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x0 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x1 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x2 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x3 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
-  x4 = _br2_load((in1)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x5 = _br2_load((in1)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x6 = _br2_load((in1)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x7 = _br2_load((in1)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x4 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x5 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x6 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x7 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
   /*skip*/
   x8 = x1;
@@ -102,15 +127,15 @@ void internal_fiat_secp256k1_scalar_mul(uintptr_t out0, uintptr_t in0, uintptr_t
   x30 = (uintptr_t)((x29)<(x12));
   x31 = (x28)+(x30);
   x32 = (x31)+(x13);
-  x33 = (x18)*((uintptr_t)5408259542528602431ULL);
-  x34 = (x33)*((uintptr_t)18446744073709551615ULL);
-  x35 = _br2_mulhuu((x33), ((uintptr_t)18446744073709551615ULL));
-  x36 = (x33)*((uintptr_t)18446744073709551614ULL);
-  x37 = _br2_mulhuu((x33), ((uintptr_t)18446744073709551614ULL));
-  x38 = (x33)*((uintptr_t)13451932020343611451ULL);
-  x39 = _br2_mulhuu((x33), ((uintptr_t)13451932020343611451ULL));
-  x40 = (x33)*((uintptr_t)13822214165235122497ULL);
-  x41 = _br2_mulhuu((x33), ((uintptr_t)13822214165235122497ULL));
+  x33 = (x18)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x34 = (x33)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x35 = _br2_mulhuu((x33), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x36 = (x33)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x37 = _br2_mulhuu((x33), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x38 = (x33)*((uintptr_t)(UINTMAX_C(13451932020343611451)));
+  x39 = _br2_mulhuu((x33), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x40 = (x33)*((uintptr_t)(UINTMAX_C(13822214165235122497)));
+  x41 = _br2_mulhuu((x33), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
   x42 = (x41)+(x38);
   x43 = (uintptr_t)((x42)<(x41));
   x44 = (x43)+(x39);
@@ -189,15 +214,15 @@ void internal_fiat_secp256k1_scalar_mul(uintptr_t out0, uintptr_t in0, uintptr_t
   x117 = (x115)+(x97);
   x118 = (uintptr_t)((x117)<(x97));
   x119 = (x116)+(x118);
-  x120 = (x98)*((uintptr_t)5408259542528602431ULL);
-  x121 = (x120)*((uintptr_t)18446744073709551615ULL);
-  x122 = _br2_mulhuu((x120), ((uintptr_t)18446744073709551615ULL));
-  x123 = (x120)*((uintptr_t)18446744073709551614ULL);
-  x124 = _br2_mulhuu((x120), ((uintptr_t)18446744073709551614ULL));
-  x125 = (x120)*((uintptr_t)13451932020343611451ULL);
-  x126 = _br2_mulhuu((x120), ((uintptr_t)13451932020343611451ULL));
-  x127 = (x120)*((uintptr_t)13822214165235122497ULL);
-  x128 = _br2_mulhuu((x120), ((uintptr_t)13822214165235122497ULL));
+  x120 = (x98)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x121 = (x120)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x122 = _br2_mulhuu((x120), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x123 = (x120)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x124 = _br2_mulhuu((x120), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x125 = (x120)*((uintptr_t)(UINTMAX_C(13451932020343611451)));
+  x126 = _br2_mulhuu((x120), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x127 = (x120)*((uintptr_t)(UINTMAX_C(13822214165235122497)));
+  x128 = _br2_mulhuu((x120), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
   x129 = (x128)+(x125);
   x130 = (uintptr_t)((x129)<(x128));
   x131 = (x130)+(x126);
@@ -277,15 +302,15 @@ void internal_fiat_secp256k1_scalar_mul(uintptr_t out0, uintptr_t in0, uintptr_t
   x205 = (x203)+(x185);
   x206 = (uintptr_t)((x205)<(x185));
   x207 = (x204)+(x206);
-  x208 = (x186)*((uintptr_t)5408259542528602431ULL);
-  x209 = (x208)*((uintptr_t)18446744073709551615ULL);
-  x210 = _br2_mulhuu((x208), ((uintptr_t)18446744073709551615ULL));
-  x211 = (x208)*((uintptr_t)18446744073709551614ULL);
-  x212 = _br2_mulhuu((x208), ((uintptr_t)18446744073709551614ULL));
-  x213 = (x208)*((uintptr_t)13451932020343611451ULL);
-  x214 = _br2_mulhuu((x208), ((uintptr_t)13451932020343611451ULL));
-  x215 = (x208)*((uintptr_t)13822214165235122497ULL);
-  x216 = _br2_mulhuu((x208), ((uintptr_t)13822214165235122497ULL));
+  x208 = (x186)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x209 = (x208)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x210 = _br2_mulhuu((x208), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x211 = (x208)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x212 = _br2_mulhuu((x208), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x213 = (x208)*((uintptr_t)(UINTMAX_C(13451932020343611451)));
+  x214 = _br2_mulhuu((x208), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x215 = (x208)*((uintptr_t)(UINTMAX_C(13822214165235122497)));
+  x216 = _br2_mulhuu((x208), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
   x217 = (x216)+(x213);
   x218 = (uintptr_t)((x217)<(x216));
   x219 = (x218)+(x214);
@@ -365,15 +390,15 @@ void internal_fiat_secp256k1_scalar_mul(uintptr_t out0, uintptr_t in0, uintptr_t
   x293 = (x291)+(x273);
   x294 = (uintptr_t)((x293)<(x273));
   x295 = (x292)+(x294);
-  x296 = (x274)*((uintptr_t)5408259542528602431ULL);
-  x297 = (x296)*((uintptr_t)18446744073709551615ULL);
-  x298 = _br2_mulhuu((x296), ((uintptr_t)18446744073709551615ULL));
-  x299 = (x296)*((uintptr_t)18446744073709551614ULL);
-  x300 = _br2_mulhuu((x296), ((uintptr_t)18446744073709551614ULL));
-  x301 = (x296)*((uintptr_t)13451932020343611451ULL);
-  x302 = _br2_mulhuu((x296), ((uintptr_t)13451932020343611451ULL));
-  x303 = (x296)*((uintptr_t)13822214165235122497ULL);
-  x304 = _br2_mulhuu((x296), ((uintptr_t)13822214165235122497ULL));
+  x296 = (x274)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x297 = (x296)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x298 = _br2_mulhuu((x296), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x299 = (x296)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x300 = _br2_mulhuu((x296), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x301 = (x296)*((uintptr_t)(UINTMAX_C(13451932020343611451)));
+  x302 = _br2_mulhuu((x296), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x303 = (x296)*((uintptr_t)(UINTMAX_C(13822214165235122497)));
+  x304 = _br2_mulhuu((x296), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
   x305 = (x304)+(x301);
   x306 = (uintptr_t)((x305)<(x304));
   x307 = (x306)+(x302);
@@ -410,46 +435,46 @@ void internal_fiat_secp256k1_scalar_mul(uintptr_t out0, uintptr_t in0, uintptr_t
   x338 = (uintptr_t)((x337)<(x317));
   x339 = (x336)+(x338);
   x340 = (x339)+(x295);
-  x341 = (x322)-((uintptr_t)13822214165235122497ULL);
+  x341 = (x322)-((uintptr_t)(UINTMAX_C(13822214165235122497)));
   x342 = (uintptr_t)((x322)<(x341));
-  x343 = (x327)-((uintptr_t)13451932020343611451ULL);
+  x343 = (x327)-((uintptr_t)(UINTMAX_C(13451932020343611451)));
   x344 = (uintptr_t)((x327)<(x343));
   x345 = (x343)-(x342);
   x346 = (uintptr_t)((x343)<(x345));
   x347 = (x344)+(x346);
-  x348 = (x332)-((uintptr_t)18446744073709551614ULL);
+  x348 = (x332)-((uintptr_t)(UINTMAX_C(18446744073709551614)));
   x349 = (uintptr_t)((x332)<(x348));
   x350 = (x348)-(x347);
   x351 = (uintptr_t)((x348)<(x350));
   x352 = (x349)+(x351);
-  x353 = (x337)-((uintptr_t)18446744073709551615ULL);
+  x353 = (x337)-((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x354 = (uintptr_t)((x337)<(x353));
   x355 = (x353)-(x352);
   x356 = (uintptr_t)((x353)<(x355));
   x357 = (x354)+(x356);
   x358 = (x340)-(x357);
   x359 = (uintptr_t)((x340)<(x358));
-  x360 = ((uintptr_t)-1ULL)+((uintptr_t)((x359)==((uintptr_t)0ULL)));
-  x361 = (x360)^((uintptr_t)18446744073709551615ULL);
+  x360 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x359)==((uintptr_t)(UINTMAX_C(0)))));
+  x361 = (x360)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x362 = ((x322)&(x360))|((x341)&(x361));
-  x363 = ((uintptr_t)-1ULL)+((uintptr_t)((x359)==((uintptr_t)0ULL)));
-  x364 = (x363)^((uintptr_t)18446744073709551615ULL);
+  x363 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x359)==((uintptr_t)(UINTMAX_C(0)))));
+  x364 = (x363)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x365 = ((x327)&(x363))|((x345)&(x364));
-  x366 = ((uintptr_t)-1ULL)+((uintptr_t)((x359)==((uintptr_t)0ULL)));
-  x367 = (x366)^((uintptr_t)18446744073709551615ULL);
+  x366 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x359)==((uintptr_t)(UINTMAX_C(0)))));
+  x367 = (x366)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x368 = ((x332)&(x366))|((x350)&(x367));
-  x369 = ((uintptr_t)-1ULL)+((uintptr_t)((x359)==((uintptr_t)0ULL)));
-  x370 = (x369)^((uintptr_t)18446744073709551615ULL);
+  x369 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x359)==((uintptr_t)(UINTMAX_C(0)))));
+  x370 = (x369)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x371 = ((x337)&(x369))|((x355)&(x370));
   x372 = x362;
   x373 = x365;
   x374 = x368;
   x375 = x371;
   /*skip*/
-  _br2_store((out0)+((uintptr_t)0ULL), x372, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)8ULL), x373, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)16ULL), x374, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)24ULL), x375, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(0))), x372, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(8))), x373, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(16))), x374, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(24))), x375, sizeof(uintptr_t));
   /*skip*/
   return;
 }
@@ -469,10 +494,10 @@ static void fiat_secp256k1_scalar_mul(uint64_t out1[4], const uint64_t arg1[4], 
 static
 void internal_fiat_secp256k1_scalar_square(uintptr_t out0, uintptr_t in0) {
   uintptr_t x7, x12, x15, x17, x13, x18, x10, x19, x21, x22, x11, x23, x8, x24, x26, x27, x9, x29, x34, x37, x39, x35, x40, x32, x41, x43, x44, x33, x45, x30, x46, x48, x49, x31, x36, x51, x14, x52, x16, x53, x38, x54, x56, x57, x20, x58, x42, x59, x61, x62, x25, x63, x47, x64, x66, x67, x28, x68, x50, x69, x71, x4, x77, x80, x82, x78, x83, x75, x84, x86, x87, x76, x88, x73, x89, x91, x92, x74, x79, x55, x95, x60, x96, x81, x97, x99, x100, x65, x101, x85, x102, x104, x105, x70, x106, x90, x107, x109, x110, x72, x111, x93, x112, x114, x116, x121, x124, x126, x122, x127, x119, x128, x130, x131, x120, x132, x117, x133, x135, x136, x118, x123, x138, x94, x139, x98, x140, x125, x141, x143, x144, x103, x145, x129, x146, x148, x149, x108, x150, x134, x151, x153, x154, x113, x155, x137, x156, x158, x159, x115, x5, x165, x168, x170, x166, x171, x163, x172, x174, x175, x164, x176, x161, x177, x179, x180, x162, x167, x142, x183, x147, x184, x169, x185, x187, x188, x152, x189, x173, x190, x192, x193, x157, x194, x178, x195, x197, x198, x160, x199, x181, x200, x202, x204, x209, x212, x214, x210, x215, x207, x216, x218, x219, x208, x220, x205, x221, x223, x224, x206, x211, x226, x182, x227, x186, x228, x213, x229, x231, x232, x191, x233, x217, x234, x236, x237, x196, x238, x222, x239, x241, x242, x201, x243, x225, x244, x246, x247, x203, x3, x2, x1, x6, x0, x253, x256, x258, x254, x259, x251, x260, x262, x263, x252, x264, x249, x265, x267, x268, x250, x255, x230, x271, x235, x272, x257, x273, x275, x276, x240, x277, x261, x278, x280, x281, x245, x282, x266, x283, x285, x286, x248, x287, x269, x288, x290, x292, x297, x300, x302, x298, x303, x295, x304, x306, x307, x296, x308, x293, x309, x311, x312, x294, x299, x314, x270, x315, x274, x316, x301, x317, x319, x320, x279, x321, x305, x322, x324, x325, x284, x326, x310, x327, x329, x330, x289, x331, x313, x332, x334, x335, x291, x338, x339, x340, x342, x343, x344, x345, x347, x348, x349, x350, x352, x353, x336, x354, x318, x356, x337, x357, x323, x359, x341, x360, x328, x362, x346, x363, x355, x333, x365, x351, x366, x358, x361, x364, x367, x368, x369, x370, x371;
-  x0 = _br2_load((in0)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x1 = _br2_load((in0)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x2 = _br2_load((in0)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x3 = _br2_load((in0)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x0 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x1 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x2 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x3 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
   /*skip*/
   x4 = x1;
@@ -500,15 +525,15 @@ void internal_fiat_secp256k1_scalar_square(uintptr_t out0, uintptr_t in0) {
   x26 = (uintptr_t)((x25)<(x8));
   x27 = (x24)+(x26);
   x28 = (x27)+(x9);
-  x29 = (x14)*((uintptr_t)5408259542528602431ULL);
-  x30 = (x29)*((uintptr_t)18446744073709551615ULL);
-  x31 = _br2_mulhuu((x29), ((uintptr_t)18446744073709551615ULL));
-  x32 = (x29)*((uintptr_t)18446744073709551614ULL);
-  x33 = _br2_mulhuu((x29), ((uintptr_t)18446744073709551614ULL));
-  x34 = (x29)*((uintptr_t)13451932020343611451ULL);
-  x35 = _br2_mulhuu((x29), ((uintptr_t)13451932020343611451ULL));
-  x36 = (x29)*((uintptr_t)13822214165235122497ULL);
-  x37 = _br2_mulhuu((x29), ((uintptr_t)13822214165235122497ULL));
+  x29 = (x14)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x30 = (x29)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x31 = _br2_mulhuu((x29), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x32 = (x29)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x33 = _br2_mulhuu((x29), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x34 = (x29)*((uintptr_t)(UINTMAX_C(13451932020343611451)));
+  x35 = _br2_mulhuu((x29), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x36 = (x29)*((uintptr_t)(UINTMAX_C(13822214165235122497)));
+  x37 = _br2_mulhuu((x29), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
   x38 = (x37)+(x34);
   x39 = (uintptr_t)((x38)<(x37));
   x40 = (x39)+(x35);
@@ -587,15 +612,15 @@ void internal_fiat_secp256k1_scalar_square(uintptr_t out0, uintptr_t in0) {
   x113 = (x111)+(x93);
   x114 = (uintptr_t)((x113)<(x93));
   x115 = (x112)+(x114);
-  x116 = (x94)*((uintptr_t)5408259542528602431ULL);
-  x117 = (x116)*((uintptr_t)18446744073709551615ULL);
-  x118 = _br2_mulhuu((x116), ((uintptr_t)18446744073709551615ULL));
-  x119 = (x116)*((uintptr_t)18446744073709551614ULL);
-  x120 = _br2_mulhuu((x116), ((uintptr_t)18446744073709551614ULL));
-  x121 = (x116)*((uintptr_t)13451932020343611451ULL);
-  x122 = _br2_mulhuu((x116), ((uintptr_t)13451932020343611451ULL));
-  x123 = (x116)*((uintptr_t)13822214165235122497ULL);
-  x124 = _br2_mulhuu((x116), ((uintptr_t)13822214165235122497ULL));
+  x116 = (x94)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x117 = (x116)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x118 = _br2_mulhuu((x116), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x119 = (x116)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x120 = _br2_mulhuu((x116), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x121 = (x116)*((uintptr_t)(UINTMAX_C(13451932020343611451)));
+  x122 = _br2_mulhuu((x116), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x123 = (x116)*((uintptr_t)(UINTMAX_C(13822214165235122497)));
+  x124 = _br2_mulhuu((x116), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
   x125 = (x124)+(x121);
   x126 = (uintptr_t)((x125)<(x124));
   x127 = (x126)+(x122);
@@ -675,15 +700,15 @@ void internal_fiat_secp256k1_scalar_square(uintptr_t out0, uintptr_t in0) {
   x201 = (x199)+(x181);
   x202 = (uintptr_t)((x201)<(x181));
   x203 = (x200)+(x202);
-  x204 = (x182)*((uintptr_t)5408259542528602431ULL);
-  x205 = (x204)*((uintptr_t)18446744073709551615ULL);
-  x206 = _br2_mulhuu((x204), ((uintptr_t)18446744073709551615ULL));
-  x207 = (x204)*((uintptr_t)18446744073709551614ULL);
-  x208 = _br2_mulhuu((x204), ((uintptr_t)18446744073709551614ULL));
-  x209 = (x204)*((uintptr_t)13451932020343611451ULL);
-  x210 = _br2_mulhuu((x204), ((uintptr_t)13451932020343611451ULL));
-  x211 = (x204)*((uintptr_t)13822214165235122497ULL);
-  x212 = _br2_mulhuu((x204), ((uintptr_t)13822214165235122497ULL));
+  x204 = (x182)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x205 = (x204)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x206 = _br2_mulhuu((x204), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x207 = (x204)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x208 = _br2_mulhuu((x204), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x209 = (x204)*((uintptr_t)(UINTMAX_C(13451932020343611451)));
+  x210 = _br2_mulhuu((x204), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x211 = (x204)*((uintptr_t)(UINTMAX_C(13822214165235122497)));
+  x212 = _br2_mulhuu((x204), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
   x213 = (x212)+(x209);
   x214 = (uintptr_t)((x213)<(x212));
   x215 = (x214)+(x210);
@@ -763,15 +788,15 @@ void internal_fiat_secp256k1_scalar_square(uintptr_t out0, uintptr_t in0) {
   x289 = (x287)+(x269);
   x290 = (uintptr_t)((x289)<(x269));
   x291 = (x288)+(x290);
-  x292 = (x270)*((uintptr_t)5408259542528602431ULL);
-  x293 = (x292)*((uintptr_t)18446744073709551615ULL);
-  x294 = _br2_mulhuu((x292), ((uintptr_t)18446744073709551615ULL));
-  x295 = (x292)*((uintptr_t)18446744073709551614ULL);
-  x296 = _br2_mulhuu((x292), ((uintptr_t)18446744073709551614ULL));
-  x297 = (x292)*((uintptr_t)13451932020343611451ULL);
-  x298 = _br2_mulhuu((x292), ((uintptr_t)13451932020343611451ULL));
-  x299 = (x292)*((uintptr_t)13822214165235122497ULL);
-  x300 = _br2_mulhuu((x292), ((uintptr_t)13822214165235122497ULL));
+  x292 = (x270)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x293 = (x292)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x294 = _br2_mulhuu((x292), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x295 = (x292)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x296 = _br2_mulhuu((x292), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x297 = (x292)*((uintptr_t)(UINTMAX_C(13451932020343611451)));
+  x298 = _br2_mulhuu((x292), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x299 = (x292)*((uintptr_t)(UINTMAX_C(13822214165235122497)));
+  x300 = _br2_mulhuu((x292), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
   x301 = (x300)+(x297);
   x302 = (uintptr_t)((x301)<(x300));
   x303 = (x302)+(x298);
@@ -808,46 +833,46 @@ void internal_fiat_secp256k1_scalar_square(uintptr_t out0, uintptr_t in0) {
   x334 = (uintptr_t)((x333)<(x313));
   x335 = (x332)+(x334);
   x336 = (x335)+(x291);
-  x337 = (x318)-((uintptr_t)13822214165235122497ULL);
+  x337 = (x318)-((uintptr_t)(UINTMAX_C(13822214165235122497)));
   x338 = (uintptr_t)((x318)<(x337));
-  x339 = (x323)-((uintptr_t)13451932020343611451ULL);
+  x339 = (x323)-((uintptr_t)(UINTMAX_C(13451932020343611451)));
   x340 = (uintptr_t)((x323)<(x339));
   x341 = (x339)-(x338);
   x342 = (uintptr_t)((x339)<(x341));
   x343 = (x340)+(x342);
-  x344 = (x328)-((uintptr_t)18446744073709551614ULL);
+  x344 = (x328)-((uintptr_t)(UINTMAX_C(18446744073709551614)));
   x345 = (uintptr_t)((x328)<(x344));
   x346 = (x344)-(x343);
   x347 = (uintptr_t)((x344)<(x346));
   x348 = (x345)+(x347);
-  x349 = (x333)-((uintptr_t)18446744073709551615ULL);
+  x349 = (x333)-((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x350 = (uintptr_t)((x333)<(x349));
   x351 = (x349)-(x348);
   x352 = (uintptr_t)((x349)<(x351));
   x353 = (x350)+(x352);
   x354 = (x336)-(x353);
   x355 = (uintptr_t)((x336)<(x354));
-  x356 = ((uintptr_t)-1ULL)+((uintptr_t)((x355)==((uintptr_t)0ULL)));
-  x357 = (x356)^((uintptr_t)18446744073709551615ULL);
+  x356 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x355)==((uintptr_t)(UINTMAX_C(0)))));
+  x357 = (x356)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x358 = ((x318)&(x356))|((x337)&(x357));
-  x359 = ((uintptr_t)-1ULL)+((uintptr_t)((x355)==((uintptr_t)0ULL)));
-  x360 = (x359)^((uintptr_t)18446744073709551615ULL);
+  x359 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x355)==((uintptr_t)(UINTMAX_C(0)))));
+  x360 = (x359)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x361 = ((x323)&(x359))|((x341)&(x360));
-  x362 = ((uintptr_t)-1ULL)+((uintptr_t)((x355)==((uintptr_t)0ULL)));
-  x363 = (x362)^((uintptr_t)18446744073709551615ULL);
+  x362 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x355)==((uintptr_t)(UINTMAX_C(0)))));
+  x363 = (x362)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x364 = ((x328)&(x362))|((x346)&(x363));
-  x365 = ((uintptr_t)-1ULL)+((uintptr_t)((x355)==((uintptr_t)0ULL)));
-  x366 = (x365)^((uintptr_t)18446744073709551615ULL);
+  x365 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x355)==((uintptr_t)(UINTMAX_C(0)))));
+  x366 = (x365)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x367 = ((x333)&(x365))|((x351)&(x366));
   x368 = x358;
   x369 = x361;
   x370 = x364;
   x371 = x367;
   /*skip*/
-  _br2_store((out0)+((uintptr_t)0ULL), x368, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)8ULL), x369, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)16ULL), x370, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)24ULL), x371, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(0))), x368, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(8))), x369, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(16))), x370, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(24))), x371, sizeof(uintptr_t));
   /*skip*/
   return;
 }
@@ -868,15 +893,15 @@ static void fiat_secp256k1_scalar_square(uint64_t out1[4], const uint64_t arg1[4
 static
 void internal_fiat_secp256k1_scalar_add(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
   uintptr_t x4, x0, x9, x1, x5, x11, x2, x6, x13, x3, x7, x17, x19, x15, x21, x8, x24, x16, x25, x10, x27, x18, x28, x12, x30, x20, x31, x23, x14, x33, x22, x34, x26, x29, x32, x35, x36, x37, x38, x39;
-  x0 = _br2_load((in0)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x1 = _br2_load((in0)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x2 = _br2_load((in0)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x3 = _br2_load((in0)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x0 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x1 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x2 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x3 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
-  x4 = _br2_load((in1)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x5 = _br2_load((in1)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x6 = _br2_load((in1)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x7 = _br2_load((in1)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x4 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x5 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x6 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x7 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
   /*skip*/
   x8 = (x0)+(x4);
@@ -887,35 +912,35 @@ void internal_fiat_secp256k1_scalar_add(uintptr_t out0, uintptr_t in0, uintptr_t
   x13 = (((uintptr_t)((x11)<(x2)))+((uintptr_t)((x12)<(x6))))+(x3);
   x14 = (x13)+(x7);
   x15 = ((uintptr_t)((x13)<(x3)))+((uintptr_t)((x14)<(x7)));
-  x16 = (x8)-((uintptr_t)13822214165235122497ULL);
-  x17 = (x10)-((uintptr_t)13451932020343611451ULL);
+  x16 = (x8)-((uintptr_t)(UINTMAX_C(13822214165235122497)));
+  x17 = (x10)-((uintptr_t)(UINTMAX_C(13451932020343611451)));
   x18 = (x17)-((uintptr_t)((x8)<(x16)));
-  x19 = (x12)-((uintptr_t)18446744073709551614ULL);
+  x19 = (x12)-((uintptr_t)(UINTMAX_C(18446744073709551614)));
   x20 = (x19)-(((uintptr_t)((x10)<(x17)))+((uintptr_t)((x17)<(x18))));
-  x21 = (x14)-((uintptr_t)18446744073709551615ULL);
+  x21 = (x14)-((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x22 = (x21)-(((uintptr_t)((x12)<(x19)))+((uintptr_t)((x19)<(x20))));
   x23 = (uintptr_t)((x15)<((x15)-(((uintptr_t)((x14)<(x21)))+((uintptr_t)((x21)<(x22))))));
-  x24 = ((uintptr_t)-1ULL)+((uintptr_t)((x23)==((uintptr_t)0ULL)));
-  x25 = (x24)^((uintptr_t)18446744073709551615ULL);
+  x24 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x23)==((uintptr_t)(UINTMAX_C(0)))));
+  x25 = (x24)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x26 = ((x8)&(x24))|((x16)&(x25));
-  x27 = ((uintptr_t)-1ULL)+((uintptr_t)((x23)==((uintptr_t)0ULL)));
-  x28 = (x27)^((uintptr_t)18446744073709551615ULL);
+  x27 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x23)==((uintptr_t)(UINTMAX_C(0)))));
+  x28 = (x27)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x29 = ((x10)&(x27))|((x18)&(x28));
-  x30 = ((uintptr_t)-1ULL)+((uintptr_t)((x23)==((uintptr_t)0ULL)));
-  x31 = (x30)^((uintptr_t)18446744073709551615ULL);
+  x30 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x23)==((uintptr_t)(UINTMAX_C(0)))));
+  x31 = (x30)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x32 = ((x12)&(x30))|((x20)&(x31));
-  x33 = ((uintptr_t)-1ULL)+((uintptr_t)((x23)==((uintptr_t)0ULL)));
-  x34 = (x33)^((uintptr_t)18446744073709551615ULL);
+  x33 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x23)==((uintptr_t)(UINTMAX_C(0)))));
+  x34 = (x33)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x35 = ((x14)&(x33))|((x22)&(x34));
   x36 = x26;
   x37 = x29;
   x38 = x32;
   x39 = x35;
   /*skip*/
-  _br2_store((out0)+((uintptr_t)0ULL), x36, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)8ULL), x37, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)16ULL), x38, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)24ULL), x39, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(0))), x36, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(8))), x37, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(16))), x38, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(24))), x39, sizeof(uintptr_t));
   /*skip*/
   return;
 }
@@ -936,15 +961,15 @@ static void fiat_secp256k1_scalar_add(uint64_t out1[4], const uint64_t arg1[4], 
 static
 void internal_fiat_secp256k1_scalar_sub(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
   uintptr_t x4, x5, x0, x6, x1, x9, x7, x2, x11, x3, x13, x8, x17, x10, x19, x12, x14, x15, x16, x18, x20, x21, x22, x23, x24, x25;
-  x0 = _br2_load((in0)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x1 = _br2_load((in0)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x2 = _br2_load((in0)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x3 = _br2_load((in0)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x0 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x1 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x2 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x3 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
-  x4 = _br2_load((in1)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x5 = _br2_load((in1)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x6 = _br2_load((in1)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x7 = _br2_load((in1)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x4 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x5 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x6 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x7 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
   /*skip*/
   x8 = (x0)-(x4);
@@ -954,22 +979,22 @@ void internal_fiat_secp256k1_scalar_sub(uintptr_t out0, uintptr_t in0, uintptr_t
   x12 = (x11)-(((uintptr_t)((x1)<(x9)))+((uintptr_t)((x9)<(x10))));
   x13 = (x3)-(x7);
   x14 = (x13)-(((uintptr_t)((x2)<(x11)))+((uintptr_t)((x11)<(x12))));
-  x15 = ((uintptr_t)-1ULL)+((uintptr_t)((((uintptr_t)((x3)<(x13)))+((uintptr_t)((x13)<(x14))))==((uintptr_t)0ULL)));
-  x16 = (x8)+((x15)&((uintptr_t)13822214165235122497ULL));
+  x15 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((((uintptr_t)((x3)<(x13)))+((uintptr_t)((x13)<(x14))))==((uintptr_t)(UINTMAX_C(0)))));
+  x16 = (x8)+((x15)&((uintptr_t)(UINTMAX_C(13822214165235122497))));
   x17 = ((uintptr_t)((x16)<(x8)))+(x10);
-  x18 = (x17)+((x15)&((uintptr_t)13451932020343611451ULL));
-  x19 = (((uintptr_t)((x17)<(x10)))+((uintptr_t)((x18)<((x15)&((uintptr_t)13451932020343611451ULL)))))+(x12);
-  x20 = (x19)+((x15)&((uintptr_t)18446744073709551614ULL));
-  x21 = ((((uintptr_t)((x19)<(x12)))+((uintptr_t)((x20)<((x15)&((uintptr_t)18446744073709551614ULL)))))+(x14))+(x15);
+  x18 = (x17)+((x15)&((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x19 = (((uintptr_t)((x17)<(x10)))+((uintptr_t)((x18)<((x15)&((uintptr_t)(UINTMAX_C(13451932020343611451)))))))+(x12);
+  x20 = (x19)+((x15)&((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x21 = ((((uintptr_t)((x19)<(x12)))+((uintptr_t)((x20)<((x15)&((uintptr_t)(UINTMAX_C(18446744073709551614)))))))+(x14))+(x15);
   x22 = x16;
   x23 = x18;
   x24 = x20;
   x25 = x21;
   /*skip*/
-  _br2_store((out0)+((uintptr_t)0ULL), x22, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)8ULL), x23, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)16ULL), x24, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)24ULL), x25, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(0))), x22, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(8))), x23, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(16))), x24, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(24))), x25, sizeof(uintptr_t));
   /*skip*/
   return;
 }
@@ -989,35 +1014,35 @@ static void fiat_secp256k1_scalar_sub(uint64_t out1[4], const uint64_t arg1[4], 
 static
 void internal_fiat_secp256k1_scalar_opp(uintptr_t out0, uintptr_t in0) {
   uintptr_t x0, x1, x2, x5, x3, x7, x9, x4, x13, x6, x15, x8, x10, x11, x12, x14, x16, x17, x18, x19, x20, x21;
-  x0 = _br2_load((in0)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x1 = _br2_load((in0)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x2 = _br2_load((in0)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x3 = _br2_load((in0)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x0 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x1 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x2 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x3 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
   /*skip*/
-  x4 = ((uintptr_t)0ULL)-(x0);
-  x5 = ((uintptr_t)0ULL)-(x1);
-  x6 = (x5)-((uintptr_t)(((uintptr_t)0ULL)<(x4)));
-  x7 = ((uintptr_t)0ULL)-(x2);
-  x8 = (x7)-(((uintptr_t)(((uintptr_t)0ULL)<(x5)))+((uintptr_t)((x5)<(x6))));
-  x9 = ((uintptr_t)0ULL)-(x3);
-  x10 = (x9)-(((uintptr_t)(((uintptr_t)0ULL)<(x7)))+((uintptr_t)((x7)<(x8))));
-  x11 = ((uintptr_t)-1ULL)+((uintptr_t)((((uintptr_t)(((uintptr_t)0ULL)<(x9)))+((uintptr_t)((x9)<(x10))))==((uintptr_t)0ULL)));
-  x12 = (x4)+((x11)&((uintptr_t)13822214165235122497ULL));
+  x4 = ((uintptr_t)(UINTMAX_C(0)))-(x0);
+  x5 = ((uintptr_t)(UINTMAX_C(0)))-(x1);
+  x6 = (x5)-((uintptr_t)(((uintptr_t)(UINTMAX_C(0)))<(x4)));
+  x7 = ((uintptr_t)(UINTMAX_C(0)))-(x2);
+  x8 = (x7)-(((uintptr_t)(((uintptr_t)(UINTMAX_C(0)))<(x5)))+((uintptr_t)((x5)<(x6))));
+  x9 = ((uintptr_t)(UINTMAX_C(0)))-(x3);
+  x10 = (x9)-(((uintptr_t)(((uintptr_t)(UINTMAX_C(0)))<(x7)))+((uintptr_t)((x7)<(x8))));
+  x11 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((((uintptr_t)(((uintptr_t)(UINTMAX_C(0)))<(x9)))+((uintptr_t)((x9)<(x10))))==((uintptr_t)(UINTMAX_C(0)))));
+  x12 = (x4)+((x11)&((uintptr_t)(UINTMAX_C(13822214165235122497))));
   x13 = ((uintptr_t)((x12)<(x4)))+(x6);
-  x14 = (x13)+((x11)&((uintptr_t)13451932020343611451ULL));
-  x15 = (((uintptr_t)((x13)<(x6)))+((uintptr_t)((x14)<((x11)&((uintptr_t)13451932020343611451ULL)))))+(x8);
-  x16 = (x15)+((x11)&((uintptr_t)18446744073709551614ULL));
-  x17 = ((((uintptr_t)((x15)<(x8)))+((uintptr_t)((x16)<((x11)&((uintptr_t)18446744073709551614ULL)))))+(x10))+(x11);
+  x14 = (x13)+((x11)&((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x15 = (((uintptr_t)((x13)<(x6)))+((uintptr_t)((x14)<((x11)&((uintptr_t)(UINTMAX_C(13451932020343611451)))))))+(x8);
+  x16 = (x15)+((x11)&((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x17 = ((((uintptr_t)((x15)<(x8)))+((uintptr_t)((x16)<((x11)&((uintptr_t)(UINTMAX_C(18446744073709551614)))))))+(x10))+(x11);
   x18 = x12;
   x19 = x14;
   x20 = x16;
   x21 = x17;
   /*skip*/
-  _br2_store((out0)+((uintptr_t)0ULL), x18, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)8ULL), x19, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)16ULL), x20, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)24ULL), x21, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(0))), x18, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(8))), x19, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(16))), x20, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(24))), x21, sizeof(uintptr_t));
   /*skip*/
   return;
 }
@@ -1037,27 +1062,27 @@ static void fiat_secp256k1_scalar_opp(uint64_t out1[4], const uint64_t arg1[4]) 
 static
 void internal_fiat_secp256k1_scalar_from_montgomery(uintptr_t out0, uintptr_t in0) {
   uintptr_t x0, x11, x13, x10, x8, x15, x9, x6, x5, x4, x12, x14, x16, x17, x7, x1, x18, x19, x20, x21, x34, x36, x33, x31, x38, x32, x29, x28, x23, x41, x24, x35, x43, x25, x37, x45, x26, x39, x47, x27, x22, x40, x30, x2, x42, x44, x46, x48, x61, x63, x60, x58, x65, x59, x56, x55, x50, x68, x51, x62, x70, x52, x64, x72, x53, x66, x74, x54, x49, x67, x57, x3, x69, x71, x73, x75, x88, x90, x87, x85, x92, x86, x83, x82, x77, x95, x78, x89, x97, x79, x91, x99, x80, x93, x101, x81, x76, x94, x84, x105, x107, x103, x109, x96, x112, x104, x113, x98, x115, x106, x116, x100, x118, x108, x119, x111, x102, x121, x110, x122, x114, x117, x120, x123, x124, x125, x126, x127;
-  x0 = _br2_load((in0)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x1 = _br2_load((in0)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x2 = _br2_load((in0)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x3 = _br2_load((in0)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x0 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x1 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x2 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x3 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
   /*skip*/
   x4 = x0;
-  x5 = (x4)*((uintptr_t)5408259542528602431ULL);
-  x6 = (x5)*((uintptr_t)18446744073709551615ULL);
-  x7 = _br2_mulhuu((x5), ((uintptr_t)18446744073709551615ULL));
-  x8 = (x5)*((uintptr_t)18446744073709551614ULL);
-  x9 = _br2_mulhuu((x5), ((uintptr_t)18446744073709551614ULL));
-  x10 = _br2_mulhuu((x5), ((uintptr_t)13451932020343611451ULL));
-  x11 = _br2_mulhuu((x5), ((uintptr_t)13822214165235122497ULL));
-  x12 = (x11)+((x5)*((uintptr_t)13451932020343611451ULL));
+  x5 = (x4)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x6 = (x5)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x7 = _br2_mulhuu((x5), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x8 = (x5)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x9 = _br2_mulhuu((x5), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x10 = _br2_mulhuu((x5), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x11 = _br2_mulhuu((x5), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
+  x12 = (x11)+((x5)*((uintptr_t)(UINTMAX_C(13451932020343611451))));
   x13 = ((uintptr_t)((x12)<(x11)))+(x10);
   x14 = (x13)+(x8);
   x15 = (((uintptr_t)((x13)<(x10)))+((uintptr_t)((x14)<(x8))))+(x9);
   x16 = (x15)+(x6);
   x17 = ((uintptr_t)((x15)<(x9)))+((uintptr_t)((x16)<(x6)));
-  x18 = ((uintptr_t)(((x4)+((x5)*((uintptr_t)13822214165235122497ULL)))<(x4)))+(x12);
+  x18 = ((uintptr_t)(((x4)+((x5)*((uintptr_t)(UINTMAX_C(13822214165235122497)))))<(x4)))+(x12);
   x19 = ((uintptr_t)((x18)<(x12)))+(x14);
   x20 = ((uintptr_t)((x19)<(x14)))+(x16);
   x21 = ((uintptr_t)((x20)<(x16)))+((x17)+(x7));
@@ -1067,20 +1092,20 @@ void internal_fiat_secp256k1_scalar_from_montgomery(uintptr_t out0, uintptr_t in
   x25 = ((uintptr_t)((x24)<(x19)))+(x20);
   x26 = ((uintptr_t)((x25)<(x20)))+(x21);
   x27 = (uintptr_t)((x26)<(x21));
-  x28 = (x23)*((uintptr_t)5408259542528602431ULL);
-  x29 = (x28)*((uintptr_t)18446744073709551615ULL);
-  x30 = _br2_mulhuu((x28), ((uintptr_t)18446744073709551615ULL));
-  x31 = (x28)*((uintptr_t)18446744073709551614ULL);
-  x32 = _br2_mulhuu((x28), ((uintptr_t)18446744073709551614ULL));
-  x33 = _br2_mulhuu((x28), ((uintptr_t)13451932020343611451ULL));
-  x34 = _br2_mulhuu((x28), ((uintptr_t)13822214165235122497ULL));
-  x35 = (x34)+((x28)*((uintptr_t)13451932020343611451ULL));
+  x28 = (x23)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x29 = (x28)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x30 = _br2_mulhuu((x28), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x31 = (x28)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x32 = _br2_mulhuu((x28), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x33 = _br2_mulhuu((x28), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x34 = _br2_mulhuu((x28), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
+  x35 = (x34)+((x28)*((uintptr_t)(UINTMAX_C(13451932020343611451))));
   x36 = ((uintptr_t)((x35)<(x34)))+(x33);
   x37 = (x36)+(x31);
   x38 = (((uintptr_t)((x36)<(x33)))+((uintptr_t)((x37)<(x31))))+(x32);
   x39 = (x38)+(x29);
   x40 = ((uintptr_t)((x38)<(x32)))+((uintptr_t)((x39)<(x29)));
-  x41 = ((uintptr_t)(((x23)+((x28)*((uintptr_t)13822214165235122497ULL)))<(x23)))+(x24);
+  x41 = ((uintptr_t)(((x23)+((x28)*((uintptr_t)(UINTMAX_C(13822214165235122497)))))<(x23)))+(x24);
   x42 = (x41)+(x35);
   x43 = (((uintptr_t)((x41)<(x24)))+((uintptr_t)((x42)<(x35))))+(x25);
   x44 = (x43)+(x37);
@@ -1094,20 +1119,20 @@ void internal_fiat_secp256k1_scalar_from_montgomery(uintptr_t out0, uintptr_t in
   x52 = ((uintptr_t)((x51)<(x44)))+(x46);
   x53 = ((uintptr_t)((x52)<(x46)))+(x48);
   x54 = (uintptr_t)((x53)<(x48));
-  x55 = (x50)*((uintptr_t)5408259542528602431ULL);
-  x56 = (x55)*((uintptr_t)18446744073709551615ULL);
-  x57 = _br2_mulhuu((x55), ((uintptr_t)18446744073709551615ULL));
-  x58 = (x55)*((uintptr_t)18446744073709551614ULL);
-  x59 = _br2_mulhuu((x55), ((uintptr_t)18446744073709551614ULL));
-  x60 = _br2_mulhuu((x55), ((uintptr_t)13451932020343611451ULL));
-  x61 = _br2_mulhuu((x55), ((uintptr_t)13822214165235122497ULL));
-  x62 = (x61)+((x55)*((uintptr_t)13451932020343611451ULL));
+  x55 = (x50)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x56 = (x55)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x57 = _br2_mulhuu((x55), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x58 = (x55)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x59 = _br2_mulhuu((x55), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x60 = _br2_mulhuu((x55), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x61 = _br2_mulhuu((x55), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
+  x62 = (x61)+((x55)*((uintptr_t)(UINTMAX_C(13451932020343611451))));
   x63 = ((uintptr_t)((x62)<(x61)))+(x60);
   x64 = (x63)+(x58);
   x65 = (((uintptr_t)((x63)<(x60)))+((uintptr_t)((x64)<(x58))))+(x59);
   x66 = (x65)+(x56);
   x67 = ((uintptr_t)((x65)<(x59)))+((uintptr_t)((x66)<(x56)));
-  x68 = ((uintptr_t)(((x50)+((x55)*((uintptr_t)13822214165235122497ULL)))<(x50)))+(x51);
+  x68 = ((uintptr_t)(((x50)+((x55)*((uintptr_t)(UINTMAX_C(13822214165235122497)))))<(x50)))+(x51);
   x69 = (x68)+(x62);
   x70 = (((uintptr_t)((x68)<(x51)))+((uintptr_t)((x69)<(x62))))+(x52);
   x71 = (x70)+(x64);
@@ -1121,20 +1146,20 @@ void internal_fiat_secp256k1_scalar_from_montgomery(uintptr_t out0, uintptr_t in
   x79 = ((uintptr_t)((x78)<(x71)))+(x73);
   x80 = ((uintptr_t)((x79)<(x73)))+(x75);
   x81 = (uintptr_t)((x80)<(x75));
-  x82 = (x77)*((uintptr_t)5408259542528602431ULL);
-  x83 = (x82)*((uintptr_t)18446744073709551615ULL);
-  x84 = _br2_mulhuu((x82), ((uintptr_t)18446744073709551615ULL));
-  x85 = (x82)*((uintptr_t)18446744073709551614ULL);
-  x86 = _br2_mulhuu((x82), ((uintptr_t)18446744073709551614ULL));
-  x87 = _br2_mulhuu((x82), ((uintptr_t)13451932020343611451ULL));
-  x88 = _br2_mulhuu((x82), ((uintptr_t)13822214165235122497ULL));
-  x89 = (x88)+((x82)*((uintptr_t)13451932020343611451ULL));
+  x82 = (x77)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x83 = (x82)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x84 = _br2_mulhuu((x82), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x85 = (x82)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x86 = _br2_mulhuu((x82), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x87 = _br2_mulhuu((x82), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x88 = _br2_mulhuu((x82), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
+  x89 = (x88)+((x82)*((uintptr_t)(UINTMAX_C(13451932020343611451))));
   x90 = ((uintptr_t)((x89)<(x88)))+(x87);
   x91 = (x90)+(x85);
   x92 = (((uintptr_t)((x90)<(x87)))+((uintptr_t)((x91)<(x85))))+(x86);
   x93 = (x92)+(x83);
   x94 = ((uintptr_t)((x92)<(x86)))+((uintptr_t)((x93)<(x83)));
-  x95 = ((uintptr_t)(((x77)+((x82)*((uintptr_t)13822214165235122497ULL)))<(x77)))+(x78);
+  x95 = ((uintptr_t)(((x77)+((x82)*((uintptr_t)(UINTMAX_C(13822214165235122497)))))<(x77)))+(x78);
   x96 = (x95)+(x89);
   x97 = (((uintptr_t)((x95)<(x78)))+((uintptr_t)((x96)<(x89))))+(x79);
   x98 = (x97)+(x91);
@@ -1143,35 +1168,35 @@ void internal_fiat_secp256k1_scalar_from_montgomery(uintptr_t out0, uintptr_t in
   x101 = (((uintptr_t)((x99)<(x80)))+((uintptr_t)((x100)<(x93))))+((x81)+(x76));
   x102 = (x101)+((x94)+(x84));
   x103 = ((uintptr_t)((x101)<((x81)+(x76))))+((uintptr_t)((x102)<((x94)+(x84))));
-  x104 = (x96)-((uintptr_t)13822214165235122497ULL);
-  x105 = (x98)-((uintptr_t)13451932020343611451ULL);
+  x104 = (x96)-((uintptr_t)(UINTMAX_C(13822214165235122497)));
+  x105 = (x98)-((uintptr_t)(UINTMAX_C(13451932020343611451)));
   x106 = (x105)-((uintptr_t)((x96)<(x104)));
-  x107 = (x100)-((uintptr_t)18446744073709551614ULL);
+  x107 = (x100)-((uintptr_t)(UINTMAX_C(18446744073709551614)));
   x108 = (x107)-(((uintptr_t)((x98)<(x105)))+((uintptr_t)((x105)<(x106))));
-  x109 = (x102)-((uintptr_t)18446744073709551615ULL);
+  x109 = (x102)-((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x110 = (x109)-(((uintptr_t)((x100)<(x107)))+((uintptr_t)((x107)<(x108))));
   x111 = (uintptr_t)((x103)<((x103)-(((uintptr_t)((x102)<(x109)))+((uintptr_t)((x109)<(x110))))));
-  x112 = ((uintptr_t)-1ULL)+((uintptr_t)((x111)==((uintptr_t)0ULL)));
-  x113 = (x112)^((uintptr_t)18446744073709551615ULL);
+  x112 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x111)==((uintptr_t)(UINTMAX_C(0)))));
+  x113 = (x112)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x114 = ((x96)&(x112))|((x104)&(x113));
-  x115 = ((uintptr_t)-1ULL)+((uintptr_t)((x111)==((uintptr_t)0ULL)));
-  x116 = (x115)^((uintptr_t)18446744073709551615ULL);
+  x115 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x111)==((uintptr_t)(UINTMAX_C(0)))));
+  x116 = (x115)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x117 = ((x98)&(x115))|((x106)&(x116));
-  x118 = ((uintptr_t)-1ULL)+((uintptr_t)((x111)==((uintptr_t)0ULL)));
-  x119 = (x118)^((uintptr_t)18446744073709551615ULL);
+  x118 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x111)==((uintptr_t)(UINTMAX_C(0)))));
+  x119 = (x118)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x120 = ((x100)&(x118))|((x108)&(x119));
-  x121 = ((uintptr_t)-1ULL)+((uintptr_t)((x111)==((uintptr_t)0ULL)));
-  x122 = (x121)^((uintptr_t)18446744073709551615ULL);
+  x121 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x111)==((uintptr_t)(UINTMAX_C(0)))));
+  x122 = (x121)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x123 = ((x102)&(x121))|((x110)&(x122));
   x124 = x114;
   x125 = x117;
   x126 = x120;
   x127 = x123;
   /*skip*/
-  _br2_store((out0)+((uintptr_t)0ULL), x124, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)8ULL), x125, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)16ULL), x126, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)24ULL), x127, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(0))), x124, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(8))), x125, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(16))), x126, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(24))), x127, sizeof(uintptr_t));
   /*skip*/
   return;
 }
@@ -1191,43 +1216,43 @@ static void fiat_secp256k1_scalar_from_montgomery(uint64_t out1[4], const uint64
 static
 void internal_fiat_secp256k1_scalar_to_montgomery(uintptr_t out0, uintptr_t in0) {
   uintptr_t x1, x2, x3, x0, x7, x14, x16, x12, x10, x18, x11, x8, x27, x29, x26, x24, x31, x25, x22, x21, x13, x34, x15, x28, x36, x17, x30, x38, x19, x32, x40, x20, x9, x33, x23, x48, x50, x47, x45, x52, x46, x43, x4, x35, x56, x37, x49, x58, x39, x51, x60, x41, x53, x69, x71, x68, x66, x73, x67, x64, x63, x55, x76, x57, x70, x78, x59, x72, x80, x61, x74, x82, x62, x42, x54, x44, x75, x65, x90, x92, x89, x87, x94, x88, x85, x5, x77, x98, x79, x91, x100, x81, x93, x102, x83, x95, x111, x113, x110, x108, x115, x109, x106, x105, x97, x118, x99, x112, x120, x101, x114, x122, x103, x116, x124, x104, x84, x96, x86, x117, x107, x132, x134, x131, x129, x136, x130, x127, x6, x119, x140, x121, x133, x142, x123, x135, x144, x125, x137, x153, x155, x152, x150, x157, x151, x148, x147, x139, x160, x141, x154, x162, x143, x156, x164, x145, x158, x166, x146, x126, x138, x128, x159, x149, x170, x172, x168, x174, x161, x177, x169, x178, x163, x180, x171, x181, x165, x183, x173, x184, x176, x167, x186, x175, x187, x179, x182, x185, x188, x189, x190, x191, x192;
-  x0 = _br2_load((in0)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x1 = _br2_load((in0)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x2 = _br2_load((in0)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x3 = _br2_load((in0)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x0 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x1 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x2 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x3 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
   /*skip*/
   x4 = x1;
   x5 = x2;
   x6 = x3;
   x7 = x0;
-  x8 = (x7)*((uintptr_t)11342065889886772165ULL);
-  x9 = _br2_mulhuu((x7), ((uintptr_t)11342065889886772165ULL));
-  x10 = (x7)*((uintptr_t)16616019711348246470ULL);
-  x11 = _br2_mulhuu((x7), ((uintptr_t)16616019711348246470ULL));
-  x12 = _br2_mulhuu((x7), ((uintptr_t)8364476168144746616ULL));
-  x13 = (x7)*((uintptr_t)9902555850136342848ULL);
-  x14 = _br2_mulhuu((x7), ((uintptr_t)9902555850136342848ULL));
-  x15 = (x14)+((x7)*((uintptr_t)8364476168144746616ULL));
+  x8 = (x7)*((uintptr_t)(UINTMAX_C(11342065889886772165)));
+  x9 = _br2_mulhuu((x7), ((uintptr_t)(UINTMAX_C(11342065889886772165))));
+  x10 = (x7)*((uintptr_t)(UINTMAX_C(16616019711348246470)));
+  x11 = _br2_mulhuu((x7), ((uintptr_t)(UINTMAX_C(16616019711348246470))));
+  x12 = _br2_mulhuu((x7), ((uintptr_t)(UINTMAX_C(8364476168144746616))));
+  x13 = (x7)*((uintptr_t)(UINTMAX_C(9902555850136342848)));
+  x14 = _br2_mulhuu((x7), ((uintptr_t)(UINTMAX_C(9902555850136342848))));
+  x15 = (x14)+((x7)*((uintptr_t)(UINTMAX_C(8364476168144746616))));
   x16 = ((uintptr_t)((x15)<(x14)))+(x12);
   x17 = (x16)+(x10);
   x18 = (((uintptr_t)((x16)<(x12)))+((uintptr_t)((x17)<(x10))))+(x11);
   x19 = (x18)+(x8);
   x20 = ((uintptr_t)((x18)<(x11)))+((uintptr_t)((x19)<(x8)));
-  x21 = (x13)*((uintptr_t)5408259542528602431ULL);
-  x22 = (x21)*((uintptr_t)18446744073709551615ULL);
-  x23 = _br2_mulhuu((x21), ((uintptr_t)18446744073709551615ULL));
-  x24 = (x21)*((uintptr_t)18446744073709551614ULL);
-  x25 = _br2_mulhuu((x21), ((uintptr_t)18446744073709551614ULL));
-  x26 = _br2_mulhuu((x21), ((uintptr_t)13451932020343611451ULL));
-  x27 = _br2_mulhuu((x21), ((uintptr_t)13822214165235122497ULL));
-  x28 = (x27)+((x21)*((uintptr_t)13451932020343611451ULL));
+  x21 = (x13)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x22 = (x21)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x23 = _br2_mulhuu((x21), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x24 = (x21)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x25 = _br2_mulhuu((x21), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x26 = _br2_mulhuu((x21), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x27 = _br2_mulhuu((x21), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
+  x28 = (x27)+((x21)*((uintptr_t)(UINTMAX_C(13451932020343611451))));
   x29 = ((uintptr_t)((x28)<(x27)))+(x26);
   x30 = (x29)+(x24);
   x31 = (((uintptr_t)((x29)<(x26)))+((uintptr_t)((x30)<(x24))))+(x25);
   x32 = (x31)+(x22);
   x33 = ((uintptr_t)((x31)<(x25)))+((uintptr_t)((x32)<(x22)));
-  x34 = ((uintptr_t)(((x13)+((x21)*((uintptr_t)13822214165235122497ULL)))<(x13)))+(x15);
+  x34 = ((uintptr_t)(((x13)+((x21)*((uintptr_t)(UINTMAX_C(13822214165235122497)))))<(x13)))+(x15);
   x35 = (x34)+(x28);
   x36 = (((uintptr_t)((x34)<(x15)))+((uintptr_t)((x35)<(x28))))+(x17);
   x37 = (x36)+(x30);
@@ -1236,19 +1261,19 @@ void internal_fiat_secp256k1_scalar_to_montgomery(uintptr_t out0, uintptr_t in0)
   x40 = (((uintptr_t)((x38)<(x19)))+((uintptr_t)((x39)<(x32))))+((x20)+(x9));
   x41 = (x40)+((x33)+(x23));
   x42 = ((uintptr_t)((x40)<((x20)+(x9))))+((uintptr_t)((x41)<((x33)+(x23))));
-  x43 = (x4)*((uintptr_t)11342065889886772165ULL);
-  x44 = _br2_mulhuu((x4), ((uintptr_t)11342065889886772165ULL));
-  x45 = (x4)*((uintptr_t)16616019711348246470ULL);
-  x46 = _br2_mulhuu((x4), ((uintptr_t)16616019711348246470ULL));
-  x47 = _br2_mulhuu((x4), ((uintptr_t)8364476168144746616ULL));
-  x48 = _br2_mulhuu((x4), ((uintptr_t)9902555850136342848ULL));
-  x49 = (x48)+((x4)*((uintptr_t)8364476168144746616ULL));
+  x43 = (x4)*((uintptr_t)(UINTMAX_C(11342065889886772165)));
+  x44 = _br2_mulhuu((x4), ((uintptr_t)(UINTMAX_C(11342065889886772165))));
+  x45 = (x4)*((uintptr_t)(UINTMAX_C(16616019711348246470)));
+  x46 = _br2_mulhuu((x4), ((uintptr_t)(UINTMAX_C(16616019711348246470))));
+  x47 = _br2_mulhuu((x4), ((uintptr_t)(UINTMAX_C(8364476168144746616))));
+  x48 = _br2_mulhuu((x4), ((uintptr_t)(UINTMAX_C(9902555850136342848))));
+  x49 = (x48)+((x4)*((uintptr_t)(UINTMAX_C(8364476168144746616))));
   x50 = ((uintptr_t)((x49)<(x48)))+(x47);
   x51 = (x50)+(x45);
   x52 = (((uintptr_t)((x50)<(x47)))+((uintptr_t)((x51)<(x45))))+(x46);
   x53 = (x52)+(x43);
   x54 = ((uintptr_t)((x52)<(x46)))+((uintptr_t)((x53)<(x43)));
-  x55 = (x35)+((x4)*((uintptr_t)9902555850136342848ULL));
+  x55 = (x35)+((x4)*((uintptr_t)(UINTMAX_C(9902555850136342848))));
   x56 = ((uintptr_t)((x55)<(x35)))+(x37);
   x57 = (x56)+(x49);
   x58 = (((uintptr_t)((x56)<(x37)))+((uintptr_t)((x57)<(x49))))+(x39);
@@ -1256,20 +1281,20 @@ void internal_fiat_secp256k1_scalar_to_montgomery(uintptr_t out0, uintptr_t in0)
   x60 = (((uintptr_t)((x58)<(x39)))+((uintptr_t)((x59)<(x51))))+(x41);
   x61 = (x60)+(x53);
   x62 = ((uintptr_t)((x60)<(x41)))+((uintptr_t)((x61)<(x53)));
-  x63 = (x55)*((uintptr_t)5408259542528602431ULL);
-  x64 = (x63)*((uintptr_t)18446744073709551615ULL);
-  x65 = _br2_mulhuu((x63), ((uintptr_t)18446744073709551615ULL));
-  x66 = (x63)*((uintptr_t)18446744073709551614ULL);
-  x67 = _br2_mulhuu((x63), ((uintptr_t)18446744073709551614ULL));
-  x68 = _br2_mulhuu((x63), ((uintptr_t)13451932020343611451ULL));
-  x69 = _br2_mulhuu((x63), ((uintptr_t)13822214165235122497ULL));
-  x70 = (x69)+((x63)*((uintptr_t)13451932020343611451ULL));
+  x63 = (x55)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x64 = (x63)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x65 = _br2_mulhuu((x63), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x66 = (x63)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x67 = _br2_mulhuu((x63), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x68 = _br2_mulhuu((x63), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x69 = _br2_mulhuu((x63), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
+  x70 = (x69)+((x63)*((uintptr_t)(UINTMAX_C(13451932020343611451))));
   x71 = ((uintptr_t)((x70)<(x69)))+(x68);
   x72 = (x71)+(x66);
   x73 = (((uintptr_t)((x71)<(x68)))+((uintptr_t)((x72)<(x66))))+(x67);
   x74 = (x73)+(x64);
   x75 = ((uintptr_t)((x73)<(x67)))+((uintptr_t)((x74)<(x64)));
-  x76 = ((uintptr_t)(((x55)+((x63)*((uintptr_t)13822214165235122497ULL)))<(x55)))+(x57);
+  x76 = ((uintptr_t)(((x55)+((x63)*((uintptr_t)(UINTMAX_C(13822214165235122497)))))<(x55)))+(x57);
   x77 = (x76)+(x70);
   x78 = (((uintptr_t)((x76)<(x57)))+((uintptr_t)((x77)<(x70))))+(x59);
   x79 = (x78)+(x72);
@@ -1278,19 +1303,19 @@ void internal_fiat_secp256k1_scalar_to_montgomery(uintptr_t out0, uintptr_t in0)
   x82 = (((uintptr_t)((x80)<(x61)))+((uintptr_t)((x81)<(x74))))+(((x62)+(x42))+((x54)+(x44)));
   x83 = (x82)+((x75)+(x65));
   x84 = ((uintptr_t)((x82)<(((x62)+(x42))+((x54)+(x44)))))+((uintptr_t)((x83)<((x75)+(x65))));
-  x85 = (x5)*((uintptr_t)11342065889886772165ULL);
-  x86 = _br2_mulhuu((x5), ((uintptr_t)11342065889886772165ULL));
-  x87 = (x5)*((uintptr_t)16616019711348246470ULL);
-  x88 = _br2_mulhuu((x5), ((uintptr_t)16616019711348246470ULL));
-  x89 = _br2_mulhuu((x5), ((uintptr_t)8364476168144746616ULL));
-  x90 = _br2_mulhuu((x5), ((uintptr_t)9902555850136342848ULL));
-  x91 = (x90)+((x5)*((uintptr_t)8364476168144746616ULL));
+  x85 = (x5)*((uintptr_t)(UINTMAX_C(11342065889886772165)));
+  x86 = _br2_mulhuu((x5), ((uintptr_t)(UINTMAX_C(11342065889886772165))));
+  x87 = (x5)*((uintptr_t)(UINTMAX_C(16616019711348246470)));
+  x88 = _br2_mulhuu((x5), ((uintptr_t)(UINTMAX_C(16616019711348246470))));
+  x89 = _br2_mulhuu((x5), ((uintptr_t)(UINTMAX_C(8364476168144746616))));
+  x90 = _br2_mulhuu((x5), ((uintptr_t)(UINTMAX_C(9902555850136342848))));
+  x91 = (x90)+((x5)*((uintptr_t)(UINTMAX_C(8364476168144746616))));
   x92 = ((uintptr_t)((x91)<(x90)))+(x89);
   x93 = (x92)+(x87);
   x94 = (((uintptr_t)((x92)<(x89)))+((uintptr_t)((x93)<(x87))))+(x88);
   x95 = (x94)+(x85);
   x96 = ((uintptr_t)((x94)<(x88)))+((uintptr_t)((x95)<(x85)));
-  x97 = (x77)+((x5)*((uintptr_t)9902555850136342848ULL));
+  x97 = (x77)+((x5)*((uintptr_t)(UINTMAX_C(9902555850136342848))));
   x98 = ((uintptr_t)((x97)<(x77)))+(x79);
   x99 = (x98)+(x91);
   x100 = (((uintptr_t)((x98)<(x79)))+((uintptr_t)((x99)<(x91))))+(x81);
@@ -1298,20 +1323,20 @@ void internal_fiat_secp256k1_scalar_to_montgomery(uintptr_t out0, uintptr_t in0)
   x102 = (((uintptr_t)((x100)<(x81)))+((uintptr_t)((x101)<(x93))))+(x83);
   x103 = (x102)+(x95);
   x104 = ((uintptr_t)((x102)<(x83)))+((uintptr_t)((x103)<(x95)));
-  x105 = (x97)*((uintptr_t)5408259542528602431ULL);
-  x106 = (x105)*((uintptr_t)18446744073709551615ULL);
-  x107 = _br2_mulhuu((x105), ((uintptr_t)18446744073709551615ULL));
-  x108 = (x105)*((uintptr_t)18446744073709551614ULL);
-  x109 = _br2_mulhuu((x105), ((uintptr_t)18446744073709551614ULL));
-  x110 = _br2_mulhuu((x105), ((uintptr_t)13451932020343611451ULL));
-  x111 = _br2_mulhuu((x105), ((uintptr_t)13822214165235122497ULL));
-  x112 = (x111)+((x105)*((uintptr_t)13451932020343611451ULL));
+  x105 = (x97)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x106 = (x105)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x107 = _br2_mulhuu((x105), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x108 = (x105)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x109 = _br2_mulhuu((x105), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x110 = _br2_mulhuu((x105), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x111 = _br2_mulhuu((x105), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
+  x112 = (x111)+((x105)*((uintptr_t)(UINTMAX_C(13451932020343611451))));
   x113 = ((uintptr_t)((x112)<(x111)))+(x110);
   x114 = (x113)+(x108);
   x115 = (((uintptr_t)((x113)<(x110)))+((uintptr_t)((x114)<(x108))))+(x109);
   x116 = (x115)+(x106);
   x117 = ((uintptr_t)((x115)<(x109)))+((uintptr_t)((x116)<(x106)));
-  x118 = ((uintptr_t)(((x97)+((x105)*((uintptr_t)13822214165235122497ULL)))<(x97)))+(x99);
+  x118 = ((uintptr_t)(((x97)+((x105)*((uintptr_t)(UINTMAX_C(13822214165235122497)))))<(x97)))+(x99);
   x119 = (x118)+(x112);
   x120 = (((uintptr_t)((x118)<(x99)))+((uintptr_t)((x119)<(x112))))+(x101);
   x121 = (x120)+(x114);
@@ -1320,19 +1345,19 @@ void internal_fiat_secp256k1_scalar_to_montgomery(uintptr_t out0, uintptr_t in0)
   x124 = (((uintptr_t)((x122)<(x103)))+((uintptr_t)((x123)<(x116))))+(((x104)+(x84))+((x96)+(x86)));
   x125 = (x124)+((x117)+(x107));
   x126 = ((uintptr_t)((x124)<(((x104)+(x84))+((x96)+(x86)))))+((uintptr_t)((x125)<((x117)+(x107))));
-  x127 = (x6)*((uintptr_t)11342065889886772165ULL);
-  x128 = _br2_mulhuu((x6), ((uintptr_t)11342065889886772165ULL));
-  x129 = (x6)*((uintptr_t)16616019711348246470ULL);
-  x130 = _br2_mulhuu((x6), ((uintptr_t)16616019711348246470ULL));
-  x131 = _br2_mulhuu((x6), ((uintptr_t)8364476168144746616ULL));
-  x132 = _br2_mulhuu((x6), ((uintptr_t)9902555850136342848ULL));
-  x133 = (x132)+((x6)*((uintptr_t)8364476168144746616ULL));
+  x127 = (x6)*((uintptr_t)(UINTMAX_C(11342065889886772165)));
+  x128 = _br2_mulhuu((x6), ((uintptr_t)(UINTMAX_C(11342065889886772165))));
+  x129 = (x6)*((uintptr_t)(UINTMAX_C(16616019711348246470)));
+  x130 = _br2_mulhuu((x6), ((uintptr_t)(UINTMAX_C(16616019711348246470))));
+  x131 = _br2_mulhuu((x6), ((uintptr_t)(UINTMAX_C(8364476168144746616))));
+  x132 = _br2_mulhuu((x6), ((uintptr_t)(UINTMAX_C(9902555850136342848))));
+  x133 = (x132)+((x6)*((uintptr_t)(UINTMAX_C(8364476168144746616))));
   x134 = ((uintptr_t)((x133)<(x132)))+(x131);
   x135 = (x134)+(x129);
   x136 = (((uintptr_t)((x134)<(x131)))+((uintptr_t)((x135)<(x129))))+(x130);
   x137 = (x136)+(x127);
   x138 = ((uintptr_t)((x136)<(x130)))+((uintptr_t)((x137)<(x127)));
-  x139 = (x119)+((x6)*((uintptr_t)9902555850136342848ULL));
+  x139 = (x119)+((x6)*((uintptr_t)(UINTMAX_C(9902555850136342848))));
   x140 = ((uintptr_t)((x139)<(x119)))+(x121);
   x141 = (x140)+(x133);
   x142 = (((uintptr_t)((x140)<(x121)))+((uintptr_t)((x141)<(x133))))+(x123);
@@ -1340,20 +1365,20 @@ void internal_fiat_secp256k1_scalar_to_montgomery(uintptr_t out0, uintptr_t in0)
   x144 = (((uintptr_t)((x142)<(x123)))+((uintptr_t)((x143)<(x135))))+(x125);
   x145 = (x144)+(x137);
   x146 = ((uintptr_t)((x144)<(x125)))+((uintptr_t)((x145)<(x137)));
-  x147 = (x139)*((uintptr_t)5408259542528602431ULL);
-  x148 = (x147)*((uintptr_t)18446744073709551615ULL);
-  x149 = _br2_mulhuu((x147), ((uintptr_t)18446744073709551615ULL));
-  x150 = (x147)*((uintptr_t)18446744073709551614ULL);
-  x151 = _br2_mulhuu((x147), ((uintptr_t)18446744073709551614ULL));
-  x152 = _br2_mulhuu((x147), ((uintptr_t)13451932020343611451ULL));
-  x153 = _br2_mulhuu((x147), ((uintptr_t)13822214165235122497ULL));
-  x154 = (x153)+((x147)*((uintptr_t)13451932020343611451ULL));
+  x147 = (x139)*((uintptr_t)(UINTMAX_C(5408259542528602431)));
+  x148 = (x147)*((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x149 = _br2_mulhuu((x147), ((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x150 = (x147)*((uintptr_t)(UINTMAX_C(18446744073709551614)));
+  x151 = _br2_mulhuu((x147), ((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x152 = _br2_mulhuu((x147), ((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x153 = _br2_mulhuu((x147), ((uintptr_t)(UINTMAX_C(13822214165235122497))));
+  x154 = (x153)+((x147)*((uintptr_t)(UINTMAX_C(13451932020343611451))));
   x155 = ((uintptr_t)((x154)<(x153)))+(x152);
   x156 = (x155)+(x150);
   x157 = (((uintptr_t)((x155)<(x152)))+((uintptr_t)((x156)<(x150))))+(x151);
   x158 = (x157)+(x148);
   x159 = ((uintptr_t)((x157)<(x151)))+((uintptr_t)((x158)<(x148)));
-  x160 = ((uintptr_t)(((x139)+((x147)*((uintptr_t)13822214165235122497ULL)))<(x139)))+(x141);
+  x160 = ((uintptr_t)(((x139)+((x147)*((uintptr_t)(UINTMAX_C(13822214165235122497)))))<(x139)))+(x141);
   x161 = (x160)+(x154);
   x162 = (((uintptr_t)((x160)<(x141)))+((uintptr_t)((x161)<(x154))))+(x143);
   x163 = (x162)+(x156);
@@ -1362,35 +1387,35 @@ void internal_fiat_secp256k1_scalar_to_montgomery(uintptr_t out0, uintptr_t in0)
   x166 = (((uintptr_t)((x164)<(x145)))+((uintptr_t)((x165)<(x158))))+(((x146)+(x126))+((x138)+(x128)));
   x167 = (x166)+((x159)+(x149));
   x168 = ((uintptr_t)((x166)<(((x146)+(x126))+((x138)+(x128)))))+((uintptr_t)((x167)<((x159)+(x149))));
-  x169 = (x161)-((uintptr_t)13822214165235122497ULL);
-  x170 = (x163)-((uintptr_t)13451932020343611451ULL);
+  x169 = (x161)-((uintptr_t)(UINTMAX_C(13822214165235122497)));
+  x170 = (x163)-((uintptr_t)(UINTMAX_C(13451932020343611451)));
   x171 = (x170)-((uintptr_t)((x161)<(x169)));
-  x172 = (x165)-((uintptr_t)18446744073709551614ULL);
+  x172 = (x165)-((uintptr_t)(UINTMAX_C(18446744073709551614)));
   x173 = (x172)-(((uintptr_t)((x163)<(x170)))+((uintptr_t)((x170)<(x171))));
-  x174 = (x167)-((uintptr_t)18446744073709551615ULL);
+  x174 = (x167)-((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x175 = (x174)-(((uintptr_t)((x165)<(x172)))+((uintptr_t)((x172)<(x173))));
   x176 = (uintptr_t)((x168)<((x168)-(((uintptr_t)((x167)<(x174)))+((uintptr_t)((x174)<(x175))))));
-  x177 = ((uintptr_t)-1ULL)+((uintptr_t)((x176)==((uintptr_t)0ULL)));
-  x178 = (x177)^((uintptr_t)18446744073709551615ULL);
+  x177 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x176)==((uintptr_t)(UINTMAX_C(0)))));
+  x178 = (x177)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x179 = ((x161)&(x177))|((x169)&(x178));
-  x180 = ((uintptr_t)-1ULL)+((uintptr_t)((x176)==((uintptr_t)0ULL)));
-  x181 = (x180)^((uintptr_t)18446744073709551615ULL);
+  x180 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x176)==((uintptr_t)(UINTMAX_C(0)))));
+  x181 = (x180)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x182 = ((x163)&(x180))|((x171)&(x181));
-  x183 = ((uintptr_t)-1ULL)+((uintptr_t)((x176)==((uintptr_t)0ULL)));
-  x184 = (x183)^((uintptr_t)18446744073709551615ULL);
+  x183 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x176)==((uintptr_t)(UINTMAX_C(0)))));
+  x184 = (x183)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x185 = ((x165)&(x183))|((x173)&(x184));
-  x186 = ((uintptr_t)-1ULL)+((uintptr_t)((x176)==((uintptr_t)0ULL)));
-  x187 = (x186)^((uintptr_t)18446744073709551615ULL);
+  x186 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x176)==((uintptr_t)(UINTMAX_C(0)))));
+  x187 = (x186)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x188 = ((x167)&(x186))|((x175)&(x187));
   x189 = x179;
   x190 = x182;
   x191 = x185;
   x192 = x188;
   /*skip*/
-  _br2_store((out0)+((uintptr_t)0ULL), x189, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)8ULL), x190, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)16ULL), x191, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)24ULL), x192, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(0))), x189, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(8))), x190, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(16))), x191, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(24))), x192, sizeof(uintptr_t));
   /*skip*/
   return;
 }
@@ -1410,10 +1435,10 @@ static void fiat_secp256k1_scalar_to_montgomery(uint64_t out1[4], const uint64_t
 static
 uintptr_t internal_fiat_secp256k1_scalar_nonzero(uintptr_t in0) {
   uintptr_t x0, x1, x2, x3, x4, out0, x5;
-  x0 = _br2_load((in0)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x1 = _br2_load((in0)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x2 = _br2_load((in0)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x3 = _br2_load((in0)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x0 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x1 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x2 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x3 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
   /*skip*/
   x4 = (x0)|((x1)|((x2)|(x3)));
@@ -1440,38 +1465,38 @@ static
 void internal_fiat_secp256k1_scalar_selectznz(uintptr_t out0, uintptr_t in0, uintptr_t in1, uintptr_t in2) {
   uintptr_t x4, x8, x0, x9, x5, x11, x1, x12, x6, x14, x2, x15, x7, x17, x3, x18, x10, x13, x16, x19, x20, x21, x22, x23;
   /*skip*/
-  x0 = _br2_load((in1)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x1 = _br2_load((in1)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x2 = _br2_load((in1)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x3 = _br2_load((in1)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x0 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x1 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x2 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x3 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
-  x4 = _br2_load((in2)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x5 = _br2_load((in2)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x6 = _br2_load((in2)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x7 = _br2_load((in2)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x4 = _br2_load((in2)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x5 = _br2_load((in2)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x6 = _br2_load((in2)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x7 = _br2_load((in2)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
   /*skip*/
-  x8 = ((uintptr_t)-1ULL)+((uintptr_t)((in0)==((uintptr_t)0ULL)));
-  x9 = (x8)^((uintptr_t)18446744073709551615ULL);
+  x8 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x9 = (x8)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x10 = ((x4)&(x8))|((x0)&(x9));
-  x11 = ((uintptr_t)-1ULL)+((uintptr_t)((in0)==((uintptr_t)0ULL)));
-  x12 = (x11)^((uintptr_t)18446744073709551615ULL);
+  x11 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x12 = (x11)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x13 = ((x5)&(x11))|((x1)&(x12));
-  x14 = ((uintptr_t)-1ULL)+((uintptr_t)((in0)==((uintptr_t)0ULL)));
-  x15 = (x14)^((uintptr_t)18446744073709551615ULL);
+  x14 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x15 = (x14)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x16 = ((x6)&(x14))|((x2)&(x15));
-  x17 = ((uintptr_t)-1ULL)+((uintptr_t)((in0)==((uintptr_t)0ULL)));
-  x18 = (x17)^((uintptr_t)18446744073709551615ULL);
+  x17 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x18 = (x17)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x19 = ((x7)&(x17))|((x3)&(x18));
   x20 = x10;
   x21 = x13;
   x22 = x16;
   x23 = x19;
   /*skip*/
-  _br2_store((out0)+((uintptr_t)0ULL), x20, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)8ULL), x21, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)16ULL), x22, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)24ULL), x23, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(0))), x20, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(8))), x21, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(16))), x22, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(24))), x23, sizeof(uintptr_t));
   /*skip*/
   return;
 }
@@ -1491,72 +1516,72 @@ static void fiat_secp256k1_scalar_selectznz(uint64_t out1[4], uint8_t arg1, cons
 static
 void internal_fiat_secp256k1_scalar_to_bytes(uintptr_t out0, uintptr_t in0) {
   uintptr_t x3, x2, x1, x0, x7, x9, x11, x13, x15, x17, x19, x6, x23, x25, x27, x29, x31, x33, x5, x37, x39, x41, x43, x45, x47, x4, x51, x53, x55, x57, x59, x61, x8, x10, x12, x14, x16, x18, x20, x21, x22, x24, x26, x28, x30, x32, x34, x35, x36, x38, x40, x42, x44, x46, x48, x49, x50, x52, x54, x56, x58, x60, x62, x63, x64, x65, x66, x67, x68, x69, x70, x71, x72, x73, x74, x75, x76, x77, x78, x79, x80, x81, x82, x83, x84, x85, x86, x87, x88, x89, x90, x91, x92, x93, x94, x95;
-  x0 = _br2_load((in0)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x1 = _br2_load((in0)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x2 = _br2_load((in0)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x3 = _br2_load((in0)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x0 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x1 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x2 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x3 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
   /*skip*/
   x4 = x3;
   x5 = x2;
   x6 = x1;
   x7 = x0;
-  x8 = (x7)&((uintptr_t)255ULL);
-  x9 = (x7)>>((uintptr_t)8ULL);
-  x10 = (x9)&((uintptr_t)255ULL);
-  x11 = (x9)>>((uintptr_t)8ULL);
-  x12 = (x11)&((uintptr_t)255ULL);
-  x13 = (x11)>>((uintptr_t)8ULL);
-  x14 = (x13)&((uintptr_t)255ULL);
-  x15 = (x13)>>((uintptr_t)8ULL);
-  x16 = (x15)&((uintptr_t)255ULL);
-  x17 = (x15)>>((uintptr_t)8ULL);
-  x18 = (x17)&((uintptr_t)255ULL);
-  x19 = (x17)>>((uintptr_t)8ULL);
-  x20 = (x19)&((uintptr_t)255ULL);
-  x21 = (x19)>>((uintptr_t)8ULL);
-  x22 = (x6)&((uintptr_t)255ULL);
-  x23 = (x6)>>((uintptr_t)8ULL);
-  x24 = (x23)&((uintptr_t)255ULL);
-  x25 = (x23)>>((uintptr_t)8ULL);
-  x26 = (x25)&((uintptr_t)255ULL);
-  x27 = (x25)>>((uintptr_t)8ULL);
-  x28 = (x27)&((uintptr_t)255ULL);
-  x29 = (x27)>>((uintptr_t)8ULL);
-  x30 = (x29)&((uintptr_t)255ULL);
-  x31 = (x29)>>((uintptr_t)8ULL);
-  x32 = (x31)&((uintptr_t)255ULL);
-  x33 = (x31)>>((uintptr_t)8ULL);
-  x34 = (x33)&((uintptr_t)255ULL);
-  x35 = (x33)>>((uintptr_t)8ULL);
-  x36 = (x5)&((uintptr_t)255ULL);
-  x37 = (x5)>>((uintptr_t)8ULL);
-  x38 = (x37)&((uintptr_t)255ULL);
-  x39 = (x37)>>((uintptr_t)8ULL);
-  x40 = (x39)&((uintptr_t)255ULL);
-  x41 = (x39)>>((uintptr_t)8ULL);
-  x42 = (x41)&((uintptr_t)255ULL);
-  x43 = (x41)>>((uintptr_t)8ULL);
-  x44 = (x43)&((uintptr_t)255ULL);
-  x45 = (x43)>>((uintptr_t)8ULL);
-  x46 = (x45)&((uintptr_t)255ULL);
-  x47 = (x45)>>((uintptr_t)8ULL);
-  x48 = (x47)&((uintptr_t)255ULL);
-  x49 = (x47)>>((uintptr_t)8ULL);
-  x50 = (x4)&((uintptr_t)255ULL);
-  x51 = (x4)>>((uintptr_t)8ULL);
-  x52 = (x51)&((uintptr_t)255ULL);
-  x53 = (x51)>>((uintptr_t)8ULL);
-  x54 = (x53)&((uintptr_t)255ULL);
-  x55 = (x53)>>((uintptr_t)8ULL);
-  x56 = (x55)&((uintptr_t)255ULL);
-  x57 = (x55)>>((uintptr_t)8ULL);
-  x58 = (x57)&((uintptr_t)255ULL);
-  x59 = (x57)>>((uintptr_t)8ULL);
-  x60 = (x59)&((uintptr_t)255ULL);
-  x61 = (x59)>>((uintptr_t)8ULL);
-  x62 = (x61)&((uintptr_t)255ULL);
-  x63 = (x61)>>((uintptr_t)8ULL);
+  x8 = (x7)&((uintptr_t)(UINTMAX_C(255)));
+  x9 = (x7)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x10 = (x9)&((uintptr_t)(UINTMAX_C(255)));
+  x11 = (x9)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x12 = (x11)&((uintptr_t)(UINTMAX_C(255)));
+  x13 = (x11)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x14 = (x13)&((uintptr_t)(UINTMAX_C(255)));
+  x15 = (x13)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x16 = (x15)&((uintptr_t)(UINTMAX_C(255)));
+  x17 = (x15)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x18 = (x17)&((uintptr_t)(UINTMAX_C(255)));
+  x19 = (x17)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x20 = (x19)&((uintptr_t)(UINTMAX_C(255)));
+  x21 = (x19)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x22 = (x6)&((uintptr_t)(UINTMAX_C(255)));
+  x23 = (x6)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x24 = (x23)&((uintptr_t)(UINTMAX_C(255)));
+  x25 = (x23)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x26 = (x25)&((uintptr_t)(UINTMAX_C(255)));
+  x27 = (x25)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x28 = (x27)&((uintptr_t)(UINTMAX_C(255)));
+  x29 = (x27)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x30 = (x29)&((uintptr_t)(UINTMAX_C(255)));
+  x31 = (x29)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x32 = (x31)&((uintptr_t)(UINTMAX_C(255)));
+  x33 = (x31)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x34 = (x33)&((uintptr_t)(UINTMAX_C(255)));
+  x35 = (x33)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x36 = (x5)&((uintptr_t)(UINTMAX_C(255)));
+  x37 = (x5)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x38 = (x37)&((uintptr_t)(UINTMAX_C(255)));
+  x39 = (x37)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x40 = (x39)&((uintptr_t)(UINTMAX_C(255)));
+  x41 = (x39)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x42 = (x41)&((uintptr_t)(UINTMAX_C(255)));
+  x43 = (x41)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x44 = (x43)&((uintptr_t)(UINTMAX_C(255)));
+  x45 = (x43)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x46 = (x45)&((uintptr_t)(UINTMAX_C(255)));
+  x47 = (x45)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x48 = (x47)&((uintptr_t)(UINTMAX_C(255)));
+  x49 = (x47)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x50 = (x4)&((uintptr_t)(UINTMAX_C(255)));
+  x51 = (x4)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x52 = (x51)&((uintptr_t)(UINTMAX_C(255)));
+  x53 = (x51)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x54 = (x53)&((uintptr_t)(UINTMAX_C(255)));
+  x55 = (x53)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x56 = (x55)&((uintptr_t)(UINTMAX_C(255)));
+  x57 = (x55)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x58 = (x57)&((uintptr_t)(UINTMAX_C(255)));
+  x59 = (x57)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x60 = (x59)&((uintptr_t)(UINTMAX_C(255)));
+  x61 = (x59)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
+  x62 = (x61)&((uintptr_t)(UINTMAX_C(255)));
+  x63 = (x61)>>_br2_shamt((uintptr_t)(UINTMAX_C(8)));
   x64 = x8;
   x65 = x10;
   x66 = x12;
@@ -1590,38 +1615,38 @@ void internal_fiat_secp256k1_scalar_to_bytes(uintptr_t out0, uintptr_t in0) {
   x94 = x62;
   x95 = x63;
   /*skip*/
-  _br2_store((out0)+((uintptr_t)0ULL), x64, 1);
-  _br2_store((out0)+((uintptr_t)1ULL), x65, 1);
-  _br2_store((out0)+((uintptr_t)2ULL), x66, 1);
-  _br2_store((out0)+((uintptr_t)3ULL), x67, 1);
-  _br2_store((out0)+((uintptr_t)4ULL), x68, 1);
-  _br2_store((out0)+((uintptr_t)5ULL), x69, 1);
-  _br2_store((out0)+((uintptr_t)6ULL), x70, 1);
-  _br2_store((out0)+((uintptr_t)7ULL), x71, 1);
-  _br2_store((out0)+((uintptr_t)8ULL), x72, 1);
-  _br2_store((out0)+((uintptr_t)9ULL), x73, 1);
-  _br2_store((out0)+((uintptr_t)10ULL), x74, 1);
-  _br2_store((out0)+((uintptr_t)11ULL), x75, 1);
-  _br2_store((out0)+((uintptr_t)12ULL), x76, 1);
-  _br2_store((out0)+((uintptr_t)13ULL), x77, 1);
-  _br2_store((out0)+((uintptr_t)14ULL), x78, 1);
-  _br2_store((out0)+((uintptr_t)15ULL), x79, 1);
-  _br2_store((out0)+((uintptr_t)16ULL), x80, 1);
-  _br2_store((out0)+((uintptr_t)17ULL), x81, 1);
-  _br2_store((out0)+((uintptr_t)18ULL), x82, 1);
-  _br2_store((out0)+((uintptr_t)19ULL), x83, 1);
-  _br2_store((out0)+((uintptr_t)20ULL), x84, 1);
-  _br2_store((out0)+((uintptr_t)21ULL), x85, 1);
-  _br2_store((out0)+((uintptr_t)22ULL), x86, 1);
-  _br2_store((out0)+((uintptr_t)23ULL), x87, 1);
-  _br2_store((out0)+((uintptr_t)24ULL), x88, 1);
-  _br2_store((out0)+((uintptr_t)25ULL), x89, 1);
-  _br2_store((out0)+((uintptr_t)26ULL), x90, 1);
-  _br2_store((out0)+((uintptr_t)27ULL), x91, 1);
-  _br2_store((out0)+((uintptr_t)28ULL), x92, 1);
-  _br2_store((out0)+((uintptr_t)29ULL), x93, 1);
-  _br2_store((out0)+((uintptr_t)30ULL), x94, 1);
-  _br2_store((out0)+((uintptr_t)31ULL), x95, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(0))), x64, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(1))), x65, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(2))), x66, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(3))), x67, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(4))), x68, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(5))), x69, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(6))), x70, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(7))), x71, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(8))), x72, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(9))), x73, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(10))), x74, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(11))), x75, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(12))), x76, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(13))), x77, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(14))), x78, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(15))), x79, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(16))), x80, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(17))), x81, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(18))), x82, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(19))), x83, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(20))), x84, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(21))), x85, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(22))), x86, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(23))), x87, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(24))), x88, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(25))), x89, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(26))), x90, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(27))), x91, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(28))), x92, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(29))), x93, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(30))), x94, 1);
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(31))), x95, 1);
   /*skip*/
   return;
 }
@@ -1641,71 +1666,71 @@ static void fiat_secp256k1_scalar_to_bytes(uint8_t out1[32], const uint64_t arg1
 static
 void internal_fiat_secp256k1_scalar_from_bytes(uintptr_t out0, uintptr_t in0) {
   uintptr_t x31, x30, x29, x28, x27, x26, x25, x24, x23, x22, x21, x20, x19, x18, x17, x16, x15, x14, x13, x12, x11, x10, x9, x8, x7, x6, x5, x4, x3, x2, x1, x0, x62, x63, x61, x64, x60, x65, x59, x66, x58, x67, x57, x68, x56, x69, x54, x55, x53, x71, x52, x72, x51, x73, x50, x74, x49, x75, x48, x76, x46, x47, x45, x78, x44, x79, x43, x80, x42, x81, x41, x82, x40, x83, x38, x39, x37, x85, x36, x86, x35, x87, x34, x88, x33, x89, x32, x90, x70, x77, x84, x91, x92, x93, x94, x95;
-  x0 = _br2_load((in0)+((uintptr_t)0ULL), 1);
-  x1 = _br2_load((in0)+((uintptr_t)1ULL), 1);
-  x2 = _br2_load((in0)+((uintptr_t)2ULL), 1);
-  x3 = _br2_load((in0)+((uintptr_t)3ULL), 1);
-  x4 = _br2_load((in0)+((uintptr_t)4ULL), 1);
-  x5 = _br2_load((in0)+((uintptr_t)5ULL), 1);
-  x6 = _br2_load((in0)+((uintptr_t)6ULL), 1);
-  x7 = _br2_load((in0)+((uintptr_t)7ULL), 1);
-  x8 = _br2_load((in0)+((uintptr_t)8ULL), 1);
-  x9 = _br2_load((in0)+((uintptr_t)9ULL), 1);
-  x10 = _br2_load((in0)+((uintptr_t)10ULL), 1);
-  x11 = _br2_load((in0)+((uintptr_t)11ULL), 1);
-  x12 = _br2_load((in0)+((uintptr_t)12ULL), 1);
-  x13 = _br2_load((in0)+((uintptr_t)13ULL), 1);
-  x14 = _br2_load((in0)+((uintptr_t)14ULL), 1);
-  x15 = _br2_load((in0)+((uintptr_t)15ULL), 1);
-  x16 = _br2_load((in0)+((uintptr_t)16ULL), 1);
-  x17 = _br2_load((in0)+((uintptr_t)17ULL), 1);
-  x18 = _br2_load((in0)+((uintptr_t)18ULL), 1);
-  x19 = _br2_load((in0)+((uintptr_t)19ULL), 1);
-  x20 = _br2_load((in0)+((uintptr_t)20ULL), 1);
-  x21 = _br2_load((in0)+((uintptr_t)21ULL), 1);
-  x22 = _br2_load((in0)+((uintptr_t)22ULL), 1);
-  x23 = _br2_load((in0)+((uintptr_t)23ULL), 1);
-  x24 = _br2_load((in0)+((uintptr_t)24ULL), 1);
-  x25 = _br2_load((in0)+((uintptr_t)25ULL), 1);
-  x26 = _br2_load((in0)+((uintptr_t)26ULL), 1);
-  x27 = _br2_load((in0)+((uintptr_t)27ULL), 1);
-  x28 = _br2_load((in0)+((uintptr_t)28ULL), 1);
-  x29 = _br2_load((in0)+((uintptr_t)29ULL), 1);
-  x30 = _br2_load((in0)+((uintptr_t)30ULL), 1);
-  x31 = _br2_load((in0)+((uintptr_t)31ULL), 1);
+  x0 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(0))), 1);
+  x1 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(1))), 1);
+  x2 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(2))), 1);
+  x3 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(3))), 1);
+  x4 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(4))), 1);
+  x5 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(5))), 1);
+  x6 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(6))), 1);
+  x7 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(7))), 1);
+  x8 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(8))), 1);
+  x9 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(9))), 1);
+  x10 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(10))), 1);
+  x11 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(11))), 1);
+  x12 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(12))), 1);
+  x13 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(13))), 1);
+  x14 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(14))), 1);
+  x15 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(15))), 1);
+  x16 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(16))), 1);
+  x17 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(17))), 1);
+  x18 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(18))), 1);
+  x19 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(19))), 1);
+  x20 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(20))), 1);
+  x21 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(21))), 1);
+  x22 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(22))), 1);
+  x23 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(23))), 1);
+  x24 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(24))), 1);
+  x25 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(25))), 1);
+  x26 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(26))), 1);
+  x27 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(27))), 1);
+  x28 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(28))), 1);
+  x29 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(29))), 1);
+  x30 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(30))), 1);
+  x31 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(31))), 1);
   /*skip*/
   /*skip*/
-  x32 = (x31)<<((uintptr_t)56ULL);
-  x33 = (x30)<<((uintptr_t)48ULL);
-  x34 = (x29)<<((uintptr_t)40ULL);
-  x35 = (x28)<<((uintptr_t)32ULL);
-  x36 = (x27)<<((uintptr_t)24ULL);
-  x37 = (x26)<<((uintptr_t)16ULL);
-  x38 = (x25)<<((uintptr_t)8ULL);
+  x32 = (x31)<<_br2_shamt((uintptr_t)(UINTMAX_C(56)));
+  x33 = (x30)<<_br2_shamt((uintptr_t)(UINTMAX_C(48)));
+  x34 = (x29)<<_br2_shamt((uintptr_t)(UINTMAX_C(40)));
+  x35 = (x28)<<_br2_shamt((uintptr_t)(UINTMAX_C(32)));
+  x36 = (x27)<<_br2_shamt((uintptr_t)(UINTMAX_C(24)));
+  x37 = (x26)<<_br2_shamt((uintptr_t)(UINTMAX_C(16)));
+  x38 = (x25)<<_br2_shamt((uintptr_t)(UINTMAX_C(8)));
   x39 = x24;
-  x40 = (x23)<<((uintptr_t)56ULL);
-  x41 = (x22)<<((uintptr_t)48ULL);
-  x42 = (x21)<<((uintptr_t)40ULL);
-  x43 = (x20)<<((uintptr_t)32ULL);
-  x44 = (x19)<<((uintptr_t)24ULL);
-  x45 = (x18)<<((uintptr_t)16ULL);
-  x46 = (x17)<<((uintptr_t)8ULL);
+  x40 = (x23)<<_br2_shamt((uintptr_t)(UINTMAX_C(56)));
+  x41 = (x22)<<_br2_shamt((uintptr_t)(UINTMAX_C(48)));
+  x42 = (x21)<<_br2_shamt((uintptr_t)(UINTMAX_C(40)));
+  x43 = (x20)<<_br2_shamt((uintptr_t)(UINTMAX_C(32)));
+  x44 = (x19)<<_br2_shamt((uintptr_t)(UINTMAX_C(24)));
+  x45 = (x18)<<_br2_shamt((uintptr_t)(UINTMAX_C(16)));
+  x46 = (x17)<<_br2_shamt((uintptr_t)(UINTMAX_C(8)));
   x47 = x16;
-  x48 = (x15)<<((uintptr_t)56ULL);
-  x49 = (x14)<<((uintptr_t)48ULL);
-  x50 = (x13)<<((uintptr_t)40ULL);
-  x51 = (x12)<<((uintptr_t)32ULL);
-  x52 = (x11)<<((uintptr_t)24ULL);
-  x53 = (x10)<<((uintptr_t)16ULL);
-  x54 = (x9)<<((uintptr_t)8ULL);
+  x48 = (x15)<<_br2_shamt((uintptr_t)(UINTMAX_C(56)));
+  x49 = (x14)<<_br2_shamt((uintptr_t)(UINTMAX_C(48)));
+  x50 = (x13)<<_br2_shamt((uintptr_t)(UINTMAX_C(40)));
+  x51 = (x12)<<_br2_shamt((uintptr_t)(UINTMAX_C(32)));
+  x52 = (x11)<<_br2_shamt((uintptr_t)(UINTMAX_C(24)));
+  x53 = (x10)<<_br2_shamt((uintptr_t)(UINTMAX_C(16)));
+  x54 = (x9)<<_br2_shamt((uintptr_t)(UINTMAX_C(8)));
   x55 = x8;
-  x56 = (x7)<<((uintptr_t)56ULL);
-  x57 = (x6)<<((uintptr_t)48ULL);
-  x58 = (x5)<<((uintptr_t)40ULL);
-  x59 = (x4)<<((uintptr_t)32ULL);
-  x60 = (x3)<<((uintptr_t)24ULL);
-  x61 = (x2)<<((uintptr_t)16ULL);
-  x62 = (x1)<<((uintptr_t)8ULL);
+  x56 = (x7)<<_br2_shamt((uintptr_t)(UINTMAX_C(56)));
+  x57 = (x6)<<_br2_shamt((uintptr_t)(UINTMAX_C(48)));
+  x58 = (x5)<<_br2_shamt((uintptr_t)(UINTMAX_C(40)));
+  x59 = (x4)<<_br2_shamt((uintptr_t)(UINTMAX_C(32)));
+  x60 = (x3)<<_br2_shamt((uintptr_t)(UINTMAX_C(24)));
+  x61 = (x2)<<_br2_shamt((uintptr_t)(UINTMAX_C(16)));
+  x62 = (x1)<<_br2_shamt((uintptr_t)(UINTMAX_C(8)));
   x63 = x0;
   x64 = (x62)+(x63);
   x65 = (x61)+(x64);
@@ -1740,10 +1765,10 @@ void internal_fiat_secp256k1_scalar_from_bytes(uintptr_t out0, uintptr_t in0) {
   x94 = x84;
   x95 = x91;
   /*skip*/
-  _br2_store((out0)+((uintptr_t)0ULL), x92, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)8ULL), x93, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)16ULL), x94, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)24ULL), x95, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(0))), x92, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(8))), x93, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(16))), x94, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(24))), x95, sizeof(uintptr_t));
   /*skip*/
   return;
 }
@@ -1763,15 +1788,15 @@ static
 void internal_fiat_secp256k1_scalar_set_one(uintptr_t out0) {
   uintptr_t x0, x1, x2, x3;
   /*skip*/
-  x0 = (uintptr_t)4624529908474429119ULL;
-  x1 = (uintptr_t)4994812053365940164ULL;
-  x2 = (uintptr_t)1ULL;
-  x3 = (uintptr_t)0ULL;
+  x0 = (uintptr_t)(UINTMAX_C(4624529908474429119));
+  x1 = (uintptr_t)(UINTMAX_C(4994812053365940164));
+  x2 = (uintptr_t)(UINTMAX_C(1));
+  x3 = (uintptr_t)(UINTMAX_C(0));
   /*skip*/
-  _br2_store((out0)+((uintptr_t)0ULL), x0, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)8ULL), x1, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)16ULL), x2, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)24ULL), x3, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(0))), x0, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(8))), x1, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(16))), x2, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(24))), x3, sizeof(uintptr_t));
   /*skip*/
   return;
 }
@@ -1791,17 +1816,17 @@ static
 void internal_fiat_secp256k1_scalar_msat(uintptr_t out0) {
   uintptr_t x0, x1, x2, x3, x4;
   /*skip*/
-  x0 = (uintptr_t)13822214165235122497ULL;
-  x1 = (uintptr_t)13451932020343611451ULL;
-  x2 = (uintptr_t)18446744073709551614ULL;
-  x3 = (uintptr_t)18446744073709551615ULL;
-  x4 = (uintptr_t)0ULL;
+  x0 = (uintptr_t)(UINTMAX_C(13822214165235122497));
+  x1 = (uintptr_t)(UINTMAX_C(13451932020343611451));
+  x2 = (uintptr_t)(UINTMAX_C(18446744073709551614));
+  x3 = (uintptr_t)(UINTMAX_C(18446744073709551615));
+  x4 = (uintptr_t)(UINTMAX_C(0));
   /*skip*/
-  _br2_store((out0)+((uintptr_t)0ULL), x0, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)8ULL), x1, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)16ULL), x2, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)24ULL), x3, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)32ULL), x4, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(0))), x0, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(8))), x1, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(16))), x2, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(24))), x3, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(32))), x4, sizeof(uintptr_t));
   /*skip*/
   return;
 }
@@ -1830,85 +1855,85 @@ static
 uintptr_t internal_fiat_secp256k1_scalar_divstep(uintptr_t out1, uintptr_t out2, uintptr_t out3, uintptr_t out4, uintptr_t in0, uintptr_t in1, uintptr_t in2, uintptr_t in3, uintptr_t in4) {
   uintptr_t x18, x20, x21, x22, x24, x25, x27, x28, x30, x31, x33, x34, x36, x37, x0, x40, x1, x42, x2, x44, x3, x46, x4, x39, x48, x5, x49, x41, x51, x6, x52, x43, x54, x7, x55, x45, x57, x8, x58, x47, x60, x9, x61, x63, x64, x66, x67, x69, x70, x72, x73, x76, x77, x78, x80, x81, x82, x83, x85, x86, x87, x88, x90, x93, x94, x95, x97, x98, x99, x100, x102, x103, x104, x105, x107, x108, x91, x109, x13, x12, x11, x10, x115, x113, x116, x118, x119, x112, x120, x122, x123, x111, x124, x126, x127, x114, x130, x117, x131, x132, x134, x135, x121, x136, x137, x139, x140, x125, x141, x128, x129, x143, x14, x144, x133, x146, x15, x147, x138, x149, x16, x150, x19, x142, x152, x17, x153, x156, x157, x159, x160, x162, x163, x165, x166, x168, x169, x158, x50, x172, x53, x173, x161, x174, x176, x177, x56, x178, x164, x179, x181, x182, x59, x183, x167, x184, x186, x187, x62, x188, x170, x65, x190, x191, x68, x193, x194, x71, x196, x197, x155, x74, x199, x200, x192, x145, x203, x148, x204, x195, x205, x207, x208, x151, x209, x198, x210, x212, x213, x154, x214, x201, x215, x217, x220, x221, x222, x224, x225, x226, x227, x229, x230, x231, x232, x234, x235, x218, x236, x23, x171, x175, x180, x185, x189, x75, x244, x92, x245, x79, x247, x96, x248, x84, x250, x101, x251, x110, x89, x253, x106, x254, x202, x256, x219, x257, x206, x259, x223, x260, x211, x262, x228, x263, x237, x216, x265, x233, x266, x238, x26, x29, x32, x35, x38, x239, x240, x241, x242, x243, x246, x249, x252, x255, x258, x261, x264, x267, out0, x268, x269, x270, x271, x272, x273, x274, x275, x276, x277, x278, x279, x280, x281, x282, x283, x284, x285, x286;
   /*skip*/
-  x0 = _br2_load((in1)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x1 = _br2_load((in1)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x2 = _br2_load((in1)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x3 = _br2_load((in1)+((uintptr_t)24ULL), sizeof(uintptr_t));
-  x4 = _br2_load((in1)+((uintptr_t)32ULL), sizeof(uintptr_t));
+  x0 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x1 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x2 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x3 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
+  x4 = _br2_load((in1)+((uintptr_t)(UINTMAX_C(32))), sizeof(uintptr_t));
   /*skip*/
-  x5 = _br2_load((in2)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x6 = _br2_load((in2)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x7 = _br2_load((in2)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x8 = _br2_load((in2)+((uintptr_t)24ULL), sizeof(uintptr_t));
-  x9 = _br2_load((in2)+((uintptr_t)32ULL), sizeof(uintptr_t));
+  x5 = _br2_load((in2)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x6 = _br2_load((in2)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x7 = _br2_load((in2)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x8 = _br2_load((in2)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
+  x9 = _br2_load((in2)+((uintptr_t)(UINTMAX_C(32))), sizeof(uintptr_t));
   /*skip*/
-  x10 = _br2_load((in3)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x11 = _br2_load((in3)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x12 = _br2_load((in3)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x13 = _br2_load((in3)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x10 = _br2_load((in3)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x11 = _br2_load((in3)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x12 = _br2_load((in3)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x13 = _br2_load((in3)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
-  x14 = _br2_load((in4)+((uintptr_t)0ULL), sizeof(uintptr_t));
-  x15 = _br2_load((in4)+((uintptr_t)8ULL), sizeof(uintptr_t));
-  x16 = _br2_load((in4)+((uintptr_t)16ULL), sizeof(uintptr_t));
-  x17 = _br2_load((in4)+((uintptr_t)24ULL), sizeof(uintptr_t));
+  x14 = _br2_load((in4)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
+  x15 = _br2_load((in4)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
+  x16 = _br2_load((in4)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
+  x17 = _br2_load((in4)+((uintptr_t)(UINTMAX_C(24))), sizeof(uintptr_t));
   /*skip*/
   /*skip*/
-  x18 = ((in0)^((uintptr_t)18446744073709551615ULL))+((uintptr_t)1ULL);
-  x19 = ((x18)>>((uintptr_t)63ULL))&((x5)&((uintptr_t)1ULL));
-  x20 = ((in0)^((uintptr_t)18446744073709551615ULL))+((uintptr_t)1ULL);
-  x21 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x22 = (x21)^((uintptr_t)18446744073709551615ULL);
+  x18 = ((in0)^((uintptr_t)(UINTMAX_C(18446744073709551615))))+((uintptr_t)(UINTMAX_C(1)));
+  x19 = ((x18)>>_br2_shamt((uintptr_t)(UINTMAX_C(63))))&((x5)&((uintptr_t)(UINTMAX_C(1))));
+  x20 = ((in0)^((uintptr_t)(UINTMAX_C(18446744073709551615))))+((uintptr_t)(UINTMAX_C(1)));
+  x21 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x22 = (x21)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x23 = ((x20)&(x21))|((in0)&(x22));
-  x24 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x25 = (x24)^((uintptr_t)18446744073709551615ULL);
+  x24 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x25 = (x24)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x26 = ((x5)&(x24))|((x0)&(x25));
-  x27 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x28 = (x27)^((uintptr_t)18446744073709551615ULL);
+  x27 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x28 = (x27)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x29 = ((x6)&(x27))|((x1)&(x28));
-  x30 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x31 = (x30)^((uintptr_t)18446744073709551615ULL);
+  x30 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x31 = (x30)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x32 = ((x7)&(x30))|((x2)&(x31));
-  x33 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x34 = (x33)^((uintptr_t)18446744073709551615ULL);
+  x33 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x34 = (x33)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x35 = ((x8)&(x33))|((x3)&(x34));
-  x36 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x37 = (x36)^((uintptr_t)18446744073709551615ULL);
+  x36 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x37 = (x36)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x38 = ((x9)&(x36))|((x4)&(x37));
-  x39 = ((uintptr_t)1ULL)+((x0)^((uintptr_t)18446744073709551615ULL));
-  x40 = (uintptr_t)((x39)<((uintptr_t)1ULL));
-  x41 = (x40)+((x1)^((uintptr_t)18446744073709551615ULL));
-  x42 = (uintptr_t)((x41)<((x1)^((uintptr_t)18446744073709551615ULL)));
-  x43 = (x42)+((x2)^((uintptr_t)18446744073709551615ULL));
-  x44 = (uintptr_t)((x43)<((x2)^((uintptr_t)18446744073709551615ULL)));
-  x45 = (x44)+((x3)^((uintptr_t)18446744073709551615ULL));
-  x46 = (uintptr_t)((x45)<((x3)^((uintptr_t)18446744073709551615ULL)));
-  x47 = (x46)+((x4)^((uintptr_t)18446744073709551615ULL));
-  x48 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x49 = (x48)^((uintptr_t)18446744073709551615ULL);
+  x39 = ((uintptr_t)(UINTMAX_C(1)))+((x0)^((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x40 = (uintptr_t)((x39)<((uintptr_t)(UINTMAX_C(1))));
+  x41 = (x40)+((x1)^((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x42 = (uintptr_t)((x41)<((x1)^((uintptr_t)(UINTMAX_C(18446744073709551615)))));
+  x43 = (x42)+((x2)^((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x44 = (uintptr_t)((x43)<((x2)^((uintptr_t)(UINTMAX_C(18446744073709551615)))));
+  x45 = (x44)+((x3)^((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x46 = (uintptr_t)((x45)<((x3)^((uintptr_t)(UINTMAX_C(18446744073709551615)))));
+  x47 = (x46)+((x4)^((uintptr_t)(UINTMAX_C(18446744073709551615))));
+  x48 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x49 = (x48)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x50 = ((x39)&(x48))|((x5)&(x49));
-  x51 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x52 = (x51)^((uintptr_t)18446744073709551615ULL);
+  x51 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x52 = (x51)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x53 = ((x41)&(x51))|((x6)&(x52));
-  x54 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x55 = (x54)^((uintptr_t)18446744073709551615ULL);
+  x54 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x55 = (x54)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x56 = ((x43)&(x54))|((x7)&(x55));
-  x57 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x58 = (x57)^((uintptr_t)18446744073709551615ULL);
+  x57 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x58 = (x57)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x59 = ((x45)&(x57))|((x8)&(x58));
-  x60 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x61 = (x60)^((uintptr_t)18446744073709551615ULL);
+  x60 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x61 = (x60)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x62 = ((x47)&(x60))|((x9)&(x61));
-  x63 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x64 = (x63)^((uintptr_t)18446744073709551615ULL);
+  x63 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x64 = (x63)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x65 = ((x14)&(x63))|((x10)&(x64));
-  x66 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x67 = (x66)^((uintptr_t)18446744073709551615ULL);
+  x66 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x67 = (x66)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x68 = ((x15)&(x66))|((x11)&(x67));
-  x69 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x70 = (x69)^((uintptr_t)18446744073709551615ULL);
+  x69 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x70 = (x69)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x71 = ((x16)&(x69))|((x12)&(x70));
-  x72 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x73 = (x72)^((uintptr_t)18446744073709551615ULL);
+  x72 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x73 = (x72)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x74 = ((x17)&(x72))|((x13)&(x73));
   x75 = (x65)+(x65);
   x76 = (uintptr_t)((x75)<(x65));
@@ -1927,19 +1952,19 @@ uintptr_t internal_fiat_secp256k1_scalar_divstep(uintptr_t out1, uintptr_t out2,
   x89 = (x87)+(x74);
   x90 = (uintptr_t)((x89)<(x74));
   x91 = (x88)+(x90);
-  x92 = (x75)-((uintptr_t)13822214165235122497ULL);
+  x92 = (x75)-((uintptr_t)(UINTMAX_C(13822214165235122497)));
   x93 = (uintptr_t)((x75)<(x92));
-  x94 = (x79)-((uintptr_t)13451932020343611451ULL);
+  x94 = (x79)-((uintptr_t)(UINTMAX_C(13451932020343611451)));
   x95 = (uintptr_t)((x79)<(x94));
   x96 = (x94)-(x93);
   x97 = (uintptr_t)((x94)<(x96));
   x98 = (x95)+(x97);
-  x99 = (x84)-((uintptr_t)18446744073709551614ULL);
+  x99 = (x84)-((uintptr_t)(UINTMAX_C(18446744073709551614)));
   x100 = (uintptr_t)((x84)<(x99));
   x101 = (x99)-(x98);
   x102 = (uintptr_t)((x99)<(x101));
   x103 = (x100)+(x102);
-  x104 = (x89)-((uintptr_t)18446744073709551615ULL);
+  x104 = (x89)-((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x105 = (uintptr_t)((x89)<(x104));
   x106 = (x104)-(x103);
   x107 = (uintptr_t)((x104)<(x106));
@@ -1950,62 +1975,62 @@ uintptr_t internal_fiat_secp256k1_scalar_divstep(uintptr_t out1, uintptr_t out2,
   x112 = x12;
   x113 = x11;
   x114 = x10;
-  x115 = (uintptr_t)(((uintptr_t)0ULL)<(((uintptr_t)0ULL)-(x114)));
-  x116 = (uintptr_t)(((uintptr_t)0ULL)<(((uintptr_t)0ULL)-(x113)));
-  x117 = (((uintptr_t)0ULL)-(x113))-(x115);
-  x118 = (uintptr_t)((((uintptr_t)0ULL)-(x113))<(x117));
+  x115 = (uintptr_t)(((uintptr_t)(UINTMAX_C(0)))<(((uintptr_t)(UINTMAX_C(0)))-(x114)));
+  x116 = (uintptr_t)(((uintptr_t)(UINTMAX_C(0)))<(((uintptr_t)(UINTMAX_C(0)))-(x113)));
+  x117 = (((uintptr_t)(UINTMAX_C(0)))-(x113))-(x115);
+  x118 = (uintptr_t)((((uintptr_t)(UINTMAX_C(0)))-(x113))<(x117));
   x119 = (x116)+(x118);
-  x120 = (uintptr_t)(((uintptr_t)0ULL)<(((uintptr_t)0ULL)-(x112)));
-  x121 = (((uintptr_t)0ULL)-(x112))-(x119);
-  x122 = (uintptr_t)((((uintptr_t)0ULL)-(x112))<(x121));
+  x120 = (uintptr_t)(((uintptr_t)(UINTMAX_C(0)))<(((uintptr_t)(UINTMAX_C(0)))-(x112)));
+  x121 = (((uintptr_t)(UINTMAX_C(0)))-(x112))-(x119);
+  x122 = (uintptr_t)((((uintptr_t)(UINTMAX_C(0)))-(x112))<(x121));
   x123 = (x120)+(x122);
-  x124 = (uintptr_t)(((uintptr_t)0ULL)<(((uintptr_t)0ULL)-(x111)));
-  x125 = (((uintptr_t)0ULL)-(x111))-(x123);
-  x126 = (uintptr_t)((((uintptr_t)0ULL)-(x111))<(x125));
+  x124 = (uintptr_t)(((uintptr_t)(UINTMAX_C(0)))<(((uintptr_t)(UINTMAX_C(0)))-(x111)));
+  x125 = (((uintptr_t)(UINTMAX_C(0)))-(x111))-(x123);
+  x126 = (uintptr_t)((((uintptr_t)(UINTMAX_C(0)))-(x111))<(x125));
   x127 = (x124)+(x126);
-  x128 = ((uintptr_t)-1ULL)+((uintptr_t)((x127)==((uintptr_t)0ULL)));
-  x129 = (((uintptr_t)0ULL)-(x114))+((x128)&((uintptr_t)13822214165235122497ULL));
-  x130 = (uintptr_t)((x129)<(((uintptr_t)0ULL)-(x114)));
+  x128 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x127)==((uintptr_t)(UINTMAX_C(0)))));
+  x129 = (((uintptr_t)(UINTMAX_C(0)))-(x114))+((x128)&((uintptr_t)(UINTMAX_C(13822214165235122497))));
+  x130 = (uintptr_t)((x129)<(((uintptr_t)(UINTMAX_C(0)))-(x114)));
   x131 = (x130)+(x117);
   x132 = (uintptr_t)((x131)<(x117));
-  x133 = (x131)+((x128)&((uintptr_t)13451932020343611451ULL));
-  x134 = (uintptr_t)((x133)<((x128)&((uintptr_t)13451932020343611451ULL)));
+  x133 = (x131)+((x128)&((uintptr_t)(UINTMAX_C(13451932020343611451))));
+  x134 = (uintptr_t)((x133)<((x128)&((uintptr_t)(UINTMAX_C(13451932020343611451)))));
   x135 = (x132)+(x134);
   x136 = (x135)+(x121);
   x137 = (uintptr_t)((x136)<(x121));
-  x138 = (x136)+((x128)&((uintptr_t)18446744073709551614ULL));
-  x139 = (uintptr_t)((x138)<((x128)&((uintptr_t)18446744073709551614ULL)));
+  x138 = (x136)+((x128)&((uintptr_t)(UINTMAX_C(18446744073709551614))));
+  x139 = (uintptr_t)((x138)<((x128)&((uintptr_t)(UINTMAX_C(18446744073709551614)))));
   x140 = (x137)+(x139);
   x141 = (x140)+(x125);
   x142 = (x141)+(x128);
-  x143 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x144 = (x143)^((uintptr_t)18446744073709551615ULL);
+  x143 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x144 = (x143)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x145 = ((x129)&(x143))|((x14)&(x144));
-  x146 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x147 = (x146)^((uintptr_t)18446744073709551615ULL);
+  x146 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x147 = (x146)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x148 = ((x133)&(x146))|((x15)&(x147));
-  x149 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x150 = (x149)^((uintptr_t)18446744073709551615ULL);
+  x149 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x150 = (x149)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x151 = ((x138)&(x149))|((x16)&(x150));
-  x152 = ((uintptr_t)-1ULL)+((uintptr_t)((x19)==((uintptr_t)0ULL)));
-  x153 = (x152)^((uintptr_t)18446744073709551615ULL);
+  x152 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x19)==((uintptr_t)(UINTMAX_C(0)))));
+  x153 = (x152)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x154 = ((x142)&(x152))|((x17)&(x153));
-  x155 = (x50)&((uintptr_t)1ULL);
-  x156 = ((uintptr_t)-1ULL)+((uintptr_t)((x155)==((uintptr_t)0ULL)));
-  x157 = (x156)^((uintptr_t)18446744073709551615ULL);
-  x158 = ((x26)&(x156))|(((uintptr_t)0ULL)&(x157));
-  x159 = ((uintptr_t)-1ULL)+((uintptr_t)((x155)==((uintptr_t)0ULL)));
-  x160 = (x159)^((uintptr_t)18446744073709551615ULL);
-  x161 = ((x29)&(x159))|(((uintptr_t)0ULL)&(x160));
-  x162 = ((uintptr_t)-1ULL)+((uintptr_t)((x155)==((uintptr_t)0ULL)));
-  x163 = (x162)^((uintptr_t)18446744073709551615ULL);
-  x164 = ((x32)&(x162))|(((uintptr_t)0ULL)&(x163));
-  x165 = ((uintptr_t)-1ULL)+((uintptr_t)((x155)==((uintptr_t)0ULL)));
-  x166 = (x165)^((uintptr_t)18446744073709551615ULL);
-  x167 = ((x35)&(x165))|(((uintptr_t)0ULL)&(x166));
-  x168 = ((uintptr_t)-1ULL)+((uintptr_t)((x155)==((uintptr_t)0ULL)));
-  x169 = (x168)^((uintptr_t)18446744073709551615ULL);
-  x170 = ((x38)&(x168))|(((uintptr_t)0ULL)&(x169));
+  x155 = (x50)&((uintptr_t)(UINTMAX_C(1)));
+  x156 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x155)==((uintptr_t)(UINTMAX_C(0)))));
+  x157 = (x156)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x158 = ((x26)&(x156))|(((uintptr_t)(UINTMAX_C(0)))&(x157));
+  x159 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x155)==((uintptr_t)(UINTMAX_C(0)))));
+  x160 = (x159)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x161 = ((x29)&(x159))|(((uintptr_t)(UINTMAX_C(0)))&(x160));
+  x162 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x155)==((uintptr_t)(UINTMAX_C(0)))));
+  x163 = (x162)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x164 = ((x32)&(x162))|(((uintptr_t)(UINTMAX_C(0)))&(x163));
+  x165 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x155)==((uintptr_t)(UINTMAX_C(0)))));
+  x166 = (x165)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x167 = ((x35)&(x165))|(((uintptr_t)(UINTMAX_C(0)))&(x166));
+  x168 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x155)==((uintptr_t)(UINTMAX_C(0)))));
+  x169 = (x168)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x170 = ((x38)&(x168))|(((uintptr_t)(UINTMAX_C(0)))&(x169));
   x171 = (x50)+(x158);
   x172 = (uintptr_t)((x171)<(x50));
   x173 = (x172)+(x53);
@@ -2025,18 +2050,18 @@ uintptr_t internal_fiat_secp256k1_scalar_divstep(uintptr_t out1, uintptr_t out2,
   x187 = (x184)+(x186);
   x188 = (x187)+(x62);
   x189 = (x188)+(x170);
-  x190 = ((uintptr_t)-1ULL)+((uintptr_t)((x155)==((uintptr_t)0ULL)));
-  x191 = (x190)^((uintptr_t)18446744073709551615ULL);
-  x192 = ((x65)&(x190))|(((uintptr_t)0ULL)&(x191));
-  x193 = ((uintptr_t)-1ULL)+((uintptr_t)((x155)==((uintptr_t)0ULL)));
-  x194 = (x193)^((uintptr_t)18446744073709551615ULL);
-  x195 = ((x68)&(x193))|(((uintptr_t)0ULL)&(x194));
-  x196 = ((uintptr_t)-1ULL)+((uintptr_t)((x155)==((uintptr_t)0ULL)));
-  x197 = (x196)^((uintptr_t)18446744073709551615ULL);
-  x198 = ((x71)&(x196))|(((uintptr_t)0ULL)&(x197));
-  x199 = ((uintptr_t)-1ULL)+((uintptr_t)((x155)==((uintptr_t)0ULL)));
-  x200 = (x199)^((uintptr_t)18446744073709551615ULL);
-  x201 = ((x74)&(x199))|(((uintptr_t)0ULL)&(x200));
+  x190 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x155)==((uintptr_t)(UINTMAX_C(0)))));
+  x191 = (x190)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x192 = ((x65)&(x190))|(((uintptr_t)(UINTMAX_C(0)))&(x191));
+  x193 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x155)==((uintptr_t)(UINTMAX_C(0)))));
+  x194 = (x193)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x195 = ((x68)&(x193))|(((uintptr_t)(UINTMAX_C(0)))&(x194));
+  x196 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x155)==((uintptr_t)(UINTMAX_C(0)))));
+  x197 = (x196)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x198 = ((x71)&(x196))|(((uintptr_t)(UINTMAX_C(0)))&(x197));
+  x199 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x155)==((uintptr_t)(UINTMAX_C(0)))));
+  x200 = (x199)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
+  x201 = ((x74)&(x199))|(((uintptr_t)(UINTMAX_C(0)))&(x200));
   x202 = (x145)+(x192);
   x203 = (uintptr_t)((x202)<(x145));
   x204 = (x203)+(x148);
@@ -2054,54 +2079,54 @@ uintptr_t internal_fiat_secp256k1_scalar_divstep(uintptr_t out1, uintptr_t out2,
   x216 = (x214)+(x201);
   x217 = (uintptr_t)((x216)<(x201));
   x218 = (x215)+(x217);
-  x219 = (x202)-((uintptr_t)13822214165235122497ULL);
+  x219 = (x202)-((uintptr_t)(UINTMAX_C(13822214165235122497)));
   x220 = (uintptr_t)((x202)<(x219));
-  x221 = (x206)-((uintptr_t)13451932020343611451ULL);
+  x221 = (x206)-((uintptr_t)(UINTMAX_C(13451932020343611451)));
   x222 = (uintptr_t)((x206)<(x221));
   x223 = (x221)-(x220);
   x224 = (uintptr_t)((x221)<(x223));
   x225 = (x222)+(x224);
-  x226 = (x211)-((uintptr_t)18446744073709551614ULL);
+  x226 = (x211)-((uintptr_t)(UINTMAX_C(18446744073709551614)));
   x227 = (uintptr_t)((x211)<(x226));
   x228 = (x226)-(x225);
   x229 = (uintptr_t)((x226)<(x228));
   x230 = (x227)+(x229);
-  x231 = (x216)-((uintptr_t)18446744073709551615ULL);
+  x231 = (x216)-((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x232 = (uintptr_t)((x216)<(x231));
   x233 = (x231)-(x230);
   x234 = (uintptr_t)((x231)<(x233));
   x235 = (x232)+(x234);
   x236 = (x218)-(x235);
   x237 = (uintptr_t)((x218)<(x236));
-  x238 = (x23)+((uintptr_t)1ULL);
-  x239 = ((x171)>>((uintptr_t)1ULL))|((x175)<<((uintptr_t)63ULL));
-  x240 = ((x175)>>((uintptr_t)1ULL))|((x180)<<((uintptr_t)63ULL));
-  x241 = ((x180)>>((uintptr_t)1ULL))|((x185)<<((uintptr_t)63ULL));
-  x242 = ((x185)>>((uintptr_t)1ULL))|((x189)<<((uintptr_t)63ULL));
-  x243 = ((x189)&((uintptr_t)9223372036854775808ULL))|((x189)>>((uintptr_t)1ULL));
-  x244 = ((uintptr_t)-1ULL)+((uintptr_t)((x110)==((uintptr_t)0ULL)));
-  x245 = (x244)^((uintptr_t)18446744073709551615ULL);
+  x238 = (x23)+((uintptr_t)(UINTMAX_C(1)));
+  x239 = ((x171)>>_br2_shamt((uintptr_t)(UINTMAX_C(1))))|((x175)<<_br2_shamt((uintptr_t)(UINTMAX_C(63))));
+  x240 = ((x175)>>_br2_shamt((uintptr_t)(UINTMAX_C(1))))|((x180)<<_br2_shamt((uintptr_t)(UINTMAX_C(63))));
+  x241 = ((x180)>>_br2_shamt((uintptr_t)(UINTMAX_C(1))))|((x185)<<_br2_shamt((uintptr_t)(UINTMAX_C(63))));
+  x242 = ((x185)>>_br2_shamt((uintptr_t)(UINTMAX_C(1))))|((x189)<<_br2_shamt((uintptr_t)(UINTMAX_C(63))));
+  x243 = ((x189)&((uintptr_t)(UINTMAX_C(9223372036854775808))))|((x189)>>_br2_shamt((uintptr_t)(UINTMAX_C(1))));
+  x244 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x110)==((uintptr_t)(UINTMAX_C(0)))));
+  x245 = (x244)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x246 = ((x75)&(x244))|((x92)&(x245));
-  x247 = ((uintptr_t)-1ULL)+((uintptr_t)((x110)==((uintptr_t)0ULL)));
-  x248 = (x247)^((uintptr_t)18446744073709551615ULL);
+  x247 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x110)==((uintptr_t)(UINTMAX_C(0)))));
+  x248 = (x247)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x249 = ((x79)&(x247))|((x96)&(x248));
-  x250 = ((uintptr_t)-1ULL)+((uintptr_t)((x110)==((uintptr_t)0ULL)));
-  x251 = (x250)^((uintptr_t)18446744073709551615ULL);
+  x250 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x110)==((uintptr_t)(UINTMAX_C(0)))));
+  x251 = (x250)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x252 = ((x84)&(x250))|((x101)&(x251));
-  x253 = ((uintptr_t)-1ULL)+((uintptr_t)((x110)==((uintptr_t)0ULL)));
-  x254 = (x253)^((uintptr_t)18446744073709551615ULL);
+  x253 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x110)==((uintptr_t)(UINTMAX_C(0)))));
+  x254 = (x253)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x255 = ((x89)&(x253))|((x106)&(x254));
-  x256 = ((uintptr_t)-1ULL)+((uintptr_t)((x237)==((uintptr_t)0ULL)));
-  x257 = (x256)^((uintptr_t)18446744073709551615ULL);
+  x256 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x237)==((uintptr_t)(UINTMAX_C(0)))));
+  x257 = (x256)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x258 = ((x202)&(x256))|((x219)&(x257));
-  x259 = ((uintptr_t)-1ULL)+((uintptr_t)((x237)==((uintptr_t)0ULL)));
-  x260 = (x259)^((uintptr_t)18446744073709551615ULL);
+  x259 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x237)==((uintptr_t)(UINTMAX_C(0)))));
+  x260 = (x259)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x261 = ((x206)&(x259))|((x223)&(x260));
-  x262 = ((uintptr_t)-1ULL)+((uintptr_t)((x237)==((uintptr_t)0ULL)));
-  x263 = (x262)^((uintptr_t)18446744073709551615ULL);
+  x262 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x237)==((uintptr_t)(UINTMAX_C(0)))));
+  x263 = (x262)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x264 = ((x211)&(x262))|((x228)&(x263));
-  x265 = ((uintptr_t)-1ULL)+((uintptr_t)((x237)==((uintptr_t)0ULL)));
-  x266 = (x265)^((uintptr_t)18446744073709551615ULL);
+  x265 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x237)==((uintptr_t)(UINTMAX_C(0)))));
+  x266 = (x265)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x267 = ((x216)&(x265))|((x233)&(x266));
   x268 = x238;
   x269 = x26;
@@ -2127,27 +2152,27 @@ uintptr_t internal_fiat_secp256k1_scalar_divstep(uintptr_t out1, uintptr_t out2,
   x286 = x267;
   /*skip*/
   out0 = x268;
-  _br2_store((out1)+((uintptr_t)0ULL), x269, sizeof(uintptr_t));
-  _br2_store((out1)+((uintptr_t)8ULL), x270, sizeof(uintptr_t));
-  _br2_store((out1)+((uintptr_t)16ULL), x271, sizeof(uintptr_t));
-  _br2_store((out1)+((uintptr_t)24ULL), x272, sizeof(uintptr_t));
-  _br2_store((out1)+((uintptr_t)32ULL), x273, sizeof(uintptr_t));
+  _br2_store((out1)+((uintptr_t)(UINTMAX_C(0))), x269, sizeof(uintptr_t));
+  _br2_store((out1)+((uintptr_t)(UINTMAX_C(8))), x270, sizeof(uintptr_t));
+  _br2_store((out1)+((uintptr_t)(UINTMAX_C(16))), x271, sizeof(uintptr_t));
+  _br2_store((out1)+((uintptr_t)(UINTMAX_C(24))), x272, sizeof(uintptr_t));
+  _br2_store((out1)+((uintptr_t)(UINTMAX_C(32))), x273, sizeof(uintptr_t));
   /*skip*/
-  _br2_store((out2)+((uintptr_t)0ULL), x274, sizeof(uintptr_t));
-  _br2_store((out2)+((uintptr_t)8ULL), x275, sizeof(uintptr_t));
-  _br2_store((out2)+((uintptr_t)16ULL), x276, sizeof(uintptr_t));
-  _br2_store((out2)+((uintptr_t)24ULL), x277, sizeof(uintptr_t));
-  _br2_store((out2)+((uintptr_t)32ULL), x278, sizeof(uintptr_t));
+  _br2_store((out2)+((uintptr_t)(UINTMAX_C(0))), x274, sizeof(uintptr_t));
+  _br2_store((out2)+((uintptr_t)(UINTMAX_C(8))), x275, sizeof(uintptr_t));
+  _br2_store((out2)+((uintptr_t)(UINTMAX_C(16))), x276, sizeof(uintptr_t));
+  _br2_store((out2)+((uintptr_t)(UINTMAX_C(24))), x277, sizeof(uintptr_t));
+  _br2_store((out2)+((uintptr_t)(UINTMAX_C(32))), x278, sizeof(uintptr_t));
   /*skip*/
-  _br2_store((out3)+((uintptr_t)0ULL), x279, sizeof(uintptr_t));
-  _br2_store((out3)+((uintptr_t)8ULL), x280, sizeof(uintptr_t));
-  _br2_store((out3)+((uintptr_t)16ULL), x281, sizeof(uintptr_t));
-  _br2_store((out3)+((uintptr_t)24ULL), x282, sizeof(uintptr_t));
+  _br2_store((out3)+((uintptr_t)(UINTMAX_C(0))), x279, sizeof(uintptr_t));
+  _br2_store((out3)+((uintptr_t)(UINTMAX_C(8))), x280, sizeof(uintptr_t));
+  _br2_store((out3)+((uintptr_t)(UINTMAX_C(16))), x281, sizeof(uintptr_t));
+  _br2_store((out3)+((uintptr_t)(UINTMAX_C(24))), x282, sizeof(uintptr_t));
   /*skip*/
-  _br2_store((out4)+((uintptr_t)0ULL), x283, sizeof(uintptr_t));
-  _br2_store((out4)+((uintptr_t)8ULL), x284, sizeof(uintptr_t));
-  _br2_store((out4)+((uintptr_t)16ULL), x285, sizeof(uintptr_t));
-  _br2_store((out4)+((uintptr_t)24ULL), x286, sizeof(uintptr_t));
+  _br2_store((out4)+((uintptr_t)(UINTMAX_C(0))), x283, sizeof(uintptr_t));
+  _br2_store((out4)+((uintptr_t)(UINTMAX_C(8))), x284, sizeof(uintptr_t));
+  _br2_store((out4)+((uintptr_t)(UINTMAX_C(16))), x285, sizeof(uintptr_t));
+  _br2_store((out4)+((uintptr_t)(UINTMAX_C(24))), x286, sizeof(uintptr_t));
   /*skip*/
   return out0;
 }
@@ -2167,15 +2192,15 @@ static
 void internal_fiat_secp256k1_scalar_divstep_precomp(uintptr_t out0) {
   uintptr_t x0, x1, x2, x3;
   /*skip*/
-  x0 = (uintptr_t)15511270460340614377ULL;
-  x1 = (uintptr_t)12351072887440524547ULL;
-  x2 = (uintptr_t)12535426401435444063ULL;
-  x3 = (uintptr_t)7013302284833964921ULL;
+  x0 = (uintptr_t)(UINTMAX_C(15511270460340614377));
+  x1 = (uintptr_t)(UINTMAX_C(12351072887440524547));
+  x2 = (uintptr_t)(UINTMAX_C(12535426401435444063));
+  x3 = (uintptr_t)(UINTMAX_C(7013302284833964921));
   /*skip*/
-  _br2_store((out0)+((uintptr_t)0ULL), x0, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)8ULL), x1, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)16ULL), x2, sizeof(uintptr_t));
-  _br2_store((out0)+((uintptr_t)24ULL), x3, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(0))), x0, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(8))), x1, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(16))), x2, sizeof(uintptr_t));
+  _br2_store((out0)+((uintptr_t)(UINTMAX_C(24))), x3, sizeof(uintptr_t));
   /*skip*/
   return;
 }

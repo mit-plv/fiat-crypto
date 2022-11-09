@@ -22,11 +22,11 @@
                                                                (expr.load access_size.one (expr.op bopname.add "K" (expr.op bopname.sru "_gs_i0" 3)))
                                                                (expr.op bopname.and "_gs_i0" 7)) 1))
                                                       (cmd.seq (cmd.set "swap" (expr.op bopname.xor "swap" "s_i"))
-                                                         (cmd.seq (cmd.call [] felem_cswap ["swap"; "X1"; "X2"])
-                                                            (cmd.seq (cmd.call [] felem_cswap ["swap"; "Z1"; "Z2"])
+                                                         (cmd.seq (cmd.call [] "felem_cswap" ["swap"; "X1"; "X2"])
+                                                            (cmd.seq (cmd.call [] "felem_cswap" ["swap"; "Z1"; "Z2"])
                                                                (cmd.seq (cmd.call [] "ladderstep" ["U"; "X1"; "Z1"; "X2"; "Z2"])
                                                                   (cmd.seq (cmd.set "swap" "s_i") (cmd.seq (cmd.unset "s_i") cmd.skip)))))))))
-                                             (cmd.seq (cmd.call [] felem_cswap ["swap"; "X1"; "X2"])
-                                                (cmd.seq (cmd.call [] felem_cswap ["swap"; "Z1"; "Z2"])
+                                             (cmd.seq (cmd.call [] "felem_cswap" ["swap"; "X1"; "X2"])
+                                                (cmd.seq (cmd.call [] "felem_cswap" ["swap"; "Z1"; "Z2"])
                                                    (cmd.seq (cmd.call [] "fe25519_inv" ["OUT"; "Z1"]) (cmd.seq (cmd.call [] mul ["OUT"; "X1"; "OUT"]) cmd.skip))))))))))))))))))
-     : bedrock_func
+     : string * func

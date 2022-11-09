@@ -29,21 +29,21 @@ Proof. vm_compute. subst; exact eq_refl. Qed.
 
 Require Import bedrock2.NotationsCustomEntry.
 
-Definition x25519 : func := ("x25519", (["out"; "sk"; "pk"], [], bedrock_func_body:(
+Definition x25519 := func! (out, sk, pk) {
   stackalloc 40 as U;
   fe25519_from_bytes(U, pk);
   stackalloc 40 as OUT;
   montladder(OUT, sk, U);
   fe25519_to_bytes(out, OUT)
-))).
+}.
 
-Definition x25519_base : func := ("x25519_base", (["out"; "sk"], [], bedrock_func_body:(
+Definition x25519_base := func! (out, sk) {
   stackalloc 40 as U;
   fe25519_from_word(U, $9);
   stackalloc 40 as OUT;
   montladder(OUT, sk, U);
   fe25519_to_bytes(out, OUT)
-))).
+}.
 
 Import LittleEndianList.
 Local Coercion F.to_Z : F >-> Z.
@@ -54,7 +54,7 @@ Import ProgramLogic.Coercions.
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
 Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 Definition x25519_gallina := montladder_gallina (Field.M_pos(FieldParameters:=field_parameters)) Field.a24 (Z.to_nat (Z.log2 (Z.pos order))).
-Global Instance spec_of_x25519 : spec_of x25519 :=
+Global Instance spec_of_x25519 : spec_of "x25519" :=
   fnspec! "x25519" out sk pk / (o s p : list Byte.byte) (R : _ -> Prop),
   { requires t m := m =* s$@sk * p$@pk * o$@out * R /\
       length s = 32%nat /\ length p = 32%nat /\ length o = 32%nat /\ byte.unsigned (nth 31 p x00) <= 0x7f;
@@ -123,7 +123,7 @@ Proof.
   use_sep_assumption; cancel. eapply RelationClasses.reflexivity.
 Qed.
 
-Global Instance spec_of_x25519_base : spec_of x25519_base :=
+Global Instance spec_of_x25519_base : spec_of "x25519_base" :=
   fnspec! "x25519_base" out sk / (o s : list Byte.byte) (R : _ -> Prop),
   { requires t m := m =* s$@sk * o$@out * R /\
       length s = 32%nat /\ length o = 32%nat;
@@ -170,16 +170,20 @@ Proof.
 Qed.
 
 Require Import coqutil.Word.Naive.
+Require Import coqutil.Macros.WithBaseName.
 
-Definition funcs : list func :=
-  [ x25519; x25519_base;
+Definition felem_cswap := CSwap.felem_cswap(word:=word32)(field_parameters:=field_parameters)(field_representaton:=field_representation n s c).
+Definition fe25519_inv := fe25519_inv(word:=word32)(field_parameters:=field_parameters).
+
+Definition funcs :=
+  &[,x25519; x25519_base;
     montladder;
     fe25519_to_bytes;
     fe25519_from_bytes;
     fe25519_from_word;
-    CSwap.cswap_body(word:=word32)(field_parameters:=field_parameters)(field_representaton:=field_representation n s c);
+    felem_cswap;
     fe25519_copy;
-    fe25519_inv(word:=word32)(field_parameters:=field_parameters);
+    fe25519_inv;
     ladderstep;
     fe25519_mul;
     fe25519_add;
@@ -187,8 +191,8 @@ Definition funcs : list func :=
     fe25519_square;
     fe25519_scmula24 ].
 
-
-Definition montladder_c_module := ToCString.c_module funcs.
+Require Import bedrock2.ToCString.
+Definition montladder_c_module := list_byte_of_string (ToCString.c_module funcs).
 
 #[export]
 Instance BWM_RV32IM : FlatToRiscvCommon.bitwidth_iset 32 Decode.RV32IM := eq_refl.

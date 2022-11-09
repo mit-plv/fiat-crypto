@@ -58,6 +58,7 @@ Local Coercion Z.pos : positive >-> Z.
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
 Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very long time *)
+Local Opaque reified_square_gen.
 (* needed for making [autorewrite] with [Set Keyed Unification] fast *)
 Local Opaque expr.Interp.
 
@@ -87,6 +88,7 @@ Section __.
   
   Local Notation possible_values := possible_values_of_machine_wordsize.
   Local Notation boundsn := (saturated_bounds n machine_wordsize).
+  Local Notation bounds4 := (saturated_bounds 4 machine_wordsize).
 
   Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
@@ -105,6 +107,7 @@ Section __.
              ; ((0 <? s - Associational.eval c)%Z, Pipeline.Value_not_ltZ "0 < s - Associational.eval c" 0 (s - Associational.eval c))
              ; (negb (s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s ≠ 0" s 0)
              ; (negb (n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n ≠ 0" n 0)
+             ; ((n =? 4)%Z, Pipeline.Values_not_provably_equalZ "n = 4" n 4)
              ; (0 <? machine_wordsize, Pipeline.Value_not_ltZ "0 < machine_wordsize" 0 machine_wordsize)
              ; (machine_wordsize =? 64, Pipeline.Values_not_provably_equalZ "machine_wordsize = 64" machine_wordsize 64)
              ; ((1 <? n)%nat, Pipeline.Value_not_ltZ "1 < n" 1 n)
@@ -177,6 +180,18 @@ Section __.
          (Some boundsn, (Some boundsn, tt))
          (Some boundsn).
 
+  Definition square
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         possible_values
+         (reified_square_gen
+            @ GallinaReify.Reify base
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n)
+         (Some boundsn, tt)
+         (Some boundsn).
+
   Definition smul (prefix : string)
     : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
@@ -186,12 +201,17 @@ Section __.
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements."]%string)
              (mul_correct weightf n m boundsn)).
 
+  Definition ssquare (prefix : string)
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "square" square
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " squares a field element."]%string)
+             (sqr_correct weightf n m boundsn)).
+
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
-
-  Hint Rewrite
-       (fun pf => @SolinasReduction.SolinasReduction.mulmod_correct (@wprops _ _ pf)) using solve [ auto with zarith | congruence | solve_extra_bounds_side_conditions ] : push_eval.
-  Hint Unfold mul : push_eval.
 
   Local Ltac prove_correctness _ := Primitives.prove_correctness use_curve_good.
 
@@ -210,12 +230,28 @@ Section __.
   Lemma Wf_mul res (Hres : mul = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
+  Lemma square_correct res
+        (Hres : square = Success res)
+    : sqr_correct weight n m boundsn (Interp res).
+  Proof using curve_good.
+    
+    prove_correctness ().
+    cbv [evalf weightf weight up_bound] in *.
+    match goal with
+    | H : machine_wordsize = _ |- _ => rewrite H in *
+    end.
+    apply (fun pf => @SolinasReduction.SolinasReduction.squaremod_correct (@wprops _ _ pf)); auto; lia.
+  Qed.
+
+  Lemma Wf_square res (Hres : square = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Section for_stringification.
     Local Open Scope string_scope.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("mul", wrap_s smul)].
+      := [("mul", wrap_s smul); ("square", wrap_s ssquare)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 
@@ -243,5 +279,14 @@ Module Export Hints.
 #[global]
   Hint Immediate
        Wf_mul
+  : wf_op_cache.
+
+#[global]
+  Hint Opaque
+       square
+  : wf_op_cache.
+#[global]
+  Hint Immediate
+       Wf_square
   : wf_op_cache.
 End Hints.

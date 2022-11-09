@@ -109,7 +109,7 @@ Section with_parameters.
     end.
 End with_parameters.
 
-Definition bedrock_func_to_lines (f : func)
+Definition bedrock_func_to_lines (f : string * func)
   : list string :=
   [c_func f].
 
@@ -119,7 +119,7 @@ Definition wrap_call
            {t}
            (indata : type.for_each_lhs_of_arrow var_data t)
            (outdata : base_var_data (type.final_codomain t))
-           (f : func)
+           (f : string*func)
            (insizes : type.for_each_lhs_of_arrow access_sizes t)
            (outsizes : base_access_sizes (type.final_codomain t))
   : string
@@ -200,7 +200,7 @@ Definition Bedrock2_ToFunctionLines
         | Some insizes, Some outsizes =>
           let out := translate_func
                        e innames inlengths insizes outnames outsizes in
-          let f : func := (("internal_" ++ name)%string, fst out) in
+          let f : string*func := (("internal_" ++ name)%string, fst out) in
           let outlengths := snd out in
           if error_free_cmd (snd (snd f))
           then

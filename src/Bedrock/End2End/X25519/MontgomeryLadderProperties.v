@@ -18,17 +18,9 @@ Require Import Crypto.Bedrock.End2End.X25519.MontgomeryLadder.
 
 Local Arguments map.rep: clear implicits.
 
-Definition fname := fst montladder.
-Definition argnames := fst (fst (snd montladder)).
-Definition retnames := snd (fst (snd montladder)).
-Definition fbody := snd (snd montladder).
-Definition f_rel_pos : Z.
-  let x := constr:(List.find (fun '(name, pos) => String.eqb name fname) montladder_finfo) in
-  let y := eval vm_compute in x in
-  match y with
-  | Some (_, ?pos) => exact pos
-  end.
-Defined.
+Definition f_rel_pos : Z := ltac:(
+  let y := eval vm_compute in (List.find (fun '(name, pos) => String.eqb name "montladder") montladder_finfo) in
+  match y with Some (_, ?pos) => exact pos end).
 
 Local Instance mem : map.map (word.rep (width:=32)) Init.Byte.byte := SortedListWord.map _ _.
 Local Existing Instance BW32.
@@ -224,8 +216,8 @@ Proof.
             (ext_spec:=FE310CSemantics.ext_spec)
             (string_keyed_map := SortedListString.map)
             (string_keyed_map_ok := SortedListString.ok))
-    with (fname:=fname).
-  all:cbn [fname montladder fst snd].
+    with (fname:="montladder").
+  all:cbn [montladder fst snd].
 
   (* fill in easy subgoals that instantiate evars *)
   all:lazymatch goal with

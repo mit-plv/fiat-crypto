@@ -500,7 +500,7 @@ Module SolinasReduction.
             (n : nat)
             (m : Z)
             (saturated_bounds : list (option zrange))
-            (length_saturated_bouns : length saturated_bounds = n).
+            (length_saturated_bounds : length saturated_bounds = n).
     Local Notation eval := (Positional.eval wt n).
 
     Definition mul_correct
@@ -510,6 +510,13 @@ Module SolinasReduction.
         list_Z_bounded_by saturated_bounds y ->
         ((eval (mul x y)) mod m = (eval x * eval y) mod m) /\
           (list_Z_bounded_by saturated_bounds (mul x y)).
+
+    Definition sqr_correct
+               (sqr : list Z -> list Z) :=
+      forall x,
+        list_Z_bounded_by saturated_bounds x ->
+        ((eval (sqr x)) mod m = (eval x * eval x) mod m) /\
+          (list_Z_bounded_by saturated_bounds (sqr x)).
 
   End __.
 End SolinasReduction.

@@ -1,7 +1,8 @@
-Require Import Coq.Strings.String.
+Require Import Coq.Strings.String. Local Open Scope string_scope.
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
 Require Import coqutil.Word.Bitwidth32.
+Require Import coqutil.Macros.WithBaseName.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Common.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Field.Interface.Representation.
@@ -61,7 +62,7 @@ Section Field.
                       spec_of_from_bytes
                         (ext_spec:=ext_spec)
                         (field_representation:=field_representation n s c)
-                        (fe25519_from_bytes :: functions))
+                        (&,fe25519_from_bytes :: functions))
          As fe25519_from_bytes_correct.
   Proof. Time derive_bedrock2_func from_bytes_op. Qed.
 
@@ -69,7 +70,7 @@ Section Field.
          SuchThat (forall functions,
                       spec_of_to_bytes
                         (field_representation:=field_representation n s c)
-                        (fe25519_to_bytes :: functions))
+                        (&,fe25519_to_bytes :: functions))
          As fe25519_to_bytes_correct.
   Proof. Time derive_bedrock2_func to_bytes_op. Qed.
 
@@ -77,7 +78,7 @@ Section Field.
          SuchThat (forall functions,
                       spec_of_felem_copy
                         (field_representation:=field_representation n s c)
-                        (fe25519_copy :: functions))
+                        (&,fe25519_copy :: functions))
          As fe25519_copy_correct.
   Proof. Time derive_bedrock2_func felem_copy_op. Qed.
 
@@ -85,7 +86,7 @@ Section Field.
          SuchThat (forall functions,
                       spec_of_from_word
                         (field_representation:=field_representation n s c)
-                        (fe25519_from_word :: functions))
+                        (&,fe25519_from_word :: functions))
          As fe25519_from_word_correct.
   Proof. Time derive_bedrock2_func from_word_op. Qed.
 
@@ -93,7 +94,7 @@ Section Field.
          SuchThat (forall functions,
                       spec_of_BinOp bin_mul
                         (field_representation:=field_representation n s c)
-                        (fe25519_mul :: functions))
+                        (&,fe25519_mul :: functions))
          As fe25519_mul_correct.
   Proof. Time derive_bedrock2_func mul_op. Qed.
 
@@ -101,7 +102,7 @@ Section Field.
          SuchThat (forall functions,
                       spec_of_UnOp un_square
                         (field_representation:=field_representation n s c)
-                        (fe25519_square :: functions))
+                        (&,fe25519_square :: functions))
          As fe25519_square_correct.
   Proof. Time derive_bedrock2_func square_op. Qed.
 
@@ -109,7 +110,7 @@ Section Field.
          SuchThat (forall functions,
                       spec_of_BinOp bin_add
                         (field_representation:=field_representation n s c)
-                        (fe25519_add :: functions))
+                        (&,fe25519_add :: functions))
          As fe25519_add_correct.
   Proof. Time derive_bedrock2_func add_op. Qed.
 
@@ -117,7 +118,7 @@ Section Field.
          SuchThat (forall functions,
                       spec_of_BinOp bin_sub
                         (field_representation:=field_representation n s c)
-                        (fe25519_sub :: functions))
+                        (&,fe25519_sub :: functions))
          As fe25519_sub_correct.
   Proof. Time derive_bedrock2_func sub_op. Qed.
 
@@ -125,24 +126,7 @@ Section Field.
          SuchThat (forall functions,
                       spec_of_UnOp un_scmula24
                         (field_representation:=field_representation n s c)
-                        (fe25519_scmula24 :: functions))
+                        (&,fe25519_scmula24 :: functions))
          As fe25519_scmula24_correct.
   Proof. Time derive_bedrock2_func scmula24_op. Qed.
 End Field.
-
-(* Uncomment below to sanity-check that compilation works *)
-(*
-Require Import bedrock2.Syntax.
-Require Import compiler.Pipeline.
-Require Import compilerExamples.MMIO.
-
-Definition funcs : list func :=
-  [ fe25519_mul;
-    fe25519_add;
-    fe25519_sub;
-    fe25519_square;
-    fe25519_to_bytes;
-    fe25519_from_bytes ].
-
-Compute compile (compile_ext_call (funname_env:=SortedListString.map)) (map.of_list funcs).
-*)

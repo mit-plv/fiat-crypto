@@ -1265,11 +1265,16 @@ Proof using Type.
   { cbn [fold_right] in *; rewrite ?Z.bit0_odd, ?Z.add_0_r, ?Z.add_assoc in *; assumption. }
 
   Unshelve. all : match goal with H : context[Syntax.cmovc] |- _ => idtac |  H : context[Syntax.cmovb] |- _ => idtac | _ => shelve end.
-  (* cmovc / cmovb *)
+  (* cmovc / cmovb / cmovo *)
   all: destruct vCF; cbn [negb Z.b2z Z.eqb] in *; eauto 9; [].
   all: enough (m = m0) by (subst; eauto 9).
   all: clear -Hm0 Hv frame G ; eauto using SetOperand_same.
   all: fail.
+
+  Unshelve. all: match goal with H : context[Syntax.cmovo] |- _=> idtac | _ => shelve end.
+  destruct vOF; cbn [negb Z.b2z Z.eqb] in *; eauto 9; [].
+  enough (m = m0) by (subst; eauto 9).
+  clear -Hm0 Hv frame G ; eauto using SetOperand_same.
 
   Unshelve. all : match goal with H : context[Syntax.cmovnz] |- _ => idtac | _ => shelve end.
   { (* cmovnz *)

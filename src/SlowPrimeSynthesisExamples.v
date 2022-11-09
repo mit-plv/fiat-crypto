@@ -4,8 +4,12 @@ Require Import Coq.QArith.Qround.
 Require Import Coq.Strings.String.
 Require Import Coq.derive.Derive.
 Require Import Coq.Lists.List.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZUtil.Zselect.
+Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.SolinasReduction.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.

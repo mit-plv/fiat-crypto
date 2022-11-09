@@ -307,7 +307,7 @@ Section UnsaturatedSolinas.
   Lemma mul_func_correct :
     valid_func (res mul_op _) ->
     forall functions,
-      spec_of_BinOp bin_mul (mul_func :: functions).
+      spec_of_BinOp bin_mul ((mul,mul_func) :: functions).
   Proof using M_eq check_args_ok mul_func_eq ok
         tight_bounds_tighter_than.
     intros. cbv [spec_of_BinOp bin_mul]. rewrite mul_func_eq.
@@ -328,7 +328,7 @@ Section UnsaturatedSolinas.
   Lemma square_func_correct :
     valid_func (res square_op _) ->
     forall functions,
-      spec_of_UnOp un_square (square_func :: functions).
+      spec_of_UnOp un_square ((square,square_func) :: functions).
   Proof using M_eq check_args_ok ok square_func_eq
         tight_bounds_tighter_than.
     intros. cbv [spec_of_UnOp un_square]. rewrite square_func_eq.
@@ -348,7 +348,7 @@ Section UnsaturatedSolinas.
   Lemma add_func_correct :
     valid_func (res add_op _) ->
     forall functions,
-      spec_of_BinOp bin_add (add_func :: functions).
+      spec_of_BinOp bin_add ((Field.add,add_func) :: functions).
   Proof using M_eq check_args_ok add_func_eq ok
         tight_bounds_tighter_than loose_bounds_tighter_than.
     intros. cbv [spec_of_BinOp bin_add]. rewrite add_func_eq.
@@ -369,7 +369,7 @@ Section UnsaturatedSolinas.
   Lemma sub_func_correct :
     valid_func (res sub_op _) ->
     forall functions,
-      spec_of_BinOp bin_sub (sub_func :: functions).
+      spec_of_BinOp bin_sub ((Field.sub,sub_func) :: functions).
   Proof using M_eq check_args_ok sub_func_eq ok
         tight_bounds_tighter_than loose_bounds_tighter_than.
     intros. cbv [spec_of_BinOp bin_sub]. rewrite sub_func_eq.
@@ -390,7 +390,7 @@ Section UnsaturatedSolinas.
   Lemma opp_func_correct :
     valid_func (res opp_op _) ->
     forall functions,
-      spec_of_UnOp un_opp (opp_func :: functions).
+      spec_of_UnOp un_opp ((Field.opp, opp_func) :: functions).
   Proof using M_eq check_args_ok loose_bounds_tighter_than opp_func_eq ok.
     intros. cbv [spec_of_UnOp un_opp]. rewrite opp_func_eq.
     pose proof opp_correct
@@ -410,7 +410,7 @@ Section UnsaturatedSolinas.
   Lemma scmula24_func_correct :
     valid_func (res scmula24_op _) ->
     forall functions,
-      spec_of_UnOp un_scmula24 (scmula24_func :: functions).
+      spec_of_UnOp un_scmula24 ((scmula24, scmula24_func) :: functions).
   Proof using M_eq check_args_ok ok scmula24_func_eq
         tight_bounds_tighter_than.
     intros. cbv [spec_of_UnOp un_scmula24]. rewrite scmula24_func_eq.
@@ -445,7 +445,7 @@ Section UnsaturatedSolinas.
   Lemma felem_copy_func_correct :
     valid_func (res felem_copy_op _) ->
     forall functions,
-      spec_of_felem_copy (felem_copy_func :: functions).
+      spec_of_felem_copy ((felem_copy, felem_copy_func) :: functions).
   Proof using M_eq check_args_ok ok felem_copy_func_eq
         tight_bounds_tighter_than parameters_sentinel ok
 to_bytes_func_eq to_bytes_func sub_func_eq sub_func square_func_eq
@@ -470,7 +470,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
   Lemma from_word_func_correct :
     valid_func (res from_word_op _) ->
     forall functions,
-      spec_of_from_word (from_word_func :: functions).
+      spec_of_from_word ((from_word, from_word_func) :: functions).
   Proof using M_eq check_args_ok from_word_func_eq ok
         tight_bounds_tighter_than.
     intros. cbv [spec_of_from_word]. rewrite from_word_func_eq.
@@ -511,7 +511,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
   Lemma from_bytes_func_correct :
     valid_func (res from_bytes_op _) ->
     forall functions,
-      spec_of_from_bytes (from_bytes_func :: functions).
+      spec_of_from_bytes ((Field.from_bytes,from_bytes_func) :: functions).
   Proof using M_eq check_args_ok from_bytes_func_eq ok
         tight_bounds_tighter_than.
     intros. cbv [spec_of_from_bytes]. rewrite from_bytes_func_eq.
@@ -533,7 +533,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
   Lemma to_bytes_func_correct :
     valid_func (res to_bytes_op _) ->
     forall functions,
-      spec_of_to_bytes (to_bytes_func :: functions).
+      spec_of_to_bytes ((Field.to_bytes, to_bytes_func) :: functions).
   Proof using M_eq check_args_ok ok to_bytes_func_eq.
     intros. cbv [spec_of_to_bytes]. rewrite to_bytes_func_eq.
     pose proof UnsaturatedSolinas.to_bytes_correct
@@ -591,18 +591,19 @@ Definition field_parameters_prefixed
     (prefix ++ "from_word")
 .
 
+Import Coq.Program.Tactics.
 Local Ltac begin_derive_bedrock2_func :=
   lazymatch goal with
-  | |- context [spec_of_BinOp bin_mul] => eapply mul_func_correct
-  | |- context [spec_of_UnOp un_square] => eapply square_func_correct
-  | |- context [spec_of_BinOp bin_add] => eapply add_func_correct
-  | |- context [spec_of_BinOp bin_sub] => eapply sub_func_correct
-  | |- context [spec_of_UnOp un_opp] => eapply opp_func_correct
-  | |- context [spec_of_UnOp un_scmula24] => eapply scmula24_func_correct
-  | |- context [spec_of_from_bytes] => eapply from_bytes_func_correct
-  | |- context [spec_of_to_bytes] => eapply to_bytes_func_correct
-  | |- context [spec_of_felem_copy] => eapply felem_copy_func_correct
-  | |- context [spec_of_from_word] => eapply from_word_func_correct
+  | |- context [spec_of_BinOp bin_mul] => rapply mul_func_correct
+  | |- context [spec_of_UnOp un_square] => rapply square_func_correct
+  | |- context [spec_of_BinOp bin_add] => rapply add_func_correct
+  | |- context [spec_of_BinOp bin_sub] => rapply sub_func_correct
+  | |- context [spec_of_UnOp un_opp] => rapply opp_func_correct
+  | |- context [spec_of_UnOp un_scmula24] => rapply scmula24_func_correct
+  | |- context [spec_of_from_bytes] => rapply from_bytes_func_correct
+  | |- context [spec_of_to_bytes] => rapply to_bytes_func_correct
+  | |- context [spec_of_felem_copy] => rapply felem_copy_func_correct
+  | |- context [spec_of_from_word] => rapply from_word_func_correct
   end.
 
 Ltac derive_bedrock2_func op :=
