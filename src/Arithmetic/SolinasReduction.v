@@ -875,9 +875,9 @@ Module SolinasReduction.
       let coef_a := Saturated.Associational.sat_mul_const base [(1, s'/s)] c in
       let coef := Associational.eval coef_a in
       dlet_nd hi := Z.zselect (nth_default 0 p n) 0 coef in
-          let lo := Z.add_get_carry machine_wordsize hi (nth_default 0 p 0) in
+          let lo := Saturated.Rows.flatten weight 1 [ [hi]; [nth_default 0 p 0] ] in
           if (is_bounded_by bounds p) then
-            [fst lo] ++ (skipn 1 (firstn n p))
+            (fst lo) ++ (skipn 1 (firstn n p))
           else
             let hi' := coef * (nth_default 0 p n) in
             add_to_nth 0 hi' (firstn n p).
@@ -926,9 +926,9 @@ Module SolinasReduction.
       let coef_a := Saturated.Associational.sat_mul_const base [(1, s'/s)] c in
       let coef := Associational.eval coef_a in
       dlet_nd hi := Z.zselect (nth_default 0 p n) 0 coef in
-          let lo := Z.add_get_carry machine_wordsize hi (nth_default 0 p 0) in
+          let lo := Saturated.Rows.flatten weight 1 [ [hi]; [nth_default 0 p 0] ] in
           if (is_bounded_by bounds p) then
-            f ([fst lo] ++ (skipn 1 (firstn n p)))
+            f ((fst lo) ++ (skipn 1 (firstn n p)))
           else
             let hi' := coef * (nth_default 0 p n) in
             f (add_to_nth 0 hi' (firstn n p)).
@@ -1555,6 +1555,27 @@ Module SolinasReduction.
         push.
       Qed.
 
+      Lemma eval_smaller m p :
+          (length p <= m)%nat ->
+          eval weight m p = eval weight (length p) p.
+      Proof.
+        intros H.
+        destruct p using rev_ind.
+        push.
+        unfold eval at 1.
+        cbv [to_associational].
+        replace m with ((length (p ++ [x])) + (m - length (p ++ [x])))%nat.
+        rewrite seq_app.
+        rewrite map_app.
+        rewrite combine_truncate_l.
+        rewrite firstn_app_inleft.
+        rewrite firstn_all.
+        reflexivity.
+        push.
+        push.
+        lia.
+      Qed.
+
       Lemma eval_reduce3 : forall p,
           canonical_repr (S n) p ->
           (nth_default 0 p (n-1) = 0 /\ nth_default 0 p n = 1 /\ nth_default 0 p 0 < up_bound * up_bound + 1) \/ nth_default 0 p n = 0 ->
@@ -1582,6 +1603,28 @@ Module SolinasReduction.
         rewrite nth_default_repeat in H3.
         destruct (dec (0 < n)%nat).
         push' H3.
+
+        match goal with
+        | |- context[fst (Rows.flatten weight 1 [ [?x]; [?y] ])] =>
+            assert (fst (Rows.flatten weight 1 [ [x]; [y] ]) =
+              [fst (Z.add_get_carry machine_wordsize x y)])
+        end.
+        { cbv [Z.add_get_carry Z.add_with_get_carry Z.add_with_carry Z.get_carry Let_In].
+          rewrite solinas_property.
+          push.
+          rewrite !Rows.eval_cons.
+          rewrite Rows.eval_nil.
+          push.
+          rewrite Partition.partition_step.
+          push.
+          intros.
+          cbn in H4.
+          intuition.
+          rewrite <-H7; push.
+          rewrite <-H4; push.
+          rewrite <-H0; push.
+          rewrite <-H4; push. }
+        rewrite H4.
 
         cbv [Z.add_get_carry Z.add_with_get_carry Z.add_with_carry Z.get_carry Let_In Z.zselect].
         rewrite solinas_property.
