@@ -18,6 +18,7 @@ Require Crypto.Util.ZUtil.Hints.PullPush.
 Require Crypto.Util.ZUtil.Hints.ZArith.
 Require Crypto.Util.ZUtil.Hints.Ztestbit.
 Require Crypto.Util.ZUtil.Land.
+Require Crypto.Util.ZUtil.Land.Fold.
 Require Crypto.Util.ZUtil.LandLorBounds.
 Require Crypto.Util.ZUtil.LandLorShiftBounds.
 Require Crypto.Util.ZUtil.Lor.

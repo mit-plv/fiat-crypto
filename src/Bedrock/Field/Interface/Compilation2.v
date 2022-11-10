@@ -269,16 +269,7 @@ Section Compile.
     prove_field_compilation.
     apply H3.
 
-    eapply Proper_sep_impl1; eauto.
-    2:exact(fun a b => b).
-    intros m' H'.
-    sepsimpl;
-      eauto.
-    do 2 (eexists;
-          sepsimpl;
-          simpl;
-          eauto).
-    ecancel_assumption.
+    extract_ex1_and_emp_in_goal; ssplit; eauto.
   Qed.
 
   Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_from_word _ _ _ _ _ _ _ _)) : typeclass_instances.
@@ -316,19 +307,11 @@ Section Compile.
   Proof using env_ok ext_spec_ok locals_ok mem_ok word_ok.
     repeat straightline'.
     unfold FElem in *.
-    sepsimpl.
+    extract_ex1_and_emp_in H1.
     prove_field_compilation.
+    match goal with H : _ |- _ => rewrite word.of_Z_unsigned in H end.
     apply H3.
-
-    eapply Proper_sep_impl1; eauto.
-    2:exact(fun a b => b).
-    intros m' H'.
-    match goal with H : _ |- _ =>
-                    rewrite word.of_Z_unsigned in H end.
-    SpecializeBy.specialize_by_assumption.
-    eexists;
-      sepsimpl;
-      eauto.
+    extract_ex1_and_emp_in_goal; ssplit; eauto.
   Qed.
 
   Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_from_bytes _ _ _ _ _ _ _ _)) : typeclass_instances.
