@@ -112,7 +112,7 @@ clean::
 
 .PHONY: {output_name}.only-status
 
-{output_name}.status: | {binary}
+{output_name}.status: {binary}
 
 {output_name}.status {output_name}.only-status: {' '.join(fnames)}
 \t$(SHOW)'TEST AMD64 {description} ...'
