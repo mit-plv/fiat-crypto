@@ -1594,8 +1594,9 @@ Section bound_expr_via_PHOAS.
        | _ => None
        end%zrange.
 
-  Definition op_to_PHOAS_bounds (o : op) : option (list (option zrange) -> option zrange)
-    := match o with
+  Definition op_to_PHOAS_bounds (o : op) : option (list (unit -> option zrange) -> option zrange)
+    := let unthunk := List.map (fun x => x tt) in
+       match o with
        | old s _ => Some (fun _ => Some r[0~>Z.ones (Z.of_N s)])
        | const x
          => Some (fun _ => interp_PHOAS_op (ident.Literal (t:=base.type.Z) x))
@@ -1603,26 +1604,26 @@ Section bound_expr_via_PHOAS.
          => let b : zrange := invert_Some (op_to_bounds o) in
             let id : Z := invert_Some (identity o) in
             let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_binop o)) in
-            Some (fun args => interp_PHOAS_op ident.Z_cast (Some b) (fold_right o (Some r[id~>id]) args))
+            Some (fun args => interp_PHOAS_op ident.Z_cast (Some b) (fold_right o (Some r[id~>id]) (unthunk args)))
        | (addcarry _ | subborrow _ | addoverflow _ | iszero)
          => Some (fun _ => Some r[0~>1])
        | (addZ|mulZ|andZ|orZ|xorZ) as o
          => let id : Z := invert_Some (identity o) in
             let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_binop o)) in
-            Some (fold_right o (Some r[id~>id]))
+            Some (fun args => fold_right o (Some r[id~>id]) (unthunk args))
        | (shl _|shr _) as o
          => let b : zrange := invert_Some (op_to_bounds o) in
             let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_binop o)) in
             Some (fun args
                   => match args with
-                     | [x; y] => interp_PHOAS_op ident.Z_cast (Some b) (o x y)
+                     | [x; y] => interp_PHOAS_op ident.Z_cast (Some b) (o (x tt) (y tt))
                      | _ => None
                      end)
        | (shlZ|shrZ) as o
          => let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_binop o)) in
             Some (fun args
                   => match args with
-                     | [x; y] => o x y
+                     | [x; y] => o (x tt) (y tt)
                      | _ => None
                      end)
        | (neg _) as o
@@ -1630,28 +1631,28 @@ Section bound_expr_via_PHOAS.
             let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_unop o)) in
             Some (fun args
                   => match args with
-                     | [x] => interp_PHOAS_op ident.Z_cast (Some b) (o x)
+                     | [x] => interp_PHOAS_op ident.Z_cast (Some b) (o (x tt))
                      | _ => None
                      end)
        | (negZ) as o
          => let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_unop o)) in
             Some (fun args
                   => match args with
-                     | [x] => o x
+                     | [x] => o (x tt)
                      | _ => None
                      end)
        | (selectznz) as o
          => let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_tritop o)) in
             Some (fun args
                   => match args with
-                     | [x; y; z] => o x y z
+                     | [x; y; z] => o (x tt) (y tt) (z tt)
                      | _ => None
                      end)
        | (slice _ s | sar s | rcr s) as o
          => Some (fun _ => Some r[0~>Z.ones (Z.of_N s)])
        | set_slice 0 w
          => Some (fun args
-                  => match args with
+                  => match unthunk args with
                      | [Some a; Some b]
                        => if ((lower a <? 0) || (lower b <? 0))%Z%bool
                           then None
@@ -1673,7 +1674,7 @@ Section bound_expr_via_PHOAS.
        | ExprApp (o, args)
          => match op_to_PHOAS_bounds o with
             | Some o
-              => o (List.map bound_expr_via_PHOAS args)
+              => o (List.map (fun e 'tt => bound_expr_via_PHOAS e) args)
             | None => None
             end
        | ExprRef _ => None
@@ -1689,13 +1690,16 @@ Section bound_expr_via_PHOAS.
                                      end)
                          args arg_bounds)
         (Hop : interp_op G o args = Some v)
-        (Hb : bf arg_bounds = Some b)
+        arg_bounds' (Hb : bf arg_bounds' = Some b)
+        (Ha : arg_bounds = List.map (fun x => x tt) arg_bounds')
         w (Ho : set_slice 0 w = o)
     : is_bounded_by_bool v b.
   Proof.
     subst o; cbv [op_to_PHOAS_bounds interp_op] in *; inversion_option; subst.
     break_innermost_match_hyps; inversion_option; subst.
+    repeat (destruct_one_head list; inversion_list).
     invlist Forall2.
+    break_innermost_match_hyps; inversion_option; subst.
     apply unreflect_bool; reflect_hyps; cbn [upper lower].
     autorewrite with zsimplify_const.
     rewrite Z.land_ones_ones.
@@ -1757,11 +1761,12 @@ Section bound_expr_via_PHOAS.
                                      end)
                          args arg_bounds)
         (Hop : interp_op G o args = Some v)
-        (Hb : bf arg_bounds = Some b)
+        arg_bounds' (Hb : bf arg_bounds' = Some b)
+        (Ha : arg_bounds = List.map (fun x => x tt) arg_bounds')
     : is_bounded_by_bool v b.
   Proof.
     (* pose proof the lemmas that we needed extra insight to prove separately *)
-    pose proof (@interp_op_op_to_PHOAS_bounds_set_slice_0 G o bf arg_bounds args v b H Hargs Hop Hb) as Hslice.
+    pose proof (@interp_op_op_to_PHOAS_bounds_set_slice_0 G o bf arg_bounds args v b H Hargs Hop arg_bounds' Hb Ha) as Hslice.
     pose proof (@interp_op_op_to_PHOAS_bounds_fold_right_helper G o arg_bounds args v Hargs Hop) as Hfold_right.
     (* destruct the operation, do general cleanup *)
     cbv [op_to_PHOAS_bounds] in *.
@@ -1796,10 +1801,14 @@ Section bound_expr_via_PHOAS.
     all: invlist Forall2.
     all: repeat first [ progress subst
                       | assumption
+                      | progress cbn [List.map] in *
+                      | inversion_list_step
                       | match goal with
                         | [ H : Forall2 _ nil _ |- _ ] => inversion H; clear H
                         | [ H : Forall2 _ (_ :: _) _ |- _ ] => inversion H; clear H
                         | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
+                        | [ H : nil = List.map _ ?ls |- _ ] => is_var ls; destruct ls
+                        | [ H : _ :: _ = List.map _ ?ls |- _ ] => is_var ls; destruct ls
                         end ].
     all: break_innermost_match_hyps.
     (* handle goals with relatively simple bounds that follow just from masking/casting/modulo *)
@@ -1882,8 +1891,8 @@ Section bound_expr_via_PHOAS.
     clear eval_bound_expr_via_PHOAS.
     break_innermost_match_hyps; inversion_option.
     inversion 1; subst.
-    eapply (@interp_op_op_to_PHOAS_bounds G n); try eassumption.
-    rewrite Forall2_map_r_iff.
+    eapply (@interp_op_op_to_PHOAS_bounds G n); try (eassumption || reflexivity).
+    rewrite !Forall2_map_r_iff.
     eassert (H' : List.length _ = List.length _) by (eapply eq_length_Forall2; eassumption).
     specialize (eval_bound_expr_via_PHOAS_Forall _ H').
     rewrite !Forall2_forall_iff_nth_error.
