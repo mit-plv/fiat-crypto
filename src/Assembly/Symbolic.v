@@ -316,8 +316,8 @@ End FMapOp.
 
 Module OpMap := FMapOp.OpMap.
 
-Definition associative o := match o with add _|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ=> true | _ => false end.
-Definition commutative o := match o with add _|addcarry _|addoverflow _|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ => true | _ => false end.
+Definition associative o := match o with add _|addZ|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ=> true | _ => false end.
+Definition commutative o := match o with add _|addZ|addcarry _|addoverflow _|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ => true | _ => false end.
 Definition identity o := match o with mul s => Some match s with N0 => 0%Z | _ => 1%Z end| mulZ=>Some 1%Z |add _|addZ|or _|orZ|xor _|xorZ|addcarry _|addcarryZ _|addoverflow _ => Some 0%Z | and s => Some (Z.ones (Z.of_N s))|andZ => Some (-1)%Z |_=> None end.
 (* identity, but not in the first slot *)
 Definition identity_after_0 o := match o with subborrow _|subborrowZ _ => Some 0%Z | _=> None end.
