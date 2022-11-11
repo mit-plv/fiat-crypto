@@ -506,6 +506,7 @@ Proof using Type.
   all : cbv [DenoteConst fold_right].
   all : rewrite !Z.land_ones by lia.
   all : push_Zmod; pull_Zmod.
+  all : autorewrite with zsimplify_const.
   all : f_equal; lia.
   (* step_symex leaves over useless evars :-( *)
   Unshelve. all: try exact True.
