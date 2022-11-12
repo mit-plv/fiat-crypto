@@ -4,6 +4,7 @@ Require Import Coq.Strings.String.
 Require Import Crypto.Util.Strings.String.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Strings.Show.
+Require Import Crypto.Util.Strings.Show.Enum.
 Require Import Crypto.Util.Strings.Parse.Common.
 Require Import Crypto.Util.Listable.
 Import ListNotations.
@@ -22,13 +23,8 @@ Derive name_case_kind_Listable SuchThat (@FinitelyListable name_case_kind name_c
 Proof. prove_ListableDerive. Qed.
 Global Existing Instances name_case_kind_Listable name_case_kind_FinitelyListable.
 
-(* M-x query-replace-regex RET \([^ ]+\) => _ RET \1 => "\1" *)
-Global Instance show_name_case_kind : Show name_case_kind
-  := fun v
-     => match v with
-        | lower => "lower"
-        | upper => "upper"
-        end.
+Global Instance show_name_case_kind : Show name_case_kind.
+Proof. prove_Show_enum (). Defined.
 Global Instance show_lvl_name_case_kind : ShowLevel name_case_kind := show_name_case_kind.
 
 Definition parse_name_case_kind_list : list (string * name_case_kind)
