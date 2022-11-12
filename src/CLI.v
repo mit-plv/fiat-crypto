@@ -16,7 +16,7 @@ Require Import Crypto.Util.Strings.NamingConventions.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Strings.Show.
-Require Import Crypto.Util.Strings.ParseDebugOptions.
+Require Import Crypto.Util.Strings.ParseFlagOptions.
 Require Import Crypto.Util.DebugMonad.
 Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
@@ -195,7 +195,7 @@ Module ForExtraction.
     ].
   Definition known_debug_options : list string
     := Eval compute in List.map fst known_debug_options_with_spec.
-  Definition special_debug_options : list (string * debug_option_kind)
+  Definition special_debug_options : list (string * flag_option_kind)
     := [("all", all)
     ].
   (** This string gets parsed as the initial argument to --debug, to be updated by subsequent arguments *)
@@ -708,7 +708,7 @@ Module ForExtraction.
              , doc_prepend_headerv
              , debugv
             ) := data in
-       let debug_to_bool x := bool_of_full_debug_status x false in
+       let flag_to_bool x := bool_of_full_flag_status x false in
        let to_bool ls := (0 <? List.length ls)%nat in
        let to_string_list ls := List.map (@snd _ _) ls in
        let to_N_list ls := List.map (@snd _ _) (List.map (@snd _ _) ls) in
@@ -727,7 +727,7 @@ Module ForExtraction.
        let to_capitalization_convention_opt ls
            := option_map (fun d => {| capitalization_convention_data := d ; only_lower_first_letters := true |})
                          (to_capitalization_data_opt ls) in
-       let '(_, unknown_debug_options, (debug_on_successv, debug_rewritingv)) := parse_debug_opts special_debug_options known_debug_options (default_debug :: List.map snd debugv) in
+       let '(_, unknown_debug_options, (debug_on_successv, debug_rewritingv)) := parse_flag_opts special_debug_options known_debug_options (default_debug :: List.map snd debugv) in
        let res
            := ({|
                   hint_file_names := to_string_list hint_file_namesv
@@ -784,8 +784,8 @@ Module ForExtraction.
                        |}
                   ; before_header_lines := to_string_list doc_prepend_header_rawv
                   ; extra_early_header_lines := to_string_list doc_prepend_headerv
-                  ; debug_rewriting := debug_to_bool debug_rewritingv
-                  ; debug_on_success := debug_to_bool debug_on_successv
+                  ; debug_rewriting := flag_to_bool debug_rewritingv
+                  ; debug_on_success := flag_to_bool debug_on_successv
                |},
                snd (List.hd lang_default langv)) in
        match langv, unknown_debug_options with
