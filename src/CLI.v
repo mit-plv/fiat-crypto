@@ -557,7 +557,7 @@ Module ForExtraction.
       (** Documentation options *)
       ; documentation_options :> documentation_options_opt
       (** assembly convention options *)
-      ; assembly_conventions :> assembly_conventions_opt
+      ; equivalence_checker_options :> equivalence_checker_options_opt
       (** error if there are un-requested assembly functions *)
       ; error_on_unused_assembly_functions :> error_on_unused_assembly_functions_opt
       (** don't prepend fiat to prefix *)
@@ -767,12 +767,14 @@ Module ForExtraction.
                       ; relax_adc_sbb_return_carry_to_bitwidth_ := to_Z_flat_list relax_primitive_carry_to_bitwidthv
                       ; language_specific_cast_adjustment_ := negb (to_bool emit_all_castsv)
                       |}
-                  ; assembly_conventions :=
-                    {| assembly_calling_registers_ := to_reg_list asm_regv
-                    ; assembly_callee_saved_registers_ := to_assembly_callee_saved_registers_default asm_callee_saved_registersv default_assembly_callee_saved_registers
-                    ; assembly_stack_size_ := to_N_opt asm_stack_sizev
-                    ; assembly_output_first_ := negb (to_bool asm_input_firstv)
-                    ; assembly_argument_registers_left_to_right_ := negb (to_bool asm_reg_rtlv)
+                  ; equivalence_checker_options :=
+                    {| assembly_conventions_ :=
+                      {| assembly_calling_registers_ := to_reg_list asm_regv
+                      ; assembly_callee_saved_registers_ := to_assembly_callee_saved_registers_default asm_callee_saved_registersv default_assembly_callee_saved_registers
+                      ; assembly_stack_size_ := to_N_opt asm_stack_sizev
+                      ; assembly_output_first_ := negb (to_bool asm_input_firstv)
+                      ; assembly_argument_registers_left_to_right_ := negb (to_bool asm_reg_rtlv)
+                      |}
                     |}
                   ; ignore_unique_asm_names := negb (to_bool asm_error_on_unique_names_mismatchv)
                   ; error_on_unused_assembly_functions := negb (to_bool no_error_on_unused_asm_functionsv)

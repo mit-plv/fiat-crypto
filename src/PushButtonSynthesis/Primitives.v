@@ -803,6 +803,7 @@ Notation wrap_s v := (fun s => existT (fun t => prod string (Pipeline.M (Pipelin
 
 (** We stick this in a module to work around COQBUG(https://github.com/coq/coq/issues/16677) *)
 Module Export Options.
+  Export Assembly.Equivalence.Options.
   (** The options which are passed from higher levels for synthesizing
       individual pipeline operations as an AST *)
   Class PipelineOptions :=
@@ -853,7 +854,7 @@ Module Export Options.
     ; emit_primitives : emit_primitives_opt
     ; class_namev : class_name_opt
     ; assembly_hints_lines : assembly_hints_lines_opt
-    ; assembly_conventions : assembly_conventions_opt }.
+    ; equivalence_checker_options : equivalence_checker_options_opt }.
   Definition default_SynthesisOptions : SynthesisOptions :=
     {| use_mul_for_cmovznz := false
     ; package_namev := None
@@ -862,9 +863,10 @@ Module Export Options.
     ; emit_primitives := true
     ; class_namev := None
     ; assembly_hints_lines := []
-    ; assembly_conventions := default_assembly_conventions |}.
+    ; equivalence_checker_options := default_equivalence_checker_options |}.
 End Options.
 Module Import PipelineHints.
+  Export EquivalenceCheckerHints.
   Global Existing Instances
          Build_PipelineOptions
          Build_PipelineToStringOptions
@@ -893,7 +895,7 @@ Module Import PipelineHints.
          emit_primitives
          class_namev
          assembly_hints_lines
-         assembly_conventions
+         equivalence_checker_options
   .
   #[global]
    Hint Cut [
@@ -922,7 +924,7 @@ Module Import PipelineHints.
         | emit_primitives
         | class_namev
         | assembly_hints_lines
-        | assembly_conventions
+        | equivalence_checker_options
         ) ( _ * )
         (Build_PipelineOptions
         | Build_PipelineToStringOptions
