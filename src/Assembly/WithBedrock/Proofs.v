@@ -1450,7 +1450,7 @@ Proof.
   eapply R_subsumed; eassumption.
 Qed.
 
-Lemma build_merge_stack_placeholders_ok_R {descr:description} G s s' frame frame' ms
+Lemma build_merge_stack_placeholders_ok_R {opts : symbolic_options_computed_opt} {descr:description} G s s' frame frame' ms
       (rsp_val : Z) (stack_vals : list Z) base_stack base_stack_word_val
       (H : build_merge_stack_placeholders (List.length stack_vals) s = Success (base_stack, s'))
       (d := s.(dag_state))
@@ -1757,7 +1757,7 @@ Local Ltac handle_eval_eval :=
          end.
 
 Lemma build_merge_base_addresses_ok_R
-      {descr:description} {dereference_scalar:bool}
+      {opts : symbolic_options_computed_opt} {descr:description} {dereference_scalar:bool}
       (idxs : list (idx + list idx))
       (reg_available : list REG)
       (runtime_reg : list Z)
@@ -1961,7 +1961,7 @@ Proof.
     all: eauto with nocore. }
 Qed.
 
-Lemma mapM_GetReg_ok_R_full {descr:description} G regs idxs reg_vals s s' frame ms
+Lemma mapM_GetReg_ok_R_full {opts : symbolic_options_computed_opt} {descr:description} G regs idxs reg_vals s s' frame ms
       (H : mapM GetReg regs s = Success (idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -1995,7 +1995,7 @@ Proof.
   all: eauto using R_regs_subsumed, R_flags_subsumed, R_mem_subsumed.
 Qed.
 
-Lemma mapM_GetReg_ok_R {descr:description} G regs idxs s s' frame (ms : machine_state)
+Lemma mapM_GetReg_ok_R {opts : symbolic_options_computed_opt} {descr:description} G regs idxs s s' frame (ms : machine_state)
       (H : mapM GetReg regs s = Success (idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -2031,7 +2031,8 @@ Proof.
   all: try solve [ cbv [R] in HR; destruct s; eapply Forall2_get_reg_of_R_regs; try assumption; try apply HR ].
 Qed.
 
-Lemma SymexLines_ok_R frame G s m asm _tt s'
+Lemma SymexLines_ok_R {opts : symbolic_options_computed_opt}
+      frame G s m asm _tt s'
       (d := s.(dag_state))
       (d' := s'.(dag_state))
       (r := s.(symbolic_reg_state))
@@ -2103,7 +2104,7 @@ Qed.
 Lemma get_asm_reg_bounded s rs : Forall (fun v => (0 <= v < 2 ^ 64)%Z) (get_asm_reg s rs).
 Proof. apply get_reg_bounded_Forall. Qed.
 
-Lemma LoadArray_ok_R {descr:description} frame G s ms s' base base_val base_word_val len idxs
+Lemma LoadArray_ok_R {opts : symbolic_options_computed_opt} {descr:description} frame G s ms s' base base_val base_word_val len idxs
       (H : LoadArray base len s = Success (idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -2402,7 +2403,7 @@ Proof.
                     | apply SeparationLogic.impl1_r_sep_emp; split; [ | reflexivity ] ].
 Qed.
 
-Lemma LoadOutputs_ok_R {descr:description} {dereference_scalar:bool} frame G s ms s' outputaddrs output_types output_vals idxs
+Lemma LoadOutputs_ok_R {opts : symbolic_options_computed_opt} {descr:description} {dereference_scalar:bool} frame G s ms s' outputaddrs output_types output_vals idxs
       (H : LoadOutputs (dereference_scalar:=dereference_scalar) outputaddrs output_types s = Success (Success idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -2823,6 +2824,7 @@ Qed.
 Local Ltac debug_run tac := tac ().
 
 Theorem symex_asm_func_M_correct
+        {opts : symbolic_options_computed_opt}
         {output_scalars_are_pointers:bool}
         d frame asm_args_out asm_args_in (G : symbol -> option Z) (s := init_symbolic_state d)
         (s' : symbolic_state) (m : machine_state) (output_types : type_spec) (stack_size : nat) (stack_base : Naive.word 64)
@@ -3267,6 +3269,7 @@ Proof.
 Time Qed. (* Finished transaction in 14.751 secs (14.751u,0.s) *)
 
 Theorem symex_asm_func_correct
+        {opts : symbolic_options_computed_opt}
         {output_scalars_are_pointers:bool}
         frame asm_args_out asm_args_in (G : symbol -> option Z) (d : dag) (output_types : type_spec) (stack_size : nat) (stack_base : Naive.word 64)
         (inputs : list (idx + list idx)) (callee_saved_registers : list REG) (reg_available : list REG) (asm : Lines)
@@ -3301,6 +3304,7 @@ Proof.
 Qed.
 
 Theorem check_equivalence_correct
+        {opts : symbolic_options_computed_opt}
         (output_scalars_are_pointers:=false)
         {assembly_calling_registers' : assembly_calling_registers_opt}
         {assembly_stack_size' : assembly_stack_size_opt}
@@ -3409,6 +3413,7 @@ Proof.
 Qed.
 
 Theorem generate_assembly_of_hinted_expr_correct
+        {opts : symbolic_options_computed_opt}
         (output_scalars_are_pointers:=false)
         {assembly_calling_registers' : assembly_calling_registers_opt}
         {assembly_stack_size' : assembly_stack_size_opt}

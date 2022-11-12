@@ -7,6 +7,7 @@ Require Import Coq.Strings.HexString.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Parse.
+Require Import Crypto.Assembly.Symbolic.
 Require Import Crypto.Assembly.Equivalence.
 Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.ParseArithmetic.
@@ -16,8 +17,10 @@ Require Import Crypto.Util.Strings.NamingConventions.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Strings.Show.
+Require Import Crypto.Util.Strings.Sorting.
 Require Import Crypto.Util.Strings.ParseFlagOptions.
 Require Import Crypto.Util.DebugMonad.
+Require Import Crypto.Util.Listable.
 Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
@@ -60,6 +63,9 @@ Module ForExtraction.
 
   Definition parse_list_REG (s : string) : option (list REG)
     := finalize (parse_comma_list parse_REG) s.
+
+  Definition parse_list_rewrite_pass (s : string) : option (list rewrite_pass)
+    := finalize (parse_comma_list parse_rewrite_pass) s.
 
   Definition parse_comma_list_Z (s : string) : option (list Z)
     := (ls <- finalize (parse_comma_list ParseArithmetic.parse_Qexpr) s;
@@ -201,6 +207,24 @@ Module ForExtraction.
   (** This string gets parsed as the initial argument to --debug, to be updated by subsequent arguments *)
   Definition default_debug : string := "rewriting".
 
+  Definition known_asm_rewriting_pass_flags : list string
+    := Eval compute in StringSort.sort (List.map show (list_all Assembly.Symbolic.RewritePass.rewrite_pass)).
+  Definition known_asm_rewriting_pass_flags_with_spec : list (string * string)
+    := Eval compute in
+      Option.invert_Some
+        (Option.List.lift
+           (List.map
+              (fun s => p <- finalize parse_rewrite_pass s; Some (s, Assembly.Symbolic.Rewrite.describe_pass p:string))%option
+              known_asm_rewriting_pass_flags)).
+  Definition special_asm_rewriting_pass_flags : list (string * flag_option_kind)
+    := [("all", all)
+    ].
+  (** This string gets parsed as the initial argument to --asm-rewriting-passes, to be updated by subsequent arguments *)
+  Definition default_asm_rewriting_passes : string := "all".
+
+  Definition default_asm_rewriting_pipeline : string
+    := Eval compute in String.concat "," (List.map show default_rewrite_pass_order).
+
   Definition CollectErrors
              {machine_wordsize : machine_wordsize_opt}
              {output_language_api : ToString.OutputLanguageAPI}
@@ -253,6 +277,28 @@ Module ForExtraction.
 
   Local Notation anon_argT := (string * Arg.spec * Arg.doc)%type (only parsing).
   Local Notation named_argT := (list Arg.key * Arg.spec * Arg.doc)%type (only parsing).
+
+  Definition describe_flag_options (kind:string) (all_descr:string) (special_options : list (string * flag_option_kind)) (known_options_with_spec : list (string * string)) : list string
+    := let len := List.fold_right Nat.max 0%nat (List.map String.length (List.map fst known_options_with_spec ++ List.map fst special_options)) in
+       let fill s := (s ++ String.repeat " " (len - String.length s))%string in
+       ((["Valid " ++ kind ++ " flags:"]%string)
+          ++ (List.flat_map
+                (fun '(opt, k)
+                 => match k with
+                    | all => ["- " ++ fill opt ++ String.Tab ++ all_descr]
+                    | alias _ => []
+                    end)%string
+                special_options)
+          ++ (List.map
+                (fun '(opt, descr) => "- " ++ fill opt ++ String.Tab ++ descr)%string
+                known_options_with_spec)
+          ++ (List.flat_map
+                (fun '(opt, k)
+                 => match k with
+                    | all => []
+                    | alias ls => ["- " ++ fill opt ++ String.Tab ++ "an alias for " ++ String.concat "," ls]
+                    end)%string
+                special_options)).
 
   Definition curve_description_spec : anon_argT
     := ("curve_description",
@@ -444,7 +490,15 @@ Module ForExtraction.
   Definition asm_error_on_unique_names_mismatch_spec : named_argT
     := ([Arg.long_key "asm-error-on-unique-name-mismatch"],
         Arg.Unit,
-        ["By default, when there's only one assembly function in a --hints-file and only one function requested to be synthesized, the name of the assembly function is ignored.  Passing this flag disables this behavior, raising an error if the names mismatch regardless of whether there are multiple functions or just one."]).
+         ["By default, when there's only one assembly function in a --hints-file and only one function requested to be synthesized, the name of the assembly function is ignored.  Passing this flag disables this behavior, raising an error if the names mismatch regardless of whether there are multiple functions or just one."]).
+  Definition asm_rewriting_pipeline_spec : named_argT
+    := ([Arg.long_key "asm-rewriting-pipeline"],
+         Arg.Custom (parse_string_and parse_list_rewrite_pass) "REWRITE_PASS",
+         ["Specifies the order and multiplicity of rewriting passes used in the assembly equivalence checker.  Default: " ++ default_asm_rewriting_passes]).
+  Definition asm_rewriting_passes_spec : named_argT
+    := ([Arg.long_key "asm-rewriting-passes"],
+         Arg.String,
+         ["A comma-separated list of rewriting passes to enable.  Prefix with - to disable a pass.  This list only impacts passes listed in --asm-rewriting-pipeline.  Default : " ++ (if default_asm_rewriting_passes =? "" then "(none)" else default_asm_rewriting_passes)]%string ++ describe_flag_options "rewriting pass" "Enable all rewriting passes" special_asm_rewriting_pass_flags known_asm_rewriting_pass_flags_with_spec)%list.
   Definition doc_text_before_function_name_spec : named_argT
     := ([Arg.long_key "doc-text-before-function-name"],
         Arg.String,
@@ -470,29 +524,9 @@ Module ForExtraction.
         Arg.String,
         ["Documentation Option: Prepend a line at the beginning of the documentation header at the top of the file.  This argument can be passed multiple times to insert multiple lines.  Lines will be automatically commented."]).
   Definition debug_spec : named_argT
-    := let len := List.fold_right Nat.max 0%nat (List.map String.length (known_debug_options ++ List.map fst special_debug_options)) in
-       let fill s := (s ++ String.repeat " " (len - String.length s))%string in
-       ([Arg.long_key "debug"; Arg.short_key "d"],
+    := ([Arg.long_key "debug"; Arg.short_key "d"],
          Arg.String,
-         (["A comma-separated list of debug options to turn on.  Use - to disable an option.  Default debug options: " ++ (if default_debug =? "" then "(none)" else default_debug)
-           ; "Valid debug options:"]%string)
-           ++ (List.flat_map
-                 (fun '(opt, k)
-                  => match k with
-                     | all => ["- " ++ fill opt ++ String.Tab ++ "Turn all debugging on"]
-                     | alias _ => []
-                     end)%string
-                 special_debug_options)
-           ++ (List.map
-                 (fun '(opt, descr) => "- " ++ fill opt ++ String.Tab ++ descr)%string
-                 known_debug_options_with_spec)
-           ++ (List.flat_map
-                 (fun '(opt, k)
-                  => match k with
-                     | all => []
-                     | alias ls => ["- " ++ fill opt ++ String.Tab ++ "an alias for " ++ String.concat "," ls]
-                     end)%string
-                 special_debug_options))%list.
+         (["A comma-separated list of debug options to turn on.  Use - to disable an option.  Default debug options: " ++ (if default_debug =? "" then "(none)" else default_debug)]%string ++ describe_flag_options "debug" "Turn all debugging on" special_debug_options known_debug_options_with_spec))%list.
 
   Definition collapse_list_default {A} (default : A) (ls : list A)
     := List.hd default (List.rev ls).
@@ -645,6 +679,8 @@ Module ForExtraction.
         ; asm_input_first_spec
         ; asm_reg_rtl_spec
         ; asm_error_on_unique_names_mismatch_spec
+        ; asm_rewriting_pipeline_spec
+        ; asm_rewriting_passes_spec
         ; doc_text_before_function_name_spec
         ; doc_text_before_type_name_spec
         ; doc_newline_before_package_declaration_spec
@@ -700,6 +736,8 @@ Module ForExtraction.
              , asm_input_firstv
              , asm_reg_rtlv
              , asm_error_on_unique_names_mismatchv
+             , asm_rewriting_pipelinev
+             , asm_rewriting_passesv
              , doc_text_before_function_namev
              , doc_text_before_type_namev
              , doc_newline_before_package_declarationv
@@ -717,6 +755,11 @@ Module ForExtraction.
                              | nil => None
                              | ls => Some (List.concat ls)
                              end in
+       let to_rewriting_pipeline_list ls
+         := match List.map (@snd _ _) (List.map (@snd _ _) ls) with
+            | nil => default_rewrite_pass_order
+            | ls => List.concat ls
+            end in
        let to_assembly_callee_saved_registers_opt ls := choose_one_of_many (List.map (fun '(_, (_, v)) => v) ls) in
        let to_assembly_callee_saved_registers_default ls default := Option.value (to_assembly_callee_saved_registers_opt ls) default in
        let to_N_opt ls := choose_one_of_many (to_N_list ls) in
@@ -728,6 +771,8 @@ Module ForExtraction.
            := option_map (fun d => {| capitalization_convention_data := d ; only_lower_first_letters := true |})
                          (to_capitalization_data_opt ls) in
        let '(_, unknown_debug_options, (debug_on_successv, debug_rewritingv)) := parse_flag_opts special_debug_options known_debug_options (default_debug :: List.map snd debugv) in
+       let default_asm_rewriting_pass_status := true (* default status of non-explicit passes; it doesn't actually matter because we're going to control the default with default_asm_rewriting_passes *) in
+       let '(unknown_asm_rewriting_passes, asm_rewriting_pass_filterv) := parse_flag_opts_to_bool_filter default_asm_rewriting_pass_status special_asm_rewriting_pass_flags known_asm_rewriting_pass_flags (default_asm_rewriting_passes :: List.map snd asm_rewriting_passesv) in
        let res
            := ({|
                   hint_file_names := to_string_list hint_file_namesv
@@ -775,6 +820,10 @@ Module ForExtraction.
                       ; assembly_output_first_ := negb (to_bool asm_input_firstv)
                       ; assembly_argument_registers_left_to_right_ := negb (to_bool asm_reg_rtlv)
                       |}
+                    ; symbolic_options_ :=
+                      {| asm_rewriting_pipeline := to_rewriting_pipeline_list asm_rewriting_pipelinev
+                      ; asm_rewriting_pass_filter := fun p => asm_rewriting_pass_filterv (show_rewrite_pass p)
+                      |}
                     |}
                   ; ignore_unique_asm_names := negb (to_bool asm_error_on_unique_names_mismatchv)
                   ; error_on_unused_assembly_functions := negb (to_bool no_error_on_unused_asm_functionsv)
@@ -790,12 +839,23 @@ Module ForExtraction.
                   ; debug_on_success := flag_to_bool debug_on_successv
                |},
                snd (List.hd lang_default langv)) in
-       match langv, unknown_debug_options with
-       | ([] | [_]), [] => inl res
-       | _ :: _ :: _, _ => inr ["Only one language specification with --lang is allowed; multiple languages were requested: " ++ String.concat ", " (List.map (@fst _ _) langv)]
-       | _, _ :: _
-         => inr ["Unrecognized debug option" ++ (if (1 <? List.length unknown_debug_options)%nat then "s" else "") ++ ": " ++ String.concat ", " (List.map fst unknown_debug_options)]
-       end.
+       let unknown_errs descr sing_suffix plural_suffix arg unknown_opts
+         := match unknown_opts with
+            | [] => []
+            | _ :: _ => ["Unrecognized " ++ descr ++ (if (1 <? List.length unknown_opts)%nat then plural_suffix else sing_suffix) ++ " (from " ++ arg ++ "): " ++ String.concat ", " (List.map fst unknown_opts)]
+            end in
+       let lang_errs
+         := match langv with
+            | [] | [_] => []
+            | _ :: _ :: _ => ["Only one language specification with --lang is allowed; multiple languages were requested: " ++ String.concat ", " (List.map (@fst _ _) langv)]
+            end in
+       match lang_errs
+               ++ unknown_errs "debug flag" "" "s" "--debug" unknown_debug_options
+               ++ unknown_errs "assembly rewriting pass" "" "es" "--asm-rewriting-passes" unknown_asm_rewriting_passes
+       with
+       | [] => inl res
+       | errs => inr errs
+       end%list.
 
   (** We define a class for the various operations that are specific to a pipeline *)
   Class PipelineAPI :=

@@ -87,9 +87,31 @@ Definition post_parse_flag_opts (known_options : list string) (status : full_fla
      let unknown_options := List.filter (fun '(opt, _) => negb (StringSet.mem opt known_options_set)) (StringMap.elements status) in
      (all_status, unknown_options, format_flag_opts known_options status).
 
+Definition post_parse_flag_opts_to_filter (known_options : list string) (status : full_flag_status (* all status *) * StringMap.t flag_status)
+  : full_flag_status (* all status *) * list (string * flag_status) (* unknown options *) * (string -> full_flag_status)
+  := let '(all_status, status) := status in
+     let known_options_set := List.fold_right StringSet.add StringSet.empty known_options in
+     let unknown_options := List.filter (fun '(opt, _) => negb (StringSet.mem opt known_options_set)) (StringMap.elements status) in
+     (all_status, unknown_options, fun s => match StringMap.find s status with
+                                            | Some s => explicit s
+                                            | None => elided
+                                            end).
+
 Definition parse_flag_opts (spec : list (string * flag_option_kind)) (known_options : list string) (args : list string)
   : full_flag_status (* all status *) * list (string * flag_status) (* unknown options *) * Tuple.tuple full_flag_status (List.length known_options)
   := let res := preparse_flag_opts spec args in
      let res := aggregate_flag_opts res in
      let res := post_parse_flag_opts known_options res in
      res.
+
+Definition parse_flag_opts_to_filter (spec : list (string * flag_option_kind)) (known_options : list string) (args : list string)
+  : full_flag_status (* all status *) * list (string * flag_status) (* unknown options *) * (string -> full_flag_status)
+  := let res := preparse_flag_opts spec args in
+     let res := aggregate_flag_opts res in
+     let res := post_parse_flag_opts_to_filter known_options res in
+     res.
+
+Definition parse_flag_opts_to_bool_filter (default : bool) (spec : list (string * flag_option_kind)) (known_options : list string) (args : list string)
+  : list (string * flag_status) (* unknown options *) * (string -> bool)
+  := let '(all_status, unknown, filter) := parse_flag_opts_to_filter spec known_options args in
+     (unknown, fun s => bool_of_full_flag_status (filter s) default).

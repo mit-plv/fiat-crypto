@@ -74,10 +74,14 @@ Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.ZUtil.Lxor.
 Require Import Crypto.Util.ZUtil.Tactics.PeelLe.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Import Crypto.Util.Listable.
+Require Import Crypto.Util.Strings.Parse.Common.
 Require Import Crypto.Util.Tactics.WarnIfGoalsRemain.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import coqutil.Z.bitblast.
-Require Import Coq.Strings.String Crypto.Util.Strings.Show.
+Require Import Coq.Strings.String.
+Require Import Crypto.Util.Strings.Show.
+Require Import Crypto.Util.Strings.Show.Enum.
 Require Import Crypto.Assembly.Syntax.
 Import ListNotations.
 Definition idx := N.
@@ -316,6 +320,130 @@ Module FMapOp.
 End FMapOp.
 
 Module OpMap := FMapOp.OpMap.
+
+Module Export RewritePass.
+  Variant rewrite_pass :=
+    | addbyte_small
+    | addcarry_bit
+    | addcarry_small
+    | addoverflow_bit
+    | addoverflow_small
+    | combine_consts
+    | constprop
+    | consts_commutative
+    | drop_identity
+    | flatten_associative
+    | flatten_bounded_associative
+    | fold_consts_to_and
+    | set_slice0_small
+    | set_slice_set_slice
+    | shift_to_mul
+    | slice0
+    | slice01_addcarryZ
+    | slice01_subborrowZ
+    | slice_set_slice
+    | truncate_small
+    | unary_truncate
+    | xor_same
+  .
+  Definition rewrite_pass_beq (x y : rewrite_pass) : bool := if rewrite_pass_eq_dec x y then true else false.
+
+  Derive rewrite_pass_Listable SuchThat (@FinitelyListable rewrite_pass rewrite_pass_Listable) As rewrite_pass_FinitelyListable.
+  Proof. prove_ListableDerive. Qed.
+  Global Existing Instances rewrite_pass_Listable rewrite_pass_FinitelyListable.
+
+  Global Instance show_rewrite_pass : Show rewrite_pass.
+  Proof. prove_Show_enum (). Defined.
+  Global Instance show_lvl_rewrite_pass : ShowLevel rewrite_pass := show_rewrite_pass.
+
+  Definition parse_rewrite_pass_list : list (string * rewrite_pass)
+    := Eval vm_compute in
+      List.map
+        (fun r => (show r, r))
+        (list_all rewrite_pass).
+
+  Definition parse_rewrite_pass : ParserAction rewrite_pass
+    := parse_strs parse_rewrite_pass_list.
+
+  Definition default_rewrite_pass_order : list rewrite_pass
+    := [constprop
+        ;slice0
+        ;slice01_addcarryZ
+        ;slice01_subborrowZ
+        ;set_slice_set_slice
+        ;slice_set_slice
+        ;set_slice0_small
+        ;shift_to_mul
+        ;flatten_associative
+        ;consts_commutative
+        ;fold_consts_to_and
+        ;drop_identity
+        ;flatten_bounded_associative
+        ;unary_truncate
+        ;truncate_small
+        ;combine_consts
+        ;addoverflow_bit
+        ;addcarry_bit
+        ;addcarry_small
+        ;addoverflow_small
+        ;addbyte_small
+        ;xor_same
+    ].
+End RewritePass.
+
+Module Export Options.
+  (* Holds the order and multiplicity of passes *)
+  Class rewriting_pipeline_opt := rewriting_pipeline : list rewrite_pass.
+  (* Holds the passes that are enabled *)
+  Class rewriting_pass_filter_opt := rewriting_pass_filter : rewrite_pass -> bool.
+  (* Holds the actual list of passes that are used; we make this a
+     separate option so that it is computed once and for all rather
+     than every time, because it is (currently) quadratic to compute
+     in the number of passes *)
+  Class rewriting_passes_opt := rewriting_passes : list rewrite_pass.
+  Definition default_rewriting_passes
+             {rewriting_pipeline : rewriting_pipeline_opt}
+             {rewriting_pass_filter : rewriting_pass_filter_opt}
+    : rewriting_passes_opt
+    := List.filter rewriting_pass_filter rewriting_pipeline.
+
+  Class symbolic_options_opt :=
+    { asm_rewriting_pipeline : rewriting_pipeline_opt
+    ; asm_rewriting_pass_filter : rewriting_pass_filter_opt
+    }.
+
+  (* This holds the list of computed options, which are passed around between methods *)
+  Class symbolic_options_computed_opt :=
+    { asm_rewriting_passes : rewriting_passes_opt
+    }.
+
+  (* N.B. The default rewriting pass filter should not be changed here, but instead changed in CLI.v where it is derived from a default string *)
+  Definition default_symbolic_options : symbolic_options_opt
+    := {| asm_rewriting_pipeline := default_rewrite_pass_order
+       ; asm_rewriting_pass_filter := fun _ => true
+       |}.
+End Options.
+Module Export Hints.
+  Global Existing Instance default_rewriting_passes.
+  Global Existing Instances
+         Build_symbolic_options_opt
+         Build_symbolic_options_computed_opt
+         asm_rewriting_pipeline
+         asm_rewriting_pass_filter
+         asm_rewriting_passes
+  .
+  #[global]
+   Hint Cut [
+      ( _ * )
+        (asm_rewriting_pipeline
+        | asm_rewriting_pass_filter
+        | asm_rewriting_passes
+        ) ( _ * )
+        (Build_symbolic_options_opt
+        | Build_symbolic_options_computed_opt
+        )
+    ] : typeclass_instances.
+End Hints.
 
 Definition associative o := match o with add _|addZ|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ=> true | _ => false end.
 Definition commutative o := match o with add _|addZ|addcarry _|addoverflow _|mul _|mulZ|or _|and _|xor _|andZ|orZ|xorZ => true | _ => false end.
@@ -1978,7 +2106,9 @@ Definition isCst (e : expr) :=
 
 Module Rewrite.
 Class Ok r := rwok : forall G d e v, eval G d e v -> eval G d (r e) v.
-
+Class description_of (r : expr -> expr) := describe : string.
+#[global] Bind Scope string_scope with description_of.
+#[global] Typeclasses Opaque description_of.
 Ltac resolve_match_using_hyp :=
   match goal with |- context[match ?x with _ => _ end] =>
   match goal with H : x = ?v |- _ =>
@@ -2048,6 +2178,8 @@ Definition slice0 :=
     ExprApp (slice 0 s, [(ExprApp ((addZ|mulZ|negZ|shlZ|shrZ|andZ|orZ|xorZ) as o, args))]) =>
         ExprApp ((match o with addZ=>add s|mulZ=>mul s|negZ=>neg s|shlZ=>shl s|shrZ => shr s|andZ => and s| orZ => or s|xorZ => xor s |_=>old 0%N 999999%N end), args)
       | _ => e end.
+#[local] Instance describe_slice0 : description_of Rewrite.slice0
+  := "Merges (slice 0 s) into addZ,mulZ,negZ,shlZ,shrZ,andZ,orZ,xorZ".
 Global Instance slice0_ok : Ok slice0. Proof using Type. t. Qed.
 
 Definition slice01_addcarryZ :=
@@ -2055,6 +2187,8 @@ Definition slice01_addcarryZ :=
     ExprApp (slice 0 1, [(ExprApp (addcarryZ s, args))]) =>
         ExprApp (addcarry s, args)
       | _ => e end.
+#[local] Instance describe_slice01_addcarryZ : description_of Rewrite.slice01_addcarryZ
+  := "Merges (slice 0 1) into addcarryZ".
 Global Instance slice01_addcarryZ_ok : Ok slice01_addcarryZ.
 Proof using Type. t; rewrite ?Z.shiftr_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2; trivial; Lia.lia. Qed.
 
@@ -2063,6 +2197,8 @@ Definition slice01_subborrowZ :=
     ExprApp (slice 0 1, [(ExprApp (subborrowZ s, args))]) =>
         ExprApp (subborrow s, args)
       | _ => e end.
+#[local] Instance describe_slice01_subborrowZ : description_of Rewrite.slice01_subborrowZ
+  := "Merges (slice 0 1) into subborrowZ".
 Global Instance slice01_subborrowZ_ok : Ok slice01_subborrowZ.
 Proof using Type. t; rewrite ?Z.shiftr_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2; trivial; Lia.lia. Qed.
 
@@ -2070,6 +2206,8 @@ Definition slice_set_slice :=
   fun e => match e with
     ExprApp (slice 0 s1, [ExprApp (set_slice 0 s2, [_; e'])]) =>
       if N.leb s1 s2 then ExprApp (slice 0 s1, [e']) else e | _ => e end.
+#[local] Instance describe_slice_set_slice : description_of Rewrite.slice_set_slice
+  := "Simplifies slice applied to set_slice".
 Global Instance slice_set_slice_ok : Ok slice_set_slice.
 Proof using Type. t. f_equal. Z.bitblast. Qed.
 
@@ -2077,6 +2215,8 @@ Definition set_slice_set_slice :=
   fun e => match e with
     ExprApp (set_slice lo1 s1, [ExprApp (set_slice lo2 s2, [x; e']); y]) =>
       if andb (N.eqb lo1 lo2) (N.leb s2 s1) then ExprApp (set_slice lo1 s1, [x; y]) else e | _ => e end.
+#[local] Instance describe_set_slice_set_slice : description_of Rewrite.set_slice_set_slice
+  := "Simplifies set_slice applied to set_slice".
 Global Instance set_slice_set_slice_ok : Ok set_slice_set_slice.
 Proof using Type. t. f_equal. Z.bitblast. Qed.
 
@@ -2086,6 +2226,8 @@ Definition set_slice0_small :=
       match bound_expr x, bound_expr y with Some a, Some b =>
       if Z.leb 0 (ZRange.lower a) && Z.leb 0 (ZRange.lower b) && Z.leb (ZRange.upper a) (Z.ones (Z.of_N s)) && Z.leb (ZRange.upper b) (Z.ones (Z.of_N s)) then y
       else e | _, _ => e end | _ => e end%bool.
+#[local] Instance describe_set_slice0_small : description_of Rewrite.set_slice0_small
+  := "Simplifies set_slice when the slice being set fully overwrites the original".
 Global Instance set_slice0_small_ok : Ok set_slice0_small.
 Proof using Type.
   t.
@@ -2107,6 +2249,8 @@ Definition truncate_small :=
       if Z.leb 0 (ZRange.lower b) && Z.leb (ZRange.upper b) (Z.ones (Z.of_N s))
       then e'
       else e | _ => e end | _ => e end.
+#[local] Instance describe_truncate_small : description_of Rewrite.truncate_small
+  := "Simplifies slice when it's a no-op".
 Global Instance truncate_small_ok : Ok truncate_small. Proof using Type. t; []. cbn in *; eapply Z.land_ones_low_alt_ones; eauto. firstorder; Lia.lia. Qed.
 
 Definition addcarry_bit :=
@@ -2118,6 +2262,8 @@ Definition addcarry_bit :=
       | Some 0, Some 0 => ExprApp (const 0, nil)
       | _, _ => e
       end else e | _ => e end%Z%bool.
+#[local] Instance describe_addcarry_bit : description_of Rewrite.addcarry_bit
+  := "Simplifies (addcarry s, [const a; b]) when b is known to be a single bit".
 Global Instance addcarry_bit_ok : Ok addcarry_bit.
 Proof using Type.
   repeat step;
@@ -2136,6 +2282,8 @@ Definition addoverflow_bit :=
       | Some 0, Some 0 => ExprApp (const 0, nil)
       | _, _ => e
       end else e | _ => e end%Z%bool.
+#[local] Instance describe_addoverflow_bit : description_of Rewrite.addoverflow_bit
+  := "Simplifies (addoverflow s, [const a; b]) when b is known to be a single bit".
 Global Instance addoverflow_bit_ok : Ok addoverflow_bit.
 Proof using Type.
   repeat step;
@@ -2153,6 +2301,8 @@ Definition addbyte_small :=
           if Z.leb 0 (List.fold_right Z.add 0%Z (List.map lower bounds)) && Z.leb (List.fold_right Z.add 0%Z (List.map upper bounds)) (Z.ones (Z.of_N s))
           then ExprApp (add 64%N, args)
           else e | _ => e end | _ =>  e end.
+#[local] Instance describe_addbyte_small : description_of Rewrite.addbyte_small
+  := "Replaces (add 8, args) with (add 64, args) when doing so doesn't change semantics".
 Global Instance addbyte_small_ok : Ok addbyte_small.
 Proof using Type.
   t; f_equal.
@@ -2170,6 +2320,8 @@ Definition addcarry_small :=
           if Z.leb 0 (List.fold_right Z.add 0%Z (List.map lower bounds)) && Z.leb (List.fold_right Z.add 0%Z (List.map upper bounds)) (Z.ones (Z.of_N s))
           then (ExprApp (const 0, nil))
           else e | _ => e end | _ =>  e end.
+#[local] Instance describe_addcarry_small : description_of Rewrite.addcarry_small
+  := "Replaces (addcarry _, args) with 0 when bounds analysis can prove there's no carry".
 Global Instance addcarry_small_ok : Ok addcarry_small.
 Proof using Type.
   t; f_equal.
@@ -2197,6 +2349,8 @@ Definition addoverflow_small :=
           if List.forallb (Z.leb 0) (List.map lower bounds) && Z.leb (List.fold_right Z.add 0%Z (List.map upper bounds)) (Z.ones (Z.of_N s-1))
           then (ExprApp (const 0, nil))
           else e | _ => e end | _ =>  e end.
+#[local] Instance describe_addoverflow_small : description_of Rewrite.addoverflow_small
+  := "Replaces (addoverflow _, args) when there are at most 3 args and when bounds analysis can prove there's no overflow".
 Global Instance addoverflow_small_ok : Ok addoverflow_small.
 Proof using Type.
   t; cbv [Option.List.lift Crypto.Util.Option.bind fold_right map List.forallb] in *;
@@ -2214,6 +2368,8 @@ Definition constprop :=
   fun e => match interp0_expr e with
            | Some v => ExprApp (const v, nil)
            | _ => e end.
+#[local] Instance describe_constprop : description_of Rewrite.constprop
+  := "Performs constant propagation, evaluating expressions that are known to be constant".
 Global Instance constprop_ok : Ok constprop.
 Proof using Type. t. f_equal; eauto using eval_eval. Qed.
 
@@ -2227,7 +2383,8 @@ Definition unary_truncate :=
     | Some (Zpos p)
       => ExprApp (slice 0%N (Npos p), [x])
     | _ => e end | _ => e end.
-
+#[local] Instance describe_unary_truncate : description_of Rewrite.unary_truncate
+  := "Some operations are equivalent to truncation when applied to only one argument; this pass canonicalizes such expressions".
 Global Instance unary_truncate_ok : Ok unary_truncate.
 Proof using Type.
   t.
@@ -2491,6 +2648,8 @@ Definition flatten_associative :=
         | ExprApp (o', args') => if op_beq o o' then args' else [e']
         | _ => [e'] end) args)
     else e | _ => e end.
+#[local] Instance describe_flatten_associative : description_of Rewrite.flatten_associative
+  := "Flattens nested associative operations, such as turning (add [x; add [y; z]]) into (add [x; y; z])".
 Global Instance flatten_associative_ok : Ok flatten_associative.
 Proof using Type.
   repeat step.
@@ -2522,6 +2681,8 @@ Definition flatten_bounded_associative :=
         | Some (drop_if_bounded bound o'') => match bound_expr (ExprApp (o'', args')) with
         | Some ubound => if is_tighter_than_bool ubound bound then args' else [e']
                                               | _ => [e'] end | _ => [e'] end | _ => [e'] end) args) | _ => e end.
+#[local] Instance describe_flatten_bounded_associative : description_of Rewrite.flatten_bounded_associative
+  := "Flattens some nested operations such as add inside addcarry".
 
 Lemma fold_right_add_cps_id init ls
   : fold_right Z.add init ls = fold_right Z.add 0 ls + init.
@@ -2601,6 +2762,8 @@ Definition consts_commutative :=
          end
     else ExprApp (o, fst csts_exprs ++ snd csts_exprs)
     else e | _ => e end.
+#[local] Instance describe_consts_commutative : description_of Rewrite.consts_commutative
+  := "Moves all constants to the beginning of commutative n-ary operation lists, additionally combining the constants into a single node when the operation is associative".
 
 Global Instance consts_commutative_ok : Ok consts_commutative.
 Proof using Type.
@@ -2655,6 +2818,8 @@ Definition drop_identity :=
         let args := List.filter (neqconst i) args in
         ExprApp (o, arg :: args)
     | _, _ => e end end | _ => e end.
+#[local] Instance describe_drop_identity : description_of Rewrite.drop_identity
+  := "Drops constant identity subexpressions, such as 0s in add and 1s in mul".
 
 Lemma filter_neqconst_helper G d id
       l args
@@ -2752,6 +2917,8 @@ Definition fold_consts_to_and :=
                           else ExprApp (and (Z.to_N v_sz), ExprApp (const v', nil) :: args)
            | _ => e
            end.
+#[local] Instance describe_fold_consts_to_and : description_of Rewrite.fold_consts_to_and
+  := "Truncates constant arguments to bitwise and, dropping them if they provably do not change the result".
 
 Global Instance fold_consts_to_and_Ok : Ok fold_consts_to_and.
 Proof using Type.
@@ -2812,6 +2979,8 @@ Qed.
 Definition xor_same :=
   fun e => match e with ExprApp (xor _,[x;y]) =>
     if expr_beq x y then ExprApp (const 0, nil) else e | _ => e end.
+#[local] Instance describe_xor_same : description_of Rewrite.xor_same
+  := "Replaces xor x x with 0".
 Global Instance xor_same_ok : Ok xor_same.
 Proof using Type.
   t; cbn [fold_right]. rewrite Z.lxor_0_r, Z.lxor_nilpotent; trivial.
@@ -2831,6 +3000,8 @@ Definition shift_to_mul :=
       else if Z.ltb 0 v
       then ExprApp (o', [e'; ExprApp (const (2^v)%Z, [])])
       else e | _ => e end.
+#[local] Instance describe_shift_to_mul : description_of Rewrite.shift_to_mul
+  := "Rewrites shl to an equivalent multiplication".
 Global Instance shift_to_mul_ok : Ok shift_to_mul.
 Proof. t; cbn in *; rewrite ?Z.shiftl_mul_pow2, ?Z.land_0_r by lia; repeat (lia + f_equal). Qed.
 
@@ -2916,6 +3087,8 @@ Definition cleanup_combine_consts : expr -> expr :=
                    | _ => e end.
 
 Definition combine_consts : expr -> expr := fun e => cleanup_combine_consts (combine_consts_pre e).
+#[local] Instance describe_combine_consts : description_of Rewrite.combine_consts
+  := "Rewrites expressions like (x + x * 5) into (x * 6)".
 
 Lemma split_consts_correct o i ls G d argsv
       (H : Forall2 (eval G d) ls argsv)
@@ -3323,47 +3496,62 @@ Qed.
 Global Instance combine_consts_Ok : Ok combine_consts.
 Proof. repeat step; apply cleanup_combine_consts_Ok, combine_consts_pre_Ok; assumption. Qed.
 
-Definition expr : expr -> expr :=
-  List.fold_left (fun e f => f e)
-  [constprop
-  ;slice0
-  ;slice01_addcarryZ
-  ;slice01_subborrowZ
-  ;set_slice_set_slice
-  ;slice_set_slice
-  ;set_slice0_small
-  ;shift_to_mul
-  ;flatten_associative
-  ;consts_commutative
-  ;fold_consts_to_and
-  ;drop_identity
-  ;flatten_bounded_associative
-  ;unary_truncate
-  ;truncate_small
-  ;combine_consts
-  ;addoverflow_bit
-  ;addcarry_bit
-  ;addcarry_small
-  ;addoverflow_small
-  ;addbyte_small
-  ;xor_same
-  ].
+(* M-x query-replace-regex RET \(| RewritePass\.\)\([^ ]*\) => _ RET \1\2 => \2 *)
+Definition named_pass (name : RewritePass.rewrite_pass) : expr -> expr
+  := match name with
+     | RewritePass.addbyte_small => addbyte_small
+     | RewritePass.addcarry_bit => addcarry_bit
+     | RewritePass.addcarry_small => addcarry_small
+     | RewritePass.addoverflow_bit => addoverflow_bit
+     | RewritePass.addoverflow_small => addoverflow_small
+     | RewritePass.combine_consts => combine_consts
+     | RewritePass.constprop => constprop
+     | RewritePass.consts_commutative => consts_commutative
+     | RewritePass.drop_identity => drop_identity
+     | RewritePass.flatten_associative => flatten_associative
+     | RewritePass.flatten_bounded_associative => flatten_bounded_associative
+     | RewritePass.fold_consts_to_and => fold_consts_to_and
+     | RewritePass.set_slice0_small => set_slice0_small
+     | RewritePass.set_slice_set_slice => set_slice_set_slice
+     | RewritePass.shift_to_mul => shift_to_mul
+     | RewritePass.slice0 => slice0
+     | RewritePass.slice01_addcarryZ => slice01_addcarryZ
+     | RewritePass.slice01_subborrowZ => slice01_subborrowZ
+     | RewritePass.slice_set_slice => slice_set_slice
+     | RewritePass.truncate_small => truncate_small
+     | RewritePass.unary_truncate => unary_truncate
+     | RewritePass.xor_same => xor_same
+     end.
 
-Lemma eval_expr c d e v : eval c d e v -> eval c d (expr e) v.
-Proof using Type.
-  intros H; cbv [expr fold_left].
-  repeat lazymatch goal with
-  | H : eval ?c ?d ?e _ |- context[?r ?e] =>
-    let Hr := fresh in epose proof ((_:Ok r) _ _ _ _ H) as Hr; clear H
-  end.
-  eassumption.
+Global Instance named_pass_Ok {n} : Ok (named_pass n).
+Proof. destruct n; cbv [named_pass]; exact _. Qed.
+
+Global Instance describe_pass n : description_of (named_pass n).
+Proof.
+  destruct n; cbv [named_pass]; try exact _.
+  all: fail_if_goals_remain ().
+Defined.
+
+Definition expr {rewriting_passes : rewriting_passes_opt} : expr -> expr :=
+  List.fold_left (fun e f => f e)
+                 (List.map named_pass rewriting_passes).
+
+Local Instance expr_Ok {rewriting_passes : rewriting_passes_opt} : Ok expr.
+Proof.
+  pose proof (@named_pass_Ok).
+  cbv [expr]; induction rewriting_passes; cbn [map fold_left]; cbv [Ok] in *; eauto.
+Qed.
+
+Lemma eval_expr {rewriting_passes : rewriting_passes_opt} c d e v : eval c d e v -> eval c d (expr e) v.
+Proof.
+  apply expr_Ok.
 Qed.
 End Rewrite.
 
-Definition simplify (dag : dag) (e : node idx) :=
+Definition simplify {opts : symbolic_options_computed_opt} (dag : dag) (e : node idx) :=
   Rewrite.expr (reveal_node_at_least dag 3 e).
 
-Lemma eval_simplify G d n v : eval_node G d n v -> eval G d (simplify d n) v.
+Lemma eval_simplify {opts : symbolic_options_computed_opt} G d n v : eval_node G d n v -> eval G d (simplify d n) v.
 Proof using Type. eauto using Rewrite.eval_expr, eval_node_reveal_node_at_least. Qed.
 
 Definition reg_state := Tuple.tuple (option idx) 16.
@@ -3612,7 +3800,7 @@ Definition Store64 (a v : idx) : M unit :=
 Definition Merge {descr : description} (e : expr) : M idx := fun s =>
   let i_dag := merge e s in
   Success (fst i_dag, update_dag_with s (fun _ => snd i_dag)).
-Definition App {descr : description} (n : node idx) : M idx :=
+Definition App {opts : symbolic_options_computed_opt} {descr : description} (n : node idx) : M idx :=
   fun s => Merge (simplify s n) s.
 Definition Reveal n (i : idx) : M expr :=
   fun s => Success (reveal s n i, s).
@@ -3623,11 +3811,11 @@ Definition RevealConst (i : idx) : M Z :=
   | _ => err (error.expected_const i x)
   end.
 
-Definition GetReg {descr:description} r : M idx :=
+Definition GetReg {opts : symbolic_options_computed_opt} {descr:description} r : M idx :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   v <- GetReg64 rn;
   App ((slice lo sz), [v]).
-Definition SetReg {descr:description} r (v : idx) : M unit :=
+Definition SetReg {opts : symbolic_options_computed_opt} {descr:description} r (v : idx) : M unit :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   if N.eqb sz 64
   then v <- App (slice 0 64, [v]);
@@ -3637,7 +3825,7 @@ Definition SetReg {descr:description} r (v : idx) : M unit :=
        SetReg64 rn v.
 
 Class AddressSize := address_size : OperationSize.
-Definition Address {descr:description} {sa : AddressSize} (a : MEM) : M idx :=
+Definition Address {opts : symbolic_options_computed_opt} {descr:description} {sa : AddressSize} (a : MEM) : M idx :=
   _ <- match a.(mem_base_label) with
        | None => ret tt
        | Some l => err (error.unsupported_label_in_memory l)
@@ -3656,21 +3844,21 @@ Definition Address {descr:description} {sa : AddressSize} (a : MEM) : M idx :=
   bi <- App (add sa, [base; index]);
   App (add sa, [bi; offset]).
 
-Definition Load {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
+Definition Load {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
   if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
   then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
   addr <- Address a;
   v <- Load64 addr;
   App ((slice 0 (Syntax.operand_size a s)), [v]).
 
-Definition Remove {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
+Definition Remove {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
   if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
   then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
   addr <- Address a;
   v <- Remove64 addr;
   App ((slice 0 (Syntax.operand_size a s)), [v]).
 
-Definition Store {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) v : M unit :=
+Definition Store {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) v : M unit :=
   if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
   then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
   addr <- Address a;
@@ -3680,7 +3868,7 @@ Definition Store {descr:description} {s : OperationSize} {sa : AddressSize} (a :
   Store64 addr v.
 
 (* note: this could totally just handle truncation of constants if semanics handled it *)
-Definition GetOperand {descr:description} {s : OperationSize} {sa : AddressSize} (o : ARG) : M idx :=
+Definition GetOperand {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (o : ARG) : M idx :=
   match o with
   | Syntax.const a => App (zconst s a, [])
   | mem a => Load a
@@ -3688,7 +3876,7 @@ Definition GetOperand {descr:description} {s : OperationSize} {sa : AddressSize}
   | label l => err (error.unsupported_label_argument l)
   end.
 
-Definition SetOperand {descr:description} {s : OperationSize} {sa : AddressSize} (o : ARG) (v : idx) : M unit :=
+Definition SetOperand {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (o : ARG) (v : idx) : M unit :=
   match o with
   | Syntax.const a => err (error.set_const a v)
   | mem a => Store a v
@@ -3712,7 +3900,7 @@ Example __testPreARG_boring : ARG -> list pre_expr := fun x : ARG => @cons pre_e
 Example __testPreARG : ARG -> list pre_expr := fun x : ARG => [x].
 *)
 
-Fixpoint Symeval {descr:description} {s : OperationSize} {sa : AddressSize} (e : pre_expr) : M idx :=
+Fixpoint Symeval {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (e : pre_expr) : M idx :=
   match e with
   | PreARG o => GetOperand o
   | PreFLG f => GetFlag f
@@ -3728,7 +3916,7 @@ Definition rcrcnt s cnt : Z :=
   Z.land cnt (Z.of_N s-1).
 
 Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
-Definition SymexNormalInstruction {descr:description} (instr : NormalInstruction) : M unit :=
+Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:description} (instr : NormalInstruction) : M unit :=
   let stack_addr_size : AddressSize := 64%N in
   let sa : AddressSize := 64%N in
   match Syntax.operation_size instr with Some s =>
@@ -3928,7 +4116,7 @@ Definition SymexNormalInstruction {descr:description} (instr : NormalInstruction
   | Some prefix => err (error.unimplemented_prefix instr) end
   | None => err (error.ambiguous_operation_size instr) end%N%x86symex.
 
-Definition SymexRawLine {descr:description} (rawline : RawLine) : M unit :=
+Definition SymexRawLine {opts : symbolic_options_computed_opt} {descr:description} (rawline : RawLine) : M unit :=
   match rawline with
   | EMPTY
   | LABEL _
@@ -3942,11 +4130,11 @@ Definition SymexRawLine {descr:description} (rawline : RawLine) : M unit :=
       => err (error.unsupported_line rawline)
   end.
 
-Definition SymexLine line :=
+Definition SymexLine {opts : symbolic_options_computed_opt} line :=
   let descr:description := Build_description (Parse.show_Line_with_line_number line) false in
   SymexRawLine line.(rawline).
 
-Fixpoint SymexLines (lines : Lines) : M unit
+Fixpoint SymexLines {opts : symbolic_options_computed_opt} (lines : Lines) : M unit
   := match lines with
      | [] => ret tt
      | line :: lines
