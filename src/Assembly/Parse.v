@@ -10,6 +10,7 @@ Require Import Crypto.Util.Strings.Parse.Common.
 Require Import Crypto.Util.Strings.ParseArithmetic.
 Require Import Crypto.Util.Strings.String.
 Require Import Crypto.Util.Strings.Show.
+Require Import Crypto.Util.Strings.Show.Enum.
 Require Import Crypto.Util.Listable.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.
@@ -25,166 +26,32 @@ Derive REG_Listable SuchThat (@FinitelyListable REG REG_Listable) As REG_Finitel
 Proof. prove_ListableDerive. Qed.
 Global Existing Instances REG_Listable REG_FinitelyListable.
 
-(* M-x query-replace-regex RET \([^ ]+\) => _ RET \1 => "\1" *)
-Global Instance show_REG : Show REG
-  := fun reg
-     => match reg with
-        | rax => "rax"
-        | rcx => "rcx"
-        | rdx => "rdx"
-        | rbx => "rbx"
-        | rsp => "rsp"
-        | rbp => "rbp"
-        | rsi => "rsi"
-        | rdi => "rdi"
-        | r8 => "r8"
-        | r9 => "r9"
-        | r10 => "r10"
-        | r11 => "r11"
-        | r12 => "r12"
-        | r13 => "r13"
-        | r14 => "r14"
-        | r15 => "r15"
-        | eax => "eax"
-        | ecx => "ecx"
-        | edx => "edx"
-        | ebx => "ebx"
-        | esp => "esp"
-        | ebp => "ebp"
-        | esi => "esi"
-        | edi => "edi"
-        | r8d => "r8d"
-        | r9d => "r9d"
-        | r10d => "r10d"
-        | r11d => "r11d"
-        | r12d => "r12d"
-        | r13d => "r13d"
-        | r14d => "r14d"
-        | r15d => "r15d"
-        | ax => "ax"
-        | cx => "cx"
-        | dx => "dx"
-        | bx => "bx"
-        | sp => "sp"
-        | bp => "bp"
-        | si => "si"
-        | di => "di"
-        | r8w => "r8w"
-        | r9w => "r9w"
-        | r10w => "r10w"
-        | r11w => "r11w"
-        | r12w => "r12w"
-        | r13w => "r13w"
-        | r14w => "r14w"
-        | r15w => "r15w"
-        | ah => "ah"
-        | al => "al"
-        | ch => "ch"
-        | cl => "cl"
-        | dh => "dh"
-        | dl => "dl"
-        | bh => "bh"
-        | bl => "bl"
-        | spl => "spl"
-        | bpl => "bpl"
-        | sil => "sil"
-        | dil => "dil"
-        | r8b => "r8b"
-        | r9b => "r9b"
-        | r10b => "r10b"
-        | r11b => "r11b"
-        | r12b => "r12b"
-        | r13b => "r13b"
-        | r14b => "r14b"
-        | r15b => "r15b"
-        end.
+Global Instance show_REG : Show REG.
+Proof. prove_Show_enum (). Defined.
 Global Instance show_lvl_REG : ShowLevel REG := show_REG.
 
 Derive FLAG_Listable SuchThat (@FinitelyListable FLAG FLAG_Listable) As FLAG_FinitelyListable.
 Proof. prove_ListableDerive. Qed.
 Global Existing Instances FLAG_Listable FLAG_FinitelyListable.
 
-(* M-x query-replace-regex RET \([^ ]+\) => _ RET \1 => "\1" *)
-Global Instance show_FLAG : Show FLAG
-  := fun flag
-     => match flag with
-        | CF => "CF"
-        | PF => "PF"
-        | AF => "AF"
-        | ZF => "ZF"
-        | SF => "SF"
-        | OF => "OF"
-        end.
+Global Instance show_FLAG : Show FLAG.
+Proof. prove_Show_enum (). Defined.
 Global Instance show_lvl_FLAG : ShowLevel FLAG := show_FLAG.
 
 Derive OpCode_Listable SuchThat (@FinitelyListable OpCode OpCode_Listable) As OpCode_FinitelyListable.
 Proof. prove_ListableDerive. Qed.
 Global Existing Instances OpCode_Listable OpCode_FinitelyListable.
 
-(* M-x query-replace-regex RET \([^ ]+\) => _ RET \1 => "\1" *)
-Global Instance show_OpCode : Show OpCode
-  := fun opc
-     => match opc with
-        | adc => "adc"
-        | adcx => "adcx"
-        | add => "add"
-        | adox => "adox"
-        | and => "and"
-        | bzhi => "bzhi"
-        | call => "call"
-        | clc => "clc"
-        | cmovb => "cmovb"
-        | cmovc => "cmovc"
-        | cmovnz => "cmovnz"
-        | cmovo => "cmovo"
-        | cmp => "cmp"
-        | db => "db"
-        | dd => "dd"
-        | dec => "dec"
-        | dq => "dq"
-        | dw => "dw"
-        | imul => "imul"
-        | inc => "inc"
-        | je => "je"
-        | jmp => "jmp"
-        | lea => "lea"
-        | mov => "mov"
-        | movzx => "movzx"
-        | mul => "mul"
-        | mulx => "mulx"
-        | or => "or"
-        | pop => "pop"
-        | push => "push"
-        | rcr => "rcr"
-        | ret => "ret"
-        | sar => "sar"
-        | sbb => "sbb"
-        | setc => "setc"
-        | seto => "seto"
-        | shl => "shl"
-        | shlx => "shlx"
-        | shr => "shr"
-        | shrx => "shrx"
-        | shrd => "shrd"
-        | sub => "sub"
-        | test => "test"
-        | xchg => "xchg"
-        | xor => "xor"
-        end.
+Global Instance show_OpCode : Show OpCode.
+Proof. prove_Show_enum (). Defined.
 Global Instance show_lvl_OpCode : ShowLevel OpCode := show_OpCode.
 
 Derive OpPrefix_Listable SuchThat (@FinitelyListable OpPrefix OpPrefix_Listable) As OpPrefix_FinitelyListable.
 Proof. prove_ListableDerive. Qed.
 Global Existing Instances OpPrefix_Listable OpPrefix_FinitelyListable.
 
-(* M-x query-replace-regex RET \([^ ]+\) => _ RET \1 => "\1" *)
-Global Instance show_OpPrefix : Show OpPrefix
-  := fun opp
-     => match opp with
-        | rep => "rep"
-        | repz => "repz"
-        | repnz => "repnz"
-        end.
+Global Instance show_OpPrefix : Show OpPrefix.
+Proof. prove_Show_enum (). Defined.
 Global Instance show_lvl_OpPrefix : ShowLevel OpPrefix := show_OpPrefix.
 
 Definition parse_REG_list : list (string * REG)
@@ -209,15 +76,8 @@ Derive AccessSize_Listable SuchThat (@FinitelyListable AccessSize AccessSize_Lis
 Proof. prove_ListableDerive. Qed.
 Global Existing Instances AccessSize_Listable AccessSize_FinitelyListable.
 
-(* M-x query-replace-regex RET \([^ ]+\) => _ RET \1 => "\1" *)
-Global Instance show_AccessSize : Show AccessSize
-  := fun sz
-     => match sz with
-        | byte => "byte"
-        | word => "word"
-        | dword => "dword"
-        | qword => "qword"
-        end.
+Global Instance show_AccessSize : Show AccessSize.
+Proof. prove_Show_enum (). Defined.
 Global Instance show_lvl_AccessSize : ShowLevel AccessSize := show_AccessSize.
 
 Definition parse_AccessSize_list : list (string * AccessSize)
