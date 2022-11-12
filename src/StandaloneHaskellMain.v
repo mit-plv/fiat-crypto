@@ -130,6 +130,11 @@ Module SaturatedSolinas.
     := main_gen ForExtraction.SaturatedSolinas.PipelineMain.
 End SaturatedSolinas.
 
+Module SolinasReduction.
+  Definition main : IO_unit
+    := main_gen ForExtraction.SolinasReduction.PipelineMain.
+End SolinasReduction.
+
 Module BaseConversion.
   Definition main : IO_unit
     := main_gen ForExtraction.BaseConversion.PipelineMain.

@@ -3659,8 +3659,10 @@ Definition SymexNormalInstruction {descr:description} (instr : NormalInstruction
     SetOperand a vb
   | cmovc, [dst; src]
   | cmovb, [dst; src]
+  | cmovo, [dst; src]
     =>
-    v <- Symeval (selectznz@(CF, dst, src));
+    let flag := match instr.(Syntax.op) with cmovo => OF | _ => CF end in
+    v <- Symeval (selectznz@(flag, dst, src));
     SetOperand dst v
   | cmovnz, [dst; src] =>
     v <- Symeval (selectznz@(ZF, src, dst));
