@@ -556,7 +556,7 @@ Module ForExtraction.
       ; language_naming_conventions :> language_naming_conventions_opt
       (** Documentation options *)
       ; documentation_options :> documentation_options_opt
-      (** assembly convention options *)
+      (** assembly equivalence checker options *)
       ; equivalence_checker_options :> equivalence_checker_options_opt
       (** error if there are un-requested assembly functions *)
       ; error_on_unused_assembly_functions :> error_on_unused_assembly_functions_opt
