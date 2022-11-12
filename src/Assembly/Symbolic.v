@@ -12,6 +12,7 @@ Require Import Coq.Structures.Orders.
 Require Import Coq.FSets.FMapInterface.
 Require Import Coq.FSets.FMapPositive.
 Require Import Coq.FSets.FMapFacts.
+Require Crypto.Util.ZRange.
 Require Crypto.Util.Tuple.
 Require Import Util.OptionList.
 Require Import Crypto.Util.ErrorT.
@@ -324,6 +325,14 @@ Definition identity_after_0 o := match o with subborrow _|subborrowZ _ => Some 0
 Definition unary_truncate_size o := match o with add s|and s|or s|xor s|mul s => Some (Z.of_N s) | addZ|mulZ|andZ|orZ|xorZ => Some (-1)%Z | _ => None end.
 Definition op_always_interps o := match o with add _|addcarry _|addoverflow _|and _|or _|xor _|mul _|addZ|mulZ|andZ|orZ|xorZ|addcarryZ _ => true | _ => false end.
 Definition combines_to o := match o with add s => Some (mul s) | addZ => Some mulZ | _ => None end.
+(* the inner operation can be dropped when replacing it with another operation results in a bounded output *)
+Variant drop_kind := drop_always | drop_if_bounded (bound : ZRange.zrange) (rep_op : op).
+Definition bounds_for_drop_inner_associative o_outer o_inner :=
+  match o_outer with addcarryZ s|addcarry s(*|addoverflow s*) =>
+  match o_inner with
+  | addZ => Some drop_always
+  | add _ => (s' <- unary_truncate_size o_inner; Some (drop_if_bounded (ZRange.Build_zrange 0 (Z.ones s')) addZ))
+  | _ => None end | _ => None end%option.
 
 Definition node (A : Set) : Set := op * list A.
 Global Instance Show_node {A : Set} {show_A : Show A} : Show (node A) := show_prod.
@@ -2503,6 +2512,83 @@ Proof using Type.
     erewrite interp_op_associative_app; eauto. }
 Qed.
 
+Definition flatten_bounded_associative :=
+  fun e => match e with
+    ExprApp (o, args) =>
+    ExprApp (o, List.flat_map (fun e' =>
+        match e' with
+        | ExprApp (o', args') => match bounds_for_drop_inner_associative o o' with
+        | Some drop_always => args'
+        | Some (drop_if_bounded bound o'') => match bound_expr (ExprApp (o'', args')) with
+        | Some ubound => if is_tighter_than_bool ubound bound then args' else [e']
+                                              | _ => [e'] end | _ => [e'] end | _ => [e'] end) args) | _ => e end.
+
+Lemma fold_right_add_cps_id init ls
+  : fold_right Z.add init ls = fold_right Z.add 0 ls + init.
+Proof. induction ls; cbn; lia. Qed.
+
+Global Instance flatten_bounded_associative_ok : Ok flatten_bounded_associative.
+Proof using Type.
+  cbv [Ok flatten_bounded_associative].
+  intros G d e v He.
+  destruct He; try solve [ t ]; [].
+  lazymatch goal with
+  | [ H0 : Forall2 ?P ?args ?args', H1 : interp_op _ _ ?args' = _
+      |- eval _ _ (ExprApp (_, flat_map ?f args)) _ ]
+    => epose [] as preargs; epose [] as preargs';
+       assert (Hpre : Forall2 P preargs preargs') by constructor;
+       change (flat_map f args) with (preargs ++ flat_map f args); change args' with (preargs' ++ args') in H1;
+       clearbody preargs preargs';
+       revert preargs preargs' Hpre H1;
+       induction H0; cbn [flat_map]; intros *
+  end.
+  { rewrite !List.app_nil_r; intros; t. }
+  { rewrite app_cons_app_app, !app_assoc.
+    break_innermost_match; reflect_hyps.
+    all: try solve [ intro; apply IHForall2, Forall2_app; auto ].
+    all: [ > | ].
+    all: let H := match goal with H : bounds_for_drop_inner_associative _ _ = _ |- _ => H end in
+         cbv [bounds_for_drop_inner_associative Crypto.Util.Option.bind unary_truncate_size] in H.
+    all: repeat first [ progress inversion_option | break_innermost_match_hyps_step ].
+    all: match goal with
+         | [ H : _ = _ :> drop_kind |- _ ] => inversion H; clear H
+         end.
+    all: subst.
+    all: match goal with
+         | [ H : eval _ _ (ExprApp _) _ |- _ ] => inversion H; clear H
+         end; subst.
+    all: lazymatch goal with
+         | [ H : bound_expr _ = _ |- _ ]
+           => let H' := fresh in
+              pose proof H as H';
+              cbn [bound_expr] in H; break_innermost_match_hyps; inversion_option; subst;
+              (eapply eval_bound_expr_via_PHOAS in H';
+               [ | econstructor; [ eassumption | cbn [interp_op]; reflexivity ] ])
+         | _ => idtac
+         end.
+    all: reflect_hyps.
+    all: repeat step.
+    all: intros; eapply IHForall2; try apply Forall2_app; clear IHForall2.
+    all: lazymatch goal with
+         | [ |- Forall2 _ _ _ ] => eassumption
+         | _ => idtac
+         end.
+    all: cbn [interp_op Option.invert_Some op_to_Z_binop identity] in *; inversion_option; subst.
+    all: rewrite !fold_right_app.
+    all: cbn [fold_right].
+    all: repeat first [ match goal with
+                        | [ |- context[fold_right Z.add ?init ?ls] ]
+                          => lazymatch init with
+                             | 0 => fail
+                             | _ => rewrite (fold_right_add_cps_id init ls)
+                             end
+                        end
+                      | reflexivity ].
+    all: rewrite !Z.land_ones, ?Z.ones_equiv in * by lia.
+    all: Z.rewrite_mod_small.
+    all: try reflexivity. }
+Qed.
+
 Definition consts_commutative :=
   fun e => match e with
     ExprApp (o, args) =>
@@ -3251,6 +3337,7 @@ Definition expr : expr -> expr :=
   ;consts_commutative
   ;fold_consts_to_and
   ;drop_identity
+  ;flatten_bounded_associative
   ;unary_truncate
   ;truncate_small
   ;combine_consts
