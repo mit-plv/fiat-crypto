@@ -305,12 +305,14 @@ Lemma App_correct {opts : symbolic_options_computed_opt} {descr:description} n d
   : eval G d' (ExprRef i) v /\ gensym_dag_ok G d' /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof using Type.
   cbv [App] in *. inversion_ErrorT.
-  do 2
   match goal with
   | H : context [simplify ?d ?n] |- _ =>
-      unique pose proof (eval_simplify _ d n _ ltac:(eassumption))
+      unique pose proof (fun G => eval_simplify G d n)
+  end.
+  specialize_under_binders_by eassumption.
+  match goal with
   | H : context [merge ?e ?d] |- _ =>
-      case (eval_merge _ e _ d ltac:(eassumption) ltac:(eassumption)) as (?&?&?)
+      edestruct (fun G n => eval_merge G e n d) as (?&?&?); try eassumption
   end.
   inversion_prod; subst; eauto 9.
 Qed.
@@ -1573,8 +1575,8 @@ Proof.
   (* need to do this early to deal with conversion slowness *)
   repeat match goal with
          | [ H : context[simplify ?s ?n] |- _ ]
-           => unshelve epose proof (@eval_simplify _ _ s n _ _); shelve_unifiable;
-              [ solve [ repeat first [ eassumption | exactly_once econstructor ] ] | ];
+           => unshelve epose proof (@eval_simplify _ _ s n _ _ _); shelve_unifiable;
+              [ solve [ repeat first [ eassumption | exactly_once econstructor ] ] .. | ];
               generalize dependent (simplify s n); intros
          | [ H : context[merge ?e ?d] |- _ ]
            => pose proof (@eval_merge _ _ e _ d ltac:(eassumption) ltac:(eassumption));
@@ -1728,8 +1730,8 @@ Proof.
   (* need to do this early to deal with conversion slowness *)
   repeat match goal with
          | [ H : context[simplify ?s ?n] |- _ ]
-           => unshelve epose proof (@eval_simplify _ _ s n _ _); shelve_unifiable;
-              [ solve [ repeat first [ eassumption | exactly_once econstructor ] ] | ];
+           => unshelve epose proof (@eval_simplify _ _ s n _ _ _); shelve_unifiable;
+              [ solve [ repeat first [ eassumption | exactly_once econstructor ] ] .. | ];
               generalize dependent (simplify s n); intros
          | [ H : context[merge ?e ?d] |- _ ]
            => pose proof (@eval_merge _ _ e _ d ltac:(eassumption) ltac:(eassumption));
@@ -1906,8 +1908,8 @@ Proof.
   (* need to do this early to deal with conversion slowness *)
   repeat first [ match goal with
                  | [ H : context[simplify ?s ?n] |- _ ]
-                   => unshelve epose proof (@eval_simplify _ _ s n _ _); shelve_unifiable;
-                      [ solve [ repeat first [ eassumption | solve [ eauto ] | exactly_once econstructor ] ] | ];
+                   => unshelve epose proof (@eval_simplify _ _ s n _ _ _); shelve_unifiable;
+                      [ solve [ repeat first [ eassumption | solve [ eauto ] | exactly_once econstructor ] ] .. | ];
                       generalize dependent (simplify s n); intros
                  | [ H : context[merge ?e ?d] |- _ ]
                    => pose proof (@eval_merge _ _ e _ d ltac:(eassumption) ltac:(eassumption));
@@ -2078,8 +2080,8 @@ Proof.
                       | [ H : (tt, (?y, ?z)) = (tt, (?y', ?z')) |- _ ]
                         => is_var y; is_var z; is_var y'; is_var z'; inversion H; clear H
                       | [ H : context[simplify ?s ?n] |- _ ]
-                        => unshelve epose proof (@eval_simplify _ _ s n _ _); shelve_unifiable;
-                           [ solve [ repeat first [ eassumption | solve [ eauto ] | exactly_once econstructor ] ] | ];
+                        => unshelve epose proof (@eval_simplify _ _ s n _ _ _); shelve_unifiable;
+                           [ solve [ repeat first [ eassumption | solve [ eauto ] | exactly_once econstructor ] ] .. | ];
                            generalize dependent (simplify s n); intros
                       | [ H : context[merge ?e ?d] |- _ ]
                         => pose proof (@eval_merge _ _ e _ d ltac:(eassumption) ltac:(eassumption));

@@ -122,6 +122,8 @@ Definition R (ss : symbolic_state) (ms : machine_state) : Prop :=
   let (d, sr, sf, sm) := ss in
   gensym_dag_ok d /\ R_regs d sr mr /\ R_flags d sf mf /\ R_mem d sm mm.
 
+Lemma gensym_dag_ok_of_R ss ms : R ss ms -> gensym_dag_ok ss.
+Proof using Type. cbv [R]; break_innermost_match; intuition. Qed.
 
 Lemma R_flag_None_l d f : R_flag d None f.
 Proof using Type. inversion 1. Qed.
@@ -131,6 +133,7 @@ Proof using Type.
   case (H _ eq_refl) as (?&?&HX); inversion HX.
 Qed.
 
+Local Hint Resolve gensym_dag_ok_of_R : core.
 Local Hint Resolve R_flag_None_l : core.
 Local Hint Resolve R_flag_None_r : typeclass_instances.
 
@@ -347,6 +350,8 @@ Lemma unfold_bind {A B} ma amb s :
   @bind A B ma amb s = ltac:(let t := eval unfold bind, ErrorT.bind in (@bind A B ma amb s) in exact t).
 Proof using Type. exact eq_refl. Qed.
 
+Local Hint Resolve gensym_dag_ok_of_R : core.
+
 Ltac step_symex0 :=
   match goal with
   | H : (x <- ?v; ?k)%x86symex ?s = _ |- _  =>
@@ -487,7 +492,7 @@ Ltac step_GetReg :=
   match goal with
   | H : Symbolic.GetReg ?r ?s = Success (?v, ?s') |- _ =>
     let Hs' := fresh "H" s' in let Hlt := fresh "He" s' in let Hv := fresh "Hv" s' in
-    let t := open_constr:(fun A B => GetReg_R s _ A r v s' H) in
+    let t := open_constr:(fun A => GetReg_R s _ A r v s' H) in
     unshelve (edestruct t as (Hs'&Hlt&Hv); clear H); shelve_unifiable;
     [eassumption|..|clear H]
   end.
@@ -508,8 +513,6 @@ Proof using Type.
   all : push_Zmod; pull_Zmod.
   all : autorewrite with zsimplify_const.
   all : f_equal; lia.
-  (* step_symex leaves over useless evars :-( *)
-  Unshelve. all: try exact True.
 Qed.
 
 Ltac step_Address :=
