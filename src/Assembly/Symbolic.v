@@ -1009,6 +1009,23 @@ Section bound_node_via_PHOAS.
         b <- op_to_PHOAS_bounds o;
         b (List.map (fun idx 'tt => lookup_bounds idx) args))%option.
 
+  Lemma bound_node_idx_via_PHOAS_Forall2_ext lookup_bounds1 lookup_bounds2 n1 n2
+    : fst n1 = fst n2 -> Forall2 (fun i1 i2 => lookup_bounds1 i1 = lookup_bounds2 i2) (snd n1) (snd n2) -> bound_node_idx_via_PHOAS lookup_bounds1 n1 = bound_node_idx_via_PHOAS lookup_bounds2 n2.
+  Proof.
+    destruct n1 as [o1 a1], n2 as [o2 a2]; cbn [fst snd]; intro; subst.
+    cbv [bound_node_idx_via_PHOAS Crypto.Util.Option.bind]; break_innermost_match; try reflexivity.
+    intro H; apply f_equal.
+    induction H; cbn; f_equal; eauto.
+    match goal with H : _ |- _ => now rewrite H end.
+  Qed.
+
+  Lemma bound_node_idx_via_PHOAS_Forall_ext lookup_bounds1 lookup_bounds2 n
+    : Forall (fun i => lookup_bounds1 i = lookup_bounds2 i) (snd n) -> bound_node_idx_via_PHOAS lookup_bounds1 n = bound_node_idx_via_PHOAS lookup_bounds2 n.
+  Proof.
+    intro H; apply bound_node_idx_via_PHOAS_Forall2_ext; cbn; try reflexivity.
+    induction H; constructor; eauto.
+  Qed.
+
   Lemma interp_op_bound_node_idx_via_PHOAS lookup_bounds G o args argsZ bs v
         (H : bound_node_idx_via_PHOAS lookup_bounds (o, args) = Some bs)
         (Hargs : Forall (fun i => match G i, lookup_bounds i with
@@ -1036,13 +1053,35 @@ Definition eager_description := option (string * bool).
 Notation Build_description descr always_show := (Some (fun 'tt => descr, always_show)) (only parsing).
 Notation no_description := None (only parsing).
 
+(* all indices in the node must be already present in the dag *)
+Definition node_arg_ok (i : idx) (n : idx) := (n < i)%N.
+Definition node_args_ok (i : idx) (n : list idx) := Forall (node_arg_ok i) n.
 (* fresh symbols must have value <= their index, so that fresh symbols are truly fresh *)
-Definition node_ok (i : idx) (n : node idx) := forall w s args, n = (old w s, args) -> (s <= i)%N.
-Lemma new_node_ok n (pf : match n with (old _ _, _) => False | _ => True end) i : node_ok i n.
-Proof. repeat intro; subst; assumption. Qed.
+Definition node_ok (i : idx) (n : node idx) := (forall w s args, n = (old w s, args) -> (s <= i)%N) /\ node_args_ok i (snd n).
+Lemma new_node_ok n (pf : match n with (old _ _, _) => False | _ => True end) i (Hi : node_args_ok i (snd n)) : node_ok i n.
+Proof. split; repeat intro; subst; assumption. Qed.
 Existing Class node_ok.
+Existing Class node_arg_ok.
+Existing Class node_args_ok.
 #[global]
 Hint Extern 1 (node_ok ?i ?n) => exact (@new_node_ok n I i) : typeclass_instances.
+#[global] Instance node_args_ok_nil i : node_args_ok i nil.
+Proof. constructor. Qed.
+Lemma node_args_ok_cons i x xs : node_arg_ok i x -> node_args_ok i xs -> node_args_ok i (x :: xs).
+Proof. constructor; assumption. Qed.
+(* For @cons N and @cons idx *)
+#[global] Hint Extern 2 (node_args_ok ?i (@cons _ ?x ?xs)) => simple notypeclasses refine (@node_args_ok_cons i x xs) : typeclass_instances.
+Lemma relax_node_arg_ok i1 i2 n : (i1 < i2)%N -> node_arg_ok i1 n -> node_arg_ok i2 n.
+Proof. cbv [node_arg_ok idx] in *; lia. Qed.
+Lemma relax_node_args_ok i1 i2 n : (i1 < i2)%N -> node_args_ok i1 n -> node_args_ok i2 n.
+Proof. cbv [node_args_ok]; intro; apply Forall_impl; intro; apply relax_node_arg_ok; assumption. Qed.
+Lemma relax_node_ok i1 i2 n : (i1 < i2)%N -> node_ok i1 n -> node_ok i2 n.
+Proof.
+  cbv [node_ok]; intro H; pose proof (@relax_node_args_ok i1 i2 (snd n) H).
+  intuition (auto; subst).
+  specialize_under_binders_by reflexivity.
+  lia.
+Qed.
 Module Type DagDefinitions.
   Parameter t : Type.
   Parameter empty : t.
@@ -1056,10 +1095,16 @@ End DagDefinitions.
 Module DagExtraDefinitions (Import dag : DagDefinitions).
   Definition all_nodes_ok (d : t) : Prop
     := forall i r, lookup d i = Some r -> node_ok i r.
+  Definition bounds_ok (d : t) : Prop
+    := (forall i r, lookup d i = Some r -> lookup_bounds d i = bound_node_idx_via_PHOAS (lookup_bounds d) r)
+       /\ (forall i, lookup d i = None -> lookup_bounds d i = None).
+  (* We require that all ok nodes reference only other nodes in the dag; we can overapproximate this by requiring all indices <= size be present, which is tautological for assoc-list dags *)
   Definition ok (d : t) : Prop
   := size_ok d
+     /\ bounds_ok d
      /\ (forall i n, reverse_lookup d n = Some i <-> lookup d i = Some n)
-     /\ (forall i n, lookup d i = Some n -> (i < size d)%N).
+     /\ (forall i n, lookup d i = Some n -> (i < size d)%N)
+     /\ (forall i, lookup d i = None -> (size d <= i)%N).
 
   Definition gensym (s:OperationSize) (d : t) : node idx
     := (old s (size d), []).
@@ -1116,8 +1161,20 @@ Module Type DagProperties (Import dag : DagDefinitions) (Import dag' : DagExtraD
                                  | None => size d
                                  end.
 
+  Axiom lookup_bounds_merge_node
+    : forall {descr : description} (n : node idx) (d : t) i
+             {ok : ok d},
+      dag.lookup_bounds (snd (dag.merge_node n d)) i = match dag.lookup_bounds d i with
+                                                       | Some v => Some v
+                                                       | None
+                                                         => if (i =? size d)%N && Option.is_None (reverse_lookup d n)
+                                                            then bound_node_idx_via_PHOAS (lookup_bounds d) n
+                                                            else None
+                                                       end.
+
   Axiom lookup_empty : forall i, lookup empty i = None.
   Axiom reverse_lookup_empty : forall n, reverse_lookup empty n = None.
+  Axiom lookup_bounds_empty : forall i, lookup_bounds empty i = None.
   Axiom size_empty : size empty = 0%N.
   Axiom size_ok_empty : size_ok empty.
 
@@ -1145,6 +1202,52 @@ Module DagExtraProperties (Import dag : DagDefinitions) (Import dag' : DagExtraD
     lia.
   Qed.
 
+  Lemma lookup_error_size d {ok : ok d}
+    : forall i, lookup d i = None -> (size d <= i)%N.
+  Proof. apply ok. Qed.
+
+  Lemma lookup_bounds_ok (d : t) {ok : ok d}
+    : forall i r, dag.lookup d i = Some r -> dag.lookup_bounds d i = bound_node_idx_via_PHOAS (dag.lookup_bounds d) r.
+  Proof. apply ok. Qed.
+
+  Lemma lookup_bounds_lookup (d : t) {ok : ok d}
+    : forall i, dag.lookup_bounds d i = match dag.lookup d i with
+                                        | None => None
+                                        | Some r => bound_node_idx_via_PHOAS (dag.lookup_bounds d) r
+                                        end.
+  Proof.
+    intro i.
+    pose proof (lookup_bounds_ok d i).
+    pose proof (lookup_error_size d i).
+    pose proof (lookup_value_size d i).
+    destruct ok; cbv [bounds_ok] in *; destruct_head'_and.
+    destruct lookup_bounds eqn:?, lookup eqn:?.
+    all: specialize_under_binders_by reflexivity.
+    all: specialize_under_binders_by eassumption.
+    all: auto.
+    all: congruence.
+  Qed.
+
+  Lemma all_nodes_idx_present (d : t)
+        {ok : ok d}
+        {all_ok : all_nodes_ok d}
+    : forall i r, dag.lookup d i = Some r -> Forall (fun a => dag.lookup d a <> None) (snd r).
+  Proof.
+    cbv [all_nodes_ok] in *; destruct_head'_and.
+    intros; specialize_under_binders_by eassumption.
+    cbv [node_ok node_args_ok node_arg_ok] in *; destruct_head'_and.
+    let H := match goal with H : Forall _ ?l |- Forall _ ?l => H end in
+    induction H; constructor; try assumption.
+    repeat match goal with
+           | [ H : lookup _ _ = Some _ |- _ ] => apply lookup_value_size in H; [ | assumption .. ]
+           | [ H : lookup _ _ = None |- _ ] => apply lookup_error_size in H; [ | assumption .. ]
+           | [ |- None <> None ] => exfalso
+           | [ |- Some _ <> None ] => congruence
+           | [ |- ?x <> None ] => destruct x eqn:?
+           | [ |- False ] => lia
+           end.
+  Qed.
+
   Lemma reverse_lookup_gensym s (d : t)
         {ok : ok d}
         {all_nodes_ok : all_nodes_ok d}
@@ -1154,8 +1257,9 @@ Module DagExtraProperties (Import dag : DagDefinitions) (Import dag' : DagExtraD
     destruct (reverse_lookup d (gensym s d)) as [i|] eqn:H; [ | reflexivity ].
     rewrite iff_reverse_lookup_lookup in H by assumption.
     cbv [node_ok gensym] in *.
-    specialize_under_binders_by eassumption.
-    specialize_under_binders_by reflexivity.
+    repeat first [ progress destruct_head'_and
+                 | progress specialize_under_binders_by eassumption
+                 | progress specialize_under_binders_by reflexivity ].
     apply lookup_value_size in H; trivial.
     lia.
   Qed.
@@ -1183,6 +1287,10 @@ Module DagExtraProperties (Import dag : DagDefinitions) (Import dag' : DagExtraD
     rewrite fst_merge_node, reverse_lookup_gensym by assumption; reflexivity.
   Qed.
 
+  Lemma bound_node_gensym s (d : t) {lookup_bounds}
+    : bound_node_idx_via_PHOAS lookup_bounds (gensym s d) = Some {| ZRange.lower := 0; ZRange.upper := Z.ones (Z.of_N s) |}.
+  Proof. reflexivity. Qed.
+
   Lemma size_merge_node_le {descr:description} n (d:t)
     : (size d <= size (snd (merge_node n d)))%N.
   Proof.
@@ -1198,18 +1306,24 @@ Module DagExtraProperties (Import dag : DagDefinitions) (Import dag' : DagExtraD
   Global Instance empty_ok : ok empty | 10.
   Proof.
     repeat apply conj; intros *;
-      rewrite ?lookup_empty, ?reverse_lookup_empty; try apply size_ok_empty;
-      intuition congruence.
+      cbv [bounds_ok]; intros *;
+      rewrite ?lookup_empty, ?reverse_lookup_empty, ?size_empty, ?lookup_bounds_empty; try apply size_ok_empty;
+      intuition first [ congruence | lia ].
   Qed.
   Global Instance empty_all_nodes_ok : all_nodes_ok empty | 10.
   Proof.
     repeat intro; subst; rewrite lookup_empty in *; congruence.
   Qed.
-  Global Instance merge_node_ok {descr:description} {n:node idx} {d : t} {dok : ok d} : ok (snd (merge_node n d)) | 10.
+  Global Instance merge_node_ok {descr:description} {n:node idx} {d : t} {dok : ok d} {dnok : all_nodes_ok d} {nok : node_args_ok (size d) (snd n)} : ok (snd (merge_node n d)) | 10.
   Proof.
     destruct (dok).
-    repeat apply conj; intros *.
-    all: rewrite ?lookup_merge_node, ?reverse_lookup_merge_node, ?fst_merge_node, ?size_merge_node by assumption.
+    repeat apply conj; cbv [bounds_ok node_args_ok node_arg_ok all_nodes_ok node_ok] in *; intros *;
+      rewrite Forall_forall_iff_nth_error in nok;
+      setoid_rewrite Forall_forall_iff_nth_error in dnok.
+    all: split_and.
+    all: rewrite ?lookup_merge_node, ?reverse_lookup_merge_node, ?fst_merge_node, ?size_merge_node, ?lookup_bounds_merge_node by assumption.
+    all: erewrite ?(@bound_node_idx_via_PHOAS_Forall_ext (lookup_bounds (snd (merge_node _ _))))
+      by (rewrite Forall_forall_iff_nth_error; intros *; rewrite lookup_bounds_merge_node by assumption; reflexivity).
     all: let tac :=
            repeat first [ progress subst
                         | progress intros
@@ -1223,14 +1337,20 @@ Module DagExtraProperties (Import dag : DagDefinitions) (Import dag' : DagExtraD
                         | progress specialize_under_binders_by reflexivity
                         | congruence
                         | tauto
+                        | apply bound_node_idx_via_PHOAS_Forall_ext
+                        | rewrite Forall_forall_iff_nth_error
                         | match goal with
                           | [ H : lookup ?d (size ?d) = Some _ |- _ ] => apply lookup_value_size in H; [ | assumption .. ]
+                          | [ H : ?x = bound_node_idx_via_PHOAS _ _ |- ?y = bound_node_idx_via_PHOAS _ _ ]
+                            => replace y with x by congruence; rewrite H;
+                               apply bound_node_idx_via_PHOAS_Forall_ext
                           end
                         | split
                         | progress split_iff ] in
          do 2 (tac;
                repeat match goal with
                       | [ H : _ = Some _ |- _ ] => progress specialize_all_ways_under_binders_by rewrite H
+                      | [ H : _ = None |- _ ] => progress specialize_all_ways_under_binders_by exact H
                       end;
                tac).
   Qed.
@@ -1243,8 +1363,8 @@ Module DagExtraProperties (Import dag : DagDefinitions) (Import dag' : DagExtraD
   Qed.
   Global Instance gensym_node_ok s d : node_ok (size d) (gensym s d) | 10.
   Proof.
-    cbv [node_ok]; intros * H.
-    inversion H; subst; reflexivity.
+    cbv [node_ok gensym]; split; cbn [snd]; try exact _.
+    inversion 1; subst; reflexivity.
   Qed.
   Global Hint Extern 1 (node_ok (size _) (gensym _ _)) => exact (@gensym_node_ok _ _) : typeclass_instances.
 
@@ -1268,6 +1388,51 @@ Module DagExtraProperties (Import dag : DagDefinitions) (Import dag' : DagExtraD
                  | progress reflect_hyps
                  | lia
                  | break_innermost_match_step ].
+  Qed.
+
+  Lemma lookup_None d {ok : ok d}
+    : forall i, lookup d i = None <-> (size d <= i)%N.
+  Proof.
+    intro i.
+    pose proof (lookup_value_size d i).
+    pose proof (lookup_size_error d i).
+    pose proof (lookup_error_size d i).
+    split; intro; destruct (lookup d i);
+      specialize_under_binders_by first [ reflexivity | lia | eassumption ];
+      inversion_option; first [ lia | congruence | auto ].
+  Qed.
+
+  Lemma lookup_Some d {ok : ok d}
+    : forall i, lookup d i <> None <-> (i < size d)%N.
+  Proof.
+    intro i.
+    pose proof (lookup_value_size d i).
+    pose proof (lookup_size_error d i).
+    pose proof (lookup_error_size d i).
+    split; intro; destruct (lookup d i);
+      specialize_under_binders_by first [ reflexivity | lia | eassumption ];
+      inversion_option; first [ lia | congruence | auto ].
+  Qed.
+
+  Lemma lookup_ind d {ok : ok d} {dnok : all_nodes_ok d}
+             (P : option (node idx) -> Prop)
+             (PNone : P None)
+             (PSome : forall o args,
+                 (exists i, dag.lookup d i = Some (o, args) /\ node_ok i (o, args))
+                 -> Forall (fun a => P (dag.lookup d a)) args
+                 -> P (Some (o, args)))
+    : forall i, P (dag.lookup d i).
+  Proof.
+    induction i using (well_founded_induction N.lt_wf_0).
+    destruct (lookup d i) as [ [o args] |] eqn:H'; [ | assumption ].
+    apply PSome.
+    { eexists; split; try eapply dnok; eassumption. }
+    { apply dnok in H'.
+      cbv [node_ok node_args_ok node_arg_ok] in *; destruct_head'_and.
+      cbn [snd] in *.
+      let H := match goal with H : Forall _ _ |- _ => H end in
+      revert H.
+      apply Forall_impl; eauto. }
   Qed.
 End DagExtraProperties.
 Module Type DagExtraPropertiesSig (dag : DagDefinitions) (dag' : DagExtraDefinitionsSig dag) (dag'' : DagProperties dag dag').
@@ -1378,10 +1543,46 @@ Module dag <: Dag.
                                  end.
   Proof. cbv [merge_node]; break_innermost_match; reflexivity. Qed.
 
+  Lemma lookup_bounds_merge_node
+        {descr : description} (n : node idx) (d : t) i
+        {ok : ok d}
+    : dag.lookup_bounds (snd (dag.merge_node n d)) i = match dag.lookup_bounds d i with
+                                                       | Some v => Some v
+                                                       | None
+                                                         => if (i =? size d)%N && Option.is_None (reverse_lookup d n)
+                                                            then bound_node_idx_via_PHOAS (lookup_bounds d) n
+                                                            else None
+                                                       end.
+  Proof.
+    cbv [merge_node]; break_innermost_match; cbn [snd]; reflect_hyps.
+    all: repeat first [ progress destruct_head'_and
+                      | progress subst
+                      | progress inversion_option
+                      | progress inversion_pair
+                      | reflexivity
+                      | assumption
+                      | lia
+                      | exfalso; assumption
+                      | rewrite Nat2N.id in *
+                      | rewrite nth_error_app
+                      | rewrite Nat.sub_diag in *
+                      | rewrite nth_error_length_error in * by lia
+                      | rewrite @nth_error_nil_error in *
+                      | break_innermost_match_step
+                      | break_innermost_match_hyps_step
+                      | progress cbv [lookup_bounds Crypto.Util.Option.bind size] in *
+                      | match goal with
+                        | [ H : nth_error (_ :: _) ?x = _ |- _ ] => destruct x eqn:?; cbn [nth_error] in H
+                        end
+                      | progress break_match ].
+  Qed.
+
   Lemma lookup_empty i : lookup empty i = None.
   Proof. cbv [empty lookup]; now rewrite nth_error_nil_error. Qed.
   Lemma reverse_lookup_empty n : reverse_lookup empty n = None.
   Proof. reflexivity. Qed.
+  Lemma lookup_bounds_empty i : lookup_bounds empty i = None.
+  Proof. cbv [empty lookup_bounds]; now rewrite nth_error_nil_error. Qed.
   Lemma size_empty : size empty = 0%N.
   Proof. reflexivity. Qed.
   Lemma size_ok_empty : size_ok empty.
@@ -1474,6 +1675,39 @@ Module dag <: Dag.
       tac; specialize_all_ways; tac.
   Qed.
 
+  Lemma lookup_bounds_merge_node {descr : description} (n : node idx) (d : t) i
+        {ok : ok d}
+    : dag.lookup_bounds (snd (dag.merge_node n d)) i = match dag.lookup_bounds d i with
+                                                       | Some v => Some v
+                                                       | None
+                                                         => if (i =? size d)%N && Option.is_None (reverse_lookup d n)
+                                                            then bound_node_idx_via_PHOAS (lookup_bounds d) n
+                                                            else None
+                                                       end.
+  Proof.
+    destruct (ok).
+    cbv [merge_node]; cbv [size_ok] in *; break_innermost_match; cbn [snd]; reflect_hyps.
+    all: let tac :=
+           repeat first [ progress destruct_head'_and
+                        | progress subst
+                        | progress inversion_option
+                        | progress inversion_pair
+                        | reflexivity
+                        | assumption
+                        | lia
+                        | exfalso; assumption
+                        | rewrite IdxMap.add_o
+                        | progress specialize_under_binders_by reflexivity
+                        | break_innermost_match_step
+                        | break_innermost_match_hyps_step
+                        | progress cbv [lookup_bounds Crypto.Util.Option.bind size bounds_ok option_map lookup] in * ] in
+         tac;
+         repeat match goal with
+                | [ H : _ = Some _ |- _ ] => progress specialize_all_ways_under_binders_by rewrite H
+                end;
+         tac.
+  Qed.
+
   Lemma reverse_lookup_merge_node {d : t}
         {ok : ok d} {descr : description} (n n' : node idx)
     : dag.reverse_lookup (snd (dag.merge_node n d)) n'
@@ -1506,6 +1740,8 @@ Module dag <: Dag.
   Proof. cbv [empty lookup]; now rewrite IdxMap.find_empty. Qed.
   Lemma reverse_lookup_empty n : reverse_lookup empty n = None.
   Proof. cbv [empty reverse_lookup]; now rewrite NodeIdxMap.find_empty. Qed.
+  Lemma lookup_bounds_empty i : lookup_bounds empty i = None.
+  Proof. cbv [empty lookup_bounds]; now rewrite IdxMap.find_empty. Qed.
   Lemma size_empty : size empty = 0%N.
   Proof. reflexivity. Qed.
   Lemma size_ok_empty : size_ok empty.
@@ -1545,6 +1781,7 @@ Global Arguments dag.t : simpl never.
 Global Arguments dag.empty : simpl never.
 Global Arguments dag.size : simpl never.
 Global Arguments dag.lookup : simpl never.
+Global Arguments dag.lookup_bounds : simpl never.
 Global Arguments dag.reverse_lookup : simpl never.
 Global Arguments dag.ok : simpl never.
 Global Arguments dag.all_nodes_ok : simpl never.
@@ -1555,6 +1792,7 @@ Global Strategy 1000 [
         dag.empty
         dag.size
         dag.lookup
+        dag.lookup_bounds
         dag.reverse_lookup
         dag.ok
         dag.all_nodes_ok
@@ -1832,16 +2070,29 @@ Proof using Type.
   cbv beta delta [merge_node].
   inversion H0; subst.
   cbv [gensym_dag_ok dag_ok] in *; destruct_head'_and.
+  assert (Hnok : node_ok (dag.size d) e).
+  { subst e; cbv [node_ok]; split; intros; inversion_pair; subst; cbn [interp_op snd] in *.
+    all: break_innermost_match_hyps; inversion_option; subst.
+    all: cbv [gensym_ok] in *.
+    all: specialize_under_binders_by eassumption; try lia.
+    cbv [node_args_ok node_arg_ok].
+    match goal with
+    | [ H : forall s v, ?G s = Some v -> (s < dag.size ?d)%N,
+          H' : Forall2 (eval ?G ?d) (map ExprRef ?args) ?args',
+          H'' : dag.ok ?d
+          |- Forall _ ?args ]
+      => clear -H H' H''; revert args' H'; induction args;
+         inversion 1; subst; constructor; eauto
+    end.
+    inversion_one_head' @eval.
+    eapply dag.lookup_value_size; eauto. }
   repeat match goal with |- _ /\ _ => split end; try exact _.
   1: econstructor; try eassumption.
   all: eauto using Forall2_weaken, eval_weaken_merge_node.
   all: try now apply gensym_ok_merge_node.
   { now rewrite dag.lookup_merge_node' by assumption. }
-  { apply @dag.merge_node_all_nodes_ok; try assumption.
-    cbv [e node_ok]; intros; inversion_pair; subst; cbn [interp_op] in *.
-    break_innermost_match_hyps; inversion_option; subst.
-    cbv [gensym_ok] in *.
-    specialize_under_binders_by eassumption; lia. }
+  { apply @dag.merge_node_ok; try assumption.
+    apply Hnok. }
   { intros *; rewrite dag.lookup_merge_node by assumption.
     break_innermost_match; inversion 1; subst; specialize_under_binders_by eassumption; destruct_head'_ex.
     all: eauto using eval_weaken_merge_node.
