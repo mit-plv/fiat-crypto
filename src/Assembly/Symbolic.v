@@ -1045,13 +1045,15 @@ Existing Class node_ok.
 Hint Extern 1 (node_ok ?i ?n) => exact (@new_node_ok n I i) : typeclass_instances.
 Module Old.
 Module dag.
-  Definition t : Type := list (node idx * description).
+  Definition t : Type := list (node idx * description * option ZRange.zrange).
   Definition empty : t := nil.
   Definition size (d : t) : N := N.of_nat (List.length d).
   Definition lookup (d : t) (i : idx) : option (node idx)
-    := option_map fst (List.nth_error d (N.to_nat i)).
+    := option_map (fun '(n, _d, _b) => n) (List.nth_error d (N.to_nat i)).
+  Definition lookup_bounds (d : t) (i : idx) : option ZRange.zrange
+    := (n <- List.nth_error d (N.to_nat i); let '(_n, _d, b) := n in b)%option.
   Definition reverse_lookup (d : t) (i : node idx) : option idx
-    := option_map N.of_nat (List.indexof (fun '(n', _) => node_beq N.eqb i n') d).
+    := option_map N.of_nat (List.indexof (fun '(n', _, _) => node_beq N.eqb i n') d).
   Definition size_ok (d : t) : Prop
     := True.
   Definition all_nodes_ok (d : t) : Prop
@@ -1064,7 +1066,7 @@ Module dag.
     := match reverse_lookup d n with
        | Some i => (i, d)
        | None
-         => (size d, d ++ [(n, descr)])
+         => (size d, d ++ [(n, descr, bound_node_idx_via_PHOAS (lookup_bounds d) n)])
        end.
   Definition gensym (s:OperationSize) (d : t) : node idx
     := (old s (size d), []).
@@ -1081,7 +1083,7 @@ Module dag.
   Module eager.
     Definition t := list (idx * node idx * eager_description).
     Definition force (d : dag.t) : eager.t
-      := List.map (fun '(idx, (n, descr)) => (N.of_nat idx, n, force_description descr))
+      := List.map (fun '(idx, (n, descr, _)) => (N.of_nat idx, n, force_description descr))
                   (List.enumerate d).
     Definition description_lookup (d : eager.t) (descr : string) : list idx
       := List.map (fun '(idx, _, _) => idx) (List.filter (fun '(_, _, descr') => match get_eager_description_description descr' with Some descr' => String.eqb descr descr' | _ => false end) d).
@@ -1253,13 +1255,13 @@ Module dag.
     repeat apply conj; cbv [size empty size_ok]; intros *.
     all: rewrite ?lookup_merge_node, ?reverse_lookup_merge_node by assumption.
     all: let tac :=
-           repeat first [ progress cbv [ok size_ok size merge_node lookup reverse_lookup] in *
+           repeat first [ progress cbv [ok size_ok size merge_node lookup reverse_lookup lookup_bounds Crypto.Util.Option.bind] in *
                         | progress destruct_head'_and
                         | progress inversion_option
                         | progress subst
                         | exfalso; assumption
                         | progress inversion_pair
-                        | progress cbn [fst snd List.length] in *
+                        | progress cbn [fst snd List.length List.app] in *
                         | break_innermost_match_step
                         | progress intros
                         | progress destruct_head'_ex
@@ -1276,14 +1278,21 @@ Module dag.
                         | rewrite Nat2N.id in *
                         | rewrite N2Nat.id in *
                         | rewrite app_length
+                        | rewrite nth_error_app in *
                         | progress specialize_under_binders_by reflexivity
                         | progress specialize_under_binders_by rewrite Nat2N.id
                         | progress destruct_head'_prod
+                        | progress inversion_list
                         | match goal with
                           | [ H : forall i n, match nth_error _ (N.to_nat i) with _ => _ end = _ -> _ |- _ ]
                             => specialize (fun i => H (N.of_nat i))
                           | [ H : _ = Some _ |- _ ] => rewrite H in *
                           | [ H : N.of_nat _ = N.of_nat _ |- _ ] => apply (f_equal N.to_nat) in H
+                          | [ H : nth_error (_ :: _) _ = Some _ |- _ ]
+                            => apply nth_error_split in H
+                          | [ H : _ :: _ = ?x ++ _ |- _ ] => is_var x; destruct x
+                          | [ H : ?x ++ _ = nil |- _ ] => is_var x; destruct x
+                          | [ H : _ :: _ = _ :: _ |- _ ] => apply list_leq_to_eq in H; cbn [list_eq] in H
                           end
                         | solve [ exfalso; auto ] ] in
          tac;
@@ -1338,11 +1347,13 @@ Module dag.
   Module IdxMapProperties := FMapFacts.OrdProperties IdxMap <+ OrdProperties_RemoveHints IdxMap.
   Module NodeIdxMapProperties := FMapFacts.OrdProperties NodeIdxMap <+ OrdProperties_RemoveHints NodeIdxMap.
 
-  Definition t : Type := NodeIdxMap.t idx * IdxMap.t (node idx * description) * N (* size *).
+  Definition t : Type := NodeIdxMap.t idx * IdxMap.t (node idx * description * option ZRange.zrange) * N (* size *).
   Definition empty : t := (@NodeIdxMap.empty _, @IdxMap.empty _, 0%N).
   Definition size (d : t) : N := let '(_, _, sz) := d in sz.
   Definition lookup (d : t) (i : idx) : option (node idx)
-    := let '(_, d, _) := d in option_map (@fst _ _) (IdxMap.find i d).
+    := let '(_, d, _) := d in option_map (fun '(n, _, _) => n) (IdxMap.find i d).
+  Definition lookup_bounds (d : t) (i : idx) : option ZRange.zrange
+    := (let '(_, d, _) := d in n <- IdxMap.find i d; let '(_n, _d, b) := n in b)%option.
   Definition reverse_lookup (d : t) (i : node idx) : option idx
     := let '(d, _, _) := d in NodeIdxMap.find i d.
   Definition size_ok (d : t) : Prop
@@ -1359,8 +1370,9 @@ Module dag.
     := match reverse_lookup d n with
        | Some i => (i, d)
        | None
-         => let '(d, d', sz) := d in
-            (sz, (NodeIdxMap.add n sz d, IdxMap.add sz (n, descr) d', N.succ sz))
+         => let lookup_bounds := lookup_bounds d in
+            let '(d, d', sz) := d in
+            (sz, (NodeIdxMap.add n sz d, IdxMap.add sz (n, descr, bound_node_idx_via_PHOAS lookup_bounds n) d', N.succ sz))
        end.
   Definition gensym (s:OperationSize) (d : t) : node idx
     := (old s (size d), []).
@@ -1377,7 +1389,7 @@ Module dag.
   Module eager.
     Definition t := list (idx * node idx * eager_description).
     Definition force (d : dag.t) : eager.t
-      := List.map (fun '(idx, (n, descr)) => (idx, n, force_description descr))
+      := List.map (fun '(idx, (n, descr, _b)) => (idx, n, force_description descr))
                   (IdxMap.elements (let '(_, d, _) := d in d)).
     Definition description_lookup (d : eager.t) (descr : string) : list idx
       := List.map (fun '(idx, _, _) => idx) (List.filter (fun '(_, _, descr') => match get_eager_description_description descr' with Some descr' => String.eqb descr descr' | _ => false end) d).
@@ -1415,18 +1427,26 @@ Module dag.
                                                      else None
                                                 end.
   Proof.
-    cbv [dag.merge_node andb is_None lookup dag.ok size] in *;
-      repeat first [ assumption
-                   | reflexivity
-                   | lia
-                   | congruence
-                   | progress specialize_under_binders_by eassumption
-                   | progress subst
-                   | progress destruct_head'_and
-                   | progress reflect_hyps
-                   | progress cbn [fst snd option_map] in *
-                   | rewrite IdxMap.add_o
-                   | break_innermost_match_step ].
+    cbv [dag.merge_node andb is_None lookup dag.ok size option_map] in *;
+      let tac :=
+        repeat first [ assumption
+                     | reflexivity
+                     | lia
+                     | congruence
+                     | progress specialize_under_binders_by eassumption
+                     | progress subst
+                     | progress destruct_head'_and
+                     | progress destruct_head' iff
+                     | progress split_iff
+                     | progress break_innermost_match_hyps
+                     | progress specialize_by reflexivity
+                     | progress inversion_option
+                     | progress inversion_pair
+                     | progress reflect_hyps
+                     | progress cbn [fst snd option_map] in *
+                     | rewrite IdxMap.add_o
+                     | break_innermost_match_step ] in
+      tac; specialize_all_ways; tac.
   Qed.
 
   Lemma reverse_lookup_merge_node {d : t}
@@ -1536,32 +1556,33 @@ Module dag.
   Proof.
     repeat apply conj; cbv [size empty size_ok]; intros *.
     all: rewrite ?lookup_merge_node, ?reverse_lookup_merge_node by assumption.
-    all: repeat first [ progress cbv [ok size_ok size merge_node lookup reverse_lookup] in *
-                      | progress destruct_head'_and
-                      | progress inversion_option
-                      | progress subst
-                      | exfalso; assumption
-                      | progress inversion_pair
-                      | progress cbn [fst snd] in *
-                      | break_innermost_match_step
-                      | progress intros
-                      | progress reflect_hyps
-                      | progress split_iff
-                      | apply conj
-                      | rewrite NodeIdxMap.cardinal_add, NodeIdxMap.mem_find_b
-                      | rewrite IdxMap.cardinal_add, IdxMap.mem_find_b
-                      | rewrite N2Nat.inj_succ
-                      | lia
-                      | congruence
-                      | solve [ auto ]
-                      | match goal with
-                        | [ H : ?x = Some _ |- _ ] => rewrite H in *
-                        end
-                      | progress specialize_under_binders_by reflexivity
-                      | match goal with
-                        | [ H : _ |- _ ] => progress specialize_all_ways_under_binders_by exact H
-                        | [ H : _ |- _ ] => progress specialize_all_ways_under_binders_by rewrite H
-                        end ].
+    all: let tac :=
+           repeat first [ progress cbv [ok size_ok size merge_node lookup reverse_lookup option_map idx] in *
+                        | progress destruct_head'_and
+                        | progress inversion_option
+                        | progress subst
+                        | exfalso; assumption
+                        | progress inversion_pair
+                        | progress cbn [fst snd] in *
+                        | break_innermost_match_step
+                        | break_innermost_match_hyps_step
+                        | progress intros
+                        | progress reflect_hyps
+                        | progress split_iff
+                        | apply conj
+                        | rewrite NodeIdxMap.cardinal_add, NodeIdxMap.mem_find_b
+                        | rewrite IdxMap.cardinal_add, IdxMap.mem_find_b
+                        | rewrite N2Nat.inj_succ
+                        | lia
+                        | congruence
+                        | solve [ auto ]
+                        | match goal with
+                          | [ H : ?x = Some _ |- _ ] => rewrite H in *
+                          end
+                        | progress specialize_under_binders_by reflexivity ] in
+         tac;
+         specialize_all_ways;
+         tac.
   Qed.
   Global Instance merge_node_all_nodes_ok {descr:description} {n:node idx} {d : t} {dok : ok d} {dnok : all_nodes_ok d} {nok : node_ok (size d) n}
     : all_nodes_ok (snd (merge_node n d)) | 10.
