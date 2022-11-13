@@ -130,6 +130,30 @@ Definition default_assembly_conventions : assembly_conventions_opt
      ; assembly_callee_saved_registers_ := default_assembly_callee_saved_registers
      |}.
 
+Module Export Options.
+  Class equivalence_checker_options_opt :=
+    { assembly_conventions_ : assembly_conventions_opt
+    }.
+  Definition default_equivalence_checker_options : equivalence_checker_options_opt
+    := {| assembly_conventions_ := default_assembly_conventions
+       |}.
+End Options.
+
+Module Export EquivalenceCheckerHints.
+  Global Existing Instances
+   Build_equivalence_checker_options_opt
+   assembly_conventions_
+  .
+  #[global]
+   Hint Cut [
+      ( _ * )
+        (assembly_conventions_
+        ) ( _ * )
+        (Build_equivalence_checker_options_opt
+        )
+    ] : typeclass_instances.
+End EquivalenceCheckerHints.
+
 Global Instance show_assembly_callee_saved_registers_opt : Show assembly_callee_saved_registers_opt | 10
   := fun v => match v with
               | Microsoft_x64 => "Microsoft x64"
