@@ -544,6 +544,363 @@ Definition node_beq {A : Set} (arg_eqb : A -> A -> bool) : node A -> node A -> b
 Global Instance reflect_node_beq {A : Set} {arg_eqb} {H : reflect_rel (@eq A) arg_eqb}
   : reflect_rel eq (@node_beq A arg_eqb) | 10 := _.
 
+Local Open Scope Z_scope.
+Require Crypto.Language.API.
+Require Crypto.AbstractInterpretation.ZRange.
+Require Crypto.AbstractInterpretation.ZRangeProofs.
+Require Import Crypto.CastLemmas.
+Require Import Crypto.Language.PreExtra.
+Require Import Crypto.Util.ZRange.LandLorBounds.
+Require Import Crypto.Util.ZRange.BasicLemmas.
+Require Import Crypto.Util.ZRange.Operations.
+Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
+Require Import Crypto.Util.ZUtil.LandLorBounds.
+
+Section bound_node_via_PHOAS.
+  Import Crypto.Util.ZRange.
+  Import API.Compilers.
+  Import AbstractInterpretation.ZRange.Compilers.
+  Import AbstractInterpretation.ZRangeProofs.Compilers.
+
+  Local Instance : shiftr_avoid_uint1_opt := false.
+  Local Notation interp_PHOAS_op := (ZRange.ident.option.interp true).
+
+  Definition op_to_PHOAS_binop (o : op) : option _
+    := match o with
+       | add _ => Some ident.Z_add
+       | shl _ => Some ident.Z_shiftl
+       | shr _ => Some ident.Z_shiftr
+       | and _ => Some ident.Z_land
+       | or _ => Some ident.Z_lor
+       | xor _ => Some ident.Z_lxor
+       | mul _ => Some ident.Z_mul
+       | addZ => Some ident.Z_add
+       | mulZ => Some ident.Z_mul
+       | shlZ => Some ident.Z_shiftl
+       | shrZ => Some ident.Z_shiftr
+       | andZ => Some ident.Z_land
+       | orZ => Some ident.Z_lor
+       | xorZ => Some ident.Z_lxor
+       | _ => None
+       end.
+  Definition op_to_PHOAS_unop (o : op) : option _
+    := match o with
+       | neg _ => Some ident.Z_opp
+       | negZ => Some ident.Z_opp
+       | _ => None
+       end.
+  Definition op_to_PHOAS_tritop (o : op) : option _
+    := match o with
+       | selectznz => Some ident.Z_zselect
+       | _ => None
+       end.
+  Definition op_to_bounds (o : op) : option _
+    := match o with
+       | add s
+       | shl s
+       | shr s
+       | and s
+       | or s
+       | xor s
+       | mul s
+       | neg s
+         => Some r[0~>Z.ones (Z.of_N s)]
+       | _ => None
+       end%zrange.
+
+  Definition op_to_PHOAS_bounds (o : op) : option (list (unit -> option zrange) -> option zrange)
+    := let unthunk := List.map (fun x => x tt) in
+       match o with
+       | old s _ => Some (fun _ => Some r[0~>Z.ones (Z.of_N s)])
+       | const x
+         => Some (fun _ => interp_PHOAS_op (ident.Literal (t:=base.type.Z) x))
+       | (add _|and _|or _|xor _|mul _) as o
+         => let b : zrange := invert_Some (op_to_bounds o) in
+            let id : Z := invert_Some (identity o) in
+            let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_binop o)) in
+            Some (fun args => interp_PHOAS_op ident.Z_cast (Some b) (fold_right o (Some r[id~>id]) (unthunk args)))
+       | (addcarry _ | subborrow _ | addoverflow _ | iszero)
+         => Some (fun _ => Some r[0~>1])
+       | (addZ|mulZ|andZ|orZ|xorZ) as o
+         => let id : Z := invert_Some (identity o) in
+            let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_binop o)) in
+            Some (fun args => fold_right o (Some r[id~>id]) (unthunk args))
+       | (shl _|shr _) as o
+         => let b : zrange := invert_Some (op_to_bounds o) in
+            let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_binop o)) in
+            Some (fun args
+                  => match args with
+                     | [x; y] => interp_PHOAS_op ident.Z_cast (Some b) (o (x tt) (y tt))
+                     | _ => None
+                     end)
+       | (shlZ|shrZ) as o
+         => let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_binop o)) in
+            Some (fun args
+                  => match args with
+                     | [x; y] => o (x tt) (y tt)
+                     | _ => None
+                     end)
+       | (neg _) as o
+         => let b : zrange := invert_Some (op_to_bounds o) in
+            let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_unop o)) in
+            Some (fun args
+                  => match args with
+                     | [x] => interp_PHOAS_op ident.Z_cast (Some b) (o (x tt))
+                     | _ => None
+                     end)
+       | (negZ) as o
+         => let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_unop o)) in
+            Some (fun args
+                  => match args with
+                     | [x] => o (x tt)
+                     | _ => None
+                     end)
+       | (selectznz) as o
+         => let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_tritop o)) in
+            Some (fun args
+                  => match args with
+                     | [x; y; z] => o (x tt) (y tt) (z tt)
+                     | _ => None
+                     end)
+       | (slice _ s | sar s | rcr s) as o
+         => Some (fun _ => Some r[0~>Z.ones (Z.of_N s)])
+       | set_slice 0 w
+         => Some (fun args
+                  => match unthunk args with
+                     | [Some a; Some b]
+                       => if ((lower a <? 0) || (lower b <? 0))%Z%bool
+                          then None
+                          else let a := upper a in
+                               let b := upper b in
+                               Some r[0~>(Z.lor
+                                            (Z.land (Z.ones (Z.succ (Z.log2 b))) (Z.ones (Z.of_N w)))
+                                            (Z.ldiff (Z.ones (Z.succ (Z.log2 a))) (Z.ones (Z.of_N w))))]
+                     | _ => None
+                     end)
+       | addcarryZ _
+       | subborrowZ _
+       | set_slice _ _
+         => None
+       end%zrange.
+
+  Local Coercion is_true : bool >-> Sortclass.
+
+  Lemma interp_op_op_to_PHOAS_bounds_set_slice_0 G o bf arg_bounds args v b
+        (H : op_to_PHOAS_bounds o = Some bf)
+        (Hargs : Forall2 (fun v b => match b with
+                                     | Some b => is_bounded_by_bool v b = true
+                                     | None => True
+                                     end)
+                         args arg_bounds)
+        (Hop : interp_op G o args = Some v)
+        arg_bounds' (Hb : bf arg_bounds' = Some b)
+        (Ha : arg_bounds = List.map (fun x => x tt) arg_bounds')
+        w (Ho : set_slice 0 w = o)
+    : is_bounded_by_bool v b.
+  Proof.
+    subst o; cbv [op_to_PHOAS_bounds interp_op] in *; inversion_option; subst.
+    break_innermost_match_hyps; inversion_option; subst.
+    repeat (destruct_one_head list; inversion_list).
+    invlist Forall2.
+    break_innermost_match_hyps; inversion_option; subst.
+    apply unreflect_bool; reflect_hyps; cbn [upper lower].
+    autorewrite with zsimplify_const.
+    rewrite Z.land_ones_ones.
+    rewrite Z.lor_nonneg, Z.ldiff_nonneg, !Z.land_ones by lia.
+    repeat apply conj; auto with zarith.
+    match goal with
+    | [ H : ~(?x < 0 \/ ?y < 0) |- _ ] => assert (0 <= x /\ 0 <= y) by lia; clear H
+    end.
+    clear G; destruct_head zrange; destruct_head'_and.
+    pose proof Z.log2_le_mono; pose proof Z.log2_nonneg; specialize_all_ways.
+    repeat match goal with H : _ -> _ |- _ => clear H end.
+    break_innermost_match; reflect_hyps; destruct_head'_or; try lia.
+    apply Z.le_bitwise; rewrite ?Z.lor_nonneg, ?Z.ldiff_nonneg; auto with zarith.
+    intros; rewrite <- Z.land_ones by lia.
+    Z.bitblast_core; cbn.
+    all: repeat rewrite ?andb_true_r, ?andb_false_r, ?andb_false_l, ?andb_true_l, ?orb_false_r, ?orb_false_l, ?orb_true_l, ?orb_true_r.
+    all: cbv [Bool.le]; break_innermost_match; auto.
+    all: rewrite ?Z.min_le_iff in *.
+    all: destruct_head'_or.
+    all: rewrite Z.bits_above_log2 in * by lia.
+    all: congruence.
+  Qed.
+
+  Lemma interp_op_op_to_PHOAS_bounds_fold_right_helper G o arg_bounds args v
+        (Hargs : Forall2 (fun v b => match b with
+                                     | Some b => is_bounded_by_bool v b = true
+                                     | None => True
+                                     end)
+                         args arg_bounds)
+        (Hop : interp_op G o args = Some v)
+        id (Hid : identity o = Some id)
+        bo (Hbo : op_to_PHOAS_binop o = Some bo)
+        (o' := interp_PHOAS_op bo)
+        (bf := fold_right o' (Some r[id~>id]%zrange))
+        b (Hb : bf arg_bounds = Some b)
+    : is_bounded_by_bool (fold_right (ident.interp bo) id args) b.
+  Proof.
+    subst o' bf; subst.
+    pose proof (@ZRange.ident.option.interp_related _ _ _ bo
+                 : type.related_hetero _ (interp_PHOAS_op bo) (ident.interp bo)) as Hbounds.
+    cbn -[interp_PHOAS_op] in *.
+    cbv [Morphisms.respectful_hetero] in *.
+    revert dependent b.
+    clear Hop v.
+    induction Hargs; cbn [fold_right]; intros; inversion_option; subst.
+    { apply ZRange.is_bounded_by_bool_constant. }
+    let H := match goal with H : interp_PHOAS_op bo _ _ = Some _ |- _ => H end in
+    in_hyp_under_binders_do (fun H' => rewrite H in H').
+    apply Hbounds; clear Hbounds.
+    all: break_innermost_match; try reflexivity; specialize_under_binders_by reflexivity.
+    all: auto.
+  Qed.
+
+  Lemma interp_op_op_to_PHOAS_bounds G o bf arg_bounds args v b
+        (H : op_to_PHOAS_bounds o = Some bf)
+        (Hargs : Forall2 (fun v b => match b with
+                                     | Some b => is_bounded_by_bool v b = true
+                                     | None => True
+                                     end)
+                         args arg_bounds)
+        (Hop : interp_op G o args = Some v)
+        arg_bounds' (Hb : bf arg_bounds' = Some b)
+        (Ha : arg_bounds = List.map (fun x => x tt) arg_bounds')
+    : is_bounded_by_bool v b.
+  Proof.
+    (* pose proof the lemmas that we needed extra insight to prove separately *)
+    pose proof (@interp_op_op_to_PHOAS_bounds_set_slice_0 G o bf arg_bounds args v b H Hargs Hop arg_bounds' Hb Ha) as Hslice.
+    pose proof (@interp_op_op_to_PHOAS_bounds_fold_right_helper G o arg_bounds args v Hargs Hop) as Hfold_right.
+    (* destruct the operation, do general cleanup *)
+    cbv [op_to_PHOAS_bounds] in *.
+    all: repeat first [ progress subst
+                      | progress inversion_option
+                      | progress cbn [interp_op] in *
+                      | break_innermost_match_hyps_step ].
+    (* make use of the special-insight lemmas *)
+    all: first [ specialize (Hslice _ eq_refl) | clear Hslice ].
+    all: first [ specialize (Hfold_right _ eq_refl _ eq_refl) | clear Hfold_right ].
+    all: try assumption.
+    (* forward reasoning of destructing bounds interp things, so we can expose the PHOAS bounds lemmas *)
+    all: let rec do_on T :=
+           lazymatch T with
+           | ?F ?x
+             => let h := head x in
+                try (constr_eq h (@ZRange.ident.option.interp); destruct x eqn:?);
+                do_on F
+           | _ => idtac
+           end in
+         repeat match goal with
+                | [ H : ?T = Some _ |- _ ] => do_on T
+                end.
+    (* pose proof the bounds be get from PHOAS reasoning *)
+    all: repeat match goal with
+                | [ H : context[@ZRange.ident.option.interp ?a ?b ?t ?op] |- _ ]
+                  => unique pose proof (@ZRange.ident.option.interp_related a b t op)
+                end.
+    (* various simplification and cleanup *)
+    all: cbn -[interp_PHOAS_op] in *.
+    all: cbv [Morphisms.respectful_hetero] in *.
+    all: invlist Forall2.
+    all: repeat first [ progress subst
+                      | assumption
+                      | progress cbn [List.map] in *
+                      | inversion_list_step
+                      | match goal with
+                        | [ H : Forall2 _ nil _ |- _ ] => inversion H; clear H
+                        | [ H : Forall2 _ (_ :: _) _ |- _ ] => inversion H; clear H
+                        | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
+                        | [ H : nil = List.map _ ?ls |- _ ] => is_var ls; destruct ls
+                        | [ H : _ :: _ = List.map _ ?ls |- _ ] => is_var ls; destruct ls
+                        end ].
+    all: break_innermost_match_hyps.
+    (* handle goals with relatively simple bounds that follow just from masking/casting/modulo *)
+    all: try change (Z.land ?x 0) with (Z.land x (Z.ones 0)).
+    all: repeat match goal with
+                | [ |- context[is_bounded_by_bool (Z.land ?x (Z.ones ?n)) _] ]
+                  => rewrite (@Z.land_ones x n), ?(Z.ones_equiv n), <- ?Z.sub_1_r by lia
+                | [ |- is_true (is_bounded_by_bool (?y mod ?x) r[0~>?x-1]) ]
+                  => apply unreflect_bool; cbn [lower upper]; generalize (Z.mod_pos_bound y x); try lia
+                | [ |- is_true (is_bounded_by_bool (?y mod ?x) r[0~>_]) ]
+                  => try now apply unreflect_bool; cbn [lower upper]; generalize (Z.mod_pos_bound y x); lia
+                | [ |- is_true (is_bounded_by_bool (Z.b2z ?b) r[0~>1]) ]
+                  => case b; vm_compute; reflexivity
+                end.
+    (* transform asm masking (Z.land _ (Z.ones _)) into PHOAS casting (ident.cast), so the bounds things line up *)
+    all: repeat first [ assumption
+                      | solve [ auto ]
+                      | match goal with
+                        | [ |- context[is_bounded_by_bool (?x mod ?y) ?b] ]
+                          => rewrite <- (Z.sub_add 1 y), (Z.sub_1_r y);
+                             rewrite <- (@ident.cast_out_of_bounds_simple_0_mod (Z.pred y)) by auto with zarith;
+                             rewrite <- ?Z.ones_equiv
+                        end ].
+    all: rewrite ?Z.add_simpl_r. (* idk why we need this *)
+    (* start applying and specializing PHOAS bounds hypotheses *)
+    all: repeat first [ reflexivity
+                      | assumption
+                      | solve [ auto ]
+                      | exactly_once (idtac; multimatch goal with
+                                             | [ H : _ |- _ ] => apply H; clear H
+                                             end)
+                      | break_innermost_match_step
+                      | progress specialize_under_binders_by reflexivity
+                      | progress specialize_under_binders_by eapply zrange_lb ].
+    (* some PHOAS bounds hypotheses have a match in their conclusion; we rewrite away the match by autospecializing it with hypotheses in the context *)
+    all: repeat first [ match goal with
+                        | [ H : ?x = _ |- _ ]
+                          => let h := head x in
+                             constr_eq h (@ZRange.ident.option.interp);
+                             progress in_hyp_under_binders_do (fun H' => rewrite H in H')
+                        end ].
+    (* finish specializing PHOAS bounds hypotheses *)
+    all: repeat first [ reflexivity
+                      | assumption
+                      | congruence
+                      | progress inversion_option
+                      | progress subst
+                      | solve [ auto ]
+                      | exactly_once (idtac; multimatch goal with
+                                             | [ H : _ |- _ ] => apply H; clear H
+                                             end)
+                      | break_innermost_match_step
+                      | apply zrange_lb
+                      | progress specialize_under_binders_by reflexivity
+                      | progress specialize_under_binders_by apply zrange_lb
+                      | break_innermost_match_hyps_step ].
+    (* Somehow, Z.zselect gets unfolded in the goal and broken up by break_innermost_match above; so we must unfold it in the hyps *)
+    all: cbv [Z.zselect] in *.
+    all: repeat match goal with
+                | [ H : (?x =? 0) = _ |- _ ] => in_hyp_under_binders_do (fun H' => rewrite H in H')
+                end.
+    all: try now cbv [is_true]; eauto with nocore.
+  Qed.
+
+  Definition bound_node_idx_via_PHOAS (lookup_bounds : idx -> option zrange) (n : node idx) : option zrange
+    := (let '(o, args) := n in
+        b <- op_to_PHOAS_bounds o;
+        b (List.map (fun idx 'tt => lookup_bounds idx) args))%option.
+
+  Lemma interp_op_bound_node_idx_via_PHOAS lookup_bounds G o args argsZ bs v
+        (H : bound_node_idx_via_PHOAS lookup_bounds (o, args) = Some bs)
+        (Hargs : Forall (fun i => match G i, lookup_bounds i with
+                                  | Some v, Some b => is_bounded_by_bool v b = true
+                                  | None, _ => False
+                                  | Some _, None => True
+                                  end) args)
+        (HargsZ : Forall2 (fun i v => G i = Some v) args argsZ)
+        (Hop : interp_op G o argsZ = Some v)
+    : is_bounded_by_bool v bs.
+  Proof.
+    cbv [bound_node_idx_via_PHOAS Crypto.Util.Option.bind] in *; break_innermost_match_hyps; inversion_option; subst.
+    eapply interp_op_op_to_PHOAS_bounds; try eassumption; try reflexivity.
+    rewrite !Forall2_map_r_iff.
+    clear dependent o.
+    clear dependent bs.
+    induction HargsZ; invlist Forall; constructor; break_innermost_match_hyps; inversion_option; subst; eauto.
+  Qed.
+End bound_node_via_PHOAS.
+
 Class description := descr : option ((unit -> string) * bool (* always show *)).
 #[global]
 Typeclasses Opaque description.
@@ -1539,18 +1896,6 @@ Proof using Type.
   eapply eval_interp_expr, eval_weaken_symbols in H; [eassumption|congruence].
 Qed.
 
-Local Open Scope Z_scope.
-Require Crypto.Language.API.
-Require Crypto.AbstractInterpretation.ZRange.
-Require Crypto.AbstractInterpretation.ZRangeProofs.
-Require Import Crypto.CastLemmas.
-Require Import Crypto.Language.PreExtra.
-Require Import Crypto.Util.ZRange.LandLorBounds.
-Require Import Crypto.Util.ZRange.BasicLemmas.
-Require Import Crypto.Util.ZRange.Operations.
-Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
-Require Import Crypto.Util.ZUtil.LandLorBounds.
-
 Section bound_expr_via_PHOAS.
   Import Crypto.Util.ZRange.
   Import API.Compilers.
@@ -1559,124 +1904,6 @@ Section bound_expr_via_PHOAS.
 
   Local Instance : shiftr_avoid_uint1_opt := false.
   Local Notation interp_PHOAS_op := (ZRange.ident.option.interp true).
-
-  Definition op_to_PHOAS_binop (o : op) : option _
-    := match o with
-       | add _ => Some ident.Z_add
-       | shl _ => Some ident.Z_shiftl
-       | shr _ => Some ident.Z_shiftr
-       | and _ => Some ident.Z_land
-       | or _ => Some ident.Z_lor
-       | xor _ => Some ident.Z_lxor
-       | mul _ => Some ident.Z_mul
-       | addZ => Some ident.Z_add
-       | mulZ => Some ident.Z_mul
-       | shlZ => Some ident.Z_shiftl
-       | shrZ => Some ident.Z_shiftr
-       | andZ => Some ident.Z_land
-       | orZ => Some ident.Z_lor
-       | xorZ => Some ident.Z_lxor
-       | _ => None
-       end.
-  Definition op_to_PHOAS_unop (o : op) : option _
-    := match o with
-       | neg _ => Some ident.Z_opp
-       | negZ => Some ident.Z_opp
-       | _ => None
-       end.
-  Definition op_to_PHOAS_tritop (o : op) : option _
-    := match o with
-       | selectznz => Some ident.Z_zselect
-       | _ => None
-       end.
-  Definition op_to_bounds (o : op) : option _
-    := match o with
-       | add s
-       | shl s
-       | shr s
-       | and s
-       | or s
-       | xor s
-       | mul s
-       | neg s
-         => Some r[0~>Z.ones (Z.of_N s)]
-       | _ => None
-       end%zrange.
-
-  Definition op_to_PHOAS_bounds (o : op) : option (list (unit -> option zrange) -> option zrange)
-    := let unthunk := List.map (fun x => x tt) in
-       match o with
-       | old s _ => Some (fun _ => Some r[0~>Z.ones (Z.of_N s)])
-       | const x
-         => Some (fun _ => interp_PHOAS_op (ident.Literal (t:=base.type.Z) x))
-       | (add _|and _|or _|xor _|mul _) as o
-         => let b : zrange := invert_Some (op_to_bounds o) in
-            let id : Z := invert_Some (identity o) in
-            let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_binop o)) in
-            Some (fun args => interp_PHOAS_op ident.Z_cast (Some b) (fold_right o (Some r[id~>id]) (unthunk args)))
-       | (addcarry _ | subborrow _ | addoverflow _ | iszero)
-         => Some (fun _ => Some r[0~>1])
-       | (addZ|mulZ|andZ|orZ|xorZ) as o
-         => let id : Z := invert_Some (identity o) in
-            let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_binop o)) in
-            Some (fun args => fold_right o (Some r[id~>id]) (unthunk args))
-       | (shl _|shr _) as o
-         => let b : zrange := invert_Some (op_to_bounds o) in
-            let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_binop o)) in
-            Some (fun args
-                  => match args with
-                     | [x; y] => interp_PHOAS_op ident.Z_cast (Some b) (o (x tt) (y tt))
-                     | _ => None
-                     end)
-       | (shlZ|shrZ) as o
-         => let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_binop o)) in
-            Some (fun args
-                  => match args with
-                     | [x; y] => o (x tt) (y tt)
-                     | _ => None
-                     end)
-       | (neg _) as o
-         => let b : zrange := invert_Some (op_to_bounds o) in
-            let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_unop o)) in
-            Some (fun args
-                  => match args with
-                     | [x] => interp_PHOAS_op ident.Z_cast (Some b) (o (x tt))
-                     | _ => None
-                     end)
-       | (negZ) as o
-         => let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_unop o)) in
-            Some (fun args
-                  => match args with
-                     | [x] => o (x tt)
-                     | _ => None
-                     end)
-       | (selectznz) as o
-         => let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_tritop o)) in
-            Some (fun args
-                  => match args with
-                     | [x; y; z] => o (x tt) (y tt) (z tt)
-                     | _ => None
-                     end)
-       | (slice _ s | sar s | rcr s) as o
-         => Some (fun _ => Some r[0~>Z.ones (Z.of_N s)])
-       | set_slice 0 w
-         => Some (fun args
-                  => match unthunk args with
-                     | [Some a; Some b]
-                       => if ((lower a <? 0) || (lower b <? 0))%Z%bool
-                          then None
-                          else let a := upper a in
-                               let b := upper b in
-                               Some r[0~>(Z.lor
-                                            (Z.land (Z.ones (Z.succ (Z.log2 b))) (Z.ones (Z.of_N w)))
-                                            (Z.ldiff (Z.ones (Z.succ (Z.log2 a))) (Z.ones (Z.of_N w))))]
-                     | _ => None
-                     end)
-       | addcarryZ _
-       | subborrowZ _
-       | set_slice _ _
-         => None
-       end%zrange.
 
   Fixpoint bound_expr_via_PHOAS (e : Symbolic.expr) : option zrange
     := match e with
@@ -1690,197 +1917,6 @@ Section bound_expr_via_PHOAS.
        end.
 
   Local Coercion is_true : bool >-> Sortclass.
-
-  Lemma interp_op_op_to_PHOAS_bounds_set_slice_0 G o bf arg_bounds args v b
-        (H : op_to_PHOAS_bounds o = Some bf)
-        (Hargs : Forall2 (fun v b => match b with
-                                     | Some b => is_bounded_by_bool v b = true
-                                     | None => True
-                                     end)
-                         args arg_bounds)
-        (Hop : interp_op G o args = Some v)
-        arg_bounds' (Hb : bf arg_bounds' = Some b)
-        (Ha : arg_bounds = List.map (fun x => x tt) arg_bounds')
-        w (Ho : set_slice 0 w = o)
-    : is_bounded_by_bool v b.
-  Proof.
-    subst o; cbv [op_to_PHOAS_bounds interp_op] in *; inversion_option; subst.
-    break_innermost_match_hyps; inversion_option; subst.
-    repeat (destruct_one_head list; inversion_list).
-    invlist Forall2.
-    break_innermost_match_hyps; inversion_option; subst.
-    apply unreflect_bool; reflect_hyps; cbn [upper lower].
-    autorewrite with zsimplify_const.
-    rewrite Z.land_ones_ones.
-    rewrite Z.lor_nonneg, Z.ldiff_nonneg, !Z.land_ones by lia.
-    repeat apply conj; auto with zarith.
-    match goal with
-    | [ H : ~(?x < 0 \/ ?y < 0) |- _ ] => assert (0 <= x /\ 0 <= y) by lia; clear H
-    end.
-    clear G; destruct_head zrange; destruct_head'_and.
-    pose proof Z.log2_le_mono; pose proof Z.log2_nonneg; specialize_all_ways.
-    repeat match goal with H : _ -> _ |- _ => clear H end.
-    break_innermost_match; reflect_hyps; destruct_head'_or; try lia.
-    apply Z.le_bitwise; rewrite ?Z.lor_nonneg, ?Z.ldiff_nonneg; auto with zarith.
-    intros; rewrite <- Z.land_ones by lia.
-    Z.bitblast_core; cbn.
-    all: repeat rewrite ?andb_true_r, ?andb_false_r, ?andb_false_l, ?andb_true_l, ?orb_false_r, ?orb_false_l, ?orb_true_l, ?orb_true_r.
-    all: cbv [Bool.le]; break_innermost_match; auto.
-    all: rewrite ?Z.min_le_iff in *.
-    all: destruct_head'_or.
-    all: rewrite Z.bits_above_log2 in * by lia.
-    all: congruence.
-  Qed.
-
-  Lemma interp_op_op_to_PHOAS_bounds_fold_right_helper G o arg_bounds args v
-        (Hargs : Forall2 (fun v b => match b with
-                                     | Some b => is_bounded_by_bool v b = true
-                                     | None => True
-                                     end)
-                         args arg_bounds)
-        (Hop : interp_op G o args = Some v)
-        id (Hid : identity o = Some id)
-        bo (Hbo : op_to_PHOAS_binop o = Some bo)
-        (o' := interp_PHOAS_op bo)
-        (bf := fold_right o' (Some r[id~>id]%zrange))
-        b (Hb : bf arg_bounds = Some b)
-    : is_bounded_by_bool (fold_right (ident.interp bo) id args) b.
-  Proof.
-    subst o' bf; subst.
-    pose proof (@ZRange.ident.option.interp_related _ _ _ bo
-                 : type.related_hetero _ (interp_PHOAS_op bo) (ident.interp bo)) as Hbounds.
-    cbn -[interp_PHOAS_op] in *.
-    cbv [Morphisms.respectful_hetero] in *.
-    revert dependent b.
-    clear Hop v.
-    induction Hargs; cbn [fold_right]; intros; inversion_option; subst.
-    { apply ZRange.is_bounded_by_bool_constant. }
-    let H := match goal with H : interp_PHOAS_op bo _ _ = Some _ |- _ => H end in
-    in_hyp_under_binders_do (fun H' => rewrite H in H').
-    apply Hbounds; clear Hbounds.
-    all: break_innermost_match; try reflexivity; specialize_under_binders_by reflexivity.
-    all: auto.
-  Qed.
-
-  Lemma interp_op_op_to_PHOAS_bounds G o bf arg_bounds args v b
-        (H : op_to_PHOAS_bounds o = Some bf)
-        (Hargs : Forall2 (fun v b => match b with
-                                     | Some b => is_bounded_by_bool v b = true
-                                     | None => True
-                                     end)
-                         args arg_bounds)
-        (Hop : interp_op G o args = Some v)
-        arg_bounds' (Hb : bf arg_bounds' = Some b)
-        (Ha : arg_bounds = List.map (fun x => x tt) arg_bounds')
-    : is_bounded_by_bool v b.
-  Proof.
-    (* pose proof the lemmas that we needed extra insight to prove separately *)
-    pose proof (@interp_op_op_to_PHOAS_bounds_set_slice_0 G o bf arg_bounds args v b H Hargs Hop arg_bounds' Hb Ha) as Hslice.
-    pose proof (@interp_op_op_to_PHOAS_bounds_fold_right_helper G o arg_bounds args v Hargs Hop) as Hfold_right.
-    (* destruct the operation, do general cleanup *)
-    cbv [op_to_PHOAS_bounds] in *.
-    all: repeat first [ progress subst
-                      | progress inversion_option
-                      | progress cbn [interp_op] in *
-                      | break_innermost_match_hyps_step ].
-    (* make use of the special-insight lemmas *)
-    all: first [ specialize (Hslice _ eq_refl) | clear Hslice ].
-    all: first [ specialize (Hfold_right _ eq_refl _ eq_refl) | clear Hfold_right ].
-    all: try assumption.
-    (* forward reasoning of destructing bounds interp things, so we can expose the PHOAS bounds lemmas *)
-    all: let rec do_on T :=
-           lazymatch T with
-           | ?F ?x
-             => let h := head x in
-                try (constr_eq h (@ZRange.ident.option.interp); destruct x eqn:?);
-                do_on F
-           | _ => idtac
-           end in
-         repeat match goal with
-                | [ H : ?T = Some _ |- _ ] => do_on T
-                end.
-    (* pose proof the bounds be get from PHOAS reasoning *)
-    all: repeat match goal with
-                | [ H : context[@ZRange.ident.option.interp ?a ?b ?t ?op] |- _ ]
-                  => unique pose proof (@ZRange.ident.option.interp_related a b t op)
-                end.
-    (* various simplification and cleanup *)
-    all: cbn -[interp_PHOAS_op] in *.
-    all: cbv [Morphisms.respectful_hetero] in *.
-    all: invlist Forall2.
-    all: repeat first [ progress subst
-                      | assumption
-                      | progress cbn [List.map] in *
-                      | inversion_list_step
-                      | match goal with
-                        | [ H : Forall2 _ nil _ |- _ ] => inversion H; clear H
-                        | [ H : Forall2 _ (_ :: _) _ |- _ ] => inversion H; clear H
-                        | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
-                        | [ H : nil = List.map _ ?ls |- _ ] => is_var ls; destruct ls
-                        | [ H : _ :: _ = List.map _ ?ls |- _ ] => is_var ls; destruct ls
-                        end ].
-    all: break_innermost_match_hyps.
-    (* handle goals with relatively simple bounds that follow just from masking/casting/modulo *)
-    all: try change (Z.land ?x 0) with (Z.land x (Z.ones 0)).
-    all: repeat match goal with
-                | [ |- context[is_bounded_by_bool (Z.land ?x (Z.ones ?n)) _] ]
-                  => rewrite (@Z.land_ones x n), ?(Z.ones_equiv n), <- ?Z.sub_1_r by lia
-                | [ |- is_true (is_bounded_by_bool (?y mod ?x) r[0~>?x-1]) ]
-                  => apply unreflect_bool; cbn [lower upper]; generalize (Z.mod_pos_bound y x); try lia
-                | [ |- is_true (is_bounded_by_bool (?y mod ?x) r[0~>_]) ]
-                  => try now apply unreflect_bool; cbn [lower upper]; generalize (Z.mod_pos_bound y x); lia
-                | [ |- is_true (is_bounded_by_bool (Z.b2z ?b) r[0~>1]) ]
-                  => case b; vm_compute; reflexivity
-                end.
-    (* transform asm masking (Z.land _ (Z.ones _)) into PHOAS casting (ident.cast), so the bounds things line up *)
-    all: repeat first [ assumption
-                      | solve [ auto ]
-                      | match goal with
-                        | [ |- context[is_bounded_by_bool (?x mod ?y) ?b] ]
-                          => rewrite <- (Z.sub_add 1 y), (Z.sub_1_r y);
-                             rewrite <- (@ident.cast_out_of_bounds_simple_0_mod (Z.pred y)) by auto with zarith;
-                             rewrite <- ?Z.ones_equiv
-                        end ].
-    all: rewrite ?Z.add_simpl_r. (* idk why we need this *)
-    (* start applying and specializing PHOAS bounds hypotheses *)
-    all: repeat first [ reflexivity
-                      | assumption
-                      | solve [ auto ]
-                      | exactly_once (idtac; multimatch goal with
-                                             | [ H : _ |- _ ] => apply H; clear H
-                                             end)
-                      | break_innermost_match_step
-                      | progress specialize_under_binders_by reflexivity
-                      | progress specialize_under_binders_by eapply zrange_lb ].
-    (* some PHOAS bounds hypotheses have a match in their conclusion; we rewrite away the match by autospecializing it with hypotheses in the context *)
-    all: repeat first [ match goal with
-                        | [ H : ?x = _ |- _ ]
-                          => let h := head x in
-                             constr_eq h (@ZRange.ident.option.interp);
-                             progress in_hyp_under_binders_do (fun H' => rewrite H in H')
-                        end ].
-    (* finish specializing PHOAS bounds hypotheses *)
-    all: repeat first [ reflexivity
-                      | assumption
-                      | congruence
-                      | progress inversion_option
-                      | progress subst
-                      | solve [ auto ]
-                      | exactly_once (idtac; multimatch goal with
-                                             | [ H : _ |- _ ] => apply H; clear H
-                                             end)
-                      | break_innermost_match_step
-                      | apply zrange_lb
-                      | progress specialize_under_binders_by reflexivity
-                      | progress specialize_under_binders_by apply zrange_lb
-                      | break_innermost_match_hyps_step ].
-    (* Somehow, Z.zselect gets unfolded in the goal and broken up by break_innermost_match above; so we must unfold it in the hyps *)
-    all: cbv [Z.zselect] in *.
-    all: repeat match goal with
-                | [ H : (?x =? 0) = _ |- _ ] => in_hyp_under_binders_do (fun H' => rewrite H in H')
-                end.
-    all: try now cbv [is_true]; eauto with nocore.
-  Qed.
 
   Fixpoint eval_bound_expr_via_PHOAS G e b {struct e}
     : bound_expr_via_PHOAS e = Some b ->
