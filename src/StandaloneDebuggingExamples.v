@@ -26,7 +26,8 @@ Module debugging_no_asm.
     cbv [ForExtraction.hint_file_names] in v.
     cbn [map fst snd] in v.
     vm_compute ParseFlagOptions.parse_flag_opts in v.
-    cbv beta iota in v.
+    vm_compute ParseFlagOptions.parse_flag_opts_to_bool_filter in v.
+    cbn [List.app] in v.
     cbn [ForExtraction.with_read_concat_asm_files_cps] in v.
     set (k := ForExtraction.with_read_file "t.asm") in (value of v).
     assert (k = (fun k => k ["SECTION .text"
@@ -125,7 +126,8 @@ Module debugging_typedef_bounds.
     cbv [ForExtraction.hint_file_names] in v.
     cbn [map] in v.
     vm_compute ParseFlagOptions.parse_flag_opts in v.
-    cbv beta iota in v.
+    vm_compute ParseFlagOptions.parse_flag_opts_to_bool_filter in v.
+    cbn [List.app] in v.
     cbn [ForExtraction.with_read_concat_asm_files_cps] in v.
     vm_compute ForExtraction.parse_args in v.
     cbv beta iota zeta in v.
