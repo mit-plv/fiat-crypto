@@ -7,6 +7,7 @@ Require Import Crypto.Arithmetic.ModularArithmeticTheorems.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil.
+Import Crypto.Util.ListUtil.Reifiable.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Decidable.Bool2Prop.
@@ -527,56 +528,55 @@ Module Associational.
   Qed.
 
   Definition value_at_weight (a : list (Z * Z)) (d : Z) :=
-    fold_right (fun p sum => if (d =? fst p) then (sum + snd p) else sum) 0 a.
+    fold_right Z.add 0 (map snd (filter (fun p => fst p =? d) a)).
 
-  Lemma value_at_weight_works a d : d * (value_at_weight a d) = Associational.eval (filter (fun p => d =? fst p) a).
+  Lemma value_at_weight_works a d : d * (value_at_weight a d) = Associational.eval (filter (fun p => fst p =? d) a).
   Proof.
     induction a as [| a0 a' IHa'].
-    - cbv [Associational.eval]. simpl. lia.
-    - simpl. destruct (d =? fst a0) eqn:E.
-      + rewrite Associational.eval_cons. rewrite <- IHa'. apply Z.eqb_eq in E. rewrite E. lia.
+    - cbv [Associational.eval value_at_weight]. simpl. lia.
+    - cbv [value_at_weight]. simpl. destruct (fst a0 =? d) eqn:E.
+      + rewrite Associational.eval_cons. simpl. rewrite <- IHa'. cbv [value_at_weight]. lia.
       + apply IHa'.
   Qed.
 
-  Definition firsts (a : list (Z*Z)) :=
-    map (fun p => fst p) a.
-
-  Lemma not_in_value_0 a d : ~ In d (firsts a) -> value_at_weight a d = 0.
+  Lemma not_in_value_0 a d : ~ In d (map fst a) -> value_at_weight a d = 0.
   Proof.
     intros H. induction a as [| x a' IHa'].
     - reflexivity.
-    - simpl. destruct (d =? fst x) eqn:E.
-      + exfalso. apply H. simpl. left. apply Z.eqb_eq in E. symmetry. apply E.
+    - cbv [value_at_weight]. simpl. destruct (fst x =? d) eqn:E.
+      + exfalso. apply H. simpl. lia.
       + apply IHa'. intros H'. apply H. simpl. right. apply H'.
   Qed.
 
   Definition dedup_weights a :=
-    map (fun d => (d, value_at_weight a d)) (just_once Z.eqb (firsts a)).
+    map (fun d => (d, value_at_weight a d)) (nodupb Z.eqb (map fst a)).
 
-  Lemma map_eq (x y : Z) l a : ~ In x l ->
-    map (fun d : Z => (d, value_at_weight a d)) l = map (fun d : Z => (d, if d =? x then (value_at_weight a d + y) else value_at_weight a d)) l.
+  Lemma funs_same (l : list Z) (a0 : Z*Z) (a' : list (Z*Z)) :
+  ~ In (fst a0) l ->
+  forall d, In d l ->
+  (fun d : Z => (d, value_at_weight (a0 :: a') d)) d = (fun d => (d, value_at_weight a' d)) d.
   Proof.
-    intros H. induction l as [|x' l' IHl'].
+    intros H d H'. simpl. f_equal. cbv [value_at_weight]. simpl. destruct (fst a0 =? d) eqn:E.
+    - exfalso. rewrite Z.eqb_eq in E. subst. apply (H H').
     - reflexivity.
-    - simpl. destruct (x' =? x) eqn:E.
-      + exfalso. apply H. apply Z.eqb_eq in E. rewrite E. simpl. left. reflexivity.
-      + rewrite IHl'.
-        -- reflexivity.
-        -- intros H'. apply H. simpl. right. apply H'.
   Qed.
 
-  Theorem eval_dedup_weights a : Associational.eval (dedup_weights a) = Associational.eval a.
+  Lemma eval_dedup_weights a : Associational.eval (dedup_weights a) = Associational.eval a.
   Proof.
     induction a as [| a0 a' IHa'].
     - reflexivity.
-    - cbv [dedup_weights]. simpl. destruct (is_in Z.eqb (fst a0) (just_once Z.eqb (firsts a'))) eqn:E.
-      + apply (is_in_true_iff Z.eqb Z.eqb_eq) in E. rewrite <- (just_once_in_iff Z.eqb Z.eqb_eq) in E. apply (just_once_split Z.eqb Z.eqb_eq) in E.
-        destruct E as [l1 [l2 [H1 [H2 H3] ] ] ]. rewrite H1. repeat rewrite map_app. rewrite <- (map_eq _ _ _ _ H2).
-        rewrite <- (map_eq _ _ _ _ H3). repeat rewrite Associational.eval_app. simpl. rewrite Z.eqb_refl. repeat rewrite Associational.eval_cons.
-        rewrite <- IHa'. simpl. rewrite Associational.eval_nil. cbv [dedup_weights]. rewrite H1.
-        repeat rewrite map_app. repeat rewrite Associational.eval_app. cbv [Associational.eval]. simpl. lia.
-      + simpl. rewrite Z.eqb_refl. apply (is_in_false_iff Z.eqb Z.eqb_eq) in E. rewrite <- (map_eq _ _ _ _ E). repeat rewrite Associational.eval_cons.
-        simpl. rewrite <- IHa'. cbv [dedup_weights]. f_equal. f_equal. rewrite <- (just_once_in_iff Z.eqb Z.eqb_eq) in E. rewrite (not_in_value_0 _ _ E). lia.
+    - cbv [dedup_weights]. simpl. destruct (existsb (Z.eqb (fst a0)) (nodupb Z.eqb (map fst a'))) eqn:E.
+      + apply (existsb_eqb_true_iff Z.eqb Z.eqb_eq) in E. rewrite <- (nodupb_in_iff Z.eqb Z.eqb_eq) in E.
+        apply (nodupb_split Z.eqb Z.eqb_eq) in E. destruct E as [l1 [l2 [H1 [H2 H3] ] ] ]. rewrite H1.
+        repeat rewrite map_app. rewrite (map_ext_in _ _ l1 (funs_same l1 a0 a' H2)).
+        rewrite (map_ext_in _ _ l2 (funs_same l2 a0 a' H3)). repeat rewrite Associational.eval_app. simpl.
+        repeat rewrite Associational.eval_cons. simpl. rewrite <- IHa'. simpl. rewrite Associational.eval_nil. 
+        cbv [dedup_weights]. rewrite H1. repeat rewrite map_app. repeat rewrite Associational.eval_app.
+        cbv [value_at_weight]. simpl. rewrite Z.eqb_refl. simpl. cbv [Associational.eval]. simpl. lia.
+      + simpl. apply (existsb_eqb_false_iff Z.eqb Z.eqb_eq) in E. rewrite (map_ext_in _ _ _ (funs_same _ _ _ E)).
+        repeat rewrite Associational.eval_cons. simpl. rewrite <- IHa'. cbv [dedup_weights]. f_equal. f_equal.
+        rewrite <- (nodupb_in_iff Z.eqb Z.eqb_eq) in E. cbv [value_at_weight]. simpl. rewrite Z.eqb_refl.
+        apply not_in_value_0 in E. cbv [value_at_weight] in E. simpl. rewrite E. lia.
   Qed.
 
   Section Carries.
@@ -605,29 +605,28 @@ Module Associational.
     Proof using Type*. cbv [carry]; induction p; push; nsatz. Qed.
     Hint Rewrite eval_carry using auto : push_eval.
 
-  (* 'carrying down', aka borrowing *)
-  Definition carryterm_down (w fw:Z) (t:Z * Z) :=
+  Definition borrowterm (w fw:Z) (t:Z * Z) :=
       let quot := w / fw in
       if (Z.eqb (fst t) w)
         then [(quot, snd t * fw)]
         else [t].
 
-  Lemma eval_carryterm_down w fw (t:Z * Z) (fw_nz:fw<>0) (w_fw:w mod fw = 0) :
-        Associational.eval (carryterm_down w fw t) = Associational.eval [t].
+  Lemma eval_borrowterm w fw (t:Z * Z) (fw_nz:fw<>0) (w_fw:w mod fw = 0) :
+        Associational.eval (borrowterm w fw t) = Associational.eval [t].
   Proof using Type*.
-    cbv [carryterm_down Let_In]; break_match; push; [|trivial].
+    cbv [borrowterm Let_In]; break_match; push; [|trivial].
     pose proof (Z.div_mod (snd t) fw fw_nz).
     rewrite Z.eqb_eq in *.
     ring_simplify. rewrite Z.mul_comm. rewrite Z.mul_assoc. rewrite <- Z_div_exact_full_2; lia.
   Qed.
 
-  Definition carry_down (w fw:Z) (p:list (Z*Z)) :=
-    flat_map (carryterm_down w fw) p.
+  Definition borrow (w fw:Z) (p:list (Z*Z)) :=
+    flat_map (borrowterm w fw) p.
 
-  Lemma eval_carry_down w fw p (fw_nz:fw<>0) (w_fw:w mod fw = 0):
-        Associational.eval (carry_down w fw p) = Associational.eval p.
+  Lemma eval_borrow w fw p (fw_nz:fw<>0) (w_fw:w mod fw = 0):
+        Associational.eval (borrow w fw p) = Associational.eval p.
   Proof using Type*.
-    cbv [carry_down carryterm_down]. induction p as [| a p' IHp'].
+    cbv [borrow borrowterm]. induction p as [| a p' IHp'].
     - trivial.
     - push. destruct (fst a =? w) eqn:E.
       + rewrite Z.mul_comm. rewrite <- Z.mul_assoc. rewrite <- Z_div_exact_full_2; lia.

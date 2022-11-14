@@ -8,7 +8,6 @@ Import Associational Positional.
 Import ListNotations. Local Open Scope Z_scope.
 
 Local Coercion Z.of_nat : nat >-> Z.
-Local Coercion Z.pos : positive >-> Z.
 
 Section __.
 
@@ -94,21 +93,18 @@ Proof.
   - apply weight_nz.
 Qed.
 
-Definition from_n_to_one n :=
-  fold_right (fun (x :nat) l' => (length l' + 1) :: l') [] (repeat 0 n).
+Definition loop start :=
+  fold_right loop_body start (rev (seq 1 (limbs - 2 - 1))).
 
-Definition loop' start :=
-  fold_right loop_body start (from_n_to_one (limbs - 2 - 1)).
-
-Lemma eval_loop' start :
-  ((Associational.eval (loop' start)) mod (s - c) = (Associational.eval start) mod (s - c))%Z.
+Lemma eval_loop start :
+  ((Associational.eval (loop start)) mod (s - c) = (Associational.eval start) mod (s - c))%Z.
 Proof.
-  cbv [loop']. induction (from_n_to_one (limbs - 2 - 1)) as [| i l' IHl'].
+  cbv [loop]. induction (rev (seq 1 (limbs - 2 - 1))) as [| i l' IHl'].
   - reflexivity.
   - simpl. rewrite eval_loop_body. apply IHl'.
 Qed.
 
-Definition mulmod_general a b :=
+Definition mulmod a b :=
   let l := limbs in
   let a_assoc := Positional.to_associational weight limbs a in
   let b_assoc := Positional.to_associational weight limbs b in
@@ -121,24 +117,24 @@ Definition mulmod_general a b :=
   let r5 := carry' (weight (l - 1)) (weight 1) r4 in
   let r6 := carry' (weight (l - 1)) (Z.div s (weight (l - 1))) r5 in
   let r7 := carry' (weight l) (weight 1) r6 in
-  let r8 := carry_down (weight l) (weight l / s) r7 in
+  let r8 := borrow (weight l) (weight l / s) r7 in
   let r8' := dedup_weights r8 in
   let r9 := reduce' s s s c r8' in
   let r10 := carry' (weight 0) (weight 1) r9 in
-  let r11 := loop' r10 in
+  let r11 := loop r10 in
   let r12 := reduce' s (weight (2 * l - 2)) (weight l) c r11 in
   let r13 := carry' (weight (l - 2)) (weight 1) r12 in
   Positional.from_associational weight l r13.
 
-Hint Rewrite Positional.eval_from_associational Positional.eval_to_associational eval_carry_down eval_loop': push_eval.
+Hint Rewrite Positional.eval_from_associational Positional.eval_to_associational eval_borrow eval_loop: push_eval.
 
 Local Open Scope Z_scope.
 
-Theorem eval_mulmod_general a b :
+Theorem eval_mulmod a b :
   (Positional.eval weight limbs a * Positional.eval weight limbs b) mod (s - c) =
-  (Positional.eval weight limbs (mulmod_general a b)) mod (s - c).
+  (Positional.eval weight limbs (mulmod a b)) mod (s - c).
 Proof.
-  cbv [mulmod_general carry' reduce']. autorewrite with push_eval. reflexivity.
+  cbv [mulmod carry' reduce']. autorewrite with push_eval. reflexivity.
   all:
       cbv [weight s base];
       try apply weight_nz;
