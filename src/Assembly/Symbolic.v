@@ -2236,35 +2236,72 @@ Section bound_expr_via_PHOAS.
 
   Local Coercion is_true : bool >-> Sortclass.
 
-  Fixpoint eval_bound_expr_via_PHOAS G d e b {struct e}
+  Fixpoint eval_bound_expr_via_PHOAS' G d (Hok : gensym_dag_ok G d) e b
+           (H_dag : forall i b, dag.lookup_bounds d i = Some b -> forall v, eval G d (ExprRef i) v -> is_bounded_by_bool v b = true)
+           {struct e}
     : bound_expr_via_PHOAS d e = Some b ->
-      forall v, gensym_dag_ok G d -> eval G d e v -> is_bounded_by_bool v b = true.
+      forall v, eval G d e v -> is_bounded_by_bool v b = true.
   Proof using Type.
-    intros H v Hok.
-    specialize (fun e v b H => eval_bound_expr_via_PHOAS G d e b H v Hok).
+    intros H v.
+    assert (dag.ok d) by apply Hok.
+    specialize (fun e v b H H_dag => eval_bound_expr_via_PHOAS' G d Hok e b H_dag H v).
     destruct e as [?|[n args] ]; cbn [bound_expr_via_PHOAS] in *.
-    { clear eval_bound_expr_via_PHOAS; intros; inversion_option. }
-    let P := lazymatch type of eval_bound_expr_via_PHOAS with forall e v, @?P e v => P end in
-    assert (eval_bound_expr_via_PHOAS_Forall : forall args', List.length args = List.length args' -> Forall2 P args args').
-    { clear -eval_bound_expr_via_PHOAS.
+    { clear eval_bound_expr_via_PHOAS'; intros; inversion_option; eauto. }
+    let P := lazymatch type of eval_bound_expr_via_PHOAS' with forall e v, @?P e v => P end in
+    assert (eval_bound_expr_via_PHOAS'_Forall : forall args', List.length args = List.length args' -> Forall2 P args args').
+    { clear -eval_bound_expr_via_PHOAS'.
       induction args as [|arg args IH], args'; cbn [List.length];
         first [ constructor; try apply IH | clear; intro; exfalso; congruence ].
-      { apply eval_bound_expr_via_PHOAS. }
-      { clear eval_bound_expr_via_PHOAS; congruence. } }
-    clear eval_bound_expr_via_PHOAS.
+      { apply eval_bound_expr_via_PHOAS'. }
+      { clear eval_bound_expr_via_PHOAS'; congruence. } }
+    clear eval_bound_expr_via_PHOAS'.
     break_innermost_match_hyps; inversion_option.
     inversion 1; subst.
     eapply (@interp_op_op_to_PHOAS_bounds G n); try (eassumption || reflexivity).
     rewrite !Forall2_map_r_iff.
     eassert (H' : List.length _ = List.length _) by (eapply eq_length_Forall2; eassumption).
-    specialize (eval_bound_expr_via_PHOAS_Forall _ H').
+    specialize (eval_bound_expr_via_PHOAS'_Forall _ H').
     rewrite !Forall2_forall_iff_nth_error.
     intro i;
       repeat match goal with
              | [ H : Forall2 _ _ _ |- _ ] => rewrite Forall2_forall_iff_nth_error in H; specialize (H i)
+             | [ H : Forall _ _ |- _ ] => rewrite Forall_forall_iff_nth_error in H; specialize (H i)
              end.
     cbv [option_eq] in *.
     break_innermost_match; break_innermost_match_hyps; inversion_option; auto; tauto.
+  Qed.
+
+  Lemma eval_bound_expr_via_PHOAS_dag G d (Hok : gensym_dag_ok G d)
+    : forall i b, dag.lookup_bounds d i = Some b -> forall v, eval G d (ExprRef i) v -> is_bounded_by_bool v b = true.
+  Proof.
+    assert (dag.ok d) by apply Hok.
+    assert (dag.all_nodes_ok d) by apply Hok.
+    intro i; rewrite dag.lookup_bounds_lookup by apply Hok.
+    intros b H' v He.
+    inversion_one_head' @eval.
+    repeat lazymatch goal with H : _ |- _ => tryif constr_eq H i then fail else revert H end.
+    set (k := dag.lookup _ _) in *.
+    revert k.
+    let P := match goal with |- let k := _ in @?P k => P end in
+    apply (dag.lookup_ind d P); intros; inversion_option; inversion_pair; subst.
+    eapply interp_op_bound_node_idx_via_PHOAS; try eassumption; [].
+    eapply Forall_impl; [ | eassumption ]; cbv beta; intros *.
+    rewrite dag.lookup_bounds_lookup by assumption.
+    destruct_head'_ex; destruct_head'_and.
+    break_innermost_match; intros; inversion_option.
+    inversion_one_head' @eval.
+    match goal with
+    | [ H : ?x = Some _, H' : ?x = _ |- _ ] => rewrite H in H'
+    end.
+    inversion_option; subst.
+    eauto.
+  Qed.
+
+  Lemma eval_bound_expr_via_PHOAS G d (Hok : gensym_dag_ok G d) e b
+    : bound_expr_via_PHOAS d e = Some b ->
+      forall v, eval G d e v -> is_bounded_by_bool v b = true.
+  Proof using Type.
+    eauto using eval_bound_expr_via_PHOAS', eval_bound_expr_via_PHOAS_dag.
   Qed.
 End bound_expr_via_PHOAS.
 
