@@ -1026,23 +1026,24 @@ Section bound_node_via_PHOAS.
     induction H; constructor; eauto.
   Qed.
 
-  Lemma interp_op_bound_node_idx_via_PHOAS lookup_bounds G o args argsZ bs v
+  Lemma interp_op_bound_node_idx_via_PHOAS lookup_bounds (evalGd : Symbolic.expr -> _ -> Prop) G o args argsZ bs v
         (H : bound_node_idx_via_PHOAS lookup_bounds (o, args) = Some bs)
-        (Hargs : Forall (fun i => match G i, lookup_bounds i with
-                                  | Some v, Some b => is_bounded_by_bool v b = true
-                                  | None, _ => False
-                                  | Some _, None => True
-                                  end) args)
-        (HargsZ : Forall2 (fun i v => G i = Some v) args argsZ)
+        (Hargs : Forall (fun i => forall v b,
+                             evalGd (ExprRef i) v
+                             -> lookup_bounds i = Some b
+                             -> is_bounded_by_bool v b = true)
+                        args)
+        (HargsZ : Forall2 evalGd (List.map ExprRef args) argsZ)
         (Hop : interp_op G o argsZ = Some v)
     : is_bounded_by_bool v bs.
   Proof.
     cbv [bound_node_idx_via_PHOAS Crypto.Util.Option.bind] in *; break_innermost_match_hyps; inversion_option; subst.
     eapply interp_op_op_to_PHOAS_bounds; try eassumption; try reflexivity.
     rewrite !Forall2_map_r_iff.
+    rewrite Forall2_map_l_iff in HargsZ.
     clear dependent o.
     clear dependent bs.
-    induction HargsZ; invlist Forall; constructor; break_innermost_match_hyps; inversion_option; subst; eauto.
+    induction HargsZ; invlist Forall; constructor; break_innermost_match_hyps; break_innermost_match; inversion_option; subst; eauto.
   Qed.
 End bound_node_via_PHOAS.
 
