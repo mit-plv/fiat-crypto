@@ -2033,12 +2033,12 @@ Section bound_expr_via_PHOAS.
   Local Instance : shiftr_avoid_uint1_opt := false.
   Local Notation interp_PHOAS_op := (ZRange.ident.option.interp true).
 
-  Fixpoint bound_expr_via_PHOAS (e : Symbolic.expr) : option zrange
+  Fixpoint bound_expr_via_PHOAS (d : dag) (e : Symbolic.expr) : option zrange
     := match e with
        | ExprApp (o, args)
          => match op_to_PHOAS_bounds o with
             | Some o
-              => o (List.map (fun e 'tt => bound_expr_via_PHOAS e) args)
+              => o (List.map (fun e 'tt => bound_expr_via_PHOAS d e) args)
             | None => None
             end
        | ExprRef _ => None
@@ -2046,12 +2046,12 @@ Section bound_expr_via_PHOAS.
 
   Local Coercion is_true : bool >-> Sortclass.
 
-  Fixpoint eval_bound_expr_via_PHOAS G e b {struct e}
-    : bound_expr_via_PHOAS e = Some b ->
-      forall d v, eval G d e v -> is_bounded_by_bool v b = true.
+  Fixpoint eval_bound_expr_via_PHOAS G d e b {struct e}
+    : bound_expr_via_PHOAS d e = Some b ->
+      forall v, gensym_dag_ok G d -> eval G d e v -> is_bounded_by_bool v b = true.
   Proof using Type.
-    intros H d.
-    specialize (fun e v b H => eval_bound_expr_via_PHOAS G e b H d v).
+    intros H v Hok.
+    specialize (fun e v b H => eval_bound_expr_via_PHOAS G d e b H v Hok).
     destruct e as [?|[n args] ]; cbn [bound_expr_via_PHOAS] in *.
     { clear eval_bound_expr_via_PHOAS; intros; inversion_option. }
     let P := lazymatch type of eval_bound_expr_via_PHOAS with forall e v, @?P e v => P end in
@@ -2079,10 +2079,10 @@ Section bound_expr_via_PHOAS.
 End bound_expr_via_PHOAS.
 
 Notation bound_expr := bound_expr_via_PHOAS.
-Lemma eval_bound_expr G e b : bound_expr e = Some b ->
-  forall d v, eval G d e v -> (ZRange.lower b <= v <= ZRange.upper b)%Z.
+Lemma eval_bound_expr G d e b : bound_expr d e = Some b ->
+  forall v, gensym_dag_ok G d -> eval G d e v -> (ZRange.lower b <= v <= ZRange.upper b)%Z.
 Proof using Type.
-  intros H d v He.
+  intros H v Hok He.
   eapply eval_bound_expr_via_PHOAS in He; [ | eassumption .. ].
   reflect_hyps; lia.
 Qed.
@@ -2110,10 +2110,10 @@ Ltac t:= match goal with
   end.
 
 Lemma bound_sum' G d
-  es (He : Forall (fun e => forall b, bound_expr e = Some b ->
-       forall (d : dag) (v : Z), eval G d e v -> (ZRange.lower b <= v <= ZRange.upper b)%Z) es)
+  es (He : Forall (fun e => forall b, bound_expr d e = Some b ->
+       forall (v : Z), eval G d e v -> (ZRange.lower b <= v <= ZRange.upper b)%Z) es)
   : forall
-  bs (Hb : Option.List.lift (map bound_expr es) = Some bs)
+  bs (Hb : Option.List.lift (map (bound_expr d) es) = Some bs)
   vs (Hv : Forall2 (eval G d) es vs)
   , (fold_right Z.add 0 (List.map ZRange.lower bs) <= fold_right Z.add 0 vs <= fold_right Z.add 0 (List.map ZRange.upper bs))%Z.
 Proof using Type.
@@ -2121,14 +2121,15 @@ Proof using Type.
   destruct (bound_expr _) eqn:? in *; cbn in *; repeat t.
   destruct (fold_right (B:=option _) _) eqn:? in *; cbn in *; repeat t; cbn in *.
   specialize (IHHe _ ltac:(eassumption) _ ltac:(eassumption)); cbn.
-  specialize (H _ ltac:(exact eq_refl) _ _ ltac:(eassumption)).
+  specialize (H _ ltac:(exact eq_refl) _ ltac:(eassumption)).
   Lia.lia.
 Qed.
 
 Import Crypto.Util.ZRange.
 
 Lemma bound_sum G d es
-  bs (Hb : Option.List.lift (map bound_expr es) = Some bs)
+  (Hok : gensym_dag_ok G d)
+  bs (Hb : Option.List.lift (map (bound_expr d) es) = Some bs)
   vs (Hv : Forall2 (eval G d) es vs)
   : (fold_right Z.add 0 (List.map ZRange.lower bs) <= fold_right Z.add 0 vs <= fold_right Z.add 0 (List.map ZRange.upper bs))%Z.
 Proof using Type.
@@ -2141,8 +2142,8 @@ Definition isCst (e : expr) :=
   match e with ExprApp ((const _), []) => true | _ => false end.
 
 Module Rewrite.
-Class Ok r := rwok : forall G d e v, eval G d e v -> eval G d (r e) v.
-Class description_of (r : expr -> expr) := describe : string.
+Class Ok r := rwok : forall G d e v, gensym_dag_ok G d -> eval G d e v -> eval G d (r d e) v.
+Class description_of (r : dag -> expr -> expr) := describe : string.
 #[global] Bind Scope string_scope with description_of.
 #[global] Typeclasses Opaque description_of.
 Ltac resolve_match_using_hyp :=
@@ -2178,7 +2179,7 @@ Ltac step := match goal with
   | H: interp_op _ (const _) nil = Some _ |- _ => inversion H; clear H; subst
   | H: interp0_op _ _ = Some _ |- _ => eapply interp_op_interp0_op in H
   | H: interp0_expr _ = Some _ |- _ => eapply eval_interp0_expr in H
-  | H: bound_expr _ = Some _ |- _ => eapply eval_bound_expr in H; eauto; [ ]
+  | H: bound_expr _ _ = Some _ |- _ => eapply eval_bound_expr in H; eauto; [ ]
 
   | H : (?x <=? ?y)%N = ?b |- _ => is_constructor b; destruct (N.leb_spec x y); (inversion H || clear H)
   | H : andb _ _ = true |- _ => eapply Bool.andb_prop in H; case H as (?&?)
@@ -2209,7 +2210,7 @@ Ltac t := repeat (step || Econstructor || eauto || (progress cbn [interp0_op int
 
 #[local] Hint Rewrite Z.fold_right_land_ones_id : step_db.
 
-Definition slice0 :=
+Definition slice0 (d : dag) :=
   fun e => match e with
     ExprApp (slice 0 s, [(ExprApp ((addZ|mulZ|negZ|shlZ|shrZ|andZ|orZ|xorZ) as o, args))]) =>
         ExprApp ((match o with addZ=>add s|mulZ=>mul s|negZ=>neg s|shlZ=>shl s|shrZ => shr s|andZ => and s| orZ => or s|xorZ => xor s |_=>old 0%N 999999%N end), args)
@@ -2218,7 +2219,7 @@ Definition slice0 :=
   := "Merges (slice 0 s) into addZ,mulZ,negZ,shlZ,shrZ,andZ,orZ,xorZ".
 Global Instance slice0_ok : Ok slice0. Proof using Type. t. Qed.
 
-Definition slice01_addcarryZ :=
+Definition slice01_addcarryZ (d : dag) :=
   fun e => match e with
     ExprApp (slice 0 1, [(ExprApp (addcarryZ s, args))]) =>
         ExprApp (addcarry s, args)
@@ -2228,7 +2229,7 @@ Definition slice01_addcarryZ :=
 Global Instance slice01_addcarryZ_ok : Ok slice01_addcarryZ.
 Proof using Type. t; rewrite ?Z.shiftr_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2; trivial; Lia.lia. Qed.
 
-Definition slice01_subborrowZ :=
+Definition slice01_subborrowZ (d : dag) :=
   fun e => match e with
     ExprApp (slice 0 1, [(ExprApp (subborrowZ s, args))]) =>
         ExprApp (subborrow s, args)
@@ -2238,7 +2239,7 @@ Definition slice01_subborrowZ :=
 Global Instance slice01_subborrowZ_ok : Ok slice01_subborrowZ.
 Proof using Type. t; rewrite ?Z.shiftr_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2; trivial; Lia.lia. Qed.
 
-Definition slice_set_slice :=
+Definition slice_set_slice (d : dag) :=
   fun e => match e with
     ExprApp (slice 0 s1, [ExprApp (set_slice 0 s2, [_; e'])]) =>
       if N.leb s1 s2 then ExprApp (slice 0 s1, [e']) else e | _ => e end.
@@ -2247,7 +2248,7 @@ Definition slice_set_slice :=
 Global Instance slice_set_slice_ok : Ok slice_set_slice.
 Proof using Type. t. f_equal. Z.bitblast. Qed.
 
-Definition set_slice_set_slice :=
+Definition set_slice_set_slice (d : dag) :=
   fun e => match e with
     ExprApp (set_slice lo1 s1, [ExprApp (set_slice lo2 s2, [x; e']); y]) =>
       if andb (N.eqb lo1 lo2) (N.leb s2 s1) then ExprApp (set_slice lo1 s1, [x; y]) else e | _ => e end.
@@ -2256,10 +2257,10 @@ Definition set_slice_set_slice :=
 Global Instance set_slice_set_slice_ok : Ok set_slice_set_slice.
 Proof using Type. t. f_equal. Z.bitblast. Qed.
 
-Definition set_slice0_small :=
+Definition set_slice0_small (d : dag) :=
   fun e => match e with
     ExprApp (set_slice 0 s, [x; y]) =>
-      match bound_expr x, bound_expr y with Some a, Some b =>
+      match bound_expr d x, bound_expr d y with Some a, Some b =>
       if Z.leb 0 (ZRange.lower a) && Z.leb 0 (ZRange.lower b) && Z.leb (ZRange.upper a) (Z.ones (Z.of_N s)) && Z.leb (ZRange.upper b) (Z.ones (Z.of_N s)) then y
       else e | _, _ => e end | _ => e end%bool.
 #[local] Instance describe_set_slice0_small : description_of Rewrite.set_slice0_small
@@ -2278,21 +2279,21 @@ Proof using Type.
   eapply Z.log2_lt_pow2; Lia.lia.
 Qed.
 
-Definition truncate_small :=
+Definition truncate_small (d : dag) :=
   fun e => match e with
     ExprApp (slice 0%N s, [e']) =>
-      match bound_expr e' with Some b =>
+      match bound_expr d e' with Some b =>
       if Z.leb 0 (ZRange.lower b) && Z.leb (ZRange.upper b) (Z.ones (Z.of_N s))
       then e'
       else e | _ => e end | _ => e end.
 #[local] Instance describe_truncate_small : description_of Rewrite.truncate_small
   := "Simplifies slice when it's a no-op".
-Global Instance truncate_small_ok : Ok truncate_small. Proof using Type. t; []. cbn in *; eapply Z.land_ones_low_alt_ones; eauto. firstorder; Lia.lia. Qed.
+Global Instance truncate_small_ok : Ok truncate_small. Proof using Type. t; []. cbn in *; eapply Z.land_ones_low_alt_ones; eauto. lia. Qed.
 
-Definition addcarry_bit :=
+Definition addcarry_bit (d : dag) :=
   fun e => match e with
     ExprApp (addcarry s, ([ExprApp (const a, nil);b])) =>
-      if option_beq zrange_beq (bound_expr b) (Some r[0~>1]%zrange) then
+      if option_beq zrange_beq (bound_expr d b) (Some r[0~>1]%zrange) then
       match interp0_op (addcarry s) [a; 0], interp0_op (addcarry s) [a; 1] with
       | Some 0, Some 1 => b
       | Some 0, Some 0 => ExprApp (const 0, nil)
@@ -2309,10 +2310,10 @@ Proof using Type.
       subst; repeat step; repeat Econstructor; cbn; congruence.
 Qed.
 
-Definition addoverflow_bit :=
+Definition addoverflow_bit (d : dag) :=
   fun e => match e with
     ExprApp (addoverflow s, ([ExprApp (const a, nil);b])) =>
-      if option_beq zrange_beq (bound_expr b) (Some r[0~>1]%zrange) then
+      if option_beq zrange_beq (bound_expr d b) (Some r[0~>1]%zrange) then
       match interp0_op (addoverflow s) [a; 0] , interp0_op (addoverflow s) [a; 1] with
       | Some 0, Some 1 => b
       | Some 0, Some 0 => ExprApp (const 0, nil)
@@ -2329,10 +2330,10 @@ Proof using Type.
       subst; repeat step; repeat Econstructor; cbn; congruence.
 Qed.
 
-Definition addbyte_small :=
+Definition addbyte_small (d : dag) :=
   fun e => match e with
     ExprApp (add (8%N as s), args) =>
-      match Option.List.lift (List.map bound_expr args) with
+      match Option.List.lift (List.map (bound_expr d) args) with
       | Some bounds =>
           if Z.leb 0 (List.fold_right Z.add 0%Z (List.map lower bounds)) && Z.leb (List.fold_right Z.add 0%Z (List.map upper bounds)) (Z.ones (Z.of_N s))
           then ExprApp (add 64%N, args)
@@ -2342,16 +2343,17 @@ Definition addbyte_small :=
 Global Instance addbyte_small_ok : Ok addbyte_small.
 Proof using Type.
   t; f_equal.
-  eapply bound_sum in H2; eauto.
-  rewrite Z.ones_equiv in E0; rewrite !Z.land_ones, !Z.mod_small; try Lia.lia;
+  let H := match goal with H : Forall2 (eval _ _) _ _ |- _ => H end in
+  eapply bound_sum in H; eauto.
+  rewrite Z.ones_equiv in * |- ; rewrite !Z.land_ones, !Z.mod_small; try lia;
     replace (Z.of_N 8) with 8 in * by (vm_compute; reflexivity);
-    replace (Z.of_N 64) with 64 in * by (vm_compute; reflexivity); Lia.lia.
+    replace (Z.of_N 64) with 64 in * by (vm_compute; reflexivity); lia.
 Qed.
 
-Definition addcarry_small :=
+Definition addcarry_small (d : dag) :=
   fun e => match e with
     ExprApp (addcarry s, args) =>
-      match Option.List.lift (List.map bound_expr args) with
+      match Option.List.lift (List.map (bound_expr d) args) with
       | Some bounds =>
           if Z.leb 0 (List.fold_right Z.add 0%Z (List.map lower bounds)) && Z.leb (List.fold_right Z.add 0%Z (List.map upper bounds)) (Z.ones (Z.of_N s))
           then (ExprApp (const 0, nil))
@@ -2361,8 +2363,9 @@ Definition addcarry_small :=
 Global Instance addcarry_small_ok : Ok addcarry_small.
 Proof using Type.
   t; f_equal.
-  eapply bound_sum in H2; eauto.
-  rewrite Z.ones_equiv in E0; rewrite Z.shiftr_div_pow2, Z.div_small; cbn; Lia.lia.
+  let H := match goal with H : Forall2 (eval _ _) _ _ |- _ => H end in
+  eapply bound_sum in H; eauto.
+  rewrite Z.ones_equiv in * |- ; rewrite Z.shiftr_div_pow2, Z.div_small; cbn; lia.
 Qed.
 
 Lemma signed_small s v (Hv : (0 <= v <= Z.ones (Z.of_N s-1))%Z) : signed s v = v.
@@ -2377,10 +2380,10 @@ Proof using Type.
   rewrite Z.pow_add_r; try Lia.lia.
 Qed.
 
-Definition addoverflow_small :=
+Definition addoverflow_small (d : dag) :=
   fun e => match e with
     ExprApp (addoverflow s, ([_]|[_;_]|[_;_;_]) as args) =>
-      match Option.List.lift (List.map bound_expr args) with
+      match Option.List.lift (List.map (bound_expr d) args) with
       | Some bounds =>
           if List.forallb (Z.leb 0) (List.map lower bounds) && Z.leb (List.fold_right Z.add 0%Z (List.map upper bounds)) (Z.ones (Z.of_N s-1))
           then (ExprApp (const 0, nil))
@@ -2400,7 +2403,7 @@ Proof using Type.
   all : destruct s; cbn in * |- ; lia.
 Qed.
 
-Definition constprop :=
+Definition constprop (d : dag) :=
   fun e => match interp0_expr e with
            | Some v => ExprApp (const v, nil)
            | _ => e end.
@@ -2410,7 +2413,7 @@ Global Instance constprop_ok : Ok constprop.
 Proof using Type. t. f_equal; eauto using eval_eval. Qed.
 
 (* convert unary operations to slice *)
-Definition unary_truncate :=
+Definition unary_truncate (d : dag) :=
   fun e => match e with
     ExprApp (o, [x]) =>
     match unary_truncate_size o with
@@ -2675,7 +2678,7 @@ Proof using Type.
   reflexivity.
 Qed.
 
-Definition flatten_associative :=
+Definition flatten_associative (d : dag) :=
   fun e => match e with
     ExprApp (o, args) =>
     if associative o then
@@ -2689,32 +2692,36 @@ Definition flatten_associative :=
 Global Instance flatten_associative_ok : Ok flatten_associative.
 Proof using Type.
   repeat step.
-  revert dependent v; induction H2; cbn.
+  let v := match goal with v : Z |- _ => v end in
+  let H := match goal with H : Forall2 (eval _ _) _ _ |- _ => H end in
+  revert dependent v; induction H; cbn.
   { econstructor; eauto. }
   intros ? H4.
   pose proof H4.
   eapply invert_interp_op_associative in H4; eauto. destruct H4 as (?&?&?).
   specialize (IHForall2 _ ltac:(eassumption)).
   inversion IHForall2; subst.
+  let x := match goal with |- context[match x with ExprRef _ => _ | _ => _ end] => x end in
   destruct x as [i|[o' args''] ].
   { econstructor. { econstructor. eauto. eauto. }
     erewrite interp_op_associative_cons; eauto. }
   { destruct (op_beq_spec o o'); subst; cycle 1.
     { econstructor. { econstructor. eauto. eauto. }
       erewrite interp_op_associative_cons; eauto. }
+    let H := match goal with H : eval _ _ (ExprApp (_, ?args)) _ |- eval _ _ (ExprApp (_, ?args ++ _)) _ => H end in
     inversion H; clear H; subst.
     econstructor; eauto using Forall2_app.
     erewrite interp_op_associative_app; eauto. }
 Qed.
 
-Definition flatten_bounded_associative :=
+Definition flatten_bounded_associative (d : dag) :=
   fun e => match e with
     ExprApp (o, args) =>
     ExprApp (o, List.flat_map (fun e' =>
         match e' with
         | ExprApp (o', args') => match bounds_for_drop_inner_associative o o' with
         | Some drop_always => args'
-        | Some (drop_if_bounded bound o'') => match bound_expr (ExprApp (o'', args')) with
+        | Some (drop_if_bounded bound o'') => match bound_expr d (ExprApp (o'', args')) with
         | Some ubound => if is_tighter_than_bool ubound bound then args' else [e']
                                               | _ => [e'] end | _ => [e'] end | _ => [e'] end) args) | _ => e end.
 #[local] Instance describe_flatten_bounded_associative : description_of Rewrite.flatten_bounded_associative
@@ -2727,7 +2734,7 @@ Proof. induction ls; cbn; lia. Qed.
 Global Instance flatten_bounded_associative_ok : Ok flatten_bounded_associative.
 Proof using Type.
   cbv [Ok flatten_bounded_associative].
-  intros G d e v He.
+  intros G d e v Hok He.
   destruct He; try solve [ t ]; [].
   lazymatch goal with
   | [ H0 : Forall2 ?P ?args ?args', H1 : interp_op _ _ ?args' = _
@@ -2755,12 +2762,12 @@ Proof using Type.
          | [ H : eval _ _ (ExprApp _) _ |- _ ] => inversion H; clear H
          end; subst.
     all: lazymatch goal with
-         | [ H : bound_expr _ = _ |- _ ]
+         | [ H : bound_expr _ _ = _ |- _ ]
            => let H' := fresh in
               pose proof H as H';
               cbn [bound_expr] in H; break_innermost_match_hyps; inversion_option; subst;
-              (eapply eval_bound_expr_via_PHOAS in H';
-               [ | econstructor; [ eassumption | cbn [interp_op]; reflexivity ] ])
+              (eapply eval_bound_expr in H';
+               [ | try eassumption; (econstructor; [ eassumption | cbn [interp_op]; reflexivity ]) .. ])
          | _ => idtac
          end.
     all: reflect_hyps.
@@ -2786,7 +2793,7 @@ Proof using Type.
     all: try reflexivity. }
 Qed.
 
-Definition consts_commutative :=
+Definition consts_commutative (d : dag) :=
   fun e => match e with
     ExprApp (o, args) =>
     if commutative o then
@@ -2804,32 +2811,33 @@ Definition consts_commutative :=
 Global Instance consts_commutative_ok : Ok consts_commutative.
 Proof using Type.
   step.
-  destruct e; trivial.
-  destruct n.
+  destruct_one_head' @expr; trivial.
+  destruct_one_head' node.
   destruct commutative eqn:?; trivial.
-  inversion H; clear H; subst.
+  inversion_one_head' @eval.
+  let l := match goal with l : list expr |- _ => l end in
   epose proof Permutation_partition l isCst.
-  eapply Permutation.Permutation_Forall2 in H2; [|eassumption].
-  DestructHead.destruct_head'_ex; DestructHead.destruct_head'_and.
-  epose proof permute_commutative  _ _ _ _ Heqb H4 _ H0.
-  repeat Econstructor; eauto.
-  destruct associative eqn:?; [|solve[repeat Econstructor; eauto] ].
-  BreakMatch.break_match; [|solve[repeat Econstructor; eauto] ].
+  let H := match goal with H : Forall2 (eval _ _) _ _ |- _ => H end in
+  eapply Permutation.Permutation_Forall2 in H; [|eassumption].
+  destruct_head'_ex; destruct_head'_and.
+  epose proof permute_commutative  _ _ _ _ ltac:(eassumption) ltac:(eassumption) _ ltac:(eassumption).
+  break_match; [|solve[repeat Econstructor; eauto] .. ].
 
   set (fst (partition isCst l)) as csts in *; clearbody csts.
   set (snd (partition isCst l)) as exps in *; clearbody exps.
   clear dependent l. clear dependent args'.
   move o at top; move Heqb0 at top; move Heqb at top.
-  eapply eval_interp0_expr in Heqo0; instantiate (1:=d) in Heqo0; instantiate (1:=G) in Heqo0.
+  let H := match goal with H : interp0_expr _ = Some _ |- _ => H end in
+  eapply eval_interp0_expr in H; instantiate (1:=d) in H; instantiate (1:=G) in H.
 
-  eapply Forall2_app_inv_l in H1; destruct H1 as (?&?&?&?&?); subst.
-  rename x0 into xs. rename x1 into ys.
+  let H := match goal with H : Forall2 (eval _ _) (_ ++ _) _ |- _ => H end in
+  eapply Forall2_app_inv_l in H; destruct H as (?&?&?&?&?); subst.
   econstructor. { econstructor. econstructor. econstructor. exact eq_refl. eassumption. }
 
-  inversion Heqo0; clear Heqo0; subst.
-  eapply eval_eval_Forall2 in H; eauto; subst.
+  inversion_one_head' @eval.
+  let H := multimatch goal with H : Forall2 (eval _ _) _ _ |- _ => H end in
+  eapply eval_eval_Forall2 in H; eauto; progress subst.
   clear dependent exps. clear dependent csts.
-  clear -H2 H6 Heqb Heqb0.
 
   change (?x :: ?xs) with ([x] ++ xs).
   rewrite interp_op_associative_app_bind in * by assumption.
@@ -2840,7 +2848,7 @@ Proof using Type.
 Qed.
 
 Definition neqconst i := fun a : expr => negb (option_beq Z.eqb (interp0_expr a) (Some i)).
-Definition drop_identity :=
+Definition drop_identity (d : dag) :=
   fun e => match e with ExprApp (o, args) =>
     match identity o with
     | Some i =>
@@ -2934,8 +2942,8 @@ Proof using Type.
                     | solve [ t ] ].
 Qed.
 
-Definition fold_consts_to_and :=
-  fun e => match consts_commutative e with
+Definition fold_consts_to_and (d : dag) :=
+  fun e => match consts_commutative d e with
            | ExprApp ((and _ | andZ) as o, ExprApp (const v, nil) :: args)
              => let v' := match o with
                           | and sz => Z.land v (Z.ones (Z.of_N sz))
@@ -2961,8 +2969,9 @@ Proof using Type.
   repeat (step; eauto; []).
   break_innermost_match; try assumption; reflect_hyps.
   all: match goal with
-       | [ H : eval _ _ ?e _, H' : consts_commutative ?e = _ |- _ ]
-         => apply consts_commutative_ok in H; rewrite H' in H; clear e H'
+       | [ H : eval _ _ ?e _, H' : consts_commutative _ ?e = _ |- _ ]
+         => eapply consts_commutative_ok in H; [ | eassumption .. ];
+            rewrite H' in H; clear e H'
        end.
   all: repeat (step; eauto; []).
   all: cbn [interp_op fold_right identity invert_Some op_to_Z_binop] in *; inversion_option; subst.
@@ -3012,7 +3021,7 @@ Proof using Type.
                     | t ].
 Qed.
 
-Definition xor_same :=
+Definition xor_same (d : dag) :=
   fun e => match e with ExprApp (xor _,[x;y]) =>
     if expr_beq x y then ExprApp (const 0, nil) else e | _ => e end.
 #[local] Instance describe_xor_same : description_of Rewrite.xor_same
@@ -3022,7 +3031,7 @@ Proof using Type.
   t; cbn [fold_right]. rewrite Z.lxor_0_r, Z.lxor_nilpotent; trivial.
 Qed.
 
-Definition shift_to_mul :=
+Definition shift_to_mul (d : dag) :=
   fun e => match e with
     ExprApp ((shl _ | shlZ) as o, [e'; ExprApp (const v, [])]) =>
       let o' := match o with shl bitwidth => mul bitwidth | shlZ => mulZ | _ => o (* impossible *) end in
@@ -3043,7 +3052,7 @@ Proof. t; cbn in *; rewrite ?Z.shiftl_mul_pow2, ?Z.land_0_r by lia; repeat (lia 
 
 (* o is like mul *)
 (* invariant: Forall2 (fun x '(y, z) => eval (o x i) matches eval (o y z)) input output *)
-Definition split_consts (o : op) (i : Z) : list expr -> list (expr * Z)
+Definition split_consts (d : dag) (o : op) (i : Z) : list expr -> list (expr * Z)
   := List.map
        (fun e
         => match e with
@@ -3075,7 +3084,7 @@ Definition split_consts (o : op) (i : Z) : list expr -> list (expr * Z)
            end%bool).
 
 (* invariant: input is a permutation of concat (List.map (fun '(e, zs) => List.map (pair e) zs) output) *)
-Definition group_consts (ls : list (expr * Z)) : list (expr * list Z)
+Definition group_consts (d : dag) (ls : list (expr * Z)) : list (expr * list Z)
   := Option.List.map
        (fun xs => match xs with
                   | [] => None
@@ -3085,7 +3094,7 @@ Definition group_consts (ls : list (expr * Z)) : list (expr * list Z)
 
 (* o is like add *)
 (* spec: if interp0_op o zs is always Some _, then Forall2 (fun '(e, zs) '(e', z) => e = e' /\ interp0_op o zs = Some z) input output *)
-Definition compress_consts (o : op) (ls : list (expr * list Z)) : list (expr * Z)
+Definition compress_consts (d : dag) (o : op) (ls : list (expr * list Z)) : list (expr * Z)
   := List.flat_map
        (fun '(e, zs) => match interp0_op o zs with
                         | None => List.map (pair e) zs
@@ -3095,7 +3104,7 @@ Definition compress_consts (o : op) (ls : list (expr * list Z)) : list (expr * Z
 
 (* o is like mul *)
 (* spec is that Forall (fun '(e, z) e' => o (eval e) z matches eval e') inputs outputs *)
-Definition app_consts (o : op) (ls : list (expr * Z)) : list expr
+Definition app_consts (d : dag) (o : op) (ls : list (expr * Z)) : list expr
   := List.map (fun '(e, z) => let z := ExprApp (const z, []) in
                               let default := ExprApp (o, [e; z]) in
                               if associative o
@@ -3107,29 +3116,30 @@ Definition app_consts (o : op) (ls : list (expr * Z)) : list expr
                                    | _ => default end else default)
               ls.
 
-Definition combine_consts_pre : expr -> expr :=
+Definition combine_consts_pre (d : dag) : expr -> expr :=
   fun e => match e with ExprApp (o, args) =>
     if commutative o && associative o && op_always_interps o then match combines_to o with
     | Some o' => match identity o' with
     | Some idv =>
-        ExprApp (o, app_consts o' (compress_consts o (group_consts (split_consts o' idv args))))
+        ExprApp (o, app_consts d o' (compress_consts d o (group_consts d (split_consts d o' idv args))))
     | None => e end | None => e end else e | _ => e end%bool.
 
-Definition cleanup_combine_consts : expr -> expr :=
-  let simp_outside := List.fold_left (fun e f => f e) [flatten_associative] in
-  let simp_inside := List.fold_left (fun e f => f e) [constprop;drop_identity;unary_truncate;truncate_small] in
+Definition cleanup_combine_consts (d : dag) : expr -> expr :=
+  let simp_outside := List.fold_left (fun e f => f e) [flatten_associative d] in
+  let simp_inside := List.fold_left (fun e f => f e) [constprop d;drop_identity d;unary_truncate d;truncate_small d] in
   fun e => simp_outside match e with ExprApp (o, args)  =>
     ExprApp (o, List.map simp_inside args)
                    | _ => e end.
 
-Definition combine_consts : expr -> expr := fun e => cleanup_combine_consts (combine_consts_pre e).
+Definition combine_consts (d : dag) : expr -> expr := fun e => cleanup_combine_consts d (combine_consts_pre d e).
 #[local] Instance describe_combine_consts : description_of Rewrite.combine_consts
   := "Rewrites expressions like (x + x * 5) into (x * 6)".
 
 Lemma split_consts_correct o i ls G d argsv
+      (HGdok : gensym_dag_ok G d)
       (H : Forall2 (eval G d) ls argsv)
       (Hi : identity o = Some i)
-  : Forall2 (fun '(e, z) v => exists v', eval G d e v' /\ (interp_op G o [v'; z] = Some v \/ (z = i /\ (v = v' \/ interp_op G o [v'] = Some v)))) (split_consts o i ls) argsv.
+  : Forall2 (fun '(e, z) v => exists v', eval G d e v' /\ (interp_op G o [v'; z] = Some v \/ (z = i /\ (v = v' \/ interp_op G o [v'] = Some v)))) (split_consts d o i ls) argsv.
 Proof.
   assert (eval G d (ExprApp (o, [])) i) by now econstructor; [ constructor | apply interp_op_nil_is_identity; assumption ].
   cbv [split_consts].
@@ -3192,8 +3202,8 @@ Proof.
                | erewrite <- interp_op_associative_app by eassumption ].
 Qed.
 
-Lemma group_consts_Permutation ls
-  : Permutation (List.concat (List.map (fun '(e, zs) => List.map (pair e) zs) (group_consts ls))) ls.
+Lemma group_consts_Permutation (d : dag) ls
+  : Permutation (List.concat (List.map (fun '(e, zs) => List.map (pair e) zs) (group_consts d ls))) ls.
 Proof.
   cbv [group_consts].
   let fv := match goal with |- context[List.groupAllBy ?f ls] => f end in
@@ -3214,8 +3224,8 @@ Proof.
   all: f_equal; assumption.
 Qed.
 
-Lemma group_consts_nonempty ls
-  : Forall (fun '(e, zs) => zs <> nil) (group_consts ls).
+Lemma group_consts_nonempty d ls
+  : Forall (fun '(e, zs) => zs <> nil) (group_consts d ls).
 Proof.
   cbv [group_consts].
   let fv := match goal with |- context[List.groupAllBy ?f ls] => f end in
@@ -3225,9 +3235,9 @@ Proof.
     constructor; try congruence; eauto.
 Qed.
 
-Lemma compress_consts_correct o ls
+Lemma compress_consts_correct d o ls
       (Ho : op_always_interps o = true)
-  : Forall2 (fun '(e, zs) '(e', z) => e = e' /\ interp0_op o zs = Some z) ls (compress_consts o ls).
+  : Forall2 (fun '(e, zs) '(e', z) => e = e' /\ interp0_op o zs = Some z) ls (compress_consts d o ls).
 Proof.
   cbv [compress_consts].
   induction ls as [|x xs IH]; cbn [List.flat_map]; break_innermost_match; cbn [List.app];
@@ -3236,9 +3246,10 @@ Qed.
 
 (* in a more specific, usable form *)
 Lemma compress_consts_correct_alt G d o' o ls argsv
+      (HGdok : gensym_dag_ok G d)
       (Ho : op_always_interps o = true)
       (H : Forall2 (fun '(e, zs) v => exists z, interp0_op o zs = Some z /\ exists v', (exists xs, interp_op G o' xs = Some z) /\ eval G d e v' /\ interp_op G o' [v'; z] = Some v) ls argsv)
-  : Forall2 (fun '(e, z) v => exists v', (exists xs, interp_op G o' xs = Some z) /\ eval G d e v' /\ interp_op G o' [v'; z] = Some v) (compress_consts o ls) argsv.
+  : Forall2 (fun '(e, z) v => exists v', (exists xs, interp_op G o' xs = Some z) /\ eval G d e v' /\ interp_op G o' [v'; z] = Some v) (compress_consts d o ls) argsv.
 Proof.
   eapply compress_consts_correct in Ho.
   apply Forall2_flip in H.
@@ -3255,8 +3266,9 @@ Proof.
 Qed.
 
 Lemma app_consts_correct G d o ls argsv
+      (HGdok : gensym_dag_ok G d)
       (H : Forall2 (fun '(e, z) v => exists v', (exists xs, interp_op G o xs = Some z) /\ eval G d e v' /\ interp_op G o [v'; z] = Some v) ls argsv)
-  : Forall2 (eval G d) (app_consts o ls) argsv.
+  : Forall2 (eval G d) (app_consts d o ls) argsv.
 Proof.
   cbv [app_consts].
   induction H; cbn [List.map]; constructor.
@@ -3483,8 +3495,8 @@ Global Instance cleanup_combine_consts_Ok : Ok cleanup_combine_consts.
 Proof.
   repeat (step; eauto; []); cbn [fold_left].
   repeat match goal with
-         | [ |- eval _ _ (?r ?e) _ ]
-           => apply (_:Ok r)
+         | [ |- eval _ _ (?r ?d ?e) _ ]
+           => apply (_:Ok r); try assumption
          end.
   econstructor; [ | eassumption ].
   rewrite Forall2_map_l.
@@ -3496,8 +3508,8 @@ Proof.
   break_innermost_match; eauto.
   cbn [fold_left].
   repeat lazymatch goal with
-  | H : eval ?c ?d ?e _ |- context[?r ?e] =>
-    let Hr := fresh in epose proof ((_:Ok r) _ _ _ _ H) as Hr; clear H
+  | H : eval ?c ?d ?e _ |- context[?r ?d ?e] =>
+    let Hr := fresh in epose proof ((_:Ok r) _ _ _ _ ltac:(eassumption) H) as Hr; clear H
   end.
   assumption.
 Qed.
@@ -3506,13 +3518,13 @@ Global Instance combine_consts_pre_Ok : Ok combine_consts_pre.
 Proof using Type.
   repeat (step; eauto; []).
   match goal with
-  | [ |- context[split_consts ?o ?i ?l] ]
-    => pose proof (@split_consts_correct o i l _ _ _ ltac:(eassumption) ltac:(assumption)) as Hs
+  | [ |- context[split_consts ?d ?o ?i ?l] ]
+    => pose proof (@split_consts_correct o i l _ _ _ ltac:(eassumption) ltac:(eassumption) ltac:(assumption)) as Hs
   end.
   match goal with
-  | [ |- context[group_consts ?ls] ]
-    => pose proof (@group_consts_Permutation ls) as Hg;
-       pose proof (@group_consts_nonempty ls) as Hg'
+  | [ |- context[group_consts ?d ?ls] ]
+    => pose proof (@group_consts_Permutation d ls) as Hg;
+       pose proof (@group_consts_nonempty d ls) as Hg'
   end.
   eapply Permutation_Forall2 in Hs; [ | symmetry; exact Hg ].
   destruct Hs as [? [? Hs] ].
@@ -3533,7 +3545,7 @@ Global Instance combine_consts_Ok : Ok combine_consts.
 Proof. repeat step; apply cleanup_combine_consts_Ok, combine_consts_pre_Ok; assumption. Qed.
 
 (* M-x query-replace-regex RET \(| RewritePass\.\)\([^ ]*\) => _ RET \1\2 => \2 *)
-Definition named_pass (name : RewritePass.rewrite_pass) : expr -> expr
+Definition named_pass (name : RewritePass.rewrite_pass) : dag -> expr -> expr
   := match name with
      | RewritePass.addbyte_small => addbyte_small
      | RewritePass.addcarry_bit => addcarry_bit
@@ -3568,8 +3580,8 @@ Proof.
   all: fail_if_goals_remain ().
 Defined.
 
-Definition expr {rewriting_passes : rewriting_passes_opt} : expr -> expr :=
-  List.fold_left (fun e f => f e)
+Definition expr {rewriting_passes : rewriting_passes_opt} (d : dag) : expr -> expr :=
+  List.fold_left (fun e f => f d e)
                  (List.map named_pass rewriting_passes).
 
 Local Instance expr_Ok {rewriting_passes : rewriting_passes_opt} : Ok expr.
@@ -3578,16 +3590,16 @@ Proof.
   cbv [expr]; induction rewriting_passes; cbn [map fold_left]; cbv [Ok] in *; eauto.
 Qed.
 
-Lemma eval_expr {rewriting_passes : rewriting_passes_opt} c d e v : eval c d e v -> eval c d (expr e) v.
+Lemma eval_expr {rewriting_passes : rewriting_passes_opt} c d e v : gensym_dag_ok c d -> eval c d e v -> eval c d (expr d e) v.
 Proof.
   apply expr_Ok.
 Qed.
 End Rewrite.
 
 Definition simplify {opts : symbolic_options_computed_opt} (dag : dag) (e : node idx) :=
-  Rewrite.expr (reveal_node_at_least dag 3 e).
+  Rewrite.expr dag (reveal_node_at_least dag 3 e).
 
-Lemma eval_simplify {opts : symbolic_options_computed_opt} G d n v : eval_node G d n v -> eval G d (simplify d n) v.
+Lemma eval_simplify {opts : symbolic_options_computed_opt} G d n v : gensym_dag_ok G d -> eval_node G d n v -> eval G d (simplify d n) v.
 Proof using Type. eauto using Rewrite.eval_expr, eval_node_reveal_node_at_least. Qed.
 
 Definition reg_state := Tuple.tuple (option idx) 16.
