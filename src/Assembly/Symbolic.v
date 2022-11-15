@@ -2231,7 +2231,7 @@ Section bound_expr_via_PHOAS.
               => o (List.map (fun e 'tt => bound_expr_via_PHOAS d e) args)
             | None => None
             end
-       | ExprRef _ => None
+       | ExprRef i => dag.lookup_bounds d i
        end.
 
   Local Coercion is_true : bool >-> Sortclass.
