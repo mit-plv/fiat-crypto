@@ -63,21 +63,28 @@ Section Bedrock2.
     handle_call; eauto.
   Qed.
 
- 
+  Lemma length_w32s_of_bytes l
+    : length (w32s_of_bytes l) = ((length l + 3) / 4)%nat.
+  Proof.
+    unfold w32s_of_bytes.
+    rewrite !map_length.
+    rewrite length_chunk; eauto.
+  Qed.
 
   Instance spec_of_chacha20_block : spec_of "chacha20_block" :=
     fnspec! "chacha20_block" (key_ptr nonce_ptr st_ptr : word) /
           (key nonce st : ListArray.t byte) R,
     { requires tr mem :=
-        (Z.of_nat (Datatypes.length st) = 64) /\
-        (array ptsto (word.of_Z 1) key_ptr key ⋆
-                                                array ptsto (word.of_Z 1) nonce_ptr nonce ⋆
-                                                array ptsto (word.of_Z 1) st_ptr st ⋆ R) mem;
+        (Datatypes.length st = 64%nat) /\
+        (Datatypes.length key = 32%nat) /\
+          (array ptsto (word.of_Z 1) key_ptr key
+             ⋆ array ptsto (word.of_Z 1) nonce_ptr nonce
+             ⋆ array ptsto (word.of_Z 1) st_ptr st ⋆ R) mem;
       ensures tr' mem' :=
         tr = tr' /\
-        (array ptsto (word.of_Z 1) key_ptr key ⋆
-                                                array ptsto (word.of_Z 1) nonce_ptr nonce ⋆
-                                                array ptsto (word.of_Z 1) st_ptr (chacha20_block key nonce st) ⋆ R) mem }.
+          (array ptsto (word.of_Z 1) key_ptr key
+             ⋆ array ptsto (word.of_Z 1) nonce_ptr nonce
+             ⋆ array ptsto (word.of_Z 1) st_ptr (chacha20_block key nonce st) ⋆ R) mem }.
   
   Derive chacha20_block_body SuchThat
          (defn! "chacha20_block" ("key", "nonce", "st") ~> "st" { chacha20_block_body },
@@ -91,7 +98,7 @@ Section Bedrock2.
     simple eapply compile_nlet_as_nlet_eq.
     simple eapply compile_buf_backed_by; repeat compile_step.
     instantiate (1 := (Naive.wrap 4)).
-    simpl; eauto.
+    1:simpl; lia.
 
     simple eapply compile_nlet_as_nlet_eq.
     eapply compile_buf_push_word32; repeat compile_step.
@@ -102,20 +109,22 @@ Section Bedrock2.
     eapply compile_buf_push_word32; repeat compile_step.
     subst v; unfold buf_backed_by. unfold buf_push. eauto. simpl. lia.
     subst v; unfold buf_backed_by. unfold buf_push.
-    admit.
-
+    {
+      simpl.
+      compile_step.
+    }
 
   (*compile_step.*)
 
     simple eapply compile_nlet_as_nlet_eq.
     eapply compile_buf_push_word32; repeat compile_step.
     { subst v; unfold buf_backed_by. unfold buf_push. eauto. simpl. lia. }
-    { subst v; unfold buf_backed_by. unfold buf_push. admit (*compile_step*). }
+    { subst v; unfold buf_backed_by. unfold buf_push. simpl; compile_step. }
 
     simple eapply compile_nlet_as_nlet_eq.
     eapply compile_buf_push_word32; repeat compile_step.
     { subst v; unfold buf_backed_by. unfold buf_push. eauto. simpl. lia. }
-    { subst v; unfold buf_backed_by. unfold buf_push. admit (*compile_step.*). }
+    { subst v; unfold buf_backed_by. unfold buf_push. simpl;compile_step. }
 
     simple eapply compile_nlet_as_nlet_eq.
     simple eapply compile_w32s_of_bytes; [repeat compile_step..|].
@@ -124,7 +133,16 @@ Section Bedrock2.
     compile_step; [repeat compile_step ..|].
 
     eapply expr_compile_Z_literal with (z:= 4).
-    shelve.
+    {
+      unfold copy.
+      let x := eval compute in (Datatypes.length v3) in
+        change (Datatypes.length v3) with x.
+      unfold v4.
+      rewrite length_w32s_of_bytes.
+      rewrite H4.
+      simpl.
+      lia.
+    }
     compile_step.
     (*TODO: need a compile words lemma comparable to compile_byte_memcpy.
       Alternately, something generic over fixed-size elements (e.g. instances of Allocable).
@@ -138,21 +156,75 @@ Section Bedrock2.
       unfold buf_backed_by.
       cbn [length Nat.add].
       replace (Datatypes.length v3) with 4%nat in H1 by reflexivity.
-      admit.
+      seprewrite_in words_of_bytes H1.
+      {
+        admit.
+      }
+      {
+        revert H1.
+        unfold listarray_value.
+        cbn [ai_width ai_size Arrays._access_info ai_repr ai_type].
+        rewrite !bytes_per_width_bytes_per_word.
+        change (Memory.bytes_per_word 32) with 4.
+        intro.
+        ecancel_assumption.
+      }
     }
     admit.
-    admit.
-    admit.
-    admit.
-    admit.
+    {
+      subst v4.
+      rewrite length_w32s_of_bytes.
+      rewrite H4.
+      cbn -[word.unsigned].
+      change (Z.of_nat 8) with 8.
+      replace 8 with (word.wrap 8) by (rewrite word.wrap_small; lia).
+      rewrite <- word.unsigned_of_Z.
+      reflexivity.
+    }
+    {
+      change (Memory.bytes_per access_size.word) with 4%nat.
+
+      revert H3.
+      unfold copy.
+      subst v4.
+      rewrite length_w32s_of_bytes.
+      rewrite H4.
+      rewrite !word.unsigned_of_Z.
+      rewrite !word.wrap_small by lia.
+      change 4 with (Z.of_nat 4%nat).
+      rewrite <- Nat2Z.inj_mul.
+      rewrite Nat2Z.inj_iff.
+      intro H3; cbn in H3.
+      
+      rewrite bs2ws_length; try lia.
+      
+      {
+        rewrite div_Zdiv by lia.
+        rewrite H3.
+        reflexivity.
+      }
+      {
+        rewrite H3.
+        reflexivity.
+      }
+    }
+    compile_step.
+    compile_step.
     compile_step.
     eapply compile_skip_marker.
     simple eapply compile_nlet_as_nlet_eq.
     eapply compile_bytes_of_w32s; repeat compile_step.
-    admit.
+    {
+      unfold listarray_value in H5.
+      cbn [ai_width ai_size
+             Arrays._access_info ai_repr ai_type]
+            in H5.
+      change (Z.of_nat (Memory.bytes_per access_size.word)) with 4 in H5.
+      ecancel_assumption.
+    }
+    compile_step.
     simple eapply compile_nlet_as_nlet_eq.
     eapply compile_w32s_of_bytes; repeat compile_step.
-    admit.
     admit.
     admit.
     admit.
