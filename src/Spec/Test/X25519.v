@@ -23,3 +23,20 @@ Example testvector_two : F.to_Z (monty
    35156891815674817266734212754503633747128614016119564763269015315466259359304%N
    (F.of_Z _ 8883857351183929894090759386610649319417338800022198945255395922347792736741%Z)) = 39566196721700740701373067725336211924689549479508623342842086701180565506965%Z.
 Proof. vm_decide_no_check. Qed.
+
+Example order_basepoint : F.to_Z (monty (N.pos l) (F.of_Z _ 9)) = 0%Z.
+Proof. vm_decide_no_check. Qed. (* note: ideally we'd check that z=0 *)
+
+Definition double x := (* takes as input affine x, returns projective x/z *)
+  fst (@MxDH.ladderstep F F.add F.sub F.mul a24 (F.of_Z _ 0) (x, F.of_Z _ 1) (x, F.of_Z _ 1)).
+(* EllipticCurve(GF(2^255 - 19), [0,486662,0,1,0]).torsion_polynomial(8).roots(multiplicities=False) *)
+(* Point of order 2: *)
+Lemma double_zero : snd (double (F.of_Z _ 0)) = F.of_Z _ 0. vm_decide_no_check. Qed.
+(* Points of order 4: *)
+Lemma double_one  : fst (double (F.of_Z _ 1)) = F.of_Z _ 0. vm_decide_no_check. Qed.
+Lemma double_minusone:fst(double(F.of_Z _(-1)))=F.of_Z _ 0. vm_decide_no_check. Qed.
+(* Points of order 8: *)
+Definition order8_x1 : F := F.of_Z _ 39382357235489614581723060781553021112529911719440698176882885853963445705823.
+Definition order8_x2 : F := F.of_Z _ 325606250916557431795983626356110631294008115727848805560023387167927233504.
+Lemma double_order8_x1 : fst (double order8_x1) = snd (double order8_x1). vm_decide_no_check. Qed.
+Lemma double_order8_x2 : fst (double order8_x2) = snd (double order8_x2). vm_decide_no_check. Qed.
