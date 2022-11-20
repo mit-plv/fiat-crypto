@@ -56,6 +56,7 @@ SPECIAL_VOFILES := \
 	src/ExtractionHaskell/%.vo \
 	src/Rewriter/PerfTesting/Specific/generated/%.vo
 GREP_EXCLUDE_SPECIAL := grep -v '^\(src/Extraction\(OCaml\|Haskell\)/\|src/Rewriter/PerfTesting/Specific/generated/\)'
+GREP_EXCLUDE_GENERATED := grep -v '^\(src\|src/Bedrock\)/Everything\.v'
 
 PERFTESTING_VO := \
 	src/Rewriter/PerfTesting/Core.vo \
@@ -499,7 +500,7 @@ EXISTING_COQPROJECT_CONTENTS_SORTED:=$(shell cat _CoqProject 2>&1 | $(SORT_COQPR
 WARNINGS_PLUS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+unexpected-implicit-declaration,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,+undeclared-scope,+deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality,+deprecated-typeclasses-transparency-without-locality
 # Remove unsupported-attributes once we stop supporting < 8.14
 WARNINGS := $(WARNINGS_PLUS),unsupported-attributes
-COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; printf -- '$(DEPFLAGS_NL)'; echo '-arg -w -arg $(WARNINGS)'; echo '-arg -native-compiler -arg ondemand'; find src -type f -name '*.v' | $(GREP_EXCLUDE_SPECIAL) | $(SORT_COQPROJECT))
+COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; printf -- '$(DEPFLAGS_NL)'; echo '-arg -w -arg $(WARNINGS)'; echo '-arg -native-compiler -arg ondemand'; echo 'src/Everything.v'; echo 'src/Bedrock/Everything.v'; find src -type f -name '*.v' | $(GREP_EXCLUDE_SPECIAL) | $(GREP_EXCLUDE_GENERATED) | $(SORT_COQPROJECT))
 NEW_COQPROJECT_CONTENTS_SORTED:=$(shell $(COQPROJECT_CMD) | $(SORT_COQPROJECT))
 
 ifneq ($(EXISTING_COQPROJECT_CONTENTS_SORTED),$(NEW_COQPROJECT_CONTENTS_SORTED))
