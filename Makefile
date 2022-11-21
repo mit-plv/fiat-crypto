@@ -58,6 +58,13 @@ SPECIAL_VOFILES := \
 GREP_EXCLUDE_SPECIAL := grep -v '^\(src/Extraction\(OCaml\|Haskell\)/\|src/Rewriter/PerfTesting/Specific/generated/\)'
 GREP_EXCLUDE_GENERATED := grep -v '^\(src\|src/Bedrock\)/Everything\.v'
 
+# .vo files that depend on Everything.vo (should be just testing files, not defining anything)
+AFTER_EVERYTHING_VOFILES := \
+	src/PerfTesting/PerfTestSearch.vo \
+	src/PerfTesting/PerfTestSearchPattern.vo \
+	src/PerfTesting/PerfTestPrint.vo \
+	#
+
 PERFTESTING_VO := \
 	src/Rewriter/PerfTesting/Core.vo \
 	src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
@@ -516,8 +523,8 @@ printdeps::
 printreversedeps::
 	$(HIDE)$(foreach vo,$(filter %.vo,$(MAKECMDGOALS)),echo '$(vo): $(call vo_reverse_closure,$(VOFILES),$(vo))'; )
 
-REGULAR_WITH_BEDROCK2_LIBS := $(sort $(subst /,.,$(patsubst src/%.vo,Crypto/%,$(filter-out src/Bedrock/Everything.vo src/Everything.vo,$(REGULAR_WITH_BEDROCK2_VOFILES)))))
-REGULAR_EXCEPT_BEDROCK2_LIBS := $(sort $(subst /,.,$(patsubst src/%.vo,Crypto/%,$(filter-out src/Bedrock/Everything.vo src/Everything.vo,$(REGULAR_EXCEPT_BEDROCK2_VOFILES)))))
+REGULAR_WITH_BEDROCK2_LIBS := $(sort $(subst /,.,$(patsubst src/%.vo,Crypto/%,$(filter-out src/Bedrock/Everything.vo src/Everything.vo $(AFTER_EVERYTHING_VOFILES),$(REGULAR_WITH_BEDROCK2_VOFILES)))))
+REGULAR_EXCEPT_BEDROCK2_LIBS := $(sort $(subst /,.,$(patsubst src/%.vo,Crypto/%,$(filter-out src/Bedrock/Everything.vo src/Everything.vo $(AFTER_EVERYTHING_VOFILES),$(REGULAR_EXCEPT_BEDROCK2_VOFILES)))))
 make_Everything_v_cmd_gen = { printf 'Require Import\n'; printf '%s\n' $(1); printf '.\n'; }
 make_Everything_v_cmd := $(call make_Everything_v_cmd_gen,$(REGULAR_EXCEPT_BEDROCK2_LIBS))
 make_Bedrock_Everything_v_cmd := $(call make_Everything_v_cmd_gen,$(REGULAR_WITH_BEDROCK2_LIBS))
