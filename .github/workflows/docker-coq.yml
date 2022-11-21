@@ -32,7 +32,7 @@ jobs:
     - name: echo host build params
       run: etc/ci/describe-system-config.sh
     - name: echo container build params
-      uses: coq-community/docker-coq-action@v1
+      uses: coq-community/docker-coq-action@pull-if-missing
       with:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
@@ -41,14 +41,14 @@ jobs:
           eval $(opam env)
           etc/ci/describe-system-config.sh
     - name: deps
-      uses: coq-community/docker-coq-action@v1
+      uses: coq-community/docker-coq-action@pull-if-missing
       with:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
         export: CI ALLOW_DIFF COQCHKEXTRAFLAGS
         custom_script: etc/ci/github-actions-docker-make.sh -j2 deps
     - name: all-except-generated
-      uses: coq-community/docker-coq-action@v1
+      uses: coq-community/docker-coq-action@pull-if-missing
       with:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
@@ -92,7 +92,7 @@ jobs:
 #        path: .
 #      if: always ()
     - name: validate
-      uses: coq-community/docker-coq-action@v1
+      uses: coq-community/docker-coq-action@pull-if-missing
       with:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
