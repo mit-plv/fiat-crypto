@@ -224,7 +224,7 @@ Module WSumSetsOn (E1 : Equalities.DecidableType) (E2 : Equalities.DecidableType
     partial_application_tactic.
     partial_application_tactic.
     class_apply @subrelation_proper.
-    exact _.
+    typeclasses eauto.
     exact _.
     repeat match goal with
            | [ |- subrelation (_ ==> _) (_ ==> _) ]
