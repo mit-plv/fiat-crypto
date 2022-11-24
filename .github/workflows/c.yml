@@ -24,9 +24,11 @@ jobs:
         sudo sed -i 's/azure\.//' /etc/apt/sources.list
         sudo apt-get -o Acquire::Retries=30 update -q
         sudo apt-get -o Acquire::Retries=30 install -y --allow-unauthenticated \
-             g++-7 libssl-dev \
+             g++ libssl-dev \
              ninja-build libunwind-dev cmake
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
+        #sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
+    - name: GCC Problem Matcher
+      uses: ammaraskar/gcc-problem-matcher@0.2.0
     - name: Set up Go 1.13
       uses: actions/setup-go@v3
       with:
