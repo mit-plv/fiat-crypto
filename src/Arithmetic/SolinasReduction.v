@@ -1242,18 +1242,14 @@ Module SolinasReduction.
 
         (* not bounded *)
         push.
-        rewrite <-Z_div_mod_eq.
-        auto.
-        rewrite Z.gt_lt_iff.
+        rewrite <-Z_div_mod_eq_full.
         auto.
         push.
         lia.
         push.
 
         push.
-        rewrite <-Z_div_mod_eq.
-        auto.
-        rewrite Z.gt_lt_iff.
+        rewrite <-Z_div_mod_eq_full.
         auto.
         push.
         lia.

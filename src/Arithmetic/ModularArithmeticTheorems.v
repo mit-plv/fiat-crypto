@@ -186,8 +186,7 @@ Module F.
     Proof using Type.
       unfold F.to_nat, F.of_nat.
       rewrite F.to_Z_of_Z.
-      assert (Pos.to_nat m <> 0)%nat as HA by (pose proof Pos2Nat.is_pos m; lia).
-      pose proof (mod_Zmod n (Pos.to_nat m) HA) as Hmod.
+      pose proof (Nat2Z.inj_mod n (Pos.to_nat m)) as Hmod.
       rewrite positive_nat_Z in Hmod.
       rewrite <- Hmod.
       rewrite <-Nat2Z.id, Z2Nat.inj_pos; lia.
@@ -209,9 +208,8 @@ Module F.
     Lemma of_nat_mod (n:nat) : F.of_nat m (n mod (Z.to_nat m)) = F.of_nat m n.
     Proof using Type.
       unfold F.of_nat.
-      rewrite (F.of_Z_mod (Z.of_nat n)), ?mod_Zmod, ?Z2Nat.id; [reflexivity|..].
-      { apply Pos2Z.is_nonneg. }
-      { rewrite Z2Nat.inj_pos. apply Pos_to_nat_nonzero. }
+      rewrite (F.of_Z_mod (Z.of_nat n)), ?Nat2Z.inj_mod, ?Z2Nat.id; [reflexivity|..].
+      apply Pos2Z.is_nonneg.
     Qed.
 
     Lemma to_nat_mod (x:F m) (Hm:(0 < m)%Z) : F.to_nat x mod (Z.to_nat m) = F.to_nat x.

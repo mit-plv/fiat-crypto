@@ -620,7 +620,7 @@ Section TableMult.
       apply map_ext_in; intros; unfold shift; rewrite map_map.
       apply map_ext_in; intros; rewrite Z.add_comm; trivial.
     Qed.
-      
+
     Lemma multicomb_elts: forall n,
       0 <= n < D -> In (n, n) multicomb.
     Proof.
@@ -639,7 +639,7 @@ Section TableMult.
           * apply Z_div_nonneg_nonneg; lia.
           * apply Z.div_lt_upper_bound; lia.
     Qed.
-    
+
     Theorem multicomb_stateseq: 
       Permutation (stateseq D) multicomb.
     Proof.
