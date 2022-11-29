@@ -84,7 +84,7 @@ Section barrett.
       assert (x / b^(k-offset) <= b^(k+offset)) by (autorewrite with pull_Zpow zsimplify in *; assumption).
       subst q1 q2 q3 Q r_mod_3m r_mod_3m_orig r1 r2 R μ.
       rewrite (Z.div_mul_diff_exact' (b^(2*k)) m (x/b^(k-offset))) by auto with lia zero_bounds.
-      rewrite (Z_div_mod_eq (_ * b^(2*k) / m) (b^(k+offset))) by lia.
+      rewrite (Z_div_mod_eq_full (_ * b^(2*k) / m) (b^(k+offset))).
       autorewrite with push_Zmul push_Zopp zsimplify zstrip_div zdiv_to_mod.
       rewrite Z.div_sub_mod_cond, !Z.div_sub_small; auto with zero_bounds zarith.
       eexists (_, _); reflexivity.

@@ -89,9 +89,9 @@ Module Z.
   Qed.
 
   Lemma mod_to_nat x m (Hm:(0 < m)%Z) (Hx:(0 <= x)%Z) : (Z.to_nat x mod Z.to_nat m = Z.to_nat (x mod m))%nat.
-    pose proof Zdiv.mod_Zmod (Z.to_nat x) (Z.to_nat m) as H;
+    pose proof Nat2Z.inj_mod (Z.to_nat x) (Z.to_nat m) as H;
       rewrite !Z2Nat.id in H by lia.
-    rewrite <-H by (change 0%nat with (Z.to_nat 0); rewrite Z2Nat.inj_iff; lia).
+    rewrite <-H.
     rewrite !Nat2Z.id; reflexivity.
   Qed.
 
@@ -140,14 +140,14 @@ Module Z.
   Lemma mul_div_eq : forall a m, m > 0 -> m * (a / m) = (a - a mod m).
   Proof.
     intros a m H.
-    rewrite (Z_div_mod_eq a m) at 2 by auto.
+    rewrite (Z_div_mod_eq_full a m) at 2.
     ring.
   Qed.
 
   Lemma mul_div_eq' : (forall a m, m > 0 -> (a / m) * m = (a - a mod m))%Z.
   Proof.
     intros a m H.
-    rewrite (Z_div_mod_eq a m) at 2 by auto.
+    rewrite (Z_div_mod_eq_full a m) at 2.
     ring.
   Qed.
 
