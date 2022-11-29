@@ -133,6 +133,8 @@ Section Bedrock2.
     compile_step.
     compile_step; [repeat compile_step ..|].
 
+    Optimize Proof.
+
     eapply expr_compile_Z_literal with (z:= 4).
     {
       unfold copy.
@@ -224,6 +226,10 @@ Section Bedrock2.
         reflexivity.
       }
     }
+    
+
+    Optimize Proof.
+    
     compile_step.
     compile_step.
     compile_step.
@@ -254,6 +260,10 @@ Section Bedrock2.
     compile_step.
     compile_step.
     compile_step.
+
+    
+
+    Optimize Proof.
     {
       unfold v5, buf_append, copy.
       rewrite app_length.
@@ -303,7 +313,12 @@ Section Bedrock2.
         replace scalar32 with (scalar (word:=word)) by admit.
         intro H1.
         seprewrite_in words_of_bytes H1.
-        admit.
+        {
+          rewrite H6.
+          change (Memory.bytes_per access_size.word) with 4%nat.
+          rewrite Nat.mul_comm.
+          apply Nat.mod_mul; lia.
+        }
         change ((Z.of_nat (Memory.bytes_per access_size.word))) with 4 in H1.
         ecancel_assumption.
     }
@@ -318,6 +333,8 @@ Section Bedrock2.
       cbv; intuition congruence.
     }
     
+
+    Optimize Proof.
     {
       let x := eval compute in (Z.of_nat ((16 + 3) / 4)) in
         change (Z.of_nat ((16 + 3) / 4)) with x.
@@ -338,8 +355,19 @@ Section Bedrock2.
     unfold FillPred.
     compile_step.
     {
-      admit.
+      
+      replace scalar32 with (scalar (word:=word)) by admit.
+      unfold v5, copy, v4, v3, v2, v1, v0, v, buf_backed_by, buf_append, buf_push in *.
+      rewrite !app_length in *.
+      rewrite ?length_w32s_of_bytes in *.
+      rewrite ?H4 in *.
+      cbn [Datatypes.app Datatypes.length Nat.add Nat.div Nat.divmod fst] in *.
+      unfold listarray_value in *.
+      cbn [ai_width ai_size Arrays._access_info ai_repr ai_type] in *.
+      change (Z.of_nat (Memory.bytes_per access_size.word)) with 4 in *.
+      ecancel_assumption.
     }
+
     compile_step.
     
     repeat (rewrite map.remove_put_same || 
@@ -350,7 +378,8 @@ Section Bedrock2.
     eapply compile_bytes_of_w32s; repeat compile_step.
     simple eapply compile_nlet_as_nlet_eq.
     (*TODO: improperly inlines computation*)
-    simple eapply compile_buf_as_array; repeat compile_step.
+    simple eapply compile_buf_as_array.
+    repeat compile_step.
     {
       unfold v9, v5, v8, v3, v4, v2, buf_append, copy.
       rewrite !app_length.
@@ -358,15 +387,13 @@ Section Bedrock2.
       rewrite H3, H4.
       reflexivity.
     }
-    admit.
-    (*TODO: eliminate this*)
-    set (buf_as_array v9) as v12.
+    compile_step.
     simple eapply compile_nlet_as_nlet_eq.
     eapply compile_buf_make_stack; [repeat compile_step .. |].
     {
-      admit (*TODO:
-              discuss in meeting:
-              use anybytes, maybe typeclass? (EG Allocable?)*).
+      admit (*TODO: replace w/ Allocable,
+              when either Allocable has been generalized to variable len
+             or this has been specialized *).
     }
     { admit (*TODO: get evar from Allocable*). }
     compile_step.
@@ -386,6 +413,9 @@ Section Bedrock2.
     (*TODO: is compile step doing the wrong thing?*)
     simple eapply compile_word_memcpy.
     shelve (*TODO: what's this?*).
+    
+
+    Optimize Proof.
     compile_step.
     {
         revert H1.
@@ -427,6 +457,9 @@ Section Bedrock2.
     compile_step.
 
     
+
+    Optimize Proof.
+
     repeat (rewrite map.remove_put_same || 
               rewrite map.remove_put_diff by (unfold gs; compile_step));
       rewrite map.remove_empty.
@@ -442,12 +475,7 @@ Section Bedrock2.
       cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
       reflexivity.
     }
-    {
-      (*TODO: array vs buffer
-        ecancel_assumption. *)     
-      admit.
-    }
-
+    compile_step.
     repeat lazymatch goal with
     | |- context [array_get ?a ?b (word.of_Z 0)] =>
         replace (array_get a b (word.of_Z 0)) with
@@ -455,9 +483,9 @@ Section Bedrock2.
            end.
     eapply compile_nlet_as_nlet_eq.
     eapply compile_word_unsizedlistarray_get.
-     {
-      (*TODO: array vs buffer
-        ecancel_assumption. *)     
+    {
+      
+      (*TODO:ecancel_assumption. *)     
       admit.
      }
      compile_step.
@@ -475,7 +503,7 @@ Section Bedrock2.
       [ admit | admit
       | unfold cast; now compile_step | ..].
     {
-      cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
+      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
       rewrite H4, H3.
@@ -489,7 +517,7 @@ Section Bedrock2.
       [ admit | admit
       | unfold cast; now compile_step | ..].
     {
-      cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
+      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
       rewrite H4, H3.
@@ -503,7 +531,7 @@ Section Bedrock2.
       [ admit | admit
       | unfold cast; now compile_step | ..].
     {
-      cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
+      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
       rewrite H4, H3.
@@ -517,7 +545,7 @@ Section Bedrock2.
       [ admit | admit
       | unfold cast; now compile_step | ..].
     {
-      cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
+      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
       rewrite H4, H3.
@@ -531,7 +559,7 @@ Section Bedrock2.
       [ admit | admit
       | unfold cast; now compile_step | ..].
     {
-      cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
+      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
       rewrite H4, H3.
@@ -545,7 +573,7 @@ Section Bedrock2.
       [ admit | admit
       | unfold cast; now compile_step | ..].
     {
-      cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
+      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
       rewrite H4, H3.
@@ -559,7 +587,7 @@ Section Bedrock2.
       [ admit | admit
       | unfold cast; now compile_step | ..].
     {
-      cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
+      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
       rewrite H4, H3.
@@ -573,7 +601,7 @@ Section Bedrock2.
       [ admit | admit
       | unfold cast; now compile_step | ..].
     {
-      cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
+      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
       rewrite H4, H3.
@@ -587,7 +615,7 @@ Section Bedrock2.
       [ admit | admit
       | unfold cast; now compile_step | ..].
     {
-      cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
+      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
       rewrite H4, H3.
@@ -601,7 +629,7 @@ Section Bedrock2.
       [ admit | admit
       | unfold cast; now compile_step | ..].
     {
-      cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
+      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
       rewrite H4, H3.
@@ -615,7 +643,7 @@ Section Bedrock2.
       [ admit | admit
       | unfold cast; now compile_step | ..].
     {
-      cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
+      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
       rewrite H4, H3.
@@ -629,7 +657,7 @@ Section Bedrock2.
       [ admit | admit
       | unfold cast; now compile_step | ..].
     {
-      cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
+      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
       rewrite H4, H3.
@@ -643,7 +671,7 @@ Section Bedrock2.
       [ admit | admit
       | unfold cast; now compile_step | ..].
     {
-      cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
+      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
       rewrite H4, H3.
@@ -657,7 +685,7 @@ Section Bedrock2.
       [ admit | admit
       | unfold cast; now compile_step | ..].
     {
-      cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
+      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
       rewrite H4, H3.
@@ -671,7 +699,7 @@ Section Bedrock2.
       [ admit | admit
       | unfold cast; now compile_step | ..].
     {
-      cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
+      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
       rewrite H4, H3.
@@ -687,20 +715,12 @@ Section Bedrock2.
     eapply compile_nd_ranged_for_all_fresh.
     now compile_step.
     now compile_step.
-
-  Abort.
-  (*
-    TODO: what is loop_pred?
-    now compile_step.
-    now compile_step.
-    now compile_step.
-    now compile_step.
-    now compile_step.
     compile_step.
-
+    compile_step.
     shelve.
     shelve.
-    shelve.
+    
+    compile_step.
     shelve.
     shelve.
     shelve.
@@ -750,13 +770,15 @@ Section Bedrock2.
         admit (*TODO: need one more broadcast lemma? double check*).
       }
       compile_step.
-    eapply compile_nlet_as_nlet_eq.
+      eapply compile_nlet_as_nlet_eq.
       eapply compile_bytes_of_w32s; [shelve.. |].
       compile_step.
       eapply compile_nlet_as_nlet_eq.
       eapply compile_buf_as_array; [shelve.. |].
+      Optimize Proof.
+      Optimize Heap.
       compile_step.      
 
-  Abort.*)
-  
+  Abort.
+    
 End Bedrock2.

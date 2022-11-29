@@ -228,23 +228,59 @@ Section CompileBufPolymorphic.
     replace a with (word.add a (word.of_Z 0)) in HA by ring; eassumption.
   Qed.
 
+  
+    Lemma buffer_at_full_capacity' (a : word) c (b : list T)
+      :   length b = c ->
+          Lift1Prop.iff1
+           (Lift1Prop.ex1
+              (fun s : list byte => emp (sz * length b + length s = sz * c) ⋆ s$@(a + word.of_Z (sz * length b))))
+           (emp True).
+    Proof.
+      unfold Lift1Prop.iff1.
+      intuition subst.
+      2:{
+        destruct H0; subst.
+        exists [].
+        repeat (unfold emp, sep; simpl).
+        repeat exists (map.empty (map:=mem)).
+        intuition subst.
+        cbv; intuition congruence.
+        lia.
+      }
+      {
+        unfold emp.
+        intuition idtac.
+        destruct H0 as [? [? [? [? [? ?]]]]].
+        destruct H0; subst.
+        assert (length x0 = 0%nat) by lia.
+        destruct x0; simpl in *; inversion H0.
+        destruct H1; subst.
+        destruct H; subst.
+        reflexivity.
+      }
+    Qed.
+
   Lemma compile_buf_as_array (n : nat) elts :
     let v := buf_as_array elts in
     forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
-    a a_var t m l (R: mem -> Prop),
+           a a_var t m l (R: mem -> Prop),
       (buffer_at n elts a * R)%sep m ->
       length elts = n ->
       (let v := v in
        forall m,
          (elts$T@a * R)%sep m ->
          <{ Trace := t; Memory := m; Locals := l; Functions := e }>
-         k_impl
-         <{ pred (k v eq_refl) }> ->
-         <{ Trace := t; Memory := m; Locals := l; Functions := e }>
-         k_impl
-         <{ pred (nlet_eq [a_var] v k) }>).
+           k_impl
+         <{ pred (k v eq_refl) }>) ->
+      <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+        k_impl
+      <{ pred (nlet_eq [a_var] v k) }>.
   Proof using Type.
-    intros * HA HB HC HD HE HF. eapply HF; subst n.
+    intros * HA HB HC.
+    eapply HC; clear HC.
+    unfold buffer_at in *.
+    seprewrite_in  (buffer_at_full_capacity' a n elts HB) HA.
+    ecancel_assumption.
   Qed.
 
 
