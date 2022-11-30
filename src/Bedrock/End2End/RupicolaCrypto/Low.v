@@ -268,7 +268,7 @@ Section CompileBufPolymorphic.
       length elts = n ->
       (let v := v in
        forall m,
-         (elts$T@a * R)%sep m ->
+         (v$T@a * R)%sep m ->
          <{ Trace := t; Memory := m; Locals := l; Functions := e }>
            k_impl
          <{ pred (k v eq_refl) }>) ->
@@ -280,6 +280,8 @@ Section CompileBufPolymorphic.
     eapply HC; clear HC.
     unfold buffer_at in *.
     seprewrite_in  (buffer_at_full_capacity' a n elts HB) HA.
+    subst v.
+    unfold buf_as_array.
     ecancel_assumption.
   Qed.
 

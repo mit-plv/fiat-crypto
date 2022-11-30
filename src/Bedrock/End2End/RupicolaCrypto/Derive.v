@@ -391,11 +391,17 @@ Section Bedrock2.
     simple eapply compile_nlet_as_nlet_eq.
     eapply compile_buf_make_stack; [repeat compile_step .. |].
     {
+      instantiate (1:=scalar).
+      instantiate (1:=word.of_Z 4).
       admit (*TODO: replace w/ Allocable,
               when either Allocable has been generalized to variable len
              or this has been specialized *).
     }
-    { admit (*TODO: get evar from Allocable*). }
+    {
+      rewrite word.unsigned_of_Z.
+      rewrite word.wrap_small by lia.
+      reflexivity.
+    }
     compile_step.
     compile_step.
     (*TODO: compile step is doing something odd here*)
@@ -425,14 +431,16 @@ Section Bedrock2.
         change (Memory.bytes_per_word 32) with 4.
         rewrite !word.unsigned_of_Z.
         rewrite ?word.wrap_small by lia.
-        rewrite !word.wrap_small by admit (*will work when evar is instantiated*).
         intro.
-        (*
-        TODO: v12 vs v9 in hyp.
-        TODO: scalar_to_anybytes
-        ecancel_assumption.
-         *)
-        admit.
+      
+      replace scalar32 with (scalar (word:=word)) in * by admit.
+      fold v13.
+      seprewrite_in words_of_bytes H1.
+      {
+       admit (*by rewrite H7. *).
+      }
+      change ((Z.of_nat (Memory.bytes_per access_size.word))) with 4 in *.
+      ecancel_assumption.
     }
     admit.
     {
@@ -445,15 +453,48 @@ Section Bedrock2.
       rewrite ?word.wrap_small; auto.
       lia.
     }
-    admit.
-    admit.
+    {
+      rewrite !word.unsigned_of_Z.
+      rewrite ?word.wrap_small by lia.
+      rewrite bs2ws_length.
+      rewrite Nat2Z.inj_div.
+      rewrite H7.
+      cbv [v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_backed_by].
+      rewrite !app_length.
+      rewrite !length_w32s_of_bytes.
+      rewrite H4, H3.
+      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
+      rewrite !word.unsigned_of_Z.
+      rewrite ?word.wrap_small; auto.
+      lia.
+      cbv; lia.
+      admit (*TODO: to Z*).
+    }
+    now compile_step.
     now compile_step.
     compile_step.
     compile_step.
     clear FillPred; subst FillPred0.
     compile_step.
     compile_step.
-    admit.
+    {
+      replace scalar32 with (scalar (word:=word)) in * by admit.
+      revert H8.
+      
+      unfold listarray_value.
+      cbn [ai_width ai_size Arrays._access_info ai_repr ai_type].
+      rewrite !bytes_per_width_bytes_per_word.
+      change (Memory.bytes_per_word 32) with 4.
+      rewrite !word.unsigned_of_Z.
+      rewrite !word.wrap_small by lia.
+      change (Z.of_nat 4) with 4.
+      fold v13 (*TODO:why?*).
+      (*TODO: why v12 vs v15?*)
+      unfold copy.
+      intro.
+      ecancel_assumption.
+    }
+
     compile_step.
 
     
@@ -484,228 +525,43 @@ Section Bedrock2.
     eapply compile_nlet_as_nlet_eq.
     eapply compile_word_unsizedlistarray_get.
     {
-      
-      (*TODO:ecancel_assumption. *)     
-      admit.
-     }
-     compile_step.
-     shelve (*what's this?*).
-     {
-       unfold cast.
-       now compile_step.
-     }
-     now compile_step.
-     compile_step.
-    eapply compile_nlet_as_nlet_eq.
-      (*TODO: array vs buffer
-        ecancel_assumption. *) 
-    eapply compile_word_unsizedlistarray_get;
-      [ admit | admit
-      | unfold cast; now compile_step | ..].
-    {
-      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
-      rewrite !app_length.
-      rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
-      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
-      reflexivity.
+      unfold listarray_value.
+      cbn [ai_width ai_size Arrays._access_info ai_repr ai_type].
+      rewrite !bytes_per_width_bytes_per_word.
+      change (Memory.bytes_per_word 32) with 4.
+      ecancel_assumption.
     }
-    eapply compile_nlet_as_nlet_eq.
-      (*TODO: array vs buffer
-        ecancel_assumption. *) 
-    eapply compile_word_unsizedlistarray_get;
-      [ admit | admit
-      | unfold cast; now compile_step | ..].
+
+    now compile_step.
     {
-      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
-      rewrite !app_length.
-      rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
-      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
-      reflexivity.
+      change (cast 0%nat) with 0%nat.
+      now compile_step.
     }
-    eapply compile_nlet_as_nlet_eq.
-      (*TODO: array vs buffer
-        ecancel_assumption. *) 
-    eapply compile_word_unsizedlistarray_get;
-      [ admit | admit
-      | unfold cast; now compile_step | ..].
     {
-      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
-      rewrite !app_length.
-      rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
-      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
-      reflexivity.
+      change (cast 0%nat) with 0%nat.
+      cbv; reflexivity.
     }
-    eapply compile_nlet_as_nlet_eq.
-      (*TODO: array vs buffer
-        ecancel_assumption. *) 
+
+    compile_step.
+    repeat (eapply compile_nlet_as_nlet_eq;
     eapply compile_word_unsizedlistarray_get;
-      [ admit | admit
-      | unfold cast; now compile_step | ..].
-    {
-      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
-      rewrite !app_length.
-      rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
-      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
-      reflexivity.
-    }
-    eapply compile_nlet_as_nlet_eq.
-      (*TODO: array vs buffer
-        ecancel_assumption. *) 
-    eapply compile_word_unsizedlistarray_get;
-      [ admit | admit
-      | unfold cast; now compile_step | ..].
-    {
-      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
-      rewrite !app_length.
-      rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
-      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
-      reflexivity.
-    }
-    eapply compile_nlet_as_nlet_eq.
-      (*TODO: array vs buffer
-        ecancel_assumption. *) 
-    eapply compile_word_unsizedlistarray_get;
-      [ admit | admit
-      | unfold cast; now compile_step | ..].
-    {
-      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
-      rewrite !app_length.
-      rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
-      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
-      reflexivity.
-    }
-    eapply compile_nlet_as_nlet_eq.
-      (*TODO: array vs buffer
-        ecancel_assumption. *) 
-    eapply compile_word_unsizedlistarray_get;
-      [ admit | admit
-      | unfold cast; now compile_step | ..].
-    {
-      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
-      rewrite !app_length.
-      rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
-      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
-      reflexivity.
-    }
-    eapply compile_nlet_as_nlet_eq.
-      (*TODO: array vs buffer
-        ecancel_assumption. *) 
-    eapply compile_word_unsizedlistarray_get;
-      [ admit | admit
-      | unfold cast; now compile_step | ..].
-    {
-      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
-      rewrite !app_length.
-      rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
-      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
-      reflexivity.
-    }
-    eapply compile_nlet_as_nlet_eq.
-      (*TODO: array vs buffer
-        ecancel_assumption. *) 
-    eapply compile_word_unsizedlistarray_get;
-      [ admit | admit
-      | unfold cast; now compile_step | ..].
-    {
-      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
-      rewrite !app_length.
-      rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
-      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
-      reflexivity.
-    }
-    eapply compile_nlet_as_nlet_eq.
-      (*TODO: array vs buffer
-        ecancel_assumption. *) 
-    eapply compile_word_unsizedlistarray_get;
-      [ admit | admit
-      | unfold cast; now compile_step | ..].
-    {
-      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
-      rewrite !app_length.
-      rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
-      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
-      reflexivity.
-    }
-    eapply compile_nlet_as_nlet_eq.
-      (*TODO: array vs buffer
-        ecancel_assumption. *) 
-    eapply compile_word_unsizedlistarray_get;
-      [ admit | admit
-      | unfold cast; now compile_step | ..].
-    {
-      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
-      rewrite !app_length.
-      rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
-      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
-      reflexivity.
-    }
-    eapply compile_nlet_as_nlet_eq.
-      (*TODO: array vs buffer
-        ecancel_assumption. *) 
-    eapply compile_word_unsizedlistarray_get;
-      [ admit | admit
-      | unfold cast; now compile_step | ..].
-    {
-      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
-      rewrite !app_length.
-      rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
-      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
-      reflexivity.
-    }
-    eapply compile_nlet_as_nlet_eq.
-      (*TODO: array vs buffer
-        ecancel_assumption. *) 
-    eapply compile_word_unsizedlistarray_get;
-      [ admit | admit
-      | unfold cast; now compile_step | ..].
-    {
-      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
-      rewrite !app_length.
-      rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
-      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
-      reflexivity.
-    }
-    eapply compile_nlet_as_nlet_eq.
-      (*TODO: array vs buffer
-        ecancel_assumption. *) 
-    eapply compile_word_unsizedlistarray_get;
-      [ admit | admit
-      | unfold cast; now compile_step | ..].
-    {
-      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
-      rewrite !app_length.
-      rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
-      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
-      reflexivity.
-    }
-    eapply compile_nlet_as_nlet_eq.
-      (*TODO: array vs buffer
-        ecancel_assumption. *) 
-    eapply compile_word_unsizedlistarray_get;
-      [ admit | admit
-      | unfold cast; now compile_step | ..].
-    {
-      cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
-      rewrite !app_length.
-      rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
-      cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
-      reflexivity.
-    }
+      [ unfold listarray_value;
+        cbn [ai_width ai_size Arrays._access_info ai_repr ai_type];
+        rewrite !bytes_per_width_bytes_per_word;
+        change (Memory.bytes_per_word 32) with 4;
+        now ecancel_assumption
+      | now compile_step
+      | change (cast ?a) with a; now compile_step
+      | change (cast ?a) with a;
+        cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array
+               v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by];
+        rewrite !app_length;
+        rewrite !length_w32s_of_bytes;
+        rewrite H4, H3;
+        cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ];
+        reflexivity
+      |]).
+    
     compile_step.
 
     rewrite  Nat_iter_as_nd_ranged_for_all with (i:=0).
@@ -717,32 +573,31 @@ Section Bedrock2.
     now compile_step.
     compile_step.
     compile_step.
-    shelve.
-    shelve.
+    admit.
+    admit.
     
     compile_step.
-    shelve.
-    shelve.
-    shelve.
-
+    admit.
+    admit.
+    admit.
     {
       compile_step.
       simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
       simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
       simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
       simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
       simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
       simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
       simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
       simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | shelve .. | compile_step].
+      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
       admit.
     }
     compile_step.
@@ -752,7 +607,7 @@ Section Bedrock2.
         replace (array_put a b c) with
         (ListArray.put a b c) by admit;
         simple eapply compile_nlet_as_nlet_eq;
-        eapply compile_word_unsizedlistarray_put; [shelve ..| compile_step]
+        eapply compile_word_unsizedlistarray_put; [admit ..| compile_step]
            end.
 
     eapply compile_nlet_as_nlet_eq.
@@ -762,19 +617,43 @@ Section Bedrock2.
       let to_var_str := gensym locals constr:((var++"_to")%string) in
       simple eapply compile_broadcast_expr
         with (idx_var:=idx_var_str) (to_var:=to_var_str)
-      end; [shelve .. | |].
+      end; [admit .. | |].
       {
         eapply broadcast_word_add.
-        shelve.
-        eapply broadcast_id; shelve.
-        admit (*TODO: need one more broadcast lemma? double check*).
+        {
+          remember v19 as v19'.
+          destruct v19' as [? [? [? [? [? [? [? [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]].
+          cbn.
+          unfold copy.
+          cbn.
+          rewrite !replace_nth_length.          
+          reflexivity.
+        }
+        eapply broadcast_id.
+        admit.
+        admit.
+        admit.
+        eapply broadcast_var.
+        admit.
+        admit.
+        admit.
+        {
+          remember v19 as v19'.
+          destruct v19' as [? [? [? [? [? [? [? [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]].
+          cbn.
+          unfold copy.
+          cbn.
+          rewrite !replace_nth_length.
+          lia.
+        }
       }
+      
       compile_step.
       eapply compile_nlet_as_nlet_eq.
-      eapply compile_bytes_of_w32s; [shelve.. |].
+      eapply compile_bytes_of_w32s; [admit.. |].
       compile_step.
       eapply compile_nlet_as_nlet_eq.
-      eapply compile_buf_as_array; [shelve.. |].
+      eapply compile_buf_as_array; [admit.. |].
       Optimize Proof.
       Optimize Heap.
       compile_step.      
