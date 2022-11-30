@@ -690,12 +690,11 @@ Section with_parameters.
     destruct l; simpl in *; [lia | auto].
   Qed.
           
-  Lemma broadcast_var l idx_var scratch a_ptr b_ptr R a_var a_data
-    : map.get l a_var = Some a_ptr ->
+  Lemma broadcast_var l idx_var scratch a_ptr b_ptr a_var a_data R'
+    : Lift1Prop.impl1 R' (a_data$@a_ptr) ->
+      map.get l a_var = Some a_ptr ->
       ~a_var = idx_var ->
       length scratch <= length a_data ->
-      let R' := (a_data$@a_ptr ⋆ R)
-      in
       broadcast_expr l idx_var scratch b_ptr R'
         (expr.load szT
            (expr.op bopname.add a_var
@@ -724,24 +723,30 @@ Section with_parameters.
       erewrite truncate_of_T.
       reflexivity.
     }
-    seprewrite_in (array_append (T:=T) predT sz_word) H4.
+    assert (((lstl ++ skipn (length lstl) scratch)$@b_ptr ⋆  (a_data$@a_ptr)) m).
+    {
+      destruct H5 as [m1 [m2 [? [? ?]]]].
+      exists m1, m2; intuition.
+    }
+    clear H5; rename H6 into H5.
+    seprewrite_in (array_append (T:=T) predT sz_word) H5.
     replace (nth (length lstl) scratch)
       with (nth ((length lstl)+0) scratch) by (f_equal;lia).
-    seprewrite_in map_predT_to_truncated_word H4.
-    seprewrite_in map_predT_to_truncated_word H4.
-    seprewrite_in map_predT_to_truncated_word H4.
-    rewrite <- (firstn_skipn (length lstl) a_data) in H4.
-    rewrite map_app in H4.   
-    seprewrite_in (array_append (T:=word)) H4.
-    rewrite map_length in H4.
-    rewrite firstn_length in H4.
-    replace ((Init.Nat.min (length lstl) (length a_data))) with (length lstl) in H4 by lia.
-    rewrite (split_hd_tl default (skipn (length lstl) a_data)) in H4 by (rewrite skipn_length; lia).
-    simpl in H4.
-    rewrite Z.mul_comm in H4.
-    rewrite word.ring_morph_mul in H4.
-    rewrite <- hd_skipn_nth_default in H4.
-    rewrite nth_default_eq in H4.
+    seprewrite_in map_predT_to_truncated_word H5.
+    seprewrite_in map_predT_to_truncated_word H5.
+    seprewrite_in map_predT_to_truncated_word H5.
+    rewrite <- (firstn_skipn (length lstl) a_data) in H5.
+    rewrite map_app in H5.   
+    seprewrite_in (array_append (T:=word)) H5.
+    rewrite map_length in H5.
+    rewrite firstn_length in H5.
+    replace ((Init.Nat.min (length lstl) (length a_data))) with (length lstl) in H5 by lia.
+    rewrite (split_hd_tl default (skipn (length lstl) a_data)) in H5 by (rewrite skipn_length; lia).
+    simpl in H5.
+    rewrite Z.mul_comm in H5.
+    rewrite word.ring_morph_mul in H5.
+    rewrite <- hd_skipn_nth_default in H5.
+    rewrite nth_default_eq in H5.
     ecancel_assumption.
   Qed.
 

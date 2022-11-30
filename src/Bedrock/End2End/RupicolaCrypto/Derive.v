@@ -566,42 +566,42 @@ Section Bedrock2.
 
     rewrite  Nat_iter_as_nd_ranged_for_all with (i:=0).
     change (0 + Z.of_nat 10) with 10%Z.
+
+    Import LoopCompiler.
+    compile_step.
+    compile_step.
+    compile_step; [repeat compile_step; lia .. | |].
+    all: repeat compile_step.
+    1: remember acc as acc';
+      destruct acc' as [? [? [? [? [? [? [? [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]];
+    cbv [P2.car P2.cdr] in *.
+    2:remember v19 as v19';
+    destruct v19' as [? [? [? [? [? [? [? [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]];
+    cbv [P2.car P2.cdr] in *.
     
-    simple eapply compile_nlet_as_nlet_eq.
-    eapply compile_nd_ranged_for_all_fresh.
-    now compile_step.
-    now compile_step.
-    compile_step.
-    compile_step.
-    admit.
-    admit.
-    
-    compile_step.
-    admit.
-    admit.
-    admit.
+      
+    Optimize Proof.
+    Optimize Heap.
     {
+      (* TODO: why doesn't simple eapply work? *)
+      do 7 (change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
+        simple eapply compile_nlet_as_nlet_eq;
+        change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
+        simple eapply compile_quarter; [ now repeat compile_step ..| repeat compile_step]).
+      (change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
+        simple eapply compile_nlet_as_nlet_eq;
+        change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
+       simple eapply compile_quarter; [ now repeat compile_step ..|]).
+      
+      Optimize Proof.
+      Optimize Heap.
+
       compile_step.
-      simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
-      simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
-      simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
-      simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
-      simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
-      simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
-      simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
-      simple eapply compile_nlet_as_nlet_eq.
-      simple eapply compile_quarter; [ compile_step | admit .. | compile_step].
-      admit.
+      compile_step.
+      all: admit (*TODO: outputs of quarter*).
     }
-    compile_step.
     
+        Set Printing Depth 150.
     repeat lazymatch goal with
     | |- context [array_put ?a ?b ?c] =>
         replace (array_put a b c) with
@@ -610,6 +610,7 @@ Section Bedrock2.
         eapply compile_word_unsizedlistarray_put; [admit ..| compile_step]
            end.
 
+    
     eapply compile_nlet_as_nlet_eq.
       lazymatch goal with
   | [ |- WeakestPrecondition.cmd _ _ _ _ ?locals (_ (nlet_eq [?var] ?v _)) ] =>
@@ -617,34 +618,58 @@ Section Bedrock2.
       let to_var_str := gensym locals constr:((var++"_to")%string) in
       simple eapply compile_broadcast_expr
         with (idx_var:=idx_var_str) (to_var:=to_var_str)
-      end; [admit .. | |].
+      end.
+      admit.
+      {
+        compile_step.
+        eapply expr_compile_var.
+        reflexivity.
+      }
+      ecancel_assumption.
+      admit.
+      admit.
+      admit.
+      cbv; congruence.
+      reflexivity.
+      reflexivity.
       {
         eapply broadcast_word_add.
         {
-          remember v19 as v19'.
-          destruct v19' as [? [? [? [? [? [? [? [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]].
           cbn.
           unfold copy.
           cbn.
           rewrite !replace_nth_length.          
           reflexivity.
         }
-        eapply broadcast_id.
-        admit.
-        admit.
-        admit.
-        eapply broadcast_var.
-        admit.
-        admit.
-        admit.
         {
-          remember v19 as v19'.
-          destruct v19' as [? [? [? [? [? [? [? [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]].
-          cbn.
-          unfold copy.
-          cbn.
-          rewrite !replace_nth_length.
-          lia.
+          simple eapply broadcast_id.
+          apply word_ac_ok.
+          compile_step.
+          cbv; congruence.
+        }
+        {
+          simple eapply broadcast_var.
+          apply word_ac_ok.
+          {
+            (*TODO: reorder lemma args*)
+            unfold listarray_value.
+            cbn [ai_width ai_size Arrays._access_info ai_repr ai_type].
+            cbv [predT sz_word szT word_ac].
+            rewrite !bytes_per_width_bytes_per_word.
+            change (Memory.bytes_per_word 32) with 4.
+            clear.
+            intros m'' H''.
+            ecancel_assumption.
+          }
+          admit(*TODO: will work once a_ptr is concrete*).
+          admit(*TODO: will work once a_ptr is concrete*).
+          {
+            cbn.
+            unfold copy.
+            cbn.
+            rewrite !replace_nth_length.
+            lia.
+          }
         }
       }
       
