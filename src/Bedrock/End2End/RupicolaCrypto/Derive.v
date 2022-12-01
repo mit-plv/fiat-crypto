@@ -90,6 +90,39 @@ Section Bedrock2.
   
   Import Loops.
   Existing Instance spec_of_unsizedlist_memcpy.
+
+  Lemma replace_nth_nil A n (c :A)
+    : replace_nth n [] c = [].
+  Proof.
+    reflexivity.
+  Qed. 
+
+  Lemma array_put_helper (a : list word) b c
+    : array_put a b c = ListArray.put a b c.
+  Proof.
+    cbv [array_put ListArray.put cast id Convertible_self upd upds].
+    cbn [Datatypes.length].
+    destruct (lt_dec b ( Datatypes.length a)).
+    {
+      rewrite replace_nth_eqn by auto.
+      f_equal.
+      replace (Datatypes.length a - b)%nat
+        with (S (Datatypes.length a - S b)) by lia.
+      cbn [List.firstn].
+      rewrite ListUtil.List.firstn_nil.
+      reflexivity.
+    }
+    {
+      replace (Datatypes.length a - b)%nat with 0%nat by lia.
+      cbn [List.firstn Datatypes.app].
+      rewrite skipn_all by lia.
+      rewrite firstn_all2 by lia.
+      replace a with (a++[]) at 2 by (rewrite List.app_nil_r; auto).
+      rewrite replace_nth_app2 by lia.
+      rewrite replace_nth_nil.
+      reflexivity.
+    }
+  Qed.
   
   Derive chacha20_block_body SuchThat
          (defn! "chacha20_block" ("key", "nonce", "st") ~> "st" { chacha20_block_body },
@@ -437,7 +470,18 @@ Section Bedrock2.
       fold v13.
       seprewrite_in words_of_bytes H1.
       {
-       admit (*by rewrite H7. *).
+        revert H7.
+        cbv [v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_backed_by].
+        rewrite !app_length.
+        rewrite !length_w32s_of_bytes.
+        rewrite H4, H3.
+        cbn [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
+        rewrite !word.unsigned_of_Z.
+        rewrite ?word.wrap_small; auto; try lia.
+        intro.
+        assert (Datatypes.length uninit1 = 64%nat) by lia.
+        rewrite H8.
+        reflexivity.
       }
       change ((Z.of_nat (Memory.bytes_per access_size.word))) with 4 in *.
       ecancel_assumption.
@@ -468,7 +512,20 @@ Section Bedrock2.
       rewrite ?word.wrap_small; auto.
       lia.
       cbv; lia.
-      admit (*TODO: to Z*).
+      {
+        revert H7.
+        cbv [v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_backed_by].
+        rewrite !app_length.
+        rewrite !length_w32s_of_bytes.
+        rewrite H4, H3.
+        cbn [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
+        rewrite !word.unsigned_of_Z.
+        rewrite ?word.wrap_small; auto; try lia.
+        intro.
+        assert (Datatypes.length uninit1 = 64%nat) by lia.
+        rewrite H8.
+        reflexivity.
+      }
     }
     now compile_step.
     now compile_step.
@@ -517,10 +574,11 @@ Section Bedrock2.
       reflexivity.
     }
     compile_step.
+    
     repeat lazymatch goal with
     | |- context [array_get ?a ?b (word.of_Z 0)] =>
         replace (array_get a b (word.of_Z 0)) with
-        (ListArray.get a b) by admit
+        (ListArray.get a b) by reflexivity
            end.
     eapply compile_nlet_as_nlet_eq.
     eapply compile_word_unsizedlistarray_get.
@@ -598,18 +656,29 @@ Section Bedrock2.
 
       compile_step.
       compile_step.
-      all: admit (*TODO: outputs of quarter*).
+      3: exact [].
+      2:{
+        
+        replace scalar32 with (scalar (word:=word)) in * by admit.
+        admit (*TODO: where is the assumption about m17?*).
+      }
+      {
+        cbv [P2.car P2.cdr fst snd].
+        cbv [map.remove_many fold_left].
+        admit (*TODO: looks false (locals before = locals after?*).
+      }
     }
     
-        Set Printing Depth 150.
     repeat lazymatch goal with
     | |- context [array_put ?a ?b ?c] =>
         replace (array_put a b c) with
-        (ListArray.put a b c) by admit;
+        (ListArray.put a b c) by (symmetry;apply array_put_helper);
         simple eapply compile_nlet_as_nlet_eq;
         eapply compile_word_unsizedlistarray_put; [admit ..| compile_step]
-           end.
+    end.
 
+    Optimize Proof.
+    Optimize Heap.
     
     eapply compile_nlet_as_nlet_eq.
       lazymatch goal with
@@ -657,7 +726,6 @@ Section Bedrock2.
             cbv [predT sz_word szT word_ac].
             rewrite !bytes_per_width_bytes_per_word.
             change (Memory.bytes_per_word 32) with 4.
-            clear.
             intros m'' H''.
             ecancel_assumption.
           }
