@@ -78,10 +78,23 @@ Module WordByWordMontgomery.
            dlet q := fst (Z.mul_split r s k) in
            dlet S2 := @drop_high_addT' _ S1 (@scmul _ q N) in
            dlet S3 := fst (@divmod _ S2) in
-           (A', S3).
+                          (A', S3).
 
       Lemma A'_S3_alt : A'_S3 = (A', S3').
       Proof using Type. cbv [A'_S3 A' S3' Let_In S2 q s S1 A' a A_a]; reflexivity. Qed.
+
+      Context (a' : Z).
+
+      Local Definition a'_S3
+        := dlet S1 := @addT _ S (@scmul _ a' B) in
+            dlet s := snd (@divmod _ S1) in
+           dlet q := fst (Z.mul_split r s k) in
+           dlet S2 := @drop_high_addT' _ S1 (@scmul _ q N) in
+                  fst (@divmod _ S2).
+
+      Lemma a_S3: a' = a  -> a'_S3 = snd A'_S3.
+      Proof using Type. intros; cbv [a'_S3 A'_S3 Let_In];  subst; reflexivity. Qed.
+      
     End Iteration.
 
     Section loop.
@@ -106,9 +119,60 @@ Module WordByWordMontgomery.
       Definition pre_redc : T (S R_numlimbs)
         := snd (redc_loop A_numlimbs (A, @zero (1 + R_numlimbs)%nat)).
 
+      Locate conditional_sub.
+      Check conditional_sub.
       Definition redc : T R_numlimbs
         := conditional_sub pre_redc N.
+
+      Definition pre_redc_from (S': T (S R_numlimbs)) : T (S R_numlimbs)
+        := snd (redc_loop A_numlimbs (A, S')).
+      
+      Definition redc_body_alt: Z * T (S R_numlimbs) -> T (S R_numlimbs)
+        := fun '(a, S') => a'_S3 B k S' a.
+
+      Definition redc_loop_alt: T (S R_numlimbs) :=
+        fold_left (fun S a => redc_body_alt (a, S)) A (@zero (1 + R_numlimbs)%nat).
+
+      Definition redc_loop_alt_from (S': T (S R_numlimbs)) : T (S R_numlimbs) :=
+        fold_left (fun S a => redc_body_alt (a, S)) A S'.
+
+      Definition redc_alt: T (R_numlimbs) :=
+        conditional_sub redc_loop_alt N.
+
     End loop.
+
+    Lemma redc_loop_alt_from_eq:
+      forall {A_numlimbs: nat} (A: T A_numlimbs) (B: T R_numlimbs) (k: Z) (S_old: T (S R_numlimbs)),
+        redc_loop_alt_from (length A) A B k S_old = pre_redc_from (length A) A B k S_old.
+      Proof. 
+        intros. generalize dependent S_old. induction A.
+        - reflexivity.
+        - intros.
+          cbv [pre_redc_from redc_loop_alt_from]. simpl. cbv [redc_loop_alt_from redc_body_alt] in IHA.  rewrite IHA.
+          cbv [pre_redc_from]. f_equal.
+      Qed.
+
+      Lemma pre_redc_from_zero:
+        forall {A_numlimbs: nat} (A: T A_numlimbs) (B: T R_numlimbs) (k: Z),
+          pre_redc (length A) A B k = pre_redc_from (length A) A B k zero.
+      Proof.
+        intros. reflexivity.
+      Qed.
+
+      Lemma redc_loop_alt_from_zero:
+        forall {A_numlimbs: nat} (A: T A_numlimbs) (B: T R_numlimbs) (k: Z),
+          redc_loop_alt (length A) A B k = redc_loop_alt_from (length A) A B k zero.
+      Proof.
+        intros. reflexivity.
+      Qed.
+      
+    Theorem redc_alt_eq:
+      forall {A_numlimbs: nat} (A: T A_numlimbs) (B: T R_numlimbs) (k : Z),
+        redc (length A) A B k = redc_alt (length A) A B k.
+    Proof.
+      intros. cbv [redc redc_alt]. f_equal. rewrite pre_redc_from_zero. rewrite redc_loop_alt_from_zero.
+      symmetry. apply redc_loop_alt_from_eq.
+    Qed.
 
     Create HintDb word_by_word_montgomery.
     Hint Unfold A'_S3 S3' S2 q s S1 a A' A_a Let_In : word_by_word_montgomery.
@@ -1038,6 +1102,7 @@ Module WordByWordMontgomery.
              end.
 
     Definition mulmod (a b : list Z) : list Z := @redc bitwidth n m_enc n a b m'.
+    Definition redc_step (b s : list Z) (a : Z) : list Z := @redc_body_alt bitwidth n m_enc b m' (a, s).
     Definition squaremod (a : list Z) : list Z := mulmod a a.
     Definition addmod (a b : list Z) : list Z := @add bitwidth n m_enc a b.
     Definition submod (a b : list Z) : list Z := @sub bitwidth n m_enc a b.
@@ -1060,7 +1125,7 @@ Module WordByWordMontgomery.
         | rewrite !m_enc_correct_montgomery; eapply redc_mod_N ];
         t_fin.
     Qed.
-
+        
     Definition onemod : list Z := Partition.partition weight n 1.
 
     Definition onemod_correct : eval onemod = 1 /\ valid onemod.
