@@ -85,7 +85,7 @@ Section Bedrock2.
         tr = tr' /\
           (array ptsto (word.of_Z 1) key_ptr key
              ⋆ array ptsto (word.of_Z 1) nonce_ptr nonce
-             ⋆ array ptsto (word.of_Z 1) st_ptr (chacha20_block key nonce st) ⋆ R) mem }.
+             ⋆ array ptsto (word.of_Z 1) st_ptr (chacha20_block key nonce st) ⋆ R) mem' }.
   
   Import Loops.
   Existing Instance spec_of_unsizedlist_memcpy.
@@ -131,10 +131,67 @@ Section Bedrock2.
     change  (Memory.bytes_per access_size.four) with 4%nat.
     reflexivity.
   Qed.
+
+  Lemma buffer_at_full_array T c sz pT b a
+    : c = Z.of_nat (Datatypes.length b) ->
+    Lift1Prop.iff1 (buffer_at T sz pT c b a)
+      (array pT sz a b).
+  Proof.
+    unfold buffer_at.
+    intro; subst.
+    split; intro; sepsimpl.
+    {
+      destruct x0.
+      {
+        cbn [array] in H0; sepsimpl.
+        destruct H0; auto.
+      }
+      {
+        exfalso; clear H0.
+        cbn [Datatypes.length] in *.
+        lia.
+      }
+    }
+    {
+      exists [].
+      cbn [Datatypes.length].
+      sepsimpl; try lia.
+      cbn [array].
+      exists map.empty, x; intuition (cbv [emp]; auto).
+      eapply map.split_empty_l; auto.
+    }
+  Qed.
+
+  Lemma bytes_of_w32s_iso nonce
+    :  (Datatypes.length nonce mod 4)%nat = 0%nat ->
+       nonce = bytes_of_w32s (w32s_of_bytes nonce).
+  Proof.
+    intro H.
+    unfold w32s_of_bytes.
+    unfold bytes_of_w32s.
+    rewrite !List.map_map.
+    erewrite map_ext_Forall; cycle 1.
+    {
+      eapply Forall_impl; [| eapply Forall_chunk_length_le; try lia].
+      cbn beta.
+      intros a H'.
+      rewrite word.unsigned_of_Z.
+      apply Z.mod_small.
+      pose proof (le_combine_bound a).
+      assert (8 * Z.of_nat (Datatypes.length a) <= 32) by lia.
+      pose proof (Z.pow_le_mono_r 2 _ _ ltac:(lia) H1).
+      lia.
+    }
+    rewrite flat_map_le_split_combine_chunk; auto; try lia.
+  Qed.
+
+  (*TODO: why is this necessary? seems like a bug*)
+  Local Hint Extern 0 (spec_of "unsizedlist_memcpy") =>
+          Tactics.rapply spec_of_unsizedlist_memcpy : typeclass_instances.
   
   Derive chacha20_block_body SuchThat
          (defn! "chacha20_block" ("key", "nonce", "st") ~> "st" { chacha20_block_body },
-          implements (chacha20_block) using [ "quarter" (* ; "unsizedlist_memcpy"*)])
+          implements (chacha20_block) using [ "quarter"  ; "unsizedlist_memcpy" ])
          As chacha20_block_body_correct.
   Proof.
     compile_setup.
@@ -183,7 +240,7 @@ Section Bedrock2.
         change (Datatypes.length v3) with x.
       unfold v4.
       rewrite length_w32s_of_bytes.
-      rewrite H4.
+      rewrite H5.
       simpl.
       lia.
     }
@@ -192,30 +249,30 @@ Section Bedrock2.
     shelve (*TODO: what is this?*).
     repeat compile_step.
     {
-      pose proof H5 as H5'.
-      revert H5'; clear H5.
+      pose proof H6 as H6'.
+      revert H6'; clear H6.
       unfold copy.
       subst v4.
       rewrite length_w32s_of_bytes.
-      rewrite H4.
+      rewrite H5.
       rewrite !word.unsigned_of_Z.
       rewrite !word.wrap_small by lia.
       change 4 with (Z.of_nat 4%nat).
       rewrite <- Nat2Z.inj_mul.
       rewrite Nat2Z.inj_iff.
-      intro H5; cbn in H5.
+      intro H6; cbn in H6.
       
       unfold buf_push.
       rewrite !app_length.
       unfold buf_backed_by.
       cbn [length Nat.add].
-      replace (Datatypes.length v3) with 4%nat in H1 by reflexivity.
-      seprewrite_in words_of_bytes H1.
+      replace (Datatypes.length v3) with 4%nat in H2 by reflexivity.
+      seprewrite_in words_of_bytes H2.
       {
-        rewrite H5; reflexivity.
+        rewrite H6; reflexivity.
       }
       {
-        revert H1.
+        revert H2.
         unfold listarray_value.
         cbn [ai_width ai_size Arrays._access_info ai_repr ai_type].
         rewrite !bytes_per_width_bytes_per_word.
@@ -228,12 +285,12 @@ Section Bedrock2.
       }
     }
     {
-      admit (*TODO: spec_of_unsizedlist_memcpy. *).
+      assumption.
     }
     {
       subst v4.
       rewrite length_w32s_of_bytes.
-      rewrite H4.
+      rewrite H5.
       cbn -[word.unsigned].
       change (Z.of_nat 8) with 8.
       replace 8 with (word.wrap 8) by (rewrite word.wrap_small; lia).
@@ -243,27 +300,27 @@ Section Bedrock2.
     {
       change (Memory.bytes_per access_size.word) with 4%nat.
 
-      revert H5.
+      revert H6.
       unfold copy.
       subst v4.
       rewrite length_w32s_of_bytes.
-      rewrite H4.
+      rewrite H5.
       rewrite !word.unsigned_of_Z.
       rewrite !word.wrap_small by lia.
       change 4 with (Z.of_nat 4%nat).
       rewrite <- Nat2Z.inj_mul.
       rewrite Nat2Z.inj_iff.
-      intro H5; cbn in H5.
+      intro H6; cbn in H6.
       
       rewrite bs2ws_length; try lia.
       
       {
         rewrite div_Zdiv by lia.
-        rewrite H5.
+        rewrite H6.
         reflexivity.
       }
       {
-        rewrite H5.
+        rewrite H6.
         reflexivity.
       }
     }
@@ -279,7 +336,7 @@ Section Bedrock2.
     compile_step.
     split.
     {
-      revert H6.
+      revert H7.
       unfold listarray_value.
       cbn [ai_width ai_size
              Arrays._access_info ai_repr ai_type].
@@ -318,7 +375,7 @@ Section Bedrock2.
       rewrite app_length.
       unfold v3,v2,v1,v0, buf_push, v, buf_backed_by, v4.
       rewrite length_w32s_of_bytes.
-      rewrite H4.
+      rewrite H5.
       cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
       compile_step.
     }
@@ -327,23 +384,23 @@ Section Bedrock2.
       rewrite app_length.
       unfold v3,v2,v1,v0, buf_push, v, buf_backed_by, v4, v8.
       rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
+      rewrite H5, H4.
       cbv; congruence.
     }
     compile_step.
 
-    rewrite word.unsigned_of_Z in H6.
-    rewrite word.wrap_small in H6 by lia.
-    change 4 with (Z.of_nat 4) in H6.
-    rewrite <- Nat2Z.inj_mul in H6.
-    apply Nat2Z.inj in H6.
+    rewrite word.unsigned_of_Z in H7.
+    rewrite word.wrap_small in H7 by lia.
+    change 4 with (Z.of_nat 4) in H7.
+    rewrite <- Nat2Z.inj_mul in H7.
+    apply Nat2Z.inj in H7.
 
     simple eapply compile_word_memcpy.
     shelve (*TODO: what is this?*).
     compile_step.
     {
-      pose proof H1 as H1'; clear H1.
-        revert H1'.
+      pose proof H2 as H2'; clear H2.
+        revert H2'.
         unfold listarray_value.
         cbn [ai_width ai_size Arrays._access_info ai_repr ai_type].
         rewrite !bytes_per_width_bytes_per_word.
@@ -357,26 +414,26 @@ Section Bedrock2.
         rewrite !app_length.
         unfold v3,v2,v1,v0, buf_push, v, buf_backed_by, v4, v8.
         rewrite !length_w32s_of_bytes.
-        rewrite H4.
+        rewrite H5.
         cbv [length Datatypes.app].
         replace scalar32 with (scalar (word:=word)) by apply  scalar32_helper.
-        intro H1.
-        seprewrite_in words_of_bytes H1.
+        intro H2.
+        seprewrite_in words_of_bytes H2.
         {
-          rewrite H6.
+          rewrite H7.
           change (Memory.bytes_per access_size.word) with 4%nat.
           rewrite Nat.mul_comm.
           apply Nat.mod_mul; lia.
         }
-        change ((Z.of_nat (Memory.bytes_per access_size.word))) with 4 in H1.
+        change ((Z.of_nat (Memory.bytes_per access_size.word))) with 4 in H2.
         ecancel_assumption.
     }
-    admit (*TODO: unsizelist_memcpy*).
+    assumption.
     {
       instantiate (1 := (word.of_Z _)).
       unfold v8.
       rewrite length_w32s_of_bytes.
-      rewrite H3.
+      rewrite H4.
       rewrite word.unsigned_of_Z.
       rewrite word.wrap_small; auto.
       cbv; intuition congruence.
@@ -390,11 +447,11 @@ Section Bedrock2.
       rewrite word.unsigned_of_Z.
       rewrite word.wrap_small; [|lia].
       rewrite bs2ws_length; [| intro H'; now inversion H'|];
-        rewrite H6;
+        rewrite H7;
         change (Memory.bytes_per access_size.word) with 4%nat;
         unfold v8, copy;
         rewrite length_w32s_of_bytes;
-        rewrite H3;
+        rewrite H4;
         reflexivity.
     }
     compile_step.
@@ -409,7 +466,7 @@ Section Bedrock2.
       unfold v5, copy, v4, v3, v2, v1, v0, v, buf_backed_by, buf_append, buf_push in *.
       rewrite !app_length in *.
       rewrite ?length_w32s_of_bytes in *.
-      rewrite ?H4 in *.
+      rewrite ?H5 in *.
       cbn [Datatypes.app Datatypes.length Nat.add Nat.div Nat.divmod fst] in *.
       unfold listarray_value in *.
       cbn [ai_width ai_size Arrays._access_info ai_repr ai_type] in *.
@@ -433,7 +490,7 @@ Section Bedrock2.
       unfold v9, v5, v8, v3, v4, v2, buf_append, copy.
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
-      rewrite H3, H4.
+      rewrite H4, H5.
       reflexivity.
     }
     compile_step.
@@ -442,9 +499,14 @@ Section Bedrock2.
     {
       instantiate (1:=scalar).
       instantiate (1:=word.of_Z 4).
-      admit (*TODO: replace w/ Allocable,
-              when either Allocable has been generalized to variable len
-             or this has been specialized *).
+      eexists; split; cycle 1.
+      {
+        intro a.
+        eapply Util.scalar_to_bytes.
+      }
+      cbn.
+      rewrite length_le_split.
+      reflexivity.
     }
     {
       rewrite word.unsigned_of_Z.
@@ -461,7 +523,7 @@ Section Bedrock2.
       unfold v12, v13, v9, v5, v8, v3, v4, v2, buf_append, copy, buf_as_array, buf_push.
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
-      rewrite H3, H4.
+      rewrite H4, H5.
       reflexivity.
     }
     compile_step.
@@ -473,7 +535,7 @@ Section Bedrock2.
     Optimize Proof.
     compile_step.
     {
-        revert H1.
+        revert H2.
         unfold listarray_value.
         cbn [ai_width ai_size Arrays._access_info ai_repr ai_type].
         rewrite !bytes_per_width_bytes_per_word.
@@ -484,30 +546,30 @@ Section Bedrock2.
       
       replace scalar32 with (scalar (word:=word)) in * by apply scalar32_helper.
       fold v13.
-      seprewrite_in words_of_bytes H1.
+      seprewrite_in words_of_bytes H2.
       {
-        revert H7.
+        revert H8.
         cbv [v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_backed_by].
         rewrite !app_length.
         rewrite !length_w32s_of_bytes.
-        rewrite H4, H3.
+        rewrite H5, H4.
         cbn [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
         rewrite !word.unsigned_of_Z.
         rewrite ?word.wrap_small; auto; try lia.
         intro.
         assert (Datatypes.length uninit1 = 64%nat) by lia.
-        rewrite H8.
+        rewrite H9.
         reflexivity.
       }
       change ((Z.of_nat (Memory.bytes_per access_size.word))) with 4 in *.
       ecancel_assumption.
     }
-    admit (*specof_unsizelist_memcpy*).
+    assumption.
     {
       cbv [v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
+      rewrite H5, H4.
       cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
       rewrite !word.unsigned_of_Z.
       rewrite ?word.wrap_small; auto.
@@ -518,28 +580,28 @@ Section Bedrock2.
       rewrite ?word.wrap_small by lia.
       rewrite bs2ws_length.
       rewrite Nat2Z.inj_div.
-      rewrite H7.
+      rewrite H8.
       cbv [v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
+      rewrite H5, H4.
       cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
       rewrite !word.unsigned_of_Z.
       rewrite ?word.wrap_small; auto.
       lia.
       cbv; lia.
       {
-        revert H7.
+        revert H8.
         cbv [v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_backed_by].
         rewrite !app_length.
         rewrite !length_w32s_of_bytes.
-        rewrite H4, H3.
+        rewrite H5, H4.
         cbn [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
         rewrite !word.unsigned_of_Z.
         rewrite ?word.wrap_small; auto; try lia.
         intro.
         assert (Datatypes.length uninit1 = 64%nat) by lia.
-        rewrite H8.
+        rewrite H9.
         reflexivity.
       }
     }
@@ -552,7 +614,7 @@ Section Bedrock2.
     compile_step.
     {
       replace scalar32 with (scalar (word:=word)) in * by apply scalar32_helper.
-      revert H8.
+      revert H9.
       
       unfold listarray_value.
       cbn [ai_width ai_size Arrays._access_info ai_repr ai_type].
@@ -585,7 +647,7 @@ Section Bedrock2.
       cbv [v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by].
       rewrite !app_length.
       rewrite !length_w32s_of_bytes.
-      rewrite H4, H3.
+      rewrite H5, H4.
       cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
       reflexivity.
     }
@@ -631,7 +693,7 @@ Section Bedrock2.
                v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by];
         rewrite !app_length;
         rewrite !length_w32s_of_bytes;
-        rewrite H4, H3;
+        rewrite H5, H4;
         cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ];
         reflexivity
       |]).
@@ -727,7 +789,7 @@ Section Bedrock2.
                  v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by];
           rewrite !app_length;
           rewrite !length_w32s_of_bytes;
-          rewrite H4, H3;
+          rewrite H5, H4;
           cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ];
           reflexivity
         | compile_step ]
@@ -754,7 +816,7 @@ Section Bedrock2.
       {
         cbv [predT sz_word word_ac szT].
         
-        revert H24.
+        revert H25.
         unfold listarray_value.
         cbn [ai_width ai_size Arrays._access_info ai_repr ai_type].
         rewrite !bytes_per_width_bytes_per_word.
@@ -809,7 +871,7 @@ Section Bedrock2.
         cbv [v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_backed_by].
         rewrite !app_length.
         rewrite !length_w32s_of_bytes.
-        rewrite H4, H3.
+        rewrite H5, H4.
         cbn [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
         reflexivity.
       }
@@ -823,7 +885,7 @@ Section Bedrock2.
                end.
         cbv [ v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_backed_by buf_make].          rewrite !app_length.
         rewrite !length_w32s_of_bytes.
-        rewrite !H4, !H3.
+        rewrite !H5, !H4.
         cbn [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
         reflexivity.
       }
@@ -834,7 +896,6 @@ Section Bedrock2.
       now compile_step.
       now compile_step.
       compile_step.
-
       
       compile_step.
       
@@ -842,12 +903,34 @@ Section Bedrock2.
       Optimize Heap.
 
       2: exact [].
-
       sepsimpl.
       eexists.
-      (* TODO: replace buffer_at w/ array
-      ecancel_assumption. *)
-      
+      seprewrite buffer_at_full_array; cycle 1.
+      {
+        refine (subrelation_refl Lift1Prop.impl1 _ _ _ mem5 H27); clear H27; clear.
+        cancel.
+        ecancel_step_by_implication.
+        cbv [seps].
+        unfold v7.
+        replace (bytes_of_w32s (w32s_of_bytes key)) with key.
+        unfold v11.
+        replace (bytes_of_w32s (w32s_of_bytes nonce)) with nonce.
+        intros m'' H''.
+        eexists; intuition subst.
+        admit (* TODO: False! what's this list? is this a var that should have been deallocated?*).
+        admit (*TODO: find the lemma that doesn't preserve the trace*).
+        ecancel_assumption.
+        apply bytes_of_w32s_iso; rewrite H4; reflexivity.
+        apply bytes_of_w32s_iso; rewrite H5; reflexivity.
+      }
+      {
+        rewrite !ListArray.put_length.
+        cbv [buf_append copy buf_as_array buf_push buf_backed_by].
+        rewrite !app_length.
+        rewrite !length_w32s_of_bytes.
+        rewrite H5, H4.
+        reflexivity.
+      }
   Abort.
     
 End Bedrock2.
