@@ -40,10 +40,9 @@ Section Bedrock2.
         map.get locals d_var = Some d ->
 
         (let v := v in
-         forall m,
            let '\<w, x, y, z\> := v in
         (<{ Trace := tr;
-            Memory := m;
+            Memory := mem;
             Locals := map.put (map.put (map.put (map.put locals a_var w) b_var x) c_var y) d_var z;
             Functions := functions }>
          k_impl
@@ -122,6 +121,15 @@ Section Bedrock2.
       rewrite replace_nth_nil.
       reflexivity.
     }
+  Qed.
+
+  Lemma scalar32_helper
+    : scalar32 = (scalar (word:=word)).
+  Proof.
+    unfold scalar32, scalar, truncated_word, truncated_scalar.
+    change  (Memory.bytes_per access_size.word) with 4%nat.
+    change  (Memory.bytes_per access_size.four) with 4%nat.
+    reflexivity.
   Qed.
   
   Derive chacha20_block_body SuchThat
@@ -271,12 +279,20 @@ Section Bedrock2.
     compile_step.
     split.
     {
-      unfold listarray_value in H5.
+      revert H6.
+      unfold listarray_value.
       cbn [ai_width ai_size
-             Arrays._access_info ai_repr ai_type]
-            in H5.
-      change (Z.of_nat (Memory.bytes_per access_size.word)) with 4 in H5.
-      admit.
+             Arrays._access_info ai_repr ai_type].
+      change (Z.of_nat (Memory.bytes_per access_size.word)) with 4.
+      replace scalar32 with (scalar (word:=word)) by apply  scalar32_helper.
+      cbv [v3 v2 v1 v0 v buf_push buf_backed_by].
+      cbn [Datatypes.app Datatypes.length].
+      rewrite !word.unsigned_of_Z.
+      rewrite !word.wrap_small by lia.
+      change (Z.of_nat 4) with 4.
+      unfold copy.
+      intro.
+      ecancel_assumption.
     }
     repeat compile_step.
 
@@ -343,7 +359,7 @@ Section Bedrock2.
         rewrite !length_w32s_of_bytes.
         rewrite H4.
         cbv [length Datatypes.app].
-        replace scalar32 with (scalar (word:=word)) by admit.
+        replace scalar32 with (scalar (word:=word)) by apply  scalar32_helper.
         intro H1.
         seprewrite_in words_of_bytes H1.
         {
@@ -355,7 +371,7 @@ Section Bedrock2.
         change ((Z.of_nat (Memory.bytes_per access_size.word))) with 4 in H1.
         ecancel_assumption.
     }
-    admit (*TODO*).
+    admit (*TODO: unsizelist_memcpy*).
     {
       instantiate (1 := (word.of_Z _)).
       unfold v8.
@@ -389,7 +405,7 @@ Section Bedrock2.
     compile_step.
     {
       
-      replace scalar32 with (scalar (word:=word)) by admit.
+      replace scalar32 with (scalar (word:=word)) by apply  scalar32_helper.
       unfold v5, copy, v4, v3, v2, v1, v0, v, buf_backed_by, buf_append, buf_push in *.
       rewrite !app_length in *.
       rewrite ?length_w32s_of_bytes in *.
@@ -466,7 +482,7 @@ Section Bedrock2.
         rewrite ?word.wrap_small by lia.
         intro.
       
-      replace scalar32 with (scalar (word:=word)) in * by admit.
+      replace scalar32 with (scalar (word:=word)) in * by apply scalar32_helper.
       fold v13.
       seprewrite_in words_of_bytes H1.
       {
@@ -486,7 +502,7 @@ Section Bedrock2.
       change ((Z.of_nat (Memory.bytes_per access_size.word))) with 4 in *.
       ecancel_assumption.
     }
-    admit.
+    admit (*specof_unsizelist_memcpy*).
     {
       cbv [v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_backed_by].
       rewrite !app_length.
@@ -535,7 +551,7 @@ Section Bedrock2.
     compile_step.
     compile_step.
     {
-      replace scalar32 with (scalar (word:=word)) in * by admit.
+      replace scalar32 with (scalar (word:=word)) in * by apply scalar32_helper.
       revert H8.
       
       unfold listarray_value.
@@ -636,7 +652,6 @@ Section Bedrock2.
     2:remember v19 as v19';
     destruct v19' as [? [? [? [? [? [? [? [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]];
     cbv [P2.car P2.cdr] in *.
-    
       
     Optimize Proof.
     Optimize Heap.
@@ -646,39 +661,81 @@ Section Bedrock2.
         simple eapply compile_nlet_as_nlet_eq;
         change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
         simple eapply compile_quarter; [ now repeat compile_step ..| repeat compile_step]).
-      (change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
+
+      change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
         simple eapply compile_nlet_as_nlet_eq;
-        change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
-       simple eapply compile_quarter; [ now repeat compile_step ..|]).
+        change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y).
+       simple eapply compile_quarter; [ now repeat compile_step ..|].
       
       Optimize Proof.
       Optimize Heap.
 
       compile_step.
+      
       compile_step.
-      3: exact [].
-      2:{
-        
-        replace scalar32 with (scalar (word:=word)) in * by admit.
-        admit (*TODO: where is the assumption about m17?*).
-      }
+      2: exact [].
       {
+        (*TODO: why are quarter calls getting subst'ed?*)
         cbv [P2.car P2.cdr fst snd].
         cbv [map.remove_many fold_left].
-        admit (*TODO: looks false (locals before = locals after?*).
+        repeat (set (quarter _ _ _ _)).
+        Ltac dedup s :=
+          repeat rewrite map.put_put_diff with (k1:=s) by congruence;
+          rewrite ?map.put_put_same with (k:=s).
+        dedup "qv0".
+        dedup "qv1".
+        dedup "qv2".
+        dedup "qv3".
+        dedup "qv4".
+        dedup "qv5".
+        dedup "qv6".
+        dedup "qv7".
+        dedup "qv8".
+        dedup "qv9".
+        dedup "qv10".
+        dedup "qv11".
+        dedup "qv12".
+        dedup "qv13".
+        dedup "qv14".
+        dedup "qv15".
+        
+        cbv [gs].
+        dedup  "_gs_from0".
+        dedup  "_gs_to0".
+        reflexivity.
+        (*TODO: why is all this work necessary for passable proof performance?*)
       }
     }
-    
+
     repeat lazymatch goal with
     | |- context [array_put ?a ?b ?c] =>
         replace (array_put a b c) with
         (ListArray.put a b c) by (symmetry;apply array_put_helper);
-        simple eapply compile_nlet_as_nlet_eq;
-        eapply compile_word_unsizedlistarray_put; [admit ..| compile_step]
+        simple eapply compile_nlet_as_nlet_eq;        
+        eapply compile_word_unsizedlistarray_put;
+        [  change (cast ?a) with a; now compile_step .. 
+        | lazymatch goal with
+            |- _ < Z.of_nat (Datatypes.length ?v) =>
+              unfold v;
+              repeat match goal with
+                  |- context [ListArray.put ?v _ _] =>
+                    rewrite ListArray.put_length; unfold v
+                end
+          end;
+          change (cast ?a) with a;
+          cbv [v16 v14 v13 v12 v9 buf_append copy buf_as_array
+                 v5 v8 v3 v4 v2 v1 v0 v buf_push buf_make buf_backed_by];
+          rewrite !app_length;
+          rewrite !length_w32s_of_bytes;
+          rewrite H4, H3;
+          cbv [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ];
+          reflexivity
+        | compile_step ]
     end.
 
     Optimize Proof.
     Optimize Heap.
+
     
     eapply compile_nlet_as_nlet_eq.
       lazymatch goal with
@@ -688,20 +745,29 @@ Section Bedrock2.
       simple eapply compile_broadcast_expr
         with (idx_var:=idx_var_str) (to_var:=to_var_str)
       end.
-      admit.
+      now eapply word_ac_ok.
       {
         compile_step.
         eapply expr_compile_var.
         reflexivity.
       }
-      ecancel_assumption.
-      admit.
-      admit.
-      admit.
-      cbv; congruence.
-      reflexivity.
-      reflexivity.
       {
+        cbv [predT sz_word word_ac szT].
+        
+        revert H24.
+        unfold listarray_value.
+        cbn [ai_width ai_size Arrays._access_info ai_repr ai_type].
+        rewrite !bytes_per_width_bytes_per_word.
+        change (Memory.bytes_per_word 32) with 4.
+        change (Z.of_nat 4) with 4.        
+        replace scalar32 with (scalar (word:=word)) by apply scalar32_helper.
+        intro.
+        ecancel_assumption.
+      }
+      4:cbv; congruence.
+      4:reflexivity.
+      4:reflexivity.
+      4:{
         eapply broadcast_word_add.
         {
           cbn.
@@ -726,11 +792,10 @@ Section Bedrock2.
             cbv [predT sz_word szT word_ac].
             rewrite !bytes_per_width_bytes_per_word.
             change (Memory.bytes_per_word 32) with 4.
-            intros m'' H''.
-            ecancel_assumption.
+            ecancel.
           }
-          admit(*TODO: will work once a_ptr is concrete*).
-          admit(*TODO: will work once a_ptr is concrete*).
+          all: repeat compile_step.
+          cbv; congruence.
           {
             cbn.
             unfold copy.
@@ -740,17 +805,49 @@ Section Bedrock2.
           }
         }
       }
+      {
+        cbv [v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_backed_by].
+        rewrite !app_length.
+        rewrite !length_w32s_of_bytes.
+        rewrite H4, H3.
+        cbn [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
+        reflexivity.
+      }
+      {
+        rewrite map_length.
+        rewrite combine_length.
+        subst v35.
+        repeat match goal with
+                 |- context [ListArray.put ?v _ _] =>
+                   rewrite ListArray.put_length; unfold v
+               end.
+        cbv [ v14 v13 v12 v9 buf_append copy buf_as_array v5 v8 v3 v4 v2 v1 v0 v buf_push buf_backed_by buf_make].          rewrite !app_length.
+        rewrite !length_w32s_of_bytes.
+        rewrite !H4, !H3.
+        cbn [length Datatypes.app Nat.add Nat.div Nat.divmod fst Z.of_nat Pos.of_succ_nat Pos.succ].
+        reflexivity.
+      }
+      lia.
+      compile_step.
+      eapply compile_nlet_as_nlet_eq.
+      eapply compile_bytes_of_w32s.
+      now compile_step.
+      now compile_step.
+      compile_step.
+
       
       compile_step.
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_bytes_of_w32s; [admit.. |].
-      compile_step.
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_buf_as_array; [admit.. |].
+      
       Optimize Proof.
       Optimize Heap.
-      compile_step.      
 
+      2: exact [].
+
+      sepsimpl.
+      eexists.
+      (* TODO: replace buffer_at w/ array
+      ecancel_assumption. *)
+      
   Abort.
     
 End Bedrock2.

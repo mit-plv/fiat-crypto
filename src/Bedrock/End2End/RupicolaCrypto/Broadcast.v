@@ -690,8 +690,8 @@ Section with_parameters.
     destruct l; simpl in *; [lia | auto].
   Qed.
           
-  Lemma broadcast_var l idx_var scratch a_ptr b_ptr a_var a_data R'
-    : Lift1Prop.impl1 R' (a_data$@a_ptr) ->
+  Lemma broadcast_var l idx_var scratch a_ptr b_ptr a_var a_data R' R
+    : Lift1Prop.iff1 R' (a_data$@a_ptr * R)%sep ->
       map.get l a_var = Some a_ptr ->
       ~a_var = idx_var ->
       length scratch <= length a_data ->
@@ -723,11 +723,10 @@ Section with_parameters.
       erewrite truncate_of_T.
       reflexivity.
     }
-    assert (((lstl ++ skipn (length lstl) scratch)$@b_ptr ⋆  (a_data$@a_ptr)) m).
-    {
-      destruct H5 as [m1 [m2 [? [? ?]]]].
-      exists m1, m2; intuition.
-    }
+    seprewrite_in H0 H5.
+    clear R' H0.
+    assert (((lstl ++ skipn (length lstl) scratch)$@b_ptr ⋆  (a_data$@a_ptr) * R)%sep m)
+     as H6 by ecancel_assumption.
     clear H5; rename H6 into H5.
     seprewrite_in (array_append (T:=T) predT sz_word) H5.
     replace (nth (length lstl) scratch)
