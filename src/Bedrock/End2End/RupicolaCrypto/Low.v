@@ -2085,7 +2085,6 @@ Definition chacha20_block (*256bit*)key (*32bit+96bit*)nonce (*512 bits*)st :=
                          st_i) (combine st ss) in
 
   let/n st := bytes_of_w32s st in
-  let/n st := array_as_buf st in
   st.
 
 Lemma word_add_pair_eqn st:

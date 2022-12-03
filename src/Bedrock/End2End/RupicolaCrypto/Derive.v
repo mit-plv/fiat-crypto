@@ -190,7 +190,7 @@ Section Bedrock2.
           Tactics.rapply spec_of_unsizedlist_memcpy : typeclass_instances.
   
   Derive chacha20_block_body SuchThat
-         (defn! "chacha20_block" ("key", "nonce", "st") ~> "st" { chacha20_block_body },
+         (defn! "chacha20_block" ("key", "nonce", "st") { chacha20_block_body },
           implements (chacha20_block) using [ "quarter"  ; "unsizedlist_memcpy" ])
          As chacha20_block_body_correct.
   Proof.
@@ -907,21 +907,19 @@ Section Bedrock2.
       eexists.
       seprewrite buffer_at_full_array; cycle 1.
       {
-        refine (subrelation_refl Lift1Prop.impl1 _ _ _ mem5 H27); clear H27; clear.
+        refine (subrelation_refl Lift1Prop.impl1 _ _ _ mem5 H27); clear H27.
         cancel.
         ecancel_step_by_implication.
         cbv [seps].
         unfold v7.
-        replace (bytes_of_w32s (w32s_of_bytes key)) with key.
+        replace (bytes_of_w32s (w32s_of_bytes key)) with key by
+            (apply bytes_of_w32s_iso; rewrite H5; reflexivity).
         unfold v11.
-        replace (bytes_of_w32s (w32s_of_bytes nonce)) with nonce.
+        replace (bytes_of_w32s (w32s_of_bytes nonce)) with nonce by
+          (apply bytes_of_w32s_iso; rewrite H4; reflexivity).
         intros m'' H''.
         eexists; intuition subst.
-        admit (* TODO: False! what's this list? is this a var that should have been deallocated?*).
-        admit (*TODO: find the lemma that doesn't preserve the trace*).
         ecancel_assumption.
-        apply bytes_of_w32s_iso; rewrite H4; reflexivity.
-        apply bytes_of_w32s_iso; rewrite H5; reflexivity.
       }
       {
         rewrite !ListArray.put_length.
@@ -931,6 +929,21 @@ Section Bedrock2.
         rewrite H5, H4.
         reflexivity.
       }
+      Unshelve.
+      (*TODO: what are these?*)
+      exact 0%nat.
+      exact 0%nat.
+      exact 0%nat.
+      shelve.
+      exact wordok.
+      exact mapok.
+      exact localsok.
+      exact envok.
+      exact ext_spec_ok.
+  (*
+    TODO: Qed takes unreasonably long (unconfirmed whether it finishes)
+  Qed.*)
   Abort.
+  
     
 End Bedrock2.

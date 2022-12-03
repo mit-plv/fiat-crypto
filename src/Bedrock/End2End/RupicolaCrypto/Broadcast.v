@@ -381,10 +381,11 @@ Section with_parameters.
       map.get l to_var = None ->
 
      broadcast_expr l idx_var scratch a_ptr R lst_expr v ->
-      (let v := v in
-       forall tr idx to m,
+     (let v := v in
+      (*TODO: should this allow writing to the trace?*)
+       forall idx to m,
          (v$@a_ptr* R)%sep m ->
-         <{ Trace := tr; Memory := m; Locals := map.put (map.put l idx_var idx) to_var to; Functions := e }>
+         <{ Trace := t; Memory := m; Locals := map.put (map.put l idx_var idx) to_var to; Functions := e }>
            k_impl
          <{ pred (k v eq_refl) }>) ->
       <{ Trace := t; Memory := m; Locals := l; Functions := e }>
@@ -427,6 +428,7 @@ Section with_parameters.
     (*Issue: in loop invariant lp from -> lp from'*)
     let x := open_constr:(fun from' lst tr mem locals =>
                             (lst$@a_ptr ⋆ R) mem
+                            /\ tr = t
                             /\ locals = map.put (map.put l idx_var (word.of_Z from'))
                                                 to_var (word.of_Z (Z.of_nat (length scratch)))) in
     instantiate(1:= x).
@@ -546,7 +548,8 @@ Section with_parameters.
       eapply H7 in H10.
       change (-1) with (0-1).
       unfold v in H10.
-      subst locals0.
+      destruct H11;
+        subst.
       exact H10.
     }
   Qed.
@@ -570,9 +573,10 @@ Section with_parameters.
 
       broadcast_expr l idx_var scratch a_ptr R lst_expr v ->
       (let v := v in
-       forall tr idx to m,
+       (*TODO: should we allow affecting the trace? *)
+       forall idx to m,
          (v$@a_ptr* R)%sep m ->
-         <{ Trace := tr; Memory := m; Locals :=  map.put (map.put l idx_var idx) to_var to; Functions := e }>
+         <{ Trace := t; Memory := m; Locals :=  map.put (map.put l idx_var idx) to_var to; Functions := e }>
            k_impl
          <{ pred (k v eq_refl) }>) ->
       <{ Trace := t; Memory := m; Locals := l; Functions := e }>
