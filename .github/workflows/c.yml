@@ -29,10 +29,10 @@ jobs:
         #sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
     - name: GCC Problem Matcher
       uses: ammaraskar/gcc-problem-matcher@0.2.0
-    - name: Set up Go 1.16
+    - name: Set up Go 1.19
       uses: actions/setup-go@v3
       with:
-        go-version: 1.16
+        go-version: 1.19
       id: go
     - name: make only-test-c-files CC=gcc
       run: make only-test-c-files CC=gcc EXTERNAL_DEPENDENCIES=1
