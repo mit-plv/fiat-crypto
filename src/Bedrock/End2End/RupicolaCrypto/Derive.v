@@ -25,8 +25,8 @@ Section Bedrock2.
   Proof.
     compile.
   Qed.
-
-  Lemma compile_quarter : forall {tr mem locals functions} a b c d,
+  
+Lemma compile_quarter : forall {tr mem locals functions} a b c d,
       let v := quarter a b c d in
 
       forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
@@ -188,6 +188,16 @@ Section Bedrock2.
   (*TODO: why is this necessary? seems like a bug*)
   Local Hint Extern 0 (spec_of "unsizedlist_memcpy") =>
           Tactics.rapply spec_of_unsizedlist_memcpy : typeclass_instances.
+
+  Ltac dedup s :=
+    repeat rewrite map.put_put_diff with (k1:=s) by congruence;
+    rewrite ?map.put_put_same with (k:=s).
+
+
+  (*used because concrete computation on maps seems to be slow here*)
+  Ltac eval_map_get :=
+    repeat rewrite map.get_put_diff by (cbv; congruence);
+    rewrite map.get_put_same; reflexivity.
   
   Derive chacha20_block_body SuchThat
          (defn! "chacha20_block" ("key", "nonce", "st") { chacha20_block_body },
@@ -708,12 +718,6 @@ Section Bedrock2.
     compile_step.
     compile_step; [repeat compile_step; lia .. | |].
     all: repeat compile_step.
-    1: remember acc as acc';
-      destruct acc' as [? [? [? [? [? [? [? [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]];
-    cbv [P2.car P2.cdr] in *.
-    2:remember v19 as v19';
-    destruct v19' as [? [? [? [? [? [? [? [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]];
-    cbv [P2.car P2.cdr] in *.
       
     Optimize Proof.
     Optimize Heap.
@@ -722,28 +726,33 @@ Section Bedrock2.
       do 7 (change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
         simple eapply compile_nlet_as_nlet_eq;
         change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
-        simple eapply compile_quarter; [ now repeat compile_step ..| repeat compile_step]).
+        simple eapply compile_quarter; [ now (eval_map_get || (repeat compile_step)) ..| repeat compile_step]).
 
       change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
         simple eapply compile_nlet_as_nlet_eq;
         change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y).
-       simple eapply compile_quarter; [ now repeat compile_step ..|].
+      simple eapply compile_quarter; [ now (eval_map_get || (repeat compile_step)) ..|].
       
       Optimize Proof.
       Optimize Heap.
 
       compile_step.
-      
-      compile_step.
+
+      (*TODO: compile_step takes too long (related to computations on maps?)*)
+      unshelve refine (compile_unsets _ _ _); [ shelve | intros |  ]; cycle 1.
+      simple apply compile_skip.
       2: exact [].
+      cbv beta delta [lp].
+      split; [tauto|].
+      split.
+      
       {
+        
         (*TODO: why are quarter calls getting subst'ed?*)
         cbv [P2.car P2.cdr fst snd].
-        cbv [map.remove_many fold_left].
-        repeat (set (quarter _ _ _ _)).
-        Ltac dedup s :=
-          repeat rewrite map.put_put_diff with (k1:=s) by congruence;
-          rewrite ?map.put_put_same with (k:=s).
+        cbv [map.remove_many fold_left].      
+        cbv [gs].
+        
         dedup "qv0".
         dedup "qv1".
         dedup "qv2".
@@ -760,15 +769,13 @@ Section Bedrock2.
         dedup "qv13".
         dedup "qv14".
         dedup "qv15".
-        
-        cbv [gs].
         dedup  "_gs_from0".
         dedup  "_gs_to0".
         reflexivity.
-        (*TODO: why is all this work necessary for passable proof performance?*)
       }
+      ecancel_assumption.
     }
-
+    
     repeat lazymatch goal with
     | |- context [array_put ?a ?b ?c] =>
         replace (array_put a b c) with
@@ -940,10 +947,8 @@ Section Bedrock2.
       exact localsok.
       exact envok.
       exact ext_spec_ok.
-  (*
-    TODO: Qed takes unreasonably long (unconfirmed whether it finishes)
-  Qed.*)
-  Abort.
+
+      Qed.
   
     
 End Bedrock2.
