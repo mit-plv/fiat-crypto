@@ -373,7 +373,7 @@ Module Z.
     assert (Hn : -X <= a - b) by lia.
     assert (Hp : a - b <= X - 1) by lia.
     split; etransitivity; [ | apply Z_div_le, Hn; lia | apply Z_div_le, Hp; lia | ];
-      instantiate; autorewrite with zsimplify; try reflexivity.
+      autorewrite with zsimplify; try reflexivity.
   Qed.
 
 #[global]
