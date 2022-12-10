@@ -340,7 +340,7 @@ Section with_parameters.
     : map f (upd l i a) = upd (map f l) i (f a).
   Proof.
     eapply nth_error_ext;
-      intros.
+      intros i0.
     destruct (Nat.compare_spec i0 (length l)); subst.
     1,3: rewrite !ListUtil.nth_error_length_error; eauto;
     repeat rewrite ?List.map_length, ?List.upd_length; lia.
