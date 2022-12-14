@@ -371,20 +371,141 @@ Existing Instance word_ac_ok.
 
 Definition load_offset e o :=
   expr.load access_size.word
-    (expr.op bopname.add (expr.literal o) e).
+    (expr.op bopname.add (expr.literal (4*o)) e).
 Definition count_to (n : nat) : list Z := (z_range 0 n).
 
+
+Fixpoint unroll {A} (default : A) (l : list A) n :=
+  match n with
+  | O => []
+  | S n' =>
+      unroll default l n' ++ [nth n' l default]
+  end.
+Lemma unroll_len {A} a (l : list A)
+  : l = unroll a l (length l).
+Proof.
+Admitted.
+
+
+
+Lemma truncate_word_word (w : word)
+  : truncate_word access_size.word w = w.
+Proof.
+  unfold truncate_word.
+  unfold truncate_Z.
+  rewrite Z.land_ones_low.
+  { apply word.of_Z_unsigned. }
+  { pose proof (word.unsigned_range w); lia. }
+  { pose proof (word.unsigned_range w).
+    change (Z.of_nat (Memory.bytes_per access_size.word) * 8) with 32.
+    admit.
+Admitted.
+      
+Lemma expr_load_word_of_array_helper m l len lst e ptr R (n : nat)
+  : length lst = len ->
+    n <= len ->
+    (array scalar (word.of_Z (word:=word) 4) ptr lst * R)%sep m ->
+    DEXPR m l e ptr ->
+    Forall2 (DEXPR m l) (map (load_offset e) (z_range n len)) (skipn n lst).
+Proof.
+  remember (len - n)%nat as diff.
+  
+  revert n Heqdiff R lst.
+  induction diff.
+  {
+    intros; simpl in *; subst.
+    rewrite z_range_nil by lia.
+    rewrite List.skipn_all by lia.
+    simpl.
+    constructor.
+  }
+  {
+    intros.
+    rewrite z_range_cons by lia.
+    erewrite split_hd_tl with (l := skipn _ _).
+    2:{
+      rewrite skipn_length.
+      cbn [length].
+      lia.
+    }
+    rewrite <- hd_skipn_nth_default.
+    rewrite nth_default_eq.
+    cbn [map].
+    constructor.
+    {
+      unfold load_offset.
+      unfold DEXPR.
+      cbn.
+      unfold literal.
+      unfold dlet.
+      eapply WeakestPrecondition_dexpr_expr; eauto.
+      unfold load.
+      eexists; split; eauto.
+      instantiate (1:= word.of_Z 0).
+      replace  (nth n lst (word.of_Z 0))
+        with (truncate_word access_size.word (nth n lst (word.of_Z 0))).
+      eapply array_load_of_sep; eauto.
+      {
+        rewrite Radd_comm by apply word.ring_theory.
+        reflexivity.
+      }
+      lia.
+      {
+        apply truncate_word_word.
+      }        
+    }
+    rewrite tl_skipn.
+    replace (Z.of_nat n + 1) with (Z.of_nat (S n)) by lia.
+    eapply IHdiff; eauto.
+    lia.
+    lia.
+  }
+Qed.
+  
+Lemma expr_load_word_of_array m l len lst e ptr R
+  : length lst = len ->
+    (array scalar (word.of_Z (word:=word) 4) ptr lst * R)%sep m ->
+    DEXPR m l e ptr ->
+    Forall2 (DEXPR m l) (map (load_offset e) (count_to len)) lst.
+Proof.
+  unfold count_to.
+  change 0 with (Z.of_nat 0).
+  change lst with (skipn 0 lst).
+  intros.
+  eapply expr_load_word_of_array_helper; eauto.
+  lia.
+Qed.
+
 Lemma expr_load_word_of_byte_array m l len lst e ptr R
-  : (length lst mod Memory.bytes_per (width :=32) access_size.word)%nat = 0%nat ->
-    length lst = len ->
+  : (*(length lst mod Memory.bytes_per (width :=32) access_size.word)%nat = 0%nat ->*)
+    length lst = (4*len)%nat ->
     (lst$@ptr * R)%sep m ->
     DEXPR m l e ptr ->
     Forall2 (DEXPR m l) (map (load_offset e) (count_to len)) (map le_combine (chunk 4 lst)).
 Proof.
   intros.
-  seprewrite_in words_of_bytes H1; auto.
-  unfold count_to.
-Admitted.
+  seprewrite_in words_of_bytes H0; auto.
+  {
+    rewrite H.
+    rewrite Nat.mul_comm.
+    rewrite Nat.mod_mul; cbv; congruence.
+  }
+  eapply expr_load_word_of_array; eauto.
+  {
+    rewrite map_length, length_chunk by lia.
+    rewrite H.
+    rewrite Nat.mul_comm.
+    rewrite Nat.div_up_exact; lia.
+  }
+  
+  unfold le_combine.
+  unfold bs2ws, zs2ws, bs2zs in *.
+  rewrite <- map_map with (g:= word.of_Z (word:=word)).
+  change (Z.of_nat (Memory.bytes_per access_size.word)) with 4 in *.
+  change (Memory.bytes_per access_size.word) with 4%nat in *.
+  ecancel_assumption.
+Qed.
+
 
 
   
@@ -656,7 +777,11 @@ Proof.
     }
     {
       eapply expr_load_word_of_byte_array; try eassumption.
-      rewrite H6; reflexivity.
+      {
+        rewrite H6.
+        instantiate (1:= 8%nat).
+        reflexivity.
+      }
       compile_step.
     }
     {
@@ -666,8 +791,12 @@ Proof.
       }
       {
         eapply expr_load_word_of_byte_array; try eassumption.
-        rewrite H9; reflexivity.
-        compile_step.
+      {
+        rewrite H9.
+        instantiate (1:= 3%nat).
+        reflexivity.
+      }
+      compile_step.
       }
     }
   }
@@ -784,7 +913,11 @@ Proof.
       }
       {
         eapply expr_load_word_of_byte_array; try eassumption.
-        rewrite H6; reflexivity.
+      {
+        rewrite H6.
+        instantiate (1:= 8%nat).
+        reflexivity.
+      }
         compile_step.
       }
       {
@@ -794,7 +927,11 @@ Proof.
         }
         {
           eapply expr_load_word_of_byte_array; try eassumption.
-          rewrite H9; reflexivity.
+      {
+        rewrite H9.
+        instantiate (1:= 3%nat).
+        reflexivity.
+      }
           compile_step.
         }
       }
@@ -853,16 +990,6 @@ Proof.
                 let/n x as "st" eq:_ := bytes_of_w32s v1 in x)).
   simple eapply compile_store_locals_array.
   {
-    Fixpoint unroll {A} (default : A) (l : list A) n :=
-      match n with
-      | O => []
-      | S n' =>
-          unroll default l n' ++ [nth n' l default]
-      end.
-    Lemma unroll_len {A} a (l : list A)
-      : l = unroll a l (length l).
-    Proof.
-    Admitted.
     rewrite unroll_len with (l:=v1) (a:= word.of_Z 0) at 1.
     replace (length v1) with 16%nat.
     cbn [unroll app].
@@ -925,7 +1052,9 @@ Local Open Scope string_scope.
 Import Syntax Syntax.Coercions NotationsCustomEntry.
 Import ListNotations.
 Import Coq.Init.Byte.
+Set Printing Depth 150.
 Compute chacha20_block_wrapped.
+TODO: key, nonce loads need to be multiplied by 4?
 (*
 TODO: offset of key loads
 TODO: 0,nonce loads at start replaced by key loads
