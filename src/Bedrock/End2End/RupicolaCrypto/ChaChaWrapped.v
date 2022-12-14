@@ -91,6 +91,18 @@ Fixpoint array_locs (vars : list string) offset (lst : list word) :=
       (v, (nth offset lst (word.of_Z 0)))::(array_locs vars (S offset) lst)
   end.
 
+
+Lemma sub_nz_implies_lt (m n o : nat)
+  : m > 0 ->
+    (m = n - o)%nat ->
+    n > o.
+Proof.
+  intros; subst.
+  revert n H.
+  induction o;
+    simpl; intros; lia.
+Qed.
+
 Lemma array_locs_is_combine' vars offset lst
   : (length vars = length lst - offset)%nat ->
     array_locs vars offset lst = combine vars (skipn offset lst).
@@ -99,7 +111,37 @@ Proof.
   induction vars; intros; try  now (simpl; auto).
   specialize (IHvars (S offset)).
   simpl in H.
-Admitted.
+  
+  assert (length lst > offset).
+  {
+    eapply sub_nz_implies_lt; eauto.
+    lia.
+  }
+  assert (1 + length vars = (length lst) - offset).  
+  {
+    replace (1 + Z.of_nat (length vars)) with (Z.of_nat (S (length vars))) by lia.
+    rewrite H.
+    rewrite Nat2Z.inj_sub by lia.
+    reflexivity.
+  }
+  erewrite split_hd_tl with (l := skipn _ _).
+  2:{
+    rewrite skipn_length.
+    lia.
+  }
+  simpl.
+  f_equal.
+  {
+    rewrite <- hd_skipn_nth_default.
+    rewrite nth_default_eq.
+    reflexivity.
+  }
+  {
+    rewrite tl_skipn.
+    apply IHvars.
+    lia.
+  }
+Qed.
 
 
 Lemma array_locs_is_combine vars lst
@@ -112,6 +154,15 @@ Qed.
   
 Definition load_to_vars vars (lst : list expr) k_impl : cmd :=
   List.fold_right (fun '(x,e) k_impl => cmd.seq (cmd.set x e) k_impl) k_impl (combine vars lst).
+
+
+Lemma array_dexpr_locals_put
+  : ∀ (m l : map.rep) (x : string) (v : word) exp w,
+    map.get l x = None → Forall2 (DEXPR m l) exp w → Forall2 (DEXPR m #{ … l; x => v }#) exp w.
+Proof.
+  induction 2; constructor;
+    eauto using dexpr_locals_put.
+Qed.
 
 Lemma compile_set_locals_array {t m l e} (lst : list word):
     let v := lst in
@@ -162,14 +213,23 @@ Proof.
   repeat straightline.
   apply IHvars with (l:=l0) (lst:=lst); eauto.
   (pose proof (H0 a (ltac:(simpl; intuition)))).
-  admit (*TODO: generalize from dexpr property*).
+  eapply array_dexpr_locals_put; eauto.
   { inversion H; subst; auto. }
   {
     intros.
     subst l0.
-    admit (*TODO: cases on v = a*).
+    destruct (String.eqb_spec a v).
+    {
+      subst.
+      exfalso.
+      inversion H; eauto.
+    }
+    {
+      rewrite map.get_put_diff; eauto.
+      apply H0; simpl; intuition subst.
+    }
   }
-Admitted.
+Qed.    
 
 Section Bedrock2.
 
@@ -282,10 +342,12 @@ Notation "'let/n' ( x0 , y0 , z0 , t0 , x1 , y1 , z1 , t1 , x2 , y2 , z2 , t2 , 
          qv4; qv5; qv6; qv7; 
          qv8; qv9; qv10; qv11; 
          qv12; qv13; qv14; qv15] in
-    let/n st := map (fun '(s, t) => s + t)%word (combine ss (map le_combine (chunk 4 (list_byte_of_string"expand 32-byte k"))
+  nlet ["qv0"; "qv1"; "qv2"; "qv3"; "qv4"; "qv5"; "qv6"; "qv7";
+         "qv8"; "qv9"; "qv10"; "qv11"; "qv12"; "qv13"; "qv14"; "qv15"] (*512bit*)
+    (map (fun '(s, t) => s + t)%word (combine ss (map le_combine (chunk 4 (list_byte_of_string"expand 32-byte k"))
             ++ map le_combine (chunk 4 key)
-            ++ (word.of_Z 0)::(map le_combine (chunk 4 nonce))))in
-    flat_map (le_split 4) st).
+            ++ (word.of_Z 0)::(map le_combine (chunk 4 nonce))))) (fun ss =>
+    let/n st := flat_map (le_split 4) ss in st)).
 
   #[export] Instance spec_of_chacha20 : spec_of "chacha20_block" :=
     fnspec! "chacha20_block" out key nonce / (pt k n : list Byte.byte) (R Rk Rn : map.rep -> Prop),
@@ -306,15 +368,6 @@ Local Hint Extern 0 (spec_of "unsizedlist_memcpy") =>
 
 Existing Instance word_ac_ok.
 
-(*TODO: move to Bedrock/Field/Common/Util.v?*)
-Lemma dexprs_app m (l : locals) es1 :
-  forall es2 vs1 vs2,
-    dexprs m l es1 vs1 ->
-    dexprs m l es2 vs2 ->
-    dexprs m l (es1 ++ es2) (vs1 ++ vs2).
-Proof.
-Admitted.
-
 
 Definition load_offset e o :=
   expr.load access_size.word
@@ -322,17 +375,22 @@ Definition load_offset e o :=
 Definition count_to (n : nat) : list Z := (z_range 0 n).
 
 Lemma expr_load_word_of_byte_array m l len lst e ptr R
-  : length lst = len ->
+  : (length lst mod Memory.bytes_per (width :=32) access_size.word)%nat = 0%nat ->
+    length lst = len ->
     (lst$@ptr * R)%sep m ->
     DEXPR m l e ptr ->
     Forall2 (DEXPR m l) (map (load_offset e) (count_to len)) (map le_combine (chunk 4 lst)).
+Proof.
+  intros.
+  seprewrite_in words_of_bytes H1; auto.
+  unfold count_to.
 Admitted.
 
 
   
 Definition store_offset e o :=
   cmd.store access_size.word
-    (expr.op bopname.add (expr.literal o) e).
+    (expr.op bopname.add (expr.literal (4*o)) e).
 
 Definition store_to_array ptr (lst : list expr) (k_impl : cmd) : cmd :=
   List.fold_right (fun '(x,e) k_impl => cmd.seq (store_offset (expr.var ptr) x e) k_impl)
@@ -340,13 +398,46 @@ Definition store_to_array ptr (lst : list expr) (k_impl : cmd) : cmd :=
     (combine (count_to (length lst)) lst).
 
 
+Lemma Forall2_distr_forall {A B C} (P : A -> B -> C -> Prop) l1 l2
+  : Forall2 (fun b c => forall a, P a b c) l1 l2 ->
+    forall (a:A), Forall2 (P a) l1 l2.
+Proof.
+  revert l2; induction l1; inversion 1; subst; intros; constructor; eauto.
+Qed.
+
+
+Lemma forall_distr_Forall2 {A B C} (P : A -> B -> C -> Prop) l1 l2
+  : A ->
+    (forall (a:A), Forall2 (P a) l1 l2) ->
+    Forall2 (fun b c => forall a, P a b c) l1 l2.
+Proof.
+  intro a.
+  revert l2; induction l1; intros.
+  {
+    specialize (H a); inversion H; subst; eauto.
+  }
+  {
+    pose proof (H a) as H'; inversion H'; subst.
+    constructor.
+    {
+      intros.
+      specialize (H a1); inversion H; subst; eauto.
+    }
+    apply IHl1.
+    intros.    
+    specialize (H a1); inversion H; subst; eauto.
+  }
+Qed.
+
+
 Lemma compile_store_locals_array' {t m l e} (lst : list word) :
     forall (n : nat) P out ptr k_impl var lst_expr R,
-      Forall2 (DEXPR m l) lst_expr lst ->
+      (out$@ptr * R)%sep m ->
+      (*TODO: is this general enough?*)
+      (Forall2 (fun e v => forall m' out', (out'$@ptr * R)%sep m' -> DEXPR m' l e v) lst_expr lst) ->
       (*TODO: move byte/word conversion to a better place*)
       length out = (4* (length lst + n))%nat ->
       DEXPR m l (expr.var var) ptr ->
-      (out$@ptr * R)%sep m ->
       (forall m,
           ((firstn (4*n)%nat out)$@ptr * (array scalar (word.of_Z 4) (ptr + word.of_Z(4*n))%word lst) * R)%sep m ->
        <{ Trace := t; Memory := m; Locals := l; Functions := e }>
@@ -359,19 +450,30 @@ Lemma compile_store_locals_array' {t m l e} (lst : list word) :
       <{ P }>.
 Proof.
   revert m.
-  induction lst;
-    inversion 1; subst;
-    intros.
+  induction lst.
   {
+    
+    intros until R;
+      intros Hm Hlst.
+    eapply Forall2_distr_forall in Hlst.
+    eapply Forall2_distr_forall in Hlst.
+    eapply Forall2_distr_forall in Hlst; eauto.
+    inversion Hlst; subst.
+                  
     cbn [length Nat.add] in *.
     rewrite z_range_nil by lia.
-    eapply H3.
-    rewrite <- H0.
+    intros HA HB HC.
+    eapply HC.
+    rewrite <- HA.
     rewrite firstn_all.
     cbn [array].
     ecancel_assumption.
   }
   {
+    cbn [length].
+    intros.
+    inversion H0; subst; clear H0.
+    
     cbn [length].
     replace (S (length l0) + n) with ((length l0) + (n+1)%nat) by lia.
     rewrite z_range_cons by lia.
@@ -384,24 +486,40 @@ Proof.
       eauto.
     }
     eexists; split; eauto.
-    eexists; split.
+    seprewrite_in words_of_bytes H.
+    { rewrite H1. admit (*length*). }
+    unfold store.
+    eapply array_store_of_sep; cycle 1.
     {
-      admit.
+      unfold scalar in H.
+      ecancel_assumption.
+    }
+    3:{
+      rewrite Radd_comm by apply word.ring_theory.
+      reflexivity.
+    }
+    {
+      rewrite bs2ws_length.
+      rewrite H1.
+      admit (*mod; TODO: is this true?*).
+      cbv;congruence.
+      rewrite H1.
+      admit (*mod*).
     }
     replace (Z.of_nat n + 1) with (Z.of_nat (n+1)) by lia.
-    eapply IHlst with (n := (n + 1)%nat).
-    admit (*TODO: m*).
-    2: (*TODO:m*) eauto.
-    2: eauto.
+    intros.
+    eapply IHlst with (n := (n + 1)%nat); eauto.
+    seprewrite words_of_bytes; cycle 1.
     {
-      rewrite H0.
-      simpl.
-      lia.
+      unfold scalar.
+      admit (*TODO: upd bs2ws
+      ecancel_assumption. *).
     }
+    admit (*TODO: bs len*).
+    admit (*TODO: bs len*).
     intros m' Hm'.
-    eapply H5.
-    admit (*TODO: ecancel_assumption*).
-    
+    eapply H3.
+    admit (*TODO: shift 1 elt from out to array ecancel_assumption *).
   }
 Admitted.
   
@@ -410,7 +528,8 @@ Lemma compile_store_locals_array {t m l e} (lst : list word):
     let v := lst in
     forall P (pred: P v -> predicate) (k: nlet_eq_k P v)
            out ptr k_impl var lst_expr R,
-      Forall2 (DEXPR m l) lst_expr v ->
+      (*TODO: is this general enough?*)
+      (Forall2 (fun e v => forall m' out', (out'$@ptr * R)%sep m' -> DEXPR m' l e v) lst_expr lst) ->
       (*TODO: move byte/word conversion to a better place*)
       length out = (4* length v)%nat ->
       DEXPR m l (expr.var var) ptr ->
@@ -431,7 +550,10 @@ Proof.
   replace (Z.of_nat (length lst_expr)) with (Z.of_nat (length lst_expr) + 0%nat) by lia.
   change 0 with (Z.of_nat 0).
   eapply compile_store_locals_array'; eauto.
-  lia.
+  {
+    subst v.
+    lia.
+  }
   intros; apply H3.
   change (4*0)%nat with 0%nat in H4.
   replace (ptr + word.of_Z (4 * Z.of_nat 0))%word with ptr in H4.
@@ -486,6 +608,24 @@ Qed.
 
   Axiom TODO : forall {A}, A.
 
+  
+Lemma forall_distr_Forall2' {A B C} (P : A -> B -> C -> Prop) l1 l2
+  : length l1 = length l2 ->
+    (forall (a:A), Forall2 (P a) l1 l2) ->
+    Forall2 (fun b c => forall a, P a b c) l1 l2.
+Proof.
+  revert l2; induction l1; destruct l2; cbn [length];
+    intros; try lia; constructor; intros.
+  {
+    specialize (H0 a0); inversion H0; subst; eauto.
+  }
+  {
+    apply IHl1; try lia.
+    intros.    
+    specialize (H0 a0); inversion H0; subst; eauto.
+  }
+Qed.
+
 Derive chacha20_block_wrapped SuchThat
   (defn! "chacha20_block" ("st", "key", "nonce") { chacha20_block_wrapped },
     implements (chacha20_block') using [ "quarter"  ; "unsizedlist_memcpy" ])
@@ -516,6 +656,7 @@ Proof.
     }
     {
       eapply expr_load_word_of_byte_array; try eassumption.
+      rewrite H6; reflexivity.
       compile_step.
     }
     {
@@ -525,6 +666,7 @@ Proof.
       }
       {
         eapply expr_load_word_of_byte_array; try eassumption.
+        rewrite H9; reflexivity.
         compile_step.
       }
     }
@@ -625,47 +767,142 @@ Proof.
   compile_step.
   
   simple eapply compile_nlet_as_nlet_eq.
-  simple eapply compile_store_locals_array.
+  simple eapply compile_set_locals_array.
   {
-
-    apply array_expr_compile_word_add.
+    eapply array_expr_compile_word_add.
     {
-      repeat constructor;
-        compile_step.
+      repeat constructor; compile_step.
     }
     {
       repeat eapply Forall2_app.
       {
-        cbn.
+        let x := eval cbn -[word.of_Z] in (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) in
+          change (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) with x.
+        unfold le_combine.
         repeat constructor;
+          apply expr_compile_Z_literal.
+      }
+      {
+        eapply expr_load_word_of_byte_array; try eassumption.
+        rewrite H6; reflexivity.
+        compile_step.
+      }
+      {
+        constructor.
+        {
           compile_step.
-      }
-      {
-        eapply expr_load_word_of_byte_array; eauto.
-        compile_step.
-      }
-      constructor.
-      {
-        compile_step.
-      }
-      {
-        eapply expr_load_word_of_byte_array; eauto.
-        compile_step.
+        }
+        {
+          eapply expr_load_word_of_byte_array; try eassumption.
+          rewrite H9; reflexivity.
+          compile_step.
+        }
       }
     }
   }
-  shelve.
   {
-    cbn.
-    unfold WeakestPrecondition.get.
-    eexists; split; eauto.
-    eval_map_get.
+    rewrite map_length.
+    rewrite combine_length.
+    rewrite !app_length, !map_length.
+    cbn [length].
+    rewrite !map_length, !length_chunk.
+    rewrite H6, H9.
+    reflexivity.
+    all:lia.
   }
   {
-    compile_step.
+    repeat constructor; cbv; intuition congruence.
+  }
+  {
+    apply TODO (*TODO: make computation*).
   }
   compile_step.
-
+  cbv [le_split].
+  subst l0.
+  change (array_locs ?a ?b ?c) with (array_locs a b v1).
+  set (array_locs _ _ _) as l0.
+  let l' := eval cbn -[v1 combine] in l0 in change l0 with l'.
+  cbv [map.putmany_of_list gs].
+  dedup  "_gs_from0".
+  dedup  "_gs_to0".
+  dedup  "qv0".
+  dedup "qv1".
+  dedup "qv2".
+  dedup "qv3".
+  dedup "qv4".
+  dedup "qv5".
+  dedup "qv6".
+  dedup "qv7".
+  dedup "qv8".
+  dedup "qv9".
+  dedup "qv10".
+  dedup "qv11".
+  dedup "qv12".
+  dedup "qv13".
+  dedup "qv14".
+  dedup "qv15".
+  
+  (*TODO: earlier in derivation: why is key counted to 32? definitely wrong*)
+  (*TODO: do I need to eval the combine?*)
+  rewrite <- ListUtil.flat_map_map.
+  change (flat_map _ (map _ v1)) with (bytes_of_w32s v1).
+  
+  simple eapply compile_nlet_as_nlet_eq.
+  change (pred (let/n x as "st" eq:_ := bytes_of_w32s v1 in x))
+    with (pred (let/n v1 as "st" eq:_ := v1 in
+                let/n x as "st" eq:_ := bytes_of_w32s v1 in x)).
+  simple eapply compile_store_locals_array.
+  {
+    Fixpoint unroll {A} (default : A) (l : list A) n :=
+      match n with
+      | O => []
+      | S n' =>
+          unroll default l n' ++ [nth n' l default]
+      end.
+    Lemma unroll_len {A} a (l : list A)
+      : l = unroll a l (length l).
+    Proof.
+    Admitted.
+    rewrite unroll_len with (l:=v1) (a:= word.of_Z 0) at 1.
+    replace (length v1) with 16%nat.
+    cbn [unroll app].
+    repeat constructor; repeat compile_step.
+    {
+      unfold v1.
+      rewrite !map_length, !combine_length.
+      cbn [length].
+      rewrite !app_length, !map_length, !length_chunk.
+      cbn [length].
+      rewrite ?app_length, ?map_length, ?length_chunk.
+      rewrite H6, H9.
+      reflexivity.
+      all: lia.
+    }
+  }
+  2:{
+    eapply expr_compile_var.
+    eval_map_get.
+  }
+  2:{
+    ecancel_assumption.
+  }
+  {
+    rewrite H5.
+      unfold v1.
+      rewrite !map_length, !combine_length.
+      cbn [length].
+      rewrite !app_length, !map_length, !length_chunk.
+      cbn [length].
+      rewrite ?app_length, ?map_length, ?length_chunk.
+      rewrite H6, H9.
+      reflexivity.
+      all: lia.
+  }
+  compile_step.
+  simple eapply compile_bytes_of_w32s.
+  compile_step.
+  compile_step.
+  compile_step.
   
   (*TODO: compile_step takes too long (related to computations on maps?)*)
   unshelve refine (compile_unsets _ _ _); [ shelve | intros |  ]; cycle 1.
@@ -674,24 +911,13 @@ Proof.
   cbv beta delta [wp_bind_retvars pred].
   eexists; intuition eauto.
   eexists; split.
-  change 4 with (Z.of_nat (Memory.bytes_per (width:=32) access_size.word )) in H8.
-  refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H8); clear H8.
-  cancel.
-  cbn [seps].
-  eapply bytes_of_words.
-
+  ecancel_assumption.
   compile_step.
   {
-    rewrite ws2bs_length.
+    unfold v3.
     apply TODO(*TODO: length goal*).
   }
-  {
-    cbv [ws2bs le_split zs2bs ws2zs].
-    rewrite ListUtil.flat_map_map.
-    reflexivity.
-  }
-  Unshelve.
-  apply TODO (*length goal*).
+  auto.
 Qed.
 
 
