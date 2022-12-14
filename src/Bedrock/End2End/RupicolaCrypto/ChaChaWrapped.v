@@ -282,13 +282,10 @@ Notation "'let/n' ( x0 , y0 , z0 , t0 , x1 , y1 , z1 , t1 , x2 , y2 , z2 , t2 , 
          qv4; qv5; qv6; qv7; 
          qv8; qv9; qv10; qv11; 
          qv12; qv13; qv14; qv15] in
-       nlet ["qv0'"; "qv1'"; "qv2'"; "qv3'"; " qv4'"; "qv5'"; "qv6'"; "qv7'";
-             "qv8'"; "qv9'"; "qv10'"; "qv11'"; "qv12'"; "qv13'"; "qv14'"; "qv15'"] (*512bit*)
-         (map le_combine (chunk 4 (list_byte_of_string"expand 32-byte k"))
+    let/n st := map (fun '(s, t) => s + t)%word (combine ss (map le_combine (chunk 4 (list_byte_of_string"expand 32-byte k"))
             ++ map le_combine (chunk 4 key)
-            ++ (word.of_Z 0)::(map le_combine (chunk 4 nonce))) (fun st =>
-    let/n st := map (fun '(s, t) => s + t)%word (combine ss st) in
-    flat_map (le_split 4) st)).
+            ++ (word.of_Z 0)::(map le_combine (chunk 4 nonce))))in
+    flat_map (le_split 4) st).
 
   #[export] Instance spec_of_chacha20 : spec_of "chacha20_block" :=
     fnspec! "chacha20_block" out key nonce / (pt k n : list Byte.byte) (R Rk Rn : map.rep -> Prop),
@@ -331,198 +328,6 @@ Lemma expr_load_word_of_byte_array m l len lst e ptr R
     Forall2 (DEXPR m l) (map (load_offset e) (count_to len)) (map le_combine (chunk 4 lst)).
 Admitted.
 
-
-
-Derive chacha20_block_wrapped SuchThat
-  (defn! "chacha20_block" ("st", "key", "nonce") { chacha20_block_wrapped },
-    implements (chacha20_block') using [ "quarter"  ; "unsizedlist_memcpy" ])
-  As chacha20_block_wrapped_correct.
-Proof.
-  compile_setup.
-  compile_step.
-  simple eapply compile_nlet_as_nlet_eq.
-  simple eapply compile_set_locals_array.
-  2:{
-    rewrite ! app_length, !ListUtil.cons_length, ! map_length, !length_chunk; try lia.
-    rewrite H6, H9.
-    reflexivity.
-  }
-  2:{
-    repeat constructor; simpl;
-    intuition congruence.
-  }
-  2:{ admit (*TODO: make a computation*). }
-  {
-    repeat apply Forall2_app.
-    {
-      let x := eval cbn -[word.of_Z] in (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) in
-        change (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) with x.
-      unfold le_combine.
-      repeat constructor;
-        apply expr_compile_Z_literal.
-    }
-    {
-      eapply expr_load_word_of_byte_array; try eassumption.
-      compile_step.
-    }
-    {
-      constructor.
-      {
-        compile_step.
-      }
-      {
-        eapply expr_load_word_of_byte_array; try eassumption.
-        compile_step.
-      }
-    }
-  }
-  compile_step.
-  let l' := eval cbn in l in
-    change l with l'.
-
-  
-  rewrite  Nat_iter_as_nd_ranged_for_all with (i:=0).
-  change (0 + Z.of_nat 10) with 10%Z.
-
-  compile_step.
-  compile_step.
-  assert (m = m) by reflexivity.
-  compile_step.
-  { compile_step. }
-  { compile_step. }
-  { intuition subst;
-      repeat rewrite map.get_put_diff by (cbv;congruence);
-      apply map.get_put_same.
-  }
-  { intuition subst.
-    reflexivity.
-  }
-  { intuition subst. }
-  { lia. }
-  compile_step.
-  {
-    compile_step.
-    compile_step.
-    compile_step.
-
-    Optimize Proof.
-    Optimize Heap.
-    
-
-  (*used because concrete computation on maps seems to be slow here*)
-  Ltac eval_map_get :=
-    repeat rewrite map.get_put_diff by (cbv; congruence);
-    rewrite map.get_put_same; reflexivity.
-
-  (* TODO: why doesn't simple eapply work? *)
-      do 7 (change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
-        simple eapply compile_nlet_as_nlet_eq;
-        change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
-        simple eapply compile_quarter; [ now (eval_map_get || (repeat compile_step)) ..| repeat compile_step]).
-
-      change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
-        simple eapply compile_nlet_as_nlet_eq;
-        change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y).
-      simple eapply compile_quarter; [ now (eval_map_get || (repeat compile_step)) ..|].
-      
-      Optimize Proof.
-      Optimize Heap.
-      compile_step.
-
-      
-      (*TODO: compile_step takes too long (related to computations on maps?)*)
-      unshelve refine (compile_unsets _ _ _); [ shelve | intros |  ]; cycle 1.
-      simple apply compile_skip.
-      2: exact [].
-      cbv beta delta [lp].
-      split; [tauto|].
-      split.
-      
-      {
-        
-        (*TODO: why are quarter calls getting subst'ed?*)
-        cbv [P2.car P2.cdr fst snd].
-        cbv [map.remove_many fold_left].      
-        cbv [gs].
-
-        
-  Ltac dedup s :=
-    repeat rewrite map.put_put_diff with (k1:=s) by congruence;
-    rewrite ?map.put_put_same with (k:=s).
-
-        dedup "qv0".
-        dedup "qv1".
-        dedup "qv2".
-        dedup "qv3".
-        dedup "qv4".
-        dedup "qv5".
-        dedup "qv6".
-        dedup "qv7".
-        dedup "qv8".
-        dedup "qv9".
-        dedup "qv10".
-        dedup "qv11".
-        dedup "qv12".
-        dedup "qv13".
-        dedup "qv14".
-        dedup "qv15".
-        dedup  "_gs_from0".
-        dedup  "_gs_to0".
-        reflexivity.
-      }
-      ecancel_assumption.
-  }
-
-  compile_step.
-
-  (*TODO: duplicated from above*)
-  
-  simple eapply compile_nlet_as_nlet_eq.
-  simple eapply compile_set_locals_array.
-  2:{
-    rewrite ! app_length, !ListUtil.cons_length, ! map_length, !length_chunk; try lia.
-    rewrite H6, H9.
-    reflexivity.
-  }
-  2:{
-    repeat constructor; simpl;
-    intuition congruence.
-  }
-  2:{ admit (*TODO: make a computation*). }
-  {
-    intuition subst.
-    repeat apply Forall2_app.
-    {
-      let x := eval cbn -[word.of_Z] in (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) in
-        change (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) with x.
-      unfold le_combine.
-      repeat constructor;
-        apply expr_compile_Z_literal.
-    }
-    {
-      eapply expr_load_word_of_byte_array; try eassumption.
-      repeat compile_step.
-    }
-    {
-      constructor.
-      {
-        compile_step.
-      }
-      {
-        eapply expr_load_word_of_byte_array; try eassumption.
-        compile_step.
-      }
-    }
-  }
-  compile_step.
-  compile_step.
-  compile_step.
-  compile_step.
-  compile_step.
-  
-  let l' := eval cbn in l0 in
-    change l0 with l'.
-  clear l0.
 
   
 Definition store_offset e o :=
@@ -642,204 +447,329 @@ Proof.
     reflexivity.
   }
 Qed.
-simple eapply compile_nlet_as_nlet_eq.
-simple eapply compile_store_locals_array.
-{
-  repeat constructor.
-  all: try apply expr_compile_word_add.
-  {
-    apply expr_compile_var.
-    compile_step.
-  }
-  {
-    unfold le_combine.
-    apply expr_compile_Z_literal.
-  }
-  {
-    apply expr_compile_var.
-    compile_step.
-  }
-  {
-    unfold le_combine.
-    apply expr_compile_Z_literal.
-  }
-  admit.
-  {
-    unfold le_combine.
-    cbn [Ascii.byte_of_ascii  Byte.of_bits app].
-    apply expr_compile_Z_literal.
-  }
-  (
-    sepsimpl.
-  simpl in H4.
-  clear H2.
+
+
+    (*TODO: generalize to all ops*)
+    Lemma 
+    array_expr_compile_word_add m l
+     : ∀ (w1 w2 : list word) (e1 e2 : list expr),
+        Forall2 (DEXPR m l) e1 w1 →
+        Forall2 (DEXPR m l) e2 w2 →
+        Forall2 (DEXPR m l)          
+          (map (λ '(s, t0), (expr.op bopname.add s t0)%word)
+             (combine e1 e2))
+          (map (λ '(s, t0), (s + t0)%word)
+             (combine w1 w2)).
+    Proof.
+      intros w1 w2 e1 e2 H.
+      revert e2 w2.
+      induction H;
+        inversion 1;
+        subst;
+        cbn [combine map];
+        constructor;
+        eauto.
+      eapply expr_compile_word_add; eauto.
+    Qed.
+
+    
+  (*used because concrete computation on maps seems to be slow here*)
+  Ltac eval_map_get :=
+    repeat rewrite map.get_put_diff by (cbv; congruence);
+    rewrite map.get_put_same; reflexivity.
+
   
-  ecancel_assumption.
-  intros P pred k.
-  unfold nlet_eq.
-  generalize (pred (k lst eq_refl)).
-  clear P pred k.
-  induction lst;
-    inversion 1; subst;
-    intros.
+        
+  Ltac dedup s :=
+    repeat rewrite map.put_put_diff with (k1:=s) by congruence;
+    rewrite ?map.put_put_same with (k:=s).
+
+  Axiom TODO : forall {A}, A.
+
+Derive chacha20_block_wrapped SuchThat
+  (defn! "chacha20_block" ("st", "key", "nonce") { chacha20_block_wrapped },
+    implements (chacha20_block') using [ "quarter"  ; "unsizedlist_memcpy" ])
+  As chacha20_block_wrapped_correct.
+Proof.
+  compile_setup.
+  compile_step.
+  simple eapply compile_nlet_as_nlet_eq.
+  simple eapply compile_set_locals_array.
+  2:{
+    rewrite ! app_length, !ListUtil.cons_length, ! map_length, !length_chunk; try lia.
+    rewrite H6, H9.
+    reflexivity.
+  }
+  2:{
+    repeat constructor; simpl;
+    intuition congruence.
+  }
+  2:{ apply TODO (*TODO: make a computation*). }
   {
-    destruct out; simpl in H0; try lia.
-    eapply H3.
+    repeat apply Forall2_app.
+    {
+      let x := eval cbn -[word.of_Z] in (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) in
+        change (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) with x.
+      unfold le_combine.
+      repeat constructor;
+        apply expr_compile_Z_literal.
+    }
+    {
+      eapply expr_load_word_of_byte_array; try eassumption.
+      compile_step.
+    }
+    {
+      constructor.
+      {
+        compile_step.
+      }
+      {
+        eapply expr_load_word_of_byte_array; try eassumption.
+        compile_step.
+      }
+    }
   }
+  compile_step.
+  let l' := eval cbn in l in
+    change l with l'.
+
+  
+  rewrite  Nat_iter_as_nd_ranged_for_all with (i:=0).
+  change (0 + Z.of_nat 10) with 10%Z.
+
+  compile_step.
+  compile_step.
+  assert (m = m) by reflexivity.
+  compile_step.
+  { compile_step. }
+  { compile_step. }
+  { intuition subst;
+      repeat rewrite map.get_put_diff by (cbv;congruence);
+      apply map.get_put_same.
+  }
+  { intuition subst.
+    reflexivity.
+  }
+  { intuition subst. }
+  { lia. }
+  compile_step.
   {
-    unfold count_to in *.
-    cbn [length] in *.
-    cbn [combine 
+    compile_step.
+    compile_step.
+    compile_step.
+
+    Optimize Proof.
+    Optimize Heap.
+    
+
+
+  (* TODO: why doesn't simple eapply work? *)
+      do 7 (change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
+        simple eapply compile_nlet_as_nlet_eq;
+        change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
+        simple eapply compile_quarter; [ now (eval_map_get || (repeat compile_step)) ..| repeat compile_step]).
+
+      change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
+        simple eapply compile_nlet_as_nlet_eq;
+        change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y).
+      simple eapply compile_quarter; [ now (eval_map_get || (repeat compile_step)) ..|].
+      
+      Optimize Proof.
+      Optimize Heap.
+      compile_step.
+
+      
+      (*TODO: compile_step takes too long (related to computations on maps?)*)
+      unshelve refine (compile_unsets _ _ _); [ shelve | intros |  ]; cycle 1.
+      simple apply compile_skip.
+      2: exact [].
+      cbv beta delta [lp].
+      split; [tauto|].
+      split.
+      
+      {
+        
+        (*TODO: why are quarter calls getting subst'ed?*)
+        cbv [P2.car P2.cdr fst snd].
+        cbv [map.remove_many fold_left].      
+        cbv [gs].
+
+
+        dedup "qv0".
+        dedup "qv1".
+        dedup "qv2".
+        dedup "qv3".
+        dedup "qv4".
+        dedup "qv5".
+        dedup "qv6".
+        dedup "qv7".
+        dedup "qv8".
+        dedup "qv9".
+        dedup "qv10".
+        dedup "qv11".
+        dedup "qv12".
+        dedup "qv13".
+        dedup "qv14".
+        dedup "qv15".
+        dedup  "_gs_from0".
+        dedup  "_gs_to0".
+        reflexivity.
+      }
+      ecancel_assumption.
   }
-    rewrite map.get_put_diff.
-    2:{
-      cbv.
-      congruence.
-    compile_step. }
-  { intuition.
-    { apply map.get_put_same. }
-    { rewrite map.get_put_diff by (cbv;congruence); auto. }
-    exact H11.
-  }
+
+  compile_step.
+  compile_step.
+  compile_step.
+  compile_step.
+  compile_step.
   
   simple eapply compile_nlet_as_nlet_eq.
-  (*TODO: loop inference hardcodes tuples for multiple vars*)
-  let from_v := gensym locals "from" in
-  let to_v := gensym locals "to" in
-  eapply (compile_ranged_for_fresh false)
-    with (from_var := from_v) (to_var := to_v)
-         (loop_pred := fun from a0 tr mem locals =>
-         map.get locals (gs "_gs_from0") = Some (word.of_Z from) ∧ map.get locals (gs "_gs_to0") = Some (word.of_Z 10) /\ _).
-  (*lp :=
-   map.get locals (gs "_gs_from0") = Some (word.of_Z from) ∧ map.get locals (gs "_gs_to0") = Some (word.of_Z 10)*)
-  { compile_step. }
-  { compile_step. }
-  { intuition. }
-  { intuition.
-    { apply map.get_put_same. }
-    { rewrite map.get_put_diff by (cbv;congruence); auto. }
-    exact H11.
-  }
-  split.
+  simple eapply compile_store_locals_array.
   {
-    repeat rewrite map.get_put_diff by (cbv;congruence);
-      apply map.get_put_same. 
-  }
-  split.
-  {
-    repeat rewrite map.get_put_diff by (cbv;congruence);
-      apply map.get_put_same. 
-  }
-  2: lia.
-  refine (conj H3 (conj H4 (conj H7 _))).
-  2:{
-    repeat compile_step.
-    unfold quarterround.
-    intros.
 
-    
+    apply array_expr_compile_word_add.
+    {
+      repeat constructor;
+        compile_step.
+    }
+    {
+      repeat eapply Forall2_app.
+      {
+        cbn.
+        repeat constructor;
+          compile_step.
+      }
+      {
+        eapply expr_load_word_of_byte_array; eauto.
+        compile_step.
+      }
+      constructor.
+      {
+        compile_step.
+      }
+      {
+        eapply expr_load_word_of_byte_array; eauto.
+        compile_step.
+      }
+    }
+  }
+  shelve.
+  {
+    cbn.
+    unfold WeakestPrecondition.get.
+    eexists; split; eauto.
+    eval_map_get.
+  }
+  {
+    compile_step.
+  }
+  compile_step.
+
+  
+  (*TODO: compile_step takes too long (related to computations on maps?)*)
+  unshelve refine (compile_unsets _ _ _); [ shelve | intros |  ]; cycle 1.
+  simple apply compile_skip.
+  2: exact [].
+  cbv beta delta [wp_bind_retvars pred].
+  eexists; intuition eauto.
+  eexists; split.
+  change 4 with (Z.of_nat (Memory.bytes_per (width:=32) access_size.word )) in H8.
+  refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H8); clear H8.
+  cancel.
+  cbn [seps].
+  eapply bytes_of_words.
+
+  compile_step.
+  {
+    rewrite ws2bs_length.
+    apply TODO(*TODO: length goal*).
+  }
+  {
+    cbv [ws2bs le_split zs2bs ws2zs].
+    rewrite ListUtil.flat_map_map.
+    reflexivity.
+  }
+  Unshelve.
+  apply TODO (*length goal*).
+Qed.
+
+
+Local Open Scope string_scope.
+Import Syntax Syntax.Coercions NotationsCustomEntry.
+Import ListNotations.
+Import Coq.Init.Byte.
+Compute chacha20_block_wrapped.
 (*
-    
-  Instance spec_of_quarterround : spec_of "quarterround" :=
-    fnspec! "quarterround" ( : word) /
-          (k msg output : array_t byte) (*(output : Z (*felem*))*) R,
-      { requires tr mem :=
-        (Z.of_nat (Datatypes.length k) = 32) /\ (*TODO: all lens*)
-          (array ptsto (word.of_Z 1) key_ptr k ⋆
-                 array ptsto (word.of_Z 1) msg_ptr msg ⋆
-                 array ptsto (word.of_Z 1) out_ptr output ⋆ R) mem;
-        ensures tr' mem' :=
-        tr = tr' /\
-          (array ptsto (word.of_Z 1) key_ptr k ⋆
-                 array ptsto (word.of_Z 1) msg_ptr msg ⋆
-                 array ptsto (word.of_Z 1) out_ptr (poly1305 k [] msg [] false false false output) ⋆ R) mem }.
+TODO: offset of key loads
+TODO: 0,nonce loads at start replaced by key loads
+
+     = (["st"; "key"; "nonce"], [], bedrock_func_body:(
+         $"qv0" = $(expr.literal 1634760805);
+         $"qv1" = $(expr.literal 857760878);
+         $"qv2" = $(expr.literal 2036477234);
+         $"qv3" = $(expr.literal 1797285236);
+         $"qv4" = load($(expr.literal 0) + $(expr.var "key"));
+         $"qv5" = load($(expr.literal 1) + $(expr.var "key"));
+         $"qv6" = load($(expr.literal 2) + $(expr.var "key"));
+         $"qv7" = load($(expr.literal 3) + $(expr.var "key"));
+         $"qv8" = load($(expr.literal 4) + $(expr.var "key"));
+         $"qv9" = load($(expr.literal 5) + $(expr.var "key"));
+         $"qv10" = load($(expr.literal 6) + $(expr.var "key"));
+         $"qv11" = load($(expr.literal 7) + $(expr.var "key"));
+         $"qv12" = load($(expr.literal 8) + $(expr.var "key"));
+         $"qv13" = load($(expr.literal 9) + $(expr.var "key"));
+         $"qv14" = load($(expr.literal 10) + $(expr.var "key"));
+         $"qv15" = load($(expr.literal 11) + $(expr.var "key"));
+         $"_gs_from0" = $(expr.literal 0);
+         $"_gs_to0" = $(expr.literal 10);
+         while $(expr.var "_gs_from0") < $(expr.var "_gs_to0") {
+           {($"qv0", $"qv4", $"qv8", $"qv12") = $"quarter"($(expr.var "qv0"), $(expr.var "qv4"),
+                                                          $(expr.var "qv8"), $(expr.var "qv12"));
+            ($"qv1", $"qv5", $"qv9", $"qv13") = $"quarter"($(expr.var "qv1"), $(expr.var "qv5"),
+                                                          $(expr.var "qv9"), $(expr.var "qv13"));
+            ($"qv2", $"qv6", $"qv10", $"qv14") = $"quarter"($(expr.var "qv2"), $(expr.var "qv6"),
+                                                           $(expr.var "qv10"), $(expr.var "qv14"));
+            ($"qv3", $"qv7", $"qv11", $"qv15") = $"quarter"($(expr.var "qv3"), $(expr.var "qv7"),
+                                                           $(expr.var "qv11"), $(expr.var "qv15"));
+            ($"qv0", $"qv5", $"qv10", $"qv15") = $"quarter"($(expr.var "qv0"), $(expr.var "qv5"),
+                                                           $(expr.var "qv10"), $(expr.var "qv15"));
+            ($"qv1", $"qv6", $"qv11", $"qv12") = $"quarter"($(expr.var "qv1"), $(expr.var "qv6"),
+                                                           $(expr.var "qv11"), $(expr.var "qv12"));
+            ($"qv2", $"qv7", $"qv8", $"qv13") = $"quarter"($(expr.var "qv2"), $(expr.var "qv7"),
+                                                          $(expr.var "qv8"), $(expr.var "qv13"));
+            ($"qv3", $"qv4", $"qv9", $"qv14") = $"quarter"($(expr.var "qv3"), $(expr.var "qv4"),
+                                                          $(expr.var "qv9"), $(expr.var "qv14"))};
+           $"_gs_from0" = $(expr.var "_gs_from0") + $(expr.literal 1)
+         };
+         store($(expr.literal 0) + $(expr.var "st"), $(expr.var "qv0") + $(expr.literal 1634760805));
+         store($(expr.literal 1) + $(expr.var "st"), $(expr.var "qv1") + $(expr.literal 857760878));
+         store($(expr.literal 2) + $(expr.var "st"), $(expr.var "qv2") + $(expr.literal 2036477234));
+         store($(expr.literal 3) + $(expr.var "st"), $(expr.var "qv3") + $(expr.literal 1797285236));
+         store($(expr.literal 4) + $(expr.var "st"), $(expr.var "qv4") +
+                                                     load($(expr.literal 0) + $(expr.var "key")));
+         store($(expr.literal 5) + $(expr.var "st"), $(expr.var "qv5") +
+                                                     load($(expr.literal 1) + $(expr.var "key")));
+         store($(expr.literal 6) + $(expr.var "st"), $(expr.var "qv6") +
+                                                     load($(expr.literal 2) + $(expr.var "key")));
+         store($(expr.literal 7) + $(expr.var "st"), $(expr.var "qv7") +
+                                                     load($(expr.literal 3) + $(expr.var "key")));
+         store($(expr.literal 8) + $(expr.var "st"), $(expr.var "qv8") +
+                                                     load($(expr.literal 4) + $(expr.var "key")));
+         store($(expr.literal 9) + $(expr.var "st"), $(expr.var "qv9") +
+                                                     load($(expr.literal 5) + $(expr.var "key")));
+         store($(expr.literal 10) + $(expr.var "st"), $(expr.var "qv10") +
+                                                      load($(expr.literal 6) + $(expr.var "key")));
+         store($(expr.literal 11) + $(expr.var "st"), $(expr.var "qv11") +
+                                                      load($(expr.literal 7) + $(expr.var "key")));
+         store($(expr.literal 12) + $(expr.var "st"), $(expr.var "qv12") +
+                                                      load($(expr.literal 8) + $(expr.var "key")));
+         store($(expr.literal 13) + $(expr.var "st"), $(expr.var "qv13") +
+                                                      load($(expr.literal 9) + $(expr.var "key")));
+         store($(expr.literal 14) + $(expr.var "st"), $(expr.var "qv14") +
+                                                      load($(expr.literal 10) + $(expr.var "key")));
+         store($(expr.literal 15) + $(expr.var "st"), $(expr.var "qv15") +
+                                                      load($(expr.literal 11) + $(expr.var "key")))))
+     : func
+
 *)
-    
-    Fail.
-    
-Ltac make_ranged_for_predicate from_var from_arg to_var to_val vars args tr pred locals :=
-  lazymatch substitute_target from_var from_arg pred locals with
-  | (?pred, ?locals) =>
-    lazymatch substitute_target to_var to_val pred locals with
-    | (?pred, ?locals) => make_predicate vars args tr pred locals
-    end
-  end.
-
-Ltac infer_ranged_for_predicate' from_var to_var to_val argstype vars tr pred locals :=
-  (** Like `make_predicate`, but with a binding for `idx` at the front. *)
-  let idxtype := type of to_val in
-  let val_pred :=
-      constr:(fun (idx: idxtype) (args: argstype) =>
-                ltac:(let f := make_ranged_for_predicate
-                                from_var idx to_var to_val
-                                vars args tr pred locals in
-                      exact f)) in
-  eval cbv beta in val_pred.
-  let from_v := gensym locals "from" in
-  let to_v := gensym locals "to" in
-  let to_val := constr:(10) in
-  let k := ltac:(infer_ranged_for_predicate' from_v to_v to_val) in
-  let lp := lazymatch goal with
-            | |- WeakestPrecondition.cmd _ _ ?tr ?mem ?locals (_ ?prog) =>
-                lazymatch goal with
-                | H:?pred mem
-                  |- _ =>
-                    lazymatch is_rupicola_binding prog with
-                    | RupicolaBinding ?A ?vars => k A vars tr pred locals
-                    | NotARupicolaBinding => fail 100 prog "does not look like a let-binding"
-                    | ?a => fail 100 "weird" a
-                    end
-                | _ => fail 100  "No hypothesis mentions memory" mem
-                end
-            | |- ?g => fail 100 g "is not a Rupicola goal"
-            end in
-  eapply (compile_ranged_for_fresh false) with (from_var := from_v) (to_var := to_v).
-
-   _compile_ranged_for locals 10 (compile_ranged_for_fresh false).
-  compile_ranged_for.
-  eapply nleq
-  compile_step; [repeat compile_step; lia .. | |].
-  all: repeat compile_step.
-  compile_ranged_for.
-  TODO: want the nat.iter to take vars in/out
-  (*TODO: could do better about filling in locals values; shouldn't repeat apps*)
-  
-  Fail.
-      
-  Ltac compile_broadcast_expr :=
-    lazymatch goal with
-    | [ |- WeakestPrecondition.cmd _ _ _ _ ?locals (_ (nlet_eq [?var] ?v _)) ] =>
-        let idx_var_str := gensym locals constr:((var++"_idx")%string) in
-        let to_var_str := gensym locals constr:((var++"_to")%string) in
-        simple eapply compile_broadcast_expr
-          with (idx_var:=idx_var_str) (to_var:=to_var_str);
-        [ typeclasses eauto|..]
-    end.
-
-  eapply compile_nlet_as_nlet_eq.
-  compile_broadcast_expr.
-
-  {
-    apply expr_compile_var.
-    repeat compile_step.
-  }
-  {
-    Unset Printing Notations.
-    
-    ecancel_assumption.
-  eapply compile_nlet_as_nlet_eq.
-  compile_broadcast_expr.
-  
-  eapply compile_nlet_as_nlet_eq.
-  lazymatch goal with
-  | [ |- WeakestPrecondition.cmd _ _ _ _ ?locals (_ (nlet_eq [?var] ?v _)) ] =>
-      let idx_var_str := gensym locals constr:((var++"_idx")%string) in
-      let to_var_str := gensym locals constr:((var++"_to")%string) in
-      simple eapply compile_broadcast_expr
-        with (idx_var:=idx_var_str) (to_var:=to_var_str)
-      end.
-  compile_step.
-  compile_step.
-  compile_step.
-  compile_step.
-  compile_step.
