@@ -398,8 +398,13 @@ Proof.
   { pose proof (word.unsigned_range w); lia. }
   { pose proof (word.unsigned_range w).
     change (Z.of_nat (Memory.bytes_per access_size.word) * 8) with 32.
-    admit.
-Admitted.
+    destruct (Z.eqb_spec (word.unsigned w) 0).
+    {
+      rewrite e; cbn; lia.
+    }
+    apply Hints.log2_lt_pow2_proj_l2r; lia.
+  }
+Qed.
       
 Lemma expr_load_word_of_array_helper m l len lst e ptr R (n : nat)
   : length lst = len ->
@@ -551,6 +556,62 @@ Proof.
 Qed.
 
 
+Lemma upd_chunk n lst a
+  : (length lst mod 4 = 0)%nat ->
+    upd (chunk 4 lst) n (LittleEndianList.le_split 4 a)
+    = chunk 4 (upds lst (n * 4) (LittleEndianList.le_split 4 a)).
+Proof.
+  intro.
+  unfold upd.
+  unfold upds.
+  cbn [length].
+  rewrite !chunk_app; try lia.
+  f_equal.
+  1: rewrite !firstn_chunk by lia; reflexivity.
+  f_equal.
+  2:{
+    rewrite skipn_chunk by lia.
+    rewrite length_le_split.
+    replace ((1 + n) * 4) with  (4 + n * 4) by lia.
+    reflexivity.
+  }
+  {
+    rewrite length_chunk by lia.
+    rewrite <- Nat.div_up_exact_mod with (a:= length lst) (b:=4%nat) at 2 by lia.
+    generalize (Nat.div_up (length lst) 4).
+    clear lst H.
+    intros.
+    replace (n0 * 4 - n * 4)%nat with ((n0 - n) * 4)%nat by lia.
+    generalize (n0 - n)%nat; intros.
+    destruct (n1); cbn [firstn chunk].
+    { reflexivity. }
+    {
+      rewrite firstn_nil.
+      rewrite <- firstn_chunk by lia.
+      rewrite chunk_small.
+      simpl.
+      rewrite firstn_nil.
+      reflexivity.
+      rewrite length_le_split.
+      lia.
+    }
+  }
+  {
+    rewrite firstn_length.
+    rewrite length_le_split.
+    apply Nat.min_case.
+    admit (*mod*).
+    apply Nat.mod_same; lia.
+  }
+  {
+    rewrite firstn_length.
+    apply Nat.min_case.
+    apply Nat.mod_mul; lia.
+    auto.
+  }
+Admitted.
+    
+
 Lemma compile_store_locals_array' {t m l e} (lst : list word) :
     forall (n : nat) P out ptr k_impl var lst_expr R,
       (out$@ptr * R)%sep m ->
@@ -608,7 +669,11 @@ Proof.
     }
     eexists; split; eauto.
     seprewrite_in words_of_bytes H.
-    { rewrite H1. admit (*length*). }
+    { rewrite H1.
+      rewrite Nat.mul_comm.
+      apply Nat.mod_mul.
+      cbv; congruence.
+    }
     unfold store.
     eapply array_store_of_sep; cycle 1.
     {
@@ -622,10 +687,16 @@ Proof.
     {
       rewrite bs2ws_length.
       rewrite H1.
-      admit (*mod; TODO: is this true?*).
+      rewrite Nat.mul_comm.
+      rewrite Nat.div_mul.
+      lia.
+      cbv;congruence.
       cbv;congruence.
       rewrite H1.
-      admit (*mod*).
+      rewrite Nat.mul_comm.
+      rewrite Nat.mod_mul.
+      lia.
+      cbv;congruence.
     }
     replace (Z.of_nat n + 1) with (Z.of_nat (n+1)) by lia.
     intros.
@@ -633,16 +704,88 @@ Proof.
     seprewrite words_of_bytes; cycle 1.
     {
       unfold scalar.
-      admit (*TODO: upd bs2ws
-      ecancel_assumption. *).
+      unfold bs2ws, zs2ws, bs2zs in *.
+      rewrite <- word.of_Z_unsigned with (x:=a) in H0.
+      replace (word.unsigned a)
+        with (word.unsigned a mod 2 ^ (Z.of_nat 4 * 8)) in H0.
+      rewrite <- le_combine_split in H0.
+      rewrite !map_upd in H0.
+      rewrite upd_chunk in H0.
+      change (Memory.bytes_per access_size.word) with 4%nat in *.
+      ecancel_assumption.
+      rewrite H1.
+      rewrite Nat.mul_comm.
+      rewrite Nat.mod_mul.
+      lia.
+      lia.
+      {
+        rewrite Z.mod_small; auto.
+        apply word.unsigned_range.
+      }
     }
-    admit (*TODO: bs len*).
-    admit (*TODO: bs len*).
+    {
+      rewrite upds_length.
+      rewrite H1.
+      rewrite Nat.mul_comm.
+      rewrite Nat.mod_mul.
+      lia.
+      cbv; congruence.
+    }
+    {
+      rewrite upds_length.
+      rewrite H1.
+      rewrite Nat.mul_comm.
+      lia.
+    }
     intros m' Hm'.
     eapply H3.
-    admit (*TODO: shift 1 elt from out to array ecancel_assumption *).
+    cbn [array].
+    unfold upds in Hm'.
+    rewrite !firstn_app, !firstn_firstn in Hm'.
+    rewrite !firstn_length, !length_le_split in Hm'.
+    replace  (Init.Nat.min (4 * (n + 1)) (n * 4)) with (4 * n)%nat in Hm' by lia.
+    assert (length out > n * 4) by lia.
+    replace (4 * (n + 1) - Init.Nat.min (n * 4) (length out))%nat
+      with 4%nat in Hm' by lia.
+    replace (length out - n * 4)%nat
+      with (4 * S (length lst))%nat in Hm' by lia.
+    replace (Init.Nat.min 4 (4 * S (length lst)))%nat with 4%nat in Hm' by lia.
+    replace (Init.Nat.min (4 * S (length lst)) 4)%nat with 4%nat in Hm' by lia.
+    rewrite Nat.sub_diag in Hm'.
+    rewrite firstn_all2 with (n:=4%nat) in Hm'.
+    cbn [firstn] in Hm'.
+    rewrite app_nil_r in Hm'.
+    replace (4 * Z.of_nat (n + 1)) with (4 * Z.of_nat n + 4) in Hm' by lia.
+    rewrite word.ring_morph_add in Hm'.
+    seprewrite_in bytearray_append Hm'.
+    seprewrite_in (scalar_of_bytes (ptr + word.of_Z (Z.of_nat (length (firstn (4 * n) out))))%word
+                     (LittleEndianList.le_split 4 (word.unsigned a))) Hm'.
+    {
+      rewrite length_le_split.
+      reflexivity.
+    }
+    rewrite !firstn_length in Hm'.
+    replace  (Z.of_nat (Init.Nat.min (4 * n) (length out)))
+      with (4 * Z.of_nat n) in Hm' by lia.
+    rewrite le_combine_split in Hm'.
+    {
+      rewrite Z.mod_small in Hm'; auto.
+      2:apply word.unsigned_range.
+      rewrite word.of_Z_unsigned in Hm'.
+      replace (ptr + (word.of_Z (4 * Z.of_nat n) + word.of_Z 4))%word
+        with (ptr + word.of_Z (4 * Z.of_nat n) + word.of_Z 4)%word in Hm'.
+      ecancel_assumption.
+      {
+        rewrite Radd_assoc.
+        reflexivity.
+        apply word.ring_theory.
+      }
+    }
+    {
+      rewrite length_le_split; lia.
+    }
   }
-Admitted.
+Qed.
   
 
 Lemma compile_store_locals_array {t m l e} (lst : list word):
@@ -1042,7 +1185,19 @@ Proof.
   compile_step.
   {
     unfold v3.
-    apply TODO(*TODO: length goal*).
+    unfold bytes_of_w32s.
+    erewrite length_flat_map; cycle 1.
+    {
+      intros; rewrite length_le_split; reflexivity.
+    }
+    rewrite map_length.
+    unfold v2, v1.
+    rewrite !map_length, !combine_length, !app_length.
+    cbn [length].
+    rewrite !map_length, ! length_chunk.
+    rewrite H6,H9.
+    reflexivity.
+    all:lia.
   }
   auto.
 Qed.
@@ -1054,6 +1209,7 @@ Import ListNotations.
 Import Coq.Init.Byte.
 Set Printing Depth 150.
 Compute chacha20_block_wrapped.
+Print Assumptions chacha20_block_wrapped_correct.
 TODO: key, nonce loads need to be multiplied by 4?
 (*
 TODO: offset of key loads
