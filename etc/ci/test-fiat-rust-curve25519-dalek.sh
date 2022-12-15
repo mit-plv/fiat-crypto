@@ -14,9 +14,7 @@ cat >> Cargo.toml <<EOF
 fiat-crypto = { path = "../fiat-rust" }
 EOF
 
-rustup target add i686-unknown-linux-gnu || exit $?
-
-RUSTFLAGS='--cfg curve25519_dalek_backend="fiat"' cargo test --target x86_64-unknown-linux-gnu || exit $?
-RUSTFLAGS='--cfg curve25519_dalek_backend="fiat"' cargo test --target i686-unknown-linux-gnu || exit $?
+RUSTFLAGS='--cfg curve25519_dalek_backend="fiat" --cfg curve25519_dalek_bits="64"' cargo test || exit $?
+RUSTFLAGS='--cfg curve25519_dalek_backend="fiat" --cfg curve25519_dalek_bits="32"' cargo test || exit $?
 
 popd >/dev/null
