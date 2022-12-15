@@ -164,15 +164,46 @@ Proof.
     eauto using dexpr_locals_put.
 Qed.
 
+Fixpoint locals_array_expr (m : mem) (l : locals) (vars : list string) lst_expr lst :=
+  match vars, lst_expr, lst with
+  | [], [], [] => True
+  | v::vars, e::lst_expr, i::lst =>
+    DEXPR m l e i /\ (locals_array_expr m (map.put l v i) vars lst_expr lst)
+  | _, _, _ => False
+  end.
+
+Lemma locals_array_expr_length m l vars lst_expr lst
+  : locals_array_expr m l vars lst_expr lst ->
+    length vars = length lst_expr
+    /\ length lst_expr = length lst.
+Proof.
+  revert l lst_expr lst;
+    induction vars;
+    destruct lst_expr;
+    destruct lst;
+    simpl;
+    intros;
+    try tauto.
+  intuition; f_equal; eapply IHvars; eauto.
+Qed.
+
 Lemma compile_set_locals_array {t m l e} (lst : list word):
     let v := lst in
     forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl vars lst_expr,
-      Forall2 (DEXPR m l) lst_expr lst ->
-      length vars = length lst ->
+      (*TODO: want to put arbitrary value for everything but current var
+        (simplification of actual invariant, which is everything before current var)
+        TODO: need to know current var for this
+       
+      Forall2 (fun e i => forall v',  DEXPR m l e i) lst_expr lst ->
+       *)
+      locals_array_expr m l vars lst_expr lst ->
+      (*length vars = length lst -> implied by above *)
       NoDup vars ->
+      (*
       (forall v, In v vars -> map.get l v = None) ->
+       *)
       (let v := v in
-       let l := map.putmany_of_list (array_locs vars 0 lst) l in
+       let l := map.putmany_of_list (array_locs vars 0 v) l in
          <{ Trace := t; Memory := m; Locals := l; Functions := e }>
            k_impl
          <{ pred (k v eq_refl) }>) ->
@@ -182,9 +213,10 @@ Lemma compile_set_locals_array {t m l e} (lst : list word):
 Proof.
   unfold load_to_vars.
   intros until lst_expr.
-  intros Hdexprs Hlen.
-  pose proof (Forall.length_Forall2 Hdexprs) as H'.
-  rewrite array_locs_is_combine by assumption.
+  intros Hdexprs.
+  pose proof (locals_array_expr_length _ _ _ _ _ Hdexprs) as H'.
+  destruct H' as [Hlen H'].
+  rewrite array_locs_is_combine by congruence.
 
   unfold nlet_eq.
   generalize (pred (k lst eq_refl)).
@@ -212,23 +244,9 @@ Proof.
   eexists; split; eauto.
   repeat straightline.
   apply IHvars with (l:=l0) (lst:=lst); eauto.
-  (pose proof (H0 a (ltac:(simpl; intuition)))).
-  eapply array_dexpr_locals_put; eauto.
+  (*(pose proof (H0 a (ltac:(simpl; intuition)))).*)
+  (*eapply array_dexpr_locals_put; eauto.*)
   { inversion H; subst; auto. }
-  {
-    intros.
-    subst l0.
-    destruct (String.eqb_spec a v).
-    {
-      subst.
-      exfalso.
-      inversion H; eauto.
-    }
-    {
-      rewrite map.get_put_diff; eauto.
-      apply H0; simpl; intuition subst.
-    }
-  }
 Qed.    
 
 Section Bedrock2.
@@ -890,6 +908,35 @@ Proof.
   }
 Qed.
 
+
+Lemma locals_array_expr_app_helper m l vars1 vars2 le1 le2 l1 l2
+  : locals_array_expr m l vars1 le1 l1 ->
+    locals_array_expr m (map.putmany_of_list (combine vars1 l1) l) vars2 le2 l2 ->
+    locals_array_expr m l (vars1 ++ vars2) (le1 ++ le2) (l1 ++ l2).
+Proof.
+  revert l le1 l1 vars2 le2 l2.
+  induction vars1;
+    destruct le1;
+    destruct l1;
+    intros;
+    cbn [locals_array_expr app] in *;
+    try tauto.
+  intuition (subst; eauto).
+Qed.
+  
+Lemma locals_array_expr_app m l vars le1 le2 l1 l2
+  : locals_array_expr m l (firstn (length l1) vars) le1 l1 ->
+    locals_array_expr m (map.putmany_of_list (array_locs (firstn (length l1) vars) 0 l1) l)
+      (skipn (length l1) vars) le2 l2 ->
+    locals_array_expr m l vars (le1 ++ le2) (l1 ++ l2).
+Proof.
+  rewrite <- firstn_skipn with (n:= length l1) (l:= vars) at 4.
+  intros; eapply locals_array_expr_app_helper; eauto.
+  rewrite array_locs_is_combine in H0; eauto.
+  pose proof (locals_array_expr_length _ _ _ _ _ H).
+  intuition congruence.
+Qed.
+
 Derive chacha20_block_wrapped SuchThat
   (defn! "chacha20_block" ("st", "key", "nonce") { chacha20_block_wrapped },
     implements (chacha20_block') using [ "quarter"  ; "unsizedlist_memcpy" ])
@@ -900,17 +947,18 @@ Proof.
   simple eapply compile_nlet_as_nlet_eq.
   simple eapply compile_set_locals_array.
   2:{
-    rewrite ! app_length, !ListUtil.cons_length, ! map_length, !length_chunk; try lia.
-    rewrite H6, H9.
-    reflexivity.
-  }
-  2:{
     repeat constructor; simpl;
     intuition congruence.
   }
-  2:{ apply TODO (*TODO: make a computation*). }
   {
-    repeat apply Forall2_app.
+    repeat apply locals_array_expr_app.
+    all: rewrite !map_length, !length_chunk by lia.
+    all: rewrite ?H6, ?H9.
+    all: cbn -[combine le_combine locals_array_expr].
+    {
+      cbn [locals_array_expr].
+      TODO: inductive defn is better for evars
+      repeat apply Forall2_app.
     {
       let x := eval cbn -[word.of_Z] in (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) in
         change (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) with x.
@@ -1039,6 +1087,10 @@ Proof.
   compile_step.
   
   simple eapply compile_nlet_as_nlet_eq.
+  (*TODO: need to strengthen this a la broadcast
+    so that it allows other vars to change, doesn't need fresh names
+   *)
+  Fail.
   simple eapply compile_set_locals_array.
   {
     eapply array_expr_compile_word_add.
@@ -1094,6 +1146,9 @@ Proof.
     repeat constructor; cbv; intuition congruence.
   }
   {
+    TODO: false
+    intro; cbn [In].
+    intuition (subst; repeat rewrite map.get_put_diff by (compute; congruence); apply map.get_empty).
     apply TODO (*TODO: make computation*).
   }
   compile_step.
