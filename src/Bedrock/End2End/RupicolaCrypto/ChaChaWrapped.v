@@ -375,10 +375,6 @@ Notation "'let/n' ( x0 , y0 , z0 , t0 , x1 , y1 , z1 , t1 , x2 , y2 , z2 , t2 , 
 
   Existing Instance spec_of_quarter.
 Import Loops.
-(*Existing Instance spec_of_unsizedlist_memcpy. *)
-(*TODO: why is this necessary? seems like a bug*)
-Local Hint Extern 0 (spec_of "unsizedlist_memcpy") =>
-        Tactics.rapply spec_of_unsizedlist_memcpy : typeclass_instances.
 
 Existing Instance word_ac_ok.
 
@@ -395,11 +391,24 @@ Fixpoint unroll {A} (default : A) (l : list A) n :=
   | S n' =>
       unroll default l n' ++ [nth n' l default]
   end.
+Lemma unroll_len_helper {A} a (l : list A) n
+  : (n <= length l)%nat -> firstn n l = unroll a l n.
+Proof.
+  induction n; cbn [length unroll]; auto.
+  intros.
+  rewrite <- IHn by lia.
+  erewrite ListUtil.firstn_succ by lia.
+  rewrite nth_default_eq.
+  reflexivity.
+Qed.
+
 Lemma unroll_len {A} a (l : list A)
   : l = unroll a l (length l).
 Proof.
-Admitted.
-
+  rewrite <- unroll_len_helper by lia.
+  rewrite firstn_all.
+  reflexivity.
+Qed.
 
 
 Lemma truncate_word_word (w : word)
@@ -703,7 +712,19 @@ Proof.
     rewrite firstn_length.
     rewrite length_le_split.
     apply Nat.min_case.
-    admit (*mod*).
+    {
+      unfold Nat.modulo in *.
+      pose proof (Nat.divmod_spec (length lst) 3 0 3 ltac:(lia)).
+      remember (Nat.divmod (length lst) 3 0 3 ).
+      destruct p.
+      destruct H0.
+      pose proof (Nat.divmod_spec (length lst - n * 4) 3 0 3 ltac:(lia)).
+      remember (Nat.divmod (length lst - n * 4) 3 0 3 ).
+      destruct p.
+      destruct H2.
+      cbn [snd] in *.
+      lia.
+    }
     apply Nat.mod_same; lia.
   }
   {
@@ -712,7 +733,7 @@ Proof.
     apply Nat.mod_mul; lia.
     auto.
   }
-Admitted.
+Qed.
 
 Lemma compile_store_locals_array' {t m l e} (lst : list word) :
     forall (n : nat) P out ptr k_impl var lst_expr R,
@@ -1050,7 +1071,7 @@ Qed.
 
 Derive chacha20_block_wrapped SuchThat
   (defn! "chacha20_block" ("st", "key", "nonce") { chacha20_block_wrapped },
-    implements (chacha20_block') using [ "quarter"  ; "unsizedlist_memcpy" ])
+    implements (chacha20_block') using [ "quarter" ])
   As chacha20_block_wrapped_correct.
 Proof.
   compile_setup.
@@ -1064,14 +1085,14 @@ Proof.
   {
     repeat (apply locals_array_expr_app; intros).
     all: rewrite !map_length, !length_chunk by lia.
-    all: rewrite ?H6, ?H9.
+    all: rewrite ?H5, ?H8.
     all: cbn -[combine le_combine].
     all: repeat constructor; intros; subst.
     all: try compile_step.
     {
       eapply expr_load_word_of_byte_array; try eassumption.
       {
-        rewrite H6.
+        rewrite H5.
         instantiate (1:= 8%nat).
         reflexivity.
       }
@@ -1083,7 +1104,7 @@ Proof.
     {
       eapply expr_load_word_of_byte_array; try eassumption.
       {
-        rewrite H9.
+        rewrite H8.
         instantiate (1:= 3%nat).
         reflexivity.
       }
@@ -1214,17 +1235,17 @@ Proof.
       {
         eapply expr_load_word_of_byte_array; try eassumption.
         {
-          rewrite H6.
+          rewrite H5.
           instantiate (1:= 8%nat).
           reflexivity.
         }
         {
-          rewrite !map_length, !length_chunk, H6.
+          rewrite !map_length, !length_chunk, H5.
           reflexivity.
           all: lia.
         }
         {
-          rewrite !map_length, !length_chunk, H6.
+          rewrite !map_length, !length_chunk, H5.
           all: try lia.
           repeat (set (Nat.div_up _ _) as x;
                   let x' := eval compute in x in
@@ -1235,7 +1256,7 @@ Proof.
         }
       }
       {        
-          rewrite !map_length, !length_chunk, H6.
+          rewrite !map_length, !length_chunk, H5.
           all: try lia.
           repeat (set (Nat.div_up _ _) as x;
                   let x' := eval compute in x in
@@ -1246,7 +1267,7 @@ Proof.
           intros.
           eapply expr_load_word_of_byte_array; try eassumption.
           {
-            rewrite H9.
+            rewrite H8.
             instantiate (1:= 3%nat).
             reflexivity.
           }
@@ -1308,7 +1329,7 @@ Proof.
       rewrite !app_length, !map_length, !length_chunk.
       cbn [length].
       rewrite ?app_length, ?map_length, ?length_chunk.
-      rewrite H6, H9.
+      rewrite H5, H8.
       reflexivity.
       all: lia.
     }
@@ -1321,14 +1342,14 @@ Proof.
     ecancel_assumption.
   }
   {
-    rewrite H5.
+    rewrite H4.
       unfold v1.
       rewrite !map_length, !combine_length.
       cbn [length].
       rewrite !app_length, !map_length, !length_chunk.
       cbn [length].
       rewrite ?app_length, ?map_length, ?length_chunk.
-      rewrite H6, H9.
+      rewrite H5, H8.
       reflexivity.
       all: lia.
   }
@@ -1359,13 +1380,54 @@ Proof.
     rewrite !map_length, !combine_length, !app_length.
     cbn [length].
     rewrite !map_length, ! length_chunk.
-    rewrite H6,H9.
+    rewrite H5,H8.
     reflexivity.
     all:lia.
   }
   auto.
 Qed.
 
+
+Lemma chacha20_block_ok key nonce :
+  Spec.chacha20_block key ((le_split 4 (word.of_Z 0))++nonce) = chacha20_block' key nonce.
+Proof.
+  unfold chacha20_block, chacha20_block'.
+  unfold le_split.
+  repeat lazymatch goal with
+           |- context c [nlet _ ?e ?f] =>
+             let ex := fresh "x" in
+             remember e as ex;
+             let x := eval cbn beta in (f ex) in
+               unfold nlet at 1
+         end.
+  subst x2.
+  rewrite <- ListUtil.flat_map_map with (f:=word.unsigned(word:=word)).
+  f_equal.
+  subst x1.
+  do 15 destruct x0 as [? x0].
+  erewrite (map_ext _ _ word_add_pair_eqn).
+  rewrite <- map_map with (g:= word.unsigned (word:=word)).
+  f_equal.
+  change (λ x1 : Z * Z, (word.of_Z (fst x1) + word.of_Z (snd x1))%word)
+    with (fun x2 => (fun x => (fst x) + (snd x))%word ((fun x1 => (word.of_Z (word:=word)(fst x1), word.of_Z (snd x1))) x2)).
+  rewrite <- map_map.
+  erewrite map_ext with (g:=(λ '(s, t), (s + t)%word)).
+  2:{
+    intro a; destruct a; reflexivity.
+  }
+  f_equal.
+  rewrite map_combine_separated.
+  subst x.
+  f_equal.
+  2:{
+    unfold le_combine.
+    rewrite !map_app, !map_map.
+    repeat (f_equal;[]).
+    reflexivity.
+  }
+Admitted.
+
+(*  
 
 Local Open Scope string_scope.
 Import Syntax Syntax.Coercions NotationsCustomEntry.
@@ -1374,77 +1436,4 @@ Import Coq.Init.Byte.
 Set Printing Depth 150.
 Compute chacha20_block_wrapped.
 Print Assumptions chacha20_block_wrapped_correct.
-TODO: key, nonce loads need to be multiplied by 4?
-(*
-TODO: offset of key loads
-TODO: 0,nonce loads at start replaced by key loads
-
-     = (["st"; "key"; "nonce"], [], bedrock_func_body:(
-         $"qv0" = $(expr.literal 1634760805);
-         $"qv1" = $(expr.literal 857760878);
-         $"qv2" = $(expr.literal 2036477234);
-         $"qv3" = $(expr.literal 1797285236);
-         $"qv4" = load($(expr.literal 0) + $(expr.var "key"));
-         $"qv5" = load($(expr.literal 1) + $(expr.var "key"));
-         $"qv6" = load($(expr.literal 2) + $(expr.var "key"));
-         $"qv7" = load($(expr.literal 3) + $(expr.var "key"));
-         $"qv8" = load($(expr.literal 4) + $(expr.var "key"));
-         $"qv9" = load($(expr.literal 5) + $(expr.var "key"));
-         $"qv10" = load($(expr.literal 6) + $(expr.var "key"));
-         $"qv11" = load($(expr.literal 7) + $(expr.var "key"));
-         $"qv12" = load($(expr.literal 8) + $(expr.var "key"));
-         $"qv13" = load($(expr.literal 9) + $(expr.var "key"));
-         $"qv14" = load($(expr.literal 10) + $(expr.var "key"));
-         $"qv15" = load($(expr.literal 11) + $(expr.var "key"));
-         $"_gs_from0" = $(expr.literal 0);
-         $"_gs_to0" = $(expr.literal 10);
-         while $(expr.var "_gs_from0") < $(expr.var "_gs_to0") {
-           {($"qv0", $"qv4", $"qv8", $"qv12") = $"quarter"($(expr.var "qv0"), $(expr.var "qv4"),
-                                                          $(expr.var "qv8"), $(expr.var "qv12"));
-            ($"qv1", $"qv5", $"qv9", $"qv13") = $"quarter"($(expr.var "qv1"), $(expr.var "qv5"),
-                                                          $(expr.var "qv9"), $(expr.var "qv13"));
-            ($"qv2", $"qv6", $"qv10", $"qv14") = $"quarter"($(expr.var "qv2"), $(expr.var "qv6"),
-                                                           $(expr.var "qv10"), $(expr.var "qv14"));
-            ($"qv3", $"qv7", $"qv11", $"qv15") = $"quarter"($(expr.var "qv3"), $(expr.var "qv7"),
-                                                           $(expr.var "qv11"), $(expr.var "qv15"));
-            ($"qv0", $"qv5", $"qv10", $"qv15") = $"quarter"($(expr.var "qv0"), $(expr.var "qv5"),
-                                                           $(expr.var "qv10"), $(expr.var "qv15"));
-            ($"qv1", $"qv6", $"qv11", $"qv12") = $"quarter"($(expr.var "qv1"), $(expr.var "qv6"),
-                                                           $(expr.var "qv11"), $(expr.var "qv12"));
-            ($"qv2", $"qv7", $"qv8", $"qv13") = $"quarter"($(expr.var "qv2"), $(expr.var "qv7"),
-                                                          $(expr.var "qv8"), $(expr.var "qv13"));
-            ($"qv3", $"qv4", $"qv9", $"qv14") = $"quarter"($(expr.var "qv3"), $(expr.var "qv4"),
-                                                          $(expr.var "qv9"), $(expr.var "qv14"))};
-           $"_gs_from0" = $(expr.var "_gs_from0") + $(expr.literal 1)
-         };
-         store($(expr.literal 0) + $(expr.var "st"), $(expr.var "qv0") + $(expr.literal 1634760805));
-         store($(expr.literal 1) + $(expr.var "st"), $(expr.var "qv1") + $(expr.literal 857760878));
-         store($(expr.literal 2) + $(expr.var "st"), $(expr.var "qv2") + $(expr.literal 2036477234));
-         store($(expr.literal 3) + $(expr.var "st"), $(expr.var "qv3") + $(expr.literal 1797285236));
-         store($(expr.literal 4) + $(expr.var "st"), $(expr.var "qv4") +
-                                                     load($(expr.literal 0) + $(expr.var "key")));
-         store($(expr.literal 5) + $(expr.var "st"), $(expr.var "qv5") +
-                                                     load($(expr.literal 1) + $(expr.var "key")));
-         store($(expr.literal 6) + $(expr.var "st"), $(expr.var "qv6") +
-                                                     load($(expr.literal 2) + $(expr.var "key")));
-         store($(expr.literal 7) + $(expr.var "st"), $(expr.var "qv7") +
-                                                     load($(expr.literal 3) + $(expr.var "key")));
-         store($(expr.literal 8) + $(expr.var "st"), $(expr.var "qv8") +
-                                                     load($(expr.literal 4) + $(expr.var "key")));
-         store($(expr.literal 9) + $(expr.var "st"), $(expr.var "qv9") +
-                                                     load($(expr.literal 5) + $(expr.var "key")));
-         store($(expr.literal 10) + $(expr.var "st"), $(expr.var "qv10") +
-                                                      load($(expr.literal 6) + $(expr.var "key")));
-         store($(expr.literal 11) + $(expr.var "st"), $(expr.var "qv11") +
-                                                      load($(expr.literal 7) + $(expr.var "key")));
-         store($(expr.literal 12) + $(expr.var "st"), $(expr.var "qv12") +
-                                                      load($(expr.literal 8) + $(expr.var "key")));
-         store($(expr.literal 13) + $(expr.var "st"), $(expr.var "qv13") +
-                                                      load($(expr.literal 9) + $(expr.var "key")));
-         store($(expr.literal 14) + $(expr.var "st"), $(expr.var "qv14") +
-                                                      load($(expr.literal 10) + $(expr.var "key")));
-         store($(expr.literal 15) + $(expr.var "st"), $(expr.var "qv15") +
-                                                      load($(expr.literal 11) + $(expr.var "key")))))
-     : func
-
 *)
