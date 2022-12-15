@@ -164,27 +164,22 @@ Proof.
     eauto using dexpr_locals_put.
 Qed.
 
-Fixpoint locals_array_expr (m : mem) (l : locals) (vars : list string) lst_expr lst :=
-  match vars, lst_expr, lst with
-  | [], [], [] => True
-  | v::vars, e::lst_expr, i::lst =>
-    DEXPR m l e i /\ (locals_array_expr m (map.put l v i) vars lst_expr lst)
-  | _, _, _ => False
-  end.
+Inductive locals_array_expr (m : mem) : locals -> list string -> list expr -> list _ -> Prop :=
+| locals_array_expr_nil l : locals_array_expr l [] [] []
+| locals_array_expr_cons l v vars e lst_expr i lst 
+  : DEXPR m l e i ->
+    locals_array_expr (map.put l v i) vars lst_expr lst ->
+    locals_array_expr l (v::vars) (e::lst_expr) (i::lst).
+Local Hint Constructors locals_array_expr : core.
 
 Lemma locals_array_expr_length m l vars lst_expr lst
   : locals_array_expr m l vars lst_expr lst ->
     length vars = length lst_expr
     /\ length lst_expr = length lst.
 Proof.
-  revert l lst_expr lst;
-    induction vars;
-    destruct lst_expr;
-    destruct lst;
+  induction 1;
     simpl;
-    intros;
-    try tauto.
-  intuition; f_equal; eapply IHvars; eauto.
+    intuition eauto.
 Qed.
 
 Lemma compile_set_locals_array {t m l e} (lst : list word):
@@ -423,23 +418,98 @@ Proof.
     apply Hints.log2_lt_pow2_proj_l2r; lia.
   }
 Qed.
+
+
+Notation map_remove_many m ks :=
+  (List.fold_left map.remove ks m).
+
+Lemma dexpr_locals_put_removed v
+  : ∀ m l exp (w : word),
+    DEXPR m (map.remove l v) exp w → DEXPR m l exp w.
+Proof.
+  intros.
+  remember (map.get l v) as mg eqn:Hget;
+    destruct mg;
+    symmetry in Hget.
+  {
+    erewrite <- map.put_noop with (m:=l) (k:=v); eauto.
+    rewrite <- map.put_remove_same.
+    eapply dexpr_locals_put; eauto.
+    apply map.get_remove_same.
+  }
+  {
+    rewrite map.remove_not_in in H; eauto.
+  }
+Qed.
+
+
+(*TODO: generalize*)
+Lemma map_remove_comm (l : locals) a b
+  : (map.remove (map.remove l a) b) = map.remove (map.remove l b) a.
+Proof.
+  eapply map.ext_eq.
+  unfold map.map_eq.
+  intro k.
+  destruct (String.eqb_spec k b);
+    destruct (String.eqb_spec k a);
+    subst;
+    repeat rewrite ?map.get_remove_same, ?map.get_remove_diff by tauto;
+    reflexivity.
+Qed.  
+  
+(*TODO: generalize*)
+Lemma map_remove_many_comm (l : locals) vars a
+  : (map_remove_many (map.remove l a) vars) = map.remove (map_remove_many l vars) a.
+Proof.
+  unfold map_remove_many.
+  revert l.
+  induction vars; cbn [map_remove_many List.fold_left];  eauto.
+  intros.
+  rewrite <- IHvars.
+  f_equal.
+  destruct (String.eqb_spec a a0).
+  {
+    subst.
+    rewrite map.remove_not_in.
+    2:{ apply map.get_remove_same. }
+    reflexivity.
+  }
+  {
+    apply map_remove_comm.
+  }
+Qed.
+
+Lemma dexpr_locals_put_removed_many vars
+  : ∀ m l exp (w : word),
+    DEXPR m (map_remove_many l vars) exp w → DEXPR m l exp w.
+Proof.
+  intro m.
+  induction vars; cbn [map_remove_many List.fold_left]; eauto.
+  intros.
+  apply IHvars in H.
+  eapply dexpr_locals_put_removed; eauto.
+Qed.
+  
       
 Lemma expr_load_word_of_array_helper m l len lst e ptr R (n : nat)
   : length lst = len ->
     n <= len ->
     (array scalar (word.of_Z (word:=word) 4) ptr lst * R)%sep m ->
-    DEXPR m l e ptr ->
-    Forall2 (DEXPR m l) (map (load_offset e) (z_range n len)) (skipn n lst).
+    forall vars,
+      DEXPR m (map_remove_many l vars) e ptr ->
+      length vars = (len - n)%nat ->
+    locals_array_expr m l vars (map (load_offset e) (z_range n len)) (skipn n lst).
 Proof.
   remember (len - n)%nat as diff.
   
-  revert n Heqdiff R lst.
+  revert l n Heqdiff R lst.
   induction diff.
   {
     intros; simpl in *; subst.
     rewrite z_range_nil by lia.
     rewrite List.skipn_all by lia.
     simpl.
+    destruct vars; simpl in *; try lia.
     constructor.
   }
   {
@@ -454,6 +524,7 @@ Proof.
     rewrite <- hd_skipn_nth_default.
     rewrite nth_default_eq.
     cbn [map].
+    destruct vars; cbn [length] in *; try lia.
     constructor.
     {
       unfold load_offset.
@@ -465,7 +536,7 @@ Proof.
       unfold load.
       eexists; split; eauto.
       instantiate (1:= word.of_Z 0).
-      replace  (nth n lst (word.of_Z 0))
+      replace (nth n lst (word.of_Z 0))
         with (truncate_word access_size.word (nth n lst (word.of_Z 0))).
       eapply array_load_of_sep; eauto.
       {
@@ -475,21 +546,30 @@ Proof.
       lia.
       {
         apply truncate_word_word.
-      }        
+      }
+      eapply dexpr_locals_put_removed_many; eauto.
     }
     rewrite tl_skipn.
     replace (Z.of_nat n + 1) with (Z.of_nat (S n)) by lia.
     eapply IHdiff; eauto.
     lia.
     lia.
-  }
-Qed.
-  
-Lemma expr_load_word_of_array m l len lst e ptr R
+    cbn [List.fold_left map_remove_many] in H2.
+    destruct (ListDec.In_dec string_dec s vars).
+    {
+      admit (*TODO: lemma for removing from in*).
+    }
+    {
+      admit (*TODO: commutativity lemma *).
+    }
+Admitted.
+ 
+Lemma expr_load_word_of_array m l len lst e ptr R vars
   : length lst = len ->
+    length vars = len ->
     (array scalar (word.of_Z (word:=word) 4) ptr lst * R)%sep m ->
-    DEXPR m l e ptr ->
-    Forall2 (DEXPR m l) (map (load_offset e) (count_to len)) lst.
+    DEXPR m (map_remove_many l vars) e ptr ->
+    locals_array_expr m l vars (map (load_offset e) (count_to len)) lst.
 Proof.
   unfold count_to.
   change 0 with (Z.of_nat 0).
@@ -497,17 +577,19 @@ Proof.
   intros.
   eapply expr_load_word_of_array_helper; eauto.
   lia.
+  lia.
 Qed.
 
-Lemma expr_load_word_of_byte_array m l len lst e ptr R
+Lemma expr_load_word_of_byte_array m l len lst e ptr R vars
   : (*(length lst mod Memory.bytes_per (width :=32) access_size.word)%nat = 0%nat ->*)
     length lst = (4*len)%nat ->
+    length vars = len ->
     (lst$@ptr * R)%sep m ->
-    DEXPR m l e ptr ->
-    Forall2 (DEXPR m l) (map (load_offset e) (count_to len)) (map le_combine (chunk 4 lst)).
+    DEXPR m (map_remove_many l vars) e ptr ->
+    locals_array_expr m l vars (map (load_offset e) (count_to len)) (map le_combine (chunk 4 lst)).
 Proof.
   intros.
-  seprewrite_in words_of_bytes H0; auto.
+  seprewrite_in words_of_bytes H1; auto.
   {
     rewrite H.
     rewrite Nat.mul_comm.
@@ -628,8 +710,9 @@ Proof.
     auto.
   }
 Admitted.
-    
 
+TODO: need to generalize locals predicate over memory preds
+Fail.
 Lemma compile_store_locals_array' {t m l e} (lst : list word) :
     forall (n : nat) P out ptr k_impl var lst_expr R,
       (out$@ptr * R)%sep m ->
@@ -853,28 +936,27 @@ Proof.
 Qed.
 
 
-    (*TODO: generalize to all ops*)
-    Lemma 
-    array_expr_compile_word_add m l
-     : ∀ (w1 w2 : list word) (e1 e2 : list expr),
-        Forall2 (DEXPR m l) e1 w1 →
-        Forall2 (DEXPR m l) e2 w2 →
-        Forall2 (DEXPR m l)          
-          (map (λ '(s, t0), (expr.op bopname.add s t0)%word)
-             (combine e1 e2))
-          (map (λ '(s, t0), (s + t0)%word)
-             (combine w1 w2)).
-    Proof.
-      intros w1 w2 e1 e2 H.
-      revert e2 w2.
-      induction H;
-        inversion 1;
-        subst;
-        cbn [combine map];
-        constructor;
-        eauto.
-      eapply expr_compile_word_add; eauto.
-    Qed.
+(*TODO: generalize to all ops*)
+Lemma array_expr_compile_word_add m l
+  : ∀ (w1 w2 : list word) (e1 e2 : list expr),
+    Forall2 (DEXPR m l) e1 w1 →
+    Forall2 (DEXPR m l) e2 w2 →
+    Forall2 (DEXPR m l)          
+      (map (λ '(s, t0), (expr.op bopname.add s t0)%word)
+         (combine e1 e2))
+      (map (λ '(s, t0), (s + t0)%word)
+         (combine w1 w2)).
+Proof.
+  intros w1 w2 e1 e2 H.
+  revert e2 w2.
+  induction H;
+    inversion 1;
+    subst;
+    cbn [combine map];
+    constructor;
+    eauto.
+  eapply expr_compile_word_add; eauto.
+Qed.
 
     
   (*used because concrete computation on maps seems to be slow here*)
@@ -914,12 +996,9 @@ Lemma locals_array_expr_app_helper m l vars1 vars2 le1 le2 l1 l2
     locals_array_expr m (map.putmany_of_list (combine vars1 l1) l) vars2 le2 l2 ->
     locals_array_expr m l (vars1 ++ vars2) (le1 ++ le2) (l1 ++ l2).
 Proof.
-  revert l le1 l1 vars2 le2 l2.
-  induction vars1;
-    destruct le1;
-    destruct l1;
+  induction 1;
     intros;
-    cbn [locals_array_expr app] in *;
+    cbn [app] in *;
     try tauto.
   intuition (subst; eauto).
 Qed.
@@ -954,18 +1033,9 @@ Proof.
     repeat apply locals_array_expr_app.
     all: rewrite !map_length, !length_chunk by lia.
     all: rewrite ?H6, ?H9.
-    all: cbn -[combine le_combine locals_array_expr].
-    {
-      cbn [locals_array_expr].
-      TODO: inductive defn is better for evars
-      repeat apply Forall2_app.
-    {
-      let x := eval cbn -[word.of_Z] in (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) in
-        change (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) with x.
-      unfold le_combine.
-      repeat constructor;
-        apply expr_compile_Z_literal.
-    }
+    all: cbn -[combine le_combine].
+    all: repeat constructor.
+    all: try compile_step.
     {
       eapply expr_load_word_of_byte_array; try eassumption.
       {
@@ -974,21 +1044,21 @@ Proof.
         reflexivity.
       }
       compile_step.
+      cbn [List.fold_left];
+        repeat rewrite ?map.remove_put_same, ?map.remove_put_diff, ?map.remove_empty by congruence.        
+      compile_step.
     }
     {
-      constructor.
-      {
-        compile_step.
-      }
-      {
-        eapply expr_load_word_of_byte_array; try eassumption.
+      eapply expr_load_word_of_byte_array; try eassumption.
       {
         rewrite H9.
         instantiate (1:= 3%nat).
         reflexivity.
       }
       compile_step.
-      }
+      cbn [List.fold_left];
+        repeat rewrite ?map.remove_put_same, ?map.remove_put_diff, ?map.remove_empty by congruence.     
+      compile_step.
     }
   }
   compile_step.
@@ -1090,7 +1160,6 @@ Proof.
   (*TODO: need to strengthen this a la broadcast
     so that it allows other vars to change, doesn't need fresh names
    *)
-  Fail.
   simple eapply compile_set_locals_array.
   {
     eapply array_expr_compile_word_add.
