@@ -626,6 +626,16 @@ Qed.
   Strategy 20 [quarterround Spec.quarterround].
   Strategy opaque [quarter_gallina Spec.quarter Nat.iter].
 
+
+  Lemma destruct_16 {A} P
+          : (forall (x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x0 : A),
+                 P \<x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x0\>) ->
+            forall a, P a.
+  Proof.
+    do 15 destruct a as [? a].
+    eauto.
+  Qed.
+
   Lemma chacha20_block_ok key nonce
     : length key = 32%nat ->
       length nonce = 12%nat ->
@@ -645,8 +655,8 @@ Qed.
   rewrite <- ListUtil.flat_map_map with (f:=word.unsigned(word:=word)).
   f_equal.
   subst x1.
-  (*TODO: this is the problem! causes Qed to take too long*)
-  do 15 destruct x0 as [? x0].
+  
+  revert dependent x0;  intro x0; simple apply destruct_16 with (a:=x0); intros.
   
   erewrite (map_ext _ _ word_add_pair_eqn).
   rewrite <- map_map with (g:= word.unsigned (word:=word)).
@@ -788,9 +798,7 @@ Qed.
     repeat (destruct l as [|? l]; cbn [length] in H; try lia).
     reflexivity.
   }
-  (*
-  Qed.*)
-  Admitted.
+  Qed.
 
 Definition load_offset e o :=
   expr.load access_size.word
@@ -1516,9 +1524,6 @@ Qed.
   Ltac dedup s :=
     repeat rewrite map.put_put_diff with (k1:=s) by congruence;
     rewrite ?map.put_put_same with (k:=s).
-
-  Axiom TODO : forall {A}, A.
-
   
 Lemma forall_distr_Forall2' {A B C} (P : A -> B -> C -> Prop) l1 l2
   : length l1 = length l2 ->
@@ -1923,6 +1928,8 @@ Proof.
     all:lia.
   }
   auto.
+  intuition.
+  intuition.
 Qed.
 
 
@@ -1933,8 +1940,8 @@ Import Syntax Syntax.Coercions NotationsCustomEntry.
 Import ListNotations.
 Import Coq.Init.Byte.
 Set Printing Depth 150.
-Compute chacha20_block_wrapped.
-Print Assumptions chacha20_block_wrapped_correct.
+Compute chacha20_block.
+Print Assumptions chacha20_block_body_correct.
 *)
 
 End Bedrock2.
