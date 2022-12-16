@@ -924,21 +924,18 @@ Definition loop := func! { loopfn() } .
 Definition memconst_pk := memconst garageowner.
 Definition ip_checksum := ip_checksum_br2fn.
 
-(*TODO: temporary to adapt the string name*)
-Local Definition quarter := ChaCha20.quarter_body.
-
 Definition funcs :=
   &[, init; loop;
     initfn; loopfn;
     memswap; memequal; memconst_pk;
     ip_checksum;
-    ChaCha20.chacha20_block; quarter;
+    ChaCha20.chacha20_block; ChaCha20.quarter;
     lan9250_tx ]
     ++lightbulb.function_impls
     ++MontgomeryLadder.funcs.
 
 
-Lemma chacha20_ok: forall functions, ChaCha20.spec_of_chacha20 (&,ChaCha20.chacha20_block::&,quarter::functions).
+Lemma chacha20_ok: forall functions, ChaCha20.spec_of_chacha20 (&,ChaCha20.chacha20_block::&,ChaCha20.quarter::functions).
   intros.
   simple eapply ChaCha20.chacha20_block_body_correct.
   constructor.
@@ -1118,7 +1115,7 @@ Proof.
   all : trivial using SortedListString.ok.
 Qed.
 
-(*
-Print Assumptions link_loopfn. (* chacha20_ok *)
-Print Assumptions invariant_proof. (* chacha20_ok, propositional_extensionality, functional_extensionality_dep *)
+
+Print Assumptions link_loopfn. (* Closed under the global context *)
+Print Assumptions invariant_proof. (* propositional_extensionality, functional_extensionality_dep *)
 *)
