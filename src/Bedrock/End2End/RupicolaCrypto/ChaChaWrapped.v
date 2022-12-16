@@ -518,11 +518,120 @@ End Derive.
   
   Existing Instance spec_of_quarter.
 
-Existing Instance word_ac_ok.
+  Existing Instance word_ac_ok.
 
-Lemma chacha20_block_ok key nonce :
-  Spec.chacha20_block key ((le_split 4 (word.of_Z 0))++nonce) = chacha20_block' key nonce.
+  
+  Lemma nat_iter_rel {A B} (R : A -> B -> Prop) acca accb fa fb n
+    : R acca accb ->
+      (forall acca accb, R acca accb -> R (fa acca) (fb accb)) ->
+      R (Nat.iter n fa acca) (Nat.iter n fb accb).
+  Proof.
+    intros.
+    induction n; simpl; eauto.
+  Qed.
+
+  
+  Lemma nat_iter_pred {A} (R : A -> Prop) f acc n
+    : R acc ->
+      (forall acc, R acc -> R (f acc)) ->
+      R (Nat.iter n f acc).
+  Proof.
+    intros.
+    induction n; simpl; eauto.
+  Qed.
+  
+  Lemma length_quarterround a b c d l
+    : length (Spec.quarterround a b c d l) = length l.
+  Proof.
+    unfold Spec.quarterround.
+    generalize (Spec.quarter (nth a l 0, nth b l 0, nth c l 0, nth d l 0)) as p.
+    intro p; destruct p as [[[? ?] ?] ?].
+    rewrite !upd_length.
+    reflexivity.
+  Qed.
+  
+Lemma quarterround_ok x y z t st :
+  Forall (in_bounds 32) st ->
+  List.map word.of_Z (Spec.quarterround x y z t st) =
+  quarterround x y z t (List.map word.of_Z st).
 Proof.
+  unfold Spec.quarterround, quarterround, nlet; intros H.
+  rewrite forall_in_bounds in H by lia.
+  rewrite !map_nth, !quarter_ok by auto.
+  destruct (Spec.quarter _) as (((?&?)&?)&?).
+  rewrite !map_upd; reflexivity.
+Qed.
+
+
+Lemma nth_upd {A} (l: list A) (a d: A) (i k: nat):
+  ((i >= length l)%nat /\ nth i (upd l k a) d = d) \/
+  (i = k /\ nth i (upd l k a) d = a) \/
+  (i <> k /\ nth i (upd l k a) d = nth i l d).
+Proof.
+  destruct (Nat.lt_ge_cases i (length l)); cycle 1; [ left | right ].
+  - unfold upd; rewrite nth_overflow; rewrite ?upds_length; eauto.
+  - destruct (Nat.eq_dec i k) as [-> | Heq]; [ left | right ].
+    + rewrite nth_upd_same; auto.
+    + rewrite nth_upd_diff; auto.
+Qed.
+
+Lemma Forall_upd {A} (P: A -> Prop) (l: list A) (a: A) k:
+  P a ->
+  Forall P l ->
+  Forall P (upd l k a).
+Proof.
+  intros Ha Hl.
+  rewrite @Forall_nth_default' with (d := a) in Hl |- *; eauto.
+  intros; destruct (nth_upd l a a i k) as [(? & ->) | [ (? & ->) | (? & ->) ] ];
+    subst; eauto; eauto.
+Qed.
+
+Lemma quarterround_in_bounds x y z t a:
+  Forall (in_bounds 32) a ->
+  Forall (in_bounds 32) (Spec.quarterround x y z t a).
+Proof.
+  unfold Spec.quarterround, nlet; intros Ha.
+  pose proof Ha as Ha'; rewrite forall_in_bounds in Ha by lia.
+  pose proof quarter_in_bounds (nth x a 0) (nth y a 0) (nth z a 0) (nth t a 0)
+       ltac:(eauto) ltac:(eauto) ltac:(eauto) ltac:(eauto) as Hb.
+  destruct (Spec.quarter _) as (((?&?)&?)&?).
+  destruct Hb as (?&?&?&?).
+  repeat (apply Forall_upd; auto).
+Qed.
+
+
+  Definition list_to_tuple_16 (l : list word) :=
+    match l with
+    | [car; car0; car1; car2; car3; car4; car5; car6; car7; car8; car9; car10; car11; car12; car13; x0] =>
+        \< car, car0, car1, car2, car3, car4, car5, car6, car7, car8, car9, car10, car11, car12, car13, x0 \>
+    | _ => \< word.of_Z 0,word.of_Z 0,word.of_Z 0,word.of_Z 0,
+             word.of_Z 0,word.of_Z 0,word.of_Z 0,word.of_Z 0,
+             word.of_Z 0,word.of_Z 0,word.of_Z 0,word.of_Z 0,
+             word.of_Z 0,word.of_Z 0,word.of_Z 0,word.of_Z 0 \>
+    end.
+
+  Lemma list_to_tuple_16_injective l1 l2
+    :  length l1 = 16%nat ->
+       length l2 = 16%nat ->
+       list_to_tuple_16 l1 = list_to_tuple_16 l2 -> l1 = l2.
+  Proof.
+    repeat (destruct l1 as [|? l1]; cbn [length]; try lia).
+
+    repeat (destruct l2 as [|? l2]; cbn [length]; try lia).
+    cbv.
+    intros _ _ H; inversion H; reflexivity.
+  Qed.
+
+  Strategy 10 [list_to_tuple_16 nlet].
+  Strategy 20 [quarterround Spec.quarterround].
+  Strategy opaque [quarter_gallina Spec.quarter Nat.iter].
+
+  Lemma chacha20_block_ok key nonce
+    : length key = 32%nat ->
+      length nonce = 12%nat ->
+      Spec.chacha20_block key ((le_split 4 (word.of_Z 0))++nonce) = chacha20_block' key nonce.
+  Proof.
+    intros Hlenk Hlenn.
   unfold Spec.chacha20_block, chacha20_block'.
   unfold le_split.
   repeat lazymatch goal with
@@ -536,12 +645,16 @@ Proof.
   rewrite <- ListUtil.flat_map_map with (f:=word.unsigned(word:=word)).
   f_equal.
   subst x1.
+  (*TODO: this is the problem! causes Qed to take too long*)
   do 15 destruct x0 as [? x0].
+  
   erewrite (map_ext _ _ word_add_pair_eqn).
   rewrite <- map_map with (g:= word.unsigned (word:=word)).
   f_equal.
   change (λ x1 : Z * Z, (word.of_Z (fst x1) + word.of_Z (snd x1))%word)
     with (fun x2 => (fun x => (fst x) + (snd x))%word ((fun x1 => (word.of_Z (word:=word)(fst x1), word.of_Z (snd x1))) x2)).
+
+  
   rewrite <- map_map.
   erewrite map_ext with (g:=(λ '(s, t), (s + t)%word)).
   2:{
@@ -557,8 +670,127 @@ Proof.
     repeat (f_equal;[]).
     reflexivity.
   }
-Admitted.
+  
 
+  lazymatch goal with |- map word.of_Z ?lhs = _ => set lhs end.
+  assert (length l = 16%nat) as Hlen.
+  {
+    subst l.
+    apply nat_iter_pred.
+    {
+      rewrite !app_length, !map_length, !length_chunk, Hlenk.
+      rewrite app_length, LittleEndianList.length_le_split, Hlenn.
+      reflexivity.
+      all: lia.
+    }
+    {
+      intros.
+      rewrite !length_quarterround.
+      auto.
+    }
+  }
+
+  apply list_to_tuple_16_injective.
+  {
+    rewrite map_length; auto.
+  }
+  {
+    reflexivity.
+  }
+  cbn [list_to_tuple_16].
+
+  subst l; rewrite Heqx0; clear Heqx0.
+  eapply Nat_iter_rew_inv
+    with (g:=fun l => list_to_tuple_16 (map word.of_Z l))
+         (P := fun l => Forall (in_bounds 32) l /\ length l = 16%nat); intros.
+  {
+    destruct H.
+    split.
+    1:repeat apply quarterround_in_bounds; auto.
+    repeat rewrite length_quarterround; auto.
+  }
+  
+  {
+    destruct H.
+    repeat rewrite quarterround_ok.
+    2-9:repeat apply quarterround_in_bounds; auto.
+    repeat (destruct a as [|? a]; cbn [length] in H0; try (exfalso;lia)).
+    cbn [list_to_tuple_16 map].
+
+
+    do 4 (lazymatch goal with
+      |- context ctx [(quarterround ?a ?b ?c ?d (?e1::?lst))] =>
+        set (quarterround a b c d (e1::lst)) as l1;
+        let g := context ctx [l1] in
+        change g
+    end;
+    remember l1 eqn:Heql;
+      subst l1;
+      unfold quarterround in Heql;
+    cbn [nth] in Heql;
+    revert Heql;
+    set (quarter_gallina _ _ _ _) as l2;
+    destruct l2 as [? [? [? ?]]];
+    intro Heql;
+    cbn-[word.of_Z] in Heql;
+          subst l).
+
+    unfold nlet.
+    do 4 (lazymatch goal with
+      |- context ctx [(quarterround ?a ?b ?c ?d (?e1::?lst))] =>
+        set (quarterround a b c d (e1::lst)) as l1;
+        let g := context ctx [l1] in
+        change g
+    end;
+    remember l1 eqn:Heql;
+      subst l1;
+      unfold quarterround in Heql;
+    cbn [nth] in Heql;
+    revert Heql;
+    set (quarter_gallina _ _ _ _) as l2;
+    destruct l2 as [? [? [? ?]]];
+    intro Heql;
+    cbn-[word.of_Z] in Heql;
+          subst l).
+    reflexivity.
+  }
+  {
+    split.
+    {
+      rewrite !Forall_app.
+      repeat split.
+      all: change 32 with (8 * Z.of_nat 4).
+      all: apply Forall_le_combine_in_bounds.
+      all: lia.
+    }
+    rewrite !app_length, !map_length, !length_chunk, Hlenk by lia.
+    rewrite app_length, Hlenn.
+    reflexivity.
+  }
+  {
+    rewrite !map_app, !map_map.
+    change  (λ x : list Init.Byte.byte, word.of_Z (LittleEndianList.le_combine x)) with le_combine.
+    rewrite chunk_app_chunk; try lia.
+    2:{ rewrite LittleEndianList.length_le_split; auto. }
+    cbn [map].
+    change (le_combine (LittleEndianList.le_split 4 (word.unsigned (word.of_Z 0)))) with (word.of_Z (word:=word) 0).
+    remember ((map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k")) ++
+                 map le_combine (chunk 4 key) ++ word.of_Z 0 :: map le_combine (chunk 4 nonce))).
+    assert (length l = 16%nat).
+    {
+      subst l.
+      rewrite !app_length, !map_length, !length_chunk, Hlenk by lia.
+      cbn [length].
+      rewrite map_length, length_chunk, Hlenn by lia.
+      reflexivity.
+    }
+    clear Heql Hlen.
+    repeat (destruct l as [|? l]; cbn [length] in H; try lia).
+    reflexivity.
+  }
+  (*
+  Qed.*)
+  Admitted.
 
 Definition load_offset e o :=
   expr.load access_size.word
