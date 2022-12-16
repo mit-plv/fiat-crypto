@@ -1,23 +1,29 @@
 (* Rewritten versions of poly1305 and chacha20 that you can compile with Rupicola *)
 Require Import Coq.Unicode.Utf8.
 Require Import Rupicola.Lib.Api.
-Require Import Rupicola.Examples.Loops Rupicola.Lib.Loops.
+Require Import Rupicola.Lib.Loops.
 (*TODO: move this file to Rupicola.Lib*)
 Require Import Crypto.Bedrock.End2End.RupicolaCrypto.Broadcast.
-Require Import Crypto.Bedrock.End2End.RupicolaCrypto.Low.
-Require Import Crypto.Bedrock.End2End.RupicolaCrypto.Derive.
 Require Import Crypto.Bedrock.End2End.RupicolaCrypto.Spec.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
-Require Import bedrock2.BasicC32Semantics.
+Require coqutil.Word.Naive.
+Require Import bedrock2.FE310CSemantics.
+Require Import coqutil.Map.SortedListWord.
 Import Syntax.Coercions ProgramLogic.Coercions.
 Import Datatypes.
-
+Import Lists.List.
 
 Import Loops.
 Import LoopCompiler.
 
+Notation word := (Naive.word 32).
+Notation locals := (FE310CSemantics.locals (word:=word)).
+Notation mem :=(@SortedListWord.map 32 (Naive.word 32) Naive.word32_ok Init.Byte.byte).
+Notation predicate := (predicate (word:=word) (locals:=locals) (mem:=mem)).
+
+Local Instance locals_ok : map.ok locals := (FE310CSemantics.locals_ok (word:=word)).
 
 (*TODO: connect to Broadcast?*)
 (* Tooling for representing a fixed-length array in local variables *)
@@ -27,7 +33,7 @@ Import LoopCompiler.
 Definition array_in_locals (l : locals) : list string -> list word -> Prop :=
   Forall2 (fun x w => map.get l x = Some w).
 
-Lemma compile_set_locals_array_app {t m l e} (lst1 lst2 : list word) :
+Lemma compile_set_locals_array_app {t} {m : mem} {l : locals} {e} (lst1 lst2 : list word) :
     let v := lst1 ++ lst2 in
     forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl vars,
       (*length vars = length lst1 + length lst2 -> *)
@@ -157,7 +163,7 @@ Definition load_to_vars vars (lst : list expr) k_impl : cmd :=
 
 
 Lemma array_dexpr_locals_put
-  : ∀ (m l : map.rep) (x : string) (v : word) exp w,
+  : ∀ (m : mem) (l : locals) (x : string) (v : word) exp w,
     map.get l x = None → Forall2 (DEXPR m l) exp w → Forall2 (DEXPR m #{ … l; x => v }#) exp w.
 Proof.
   induction 2; constructor;
@@ -258,9 +264,74 @@ Section Bedrock2.
   Definition le_combine l : word := word.of_Z (le_combine l).
   Definition le_split n (l : word) := le_split n (word.unsigned l).
 
+  (* copied from Low.v, anticipating its removal *)
+  Section Low.    
+
+Local Notation "a + b" := (word.add (word := word) a b).
+Local Notation "a ^ b" := (word.xor (word := word) a b).
+Local Notation "a <<< b" := (word.slu a b + word.sru a (word.sub (word.of_Z 32) b)) (at level 30).
+
+Definition quarter a b c d : \<< word, word, word, word \>> :=
+  let/n a := a + b in  let/n d := d ^ a in  let/n d := d <<< word.of_Z 16 in
+  let/n c := c + d in  let/n b := b ^ c in  let/n b := b <<< word.of_Z 12 in
+  let/n a := a + b in  let/n d := d ^ a in  let/n d := d <<< word.of_Z 8 in
+  let/n c := c + d in  let/n b := b ^ c in  let/n b := b <<< word.of_Z 7 in
+                                            \< a, b, c, d \>.
+
+Hint Rewrite word.Z_land_ones_rotate using (split; reflexivity) : quarter.
+Hint Rewrite <- word.unsigned_xor_nowrap : quarter.
+Hint Rewrite word.Z_land_ones_word_add : quarter.
+
+Lemma quarter_ok0 a b c d:
+  Spec.quarter (word.unsigned a, word.unsigned b, word.unsigned c, word.unsigned d) =
+  let '\<a', b', c', d'\> := quarter a b c d in
+  (word.unsigned a', word.unsigned b', word.unsigned c', word.unsigned d').
+Proof.
+  unfold Spec.quarter.
+  repeat rewrite ?word.Z_land_ones_word_add, <- ?word.unsigned_xor_nowrap,
+    ?word.Z_land_ones_rotate by (split; reflexivity).
+  reflexivity.
+Qed.
+
+Lemma quarter_ok a b c d:
+  in_bounds 32 a -> in_bounds 32 b -> in_bounds 32 c -> in_bounds 32 d ->
+  quarter (word.of_Z (word:=word) a) (word.of_Z b) (word.of_Z c) (word.of_Z d) =
+  let '(a', b', c', d') := Spec.quarter (a, b, c, d) in
+  \< word.of_Z a', word.of_Z b', word.of_Z c', word.of_Z d' \>.
+Proof.
+  unfold in_bounds; intros.
+  set (wa := word.of_Z a); set (wb := word.of_Z b); set (wc := word.of_Z c); set (wd := word.of_Z d).
+  rewrite <- (word.unsigned_of_Z_nowrap (word:=word)  a),
+    <- (word.unsigned_of_Z_nowrap (word:=word) b) by assumption.
+  rewrite <- (word.unsigned_of_Z_nowrap (word:=word)  c),
+    <- (word.unsigned_of_Z_nowrap (word:=word) d) by assumption.
+  rewrite quarter_ok0; subst wa wb wc wd; destruct (quarter _ _ _ _) as (?&?&?&?); cbn -[word.of_Z word.unsigned].
+  rewrite !word.of_Z_unsigned; reflexivity.
+Qed.
+
+
+Lemma quarter_in_bounds a b c d:
+  in_bounds 32 a -> in_bounds 32 b -> in_bounds 32 c -> in_bounds 32 d ->
+  let '(a', b', c', d') := Spec.quarter (a, b, c, d) in
+  in_bounds 32 a' /\ in_bounds 32 b' /\ in_bounds 32 c' /\ in_bounds 32 d'.
+Proof.
+  unfold in_bounds; intros.
+  rewrite <- (word.unsigned_of_Z_nowrap (word:=word)  a),
+    <- (word.unsigned_of_Z_nowrap (word:=word) b) by assumption.
+  rewrite <- (word.unsigned_of_Z_nowrap (word:=word)  c),
+    <- (word.unsigned_of_Z_nowrap (word:=word) d) by assumption.
+  rewrite <- (word.unsigned_of_Z_nowrap (word:=word)  a),
+    <- (word.unsigned_of_Z_nowrap (word:=word) b) by assumption.
+  rewrite <- (word.unsigned_of_Z_nowrap (word:=word)  c),
+    <- (word.unsigned_of_Z_nowrap (word:=word) d) by assumption.
+  rewrite quarter_ok0; destruct (quarter _ _ _ _) as (?&?&?&?); cbn -[word.of_Z word.unsigned Z.pow].
+  repeat (split; try apply word.unsigned_range).
+Qed.
+
+  End Low.
   
 Definition quarterround x y z t (st : list word) :=
-  let '\<a,b,c,d\> := Low.quarter (nth x st (word.of_Z 0))
+  let '\<a,b,c,d\> := quarter (nth x st (word.of_Z 0))
                         (nth y st (word.of_Z 0))
                         (nth z st (word.of_Z 0))
                         (nth t st (word.of_Z 0)) in
@@ -336,14 +407,14 @@ Notation "'let/n' ( x0 , y0 , z0 , t0 , x1 , y1 , z1 , t1 , x2 , y2 , z2 , t2 , 
                       qv4, qv5, qv6, qv7,
                       qv8, qv9, qv10,qv11,
                       qv12,qv13,qv14,qv15\>  =>
-                    let/n (qv0, qv4, qv8,qv12) := Low.quarter qv0  qv4  qv8 qv12 in
-                    let/n (qv1, qv5, qv9,qv13) := Low.quarter qv1  qv5  qv9 qv13 in
-                    let/n (qv2, qv6, qv10,qv14) := Low.quarter qv2  qv6 qv10 qv14 in
-                    let/n (qv3, qv7, qv11,qv15) := Low.quarter qv3  qv7 qv11 qv15 in
-                    let/n (qv0, qv5, qv10,qv15) := Low.quarter qv0  qv5 qv10 qv15 in
-                    let/n (qv1, qv6, qv11,qv12) := Low.quarter qv1  qv6 qv11 qv12 in
-                    let/n (qv2, qv7, qv8,qv13) := Low.quarter qv2  qv7  qv8 qv13 in
-                    let/n (qv3, qv4, qv9,qv14) := Low.quarter qv3  qv4  qv9 qv14 in
+                    let/n (qv0, qv4, qv8,qv12) := quarter qv0  qv4  qv8 qv12 in
+                    let/n (qv1, qv5, qv9,qv13) := quarter qv1  qv5  qv9 qv13 in
+                    let/n (qv2, qv6, qv10,qv14) := quarter qv2  qv6 qv10 qv14 in
+                    let/n (qv3, qv7, qv11,qv15) := quarter qv3  qv7 qv11 qv15 in
+                    let/n (qv0, qv5, qv10,qv15) := quarter qv0  qv5 qv10 qv15 in
+                    let/n (qv1, qv6, qv11,qv12) := quarter qv1  qv6 qv11 qv12 in
+                    let/n (qv2, qv7, qv8,qv13) := quarter qv2  qv7  qv8 qv13 in
+                    let/n (qv3, qv4, qv9,qv14) := quarter qv3  qv4  qv9 qv14 in
                     \<qv0,qv1,qv2,qv3,
                     qv4,qv5,qv6,qv7,
                     qv8,qv9,qv10,qv11,
@@ -363,20 +434,129 @@ Notation "'let/n' ( x0 , y0 , z0 , t0 , x1 , y1 , z1 , t1 , x2 , y2 , z2 , t2 , 
             ++ (word.of_Z 0)::(map le_combine (chunk 4 nonce))))) (fun ss =>
     let/n st := flat_map (le_split 4) ss in st)).
 
+  (*TODO: don't hardcode 0*)
   #[export] Instance spec_of_chacha20 : spec_of "chacha20_block" :=
-    fnspec! "chacha20_block" out key nonce / (pt k n : list Byte.byte) (R Rk Rn : map.rep -> Prop),
+    fnspec! "chacha20_block" out key nonce / (pt k n : list Byte.byte) (R Rk Rn : mem -> Prop),
       { requires t m :=
           m =* pt$@out * R /\ length pt = 64%nat /\
             m =* k$@key * Rk /\ length k = 32%nat /\
             (*TODO: account for difference in nonce length*)
             m =* n$@nonce * Rn /\ length n = 12%nat;
         ensures T m := T = t /\ exists ct, m =* ct$@out * R /\ length ct = 64%nat /\
-                                             ct = chacha20_block' k n }.
+                                             ct = Spec.chacha20_block k (le_split 4 (word.of_Z 0) ++ n) }.
 
+
+Lemma word_add_pair_eqn st:
+  (let '(s, t) := st in Z.land (s + t) (Z.ones 32)) =
+  word.unsigned (word.of_Z (word:=word) (fst st) + word.of_Z (snd st))%word.
+Proof.
+  destruct st.
+  rewrite Z.land_ones, <- word.ring_morph_add, word.unsigned_of_Z by lia.
+  reflexivity.
+Qed.
+
+(*Copied from Derive anticipating its removal*)
+Section Derive.
+
+  Instance spec_of_quarter : spec_of "quarter" :=
+    fnspec! "quarter" (a b c d : word) ~> (a' b' c' d' : word),
+    { requires tr m := True;
+      ensures tr' m' :=
+        tr = tr' /\
+        (m = m' :> mem) /\
+        let '\<w, x, y, z\> := quarter a b c d in
+        (a' = w /\ b' = x /\ c' = y /\ d' = z)}.
+
+  Derive quarter_body SuchThat
+         (defn! "quarter" ("a", "b", "c", "d") ~> "a", "b", "c", "d" { quarter_body },
+          implements (quarter) using [])
+         As quarter_body_correct.
+  Proof.
+    compile.
+  Qed.
+  
+Lemma compile_quarter : forall {tr mem locals functions} a b c d,
+      let v := quarter a b c d in
+
+      forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
+             a_var b_var c_var d_var,
+
+        spec_of_quarter functions ->
+        
+        map.get locals a_var = Some a ->
+        map.get locals b_var = Some b ->
+        map.get locals c_var = Some c ->
+        map.get locals d_var = Some d ->
+
+        (let v := v in
+           let '\<w, x, y, z\> := v in
+        (<{ Trace := tr;
+            Memory := mem;
+            Locals := map.put (map.put (map.put (map.put locals a_var w) b_var x) c_var y) d_var z;
+            Functions := functions }>
+         k_impl
+         <{ pred (k v eq_refl) }>)) ->
+        <{ Trace := tr;
+           Memory := mem;
+           Locals := locals;
+           Functions := functions }>
+        
+        cmd.seq (cmd.call [a_var; b_var; c_var; d_var] "quarter" [expr.var a_var; expr.var b_var; expr.var c_var; expr.var d_var])
+                k_impl
+                
+        <{ pred (nlet_eq [a_var; b_var; c_var; d_var] v k) }>.
+  Proof.
+    repeat straightline.
+    repeat (eexists; split; eauto).
+    handle_call; eauto.
+  Qed.
+
+End Derive.
+
+
+  
   Existing Instance spec_of_quarter.
-Import Loops.
 
 Existing Instance word_ac_ok.
+
+Lemma chacha20_block_ok key nonce :
+  Spec.chacha20_block key ((le_split 4 (word.of_Z 0))++nonce) = chacha20_block' key nonce.
+Proof.
+  unfold chacha20_block, chacha20_block'.
+  unfold le_split.
+  repeat lazymatch goal with
+           |- context c [nlet _ ?e ?f] =>
+             let ex := fresh "x" in
+             remember e as ex;
+             let x := eval cbn beta in (f ex) in
+               unfold nlet at 1
+         end.
+  subst x2.
+  rewrite <- ListUtil.flat_map_map with (f:=word.unsigned(word:=word)).
+  f_equal.
+  subst x1.
+  do 15 destruct x0 as [? x0].
+  erewrite (map_ext _ _ word_add_pair_eqn).
+  rewrite <- map_map with (g:= word.unsigned (word:=word)).
+  f_equal.
+  change (λ x1 : Z * Z, (word.of_Z (fst x1) + word.of_Z (snd x1))%word)
+    with (fun x2 => (fun x => (fst x) + (snd x))%word ((fun x1 => (word.of_Z (word:=word)(fst x1), word.of_Z (snd x1))) x2)).
+  rewrite <- map_map.
+  erewrite map_ext with (g:=(λ '(s, t), (s + t)%word)).
+  2:{
+    intro a; destruct a; reflexivity.
+  }
+  f_equal.
+  rewrite map_combine_separated.
+  subst x.
+  f_equal.
+  2:{
+    unfold le_combine.
+    rewrite !map_app, !map_map.
+    repeat (f_equal;[]).
+    reflexivity.
+  }
+Admitted.
 
 
 Definition load_offset e o :=
@@ -434,7 +614,7 @@ Notation map_remove_many m ks :=
   (List.fold_left map.remove ks m).
 
 Lemma dexpr_locals_put_removed v
-  : ∀ m l exp (w : word),
+  : ∀ (m : mem) l exp (w : word),
     DEXPR m (map.remove l v) exp w → DEXPR m l exp w.
 Proof.
   intros.
@@ -490,7 +670,7 @@ Proof.
 Qed.
 
 Lemma dexpr_locals_put_removed_many vars
-  : ∀ m l exp (w : word),
+  : ∀ (m : mem) l exp (w : word),
     DEXPR m (map_remove_many l vars) exp w → DEXPR m l exp w.
 Proof.
   intro m.
@@ -547,12 +727,19 @@ Proof.
       unfold load.
       eexists; split; eauto.
       instantiate (1:= word.of_Z 0).
+      change (@nth (@Naive.rep 32) n lst (@word.of_Z 32 word 0))
+        with (@nth (@word.rep _ word) n lst (@word.of_Z 32 word 0)).
       replace (nth n lst (word.of_Z 0))
-        with (truncate_word access_size.word (nth n lst (word.of_Z 0))).
+        with (truncate_word access_size.word (nth n lst (word.of_Z 0))).      
       eapply array_load_of_sep; eauto.
       {
+        
+        change (Naive.unsigned ?a) with (word.unsigned (word:=word) a).
+        rewrite word.unsigned_of_Z.
+        (*lia.
         rewrite Radd_comm by apply word.ring_theory.
-        reflexivity.
+        reflexivity.*)
+        admit.
       }
       lia.
       {
@@ -735,7 +922,7 @@ Proof.
   }
 Qed.
 
-Lemma compile_store_locals_array' {t m l e} (lst : list word) :
+Lemma compile_store_locals_array' {t} {m : mem} {l e} (lst : list word) :
     forall (n : nat) P out ptr k_impl var lst_expr R,
       (out$@ptr * R)%sep m ->
       (*TODO: is this general enough?*)
@@ -832,7 +1019,7 @@ Proof.
       replace (word.unsigned a)
         with (word.unsigned a mod 2 ^ (Z.of_nat 4 * 8)) in H0.
       rewrite <- le_combine_split in H0.
-      rewrite !map_upd in H0.
+      rewrite <- !map_upd in H0.
       rewrite upd_chunk in H0.
       change (Memory.bytes_per access_size.word) with 4%nat in *.
       ecancel_assumption.
@@ -880,7 +1067,7 @@ Proof.
     rewrite app_nil_r in Hm'.
     replace (4 * Z.of_nat (n + 1)) with (4 * Z.of_nat n + 4) in Hm' by lia.
     rewrite word.ring_morph_add in Hm'.
-    seprewrite_in bytearray_append Hm'.
+    seprewrite_in (bytearray_append (firstn (4*n) out) (LittleEndianList.le_split 4 (word.unsigned a)) ptr) Hm'.
     seprewrite_in (scalar_of_bytes (ptr + word.of_Z (Z.of_nat (length (firstn (4 * n) out))))%word
                      (LittleEndianList.le_split 4 (word.unsigned a))) Hm'.
     {
@@ -1071,10 +1258,13 @@ Qed.
 
 Derive chacha20_block_wrapped SuchThat
   (defn! "chacha20_block" ("st", "key", "nonce") { chacha20_block_wrapped },
-    implements (chacha20_block') using [ "quarter" ])
+    implements (Spec.chacha20_block) using [ "quarter" ])
   As chacha20_block_wrapped_correct.
 Proof.
   compile_setup.
+  replace (pred _) with (pred (chacha20_block k (le_split 4 (word.of_Z 0) ++ n))) by reflexivity.
+  rewrite chacha20_block_ok.
+  unfold chacha20_block'.
   compile_step.
   simple eapply compile_nlet_as_nlet_eq.
   simple eapply compile_set_locals_array.
@@ -1179,26 +1369,18 @@ Proof.
         cbv [map.remove_many fold_left].      
         cbv [gs].
 
-
-        dedup "qv0".
-        dedup "qv1".
-        dedup "qv2".
-        dedup "qv3".
-        dedup "qv4".
-        dedup "qv5".
-        dedup "qv6".
-        dedup "qv7".
-        dedup "qv8".
-        dedup "qv9".
-        dedup "qv10".
-        dedup "qv11".
-        dedup "qv12".
-        dedup "qv13".
-        dedup "qv14".
-        dedup "qv15".
-        dedup  "_gs_from0".
-        dedup  "_gs_to0".
-        reflexivity.
+        Ltac concrete_maps_equal :=
+          eapply map.map_ext;
+          intro;
+          repeat (rewrite ?map.get_put_diff by assumption;
+                  lazymatch goal with
+                    |- _ = map.get (map.put _ ?k2 _) ?k1 =>
+                      destruct (String.eqb_spec k1 k2);
+                      [subst; rewrite ?map.get_put_diff, ?map.get_put_same by congruence; now auto
+                      | rewrite map.get_put_diff with (k:=k1) (k':=k2) by assumption]
+                  end);
+          reflexivity.
+        concrete_maps_equal.
       }
       ecancel_assumption.
   }
@@ -1220,6 +1402,14 @@ Proof.
     eapply array_expr_compile_word_add.
     {
       repeat constructor; repeat compile_step.
+      all:apply expr_compile_var;
+        let v := lazymatch goal with |- _ = Some ?v => v end in
+        let k := lazymatch goal with |- map.get _ ?k = Some _ => k end in
+        lazymatch goal with
+          |- context [ map.put _ ?k' v] =>
+            unify k k'
+        end;
+        eval_map_get.
     }
     {
       
@@ -1310,18 +1500,28 @@ Proof.
   (*TODO: earlier in derivation: why is key counted to 32? definitely wrong*)
   (*TODO: do I need to eval the combine?*)
   rewrite <- ListUtil.flat_map_map.
-  change (flat_map _ (map _ v1)) with (bytes_of_w32s v1).
+  (*change (flat_map _ (map _ v1)) with (bytes_of_w32s v1).*)
   
   simple eapply compile_nlet_as_nlet_eq.
-  change (pred (let/n x as "st" eq:_ := bytes_of_w32s v1 in x))
+  change (pred (let/n x as "st" eq:_ := _ in x))
     with (pred (let/n v1 as "st" eq:_ := v1 in
-                let/n x as "st" eq:_ := bytes_of_w32s v1 in x)).
+                let/n x as "st" eq:_ := flat_map (LittleEndianList.le_split 4) (map word.unsigned v1) in x)).
   simple eapply compile_store_locals_array.
   {
     rewrite unroll_len with (l:=v1) (a:= word.of_Z 0) at 1.
     replace (length v1) with 16%nat.
     cbn [unroll app].
-    repeat constructor; repeat compile_step.
+    {
+      repeat constructor; repeat compile_step.
+      all: apply expr_compile_var; cbn [word word.rep Naive.gen_word word.of_Z];
+        let v := lazymatch goal with |- _ = Some ?v => v end in
+        let k := lazymatch goal with |- map.get _ ?k = Some _ => k end in
+        lazymatch goal with
+          |- context [ map.put _ ?k' v] =>
+            unify k k'
+        end;
+        eval_map_get.
+    }
     {
       unfold v1.
       rewrite !map_length, !combine_length.
@@ -1354,10 +1554,7 @@ Proof.
       all: lia.
   }
   compile_step.
-  simple eapply compile_bytes_of_w32s.
-  compile_step.
-  compile_step.
-  compile_step.
+  unfold nlet_eq.
   
   (*TODO: compile_step takes too long (related to computations on maps?)*)
   unshelve refine (compile_unsets _ _ _); [ shelve | intros |  ]; cycle 1.
@@ -1366,16 +1563,15 @@ Proof.
   cbv beta delta [wp_bind_retvars pred].
   eexists; intuition eauto.
   eexists; split.
+  pose proof (bytes_of_words (width:=32) v2 out) as H'.
+  cbn [id] in H'.
+  change  (Z.of_nat (Memory.bytes_per (width:=32) access_size.word)) with 4 in H'.
+  seprewrite_in H' H7.
+  clear H'.
   ecancel_assumption.
   compile_step.
   {
-    unfold v3.
-    unfold bytes_of_w32s.
-    erewrite length_flat_map; cycle 1.
-    {
-      intros; rewrite length_le_split; reflexivity.
-    }
-    rewrite map_length.
+    rewrite ws2bs_length.
     unfold v2, v1.
     rewrite !map_length, !combine_length, !app_length.
     cbn [length].
@@ -1387,45 +1583,6 @@ Proof.
   auto.
 Qed.
 
-
-Lemma chacha20_block_ok key nonce :
-  Spec.chacha20_block key ((le_split 4 (word.of_Z 0))++nonce) = chacha20_block' key nonce.
-Proof.
-  unfold chacha20_block, chacha20_block'.
-  unfold le_split.
-  repeat lazymatch goal with
-           |- context c [nlet _ ?e ?f] =>
-             let ex := fresh "x" in
-             remember e as ex;
-             let x := eval cbn beta in (f ex) in
-               unfold nlet at 1
-         end.
-  subst x2.
-  rewrite <- ListUtil.flat_map_map with (f:=word.unsigned(word:=word)).
-  f_equal.
-  subst x1.
-  do 15 destruct x0 as [? x0].
-  erewrite (map_ext _ _ word_add_pair_eqn).
-  rewrite <- map_map with (g:= word.unsigned (word:=word)).
-  f_equal.
-  change (λ x1 : Z * Z, (word.of_Z (fst x1) + word.of_Z (snd x1))%word)
-    with (fun x2 => (fun x => (fst x) + (snd x))%word ((fun x1 => (word.of_Z (word:=word)(fst x1), word.of_Z (snd x1))) x2)).
-  rewrite <- map_map.
-  erewrite map_ext with (g:=(λ '(s, t), (s + t)%word)).
-  2:{
-    intro a; destruct a; reflexivity.
-  }
-  f_equal.
-  rewrite map_combine_separated.
-  subst x.
-  f_equal.
-  2:{
-    unfold le_combine.
-    rewrite !map_app, !map_map.
-    repeat (f_equal;[]).
-    reflexivity.
-  }
-Admitted.
 
 (*  
 
