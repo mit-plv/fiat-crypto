@@ -14,7 +14,7 @@ cat >> Cargo.toml <<EOF
 fiat-crypto = { path = "../fiat-rust" }
 EOF
 
-cargo test --features="std fiat_u64_backend" --no-default-features || exit $?
-cargo test --features="std fiat_u32_backend" --no-default-features || exit $?
+RUSTFLAGS='--cfg curve25519_dalek_backend="fiat" --cfg curve25519_dalek_bits="64"' cargo test || exit $?
+RUSTFLAGS='--cfg curve25519_dalek_backend="fiat" --cfg curve25519_dalek_bits="32"' cargo test || exit $?
 
 popd >/dev/null
