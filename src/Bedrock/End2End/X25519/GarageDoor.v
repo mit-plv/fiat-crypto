@@ -1115,7 +1115,7 @@ Proof.
   all : trivial using SortedListString.ok.
 Qed.
 
-
+(*
 Print Assumptions link_loopfn. (* Closed under the global context *)
 Print Assumptions invariant_proof. (* propositional_extensionality, functional_extensionality_dep *)
 *)
