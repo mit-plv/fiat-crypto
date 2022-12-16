@@ -26,7 +26,7 @@ Require Import Rupicola.Examples.Net.IPChecksum.IPChecksum.
 
 (******)
 
-Require Crypto.Bedrock.End2End.RupicolaCrypto.ChaChaWrapped.
+Require Crypto.Bedrock.End2End.RupicolaCrypto.ChaCha20.
 (*
 Require bedrock2.BasicC32Semantics.
 Goal bedrock2.BasicC32Semantics.ext_spec = bedrock2.FE310CSemantics.ext_spec.
@@ -251,7 +251,7 @@ Import coqutil.Tactics.autoforward.
 
 Import Crypto.Util.FixCoqMistakes.
 
-Local Existing Instance ChaChaWrapped.spec_of_chacha20.
+Local Existing Instance ChaCha20.spec_of_chacha20.
 
 Lemma loopfn_ok : program_logic_goal_for_function! loopfn.
 Proof.
@@ -925,24 +925,24 @@ Definition memconst_pk := memconst garageowner.
 Definition ip_checksum := ip_checksum_br2fn.
 
 (*TODO: temporary to adapt the string name*)
-Local Definition quarter := ChaChaWrapped.quarter_body.
+Local Definition quarter := ChaCha20.quarter_body.
 
 Definition funcs :=
   &[, init; loop;
     initfn; loopfn;
     memswap; memequal; memconst_pk;
     ip_checksum;
-    ChaChaWrapped.chacha20_block; quarter;
+    ChaCha20.chacha20_block; quarter;
     lan9250_tx ]
     ++lightbulb.function_impls
     ++MontgomeryLadder.funcs.
 
 
-Lemma chacha20_ok: forall functions, ChaChaWrapped.spec_of_chacha20 (&,ChaChaWrapped.chacha20_block::&,quarter::functions).
+Lemma chacha20_ok: forall functions, ChaCha20.spec_of_chacha20 (&,ChaCha20.chacha20_block::&,quarter::functions).
   intros.
-  simple eapply ChaChaWrapped.chacha20_block_body_correct.
+  simple eapply ChaCha20.chacha20_block_body_correct.
   constructor.
-  eapply ChaChaWrapped.quarter_body_correct.
+  eapply ChaCha20.quarter_body_correct.
   constructor.
 Qed.
 
