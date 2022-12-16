@@ -4,7 +4,8 @@ Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Loops.
 (*TODO: move this file to Rupicola.Lib*)
 Require Import Crypto.Bedrock.End2End.RupicolaCrypto.Broadcast.
-Require Import Crypto.Bedrock.End2End.RupicolaCrypto.Spec.
+Require Crypto.Bedrock.End2End.RupicolaCrypto.Spec.
+Import coqutil.Word.LittleEndianList (le_combine, le_split).
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
@@ -271,7 +272,7 @@ Local Notation "a + b" := (word.add (word := word) a b).
 Local Notation "a ^ b" := (word.xor (word := word) a b).
 Local Notation "a <<< b" := (word.slu a b + word.sru a (word.sub (word.of_Z 32) b)) (at level 30).
 
-Definition quarter a b c d : \<< word, word, word, word \>> :=
+Definition quarter_gallina a b c d : \<< word, word, word, word \>> :=
   let/n a := a + b in  let/n d := d ^ a in  let/n d := d <<< word.of_Z 16 in
   let/n c := c + d in  let/n b := b ^ c in  let/n b := b <<< word.of_Z 12 in
   let/n a := a + b in  let/n d := d ^ a in  let/n d := d <<< word.of_Z 8 in
@@ -284,7 +285,7 @@ Hint Rewrite word.Z_land_ones_word_add : quarter.
 
 Lemma quarter_ok0 a b c d:
   Spec.quarter (word.unsigned a, word.unsigned b, word.unsigned c, word.unsigned d) =
-  let '\<a', b', c', d'\> := quarter a b c d in
+  let '\<a', b', c', d'\> := quarter_gallina a b c d in
   (word.unsigned a', word.unsigned b', word.unsigned c', word.unsigned d').
 Proof.
   unfold Spec.quarter.
@@ -295,7 +296,7 @@ Qed.
 
 Lemma quarter_ok a b c d:
   in_bounds 32 a -> in_bounds 32 b -> in_bounds 32 c -> in_bounds 32 d ->
-  quarter (word.of_Z (word:=word) a) (word.of_Z b) (word.of_Z c) (word.of_Z d) =
+  quarter_gallina (word.of_Z (word:=word) a) (word.of_Z b) (word.of_Z c) (word.of_Z d) =
   let '(a', b', c', d') := Spec.quarter (a, b, c, d) in
   \< word.of_Z a', word.of_Z b', word.of_Z c', word.of_Z d' \>.
 Proof.
@@ -305,7 +306,7 @@ Proof.
     <- (word.unsigned_of_Z_nowrap (word:=word) b) by assumption.
   rewrite <- (word.unsigned_of_Z_nowrap (word:=word)  c),
     <- (word.unsigned_of_Z_nowrap (word:=word) d) by assumption.
-  rewrite quarter_ok0; subst wa wb wc wd; destruct (quarter _ _ _ _) as (?&?&?&?); cbn -[word.of_Z word.unsigned].
+  rewrite quarter_ok0; subst wa wb wc wd; destruct (quarter_gallina _ _ _ _) as (?&?&?&?); cbn -[word.of_Z word.unsigned].
   rewrite !word.of_Z_unsigned; reflexivity.
 Qed.
 
@@ -324,14 +325,14 @@ Proof.
     <- (word.unsigned_of_Z_nowrap (word:=word) b) by assumption.
   rewrite <- (word.unsigned_of_Z_nowrap (word:=word)  c),
     <- (word.unsigned_of_Z_nowrap (word:=word) d) by assumption.
-  rewrite quarter_ok0; destruct (quarter _ _ _ _) as (?&?&?&?); cbn -[word.of_Z word.unsigned Z.pow].
+  rewrite quarter_ok0; destruct (quarter_gallina _ _ _ _) as (?&?&?&?); cbn -[word.of_Z word.unsigned Z.pow].
   repeat (split; try apply word.unsigned_range).
 Qed.
 
   End Low.
   
 Definition quarterround x y z t (st : list word) :=
-  let '\<a,b,c,d\> := quarter (nth x st (word.of_Z 0))
+  let '\<a,b,c,d\> := quarter_gallina (nth x st (word.of_Z 0))
                         (nth y st (word.of_Z 0))
                         (nth z st (word.of_Z 0))
                         (nth t st (word.of_Z 0)) in
@@ -407,14 +408,14 @@ Notation "'let/n' ( x0 , y0 , z0 , t0 , x1 , y1 , z1 , t1 , x2 , y2 , z2 , t2 , 
                       qv4, qv5, qv6, qv7,
                       qv8, qv9, qv10,qv11,
                       qv12,qv13,qv14,qv15\>  =>
-                    let/n (qv0, qv4, qv8,qv12) := quarter qv0  qv4  qv8 qv12 in
-                    let/n (qv1, qv5, qv9,qv13) := quarter qv1  qv5  qv9 qv13 in
-                    let/n (qv2, qv6, qv10,qv14) := quarter qv2  qv6 qv10 qv14 in
-                    let/n (qv3, qv7, qv11,qv15) := quarter qv3  qv7 qv11 qv15 in
-                    let/n (qv0, qv5, qv10,qv15) := quarter qv0  qv5 qv10 qv15 in
-                    let/n (qv1, qv6, qv11,qv12) := quarter qv1  qv6 qv11 qv12 in
-                    let/n (qv2, qv7, qv8,qv13) := quarter qv2  qv7  qv8 qv13 in
-                    let/n (qv3, qv4, qv9,qv14) := quarter qv3  qv4  qv9 qv14 in
+                    let/n (qv0, qv4, qv8,qv12) := quarter_gallina qv0  qv4  qv8 qv12 in
+                    let/n (qv1, qv5, qv9,qv13) := quarter_gallina qv1  qv5  qv9 qv13 in
+                    let/n (qv2, qv6, qv10,qv14) := quarter_gallina qv2  qv6 qv10 qv14 in
+                    let/n (qv3, qv7, qv11,qv15) := quarter_gallina qv3  qv7 qv11 qv15 in
+                    let/n (qv0, qv5, qv10,qv15) := quarter_gallina qv0  qv5 qv10 qv15 in
+                    let/n (qv1, qv6, qv11,qv12) := quarter_gallina qv1  qv6 qv11 qv12 in
+                    let/n (qv2, qv7, qv8,qv13) := quarter_gallina qv2  qv7  qv8 qv13 in
+                    let/n (qv3, qv4, qv9,qv14) := quarter_gallina qv3  qv4  qv9 qv14 in
                     \<qv0,qv1,qv2,qv3,
                     qv4,qv5,qv6,qv7,
                     qv8,qv9,qv10,qv11,
@@ -464,19 +465,19 @@ Section Derive.
       ensures tr' m' :=
         tr = tr' /\
         (m = m' :> mem) /\
-        let '\<w, x, y, z\> := quarter a b c d in
+        let '\<w, x, y, z\> := quarter_gallina a b c d in
         (a' = w /\ b' = x /\ c' = y /\ d' = z)}.
 
-  Derive quarter_body SuchThat
-         (defn! "quarter" ("a", "b", "c", "d") ~> "a", "b", "c", "d" { quarter_body },
-          implements (quarter) using [])
+  Derive quarter SuchThat
+         (defn! "quarter" ("a", "b", "c", "d") ~> "a", "b", "c", "d" { quarter },
+          implements (quarter_gallina) using [])
          As quarter_body_correct.
   Proof.
     compile.
   Qed.
   
 Lemma compile_quarter : forall {tr mem locals functions} a b c d,
-      let v := quarter a b c d in
+      let v := quarter_gallina a b c d in
 
       forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
              a_var b_var c_var d_var,
@@ -522,7 +523,7 @@ Existing Instance word_ac_ok.
 Lemma chacha20_block_ok key nonce :
   Spec.chacha20_block key ((le_split 4 (word.of_Z 0))++nonce) = chacha20_block' key nonce.
 Proof.
-  unfold chacha20_block, chacha20_block'.
+  unfold Spec.chacha20_block, chacha20_block'.
   unfold le_split.
   repeat lazymatch goal with
            |- context c [nlet _ ?e ?f] =>
@@ -870,6 +871,7 @@ Proof.
   f_equal.
   2:{
     rewrite skipn_chunk by lia.
+Import coqutil.Word.LittleEndianList (length_le_split).
     rewrite length_le_split.
     replace ((1 + n) * 4) with  (4 + n * 4) by lia.
     reflexivity.
@@ -1018,6 +1020,7 @@ Proof.
       rewrite <- word.of_Z_unsigned with (x:=a) in H0.
       replace (word.unsigned a)
         with (word.unsigned a mod 2 ^ (Z.of_nat 4 * 8)) in H0.
+Import coqutil.Word.LittleEndianList (le_combine_split).
       rewrite <- le_combine_split in H0.
       rewrite <- !map_upd in H0.
       rewrite upd_chunk in H0.
@@ -1256,13 +1259,13 @@ Proof.
   intuition congruence.
 Qed.
 
-Derive chacha20_block_wrapped SuchThat
-  (defn! "chacha20_block" ("st", "key", "nonce") { chacha20_block_wrapped },
+Derive chacha20_block SuchThat
+  (defn! "chacha20_block" ("st", "key", "nonce") { chacha20_block },
     implements (Spec.chacha20_block) using [ "quarter" ])
-  As chacha20_block_wrapped_correct.
+  As chacha20_block_body_correct.
 Proof.
   compile_setup.
-  replace (pred _) with (pred (chacha20_block k (le_split 4 (word.of_Z 0) ++ n))) by reflexivity.
+  replace (pred _) with (pred (Spec.chacha20_block k (le_split 4 (word.of_Z 0) ++ n))) by reflexivity.
   rewrite chacha20_block_ok.
   unfold chacha20_block'.
   compile_step.
@@ -1385,6 +1388,9 @@ Proof.
       ecancel_assumption.
   }
 
+  Optimize Proof.
+  Optimize Heap.
+  
   compile_step.
   compile_step.
   compile_step.
@@ -1496,6 +1502,10 @@ Proof.
   dedup "qv13".
   dedup "qv14".
   dedup "qv15".
+
+  
+  Optimize Proof.
+  Optimize Heap.
   
   (*TODO: earlier in derivation: why is key counted to 32? definitely wrong*)
   (*TODO: do I need to eval the combine?*)
