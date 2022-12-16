@@ -912,6 +912,89 @@ Proof.
   apply IHvars in H.
   eapply dexpr_locals_put_removed; eauto.
 Qed.
+
+Lemma map_remove_remove_same s (l : locals)
+  : map.remove (map.remove l s) s = map.remove l s.
+Proof.
+  apply map.map_ext.
+  intros.
+  destruct (String.eqb_spec s k); subst;
+    rewrite ?map.get_remove_diff, ?map.get_remove_same by auto;
+    auto.
+Qed.
+
+
+Lemma map_remove_remove_comm s1 s2 (l : locals)
+  : map.remove (map.remove l s1) s2 =  map.remove (map.remove l s2) s1.
+Proof.
+  apply map.map_ext.
+  intros.
+  destruct (String.eqb_spec s1 k); subst;
+  destruct (String.eqb_spec s2 k); subst;
+    rewrite ?map.get_remove_diff, ?map.get_remove_same by auto;
+    auto.
+  rewrite ?map.get_remove_diff, ?map.get_remove_same by auto.
+  auto.
+Qed.
+
+Lemma map_remove_remove_many_in s vars (l : locals)
+  : In s vars ->
+    (map_remove_many (map.remove l s) vars) = (map_remove_many l vars).
+Proof.
+  revert l.
+  induction vars;
+    cbn [List.fold_left In];
+    intuition (subst; eauto).
+  1: f_equal; apply map_remove_remove_same.
+  rewrite map_remove_remove_comm.
+  apply IHvars; auto.
+Qed.
+  
+Lemma map_put_remove_many_in s i vars (l : locals)
+        : In s vars ->
+          (map_remove_many #{ … l; s => i }# vars)
+          = (map_remove_many l vars).
+Proof.
+  revert l.
+  induction vars;
+    cbn [List.fold_left In];
+    intuition (subst; eauto).
+  1: f_equal; apply map.remove_put_same.
+  destruct (String.eqb_spec s a); subst.
+  {
+    rewrite map.remove_put_same; auto.
+  }
+  {
+    rewrite map.remove_put_diff; auto.
+  }
+Qed.
+
+
+      
+Lemma map_put_remove_many_notin s i vars (l : locals)
+        : ~ In s vars ->
+          (map_remove_many #{ … l; s => i }# vars)
+          = map.put (map_remove_many l vars) s i.
+Proof.
+  revert l.
+  induction vars;
+    cbn [List.fold_left In];
+    intuition (subst; eauto).
+    rewrite map.remove_put_diff; auto.
+Qed.
+
+      
+Lemma map_remove_remove_many_notin s vars (l : locals)
+        : ~ In s vars ->
+          (map_remove_many (map.remove l s) vars)
+          = map.remove (map_remove_many l vars) s.
+Proof.
+  revert l.
+  induction vars;
+    cbn [List.fold_left In];
+    intuition (subst; eauto).
+    rewrite map_remove_comm; auto.
+Qed.
   
       
 Lemma expr_load_word_of_array_helper m l len lst e ptr R (n : nat)
@@ -972,7 +1055,16 @@ Proof.
         (*lia.
         rewrite Radd_comm by apply word.ring_theory.
         reflexivity.*)
-        admit.
+        change (Naive.wrap ?a) with (word.of_Z (word:=word) a).
+        rewrite word.ring_morph_add.
+        rewrite word.of_Z_unsigned.
+        rewrite Radd_comm by apply word.ring_theory.
+        f_equal.
+        rewrite word.unsigned_of_Z.
+        symmetry.
+        rewrite word.of_Z_wrap.
+        change (word.wrap 4) with 4.
+        reflexivity.
       }
       lia.
       {
@@ -989,13 +1081,21 @@ Proof.
     cbn [List.fold_left map_remove_many] in H2.
     destruct (ListDec.In_dec string_dec s vars).
     {
-      admit (*TODO: lemma for removing from in*).
+      rewrite map_put_remove_many_in by assumption.
+      rewrite map_remove_remove_many_in in H2 by assumption.
+      auto.
     }
     {
-      admit (*TODO: commutativity lemma *).
+      rewrite map_put_remove_many_notin; auto.
+      rewrite map_remove_remove_many_notin in H2 by auto.
+      eapply dexpr_locals_put with (x:=s) (v:=i) in H2.
+      2: apply map.get_remove_same.
+      rewrite map.put_remove_same in H2.
+      auto.
     }
-Admitted.
- 
+  }
+Qed.
+
 Lemma expr_load_word_of_array m l len lst e ptr R vars
   : length lst = len ->
     length vars = len ->
