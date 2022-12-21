@@ -25,6 +25,7 @@ Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
 Require Crypto.PushButtonSynthesis.BaseConversion.
+Require Crypto.PushButtonSynthesis.DettmanMultiplication.
 Require Crypto.PushButtonSynthesis.SolinasReduction.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Stringification.Language.
@@ -95,7 +96,16 @@ Module ForExtraction.
                  option_map Auto numv
             else None
        end.
+  
+  Definition parse_n_nat (s : string) : option nat
+    := parse_nat s.
 
+  Definition parse_nat_limbwidth (s : string) : option nat
+    := parse_nat s.
+
+  Definition parse_input_magnitude (s : string) : option nat
+    := parse_nat s.
+  
   Definition parse_sc (s : string) : option (Z * list (Z * Z))
     := parseZ_arith_to_taps s.
 
@@ -393,7 +403,21 @@ Module ForExtraction.
   Definition n_spec : anon_argT
     := ("n",
         Arg.Custom (parse_string_and parse_n) "an ℕ or the literal '(auto)' or '(autoN)' for a non-negative number N",
-        ["The number of limbs, or the literal '(auto)' or '(autoN)' for a non-negative number N, to automatically guess the number of limbs"]).
+         ["The number of limbs, or the literal '(auto)' or '(autoN)' for a non-negative number N, to automatically guess the number of limbs"]).
+  Definition n_nat_spec : anon_argT
+    := ("n",
+        Arg.Custom (parse_string_and parse_nat) "ℕ",
+        ["The number of limbs"]).
+  Definition limbwidth_spec : anon_argT
+    := ("limbwidth",
+        Arg.Custom (parse_string_and parse_nat) "ℕ",
+        ["The limb width"]).
+  Definition input_magnitude_spec : anon_argT
+    := ("input_magnitude",
+        Arg.Custom (parse_string_and parse_input_magnitude) "ℕ",
+        ["This number determines the input bounds to the dettman multiplication function.  If the input magnitude is M, the limbwidth argument (which determines the width of all limbs except the most significant limb) has a value a, and the most significant limb has a limbwidth b, then the input bounds are as follows: 
+          - 2*M*(2^b-1) is the max (inclusive) of the most significant limb
+          - 2*M*(2^a-1) is the max (inclusive) of the remaining limbs"]).
   Definition sc_spec : anon_argT
     := ("s-c",
         Arg.Custom (parse_string_and parse_sc) "an integer expression",
@@ -1176,6 +1200,45 @@ Module ForExtraction.
       : A
       := Parameterized.PipelineMain argv.
   End SaturatedSolinas.
+
+  Module DettmanMultiplication.
+    Local Instance api : PipelineAPI
+      := {
+          spec :=
+            {| Arg.named_args := []
+               ; Arg.anon_args := [n_nat_spec; limbwidth_spec; sc_spec; input_magnitude_spec]
+               ; Arg.anon_opt_args := []
+               ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec DettmanMultiplication.valid_names) |};
+
+          parse_args opts args
+          := let '(tt, ((str_n, n), (str_limbwidth, limbwidth), (str_sc, (s, c)), (str_input_magnitude, input_magnitude)),
+                   tt, requests) := args in
+             let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
+             inl ((str_n, str_limbwidth, str_sc, str_input_magnitude, show_requests),
+                  (n, limbwidth, s, c, input_magnitude, requests));
+
+          show_lines_args :=
+            fun '((str_n, str_limbwidth, str_sc, str_input_magnitude, show_requests),
+                  (n, limbwidth, s, c, input_magnitude, requests))
+            => ["requested operations: " ++ show_requests;
+                "n = " ++ show n ++ " (from """ ++ str_n ++ """)";
+                "limbwidth = " ++ show limbwidth ++ " (from """ ++ str_limbwidth ++ """)";
+                "s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ " (from """ ++ str_sc ++ """)";
+                "input magnitude: " ++ show input_magnitude ++ " (from """ ++ str_input_magnitude ++ """)"];
+
+          Synthesize
+          := fun _ opts '(n, limbwidth, s, c, input_magnitude, requests) comment_header prefix
+             => DettmanMultiplication.Synthesize machine_wordsize s c n limbwidth input_magnitude comment_header prefix requests
+        }.
+
+    Definition PipelineMain
+               {supported_languages : supported_languagesT}
+               {A}
+               {io_driver : IODriverAPI A}
+               (argv : list string)
+      : A
+      := Parameterized.PipelineMain argv.
+  End DettmanMultiplication.
 
   Module SolinasReduction.
     Local Instance api : PipelineAPI
