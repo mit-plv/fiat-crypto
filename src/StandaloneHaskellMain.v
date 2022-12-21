@@ -130,6 +130,11 @@ Module SaturatedSolinas.
     := main_gen ForExtraction.SaturatedSolinas.PipelineMain.
 End SaturatedSolinas.
 
+Module DettmanMultiplication.
+  Definition main : IO_unit
+    := main_gen ForExtraction.DettmanMultiplication.PipelineMain.
+End DettmanMultiplication.
+
 Module SolinasReduction.
   Definition main : IO_unit
     := main_gen ForExtraction.SolinasReduction.PipelineMain.
