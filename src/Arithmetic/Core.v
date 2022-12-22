@@ -539,7 +539,7 @@ Module Associational.
       + apply IHa'.
   Qed.
 
- Lemma not_in_value_0 a d : ~ In d (map fst a) -> value_at_weight a d = 0.
+  Lemma not_in_value_0 a d : ~ In d (map fst a) -> value_at_weight a d = 0.
   Proof.
     intros H. induction a as [| x a' IHa'].
     - reflexivity.

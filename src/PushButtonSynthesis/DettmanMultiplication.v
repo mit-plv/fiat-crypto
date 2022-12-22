@@ -68,7 +68,7 @@ Section __.
           (s_ : Z)
           (c_ : list (Z*Z))
           (n : nat) (* number of limbs *)
-          (limb_size : nat)
+          (limbwidth : nat)
           (input_magnitude : nat).
 
   Local Instance override_pipeline_opts : PipelineOptions
@@ -87,11 +87,11 @@ Section __.
   Local Notation possible_values := possible_values_of_machine_wordsize.
 
   Definition output_magnitude : nat := input_magnitude / 2 + 1.
-  Definition last_limb_size : nat := Z.to_nat (Qceiling (Z.log2_up s) - ((n - 1) * limb_size)).
+  Definition last_limb_width : nat := Z.to_nat (Qceiling (Z.log2_up s) - ((n - 1) * limbwidth)).
   Definition input_bounds : list (ZRange.type.option.interp base.type.Z)
-    := (repeat (Some r[0 ~> 2 * input_magnitude * (2^limb_size - 1)]%zrange) 4) ++ [Some r[0 ~> 2 * input_magnitude * (2^last_limb_size - 1)]%zrange].
+    := (repeat (Some r[0 ~> 2 * input_magnitude * (2^limbwidth - 1)]%zrange) 4) ++ [Some r[0 ~> 2 * input_magnitude * (2^last_limb_width - 1)]%zrange].
   Definition output_bounds : list (ZRange.type.option.interp base.type.Z)
-    := (repeat (Some r[0 ~> 2 * output_magnitude * (2^limb_size - 1)]%zrange) 4) ++ [Some r[0 ~> 2 * output_magnitude * (2^last_limb_size - 1)]%zrange].
+    := (repeat (Some r[0 ~> 2 * output_magnitude * (2^limbwidth - 1)]%zrange) 4) ++ [Some r[0 ~> 2 * output_magnitude * (2^last_limb_width - 1)]%zrange].
 
   Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
@@ -108,8 +108,8 @@ Section __.
             [(negb (s - c =? 0)%Z, Pipeline.Value_not_ltZ "s - c <> 0" (s - c) 0)
              ; (negb (s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s ≠ 0" s 0)
              ; ((3 <=? n)%nat, Pipeline.Value_not_leZ "n < 3" 3 n)
-             ; ((e <=? limb_size * n)%nat, Pipeline.Value_not_leZ "e <= limb_size * limbs" e (limb_size * n))
-             ; ((limb_size * (n - 1) <=? e)%nat, Pipeline.Value_not_leZ "limb_size * (limbs - 1) <= e" (limb_size * (n - 1)) e)
+             ; ((e <=? limbwidth * n)%nat, Pipeline.Value_not_leZ "e <= limb_size * limbs" e (limbwidth * n))
+             ; ((limbwidth * (n - 1) <=? e)%nat, Pipeline.Value_not_leZ "limb_size * (limbs - 1) <= e" (limbwidth * (n - 1)) e)
              ; ((s_ =? s)%Z, Pipeline.Values_not_provably_equalZ "s not a power of 2" s_ s)
          ])
          res.
@@ -127,8 +127,8 @@ Section __.
   Lemma use_curve_good
     : 2 ^ e - c <> 0
       /\ 3 <= n
-      /\ e <= limb_size * n
-      /\ limb_size * (n - 1) <= e
+      /\ e <= limbwidth * n
+      /\ limbwidth * (n - 1) <= e
       /\ 2 ^ e = s.
   Proof using curve_good.
     prepare_use_curve_good ().
@@ -138,7 +138,7 @@ Section __.
     { use_curve_good_t. }
   Qed.
 
-  Local Notation weightf := (fun n : nat => (2 ^ limb_size) ^ n).
+  Local Notation weightf := (fun n : nat => (2 ^ limbwidth) ^ n).
   Local Notation evalf := (eval weightf n).
   Local Notation notations_for_docstring
     := (CorrectnessStringification.dyn_context.cons
@@ -158,7 +158,7 @@ Section __.
          false (* subst01 *)
          possible_values
          (reified_mul_gen
-            @ GallinaReify.Reify e @ GallinaReify.Reify c_ @ GallinaReify.Reify (n: nat) @ GallinaReify.Reify (limb_size : nat))
+            @ GallinaReify.Reify e @ GallinaReify.Reify c_ @ GallinaReify.Reify (n: nat) @ GallinaReify.Reify (limbwidth : nat))
          (Some input_bounds, (Some input_bounds, tt))
          (Some output_bounds).
 

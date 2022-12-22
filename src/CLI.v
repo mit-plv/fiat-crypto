@@ -403,7 +403,7 @@ Module ForExtraction.
   Definition n_spec : anon_argT
     := ("n",
         Arg.Custom (parse_string_and parse_n) "an ℕ or the literal '(auto)' or '(autoN)' for a non-negative number N",
-         ["The number of limbs, or the literal '(auto)' or '(autoN)' for a non-negative number N, to automatically guess the number of limbs"]).
+        ["The number of limbs, or the literal '(auto)' or '(autoN)' for a non-negative number N, to automatically guess the number of limbs"]).
   Definition n_nat_spec : anon_argT
     := ("n",
         Arg.Custom (parse_string_and parse_nat) "ℕ",
