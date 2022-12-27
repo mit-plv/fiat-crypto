@@ -5,11 +5,11 @@ fn testVector(comptime fiat: type, expected_s: []const u8) !void {
     // Find the type of the limbs and the size of the serialized representation.
     const repr = switch (@typeInfo(@TypeOf(fiat.fromBytes))) {
         .Fn => |f| .{
-            .Limbs = switch (@typeInfo(f.args[0].arg_type.?)) {
+            .Limbs = switch (@typeInfo(f.params[0].type.?)) {
                 .Pointer => |p| p.child,
                 else => unreachable,
             },
-            .Bytes = f.args[1].arg_type.?,
+            .Bytes = f.params[1].type.?,
         },
         else => unreachable,
     };
