@@ -122,7 +122,7 @@ $(foreach bw,64 32,$(eval $(call add_curve_keys,p256_scalar_$(bw),WORD_BY_WORD_M
 $(foreach bw,64 32,$(eval $(call add_curve_keys,p384_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'p384_scalar',$(bw),'2^384 - 1388124618062372383947042015309946732620727252194336364173',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 $(foreach bw,64 32,$(eval $(call add_curve_keys,secp256k1_montgomery_scalar_$(bw),WORD_BY_WORD_MONTGOMERY,'secp256k1_montgomery_scalar',$(bw),'2^256 - 432420386565659656852420866394968145599',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
 
-$(foreach bw,64,$(eval $(call add_curve_keys,secp256k1_dettman_$(bw),DETTMAN_MULTIPLICATION,'secp256k1_dettman',$(bw),5 52 '2^256 - 4294968273' 1,$(DETTMAN_MULTIPLICATION_FUNCTIONS),DETTMAN_MULTIPLICATION)))
+$(foreach bw,64,$(eval $(call add_curve_keys,secp256k1_dettman_$(bw),DETTMAN_MULTIPLICATION,'secp256k1_dettman',$(bw),5 52 '2^256 - 4294968273',$(DETTMAN_MULTIPLICATION_FUNCTIONS),DETTMAN_MULTIPLICATION)))
 
 $(foreach bw,64,$(eval $(call add_curve_keys,curve25519_solinas_$(bw),SOLINAS_REDUCTION,'curve25519_solinas',$(bw),'2^255 - 19',$(SOLINAS_REDUCTION_FUNCTIONS),SOLINAS_REDUCTION)))
 
