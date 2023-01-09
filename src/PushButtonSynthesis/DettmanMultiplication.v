@@ -69,7 +69,7 @@ Section __.
           (c_ : list (Z*Z))
           (n : nat) (* number of limbs *)
           (limbwidth : nat)
-          (input_magnitude : nat).
+          (inbounds_multiplier : option Q).
 
   Local Instance override_pipeline_opts : PipelineOptions
     := {| widen_bytes := true (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
@@ -86,12 +86,14 @@ Section __.
 
   Local Notation possible_values := possible_values_of_machine_wordsize.
 
-  Definition output_magnitude : nat := input_magnitude / 2 + 1.
+  Definition input_magnitude := Option.value inbounds_multiplier 1.
+  Definition output_magnitude_first_limbs : Q := input_magnitude / 2 + 1 / 2.
+  Definition output_magnitude_last_limb : Q := input_magnitude / 2 + 1 / 4. (* Where these bounds came from: https://github.com/bitcoin-core/secp256k1/blob/0eb3000417fcf996e3805d0eb00f0f32b8849315/src/field_5x52_impl.h#L545 *)
   Definition last_limb_width : nat := Z.to_nat (Qceiling (Z.log2_up s) - ((n - 1) * limbwidth)).
   Definition input_bounds : list (ZRange.type.option.interp base.type.Z)
-    := (repeat (Some r[0 ~> 2 * input_magnitude * (2^limbwidth - 1)]%zrange) 4) ++ [Some r[0 ~> 2 * input_magnitude * (2^last_limb_width - 1)]%zrange].
+    := (repeat (Some r[0 ~> Qceiling (2 * input_magnitude * (2^limbwidth - 1))]%zrange) (n - 1)) ++ [Some r[0 ~> Qceiling (2 * input_magnitude * (2^last_limb_width - 1))]%zrange].
   Definition output_bounds : list (ZRange.type.option.interp base.type.Z)
-    := (repeat (Some r[0 ~> 2 * output_magnitude * (2^limbwidth - 1)]%zrange) 4) ++ [Some r[0 ~> 2 * output_magnitude * (2^last_limb_width - 1)]%zrange].
+    := (repeat (Some r[0 ~> Qceiling (2 * output_magnitude_first_limbs * (2^limbwidth - 1))]%zrange) (n - 1)) ++ [Some r[0 ~> Qceiling (2 * output_magnitude_last_limb * (2^last_limb_width - 1))]%zrange].
 
   Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
