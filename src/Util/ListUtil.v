@@ -1236,7 +1236,7 @@ Proof.
           | Some v => fun _ => v
           | None => fun bad => match _ : False with end
           end eq_refl).
-  apply (proj1 (@nth_error_None _ _ _)) in bad; instantiate; generalize dependent (length ls); clear.
+  apply (proj1 (@nth_error_None _ _ _)) in bad; generalize dependent (length ls); clear.
   abstract (intros; lia).
 Defined.
 

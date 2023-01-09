@@ -1144,7 +1144,7 @@ Section Updates.
 
   Local Ltac mul_mono :=
     etransitivity; [|apply Z.mul_le_mono_nonneg_r];
-    repeat (instantiate; first
+    repeat (first
     [ eassumption
     | reflexivity
     | apply Z.mul_le_mono_nonneg_l
