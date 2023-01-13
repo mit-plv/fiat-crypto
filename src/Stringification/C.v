@@ -176,89 +176,274 @@ Module Compilers.
              end.
       End primitive.
 
-      Fixpoint arith_to_string
-               {language_naming_conventions : language_naming_conventions_opt} (internal_static : bool)
-               (prefix : string) {t} (e : arith_expr t) : string
-        := let special_name_ty name ty := format_special_function_name_ty internal_static prefix name ty in
-           let special_name name bw := format_special_function_name internal_static prefix name false(*unsigned*) bw in
-           match e with
-           | (literal v @@@ _) => primitive.to_string prefix type.Z v
-           | (List_nth n @@@ Var _ v)
-             => "(" ++ v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "])"
-           | (Addr @@@ Var _ v) => "&" ++ v
-           | (Dereference @@@ e) => "( *" ++ arith_to_string internal_static prefix e ++ " )"
-           | (Z_shiftr offset @@@ e)
-             => "(" ++ arith_to_string internal_static prefix e ++ " >> " ++ Decimal.Z.to_string offset ++ ")"
-           | (Z_shiftl offset @@@ e)
-             => "(" ++ arith_to_string internal_static prefix e ++ " << " ++ Decimal.Z.to_string offset ++ ")"
-           | (Z_land @@@ (e1, e2))
-             => "(" ++ arith_to_string internal_static prefix e1 ++ " & " ++ arith_to_string internal_static prefix e2 ++ ")"
-           | (Z_lor @@@ (e1, e2))
-             => "(" ++ arith_to_string internal_static prefix e1 ++ " | " ++ arith_to_string internal_static prefix e2 ++ ")"
-           | (Z_lxor @@@ (e1, e2))
-             => "(" ++ arith_to_string internal_static prefix e1 ++ " ^ " ++ arith_to_string internal_static prefix e2 ++ ")"
-           | (Z_add @@@ (x1, x2))
-             => "(" ++ arith_to_string internal_static prefix x1 ++ " + " ++ arith_to_string internal_static prefix x2 ++ ")"
-           | (Z_mul @@@ (x1, x2))
-             => "(" ++ arith_to_string internal_static prefix x1 ++ " * " ++ arith_to_string internal_static prefix x2 ++ ")"
-           | (Z_sub @@@ (x1, x2))
-             => "(" ++ arith_to_string internal_static prefix x1 ++ " - " ++ arith_to_string internal_static prefix x2 ++ ")"
-           | (Z_lnot _ @@@ e)
-             => "(~" ++ arith_to_string internal_static prefix e ++ ")"
-           | (Z_bneg @@@ e)
-             => "(!" ++ arith_to_string internal_static prefix e ++ ")"
-           | (Z_value_barrier ty @@@ e)
-             => String.value_barrier_name internal_static prefix ty ++ "(" ++ arith_to_string internal_static prefix e ++ ")"
-           | (Z_mul_split lg2s @@@ args)
-             => special_name "mulx" lg2s ++ "(" ++ arith_to_string internal_static prefix args ++ ")"
-           | (Z_add_with_get_carry lg2s @@@ args)
-             => special_name "addcarryx" lg2s ++ "(" ++ arith_to_string internal_static prefix args ++ ")"
-           | (Z_sub_with_get_borrow lg2s @@@ args)
-             => special_name "subborrowx" lg2s ++ "(" ++ arith_to_string internal_static prefix args ++ ")"
-           | (Z_zselect ty @@@ args)
-             => special_name_ty "cmovznz" ty ++ "(" ++ arith_to_string internal_static prefix args ++ ")"
-           | (Z_add_modulo @@@ (x1, x2, x3)) => "#error addmodulo;"
-           | (Z_static_cast int_t @@@ e)
-             => "(" ++ String.type.primitive.to_string prefix type.Z (Some int_t) ++ ")"
-                    ++ arith_to_string internal_static prefix e
-           | Var _ v => v
-           | Pair A B a b
-             => arith_to_string internal_static prefix a ++ ", " ++ arith_to_string internal_static prefix b
-           | (List_nth _ @@@ _)
-           | (Addr @@@ _)
-           | (Z_add @@@ _)
-           | (Z_mul @@@ _)
-           | (Z_sub @@@ _)
-           | (Z_land @@@ _)
-           | (Z_lor @@@ _)
-           | (Z_lxor @@@ _)
-           | (Z_add_modulo @@@ _)
-             => "#error bad_arg;"
-           | TT
-             => "#error tt;"
-           end%core%Cexpr.
+      (** Quoting https://en.cppreference.com/w/c/language/operator_precedence:
+
+<<
+Precedence |   Operator   |              Description                | Associativity
+-----------------------------------------------------------------------------------
+1          | ++ --        | Suffix/postfix increment and decrement  | Left-to-right
+           | ()           | Function call                           |
+           | []           | Array subscripting                      |
+           | .            | Structure and union member access       |
+           | ->           | Structure and union member access       |
+           |              |    through pointer                      |
+           | (type){list} | Compound literal(C99)                   |
+-----------|--------------|-----------------------------------------|--------------
+2          | ++ --        | Prefix increment and decrement[note 1]  | Right-to-left
+           | + -          | Unary plus and minus                    |
+           | ! ~          | Logical NOT and bitwise NOT             |
+           | (type)       | Cast                                    |
+           | *            | Indirection (dereference)               |
+           | &            | Address-of                              |
+           | sizeof       | Size-of[note 2]                         |
+           | _Alignof     | Alignment requirement(C11)              |
+-----------|--------------|-----------------------------------------|--------------
+3          | * / %        | Multiplication, division, and remainder | Left-to-right
+-----------|--------------|-----------------------------------------|
+4          | + -          | Addition and subtraction                |
+-----------|--------------|-----------------------------------------|
+5          | << >>        | Bitwise left shift and right shift      |
+-----------|--------------|-----------------------------------------|
+6          | < <=         | For relational operators < and ≤        |
+           |              |   respectively                          |
+           | > >=         | For relational operators > and ≥        |
+           |              |   respectively                          |
+-----------|--------------|-----------------------------------------|
+7          |== !=         | For relational = and ≠ respectively     |
+-----------|--------------|-----------------------------------------|
+8          | &            | Bitwise AND                             |
+-----------|--------------|-----------------------------------------|
+9          | ^            | Bitwise XOR (exclusive or)              |
+-----------|--------------|-----------------------------------------|
+10         | |            | Bitwise OR (inclusive or)               |
+-----------|--------------|-----------------------------------------|
+11         | &&           | Logical AND                             |
+-----------|--------------|-----------------------------------------|
+12         | ||           | Logical OR                              |
+-----------|--------------|-----------------------------------------|--------------
+13         | ?:           | Ternary conditional[note 3]             | Right-to-left
+-----------|--------------|-----------------------------------------|
+14[note 4] | =            | Simple assignment                       |
+           | += -=        | Assignment by sum and difference        |
+           | *= /= %=     | Assignment by product, quotient, and    |
+           |              |   remainder                             |
+           | <<= >>=      | Assignment by bitwise left shift and    |
+           |              |   right shift                           |
+           | &= ^= |=     | Assignment by bitwise AND, XOR, and OR  |
+-----------|--------------|-----------------------------------------|--------------
+15         | ,            | Comma                                   | Left-to-right
+>>
+       *)
+      (**
+
+      1. The operand of prefix ++ and -- can't be a type cast. This
+         rule grammatically forbids some expressions that would be
+         semantically invalid anyway. Some compilers ignore this rule
+         and detect the invalidity semantically.
+
+      2. The operand of sizeof can't be a type cast: the expression
+         sizeof (int) * p is unambiguously interpreted as
+         (sizeof(int)) * p, but not sizeof((int)*p).
+
+      3. The expression in the middle of the conditional operator
+         (between ? and :) is parsed as if parenthesized: its
+         precedence relative to ?: is ignored.
+
+      4. Assignment operators' left operands must be unary (level-2
+         non-cast) expressions. This rule grammatically forbids some
+         expressions that would be semantically invalid anyway. Many
+         compilers ignore this rule and detect the invalidity
+         semantically. For example, e = a < d ? a++ : a = d is an
+         expression that cannot be parsed because of this
+         rule. However, many compilers ignore this rule and parse it
+         as e = ( ((a < d) ?  (a++) : a) = d ), and then give an error
+         because it is semantically invalid.
+
+      When parsing an expression, an operator which is listed on some
+      row will be bound tighter (as if by parentheses) to its
+      arguments than any operator that is listed on a row further
+      below it. For example, the expression *p++ is parsed as *(p++),
+      and not as ( *p )++.
+
+      Operators that are in the same cell (there may be several rows
+      of operators listed in a cell) are evaluated with the same
+      precedence, in the given direction. For example, the expression
+      a=b=c is parsed as a=(b=c), and not as (a=b)=c because of
+      right-to-left associativity.  *)
+
+      (** Since unary operators are ambiguous (is --a -(-a) or --a?), we bind the arguments of -, --, +, ++ at one level lower so that they are always parenthesized *)
+
+      Definition C_postop_precedence_table : list (string * (Associativity * Level))
+        := [("++", (LeftAssoc, Level.level 1)); ("--", (LeftAssoc, Level.level 1)) (* Suffix/postfix increment and decrement *)
+            ; ("()", (LeftAssoc, Level.level 1)) (* Function call *)
+            ; ("[]", (LeftAssoc, Level.level 1)) (* Array subscripting *)
+            ; ("." , (LeftAssoc, Level.level 1)) (* Structure and union member access *)
+            ; ("->", (LeftAssoc, Level.level 1)) (* Structure and union member access through pointer *)
+            ; ("(type){list}", (LeftAssoc, Level.level 1)) (* Compound literal(C99) *)
+           ].
+      Definition C_preop_precedence_table : list (string * (Associativity * Level))
+        := [("++", (ExplicitAssoc 1 1, Level.level 2)); ("--", (ExplicitAssoc 1 1, Level.level 2)) (* Prefix increment and decrement *)
+            ; ("+", (ExplicitAssoc 1 1, Level.level 2)); ("-", (ExplicitAssoc 1 1, Level.level 2)) (* Unary plus and minus *)
+            ; ("!", (RightAssoc, Level.level 2)); ("~", (RightAssoc, Level.level 2)) (* Logical NOT and bitwise NOT *)
+            ; ("(type)", (RightAssoc, Level.level 2)) (* Cast *)
+            ; ("*", (RightAssoc, Level.level 2)) (* Indirection (dereference) *)
+            ; ("&", (RightAssoc, Level.level 2)) (* Address-of *)
+            ; ("sizeof", (RightAssoc, Level.level 2)) (* Size-of (* args at level below (type) cast because argument cannot be a type cast *) *)
+            ; ("_Alignof", (RightAssoc, Level.level 2))
+           ].
+      Definition C_binop_precedence_table : list (string * (Associativity * Level))
+        := [("*", (LeftAssoc, Level.level 3)); ("/", (LeftAssoc, Level.level 3)); ("%", (LeftAssoc, Level.level 3)) (* Multiplication, division, and remainder *)
+            ; ("+", (LeftAssoc, Level.level 4)); ("-", (LeftAssoc, Level.level 4)) (* Addition and subtraction *)
+            ; ("<<", (LeftAssoc, Level.level 5)); (">>", (LeftAssoc, Level.level 5)) (* Bitwise left shift and right shift *)
+            ; ("<", (LeftAssoc, Level.level 6)); ("<=", (LeftAssoc, Level.level 6)) (* For relational operators < and ≤ respectively *)
+            ; (">", (LeftAssoc, Level.level 6)); (">=", (LeftAssoc, Level.level 6)) (* For relational operators > and ≥ respectively *)
+            ; ("==", (LeftAssoc, Level.level 7)); ("!=", (LeftAssoc, Level.level 7)) (* For relational = and ≠ respectively *)
+            ; ("&", (ExplicitAssoc 2 2, Level.level 8)) (* Bitwise AND *)
+            ; ("^", (ExplicitAssoc 2 2, Level.level 9)) (* Bitwise XOR (exclusive or) *)
+            ; ("|", (ExplicitAssoc 2 2, Level.level 10)) (* Bitwise OR (inclusive or) *)
+            ; ("&&", (ExplicitAssoc 2 2, Level.level 10)) (* Logical AND *)
+            ; ("||", (ExplicitAssoc 2 2, Level.level 10)) (* Logical OR *)
+            ; ("?:", (RightAssoc, Level.level 10)) (* Ternary conditional[note 3] *)
+            ; ("=", (ExplicitAssoc 2 14, Level.level 10)) (* Simple assignment; Assignment operators' left operands must be unary (level-2 non-cast) expressions. *)
+            ; ("+=", (ExplicitAssoc 2 14, Level.level 11)); ("-=", (ExplicitAssoc 2 14, Level.level 11)) (* Assignment by sum and difference *)
+            ; ("*=", (ExplicitAssoc 2 14, Level.level 12)); ("/=", (ExplicitAssoc 2 14, Level.level 12)); ("%=", (ExplicitAssoc 2 14, Level.level 12)) (* Assignment by product, quotient, and remainder *)
+            ; ("<<=", (ExplicitAssoc 2 14, Level.level 13)); (">>=", (ExplicitAssoc 2 14, Level.level 13)) (* Assignment by bitwise left shift and right shift *)
+            ; ("&=", (ExplicitAssoc 2 14, Level.level 14)); ("^=", (ExplicitAssoc 2 14, Level.level 14)); ("|=", (ExplicitAssoc 2 14, Level.level 14)) (* Assignment by bitwise AND, XOR, and OR *)
+            ; (", ", (LeftAssoc, Level.level 10)) (* Comma *)
+           ].
+
+      Definition ident_to_op_string {a b} (idc : ident a b) : string
+        := match idc with
+           | List_nth _ => "[]"
+           | Addr => "&"
+           | Dereference => "*"
+           | Z_shiftr _ => ">>"
+           | Z_shiftl _ => "<<"
+           | Z_lnot _ => "~"
+           | Z_bneg => "!"
+           | Z_land => "&"
+           | Z_lor => "|"
+           | Z_lxor => "^"
+           | Z_add => "+"
+           | Z_mul => "*"
+           | Z_sub => "-"
+           | Z_static_cast _ => "(type)"
+           | Z_mul_split _
+           | Z_add_with_get_carry _
+           | Z_sub_with_get_borrow _
+           | Z_zselect _
+           | Z_add_modulo
+           | Z_value_barrier _
+           | literal _
+             => ""
+           end.
+
+      (* _s for string rather than ident *)
+      Local Notation show_lvl_binop_s_no_space binop := (PHOAS.ident.lookup_show_lvl_binop (with_space:=false) C_binop_precedence_table binop).
+      Local Notation show_lvl_binop_no_space idc := (show_lvl_binop_s_no_space (ident_to_op_string idc)).
+      Local Notation show_lvl_binop_s binop := (PHOAS.ident.lookup_show_lvl_binop (with_space:=true) C_binop_precedence_table binop).
+      Local Notation show_lvl_binop idc := (show_lvl_binop_s (ident_to_op_string idc)).
+      Local Notation show_lvl_preop idc := (PHOAS.ident.lookup_show_lvl_preop C_preop_precedence_table (ident_to_op_string idc)).
+      Local Notation show_lvl_postop idc := (PHOAS.ident.lookup_show_lvl_postop C_postop_precedence_table (ident_to_op_string idc)).
+      Local Notation lookup_preop_assoc idc := (PHOAS.ident.lookup_assoc C_preop_precedence_table (ident_to_op_string idc)).
+      Local Notation lookup_postop_assoc idc := (PHOAS.ident.lookup_assoc C_postop_precedence_table (ident_to_op_string idc)).
+      Local Notation lookup_binop_assoc_s binop := (PHOAS.ident.lookup_assoc C_binop_precedence_table binop).
+      Local Notation lookup_binop_assoc idc := (lookup_binop_assoc_s (ident_to_op_string idc)).
+      Local Notation lookup_preop_lvl idc := (PHOAS.ident.lookup_lvl C_preop_precedence_table (ident_to_op_string idc)).
+      Local Notation lookup_postop_lvl idc := (PHOAS.ident.lookup_lvl C_postop_precedence_table (ident_to_op_string idc)).
+      Local Notation lookup_binop_lvl_s binop := (PHOAS.ident.lookup_lvl C_binop_precedence_table binop).
+      Local Notation lookup_binop_lvl idc := (lookup_binop_lvl_s (ident_to_op_string idc)).
+      Local Notation fn_call_lvl := (PHOAS.ident.lookup_lvl C_postop_precedence_table "()").
+      Local Notation fn_call f e := (lvl_wrap_parens fn_call_lvl (f ++ "(" ++ show_lvl e ∞ ++ ")")).
+      (** Use a [Definition] wrapped around a [fix] so that we get the
+          type of the definition to be [ShowLevel] while still
+          otherwise having the exact behavior as if we had used
+          [Fixpoint] *)
+      Definition arith_to_string
+        : forall {language_naming_conventions : language_naming_conventions_opt} (internal_static : bool)
+                 (prefix : string) {t}, ShowLevel (arith_expr t)
+        := fix arith_to_string {language_naming_conventions : language_naming_conventions_opt} (internal_static : bool)
+               (prefix : string) {t} (e : arith_expr t) {struct e} : Level -> string
+             := let special_name_ty name ty := format_special_function_name_ty internal_static prefix name ty in
+                let special_name name bw := format_special_function_name internal_static prefix name false(*unsigned*) bw in
+                let _ (* for tc resolution *) : forall {t}, ShowLevel (arith_expr t) := fun t => arith_to_string internal_static prefix (t:=t) in
+                match e with
+                | (literal v @@@ _) => neg_wrap_parens (primitive.to_string prefix type.Z v)
+                | ((List_nth n as idc) @@@ Var _ v)
+                  => show_lvl_postop_assoc (lookup_postop_assoc idc) (lookup_postop_lvl idc) (fun 'tt => v) ("[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "]")
+                | ((Addr as idc) @@@ Var _ v)
+                  => show_lvl_preop idc (neg_wrap_parens v)
+                | ((Dereference as idc) @@@ e)
+                | ((Z_lnot _ as idc) @@@ e)
+                | ((Z_bneg as idc) @@@ e)
+                  => show_lvl_preop idc (show_lvl e)
+                | ((Z_shiftr offset as idc) @@@ e)
+                | ((Z_shiftl offset as idc) @@@ e)
+                  => show_lvl_binop idc (show_lvl e) (neg_wrap_parens (Decimal.Z.to_string offset))
+                | ((Z_land as idc) @@@ (e1, e2))
+                | ((Z_lor as idc) @@@ (e1, e2))
+                | ((Z_lxor as idc) @@@ (e1, e2))
+                | ((Z_add as idc) @@@ (e1, e2))
+                | ((Z_mul as idc) @@@ (e1, e2))
+                | ((Z_sub as idc) @@@ (e1, e2))
+                  => show_lvl_binop idc (show_lvl e1) (show_lvl e2)
+                | (Z_value_barrier ty @@@ args)
+                  => fn_call (String.value_barrier_name internal_static prefix ty) args
+                | (Z_mul_split lg2s @@@ args)
+                  => fn_call (special_name "mulx" lg2s) args
+                | (Z_add_with_get_carry lg2s @@@ args)
+                  => fn_call (special_name "addcarryx" lg2s) args
+                | (Z_sub_with_get_borrow lg2s @@@ args)
+                  => fn_call (special_name "subborrowx" lg2s) args
+                | (Z_zselect ty @@@ args)
+                  => fn_call (special_name_ty "cmovznz" ty) args
+                | (Z_add_modulo @@@ (x1, x2, x3)) => neg_wrap_parens "#error addmodulo;"
+                | ((Z_static_cast int_t as idc) @@@ e)
+                  => show_lvl_preop_assoc
+                       (lookup_preop_assoc idc) (lookup_preop_lvl idc)
+                       ("(" ++ String.type.primitive.to_string prefix type.Z (Some int_t) ++ ")")
+                       (show_lvl e)
+                | Var _ v => neg_wrap_parens v
+                | Pair A B a b
+                  => Show.show_lvl_binop
+                       FullyAssoc (* function call arguments can be passed in any order *)
+                       (Level.prev (lookup_binop_lvl_s ", ")) (* function call [,] MUST bind more tightly than [,] as a binary operator in C, otherwise if we ever support [,] as a binary operator, we'll end up printing [f((_, x), (_, y))] as [f(_, x, _, y)] *)
+                       a ", " b
+                | (List_nth _ @@@ _)
+                | (Addr @@@ _)
+                | (Z_add @@@ _)
+                | (Z_mul @@@ _)
+                | (Z_sub @@@ _)
+                | (Z_land @@@ _)
+                | (Z_lor @@@ _)
+                | (Z_lxor @@@ _)
+                | (Z_add_modulo @@@ _)
+                  => neg_wrap_parens "#error bad_arg;"
+                | TT
+                  => neg_wrap_parens "#error tt;"
+                end%core%Cexpr.
 
       Definition stmt_to_string
-                 {language_naming_conventions : language_naming_conventions_opt} (internal_static : bool)
-                 (prefix : string)
-                 (e : stmt)
-        : string
-        := match e with
-           | Call val
-             => arith_to_string internal_static prefix val ++ ";"
-           | Assign true t sz name val
-             => String.type.primitive.to_string prefix t sz ++ " " ++ name ++ " = " ++ arith_to_string internal_static prefix val ++ ";"
-           | Assign false _ sz name val
-             => name ++ " = " ++ arith_to_string internal_static prefix val ++ ";"
-           | AssignZPtr name sz val
-             => "*" ++ name ++ " = " ++ arith_to_string internal_static prefix val ++ ";"
-           | DeclareVar t sz name
-             => String.type.primitive.to_string prefix t sz ++ " " ++ name ++ ";"
-           | Comment lines _
-             => String.concat String.NewLine (comment_block (ToString.preprocess_comment_block lines))
-           | AssignNth name n val
-             => name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string internal_static prefix val ++ ";"
-           end.
+            {language_naming_conventions : language_naming_conventions_opt} (internal_static : bool)
+            (prefix : string)
+        : Show stmt
+        := fun e
+           => match e with
+              | Call val
+                => arith_to_string internal_static prefix val ∞ ++ ";"
+              | Assign true t sz name val
+                => String.type.primitive.to_string prefix t sz ++ " " ++ name ++ " = " ++ arith_to_string internal_static prefix val (lookup_binop_lvl_s "=") ++ ";"
+              | Assign false _ sz name val
+                => name ++ " = " ++ arith_to_string internal_static prefix val (lookup_binop_lvl_s "=") ++ ";"
+              | AssignZPtr name sz val
+                => "*" ++ name ++ " = " ++ arith_to_string internal_static prefix val (lookup_binop_lvl_s "=") ++ ";"
+              | DeclareVar t sz name
+                => String.type.primitive.to_string prefix t sz ++ " " ++ name ++ ";"
+              | Comment lines _
+                => String.concat String.NewLine (comment_block (ToString.preprocess_comment_block lines))
+              | AssignNth name n val
+                => name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string internal_static prefix val (lookup_binop_lvl_s "=") ++ ";"
+              end.
       Definition to_strings
                  {language_naming_conventions : language_naming_conventions_opt} (internal_static : bool)
                  (prefix : string)
