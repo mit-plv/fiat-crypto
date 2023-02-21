@@ -2,6 +2,7 @@
 Require Import Coq.Setoids.Setoid Coq.Program.Program Coq.Program.Wf Coq.Arith.Wf_nat Coq.Classes.Morphisms Coq.Init.Wf.
 Require Import Coq.Lists.SetoidList.
 Require Export Crypto.Util.FixCoqMistakes.
+Require Coq.Arith.EqNat.
 
 Local Set Implicit Arguments.
 Local Unset Uniform Inductive Parameters.
