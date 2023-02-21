@@ -19,11 +19,22 @@ Require Import Crypto.Bedrock.End2End.X25519.Field25519.
 Require Import Crypto.Bedrock.End2End.X25519.MontgomeryLadder.
 Require Import bedrock2Examples.LAN9250.
 Require Import bedrock2Examples.lightbulb.
-Require Import bedrock2Examples.chacha20.
 Require Import bedrock2Examples.memequal.
 Require Import bedrock2Examples.memswap.
 Require Import bedrock2Examples.memconst.
 Require Import Rupicola.Examples.Net.IPChecksum.IPChecksum.
+
+(******)
+
+Require Crypto.Bedrock.End2End.RupicolaCrypto.ChaCha20.
+(*
+Require bedrock2.BasicC32Semantics.
+Goal bedrock2.BasicC32Semantics.ext_spec = bedrock2.FE310CSemantics.ext_spec.
+  reflexivity.
+  cbn.
+Require bedrock2.FE310CSemantics*)
+
+(******)
 
 Local Open Scope string_scope.
 Import Syntax Syntax.Coercions NotationsCustomEntry.
@@ -88,7 +99,7 @@ Definition loopfn := func! {
     output! MMIOWRITE($0x1001200c, mmio_val | (set1<<$1 | set0) << $11);
 
     if (set0|set1) { (* rekey *)
-        chacha20_block(st, st, (*nonce*)pk, $0) (* NOTE: another impl? *)
+        chacha20_block(st, st, (*nonce*)pk) (* NOTE: another impl? *)
     }
   }
 }.
@@ -216,14 +227,6 @@ Local Instance spec_of_lan9250_tx : spec_of "lan9250_tx" := spec_of_lan9250_tx.
 Local Instance spec_of_memswap : spec_of "memswap" := spec_of_memswap.
 Local Instance spec_of_memequal : spec_of "memequal" := spec_of_memequal.
 
-Local Instance spec_of_chacha20 : spec_of "chacha20_block" :=
-  fnspec! "chacha20_block" out key nonce counter / (pt k n : list Byte.byte) (R Rk Rn : map.rep -> Prop),
-  { requires t m :=
-      m =* pt$@out * R /\ length pt = 64%nat /\
-      m =* k$@key * Rk /\ length k = 32%nat /\
-      m =* n$@nonce * Rn /\ length n = 12%nat;
-    ensures T m := T = t /\ exists ct, m =* ct$@out * R /\ length ct = 64%nat /\
-      ct = RupicolaCrypto.Spec.chacha20_encrypt k (Z.to_nat (word.unsigned counter)) n pt }.
 
 Definition memrep bs R : state -> map.rep(map:=SortedListWord.map _ _) -> Prop := fun '(seed, sk) m =>
   m =*
@@ -247,6 +250,8 @@ Import ZnWords.
 Import coqutil.Tactics.autoforward.
 
 Import Crypto.Util.FixCoqMistakes.
+
+Local Existing Instance ChaCha20.spec_of_chacha20.
 
 Lemma loopfn_ok : program_logic_goal_for_function! loopfn.
 Proof.
@@ -924,13 +929,19 @@ Definition funcs :=
     initfn; loopfn;
     memswap; memequal; memconst_pk;
     ip_checksum;
-    chacha20_block; chacha20_quarter;
+    ChaCha20.chacha20_block; ChaCha20.quarter;
     lan9250_tx ]
     ++lightbulb.function_impls
     ++MontgomeryLadder.funcs.
 
-Lemma chacha20_ok: forall functions, spec_of_chacha20 (&,chacha20_block::&,chacha20_quarter::functions).
-Admitted.
+
+Lemma chacha20_ok: forall functions, ChaCha20.spec_of_chacha20 (&,ChaCha20.chacha20_block::&,ChaCha20.quarter::functions).
+  intros.
+  simple eapply ChaCha20.chacha20_block_body_correct.
+  constructor.
+  eapply ChaCha20.quarter_body_correct.
+  constructor.
+Qed.
 
 Import SPI.
 Lemma link_loopfn : spec_of_loopfn funcs.
@@ -1105,6 +1116,6 @@ Proof.
 Qed.
 
 (*
-Print Assumptions link_loopfn. (* chacha20_ok *)
-Print Assumptions invariant_proof. (* chacha20_ok, propositional_extensionality, functional_extensionality_dep *)
+Print Assumptions link_loopfn. (* Closed under the global context *)
+Print Assumptions invariant_proof. (* propositional_extensionality, functional_extensionality_dep *)
 *)

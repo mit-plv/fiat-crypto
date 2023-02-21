@@ -1482,7 +1482,7 @@ Proof.
           | Some v => fun _ => v
           | None => fun bad => match _ : False with end
           end eq_refl).
-  apply (proj1 (@nth_error_None _ _ _)) in bad; instantiate; generalize dependent (length ls); clear.
+  apply (proj1 (@nth_error_None _ _ _)) in bad; generalize dependent (length ls); clear.
   abstract (intros; lia).
 Defined.
 
@@ -3421,86 +3421,85 @@ Lemma fold_left_rev_higher_order A B f a ls
     = fold_left (fun acc x a => acc (f a x)) ls id a.
 Proof. symmetry; apply fold_left_higher_order. Qed.
 
-(* This section is here because the equivalent standard library functions fail to be "reified by unfolding". *)
+(* This module is here because the equivalent standard library functions fail to be "reified by unfolding". *)
 
-Section Reifiable.
+Module Reifiable.
+  Section __.
+    Context {X : Type}
+            (eqb : X -> X -> bool)
+            (eqb_eq : forall x1 x2, eqb x1 x2 = true <-> x1 = x2).
 
-Context {X : Type}
-        (eqb : X -> X -> bool)
-        (eqb_eq : forall x1 x2, eqb x1 x2 = true <-> x1 = x2).
+    Definition existsb (f : X -> bool) (l : list X) : bool :=
+      fold_right (fun x found => orb (f x) found) false l.
 
-Definition is_in (x : X) (l : list X) :=
-  fold_right (fun x' found => orb (eqb x' x) found) false l.
+    Lemma reifiable_existsb_is_existsb : forall (f : X -> bool) (l : list X),
+      existsb f l = List.existsb f l.
+    Proof. reflexivity. Qed.
 
-Lemma is_in_true_iff : forall x l, is_in x l = true <-> In x l.
-  intros. induction l as [ | x' l'].
-  - split; intros H.
-    + discriminate H.
-    + destruct H.
-  - split; intros H.
-    + simpl in *. destruct (eqb x' x) eqn:E.
-      -- apply eqb_eq in E. left. apply E.
-      -- simpl in H. right. rewrite <- IHl'. apply H.
-    + destruct H as [H | H].
-      -- simpl. apply eqb_eq in H. rewrite H. reflexivity.
-      -- simpl. rewrite <- IHl' in H. rewrite H. destruct (eqb x' x); reflexivity.
-Qed.
+    Lemma existsb_eqb_true_iff : forall x l, existsb (eqb x) l = true <-> In x l.
+    Proof.
+      intros x l. rewrite reifiable_existsb_is_existsb. rewrite existsb_exists. split.
+      - intros [x0 [H1 H2]]. rewrite eqb_eq in H2. subst. assumption.
+      - intros H. exists x. split.
+        + assumption.
+        + apply eqb_eq. reflexivity.
+    Qed.
 
-Lemma is_in_false_iff : forall x l, is_in x l = false <-> ~ In x l.
-Proof.
-  intros. rewrite <- is_in_true_iff. split.
-  - intros H. rewrite H. auto.
-  - intros H. destruct (is_in x l).
-    + exfalso. apply H. reflexivity.
-    + reflexivity.
-Qed.
+    Lemma existsb_eqb_false_iff : forall x l, existsb (eqb x) l = false <-> ~In x l.
+    Proof.
+      intros. rewrite <- existsb_eqb_true_iff. split.
+      - intros H. rewrite H. auto.
+      - intros H. destruct (existsb (eqb x) l).
+        + exfalso. apply H. reflexivity.
+        + reflexivity.
+    Qed.
 
-Definition just_once (l : list X) :=
-  fold_right (fun x l' => if (is_in x l') then l' else (x :: l')) [] l.
+    Definition nodupb (l : list X) :=
+      fold_right (fun x l' => if (existsb (eqb x) l') then l' else (x :: l')) [] l.
 
-Lemma just_once_in_iff (x : X) (l : list X) : In x l <-> In x (just_once l).
-Proof.
-  induction l as [|x' l' IHl'].
-  - reflexivity.
-  - simpl. destruct (is_in x' (just_once l')) eqn:E.
-    + rewrite is_in_true_iff in E. split.
-      -- intros [H|H].
-        ++ rewrite <- H. apply E.
-        ++ rewrite <- IHl'. apply H.
-      -- intros H. right. rewrite IHl'. apply H.
-    + rewrite is_in_false_iff in E. split.
-      -- intros [H|H].
-        ++ rewrite H. simpl. left. reflexivity.
-        ++ simpl. right. rewrite <- IHl'. apply H.
-      -- simpl. intros [H|H].
-        ++ left. apply H.
-        ++ right. rewrite IHl'. apply H.
-Qed.
+    Lemma nodupb_in_iff (x : X) (l : list X) : In x l <-> In x (nodupb l).
+    Proof.
+      induction l as [|x' l' IHl'].
+      - reflexivity.
+      - simpl. destruct (existsb (eqb x') (nodupb l')) eqn:E.
+        + rewrite existsb_eqb_true_iff in E. split.
+          -- intros [H|H].
+            ++ rewrite <- H. apply E.
+            ++ rewrite <- IHl'. apply H.
+          -- intros H. right. rewrite IHl'. apply H.
+        + rewrite existsb_eqb_false_iff in E. split.
+          -- intros [H|H].
+            ++ rewrite H. simpl. left. reflexivity.
+            ++ simpl. right. rewrite <- IHl'. apply H.
+          -- simpl. intros [H|H].
+            ++ left. apply H.
+            ++ right. rewrite IHl'. apply H.
+    Qed.
 
-Lemma just_once_split (x : X) (l : list X) : In x l ->
-  exists l1 l2, just_once l = l1 ++ [x] ++ l2 /\ ~ In x l1 /\ ~ In x l2.
-Proof.
-  intros H. induction l as [| x' l'].
-  - simpl in H. destruct H.
-  - simpl in H. destruct H as [H|H].
-    + rewrite H. clear H. simpl. destruct (is_in x (just_once l')) eqn:E.
-      -- rewrite is_in_true_iff in E. rewrite <- just_once_in_iff in E.
-         apply IHl' in E. apply E.
-      -- exists []. exists (just_once l'). split.
-        ++ rewrite app_nil_l. reflexivity.
-        ++ split.
-          --- auto.
-          --- rewrite <- is_in_false_iff. apply E.
-    + apply IHl' in H. clear IHl'. simpl. destruct (is_in x' (just_once l')) eqn:E.
-      -- apply H.
-      -- destruct H as [l1 [l2 [H1 [H2 H3] ] ] ]. exists (x' :: l1). exists l2. split.
-        ++ rewrite H1. reflexivity.
-        ++ split.
-          --- simpl. intros [H|H].
-            +++ rewrite H in *. rewrite H1 in E. apply is_in_false_iff in E. apply E.
-                repeat rewrite in_app_iff. right. left. simpl. left. reflexivity.
-            +++ apply H2. apply H.
-          --- apply H3.
-Qed.
-
+    Lemma nodupb_split (x : X) (l : list X) : In x l ->
+      exists l1 l2, nodupb l = l1 ++ [x] ++ l2 /\ ~ In x l1 /\ ~ In x l2.
+    Proof.
+      intros H. induction l as [| x' l'].
+      - simpl in H. destruct H.
+      - simpl in H. destruct H as [H|H].
+        + rewrite H. clear H. simpl. destruct (existsb (eqb x) (nodupb l')) eqn:E. 
+          -- rewrite existsb_eqb_true_iff in E. rewrite <- nodupb_in_iff in E.
+             apply IHl' in E. apply E.
+          -- exists []. exists (nodupb l'). split.
+            ++ rewrite app_nil_l. reflexivity.
+            ++ split.
+              --- auto.
+              --- rewrite <- existsb_eqb_false_iff. apply E.
+        + apply IHl' in H. clear IHl'. simpl. destruct (existsb (eqb x') (nodupb l')) eqn:E.
+          -- apply H.
+          -- destruct H as [l1 [l2 [H1 [H2 H3] ] ] ]. exists (x' :: l1). exists l2. split.
+            ++ rewrite H1. reflexivity.
+            ++ split.
+              --- simpl. intros [H|H].
+                +++ rewrite H in *. rewrite H1 in E. apply existsb_eqb_false_iff in E. apply E.
+                    repeat rewrite in_app_iff. right. left. simpl. left. reflexivity.
+                +++ apply H2. apply H.
+              --- apply H3.
+    Qed.
+  End __.
 End Reifiable.

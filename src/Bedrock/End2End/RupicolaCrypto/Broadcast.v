@@ -340,7 +340,7 @@ Section with_parameters.
     : map f (upd l i a) = upd (map f l) i (f a).
   Proof.
     eapply nth_error_ext;
-      intros.
+      intros i0.
     destruct (Nat.compare_spec i0 (length l)); subst.
     1,3: rewrite !ListUtil.nth_error_length_error; eauto;
     repeat rewrite ?List.map_length, ?List.upd_length; lia.
@@ -381,10 +381,11 @@ Section with_parameters.
       map.get l to_var = None ->
 
      broadcast_expr l idx_var scratch a_ptr R lst_expr v ->
-      (let v := v in
-       forall tr idx to m,
+     (let v := v in
+      (*TODO: should this allow writing to the trace?*)
+       forall idx to m,
          (v$@a_ptr* R)%sep m ->
-         <{ Trace := tr; Memory := m; Locals := map.put (map.put l idx_var idx) to_var to; Functions := e }>
+         <{ Trace := t; Memory := m; Locals := map.put (map.put l idx_var idx) to_var to; Functions := e }>
            k_impl
          <{ pred (k v eq_refl) }>) ->
       <{ Trace := t; Memory := m; Locals := l; Functions := e }>
@@ -427,6 +428,7 @@ Section with_parameters.
     (*Issue: in loop invariant lp from -> lp from'*)
     let x := open_constr:(fun from' lst tr mem locals =>
                             (lst$@a_ptr ⋆ R) mem
+                            /\ tr = t
                             /\ locals = map.put (map.put l idx_var (word.of_Z from'))
                                                 to_var (word.of_Z (Z.of_nat (length scratch)))) in
     instantiate(1:= x).
@@ -546,7 +548,8 @@ Section with_parameters.
       eapply H7 in H10.
       change (-1) with (0-1).
       unfold v in H10.
-      subst locals0.
+      destruct H11;
+        subst.
       exact H10.
     }
   Qed.
@@ -570,9 +573,10 @@ Section with_parameters.
 
       broadcast_expr l idx_var scratch a_ptr R lst_expr v ->
       (let v := v in
-       forall tr idx to m,
+       (*TODO: should we allow affecting the trace? *)
+       forall idx to m,
          (v$@a_ptr* R)%sep m ->
-         <{ Trace := tr; Memory := m; Locals :=  map.put (map.put l idx_var idx) to_var to; Functions := e }>
+         <{ Trace := t; Memory := m; Locals :=  map.put (map.put l idx_var idx) to_var to; Functions := e }>
            k_impl
          <{ pred (k v eq_refl) }>) ->
       <{ Trace := t; Memory := m; Locals := l; Functions := e }>
@@ -690,12 +694,11 @@ Section with_parameters.
     destruct l; simpl in *; [lia | auto].
   Qed.
           
-  Lemma broadcast_var l idx_var scratch a_ptr b_ptr R a_var a_data
-    : map.get l a_var = Some a_ptr ->
+  Lemma broadcast_var l idx_var scratch a_ptr b_ptr a_var a_data R' R
+    : Lift1Prop.iff1 R' (a_data$@a_ptr * R)%sep ->
+      map.get l a_var = Some a_ptr ->
       ~a_var = idx_var ->
       length scratch <= length a_data ->
-      let R' := (a_data$@a_ptr ⋆ R)
-      in
       broadcast_expr l idx_var scratch b_ptr R'
         (expr.load szT
            (expr.op bopname.add a_var
@@ -724,24 +727,29 @@ Section with_parameters.
       erewrite truncate_of_T.
       reflexivity.
     }
-    seprewrite_in (array_append (T:=T) predT sz_word) H4.
+    seprewrite_in H0 H5.
+    clear R' H0.
+    assert (((lstl ++ skipn (length lstl) scratch)$@b_ptr ⋆  (a_data$@a_ptr) * R)%sep m)
+     as H6 by ecancel_assumption.
+    clear H5; rename H6 into H5.
+    seprewrite_in (array_append (T:=T) predT sz_word) H5.
     replace (nth (length lstl) scratch)
       with (nth ((length lstl)+0) scratch) by (f_equal;lia).
-    seprewrite_in map_predT_to_truncated_word H4.
-    seprewrite_in map_predT_to_truncated_word H4.
-    seprewrite_in map_predT_to_truncated_word H4.
-    rewrite <- (firstn_skipn (length lstl) a_data) in H4.
-    rewrite map_app in H4.   
-    seprewrite_in (array_append (T:=word)) H4.
-    rewrite map_length in H4.
-    rewrite firstn_length in H4.
-    replace ((Init.Nat.min (length lstl) (length a_data))) with (length lstl) in H4 by lia.
-    rewrite (split_hd_tl default (skipn (length lstl) a_data)) in H4 by (rewrite skipn_length; lia).
-    simpl in H4.
-    rewrite Z.mul_comm in H4.
-    rewrite word.ring_morph_mul in H4.
-    rewrite <- hd_skipn_nth_default in H4.
-    rewrite nth_default_eq in H4.
+    seprewrite_in map_predT_to_truncated_word H5.
+    seprewrite_in map_predT_to_truncated_word H5.
+    seprewrite_in map_predT_to_truncated_word H5.
+    rewrite <- (firstn_skipn (length lstl) a_data) in H5.
+    rewrite map_app in H5.   
+    seprewrite_in (array_append (T:=word)) H5.
+    rewrite map_length in H5.
+    rewrite firstn_length in H5.
+    replace ((Init.Nat.min (length lstl) (length a_data))) with (length lstl) in H5 by lia.
+    rewrite (split_hd_tl default (skipn (length lstl) a_data)) in H5 by (rewrite skipn_length; lia).
+    simpl in H5.
+    rewrite Z.mul_comm in H5.
+    rewrite word.ring_morph_mul in H5.
+    rewrite <- hd_skipn_nth_default in H5.
+    rewrite nth_default_eq in H5.
     ecancel_assumption.
   Qed.
 

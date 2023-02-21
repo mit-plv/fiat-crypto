@@ -176,6 +176,7 @@ Section CompileBufPolymorphic.
     *s$@(a+word.of_Z(sz*length b)))))%sep.
 
   Local Set Printing Coercions.
+  (*TODO: use Allocable typeclass instead?*)
   Context (dealloc_T : forall x, exists bs,
     length bs = sz :>Z /\ forall a, Lift1Prop.iff1 (pT a x) (bs$@a)).
   Lemma _dealloc_array_T xs : exists bs, length bs = sz * length xs :>Z
@@ -227,31 +228,62 @@ Section CompileBufPolymorphic.
     replace a with (word.add a (word.of_Z 0)) in HA by ring; eassumption.
   Qed.
 
+  
+    Lemma buffer_at_full_capacity' (a : word) c (b : list T)
+      :   length b = c ->
+          Lift1Prop.iff1
+           (Lift1Prop.ex1
+              (fun s : list byte => emp (sz * length b + length s = sz * c) ⋆ s$@(a + word.of_Z (sz * length b))))
+           (emp True).
+    Proof.
+      unfold Lift1Prop.iff1.
+      intuition subst.
+      2:{
+        destruct H0; subst.
+        exists [].
+        repeat (unfold emp, sep; simpl).
+        repeat exists (map.empty (map:=mem)).
+        intuition subst.
+        cbv; intuition congruence.
+        lia.
+      }
+      {
+        unfold emp.
+        intuition idtac.
+        destruct H0 as [? [? [? [? [? ?]]]]].
+        destruct H0; subst.
+        assert (length x0 = 0%nat) by lia.
+        destruct x0; simpl in *; inversion H0.
+        destruct H1; subst.
+        destruct H; subst.
+        reflexivity.
+      }
+    Qed.
+
   Lemma compile_buf_as_array (n : nat) elts :
     let v := buf_as_array elts in
     forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
-    a a_var t m l (R: mem -> Prop),
+           a a_var t m l (R: mem -> Prop),
       (buffer_at n elts a * R)%sep m ->
       length elts = n ->
       (let v := v in
        forall m,
-         (elts$T@a * R)%sep m ->
+         (v$T@a * R)%sep m ->
          <{ Trace := t; Memory := m; Locals := l; Functions := e }>
-         k_impl
-         <{ pred (k v eq_refl) }> ->
-         <{ Trace := t; Memory := m; Locals := l; Functions := e }>
-         k_impl
-         <{ pred (nlet_eq [a_var] v k) }>).
+           k_impl
+         <{ pred (k v eq_refl) }>) ->
+      <{ Trace := t; Memory := m; Locals := l; Functions := e }>
+        k_impl
+      <{ pred (nlet_eq [a_var] v k) }>.
   Proof using Type.
-    intros * HA HB HC HD HE HF. eapply HF; subst n.
-  Qed.
-  (*
-intros * HA HB HC HD; eapply HC; subst n.
-    cbv [buffer_at] in HC.
-    eapply sep_assoc, sep_comm, sep_assoc, sep_ex1_l  in HA; case HA as [? ?]; sepsimpl.
-    destruct x; cbn [length] in *; try lia; cbn [array] in *; sepsimpl.
+    intros * HA HB HC.
+    eapply HC; clear HC.
+    unfold buffer_at in *.
+    seprewrite_in  (buffer_at_full_capacity' a n elts HB) HA.
+    subst v.
+    unfold buf_as_array.
     ecancel_assumption.
-   *)
+  Qed.
 
 
  Lemma compile_buf_make_stack (n:nat) :
@@ -261,7 +293,7 @@ intros * HA HB HC HD; eapply HC; subst n.
       (sz * n) mod Memory.bytes_per_word 32 = 0 ->
       R m ->
       (let v:= v in
-       forall a m, (buffer_at n nil a * R)%sep m ->
+       forall a m, (buffer_at n v a * R)%sep m ->
        <{ Trace := t; Memory := m; Locals := #{ … l; a_var => a }#;
           Functions := e }>
          k_impl
@@ -377,7 +409,7 @@ intros * HA HB HC HD; eapply HC; subst n.
          Z.of_nat (length uninit) = sz * length arr ->
          let FillPred prog t m l :=
            (array pT sz buf_ptr buf ⋆ array pT sz ax arr ⋆ Rbuf ⋆ R) m /\
-             (forall m', (buffer_at c (buf++arr) buf_ptr * R)%sep m' ->
+             (forall m', (buffer_at c v buf_ptr * R)%sep m' ->
               <{ Trace := t; Memory := m'; Locals := (map.remove l arr_var); Functions := e }>
                 k_impl
               <{ pred prog }>) in
@@ -410,6 +442,7 @@ intros * HA HB HC HD; eapply HC; subst n.
     intros t1 m1 l1 [Hm Hk].
     repeat straightline.
     eapply Hk; clear Hk.
+    subst v; unfold buf_append.
     seprewrite open_constr:(array_append _ _ buf arr).
     rewrite app_length, Nat2Z.inj_add, Z.mul_add_distr_l.
 
@@ -1619,10 +1652,8 @@ Proof.
   shelve.
   eapply compile_nlet_as_nlet_eq.
   eapply compile_buf_split.
-  {
-    change v1 with (v0++(copy (fst v))).
-    ecancel_assumption.
-  }
+  ecancel_assumption.
+
   shelve.
   compile_step.
   change v3 with (fst v3, snd v3).
@@ -2054,7 +2085,6 @@ Definition chacha20_block (*256bit*)key (*32bit+96bit*)nonce (*512 bits*)st :=
                          st_i) (combine st ss) in
 
   let/n st := bytes_of_w32s st in
-  let/n st := buf_as_array st in
   st.
 
 Lemma word_add_pair_eqn st:
