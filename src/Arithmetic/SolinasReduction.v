@@ -10,7 +10,7 @@ Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.UniformWeight.
 Require Import Crypto.Arithmetic.Saturated.
-Require Coq.btauto.Btauto.
+Require Import (*hints*) Coq.btauto.Algebra.
 Require Coq.Structures.OrdersEx.
 Require Import Crypto.Util.ListUtil.StdlibCompat.
 Require Import Crypto.Util.ZUtil.ModInv.
