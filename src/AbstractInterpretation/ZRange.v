@@ -559,6 +559,19 @@ Module Compilers.
                          ls
                    | None => (None, None)
                    end
+             | ident.List_filter _
+               => fun f ls
+                  => match ls with
+                     | Some xs
+                       => list_rect
+                            _
+                            (Some nil)
+                            (fun x xs' filter_xs'
+                             => (fx <- f x;
+                                 if fx then (filter_xs' <- filter_xs'; Some (x::filter_xs')) else filter_xs'))
+                            xs
+                     | None => None
+                     end
              | ident.Z_eqb as idc
              | ident.Z_leb as idc
              | ident.Z_ltb as idc

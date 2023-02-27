@@ -528,14 +528,14 @@ Module Associational.
   Qed.
 
   Definition value_at_weight (a : list (Z * Z)) (d : Z) :=
-    fold_right (fun p sum => if (d =? fst p) then (sum + snd p) else sum) 0 a.
+    fold_right Z.add 0 (map snd (filter (fun p => d =? fst p) a)).
 
   Lemma value_at_weight_works a d : d * (value_at_weight a d) = Associational.eval (filter (fun p => d =? fst p) a).
   Proof.
-    induction a as [| a0 a' IHa'].
+     cbv [value_at_weight]. induction a as [| a0 a' IHa'].
     - cbv [Associational.eval]. simpl. lia.
     - simpl. destruct (d =? fst a0) eqn:E.
-      + rewrite Associational.eval_cons. rewrite <- IHa'. apply Z.eqb_eq in E. rewrite E. lia.
+      + rewrite Associational.eval_cons. rewrite <- IHa'. apply Z.eqb_eq in E. rewrite E. simpl. lia.
       + apply IHa'.
   Qed.
 
@@ -543,8 +543,8 @@ Module Associational.
   Proof.
     intros H. induction a as [| x a' IHa'].
     - reflexivity.
-    - simpl. destruct (d =? fst x) eqn:E.
-      + exfalso. apply H. simpl. left. apply Z.eqb_eq in E. symmetry. apply E.
+    - cbv [value_at_weight]. simpl. destruct (d =? fst x) eqn:E.
+      + exfalso. apply H. simpl. lia.
       + apply IHa'. intros H'. apply H. simpl. right. apply H'.
   Qed.
 
@@ -556,7 +556,7 @@ Module Associational.
   forall d, In d l ->
   (fun d : Z => (d, value_at_weight (a0 :: a') d)) d = (fun d => (d, value_at_weight a' d)) d.
   Proof.
-    intros H d H'. simpl. f_equal. cbv [value_at_weight]. destruct (d =? fst a0) eqn:E.
+    intros H d H'. simpl. f_equal. cbv [value_at_weight]. simpl. destruct (d =? fst a0) eqn:E.
     - exfalso. rewrite Z.eqb_eq in E. subst. apply (H H').
     - reflexivity.
   Qed.
@@ -564,21 +564,22 @@ Module Associational.
   Lemma eval_dedup_weights a : Associational.eval (dedup_weights a) = Associational.eval a.
   Proof.
     induction a as [| a0 a' IHa'].
-    - reflexivity.
-    - cbv [dedup_weights]. remember (value_at_weight (a0 :: a')) as x eqn:Ex.
-      simpl. destruct (existsb (Z.eqb (fst a0)) (nodupb Z.eqb (map fst a'))) eqn:E.
-      + apply (existsb_eqb_true_iff Z.eqb Z.eqb_eq) in E. rewrite <- (nodupb_in_iff Z.eqb Z.eqb_eq) in E.
-        apply (nodupb_split Z.eqb Z.eqb_eq) in E. destruct E as [l1 [l2 [H1 [H2 H3] ] ] ]. rewrite H1.
-        repeat rewrite map_app. rewrite Ex; clear Ex x. rewrite (map_ext_in _ _ l1 (funs_same l1 a0 a' H2)).
-        rewrite (map_ext_in _ _ l2 (funs_same l2 a0 a' H3)). repeat rewrite Associational.eval_app. simpl.
-        repeat rewrite Associational.eval_cons. simpl. rewrite <- IHa'. simpl. rewrite Associational.eval_nil. 
-        cbv [dedup_weights]. rewrite H1. repeat rewrite map_app. repeat rewrite Associational.eval_app.
-        cbv [value_at_weight]. rewrite Z.eqb_refl. simpl. cbv [Associational.eval]. simpl. lia.
-      + simpl. apply (existsb_eqb_false_iff Z.eqb Z.eqb_eq) in E. rewrite Ex; clear x Ex. rewrite (map_ext_in _ _ _ (funs_same _ _ _ E)).
-        repeat rewrite Associational.eval_cons. simpl. rewrite <- IHa'. cbv [dedup_weights]. f_equal. f_equal.
-        rewrite <- (nodupb_in_iff Z.eqb Z.eqb_eq) in E. cbv [value_at_weight]. simpl. rewrite Z.eqb_refl.
-        apply not_in_value_0 in E. cbv [value_at_weight] in E. simpl. rewrite E. lia.
-  Qed.
+     - reflexivity.
+     - cbv [dedup_weights]. simpl.
+       destruct (existsb (Z.eqb (fst a0)) (nodupb Z.eqb (map fst a'))) eqn:E.
+       + apply (existsb_eqb_true_iff Z.eqb Z.eqb_eq) in E.
+         rewrite <- (nodupb_in_iff Z.eqb Z.eqb_eq) in E.
+         apply (nodupb_split Z.eqb Z.eqb_eq) in E. destruct E as [l1 [l2 [H1 [H2 H3] ] ] ]. rewrite H1.
+         repeat rewrite map_app. rewrite (map_ext_in _ _ l1 (funs_same l1 a0 a' H2)).
+         rewrite (map_ext_in _ _ l2 (funs_same l2 a0 a' H3)). repeat rewrite Associational.eval_app. simpl.
+         repeat rewrite Associational.eval_cons. simpl. rewrite <- IHa'. simpl. rewrite Associational.eval_nil. 
+         cbv [dedup_weights]. rewrite H1. repeat rewrite map_app. repeat rewrite Associational.eval_app.
+         cbv [value_at_weight]. simpl. rewrite Z.eqb_refl. simpl. cbv [Associational.eval]. simpl. lia.
+       + simpl. apply (existsb_eqb_false_iff Z.eqb Z.eqb_eq) in E. rewrite (map_ext_in _ _ _ (funs_same _ _ _ E)).
+         repeat rewrite Associational.eval_cons. simpl. rewrite <- IHa'. cbv [dedup_weights]. f_equal. f_equal.
+         rewrite <- (nodupb_in_iff Z.eqb Z.eqb_eq) in E. cbv [value_at_weight]. simpl. rewrite Z.eqb_refl.
+         apply not_in_value_0 in E. cbv [value_at_weight] in E. simpl. rewrite E. lia.
+Qed.
 
   Section Carries.
     Definition carryterm (w fw:Z) (t:Z * Z) :=

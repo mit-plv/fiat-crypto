@@ -37,7 +37,6 @@ Local Notation dlet2 rv rc e
           (cstZ rv (fst (cstZZ rv rc vc)),
            cstZ rc (snd (cstZZ rv rc vc)))).
 
-
 Local Notation "x '\in' y" := (is_bounded_by_bool x (ZRange.normalize y) = true) : zrange_scope.
 Local Notation "x ∈ y" := (is_bounded_by_bool x (ZRange.normalize y) = true) : zrange_scope.
 Local Notation "x <= y" := (is_tighter_than_bool (ZRange.normalize x) y = true) : zrange_scope.
@@ -160,6 +159,13 @@ Definition nbe_rewrite_rulesT : list (bool * Prop)
                         (fun x tl partition_tl
                          => let '(g, d) := partition_tl in
                             if f x then (x :: g, d) else (g, x :: d))
+                        xs)
+              ; (forall A f xs,
+                    @List.filter A f xs
+                    = (list_rect _)
+                        nil
+                        (fun x xs' filter_xs'
+                         => if f x then x :: filter_xs' else filter_xs')
                         xs)
               ; (forall A n f xs,
                     @update_nth A ('n) f xs

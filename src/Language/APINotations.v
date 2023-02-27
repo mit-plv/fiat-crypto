@@ -96,6 +96,7 @@ Module Compilers.
   Global Arguments ident_List_rev {_} : assert.
   Global Arguments ident_List_flat_map {_ _} : assert.
   Global Arguments ident_List_partition {_} : assert.
+  Global Arguments ident_List_filter {_} : assert.
   Global Arguments ident_List_fold_right {_ _} : assert.
   Global Arguments ident_List_update_nth {_} : assert.
   Global Arguments ident_List_nth_default {_} : assert.
@@ -260,6 +261,7 @@ Module Compilers.
     Notation List_rev := Compilers.ident_List_rev (only parsing).
     Notation List_flat_map := Compilers.ident_List_flat_map (only parsing).
     Notation List_partition := Compilers.ident_List_partition (only parsing).
+    Notation List_filter := Compilers.ident_List_filter (only parsing).
     Notation List_fold_right := Compilers.ident_List_fold_right (only parsing).
     Notation List_update_nth := Compilers.ident_List_update_nth (only parsing).
     Notation List_nth_default := Compilers.ident_List_nth_default (only parsing).
