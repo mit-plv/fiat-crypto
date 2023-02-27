@@ -426,6 +426,7 @@ Module Compilers.
                 | ident.List_rev A => neg_wrap_parens "rev"
                 | ident.List_flat_map A B => neg_wrap_parens "flat_map"
                 | ident.List_partition A => neg_wrap_parens "partition"
+                | ident.List_filter A => neg_wrap_parens "filter"
                 | ident.List_fold_right A B => neg_wrap_parens "fold_right"
                 | ident.List_update_nth T => neg_wrap_parens "update_nth"
                 | ident.List_nth_default T => neg_wrap_parens "nth"
@@ -702,6 +703,7 @@ Module Compilers.
              | ident.List_rev _ as idc
              | ident.List_flat_map _ _ as idc
              | ident.List_partition _ as idc
+             | ident.List_filter _ as idc
              | ident.List_fold_right _ _ as idc
              | ident.List_update_nth _ as idc
              | ident.Z_log2 as idc

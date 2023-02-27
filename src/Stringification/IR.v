@@ -819,6 +819,7 @@ Module Compilers.
                  | ident.List_rev _
                  | ident.List_flat_map _ _
                  | ident.List_partition _
+                 | ident.List_filter _
                  | ident.List_fold_right _ _
                  | ident.List_update_nth _
                  | ident.List_nth_default _

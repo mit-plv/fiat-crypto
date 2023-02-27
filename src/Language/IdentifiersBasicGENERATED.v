@@ -3,6 +3,7 @@ Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.IdentifierParameters.
 Require Import Rewriter.Language.IdentifiersBasicGenerate.
 Require Import Rewriter.Util.plugins.RewriterBuild.
+Require Import Crypto.Util.ListUtil.Filter.
 
 Module Compilers.
   Import IdentifiersBasicLibrary.Compilers.Basic.

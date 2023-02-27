@@ -161,6 +161,13 @@ Definition nbe_rewrite_rulesT : list (bool * Prop)
                          => let '(g, d) := partition_tl in
                             if f x then (x :: g, d) else (g, x :: d))
                         xs)
+              ; (forall A f xs,
+                    @List.filter A f xs
+                    = (list_rect _)
+                        nil
+                        (fun x xs' filter_xs'
+                         => if f x then x :: filter_xs' else filter_xs')
+                        xs)
               ; (forall A n f xs,
                     @update_nth A ('n) f xs
                     = (nat_rect _)

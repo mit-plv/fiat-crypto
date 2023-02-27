@@ -194,6 +194,57 @@ Module Compilers.
                          | progress break_innermost_match_step ].
           Qed.
 
+          Lemma interp_related_List_filter A : interp_is_related (@ident.List_filter A).
+          Proof using Type.
+            cbn; cbv [respectful_hetero]. intros f g H0 l1 l2 H1.
+            destruct l1 as [l1|]; try reflexivity.
+            destruct (list_rect _ _) as [l3 |] eqn:E; try reflexivity.
+            rewrite fold_andb_map_iff in *. destruct H1 as [H1 H2].
+            cbv [list_rect] in E. generalize dependent l2. generalize dependent l3.
+            induction l1 as [|a l1' IHl1'].
+            - intros l3 E l2 H1 H2. injection E as E. subst. simpl. simpl in H1.
+              destruct l2 as [|l2_0 l2']; try discriminate H1. constructor.
+              + reflexivity.
+              + intros v H. destruct H.
+            - intros l3 E l2 H1 H2. cbv [bind] in E.
+              destruct (f a) as [ [|]|] eqn:E'; try discriminate E.
+              + destruct (_ l1') as [v|] eqn:E''; try discriminate E.
+                destruct l3 as [| a' l3']; try discriminate E.
+                injection E as E1 E2. subst. destruct l2 as [| a l2']; try discriminate H1.
+                injection H1 as H1. assert (Htemp: Some l3' = Some l3') by reflexivity.
+                simpl in H2. remember (IHl1' l3' Htemp l2' H1) as IHl1'' eqn:clearMe.
+                clear IHl1' clearMe. assert (IHhyp: forall v, List.In v (List.combine l1' l2') ->
+                                                              ZRange.type.base.option.is_bounded_by (fst v) (snd v) = true).
+                { intros v H. apply H2. right. apply H. }
+                apply IHl1'' in IHhyp. clear IHl1''. destruct IHhyp as [IH1 IH2].
+                assert (H2': ZRange.type.base.option.is_bounded_by a' a = true).
+                { apply (H2 (pair a' a)). simpl. left. reflexivity. }
+                clear H2. remember (H0 _ _ H2') as H0' eqn:clearMe. clear H0 clearMe.
+                destruct (f a') as [r|]; try discriminate E'. injection E' as E'. subst.
+                simpl in H0'. destruct (g a) as [|] eqn:E'''; try discriminate H0'.
+                clear H0'. simpl. rewrite E'''. simpl. constructor.
+                -- f_equal. assumption.
+                -- intros v [H|H].
+                   ++ subst. simpl. assumption.
+                   ++ apply IH2. assumption.
+              + destruct (_ l1') as [v|] eqn:E''; try discriminate E.
+                injection E as E. subst. destruct l2 as [| a' l2']; try discriminate H1.
+                injection H1 as H1. assert (Htemp: Some l3 = Some l3) by reflexivity.
+                simpl in H2. remember (IHl1' l3 Htemp l2' H1) as IHl1'' eqn:clearMe.
+                clear IHl1' clearMe. assert (IHhyp: forall v, List.In v (List.combine l1' l2') ->
+                                                              ZRange.type.base.option.is_bounded_by (fst v) (snd v) = true).
+                { intros v H. apply H2. right. apply H. }
+                apply IHl1'' in IHhyp. clear IHl1''. destruct IHhyp as [IH1 IH2].
+                assert (H2': ZRange.type.base.option.is_bounded_by a a' = true).
+                { apply (H2 (pair a a')). simpl. left. reflexivity. }
+                clear H2. remember (H0 _ _ H2') as H0' eqn:clearMe. clear H0 clearMe.
+                destruct (f a) as [r|]; try discriminate E'. injection E' as E'. subst.
+                simpl in H0'. destruct (g a') as [|] eqn:E'''; try discriminate H0'.
+                clear H0'. simpl. rewrite E'''. constructor.
+                -- f_equal. assumption.
+                -- intros v H. apply IH2. assumption.
+          Qed.
+          
           Local Ltac handle_lt_le_t_step_fast :=
             first [ match goal with
                     | [ H : (?a <= ?b)%Z, H' : (?b <= ?a)%Z |- _ ]
@@ -543,6 +594,7 @@ Module Compilers.
                  | [ |- context[ident.Z_cast2] ] => apply interp_related_Z_cast2
                  | [ |- context[ident.List_flat_map] ] => apply interp_related_List_flat_map
                  | [ |- context[ident.List_partition] ] => apply interp_related_List_partition
+                 | [ |- context[ident.List_filter] ] => apply interp_related_List_filter
                  | [ |- context[ident.fancy_rshi] ] => apply interp_related_fancy_rshi
                  | _ => idtac
                  end.
