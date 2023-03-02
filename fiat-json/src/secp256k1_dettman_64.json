@@ -162,149 +162,8 @@
                   {
                     "datatype": "u128",
                     "name": [],
-                    "operation": "*",
-                    "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x3"
-                        ]
-                      },
-                      "0x1000003d10"
-                    ]
-                  }
-                ]
-              },
-              {
-                "datatype": "u128",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  {
-                    "datatype": "u128",
-                    "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u128",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          {
-                            "datatype": "u128",
-                            "name": [],
-                            "operation": "+",
-                            "arguments": [
-                              {
-                                "datatype": "u128",
-                                "name": [],
-                                "operation": "static_cast",
-                                "arguments": [
-                                  {
-                                    "datatype": "u128",
-                                    "name": [],
-                                    "operation": "+",
-                                    "arguments": [
-                                      {
-                                        "datatype": "u128",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          {
-                                            "datatype": "u128",
-                                            "name": [],
-                                            "operation": "*",
-                                            "arguments": [
-                                              {
-                                                "datatype": "u64",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  "arg1[3]"
-                                                ]
-                                              },
-                                              {
-                                                "datatype": "u64",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  "arg2[0]"
-                                                ]
-                                              }
-                                            ]
-                                          }
-                                        ]
-                                      },
-                                      {
-                                        "datatype": "u128",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          {
-                                            "datatype": "u128",
-                                            "name": [],
-                                            "operation": "*",
-                                            "arguments": [
-                                              {
-                                                "datatype": "u64",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  "arg1[2]"
-                                                ]
-                                              },
-                                              {
-                                                "datatype": "u64",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  "arg2[1]"
-                                                ]
-                                              }
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              },
-                              {
-                                "datatype": "u128",
-                                "name": [],
-                                "operation": "static_cast",
-                                "arguments": [
-                                  {
-                                    "datatype": "u128",
-                                    "name": [],
-                                    "operation": "*",
-                                    "arguments": [
-                                      {
-                                        "datatype": "u64",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          "arg1[1]"
-                                        ]
-                                      },
-                                      {
-                                        "datatype": "u64",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          "arg2[2]"
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              }
-                            ]
-                          }
-                        ]
-                      },
                       {
                         "datatype": "u128",
                         "name": [],
@@ -334,7 +193,148 @@
                             ]
                           }
                         ]
+                      },
+                      {
+                        "datatype": "u128",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          {
+                            "datatype": "u128",
+                            "name": [],
+                            "operation": "+",
+                            "arguments": [
+                              {
+                                "datatype": "u128",
+                                "name": [],
+                                "operation": "static_cast",
+                                "arguments": [
+                                  {
+                                    "datatype": "u128",
+                                    "name": [],
+                                    "operation": "*",
+                                    "arguments": [
+                                      {
+                                        "datatype": "u64",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          "arg1[1]"
+                                        ]
+                                      },
+                                      {
+                                        "datatype": "u64",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          "arg2[2]"
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "datatype": "u128",
+                                "name": [],
+                                "operation": "static_cast",
+                                "arguments": [
+                                  {
+                                    "datatype": "u128",
+                                    "name": [],
+                                    "operation": "+",
+                                    "arguments": [
+                                      {
+                                        "datatype": "u128",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          {
+                                            "datatype": "u128",
+                                            "name": [],
+                                            "operation": "*",
+                                            "arguments": [
+                                              {
+                                                "datatype": "u64",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  "arg1[2]"
+                                                ]
+                                              },
+                                              {
+                                                "datatype": "u64",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  "arg2[1]"
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "datatype": "u128",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          {
+                                            "datatype": "u128",
+                                            "name": [],
+                                            "operation": "*",
+                                            "arguments": [
+                                              {
+                                                "datatype": "u64",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  "arg1[3]"
+                                                ]
+                                              },
+                                              {
+                                                "datatype": "u64",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  "arg2[0]"
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
                       }
+                    ]
+                  }
+                ]
+              },
+              {
+                "datatype": "u128",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  {
+                    "datatype": "u128",
+                    "name": [],
+                    "operation": "*",
+                    "arguments": [
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "x3"
+                        ]
+                      },
+                      "0x1000003d10"
                     ]
                   }
                 ]
@@ -413,39 +413,8 @@
                   {
                     "datatype": "u128",
                     "name": [],
-                    "operation": "*",
-                    "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x2"
-                        ]
-                      },
-                      "0x1000003d10"
-                    ]
-                  }
-                ]
-              },
-              {
-                "datatype": "u128",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  {
-                    "datatype": "u128",
-                    "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x5"
-                        ]
-                      },
                       {
                         "datatype": "u128",
                         "name": [],
@@ -456,168 +425,6 @@
                             "name": [],
                             "operation": "+",
                             "arguments": [
-                              {
-                                "datatype": "u128",
-                                "name": [],
-                                "operation": "static_cast",
-                                "arguments": [
-                                  {
-                                    "datatype": "u128",
-                                    "name": [],
-                                    "operation": "+",
-                                    "arguments": [
-                                      {
-                                        "datatype": "u128",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          {
-                                            "datatype": "u128",
-                                            "name": [],
-                                            "operation": "+",
-                                            "arguments": [
-                                              {
-                                                "datatype": "u128",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  {
-                                                    "datatype": "u128",
-                                                    "name": [],
-                                                    "operation": "+",
-                                                    "arguments": [
-                                                      {
-                                                        "datatype": "u128",
-                                                        "name": [],
-                                                        "operation": "static_cast",
-                                                        "arguments": [
-                                                          {
-                                                            "datatype": "u128",
-                                                            "name": [],
-                                                            "operation": "*",
-                                                            "arguments": [
-                                                              {
-                                                                "datatype": "u64",
-                                                                "name": [],
-                                                                "operation": "static_cast",
-                                                                "arguments": [
-                                                                  "arg1[4]"
-                                                                ]
-                                                              },
-                                                              {
-                                                                "datatype": "u64",
-                                                                "name": [],
-                                                                "operation": "static_cast",
-                                                                "arguments": [
-                                                                  "arg2[0]"
-                                                                ]
-                                                              }
-                                                            ]
-                                                          }
-                                                        ]
-                                                      },
-                                                      {
-                                                        "datatype": "u128",
-                                                        "name": [],
-                                                        "operation": "static_cast",
-                                                        "arguments": [
-                                                          {
-                                                            "datatype": "u128",
-                                                            "name": [],
-                                                            "operation": "*",
-                                                            "arguments": [
-                                                              {
-                                                                "datatype": "u64",
-                                                                "name": [],
-                                                                "operation": "static_cast",
-                                                                "arguments": [
-                                                                  "arg1[3]"
-                                                                ]
-                                                              },
-                                                              {
-                                                                "datatype": "u64",
-                                                                "name": [],
-                                                                "operation": "static_cast",
-                                                                "arguments": [
-                                                                  "arg2[1]"
-                                                                ]
-                                                              }
-                                                            ]
-                                                          }
-                                                        ]
-                                                      }
-                                                    ]
-                                                  }
-                                                ]
-                                              },
-                                              {
-                                                "datatype": "u128",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  {
-                                                    "datatype": "u128",
-                                                    "name": [],
-                                                    "operation": "*",
-                                                    "arguments": [
-                                                      {
-                                                        "datatype": "u64",
-                                                        "name": [],
-                                                        "operation": "static_cast",
-                                                        "arguments": [
-                                                          "arg1[2]"
-                                                        ]
-                                                      },
-                                                      {
-                                                        "datatype": "u64",
-                                                        "name": [],
-                                                        "operation": "static_cast",
-                                                        "arguments": [
-                                                          "arg2[2]"
-                                                        ]
-                                                      }
-                                                    ]
-                                                  }
-                                                ]
-                                              }
-                                            ]
-                                          }
-                                        ]
-                                      },
-                                      {
-                                        "datatype": "u128",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          {
-                                            "datatype": "u128",
-                                            "name": [],
-                                            "operation": "*",
-                                            "arguments": [
-                                              {
-                                                "datatype": "u64",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  "arg1[1]"
-                                                ]
-                                              },
-                                              {
-                                                "datatype": "u64",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  "arg2[3]"
-                                                ]
-                                              }
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              },
                               {
                                 "datatype": "u128",
                                 "name": [],
@@ -647,11 +454,204 @@
                                     ]
                                   }
                                 ]
+                              },
+                              {
+                                "datatype": "u128",
+                                "name": [],
+                                "operation": "static_cast",
+                                "arguments": [
+                                  {
+                                    "datatype": "u128",
+                                    "name": [],
+                                    "operation": "+",
+                                    "arguments": [
+                                      {
+                                        "datatype": "u128",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          {
+                                            "datatype": "u128",
+                                            "name": [],
+                                            "operation": "*",
+                                            "arguments": [
+                                              {
+                                                "datatype": "u64",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  "arg1[1]"
+                                                ]
+                                              },
+                                              {
+                                                "datatype": "u64",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  "arg2[3]"
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "datatype": "u128",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          {
+                                            "datatype": "u128",
+                                            "name": [],
+                                            "operation": "+",
+                                            "arguments": [
+                                              {
+                                                "datatype": "u128",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  {
+                                                    "datatype": "u128",
+                                                    "name": [],
+                                                    "operation": "*",
+                                                    "arguments": [
+                                                      {
+                                                        "datatype": "u64",
+                                                        "name": [],
+                                                        "operation": "static_cast",
+                                                        "arguments": [
+                                                          "arg1[2]"
+                                                        ]
+                                                      },
+                                                      {
+                                                        "datatype": "u64",
+                                                        "name": [],
+                                                        "operation": "static_cast",
+                                                        "arguments": [
+                                                          "arg2[2]"
+                                                        ]
+                                                      }
+                                                    ]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "datatype": "u128",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  {
+                                                    "datatype": "u128",
+                                                    "name": [],
+                                                    "operation": "+",
+                                                    "arguments": [
+                                                      {
+                                                        "datatype": "u128",
+                                                        "name": [],
+                                                        "operation": "static_cast",
+                                                        "arguments": [
+                                                          {
+                                                            "datatype": "u128",
+                                                            "name": [],
+                                                            "operation": "*",
+                                                            "arguments": [
+                                                              {
+                                                                "datatype": "u64",
+                                                                "name": [],
+                                                                "operation": "static_cast",
+                                                                "arguments": [
+                                                                  "arg1[3]"
+                                                                ]
+                                                              },
+                                                              {
+                                                                "datatype": "u64",
+                                                                "name": [],
+                                                                "operation": "static_cast",
+                                                                "arguments": [
+                                                                  "arg2[1]"
+                                                                ]
+                                                              }
+                                                            ]
+                                                          }
+                                                        ]
+                                                      },
+                                                      {
+                                                        "datatype": "u128",
+                                                        "name": [],
+                                                        "operation": "static_cast",
+                                                        "arguments": [
+                                                          {
+                                                            "datatype": "u128",
+                                                            "name": [],
+                                                            "operation": "*",
+                                                            "arguments": [
+                                                              {
+                                                                "datatype": "u64",
+                                                                "name": [],
+                                                                "operation": "static_cast",
+                                                                "arguments": [
+                                                                  "arg1[4]"
+                                                                ]
+                                                              },
+                                                              {
+                                                                "datatype": "u64",
+                                                                "name": [],
+                                                                "operation": "static_cast",
+                                                                "arguments": [
+                                                                  "arg2[0]"
+                                                                ]
+                                                              }
+                                                            ]
+                                                          }
+                                                        ]
+                                                      }
+                                                    ]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
                               }
                             ]
                           }
                         ]
+                      },
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "x5"
+                        ]
                       }
+                    ]
+                  }
+                ]
+              },
+              {
+                "datatype": "u128",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  {
+                    "datatype": "u128",
+                    "name": [],
+                    "operation": "*",
+                    "arguments": [
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "x2"
+                        ]
+                      },
+                      "0x1000003d10"
                     ]
                   }
                 ]
@@ -773,14 +773,6 @@
             "operation": "+",
             "arguments": [
               {
-                "datatype": "u64",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  "x8"
-                ]
-              },
-              {
                 "datatype": "u128",
                 "name": [],
                 "operation": "static_cast",
@@ -790,124 +782,6 @@
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u128",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          {
-                            "datatype": "u128",
-                            "name": [],
-                            "operation": "+",
-                            "arguments": [
-                              {
-                                "datatype": "u128",
-                                "name": [],
-                                "operation": "static_cast",
-                                "arguments": [
-                                  {
-                                    "datatype": "u128",
-                                    "name": [],
-                                    "operation": "+",
-                                    "arguments": [
-                                      {
-                                        "datatype": "u128",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          {
-                                            "datatype": "u128",
-                                            "name": [],
-                                            "operation": "*",
-                                            "arguments": [
-                                              {
-                                                "datatype": "u64",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  "arg1[4]"
-                                                ]
-                                              },
-                                              {
-                                                "datatype": "u64",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  "arg2[1]"
-                                                ]
-                                              }
-                                            ]
-                                          }
-                                        ]
-                                      },
-                                      {
-                                        "datatype": "u128",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          {
-                                            "datatype": "u128",
-                                            "name": [],
-                                            "operation": "*",
-                                            "arguments": [
-                                              {
-                                                "datatype": "u64",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  "arg1[3]"
-                                                ]
-                                              },
-                                              {
-                                                "datatype": "u64",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  "arg2[2]"
-                                                ]
-                                              }
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              },
-                              {
-                                "datatype": "u128",
-                                "name": [],
-                                "operation": "static_cast",
-                                "arguments": [
-                                  {
-                                    "datatype": "u128",
-                                    "name": [],
-                                    "operation": "*",
-                                    "arguments": [
-                                      {
-                                        "datatype": "u64",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          "arg1[2]"
-                                        ]
-                                      },
-                                      {
-                                        "datatype": "u64",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          "arg2[3]"
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              }
-                            ]
-                          }
-                        ]
-                      },
                       {
                         "datatype": "u128",
                         "name": [],
@@ -937,9 +811,135 @@
                             ]
                           }
                         ]
+                      },
+                      {
+                        "datatype": "u128",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          {
+                            "datatype": "u128",
+                            "name": [],
+                            "operation": "+",
+                            "arguments": [
+                              {
+                                "datatype": "u128",
+                                "name": [],
+                                "operation": "static_cast",
+                                "arguments": [
+                                  {
+                                    "datatype": "u128",
+                                    "name": [],
+                                    "operation": "*",
+                                    "arguments": [
+                                      {
+                                        "datatype": "u64",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          "arg1[2]"
+                                        ]
+                                      },
+                                      {
+                                        "datatype": "u64",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          "arg2[3]"
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "datatype": "u128",
+                                "name": [],
+                                "operation": "static_cast",
+                                "arguments": [
+                                  {
+                                    "datatype": "u128",
+                                    "name": [],
+                                    "operation": "+",
+                                    "arguments": [
+                                      {
+                                        "datatype": "u128",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          {
+                                            "datatype": "u128",
+                                            "name": [],
+                                            "operation": "*",
+                                            "arguments": [
+                                              {
+                                                "datatype": "u64",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  "arg1[3]"
+                                                ]
+                                              },
+                                              {
+                                                "datatype": "u64",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  "arg2[2]"
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "datatype": "u128",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          {
+                                            "datatype": "u128",
+                                            "name": [],
+                                            "operation": "*",
+                                            "arguments": [
+                                              {
+                                                "datatype": "u64",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  "arg1[4]"
+                                                ]
+                                              },
+                                              {
+                                                "datatype": "u64",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  "arg2[1]"
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
                       }
                     ]
                   }
+                ]
+              },
+              {
+                "datatype": "u64",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  "x8"
                 ]
               }
             ]
@@ -1023,19 +1023,41 @@
                         "name": [],
                         "operation": "static_cast",
                         "arguments": [
+                          "arg1[0]"
+                        ]
+                      },
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "arg2[0]"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "datatype": "u128",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  {
+                    "datatype": "u128",
+                    "name": [],
+                    "operation": "*",
+                    "arguments": [
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
                           {
                             "datatype": "u64",
                             "name": [],
                             "operation": "+",
                             "arguments": [
-                              {
-                                "datatype": "u64",
-                                "name": [],
-                                "operation": "static_cast",
-                                "arguments": [
-                                  "x10"
-                                ]
-                              },
                               {
                                 "datatype": "u64",
                                 "name": [],
@@ -1058,42 +1080,20 @@
                                     ]
                                   }
                                 ]
+                              },
+                              {
+                                "datatype": "u64",
+                                "name": [],
+                                "operation": "static_cast",
+                                "arguments": [
+                                  "x10"
+                                ]
                               }
                             ]
                           }
                         ]
                       },
                       "0x1000003d1"
-                    ]
-                  }
-                ]
-              },
-              {
-                "datatype": "u128",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  {
-                    "datatype": "u128",
-                    "name": [],
-                    "operation": "*",
-                    "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "arg1[0]"
-                        ]
-                      },
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "arg2[0]"
-                        ]
-                      }
                     ]
                   }
                 ]
@@ -1165,14 +1165,6 @@
             "operation": "+",
             "arguments": [
               {
-                "datatype": "u64",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  "x13"
-                ]
-              },
-              {
                 "datatype": "u128",
                 "name": [],
                 "operation": "static_cast",
@@ -1182,80 +1174,6 @@
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u128",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          {
-                            "datatype": "u128",
-                            "name": [],
-                            "operation": "+",
-                            "arguments": [
-                              {
-                                "datatype": "u128",
-                                "name": [],
-                                "operation": "static_cast",
-                                "arguments": [
-                                  {
-                                    "datatype": "u128",
-                                    "name": [],
-                                    "operation": "*",
-                                    "arguments": [
-                                      {
-                                        "datatype": "u64",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          "arg1[4]"
-                                        ]
-                                      },
-                                      {
-                                        "datatype": "u64",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          "arg2[2]"
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              },
-                              {
-                                "datatype": "u128",
-                                "name": [],
-                                "operation": "static_cast",
-                                "arguments": [
-                                  {
-                                    "datatype": "u128",
-                                    "name": [],
-                                    "operation": "*",
-                                    "arguments": [
-                                      {
-                                        "datatype": "u64",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          "arg1[3]"
-                                        ]
-                                      },
-                                      {
-                                        "datatype": "u64",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          "arg2[3]"
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              }
-                            ]
-                          }
-                        ]
-                      },
                       {
                         "datatype": "u128",
                         "name": [],
@@ -1285,9 +1203,91 @@
                             ]
                           }
                         ]
+                      },
+                      {
+                        "datatype": "u128",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          {
+                            "datatype": "u128",
+                            "name": [],
+                            "operation": "+",
+                            "arguments": [
+                              {
+                                "datatype": "u128",
+                                "name": [],
+                                "operation": "static_cast",
+                                "arguments": [
+                                  {
+                                    "datatype": "u128",
+                                    "name": [],
+                                    "operation": "*",
+                                    "arguments": [
+                                      {
+                                        "datatype": "u64",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          "arg1[3]"
+                                        ]
+                                      },
+                                      {
+                                        "datatype": "u64",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          "arg2[3]"
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "datatype": "u128",
+                                "name": [],
+                                "operation": "static_cast",
+                                "arguments": [
+                                  {
+                                    "datatype": "u128",
+                                    "name": [],
+                                    "operation": "*",
+                                    "arguments": [
+                                      {
+                                        "datatype": "u64",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          "arg1[4]"
+                                        ]
+                                      },
+                                      {
+                                        "datatype": "u64",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          "arg2[2]"
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
                       }
                     ]
                   }
+                ]
+              },
+              {
+                "datatype": "u64",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  "x13"
                 ]
               }
             ]
@@ -1364,39 +1364,8 @@
                   {
                     "datatype": "u128",
                     "name": [],
-                    "operation": "*",
-                    "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x20"
-                        ]
-                      },
-                      "0x1000003d10"
-                    ]
-                  }
-                ]
-              },
-              {
-                "datatype": "u128",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  {
-                    "datatype": "u128",
-                    "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x16"
-                        ]
-                      },
                       {
                         "datatype": "u128",
                         "name": [],
@@ -1407,36 +1376,6 @@
                             "name": [],
                             "operation": "+",
                             "arguments": [
-                              {
-                                "datatype": "u128",
-                                "name": [],
-                                "operation": "static_cast",
-                                "arguments": [
-                                  {
-                                    "datatype": "u128",
-                                    "name": [],
-                                    "operation": "*",
-                                    "arguments": [
-                                      {
-                                        "datatype": "u64",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          "arg1[1]"
-                                        ]
-                                      },
-                                      {
-                                        "datatype": "u64",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          "arg2[0]"
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              },
                               {
                                 "datatype": "u128",
                                 "name": [],
@@ -1466,11 +1405,72 @@
                                     ]
                                   }
                                 ]
+                              },
+                              {
+                                "datatype": "u128",
+                                "name": [],
+                                "operation": "static_cast",
+                                "arguments": [
+                                  {
+                                    "datatype": "u128",
+                                    "name": [],
+                                    "operation": "*",
+                                    "arguments": [
+                                      {
+                                        "datatype": "u64",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          "arg1[1]"
+                                        ]
+                                      },
+                                      {
+                                        "datatype": "u64",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          "arg2[0]"
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
                               }
                             ]
                           }
                         ]
+                      },
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "x16"
+                        ]
                       }
+                    ]
+                  }
+                ]
+              },
+              {
+                "datatype": "u128",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  {
+                    "datatype": "u128",
+                    "name": [],
+                    "operation": "*",
+                    "arguments": [
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "x20"
+                        ]
+                      },
+                      "0x1000003d10"
                     ]
                   }
                 ]
@@ -1542,14 +1542,6 @@
             "operation": "+",
             "arguments": [
               {
-                "datatype": "u64",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  "x19"
-                ]
-              },
-              {
                 "datatype": "u128",
                 "name": [],
                 "operation": "static_cast",
@@ -1559,36 +1551,6 @@
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u128",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          {
-                            "datatype": "u128",
-                            "name": [],
-                            "operation": "*",
-                            "arguments": [
-                              {
-                                "datatype": "u64",
-                                "name": [],
-                                "operation": "static_cast",
-                                "arguments": [
-                                  "arg1[4]"
-                                ]
-                              },
-                              {
-                                "datatype": "u64",
-                                "name": [],
-                                "operation": "static_cast",
-                                "arguments": [
-                                  "arg2[3]"
-                                ]
-                              }
-                            ]
-                          }
-                        ]
-                      },
                       {
                         "datatype": "u128",
                         "name": [],
@@ -1618,9 +1580,47 @@
                             ]
                           }
                         ]
+                      },
+                      {
+                        "datatype": "u128",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          {
+                            "datatype": "u128",
+                            "name": [],
+                            "operation": "*",
+                            "arguments": [
+                              {
+                                "datatype": "u64",
+                                "name": [],
+                                "operation": "static_cast",
+                                "arguments": [
+                                  "arg1[4]"
+                                ]
+                              },
+                              {
+                                "datatype": "u64",
+                                "name": [],
+                                "operation": "static_cast",
+                                "arguments": [
+                                  "arg2[3]"
+                                ]
+                              }
+                            ]
+                          }
+                        ]
                       }
                     ]
                   }
+                ]
+              },
+              {
+                "datatype": "u64",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  "x19"
                 ]
               }
             ]
@@ -1697,39 +1697,8 @@
                   {
                     "datatype": "u128",
                     "name": [],
-                    "operation": "*",
-                    "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x26"
-                        ]
-                      },
-                      "0x1000003d10"
-                    ]
-                  }
-                ]
-              },
-              {
-                "datatype": "u128",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  {
-                    "datatype": "u128",
-                    "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x22"
-                        ]
-                      },
                       {
                         "datatype": "u128",
                         "name": [],
@@ -1740,80 +1709,6 @@
                             "name": [],
                             "operation": "+",
                             "arguments": [
-                              {
-                                "datatype": "u128",
-                                "name": [],
-                                "operation": "static_cast",
-                                "arguments": [
-                                  {
-                                    "datatype": "u128",
-                                    "name": [],
-                                    "operation": "+",
-                                    "arguments": [
-                                      {
-                                        "datatype": "u128",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          {
-                                            "datatype": "u128",
-                                            "name": [],
-                                            "operation": "*",
-                                            "arguments": [
-                                              {
-                                                "datatype": "u64",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  "arg1[2]"
-                                                ]
-                                              },
-                                              {
-                                                "datatype": "u64",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  "arg2[0]"
-                                                ]
-                                              }
-                                            ]
-                                          }
-                                        ]
-                                      },
-                                      {
-                                        "datatype": "u128",
-                                        "name": [],
-                                        "operation": "static_cast",
-                                        "arguments": [
-                                          {
-                                            "datatype": "u128",
-                                            "name": [],
-                                            "operation": "*",
-                                            "arguments": [
-                                              {
-                                                "datatype": "u64",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  "arg1[1]"
-                                                ]
-                                              },
-                                              {
-                                                "datatype": "u64",
-                                                "name": [],
-                                                "operation": "static_cast",
-                                                "arguments": [
-                                                  "arg2[1]"
-                                                ]
-                                              }
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              },
                               {
                                 "datatype": "u128",
                                 "name": [],
@@ -1843,11 +1738,116 @@
                                     ]
                                   }
                                 ]
+                              },
+                              {
+                                "datatype": "u128",
+                                "name": [],
+                                "operation": "static_cast",
+                                "arguments": [
+                                  {
+                                    "datatype": "u128",
+                                    "name": [],
+                                    "operation": "+",
+                                    "arguments": [
+                                      {
+                                        "datatype": "u128",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          {
+                                            "datatype": "u128",
+                                            "name": [],
+                                            "operation": "*",
+                                            "arguments": [
+                                              {
+                                                "datatype": "u64",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  "arg1[1]"
+                                                ]
+                                              },
+                                              {
+                                                "datatype": "u64",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  "arg2[1]"
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "datatype": "u128",
+                                        "name": [],
+                                        "operation": "static_cast",
+                                        "arguments": [
+                                          {
+                                            "datatype": "u128",
+                                            "name": [],
+                                            "operation": "*",
+                                            "arguments": [
+                                              {
+                                                "datatype": "u64",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  "arg1[2]"
+                                                ]
+                                              },
+                                              {
+                                                "datatype": "u64",
+                                                "name": [],
+                                                "operation": "static_cast",
+                                                "arguments": [
+                                                  "arg2[0]"
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
                               }
                             ]
                           }
                         ]
+                      },
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "x22"
+                        ]
                       }
+                    ]
+                  }
+                ]
+              },
+              {
+                "datatype": "u128",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  {
+                    "datatype": "u128",
+                    "name": [],
+                    "operation": "*",
+                    "arguments": [
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "x26"
+                        ]
+                      },
+                      "0x1000003d10"
                     ]
                   }
                 ]
@@ -1919,6 +1919,36 @@
             "operation": "+",
             "arguments": [
               {
+                "datatype": "u64",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  {
+                    "datatype": "u64",
+                    "name": [],
+                    "operation": "+",
+                    "arguments": [
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "x6"
+                        ]
+                      },
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "x28"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
                 "datatype": "u128",
                 "name": [],
                 "operation": "static_cast",
@@ -1937,36 +1967,6 @@
                         ]
                       },
                       "0x1000003d10"
-                    ]
-                  }
-                ]
-              },
-              {
-                "datatype": "u64",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "+",
-                    "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x28"
-                        ]
-                      },
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x6"
-                        ]
-                      }
                     ]
                   }
                 ]
@@ -2042,7 +2042,7 @@
                 "name": [],
                 "operation": "static_cast",
                 "arguments": [
-                  "x31"
+                  "x11"
                 ]
               },
               {
@@ -2050,7 +2050,7 @@
                 "name": [],
                 "operation": "static_cast",
                 "arguments": [
-                  "x11"
+                  "x31"
                 ]
               }
             ]
