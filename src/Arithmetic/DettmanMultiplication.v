@@ -12,41 +12,31 @@ Local Coercion Z.of_nat : nat >-> Z.
 Section __.
 
 Context
-        (e : nat)
-        (c_ : list (Z*Z))
-        (p_nz : 2 ^ e - Associational.eval c_ <> 0)
-        (limbs : nat)
-        (limb_size : nat)
-        (limbs_gteq_3 : (3 <= limbs)%nat)
-        (e_small : (e <= limb_size * limbs)%nat)
-        (e_big : (limb_size * (limbs - 1) <= e)%nat).
-
-Let s := (2 ^ e).
+    (s : Z)
+    (c_ : list (Z*Z))
+    (p_nz : s - Associational.eval c_ <> 0)
+    (limbs : nat)
+    (limb_size : nat)
+    (weight: nat -> Z)
+    (s_small : s <= weight limbs)
+    (s_big : weight (limbs - 1)%nat <= s)
+    (limbs_gteq_3 : (3 <= limbs)%nat)
+    (weight_limbs_mod_s_eq_0 : (weight limbs) mod s = 0)
+    (weight_0 : weight 0%nat = 1)
+    (weight_positive : forall i, 0 < weight i)
+    (weight_multiples : forall i, weight (S i) mod weight i = 0)
+    (weight_divides : forall i : nat, 0 < weight (S i) / weight i).
 
 Let c := Associational.eval c_.
 
-Let base := (2 ^ limb_size).
-
-Lemma base_nz : base <> 0.
-Proof. cbv [base]. apply Z.pow_nonzero; lia. Qed.
+Lemma s_positive : s > 0.
+Proof. remember (weight_positive (limbs - 1)). lia. Qed.
 
 Lemma s_nz : s <> 0.
-Proof. cbv [s]. apply Z.pow_nonzero; lia. Qed.
-
-Let weight (n : nat) := base ^ n.
-
-Lemma weight_0 : weight 0 = 1.
-Proof. reflexivity. Qed.
+Proof. remember s_positive. lia. Qed.
 
 Lemma weight_nz : forall i, weight i <> 0.
-Proof. intros i. cbv [weight]. apply Z.pow_nonzero; lia. Qed.
-
-Lemma mod_is_zero : forall b (n m : nat), b <> 0 -> le n m -> (b ^ m) mod (b ^ n) = 0.
-  intros b n m H1 H2. induction H2 as [|m' nlem' IHm'].
-  - rewrite Z_mod_same_full. constructor.
-  - rewrite Nat2Z.inj_succ. cbv [Z.succ]. rewrite <- Pow.Z.pow_mul_base by lia.
-    rewrite Z.mul_mod_full. rewrite IHm'. rewrite Z.mul_0_r. apply Z.mod_0_l. apply Z.pow_nonzero; lia.
-Qed.
+Proof. intros i. remember (weight_positive i). lia. Qed.
 
 Lemma div_nz a b : b > 0 -> b <= a -> a / b <> 0.
 Proof.
@@ -57,11 +47,6 @@ Proof.
   - symmetry. apply Z.lt_neq. apply Z.lt_le_trans with 1.
     + reflexivity.
     + apply H.
-Qed.
-
-Lemma limbs_mod_s_0 : (weight limbs) mod s = 0.
-Proof.
-  cbv [weight base s]. rewrite <- Z.pow_mul_r by lia. rewrite <- Nat2Z.inj_mul. apply mod_is_zero; lia.
 Qed.
 
 Local Open Scope nat_scope.
@@ -85,10 +70,8 @@ Proof.
   - apply weight_nz.
   - apply s_nz.
   - apply weight_nz.
-  - cbv [weight]. apply mod_is_zero.
-    + apply base_nz.
-    + lia.
-  - cbv [weight]. apply limbs_mod_s_0.
+  - apply Weight.weight_multiples_full; try assumption. lia.
+  - assumption.
   - apply p_nz.
   - apply weight_nz.
 Qed.
@@ -136,22 +119,19 @@ Theorem eval_mulmod a b :
 Proof.
   cbv [mulmod carry' reduce']. autorewrite with push_eval. reflexivity.
   all:
-      cbv [weight s base];
-      try apply weight_nz;
-      try apply s_nz;
-      try apply p_nz;
-      try apply weight_0;
-      try apply Z_mod_same_full;
-      try apply limbs_mod_s_0;
-      try apply mod_is_zero;
-      try (remember limbs_gteq_3 as H; lia);
-      try apply base_nz.
-  - apply div_nz; try lia. rewrite <- Z.pow_mul_r by lia. rewrite <- Nat2Z.inj_mul.
-    rewrite <- Z.pow_le_mono_r_iff by lia. lia.
-  - apply div_nz; try lia. rewrite <- Z.pow_mul_r by lia. rewrite <- Nat2Z.inj_mul.
-    rewrite <- Z.pow_le_mono_r_iff by lia. lia.
-  - repeat rewrite <- Z.pow_mul_r by lia. rewrite <- Z.pow_sub_r by lia.
-    rewrite <- Nat2Z.inj_mul. rewrite <- Nat2Z.inj_sub by lia. apply mod_is_zero; lia.
+    try apply weight_nz;
+    try apply s_nz;
+    try apply p_nz;
+    try apply weight_0;
+    try apply Z_mod_same_full;
+    try apply weight_limbs_mod_s_eq_0;
+    try apply Weight.weight_multiples_full;
+    try assumption;
+    try lia.
+  - apply div_nz; try assumption. remember (weight_positive (limbs - 1)). lia.
+  - apply div_nz; try lia. apply s_positive.
+  - apply Divide.Z.mod_divide_full in weight_limbs_mod_s_eq_0. destruct weight_limbs_mod_s_eq_0 as [x H].
+    rewrite H. rewrite Z_div_mult; try apply s_positive. rewrite Z.mul_comm. rewrite Z_mod_mult. lia.
 Qed.
 
 End __.
