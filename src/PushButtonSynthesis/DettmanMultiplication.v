@@ -160,20 +160,32 @@ Section __.
           summary
           correctness)
          (only parsing, at level 10, summary at next level, correctness at next level).
-  Check weight_properties.
-  Print weight_properties.
+
+  Lemma last_limb_width_small : n - 1 <= Z.log2_up s - last_limb_width.
+  Proof. Admitted.
+
+  Lemma limbwidth_good : 0 < Qden limbwidth <= Qnum limbwidth.
+  Proof.
+    remember last_limb_width_small eqn:clearMe1. remember use_curve_good eqn:clearMe2. clear clearMe1 clearMe2.
+    cbv [limbwidth Qnum Qden Qdiv inject_Z Qmult Qinv].
+    destruct n as [|n']; try cbn [Z.of_nat]; try lia.
+    simpl. repeat rewrite Pos.mul_1_r.
+    destruct (Pos.of_succ_nat n') eqn:E; lia.
+  Qed.
+  
   Lemma weight_good : @weight_properties weightf.
-  Proof. Search weight. apply wprops. cbv [limbwidth Qnum Qden Qdiv inject_Z Qmult Qinv].
-         destruct n as [|n'] eqn:E. remember use_curve_good as H. lia.
-         - simpl. Search (0 < Z.pos _). split; try apply Pos2Z.is_pos. Search (_ * 1). Check Z.mul_1_r. repeat rewrite Pos.mul_1_r. remember (Pos.of_succ_nat n') as n''. destruct n''.
-           + repeat rewrite Z.mul_1_r.
-           destruct cbv [Pos.of_succ_nat].
+  Proof. apply wprops. apply limbwidth_good. Qed.
+  
+  Print GallinaReify.Reify.
+  Check GallinaReify.reify.
+  Check (GallinaReify.reify).
+
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          possible_values
          (reified_mul_gen
-            @ GallinaReify.Reify e @ GallinaReify.Reify c_ @ GallinaReify.Reify (n: nat) @ GallinaReify.Reify (limbwidth : nat))
+            @ GallinaReify.Reify s @ GallinaReify.Reify c_ @ GallinaReify.Reify n @ GallinaReify.Reify (GallinaReify.reify_as weightf(**)))
          (Some input_bounds, (Some input_bounds, tt))
          (Some output_bounds).
 

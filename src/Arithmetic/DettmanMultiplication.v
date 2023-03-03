@@ -15,7 +15,6 @@ Context
     (s : Z)
     (c_ : list (Z*Z))
     (limbs : nat)
-    (limb_size : nat)
     (weight: nat -> Z)
     (p_nz : s - Associational.eval c_ <> 0)
     (limbs_gteq_3 : 3%nat <= limbs) (* Technically we only need 2 <= limbs to get the proof to go through, but it doesn't make any sense to try to do this with less than three limbs.  
