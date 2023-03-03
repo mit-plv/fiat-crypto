@@ -65,10 +65,10 @@ Section __.
           {pipeline_to_string_opts : PipelineToStringOptions}
           {synthesis_opts : SynthesisOptions}
           (machine_wordsize : machine_wordsize_opt)
-          (s_ : Z)
+          (s : Z)
           (c_ : list (Z*Z))
           (n : nat) (* number of limbs *)
-          (limbwidth : nat)
+          (last_limb_width : nat)
           (inbounds_multiplier : option Q).
 
   Local Instance override_pipeline_opts : PipelineOptions
@@ -79,8 +79,8 @@ Section __.
        notice where the constant 0s are, and remove them. *)
   Definition possible_values_of_machine_wordsize
     := prefix_with_carry [machine_wordsize; 2 * machine_wordsize].
-  Definition e : nat := Z.abs_nat (Z.log2_up s_).
-  Local Notation s := (2 ^ e).
+  (*Definition e : nat := Z.abs_nat (Z.log2_up s_).*)
+  (*Local Notation s := (2 ^ e).*)
   Local Notation c := (Associational.eval c_).
   Definition m := s - c.
 
@@ -89,11 +89,16 @@ Section __.
   Definition input_magnitude := Option.value inbounds_multiplier 1.
   Definition output_magnitude_first_limbs : Q := input_magnitude / 2 + 1 / 2.
   Definition output_magnitude_last_limb : Q := input_magnitude / 2 + 1 / 4. (* Where these bounds came from: https://github.com/bitcoin-core/secp256k1/blob/0eb3000417fcf996e3805d0eb00f0f32b8849315/src/field_5x52_impl.h#L545 *)
-  Definition last_limb_width : nat := Z.to_nat (Qceiling (Z.log2_up s) - ((n - 1) * limbwidth)).
+  (* I do want to have Z.log2_up s, not Z.log2_up (s - c) below.  We want to ensure that weight (n - 1) <= s <= weight limbs *)
+  Definition limbwidth : Q := ((Z.log2_up s - last_limb_width) / (n - 1)).
+  Local Notation weightf := (weight (Qnum limbwidth) (QDen limbwidth)).
+  Print fold_left. Print seq.
   Definition input_bounds : list (ZRange.type.option.interp base.type.Z)
-    := (repeat (Some r[0 ~> Qceiling (2 * input_magnitude * (2^limbwidth - 1))]%zrange) (n - 1)) ++ [Some r[0 ~> Qceiling (2 * input_magnitude * (2^last_limb_width - 1))]%zrange].
+    := fold_left (fun l i => Some r[0 ~> Qceiling (2 * input_magnitude * (weightf (i + 1) / weightf i) - 1)]%zrange :: l) (seq 0 n) [] ++
+                 [Some r[0 ~> Qceiling (2 * input_magnitude * 2^last_limb_width)]%zrange].
   Definition output_bounds : list (ZRange.type.option.interp base.type.Z)
-    := (repeat (Some r[0 ~> Qceiling (2 * output_magnitude_first_limbs * (2^limbwidth - 1))]%zrange) (n - 1)) ++ [Some r[0 ~> Qceiling (2 * output_magnitude_last_limb * (2^last_limb_width - 1))]%zrange].
+    := fold_left (fun l i => Some r[0 ~> Qceiling (2 * output_magnitude_first_limbs * (weightf (i + 1) / weightf i) - 1)]%zrange :: l) (seq 0 n) [] ++
+         [Some r[0 ~> Qceiling (2 * output_magnitude_last_limb * 2^last_limb_width)]%zrange].
 
   Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
@@ -107,12 +112,11 @@ Section __.
     := check_args_of_list
          (List.map
             (fun v => (true, v))
-            [(negb (s - c =? 0)%Z, Pipeline.Value_not_ltZ "s - c <> 0" (s - c) 0)
-             ; (negb (s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s ≠ 0" s 0)
-             ; ((3 <=? n)%nat, Pipeline.Value_not_leZ "n < 3" 3 n)
-             ; ((e <=? limbwidth * n)%nat, Pipeline.Value_not_leZ "e <= limb_size * limbs" e (limbwidth * n))
-             ; ((limbwidth * (n - 1) <=? e)%nat, Pipeline.Value_not_leZ "limb_size * (limbs - 1) <= e" (limbwidth * (n - 1)) e)
-             ; ((s_ =? s)%Z, Pipeline.Values_not_provably_equalZ "s not a power of 2" s_ s)
+            [(negb (s - c =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s - c <> 0" (s - c) 0)
+             ; ((3 <=? n)%nat, Pipeline.Value_not_leZ "3 <= n" 3 n)
+             (*; (s <=? weightf n, Pipeline.Value_not_leZ "s <= weight n" s (weightf n))
+             ; (weight (n - 1) <=? s, Pipeline.Value_not_leZ "weight (n - 1) <= s" (weight (n - 1)) s)
+             ; ((weight limbs) mod s =? 0, Pipeline.Values_not_provable_equalZ "(weight limbs) mod s = 0" ((weight limbs) mod s) 0)*)
          ])
          res.
 
@@ -127,20 +131,22 @@ Section __.
           (curve_good : check_args requests (Success tt) = Success tt).
 
   Lemma use_curve_good
-    : 2 ^ e - c <> 0
+    : s - c <> 0
       /\ 3 <= n
-      /\ e <= limbwidth * n
-      /\ limbwidth * (n - 1) <= e
-      /\ 2 ^ e = s.
+      (*/\ s <= weightf n
+      /\ weightf (n - 1) <= s
+      /\ weightf n mod s = 0
+      /\ weightf 0 = 1
+      /\ (forall i, 0 < weightf i)
+      /\ (forall i, weightf (S i) mod weightf i = 0)*).                                  
   Proof using curve_good.
     prepare_use_curve_good ().
     { use_curve_good_t. }
+    (*{ use_curve_good_t. }
     { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
+    { use_curve_good_t. }*)
   Qed.
 
-  Local Notation weightf := (fun n : nat => (2 ^ limbwidth) ^ n).
   Local Notation evalf := (eval weightf n).
   Local Notation notations_for_docstring
     := (CorrectnessStringification.dyn_context.cons
@@ -154,7 +160,14 @@ Section __.
           summary
           correctness)
          (only parsing, at level 10, summary at next level, correctness at next level).
-
+  Check weight_properties.
+  Print weight_properties.
+  Lemma weight_good : @weight_properties weightf.
+  Proof. Search weight. apply wprops. cbv [limbwidth Qnum Qden Qdiv inject_Z Qmult Qinv].
+         destruct n as [|n'] eqn:E. remember use_curve_good as H. lia.
+         - simpl. Search (0 < Z.pos _). split; try apply Pos2Z.is_pos. Search (_ * 1). Check Z.mul_1_r. repeat rewrite Pos.mul_1_r. remember (Pos.of_succ_nat n') as n''. destruct n''.
+           + repeat rewrite Z.mul_1_r.
+           destruct cbv [Pos.of_succ_nat].
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)

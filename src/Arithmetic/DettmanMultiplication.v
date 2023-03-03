@@ -14,29 +14,27 @@ Section __.
 Context
     (s : Z)
     (c_ : list (Z*Z))
-    (p_nz : s - Associational.eval c_ <> 0)
     (limbs : nat)
     (limb_size : nat)
     (weight: nat -> Z)
+    (p_nz : s - Associational.eval c_ <> 0)
+    (limbs_gteq_3 : 3%nat <= limbs) (* Technically we only need 2 <= limbs to get the proof to go through, but it doesn't make any sense to try to do this with less than three limbs.  
+                                       Note that having 3 limbs corresponds to zero iterations of the "loop" function defined below. *)
     (s_small : s <= weight limbs)
     (s_big : weight (limbs - 1)%nat <= s)
-    (limbs_gteq_3 : (3 <= limbs)%nat)
     (weight_limbs_mod_s_eq_0 : (weight limbs) mod s = 0)
-    (weight_0 : weight 0%nat = 1)
-    (weight_positive : forall i, 0 < weight i)
-    (weight_multiples : forall i, weight (S i) mod weight i = 0)
-    (weight_divides : forall i : nat, 0 < weight (S i) / weight i).
+    (wprops : @weight_properties weight).
 
 Let c := Associational.eval c_.
 
 Lemma s_positive : s > 0.
-Proof. remember (weight_positive (limbs - 1)). lia. Qed.
+Proof. remember (weight_positive wprops (limbs - 1)). lia. Qed.
 
 Lemma s_nz : s <> 0.
 Proof. remember s_positive. lia. Qed.
 
 Lemma weight_nz : forall i, weight i <> 0.
-Proof. intros i. remember (weight_positive i). lia. Qed.
+Proof. intros i. remember (weight_positive wprops i). lia. Qed.
 
 Lemma div_nz a b : b > 0 -> b <= a -> a / b <> 0.
 Proof.
@@ -48,6 +46,9 @@ Proof.
     + reflexivity.
     + apply H.
 Qed.
+
+Hint Resolve s_positive s_nz weight_nz div_nz : arith.
+Hint Resolve weight_0 weight_positive weight_multiples Weight.weight_multiples_full : arith.
 
 Local Open Scope nat_scope.
 
@@ -66,15 +67,7 @@ Lemma eval_loop_body i before :
   (Associational.eval (loop_body i before) mod (s - c) =
   Associational.eval before mod (s - c))%Z.
 Proof.
-  cbv [loop_body carry' reduce']. autorewrite with push_eval. reflexivity.
-  - apply weight_nz.
-  - apply s_nz.
-  - apply weight_nz.
-  - apply Weight.weight_multiples_full; try assumption. lia.
-  - assumption.
-  - apply p_nz.
-  - apply weight_nz.
-Qed.
+  cbv [loop_body carry' reduce']. autorewrite with push_eval; auto with arith. Qed.
 
 Definition loop start :=
   fold_right loop_body start (rev (seq 1 (limbs - 2 - 1))).
@@ -110,6 +103,7 @@ Definition mulmod a b :=
   Positional.from_associational weight l r13.
 
 Hint Rewrite Positional.eval_from_associational Positional.eval_to_associational eval_borrow eval_loop: push_eval.
+Hint Resolve Z_mod_same_full : arith.
 
 Local Open Scope Z_scope.
 
@@ -117,19 +111,9 @@ Theorem eval_mulmod a b :
   (Positional.eval weight limbs a * Positional.eval weight limbs b) mod (s - c) =
   (Positional.eval weight limbs (mulmod a b)) mod (s - c).
 Proof.
-  cbv [mulmod carry' reduce']. autorewrite with push_eval. reflexivity.
-  all:
-    try apply weight_nz;
-    try apply s_nz;
-    try apply p_nz;
-    try apply weight_0;
-    try apply Z_mod_same_full;
-    try apply weight_limbs_mod_s_eq_0;
-    try apply Weight.weight_multiples_full;
-    try assumption;
-    try lia.
-  - apply div_nz; try assumption. remember (weight_positive (limbs - 1)). lia.
-  - apply div_nz; try lia. apply s_positive.
+  cbv [mulmod carry' reduce']. autorewrite with push_eval; auto with arith.
+  all: try apply Weight.weight_multiples_full; auto with arith; try lia.
+  - apply div_nz; try assumption. remember (weight_positive wprops (limbs - 1)). lia.
   - apply Divide.Z.mod_divide_full in weight_limbs_mod_s_eq_0. destruct weight_limbs_mod_s_eq_0 as [x H].
     rewrite H. rewrite Z_div_mult; try apply s_positive. rewrite Z.mul_comm. rewrite Z_mod_mult. lia.
 Qed.
