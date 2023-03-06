@@ -2,6 +2,7 @@ Require Import Crypto.Arithmetic.Core.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZUtil.Modulo.PullPush.
+Require Import Crypto.Arithmetic.ModOps.
 Local Open Scope list_scope.
 
 Import Associational Positional.
@@ -9,8 +10,8 @@ Import ListNotations. Local Open Scope Z_scope.
 
 Local Coercion Z.of_nat : nat >-> Z.
 
-Section __.
-
+Module DettmanMultiplication.
+Section DettmanMultiplication.
 Context
     (s : Z)
     (c_ : list (Z*Z))
@@ -117,4 +118,31 @@ Proof.
     rewrite H. rewrite Z_div_mult; try apply s_positive. rewrite Z.mul_comm. rewrite Z_mod_mult. lia.
 Qed.
 
-End __.
+End DettmanMultiplication.
+End DettmanMultiplication.
+
+Module dettman_multiplication_mod_ops.
+  Section dettman_multiplication_mod_ops.
+    Import DettmanMultiplication.
+    Context
+        (limbwidth_num limbwidth_den : Z)
+        (limbwidth_good : 0 < limbwidth_den <= limbwidth_num)
+        (s : Z)
+        (c : list (Z*Z))
+        (limbs : nat)
+        (p_nz : s - Associational.eval c <> 0)
+        (limbs_gteq_3 : 3%nat <= limbs).
+    
+    Local Notation weight := (@weight limbwidth_num limbwidth_den).
+    Context
+        (s_small : s <= weight limbs)
+        (s_big : weight (limbs - 1)%nat <= s)
+        (weight_limbs_mod_s_eq_0 : weight limbs mod s = 0).
+    
+    Definition mulmod := mulmod s c limbs weight.
+
+    Local Notation wprops := (@wprops limbwidth_num limbwidth_den limbwidth_good).
+ 
+    Definition eval_mulmod := eval_mulmod s c limbs weight p_nz limbs_gteq_3 s_small s_big weight_limbs_mod_s_eq_0 wprops.
+  End dettman_multiplication_mod_ops.
+End dettman_multiplication_mod_ops.
