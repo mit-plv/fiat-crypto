@@ -114,9 +114,6 @@ Section __.
             (fun v => (true, v))
             [(negb (s - c =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s - c <> 0" (s - c) 0)
              ; ((3 <=? n)%nat, Pipeline.Value_not_leZ "3 <= n" 3 n)
-             (*; (s <=? weightf n, Pipeline.Value_not_leZ "s <= weight n" s (weightf n))
-             ; (weight (n - 1) <=? s, Pipeline.Value_not_leZ "weight (n - 1) <= s" (weight (n - 1)) s)
-             ; ((weight limbs) mod s =? 0, Pipeline.Values_not_provable_equalZ "(weight limbs) mod s = 0" ((weight limbs) mod s) 0)*)
          ])
          res.
 
@@ -128,7 +125,7 @@ Section __.
                  | progress distr_length ].
 
   Context (requests : list string)
-          (curve_good : check_args requests (Success tt) = Success tt).
+    (curve_good : check_args requests (Success tt) = Success tt).
 
   Lemma use_curve_good
     : s - c <> 0
@@ -161,31 +158,52 @@ Section __.
           correctness)
          (only parsing, at level 10, summary at next level, correctness at next level).
 
-  Lemma last_limb_width_small : n - 1 <= Z.log2_up s - last_limb_width.
+  Lemma from_Q_to_Z_and_back (x : Q) : x = Qdiv (inject_Z (Qnum x)) (inject_Z (QDen x)).
   Proof. Admitted.
+
+  Lemma something : Z.log2_up s >= last_limb_width * n.
+       Proof. Admitted. (* this will have to be an axiom verified by check_args, I think *)
+
+  Lemma last_limb_width_small : n - 1 <= Z.log2_up s - last_limb_width.
+  Proof. Admitted. (* if we assume last_limb_width >= 1, then this follows from "something" above*)
 
   Lemma limbwidth_good : 0 < Qden limbwidth <= Qnum limbwidth.
   Proof.
-    remember last_limb_width_small eqn:clearMe1. remember use_curve_good eqn:clearMe2. clear clearMe1 clearMe2.
+    remember last_limb_width_small eqn:clearMe1.
+    remember use_curve_good eqn:clearMe2. clear clearMe1 clearMe2.
     cbv [limbwidth Qnum Qden Qdiv inject_Z Qmult Qinv].
     destruct n as [|n']; try cbn [Z.of_nat]; try lia.
     simpl. repeat rewrite Pos.mul_1_r.
     destruct (Pos.of_succ_nat n') eqn:E; lia.
   Qed.
   
-  Lemma weight_good : @weight_properties weightf.
-  Proof. apply wprops. apply limbwidth_good. Qed.
+  Lemma s_small : s <= weightf n.
+  Proof.
+    remember use_curve_good eqn:clearMe. clear clearMe.
+    rewrite (ModOps.weight_ZQ_correct _ _ limbwidth_good).
+    rewrite <- (from_Q_to_Z_and_back limbwidth).
+    remember (Log2.Z.log2_up_le_full s) as H eqn:clearMe. clear clearMe.
+    apply (Z.le_trans _ _ _ H). apply Z.pow_le_mono_r; try lia. cbv [limbwidth].
+    remember something as H' eqn:clearMe. clear clearMe. rewrite Zle_Qle.
+    remember (_ *_)%Q as x eqn:E. apply (Qle_trans _ x).
+    - subst. rewrite <- (Qmult_le_r _ _ (inject_Z (Z.of_nat n) - 1)).
+      + cbv [Qdiv].
+        repeat rewrite <- inject_Z_mult. simpl. repeat rewrite <- Qmult_assoc.
+        rewrite (Qmult_assoc (Qinv _)). rewrite (Qmult_comm _ (inject_Z _ - 1)%Q).
+        rewrite (Qmult_assoc _ (Qinv _)). rewrite Qmult_inv_r.
+        -- rewrite Qmult_1_l. cbv [Qminus]. rewrite <- inject_Z_plus. simpl. rewrite <- inject_Z_mult. rewrite <- Zle_Qle.
+            lia.
+        -- replace 0%Q with (inject_Z 0) by reflexivity. replace 1%Q with (inject_Z 1) by reflexivity. cbv [Qminus]. rewrite <- inject_Z_plus. rewrite inject_Z_injective. simpl. lia.
+      + replace 0%Q with (inject_Z 0) by reflexivity. replace 1%Q with (inject_Z 1) by reflexivity. cbv [Qminus]. rewrite <- inject_Z_plus. simpl. rewrite <- Zlt_Qlt. lia.
+    - apply Qle_ceiling.
+Qed.
   
-  Print GallinaReify.Reify.
-  Check GallinaReify.reify.
-  Check (GallinaReify.reify).
-
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          possible_values
          (reified_mul_gen
-            @ GallinaReify.Reify s @ GallinaReify.Reify c_ @ GallinaReify.Reify n @ GallinaReify.Reify (GallinaReify.reify_as weightf(**)))
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (QDen limbwidth) @ GallinaReify.Reify s @ GallinaReify.Reify c_ @ GallinaReify.Reify n)
          (Some input_bounds, (Some input_bounds, tt))
          (Some output_bounds).
 
@@ -202,9 +220,9 @@ Section __.
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
 
   Hint Rewrite
-       DettmanMultiplication.eval_mulmod
+       dettman_multiplication_mod_ops.eval_mulmod
        using solve [ auto with zarith | congruence | solve_extra_bounds_side_conditions ] : push_eval.
-  Hint Unfold DettmanMultiplication.mulmod : push_eval.
+  Hint Unfold dettman_multiplication_mod_ops.mulmod DettmanMultiplication.mulmod : push_eval.
 
   Local Ltac prove_correctness _ := Primitives.prove_correctness use_curve_good.
 

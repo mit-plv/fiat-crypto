@@ -11,6 +11,7 @@ Local Open Scope Z_scope.
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
 Module Export DettmanMultiplication.
+  Import dettman_multiplication_mod_ops.
   Derive reified_mul_gen
          SuchThat (is_reification_of reified_mul_gen mulmod)
          As reified_mul_gen_correct.
