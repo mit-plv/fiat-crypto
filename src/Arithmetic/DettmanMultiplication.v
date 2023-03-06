@@ -140,8 +140,9 @@ Module dettman_multiplication_mod_ops.
         (s_power_of_2 : 2 ^ (Z.log2 s) = s).
 
     (* I do want to have Z.log2_up s, not Z.log2_up (s - c) below.  We want to ensure that weight (n - 1) <= s <= weight limbs *)
-    Definition limbwidth : Q := ((Z.log2_up s - last_limb_width) / (n - 1)).
-    Definition weight := (weight (Qnum limbwidth) (QDen limbwidth)).
+    Local Notation limbwidth_num := (Z.log2_up s - last_limb_width).
+    Local Notation limbwidth_den := (n - 1).
+    Definition weight := (weight limbwidth_num limbwidth_den).
     
     Definition mulmod := mulmod s c n weight.
 
@@ -157,26 +158,16 @@ Module dettman_multiplication_mod_ops.
       lia.
     Qed.
 
-    Lemma limbwidth_good : 0 < Qden limbwidth <= Qnum limbwidth.
-    Proof.
-      remember n_small eqn:clearMe. clear clearMe.
-      cbv [limbwidth Qnum Qden Qdiv inject_Z Qmult Qinv].
-      destruct n as [|n']; try cbn [Z.of_nat]; try lia.
-      simpl. repeat rewrite Pos.mul_1_r.
-      destruct (Pos.of_succ_nat n') eqn:E; try lia.
-    Qed.
+    Lemma limbwidth_good : 0 < limbwidth_den <= limbwidth_num.
+    Proof. remember n_small eqn:clearMe. clear clearMe. lia. Qed.
 
-    Local Notation wprops := (@wprops (Qnum limbwidth) (QDen limbwidth) limbwidth_good).
-
-    Lemma from_Q_to_Z_and_back (x : Q) : (x == Qdiv (inject_Z (Qnum x)) (inject_Z (QDen x)))%Q.
-    Proof. destruct x as [num den]. simpl. apply Qmake_Qdiv. Qed.
+    Local Notation wprops := (@wprops limbwidth_num limbwidth_den limbwidth_good).
 
     Lemma s_small : s <= weight n.
     Proof.
       rewrite (ModOps.weight_ZQ_correct _ _ limbwidth_good).
-      rewrite <- (from_Q_to_Z_and_back limbwidth).
       remember (Log2.Z.log2_up_le_full s) as H eqn:clearMe. clear clearMe.
-      apply (Z.le_trans _ _ _ H). apply Z.pow_le_mono_r; try lia. cbv [limbwidth].
+      apply (Z.le_trans _ _ _ H). apply Z.pow_le_mono_r; try lia.
       rewrite Zle_Qle.
       remember (_ *_)%Q as x eqn:E. apply (Qle_trans _ x).
       - subst. rewrite <- (Qmult_le_r _ _ (inject_Z (Z.of_nat n) - 1)).
@@ -184,8 +175,7 @@ Module dettman_multiplication_mod_ops.
           replace (-(1))%Q with (inject_Z (-1)) by reflexivity. rewrite <- inject_Z_plus.
           rewrite <- inject_Z_mult. repeat rewrite <- Qmult_assoc. rewrite (Qmult_comm (Qinv _)).
           rewrite <- (Qmult_assoc _ _ (Qinv _)). rewrite Qmult_inv_r.
-          -- rewrite Qmult_1_r. rewrite <- inject_Z_opp. rewrite <- inject_Z_plus.
-             rewrite <- inject_Z_mult. rewrite <- Zle_Qle. lia.
+          -- rewrite Qmult_1_r. rewrite <- inject_Z_mult. rewrite <- Zle_Qle. lia.
           -- replace 0%Q with (inject_Z 0) by reflexivity. rewrite inject_Z_injective. lia.
         + replace 0%Q with (inject_Z 0) by reflexivity.
           replace 1%Q with (inject_Z 1) by reflexivity. cbv [Qminus]. rewrite <- inject_Z_opp.
@@ -202,18 +192,17 @@ Module dettman_multiplication_mod_ops.
     Lemma s_big : weight (n - 1) <= s.
     Proof.
       rewrite (ModOps.weight_ZQ_correct _ _ limbwidth_good).
-      rewrite <- (from_Q_to_Z_and_back limbwidth).
       remember (Z.log2_spec _ s_gt_0) as H eqn:clearMe. clear clearMe.
       destruct H as [H _].
       apply (Z.le_trans _ (2 ^ Z.log2 s)); try apply H.
       apply Z.pow_le_mono_r; try lia.
-      rewrite Zle_Qle. cbv [limbwidth]. cbv [Qdiv]. rewrite <- (Qmult_assoc _ (Qinv _)).
+      rewrite Zle_Qle. cbv [Qdiv]. rewrite <- (Qmult_assoc _ (Qinv _)).
       rewrite (Qmult_comm (Qinv _)). rewrite Nat2Z.inj_sub; try lia. simpl. cbv [Z.sub].
       rewrite inject_Z_plus. simpl. replace (inject_Z (-1)) with (-(1))%Q by reflexivity.
       cbv [Qminus]. rewrite Qmult_inv_r.
-      - rewrite <- inject_Z_opp. rewrite <- inject_Z_plus. rewrite Qmult_1_r. rewrite Qceiling_Z.
+      - rewrite <- inject_Z_plus. rewrite Qmult_1_r. rewrite Qceiling_Z.
         rewrite <- Zle_Qle. remember (Z.le_log2_up_succ_log2 s) eqn:clearMe. clear clearMe. lia.
-      - replace (-(1))%Q with (inject_Z (-1)) by reflexivity. rewrite <- inject_Z_plus.
+      - replace (-(1))%Q with (inject_Z (-1)) by reflexivity.
         replace 0%Q with (inject_Z 0) by reflexivity. rewrite inject_Z_injective. lia.
     Qed.
 
