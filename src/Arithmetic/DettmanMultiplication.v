@@ -3,6 +3,7 @@ Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZUtil.Modulo.PullPush.
 Require Import Crypto.Arithmetic.ModOps.
+Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
 Local Open Scope list_scope.
 
 Import Associational Positional.
@@ -124,25 +125,112 @@ End DettmanMultiplication.
 Module dettman_multiplication_mod_ops.
   Section dettman_multiplication_mod_ops.
     Import DettmanMultiplication.
+    Local Open Scope Z_scope.
+    Local Coercion QArith_base.inject_Z : Z >-> Q.
+    Local Coercion Z.pos : positive >-> Z.
     Context
-        (limbwidth_num limbwidth_den : Z)
-        (limbwidth_good : 0 < limbwidth_den <= limbwidth_num)
         (s : Z)
         (c : list (Z*Z))
-        (limbs : nat)
+        (n : nat)
+        (last_limb_width : nat)
         (p_nz : s - Associational.eval c <> 0)
-        (limbs_gteq_3 : 3%nat <= limbs).
-    
-    Local Notation weight := (@weight limbwidth_num limbwidth_den).
-    Context
-        (s_small : s <= weight limbs)
-        (s_big : weight (limbs - 1)%nat <= s)
-        (weight_limbs_mod_s_eq_0 : weight limbs mod s = 0).
-    
-    Definition mulmod := mulmod s c limbs weight.
+        (n_gteq_3 : 3%nat <= n)
+        (last_limb_width_small : last_limb_width * n <= Z.log2_up s)
+        (last_limb_width_big : 1 <= last_limb_width)
+        (s_power_of_2 : 2 ^ (Z.log2 s) = s).
 
-    Local Notation wprops := (@wprops limbwidth_num limbwidth_den limbwidth_good).
+    (* I do want to have Z.log2_up s, not Z.log2_up (s - c) below.  We want to ensure that weight (n - 1) <= s <= weight limbs *)
+    Definition limbwidth : Q := ((Z.log2_up s - last_limb_width) / (n - 1)).
+    Definition weight := (weight (Qnum limbwidth) (QDen limbwidth)).
+    
+    Definition mulmod := mulmod s c n weight.
+
+    Lemma n_small : n - 1 <= Z.log2_up s - last_limb_width.
+    Proof.
+      replace (Z.of_nat n) with (Z.of_nat n - 1 + 1) in last_limb_width_small by lia.
+      remember (Z.of_nat n - 1) as n'.
+      rewrite Z.mul_add_distr_l in last_limb_width_small.
+      remember (Z.of_nat last_limb_width) as l.
+      assert (H: n' <= l * n').
+      { replace n' with (1 * n') by lia. replace (l * (1 * n')) with (l * n') by lia.
+        apply Zmult_le_compat_r; lia. }
+      lia.
+    Qed.
+
+    Lemma limbwidth_good : 0 < Qden limbwidth <= Qnum limbwidth.
+    Proof.
+      remember n_small eqn:clearMe. clear clearMe.
+      cbv [limbwidth Qnum Qden Qdiv inject_Z Qmult Qinv].
+      destruct n as [|n']; try cbn [Z.of_nat]; try lia.
+      simpl. repeat rewrite Pos.mul_1_r.
+      destruct (Pos.of_succ_nat n') eqn:E; try lia.
+    Qed.
+
+    Local Notation wprops := (@wprops (Qnum limbwidth) (QDen limbwidth) limbwidth_good).
+
+    Lemma from_Q_to_Z_and_back (x : Q) : (x == Qdiv (inject_Z (Qnum x)) (inject_Z (QDen x)))%Q.
+    Proof. destruct x as [num den]. simpl. apply Qmake_Qdiv. Qed.
+
+    Lemma s_small : s <= weight n.
+    Proof.
+      rewrite (ModOps.weight_ZQ_correct _ _ limbwidth_good).
+      rewrite <- (from_Q_to_Z_and_back limbwidth).
+      remember (Log2.Z.log2_up_le_full s) as H eqn:clearMe. clear clearMe.
+      apply (Z.le_trans _ _ _ H). apply Z.pow_le_mono_r; try lia. cbv [limbwidth].
+      rewrite Zle_Qle.
+      remember (_ *_)%Q as x eqn:E. apply (Qle_trans _ x).
+      - subst. rewrite <- (Qmult_le_r _ _ (inject_Z (Z.of_nat n) - 1)).
+        + cbv [Qdiv Qminus]. replace 0%Q with (inject_Z 0) by reflexivity.
+          replace (-(1))%Q with (inject_Z (-1)) by reflexivity. rewrite <- inject_Z_plus.
+          rewrite <- inject_Z_mult. repeat rewrite <- Qmult_assoc. rewrite (Qmult_comm (Qinv _)).
+          rewrite <- (Qmult_assoc _ _ (Qinv _)). rewrite Qmult_inv_r.
+          -- rewrite Qmult_1_r. rewrite <- inject_Z_opp. rewrite <- inject_Z_plus.
+             rewrite <- inject_Z_mult. rewrite <- Zle_Qle. lia.
+          -- replace 0%Q with (inject_Z 0) by reflexivity. rewrite inject_Z_injective. lia.
+        + replace 0%Q with (inject_Z 0) by reflexivity.
+          replace 1%Q with (inject_Z 1) by reflexivity. cbv [Qminus]. rewrite <- inject_Z_opp.
+          rewrite <- inject_Z_plus. rewrite <- Zlt_Qlt. lia.
+      - apply Qle_ceiling.
+    Qed.
+
+    Lemma s_gt_0 : 0 < s.
+      assert (H: s <= 0 \/ 0 < s) by lia. destruct H as [H|H].
+      - apply Z.log2_up_nonpos in H. lia.
+      - assumption.
+    Qed.
+
+    Lemma s_big : weight (n - 1) <= s.
+    Proof.
+      rewrite (ModOps.weight_ZQ_correct _ _ limbwidth_good).
+      rewrite <- (from_Q_to_Z_and_back limbwidth).
+      remember (Z.log2_spec _ s_gt_0) as H eqn:clearMe. clear clearMe.
+      destruct H as [H _].
+      apply (Z.le_trans _ (2 ^ Z.log2 s)); try apply H.
+      apply Z.pow_le_mono_r; try lia.
+      rewrite Zle_Qle. cbv [limbwidth]. cbv [Qdiv]. rewrite <- (Qmult_assoc _ (Qinv _)).
+      rewrite (Qmult_comm (Qinv _)). rewrite Nat2Z.inj_sub; try lia. simpl. cbv [Z.sub].
+      rewrite inject_Z_plus. simpl. replace (inject_Z (-1)) with (-(1))%Q by reflexivity.
+      cbv [Qminus]. rewrite Qmult_inv_r.
+      - rewrite <- inject_Z_opp. rewrite <- inject_Z_plus. rewrite Qmult_1_r. rewrite Qceiling_Z.
+        rewrite <- Zle_Qle. remember (Z.le_log2_up_succ_log2 s) eqn:clearMe. clear clearMe. lia.
+      - replace (-(1))%Q with (inject_Z (-1)) by reflexivity. rewrite <- inject_Z_plus.
+        replace 0%Q with (inject_Z 0) by reflexivity. rewrite inject_Z_injective. lia.
+    Qed.
+
+    Lemma weight_n_mod_s_eq_0 : weight n mod s = 0.
+    Proof.
+      cbv [weight ModOps.weight]. remember (- _) as e eqn:E. rewrite <- s_power_of_2.
+      apply Modulo.Z.mod_same_pow. split.
+      - apply Z.log2_nonneg.
+      - assert (H: 0 < 2) by lia. rewrite (Z.pow_le_mono_r_iff 2); try lia.
+        + subst. replace (2^(-_)) with (weight n) by reflexivity. rewrite s_power_of_2.
+          apply s_small.
+        + remember (weight_positive wprops n) as H1 eqn:clearMe. clear clearMe.
+          cbv [ModOps.weight] in H1. rewrite <- E in H1.
+          assert (H': 0 <= e \/ e < 0) by lia. destruct H' as [H'|H']; try lia.
+          apply (Z.pow_neg_r 2 _) in H'. lia.
+    Qed.
  
-    Definition eval_mulmod := eval_mulmod s c limbs weight p_nz limbs_gteq_3 s_small s_big weight_limbs_mod_s_eq_0 wprops.
+    Definition eval_mulmod := eval_mulmod s c n weight p_nz n_gteq_3 s_small s_big weight_n_mod_s_eq_0 wprops.
   End dettman_multiplication_mod_ops.
 End dettman_multiplication_mod_ops.
