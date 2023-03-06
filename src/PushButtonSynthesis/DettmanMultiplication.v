@@ -89,9 +89,7 @@ Section __.
   Definition input_magnitude := Option.value inbounds_multiplier 1.
   Definition output_magnitude_first_limbs : Q := input_magnitude / 2 + 1 / 2.
   Definition output_magnitude_last_limb : Q := input_magnitude / 2 + 1 / 4. (* Where these bounds came from: https://github.com/bitcoin-core/secp256k1/blob/0eb3000417fcf996e3805d0eb00f0f32b8849315/src/field_5x52_impl.h#L545 *)
-  (* I do want to have Z.log2_up s, not Z.log2_up (s - c) below.  We want to ensure that weight (n - 1) <= s <= weight limbs *)
-  Definition limbwidth : Q := ((Z.log2_up s - last_limb_width) / (n - 1)).
-  Local Notation weightf := (weight (Qnum limbwidth) (QDen limbwidth)).
+  Definition weightf := dettman_multiplication_mod_ops.weight s n last_limb_width.
   Definition input_bounds : list (ZRange.type.option.interp base.type.Z)
     := fold_left (fun l i => Some r[0 ~> Qceiling (2 * input_magnitude * (weightf (i + 1) / weightf i) - 1)]%zrange :: l) (seq 0 n) [] ++
                  [Some r[0 ~> Qceiling (2 * input_magnitude * 2^last_limb_width)]%zrange].
@@ -156,7 +154,7 @@ Section __.
          false (* subst01 *)
          possible_values
          (reified_mul_gen
-            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (QDen limbwidth) @ GallinaReify.Reify s @ GallinaReify.Reify c_ @ GallinaReify.Reify n)
+            @ GallinaReify.Reify s @ GallinaReify.Reify c_ @ GallinaReify.Reify n @ GallinaReify.Reify last_limb_width)
          (Some input_bounds, (Some input_bounds, tt))
          (Some output_bounds).
 

@@ -141,7 +141,7 @@ Module dettman_multiplication_mod_ops.
 
     (* I do want to have Z.log2_up s, not Z.log2_up (s - c) below.  We want to ensure that weight (n - 1) <= s <= weight limbs *)
     Local Notation limbwidth_num := (Z.log2_up s - last_limb_width).
-    Local Notation limbwidth_den := (n - 1).
+    Local Notation limbwidth_den := (n - 1). (* can't use Q here, or else reification doesn't work *)
     Definition weight := (weight limbwidth_num limbwidth_den).
     
     Definition mulmod := mulmod s c n weight.
