@@ -111,12 +111,13 @@ Section __.
     := check_args_of_list
          (List.map
             (fun v => (true, v))
-            [(negb (s - c =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s - c <> 0" (s - c) 0)
+            [(negb (s - c =? 0), Pipeline.Values_not_provably_distinctZ "s - c <> 0" (s - c) 0)
              ; (3 <=? n, Pipeline.Value_not_leZ "3 <= n" 3 n)
              ; (last_limb_width * n <=? Z.log2_up s, Pipeline.Value_not_leZ "last_limb_width * n <= Z.log2_up s" (last_limb_width * n) (Z.log2_up s))
              ; (1 <=? last_limb_width, Pipeline.Value_not_leZ "1 <= last_limb_width" 1 last_limb_width)
-         ])
-         res.
+             ; (2 ^ (Z.log2 s) =? s, Pipeline.Values_not_provably_equalZ "2 ^ (Z.log2 s) = s" (2 ^ Z.log2 s) s)
+            ])
+            res.
 
   Local Ltac use_curve_good_t :=
     repeat first [ use_requests_to_prove_curve_good_t_step
@@ -133,9 +134,7 @@ Section __.
       /\ (3 <= n)
       /\ last_limb_width * n <= Z.log2_up s
       /\ 1 <= last_limb_width
-      (*/\ weightf (n - 1) <= s
-      /\ s <= weightf n
-      /\ weightf n mod s = 0.*).
+      /\ 2 ^ (Z.log2 s) = s.
   Proof using curve_good. prepare_use_curve_good (). Qed.
 
   Local Notation evalf := (eval weightf n).
@@ -151,93 +150,7 @@ Section __.
           summary
           correctness)
          (only parsing, at level 10, summary at next level, correctness at next level).
-
-  Lemma from_Q_to_Z_and_back (x : Q) : (x == Qdiv (inject_Z (Qnum x)) (inject_Z (QDen x)))%Q.
-  Proof. destruct x as [num den]. simpl. apply Qmake_Qdiv. Qed.
-
-  Lemma last_limb_width_small : n - 1 <= Z.log2_up s - last_limb_width.
-  Proof.
-    remember use_curve_good as H eqn:clearMe. clear clearMe.
-    replace (Z.of_nat n) with (Z.of_nat n - 1 + 1) in H by lia. remember (Z.of_nat n - 1) as n'.
-    destruct H as [_ [H1 [H2 H3] ] ]. rewrite Z.mul_add_distr_l in H2.
-    remember (Z.of_nat last_limb_width) as l.
-    assert (H4: n' <= l * n').
-    { replace n' with (1 * n') by lia. replace (l * (1 * n')) with (l * n') by lia.
-      apply Zmult_le_compat_r; lia. }
-    lia.
-  Qed.
-
-  Lemma limbwidth_good : 0 < Qden limbwidth <= Qnum limbwidth.
-  Proof.
-    remember last_limb_width_small eqn:clearMe1.
-    remember use_curve_good eqn:clearMe2. clear clearMe1 clearMe2.
-    cbv [limbwidth Qnum Qden Qdiv inject_Z Qmult Qinv].
-    destruct n as [|n']; try cbn [Z.of_nat]; try lia.
-    simpl. repeat rewrite Pos.mul_1_r.
-    destruct (Pos.of_succ_nat n') eqn:E; lia.
-  Qed.
-  
-  Lemma s_small : s <= weightf n.
-  Proof.
-    remember use_curve_good eqn:clearMe. clear clearMe.
-    rewrite (ModOps.weight_ZQ_correct _ _ limbwidth_good).
-    rewrite <- (from_Q_to_Z_and_back limbwidth).
-    remember (Log2.Z.log2_up_le_full s) as H eqn:clearMe. clear clearMe.
-    apply (Z.le_trans _ _ _ H). apply Z.pow_le_mono_r; try lia. cbv [limbwidth].
-    rewrite Zle_Qle.
-    remember (_ *_)%Q as x eqn:E. apply (Qle_trans _ x).
-    - subst. rewrite <- (Qmult_le_r _ _ (inject_Z (Z.of_nat n) - 1)).
-      + cbv [Qdiv].
-        repeat rewrite <- inject_Z_mult. simpl. repeat rewrite <- Qmult_assoc.
-        rewrite (Qmult_assoc (Qinv _)). rewrite (Qmult_comm _ (inject_Z _ - 1)%Q).
-        rewrite (Qmult_assoc _ (Qinv _)). rewrite Qmult_inv_r.
-        -- rewrite Qmult_1_l. cbv [Qminus]. rewrite <- inject_Z_plus. simpl.
-           rewrite <- inject_Z_mult. rewrite <- Zle_Qle.
-           lia.
-        -- replace 0%Q with (inject_Z 0) by reflexivity.
-           replace 1%Q with (inject_Z 1) by reflexivity. cbv [Qminus]. rewrite <- inject_Z_plus.
-           rewrite inject_Z_injective. simpl. lia.
-      + replace 0%Q with (inject_Z 0) by reflexivity.
-        replace 1%Q with (inject_Z 1) by reflexivity. cbv [Qminus]. rewrite <- inject_Z_plus.
-        simpl. rewrite <- Zlt_Qlt. lia.
-    - apply Qle_ceiling.
-  Qed.
-
-  Lemma s_gt_0 : 0 < s.
-    remember use_curve_good eqn:clearMe. clear clearMe.
-    assert (H: s <= 0 \/ 0 < s) by lia. destruct H as [H|H].
-    - apply Z.log2_up_nonpos in H. lia.
-    - assumption.
-  Qed.
-
-  (* this lemma isn't being used anywhere, I think. I should get rid of it. *)
-  Lemma Qceiling_lt' (x : Q) : (inject_Z (Qceiling x) < x + 1)%Q.
-  Proof.
-    assert (E: (Qceiling x == Qceiling ((x + 1) - 1))%Q).
-    { f_equal. cbv [Qminus]. rewrite <- Qplus_assoc. rewrite Qplus_opp_r. rewrite Qplus_0_r. reflexivity. }
-    rewrite E. apply (Qle_lt_trans _ (inject_Z (Qceiling (x + 1) - 1))).
-    - rewrite <- Zle_Qle. cbv [Qminus]. apply QUtil.Qceiling_le_add.
-    - apply Qceiling_lt.
-  Qed.
-  
-  Lemma s_big : weightf (n - 1) <= s.
-  Proof.
-    remember use_curve_good eqn:clearMe. clear clearMe.
-    rewrite (ModOps.weight_ZQ_correct _ _ limbwidth_good).
-    rewrite <- (from_Q_to_Z_and_back limbwidth). remember (Z.log2_spec _ s_gt_0) as H eqn:clearMe. clear clearMe.
-    destruct H as [H _].
-    apply (Z.le_trans _ (2 ^ Z.log2 s)); try apply H.
-    apply Z.pow_le_mono_r; try lia.
-    rewrite Zle_Qle. cbv [limbwidth]. cbv [Qdiv]. rewrite <- (Qmult_assoc _ (Qinv _)).
-    rewrite (Qmult_comm (Qinv _)). rewrite Nat2Z.inj_sub; try lia. simpl. cbv [Z.sub].
-    rewrite inject_Z_plus. simpl. replace (inject_Z (-1)) with (-(1))%Q by reflexivity.
-    cbv [Qminus]. rewrite Qmult_inv_r.
-    - rewrite <- inject_Z_opp. rewrite <- inject_Z_plus. rewrite Qmult_1_r. rewrite Qceiling_Z.
-      rewrite <- Zle_Qle. remember (Z.le_log2_up_succ_log2 s) eqn:clearMe. clear clearMe. lia.
-    - replace (-(1))%Q with (inject_Z (-1)) by reflexivity. rewrite <- inject_Z_plus.
-      replace 0%Q with (inject_Z 0) by reflexivity. rewrite inject_Z_injective. lia.
-  Qed.
-
+ 
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
