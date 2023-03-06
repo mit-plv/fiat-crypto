@@ -68,7 +68,7 @@ Section __.
           (s : Z)
           (c_ : list (Z*Z))
           (n : nat) (* number of limbs *)
-          (last_limb_width : nat)
+          (last_limb_width : nat) (* This is required to be >= 0.  Should it have type positive? *)
           (inbounds_multiplier : option Q).
 
   Local Instance override_pipeline_opts : PipelineOptions
@@ -92,7 +92,6 @@ Section __.
   (* I do want to have Z.log2_up s, not Z.log2_up (s - c) below.  We want to ensure that weight (n - 1) <= s <= weight limbs *)
   Definition limbwidth : Q := ((Z.log2_up s - last_limb_width) / (n - 1)).
   Local Notation weightf := (weight (Qnum limbwidth) (QDen limbwidth)).
-  Print fold_left. Print seq.
   Definition input_bounds : list (ZRange.type.option.interp base.type.Z)
     := fold_left (fun l i => Some r[0 ~> Qceiling (2 * input_magnitude * (weightf (i + 1) / weightf i) - 1)]%zrange :: l) (seq 0 n) [] ++
                  [Some r[0 ~> Qceiling (2 * input_magnitude * 2^last_limb_width)]%zrange].
@@ -113,7 +112,9 @@ Section __.
          (List.map
             (fun v => (true, v))
             [(negb (s - c =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s - c <> 0" (s - c) 0)
-             ; ((3 <=? n)%nat, Pipeline.Value_not_leZ "3 <= n" 3 n)
+             ; (3 <=? n, Pipeline.Value_not_leZ "3 <= n" 3 n)
+             ; (last_limb_width * n <=? Z.log2_up s, Pipeline.Value_not_leZ "last_limb_width * n <= Z.log2_up s" (last_limb_width * n) (Z.log2_up s))
+             ; (1 <=? last_limb_width, Pipeline.Value_not_leZ "1 <= last_limb_width" 1 last_limb_width)
          ])
          res.
 
@@ -129,20 +130,10 @@ Section __.
 
   Lemma use_curve_good
     : s - c <> 0
-      /\ 3 <= n
-      (*/\ s <= weightf n
-      /\ weightf (n - 1) <= s
-      /\ weightf n mod s = 0
-      /\ weightf 0 = 1
-      /\ (forall i, 0 < weightf i)
-      /\ (forall i, weightf (S i) mod weightf i = 0)*).                                  
-  Proof using curve_good.
-    prepare_use_curve_good ().
-    { use_curve_good_t. }
-    (*{ use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }*)
-  Qed.
+      /\ (3 <= n)
+      /\ last_limb_width * n <= Z.log2_up s
+      /\ 1 <= last_limb_width.                                  
+  Proof using curve_good. prepare_use_curve_good (). Qed.
 
   Local Notation evalf := (eval weightf n).
   Local Notation notations_for_docstring
@@ -158,14 +149,20 @@ Section __.
           correctness)
          (only parsing, at level 10, summary at next level, correctness at next level).
 
-  Lemma from_Q_to_Z_and_back (x : Q) : x = Qdiv (inject_Z (Qnum x)) (inject_Z (QDen x)).
-  Proof. Admitted.
-
-  Lemma something : Z.log2_up s >= last_limb_width * n.
-       Proof. Admitted. (* this will have to be an axiom verified by check_args, I think *)
+  Lemma from_Q_to_Z_and_back (x : Q) : (x == Qdiv (inject_Z (Qnum x)) (inject_Z (QDen x)))%Q.
+  Proof. destruct x as [num den]. simpl. apply Qmake_Qdiv. Qed.
 
   Lemma last_limb_width_small : n - 1 <= Z.log2_up s - last_limb_width.
-  Proof. Admitted. (* if we assume last_limb_width >= 1, then this follows from "something" above*)
+  Proof.
+    remember use_curve_good as H eqn:clearMe. clear clearMe.
+    replace (Z.of_nat n) with (Z.of_nat n - 1 + 1) in H by lia. remember (Z.of_nat n - 1) as n'.
+    destruct H as [_ [H1 [H2 H3] ] ]. rewrite Z.mul_add_distr_l in H2.
+    remember (Z.of_nat last_limb_width) as l.
+    assert (H4: n' <= l * n').
+    { replace n' with (1 * n') by lia. replace (l * (1 * n')) with (l * n') by lia.
+      apply Zmult_le_compat_r; lia. }
+    lia.
+  Qed.
 
   Lemma limbwidth_good : 0 < Qden limbwidth <= Qnum limbwidth.
   Proof.
@@ -184,7 +181,7 @@ Section __.
     rewrite <- (from_Q_to_Z_and_back limbwidth).
     remember (Log2.Z.log2_up_le_full s) as H eqn:clearMe. clear clearMe.
     apply (Z.le_trans _ _ _ H). apply Z.pow_le_mono_r; try lia. cbv [limbwidth].
-    remember something as H' eqn:clearMe. clear clearMe. rewrite Zle_Qle.
+    rewrite Zle_Qle.
     remember (_ *_)%Q as x eqn:E. apply (Qle_trans _ x).
     - subst. rewrite <- (Qmult_le_r _ _ (inject_Z (Z.of_nat n) - 1)).
       + cbv [Qdiv].
@@ -196,8 +193,14 @@ Section __.
         -- replace 0%Q with (inject_Z 0) by reflexivity. replace 1%Q with (inject_Z 1) by reflexivity. cbv [Qminus]. rewrite <- inject_Z_plus. rewrite inject_Z_injective. simpl. lia.
       + replace 0%Q with (inject_Z 0) by reflexivity. replace 1%Q with (inject_Z 1) by reflexivity. cbv [Qminus]. rewrite <- inject_Z_plus. simpl. rewrite <- Zlt_Qlt. lia.
     - apply Qle_ceiling.
-Qed.
-  
+  Qed.
+
+  Lemma s_big : weightf (n - 1) <= s.
+  Proof.
+    remember use_curve_good eqn:clearMe. clear clearMe.
+    
+
+    
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
