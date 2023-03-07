@@ -25,7 +25,6 @@ Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
-Require Import Crypto.Arithmetic.Saturated.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.

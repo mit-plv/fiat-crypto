@@ -1,12 +1,7 @@
 (** * Push-Button Synthesis of Bitcoin Multiplication: Reification Cache *)
-Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
-Require Import Coq.ZArith.ZArith.
 Require Import Coq.derive.Derive.
-Require Import Crypto.Arithmetic.Core.
-Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.Arithmetic.DettmanMultiplication.
-Local Open Scope Z_scope.
 
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 

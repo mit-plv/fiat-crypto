@@ -1,7 +1,6 @@
 Require Import Crypto.Arithmetic.Core.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List.
-Require Import Crypto.Util.ZUtil.Modulo.PullPush.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
 Local Open Scope list_scope.
