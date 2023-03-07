@@ -117,7 +117,6 @@ Module DettmanMultiplication.
       - apply Divide.Z.mod_divide_full in weight_limbs_mod_s_eq_0. destruct weight_limbs_mod_s_eq_0 as [x H].
         rewrite H. rewrite Z_div_mult; try apply s_positive. rewrite Z.mul_comm. rewrite Z_mod_mult. lia.
     Qed.
-
   End DettmanMultiplication.
 End DettmanMultiplication.
 
@@ -158,7 +157,7 @@ Module dettman_multiplication_mod_ops.
     Qed.
 
     Lemma limbwidth_good : 0 < limbwidth_den <= limbwidth_num.
-    Proof. remember n_small eqn:clearMe. clear clearMe. lia. Qed.
+    Proof. remember n_small. lia. Qed.
 
     Local Notation wprops := (@wprops limbwidth_num limbwidth_den limbwidth_good).
 
@@ -200,7 +199,7 @@ Module dettman_multiplication_mod_ops.
       rewrite inject_Z_plus. simpl. replace (inject_Z (-1)) with (-(1))%Q by reflexivity.
       cbv [Qminus]. rewrite Qmult_inv_r.
       - rewrite <- inject_Z_plus. rewrite Qmult_1_r. rewrite Qceiling_Z.
-        rewrite <- Zle_Qle. remember (Z.le_log2_up_succ_log2 s) eqn:clearMe. clear clearMe. lia.
+        rewrite <- Zle_Qle. remember (Z.le_log2_up_succ_log2 s). lia.
       - replace (-(1))%Q with (inject_Z (-1)) by reflexivity.
         replace 0%Q with (inject_Z 0) by reflexivity. rewrite inject_Z_injective. lia.
     Qed.

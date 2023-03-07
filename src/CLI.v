@@ -96,7 +96,7 @@ Module ForExtraction.
                  option_map Auto numv
             else None
        end.
-  
+
   Definition parse_sc (s : string) : option (Z * list (Z * Z))
     := parseZ_arith_to_taps s.
 
@@ -399,10 +399,6 @@ Module ForExtraction.
     := ("n",
         Arg.Custom (parse_string_and parse_nat) "ℕ",
         ["The number of limbs"]).
-  Definition limbwidth_spec : anon_argT
-    := ("limbwidth",
-        Arg.Custom (parse_string_and parse_nat) "ℕ",
-        ["The limb width"]).
   Definition last_limb_width_spec : anon_argT
     := ("last_limb_width",
          Arg.Custom (parse_string_and parse_nat) "ℕ",

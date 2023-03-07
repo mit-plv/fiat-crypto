@@ -79,8 +79,7 @@ Section __.
        notice where the constant 0s are, and remove them. *)
   Definition possible_values_of_machine_wordsize
     := prefix_with_carry [machine_wordsize; 2 * machine_wordsize].
-  (*Definition e : nat := Z.abs_nat (Z.log2_up s_).*)
-  (*Local Notation s := (2 ^ e).*)
+  
   Local Notation c := (Associational.eval c_).
   Definition m := s - c.
 
@@ -88,7 +87,17 @@ Section __.
 
   Definition input_magnitude := Option.value inbounds_multiplier 1.
   Definition output_magnitude_first_limbs : Q := input_magnitude / 2 + 1 / 2.
-  Definition output_magnitude_last_limb : Q := input_magnitude / 2 + 1 / 4. (* Where these bounds came from: https://github.com/bitcoin-core/secp256k1/blob/0eb3000417fcf996e3805d0eb00f0f32b8849315/src/field_5x52_impl.h#L545 *)
+  Definition output_magnitude_last_limb : Q := input_magnitude / 2 + 1 / 4.
+  (* Where these bounds came from:
+     https://github.com/bitcoin-core/secp256k1/blob/0eb3000417fcf996e3805d0eb00f0f32b8849315/src/field_5x52_impl.h#L545
+     These bounds are correct, and reasonably tight, for the following parameters:
+           s = 2^256
+           c = 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
+           n = 5
+           last_limb_width = 48.
+     Given parameters dissimilar to those above, these bounds are no better than a guess.
+     I suppose they provide a reasonable default, though. *)
+
   Definition weightf := dettman_multiplication_mod_ops.weight s n last_limb_width.
   Definition input_bounds : list (ZRange.type.option.interp base.type.Z)
     := fold_left (fun l i => Some r[0 ~> Qceiling (2 * input_magnitude * ((weightf (i + 1) / weightf i) - 1))]%zrange :: l) (seq 0 (n - 1)) [] ++
@@ -116,13 +125,6 @@ Section __.
              ; (2 ^ (Z.log2 s) =? s, Pipeline.Values_not_provably_equalZ "2 ^ (Z.log2 s) = s" (2 ^ Z.log2 s) s)
             ])
             res.
-
-  Local Ltac use_curve_good_t :=
-    repeat first [ use_requests_to_prove_curve_good_t_step
-                 | assumption
-                 | lia
-                 | progress autorewrite with distr_length
-                 | progress distr_length ].
 
   Context (requests : list string)
     (curve_good : check_args requests (Success tt) = Success tt).
@@ -167,13 +169,10 @@ Section __.
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements."]%string)
              (mul_correct weightf n m input_bounds output_bounds)).
 
-  Local Ltac solve_extra_bounds_side_conditions :=
-    cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
-
   Hint Rewrite
        dettman_multiplication_mod_ops.eval_mulmod
-       using solve [ auto with zarith | congruence | solve_extra_bounds_side_conditions ] : push_eval.
-  Hint Unfold dettman_multiplication_mod_ops.mulmod DettmanMultiplication.mulmod : push_eval.
+       using solve [ auto with zarith | congruence ] : push_eval.
+  Hint Unfold dettman_multiplication_mod_ops.mulmod : push_eval.
 
   Local Ltac prove_correctness _ := Primitives.prove_correctness use_curve_good.
 
