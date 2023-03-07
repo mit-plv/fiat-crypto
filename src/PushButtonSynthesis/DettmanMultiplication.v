@@ -68,7 +68,7 @@ Section __.
           (s : Z)
           (c_ : list (Z*Z))
           (n : nat) (* number of limbs *)
-          (last_limb_width : nat) (* This is required to be >= 0.  Should it have type positive? *)
+          (last_limb_width : nat) (* This is required to be >= 0.  Perhaps it should have type positive. *)
           (inbounds_multiplier : option Q).
 
   Local Instance override_pipeline_opts : PipelineOptions
@@ -91,10 +91,10 @@ Section __.
   Definition output_magnitude_last_limb : Q := input_magnitude / 2 + 1 / 4. (* Where these bounds came from: https://github.com/bitcoin-core/secp256k1/blob/0eb3000417fcf996e3805d0eb00f0f32b8849315/src/field_5x52_impl.h#L545 *)
   Definition weightf := dettman_multiplication_mod_ops.weight s n last_limb_width.
   Definition input_bounds : list (ZRange.type.option.interp base.type.Z)
-    := fold_left (fun l i => Some r[0 ~> Qceiling (2 * input_magnitude * (weightf (i + 1) / weightf i) - 1)]%zrange :: l) (seq 0 n) [] ++
+    := fold_left (fun l i => Some r[0 ~> Qceiling (2 * input_magnitude * (weightf (i + 1) / weightf i) - 1)]%zrange :: l) (seq 0 (n - 1)) [] ++
                  [Some r[0 ~> Qceiling (2 * input_magnitude * 2^last_limb_width)]%zrange].
   Definition output_bounds : list (ZRange.type.option.interp base.type.Z)
-    := fold_left (fun l i => Some r[0 ~> Qceiling (2 * output_magnitude_first_limbs * (weightf (i + 1) / weightf i) - 1)]%zrange :: l) (seq 0 n) [] ++
+    := fold_left (fun l i => Some r[0 ~> Qceiling (2 * output_magnitude_first_limbs * (weightf (i + 1) / weightf i) - 1)]%zrange :: l) (seq 0 (n - 1)) [] ++
          [Some r[0 ~> Qceiling (2 * output_magnitude_last_limb * 2^last_limb_width)]%zrange].
 
   Local Existing Instance default_translate_to_fancy.

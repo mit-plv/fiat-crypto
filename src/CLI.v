@@ -97,12 +97,6 @@ Module ForExtraction.
             else None
        end.
   
-  Definition parse_n_nat (s : string) : option nat
-    := parse_nat s.
-
-  Definition parse_nat_limbwidth (s : string) : option nat
-    := parse_nat s.
-  
   Definition parse_sc (s : string) : option (Z * list (Z * Z))
     := parseZ_arith_to_taps s.
 
@@ -409,6 +403,10 @@ Module ForExtraction.
     := ("limbwidth",
         Arg.Custom (parse_string_and parse_nat) "ℕ",
         ["The limb width"]).
+  Definition last_limb_width_spec : anon_argT
+    := ("last_limb_width",
+         Arg.Custom (parse_string_and parse_nat) "ℕ",
+         ["The desired width of the last (most significant) limb"]).
   Definition sc_spec : anon_argT
     := ("s-c",
         Arg.Custom (parse_string_and parse_sc) "an integer expression",
@@ -1197,12 +1195,12 @@ Module ForExtraction.
       := {
           spec :=
             {| Arg.named_args := [inbounds_multiplier_spec]
-               ; Arg.anon_args := [n_nat_spec; limbwidth_spec; sc_spec]
+               ; Arg.anon_args := [n_nat_spec; last_limb_width_spec; sc_spec]
                ; Arg.anon_opt_args := []
                ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec DettmanMultiplication.valid_names) |};
 
           parse_args opts args
-          := let '(inbounds_multiplier, ((str_n, n), (str_limbwidth, limbwidth), (str_sc, (s, c))), tt, requests) := args in
+          := let '(inbounds_multiplier, ((str_n, n), (str_last_limb_width, last_limb_width), (str_sc, (s, c))), tt, requests) := args in
              let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
              let to_string_opt ls := choose_one_of_many (List.map (@snd _ _) ls) in
              let inbounds_multiplier := to_string_opt inbounds_multiplier in
@@ -1210,22 +1208,22 @@ Module ForExtraction.
              match inbounds_multiplier with
              | inr errs => inr errs
              | inl inbounds_multiplier
-                   => inl ((str_n, str_limbwidth, str_sc, str_inbounds_multiplier, show_requests),
-                          (n, limbwidth, s, c, inbounds_multiplier, requests))
+                   => inl ((str_n, str_last_limb_width, str_sc, str_inbounds_multiplier, show_requests),
+                          (n, last_limb_width, s, c, inbounds_multiplier, requests))
              end;
 
           show_lines_args :=
-            fun '((str_n, str_limbwidth, str_sc, str_inbounds_multiplier, show_requests),
-                  (n, limbwidth, s, c, inbounds_multiplier, requests))
+            fun '((str_n, str_last_limb_width, str_sc, str_inbounds_multiplier, show_requests),
+                  (n, last_limb_width, s, c, inbounds_multiplier, requests))
             => ["requested operations: " ++ show_requests;
                 "n = " ++ show n ++ " (from """ ++ str_n ++ """)";
-                "limbwidth = " ++ show limbwidth ++ " (from """ ++ str_limbwidth ++ """)";
+                "last_limb_width = " ++ show last_limb_width ++ " (from """ ++ str_last_limb_width ++ """)";
                 "s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ " (from """ ++ str_sc ++ """)";
                 "inbounds_multiplier: " ++ show inbounds_multiplier ++ " (from """ ++ str_inbounds_multiplier ++ """)"];
 
           Synthesize
-          := fun _ opts '(n, limbwidth, s, c, inbounds_multiplier, requests) comment_header prefix
-             => DettmanMultiplication.Synthesize machine_wordsize s c n limbwidth inbounds_multiplier comment_header prefix requests
+          := fun _ opts '(n, last_limb_width, s, c, inbounds_multiplier, requests) comment_header prefix
+             => DettmanMultiplication.Synthesize machine_wordsize s c n last_limb_width inbounds_multiplier comment_header prefix requests
         }.
 
     Definition PipelineMain
