@@ -91,11 +91,11 @@ Section __.
   Definition output_magnitude_last_limb : Q := input_magnitude / 2 + 1 / 4. (* Where these bounds came from: https://github.com/bitcoin-core/secp256k1/blob/0eb3000417fcf996e3805d0eb00f0f32b8849315/src/field_5x52_impl.h#L545 *)
   Definition weightf := dettman_multiplication_mod_ops.weight s n last_limb_width.
   Definition input_bounds : list (ZRange.type.option.interp base.type.Z)
-    := fold_left (fun l i => Some r[0 ~> Qceiling (2 * input_magnitude * (weightf (i + 1) / weightf i) - 1)]%zrange :: l) (seq 0 (n - 1)) [] ++
-                 [Some r[0 ~> Qceiling (2 * input_magnitude * 2^last_limb_width)]%zrange].
+    := fold_left (fun l i => Some r[0 ~> Qceiling (2 * input_magnitude * ((weightf (i + 1) / weightf i) - 1))]%zrange :: l) (seq 0 (n - 1)) [] ++
+                 [Some r[0 ~> Qceiling (2 * input_magnitude * (2^last_limb_width - 1))]%zrange].
   Definition output_bounds : list (ZRange.type.option.interp base.type.Z)
-    := fold_left (fun l i => Some r[0 ~> Qceiling (2 * output_magnitude_first_limbs * (weightf (i + 1) / weightf i) - 1)]%zrange :: l) (seq 0 (n - 1)) [] ++
-         [Some r[0 ~> Qceiling (2 * output_magnitude_last_limb * 2^last_limb_width)]%zrange].
+    := fold_left (fun l i => Some r[0 ~> Qceiling (2 * output_magnitude_first_limbs * ((weightf (i + 1) / weightf i) - 1))]%zrange :: l) (seq 0 (n - 1)) [] ++
+         [Some r[0 ~> Qceiling (2 * output_magnitude_last_limb * (2^last_limb_width - 1))]%zrange].
 
   Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
