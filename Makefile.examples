@@ -127,8 +127,8 @@ $(foreach bw,64,$(eval $(call add_curve_keys,secp256k1_dettman_$(bw),DETTMAN_MUL
 $(foreach bw,64,$(eval $(call add_curve_keys,curve25519_solinas_$(bw),SOLINAS_REDUCTION,'curve25519_solinas',$(bw),'2^255 - 19',$(SOLINAS_REDUCTION_FUNCTIONS),SOLINAS_REDUCTION)))
 
 # Files taking 30s or less
-LITE_BASE_FILES := curve25519_64 poly1305_64 poly1305_32 p256_64 secp256k1_64 p384_64 p224_32 p434_64 p448_solinas_64 secp256k1_32 p256_32 p448_solinas_32 \
-	curve25519_scalar_64 p256_scalar_64 secp256k1_scalar_64 p384_scalar_64 secp256k1_scalar_32 p256_scalar_32
+LITE_BASE_FILES := curve25519_64 poly1305_64 poly1305_32 p256_64 secp256k1_dettman_64 secp256k1_montgomery_64 p384_64 p224_32 p434_64 p448_solinas_64 secp256k1_montgomery_32 p256_32 p448_solinas_32 \
+	curve25519_scalar_64 p256_scalar_64 secp256k1_montgomery_scalar_64 p384_scalar_64 secp256k1_montgomery_scalar_32 p256_scalar_32
 
 EXTRA_C_FILES := inversion/c/*_test.c
 
