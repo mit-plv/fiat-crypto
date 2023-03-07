@@ -126,6 +126,7 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_List_rev (@List.rev)
       ; with_name ident_List_flat_map (@List.flat_map)
       ; with_name ident_List_partition (@List.partition)
+      ; with_name ident_List_filter (@List.filter)
       ; with_name ident_List_fold_right (@List.fold_right)
       ; with_name ident_List_update_nth (@update_nth)
       ; with_name ident_List_nth_default (@nth_default)

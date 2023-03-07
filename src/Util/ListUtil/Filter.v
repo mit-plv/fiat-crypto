@@ -1,6 +1,7 @@
 Require Import Coq.micromega.Lia.
 Require Import Coq.Arith.Arith.
 Require Import Coq.Lists.List.
+Require Import Coq.Classes.Morphisms.
 Require Export Crypto.Util.FixCoqMistakes.
 Import ListNotations.
 Local Set Implicit Arguments.
@@ -34,4 +35,15 @@ Module List.
     induction 1; cbn; [ constructor | ].
     destruct f, g; try constructor; auto; try (exfalso; assumption).
   Qed.
+
+  #[export] Instance filter_Proper {A} : Proper (pointwise_relation _ eq ==> eq ==> eq) (@List.filter A).
+  Proof.
+    cbv [pointwise_relation]; intros f g Hfg ls ls' ?; subst ls'.
+    induction ls as [|l ls IHls]; cbn [filter]; rewrite ?IHls, ?Hfg; reflexivity.
+  Qed.
+  
+  #[export] Instance Proper_filter_eq {A} : Proper ((eq ==> eq) ==> eq ==> eq) (@filter A).
+  Proof. repeat intro; subst; apply filter_Proper; repeat intro; eauto. Qed.
 End List.
+
+Export (hints) List.
