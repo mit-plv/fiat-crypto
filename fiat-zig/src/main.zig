@@ -72,7 +72,7 @@ test "poly1305" {
     try testVector(@import("poly1305_64.zig"), expected);
 }
 
-test "secp256k1" {
+test "secp256k1_montgomery" {
     const expected = "aaa4b177db43ac4d443d0171c3bd2ec9db6c0bf91c1941217b81d250614324dc";
-    try testVector(@import("secp256k1_64.zig"), expected);
+    try testVector(@import("secp256k1_montgomery_64.zig"), expected);
 }
