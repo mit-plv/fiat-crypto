@@ -15,7 +15,7 @@ Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
 Require Import Crypto.Bedrock.End2End.X25519.MontgomeryLadder.
-
+Local Open Scope string_scope.
 Local Arguments map.rep: clear implicits.
 
 Definition f_rel_pos : Z := ltac:(

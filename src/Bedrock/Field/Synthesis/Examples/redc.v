@@ -25,7 +25,7 @@ Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 
 Section WithParameters.
 
-  Import List.
+  Import coqutil.Datatypes.List.
   Import WordByWordMontgomery.
 
   Context {prime: Z} (r := 64) {ri : Z}.
@@ -60,7 +60,7 @@ Section WithParameters.
 
   (* redc_step ought to take in small arrays B and S, and value a, and output an array S' *)
   (* S' should be small, and should eval to the same as (a * B + S) * ri modulo the prime *)
- 
+
   Instance spec_of_redc_step : spec_of "redc_step" :=
     fnspec! "redc_step" a Bstart Sstart len / B (bval: Z) S (sval: Z) R,
       { requires t m :=
