@@ -216,7 +216,7 @@ Proof.
             (ext_spec:=FE310CSemantics.ext_spec)
             (string_keyed_map := SortedListString.map)
             (string_keyed_map_ok := SortedListString.ok))
-    with (fname:="montladder").
+    with (fname:="montladder"%string).
   all:cbn [montladder fst snd].
 
   (* fill in easy subgoals that instantiate evars *)
@@ -235,7 +235,7 @@ Proof.
       | |- map.get (getRegs (getMachine _)) _ = Some _ => eassumption
       | |- LowerPipeline.arg_regs_contain _ _ => eassumption
       | |- context [LowerPipeline.machine_ok] => eassumption
-      | |- map.get _ "montladder" = Some _ => reflexivity
+      | |- map.get _ "montladder"%string = Some _ => reflexivity
       | _ => idtac
       end.
 

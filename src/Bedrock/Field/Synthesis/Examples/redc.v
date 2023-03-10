@@ -25,7 +25,7 @@ Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 
 Section WithParameters.
 
-  Import List.
+  Import List coqutil.Datatypes.List.
   Import WordByWordMontgomery.
 
   Context {prime: Z} (r := 64) {ri : Z}.
