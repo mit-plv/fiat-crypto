@@ -325,15 +325,19 @@ Module Export RewritePass.
   Variant rewrite_pass :=
     | addbyte_small
     | addcarry_bit
-    | addcarry_small
+    (*| addcarry_small*)
+    | shr_small
+        | shr_smallish
+    | addcarry_to_shr
     | addoverflow_bit
     | addoverflow_small
     | combine_consts
+    | combine_sum_of_shrs
     | constprop
     | consts_commutative
     | drop_identity
     | flatten_associative
-    | flatten_bounded_associative
+    (*| flatten_bounded_associative*)
     | fold_consts_to_and
     | set_slice0_small
     | set_slice_set_slice
@@ -378,13 +382,19 @@ Module Export RewritePass.
         ;consts_commutative
         ;fold_consts_to_and
         ;drop_identity
-        ;flatten_bounded_associative
+        (*;flatten_bounded_associative*)
         ;unary_truncate
         ;truncate_small
         ;combine_consts
         ;addoverflow_bit
         ;addcarry_bit
-        ;addcarry_small
+        ;truncate_small
+        (*;addcarry_small*)
+        ;addcarry_to_shr
+        ;truncate_small
+        ;shr_small
+        ;shr_smallish
+        ;combine_sum_of_shrs
         ;addoverflow_small
         ;addbyte_small
         ;xor_same
@@ -2577,7 +2587,7 @@ Proof using Type.
     replace (Z.of_N 64) with 64 in * by (vm_compute; reflexivity); lia.
 Qed.
 
-Definition addcarry_small (d : dag) :=
+(*Definition addcarry_small (d : dag) :=
   fun e => match e with
     ExprApp (addcarry s, args) =>
       match Option.List.lift (List.map (bound_expr d) args) with
@@ -2593,7 +2603,34 @@ Proof using Type.
   let H := match goal with H : Forall2 (eval _ _) _ _ |- _ => H end in
   eapply bound_sum in H; eauto.
   rewrite Z.ones_equiv in * |- ; rewrite Z.shiftr_div_pow2, Z.div_small; cbn; lia.
+Qed.*)
+
+(* this is the replacement for addcarry_small, which we should no longer need since all addcarries are immediately rewritten into shrs. *)
+Definition shr_small (d : dag) :=
+  fun e => match e with
+    ExprApp ((shrZ | shr _), [e'; ExprApp (const w, [])]) => (* could use bounds analysis to make this work even when shift amount isn't a const?  Probably not worth the effort. *)
+      match bound_expr d e' with
+      | Some bounds =>
+          if Z.leb 0 w && Z.leb 0 (lower bounds) && Z.leb (upper bounds) (Z.ones w) (* can we do something here even if w < 0 ?*)
+          then (ExprApp (const 0, nil))
+          else e | _ => e end | _ =>  e end.
+#[local] Instance describe_shr_small : description_of Rewrite.shr_small
+  := "put description here.".
+Global Instance shr_small_ok : Ok shr_small.
+Proof using Type.
+  t; f_equal; rewrite Z.ones_equiv in *; rewrite Z.shiftr_div_pow2, Z.div_small; cbn; lia.
 Qed.
+
+(* need to do this because the phoas stuff produces some stuff of the form shr 1, which I want to rewrite into shrZ when possible. *)
+Definition shr_smallish (d : dag) :=
+  fun e => match e with
+           | ExprApp (shr s, [a; b]) => slice0 d (truncate_small d (ExprApp (slice 0 s, [ExprApp (shrZ, [a; b])])))
+           | _ => e
+           end.
+#[local] Instance describe_shr_smallish : description_of Rewrite.shr_smallish
+  := "put description here".
+Global Instance shr_smallish_ok : Ok shr_smallish.
+Proof. Admitted.
 
 Lemma signed_small s v (Hv : (0 <= v <= Z.ones (Z.of_N s-1))%Z) : signed s v = v.
 Proof using Type.
@@ -2941,7 +2978,9 @@ Proof using Type.
     erewrite interp_op_associative_app; eauto. }
 Qed.
 
-Definition flatten_bounded_associative (d : dag) :=
+Print bounds_for_drop_inner_associative.
+
+(*Definition flatten_bounded_associative (d : dag) :=
   fun e => match e with
     ExprApp (o, args) =>
     ExprApp (o, List.flat_map (fun e' =>
@@ -2952,9 +2991,11 @@ Definition flatten_bounded_associative (d : dag) :=
         | Some ubound => if is_tighter_than_bool ubound bound then args' else [e']
                                               | _ => [e'] end | _ => [e'] end | _ => [e'] end) args) | _ => e end.
 #[local] Instance describe_flatten_bounded_associative : description_of Rewrite.flatten_bounded_associative
-  := "Flattens some nested operations such as add inside addcarry".
+  := "Flattens some nested operations such as add inside addcarry".*)
 
-Lemma fold_right_add_cps_id init ls
+(* I don't think we need flatten_bounded_associative, now that addcarries are rewritten as shrs.  Not entirely sure.  Would be neat if we didn't need it.*)
+
+(*Lemma fold_right_add_cps_id init ls
   : fold_right Z.add init ls = fold_right Z.add 0 ls + init.
 Proof. induction ls; cbn; lia. Qed.
 
@@ -3018,7 +3059,7 @@ Proof using Type.
     all: rewrite !Z.land_ones, ?Z.ones_equiv in * by lia.
     all: Z.rewrite_mod_small.
     all: try reflexivity. }
-Qed.
+Qed.*)
 
 Definition consts_commutative (d : dag) :=
   fun e => match e with
@@ -3771,20 +3812,196 @@ Qed.
 Global Instance combine_consts_Ok : Ok combine_consts.
 Proof. repeat step; apply cleanup_combine_consts_Ok, combine_consts_pre_Ok; assumption. Qed.
 
+(* addcarry s, [a; b; c; d] => andZ [(shr 1, [(addZ, [a; b; c; d]]); s]*)
+(* I'm not sure what to do when the sum of the args isn't upper-bounded by 2^s-1.  I don't think it will matter, usually.  I'll just write it as a shr 1 instead of a shrZ. *)
+Definition addcarry_to_shr (d : dag) : expr -> expr :=
+  fun e =>
+    match e with
+    | ExprApp (addcarry s, operands) => (*let sum := ExprApp (addZ, operands) in
+                                        let op :=
+                                          match bound_expr d sum with
+                                          | Some bounds => if (0 <=? lower bounds) && (upper bounds <? 2^Z.of_N s) then shrZ else slice (Z.to_
+                                          | None => shr 1%N
+                                          end
+                                        in
+                                        ExprApp (op, [sum; ExprApp (const (Z.of_N s), [])])*)
+                                       (*ExprApp (slice 0 1, [*)ExprApp (shrZ, [ExprApp (addZ, operands); ExprApp (const (Z.of_N s), [])])(*])*)
+    | _ => e
+    end.
+
+#[local] Instance describe_addcarry_to_shr : description_of Rewrite.addcarry_to_shr
+  := "Rewrites addcarry s as shr of addZ.".
+
+Global Instance addcarry_to_shr_Ok : Ok addcarry_to_shr.
+Proof. (*t. simpl. rewrite Z.land_ones by lia. f_equal. Qed.*) Admitted.
+
+Print partition. Search partition.
+(* eventually move to Util/Structures/Orders/List.v? *)
+Module OrderForCombineShr <: TotalLeBool.
+  Definition t := expr.
+  Definition value (e : expr) : option Z :=
+  match e with
+  | ExprApp (shrZ, [_; ExprApp (const c, [])]) => Some c
+  | _ => None
+  end.
+
+  Definition leb (x y : expr) :=
+    match value x, value y with
+    | _, None => true
+    | None, Some _ => false
+    | Some a, Some b => Z.leb a b
+    end.
+  Theorem leb_total : forall a1 a2, leb a1 a2 = true \/ leb a2 a1 = true.
+  Admitted.
+End OrderForCombineShr.
+
+Search expr.
+
+Definition x := ExprRef 1%N.
+Definition y := ExprRef 2%N.
+Definition z := ExprRef 3%N.
+Definition s := 64%N.
+Definition test_case : expr :=
+
+  ExprApp (addZ, [ExprApp (shrZ, [ExprApp (addZ, [x; y]); ExprApp (const (Z.of_N s), [])]);
+                  ExprRef 4%N;
+                  ExprApp (shrZ, [ExprRef 1%N; ExprApp (const 4, [])]);
+                  ExprRef 89%N;
+                  ExprApp (shrZ, [ExprApp (addZ, [ExprApp (add s, [x; y]);z]);
+                                  ExprApp (const (Z.of_N s), [])])]).
+
+Definition times0 (d : dag) : expr -> expr :=
+  fun e =>
+    match e with
+    | ExprApp ((mulZ), args) =>
+        if (List.existsb (expr_beq (ExprApp (const 0, []))) args)
+        then ExprApp (const 0, [])
+        else e
+    | _ => e
+    end.
+
+Require Import Coq.Sorting.Mergesort.
+
+Module Import ShrSort := Sort OrderForCombineShr.
+
+Definition merge_shr_with_sum (addend : expr) (addends : list expr) : list expr :=
+  match addend, addends with
+  | ExprApp (shrZ, [e'; ExprApp (const a, [])]), ExprApp (shrZ, [e; ExprApp (const b, [])]) :: addends' =>
+      if Z.eqb a b then
+        let simple_mod := fun ex => flatten_associative dag.empty (slice0 dag.empty (ExprApp (slice 0 (Z.to_N b), [ex]))) in
+        let neg_simple_mod := fun ex => ExprApp (mulZ, [ExprApp (const (-1), []); simple_mod ex]) in
+        let simple_sum := combine_consts dag.empty (flatten_associative dag.empty (ExprApp (addZ, [e'; e; neg_simple_mod e'; neg_simple_mod e]))) in
+        let simpler_sum := match simple_sum with
+                           | ExprApp (o, operands) => ExprApp (o, map (times0 dag.empty) operands)
+                           | _ => simple_sum
+                           end in
+        let simplest_sum := drop_identity dag.empty simpler_sum in
+        ExprApp (shrZ, [simplest_sum; ExprApp (const a, [])]) :: addends'
+      else
+        addend :: addends
+  | _, _ => addend :: addends
+  end.
+
+(* calling the "simplify_addends" function, defined within combine_shr, may cause the number of addends to decrease.  Potentially, the number of addends could decrease to one, in which case the combine_sum_of_shrs function might output something like ExprApp (add s, [x]) or ExprApp (addZ, [x]).  This could be simplified to either ExprApp (slice 0 s, [x]) or simply x, respectively.  I'm choosing not to do this simplification for the moment, because I'm concerned that rewriting ExprApp (add s, [x]) into a different form could be bad, and potentially interfere with some future call to flatten_associative, for instance 
+
+^Never mind that.  See unary_truncate!  That's convenient, sort of.  Should I put this before unary_truncate in the default ordering?  This could still be problematic, maybe?
+
+Perhaps I should add a rule that removes things like slice 0, s inside of add s, so that this isn't an issue?  Or does this already exist?
+
+
+*)
+Definition combine_sum_of_shrs (d : dag) : expr -> expr :=
+  fun e =>
+    let simplify_addends := fun addends => fold_right merge_shr_with_sum [] (sort addends) in
+    match e with
+    | ExprApp (addZ, operands) => ExprApp (addZ, simplify_addends operands)
+    | ExprApp (add s, operands) => ExprApp (add s, simplify_addends operands)
+    | _ => e             
+    end.
+
+Global Instance combine_sum_of_shrs_Ok : Ok combine_sum_of_shrs.
+Proof. Admitted.
+#[local] Instance describe_sum_of_shrs : description_of Rewrite.combine_sum_of_shrs
+  := "put something helpful here".
+
+(*Fixpoint apply_recursively (rewrite_rule : expr -> expr) (e : expr) : expr :=
+  match e with
+  | ExprApp (o, args) => rewrite_rule (ExprApp (o, map (apply_recursively rewrite_rule) args))
+  | ExprRef _ => e
+  end.*)
+
+Definition x1 := combine_sum_of_shrs dag.empty test_case.
+Compute x1.
+Definition x1' := ExprApp
+               (addZ,
+               [ExprRef 1%N; ExprRef 2%N;
+               ExprApp (add 64%N, [ExprRef 1%N; ExprRef 2%N]); 
+               ExprRef 3%N;
+               ExprApp
+                 (mulZ,
+                 [ExprApp (add 64%N, [ExprRef 1%N; ExprRef 2%N]);
+                 ExprApp (const (-1), [])]);
+               ExprApp
+                 (mulZ,
+                 [ExprApp (add 64%N, [ExprRef 1%N; ExprRef 2%N; ExprRef 3%N]);
+                 ExprApp (const (-1), [])])]).
+Compute (combine_consts dag.empty x1').
+(*Definition x2 := (apply_recursively (slice0 dag.empty) x1).
+Compute x2.
+Definition x3 := (apply_recursively (flatten_associative dag.empty) x2).
+Compute x3.
+Definition x3' := ExprApp
+               (addZ,
+               [ExprRef 1%N; ExprRef 2%N; ExprApp (add 64%N, [ExprRef 1%N; ExprRef 2%N]);
+               ExprRef 3%N;
+               ExprApp
+                 (mulZ,
+                 [ExprApp (const (-1), []); ExprApp (add 64%N, [ExprRef 1%N; ExprRef 2%N])]);
+               ExprApp
+                 (mulZ,
+                 [ExprApp (const (-1), []);
+                 ExprApp (add 64%N, [ExprRef 1%N; ExprRef 2%N; ExprRef 3%N])])]).
+Compute (combine_consts dag.empty x3').
+Definition x4 := (apply_recursively (combine_consts dag.empty) x3).
+Compute x4.
+Compute (apply_recursively (slice0 dag.empty) (combine_shr dag.empty test_case)).
+Compute*)
+
+(*Definition combine_shr (d : dag) : expr -> expr :=
+  fun e =>
+    match e with
+    | ExprApp (addZ, operands) =>
+        let (shrs, other) := partition (fun e => match e with
+                                                 | ExprApp (shrZ, [_; (ExprApp (const _, _))]) => true
+                                                 | ExprApp (shrZ, [(ExprApp (const _, _); _]) => true
+                                                 | _ => false
+                                                 end) operands in ExprApp (addZ, shrs ++ other)
+    | _ => e
+    end.*)
+      
+
+
+
+
+
 (* M-x query-replace-regex RET \(| RewritePass\.\)\([^ ]*\) => _ RET \1\2 => \2 *)
 Definition named_pass (name : RewritePass.rewrite_pass) : dag -> expr -> expr
   := match name with
      | RewritePass.addbyte_small => addbyte_small
      | RewritePass.addcarry_bit => addcarry_bit
-     | RewritePass.addcarry_small => addcarry_small
+     (*| RewritePass.addcarry_small => addcarry_small*)
+     | RewritePass.shr_small => shr_small
+     | RewritePass.shr_smallish => shr_smallish
+     | RewritePass.addcarry_to_shr => addcarry_to_shr
      | RewritePass.addoverflow_bit => addoverflow_bit
      | RewritePass.addoverflow_small => addoverflow_small
      | RewritePass.combine_consts => combine_consts
+     | RewritePass.combine_sum_of_shrs => combine_sum_of_shrs
      | RewritePass.constprop => constprop
      | RewritePass.consts_commutative => consts_commutative
      | RewritePass.drop_identity => drop_identity
      | RewritePass.flatten_associative => flatten_associative
-     | RewritePass.flatten_bounded_associative => flatten_bounded_associative
+     (*| RewritePass.flatten_bounded_associative => flatten_bounded_associative*)
      | RewritePass.fold_consts_to_and => fold_consts_to_and
      | RewritePass.set_slice0_small => set_slice0_small
      | RewritePass.set_slice_set_slice => set_slice_set_slice
@@ -3917,9 +4134,16 @@ Global Instance show_flag_state : Show flag_state :=
   ++" SF="++show sfv
   ++" ZF="++show zfv
   ++" OF="++show ofv++")")%string.
+
+Print Show.
+Print zrange.
+
+Global Instance show_zrange : Show zrange :=
+  fun r => ("r[a " ++ show (lower r) ++ " ~> " ++ show (upper r) ++ "]")%string.
+
 Global Instance show_lines_dag : ShowLines dag := (fun d:dag =>
   ["(*dag*)["]
-    ++List.map (fun '(i, v, descr) =>"(*"++show i ++"*) " ++ show v++";"
+    ++List.map (fun '(i, v, descr) =>"(*"++show i ++"*) " ++ show v++";"++"(**"++ show (dag.lookup_bounds d i) ++ "**)"
                                          ++ (if dag.get_eager_description_always_show descr
                                              then match dag.get_eager_description_description descr with
                                                   | Some descr => " " ++ String.Tab ++ "(*" ++ descr ++ "*)"
