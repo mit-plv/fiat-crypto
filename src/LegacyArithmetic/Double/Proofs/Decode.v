@@ -122,7 +122,7 @@ Lemma is_add_with_carry_1tuple {n W decode adc}
       (H : @is_add_with_carry n W decode adc)
   : @is_add_with_carry (1 * n) W (@tuple_decoder n W decode 1) adc.
 Proof.
-  apply tuple_decoder_O_ind_prod; try assumption.
+  apply tuple_decoder_O_ind_prod in H; try assumption.
   intros ??? ext [H0 H1]; apply Build_is_add_with_carry'.
   intros x y c; specialize (H0 x y c); specialize (H1 x y c).
   rewrite <- !ext; split; assumption.
