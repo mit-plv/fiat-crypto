@@ -512,6 +512,13 @@ Module DettmanMultiplication.
         -> list_Z_bounded_by input_bounds y
         -> eval (mul x y) mod m = ((eval x) * (eval y)) mod m
            /\ list_Z_bounded_by output_bounds (mul x y).
+
+     Definition square_correct
+               (square : list Z -> list Z)
+      := forall x,
+        list_Z_bounded_by input_bounds x
+        -> eval (square x) mod m = ((eval x) * (eval x)) mod m
+           /\ list_Z_bounded_by output_bounds (square x).
   End __.
 End DettmanMultiplication.
 
