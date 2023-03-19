@@ -189,11 +189,6 @@ Section __.
            (fun fname : string => [text_before_function_name ++ fname ++ " squares a field element."]%string)
            (square_correct weightf n m input_bounds output_bounds)).
 
-  Hint Rewrite eval_mulmod using solve [ auto with zarith | congruence ] : push_eval.
-  Hint Rewrite eval_squaremod using solve [ auto with zarith | congruence ] : push_eval.
-  Hint Unfold dettman_multiplication_mod_ops.mulmod : push_eval.
-  Hint Unfold dettman_multiplication_mod_ops.squaremod : push_eval.
-
   (** Work around COQBUG(https://github.com/coq/coq/issues/9286) *)
   Local Opaque DettmanMultiplication.mulmod DettmanMultiplication.squaremod.
 

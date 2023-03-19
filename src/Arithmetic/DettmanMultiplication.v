@@ -125,18 +125,20 @@ Module DettmanMultiplication.
         rewrite H. rewrite Z_div_mult; try apply s_positive. rewrite Z.mul_comm. rewrite Z_mod_mult. lia.
     Qed.
 
+    Hint Rewrite eval_reduce_carry_borrow : push_eval.
+
     Theorem eval_mulmod a b :
       (Positional.eval weight limbs (mulmod a b)) mod (s - c) =
       (Positional.eval weight limbs a * Positional.eval weight limbs b) mod (s - c).
     Proof.
-      cbv [mulmod]. rewrite eval_reduce_carry_borrow. autorewrite with push_eval. reflexivity.
+      cbv [mulmod]. autorewrite with push_eval. reflexivity.
     Qed.
 
     Theorem eval_squaremod a :
       (Positional.eval weight limbs (squaremod a)) mod (s - c) =
       (Positional.eval weight limbs a * Positional.eval weight limbs a) mod (s - c).
     Proof.
-      cbv [squaremod]. rewrite eval_reduce_carry_borrow. autorewrite with push_eval. reflexivity.
+      cbv [squaremod]. autorewrite with push_eval. reflexivity.
     Qed.
   End DettmanMultiplication.
 End DettmanMultiplication.
@@ -244,3 +246,11 @@ Module dettman_multiplication_mod_ops.
     Definition eval_squaremod := eval_squaremod s c n weight p_nz n_gteq_3 s_small s_big weight_n_mod_s_eq_0 wprops.
   End dettman_multiplication_mod_ops.
 End dettman_multiplication_mod_ops.
+
+Module Export Hints.
+  Import dettman_multiplication_mod_ops.
+#[global]
+  Hint Rewrite eval_mulmod using solve [ auto with zarith | congruence ] : push_eval.
+#[global]
+  Hint Rewrite eval_squaremod using solve [ auto with zarith | congruence ] : push_eval.
+End Hints.
