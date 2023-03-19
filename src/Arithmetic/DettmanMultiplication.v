@@ -79,11 +79,8 @@ Module DettmanMultiplication.
       - simpl. rewrite eval_loop_body. apply IHl'.
     Qed.
 
-    Definition mulmod a b :=
+    Definition reduce_carry_borrow r0 :=
       let l := limbs in
-      let a_assoc := Positional.to_associational weight limbs a in
-      let b_assoc := Positional.to_associational weight limbs b in
-      let r0 := Associational.mul a_assoc b_assoc in
       let r0' := dedup_weights r0 in
       let r1 := carry' (weight (2 * l - 2)) (weight 1) r0' in
       let r2 := reduce' s (weight (2 * l - 2)) (weight l) c r1 in
@@ -101,20 +98,47 @@ Module DettmanMultiplication.
       let r13 := carry' (weight (l - 2)) (weight 1) r12 in
       Positional.from_associational weight l r13.
 
+    Definition mulmod a b :=
+      let a_assoc := Positional.to_associational weight limbs a in
+      let b_assoc := Positional.to_associational weight limbs b in
+      let r0 := Associational.mul a_assoc b_assoc in
+      reduce_carry_borrow r0.
+
+    Definition squaremod a :=
+      let a_assoc := Positional.to_associational weight limbs a in
+      let r0 := Associational.square a_assoc in
+      reduce_carry_borrow r0.
+
     Hint Rewrite Positional.eval_from_associational Positional.eval_to_associational eval_borrow eval_loop: push_eval.
     Hint Resolve Z_mod_same_full : arith.
 
     Local Open Scope Z_scope.
 
-    Theorem eval_mulmod a b :
-      (Positional.eval weight limbs a * Positional.eval weight limbs b) mod (s - c) =
-      (Positional.eval weight limbs (mulmod a b)) mod (s - c).
+    Lemma eval_reduce_carry_borrow r0 :
+      (Positional.eval weight limbs (reduce_carry_borrow r0)) mod (s - c) =
+      (Associational.eval r0) mod (s - c).
     Proof.
-      cbv [mulmod carry' reduce']. autorewrite with push_eval; auto with arith.
+      cbv [reduce_carry_borrow carry' reduce']. autorewrite with push_eval; auto with arith.
       all: try apply Weight.weight_multiples_full; auto with arith; try lia.
       - apply div_nz; try assumption. remember (weight_positive wprops (limbs - 1)). lia.
       - apply Divide.Z.mod_divide_full in weight_limbs_mod_s_eq_0. destruct weight_limbs_mod_s_eq_0 as [x H].
         rewrite H. rewrite Z_div_mult; try apply s_positive. rewrite Z.mul_comm. rewrite Z_mod_mult. lia.
+    Qed.
+
+    Hint Rewrite eval_reduce_carry_borrow : push_eval.
+
+    Theorem eval_mulmod a b :
+      (Positional.eval weight limbs (mulmod a b)) mod (s - c) =
+      (Positional.eval weight limbs a * Positional.eval weight limbs b) mod (s - c).
+    Proof.
+      cbv [mulmod]. autorewrite with push_eval. reflexivity.
+    Qed.
+
+    Theorem eval_squaremod a :
+      (Positional.eval weight limbs (squaremod a)) mod (s - c) =
+      (Positional.eval weight limbs a * Positional.eval weight limbs a) mod (s - c).
+    Proof.
+      cbv [squaremod]. autorewrite with push_eval. reflexivity.
     Qed.
   End DettmanMultiplication.
 End DettmanMultiplication.
@@ -142,6 +166,7 @@ Module dettman_multiplication_mod_ops.
     Definition weight := (weight limbwidth_num limbwidth_den).
     
     Definition mulmod := mulmod s c n weight.
+    Definition squaremod := squaremod s c n weight.
 
     Lemma n_small : n - 1 <= Z.log2_up s - last_limb_width.
     Proof.
@@ -218,5 +243,14 @@ Module dettman_multiplication_mod_ops.
     Qed.
  
     Definition eval_mulmod := eval_mulmod s c n weight p_nz n_gteq_3 s_small s_big weight_n_mod_s_eq_0 wprops.
+    Definition eval_squaremod := eval_squaremod s c n weight p_nz n_gteq_3 s_small s_big weight_n_mod_s_eq_0 wprops.
   End dettman_multiplication_mod_ops.
 End dettman_multiplication_mod_ops.
+
+Module Export Hints.
+  Import dettman_multiplication_mod_ops.
+#[global]
+  Hint Rewrite eval_mulmod using solve [ auto with zarith | congruence ] : push_eval.
+#[global]
+  Hint Rewrite eval_squaremod using solve [ auto with zarith | congruence ] : push_eval.
+End Hints.

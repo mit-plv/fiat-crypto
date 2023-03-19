@@ -48,6 +48,8 @@ Import COperationSpecifications.DettmanMultiplication.
 
 Import Associational Positional.
 
+Import dettman_multiplication_mod_ops.
+
 Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
@@ -55,6 +57,7 @@ Local Coercion Z.pos : positive >-> Z.
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
 Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very long time *)
+Local Opaque reified_square_gen. (* needed for making [autorewrite] not take a very long time *)
 (* needed for making [autorewrite] with [Set Keyed Unification] fast *)
 Local Opaque expr.Interp.
 
@@ -159,6 +162,15 @@ Section __.
          (Some input_bounds, (Some input_bounds, tt))
          (Some output_bounds).
 
+ Definition square
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         possible_values
+         (reified_square_gen
+            @ GallinaReify.Reify s @ GallinaReify.Reify c_ @ GallinaReify.Reify n @ GallinaReify.Reify last_limb_width)
+         (Some input_bounds, tt)
+         (Some output_bounds).
+
   Definition smul (prefix : string)
     : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
@@ -168,10 +180,17 @@ Section __.
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements."]%string)
              (mul_correct weightf n m input_bounds output_bounds)).
 
-  Hint Rewrite
-       dettman_multiplication_mod_ops.eval_mulmod
-       using solve [ auto with zarith | congruence ] : push_eval.
-  Hint Unfold dettman_multiplication_mod_ops.mulmod : push_eval.
+  Definition ssquare (prefix : string)
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+      FromPipelineToString!
+        machine_wordsize prefix "square" square
+        (docstring_with_summary_from_lemma!
+           (fun fname : string => [text_before_function_name ++ fname ++ " squares a field element."]%string)
+           (square_correct weightf n m input_bounds output_bounds)).
+
+  (** Work around COQBUG(https://github.com/coq/coq/issues/9286) *)
+  Local Opaque DettmanMultiplication.mulmod DettmanMultiplication.squaremod.
 
   Local Ltac prove_correctness _ := Primitives.prove_correctness use_curve_good.
 
@@ -183,12 +202,21 @@ Section __.
   Lemma Wf_mul res (Hres : mul = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
+  Lemma square_correct res
+        (Hres : square = Success res)
+    : square_correct (weightf) n m input_bounds output_bounds (Interp res).
+  Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_square res (Hres : square = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Section for_stringification.
     Local Open Scope string_scope.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("mul", wrap_s smul)].
+      := [("mul", wrap_s smul);
+          ("square", wrap_s ssquare)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 
@@ -212,9 +240,11 @@ Module Export Hints.
 #[global]
   Hint Opaque
        mul
+       square
   : wf_op_cache.
 #[global]
   Hint Immediate
        Wf_mul
+       Wf_square
   : wf_op_cache.
 End Hints.
