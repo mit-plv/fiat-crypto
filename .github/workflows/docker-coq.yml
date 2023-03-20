@@ -40,6 +40,8 @@ jobs:
         custom_script: |
           eval $(opam env)
           etc/ci/describe-system-config.sh
+    - name: Work around https://github.com/actions/checkout/issues/766
+      run: git config --global --add safe.directory "*"
     - name: deps
       uses: coq-community/docker-coq-action@v1
       with:
