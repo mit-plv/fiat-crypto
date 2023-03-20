@@ -325,7 +325,8 @@ Module Export RewritePass.
   Variant rewrite_pass :=
     | addbyte_small
     | addcarry_bit
-    (*| addcarry_small*)
+    | shrZ_bit
+    | addcarry_small
     | shr_small
         | shr_smallish
     | addcarry_to_shr
@@ -337,7 +338,7 @@ Module Export RewritePass.
     | consts_commutative
     | drop_identity
     | flatten_associative
-    (*| flatten_bounded_associative*)
+    | flatten_bounded_associative
     | fold_consts_to_and
     | set_slice0_small
     | set_slice_set_slice
@@ -387,14 +388,15 @@ Module Export RewritePass.
         ;truncate_small
         ;combine_consts
         ;addoverflow_bit
-        ;addcarry_bit
+        (*;addcarry_bit*)
         ;truncate_small
         (*;addcarry_small*)
         ;addcarry_to_shr
+        ;shrZ_bit
         ;truncate_small
         ;shr_small
         ;shr_smallish
-        ;combine_sum_of_shrs
+        (*;combine_sum_of_shrs*)
         ;addoverflow_small
         ;addbyte_small
         ;xor_same
@@ -2547,6 +2549,45 @@ Proof using Type.
       subst; repeat step; repeat Econstructor; cbn; congruence.
 Qed.
 
+Definition shrZ_bit (d : dag) :=
+  fun e =>
+    match e with
+    | ExprApp (shrZ, ([ExprApp (addZ, [ExprApp (const a, nil); b]); ExprApp (const s, nil)])) =>
+        if option_beq zrange_beq (bound_expr d b) (Some r[0~>1]%zrange) then
+          match interp0_op addZ [a; 0], interp0_op addZ [a; 1] with
+          | Some x0, Some x1 =>
+              match interp0_op shrZ [x0; s], interp0_op shrZ [x1; s] with
+              | Some 0, Some 1 => b
+              | Some 0, Some 0 => ExprApp (const 0, nil)
+              | _, _ => e
+              end
+          | _, _ => e
+          end
+        else e
+    | ExprApp (shrZ, ([ExprApp (addZ, [b; ExprApp (const a, nil)]); ExprApp (const s, nil)])) =>
+        if option_beq zrange_beq (bound_expr d b) (Some r[0~>1]%zrange) then
+          match interp0_op addZ [a; 0], interp0_op addZ [a; 1] with
+          | Some x0, Some x1 =>
+              match interp0_op shrZ [x0; s], interp0_op shrZ [x1; s] with
+              | Some 0, Some 1 => b
+              | Some 0, Some 0 => ExprApp (const 0, nil)
+              | _, _ => e
+              end
+          | _, _ => e
+          end
+        else e | _ => e end
+      %Z%bool.
+#[local] Instance describe_shrZ_bit : description_of Rewrite.shrZ_bit
+  := "Like addcarrry_bit but translated into shrZ.  I SHOULD WRITE SOMETHING BETTER HERE.".
+Global Instance shrZ_bit_ok : Ok shrZ_bit.
+Proof using Type. Admitted.
+(*  repeat step;
+    [instantiate (1:=G) in E0; instantiate (1:=G) in E1|];
+    reflect_hyps; repeat step;
+    assert (y0 = 0 \/ y0 = 1)%Z as HH by Lia.lia; case HH as [|];
+      subst; repeat step; repeat Econstructor; cbn; congruence.
+Qed.*)
+
 Definition addoverflow_bit (d : dag) :=
   fun e => match e with
     ExprApp (addoverflow s, ([ExprApp (const a, nil);b])) =>
@@ -2587,7 +2628,7 @@ Proof using Type.
     replace (Z.of_N 64) with 64 in * by (vm_compute; reflexivity); lia.
 Qed.
 
-(*Definition addcarry_small (d : dag) :=
+Definition addcarry_small (d : dag) :=
   fun e => match e with
     ExprApp (addcarry s, args) =>
       match Option.List.lift (List.map (bound_expr d) args) with
@@ -2603,7 +2644,7 @@ Proof using Type.
   let H := match goal with H : Forall2 (eval _ _) _ _ |- _ => H end in
   eapply bound_sum in H; eauto.
   rewrite Z.ones_equiv in * |- ; rewrite Z.shiftr_div_pow2, Z.div_small; cbn; lia.
-Qed.*)
+Qed.
 
 (* this is the replacement for addcarry_small, which we should no longer need since all addcarries are immediately rewritten into shrs. *)
 Definition shr_small (d : dag) :=
@@ -2980,7 +3021,7 @@ Qed.
 
 Print bounds_for_drop_inner_associative.
 
-(*Definition flatten_bounded_associative (d : dag) :=
+Definition flatten_bounded_associative (d : dag) :=
   fun e => match e with
     ExprApp (o, args) =>
     ExprApp (o, List.flat_map (fun e' =>
@@ -2991,11 +3032,11 @@ Print bounds_for_drop_inner_associative.
         | Some ubound => if is_tighter_than_bool ubound bound then args' else [e']
                                               | _ => [e'] end | _ => [e'] end | _ => [e'] end) args) | _ => e end.
 #[local] Instance describe_flatten_bounded_associative : description_of Rewrite.flatten_bounded_associative
-  := "Flattens some nested operations such as add inside addcarry".*)
+  := "Flattens some nested operations such as add inside addcarry".
 
 (* I don't think we need flatten_bounded_associative, now that addcarries are rewritten as shrs.  Not entirely sure.  Would be neat if we didn't need it.*)
 
-(*Lemma fold_right_add_cps_id init ls
+Lemma fold_right_add_cps_id init ls
   : fold_right Z.add init ls = fold_right Z.add 0 ls + init.
 Proof. induction ls; cbn; lia. Qed.
 
@@ -3059,7 +3100,7 @@ Proof using Type.
     all: rewrite !Z.land_ones, ?Z.ones_equiv in * by lia.
     all: Z.rewrite_mod_small.
     all: try reflexivity. }
-Qed.*)
+Qed.
 
 Definition consts_commutative (d : dag) :=
   fun e => match e with
@@ -3989,7 +4030,8 @@ Definition named_pass (name : RewritePass.rewrite_pass) : dag -> expr -> expr
   := match name with
      | RewritePass.addbyte_small => addbyte_small
      | RewritePass.addcarry_bit => addcarry_bit
-     (*| RewritePass.addcarry_small => addcarry_small*)
+     | RewritePass.shrZ_bit => shrZ_bit
+     | RewritePass.addcarry_small => addcarry_small
      | RewritePass.shr_small => shr_small
      | RewritePass.shr_smallish => shr_smallish
      | RewritePass.addcarry_to_shr => addcarry_to_shr
@@ -4001,7 +4043,7 @@ Definition named_pass (name : RewritePass.rewrite_pass) : dag -> expr -> expr
      | RewritePass.consts_commutative => consts_commutative
      | RewritePass.drop_identity => drop_identity
      | RewritePass.flatten_associative => flatten_associative
-     (*| RewritePass.flatten_bounded_associative => flatten_bounded_associative*)
+     | RewritePass.flatten_bounded_associative => flatten_bounded_associative
      | RewritePass.fold_consts_to_and => fold_consts_to_and
      | RewritePass.set_slice0_small => set_slice0_small
      | RewritePass.set_slice_set_slice => set_slice_set_slice
