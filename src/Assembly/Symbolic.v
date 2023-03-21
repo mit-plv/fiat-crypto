@@ -385,6 +385,7 @@ Module Export RewritePass.
         ;drop_identity
         (*;flatten_bounded_associative*)
         ;unary_truncate
+        ;slice0 (* It's important that this comes after unary_truncate. *)
         ;truncate_small
         ;combine_consts
         ;addoverflow_bit
