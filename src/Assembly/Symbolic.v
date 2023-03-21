@@ -338,6 +338,7 @@ Module Export RewritePass.
     | consts_commutative
     | drop_identity
     | flatten_associative
+    | flatten_slice
     | flatten_bounded_associative
     | fold_consts_to_and
     | set_slice0_small
@@ -380,12 +381,12 @@ Module Export RewritePass.
         ;set_slice0_small
         ;shift_to_mul
         ;flatten_associative
+        ;flatten_slice (* I put this here *)
         ;consts_commutative
         ;fold_consts_to_and
         ;drop_identity
         (*;flatten_bounded_associative*)
         ;unary_truncate
-        ;slice0 (* It's important that this comes after unary_truncate. *)
         ;truncate_small
         ;combine_consts
         ;addoverflow_bit
@@ -597,6 +598,9 @@ Proof using Type. destruct (expr_beq_spec a b); congruence. Qed.
 
 Require Import Crypto.Util.Option Crypto.Util.Notations Coq.Lists.List.
 Import ListNotations.
+
+Print Z.shiftr.
+Compute (Z.shiftr (-5) 5).
 
 Section WithContext.
   Context (ctx : symbol -> option Z).
@@ -3020,6 +3024,24 @@ Proof using Type.
     erewrite interp_op_associative_app; eauto. }
 Qed.
 
+
+(* unary truncate was causing problems; if it didn't exist, then flatten_slice wouldn't be necessary *)
+Definition flatten_slice (d : dag) :=
+  fun e => match e with
+           | ExprApp (add s, args) =>
+               ExprApp (add s, List.flat_map (fun e' =>
+                                           match e' with
+                                           | ExprApp (slice 0 s', args') => if (s =? s')%N then args' else [e']
+                                           | _ => [e'] end) args)
+           | _ => e end.
+#[local] Instance describe_flatten_slice : description_of Rewrite.flatten_slice
+  := "TODO".
+Global Instance flatten_slice_ok : Ok flatten_slice.
+Proof. Admitted.
+
+Definition test_case_1 := (ExprApp (add 64%N, [ExprApp (slice 0 64%N, [ExprRef 5%N])])).
+Compute (flatten_slice dag.empty test_case_1).
+
 Print bounds_for_drop_inner_associative.
 
 Definition flatten_bounded_associative (d : dag) :=
@@ -3975,6 +3997,7 @@ Definition add_mod (s : OperationSize) (e : expr) :=
   | _ => e
   end.
 
+(*it's better to rewrite addZ->add s inside mod instead of add s-> add Z, because with add s flatten_associative can do its thing*)
 Definition add_mods (e : expr) :=
   match e with
   | ExprApp (add s, args) =>
@@ -3985,11 +4008,12 @@ Definition add_mods (e : expr) :=
 Print flatten_associative.
 
 Definition merge_shr_with_sum (addend : expr) (addends : list expr) : list expr :=
+  let flatten_associative_and_slice := fun ex => flatten_associative dag.empty (flatten_slice dag.empty ex) in
   match addend, addends with
   | ExprApp (shrZ, [e'; ExprApp (const a, [])]), ExprApp (shrZ, [e; ExprApp (const b, [])]) :: addends' =>
       if Z.eqb a b then
-        let simple_mod' := fun ex => flatten_associative dag.empty (slice0 dag.empty (ExprApp (slice 0 (Z.to_N b), [ex]))) in
-        let simple_mod := fun ex => add_mods (simple_mod' ex) in
+        let simple_mod' := fun ex => flatten_associative_and_slice (slice0 dag.empty (ExprApp (slice 0 (Z.to_N b), [ex]))) in
+        let simple_mod := fun ex => flatten_associative_and_slice (add_mods (simple_mod' ex)) in
         let neg_simple_mod := fun ex =>
                                 match (simple_mod ex) with
                                 (*| ExprApp (addZ, l) =>
@@ -3999,7 +4023,7 @@ Definition merge_shr_with_sum (addend : expr) (addends : list expr) : list expr 
                                 | _ => ExprApp (mulZ, [ExprApp (const (-1), []); simple_mod ex])
                                 end in
         let simple_sum := combine_consts dag.empty
-                            (flatten_associative dag.empty (ExprApp (addZ, [e'; e; neg_simple_mod e'; neg_simple_mod e]))) in
+                            (flatten_associative_and_slice (ExprApp (addZ, [e'; e; neg_simple_mod e'; neg_simple_mod e]))) in
         let simpler_sum := match simple_sum with
                            | ExprApp (o, operands) => ExprApp (o, map (times0 dag.empty) operands)
                            | _ => simple_sum
@@ -4118,6 +4142,7 @@ Definition named_pass (name : RewritePass.rewrite_pass) : dag -> expr -> expr
      | RewritePass.consts_commutative => consts_commutative
      | RewritePass.drop_identity => drop_identity
      | RewritePass.flatten_associative => flatten_associative
+     | RewritePass.flatten_slice => flatten_slice
      | RewritePass.flatten_bounded_associative => flatten_bounded_associative
      | RewritePass.fold_consts_to_and => fold_consts_to_and
      | RewritePass.set_slice0_small => set_slice0_small
