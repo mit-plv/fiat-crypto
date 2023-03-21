@@ -3985,7 +3985,7 @@ Definition merge_shr_with_sum (addend : expr) (addends : list expr) : list expr 
   | ExprApp (shrZ, [e'; ExprApp (const a, [])]), ExprApp (shrZ, [e; ExprApp (const b, [])]) :: addends' =>
       if Z.eqb a b then
         let simple_mod' := fun ex => flatten_associative dag.empty (slice0 dag.empty (ExprApp (slice 0 (Z.to_N b), [ex]))) in
-        let simple_mod := fun ex => (*distribute_wisely ( *)add_mods (simple_mod' ex)(*)*) in
+        let simple_mod := fun ex => map (flatten_associative dag.empty) (add_mods (simple_mod' ex)) in
         let neg_simple_mod := fun ex =>
                                 match (simple_mod ex) with
                                 (*| ExprApp (addZ, l) =>
