@@ -3976,16 +3976,19 @@ Definition add_mod (s : OperationSize) (e : expr) :=
 
 Definition add_mods (e : expr) :=
   match e with
-  | ExprApp (add s, args) => ExprApp (add s, map (add_mod s) args)
+  | ExprApp (add s, args) =>
+      ExprApp (add s, map (fun e => flatten_associative dag.empty (add_mod s e)) args)
   | _ => e
   end.
+
+Print flatten_associative.
 
 Definition merge_shr_with_sum (addend : expr) (addends : list expr) : list expr :=
   match addend, addends with
   | ExprApp (shrZ, [e'; ExprApp (const a, [])]), ExprApp (shrZ, [e; ExprApp (const b, [])]) :: addends' =>
       if Z.eqb a b then
         let simple_mod' := fun ex => flatten_associative dag.empty (slice0 dag.empty (ExprApp (slice 0 (Z.to_N b), [ex]))) in
-        let simple_mod := fun ex => map (flatten_associative dag.empty) (add_mods (simple_mod' ex)) in
+        let simple_mod := fun ex => add_mods (simple_mod' ex) in
         let neg_simple_mod := fun ex =>
                                 match (simple_mod ex) with
                                 (*| ExprApp (addZ, l) =>
