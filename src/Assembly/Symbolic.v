@@ -396,7 +396,7 @@ Module Export RewritePass.
         ;truncate_small
         ;shr_small
         ;shr_smallish
-        (*;combine_sum_of_shrs*)
+        ;combine_sum_of_shrs
         ;addoverflow_small
         ;addbyte_small
         ;xor_same
@@ -3925,13 +3925,60 @@ Require Import Coq.Sorting.Mergesort.
 
 Module Import ShrSort := Sort OrderForCombineShr.
 
+(* don't worry about flattening directly, since we already have flatten_associative *)
+Definition get_addends_for_add_s e : list expr :=
+  match e with
+  | (ExprApp (mulZ, [ExprApp (const a, []); ExprApp (addZ, addends)])) =>
+      map (fun e' => ExprApp (mulZ, [ExprApp (const a, []); e'])) addends
+  | (ExprApp (mulZ, [ExprApp (const a, []); ExprApp (add s, addends)])) =>
+      map (fun e' => ExprApp (mulZ, [ExprApp (const a, []); e'])) addends
+  | _ => [e]
+  end.
+
+(* could also write "get_addends_for_addZ"; that's too much effort for now *)
+
+Print fold_right.
+
+Definition distribute_wisely :=
+  fun e =>
+    match e with
+    | ExprApp (add s, addends) => ExprApp (add s, fold_right (fun old_addend new_addends_so_far =>
+                                    get_addends_for_add_s old_addend ++ new_addends_so_far) [] addends)
+    | _ => e
+    end.
+
+(*TODO: first rewrite (_ 64, [..., _ 64 [...], ...]) => (_ 64, [..., _Z [...], ...])*)
+(*then rewrite (add 64, [..., x * (y + z), ...]) => (add 64, [..., x * y, x * z])*)
+
+Definition add_mod (s : OperationSize) (e : expr) :=
+  match e with
+  | ExprApp (addZ, args) => ExprApp (add s, args)
+  | ExprApp (mulZ, args) => ExprApp (mul s, args)
+  | _ => e
+  end.
+
+Definition add_mods (e : expr) :=
+  match e with
+  | ExprApp (add s, args) => ExprApp (add s, map (add_mod s) args)
+  | _ => e
+  end.
+
 Definition merge_shr_with_sum (addend : expr) (addends : list expr) : list expr :=
   match addend, addends with
   | ExprApp (shrZ, [e'; ExprApp (const a, [])]), ExprApp (shrZ, [e; ExprApp (const b, [])]) :: addends' =>
       if Z.eqb a b then
-        let simple_mod := fun ex => flatten_associative dag.empty (slice0 dag.empty (ExprApp (slice 0 (Z.to_N b), [ex]))) in
-        let neg_simple_mod := fun ex => ExprApp (mulZ, [ExprApp (const (-1), []); simple_mod ex]) in
-        let simple_sum := combine_consts dag.empty (flatten_associative dag.empty (ExprApp (addZ, [e'; e; neg_simple_mod e'; neg_simple_mod e]))) in
+        let simple_mod' := fun ex => flatten_associative dag.empty (slice0 dag.empty (ExprApp (slice 0 (Z.to_N b), [ex]))) in
+        let simple_mod := fun ex => add_mods (simple_mod' ex) in
+        let neg_simple_mod := fun ex =>
+                                match (simple_mod ex) with
+                                (*| ExprApp (addZ, l) =>
+                                    ExprApp (addZ, map (fun exp => ExprApp (mulZ, [ExprApp (const (-1), []); exp])) l)
+                                | ExprApp (add s, l) =>
+                                    ExprApp (add s, map (fun exp => ExprApp (mulZ, [ExprApp (const (-1), []); exp])) l)*)
+                                | _ => ExprApp (mulZ, [ExprApp (const (-1), []); simple_mod ex])
+                                end in
+        let simple_sum := combine_consts dag.empty
+                            (flatten_associative dag.empty (ExprApp (addZ, [e'; e; neg_simple_mod e'; neg_simple_mod e]))) in
         let simpler_sum := match simple_sum with
                            | ExprApp (o, operands) => ExprApp (o, map (times0 dag.empty) operands)
                            | _ => simple_sum
@@ -3943,6 +3990,8 @@ Definition merge_shr_with_sum (addend : expr) (addends : list expr) : list expr 
   | _, _ => addend :: addends
   end.
 
+
+
 (* calling the "simplify_addends" function, defined within combine_shr, may cause the number of addends to decrease.  Potentially, the number of addends could decrease to one, in which case the combine_sum_of_shrs function might output something like ExprApp (add s, [x]) or ExprApp (addZ, [x]).  This could be simplified to either ExprApp (slice 0 s, [x]) or simply x, respectively.  I'm choosing not to do this simplification for the moment, because I'm concerned that rewriting ExprApp (add s, [x]) into a different form could be bad, and potentially interfere with some future call to flatten_associative, for instance 
 
 ^Never mind that.  See unary_truncate!  That's convenient, sort of.  Should I put this before unary_truncate in the default ordering?  This could still be problematic, maybe?
@@ -3950,7 +3999,9 @@ Definition merge_shr_with_sum (addend : expr) (addends : list expr) : list expr 
 Perhaps I should add a rule that removes things like slice 0, s inside of add s, so that this isn't an issue?  Or does this already exist?
 
 
-*)
+ *)
+
+Compute (flatten_associative dag.empty (ExprApp (add s, [ExprApp (addZ, [ExprRef 4%N; ExprRef 5%N])]))).
 Definition combine_sum_of_shrs (d : dag) : expr -> expr :=
   fun e =>
     let simplify_addends := fun addends => fold_right merge_shr_with_sum [] (sort addends) in
@@ -3972,6 +4023,7 @@ Proof. Admitted.
   end.*)
 
 Definition x1 := combine_sum_of_shrs dag.empty test_case.
+Print test_case.
 Compute x1.
 Definition x1' := ExprApp
                (addZ,
