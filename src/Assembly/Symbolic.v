@@ -3928,9 +3928,22 @@ Module Import ShrSort := Sort OrderForCombineShr.
 (* don't worry about flattening directly, since we already have flatten_associative *)
 Definition get_addends_for_add_s e : list expr :=
   match e with
+  | (ExprApp (mul s, [ExprApp (const a, []); ExprApp (addZ, addends)])) =>
+      map (fun e' => ExprApp (mul s, [ExprApp (const a, []); e'])) addends
+  | (ExprApp (mul s, [ExprApp (const a, []); ExprApp (add s', addends)])) => (* should assert that s = s', all throughout this function.   *)
+      map (fun e' => ExprApp (mul s, [ExprApp (const a, []); e'])) addends
+  | (ExprApp (mul s, [ExprApp (add s', addends); ExprApp (const a, [])])) =>
+      map (fun e' => ExprApp (mul s, [ExprApp (const a, []); e'])) addends
+  | (ExprApp (mul s, [ExprApp (addZ, addends); ExprApp (const a, [])])) =>
+      map (fun e' => ExprApp (mul s, [ExprApp (const a, []); e'])) addends
+          
   | (ExprApp (mulZ, [ExprApp (const a, []); ExprApp (addZ, addends)])) =>
       map (fun e' => ExprApp (mulZ, [ExprApp (const a, []); e'])) addends
-  | (ExprApp (mulZ, [ExprApp (const a, []); ExprApp (add s, addends)])) =>
+  | (ExprApp (mulZ, [ExprApp (const a, []); ExprApp (add s', addends)])) =>
+      map (fun e' => ExprApp (mulZ, [ExprApp (const a, []); e'])) addends
+  | (ExprApp (mulZ, [ExprApp (add s', addends); ExprApp (const a, [])])) =>
+      map (fun e' => ExprApp (mulZ, [ExprApp (const a, []); e'])) addends
+  | (ExprApp (mulZ, [ExprApp (addZ, addends); ExprApp (const a, [])])) =>
       map (fun e' => ExprApp (mulZ, [ExprApp (const a, []); e'])) addends
   | _ => [e]
   end.
@@ -3943,6 +3956,10 @@ Definition distribute_wisely :=
   fun e =>
     match e with
     | ExprApp (add s, addends) => ExprApp (add s, fold_right (fun old_addend new_addends_so_far =>
+                                                                get_addends_for_add_s old_addend ++ new_addends_so_far) [] addends)
+    (*can't do the thing in the line below.  Instead, we can augment the slice0 rule.  Every 
+      time an addZ is rewritten as add s, we can rewrite the addends in this way.*)
+    | ExprApp (addZ, addends) => ExprApp (addZ, fold_right (fun old_addend new_addends_so_far =>
                                     get_addends_for_add_s old_addend ++ new_addends_so_far) [] addends)
     | _ => e
     end.
@@ -3968,7 +3985,7 @@ Definition merge_shr_with_sum (addend : expr) (addends : list expr) : list expr 
   | ExprApp (shrZ, [e'; ExprApp (const a, [])]), ExprApp (shrZ, [e; ExprApp (const b, [])]) :: addends' =>
       if Z.eqb a b then
         let simple_mod' := fun ex => flatten_associative dag.empty (slice0 dag.empty (ExprApp (slice 0 (Z.to_N b), [ex]))) in
-        let simple_mod := fun ex => add_mods (simple_mod' ex) in
+        let simple_mod := fun ex => (*distribute_wisely ( *)add_mods (simple_mod' ex)(*)*) in
         let neg_simple_mod := fun ex =>
                                 match (simple_mod ex) with
                                 (*| ExprApp (addZ, l) =>
@@ -3983,12 +4000,14 @@ Definition merge_shr_with_sum (addend : expr) (addends : list expr) : list expr 
                            | ExprApp (o, operands) => ExprApp (o, map (times0 dag.empty) operands)
                            | _ => simple_sum
                            end in
-        let simplest_sum := drop_identity dag.empty simpler_sum in
+        let simplest_sum := distribute_wisely (drop_identity dag.empty simpler_sum) in
         ExprApp (shrZ, [simplest_sum; ExprApp (const a, [])]) :: addends'
       else
         addend :: addends
   | _, _ => addend :: addends
-  end.
+  end. (* currently distribute_wisely is called after combine_consts.  is this good?
+          should it be the other way around (I suspect this would break something)?  
+          should we call combine_consts both before and after distributing? *)
 
 
 
@@ -4135,7 +4154,7 @@ Qed.
 End Rewrite.
 
 Definition simplify {opts : symbolic_options_computed_opt} (dag : dag) (e : node idx) :=
-  Rewrite.expr dag (reveal_node_at_least dag 3 e).
+  Rewrite.expr dag (reveal_node_at_least dag 4 e).
 
 Lemma eval_simplify {opts : symbolic_options_computed_opt} G d n v : gensym_dag_ok G d -> eval_node G d n v -> eval G d (simplify d n) v.
 Proof using Type. eauto using Rewrite.eval_expr, eval_node_reveal_node_at_least. Qed.
