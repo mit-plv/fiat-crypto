@@ -10,6 +10,8 @@ if [ -z "${EXTRA_PACKAGES+x}" ]; then
 fi
 
 sudo chmod -R a=u .
+# Work around https://github.com/actions/checkout/issues/766
+git config --global --add safe.directory "*"
 echo '::group::install general dependencies'
 sudo apt-get update -y
 sudo apt-get install -y python python3 bsdmainutils ${EXTRA_PACKAGES}
