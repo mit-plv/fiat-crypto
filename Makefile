@@ -144,15 +144,6 @@ OUTPUT_PREOUTS := \
 	Crypto.UnsaturatedSolinasHeuristics.Tests.get_possible_limbs \
 	Crypto.UnsaturatedSolinasHeuristics.Tests.get_balances
 
-ifneq ($(SKIP_BEDROCK2),1)
-OUTPUT_VOS += \
-	src/Bedrock/Group/ScalarMult/LadderStep.vo \
-	src/Bedrock/Group/ScalarMult/MontgomeryLadder.vo
-OUTPUT_PREOUTS += \
-	Crypto.Bedrock.Group.ScalarMult.LadderStep.ladderstep_body \
-	Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body
-endif
-
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS) fiat-amd64.test)
 
