@@ -381,7 +381,7 @@ Module Export RewritePass.
         ;set_slice0_small
         ;shift_to_mul
         ;flatten_associative
-        ;flatten_slice (* I put this here *)
+        (*;flatten_slice ( I put this here )*)
         ;consts_commutative
         ;fold_consts_to_and
         ;drop_identity
@@ -398,11 +398,12 @@ Module Export RewritePass.
         ;truncate_small
         ;shr_small
         ;shr_smallish
+        (*;flatten_slice*)
         ;combine_sum_of_shrs
         ;addoverflow_small
         ;addbyte_small
         ;xor_same
-        ;flatten_slice
+        (*;flatten_slice*)
     ].
 End RewritePass.
 
@@ -3040,7 +3041,7 @@ Definition flatten_slice (d : dag) :=
 Global Instance flatten_slice_ok : Ok flatten_slice.
 Proof. Admitted.
 
-Definition test_case_1 := (ExprApp (add 64%N, [ExprApp (slice 0 64%N, [ExprRef 5%N])])).
+Definition test_case_1 := (ExprApp (add 64%N, [ExprApp (slice 0 64%N, [ExprRef 5%N]); ExprRef 1%N])).
 Compute (flatten_slice dag.empty test_case_1).
 
 Print bounds_for_drop_inner_associative.
@@ -3925,7 +3926,7 @@ Search expr.
 Definition x := ExprRef 1%N.
 Definition y := ExprRef 2%N.
 Definition z := ExprRef 3%N.
-Definition s := 64%N.
+Definition s := 1%N.
 Definition test_case : expr :=
 
   ExprApp (addZ, [ExprApp (shrZ, [ExprApp (addZ, [x; y]); ExprApp (const (Z.of_N s), [])]);
@@ -3938,7 +3939,7 @@ Definition test_case : expr :=
 Definition times0 (d : dag) : expr -> expr :=
   fun e =>
     match e with
-    | ExprApp ((mulZ), args) =>
+    | ExprApp ((mulZ|mul _), args) =>
         if (List.existsb (expr_beq (ExprApp (const 0, []))) args)
         then ExprApp (const 0, [])
         else e
@@ -4009,27 +4010,20 @@ Definition add_mods (e : expr) :=
 Print flatten_associative.
 
 Definition merge_shr_with_sum (addend : expr) (addends : list expr) : list expr :=
-  let flatten_associative_and_slice := fun ex => flatten_associative dag.empty (flatten_slice dag.empty ex) in
+  let flatten_associative_and_slice := fun ex => flatten_associative dag.empty ((*flatten_slice dag.empty*) ex) in
   match addend, addends with
   | ExprApp (shrZ, [e'; ExprApp (const a, [])]), ExprApp (shrZ, [e; ExprApp (const b, [])]) :: addends' =>
       if Z.eqb a b then
         let simple_mod' := fun ex => flatten_associative_and_slice (slice0 dag.empty (ExprApp (slice 0 (Z.to_N b), [ex]))) in
         let simple_mod := fun ex => flatten_associative_and_slice (add_mods (simple_mod' ex)) in
-        let neg_simple_mod := fun ex =>
-                                match (simple_mod ex) with
-                                (*| ExprApp (addZ, l) =>
-                                    ExprApp (addZ, map (fun exp => ExprApp (mulZ, [ExprApp (const (-1), []); exp])) l)
-                                | ExprApp (add s, l) =>
-                                    ExprApp (add s, map (fun exp => ExprApp (mulZ, [ExprApp (const (-1), []); exp])) l)*)
-                                | _ => ExprApp (mulZ, [ExprApp (const (-1), []); simple_mod ex])
-                                end in
+        let neg_simple_mod := fun ex => ExprApp (mulZ, [ExprApp (const (-1), []); simple_mod ex]) in
         let simple_sum := combine_consts dag.empty
                             (flatten_associative_and_slice (ExprApp (addZ, [e'; e; neg_simple_mod e'; neg_simple_mod e]))) in
         let simpler_sum := match simple_sum with
                            | ExprApp (o, operands) => ExprApp (o, map (times0 dag.empty) operands)
                            | _ => simple_sum
                            end in
-        let simplest_sum := distribute_wisely (drop_identity dag.empty simpler_sum) in
+        let simplest_sum := drop_identity dag.empty simpler_sum in
         ExprApp (shrZ, [simplest_sum; ExprApp (const a, [])]) :: addends'
       else
         addend :: addends
@@ -4038,7 +4032,70 @@ Definition merge_shr_with_sum (addend : expr) (addends : list expr) : list expr 
           should it be the other way around (I suspect this would break something)?  
           should we call combine_consts both before and after distributing? *)
 
+(*(addZ|mulZ|negZ|shlZ|shrZ|andZ|orZ|xorZ)*)
+  
+Definition simplify_slice (e : expr) :=
+  match e with
+  | ExprApp (slice 0 s, [e']) =>
+      match e' with
+      | ExprApp (slice 0 s', args) => if (s =? s')%N
+                                      then ExprApp (slice 0 s, args)
+                                      else e
+      | ExprApp ((addZ |mulZ |negZ |shlZ |shrZ |andZ |orZ |xorZ ) (*why these? because they're the ones that appear in slice0*) as o, args) =>
+          ExprApp ((match o with addZ=>add s|mulZ=>mul s|negZ=>neg s|shlZ=>shl s|shrZ => shr s|andZ => and s| orZ => or s|xorZ => xor s |_=>old 0%N 999999%N end), args)
+      | ExprApp ((add s'|mul s'|neg s'|shl s'|shr s'|and s'|or s'|xor s') as o, args) =>
+          if (s =? s')%N
+          then ExprApp (o, args)
+          else e
+      | _ => e
+      end
+  | _ => e
+  end.
 
+Definition simplify_add_s (e : expr) :=
+  match e with
+  | ExprApp (add s, [e']) => simplify_slice (ExprApp (slice 0 s, [e']))
+  | _ => e
+  end.
+
+
+          
+Definition merge_shr_with_sum' (addend : expr) (addends : list expr) : list expr :=
+  match addend, addends with
+  | ExprApp (shrZ, [e'; ExprApp (const a, [])]), ExprApp (shrZ, [e; ExprApp (const b, [])]) :: addends' =>
+      if Z.eqb a b then
+        let e'_addends :=
+          match e' with
+          | ExprApp (addZ, addends) => addends
+          | _ => [e']
+          end in
+        let e_addends :=
+          match e with
+          | ExprApp (addZ, addends) => addends
+          | _ => [e]
+          end in
+        let e'_addends_mod := map (fun addend => simplify_slice (ExprApp (slice 0 s, [addend]))) e'_addends in
+        let e_addends_mod := map (fun addend => simplify_slice (ExprApp (slice 0 s, [addend]))) e_addends in
+        let e'_mod := combine_consts dag.empty (simplify_add_s (ExprApp (add s, e'_addends_mod))) in
+        let simpler_e'_mod := match e'_mod with
+                              | ExprApp (o, operands) => ExprApp (o, map (times0 dag.empty) operands)
+                              | _ => e'_mod
+                              end in
+        let simplest_e'_mod := drop_identity dag.empty simpler_e'_mod in
+        let e_mod  := combine_consts dag.empty (simplify_add_s (ExprApp (add s, e_addends_mod))) in
+        let simpler_e_mod := match e_mod with
+                              | ExprApp (o, operands) => ExprApp (o, map (times0 dag.empty) operands)
+                              | _ => e_mod
+                              end in
+        let simplest_e_mod := drop_identity dag.empty simpler_e_mod in
+        let neg_e'_mod := times0 dag.empty (ExprApp (mulZ, [ExprApp (const (-1), []); simplest_e'_mod])) in
+        let neg_e_mod := times0 dag.empty (ExprApp (mulZ, [ExprApp (const (-1), []); simplest_e_mod])) in
+        let simple_sum := drop_identity dag.empty (flatten_associative dag.empty (ExprApp (addZ, [e'; e; neg_e'_mod; neg_e_mod]))) in                                                    
+        ExprApp (shrZ, [simple_sum; ExprApp (const a, [])]) :: addends'
+      else
+        addend :: addends
+  | _, _ => addend :: addends
+  end.
 
 (* calling the "simplify_addends" function, defined within combine_shr, may cause the number of addends to decrease.  Potentially, the number of addends could decrease to one, in which case the combine_sum_of_shrs function might output something like ExprApp (add s, [x]) or ExprApp (addZ, [x]).  This could be simplified to either ExprApp (slice 0 s, [x]) or simply x, respectively.  I'm choosing not to do this simplification for the moment, because I'm concerned that rewriting ExprApp (add s, [x]) into a different form could be bad, and potentially interfere with some future call to flatten_associative, for instance 
 
@@ -4052,7 +4109,7 @@ Perhaps I should add a rule that removes things like slice 0, s inside of add s,
 Compute (flatten_associative dag.empty (ExprApp (add s, [ExprApp (addZ, [ExprRef 4%N; ExprRef 5%N])]))).
 Definition combine_sum_of_shrs (d : dag) : expr -> expr :=
   fun e =>
-    let simplify_addends := fun addends => fold_right merge_shr_with_sum [] (sort addends) in
+    let simplify_addends := fun addends => fold_right merge_shr_with_sum' [] (sort addends) in
     match e with
     | ExprApp (addZ, operands) => ExprApp (addZ, simplify_addends operands)
     | ExprApp (add s, operands) => ExprApp (add s, simplify_addends operands)
@@ -4070,9 +4127,49 @@ Proof. Admitted.
   | ExprRef _ => e
   end.*)
 
-Definition x1 := combine_sum_of_shrs dag.empty test_case.
+Print s.
+
+Definition part_of_test_case :=
+  ExprApp (addZ, [ExprApp (shrZ, [ExprApp (addZ, [x; y]); ExprApp (const (Z.of_N s), [])]);
+                  ExprRef 4%N;
+                  ExprApp (shrZ, [ExprRef 1%N; ExprApp (const 4, [])]);
+                  (*ExprApp (shrZ, [ExprRef 7%N; ExprApp (const (Z.of_N s), [])]);*)
+                  ExprRef 89%N;
+                  ExprApp (shrZ, [ExprApp (addZ, [ExprApp (add s, [x; y]);z]);
+                                  ExprApp (const (Z.of_N s), [])]);
+                  ExprApp (shrZ, [ExprRef 8%N; ExprApp (const (Z.of_N s), [])])]).
+Definition const_s := ExprApp (const (Z.of_N s), []).
+Definition test_2 :=
+  ExprApp (addZ, [ExprApp (shrZ, [ExprRef 1%N; const_s]);
+                  ExprApp (shrZ, [ExprRef 2%N; const_s]);
+                  ExprApp (shrZ, [ExprRef 3%N; const_s])(*;
+                  ExprApp (shrZ, [ExprRef 4%N; const_s])*)]).
+
+                               Definition x1 := combine_sum_of_shrs dag.empty test_case.
+Definition x2 := combine_sum_of_shrs dag.empty part_of_test_case.
+Definition x3 := combine_sum_of_shrs dag.empty test_2.
+Compute dag.empty.
 Print test_case.
 Compute x1.
+Compute x2.*)
+Compute x3.
+Compute (combine_consts dag.empty ( ExprApp
+                   (add 2%N,
+                   [ExprApp (slice 0 2, [ExprRef 1%N]); ExprApp (slice 0 2, [ExprRef 2%N]);
+                   ExprApp
+                     (mul 2%N, [ExprApp (const (-1), []); ExprApp (slice 0 2, [ExprRef 1%N])]);
+                   ExprApp
+                     (mul 2%N, [ExprApp (const (-1), []); ExprApp (slice 0 2, [ExprRef 2%N])])]))).
+
+Compute (combine_consts dag.empty (ExprApp
+                   (add 64%N,
+                   [ExprApp (slice 0 64, [ExprRef 1%N]); ExprApp (slice 0 64, [ExprRef 2%N]);
+                   ExprApp (mul 64%N, [ExprApp (const (-1), []); ExprApp (add 64%N, [ExprApp (slice 0 64, [ExprRef 1%N])])]);
+                   ExprApp (mul 64%N, [ExprApp (const (-1), []); ExprApp (add 64%N, [ExprApp (slice 0 64, [ExprRef 2%N])])])])).
+Check interp_op.
+Search interp_op.
+Check interp0_op.
+Compute (interp0_op (add 64%N) [-1]).
 Definition x1' := ExprApp
                (addZ,
                [ExprRef 1%N; ExprRef 2%N;
