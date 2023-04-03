@@ -402,6 +402,7 @@ Module Export RewritePass.
         ;addoverflow_small
         ;addbyte_small
         ;xor_same
+        ;flatten_slice
     ].
 End RewritePass.
 
