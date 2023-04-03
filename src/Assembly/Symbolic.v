@@ -3901,7 +3901,7 @@ Definition addcarry_to_shr (d : dag) : expr -> expr :=
 Global Instance addcarry_to_shr_Ok : Ok addcarry_to_shr.
 Proof. (*t. simpl. rewrite Z.land_ones by lia. f_equal. Qed.*) Admitted.
 
-Print partition. Search partition.
+Print partition.
 (* eventually move to Util/Structures/Orders/List.v? *)
 Module OrderForCombineShr <: TotalLeBool.
   Definition t := expr.
@@ -3921,7 +3921,6 @@ Module OrderForCombineShr <: TotalLeBool.
   Admitted.
 End OrderForCombineShr.
 
-Search expr.
 
 Definition x := ExprRef 1%N.
 Definition y := ExprRef 2%N.
@@ -4127,15 +4126,16 @@ Proof. Admitted.
   | ExprRef _ => e
   end.*)
 
-Print s.
+                                                                Print s.
+                                                                Print x. Print y. Print z.
 
 Definition part_of_test_case :=
-  ExprApp (addZ, [ExprApp (shrZ, [ExprApp (addZ, [x; y]); ExprApp (const (Z.of_N s), [])]);
+  ExprApp (addZ, [ExprApp (shrZ, [ExprApp (addZ, [ExprRef 1%N; ExprRef 2%N]); ExprApp (const 2, [])]);
                   ExprRef 4%N;
                   ExprApp (shrZ, [ExprRef 1%N; ExprApp (const 4, [])]);
-                  (*ExprApp (shrZ, [ExprRef 7%N; ExprApp (const (Z.of_N s), [])]);*)
+                  ExprApp (shrZ, [ExprRef 7%N; ExprApp (const (Z.of_N s), [])]);
                   ExprRef 89%N;
-                  ExprApp (shrZ, [ExprApp (addZ, [ExprApp (add s, [x; y]);z]);
+                  ExprApp (shrZ, [ExprApp (addZ, [ExprApp (add s, [ExprRef 1%N; ExprRef 2%N]); ExprRef 3%N]);
                                   ExprApp (const (Z.of_N s), [])]);
                   ExprApp (shrZ, [ExprRef 8%N; ExprApp (const (Z.of_N s), [])])]).
 Definition const_s := ExprApp (const (Z.of_N s), []).
@@ -4148,11 +4148,12 @@ Definition test_2 :=
                                Definition x1 := combine_sum_of_shrs dag.empty test_case.
 Definition x2 := combine_sum_of_shrs dag.empty part_of_test_case.
 Definition x3 := combine_sum_of_shrs dag.empty test_2.
-Compute dag.empty.
+                                                                                        Compute dag.empty.
 Print test_case.
+                                                                                                          (*Compute x2.
 Compute x1.
-Compute x2.*)
-Compute x3.
+Compute x2.
+Compute x3.*)
 Compute (combine_consts dag.empty ( ExprApp
                    (add 2%N,
                    [ExprApp (slice 0 2, [ExprRef 1%N]); ExprApp (slice 0 2, [ExprRef 2%N]);
@@ -4161,13 +4162,12 @@ Compute (combine_consts dag.empty ( ExprApp
                    ExprApp
                      (mul 2%N, [ExprApp (const (-1), []); ExprApp (slice 0 2, [ExprRef 2%N])])]))).
 
-Compute (combine_consts dag.empty (ExprApp
+(*Compute (combine_consts dag.empty (ExprApp
                    (add 64%N,
                    [ExprApp (slice 0 64, [ExprRef 1%N]); ExprApp (slice 0 64, [ExprRef 2%N]);
                    ExprApp (mul 64%N, [ExprApp (const (-1), []); ExprApp (add 64%N, [ExprApp (slice 0 64, [ExprRef 1%N])])]);
-                   ExprApp (mul 64%N, [ExprApp (const (-1), []); ExprApp (add 64%N, [ExprApp (slice 0 64, [ExprRef 2%N])])])])).
+                   ExprApp (mul 64%N, [ExprApp (const (-1), []); ExprApp (add 64%N, [ExprApp (slice 0 64, [ExprRef 2%N])])])])).*)
 Check interp_op.
-Search interp_op.
 Check interp0_op.
 Compute (interp0_op (add 64%N) [-1]).
 Definition x1' := ExprApp
