@@ -2,7 +2,7 @@
 
 set -eu
 
-recstacksize=65536
+recstacksize=66520
 if command -v ulimit >/dev/null 2>/dev/null; then
     hardstacksize="$(ulimit -H -s || true)"
     (
