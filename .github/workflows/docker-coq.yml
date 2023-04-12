@@ -65,8 +65,6 @@ jobs:
         name: generated-files-${{ matrix.env.COQ_VERSION }}
         path: generated-files.tgz
       if: ${{ failure() }}
-    - name: only-test-amd64-files
-      run: etc/ci/github-actions-make.sh -f Makefile.examples -j2 only-test-amd64-files SLOWEST_FIRST=1
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
       with:
@@ -99,3 +97,29 @@ jobs:
         export: CI ALLOW_DIFF COQCHKEXTRAFLAGS
         custom_script: etc/ci/github-actions-docker-make.sh TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"
       if: env.SKIP_VALIDATE == '' && github.event_name != 'pull_request'
+
+  test-amd64:
+
+    runs-on: ubuntu-latest
+
+    concurrency:
+      group: ${{ github.workflow }}-test-amd64-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    needs: docker-build
+
+    steps:
+    - name: checkout repo
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: ExtractionOCaml-master
+        path: src/ExtractionOCaml
+    - name: make binaries executable
+      run: chmod +x src/ExtractionOCaml/*
+    - name: only-test-amd64-files
+      run: etc/ci/github-actions-make.sh -f Makefile.examples -j2 only-test-amd64-files SLOWEST_FIRST=1
+      env: 
+        ALLOW_DIFF: 1

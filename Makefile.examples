@@ -334,11 +334,11 @@ javadoc only-javadoc:
 	mkdir -p $(JAVADOC_DIR)
 	(cd $(JAVADOC_DIR); javadoc $(addprefix $(realpath .)/,$(ALL_JAVA_FILES)))
 
-AMD64_ASM_FILES := $(sort $(wildcard fiat-amd64/*.asm))
+AMD64_ASM_FILES := $(sort $(wildcard fiat-amd64/**/*.asm))
 
 Makefile.test-amd64-files.mk: fiat-amd64/gentest.py $(AMD64_ASM_FILES)
-	$(SHOW)'GENTEST --makefile fiat-amd64/*.asm > $@'
-	$(HIDE)fiat-amd64/gentest.py --makefile $(AMD64_ASM_FILES) > $@
+	$(SHOW)'GENTEST --makefile fiat-amd64/fiat_* > $@'
+	$(HIDE)fiat-amd64/gentest.py --makefile fiat-amd64/fiat_* > $@
 
 include Makefile.test-amd64-files.mk
 
@@ -369,7 +369,7 @@ test-amd64-files-status only-test-amd64-files-status test-amd64-files-lite-statu
 
 .PHONY: test-amd64-files-status only-test-amd64-files-status test-amd64-files-lite-status only-test-amd64-files-lite-status
 
-test-amd64-files test-amd64-files-lite: $(UNSATURATED_SOLINAS) $(WORD_BY_WORD_MONTGOMERY) $(SOLINAS_REDUCTION)
+test-amd64-files test-amd64-files-lite: $(UNSATURATED_SOLINAS) $(WORD_BY_WORD_MONTGOMERY) $(SOLINAS_REDUCTION) $(DETTMAN_MULTIPLICATION)
 
 test-amd64-files: test-amd64-files-print-report test-amd64-files-status
 

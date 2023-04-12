@@ -19,11 +19,11 @@ total_count=0
 
 while IFS= read -r line; do
     total_count=$((total_count + 1))
-    eval $line 2>/dev/null >/dev/null && echo "${passed_start}${line}${passed_end}" || {
+    eval "${line}" 2>/dev/null >/dev/null && echo "${passed_start}${line}${passed_end}" || {
             echo "${failed_start}${line}${failed_end}";
             failed_count=$((failed_count + 1))
         };
-done < <(fiat-amd64/gentest.py fiat-amd64/*.asm)
+done < <(fiat-amd64/gentest.py fiat-amd64/fiat_*)
 
 if [[ ${failed_count} == 0 ]]; then
     echo "${green}${bold}ALL ${total_count} TESTS PASSED${normal}${nc}"

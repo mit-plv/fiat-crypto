@@ -59,10 +59,12 @@ jobs:
       run: |
         eval $(opam env)
         etc/ci/github-actions-make.sh -j2 all
-    - name: only-test-amd64-files
+
+    - name: only-test-amd64-files-lite
       run: |
         eval $(opam env)
-        etc/ci/github-actions-make.sh -j2 only-test-amd64-files SLOWEST_FIRST=1
+        etc/ci/github-actions-make.sh -j2 only-test-amd64-files-lite SLOWEST_FIRST=1
+
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
       with:
