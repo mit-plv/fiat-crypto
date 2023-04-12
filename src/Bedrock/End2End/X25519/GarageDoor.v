@@ -175,11 +175,11 @@ Definition garagedoor_iteration : state -> list (lightbulb_spec.OP _) -> state -
   fun '(seed, sk) ioh '(SEED, SK) =>
   (lightbulb_spec.lan9250_recv_no_packet _ ioh \/
     lightbulb_spec.lan9250_recv_packet_too_long _ ioh \/
-    TracePredicate.concat TracePredicate.any (lightbulb_spec.spi_timeout _) ioh) \/
+    TracePredicate.concat TracePredicate.any (lightbulb_spec.spi_timeout _) ioh) /\ SEED=seed /\ SK=sk \/
   (exists incoming, lightbulb_spec.lan9250_recv _ incoming ioh /\
   let ethertype := le_combine (rev (firstn 2 (skipn 12 incoming))) in ethertype < 1536 \/
-  let ipproto := nth 23 incoming x00 in ipproto <> x11 \/
-  (length incoming <> 14+20+8 +2+16 +4 /\ length incoming <> 14+20+8 +2+32 +4)%nat) \/
+  let ipproto := nth 23 incoming x00 in (ipproto <> x11 \/
+  length incoming <> 14+20+8 +2+16 +4 /\ length incoming <> 14+20+8 +2+32 +4)%nat) /\ SEED=seed /\ SK=sk \/
   exists (mac_local mac_remote : tuple byte 6),
   exists (ethertype : Z) (ih_const : tuple byte 2) (ip_length : Z) (ip_idff : tuple byte 5),
   exists (ipproto := x11) (ip_checksum : Z) (ip_local ip_remote : tuple byte 4),
@@ -205,8 +205,9 @@ Definition garagedoor_iteration : state -> list (lightbulb_spec.OP _) -> state -
     (word.unsigned set0 = 1 <-> firstn 16 v = m) /\
     (word.unsigned set1 = 1 <->  skipn 16 v = m) /\
     action = word.or (word.and doorstate (word.of_Z (Z.clearbit (Z.clearbit (2^32-1) 11) 12))) (word.slu (word.or (word.slu set1 (word.of_Z 1)) set0) (word.of_Z 11)) /\
-    (* /\ (word.unsigned set0 <> 0 \/ word.unsigned set1 <> 0 -> SEED++SK = RupicolaCrypto.Spec.chacha20_encrypt k (Z.to_nat (word.unsigned counter)) _ _) *)
-    (word.unsigned set1 = 0 -> word.unsigned set0 = 0 -> SEED=seed /\ SK=sk))) \/
+    (word.unsigned (word.or set0 set1) = 0 -> SEED=seed /\ SK=sk) /\
+    (word.unsigned (word.or set0 set1) <> 0 -> SEED++SK = RupicolaCrypto.Spec.chacha20_block seed (ChaCha20.le_split 4 (word.of_Z 0) ++ firstn 12 garageowner))
+    )) \/
   TracePredicate.concat (lightbulb_spec.lan9250_recv _ incoming)
   (lightbulb_spec.lan9250_send _
     (let ip_length := 62 in
@@ -313,7 +314,7 @@ Proof.
   autoforward with typeclass_instances in E0.
   2: {
     fwd; slv; [].
-    right. left. eexists. ssplit; try eassumption. left.
+    right. left. ssplit; trivial; []. eexists; split; try eassumption; trivial. left.
     rewrite skipn_app, skipn_all2, ?Lpp, ?app_nil_l by ZnWords.
     cbn [List.skipn minus firstn List.firstn List.app rev]. ZnWords. }
 
@@ -337,7 +338,7 @@ Proof.
   destr Z.eqb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate; autoforward with typeclass_instances in E1.
   2: {
     fwd; slv; [].
-    right. left. eexists. ssplit; try eassumption. right. left.
+    right. left. ssplit; trivial; []. eexists. ssplit; try eassumption. right. left.
     rewrite app_nth2 by ZnWords.
     rewrite app_comm_cons.
     rewrite app_nth2 by SepAutoArray.listZnWords.
@@ -358,7 +359,7 @@ Proof.
     destr Z.eqb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate; autoforward with typeclass_instances in E3.
     2: {
       fwd; slv.
-      right. left. eexists. ssplit; try eassumption. right. right. SepAutoArray.listZnWords. }
+      right. left. ssplit; trivial; []. eexists. ssplit; try eassumption. right. right. SepAutoArray.listZnWords. }
     repeat straightline.
     straightline_call; ssplit; try ecancel_assumption; try trivial; try ZnWords.
     { cbv. inversion 1. }
@@ -533,8 +534,7 @@ Proof.
     rewrite !ListUtil.skipn_app_sharp by ZnWords.
     eexists _, _; ssplit; try eassumption; subst mmio_val; eauto.
 
-    intros; exfalso. apply H39.
-    rewrite word.unsigned_or_nowrap. apply Z.lor_eq_0_iff; auto.
+    all : rewrite ?firstn_skipn; intuition auto.
     (* end chacha20*) }
 
 Optimize Proof. Optimize Heap.
@@ -605,7 +605,7 @@ Optimize Proof. Optimize Heap.
     rewrite <-Hvv.
     rewrite !ListUtil.firstn_app_sharp by ZnWords.
     rewrite !ListUtil.skipn_app_sharp by ZnWords.
-    eexists _, _; ssplit; try eassumption; subst mmio_val; eauto.
+    eexists _, _; ssplit; try eassumption; subst mmio_val; eauto; congruence.
   }
 
   {
@@ -861,7 +861,7 @@ Optimize Proof. Optimize Heap.
   { eexists; ssplit. eexists _, _; ssplit; slv.
     eexists; ssplit. subst a4. subst a. rewrite app_assoc. reflexivity.
     eexists; ssplit. eapply Forall2_app; eassumption.
-    eauto using TracePredicate.any_app_more. }
+    intuition eauto using TracePredicate.any_app_more. }
 
   ssplit; trivial.
   eexists _, _, _; ssplit; slv.
