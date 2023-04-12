@@ -110,9 +110,9 @@ Lemma compiler_emitted_valid_instructions :
   bverify.bvalidInstructions Decode.RV32IM garagedoor_insns = true.
 Proof. vm_cast_no_check (eq_refl true). Qed.
 
-Definition good_trace s t s' :=
+Definition good_trace(s : state)(t : Semantics.trace)(s' : state) :=
   exists ioh, SPI.mmio_trace_abstraction_relation ioh t /\
-  (BootSeq +++ stateful garagedoor_iteration s s') ioh.
+              (BootSeq +++ stateful garagedoor_iteration s s') ioh.
 Import ExprImpEventLoopSpec.
 Definition garagedoor_spec : ProgramSpec := {|
   datamem_start := MemoryLayout.heap_start ml;
@@ -139,25 +139,31 @@ Proof.
         (eapply spi_write_ok || eapply spi_read_ok).
 Qed. Optimize Heap.
 
-Import ToplevelLoop GoFlatToRiscv .
-Local Notation invariant := (ll_inv compile_ext_call ml garagedoor_spec).
-Lemma invariant_proof :
-  forall initial : MetricRiscvMachine,
-    getPc (getMachine initial) = MemoryLayout.code_start ml ->
-    getNextPc (getMachine initial) = word.add (getPc (getMachine initial)) (word.of_Z 4)->
-    regs_initialized.regs_initialized (getRegs (getMachine initial)) ->
-    getLog (getMachine initial) = [] ->
-    (forall a, word.unsigned (MemoryLayout.code_start ml) <= word.unsigned a < word.unsigned (MemoryLayout.code_pastend ml) -> In a (getXAddrs (getMachine initial))) ->
-    valid_machine initial ->
-    (imem (MemoryLayout.code_start ml) (MemoryLayout.code_pastend ml) garagedoor_insns *
-     LowerPipeline.mem_available (MemoryLayout.heap_start ml) (MemoryLayout.heap_pastend ml) *
-     LowerPipeline.mem_available (MemoryLayout.stack_start ml) (MemoryLayout.stack_pastend ml))%sep (getMem (getMachine initial)) ->
+Import ToplevelLoop GoFlatToRiscv regs_initialized LowerPipeline.
+Require Import bedrock2.WordNotations. Local Open Scope word_scope.
+Import bedrock2.Map.Separation. Local Open Scope sep_scope.
+Require Import bedrock2.ReversedListNotations.
+Local Notation run_one_riscv_instr := (mcomp_sat (run1 Decode.RV32IM)).
+Implicit Types initial mach : MetricRiscvMachine.
 
-     invariant initial /\
-     (forall st, invariant st -> mcomp_sat (run1 Decode.RV32IM) st invariant /\
-       exists extend s0 s1, good_trace s0 (extend ++ getLog (getMachine st)) s1).
+Theorem garagedoor_invariant_proof: exists invariant, forall initial,
+    getPc initial = code_start ml /\
+    getNextPc initial = getPc initial ^+ /[4] /\
+    regs_initialized (getRegs initial) /\
+    getLog initial = [] /\
+    (forall a, \[code_start ml] <= \[a] < \[code_pastend ml] -> In a (getXAddrs initial)) /\
+    valid_machine initial /\
+    (imem (code_start ml) (code_pastend ml) garagedoor_insns ⋆
+     mem_available (heap_start ml) (heap_pastend ml) ⋆
+     mem_available (stack_start ml) (stack_pastend ml)) (getMem initial)
+    ->
+    invariant initial /\
+    (forall mach, invariant mach ->
+       (run_one_riscv_instr mach invariant /\
+        exists extend s0 s1, good_trace s0 (getLog mach ;++ extend) s1)).
 Proof.
-  intros.
+  exists (ll_inv compile_ext_call ml garagedoor_spec).
+  intros ? (? & ? & ? & ? & ? & ? & ?).
 
   unshelve epose proof compiler_invariant_proofs _ _ _ _ _ garagedoor_spec as HCI; shelve_unifiable; try exact _.
   { exact (naive_word_riscv_ok 5%nat). }
