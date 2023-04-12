@@ -35,7 +35,6 @@ fn testVector(comptime fiat: type, expected_s: []const u8) !void {
     // Check that the result matches the expected one.
     var expected: [as.len]u8 = undefined;
     _ = try fmt.hexToBytes(&expected, expected_s);
-    std.debug.print("> {s}\n", .{fmt.fmtSliceHexLower(&as)});
     try std.testing.expectEqualSlices(u8, &expected, &as);
 }
 
