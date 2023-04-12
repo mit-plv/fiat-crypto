@@ -144,27 +144,25 @@ Require Import bedrock2.WordNotations. Local Open Scope word_scope.
 Import bedrock2.Map.Separation. Local Open Scope sep_scope.
 Require Import bedrock2.ReversedListNotations.
 Local Notation run_one_riscv_instr := (mcomp_sat (run1 Decode.RV32IM)).
-Implicit Types initial mach : MetricRiscvMachine.
+Local Notation RiscvMachine := MetricRiscvMachine.
+Implicit Types mach : RiscvMachine.
 
-Theorem garagedoor_invariant_proof: exists invariant, forall initial,
-    getPc initial = code_start ml /\
-    getNextPc initial = getPc initial ^+ /[4] /\
-    regs_initialized (getRegs initial) /\
-    getLog initial = [] /\
-    (forall a, \[code_start ml] <= \[a] < \[code_pastend ml] -> In a (getXAddrs initial)) /\
-    valid_machine initial /\
+Theorem garagedoor_invariant_proof: exists invariant: RiscvMachine -> Prop,
+   (forall mach,
+    getPc mach = code_start ml /\
+    getNextPc mach = getPc mach ^+ /[4] /\
+    regs_initialized (getRegs mach) /\
+    getLog mach = [] /\
+    (forall a, \[code_start ml] <= \[a] < \[code_pastend ml] -> In a (getXAddrs mach)) /\
+    valid_machine mach /\
     (imem (code_start ml) (code_pastend ml) garagedoor_insns ⋆
      mem_available (heap_start ml) (heap_pastend ml) ⋆
-     mem_available (stack_start ml) (stack_pastend ml)) (getMem initial)
-    ->
-    invariant initial /\
-    (forall mach, invariant mach ->
-       (run_one_riscv_instr mach invariant /\
-        exists extend s0 s1, good_trace s0 (getLog mach ;++ extend) s1)).
+     mem_available (stack_start ml) (stack_pastend ml)) (getMem mach)
+    -> invariant mach) /\
+   (forall mach, invariant mach -> run_one_riscv_instr mach invariant) /\
+   (forall mach, invariant mach -> exists extend s0 s1, good_trace s0 (getLog mach ;++ extend) s1).
 Proof.
   exists (ll_inv compile_ext_call ml garagedoor_spec).
-  intros ? (? & ? & ? & ? & ? & ? & ?).
-
   unshelve epose proof compiler_invariant_proofs _ _ _ _ _ garagedoor_spec as HCI; shelve_unifiable; try exact _.
   { exact (naive_word_riscv_ok 5%nat). }
   { eapply SortedListString.ok. }
@@ -173,6 +171,7 @@ Proof.
   { exact ml_ok. }
   ssplit; intros; ssplit; eapply HCI; eauto; [].
 
+  clear HCI. destruct H as (? & ? & ? & ? & ? & ? & ?).
   econstructor.
   eexists garagedoor_insns.
   eexists garagedoor_finfo.
@@ -205,12 +204,13 @@ Proof.
         Morphisms.f_equiv. }
       { rewrite firstn_length, skipn_length. Lia.lia. }
       { Lia.lia. } }
-    intros ? ? ? ?; repeat straightline; eapply good_trace_from_isRead.
+    intros ? m ? ?; repeat straightline; eapply good_trace_from_isRead.
     subst a; rewrite app_nil_r.
-    rewrite <-(List.firstn_skipn 0x20 (List.firstn _ anybytes)) in H11.
-    rewrite <-(List.firstn_skipn 1520 (skipn 32 (skipn 64 anybytes))) in H11.
-    do 2 seprewrite_in @Array.bytearray_append H11.
-    rewrite ?firstn_length, ?skipn_length, ?Nat2Z.inj_min, ?Nat2Z.inj_sub, H6_emp0 in H11.
+    lazymatch goal with H: sep _ _ m |- _ => rename H into M end.
+    rewrite <-(List.firstn_skipn 0x20 (List.firstn _ anybytes)) in M.
+    rewrite <-(List.firstn_skipn 1520 (skipn 32 (skipn 64 anybytes))) in M.
+    do 2 seprewrite_in @Array.bytearray_append M.
+    rewrite ?firstn_length, ?skipn_length, ?Nat2Z.inj_min, ?Nat2Z.inj_sub, H6_emp0 in M.
     cbv [isReady garagedoor_spec good_trace]. eexists (_,_), (_,_); fwd. eauto.
     { rewrite <-app_nil_l. eapply TracePredicate.concat_app; eauto. econstructor. }
     cbv [memrep]. ssplit.
