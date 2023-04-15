@@ -299,7 +299,7 @@ Module Z.
         (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
     : c * a / b = c * (a / b) + (c * (a mod b)) / b.
   Proof.
-    rewrite (Z_div_mod_eq a b) at 1 by lia.
+    rewrite (Z_div_mod_eq_full a b) at 1.
     rewrite Z.mul_add_distr_l.
     replace (c * (b * (a / b))) with ((c * (a / b)) * b) by lia.
     rewrite Z.div_add_l by lia.

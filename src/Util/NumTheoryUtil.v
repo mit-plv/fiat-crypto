@@ -238,15 +238,14 @@ Proof.
   assert (Z.to_nat x mod 4 = 1)%nat as x_1mod4_nat. {
     replace 1 with (Z.of_nat 1) in * by auto.
     replace (x mod 4) with (Z.of_nat (Z.to_nat x mod 4)) in *
-      by (rewrite mod_Zmod by lia; rewrite Z2Nat.id; auto).
+      by (rewrite Nat2Z.inj_mod, Z2Nat.id; auto).
     apply Nat2Z.inj in x_1mod4; auto.
   }
   remember (Z.to_nat x / 4)%nat as c eqn:Heqc.
   destruct (divide2_1mod4_nat c (Z.to_nat x) Heqc x_1mod4_nat) as [k k_id].
   replace 2%nat with (Z.to_nat 2) in * by auto.
   apply inj_eq in k_id.
-  rewrite div_Zdiv in k_id by (replace (Z.to_nat 2) with 2%nat by auto; lia).
-  rewrite Nat2Z.inj_mul in k_id.
+  rewrite Nat2Z.inj_div, Nat2Z.inj_mul in k_id.
   do 2 rewrite Z2Nat.id in k_id by lia.
   rewrite Z.mul_comm in k_id.
   symmetry in k_id.
@@ -311,7 +310,7 @@ Qed.
 Lemma odd_as_div a : Z.odd a = true -> a = (2*(a/2) + 1)%Z.
 Proof.
   rewrite Zodd_mod, <-Zeq_is_eq_bool; intro H_1; rewrite <-H_1.
-  apply Z_div_mod_eq; reflexivity.
+  apply Z_div_mod_eq_full.
 Qed.
 
 Module Export Hints.
