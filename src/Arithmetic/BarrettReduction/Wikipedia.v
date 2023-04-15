@@ -98,7 +98,7 @@ Section barrett.
       assert (0 <= a * (4 ^ k mod n) / n < 4 ^ k) by (auto with zero_bounds zarith lia).
       subst q r m.
       rewrite (Z.div_mul_diff_exact''' (4^k) n a) by lia.
-      rewrite (Z_div_mod_eq (4^k * _ / n) (4^k)) by lia.
+      rewrite (Z_div_mod_eq_full (4^k * _ / n) (4^k)).
       autorewrite with push_Zmul push_Zopp zsimplify zstrip_div.
       eexists; reflexivity.
     Qed.
