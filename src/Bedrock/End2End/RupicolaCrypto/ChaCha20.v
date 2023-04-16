@@ -26,6 +26,224 @@ Notation predicate := (predicate (word:=word) (locals:=locals) (mem:=mem)).
 
 Local Instance locals_ok : map.ok locals := (FE310CSemantics.locals_ok (word:=word)).
 
+
+Class Abstractable {C A : Type} (abstract : C -> A) (c : C) (a : A) : Prop :=
+  Abstr {
+      abstraction_sound : abstract c = a;
+    }.
+
+Definition abstr_hyp {C A : Type} (f : C -> A) c a : f c = a -> Abstractable f c a := Abstr _ _ _ _ _.
+(* does not shelve, so should only last if an eqn is found *)
+#[export] Hint Extern 10 (Abstractable _ _ _) => apply abstr_hyp : abstraction. 
+#[global] Hint Extern 9 (Abstractable _ ?l _) => subst l : abstraction.
+
+Arguments Abstr {C A}%type_scope {abstract}%function_scope {c} {a}.
+                
+Section Length.
+  
+  Local Open Scope nat.
+
+  Import ListNotations.
+
+  Section WithFV.
+    Context (B : Type).
+
+    
+    #[refine]
+      Instance abstr_combine {B'} l1 l2 llen1 llen2
+      `{Abstractable _ _ (@length B) l1 llen1}
+      `{Abstractable _ _ (@length B') l2 llen2}
+      : Abstractable (@length _) (combine l1 l2) (Nat.min llen1 llen2) := Abstr _.
+    Proof.
+      rewrite (combine_length _ _).
+      f_equal; apply abstraction_sound; assumption.
+    Qed.
+
+    Local Notation Abstractable := (Abstractable (@length B)).
+
+
+    Instance abstr_nil : Abstractable [] 0 := Abstr eq_refl.
+    
+    #[refine]
+    Instance abstr_cons e l llen `{Abstractable l llen} : Abstractable (e::l) (S llen) := Abstr _.
+    Proof.
+      simpl.
+      eauto.
+      f_equal.
+      apply Abstractable0.
+    Qed.
+    
+    #[refine]
+      Instance abstr_app l1 llen1 l2 llen2 `{Abstractable l1 llen1} `{Abstractable l2 llen2}
+      : Abstractable (l1++l2) (llen1 + llen2) := Abstr _.
+    Proof.
+      rewrite (app_length _ _).
+      f_equal.
+      apply Abstractable0.
+      apply Abstractable1.
+    Qed.
+
+    #[refine]
+      Instance abstr_skipn n l llen `{Abstractable l llen}
+      : Abstractable (skipn n l) (llen - n) := Abstr _.
+    Proof.
+      rewrite (skipn_length _ _).
+      f_equal.
+      apply Abstractable0.
+    Qed.
+
+    #[refine]
+      Instance abstr_firstn n l  llen `{Abstractable l llen}
+      : Abstractable (firstn n l) (Nat.min n llen) := Abstr _.
+    Proof.
+      rewrite (firstn_length _ _).
+      f_equal.
+      apply Abstractable0.
+    Qed.
+
+    
+    #[refine]
+      Instance abstr_map {B'} (f : B' -> B) l llen `{ChaCha20.Abstractable _ _ (@length B') l llen}
+      : Abstractable (map f l) llen := Abstr _.
+    Proof.
+      rewrite (map_length _ _).
+      f_equal.
+      apply H.
+    Qed.
+    
+    
+    #[refine]
+      Instance abstr_upds i xs l llen `{Abstractable l llen}
+      : Abstractable (upds l i xs) llen := Abstr _.
+    Proof.
+      rewrite (upds_length _ _).
+      f_equal.
+      apply Abstractable0.
+    Qed.
+    
+    #[refine]
+      Instance abstr_upd i x l llen `{Abstractable l llen}
+      : Abstractable (upd l i x) llen := Abstr _.
+    Proof.
+      rewrite (upd_length _ _).
+      f_equal.
+      apply Abstractable0.
+    Qed.
+    
+    #[refine]
+      Instance abstr_chunk k (bs : list B) (_ : ~ k = 0) llen `{Abstractable bs llen}
+      : ChaCha20.Abstractable (@length _) (chunk k bs)  (Nat.div_up llen k)  := Abstr _.
+    Proof. rewrite length_chunk; auto.
+      f_equal.
+      apply Abstractable0.
+    Qed.
+
+  End WithFV.
+
+  
+    #[refine]
+      Instance abstr_le_split n z : Abstractable (@length _) (le_split n z)  n := Abstr _.
+    Proof.
+      apply LittleEndianList.length_le_split.
+    Qed.
+
+    
+    #[refine]
+      Instance abstr_list_byte_of_string s strlen `{Abstractable _ _ String.length s strlen}
+      : Abstractable (@length _) (list_byte_of_string s)  strlen := Abstr _.
+    Proof.
+      unfold list_byte_of_string.
+      rewrite map_length.
+      destruct H.
+      revert strlen abstraction_sound0.
+      induction s; simpl; intros; try congruence.
+      erewrite IHs; eauto.
+    Qed.
+
+    
+    Instance abstr_string_nil : Abstractable String.length EmptyString 0 := Abstr eq_refl.
+    
+    #[refine]
+      Instance abstr_string_cons e l llen `{Abstractable _ _ String.length l llen}
+      : Abstractable String.length (String e l) (S llen) := Abstr _.
+    Proof.
+      simpl.
+      eauto.
+      f_equal.
+      apply H.
+    Qed.
+
+    
+    (*TODO: bs2ws_length or bs2ws_length'?*)
+    #[refine]
+      Instance abstr_bs2ws k (bs : list _) (_ : ~ k = 0) llen `{Abstractable _ _ (@length _) bs llen}
+      : Abstractable (@length _) (bs2ws (word:=word) k bs)  (Nat.div_up llen k)  := Abstr _.
+    Proof.
+      rewrite bs2ws_length'; auto.
+      f_equal.
+      apply H.
+    Qed.
+
+    #[refine]
+      Instance abstr_ws2bs k (bs : list _) llen `{Abstractable _ _ (@length _) bs llen}
+      : Abstractable (@length _) (ws2bs (word:=word) k bs)  (k*llen)  := Abstr _.
+    Proof.
+      rewrite ws2bs_length; auto.
+      f_equal.
+      apply H.
+    Qed.
+        
+End Length.
+
+#[export] Hint Extern 1 (Abstractable (@length _) (combine _ _) _) => apply abstr_combine;shelve : abstraction.
+
+#[export] Hint Extern 1 (Abstractable (@length _) (chunk _ _) _) => apply abstr_chunk;shelve : abstraction.
+#[export] Hint Extern 1 (Abstractable (@length _) (map _ _) _) => apply abstr_map;shelve : abstraction.
+#[export] Hint Extern 1 (Abstractable (@length _) (upds _ _ _) _) => apply abstr_upds;shelve : abstraction.
+#[export] Hint Extern 1 (Abstractable (@length _) (upd _ _ _) _) => apply abstr_upd;shelve : abstraction.
+#[export] Hint Extern 1 (Abstractable (@length _) (firstn _ _) _) => apply abstr_firstn;shelve : abstraction.
+#[export] Hint Extern 1 (Abstractable (@length _) (skipn _ _) _) => apply abstr_skipn;shelve : abstraction.
+#[export] Hint Extern 1 (Abstractable (@length _) (_ ++ _) _) => apply abstr_app;shelve : abstraction.
+#[export] Hint Extern 1 (Abstractable (@length _) (cons _ _) _) => apply abstr_cons;shelve : abstraction.
+#[export] Hint Extern 1 (Abstractable (@length _) (@nil _) _) => apply abstr_nil : abstraction.
+
+#[export] Hint Extern 1 (Abstractable (@length _) (le_split _ _) _) => apply abstr_le_split : abstraction.
+#[export] Hint Extern 1 (Abstractable (@length _) (list_byte_of_string _) _) =>
+  apply abstr_list_byte_of_string; shelve : abstraction.
+#[export] Hint Extern 1 (Abstractable String.length (String _ _) _) => apply abstr_string_cons;shelve : abstraction.
+#[export] Hint Extern 1 (Abstractable String.length EmptyString _) => apply abstr_string_nil : abstraction.
+
+
+#[export] Hint Extern 1 (Abstractable (@length _) (bs2ws _ _) _) => apply abstr_bs2ws;shelve : abstraction.
+#[export] Hint Extern 1 (Abstractable (@length _) (ws2bs _ _) _) => apply abstr_ws2bs;shelve : abstraction.
+
+Ltac simplify_abstract_goal :=
+  repeat (unshelve (progress typeclasses eauto with abstraction); shelve_unifiable).
+
+
+Ltac abstract_at_fn f :=  
+  lazymatch goal with
+    |- context [f ?c] =>
+      let x := open_constr:(_) in
+      replace (f c) with x; [| apply (@abstraction_sound _ _ f c);  simplify_abstract_goal]
+  end.
+
+
+
+Ltac simplify_len :=
+  progress multimatch goal with
+    |- context [@length ?A ?c] =>
+        let x := open_constr:(_) in
+        replace (@length A c) with x;
+        cycle 1;
+        [ symmetry; eapply (@abstraction_sound _ _ (@length _) _);
+          simplify_abstract_goal; first [apply Abstr; reflexivity | lia] |]
+    end.
+
+
+
+
+
 (*TODO: connect to Broadcast?*)
 (* Tooling for representing a fixed-length array in local variables *)
 
@@ -132,10 +350,7 @@ Proof.
     reflexivity.
   }
   erewrite split_hd_tl with (l := skipn _ _).
-  2:{
-    rewrite skipn_length.
-    lia.
-  }
+  2:{ simplify_len; lia. }
   simpl.
   f_equal.
   {
@@ -338,9 +553,6 @@ Definition quarterround x y z t (st : list word) :=
                         (nth t st (word.of_Z 0)) in
   upd (upd (upd (upd st x a) y b) z c) t d.
 
-  (*Want: local_alloc; put a fixed-length array in local variables,
-    accessible via broadcast
-   *)
 
 
 (* TODO: find a better way than hardcoding tuple length *)
@@ -546,9 +758,22 @@ End Derive.
     unfold Spec.quarterround.
     generalize (Spec.quarter (nth a l 0, nth b l 0, nth c l 0, nth d l 0)) as p.
     intro p; destruct p as [[[? ?] ?] ?].
-    rewrite !upd_length.
+    simplify_len.
     reflexivity.
   Qed.
+  
+    #[refine]
+      Instance abstr_quarterround x y z t l llen `{Abstractable _ _ (@length _) l llen}
+      : Abstractable (@length _) (Spec.quarterround x y z t l) llen := Abstr _.
+    Proof.
+      rewrite (length_quarterround _ _).
+      f_equal.
+      apply H.
+    Qed.
+
+    (*TODO: move to the right place*)
+     Hint Extern 1 (Abstractable (@length _) (Spec.quarterround _ _ _ _ _) _) =>
+      apply abstr_quarterround;shelve : abstraction.
   
 Lemma quarterround_ok x y z t st :
   Forall (in_bounds 32) st ->
@@ -569,7 +794,7 @@ Lemma nth_upd {A} (l: list A) (a d: A) (i k: nat):
   (i <> k /\ nth i (upd l k a) d = nth i l d).
 Proof.
   destruct (Nat.lt_ge_cases i (length l)); cycle 1; [ left | right ].
-  - unfold upd; rewrite nth_overflow; rewrite ?upds_length; eauto.
+  - unfold upd; rewrite nth_overflow; try simplify_len; auto.
   - destruct (Nat.eq_dec i k) as [-> | Heq]; [ left | right ].
     + rewrite nth_upd_same; auto.
     + rewrite nth_upd_diff; auto.
@@ -687,23 +912,12 @@ Qed.
   {
     subst l.
     apply nat_iter_pred.
-    {
-      rewrite !app_length, !map_length, !length_chunk, Hlenk.
-      rewrite app_length, LittleEndianList.length_le_split, Hlenn.
-      reflexivity.
-      all: lia.
-    }
-    {
-      intros.
-      rewrite !length_quarterround.
-      auto.
-    }
+    { repeat simplify_len; reflexivity. }
+    { intros. simplify_len; reflexivity. }
   }
 
   apply list_to_tuple_16_injective.
-  {
-    rewrite map_length; auto.
-  }
+  { repeat simplify_len; reflexivity. }
   {
     reflexivity.
   }
@@ -717,7 +931,7 @@ Qed.
     destruct H.
     split.
     1:repeat apply quarterround_in_bounds; auto.
-    repeat rewrite length_quarterround; auto.
+    simplify_len; reflexivity.
   }
   
   {
@@ -773,27 +987,18 @@ Qed.
       all: apply Forall_le_combine_in_bounds.
       all: lia.
     }
-    rewrite !app_length, !map_length, !length_chunk, Hlenk by lia.
-    rewrite app_length, Hlenn.
-    reflexivity.
+    { repeat simplify_len; reflexivity. }
   }
   {
     rewrite !map_app, !map_map.
     change  (λ x : list Init.Byte.byte, word.of_Z (LittleEndianList.le_combine x)) with le_combine.
     rewrite chunk_app_chunk; try lia.
-    2:{ rewrite LittleEndianList.length_le_split; auto. }
+    2:{ simplify_len; lia. }
     cbn [map].
     change (le_combine (LittleEndianList.le_split 4 (word.unsigned (word.of_Z 0)))) with (word.of_Z (word:=word) 0).
     remember ((map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k")) ++
                  map le_combine (chunk 4 key) ++ word.of_Z 0 :: map le_combine (chunk 4 nonce))).
-    assert (length l = 16%nat).
-    {
-      subst l.
-      rewrite !app_length, !map_length, !length_chunk, Hlenk by lia.
-      cbn [length].
-      rewrite map_length, length_chunk, Hlenn by lia.
-      reflexivity.
-    }
+    assert (length l = 16%nat) by (repeat simplify_len; reflexivity).
     clear Heql Hlen.
     repeat (destruct l as [|? l]; cbn [length] in H; try lia).
     reflexivity.
@@ -1030,11 +1235,7 @@ Proof.
     intros.
     rewrite z_range_cons by lia.
     erewrite split_hd_tl with (l := skipn _ _).
-    2:{
-      rewrite skipn_length.
-      cbn [length].
-      lia.
-    }
+    2:{ simplify_len; lia. }
     rewrite <- hd_skipn_nth_default.
     rewrite nth_default_eq.
     cbn [map].
@@ -1137,8 +1338,7 @@ Proof.
   }
   eapply expr_load_word_of_array; eauto.
   {
-    rewrite map_length, length_chunk by lia.
-    rewrite H.
+    simplify_len.
     rewrite Nat.mul_comm.
     rewrite Nat.div_up_exact; lia.
   }
@@ -1211,13 +1411,12 @@ Proof.
   f_equal.
   2:{
     rewrite skipn_chunk by lia.
-Import coqutil.Word.LittleEndianList (length_le_split).
-    rewrite length_le_split.
+    simplify_len.
     replace ((1 + n) * 4) with  (4 + n * 4) by lia.
     reflexivity.
   }
   {
-    rewrite length_chunk by lia.
+    simplify_len.
     rewrite <- Nat.div_up_exact_mod with (a:= length lst) (b:=4%nat) at 2 by lia.
     generalize (Nat.div_up (length lst) 4).
     clear lst H.
@@ -1233,13 +1432,12 @@ Import coqutil.Word.LittleEndianList (length_le_split).
       simpl.
       rewrite firstn_nil.
       reflexivity.
-      rewrite length_le_split.
+      simplify_len.
       lia.
     }
   }
   {
-    rewrite firstn_length.
-    rewrite length_le_split.
+    simplify_len.
     apply Nat.min_case.
     {
       unfold Nat.modulo in *.
@@ -1257,7 +1455,7 @@ Import coqutil.Word.LittleEndianList (length_le_split).
     apply Nat.mod_same; lia.
   }
   {
-    rewrite firstn_length.
+    simplify_len.
     apply Nat.min_case.
     apply Nat.mod_mul; lia.
     auto.
@@ -1337,6 +1535,7 @@ Proof.
       reflexivity.
     }
     {
+      (*TODO: make work with simplify_len*)
       rewrite bs2ws_length.
       rewrite H1.
       rewrite Nat.mul_comm.
@@ -1377,25 +1576,21 @@ Import coqutil.Word.LittleEndianList (le_combine_split).
       }
     }
     {
-      rewrite upds_length.
-      rewrite H1.
+      simplify_len.
       rewrite Nat.mul_comm.
       rewrite Nat.mod_mul.
       lia.
       cbv; congruence.
     }
     {
-      rewrite upds_length.
-      rewrite H1.
-      rewrite Nat.mul_comm.
-      lia.
+      simplify_len; lia.
     }
     intros m' Hm'.
     eapply H3.
     cbn [array].
     unfold upds in Hm'.
     rewrite !firstn_app, !firstn_firstn in Hm'.
-    rewrite !firstn_length, !length_le_split in Hm'.
+    rewrite !firstn_length, !LittleEndianList.length_le_split in Hm'.
     replace  (Init.Nat.min (4 * (n + 1)) (n * 4)) with (4 * n)%nat in Hm' by lia.
     assert (length out > n * 4) by lia.
     replace (4 * (n + 1) - Init.Nat.min (n * 4) (length out))%nat
@@ -1413,10 +1608,7 @@ Import coqutil.Word.LittleEndianList (le_combine_split).
     seprewrite_in (bytearray_append (firstn (4*n) out) (LittleEndianList.le_split 4 (word.unsigned a)) ptr) Hm'.
     seprewrite_in (scalar_of_bytes (ptr + word.of_Z (Z.of_nat (length (firstn (4 * n) out))))%word
                      (LittleEndianList.le_split 4 (word.unsigned a))) Hm'.
-    {
-      rewrite length_le_split.
-      reflexivity.
-    }
+    { simplify_len; lia. }
     rewrite !firstn_length in Hm'.
     replace  (Z.of_nat (Init.Nat.min (4 * n) (length out)))
       with (4 * Z.of_nat n) in Hm' by lia.
@@ -1434,9 +1626,7 @@ Import coqutil.Word.LittleEndianList (le_combine_split).
         apply word.ring_theory.
       }
     }
-    {
-      rewrite length_le_split; lia.
-    }
+    { simplify_len; lia. }
   }
 Qed.
   
@@ -1516,7 +1706,10 @@ Qed.
     
   (*used because concrete computation on maps seems to be slow here*)
   Ltac eval_map_get :=
-    repeat rewrite map.get_put_diff by (cbv; congruence);
+    repeat rewrite ?map.remove_put_same,
+      ?map.remove_put_diff,
+      ?map.get_put_diff,
+      ?map.remove_empty by (compute;congruence);
     rewrite map.get_put_same; reflexivity.
 
   
@@ -1581,20 +1774,44 @@ Proof.
   rewrite firstn_length in Hlen.
   assert (length vars >= length l1)%nat.
   {
-    rewrite <- H3.
-    rewrite <- H2.
-    rewrite firstn_length.
+    revert H2 H3.
+    repeat simplify_len.
     lia.
   }
-  assert (length l1' = length l1).
-  {
-    rewrite Hlen.
-    lia.
-  }
+  assert (length l1' = length l1) by lia.
   specialize (H0 l1').
   rewrite array_locs_is_combine in H0; eauto.
   intuition congruence.
 Qed.
+
+
+Ltac cmd_step lem :=
+  try simple eapply compile_nlet_as_nlet_eq;
+  simple eapply lem.
+
+Ltac solve_NoDup :=
+  lazymatch goal with
+  | |- NoDup _ =>
+      repeat constructor; simpl;
+      intuition congruence
+  | |- _ => fail "Not a NoDup"
+  end.
+
+Hint Extern 1 (locals_array_expr _ _ _ _ (_::_)) =>
+       constructor; shelve : compiler.
+Hint Extern 1 (locals_array_expr _ _ _ _ (_++_)) =>
+         simple apply locals_array_expr_app; shelve : compiler.
+Hint Extern 5 (locals_array_expr _ _ _ _ (map le_combine (chunk 4 _))) =>
+         simple eapply expr_load_word_of_byte_array; shelve : compiler. 
+Ltac greedy_eauto db := unshelve eauto 1 with db; shelve_unifiable.
+
+Ltac deduce_map_key :=
+  let v := lazymatch goal with |- _ = Some ?v => v end in
+  let k := lazymatch goal with |- map.get _ ?k = Some _ => k end in
+  lazymatch goal with
+    |- context [ map.put _ ?k' v] =>
+      unify k k'
+  end.
 
 Derive chacha20_block SuchThat
   (defn! "chacha20_block" ("st", "key", "nonce") { chacha20_block },
@@ -1603,70 +1820,51 @@ Derive chacha20_block SuchThat
 Proof.
   compile_setup.
   replace (pred _) with (pred (Spec.chacha20_block k (le_split 4 (word.of_Z 0) ++ n))) by reflexivity.
-  rewrite chacha20_block_ok.
+  rewrite chacha20_block_ok by intuition.
   unfold chacha20_block'.
   compile_step.
-  simple eapply compile_nlet_as_nlet_eq.
-  simple eapply compile_set_locals_array.
-  2:{
-    repeat constructor; simpl;
-    intuition congruence.
-  }
+
+  
+  cmd_step @compile_set_locals_array; [| solve_NoDup| ..].
   {
-    repeat (apply locals_array_expr_app; intros).
-    all: rewrite !map_length, !length_chunk by lia.
-    all: rewrite ?H5, ?H8.
+    
+    cbn -[combine le_combine word.of_Z].
+    repeat (greedy_eauto compiler || compile_step).
+    all: repeat simplify_len.
+    2: compute; reflexivity.
+    now compile_step.
+    {
+      cbn -[combine le_combine].
+      eapply expr_compile_var.
+      deduce_map_key.      
+      eval_map_get.
+    }    
+    cbn -[combine le_combine word.of_Z].
+    repeat (greedy_eauto compiler || compile_step).
+    all: repeat simplify_len.
+    all: repeat compile_step.
     all: cbn -[combine le_combine].
-    all: repeat constructor; intros; subst.
-    all: try compile_step.
-    {
-      eapply expr_load_word_of_byte_array; try eassumption.
-      {
-        rewrite H5.
-        instantiate (1:= 8%nat).
-        reflexivity.
-      }
-      compile_step.
-      cbn [List.fold_left];
-        repeat rewrite ?map.remove_put_same, ?map.remove_put_diff, ?map.remove_empty by congruence.        
-      compile_step.
-    }
-    {
-      eapply expr_load_word_of_byte_array; try eassumption.
-      {
-        rewrite H8.
-        instantiate (1:= 3%nat).
-        reflexivity.
-      }
-      compile_step.
-      cbn [List.fold_left];
-        repeat rewrite ?map.remove_put_same, ?map.remove_put_diff, ?map.remove_empty by congruence.     
-      compile_step.
-    }
+    eapply expr_compile_var.
+    deduce_map_key.      
+    eval_map_get.
   }
   compile_step.
   let l' := eval cbn in l in
     change l with l'.
-
-  
-  rewrite  Nat_iter_as_nd_ranged_for_all with (i:=0).
+  rewrite Nat_iter_as_nd_ranged_for_all with (i:=0).
   change (0 + Z.of_nat 10) with 10%Z.
 
   compile_step.
   compile_step.
   assert (m = m) by reflexivity.
-  compile_step.
-  { compile_step. }
-  { compile_step. }
-  { intuition subst;
-      repeat rewrite map.get_put_diff by (cbv;congruence);
-      apply map.get_put_same.
-  }
-  { intuition subst.
-    reflexivity.
-  }
-  { intuition subst. }
-  { lia. }
+  compile_step; [ now compile_step
+                | now compile_step
+                | now repeat compile_step 
+                | now repeat compile_step 
+                | now repeat compile_step
+                | lia
+                | .. ].
+  {
   compile_step.
   {
     compile_step.
@@ -1674,9 +1872,7 @@ Proof.
     compile_step.
 
     Optimize Proof.
-    Optimize Heap.
-    
-
+    Optimize Heap.    
 
   (* TODO: why doesn't simple eapply work? *)
       do 7 (change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y);
@@ -1724,7 +1920,7 @@ Proof.
       }
       ecancel_assumption.
   }
-
+  }
   Optimize Proof.
   Optimize Heap.
   
@@ -1734,112 +1930,73 @@ Proof.
   compile_step.
   compile_step.
   
-  simple eapply compile_nlet_as_nlet_eq.
   (*TODO: need to strengthen this a la broadcast
     so that it allows other vars to change, doesn't need fresh names
    *)
-  simple eapply compile_set_locals_array.
+  cmd_step @compile_set_locals_array.
   {
+   (* cbn -[combine le_combine word.of_Z word.add]. *)
     
-(*TODO: generalize to all ops*)
-    eapply array_expr_compile_word_add.
+    Hint Extern 5 (locals_array_expr _ _ _ _ (map (fun '(_,_) => word.add _ _) _)) =>
+           simple eapply array_expr_compile_word_add; shelve : compiler.
+    (*repeat (greedy_eauto compiler || compile_step).*)
+    
+    greedy_eauto compiler.
     {
-      repeat constructor; repeat compile_step.
-      all:apply expr_compile_var;
-        let v := lazymatch goal with |- _ = Some ?v => v end in
-        let k := lazymatch goal with |- map.get _ ?k = Some _ => k end in
-        lazymatch goal with
-          |- context [ map.put _ ?k' v] =>
-            unify k k'
-        end;
+      repeat (greedy_eauto compiler || compile_step).
+      all:apply expr_compile_var.
+      all: deduce_map_key.
+      all: eval_map_get.
+    }
+    {
+      let l := constr:(chunk 4 (list_byte_of_string "expand 32-byte k")) in
+      let l' := eval compute in l in
+        change l with l'.
+      cbn [map app].
+      repeat (greedy_eauto compiler || compile_step).
+      all:  repeat simplify_len.
+      2: { compute; reflexivity. }
+      { reflexivity. }
+      {
+        apply expr_compile_var.
+        deduce_map_key.
+        cbn.
         eval_map_get.
-    }
-    {
+      }
       
-      repeat (apply locals_array_expr_app; intros).
-      {
-        let x := eval cbn -[word.of_Z] in (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) in
-          change (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) with x.
-        unfold le_combine.
-        cbn [firstn length].
-        repeat (constructor; intros);
-          apply expr_compile_Z_literal.
-      }
-      {
-        eapply expr_load_word_of_byte_array; try eassumption.
-        {
-          rewrite H5.
-          instantiate (1:= 8%nat).
-          reflexivity.
-        }
-        {
-          rewrite !map_length, !length_chunk, H5.
-          reflexivity.
-          all: lia.
-        }
-        {
-          rewrite !map_length, !length_chunk, H5.
-          all: try lia.
-          repeat (set (Nat.div_up _ _) as x;
-                  let x' := eval compute in x in
-                    change x with x'; clear x).
-          cbn [firstn skipn length map.putmany_of_list List.fold_left array_locs].
-          repeat rewrite ?map.remove_put_same, ? map.remove_put_diff, ?map.remove_empty by (cbv;congruence).
-          compile_step.
-        }
-      }
-      {        
-          rewrite !map_length, !length_chunk, H5.
-          all: try lia.
-          repeat (set (Nat.div_up _ _) as x;
-                  let x' := eval compute in x in
-                    change x with x'; clear x).
-          cbn [firstn skipn length map.putmany_of_list List.fold_left array_locs].
-          constructor.
-          { repeat compile_step. }
-          intros.
-          eapply expr_load_word_of_byte_array; try eassumption.
-          {
-            rewrite H8.
-            instantiate (1:= 3%nat).
-            reflexivity.
-          }
-          compile_step.
-          cbn [firstn skipn length map.putmany_of_list List.fold_left array_locs].
-          repeat rewrite ?map.remove_put_same, ? map.remove_put_diff, ?map.remove_empty by (cbv;congruence).
-          repeat compile_step.
-        }
-      }
+      repeat (greedy_eauto compiler || compile_step).
+      all:  repeat simplify_len; try reflexivity.
+      
+      apply expr_compile_var.
+      deduce_map_key.
+      cbn.
+      eval_map_get.
     }
+  }
   {
-    repeat constructor; cbv; intuition congruence.
+    solve_NoDup.
   }
   compile_step.
   cbv [le_split].
-  subst l0.
-  change (array_locs ?a ?b ?c) with (array_locs a b v1).
-  set (array_locs _ _ _) as l0.
-  let l' := eval cbn -[v1 combine] in l0 in change l0 with l'.
-  cbv [map.putmany_of_list gs].
-  dedup  "_gs_from0".
-  dedup  "_gs_to0".
-  dedup  "qv0".
-  dedup "qv1".
-  dedup "qv2".
-  dedup "qv3".
-  dedup "qv4".
-  dedup "qv5".
-  dedup "qv6".
-  dedup "qv7".
-  dedup "qv8".
-  dedup "qv9".
-  dedup "qv10".
-  dedup "qv11".
-  dedup "qv12".
-  dedup "qv13".
-  dedup "qv14".
-  dedup "qv15".
-
+  let l' := open_constr:(_) in
+  replace l0 with l'; cycle 1.
+  {
+    subst l0.
+    change (array_locs ?a ?b ?c) with (array_locs a b v1).
+    set (array_locs _ _ _) as l0.
+    let l' := eval cbn -[v1 combine word.of_Z] in l0 in change l0 with l'.
+    clear l0.
+    cbv [map.putmany_of_list gs].
+    Ltac dedup_all keys :=
+      lazymatch keys with
+      | ?k :: ?keys => dedup k; dedup_all keys
+      | _ => idtac
+      end.
+    let m := match goal with |- _ = ?m => m end in
+    let keys := eval compute in (map.keys m) in
+      dedup_all keys.
+    reflexivity.
+  }  
   
   Optimize Proof.
   Optimize Heap.
@@ -1860,25 +2017,13 @@ Proof.
     cbn [unroll app].
     {
       repeat constructor; repeat compile_step.
-      all: apply expr_compile_var; cbn [word word.rep Naive.gen_word word.of_Z];
-        let v := lazymatch goal with |- _ = Some ?v => v end in
-        let k := lazymatch goal with |- map.get _ ?k = Some _ => k end in
-        lazymatch goal with
-          |- context [ map.put _ ?k' v] =>
-            unify k k'
-        end;
-        eval_map_get.
+      all: apply expr_compile_var; cbn [word word.rep Naive.gen_word word.of_Z].
+     (* TODO: remove need for the above cbn*)
+      all: deduce_map_key;eval_map_get.
     }
     {
-      unfold v1.
-      rewrite !map_length, !combine_length.
-      cbn [length].
-      rewrite !app_length, !map_length, !length_chunk.
-      cbn [length].
-      rewrite ?app_length, ?map_length, ?length_chunk.
-      rewrite H5, H8.
+      simplify_len.
       reflexivity.
-      all: lia.
     }
   }
   2:{
@@ -1886,19 +2031,11 @@ Proof.
     eval_map_get.
   }
   2:{
-    ecancel_assumption.
+    compile_step.
   }
   {
-    rewrite H4.
-      unfold v1.
-      rewrite !map_length, !combine_length.
-      cbn [length].
-      rewrite !app_length, !map_length, !length_chunk.
-      cbn [length].
-      rewrite ?app_length, ?map_length, ?length_chunk.
-      rewrite H5, H8.
-      reflexivity.
-      all: lia.
+    repeat simplify_len.
+    reflexivity.
   }
   compile_step.
   unfold nlet_eq.
@@ -1910,33 +2047,29 @@ Proof.
   cbv beta delta [wp_bind_retvars pred].
   eexists; intuition eauto.
   eexists; split.
-  pose proof (bytes_of_words (width:=32) v2 out) as H'.
-  cbn [id] in H'.
-  change  (Z.of_nat (Memory.bytes_per (width:=32) access_size.word)) with 4 in H'.
-  seprewrite_in H' H7.
-  clear H'.
-  ecancel_assumption.
+  {
+    pose proof (bytes_of_words (width:=32) v2 out) as H'.
+    cbn [id] in H'.
+    change  (Z.of_nat (Memory.bytes_per (width:=32) access_size.word)) with 4 in H'.
+    lazymatch goal with
+      [ H : _ ?m |- _ ?m] => seprewrite_in H' H
+    end.
+    now compile_step.
+  }
   compile_step.
   {
-    rewrite ws2bs_length.
-    unfold v2, v1.
-    rewrite !map_length, !combine_length, !app_length.
-    cbn [length].
-    rewrite !map_length, ! length_chunk.
-    rewrite H5,H8.
+    simplify_len.
     reflexivity.
-    all:lia.
   }
   auto.
-  intuition.
-  intuition.
 Qed.
 
 
-(*  
 
+(*
 Local Open Scope string_scope.
-Import Syntax Syntax.Coercions NotationsCustomEntry.
+Import Syntax Syntax.Coercions.
+Require Import bedrock2.NotationsCustomEntry.
 Import ListNotations.
 Import Coq.Init.Byte.
 Set Printing Depth 150.
