@@ -42,8 +42,6 @@ Section Bedrock2.
   Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
   Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 
-  Definition le_combine l : word := word.of_Z (le_combine l).
-  Definition le_split n (l : word) := le_split n (word.unsigned l).
 
   (* copied from Low.v, anticipating its removal *)
   Section Low.    
@@ -572,7 +570,7 @@ Qed.
 
 
   (*TODO: continue from here*)
-    
+  
   (*used because concrete computation on maps seems to be slow here*)
   Ltac eval_map_get :=
     repeat rewrite ?map.remove_put_same,
@@ -582,77 +580,11 @@ Qed.
     rewrite map.get_put_same; reflexivity.
 
   
-        
+  
   Ltac dedup s :=
     repeat rewrite map.put_put_diff with (k1:=s) by congruence;
     rewrite ?map.put_put_same with (k:=s).
   
-Lemma forall_distr_Forall2' {A B C} (P : A -> B -> C -> Prop) l1 l2
-  : length l1 = length l2 ->
-    (forall (a:A), Forall2 (P a) l1 l2) ->
-    Forall2 (fun b c => forall a, P a b c) l1 l2.
-Proof.
-  revert l2; induction l1; destruct l2; cbn [length];
-    intros; try lia; constructor; intros.
-  {
-    specialize (H0 a0); inversion H0; subst; eauto.
-  }
-  {
-    apply IHl1; try lia.
-    intros.    
-    specialize (H0 a0); inversion H0; subst; eauto.
-  }
-Qed.
-
-
-Lemma locals_array_expr_app_helper m l vars1 vars2 le1 le2 l1 l2
-  : locals_array_expr m l vars1 le1 l1 ->
-    (forall l1', length l1' = length vars1 ->
-                locals_array_expr m (map.putmany_of_list (combine vars1 l1') l) vars2 le2 l2) ->
-    locals_array_expr m l (vars1 ++ vars2) (le1 ++ le2) (l1 ++ l2).
-Proof.
-  induction 1;
-    intros;
-    cbn [app] in *;
-    try tauto.
-  { eapply H; eauto. exact (eq_refl (x:= length [])). }
-  {
-    constructor;
-    intuition (subst; eauto).
-    specialize (H0 i0).
-    specialize (H1 i0).
-    eapply H1; eauto.
-    intros.
-    apply (H2 (i0::l1')).
-    cbn [length]; congruence.
-  }
-Qed.
-  
-Lemma locals_array_expr_app m l vars le1 le2 l1 l2
-  : locals_array_expr m l (firstn (length l1) vars) le1 l1 ->
-    (forall l1', length l1' = length l1 ->
-                 locals_array_expr m (map.putmany_of_list (array_locs (firstn (length l1) vars) 0 l1') l)
-                   (skipn (length l1) vars) le2 l2) ->
-    locals_array_expr m l vars (le1 ++ le2) (l1 ++ l2).
-Proof.
-  intros.
-  rewrite <- firstn_skipn with (n:= length l1) (l:= vars).
-  intros; eapply locals_array_expr_app_helper; eauto.
-  intros l1' Hlen.
-  pose proof (locals_array_expr_length _ _ _ _ _ H); intuition.
-  rewrite firstn_length in Hlen.
-  assert (length vars >= length l1)%nat.
-  {
-    revert H2 H3.
-    repeat simplify_len.
-    lia.
-  }
-  assert (length l1' = length l1) by lia.
-  specialize (H0 l1').
-  rewrite array_locs_is_combine in H0; eauto.
-  intuition congruence.
-Qed.
-
 
 Ltac cmd_step lem :=
   try simple eapply compile_nlet_as_nlet_eq;
