@@ -303,6 +303,10 @@ Section __.
 
   Hint Extern 1 (spec_of "fe25519_inv") => (simple refine (spec_of_exp_large)) : typeclass_instances.
   Hint Extern 1 (spec_of "felem_cswap") => (simple refine (spec_of_cswap)) : typeclass_instances.
+
+  (*TODO: currently specialized to Felems *)
+  Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (cswap _ _ _) _))) =>
+         simple eapply compile_felem_cswap; shelve : compiler.
   
     Derive montladder_body SuchThat
            (defn! "montladder" ("OUT", "K", "U")
@@ -313,15 +317,7 @@ Section __.
            As montladder_correct.
     Proof.
       pose proof scalarbits_bound.
-      compile_setup.
-      repeat compile_step.
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_felem_cswap; repeat compile_step.
-
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_felem_cswap; repeat compile_step.
-
-      compile_step.
+      compile.
     Qed.
 
   End MontLadder.
