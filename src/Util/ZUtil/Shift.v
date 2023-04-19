@@ -76,7 +76,7 @@ Module Z.
                                 then Z.testbit a i
                                 else Z.testbit b (i - n).
   Proof. destruct (Z.ltb_spec i n); autorewrite with Ztestbit; reflexivity. Qed.
-  
+
   Lemma shiftr_succ : forall n x,
     Z.shiftr n (Z.succ x) = Z.shiftr (Z.shiftr n x) 1.
   Proof.
@@ -211,9 +211,9 @@ Module Z.
 #[global]
   Hint Rewrite shiftr_spec_full : Ztestbit_full.
 
-  Lemma testbit_add_shiftl_full i (Hi : 0 <= i) a b n (Ha : 0 <= a < 2^n)
+  Lemma testbit_add_shiftl_full i a b n (Ha : 0 <= a < 2^n)
     : Z.testbit (a + b << n) i
-      = if (i <? n) then Z.testbit a i else Z.testbit b (i - n).
+      = if (i <? 0) then false else if (i <? n) then Z.testbit a i else Z.testbit b (i - n).
   Proof.
     assert (0 < 2^n) by lia.
     assert (0 <= n) by eauto 2 with zarith.

@@ -12,6 +12,8 @@ Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModDivide.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.ZUtil.Tactics.LinearSubstitute.
+Require Import Crypto.Util.ZUtil.Testbit.
+Require Import Crypto.Util.ZUtil.Tactics.Ztestbit.
 Require Import Crypto.Util.ZUtil.Hints.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.ZSimplify.Core.
@@ -506,6 +508,18 @@ Local Ltac clear_useless_hyps :=
 Local Ltac systematically_handle_casts :=
   remove_casts; unfold_cast_lemmas; clear_useless_hyps.
 
+Local Ltac post_testbit_step :=
+  first [ reflexivity
+        | progress Z.ltb_to_lt
+        | progress rewrite ?Bool.andb_true_l, ?Bool.andb_true_r, ?Bool.andb_false_l, ?Bool.andb_false_r, ?Bool.orb_true_l, ?Bool.orb_true_r, ?Bool.orb_false_l, ?Bool.orb_false_r
+        | exfalso; lia
+        | break_innermost_match_step
+        | apply (f_equal2 Z.testbit); lia ].
+
+Local Ltac handle_via_testbit :=
+  apply Z.bits_inj; intro; Ztestbit;
+  repeat post_testbit_step.
+
 
 Local Ltac fin_with_nia :=
   lazymatch goal with
@@ -767,12 +781,14 @@ Proof using Type.
              autorewrite with zsimplify; lia
            end.
 
-  (* should have only Z.lor cases now *)
   all:rewrite <-?Z.pow_twice_r,<-?Z.land_ones, <-?Z.shiftl_mul_pow2 in * by lia.
+  all: try solve [ handle_via_testbit ].
+  (* should have only Z.lor cases now *)
   all:match goal with
       | |- context [Z.lor (?a >> ?b) (_ &' Z.ones ?c)] =>
         rewrite <-(Z.mod_small (a >> b) (2 ^ c)) by auto with zarith;
-          rewrite <-Z.land_ones, <-Z.land_lor_distr_l by auto with zarith
+        rewrite <-Z.land_ones, <-Z.land_lor_distr_l by auto with zarith
+      | _ => shelve
       end.
   all:rewrite Z.lor_shiftl by use_shiftr_range.
   all:rewrite Z.shiftr_add_shiftl_low by lia.
