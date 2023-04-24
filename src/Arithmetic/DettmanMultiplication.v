@@ -28,7 +28,7 @@ Module DettmanMultiplication.
         (weight_limbs_mod_s_eq_0 : (weight limbs) mod s = 0)
         (wprops : @weight_properties weight).
 
-    Definition register_width : nat := 52. (* for testing purposes *)
+    Definition register_width : nat := 64. (* for testing purposes *)
     
     Let c := Associational.eval c_.
 
