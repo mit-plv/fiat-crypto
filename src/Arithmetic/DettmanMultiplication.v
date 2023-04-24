@@ -100,18 +100,18 @@ Module DettmanMultiplication.
       let r8' := dedup_weights r8 in
       let r9 := reduce' s s s c r8' in
       let r10 := carry' (weight 0) (weight 1) r9 in
-
-      (* here I've pulled out the first iteration of the loop to do 
+      let r11 := loop r10 in
+      
+      (* here I've pulled out the final iteration of the loop to do
          the special register_width carry.  The loop now runs for one fewer iteration. *)
       let i0 := limbs - 2 - 1 in
-      let rloop1 := carry' (weight (i0 + limbs)) (2^register_width) r10 in
+      let rloop1 := carry' (weight (i0 + limbs)) (2^register_width) r11 in
       let rloop2 := reduce' s (weight (i0 + limbs)) (weight limbs) c rloop1 in
       let rloop3 := carry' (weight i0) (weight 1) rloop2 in
       
-      let r11 := loop rloop3 in
       let from12 := Z.mul (weight (i0 + limbs)) (2^register_width) in
-      let to12 := i0 + 1 (* should I write this as limbs - 2? idk *) in
-      let r12 := reduce' s from12 (from12 / to12) c r11 in
+      let to12 := weight (i0 + 1) (* should I write this as limbs - 2? idk *) in
+      let r12 := reduce' s from12 (from12 / to12) c rloop3 in
       let r13 := carry' (weight (l - 2)) (weight 1) r12 in
       Positional.from_associational weight l r13.
 
