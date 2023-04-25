@@ -13,33 +13,52 @@ Local Coercion Z.of_nat : nat >-> Z.
 Module DettmanMultiplication.
   Section DettmanMultiplication.
     Context
-        (*(register_size : nat)  for the algorithm to behave sensibly, we want, for each i, 
-                                 to have 2^(register_size * i) >= weight i. 
-                                 this is important to the proof, so I need to formalize it. *)
         (s : Z)
         (c_ : list (Z*Z))
+        (register_width : nat)
         (limbs : nat)
         (weight: nat -> Z)
         (p_nz : s - Associational.eval c_ <> 0)
-        (limbs_gteq_3 : 3%nat <= limbs) (* Technically we only need 2 <= limbs to get the proof to go through, but it doesn't make any sense to try to do this with less than three limbs.
-                                           Note that having 3 limbs corresponds to zero iterations of the "loop" function defined below. *)
+        (limbs_gteq_4 : 4%nat <= limbs) (* Technically we only need 2 <= limbs to get the proof to go through, but it doesn't make any sense to try to do this with less than three limbs.
+                                           Note that having 4 limbs corresponds to zero iterations of the "loop" function defined below. *)
         (s_small : s <= weight limbs)
         (s_big : weight (limbs - 1)%nat <= s)
         (weight_limbs_mod_s_eq_0 : (weight limbs) mod s = 0)
+        (weight_small : forall i, weight i * (2^register_width) <= weight (i + 1)%nat)
         (wprops : @weight_properties weight).
 
-    Definition register_width : nat := 64. (* for testing purposes *)
+    Context
+        (weight_0 := weight_positive wprops)
+        (weight_positive := weight_positive wprops)
+        (weight_multiples := weight_multiples wprops)
+        (weight_divides := weight_divides wprops).
+     
     
     Let c := Associational.eval c_.
 
     Lemma s_positive : s > 0.
-    Proof. remember (weight_positive wprops (limbs - 1)). lia. Qed.
+    Proof. remember (weight_positive (limbs - 1)). lia. Qed.
 
     Lemma s_nz : s <> 0.
     Proof. remember s_positive. lia. Qed.
 
     Lemma weight_nz : forall i, weight i <> 0.
-    Proof. intros i. remember (weight_positive wprops i). lia. Qed.
+    Proof. intros i. remember (weight_positive i). lia. Qed.
+
+    Lemma div_mul_le : forall x y, y > 0 -> x / y * y <= x.
+    Proof. intros x y H. remember (Zmod_eq x y H). remember (Z_mod_lt x y H). lia. Qed.
+
+    Lemma weight_increasing : forall i j : nat, (i <= j)%nat -> weight i <= weight j.
+    Proof.
+      intros i j H.
+      assert (0 < weight j / weight i). { apply Weight.weight_divides_full; try assumption. }
+      assert (1 <= weight j / weight i) by lia.
+      assert (1 * weight i <= weight j / weight i * weight i).
+      { apply Zmult_le_compat_r; try lia. remember (weight_positive i). lia. }
+      apply (Z.le_trans _ (weight j / weight i * weight i) _).
+      - lia.
+      - (*rewrite Weight.weight_div_mod.*) apply div_mul_le. remember (weight_positive i). lia.
+    Qed.
 
     Lemma div_nz a b : b > 0 -> b <= a -> a / b <> 0.
     Proof.
@@ -87,32 +106,71 @@ Module DettmanMultiplication.
     Definition reduce_carry_borrow r0 :=
       let l := limbs in
       let r0' := dedup_weights r0 in
+      
       let r1 := carry' (weight (2 * l - 2)) (2^register_width) r0' in
-      let r2 := reduce' s (weight (2 * l - 2)) (weight l) c r1 in
-      let r3 := carry' (weight (l - 2)) (weight 1) r2 in
+      
+      let from2 := weight (2 * l - 2) in
+      let to2 := weight (l - 2) in
+      let r2 := reduce' s from2 (from2 / to2) c r1 in
+
+      let from3 := weight (l - 2) in
+      let to3 := weight (l - 1) in
+      let r3 := carry' from3 (to3 / from3) r2 in
+      
       let from4 := Z.mul (weight (2 * l - 2)) (2^register_width) in
       let to4 := weight (l - 1) in
       let r4 := reduce' s from4 (from4 / to4) c r3 in
-      let r5 := carry' (weight (l - 1)) (weight 1) r4 in
-      let r6 := carry' (weight (l - 1)) (Z.div s (weight (l - 1))) r5 in
-      let r7 := carry' (weight l) (weight 1) r6 in
-      let r8 := borrow (weight l) (weight l / s) r7 in
+
+      let from5 := weight (l - 1) in
+      let to5 := weight l in
+      let r5 := carry' from5 (to5 / from5) r4 in
+
+      let from6 := weight (l - 1) in
+      let to6 := s in
+      let r6 := carry' from6 (to6 / from6) r5 in
+
+      let from7 := weight l in
+      let to7 := weight (l + 1) in
+      let r7 := carry' from7 (to7 / from7) r6 in
+
+      let from8 := weight l in
+      let to8 := s in
+      let r8 := borrow from8 (from8 / to8) r7 in
+      
       let r8' := dedup_weights r8 in
+      
       let r9 := reduce' s s s c r8' in
-      let r10 := carry' (weight 0) (weight 1) r9 in
+
+      let from10 := weight 0 in
+      let to10 := weight 1 in
+      let r10 := carry' from10 (to10 / from10) r9 in
+      
       let r11 := loop r10 in
       
       (* here I've pulled out the final iteration of the loop to do
-         the special register_width carry.  The loop now runs for one fewer iteration. *)
-      let i0 := limbs - 2 - 1 in
+         the special register_width carry. *)
+      (* begin loop iteration *)
+      let i0 := l - 2 - 1 in
+      
       let rloop1 := carry' (weight (i0 + limbs)) (2^register_width) r11 in
-      let rloop2 := reduce' s (weight (i0 + limbs)) (weight limbs) c rloop1 in
-      let rloop3 := carry' (weight i0) (weight 1) rloop2 in
+
+      let fromLoop2 := weight (i0 + limbs) in
+      let toLoop2 := weight i0 in
+      let rloop2 := reduce' s fromLoop2 (fromLoop2 / toLoop2) c rloop1 in
+
+      let fromLoop3 := weight i0 in
+      let toLoop3 := weight (i0 + 1) in
+      let rloop3 := carry' fromLoop3 (toLoop3 / fromLoop3) rloop2 in
+      (* end loop iteration*)
       
       let from12 := Z.mul (weight (i0 + limbs)) (2^register_width) in
-      let to12 := weight (i0 + 1) (* should I write this as limbs - 2? idk *) in
+      let to12 := weight (i0 + 1) in
       let r12 := reduce' s from12 (from12 / to12) c rloop3 in
-      let r13 := carry' (weight (l - 2)) (weight 1) r12 in
+
+      let from13 := weight (l - 2) in
+      let to13 := weight (l - 1) in
+      let r13 := carry' from13 (to13 / from13) r12 in
+      
       Positional.from_associational weight l r13.
 
     Definition mulmod a b :=
@@ -131,16 +189,45 @@ Module DettmanMultiplication.
 
     Local Open Scope Z_scope.
 
+    Lemma weight_div_nz : forall i j : nat, (i <= j)%nat -> weight j / weight i <> 0.
+    Proof.
+      intros i j H.
+      assert (0 < weight j / weight i). { apply Weight.weight_divides_full; assumption. }
+      lia.
+    Qed.
+
+    Lemma weight_mod_quotient_zero : forall i j : nat, (i <= j)%nat ->
+                                                       (weight j) mod (weight j / weight i) = 0.
+    Proof.
+      intros i j H. destruct wprops. replace (weight j) with (weight i * (weight j / weight i)).
+      - repeat rewrite (Z.mul_comm (weight i)). Search (_ * _ / _). rewrite Z_div_mult.
+        + rewrite (Z.mul_comm _ (weight i)). apply Z_mod_mult.
+        + remember (weight_positive i). lia.
+      - symmetry. apply Weight.weight_div_mod; assumption.
+    Qed.
+
     Lemma eval_reduce_carry_borrow r0 :
       (Positional.eval weight limbs (reduce_carry_borrow r0)) mod (s - c) =
       (Associational.eval r0) mod (s - c).
-    Proof. (*
+    Proof. 
       cbv [reduce_carry_borrow carry' reduce']. autorewrite with push_eval; auto with arith.
-      all: try apply Weight.weight_multiples_full; auto with arith; try lia.
-      - apply div_nz; try assumption. remember (weight_positive wprops (limbs - 1)). lia.
+      all: try apply weight_div_nz; try lia.
+      all: try apply weight_mod_quotient_zero; try lia.
+      - apply weight_div_nz. lia. apply div_nz.
+        + remember (weight_positive wprops (limbs - 1)). lia.
+        + (* weight (limbs - 1) <= weight (2 * limbs - 2) * 2 ^ Z.of_nat register_width *)
+          assert (H: (limbs - 1 <= 2 * limbs - 2)%nat) by lia.
+          apply weight_increasing in H.
+          assert (0 < 2^register_width). { apply Pow2.Z.pow2_gt_0. lia. }
+          replace (weight (limbs - 1)) with (weight (limbs - 1) * 1) by lia.
+          apply Zmult_le_compat; try lia.
+          remember (@weight_positive weight wprops (limbs - 1)). lia.
+     - 
+          remember (weight_small (limbs - 1)). remember (weight_small (2 * limbs - 2)). lia.
+
       - apply Divide.Z.mod_divide_full in weight_limbs_mod_s_eq_0. destruct weight_limbs_mod_s_eq_0 as [x H].
         rewrite H. rewrite Z_div_mult; try apply s_positive. rewrite Z.mul_comm. rewrite Z_mod_mult. lia.
-    Qed.*) Admitted.
+    Qed.
 
     Hint Rewrite eval_reduce_carry_borrow : push_eval.
 
