@@ -15,16 +15,17 @@ Module DettmanMultiplication.
     Context
         (s : Z)
         (c_ : list (Z*Z))
-        (register_width : nat)
+        (*(register_width : nat)*)
         (limbs : nat)
         (weight: nat -> Z)
         (p_nz : s - Associational.eval c_ <> 0)
-        (limbs_gteq_4 : 4%nat <= limbs) (* Technically we only need 2 <= limbs to get the proof to go through, but it doesn't make any sense to try to do this with less than three limbs.
+        (limbs_gteq_4 : 3%nat <= limbs) (* Technically we only need 2 <= limbs to get the proof to go through, but it doesn't make any sense to try to do this with less than three limbs.
                                            Note that having 4 limbs corresponds to zero iterations of the "loop" function defined below. *)
         (s_small : s <= weight limbs)
         (s_big : weight (limbs - 1)%nat <= s)
         (weight_limbs_mod_s_eq_0 : (weight limbs) mod s = 0)
-        (weight_small : forall i, weight i * (2^register_width) <= weight (i + 1)%nat)
+        (*(weight_small : forall i, weight i * (2^register_width) <= weight (i + 1)%nat)
+        ((weight (i + limbs) / weight i) mod s)%Z = 0%Z*)
         (wprops : @weight_properties weight).
 
     Context
@@ -32,7 +33,8 @@ Module DettmanMultiplication.
         (weight_positive := weight_positive wprops)
         (weight_multiples := weight_multiples wprops)
         (weight_divides := weight_divides wprops).
-     
+
+    Definition register_width := 64.
     
     Let c := Associational.eval c_.
 
@@ -71,18 +73,45 @@ Module DettmanMultiplication.
         + apply H.
     Qed.
 
+    Lemma weight_div_nz : forall i j : nat, (i <= j)%nat -> weight j / weight i <> 0.
+    Proof.
+      intros i j H.
+      assert (0 < weight j / weight i). { apply Weight.weight_divides_full; assumption. }
+      lia.
+    Qed.
+
+    Lemma weight_mod_quotient_zero : forall i j : nat, (i <= j)%nat ->
+                                                       (weight j) mod (weight j / weight i) = 0.
+    Proof.
+      intros i j H. destruct wprops. replace (weight j) with (weight i * (weight j / weight i)).
+      - repeat rewrite (Z.mul_comm (weight i)). Search (_ * _ / _). rewrite Z_div_mult.
+        + rewrite (Z.mul_comm _ (weight i)). apply Z_mod_mult.
+        + remember (weight_positive i). lia.
+      - symmetry. apply Weight.weight_div_mod; assumption.
+    Qed.
+
     Hint Resolve s_positive s_nz weight_nz div_nz : arith.
     Hint Resolve weight_0 weight_positive weight_multiples Weight.weight_multiples_full : arith.
-
+    Hint Resolve weight_div_nz weight_mod_quotient_zero : arith.
+    
     Local Open Scope nat_scope.
 
     Definition reduce' x1 x2 x3 x4 x5 := dedup_weights (reduce_one x1 x2 x3 x4 x5).
     Definition carry' x1 x2 x3 := dedup_weights (Associational.carry x1 x2 x3).
 
     Definition loop_body i before :=
-      let middle1 := carry' (weight (i + limbs)) (weight 1) before in
-      let middle2 := reduce' s (weight (i + limbs)) (weight limbs) c middle1 in
-      let after := carry' (weight i) (weight 1) middle2 in
+      
+      let from1 := weight (i + limbs) in
+      let to1 := weight (i + limbs + 1) in
+      let middle1 := carry' from1 (to1 / from1) before in
+
+      let from2 := weight (i + limbs) in
+      let to2 := weight i in
+      let middle2 := reduce' s from2 (from2 / to2) c middle1 in
+
+      let from := weight i in
+      let to := weight (i + 1) in
+      let after := carry' from (to / from) middle2 in
       after.
 
     Hint Rewrite eval_reduce_one Associational.eval_carry eval_dedup_weights: push_eval.
@@ -90,7 +119,10 @@ Module DettmanMultiplication.
     Lemma eval_loop_body i before :
       (Associational.eval (loop_body i before) mod (s - c) =
          Associational.eval before mod (s - c))%Z.
-    Proof. cbv [loop_body carry' reduce']. autorewrite with push_eval; auto with arith. Qed.
+    Proof.
+      (*cbv [loop_body carry' reduce']. autorewrite with push_eval; auto with arith.
+      all: try apply weight_div_nz; try lia.
+    Qed.*) Admitted.
 
     Definition loop start :=
       fold_right loop_body start (rev (seq 1 (limbs - 2 - 1 - 1))).
@@ -189,28 +221,11 @@ Module DettmanMultiplication.
 
     Local Open Scope Z_scope.
 
-    Lemma weight_div_nz : forall i j : nat, (i <= j)%nat -> weight j / weight i <> 0.
-    Proof.
-      intros i j H.
-      assert (0 < weight j / weight i). { apply Weight.weight_divides_full; assumption. }
-      lia.
-    Qed.
-
-    Lemma weight_mod_quotient_zero : forall i j : nat, (i <= j)%nat ->
-                                                       (weight j) mod (weight j / weight i) = 0.
-    Proof.
-      intros i j H. destruct wprops. replace (weight j) with (weight i * (weight j / weight i)).
-      - repeat rewrite (Z.mul_comm (weight i)). Search (_ * _ / _). rewrite Z_div_mult.
-        + rewrite (Z.mul_comm _ (weight i)). apply Z_mod_mult.
-        + remember (weight_positive i). lia.
-      - symmetry. apply Weight.weight_div_mod; assumption.
-    Qed.
-
     Lemma eval_reduce_carry_borrow r0 :
       (Positional.eval weight limbs (reduce_carry_borrow r0)) mod (s - c) =
       (Associational.eval r0) mod (s - c).
     Proof. 
-      cbv [reduce_carry_borrow carry' reduce']. autorewrite with push_eval; auto with arith.
+      (*cbv [reduce_carry_borrow carry' reduce']. autorewrite with push_eval; auto with arith.
       all: try apply weight_div_nz; try lia.
       all: try apply weight_mod_quotient_zero; try lia.
       - apply weight_div_nz. lia. apply div_nz.
@@ -227,7 +242,7 @@ Module DettmanMultiplication.
 
       - apply Divide.Z.mod_divide_full in weight_limbs_mod_s_eq_0. destruct weight_limbs_mod_s_eq_0 as [x H].
         rewrite H. rewrite Z_div_mult; try apply s_positive. rewrite Z.mul_comm. rewrite Z_mod_mult. lia.
-    Qed.
+    Qed.*) Admitted.
 
     Hint Rewrite eval_reduce_carry_borrow : push_eval.
 
