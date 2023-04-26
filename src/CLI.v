@@ -483,7 +483,7 @@ Module ForExtraction.
   Definition asm_stack_size_spec : named_argT
     := ([Arg.long_key "asm-stack-size"],
         Arg.Custom (parse_string_and parse_N) "ℕ",
-        ["The number of bytes of stack.  Only relevant when --hints-file is specified.  Defaults to " ++ show (extra_assembly_stack_size:N) ++ " plus the maximum statically knowable increase to `rsp` (via `push`, `pop`, `sub`, `add`, and `lea` instructions) the code."]).
+        ["The number of bytes of stack.  Only relevant when --hints-file is specified.  Defaults to the conventional size of the red zone (" ++ show (system_v_amd64_assembly_stack_red_zone:N) ++ " for --asm-callee-saved-registers " ++ show System_V_AMD64 ++ ", or " ++ show (microsoft_x64_assembly_stack_red_zone:N) ++ " for  --asm-callee-saved-registers " ++ show Microsoft_x64 ++ ", or " ++ show (@assembly_stack_red_zone (explicit_registers []):N) ++ " for an explicit list of registers given to --asm-callee-saved-registers) plus the maximum statically knowable increase to `rsp` (via `push`, `pop`, `sub`, `add`, and `lea` instructions) the code."]).
   Definition no_error_on_unused_asm_functions_spec : named_argT
     := ([Arg.long_key "no-error-on-unused-asm-functions"],
         Arg.Unit,

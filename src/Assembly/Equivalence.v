@@ -71,9 +71,8 @@ Typeclasses Opaque assembly_argument_registers_left_to_right_opt.
 Class assembly_stack_size_opt := assembly_stack_size' : option N.
 #[global]
 Typeclasses Opaque assembly_stack_size_opt.
-Definition extra_assembly_stack_size := 0%N.
 (** The stack size is taken to be the given command line argument, or
-    else inferred to be extra_assembly_stack_size plus the maximum
+    else inferred to be assembly_stack_red_zone plus the maximum
     statically knowable increase to rsp (via `push`, `pop`, `sub`,
     `add`, and `lea` instructions) *)
 Fixpoint assembly_stack_size_at (cur_stack_size : Z) (asm : _) : list Z
@@ -108,11 +107,31 @@ Fixpoint assembly_stack_size_at (cur_stack_size : Z) (asm : _) : list Z
           let new_stack_size := cur_stack_size + cng in
           new_stack_size :: assembly_stack_size_at new_stack_size asm
      end%Z.
-Definition assembly_stack_size {v : assembly_stack_size_opt} (asm : _) : N
+(** According to https://en.m.wikipedia.org/wiki/Red_zone_(computing)
+
+   Whether a red zone is present depends on the calling convention. x86-64
+   systems that use the System V AMD64 ABI (including Linux and macOS) use a
+   128-byte red zone that begins directly under the current value of the stack
+   pointer.[1][2] The OpenRISC toolchain assumes a 128-byte red zone.[3]
+   Microsoft Windows does not have the concept of a red zone on x86.[4] In
+   fact, the ABI explicitly states that the memory beyond the stack pointer is
+   volatile and may be overwritten by debuggers or interrupt handlers.[5][6]
+   However, Microsoft Windows has a red zone of 16 bytes on IA-64, 8 bytes on
+   AArch32, and 16 bytes on AArch64.[6]
+*)
+Definition microsoft_x64_assembly_stack_red_zone : N := 0.
+Definition system_v_amd64_assembly_stack_red_zone : N := 128.
+Definition assembly_stack_red_zone {calling_convention : assembly_callee_saved_registers_opt} : N
+  := match calling_convention with
+     | Microsoft_x64 => microsoft_x64_assembly_stack_red_zone
+     | System_V_AMD64 => system_v_amd64_assembly_stack_red_zone
+     | explicit_registers _ => 0%N
+     end.
+Definition assembly_stack_size {calling_convention : assembly_callee_saved_registers_opt} {v : assembly_stack_size_opt} (asm : _) : N
   := match v with
      | Some v => v
-     | None => let extra_ss := Z.of_N extra_assembly_stack_size in
-               Z.to_N (fold_right Z.max extra_ss (assembly_stack_size_at extra_ss asm))
+     | None => let red_zone := Z.of_N assembly_stack_red_zone in
+               Z.to_N (fold_right Z.max red_zone (assembly_stack_size_at red_zone asm))
      end.
 
 Class assembly_conventions_opt :=
