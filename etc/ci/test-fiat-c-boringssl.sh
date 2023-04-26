@@ -26,7 +26,11 @@ pushd boringssl >/dev/null
 echo "::group::Patching BoringSSL"
 ({
     set -ex
-    ( cd third_party/fiat && for i in *.h; do cp "${SUBCOMPONENT_PATH}/${i/.h/.c}" "$i" || exit $?; done ) || exit $?
+    ( cd third_party/fiat && for i in *.h; do
+          if [ "$i" != "curve25519_64_msvc.h" ] && [ "$i" != "p256_64_msvc.h" ]; then
+              cp "${SUBCOMPONENT_PATH}/${i/.h/.c}" "$i" || exit $?;
+          fi;
+      done ) || exit $?
     ( cd third_party/fiat && git --no-pager diff )
 }) || exit $?
 echo "::endgroup::"

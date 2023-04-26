@@ -13,6 +13,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.TruncatingShiftl.
 Require Import Crypto.Util.ZUtil.Modulo.
@@ -125,10 +126,10 @@ Proof.
       by (specialize (Hz a (or_introl eq_refl)); lia).
     rewrite uweight_0, uweight_eq_alt', Z.mul_1_l, Z.mul_1_r, Z.mul_comm, <- Z.shiftl_mul_pow2, Shift.Z.testbit_add_shiftl_full
       by (specialize (Hz a (or_introl eq_refl)); lia).
-    destruct (m <? machine_wordsize) eqn:E.
-    + rewrite Z.ltb_lt in E; rewrite Z.div_small by lia.
+    break_innermost_match; Z.ltb_to_lt; try lia.
+    + rewrite Z.div_small by lia.
       rewrite ListUtil.nth_default_cons, Z.mod_small by lia. reflexivity.
-    + rewrite Z.ltb_ge in E; rewrite IHf; try lia.
+    + rewrite IHf; try lia.
       replace (Z.abs_nat (m / machine_wordsize)) with
           (S (Z.abs_nat ((m - machine_wordsize) / machine_wordsize))).
       rewrite ListUtil.nth_default_cons_S, PullPush.Z.sub_mod_r, Z_mod_same_full, Z.sub_0_r; reflexivity.

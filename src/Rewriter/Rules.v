@@ -997,6 +997,12 @@ Section with_bitwidth.
                        = (dlet lc := singlewidth_carry (Z.add_get_carry_full cstZ_pow2_bitwidth (singlewidth xl) (singlewidth y)) in
                               dlet h := singlewidth (Z.add(*_with_carry*) (carrywidth (snd lc)) (singlewidth xh) (*(singlewidth ('0))*)) in
                               cstZsingle_to_double (fst lc) h))
+              ; (forall x offset,
+                    0 < offset < bitwidth
+                    -> doublewidth (singlewidth x << singlewidth ('offset))
+                       = (dlet xl := singlewidth (Z.truncating_shiftl (singlewidth ('bitwidth)) (singlewidth x) (singlewidth ('offset))) in
+                            dlet xh := singlewidth (singlewidth x >> singlewidth ('(bitwidth - offset))) in
+                            cstZsingle_to_double xl xh))
               ; (forall xl xh mask,
                     0 < mask < 2^bitwidth
                     -> singlewidth (cstZsingle_to_double xl xh &' singlewidth ('mask))
