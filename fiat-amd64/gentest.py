@@ -3,6 +3,8 @@
 import shlex
 import sys
 import math
+import re
+import os
 from collections import OrderedDict
 
 # in Python 3.9 and newer, this is primitive as str.removesuffix
@@ -14,9 +16,11 @@ def removeprefix(s, prefix):
     return s
 
 # grep -oP "src/.*square" fiat-c/src/*64*.c
-solinasprimes = dict(
+
+#unsaturated_solinas
+solinasprimes = dict( # num limbs, prime
         curve25519=('5', '2^255 - 19'),
-        p448=('8', '2^448 - 2^224 - 1'),
+        p448_solinas=('8', '2^448 - 2^224 - 1'),
         p521=('9', '2^521 - 1'),
         poly1305=('3', '2^130 - 5'))
 
@@ -28,32 +32,53 @@ montgomeryprimes = dict(
   p384='2^384 - 2^128 - 2^96 + 2^32 - 1',
   p384_scalar='2^384 - 1388124618062372383947042015309946732620727252194336364173',
   p434='2^216 * 3^137 - 1',
-  secp256k1='2^256 - 2^32 - 977',
+  secp256k1_montgomery='2^256 - 2^32 - 977',
   secp256k1_scalar='2^256 - 432420386565659656852420866394968145599')
 
+saturatedsolinasprimes = dict(
+  curve25519_solinas=('2^255 - 19'))
+
+dettmanprimes = dict( # last limb width, limbs, prime
+  secp256k1_dettman=('48', '5', '2^256 - 4294968273'))
+
 output_makefile = ('--makefile' in sys.argv[1:])
-asm_files = tuple(i for i in sys.argv[1:] if i not in ('--makefile',))
+directories = tuple(i for i in sys.argv[1:] if i not in ('--makefile',))
 
 asm_op_names = OrderedDict()
-for fname in asm_files:
-    op, name = removesuffix(fname, '.asm').replace('_solinas','').split('_')[-2:]
-    asm_op_names.setdefault((name, op), []).append(fname)
+
+regex = re.compile(r'fiat_(?P<name>[^_]+(_(solinas|montgomery|dettman))?)_(?P<op>(carry_)?(square|mul))')
+for dirname in directories:
+    m = regex.match(os.path.basename(dirname))
+    if m:
+        for fname in os.listdir(dirname):
+            groups = m.groupdict()
+            asm_op_names.setdefault((groups['name'], groups['op']), []).append(os.path.join(dirname,fname))
 
 def asm_op_names_key(val):
     (name, op), fnames = val
-    if name in solinasprimes.keys():
+    n = 0
+
+    if name in dettmanprimes.keys():
         kind = 0
-        n, prime = solinasprimes[name]
-    elif name in montgomeryprimes.keys():
+        limbwidth, n, prime = dettmanprimes[name]
+
+    elif name in saturatedsolinasprimes.keys():
         kind = 1
-        n = 0
+        prime = saturatedsolinasprimes[name]
+
+    elif name in montgomeryprimes.keys():
+        kind = 2
         prime = montgomeryprimes[name]
-    n = int(n)
-    prime = eval(prime.replace('^', '**'))
+
+    elif name in solinasprimes.keys():
+        kind = 3
+        n, prime = solinasprimes[name]
+
     return (kind, n, prime, op, name, fnames)
 
 def is_small(val):
     (kind, n, prime, op, name, fnames) = asm_op_names_key(val)
+    prime = eval(prime.replace('^', '**'))
     return math.log2(prime) / 64 <= 4
 
 asm_op_names_items = tuple(sorted(asm_op_names.items(), key=asm_op_names_key))
@@ -83,21 +108,29 @@ AMD64_ASM_SMALL_ONLY_STATUS_FILES := $(if $(SLOWEST_FIRST),{' '.join(reversed(sm
 
 ''')
 
-for (name, op), fnames in asm_op_names_items:
-    if name in solinasprimes.keys():
-        n, prime = solinasprimes[name]
-        binary = 'src/ExtractionOCaml/unsaturated_solinas'
-        binary_descr = 'Unsaturated Solinas'
-        invocation = ' '.join([binary, name, '64', n, shlex.quote(prime), dict(mul='carry_mul',square='carry_square')[op], '--no-wide-int', '--shiftr-avoid-uint1', '--tight-bounds-mul-by', '1.000001'] + [item for fname in fnames for item in ('--hints-file', shlex.quote(fname))])
-    elif name in montgomeryprimes.keys():
-        prime = montgomeryprimes[name]
+for item in asm_op_names_items:
+    (kind, n, prime, op, name, fnames) = asm_op_names_key(item)
+    if kind == 0:
+        binary = 'src/ExtractionOCaml/dettman_multiplication'
+        binary_descr = 'Dettman Multiplication'
+        limbwidth, _n, _prime = dettmanprimes[name]
+        invocation = ' '.join([binary, name, '64', n, limbwidth, shlex.quote(prime), op, '--no-wide-int', '--shiftr-avoid-uint1'] +                                         [item for fname in fnames for item in ('--hints-file', shlex.quote(fname))])
+    elif kind == 1:
+        binary = 'src/ExtractionOCaml/solinas_reduction'
+        binary_descr = 'Saturated Solinas'
+        invocation = ' '.join([binary, name, '64', shlex.quote(prime), op, '--no-wide-int', '--shiftr-avoid-uint1'] +                                         [item for fname in fnames for item in ('--hints-file', shlex.quote(fname))])
+    elif kind == 2:
         binary = 'src/ExtractionOCaml/word_by_word_montgomery'
         binary_descr = 'Word-by-Word Montgomery'
-        invocation = ' '.join([binary, name, '64', shlex.quote(prime), op, '--no-wide-int', '--shiftr-avoid-uint1'] + [item for fname in fnames for item in ('--hints-file', shlex.quote(fname))])
+        invocation = ' '.join([binary, name, '64', shlex.quote(prime), op, '--no-wide-int', '--shiftr-avoid-uint1'] +                                         [item for fname in fnames for item in ('--hints-file', shlex.quote(fname))])
+    elif kind == 3:
+        binary = 'src/ExtractionOCaml/unsaturated_solinas'
+        binary_descr = 'Unsaturated Solinas'
+        invocation = ' '.join([binary, name, '64', n, shlex.quote(prime), op, '--no-wide-int', '--shiftr-avoid-uint1', '--tight-bounds-mul-by', '1.000001'] + [item for fname in fnames for item in ('--hints-file', shlex.quote(fname))])
     else:
         assert False, name
     if output_makefile:
-        short_fnames = ['_'.join(removesuffix(removeprefix(fname, 'fiat-amd64/'),'.asm').replace('_solinas','').split('_')[:-2]) for fname in fnames]
+        short_fnames = [removesuffix(os.path.basename(fname),'.asm') for fname in fnames]
         description = f'{name} {prime.replace(" ", "")} ({op}) ({binary_descr}) ({" ".join(short_fnames)})'
         output_name = f'fiat-amd64/{name}-{op}'
         print(f'''
