@@ -18,6 +18,7 @@ pub mod p384_scalar_64;
 pub mod p434_64;
 pub mod p448_solinas_32;
 pub mod p448_solinas_64;
+pub mod p521_32;
 pub mod p521_64;
 pub mod poly1305_32;
 pub mod poly1305_64;
