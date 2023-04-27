@@ -397,6 +397,13 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
              ]%Z%zrange
          ; mymap
              do_again
+             [ (forall c M rv r0 rM, 0 ∈ r0 -> M ∈ rM -> M ∈ rv -> 2^Z.log2 (M+1) = M + 1 -> 1 <= M ->
+                  cstZ rv (Z.zselect (cstZ r[0~>1] c) (cstZ r0 ('0)) (cstZ rM ('M)))
+                  = (dlet vc := cstZZ rv r[0~>1] (Z.sub_with_get_borrow_full ('(M+1)) (cstZ r[0~>1] c) 0 0) in
+                     cstZ rv (fst vc)))
+                  ]
+         ; mymap
+             do_again
              [ (* [do_again], so that we can trigger add/sub rules on the output *)
                (** flatten add/sub which incurs no carry/borrow *)
                (forall rv rs s rx x ry y,
@@ -1237,7 +1244,8 @@ Section with_bitwidth.
     := Eval cbv [myapp mymap myflatten] in
         mymap
           dont_do_again
-          [(* no-op rule to prevent firing on selects between 0 and mask (since
+          [
+          (* no-op rule to prevent firing on selects between 0 and mask (since
                these can be succinctly expressed as 0-c *)
             (forall rc c,
                 singlewidth (Z.zselect (cstZ rc c)

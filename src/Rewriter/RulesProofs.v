@@ -571,6 +571,11 @@ Proof using Type.
   all: repeat interp_good_t_step_arith.
   all: remove_casts; try fin_with_nia.
   all: try (reflect_hyps; lia).
+
+  { (* cmov c 0 -1 -> sbb 0 0 c *)
+    enough (- c mod (M + 1) = M) as E by (rewrite E; remove_casts; trivial).
+    match goal with H5 : _ |- _ => apply unfold_is_bounded_by_bool in H5; cbn in H5 end.
+    rewrite Z.mod_opp_l_nz; rewrite ?Z.mod_small; nia. }
 Qed.
 
 Lemma relaxed_rules_work rland rm1 rv v :
