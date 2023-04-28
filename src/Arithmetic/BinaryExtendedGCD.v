@@ -2,10 +2,11 @@ Require Import Coq.Bool.Bool.
 Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.ZArith.Znumtheory.
-Require Import Crypto.Experiments.Loops.
+Require Import Crypto.Util.Loops.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
+Require Import Crypto.Util.ZUtil.Modulo.PullPush.
 
 Local Open Scope Z_scope.
 
@@ -50,7 +51,7 @@ Module BinaryExtendedGCD.
         width. The actual implementation will represent this with an array of
         smaller machine words. *)
     Inductive word (bits : Z) :=
-    | Word : Z -> word bits.
+    | Word : Z -> word.
 
     Definition wrap (bits val : Z) : Z := val mod 2^bits.
 
@@ -410,9 +411,10 @@ Module BinaryExtendedGCD.
     Proof.
       destruct (2^bits <=? x + y) eqn:Hxy; repeat bool_to_prop_once.
       { (* 2^bits <= x + y *)
-        rewrite Z.mod_small_1 by lia.
-        replace (2^bits) with (2*2^(bits-1)) by (rewrite <- Z.pow_succ_r; f_equal; lia).
-        rewrite Z.div_sub' by lia.
+        rewrite Z.mod_eq by lia.
+        rewrite (Div.Z.div_between_1 (x + y) (2^bits)), Z.mul_1_r by lia.
+        replace (2^bits) with (2^(bits-1)*2) by (rewrite Z.mul_comm, <- Z.pow_succ_r; f_equal; lia).
+        rewrite Div.Z.div_sub by lia.
         lia. }
       { (* x + y < 2^bits *)
         rewrite Z.mod_small by lia.
@@ -801,14 +803,17 @@ Module BinaryExtendedGCD.
         [ destruct_head'_and; apply gcd_even_even; trivial | ].
 
       lazymatch goal with |- context [while ?t ?b ?l ?i] => pattern (while t b l i) end.
+      remember ((fun '(_,i) => Z.to_nat (abits + nbits - i)) : state * Z -> nat) as measure.
+      lazymatch goal with |- ?P (while ?t ?b ?l ?s) =>
+                          replace l with (measure s)
+      end.
       eapply (while.by_invariant
                 (fun '(s, i) =>
                    invariant s /\
                    u_v_prod s <= a * n / 2^i /\
                    0 <= i /\
                    state_get_a s = a /\
-                   state_get_n s = n)
-                (fun '(_, i) => Z.to_nat (abits + nbits - i))).
+                   state_get_n s = n)); subst measure.
       { (* Invariant holds in the beginning. *)
         unfold invariant, u_v_prod.
         repeat split; try rewrite Z.div_1_r; try solve [trivial | lia]. }
@@ -826,7 +831,8 @@ Module BinaryExtendedGCD.
             apply Z.div_le_mono; lia.
           - lia.
           - rewrite <- Hpreserve_a; apply step_preserve_a_n.
-          - rewrite <- Hpreserve_n; apply step_preserve_a_n. }
+          - rewrite <- Hpreserve_n; apply step_preserve_a_n.
+          - lia. }
         { (* If the loop exited, the invariant implies the postcondition. *)
           destruct s as [[[[[[[[a'] [n']] [A]] [B]] [C]] [D]] [u]] [v]].
           unfold invariant, state_get_a, state_get_n, u_v_prod in *.
@@ -856,17 +862,12 @@ Module BinaryExtendedGCD.
           { (* There is a mod inverse *)
             rewrite Hgcd in *.
             split; try lia.
-            rewrite <- (Z.mod_add_full (A*a) (-B) n).
+            rewrite <- (Z.mod_add (A*a) (-B) n) by lia.
             rewrite <- (Z.mod_1_l n) by lia.
             f_equal; nia. }
           { (* No mod inverse *) trivial. } } }
       { (* fuel <= measure *)
-        apply Z2Nat.inj_le; lia. }
-      { (* measure decreases *)
-        intros [_ i].
-        destruct (i <? abits + nbits) eqn:H; repeat bool_to_prop_once.
-        - apply Z2Nat.inj_lt; lia.
-        - trivial. }
+        subst; lia. }
     Qed.
 
   End BinaryExtendedGCD.
