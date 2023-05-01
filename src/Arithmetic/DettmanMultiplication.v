@@ -261,9 +261,9 @@ Module DettmanMultiplication.
       (* weight (2 * limbs - 2) * 2 ^ Z.of_nat register_width / weight (limbs - 1) <> 0 *)
       1: { apply divisible_implies_nonzero.
            - rewrite Divide.Z.mod_divide_full. apply Z.divide_mul_l. rewrite <- Divide.Z.mod_divide_full. apply Weight.weight_multiples_full; try assumption. lia.
-           - Search (_ * _ <> 0). rewrite <- Z.neq_mul_0. split.
+           - rewrite <- Z.neq_mul_0. split.
              + remember (weight_positive (2 * limbs - 2)). lia.
-             + assert (0 < 2^register_width). { Search (0 < 2^_). apply Pow2.Z.pow2_gt_0. lia. }
+             + assert (0 < 2^register_width). { apply Pow2.Z.pow2_gt_0. lia. }
                lia.
       }
       (* weight limbs / s <> 0 *)
@@ -276,9 +276,9 @@ Module DettmanMultiplication.
       (* weight (limbs - 2 - 1 + limbs) * 2 ^ Z.of_nat register_width / weight (limbs - 2 - 1 + 1) <> 0 *)
       2: { apply divisible_implies_nonzero.
            - rewrite Divide.Z.mod_divide_full. apply Z.divide_mul_l. rewrite <- Divide.Z.mod_divide_full. apply Weight.weight_multiples_full; try assumption. lia.
-           - Search (_ * _ <> 0). rewrite <- Z.neq_mul_0. split.
+           - rewrite <- Z.neq_mul_0. split.
              + remember (weight_positive (limbs - 2 - 1 + limbs)). lia.
-             + assert (0 < 2^register_width). { Search (0 < 2^_). apply Pow2.Z.pow2_gt_0. lia. }
+             + assert (0 < 2^register_width). { apply Pow2.Z.pow2_gt_0. lia. }
                lia.
       }
       
@@ -333,12 +333,15 @@ Module dettman_multiplication_mod_ops.
         (s_power_of_2 : 2 ^ (Z.log2 s) = s).
 
     (* I do want to have Z.log2_up s, not Z.log2_up (s - c) below.  We want to ensure that weight (n - 1) <= s <= weight limbs *)
-    Definition limbwidth_num := (Z.log2_up s - last_limb_width).
-    Definition limbwidth_den := (n - 1). (* can't use Q here, or else reification doesn't work *)
+    Local Notation limbwidth_num' := (Z.log2_up s - last_limb_width).
+    Local Notation limbwidth_den' := (n - 1). (* can't use Q here, or else reification doesn't work *)
     
     Context
-        (registers_big : limbwidth_num <= register_width * limbwidth_den) (* stated somewhat awkwardly in terms of Z; i think we might want to avoid Q here too? idk *)
-        (weight_big : Z.log2 s <= n * limbwidth_num / limbwidth_den).
+        (registers_big : limbwidth_num' <= register_width * limbwidth_den') (* stated somewhat awkwardly in terms of Z; i think we might want to avoid Q here too? idk *)
+        (weight_big : Z.log2 s <= n * limbwidth_num' / limbwidth_den').
+
+    Definition limbwidth_num := limbwidth_num'.
+    Definition limbwidth_den := limbwidth_den'.
     
     Definition weight := (weight limbwidth_num limbwidth_den).
     
@@ -466,7 +469,8 @@ Module dettman_multiplication_mod_ops.
                 rewrite Qmult_1_r. apply Qle_shift_div_r.
                 --- remember limbwidth_good. replace 0%Q with (inject_Z 0) by reflexivity.
                     rewrite <- Zlt_Qlt. lia.
-                --- rewrite <- inject_Z_mult. rewrite <- Zle_Qle. lia.
+                --- rewrite <- inject_Z_mult. rewrite <- Zle_Qle.
+                    cbv [limbwidth_num limbwidth_den]. lia.
              ++ apply Qceiling_Z.
       - replace 0 with (Qceiling 0) by reflexivity. apply Qceiling_resp_le.
         apply Qmult_le_0_compat.
