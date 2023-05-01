@@ -446,19 +446,39 @@ Module dettman_multiplication_mod_ops.
       intros i. repeat rewrite (ModOps.weight_ZQ_correct _ _ limbwidth_good).
       rewrite <- Z.pow_add_r; try lia.
       - apply Modulo.Z.mod_same_pow. split.
-        + remember (_ / _ * _)%Q as x. Search Qceiling. replace 0 with (Qceiling 0%Z) by reflexivity.
-          Search Qceiling. apply Qceiling_resp_le. subst. replace (inject_Z 0) with 0%Q by reflexivity.
-          cbv [Qdiv]. Search (0 <= _ * _)%Q. apply Qmult_le_0_compat.
+        + remember (_ / _ * _)%Q as x. replace 0 with (Qceiling 0%Z) by reflexivity.
+          apply Qceiling_resp_le. subst. replace (inject_Z 0) with 0%Q by reflexivity.
+          cbv [Qdiv]. apply Qmult_le_0_compat.
           -- remember limbwidth_good eqn:clearMe; clear clearMe. apply Qmult_le_0_compat.
-             ++ replace 0%Q with (inject_Z 0) by reflexivity. Search inject_Z. rewrite <- Zle_Qle.
+             ++ replace 0%Q with (inject_Z 0) by reflexivity. rewrite <- Zle_Qle.
                 lia.
              ++ apply Qinv_le_0_compat. replace 0%Q with (inject_Z 0) by reflexivity.
                 rewrite <- Zle_Qle. lia.
           -- replace 0%Q with (inject_Z 0) by reflexivity. rewrite <- Zle_Qle. lia.
-        + Check Qceiling_diff.
+        + rewrite Nat2Z.inj_add. rewrite inject_Z_plus. rewrite Qmult_plus_distr_r.
+          remember (_ / _ * i)%Q as x. remember (_ / _ * 1%nat)%Q as y.
+          apply (Z.le_trans _ (Qceiling x + Qceiling y)).
+          -- apply QUtil.Qceiling_le_add.
+          -- assert (Qceiling y <= register_width); try lia.
+             replace (Z.of_nat register_width) with (Qceiling (inject_Z register_width)).
+             ++ apply Qceiling_resp_le. subst.
+                replace (inject_Z (Z.of_nat 1)) with 1%Q by reflexivity.
+                rewrite Qmult_1_r. apply Qle_shift_div_r.
+                --- remember limbwidth_good. replace 0%Q with (inject_Z 0) by reflexivity.
+                    rewrite <- Zlt_Qlt. lia.
+                --- rewrite <- inject_Z_mult. rewrite <- Zle_Qle. lia.
+             ++ apply Qceiling_Z.
+      - replace 0 with (Qceiling 0) by reflexivity. apply Qceiling_resp_le.
+        apply Qmult_le_0_compat.
+        + cbv [Qdiv]. remember limbwidth_good. apply Qmult_le_0_compat.
+          -- replace 0%Q with (inject_Z 0) by reflexivity. rewrite <- Zle_Qle. lia.
+          -- apply Qinv_le_0_compat. replace 0%Q with (inject_Z 0) by reflexivity.  rewrite <- Zle_Qle.
+             lia.
+        + replace 0%Q with (inject_Z 0) by reflexivity. rewrite <- Zle_Qle. lia.
+    Qed.
           
-    Definition eval_mulmod := eval_mulmod s c register_width n weight p_nz n_gteq_4 s_small s_big wprops.
-    Definition eval_squaremod := eval_squaremod s c register_width n weight p_nz n_gteq_3 s_small s_big weight_n_mod_s_eq_0 wprops.
+    Definition eval_mulmod := eval_mulmod s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
+    Definition eval_squaremod := eval_squaremod s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
   End dettman_multiplication_mod_ops.
 End dettman_multiplication_mod_ops.
 
