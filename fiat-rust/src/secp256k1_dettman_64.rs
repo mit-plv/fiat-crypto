@@ -29,12 +29,12 @@
 #[inline]
 pub fn fiat_secp256k1_dettman_mul(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[u64; 5]) -> () {
   let x1: u128 = (((arg1[4]) as u128) * ((arg2[4]) as u128));
-  let x2: u64 = ((x1 >> 52) as u64);
-  let x3: u64 = ((x1 & (0xfffffffffffff as u128)) as u64);
+  let x2: u64 = ((x1 >> 64) as u64);
+  let x3: u64 = ((x1 & (0xffffffffffffffff as u128)) as u64);
   let x4: u128 = (((((arg1[0]) as u128) * ((arg2[3]) as u128)) + ((((arg1[1]) as u128) * ((arg2[2]) as u128)) + ((((arg1[2]) as u128) * ((arg2[1]) as u128)) + (((arg1[3]) as u128) * ((arg2[0]) as u128))))) + ((x3 as u128) * (0x1000003d10 as u128)));
   let x5: u64 = ((x4 >> 52) as u64);
   let x6: u64 = ((x4 & (0xfffffffffffff as u128)) as u64);
-  let x7: u128 = ((((((arg1[0]) as u128) * ((arg2[4]) as u128)) + ((((arg1[1]) as u128) * ((arg2[3]) as u128)) + ((((arg1[2]) as u128) * ((arg2[2]) as u128)) + ((((arg1[3]) as u128) * ((arg2[1]) as u128)) + (((arg1[4]) as u128) * ((arg2[0]) as u128)))))) + (x5 as u128)) + ((x2 as u128) * (0x1000003d10 as u128)));
+  let x7: u128 = ((((((arg1[0]) as u128) * ((arg2[4]) as u128)) + ((((arg1[1]) as u128) * ((arg2[3]) as u128)) + ((((arg1[2]) as u128) * ((arg2[2]) as u128)) + ((((arg1[3]) as u128) * ((arg2[1]) as u128)) + (((arg1[4]) as u128) * ((arg2[0]) as u128)))))) + (x5 as u128)) + ((x2 as u128) * (0x1000003d10000 as u128)));
   let x8: u64 = ((x7 >> 52) as u64);
   let x9: u64 = ((x7 & (0xfffffffffffff as u128)) as u64);
   let x10: u64 = (x9 >> 48);
@@ -52,12 +52,12 @@ pub fn fiat_secp256k1_dettman_mul(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[
   let x22: u64 = ((x21 >> 52) as u64);
   let x23: u64 = ((x21 & (0xfffffffffffff as u128)) as u64);
   let x24: u128 = (((((arg1[3]) as u128) * ((arg2[4]) as u128)) + (((arg1[4]) as u128) * ((arg2[3]) as u128))) + (x19 as u128));
-  let x25: u64 = ((x24 >> 52) as u64);
-  let x26: u64 = ((x24 & (0xfffffffffffff as u128)) as u64);
+  let x25: u64 = ((x24 >> 64) as u64);
+  let x26: u64 = ((x24 & (0xffffffffffffffff as u128)) as u64);
   let x27: u128 = ((((((arg1[0]) as u128) * ((arg2[2]) as u128)) + ((((arg1[1]) as u128) * ((arg2[1]) as u128)) + (((arg1[2]) as u128) * ((arg2[0]) as u128)))) + (x22 as u128)) + ((x26 as u128) * (0x1000003d10 as u128)));
   let x28: u64 = ((x27 >> 52) as u64);
   let x29: u64 = ((x27 & (0xfffffffffffff as u128)) as u64);
-  let x30: u128 = (((x6 + x28) as u128) + ((x25 as u128) * (0x1000003d10 as u128)));
+  let x30: u128 = (((x6 + x28) as u128) + ((x25 as u128) * (0x1000003d10000 as u128)));
   let x31: u64 = ((x30 >> 52) as u64);
   let x32: u64 = ((x30 & (0xfffffffffffff as u128)) as u64);
   let x33: u64 = (x11 + x31);
@@ -84,12 +84,12 @@ pub fn fiat_secp256k1_dettman_square(out1: &mut [u64; 5], arg1: &[u64; 5]) -> ()
   let x3: u64 = ((arg1[1]) * 0x2);
   let x4: u64 = ((arg1[0]) * 0x2);
   let x5: u128 = (((arg1[4]) as u128) * ((arg1[4]) as u128));
-  let x6: u64 = ((x5 >> 52) as u64);
-  let x7: u64 = ((x5 & (0xfffffffffffff as u128)) as u64);
+  let x6: u64 = ((x5 >> 64) as u64);
+  let x7: u64 = ((x5 & (0xffffffffffffffff as u128)) as u64);
   let x8: u128 = ((((x4 as u128) * ((arg1[3]) as u128)) + ((x3 as u128) * ((arg1[2]) as u128))) + ((x7 as u128) * (0x1000003d10 as u128)));
   let x9: u64 = ((x8 >> 52) as u64);
   let x10: u64 = ((x8 & (0xfffffffffffff as u128)) as u64);
-  let x11: u128 = (((((x4 as u128) * ((arg1[4]) as u128)) + (((x3 as u128) * ((arg1[3]) as u128)) + (((arg1[2]) as u128) * ((arg1[2]) as u128)))) + (x9 as u128)) + ((x6 as u128) * (0x1000003d10 as u128)));
+  let x11: u128 = (((((x4 as u128) * ((arg1[4]) as u128)) + (((x3 as u128) * ((arg1[3]) as u128)) + (((arg1[2]) as u128) * ((arg1[2]) as u128)))) + (x9 as u128)) + ((x6 as u128) * (0x1000003d10000 as u128)));
   let x12: u64 = ((x11 >> 52) as u64);
   let x13: u64 = ((x11 & (0xfffffffffffff as u128)) as u64);
   let x14: u64 = (x13 >> 48);
@@ -107,12 +107,12 @@ pub fn fiat_secp256k1_dettman_square(out1: &mut [u64; 5], arg1: &[u64; 5]) -> ()
   let x26: u64 = ((x25 >> 52) as u64);
   let x27: u64 = ((x25 & (0xfffffffffffff as u128)) as u64);
   let x28: u128 = (((x1 as u128) * ((arg1[4]) as u128)) + (x23 as u128));
-  let x29: u64 = ((x28 >> 52) as u64);
-  let x30: u64 = ((x28 & (0xfffffffffffff as u128)) as u64);
+  let x29: u64 = ((x28 >> 64) as u64);
+  let x30: u64 = ((x28 & (0xffffffffffffffff as u128)) as u64);
   let x31: u128 = (((((x4 as u128) * ((arg1[2]) as u128)) + (((arg1[1]) as u128) * ((arg1[1]) as u128))) + (x26 as u128)) + ((x30 as u128) * (0x1000003d10 as u128)));
   let x32: u64 = ((x31 >> 52) as u64);
   let x33: u64 = ((x31 & (0xfffffffffffff as u128)) as u64);
-  let x34: u128 = (((x10 + x32) as u128) + ((x29 as u128) * (0x1000003d10 as u128)));
+  let x34: u128 = (((x10 + x32) as u128) + ((x29 as u128) * (0x1000003d10000 as u128)));
   let x35: u64 = ((x34 >> 52) as u64);
   let x36: u64 = ((x34 & (0xfffffffffffff as u128)) as u64);
   let x37: u64 = (x15 + x35);
