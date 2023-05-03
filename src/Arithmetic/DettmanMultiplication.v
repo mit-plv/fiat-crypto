@@ -223,6 +223,41 @@ Module DettmanMultiplication.
 
     Local Open Scope Z_scope.
 
+    (*(weight (limbs - 2 - 1 + limbs) * 2 ^ Z.of_nat register_width / weight (limbs - 2 - 1 + 1)) mod s = 0*)
+    Lemma reduction_works i : weight (limbs + i - 1) * 2^register_width / weight i mod s = 0.
+    Proof.
+      rewrite Divide.Z.mod_divide_full.
+      remember (s_small (limbs + i - 1)) as H eqn:clearMe. clear clearMe.
+      apply (Z.divide_trans _ (weight (limbs + i) / weight i)).
+      - rewrite <- Divide.Z.mod_divide_full. rewrite (Nat.add_comm limbs i). apply s_small.
+      - apply Z.divide_div.
+        + remember (weight_positive i). lia.
+        + rewrite <- Divide.Z.mod_divide_full. apply Weight.weight_multiples_full; try assumption.
+          lia.
+        + rewrite <- Divide.Z.mod_divide_full.
+          replace (weight (limbs + i)) with (weight (limbs + i - 1 + 1)).
+          -- apply weight_lt_width.
+          -- f_equal. lia.
+    Qed.
+
+    Lemma reduction_works' (i j : nat) :
+      (j = limbs + i - 1)%nat ->
+      weight j * 2^register_width / weight i mod s = 0.
+    Proof.
+      intros H. subst. apply reduction_works.
+    Qed.
+
+    Lemma weight_prod_div_nz (i j : nat) (e : Z) :
+      0 <= e ->
+      (i <= j)%nat ->
+      weight j * 2^e / weight i <> 0.
+    Proof.
+      intros H1 H2 H3. Check Weight.weight_divides_full.
+      apply (Weight.weight_divides_full weight weight_positive weight_multiples) in H2.
+      assert (0 < 2^e). { apply Pow2.Z.pow2_gt_0. lia. }
+      Search (_ * _ = 0). Abort.
+      
+
     Lemma eval_reduce_carry_borrow r0 :
       (Positional.eval weight limbs (reduce_carry_borrow r0)) mod (s - c) =
       (Associational.eval r0) mod (s - c).
@@ -241,16 +276,7 @@ Module DettmanMultiplication.
              -- apply s_small.
              -- rewrite weight_0. rewrite Z.div_1_r. rewrite Nat.add_0_l. reflexivity. }
       (*(weight (limbs - 2 - 1 + limbs) * 2 ^ Z.of_nat register_width / weight (limbs - 2 - 1 + 1)) mod s = 0*)
-      7: { rewrite Divide.Z.mod_divide_full.
-           remember (s_small (limbs - 2 - 1 + 1)) as H eqn:clearMe. clear clearMe.
-           apply (Z.divide_trans _ (weight (2*limbs - 2) / weight (limbs - 2))).
-           - rewrite <- Divide.Z.mod_divide_full.
-             replace (2*limbs-2)%nat with (limbs - 2 + limbs)%nat by lia. apply s_small.
-           - replace (limbs - 2 - 1 + 1)%nat with (limbs - 2)%nat by lia. apply Z.divide_div.
-             + remember (weight_positive (limbs-2)). lia.
-             + rewrite <- Divide.Z.mod_divide_full. apply Weight.weight_multiples_full; try assumption.
-               lia.
-             + rewrite <- Divide.Z.mod_divide_full. replace (2 * limbs - 2)%nat with (limbs - 2 - 1 + limbs + 1)%nat by lia. apply weight_lt_width. }
+      7: { apply reduction_works'; lia. }
       (* (weight (limbs - 2 - 1 + limbs) * 2 ^ Z.of_nat register_width)
  mod (weight (limbs - 2 - 1 + limbs) * 2 ^ Z.of_nat register_width / weight (limbs - 2 - 1 + 1)) =
  0 *)
@@ -283,17 +309,7 @@ Module DettmanMultiplication.
       }
       
       (* (weight (2 * limbs - 2) * 2 ^ Z.of_nat register_width / weight (limbs - 1)) mod s = 0 *)
-      1: { rewrite Divide.Z.mod_divide_full.
-           remember (s_small (limbs - 1)) as H eqn:clearMe. clear clearMe.
-           apply (Z.divide_trans _ (weight (2 * limbs - 1) / weight (limbs - 1))).
-           - rewrite <- Divide.Z.mod_divide_full.
-             replace (2*limbs-1)%nat with (limbs - 1 + limbs)%nat by lia. apply s_small.
-           - Search ((_ / _) | (_ / _)). apply Z.divide_div.
-             + remember (weight_positive (limbs-1)). lia.
-             + rewrite <- Divide.Z.mod_divide_full. apply Weight.weight_multiples_full; try assumption.
-               lia.
-             + rewrite <- Divide.Z.mod_divide_full. replace (2 * limbs - 1)%nat with (2 * limbs - 2 + 1)%nat by lia. apply weight_lt_width.
-      }
+      1: { apply reduction_works'; lia. }
     Qed.
 
     Hint Rewrite eval_reduce_carry_borrow : push_eval.
