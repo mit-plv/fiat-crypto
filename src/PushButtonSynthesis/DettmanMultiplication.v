@@ -112,7 +112,7 @@ Section __.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
-  
+
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
   Definition check_args {T} (requests : list string) (res : Pipeline.ErrorT T)
@@ -122,26 +122,25 @@ Section __.
             (fun v => (true, v))
             [(negb (s - c =? 0), Pipeline.Values_not_provably_distinctZ "s - c <> 0" (s - c) 0)
              ; (4 <=? n, Pipeline.Value_not_leZ "4 <= n" 3 n)
-             ; (last_limb_width * n <=? Z.log2_up s, Pipeline.Value_not_leZ "last_limb_width * n <= Z.log2_up s" (last_limb_width * n) (Z.log2_up s))
+             ; (last_limb_width * n <=? Z.log2 s, Pipeline.Value_not_leZ "last_limb_width * n <= Z.log2 s" (last_limb_width * n) (Z.log2 s))
              ; (1 <=? last_limb_width, Pipeline.Value_not_leZ "1 <= last_limb_width" 1 last_limb_width)
              ; (2 ^ (Z.log2 s) =? s, Pipeline.Values_not_provably_equalZ "2 ^ (Z.log2 s) = s" (2 ^ Z.log2 s) s)
-             ; (Z.log2_up s - last_limb_width <=? (Z.to_nat machine_wordsize) * (n - 1), Pipeline.Value_not_leZ "Z.log2_up s - last_limb_width <= (Z.to_nat machine_wordsize) * (n - 1)" (Z.log2_up s - last_limb_width) (Z.to_nat machine_wordsize * (n - 1)))
-             ; (Z.log2 s <=? n * (Z.log2_up s - last_limb_width) / (n - 1), Pipeline.Value_not_leZ "Z.log2 s <= n * (Z.log2_up s - last_limb_width) / (n - 1)" (Z.log2 s) (n * (Z.log2_up s - last_limb_width) / (n - 1)))
+             ; (Z.log2 s - last_limb_width <=? (Z.to_nat machine_wordsize) * (n - 1), Pipeline.Value_not_leZ "Z.log2 s - last_limb_width <= (Z.to_nat machine_wordsize) * (n - 1)" (Z.log2 s - last_limb_width) (Z.to_nat machine_wordsize * (n - 1)))
+             ; (Z.log2 s <=? n * (Z.log2 s - last_limb_width) / (n - 1), Pipeline.Value_not_leZ "Z.log2 s <= n * (Z.log2 s - last_limb_width) / (n - 1)" (Z.log2 s) (n * (Z.log2 s - last_limb_width) / (n - 1)))
             ])
             res.
 
   Context (requests : list string)
     (curve_good : check_args requests (Success tt) = Success tt).
 
-  (* should probably use limbwidth_num, limbwidth_den to make this less confusing-looking *)
   Lemma use_curve_good
     : s - c <> 0
       /\ (4 <= n)
-      /\ last_limb_width * n <= Z.log2_up s
+      /\ last_limb_width * n <= Z.log2 s
       /\ 1 <= last_limb_width
       /\ 2 ^ (Z.log2 s) = s
-      /\ Z.log2_up s - last_limb_width <= (Z.to_nat machine_wordsize) * (n - 1)
-      /\ Z.log2 s <= n * (Z.log2_up s - last_limb_width) / (n - 1).
+      /\ Z.log2 s - last_limb_width <= (Z.to_nat machine_wordsize) * (n - 1)
+      /\ Z.log2 s <= n * (Z.log2 s - last_limb_width) / (n - 1).
   Proof using curve_good. prepare_use_curve_good (). Qed.
 
   Local Notation evalf := (eval weightf n).
@@ -157,7 +156,7 @@ Section __.
           summary
           correctness)
          (only parsing, at level 10, summary at next level, correctness at next level).
-  
+
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)

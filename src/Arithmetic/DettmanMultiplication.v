@@ -312,12 +312,12 @@ Module dettman_multiplication_mod_ops.
         (last_limb_width : nat)
         (p_nz : s - Associational.eval c <> 0)
         (n_gteq_4 : (4 <= n)%nat)
-        (last_limb_width_small : last_limb_width * n <= Z.log2_up s)
+        (last_limb_width_small : last_limb_width * n <= Z.log2 s)
         (last_limb_width_big : 1 <= last_limb_width)
         (s_power_of_2 : 2 ^ (Z.log2 s) = s).
 
-    (* I do want to have Z.log2_up s, not Z.log2_up (s - c) below.  We want to ensure that weight (n - 1) <= s <= weight limbs *)
-    Local Notation limbwidth_num' := (Z.log2_up s - last_limb_width).
+    (* I do want to have Z.log2 s, not Z.log2_up (s - c) below.  We want to ensure that weight (n - 1) <= s <= weight limbs *)
+    Local Notation limbwidth_num' := (Z.log2 s - last_limb_width).
     Local Notation limbwidth_den' := (n - 1). (* can't use Q here, or else reification doesn't work *)
     
     Context
@@ -333,7 +333,7 @@ Module dettman_multiplication_mod_ops.
     Definition mulmod := mulmod s c register_width n weight.
     Definition squaremod := squaremod s c register_width n weight.
 
-    Lemma n_small : n - 1 <= Z.log2_up s - last_limb_width.
+    Lemma n_small : n - 1 <= Z.log2 s - last_limb_width.
     Proof.
       replace (Z.of_nat n) with (Z.of_nat n - 1 + 1) in last_limb_width_small by lia.
       remember (Z.of_nat n - 1) as n'.
@@ -404,7 +404,7 @@ Module dettman_multiplication_mod_ops.
       
     Lemma s_gt_0 : 0 < s.
       assert (H: s <= 0 \/ 0 < s) by lia. destruct H as [H|H].
-      - apply Z.log2_up_nonpos in H. lia.
+      - apply Z.log2_nonpos in H. lia.
       - assumption.
     Qed.
 
