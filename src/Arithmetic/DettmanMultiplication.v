@@ -46,6 +46,23 @@ Module DettmanMultiplication.
     Lemma div_mul_le : forall x y, y > 0 -> x / y * y <= x.
     Proof. intros x y H. remember (Zmod_eq x y H). remember (Z_mod_lt x y H). lia. Qed.
 
+    Lemma div_nz a b : b > 0 -> b <= a -> a / b <> 0.
+    Proof. Z.div_mod_to_equations. lia. Qed.
+
+    Lemma weight_div_nz : forall i j : nat, (i <= j)%nat -> weight j / weight i <> 0.
+    Proof.
+      intros i j H. assert (0 < weight j / weight i); try lia.
+      apply Weight.weight_divides_full; assumption.
+    Qed.
+
+    Lemma s_small' (i j : nat) :
+      (j = i + limbs)%nat ->
+      weight j / weight i mod s = 0.
+    Proof. intros H. subst. apply s_small. Qed.
+
+    Lemma s_big' : s / weight (limbs - 1) <> 0.
+    Proof. remember (weight_positive (limbs - 1)). apply div_nz; lia. Qed.
+
     Lemma weight_increasing : forall i j : nat, (i <= j)%nat -> weight i <= weight j.
     Proof.
       intros i j H.
@@ -53,19 +70,8 @@ Module DettmanMultiplication.
       assert (1 <= weight j / weight i) by lia.
       assert (1 * weight i <= weight j / weight i * weight i).
       { apply Zmult_le_compat_r; try lia. remember (weight_positive i). lia. }
-      apply (Z.le_trans _ (weight j / weight i * weight i) _).
-      - lia.
-      - (*rewrite Weight.weight_div_mod.*) apply div_mul_le. remember (weight_positive i). lia.
-    Qed.
-
-    Lemma div_nz a b : b > 0 -> b <= a -> a / b <> 0.
-    Proof. Z.div_mod_to_equations. lia. Qed.
-
-    Lemma weight_div_nz : forall i j : nat, (i <= j)%nat -> weight j / weight i <> 0.
-    Proof.
-      intros i j H.
-      assert (0 < weight j / weight i). { apply Weight.weight_divides_full; assumption. }
-      lia.
+      apply (Z.le_trans _ (weight j / weight i * weight i) _); try lia.
+      apply div_mul_le. remember (weight_positive i). lia.
     Qed.
 
     Lemma mod_quotient_zero : forall x y, 0 < y -> x mod y = 0 -> x mod (x / y) = 0.
@@ -74,8 +80,9 @@ Module DettmanMultiplication.
       subst. rewrite Z_div_mult by lia. rewrite Z.mul_comm. apply Z_mod_mult.
     Qed.
     
-    Lemma weight_mod_quotient_zero : forall i j : nat, (i <= j)%nat ->
-                                                       (weight j) mod (weight j / weight i) = 0.
+    Lemma weight_mod_quotient_zero : forall i j : nat,
+        (i <= j)%nat ->
+        (weight j) mod (weight j / weight i) = 0.
     Proof.
       intros i j H. apply mod_quotient_zero; try apply weight_positive.
       apply Weight.weight_multiples_full; assumption.
@@ -87,7 +94,7 @@ Module DettmanMultiplication.
       a / b <> 0.
     Proof. intros H1 H2. remember (Z_div_mod_eq_full a b). lia. Qed.
       
-    Hint Resolve s_positive s_nz weight_nz div_nz : arith.
+    Hint Resolve s_positive s_nz weight_nz div_nz s_big' : arith.
     Hint Resolve weight_0 weight_positive weight_multiples Weight.weight_multiples_full : arith.
     Hint Resolve weight_div_nz weight_mod_quotient_zero : arith.
     
@@ -175,7 +182,7 @@ Module DettmanMultiplication.
       
       (* here I've pulled out the final iteration of the loop to do
          the special register_width carry. *)
-      (* begin loop iteration *)
+      (* begin final loop iteration *)
       let i0 := l - 2 - 1 in
       
       let rloop1 := carry' (weight (i0 + limbs)) (2^register_width) r11 in
@@ -187,7 +194,7 @@ Module DettmanMultiplication.
       let fromLoop3 := weight i0 in
       let toLoop3 := weight (i0 + 1) in
       let rloop3 := carry' fromLoop3 (toLoop3 / fromLoop3) rloop2 in
-      (* end loop iteration*)
+      (* end final loop iteration*)
       
       let from12 := Z.mul (weight (i0 + limbs)) (2^register_width) in
       let to12 := weight (i0 + 1) in
@@ -215,12 +222,9 @@ Module DettmanMultiplication.
 
     Local Open Scope Z_scope.
 
-    (*(weight (limbs - 2 - 1 + limbs) * 2 ^ Z.of_nat register_width / weight (limbs - 2 - 1 + 1)) mod s = 0*)
     Lemma reduction_divides i : weight (limbs + i - 1) * 2^register_width / weight i mod s = 0.
     Proof.
-      rewrite Divide.Z.mod_divide_full.
-      remember (s_small (limbs + i - 1)) as H eqn:clearMe. clear clearMe.
-      apply (Z.divide_trans _ (weight (limbs + i) / weight i)).
+      rewrite Divide.Z.mod_divide_full. apply (Z.divide_trans _ (weight (limbs + i) / weight i)).
       - rewrite <- Divide.Z.mod_divide_full. rewrite (Nat.add_comm limbs i). apply s_small.
       - apply Z.divide_div.
         + remember (weight_positive i). lia.
@@ -235,21 +239,31 @@ Module DettmanMultiplication.
     Lemma reduction_divides' (i j : nat) :
       (j = limbs + i - 1)%nat ->
       weight j * 2^register_width / weight i mod s = 0.
-    Proof.
-      intros H. subst. apply reduction_divides.
-    Qed.
+    Proof. intros H. subst. apply reduction_divides. Qed.
 
-    Lemma weight_prod_div_nz (i j : nat) (e : Z) :
-      0 <= e ->
+    Lemma weight_prod_mod_zero (i j : nat) :
       (i <= j)%nat ->
-      weight j * 2^e / weight i <> 0.
+      (weight j * 2^register_width) mod (weight i) = 0.
     Proof.
-      intros H1 H2. apply div_nz.
-      - remember (weight_positive i). lia.
-      - apply weight_increasing in H2. replace (weight i) with (weight i * 1) by lia.
-        apply Zmult_le_compat; try lia. remember (weight_positive i). lia.
+      intros H. apply Divide.Z.mod_divide_full. apply Z.divide_mul_l.
+      rewrite <- Divide.Z.mod_divide_full. apply Weight.weight_multiples_full; try assumption.
+    Qed.
+    
+    Lemma weight_prod_div_nz (i j : nat) :
+      (i <= j)%nat ->
+      weight j * 2^register_width / weight i <> 0.
+    Proof.
+      intros H. apply divisible_implies_nonzero. apply weight_prod_mod_zero; try lia.
+      remember (weight_positive j). remember (Z.pow_nonneg 2 register_width). lia.
     Qed.
 
+    Lemma s_small_particular : weight limbs mod s = 0.
+    Proof.
+      replace (weight limbs) with (weight limbs / weight 0).
+      - apply s_small'; lia.
+      - Z.div_mod_to_equations. lia.
+    Qed.
+      
     Lemma eval_reduce_carry_borrow r0 :
       (Positional.eval weight limbs (reduce_carry_borrow r0)) mod (s - c) =
       (Associational.eval r0) mod (s - c).
@@ -259,30 +273,11 @@ Module DettmanMultiplication.
       all: try apply weight_mod_quotient_zero; try lia.
       all: try apply reduction_divides'; try lia.
       all: try apply weight_prod_div_nz; try lia.
-      (*(weight (2 * limbs - 2) / weight (limbs - 2)) mod s = 0*)
-      1: { replace (2 * limbs - 2)%nat with ((limbs - 2) + limbs)%nat by lia. apply s_small. }
-      (*  s / weight (limbs - 1) <> 0 *)
-      2: { apply div_nz; auto with arith. remember (weight_positive (limbs - 1)). lia. }
-      (* weight limbs mod (weight limbs / s) = 0 *)
-      3: { apply mod_quotient_zero.
-           + remember s_positive. lia.
-           + replace (weight limbs) with (weight (0 + limbs) / weight 0).
-             -- apply s_small.
-             -- rewrite weight_0. rewrite Z.div_1_r. rewrite Nat.add_0_l. reflexivity. }
-      (* (weight (limbs - 2 - 1 + limbs) * 2 ^ Z.of_nat register_width)
- mod (weight (limbs - 2 - 1 + limbs) * 2 ^ Z.of_nat register_width / weight (limbs - 2 - 1 + 1)) =
- 0 *)
-      3: { apply mod_quotient_zero; try apply weight_positive. apply Divide.Z.mod_divide_full. apply Z.divide_mul_l. rewrite <- Divide.Z.mod_divide_full. apply Weight.weight_multiples_full; try assumption. lia. }
-      (* (weight (2 * limbs - 2) * 2 ^ Z.of_nat register_width)
- mod (weight (2 * limbs - 2) * 2 ^ Z.of_nat register_width / weight (limbs - 1)) = 0 *)
-      1: { apply mod_quotient_zero; try apply weight_positive. apply Divide.Z.mod_divide_full. apply Z.divide_mul_l. rewrite <- Divide.Z.mod_divide_full. apply Weight.weight_multiples_full; try assumption. lia. }
-      (* weight limbs / s <> 0 *)
-      1: { apply divisible_implies_nonzero.
-           - replace (weight limbs) with (weight (0 + limbs) / weight 0).
-             + apply s_small.
-             + rewrite weight_0. rewrite Z.div_1_r. rewrite Nat.add_0_l. reflexivity.
-           - remember (weight_positive limbs). lia.
-      }
+      all: try apply s_small'; try lia.
+      all: try apply mod_quotient_zero; try apply divisible_implies_nonzero; try apply s_small_particular; try apply weight_positive.
+      all: try apply weight_prod_mod_zero; try lia.
+      all: try (remember (weight_positive limbs); lia).
+      all: try (remember s_positive; lia).
     Qed.
 
     Hint Rewrite eval_reduce_carry_borrow : push_eval.
@@ -326,9 +321,10 @@ Module dettman_multiplication_mod_ops.
     Local Notation limbwidth_den' := (n - 1). (* can't use Q here, or else reification doesn't work *)
     
     Context
-        (registers_big : limbwidth_num' <= register_width * limbwidth_den') (* stated somewhat awkwardly in terms of Z; i think we might want to avoid Q here too? idk *)
+        (registers_big : limbwidth_num' <= register_width * limbwidth_den') (* stated somewhat awkwardly in terms of Z; i think we might want to avoid Q here too *)
         (weight_big : Z.log2 s <= n * limbwidth_num' / limbwidth_den').
 
+    (* I don't want these to be automatically unfolded in the proofs below. *)
     Definition limbwidth_num := limbwidth_num'.
     Definition limbwidth_den := limbwidth_den'.
     
@@ -358,10 +354,10 @@ Module dettman_multiplication_mod_ops.
     Proof.
       assert (H: Qfloor (x - y) + Qceiling y <= Qceiling x).
       - replace (Qceiling x) with (Qceiling (x - y + y))%Q.
-        + Search Qceiling. apply QUtil.add_floor_l_le_ceiling.
-        + Search (_ + _)%Q. Check (Qplus_comm). Check Qplus_assoc. cbv [Qminus].
-          rewrite <- Qplus_assoc. rewrite (Qplus_comm (-y) y). Search (_ + (-_))%Q.
-          rewrite Qplus_opp_r. Search (_ + 0)%Q. rewrite Qplus_0_r. reflexivity.
+        + apply QUtil.add_floor_l_le_ceiling.
+        + cbv [Qminus].
+          rewrite <- Qplus_assoc. rewrite (Qplus_comm (-y) y).
+          rewrite Qplus_opp_r. rewrite Qplus_0_r. reflexivity.
       - lia.
     Qed.
 
@@ -371,7 +367,7 @@ Module dettman_multiplication_mod_ops.
     Lemma s_small : forall i : nat, (weight (i + n) / weight i) mod s = 0.
     Proof.
       intros i. repeat rewrite (ModOps.weight_ZQ_correct _ _ limbwidth_good).
-      rewrite <- Z.pow_sub_r.
+      rewrite <- Z.pow_sub_r; try lia.
       - rewrite <- s_power_of_2. apply Modulo.Z.mod_same_pow. split.
         + apply Z.log2_nonneg.
         + remember (_ * (i + n)%nat)%Q as x. remember (_ * i)%Q as y.
@@ -380,7 +376,7 @@ Module dettman_multiplication_mod_ops.
              rewrite <- inject_Z_opp. rewrite <- inject_Z_plus.
              replace (Z.of_nat (i + n) + - Z.of_nat i) with (Z.of_nat n) by lia.
              replace (Z.log2 s) with (Qfloor (inject_Z (Z.log2 s))).
-             ++ apply Qfloor_resp_le. cbv [Qdiv]. rewrite Qmult_comm.
+             ++ apply Qfloor_resp_le. rewrite Qmult_comm.
                 apply (Qle_trans _ (inject_Z (n * limbwidth_num / limbwidth_den)))%Z.
                 --- rewrite <- Zle_Qle. apply weight_big.
                 --- cbv [Qdiv]. rewrite Zdiv_Qdiv.
@@ -389,12 +385,10 @@ Module dettman_multiplication_mod_ops.
                     +++ rewrite inject_Z_mult. rewrite Qmult_assoc. apply Qle_refl.
              ++ apply Qfloor_Z.
           -- apply Qceiling_diff.
-      - lia.
-      - split.
+      - remember limbwidth_good as H eqn:clearMe; clear clearMe. split.
         + replace 0 with (Qceiling 0) by reflexivity. apply Qceiling_resp_le.
           apply Qmult_le_0_compat.
-          -- cbv [Qdiv]. remember limbwidth_good as H eqn:clearMe; clear clearMe.
-             apply Qmult_le_0_compat.
+          -- cbv [Qdiv]. apply Qmult_le_0_compat.
              ++ replace 0%Q with (inject_Z 0) by reflexivity. rewrite <- Zle_Qle. lia.
              ++ apply Qinv_le_0_compat. replace 0%Q with (inject_Z 0) by reflexivity.
                 rewrite <- Zle_Qle. lia.
@@ -402,8 +396,7 @@ Module dettman_multiplication_mod_ops.
         + apply Qceiling_resp_le. rewrite Qmult_comm. rewrite (Qmult_comm (_ / _)).
           apply Qmult_le_compat_r.
           -- rewrite <- Zle_Qle. lia.
-          -- cbv [Qdiv]. remember limbwidth_good as H eqn:clearMe; clear clearMe.
-             apply Qmult_le_0_compat.
+          -- cbv [Qdiv]. apply Qmult_le_0_compat.
              ++ replace 0%Q with (inject_Z 0) by reflexivity. rewrite <- Zle_Qle. lia.
              ++ apply Qinv_le_0_compat. replace 0%Q with (inject_Z 0) by reflexivity.
                 rewrite <- Zle_Qle. lia.
@@ -425,25 +418,23 @@ Module dettman_multiplication_mod_ops.
       apply Z.pow_le_mono_r; try lia.
       rewrite Zle_Qle. cbv [Qdiv]. rewrite <- (Qmult_assoc _ (Qinv _)).
       rewrite (Qmult_comm (Qinv _)). rewrite Nat2Z.inj_sub; try lia. simpl. cbv [Z.sub].
-      rewrite inject_Z_plus. simpl. replace (inject_Z (-1)) with (-(1))%Q by reflexivity.
-      cbv [Qminus]. rewrite Qmult_inv_r.
+      rewrite inject_Z_plus. simpl. cbv [Qminus]. rewrite Qmult_inv_r.
       - rewrite <- inject_Z_plus. rewrite Qmult_1_r. rewrite Qceiling_Z.
         rewrite <- Zle_Qle. remember (Z.le_log2_up_succ_log2 s). lia.
-      - replace (-(1))%Q with (inject_Z (-1)) by reflexivity.
-        replace 0%Q with (inject_Z 0) by reflexivity. rewrite inject_Z_injective. lia.
+      - replace 0%Q with (inject_Z 0) by reflexivity. rewrite inject_Z_injective. lia.
     Qed.
 
     Lemma weight_lt_width : forall i: nat, (weight i * 2^register_width) mod weight (i + 1)%nat = 0.
     Proof.
       intros i. repeat rewrite (ModOps.weight_ZQ_correct _ _ limbwidth_good).
+      remember limbwidth_good eqn:clearMe; clear clearMe.
       rewrite <- Z.pow_add_r; try lia.
       - apply Modulo.Z.mod_same_pow. split.
         + remember (_ / _ * _)%Q as x. replace 0 with (Qceiling 0%Z) by reflexivity.
           apply Qceiling_resp_le. subst. replace (inject_Z 0) with 0%Q by reflexivity.
           cbv [Qdiv]. apply Qmult_le_0_compat.
-          -- remember limbwidth_good eqn:clearMe; clear clearMe. apply Qmult_le_0_compat.
-             ++ replace 0%Q with (inject_Z 0) by reflexivity. rewrite <- Zle_Qle.
-                lia.
+          -- apply Qmult_le_0_compat.
+             ++ replace 0%Q with (inject_Z 0) by reflexivity. rewrite <- Zle_Qle. lia.
              ++ apply Qinv_le_0_compat. replace 0%Q with (inject_Z 0) by reflexivity.
                 rewrite <- Zle_Qle. lia.
           -- replace 0%Q with (inject_Z 0) by reflexivity. rewrite <- Zle_Qle. lia.
@@ -463,10 +454,10 @@ Module dettman_multiplication_mod_ops.
              ++ apply Qceiling_Z.
       - replace 0 with (Qceiling 0) by reflexivity. apply Qceiling_resp_le.
         apply Qmult_le_0_compat.
-        + cbv [Qdiv]. remember limbwidth_good. apply Qmult_le_0_compat.
+        + cbv [Qdiv]. apply Qmult_le_0_compat.
           -- replace 0%Q with (inject_Z 0) by reflexivity. rewrite <- Zle_Qle. lia.
-          -- apply Qinv_le_0_compat. replace 0%Q with (inject_Z 0) by reflexivity.  rewrite <- Zle_Qle.
-             lia.
+          -- apply Qinv_le_0_compat. replace 0%Q with (inject_Z 0) by reflexivity.
+             rewrite <- Zle_Qle. lia.
         + replace 0%Q with (inject_Z 0) by reflexivity. rewrite <- Zle_Qle. lia.
     Qed.
           
