@@ -567,10 +567,15 @@ Lemma arith_with_casts_rewrite_rules_proofs (adc_no_carry_to_add : bool)
   : PrimitiveHList.hlist (@snd bool Prop) (arith_with_casts_rewrite_rulesT adc_no_carry_to_add).
 Proof using Type.
   start_proof; auto; intros; try lia.
-  all: repeat interp_good_t_step_related.
-  all: repeat interp_good_t_step_arith.
+  all: repeat interp_good_t_step_related.                           
+  all: repeat interp_good_t_step_arith. Search (_ mod _).
   all: remove_casts; try fin_with_nia.
-  all: try (reflect_hyps; lia).
+  all: try (reflect_hyps; lia). rewrite Z.mod_small.
+  apply ident.cast_in_bounds. unfold is_bounded_by_bool. rewrite Bool.andb_true_iff.
+  split. apply Zle_imp_le_bool. cbv [is_tighter_than_bool] in H. simpl in H.
+  cbv [is_bounded_by_bool] in H3. simpl in H3. lia. cbv [is_bounded_by_bool] in H4. simpl in H4.
+  lia. cbv [is_bounded_by_bool] in H3. simpl in H3. cbv [is_bounded_by_bool] in H4. simpl in H4.
+  lia.
 Qed.
 
 Lemma strip_literal_casts_rewrite_rules_proofs
