@@ -271,7 +271,7 @@ Module Import core.
             try (rewrite loop_fuel_0 in Hs; congruence); [].
           pose proof (iterations_required_step _ _ s' _ Hs' Hstep) as HA.
           rewrite HA.
-          destruct (proj1 (iterations_required_correct _ _) _ HA) as [? [? [? HE']]].
+          edestruct (proj1 (iterations_required_correct _ _) _ HA) as [? [? [? HE']]].
           pose proof (HE' ltac:(constructor)) as HE; clear HE'.
           split; [|lia].
           rewrite loop_fuel_S_first, Hstep in Hs.
