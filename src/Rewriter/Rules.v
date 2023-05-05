@@ -335,12 +335,16 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
                   0 ∈ rland -> 0 ∈ r0
                   -> cstZ rland (Z.land (cstZ r0 ('0)) (cstZ rv v)) = cstZ r0 ('0))
             ; (forall rland rm1 rv v,
-                  (rland <= rv)%zrange
-                  -> rland.(upper) ∈ rm1
+                  rland.(upper) ∈ rm1
                   -> rland.(upper) = Z.ones (Z.succ (Z.log2 rland.(upper)))
                   -> (0 = rland.(lower))
-                  -> v ∈ rv
-                  -> cstZ rland (Z.land (cstZ rv v) (cstZ rm1 ('rland.(upper)))) = cstZ rland v)
+                  -> cstZ rland (Z.land (cstZ rv v) (cstZ rm1 ('rland.(upper)))) = cstZ rland (cstZ rv v))
+            ; (forall rland rm1 rv v,
+                  (rv <= rland)%zrange -> -1 ∈ rm1
+                  -> cstZ rland (Z.land (cstZ rv v) (cstZ rm1 ('-1))) = cstZ rv v)
+            (*; (forall rland rm1 rv v,
+                  (rm1 <= rland)%zrange -> -1 ∈ rm1
+                  -> cstZ rland (Z.land (cstZ rv v) (cstZ rm1 ('-1))) = cstZ rland (cstZ rv v))*)
             ; (forall rland rm1 rv v,
                   (rv <= rland)%zrange -> -1 ∈ rm1
                   -> cstZ rland (Z.land (cstZ rm1 ('-1)) (cstZ rv v)) = cstZ rv v)

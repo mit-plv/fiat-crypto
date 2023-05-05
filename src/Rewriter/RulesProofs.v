@@ -569,16 +569,13 @@ Lemma arith_with_casts_rewrite_rules_proofs (adc_no_carry_to_add : bool)
 Proof using Type.
   start_proof; auto; intros; try lia.
   all: repeat interp_good_t_step_related.
-  11: { interp_good_t_step_arith. interp_good_t_step_arith. interp_good_t_step_arith.
-        rewrite Z.land_ones.
-        - Check ident.cast_out_of_bounds_simple_0_mod.
-          replace (2 ^ Z.succ (Z.log2 (upper rland))) with (upper rland + 1).
+  11: { interp_good_t_step_arith. interp_good_t_step_arith. rewrite Z.land_ones.
+        - replace (2 ^ Z.succ (Z.log2 (upper rland))) with (upper rland + 1).
           + rewrite <- ident.cast_out_of_bounds_simple_0_mod.
-            -- destruct rland. simpl in H2. subst. apply ident.cast_idempotent.
-            -- rewrite H1. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper rland)). lia.
-          + remember (Z.log2 _) as x. rewrite H1. subst. rewrite Z.ones_equiv. lia.
-        - remember (Z.log2_nonneg (upper rland)). lia.
-  }
+            -- destruct rland. simpl in H1. subst. apply ident.cast_idempotent.
+            -- rewrite H0. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper rland)). lia.
+          + remember (Z.log2 _) as x. rewrite H0. subst. rewrite Z.ones_equiv. lia.
+        - remember (Z.log2_nonneg (upper rland)). lia. }
                  (*cbv [Z.succ]. Check Z.ones_equiv. rewrite <- ident.cast_out_of_bounds_simple_0_mod.
         Search (Z.ones (Z.succ _)). rewrite Z.ones_equiv.
         rewrite Z.land_ones.
