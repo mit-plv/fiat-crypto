@@ -273,6 +273,7 @@ Local Ltac interp_good_t_step_arith :=
                          | H : is_bounded_by_bool _ _ = true |- _ =>
                            apply unfold_is_bounded_by_bool in H;
                            cbn [upper lower] in H
+                    (*| H : _ |- _ => fail*)
                          end;
                   try apply Z.lt_succ_r;
                   eauto using Z.log2_le_mono with lia)
@@ -547,7 +548,7 @@ Local Ltac do_clear_nia x y r H H' :=
                => let H0 := find_H x0 in
                   let H1 := find_H x1 in
                   let m0 := lazymatch type of H0 with 0 <= _ <= ?m => m end in
-                  let m1 := lazymatch type of H1 with 0 <= _ <= ?m => m end in
+                   let m1 := lazymatch type of H1 with 0 <= _ <= ?m => m end in
                   let H := fresh in
                   let __ := lazymatch goal with
                             | _ => assert (H : -m1 <= x <= m0) by (clear -H0 H1; lia)
@@ -567,15 +568,40 @@ Lemma arith_with_casts_rewrite_rules_proofs (adc_no_carry_to_add : bool)
   : PrimitiveHList.hlist (@snd bool Prop) (arith_with_casts_rewrite_rulesT adc_no_carry_to_add).
 Proof using Type.
   start_proof; auto; intros; try lia.
-  all: repeat interp_good_t_step_related.                           
-  all: repeat interp_good_t_step_arith. Search (_ mod _).
+  all: repeat interp_good_t_step_related.
+  11: { interp_good_t_step_arith. interp_good_t_step_arith. interp_good_t_step_arith.
+        rewrite Z.land_ones.
+        - Check ident.cast_out_of_bounds_simple_0_mod.
+          replace (2 ^ Z.succ (Z.log2 (upper rland))) with (upper rland + 1).
+          + rewrite <- ident.cast_out_of_bounds_simple_0_mod.
+            -- destruct rland. simpl in H2. subst. apply ident.cast_idempotent.
+            -- rewrite H1. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper rland)). lia.
+          + remember (Z.log2 _) as x. rewrite H1. subst. rewrite Z.ones_equiv. lia.
+        - remember (Z.log2_nonneg (upper rland)). lia.
+  }
+                 (*cbv [Z.succ]. Check Z.ones_equiv. rewrite <- ident.cast_out_of_bounds_simple_0_mod.
+        Search (Z.ones (Z.succ _)). rewrite Z.ones_equiv.
+        rewrite Z.land_ones.
+        - 
+        all: repeat interp_good_t_step_arith.
+          Search (Z.land _ (Z.ones _)). rewrite Z.land_ones.
+          + Search (ident.cast _ _ = _ mod _). cbv [Z.succ]. replace (2^(Z.log2 (upper rland) + 1)) with ((upper rland) + 1).
+            -- rewrite <- ident.cast_out_of_bounds_simple_0_mod.
+               ++ Search (ident.cast _ (ident.cast _ _)).
+                  replace r[0~>upper rland]%zrange with rland.
+                  --- rewrite ident.cast_idempotent. rep apply ident.cast_idempotent.
+                  --- reflect_hyps. destruct rland. simpl in *. subst. reflexivity.
+               ++ reflect_hyps. simpl in *. Search (0 <= Z.ones _). rewrite H1.
+                  apply Ones.Z.ones_nonneg. Search (0 <= Z.log2 _). remember (Z.log2_nonneg (upper rland)). lia.
+            -- remember (Z.log2 _) as x. rewrite H1. subst. Search Z.ones. rewrite Z.ones_equiv. cbv [Z.succ Z.pred]. lia.
+          + remember (Z.log2_nonneg (upper rland)). lia.
+        - Check Ones.Z.ones_succ. remember (Ones.Z.ones_nonneg (Z.succ (Z.l lia.
+          interp_good_t_step_arith.
+        all: repeat interp_good_t_step_arith. assert (is_bounded_by_bool v rland = true).
+  { reflect_hyps. cbv [is_bounded_by_bool]. lia. } Search is_tighter_than_bool. reflect_hyps.*)
+  all: repeat interp_good_t_step_arith.
   all: remove_casts; try fin_with_nia.
-  all: try (reflect_hyps; lia). rewrite Z.mod_small.
-  apply ident.cast_in_bounds. unfold is_bounded_by_bool. rewrite Bool.andb_true_iff.
-  split. apply Zle_imp_le_bool. cbv [is_tighter_than_bool] in H. simpl in H.
-  cbv [is_bounded_by_bool] in H3. simpl in H3. lia. cbv [is_bounded_by_bool] in H4. simpl in H4.
-  lia. cbv [is_bounded_by_bool] in H3. simpl in H3. cbv [is_bounded_by_bool] in H4. simpl in H4.
-  lia.
+  all: try (reflect_hyps; lia).
 Qed.
 
 Lemma strip_literal_casts_rewrite_rules_proofs
