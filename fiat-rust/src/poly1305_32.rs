@@ -29,6 +29,50 @@ pub type fiat_poly1305_loose_field_element = [u32; 5];
 pub type fiat_poly1305_tight_field_element = [u32; 5];
 
 
+/// The function fiat_poly1305_addcarryx_u32 is an addition with carry.
+///
+/// Postconditions:
+///   out1 = (arg1 + arg2 + arg3) mod 2^32
+///   out2 = ⌊(arg1 + arg2 + arg3) / 2^32⌋
+///
+/// Input Bounds:
+///   arg1: [0x0 ~> 0x1]
+///   arg2: [0x0 ~> 0xffffffff]
+///   arg3: [0x0 ~> 0xffffffff]
+/// Output Bounds:
+///   out1: [0x0 ~> 0xffffffff]
+///   out2: [0x0 ~> 0x1]
+#[inline]
+pub fn fiat_poly1305_addcarryx_u32(out1: &mut u32, out2: &mut fiat_poly1305_u1, arg1: fiat_poly1305_u1, arg2: u32, arg3: u32) -> () {
+  let x1: u64 = (((arg1 as u64) + (arg2 as u64)) + (arg3 as u64));
+  let x2: u32 = ((x1 & (0xffffffff as u64)) as u32);
+  let x3: fiat_poly1305_u1 = ((x1 >> 32) as fiat_poly1305_u1);
+  *out1 = x2;
+  *out2 = x3;
+}
+
+/// The function fiat_poly1305_subborrowx_u32 is a subtraction with borrow.
+///
+/// Postconditions:
+///   out1 = (-arg1 + arg2 + -arg3) mod 2^32
+///   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^32⌋
+///
+/// Input Bounds:
+///   arg1: [0x0 ~> 0x1]
+///   arg2: [0x0 ~> 0xffffffff]
+///   arg3: [0x0 ~> 0xffffffff]
+/// Output Bounds:
+///   out1: [0x0 ~> 0xffffffff]
+///   out2: [0x0 ~> 0x1]
+#[inline]
+pub fn fiat_poly1305_subborrowx_u32(out1: &mut u32, out2: &mut fiat_poly1305_u1, arg1: fiat_poly1305_u1, arg2: u32, arg3: u32) -> () {
+  let x1: i64 = (((arg2 as i64) - (arg1 as i64)) - (arg3 as i64));
+  let x2: fiat_poly1305_i1 = ((x1 >> 32) as fiat_poly1305_i1);
+  let x3: u32 = ((x1 & (0xffffffff as i64)) as u32);
+  *out1 = x3;
+  *out2 = (((0x0 as fiat_poly1305_i2) - (x2 as fiat_poly1305_i2)) as fiat_poly1305_u1);
+}
+
 /// The function fiat_poly1305_addcarryx_u26 is an addition with carry.
 ///
 /// Postconditions:
@@ -360,75 +404,76 @@ pub fn fiat_poly1305_to_bytes(out1: &mut [u8; 17], arg1: &fiat_poly1305_tight_fi
   let mut x10: fiat_poly1305_u1 = 0;
   fiat_poly1305_subborrowx_u26(&mut x9, &mut x10, x8, (arg1[4]), 0x3ffffff);
   let mut x11: u32 = 0;
-  fiat_poly1305_cmovznz_u32(&mut x11, x10, (0x0 as u32), 0xffffffff);
-  let mut x12: u32 = 0;
-  let mut x13: fiat_poly1305_u1 = 0;
-  fiat_poly1305_addcarryx_u26(&mut x12, &mut x13, 0x0, x1, (x11 & 0x3fffffb));
-  let mut x14: u32 = 0;
-  let mut x15: fiat_poly1305_u1 = 0;
-  fiat_poly1305_addcarryx_u26(&mut x14, &mut x15, x13, x3, (x11 & 0x3ffffff));
-  let mut x16: u32 = 0;
-  let mut x17: fiat_poly1305_u1 = 0;
-  fiat_poly1305_addcarryx_u26(&mut x16, &mut x17, x15, x5, (x11 & 0x3ffffff));
-  let mut x18: u32 = 0;
-  let mut x19: fiat_poly1305_u1 = 0;
-  fiat_poly1305_addcarryx_u26(&mut x18, &mut x19, x17, x7, (x11 & 0x3ffffff));
-  let mut x20: u32 = 0;
-  let mut x21: fiat_poly1305_u1 = 0;
-  fiat_poly1305_addcarryx_u26(&mut x20, &mut x21, x19, x9, (x11 & 0x3ffffff));
-  let x22: u32 = (x18 << 6);
-  let x23: u32 = (x16 << 4);
-  let x24: u32 = (x14 << 2);
-  let x25: u8 = ((x12 & (0xff as u32)) as u8);
-  let x26: u32 = (x12 >> 8);
-  let x27: u8 = ((x26 & (0xff as u32)) as u8);
-  let x28: u32 = (x26 >> 8);
-  let x29: u8 = ((x28 & (0xff as u32)) as u8);
-  let x30: u8 = ((x28 >> 8) as u8);
-  let x31: u32 = (x24 + (x30 as u32));
-  let x32: u8 = ((x31 & (0xff as u32)) as u8);
-  let x33: u32 = (x31 >> 8);
-  let x34: u8 = ((x33 & (0xff as u32)) as u8);
-  let x35: u32 = (x33 >> 8);
-  let x36: u8 = ((x35 & (0xff as u32)) as u8);
-  let x37: u8 = ((x35 >> 8) as u8);
-  let x38: u32 = (x23 + (x37 as u32));
-  let x39: u8 = ((x38 & (0xff as u32)) as u8);
-  let x40: u32 = (x38 >> 8);
-  let x41: u8 = ((x40 & (0xff as u32)) as u8);
-  let x42: u32 = (x40 >> 8);
-  let x43: u8 = ((x42 & (0xff as u32)) as u8);
-  let x44: u8 = ((x42 >> 8) as u8);
-  let x45: u32 = (x22 + (x44 as u32));
-  let x46: u8 = ((x45 & (0xff as u32)) as u8);
-  let x47: u32 = (x45 >> 8);
-  let x48: u8 = ((x47 & (0xff as u32)) as u8);
-  let x49: u32 = (x47 >> 8);
-  let x50: u8 = ((x49 & (0xff as u32)) as u8);
-  let x51: u8 = ((x49 >> 8) as u8);
-  let x52: u8 = ((x20 & (0xff as u32)) as u8);
-  let x53: u32 = (x20 >> 8);
-  let x54: u8 = ((x53 & (0xff as u32)) as u8);
-  let x55: u32 = (x53 >> 8);
-  let x56: u8 = ((x55 & (0xff as u32)) as u8);
-  let x57: u8 = ((x55 >> 8) as u8);
-  out1[0] = x25;
-  out1[1] = x27;
-  out1[2] = x29;
-  out1[3] = x32;
-  out1[4] = x34;
-  out1[5] = x36;
-  out1[6] = x39;
-  out1[7] = x41;
-  out1[8] = x43;
-  out1[9] = x46;
-  out1[10] = x48;
-  out1[11] = x50;
-  out1[12] = x51;
-  out1[13] = x52;
-  out1[14] = x54;
-  out1[15] = x56;
-  out1[16] = x57;
+  let mut x12: fiat_poly1305_u1 = 0;
+  fiat_poly1305_subborrowx_u32(&mut x11, &mut x12, x10, (0x0 as u32), (0x0 as u32));
+  let mut x13: u32 = 0;
+  let mut x14: fiat_poly1305_u1 = 0;
+  fiat_poly1305_addcarryx_u26(&mut x13, &mut x14, 0x0, x1, (x11 & 0x3fffffb));
+  let mut x15: u32 = 0;
+  let mut x16: fiat_poly1305_u1 = 0;
+  fiat_poly1305_addcarryx_u26(&mut x15, &mut x16, x14, x3, (x11 & 0x3ffffff));
+  let mut x17: u32 = 0;
+  let mut x18: fiat_poly1305_u1 = 0;
+  fiat_poly1305_addcarryx_u26(&mut x17, &mut x18, x16, x5, (x11 & 0x3ffffff));
+  let mut x19: u32 = 0;
+  let mut x20: fiat_poly1305_u1 = 0;
+  fiat_poly1305_addcarryx_u26(&mut x19, &mut x20, x18, x7, (x11 & 0x3ffffff));
+  let mut x21: u32 = 0;
+  let mut x22: fiat_poly1305_u1 = 0;
+  fiat_poly1305_addcarryx_u26(&mut x21, &mut x22, x20, x9, (x11 & 0x3ffffff));
+  let x23: u32 = (x19 << 6);
+  let x24: u32 = (x17 << 4);
+  let x25: u32 = (x15 << 2);
+  let x26: u8 = ((x13 & (0xff as u32)) as u8);
+  let x27: u32 = (x13 >> 8);
+  let x28: u8 = ((x27 & (0xff as u32)) as u8);
+  let x29: u32 = (x27 >> 8);
+  let x30: u8 = ((x29 & (0xff as u32)) as u8);
+  let x31: u8 = ((x29 >> 8) as u8);
+  let x32: u32 = (x25 + (x31 as u32));
+  let x33: u8 = ((x32 & (0xff as u32)) as u8);
+  let x34: u32 = (x32 >> 8);
+  let x35: u8 = ((x34 & (0xff as u32)) as u8);
+  let x36: u32 = (x34 >> 8);
+  let x37: u8 = ((x36 & (0xff as u32)) as u8);
+  let x38: u8 = ((x36 >> 8) as u8);
+  let x39: u32 = (x24 + (x38 as u32));
+  let x40: u8 = ((x39 & (0xff as u32)) as u8);
+  let x41: u32 = (x39 >> 8);
+  let x42: u8 = ((x41 & (0xff as u32)) as u8);
+  let x43: u32 = (x41 >> 8);
+  let x44: u8 = ((x43 & (0xff as u32)) as u8);
+  let x45: u8 = ((x43 >> 8) as u8);
+  let x46: u32 = (x23 + (x45 as u32));
+  let x47: u8 = ((x46 & (0xff as u32)) as u8);
+  let x48: u32 = (x46 >> 8);
+  let x49: u8 = ((x48 & (0xff as u32)) as u8);
+  let x50: u32 = (x48 >> 8);
+  let x51: u8 = ((x50 & (0xff as u32)) as u8);
+  let x52: u8 = ((x50 >> 8) as u8);
+  let x53: u8 = ((x21 & (0xff as u32)) as u8);
+  let x54: u32 = (x21 >> 8);
+  let x55: u8 = ((x54 & (0xff as u32)) as u8);
+  let x56: u32 = (x54 >> 8);
+  let x57: u8 = ((x56 & (0xff as u32)) as u8);
+  let x58: u8 = ((x56 >> 8) as u8);
+  out1[0] = x26;
+  out1[1] = x28;
+  out1[2] = x30;
+  out1[3] = x33;
+  out1[4] = x35;
+  out1[5] = x37;
+  out1[6] = x40;
+  out1[7] = x42;
+  out1[8] = x44;
+  out1[9] = x47;
+  out1[10] = x49;
+  out1[11] = x51;
+  out1[12] = x52;
+  out1[13] = x53;
+  out1[14] = x55;
+  out1[15] = x57;
+  out1[16] = x58;
 }
 
 /// The function fiat_poly1305_from_bytes deserializes a field element from bytes in little-endian order.

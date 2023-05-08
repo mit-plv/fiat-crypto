@@ -882,14 +882,21 @@ Module SolinasReduction.
             let hi' := coef * (nth_default 0 p n) in
             add_to_nth 0 hi' (firstn n p).
 
-    Definition reduce_full base s c n (p : list Z) :=
-      let r1 := reduce1 base s c (2*n) (S n) p in
+    Definition reduce_S base s c n (p : list Z) :=
+      let r2 := reduce1 base s c (S n) (S n) p in
+      let r3 := reduce3 base s c n r2 in
       let bound := (0, 2^machine_wordsize - 1) in
       let bounds := repeat bound n ++ [(0, up_bound-1)] in
-      let r2 := reduce1 base s c (S n) (S n) r1 in
-      let r3 := reduce3 base s c n r2 in
-      if (is_bounded_by bounds r1) then r3
-      else add_to_nth 0 (weight n * nth_default 0 r1 n) (firstn n r1).
+      if (is_bounded_by bounds p) then r3
+      else add_to_nth 0 (weight n * nth_default 0 p n) (firstn n p).
+
+    Definition add' base s c n p q :=
+      dlet lo_hi := Rows.add weight n p q in
+      reduce_S base s c n (fst lo_hi ++ [snd lo_hi]).
+
+    Definition reduce_full base s c n (p : list Z) :=
+      let r1 := reduce1 base s c (2*n) (S n) p in
+      reduce_S base s c n r1.
 
     Definition mulmod' base s c n (p q : list Z) :=
       let prod := mul_no_reduce base n p q in
@@ -941,29 +948,49 @@ Module SolinasReduction.
       break_match; reflexivity.
     Qed.
 
+    Definition reduce_S_cps {T} base s c n (p : list Z) (f  : list Z -> T) :=
+      let bound := (0, 2^machine_wordsize - 1) in
+      let bounds := repeat bound n ++ [(0, up_bound-1)] in
+      r2 <- reduce1_cps base s c (S n) (S n) p;
+      (if (is_bounded_by bounds p) then
+         reduce3_cps base s c n r2 f
+       else
+         f (add_to_nth 0 (weight n * nth_default 0 p n) (firstn n p))).
+
+    Lemma reduce_S_cps_ok {T} base s c n (f : list Z -> T) p :
+        reduce_S_cps base s c n p f = f (reduce_S base s c n p).
+    Proof using Type.
+      cbv [reduce_S reduce_S_cps].
+      repeat (break_match; rewrite ?reduce1_cps_ok, ?reduce3_cps_ok; trivial).
+    Qed.
+
+    Definition add_cps {T} base s c n p q (f : list Z -> T) :=
+      dlet lo_hi := Rows.add weight n p q in
+      reduce_S_cps base s c n (fst lo_hi ++ [snd lo_hi]) f.
+
+    Definition add base s c n (p q : list Z) :=
+      ltac:(let x := (eval cbv beta delta [add_cps reduce_S_cps reduce1_cps reduce3_cps id] in (@add_cps (list Z) base s c n p q id)) in
+            exact x).
+
+    Lemma add_cps_ok {T} base s c n (f : list Z -> T) : forall p q,
+        add_cps base s c n p q f = f (add' base s c n p q).
+    Proof.
+      cbv [add' Let_In]; intros; rewrite <-reduce_S_cps_ok; trivial.
+    Qed.
+
     Definition reduce_full_cps {T} base s c n (p : list Z) (f : list Z -> T):=
-      (r1 <- reduce1_cps base s c (2*n) (S n) p;
-       (let bound := (0, 2^machine_wordsize - 1) in
-        let bounds := repeat bound n ++ [(0, up_bound-1)] in
-        r2 <- reduce1_cps base s c (S n) (S n) r1;
-        (if (is_bounded_by bounds r1) then
-           reduce3_cps base s c n r2 f
-         else
-           f (add_to_nth 0 (weight n * nth_default 0 r1 n) (firstn n r1))))).
+      r1 <- reduce1_cps base s c (2*n) (S n) p;
+      reduce_S_cps base s c n r1 f.
 
     Definition reduce_full' base s c n p :=
       ltac:(let x := (eval cbv beta delta [reduce_full_cps reduce1_cps reduce3_cps id] in (@reduce_full_cps (list Z) base s c n p id)) in
             exact x).
 
-    Lemma reduce_full_cps_ok {T} base s c n (f : list Z -> T) : forall p,
+    Lemma reduce_full_cps_ok {T} base s c n (f : list Z -> T) p :
         reduce_full_cps base s c n p f = f (reduce_full base s c n p).
     Proof using Type.
-      intros.
-      cbv [reduce_full reduce_full_cps].
-      repeat (rewrite reduce1_cps_ok ||
-                rewrite reduce3_cps_ok ||
-                  reflexivity ||
-                    break_match).
+      cbv [reduce_full_cps reduce_full].
+      rewrite ?reduce1_cps_ok, ?reduce_S_cps_ok; trivial.
     Qed.
 
     Definition mul_no_reduce_cps {T} base n (p q : list Z) (f : list Z -> T):=
@@ -1003,7 +1030,7 @@ Module SolinasReduction.
     Qed.
 
     Definition mulmod base s c n (p q : list Z) :=
-      ltac:(let x := (eval cbv beta delta [mulmod_cps mul_no_reduce_cps reduce_full_cps reduce1_cps reduce3_cps id] in (@mulmod_cps (list Z) base s c n p q id)) in
+      ltac:(let x := (eval cbv beta delta [mulmod_cps mul_no_reduce_cps reduce_full_cps reduce_S_cps reduce1_cps reduce3_cps id] in (@mulmod_cps (list Z) base s c n p q id)) in
             exact x).
 
     Lemma mulmod_unfold base s c n : forall p q,
@@ -2194,14 +2221,15 @@ Module SolinasReduction.
       (* (* END SECTION REDUCE_THIRD *) *)
 
       (* SECTION REDUCE_FULL] *)
-      Theorem reduce_full_correct : forall (p : list Z),
-          n <= length p ->
-          let r := reduce_full base s c n p in
-          (Positional.eval weight (2 * n) p) mod (s - Associational.eval c)
+      Theorem reduce_S_correct p :
+          length p = S n ->
+          let r := reduce_S base s c n p in
+          (Positional.eval weight (S n) p) mod (s - Associational.eval c)
           = (Positional.eval weight n r) mod (s - Associational.eval c).
       Proof.
-        intros p ? r; cbv [r reduce_full]; break_match.
-        pose proof (is_bounded_by_nth n _ _ Heqb ltac:(push) ltac:(push)) as Hnth.
+        intros Hr r; cbv [r reduce_S].
+        break_match.
+        pose proof (is_bounded_by_nth n _ _ Heqb ltac:(lia) ltac:(push)) as Hnth.
         repeat match goal with
                | H : context[nth_default _ (_ ++ _) _] |- _ => rewrite nth_default_app in H
                | H : context[snd (nth_default _ _ _)] |- _ => progress cbn in H
@@ -2211,80 +2239,73 @@ Module SolinasReduction.
                | _ => lia
                end.
         apply is_bounded_by_loosen with (bound2:=repeat (0, 2^machine_wordsize-1) (S n)) in Heqb.
-        assert (canonical_repr (S n) (reduce1 base s c (2*n) (S n) p)).
+        assert (canonical_repr (S n) p).
         rewrite canonical_is_bounded_by.
         intuition; push.
-        rewrite <-eval_reduce3.
-        rewrite <-eval_reduce1.
-        rewrite <-eval_reduce1.
-        auto.
-        pose proof (firstn_skipn n p) as Hp; symmetry in Hp.
+        rewrite <-eval_reduce3, <-eval_reduce1; try lia.
 
-        all:
-          repeat multimatch goal with
+        all: repeat match goal with
                  | _ => apply reduce_second_canonical
                  | _ => apply reduce_second_bounds
-                 | _ => solve_length p
-                 | _ => const_simpl
-                 | _ => cbv [up_bound]
-                 | _ => push
-                 | _ => auto
+                 | _ => progress const_simpl
+                 | _ => progress cbv [up_bound]
+                 | _ => progress push
                  | _ => lia
                  end.
-        weight_comp; try lia.
-        rewrite <-Z.mul_succ_l.
-        apply Zmult_lt_compat_r.
-        apply Z.pow_pos_nonneg; cbn; break_match; lia.
-        cbn; lia.
-        rewrite Z.lt_add_lt_sub_r.
-        etransitivity; [| apply (weight_dif_mono 1); lia].
-        weight_comp; cbn; break_match; lia.
-        autounfold.
-        replace (S n) with (n+1)%nat.
-        cbn.
-        const_simpl.
-        replace (n+1)%nat with (S n) by lia.
-        lia.
-        lia.
-        cbv [fold_andb_map' dual_map].
-        cbn [repeat].
-        rewrite repeat_cons.
-        rewrite combine_app_samelength.
-        rewrite map_app.
-        rewrite fold_right_app.
-        cbn.
-        pose proof (bounds_same (repeat (0, 18446744073709551615) n)).
-        auto.
-        auto.
-
-        (* not canonical *)
-        rewrite eval_reduce1 with (m2:=S n).
-        rewrite <-(firstn_skipn n (reduce1 base s c (2 * n) (S n) p)) at 1.
-        unfold eval at 1.
-        unfold to_associational.
-        rewrite seq_snoc.
-        rewrite skipn_nth_default with (d:=0).
-        rewrite skipn_all.
-        push.
-        apply Z.elim_mod.
-        const_simpl.
-        rewrite Z.add_comm at 1.
-        auto.
-        all:
-          repeat multimatch goal with
-                 | _ => push
-                 | _ => lia
-                 end.
-        const_simpl.
-        cbv [up_bound].
-        weight_comp; try lia.
-        rewrite <-Z.mul_succ_l.
-        apply Zmult_lt_compat_r.
-        apply Z.pow_pos_nonneg; cbn; break_match; lia.
-        cbn; lia.
+        { rewrite Z.lt_add_lt_sub_r.
+          etransitivity; [| apply (weight_dif_mono 1); lia].
+          weight_comp; cbn; break_match; lia. }
+        { cbv [machine_wordsize]. cbn. lia. }
+        { autounfold; cbn [repeat].
+          pose proof (bounds_same (repeat (0, 2 ^ machine_wordsize - 1) n)).
+          rewrite repeat_cons, combine_app_samelength, map_app, fold_right_app;
+          auto. }
+        { erewrite Z.add_comm, <-eval_snoc_S by (rewrite firstn_length; lia).
+          f_equal; f_equal.
+          rewrite <-(firstn_skipn n p) at 1; f_equal.
+          erewrite skipn_nth_default, skipn_all; trivial; lia. }
       Qed.
 
+      Theorem reduce_full_correct (p : list Z) (Hp : n <= length p) :
+          let r := reduce_full base s c n p in
+          (Positional.eval weight (2 * n) p) mod (s - Associational.eval c)
+          = (Positional.eval weight n r) mod (s - Associational.eval c).
+      Proof.
+        cbv [reduce_full]; intros.
+        erewrite <-reduce_S_correct, eval_reduce1; trivial using reduce1_length; try lia.
+        { rewrite n2_sub.
+          weight_comp; try lia.
+          rewrite <-Z.mul_succ_l.
+          apply Zmult_lt_compat_r.
+          apply Z.pow_pos_nonneg; cbn; break_match; lia.
+          cbn; lia. }
+      Qed.
+        
       (* END SECTION REDUCE_FULL *)
+
+      (* SECTION ADDMOD *)
+
+      Theorem add'_correct p q :
+          Datatypes.length p = n -> 
+          Datatypes.length q = n -> 
+          eval weight n (add' base s c n p q) mod (s - Associational.eval c) =
+            (eval weight n p + eval weight n q) mod (s - Associational.eval c).
+      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
+        intros.
+        cbv [add' Let_In].
+        rewrite <-reduce_S_correct; rewrite ?Rows.add_div, ?Rows.add_partitions; push; try lia.
+        f_equal; Z.div_mod_to_equations; lia.
+      Qed.
+
+      Theorem add_correct p q :
+          Datatypes.length p = n -> 
+          Datatypes.length q = n -> 
+          eval weight n (add base s c n p q) mod (s - Associational.eval c) =
+            (eval weight n p + eval weight n q) mod (s - Associational.eval c).
+      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
+        change (add base s c n p q) with (add_cps base s c n p q id); rewrite add_cps_ok.
+        apply add'_correct.
+      Qed.
 
       (* SECTION MULMOD *)
       Theorem mulmod'_correct : forall p q,
@@ -2376,7 +2397,7 @@ Module SolinasReduction.
          reduce_full_cps base s c n sqr f).
 
       Definition squaremod base s c n (p : list Z) :=
-        ltac:(let x := (eval cbv beta delta [squaremod_cps square_no_reduce_cps mul_no_reduce_cps reduce_full_cps reduce1_cps reduce3_cps id] in (@squaremod_cps (list Z) base s c n p id)) in
+        ltac:(let x := (eval cbv beta delta [squaremod_cps square_no_reduce_cps mul_no_reduce_cps reduce_full_cps reduce_S_cps reduce1_cps reduce3_cps id] in (@squaremod_cps (list Z) base s c n p id)) in
               exact x).
 
       Context (base : Z)

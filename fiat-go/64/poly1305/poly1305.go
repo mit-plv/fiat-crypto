@@ -409,69 +409,69 @@ func ToBytes(out1 *[17]uint8, arg1 *TightFieldElement) {
 	var x6 uint1
 	subborrowxU43(&x5, &x6, x4, arg1[2], 0x7ffffffffff)
 	var x7 uint64
-	cmovznzU64(&x7, x6, uint64(0x0), 0xffffffffffffffff)
-	var x8 uint64
-	var x9 uint1
-	addcarryxU44(&x8, &x9, 0x0, x1, (x7 & 0xffffffffffb))
-	var x10 uint64
-	var x11 uint1
-	addcarryxU43(&x10, &x11, x9, x3, (x7 & 0x7ffffffffff))
-	var x12 uint64
-	var x13 uint1
-	addcarryxU43(&x12, &x13, x11, x5, (x7 & 0x7ffffffffff))
-	x14 := (x12 << 7)
-	x15 := (x10 << 4)
-	x16 := (uint8(x8) & 0xff)
-	x17 := (x8 >> 8)
-	x18 := (uint8(x17) & 0xff)
-	x19 := (x17 >> 8)
-	x20 := (uint8(x19) & 0xff)
-	x21 := (x19 >> 8)
-	x22 := (uint8(x21) & 0xff)
-	x23 := (x21 >> 8)
-	x24 := (uint8(x23) & 0xff)
-	x25 := uint8((x23 >> 8))
-	x26 := (x15 + uint64(x25))
-	x27 := (uint8(x26) & 0xff)
-	x28 := (x26 >> 8)
-	x29 := (uint8(x28) & 0xff)
-	x30 := (x28 >> 8)
-	x31 := (uint8(x30) & 0xff)
-	x32 := (x30 >> 8)
-	x33 := (uint8(x32) & 0xff)
-	x34 := (x32 >> 8)
-	x35 := (uint8(x34) & 0xff)
-	x36 := uint8((x34 >> 8))
-	x37 := (x14 + uint64(x36))
-	x38 := (uint8(x37) & 0xff)
-	x39 := (x37 >> 8)
-	x40 := (uint8(x39) & 0xff)
-	x41 := (x39 >> 8)
-	x42 := (uint8(x41) & 0xff)
-	x43 := (x41 >> 8)
-	x44 := (uint8(x43) & 0xff)
-	x45 := (x43 >> 8)
-	x46 := (uint8(x45) & 0xff)
-	x47 := (x45 >> 8)
-	x48 := (uint8(x47) & 0xff)
-	x49 := uint8((x47 >> 8))
-	out1[0] = x16
-	out1[1] = x18
-	out1[2] = x20
-	out1[3] = x22
-	out1[4] = x24
-	out1[5] = x27
-	out1[6] = x29
-	out1[7] = x31
-	out1[8] = x33
-	out1[9] = x35
-	out1[10] = x38
-	out1[11] = x40
-	out1[12] = x42
-	out1[13] = x44
-	out1[14] = x46
-	out1[15] = x48
-	out1[16] = x49
+	x7, _ = bits.Sub64(uint64(0x0), uint64(0x0), uint64(x6))
+	var x9 uint64
+	var x10 uint1
+	addcarryxU44(&x9, &x10, 0x0, x1, (x7 & 0xffffffffffb))
+	var x11 uint64
+	var x12 uint1
+	addcarryxU43(&x11, &x12, x10, x3, (x7 & 0x7ffffffffff))
+	var x13 uint64
+	var x14 uint1
+	addcarryxU43(&x13, &x14, x12, x5, (x7 & 0x7ffffffffff))
+	x15 := (x13 << 7)
+	x16 := (x11 << 4)
+	x17 := (uint8(x9) & 0xff)
+	x18 := (x9 >> 8)
+	x19 := (uint8(x18) & 0xff)
+	x20 := (x18 >> 8)
+	x21 := (uint8(x20) & 0xff)
+	x22 := (x20 >> 8)
+	x23 := (uint8(x22) & 0xff)
+	x24 := (x22 >> 8)
+	x25 := (uint8(x24) & 0xff)
+	x26 := uint8((x24 >> 8))
+	x27 := (x16 + uint64(x26))
+	x28 := (uint8(x27) & 0xff)
+	x29 := (x27 >> 8)
+	x30 := (uint8(x29) & 0xff)
+	x31 := (x29 >> 8)
+	x32 := (uint8(x31) & 0xff)
+	x33 := (x31 >> 8)
+	x34 := (uint8(x33) & 0xff)
+	x35 := (x33 >> 8)
+	x36 := (uint8(x35) & 0xff)
+	x37 := uint8((x35 >> 8))
+	x38 := (x15 + uint64(x37))
+	x39 := (uint8(x38) & 0xff)
+	x40 := (x38 >> 8)
+	x41 := (uint8(x40) & 0xff)
+	x42 := (x40 >> 8)
+	x43 := (uint8(x42) & 0xff)
+	x44 := (x42 >> 8)
+	x45 := (uint8(x44) & 0xff)
+	x46 := (x44 >> 8)
+	x47 := (uint8(x46) & 0xff)
+	x48 := (x46 >> 8)
+	x49 := (uint8(x48) & 0xff)
+	x50 := uint8((x48 >> 8))
+	out1[0] = x17
+	out1[1] = x19
+	out1[2] = x21
+	out1[3] = x23
+	out1[4] = x25
+	out1[5] = x28
+	out1[6] = x30
+	out1[7] = x32
+	out1[8] = x34
+	out1[9] = x36
+	out1[10] = x39
+	out1[11] = x41
+	out1[12] = x43
+	out1[13] = x45
+	out1[14] = x47
+	out1[15] = x49
+	out1[16] = x50
 }
 
 // FromBytes deserializes a field element from bytes in little-endian order.
