@@ -1233,7 +1233,7 @@ Module SolinasReduction.
               (c_pos : Associational.eval c > 0)
               (mod_nz : s - Associational.eval c <> 0)
               (base_nz : base <> 0)
-              (solinas_property : Rows.adjust_s weight (S (S n)) s = (weight n, true))
+              (adjust_SSn : Rows.adjust_s weight (S (S n)) s = (weight n, true))
               (coef_small : weight n / s * Associational.eval c < up_bound).
 
       (* SECTION MUL_NO_REDUCE *)
@@ -1376,21 +1376,21 @@ Module SolinasReduction.
           let coef := Associational.sat_mul_const base [(1, s'/s)] c in
           eval weight m2 (reduce1 base s c m1 m2 p) =
             Associational.eval coef * eval weight (m1 - n) (skipn n p) + eval weight n (firstn n p).
-      Proof using base_nz c_pos coef_small n_gt_1 s_pos solinas_property wprops.
+      Proof using base_nz c_pos coef_small n_gt_1 s_pos adjust_SSn wprops.
         intros p m1 m2 H.
         intros.
         assert (Rows.adjust_s weight (S (S m1)) s =
                   Rows.adjust_s weight (S (S n)) s) as Hadjust.
         { destruct H.
           auto.
-          rewrite solinas_property.
-          eapply adjust_s_finished; try apply solinas_property.
+          rewrite adjust_SSn.
+          eapply adjust_s_finished; try apply adjust_SSn.
           lia.
           lia. }
         cbv [s' coef reduce1].
         destruct (is_bounded_by (repeat (0, 2 ^ machine_wordsize - 1) m1) p) eqn:Heqb; push.
         rewrite Hadjust.
-        rewrite solinas_property.
+        rewrite adjust_SSn.
         cbv [to_associational].
         push.
         rewrite <-(firstn_skipn n p) in Heqb.
@@ -1410,7 +1410,7 @@ Module SolinasReduction.
         lia.
 
         rewrite Hadjust.
-        rewrite solinas_property.
+        rewrite adjust_SSn.
         cbv [to_associational].
         push.
         rewrite <-Z_div_mod_eq_full.
@@ -1426,12 +1426,12 @@ Module SolinasReduction.
           let q := reduce1 base s c m1 m2 p in
           (Positional.eval weight m1 p) mod (s - Associational.eval c)
           = (Positional.eval weight m2 q) mod (s - Associational.eval c).
-      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
+      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos adjust_SSn wprops.
         intros p m1 m2; intros.
         cbv [q].
         rewrite value_reduce1; try lia.
         push.
-        rewrite solinas_property.
+        rewrite adjust_SSn.
         cbn [fst snd].
         match goal with
         | |- context[_ mod (_ - ?c)] =>
@@ -1455,7 +1455,7 @@ Module SolinasReduction.
         lia.
         lia.
         pose proof (adjust_s_invariant (S (S n)) s ltac:(lia)) as Hadj.
-        rewrite solinas_property in Hadj.
+        rewrite adjust_SSn in Hadj.
         intuition.
         push.
         lia.
@@ -1480,8 +1480,8 @@ Module SolinasReduction.
         cbv [reduce1].
         rewrite H.
         push.
-        erewrite adjust_s_finished'; try apply solinas_property.
-        rewrite solinas_property.
+        erewrite adjust_s_finished'; try apply adjust_SSn.
+        rewrite adjust_SSn.
         cbv [to_associational].
         push.
         const_simpl.
@@ -1525,12 +1525,12 @@ Module SolinasReduction.
           let q := reduce1 base s c (S m) m p in
           (Positional.eval weight (S m) p) mod (s - Associational.eval c)
           = (Positional.eval weight m q) mod (s - Associational.eval c).
-      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
+      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos adjust_SSn wprops.
         intros p m H H1 H2 H3 s' coef q.
         cbv [q].
         rewrite value_reduce1'; try lia.
         push.
-        rewrite solinas_property.
+        rewrite adjust_SSn.
         cbn [fst snd].
         match goal with
         | |- context[_ mod (_ - ?c)] =>
@@ -1561,7 +1561,7 @@ Module SolinasReduction.
         lia.
         lia.
         pose proof (adjust_s_invariant (S (S n)) s ltac:(lia)) as Hadj.
-        rewrite solinas_property in Hadj.
+        rewrite adjust_SSn in Hadj.
         intuition.
         push; lia.
         lia.
@@ -1609,7 +1609,7 @@ Module SolinasReduction.
           = (Positional.eval weight n q) mod (s - Associational.eval c).
       Proof.
         intros.
-        rewrite eval_reduce1'; try solve_length p; try lia; [|]; cycle 1.
+        assert (Hlt : weight n / s * Associational.eval c * nth_default 0 p n + eval weight n (firstn n p) < weight n).
         { intuition.
         { rewrite H1.
           rewrite <-firstn_skipn with (n:=(n-1)%nat) (l:=firstn n p).
@@ -1676,77 +1676,9 @@ Module SolinasReduction.
         apply canonical_eval_bounded; auto.
         }
 
-        rewrite value_reduce1'; try solve_length p; try lia; [|]; cycle 1.
-        { intuition.
-          { rewrite H1.
-          rewrite <-firstn_skipn with (n:=(n-1)%nat) (l:=firstn n p).
-          rewrite firstn_firstn by lia.
-          rewrite skipn_nth_default with (d:=0).
-          {
-          rewrite skipn_all.
-          {
-          rewrite nth_default_firstn.
-          destruct le_dec.
-          {
-          destruct lt_dec; [| lia].
-          rewrite H0.
-          cbv [eval to_associational].
-          destruct n eqn:E; [lia|].
-          rewrite seq_snoc.
-          rewrite map_app, combine_app_samelength.
-          {
-          rewrite eval_app.
-          push.
-          pose proof (firstn_skipn n0 p).
-          symmetry in H2.
-          canonical_app p.
-          push' Hcanon_l.
-          rewrite min_l in Hcanon_l by lia.
-          pose proof (canonical_eval_bounded n0 (firstn n0 p) ltac:(auto)).
-          etransitivity.
-          {
-          cbv [eval to_associational] in H4.
-          replace (S n0 - 1)%nat with (n0) by lia.
-          apply Z.add_lt_le_mono; eauto.
-          le_lt; eauto.
-          }
-          cbv [up_bound].
-          rewrite Z.add_sub_assoc.
-          rewrite Z.add_sub_swap.
-          rewrite Z.lt_add_lt_sub_r.
-          apply weight_dif_lt with (n:=0%nat); try lia.
-          weight_comp; simpl; lia.
-          }
-          push.
-          lia.
-          }
-          push.
-          intuition.
-          exfalso.
-          apply n0.
-          unfold canonical_repr in H.
-          lia.
-          }
-          push.
-          lia.
-          }
-          push.
-          unfold canonical_repr in H.
-          lia. }
-        rewrite H1.
-        ring_simplify.
-        pose proof (firstn_skipn n p).
-        symmetry in H0.
-        canonical_app p.
-        push' Hcanon_l.
-        rewrite min_l in Hcanon_l; [|solve_length p].
-        apply canonical_eval_bounded; auto.
-        }
-
-        {
-        rewrite solinas_property.
+        rewrite eval_reduce1', value_reduce1' by (solve_length p || lia).
+        rewrite adjust_SSn.
         push.
-        const_simpl.
         cbv [q reduce3 Let_In].
         assert (Hcanon := H).
         unfold canonical_repr in Hcanon.
@@ -1770,7 +1702,7 @@ Module SolinasReduction.
               [fst (Z.add_get_carry machine_wordsize x y)])
         end.
         { cbv [Z.add_get_carry Z.add_with_get_carry Z.add_with_carry Z.get_carry Let_In].
-          rewrite solinas_property.
+          rewrite adjust_SSn.
           push.
           {
           rewrite !Rows.eval_cons.
@@ -1789,7 +1721,7 @@ Module SolinasReduction.
         rewrite H4.
 
         cbv [Z.add_get_carry Z.add_with_get_carry Z.add_with_carry Z.get_carry Let_In Z.zselect].
-        rewrite solinas_property.
+        rewrite adjust_SSn.
         push.
         rewrite <-firstn_skipn with (l:=(firstn n p)) (n:=1%nat) at 1.
         rewrite firstn_firstn.
@@ -1800,9 +1732,8 @@ Module SolinasReduction.
       {
         (* nth_default 0 p n = 1 *)
         rewrite H3.
-        break_match; [lia|].
+        progress simpl (Z.eqb 1 0); progress cbv match.
         push.
-
         f_equal.
         rewrite Z.mod_small.
       {
@@ -1855,9 +1786,8 @@ Module SolinasReduction.
         }
 
         (* not bounded *)
-        rewrite solinas_property.
+        rewrite adjust_SSn.
         push; push; lia.
-        }
       Qed.
 
       (* END SECTION REDUCE3 *)
@@ -1868,13 +1798,13 @@ Module SolinasReduction.
           length p = (2 * n)%nat ->
           is_bounded_by (repeat (0, 2 ^ machine_wordsize - 1) (2 * n)) p = true->
           canonical_repr (S n) (reduce1 base s c (2*n) (S n) p).
-      Proof using base_nz c_pos coef_small n_gt_1 s_pos solinas_property wprops.
+      Proof using base_nz c_pos coef_small n_gt_1 s_pos adjust_SSn wprops.
         intros p Hlen H.
         cbv [reduce1 canonical_repr].
         rewrite H.
         push.
         intuition.
-        erewrite adjust_s_finished; try apply solinas_property; try lia.
+        erewrite adjust_s_finished; try apply adjust_SSn; try lia.
         push.
         f_equal.
         rewrite Z.mod_small.
@@ -1912,7 +1842,7 @@ Module SolinasReduction.
       Lemma reduce_second_canonical : forall p,
           canonical_repr (S n) p ->
           canonical_repr (S n) (reduce1 base s c (S n) (S n) p).
-      Proof using base_nz c_pos coef_small n_gt_1 s_pos solinas_property wprops.
+      Proof using base_nz c_pos coef_small n_gt_1 s_pos adjust_SSn wprops.
         intros p H.
         cbv [canonical_repr].
         push.
@@ -1920,12 +1850,12 @@ Module SolinasReduction.
         cbv [canonical_repr] in H.
         intuition.
         rewrite value_reduce1.
-        rewrite solinas_property.
+        rewrite adjust_SSn.
         push.
         cbv [reduce1].
         break_match.
         push.
-        erewrite adjust_s_finished'; try eapply solinas_property.
+        erewrite adjust_s_finished'; try eapply adjust_SSn.
         cbv [to_associational].
         rewrite split_p.
         push.
@@ -1969,7 +1899,7 @@ Module SolinasReduction.
           let q := reduce1 base s c (S n) (S n) p in
           (nth_default 0 q (n-1) = 0 /\ nth_default 0 q n = 1 /\ nth_default 0 q 0 < up_bound * up_bound + 1) \/
             nth_default 0 q n = 0.
-      Proof using base_nz c_pos coef_small n_gt_1 s_pos solinas_property wprops.
+      Proof using base_nz c_pos coef_small n_gt_1 s_pos adjust_SSn wprops.
         intros p ? ? q.
         pose proof (reduce_second_canonical p ltac:(auto)) as Hcanonq.
         fold q in Hcanonq.
@@ -1995,7 +1925,7 @@ Module SolinasReduction.
         cbv [q].
         rewrite value_reduce1.
         const_simpl.
-        rewrite solinas_property.
+        rewrite adjust_SSn.
         push.
         rewrite <-Zplus_diag_eq_mult_2.
         solve_ineq.
@@ -2064,7 +1994,7 @@ Module SolinasReduction.
         rewrite Z.lt_sub_lt_add_l.
         cbv [q].
         rewrite value_reduce1.
-        rewrite solinas_property.
+        rewrite adjust_SSn.
         push.
         const_simpl.
         rewrite Z.add_comm.
@@ -2132,7 +2062,7 @@ Module SolinasReduction.
         assert (eval weight (S n) q = weight n / s * Associational.eval c * nth_default 0 p n + eval weight n (firstn n p)).
         { unfold q at 1.
           rewrite value_reduce1.
-          rewrite solinas_property.
+          rewrite adjust_SSn.
           push.
           const_simpl.
           unfold eval at 1.
@@ -2325,7 +2255,7 @@ Module SolinasReduction.
           Datatypes.length q = n -> 
           eval weight n (add' base s c n p q) mod (s - Associational.eval c) =
             (eval weight n p + eval weight n q) mod (s - Associational.eval c).
-      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
+      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos adjust_SSn wprops.
         intros.
         cbv [add' Let_In].
         rewrite <-reduce_S_correct; rewrite ?Rows.add_div, ?Rows.add_partitions; push; try lia.
@@ -2337,7 +2267,7 @@ Module SolinasReduction.
           Datatypes.length q = n -> 
           eval weight n (add base s c n p q) mod (s - Associational.eval c) =
             (eval weight n p + eval weight n q) mod (s - Associational.eval c).
-      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
+      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos adjust_SSn wprops.
         change (add base s c n p q) with (add_cps base s c n p q id); rewrite add_cps_ok.
         apply add'_correct.
       Qed.
@@ -2346,7 +2276,7 @@ Module SolinasReduction.
       Theorem mulmod'_correct : forall p q,
           Positional.eval weight n (mulmod' base s c n p q) mod (s - Associational.eval c) =
             (Positional.eval weight n p * Positional.eval weight n q) mod (s - Associational.eval c).
-      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
+      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos adjust_SSn wprops.
         intros.
         cbv [mulmod'].
         rewrite <-reduce_full_correct; push; lia.
@@ -2355,7 +2285,7 @@ Module SolinasReduction.
       Theorem mulmod_correct : forall p q,
           Positional.eval weight n (mulmod base s c n p q) mod (s - Associational.eval c) =
             (Positional.eval weight n p * Positional.eval weight n q) mod (s - Associational.eval c).
-      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
+      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos adjust_SSn wprops.
         intros.
         rewrite mulmod_cps_conv.
         apply mulmod'_correct.
@@ -2445,7 +2375,7 @@ Module SolinasReduction.
               (c_pos : Associational.eval c > 0)
               (mod_nz : s - Associational.eval c <> 0)
               (base_nz : base <> 0)
-              (solinas_property : Rows.adjust_s weight (S (S n)) s = (weight n, true))
+              (adjust_SSn : Rows.adjust_s weight (S (S n)) s = (weight n, true))
               (coef_small : weight n / s * Associational.eval c < up_bound).
 
       Lemma square_no_reduce_cps_ok {T} (f : list Z -> T) : forall p,
@@ -2827,7 +2757,7 @@ Module SolinasReduction.
       Lemma squaremod'_correct : forall p,
           Positional.eval weight n (squaremod' base s c n p) mod (s - Associational.eval c) =
             (Positional.eval weight n p * Positional.eval weight n p) mod (s - Associational.eval c).
-      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
+      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos adjust_SSn wprops.
         intros.
         cbv [squaremod'].
         rewrite <-reduce_full_correct.
@@ -2841,7 +2771,7 @@ Module SolinasReduction.
       Theorem squaremod_correct : forall p ,
           Positional.eval weight n (squaremod base s c n p) mod (s - Associational.eval c) =
             (Positional.eval weight n p * Positional.eval weight n p) mod (s - Associational.eval c).
-      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos solinas_property wprops.
+      Proof using base_nz c_pos coef_small mod_nz n_gt_1 s_pos adjust_SSn wprops.
         intros.
         rewrite squaremod_cps_conv.
         apply squaremod'_correct.
