@@ -1588,6 +1588,7 @@ Module SolinasReduction.
         unfold eval at 1.
         cbv [to_associational].
         replace m with ((length (p ++ [x])) + (m - length (p ++ [x])))%nat.
+        {
         rewrite seq_app.
         rewrite map_app.
         rewrite combine_truncate_l.
@@ -1596,6 +1597,7 @@ Module SolinasReduction.
         reflexivity.
         push.
         push.
+        }
         lia.
       Qed.
 
@@ -1607,8 +1609,141 @@ Module SolinasReduction.
           = (Positional.eval weight n q) mod (s - Associational.eval c).
       Proof.
         intros.
-        rewrite eval_reduce1'.
-        rewrite value_reduce1'.
+        rewrite eval_reduce1'; try solve_length p; try lia; [|]; cycle 1.
+        { intuition.
+        { rewrite H1.
+          rewrite <-firstn_skipn with (n:=(n-1)%nat) (l:=firstn n p).
+          rewrite firstn_firstn by lia.
+          rewrite skipn_nth_default with (d:=0).
+          {
+          rewrite skipn_all.
+          {
+          rewrite nth_default_firstn.
+          destruct le_dec.
+          {
+          destruct lt_dec; [| lia].
+          rewrite H0.
+          cbv [eval to_associational].
+          destruct n eqn:E; [lia|].
+          rewrite seq_snoc.
+          rewrite map_app, combine_app_samelength.
+          {
+          rewrite eval_app.
+          push.
+          pose proof (firstn_skipn n0 p).
+          symmetry in H2.
+          canonical_app p.
+          push' Hcanon_l.
+          rewrite min_l in Hcanon_l by lia.
+          pose proof (canonical_eval_bounded n0 (firstn n0 p) ltac:(auto)).
+          etransitivity.
+          {
+          cbv [eval to_associational] in H4.
+          replace (S n0 - 1)%nat with (n0) by lia.
+          apply Z.add_lt_le_mono; eauto.
+          le_lt; eauto.
+          }
+          cbv [up_bound].
+          rewrite Z.add_sub_assoc.
+          rewrite Z.add_sub_swap.
+          rewrite Z.lt_add_lt_sub_r.
+          apply weight_dif_lt with (n:=0%nat); try lia.
+          weight_comp; simpl; lia.
+          }
+          push.
+          lia.
+          }
+          push.
+          intuition.
+          exfalso.
+          apply n0.
+          unfold canonical_repr in H.
+          lia.
+          }
+          push.
+          lia.
+        }
+          push.
+          unfold canonical_repr in H.
+          lia. }
+        rewrite H1.
+        ring_simplify.
+        pose proof (firstn_skipn n p).
+        symmetry in H0.
+        canonical_app p.
+        push' Hcanon_l.
+        rewrite min_l in Hcanon_l; [|solve_length p].
+        apply canonical_eval_bounded; auto.
+        }
+
+        rewrite value_reduce1'; try solve_length p; try lia; [|]; cycle 1.
+        { intuition.
+          { rewrite H1.
+          rewrite <-firstn_skipn with (n:=(n-1)%nat) (l:=firstn n p).
+          rewrite firstn_firstn by lia.
+          rewrite skipn_nth_default with (d:=0).
+          {
+          rewrite skipn_all.
+          {
+          rewrite nth_default_firstn.
+          destruct le_dec.
+          {
+          destruct lt_dec; [| lia].
+          rewrite H0.
+          cbv [eval to_associational].
+          destruct n eqn:E; [lia|].
+          rewrite seq_snoc.
+          rewrite map_app, combine_app_samelength.
+          {
+          rewrite eval_app.
+          push.
+          pose proof (firstn_skipn n0 p).
+          symmetry in H2.
+          canonical_app p.
+          push' Hcanon_l.
+          rewrite min_l in Hcanon_l by lia.
+          pose proof (canonical_eval_bounded n0 (firstn n0 p) ltac:(auto)).
+          etransitivity.
+          {
+          cbv [eval to_associational] in H4.
+          replace (S n0 - 1)%nat with (n0) by lia.
+          apply Z.add_lt_le_mono; eauto.
+          le_lt; eauto.
+          }
+          cbv [up_bound].
+          rewrite Z.add_sub_assoc.
+          rewrite Z.add_sub_swap.
+          rewrite Z.lt_add_lt_sub_r.
+          apply weight_dif_lt with (n:=0%nat); try lia.
+          weight_comp; simpl; lia.
+          }
+          push.
+          lia.
+          }
+          push.
+          intuition.
+          exfalso.
+          apply n0.
+          unfold canonical_repr in H.
+          lia.
+          }
+          push.
+          lia.
+          }
+          push.
+          unfold canonical_repr in H.
+          lia. }
+        rewrite H1.
+        ring_simplify.
+        pose proof (firstn_skipn n p).
+        symmetry in H0.
+        canonical_app p.
+        push' Hcanon_l.
+        rewrite min_l in Hcanon_l; [|solve_length p].
+        apply canonical_eval_bounded; auto.
+        }
+
+        {
         rewrite solinas_property.
         push.
         const_simpl.
@@ -1618,13 +1753,15 @@ Module SolinasReduction.
         destruct Hcanon.
         break_match.
 
-        (* bounded *)
+        { (* bounded *)
         pose proof (is_bounded_by_nth 0 _ _ Heqb ltac:(lia)) .
         specialize (H3 ltac:(push; try lia)).
         rewrite nth_default_app in H3.
         destruct (lt_dec 0 (Datatypes.length (repeat (0, 2 ^ machine_wordsize - 1) n))).
+        {
         rewrite nth_default_repeat in H3.
         destruct (dec (0 < n)%nat).
+        {
         push' H3.
 
         match goal with
@@ -1635,18 +1772,20 @@ Module SolinasReduction.
         { cbv [Z.add_get_carry Z.add_with_get_carry Z.add_with_carry Z.get_carry Let_In].
           rewrite solinas_property.
           push.
+          {
           rewrite !Rows.eval_cons.
           rewrite Rows.eval_nil.
           push.
           rewrite Partition.partition_step.
           push.
+          }
           intros.
           cbn in H4.
           intuition.
-          rewrite <-H7; push.
-          rewrite <-H4; push.
-          rewrite <-H0; push.
-          rewrite <-H4; push. }
+          { rewrite <-H7; push. }
+          { rewrite <-H4; push. }
+          { rewrite <-H0; push. }
+          { rewrite <-H4; push. } }
         rewrite H4.
 
         cbv [Z.add_get_carry Z.add_with_get_carry Z.add_with_carry Z.get_carry Let_In Z.zselect].
@@ -1654,8 +1793,11 @@ Module SolinasReduction.
         push.
         rewrite <-firstn_skipn with (l:=(firstn n p)) (n:=1%nat) at 1.
         rewrite firstn_firstn.
+      {
         rewrite firstn_nth_default_0.
+      {
         intuition.
+      {
         (* nth_default 0 p n = 1 *)
         rewrite H3.
         break_match; [lia|].
@@ -1663,166 +1805,59 @@ Module SolinasReduction.
 
         f_equal.
         rewrite Z.mod_small.
+      {
         cbv [eval to_associational].
-        destruct n eqn:E1.
-        lia.
+        destruct n eqn:E1; try lia.
         cbn [seq map].
         replace (weight 0 :: map weight (seq 1 n0)) with ([weight 0] ++ map weight (seq 1 n0)) by auto.
-        rewrite !combine_app_samelength.
+        rewrite !combine_app_samelength; try (cbn; lia).
+      {
         cbn [combine].
         rewrite !eval_app.
         push.
         lia.
-        cbn; lia.
-        cbn; lia.
+      }
+      }
         solve_ineq.
         etransitivity.
+      {
         apply Z.add_lt_mono.
+      {
         eauto.
+      }
         eauto.
+      }
         cbv [up_bound]; weight_comp; simpl; lia.
+      }
 
         (* nth_default 0 p n = 0 *)
         rewrite H3.
         break_match; [| lia].
         push.
         f_equal.
-        rewrite Z.mod_small.
-        lia.
+        rewrite Z.mod_small; try lia.
+      }
         solve_ineq.
+        }
         lia.
+        }
         lia.
-        lia.
+        }
         intuition.
+      {
         push' n0.
         lia.
-        push' n0.
+        }
+        {
+          push' n0.
         lia.
+        }
+        }
 
         (* not bounded *)
         rewrite solinas_property.
-        push.
-        push; lia.
-        push; lia.
-        lia.
-        solve_length p.
-        lia.
-
-        intuition.
-        { rewrite H1.
-          rewrite <-firstn_skipn with (n:=(n-1)%nat) (l:=firstn n p).
-          rewrite firstn_firstn by lia.
-          rewrite skipn_nth_default with (d:=0).
-          rewrite skipn_all.
-          rewrite nth_default_firstn.
-          destruct le_dec.
-          destruct lt_dec; [| lia].
-          rewrite H0.
-          cbv [eval to_associational].
-          destruct n eqn:E; [lia|].
-          rewrite seq_snoc.
-          rewrite map_app, combine_app_samelength.
-          rewrite eval_app.
-          push.
-          pose proof (firstn_skipn n0 p).
-          symmetry in H2.
-          canonical_app p.
-          push' Hcanon_l.
-          rewrite min_l in Hcanon_l by lia.
-          pose proof (canonical_eval_bounded n0 (firstn n0 p) ltac:(auto)).
-          etransitivity.
-          cbv [eval to_associational] in H4.
-          replace (S n0 - 1)%nat with (n0) by lia.
-          apply Z.add_lt_le_mono.
-          eauto.
-          le_lt; eauto.
-          cbv [up_bound].
-          rewrite Z.add_sub_assoc.
-          rewrite Z.add_sub_swap.
-          rewrite Z.lt_add_lt_sub_r.
-          apply weight_dif_lt with (n:=0%nat).
-          lia.
-          weight_comp; simpl; lia.
-          push.
-          lia.
-          push.
-          intuition.
-          exfalso.
-          apply n0.
-          unfold canonical_repr in H.
-          lia.
-          push.
-          lia.
-          push.
-          unfold canonical_repr in H.
-          lia. }
-        rewrite H1.
-        ring_simplify.
-        pose proof (firstn_skipn n p).
-        symmetry in H0.
-        canonical_app p.
-        push' Hcanon_l.
-        rewrite min_l in Hcanon_l; [|solve_length p].
-        apply canonical_eval_bounded; auto.
-        lia.
-        solve_length p.
-        lia.
-        intuition.
-        { rewrite H1.
-          rewrite <-firstn_skipn with (n:=(n-1)%nat) (l:=firstn n p).
-          rewrite firstn_firstn by lia.
-          rewrite skipn_nth_default with (d:=0).
-          rewrite skipn_all.
-          rewrite nth_default_firstn.
-          destruct le_dec.
-          destruct lt_dec; [| lia].
-          rewrite H0.
-          cbv [eval to_associational].
-          destruct n eqn:E; [lia|].
-          rewrite seq_snoc.
-          rewrite map_app, combine_app_samelength.
-          rewrite eval_app.
-          push.
-          pose proof (firstn_skipn n0 p).
-          symmetry in H2.
-          canonical_app p.
-          push' Hcanon_l.
-          rewrite min_l in Hcanon_l by lia.
-          pose proof (canonical_eval_bounded n0 (firstn n0 p) ltac:(auto)).
-          etransitivity.
-          cbv [eval to_associational] in H4.
-          replace (S n0 - 1)%nat with (n0) by lia.
-          apply Z.add_lt_le_mono.
-          eauto.
-          le_lt; eauto.
-          cbv [up_bound].
-          rewrite Z.add_sub_assoc.
-          rewrite Z.add_sub_swap.
-          rewrite Z.lt_add_lt_sub_r.
-          apply weight_dif_lt with (n:=0%nat).
-          lia.
-          weight_comp; simpl; lia.
-          push.
-          lia.
-          push.
-          intuition.
-          exfalso.
-          apply n0.
-          unfold canonical_repr in H.
-          lia.
-          push.
-          lia.
-          push.
-          unfold canonical_repr in H.
-          lia. }
-        rewrite H1.
-        ring_simplify.
-        pose proof (firstn_skipn n p).
-        symmetry in H0.
-        canonical_app p.
-        push' Hcanon_l.
-        rewrite min_l in Hcanon_l; [|solve_length p].
-        apply canonical_eval_bounded; auto.
+        push; push; lia.
+        }
       Qed.
 
       (* END SECTION REDUCE3 *)

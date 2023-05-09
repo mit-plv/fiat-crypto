@@ -805,22 +805,22 @@ func Sub(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement,
 	var x8 uint64
 	x7, x8 = bits.Sub64(arg1[3], arg2[3], uint64(uint1(x6)))
 	var x9 uint64
-	cmovznzU64(&x9, uint1(x8), uint64(0x0), 0xffffffffffffffff)
-	var x10 uint64
+	x9, _ = bits.Sub64(uint64(0x0), uint64(0x0), uint64(uint1(x8)))
 	var x11 uint64
-	x10, x11 = bits.Add64(x1, (x9 & 0xbfd25e8cd0364141), uint64(0x0))
 	var x12 uint64
+	x11, x12 = bits.Add64(x1, (x9 & 0xbfd25e8cd0364141), uint64(0x0))
 	var x13 uint64
-	x12, x13 = bits.Add64(x3, (x9 & 0xbaaedce6af48a03b), uint64(uint1(x11)))
 	var x14 uint64
+	x13, x14 = bits.Add64(x3, (x9 & 0xbaaedce6af48a03b), uint64(uint1(x12)))
 	var x15 uint64
-	x14, x15 = bits.Add64(x5, (x9 & 0xfffffffffffffffe), uint64(uint1(x13)))
 	var x16 uint64
-	x16, _ = bits.Add64(x7, x9, uint64(uint1(x15)))
-	out1[0] = x10
-	out1[1] = x12
-	out1[2] = x14
-	out1[3] = x16
+	x15, x16 = bits.Add64(x5, (x9 & 0xfffffffffffffffe), uint64(uint1(x14)))
+	var x17 uint64
+	x17, _ = bits.Add64(x7, x9, uint64(uint1(x16)))
+	out1[0] = x11
+	out1[1] = x13
+	out1[2] = x15
+	out1[3] = x17
 }
 
 // Opp negates a field element in the Montgomery domain.
@@ -845,22 +845,22 @@ func Opp(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement)
 	var x8 uint64
 	x7, x8 = bits.Sub64(uint64(0x0), arg1[3], uint64(uint1(x6)))
 	var x9 uint64
-	cmovznzU64(&x9, uint1(x8), uint64(0x0), 0xffffffffffffffff)
-	var x10 uint64
+	x9, _ = bits.Sub64(uint64(0x0), uint64(0x0), uint64(uint1(x8)))
 	var x11 uint64
-	x10, x11 = bits.Add64(x1, (x9 & 0xbfd25e8cd0364141), uint64(0x0))
 	var x12 uint64
+	x11, x12 = bits.Add64(x1, (x9 & 0xbfd25e8cd0364141), uint64(0x0))
 	var x13 uint64
-	x12, x13 = bits.Add64(x3, (x9 & 0xbaaedce6af48a03b), uint64(uint1(x11)))
 	var x14 uint64
+	x13, x14 = bits.Add64(x3, (x9 & 0xbaaedce6af48a03b), uint64(uint1(x12)))
 	var x15 uint64
-	x14, x15 = bits.Add64(x5, (x9 & 0xfffffffffffffffe), uint64(uint1(x13)))
 	var x16 uint64
-	x16, _ = bits.Add64(x7, x9, uint64(uint1(x15)))
-	out1[0] = x10
-	out1[1] = x12
-	out1[2] = x14
-	out1[3] = x16
+	x15, x16 = bits.Add64(x5, (x9 & 0xfffffffffffffffe), uint64(uint1(x14)))
+	var x17 uint64
+	x17, _ = bits.Add64(x7, x9, uint64(uint1(x16)))
+	out1[0] = x11
+	out1[1] = x13
+	out1[2] = x15
+	out1[3] = x17
 }
 
 // FromMontgomery translates a field element out of the Montgomery domain.
@@ -1771,127 +1771,127 @@ func Divstep(out1 *uint64, out2 *[5]uint64, out3 *[5]uint64, out4 *[4]uint64, ou
 	var x60 uint64
 	x59, x60 = bits.Sub64(uint64(0x0), x49, uint64(uint1(x58)))
 	var x61 uint64
-	cmovznzU64(&x61, uint1(x60), uint64(0x0), 0xffffffffffffffff)
-	var x62 uint64
+	x61, _ = bits.Sub64(uint64(0x0), uint64(0x0), uint64(uint1(x60)))
 	var x63 uint64
-	x62, x63 = bits.Add64(x53, (x61 & 0xbfd25e8cd0364141), uint64(0x0))
 	var x64 uint64
+	x63, x64 = bits.Add64(x53, (x61 & 0xbfd25e8cd0364141), uint64(0x0))
 	var x65 uint64
-	x64, x65 = bits.Add64(x55, (x61 & 0xbaaedce6af48a03b), uint64(uint1(x63)))
 	var x66 uint64
+	x65, x66 = bits.Add64(x55, (x61 & 0xbaaedce6af48a03b), uint64(uint1(x64)))
 	var x67 uint64
-	x66, x67 = bits.Add64(x57, (x61 & 0xfffffffffffffffe), uint64(uint1(x65)))
 	var x68 uint64
-	x68, _ = bits.Add64(x59, x61, uint64(uint1(x67)))
-	var x70 uint64
-	cmovznzU64(&x70, x3, arg5[0], x62)
+	x67, x68 = bits.Add64(x57, (x61 & 0xfffffffffffffffe), uint64(uint1(x66)))
+	var x69 uint64
+	x69, _ = bits.Add64(x59, x61, uint64(uint1(x68)))
 	var x71 uint64
-	cmovznzU64(&x71, x3, arg5[1], x64)
+	cmovznzU64(&x71, x3, arg5[0], x63)
 	var x72 uint64
-	cmovznzU64(&x72, x3, arg5[2], x66)
+	cmovznzU64(&x72, x3, arg5[1], x65)
 	var x73 uint64
-	cmovznzU64(&x73, x3, arg5[3], x68)
-	x74 := (uint1(x22) & 0x1)
-	var x75 uint64
-	cmovznzU64(&x75, x74, uint64(0x0), x7)
+	cmovznzU64(&x73, x3, arg5[2], x67)
+	var x74 uint64
+	cmovznzU64(&x74, x3, arg5[3], x69)
+	x75 := (uint1(x22) & 0x1)
 	var x76 uint64
-	cmovznzU64(&x76, x74, uint64(0x0), x8)
+	cmovznzU64(&x76, x75, uint64(0x0), x7)
 	var x77 uint64
-	cmovznzU64(&x77, x74, uint64(0x0), x9)
+	cmovznzU64(&x77, x75, uint64(0x0), x8)
 	var x78 uint64
-	cmovznzU64(&x78, x74, uint64(0x0), x10)
+	cmovznzU64(&x78, x75, uint64(0x0), x9)
 	var x79 uint64
-	cmovznzU64(&x79, x74, uint64(0x0), x11)
+	cmovznzU64(&x79, x75, uint64(0x0), x10)
 	var x80 uint64
+	cmovznzU64(&x80, x75, uint64(0x0), x11)
 	var x81 uint64
-	x80, x81 = bits.Add64(x22, x75, uint64(0x0))
 	var x82 uint64
+	x81, x82 = bits.Add64(x22, x76, uint64(0x0))
 	var x83 uint64
-	x82, x83 = bits.Add64(x23, x76, uint64(uint1(x81)))
 	var x84 uint64
+	x83, x84 = bits.Add64(x23, x77, uint64(uint1(x82)))
 	var x85 uint64
-	x84, x85 = bits.Add64(x24, x77, uint64(uint1(x83)))
 	var x86 uint64
+	x85, x86 = bits.Add64(x24, x78, uint64(uint1(x84)))
 	var x87 uint64
-	x86, x87 = bits.Add64(x25, x78, uint64(uint1(x85)))
 	var x88 uint64
-	x88, _ = bits.Add64(x26, x79, uint64(uint1(x87)))
-	var x90 uint64
-	cmovznzU64(&x90, x74, uint64(0x0), x27)
+	x87, x88 = bits.Add64(x25, x79, uint64(uint1(x86)))
+	var x89 uint64
+	x89, _ = bits.Add64(x26, x80, uint64(uint1(x88)))
 	var x91 uint64
-	cmovznzU64(&x91, x74, uint64(0x0), x28)
+	cmovznzU64(&x91, x75, uint64(0x0), x27)
 	var x92 uint64
-	cmovznzU64(&x92, x74, uint64(0x0), x29)
+	cmovznzU64(&x92, x75, uint64(0x0), x28)
 	var x93 uint64
-	cmovznzU64(&x93, x74, uint64(0x0), x30)
+	cmovznzU64(&x93, x75, uint64(0x0), x29)
 	var x94 uint64
+	cmovznzU64(&x94, x75, uint64(0x0), x30)
 	var x95 uint64
-	x94, x95 = bits.Add64(x70, x90, uint64(0x0))
 	var x96 uint64
+	x95, x96 = bits.Add64(x71, x91, uint64(0x0))
 	var x97 uint64
-	x96, x97 = bits.Add64(x71, x91, uint64(uint1(x95)))
 	var x98 uint64
+	x97, x98 = bits.Add64(x72, x92, uint64(uint1(x96)))
 	var x99 uint64
-	x98, x99 = bits.Add64(x72, x92, uint64(uint1(x97)))
 	var x100 uint64
+	x99, x100 = bits.Add64(x73, x93, uint64(uint1(x98)))
 	var x101 uint64
-	x100, x101 = bits.Add64(x73, x93, uint64(uint1(x99)))
 	var x102 uint64
+	x101, x102 = bits.Add64(x74, x94, uint64(uint1(x100)))
 	var x103 uint64
-	x102, x103 = bits.Sub64(x94, 0xbfd25e8cd0364141, uint64(0x0))
 	var x104 uint64
+	x103, x104 = bits.Sub64(x95, 0xbfd25e8cd0364141, uint64(0x0))
 	var x105 uint64
-	x104, x105 = bits.Sub64(x96, 0xbaaedce6af48a03b, uint64(uint1(x103)))
 	var x106 uint64
+	x105, x106 = bits.Sub64(x97, 0xbaaedce6af48a03b, uint64(uint1(x104)))
 	var x107 uint64
-	x106, x107 = bits.Sub64(x98, 0xfffffffffffffffe, uint64(uint1(x105)))
 	var x108 uint64
+	x107, x108 = bits.Sub64(x99, 0xfffffffffffffffe, uint64(uint1(x106)))
 	var x109 uint64
-	x108, x109 = bits.Sub64(x100, 0xffffffffffffffff, uint64(uint1(x107)))
-	var x111 uint64
-	_, x111 = bits.Sub64(uint64(uint1(x101)), uint64(0x0), uint64(uint1(x109)))
+	var x110 uint64
+	x109, x110 = bits.Sub64(x101, 0xffffffffffffffff, uint64(uint1(x108)))
 	var x112 uint64
-	x112, _ = bits.Add64(x6, uint64(0x1), uint64(0x0))
-	x114 := ((x80 >> 1) | ((x82 << 63) & 0xffffffffffffffff))
-	x115 := ((x82 >> 1) | ((x84 << 63) & 0xffffffffffffffff))
-	x116 := ((x84 >> 1) | ((x86 << 63) & 0xffffffffffffffff))
-	x117 := ((x86 >> 1) | ((x88 << 63) & 0xffffffffffffffff))
-	x118 := ((x88 & 0x8000000000000000) | (x88 >> 1))
-	var x119 uint64
-	cmovznzU64(&x119, uint1(x48), x39, x31)
+	_, x112 = bits.Sub64(uint64(uint1(x102)), uint64(0x0), uint64(uint1(x110)))
+	var x113 uint64
+	x113, _ = bits.Add64(x6, uint64(0x1), uint64(0x0))
+	x115 := ((x81 >> 1) | ((x83 << 63) & 0xffffffffffffffff))
+	x116 := ((x83 >> 1) | ((x85 << 63) & 0xffffffffffffffff))
+	x117 := ((x85 >> 1) | ((x87 << 63) & 0xffffffffffffffff))
+	x118 := ((x87 >> 1) | ((x89 << 63) & 0xffffffffffffffff))
+	x119 := ((x89 & 0x8000000000000000) | (x89 >> 1))
 	var x120 uint64
-	cmovznzU64(&x120, uint1(x48), x41, x33)
+	cmovznzU64(&x120, uint1(x48), x39, x31)
 	var x121 uint64
-	cmovznzU64(&x121, uint1(x48), x43, x35)
+	cmovznzU64(&x121, uint1(x48), x41, x33)
 	var x122 uint64
-	cmovznzU64(&x122, uint1(x48), x45, x37)
+	cmovznzU64(&x122, uint1(x48), x43, x35)
 	var x123 uint64
-	cmovznzU64(&x123, uint1(x111), x102, x94)
+	cmovznzU64(&x123, uint1(x48), x45, x37)
 	var x124 uint64
-	cmovznzU64(&x124, uint1(x111), x104, x96)
+	cmovznzU64(&x124, uint1(x112), x103, x95)
 	var x125 uint64
-	cmovznzU64(&x125, uint1(x111), x106, x98)
+	cmovznzU64(&x125, uint1(x112), x105, x97)
 	var x126 uint64
-	cmovznzU64(&x126, uint1(x111), x108, x100)
-	*out1 = x112
+	cmovznzU64(&x126, uint1(x112), x107, x99)
+	var x127 uint64
+	cmovznzU64(&x127, uint1(x112), x109, x101)
+	*out1 = x113
 	out2[0] = x7
 	out2[1] = x8
 	out2[2] = x9
 	out2[3] = x10
 	out2[4] = x11
-	out3[0] = x114
-	out3[1] = x115
-	out3[2] = x116
-	out3[3] = x117
-	out3[4] = x118
-	out4[0] = x119
-	out4[1] = x120
-	out4[2] = x121
-	out4[3] = x122
-	out5[0] = x123
-	out5[1] = x124
-	out5[2] = x125
-	out5[3] = x126
+	out3[0] = x115
+	out3[1] = x116
+	out3[2] = x117
+	out3[3] = x118
+	out3[4] = x119
+	out4[0] = x120
+	out4[1] = x121
+	out4[2] = x122
+	out4[3] = x123
+	out5[0] = x124
+	out5[1] = x125
+	out5[2] = x126
+	out5[3] = x127
 }
 
 // DivstepPrecomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form).
