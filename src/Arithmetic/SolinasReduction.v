@@ -869,18 +869,11 @@ Module SolinasReduction.
 
     (* S n -> n limbs *)
     Definition reduce3 base s c n (p : list Z) :=
-      let bound := (0, 2^machine_wordsize-1) in
-      let bounds := (repeat bound n) ++ [(0, 1)] in
       let s' := fst (Saturated.Rows.adjust_s weight (S (S n)) s) in
       let coef_a := Saturated.Associational.sat_mul_const base [(1, s'/s)] c in
       let coef := Associational.eval coef_a in
       dlet_nd hi := Z.zselect (nth_default 0 p n) 0 coef in
-          let lo := Saturated.Rows.flatten weight 1 [ [hi]; [nth_default 0 p 0] ] in
-          if (is_bounded_by bounds p) then
-            (fst lo) ++ (skipn 1 (firstn n p))
-          else
-            let hi' := coef * (nth_default 0 p n) in
-            add_to_nth 0 hi' (firstn n p).
+      fst (Z.add_get_carry_full base hi (nth_default 0 p 0)) :: skipn 1 (firstn n p).
 
     Definition reduce_S base s c n (p : list Z) :=
       let r2 := reduce1 base s c (S n) (S n) p in
@@ -927,18 +920,8 @@ Module SolinasReduction.
     Qed.
 
     Definition reduce3_cps {T} base s c n (p : list Z) (f : list Z -> T) :=
-      let bound := (0, 2^machine_wordsize-1) in
-      let bounds := (repeat bound n) ++ [(0, 1)] in
-      let s' := fst (Saturated.Rows.adjust_s weight (S (S n)) s) in
-      let coef_a := Saturated.Associational.sat_mul_const base [(1, s'/s)] c in
-      let coef := Associational.eval coef_a in
-      dlet_nd hi := Z.zselect (nth_default 0 p n) 0 coef in
-          let lo := Saturated.Rows.flatten weight 1 [ [hi]; [nth_default 0 p 0] ] in
-          if (is_bounded_by bounds p) then
-            f ((fst lo) ++ (skipn 1 (firstn n p)))
-          else
-            let hi' := coef * (nth_default 0 p n) in
-            f (add_to_nth 0 hi' (firstn n p)).
+      f (reduce3 base s c n p).
+    (* FIXME *)
 
     Lemma reduce3_cps_ok {T} base s c n (f : list Z -> T) : forall p,
         reduce3_cps base s c n p f = f (reduce3 base s c n p).
@@ -1676,80 +1659,30 @@ Module SolinasReduction.
         apply canonical_eval_bounded; auto.
         }
 
-        rewrite eval_reduce1', value_reduce1' by (solve_length p || lia).
-        rewrite adjust_SSn.
-        push.
-        cbv [q reduce3 Let_In].
-        assert (Hcanon := H).
-        unfold canonical_repr in Hcanon.
-        destruct Hcanon.
+        pose proof H; destruct H.
+        rewrite eval_reduce1', value_reduce1', adjust_SSn by (solve_length p || lia).
+        cbv [q reduce3 Let_In]; rewrite adjust_SSn; push; try lia.
         break_match.
 
         { (* bounded *)
-        pose proof (is_bounded_by_nth 0 _ _ Heqb ltac:(lia)) .
-        specialize (H3 ltac:(push; try lia)).
-        rewrite nth_default_app in H3.
-        destruct (lt_dec 0 (Datatypes.length (repeat (0, 2 ^ machine_wordsize - 1) n))).
-        {
-        rewrite nth_default_repeat in H3.
-        destruct (dec (0 < n)%nat).
-        {
-        push' H3.
-
-        match goal with
-        | |- context[fst (Rows.flatten weight 1 [ [?x]; [?y] ])] =>
-            assert (fst (Rows.flatten weight 1 [ [x]; [y] ]) =
-              [fst (Z.add_get_carry machine_wordsize x y)])
-        end.
-        { cbv [Z.add_get_carry Z.add_with_get_carry Z.add_with_carry Z.get_carry Let_In].
-          rewrite adjust_SSn.
-          push.
-          {
-          rewrite !Rows.eval_cons.
-          rewrite Rows.eval_nil.
-          push.
-          rewrite Partition.partition_step.
-          push.
-          }
-          intros.
-          cbn in H4.
-          intuition.
-          { rewrite <-H7; push. }
-          { rewrite <-H4; push. }
-          { rewrite <-H0; push. }
-          { rewrite <-H4; push. } }
-        rewrite H4.
-
-        cbv [Z.add_get_carry Z.add_with_get_carry Z.add_with_carry Z.get_carry Let_In Z.zselect].
-        rewrite adjust_SSn.
-        push.
-        rewrite <-firstn_skipn with (l:=(firstn n p)) (n:=1%nat) at 1.
-        rewrite firstn_firstn.
-      {
-        rewrite firstn_nth_default_0.
-      {
-        intuition.
+          case H0 as [(?&?&?)|].
       {
         (* nth_default 0 p n = 1 *)
         rewrite H3.
-        progress simpl (Z.eqb 1 0); progress cbv match.
+        cbv [Z.zselect]. progress simpl (Z.eqb 1 0); progress cbv match.
         push.
         f_equal.
-        rewrite Z.mod_small.
+        rewrite Z.add_get_carry_full_mod, Z.mod_small.
       {
-        cbv [eval to_associational].
         destruct n eqn:E1; try lia.
-        cbn [seq map].
-        replace (weight 0 :: map weight (seq 1 n0)) with ([weight 0] ++ map weight (seq 1 n0)) by auto.
-        rewrite !combine_app_samelength; try (cbn; lia).
-      {
-        cbn [combine].
-        rewrite !eval_app.
-        push.
-        lia.
-      }
+        rewrite eval_cons; push; try lia.
+        destruct p; try (cbn [length] in *; lia); [].
+        progress cbn [firstn skipn nth_default nth_error]; rewrite eval_cons, eval_weight_S by
+          (autorewrite with push_length; destruct p; cbn [length] in *; try lia).
+        rewrite <-!Z.add_assoc. f_equal; []. f_equal; []. enough (weight 0 = 1) by lia; auto.
       }
         solve_ineq.
+        admit.
         etransitivity.
       {
         apply Z.add_lt_mono.
@@ -1758,37 +1691,21 @@ Module SolinasReduction.
       }
         eauto.
       }
-        cbv [up_bound]; weight_comp; simpl; lia.
+        ring_simplify.
+        cbv [up_bound]; weight_comp. simpl.
+        admit; lia.
       }
 
         (* nth_default 0 p n = 0 *)
-        rewrite H3.
-        break_match; [| lia].
+        rewrite H0.
+        cbv [Z.zselect]. progress simpl (Z.eqb 0 0); progress cbv match.
+        break_match; try lia.
         push.
-        f_equal.
-        rewrite Z.mod_small; try lia.
+        f_equal. f_equal.
+        rewrite Z.add_get_carry_full_mod, Z.mod_small; try split; try ring_simplify; try lia.
+        all : admit.
       }
-        solve_ineq.
-        }
-        lia.
-        }
-        lia.
-        }
-        intuition.
-      {
-        push' n0.
-        lia.
-        }
-        {
-          push' n0.
-        lia.
-        }
-        }
-
-        (* not bounded *)
-        rewrite adjust_SSn.
-        push; push; lia.
-      Qed.
+      Admitted.
 
       (* END SECTION REDUCE3 *)
 
@@ -1895,7 +1812,7 @@ Module SolinasReduction.
       Hint Rewrite nth_default_partition : push_misc.
       Lemma reduce_second_bounds : forall p,
           canonical_repr (S n) p ->
-          (nth_default 0 p n) < up_bound ->
+          nth_default 0 p n < up_bound ->
           let q := reduce1 base s c (S n) (S n) p in
           (nth_default 0 q (n-1) = 0 /\ nth_default 0 q n = 1 /\ nth_default 0 q 0 < up_bound * up_bound + 1) \/
             nth_default 0 q n = 0.
@@ -1915,151 +1832,141 @@ Module SolinasReduction.
         const_simpl.
 
         assert (0 <= nth_default 0 q n < 2).
+        {
         assert (Hcanonq' := Hcanonq).
         cbv [canonical_repr] in Hcanonq'.
         destruct Hcanonq as [ _ Hpartq ].
         rewrite Hpartq.
         push.
         solve_ineq; auto.
-        rewrite Z.mod_small.
+        rewrite Z.mod_small
+         by (solve_ineq; [apply canonical_pos | apply canonical_eval_bounded]; auto).
         cbv [q].
-        rewrite value_reduce1.
+        rewrite value_reduce1; try lia; try solve_length p.
+        {
         const_simpl.
         rewrite adjust_SSn.
         push.
         rewrite <-Zplus_diag_eq_mult_2.
         solve_ineq.
+        {
         etransitivity.
-        apply Z.mul_lt_mono_nonneg.
-        solve_ineq.
-        eauto.
-        apply canonical_pos; auto.
-        rewrite skipn_nth_default with (d:=0).
-        rewrite skipn_all.
-        push; eauto.
-        solve_length p.
-        solve_length p.
+        {
+        apply Z.mul_lt_mono_nonneg; eauto using canonical_pos; solve_ineq; [].
+        rewrite skipn_nth_default with (d:=0) by solve_length p.
+        rewrite skipn_all; push; eauto; solve_length p.
+        }
         cbv [up_bound machine_wordsize].
         weight_comp.
-        rewrite <-OrdersEx.Z_as_OT.pow_mul_r.
-        apply Z.pow_lt_mono_r; cbn; break_match; lia.
-        cbn; lia.
-        lia.
-        apply canonical_eval_bounded; auto.
-        lia.
-        lia.
-        solve_length p.
+        rewrite <-OrdersEx.Z_as_OT.pow_mul_r by (cbn; lia).
+        apply Z.pow_lt_mono_r; cbn; break_match; lia. }
+        apply canonical_eval_bounded; auto. }
         const_simpl.
         cbv [up_bound machine_wordsize].
         rewrite Z.lt_add_lt_sub_r.
         etransitivity; [ | apply weight_dif_mono with (n:=1%nat); lia ].
         weight_comp; cbn; lia.
-        solve_ineq; [apply canonical_pos | apply canonical_eval_bounded]; auto.
+         }
 
         assert (Hnth : nth_default 0 q n = 0 \/ nth_default 0 q n = 1) by lia.
-        destruct Hnth as [Hnth1 | Hnth2].
-        intuition.
-        left.
+        destruct Hnth as [Hnth1 | Hnth2]; intuition; []; left.
 
-        intuition.
+        split; [|split;auto]; [|].
+        {
         assert (Hcanonq' := Hcanonq).
         destruct Hcanonq' as [_ Hpart].
         rewrite Hpart.
-        push.
-        assert (H' : Associational.eval (combine (map weight (seq 0 n)) (firstn n q)) = eval weight (S n) q - weight n).
-        rewrite Hq at 2.
-        cbv [eval to_associational].
-        rewrite seq_snoc.
-        push.
-        rewrite skipn_nth_default with (d:=0).
-        rewrite skipn_all.
-        const_simpl.
-        cbn [seq].
-        push.
-        lia.
-        solve_length q.
-        solve_length q.
-        push.
-        rewrite min_l; [lia | solve_length q].
+        push; [|lia].
+        assert (H' : Associational.eval (combine (map weight (seq 0 n)) (firstn n q)) = eval weight (S n) q - weight n). {
+          rewrite Hq at 2.
+          cbv [eval to_associational].
+          rewrite seq_snoc.
+          push.
+          {
+          rewrite skipn_nth_default with (d:=0) by solve_length q.
+          rewrite skipn_all by solve_length q.
+          const_simpl.
+          cbn [seq].
+          push.
+          lia.
+          }
+          push.
+          rewrite min_l; [lia | solve_length q]. }
         rewrite <-Z.add_move_l in H'.
         rewrite <-H'.
         const_simpl.
-        rewrite Zplus_mod, Z.mod_same, Z.add_0_l, Z.mod_mod.
+        rewrite Zplus_mod, Z.mod_same, Z.add_0_l, Z.mod_mod by (auto; lia).
         rewrite Z.add_move_l in H'.
         apply Z.div_small.
         rewrite Z.mod_small.
+        {
         solve_ineq.
-        apply canonical_pos; auto.
+        {
+        apply canonical_pos; auto. }
         rewrite H'.
         rewrite Z.lt_sub_lt_add_l.
         cbv [q].
         rewrite value_reduce1.
+        {
         rewrite adjust_SSn.
         push.
         const_simpl.
         rewrite Z.add_comm.
         solve_ineq.
+        {
         apply canonical_eval_bounded; auto.
+        }
         rewrite skipn_nth_default with (d:=0).
-        rewrite skipn_all.
+        { rewrite skipn_all by solve_length p.
         push.
         etransitivity.
+        {
         apply Z.mul_lt_mono_nonneg.
-        solve_ineq.
-        eauto.
-        apply (canonical_bounded (S n) p).
-        auto.
+        { solve_ineq. }
+        { eauto. }
+        { apply (canonical_bounded (S n) p); auto.
         rewrite Hp at 2.
         apply in_or_app.
         right.
-        rewrite skipn_nth_default with (d:=0).
-        rewrite skipn_all.
-        push.
-        solve_length p.
-        solve_length p.
-        eauto.
+        rewrite skipn_nth_default with (d:=0) by solve_length p.
+        rewrite skipn_all; push; solve_length p. }
+        eauto. }
         cbv [up_bound machine_wordsize].
         rewrite <-Le.Z.le_sub_1_iff.
         etransitivity; [| rewrite <-Z.sub_le_mono_r; apply (weight_mono_le 1)].
-        weight_comp; cbn; lia.
-        lia.
-        solve_length p.
-        solve_length p.
-        lia.
-        lia.
-        solve_length p.
+        { weight_comp; cbn; lia. }
+        lia. }
+        solve_length p. }
+        all : try lia.
+        { solve_length p. }
         const_simpl.
         cbv [up_bound machine_wordsize].
         rewrite Z.lt_add_lt_sub_r.
-        etransitivity; [| apply (weight_dif_mono 1)].
-        weight_comp; cbn; lia.
-        lia.
+        etransitivity; [| apply (weight_dif_mono 1); lia]; reflexivity. }
+
         solve_ineq.
-        apply canonical_pos; auto.
-        apply canonical_eval_bounded; auto.
-        auto.
-        auto.
-        lia.
+        { apply canonical_pos; auto. }
+        apply canonical_eval_bounded; auto. }
 
         assert (Hcanonq' := Hcanonq).
         destruct Hcanonq as [ _ Hpartq].
         rewrite Hpartq.
-        rewrite nth_default_partition.
-        rewrite weight_0.
-        rewrite Z.div_1_r.
+        rewrite nth_default_partition by lia.
+        rewrite weight_0 by auto.
+        rewrite Z.div_1_r by lia.
+
         assert (eval weight (S n) q = eval weight n (firstn n q) + weight n).
         { rewrite Hq at 1.
-          rewrite skipn_nth_default with (d:=0).
-          rewrite skipn_all.
+          rewrite skipn_nth_default with (d:=0) by solve_length q.
+          rewrite skipn_all by solve_length q.
           rewrite eval_snoc_S.
           lia.
           push.
           rewrite min_l.
           lia.
-          solve_length q.
-          solve_length q.
           solve_length q. }
-        assert (eval weight (S n) q = weight n / s * Associational.eval c * nth_default 0 p n + eval weight n (firstn n p)).
+
+        assert (HA : eval weight (S n) q = (weight n/s*Associational.eval c) * nth_default 0 p n + eval weight n (firstn n p)).
         { unfold q at 1.
           rewrite value_reduce1.
           rewrite adjust_SSn.
@@ -2079,89 +1986,36 @@ Module SolinasReduction.
           const_simpl.
           rewrite Z.lt_add_lt_sub_r.
           apply up_bound_weight1; lia. }
-        rewrite H1 in H4.
-        apply LinearSubstitute.Z.move_R_pX in H4.
+
+        rewrite H1 in HA.
+        apply LinearSubstitute.Z.move_R_pX in HA.
         rewrite H1.
         rewrite PullPush.Z.add_mod_r.
-        rewrite Weight.weight_multiples_full.
+        rewrite Weight.weight_multiples_full by (auto || lia).
         const_simpl.
-        rewrite Z.mod_small.
-        rewrite H4.
-        etransitivity.
-        apply Z.add_lt_mono_r.
-        apply Z.add_lt_mono.
-        apply Z.mul_lt_mono_nonneg.
-        solve_ineq.
-        eauto.
-        eapply canonical_bounded with (n:=S n) (p:=p).
-        auto.
+
+        enough (eval weight n (firstn n q) < up_bound * up_bound + 1). {
+          rewrite Z.mod_small; [lia|].
+          split; [auto using canonical_pos|].
+          change (up_bound * up_bound + 1) with 4294967297 in *.
+          change (weight 1) with (2^64) in *; lia. }
+
+        rewrite HA.
+        pose proof canonical_eval_bounded n (firstn n p) ltac:(trivial).
+        enough (weight n / s * Associational.eval c * nth_default 0 p n < up_bound*up_bound+1) by lia.
+        enough (0 <= nth_default 0 p n) by nia.
+
+        eapply canonical_bounded with (n:=S n) (p:=p); auto; [].
         rewrite Hp.
         rewrite nth_default_app.
         break_match.
-        push' H5.
-        rewrite min_l in H5.
-        lia.
-        lia.
+        { push' H5; lia. }
         push.
-        rewrite min_l.
-        rewrite Nat.sub_diag.
-        rewrite skipn_nth_default with (d:=0).
-        rewrite skipn_all.
-        apply in_or_app.
-        right.
-        push.
-        solve_length p.
-        solve_length p.
-        solve_length p.
-        eauto.
-        apply canonical_eval_bounded.
-        eauto.
-        lia.
-        solve_ineq.
-        apply canonical_pos; auto.
-        rewrite H4.
-        etransitivity.
-        apply Z.add_lt_mono_r.
-        apply Z.add_lt_mono.
-        apply Z.mul_lt_mono_nonneg.
-        solve_ineq.
-        eauto.
-        eapply canonical_bounded with (n:=S n) (p:=p).
-        auto.
-        rewrite Hp.
-        rewrite nth_default_app.
-        break_match.
-        push' H5.
-        rewrite min_l in H5.
-        lia.
-        lia.
-        push.
-        rewrite min_l.
-        rewrite Nat.sub_diag.
-        rewrite skipn_nth_default with (d:=0).
-        rewrite skipn_all.
-        apply in_or_app.
-        right.
-        push.
-        solve_length p.
-        solve_length p.
-        solve_length p.
-        eauto.
-        apply canonical_eval_bounded.
-        eauto.
-        rewrite <-Z.add_assoc.
-        rewrite Z.add_opp_diag_r.
-        const_simpl.
-        cbv [up_bound].
-        weight_comp.
-        simpl; break_match; lia.
-        lia.
-        lia.
-        auto.
-        auto.
-        lia.
-        auto.
-        lia.
+        rewrite min_l by solve_length p.
+        rewrite Nat.sub_diag by solve_length p.
+        rewrite skipn_nth_default with (d:=0) by solve_length p.
+        rewrite skipn_all by solve_length p.
+        auto using in_or_app.
       Qed.
 
       (* END SECTION REDUCE_SECOND *)
