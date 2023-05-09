@@ -50,6 +50,79 @@ Local Existing Instances
 Local Instance : unfold_value_barrier_opt := true.
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
 
+Module debugging_sat_solinas_25519.
+  Section __.
+    Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
+    Import Stringification.C.
+    Import Stringification.C.Compilers.
+    Import Stringification.C.Compilers.ToString.
+
+    (* We split these off to make things a bit easier on typeclass resolution and speed things up. *)
+    Local Existing Instances ToString.C.OutputCAPI Pipeline.show_ErrorMessage.
+    Local Instance : only_signed_opt := false.
+    Local Instance : no_select_opt := false.
+    Local Instance : static_opt := true.
+    Local Instance : internal_static_opt := true.
+    Local Instance : inline_opt := true.
+    Local Instance : inline_internal_opt := true.
+    Local Instance : use_mul_for_cmovznz_opt := false.
+    Local Instance : emit_primitives_opt := true.
+    Local Instance : should_split_mul_opt := false.
+    Local Instance : should_split_multiret_opt := false.
+    Local Instance : widen_carry_opt := false.
+    Local Instance : widen_bytes_opt := true. (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
+
+    (** ======= these are the changable parameters ====== *)
+    Let s := 2^256.
+    Let c := [(1, 38)].
+    Let machine_wordsize := 64.
+    (** ================================================= *)
+    Let possible_values := prefix_with_carry [machine_wordsize].
+    Local Instance : machine_wordsize_opt := machine_wordsize. (* for show *)
+    Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
+    Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
+    Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+    Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
+    Let m := s - Associational.eval c.
+    (* Number of reductions is calculated as follows :
+         Let i be the highest limb index of c. Then, each reduction
+         decreases the number of extra limbs by (n-i-1). (The -1 comes
+         from possibly having an extra high partial product at the end
+         of a reduction.) So, to go from the n extra limbs we have
+         post-multiplication down to 0, we need ceil (n / (n - i - 1))
+         reductions.  In some cases. however, [n - i <= 1], and in
+         this case, we do [n] reductions (is this enough?). *)
+  Let nreductions : nat :=
+    let i := fold_right Z.max 0 (map (fun t => Z.log2 (fst t) / machine_wordsize) c) in
+    if Z.of_nat n - i <=? 1
+    then n
+    else Z.to_nat (Qceiling (Z.of_nat n / (Z.of_nat n - i - 1))).
+    Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
+    Let boundsn : list (ZRange.type.option.interp base.type.Z)
+      := repeat bound n.
+
+    Time Redirect "log" Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (Pipeline.BoundsPipelineToString
+            "fiat" "mul"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
+                  let nreductions := (eval cbv in nreductions) (* needs to be reduced to reify correctly *) in
+                  let r := Reify (@SolinasReduction.add (2^machine_wordsize) s c n) in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, (Some boundsn, tt))
+                   (Some boundsn)
+                   (None, (None, tt))
+                   (None)
+          : Pipeline.ErrorT _).
+    (* Finished transaction in 6.9 secs (4.764u,0.001s) (successful) *)
+  End __.
+End debugging_sat_solinas_25519.
+
 Module debugging_go_bits_add.
   Import Stringification.Go.
   Section __.
@@ -504,79 +577,6 @@ Module debugging_21271_from_bytes.
     Abort.
   End __.
 End debugging_21271_from_bytes.
-
-Module debugging_sat_solinas_25519.
-  Section __.
-    Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
-    Import Stringification.C.
-    Import Stringification.C.Compilers.
-    Import Stringification.C.Compilers.ToString.
-
-    (* We split these off to make things a bit easier on typeclass resolution and speed things up. *)
-    Local Existing Instances ToString.C.OutputCAPI Pipeline.show_ErrorMessage.
-    Local Instance : only_signed_opt := false.
-    Local Instance : no_select_opt := false.
-    Local Instance : static_opt := true.
-    Local Instance : internal_static_opt := true.
-    Local Instance : inline_opt := true.
-    Local Instance : inline_internal_opt := true.
-    Local Instance : use_mul_for_cmovznz_opt := false.
-    Local Instance : emit_primitives_opt := true.
-    Local Instance : should_split_mul_opt := false.
-    Local Instance : should_split_multiret_opt := false.
-    Local Instance : widen_carry_opt := false.
-    Local Instance : widen_bytes_opt := true. (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
-
-    (** ======= these are the changable parameters ====== *)
-    Let s := 2^256.
-    Let c := [(1, 38)].
-    Let machine_wordsize := 64.
-    (** ================================================= *)
-    Let possible_values := prefix_with_carry [machine_wordsize].
-    Local Instance : machine_wordsize_opt := machine_wordsize. (* for show *)
-    Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
-    Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
-    Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
-    Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
-    Let m := s - Associational.eval c.
-    (* Number of reductions is calculated as follows :
-         Let i be the highest limb index of c. Then, each reduction
-         decreases the number of extra limbs by (n-i-1). (The -1 comes
-         from possibly having an extra high partial product at the end
-         of a reduction.) So, to go from the n extra limbs we have
-         post-multiplication down to 0, we need ceil (n / (n - i - 1))
-         reductions.  In some cases. however, [n - i <= 1], and in
-         this case, we do [n] reductions (is this enough?). *)
-  Let nreductions : nat :=
-    let i := fold_right Z.max 0 (map (fun t => Z.log2 (fst t) / machine_wordsize) c) in
-    if Z.of_nat n - i <=? 1
-    then n
-    else Z.to_nat (Qceiling (Z.of_nat n / (Z.of_nat n - i - 1))).
-    Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
-    Let boundsn : list (ZRange.type.option.interp base.type.Z)
-      := repeat bound n.
-
-    Time Redirect "log" Compute
-         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
-         (Pipeline.BoundsPipelineToString
-            "fiat" "mul"
-            false (* subst01 *)
-            false (* inline *)
-            possible_values
-            machine_wordsize
-            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
-                  let nreductions := (eval cbv in nreductions) (* needs to be reduced to reify correctly *) in
-                  let r := Reify (@Saturated.Rows.mulmod (weight machine_wordsize 1) (2^machine_wordsize) s c n nreductions) in
-                  exact r)
-                   (fun _ _ => []) (* comment *)
-                   (Some boundsn, (Some boundsn, tt))
-                   (Some boundsn, None (* Should be: Some r[0~>0]%zrange, but bounds analysis is not good enough *) )
-                   (None, (None, tt))
-                   (None, None)
-          : Pipeline.ErrorT _).
-    (* Finished transaction in 6.9 secs (4.764u,0.001s) (successful) *)
-  End __.
-End debugging_sat_solinas_25519.
 
 Module debugging_sat_solinas_25519_expanded_straightforward.
   Import PreExtra.
