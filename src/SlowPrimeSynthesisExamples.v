@@ -101,25 +101,53 @@ Module debugging_sat_solinas_25519.
     Let boundsn : list (ZRange.type.option.interp base.type.Z)
       := repeat bound n.
 
-    Time Redirect "log" Compute
-         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
-         (Pipeline.BoundsPipelineToString
-            "fiat" "mul"
+    Goal True.
+    pose (
+         (Pipeline.BoundsPipeline
             false (* subst01 *)
-            false (* inline *)
             possible_values
-            machine_wordsize
             ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
                   let nreductions := (eval cbv in nreductions) (* needs to be reduced to reify correctly *) in
                   let r := Reify (@SolinasReduction.add (2^machine_wordsize) s c n) in
                   exact r)
-                   (fun _ _ => []) (* comment *)
                    (Some boundsn, (Some boundsn, tt))
                    (Some boundsn)
-                   (None, (None, tt))
-                   (None)
-          : Pipeline.ErrorT _).
-    (* Finished transaction in 6.9 secs (4.764u,0.001s) (successful) *)
+                   )) as k.
+    cbv beta delta [Pipeline.BoundsPipeline Pipeline.BoundsPipelineWithDebug Debug.eval_result] in *.
+      Import Rewriter.Util.LetIn.
+      cbv zeta beta in k.
+      cbv [Pipeline.PreBoundsPipeline] in *.
+      set (E0:=(fun var : API.type -> Type => _)) in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      set (E':=Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _ _ _) in k.
+      set (E:=snd _) in E'.
+      (* search for "select" *)
+      Compute E. (* good *)
+      (*
+         #IdentifiersBasicGENERATED.Compilers.ident_bool_rect @
+         (λ _ : var (type.base ()),
+          expr_let x20 := #IdentifiersBasicGENERATED.Compilers.ident_Z_zselect @
+                          (#IdentifiersBasicGENERATED.Compilers.ident_fst @
+         $$x18) @ ###0 @ ###38 in *)
+      Compute E'. (* bad *)
+      (*
+                         #IdentifiersBasicGENERATED.Compilers.ident_bool_rect @
+                         (λ _ : var (type.base ()),
+                          expr_let x12 := #IdentifiersBasicGENERATED.Compilers.ident_Z_add_with_get_carry @
+                                          ###18446744073709551616 @ ###0 @
+                                          (#IdentifiersBasicGENERATED.Compilers.ident_Z_zselect @
+                                           (#IdentifiersBasicGENERATED.Compilers.ident_fst @
+                                            $$x10) @ ###0 @ ###38) @
+                                          (#IdentifiersBasicGENERATED.Compilers.ident_fst @
+                                           $$x6) in
+       *)
+    Abort.
   End __.
 End debugging_sat_solinas_25519.
 
