@@ -44,6 +44,45 @@ Local Open Scope string_scope.
 Local Open Scope list_scope.
 Import ListNotations. Local Open Scope Z_scope.
 
+Goal forall W s c a b, 0 <= c < W -> W < s ->
+  0 <= a < s ->
+  0 <= c*b <= W-c ->
+  s <= (a + c*b) ->
+  (((a + c*b) mod s) / W = ((a + c*b) mod s + c * ((a + c*b) / s)) / W).
+Proof.
+  intros; assert ((a + c * b) / s = 1) by (Z.div_mod_to_equations; nia).
+  transitivity 0; Z.div_mod_to_equations; nia.
+Qed.
+
+Goal forall W s (HH: s / W * W = s) c a b, 0 <= c < W -> W < s ->
+  0 <= a < s ->
+  0 <= -c*b < W-c ->
+  (a + c*b) < 0 ->
+  (((a + c*b) mod s) / W = ((a + c*b) mod s + c * ((a + c*b) / s)) / W).
+Proof.
+  intros; assert ((a + c * b) / s = -1) by (Z.div_mod_to_equations; nia).
+  assert ((a + c * b) mod s = s + a + c*b) by (Z.div_mod_to_equations; nia).
+  rewrite H4 in *; rewrite H5 in *.
+  enough ((s + a + c * b) / W - (s/W-1) = (s + a + c * b + c * -1) / W - (s/W-1)) by lia.
+  rewrite <-2Z.div_sub with (b:=s/W-1) by lia; rewrite 2Z.div_small; trivial.
+  all : rewrite ?HH; try split; ring_simplify; try nia.
+Qed.
+
+Lemma saturated_pseudomersenne_reduction_converges :
+  forall W s c a b (HH: b < 0 -> s / W * W = s), 0 <= c < W -> W < s ->
+  0 <= a < s ->
+  0 <= c*Z.abs b <= W-c ->
+  (((a + c*b) mod s) / W = ((a + c*b) mod s + c * ((a + c*b) / s)) / W).
+Proof.
+  intros; assert ((a+c*b)/s = -1 \/ (a+c*b)/s = 0 \/ (a+c*b)/s = 1)
+    by (Z.div_mod_to_equations; nia); intuition idtac.
+  { eapply Z.sub_cancel_r with (p:=s/W-1); rewrite <-2Z.div_sub with (b:=s/W-1) by lia.
+    rewrite 2Z.div_small; Z.div_mod_to_equations; lia. }
+  { f_equal. rewrite Z.mod_small; Z.div_mod_to_equations; lia. }
+  { clear -H3 H0 H6 H7 H4.
+    transitivity 0; Z.div_mod_to_equations; nia. }
+Qed.
+
 Import Associational Positional.
 
 Local Coercion Z.of_nat : nat >-> Z.
