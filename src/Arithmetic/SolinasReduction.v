@@ -76,11 +76,9 @@ Lemma saturated_pseudomersenne_reduction_converges :
 Proof.
   intros; assert ((a+c*b)/s = -1 \/ (a+c*b)/s = 0 \/ (a+c*b)/s = 1)
     by (Z.div_mod_to_equations; nia); intuition idtac.
-  { eapply Z.sub_cancel_r with (p:=s/W-1); rewrite <-2Z.div_sub with (b:=s/W-1) by lia.
-    rewrite 2Z.div_small; Z.div_mod_to_equations; lia. }
+  { clear -HH H H0 H2 H4 H7. transitivity (s/W-1); Z.div_mod_to_equations; nia. }
   { f_equal. rewrite Z.mod_small; Z.div_mod_to_equations; lia. }
-  { clear -H3 H0 H6 H7 H4.
-    transitivity 0; Z.div_mod_to_equations; nia. }
+  { clear -H0 H3 H4 H6 H7. transitivity 0; Z.div_mod_to_equations; nia. }
 Qed.
 
 Import Associational Positional.
