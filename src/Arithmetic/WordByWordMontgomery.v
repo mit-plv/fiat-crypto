@@ -539,33 +539,13 @@ Module WordByWordMontgomery.
         do 2 f_equal; nia.
       Qed.
 
-      Lemma pre_S3_bound
-        : eval S < eval N + eval B
-          -> eval_pre_S3 < eval N + eval B.
-      Proof using small_A small_S small_B B_bounds N_nz N_lt_R small_N lgr_big.
-        clear -small_A small_S r_big' partition_Proper small_B B_bounds N_nz N_lt_R small_N lgr_big.
-        assert (Hmod : forall a b, 0 < b -> a mod b <= b - 1)
-          by (intros x y; pose proof (Z_mod_lt x y); lia).
-        intro HS.
-        eapply Z.le_lt_trans.
-        { transitivity ((N+B-1 + (r-1)*B + (r-1)*N) / r);
-            [ | set_evars; ring_simplify_subterms; subst_evars; reflexivity ].
-          Z.peel_le; repeat apply Z.add_le_mono; repeat apply Z.mul_le_mono_nonneg; try lia;
-            repeat autounfold with word_by_word_montgomery; rewrite ?Z.mul_split_mod;
-              autorewrite with push_mont_eval;
-              try Z.zero_bounds;
-              auto with lia. }
-        rewrite (Z.mul_comm _ r), <- Z.add_sub_assoc, <- Z.add_opp_r, !Z.div_add_l' by lia.
-        autorewrite with zsimplify.
-        simpl; lia.
-      Qed.
-
-      Lemma pre_S3_nonneg : 0 <= eval_pre_S3.
-      Proof using N_nz B_bounds small_B small_A small_S S_nonneg lgr_big.
-        clear -N_nz B_bounds small_B partition_Proper r_big' small_A small_S S_nonneg.
+      Lemma pre_S3_bound (HS : eval S < eval N + eval B)
+          : 0 <= eval_pre_S3 < eval N + eval B.
+      Proof using small_A small_S small_B B_bounds N_nz N_lt_R small_N lgr_big S_nonneg.
+        clear -HS small_A small_S r_big' partition_Proper small_B B_bounds N_nz N_lt_R small_N lgr_big N_nz B_bounds small_B partition_Proper r_big' small_A small_S S_nonneg.
         repeat autounfold with word_by_word_montgomery; rewrite ?Z.mul_split_mod;
           autorewrite with push_mont_eval; [].
-        rewrite ?Npos_correct; Z.zero_bounds; lia.
+        Z.div_mod_to_equations; nia.
       Qed.
 
       Lemma small_A'
@@ -579,22 +559,11 @@ Module WordByWordMontgomery.
         repeat autounfold with word_by_word_montgomery; t_small.
       Qed.
 
-      Lemma S3_nonneg : 0 <= eval S3.
-      Proof using small_A small_S small_B B_bounds N_nz N_lt_R small_N lgr_big.
-        clear -small_A small_S r_big' partition_Proper small_B B_bounds N_nz N_lt_R small_N lgr_big sub_then_maybe_add.
-        rewrite eval_S3_eq; Z.zero_bounds.
-      Qed.
-
-      Lemma S3_bound
-        : eval S < eval N + eval B
-          -> eval S3 < eval N + eval B.
+      Lemma S3_bound (HS : eval S < eval N + eval B) : 0 <= eval S3 < eval N + eval B.
       Proof using N_nz B_bounds small_B small_A small_S S_nonneg B_bounds N_nz N_lt_R small_N lgr_big.
-        clear -N_nz B_bounds small_B small_A small_S S_nonneg B_bounds N_nz N_lt_R small_N lgr_big partition_Proper r_big' sub_then_maybe_add.
-        rewrite eval_S3_eq.
-        intro H; pose proof (pre_S3_bound H); pose proof pre_S3_nonneg.
-        subst R.
-        rewrite Z.mod_small by nia.
-        assumption.
+        clear -HS N_nz B_bounds small_B small_A small_S S_nonneg B_bounds N_nz N_lt_R small_N lgr_big partition_Proper r_big' sub_then_maybe_add.
+        pose proof pre_S3_bound HS.
+        rewrite eval_S3_eq, Z.mod_small; nia.
       Qed.
 
       Lemma S1_eq : eval S1 = S + a*B.
@@ -614,7 +583,6 @@ Module WordByWordMontgomery.
         { destruct (Z.eq_dec r 1) as [H'|H'].
           { rewrite H'; split; reflexivity. }
           { rewrite !Z_mod_nz_opp_full; rewrite ?Z.mod_mod; Z.rewrite_mod_small; [ split; reflexivity | lia.. ]. } }
-        autorewrite with pull_Zmod.
         replace 0 with (0 mod r) by apply Zmod_0_l.
         pose (Z.to_pos r) as r'.
         replace r with (Z.pos r') by (subst r'; rewrite Z2Pos.id; lia).
@@ -660,7 +628,7 @@ Module WordByWordMontgomery.
       Proof using B_bounds R_numlimbs_nz lgr_big small_A small_B small_S k_correct ri_correct small_N N_lt_R N_nz S_nonneg.
         clear -B_bounds R_numlimbs_nz lgr_big small_A small_B small_S r_big' partition_Proper k_correct ri_correct N_nz N_lt_R small_N sub_then_maybe_add Hbound S_nonneg.
         rewrite eval_S3_eq.
-        pose proof (pre_S3_bound Hbound); pose proof pre_S3_nonneg.
+        pose proof (pre_S3_bound Hbound); pose proof pre_S3_bound.
         rewrite (Z.mod_small _ (r * _)) by (subst R; nia).
         apply pre_S3_mod_N.
       Qed.
@@ -691,7 +659,7 @@ Module WordByWordMontgomery.
         Qed.
         Lemma snd_redc_body_nonneg : 0 <= eval (snd (redc_body A_S)).
         Proof using small_S small_N small_B small_A lgr_big S_bound N_nz N_lt_R B_bounds.
-          destruct A_S; apply S3_nonneg; assumption.
+          destruct A_S; apply S3_bound; try apply S_bound; trivial.
         Qed.
 
         Lemma snd_redc_body_mod_N

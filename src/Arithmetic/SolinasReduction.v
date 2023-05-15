@@ -81,18 +81,178 @@ Proof.
   { clear -H0 H3 H4 H6 H7. transitivity 0; Z.div_mod_to_equations; nia. }
 Qed.
 
-Import Associational Positional.
+Module Z.
+  Lemma prod_init x ys : fold_right Z.mul x ys = fold_right Z.mul 1 ys * x.
+  Proof.
+    revert dependent x; induction ys; cbn [fold_right]; intros; try ring.
+    rewrite IHys; ring.
+  Qed.
 
-Local Coercion Z.of_nat : nat >-> Z.
-Local Coercion QArith_base.inject_Z : Z >-> Q.
-Local Coercion Z.pos : positive >-> Z.
+  Lemma prod_pos xs : Forall (fun x => 0 < x) xs -> 0 < fold_right Z.mul 1 xs.
+  Proof. induction 1; cbn; lia. Qed.
+End Z.
 
-Module SolinasReduction.
+Module fstream.
+  Local Open Scope nat_scope.
+  Definition fstream T := nat -> T.
+  Definition hd {T} (xs : fstream T) : T := xs O.
+  Definition tl {T} (xs : fstream T) : fstream T := fun i => xs (S i).
+  Definition skipn {T} n (xs : fstream T) : fstream T := fun i => xs (n+i).
+  Definition firstn {T} n (xs : fstream T) : list T := map xs (seq 0 n).
+  Definition cons {T} x (xs : fstream T) : fstream T :=
+    fun i => match i with O => x | S i => xs i end.
+End fstream.
 
-  Import Core.Associational.
-  Import Core.Positional.
+Module Saturated. Section __.
+  Import Positional List ListNotations.
 
-  Section __.
+  Definition weight bound i := fold_right Z.mul 1 (map bound (seq 0 i)).
+
+  Lemma weight_0 bound : weight bound O = 1. Proof. trivial. Qed.
+
+  Lemma weight_S bound i : weight bound (S i) = weight bound i * bound i.
+  Proof.
+    cbv [weight].
+    rewrite seq_snoc, map_app, fold_right_app; cbn -[Z.mul]; rewrite Z.prod_init; ring.
+  Qed.
+
+  Lemma weight_shift bound i :
+    bound O * weight (fun j => bound (S j)) i = weight bound (S i).
+  Proof.
+    cbv [weight].
+    erewrite <-map_map, seq_shift; cbn -[Z.mul]; ring.
+  Qed.
+
+  Lemma weight_shift' bound (Hbound : forall i, bound i <> 0) i :
+    weight (fun j => bound (S j)) i = weight bound (S i) / bound O.
+  Proof.
+    revert dependent bound; induction i; cbn -[Z.mul]; intros.
+    { specialize (Hbound O). Z.div_mod_to_equations. nia. }
+    rewrite (Z.mul_comm (bound O)), Z.div_mul by trivial; f_equal.
+    symmetry; rewrite <-seq_shift, map_map; symmetry; trivial.
+  Qed.
+
+  Lemma weight_pos bound i (H : forall j, (j < i)%nat -> 0 < bound j) :
+    0 < weight bound i.
+  Proof.
+    intros; cbv [weight]. apply Z.prod_pos, Forall_map, Forall_forall.
+    intros j Hj%in_seq; apply H; lia.
+  Qed.
+
+  Definition eval (bound : nat -> Z) (xs : list Z) : Z :=
+    list_rect _ (fun _ => 0) (fun x _  rec bound =>
+      x + bound O * rec (fun j => bound (S j))
+    ) xs bound.
+
+  Lemma eval_app bound xs ys :
+    eval bound (xs ++ ys) = eval bound xs + weight bound (length xs) * eval (fun i => bound (length xs+i))%nat ys.
+  Proof.
+    revert ys; revert bound; induction xs; cbn -[Z.add Z.mul]; intros; cbv [eval] in *.
+    { ring_simplify; trivial. }
+    setoid_rewrite IHxs; clear IHxs.
+    ring_simplify; f_equal.
+    set (list_rect _ _ _ _) as EVAL; set (EVAL _) as V;
+    rewrite !(Z.mul_comm _ V); rewrite <-!Z.mul_assoc.
+    f_equal.
+    f_equal.
+
+    cbv [weight].
+    rewrite <-map_map.
+    rewrite seq_shift.
+    trivial.
+  Qed.
+
+  Lemma eval_firstn bound n xs (Hw : weight bound n <> 0) :
+    eval bound (firstn n xs) = eval bound xs mod weight bound n.
+  Proof.
+    assert (n < length xs)%nat by admit.
+    rewrite <-(firstn_skipn n xs) at 2; rewrite eval_app, firstn_length_le, Z.mod_add' by lia.
+    symmetry; apply Z.mod_small.
+  Abort.
+
+  Definition rep (bound : nat -> Z) (n : nat) (x : Z) : list Z :=
+    nat_rect _ (fun _ _ => []) (fun _ rec x bound =>
+      (x mod bound O :: rec (x / bound O) (fun j => bound (S j)))
+    )  n x bound.
+
+  Lemma length_rep bound n x : length (rep bound n x) = n. Admitted.
+
+  Lemma eval_rep bound n x : eval bound (rep bound n x) = x mod weight bound n.
+  Proof.
+    revert x; revert dependent bound; induction n; intros;
+      cbn [rep nat_rect eval list_rect].
+    { rewrite ?weight_0, Z.mod_1_r; trivial. }
+    setoid_rewrite IHn. rewrite <-weight_shift.
+
+    set (weight _ _) as M.
+    set (bound 0%nat) as B in *.
+    assert (0 < B) by admit.
+    assert (0 < M) by admit.
+
+    symmetry; rewrite (Z.div_mod x B), Z.add_comm at 1.
+    rewrite <-Z.add_mod_idemp_r, Zmult_mod_distr_l. apply Z.mod_small.
+    Z.div_mod_to_equations; nia.
+    Z.div_mod_to_equations; nia.
+    Z.div_mod_to_equations; nia.
+  Admitted.
+
+  Lemma rep_add_l bound n m x :
+    rep bound (n+m) x = rep bound n x ++ rep (fun j => bound (n+j)%nat) m (x / weight bound n).
+  Proof.
+    revert x; revert bound; induction n; cbn [Nat.add rep nat_rect]; intros.
+    { rewrite weight_0, Z.div_1_r. admit. }
+    setoid_rewrite IHn; cbn [app]; f_equal.
+    rewrite Z.div_div, weight_shift; trivial.
+  Admitted.
+
+  Lemma firstn_rep bound i n x (H : Nat.lt i n) :
+    firstn i (rep bound n x) = rep bound i x.
+  Proof.
+    replace n with (i + (n-i))%nat by lia; set (n-i)%nat as m; clearbody m.
+    rewrite rep_add_l, firstn_app_sharp; auto using length_rep.
+  Qed.
+
+  Lemma eval_firstn_rep bound i n x (H : Nat.lt i n) :
+    eval bound (firstn i (rep bound n x)) = x mod weight bound i.
+  Proof. rewrite firstn_rep, eval_rep; trivial. Qed.
+
+  Definition add (bound : nat -> Z) (c0 : Z) (xs ys : list Z) : list Z * Z  :=
+    list_rect _ (fun _ c => ([], c)) (fun '(x, y) _  rec bound c =>
+      let (z, c) := Z.add_with_get_carry_full (bound O) c x y in
+      let (zs, C) := rec (fun j => bound (S j)) c in
+      (z::zs, C)
+    ) (combine xs ys) bound c0.
+
+  Lemma add_correct :forall bound xs ys c
+    (bound_pos : forall i, (i < length xs)%nat -> 0 < bound i)
+    (same_length : length xs = length ys),
+    let s := c + eval bound xs + eval bound ys in
+    add bound c xs ys = (rep bound (length xs) s, s / weight bound (length xs)).
+  Proof.
+    intros until xs; revert dependent bound; induction xs, ys;
+      cbv [rep add eval]; cbn [list_rect length nat_rect combine]; intros;
+      rewrite ?weight_0.
+    { f_equal; Z.div_mod_to_equations; lia. }
+    { f_equal; Z.div_mod_to_equations; lia. }
+    { congruence. }
+    pose proof (bound_pos O).
+    destruct Z.add_with_get_carry_full as (?&c') eqn:Hdiv; pose proof Hdiv as Hmod;
+      apply (f_equal snd) in Hdiv; rewrite Z.add_with_get_carry_full_div in Hdiv.
+      apply (f_equal fst) in Hmod; rewrite Z.add_with_get_carry_full_mod in Hmod.
+      cbn [fst snd] in *. subst.
+    setoid_rewrite IHxs; auto with arith; clear IHxs; cbv [rep eval].
+      set (list_rect _ _ _) as eval; cbv beta in *.
+      set (eval xs _) as vxs; clearbody vxs.
+      set (eval ys _) as vys; clearbody vys.
+    repeat (apply (f_equal2 pair) || apply (f_equal2 cons)).
+    { push_Zmod; pull_Zmod; f_equal; lia. }
+    { f_equal. Z.div_mod_to_equations; nia. }
+    { rewrite <-(weight_shift), <-2Z.div_add, Z.div_div; f_equal; try lia.
+      auto using weight_pos with arith. }
+  Qed.
+
+
+
 
     Context (machine_wordsize := 64)
             (weight := uweight machine_wordsize)
