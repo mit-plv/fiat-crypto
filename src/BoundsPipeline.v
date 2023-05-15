@@ -804,6 +804,7 @@ Module Pipeline.
             | inr v => Debug.ret (inr v)
             end;
       match E' with
+        (* rewrites after bounds relaxation---add a new one named arithWithRelaxedCasts or something. *)
       | inl E
         => (E <- match split_mul_to with
                  | Some (max_bitwidth, lgcarrymax)
