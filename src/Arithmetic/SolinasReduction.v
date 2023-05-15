@@ -382,7 +382,6 @@ Module Saturated. Section __.
     { rewrite (Z.add_comm (_ mod _) (_ * (_ / _))), <-Z.div_mod; lia. }
     assert (Z.abs ((eval bound a + eval bound b) / Z.pos (weight bound (length a))) <= 1) by (Z.div_mod_to_equations; nia); nia.
   Qed.
-    
 
   Local Notation "!" := ltac:(vm_decide) (only parsing).
   Goal forall a0 a1 a2 a3 b : Z, False. intros.
@@ -395,6 +394,18 @@ Module Saturated. Section __.
     set (eval (fun _ : nat => (2 ^ 64)%positive)) as eval in *.
     set (reduce' (fun _ : nat => (2 ^ 64)%positive) _ _ _) as reduce' in *.
   Abort.
+
+  Goal forall a0 a1 a2 a3 b0 b1 b2 b3 : Z, False. intros.
+  Proof.
+    pose proof (eval_addmod (fun _ => 2^64)%positive 38 [a0;a1;a2;a3] [b0;b1;b2;b3] (2^256-38) ! ! ! !).
+    cbn [length] in *.
+    change (Z.pos (weight (fun _ : nat => (2 ^ 64)%positive) 4%nat)) with (2^256) in *.
+    change (Z.pos (weight (fun _ : nat => (2 ^ 64)%positive) 1%nat)) with (2^64) in *.
+    change (weight (fun _ : nat => (2 ^ 64)%positive) 1%nat)%positive with (2^64)%positive in *.
+    set (eval (fun _ : nat => (2 ^ 64)%positive)) as eval in *.
+    set (addmod _ _) as addmod in *.
+  Abort.
+
 
 
 
