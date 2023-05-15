@@ -81,6 +81,16 @@ Proof.
   { clear -H0 H3 H4 H6 H7. transitivity 0; Z.div_mod_to_equations; nia. }
 Qed.
 
+Module Pos.
+  Local Open Scope positive_scope.
+  Lemma prod_init x ys : fold_right Pos.mul x ys = fold_right Pos.mul 1 ys * x.
+  Proof.
+    revert dependent x; induction ys; cbn [fold_right]; intros; try lia.
+    rewrite IHys; lia.
+  Qed.
+End Pos.
+
+
 Module Z.
   Lemma prod_init x ys : fold_right Z.mul x ys = fold_right Z.mul 1 ys * x.
   Proof.
@@ -92,37 +102,65 @@ Module Z.
   Proof. induction 1; cbn; lia. Qed.
 End Z.
 
-Module fstream.
+Module stream.
   Local Open Scope nat_scope.
-  Definition fstream T := nat -> T.
-  Definition hd {T} (xs : fstream T) : T := xs O.
-  Definition tl {T} (xs : fstream T) : fstream T := fun i => xs (S i).
-  Definition skipn {T} n (xs : fstream T) : fstream T := fun i => xs (n+i).
-  Definition firstn {T} n (xs : fstream T) : list T := map xs (seq 0 n).
-  Definition cons {T} x (xs : fstream T) : fstream T :=
+  Definition stream T := nat -> T.
+  Definition hd {T} (xs : stream T) : T := xs O.
+  Definition tl {T} (xs : stream T) : stream T := fun i => xs (S i).
+  Definition skipn {T} n (xs : stream T) : stream T := fun i => xs (n+i).
+  Definition firstn {T} n (xs : stream T) : list T := map xs (seq 0 n).
+  Definition cons {T} x (xs : stream T) : stream T :=
     fun i => match i with O => x | S i => xs i end.
-End fstream.
+  Definition prefixes {T} (xs : stream T) : stream (list T) :=
+    fun i => firstn i xs.
+  Definition map {A B} (f : A -> B) (xs : stream A) : stream B :=
+    fun i => f (xs i).
+
+  Definition firstn_S {T} n (xs : stream T) :
+    firstn (S n) xs = List.cons (xs O) (firstn n (tl xs)).
+  Proof.
+    cbv [firstn]; rewrite <-cons_seq, <-seq_shift, map_cons, map_map; trivial.
+  Qed.
+
+  Definition firstn_S' {T} n (xs : stream T) :
+    firstn (S n) xs = firstn n xs ++ [xs n].
+  Proof. cbv [firstn]. rewrite seq_snoc, map_app; trivial. Qed.
+
+  Lemma firstn_tl {T} n (xs : stream T) : firstn n (tl xs) = List.tl (firstn (S n) xs).
+  Proof. cbn. rewrite <-seq_shift, map_map; trivial. Qed.
+
+  Lemma skipn_tl {T} n (xs : stream T) i : skipn n (tl xs) i = skipn (S n) xs i.
+  Proof. trivial. Qed.
+
+  Lemma tl_map {A B} f xs i : tl (@map A B f xs) i = map f (tl xs) i.
+  Proof. exact eq_refl. Qed.
+
+  Lemma tl_prefixes {T} xs i :
+    tl (@prefixes T xs) i = map (List.cons (hd xs)) (prefixes (tl xs)) i.
+  Proof. cbv [tl prefixes map]. rewrite firstn_S; trivial. Qed.
+End stream. Notation stream := stream.stream.
 
 Module Saturated. Section __.
   Import Positional List ListNotations.
+  Import stream Coq.Init.Datatypes Coq.Lists.List List.
 
-  Definition weight bound i := fold_right Z.mul 1 (map bound (seq 0 i)).
+  Implicit Types (weight bound : stream positive).
+  Local Open Scope positive_scope.
 
-  Lemma weight_0 bound : weight bound O = 1. Proof. trivial. Qed.
+  Definition weight bound := stream.map (fold_right Pos.mul xH) (stream.prefixes bound).
 
-  Lemma weight_S bound i : weight bound (S i) = weight bound i * bound i.
+  Lemma weight_0 bound : weight bound O = 1%positive. Proof. trivial. Qed.
+
+  Lemma tl_weight bound i : stream.tl (weight bound) i = stream.hd bound * weight (stream.tl bound) i.
+  Proof. cbv [weight]. rewrite tl_map. cbv [stream.map]. rewrite tl_prefixes; trivial. Qed.
+
+  Lemma tl_weight' bound i : stream.tl (weight bound) i = (weight bound i * bound i)%positive.
   Proof.
-    cbv [weight].
-    rewrite seq_snoc, map_app, fold_right_app; cbn -[Z.mul]; rewrite Z.prod_init; ring.
+    cbv [stream.tl weight stream.prefixes stream.map].
+    rewrite stream.firstn_S', fold_right_app; cbn [fold_right]; rewrite Pos.prod_init; lia.
   Qed.
 
-  Lemma weight_shift bound i :
-    bound O * weight (fun j => bound (S j)) i = weight bound (S i).
-  Proof.
-    cbv [weight].
-    erewrite <-map_map, seq_shift; cbn -[Z.mul]; ring.
-  Qed.
-
+  (*
   Lemma weight_shift' bound (Hbound : forall i, bound i <> 0) i :
     weight (fun j => bound (S j)) i = weight bound (S i) / bound O.
   Proof.
@@ -138,118 +176,126 @@ Module Saturated. Section __.
     intros; cbv [weight]. apply Z.prod_pos, Forall_map, Forall_forall.
     intros j Hj%in_seq; apply H; lia.
   Qed.
+  *)
 
-  Definition eval (bound : nat -> Z) (xs : list Z) : Z :=
+  Local Open Scope Z_scope.
+  Local Coercion Z.pos : positive >-> Z.
+
+  Definition eval bound (xs : list Z) : Z :=
     list_rect _ (fun _ => 0) (fun x _  rec bound =>
-      x + bound O * rec (fun j => bound (S j))
+      x + stream.hd bound * rec (stream.tl bound)
     ) xs bound.
 
   Lemma eval_app bound xs ys :
-    eval bound (xs ++ ys) = eval bound xs + weight bound (length xs) * eval (fun i => bound (length xs+i))%nat ys.
+    eval bound (xs ++ ys) =
+      eval bound xs +
+      weight bound (length xs) * eval (stream.skipn (length xs) bound) ys.
   Proof.
-    revert ys; revert bound; induction xs; cbn -[Z.add Z.mul]; intros; cbv [eval] in *.
-    { ring_simplify; trivial. }
+    revert ys; revert bound; induction xs; cbn -[Z.add Z.mul weight stream.skipn stream.hd stream.tl]; intros; cbv [eval] in *.
+    { rewrite weight_0. ring_simplify; trivial. }
     setoid_rewrite IHxs; clear IHxs.
     ring_simplify; f_equal.
     set (list_rect _ _ _ _) as EVAL; set (EVAL _) as V;
-    rewrite !(Z.mul_comm _ V); rewrite <-!Z.mul_assoc.
-    f_equal.
-    f_equal.
-
-    cbv [weight].
-    rewrite <-map_map.
-    rewrite seq_shift.
-    trivial.
+    rewrite !(Z.mul_comm _ V), <-Pos2Z.inj_mul, <-tl_weight; trivial.
   Qed.
 
-  Lemma eval_firstn bound n xs (Hw : weight bound n <> 0) :
+  (*
+  Lemma eval_firstn bound n xs :
     eval bound (firstn n xs) = eval bound xs mod weight bound n.
   Proof.
     assert (n < length xs)%nat by admit.
     rewrite <-(firstn_skipn n xs) at 2; rewrite eval_app, firstn_length_le, Z.mod_add' by lia.
     symmetry; apply Z.mod_small.
   Abort.
+  *)
 
-  Definition rep (bound : nat -> Z) (n : nat) (x : Z) : list Z :=
+  Definition encode bound (n : nat) (x : Z) : list Z :=
     nat_rect _ (fun _ _ => []) (fun _ rec x bound =>
-      (x mod bound O :: rec (x / bound O) (fun j => bound (S j)))
+      (x mod (stream.hd bound) :: rec (x / stream.hd bound) (stream.tl bound))
     )  n x bound.
 
-  Lemma length_rep bound n x : length (rep bound n x) = n. Admitted.
-
-  Lemma eval_rep bound n x : eval bound (rep bound n x) = x mod weight bound n.
+  Instance Proper_encode : Proper (pointwise_relation _ eq ==> eq ==> eq ==> eq)%signature encode.
   Proof.
-    revert x; revert dependent bound; induction n; intros;
-      cbn [rep nat_rect eval list_rect].
-    { rewrite ?weight_0, Z.mod_1_r; trivial. }
-    setoid_rewrite IHn. rewrite <-weight_shift.
-
-    set (weight _ _) as M.
-    set (bound 0%nat) as B in *.
-    assert (0 < B) by admit.
-    assert (0 < M) by admit.
-
-    symmetry; rewrite (Z.div_mod x B), Z.add_comm at 1.
-    rewrite <-Z.add_mod_idemp_r, Zmult_mod_distr_l. apply Z.mod_small.
-    Z.div_mod_to_equations; nia.
-    Z.div_mod_to_equations; nia.
-    Z.div_mod_to_equations; nia.
-  Admitted.
-
-  Lemma rep_add_l bound n m x :
-    rep bound (n+m) x = rep bound n x ++ rep (fun j => bound (n+j)%nat) m (x / weight bound n).
-  Proof.
-    revert x; revert bound; induction n; cbn [Nat.add rep nat_rect]; intros.
-    { rewrite weight_0, Z.div_1_r. admit. }
-    setoid_rewrite IHn; cbn [app]; f_equal.
-    rewrite Z.div_div, weight_shift; trivial.
-  Admitted.
-
-  Lemma firstn_rep bound i n x (H : Nat.lt i n) :
-    firstn i (rep bound n x) = rep bound i x.
-  Proof.
-    replace n with (i + (n-i))%nat by lia; set (n-i)%nat as m; clearbody m.
-    rewrite rep_add_l, firstn_app_sharp; auto using length_rep.
+    intros f f' F n; revert F; revert f'; revert f; induction n;
+      cbv [encode nat_rect stream.hd stream.tl]; repeat intro; subst; trivial.
+    rewrite F; f_equal. eapply IHn; repeat intro; rewrite ?F; trivial.
   Qed.
 
-  Lemma eval_firstn_rep bound i n x (H : Nat.lt i n) :
-    eval bound (firstn i (rep bound n x)) = x mod weight bound i.
-  Proof. rewrite firstn_rep, eval_rep; trivial. Qed.
+  Lemma length_encode bound n x : length (encode bound n x) = n. Admitted.
 
-  Definition add (bound : nat -> Z) (c0 : Z) (xs ys : list Z) : list Z * Z  :=
+  Lemma eval_encode bound n x : eval bound (encode bound n x) = x mod weight bound n.
+  Proof.
+    revert x; revert dependent bound; induction n; intros;
+      cbn [encode nat_rect eval list_rect].
+    { rewrite ?weight_0, Z.mod_1_r; trivial. }
+    setoid_rewrite IHn. setoid_rewrite tl_weight. rewrite ?Pos2Z.inj_mul.
+    set (Z.pos (stream.hd bound)) as B in *.
+    symmetry; rewrite (Z.div_mod x B), Z.add_comm at 1 by lia.
+    rewrite <-Z.add_mod_idemp_r, Zmult_mod_distr_l by lia.
+    apply Z.mod_small; Z.div_mod_to_equations; nia.
+  Qed.
+
+  Lemma rep_add_l bound n m x :
+    encode bound (n+m) x = encode bound n x ++ encode (stream.skipn n bound) m (x / weight bound n).
+  Proof.
+    revert x; revert bound; induction n; cbn [Nat.add encode nat_rect]; intros.
+    { rewrite weight_0, Z.div_1_r. reflexivity. }
+    setoid_rewrite IHn; cbn [app]; f_equal.
+    rewrite Z.div_div, <-Pos2Z.inj_mul, <-tl_weight by lia.
+    { (* setoid_rewrite stream.skipn_tl *)
+      eapply f_equal2; [reflexivity|].
+      eapply Proper_encode; [|reflexivity..].
+      intro i; eapply stream.skipn_tl. }
+  Qed.
+
+  Lemma firstn_encode bound i n x (H : Nat.lt i n) :
+    firstn i (encode bound n x) = encode bound i x.
+  Proof.
+    replace n with (i + (n-i))%nat by lia; set (n-i)%nat as m; clearbody m.
+    rewrite rep_add_l, firstn_app_sharp; auto using length_encode.
+  Qed.
+
+  Lemma eval_firstn_encode bound i n x (H : Nat.lt i n) :
+    eval bound (firstn i (encode bound n x)) = x mod weight bound i.
+  Proof. rewrite firstn_encode, eval_encode; trivial. Qed.
+
+  Definition add bound (c0 : Z) (xs ys : list Z) : list Z * Z  :=
     list_rect _ (fun _ c => ([], c)) (fun '(x, y) _  rec bound c =>
-      let (z, c) := Z.add_with_get_carry_full (bound O) c x y in
-      let (zs, C) := rec (fun j => bound (S j)) c in
+      let (z, c) := Z.add_with_get_carry_full (stream.hd bound) c x y in
+      let (zs, C) := rec (stream.tl bound) c in
       (z::zs, C)
     ) (combine xs ys) bound c0.
 
   Lemma add_correct :forall bound xs ys c
-    (bound_pos : forall i, (i < length xs)%nat -> 0 < bound i)
     (same_length : length xs = length ys),
     let s := c + eval bound xs + eval bound ys in
-    add bound c xs ys = (rep bound (length xs) s, s / weight bound (length xs)).
+    add bound c xs ys = (encode bound (length xs) s, s / weight bound (length xs)).
   Proof.
     intros until xs; revert dependent bound; induction xs, ys;
-      cbv [rep add eval]; cbn [list_rect length nat_rect combine]; intros;
+      cbv [encode add eval]; cbn [list_rect length nat_rect combine]; intros;
       rewrite ?weight_0.
     { f_equal; Z.div_mod_to_equations; lia. }
     { f_equal; Z.div_mod_to_equations; lia. }
     { congruence. }
-    pose proof (bound_pos O).
     destruct Z.add_with_get_carry_full as (?&c') eqn:Hdiv; pose proof Hdiv as Hmod;
       apply (f_equal snd) in Hdiv; rewrite Z.add_with_get_carry_full_div in Hdiv.
       apply (f_equal fst) in Hmod; rewrite Z.add_with_get_carry_full_mod in Hmod.
       cbn [fst snd] in *. subst.
-    setoid_rewrite IHxs; auto with arith; clear IHxs; cbv [rep eval].
+    setoid_rewrite IHxs; auto with arith; clear IHxs; cbv [encode eval].
       set (list_rect _ _ _) as eval; cbv beta in *.
       set (eval xs _) as vxs; clearbody vxs.
       set (eval ys _) as vys; clearbody vys.
     repeat (apply (f_equal2 pair) || apply (f_equal2 cons)).
     { push_Zmod; pull_Zmod; f_equal; lia. }
     { f_equal. Z.div_mod_to_equations; nia. }
-    { rewrite <-(weight_shift), <-2Z.div_add, Z.div_div; f_equal; try lia.
-      auto using weight_pos with arith. }
+    { setoid_rewrite tl_weight.
+      rewrite <-2Z.div_add, Z.div_div; f_equal; lia. }
   Qed.
+
+  (* See lemma saturated_pseudomersenne_reduction_converges *)
+
+  Definition reduce' bound (s c : Z) (a : list Z) (b : Z) : list Z :=
+    add 
 
 
 
