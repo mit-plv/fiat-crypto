@@ -98,11 +98,35 @@ Module debugging_sat_solinas_25519.
     Let boundsn : list (ZRange.type.option.interp base.type.Z)
       := repeat bound n.
 
-    Locate Ltac Reify.
+    Check
+    ltac:(
+    let r := Reify (list_rect (fun _ : list Z => list Z -> Z) (fun _ => 0)) in
+    exact r).
+
+    Check
+    ltac:(
+    let r := Reify (
+list_rect (fun _ : list Z => list Z -> Z) (fun _  => 0)
+  (fun (x : Z) (l : list Z) rec bs => x + List.hd 0 bs * rec (List.tl bs))) in
+    exact r).
+
+    Check
+    ltac:(
+    let r := Reify (list_rect (fun _ : list Z => (nat -> Z) -> Z) (fun _ => 0)) in
+    exact r).
+
+    Check
+    ltac:(
+    let r := Reify (
+list_rect (fun _ : list Z => (nat -> Z) -> Z) (fun _  => 0)
+  (fun (x : Z) (l : list Z) rec bs => x + stream.hd bs * rec (stream.tl bs))) in
+    exact r).
+
     Check
     ltac:(
     let e := constr:(@SolinasReduction.Saturated.addmod (fun _ => Z.to_pos (2^64)) 38) in
-    let e := eval cbv delta in e in
+    let t := type of e in
+    idtac t;
     let r := Reify e in
     exact r).
 
