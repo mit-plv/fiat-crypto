@@ -458,6 +458,7 @@ Module Pipeline.
       := match t return ZRange.type.base.option.interp t -> ZRange.type.option.interp t-> bool * list (nat * nat) * list (zrange * zrange) with
          | base.type.unit
            => fun 'tt 'tt => (false, nil, nil)
+         | base.type.type_base Compilers.positive
          | base.type.type_base base.type.nat
          | base.type.type_base base.type.bool
          | base.type.type_base base.type.zrange

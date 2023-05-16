@@ -12,13 +12,15 @@ Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.SolinasReduction.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
+(*
+Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
-Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
 Require Crypto.Stringification.C.
 Require Crypto.Stringification.Go.
 Require Crypto.Stringification.Java.
+*)
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Util.DebugMonad.
 Require Import Crypto.Util.ZUtil.ModInv.
@@ -42,6 +44,7 @@ Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
 Local Existing Instance default_translate_to_fancy.
+(*
 Local Existing Instances
       Primitives.Options.default_PipelineOptions
       Primitives.Options.default_PipelineToStringOptions
@@ -49,16 +52,10 @@ Local Existing Instances
 | 100.
 Local Instance : unfold_value_barrier_opt := true.
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
+ *)
 
 Module debugging_sat_solinas_25519.
   Section __.
-    Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
-    Import Stringification.C.
-    Import Stringification.C.Compilers.
-    Import Stringification.C.Compilers.ToString.
-
-    (* We split these off to make things a bit easier on typeclass resolution and speed things up. *)
-    Local Existing Instances ToString.C.OutputCAPI Pipeline.show_ErrorMessage.
     Local Instance : only_signed_opt := false.
     Local Instance : no_select_opt := false.
     Local Instance : static_opt := true.
@@ -101,6 +98,14 @@ Module debugging_sat_solinas_25519.
     Let boundsn : list (ZRange.type.option.interp base.type.Z)
       := repeat bound n.
 
+    Locate Ltac Reify.
+    Check
+    ltac:(
+    let e := constr:(@SolinasReduction.Saturated.addmod (fun _ => Z.to_pos (2^64)) 38) in
+    let e := eval cbv delta in e in
+    let r := Reify e in
+    exact r).
+
     Goal True.
     pose (
          (Pipeline.BoundsPipeline
@@ -108,7 +113,7 @@ Module debugging_sat_solinas_25519.
             possible_values
             ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
                   let nreductions := (eval cbv in nreductions) (* needs to be reduced to reify correctly *) in
-                  let r := Reify (@SolinasReduction.add (2^machine_wordsize) s c n) in
+                  let r := Reify (@SolinasReduction.Saturated.addmod (fun _ => 2^64)%positive 38) in
                   exact r)
                    (Some boundsn, (Some boundsn, tt))
                    (Some boundsn)

@@ -1216,6 +1216,11 @@ Proof.
           | ident.fancy_selm
           | ident.fancy_sell
           | ident.fancy_addm
+          | Compilers.ident_Literal Compilers.positive _
+          | Compilers.ident_Pos_add
+          | Compilers.ident_Pos_mul
+          | Compilers.ident_Z_pos
+          | Compilers.ident_Z_to_pos
             => symex_T_error (Unhandled_identifier idc)
           end%symex).
   all: cbn in *.
