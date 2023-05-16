@@ -215,9 +215,9 @@ Module Saturated. Section __.
      *)Admitted.
 
   Definition encode bound (n : nat) (x : Z) : list Z :=
-    nat_rect _ (fun _ _ => []) (fun _ rec x bound =>
-      (x mod (stream.hd bound) :: rec (x / stream.hd bound) (stream.tl bound))
-    )  n x bound.
+    nat_rect _ (fun _ _ => []) (fun _ rec bound x =>
+      (x mod (stream.hd bound) :: rec (stream.tl bound) (x / stream.hd bound))
+    ) n bound x.
 
   Lemma encode_O bound x : encode bound O x = nil.  Proof. trivial. Qed.
 
