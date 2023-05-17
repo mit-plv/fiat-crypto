@@ -273,7 +273,6 @@ Local Ltac interp_good_t_step_arith :=
                          | H : is_bounded_by_bool _ _ = true |- _ =>
                            apply unfold_is_bounded_by_bool in H;
                            cbn [upper lower] in H
-                    (*| H : _ |- _ => fail*)
                          end;
                   try apply Z.lt_succ_r;
                   eauto using Z.log2_le_mono with lia)
@@ -548,7 +547,7 @@ Local Ltac do_clear_nia x y r H H' :=
                => let H0 := find_H x0 in
                   let H1 := find_H x1 in
                   let m0 := lazymatch type of H0 with 0 <= _ <= ?m => m end in
-                   let m1 := lazymatch type of H1 with 0 <= _ <= ?m => m end in
+                  let m1 := lazymatch type of H1 with 0 <= _ <= ?m => m end in
                   let H := fresh in
                   let __ := lazymatch goal with
                             | _ => assert (H : -m1 <= x <= m0) by (clear -H0 H1; lia)

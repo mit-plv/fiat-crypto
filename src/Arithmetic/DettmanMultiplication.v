@@ -267,7 +267,7 @@ Module DettmanMultiplication.
     Lemma eval_reduce_carry_borrow r0 :
       (Positional.eval weight limbs (reduce_carry_borrow r0)) mod (s - c) =
       (Associational.eval r0) mod (s - c).
-    Proof. 
+    Proof.
       cbv [reduce_carry_borrow carry' reduce']. autorewrite with push_eval; auto with arith.
       all: try apply weight_div_nz; try lia.
       all: try apply weight_mod_quotient_zero; try lia.
@@ -460,7 +460,7 @@ Module dettman_multiplication_mod_ops.
              rewrite <- Zle_Qle. lia.
         + replace 0%Q with (inject_Z 0) by reflexivity. rewrite <- Zle_Qle. lia.
     Qed.
-          
+
     Definition eval_mulmod := eval_mulmod s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
     Definition eval_squaremod := eval_squaremod s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
   End dettman_multiplication_mod_ops.

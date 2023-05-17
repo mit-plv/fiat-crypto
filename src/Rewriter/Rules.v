@@ -45,8 +45,6 @@ Local Notation "x <= y <= z" := (andb (is_tighter_than_bool (ZRange.normalize x)
 Local Notation litZZ x := (ident.literal (fst x), ident.literal (snd x)) (only parsing).
 Local Notation n r := (ZRange.normalize r) (only parsing).
 
-Print ident.cast. Search ident.cast.
-
 (* N.B. [ident.eagerly] does not play well with [do_again] *)
 Definition nbe_rewrite_rulesT : list (bool * Prop)
   := Eval cbv [myapp mymap myflatten] in
@@ -336,21 +334,9 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
             ; (forall rland r0 rv v,
                   0 ∈ rland -> 0 ∈ r0
                   -> cstZ rland (Z.land (cstZ r0 ('0)) (cstZ rv v)) = cstZ r0 ('0))
-                (* try to use lower bounds = 0, rland.upper divides rv.upper to remove double cast. *)
-            (*; (forall rland rm1 rv v,
-                  rland.(upper) ∈ rm1
-                  -> rland.(upper) = Z.ones (Z.succ (Z.log2 rland.(upper)))
-                  -> 0 = rland.(lower)
-                  -> 0 = rv.(lower)
-                  -> 0 <= rv.(upper)
-                  -> (rv.(upper) + 1) mod (rland.(upper) + 1) = 0
-                  -> cstZ rland (Z.land (cstZ rv v) (cstZ rm1 ('rland.(upper)))) = cstZ rland v)*)
             ; (forall rland rm1 rv v,
                   (rv <= rland)%zrange -> -1 ∈ rm1
                   -> cstZ rland (Z.land (cstZ rv v) (cstZ rm1 ('-1))) = cstZ rv v)
-            (*; (forall rland rm1 rv v,
-                  (rm1 <= rland)%zrange -> -1 ∈ rm1
-                  -> cstZ rland (Z.land (cstZ rv v) (cstZ rm1 ('-1))) = cstZ rland (cstZ rv v))*)
             ; (forall rland rm1 rv v,
                   (rv <= rland)%zrange -> -1 ∈ rm1
                   -> cstZ rland (Z.land (cstZ rm1 ('-1)) (cstZ rv v)) = cstZ rv v)

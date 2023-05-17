@@ -107,11 +107,6 @@ Section __.
   Definition output_bounds : list (ZRange.type.option.interp base.type.Z)
     := fold_left (fun l i => Some r[0 ~> Qceiling (2 * output_magnitude_first_limbs * ((weightf (i + 1) / weightf i) - 1))]%zrange :: l) (seq 0 (n - 1)) [] ++
          [Some r[0 ~> Qceiling (2 * output_magnitude_last_limb * (2^last_limb_width - 1))]%zrange].
-  (*Definition output_bounds : list (ZRange.type.option.interp base.type.Z) :=
-    match inbounds_multiplier with
-    | Some _ => [None; None; None; None; None]
-    | None => [None; None; None; None; None]
-    end.*)
   Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
