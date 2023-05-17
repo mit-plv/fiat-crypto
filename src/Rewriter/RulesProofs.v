@@ -564,63 +564,52 @@ Local Ltac do_clear_nia x y r H H' :=
     => clear -Hx Hy Hm Hr H' H; nia
   end.
 
-Search ident.cast.
 Lemma arith_with_casts_rewrite_rules_proofs (adc_no_carry_to_add : bool)
   : PrimitiveHList.hlist (@snd bool Prop) (arith_with_casts_rewrite_rulesT adc_no_carry_to_add).
 Proof using Type.
   start_proof; auto; intros; try lia.
   all: repeat interp_good_t_step_related.
-  (*11: { replace (ident.cast rland v) with (ident.cast rland (ident.cast rv v)).
-        - interp_good_t_step_arith. interp_good_t_step_arith. rewrite Z.land_ones.
-          + replace (2 ^ Z.succ (Z.log2 (upper rland))) with (upper rland + 1).
-            -- rewrite <- ident.cast_out_of_bounds_simple_0_mod.
-               ++ destruct rland. simpl in H1. subst. apply ident.cast_idempotent.
-               ++ rewrite H0. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper rland)). lia.
-            -- remember (Z.log2 _) as x. rewrite H0. subst. rewrite Z.ones_equiv. lia.
-          + remember (Z.log2_nonneg (upper rland)). lia.
-        - Search ident.cast. destruct rland. destruct rv. simpl in *. subst.
-          (*Search ident.cast. Search ZRange.normalize.
-          repeat rewrite <- (ident.cast_normalize r[0~>upper]).
-          repeat rewrite <- (ident.cast_normalize r[0~>upper0]).*)
-          Check ident.cast_out_of_bounds_simple_0_mod.
-          repeat rewrite ident.cast_out_of_bounds_simple_0_mod.
-          + Search ((_ mod _) mod _). rewrite <- Z.mod_div_mod_full.
-            -- reflexivity.
-            -- Search Z.divide. rewrite <- Z.mod_divide_full. assumption.
-          + Search Z.ones. rewrite H0. apply Ones.Z.ones_nonneg.
-            remember (Z.log2_nonneg (upper)). lia.
-          + lia.
-          + Search Z.ones. rewrite H0. apply Ones.Z.ones_nonneg.
-            remember (Z.log2_nonneg (upper)). lia.
-  }*)
-           (* Search Z.ones. rewrite H0. apply Ones.Z.ones_nonneg.
-            remember (Z.log2_nonneg (upper)). lia.
-  }
-                 cbv [Z.succ]. Check Z.ones_equiv. rewrite <- ident.cast_out_of_bounds_simple_0_mod.
-        Search (Z.ones (Z.succ _)). rewrite Z.ones_equiv.
-        rewrite Z.land_ones.
-        - 
-        all: repeat interp_good_t_step_arith.
-          Search (Z.land _ (Z.ones _)). rewrite Z.land_ones.
-          + Search (ident.cast _ _ = _ mod _). cbv [Z.succ]. replace (2^(Z.log2 (upper rland) + 1)) with ((upper rland) + 1).
-            -- rewrite <- ident.cast_out_of_bounds_simple_0_mod.
-               ++ Search (ident.cast _ (ident.cast _ _)).
-                  replace r[0~>upper rland]%zrange with rland.
-                  --- rewrite ident.cast_idempotent. rep apply ident.cast_idempotent.
-                  --- reflect_hyps. destruct rland. simpl in *. subst. reflexivity.
-               ++ reflect_hyps. simpl in *. Search (0 <= Z.ones _). rewrite H1.
-                  apply Ones.Z.ones_nonneg. Search (0 <= Z.log2 _). remember (Z.log2_nonneg (upper rland)). lia.
-            -- remember (Z.log2 _) as x. rewrite H1. subst. Search Z.ones. rewrite Z.ones_equiv. cbv [Z.succ Z.pred]. lia.
-          + remember (Z.log2_nonneg (upper rland)). lia.
-        - Check Ones.Z.ones_succ. remember (Ones.Z.ones_nonneg (Z.succ (Z.l lia.
-          interp_good_t_step_arith.
-        all: repeat interp_good_t_step_arith. assert (is_bounded_by_bool v rland = true).
-  { reflect_hyps. cbv [is_bounded_by_bool]. lia. } Search is_tighter_than_bool. reflect_hyps.*)
   all: repeat interp_good_t_step_arith.
   all: remove_casts; try fin_with_nia.
   all: try (reflect_hyps; lia).
 Qed.
 
+Lemma relaxed_rules_work rland rm1 rv v :
+    is_bounded_by_bool (upper rland) (ZRange.normalize rm1) = true ->
+    upper rland = Z.ones (Z.succ (Z.log2 (upper rland))) ->
+    0 = lower rland ->
+    0 = lower rv ->
+    0 <= upper rv ->
+    (upper rv + 1) mod (upper rland + 1) = 0 ->
+    ident.cast rland (ident.cast rv v &' ident.cast rm1 (upper rland)) = ident.cast rland v.
+Proof.
+  intros H1 H2 H3 H4 H5 H6.
+  replace (ident.cast rland v) with (ident.cast rland (ident.cast rv v)).
+  - interp_good_t_step_arith. interp_good_t_step_arith. rewrite Z.land_ones.
+    + replace (2 ^ Z.succ (Z.log2 (upper rland))) with (upper rland + 1).
+      -- rewrite <- ident.cast_out_of_bounds_simple_0_mod.
+         ++ destruct rland. simpl in *. subst. apply ident.cast_idempotent.
+         ++ rewrite H2. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper rland)). lia.
+      -- remember (Z.log2 _) as x. rewrite H2. subst. rewrite Z.ones_equiv. lia.
+    + remember (Z.log2_nonneg (upper rland)). lia.
+  - destruct rland. destruct rv. simpl in *. subst.
+    repeat rewrite ident.cast_out_of_bounds_simple_0_mod.
+    + rewrite <- Z.mod_div_mod_full.
+      -- reflexivity.
+      -- rewrite <- Z.mod_divide_full. assumption.
+    + rewrite H2. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper)). lia.
+    + lia.
+    + rewrite H2. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper)). lia.  
+Qed.
+      
+Lemma arith_with_relaxed_casts_rewrite_rules_proofs
+  : PrimitiveHList.hlist (@snd bool Prop) arith_with_relaxed_casts_rewrite_rulesT.
+Proof using Type.
+  start_proof; auto; intros; try lia.
+  - apply relaxed_rules_work; assumption.
+  - rewrite Z.land_comm. apply relaxed_rules_work; assumption.
+Qed.
+      
 Lemma strip_literal_casts_rewrite_rules_proofs
   : PrimitiveHList.hlist (@snd bool Prop) strip_literal_casts_rewrite_rulesT.
 Proof using Type.
@@ -861,30 +850,6 @@ Proof using Type.
     by (intros; apply Z.pow_gt_lin_r; auto with zarith).
 
   start_proof; auto; intros; try lia.
-  1: {
-    replace (ident.cast rland v) with (ident.cast rland (ident.cast rv v)).
-    - interp_good_t_step_arith. interp_good_t_step_arith. rewrite Z.land_ones.
-          + replace (2 ^ Z.succ (Z.log2 (upper rland))) with (upper rland + 1).
-            -- rewrite <- ident.cast_out_of_bounds_simple_0_mod.
-               ++ destruct rland. simpl in *. subst. apply ident.cast_idempotent.
-               ++ rewrite H2. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper rland)). lia.
-            -- remember (Z.log2 _) as x. rewrite H2. subst. rewrite Z.ones_equiv. lia.
-          + remember (Z.log2_nonneg (upper rland)). lia.
-        - Search ident.cast. destruct rland. destruct rv. simpl in *. subst.
-          (*Search ident.cast. Search ZRange.normalize.
-          repeat rewrite <- (ident.cast_normalize r[0~>upper]).
-          repeat rewrite <- (ident.cast_normalize r[0~>upper0]).*)
-          Check ident.cast_out_of_bounds_simple_0_mod.
-          repeat rewrite ident.cast_out_of_bounds_simple_0_mod.
-          + Search ((_ mod _) mod _). rewrite <- Z.mod_div_mod_full.
-            -- reflexivity.
-            -- Search Z.divide. rewrite <- Z.mod_divide_full. assumption.
-          + Search Z.ones. rewrite H2. apply Ones.Z.ones_nonneg.
-            remember (Z.log2_nonneg (upper)). lia.
-          + lia.
-          + Search Z.ones. rewrite H2. apply Ones.Z.ones_nonneg.
-            remember (Z.log2_nonneg (upper)). lia.
-  }
   all: repeat interp_good_t_step_related.
   all: systematically_handle_casts; autorewrite with zsimplify_fast; try reflexivity.
   all: subst; rewrite !ident.platform_specific_cast_0_is_mod, ?Z.sub_add, ?Z.mod_mod by lia; try reflexivity.

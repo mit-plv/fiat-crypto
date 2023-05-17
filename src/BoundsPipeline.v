@@ -806,7 +806,8 @@ Module Pipeline.
       match E' with
         (* rewrites after bounds relaxation---add a new one named arithWithRelaxedCasts or something. *)
       | inl E
-        => (E <- match split_mul_to with
+        => (E <- RewriteAndEliminateDeadAndInline "RewriteArithWithRelaxedCasts" (RewriteRules.RewriteArithWithRelaxedCasts opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
+            E <- match split_mul_to with
                  | Some (max_bitwidth, lgcarrymax)
                    => wrap_debug_rewrite "RewriteMulSplit" (RewriteRules.RewriteMulSplit max_bitwidth lgcarrymax opts) E
                  | None => Debug.ret E
