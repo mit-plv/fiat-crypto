@@ -337,14 +337,14 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
                   0 ∈ rland -> 0 ∈ r0
                   -> cstZ rland (Z.land (cstZ r0 ('0)) (cstZ rv v)) = cstZ r0 ('0))
                 (* try to use lower bounds = 0, rland.upper divides rv.upper to remove double cast. *)
-            ; (forall rland rm1 rv v,
+            (*; (forall rland rm1 rv v,
                   rland.(upper) ∈ rm1
                   -> rland.(upper) = Z.ones (Z.succ (Z.log2 rland.(upper)))
                   -> 0 = rland.(lower)
                   -> 0 = rv.(lower)
                   -> 0 <= rv.(upper)
                   -> (rv.(upper) + 1) mod (rland.(upper) + 1) = 0
-                  -> cstZ rland (Z.land (cstZ rv v) (cstZ rm1 ('rland.(upper)))) = cstZ rland v)
+                  -> cstZ rland (Z.land (cstZ rv v) (cstZ rm1 ('rland.(upper)))) = cstZ rland v)*)
             ; (forall rland rm1 rv v,
                   (rv <= rland)%zrange -> -1 ∈ rm1
                   -> cstZ rland (Z.land (cstZ rv v) (cstZ rm1 ('-1))) = cstZ rv v)
@@ -1060,7 +1060,17 @@ Section with_bitwidth.
           [mymap dont_do_again []
            ; mymap
                do_again
-               [(forall A B x y, @fst A B (x, y) = x)
+               [
+                 (* owen put this here, and he needs to remove it. *)
+                 (forall rland rm1 rv v,
+                       rland.(upper) ∈ rm1
+                       -> rland.(upper) = Z.ones (Z.succ (Z.log2 rland.(upper)))
+                       -> 0 = rland.(lower)
+                       -> 0 = rv.(lower)
+                       -> 0 <= rv.(upper)
+                       -> (rv.(upper) + 1) mod (rland.(upper) + 1) = 0
+                       -> cstZ rland (Z.land (cstZ rv v) (cstZ rm1 ('rland.(upper)))) = cstZ rland v)
+                ; (forall A B x y, @fst A B (x, y) = x)
                 ; (forall A B x y, @snd A B (x, y) = y)
                     (** In order to avoid tautological compares, we need to deal with carry/borrows being 0 *)
                 ; (forall r0 s x y r1 r2,

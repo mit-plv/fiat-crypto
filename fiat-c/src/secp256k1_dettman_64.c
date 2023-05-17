@@ -38,7 +38,7 @@ FIAT_SECP256K1_DETTMAN_FIAT_EXTENSION typedef unsigned __int128 fiat_secp256k1_d
  *   arg1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
  *   arg2: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
  * Output Bounds:
- *   out1: Some [None, None, None, None, None]
+ *   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x17fffffffffff]]
  */
 static FIAT_SECP256K1_DETTMAN_FIAT_INLINE void fiat_secp256k1_dettman_mul(uint64_t out1[5], const uint64_t arg1[5], const uint64_t arg2[5]) {
   fiat_secp256k1_dettman_uint128 x1;
@@ -51,26 +51,29 @@ static FIAT_SECP256K1_DETTMAN_FIAT_INLINE void fiat_secp256k1_dettman_mul(uint64
   uint64_t x8;
   uint64_t x9;
   uint64_t x10;
-  fiat_secp256k1_dettman_uint128 x11;
-  uint64_t x12;
+  uint64_t x11;
+  fiat_secp256k1_dettman_uint128 x12;
   uint64_t x13;
-  fiat_secp256k1_dettman_uint128 x14;
-  uint64_t x15;
+  uint64_t x14;
+  fiat_secp256k1_dettman_uint128 x15;
   uint64_t x16;
-  fiat_secp256k1_dettman_uint128 x17;
-  uint64_t x18;
+  uint64_t x17;
+  fiat_secp256k1_dettman_uint128 x18;
   uint64_t x19;
-  fiat_secp256k1_dettman_uint128 x20;
-  uint64_t x21;
-  fiat_secp256k1_dettman_uint128 x22;
+  uint64_t x20;
+  fiat_secp256k1_dettman_uint128 x21;
+  uint64_t x22;
   uint64_t x23;
-  uint64_t x24;
-  fiat_secp256k1_dettman_uint128 x25;
+  fiat_secp256k1_dettman_uint128 x24;
+  uint64_t x25;
   uint64_t x26;
   fiat_secp256k1_dettman_uint128 x27;
   uint64_t x28;
   uint64_t x29;
-  uint64_t x30;
+  fiat_secp256k1_dettman_uint128 x30;
+  uint64_t x31;
+  uint64_t x32;
+  uint64_t x33;
   x1 = ((fiat_secp256k1_dettman_uint128)(arg1[4]) * (arg2[4]));
   x2 = (uint64_t)(x1 >> 64);
   x3 = (uint64_t)(x1 & UINT64_C(0xffffffffffffffff));
@@ -81,31 +84,34 @@ static FIAT_SECP256K1_DETTMAN_FIAT_INLINE void fiat_secp256k1_dettman_mul(uint64
   x8 = (uint64_t)(x7 >> 52);
   x9 = (uint64_t)(x7 & UINT64_C(0xfffffffffffff));
   x10 = (x9 >> 48);
-  x11 = ((((fiat_secp256k1_dettman_uint128)(arg1[1]) * (arg2[4])) + (((fiat_secp256k1_dettman_uint128)(arg1[2]) * (arg2[3])) + (((fiat_secp256k1_dettman_uint128)(arg1[3]) * (arg2[2])) + ((fiat_secp256k1_dettman_uint128)(arg1[4]) * (arg2[1]))))) + x8);
-  x12 = (uint64_t)(x11 >> 52);
-  x13 = (uint64_t)(x11 & UINT64_C(0xfffffffffffff));
-  x14 = (((fiat_secp256k1_dettman_uint128)(arg1[0]) * (arg2[0])) + ((fiat_secp256k1_dettman_uint128)((x13 << 4) + x10) * UINT64_C(0x1000003d1)));
-  x15 = (uint64_t)(x14 >> 52);
-  x16 = (uint64_t)(x14 & UINT64_C(0xfffffffffffff));
-  x17 = ((((fiat_secp256k1_dettman_uint128)(arg1[2]) * (arg2[4])) + (((fiat_secp256k1_dettman_uint128)(arg1[3]) * (arg2[3])) + ((fiat_secp256k1_dettman_uint128)(arg1[4]) * (arg2[2])))) + x12);
-  x18 = (uint64_t)(x17 >> 52);
-  x19 = (uint64_t)(x17 & UINT64_C(0xfffffffffffff));
-  x20 = (((((fiat_secp256k1_dettman_uint128)(arg1[0]) * (arg2[1])) + ((fiat_secp256k1_dettman_uint128)(arg1[1]) * (arg2[0]))) + x15) + ((fiat_secp256k1_dettman_uint128)x19 * UINT64_C(0x1000003d10)));
-  x21 = (uint64_t)(x20 >> 52);
-  x22 = ((((fiat_secp256k1_dettman_uint128)(arg1[3]) * (arg2[4])) + ((fiat_secp256k1_dettman_uint128)(arg1[4]) * (arg2[3]))) + x18);
-  x23 = (uint64_t)(x22 >> 64);
-  x24 = (uint64_t)(x22 & UINT64_C(0xffffffffffffffff));
-  x25 = (((((fiat_secp256k1_dettman_uint128)(arg1[0]) * (arg2[2])) + (((fiat_secp256k1_dettman_uint128)(arg1[1]) * (arg2[1])) + ((fiat_secp256k1_dettman_uint128)(arg1[2]) * (arg2[0])))) + x21) + ((fiat_secp256k1_dettman_uint128)x24 * UINT64_C(0x1000003d10)));
-  x26 = (uint64_t)(x25 >> 52);
-  x27 = ((x6 + x26) + ((fiat_secp256k1_dettman_uint128)x23 * UINT64_C(0x1000003d10000)));
+  x11 = (x9 & UINT64_C(0xffffffffffff));
+  x12 = ((((fiat_secp256k1_dettman_uint128)(arg1[1]) * (arg2[4])) + (((fiat_secp256k1_dettman_uint128)(arg1[2]) * (arg2[3])) + (((fiat_secp256k1_dettman_uint128)(arg1[3]) * (arg2[2])) + ((fiat_secp256k1_dettman_uint128)(arg1[4]) * (arg2[1]))))) + x8);
+  x13 = (uint64_t)(x12 >> 52);
+  x14 = (uint64_t)(x12 & UINT64_C(0xfffffffffffff));
+  x15 = (((fiat_secp256k1_dettman_uint128)(arg1[0]) * (arg2[0])) + ((fiat_secp256k1_dettman_uint128)((x14 << 4) + x10) * UINT64_C(0x1000003d1)));
+  x16 = (uint64_t)(x15 >> 52);
+  x17 = (uint64_t)(x15 & UINT64_C(0xfffffffffffff));
+  x18 = ((((fiat_secp256k1_dettman_uint128)(arg1[2]) * (arg2[4])) + (((fiat_secp256k1_dettman_uint128)(arg1[3]) * (arg2[3])) + ((fiat_secp256k1_dettman_uint128)(arg1[4]) * (arg2[2])))) + x13);
+  x19 = (uint64_t)(x18 >> 52);
+  x20 = (uint64_t)(x18 & UINT64_C(0xfffffffffffff));
+  x21 = (((((fiat_secp256k1_dettman_uint128)(arg1[0]) * (arg2[1])) + ((fiat_secp256k1_dettman_uint128)(arg1[1]) * (arg2[0]))) + x16) + ((fiat_secp256k1_dettman_uint128)x20 * UINT64_C(0x1000003d10)));
+  x22 = (uint64_t)(x21 >> 52);
+  x23 = (uint64_t)(x21 & UINT64_C(0xfffffffffffff));
+  x24 = ((((fiat_secp256k1_dettman_uint128)(arg1[3]) * (arg2[4])) + ((fiat_secp256k1_dettman_uint128)(arg1[4]) * (arg2[3]))) + x19);
+  x25 = (uint64_t)(x24 >> 64);
+  x26 = (uint64_t)(x24 & UINT64_C(0xffffffffffffffff));
+  x27 = (((((fiat_secp256k1_dettman_uint128)(arg1[0]) * (arg2[2])) + (((fiat_secp256k1_dettman_uint128)(arg1[1]) * (arg2[1])) + ((fiat_secp256k1_dettman_uint128)(arg1[2]) * (arg2[0])))) + x22) + ((fiat_secp256k1_dettman_uint128)x26 * UINT64_C(0x1000003d10)));
   x28 = (uint64_t)(x27 >> 52);
   x29 = (uint64_t)(x27 & UINT64_C(0xfffffffffffff));
-  x30 = (x9 + x28);
-  out1[0] = x16;
-  out1[1] = (uint64_t)x20;
-  out1[2] = (uint64_t)x25;
-  out1[3] = x29;
-  out1[4] = x30;
+  x30 = ((x6 + x28) + ((fiat_secp256k1_dettman_uint128)x25 * UINT64_C(0x1000003d10000)));
+  x31 = (uint64_t)(x30 >> 52);
+  x32 = (uint64_t)(x30 & UINT64_C(0xfffffffffffff));
+  x33 = (x11 + x31);
+  out1[0] = x17;
+  out1[1] = x23;
+  out1[2] = x29;
+  out1[3] = x32;
+  out1[4] = x33;
 }
 
 /*
@@ -117,7 +123,7 @@ static FIAT_SECP256K1_DETTMAN_FIAT_INLINE void fiat_secp256k1_dettman_mul(uint64
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
  * Output Bounds:
- *   out1: Some [None, None, None, None, None]
+ *   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x17fffffffffff]]
  */
 static FIAT_SECP256K1_DETTMAN_FIAT_INLINE void fiat_secp256k1_dettman_square(uint64_t out1[5], const uint64_t arg1[5]) {
   uint64_t x1;
@@ -134,26 +140,29 @@ static FIAT_SECP256K1_DETTMAN_FIAT_INLINE void fiat_secp256k1_dettman_square(uin
   uint64_t x12;
   uint64_t x13;
   uint64_t x14;
-  fiat_secp256k1_dettman_uint128 x15;
-  uint64_t x16;
+  uint64_t x15;
+  fiat_secp256k1_dettman_uint128 x16;
   uint64_t x17;
-  fiat_secp256k1_dettman_uint128 x18;
-  uint64_t x19;
+  uint64_t x18;
+  fiat_secp256k1_dettman_uint128 x19;
   uint64_t x20;
-  fiat_secp256k1_dettman_uint128 x21;
-  uint64_t x22;
+  uint64_t x21;
+  fiat_secp256k1_dettman_uint128 x22;
   uint64_t x23;
-  fiat_secp256k1_dettman_uint128 x24;
-  uint64_t x25;
-  fiat_secp256k1_dettman_uint128 x26;
+  uint64_t x24;
+  fiat_secp256k1_dettman_uint128 x25;
+  uint64_t x26;
   uint64_t x27;
-  uint64_t x28;
-  fiat_secp256k1_dettman_uint128 x29;
+  fiat_secp256k1_dettman_uint128 x28;
+  uint64_t x29;
   uint64_t x30;
   fiat_secp256k1_dettman_uint128 x31;
   uint64_t x32;
   uint64_t x33;
-  uint64_t x34;
+  fiat_secp256k1_dettman_uint128 x34;
+  uint64_t x35;
+  uint64_t x36;
+  uint64_t x37;
   x1 = ((arg1[3]) * 0x2);
   x2 = ((arg1[2]) * 0x2);
   x3 = ((arg1[1]) * 0x2);
@@ -168,29 +177,32 @@ static FIAT_SECP256K1_DETTMAN_FIAT_INLINE void fiat_secp256k1_dettman_square(uin
   x12 = (uint64_t)(x11 >> 52);
   x13 = (uint64_t)(x11 & UINT64_C(0xfffffffffffff));
   x14 = (x13 >> 48);
-  x15 = ((((fiat_secp256k1_dettman_uint128)x3 * (arg1[4])) + ((fiat_secp256k1_dettman_uint128)x2 * (arg1[3]))) + x12);
-  x16 = (uint64_t)(x15 >> 52);
-  x17 = (uint64_t)(x15 & UINT64_C(0xfffffffffffff));
-  x18 = (((fiat_secp256k1_dettman_uint128)(arg1[0]) * (arg1[0])) + ((fiat_secp256k1_dettman_uint128)((x17 << 4) + x14) * UINT64_C(0x1000003d1)));
-  x19 = (uint64_t)(x18 >> 52);
-  x20 = (uint64_t)(x18 & UINT64_C(0xfffffffffffff));
-  x21 = ((((fiat_secp256k1_dettman_uint128)x2 * (arg1[4])) + ((fiat_secp256k1_dettman_uint128)(arg1[3]) * (arg1[3]))) + x16);
-  x22 = (uint64_t)(x21 >> 52);
-  x23 = (uint64_t)(x21 & UINT64_C(0xfffffffffffff));
-  x24 = ((((fiat_secp256k1_dettman_uint128)x4 * (arg1[1])) + x19) + ((fiat_secp256k1_dettman_uint128)x23 * UINT64_C(0x1000003d10)));
-  x25 = (uint64_t)(x24 >> 52);
-  x26 = (((fiat_secp256k1_dettman_uint128)x1 * (arg1[4])) + x22);
-  x27 = (uint64_t)(x26 >> 64);
-  x28 = (uint64_t)(x26 & UINT64_C(0xffffffffffffffff));
-  x29 = (((((fiat_secp256k1_dettman_uint128)x4 * (arg1[2])) + ((fiat_secp256k1_dettman_uint128)(arg1[1]) * (arg1[1]))) + x25) + ((fiat_secp256k1_dettman_uint128)x28 * UINT64_C(0x1000003d10)));
-  x30 = (uint64_t)(x29 >> 52);
-  x31 = ((x10 + x30) + ((fiat_secp256k1_dettman_uint128)x27 * UINT64_C(0x1000003d10000)));
+  x15 = (x13 & UINT64_C(0xffffffffffff));
+  x16 = ((((fiat_secp256k1_dettman_uint128)x3 * (arg1[4])) + ((fiat_secp256k1_dettman_uint128)x2 * (arg1[3]))) + x12);
+  x17 = (uint64_t)(x16 >> 52);
+  x18 = (uint64_t)(x16 & UINT64_C(0xfffffffffffff));
+  x19 = (((fiat_secp256k1_dettman_uint128)(arg1[0]) * (arg1[0])) + ((fiat_secp256k1_dettman_uint128)((x18 << 4) + x14) * UINT64_C(0x1000003d1)));
+  x20 = (uint64_t)(x19 >> 52);
+  x21 = (uint64_t)(x19 & UINT64_C(0xfffffffffffff));
+  x22 = ((((fiat_secp256k1_dettman_uint128)x2 * (arg1[4])) + ((fiat_secp256k1_dettman_uint128)(arg1[3]) * (arg1[3]))) + x17);
+  x23 = (uint64_t)(x22 >> 52);
+  x24 = (uint64_t)(x22 & UINT64_C(0xfffffffffffff));
+  x25 = ((((fiat_secp256k1_dettman_uint128)x4 * (arg1[1])) + x20) + ((fiat_secp256k1_dettman_uint128)x24 * UINT64_C(0x1000003d10)));
+  x26 = (uint64_t)(x25 >> 52);
+  x27 = (uint64_t)(x25 & UINT64_C(0xfffffffffffff));
+  x28 = (((fiat_secp256k1_dettman_uint128)x1 * (arg1[4])) + x23);
+  x29 = (uint64_t)(x28 >> 64);
+  x30 = (uint64_t)(x28 & UINT64_C(0xffffffffffffffff));
+  x31 = (((((fiat_secp256k1_dettman_uint128)x4 * (arg1[2])) + ((fiat_secp256k1_dettman_uint128)(arg1[1]) * (arg1[1]))) + x26) + ((fiat_secp256k1_dettman_uint128)x30 * UINT64_C(0x1000003d10)));
   x32 = (uint64_t)(x31 >> 52);
   x33 = (uint64_t)(x31 & UINT64_C(0xfffffffffffff));
-  x34 = (x13 + x32);
-  out1[0] = x20;
-  out1[1] = (uint64_t)x24;
-  out1[2] = (uint64_t)x29;
-  out1[3] = x33;
-  out1[4] = x34;
+  x34 = ((x10 + x32) + ((fiat_secp256k1_dettman_uint128)x29 * UINT64_C(0x1000003d10000)));
+  x35 = (uint64_t)(x34 >> 52);
+  x36 = (uint64_t)(x34 & UINT64_C(0xfffffffffffff));
+  x37 = (x15 + x35);
+  out1[0] = x21;
+  out1[1] = x27;
+  out1[2] = x33;
+  out1[3] = x36;
+  out1[4] = x37;
 }

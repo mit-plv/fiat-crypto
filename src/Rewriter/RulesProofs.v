@@ -570,7 +570,7 @@ Lemma arith_with_casts_rewrite_rules_proofs (adc_no_carry_to_add : bool)
 Proof using Type.
   start_proof; auto; intros; try lia.
   all: repeat interp_good_t_step_related.
-  11: { replace (ident.cast rland v) with (ident.cast rland (ident.cast rv v)).
+  (*11: { replace (ident.cast rland v) with (ident.cast rland (ident.cast rv v)).
         - interp_good_t_step_arith. interp_good_t_step_arith. rewrite Z.land_ones.
           + replace (2 ^ Z.succ (Z.log2 (upper rland))) with (upper rland + 1).
             -- rewrite <- ident.cast_out_of_bounds_simple_0_mod.
@@ -592,7 +592,7 @@ Proof using Type.
           + lia.
           + Search Z.ones. rewrite H0. apply Ones.Z.ones_nonneg.
             remember (Z.log2_nonneg (upper)). lia.
-  }
+  }*)
            (* Search Z.ones. rewrite H0. apply Ones.Z.ones_nonneg.
             remember (Z.log2_nonneg (upper)). lia.
   }
@@ -861,6 +861,30 @@ Proof using Type.
     by (intros; apply Z.pow_gt_lin_r; auto with zarith).
 
   start_proof; auto; intros; try lia.
+  1: {
+    replace (ident.cast rland v) with (ident.cast rland (ident.cast rv v)).
+    - interp_good_t_step_arith. interp_good_t_step_arith. rewrite Z.land_ones.
+          + replace (2 ^ Z.succ (Z.log2 (upper rland))) with (upper rland + 1).
+            -- rewrite <- ident.cast_out_of_bounds_simple_0_mod.
+               ++ destruct rland. simpl in *. subst. apply ident.cast_idempotent.
+               ++ rewrite H2. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper rland)). lia.
+            -- remember (Z.log2 _) as x. rewrite H2. subst. rewrite Z.ones_equiv. lia.
+          + remember (Z.log2_nonneg (upper rland)). lia.
+        - Search ident.cast. destruct rland. destruct rv. simpl in *. subst.
+          (*Search ident.cast. Search ZRange.normalize.
+          repeat rewrite <- (ident.cast_normalize r[0~>upper]).
+          repeat rewrite <- (ident.cast_normalize r[0~>upper0]).*)
+          Check ident.cast_out_of_bounds_simple_0_mod.
+          repeat rewrite ident.cast_out_of_bounds_simple_0_mod.
+          + Search ((_ mod _) mod _). rewrite <- Z.mod_div_mod_full.
+            -- reflexivity.
+            -- Search Z.divide. rewrite <- Z.mod_divide_full. assumption.
+          + Search Z.ones. rewrite H2. apply Ones.Z.ones_nonneg.
+            remember (Z.log2_nonneg (upper)). lia.
+          + lia.
+          + Search Z.ones. rewrite H2. apply Ones.Z.ones_nonneg.
+            remember (Z.log2_nonneg (upper)). lia.
+  }
   all: repeat interp_good_t_step_related.
   all: systematically_handle_casts; autorewrite with zsimplify_fast; try reflexivity.
   all: subst; rewrite !ident.platform_specific_cast_0_is_mod, ?Z.sub_add, ?Z.mod_mod by lia; try reflexivity.
