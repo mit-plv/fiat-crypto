@@ -584,7 +584,7 @@ Lemma relaxed_rules_work rland rm1 rv v :
 Proof.
   intros H1 H2 H3 H4 H5 H6.
   replace (ident.cast rland v) with (ident.cast rland (ident.cast rv v)).
-  - interp_good_t_step_arith. interp_good_t_step_arith. rewrite Z.land_ones.
+  - do 3 interp_good_t_step_arith. rewrite Z.land_ones.
     + replace (2 ^ Z.succ (Z.log2 (upper rland))) with (upper rland + 1).
       -- rewrite <- ident.cast_out_of_bounds_simple_0_mod.
          ++ destruct rland. simpl in *. subst. apply ident.cast_idempotent.
