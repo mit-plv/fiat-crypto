@@ -120,11 +120,11 @@ Section __.
          (List.map
             (fun v => (true, v))
             [(negb (s - c =? 0), Pipeline.Values_not_provably_distinctZ "s - c <> 0" (s - c) 0)
-             ; (4 <=? n, Pipeline.Value_not_leZ "4 <= n" 3 n)
+             ; (4 <=? n, Pipeline.Value_not_leZ "4 <= n" 4 n)
              ; (last_limb_width * n <=? Z.log2 s, Pipeline.Value_not_leZ "last_limb_width * n <= Z.log2 s" (last_limb_width * n) (Z.log2 s))
              ; (1 <=? last_limb_width, Pipeline.Value_not_leZ "1 <= last_limb_width" 1 last_limb_width)
              ; (2 ^ (Z.log2 s) =? s, Pipeline.Values_not_provably_equalZ "2 ^ (Z.log2 s) = s" (2 ^ Z.log2 s) s)
-             ; (Z.log2 s - last_limb_width <=? (Z.to_nat machine_wordsize) * (n - 1), Pipeline.Value_not_leZ "Z.log2 s - last_limb_width <= (Z.to_nat machine_wordsize) * (n - 1)" (Z.log2 s - last_limb_width) (Z.to_nat machine_wordsize * (n - 1)))
+             ; (Z.log2 s - last_limb_width <=? (Z.to_nat machine_wordsize) * (n - 1), Pipeline.Value_not_leZ "Z.log2 s - last_limb_width <= machine_wordsize * (n - 1)" (Z.log2 s - last_limb_width) (Z.to_nat machine_wordsize * (n - 1)))
              ; (Z.log2 s <=? n * (Z.log2 s - last_limb_width) / (n - 1), Pipeline.Value_not_leZ "Z.log2 s <= n * (Z.log2 s - last_limb_width) / (n - 1)" (Z.log2 s) (n * (Z.log2 s - last_limb_width) / (n - 1)))
             ])
             res.
