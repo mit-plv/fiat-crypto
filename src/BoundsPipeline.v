@@ -838,7 +838,7 @@ Module Pipeline.
                    => wrap_debug_rewrite "RewriteNoSelect" (RewriteRules.RewriteNoSelect bitwidth opts) E
                  | None => Debug.ret E
                  end;
-            E <- RewriteAndEliminateDeadAndInline "RewriteArithWithRelaxedCasts" (RewriteRules.RewriteArithWithRelaxedCasts opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
+            E <- wrap_debug_rewrite "RewriteArithWithRelaxedCasts" (RewriteRules.RewriteArithWithRelaxedCasts opts) E;
             E <- wrap_debug_rewrite "RewriteStripLiteralCasts" (RewriteRules.RewriteStripLiteralCasts opts) E;
             M.ret E)
       | inr (inl (b, E))
