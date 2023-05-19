@@ -245,6 +245,19 @@ Module Saturated. Section __.
   Qed.
      *)Admitted.
 
+  Lemma eval_firstn bound n xs :
+    eval bound (firstn n xs) mod weight bound n =
+    eval bound xs mod weight bound n.
+  Proof.
+    epose proof eval_app bound _ _ as H; rewrite (firstn_skipn n xs) in H.
+    rewrite H; clear H.
+    rewrite firstn_length.
+    case (Nat.min_dec n (length xs)) as [e|e]; rewrite e.
+    { rewrite Z.mul_comm, Z.mod_add; trivial. admit. }
+    rewrite ListUtil.skipn_all, eval_nil, Z.mul_0_r, Z.add_0_r by lia; trivial.
+    all : fail.
+  Admitted.
+
   Definition encode bound (n : nat) (x : Z) : list Z :=
     nat_rect _ (fun _ _ => []) (fun _ rec bound x =>
       (x mod (stream.hd bound) :: rec (stream.tl bound) (x / stream.hd bound))
@@ -508,18 +521,20 @@ Module Saturated. Section __.
   Definition mulmod bound n c a b :=
     let p := mul bound a b in
     let (lo, hi) := add_mul_limb' bound (firstn n p) (skipn n p) c 0 0 0 in
-    reduce' bound 1 c lo hi.
+    if (* true by range analysis *) c*Z.abs hi <=? weight bound 1 - c
+    then reduce' bound 1 c lo hi
+    else lo ++ [hi].
 
   Lemma eval_mulmod B (bound := fun _ => B) n a b m
     (s : Z := weight bound n) (c := s mod m)
-    (Hn : (1 < n)%nat)
-    (Hc' : 0 <= c < stream.hd bound)
+    (Hn : (1 < n)%nat) (Hc' : 0 <= c < stream.hd bound)
     : eval bound (mulmod bound n c a b) mod m = (eval bound a * eval bound b) mod m.
   Proof.
+    assert (0 < weight bound n) by admit.
     cbv [mulmod].
     pose proof (eq_refl : weight bound n mod m = c) as Hc.
     pose proof eval_mul B a b as Hmul; fold bound in Hmul.
-    epose proof eval_app _ (firstn n _) (skipn n _) as Hsplit.
+    epose proof eq_sym (eval_app _ (firstn n _) (skipn n _)) as Hsplit.
     erewrite firstn_skipn, Hmul in Hsplit.
     replace (length (firstn n (mul bound a b))) with n in *.
     apply (f_equal (fun x => x mod m)) in Hsplit.
@@ -531,17 +546,18 @@ Module Saturated. Section __.
     set (t := eval bound (firstn n (mul bound a b)) +
     eval bound (skipn n (mul bound a b)) * c) in *.
     rewrite Hadd.
-    rewrite eval_reduce', eval_encode, Z.add_comm.
-    replace (length (encode bound n t)) with n.
+    break_match.
+    rewrite eval_reduce', eval_encode, Z.add_comm, ?length_encode.
     rewrite <-Z.div_mod. rewrite Hsplit. trivial.
-    admit.
-    { rewrite length_encode; trivial. }
+    lia.
     { rewrite length_encode; trivial. }
     { rewrite weight_1; trivial. }
     { rewrite length_encode; lia. }
     { rewrite length_encode; trivial. }
-    { rewrite eval_encode, length_encode. apply Z.mod_pos_bound. admit. }
-    { subst t. (* TODO: mul encodes its result *) admit. }
+    { rewrite eval_encode, length_encode. apply Z.mod_pos_bound. trivial. }
+    { lia. }
+    { rewrite eval_app, eval_encode, length_encode, eval_cons, eval_nil;
+      rewrite Z.add_comm, Z.mul_0_r, Z.add_0_r. rewrite <-Z.div_mod; lia. }
     { rewrite firstn_length, skipn_length. (* length mul *) admit. }
     { rewrite firstn_length. (* length mul *) admit. }
   Admitted.
@@ -559,7 +575,7 @@ Module Saturated. Section __.
     eval bound (addmod bound c a b) mod m = (eval bound a + eval bound b) mod m.
   Proof.
     cbv [addmod]; rewrite add_correct by trivial; rewrite ?Z.add_0_l.
-    rewrite <-eval_reduce'; rewrite ?eval_encode, ?length_encode, ?weight_1;
+    rewrite eval_reduce'; rewrite ?eval_encode, ?length_encode, ?weight_1;
       try solve [trivial | cbn; lia | apply Z.mod_pos_bound; lia ].
     { rewrite (Z.add_comm (_ mod _) (_ * (_ / _))), <-Z.div_mod; lia. }
     (*
@@ -588,6 +604,16 @@ Module Saturated. Section __.
     change (weight (fun _ : nat => (2 ^ 64)%Z) 1%nat)%Z with (2^64)%Z in *.
     set (eval (fun _ : nat => (2 ^ 64)%Z)) as eval in *.
     set (addmod _ _) as addmod in *.
+  Abort.
+
+  Goal forall a0 a1 a2 a3 b0 b1 b2 b3 : Z, False. intros.
+  Proof.
+    pose proof (eval_mulmod (2^64)%Z 4 [a0;a1;a2;a3] [b0;b1;b2;b3] (2^256-38) ! !).
+    cbn [length] in *.
+    change ((weight (fun _ : nat => (2 ^ 64)%Z) 4%nat)) with (2^256) in *.
+    set (eval (fun _ : nat => (2 ^ 64)%Z)) as eval in *.
+    change (2 ^ 256 mod (2 ^ 256 - 38)) with 38 in *.
+    set (mulmod _ _) as mulmod in *.
   Abort.
 End __.
 End Saturated.
