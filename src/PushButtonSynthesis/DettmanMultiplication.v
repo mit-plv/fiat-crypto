@@ -107,7 +107,6 @@ Section __.
   Definition output_bounds : list (ZRange.type.option.interp base.type.Z)
     := fold_left (fun l i => Some r[0 ~> Qceiling (2 * output_magnitude_first_limbs * ((weightf (i + 1) / weightf i) - 1))]%zrange :: l) (seq 0 (n - 1)) [] ++
          [Some r[0 ~> Qceiling (2 * output_magnitude_last_limb * (2^last_limb_width - 1))]%zrange].
-
   Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
@@ -121,10 +120,12 @@ Section __.
          (List.map
             (fun v => (true, v))
             [(negb (s - c =? 0), Pipeline.Values_not_provably_distinctZ "s - c <> 0" (s - c) 0)
-             ; (3 <=? n, Pipeline.Value_not_leZ "3 <= n" 3 n)
-             ; (last_limb_width * n <=? Z.log2_up s, Pipeline.Value_not_leZ "last_limb_width * n <= Z.log2_up s" (last_limb_width * n) (Z.log2_up s))
+             ; (4 <=? n, Pipeline.Value_not_leZ "4 <= n" 4 n)
+             ; (last_limb_width * n <=? Z.log2 s, Pipeline.Value_not_leZ "last_limb_width * n <= Z.log2 s" (last_limb_width * n) (Z.log2 s))
              ; (1 <=? last_limb_width, Pipeline.Value_not_leZ "1 <= last_limb_width" 1 last_limb_width)
              ; (2 ^ (Z.log2 s) =? s, Pipeline.Values_not_provably_equalZ "2 ^ (Z.log2 s) = s" (2 ^ Z.log2 s) s)
+             ; (Z.log2 s - last_limb_width <=? (Z.to_nat machine_wordsize) * (n - 1), Pipeline.Value_not_leZ "Z.log2 s - last_limb_width <= machine_wordsize * (n - 1)" (Z.log2 s - last_limb_width) (Z.to_nat machine_wordsize * (n - 1)))
+             ; (Z.log2 s <=? n * (Z.log2 s - last_limb_width) / (n - 1), Pipeline.Value_not_leZ "Z.log2 s <= n * (Z.log2 s - last_limb_width) / (n - 1)" (Z.log2 s) (n * (Z.log2 s - last_limb_width) / (n - 1)))
             ])
             res.
 
@@ -133,10 +134,12 @@ Section __.
 
   Lemma use_curve_good
     : s - c <> 0
-      /\ (3 <= n)
-      /\ last_limb_width * n <= Z.log2_up s
+      /\ (4 <= n)
+      /\ last_limb_width * n <= Z.log2 s
       /\ 1 <= last_limb_width
-      /\ 2 ^ (Z.log2 s) = s.
+      /\ 2 ^ (Z.log2 s) = s
+      /\ Z.log2 s - last_limb_width <= (Z.to_nat machine_wordsize) * (n - 1)
+      /\ Z.log2 s <= n * (Z.log2 s - last_limb_width) / (n - 1).
   Proof using curve_good. prepare_use_curve_good (). Qed.
 
   Local Notation evalf := (eval weightf n).
@@ -152,13 +155,15 @@ Section __.
           summary
           correctness)
          (only parsing, at level 10, summary at next level, correctness at next level).
- 
+
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          possible_values
          (reified_mul_gen
-            @ GallinaReify.Reify s @ GallinaReify.Reify c_ @ GallinaReify.Reify n @ GallinaReify.Reify last_limb_width)
+            @ GallinaReify.Reify s @ GallinaReify.Reify c_
+            @ GallinaReify.Reify (Z.to_nat machine_wordsize) @ GallinaReify.Reify n
+            @ GallinaReify.Reify last_limb_width)
          (Some input_bounds, (Some input_bounds, tt))
          (Some output_bounds).
 
@@ -167,7 +172,9 @@ Section __.
          false (* subst01 *)
          possible_values
          (reified_square_gen
-            @ GallinaReify.Reify s @ GallinaReify.Reify c_ @ GallinaReify.Reify n @ GallinaReify.Reify last_limb_width)
+            @ GallinaReify.Reify s @ GallinaReify.Reify c_
+            @ GallinaReify.Reify (Z.to_nat machine_wordsize)
+            @ GallinaReify.Reify n @ GallinaReify.Reify last_limb_width)
          (Some input_bounds, tt)
          (Some output_bounds).
 
