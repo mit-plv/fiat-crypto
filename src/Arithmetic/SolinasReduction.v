@@ -463,9 +463,6 @@ Module Saturated. Section __.
     eval bound (mul bound xs ys) = eval bound xs * eval bound ys.
   Proof. cbv [mul]. subst bound; rewrite eval_add_mul, ?eval_nil; ring. Qed.
 
-  Compute add_mul (fun _ => 10) [] [1;1] [1;1].
-  Compute add_mul (fun _ => 10) [] [9;9] [9;9].
-
   (* See lemma saturated_pseudomersenne_reduction_converges *)
 
   Definition reduce' bound k (c : Z) (a : list Z) (b : Z) : list Z :=
@@ -479,7 +476,7 @@ Module Saturated. Section __.
     (Hla : (1 <= length a)%nat) (Hla' : (k < length a)%nat)
     (Ha : 0 <= eval bound a < weight bound (length a))
     (Hb : 0 <= c * Z.abs b <= weight bound k - c) :
-    (eval bound a + s * b) mod m = eval bound (reduce' bound k c a b) mod m.
+    eval bound (reduce' bound k c a b) mod m = (eval bound a + s * b) mod m.
   Proof.
     cbv [reduce'].
     rewrite 2 add_correct by (rewrite ?length_encode; trivial); cbn [fst snd].
@@ -506,6 +503,47 @@ Module Saturated. Section __.
     push_Zmod; rewrite Hc; pull_Zmod.
     trivial.
     all: fail.
+  Admitted.
+
+  Definition mulmod bound n c a b :=
+    let p := mul bound a b in
+    let (lo, hi) := add_mul_limb' bound (firstn n p) (skipn n p) c 0 0 0 in
+    reduce' bound 1 c lo hi.
+
+  Lemma eval_mulmod B (bound := fun _ => B) n a b m
+    (s : Z := weight bound n) (c := s mod m)
+    (Hn : (1 < n)%nat)
+    (Hc' : 0 <= c < stream.hd bound)
+    : eval bound (mulmod bound n c a b) mod m = (eval bound a * eval bound b) mod m.
+  Proof.
+    cbv [mulmod].
+    pose proof (eq_refl : weight bound n mod m = c) as Hc.
+    pose proof eval_mul B a b as Hmul; fold bound in Hmul.
+    epose proof eval_app _ (firstn n _) (skipn n _) as Hsplit.
+    erewrite firstn_skipn, Hmul in Hsplit.
+    replace (length (firstn n (mul bound a b))) with n in *.
+    apply (f_equal (fun x => x mod m)) in Hsplit.
+    revert Hsplit; push_Zmod; rewrite ?Hc, ?(Z.mul_comm c); pull_Zmod; intro.
+    change (stream.skipn n bound) with bound in *.
+    epose proof add_mul_limb'_correct bound (firstn n (mul bound a b)) (skipn n (mul bound a b)) c 0 0 0 as Hadd;
+    cbv zeta in Hadd; rewrite ?Z.add_0_r in Hadd.
+    replace (Nat.max (length (firstn n (mul bound a b))) (length (skipn n (mul bound a b)))) with n in *.
+    set (t := eval bound (firstn n (mul bound a b)) +
+    eval bound (skipn n (mul bound a b)) * c) in *.
+    rewrite Hadd.
+    rewrite eval_reduce', eval_encode, Z.add_comm.
+    replace (length (encode bound n t)) with n.
+    rewrite <-Z.div_mod. rewrite Hsplit. trivial.
+    admit.
+    { rewrite length_encode; trivial. }
+    { rewrite length_encode; trivial. }
+    { rewrite weight_1; trivial. }
+    { rewrite length_encode; lia. }
+    { rewrite length_encode; trivial. }
+    { rewrite eval_encode, length_encode. apply Z.mod_pos_bound. admit. }
+    { subst t. (* TODO: mul encodes its result *) admit. }
+    { rewrite firstn_length, skipn_length. (* length mul *) admit. }
+    { rewrite firstn_length. (* length mul *) admit. }
   Admitted.
 
   Definition addmod bound c a b :=
