@@ -100,7 +100,27 @@ Module Z.
 
   Lemma prod_pos xs : Forall (fun x => 0 < x) xs -> 0 < fold_right Z.mul 1 xs.
   Proof. induction 1; cbn; lia. Qed.
+
+  (* TODO: move *)
+  Lemma mul_split_correct s x y :
+    Z.mul_split s x y = (x * y mod s, x * y / s).
+  Proof.
+    rewrite (surjective_pairing (Z.mul_split _ _ _)).
+    rewrite Z.mul_split_mod, Z.mul_split_div; trivial.
+  Qed.
+
+  Lemma add_with_get_carry_full_correct s c x y :
+    Z.add_with_get_carry_full s c x y = ((c + x + y) mod s, (c + x + y) / s).
+  Proof.
+    rewrite (surjective_pairing (Z.add_with_get_carry_full _ _ _ _)).
+    rewrite Z.add_with_get_carry_full_mod, Z.add_with_get_carry_full_div; trivial.
+  Qed.
 End Z.
+
+Module Nat.
+  Lemma max_S_r a b : Nat.max a (S b) = S (Nat.max (a-1) b). Proof. lia. Qed.
+  Lemma max_S_l a b : Nat.max (S a) b = S (Nat.max a (b-1)). Proof. lia. Qed.
+End Nat.
 
 Module stream.
   Local Open Scope nat_scope.
@@ -115,6 +135,10 @@ Module stream.
     fun i => firstn i xs.
   Definition map {A B} (f : A -> B) (xs : stream A) : stream B :=
     fun i => f (xs i).
+
+  Lemma hd_const {T} (x : T) : hd (fun _ => x) = x. trivial. Qed.
+  Lemma tl_const {T} (x : T) i : tl (fun _ => x) i = x. trivial. Qed.
+  Lemma skipn_const {T} n (x : T) i : skipn n (fun _ => x) i = x. trivial. Qed.
 
   Definition firstn_S {T} n (xs : stream T) :
     firstn (S n) xs = List.cons (xs O) (firstn n (tl xs)).
@@ -195,6 +219,13 @@ Module Saturated. Section __.
     eval bound (cons x xs) =
     x + stream.hd bound * eval (stream.tl bound) xs.
   Proof. reflexivity. Qed.
+
+  Instance Proper_eval : Proper (pointwise_relation _ eq==>eq==>eq)%signature eval.
+  Proof.
+    cbv [pointwise_relation].
+    intros f g fg l; revert fg; revert g; revert f; induction l; intros;
+      subst; rewrite ?eval_nil, ?eval_cons; trivial; f_equal; f_equal; eauto.
+  Qed.
 
   Lemma eval_hd_tl bound xs : eval bound (hd 0 xs :: tl xs) = eval bound xs.
   Proof. case xs; intros; cbn [hd tl]; rewrite ?eval_cons, ?eval_nil; lia. Qed.
@@ -318,20 +349,122 @@ Module Saturated. Section __.
     intros until xs; revert dependent bound; induction xs as [|x xs];
       cbn [length]; intros; rewrite ?add_nil, ?add_cons.
     { case ys in *; [|inversion Hlength]. cbn. f_equal. Z.div_mod_to_equations; lia. }
+    assert (0 < stream.hd bound) by admit.
+    assert (0 < weight (stream.tl bound) (length xs)) by admit.
     rewrite <-?(eval_hd_tl _ ys), ?eval_cons, ?encode_S; cbn [hd tl].
-    destruct Z.add_with_get_carry_full as (?&c') eqn:Hdiv; pose proof Hdiv as Hmod.
-      apply (f_equal snd) in Hdiv; rewrite Z.add_with_get_carry_full_div in Hdiv.
-      apply (f_equal fst) in Hmod; rewrite Z.add_with_get_carry_full_mod in Hmod.
-      cbn [fst snd] in *. subst.
+    rewrite Z.add_with_get_carry_full_correct.
     rewrite IHxs by ( rewrite length_tl; lia); clear IHxs.
     repeat (apply (f_equal2 pair) || apply (f_equal2 cons)).
     { push_Zmod; pull_Zmod. f_equal. rewrite Z.mul_0_l, Z.add_0_r. lia. }
-    (*
     { f_equal. Z.div_mod_to_equations; nia. }
     { setoid_rewrite tl_weight.
       rewrite <-2Z.div_add, Z.div_div; f_equal; lia. }
+    all : fail. (*
   Qed.
      *)Admitted.
+
+  Definition add_mul_limb' bound (acc : list Z) (xs : list Z) y h c o : list Z *Z :=
+    list_rect _
+      (fun bound acc h c o =>
+      match acc with [] => ([], h+c+o) | _ => add bound o acc [h+c] end)
+      (fun x _ rec bound acc h c o =>
+      let (p, h') := Z.mul_split (stream.hd bound) x y in
+      let (z, c) := Z.add_with_get_carry_full (stream.hd bound) c (hd 0 acc) h in
+      let (z, o) := Z.add_with_get_carry_full (stream.hd bound) o z p in
+      let (zs, C) := rec (stream.tl bound) (tl acc) h' c o in
+      (z::zs, C)
+    ) xs bound acc h c o.
+
+  Lemma add_mul_limb'_nil bound acc y h c o :
+    add_mul_limb' bound acc [] y h c o =
+    match acc with [] => ([], h+c+o) | _ => add bound o acc [h+c] end.
+  Proof. trivial. Qed.
+
+  Lemma add_mul_limb'_cons bound acc x xs y h c o :
+    add_mul_limb' bound acc (x::xs) y h c o =
+      let (p, h') := Z.mul_split (stream.hd bound) x y in
+      let (z, c) := Z.add_with_get_carry_full (stream.hd bound) c (hd 0 acc) h in
+      let (z, o) := Z.add_with_get_carry_full (stream.hd bound) o z p in
+      let (zs, C) := add_mul_limb' (stream.tl bound) (tl acc) xs y h' c o in
+      (z::zs, C).
+  Proof. trivial. Qed.
+
+  Lemma add_mul_limb'_correct : forall bound acc xs y h c o,
+    let n := Nat.max (length acc) (length xs) in
+    let z := eval bound acc + h + c + o + eval bound xs * y in
+    add_mul_limb' bound acc xs y h c o = (encode bound n z, z / weight bound n).
+  Proof.
+    intros ? ? ?; revert acc; revert bound; induction xs as [|x xs];
+      cbn [length]; intros;
+      rewrite ?add_mul_limb'_cons, ?add_mul_limb'_nil.
+    { case acc; intros.
+      { cbn. f_equal; Z.div_mod_to_equations; lia. }
+      { rewrite add_correct by (cbn; lia).
+        f_equal; f_equal; rewrite ?eval_cons, ?eval_nil; lia. } }
+    repeat rewrite <-?(eval_hd_tl _ acc), ?Z.mul_split_correct, ?Z.add_with_get_carry_full_correct, ?eval_cons, ?IHxs, ?length_tl, ?Nat.max_S_r, ?encode_S.
+    set (stream.hd bound) as B.
+    assert (0 < B) by admit.
+    set (eval (stream.tl bound) (tl acc)) as AS.
+    set (eval (stream.tl bound) xs) as XS.
+    set (Nat.max _ _) as n'.
+    f_equal.
+    { f_equal.
+      { push_Zmod; pull_Zmod; f_equal; lia. }
+      { f_equal. Z.div_mod_to_equations. nia. } }
+    setoid_rewrite tl_weight; fold B; set (weight _ _) as W.
+    assert (0 < W) by admit.
+    Z.div_mod_to_equations; nia.
+    all : fail.
+  Admitted.
+
+  Definition add_mul_limb bound acc xs y :=
+    let (lo, hi) := add_mul_limb' bound acc xs y 0 0 0 in lo ++ [hi].
+
+  Lemma eval_add_mul_limb bound acc xs y :
+    eval bound (add_mul_limb bound acc xs y) = eval bound acc + eval bound xs * y.
+  Proof.
+    cbv [add_mul_limb].
+    rewrite ?add_mul_limb'_correct, ?eval_app, ?eval_encode, ?length_encode, ?eval_cons, ?eval_nil.
+    Z.div_mod_to_equations; nia.
+  Qed.
+
+  Definition add_mul bound (acc xs ys : list Z) : list Z :=
+    list_rect _ (fun _ acc => acc) (fun y _ rec bound acc =>
+      let acc := add_mul_limb bound acc xs y in
+      hd 0 acc :: rec (stream.tl bound) (tl acc)
+    ) ys bound acc.
+
+  Definition add_mul_nil bound acc xs : add_mul bound acc xs [] = acc.
+  Proof. trivial. Qed.
+
+  Definition add_mul_cons bound acc xs y ys :
+    add_mul bound acc xs (y::ys) =
+      let acc := add_mul_limb bound acc xs y in
+      hd 0 acc :: add_mul (stream.tl bound) (tl acc) xs ys.
+  Proof. trivial. Qed.
+
+  Lemma eval_add_mul B (bound := fun _ => B) acc xs ys :
+    eval bound (add_mul bound acc xs ys) =
+    eval bound acc + eval bound xs * eval bound ys.
+  Proof.
+    revert xs; revert acc; induction ys; intros;
+      rewrite ?add_mul_nil, ?add_mul_cons, ?eval_nil, ?eval_cons, ?IHys.
+    { ring. }
+    pose proof eval_add_mul_limb bound acc xs a as HH;
+    rewrite <-eval_hd_tl, eval_cons in HH.
+    rewrite Proper_eval in HH by ((intro i; eapply tl_const) || trivial); fold bound in HH.
+    ring_simplify; rewrite HH; clear HH.
+    ring_simplify. trivial.
+  Qed.
+
+  Definition mul bound := add_mul bound [].
+
+  Lemma eval_mul B (bound := fun _ => B) xs ys :
+    eval bound (mul bound xs ys) = eval bound xs * eval bound ys.
+  Proof. cbv [mul]. subst bound; rewrite eval_add_mul, ?eval_nil; ring. Qed.
+
+  Compute add_mul (fun _ => 10) [] [1;1] [1;1].
+  Compute add_mul (fun _ => 10) [] [9;9] [9;9].
 
   (* See lemma saturated_pseudomersenne_reduction_converges *)
 
