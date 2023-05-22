@@ -1,48 +1,16 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.QArith.QArith.
-Require Import Coq.QArith.Qround.
-Require Import Coq.Strings.String.
-Require Import Coq.derive.Derive.
-Require Import Coq.Lists.List.
-Require Import Crypto.Util.ZRange.
-Require Import Crypto.Arithmetic.Core.
-Require Import Crypto.Arithmetic.ModOps.
-Require Import Crypto.Arithmetic.Partition.
-Require Import Crypto.Arithmetic.UniformWeight.
-Require Import Crypto.Arithmetic.Saturated.
-Require Import (*hints*) Coq.btauto.Algebra.
-Require Coq.Structures.OrdersEx.
-Require Import Crypto.Util.ListUtil.StdlibCompat.
-Require Import Crypto.Util.ZUtil.ModInv.
-
-Require Import Coq.micromega.Lia.
-Require Import Crypto.Algebra.Ring.
+Require Import Coq.Lists.List Crypto.Util.ListUtil Crypto.Util.ListUtil.StdlibCompat.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn.
-Require Import Crypto.Util.ListUtil.
-Require Import Crypto.Util.ListUtil.FoldBool.
-Require Import Crypto.Util.NatUtil.
-Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.BreakMatch.
-Require Import Crypto.Util.Tactics.UniquePose.
+Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Definitions.
-Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
-Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Hints.Core.
+Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
-Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
-Require Import Coq.ZArith.Znat.
-
-Require Import Crypto.Util.CPSUtil.
-Require Import Crypto.Util.CPSNotations.
-Local Open Scope cps_scope.
-Notation "x' <- v ; C" := (v (fun x' => C)) (only parsing).
-
-Require Import Crypto.Util.Notations.
-Local Open Scope string_scope.
-Local Open Scope list_scope.
-Import ListNotations. Local Open Scope Z_scope.
+Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Import ListNotations. Local Open Scope list_scope. Local Open Scope Z_scope.
 
 (*
 Goal forall W s c a b, 0 <= c -> W < s ->
@@ -169,25 +137,25 @@ Module stream.
 End stream. Notation stream := stream.stream.
 
 Module Saturated. Section __.
-  Import Positional List ListNotations.
+  Import List ListNotations.
   Import stream Coq.Init.Datatypes Coq.Lists.List List.
 
-  Implicit Types (weight bound : stream Z).
-  Local Open Scope Z_scope.
+  Implicit Types (weight bound : stream positive).
+  Local Open Scope positive_scope.
 
-  Definition weight bound := stream.map (fold_right Z.mul 1) (stream.prefixes bound).
+  Definition weight bound := stream.map (fold_right Pos.mul 1) (stream.prefixes bound).
 
-  Lemma weight_0 bound : weight bound O = 1%Z. Proof. trivial. Qed.
+  Lemma weight_0 bound : weight bound O = 1. Proof. trivial. Qed.
 
   Lemma weight_1 bound : weight bound 1%nat = bound O. Proof. cbn. lia. Qed.
 
-  Lemma tl_weight bound i : stream.tl (weight bound) i = stream.hd bound * weight (stream.tl bound) i.
+  Lemma tl_weight bound i : stream.tl (weight bound) i = (stream.hd bound * weight (stream.tl bound) i).
   Proof. cbv [weight]. rewrite tl_map. cbv [stream.map]. rewrite tl_prefixes; trivial. Qed.
 
-  Lemma tl_weight' bound i : stream.tl (weight bound) i = (weight bound i * bound i)%Z.
+  Lemma tl_weight' bound i : stream.tl (weight bound) i = (weight bound i * bound i).
   Proof.
     cbv [stream.tl weight stream.prefixes stream.map].
-    rewrite stream.firstn_S', fold_right_app; cbn [fold_right]; rewrite Z.prod_init; lia.
+    rewrite stream.firstn_S', fold_right_app; cbn [fold_right]; rewrite Pos.prod_init; lia.
   Qed.
 
   (*
@@ -224,11 +192,13 @@ Module Saturated. Section __.
     x + stream.hd bound * eval (stream.tl bound) xs.
   Proof. reflexivity. Qed.
 
+  Import Morphisms.
+
   Instance Proper_eval : Proper (pointwise_relation _ eq==>eq==>eq)%signature eval.
   Proof.
     cbv [pointwise_relation].
     intros f g fg l; revert fg; revert g; revert f; induction l; intros;
-      subst; rewrite ?eval_nil, ?eval_cons; trivial; f_equal; f_equal; eauto.
+      subst; rewrite ?eval_nil, ?eval_cons; repeat (eauto||f_equal).
   Qed.
 
   Lemma eval_hd_tl bound xs : eval bound (hd 0 xs :: tl xs) = eval bound xs.
@@ -244,10 +214,8 @@ Module Saturated. Section __.
     { rewrite weight_0. ring_simplify; trivial. }
     setoid_rewrite IHxs; clear IHxs.
     ring_simplify; f_equal.
-    (*
-    rewrite !(Z.mul_comm _ (eval _ _)), <-Z2Z.inj_mul, <-tl_weight; trivial.
+    rewrite !(Z.mul_comm _ (eval _ _)), <-Pos2Z.inj_mul, <-tl_weight; trivial.
   Qed.
-     *)Admitted.
 
   Lemma eval_firstn bound n xs :
     eval bound (firstn n xs) mod weight bound n =
@@ -257,10 +225,9 @@ Module Saturated. Section __.
     rewrite H; clear H.
     rewrite firstn_length.
     case (Nat.min_dec n (length xs)) as [e|e]; rewrite e.
-    { rewrite Z.mul_comm, Z.mod_add; trivial. admit. }
+    { rewrite Z.mul_comm, Z.mod_add; lia. }
     rewrite ListUtil.skipn_all, eval_nil, Z.mul_0_r, Z.add_0_r by lia; trivial.
-    all : fail.
-  Admitted.
+  Qed.
 
   Definition encode bound n x :=
     nat_rect_fbb_b_b (fun _ _ => []) (fun _ rec bound x =>
@@ -288,14 +255,12 @@ Module Saturated. Section __.
     revert x; revert dependent bound; induction n; intros;
       rewrite ?encode_O, ?encode_S, ?eval_nil, ?eval_cons.
     { rewrite ?weight_0, Z.mod_1_r; trivial. }
-    (*
-    setoid_rewrite IHn. setoid_rewrite tl_weight. rewrite ?Z2Z.inj_mul.
+    setoid_rewrite IHn. setoid_rewrite tl_weight. rewrite ?Pos2Z.inj_mul.
     set (Z.pos (stream.hd bound)) as B in *.
     symmetry; rewrite (Z.div_mod x B), Z.add_comm at 1 by lia.
     rewrite <-Z.add_mod_idemp_r, Zmult_mod_distr_l by lia.
     apply Z.mod_small; Z.div_mod_to_equations; nia.
   Qed.
-     *)Admitted.
 
   Lemma encode_add_l bound n m x :
     encode bound (n+m) x = encode bound n x ++ encode (stream.skipn n bound) m (x / weight bound n).
@@ -304,14 +269,12 @@ Module Saturated. Section __.
       rewrite ?encode_O, ?encode_S.
     { rewrite weight_0, Z.div_1_r. reflexivity. }
     setoid_rewrite IHn; cbn [app]; f_equal.
-    (*
-    rewrite Z.div_div, <-Z2Z.inj_mul, <-tl_weight by lia.
+    rewrite Z.div_div, <-Pos2Z.inj_mul, <-tl_weight by lia.
     { (* setoid_rewrite stream.skipn_tl *)
       eapply f_equal2; [reflexivity|].
       eapply Proper_encode; [|reflexivity..].
       intro i; eapply stream.skipn_tl. }
   Qed.
-     *)Admitted.
 
   Lemma firstn_encode bound i n x (H : Nat.lt i n) :
     firstn i (encode bound n x) = encode bound i x.
@@ -335,14 +298,11 @@ Module Saturated. Section __.
     eval (stream.skipn i bound) (skipn i (encode bound n x)) = x mod weight bound n / weight bound i.
   Proof.
     rewrite skipn_encode, eval_encode; trivial.
-    (*
     rewrite Z.mod_pull_div by lia.
     f_equal.
     f_equal.
-    rewrite <-Z2Z.inj_mul.
-    f_equal.
+    rewrite <-Pos2Z.inj_mul; f_equal.
   Admitted.
-     *)Admitted.
 
   Definition add bound (c0 : Z) (xs ys : list Z) : list Z * Z  :=
     list_rect_fbb_b_b_b (fun _ _ c => ([], c)) (fun x _  rec bound ys c =>
@@ -367,8 +327,6 @@ Module Saturated. Section __.
     intros until xs; revert dependent bound; induction xs as [|x xs];
       cbn [length]; intros; rewrite ?add_nil, ?add_cons.
     { case ys in *; [|inversion Hlength]. cbn. f_equal. Z.div_mod_to_equations; lia. }
-    assert (0 < stream.hd bound) by admit.
-    assert (0 < weight (stream.tl bound) (length xs)) by admit.
     rewrite <-?(eval_hd_tl _ ys), ?eval_cons, ?encode_S; cbn [hd tl].
     rewrite Z.add_with_get_carry_full_correct.
     rewrite IHxs by ( rewrite length_tl; lia); clear IHxs.
@@ -377,9 +335,7 @@ Module Saturated. Section __.
     { f_equal. Z.div_mod_to_equations; nia. }
     { setoid_rewrite tl_weight.
       rewrite <-2Z.div_add, Z.div_div; f_equal; lia. }
-    all : fail. (*
   Qed.
-     *)Admitted.
 
   Definition add_mul_limb' bound (acc : list Z) (xs : list Z) y h c o : list Z *Z :=
     list_rect_fbb_b_b_b_b_b
@@ -421,7 +377,7 @@ Module Saturated. Section __.
         f_equal; f_equal; rewrite ?eval_cons, ?eval_nil; lia. } }
     repeat rewrite <-?(eval_hd_tl _ acc), ?Z.mul_split_correct, ?Z.add_with_get_carry_full_correct, ?eval_cons, ?IHxs, ?length_tl, ?Nat.max_S_r, ?encode_S.
     set (stream.hd bound) as B.
-    assert (0 < B) by admit.
+    assert (0 < B) by (subst B; lia).
     set (eval (stream.tl bound) (tl acc)) as AS.
     set (eval (stream.tl bound) xs) as XS.
     set (Nat.max _ _) as n'.
@@ -430,10 +386,9 @@ Module Saturated. Section __.
       { push_Zmod; pull_Zmod; f_equal; lia. }
       { f_equal. Z.div_mod_to_equations. nia. } }
     setoid_rewrite tl_weight; fold B; set (weight _ _) as W.
-    assert (0 < W) by admit.
+    assert (0 < W) by (subst W; lia).
     Z.div_mod_to_equations; nia.
-    all : fail.
-  Admitted.
+  Qed.
 
   Definition add_mul_limb bound acc xs y :=
     let (lo, hi) := add_mul_limb' bound acc xs y 0 0 0 in lo ++ [hi].
@@ -505,7 +460,7 @@ Module Saturated. Section __.
     set (weight bound k) as W.
 
     epose proof (saturated_pseudomersenne_reduction_converges W s c (@eval bound a) b).
-    progress change ((weight bound (length a))) with s.
+    progress change (Z.pos (weight bound (length a))) with s.
     subst W.
     subst s.
     rewrite eval_skipn_encode by trivial.
@@ -536,7 +491,6 @@ Module Saturated. Section __.
     (Hn : (1 < n)%nat) (Hc' : 0 <= c < stream.hd bound)
     : eval bound (mulmod bound n c a b) mod m = (eval bound a * eval bound b) mod m.
   Proof.
-    assert (0 < weight bound n) by admit.
     cbv [mulmod].
     pose proof (eq_refl : weight bound n mod m = c) as Hc.
     pose proof eval_mul B a b as Hmul; fold bound in Hmul.
@@ -560,7 +514,7 @@ Module Saturated. Section __.
     { rewrite weight_1; trivial. }
     { rewrite length_encode; lia. }
     { rewrite length_encode; trivial. }
-    { rewrite eval_encode, length_encode. apply Z.mod_pos_bound. trivial. }
+    { rewrite eval_encode, length_encode. apply Z.mod_pos_bound. lia. }
     { lia. }
     { rewrite eval_app, eval_encode, length_encode, eval_cons, eval_nil;
       rewrite Z.add_comm, Z.mul_0_r, Z.add_0_r. rewrite <-Z.div_mod; lia. }
@@ -584,10 +538,8 @@ Module Saturated. Section __.
     rewrite eval_reduce'; rewrite ?eval_encode, ?length_encode, ?weight_1;
       try solve [trivial | cbn; lia | apply Z.mod_pos_bound; lia ].
     { rewrite (Z.add_comm (_ mod _) (_ * (_ / _))), <-Z.div_mod; lia. }
-    (*
     assert (Z.abs ((eval bound a + eval bound b) / Z.pos (weight bound (length a))) <= 1) by (Z.div_mod_to_equations; nia); nia.
   Qed.
-     *)Admitted.
 
   Lemma eval_map_opp bound xs : eval bound (map Z.opp xs) = - eval bound xs.
   Proof. revert bound; induction xs; trivial; intros; rewrite ?map_cons, ?eval_cons, ?IHxs; lia. Qed.
@@ -607,7 +559,7 @@ Module Saturated. Section __.
 
   Lemma select_correct c a b : length a = length b -> select c a b = if dec (c = 0) then a else b.
   Proof.
-    revert b; induction a, b; cbn; try inversion 1; rewrite ?Zselect.Z.zselect_correct;
+    revert b; induction a, b; cbn; try inversion 1; rewrite ?Z.zselect_correct;
       break_match; f_equal; eauto.
   Qed.
 
@@ -627,12 +579,10 @@ Module Saturated. Section __.
     then eval bound a
     else eval bound a - eval bound b.
   Proof.
-    assert (0 < weight bound (length a)) by admit.
     cbv [condsub]; intros.
     rewrite add_correct, select_correct, eval_map_opp; rewrite ?map_length, ?length_encode; try lia.
     break_match; rewrite ?eval_encode, ?Z.add_0_l, ?Z.add_opp_r in *; Z.div_mod_to_equations; nia.
-    all : fail.
-  Admitted.
+  Qed.
 
   Definition canon bound m x :=
     Nat.iter (Z.to_nat (weight bound (length x)/m)) (fun x => condsub bound x (encode bound (length x) m)) x.
@@ -668,32 +618,32 @@ Module Saturated. Section __.
   Local Notation "!" := ltac:(vm_decide) (only parsing).
   Goal forall a0 a1 a2 a3 b : Z, False. intros.
   Proof.
-    pose proof (eval_reduce' (fun _ => 2^64)%Z 1 38 [a0;a1;a2;a3] b (2^256-38) ! ! ! !).
+    pose proof (eval_reduce' (fun _ => 2^64)%positive 1 38 [a0;a1;a2;a3] b (2^256-38) ! ! ! !).
     cbn [length] in *.
-    change ((weight (fun _ : nat => (2 ^ 64)%Z) 4%nat)) with (2^256) in *.
-    change ((weight (fun _ : nat => (2 ^ 64)%Z) 1%nat)) with (2^64) in *.
-    change (weight (fun _ : nat => (2 ^ 64)%Z) 1%nat)%Z with (2^64)%Z in *.
-    set (eval (fun _ : nat => (2 ^ 64)%Z)) as eval in *.
-    set (reduce' (fun _ : nat => (2 ^ 64)%Z) _ _ _) as reduce' in *.
+    change ((weight (fun _ : nat => (2 ^ 64)%positive) 4%nat)) with (2^256)%positive in *.
+    change ((weight (fun _ : nat => (2 ^ 64)%positive) 1%nat)) with (2^64)%positive in *.
+    change (weight (fun _ : nat => (2 ^ 64)%positive) 1%nat)%positive with (2^64)%positive in *.
+    set (eval (fun _ : nat => (2 ^ 64)%positive)) as eval in *.
+    set (reduce' (fun _ : nat => (2 ^ 64)%positive) _ _ _) as reduce' in *.
   Abort.
 
   Goal forall a0 a1 a2 a3 b0 b1 b2 b3 : Z, False. intros.
   Proof.
-    pose proof (eval_addmod (fun _ => 2^64)%Z 38 [a0;a1;a2;a3] [b0;b1;b2;b3] (2^256-38) ! ! ! !).
+    pose proof (eval_addmod (fun _ => 2^64)%positive 38 [a0;a1;a2;a3] [b0;b1;b2;b3] (2^256-38) ! ! ! !).
     cbn [length] in *.
-    change ((weight (fun _ : nat => (2 ^ 64)%Z) 4%nat)) with (2^256) in *.
-    change ((weight (fun _ : nat => (2 ^ 64)%Z) 1%nat)) with (2^64) in *.
-    change (weight (fun _ : nat => (2 ^ 64)%Z) 1%nat)%Z with (2^64)%Z in *.
-    set (eval (fun _ : nat => (2 ^ 64)%Z)) as eval in *.
+    change ((weight (fun _ : nat => (2 ^ 64)%positive) 4%nat)) with (2^256)%positive in *.
+    change ((weight (fun _ : nat => (2 ^ 64)%positive) 1%nat)) with (2^64)%positive in *.
+    change (weight (fun _ : nat => (2 ^ 64)%positive) 1%nat)%positive with (2^64)%positive in *.
+    set (eval (fun _ : nat => (2 ^ 64)%positive)) as eval in *.
     set (addmod _ _) as addmod in *.
   Abort.
 
   Goal forall a0 a1 a2 a3 b0 b1 b2 b3 : Z, False. intros.
   Proof.
-    pose proof (eval_mulmod (2^64)%Z 4 [a0;a1;a2;a3] [b0;b1;b2;b3] (2^256-38) ! !).
+    pose proof (eval_mulmod (2^64)%positive 4 [a0;a1;a2;a3] [b0;b1;b2;b3] (2^256-38) ! !).
     cbn [length] in *.
-    change ((weight (fun _ : nat => (2 ^ 64)%Z) 4%nat)) with (2^256) in *.
-    set (eval (fun _ : nat => (2 ^ 64)%Z)) as eval in *.
+    change ((weight (fun _ : nat => (2 ^ 64)%positive) 4%nat)) with (2^256)%positive in *.
+    set (eval (fun _ : nat => (2 ^ 64)%positive)) as eval in *.
     change (2 ^ 256 mod (2 ^ 256 - 38)) with 38 in *.
     set (mulmod _ _) as mulmod in *.
   Abort.
