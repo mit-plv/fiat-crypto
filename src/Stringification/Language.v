@@ -413,6 +413,14 @@ Module Compilers.
                 | ident.nat_rect P => neg_wrap_parens "nat_rect"
                 | ident.eager_nat_rect P => neg_wrap_parens "eager_nat_rect"
                 | ident.nat_rect_arrow P Q => neg_wrap_parens "nat_rect(→)"
+
+                | @Compilers.ident_nat_rect_fbb_b A B C => neg_wrap_parens "nat_rect_fbb_b"
+                | @Compilers.ident_nat_rect_fbb_b_b A B C D => neg_wrap_parens "nat_rect_fbb_b_b"
+                | @Compilers.ident_list_rect_fbb_b T A B C => neg_wrap_parens "list_rect_fbb_b"
+                | @Compilers.ident_list_rect_fbb_b_b T A B C D => neg_wrap_parens "list_rect_fbb_b_b"
+                | @Compilers.ident_list_rect_fbb_b_b_b T A B C D E => neg_wrap_parens "list_rect_fbb_b_b"
+                | @Compilers.ident_list_rect_fbb_b_b_b_b T A B C D E F => neg_wrap_parens "list_rect_fbb_b_b"
+                | @Compilers.ident_list_rect_fbb_b_b_b_b_b T A B C D E F G => neg_wrap_parens "list_rect_fbb_b_b"
                 | ident.eager_nat_rect_arrow P Q => neg_wrap_parens "eager_nat_rect(→)"
                 | ident.list_rect A P => neg_wrap_parens "list_rect"
                 | ident.eager_list_rect A P => neg_wrap_parens "eager_list_rect"
@@ -496,6 +504,7 @@ Module Compilers.
                 | ident.fancy_addm => neg_wrap_parens "fancy.addm"
                 | Compilers.ident_Pos_add => neg_wrap_parens "Pos.add"
                 | Compilers.ident_Pos_mul => neg_wrap_parens "Pos.mul"
+                | Compilers.ident_Z_abs => neg_wrap_parens "Z.abs"
                 | Compilers.ident_Z_pos => neg_wrap_parens "Z.pos"
                 | Compilers.ident_Z_to_pos => neg_wrap_parens "Z.to_pos"
                 end.
@@ -700,6 +709,13 @@ Module Compilers.
              | ident.nat_rect _ as idc
              | ident.eager_nat_rect _ as idc
              | ident.eager_nat_rect_arrow _ _ as idc
+             | @Compilers.ident_nat_rect_fbb_b    _ _ _ as idc
+             | @Compilers.ident_nat_rect_fbb_b_b  _ _ _ _ as idc
+             | @Compilers.ident_list_rect_fbb_b   _ _ _ _ as idc
+             | @Compilers.ident_list_rect_fbb_b_b _ _ _ _ _ as idc
+             | @Compilers.ident_list_rect_fbb_b_b_b _ _ _ _ _ _ as idc
+             | @Compilers.ident_list_rect_fbb_b_b_b_b _ _ _ _ _ _ _ as idc
+             | @Compilers.ident_list_rect_fbb_b_b_b_b_b  _ _ _ _ _ _ _ _ as idc
              | ident.nat_rect_arrow _ _ as idc
              | ident.option_rect _ _ as idc
              | ident.list_rect _ _ as idc
@@ -726,6 +742,7 @@ Module Compilers.
              | ident.Z_to_nat as idc
              | Compilers.ident_Z_pos as idc
              | Compilers.ident_Z_to_pos as idc
+             | Compilers.ident_Z_abs as idc
              | ident.Z_min as idc
              | ident.Z_max as idc
              | ident.Z_mul_split as idc

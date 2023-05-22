@@ -44,6 +44,7 @@ Local Open Scope string_scope.
 Local Open Scope list_scope.
 Import ListNotations. Local Open Scope Z_scope.
 
+(*
 Goal forall W s c a b, 0 <= c -> W < s ->
   0 <= a < s ->
   0 <= c*b <= W-c ->
@@ -67,6 +68,7 @@ Proof.
   rewrite <-2Z.div_sub with (b:=s/W-1) by lia; rewrite 2Z.div_small; trivial.
   all : rewrite ?HH; try split; ring_simplify; try nia.
 Qed.
+ *)
 
 Lemma saturated_pseudomersenne_reduction_converges :
   forall W s c a b (HH: b < 0 -> s / W * W = s), 0 <= c < W -> W < s ->
@@ -80,6 +82,8 @@ Proof.
   { f_equal. rewrite Z.mod_small; Z.div_mod_to_equations; lia. }
   { clear -H0 H3 H4 H6 H7. transitivity 0; Z.div_mod_to_equations; nia. }
 Qed.
+
+Require Import Crypto.Language.PreExtra.
 
 Module Pos.
   Local Open Scope positive_scope.
@@ -208,7 +212,7 @@ Module Saturated. Section __.
   Local Coercion Z.pos : positive >-> Z.
 
   Definition eval bound (xs : list Z) : Z :=
-    list_rect _ (fun _ => 0) (fun x _  rec bound =>
+    list_rect_fbb_b (fun _ => 0) (fun x _  rec bound =>
       x + stream.hd bound * rec (stream.tl bound)
     ) xs bound.
 
@@ -258,8 +262,8 @@ Module Saturated. Section __.
     all : fail.
   Admitted.
 
-  Definition encode bound (n : nat) (x : Z) : list Z :=
-    nat_rect _ (fun _ _ => []) (fun _ rec bound x =>
+  Definition encode bound n x :=
+    nat_rect_fbb_b_b (fun _ _ => []) (fun _ rec bound x =>
       (x mod (stream.hd bound) :: rec (stream.tl bound) (x / stream.hd bound))
     ) n bound x.
 
@@ -272,8 +276,9 @@ Module Saturated. Section __.
   Instance Proper_encode : Proper (pointwise_relation _ eq ==> eq ==> eq ==> eq)%signature encode.
   Proof.
     intros f f' F n; revert F; revert f'; revert f; induction n;
-      cbv [encode nat_rect stream.hd stream.tl]; repeat intro; subst; trivial.
-    rewrite F; f_equal. eapply IHn; repeat intro; rewrite ?F; trivial.
+      repeat intro; subst; rewrite ?encode_O, ?encode_S; trivial.
+    cbv [stream.hd stream.tl]; rewrite F; f_equal; [].
+    eapply IHn; repeat intro; rewrite ?F; trivial.
   Qed.
 
   Lemma length_encode bound n x : length (encode bound n x) = n. Admitted.
@@ -340,7 +345,7 @@ Module Saturated. Section __.
      *)Admitted.
 
   Definition add bound (c0 : Z) (xs ys : list Z) : list Z * Z  :=
-    list_rect _ (fun _ _ c => ([], c)) (fun x _  rec bound ys c =>
+    list_rect_fbb_b_b_b (fun _ _ c => ([], c)) (fun x _  rec bound ys c =>
       let (z, c) := Z.add_with_get_carry_full (stream.hd bound) c x (hd 0 ys) in
       let (zs, C) := rec (stream.tl bound) (tl ys) c in
       (z::zs, C)
@@ -377,7 +382,7 @@ Module Saturated. Section __.
      *)Admitted.
 
   Definition add_mul_limb' bound (acc : list Z) (xs : list Z) y h c o : list Z *Z :=
-    list_rect _
+    list_rect_fbb_b_b_b_b_b
       (fun bound acc h c o =>
       match acc with [] => ([], h+c+o) | _ => add bound o acc [h+c] end)
       (fun x _ rec bound acc h c o =>
@@ -442,7 +447,7 @@ Module Saturated. Section __.
   Qed.
 
   Definition add_mul bound (acc xs ys : list Z) : list Z :=
-    list_rect _ (fun _ acc => acc) (fun y _ rec bound acc =>
+    list_rect_fbb_b_b (fun _ acc => acc) (fun y _ rec bound acc =>
       let acc := add_mul_limb bound acc xs y in
       hd 0 acc :: rec (stream.tl bound) (tl acc)
     ) ys bound acc.
@@ -479,7 +484,8 @@ Module Saturated. Section __.
   (* See lemma saturated_pseudomersenne_reduction_converges *)
 
   Definition reduce' bound k (c : Z) (a : list Z) (b : Z) : list Z :=
-    let (sum, carry) := add bound 0 a [c * b] in
+    dlet cb := c * b in
+    let (sum, carry) := add bound 0 a [cb] in
     let (sum', _) := add bound 0 sum [c * carry] in
     firstn k sum' ++ skipn k sum.
 
@@ -491,7 +497,7 @@ Module Saturated. Section __.
     (Hb : 0 <= c * Z.abs b <= weight bound k - c) :
     eval bound (reduce' bound k c a b) mod m = (eval bound a + s * b) mod m.
   Proof.
-    cbv [reduce'].
+    cbv [reduce' Let_In].
     rewrite 2 add_correct by (rewrite ?length_encode; trivial); cbn [fst snd].
     rewrite firstn_encode, eval_encode by (rewrite ?length_encode; trivial).
     repeat rewrite ?eval_cons, ?eval_nil, ?Z.add_0_l, ?Z.mul_0_r, ?Z.add_0_r.
@@ -582,6 +588,82 @@ Module Saturated. Section __.
     assert (Z.abs ((eval bound a + eval bound b) / Z.pos (weight bound (length a))) <= 1) by (Z.div_mod_to_equations; nia); nia.
   Qed.
      *)Admitted.
+
+  Lemma eval_map_opp bound xs : eval bound (map Z.opp xs) = - eval bound xs.
+  Proof. revert bound; induction xs; trivial; intros; rewrite ?map_cons, ?eval_cons, ?IHxs; lia. Qed.
+
+  Definition submod bound c a b := addmod bound c a (map Z.opp b).
+
+  Lemma eval_submod bound c a b m
+    (s : Z := weight bound (length a)) (Hc : s mod m = c)
+    (Hc' : 0 <= 2*c <= bound O)
+    (Hla : (1 < length a)%nat) (Hlb : (length b <= length a)%nat)
+    (Ha : 0 <= eval bound a < weight bound (length a))
+    (Hb : - weight bound (length a) <= eval bound b <= weight bound (length a)) :
+    eval bound (submod bound c a b) mod m = (eval bound a - eval bound b) mod m.
+  Proof. cbv [submod]; rewrite eval_addmod; rewrite ?map_length, ?eval_map_opp; auto; lia. Qed.
+
+  Definition select c a b := map (uncurry (Z.zselect c)) (combine a b).
+
+  Lemma select_correct c a b : length a = length b -> select c a b = if dec (c = 0) then a else b.
+  Proof.
+    revert b; induction a, b; cbn; try inversion 1; rewrite ?Zselect.Z.zselect_correct;
+      break_match; f_equal; eauto.
+  Qed.
+
+  Definition cswap c a b := (select c a b, select c b a).
+
+  Lemma cswap_correct c a b : length a = length b -> cswap c a b = if dec (c = 0) then (a, b) else (b, a).
+  Proof. cbv [cswap]; intros; rewrite !select_correct; break_match; congruence. Qed.
+
+  Definition condsub bound a b := let (lo, hi) := add bound 0 a (map Z.opp b) in select (-hi) lo a.
+
+  Lemma eval_condsub bound a b :
+    0 <= eval bound a < weight bound (length a) ->
+    0 <= eval bound b < weight bound (length a) ->
+    (length b <= length a)%nat ->
+    eval bound (condsub bound a b) =
+    if dec (eval bound a < eval bound b)
+    then eval bound a
+    else eval bound a - eval bound b.
+  Proof.
+    assert (0 < weight bound (length a)) by admit.
+    cbv [condsub]; intros.
+    rewrite add_correct, select_correct, eval_map_opp; rewrite ?map_length, ?length_encode; try lia.
+    break_match; rewrite ?eval_encode, ?Z.add_0_l, ?Z.add_opp_r in *; Z.div_mod_to_equations; nia.
+    all : fail.
+  Admitted.
+
+  Definition canon bound m x :=
+    Nat.iter (Z.to_nat (weight bound (length x)/m)) (fun x => condsub bound x (encode bound (length x) m)) x.
+
+
+  (*
+  Definition smalldivmod bound (xs : list Z) (s : Z) : Z * list Z :=
+    list_rect_fbb_b_b (fun _ _ => (0, [])) (fun x xs  rec bound s =>
+      if (s mod stream.hd bound =? 0) && (x <? stream.hd bound)
+      then let (q, r) := rec (stream.tl bound) (s / stream.hd bound) in (q + x/s, x :: r)
+      else let v := eval bound (x::xs) in (v/s, encode bound (length xs) (v mod s))
+    ) xs bound s.
+
+  Definition smalldivmod_nil bound s : smalldivmod bound [] s = (0, []). Proof. trivial. Qed.
+
+  Definition smalldivmod_cons bound x xs s : smalldivmod bound (x::xs) s =
+    if (s mod stream.hd bound =? 0) && (x <? stream.hd bound)
+    then let (q, r) := smalldivmod (stream.tl bound) xs (s / stream.hd bound) in (q + x/s, x :: r)
+    else let v := eval bound (x::xs) in (v/s, encode bound (length xs) (v mod s)).
+  Proof. trivial. Qed.
+
+  Lemma smalldivmod_correct bound xs s : smalldivmod bound xs s = (eval bound xs / s, encode bound (length xs) (eval bound xs mod s)).
+  Proof.
+    revert s; revert bound; induction xs; intros; rewrite ?smalldivmod_nil, ?smalldivmod_cons;
+    rewrite ?eval_nil, ?eval_cons, ?Zmod_0_l, ?Zdiv_0_l, ?IHxs; cbn zeta beta; trivial.
+    destruct (Z.eqb_spec (s mod stream.hd bound) 0) as [E|E]; cbn [andb]; trivial.
+    destruct (Z.ltb_spec a (stream.hd bound)) as [L|L]; cbn [andb]; trivial.
+    set (s / stream.hd bound) as s' in *.
+    replace s with (stream.hd bound * s') in * by (Z.div_mod_to_equations; nia); clearbody s'; clear s.
+  *)
+
 
   Local Notation "!" := ltac:(vm_decide) (only parsing).
   Goal forall a0 a1 a2 a3 b : Z, False. intros.

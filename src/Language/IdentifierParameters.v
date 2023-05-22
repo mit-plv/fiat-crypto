@@ -111,6 +111,13 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_eager_nat_rect (ident.eagerly (@Thunked.nat_rect))
       ; with_name ident_nat_rect_arrow (@nat_rect_arrow_nodep)
       ; with_name ident_eager_nat_rect_arrow (ident.eagerly (@nat_rect_arrow_nodep))
+      ; with_name ident_nat_rect_fbb_b (@nat_rect_fbb_b)
+      ; with_name ident_nat_rect_fbb_b_b (@nat_rect_fbb_b_b)
+      ; with_name ident_list_rect_fbb_b (@list_rect_fbb_b)
+      ; with_name ident_list_rect_fbb_b_b (@list_rect_fbb_b_b)
+      ; with_name ident_list_rect_fbb_b_b_b (@list_rect_fbb_b_b_b)
+      ; with_name ident_list_rect_fbb_b_b_b_b (@list_rect_fbb_b_b_b_b)
+      ; with_name ident_list_rect_fbb_b_b_b_b_b (@list_rect_fbb_b_b_b_b_b)
       ; with_name ident_list_rect (@Thunked.list_rect)
       ; with_name ident_eager_list_rect (ident.eagerly (@Thunked.list_rect))
       ; with_name ident_list_rect_arrow (@list_rect_arrow_nodep)
@@ -158,6 +165,7 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_Z_lor Z.lor
       ; with_name ident_Z_min Z.min
       ; with_name ident_Z_max Z.max
+      ; with_name ident_Z_abs Z.abs
       ; with_name ident_Z_mul_split Z.mul_split
       ; with_name ident_Z_mul_high Z.mul_high
       ; with_name ident_Z_add_get_carry Z.add_get_carry_full

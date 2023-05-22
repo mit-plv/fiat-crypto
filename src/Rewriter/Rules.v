@@ -45,6 +45,11 @@ Local Notation "x <= y <= z" := (andb (is_tighter_than_bool (ZRange.normalize x)
 Local Notation litZZ x := (ident.literal (fst x), ident.literal (snd x)) (only parsing).
 Local Notation n r := (ZRange.normalize r) (only parsing).
 
+Local Notation "typeof! x" := ltac:(let t := type of x in exact t) (at level 10, only parsing).
+
+Lemma prod_rect_eta A B C f p : @prod_rect A B (fun _ : A * B => C) f p = f (fst p) (snd p).
+Proof. case p; trivial. Qed.
+
 (* N.B. [ident.eagerly] does not play well with [do_again] *)
 Definition nbe_rewrite_rulesT : list (bool * Prop)
   := Eval cbv [myapp mymap myflatten] in
@@ -56,6 +61,7 @@ Definition nbe_rewrite_rulesT : list (bool * Prop)
             ; (forall P t f, @Thunked.bool_rect P t f true = t tt)
             ; (forall P t f, @Thunked.bool_rect P t f false = f tt)
             ; (forall A B C f x y, @prod_rect A B (fun _ => C) f (x, y) = f x y)
+            ; (forall A B C f p, @prod_rect A B (fun _ : A * B => C) f p = dlet p := p in f (fst p) (snd p))
 
             ; (forall A x n,
                   @List.repeat A x ('n)
@@ -182,6 +188,13 @@ Definition nbe_rewrite_rulesT : list (bool * Prop)
                             end)
                         ('n)
                         xs)
+              ; typeof! @unfold1_nat_rect_fbb_b 
+              ; typeof! @unfold1_nat_rect_fbb_b_b
+              ; typeof! @unfold1_list_rect_fbb_b 
+              ; typeof! @unfold1_list_rect_fbb_b_b
+              ; typeof! @unfold1_list_rect_fbb_b_b_b
+              ; typeof! @unfold1_list_rect_fbb_b_b_b_b
+              ; typeof! @unfold1_list_rect_fbb_b_b_b_b_b
              ]
         ].
 
@@ -288,18 +301,35 @@ Definition arith_rewrite_rulesT (max_const_val : Z) : list (bool * Prop)
             ; (forall s y x,
                   Z.add_get_carry_full s (- y) x
                   = dlet vb := Z.sub_get_borrow_full s x y in (fst vb, - snd vb))
+            ; (forall s y x k,
+                  Z.add_get_carry_full s x (-y * k)
+                  = dlet vb := Z.sub_get_borrow_full s x (y * k) in (fst vb, - snd vb))
+            ; (forall s y x k,
+                  Z.add_get_carry_full s (-y * k) x
+                  = dlet vb := Z.sub_get_borrow_full s x (y * k) in (fst vb, - snd vb))
             ; (forall s y x,
                   Z.add_with_get_carry_full s 0 x (- y)
                   = dlet vb := Z.sub_get_borrow_full s x y in (fst vb, - snd vb))
             ; (forall s y x,
                   Z.add_with_get_carry_full s 0 (- y) x
                   = dlet vb := Z.sub_get_borrow_full s x y in (fst vb, - snd vb))
+
+            ; (forall s c x,
+                  Z.add_with_get_carry_full s (- c) x 0
+                  = dlet vb := Z.sub_with_get_borrow_full s c x 0 in (fst vb, - snd vb))
+
             ; (forall s c y x,
                   Z.add_with_get_carry_full s (- c) (- y) x
                   = dlet vb := Z.sub_with_get_borrow_full s c x y in (fst vb, - snd vb))
             ; (forall s c y x,
                   Z.add_with_get_carry_full s (- c) x (- y)
                   = dlet vb := Z.sub_with_get_borrow_full s c x y in (fst vb, - snd vb))
+            ; (forall s c y x k,
+                  Z.add_with_get_carry_full s c x (-y * k)
+                  = dlet vb := Z.sub_with_get_borrow_full s (-c) x (y * k) in (fst vb, - snd vb))
+            ; (forall s c y x k,
+                  Z.add_with_get_carry_full s c (-y * k) x
+                  = dlet vb := Z.sub_with_get_borrow_full s (-c) x (y * k) in (fst vb, - snd vb))
             ; (forall b x, (* inline negation when the rewriter wouldn't already inline it *)
                   ident.gets_inlined b x = false
                   -> -x = dlet v := x in -v)
@@ -397,10 +427,13 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
              ]%Z%zrange
          ; mymap
              do_again
-             [ (forall c M rv r0 rM, 0 ∈ r0 -> M ∈ rM -> M ∈ rv -> 2^Z.log2 (M+1) = M + 1 -> 1 <= M ->
+             [ (forall x y, cstZ r[0~>1] x * y = Z.zselect (cstZ r[0~>1] x) (cstZ r[0~>0] (' 0)) y)
+             ; (forall x y, y * cstZ r[0~>1] x = Z.zselect (cstZ r[0~>1] x) (cstZ r[0~>0] (' 0)) y)
+             ; (forall c M rv r0 rM, 0 ∈ r0 -> M ∈ rM -> M ∈ rv -> 2^Z.log2 (M+1) = M + 1 -> 1 <= M ->
                   cstZ rv (Z.zselect (cstZ r[0~>1] c) (cstZ r0 ('0)) (cstZ rM ('M)))
                   = (dlet vc := cstZZ rv r[0~>1] (Z.sub_with_get_borrow_full ('(M+1)) (cstZ r[0~>1] c) 0 0) in
                      cstZ rv (fst vc)))
+              ; (forall rv c x y, cstZ rv (Z.zselect c x y) = dlet v := cstZ rv (Z.zselect c x y) in cstZ rv v)
                   ]
          ; mymap
              do_again

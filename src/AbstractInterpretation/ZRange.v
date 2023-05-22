@@ -920,11 +920,22 @@ Module Compilers.
                                 (ZRange.four_corners Z.add x y)
                                 (ZRange.eight_corners (fun x y m => Z.max 0 (x + y - m))
                                                       x y m)))
-             (* FIXME *)
+
+             | Compilers.ident_Z_abs as idc
+               => fun x => x <- x; Some (ZRange.two_corners_and_zero (ident.interp idc) x)
+
              | Compilers.ident_Pos_add => fun _ _ => None
              | Compilers.ident_Pos_mul => fun _ _ => None
              | Compilers.ident_Z_pos => fun _ => None
              | Compilers.ident_Z_to_pos => fun _ => None
+
+             | Compilers.ident_nat_rect_fbb_b _ _ _ => fun _ _ _ _ => ZRange.type.base.option.None
+             | Compilers.ident_nat_rect_fbb_b_b _ _ _ _ => fun _ _ _ _ _ => ZRange.type.base.option.None
+             | Compilers.ident_list_rect_fbb_b _ _ _ _ => fun _ _ _ _ => ZRange.type.base.option.None
+             | Compilers.ident_list_rect_fbb_b_b _ _ _ _ _ => fun _ _ _ _ _ => ZRange.type.base.option.None
+             | Compilers.ident_list_rect_fbb_b_b_b _ _ _ _ _ _ => fun _ _ _ _ _ _ => ZRange.type.base.option.None
+             | Compilers.ident_list_rect_fbb_b_b_b_b _ _ _ _ _ _ _ => fun _ _ _ _ _ _ _=> ZRange.type.base.option.None
+             | Compilers.ident_list_rect_fbb_b_b_b_b_b _ _ _ _ _ _ _ _ => fun _ _ _ _ _ _ _ _=> ZRange.type.base.option.None
              end%option.
       End option.
     End ident.
