@@ -2,7 +2,6 @@ Require Import Crypto.Rewriter.Passes.NBE.
 Require Import Crypto.Rewriter.Passes.AddAssocLeft.
 Require Import Crypto.Rewriter.Passes.Arith.
 Require Import Crypto.Rewriter.Passes.ArithWithCasts.
-Require Import Crypto.Rewriter.Passes.ArithWithRelaxedCasts.
 Require Import Crypto.Rewriter.Passes.StripLiteralCasts.
 Require Import Crypto.Rewriter.Passes.FlattenThunkedRects.
 Require Import Crypto.Rewriter.Passes.MulSplit.
@@ -18,7 +17,6 @@ Module Compilers.
   Export AddAssocLeft.Compilers.
   Export Arith.Compilers.
   Export ArithWithCasts.Compilers.
-  Export ArithWithRelaxedCasts.Compilers.
   Export StripLiteralCasts.Compilers.
   Export FlattenThunkedRects.Compilers.
   Export MulSplit.Compilers.
@@ -34,7 +32,6 @@ Module Compilers.
     Export AddAssocLeft.Compilers.RewriteRules.
     Export Arith.Compilers.RewriteRules.
     Export ArithWithCasts.Compilers.RewriteRules.
-    Export ArithWithRelaxedCasts.Compilers.RewriteRules.
     Export StripLiteralCasts.Compilers.RewriteRules.
     Export FlattenThunkedRects.Compilers.RewriteRules.
     Export MulSplit.Compilers.RewriteRules.

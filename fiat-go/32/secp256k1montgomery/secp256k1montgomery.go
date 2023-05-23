@@ -4552,62 +4552,86 @@ func ToBytes(out1 *[32]uint8, arg1 *[8]uint32) {
 	x6 := arg1[2]
 	x7 := arg1[1]
 	x8 := arg1[0]
-	x9 := (x8 >> 8)
-	x10 := (x9 >> 8)
-	x11 := uint8((x10 >> 8))
-	x12 := (x7 >> 8)
-	x13 := (x12 >> 8)
-	x14 := uint8((x13 >> 8))
-	x15 := (x6 >> 8)
-	x16 := (x15 >> 8)
-	x17 := uint8((x16 >> 8))
-	x18 := (x5 >> 8)
-	x19 := (x18 >> 8)
-	x20 := uint8((x19 >> 8))
-	x21 := (x4 >> 8)
-	x22 := (x21 >> 8)
-	x23 := uint8((x22 >> 8))
-	x24 := (x3 >> 8)
-	x25 := (x24 >> 8)
-	x26 := uint8((x25 >> 8))
-	x27 := (x2 >> 8)
-	x28 := (x27 >> 8)
-	x29 := uint8((x28 >> 8))
-	x30 := (x1 >> 8)
-	x31 := (x30 >> 8)
-	x32 := uint8((x31 >> 8))
-	out1[0] = uint8(x8)
-	out1[1] = uint8(x9)
-	out1[2] = uint8(x10)
-	out1[3] = x11
-	out1[4] = uint8(x7)
-	out1[5] = uint8(x12)
-	out1[6] = uint8(x13)
-	out1[7] = x14
-	out1[8] = uint8(x6)
-	out1[9] = uint8(x15)
-	out1[10] = uint8(x16)
-	out1[11] = x17
-	out1[12] = uint8(x5)
-	out1[13] = uint8(x18)
-	out1[14] = uint8(x19)
-	out1[15] = x20
-	out1[16] = uint8(x4)
-	out1[17] = uint8(x21)
-	out1[18] = uint8(x22)
-	out1[19] = x23
-	out1[20] = uint8(x3)
-	out1[21] = uint8(x24)
-	out1[22] = uint8(x25)
-	out1[23] = x26
-	out1[24] = uint8(x2)
-	out1[25] = uint8(x27)
-	out1[26] = uint8(x28)
-	out1[27] = x29
-	out1[28] = uint8(x1)
-	out1[29] = uint8(x30)
-	out1[30] = uint8(x31)
-	out1[31] = x32
+	x9 := (uint8(x8) & 0xff)
+	x10 := (x8 >> 8)
+	x11 := (uint8(x10) & 0xff)
+	x12 := (x10 >> 8)
+	x13 := (uint8(x12) & 0xff)
+	x14 := uint8((x12 >> 8))
+	x15 := (uint8(x7) & 0xff)
+	x16 := (x7 >> 8)
+	x17 := (uint8(x16) & 0xff)
+	x18 := (x16 >> 8)
+	x19 := (uint8(x18) & 0xff)
+	x20 := uint8((x18 >> 8))
+	x21 := (uint8(x6) & 0xff)
+	x22 := (x6 >> 8)
+	x23 := (uint8(x22) & 0xff)
+	x24 := (x22 >> 8)
+	x25 := (uint8(x24) & 0xff)
+	x26 := uint8((x24 >> 8))
+	x27 := (uint8(x5) & 0xff)
+	x28 := (x5 >> 8)
+	x29 := (uint8(x28) & 0xff)
+	x30 := (x28 >> 8)
+	x31 := (uint8(x30) & 0xff)
+	x32 := uint8((x30 >> 8))
+	x33 := (uint8(x4) & 0xff)
+	x34 := (x4 >> 8)
+	x35 := (uint8(x34) & 0xff)
+	x36 := (x34 >> 8)
+	x37 := (uint8(x36) & 0xff)
+	x38 := uint8((x36 >> 8))
+	x39 := (uint8(x3) & 0xff)
+	x40 := (x3 >> 8)
+	x41 := (uint8(x40) & 0xff)
+	x42 := (x40 >> 8)
+	x43 := (uint8(x42) & 0xff)
+	x44 := uint8((x42 >> 8))
+	x45 := (uint8(x2) & 0xff)
+	x46 := (x2 >> 8)
+	x47 := (uint8(x46) & 0xff)
+	x48 := (x46 >> 8)
+	x49 := (uint8(x48) & 0xff)
+	x50 := uint8((x48 >> 8))
+	x51 := (uint8(x1) & 0xff)
+	x52 := (x1 >> 8)
+	x53 := (uint8(x52) & 0xff)
+	x54 := (x52 >> 8)
+	x55 := (uint8(x54) & 0xff)
+	x56 := uint8((x54 >> 8))
+	out1[0] = x9
+	out1[1] = x11
+	out1[2] = x13
+	out1[3] = x14
+	out1[4] = x15
+	out1[5] = x17
+	out1[6] = x19
+	out1[7] = x20
+	out1[8] = x21
+	out1[9] = x23
+	out1[10] = x25
+	out1[11] = x26
+	out1[12] = x27
+	out1[13] = x29
+	out1[14] = x31
+	out1[15] = x32
+	out1[16] = x33
+	out1[17] = x35
+	out1[18] = x37
+	out1[19] = x38
+	out1[20] = x39
+	out1[21] = x41
+	out1[22] = x43
+	out1[23] = x44
+	out1[24] = x45
+	out1[25] = x47
+	out1[26] = x49
+	out1[27] = x50
+	out1[28] = x51
+	out1[29] = x53
+	out1[30] = x55
+	out1[31] = x56
 }
 
 // FromBytes deserializes a field element NOT in the Montgomery domain from bytes in little-endian order.
@@ -4757,7 +4781,7 @@ func Msat(out1 *[9]uint32) {
 func Divstep(out1 *uint32, out2 *[9]uint32, out3 *[9]uint32, out4 *[8]uint32, out5 *[8]uint32, arg1 uint32, arg2 *[9]uint32, arg3 *[9]uint32, arg4 *[8]uint32, arg5 *[8]uint32) {
 	var x1 uint32
 	x1, _ = bits.Add32((^arg1), uint32(0x1), uint32(0x0))
-	x3 := (uint1((x1 >> 31)) & uint1(arg3[0]))
+	x3 := (uint1((x1 >> 31)) & (uint1(arg3[0]) & 0x1))
 	var x4 uint32
 	x4, _ = bits.Add32((^arg1), uint32(0x1), uint32(0x0))
 	var x6 uint32
@@ -4963,160 +4987,161 @@ func Divstep(out1 *uint32, out2 *[9]uint32, out3 *[9]uint32, out4 *[8]uint32, ou
 	cmovznzU32(&x132, x3, arg5[6], x122)
 	var x133 uint32
 	cmovznzU32(&x133, x3, arg5[7], x124)
-	var x134 uint32
-	cmovznzU32(&x134, uint1(x34), uint32(0x0), x7)
+	x134 := (uint1(x34) & 0x1)
 	var x135 uint32
-	cmovznzU32(&x135, uint1(x34), uint32(0x0), x8)
+	cmovznzU32(&x135, x134, uint32(0x0), x7)
 	var x136 uint32
-	cmovznzU32(&x136, uint1(x34), uint32(0x0), x9)
+	cmovznzU32(&x136, x134, uint32(0x0), x8)
 	var x137 uint32
-	cmovznzU32(&x137, uint1(x34), uint32(0x0), x10)
+	cmovznzU32(&x137, x134, uint32(0x0), x9)
 	var x138 uint32
-	cmovznzU32(&x138, uint1(x34), uint32(0x0), x11)
+	cmovznzU32(&x138, x134, uint32(0x0), x10)
 	var x139 uint32
-	cmovznzU32(&x139, uint1(x34), uint32(0x0), x12)
+	cmovznzU32(&x139, x134, uint32(0x0), x11)
 	var x140 uint32
-	cmovznzU32(&x140, uint1(x34), uint32(0x0), x13)
+	cmovznzU32(&x140, x134, uint32(0x0), x12)
 	var x141 uint32
-	cmovznzU32(&x141, uint1(x34), uint32(0x0), x14)
+	cmovznzU32(&x141, x134, uint32(0x0), x13)
 	var x142 uint32
-	cmovznzU32(&x142, uint1(x34), uint32(0x0), x15)
+	cmovznzU32(&x142, x134, uint32(0x0), x14)
 	var x143 uint32
+	cmovznzU32(&x143, x134, uint32(0x0), x15)
 	var x144 uint32
-	x143, x144 = bits.Add32(x34, x134, uint32(0x0))
 	var x145 uint32
+	x144, x145 = bits.Add32(x34, x135, uint32(0x0))
 	var x146 uint32
-	x145, x146 = bits.Add32(x35, x135, uint32(uint1(x144)))
 	var x147 uint32
+	x146, x147 = bits.Add32(x35, x136, uint32(uint1(x145)))
 	var x148 uint32
-	x147, x148 = bits.Add32(x36, x136, uint32(uint1(x146)))
 	var x149 uint32
+	x148, x149 = bits.Add32(x36, x137, uint32(uint1(x147)))
 	var x150 uint32
-	x149, x150 = bits.Add32(x37, x137, uint32(uint1(x148)))
 	var x151 uint32
+	x150, x151 = bits.Add32(x37, x138, uint32(uint1(x149)))
 	var x152 uint32
-	x151, x152 = bits.Add32(x38, x138, uint32(uint1(x150)))
 	var x153 uint32
+	x152, x153 = bits.Add32(x38, x139, uint32(uint1(x151)))
 	var x154 uint32
-	x153, x154 = bits.Add32(x39, x139, uint32(uint1(x152)))
 	var x155 uint32
+	x154, x155 = bits.Add32(x39, x140, uint32(uint1(x153)))
 	var x156 uint32
-	x155, x156 = bits.Add32(x40, x140, uint32(uint1(x154)))
 	var x157 uint32
+	x156, x157 = bits.Add32(x40, x141, uint32(uint1(x155)))
 	var x158 uint32
-	x157, x158 = bits.Add32(x41, x141, uint32(uint1(x156)))
 	var x159 uint32
-	x159, _ = bits.Add32(x42, x142, uint32(uint1(x158)))
-	var x161 uint32
-	cmovznzU32(&x161, uint1(x34), uint32(0x0), x43)
+	x158, x159 = bits.Add32(x41, x142, uint32(uint1(x157)))
+	var x160 uint32
+	x160, _ = bits.Add32(x42, x143, uint32(uint1(x159)))
 	var x162 uint32
-	cmovznzU32(&x162, uint1(x34), uint32(0x0), x44)
+	cmovznzU32(&x162, x134, uint32(0x0), x43)
 	var x163 uint32
-	cmovznzU32(&x163, uint1(x34), uint32(0x0), x45)
+	cmovznzU32(&x163, x134, uint32(0x0), x44)
 	var x164 uint32
-	cmovznzU32(&x164, uint1(x34), uint32(0x0), x46)
+	cmovznzU32(&x164, x134, uint32(0x0), x45)
 	var x165 uint32
-	cmovznzU32(&x165, uint1(x34), uint32(0x0), x47)
+	cmovznzU32(&x165, x134, uint32(0x0), x46)
 	var x166 uint32
-	cmovznzU32(&x166, uint1(x34), uint32(0x0), x48)
+	cmovznzU32(&x166, x134, uint32(0x0), x47)
 	var x167 uint32
-	cmovznzU32(&x167, uint1(x34), uint32(0x0), x49)
+	cmovznzU32(&x167, x134, uint32(0x0), x48)
 	var x168 uint32
-	cmovznzU32(&x168, uint1(x34), uint32(0x0), x50)
+	cmovznzU32(&x168, x134, uint32(0x0), x49)
 	var x169 uint32
+	cmovznzU32(&x169, x134, uint32(0x0), x50)
 	var x170 uint32
-	x169, x170 = bits.Add32(x126, x161, uint32(0x0))
 	var x171 uint32
+	x170, x171 = bits.Add32(x126, x162, uint32(0x0))
 	var x172 uint32
-	x171, x172 = bits.Add32(x127, x162, uint32(uint1(x170)))
 	var x173 uint32
+	x172, x173 = bits.Add32(x127, x163, uint32(uint1(x171)))
 	var x174 uint32
-	x173, x174 = bits.Add32(x128, x163, uint32(uint1(x172)))
 	var x175 uint32
+	x174, x175 = bits.Add32(x128, x164, uint32(uint1(x173)))
 	var x176 uint32
-	x175, x176 = bits.Add32(x129, x164, uint32(uint1(x174)))
 	var x177 uint32
+	x176, x177 = bits.Add32(x129, x165, uint32(uint1(x175)))
 	var x178 uint32
-	x177, x178 = bits.Add32(x130, x165, uint32(uint1(x176)))
 	var x179 uint32
+	x178, x179 = bits.Add32(x130, x166, uint32(uint1(x177)))
 	var x180 uint32
-	x179, x180 = bits.Add32(x131, x166, uint32(uint1(x178)))
 	var x181 uint32
+	x180, x181 = bits.Add32(x131, x167, uint32(uint1(x179)))
 	var x182 uint32
-	x181, x182 = bits.Add32(x132, x167, uint32(uint1(x180)))
 	var x183 uint32
+	x182, x183 = bits.Add32(x132, x168, uint32(uint1(x181)))
 	var x184 uint32
-	x183, x184 = bits.Add32(x133, x168, uint32(uint1(x182)))
 	var x185 uint32
+	x184, x185 = bits.Add32(x133, x169, uint32(uint1(x183)))
 	var x186 uint32
-	x185, x186 = bits.Sub32(x169, 0xfffffc2f, uint32(0x0))
 	var x187 uint32
+	x186, x187 = bits.Sub32(x170, 0xfffffc2f, uint32(0x0))
 	var x188 uint32
-	x187, x188 = bits.Sub32(x171, 0xfffffffe, uint32(uint1(x186)))
 	var x189 uint32
+	x188, x189 = bits.Sub32(x172, 0xfffffffe, uint32(uint1(x187)))
 	var x190 uint32
-	x189, x190 = bits.Sub32(x173, 0xffffffff, uint32(uint1(x188)))
 	var x191 uint32
+	x190, x191 = bits.Sub32(x174, 0xffffffff, uint32(uint1(x189)))
 	var x192 uint32
-	x191, x192 = bits.Sub32(x175, 0xffffffff, uint32(uint1(x190)))
 	var x193 uint32
+	x192, x193 = bits.Sub32(x176, 0xffffffff, uint32(uint1(x191)))
 	var x194 uint32
-	x193, x194 = bits.Sub32(x177, 0xffffffff, uint32(uint1(x192)))
 	var x195 uint32
+	x194, x195 = bits.Sub32(x178, 0xffffffff, uint32(uint1(x193)))
 	var x196 uint32
-	x195, x196 = bits.Sub32(x179, 0xffffffff, uint32(uint1(x194)))
 	var x197 uint32
+	x196, x197 = bits.Sub32(x180, 0xffffffff, uint32(uint1(x195)))
 	var x198 uint32
-	x197, x198 = bits.Sub32(x181, 0xffffffff, uint32(uint1(x196)))
 	var x199 uint32
+	x198, x199 = bits.Sub32(x182, 0xffffffff, uint32(uint1(x197)))
 	var x200 uint32
-	x199, x200 = bits.Sub32(x183, 0xffffffff, uint32(uint1(x198)))
-	var x202 uint32
-	_, x202 = bits.Sub32(uint32(uint1(x184)), uint32(0x0), uint32(uint1(x200)))
+	var x201 uint32
+	x200, x201 = bits.Sub32(x184, 0xffffffff, uint32(uint1(x199)))
 	var x203 uint32
-	x203, _ = bits.Add32(x6, uint32(0x1), uint32(0x0))
-	x205 := ((x143 >> 1) | ((x145 << 31) & 0xffffffff))
-	x206 := ((x145 >> 1) | ((x147 << 31) & 0xffffffff))
-	x207 := ((x147 >> 1) | ((x149 << 31) & 0xffffffff))
-	x208 := ((x149 >> 1) | ((x151 << 31) & 0xffffffff))
-	x209 := ((x151 >> 1) | ((x153 << 31) & 0xffffffff))
-	x210 := ((x153 >> 1) | ((x155 << 31) & 0xffffffff))
-	x211 := ((x155 >> 1) | ((x157 << 31) & 0xffffffff))
-	x212 := ((x157 >> 1) | ((x159 << 31) & 0xffffffff))
-	x213 := ((x159 & 0x80000000) | (x159 >> 1))
-	var x214 uint32
-	cmovznzU32(&x214, uint1(x84), x67, x51)
+	_, x203 = bits.Sub32(uint32(uint1(x185)), uint32(0x0), uint32(uint1(x201)))
+	var x204 uint32
+	x204, _ = bits.Add32(x6, uint32(0x1), uint32(0x0))
+	x206 := ((x144 >> 1) | ((x146 << 31) & 0xffffffff))
+	x207 := ((x146 >> 1) | ((x148 << 31) & 0xffffffff))
+	x208 := ((x148 >> 1) | ((x150 << 31) & 0xffffffff))
+	x209 := ((x150 >> 1) | ((x152 << 31) & 0xffffffff))
+	x210 := ((x152 >> 1) | ((x154 << 31) & 0xffffffff))
+	x211 := ((x154 >> 1) | ((x156 << 31) & 0xffffffff))
+	x212 := ((x156 >> 1) | ((x158 << 31) & 0xffffffff))
+	x213 := ((x158 >> 1) | ((x160 << 31) & 0xffffffff))
+	x214 := ((x160 & 0x80000000) | (x160 >> 1))
 	var x215 uint32
-	cmovznzU32(&x215, uint1(x84), x69, x53)
+	cmovznzU32(&x215, uint1(x84), x67, x51)
 	var x216 uint32
-	cmovznzU32(&x216, uint1(x84), x71, x55)
+	cmovznzU32(&x216, uint1(x84), x69, x53)
 	var x217 uint32
-	cmovznzU32(&x217, uint1(x84), x73, x57)
+	cmovznzU32(&x217, uint1(x84), x71, x55)
 	var x218 uint32
-	cmovznzU32(&x218, uint1(x84), x75, x59)
+	cmovznzU32(&x218, uint1(x84), x73, x57)
 	var x219 uint32
-	cmovznzU32(&x219, uint1(x84), x77, x61)
+	cmovznzU32(&x219, uint1(x84), x75, x59)
 	var x220 uint32
-	cmovznzU32(&x220, uint1(x84), x79, x63)
+	cmovznzU32(&x220, uint1(x84), x77, x61)
 	var x221 uint32
-	cmovznzU32(&x221, uint1(x84), x81, x65)
+	cmovznzU32(&x221, uint1(x84), x79, x63)
 	var x222 uint32
-	cmovznzU32(&x222, uint1(x202), x185, x169)
+	cmovznzU32(&x222, uint1(x84), x81, x65)
 	var x223 uint32
-	cmovznzU32(&x223, uint1(x202), x187, x171)
+	cmovznzU32(&x223, uint1(x203), x186, x170)
 	var x224 uint32
-	cmovznzU32(&x224, uint1(x202), x189, x173)
+	cmovznzU32(&x224, uint1(x203), x188, x172)
 	var x225 uint32
-	cmovznzU32(&x225, uint1(x202), x191, x175)
+	cmovznzU32(&x225, uint1(x203), x190, x174)
 	var x226 uint32
-	cmovznzU32(&x226, uint1(x202), x193, x177)
+	cmovznzU32(&x226, uint1(x203), x192, x176)
 	var x227 uint32
-	cmovznzU32(&x227, uint1(x202), x195, x179)
+	cmovznzU32(&x227, uint1(x203), x194, x178)
 	var x228 uint32
-	cmovznzU32(&x228, uint1(x202), x197, x181)
+	cmovznzU32(&x228, uint1(x203), x196, x180)
 	var x229 uint32
-	cmovznzU32(&x229, uint1(x202), x199, x183)
-	*out1 = x203
+	cmovznzU32(&x229, uint1(x203), x198, x182)
+	var x230 uint32
+	cmovznzU32(&x230, uint1(x203), x200, x184)
+	*out1 = x204
 	out2[0] = x7
 	out2[1] = x8
 	out2[2] = x9
@@ -5126,31 +5151,31 @@ func Divstep(out1 *uint32, out2 *[9]uint32, out3 *[9]uint32, out4 *[8]uint32, ou
 	out2[6] = x13
 	out2[7] = x14
 	out2[8] = x15
-	out3[0] = x205
-	out3[1] = x206
-	out3[2] = x207
-	out3[3] = x208
-	out3[4] = x209
-	out3[5] = x210
-	out3[6] = x211
-	out3[7] = x212
-	out3[8] = x213
-	out4[0] = x214
-	out4[1] = x215
-	out4[2] = x216
-	out4[3] = x217
-	out4[4] = x218
-	out4[5] = x219
-	out4[6] = x220
-	out4[7] = x221
-	out5[0] = x222
-	out5[1] = x223
-	out5[2] = x224
-	out5[3] = x225
-	out5[4] = x226
-	out5[5] = x227
-	out5[6] = x228
-	out5[7] = x229
+	out3[0] = x206
+	out3[1] = x207
+	out3[2] = x208
+	out3[3] = x209
+	out3[4] = x210
+	out3[5] = x211
+	out3[6] = x212
+	out3[7] = x213
+	out3[8] = x214
+	out4[0] = x215
+	out4[1] = x216
+	out4[2] = x217
+	out4[3] = x218
+	out4[4] = x219
+	out4[5] = x220
+	out4[6] = x221
+	out4[7] = x222
+	out5[0] = x223
+	out5[1] = x224
+	out5[2] = x225
+	out5[3] = x226
+	out5[4] = x227
+	out5[5] = x228
+	out5[6] = x229
+	out5[7] = x230
 }
 
 // DivstepPrecomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form).

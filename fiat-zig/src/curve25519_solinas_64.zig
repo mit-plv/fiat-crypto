@@ -41,9 +41,10 @@ inline fn addcarryxU64(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) vo
     @setRuntimeSafety(mode == .Debug);
 
     const x1 = ((cast(u128, arg1) + cast(u128, arg2)) + cast(u128, arg3));
-    const x2 = cast(u1, (x1 >> 64));
-    out1.* = cast(u64, x1);
-    out2.* = x2;
+    const x2 = cast(u64, (x1 & cast(u128, 0xffffffffffffffff)));
+    const x3 = cast(u1, (x1 >> 64));
+    out1.* = x2;
+    out2.* = x3;
 }
 
 /// The function subborrowxU64 is a subtraction with borrow.
@@ -85,9 +86,10 @@ inline fn mulxU64(out1: *u64, out2: *u64, arg1: u64, arg2: u64) void {
     @setRuntimeSafety(mode == .Debug);
 
     const x1 = (cast(u128, arg1) * cast(u128, arg2));
-    const x2 = cast(u64, (x1 >> 64));
-    out1.* = cast(u64, x1);
-    out2.* = x2;
+    const x2 = cast(u64, (x1 & cast(u128, 0xffffffffffffffff)));
+    const x3 = cast(u64, (x1 >> 64));
+    out1.* = x2;
+    out2.* = x3;
 }
 
 /// The function cmovznzU64 is a single-word conditional move.

@@ -573,42 +573,6 @@ Proof using Type.
   all: try (reflect_hyps; lia).
 Qed.
 
-Lemma relaxed_rules_work rland rm1 rv v :
-    is_bounded_by_bool (upper rland) (ZRange.normalize rm1) = true ->
-    upper rland = Z.ones (Z.succ (Z.log2 (upper rland))) ->
-    0 = lower rland ->
-    0 = lower rv ->
-    0 <= upper rv ->
-    (upper rv + 1) mod (upper rland + 1) = 0 ->
-    ident.cast rland (ident.cast rv v &' ident.cast rm1 (upper rland)) = ident.cast rland v.
-Proof.
-  intros H1 H2 H3 H4 H5 H6.
-  replace (ident.cast rland v) with (ident.cast rland (ident.cast rv v)).
-  - do 3 interp_good_t_step_arith. rewrite Z.land_ones.
-    + replace (2 ^ Z.succ (Z.log2 (upper rland))) with (upper rland + 1).
-      -- rewrite <- ident.cast_out_of_bounds_simple_0_mod.
-         ++ destruct rland. simpl in *. subst. apply ident.cast_idempotent.
-         ++ rewrite H2. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper rland)). lia.
-      -- remember (Z.log2 _) as x. rewrite H2. subst. rewrite Z.ones_equiv. lia.
-    + remember (Z.log2_nonneg (upper rland)). lia.
-  - destruct rland. destruct rv. simpl in *. subst.
-    repeat rewrite ident.cast_out_of_bounds_simple_0_mod.
-    + rewrite <- Z.mod_div_mod_full.
-      -- reflexivity.
-      -- rewrite <- Z.mod_divide_full. assumption.
-    + rewrite H2. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper)). lia.
-    + lia.
-    + rewrite H2. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper)). lia.  
-Qed.
-      
-Lemma arith_with_relaxed_casts_rewrite_rules_proofs
-  : PrimitiveHList.hlist (@snd bool Prop) arith_with_relaxed_casts_rewrite_rulesT.
-Proof using Type.
-  start_proof; auto; intros; try lia.
-  - apply relaxed_rules_work; assumption.
-  - rewrite Z.land_comm. apply relaxed_rules_work; assumption.
-Qed.
-      
 Lemma strip_literal_casts_rewrite_rules_proofs
   : PrimitiveHList.hlist (@snd bool Prop) strip_literal_casts_rewrite_rulesT.
 Proof using Type.

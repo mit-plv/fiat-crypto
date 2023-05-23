@@ -547,30 +547,6 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
              ]
         ]%Z%zrange.
 
-Definition arith_with_relaxed_casts_rewrite_rulesT : list (bool * Prop)
-  := Eval cbv [myapp mymap myflatten] in
-    myflatten
-      [mymap
-         dont_do_again
-         [(forall rland rm1 rv v,
-              rland.(upper) ∈ rm1
-              -> rland.(upper) = Z.ones (Z.succ (Z.log2 rland.(upper)))
-              -> 0 = rland.(lower)
-              -> 0 = rv.(lower)
-              -> 0 <= rv.(upper)
-              -> (rv.(upper) + 1) mod (rland.(upper) + 1) = 0
-              -> cstZ rland (Z.land (cstZ rv v) (cstZ rm1 ('rland.(upper)))) = cstZ rland v)
-          ; (forall rland rm1 rv v,
-                rland.(upper) ∈ rm1
-                -> rland.(upper) = Z.ones (Z.succ (Z.log2 rland.(upper)))
-                -> 0 = rland.(lower)
-                -> 0 = rv.(lower)
-                -> 0 <= rv.(upper)
-                -> (rv.(upper) + 1) mod (rland.(upper) + 1) = 0
-                -> cstZ rland (Z.land (cstZ rm1 ('rland.(upper))) (cstZ rv v)) = cstZ rland v)
-         ]
-      ]%Z%zrange.
-
 Definition strip_literal_casts_rewrite_rulesT : list (bool * Prop)
   := [dont_do_again (forall rx x, x ∈ rx -> cstZ rx ('x) = 'x)]%Z%zrange.
 

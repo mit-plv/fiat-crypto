@@ -47,9 +47,10 @@ static class Box<T> {
  */
 static void fiat_Secp256K1MontgomeryScalar_addcarryx_u32(Box<Integer> out1, Box<Integer> out2, int arg1, int arg2, int arg3) {
   long x1 = (((long) Integer.toUnsignedLong(((Number) (arg1)).intValue()) + (long) Integer.toUnsignedLong(((Number) (arg2)).intValue())) + (long) Integer.toUnsignedLong(((Number) (arg3)).intValue()));
-  int x2 = (int) Integer.toUnsignedLong(((Number) ((x1 >>> 32))).intValue());
-  out1.set((int) Integer.toUnsignedLong(((Number) (x1)).intValue()));
-  out2.set(x2);
+  int x2 = ((int) Integer.toUnsignedLong(((Number) (x1)).intValue()) & 0xffffffff);
+  int x3 = (int) Integer.toUnsignedLong(((Number) ((x1 >>> 32))).intValue());
+  out1.set(x2);
+  out2.set(x3);
 }
 
 /**
@@ -91,9 +92,10 @@ static void fiat_Secp256K1MontgomeryScalar_subborrowx_u32(Box<Integer> out1, Box
  */
 static void fiat_Secp256K1MontgomeryScalar_mulx_u32(Box<Integer> out1, Box<Integer> out2, int arg1, int arg2) {
   long x1 = ((long) Integer.toUnsignedLong(((Number) (arg1)).intValue()) * (long) Integer.toUnsignedLong(((Number) (arg2)).intValue()));
-  int x2 = (int) Integer.toUnsignedLong(((Number) ((x1 >>> 32))).intValue());
-  out1.set((int) Integer.toUnsignedLong(((Number) (x1)).intValue()));
-  out2.set(x2);
+  int x2 = ((int) Integer.toUnsignedLong(((Number) (x1)).intValue()) & 0xffffffff);
+  int x3 = (int) Integer.toUnsignedLong(((Number) ((x1 >>> 32))).intValue());
+  out1.set(x2);
+  out2.set(x3);
 }
 
 /**
