@@ -39,7 +39,7 @@ Qed.
  *)
 
 Lemma saturated_pseudomersenne_reduction_converges :
-  forall W s c a b (HH: b < 0 -> s / W * W = s), 0 <= c < W -> W < s ->
+  forall W s c a b (HH: b < 0 -> s / W * W = s), 0 <= c < W -> W <= s ->
   0 <= a < s ->
   0 <= c*Z.abs b <= W-c ->
   (((a + c*b) mod s) / W = ((a + c*b) mod s + c * ((a + c*b) / s)) / W).
@@ -125,6 +125,12 @@ Module stream.
   Lemma firstn_tl {T} n (xs : stream T) : firstn n (tl xs) = List.tl (firstn (S n) xs).
   Proof. cbn. rewrite <-seq_shift, map_map; trivial. Qed.
 
+  Lemma firstn_add {T} i j xs : @firstn T (i + j) xs = firstn i xs ++ firstn j (skipn i xs).
+  Proof.
+    cbv [firstn skipn].
+    rewrite seq_add, map_app; apply f_equal, eq_sym, map_seq_ext; intros; f_equal; lia.
+  Qed.
+
   Lemma skipn_tl {T} n (xs : stream T) i : skipn n (tl xs) i = skipn (S n) xs i.
   Proof. trivial. Qed.
 
@@ -158,26 +164,24 @@ Module Saturated. Section __.
     rewrite stream.firstn_S', fold_right_app; cbn [fold_right]; rewrite Pos.prod_init; lia.
   Qed.
 
-  (*
-  Lemma weight_shift' bound (Hbound : forall i, bound i <> 0) i :
-    weight (fun j => bound (S j)) i = weight bound (S i) / bound O.
+  Lemma weight_add bound i j : weight bound (i+j) = weight bound i * weight (stream.skipn i bound) j.
   Proof.
-    revert dependent bound; induction i; cbn -[Z.mul]; intros.
-    { specialize (Hbound O). Z.div_mod_to_equations. nia. }
-    rewrite (Z.mul_comm (bound O)), Z.div_mul by trivial; f_equal.
-    symmetry; rewrite <-seq_shift, map_map; symmetry; trivial.
+    cbv [weight stream.map stream.prefixes].
+    rewrite <-Pos.prod_init, <-fold_right_app; apply f_equal, stream.firstn_add.
   Qed.
 
-  Lemma weight_pos bound i (H : forall j, (j < i)%nat -> 0 < bound j) :
-    0 < weight bound i.
-  Proof.
-    intros; cbv [weight]. apply Z.prod_pos, Forall_map, Forall_forall.
-    intros j Hj%in_seq; apply H; lia.
-  Qed.
-  *)
+  Lemma weight_mono_le bound i j : Nat.le i j -> weight bound i <= weight bound j.
+  Proof. intros. replace j with (i+(j-i))%nat by lia; rewrite weight_add. nia. Qed.
 
   Local Open Scope Z_scope.
   Local Coercion Z.pos : positive >-> Z.
+
+  Lemma mod_weight_lt bound i j : Nat.le i j -> weight bound j mod weight bound i = 0.
+  Proof.
+    intros.
+    replace j with (i+(j-i))%nat by lia; rewrite weight_add.
+    rewrite Pos.mul_comm, Pos2Z.inj_mul, Z.mod_mul; lia.
+  Qed.
 
   Definition eval bound (xs : list Z) : Z :=
     list_rect_fbb_b (fun _ => 0) (fun x _  rec bound =>
@@ -248,7 +252,11 @@ Module Saturated. Section __.
     eapply IHn; repeat intro; rewrite ?F; trivial.
   Qed.
 
-  Lemma length_encode bound n x : length (encode bound n x) = n. Admitted.
+  Lemma length_encode bound n x : length (encode bound n x) = n.
+  Proof.
+    revert bound; revert x; induction n; intros;
+    rewrite ?encode_O, ?encode_S; cbn [length]; erewrite ?IHn; trivial.
+  Qed.
 
   Lemma eval_encode bound n x : eval bound (encode bound n x) = x mod weight bound n.
   Proof.
@@ -276,33 +284,32 @@ Module Saturated. Section __.
       intro i; eapply stream.skipn_tl. }
   Qed.
 
-  Lemma firstn_encode bound i n x (H : Nat.lt i n) :
+  Lemma firstn_encode bound i n x (H : Nat.le i n) :
     firstn i (encode bound n x) = encode bound i x.
   Proof.
     replace n with (i + (n-i))%nat by lia; set (n-i)%nat as m; clearbody m.
     rewrite encode_add_l, firstn_app_sharp; auto using length_encode.
   Qed.
 
-  Lemma skipn_encode bound i n x (H : Nat.lt i n) :
+  Lemma skipn_encode bound i n x (H : Nat.le i n) :
     skipn i (encode bound n x) = encode (stream.skipn i bound) (n-i) (x / weight bound i).
   Proof.
     replace n with (i + (n-i))%nat by lia; set (n-i)%nat as m; clearbody m.
     rewrite encode_add_l, skipn_app_sharp; auto using length_encode; f_equal; lia.
   Qed.
 
-  Lemma eval_firstn_encode bound i n x (H : Nat.lt i n) :
+  Lemma eval_firstn_encode bound i n x (H : Nat.le i n) :
     eval bound (firstn i (encode bound n x)) = x mod weight bound i.
   Proof. rewrite firstn_encode, eval_encode; trivial. Qed.
 
-  Lemma eval_skipn_encode bound i n x (H : Nat.lt i n) :
+  Lemma eval_skipn_encode bound i n x (H : Nat.le i n) :
     eval (stream.skipn i bound) (skipn i (encode bound n x)) = x mod weight bound n / weight bound i.
   Proof.
     rewrite skipn_encode, eval_encode; trivial.
-    rewrite Z.mod_pull_div by lia.
-    f_equal.
-    f_equal.
+    rewrite Z.mod_pull_div by lia; f_equal; f_equal.
     rewrite <-Pos2Z.inj_mul; f_equal.
-  Admitted.
+    replace n with (i+(n-i))%nat at 2 by lia; rewrite weight_add; lia.
+  Qed.
 
   Definition add bound (c0 : Z) (xs ys : list Z) : list Z * Z  :=
     list_rect_fbb_b_b_b (fun _ _ c => ([], c)) (fun x _  rec bound ys c =>
@@ -401,6 +408,13 @@ Module Saturated. Section __.
     Z.div_mod_to_equations; nia.
   Qed.
 
+  Lemma length_add_mul_limb bound acc xs y :
+    length (add_mul_limb bound acc xs y) = S (Nat.max (length acc) (length xs)).
+  Proof.
+    cbv [add_mul_limb]; rewrite add_mul_limb'_correct.
+    rewrite app_length, length_encode; cbn [length]; lia.
+  Qed.
+
   Definition add_mul bound (acc xs ys : list Z) : list Z :=
     list_rect_fbb_b_b (fun _ acc => acc) (fun y _ rec bound acc =>
       let acc := add_mul_limb bound acc xs y in
@@ -436,6 +450,9 @@ Module Saturated. Section __.
     eval bound (mul bound xs ys) = eval bound xs * eval bound ys.
   Proof. cbv [mul]. subst bound; rewrite eval_add_mul, ?eval_nil; ring. Qed.
 
+  Lemma length_mul bound xs ys : ys <> [] ->  length (mul bound xs ys) = (length xs + length ys)%nat.
+  Admitted.
+
   (* See lemma saturated_pseudomersenne_reduction_converges *)
 
   Definition reduce' bound k (c : Z) (a : list Z) (b : Z) : list Z :=
@@ -447,37 +464,25 @@ Module Saturated. Section __.
   Lemma eval_reduce' bound k c a b m
     (s : Z := weight bound (length a)) (Hc : s mod m = c)
     (Hc' : 0 <= c < weight bound k)
-    (Hla : (1 <= length a)%nat) (Hla' : (k < length a)%nat)
+    (Hla : (1 <= length a)%nat) (Hla' : (k <= length a)%nat)
     (Ha : 0 <= eval bound a < weight bound (length a))
     (Hb : 0 <= c * Z.abs b <= weight bound k - c) :
     eval bound (reduce' bound k c a b) mod m = (eval bound a + s * b) mod m.
   Proof.
-    cbv [reduce' Let_In].
+    cbv [reduce' Let_In s] in *.
     rewrite 2 add_correct by (rewrite ?length_encode; trivial); cbn [fst snd].
     rewrite firstn_encode, eval_encode by (rewrite ?length_encode; trivial).
     repeat rewrite ?eval_cons, ?eval_nil, ?Z.add_0_l, ?Z.mul_0_r, ?Z.add_0_r.
-    rewrite eval_app, ?length_encode, (eval_encode _ k).
-    set (weight bound k) as W.
-
-    epose proof (saturated_pseudomersenne_reduction_converges W s c (@eval bound a) b).
-    progress change (Z.pos (weight bound (length a))) with s.
-    subst W.
-    subst s.
-    rewrite eval_skipn_encode by trivial.
-    rewrite H; cycle 1; clear H; try trivial.
-    { intros. rewrite Z.mul_comm. symmetry; apply Z.div_exact; try lia.
-      (* weight bound (length a) mod weight bound k = 0 *) admit. }
-    { (* weight bound k < weight bound (length a) *) admit. }
-
+    rewrite eval_app, ?length_encode, (eval_encode _ k), eval_skipn_encode by trivial.
+    rewrite saturated_pseudomersenne_reduction_converges; cycle 1; trivial.
+    { intros. rewrite Z.mul_comm. symmetry; apply Z.div_exact; auto using mod_weight_lt with zarith. }
+    { apply weight_mono_le; lia. }
     rewrite (Z.add_comm (_ mod _) (_ * (_ / _))), <-Z.div_mod by lia.
     rewrite (Z.add_comm (_ mod _) (_ * (_ / _))).
-    set (eval _ a + c * b) as A.
-    push_Zmod; rewrite <-Hc; pull_Zmod.
+    set (eval _ a + c * b) as A; push_Zmod; rewrite <-Hc; pull_Zmod; subst A.
     rewrite <-Z.div_mod by lia.
-    push_Zmod; rewrite Hc; pull_Zmod.
-    trivial.
-    all: fail.
-  Admitted.
+    push_Zmod; rewrite Hc; pull_Zmod; trivial.
+  Qed.
 
   Definition mulmod bound n c a b :=
     let p := mul bound a b in
@@ -487,11 +492,12 @@ Module Saturated. Section __.
     else lo ++ [hi].
 
   Lemma eval_mulmod B (bound := fun _ => B) n a b m
-    (s : Z := weight bound n) (c := s mod m)
-    (Hn : (1 < n)%nat) (Hc' : 0 <= c < stream.hd bound)
+    (s : Z := weight bound n) (c := s mod m) (Hc' : 0 <= c < stream.hd bound)
+    (Hn : (n <= length a + length b <= n + n)%nat) (Hb : b <> nil)
     : eval bound (mulmod bound n c a b) mod m = (eval bound a * eval bound b) mod m.
   Proof.
     cbv [mulmod].
+    assert (1 <= length b)%nat by (destruct b; cbn [length] in *; congruence || lia).
     pose proof (eq_refl : weight bound n mod m = c) as Hc.
     pose proof eval_mul B a b as Hmul; fold bound in Hmul.
     epose proof eq_sym (eval_app _ (firstn n _) (skipn n _)) as Hsplit.
@@ -513,14 +519,14 @@ Module Saturated. Section __.
     { rewrite length_encode; trivial. }
     { rewrite weight_1; trivial. }
     { rewrite length_encode; lia. }
-    { rewrite length_encode; trivial. }
+    { rewrite length_encode; lia. }
     { rewrite eval_encode, length_encode. apply Z.mod_pos_bound. lia. }
     { lia. }
     { rewrite eval_app, eval_encode, length_encode, eval_cons, eval_nil;
       rewrite Z.add_comm, Z.mul_0_r, Z.add_0_r. rewrite <-Z.div_mod; lia. }
-    { rewrite firstn_length, skipn_length. (* length mul *) admit. }
-    { rewrite firstn_length. (* length mul *) admit. }
-  Admitted.
+    { rewrite firstn_length, skipn_length, length_mul; trivial; lia. }
+    { rewrite firstn_length, length_mul; trivial; lia. }
+  Qed.
 
   Definition addmod bound c a b :=
     let (sum, carry) := add bound 0 a b in
@@ -584,9 +590,23 @@ Module Saturated. Section __.
     break_match; rewrite ?eval_encode, ?Z.add_0_l, ?Z.add_opp_r in *; Z.div_mod_to_equations; nia.
   Qed.
 
-  Definition canon bound m x :=
-    Nat.iter (Z.to_nat (weight bound (length x)/m)) (fun x => condsub bound x (encode bound (length x) m)) x.
+  Definition canon bound m (x : list Z) :=
+    dlet m' := encode bound (length x) m in
+    @nat_rect _ id (fun _ rec x => rec (condsub bound x m'))
+    (Z.to_nat (weight bound (length x)/m)) x.
 
+  Lemma canon_correct bound m x (Hm : 0 < m) (Hcanon : encode bound (length x) (eval bound x) = x) :
+    canon bound m x = encode bound (length x) (eval bound x mod m).
+  Proof.
+    pose proof eval_encode bound (length x) (eval bound x) as Heval; rewrite Hcanon in Heval.
+    assert (0 <= eval bound x < m + Z.of_nat (Z.to_nat (weight bound (length x) / m)) * m)
+      by (Z.div_mod_to_equations; nia).
+    cbv [canon Let_In];
+    remember (length x) as n in *; set (Z.to_nat (weight bound n / m)) as q in *; clearbody q.
+    clear Heval; revert dependent x; induction q; cbn -[condsub Z.mul]; intros.
+    { rewrite Z.mod_small; auto; lia. }
+    erewrite IHq.
+  Abort.
 
   (*
   Definition smalldivmod bound (xs : list Z) (s : Z) : Z * list Z :=
@@ -640,7 +660,7 @@ Module Saturated. Section __.
 
   Goal forall a0 a1 a2 a3 b0 b1 b2 b3 : Z, False. intros.
   Proof.
-    pose proof (eval_mulmod (2^64)%positive 4 [a0;a1;a2;a3] [b0;b1;b2;b3] (2^256-38) ! !).
+    pose proof (eval_mulmod (2^64)%positive 4 [a0;a1;a2;a3] [b0;b1;b2;b3] (2^256-38) ! ! !).
     cbn [length] in *.
     change ((weight (fun _ : nat => (2 ^ 64)%positive) 4%nat)) with (2^256)%positive in *.
     set (eval (fun _ : nat => (2 ^ 64)%positive)) as eval in *.

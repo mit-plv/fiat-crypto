@@ -82,8 +82,8 @@ Module debugging_sat_solinas_25519.
 
     Import SolinasReduction.Saturated.
 
-    Definition mulmod (bound : stream BinNums.Z := fun _ => 2^64)
-      (c : BinNums.Z := 38) (a b : list BinNums.Z) :=
+    Definition bound (_ : Datatypes.nat) := Z.to_pos (2^64).
+    Definition mulmod (c : BinNums.Z := 38) (a b : list BinNums.Z) :=
       let p := mul bound a b in
       let (lo, hi) := add_mul_limb' bound (firstn n p) (skipn n p) c 0 0 0 in
       if c * Z.abs hi <=? 2^machine_wordsize - c
@@ -96,7 +96,7 @@ Module debugging_sat_solinas_25519.
             false (* subst01 *)
             possible_values
             ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
-                  let r := Reify (fun xs ys => addmod (fun _ => 2^64) 38 xs (map Z.opp ys)) in
+                  let r := Reify (fun xs ys => addmod bound 38 xs (map Z.opp ys)) in
                   exact r)
                    (Some boundsn, (Some boundsn, tt))
                    (Some boundsn)
@@ -114,7 +114,7 @@ Module debugging_sat_solinas_25519.
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
-                  let r := Reify (addmod (fun _ => 2^64) 38) in
+                  let r := Reify (addmod bound 38) in
                   exact r)
                    (fun _ _ => []) (* comment *)
                    (Some boundsn, (Some boundsn, tt))
@@ -132,7 +132,7 @@ Module debugging_sat_solinas_25519.
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
-                  let r := Reify (submod (fun _ => 2^64) 38) in
+                  let r := Reify (submod bound 38) in
                   exact r)
                    (fun _ _ => []) (* comment *)
                    (Some boundsn, (Some boundsn, tt))
@@ -169,8 +169,8 @@ Module debugging_sat_solinas_25519.
             machine_wordsize
             ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
             let r := Reify (fun xs =>
-              dlet xs := condsub (fun _ => 2^64) xs (encode (fun _ => 2^64) 4 (2^255-19)) in
-              dlet xs := condsub (fun _ => 2^64) xs (encode (fun _ => 2^64) 4 (2^255-19)) in
+              dlet xs := condsub bound xs (encode bound 4 (2^255-19)) in
+              dlet xs := condsub bound xs (encode bound 4 (2^255-19)) in
               xs) in
                   exact r)
                    (fun _ _ => []) (* comment *)
@@ -243,13 +243,13 @@ Module debugging_sat_solinas_25519.
          let boundsN : list (ZRange.type.option.interp base.type.Z) := repeat (Some r[0 ~> (2^machine_wordsize - 1)]%zrange) (n+n) in
          let boundsn : list (ZRange.type.option.interp base.type.Z) := repeat (Some r[0 ~> (2^machine_wordsize - 1)]%zrange) n in
          Pipeline.BoundsPipelineToString
-            "fiat_" "fe4_mul"
+            "fiat_" "TEST_mul"
             false (* subst01 *)
             false (* inline *)
             possible_values
             machine_wordsize
             ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
-                  let r := Reify (mul (fun _ => 2^64)) in
+                  let r := Reify (mul bound) in
                   exact r)
                    (fun _ _ => []) (* comment *)
                    (Some boundsn, (Some boundsn, tt))
