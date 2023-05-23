@@ -576,26 +576,28 @@ Module Saturated. Section __.
 
   Definition condsub bound a b := let (lo, hi) := add bound 0 a (map Z.opp b) in select (-hi) lo a.
 
-  Lemma eval_condsub bound a b :
+  Lemma condsub_correct bound a b :
     0 <= eval bound a < weight bound (length a) ->
     0 <= eval bound b < weight bound (length a) ->
     (length b <= length a)%nat ->
-    eval bound (condsub bound a b) =
+    condsub bound a b =
     if dec (eval bound a < eval bound b)
-    then eval bound a
-    else eval bound a - eval bound b.
+    then a
+    else encode bound (length a) (eval bound a - eval bound b).
   Proof.
     cbv [condsub]; intros.
     rewrite add_correct, select_correct, eval_map_opp; rewrite ?map_length, ?length_encode; try lia.
-    break_match; rewrite ?eval_encode, ?Z.add_0_l, ?Z.add_opp_r in *; Z.div_mod_to_equations; nia.
+    break_match; rewrite ?eval_encode, ?Z.add_0_l, ?Z.add_opp_r in *; trivial; Z.div_mod_to_equations; nia.
   Qed.
 
   Definition canon bound m (x : list Z) :=
     dlet m' := encode bound (length x) m in
-    @nat_rect _ id (fun _ rec x => rec (condsub bound x m'))
+    nat_rect _ id (fun _ rec x => rec (condsub bound x m'))
     (Z.to_nat (weight bound (length x)/m)) x.
 
-  Lemma canon_correct bound m x (Hm : 0 < m) (Hcanon : encode bound (length x) (eval bound x) = x) :
+  Lemma canon_correct bound m x
+    (Hm : 0 < m < weight bound (length x))
+    (Hcanon : encode bound (length x) (eval bound x) = x) :
     canon bound m x = encode bound (length x) (eval bound x mod m).
   Proof.
     pose proof eval_encode bound (length x) (eval bound x) as Heval; rewrite Hcanon in Heval.
@@ -603,10 +605,19 @@ Module Saturated. Section __.
       by (Z.div_mod_to_equations; nia).
     cbv [canon Let_In];
     remember (length x) as n in *; set (Z.to_nat (weight bound n / m)) as q in *; clearbody q.
-    clear Heval; revert dependent x; induction q; cbn -[condsub Z.mul]; intros.
+    clear Heval; revert dependent x; induction q; cbn -[condsub Z.of_nat]; intros; subst n.
     { rewrite Z.mod_small; auto; lia. }
-    erewrite IHq.
-  Abort.
+    rewrite ?Nat2Z.inj_succ, <-Z.add_1_l, Z.mul_add_distr_r, Z.mul_1_l, Z.add_assoc in *.
+    pose proof eval_encode bound (length x) (eval bound x) as Heval; rewrite Hcanon in Heval.
+    rewrite condsub_correct; rewrite ?eval_encode, ?length_encode; try (Z.div_mod_to_equations; nia).
+    break_match; rewrite ?(Z.mod_small m) in * by lia.
+    { rewrite IHq; trivial; try split; try (Z.div_mod_to_equations; nia). }
+    rewrite IHq; rewrite ?eval_encode, ?length_encode; try lia.
+    { f_equal. rewrite (Z.mod_small _ (weight _ _)); try split; try (Z.div_mod_to_equations; nia).
+      push_Zmod; pull_Zmod; rewrite ?Z.sub_0_r; trivial. }
+    { f_equal; rewrite ?Z.mod_small; Z.div_mod_to_equations; nia. }
+    { rewrite Z.mod_small; try split; try (Z.div_mod_to_equations; lia). }
+  Qed.
 
   (*
   Definition smalldivmod bound (xs : list Z) (s : Z) : Z * list Z :=
