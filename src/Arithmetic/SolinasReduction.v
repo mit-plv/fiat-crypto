@@ -592,7 +592,7 @@ Module Saturated. Section __.
 
   Definition canon bound m (x : list Z) :=
     dlet m' := encode bound (length x) m in
-    nat_rect _ id (fun _ rec x => rec (condsub bound x m'))
+    NatUtil.nat_rect_arrow_nodep id (fun _ rec x => rec (condsub bound x m'))
     (Z.to_nat (weight bound (length x)/m)) x.
 
   Lemma canon_correct bound m x

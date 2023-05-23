@@ -158,6 +158,26 @@ Module debugging_sat_solinas_25519.
                    (None, (None, tt))
                    (None)).
 
+    Time Redirect "log" Fail
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (Pipeline.BoundsPipelineToString
+            "fiat_" "fe4_canon"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
+            let r := Reify (canon bound (2^255-19)) in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, tt)
+                   (Some boundsn)
+                   (None, tt)
+                   (None)).
+
+    Goal (Z.to_nat (weight bound 4/(2^255-19))) = 2%nat. trivial. all: fail. Abort.
+
     Time Redirect "log"
          Compute
          Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
