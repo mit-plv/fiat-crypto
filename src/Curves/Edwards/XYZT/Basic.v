@@ -24,6 +24,7 @@ Section ExtendedCoordinates.
           {square_a : exists sqrt_a, sqrt_a^2 = a}
           {nonsquare_d : forall x, x^2 <> d}.
   Local Notation Epoint := (@E.point F Feq Fone Fadd Fmul a d).
+  Local Notation Eadd := (E.add(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)).
 
   Local Notation onCurve x y := (a*x^2 + y^2 = 1 + d*x^2*y^2) (only parsing).
   (** [Extended.point] represents a point on an elliptic curve using extended projective
@@ -49,7 +50,7 @@ Section ExtendedCoordinates.
     | _ => progress cbv [eq CompleteEdwardsCurve.E.eq E.eq E.zero E.add E.opp fst snd coordinates E.coordinates proj1_sig] in *
     | |- _ /\ _ => split | |- _ <-> _ => split
     end.
-  Ltac t := repeat t_step; Field.fsatz.
+  Ltac t := repeat t_step; try Field.fsatz.
 
   Global Instance Equivalence_eq : Equivalence eq.
   Proof using Feq_dec field nonzero_a. split; repeat intro; t. Qed.
@@ -114,7 +115,7 @@ Section ExtendedCoordinates.
     Global Instance isomorphic_commutative_group_m1 :
       @Group.isomorphic_commutative_groups
         Epoint E.eq
-        (E.add(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d))
+        Eadd
         (E.zero(nonzero_a:=nonzero_a))
         (E.opp(nonzero_a:=nonzero_a))
         point eq m1add zero opp
@@ -128,5 +129,76 @@ Section ExtendedCoordinates.
                        unique pose proof (E.denominator_nonzero _ nonzero_a square_a _ nonsquare_d _ _  (proj2_sig P)  _ _  (proj2_sig Q)) end;
               t).
     Qed.
+
+    Lemma to_twisted_m1add P Q : E.eq (to_twisted (m1add P Q)) (Eadd (to_twisted P) (to_twisted Q)).
+    Proof. pose proof isomorphic_commutative_group_m1 as H; destruct H as [ [] [] [] [] ]; trivial. Qed.
+
+    Program Definition m1double (P : point) : point :=
+      match coordinates P return F*F*F*F with
+        (X, Y, Z, _) =>
+        let trX := X^2 in
+        let trZ := Y^2 in
+        let trT := (let t0 := Z^2 in t0+t0) in
+        let rY := X+Y in
+        let t0 := rY^2 in
+        let cY := trZ+trX in
+        let cZ := trZ-trX in
+        let cX := t0-cY in
+        let cT := trT-cZ in
+        let X3 := cX*cT in
+        let Y3 := cY*cZ in
+        let Z3 := cZ*cT in
+        let T3 := cX*cY in
+        (X3, Y3, Z3, T3)
+      end.
+    Next Obligation.
+      match goal with
+      | [ |- context [let (_, _) := coordinates ?P in _] ]
+        => pose proof (E.denominator_nonzero _ nonzero_a square_a _ nonsquare_d _ _ (proj2_sig (to_twisted P))  _ _  (proj2_sig (to_twisted P)))
+      end; t.
+    Qed.
+
+    Lemma m1double_correct P : eq (m1double P) (m1add P P).
+    Proof. intros; progress destruct_head' @point; cbv [m1add m1double]; t. Qed.
+
+    Lemma to_twisted_m1double P : E.eq (to_twisted (m1double P)) (Eadd (to_twisted P) (to_twisted P)).
+    Proof. setoid_rewrite m1double_correct; trivial. eapply to_twisted_m1add. Qed.
   End TwistMinusOne.
+
+  (* https://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#doubling-double-2008-hwcd *)
+  Program Definition double (P : point) : point :=
+    match coordinates P return F*F*F*F with
+      (X1, Y1, Z1, T1) =>
+      let A := X1^2 in
+      let B := Y1^2 in
+      let t0 := Z1^2 in
+      let C := t0+t0 in
+      let D := a*A in
+      let t1 := X1+Y1 in
+      let t2 := t1^2 in
+      let t3 := t2-A in
+      let E := t3-B in
+      let G := D+B in
+      let F := G-C in
+      let H := D-B in
+      let X3 := E*F in
+      let Y3 := G*H in
+      let T3 := E*H in
+      let Z3 := F*G in
+      (X3, Y3, Z3, T3)
+    end.
+  Next Obligation.
+    match goal with
+    | [ |- context [let (_, _) := coordinates ?P in _] ]
+      => pose proof (E.denominator_nonzero _ nonzero_a square_a _ nonsquare_d _ _ (proj2_sig (to_twisted P))  _ _  (proj2_sig (to_twisted P)))
+    end; t.
+  Qed.
+
+  Lemma to_twisted_double P : E.eq (to_twisted (double P)) (Eadd (to_twisted P) (to_twisted P)).
+  Proof.
+    cbv beta delta [double].
+    match goal with
+    | [ |- context [let (_, _) := coordinates ?P in _] ]
+      => pose proof (E.denominator_nonzero _ nonzero_a square_a _ nonsquare_d _ _ (proj2_sig (to_twisted P))  _ _  (proj2_sig (to_twisted P)))
+    end; progress destruct_head' @point; cbv [E.add double to_twisted]; t. Qed.
 End ExtendedCoordinates.
