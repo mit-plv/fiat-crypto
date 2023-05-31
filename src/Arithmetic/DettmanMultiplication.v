@@ -340,7 +340,7 @@ Module DettmanMultiplication.
       (* begin a loop iteration *)
       let from01 := weight (2 * l - 3) in
       let to01 := weight (2 * l - 2) in
-      let r01 := carry' from01 (to01 / from01) r0 in
+      let r01 := carry' from01 (to01 / from01) r0' in
 
       let from02 := weight (2 * l - 3) in
       let to02 := weight (l - 3) in
@@ -412,9 +412,13 @@ Module DettmanMultiplication.
       let to12 := weight (i0 + 1) in (* i0 + 1 = l - 2 *)
       let r12 := reduce' s from12 (from12 / to12) c rloop3 in (*from12 / to12 = 266.*)
 
+      let from12A := weight (l - 3) in
+      let to12A := weight (l - 2) in
+      let r12A := carry' from12A (to12A / from12A) r12 in
+
       let from13 := weight (l - 2) in
       let to13 := weight (l - 1) in
-      let r13 := carry' from13 (to13 / from13) r12 in
+      let r13 := carry' from13 (to13 / from13) r12A in
 
       Positional.from_associational weight l r13.
 
@@ -440,7 +444,7 @@ Module DettmanMultiplication.
       let r0 := Associational.square a_assoc in
       reduce_carry_borrow32 r0.
 
-    Hint Rewrite Positional.eval_from_associational Positional.eval_to_associational eval_borrow eval_loop: push_eval.
+    Hint Rewrite Positional.eval_from_associational Positional.eval_to_associational eval_borrow eval_loop eval_loop32: push_eval.
     Hint Resolve Z_mod_same_full : arith.
 
     Local Open Scope Z_scope.
@@ -507,10 +511,10 @@ Module DettmanMultiplication.
     Qed.
 
     Lemma eval_reduce_carry_borrow32 r0 :
-      (Positional.eval weight limbs (reduce_carry_borrow r0)) mod (s - Associational.eval c) =
+      (Positional.eval weight limbs (reduce_carry_borrow32 r0)) mod (s - Associational.eval c) =
       (Associational.eval r0) mod (s - Associational.eval c).
     Proof.
-      cbv [reduce_carry_borrow carry' reduce']. autorewrite with push_eval; auto with arith.
+      cbv [reduce_carry_borrow32 carry' reduce']. autorewrite with push_eval; auto with arith.
       all: try apply weight_div_nz; try lia.
       all: try apply weight_mod_quotient_zero; try lia.
       all: try apply reduction_divides'; try lia.
@@ -524,8 +528,8 @@ Module DettmanMultiplication.
       (*- replace 1 with (weight 0). Search (weight _ mod _). apply weight_multiples.
       - replace 1 with (weight 0). apply weight_multiples.*)
     Qed.
-
-    Hint Rewrite eval_reduce_carry_borrow : push_eval.
+        
+    Hint Rewrite eval_reduce_carry_borrow eval_reduce_carry_borrow32 : push_eval.
 
     Theorem eval_mulmod a b :
       (Positional.eval weight limbs (mulmod a b)) mod (s - c') =
@@ -539,6 +543,20 @@ Module DettmanMultiplication.
       (Positional.eval weight limbs a * Positional.eval weight limbs a) mod (s - c').
     Proof.
       cbv [squaremod]. rewrite <- c_correct. autorewrite with push_eval. reflexivity.
+    Qed.
+
+    Theorem eval_mulmod32 a b :
+      (Positional.eval weight limbs (mulmod32 a b)) mod (s - c') =
+      (Positional.eval weight limbs a * Positional.eval weight limbs b) mod (s - c').
+    Proof.
+      cbv [mulmod32]. rewrite <- c_correct. autorewrite with push_eval. reflexivity.
+    Qed.
+
+    Theorem eval_squaremod32 a :
+      (Positional.eval weight limbs (squaremod32 a)) mod (s - c') =
+      (Positional.eval weight limbs a * Positional.eval weight limbs a) mod (s - c').
+    Proof.
+      cbv [squaremod32]. rewrite <- c_correct. autorewrite with push_eval. reflexivity.
     Qed.
   End DettmanMultiplication.
 End DettmanMultiplication.
@@ -574,9 +592,11 @@ Module dettman_multiplication_mod_ops.
     Definition limbwidth_den := limbwidth_den'.
     
     Definition weight := (weight limbwidth_num limbwidth_den).
-    Print mulmod.    
+    
     Definition mulmod := mulmod s c register_width n weight.
     Definition squaremod := squaremod s c register_width n weight.
+    Definition mulmod32 := mulmod32 s c register_width n weight.
+    Definition squaremod32 := squaremod32 s c register_width n weight.
 
     Lemma n_small : n - 1 <= Z.log2 s - last_limb_width.
     Proof.
@@ -708,6 +728,8 @@ Module dettman_multiplication_mod_ops.
 
     Definition eval_mulmod := eval_mulmod s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
     Definition eval_squaremod := eval_squaremod s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
+    Definition eval_mulmod32 := eval_mulmod32 s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
+    Definition eval_squaremod32 := eval_squaremod32 s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
   End dettman_multiplication_mod_ops.
 End dettman_multiplication_mod_ops.
 
@@ -717,4 +739,8 @@ Module Export Hints.
   Hint Rewrite eval_mulmod using solve [ auto with zarith | congruence ] : push_eval.
 #[global]
   Hint Rewrite eval_squaremod using solve [ auto with zarith | congruence ] : push_eval.
+#[global]
+  Hint Rewrite eval_mulmod32 using solve [ auto with zarith | congruence ] : push_eval.
+#[global]
+  Hint Rewrite eval_squaremod32 using solve [ auto with zarith | congruence ] : push_eval.
 End Hints.
