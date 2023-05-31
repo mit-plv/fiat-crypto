@@ -30,4 +30,28 @@ Module Export DettmanMultiplication.
 #[global]
   Hint Rewrite (proj1 reified_square_gen_correct) : interp_gen_cache.
   Local Opaque reified_square_gen. (* needed for making [autorewrite] not take a very long time *)
+
+  Derive reified_mul32_gen
+         SuchThat (is_reification_of reified_mul32_gen mulmod32)
+         As reified_mul32_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+#[global]
+  Hint Extern 1 (_ = _) => apply_cached_reification mulmod32 (proj1 reified_mul32_gen_correct) : reify_cache_gen.
+#[global]
+  Hint Immediate (proj2 reified_mul32_gen_correct) : wf_gen_cache.
+#[global]
+  Hint Rewrite (proj1 reified_mul32_gen_correct) : interp_gen_cache.
+  Local Opaque reified_mul32_gen. (* needed for making [autorewrite] not take a very long time *)
+
+  Derive reified_square32_gen
+         SuchThat (is_reification_of reified_square32_gen squaremod32)
+         As reified_square32_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+#[global]
+  Hint Extern 1 (_ = _) => apply_cached_reification squaremod32 (proj1 reified_square32_gen_correct) : reify_cache_gen.
+#[global]
+  Hint Immediate (proj2 reified_square32_gen_correct) : wf_gen_cache.
+#[global]
+  Hint Rewrite (proj1 reified_square32_gen_correct) : interp_gen_cache.
+  Local Opaque reified_square32_gen. (* needed for making [autorewrite] not take a very long time *)
 End DettmanMultiplication.
