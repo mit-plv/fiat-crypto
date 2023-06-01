@@ -1192,6 +1192,40 @@ Module Positional.
                       - rewrite (map_ext _ fst), ListUtil.map_fst_combine, <- H, firstn_all; reflexivity.
                       - rewrite (map_ext _ snd), ListUtil.map_snd_combine, H, firstn_all; reflexivity. Qed.
   End select.
+
+  Section adk_mul.
+    (* this Arbitrary-Degree Karatsuba multiplication uses fewer muls but more adds/subs compared to Associational.mul,
+       as described here: https://eprint.iacr.org/2015/1247.pdf.
+       As the number of limbs increases, the performance of this multiplication improves relative to Associational.mul.
+       As described in the paper, the algorithm is this:
+       xy = \sum_{i = 1}^{n - 1} \sum_{j = 0}^{i - 1} (x_i - x_j)(y_j - y_i) b^{i + j} +
+            \sum_{i = 0}^{n - 1} \sum_{j = 0}^{n - 1} x_j y_j b^{i + j}.
+       Then, as we see in this example
+       (https://github.com/bitcoin-core/secp256k1/blob/9618abcc872a6e622715c4540164cc847b653efb/src/field_10x26_impl.h),
+       the number of adds can be reduced by rewriting the second summation as follows:
+       \sum_{i = 0}^{n - 1} \sum_{j = 0}^{n - 1} x_i y_i b^{i + j} = 
+       \sum_{i = 0}^{2n - 2} b^i \sum_{j = \max(0, i - (n - 1))}^{i} x_j y_j = 
+       \sum_{i = 0}^{2n - 2} b^i ([\sum_{j = 0}^i x_j y_j] - [\sum_{j = 0}^{i - n} x_j y_j]) = 
+               b^{2n - 2} x_{n - 1} y_{n - 1} + 
+               \sum_{i = 0}^{2n - 3} b^i ([\sum_{j = 0}^i x_j y_j] - [\sum_{j = 0}^{i - n} x_j y_j]).
+       This last formula will be particularly nice if we precompute the values \sum_{j = 0}^i x_j y_j, as i ranges from 0 to n - 1.
+     *)
+    Definition first_summation (n : nat) (x y : list Z) : list (Z*Z) :=
+      flat_map (fun i =>
+                  map (fun j => (weight i * weight j, (nth i x 0 - nth j x 0) * (nth j y 0 - nth i y 0)))
+                    (seq 0 (i - 1)))
+        (seq 1 (n - 1)).
+
+    Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
+      let products : list Z := map (fun i => (nth i x 0) * (nth i y 0)) (seq 0 (n - 1)) in
+      let f : list Z := fold_right (fun i f' => ((nth 0 f' 0) + (nth i products 0)) :: f') [] (seq 0 (n - 1)) in
+      let high_part : Z*Z := (weight (n - 1) * weight (n - 1), (nth (n - 1) products 0)) in
+      let low_part : list (Z*Z) := map (fun i => (weight i, (nth i f 0) - (nth (n - i) f 0))) (seq 0 (2*n - 3)) in
+      high_part :: low_part.
+
+    Definition adk_mul (n : nat) (x y : list Z) : list (Z*Z) :=
+      first_summation n x y ++ second_summation n x y.
+  End adk_mul.
 End Positional.
 (* Hint Rewrite disappears after the end of a section *)
 #[global]
