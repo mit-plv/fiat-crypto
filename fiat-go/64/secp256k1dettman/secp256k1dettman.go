@@ -121,7 +121,7 @@ func Mul(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
 	x57, _ = bits.Add64(x54, x51, uint64(uint1(x56)))
 	var x59 uint64
 	var x60 uint64
-	x59, x60 = bits.Add64(x55, x29, uint64(0x0))
+	x59, x60 = bits.Add64(x29, x55, uint64(0x0))
 	x61 := (uint64(uint1(x60)) + x57)
 	var x62 uint64
 	var x63 uint64
@@ -161,13 +161,13 @@ func Mul(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
 	x88, _ = bits.Add64(x85, x82, uint64(uint1(x87)))
 	var x90 uint64
 	var x91 uint64
-	x90, x91 = bits.Add64(x86, x66, uint64(0x0))
+	x90, x91 = bits.Add64(x66, x86, uint64(0x0))
 	x92 := (uint64(uint1(x91)) + x88)
 	x93 := ((x90 >> 52) | ((x92 << 12) & 0xffffffffffffffff))
 	x94 := (x90 & 0xfffffffffffff)
 	var x95 uint64
 	var x96 uint64
-	x96, x95 = bits.Mul64(((x94 << 4) + x68), 0x1000003d1)
+	x96, x95 = bits.Mul64((x68 + (x94 << 4)), 0x1000003d1)
 	var x97 uint64
 	var x98 uint64
 	x98, x97 = bits.Mul64(arg1[0], arg2[0])
@@ -199,7 +199,7 @@ func Mul(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
 	x117, _ = bits.Add64(x114, x111, uint64(uint1(x116)))
 	var x119 uint64
 	var x120 uint64
-	x119, x120 = bits.Add64(x115, x93, uint64(0x0))
+	x119, x120 = bits.Add64(x93, x115, uint64(0x0))
 	x121 := (uint64(uint1(x120)) + x117)
 	x122 := ((x119 >> 52) | ((x121 << 12) & 0xffffffffffffffff))
 	x123 := (x119 & 0xfffffffffffff)
@@ -219,7 +219,7 @@ func Mul(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
 	x132, _ = bits.Add64(x129, x127, uint64(uint1(x131)))
 	var x134 uint64
 	var x135 uint64
-	x134, x135 = bits.Add64(x130, x103, uint64(0x0))
+	x134, x135 = bits.Add64(x103, x130, uint64(0x0))
 	x136 := (uint64(uint1(x135)) + x132)
 	var x137 uint64
 	var x138 uint64
@@ -241,7 +241,7 @@ func Mul(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
 	x149, _ = bits.Add64(x146, x144, uint64(uint1(x148)))
 	var x151 uint64
 	var x152 uint64
-	x151, x152 = bits.Add64(x147, x122, uint64(0x0))
+	x151, x152 = bits.Add64(x122, x147, uint64(0x0))
 	x153 := (uint64(uint1(x152)) + x149)
 	var x154 uint64
 	var x155 uint64
@@ -267,7 +267,7 @@ func Mul(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
 	x168, _ = bits.Add64(x165, x162, uint64(uint1(x167)))
 	var x170 uint64
 	var x171 uint64
-	x170, x171 = bits.Add64(x166, x141, uint64(0x0))
+	x170, x171 = bits.Add64(x141, x166, uint64(0x0))
 	x172 := (uint64(uint1(x171)) + x168)
 	var x173 uint64
 	var x174 uint64
@@ -281,11 +281,11 @@ func Mul(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
 	x180, x179 = bits.Mul64(x153, 0x1000003d10000)
 	var x181 uint64
 	var x182 uint64
-	x181, x182 = bits.Add64((x30 + x177), x179, uint64(0x0))
+	x181, x182 = bits.Add64((x177 + x30), x179, uint64(0x0))
 	x183 := (uint64(uint1(x182)) + x180)
 	x184 := ((x181 >> 52) | ((x183 << 12) & 0xffffffffffffffff))
 	x185 := (x181 & 0xfffffffffffff)
-	x186 := (x69 + x184)
+	x186 := (x184 + x69)
 	out1[0] = x104
 	out1[1] = x142
 	out1[2] = x178
@@ -355,7 +355,7 @@ func Square(out1 *[5]uint64, arg1 *[5]uint64) {
 	x37, _ = bits.Add64(x34, x31, uint64(uint1(x36)))
 	var x39 uint64
 	var x40 uint64
-	x39, x40 = bits.Add64(x35, x21, uint64(0x0))
+	x39, x40 = bits.Add64(x21, x35, uint64(0x0))
 	x41 := (uint64(uint1(x40)) + x37)
 	var x42 uint64
 	var x43 uint64
@@ -379,13 +379,13 @@ func Square(out1 *[5]uint64, arg1 *[5]uint64) {
 	x56, _ = bits.Add64(x53, x51, uint64(uint1(x55)))
 	var x58 uint64
 	var x59 uint64
-	x58, x59 = bits.Add64(x54, x46, uint64(0x0))
+	x58, x59 = bits.Add64(x46, x54, uint64(0x0))
 	x60 := (uint64(uint1(x59)) + x56)
 	x61 := ((x58 >> 52) | ((x60 << 12) & 0xffffffffffffffff))
 	x62 := (x58 & 0xfffffffffffff)
 	var x63 uint64
 	var x64 uint64
-	x64, x63 = bits.Mul64(((x62 << 4) + x48), 0x1000003d1)
+	x64, x63 = bits.Mul64((x48 + (x62 << 4)), 0x1000003d1)
 	var x65 uint64
 	var x66 uint64
 	x66, x65 = bits.Mul64(arg1[0], arg1[0])
@@ -409,7 +409,7 @@ func Square(out1 *[5]uint64, arg1 *[5]uint64) {
 	x79, _ = bits.Add64(x76, x74, uint64(uint1(x78)))
 	var x81 uint64
 	var x82 uint64
-	x81, x82 = bits.Add64(x77, x61, uint64(0x0))
+	x81, x82 = bits.Add64(x61, x77, uint64(0x0))
 	x83 := (uint64(uint1(x82)) + x79)
 	x84 := ((x81 >> 52) | ((x83 << 12) & 0xffffffffffffffff))
 	x85 := (x81 & 0xfffffffffffff)
@@ -421,7 +421,7 @@ func Square(out1 *[5]uint64, arg1 *[5]uint64) {
 	x89, x88 = bits.Mul64(x4, arg1[1])
 	var x90 uint64
 	var x91 uint64
-	x90, x91 = bits.Add64(x88, x71, uint64(0x0))
+	x90, x91 = bits.Add64(x71, x88, uint64(0x0))
 	x92 := (uint64(uint1(x91)) + x89)
 	var x93 uint64
 	var x94 uint64
@@ -435,7 +435,7 @@ func Square(out1 *[5]uint64, arg1 *[5]uint64) {
 	x100, x99 = bits.Mul64(x1, arg1[4])
 	var x101 uint64
 	var x102 uint64
-	x101, x102 = bits.Add64(x99, x84, uint64(0x0))
+	x101, x102 = bits.Add64(x84, x99, uint64(0x0))
 	x103 := (uint64(uint1(x102)) + x100)
 	var x104 uint64
 	var x105 uint64
@@ -453,7 +453,7 @@ func Square(out1 *[5]uint64, arg1 *[5]uint64) {
 	x112, _ = bits.Add64(x109, x107, uint64(uint1(x111)))
 	var x114 uint64
 	var x115 uint64
-	x114, x115 = bits.Add64(x110, x97, uint64(0x0))
+	x114, x115 = bits.Add64(x97, x110, uint64(0x0))
 	x116 := (uint64(uint1(x115)) + x112)
 	var x117 uint64
 	var x118 uint64
@@ -467,11 +467,11 @@ func Square(out1 *[5]uint64, arg1 *[5]uint64) {
 	x124, x123 = bits.Mul64(x103, 0x1000003d10000)
 	var x125 uint64
 	var x126 uint64
-	x125, x126 = bits.Add64((x22 + x121), x123, uint64(0x0))
+	x125, x126 = bits.Add64((x121 + x22), x123, uint64(0x0))
 	x127 := (uint64(uint1(x126)) + x124)
 	x128 := ((x125 >> 52) | ((x127 << 12) & 0xffffffffffffffff))
 	x129 := (x125 & 0xfffffffffffff)
-	x130 := (x49 + x128)
+	x130 := (x128 + x49)
 	out1[0] = x72
 	out1[1] = x98
 	out1[2] = x122

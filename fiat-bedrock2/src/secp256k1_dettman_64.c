@@ -84,7 +84,7 @@ uintptr_t _br2_shamt(uintptr_t a) {
  */
 static
 void internal_fiat_secp256k1_dettman_mul(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
-  uintptr_t x10, x14, x16, x19, x17, x20, x15, x18, x22, x25, x23, x26, x21, x24, x28, x31, x29, x32, x27, x12, x30, x35, x33, x36, x13, x37, x34, x11, x42, x44, x47, x45, x48, x43, x46, x50, x53, x51, x54, x49, x52, x56, x59, x57, x60, x55, x58, x62, x65, x63, x66, x61, x38, x64, x69, x67, x40, x68, x72, x70, x73, x41, x74, x71, x76, x79, x81, x84, x82, x85, x80, x83, x87, x90, x88, x91, x86, x89, x93, x96, x94, x97, x92, x75, x95, x100, x98, x101, x99, x103, x77, x104, x106, x109, x107, x110, x105, x111, x108, x114, x116, x119, x117, x120, x115, x118, x122, x125, x123, x126, x121, x102, x124, x129, x127, x130, x128, x132, x135, x137, x140, x138, x141, x136, x112, x139, x144, x142, x133, x143, x147, x145, x148, x134, x149, x146, x4, x8, x3, x9, x152, x154, x157, x155, x158, x153, x131, x156, x161, x159, x160, x2, x5, x1, x6, x165, x167, x170, x168, x171, x166, x0, x7, x169, x173, x176, x174, x177, x172, x150, x175, x180, x178, x163, x179, x183, x181, x184, x164, x185, x182, x162, x188, x39, x186, x191, x189, x192, x190, x78, x193, x113, x151, x187, x194, x195, x196, x197, x198, x199, x200;
+  uintptr_t x10, x14, x16, x19, x17, x20, x15, x18, x22, x25, x23, x26, x21, x24, x28, x31, x29, x32, x27, x12, x30, x35, x33, x36, x13, x37, x34, x11, x42, x44, x47, x45, x48, x43, x46, x50, x53, x51, x54, x49, x52, x56, x59, x57, x60, x55, x58, x62, x65, x63, x66, x61, x64, x38, x69, x67, x40, x68, x72, x70, x73, x41, x74, x71, x76, x79, x81, x84, x82, x85, x80, x83, x87, x90, x88, x91, x86, x89, x93, x96, x94, x97, x92, x95, x75, x100, x98, x101, x99, x77, x103, x104, x106, x109, x107, x110, x105, x111, x108, x114, x116, x119, x117, x120, x115, x118, x122, x125, x123, x126, x121, x124, x102, x129, x127, x130, x128, x132, x135, x137, x140, x138, x141, x136, x139, x112, x144, x142, x133, x143, x147, x145, x148, x134, x149, x146, x4, x8, x3, x9, x152, x154, x157, x155, x158, x153, x156, x131, x161, x159, x160, x2, x5, x1, x6, x165, x167, x170, x168, x171, x166, x0, x7, x169, x173, x176, x174, x177, x172, x175, x150, x180, x178, x163, x179, x183, x181, x184, x164, x185, x182, x162, x188, x186, x39, x191, x189, x192, x190, x193, x78, x113, x151, x187, x194, x195, x196, x197, x198, x199, x200;
   x0 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
   x1 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
   x2 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
@@ -156,8 +156,8 @@ void internal_fiat_secp256k1_dettman_mul(uintptr_t out0, uintptr_t in0, uintptr_
   x65 = (uintptr_t)((x64)<(x62));
   x66 = (x65)+(x63);
   x67 = (x66)+(x61);
-  x68 = (x64)+(x38);
-  x69 = (uintptr_t)((x68)<(x64));
+  x68 = (x38)+(x64);
+  x69 = (uintptr_t)((x68)<(x38));
   x70 = (x69)+(x67);
   x71 = (x68)+(x40);
   x72 = (uintptr_t)((x71)<(x68));
@@ -187,13 +187,13 @@ void internal_fiat_secp256k1_dettman_mul(uintptr_t out0, uintptr_t in0, uintptr_
   x96 = (uintptr_t)((x95)<(x93));
   x97 = (x96)+(x94);
   x98 = (x97)+(x92);
-  x99 = (x95)+(x75);
-  x100 = (uintptr_t)((x99)<(x95));
+  x99 = (x75)+(x95);
+  x100 = (uintptr_t)((x99)<(x75));
   x101 = (x100)+(x98);
   x102 = ((x99)>>_br2_shamt((uintptr_t)(UINTMAX_C(52))))|((x101)<<_br2_shamt((uintptr_t)(UINTMAX_C(12))));
   x103 = (x99)&((uintptr_t)(UINTMAX_C(4503599627370495)));
-  x104 = (((x103)<<_br2_shamt((uintptr_t)(UINTMAX_C(4))))+(x77))*((uintptr_t)(UINTMAX_C(4294968273)));
-  x105 = _br2_mulhuu((((x103)<<_br2_shamt((uintptr_t)(UINTMAX_C(4))))+(x77)), ((uintptr_t)(UINTMAX_C(4294968273))));
+  x104 = ((x77)+((x103)<<_br2_shamt((uintptr_t)(UINTMAX_C(4)))))*((uintptr_t)(UINTMAX_C(4294968273)));
+  x105 = _br2_mulhuu(((x77)+((x103)<<_br2_shamt((uintptr_t)(UINTMAX_C(4))))), ((uintptr_t)(UINTMAX_C(4294968273))));
   x106 = (x0)*(x5);
   x107 = _br2_mulhuu((x0), (x5));
   x108 = (x106)+(x104);
@@ -216,8 +216,8 @@ void internal_fiat_secp256k1_dettman_mul(uintptr_t out0, uintptr_t in0, uintptr_
   x125 = (uintptr_t)((x124)<(x122));
   x126 = (x125)+(x123);
   x127 = (x126)+(x121);
-  x128 = (x124)+(x102);
-  x129 = (uintptr_t)((x128)<(x124));
+  x128 = (x102)+(x124);
+  x129 = (uintptr_t)((x128)<(x102));
   x130 = (x129)+(x127);
   x131 = ((x128)>>_br2_shamt((uintptr_t)(UINTMAX_C(52))))|((x130)<<_br2_shamt((uintptr_t)(UINTMAX_C(12))));
   x132 = (x128)&((uintptr_t)(UINTMAX_C(4503599627370495)));
@@ -231,8 +231,8 @@ void internal_fiat_secp256k1_dettman_mul(uintptr_t out0, uintptr_t in0, uintptr_
   x140 = (uintptr_t)((x139)<(x137));
   x141 = (x140)+(x138);
   x142 = (x141)+(x136);
-  x143 = (x139)+(x112);
-  x144 = (uintptr_t)((x143)<(x139));
+  x143 = (x112)+(x139);
+  x144 = (uintptr_t)((x143)<(x112));
   x145 = (x144)+(x142);
   x146 = (x143)+(x133);
   x147 = (uintptr_t)((x146)<(x143));
@@ -248,8 +248,8 @@ void internal_fiat_secp256k1_dettman_mul(uintptr_t out0, uintptr_t in0, uintptr_
   x157 = (uintptr_t)((x156)<(x154));
   x158 = (x157)+(x155);
   x159 = (x158)+(x153);
-  x160 = (x156)+(x131);
-  x161 = (uintptr_t)((x160)<(x156));
+  x160 = (x131)+(x156);
+  x161 = (uintptr_t)((x160)<(x131));
   x162 = (x161)+(x159);
   x163 = (x160)*((uintptr_t)(UINTMAX_C(68719492368)));
   x164 = _br2_mulhuu((x160), ((uintptr_t)(UINTMAX_C(68719492368))));
@@ -267,8 +267,8 @@ void internal_fiat_secp256k1_dettman_mul(uintptr_t out0, uintptr_t in0, uintptr_
   x176 = (uintptr_t)((x175)<(x173));
   x177 = (x176)+(x174);
   x178 = (x177)+(x172);
-  x179 = (x175)+(x150);
-  x180 = (uintptr_t)((x179)<(x175));
+  x179 = (x150)+(x175);
+  x180 = (uintptr_t)((x179)<(x150));
   x181 = (x180)+(x178);
   x182 = (x179)+(x163);
   x183 = (uintptr_t)((x182)<(x179));
@@ -278,12 +278,12 @@ void internal_fiat_secp256k1_dettman_mul(uintptr_t out0, uintptr_t in0, uintptr_
   x187 = (x182)&((uintptr_t)(UINTMAX_C(4503599627370495)));
   x188 = (x162)*((uintptr_t)(UINTMAX_C(281475040739328)));
   x189 = _br2_mulhuu((x162), ((uintptr_t)(UINTMAX_C(281475040739328))));
-  x190 = ((x39)+(x186))+(x188);
-  x191 = (uintptr_t)((x190)<((x39)+(x186)));
+  x190 = ((x186)+(x39))+(x188);
+  x191 = (uintptr_t)((x190)<((x186)+(x39)));
   x192 = (x191)+(x189);
   x193 = ((x190)>>_br2_shamt((uintptr_t)(UINTMAX_C(52))))|((x192)<<_br2_shamt((uintptr_t)(UINTMAX_C(12))));
   x194 = (x190)&((uintptr_t)(UINTMAX_C(4503599627370495)));
-  x195 = (x78)+(x193);
+  x195 = (x193)+(x78);
   x196 = x113;
   x197 = x151;
   x198 = x187;
@@ -313,7 +313,7 @@ static void fiat_secp256k1_dettman_mul(uint64_t out1[5], const uint64_t arg1[5],
  */
 static
 void internal_fiat_secp256k1_dettman_square(uintptr_t out0, uintptr_t in0) {
-  uintptr_t x9, x13, x15, x18, x16, x19, x14, x11, x17, x22, x20, x23, x12, x24, x21, x10, x29, x31, x34, x32, x35, x30, x33, x37, x40, x38, x41, x36, x25, x39, x44, x42, x27, x43, x47, x45, x48, x28, x49, x46, x51, x7, x54, x56, x59, x57, x60, x55, x50, x58, x63, x61, x64, x62, x66, x52, x0, x67, x69, x72, x70, x73, x68, x74, x71, x3, x6, x77, x79, x82, x80, x83, x78, x65, x81, x86, x84, x87, x85, x89, x75, x92, x95, x93, x90, x94, x98, x96, x99, x91, x100, x97, x5, x4, x88, x103, x106, x104, x105, x1, x8, x2, x110, x112, x115, x113, x116, x111, x101, x114, x119, x117, x108, x118, x122, x120, x123, x109, x124, x121, x107, x127, x26, x125, x130, x128, x131, x129, x53, x132, x76, x102, x126, x133, x134, x135, x136, x137, x138, x139;
+  uintptr_t x9, x13, x15, x18, x16, x19, x14, x11, x17, x22, x20, x23, x12, x24, x21, x10, x29, x31, x34, x32, x35, x30, x33, x37, x40, x38, x41, x36, x39, x25, x44, x42, x27, x43, x47, x45, x48, x28, x49, x46, x51, x7, x54, x56, x59, x57, x60, x55, x58, x50, x63, x61, x64, x62, x52, x66, x0, x67, x69, x72, x70, x73, x68, x74, x71, x3, x6, x77, x79, x82, x80, x83, x78, x81, x65, x86, x84, x87, x85, x89, x92, x75, x95, x93, x90, x94, x98, x96, x99, x91, x100, x97, x5, x4, x103, x88, x106, x104, x105, x1, x8, x2, x110, x112, x115, x113, x116, x111, x114, x101, x119, x117, x108, x118, x122, x120, x123, x109, x124, x121, x107, x127, x125, x26, x130, x128, x131, x129, x132, x53, x76, x102, x126, x133, x134, x135, x136, x137, x138, x139;
   x0 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(0))), sizeof(uintptr_t));
   x1 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(8))), sizeof(uintptr_t));
   x2 = _br2_load((in0)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
@@ -359,8 +359,8 @@ void internal_fiat_secp256k1_dettman_square(uintptr_t out0, uintptr_t in0) {
   x40 = (uintptr_t)((x39)<(x37));
   x41 = (x40)+(x38);
   x42 = (x41)+(x36);
-  x43 = (x39)+(x25);
-  x44 = (uintptr_t)((x43)<(x39));
+  x43 = (x25)+(x39);
+  x44 = (uintptr_t)((x43)<(x25));
   x45 = (x44)+(x42);
   x46 = (x43)+(x27);
   x47 = (uintptr_t)((x46)<(x43));
@@ -378,13 +378,13 @@ void internal_fiat_secp256k1_dettman_square(uintptr_t out0, uintptr_t in0) {
   x59 = (uintptr_t)((x58)<(x56));
   x60 = (x59)+(x57);
   x61 = (x60)+(x55);
-  x62 = (x58)+(x50);
-  x63 = (uintptr_t)((x62)<(x58));
+  x62 = (x50)+(x58);
+  x63 = (uintptr_t)((x62)<(x50));
   x64 = (x63)+(x61);
   x65 = ((x62)>>_br2_shamt((uintptr_t)(UINTMAX_C(52))))|((x64)<<_br2_shamt((uintptr_t)(UINTMAX_C(12))));
   x66 = (x62)&((uintptr_t)(UINTMAX_C(4503599627370495)));
-  x67 = (((x66)<<_br2_shamt((uintptr_t)(UINTMAX_C(4))))+(x52))*((uintptr_t)(UINTMAX_C(4294968273)));
-  x68 = _br2_mulhuu((((x66)<<_br2_shamt((uintptr_t)(UINTMAX_C(4))))+(x52)), ((uintptr_t)(UINTMAX_C(4294968273))));
+  x67 = ((x52)+((x66)<<_br2_shamt((uintptr_t)(UINTMAX_C(4)))))*((uintptr_t)(UINTMAX_C(4294968273)));
+  x68 = _br2_mulhuu(((x52)+((x66)<<_br2_shamt((uintptr_t)(UINTMAX_C(4))))), ((uintptr_t)(UINTMAX_C(4294968273))));
   x69 = (x0)*(x0);
   x70 = _br2_mulhuu((x0), (x0));
   x71 = (x69)+(x67);
@@ -401,8 +401,8 @@ void internal_fiat_secp256k1_dettman_square(uintptr_t out0, uintptr_t in0) {
   x82 = (uintptr_t)((x81)<(x79));
   x83 = (x82)+(x80);
   x84 = (x83)+(x78);
-  x85 = (x81)+(x65);
-  x86 = (uintptr_t)((x85)<(x81));
+  x85 = (x65)+(x81);
+  x86 = (uintptr_t)((x85)<(x65));
   x87 = (x86)+(x84);
   x88 = ((x85)>>_br2_shamt((uintptr_t)(UINTMAX_C(52))))|((x87)<<_br2_shamt((uintptr_t)(UINTMAX_C(12))));
   x89 = (x85)&((uintptr_t)(UINTMAX_C(4503599627370495)));
@@ -410,8 +410,8 @@ void internal_fiat_secp256k1_dettman_square(uintptr_t out0, uintptr_t in0) {
   x91 = _br2_mulhuu((x89), ((uintptr_t)(UINTMAX_C(68719492368))));
   x92 = (x8)*(x1);
   x93 = _br2_mulhuu((x8), (x1));
-  x94 = (x92)+(x75);
-  x95 = (uintptr_t)((x94)<(x92));
+  x94 = (x75)+(x92);
+  x95 = (uintptr_t)((x94)<(x75));
   x96 = (x95)+(x93);
   x97 = (x94)+(x90);
   x98 = (uintptr_t)((x97)<(x94));
@@ -421,8 +421,8 @@ void internal_fiat_secp256k1_dettman_square(uintptr_t out0, uintptr_t in0) {
   x102 = (x97)&((uintptr_t)(UINTMAX_C(4503599627370495)));
   x103 = (x5)*(x4);
   x104 = _br2_mulhuu((x5), (x4));
-  x105 = (x103)+(x88);
-  x106 = (uintptr_t)((x105)<(x103));
+  x105 = (x88)+(x103);
+  x106 = (uintptr_t)((x105)<(x88));
   x107 = (x106)+(x104);
   x108 = (x105)*((uintptr_t)(UINTMAX_C(68719492368)));
   x109 = _br2_mulhuu((x105), ((uintptr_t)(UINTMAX_C(68719492368))));
@@ -434,8 +434,8 @@ void internal_fiat_secp256k1_dettman_square(uintptr_t out0, uintptr_t in0) {
   x115 = (uintptr_t)((x114)<(x112));
   x116 = (x115)+(x113);
   x117 = (x116)+(x111);
-  x118 = (x114)+(x101);
-  x119 = (uintptr_t)((x118)<(x114));
+  x118 = (x101)+(x114);
+  x119 = (uintptr_t)((x118)<(x101));
   x120 = (x119)+(x117);
   x121 = (x118)+(x108);
   x122 = (uintptr_t)((x121)<(x118));
@@ -445,12 +445,12 @@ void internal_fiat_secp256k1_dettman_square(uintptr_t out0, uintptr_t in0) {
   x126 = (x121)&((uintptr_t)(UINTMAX_C(4503599627370495)));
   x127 = (x107)*((uintptr_t)(UINTMAX_C(281475040739328)));
   x128 = _br2_mulhuu((x107), ((uintptr_t)(UINTMAX_C(281475040739328))));
-  x129 = ((x26)+(x125))+(x127);
-  x130 = (uintptr_t)((x129)<((x26)+(x125)));
+  x129 = ((x125)+(x26))+(x127);
+  x130 = (uintptr_t)((x129)<((x125)+(x26)));
   x131 = (x130)+(x128);
   x132 = ((x129)>>_br2_shamt((uintptr_t)(UINTMAX_C(52))))|((x131)<<_br2_shamt((uintptr_t)(UINTMAX_C(12))));
   x133 = (x129)&((uintptr_t)(UINTMAX_C(4503599627370495)));
-  x134 = (x53)+(x132);
+  x134 = (x132)+(x53);
   x135 = x76;
   x136 = x102;
   x137 = x126;
