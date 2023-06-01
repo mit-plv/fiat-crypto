@@ -1210,6 +1210,53 @@ Module Positional.
                \sum_{i = 0}^{2n - 3} b^i ([\sum_{j = 0}^i x_j y_j] - [\sum_{j = 0}^{i - n} x_j y_j]).
        This last formula will be particularly nice if we precompute the values \sum_{j = 0}^i x_j y_j, as i ranges from 0 to n - 1.
      *)
+
+    Definition length_reifiable {X} (l : list X) : nat :=
+      fold_right (fun (x : X) (len' : nat) => (len' + 1)%nat) 0%nat l.
+
+    Definition nth_from_last' {X} (n : Z) (l : list X) (default : X) : Z*X :=
+      fold_right (fun (first : X) (i_val : Z*X) =>
+                    let '(i, val) := i_val in
+                    if i =? 0 then (i - 1, first) else (i - 1, val)) (n, default) l.
+    
+    Lemma nth_from_last'_spec {X} (n : Z) (l : list X) (default : X) :
+      let m := Z.of_nat (length_reifiable l) - n - 1 in
+      nth_from_last' m l default =
+        (m - Z.of_nat (length_reifiable l), if 0 <=? n then nth (Z.to_nat n) l default else default).
+    Proof.
+      cbv [nth_from_last']. generalize dependent n. induction l as [| x l' IHl'].
+      - intros n. simpl. f_equal; destruct (0 <=? n); destruct (Z.to_nat n); try reflexivity; lia.
+      - intros n. simpl.
+        replace (Z.of_nat (length_reifiable l' + 1)%nat - n - 1) with (Z.of_nat (length_reifiable l') - (n - 1) - 1) by lia.
+        rewrite IHl'. replace (Z.of_nat (length_reifiable l') - (n - 1) - 1) with (Z.of_nat (length_reifiable l') - n) by lia.
+        destruct (_ =? _) eqn:E.
+        + destruct (Z.to_nat n) eqn:E'; f_equal; try lia.
+          destruct (_ <=? _) eqn:E3; try reflexivity. lia.          
+        + f_equal; try lia.
+          destruct (0 <=? n - 1) eqn:E3; destruct (0 <=? n) eqn:E4; try reflexivity; try lia.
+          destruct (Z.to_nat n) eqn:E5; try lia. f_equal. lia.
+    Qed.
+    
+    Definition nth_from_last {X} (n : Z) (l : list X) (default : X) : X :=
+      snd (nth_from_last' n l default).
+
+    Lemma nth_from_last_spec {X} (n : Z) (l : list X) (default : X) :
+      nth_from_last (Z.of_nat (length_reifiable l) - n - 1) l default =
+        if 0 <=? n then nth (Z.to_nat n) l default else default.
+    Proof. cbv [nth_from_last]. rewrite nth_from_last'_spec. reflexivity. Qed.
+      
+    Definition nth_reifiable {X} (n : nat) (l : list X) (default : X) : X :=
+      nth_from_last (Z.of_nat (length_reifiable l) - Z.of_nat (n) - 1) l default.
+
+    Lemma nth_reifiable_spec {X} (n : nat) (l : list X) (default : X) :
+      nth_reifiable n l default = nth n l default.
+    Proof.
+      cbv [nth_reifiable]. rewrite nth_from_last_spec. destruct (_ <=? _) eqn:E; try lia.
+      - rewrite Nat2Z.id. reflexivity.
+      - apply Z.leb_gt in E. lia.
+    Qed.
+
+    
     Definition first_summation (n : nat) (x y : list Z) : list (Z*Z) :=
       flat_map (fun i =>
                   map (fun j => (weight i * weight j, (nth i x 0 - nth j x 0) * (nth j y 0 - nth i y 0)))
@@ -1227,6 +1274,7 @@ Module Positional.
       first_summation n x y ++ second_summation n x y.
   End adk_mul.
 End Positional.
+
 (* Hint Rewrite disappears after the end of a section *)
 #[global]
 Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_carry @length_chained_carries @length_encode @length_scmul @length_sub @length_opp @length_select @length_zselect @length_select_min @length_extend_to_length @length_drop_high_to_length : distr_length.
