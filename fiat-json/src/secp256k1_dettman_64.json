@@ -416,6 +416,14 @@
                     "operation": "+",
                     "arguments": [
                       {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "x4"
+                        ]
+                      },
+                      {
                         "datatype": "u128",
                         "name": [],
                         "operation": "static_cast",
@@ -773,6 +781,14 @@
             "operation": "+",
             "arguments": [
               {
+                "datatype": "u64",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  "x7"
+                ]
+              },
+              {
                 "datatype": "u128",
                 "name": [],
                 "operation": "static_cast",
@@ -1063,6 +1079,14 @@
                                 "name": [],
                                 "operation": "static_cast",
                                 "arguments": [
+                                  "x9"
+                                ]
+                              },
+                              {
+                                "datatype": "u64",
+                                "name": [],
+                                "operation": "static_cast",
+                                "arguments": [
                                   {
                                     "datatype": "u64",
                                     "name": [],
@@ -1164,6 +1188,14 @@
             "name": [],
             "operation": "+",
             "arguments": [
+              {
+                "datatype": "u64",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  "x12"
+                ]
+              },
               {
                 "datatype": "u128",
                 "name": [],
@@ -1367,6 +1399,14 @@
                     "operation": "+",
                     "arguments": [
                       {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "x15"
+                        ]
+                      },
+                      {
                         "datatype": "u128",
                         "name": [],
                         "operation": "static_cast",
@@ -1542,6 +1582,14 @@
             "operation": "+",
             "arguments": [
               {
+                "datatype": "u64",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  "x18"
+                ]
+              },
+              {
                 "datatype": "u128",
                 "name": [],
                 "operation": "static_cast",
@@ -1699,6 +1747,14 @@
                     "name": [],
                     "operation": "+",
                     "arguments": [
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "x21"
+                        ]
+                      },
                       {
                         "datatype": "u128",
                         "name": [],
@@ -2520,6 +2576,14 @@
                     "operation": "+",
                     "arguments": [
                       {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "x8"
+                        ]
+                      },
+                      {
                         "datatype": "u128",
                         "name": [],
                         "operation": "static_cast",
@@ -2789,6 +2853,14 @@
             "operation": "+",
             "arguments": [
               {
+                "datatype": "u64",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  "x11"
+                ]
+              },
+              {
                 "datatype": "u128",
                 "name": [],
                 "operation": "static_cast",
@@ -2991,6 +3063,14 @@
                                 "name": [],
                                 "operation": "static_cast",
                                 "arguments": [
+                                  "x13"
+                                ]
+                              },
+                              {
+                                "datatype": "u64",
+                                "name": [],
+                                "operation": "static_cast",
+                                "arguments": [
                                   {
                                     "datatype": "u64",
                                     "name": [],
@@ -3092,6 +3172,14 @@
             "name": [],
             "operation": "+",
             "arguments": [
+              {
+                "datatype": "u64",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  "x16"
+                ]
+              },
               {
                 "datatype": "u128",
                 "name": [],
@@ -3251,6 +3339,14 @@
                     "operation": "+",
                     "arguments": [
                       {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "x19"
+                        ]
+                      },
+                      {
                         "datatype": "u128",
                         "name": [],
                         "operation": "static_cast",
@@ -3382,6 +3478,14 @@
             "operation": "+",
             "arguments": [
               {
+                "datatype": "u64",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  "x22"
+                ]
+              },
+              {
                 "datatype": "u128",
                 "name": [],
                 "operation": "static_cast",
@@ -3495,6 +3599,14 @@
                     "name": [],
                     "operation": "+",
                     "arguments": [
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "x25"
+                        ]
+                      },
                       {
                         "datatype": "u128",
                         "name": [],
