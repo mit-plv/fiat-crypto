@@ -97,88 +97,6 @@ Module DettmanMultiplication.
       a / b <> 0.
     Proof. intros H1 H2. remember (Z_div_mod_eq_full a b). lia. Qed.
 
-     (*(* maybe I should write a proof that this not only terminates, but actually works properly? *)
-    Program Fixpoint num_digits' (x : N) (i : nat) { measure (N.to_nat x) } : nat :=
-      match x with
-      | N0 => 0
-      | _ => 1 + num_digits' (x - Z.to_N (weight (i + 1) - weight i)) (i + 1)
-      end.
-    Next Obligation.
-      remember (weight_positive wprops i). Remember (weight_dividesremember lia.
-    Qed.
-    
-    Lemma num_digits'_equiv (x : N) (i : nat) :
-      num_digits' x i =
-        match x with
-        | N0 => 0%nat
-        | _ => (1 + num_digits' (x - Z.to_N (weight i)) (i + 1))%nat
-        end.
-    Proof.
-      destruct x; trivial. cbv [num_digits'].
-      remember (num_digits'_func (existT _ _ (i + 1)%nat)) as y eqn:Ey.
-      cbv [num_digits'_func]. simpl. rewrite fix_sub_eq.
-      - subst. reflexivity.
-      - intros x f g H. destruct x. simpl. destruct x.
-        + reflexivity.
-        + f_equal. apply H.
-    Qed.
-    
-    Definition num_digits (x : N) : nat := num_digits' x 0.
-
-    (* currently, this is the only fact that I use about num_digits *)
-    Lemma num_digits_0_0 (x : N) : num_digits x = 0%nat -> x = 0%N.
-    Proof.
-      cbv [num_digits]. rewrite num_digits'_equiv. destruct x; lia.
-    Qed.
-
-    Fixpoint Positional_from_N' (x : N) (num_digits : nat) : list Z :=
-      match num_digits with
-      | O => []
-      | S num_digits' => Positional_from_N' (Z.to_N ((Z.of_N x) mod (weight num_digits'))) num_digits' ++
-                           [(Z.of_N x) / (weight num_digits')]
-      end.
-
-    Definition Positional_from_N (x : N) : list Z :=
-      Positional_from_N' x (num_digits x).
-    
-    Definition Positional_from_Z (x : Z) : list Z :=
-      let abs := Positional_from_N (Z.to_N x) in
-      if x <? 0 then
-        map (fun a => -1 * a) abs
-      else
-        abs.
-
-    Print Positional.eval.
-
-    Lemma len_Positional_from_N (x : N) :
-      length (Positional_from_N x) = num_digits x.
-    Proof.
-      cbv [Positional_from_N Positional_from_N'].
-      remember (num_digits x) as len eqn:E. assert (len <= num_digits x) generalize dependent x.
-      induction len as [| len' IHlen'].
-      - reflexivity.
-      - intros x. Search (length (_ ++ _)). rewrite app_length. simpl. rewrite IHlen'.
-        + lia.
-        + 
-        
-    Lemma eval_Positional_from_N (x : N) :
-      Positional.eval weight (num_digits x) (Positional_from_N x) = Z.of_N x.
-    Proof.
-      cbv [Positional_from_N Positional_from_N']. remember (num_digits x) as len eqn:E.
-      generalize dependent x. induction len as [ | len' IHlen'].
-      - intros x H. symmetry in H. apply num_digits_0_0 in H. subst. reflexivity.
-      - intros x H. Search Positional.eval. Check eval_snoc.
-        rewrite (eval_snoc _ len'). rewrite eval_snoc. sC apply IHlen'.
-      
-    
-    Fixpoint getC (c_ : Z) (log2_c : nat) : list (Z*Z) :=
-      match log2_c with
-      | 0 => [(1, c_)]
-      | S log2_c' => Associational.mul [(2^ Context*)
-        
-
-                                         
-      
     Hint Resolve s_positive s_nz weight_nz div_nz s_big' : arith.
     Hint Resolve weight_0 weight_positive weight_multiples Weight.weight_multiples_full : arith.
     Hint Resolve weight_div_nz weight_mod_quotient_zero : arith.
@@ -315,19 +233,6 @@ Module DettmanMultiplication.
       let from13 := weight (l - 2) in
       let to13 := weight (l - 1) in
       let r13 := carry' from13 (to13 / from13) r12 in
-
-      (* experiment with 32 bits *)
-      (* last limb too big, so just add another carry on the end??? *)
-      (*let from14 := weight (l - 1) in
-      let to14 := s in
-      let r14 := carry' from14 (to14 / from14) r13 in
-      let r14' := dedup_weights r14 in
-
-      let r15 := reduce' s s s c r14' in
-
-      let from16 := weight 0 in
-      let to16 := weight 1 in
-      let r16 := carry' from16 (to16 / from16) r15 in*)
 
       Positional.from_associational weight l r13.
 
@@ -506,8 +411,6 @@ Module DettmanMultiplication.
       all: try (remember (weight_positive limbs); lia).
       all: try (remember s_positive; lia).
       all: try apply weight_nz.
-      (*- replace 1 with (weight 0). Search (weight _ mod _). apply weight_multiples.
-      - replace 1 with (weight 0). apply weight_multiples.*)
     Qed.
 
     Lemma eval_reduce_carry_borrow32 r0 :
@@ -525,8 +428,6 @@ Module DettmanMultiplication.
       all: try (remember (weight_positive limbs); lia).
       all: try (remember s_positive; lia).
       all: try apply weight_nz.
-      (*- replace 1 with (weight 0). Search (weight _ mod _). apply weight_multiples.
-      - replace 1 with (weight 0). apply weight_multiples.*)
     Qed.
         
     Hint Rewrite eval_reduce_carry_borrow eval_reduce_carry_borrow32 : push_eval.
