@@ -18,9 +18,13 @@ Module DettmanMultiplication.
         (c_ : list (Z*Z))
         (register_width : nat)
         (limbs : nat)
+        (last_reduction : nat) (* should be between 1 and limbs - 3, inclusive.
+                                  This is the position that the final modular reduction lands in.
+                                  Larger values correspond to a faster algorithm but looser bounds on the output.
+                                *)
         (weight: nat -> Z)
         (p_nz : s - Associational.eval c_ <> 0)
-        (limbs_gteq_4 : (4 <= limbs)%nat) (* Technically we only need 2 <= limbs to get the proof to go through, but it doesn't make any sense to try to do this with less than three limbs.
+        (limbs_gteq_4 : (4 <= limbs)%nat) (* Technically we only need 2 <= limbs to get the proof to go through, but it doesn't make much sense to try to do this with less than four limbs.
                                            Note that having 4 limbs corresponds to zero iterations of the "loop" function defined below. *)
         (s_small : forall i: nat, (weight (i + limbs)%nat / weight i) mod s = 0)
         (s_big : weight (limbs - 1)%nat <= s)
@@ -237,7 +241,7 @@ Module DettmanMultiplication.
 
     Definition seq_from_to a b := seq a (Z.to_nat (b - a + 1)).
 
-    Definition reduce_carry_borrow last_reduction x :=
+    Definition reduce_carry_borrow x :=
       let l := limbs in
       let x := dedup_weights x in
 
@@ -264,14 +268,14 @@ Module DettmanMultiplication.
       let a_assoc := Positional.to_associational weight limbs a in
       let b_assoc := Positional.to_associational weight limbs b in
       let r0 := Associational.mul a_assoc b_assoc in
-      reduce_carry_borrow (limbs - 3) r0.
+      reduce_carry_borrow r0.
 
     Definition squaremod a :=
       let a_assoc := Positional.to_associational weight limbs a in
       let r0 := Associational.square a_assoc in
-      reduce_carry_borrow (limbs - 3) r0.
+      reduce_carry_borrow r0.
 
-    Definition mulmod32 a b :=
+    (*Definition mulmod32 a b :=
       let a_assoc := Positional.to_associational weight limbs a in
       let b_assoc := Positional.to_associational weight limbs b in
       let r0 := Associational.mul a_assoc b_assoc in
@@ -280,17 +284,15 @@ Module DettmanMultiplication.
     Definition squaremod32 a :=
       let a_assoc := Positional.to_associational weight limbs a in
       let r0 := Associational.square a_assoc in
-      reduce_carry_borrow (limbs - 4) r0.
+      reduce_carry_borrow (limbs - 4) r0.*)
 
     Hint Rewrite Positional.eval_from_associational Positional.eval_to_associational : push_eval.
     Hint Resolve Z_mod_same_full : arith.
 
     Local Open Scope Z_scope.
-
-    Search (_ / 1). Hint Rewrite Z.div_1_r : arith.
       
-    Lemma eval_reduce_carry_borrow i r0 :
-      (Positional.eval weight limbs (reduce_carry_borrow i r0)) mod (s - Associational.eval c) =
+    Lemma eval_reduce_carry_borrow r0 :
+      (Positional.eval weight limbs (reduce_carry_borrow r0)) mod (s - Associational.eval c) =
       (Associational.eval r0) mod (s - Associational.eval c).
     Proof.
       cbv [reduce_carry_borrow carry' reduce' borrow'].
@@ -319,7 +321,7 @@ Module DettmanMultiplication.
       cbv [squaremod]. rewrite <- c_correct. autorewrite with push_eval. reflexivity.
     Qed.
 
-    Theorem eval_mulmod32 a b :
+    (*Theorem eval_mulmod32 a b :
       (Positional.eval weight limbs (mulmod32 a b)) mod (s - c') =
       (Positional.eval weight limbs a * Positional.eval weight limbs b) mod (s - c').
     Proof.
@@ -331,7 +333,7 @@ Module DettmanMultiplication.
       (Positional.eval weight limbs a * Positional.eval weight limbs a) mod (s - c').
     Proof.
       cbv [squaremod32]. rewrite <- c_correct. autorewrite with push_eval. reflexivity.
-    Qed.
+    Qed.*)
   End DettmanMultiplication.
 End DettmanMultiplication.
 
@@ -347,13 +349,13 @@ Module dettman_multiplication_mod_ops.
         (register_width : nat)
         (n : nat)
         (last_limb_width : nat)
+        (last_reduction : nat)
         (p_nz : s - Associational.eval c <> 0)
         (n_gteq_4 : (4 <= n)%nat)
         (last_limb_width_small : last_limb_width * n <= Z.log2 s)
         (last_limb_width_big : 1 <= last_limb_width)
         (s_power_of_2 : 2 ^ (Z.log2 s) = s).
 
-    (* I do want to have Z.log2 s, not Z.log2_up (s - c) below.  We want to ensure that weight (n - 1) <= s <= weight limbs *)
     Local Notation limbwidth_num' := (Z.log2 s - last_limb_width).
     Local Notation limbwidth_den' := (n - 1). (* can't use Q here, or else reification doesn't work *)
     
@@ -367,10 +369,10 @@ Module dettman_multiplication_mod_ops.
     
     Definition weight := (weight limbwidth_num limbwidth_den).
     
-    Definition mulmod := mulmod s c register_width n weight.
-    Definition squaremod := squaremod s c register_width n weight.
-    Definition mulmod32 := mulmod32 s c register_width n weight.
-    Definition squaremod32 := squaremod32 s c register_width n weight.
+    Definition mulmod := mulmod s c register_width n last_reduction weight.
+    Definition squaremod := squaremod s c register_width n last_reduction weight.
+    (*Definition mulmod32 := mulmod32 s c register_width n weight.
+    Definition squaremod32 := squaremod32 s c register_width n weight.*)
 
     Lemma n_small : n - 1 <= Z.log2 s - last_limb_width.
     Proof.
@@ -500,10 +502,10 @@ Module dettman_multiplication_mod_ops.
         + replace 0%Q with (inject_Z 0) by reflexivity. rewrite <- Zle_Qle. lia.
     Qed.
 
-    Definition eval_mulmod := eval_mulmod s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
-    Definition eval_squaremod := eval_squaremod s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
-    Definition eval_mulmod32 := eval_mulmod32 s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
-    Definition eval_squaremod32 := eval_squaremod32 s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
+    Definition eval_mulmod := eval_mulmod s c register_width n last_reduction weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
+    Definition eval_squaremod := eval_squaremod s c register_width n last_reduction weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
+    (*Definition eval_mulmod32 := eval_mulmod32 s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
+    Definition eval_squaremod32 := eval_squaremod32 s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.*)
   End dettman_multiplication_mod_ops.
 End dettman_multiplication_mod_ops.
 
@@ -513,8 +515,8 @@ Module Export Hints.
   Hint Rewrite eval_mulmod using solve [ auto with zarith | congruence ] : push_eval.
 #[global]
   Hint Rewrite eval_squaremod using solve [ auto with zarith | congruence ] : push_eval.
-#[global]
+(*#[global]
   Hint Rewrite eval_mulmod32 using solve [ auto with zarith | congruence ] : push_eval.
 #[global]
-  Hint Rewrite eval_squaremod32 using solve [ auto with zarith | congruence ] : push_eval.
+  Hint Rewrite eval_squaremod32 using solve [ auto with zarith | congruence ] : push_eval.*)
 End Hints.

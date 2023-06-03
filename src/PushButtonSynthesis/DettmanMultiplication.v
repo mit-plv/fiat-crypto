@@ -58,8 +58,8 @@ Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBU
 (* needed for making [autorewrite] not take a very long time *)
 Local Opaque reified_mul_gen.
 Local Opaque reified_square_gen.
-Local Opaque reified_mul32_gen.
-Local Opaque reified_square32_gen.
+(*Local Opaque reified_mul32_gen.
+Local Opaque reified_square32_gen.*)
 (* needed for making [autorewrite] with [Set Keyed Unification] fast *)
 Local Opaque expr.Interp.
 
@@ -72,7 +72,8 @@ Section __.
           (s : Z)
           (c_ : list (Z*Z))
           (n : nat) (* number of limbs *)
-          (last_limb_width : nat) (* This is required to be >= 0.  Perhaps it should have type positive. *)
+          (last_limb_width : nat)
+          (last_reduction : nat)
           (inbounds_multiplier : option Q).
 
   Local Instance override_pipeline_opts : PipelineOptions
@@ -165,7 +166,7 @@ Section __.
          (reified_mul_gen
             @ GallinaReify.Reify s @ GallinaReify.Reify c_
             @ GallinaReify.Reify (Z.to_nat machine_wordsize) @ GallinaReify.Reify n
-            @ GallinaReify.Reify last_limb_width)
+            @ GallinaReify.Reify last_limb_width @ GallinaReify.Reify last_reduction)
          (Some input_bounds, (Some input_bounds, tt))
          (Some output_bounds).
 
@@ -175,30 +176,8 @@ Section __.
          possible_values
          (reified_square_gen
             @ GallinaReify.Reify s @ GallinaReify.Reify c_
-            @ GallinaReify.Reify (Z.to_nat machine_wordsize)
-            @ GallinaReify.Reify n @ GallinaReify.Reify last_limb_width)
-         (Some input_bounds, tt)
-         (Some output_bounds).
-  
-  Definition mul32
-    := Pipeline.BoundsPipeline
-         false (* subst01 *)
-         possible_values
-         (reified_mul32_gen
-           @ GallinaReify.Reify s @ GallinaReify.Reify c_
-           @ GallinaReify.Reify (Z.to_nat machine_wordsize) @ GallinaReify.Reify n
-           @ GallinaReify.Reify last_limb_width)
-         (Some input_bounds, (Some input_bounds, tt))
-         (Some output_bounds).
-
-  Definition square32
-    := Pipeline.BoundsPipeline
-         false (* subst01 *)
-         possible_values
-         (reified_square32_gen
-            @ GallinaReify.Reify s @ GallinaReify.Reify c_
-            @ GallinaReify.Reify (Z.to_nat machine_wordsize)
-            @ GallinaReify.Reify n @ GallinaReify.Reify last_limb_width)
+            @ GallinaReify.Reify (Z.to_nat machine_wordsize) @ GallinaReify.Reify n
+            @ GallinaReify.Reify last_limb_width @ GallinaReify.Reify last_reduction)
          (Some input_bounds, tt)
          (Some output_bounds).
  
@@ -220,60 +199,25 @@ Section __.
            (fun fname : string => [text_before_function_name ++ fname ++ " squares a field element."]%string)
            (square_correct weightf n m input_bounds output_bounds)).
 
-  Definition smul32 (prefix : string)
-    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
-    := Eval cbv beta in
-        FromPipelineToString!
-          machine_wordsize prefix "mul32" mul32
-          (docstring_with_summary_from_lemma!
-             (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements."]%string)
-             (mul_correct weightf n m input_bounds output_bounds)).
-
-  Definition ssquare32 (prefix : string)
-    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
-    := Eval cbv beta in
-      FromPipelineToString!
-        machine_wordsize prefix "square32" square32
-        (docstring_with_summary_from_lemma!
-           (fun fname : string => [text_before_function_name ++ fname ++ " squares a field element."]%string)
-           (square_correct weightf n m input_bounds output_bounds)).
-
   (** Work around COQBUG(https://github.com/coq/coq/issues/9286) *)
   Local Opaque DettmanMultiplication.mulmod DettmanMultiplication.squaremod.
-  Local Opaque DettmanMultiplication.mulmod32 DettmanMultiplication.squaremod32.
 
   Local Ltac prove_correctness _ := Primitives.prove_correctness use_curve_good.
 
-  Lemma mul64_correct res
+  Lemma mul_correct res
         (Hres : mul = Success res)
     : mul_correct (weightf) n m input_bounds output_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
-  Lemma Wf_mul64 res (Hres : mul = Success res) : Wf res.
+  Lemma Wf_mul res (Hres : mul = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
-  Lemma square64_correct res
+  Lemma square_correct res
         (Hres : square = Success res)
     : square_correct (weightf) n m input_bounds output_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
-  Lemma Wf_square64 res (Hres : square = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). Qed.
-
-  Lemma mul32_correct res
-        (Hres : mul32 = Success res)
-    : mul_correct (weightf) n m input_bounds output_bounds (Interp res).
-  Proof using curve_good. prove_correctness (). Qed.
-
-  Lemma Wf_mul32 res (Hres : mul32 = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). Qed.
-
-  Lemma square32_correct res
-        (Hres : square32 = Success res)
-    : square_correct (weightf) n m input_bounds output_bounds (Interp res).
-  Proof using curve_good. prove_correctness (). Qed.
-
-  Lemma Wf_square32 res (Hres : square32 = Success res) : Wf res.
+  Lemma Wf_square res (Hres : square = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
   Section for_stringification.
@@ -282,9 +226,7 @@ Section __.
 
     Definition known_functions
       := [("mul", wrap_s smul);
-          ("square", wrap_s ssquare);
-          ("mul32", wrap_s smul32);
-          ("square32", wrap_s ssquare32)].
+          ("square", wrap_s ssquare)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 
@@ -309,14 +251,10 @@ Module Export Hints.
   Hint Opaque
        mul
        square
-       mul32
-       square32
   : wf_op_cache.
 #[global]
   Hint Immediate
-       Wf_mul64
-       Wf_square64
-       Wf_mul32
-       Wf_square32
+       Wf_mul
+       Wf_square
   : wf_op_cache.
 End Hints.
