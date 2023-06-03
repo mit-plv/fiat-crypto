@@ -99,7 +99,14 @@ Section __.
            s = 2^256
            c = 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
            n = 5
-           last_limb_width = 48.
+           last_limb_width = 48
+           last_reduction = 2.
+
+           s = 2^256
+           c = 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
+           n = 10
+           last_limb_width = 22
+           last_reduction = 6.
      Given parameters dissimilar to those above, these bounds are no better than a guess.
      I suppose they provide a reasonable default, though. *)
 
@@ -164,7 +171,7 @@ Section __.
          false (* subst01 *)
          possible_values
          (reified_mul_gen
-            @ GallinaReify.Reify s @ GallinaReify.Reify c_
+            @ GallinaReify.Reify s @ GallinaReify.Reify c
             @ GallinaReify.Reify (Z.to_nat machine_wordsize) @ GallinaReify.Reify n
             @ GallinaReify.Reify last_limb_width @ GallinaReify.Reify last_reduction)
          (Some input_bounds, (Some input_bounds, tt))
@@ -175,12 +182,12 @@ Section __.
          false (* subst01 *)
          possible_values
          (reified_square_gen
-            @ GallinaReify.Reify s @ GallinaReify.Reify c_
+            @ GallinaReify.Reify s @ GallinaReify.Reify c
             @ GallinaReify.Reify (Z.to_nat machine_wordsize) @ GallinaReify.Reify n
             @ GallinaReify.Reify last_limb_width @ GallinaReify.Reify last_reduction)
          (Some input_bounds, tt)
          (Some output_bounds).
- 
+
   Definition smul (prefix : string)
     : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
