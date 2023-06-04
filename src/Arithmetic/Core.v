@@ -1210,43 +1210,6 @@ Module Positional.
                \sum_{i = 0}^{2n - 3} b^i ([\sum_{j = 0}^i x_j y_j] - [\sum_{j = 0}^{i - n} x_j y_j]).
        This last formula will be particularly nice if we precompute the values \sum_{j = 0}^i x_j y_j, as i ranges from 0 to n - 1.
      *)
-
-    Print fold_right.
-
-    Definition length_reifiable {X} (l : list X) : nat :=
-      fold_right (fun (x : X) (len' : nat) => (len' + 1)%nat) 0%nat l.
-
-    (*Definition nth_from_last' {X} (n : Z) (l : list X) (default : X) : Z*X :=
-      fold_right (fun (first : X) (i_val : list) =>
-                    let i := fst i_val in
-                    let val := snd i_val in
-                    if i =? 0 then (i - 1, first) else (i - 1, val)) (n, default) l.
-    
-    Lemma nth_from_last'_spec {X} (n : Z) (l : list X) (default : X) :
-      let m := Z.of_nat (length_reifiable l) - n - 1 in
-      nth_from_last' m l default =
-        (m - Z.of_nat (length_reifiable l), if 0 <=? n then nth (Z.to_nat n) l default else default).
-    Proof.
-      cbv [nth_from_last']. generalize dependent n. induction l as [| x l' IHl'].
-      - intros n. simpl. f_equal; destruct (0 <=? n); destruct (Z.to_nat n); try reflexivity; lia.
-      - intros n. simpl.
-        replace (Z.of_nat (length_reifiable l' + 1)%nat - n - 1) with (Z.of_nat (length_reifiable l') - (n - 1) - 1) by lia.
-        rewrite IHl'. replace (Z.of_nat (length_reifiable l') - (n - 1) - 1) with (Z.of_nat (length_reifiable l') - n) by lia. simpl.
-        destruct (_ =? _) eqn:E.
-        + destruct (Z.to_nat n) eqn:E'; simpl; f_equal; try lia.
-          destruct (0 <=? n) eqn:E3; try reflexivity. apply Z.leb_gt in E3. lia.          
-        + f_equal; try lia.
-          destruct (0 <=? n - 1) eqn:E3; destruct (0 <=? n) eqn:E4; try reflexivity; try lia.
-          destruct (Z.to_nat n) eqn:E5; try lia. f_equal. lia.
-    Qed.
-    
-    Definition nth_from_last {X} (n : Z) (l : list X) (default : X) : X :=
-      snd (nth_from_last' n l default).
-
-    Lemma nth_from_last_spec {X} (n : Z) (l : list X) (default : X) :
-      nth_from_last (Z.of_nat (length_reifiable l) - n - 1) l default =
-        if 0 <=? n then nth (Z.to_nat n) l default else default.
-    Proof. cbv [nth_from_last]. rewrite nth_from_last'_spec. reflexivity. Qed.*)
       
     Definition nth_reifiable' {X} (n : Z) (l : list X) (default : X) : Z*X :=
       fold_right (fun next n_nth => (fst n_nth - 1, if (fst n_nth =? 0) then next else (snd n_nth))) (Z.of_nat (length l) - n - 1, default) l.
@@ -1279,23 +1242,34 @@ Module Positional.
 
     Local Notation nth' := nth_reifiable.
 
+    Search seq.
+    Definition seqZ_from_to a b :=
+      map (fun x => Z.of_nat x + a) (seq 0 (Z.to_nat (1 + b - a))).
+
     Definition first_summation (n : nat) (x y : list Z) : list (Z*Z) :=
       flat_map (fun i =>
                   map (fun j => (weight i * weight j, (nth' i x 0 - nth' j x 0) * (nth' j y 0 - nth' i y 0)))
-                    (seq 0 (i - 1)))
-        (seq 1 (n - 1)).
+                    (map Z.to_nat (seqZ_from_to 0 (Z.of_nat i - 1))))
+        (map Z.to_nat (seqZ_from_to 1 (Z.of_nat n - 1))).
 
     Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
-      let products : list Z := map (fun i => (nth' i x 0) * (nth' i y 0)) (seq 0 (n - 1)) in
-      let f : list Z := fold_right (fun i f' => ((nth' 0 f' 0) + (nth' i products 0)) :: f') [] (seq 0 (n - 1)) in
+      let products : list Z := map (fun i => (nth' i x 0) * (nth' i y 0)) (map Z.to_nat (seqZ_from_to 0 (Z.of_nat n - 1))) in
+      let f : list Z := fold_right (fun i f' => ((nth' 0 f' 0) + (nth' i products 0)) :: f') [] (map Z.to_nat (seqZ_from_to 0 (Z.of_nat n - 1))) in
       let high_part : Z*Z := (weight (n - 1) * weight (n - 1), (nth' (n - 1) products 0)) in
-      let low_part : list (Z*Z) := map (fun i => (weight i, (nth' i f 0) - (nth' (n - i) f 0))) (seq 0 (2*n - 3)) in
+      let low_part : list (Z*Z) := map (fun i => (weight i, (nth' i f 0) - (nth' (n - i) f 0))) (map Z.to_nat (seqZ_from_to 0 (2*Z.of_nat n - 3))) in
       high_part :: low_part.
 
     Definition adk_mul (n : nat) (x y : list Z) : list (Z*Z) :=
       first_summation n x y ++ second_summation n x y.
   End adk_mul.
-End Positional.
+  End Positional.
+
+  Local Notation nth' := nth_reifiable.
+  Definition x := [2].
+  Definition y := [3].
+  Definition weight := (fun i => 2^Z.of_nat i).
+  Definition n := 1%nat.
+Compute (adk_mul (fun i => 2^Z.of_nat i) 1 [2] [3]).
 
 (* Hint Rewrite disappears after the end of a section *)
 #[global]
