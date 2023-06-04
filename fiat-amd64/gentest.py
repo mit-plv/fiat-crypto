@@ -38,8 +38,8 @@ montgomeryprimes = dict(
 saturatedsolinasprimes = dict(
   curve25519_solinas=('2^255 - 19'))
 
-dettmanprimes = dict( # last limb width, limbs, prime
-  secp256k1_dettman=('48', '5', '2^256 - 4294968273'))
+dettmanprimes = dict( # last limb width, limbs, last reduction, prime
+  secp256k1_dettman=('48', '5', '2', '2^256 - 4294968273'))
 
 output_makefile = ('--makefile' in sys.argv[1:])
 directories = tuple(i for i in sys.argv[1:] if i not in ('--makefile',))
@@ -60,7 +60,7 @@ def asm_op_names_key(val):
 
     if name in dettmanprimes.keys():
         kind = 0
-        limbwidth, n, prime = dettmanprimes[name]
+        limbwidth, n, last_reduction, prime = dettmanprimes[name]
 
     elif name in saturatedsolinasprimes.keys():
         kind = 1
@@ -113,8 +113,8 @@ for item in asm_op_names_items:
     if kind == 0:
         binary = 'src/ExtractionOCaml/dettman_multiplication'
         binary_descr = 'Dettman Multiplication'
-        limbwidth, _n, _prime = dettmanprimes[name]
-        invocation = ' '.join([binary, name, '64', n, limbwidth, shlex.quote(prime), op, '--no-wide-int', '--shiftr-avoid-uint1'] +                                         [item for fname in fnames for item in ('--hints-file', shlex.quote(fname))])
+        limbwidth, _n, last_reduction, _prime = dettmanprimes[name]
+        invocation = ' '.join([binary, name, '64', n, limbwidth, last_reduction, shlex.quote(prime), op, '--no-wide-int', '--shiftr-avoid-uint1'] +                                         [item for fname in fnames for item in ('--hints-file', shlex.quote(fname))])
     elif kind == 1:
         binary = 'src/ExtractionOCaml/solinas_reduction'
         binary_descr = 'Saturated Solinas'
