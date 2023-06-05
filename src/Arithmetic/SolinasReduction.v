@@ -653,32 +653,51 @@ Module Saturated. Section __.
     { rewrite Z.mod_small; try split; try (Z.div_mod_to_equations; lia). }
   Qed.
 
-  (*
-  Definition smalldivmod bound (xs : list Z) (s : Z) : Z * list Z :=
+  Definition divmodw bound (xs : list Z) (s : Z) : Z * list Z :=
     list_rect_fbb_b_b (fun _ _ => (0, [])) (fun x xs  rec bound s =>
-      if (s mod stream.hd bound =? 0) && (x <? stream.hd bound)
+      if ((stream.hd bound <? s) && (s mod stream.hd bound =? 0) && (0 <=? x) && (x <? stream.hd bound))%bool
       then let (q, r) := rec (stream.tl bound) (s / stream.hd bound) in (q + x/s, x :: r)
-      else let v := eval bound (x::xs) in (v/s, encode bound (length xs) (v mod s))
+      else let v := eval bound (x::xs) in (v/s, encode bound (length (x::xs)) (v mod s))
     ) xs bound s.
 
-  Definition smalldivmod_nil bound s : smalldivmod bound [] s = (0, []). Proof. trivial. Qed.
+  Lemma divmodw_nil bound s : divmodw bound [] s = (0, []). Proof. trivial. Qed.
 
-  Definition smalldivmod_cons bound x xs s : smalldivmod bound (x::xs) s =
-    if (s mod stream.hd bound =? 0) && (x <? stream.hd bound)
-    then let (q, r) := smalldivmod (stream.tl bound) xs (s / stream.hd bound) in (q + x/s, x :: r)
-    else let v := eval bound (x::xs) in (v/s, encode bound (length xs) (v mod s)).
+  Lemma divmodw_cons bound x xs s : divmodw bound (x::xs) s =
+    if ((stream.hd bound <? s) && (s mod stream.hd bound =? 0) && (0 <=? x) && (x <? stream.hd bound))%bool
+    then let (q, r) := divmodw (stream.tl bound) xs (s / stream.hd bound) in (q + x/s, x :: r)
+    else let v := eval bound (x::xs) in (v/s, encode bound (length (x::xs)) (v mod s)).
   Proof. trivial. Qed.
 
-  Lemma smalldivmod_correct bound xs s : smalldivmod bound xs s = (eval bound xs / s, encode bound (length xs) (eval bound xs mod s)).
+  Lemma divmodw_correct bound xs s (Hs : 0 < s) :
+    divmodw bound xs s = (eval bound xs / s, encode bound (length xs) (eval bound xs mod s)).
   Proof.
-    revert s; revert bound; induction xs; intros; rewrite ?smalldivmod_nil, ?smalldivmod_cons;
-    rewrite ?eval_nil, ?eval_cons, ?Zmod_0_l, ?Zdiv_0_l, ?IHxs; cbn zeta beta; trivial.
-    destruct (Z.eqb_spec (s mod stream.hd bound) 0) as [E|E]; cbn [andb]; trivial.
-    destruct (Z.ltb_spec a (stream.hd bound)) as [L|L]; cbn [andb]; trivial.
+    revert dependent s; revert bound; induction xs; intros; rewrite ?divmodw_nil, ?divmodw_cons;
+    destruct (Z.ltb_spec (stream.hd bound) s) as [H|H]; cbn [andb]; trivial; [].
+    destruct (Z.eqb_spec (s mod stream.hd bound) 0) as [E|E]; cbn [andb]; trivial; [].
+    destruct (Z.leb_spec 0 a) as [L|L]; cbn [andb]; trivial; [].
+    destruct (Z.ltb_spec a (stream.hd bound)) as [U|U]; cbn [andb]; trivial; [].
+    rewrite ?eval_nil, ?eval_cons, ?length_cons, ?encode_S, ?Zmod_0_l, ?Zdiv_0_l, ?IHxs
+      by (Z.div_mod_to_equations; nia).
     set (s / stream.hd bound) as s' in *.
     replace s with (stream.hd bound * s') in * by (Z.div_mod_to_equations; nia); clearbody s'; clear s.
-  *)
-
+    set (stream.hd bound) as B in *.
+    rewrite <-!Z.div_div by lia.
+    rewrite !(Z.mul_comm B), Z.div_add, <-!(Z.mul_comm B) by lia.
+    f_equal.
+    { rewrite (Z.div_small a B), Z.div_0_l, Z.add_0_l, Z.add_0_r; lia. }
+    { rewrite PullPush.Z.add_mod_r_push by exact I.
+      rewrite PullPush.Z.mul_mod_r_push by exact I.
+      rewrite <-PullPush.Z.add_mod_r_push by exact I.
+      rewrite Z.add_comm, Z.add_mul_mod_distr_l by (try apply Z.mod_pos_bound; nia).
+      rewrite Z.mod_add_l' by lia.
+      f_equal. { rewrite Z.mod_small; lia. }
+      rewrite (Z.mul_comm B), Z_div_plus_full_l by lia.
+      rewrite Z.div_small, Z.add_0_r by lia.
+      f_equal.
+      rewrite (Z.mul_comm B).
+      rewrite Z.rem_mul_r by nia.
+      rewrite Z.mod_add', Z.mod_mod by lia; trivial. }
+  Qed.
 
   Local Notation "!" := ltac:(vm_decide) (only parsing).
   Goal forall a0 a1 a2 a3 b : Z, False. intros.

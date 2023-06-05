@@ -235,6 +235,24 @@ Module debugging_sat_solinas_25519.
     Time Redirect "log"
          Compute
          Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (Pipeline.BoundsPipelineToString
+            "fiat_" "fe4_divmod255"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
+                  let r := Reify (fun xs => divmodw bound xs (2^255)) in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, tt)
+                   (Some (r[0 ~>1]%zrange), Some boundsn)
+                   (None, tt)
+                   (None, None)).
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
          (
          Pipeline.BoundsPipelineToString
             "fiat_" "fe4_mul"
@@ -255,11 +273,7 @@ Module debugging_sat_solinas_25519.
     Time Redirect "log"
          Compute
          Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
-         (let n := 2%nat in
-         let boundsn : list (ZRange.type.option.interp base.type.Z) := repeat (Some r[0 ~> (2^machine_wordsize - 1)]%zrange) n in
-         let boundsN : list (ZRange.type.option.interp base.type.Z) := repeat (Some r[0 ~> (2^machine_wordsize - 1)]%zrange) (n+n) in
-         let boundsn : list (ZRange.type.option.interp base.type.Z) := repeat (Some r[0 ~> (2^machine_wordsize - 1)]%zrange) n in
-         Pipeline.BoundsPipelineToString
+         (Pipeline.BoundsPipelineToString
             "fiat_" "TEST_mul"
             false (* subst01 *)
             false (* inline *)
@@ -270,26 +284,7 @@ Module debugging_sat_solinas_25519.
                   exact r)
                    (fun _ _ => []) (* comment *)
                    (Some boundsn, (Some boundsn, tt))
-                   (Some boundsN)
-                   (None, (None, tt))
-                   (None)
-          : Pipeline.ErrorT _).
-
-    Time Redirect "log"
-         Compute
-         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
-         (Pipeline.BoundsPipelineToString
-            "fiat_" "fe4_mul"
-            false (* subst01 *)
-            false (* inline *)
-            possible_values
-            machine_wordsize
-            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
-                  let r := Reify mulmod in
-                  exact r)
-                   (fun _ _ => []) (* comment *)
-                   (Some boundsn, (Some boundsn, tt))
-                   (Some boundsn)
+                   (Some (boundsn++boundsn))
                    (None, (None, tt))
                    (None)
           : Pipeline.ErrorT _).
