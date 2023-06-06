@@ -1240,26 +1240,27 @@ Module Positional.
       - apply Z.leb_gt in E. lia.
     Qed.
 
-    Local Coercion Z.of_nat : nat >-> Z.
-    Local Coercion Z.to_nat : Z >-> nat.
-
-    Definition nth' {X} (i : Z) := if Z.to_nat i =? i then (@nth_reifiable X i) else fun x1 x2 => x2.
+    Definition nthZ {X} (i : Z) :=
+      if (Z.of_nat (Z.to_nat i)) =? i then
+        (@nth_reifiable X (Z.to_nat i))
+      else
+        fun l default => default.
 
     Search seq.
-    Definition seqZ_from_to a b :=
+    Definition seqZ a b :=
       map (fun x => Z.of_nat x + a) (seq 0 (Z.to_nat (1 + b - a))).
 
     Definition first_summation (n : nat) (x y : list Z) : list (Z*Z) :=
       flat_map (fun i =>
-                  map (fun j => (weight i * weight j, (nth' i x 0 - nth' j x 0) * (nth' j y 0 - nth' i y 0)))
-                    (map Z.to_nat (seqZ_from_to 0 (Z.of_nat i - 1))))
-        (map Z.to_nat (seqZ_from_to 1 (Z.of_nat n - 1))).
+                  map (fun j => (weight (Z.to_nat i) * weight (Z.to_nat j), (nthZ i x 0 - nthZ j x 0) * (nthZ j y 0 - nthZ i y 0)))
+                    (seqZ 0 (i - 1)))
+        (seqZ 1 (Z.of_nat n - 1)).
 
     Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
-      let products : list Z := map (fun i => (nth' i x 0) * (nth' i y 0)) (seqZ_from_to 0 (Z.of_nat n - 1)) in
-      let f : list Z := (rev (fold_right (fun i f' => ((nth' 0 f' 0) + (nth' i products 0)) :: f') [] (rev (seqZ_from_to 0 (2 * Z.of_nat n - 3))))) in
-      let high_part : Z*Z := (weight (n - 1) * weight (n - 1), (nth' (n - 1) products 0)) in
-      let low_part : list (Z*Z) := map (fun i => (weight i, (nth' i f 0) - (nth' (i - n) f 0))) (map Z.to_nat (seqZ_from_to 0 (2*Z.of_nat n - 3))) in
+      let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 1)) in
+      let f : list Z := (rev (fold_right (fun i f' => ((nthZ 0 f' 0) + (nthZ i products 0)) :: f') [] (rev (seqZ 0 (2 * Z.of_nat n - 3))))) in
+      let high_part : Z*Z := (weight (n - 1) * weight (n - 1), (nthZ (Z.of_nat (n - 1)) products 0)) in
+      let low_part : list (Z*Z) := map (fun i => (weight (Z.to_nat i), (nthZ i f 0) - (nthZ (i - Z.of_nat n) f 0))) (seqZ 0 (2*Z.of_nat n - 3)) in
       high_part :: low_part.
 
     Definition adk_mul (n : nat) (x y : list Z) : list (Z*Z) :=
@@ -1267,23 +1268,12 @@ Module Positional.
   End adk_mul.
   End Positional.
 
-  Definition x1 := [2].
-  Definition y1 := [3].
   Definition x := [3; 4; 123; 93].
   Definition y := [543; 123; 64; 1].
   Definition weight := (fun i => 2^Z.of_nat i).
   Definition n := 4%nat.
-  Compute (first_summation weight n x y). (* it works! *)
-  Definition products : list Z := map (fun i => (nth' i x 0) * (nth' i y 0)) (seqZ_from_to 0 (Z.of_nat n - 1)).
-  Definition f : list Z := (rev (fold_right (fun i f' => ((nth' 0 f' 0) + (nth' i products 0)) :: f') [] (rev (seqZ_from_to 0 (2 * Z.of_nat n - 3))))).
-  Definition high_part : Z*Z := (weight (n - 1) * weight (n - 1), (nth' (Z.of_nat n - 1) products 0)).
-  Definition low_part : list (Z*Z) := map (fun i => (weight (Z.to_nat i), (nth' i f 0) - (nth' (i - Z.of_nat n) f 0))) (seqZ_from_to 0 (2*Z.of_nat n - 3)).
-  Compute products.
-  Compute f.
-  Compute high_part.
-  Compute low_part.
-  Compute (Associational.eval (Associational.dedup_weights (adk_mul (fun i => 2^Z.of_nat i) n x y))).
-  Compute (Associational.eval (Associational.dedup_weights (Associational.mul (Positional.to_associational (fun i => 2^Z.of_nat i) 4 x) (Positional.to_associational (fun i => 2^Z.of_nat i) 4 y)))).
+  Compute (Associational.eval (Associational.dedup_weights (adk_mul weight n x y))).
+  Compute (Associational.eval (Associational.dedup_weights (Associational.mul (Positional.to_associational weight n x) (Positional.to_associational weight n y)))).
 
 (* Hint Rewrite disappears after the end of a section *)
 #[global]
