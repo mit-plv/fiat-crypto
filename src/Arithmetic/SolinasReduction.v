@@ -176,7 +176,7 @@ Module Saturated. Section __.
   Local Open Scope Z_scope.
   Local Coercion Z.pos : positive >-> Z.
 
-  Lemma mod_weight_lt bound i j : Nat.le i j -> weight bound j mod weight bound i = 0.
+  Lemma mod_weight_le bound i j : Nat.le i j -> weight bound j mod weight bound i = 0.
   Proof.
     intros.
     replace j with (i+(j-i))%nat by lia; rewrite weight_add.
@@ -311,28 +311,28 @@ Module Saturated. Section __.
     replace n with (i+(n-i))%nat at 2 by lia; rewrite weight_add; lia.
   Qed.
 
-  Definition add bound (c0 : Z) (xs ys : list Z) : list Z * Z  :=
+  Definition add' bound (c0 : Z) (xs ys : list Z) : list Z * Z  :=
     list_rect_fbb_b_b_b (fun _ _ c => ([], c)) (fun x _  rec bound ys c =>
       let (z, c) := Z.add_with_get_carry_full (stream.hd bound) c x (hd 0 ys) in
       let (zs, C) := rec (stream.tl bound) (tl ys) c in
       (z::zs, C)
     ) xs bound ys c0.
 
-  Lemma add_nil bound c ys : add bound c [] ys = ([], c). Proof. trivial. Qed.
+  Lemma add'_nil bound c ys : add' bound c [] ys = ([], c). Proof. trivial. Qed.
 
-  Lemma add_cons bound c x xs ys : add bound c (cons x xs) ys =
+  Lemma add'_cons bound c x xs ys : add' bound c (cons x xs) ys =
     let (z, c) := Z.add_with_get_carry_full (stream.hd bound) c x (hd 0 ys) in
-    let (zs, C) := add (stream.tl bound)  c xs (tl ys)in
+    let (zs, C) := add' (stream.tl bound)  c xs (tl ys)in
     (z::zs, C).
   Proof. trivial. Qed.
 
-  Lemma add_correct :forall bound xs ys c
+  Lemma add'_correct :forall bound xs ys c
     (Hlength : (length ys <= length xs)%nat),
     let s := c + eval bound xs + eval bound ys in
-    add bound c xs ys = (encode bound (length xs) s, s / weight bound (length xs)).
+    add' bound c xs ys = (encode bound (length xs) s, s / weight bound (length xs)).
   Proof.
     intros until xs; revert dependent bound; induction xs as [|x xs];
-      cbn [length]; intros; rewrite ?add_nil, ?add_cons.
+      cbn [length]; intros; rewrite ?add'_nil, ?add'_cons.
     { case ys in *; [|inversion Hlength]. cbn. f_equal. Z.div_mod_to_equations; lia. }
     rewrite <-?(eval_hd_tl _ ys), ?eval_cons, ?encode_S; cbn [hd tl].
     rewrite Z.add_with_get_carry_full_correct.
@@ -344,89 +344,202 @@ Module Saturated. Section __.
       rewrite <-2Z.div_add, Z.div_div; f_equal; lia. }
   Qed.
 
-  Definition add_mul_limb' bound (acc : list Z) (xs : list Z) y h c o : list Z *Z :=
+  Definition add bound c (xs ys : list Z) :=
+    if (Z.of_nat (length ys) <=? Z.of_nat (length xs))
+    then add' bound c xs ys
+    else add' bound c ys xs.
+
+  Lemma add_correct :forall bound xs ys c,
+    let s := c + eval bound xs + eval bound ys in
+    let n := Nat.max (length xs) (length ys) in
+    add bound c xs ys = (encode bound n s, s / weight bound n).
+  Proof.
+    cbv [add]; intros.
+    match goal with |- context [Z.leb ?a ?b] => destruct (Z.leb_spec a b) end;
+    rewrite ?add'_correct; repeat (lia || f_equal).
+  Qed.
+
+  Definition product_scan bound (acc : list Z) (pps : list (Z*Z)) h c o : list Z * (Z*Z*Z) :=
     list_rect_fbb_b_b_b_b_b
-      (fun bound acc h c o =>
-      match acc with [] => ([], h+c+o) | _ => add bound o acc [h+c] end)
-      (fun x _ rec bound acc h c o =>
+      (fun bound acc h c o => ([], (h, c, o)))
+      (fun x_y _ rec bound acc h c o =>
+      let '(x, y) := x_y in (* workaround for Reify *)
       let (p, h') := Z.mul_split (stream.hd bound) x y in
       let (z, c) := Z.add_with_get_carry_full (stream.hd bound) c (hd 0 acc) h in
       let (z, o) := Z.add_with_get_carry_full (stream.hd bound) o z p in
       let (zs, C) := rec (stream.tl bound) (tl acc) h' c o in
       (z::zs, C)
-    ) xs bound acc h c o.
+    ) pps bound acc h c o.
 
-  Lemma add_mul_limb'_nil bound acc y h c o :
-    add_mul_limb' bound acc [] y h c o =
-    match acc with [] => ([], h+c+o) | _ => add bound o acc [h+c] end.
+  Lemma product_scan_nil bound acc h c o :
+    product_scan bound acc [] h c o = ([], (h, c, o)).
   Proof. trivial. Qed.
 
-  Lemma add_mul_limb'_cons bound acc x xs y h c o :
-    add_mul_limb' bound acc (x::xs) y h c o =
+  Lemma hd_firstn_S {A} d n l : @hd A d (firstn (S n) l) = hd d l.
+  Proof. case l; trivial. Qed.
+
+  Lemma tl_firstn_S {A} n l : @tl A (firstn (S n) l) = firstn n (tl l).
+  Proof. case l; cbn; rewrite ?firstn_nil; trivial. Qed.
+
+  Lemma product_scan_cons bound acc x y pps h c o :
+    product_scan bound acc ((x, y)::pps) h c o =
       let (p, h') := Z.mul_split (stream.hd bound) x y in
       let (z, c) := Z.add_with_get_carry_full (stream.hd bound) c (hd 0 acc) h in
       let (z, o) := Z.add_with_get_carry_full (stream.hd bound) o z p in
-      let (zs, C) := add_mul_limb' (stream.tl bound) (tl acc) xs y h' c o in
+      let (zs, C) := product_scan (stream.tl bound) (tl acc) pps h' c o in
       (z::zs, C).
   Proof. trivial. Qed.
 
-  Lemma add_mul_limb'_correct : forall bound acc xs y h c o,
-    let n := Nat.max (length acc) (length xs) in
-    let z := eval bound acc + h + c + o + eval bound xs * y in
-    add_mul_limb' bound acc xs y h c o = (encode bound n z, z / weight bound n).
+  Lemma product_scan_correct : forall bound acc pps h c o,
+    let n := length pps in
+    let z := eval bound (firstn n acc) + h + c + o + eval bound (map (uncurry Z.mul) pps) in
+    exists h' c' o',
+    product_scan bound acc pps h c o = (encode bound n z, (h', c', o')) /\
+    h' + c' + o' = z / weight bound n.
   Proof.
-    intros ? ? ?; revert acc; revert bound; induction xs as [|x xs];
-      cbn [length]; intros;
-      rewrite ?add_mul_limb'_cons, ?add_mul_limb'_nil.
-    { case acc; intros.
-      { cbn. f_equal; Z.div_mod_to_equations; lia. }
-      { rewrite add_correct by (cbn; lia).
-        f_equal; f_equal; rewrite ?eval_cons, ?eval_nil; lia. } }
-    repeat rewrite <-?(eval_hd_tl _ acc), ?Z.mul_split_correct, ?Z.add_with_get_carry_full_correct, ?eval_cons, ?IHxs, ?length_tl, ?Nat.max_S_r, ?encode_S.
-    set (stream.hd bound) as B.
-    assert (0 < B) by (subst B; lia).
-    set (eval (stream.tl bound) (tl acc)) as AS.
-    set (eval (stream.tl bound) xs) as XS.
-    set (Nat.max _ _) as n'.
-    f_equal.
-    { f_equal.
-      { push_Zmod; pull_Zmod; f_equal; lia. }
-      { f_equal. Z.div_mod_to_equations. nia. } }
-    setoid_rewrite tl_weight; fold B; set (weight _ _) as W.
-    assert (0 < W) by (subst W; lia).
+    intros ? ? ?; revert acc; revert bound; induction pps as [|[x y] pps];
+      cbn [length]; intros; rewrite ?product_scan_nil, ?product_scan_cons.
+    { eexists _, _, _; split; trivial. cbn. Z.div_mod_to_equations; lia. }
+    edestruct IHpps as (h'&c'&o'&Hlo&Hhi).
+    eexists _, _, _.
+    repeat rewrite <-?(eval_hd_tl _ (firstn _ acc)), ?Z.mul_split_correct, ?Z.add_with_get_carry_full_correct, ?map_cons, ?eval_cons, ?Hlo, ?Hhi, ?length_tl, ?hd_firstn_S, ?tl_firstn_S, ?Nat.max_S_r, ?encode_S; clear IHpps Hhi Hlo; cbn [uncurry].
+    split.
+    1: f_equal; f_equal.
+    all : push_Zmod; pull_Zmod.
+    rewrite ?Z.mul_0_l, ?Z.add_0_r.
+    { f_equal; Z.div_mod_to_equations. nia. }
+    { f_equal. Z.div_mod_to_equations. nia. }
+    setoid_rewrite tl_weight.
+      set (eval (stream.tl bound) (map (uncurry Z.mul) pps)) as PPS.
+      set (eval (stream.tl bound) (firstn (length pps) (tl acc))) as ACC.
+      set (stream.hd bound) as B.
+      set (weight _ _) as W.
+      assert (0 < W) by (subst W; lia).
     Z.div_mod_to_equations; nia.
   Qed.
 
-  Definition add_mul_limb bound acc xs y :=
-    let (lo, hi) := add_mul_limb' bound acc xs y 0 0 0 in lo ++ [hi].
+  Definition add_mul_limb' bound acc x ys : list Z * Z :=
+    let '(lo, (h, c, o)) := product_scan bound acc (map (pair x) ys) 0 0 0 in
+    (lo, 
+      let z := eval bound (firstn (length ys) acc) + x * eval bound ys in
+      let zc := z / weight bound (length lo) in
+      if  ((0 <=? zc) && (zc <? bound (length lo)))%bool
+      then
+        let h := fst (Z.add_with_get_carry_full (bound (length lo)) c h 0) in
+        let h := fst (Z.add_with_get_carry_full (bound (length lo)) o h 0) in
+        h
+      else h+c+o).
 
-  Lemma eval_add_mul_limb bound acc xs y :
-    eval bound (add_mul_limb bound acc xs y) = eval bound acc + eval bound xs * y.
+  Lemma eval_map_mul bound x ys : eval bound (map (Z.mul x) ys) = x * eval bound ys.
   Proof.
-    cbv [add_mul_limb].
-    rewrite ?add_mul_limb'_correct, ?eval_app, ?eval_encode, ?length_encode, ?eval_cons, ?eval_nil.
-    Z.div_mod_to_equations; nia.
+    revert bound; induction ys; intros;
+      rewrite ?map_cons, ?eval_nil, ?eval_cons, ?IHys; ring.
   Qed.
 
-  Lemma length_add_mul_limb bound acc xs y :
-    length (add_mul_limb bound acc xs y) = S (Nat.max (length acc) (length xs)).
+  Lemma add_mul_limb'_correct bound acc x ys :
+    let n := length ys in
+    let z := eval bound (firstn n acc) + x * eval bound ys in
+    add_mul_limb' bound acc x ys = (encode bound n z, z / weight bound n).
   Proof.
-    cbv [add_mul_limb]; rewrite add_mul_limb'_correct.
-    rewrite app_length, length_encode; cbn [length]; lia.
+    cbv [add_mul_limb'].
+    edestruct product_scan_correct as (h&c&o&Hlo&Hhi); rewrite Hlo, Hhi; clear Hlo.
+    rewrite ?map_map, ?map_length, ?eval_app, ?eval_encode, ?length_encode, ?eval_cons, ?eval_nil, ?Z.add_with_get_carry_full_mod in *.
+    cbn [uncurry] in *; rewrite ?eval_map_mul, ?Z.mul_0_r ,?Z.add_0_r in *; f_equal.
+    match goal with |- context [Z.leb ?a ?b] => destruct (Z.leb_spec a b) end; trivial.
+    match goal with |- context [Z.ltb ?a ?b] => destruct (Z.ltb_spec a b) end; trivial; cbn [andb].
+    push_Zmod; pull_Zmod.
+    rewrite (Z.mod_small (o+_)); Z.div_mod_to_equations; nia.
+  Qed.
+
+  Lemma length_add_mul_limb' bound acc x ys :
+    length (fst (add_mul_limb' bound acc x ys)) = length ys.
+  Proof.
+    cbv [add_mul_limb'].
+    edestruct product_scan_correct as (h&c&o&Hlo&_); rewrite Hlo; clear Hlo.
+    cbn [fst]; rewrite length_encode, map_length; cbn [length]; lia.
+  Qed.
+
+  Definition add_ bound c xs ys : list Z :=
+    let (lo, hi) := add bound c xs ys in lo ++ [hi].
+
+  Lemma eval_add_ bound c xs ys :
+    eval bound (add_ bound c xs ys) = c + eval bound xs + eval bound ys.
+  Proof.
+    cbv [add_].
+    break_match; Prod.inversion_prod; subst;
+    rewrite add_correct, eval_app, eval_cons, eval_nil by lia; cbn [fst snd]; ring_simplify.
+    rewrite eval_encode, length_encode; Z.div_mod_to_equations; nia.
+  Qed.
+
+  Definition add_mul_small bound acc x ys : list Z * Z :=
+    let '(lo, (h, c, o)) := product_scan bound acc (map (pair x) ys) 0 0 0 in
+    let hi := h + c + o in
+    if (Z.of_nat (length acc) <=? Z.of_nat (length ys))
+    then (lo, hi)
+    else
+      let (mid, hi) := add (stream.skipn (length ys) bound) (*suboptimal*)0 (skipn (length ys) acc) [hi] in
+      (lo ++ mid, hi).
+
+  Lemma add_mul_small_correct bound acc x ys :
+    let z := eval bound acc + x * eval bound ys in
+    let n := Nat.max (length acc) (length ys) in
+    add_mul_small bound acc x ys = (encode bound n z, z / weight bound n).
+  Proof.
+  Admitted.
+
+  Definition add_mul_limb bound acc x ys : list Z * Z :=
+    let (lo, hi) := add_mul_limb' bound acc x ys in
+    if (Z.of_nat (length acc) <=? Z.of_nat (length ys))
+    then (lo, hi)
+    else
+      let (mid, hi) := add (stream.skipn (length ys) bound) (*suboptimal*)0 (skipn (length ys) acc) [hi] in
+      (lo ++ mid, hi).
+
+  Lemma add_mul_limb_correct bound acc x ys :
+    let z := eval bound acc + x * eval bound ys in
+    let n := Nat.max (length acc) (length ys) in
+    add_mul_limb bound acc x ys = (encode bound n z, z / weight bound n).
+  Proof.
+    intros. cbv [add_mul_limb].
+    match goal with |- context [Z.leb ?a ?b] => destruct (Z.leb_spec a b) end; trivial.
+    { rewrite add_mul_limb'_correct; rewrite ?firstn_nil, ?eval_nil; trivial.
+      subst n; rewrite firstn_all2, Nat.max_r; trivial; lia. }
+    rewrite add_mul_limb'_correct, add_correct, eval_cons, eval_nil, Z.mul_0_r, Z.add_0_l, Z.add_0_r, skipn_length, Nat.max_l by (cbn [length]; lia); f_equal.
+    
+    (*
+    eval_app, eval_encode, length_encode, eval_add_, eval_cons, eval_nil; ring_simplify.
+    epose proof eval_app bound _ _ as H; rewrite (firstn_skipn (length ys) acc) in H.
+    destruct (Nat.leb_spec (length ys) (length acc)).
+    { rewrite firstn_length_le in H by trivial. Z.div_mod_to_equations; nia. }
+    { rewrite !skipn_all2, eval_nil in * by lia. Z.div_mod_to_equations; nia. }
+     *)
+  Admitted.
+
+  Definition add_mul_limb_ bound acc x ys : list Z :=
+    let (lo, hi) := add_mul_limb bound acc x ys in lo ++ [hi].
+
+  Lemma eval_add_mul_limb_ bound acc x ys :
+    eval bound (add_mul_limb_ bound acc x ys) = eval bound acc + x * eval bound ys.
+  Proof.
+    cbv [add_mul_limb_].
+    break_match; Prod.inversion_prod; subst;
+    rewrite add_mul_limb_correct, eval_app, eval_cons, eval_nil by lia; cbn [fst snd]; ring_simplify.
+    rewrite eval_encode, length_encode; Z.div_mod_to_equations; nia.
   Qed.
 
   Definition add_mul bound (acc xs ys : list Z) : list Z :=
-    list_rect_fbb_b_b (fun _ acc => acc) (fun y _ rec bound acc =>
-      let acc := add_mul_limb bound acc xs y in
+    list_rect_fbb_b_b (fun _ acc => acc)
+    (fun x _ rec bound acc =>
+      let acc := add_mul_limb_ bound acc x ys in
       hd 0 acc :: rec (stream.tl bound) (tl acc)
-    ) ys bound acc.
+    ) xs bound acc.
 
-  Definition add_mul_nil bound acc xs : add_mul bound acc xs [] = acc.
+  Definition add_mul_nil bound acc ys : add_mul bound acc [] ys = acc.
   Proof. trivial. Qed.
 
-  Definition add_mul_cons bound acc xs y ys :
-    add_mul bound acc xs (y::ys) =
-      let acc := add_mul_limb bound acc xs y in
+  Definition add_mul_cons bound acc x xs ys :
+    add_mul bound acc (x::xs) ys =
+      let acc := add_mul_limb_ bound acc x ys in
       hd 0 acc :: add_mul (stream.tl bound) (tl acc) xs ys.
   Proof. trivial. Qed.
 
@@ -434,63 +547,53 @@ Module Saturated. Section __.
     eval bound (add_mul bound acc xs ys) =
     eval bound acc + eval bound xs * eval bound ys.
   Proof.
-    revert xs; revert acc; induction ys; intros;
-      rewrite ?add_mul_nil, ?add_mul_cons, ?eval_nil, ?eval_cons, ?IHys.
+    revert ys; revert acc; induction xs; intros;
+      rewrite ?add_mul_nil, ?add_mul_cons, ?eval_nil, ?eval_cons, ?IHxs.
     { ring. }
-    pose proof eval_add_mul_limb bound acc xs a as HH;
+    pose proof eval_add_mul_limb_ bound acc a ys as HH.
     rewrite <-eval_hd_tl, eval_cons in HH.
-    rewrite Proper_eval in HH by ((intro i; eapply tl_const) || trivial); fold bound in HH.
-    ring_simplify; rewrite HH; clear HH.
-    ring_simplify. trivial.
+    rewrite Z.mul_add_distr_r, Z.add_assoc, <-HH; ring_simplify.
+    setoid_rewrite (tl_const _ : pointwise_relation _ eq (stream.tl bound) bound).
+    ring.
   Qed.
 
   Definition mul bound := add_mul bound [].
 
   Lemma eval_mul B (bound := fun _ => B) xs ys :
     eval bound (mul bound xs ys) = eval bound xs * eval bound ys.
-  Proof. cbv [mul]. subst bound; rewrite eval_add_mul, ?eval_nil; ring. Qed.
-
+  Proof. cbv [mul]. subst bound; rewrite eval_add_mul, ?firstn_nil, ?eval_nil. ring. Qed.
+  
   Lemma length_mul bound xs ys : ys <> [] ->  length (mul bound xs ys) = (length xs + length ys)%nat.
   Admitted.
 
-  (* See lemma saturated_pseudomersenne_reduction_converges *)
 
+  (* See lemma saturated_pseudomersenne_reduction_converges *)
   Definition reduce' bound k (c : Z) (a : list Z) (b : list Z) : list Z :=
-    let (sum, carry) := add_mul_limb' bound a b c 0 0 0 in
+    let (sum, carry) := add_mul_small bound a c b in
     let (sum', _) := add bound 0 sum [c * carry] in
     firstn k sum' ++ skipn k sum.
 
   Lemma eval_reduce' bound k c a b m
     (s : Z := weight bound (Nat.max (length a) (length b))) (Hc : s mod m = c)
-    (Hc' : 0 <= c < weight bound k)
-    (Hla : (1 <= length a)%nat) (Hla' : (k <= length a)%nat)
+    (Hc' : 0 <= c < weight bound k) (Hla : (k <= length a)%nat)
     (Ha : 0 <= eval bound a < weight bound (length a))
-    (Hb : 0 <= c * Z.abs (eval bound b) <= weight bound k - c) :
+    (Hb : c * Z.abs (eval bound b) <= weight bound k - c) :
     eval bound (reduce' bound k c a b) mod m = (eval bound a + s * eval bound b) mod m.
   Proof.
     cbv [reduce'] in *.
-    rewrite add_mul_limb'_correct, add_correct; cbn [fst snd].
-    2: { cbn [length]. rewrite length_encode; lia. }
-    rewrite firstn_encode, eval_encode by (rewrite ?length_encode; lia).
-    repeat rewrite ?eval_cons, ?eval_nil, ?Z.add_0_l, ?Z.mul_0_r, ?Z.add_0_r.
-    rewrite eval_app, ?length_encode, (eval_encode _ k), eval_skipn_encode by lia.
-    rewrite !(Z.mul_comm (eval bound b)).
-    rewrite saturated_pseudomersenne_reduction_converges; cycle 1; trivial.
-    { intros. rewrite Z.mul_comm. symmetry; apply Z.div_exact; auto using mod_weight_lt with zarith. }
+    repeat (rewrite ?add_mul_small_correct, ?add_correct, ?firstn_encode, ?eval_app,
+      ?eval_encode, ?length_encode, ?eval_skipn_encode, ?eval_cons, ?eval_nil,
+      ?Z.add_0_l, ?Z.mul_0_r, ?Z.add_0_r by lia; cbn [fst snd length]); fold s.
+    rewrite saturated_pseudomersenne_reduction_converges, <-Z.div_mod''; try split; try lia.
+    { rewrite (Zmod_eq _ s) by lia. push_Zmod. rewrite ?Hc. pull_Zmod. f_equal. ring. }
+    { intros. rewrite Z.mul_comm. symmetry; apply Z.div_exact; try apply mod_weight_le; lia. }
     { apply weight_mono_le; lia. }
-    { enough (weight bound (length a) <= weight bound (Nat.max (length a) (length b))) by lia.
-      apply weight_mono_le; lia. }
-    rewrite (Z.add_comm (_ mod _) (_ * (_ / _))), <-Z.div_mod by lia.
-    rewrite (Z.add_comm (_ mod _) (_ * (_ / _))).
-    set (eval _ a + c * eval _ b) as A; push_Zmod; rewrite <-Hc; pull_Zmod; subst A.
-    rewrite <-Z.div_mod by lia.
-    push_Zmod; rewrite Hc; pull_Zmod; trivial.
+    { enough (weight bound (length a) <= s) by lia. apply weight_mono_le. lia. }
   Qed.
 
   Definition reduce bound k (c : Z) (a : list Z) (b : list Z) : list Z :=
     (* NOTE: it would be nice if we had an "if" that threw error messages during specialization *)
-    if ((Z.of_nat 1 <=? Z.of_nat (length a))
-    && (Z.of_nat k <=? Z.of_nat (length a))
+    if ((Z.of_nat k <=? Z.of_nat (length a))
     && (Z.of_nat (length b) <=? Z.of_nat (length a))
     && (0 <=? c)
     && (c <? weight bound k)
@@ -508,8 +611,7 @@ Module Saturated. Section __.
     cbv [reduce]; break_match.
     { repeat match goal with H : _ |- _ => apply Bool.andb_prop in H; case H as [H ?] end.
       Require Import Crypto.Util.Decidable.Bool2Prop.
-      rewrite eval_reduce'; rewrite ?Nat.max_l; repeat split; auto; try apply Nat2Z.inj_le; auto.
-      apply Z.mul_nonneg_nonneg; auto; lia. }
+      rewrite eval_reduce'; rewrite ?Nat.max_l; repeat split; auto; try apply Nat2Z.inj_le; auto. }
     { rewrite eval_app; subst s. f_equiv. f_equiv. f_equiv. f_equiv. trivial. }
   Qed.
 
@@ -524,7 +626,7 @@ Module Saturated. Section __.
 
   Definition mulmod bound n c a b :=
     let p := mul bound a b in
-    let (lo, hi) := add_mul_limb' bound (firstn n p) (skipn n p) c 0 0 0 in
+    let (lo, hi) := add_mul_limb bound (firstn n p) c (skipn n p) in
     if (* true by range analysis *) c*Z.abs hi <=? weight bound 1 - c
     then reduce' bound 1 c lo [hi]
     else lo ++ [hi].
@@ -543,15 +645,13 @@ Module Saturated. Section __.
     replace (length (firstn n (mul bound a b))) with n in *
       by (rewrite firstn_length, length_mul; trivial; lia).
     apply (f_equal (fun x => x mod m)) in Hsplit.
-    revert Hsplit; push_Zmod; rewrite ?Hc, ?(Z.mul_comm c); pull_Zmod; intro.
+    revert Hsplit; push_Zmod; rewrite ?Hc; pull_Zmod; intro.
     change (stream.skipn n bound) with bound in *.
-    epose proof add_mul_limb'_correct bound (firstn n (mul bound a b)) (skipn n (mul bound a b)) c 0 0 0 as Hadd;
-    cbv zeta in Hadd; rewrite ?Z.add_0_r in Hadd.
-    replace (Nat.max (length (firstn n (mul bound a b))) (length (skipn n (mul bound a b))))
-      with n in * by (rewrite firstn_length, skipn_length, !length_mul; trivial; lia).
+    rewrite add_mul_limb_correct.
     set (t := eval bound (firstn n (mul bound a b)) +
-    eval bound (skipn n (mul bound a b)) * c) in *.
-    rewrite Hadd.
+      c * eval bound (skipn n (mul bound a b))) in *.
+    progress replace (Nat.max (length (firstn n (mul bound a b))) (length (skipn n (mul bound a b))))
+      with n in * by (rewrite firstn_length, skipn_length, !length_mul; trivial; lia).
     break_match; [rewrite eval_reduce', eval_encode, Z.add_comm | rewrite eval_app];
     repeat rewrite ?length_encode, ?firstn_length, ?skipn_length, ?length_mul, ?eval_cons,
                    ?eval_encode, ?eval_nil, ?Z.mul_0_r, ?Z.add_0_r, ?weight_1 in *;
@@ -620,8 +720,8 @@ Module Saturated. Section __.
     else encode bound (length a) (eval bound a - eval bound b).
   Proof.
     cbv [condsub]; intros.
-    rewrite add_correct, select_correct, eval_map_opp; rewrite ?map_length, ?length_encode; try lia.
-    break_match; rewrite ?eval_encode, ?Z.add_0_l, ?Z.add_opp_r in *; trivial; Z.div_mod_to_equations; nia.
+    rewrite add_correct, select_correct, eval_map_opp; rewrite ?map_length, ?length_encode, ?Nat.max_l ; try lia.
+    break_match; rewrite ?eval_encode, ?Z.add_0_l, ?Z.add_opp_r in *; trivial; try (Z.div_mod_to_equations; nia).
   Qed.
 
   Definition canon bound m (x : list Z) :=
@@ -652,6 +752,7 @@ Module Saturated. Section __.
     { f_equal; rewrite ?Z.mod_small; Z.div_mod_to_equations; nia. }
     { rewrite Z.mod_small; try split; try (Z.div_mod_to_equations; lia). }
   Qed.
+
 
   Definition divmodw bound (xs : list Z) (s : Z) : Z * list Z :=
     list_rect_fbb_b_b (fun _ _ => (0, [])) (fun x xs  rec bound s =>
@@ -699,10 +800,11 @@ Module Saturated. Section __.
       rewrite Z.mod_add', Z.mod_mod by lia; trivial. }
   Qed.
 
+
   Local Notation "!" := ltac:(vm_decide) (only parsing).
   Goal forall a0 a1 a2 a3 b : Z, False. intros.
   Proof.
-    pose proof (eval_reduce' (fun _ => 2^64)%positive 1 38 [a0;a1;a2;a3] [b] (2^256-38) ! ! ! !).
+    pose proof (eval_reduce' (fun _ => 2^64)%positive 1 38 [a0;a1;a2;a3] [b] (2^256-38) ! ! !).
     cbn [length] in *.
     change ((weight (fun _ : nat => (2 ^ 64)%positive) 4%nat)) with (2^256)%positive in *.
     change ((weight (fun _ : nat => (2 ^ 64)%positive) 1%nat)) with (2^64)%positive in *.

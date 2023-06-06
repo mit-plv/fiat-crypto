@@ -83,24 +83,50 @@ Module debugging_sat_solinas_25519.
     Import SolinasReduction.Saturated.
 
     Definition bound (_ : Datatypes.nat) := Z.to_pos (2^64).
+
+    (*
     Definition mulmod (c : BinNums.Z := 38) (a b : list BinNums.Z) :=
       let p := mul bound a b in
-      let (lo, hi) := add_mul_limb' bound (firstn n p) (skipn n p) c 0 0 0 in
+      let (lo, hi) := add_mul_limb bound (firstn n p) c (skipn n p) in
       if c * Z.abs hi <=? 2^machine_wordsize - c
       then reduce' bound 1 c lo [hi]
       else lo ++ [hi].
+     *)
+
+    (*
+    Ltac2 Set reify_debug_level := 1.
+    Check ltac:(
+              let e := constr:(addmod bound) in
+              let e := eval cbv delta [addmod reduce' add_mul_limb add_mul_limb' stream.map weight stream.prefixes] in e in
+              let r := Reify e in
+              exact r).
+    *)
+
+    Fail Check ltac:(
+      let e := constr:(weight (fun _ => 10)%positive 2) in
+      let e := eval cbv [stream.map weight] in e in
+      (* let e := eval cbv delta [stream.prefixes] in e in *)
+      idtac e;
+      let r := Reify e in exact r).
+    Check ltac:(
+      let e := constr:(weight (fun _ => 10)%positive 2) in
+      let e := eval cbv [stream.map weight] in e in
+      let e := eval cbv delta [stream.prefixes] in e in
+      idtac e;
+      let r := Reify e in exact r).
 
     Goal True.
     pose (
          (Pipeline.BoundsPipelineWithDebug
             false (* subst01 *)
             possible_values
-            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
-                  let r := Reify (fun xs ys => addmod bound 38 xs (map Z.opp ys)) in
-                  exact r)
-                   (Some boundsn, (Some boundsn, tt))
-                   (Some boundsn)
-                   )) as k.
+            ltac:(
+              let e := constr:((fun xs ys => addmod bound 38 xs (map Z.opp ys))) in
+              let r := Reify e in
+              exact r)
+              (Some boundsn, (Some boundsn, tt))
+              (Some boundsn)
+         )) as k.
     vm_compute in k.
     Abort.
 
@@ -113,8 +139,9 @@ Module debugging_sat_solinas_25519.
             false (* inline *)
             possible_values
             machine_wordsize
-            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
-                  let r := Reify (addmod bound 38) in
+            ltac:(
+                  let e := constr:(addmod bound 38) in
+                  let r := Reify e in
                   exact r)
                    (fun _ _ => []) (* comment *)
                    (Some boundsn, (Some boundsn, tt))
@@ -131,27 +158,15 @@ Module debugging_sat_solinas_25519.
             false (* inline *)
             possible_values
             machine_wordsize
-            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
-                  let r := Reify (submod bound 38) in
+            ltac:(
+                  let e := constr:(submod bound 38) in
+                  let r := Reify e in
                   exact r)
                    (fun _ _ => []) (* comment *)
                    (Some boundsn, (Some boundsn, tt))
                    (Some boundsn)
                    (None, (None, tt))
                    (None)).
-
-    Fail Check ltac:(
-      let e := constr:(weight (fun _ => 10)%positive 2) in
-      let e := eval cbv [stream.map weight] in e in
-      (* let e := eval cbv delta [stream.prefixes] in e in *)
-      idtac e;
-      let r := Reify e in exact r).
-    Check ltac:(
-      let e := constr:(weight (fun _ => 10)%positive 2) in
-      let e := eval cbv [stream.map weight] in e in
-      let e := eval cbv delta [stream.prefixes] in e in
-      idtac e;
-      let r := Reify e in exact r).
 
     Time Redirect "log"
          Compute
@@ -162,11 +177,11 @@ Module debugging_sat_solinas_25519.
             false (* inline *)
             possible_values
             machine_wordsize
-            ltac:(let e := constr:(fun xs y =>
-                    let (lo, hi) := add_mul_limb' bound [] xs y 0 0 0 in
+            ltac:(let e := constr:(fun ys x =>
+                    let (lo, hi) := add_mul_small bound [] x ys in
                     reduce bound 1%nat 38 lo [hi]
                   ) in
-                  let e := eval cbv delta [n reduce stream.map weight stream.prefixes] in e in
+                  let e := eval cbv delta [reduce reduce' add_mul_limb add_mul_limb' stream.map weight stream.prefixes] in e in
                   let r := Reify e in
                   exact r)
                    (fun _ _ => []) (* comment *)
@@ -174,8 +189,9 @@ Module debugging_sat_solinas_25519.
                    (Some boundsn)
                    (None, (None, tt))
                    (None)).
+         (* with add_mul_limb Check eq_refl true : (0x97ffffffffffffda <=? 0xffffffffffffffda) = true. *)
 
-    Goal (Z.to_nat (weight bound 4/(2^255-19))) = 2%nat. trivial. all: fail.
+    Goal (Z.to_nat (weight bound 4/(2^255-19))) = 2%nat. trivial. all: fail. Abort.
 
     Time Redirect "log"
          Compute
@@ -253,19 +269,19 @@ Module debugging_sat_solinas_25519.
     Time Redirect "log"
          Compute
          Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
-         (
-         Pipeline.BoundsPipelineToString
-            "fiat_" "fe4_mul"
+         (Pipeline.BoundsPipelineToString
+            "fiat_" "fe4_mul_no_reduce"
             false (* subst01 *)
             false (* inline *)
             possible_values
             machine_wordsize
-            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
-            let r := Reify (mulmod) in
+            ltac:(let e := constr:(mul bound) in
+                  let e := eval cbv delta [mulmod mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let r := Reify e in
                   exact r)
                    (fun _ _ => []) (* comment *)
                    (Some boundsn, (Some boundsn, tt))
-                   (Some boundsn)
+                   (Some (boundsn++boundsn))
                    (None, (None, tt))
                    (None)
           : Pipeline.ErrorT _).
@@ -273,18 +289,21 @@ Module debugging_sat_solinas_25519.
     Time Redirect "log"
          Compute
          Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
-         (Pipeline.BoundsPipelineToString
-            "fiat_" "TEST_mul"
+         (
+         Pipeline.BoundsPipelineToString
+            "fiat_" "fe4_mul"
             false (* subst01 *)
             false (* inline *)
             possible_values
             machine_wordsize
-            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
-                  let r := Reify (mul bound) in
+            ltac:(
+                  let e := constr:(mulmod bound 1 38) in
+                  let e := eval cbv delta [mulmod mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let r := Reify e in
                   exact r)
                    (fun _ _ => []) (* comment *)
                    (Some boundsn, (Some boundsn, tt))
-                   (Some (boundsn++boundsn))
+                   (Some boundsn)
                    (None, (None, tt))
                    (None)
           : Pipeline.ErrorT _).
