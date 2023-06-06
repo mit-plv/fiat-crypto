@@ -141,12 +141,21 @@ Module DettmanMultiplication.
       Associational.eval x mod (s - Associational.eval c))%Z.
     Proof. cbv [carry_reduce reduce']. autorewrite with push_eval; auto with arith. Qed.
     Hint Rewrite eval_carry_reduce : push_eval.
-    
+
+    (* rw stands for "register_width".
+       The idea here is that, if x has value 0 at weight (i + limbs + 1), then
+       carry_reduce_rw i x = carry_reduce (i + 1) (carry_reduce i x).
+
+       The benefit of using carry_reduce_rw, then, instead of a couple of carry_reduces,
+       is that (in C, or something similar), the LHS of the equation above takes less work
+       to calculate than the RHS.  This is because carries by 2^register_width are very easy.
+     *)
     Definition carry_reduce_rw i x :=
       let x := carry' (weight (i + limbs)) (weight (i + limbs) * 2^register_width) x in
       let x := reduce' (weight (i + limbs)) (weight i) x in
       let x := carry_from_position i x in
-      reduce' (weight (i + limbs) * 2^register_width) (weight (i + 1)) x.
+      let x := reduce' (weight (i + limbs) * 2^register_width) (weight (i + 1)) x in
+      carry_from_position (i + 1) x.
 
     Local Open Scope Z_scope.
 
@@ -232,26 +241,59 @@ Module DettmanMultiplication.
 
     Definition seq_from_to a b := seq a (Z.to_nat (b - a + 1)).
 
+    (* The main idea here is to have something like this:
+           Definition overly_simple_reduce_carry_borrow x :=
+                      carry_reduce_chain (seq_from_to 0 (l - 1)) x.
+       Below, we have something like this, with a few extra things added in.
+     *)
     Definition reduce_carry_borrow x :=
       let l := limbs in
       let x := dedup_weights x in
 
+      (* In the 'overly_simple_reduce_carry_borrow', the following code block
+         paragraph would belong in the position marked with an 'A' down below.
+         It turns out that doing that might make the output bounds too loose.
+
+         In particular, we need last_reduction to be small enough so that the final
+         carry chain (right below the 'A') does not overflow position (l - 1).
+         We solve this issue by putting the code block here (instad of at 'A').
+
+         Note that, other than this constraint, we want to choose the
+         last_reduction parameter to be as large as possible, since when it gets
+         smaller, the last carry chain gets longer (and everything else takes
+         the same amount of time).
+       *)
       let x := carry_reduce_chain (seq_from_to (last_reduction + 1) (l - 3)) x in
-      
       let x := carry_reduce_rw (l - 2) x in
 
-      let x := carry_from_position (l - 1) x in
+      (* This next code block is a reduction from position l to position 0---
+         the main idea is to do something like 'let x := carry_reduce 0 x'.
+
+         In fact, we move everything from position l to weight s, as well
+         as taking the top few bits off position (l - 1) to put them in weight s,
+         before doing the reduction from weight s to position 0.
+
+         This gives us the opportunity to reduce from position (l - 1), as
+         well as from position l, while only having to do one reduction.
+       *)
       let x := carry' (weight (l - 1)) s x in
       let x := carry_from_position l x in
       let x := borrow' (weight l) s x in
       let x := reduce' s (weight 0) x in
       let x := carry_from_position 0 x in
-      
+
+      (* This code block is what remains (after we've finished adding in all the
+         extra stuff) of the 'overly_simple_reduce_carry_borrow' referred to above.
+
+         The only clever part is that the last two carry_reduces have been replaced
+         with a carry_reduce_rw.
+       *)
       let x := carry_reduce_chain (seq_from_to 1 (last_reduction - 1)) x in
-      
       let x := carry_reduce_rw last_reduction x in
 
-      let x := carry_chain (seq_from_to (last_reduction + 1) (l - 2)) x in
+      (* A *)
+
+      let x := carry_chain (seq_from_to (last_reduction + 2) (l - 2)) x in
 
       Positional.from_associational weight l x.
 
