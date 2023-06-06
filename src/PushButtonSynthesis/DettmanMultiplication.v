@@ -58,8 +58,6 @@ Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBU
 (* needed for making [autorewrite] not take a very long time *)
 Local Opaque reified_mul_gen.
 Local Opaque reified_square_gen.
-(*Local Opaque reified_mul32_gen.
-Local Opaque reified_square32_gen.*)
 (* needed for making [autorewrite] with [Set Keyed Unification] fast *)
 Local Opaque expr.Interp.
 
