@@ -8,6 +8,8 @@ Require Rewriter.Util.LetIn.
 Notation Let_In := Rewriter.Util.LetIn.Let_In (only parsing).
 Notation Let_In_pf := Rewriter.Util.LetIn.Let_In_pf (only parsing).
 
+Check Let_In.
+
 Notation "'dlet_nd' x .. y := v 'in' f" := (Let_In (P:=fun _ => _) v (fun x => .. (fun y => f) .. )) (only parsing).
 Notation "'dlet' x .. y := v 'in' f" := (Let_In v (fun x => .. (fun y => f) .. )).
 Notation "'pflet' x , pf := y 'in' f" := (Let_In_pf y (fun x pf => f)).

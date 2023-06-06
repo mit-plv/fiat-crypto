@@ -1240,11 +1240,11 @@ Module Positional.
       - apply Z.leb_gt in E. lia.
     Qed.
 
-    Definition nthZ {X} (i : Z) :=
+    Definition nthZ {X} (i : Z) (l : list X) (default : X) : X :=
       if (Z.of_nat (Z.to_nat i)) =? i then
-        (@nth_reifiable X (Z.to_nat i))
+        nth_reifiable (Z.to_nat i) l default
       else
-        fun l default => default.
+        default.
 
     Search seq.
     Definition seqZ a b :=
@@ -1256,24 +1256,28 @@ Module Positional.
                     (seqZ 0 (i - 1)))
         (seqZ 1 (Z.of_nat n - 1)).
 
-    Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
-      let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 1)) in
-      let f : list Z := (rev (fold_right (fun i f' => ((nthZ 0 f' 0) + (nthZ i products 0)) :: f') [] (rev (seqZ 0 (2 * Z.of_nat n - 3))))) in
+    Locate "dlet".
+
+    Definition second_summation' (n : nat) (products f : list Z) := 
       let high_part : Z*Z := (weight (n - 1) * weight (n - 1), (nthZ (Z.of_nat (n - 1)) products 0)) in
       let low_part : list (Z*Z) := map (fun i => (weight (Z.to_nat i), (nthZ i f 0) - (nthZ (i - Z.of_nat n) f 0))) (seqZ 0 (2*Z.of_nat n - 3)) in
       high_part :: low_part.
+
+    Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
+      dlet products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 1)) in
+      dlet f : list Z := (rev (fold_right (fun i f' => Let_In f' (((nthZ 0 f' 0) + (nthZ i products 0)) :: f')) [] (rev (seqZ 0 (2 * Z.of_nat n - 3)))))
 
     Definition adk_mul (n : nat) (x y : list Z) : list (Z*Z) :=
       first_summation n x y ++ second_summation n x y.
   End adk_mul.
   End Positional.
 
-  Definition x := [3; 4; 123; 93].
+  (*Definition x := [3; 4; 123; 93].
   Definition y := [543; 123; 64; 1].
   Definition weight := (fun i => 2^Z.of_nat i).
   Definition n := 4%nat.
   Compute (Associational.eval (Associational.dedup_weights (adk_mul weight n x y))).
-  Compute (Associational.eval (Associational.dedup_weights (Associational.mul (Positional.to_associational weight n x) (Positional.to_associational weight n y)))).
+  Compute (Associational.eval (Associational.dedup_weights (Associational.mul (Positional.to_associational weight n x) (Positional.to_associational weight n y)))).*)
 
 (* Hint Rewrite disappears after the end of a section *)
 #[global]
