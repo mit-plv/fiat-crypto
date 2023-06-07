@@ -1263,9 +1263,14 @@ Module Positional.
       let low_part : list (Z*Z) := map (fun i => (weight (Z.to_nat i), (nthZ i f 0) - (nthZ (i - Z.of_nat n) f 0))) (seqZ 0 (2*Z.of_nat n - 3)) in
       high_part :: low_part.
 
+    Print fold_right.
+
     Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
       dlet products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 1)) in
-      dlet f : list Z := (rev (fold_right (fun i f' => Let_In f' (((nthZ 0 f' 0) + (nthZ i products 0)) :: f')) [] (rev (seqZ 0 (2 * Z.of_nat n - 3)))))
+            (fold_right
+              (fun i g => fun f' => Let_In (P:=fun _ => _) (((nthZ 0 f' 0) + (nthZ i products 0)) :: f') g) 
+              (fun f => second_summation' n products (rev f))
+              (seqZ 0 (2*Z.of_nat n - 3))) [].
 
     Definition adk_mul (n : nat) (x y : list Z) : list (Z*Z) :=
       first_summation n x y ++ second_summation n x y.
