@@ -1282,14 +1282,31 @@ Module Positional.
 
     Print fold_right.
     Print list_rect.
-    Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
+    Check Let_In.
+
+    Definition second_summation (n : nat) (x y : list Z) (*: list (Z*Z)*) :=
+      dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
+      let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 2)) ++ [high_product] in
+      dlet f_backwards : list Z := (fold_right (fun i f' => dlet prev := (nthZ 0 f' 0) in prev + (nthZ i products 0) :: f') [] (rev (seqZ 0 (2*Z.of_nat n - 3)))) in
+      let f := rev f_backwards in
+      let high_part : Z*Z := (weight (n - 1) * weight (n - 1), (nthZ (Z.of_nat (n - 1)) products 0)) in
+      let low_part : list (Z*Z) := map (fun i => (weight (Z.to_nat i), (nthZ i f 0) - (nthZ (i - Z.of_nat n) f 0))) (seqZ 0 (2*Z.of_nat n - 3)) in
+      low_part ++ [high_part].
+    
+    (*Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
       dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
       let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 2)) ++ [high_product] in
       (list_rect
-         (fun _ => list Z -> list (Z*Z))
+         (fun x => list Z -> list (Z*Z))
          (fun f => second_summation' n products (rev f))
-         (fun i _ g => fun f' => Let_In (P:=fun _ => _) (((nthZ 0 f' 0) + (nthZ i products 0)) :: f') g) 
+         (fun i is g => fun f' => Let_In (P:=fun a => list (Z*Z)) (((nthZ 0 f' 0) + (nthZ i products 0)) :: f') g) 
          (seqZ 0 (2*Z.of_nat n - 3))) [].
+    Check Let_In.
+    Print fold_right.
+    Definition fs (n : nat) (x y : list Z) : list Z :=
+      dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
+          let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 2)) ++ [high_product] in
+          dlet f : list Z := (fold_right (fun i f' => dlet prev := (nthZ 0 f' 0) in prev + (nthZ i products 0) :: f') [] (seqZ 0 (2*Z.of_nat n - 3))) in*)
     
     (*Check (list_rect (fun _ => list Z -> list (Z*Z)) ).
 
@@ -1311,7 +1328,7 @@ Module Positional.
   Definition weight := (fun i => 2^Z.of_nat i).
   Definition n := 4%nat.
   Compute (Associational.dedup_weights (adk_mul weight n x y)).
-  Compute (Associational.dedup_weights (Associational.mul (Positional.to_associational weight n x) (Positional.to_associational weight n y))).*)
+  Compute (Associational.dedup_weights (Associational.mul (Positional.to_associational weight n x) (Positional.to_associational weight n y))). *)
 
 (* Hint Rewrite disappears after the end of a section *)
 #[global]
