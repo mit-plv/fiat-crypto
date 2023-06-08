@@ -1261,12 +1261,13 @@ Module Positional.
     Definition second_summation' (n : nat) (products f : list Z) := 
       let high_part : Z*Z := (weight (n - 1) * weight (n - 1), (nthZ (Z.of_nat (n - 1)) products 0)) in
       let low_part : list (Z*Z) := map (fun i => (weight (Z.to_nat i), (nthZ i f 0) - (nthZ (i - Z.of_nat n) f 0))) (seqZ 0 (2*Z.of_nat n - 3)) in
-      high_part :: low_part.
+      low_part ++ [high_part].
 
     Print fold_right.
 
     Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
-      dlet products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 1)) in
+      dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
+      let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 2)) ++ [high_product] in
             (fold_right
               (fun i g => fun f' => Let_In (P:=fun _ => _) (((nthZ 0 f' 0) + (nthZ i products 0)) :: f') g) 
               (fun f => second_summation' n products (rev f))
@@ -1281,8 +1282,8 @@ Module Positional.
   Definition y := [543; 123; 64; 1].
   Definition weight := (fun i => 2^Z.of_nat i).
   Definition n := 4%nat.
-  Compute (Associational.eval (Associational.dedup_weights (adk_mul weight n x y))).
-  Compute (Associational.eval (Associational.dedup_weights (Associational.mul (Positional.to_associational weight n x) (Positional.to_associational weight n y)))).*)
+  Compute (Associational.dedup_weights (adk_mul weight n x y)).
+  Compute (Associational.dedup_weights (Associational.mul (Positional.to_associational weight n x) (Positional.to_associational weight n y))).*)
 
 (* Hint Rewrite disappears after the end of a section *)
 #[global]
