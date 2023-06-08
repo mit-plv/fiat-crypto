@@ -1264,6 +1264,34 @@ Module Positional.
       low_part ++ [high_part].
 
     Print fold_right.
+    Print list_rect.
+
+    Fixpoint sums (x : list Z) (a : Z) : list Z :=
+      match x with
+      | [] => [a]
+      | c :: x' => dlet y := a + c in
+          y :: sums x' y
+      end.
+
+    Eval cbn [sums] in (sums [1; 2; 3] 7).
+    Print list_rect.
+    (*Goal (sums = list_rect (fun l => Z -> list Z) (fun a => [a]) (fun c x' rec a => dlet y := a + c in y :: rec y)).*)
+    Definition sums' := list_rect (fun l => Z -> list Z) (fun a => [a]) (fun c x' rec a => dlet y := a + c in y :: rec y).
+    Lemma sums_nil a : sums' [] a = [a].
+    Proof. reflexivity. Qed.
+
+    Print fold_right.
+    Print list_rect.
+    Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
+      dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
+      let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 2)) ++ [high_product] in
+      (list_rect
+         (fun _ => list Z -> list (Z*Z))
+         (fun f => second_summation' n products (rev f))
+         (fun i _ g => fun f' => Let_In (P:=fun _ => _) (((nthZ 0 f' 0) + (nthZ i products 0)) :: f') g) 
+         (seqZ 0 (2*Z.of_nat n - 3))) [].
+    
+    (*Check (list_rect (fun _ => list Z -> list (Z*Z)) ).
 
     Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
       dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
@@ -1271,7 +1299,7 @@ Module Positional.
             (fold_right
               (fun i g => fun f' => Let_In (P:=fun _ => _) (((nthZ 0 f' 0) + (nthZ i products 0)) :: f') g) 
               (fun f => second_summation' n products (rev f))
-              (seqZ 0 (2*Z.of_nat n - 3))) [].
+              (seqZ 0 (2*Z.of_nat n - 3))) [].*)
 
     Definition adk_mul (n : nat) (x y : list Z) : list (Z*Z) :=
       first_summation n x y ++ second_summation n x y.
