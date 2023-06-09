@@ -1322,8 +1322,47 @@ Module Positional.
     Definition adk_mul' (n : nat) (x y : list Z) : list (Z*Z) :=
       first_summation n x y ++ second_summation n x y.
 
-    (*Definition adk_mul (n : nat) (x_bounds y_bounds : list zrange) (x y : list Z) : list (Z*Z) :=
-      map cast_to (adk_mul' n x y) appropriate_bounds_in_terms_of_x_bounds_and_y_bounds.*)
+    Search zrange.
+
+    Locate "&&". Print fold_right. Print is_bounded_by_bool. Print fold_right.
+    
+    Definition is_bounded_by (l : list Z) (bounds : list zrange) : bool :=
+      fold_right andb true
+        (map (fun x_bound => let '(x, bound) := x_bound in is_bounded_by_bool x bound)
+           (combine l bounds)).
+
+    Definition is_lower_bounded_by (bounds : list zrange) (xs : list Z) : bool :=
+      fold_right andb true
+        (map (fun bound_x => let '(bound, x) := bound_x in x <=? lower bound)
+           (combine bounds xs)).
+
+    (* if everything is nonnegative, then the output is nondecreasing in the inputs *)
+    Definition output_bounds (n : nat) (x_bounds y_bounds : list zrange) : list zrange :=
+      let lower_bounds := Positional.from_associational n
+                            (adk_mul' n (map lower x_bounds) (map lower y_bounds)) in
+      let upper_bounds := Positional.from_associational n
+                            (adk_mul' n (map upper x_bounds) (map upper y_bounds)) in
+      map (fun lower_upper => Build_zrange (fst lower_upper) (snd lower_upper))
+        (combine lower_bounds upper_bounds).
+
+    Compute (true && true)%bool.
+    
+    Definition adk_mul'' (n : nat) (x_bounds y_bounds : list zrange) (x y : list Z) : list Z :=
+      if (is_lower_bounded_by x_bounds (repeat 0 n) &&
+           is_lower_bounded_by y_bounds (repeat 0 n) &&
+           is_bounded_by x x_bounds &&
+           is_bounded_by y y_bounds)%bool
+      then
+        map (fun r_bounds => let '(r, bounds) := r_bounds in
+                             (r - lower bounds) mod (upper bounds - lower bounds) + lower bounds)
+          (combine (Positional.from_associational n (adk_mul' n x y)) (output_bounds n x_bounds y_bounds))
+      else
+        Positional.from_associational n
+          (Associational.mul (Positional.to_associational n x)
+             (Positional.to_associational n y)).
+
+    Definition adk_mul (n : nat) (x y : list Z) : list Z :=
+      adk_mul'' n (repeat (Build_zrange 0 (2^29 - 1)) 10) (repeat (Build_zrange 0 (2^29 - 1)) 10) x y.
   End adk_mul.
   End Positional.
 
@@ -1331,8 +1370,10 @@ Module Positional.
   Definition y := [543; 123; 64; 1].
   Definition weight := (fun i => 2^Z.of_nat i).
   Definition n := 4%nat.
-  Compute (Associational.dedup_weights (adk_mul weight n x y)).
-  Compute (Associational.dedup_weights (Associational.mul (Positional.to_associational weight n x) (Positional.to_associational weight n y))). *)
+  Compute (adk_mul weight n x y).
+  Compute (Positional.from_associational weight n
+          (Associational.mul (Positional.to_associational weight n x)
+             (Positional.to_associational weight n y))).*)
 
 (* Hint Rewrite disappears after the end of a section *)
 #[global]

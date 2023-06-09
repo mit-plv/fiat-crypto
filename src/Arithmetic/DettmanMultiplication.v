@@ -340,7 +340,7 @@ Module DettmanMultiplication.
 
     Definition mulmod32 a b :=
       let r0 := Positional.adk_mul weight limbs a b in
-      reduce_carry_borrow32 r0.
+      reduce_carry_borrow32 (Positional.to_associational weight limbs r0).
 
     Definition squaremod32 a :=
       let a_assoc := Positional.to_associational weight limbs a in
