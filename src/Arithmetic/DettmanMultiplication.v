@@ -16,17 +16,17 @@ Module DettmanMultiplication.
         (s : Z)
         (c' : Z)
         (register_width : nat)
-        (limbs : nat)
-        (last_reduction : nat) (* should be between 1 and limbs - 3, inclusive.
+        (n : nat)
+        (last_reduction : nat) (* should be between 1 and n - 3, inclusive.
                                   This is the position that the final modular reduction lands in.
                                   Larger values correspond to a faster algorithm but looser bounds on the output.
                                 *)
         (weight: nat -> Z)
         (p_nz' : s - c' <> 0)
-        (limbs_gteq_4 : (4 <= limbs)%nat) (* Technically we only need 2 <= limbs to get the proof to go through, but it doesn't make much sense to try to do this with less than four limbs.
+        (n_gteq_4 : (4 <= n)%nat) (* Technically we only need 2 <= n to get the proof to go through, but it doesn't make much sense to try to do this with less than four limbs.
                                            Note that having 4 limbs corresponds to zero iterations of the "loop" function defined below. *)
-        (s_small : forall i: nat, (weight (i + limbs)%nat / weight i) mod s = 0)
-        (s_big : weight (limbs - 1)%nat <= s)
+        (s_small : forall i: nat, (weight (i + n)%nat / weight i) mod s = 0)
+        (s_big : weight (n - 1)%nat <= s)
         (weight_lt_width : forall i: nat, (weight i * 2^register_width) mod weight (i + 1)%nat = 0)
         (wprops : @weight_properties weight)
         
@@ -35,11 +35,17 @@ Module DettmanMultiplication.
         (weight_multiples := weight_multiples wprops)
         (weight_divides := weight_divides wprops).
 
-    Definition c := Positional.to_associational weight limbs
-                      (Positional.simple_encode weight limbs c').        
+    (* Proofs will go through regardless of which encoding we choose for c.
+       We choose this encoding (with the weights given by the weight function)
+       so that our reductions land in the weights given by the weight function.
+       (Note that this won't necessarily work out nicely if we have a fractional
+       limbwidth.)
+     *)
+    Definition c := Positional.to_associational weight n
+                      (Positional.simple_encode weight n c').
       
     Lemma s_positive : s > 0.
-    Proof. remember (weight_positive (limbs - 1)). lia. Qed.
+    Proof. remember (weight_positive (n - 1)). lia. Qed.
 
     Lemma s_nz : s <> 0.
     Proof. remember s_positive. lia. Qed.
@@ -60,12 +66,12 @@ Module DettmanMultiplication.
     Qed.
 
     Lemma s_small' (i j : nat) :
-      (j = i + limbs)%nat ->
+      (j = i + n)%nat ->
       weight j / weight i mod s = 0.
     Proof. intros H. subst. apply s_small. Qed.
 
-    Lemma s_big' : s / weight (limbs - 1) <> 0.
-    Proof. remember (weight_positive (limbs - 1)). apply div_nz; lia. Qed.
+    Lemma s_big' : s / weight (n - 1) <> 0.
+    Proof. remember (weight_positive (n - 1)). apply div_nz; lia. Qed.
 
     Lemma weight_increasing : forall i j : nat, (i <= j)%nat -> weight i <= weight j.
     Proof.
@@ -132,8 +138,8 @@ Module DettmanMultiplication.
     Hint Rewrite eval_carry_from_position : push_eval.
 
     Definition carry_reduce i x :=
-      let x := carry_from_position (i + limbs) x in
-      let x := reduce' (weight (i + limbs)) (weight i) x in
+      let x := carry_from_position (i + n) x in
+      let x := reduce' (weight (i + n)) (weight i) x in
       carry_from_position i x.
 
     Lemma eval_carry_reduce i x :
@@ -143,7 +149,7 @@ Module DettmanMultiplication.
     Hint Rewrite eval_carry_reduce : push_eval.
 
     (* rw stands for "register_width".
-       The idea here is that, if x has value 0 at weight (i + limbs + 1), then
+       The idea here is that, if x has value 0 at weight (i + n + 1), then
        carry_reduce_rw i x = carry_reduce (i + 1) (carry_reduce i x).
 
        The benefit of using carry_reduce_rw, then, instead of a couple of carry_reduces,
@@ -151,30 +157,30 @@ Module DettmanMultiplication.
        to calculate than the RHS.  This is because carries by 2^register_width are very easy.
      *)
     Definition carry_reduce_rw i x :=
-      let x := carry' (weight (i + limbs)) (weight (i + limbs) * 2^register_width) x in
-      let x := reduce' (weight (i + limbs)) (weight i) x in
+      let x := carry' (weight (i + n)) (weight (i + n) * 2^register_width) x in
+      let x := reduce' (weight (i + n)) (weight i) x in
       let x := carry_from_position i x in
-      let x := reduce' (weight (i + limbs) * 2^register_width) (weight (i + 1)) x in
+      let x := reduce' (weight (i + n) * 2^register_width) (weight (i + 1)) x in
       carry_from_position (i + 1) x.
 
     Local Open Scope Z_scope.
 
-    Lemma reduction_divides i : weight (limbs + i - 1) * 2^register_width / weight i mod s = 0.
+    Lemma reduction_divides i : weight (n + i - 1) * 2^register_width / weight i mod s = 0.
     Proof.
-      rewrite Divide.Z.mod_divide_full. apply (Z.divide_trans _ (weight (limbs + i) / weight i)).
-      - rewrite <- Divide.Z.mod_divide_full. rewrite (Nat.add_comm limbs i). apply s_small.
+      rewrite Divide.Z.mod_divide_full. apply (Z.divide_trans _ (weight (n + i) / weight i)).
+      - rewrite <- Divide.Z.mod_divide_full. rewrite (Nat.add_comm n i). apply s_small.
       - apply Z.divide_div.
         + remember (weight_positive i). lia.
         + rewrite <- Divide.Z.mod_divide_full. apply Weight.weight_multiples_full; try assumption.
           lia.
         + rewrite <- Divide.Z.mod_divide_full.
-          replace (weight (limbs + i)) with (weight (limbs + i - 1 + 1)).
+          replace (weight (n + i)) with (weight (n + i - 1 + 1)).
           -- apply weight_lt_width.
           -- f_equal. lia.
     Qed.
 
     Lemma reduction_divides' (i j : nat) :
-      (j = limbs + i - 1)%nat ->
+      (j = n + i - 1)%nat ->
       weight j * 2^register_width / weight i mod s = 0.
     Proof. intros H. subst. apply reduction_divides. Qed.
 
@@ -194,9 +200,9 @@ Module DettmanMultiplication.
       remember (weight_positive j). remember (Z.pow_nonneg 2 register_width). lia.
     Qed.
 
-    Lemma s_small_particular : weight limbs mod s = 0.
+    Lemma s_small_particular : weight n mod s = 0.
     Proof.
-      replace (weight limbs) with (weight limbs / weight 0).
+      replace (weight n) with (weight n / weight 0).
       - apply s_small'; lia.
       - Z.div_mod_to_equations. lia.
     Qed.
@@ -243,11 +249,10 @@ Module DettmanMultiplication.
 
     (* The main idea here is to have something like this:
            Definition overly_simple_reduce_carry_borrow x :=
-                      carry_reduce_chain (seq_from_to 0 (l - 1)) x.
+                      carry_reduce_chain (seq_from_to 0 (n - 1)) x.
        Below, we have something like this, with a few extra things added in.
      *)
     Definition reduce_carry_borrow x :=
-      let l := limbs in
       let x := dedup_weights x in
 
       (* In the 'overly_simple_reduce_carry_borrow', the following code block
@@ -255,7 +260,7 @@ Module DettmanMultiplication.
          It turns out that doing that might make the output bounds too loose.
 
          In particular, we need last_reduction to be small enough so that the final
-         carry chain (right below the 'A') does not overflow position (l - 1).
+         carry chain (right below the 'A') does not overflow position (n - 1).
          We solve this issue by putting the code block here (instad of at 'A').
 
          Note that, other than this constraint, we want to choose the
@@ -263,22 +268,22 @@ Module DettmanMultiplication.
          smaller, the last carry chain gets longer (and everything else takes
          the same amount of time).
        *)
-      let x := carry_reduce_chain (seq_from_to (last_reduction + 1) (l - 3)) x in
-      let x := carry_reduce_rw (l - 2) x in
+      let x := carry_reduce_chain (seq_from_to (last_reduction + 1) (n - 3)) x in
+      let x := carry_reduce_rw (n - 2) x in
 
-      (* This next code block is a reduction from position l to position 0---
+      (* This next code block is a reduction from position n to position 0---
          the main idea is to do something like 'let x := carry_reduce 0 x'.
 
-         In fact, we move everything from position l to weight s, as well
-         as taking the top few bits off position (l - 1) to put them in weight s,
+         In fact, we move everything from position n to weight s, as well
+         as taking the top few bits off position (n - 1) to put them in weight s,
          before doing the reduction from weight s to position 0.
 
-         This gives us the opportunity to reduce from position (l - 1), as
-         well as from position l, while only having to do one reduction.
+         This gives us the opportunity to reduce from position (n - 1), as
+         well as from position n, while only having to do one reduction.
        *)
-      let x := carry' (weight (l - 1)) s x in
-      let x := carry_from_position l x in
-      let x := borrow' (weight l) s x in
+      let x := carry' (weight (n - 1)) s x in
+      let x := carry_from_position n x in
+      let x := borrow' (weight n) s x in
       let x := reduce' s (weight 0) x in
       let x := carry_from_position 0 x in
 
@@ -293,18 +298,18 @@ Module DettmanMultiplication.
 
       (* A *)
 
-      let x := carry_chain (seq_from_to (last_reduction + 2) (l - 2)) x in
+      let x := carry_chain (seq_from_to (last_reduction + 2) (n - 2)) x in
 
-      Positional.from_associational weight l x.
+      Positional.from_associational weight n x.
 
     Definition mulmod a b :=
-      let a_assoc := Positional.to_associational weight limbs a in
-      let b_assoc := Positional.to_associational weight limbs b in
+      let a_assoc := Positional.to_associational weight n a in
+      let b_assoc := Positional.to_associational weight n b in
       let x := Associational.mul a_assoc b_assoc in
       reduce_carry_borrow x.
 
     Definition squaremod a :=
-      let a_assoc := Positional.to_associational weight limbs a in
+      let a_assoc := Positional.to_associational weight n a in
       let x := Associational.square a_assoc in
       reduce_carry_borrow x.
 
@@ -314,7 +319,7 @@ Module DettmanMultiplication.
     Local Open Scope Z_scope.
       
     Lemma eval_reduce_carry_borrow r0 :
-      (Positional.eval weight limbs (reduce_carry_borrow r0)) mod (s - Associational.eval c) =
+      (Positional.eval weight n (reduce_carry_borrow r0)) mod (s - Associational.eval c) =
       (Associational.eval r0) mod (s - Associational.eval c).
     Proof.
       cbv [reduce_carry_borrow carry' reduce' borrow'].
@@ -329,15 +334,15 @@ Module DettmanMultiplication.
     Hint Rewrite eval_reduce_carry_borrow : push_eval.
 
     Theorem eval_mulmod a b :
-      (Positional.eval weight limbs (mulmod a b)) mod (s - c') =
-      (Positional.eval weight limbs a * Positional.eval weight limbs b) mod (s - c').
+      (Positional.eval weight n (mulmod a b)) mod (s - c') =
+      (Positional.eval weight n a * Positional.eval weight n b) mod (s - c').
     Proof.
       cbv [mulmod]. rewrite <- c_correct. autorewrite with push_eval. reflexivity.
     Qed.
 
     Theorem eval_squaremod a :
-      (Positional.eval weight limbs (squaremod a)) mod (s - c') =
-      (Positional.eval weight limbs a * Positional.eval weight limbs a) mod (s - c').
+      (Positional.eval weight n (squaremod a)) mod (s - c') =
+      (Positional.eval weight n a * Positional.eval weight n a) mod (s - c').
     Proof.
       cbv [squaremod]. rewrite <- c_correct. autorewrite with push_eval. reflexivity.
     Qed.
