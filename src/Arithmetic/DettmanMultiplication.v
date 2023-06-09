@@ -243,6 +243,51 @@ Module DettmanMultiplication.
     Qed.
     Hint Rewrite eval_carry_reduce_chain : push_eval.
 
+    Hint Resolve s_small_particular divisible_implies_nonzero Z_mod_same_full : arith.
+
+    (* combine the values at position (n - 1) and n;
+       then, split the combined value into
+       pieces at position (n - 1) and weight s.
+     *)
+    Definition move_to_weight_s x :=
+      let x := carry' (weight (n - 1)) s x in
+      borrow' (weight n) s x.
+
+    Lemma eval_move_to_weight_s x :
+      Associational.eval (move_to_weight_s x) = Associational.eval x.
+    Proof.
+      cbv [move_to_weight_s borrow' carry']. autorewrite with push_eval; auto with arith.
+      apply mod_quotient_zero; auto with arith. remember s_positive. lia.
+    Qed.
+    Hint Rewrite eval_move_to_weight_s : push_eval.
+
+    (* This function is a reduction from position n to position 0---
+       the main idea is to do something like 'let x := carry_reduce 0 x'.
+
+       In fact, we move everything from position n to weight s, as well
+       as taking the top few bits off position (n - 1) to put them in weight s,
+       before doing the reduction from weight s to position 0.
+
+       This gives us the opportunity to reduce from the top of position (n - 1),
+       as well as from position n, while only having to do one reduction.
+     *)
+    Definition carry_reduce_s x :=
+      let x := carry_from_position n x in
+      let x := move_to_weight_s x in
+      let x := reduce' s (weight 0) x in
+      carry_from_position 0 x.
+
+    Lemma eval_carry_reduce_s x :
+      ((Associational.eval (carry_reduce_s x)) mod (s - Associational.eval c) =
+      (Associational.eval x) mod (s - Associational.eval c))%Z.
+    Proof.
+      cbv [carry_reduce_s reduce']. autorewrite with push_eval; auto with arith.
+      - rewrite weight_0. rewrite Z.div_1_r. apply s_nz.
+      - rewrite weight_0. rewrite Z.div_1_r. auto with arith.
+      - rewrite weight_0. rewrite Z.div_1_r. auto with arith.
+    Qed.
+    Hint Rewrite eval_carry_reduce_s : push_eval.
+
     Local Open Scope nat_scope.
 
     Definition seq_from_to a b := seq a (Z.to_nat (b - a + 1)).
@@ -276,21 +321,13 @@ Module DettmanMultiplication.
       let x := carry_reduce_chain (seq_from_to (last_reduction + 1) (n - 3)) x in
       let x := carry_reduce_rw (n - 2) x in
 
-      (* This next code block is a reduction from position n to position 0---
-         the main idea is to do something like 'let x := carry_reduce 0 x'.
-
-         In fact, we move everything from position n to weight s, as well
-         as taking the top few bits off position (n - 1) to put them in weight s,
-         before doing the reduction from weight s to position 0.
-
-         This gives us the opportunity to reduce from the top of position (n - 1),
-         as well as from position n, while only having to do one reduction.
+      (* This next code block is similar to writing
+              let x := carry_reduce 0 x,
+         except it's a bit more clever.
+         While reducing from position n to position 0, we simultaneously reduce
+         the top few bits of position (n - 1) down to position 0.
        *)
-      let x := carry' (weight (n - 1)) s x in
-      let x := carry_from_position n x in
-      let x := borrow' (weight n) s x in
-      let x := reduce' s (weight 0) x in
-      let x := carry_from_position 0 x in
+      let x := carry_reduce_s x in
 
       (* This code block is what remains (after we've finished adding in all the
          extra stuff) of the 'overly_simple_reduce_carry_borrow' referred to above.
@@ -319,7 +356,6 @@ Module DettmanMultiplication.
       reduce_carry_borrow x.
 
     Hint Rewrite Positional.eval_from_associational Positional.eval_to_associational : push_eval.
-    Hint Resolve Z_mod_same_full : arith.
 
     Local Open Scope Z_scope.
       
@@ -329,12 +365,6 @@ Module DettmanMultiplication.
     Proof.
       cbv [reduce_carry_borrow carry' reduce' borrow'].
       autorewrite with push_eval; auto with arith; try lia.
-      all: try rewrite Z.div_1_r.
-      all: try apply mod_quotient_zero.
-      all: try apply divisible_implies_nonzero.
-      all: try apply s_small_particular.
-      all: auto with arith.
-      all: try (remember s_positive; lia).
     Qed.
     Hint Rewrite eval_reduce_carry_borrow : push_eval.
 
