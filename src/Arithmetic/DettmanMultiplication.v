@@ -256,17 +256,22 @@ Module DettmanMultiplication.
       let x := dedup_weights x in
 
       (* In the 'overly_simple_reduce_carry_borrow', the following code block
-         paragraph would belong in the position marked with an 'A' down below.
+         would belong in the position marked with an 'A' down below.
          It turns out that doing that might make the output bounds too loose.
 
          In particular, we need last_reduction to be small enough so that the final
          carry chain (right below the 'A') does not overflow position (n - 1).
          We solve this issue by putting the code block here (instad of at 'A').
 
-         Note that, other than this constraint, we want to choose the
-         last_reduction parameter to be as large as possible, since when it gets
-         smaller, the last carry chain gets longer (and everything else takes
-         the same amount of time).
+         This way, the reductions that land in positions
+              last_reduction + 1, last_reduction + 2, ..., n - 2, n - 1
+         are carried up to position n (before the reduction from position n),
+         so we don't have to worry about them overflowing position (n - 1).
+
+         Note that, other than this constraint requiring last_reduction to be
+         sufficiently small, we want to choose the last_reduction parameter to
+         be as large as possible, since when it gets smaller, the final carry
+         chain gets longer (and everything else takes the same amount of time).
        *)
       let x := carry_reduce_chain (seq_from_to (last_reduction + 1) (n - 3)) x in
       let x := carry_reduce_rw (n - 2) x in
@@ -278,8 +283,8 @@ Module DettmanMultiplication.
          as taking the top few bits off position (n - 1) to put them in weight s,
          before doing the reduction from weight s to position 0.
 
-         This gives us the opportunity to reduce from position (n - 1), as
-         well as from position n, while only having to do one reduction.
+         This gives us the opportunity to reduce from the top of position (n - 1),
+         as well as from position n, while only having to do one reduction.
        *)
       let x := carry' (weight (n - 1)) s x in
       let x := carry_from_position n x in
