@@ -24,6 +24,7 @@ Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.ZRange.
 Import ListNotations. Local Open Scope Z_scope.
 
 Module Associational.
@@ -1318,8 +1319,11 @@ Module Positional.
               (fun f => second_summation' n products (rev f))
               (seqZ 0 (2*Z.of_nat n - 3))) [].*)
 
-    Definition adk_mul (n : nat) (x y : list Z) : list (Z*Z) :=
+    Definition adk_mul' (n : nat) (x y : list Z) : list (Z*Z) :=
       first_summation n x y ++ second_summation n x y.
+
+    (*Definition adk_mul (n : nat) (x_bounds y_bounds : list zrange) (x y : list Z) : list (Z*Z) :=
+      map cast_to (adk_mul' n x y) appropriate_bounds_in_terms_of_x_bounds_and_y_bounds.*)
   End adk_mul.
   End Positional.
 
