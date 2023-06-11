@@ -490,6 +490,7 @@ Module Compilers.
                 | ident.fancy_selm => neg_wrap_parens "fancy.selm"
                 | ident.fancy_sell => neg_wrap_parens "fancy.sell"
                 | ident.fancy_addm => neg_wrap_parens "fancy.addm"
+                | Compilers.ident_Z_abs => neg_wrap_parens "Z.abs"
                 end.
         Global Instance show_ident {t} : Show (ident.ident t) := show_lvl_ident.
 
@@ -710,6 +711,7 @@ Module Compilers.
              | ident.Z_log2_up as idc
              | ident.Z_of_nat as idc
              | ident.Z_to_nat as idc
+             | Compilers.ident_Z_abs as idc
              | ident.Z_min as idc
              | ident.Z_max as idc
              | ident.Z_mul_split as idc

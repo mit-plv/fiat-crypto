@@ -4,12 +4,238 @@ Require Import Coq.Lists.List.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
 Require Import Coq.Program.Wf.
+Require Import Crypto.Util.LetIn.
+Require Import Coq.ZArith.ZArith.
+Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZRange.
+
+
+Definition value_in_range (x : Z) (r : zrange) (H : is_bounded_by_bool x r = true) : Z := x.
+
 Local Open Scope list_scope.
 
 Import Associational Positional.
 Import ListNotations. Local Open Scope Z_scope.
 
 Local Coercion Z.of_nat : nat >-> Z.
+
+Section adk_mul.
+  Context (weight : nat -> Z).
+    (* this Arbitrary-Degree Karatsuba multiplication uses fewer muls but more adds/subs compared to Associational.mul,
+       as described here: https://eprint.iacr.org/2015/1247.pdf.
+       As the number of limbs increases, the performance of this multiplication improves relative to Associational.mul.
+       As described in the paper, the algorithm is this:
+       xy = \sum_{i = 1}^{n - 1} \sum_{j = 0}^{i - 1} (x_i - x_j)(y_j - y_i) b^{i + j} +
+            \sum_{i = 0}^{n - 1} \sum_{j = 0}^{n - 1} x_j y_j b^{i + j}.
+       Then, as we see in this example
+       (https://github.com/bitcoin-core/secp256k1/blob/9618abcc872a6e622715c4540164cc847b653efb/src/field_10x26_impl.h),
+       the number of adds can be reduced by rewriting the second summation as follows:
+       \sum_{i = 0}^{n - 1} \sum_{j = 0}^{n - 1} x_i y_i b^{i + j} = 
+       \sum_{i = 0}^{2n - 2} b^i \sum_{j = \max(0, i - (n - 1))}^{i} x_j y_j = 
+       \sum_{i = 0}^{2n - 2} b^i ([\sum_{j = 0}^i x_j y_j] - [\sum_{j = 0}^{i - n} x_j y_j]) = 
+               b^{2n - 2} x_{n - 1} y_{n - 1} + 
+               \sum_{i = 0}^{2n - 3} b^i ([\sum_{j = 0}^i x_j y_j] - [\sum_{j = 0}^{i - n} x_j y_j]).
+       This last formula will be particularly nice if we precompute the values \sum_{j = 0}^i x_j y_j, as i ranges from 0 to n - 1.
+     *)
+      
+    Definition nth_reifiable' {X} (n : Z) (l : list X) (default : X) : Z*X :=
+      fold_right (fun next n_nth => (fst n_nth - 1, if (fst n_nth =? 0) then next else (snd n_nth))) (Z.of_nat (length l) - n - 1, default) l.
+
+    Compute (nth_reifiable' 0 [7; 2; 3] (-1)).
+    
+
+    Lemma nth_reifiable'_spec {X} (n : Z) (l : list X) (default : X) :
+      nth_reifiable' n l default = (-n - 1, if 0 <=? n then nth (Z.to_nat n) l default else default).
+    Proof.
+      cbv [nth_reifiable']. generalize dependent n. induction l as [| x l' IHl']; intros n.
+      - simpl. f_equal. destruct (0 <=? n); destruct (Z.to_nat n); reflexivity.
+      - replace (Z.of_nat (length (x :: l')) - n - 1) with
+          (Z.of_nat (length l') - (n - 1) - 1).
+        + simpl. rewrite IHl'. simpl. f_equal; try lia. destruct (_ =? 0) eqn:E1; destruct (0 <=? n - 1) eqn:E2; destruct (0 <=? n) eqn:E3; destruct (Z.to_nat n) eqn:E4; try lia; try reflexivity.
+          f_equal. lia.
+        + replace (length (x :: l')) with (1 + length l')%nat by reflexivity. lia.
+    Qed.
+
+    Definition nth_reifiable {X} (n : nat) (l : list X) (default : X) : X :=
+      snd (nth_reifiable' (Z.of_nat n) l default).
+    
+   Lemma nth_reifiable_spec {X} (n : nat) (l : list X) (default : X) :
+      nth_reifiable n l default = nth n l default.
+    Proof.
+      cbv [nth_reifiable]. rewrite nth_reifiable'_spec. simpl. destruct (_ <=? _) eqn:E; try lia.
+      - rewrite Nat2Z.id. reflexivity.
+      - apply Z.leb_gt in E. lia.
+    Qed.
+
+    Definition nthZ {X} (i : Z) (l : list X) (default : X) : X :=
+      if (Z.of_nat (Z.to_nat i)) =? i then
+        nth_reifiable (Z.to_nat i) l default
+      else
+        default.
+
+    Search seq.
+    Definition seqZ a b :=
+      map (fun x => Z.of_nat x + a) (seq 0 (Z.to_nat (1 + b - a))).
+
+    Definition first_summation (n : nat) (x y : list Z) : list (Z*Z) :=
+      flat_map (fun i =>
+                  map (fun j => (weight (Z.to_nat i) * weight (Z.to_nat j), (nthZ i x 0 - nthZ j x 0) * (nthZ j y 0 - nthZ i y 0)))
+                    (seqZ 0 (i - 1)))
+        (seqZ 1 (Z.of_nat n - 1)).
+
+    Locate "dlet".
+
+    Definition second_summation' (n : nat) (products f : list Z) := 
+      let high_part : Z*Z := (weight (n - 1) * weight (n - 1), (nthZ (Z.of_nat (n - 1)) products 0)) in
+      let low_part : list (Z*Z) := map (fun i => (weight (Z.to_nat i), (nthZ i f 0) - (nthZ (i - Z.of_nat n) f 0))) (seqZ 0 (2*Z.of_nat n - 3)) in
+      low_part ++ [high_part].
+
+    Print fold_right.
+    Print list_rect.
+
+    Fixpoint sums (x : list Z) (a : Z) : list Z :=
+      match x with
+      | [] => [a]
+      | c :: x' => dlet y := a + c in
+          y :: sums x' y
+      end.
+
+    Eval cbn [sums] in (sums [1; 2; 3] 7).
+    Print list_rect.
+    (*Goal (sums = list_rect (fun l => Z -> list Z) (fun a => [a]) (fun c x' rec a => dlet y := a + c in y :: rec y)).*)
+    Definition sums' := list_rect (fun l => Z -> list Z) (fun a => [a]) (fun c x' rec a => dlet y := a + c in y :: rec y).
+    Lemma sums_nil a : sums' [] a = [a].
+    Proof. reflexivity. Qed.
+
+    Print fold_right.
+    Print list_rect.
+    Check Let_In.
+
+    (*Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
+      dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
+          let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 2)) ++ [high_product] in
+          (list_rect
+             (fun _ => list Z -> list (Z*Z))
+             (fun f => second_summation' n products (rev f))
+             (fun i _ g => fun f' => Let_In (P:=fun _ => _) (((nthZ 0 f' 0) + (nthZ i products 0)) :: f') g) 
+             (seqZ 0 (2*Z.of_nat n - 3))) [].*)
+    
+    Definition second_summation (n : nat) (x y : list Z) (*: list (Z*Z)*) :=
+      dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
+      let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 2)) ++ [high_product] in
+      let f_backwards : list Z := (fold_right (fun i f' => (*d*)let prev := (nthZ 0 f' 0) in prev + (nthZ i products 0) :: f') [] (rev (seqZ 0 (2*Z.of_nat n - 3)))) in
+     (* let f_ := rev f_backwards in
+      let f0 := nthZ 0 f_ 0 in
+      let f := f0 :: map (fun i => nthZ i f_ 0) (seqZ 1 (Z.of_nat (length f_) - 1)) in*)
+      let nthZf := fun i default => nthZ (Z.of_nat (length f_backwards) - i - 1) f_backwards default in
+      let high_part : Z*Z := (weight (n - 1) * weight (n - 1), (nthZ (Z.of_nat (n - 1)) products 0)) in
+      let low_part : list (Z*Z) := map (fun i => (weight (Z.to_nat i), (nthZf i 0) - (nthZf (i - Z.of_nat n) 0))) (seqZ 0 (2*Z.of_nat n - 3)) in
+      low_part ++ [high_part].
+    
+    (*Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
+      dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
+      let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 2)) ++ [high_product] in
+      (list_rect
+         (fun x => list Z -> list (Z*Z))
+         (fun f => second_summation' n products (rev f))
+         (fun i is g => fun f' => Let_In (P:=fun a => list (Z*Z)) (((nthZ 0 f' 0) + (nthZ i products 0)) :: f') g) 
+         (seqZ 0 (2*Z.of_nat n - 3))) [].
+    Check Let_In.
+    Print fold_right.
+    Definition fs (n : nat) (x y : list Z) : list Z :=
+      dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
+          let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 2)) ++ [high_product] in
+          dlet f : list Z := (fold_right (fun i f' => dlet prev := (nthZ 0 f' 0) in prev + (nthZ i products 0) :: f') [] (seqZ 0 (2*Z.of_nat n - 3))) in*)
+    
+    (*Check (list_rect (fun _ => list Z -> list (Z*Z)) ).
+
+    Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
+      dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
+      let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 2)) ++ [high_product] in
+            (fold_right
+              (fun i g => fun f' => Let_In (P:=fun _ => _) (((nthZ 0 f' 0) + (nthZ i products 0)) :: f') g) 
+              (fun f => second_summation' n products (rev f))
+              (seqZ 0 (2*Z.of_nat n - 3))) [].*)
+
+    Definition adk_mul' (n : nat) (x y : list Z) : list (Z*Z) :=
+      first_summation n x y ++ second_summation n x y.
+
+    Compute (Z.lxor (-8) (-8)).
+    Check Z.abs.
+    Compute (Z.land (8) (-1)).
+    
+    Search Z.shiftr.
+
+    (*Lemma Zleb_reifiable_spec (a b : Z) :
+      Zleb_reifiable a b = Z.leb a b.
+    Proof. cbv [Zleb_reifiable]. lia. Qed.*)
+
+    (* condition should be either 1 or 0. *)
+    Definition if_then_else' (condition : Z) (then_value : Z) (else_value : Z) : Z :=
+      if condition =? 1 then then_value else else_value.
+
+    Definition if_then_else (condition : Z) (then_value : Z) (else_value : Z) : Z :=
+      condition * then_value + (1 - condition) * else_value.
+
+    Definition ZZ_is_bounded_by_bool (x : Z) (bounds : Z*Z) : bool := true.
+      (*((Z.ltz (fst bounds - 1) x) && (Z.ltz x (snd bounds + 1)))%bool.*)
+    
+    Definition is_bounded_by (l : list Z) (bounds : list (Z*Z)) : bool :=
+      fold_right andb true
+        (map (fun x_bound => ZZ_is_bounded_by_bool (fst x_bound) (snd x_bound))
+           (combine l bounds)).
+
+    Definition is_lower_bounded_by (bounds : list (Z*Z)) (xs : list Z) : bool :=
+      fold_right andb true
+        (map (fun bound_x => snd bound_x <=? fst (fst bound_x))
+           (combine bounds xs)).
+
+    (* if everything is nonnegative, then the output is nondecreasing in the inputs *)
+    Definition output_bounds (n : nat) (x_bounds y_bounds : list (Z*Z)) : list (Z*Z) :=
+      let lower_bounds := Positional.from_associational weight (2*n - 2 + 1)
+                            (adk_mul' n (map fst x_bounds) (map fst y_bounds)) in
+      let upper_bounds := Positional.from_associational weight (2*n - 2 + 1)
+                            (adk_mul' n (map snd x_bounds) (map snd y_bounds)) in
+      map (fun lower_upper => (fst lower_upper, snd lower_upper))
+        (combine lower_bounds upper_bounds).
+
+    Compute (true && true)%bool.
+    Print value_in_range.
+    Lemma nonsense x r : is_bounded_by_bool x (Build_zrange (fst r) (snd r)) = true. Proof. Admitted.
+   
+    Definition adk_mul'' (n : nat) (x_bounds y_bounds : list (Z*Z)) (x y : list Z) : list Z :=
+      (*map (fun t_e => if_then_else (is_lower_bounded_by x_bounds (repeat 0 n) &&
+           is_lower_bounded_by y_bounds (repeat 0 n) &&
+           ZZ_is_bounded_by_bool (nthZ 0 x 0) (nthZ 0 x_bounds (0, 0)) &&
+           is_bounded_by y y_bounds)%bool  Z.ltz (nthZ 0 x 0) (2^29)) (fst t_e) (snd t_e))
+
+        (combine*) 
+           (map (fun r_bounds => let r := fst r_bounds in
+                                 let bounds := snd r_bounds in
+                                 Z.land (value_in_range r (Build_zrange (fst bounds) (snd bounds)) (nonsense r bounds)) (Z.ones (Z.log2_up (snd bounds))))
+              (combine
+                  (Positional.from_associational weight (2*n - 2 + 1) (dedup_weights (adk_mul' n x y)))
+                  (output_bounds n x_bounds y_bounds)
+              )
+           )
+        (*Positional.from_associational weight n
+          (Associational.mul (Positional.to_associational weight n x)
+             (Positional.to_associational weight n y))
+           (repeat 0 (2*n - 2 + 1))*)
+        .
+
+    Definition adk_mul (n : nat) (x y : list Z) : list Z :=
+      adk_mul'' n (repeat (0, 2^29 - 1) 10) (repeat (0, 2^29 - 1) 10) x y.
+End adk_mul.
+
+Definition x := [3; 4; 123; 93].
+  Definition y := [543; 123; 64; 1].
+  Definition weight_ := (fun i => 2^Z.of_nat i).
+  Definition n := 4%nat.
+  Compute (adk_mul weight_ n x y).
+  Compute (dedup_weights
+          (Associational.mul (Positional.to_associational weight_ n x)
+             (Positional.to_associational weight_ n y))).
 
 Module DettmanMultiplication.
   Section DettmanMultiplication.
@@ -339,8 +565,8 @@ Module DettmanMultiplication.
       reduce_carry_borrow r0.
 
     Definition mulmod32 a b :=
-      let r0 := Positional.adk_mul weight limbs a b in
-      reduce_carry_borrow32 (Positional.to_associational weight limbs r0).
+      let r0 := adk_mul weight limbs a b in
+      reduce_carry_borrow32 (Positional.to_associational weight (2*limbs-2+1) r0).
 
     Definition squaremod32 a :=
       let a_assoc := Positional.to_associational weight limbs a in

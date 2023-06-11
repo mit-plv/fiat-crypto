@@ -919,7 +919,10 @@ Module Compilers.
                         Some (ZRange.union
                                 (ZRange.four_corners Z.add x y)
                                 (ZRange.eight_corners (fun x y m => Z.max 0 (x + y - m))
-                                                      x y m)))
+                                   x y m)))
+
+             | Compilers.ident_Z_abs as idc
+               => fun x => x <- x; Some (ZRange.two_corners_and_zero (ident.interp idc) x)
              end%option.
       End option.
     End ident.

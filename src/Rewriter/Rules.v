@@ -306,6 +306,8 @@ Definition arith_rewrite_rulesT (max_const_val : Z) : list (bool * Prop)
            ]
         ].
 
+Print n.
+
 Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (bool * Prop)
   := Eval cbv [myapp mymap myflatten] in
       myflatten
@@ -355,6 +357,7 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
                   -> cstZ rlor (Z.lor (cstZ rm1 ('-1)) (cstZ rv v)) = cstZ rm1 ('-1))
 
             ; (forall rx x ry y, upper (n rx) <= lower (n ry) -> (cstZ rx x <=? cstZ ry y)%Z = true)
+            ; (forall rx x ry y, upper (n rx) <= y -> y \in ry -> (cstZ rx x <=? cstZ ry ('y))%Z = true)
             ; (forall rx x ry y, upper (n ry) < lower (n rx) -> (cstZ rx x <=? cstZ ry y)%Z = false)
             ; (forall rx x ry y, upper (n rx) < lower (n ry) -> (cstZ rx x <? cstZ ry y)%Z = true)
             ; (forall rx x ry y, upper (n ry) <= lower (n rx) -> (cstZ rx x <? cstZ ry y)%Z = false)

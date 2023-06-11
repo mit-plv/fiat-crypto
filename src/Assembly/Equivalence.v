@@ -1061,6 +1061,7 @@ Proof.
           | ident.Z_lor => fun x y => App (orZ, [x; y])
           | ident.Z_min
           | ident.Z_max
+          | Compilers.ident_Z_abs
             => symex_T_error (Unhandled_identifier idc)
           | ident.Z_mul_split => fun bs x y =>
             vs <- RevealWidth bs; s <- App (const (Z.of_N vs), nil);

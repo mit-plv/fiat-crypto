@@ -690,7 +690,8 @@ Module Compilers.
                         | [ |- context[Proper _ (fun y => Z.shiftl _ ?v)] ] => is_var v; destruct v; auto with zarith
                         | [ |- context[Proper _ (fun y => Z.shiftl ?v _)] ] => is_var v; destruct v; auto with zarith
                         | _ => idtac
-                        end.
+                   end.
+            all : try solve [eapply (ZRange.monotoneb_two_corners_and_zero_gen Z.abs); trivial; cbv [Proper respectful]; left; lia].
             all: try solve [ cbv [Proper respectful Basics.flip]; constructor; intros; lia ].
             all: try solve [ cbv [Proper respectful Basics.flip]; constructor; intros; autorewrite with zsimplify_const; lia ].
             all: cbv [is_bounded_by_bool ZRange.upper ZRange.lower]; rewrite ?Bool.andb_true_iff, ?Z.leb_le.

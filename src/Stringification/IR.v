@@ -834,6 +834,7 @@ Module Compilers.
                  | ident.Z_gtb
                  | ident.Z_min
                  | ident.Z_max
+                 | Compilers.ident_Z_abs
                  | ident.Z_log2
                  | ident.Z_log2_up
                  | ident.Z_of_nat

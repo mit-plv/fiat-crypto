@@ -10,6 +10,7 @@ Require Import Ltac2.Bool.
 Import Ltac2.Constr.Unsafe.
 Require Rewriter.Util.InductiveHList.
 Require Rewriter.Util.LetIn.
+Require Import Crypto.Arithmetic.DettmanMultiplication.
 Import InductiveHList.Notations.
 Require Import Ltac2.Printf.
 
@@ -76,7 +77,8 @@ Definition var_like_idents : InductiveHList.hlist
       ; Z.opp
       ; ident.cast
       ; ident.cast2
-      ; Z.combine_at_bitwidth]%hlist.
+      ; Z.combine_at_bitwidth
+      ; with_name ident_Z_value_in_range value_in_range]%hlist.
 
 Definition base_type_list_named : InductiveHList.hlist
   := [with_name Z BinInt.Z
@@ -153,6 +155,7 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_Z_lor Z.lor
       ; with_name ident_Z_min Z.min
       ; with_name ident_Z_max Z.max
+      ; with_name ident_Z_abs Z.abs
       ; with_name ident_Z_mul_split Z.mul_split
       ; with_name ident_Z_mul_high Z.mul_high
       ; with_name ident_Z_add_get_carry Z.add_get_carry_full
