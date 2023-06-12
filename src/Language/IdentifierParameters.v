@@ -65,10 +65,14 @@ Ltac2 Set reify_ident_preprocess_extra :=
           end
      | _ => term
      end.
+Check Z.opp.
+Check ident.cast.
+Check Datatypes.nil.
 
 Definition var_like_idents : InductiveHList.hlist
   := [@ident.literal
       ; @Datatypes.nil
+      ; value_in_range
       ; @Datatypes.cons
       ; @Datatypes.pair
       ; @Datatypes.fst
@@ -77,8 +81,9 @@ Definition var_like_idents : InductiveHList.hlist
       ; Z.opp
       ; ident.cast
       ; ident.cast2
-      ; Z.combine_at_bitwidth
-      ; with_name ident_Z_value_in_range value_in_range]%hlist.
+      ; Z.combine_at_bitwidth]%hlist.
+
+Definition f {X : Type} {y : X = X} (x : X) := x. 
 
 Definition base_type_list_named : InductiveHList.hlist
   := [with_name Z BinInt.Z
@@ -89,6 +94,7 @@ Definition base_type_list_named : InductiveHList.hlist
 
 Definition all_ident_named_interped : InductiveHList.hlist
   := [with_name ident_Literal (@ident.literal)
+      ; with_name ff (@f)
       ; with_name ident_comment (@ident.comment)
       ; with_name ident_comment_no_keep (@ident.comment_no_keep)
       ; with_name ident_value_barrier (@Z.value_barrier)
@@ -100,6 +106,7 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_Nat_sub Nat.sub
       ; with_name ident_Nat_eqb Nat.eqb
       ; with_name ident_nil (@Datatypes.nil)
+      ; with_name ident_value_in_range value_in_range
       ; with_name ident_cons (@Datatypes.cons)
       ; with_name ident_tt Datatypes.tt
       ; with_name ident_pair (@Datatypes.pair)

@@ -111,7 +111,16 @@ Section adk_mul.
     Print list_rect.
     Check Let_In.
 
-    (*Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
+    Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
+      dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
+          let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (2*Z.of_nat n - 3)) ++ [high_product] in
+          (list_rect
+             (fun _ => list Z -> list (Z*Z))
+             (fun f => second_summation' n products (rev f))
+             (fun p _ g => fun f' => Let_In ((nthZ 0 f' 0) + p) (fun x => g (x :: f'))) 
+             products) [].
+
+     (*Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
       dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
           let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 2)) ++ [high_product] in
           (list_rect
@@ -120,7 +129,7 @@ Section adk_mul.
              (fun i _ g => fun f' => Let_In (P:=fun _ => _) (((nthZ 0 f' 0) + (nthZ i products 0)) :: f') g) 
              (seqZ 0 (2*Z.of_nat n - 3))) [].*)
     
-    Definition second_summation (n : nat) (x y : list Z) (*: list (Z*Z)*) :=
+    (*Definition second_summation (n : nat) (x y : list Z) (*: list (Z*Z)*) :=
       dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
       let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 2)) ++ [high_product] in
       let f_backwards : list Z := (fold_right (fun i f' => (*d*)let prev := (nthZ 0 f' 0) in prev + (nthZ i products 0) :: f') [] (rev (seqZ 0 (2*Z.of_nat n - 3)))) in
@@ -130,7 +139,7 @@ Section adk_mul.
       let nthZf := fun i default => nthZ (Z.of_nat (length f_backwards) - i - 1) f_backwards default in
       let high_part : Z*Z := (weight (n - 1) * weight (n - 1), (nthZ (Z.of_nat (n - 1)) products 0)) in
       let low_part : list (Z*Z) := map (fun i => (weight (Z.to_nat i), (nthZf i 0) - (nthZf (i - Z.of_nat n) 0))) (seqZ 0 (2*Z.of_nat n - 3)) in
-      low_part ++ [high_part].
+      low_part ++ [high_part].*)
     
     (*Definition second_summation (n : nat) (x y : list Z) : list (Z*Z) :=
       dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
@@ -212,7 +221,7 @@ Section adk_mul.
         (combine*) 
            (map (fun r_bounds => let r := fst r_bounds in
                                  let bounds := snd r_bounds in
-                                 Z.land (value_in_range r (Build_zrange (fst bounds) (snd bounds)) (nonsense r bounds)) (Z.ones (Z.log2_up (snd bounds))))
+                                 Z.land (*(value_in_range*) r(* (Build_zrange (fst bounds) (snd bounds)) (nonsense r bounds))*) (Z.ones (Z.log2_up (snd bounds))))
               (combine
                   (Positional.from_associational weight (2*n - 2 + 1) (dedup_weights (adk_mul' n x y)))
                   (output_bounds n x_bounds y_bounds)
@@ -233,9 +242,9 @@ Definition x := [3; 4; 123; 93].
   Definition weight_ := (fun i => 2^Z.of_nat i).
   Definition n := 4%nat.
   Compute (adk_mul weight_ n x y).
-  Compute (dedup_weights
+  Compute (Positional.from_associational weight_ (2* n - 2 + 1) (dedup_weights
           (Associational.mul (Positional.to_associational weight_ n x)
-             (Positional.to_associational weight_ n y))).
+             (Positional.to_associational weight_ n y)))).
 
 Module DettmanMultiplication.
   Section DettmanMultiplication.
