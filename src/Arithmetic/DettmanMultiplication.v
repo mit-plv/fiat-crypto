@@ -2,6 +2,7 @@ Require Import Crypto.Arithmetic.Core.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List.
 Require Import Crypto.Arithmetic.ModOps.
+Require Import Crypto.Util.LetIn.
 Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
 Local Open Scope list_scope.
 
@@ -13,28 +14,31 @@ Local Coercion Z.of_nat : nat >-> Z.
 Module DettmanMultiplication.
   Section DettmanMultiplication.
     Context
-        (s : Z)
-        (c' : Z)
-        (register_width : nat)
-        (n : nat)
-        (last_reduction : nat) (* should be between 1 and n - 3, inclusive.
-                                  This is the position that the final modular reduction lands in.
-                                  Larger values correspond to a faster algorithm but looser bounds on the output.
-                                *)
-        (weight: nat -> Z)
-        (p_nz' : s - c' <> 0)
-        (n_gteq_4 : (4 <= n)%nat) (* Technically we only need 2 <= n to get the proof to go through, but it doesn't make much sense to try to do this with less than four limbs.
-                                           Note that having 4 limbs corresponds to zero iterations of the "loop" function defined below. *)
+      (s : Z)
+      (c' : Z)
+      (register_width : nat)
+      (n : nat)
+      (last_reduction : nat) (* should be between 1 and n - 3, inclusive.
+                                This is the position that the final modular reduction lands in.
+                                Larger values correspond to a faster algorithm but looser bounds on the output.
+                              *)
+      (weight: nat -> Z)
+      (p_nz' : s - c' <> 0)
+      (n_gteq_4 : (4 <= n)%nat) (* Technically we only need 2 <= n to get the proof to go through, but it doesn't make much sense to try to do this with less than four limbs.
+                                   Note that having 4 limbs corresponds to zero iterations of the "loop" function defined below. *)
+      (wprops : @weight_properties weight)
+        
+      (weight_0 := weight_0 wprops)
+      (weight_positive := weight_positive wprops)
+      (weight_multiples := weight_multiples wprops)
+      (weight_divides := weight_divides wprops).
+
+    Section WithoutADK.
+      Context
         (s_small : forall i: nat, (weight (i + n)%nat / weight i) mod s = 0)
         (s_big : weight (n - 1)%nat <= s)
-        (weight_lt_width : forall i: nat, (weight i * 2^register_width) mod weight (i + 1)%nat = 0)
-        (wprops : @weight_properties weight)
-        
-        (weight_0 := weight_0 wprops)
-        (weight_positive := weight_positive wprops)
-        (weight_multiples := weight_multiples wprops)
-        (weight_divides := weight_divides wprops).
-
+        (weight_lt_width : forall i: nat, (weight i * 2^register_width) mod weight (i + 1)%nat = 0).
+      
     (* Proofs will go through regardless of which encoding we choose for c.
        We choose this encoding (with the weights given by the weight function)
        so that our reductions land in the weights given by the weight function.
@@ -381,7 +385,137 @@ Module DettmanMultiplication.
     Proof.
       cbv [squaremod]. rewrite <- c_correct. autorewrite with push_eval. reflexivity.
     Qed.
-  End DettmanMultiplication.
+    End WithoutADK.
+
+    Section WithADK.
+    (* now we'll add the option to use the adk algorithm in place of associational.mul *)
+    Context (weight_friendly : forall i j : nat, weight i * weight j = weight (i + j)).
+    (* this Arbitrary-Degree Karatsuba multiplication uses fewer muls but more adds/subs compared to Associational.mul,
+       as described here: https://eprint.iacr.org/2015/1247.pdf.
+       As the number of limbs increases, the performance of this multiplication improves relative to Associational.mul.
+       As described in the paper, the algorithm is this:
+       xy = \sum_{i = 1}^{n - 1} \sum_{j = 0}^{i - 1} (x_i - x_j)(y_j - y_i) b^{i + j} +
+            \sum_{i = 0}^{n - 1} \sum_{j = 0}^{n - 1} x_j y_j b^{i + j}.
+       Then, as we see in this example
+       (https://github.com/bitcoin-core/secp256k1/blob/9618abcc872a6e622715c4540164cc847b653efb/src/field_10x26_impl.h),
+       the number of adds can be reduced by rewriting the second summation as follows:
+       \sum_{i = 0}^{n - 1} \sum_{j = 0}^{n - 1} x_i y_i b^{i + j} = 
+       \sum_{i = 0}^{2n - 2} b^i \sum_{j = \max(0, i - (n - 1))}^{i} x_j y_j = 
+       \sum_{i = 0}^{2n - 2} b^i ([\sum_{j = 0}^i x_j y_j] - [\sum_{j = 0}^{i - n} x_j y_j]) = 
+               b^{2n - 2} x_{n - 1} y_{n - 1} + 
+               \sum_{i = 0}^{2n - 3} b^i ([\sum_{j = 0}^i x_j y_j] - [\sum_{j = 0}^{i - n} x_j y_j]).
+       This last formula will be particularly nice if we precompute the values \sum_{j = 0}^i x_j y_j, as i ranges from 0 to n - 1.
+     *)
+      
+    Definition nth_reifiable' {X} (i : Z) (l : list X) (default : X) : Z*X :=
+      fold_right (fun next n_nth => (fst n_nth - 1, if (fst n_nth =? 0) then next else (snd n_nth))) (Z.of_nat (length l) - i - 1, default) l.    
+
+    Lemma nth_reifiable'_spec {X} (i : Z) (l : list X) (default : X) :
+      nth_reifiable' i l default = (-i - 1, if 0 <=? i then nth (Z.to_nat i) l default else default).
+    Proof.
+      cbv [nth_reifiable']. generalize dependent i. induction l as [| x l' IHl']; intros i.
+      - simpl. f_equal. destruct (0 <=? i); destruct (Z.to_nat i); reflexivity.
+      - replace (Z.of_nat (length (x :: l')) - i - 1) with
+          (Z.of_nat (length l') - (i - 1) - 1).
+        + simpl. rewrite IHl'. simpl. f_equal; try lia. destruct (_ =? 0) eqn:E1; destruct (0 <=? i - 1) eqn:E2; destruct (0 <=? i) eqn:E3; destruct (Z.to_nat i) eqn:E4; try lia; try reflexivity.
+          f_equal. lia.
+        + replace (length (x :: l')) with (1 + length l')%nat by reflexivity. lia.
+    Qed.
+
+    Definition nth_reifiable {X} (i : nat) (l : list X) (default : X) : X :=
+      snd (nth_reifiable' (Z.of_nat i) l default).
+    
+   Lemma nth_reifiable_spec {X} (i : nat) (l : list X) (default : X) :
+      nth_reifiable i l default = nth i l default.
+    Proof.
+      cbv [nth_reifiable]. rewrite nth_reifiable'_spec. simpl. destruct (_ <=? _) eqn:E; try lia.
+      - rewrite Nat2Z.id. reflexivity.
+      - apply Z.leb_gt in E. lia.
+    Qed.
+
+    Definition nthZ {X} (i : Z) (l : list X) (default : X) : X :=
+      if (Z.of_nat (Z.to_nat i)) =? i then
+        nth_reifiable (Z.to_nat i) l default
+      else
+        default.
+
+    Definition seqZ a b :=
+      map (fun x => Z.of_nat x + a) (seq 0 (Z.to_nat (1 + b - a))).
+
+    Definition first_summation (x y : list Z) : list (Z*Z) :=
+      flat_map (fun i =>
+                  map (fun j => (weight (Z.to_nat i) * weight (Z.to_nat j), (nthZ i x 0 - nthZ j x 0) * (nthZ j y 0 - nthZ i y 0)))
+                    (seqZ 0 (i - 1)))
+        (seqZ 1 (Z.of_nat n - 1)).
+
+    Definition second_summation' (products f : list Z) := 
+      let high_part : Z*Z := (weight (n - 1) * weight (n - 1), (nthZ (Z.of_nat (n - 1)) products 0)) in
+      let low_part : list (Z*Z) := map (fun i => (weight (Z.to_nat i), (nthZ i f 0) - (nthZ (i - Z.of_nat n) f 0))) (seqZ 0 (2*Z.of_nat n - 3)) in
+      low_part ++ [high_part].
+
+    Definition second_summation (x y : list Z) : list (Z*Z) :=
+      dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
+          let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (2*Z.of_nat n - 3)) ++ [high_product] in
+          (list_rect
+             (fun _ => list Z -> list (Z*Z))
+             (fun f => second_summation' products (rev f))
+             (fun p _ g => fun f' => Let_In ((nthZ 0 f' 0) + p) (fun x => g (x :: f'))) 
+             products) [].
+
+    Definition adk_mul' (x y : list Z) : list (Z*Z) :=
+      first_summation x y ++ second_summation x y.
+
+    Definition ZZ_is_bounded_by_bool (x : Z) (bounds : Z*Z) : bool :=
+      (fst bounds <=? x) && (x <=? snd bounds).
+    
+    Definition is_bounded_by (l : list Z) (bounds : list (Z*Z)) : bool :=
+      fold_right andb true
+        (map (fun x_bound => ZZ_is_bounded_by_bool (fst x_bound) (snd x_bound))
+           (combine l bounds)).
+
+    Definition is_lower_bounded_by (bounds : list (Z*Z)) (xs : list Z) : bool :=
+      fold_right andb true
+        (map (fun bound_x => snd bound_x <=? fst (fst bound_x))
+           (combine bounds xs)).
+
+    (* if everything is nonnegative, then the output is nondecreasing in the inputs *)
+    Definition output_bounds (x_bounds y_bounds : list (Z*Z)) : list (Z*Z) :=
+      let lower_bounds := Positional.from_associational weight (2*n - 2 + 1)
+                            (adk_mul' (map fst x_bounds) (map fst y_bounds)) in
+      let upper_bounds := Positional.from_associational weight (2*n - 2 + 1)
+                            (adk_mul' (map snd x_bounds) (map snd y_bounds)) in
+      map (fun lower_upper => (fst lower_upper, snd lower_upper))
+        (combine lower_bounds upper_bounds).
+
+    Definition list_if_then_else {X} (cond : bool) (ifval elseval : list X) : list X :=
+      map (fun if_else => if cond then fst if_else else snd if_else) (combine ifval elseval).
+
+    Definition truncate (values : list Z) (upper_bounds : list Z) :=
+      map (fun x_upper => Z.land (fst x_upper) (Z.ones (Z.log2_up (snd x_upper)))) (combine values upper_bounds).
+    
+    Definition adk_mul (x_bounds y_bounds : list (Z*Z)) (x y : list Z) : list Z :=
+      list_if_then_else
+        (is_lower_bounded_by x_bounds (repeat 0 n) &&
+           is_lower_bounded_by y_bounds (repeat 0 n) &&
+           ZZ_is_bounded_by_bool (nthZ 0 x 0) (nthZ 0 x_bounds (0, 0)) &&
+           is_bounded_by y y_bounds)
+        (truncate
+           (Positional.from_associational weight (2*n - 2 + 1) (adk_mul' x y))
+           (map snd (output_bounds x_bounds y_bounds)))
+        (Positional.from_associational weight n
+           (Associational.mul
+              (Positional.to_associational weight n x)
+              (Positional.to_associational weight n y))).
+    
+    Definition adk_mulmod (x_bounds y_bounds : list (Z*Z)) (x y : list Z) : list Z :=
+      reduce_carry_borrow (Positional.to_associational weight n (adk_mul x_bounds y_bounds x y)). Print Positional.eval.
+
+    Theorem eval_adk_mulmod a_bounds b_bounds a b :
+      (Positional.eval weight n (adk_mulmod a_bounds b_bounds a b)) mod (s - c') =
+        (Positional.eval weight n a * Positional.eval weight n b) mod (s - c').
+    Proof. Admitted.
+  End WithADK.
+  End DettmanMultiplication.  
 End DettmanMultiplication.
 
 Module dettman_multiplication_mod_ops.
@@ -547,15 +681,61 @@ Module dettman_multiplication_mod_ops.
         + replace 0%Q with (inject_Z 0) by reflexivity. rewrite <- Zle_Qle. lia.
     Qed.
 
-    Definition eval_mulmod := eval_mulmod s c register_width n last_reduction weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
-    Definition eval_squaremod := eval_squaremod s c register_width n last_reduction weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
+    Definition eval_mulmod := eval_mulmod s c register_width n last_reduction weight p_nz n_gteq_4 wprops s_small s_big weight_lt_width.
+    Definition eval_squaremod := eval_squaremod s c register_width n last_reduction weight p_nz n_gteq_4 wprops s_small s_big weight_lt_width.
   End dettman_multiplication_mod_ops.
 End dettman_multiplication_mod_ops.
 
+Module dettman_multiplication_with_adk_mod_ops.
+  Section dettman_multiplication_with_adk_mod_ops.
+  Import DettmanMultiplication.
+  Local Open Scope Z_scope.
+  Context
+        (s : Z)
+        (c : Z)
+        (register_width : nat)
+        (n : nat)
+        (limbwidth : nat)
+        (last_reduction : nat)
+        (p_nz : s - c <> 0)
+        (n_gteq_4 : (4 <= n)%nat)
+        (limbwidth_nz : 0 <> limbwidth)
+        (s_power_of_2 : 2 ^ (Z.log2 s) = s)
+        (s_big' : (n - 1) * limbwidth <= Z.log2 s)
+        (s_small' : Z.log2 s <= n * limbwidth)
+        (registers_big : limbwidth <= register_width).
+
+  Definition weight := weight limbwidth 1.
+
+  Lemma limbwidth_good : 0 < 1 <= limbwidth.
+  Proof. remember limbwidth_nz. lia. Qed.
+  Local Notation wprops := (@wprops limbwidth 1 limbwidth_good).
+
+  Lemma weight_simple : forall i, weight i = 2 ^ (i * limbwidth).
+  Proof.
+    intros i. rewrite (ModOps.weight_ZQ_correct _ _ limbwidth_good).
+    cbv [Qdiv]. replace (Qinv (inject_Z 1)) with 1%Q by reflexivity.
+    rewrite Qmult_1_r. rewrite <- inject_Z_mult. rewrite Qceiling_Z.
+    f_equal. lia.
+  Qed.
+
+  Definition adk_mulmod := adk_mulmod s c register_width last_reduction n weight.
+
+  Lemma weight_friendly : forall i j : nat, weight i * weight j = weight (i + j).
+  Proof.
+    intros i j. repeat rewrite weight_simple. rewrite <- Z.pow_add_r; try lia. f_equal. lia.
+  Qed.
+  
+  Definition eval_adk_mulmod := eval_adk_mulmod s c register_width n last_reduction weight p_nz n_gteq_4 wprops weight_friendly.
+  End dettman_multiplication_with_adk_mod_ops.
+  End dettman_multiplication_with_adk_mod_ops.
 Module Export Hints.
   Import dettman_multiplication_mod_ops.
+  Import dettman_multiplication_with_adk_mod_ops.
 #[global]
   Hint Rewrite eval_mulmod using solve [ auto with zarith | congruence ] : push_eval.
 #[global]
   Hint Rewrite eval_squaremod using solve [ auto with zarith | congruence ] : push_eval.
+#[global]
+  Hint Rewrite eval_adk_mulmod using solve [ auto with zarith | congruence ] : push_eval.
 End Hints.
