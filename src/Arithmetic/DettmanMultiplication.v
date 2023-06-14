@@ -405,7 +405,7 @@ Module DettmanMultiplication.
          \sum_{i = 0}^{2n - 2} b^i ([\sum_{j = 0}^i x_j y_j] - [\sum_{j = 0}^{i - n} x_j y_j]) = 
                  b^{2n - 2} x_{n - 1} y_{n - 1} + 
                  \sum_{i = 0}^{2n - 3} b^i ([\sum_{j = 0}^i x_j y_j] - [\sum_{j = 0}^{i - n} x_j y_j]).
-         This last formula will be particularly nice if we precompute the values \sum_{j = 0}^i x_j y_j, as i ranges from 0 to n - 1.
+         This last formula will be particularly nice if we precompute the values f_i = \sum_{j = 0}^i x_j y_j, as i ranges from 0 to n - 1.
        *)
 
       Definition nth_reifiable' {X} (i : Z) (l : list X) (default : X) : Z*X :=
@@ -440,6 +440,22 @@ Module DettmanMultiplication.
         else
           default.
 
+      Lemma nthZ_lt_0 {X} (i : Z) (l : list X) (default : X) :
+        i < 0 ->
+        nthZ i l default = default.
+      Proof.
+        intros H. cbv [nthZ]. assert (H': Z.of_nat (Z.to_nat i) <> i) by lia.
+        rewrite <- Z.eqb_neq in H'. rewrite H'. reflexivity.
+      Qed.
+
+      Lemma nthZ_ge_0 {X} (i : Z) (l : list X) (default : X) :
+        0 <= i ->
+        nthZ i l default = nth (Z.to_nat i) l default.
+      Proof.
+        intros H. cbv [nthZ]. assert (H': Z.of_nat (Z.to_nat i) = i) by lia.
+        rewrite <- Z.eqb_eq in H'. rewrite H'. apply nth_reifiable_spec.
+      Qed.
+        
       Definition seqZ a b :=
         map (fun x => Z.of_nat x + a) (seq 0 (Z.to_nat (1 + b - a))).
 
@@ -456,15 +472,101 @@ Module DettmanMultiplication.
 
       Definition second_summation (x y : list Z) : list (Z*Z) :=
         dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
-            let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (2*Z.of_nat n - 3)) ++ [high_product] in
+            let products : list Z :=
+              map (fun i => (nthZ i x 0) * (nthZ i y 0))
+                (seqZ 0 (Z.of_nat n - 2)) ++ [high_product] ++ (repeat 0 ((2*n - 3) - (n - 2 + 1))) in
             (list_rect
                (fun _ => list Z -> list (Z*Z))
                (fun f => second_summation' products (rev f))
                (fun p _ g => fun f' => Let_In ((nthZ 0 f' 0) + p) (fun x => g (x :: f'))) 
                products) [].
 
+      Definition friendly_second_summation (x y : list Z) : list (Z*Z) :=
+        let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (2*Z.of_nat n - 3)) in
+        let f : list Z := fold_right (fun p l => (nthZ 0 l 0) + p :: l) [] products in
+        second_summation' products (rev f).
+
+      Lemma products_friendly x y :
+        map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 2)) ++
+          [(nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0)] ++
+          (repeat 0 ((2*n - 3) - (n - 2 + 1))) =
+        map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (2*Z.of_nat n - 3)).
+      Proof. Admitted.
+            
+      Lemma second_summation_friendly x y :
+        second_summation x y = friendly_second_summation x y.
+      Proof.
+        cbv [second_summation]. Search Let_In. rewrite unfold_Let_In.
+        rewrite products_friendly. cbv [friendly_second_summation].
+        remember (map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (2*Z.of_nat n - 3))) as products eqn:E1.
+        (* want to replace products with l in some places, then forget the l = products *)
+        remember (second_summation' products) as sum eqn:E2. clear E1 E2.
+        induction products as [| p products' IH].
+        - reflexivity.
+        - simpl. rewrite unfold_Let_In. Search list_rect. Search list_rect. rewrite <- IH.
+
+      Definition second_summation_1 (x y : list Z) : list (Z*Z) :=
+        let products : list Z :=
+
       Definition adk_mul' (x y : list Z) : list (Z*Z) :=
         first_summation x y ++ second_summation x y.
+
+      Definition friendly_second_summation' (products f : list Z) : list (Z*Z) :=
+        map (fun i => (weight (Z.to_nat i), (nthZ i f 0) - (nthZ (i - Z.of_nat n) f 0))) (seqZ 0 (2*Z.of_nat n - 2)).
+
+      Lemma expand_seqZ_le i j : i <= j -> seqZ i j = i :: seqZ (i + 1) j.
+      Proof.
+        intros H. cbv [seqZ].
+        replace (Z.to_nat (1 + j - i)) with (S (Z.to_nat (j - i))) by lia.
+        replace (Z.to_nat (1 + j - (i + 1))) with (Z.to_nat (j - i)) by lia.
+        rewrite <- cons_seq. rewrite map_cons. f_equal; try lia.
+        rewrite ListUtil.map_seq_succ. rewrite map_map. apply map_ext. lia.
+      Qed.
+
+      Lemma expand_seqZ_gt i j : i > j -> seqZ i j = [].
+      Proof. intros H. cbv [seqZ]. replace (Z.to_nat (1 + j - i)) with 0%nat by lia. reflexivity. Qed.
+      
+
+      Lemma friendly' products f x y :
+        n <> 0%nat ->
+        products = map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (2*Z.of_nat n - 3)) ->
+        f = rev (fold_right (fun p l => (nthZ 0 l 0) + p :: l) [] products) ->
+        friendly_second_summation' products f = second_summation' products f.
+      Proof.
+        intros H1 H2 H3. cbv [second_summation' friendly_second_summation'].
+        replace (seqZ 0 (2*Z.of_nat n - 2)) with (seqZ 0 (2*Z.of_nat n - 3) ++ [2*Z.of_nat n - 2]).
+        - rewrite map_app. f_equal. rewrite map_cons. Search (map _ []). rewrite ListUtil.List.map_nil. f_equal. f_equal.
+          + symmetry. replace (Z.to_nat (2 * Z.of_nat n - 2)) with ((n - 1) + (n - 1))%nat by lia. apply weight_friendly.
+          + 
+          repeat rewrite nthZ_ge_0 by lia. 
+          rewrite map_nil. simpl.
+        remember (Z.to_nat (2*Z.of_nat n - 2)) as m eqn:E. generalize dependent n. induction m as [|m' IHm'].
+        - intros n0 H0 H4 H5 H6. replace (2 * Z.of_nat n0 - 2) with 0 by lia.
+          replace (2 * Z.of_nat n0 - 3) with (-1) in * by lia.
+          subst. simpl. replace (n0 - 1)%nat with 0%nat by lia. rewrite weight_0. f_equal. f_equal.
+          rewrite nthZ_lt_0 by lia. reflexivity.
+        - intros n0 H0 H4 H5 H6. replace (2 * Z.of_nat n0 - 3) with (Z.of_nat m') in * by lia.
+          replace (2*Z.of_nat n0 - 2) with (Z.of_nat (m' + 1)) by lia. Search seqZ. rewrite expand_seqZ_le by lia.
+          rewrite expand_seqZ_le by lia. repeat rewrite expand_seqZ_gt in * by lia. simpl in H2. rewrite H2 in *.
+          simpl in H3. simpl. rewrite nthZ_ge_0 by lia. subst. simpl in H3.
+          reflexivity.
+        
+      Definition friendly_second_summation (x y : list Z) : list (Z*Z) :=
+        let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (2*Z.of_nat n - 3)) in
+        let f : list Z := fold_right (fun p l => (nthZ 0 l 0) + p :: l) [] products in
+        second_summation' products (rev f).
+
+      Lemma friendly x y :
+        second_summation x y = friendly_second_summation x y.
+      Proof. Admitted.
+
+      Lemma eval_adk_mul' x y :
+        dedup_weights (adk_mul' x y) = dedup_weights (Associational.mul
+                                                        (Positional.to_associational weight n x)
+                                                        (Positional.to_associational weight n y)).
+      Proof.
+        induction n.
+        - simpl.
 
       Definition ZZ_is_bounded_by_bool (x : Z) (bounds : Z*Z) : bool :=
         (fst bounds <=? x) && (x <=? snd bounds).
@@ -497,16 +599,15 @@ Module DettmanMultiplication.
       Definition adk_mul (x_bounds y_bounds : list (Z*Z)) (x y : list Z) : list Z :=
         list_if_then_else
           (is_lower_bounded_by x_bounds (repeat 0 n) &&
-             is_lower_bounded_by y_bounds (repeat 0 n) &&
-             ZZ_is_bounded_by_bool (nthZ 0 x 0) (nthZ 0 x_bounds (0, 0)) &&
-             is_bounded_by y y_bounds)
+           is_lower_bounded_by y_bounds (repeat 0 n) &&
+           ZZ_is_bounded_by_bool (nthZ 0 x 0) (nthZ 0 x_bounds (0, 0)) &&
+           is_bounded_by y y_bounds)
           (truncate
              (Positional.from_associational weight (2*n - 2 + 1) (adk_mul' x y))
              (map snd (output_bounds x_bounds y_bounds)))
-          (Positional.from_associational weight n
-             (Associational.mul
-                (Positional.to_associational weight n x)
-                (Positional.to_associational weight n y))).
+          (Positional.from_associational weight (2*n - 2 + 1) (adk_mul' x y)).
+
+     
 
       Definition adk_mulmod (x_bounds y_bounds : list (Z*Z)) (x y : list Z) : list Z :=
         reduce_carry_borrow (Positional.to_associational weight n (adk_mul x_bounds y_bounds x y)).
@@ -518,6 +619,14 @@ Module DettmanMultiplication.
     End WithADK.
   End DettmanMultiplication.  
 End DettmanMultiplication.
+
+(*Definition nn := 5%nat.
+      Definition xx := [543; 654; 234; 123; 5698].
+      Definition yy := [890423; 432; 321; 1; 232].
+      Definition weightt i := 2^i.
+      Compute (dedup_weights (DettmanMultiplication.adk_mul' nn weightt xx yy)).
+      Compute (dedup_weights (Associational.mul (Positional.to_associational weightt nn xx)
+                                                (Positional.to_associational weightt nn yy))).*)
 
 Module dettman_multiplication_mod_ops.
   Section dettman_multiplication_mod_ops.
