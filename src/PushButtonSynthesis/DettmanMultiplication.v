@@ -55,9 +55,9 @@ Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
-
-Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very long time *)
-Local Opaque reified_square_gen. (* needed for making [autorewrite] not take a very long time *)
+(* needed for making [autorewrite] not take a very long time *)
+Local Opaque reified_mul_gen.
+Local Opaque reified_square_gen.
 (* needed for making [autorewrite] with [Set Keyed Unification] fast *)
 Local Opaque expr.Interp.
 
@@ -70,7 +70,8 @@ Section __.
           (s : Z)
           (c_ : list (Z*Z))
           (n : nat) (* number of limbs *)
-          (last_limb_width : nat) (* This is required to be >= 0.  Perhaps it should have type positive. *)
+          (last_limb_width : nat)
+          (last_reduction : nat)
           (inbounds_multiplier : option Q).
 
   Local Instance override_pipeline_opts : PipelineOptions
@@ -96,7 +97,14 @@ Section __.
            s = 2^256
            c = 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
            n = 5
-           last_limb_width = 48.
+           last_limb_width = 48
+           last_reduction = 2.
+
+           s = 2^256
+           c = 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
+           n = 10
+           last_limb_width = 22
+           last_reduction = 6.
      Given parameters dissimilar to those above, these bounds are no better than a guess.
      I suppose they provide a reasonable default, though. *)
 
@@ -161,20 +169,20 @@ Section __.
          false (* subst01 *)
          possible_values
          (reified_mul_gen
-            @ GallinaReify.Reify s @ GallinaReify.Reify c_
+            @ GallinaReify.Reify s @ GallinaReify.Reify c
             @ GallinaReify.Reify (Z.to_nat machine_wordsize) @ GallinaReify.Reify n
-            @ GallinaReify.Reify last_limb_width)
+            @ GallinaReify.Reify last_limb_width @ GallinaReify.Reify last_reduction)
          (Some input_bounds, (Some input_bounds, tt))
          (Some output_bounds).
 
- Definition square
+  Definition square
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          possible_values
          (reified_square_gen
-            @ GallinaReify.Reify s @ GallinaReify.Reify c_
-            @ GallinaReify.Reify (Z.to_nat machine_wordsize)
-            @ GallinaReify.Reify n @ GallinaReify.Reify last_limb_width)
+            @ GallinaReify.Reify s @ GallinaReify.Reify c
+            @ GallinaReify.Reify (Z.to_nat machine_wordsize) @ GallinaReify.Reify n
+            @ GallinaReify.Reify last_limb_width @ GallinaReify.Reify last_reduction)
          (Some input_bounds, tt)
          (Some output_bounds).
 

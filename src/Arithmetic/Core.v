@@ -219,23 +219,24 @@ Module Associational.
         rewrite <- IHp'. ring.
   Qed.
 
-  Definition reduce_one (s:Z) (w fw : Z) (c: Z) (p:list _) : list (Z*Z) :=
+  Definition reduce_one (s:Z) (w fw : Z) (c: list (Z*Z)) (p:list _) : list (Z*Z) :=
     let lo_hi := split_one s w fw p in
-    fst lo_hi ++ map (fun thing => (fst thing, snd thing * (c * (fw / s)))) (snd lo_hi).
+    fst lo_hi ++ mul (snd lo_hi) (map (fun thing => (fst thing, snd thing * (fw / s))) c).
 
   Lemma eval_map_mul_snd (x:Z) (p:list (Z*Z))
     : Associational.eval (List.map (fun t => (fst t, snd t * x)) p) = x * Associational.eval p.
   Proof. induction p; push; nsatz. Qed.
 
   Lemma eval_reduce_one s w fw c p (s_nz:s<>0) (fw_nz:fw<>0) (w_fw : w mod fw = 0) (fw_s : fw mod s = 0)
-                               (modulus_nz: s - c<>0) :
-              Associational.eval (reduce_one s w fw c p) mod (s - c) =
-              Associational.eval p mod (s - c).
+                               (modulus_nz: s - Associational.eval c <> 0) :
+              Associational.eval (reduce_one s w fw c p) mod (s - Associational.eval c) =
+              Associational.eval p mod (s - Associational.eval c).
   Proof using Type.
     cbv [reduce_one]; push.
-    rewrite eval_map_mul_snd. rewrite <- Z.mul_assoc.
-    rewrite <- (reduction_rule _ _ _ _ modulus_nz).
-    rewrite Z.mul_assoc. rewrite <- (Z_div_exact_full_2 fw s s_nz fw_s). rewrite eval_split_one; trivial.
+    rewrite eval_map_mul_snd. rewrite Z.mul_assoc. rewrite <- Z.mul_comm.
+    rewrite <- (reduction_rule _ _ _ _ modulus_nz). rewrite (Z.mul_comm _ (fw / s)).
+    rewrite Z.mul_assoc. rewrite <- (Z_div_exact_full_2 fw s s_nz fw_s).
+    rewrite eval_split_one; trivial.
   Qed.
 
   (*
@@ -1026,6 +1027,18 @@ Module Positional.
 
     (* Reverse of [eval]; translate from Z to basesystem by putting
     everything in first digit and then carrying. *)
+    Definition simple_encode n (x : Z) : list Z :=
+      fold_right (fun a b => carry n n a b) (from_associational n [(1,x)]) (seq 0 (n - 1)).
+    Lemma eval_simple_encode n (x : Z) :
+      n <> 0%nat ->
+      (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
+      eval n (simple_encode n x) = x.
+    Proof using Type*.
+      cbv [simple_encode]. intros H1 H2. apply fold_right_invariant.
+      - push; auto; f_equal; lia.
+      - intros y H3 l H4. rewrite eval_carry; push; auto. apply H2.
+        rewrite Lists.List.in_seq in *. lia.
+    Qed.
     Definition encode n s c (x : Z) : list Z :=
       chained_carries n s c (from_associational n [(1,x)]) (seq 0 n).
     Lemma eval_encode n s c x :

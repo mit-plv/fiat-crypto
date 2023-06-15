@@ -22,6 +22,7 @@ pub mod p521_32;
 pub mod p521_64;
 pub mod poly1305_32;
 pub mod poly1305_64;
+pub mod secp256k1_dettman_32;
 pub mod secp256k1_dettman_64;
 pub mod secp256k1_montgomery_32;
 pub mod secp256k1_montgomery_64;

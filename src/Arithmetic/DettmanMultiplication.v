@@ -14,28 +14,38 @@ Module DettmanMultiplication.
   Section DettmanMultiplication.
     Context
         (s : Z)
-        (c_ : list (Z*Z))
+        (c' : Z)
         (register_width : nat)
-        (limbs : nat)
+        (n : nat)
+        (last_reduction : nat) (* should be between 1 and n - 3, inclusive.
+                                  This is the position that the final modular reduction lands in.
+                                  Larger values correspond to a faster algorithm but looser bounds on the output.
+                                *)
         (weight: nat -> Z)
-        (p_nz : s - Associational.eval c_ <> 0)
-        (limbs_gteq_4 : (4 <= limbs)%nat) (* Technically we only need 2 <= limbs to get the proof to go through, but it doesn't make any sense to try to do this with less than three limbs.
+        (p_nz' : s - c' <> 0)
+        (n_gteq_4 : (4 <= n)%nat) (* Technically we only need 2 <= n to get the proof to go through, but it doesn't make much sense to try to do this with less than four limbs.
                                            Note that having 4 limbs corresponds to zero iterations of the "loop" function defined below. *)
-        (s_small : forall i: nat, (weight (i + limbs)%nat / weight i) mod s = 0)
-        (s_big : weight (limbs - 1)%nat <= s)
+        (s_small : forall i: nat, (weight (i + n)%nat / weight i) mod s = 0)
+        (s_big : weight (n - 1)%nat <= s)
         (weight_lt_width : forall i: nat, (weight i * 2^register_width) mod weight (i + 1)%nat = 0)
-        (wprops : @weight_properties weight).
-
-    Context
+        (wprops : @weight_properties weight)
+        
         (weight_0 := weight_0 wprops)
         (weight_positive := weight_positive wprops)
         (weight_multiples := weight_multiples wprops)
         (weight_divides := weight_divides wprops).
-    
-    Let c := Associational.eval c_.
 
+    (* Proofs will go through regardless of which encoding we choose for c.
+       We choose this encoding (with the weights given by the weight function)
+       so that our reductions land in the weights given by the weight function.
+       (Note that this won't necessarily work out nicely if we have a fractional
+       limbwidth.)
+     *)
+    Definition c := Positional.to_associational weight n
+                      (Positional.simple_encode weight n c').
+      
     Lemma s_positive : s > 0.
-    Proof. remember (weight_positive (limbs - 1)). lia. Qed.
+    Proof. remember (weight_positive (n - 1)). lia. Qed.
 
     Lemma s_nz : s <> 0.
     Proof. remember s_positive. lia. Qed.
@@ -56,12 +66,12 @@ Module DettmanMultiplication.
     Qed.
 
     Lemma s_small' (i j : nat) :
-      (j = i + limbs)%nat ->
+      (j = i + n)%nat ->
       weight j / weight i mod s = 0.
     Proof. intros H. subst. apply s_small. Qed.
 
-    Lemma s_big' : s / weight (limbs - 1) <> 0.
-    Proof. remember (weight_positive (limbs - 1)). apply div_nz; lia. Qed.
+    Lemma s_big' : s / weight (n - 1) <> 0.
+    Proof. remember (weight_positive (n - 1)). apply div_nz; lia. Qed.
 
     Lemma weight_increasing : forall i j : nat, (i <= j)%nat -> weight i <= weight j.
     Proof.
@@ -93,151 +103,84 @@ Module DettmanMultiplication.
       a <> 0 ->
       a / b <> 0.
     Proof. intros H1 H2. remember (Z_div_mod_eq_full a b). lia. Qed.
-      
+
     Hint Resolve s_positive s_nz weight_nz div_nz s_big' : arith.
     Hint Resolve weight_0 weight_positive weight_multiples Weight.weight_multiples_full : arith.
     Hint Resolve weight_div_nz weight_mod_quotient_zero : arith.
+
+    Lemma c_correct : Associational.eval c = c'.
+    Proof.
+      cbv [c]. rewrite eval_to_associational.
+      replace (s - c') with (s - Associational.eval [(1, c')]).
+      - apply eval_simple_encode; auto with arith. lia.
+      - f_equal. cbv [Associational.eval]. simpl. destruct c'; lia.
+    Qed.
+    
+    Lemma p_nz : s - Associational.eval c <> 0.
+    Proof. rewrite c_correct. auto with arith. Qed.    
+    Hint Resolve p_nz : arith.
     
     Local Open Scope nat_scope.
 
-    Definition reduce' x1 x2 x3 x4 x5 := dedup_weights (reduce_one x1 x2 x3 x4 x5).
-    Definition carry' x1 x2 x3 := dedup_weights (Associational.carry x1 x2 x3).
+    Definition reduce' from to before := dedup_weights (reduce_one s from (from / to) c before).
+    Definition carry' from to before := dedup_weights (Associational.carry from (to / from) before).
+    Definition borrow' from to before := dedup_weights (borrow from (from / to) before).
 
-    Definition loop_body i before :=
-      
-      let from1 := weight (i + limbs) in
-      let to1 := weight (i + limbs + 1) in
-      let middle1 := carry' from1 (to1 / from1) before in
+    Hint Rewrite eval_reduce_one Associational.eval_carry eval_dedup_weights eval_borrow : push_eval.
 
-      let from2 := weight (i + limbs) in
-      let to2 := weight i in
-      let middle2 := reduce' s from2 (from2 / to2) c middle1 in
+    Definition carry_from_position i x :=
+      carry' (weight i) (weight (i + 1)) x.
 
-      let from := weight i in
-      let to := weight (i + 1) in
-      let after := carry' from (to / from) middle2 in
-      after.
-
-    Hint Rewrite eval_reduce_one Associational.eval_carry eval_dedup_weights: push_eval.
-
-    Lemma eval_loop_body i before :
-      (Associational.eval (loop_body i before) mod (s - c) =
-         Associational.eval before mod (s - c))%Z.
-    Proof. cbv [loop_body carry' reduce']. autorewrite with push_eval; auto with arith. Qed.
-
-    Definition loop start :=
-      fold_right loop_body start (rev (seq 1 (limbs - 2 - 1 - 1))).
-
-    Lemma eval_loop start :
-      ((Associational.eval (loop start)) mod (s - c) = (Associational.eval start) mod (s - c))%Z.
+    Lemma eval_carry_from_position i x :
+      Associational.eval (carry_from_position i x) = Associational.eval x.
     Proof.
-      cbv [loop]. induction (rev (seq 1 (limbs - 2 - 1 - 1))) as [| i l' IHl'].
-      - reflexivity.
-      - simpl. rewrite eval_loop_body. apply IHl'.
-    Qed.
+      cbv [carry_from_position carry']. autorewrite with push_eval; auto with arith. Qed.
+    Hint Rewrite eval_carry_from_position : push_eval.
 
-    Definition reduce_carry_borrow r0 :=
-      let l := limbs in
-      let r0' := dedup_weights r0 in
-      
-      let r1 := carry' (weight (2 * l - 2)) (2^register_width) r0' in
-      
-      let from2 := weight (2 * l - 2) in
-      let to2 := weight (l - 2) in
-      let r2 := reduce' s from2 (from2 / to2) c r1 in
+    Definition carry_reduce i x :=
+      let x := carry_from_position (i + n) x in
+      let x := reduce' (weight (i + n)) (weight i) x in
+      carry_from_position i x.
 
-      let from3 := weight (l - 2) in
-      let to3 := weight (l - 1) in
-      let r3 := carry' from3 (to3 / from3) r2 in
-      
-      let from4 := Z.mul (weight (2 * l - 2)) (2^register_width) in
-      let to4 := weight (l - 1) in
-      let r4 := reduce' s from4 (from4 / to4) c r3 in
+    Lemma eval_carry_reduce i x :
+      (Associational.eval (carry_reduce i x) mod (s - Associational.eval c) =
+      Associational.eval x mod (s - Associational.eval c))%Z.
+    Proof. cbv [carry_reduce reduce']. autorewrite with push_eval; auto with arith. Qed.
+    Hint Rewrite eval_carry_reduce : push_eval.
 
-      let from5 := weight (l - 1) in
-      let to5 := weight l in
-      let r5 := carry' from5 (to5 / from5) r4 in
+    (* rw stands for "register_width".
+       The idea here is that, if x has value 0 at weight (i + n + 1), then
+       carry_reduce_rw i x = carry_reduce (i + 1) (carry_reduce i x).
 
-      let from6 := weight (l - 1) in
-      let to6 := s in
-      let r6 := carry' from6 (to6 / from6) r5 in
-
-      let from7 := weight l in
-      let to7 := weight (l + 1) in
-      let r7 := carry' from7 (to7 / from7) r6 in
-
-      let from8 := weight l in
-      let to8 := s in
-      let r8 := borrow from8 (from8 / to8) r7 in
-      
-      let r8' := dedup_weights r8 in
-      
-      let r9 := reduce' s s s c r8' in
-
-      let from10 := weight 0 in
-      let to10 := weight 1 in
-      let r10 := carry' from10 (to10 / from10) r9 in
-      
-      let r11 := loop r10 in
-      
-      (* here I've pulled out the final iteration of the loop to do
-         the special register_width carry. *)
-      (* begin final loop iteration *)
-      let i0 := l - 2 - 1 in
-      
-      let rloop1 := carry' (weight (i0 + limbs)) (2^register_width) r11 in
-
-      let fromLoop2 := weight (i0 + limbs) in
-      let toLoop2 := weight i0 in
-      let rloop2 := reduce' s fromLoop2 (fromLoop2 / toLoop2) c rloop1 in
-
-      let fromLoop3 := weight i0 in
-      let toLoop3 := weight (i0 + 1) in
-      let rloop3 := carry' fromLoop3 (toLoop3 / fromLoop3) rloop2 in
-      (* end final loop iteration*)
-      
-      let from12 := Z.mul (weight (i0 + limbs)) (2^register_width) in
-      let to12 := weight (i0 + 1) in
-      let r12 := reduce' s from12 (from12 / to12) c rloop3 in
-
-      let from13 := weight (l - 2) in
-      let to13 := weight (l - 1) in
-      let r13 := carry' from13 (to13 / from13) r12 in
-      
-      Positional.from_associational weight l r13.
-
-    Definition mulmod a b :=
-      let a_assoc := Positional.to_associational weight limbs a in
-      let b_assoc := Positional.to_associational weight limbs b in
-      let r0 := Associational.mul a_assoc b_assoc in
-      reduce_carry_borrow r0.
-
-    Definition squaremod a :=
-      let a_assoc := Positional.to_associational weight limbs a in
-      let r0 := Associational.square a_assoc in
-      reduce_carry_borrow r0.
-
-    Hint Rewrite Positional.eval_from_associational Positional.eval_to_associational eval_borrow eval_loop: push_eval.
-    Hint Resolve Z_mod_same_full : arith.
+       The benefit of using carry_reduce_rw, then, instead of a couple of carry_reduces,
+       is that (in C, or something similar), the LHS of the equation above takes less work
+       to calculate than the RHS.  This is because carries by 2^register_width are very easy.
+     *)
+    Definition carry_reduce_rw i x :=
+      let x := carry' (weight (i + n)) (weight (i + n) * 2^register_width) x in
+      let x := reduce' (weight (i + n)) (weight i) x in
+      let x := carry_from_position i x in
+      let x := reduce' (weight (i + n) * 2^register_width) (weight (i + 1)) x in
+      carry_from_position (i + 1) x.
 
     Local Open Scope Z_scope.
 
-    Lemma reduction_divides i : weight (limbs + i - 1) * 2^register_width / weight i mod s = 0.
+    Lemma reduction_divides i : weight (n + i - 1) * 2^register_width / weight i mod s = 0.
     Proof.
-      rewrite Divide.Z.mod_divide_full. apply (Z.divide_trans _ (weight (limbs + i) / weight i)).
-      - rewrite <- Divide.Z.mod_divide_full. rewrite (Nat.add_comm limbs i). apply s_small.
+      rewrite Divide.Z.mod_divide_full. apply (Z.divide_trans _ (weight (n + i) / weight i)).
+      - rewrite <- Divide.Z.mod_divide_full. rewrite (Nat.add_comm n i). apply s_small.
       - apply Z.divide_div.
         + remember (weight_positive i). lia.
         + rewrite <- Divide.Z.mod_divide_full. apply Weight.weight_multiples_full; try assumption.
           lia.
         + rewrite <- Divide.Z.mod_divide_full.
-          replace (weight (limbs + i)) with (weight (limbs + i - 1 + 1)).
+          replace (weight (n + i)) with (weight (n + i - 1 + 1)).
           -- apply weight_lt_width.
           -- f_equal. lia.
     Qed.
 
     Lemma reduction_divides' (i j : nat) :
-      (j = limbs + i - 1)%nat ->
+      (j = n + i - 1)%nat ->
       weight j * 2^register_width / weight i mod s = 0.
     Proof. intros H. subst. apply reduction_divides. Qed.
 
@@ -257,43 +200,186 @@ Module DettmanMultiplication.
       remember (weight_positive j). remember (Z.pow_nonneg 2 register_width). lia.
     Qed.
 
-    Lemma s_small_particular : weight limbs mod s = 0.
+    Lemma s_small_particular : weight n mod s = 0.
     Proof.
-      replace (weight limbs) with (weight limbs / weight 0).
+      replace (weight n) with (weight n / weight 0).
       - apply s_small'; lia.
       - Z.div_mod_to_equations. lia.
     Qed.
+
+    Lemma eval_carry_reduce_rw i x :
+      (Associational.eval (carry_reduce_rw i x) mod (s - Associational.eval c) =
+         Associational.eval x mod (s - Associational.eval c))%Z.
+    Proof.
+      cbv [carry_reduce_rw carry' reduce']. autorewrite with push_eval; auto with arith.
+      - apply weight_prod_div_nz; lia.
+      - apply weight_prod_div_nz; lia.
+      - apply mod_quotient_zero; auto with arith. apply weight_prod_mod_zero; lia.
+      - apply reduction_divides'; lia.
+    Qed.
+    Hint Rewrite eval_carry_reduce_rw : push_eval.
+
+    Definition carry_chain idxs x :=
+      fold_right carry_from_position x (rev idxs).
+
+    Lemma eval_carry_chain idxs x :
+      Associational.eval (carry_chain idxs x) = Associational.eval x.
+    Proof.
+      cbv [carry_chain]. induction (rev idxs).
+      - reflexivity.
+      - simpl. autorewrite with push_eval. assumption.
+    Qed.
+    Hint Rewrite eval_carry_chain : push_eval.
+    
+    Definition carry_reduce_chain idxs x :=
+      fold_right carry_reduce x (rev idxs).
+      
+    Lemma eval_carry_reduce_chain idxs x :
+      ((Associational.eval (carry_reduce_chain idxs x)) mod (s - Associational.eval c) = (Associational.eval x) mod (s - Associational.eval c))%Z.
+    Proof.
+      cbv [carry_reduce_chain]. induction (rev idxs).
+      - reflexivity.
+      - simpl. autorewrite with push_eval. assumption.
+    Qed.
+    Hint Rewrite eval_carry_reduce_chain : push_eval.
+
+    Hint Resolve s_small_particular divisible_implies_nonzero Z_mod_same_full : arith.
+
+    (* combine the values at position (n - 1) and n;
+       then, split the combined value into
+       pieces at position (n - 1) and weight s.
+     *)
+    Definition move_to_weight_s x :=
+      let x := carry' (weight (n - 1)) s x in
+      borrow' (weight n) s x.
+
+    Lemma eval_move_to_weight_s x :
+      Associational.eval (move_to_weight_s x) = Associational.eval x.
+    Proof.
+      cbv [move_to_weight_s borrow' carry']. autorewrite with push_eval; auto with arith.
+      apply mod_quotient_zero; auto with arith. remember s_positive. lia.
+    Qed.
+    Hint Rewrite eval_move_to_weight_s : push_eval.
+
+    (* This function is a reduction from position n to position 0---
+       the main idea is to do something like 'let x := carry_reduce 0 x'.
+
+       In fact, we move everything from position n to weight s, as well
+       as taking the top few bits off position (n - 1) to put them in weight s,
+       before doing the reduction from weight s to position 0.
+
+       This gives us the opportunity to reduce from the top of position (n - 1),
+       as well as from position n, while only having to do one reduction.
+     *)
+    Definition carry_reduce_s x :=
+      let x := carry_from_position n x in
+      let x := move_to_weight_s x in
+      let x := reduce' s (weight 0) x in
+      carry_from_position 0 x.
+
+    Lemma eval_carry_reduce_s x :
+      ((Associational.eval (carry_reduce_s x)) mod (s - Associational.eval c) =
+      (Associational.eval x) mod (s - Associational.eval c))%Z.
+    Proof.
+      cbv [carry_reduce_s reduce']. autorewrite with push_eval; auto with arith.
+      - rewrite weight_0. rewrite Z.div_1_r. apply s_nz.
+      - rewrite weight_0. rewrite Z.div_1_r. auto with arith.
+      - rewrite weight_0. rewrite Z.div_1_r. auto with arith.
+    Qed.
+    Hint Rewrite eval_carry_reduce_s : push_eval.
+
+    Local Open Scope nat_scope.
+
+    Definition seq_from_to a b := seq a (Z.to_nat (b - a + 1)).
+
+    (* The main idea here is to have something like this:
+           Definition overly_simple_reduce_carry_borrow x :=
+                      carry_reduce_chain (seq_from_to 0 (n - 1)) x.
+       Below, we have something like this, with a few extra things added in.
+     *)
+    Definition reduce_carry_borrow x :=
+      let x := dedup_weights x in
+
+      (* In the 'overly_simple_reduce_carry_borrow', the following code block
+         would belong in the position marked with an 'A' down below.
+         It turns out that doing that might make the output bounds too loose.
+
+         In particular, we need last_reduction to be small enough so that the final
+         carry chain (right below the 'A') does not overflow position (n - 1).
+         We solve this issue by putting the code block here (instad of at 'A').
+
+         This way, the reductions that land in positions
+              last_reduction + 1, last_reduction + 2, ..., n - 2, n - 1
+         are carried up to position n (before the reduction from position n),
+         so we don't have to worry about them overflowing position (n - 1).
+
+         Note that, other than this constraint requiring last_reduction to be
+         sufficiently small, we want to choose the last_reduction parameter to
+         be as large as possible, since when it gets smaller, the final carry
+         chain gets longer (and everything else takes the same amount of time).
+       *)
+      let x := carry_reduce_chain (seq_from_to (last_reduction + 1) (n - 3)) x in
+      let x := carry_reduce_rw (n - 2) x in
+
+      (* This next code block is similar to writing
+              let x := carry_reduce 0 x,
+         except it's a bit more clever.
+         While reducing from position n to position 0, we simultaneously reduce
+         the top few bits of position (n - 1) down to position 0.
+       *)
+      let x := carry_reduce_s x in
+
+      (* This code block is what remains (after we've finished adding in all the
+         extra stuff) of the 'overly_simple_reduce_carry_borrow' referred to above.
+
+         The only clever part is that the last two carry_reduces have been replaced
+         with a carry_reduce_rw.
+       *)
+      let x := carry_reduce_chain (seq_from_to 1 (last_reduction - 1)) x in
+      let x := carry_reduce_rw last_reduction x in
+
+      (* A *)
+
+      let x := carry_chain (seq_from_to (last_reduction + 2) (n - 2)) x in
+
+      Positional.from_associational weight n x.
+
+    Definition mulmod a b :=
+      let a_assoc := Positional.to_associational weight n a in
+      let b_assoc := Positional.to_associational weight n b in
+      let x := Associational.mul a_assoc b_assoc in
+      reduce_carry_borrow x.
+
+    Definition squaremod a :=
+      let a_assoc := Positional.to_associational weight n a in
+      let x := Associational.square a_assoc in
+      reduce_carry_borrow x.
+
+    Hint Rewrite Positional.eval_from_associational Positional.eval_to_associational : push_eval.
+
+    Local Open Scope Z_scope.
       
     Lemma eval_reduce_carry_borrow r0 :
-      (Positional.eval weight limbs (reduce_carry_borrow r0)) mod (s - c) =
-      (Associational.eval r0) mod (s - c).
+      (Positional.eval weight n (reduce_carry_borrow r0)) mod (s - Associational.eval c) =
+      (Associational.eval r0) mod (s - Associational.eval c).
     Proof.
-      cbv [reduce_carry_borrow carry' reduce']. autorewrite with push_eval; auto with arith.
-      all: try apply weight_div_nz; try lia.
-      all: try apply weight_mod_quotient_zero; try lia.
-      all: try apply reduction_divides'; try lia.
-      all: try apply weight_prod_div_nz; try lia.
-      all: try apply s_small'; try lia.
-      all: try apply mod_quotient_zero; try apply divisible_implies_nonzero; try apply s_small_particular; try apply weight_positive.
-      all: try apply weight_prod_mod_zero; try lia.
-      all: try (remember (weight_positive limbs); lia).
-      all: try (remember s_positive; lia).
+      cbv [reduce_carry_borrow carry' reduce' borrow'].
+      autorewrite with push_eval; auto with arith; try lia.
     Qed.
-
     Hint Rewrite eval_reduce_carry_borrow : push_eval.
 
     Theorem eval_mulmod a b :
-      (Positional.eval weight limbs (mulmod a b)) mod (s - c) =
-      (Positional.eval weight limbs a * Positional.eval weight limbs b) mod (s - c).
+      (Positional.eval weight n (mulmod a b)) mod (s - c') =
+      (Positional.eval weight n a * Positional.eval weight n b) mod (s - c').
     Proof.
-      cbv [mulmod]. autorewrite with push_eval. reflexivity.
+      cbv [mulmod]. rewrite <- c_correct. autorewrite with push_eval. reflexivity.
     Qed.
 
     Theorem eval_squaremod a :
-      (Positional.eval weight limbs (squaremod a)) mod (s - c) =
-      (Positional.eval weight limbs a * Positional.eval weight limbs a) mod (s - c).
+      (Positional.eval weight n (squaremod a)) mod (s - c') =
+      (Positional.eval weight n a * Positional.eval weight n a) mod (s - c').
     Proof.
-      cbv [squaremod]. autorewrite with push_eval. reflexivity.
+      cbv [squaremod]. rewrite <- c_correct. autorewrite with push_eval. reflexivity.
     Qed.
   End DettmanMultiplication.
 End DettmanMultiplication.
@@ -306,17 +392,17 @@ Module dettman_multiplication_mod_ops.
     Local Coercion Z.pos : positive >-> Z.
     Context
         (s : Z)
-        (c : list (Z*Z))
+        (c : Z)
         (register_width : nat)
         (n : nat)
         (last_limb_width : nat)
-        (p_nz : s - Associational.eval c <> 0)
+        (last_reduction : nat)
+        (p_nz : s - c <> 0)
         (n_gteq_4 : (4 <= n)%nat)
         (last_limb_width_small : last_limb_width * n <= Z.log2 s)
         (last_limb_width_big : 1 <= last_limb_width)
         (s_power_of_2 : 2 ^ (Z.log2 s) = s).
 
-    (* I do want to have Z.log2 s, not Z.log2_up (s - c) below.  We want to ensure that weight (n - 1) <= s <= weight limbs *)
     Local Notation limbwidth_num' := (Z.log2 s - last_limb_width).
     Local Notation limbwidth_den' := (n - 1). (* can't use Q here, or else reification doesn't work *)
     
@@ -330,8 +416,8 @@ Module dettman_multiplication_mod_ops.
     
     Definition weight := (weight limbwidth_num limbwidth_den).
     
-    Definition mulmod := mulmod s c register_width n weight.
-    Definition squaremod := squaremod s c register_width n weight.
+    Definition mulmod := mulmod s c register_width n last_reduction weight.
+    Definition squaremod := squaremod s c register_width n last_reduction weight.
 
     Lemma n_small : n - 1 <= Z.log2 s - last_limb_width.
     Proof.
@@ -461,8 +547,8 @@ Module dettman_multiplication_mod_ops.
         + replace 0%Q with (inject_Z 0) by reflexivity. rewrite <- Zle_Qle. lia.
     Qed.
 
-    Definition eval_mulmod := eval_mulmod s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
-    Definition eval_squaremod := eval_squaremod s c register_width n weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
+    Definition eval_mulmod := eval_mulmod s c register_width n last_reduction weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
+    Definition eval_squaremod := eval_squaremod s c register_width n last_reduction weight p_nz n_gteq_4 s_small s_big weight_lt_width wprops.
   End dettman_multiplication_mod_ops.
 End dettman_multiplication_mod_ops.
 
