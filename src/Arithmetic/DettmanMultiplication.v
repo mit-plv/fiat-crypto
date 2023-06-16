@@ -406,7 +406,111 @@ Module DettmanMultiplication.
                  b^{2n - 2} x_{n - 1} y_{n - 1} + 
                  \sum_{i = 0}^{2n - 3} b^i ([\sum_{j = 0}^i x_j y_j] - [\sum_{j = 0}^{i - n} x_j y_j]).
          This last formula will be particularly nice if we precompute the values f_i = \sum_{j = 0}^i x_j y_j, as i ranges from 0 to n - 1.
-       *)
+       *) Print split. Search split. Print negate_snd.
+
+      (* returns a0 * s_b1 + b0 * s_a1 *)
+      Definition karatsuba_cross_terms (a0 s_a1 b0 s_b1 : (Z*Z)) : list (Z*Z) :=
+        let sa := fst s_a1 / fst a0 in
+        let sb := fst s_b1 / fst b0 in
+        let s := if sa =? sb then sa else 1 in
+        let a1 := (fst s_a1 / s, snd s_a1) in
+        let b1 := (fst s_b1 / s, snd s_b1) in
+        mul [(s, 1)]
+          (mul [a0] [b0] ++
+             mul [a1] [b1] ++
+             mul (dedup_weights ([a1] ++ Associational.negate_snd [a0])) (dedup_weights ([b1] ++ Associational.negate_snd [b0]))).
+
+      (* a and b should be ordered from least to greatest weight *)
+      (* natural to think about this when length rest_of_a = length rest_of_b, but I don't think we need that *)
+      (* returns a0 * rest_of_b + b0 * rest_of_a *)
+      Fixpoint all_pairs (a0 b0 : Z*Z) (rest_of_a rest_of_b : list (Z*Z)) : list (Z*Z) :=
+        match rest_of_a, rest_of_b with
+        | s_a1 :: rest_of_a', s_b1 :: rest_of_b' => karatsuba_cross_terms a0 b0 s_a1 s_b1 ++ all_pairs a0 b0 rest_of_a' rest_of_b'
+        | _, _ => []
+        end.
+
+      (* for this to work out nicely, a and b should have the same weights in the same (increasing) order.
+         i.e., we want a = [(w_0, a_0), (w_1, a_1), ..., (w_n, a_n)], and
+                       b = [(w_0, b_0), (w_1, b_1), ..., (w_n, b_n)], and
+                       w_0 < w_1 < ... < w_n. *)
+      Fixpoint adk_mul (a b : list (Z*Z)) :=
+        match a, b with
+        | a0 :: rest_of_a, b0 :: rest_of_b => mul [a0] [b0]                            (* a0 * b0 *)
+                                                ++ all_pairs a0 b0 rest_of_a rest_of_b (* a0 * rest_of_b + b0 * rest_of_a *)
+                                                ++ adk_mul rest_of_a rest_of_b         (* rest_of_a * rest_of_b *)
+        | _, _ => []
+        end.
+
+      (* The algorithm above is very nice.  Now I apply some ugly transformations.
+         AFAIK, the rewriter doesn't know how to rewrite things like a1 + b1 - a1 --> b1.
+         This is a problem, since I would like to do term cancellation like that here.
+         However, the rewriter does know how to rewrite things like a1 - a1 --> 0.
+         So, I just need to manually group terms here, and then let the rewriter cancel them out. *)
+      Print fold_right.
+
+      Fixpoint append_to_nth {X} (n : nat) (x : list X) (l : list (list X)) : list (list X) :=
+        match n with
+        | O => match l with
+               | l0 :: l' => (l0 ++ x) :: l'
+               | [] => x :: []
+               end
+        | S n' => match l with
+                  | l0 :: l' => l0 :: append_to_nth n' x l'
+                  | [] => [] :: append_to_nth n' x []
+                  end
+        end.
+
+      Fixpoint append_elementwise {X} (a b : list (list X)) : list (list X) :=
+        match a, b with
+        | a0 :: a', b0 :: b' => (a0 ++ b0) :: append_elementwise a' b'
+        | [], _ => b
+        | _, [] => a
+        end.
+      Print mul.
+
+      Definition karatsuba_cross_terms_grouped_nicely (a0_marked s_a1_marked : Z*Z*nat)
+        (b0 s_b1 : (Z*Z)) : list (list (Z*Z)) :=
+        let (a0, a0_marker) := a0_marked in
+        let (s_a1, s_a1_marker) := s_a1_marked in
+        let sa := fst s_a1 / fst a0 in
+        let sb := fst s_b1 / fst b0 in
+        let s := if sa =? sb then sa else 1 in
+        let a1 := (fst s_a1 / s, snd s_a1) in
+        let b1 := (fst s_b1 / s, snd s_b1) in
+        append_to_nth a0_marker (mul [(s, 1)] (mul [a0] [b0]))
+          (append_to_nth s_a1_marker (mul [(s, 1)] (mul [a1] [b1]))
+             (append_to_nth 0
+                (mul [(s, 1)] 
+                   (mul
+                      (dedup_weights ([a1] ++ Associational.negate_snd [a0]))
+                      (dedup_weights ([b1] ++ Associational.negate_snd [b0]))))
+                [])).
+                            
+                      
+      Fixpoint all_pairs_grouped_nicely (a0_marked : Z*Z*nat) (b0 : Z*Z) (rest_of_a : list (Z*Z*nat)) (rest_of_b : list (Z*Z)) :
+        (list (list (Z*Z))) :=
+        match rest_of_a, rest_of_b with
+        | s_a1_marked :: rest_of_a', s_b1 :: rest_of_b' =>
+            append_elementwise
+              (karatsuba_cross_terms_grouped_nicely a0_marked s_a1_marked b0 s_b1)
+              (all_pairs_grouped_nicely a0_marked b0 rest_of_a' rest_of_b')
+        | _, _ => []
+        end.
+
+      Fixpoint adk_mul_grouped_nicely' (a_marked : list (Z*Z*nat)) (b : list (Z*Z)) : list (list (Z*Z)) :=
+        match a_marked, b with
+        | (a0, a0_marker) :: rest_of_a, b0 :: rest_of_b =>
+            append_to_nth a0_marker (mul [a0] [b0])
+              (append_elementwise
+                 (all_pairs_grouped_nicely (a0, a0_marker) b0 rest_of_a rest_of_b)
+                 (adk_mul_grouped_nicely' rest_of_a rest_of_b))
+        | _, _ => []
+        end.
+
+      Definition adk_mul_grouped_nicely (a b : list (Z*Z)) : list (list (Z*Z)) :=
+        let a_marked := fst (fold_right (fun p l_n => ((p, snd l_n) :: fst l_n, S n)) ([], S O) a) in
+        (* if a = [a1; ...; an], then a_marked = [(1, a1); (2, a2); ...; (n, an)] *)
+        adk_mul_grouped_nicely' a_marked b. Print fold_right.
 
       Definition nth_reifiable' {X} (i : Z) (l : list X) (default : X) : Z*X :=
         fold_right (fun next n_nth => (fst n_nth - 1, if (fst n_nth =? 0) then next else (snd n_nth))) (Z.of_nat (length l) - i - 1, default) l.    
@@ -455,31 +559,55 @@ Module DettmanMultiplication.
         intros H. cbv [nthZ]. assert (H': Z.of_nat (Z.to_nat i) = i) by lia.
         rewrite <- Z.eqb_eq in H'. rewrite H'. apply nth_reifiable_spec.
       Qed.
-        
+      
+      Fixpoint half_that_cancels' (n : nat) (weight : nat -> Z) (a b : list Z) (current_n_plus_one : nat) : list (list (Z*Z)) :=
+        (* we want
+           a0 * b0 to appear at weights 0 ... (n - 1),
+           a1 * b1 to appear at weights 1 ... n,
+           ...
+           a_(n - 1) * b_(n - 1) to appear at weights (n - 1) ... (2*n - 2)
+         *)
+        match current_n_plus_one with
+        | O => []
+        | S current_n => append_to_nth
+                           current_n
+                           (map (fun i => (weight i, (nthZ current_n a 0) * (nthZ current_n b 0))) (seq current_n n))
+                           (half_that_cancels' n weight a b current_n)
+        end.
+
+      Definition half_that_cancels (n : nat) (weight : nat -> Z) (a b : list Z) : list (list (Z*Z)) :=
+        half_that_cancels' n weight a b n.
+
       Definition seqZ a b :=
         map (fun x => Z.of_nat x + a) (seq 0 (Z.to_nat (1 + b - a))).
 
-      Definition first_summation (x y : list Z) : list (Z*Z) :=
-        flat_map (fun i =>
-                    map (fun j => (weight (Z.to_nat i) * weight (Z.to_nat j), (nthZ i x 0 - nthZ j x 0) * (nthZ j y 0 - nthZ i y 0)))
-                      (seqZ 0 (i - 1)))
-          (seqZ 1 (Z.of_nat n - 1)).
-
-      Definition second_summation' (products f : list Z) := 
-        let high_part : Z*Z := (weight (n - 1) * weight (n - 1), (nthZ (Z.of_nat (n - 1)) products 0)) in
+      Definition second_summation' (n : nat) (weight : nat -> Z) (products f : list Z) := 
+        let high_part : Z*Z := (weight (n - 1)%nat * weight (n - 1)%nat, (nthZ (Z.of_nat (n - 1)) products 0)) in
         let low_part : list (Z*Z) := map (fun i => (weight (Z.to_nat i), (nthZ i f 0) - (nthZ (i - Z.of_nat n) f 0))) (seqZ 0 (2*Z.of_nat n - 3)) in
         low_part ++ [high_part].
 
-      Definition second_summation (x y : list Z) : list (Z*Z) :=
+      Definition second_summation (n : nat) (weight : nat -> Z) (x y : list Z) : list (Z*Z) :=
         dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
             let products : list Z :=
               map (fun i => (nthZ i x 0) * (nthZ i y 0))
                 (seqZ 0 (Z.of_nat n - 2)) ++ [high_product] ++ (repeat 0 ((2*n - 3) - (n - 2 + 1))) in
             (list_rect
                (fun _ => list Z -> list (Z*Z))
-               (fun f => second_summation' products (rev f))
+               (fun f => second_summation' n weight products (rev f))
                (fun p _ g => fun f' => Let_In ((nthZ 0 f' 0) + p) (fun x => g (x :: f'))) 
                products) [].
+
+      Definition half_that_doesnt_cancel (n : nat) (weight : nat -> Z) (a b : list Z) : list (Z*Z) :=
+        second_summation n weight a b.
+
+      (* We have two 'halves of zero'.  The 'half_that_cancels' should cancel out (be sure to use dedup_weights!) with stuff in adk_mul_grouped_nicely.
+         Then, we just add on the 'half_that_doesnt_cancel'. Should be easy to prove that putting together the half that cancels with the half that doesn't cancel gives you zero.*)
+
+      Definition first_summation (x y : list Z) : list (Z*Z) :=
+        flat_map (fun i =>
+                    map (fun j => (weight (Z.to_nat i) * weight (Z.to_nat j), (nthZ i x 0 - nthZ j x 0) * (nthZ j y 0 - nthZ i y 0)))
+                      (seqZ 0 (i - 1)))
+          (seqZ 1 (Z.of_nat n - 1)).
 
       Lemma friendly_list_rect products_remaining f_so_far base_case :
         (list_rect
@@ -539,44 +667,6 @@ Module DettmanMultiplication.
       Lemma expand_seqZ_gt i j : i > j -> seqZ i j = [].
       Proof. intros H. cbv [seqZ]. replace (Z.to_nat (1 + j - i)) with 0%nat by lia. reflexivity. Qed.
       
-
-      (*Lemma friendly' products f x y :
-        n <> 0%nat ->
-        products = map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (2*Z.of_nat n - 3)) ->
-        f = rev (fold_right (fun p l => (nthZ 0 l 0) + p :: l) [] products) ->
-        friendly_second_summation' products f = second_summation' products f.
-      Proof.
-        intros H1 H2 H3. cbv [second_summation' friendly_second_summation'].
-        replace (seqZ 0 (2*Z.of_nat n - 2)) with (seqZ 0 (2*Z.of_nat n - 3) ++ [2*Z.of_nat n - 2]).
-        - rewrite map_app. f_equal. rewrite map_cons. Search (map _ []). rewrite ListUtil.List.map_nil. f_equal. f_equal.
-          + symmetry. replace (Z.to_nat (2 * Z.of_nat n - 2)) with ((n - 1) + (n - 1))%nat by lia. apply weight_friendly.
-          + 
-          repeat rewrite nthZ_ge_0 by lia. 
-          rewrite map_nil. simpl.
-        remember (Z.to_nat (2*Z.of_nat n - 2)) as m eqn:E. generalize dependent n. induction m as [|m' IHm'].
-        - intros n0 H0 H4 H5 H6. replace (2 * Z.of_nat n0 - 2) with 0 by lia.
-          replace (2 * Z.of_nat n0 - 3) with (-1) in * by lia.
-          subst. simpl. replace (n0 - 1)%nat with 0%nat by lia. rewrite weight_0. f_equal. f_equal.
--          rewrite nthZ_lt_0 by lia. reflexivity.
-        - intros n0 H0 H4 H5 H6. replace (2 * Z.of_nat n0 - 3) with (Z.of_nat m') in * by lia.
-          replace (2*Z.of_nat n0 - 2) with (Z.of_nat (m' + 1)) by lia. Search seqZ. rewrite expand_seqZ_le by lia.
-          rewrite expand_seqZ_le by lia. repeat rewrite expand_seqZ_gt in * by lia. simpl in H2. rewrite H2 in *.
-          simpl in H3. simpl. rewrite nthZ_ge_0 by lia. subst. simpl in H3.
-          reflexivity.*)
-        
-      (*Definition friendly_second_summation (x y : list Z) : list (Z*Z) :=
-        let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (2*Z.of_nat n - 3)) in
-        let f : list Z := fold_right (fun p l => (nthZ 0 l 0) + p :: l) [] products in
-        second_summation' products (rev f).
-
-      Lemma friendly x y :
-        second_summation x y = friendly_second_summation x y.
-      Proof. Admitted.*)
-
-      Definition sum (f : Z -> Z) (a b : Z) := fold_right Z.add 0 (map f (seqZ a b)).
-      
-      Print first_summation.
-
       Definition f1 x y :=
         fun i j => (i + j, (nthZ i x 0 - nthZ j x 0) * (nthZ j y 0 - nthZ i y 0)).
       Definition first_summation_lifted (x y : list Z) : list (Z*Z) :=
