@@ -1230,6 +1230,76 @@ End Positional_nonuniform.
 Hint Rewrite @eval_cons using solve [auto; distr_length]: push_eval.
 End Positional.
 
+Section Nice_weight.
+  Context (first_limb_weight : Z := 5)
+    (flw_gt_0 : first_limb_weight > 0).
+  
+  Definition weight (n : nat) : Z := first_limb_weight ^ Z.of_nat n.
+  Definition prod_at_index (x y : list Z) (i : nat) : Z :=
+    fold_right Z.add 0
+      (map (fun j => (nth j x 0) * (nth (i - j) y 0)) (seq 0 (i + 1))).
+  Definition pmul (n : nat) (x y : list Z) :=
+    map (prod_at_index x y) (seq 0 (2*n - 1)).
+
+  Definition amul (n : nat) (x y : list Z) :=
+    Positional.from_associational weight (2*n - 1)
+      (Associational.mul
+         (Positional.to_associational weight n x)
+         (Positional.to_associational weight n y)).
+
+  Compute (pmul 5 [1; 2; 3; 4; 5] [312; 243; 123; 543; 3]).
+  Compute (amul 5 [1; 2; 3; 4; 5] [312; 243; 123; 543; 3]).
+
+  Search Positional.place.
+  Lemma weight_0 : weight 0 = 1. Admitted.
+  Lemma weight_nz : forall i, weight i <> 0. Admitted.
+  Lemma weight_gt_0 : forall i, 0 < weight i. Admitted.
+  Lemma weight_divides : forall i, weight (S i) mod weight i = 0. Admitted.
+  Lemma weight_injective : forall n i j, (i <= n)%nat -> (j <= n)%nat -> weight i = weight j -> i = j. Admitted.
+  Check (Positional.place_weight weight weight_0 weight_nz 5 weight_gt_0 weight_divides (weight_injective 5)).
+  Lemma place_weight' :
+    forall n i x, Positional.place weight (weight i, x) n = (Nat.min i n, weight i / weight (Nat.min i n) * x).
+  Proof.
+    intros n i x. apply Positional.place_weight.
+    - apply weight_0.
+    - apply weight_nz.
+    - apply weight_gt_0.
+    - apply weight_divides.
+    - apply (weight_injective n).
+  Qed.
+
+  Print Associational.mul.
+  Print Positional.to_associational.
+    
+  Lemma amul_is_pmul : forall n x y,
+      pmul n x y = amul n x y.
+  Proof.
+    intros n x y. induction x as [| x0 x' IHx'].
+    - cbv [pmul amul]. replace (Positional.to_associational weight n []) with (@nil (Z*Z)).
+      2: { cbv [Positional.to_associational combine]. destruct (map _ _); reflexivity. }
+      replace (Associational.mul _ _) with (@nil (Z*Z)) by reflexivity.
+      cbv [Positional.from_associational fold_right]. cbv [Positional.zeros]. cbv [prod_at_index]. Check (@map).
+      replace (map _ (seq 0 (2 * n - 1))) with (@map nat Z (fun j => 0) (seq 0 (2*n - 1))).
+      + remember (2*n - 1)%nat as m eqn:E. clear E. remember (seq 0 m) as l eqn:E. assert (H : length l = m).
+        -- rewrite E. Search seq. apply seq_length.
+        -- clear E. generalize dependent l. induction m as [|m' IHm'].
+           ++ destruct l as [| l0 l']; try reflexivity. intros H. simpl in H. congruence.
+           ++ intros l H. destruct l as [| l0 l'].
+              --- simpl in H. congruence.
+              --- simpl in H. injection H as H. apply IHm' in H. simpl. f_equal. apply H.
+      + apply map_ext. intros a. remember (a + 1)%nat as b eqn:E; clear E.
+        remember (seq 0 b) as l eqn:E. assert (H : length l = b).
+        -- rewrite E. apply seq_length.
+        -- clear E. generalize dependent l. induction b as [|b' IHb'].
+           ++ intros l H. destruct l as [| l0 l']; try reflexivity. simpl in H. congruence.
+           ++ intros l H. destruct l as [| l0 l'].
+              --- reflexivity.
+              --- simpl in H. injection H as H. apply IHb' in H. rewrite map_cons.
+                  rewrite fold_right_cons. rewrite <- H. cbv [nth]; destruct l0; try lia.
+    - 
+
+Definition 
+
 Record weight_properties {weight : nat -> Z} :=
   {
     weight_0 : weight 0%nat = 1;
