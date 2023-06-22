@@ -1611,6 +1611,69 @@ Section Nice_weight.
                                    --- apply Nat.leb_nle in E. lia.
                                 ++ apply Nat.leb_nle in E. rewrite seq_length. lia.
   Qed.
+
+  Definition pad_or_truncate (len : nat) (l : list Z) : list Z :=
+    (firstn len l) ++ (repeat 0 (len - length l)%nat).
+
+  Lemma nth_pad_default {X} (i : nat) (l : list X) (d : X) (n : nat) :
+    nth i l d = nth i (l ++ repeat d n) d.
+  Proof.
+    Search (nth _ (_ ++ _)). destruct (i <? length l)%nat eqn:E.
+    - apply Nat.ltb_lt in E. rewrite app_nth1; try apply E. reflexivity.
+    - apply Nat.ltb_nlt in E. rewrite app_nth2; try lia. Search (nth _ (repeat _ _) _). rewrite nth_repeat. rewrite nth_overflow; try lia. reflexivity.
+  Qed.
+  
+  Lemma pmul_doesnt_care_about_zeros n x y :
+    pmul n x y = pmul n x (pad_or_truncate n y).
+  Proof.
+    cbv [pad_or_truncate pmul]. rewrite (firstn_all _ (firstn _ _ ++ _)).
+    - cbv [prod_at_index]. apply map_ext_in. intros a1 Ha1. f_equal. apply map_ext_in. intros a2 Ha2. f_equal. apply nth_pad_default.
+    - rewrite app_length. rewrite firstn_length. rewrite repeat_length. lia.
+  Qed.
+
+  Lemma combine_add_garbage_l {X} (l1 l2 l3 : list X) :
+    (length l2 <= length l1)%nat ->
+    combine l1 l2 = combine (l1 ++ l3) l2.
+  Proof. Admitted.
+
+  Lemma combine_remove_garbage_r {X} (l1 l2 : list X) :
+    combine l1 l2 = combine l1 (firstn (length l1) l2).
+  Proof. Admitted. Print Positional.place.
+
+  (*Lemma place_zero weight a :
+    Positional.place weight (a, 0) = 0. Admitted.*)
+
+  Lemma amul_doesnt_care_about_zeros n x y :
+    amul n x y = amul n (pad_or_truncate n x) y.
+  Proof.
+    remember (amul n x y) as thegoal eqn:E1.
+    cbv [amul pad_or_truncate]. Search Positional.to_associational. cbv [Positional.to_associational]. Search combine (_ ++ _).
+    remember (combine _ y) as something eqn:E2.
+    assert (E: seq 0 n = seq 0 (Nat.min (length x) n) ++ seq (length x) (n - length x)).
+    { destruct (length x <=? n)%nat eqn:E'.
+      - apply Nat.leb_le in E'. replace (Nat.min (length x) n) with (length x) by lia. rewrite <- seq_app. f_equal. lia.
+      - apply Nat.leb_nle in E'. replace (Nat.min (length x) n) with n by lia. replace (n - length x)%nat with 0%nat by lia. simpl. rewrite app_nil_r. reflexivity.
+    }
+    rewrite E.
+    - Search (Associational.mul (_ ++ _)). rewrite map_app. rewrite combine_app_samelength.
+      + rewrite Associational.mul_app_l. rewrite (combine_add_garbage_l _ (firstn _ _) (map weight (seq (length x) (n - length x)))).
+        -- rewrite <- map_app. rewrite <- E. remember (Associational.mul (combine _ (firstn _ _)) _) as somethin_else eqn:E3.
+           cbv [Positional.from_associational]. rewrite fold_right_app. rewrite E1. rewrite E2 in *. rewrite E3. cbv [amul Positional.from_associational Positional.to_associational]. f_equal.
+           2: { f_equal. replace (firstn n x) with (firstn (length (map weight (seq 0 n))) x).
+                - Check combine_remove_garbage_r. apply combine_remove_garbage_r.
+                - f_equal. rewrite map_length. apply seq_length.
+           }
+           apply fold_right_invariant; try reflexivity. intros y0 Hin l' IHl'. rewrite unfold_Let_In. cbv [Associational.mul] in Hin. Search (In _ (flat_map _ _)). apply in_flat_map in Hin.
+           destruct Hin as [x0 [Hin_1 Hin_2] ]. destruct x0 as [x0_1 x0_2]. Search (In _ (combine _ _)). apply in_combine_r in Hin_1. Search (In _ (repeat _ _)). apply repeat_spec in Hin_1.
+           rewrite Hin_1 in Hin_2; clear Hin_1. simpl in Hin_2. Search (In _ (map _ _)). apply in_map_iff in Hin_2. destruct Hin_2 as [y0' [Hin_2_1 Hin_2_2] ]. destruct y0 as [y0_1 y0_2].
+           injection Hin_2_1 as E1' E2'. rewrite <- E2'.
+           simpl. Search Positional.add_to_nth. Search Positional.place.
+      replace (combine (map weight (seq 0 (Nat.min (length x) n))) (firstn n x)) with (combine (map weight (seq 0 cbv [Positional.from_associational].
+      rewrite fold_right_app.
+
+  Lemma amul_is_pmul : forall n x y,
+      pmul n x y = amul n x y.
+  Proof. Admitted.
                               
 Record weight_properties {weight : nat -> Z} :=
   {
