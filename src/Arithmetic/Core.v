@@ -1694,7 +1694,113 @@ Section Nice_weight.
     intros n x y. rewrite amul_doesnt_care_about_zeros. rewrite pmul_doesnt_care_about_zeros. apply amul_is_pmul'. Search (length (pad_or_truncate _ _)). apply pad_or_truncate_length.
   Qed.
 
+  Definition nth_reifiable' {X} (n : Z) (l : list X) (default : X) : Z*X :=
+      fold_right (fun next n_nth => (fst n_nth - 1, if (fst n_nth =? 0) then next else (snd n_nth))) (Z.of_nat (length l) - n - 1, default) l.
+
+    Compute (nth_reifiable' 0 [7; 2; 3] (-1)).
+    
+
+    Lemma nth_reifiable'_spec {X} (n : Z) (l : list X) (default : X) :
+      nth_reifiable' n l default = (-n - 1, if 0 <=? n then nth (Z.to_nat n) l default else default).
+    Proof.
+      cbv [nth_reifiable']. generalize dependent n. induction l as [| x l' IHl']; intros n.
+      - simpl. f_equal. destruct (0 <=? n); destruct (Z.to_nat n); reflexivity.
+      - replace (Z.of_nat (length (x :: l')) - n - 1) with
+          (Z.of_nat (length l') - (n - 1) - 1).
+        + simpl. rewrite IHl'. simpl. f_equal; try lia. destruct (_ =? 0) eqn:E1; destruct (0 <=? n - 1) eqn:E2; destruct (0 <=? n) eqn:E3; destruct (Z.to_nat n) eqn:E4; try lia; try reflexivity.
+          f_equal. lia.
+        + replace (length (x :: l')) with (1 + length l')%nat by reflexivity. lia.
+    Qed.
+
+    Definition nth_reifiable {X} (n : nat) (l : list X) (default : X) : X :=
+      snd (nth_reifiable' (Z.of_nat n) l default).
+    
+   Lemma nth_reifiable_spec {X} (n : nat) (l : list X) (default : X) :
+      nth_reifiable n l default = nth n l default.
+    Proof.
+      cbv [nth_reifiable]. rewrite nth_reifiable'_spec. simpl. destruct (_ <=? _) eqn:E; try lia.
+      - rewrite Nat2Z.id. reflexivity.
+      - apply Z.leb_gt in E. lia.
+    Qed.
+
+    Definition nthZ {X} (i : Z) (l : list X) (default : X) : X :=
+      if (Z.of_nat (Z.to_nat i)) =? i then
+        nth_reifiable (Z.to_nat i) l default
+      else
+        default.
+
+    Search seq.
+    Definition seqZ a b :=
+      map (fun x => Z.of_nat x + a) (seq 0 (Z.to_nat (1 + b - a))).
+
+    Definition adk_mul_prod_at_i (n : nat) (x y products f : list Z) (i : nat) : Z :=
+      fold_right Z.add 0 (map (fun j => (nthZ (Z.of_nat j) x 0 - nthZ (Z.of_nat i - Z.of_nat j) x 0) * (nthZ (Z.of_nat i - Z.of_nat j) y 0 - nthZ (Z.of_nat j) y 0)) (seq 0 (i + 1))) +
+        (if (i =? 2 * n - 2)%nat then
+          nthZ (Z.of_nat (n - 1)) products 0
+        else
+          nthZ (Z.of_nat i) f 0 - nthZ (Z.of_nat i - Z.of_nat n) f 0).
+
+    Definition adk_mul' (n : nat) (x y products f : list Z) : list Z :=
+      map (adk_mul_prod_at_i n x y products f) (seq 0 (2*n - 1)).
+
+    Definition adk_mul (n : nat) (x y : list Z) : list Z :=
+      dlet high_product : Z := (nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0) in
+          let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 2)) ++ [high_product] ++ (repeat 0 ((2*n - 2) - (n - 2 + 1))) in
+          (list_rect
+             (fun _ => list Z -> list Z)
+             (fun f => adk_mul' n x y products (rev f))
+             (fun p _ g => fun f' => Let_In ((nthZ 0 f' 0) + p) (fun x => g (x :: f'))) 
+             products) [].
+    
+    Lemma adk_mul_is_pmul (n : nat) (x y : list Z) :
+      adk_mul n x y = pmul n x y.
+    Proof. Admitted.
+
+    Definition nn := 5%nat.
+    Definition xx := [1; 2; 3; 4; 5].
+    Definition yy := [6; 7; 8; 9; 10].
+    Compute (adk_mul nn xx yy).
+    Compute (pmul nn xx yy).
+
+    Lemma friendly_list_rect products_remaining f_so_far base_case :
+        (list_rect
+           (fun _ => list Z -> list Z)
+           base_case
+           (fun p _ g => fun f' => Let_In ((nthZ 0 f' 0) + p) (fun x => g (x :: f'))) 
+           products_remaining) f_so_far =
+          base_case (fold_left (fun l p => (nthZ 0 l 0) + p :: l) products_remaining f_so_far).
+      Proof.
+        generalize dependent f_so_far. induction products_remaining as [| p products' IH].
+        - reflexivity.
+        - intros f_so_far. simpl. rewrite unfold_Let_In. rewrite IH. reflexivity.
+      Qed.
+
+      Lemma f_spec products :
+        fold_left (fun l p => (nthZ 0 l 0) + p :: l) products [] =
+          map
+            (fun i => fold_right Z.add 0 (map (fun j => nthZ j products 0) (seqZ 0 i)))
+            (seqZ 0 (Z.of_nat (length products))).
+      Proof. Admitted.
+
+      Definition friendly_adk_mul (n : nat) (x y : list Z) : list Z :=
+        let products : list Z := map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (2*Z.of_nat n - 1)) in
+        let f : list Z := fold_left (fun l p => (nthZ 0 l 0) + p :: l) products [] in
+        adk_mul' n x y products (rev f).
+
+      Lemma products_friendly n x y :
+        map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (Z.of_nat n - 2)) ++
+          [(nthZ (Z.of_nat n - 1) x 0) * (nthZ (Z.of_nat n - 1) y 0)] =
+        map (fun i => (nthZ i x 0) * (nthZ i y 0)) (seqZ 0 (2*Z.of_nat n - 1)).
+      Proof. Admitted.
+
+      (*Lemma adk_mul_friendly (n : nat) (x y : list Z) :
+        adk_mul n x y = friendly_adk_mul n x y.
+      Proof.
+        cbv [adk_mul]. rewrite unfold_Let_In. rewrite products_friendly.
+        cbv [friendly_adk_mul]. rewrite friendly_list_rect. reflexivity.
+      Qed.*)
 End Nice_weight.
+
 End pmul.
                               
 Record weight_properties {weight : nat -> Z} :=
