@@ -26,12 +26,11 @@ inline fn cast(comptime DestType: type, target: anytype) DestType {
         const dest = @typeInfo(DestType).Int;
         const source = @typeInfo(@TypeOf(target)).Int;
         if (dest.bits < source.bits) {
-            return @bitCast(DestType, @truncate(std.meta.Int(source.signedness, dest.bits), target));
-        } else {
-            return @bitCast(DestType, @as(std.meta.Int(source.signedness, dest.bits), target));
+            const T = std.meta.Int(source.signedness, dest.bits);
+            return @bitCast(@as(T, @truncate(target)));
         }
     }
-    return @as(DestType, target);
+    return target;
 }
 
 // The type MontgomeryDomainFieldElement is a field element in the Montgomery domain.

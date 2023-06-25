@@ -105,12 +105,11 @@ Module Zig.
          "        const dest = @typeInfo(DestType).Int;";
          "        const source = @typeInfo(@TypeOf(target)).Int;";
          "        if (dest.bits < source.bits) {";
-         "            return @bitCast(DestType, @truncate(std.meta.Int(source.signedness, dest.bits), target));";
-         "        } else {";
-         "            return @bitCast(DestType, @as(std.meta.Int(source.signedness, dest.bits), target));";
+         "            const T = std.meta.Int(source.signedness, dest.bits);";
+         "            return @bitCast(@as(T, @truncate(target)));";
          "        }";
          "    }";
-         "    return @as(DestType, target);";
+         "    return target;";
          "}"]
           ++ (if skip_typedefs
               then []
