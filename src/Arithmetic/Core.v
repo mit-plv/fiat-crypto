@@ -1817,7 +1817,7 @@ Section Nice_weight.
 
     Print prod_at_index.
     Definition prod_at_index' (n : nat) (x y : list Z) (i : nat) : Z :=
-      fold_right Z.add 0 (map (fun j : nat => nth j x 0 * nth (i - j) y 0) (seq (Nat.max  (Nat.min n (i + 1)))).
+      fold_right Z.add 0 (map (fun j : nat => nth j x 0 * nth (i - j) y 0) (seq (i - (n - 1)) (Z.to_nat (1 + (Z.min (Z.of_nat n - 1) (Z.of_nat i)) - Z.of_nat (i - (n - 1)))))).
 
     Print pmul.
     Definition pmul' (n : nat) (x y : list Z) : list Z :=
@@ -1898,12 +1898,19 @@ Section Nice_weight.
                     rewrite app_comm_cons. f_equal.
                     - f_equal. f_equal; lia.
                     - f_equal; lia. }
-               replace (seq 0 (Nat.min (S n') (i + 1))) with (seq 0 (Nat.min n' (i + 1)) ++ [S n' - 1]%nat).
-               2: { replace (Nat.min (S n') (i + 1)) with (S (Nat.min n' (i + 1))) by lia. rewrite seq_S. f_equal. f_equal. lia. }
+               replace (seq (i - (S n' - 1)) (Z.to_nat (1 + Z.min (Z.of_nat (S n') - 1) (Z.of_nat i) - Z.of_nat (i - (S n' - 1)))))
+                 with ([i - (S n' - 1)]%nat ++ seq (i - (n' - 1)) (Z.to_nat (1 + Z.min (Z.of_nat (n') - 1) (Z.of_nat i) - Z.of_nat (i - (n' - 1)))) ++ [S n' - 1]%nat).
+               
+               2: { replace (Z.to_nat (1 + Z.min (Z.of_nat (S n') - 1) (Z.of_nat i) - Z.of_nat (i - (S n' - 1)))) with
+                 (S (S (Z.to_nat (1 + Z.min (Z.of_nat n' - 1) (Z.of_nat i) - Z.of_nat (i - (n' - 1)))))) by lia.
+                    rewrite seq_S. rewrite <- cons_seq. cbn [app]. f_equal. f_equal.
+                    - f_equal; lia.
+                    - f_equal. lia. }
                Search (fold_right Z.add). repeat rewrite map_cons. repeat rewrite map_app. repeat rewrite map_cons. repeat rewrite split_sum. repeat rewrite map_nil. repeat rewrite fold_right_cons.
                repeat rewrite split_sum. repeat rewrite fold_right_cons.
                repeat rewrite fold_right_nil. repeat rewrite Z.add_0_r.
-               repeat rewrite Z.add_assoc. rewrite (Z.add_comm _ (fold_right _ _ _)). rewrite (Z.add_comm _ (fold_right _ _ _)). repeat rewrite <- Z.add_assoc. rewrite Z.add_assoc. f_equal.
+               repeat rewrite Z.add_assoc. rewrite (Z.add_comm _ (fold_right _ _ _)). rewrite (Z.add_comm _ (fold_right _ _ _)). rewrite (Z.add_comm _ (fold_right _ _ _)).
+               repeat rewrite <- Z.add_assoc. rewrite Z.add_assoc. f_equal.
                -- rewrite <- IHn'. rewrite Z.add_comm. f_equal.
                   ++ f_equal. replace (Z.to_nat (1 + ((Z.of_nat i + 1) / 2 - 1) - Z.of_nat (i - (n' - 1)))) with (thing - 1)%nat by lia. apply map_ext_in. intros a Ha.
                      apply in_seq in Ha. Search firstn. apply Nat.eqb_neq in E1. clear IHn'.
@@ -1930,7 +1937,11 @@ Section Nice_weight.
                     - left. apply Zeven_div2. apply H'.
                     - right. apply Zodd_div2. apply H'. }
                   repeat rewrite nth_firstn. replace (_ <? _)%nat with true. replace (_ <? _)%nat with true. replace (_ <? _)%nat with true.
-                  replace (i - (i - (S n' - 1)))%nat with (S n' - 1)%nat by lia. remember (nth (i - (S n' - 1)) x 0) as x1. remember (nth (S n' - 1)lia. replace (_ <? _)%nat with true.
+                  replace (i - (i - (S n' - 1)))%nat with (S n' - 1)%nat by lia. lia.
+                  +++ symmetry. apply Nat.ltb_lt. lia.
+                  +++ symmetry. apply Nat.ltb_lt. lia.
+                  +++ symmetry. apply Nat.ltb_lt. lia.
+             + remember (nth (i - (S n' - 1)) x 0) as x1. remember (nth (S n' - 1)lia. replace (_ <? _)%nat with true.
                        repeat rewriate 
                      --- apply Zodd_div2 in H'. assert (H : (a <= n' - 1)%nat) by lia. simpl.
                          replace (i - (n' - 1) + Z.to_nat (Z.div2 (Z.of_nat i + 1) - 1 - Z.of_nat (i - (S n' - 1))))%nat with
