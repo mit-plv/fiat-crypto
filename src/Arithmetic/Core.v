@@ -1242,8 +1242,21 @@ Section Nice_weight.
   Definition prod_at_index (x y : list Z) (i : nat) : Z :=
     fold_right Z.add 0
       (map (fun j => (nth j x 0) * (nth (i - j) y 0)) (seq 0 (i + 1))).
+  
   Definition pmul (n : nat) (x y : list Z) :=
     map (prod_at_index (firstn n x) (firstn n y)) (seq 0 (2*n - 1)).
+  
+  Definition prod_at_index' (n : nat) (x y : list Z) (i : nat) : Z :=
+    fold_right Z.add 0
+      (map
+         (fun j : nat => nth j x 0 * nth (i - j) y 0)
+         (seq
+            (i - (n - 1))
+            (Z.to_nat (1 + (Z.min (Z.of_nat n - 1) (Z.of_nat i)) - Z.of_nat (i - (n - 1)))))).
+
+    Print pmul.
+    Definition pmul' (n : nat) (x y : list Z) : list Z :=
+      map (prod_at_index' n x y) (seq 0 (2 * n - 1)).
 
   Definition amul (n : nat) (x y : list Z) :=
     Positional.from_associational weight (2*n - 1)
@@ -1456,13 +1469,13 @@ Section Nice_weight.
         
   Lemma amul_is_pmul' : forall n x y,
       length y = n ->
-      pmul n x y = amul n x y.
+      pmul' n x y = amul n x y.
   Proof.
     intros n x y H0. generalize dependent x. apply list_induction_backwards. (* forall x : list Z, length x = n -> pmul n y x = amul n y x *)
-    - cbv [pmul amul]. replace (Positional.to_associational weight n []) with (@nil (Z*Z)).
+    - cbv [pmul' amul]. replace (Positional.to_associational weight n []) with (@nil (Z*Z)).
       2: { cbv [Positional.to_associational combine]. destruct (map _ _); reflexivity. }
       replace (Associational.mul [] _) with (@nil (Z*Z)) by reflexivity.
-      cbv [Positional.from_associational fold_right]. cbv [Positional.zeros]. cbv [prod_at_index].
+      cbv [Positional.from_associational fold_right]. cbv [Positional.zeros]. cbv [prod_at_index'].
       replace (map _ (seq 0 (2 * n - 1))) with (@map nat Z (fun j => 0) (seq 0 (2*n - 1))).
       + remember (2*n - 1)%nat as m eqn:E. clear E. remember (seq 0 m) as l eqn:E. assert (H : length l = m).
         -- rewrite E. apply seq_length.
@@ -1475,11 +1488,12 @@ Section Nice_weight.
         remember (seq 0 b) as l eqn:E. assert (H : length l = b).
         -- rewrite E. apply seq_length.
         -- clear E. apply fold_right_invariant; try reflexivity. intros y0 Hin sum IH.
-           apply in_map_iff in Hin. destruct Hin as [i [Hin_1 Hin_2] ]. Search (firstn _ []). rewrite firstn_nil in Hin_1. Search (nth _ []). rewrite nth_nil in Hin_1. simpl in Hin_1. lia.
-    - intros x l H. cbv [pmul amul]. cbv [Positional.to_associational]. destruct n as [| n']; try reflexivity. rewrite combine_app_one.
+           apply in_map_iff in Hin. destruct Hin as [i [Hin_1 Hin_2] ]. rewrite nth_nil in Hin_1. lia.
+    - intros x l H. cbv [pmul' amul]. cbv [Positional.to_associational]. destruct n as [| n']; try reflexivity. rewrite combine_app_one.
       Search (length (map _ _)). rewrite map_length. Search (length (seq _ _)). rewrite seq_length. destruct (S n' <=? length l)%nat eqn:E.
-      + cbv [pmul amul] in H. cbv [prod_at_index]. Search (firstn _ (_ ++ _)). apply Nat.leb_le in E. rewrite firstn_app_inleft; try apply E. apply H.
-      + Search (Associational.mul (_ ++ _) _). rewrite Associational.mul_app_l. Print Associational.mul. replace (nth (length l) (map weight (seq 0 (S n'))) x) with (weight (length l)).
+      + cbv [pmul' amul] in H. cbv [prod_at_index']. apply Nat.leb_le in E. cbv [Positional.to_associational] in H. rewrite <- H. apply map_ext_in.
+        intros a Ha. apply in_seq in Ha. cbv [prod_at_index']. f_equal. apply map_ext_in. intros b Hb. Search (nth _ (_ ++ _)). apply in_seq in Hb. rewrite app_nth1 by lia. reflexivity.
+      + rewrite Associational.mul_app_l. replace (nth (length l) (map weight (seq 0 (S n'))) x) with (weight (length l)).
         -- rewrite expand_singleton_l. rewrite p_to_a_app. cbv [Positional.from_associational]. rewrite fold_right_app. cbv [amul Positional.from_associational Positional.to_associational] in H.
            rewrite <- H. clear H.
 
@@ -1508,7 +1522,7 @@ Section Nice_weight.
            }
            
            ++ rewrite fold_right_map.
-              replace (fold_right _ _ _) with (fold_right (fun x0 y0 => Positional.add_to_nth (x0 + length l) (x * nth x0 y 0) y0) (pmul (S n') l y) (seq 0 (S n'))).
+              replace (fold_right _ _ _) with (fold_right (fun x0 y0 => Positional.add_to_nth (x0 + length l) (x * nth x0 y 0) y0) (pmul' (S n') l y) (seq 0 (S n'))).
               2: { apply fold_right_ext_in. intros x0 y0 H. rewrite unfold_Let_In. simpl. rewrite place_weight'. simpl.
                    replace (Nat.min (x0 + length l) _) with (x0 + length l)%nat.
                    - rewrite Z.div_same.
@@ -1516,45 +1530,47 @@ Section Nice_weight.
                      + apply weight_nz.
                    - apply in_seq in H. apply Nat.leb_nle in E. lia.
               }
-              cbv [prod_at_index]. apply (nth_equal 0 1); try lia. intros i x0.
+              cbv [prod_at_index']. apply (nth_equal 0 1); try lia. intros i x0.
               destruct (i <? 2 * S n' - 1)%nat eqn:E'.
               --- apply Nat.ltb_lt in E'. rewrite (map_nth' _ _ _ 0%nat _).
                   +++ rewrite seq_nth; try apply E'.
-                      replace (nth i _ _) with (nth i (pmul (S n') l y) 0 + (if (length l <=? i)%nat then (x * (nth (i - length l) y 0)) else 0)).
-                      ---- rewrite firstn_app. apply Nat.leb_nle in E.
+                      remember (Z.to_nat _) as thing.                           
+                      replace (nth i _ _) with (nth i (pmul' (S n') l y) 0 + (if (andb (i - (S n' - 1) <=? length l) (length l <? (i - (S n' - 1)) + thing))%nat then (x * (nth (i - length l) y 0)) else 0)).
+                      ---- Search (nth _ (_ ++ _)). Check firstn_app. (*rewrite firstn_app.*) apply Nat.leb_nle in E.
                            replace (S n' - length l)%nat with (S (n' - length l))%nat by lia.
-                           rewrite firstn_cons. rewrite firstn_nil. replace (0 + i)%nat with i by lia.
-                           destruct (length l <=? i)%nat eqn:E''.
-                           *
-                           replace (fold_right Z.add 0 (map (fun j : nat => nth j (firstn (S n') l ++ [x]) 0 * nth (i - j) (firstn (S n') y) 0) (seq 0 (i + 1)))) with
-                             (fold_right Z.add 0 (map (fun j : nat => nth j (firstn (S n') l) 0 * nth (i - j) (firstn (S n') y) 0) (seq 0 (i + 1))) + x * nth (i - length l) y 0).
-                           ++++ f_equal. symmetry. cbv [pmul]. rewrite (map_nth' _ _ _ 0%nat _).
-                                ----- cbv [prod_at_index]. replace (nth i (seq 0 (2 * S n' - 1)) 0%nat) with i; try reflexivity. rewrite seq_nth; try lia.
+                           (*Check firstn_cons. rewrite firstn_cons. rewrite firstn_nil. *) replace (0 + i)%nat with i in * by lia.
+                           destruct (andb (i - (S n' - 1) <=? length l) (length l <? (i - (S n' - 1)) + thing))%nat eqn:E''.
+                           * apply Bool.andb_true_iff in E''. rewrite Nat.leb_le in E''. rewrite Nat.ltb_lt in E''. remember (seq _ _) as theseq.
+                           replace (fold_right Z.add 0 (map (fun j : nat => nth j (l ++ [x]) 0 * nth (i - j) y 0) theseq)) with
+                             (fold_right Z.add 0 (map (fun j : nat => nth j l 0 * nth (i - j) y 0) theseq) + x * nth (i - length l) y 0).
+                             ++++ f_equal. symmetry. cbv [pmul']. rewrite (map_nth' _ _ _ 0%nat _).
+                                  ----- subst. cbv [prod_at_index']. replace (nth i (seq 0 (2 * S n' - 1)) 0%nat) with i; try reflexivity. rewrite seq_nth; try lia.
                                 ----- rewrite seq_length. lia.
-                           ++++ 
-                                ----- replace (seq 0 (i + 1)) with ((seq 0 (length l)) ++ [length l] ++ (seq (length l + 1) (i - length l))).
+                             ++++ subst. remember (Z.to_nat _) as thing.
+                                  ----- replace (seq (i - (S n' - 1)) thing) with
+                                          ((seq (i - (S n' - 1)) (length l - (i - (S n' - 1)))) ++ [length l] ++ (seq (length l + 1) (thing - 1 - (length l - (i - (S n' - 1)))))).
                                 +++++ repeat rewrite map_app. repeat rewrite split_sum. rewrite <- Z.add_assoc. f_equal.
-                                ------ f_equal. apply map_ext_in. intros a Ha. f_equal. rewrite app_nth1; try reflexivity. apply in_seq in Ha. rewrite firstn_all2; try lia.
+                                ------ f_equal. apply map_ext_in. intros a Ha. f_equal. rewrite app_nth1; try reflexivity. apply in_seq in Ha. lia.
                                 ------ rewrite <- Z.add_comm. rewrite Z.add_assoc. f_equal.
-                                ++++++ repeat rewrite map_cons. repeat rewrite map_nil. repeat rewrite fold_right_cons. repeat rewrite fold_right_nil. rewrite (nth_overflow (firstn _ l)).
+                                ++++++ repeat rewrite map_cons. repeat rewrite map_nil. repeat rewrite fold_right_cons. repeat rewrite fold_right_nil. rewrite (nth_overflow l).
                                 ------- rewrite app_nth2.
-                                +++++++ replace (length l - length (firstn (S n') l))%nat with 0%nat.
-                                -------- replace (firstn (S n') y) with y.
-                                ++++++++ simpl. lia.
-                                ++++++++ symmetry. rewrite <- H0. apply List.firstn_all.
-                                -------- rewrite firstn_length. lia.
-                                +++++++ rewrite firstn_length. lia.
-                                ------- rewrite firstn_length. lia.
+                                +++++++ replace (length l - length l)%nat with 0%nat by lia. simpl. lia.
+                                +++++++ lia.
+                                ------- lia.
                                 ++++++ f_equal. apply map_ext_in. intros a Ha. f_equal. apply in_seq in Ha. rewrite nth_overflow; try rewrite firstn_length; try lia.
-                                rewrite nth_overflow; try reflexivity. rewrite app_length. rewrite firstn_length. replace (length [x]) with 1%nat by reflexivity. lia.
+                                rewrite nth_overflow; try reflexivity. rewrite app_length. replace (length [x]) with 1%nat by reflexivity. lia.
                                 +++++ replace ([length l]) with (seq (length l) 1) by reflexivity.
-                                rewrite <- seq_add. rewrite <- seq_add. f_equal. apply Nat.leb_le in E''. lia.
-                           * apply Nat.leb_nle in E''. cbv [pmul]. rewrite (map_nth' _ _ _ 0%nat _).
-                             ++++ cbv [prod_at_index]. replace (nth i (seq 0 (2 * S n' - 1)) 0%nat) with i.
-                                  ----- rewrite Z.add_0_r. f_equal. apply map_ext_in. intros a Ha. f_equal. apply app_nth1. rewrite firstn_length. apply in_seq in Ha. lia.
+                                rewrite <- seq_add. replace (seq (length l)) with (seq ((i - (S n' - 1)) + (length l - (i - (S n' - 1)))))%nat. 2: { f_equal. lia. } rewrite <- seq_add. f_equal. lia.
+                           * apply Bool.andb_false_iff in E''. rewrite Nat.leb_nle in E''. rewrite Nat.ltb_nlt in E''. cbv [pmul']. rewrite (map_nth' _ _ _ 0%nat _).
+                             ++++ cbv [prod_at_index']. replace (nth i (seq 0 (2 * S n' - 1)) 0%nat) with i. 
+                                  ----- rewrite Z.add_0_r. f_equal. subst. apply map_ext_in. intros a Ha. apply in_seq in Ha. f_equal. destruct E'' as [E''|E''].
+                                  +++++ repeat rewrite nth_overflow. reflexivity.
+                                  ------ lia.
+                                  ------ rewrite app_length. cbn [length]. lia.
+                                  +++++ apply app_nth1. lia.
                                   ----- rewrite seq_nth; try lia.
                              ++++ rewrite seq_length. lia.
-                             ---- destruct (length l <=? i)%nat eqn:E''.
+                             ---- destruct ((i - (S n' - 1) <=? length l)%nat && (length l <? i - (S n' - 1) + thing)%nat)%bool eqn:E''.
                                   ++++ remember (pmul _ _ _) as p eqn:Ep. assert (H: (length p = 2 * (S n') - 1)%nat).
                                        { subst. apply length_pmul. }
                                        rewrite <- H in E'. destruct (i - length l <? length y)%nat eqn:E7.
@@ -1814,14 +1830,6 @@ Section Nice_weight.
     Lemma adk_mul_friendlier (n : nat) (x y : list Z) :
       friendly_adk_mul n x y = friendlier_adk_mul n x y.
     Proof. Admitted.
-
-    Print prod_at_index.
-    Definition prod_at_index' (n : nat) (x y : list Z) (i : nat) : Z :=
-      fold_right Z.add 0 (map (fun j : nat => nth j x 0 * nth (i - j) y 0) (seq (i - (n - 1)) (Z.to_nat (1 + (Z.min (Z.of_nat n - 1) (Z.of_nat i)) - Z.of_nat (i - (n - 1)))))).
-
-    Print pmul.
-    Definition pmul' (n : nat) (x y : list Z) : list Z :=
-      map (prod_at_index' n x y) (seq 0 (2 * n - 1)).
 
     Lemma dec : forall (T1 T2 : Prop) (x : {T1} + {T2}),
         T1 \/ T2.
