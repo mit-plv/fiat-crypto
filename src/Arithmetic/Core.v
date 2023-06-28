@@ -1871,21 +1871,19 @@ Section Nice_weight.
         { rewrite <- Nat.div2_div. destruct (Nat.Even_or_Odd (i + 1)) as [H'|H'].
           - apply Nat.Even_double in H'. cbv [Nat.double] in H'. split; try lia.
           - apply Nat.Odd_double in H'. cbv [Nat.double] in H'. lia. }*)
-        destruct (S n' =? 1)%nat eqn:E1.
-        2: {
-             assert (E1': ((Z.of_nat i - (Z.of_nat (S n') - 1) <= Z.of_nat (S n') - 1) ->
-                                                      ((Z.of_nat i - (Z.of_nat (S n') - 1) <= ((Z.of_nat i + 1) / 2 - 1)) <->
-                                                         Z.of_nat i <= 2*Z.of_nat (S n') - 3))).
-             (* this uses the fact that S n' <> 1 *)
+        destruct (andb (negb (S n' =? 1)) (andb ((Z.of_nat (S n') - 1) <=? Z.of_nat i) (Z.of_nat i <=? 2*Z.of_nat (S n') - 3))%Z)%nat eqn:E1.
+        + assert (E1': ((Z.of_nat i - (Z.of_nat (S n') - 1) <= Z.of_nat (S n') - 1) ->
+                      ((Z.of_nat i - (Z.of_nat (S n') - 1) <= ((Z.of_nat i + 1) / 2 - 1)) <->
+                         Z.of_nat i <= 2*Z.of_nat (S n') - 3))).
         { rewrite <- Z.div2_div. destruct (Zeven_odd_dec (Z.of_nat i + 1)) as [H'|H'].
           - apply Zeven_div2 in H'. cbv [Nat.double] in H'. split; try lia; try split; try lia; try split; try lia.
           - apply Zodd_div2 in H'. cbv [Nat.double] in H'. split; try lia.
         }
+        apply andb_prop in E1. destruct E1 as [E1 E2]. Search (negb _ = true). rewrite Bool.negb_true_iff in E1.
         remember (Z.to_nat
        (1 + ((Z.of_nat i + 1) / 2 - 1) -
           Z.of_nat (i - (S n' - 1)))) as thing.
-        destruct (andb ((Z.of_nat (S n') - 1) <=? Z.of_nat i) (Z.of_nat i <=? 2*Z.of_nat (S n') - 3))%Z eqn:E2.
-             + apply andb_prop in E2. repeat rewrite Z.leb_le in E2.
+        apply andb_prop in E2. repeat rewrite Z.leb_le in E2.
                replace (seq (i - (S n' - 1)) thing) with                 
                  ((i - (S n' - 1))%nat ::
                                  (seq (i - (n' - 1)) (thing - 1))).
@@ -1941,61 +1939,9 @@ Section Nice_weight.
                   +++ symmetry. apply Nat.ltb_lt. lia.
                   +++ symmetry. apply Nat.ltb_lt. lia.
                   +++ symmetry. apply Nat.ltb_lt. lia.
-             + remember (nth (i - (S n' - 1)) x 0) as x1. remember (nth (S n' - 1)lia. replace (_ <? _)%nat with true.
-                       repeat rewriate 
-                     --- apply Zodd_div2 in H'. assert (H : (a <= n' - 1)%nat) by lia. simpl.
-                         replace (i - (n' - 1) + Z.to_nat (Z.div2 (Z.of_nat i + 1) - 1 - Z.of_nat (i - (S n' - 1))))%nat with
-                           (Z.to_nat (Z.div2 (Z.of_nat i + 1) - 1)) by lia.
-c                             replace (i - (n' - 1) + (thing - 1)) with (1 + split; try lia; try split; try lia; try split; try lia.
-          - apply Zodd_div2 in H'. cbv [Nat.double] in H'. split; try lia.assert (a <= S n')%nat by lia.
-                     remember assert (a <= n')%nat by lia. fold_right_ext_in.
-               f_equal. f_equal.
-               -- rewrite <- IHn'. rewrite Z.add_comm. rewrite f_equal.
-               -- 
-               
-                    
-                 replace 
-        + apply Bool.orb_prop in E1. rewrite Nat.eqb_eq in E1. rewrite Nat.eqb_eq in E1.
-          2: {
-          assert (E1': (S n' = 1)%nat \/ ((i - (S n' - 1) <= S n' - 1)%nat ->
-                                                      ((i - (S n' - 1)<= ((i + 1) / 2 - 1)) <->
-                                                         i <= 2*S n' - 3))%nat).
-        { rewrite <- Nat.div2_div. destruct (Nat.Even_or_Odd (i + 1)) as [H'|H'].
-          - apply Nat.Even_double in H'. cbv [Nat.double] in H'. split; try lia; try split; try lia; try split; try lia.
-          - apply Nat.Odd_double in H'. cbv [Nat.double] in H'. split; try lia.
-        } lia. rewrite H.
-        destruct (andb (i - (S n' - 1) <=? S n') (i - (S n' - 1) <=? (i + 1) / 2 - 1))%nat eqn:E.
-        
-        + apply Bool.andb_prop in E. destruct E as [E1 E2].
-          apply Nat.leb_le in E1. apply Nat.leb_le in E2.
-          apply H in E2. clear H.
-          replace (seq_from_to (i - (S n' - 1)) ((i + 1) / 2 - 1))%nat with
-            (i - S n' - 1 :: seq_from_to (i - (n' - 1)) ((i + 1) / 2 - 1))%nat.
-          2: { cbv [seq_from_to].
-               replace (i - (n' - 1))%nat with (S (i - S n' - 1))%nat by lia.
-               rewrite cons_seq. f_equal; lia. }
-          rewrite map_cons. rewrite fold_right_cons.
-          replace (seq_from_to (i - (S n' - 1)) i) with
-            (i - (S n' - 1) :: seq_from_to (i - (n' - 1)) i)%nat.
-          2: { cbv [seq_from_to]. replace (i - (n' - 1))%nat with (S (i - (S n' - 1)))%nat by lia.
-               rewrite cons_seq. f_equal; lia. }
-          rewrite map_cons. rewrite fold_right_cons.
-          replace (seq_from_to (i - (n' - 1)) i) with
-          (*(seq_from_to (i - n' - 1) (S n' - 1) ++ [S n'] ++ seq_from_to (S n' + 1) i)%nat*)
-          (S n' :: seq_from_to (S n' + 1) i).
-          2: { cbv [seq_from_to]. simpl. replace (S (n' + 1)) with (S (S n')) by lia.
-               rewrite cons_seq. f_equal; lia. }
-          rewrite map_cons. rewrite fold_right_cons. assert (2 * S n' = i)%nat by lia.
-                     by lia.
-               Check seq_app.
-               rewrite (seq_app _ _ (S)). f_equal.
-            (nth (i - j) (firstn (S n') y) 0 - nth j (firstn (S n') y) 0))
-       (seq_from_to (i - (S n' - 1)) ((i + 1) / 2 - 1))) with .
-         -- 
-          -- Check nth_nil. rewrite nth_nil. simpl. cbv [seq_from_to]. Search Nat.div. Print Nat.div2. Search Nat.div2. replace (Z.to_nat _) with 0%nat. 2: { Search Nat.div. rewrite <- Nat.div2_div. Search Nat.div2. remember (Nat.le_div2 i). replace (i + 1)%nat with (S i) by  lia. clear Heql. remember (Nat.div2 (S i)) as m eqn:clearMe; clear clearMe. simpl. replace lia. simpl in l.
-      cbv [pmul]. remember (map _ _) as products eqn:Eproducts. remember (rev _) as f eqn:Ef. cbv [adk_mul' pmul]. cbv [adk_mul_prod_at_i prod_at_index].
-      apply map_ext(*_in?*). intros i. induction n as [|n' IHn'].
-      - destruct (i - j)%nat. cbv [nth] simpl. Search Nat.divmod. Check Nat.divmod_spec. Print Nat.div. Search Nat.div. rewrite Nat.divmod_spec.
+        + Search (andb _ _ = false). apply Bool.andb_false_iff in E1. rewrite Bool.negb_false_iff in E1. rewrite Nat.eqb_eq in E1. rewrite Bool.andb_false_iff in E1.
+          repeat rewrite Z.leb_nle in E1.
+          
     Admitted.
                  
     Definition nn' := 5%nat.
