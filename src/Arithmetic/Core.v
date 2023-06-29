@@ -1677,11 +1677,6 @@ Section Nice_weight.
   Proof.
     Search combine. Admitted.
 
-  Lemma combine_remove_garbage_r {X} (n : nat) (l1 l2 : list X) :
-    (length l1 <= n)%nat ->
-    combine l1 l2 = combine l1 (firstn n l2).
-  Proof. Admitted.
-
   Lemma amul_doesnt_care_about_zeros n x y :
     amul n x y = amul n x (pad_or_truncate n y).
   Proof.
@@ -1699,10 +1694,15 @@ Section Nice_weight.
       - apply Nat.leb_nle in E'. replace (Nat.min (length y) n) with n by lia. replace (n - length y)%nat with 0%nat by lia. simpl. rewrite app_nil_r. reflexivity.
     }
     rewrite E. rewrite map_app. rewrite combine_app_samelength.
-      + rewrite Associational.mul_singleton_l_app_r. rewrite (combine_add_garbage_l _ (firstn _ _) (map weight (seq (length y) (n - length y)))).
+      + rewrite Associational.mul_singleton_l_app_r. (*rewrite (combine_add_garbage_l _ (firstn _ _) (map weight (seq (length y) (n - length y)))).*)
         -- rewrite <- map_app. rewrite <- E.
            cbv [Positional.from_associational]. rewrite fold_right_app. rewrite E1. f_equal.
-           2: { f_equal. apply combine_remove_garbage_r. rewrite map_length. rewrite seq_length. lia. }
+           2: { f_equal. remember (map weight (seq 0 n)) as x eqn:Ex. destruct (length y <=? n)%nat eqn:E3.
+                - apply Nat.leb_le in E3. Search (firstn _ _ = _). rewrite firstn_all2 by lia. replace (map weight (seq 0 (Nat.min _ _))) with (firstn (length y) x).
+                  + apply combine_truncate_l.
+                  + replace (Nat.min (length y) n) with (length y) by lia. subst. Check firstn_map. rewrite firstn_map. f_equal. Check firstn_seq. rewrite firstn_seq. f_equal. lia.
+                - apply Nat.leb_nle in E3. replace (Nat.min (length y) n) with n by lia. rewrite <- Ex. replace n with (length x). apply combine_truncate_r. subst. rewrite map_length.
+                  rewrite seq_length. lia. }
            apply fold_right_invariant; try reflexivity. intros y0 Hin l' IHl'. rewrite E2; clear E2. rewrite unfold_Let_In. cbv [Associational.mul] in Hin. apply in_flat_map in Hin.
            destruct Hin as [x0 [Hin_1 Hin_2] ]. destruct y0 as [y0_1 y0_2]. Search (In _ (combine _ _)). apply in_map_iff in Hin_2. destruct Hin_2 as [y0' [Hin_2_1 Hin_2_2] ].
            destruct y0' as [y0'_1 y0'_2].
@@ -1715,7 +1715,6 @@ Section Nice_weight.
            ++ rewrite seq_nth in Hin_1 by lia. rewrite <- Hin_1 in *; clear Hin_1 x0. simpl. rewrite <- defi; clear defi y0'_1. rewrite weight_prod_sum. rewrite place_weight'. simpl.
               repeat rewrite Z.mul_0_r. rewrite Positional.add_to_nth_zero. apply IHl'.
            ++ rewrite seq_length. lia.
-        -- rewrite firstn_length. rewrite map_length. rewrite seq_length. lia.
       + rewrite firstn_length. rewrite map_length. rewrite seq_length. lia.
   Qed.
 
