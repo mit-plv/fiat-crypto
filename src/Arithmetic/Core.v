@@ -1654,27 +1654,33 @@ Section Nice_weight.
     - apply Nat.ltb_lt in E. rewrite app_nth1; try apply E. reflexivity.
     - apply Nat.ltb_nlt in E. rewrite app_nth2; try lia. Search (nth _ (repeat _ _) _). rewrite nth_repeat. rewrite nth_overflow; try lia. reflexivity.
   Qed.
-  
-  Lemma pmul_doesnt_care_about_zeros n x y :
-    pmul n x y = pmul n x (pad_or_truncate n y).
+
+  Lemma nth_firstn {X} (l : list X) (n i : nat) (d : X) :
+    nth i (firstn n l) d = if (i <? n)%nat then nth i l d else d.
   Proof.
-    cbv [pad_or_truncate pmul]. rewrite (firstn_all _ (firstn _ _ ++ _)).
-    - cbv [prod_at_index]. apply map_ext_in. intros a1 Ha1. f_equal. apply map_ext_in. intros a2 Ha2. f_equal. apply nth_pad_default.
-    - rewrite app_length. rewrite firstn_length. rewrite repeat_length. lia.
+    repeat rewrite nth_error_nth_full. rewrite nth_error_firstn.
+    destruct (i <? n)%nat eqn:E.
+    - apply Nat.ltb_lt in E. destruct (lt_dec i n); try lia. reflexivity.
+    - apply Nat.ltb_nlt in E. destruct (lt_dec i n); try lia. reflexivity.
+  Qed.
+  
+  Lemma pmul'_doesnt_care_about_zeros n x y :
+    pmul' n x y = pmul' n x (pad_or_truncate n y).
+  Proof.
+    cbv [pad_or_truncate pmul']. cbv [prod_at_index']. apply map_ext_in. intros a1 Ha1. f_equal. apply map_ext_in. intros a2 Ha2. f_equal. rewrite <- nth_pad_default.
+    rewrite nth_firstn. apply in_seq in Ha1. apply in_seq in Ha2. replace (_ <? _)%nat with true; try reflexivity. symmetry. apply Nat.ltb_lt. lia.
   Qed.
 
   Lemma combine_add_garbage_l {X} (l1 l2 l3 : list X) :
     (length l2 <= length l1)%nat ->
     combine l1 l2 = combine (l1 ++ l3) l2.
-  Proof. Admitted.
+  Proof.
+    Search combine. Admitted.
 
   Lemma combine_remove_garbage_r {X} (n : nat) (l1 l2 : list X) :
     (length l1 <= n)%nat ->
     combine l1 l2 = combine l1 (firstn n l2).
-  Proof. Admitted. 
-
-  (*Lemma place_zero weight a :
-    Positional.place weight (a, 0) = 0. Admitted.*)
+  Proof. Admitted.
 
   Lemma amul_doesnt_care_about_zeros n x y :
     amul n x y = amul n x (pad_or_truncate n y).
@@ -1714,9 +1720,9 @@ Section Nice_weight.
   Qed.
 
   Lemma amul_is_pmul : forall n x y,
-      pmul n x y = amul n x y.
+      pmul' n x y = amul n x y.
   Proof.
-    intros n x y. rewrite amul_doesnt_care_about_zeros. rewrite pmul_doesnt_care_about_zeros. apply amul_is_pmul'. Search (length (pad_or_truncate _ _)). apply pad_or_truncate_length.
+    intros n x y. rewrite amul_doesnt_care_about_zeros. rewrite pmul'_doesnt_care_about_zeros. apply amul_is_pmul'. Search (length (pad_or_truncate _ _)). apply pad_or_truncate_length.
   Qed.
 
   Definition nth_reifiable' {X} (n : Z) (l : list X) (default : X) : Z*X :=
@@ -1752,7 +1758,7 @@ Section Nice_weight.
 
     Definition adk_mul_prod_at_i (n : nat) (x y products f : list Z) (i : nat) : Z :=
       fold_right Z.add 0 (map (fun j => (nth j x 0 - nth (i - j) x 0) * (nth (i - j) y 0 - nth j y 0))
-                            (seq_from_to (i - (n - 1)) (Nat.min (n - 1) ((i + 1)/2 - 1)))) +
+                            (seq (i - (n - 1)) (Z.to_nat (1 + ((Z.of_nat i + 1)/2 - 1) - Z.of_nat (i - (n - 1))%nat)%Z))) +
         (if (i =? 2 * n - 2)%nat then
           nth (n - 1) products 0
         else
@@ -1789,15 +1795,6 @@ Section Nice_weight.
         - intros f_so_far. simpl. rewrite unfold_Let_In. rewrite IH. reflexivity.
       Qed.
 
-      Lemma nth_firstn {X} (l : list X) (n i : nat) (d : X) :
-        nth i (firstn n l) d = if (i <? n)%nat then nth i l d else d.
-      Proof.
-        repeat rewrite nth_error_nth_full. rewrite nth_error_firstn.
-        destruct (i <? n)%nat eqn:E.
-        - apply Nat.ltb_lt in E. destruct (lt_dec i n); try lia. reflexivity.
-        - apply Nat.ltb_nlt in E. destruct (lt_dec i n); try lia. reflexivity.
-      Qed.
-
       Lemma adk_mul_friendly (n : nat) (x y : list Z) :
         adk_mul n x y = friendly_adk_mul n x y.
       Proof.
@@ -1818,6 +1815,8 @@ Section Nice_weight.
                   --- f_equal. apply seq_length.
       Qed.
 
+    Print friendly_adk_mul.
+
     Definition friendlier_adk_prod_at_i (n : nat) (x y : list Z) (i : nat) : Z :=
       fold_right Z.add 0 (map (fun j => (nth j x 0 - nth (i - j) x 0) * (nth (i - j) y 0 - nth j y 0))
                             (seq (i - (n - 1)) (Z.to_nat (1 + ((Z.of_nat i + 1)/2 - 1) - Z.of_nat (i - (n - 1))%nat)%Z))) +
@@ -1826,19 +1825,50 @@ Section Nice_weight.
     Definition friendlier_adk_mul (n : nat) (x y : list Z) :=
       map (friendlier_adk_prod_at_i n x y) (seq 0 (2*n - 1)).
 
-    Lemma f_spec (n : nat) (x y : list Z) (i : nat) (d : Z) :
-      let products : list Z := map (fun i => (nth i (firstn n x) 0) * (nth i (firstn n y) 0)) (seq 0 (2*n - 1)) in
+    Lemma f_spec (n : nat) (xn yn : list Z) (i : nat) (d : Z) :
+      let products : list Z := map (fun i => (nth i xn 0) * (nth i yn 0)) (seq 0 (2*n - 1)) in
       let f : list Z := rev (fold_left (fun l p => (nth 0 l 0) + p :: l) products []) in
       nth i f d =
-        if (i <=? 2*n - 1)%nat then
-          fold_right Z.add 0 (map (fun j => nth j x 0 * nth j y 0) (seq_from_to 0 i))
+        if (i <? 2*n - 1)%nat then
+          fold_right Z.add 0 (map (fun j => nth j xn 0 * nth j yn 0) (seq_from_to 0 i))
         else
           d.
-    Proof. Admitted.
+    Proof.
+      remember (2 * n - 1)%nat as m eqn:clearMe; clear clearMe.
+      remember (map _ (seq _ m)) as p eqn:Ep. simpl. remember (rev (fold_left _ p _)) as f eqn:Ef. Search (_ /\ _ -> _).
+      generalize dependent d. generalize dependent i. apply (@proj1 _ (length f = m)).
+      subst. induction m as [|m' IHm'].
+      - simpl. split; try reflexivity. intros i d. destruct i; reflexivity.
+      - destruct IHm' as [IHnth IHlen].
+        remember (map _ (seq _ (S m'))) as p eqn:Ep. remember (fold_left _ p _) as f_rev eqn:Ef.
+        remember (map _ (seq 0 m')) as p' eqn:Ep'. remember (fold_left _ p' _) as f'_rev eqn:Ef'.
+        rewrite seq_S in Ep. rewrite map_app in Ep. rewrite <- Ep' in Ep. clear Ep'. cbn [map] in Ep. rewrite Ep in *. clear Ep.
+        Search (fold_left _ (_ ++ _) _). rewrite fold_left_app in Ef. cbn [fold_left] in Ef. rewrite <- Ef' in Ef. clear Ef'. rewrite Ef in *. clear Ef. cbn [rev].
+        split.
+        + intros i d. destruct (i <? S m')%nat eqn:E1.
+          -- apply Nat.ltb_lt in E1. remember (IHnth i) as IHnthi eqn:clearMe; clear clearMe. destruct (i <? m')%nat eqn:E2.
+             ++ apply Nat.ltb_lt in E2. rewrite app_nth1 by lia. Search Nat.ltb. apply IHnthi.
+             ++ apply Nat.ltb_nlt in E2. rewrite app_nth2 by lia. replace (i - length (rev f'_rev))%nat with 0%nat by lia. cbn [nth]. assert (i = m') by lia. rewrite H in *. clear E1 E2 H.
+                Search (nth _ (rev _)). Check rev_involutive. rewrite <- (rev_involutive f'_rev). destruct (m' - 1 <? m')%nat eqn:E.
+                --- apply Nat.ltb_lt in E. rewrite rev_nth by lia. rewrite IHlen. rewrite IHnth. rewrite <- Nat.ltb_lt in E. rewrite E. rewrite Nat.ltb_lt in E.
+                    cbv [seq_from_to]. remember (Z.to_nat (Z.of_nat m' - _ + _)) as len. replace len with (S (len - 1)) by lia. rewrite seq_S.
+                    rewrite map_app. cbn [map]. Search (fold_right Z.add). rewrite split_sum. cbn [fold_right]. f_equal.
+                    +++ f_equal. f_equal. f_equal. lia.
+                    +++ rewrite Z.add_0_r. f_equal.
+                        ---- f_equal. lia.
+                        ---- f_equal. lia.
+                --- apply Nat.ltb_nlt in E. replace m' with 0%nat by lia. simpl. rewrite rev_involutive. destruct f'_rev as [|f0 f'_rev'].
+                    +++ rewrite nth_nil. lia.
+                    +++ simpl in IHlen. rewrite app_length in IHlen. cbn [length] in IHlen. lia.
+          -- apply Nat.ltb_nlt in E1. rewrite nth_overflow.
+             ++ reflexivity.
+             ++ rewrite app_length. cbn [length]. lia.
+        + rewrite app_length. cbn [length]. lia.
+    Qed.
 
     Lemma adk_mul_friendlier (n : nat) (x y : list Z) :
       friendly_adk_mul n x y = friendlier_adk_mul n x y.
-    Proof. Admitted.
+    Proof. cbv [friendly_adk_mul adk_mul_prod_at_i]. rewrite f_spec.
 
     Lemma dec : forall (T1 T2 : Prop) (x : {T1} + {T2}),
         T1 \/ T2.
