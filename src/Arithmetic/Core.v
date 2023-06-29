@@ -1868,7 +1868,41 @@ Section Nice_weight.
 
     Lemma adk_mul_friendlier (n : nat) (x y : list Z) :
       friendly_adk_mul n x y = friendlier_adk_mul n x y.
-    Proof. cbv [friendly_adk_mul adk_mul_prod_at_i]. rewrite f_spec.
+    Proof.
+      cbv [friendly_adk_mul adk_mul_prod_at_i adk_mul' friendlier_adk_mul friendlier_adk_prod_at_i].
+      apply map_ext_in. intros i Hi. apply in_seq in Hi. f_equal. repeat rewrite f_spec. replace (i - n <? 2 * n - 1)%nat with true.
+      - replace (i <? 2 * n - 1)%nat with true.
+        + destruct (i =? 2 * n - 2)%nat eqn:E.
+          -- apply Nat.eqb_eq in E. replace (Z.to_nat _) with 1%nat by lia. Check map_nth'. rewrite (map_nth' _ _ _ 0%nat).
+             ++ rewrite seq_nth by lia. repeat rewrite nth_firstn. replace (_ <? _)%nat with true.
+                --- cbn [seq map fold_right]. rewrite Z.add_0_r. f_equal.
+                    +++ f_equal. lia.
+                    +++ f_equal. lia.
+                --- symmetry. apply Nat.ltb_lt. lia.
+             ++ rewrite seq_length. lia.
+          -- clear E. destruct (i <? n)%nat eqn:E.
+             ++ apply Nat.ltb_lt in E. rewrite Z.sub_0_r. f_equal. replace (seq _ _) with (seq_from_to 0 i).
+                --- apply map_ext_in. intros j Hj. apply in_seq in Hj. repeat rewrite nth_firstn. replace (_ <? _)%nat with true.
+                    +++ reflexivity.
+                    +++ symmetry. apply Nat.ltb_lt. lia.
+                --- cbv [seq_from_to]. f_equal; lia.
+             ++ apply Nat.ltb_nlt in E. replace (seq_from_to 0 i) with (seq_from_to 0 (i - n) ++ seq_from_to (i - n + 1) i).
+                --- rewrite map_app. rewrite split_sum. ring_simplify. Print friendly_adk_mul. remember (Z.to_nat _) as seqlen.
+                    replace (seq_from_to (i - n + 1) i) with (seq (i - (n - 1)) seqlen ++ seq (i - (n - 1) + seqlen) (1 + i - (i - n + 1) - seqlen)).
+                    2: { rewrite <- seq_app. cbv [seq_from_to]. f_equal; lia. }
+                    rewrite map_app. rewrite split_sum. rewrite <- Z.add_0_r. f_equal.
+                    +++ f_equal. apply map_ext_in. intros j Hj. apply in_seq in Hj. repeat rewrite nth_firstn. replace (j <? n)%nat with true.
+                        ---- reflexivity.
+                        ---- symmetry. apply Nat.ltb_lt. lia.
+                    +++ rewrite fold_right_map. apply fold_right_invariant; try reflexivity. intros j Hj s' Hs'. apply in_seq in Hj. repeat rewrite nth_overflow.
+                        ---- lia.
+                        ---- rewrite firstn_length. lia.
+                        ---- rewrite firstn_length. lia.
+                --- cbv [seq_from_to]. replace (i - n + 1)%nat with (0 + (i - n + 1))%nat by lia. replace (Z.to_nat (Z.of_nat (i - n) - Z.of_nat 0 + 1)) with (0 + (i - n + 1))%nat by lia.
+                    rewrite <- seq_app. f_equal. lia.
+        + symmetry. apply Nat.ltb_lt. lia.
+      - symmetry. apply Nat.ltb_lt. lia.
+    Qed.
 
     Lemma dec : forall (T1 T2 : Prop) (x : {T1} + {T2}),
         T1 \/ T2.
@@ -1876,16 +1910,21 @@ Section Nice_weight.
       intros T1 T2 H. destruct H.
       - left. assumption.
       - right. assumption.
-    Qed.
+    Qed. Print adk_mul_prod_at_i.
 
     Lemma adk_mul_is_pmul (n : nat) (x y : list Z) :
-      adk_mul n (firstn n x) (firstn n y) = pmul' n x y.
+      adk_mul n x y = pmul' n x y.
     Proof.
       rewrite adk_mul_friendly. rewrite adk_mul_friendlier. cbv [friendlier_adk_mul pmul'].
       cbv [prod_at_index' friendlier_adk_prod_at_i].
       apply map_ext. intros i.
+      remember (Zeven_odd_dec (Z.of_nat i + 1)) as H72 eqn:clearMe; clear clearMe. apply dec in H72. Check Zodd_div2.
+                  assert (H73: (Z.of_nat i + 1 = 2 * Z.div2 (Z.of_nat i + 1) \/ Z.of_nat i + 1 = 2 * Z.div2 (Z.of_nat i + 1) + 1)).
+                  { destruct H72 as [H'|H'].
+                    - left. apply Zeven_div2. apply H'.
+                    - right. apply Zodd_div2. apply H'. }
       induction n as [|n' IHn'].
-      - cbv [firstn]. replace (fold_right _ _ _) with 0.
+      - replace (fold_right _ _ _) with 0.
         + replace (fold_right _ _ _) with 0.
           -- replace (fold_right _ _ _) with 0.
              ++ lia.
@@ -1894,16 +1933,12 @@ Section Nice_weight.
                 apply in_seq in H2. lia.
           -- apply fold_right_invariant; try reflexivity. intros y0 Hin z IH.
                 apply in_map_iff in Hin. destruct Hin as [x0 [H1 H2] ].
-                repeat rewrite nth_nil in H1. lia.
+                repeat rewrite nth_nil in H1. apply in_seq in H2. lia.
         + apply fold_right_invariant; try reflexivity. intros y0 Hin z IH.
                 apply in_map_iff in Hin. destruct Hin as [x0 [H1 H2] ].
-                repeat rewrite nth_nil in H1. lia.
+                repeat rewrite nth_nil in H1. apply in_seq in H2. (* this is secretly a proof by contradiction. more contradiction above *) lia.
       -
-        remember (Zeven_odd_dec (Z.of_nat i + 1)) as H72 eqn:clearMe; clear clearMe. apply dec in H72. Check Zodd_div2.
-                  assert (H73: (Z.of_nat i + 1 = 2 * Z.div2 (Z.of_nat i + 1) \/ Z.of_nat i + 1 = 2 * Z.div2 (Z.of_nat i + 1) + 1)).
-                  { destruct H72 as [H'|H'].
-                    - left. apply Zeven_div2. apply H'.
-                    - right. apply Zodd_div2. apply H'. }
+        
 
         (* three cases.
            1. n = 1, or i = 2*n - 2.  In this case, the second summation on the LHS gets an extra term, as does the summation on the RHS.
@@ -1974,24 +2009,25 @@ Section Nice_weight.
                          +++ symmetry. apply Nat.ltb_lt. lia.
                          +++ symmetry. apply Nat.ltb_lt. lia.
                          +++ symmetry. apply Nat.ltb_lt. lia.
-                  ++ f_equal. apply map_ext_in. intros a Ha. apply in_seq in Ha. apply Nat.eqb_neq in E1. clear IHn'.
+               -- 
+                  (*++ f_equal. apply map_ext_in. intros a Ha. apply in_seq in Ha. apply Nat.eqb_neq in E1. clear IHn'.
                      assert (H1 : (a <= n' - 1)%nat). { rewrite <- Z.div2_div in *. destruct (Zeven_odd_dec (Z.of_nat i + 1)) as [H'|H'].
                                                        - apply Zeven_div2 in H'. lia.
                                                        - apply Zodd_div2 in H'. lia. }
                      assert (H2 : (i - a <= n' - 1)%nat) by lia. repeat rewrite nth_firstn.
                      replace (a <? S n')%nat with true. replace (a <? n')%nat with true. reflexivity.
                      +++ symmetry. apply Nat.ltb_lt. lia.
-                     +++ symmetry. apply Nat.ltb_lt. lia.
-               -- remember (Zeven_odd_dec (Z.of_nat i + 1)) as H' eqn:clearMe; clear clearMe. apply dec in H'. Check Zodd_div2.
+                     +++ symmetry. apply Nat.ltb_lt. lia.*)
+               (*--*) remember (Zeven_odd_dec (Z.of_nat i + 1)) as H' eqn:clearMe; clear clearMe. apply dec in H'. Check Zodd_div2.
                   assert (H'': (Z.of_nat i + 1 = 2 * Z.div2 (Z.of_nat i + 1) \/ Z.of_nat i + 1 = 2 * Z.div2 (Z.of_nat i + 1) + 1)).
                   { destruct H' as [H'|H'].
                     - left. apply Zeven_div2. apply H'.
                     - right. apply Zodd_div2. apply H'. }
-                  repeat rewrite nth_firstn. replace (_ <? _)%nat with true. replace (_ <? _)%nat with true. replace (_ <? _)%nat with true.
+                  repeat rewrite nth_firstn. (*replace (_ <? _)%nat with true. replace (_ <? _)%nat with true. replace (_ <? _)%nat with true.*)
                   replace (i - (i - (S n' - 1)))%nat with (S n' - 1)%nat by lia. lia.
+                  (*+++ symmetry. apply Nat.ltb_lt. lia.
                   +++ symmetry. apply Nat.ltb_lt. lia.
-                  +++ symmetry. apply Nat.ltb_lt. lia.
-                  +++ symmetry. apply Nat.ltb_lt. lia.
+                  +++ symmetry. apply Nat.ltb_lt. lia.*)
         + Search (andb _ _ = false). apply Bool.andb_false_iff in E1. rewrite Bool.negb_false_iff in E1. rewrite Nat.eqb_eq in E1. rewrite Bool.andb_false_iff in E1.
           repeat rewrite Z.leb_nle in E1.
           destruct (orb (andb (S n' =? 1) (i =? 0)) (i =? 2*(S n') - 2))%nat eqn:E2.
@@ -2007,8 +2043,7 @@ Section Nice_weight.
              cbn [seq map fold_right]. f_equal.
              replace (i - (i - (S n' - 1)))%nat with (S n' - 1)%nat by lia.
              replace (i - (S n' - 1))%nat with (S n' - 1)%nat by lia.
-             repeat rewrite nth_firstn. replace (_ <? _)%nat with true. reflexivity.
-             +++ symmetry. apply Nat.ltb_lt. lia.
+             reflexivity.
           -- (* case 3 *) Search (orb _ _ = false). rewrite Bool.orb_false_iff in E2. rewrite Bool.andb_false_iff in E2. repeat rewrite Nat.eqb_neq in E2.
              assert (H: (i < (S n' - 1) \/ 2*(S n') - 2 < i)%nat) by lia.
              (*assert (H: (((i - (S n' - 1)) = (i - (n' - 1)) /\ (Z.to_nat (1 + Z.min (Z.of_nat (S n') - 1) (Z.of_nat i) - Z.of_nat (i - (S n' - 1)))) =
@@ -2018,17 +2053,17 @@ Section Nice_weight.
                 replace (Z.to_nat (1 + Z.min (Z.of_nat (S n') - 1) (Z.of_nat i) - Z.of_nat 0)) with
                   (Z.to_nat (1 + Z.min (Z.of_nat n' - 1) (Z.of_nat i) - Z.of_nat 0))
                   in * by lia. rewrite <- IHn'. clear IHn'. f_equal.
-                --- f_equal. apply map_ext_in. intros a Ha. apply in_seq in Ha. Search firstn.
+                (*--- f_equal. apply map_ext_in. intros a Ha. apply in_seq in Ha. Search firstn.
                     repeat rewrite nth_firstn. replace (_ <? _)%nat with true. replace (_ <? _)%nat with true. replace (_ <? _)%nat with true. replace (_ <? _)%nat with true. reflexivity.
                     +++ symmetry. apply Nat.ltb_lt. lia.
                     +++ symmetry. apply Nat.ltb_lt. lia.
                     +++ symmetry. apply Nat.ltb_lt. lia.
-                    +++ symmetry. apply Nat.ltb_lt. lia.
+                    +++ symmetry. apply Nat.ltb_lt. lia.*)
                 --- f_equal. replace ((Z.to_nat (1 + Z.min (Z.of_nat i) (Z.of_nat (S n') - 1) - Z.of_nat 0))) with
                       (Z.to_nat (1 + Z.min (Z.of_nat i) (Z.of_nat n' - 1) - Z.of_nat 0)) by lia. apply map_ext_in.
-                    intros a Ha. apply in_seq in Ha. repeat rewrite nth_firstn. replace (_ <? _)%nat with true. replace (_ <? _)%nat with true. reflexivity.
-                    +++ symmetry. apply Nat.ltb_lt. lia.
-                    +++ symmetry. apply Nat.ltb_lt. lia.
+                    intros a Ha. apply in_seq in Ha. (*repeat rewrite nth_firstn. replace (_ <? _)%nat with true. replace (_ <? _)%nat with true.*) reflexivity.
+                    (*+++ symmetry. apply Nat.ltb_lt. lia.
+                    +++ symmetry. apply Nat.ltb_lt. lia.*)
              ++ replace (Z.to_nat (1 + Z.min (Z.of_nat (S n') - 1) (Z.of_nat i) - Z.of_nat (i - (S n' - 1)))) with 0%nat by lia.
                 (*replace (Z.to_nat (1 + Z.min (Z.of_nat n' - 1) (Z.of_nat i) - Z.of_nat (i - (n' - 1)))) with 0%nat in * by lia.*)
                 replace ((Z.to_nat (1 + ((Z.of_nat i + 1) / 2 - 1) - Z.of_nat (i - (S n' - 1))))) with 0%nat by lia.
