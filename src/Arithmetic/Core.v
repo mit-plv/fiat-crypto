@@ -1463,6 +1463,12 @@ Section Nice_weight.
     intros n x y. cbv [pmul]. rewrite map_length. rewrite seq_length. reflexivity.
   Qed.
 
+  Lemma length_pmul' : forall n x y,
+      length (pmul' n x y) = (2*n - 1)%nat.
+  Proof.
+    intros n x y. cbv [pmul']. rewrite map_length. rewrite seq_length. reflexivity.
+  Qed.
+
   Lemma nth_nil {X} n d :
     nth n (@nil X) d = d.
   Proof. destruct n; reflexivity. Qed.
@@ -1571,8 +1577,8 @@ Section Nice_weight.
                                   ----- rewrite seq_nth; try lia.
                              ++++ rewrite seq_length. lia.
                              ---- destruct ((i - (S n' - 1) <=? length l)%nat && (length l <? i - (S n' - 1) + thing)%nat)%bool eqn:E''.
-                                  ++++ remember (pmul _ _ _) as p eqn:Ep. assert (H: (length p = 2 * (S n') - 1)%nat).
-                                       { subst. apply length_pmul. }
+                                  ++++ remember (pmul' _ _ _) as p eqn:Ep. assert (H: (length p = 2 * (S n') - 1)%nat).
+                                       { subst. apply length_pmul'. }
                                        rewrite <- H in E'. destruct (i - length l <? length y)%nat eqn:E7.
                                        ** replace (seq 0 (S n')) with (seq 0 (i - length l) ++ [i - length l] ++ seq (i - length l + 1) (S n' - (i - length l) - 1))%nat.
                                        ----- repeat rewrite fold_right_app. remember (fold_right _ (fold_right _ p _) _) as the_list eqn:E3.
@@ -1587,7 +1593,8 @@ Section Nice_weight.
                                        ------- intros y0 Hin l' IH. rewrite E4; clear E4. rewrite mth_add_to_nth.
                                        +++++++ apply IH.
                                        +++++++ apply in_seq in Hin. lia.
-                                       ------ simpl. rewrite E4. apply Nat.leb_le in E''. replace (i - length l + length l)%nat with i by lia. rewrite nth_add_to_nth.
+                                       ------ simpl. rewrite E4. apply Bool.andb_true_iff in E''. rewrite Nat.leb_le in E''. rewrite Nat.ltb_lt in E''.
+                                       replace (i - length l + length l)%nat with i by lia. rewrite nth_add_to_nth.
                                        replace (i <? length the_list)%nat with true.
                                        ++++++ reflexivity.
                                        ++++++ symmetry. rewrite Nat.ltb_lt. replace (length the_list) with (length p); try lia. rewrite E3; clear E3. apply fold_right_invariant.
@@ -1597,7 +1604,7 @@ Section Nice_weight.
                                        ------ apply IH.
                                        ------ apply in_seq in H'. lia.
                                        ----- replace [(i - length l)%nat] with (seq (i - length l)%nat 1) by reflexivity. rewrite <- seq_app. rewrite <- seq_app. f_equal.
-                                       apply Nat.leb_le in E''. apply Nat.leb_nle in E. rewrite H in E'. apply Nat.ltb_lt in E7. lia.
+                                       rewrite Bool.andb_true_iff in E''. rewrite Nat.leb_le in E''. rewrite Nat.ltb_lt in E''. rewrite H in E'. apply Nat.ltb_lt in E7. lia.
                                        ** rewrite (nth_overflow y).
                                           ----- rewrite Z.mul_0_r. rewrite Z.add_0_r. remember (fold_right _ _ _) as pp eqn:E11. apply (@proj2 (length pp = length p)).
                                           rewrite E11; clear E11. apply fold_right_invariant.
@@ -1607,21 +1614,23 @@ Section Nice_weight.
                                           ------ apply Nat.eqb_eq in E8. rewrite E8. rewrite nth_add_to_nth. destruct (i <? length l')%nat eqn:E10.
                                           ++++++ rewrite (nth_overflow y).
                                           ------- rewrite IH2. lia.
-                                          ------- apply in_seq in H'. apply Nat.ltb_nlt in E7. apply Nat.leb_le in E''. apply Nat.leb_nle in E. apply Nat.ltb_lt in E10. lia.
+                                          ------- apply in_seq in H'. apply Nat.ltb_nlt in E7. rewrite Bool.andb_true_iff in E''. rewrite Nat.leb_le in E''. rewrite Nat.ltb_lt in E''.
+                                          apply Nat.leb_nle in E. apply Nat.ltb_lt in E10. lia.
                                           ++++++ apply IH2.
                                           ------ apply Nat.eqb_neq in E8. rewrite mth_add_to_nth.
                                           ++++++ apply IH2.
                                           ++++++ lia.
                                           ----- apply Nat.ltb_nlt in E7. lia.
                                           ++++ rewrite Z.add_0_r. apply fold_right_invariant.
-                                               ----- apply nth_indep. rewrite length_pmul. lia.
-                                               ----- intros y0 H l' IH. rewrite mth_add_to_nth; try apply IH. apply Nat.leb_nle in E''. lia.
+                                               ----- apply nth_indep. rewrite length_pmul'. lia.
+                                               ----- intros y0 H l' IH. rewrite mth_add_to_nth; try apply IH. rewrite Bool.andb_false_iff in E''.
+                                               rewrite Nat.leb_nle in E''. rewrite Nat.ltb_nlt in E''. rewrite Nat.leb_nle in E. apply in_seq in H. lia.
                                           +++ rewrite seq_length. lia.
                                           --- repeat rewrite nth_overflow; try reflexivity.
                                               +++ replace (length _) with (2 * S n' - 1)%nat.
                                                   ---- apply Nat.ltb_nlt in E'. lia.
                                                   ---- apply fold_right_invariant.
-                                                       ++++ rewrite length_pmul. lia.
+                                                       ++++ rewrite length_pmul'. lia.
                                                        ++++ intros y0 Hin l' IH. rewrite Positional.length_add_to_nth. apply IH.
                                               +++ rewrite map_length. rewrite seq_length. apply Nat.ltb_nlt in E'. lia.
                              -- clear H H0. rewrite (map_nth' _ _ _ 0%nat).
