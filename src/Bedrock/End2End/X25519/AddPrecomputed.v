@@ -163,9 +163,11 @@ Local Ltac solve_mem :=
 
 Lemma add_precomputed_partial_ok : program_logic_goal_for_function! add_precomputed_partial.
 Proof.
-  repeat straightline.
-  unwrap_calls.
-  all: try solve_stack. (* all: try solve_mem. all: try solve_bounds *) (* Too aggressive somewhere... *)
+  repeat straightline. straightline_call. ssplit.
+  6:repeat straightline. 6:straightline_call. 6:ssplit.
+  11:repeat straightline.
+  (* unwrap_calls is apparently too aggressive; so I had to do the above instead *)
+  (* all: try solve_mem. all: try solve_bounds *) (* Also too aggressive somewhere... *)
   3: solve_mem. 3: solve_mem.
   solve_bounds. solve_bounds.
   - (* (FElem a ?out ⋆ ?Rr)%sep m *)
@@ -173,7 +175,7 @@ Proof.
     cbv [FElem].
     seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a) H3. { transitivity 40%nat; trivial. }
     use_sep_assumption.
-    cancel. cancel_seps_at_indices 0%nat 0%nat; cbn; trivial.
+    cancel. cancel_seps_at_indices 0%nat 0%nat; cbn. trivial.
     eapply RelationClasses.reflexivity.
   - apply H2. (* bounded_by bin_xbounds ?x@{a1:=a0; H12:=H13; mCombined:=a1} *)
   - apply H1. (* bounded_by bin_ybounds ?y@{a1:=a0; H12:=H13; mCombined:=a1} *)
@@ -183,19 +185,19 @@ Proof.
     cbv [FElem].
     seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a2) H12. { transitivity 40%nat; trivial. }
     use_sep_assumption.
-    cancel. repeat ecancel_step. cancel_seps_at_indices 0%nat 0%nat; cbn. admit. (* I think context of evars is causing problems? *)
+    cancel. cancel_seps_at_indices 0%nat 0%nat; cbn; trivial. (* I think context of evars is causing problems? *)
     eapply RelationClasses.reflexivity.
   - (* exists m' mStack' : SortedListWord.map word Init.Byte.byte,
   anybytes a 40 mStack' /\
   map.split a1 m' mStack' /\ list_map (get l0) [] (fun rets : list word => rets = [] /\ a0 = a0 /\ (FElem X1K X1 ⋆ FElem Y1K Y1 ⋆ R)%sep m') *)
     (* Rewrites the FElem about `a` in H11 to be about bytes instead, so we can use it to prove things about `a` as bytes *)
     cbv [FElem] in *.
-    seprewrite_in @Bignum.Bignum_to_bytes H17.
-    seprewrite_in @Bignum.Bignum_to_bytes H17.
-    extract_ex1_and_emp_in H17.
+    seprewrite_in @Bignum.Bignum_to_bytes H19.
+    seprewrite_in @Bignum.Bignum_to_bytes H19.
+    extract_ex1_and_emp_in H19.
 
     repeat straightline; intuition eauto.
-Admitted.
+Qed.
 
 Lemma add_precomputed_ok : program_logic_goal_for_function! add_precomputed.
 Proof.
