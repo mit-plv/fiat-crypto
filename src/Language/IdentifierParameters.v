@@ -1,5 +1,6 @@
 Require Import Coq.Strings.String.
 Require Import Coq.ZArith.ZArith.
+Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Definitions.
@@ -97,6 +98,7 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_Nat_add Nat.add
       ; with_name ident_Nat_sub Nat.sub
       ; with_name ident_Nat_eqb Nat.eqb
+      ; with_name ident_Nat_ltb Nat.ltb
       ; with_name ident_nil (@Datatypes.nil)
       ; with_name ident_cons (@Datatypes.cons)
       ; with_name ident_tt Datatypes.tt
@@ -190,6 +192,7 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_fancy_selm ident.fancy.selm
       ; with_name ident_fancy_sell ident.fancy.sell
       ; with_name ident_fancy_addm ident.fancy.addm
+      ; with_name ident_adk_mul pmul.adk_mul
      ]%hlist.
 
 Definition scraped_data : ScrapedData.t

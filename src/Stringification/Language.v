@@ -398,6 +398,7 @@ Module Compilers.
                 | ident.Nat_add => neg_wrap_parens "Nat.add"
                 | ident.Nat_sub => neg_wrap_parens "Nat.sub"
                 | ident.Nat_eqb => neg_wrap_parens "Nat.eqb"
+                | ident.Nat_ltb => neg_wrap_parens "Nat.ltb"
                 | ident.nil t => neg_wrap_parens "[]"
                 | ident.cons t => fun _ => "(::)"
                 | ident.pair A B => fun _ => "(,)"
@@ -490,6 +491,7 @@ Module Compilers.
                 | ident.fancy_selm => neg_wrap_parens "fancy.selm"
                 | ident.fancy_sell => neg_wrap_parens "fancy.sell"
                 | ident.fancy_addm => neg_wrap_parens "fancy.addm"
+                | ident.adk_mul => neg_wrap_parens "adk_mul"
                 end.
         Global Instance show_ident {t} : Show (ident.ident t) := show_lvl_ident.
 
@@ -575,6 +577,7 @@ Module Compilers.
              | ident.Nat_add => "+ℕ"
              | ident.Nat_sub => "-ℕ"
              | ident.Nat_eqb => "=ℕ"
+             | ident.Nat_ltb => "<ℕ"
              | ident.cons _ => "::"
              | ident.List_app _ => "++"
              | ident.Z_mul => "*"
@@ -706,6 +709,7 @@ Module Compilers.
              | ident.List_filter _ as idc
              | ident.List_fold_right _ _ as idc
              | ident.List_update_nth _ as idc
+             | ident.Nat_ltb as idc (* probably this should be handled fancily, like Nat.eqb *)
              | ident.Z_log2 as idc
              | ident.Z_log2_up as idc
              | ident.Z_of_nat as idc
@@ -740,6 +744,7 @@ Module Compilers.
              | ident.fancy_selm as idc
              | ident.fancy_sell as idc
              | ident.fancy_addm as idc
+             | ident.adk_mul as idc
                => fun args => (show_application with_casts (fun _ => show idc) args, ZRange.type.base.option.None)
              end.
       End ident.

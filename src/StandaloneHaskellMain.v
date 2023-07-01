@@ -135,6 +135,11 @@ Module DettmanMultiplication.
     := main_gen ForExtraction.DettmanMultiplication.PipelineMain.
 End DettmanMultiplication.
 
+Module DettmanMultiplicationADK.
+  Definition main : IO_unit
+    := main_gen ForExtraction.DettmanMultiplicationADK.PipelineMain.
+End DettmanMultiplicationADK.
+
 Module SolinasReduction.
   Definition main : IO_unit
     := main_gen ForExtraction.SolinasReduction.PipelineMain.

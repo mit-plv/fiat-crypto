@@ -793,6 +793,7 @@ Module Compilers.
                  | ident.Nat_add
                  | ident.Nat_sub
                  | ident.Nat_eqb
+                 | ident.Nat_ltb
                  | ident.prod_rect _ _ _
                  | ident.bool_rect _
                  | ident.bool_rect_nodep _
@@ -868,6 +869,7 @@ Module Compilers.
                  | ident.fancy_selm
                  | ident.fancy_sell
                  | ident.fancy_addm
+                 | ident.adk_mul
                    => fun _ => type.interpM_return _ _ _ (inr ["Invalid identifier in arithmetic expression " ++ show idc]%string)
                  end%core%Cexpr%option%zrange.
 

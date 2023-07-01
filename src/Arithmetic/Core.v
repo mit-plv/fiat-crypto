@@ -1238,25 +1238,50 @@ Section Nice_weight.
   Context (first_limb_weight : Z)
     (flw_gt_1 : first_limb_weight > 1).
   
-  Definition weight (n : nat) : Z := first_limb_weight ^ Z.of_nat n.
-  Definition prod_at_index (x y : list Z) (i : nat) : Z :=
-    fold_right Z.add 0
-      (map (fun j => (nth j x 0) * (nth (i - j) y 0)) (seq 0 (i + 1))).
+  Definition weight (n : nat) : Z := first_limb_weight ^ Z.of_nat n. Search nth_default.
+
+  Definition nth_reifiable' {X} (n : Z) (l : list X) (default : X) : Z*X :=
+    fold_right (fun next n_nth => (fst n_nth - 1, if (fst n_nth =? 0) then next else (snd n_nth))) (Z.of_nat (length l) - n - 1, default) l.  
+
+  Lemma nth_reifiable'_spec {X} (n : Z) (l : list X) (default : X) :
+    nth_reifiable' n l default = (-n - 1, if 0 <=? n then nth (Z.to_nat n) l default else default).
+  Proof.
+    cbv [nth_reifiable']. generalize dependent n. induction l as [| x l' IHl']; intros n.
+    - simpl. f_equal. destruct (0 <=? n); destruct (Z.to_nat n); reflexivity.
+    - replace (Z.of_nat (length (x :: l')) - n - 1) with
+        (Z.of_nat (length l') - (n - 1) - 1).
+      + simpl. rewrite IHl'. simpl. f_equal; try lia. destruct (_ =? 0) eqn:E1; destruct (0 <=? n - 1) eqn:E2; destruct (0 <=? n) eqn:E3; destruct (Z.to_nat n) eqn:E4; try lia; try reflexivity.
+        f_equal. lia.
+      + replace (length (x :: l')) with (1 + length l')%nat by reflexivity. lia.
+  Qed.
   
-  Definition pmul (n : nat) (x y : list Z) :=
-    map (prod_at_index (firstn n x) (firstn n y)) (seq 0 (2*n - 1)).
+  Definition nth_reifiable {X} (n : nat) (l : list X) (default : X) : X :=
+    snd (nth_reifiable' (Z.of_nat n) l default).
+    
+  Lemma nth_reifiable_spec {X} (n : nat) (l : list X) (default : X) :
+    nth_reifiable n l default = nth n l default.
+  Proof.
+    cbv [nth_reifiable]. rewrite nth_reifiable'_spec. simpl. destruct (_ <=? _) eqn:E; try lia.
+    - rewrite Nat2Z.id. reflexivity.
+    - apply Z.leb_gt in E. lia.
+  Qed.
+
+  Local Notation nth' := (fun i l d => (nth_default d l i)).
+  (* why does nth_default exist? why can i reify it, but not nth? why is the order of arguments
+     switched around? *)
+  Check nth_default.
+  Search (nth_default _ _ _ = nth _ _ _). Check nth_default.
   
-  Definition prod_at_index' (n : nat) (x y : list Z) (i : nat) : Z :=
+  Definition prod_at_index (n : nat) (x y : list Z) (i : nat) : Z :=
     fold_right Z.add 0
       (map
-         (fun j : nat => nth j x 0 * nth (i - j) y 0)
+         (fun j : nat => nth' j x 0 * nth' (i - j)%nat y 0)
          (seq
             (i - (n - 1))
             (Z.to_nat (1 + (Z.min (Z.of_nat n - 1) (Z.of_nat i)) - Z.of_nat (i - (n - 1)))))).
 
-    Print pmul.
-    Definition pmul' (n : nat) (x y : list Z) : list Z :=
-      map (prod_at_index' n x y) (seq 0 (2 * n - 1)).
+  Definition pmul (n : nat) (x y : list Z) : list Z :=
+    map (prod_at_index n x y) (seq 0 (2 * n - 1)).
 
   Definition amul (n : nat) (x y : list Z) :=
     Positional.from_associational weight (2*n - 1)
@@ -1264,10 +1289,6 @@ Section Nice_weight.
          (Positional.to_associational weight n x)
          (Positional.to_associational weight n y)).
 
-  (*Compute (pmul 5 [1; 2; 3; 4; 5] [312; 243; 123; 543; 3]).
-  Compute (amul 5 [1; 2; 3; 4; 5] [312; 243; 123; 543; 3]).*)
-
-  Search Positional.place.
   Lemma weight_0 : weight 0 = 1.
   Proof. cbv [weight]. rewrite Z.pow_0_r. reflexivity. Qed.
   
@@ -1445,10 +1466,6 @@ Section Nice_weight.
     Associational.mul [(a, b)] y =  map (fun t' : Z * Z => (a * fst t', b * snd t')) y.
   Proof. simpl. rewrite app_nil_r. reflexivity. Qed.
 
-    (*intros H1 H2. induction l1 as [| x0 l1' IHl1'].
-    - remember (H2 0%nat a) as H3 eqn:E; clear E. remember (H2 0%nat b) as H4 eqn:E; clear E. destruct l2; try reflexivity. simpl in H3. simpl in H4. subst. congruence.
-    - remember (jlia. Search nth. simpl in H3.*)
-
   Lemma split_sum (l1 l2 : list Z) :
     fold_right Z.add 0 (l1 ++ l2) = fold_right Z.add 0 l1 + fold_right Z.add 0 l2.
   Proof.
@@ -1463,25 +1480,19 @@ Section Nice_weight.
     intros n x y. cbv [pmul]. rewrite map_length. rewrite seq_length. reflexivity.
   Qed.
 
-  Lemma length_pmul' : forall n x y,
-      length (pmul' n x y) = (2*n - 1)%nat.
-  Proof.
-    intros n x y. cbv [pmul']. rewrite map_length. rewrite seq_length. reflexivity.
-  Qed.
-
   Lemma nth_nil {X} n d :
     nth n (@nil X) d = d.
   Proof. destruct n; reflexivity. Qed.
         
   Lemma amul_is_pmul' : forall n x y,
       length y = n ->
-      pmul' n x y = amul n x y.
+      pmul n x y = amul n x y.
   Proof.
     intros n x y H0. generalize dependent x. apply list_induction_backwards. (* forall x : list Z, length x = n -> pmul n y x = amul n y x *)
-    - cbv [pmul' amul]. replace (Positional.to_associational weight n []) with (@nil (Z*Z)).
+    - cbv [pmul amul]. replace (Positional.to_associational weight n []) with (@nil (Z*Z)).
       2: { cbv [Positional.to_associational combine]. destruct (map _ _); reflexivity. }
       replace (Associational.mul [] _) with (@nil (Z*Z)) by reflexivity.
-      cbv [Positional.from_associational fold_right]. cbv [Positional.zeros]. cbv [prod_at_index'].
+      cbv [Positional.from_associational fold_right]. cbv [Positional.zeros]. cbv [prod_at_index].
       replace (map _ (seq 0 (2 * n - 1))) with (@map nat Z (fun j => 0) (seq 0 (2*n - 1))).
       + remember (2*n - 1)%nat as m eqn:E. clear E. remember (seq 0 m) as l eqn:E. assert (H : length l = m).
         -- rewrite E. apply seq_length.
@@ -1494,11 +1505,13 @@ Section Nice_weight.
         remember (seq 0 b) as l eqn:E. assert (H : length l = b).
         -- rewrite E. apply seq_length.
         -- clear E. apply fold_right_invariant; try reflexivity. intros y0 Hin sum IH.
-           apply in_map_iff in Hin. destruct Hin as [i [Hin_1 Hin_2] ]. rewrite nth_nil in Hin_1. lia.
-    - intros x l H. cbv [pmul' amul]. cbv [Positional.to_associational]. destruct n as [| n']; try reflexivity. rewrite combine_app_one.
+           apply in_map_iff in Hin. destruct Hin as [i [Hin_1 Hin_2] ].
+           rewrite nth_default_eq in Hin_1. rewrite nth_nil in Hin_1. lia.
+    - intros x l H. cbv [pmul amul]. cbv [Positional.to_associational]. destruct n as [| n']; try reflexivity. rewrite combine_app_one.
       Search (length (map _ _)). rewrite map_length. Search (length (seq _ _)). rewrite seq_length. destruct (S n' <=? length l)%nat eqn:E.
-      + cbv [pmul' amul] in H. cbv [prod_at_index']. apply Nat.leb_le in E. cbv [Positional.to_associational] in H. rewrite <- H. apply map_ext_in.
-        intros a Ha. apply in_seq in Ha. cbv [prod_at_index']. f_equal. apply map_ext_in. intros b Hb. Search (nth _ (_ ++ _)). apply in_seq in Hb. rewrite app_nth1 by lia. reflexivity.
+      + cbv [pmul amul] in H. cbv [prod_at_index]. apply Nat.leb_le in E. cbv [Positional.to_associational] in H. rewrite <- H. apply map_ext_in.
+        intros a Ha. apply in_seq in Ha. cbv [prod_at_index]. f_equal. apply map_ext_in. intros b Hb. Search (nth _ (_ ++ _)). apply in_seq in Hb.
+        repeat rewrite nth_default_eq. rewrite app_nth1 by lia. reflexivity.
       + rewrite Associational.mul_app_l. replace (nth (length l) (map weight (seq 0 (S n'))) x) with (weight (length l)).
         -- rewrite expand_singleton_l. rewrite p_to_a_app. cbv [Positional.from_associational]. rewrite fold_right_app. cbv [amul Positional.from_associational Positional.to_associational] in H.
            rewrite <- H. clear H.
@@ -1528,7 +1541,7 @@ Section Nice_weight.
            }
            
            ++ rewrite fold_right_map.
-              replace (fold_right _ _ _) with (fold_right (fun x0 y0 => Positional.add_to_nth (x0 + length l) (x * nth x0 y 0) y0) (pmul' (S n') l y) (seq 0 (S n'))).
+              replace (fold_right _ _ _) with (fold_right (fun x0 y0 => Positional.add_to_nth (x0 + length l) (x * nth x0 y 0) y0) (pmul (S n') l y) (seq 0 (S n'))).
               2: { apply fold_right_ext_in. intros x0 y0 H. rewrite unfold_Let_In. simpl. rewrite place_weight'. simpl.
                    replace (Nat.min (x0 + length l) _) with (x0 + length l)%nat.
                    - rewrite Z.div_same.
@@ -1536,40 +1549,37 @@ Section Nice_weight.
                      + apply weight_nz.
                    - apply in_seq in H. apply Nat.leb_nle in E. lia.
               }
-              cbv [prod_at_index']. apply (nth_equal 0 1); try lia. intros i x0.
+              cbv [prod_at_index]. apply (nth_equal 0 1); try lia. intros i x0.
               destruct (i <? 2 * S n' - 1)%nat eqn:E'.
               --- apply Nat.ltb_lt in E'. rewrite (map_nth' _ _ _ 0%nat _).
                   +++ rewrite seq_nth; try apply E'.
                       remember (Z.to_nat _) as thing.                           
-                      replace (nth i _ _) with (nth i (pmul' (S n') l y) 0 + (if (andb (i - (S n' - 1) <=? length l) (length l <? (i - (S n' - 1)) + thing))%nat then (x * (nth (i - length l) y 0)) else 0)).
+                      replace (nth i _ _) with (nth i (pmul (S n') l y) 0 + (if (andb (i - (S n' - 1) <=? length l) (length l <? (i - (S n' - 1)) + thing))%nat then (x * (nth (i - length l) y 0)) else 0)).
                       ---- Search (nth _ (_ ++ _)). Check firstn_app. (*rewrite firstn_app.*) apply Nat.leb_nle in E.
                            replace (S n' - length l)%nat with (S (n' - length l))%nat by lia.
-                           (*Check firstn_cons. rewrite firstn_cons. rewrite firstn_nil. *) replace (0 + i)%nat with i in * by lia.
+                           replace (0 + i)%nat with i in * by lia.
                            destruct (andb (i - (S n' - 1) <=? length l) (length l <? (i - (S n' - 1)) + thing))%nat eqn:E''.
                            * apply Bool.andb_true_iff in E''. rewrite Nat.leb_le in E''. rewrite Nat.ltb_lt in E''. remember (seq _ _) as theseq.
-                           replace (fold_right Z.add 0 (map (fun j : nat => nth j (l ++ [x]) 0 * nth (i - j) y 0) theseq)) with
-                             (fold_right Z.add 0 (map (fun j : nat => nth j l 0 * nth (i - j) y 0) theseq) + x * nth (i - length l) y 0).
-                             ++++ f_equal. symmetry. cbv [pmul']. rewrite (map_nth' _ _ _ 0%nat _).
-                                  ----- subst. cbv [prod_at_index']. replace (nth i (seq 0 (2 * S n' - 1)) 0%nat) with i; try reflexivity. rewrite seq_nth; try lia.
-                                ----- rewrite seq_length. lia.
+                           replace (fold_right Z.add 0 (map (fun j : nat => nth' j (l ++ [x]) 0 * nth' (i - j)%nat y 0) theseq)) with
+                             (fold_right Z.add 0 (map (fun j : nat => nth' j l 0 * nth' (i - j)%nat y 0) theseq) + x * nth' (i - length l)%nat y 0).
+                             ++++ repeat rewrite nth_default_eq. f_equal. symmetry. cbv [pmul]. rewrite (map_nth' _ _ _ 0%nat _).
+                                  ----- subst. cbv [prod_at_index]. replace (nth i (seq 0 (2 * S n' - 1)) 0%nat) with i; try reflexivity. rewrite seq_nth; try lia.
+                                  ----- rewrite seq_length. lia.
                              ++++ subst. remember (Z.to_nat _) as thing.
                                   ----- replace (seq (i - (S n' - 1)) thing) with
                                           ((seq (i - (S n' - 1)) (length l - (i - (S n' - 1)))) ++ [length l] ++ (seq (length l + 1) (thing - 1 - (length l - (i - (S n' - 1)))))).
                                 +++++ repeat rewrite map_app. repeat rewrite split_sum. rewrite <- Z.add_assoc. f_equal.
-                                ------ f_equal. apply map_ext_in. intros a Ha. f_equal. rewrite app_nth1; try reflexivity. apply in_seq in Ha. lia.
-                                ------ rewrite <- Z.add_comm. rewrite Z.add_assoc. f_equal.
-                                ++++++ repeat rewrite map_cons. repeat rewrite map_nil. repeat rewrite fold_right_cons. repeat rewrite fold_right_nil. rewrite (nth_overflow l).
-                                ------- rewrite app_nth2.
-                                +++++++ replace (length l - length l)%nat with 0%nat by lia. simpl. lia.
-                                +++++++ lia.
-                                ------- lia.
-                                ++++++ f_equal. apply map_ext_in. intros a Ha. f_equal. apply in_seq in Ha. rewrite nth_overflow; try rewrite firstn_length; try lia.
+                                ------ f_equal. apply map_ext_in. intros a Ha. f_equal. repeat rewrite nth_default_eq. rewrite app_nth1; try reflexivity. apply in_seq in Ha. lia.
+                                ------ rewrite <- Z.add_comm. rewrite Z.add_assoc. f_equal. repeat rewrite nth_reifiable_spec.
+                                ++++++ repeat rewrite map_cons. repeat rewrite map_nil. repeat rewrite fold_right_cons. repeat rewrite fold_right_nil. repeat rewrite nth_default_eq.
+                                rewrite (nth_overflow l) by lia. rewrite app_nth2 by lia. replace (length l - length l)%nat with 0%nat by lia. simpl. lia.
+                                ++++++ f_equal. apply map_ext_in. intros a Ha. repeat rewrite nth_default_eq. f_equal. apply in_seq in Ha. rewrite nth_overflow; try rewrite firstn_length; try lia.
                                 rewrite nth_overflow; try reflexivity. rewrite app_length. replace (length [x]) with 1%nat by reflexivity. lia.
                                 +++++ replace ([length l]) with (seq (length l) 1) by reflexivity.
                                 rewrite <- seq_add. replace (seq (length l)) with (seq ((i - (S n' - 1)) + (length l - (i - (S n' - 1)))))%nat. 2: { f_equal. lia. } rewrite <- seq_add. f_equal. lia.
-                           * apply Bool.andb_false_iff in E''. rewrite Nat.leb_nle in E''. rewrite Nat.ltb_nlt in E''. cbv [pmul']. rewrite (map_nth' _ _ _ 0%nat _).
-                             ++++ cbv [prod_at_index']. replace (nth i (seq 0 (2 * S n' - 1)) 0%nat) with i. 
-                                  ----- rewrite Z.add_0_r. f_equal. subst. apply map_ext_in. intros a Ha. apply in_seq in Ha. f_equal. destruct E'' as [E''|E''].
+                           * apply Bool.andb_false_iff in E''. rewrite Nat.leb_nle in E''. rewrite Nat.ltb_nlt in E''. cbv [pmul]. rewrite (map_nth' _ _ _ 0%nat _).
+                             ++++ cbv [prod_at_index]. replace (nth i (seq 0 (2 * S n' - 1)) 0%nat) with i. 
+                                  ----- rewrite Z.add_0_r. f_equal. subst. apply map_ext_in. intros a Ha. apply in_seq in Ha. repeat rewrite nth_default_eq. f_equal. destruct E'' as [E''|E''].
                                   +++++ repeat rewrite nth_overflow. reflexivity.
                                   ------ lia.
                                   ------ rewrite app_length. cbn [length]. lia.
@@ -1577,8 +1587,8 @@ Section Nice_weight.
                                   ----- rewrite seq_nth; try lia.
                              ++++ rewrite seq_length. lia.
                              ---- destruct ((i - (S n' - 1) <=? length l)%nat && (length l <? i - (S n' - 1) + thing)%nat)%bool eqn:E''.
-                                  ++++ remember (pmul' _ _ _) as p eqn:Ep. assert (H: (length p = 2 * (S n') - 1)%nat).
-                                       { subst. apply length_pmul'. }
+                                  ++++ remember (pmul _ _ _) as p eqn:Ep. assert (H: (length p = 2 * (S n') - 1)%nat).
+                                       { subst. apply length_pmul. }
                                        rewrite <- H in E'. destruct (i - length l <? length y)%nat eqn:E7.
                                        ** replace (seq 0 (S n')) with (seq 0 (i - length l) ++ [i - length l] ++ seq (i - length l + 1) (S n' - (i - length l) - 1))%nat.
                                        ----- repeat rewrite fold_right_app. remember (fold_right _ (fold_right _ p _) _) as the_list eqn:E3.
@@ -1622,7 +1632,7 @@ Section Nice_weight.
                                           ++++++ lia.
                                           ----- apply Nat.ltb_nlt in E7. lia.
                                           ++++ rewrite Z.add_0_r. apply fold_right_invariant.
-                                               ----- apply nth_indep. rewrite length_pmul'. lia.
+                                               ----- apply nth_indep. rewrite length_pmul. lia.
                                                ----- intros y0 H l' IH. rewrite mth_add_to_nth; try apply IH. rewrite Bool.andb_false_iff in E''.
                                                rewrite Nat.leb_nle in E''. rewrite Nat.ltb_nlt in E''. rewrite Nat.leb_nle in E. apply in_seq in H. lia.
                                           +++ rewrite seq_length. lia.
@@ -1630,7 +1640,7 @@ Section Nice_weight.
                                               +++ replace (length _) with (2 * S n' - 1)%nat.
                                                   ---- apply Nat.ltb_nlt in E'. lia.
                                                   ---- apply fold_right_invariant.
-                                                       ++++ rewrite length_pmul'. lia.
+                                                       ++++ rewrite length_pmul. lia.
                                                        ++++ intros y0 Hin l' IH. rewrite Positional.length_add_to_nth. apply IH.
                                               +++ rewrite map_length. rewrite seq_length. apply Nat.ltb_nlt in E'. lia.
                              -- clear H H0. rewrite (map_nth' _ _ _ 0%nat).
@@ -1665,17 +1675,11 @@ Section Nice_weight.
   Qed.
   
   Lemma pmul'_doesnt_care_about_zeros n x y :
-    pmul' n x y = pmul' n x (pad_or_truncate n y).
+    pmul n x y = pmul n x (pad_or_truncate n y).
   Proof.
-    cbv [pad_or_truncate pmul']. cbv [prod_at_index']. apply map_ext_in. intros a1 Ha1. f_equal. apply map_ext_in. intros a2 Ha2. f_equal. rewrite <- nth_pad_default.
+    cbv [pad_or_truncate pmul]. cbv [prod_at_index]. apply map_ext_in. intros a1 Ha1. f_equal. apply map_ext_in. intros a2 Ha2. repeat rewrite nth_default_eq. f_equal. rewrite <- nth_pad_default.
     rewrite nth_firstn. apply in_seq in Ha1. apply in_seq in Ha2. replace (_ <? _)%nat with true; try reflexivity. symmetry. apply Nat.ltb_lt. lia.
   Qed.
-
-  Lemma combine_add_garbage_l {X} (l1 l2 l3 : list X) :
-    (length l2 <= length l1)%nat ->
-    combine l1 l2 = combine (l1 ++ l3) l2.
-  Proof.
-    Search combine. Admitted.
 
   Lemma amul_doesnt_care_about_zeros n x y :
     amul n x y = amul n x (pad_or_truncate n y).
@@ -1719,64 +1723,35 @@ Section Nice_weight.
   Qed.
 
   Lemma amul_is_pmul : forall n x y,
-      pmul' n x y = amul n x y.
+      pmul n x y = amul n x y.
   Proof.
     intros n x y. rewrite amul_doesnt_care_about_zeros. rewrite pmul'_doesnt_care_about_zeros. apply amul_is_pmul'. Search (length (pad_or_truncate _ _)). apply pad_or_truncate_length.
   Qed.
 
-  Definition nth_reifiable' {X} (n : Z) (l : list X) (default : X) : Z*X :=
-    fold_right (fun next n_nth => (fst n_nth - 1, if (fst n_nth =? 0) then next else (snd n_nth))) (Z.of_nat (length l) - n - 1, default) l.
-  
-  Compute (nth_reifiable' 0 [7; 2; 3] (-1)).
-  
-
-  Lemma nth_reifiable'_spec {X} (n : Z) (l : list X) (default : X) :
-    nth_reifiable' n l default = (-n - 1, if 0 <=? n then nth (Z.to_nat n) l default else default).
-  Proof.
-    cbv [nth_reifiable']. generalize dependent n. induction l as [| x l' IHl']; intros n.
-    - simpl. f_equal. destruct (0 <=? n); destruct (Z.to_nat n); reflexivity.
-    - replace (Z.of_nat (length (x :: l')) - n - 1) with
-        (Z.of_nat (length l') - (n - 1) - 1).
-      + simpl. rewrite IHl'. simpl. f_equal; try lia. destruct (_ =? 0) eqn:E1; destruct (0 <=? n - 1) eqn:E2; destruct (0 <=? n) eqn:E3; destruct (Z.to_nat n) eqn:E4; try lia; try reflexivity.
-        f_equal. lia.
-      + replace (length (x :: l')) with (1 + length l')%nat by reflexivity. lia.
-  Qed.
-  
-  Definition nth_reifiable {X} (n : nat) (l : list X) (default : X) : X :=
-    snd (nth_reifiable' (Z.of_nat n) l default).
-    
-  Lemma nth_reifiable_spec {X} (n : nat) (l : list X) (default : X) :
-    nth_reifiable n l default = nth n l default.
-  Proof.
-    cbv [nth_reifiable]. rewrite nth_reifiable'_spec. simpl. destruct (_ <=? _) eqn:E; try lia.
-    - rewrite Nat2Z.id. reflexivity.
-    - apply Z.leb_gt in E. lia.
-  Qed.
-
   Definition seq_from_to a b := seq a (Z.to_nat (Z.of_nat b - Z.of_nat a + 1)).
   
-  Definition adk_mul_prod_at_i (nth_ : nat -> list Z -> Z -> Z) (n : nat) (x y products f : list Z) (i : nat) : Z :=
-    fold_right Z.add 0 (map (fun j => (nth_ j x 0 - nth_ (i - j)%nat x 0) * (nth_ (i - j)%nat y 0 - nth_ j y 0))
+  Definition adk_mul_prod_at_i (n : nat) (x y products f : list Z) (i : nat) : Z :=
+    fold_right Z.add 0 (map (fun j => (nth' j x 0 - nth' (i - j)%nat x 0) * (nth' (i - j)%nat y 0 - nth' j y 0))
                           (seq (i - (n - 1)) (Z.to_nat (1 + ((Z.of_nat i + 1)/2 - 1) - Z.of_nat (i - (n - 1))%nat)%Z))) +
       (if (i =? 2 * n - 2)%nat then
-         nth_ (n - 1)%nat products 0
+         nth' (n - 1)%nat products 0
        else
-         nth_ i f 0 - if (i <? n)%nat then 0 else nth_ (i - n)%nat f 0).
+         nth' i f 0 - if (i <? n)%nat then 0 else nth' (i - n)%nat f 0).
   
-  Definition adk_mul' (nth_ : nat -> list Z -> Z -> Z) (n : nat) (x y products f : list Z) : list Z :=
-    map (adk_mul_prod_at_i nth_ n x y products f) (seq 0 (2*n - 1)).
+  Definition adk_mul' (n : nat) (x y products f : list Z) : list Z :=
+    map (adk_mul_prod_at_i n x y products f) (seq 0 (2*n - 1)).
   
-  Definition adk_mul (nth_ : nat -> list Z -> Z -> Z) (n : nat) (x y : list Z) : list Z :=
-    dlet high_product : Z := (nth_ (n - 1)%nat x 0) * (nth_ (n - 1)%nat y 0) in
-        let products : list Z := map (fun i => (nth_ i x 0) * (nth_ i y 0)) (seq 0 (n - 1)) ++ [high_product] ++ (repeat 0 (n - 1)) (*the total length of products should be (2*n - 1), since this is
+  Definition adk_mul (n : nat) (x y : list Z) : list Z :=
+    dlet high_product : Z := (nth' (n - 1)%nat x 0) * (nth' (n - 1)%nat y 0) in
+        let products : list Z := map (fun i => (nth' i x 0) * (nth' i y 0)) (seq 0 (n - 1)) ++ [high_product] ++ (repeat 0 (n - 1)) (*the total length of products should be (2*n - 1), since this is
                                                                                                                                     what we want the length of f to be.*) in
         (list_rect
            (fun _ => list Z -> list Z)
-           (fun f => adk_mul' nth_ n x y products (rev f))
-           (fun p _ g => fun f' => Let_In ((nth_ 0%nat f' 0) + p) (fun x => g (x :: f'))) 
+           (fun f => adk_mul' n x y products (rev f))
+           (fun p _ g => fun f' => Let_In ((nth' 0%nat f' 0) + p) (fun x => g (x :: f'))) 
            products) [].
 
-  Lemma adk_mul'_ext nth1 nth2 n x y p f :
+  (*Lemma adk_mul'_ext nth1 nth2 n x y p f :
     (forall i l d, nth1 i l d = nth2 i l d) ->
     adk_mul' nth1 n x y p f = adk_mul' nth2 n x y p f.
   Proof.
@@ -1810,22 +1785,22 @@ Section Nice_weight.
         -- f_equal. symmetry. apply El.
       + f_equal. symmetry. apply El.
     - subst. repeat rewrite H. f_equal. apply map_ext. intros a. repeat rewrite H. reflexivity.
-  Qed.
+  Qed.*)
 
   Local Notation nth_ := 5.
   
   Definition friendly_adk_mul (n : nat) (x y : list Z) : list Z :=
-    let products : list Z := map (fun i => (nth i (firstn n x) 0) * (nth i (firstn n y) 0)) (seq 0 (2*n - 1)) in
-    let f_rev : list Z := fold_left (fun l p => (nth 0%nat l 0) + p :: l) products [] in
-    adk_mul' (@nth Z) n x y products (rev f_rev).
+    let products : list Z := map (fun i => (nth' i (firstn n x) 0) * (nth' i (firstn n y) 0)) (seq 0 (2*n - 1)) in
+    let f_rev : list Z := fold_left (fun l p => (nth' 0%nat l 0) + p :: l) products [] in
+    adk_mul' n x y products (rev f_rev).
   
-  Lemma friendly_list_rect (nth_ : nat -> list Z -> Z -> Z) products_remaining f_so_far base_case :
+  Lemma friendly_list_rect products_remaining f_so_far base_case :
     (list_rect
        (fun _ => list Z -> list Z)
        base_case
-       (fun p _ g => fun f' => Let_In ((nth_ 0%nat f' 0) + p) (fun x => g (x :: f'))) 
+       (fun p _ g => fun f' => Let_In ((nth' 0%nat f' 0) + p) (fun x => g (x :: f'))) 
        products_remaining) f_so_far =
-      base_case (fold_left (fun l p => (nth_ 0%nat l 0) + p :: l) products_remaining f_so_far).
+      base_case (fold_left (fun l p => (nth' 0%nat l 0) + p :: l) products_remaining f_so_far).
   Proof.
     generalize dependent f_so_far. induction products_remaining as [| p products' IH].
     - reflexivity.
@@ -1833,21 +1808,21 @@ Section Nice_weight.
   Qed.
   
   Lemma adk_mul_friendly (n : nat) (x y : list Z) :
-    adk_mul (@nth Z) n x y = friendly_adk_mul n x y.
+    adk_mul n x y = friendly_adk_mul n x y.
   Proof.
     cbv [adk_mul]. rewrite unfold_Let_In. rewrite friendly_list_rect.
     destruct (n =? 0)%nat eqn:E.
     - apply Nat.eqb_eq in E. subst. reflexivity.
     - apply Nat.eqb_neq in E.
-      replace (_ ++ _ ++ _) with (map (fun i => (nth i (firstn n x) 0) * (nth i (firstn n y) 0)) (seq 0 (2*n - 1))).
+      replace (_ ++ _ ++ _) with (map (fun i => (nth' i (firstn n x) 0) * (nth' i (firstn n y) 0)) (seq 0 (2*n - 1))).
       + cbv [friendly_adk_mul]. reflexivity.
       + replace (2 * n - 1)%nat with ((n - 1) + 1 + (n - 1))%nat by lia. repeat rewrite seq_app. repeat rewrite map_app.
         rewrite <- app_assoc. f_equal.
-        -- apply map_ext_in. intros a Ha. apply in_seq in Ha. Search list_rect. repeat rewrite nth_firstn. repeat rewrite nth_reifiable_spec. destruct (a <? n)%nat eqn:E'; try reflexivity. apply Nat.ltb_nlt in E'. lia.
+        -- apply map_ext_in. intros a Ha. apply in_seq in Ha. repeat rewrite nth_default_eq. repeat rewrite nth_firstn. destruct (a <? n)%nat eqn:E'; try reflexivity. apply Nat.ltb_nlt in E'. lia.
         -- f_equal.
-           ++ simpl. repeat rewrite nth_firstn. replace (n - 1 <? n)%nat with true; try reflexivity. symmetry. apply Nat.ltb_lt. lia.
+           ++ simpl. repeat rewrite nth_default_eq. repeat rewrite nth_firstn. replace (n - 1 <? n)%nat with true; try reflexivity. symmetry. apply Nat.ltb_lt. lia.
            ++ replace (0 + (n - 1 + 1))%nat with n by lia. replace (repeat 0 (n - 1)) with (repeat 0 (length (seq n (n - 1)))).
-              --- rewrite <- map_const. apply map_ext_in. intros a Hin. repeat rewrite nth_firstn. destruct (a <? n)%nat eqn:E'; try reflexivity. apply Nat.ltb_lt in E'.
+              --- rewrite <- map_const. apply map_ext_in. intros a Hin. repeat rewrite nth_default_eq. repeat rewrite nth_firstn. destruct (a <? n)%nat eqn:E'; try reflexivity. apply Nat.ltb_lt in E'.
                   apply in_seq in Hin. lia.
               --- f_equal. apply seq_length.
   Qed.
@@ -1861,8 +1836,8 @@ Section Nice_weight.
     map (friendlier_adk_prod_at_i n x y) (seq 0 (2*n - 1)).
   
   Lemma f_spec (n : nat) (xn yn : list Z) (i : nat) (d : Z) :
-    let products : list Z := map (fun i => (nth i xn 0) * (nth i yn 0)) (seq 0 (2*n - 1)) in
-    let f : list Z := rev (fold_left (fun l p => (nth 0 l 0) + p :: l) products []) in
+    let products : list Z := map (fun i => (nth' i xn 0) * (nth' i yn 0)) (seq 0 (2*n - 1)) in
+    let f : list Z := rev (fold_left (fun l p => (nth' 0%nat l 0) + p :: l) products []) in
     nth i f d =
       if (i <? 2*n - 1)%nat then
         fold_right Z.add 0 (map (fun j => nth j xn 0 * nth j yn 0) (seq_from_to 0 i))
@@ -1880,7 +1855,7 @@ Section Nice_weight.
       rewrite seq_S in Ep. rewrite map_app in Ep. rewrite <- Ep' in Ep. clear Ep'. cbn [map] in Ep. rewrite Ep in *. clear Ep.
       Search (fold_left _ (_ ++ _) _). rewrite fold_left_app in Ef. cbn [fold_left] in Ef. rewrite <- Ef' in Ef. clear Ef'. rewrite Ef in *. clear Ef. cbn [rev].
       split.
-      + intros i d. destruct (i <? S m')%nat eqn:E1.
+      + repeat rewrite nth_default_eq. intros i d. destruct (i <? S m')%nat eqn:E1.
         -- apply Nat.ltb_lt in E1. remember (IHnth i) as IHnthi eqn:clearMe; clear clearMe. destruct (i <? m')%nat eqn:E2.
            ++ apply Nat.ltb_lt in E2. rewrite app_nth1 by lia. Search Nat.ltb. apply IHnthi.
            ++ apply Nat.ltb_nlt in E2. rewrite app_nth2 by lia. replace (i - length (rev f'_rev))%nat with 0%nat by lia. cbn [nth]. assert (i = m') by lia. rewrite H in *. clear E1 E2 H.
@@ -1905,11 +1880,13 @@ Section Nice_weight.
     friendly_adk_mul n x y = friendlier_adk_mul n x y.
   Proof.
     cbv [friendly_adk_mul adk_mul_prod_at_i adk_mul' friendlier_adk_mul friendlier_adk_prod_at_i].
-    apply map_ext_in. intros i Hi. apply in_seq in Hi. f_equal. repeat rewrite f_spec. replace (i - n <? 2 * n - 1)%nat with true.
+    apply map_ext_in. repeat rewrite nth_default_eq. intros i Hi. apply in_seq in Hi. f_equal.
+    1: { f_equal. apply map_ext. intros j. repeat rewrite nth_default_eq. reflexivity. }
+    repeat rewrite nth_default_eq. repeat rewrite f_spec. replace (i - n <? 2 * n - 1)%nat with true.
     - replace (i <? 2 * n - 1)%nat with true.
-      + destruct (i =? 2 * n - 2)%nat eqn:E.
-        -- apply Nat.eqb_eq in E. replace (Z.to_nat _) with 1%nat by lia. Check map_nth'. rewrite (map_nth' _ _ _ 0%nat).
-           ++ rewrite seq_nth by lia. repeat rewrite nth_firstn. replace (_ <? _)%nat with true.
+      + repeat rewrite nth_default_eq. destruct (i =? 2 * n - 2)%nat eqn:E.
+        -- apply Nat.eqb_eq in E. replace (Z.to_nat _) with 1%nat by lia. repeat rewrite (map_nth' _ _ _ 0%nat).
+           ++ repeat rewrite nth_default_eq. rewrite seq_nth by lia. repeat rewrite nth_firstn. replace (_ <? _)%nat with true.
               --- cbn [seq map fold_right]. rewrite Z.add_0_r. f_equal.
                   +++ f_equal. lia.
                   +++ f_equal. lia.
@@ -1917,7 +1894,7 @@ Section Nice_weight.
            ++ rewrite seq_length. lia.
         -- clear E. destruct (i <? n)%nat eqn:E.
            ++ apply Nat.ltb_lt in E. rewrite Z.sub_0_r. f_equal. replace (seq _ _) with (seq_from_to 0 i).
-              --- apply map_ext_in. intros j Hj. apply in_seq in Hj. repeat rewrite nth_firstn. replace (_ <? _)%nat with true.
+              --- repeat rewrite nth_default_eq. apply map_ext_in. intros j Hj. apply in_seq in Hj. repeat rewrite nth_firstn. replace (_ <? _)%nat with true.
                   +++ reflexivity.
                   +++ symmetry. apply Nat.ltb_lt. lia.
               --- cbv [seq_from_to]. f_equal; lia.
@@ -1938,27 +1915,18 @@ Section Nice_weight.
       + symmetry. apply Nat.ltb_lt. lia.
     - symmetry. apply Nat.ltb_lt. lia.
   Qed.
-  
-    Lemma dec : forall (T1 T2 : Prop) (x : {T1} + {T2}),
-        T1 \/ T2.
-    Proof.
-      intros T1 T2 H. destruct H.
-      - left. assumption.
-      - right. assumption.
-    Qed. Print adk_mul_prod_at_i.
 
     Lemma adk_mul_is_pmul (n : nat) (x y : list Z) :
-      adk_mul nth_reifiable n x y = pmul' n x y.
+      adk_mul n x y = pmul n x y.
     Proof.
-      rewrite (adk_mul_ext _ (@nth Z)) by (apply nth_reifiable_spec).
       rewrite adk_mul_friendly. rewrite adk_mul_friendlier.
-      cbv [friendlier_adk_mul pmul']. cbv [prod_at_index' friendlier_adk_prod_at_i].
+      cbv [friendlier_adk_mul pmul]. cbv [prod_at_index friendlier_adk_prod_at_i].
       apply map_ext. intros i.
-      remember (Zeven_odd_dec (Z.of_nat i + 1)) as H72 eqn:clearMe; clear clearMe. apply dec in H72. Check Zodd_div2.
-                  assert (H73: (Z.of_nat i + 1 = 2 * Z.div2 (Z.of_nat i + 1) \/ Z.of_nat i + 1 = 2 * Z.div2 (Z.of_nat i + 1) + 1)).
-                  { destruct H72 as [H'|H'].
-                    - left. apply Zeven_div2. apply H'.
-                    - right. apply Zodd_div2. apply H'. }
+      remember (Zeven_odd_dec (Z.of_nat i + 1)) as H72 eqn:clearMe; clear clearMe.
+      assert (H73: (Z.of_nat i + 1 = 2 * Z.div2 (Z.of_nat i + 1) \/ Z.of_nat i + 1 = 2 * Z.div2 (Z.of_nat i + 1) + 1)).
+      { destruct H72 as [H'|H'].
+        - left. apply Zeven_div2. apply H'.
+        - right. apply Zodd_div2. apply H'. }
       induction n as [|n' IHn'].
       - replace (fold_right _ _ _) with 0.
         + replace (fold_right _ _ _) with 0.
@@ -2045,25 +2013,14 @@ Section Nice_weight.
                          +++ symmetry. apply Nat.ltb_lt. lia.
                          +++ symmetry. apply Nat.ltb_lt. lia.
                          +++ symmetry. apply Nat.ltb_lt. lia.
-               -- 
-                  (*++ f_equal. apply map_ext_in. intros a Ha. apply in_seq in Ha. apply Nat.eqb_neq in E1. clear IHn'.
-                     assert (H1 : (a <= n' - 1)%nat). { rewrite <- Z.div2_div in *. destruct (Zeven_odd_dec (Z.of_nat i + 1)) as [H'|H'].
-                                                       - apply Zeven_div2 in H'. lia.
-                                                       - apply Zodd_div2 in H'. lia. }
-                     assert (H2 : (i - a <= n' - 1)%nat) by lia. repeat rewrite nth_firstn.
-                     replace (a <? S n')%nat with true. replace (a <? n')%nat with true. reflexivity.
-                     +++ symmetry. apply Nat.ltb_lt. lia.
-                     +++ symmetry. apply Nat.ltb_lt. lia.*)
-               (*--*) remember (Zeven_odd_dec (Z.of_nat i + 1)) as H' eqn:clearMe; clear clearMe. apply dec in H'. Check Zodd_div2.
-                  assert (H'': (Z.of_nat i + 1 = 2 * Z.div2 (Z.of_nat i + 1) \/ Z.of_nat i + 1 = 2 * Z.div2 (Z.of_nat i + 1) + 1)).
-                  { destruct H' as [H'|H'].
-                    - left. apply Zeven_div2. apply H'.
-                    - right. apply Zodd_div2. apply H'. }
-                  repeat rewrite nth_firstn. (*replace (_ <? _)%nat with true. replace (_ <? _)%nat with true. replace (_ <? _)%nat with true.*)
-                  replace (i - (i - (S n' - 1)))%nat with (S n' - 1)%nat by lia. lia.
-                  (*+++ symmetry. apply Nat.ltb_lt. lia.
-                  +++ symmetry. apply Nat.ltb_lt. lia.
-                  +++ symmetry. apply Nat.ltb_lt. lia.*)
+               -- repeat rewrite nth_default_eq.
+                  remember (Zeven_odd_dec (Z.of_nat i + 1)) as H' eqn:clearMe; clear clearMe.
+                 assert (H'': (Z.of_nat i + 1 = 2 * Z.div2 (Z.of_nat i + 1) \/ Z.of_nat i + 1 = 2 * Z.div2 (Z.of_nat i + 1) + 1)).
+                 { destruct H' as [H'|H'].
+                   - left. apply Zeven_div2. apply H'.
+                   - right. apply Zodd_div2. apply H'. }
+                 repeat rewrite nth_firstn. 
+                 replace (i - (i - (S n' - 1)))%nat with (S n' - 1)%nat by lia. lia.
         + Search (andb _ _ = false). apply Bool.andb_false_iff in E1. rewrite Bool.negb_false_iff in E1. rewrite Nat.eqb_eq in E1. rewrite Bool.andb_false_iff in E1.
           repeat rewrite Z.leb_nle in E1.
           destruct (orb (andb (S n' =? 1) (i =? 0)) (i =? 2*(S n') - 2))%nat eqn:E2.
@@ -2076,7 +2033,7 @@ Section Nice_weight.
              replace (Z.to_nat (1 + Z.min (Z.of_nat i) (Z.of_nat (S n') - 1) - Z.of_nat (i - (S n' - 1)))) with 1%nat by lia.
              cbn [seq map fold_right].
              replace (Z.to_nat (1 + Z.min (Z.of_nat (S n') - 1) (Z.of_nat i) - Z.of_nat (i - (S n' - 1)))) with 1%nat by lia.
-             cbn [seq map fold_right]. f_equal.
+             cbn [seq map fold_right]. repeat rewrite nth_default_eq. f_equal.
              replace (i - (i - (S n' - 1)))%nat with (S n' - 1)%nat by lia.
              replace (i - (S n' - 1))%nat with (S n' - 1)%nat by lia.
              reflexivity.
@@ -2097,20 +2054,35 @@ Section Nice_weight.
                     +++ symmetry. apply Nat.ltb_lt. lia.*)
                 --- f_equal. replace ((Z.to_nat (1 + Z.min (Z.of_nat i) (Z.of_nat (S n') - 1) - Z.of_nat 0))) with
                       (Z.to_nat (1 + Z.min (Z.of_nat i) (Z.of_nat n' - 1) - Z.of_nat 0)) by lia. apply map_ext_in.
-                    intros a Ha. apply in_seq in Ha. (*repeat rewrite nth_firstn. replace (_ <? _)%nat with true. replace (_ <? _)%nat with true.*) reflexivity.
-                    (*+++ symmetry. apply Nat.ltb_lt. lia.
-                    +++ symmetry. apply Nat.ltb_lt. lia.*)
+                    intros a Ha. apply in_seq in Ha. reflexivity.
              ++ replace (Z.to_nat (1 + Z.min (Z.of_nat (S n') - 1) (Z.of_nat i) - Z.of_nat (i - (S n' - 1)))) with 0%nat by lia.
                 (*replace (Z.to_nat (1 + Z.min (Z.of_nat n' - 1) (Z.of_nat i) - Z.of_nat (i - (n' - 1)))) with 0%nat in * by lia.*)
                 replace ((Z.to_nat (1 + ((Z.of_nat i + 1) / 2 - 1) - Z.of_nat (i - (S n' - 1))))) with 0%nat by lia.
                 replace (Z.to_nat (1 + Z.min (Z.of_nat i) (Z.of_nat (S n') - 1) - Z.of_nat (i - (S n' - 1)))) with 0%nat by lia.
                 reflexivity.
     Qed.
+    
+    Lemma eval_pmul n x y :
+      Positional.eval weight n x * Positional.eval weight n y =
+        Positional.eval weight (2*n - 1) (pmul n x y).
+    Proof.
+      Search amul. rewrite amul_is_pmul. cbv [amul]. Search Positional.from_associational.
+      rewrite Positional.eval_from_associational.
+      - Search Associational.mul. rewrite Associational.eval_mul. Search Positional.to_associational. repeat rewrite Positional.eval_to_associational. reflexivity.
+      - apply weight_0.
+      - apply weight_nz.
+      - destruct (dec (2 * n - 1 = 0)%nat).
+        + right. cbv [Positional.to_associational]. replace n with 0%nat by lia. reflexivity.
+        + lia.
+    Qed.
+
+    Lemma eval_adk_mul n x y :
+      Positional.eval weight n x * Positional.eval weight n y =
+        Positional.eval weight (2 * n - 1) (adk_mul n x y).
+    Proof. rewrite adk_mul_is_pmul. rewrite eval_pmul. reflexivity. Qed.
       
 End Nice_weight.
 End pmul.
-
-Definition adk_mul := pmul.adk_mul pmul.nth_reifiable.
 
 Record weight_properties {weight : nat -> Z} :=
   {

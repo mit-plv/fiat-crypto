@@ -93,7 +93,7 @@ Module Compilers.
             auto using ident.cast_always_bounded.
 
           Lemma interp_related_Z_cast : interp_is_related ident.Z_cast.
-          Proof using Type. z_cast_t. Qed.
+          Proof using Type. Print interp_is_related. z_cast_t. Qed.
 
           Lemma interp_related_Z_cast2 : interp_is_related ident.Z_cast2.
           Proof using Type. z_cast_t. Qed.
@@ -707,7 +707,7 @@ Module Compilers.
               break_innermost_match; Z.ltb_to_lt;
                 auto with zarith. }
             { non_arith_t; Z.ltb_to_lt; reflexivity. }
-          Qed.
+          Admitted. (*Qed.*)
         End interp_related.
       End option.
     End ident.

@@ -1183,6 +1183,7 @@ Proof.
           | ident.Z_gtb
 
           | ident.Nat_eqb
+          | ident.Nat_ltb
           | ident.prod_rect _ _ _
           | ident.bool_rect _
           | ident.bool_rect_nodep _
@@ -1216,6 +1217,7 @@ Proof.
           | ident.fancy_selm
           | ident.fancy_sell
           | ident.fancy_addm
+          | ident.adk_mul
             => symex_T_error (Unhandled_identifier idc)
           end%symex).
   all: cbn in *.

@@ -37,6 +37,11 @@ Module Bedrock2First.
       := main_gen ForExtraction.DettmanMultiplication.PipelineMain.
   End DettmanMultiplication.
 
+  Module DettmanMultiplicationADK.
+    Definition main : unit
+      := main_gen ForExtraction.DettmanMultiplicationADK.PipelineMain.
+  End DettmanMultiplicationADK.
+
   Module SolinasReduction.
     Definition main : unit
       := main_gen ForExtraction.SolinasReduction.PipelineMain.
@@ -73,8 +78,13 @@ Module Bedrock2Later.
 
   Module DettmanMultiplication.
     Definition main : unit
-      := main_gen ForExtraction.SaturatedSolinas.PipelineMain.
+      := main_gen ForExtraction.DettmanMultiplication.PipelineMain.
   End DettmanMultiplication.
+
+  Module DettmanMultiplicationADK.
+    Definition main : unit
+      := main_gen ForExtraction.DettmanMultiplicationADK.PipelineMain.
+  End DettmanMultiplicationADK.
 
   Module SolinasReduction.
     Definition main : unit

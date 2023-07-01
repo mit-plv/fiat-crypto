@@ -26,6 +26,7 @@ Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
 Require Crypto.PushButtonSynthesis.BaseConversion.
 Require Crypto.PushButtonSynthesis.DettmanMultiplication.
+Require Crypto.PushButtonSynthesis.DettmanMultiplicationADK.
 Require Crypto.PushButtonSynthesis.SolinasReduction.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Stringification.Language.
@@ -399,6 +400,10 @@ Module ForExtraction.
     := ("n",
         Arg.Custom (parse_string_and parse_nat) "ℕ",
         ["The number of limbs"]).
+  Definition limb_width_spec : anon_argT
+    := ("limb_width",
+         Arg.Custom (parse_string_and parse_nat) "ℕ",
+         ["The limb width"]).
   Definition last_limb_width_spec : anon_argT
     := ("last_limb_width",
          Arg.Custom (parse_string_and parse_nat) "ℕ",
@@ -1235,6 +1240,52 @@ Module ForExtraction.
       : A
       := Parameterized.PipelineMain argv.
   End DettmanMultiplication.
+
+  Module DettmanMultiplicationADK. Print DettmanMultiplicationADK.Synthesize.
+    Local Instance api : PipelineAPI
+      := {
+          spec :=
+            {| Arg.named_args := [inbounds_multiplier_spec]
+               ; Arg.anon_args := [n_nat_spec; limb_width_spec; last_reduction_spec; sc_spec]
+               ; Arg.anon_opt_args := []
+               ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec DettmanMultiplication.valid_names) |};
+
+          parse_args opts args
+          := let '(inbounds_multiplier, ((str_n, n), (str_limb_width, limb_width), (str_last_reduction, last_reduction), (str_sc, (s, c))), tt, requests) := args in
+             let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
+             let to_string_opt ls := choose_one_of_many (List.map (@snd _ _) ls) in
+             let inbounds_multiplier := to_string_opt inbounds_multiplier in
+             let '(str_inbounds_multiplier, inbounds_multiplier) := parse_dirbounds_multiplier "in" (inl inbounds_multiplier) in
+             match inbounds_multiplier with
+             | inr errs => inr errs
+             | inl inbounds_multiplier
+                   => inl ((str_n, str_limb_width, str_last_reduction, str_sc, str_inbounds_multiplier, show_requests),
+                          (n, limb_width, last_reduction, s, c, inbounds_multiplier, requests))
+             end;
+
+          show_lines_args :=
+            fun '((str_n, str_limb_width, str_last_reduction, str_sc, str_inbounds_multiplier, show_requests),
+                  (n, limb_width, last_reduction, s, c, inbounds_multiplier, requests))
+            => ["requested operations: " ++ show_requests;
+                "n = " ++ show n ++ " (from """ ++ str_n ++ """)";
+                "limb_width = " ++ show limb_width ++ " (from """ ++ str_limb_width ++ """)";
+                "last_reduction = " ++ show last_reduction ++ " (from """ ++ str_last_reduction ++ """)";
+                "s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ " (from """ ++ str_sc ++ """)";
+                "inbounds_multiplier: " ++ show inbounds_multiplier ++ " (from """ ++ str_inbounds_multiplier ++ """)"];
+
+          Synthesize
+          := fun _ opts '(n, limb_width, last_reduction, s, c, inbounds_multiplier, requests) comment_header prefix
+             => DettmanMultiplicationADK.Synthesize machine_wordsize s c n limb_width last_reduction inbounds_multiplier comment_header prefix requests
+        }.
+
+    Definition PipelineMain
+               {supported_languages : supported_languagesT}
+               {A}
+               {io_driver : IODriverAPI A}
+               (argv : list string)
+      : A
+      := Parameterized.PipelineMain argv.
+  End DettmanMultiplicationADK.
 
   Module SolinasReduction.
     Local Instance api : PipelineAPI
