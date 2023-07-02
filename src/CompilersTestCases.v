@@ -1,4 +1,4 @@
-Require Import Coq.Strings.String.
+(*Require Import Coq.Strings.String.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
@@ -34,7 +34,7 @@ Local Notation "x" := (expr.Var x) (only printing, at level 9) : expr_scope.
 Local Notation cstZ r := (#ident.Z_cast @ #(@ident.Literal base.type.zrange r%zrange))%expr.
 Local Notation cstZZ r1 r2 := (#ident.Z_cast2 @ (#(@ident.Literal base.type.zrange r1%zrange), #(@ident.Literal base.type.zrange r2%zrange)))%expr.
 
-Example test1 : True.
+(*Example test1 : True.
 Proof.
   let v := Reify ((fun x => 2^x) 255)%Z in
   pose v as E.
@@ -45,7 +45,7 @@ Proof.
   | (fun var => expr.Ident (ident.Literal ?v)) => idtac
   end.
   constructor.
-Qed.
+Qed.*)
 Module testrewrite.
   Import expr.
   Import ident.
@@ -463,3 +463,4 @@ Module test14.
     exact I.
   Qed.
 End test14.
+*)

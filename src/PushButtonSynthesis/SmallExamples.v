@@ -21,7 +21,7 @@ Import Compilers.API.
 Import Associational Positional.
 
 Local Existing Instance Pipeline.default_BoundsPipelineOptions.
-
+Print Pipeline.BoundsPipeline. Print Pipeline.default_BoundsPipelineOptions.
 Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
         true [64; 128]
@@ -29,6 +29,7 @@ Time Redirect "log" Compute
               exact r)
                (Some (repeat (@None _) 5), ((Some (repeat (@None _) 5), tt)))
                ZRange.type.base.option.None).
+Print mulmod.
 
 Time Redirect "log" Compute
      (Pipeline.BoundsPipeline

@@ -232,7 +232,7 @@ Module Compilers.
     Notation Nat_add := Compilers.ident_Nat_add (only parsing).
     Notation Nat_sub := Compilers.ident_Nat_sub (only parsing).
     Notation Nat_eqb := Compilers.ident_Nat_eqb (only parsing).
-    Notation Nat_ltb := Compilers.ident_Nat_ltb (only parsing).
+    (*Notation Nat_ltb := Compilers.ident_Nat_ltb (only parsing).*)
     Notation nil := Compilers.ident_nil (only parsing).
     Notation cons := Compilers.ident_cons (only parsing).
     Notation tt := Compilers.ident_tt (only parsing).
@@ -326,7 +326,7 @@ Module Compilers.
     Notation fancy_selm := Compilers.ident_fancy_selm (only parsing).
     Notation fancy_sell := Compilers.ident_fancy_sell (only parsing).
     Notation fancy_addm := Compilers.ident_fancy_addm (only parsing).
-    Notation adk_mul := Compilers.ident_adk_mul (only parsing).
+    (*Notation adk_mul := Compilers.ident_adk_mul (only parsing).*)
 
     Notation option_Some := Compilers.ident_Some (only parsing).
     Notation option_None := Compilers.ident_None (only parsing).

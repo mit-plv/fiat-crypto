@@ -537,7 +537,7 @@ Module Compilers.
              | ident.Nat_add as idc
              | ident.Nat_sub as idc
              | ident.Nat_eqb as idc
-             | ident.Nat_ltb as idc
+             (*| ident.Nat_ltb as idc*)
              | ident.List_seq as idc
                => fun x y  => x <- x; y <- y; rSome (ident.interp idc x y)
              | ident.List_repeat _
@@ -585,7 +585,7 @@ Module Compilers.
                             xs
                      | None => None
                      end
-      | ident.adk_mul
+      (*| ident.adk_mul
         => fun (n : option nat) (x y : option (list (option zrange)))
            => match n, x, y with
               | Some n, Some x, Some y =>
@@ -595,7 +595,7 @@ Module Compilers.
                   | _, _ => None
                   end
               | _, _, _ => None
-              end
+              end*)
              | ident.Z_eqb as idc
              | ident.Z_leb as idc
              | ident.Z_ltb as idc
@@ -944,6 +944,7 @@ Module Compilers.
                                 (ZRange.four_corners Z.add x y)
                                 (ZRange.eight_corners (fun x y m => Z.max 0 (x + y - m))
                                    x y m)))
+      (*| ident.adk_mul => fun n x y => None*)
 
              end%option.
       End option.
