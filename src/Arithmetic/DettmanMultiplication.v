@@ -1,4 +1,5 @@
 Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.ADK.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List.
 Require Import Crypto.Arithmetic.ModOps.
@@ -389,7 +390,6 @@ Module DettmanMultiplication.
     End WithoutADK.
 
     Section WithADK.
-      Import pmul.
       (* now we'll add the option to use the adk algorithm in place of associational.mul *)
       Context (weight_friendly : forall i j : nat, weight i * weight j = weight (i + j)).
 

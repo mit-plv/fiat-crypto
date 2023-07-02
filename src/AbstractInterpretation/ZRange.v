@@ -1,6 +1,6 @@
 Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
-Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.ADK.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
@@ -501,17 +501,12 @@ Module Compilers.
              | None, None => None
              end.
         Local Notation tZ := (base.type.type_base base.type.Z).
-        (*Print Compilers.type.interp.
-        Print ZRange.two_corners. Print ZRange.apply_to_range. Print nth_default.
-        Compute (type.base.option.interp (base.type.type_base Compilers.nat)).
-        Check lower. Check pmul.adk_mul. Print map.
         Require Import Coq.Lists.List.
         Definition adk_output_bounds (n : nat) (x_bounds y_bounds : list zrange) : list zrange :=
-          let lower_bounds : list Z := pmul.adk_mul n (map (lower : zrange -> Z) x_bounds) (map lower y_bounds) in
-          let upper_bounds := pmul.adk_mul n (map lower x_bounds) (map upper y_bounds) in
+          let lower_bounds : list Z := adk_mul n (map (lower : zrange -> Z) x_bounds) (map lower y_bounds) in
+          let upper_bounds :=adk_mul n (map lower x_bounds) (map upper y_bounds) in
           map (fun lower_upper => Build_zrange (fst lower_upper) (snd lower_upper))
             (combine lower_bounds upper_bounds).
-        Check option_map. Search (list (option _)). Print Option.List.lift.*)
         Definition interp {shiftr_avoid_uint1 : shiftr_avoid_uint1_opt} (assume_cast_truncates : bool) {t} (idc : ident t) : type.option.interp t
           := let interp_Z_cast := if assume_cast_truncates then interp_Z_cast_truncate else interp_Z_cast in
              match idc in ident.ident t return type.option.interp t with
@@ -537,7 +532,7 @@ Module Compilers.
              | ident.Nat_add as idc
              | ident.Nat_sub as idc
              | ident.Nat_eqb as idc
-             (*| ident.Nat_ltb as idc*)
+             | ident.Nat_ltb as idc
              | ident.List_seq as idc
                => fun x y  => x <- x; y <- y; rSome (ident.interp idc x y)
              | ident.List_repeat _
@@ -585,7 +580,7 @@ Module Compilers.
                             xs
                      | None => None
                      end
-      (*| ident.adk_mul
+      | ident.adk_mul
         => fun (n : option nat) (x y : option (list (option zrange)))
            => match n, x, y with
               | Some n, Some x, Some y =>
@@ -595,7 +590,7 @@ Module Compilers.
                   | _, _ => None
                   end
               | _, _, _ => None
-              end*)
+              end
              | ident.Z_eqb as idc
              | ident.Z_leb as idc
              | ident.Z_ltb as idc
@@ -944,8 +939,6 @@ Module Compilers.
                                 (ZRange.four_corners Z.add x y)
                                 (ZRange.eight_corners (fun x y m => Z.max 0 (x + y - m))
                                    x y m)))
-      (*| ident.adk_mul => fun n x y => None*)
-
              end%option.
       End option.
     End ident.
