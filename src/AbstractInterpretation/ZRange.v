@@ -501,7 +501,7 @@ Module Compilers.
              | None, None => None
              end.
         Local Notation tZ := (base.type.type_base base.type.Z).
-        Print Compilers.type.interp.
+        (*Print Compilers.type.interp.
         Print ZRange.two_corners. Print ZRange.apply_to_range. Print nth_default.
         Compute (type.base.option.interp (base.type.type_base Compilers.nat)).
         Check lower. Check pmul.adk_mul. Print map.
@@ -511,7 +511,7 @@ Module Compilers.
           let upper_bounds := pmul.adk_mul n (map lower x_bounds) (map upper y_bounds) in
           map (fun lower_upper => Build_zrange (fst lower_upper) (snd lower_upper))
             (combine lower_bounds upper_bounds).
-        Check option_map. Search (list (option _)). Print Option.List.lift.
+        Check option_map. Search (list (option _)). Print Option.List.lift.*)
         Definition interp {shiftr_avoid_uint1 : shiftr_avoid_uint1_opt} (assume_cast_truncates : bool) {t} (idc : ident t) : type.option.interp t
           := let interp_Z_cast := if assume_cast_truncates then interp_Z_cast_truncate else interp_Z_cast in
              match idc in ident.ident t return type.option.interp t with
