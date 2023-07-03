@@ -1,1 +1,10 @@
-Closed under the global context
+Axioms:
+ZRangeProofs.Compilers.ZRange.ident.option.interp_related
+  : forall (shiftr_avoid_uint1 : ZRange.Compilers.ZRange.Settings.shiftr_avoid_uint1_opt) (assume_cast_truncates : bool) 
+      (t : API.type) (idc : IdentifiersBasicGENERATED.Compilers.ident t),
+    type.related_hetero
+      (fun (t0 : Language.Compilers.base.type Compilers.base)
+         (st : (fun t1 : Language.Compilers.base.type Compilers.base => ZRange.Compilers.ZRange.type.base.option.interp t1) t0)
+         (v : (fun t1 : Language.Compilers.base.type Compilers.base => Language.Compilers.base.interp Compilers.base_interp t1) t0) =>
+       ZRange.Compilers.ZRange.type.base.option.is_bounded_by st v = true) (ZRange.Compilers.ZRange.ident.option.interp assume_cast_truncates idc)
+      (Compilers.ident_interp idc)

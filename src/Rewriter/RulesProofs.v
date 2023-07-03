@@ -68,6 +68,7 @@ Require Import Crypto.Rewriter.Rules.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Arithmetic.ADKProofs.
 Import ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 
 Local Definition mymap {A B} := Eval cbv in @List.map A B.
@@ -89,6 +90,11 @@ Local Hint Resolve
       eq_skipn_nat_rect
       eq_update_nth_nat_rect
   : core.
+
+Lemma unfold_things_rewrite_rules_proofs
+  : PrimitiveHList.hlist (@snd bool Prop) unfold_thingsT.
+Proof. start_proof; auto. (*intros A B. apply map_const.*) (*intros n x y. rewrite reifiable_ok. rewrite <- adk_mul_friendlier. rewrite <- adk_mul_friendly. reflexivity.*) Qed.
+Print reifiable_friendlier_adk_prod_at_i.
 
 Lemma nbe_rewrite_rules_proofs
   : PrimitiveHList.hlist (@snd bool Prop) nbe_rewrite_rulesT.

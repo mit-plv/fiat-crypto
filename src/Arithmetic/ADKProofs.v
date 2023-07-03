@@ -598,9 +598,26 @@ Section Nice_weight.
     fold_right Z.add 0 (map (fun j => (nth j x 0 - nth (i - j) x 0) * (nth (i - j) y 0 - nth j y 0))
                           (seq (i - (n - 1)) (Z.to_nat (1 + ((Z.of_nat i + 1)/2 - 1) - Z.of_nat (i - (n - 1))%nat)%Z))) +
       fold_right Z.add 0 (map (fun j => nth j x 0 * nth j y 0) (seq (i - (n - 1)) (Z.to_nat (1 + Z.min (Z.of_nat i) (Z.of_nat n - 1) - Z.of_nat (i - (n - 1)))))).
+
+  Definition reifiable_friendlier_adk_prod_at_i (n : nat) (x y : list Z) (i : nat) : Z :=
+    fold_right Z.add 0 (map (fun j => (nth' j x 0 - nth' (i - j)%nat x 0) * (nth' (i - j)%nat y 0 - nth' j y 0))
+                          (seq (i - (n - 1)) (Z.to_nat (1 + ((Z.of_nat i + 1)/2 - 1) - Z.of_nat (i - (n - 1))%nat)%Z))) +
+      fold_right Z.add 0 (map (fun j => nth' j x 0 * nth' j y 0) (seq (i - (n - 1)) (Z.to_nat (1 + Z.min (Z.of_nat i) (Z.of_nat n - 1) - Z.of_nat (i - (n - 1)))))).
   
   Definition friendlier_adk_mul (n : nat) (x y : list Z) :=
     map (friendlier_adk_prod_at_i n x y) (seq 0 (2*n - 1)).
+
+  Definition reifiable_friendlier_adk_mul (n : nat) (x y : list Z) :=
+    map (reifiable_friendlier_adk_prod_at_i n x y) (seq 0 (2*n - 1)).
+
+  Lemma reifiable_ok n x y :
+    reifiable_friendlier_adk_mul n x y = friendlier_adk_mul n x y.
+  Proof.
+    cbv [reifiable_friendlier_adk_mul friendlier_adk_mul]. apply map_ext. intros i.
+    cbv [reifiable_friendlier_adk_prod_at_i friendlier_adk_prod_at_i]. f_equal.
+    - f_equal. apply map_ext. intros j. repeat rewrite nth_default_eq. reflexivity.
+    - f_equal. apply map_ext. intros j. repeat rewrite nth_default_eq. reflexivity.
+  Qed.
   
   Lemma f_spec (n : nat) (xn yn : list Z) (i : nat) (d : Z) :
     let products : list Z := map (fun i => (nth' i xn 0) * (nth' i yn 0)) (seq 0 (2*n - 1)) in

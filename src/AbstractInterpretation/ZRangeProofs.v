@@ -44,6 +44,7 @@ Require Import Crypto.Util.Tactics.PrintGoal.
 Require Import Crypto.Language.PreExtra.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.AbstractInterpretation.ZRange.
+Require Import Crypto.Arithmetic.ADKProofs.
 
 Module Compilers.
   Import AbstractInterpretation.ZRange.Compilers.

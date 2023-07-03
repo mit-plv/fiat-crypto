@@ -449,16 +449,38 @@ Module DettmanMultiplication.
              (map snd (output_bounds n x_bounds y_bounds)))
           (pmul.pmul n x y). Print adk_mul.*)
 
+      Print adk_mul.
+      Definition adk_mul_alias : nat -> list Z -> list Z -> list Z :=
+        fun (n : nat) (x y : list Z) =>
+dlet high_product : Z := (fun (i : nat) (l : list Z) (d : Z) => nth_default d l i) 
+                           (n - 1)%nat x 0 *
+                         (fun (i : nat) (l : list Z) (d : Z) => nth_default d l i) 
+                           (n - 1)%nat y 0 in
+let products :=
+  map
+    (fun i : nat =>
+     (fun (i0 : nat) (l : list Z) (d : Z) => nth_default d l i0) i x 0 *
+     (fun (i0 : nat) (l : list Z) (d : Z) => nth_default d l i0) i y 0) 
+    (seq 0 (n - 1)) ++ [high_product] ++ repeat 0 (n - 1) in
+list_rect (fun _ : list Z => list Z -> list Z)
+  (fun f : list Z => adk_mul' n x y products (rev f))
+  (fun (p : Z) (l : list Z) (g : (fun _ : list Z => list Z -> list Z) l) (f' : list Z) =>
+   dlet x0 : Z := (fun (i : nat) (l0 : list Z) (d : Z) => nth_default d l0 i) 0%nat f' 0 + p in
+   g (x0 :: f')) products []. Print adk_mul.
+      
       Definition adk_mulmod (*(x_bounds y_bounds : list (Z*Z))*) (x y : list Z) : list Z :=
-        reduce_carry_borrow (Positional.to_associational weight n (adk_mul (*_with_bounds x_bounds y_bounds*) n x y)).
+       (* reduce_carry_borrow (Positional.to_associational weight n ( *)adk_mul (*_with_bounds x_bounds y_bounds*) n x y(* ))*)
+          (*(Associational.mul
+             (Positional.to_associational weight n x)
+             (Positional.to_associational weight n y))*).
 
       Theorem eval_adk_mulmod (*a_bounds b_bounds*) a b :
         (Positional.eval weight n (adk_mulmod (*a_bounds b_bounds*) a b)) mod (s - c') =
           (Positional.eval weight n a * Positional.eval weight n b) mod (s - c').
       Proof.
-        cbv [adk_mulmod]. rewrite <- c_correct. rewrite eval_reduce_carry_borrow.
+        (*cbv [adk_mulmod]. rewrite <- c_correct. rewrite eval_reduce_carry_borrow.
         - Search to_associational. rewrite eval_to_associational. f_equal. 
-          Check eval_reduce_carry_borrow. Search adk_mul.
+          Check eval_reduce_carry_borrow. Search adk_mul.*)
       Admitted. Check adk_mulmod.
     End WithADK.
   End DettmanMultiplication.  
@@ -691,7 +713,7 @@ Module dettman_multiplication_with_adk_mod_ops.
       f_equal. lia.
     Qed. Print adk_mulmod.
 
-    Definition adk_mulmod := adk_mulmod s c register_width n last_reduction weight.
+    (*Definition adk_mulmod := adk_mulmod s c register_width n last_reduction weight.*)
 
     Lemma weight_friendly : forall i j : nat, weight i * weight j = weight (i + j).
     Proof.
@@ -700,6 +722,9 @@ Module dettman_multiplication_with_adk_mod_ops.
   
     Definition eval_adk_mulmod := eval_adk_mulmod s c register_width n last_reduction weight p_nz n_gteq_4 wprops weight_friendly.
   End dettman_multiplication_with_adk_mod_ops.
+  Print eval_adk_mulmod.
+  Definition adk_mulmod (s c : Z) (register_width n limbwidth last_reduction : nat) :=
+   DettmanMultiplication.adk_mulmod n.
 End dettman_multiplication_with_adk_mod_ops.
 Module Export Hints.
   Import dettman_multiplication_mod_ops.

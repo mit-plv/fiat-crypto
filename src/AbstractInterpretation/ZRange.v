@@ -504,9 +504,11 @@ Module Compilers.
         Require Import Coq.Lists.List.
         Definition adk_output_bounds (n : nat) (x_bounds y_bounds : list zrange) : list zrange :=
           let lower_bounds : list Z := adk_mul n (map (lower : zrange -> Z) x_bounds) (map lower y_bounds) in
-          let upper_bounds :=adk_mul n (map lower x_bounds) (map upper y_bounds) in
+          let upper_bounds :=adk_mul n (map upper x_bounds) (map upper y_bounds) in
           map (fun lower_upper => Build_zrange (fst lower_upper) (snd lower_upper))
             (combine lower_bounds upper_bounds).
+        (*Compute (adk_output_bounds 10 (repeat r[0x0 ~> 0x7fffffe] 10) (repeat r[0x0 ~> 0x7fffffe] 10)).*)
+        
         Definition interp {shiftr_avoid_uint1 : shiftr_avoid_uint1_opt} (assume_cast_truncates : bool) {t} (idc : ident t) : type.option.interp t
           := let interp_Z_cast := if assume_cast_truncates then interp_Z_cast_truncate else interp_Z_cast in
              match idc in ident.ident t return type.option.interp t with
