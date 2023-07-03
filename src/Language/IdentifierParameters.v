@@ -194,7 +194,7 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_fancy_selm ident.fancy.selm
       ; with_name ident_fancy_sell ident.fancy.sell
       ; with_name ident_fancy_addm ident.fancy.addm
-      ; with_name ident_adk_mul adk_mul
+      ; with_name ident_adk_mul ident_adk_mul
      ]%hlist.
 
 Definition scraped_data : ScrapedData.t

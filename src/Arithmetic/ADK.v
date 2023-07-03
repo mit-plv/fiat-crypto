@@ -26,3 +26,5 @@ Definition adk_mul_prod_at_i (n : nat) (x y products f : list Z) (i : nat) : Z :
            (fun f => adk_mul' n x y products (rev f))
            (fun p _ g => fun f' => Let_In ((nth' 0%nat f' 0) + p) (fun x => g (x :: f'))) 
            products) [].
+
+  Definition ident_adk_mul := adk_mul.

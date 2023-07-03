@@ -6,7 +6,6 @@ Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Arithmetic.ADK.
-Require Import Crypto.Arithmetic.ADKProofs.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Language.PreExtra.
 Require Import Crypto.Util.LetIn.
@@ -47,25 +46,25 @@ Local Notation "x <= y <= z" := (andb (is_tighter_than_bool (ZRange.normalize x)
 Local Notation litZZ x := (ident.literal (fst x), ident.literal (snd x)) (only parsing).
 Local Notation n r := (ZRange.normalize r) (only parsing).
 
-Print reifiable_friendlier_adk_mul. Print reifiable_friendlier_adk_prod_at_i.
+(*Print reifiable_friendlier_adk_mul. Print reifiable_friendlier_adk_prod_at_i.*)
 Search map.
 
 Print adk_mul.
 
-Print reifiable_friendlier_adk_prod_at_i.
+(*Print reifiable_friendlier_adk_prod_at_i.*)
 
 
-Definition unfold_thingsT : list (bool * Prop)
+(*Definition unfold_thingsT : list (bool * Prop)
   := Eval cbv [myapp mymap myflatten] in
     myflatten
       [mymap
          dont_do_again
-         [(forall (i : nat),
-              Z.of_nat i - Z.of_nat i
+         [(forall (i n : nat),
+              (Z.to_nat ('1 + Z.min (Z.of_nat i) (Z.of_nat n + ('-1)) + (-Z.of_nat (i - (n - 1)))))
               =
-              Z.of_nat i - Z.of_nat i)
+                (Z.to_nat ('1 + Z.min (Z.of_nat i) (Z.of_nat n + ('-1)) + (- Z.of_nat (i - (n - 1))))))
          ]
-      ].
+      ].*)
 
 (* N.B. [ident.eagerly] does not play well with [do_again] *)
 Definition nbe_rewrite_rulesT : list (bool * Prop)
@@ -221,8 +220,11 @@ Definition arith_rewrite_rulesT (max_const_val : Z) : list (bool * Prop)
       myflatten
         [mymap
            dont_do_again
-           [(forall z, z - z = z - z)
-            ; (forall A B x y, @fst A B (x, y) = x)
+           [(*(forall n x y, ident_adk_mul n x y = adk_mul n x y) <---- causes make_rewriter to fail *)
+             (*(forall i n : nat,
+             (Z.to_nat (1 + ((Z.of_nat i + 1)/2 - 1) - Z.of_nat (i - (n - 1))%nat)%Z) =
+               (Z.to_nat (1 + ((Z.of_nat i + 1)/2 - 1) - Z.of_nat (i - (n - 1))%nat)%Z)) <---- also causes make_rewriter to fail *)
+            (*;*) (forall A B x y, @fst A B (x, y) = x)
             ; (forall A B x y, @snd A B (x, y) = y)
             ; (forall v, 0 + v = v)
             ; (forall v, v + 0 = v)
@@ -328,6 +330,8 @@ Definition arith_rewrite_rulesT (max_const_val : Z) : list (bool * Prop)
                   -> -x = dlet v := x in -v)
            ]
         ].
+
+Print adk_mul.
 
 Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (bool * Prop)
   := Eval cbv [myapp mymap myflatten] in

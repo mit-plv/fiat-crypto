@@ -91,9 +91,9 @@ Local Hint Resolve
       eq_update_nth_nat_rect
   : core.
 
-Lemma unfold_things_rewrite_rules_proofs
+(*Lemma unfold_things_rewrite_rules_proofs
   : PrimitiveHList.hlist (@snd bool Prop) unfold_thingsT.
-Proof. start_proof; auto. (*intros A B. apply map_const.*) (*intros n x y. rewrite reifiable_ok. rewrite <- adk_mul_friendlier. rewrite <- adk_mul_friendly. reflexivity.*) Qed.
+Proof. start_proof; auto. (*intros A B. apply map_const.*) (*intros n x y. rewrite reifiable_ok. rewrite <- adk_mul_friendlier. rewrite <- adk_mul_friendly. reflexivity.*) Qed.*)
 Print reifiable_friendlier_adk_prod_at_i.
 
 Lemma nbe_rewrite_rules_proofs
