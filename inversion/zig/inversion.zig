@@ -46,7 +46,7 @@ fn fieldElement(comptime Field: type) type {
             }
             var v_opp: Field.Limbs = undefined;
             fiat.opp(&v_opp, v);
-            fiat.selectznz(&v, @truncate(u1, f[f.len - 1] >> (@bitSizeOf(Field.Word) - 1)), v, v_opp);
+            fiat.selectznz(&v, @truncate(f[f.len - 1] >> (@bitSizeOf(Field.Word) - 1)), v, v_opp);
 
             const precomp = comptime x: {
                 var precomp: Field.Limbs = undefined;
