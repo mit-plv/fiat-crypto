@@ -58,25 +58,6 @@ Definition add_precomputed := func! (ox, oy, oz, ot, X1, Y1, Z1, T1, ypx2, ymx2,
   fe25519_mul(ot, ox, oy)
 }.
 
-Definition add_precomputed_partial := func! (ox, oy, X1, Y1, Z1, T1, ypx2, ymx2, xy2d2) {
-  stackalloc 40 as YpX1;
-  fe25519_add(YpX1, Y1, X1);
-  stackalloc 40 as YmX1;
-  fe25519_sub(YmX1, Y1, X1);
-  stackalloc 40 as A;
-  fe25519_mul(A, YpX1, ypx2);
-  stackalloc 40 as B;
-  fe25519_mul(B, YmX1, ymx2);
-  stackalloc 40 as C;
-  fe25519_mul(C, xy2d2, T1);
-  stackalloc 40 as Two;
-  fe25519_from_word(Two, $2);
-  stackalloc 40 as D;
-  fe25519_mul(D, Z1, Two);
-  fe25519_sub(ox, A, B);
-  fe25519_add(oy, A, B)
-}.
-
 Section WithParameters.
   Check _: FieldRepresentation.
 
@@ -119,26 +100,6 @@ Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
         bounded_by loose_bounds ot' /\
         m' =* (FElem X1K X1) * (FElem Y1K Y1) * (FElem Z1K Z1) * (FElem T1K T1) * (FElem ypx2K ypx2) * (FElem ymx2K ymx2) * (FElem xy2d2K xy2d2) * (FElem oxK ox') * (FElem oyK oy') * (FElem ozK oz') * (FElem otK ot') * R }.
 
-Global Instance spec_of_add_precomputed_partial : spec_of "add_precomputed_partial" :=
-  fnspec! "add_precomputed_partial"
-    (oxK oyK X1K Y1K Z1K T1K ypx2K ymx2K xy2d2K : word) /
-    (ox oy X1 Y1 Z1 T1 ypx2 ymx2 xy2d2 : felem) (R : _ -> Prop),
-  { requires t m :=
-      bounded_by tight_bounds X1 /\
-      bounded_by tight_bounds Y1 /\
-      bounded_by loose_bounds Z1 /\
-      bounded_by loose_bounds T1 /\
-      bounded_by loose_bounds ypx2 /\
-      bounded_by loose_bounds ymx2 /\
-      bounded_by loose_bounds xy2d2 /\
-      m =* (FElem X1K X1) * (FElem Y1K Y1) * (FElem Z1K Z1) * (FElem T1K T1) * (FElem ypx2K ypx2) * (FElem ymx2K ymx2) * (FElem xy2d2K xy2d2) * (FElem oxK ox) * (FElem oyK oy) * R;
-    ensures t' m' :=
-      t = t' /\
-      exists ox' oy',
-        bounded_by loose_bounds ox' /\
-        bounded_by loose_bounds oy' /\
-        m' =* (FElem X1K X1) * (FElem Y1K Y1) * (FElem Z1K Z1) * (FElem T1K T1) * (FElem ypx2K ypx2) * (FElem ymx2K ymx2) * (FElem xy2d2K xy2d2) * (FElem oxK ox') * (FElem oyK oy') * R }.
-
 
 Local Instance spec_of_fe25519_square : spec_of "fe25519_square" := Field.spec_of_UnOp un_square.
 Local Instance spec_of_fe25519_mul : spec_of "fe25519_mul" := Field.spec_of_BinOp bin_mul.
@@ -176,8 +137,6 @@ Local Ltac solve_mem :=
   end.
 
 Local Ltac unwrap_fn_step := repeat straightline; straightline_call; ssplit.
-
-(* Local Ltac solve_stack := *)
 
 Local Ltac solve_stack a :=
   (* Rewrites the `stack$@a` term in H to use a Bignum instead *)
