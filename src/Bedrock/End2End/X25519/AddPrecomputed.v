@@ -146,17 +146,6 @@ Local Arguments word.rep : simpl never.
 Local Arguments word.wrap : simpl never.
 Local Arguments word.unsigned : simpl never.
 Local Arguments word.of_Z : simpl never.
-Local Ltac unwrap_calls :=
-  repeat match goal with
-  | |- _ /\ _ => split
-  | |- call _ _ _ _ _ _ => straightline_call
-  | _ => straightline
-  end.
-
-Local Ltac solve_stack :=
-  match goal with
-  | |- 40 mod bytes_per_word 32 = 0 => auto
-  end.
 
 Local Ltac solve_bounds :=
   repeat match goal with
@@ -173,56 +162,41 @@ Local Ltac solve_mem :=
 
 Local Ltac unwrap_fn_step := repeat straightline; straightline_call; ssplit.
 
+(* Local Ltac solve_stack := *)
+
+Local Ltac solve_stack a :=
+  (* Rewrites the `stack$@a` term in H to use a Bignum instead *)
+  cbv [FElem];
+  match goal with
+  | H: _%sep ?m |- (Bignum.Bignum felem_size_in_words a _ * _)%sep ?m =>
+       seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a) H
+  end;
+  [> transitivity 40%nat; trivial | ];
+  (* proves the memory matches up *)
+  use_sep_assumption; cancel; cancel_seps_at_indices 0%nat 0%nat; cbn; [> trivial | eapply RelationClasses.reflexivity].
+
 Lemma add_precomputed_partial_ok : program_logic_goal_for_function! add_precomputed_partial.
 Proof.
   (* slightly painful way to split out all the memory and bounds conditions, and the final postconditions *)
   unwrap_fn_step. 6:unwrap_fn_step. 11:unwrap_fn_step. 16:unwrap_fn_step. 21:unwrap_fn_step.
   26:repeat straightline.
   (* Solve each of the memory and bounds conditions piece-by-piece, as much as possible *)
-  3,4:solve_mem. 1,2:solve_bounds.
-  { (* (FElem a ?out ⋆ ?Rr)%sep m *)
-    (* Rewrites the `stack$@a` term in H10 to use a Bignum instead *)
-    cbv [FElem].
-    seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a) H10. { transitivity 40%nat; trivial. }
-    use_sep_assumption.
-    cancel. cancel_seps_at_indices 0%nat 0%nat; cbn. trivial.
-    eapply RelationClasses.reflexivity. }
-  3,4:solve_mem. 1,2:solve_bounds.
-  { (* (FElem a2 ?out ⋆ ?Rr)%sep a1 *)
-    cbv [FElem].
-    seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a2) H19. { transitivity 40%nat; trivial. }
-    use_sep_assumption.
-    cancel. cancel_seps_at_indices 0%nat 0%nat; cbn; trivial.
-    eapply RelationClasses.reflexivity. }
-  3,4:solve_mem. 1,2:solve_bounds.
-  { (* (FElem a0 ?out ⋆ ?Rr)%sep a5 *)
-    cbv [FElem].
-    seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a0) H26. { transitivity 40%nat; trivial. }
-    use_sep_assumption.
-    cancel. cancel_seps_at_indices 0%nat 0%nat; cbn; trivial.
-    eapply RelationClasses.reflexivity. }
-  3,4:solve_mem. 1,2:solve_bounds.
-  { (* (FElem a4 ?out ⋆ ?Rr)%sep a8 *)
-    cbv [FElem].
-    seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a4) H33. { transitivity 40%nat; trivial. }
-    use_sep_assumption.
-    cancel. cancel_seps_at_indices 0%nat 0%nat; cbn; trivial.
-    eapply RelationClasses.reflexivity. }
-  3,4:solve_mem. 1,2:solve_bounds.
-  { (* (FElem a7 ?out ⋆ ?Rr)%sep a11 *)
-    cbv [FElem].
-    seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a7) H40. { transitivity 40%nat; trivial. }
-    use_sep_assumption.
-    cancel. cancel_seps_at_indices 0%nat 0%nat; cbn; trivial.
-    eapply RelationClasses.reflexivity. }
+  3,4:solve_mem. 1,2:solve_bounds. solve_stack a.
+  3,4:solve_mem. 1,2:solve_bounds. solve_stack a2.
+  3,4:solve_mem. 1,2:solve_bounds. solve_stack a0.
+  3,4:solve_mem. 1,2:solve_bounds. solve_stack a4.
+  3,4:solve_mem. 1,2:solve_bounds. solve_stack a7.
   - (* exists m' mStack' : SortedListWord.map word Init.Byte.byte,
   anybytes a 40 mStack' /\
   map.split a1 m' mStack' /\ list_map (get l0) [] (fun rets : list word => rets = [] /\ a0 = a0 /\ (FElem X1K X1 ⋆ FElem Y1K Y1 ⋆ R)%sep m') *)
     (* Rewrites the FElem about `a` in H11 to be about bytes instead, so we can use it to prove things about `a` as bytes *)
     cbv [FElem] in *.
-    seprewrite_in @Bignum.Bignum_to_bytes H19.
-    seprewrite_in @Bignum.Bignum_to_bytes H19.
-    extract_ex1_and_emp_in H19.
+    seprewrite_in @Bignum.Bignum_to_bytes H47.
+    seprewrite_in @Bignum.Bignum_to_bytes H47.
+    seprewrite_in @Bignum.Bignum_to_bytes H47.
+    seprewrite_in @Bignum.Bignum_to_bytes H47.
+    seprewrite_in @Bignum.Bignum_to_bytes H47.
+    extract_ex1_and_emp_in H47.
 
     repeat straightline; intuition eauto.
 Qed.
