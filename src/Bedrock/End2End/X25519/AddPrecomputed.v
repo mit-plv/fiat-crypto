@@ -56,11 +56,17 @@ Definition add_precomputed := func! (ox, oy, oz, ot, X1, Y1, Z1, T1, ypx2, ymx2,
   fe25519_mul(ot, ox, oy)
 }.
 
-Definition add_precomputed_partial := func! (X1, Y1) {
+Definition add_precomputed_partial := func! (X1, Y1, T1, ypx2, ymx2, xy2d2) {
   stackalloc 40 as YpX1;
   fe25519_add(YpX1, Y1, X1);
   stackalloc 40 as YmX1;
-  fe25519_sub(YmX1, Y1, X1)
+  fe25519_sub(YmX1, Y1, X1);
+  stackalloc 40 as A;
+  fe25519_mul(A, YpX1, ypx2);
+  stackalloc 40 as B;
+  fe25519_mul(B, YmX1, ymx2);
+  stackalloc 40 as C;
+  fe25519_mul(C, xy2d2, T1)
 }.
 
 Section WithParameters.
@@ -107,15 +113,19 @@ Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
 
 Global Instance spec_of_add_precomputed_partial : spec_of "add_precomputed_partial" :=
   fnspec! "add_precomputed_partial"
-    (X1K Y1K : word) /
-    (X1 Y1 : felem) (R : _ -> Prop),
+    (X1K Y1K T1K ypx2K ymx2K xy2d2K : word) /
+    (X1 Y1 T1 ypx2 ymx2 xy2d2 : felem) (R : _ -> Prop),
   { requires t m :=
       bounded_by tight_bounds X1 /\
       bounded_by tight_bounds Y1 /\
-      m =* (FElem X1K X1) * (FElem Y1K Y1) * R;
+      bounded_by loose_bounds T1 /\
+      bounded_by loose_bounds ypx2 /\
+      bounded_by loose_bounds ymx2 /\
+      bounded_by loose_bounds xy2d2 /\
+      m =* (FElem X1K X1) * (FElem Y1K Y1) * (FElem T1K T1) * (FElem ypx2K ypx2) * (FElem ymx2K ymx2) * (FElem xy2d2K xy2d2) * R;
     ensures t' m' :=
       t = t' /\
-      m' =* (FElem X1K X1) * (FElem Y1K Y1) * R }.
+      m' =* (FElem X1K X1) * (FElem Y1K Y1) * (FElem T1K T1) * (FElem ypx2K ypx2) * (FElem ymx2K ymx2) * (FElem xy2d2K xy2d2) * R }.
 
 
 Local Instance spec_of_fe25519_square : spec_of "fe25519_square" := Field.spec_of_UnOp un_square.
@@ -150,9 +160,9 @@ Local Ltac solve_stack :=
 
 Local Ltac solve_bounds :=
   repeat match goal with
-  | H: bounded_by loose_bounds _ |- bounded_by loose_bounds _ => apply H
-  | H: bounded_by tight_bounds _ |- bounded_by tight_bounds _ => apply H
-  | H: bounded_by _ _ |- bounded_by _ _ => cbv [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_sub un_outbounds bin_outbounds] in *
+  | H: bounded_by loose_bounds ?x |- bounded_by loose_bounds ?x => apply H
+  | H: bounded_by tight_bounds ?x |- bounded_by tight_bounds ?x => apply H
+  | H: bounded_by _ ?x |- bounded_by _ ?x => cbv [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_sub un_outbounds bin_outbounds] in *
   end.
 
 Local Ltac solve_mem :=
@@ -161,32 +171,50 @@ Local Ltac solve_mem :=
   | |- _%sep _ => ecancel_assumption
   end.
 
+Local Ltac unwrap_fn_step := repeat straightline; straightline_call; ssplit.
+
 Lemma add_precomputed_partial_ok : program_logic_goal_for_function! add_precomputed_partial.
 Proof.
-  repeat straightline. straightline_call. ssplit.
-  6:repeat straightline. 6:straightline_call. 6:ssplit.
-  11:repeat straightline.
-  (* unwrap_calls is apparently too aggressive; so I had to do the above instead *)
-  (* all: try solve_mem. all: try solve_bounds *) (* Also too aggressive somewhere... *)
-  3: solve_mem. 3: solve_mem.
-  solve_bounds. solve_bounds.
-  - (* (FElem a ?out ⋆ ?Rr)%sep m *)
-    (* Rewrites the `stack$@a` term in H3 to use a Bignum instead *)
+  (* slightly painful way to split out all the memory and bounds conditions, and the final postconditions *)
+  unwrap_fn_step. 6:unwrap_fn_step. 11:unwrap_fn_step. 16:unwrap_fn_step. 21:unwrap_fn_step.
+  26:repeat straightline.
+  (* Solve each of the memory and bounds conditions piece-by-piece, as much as possible *)
+  3,4:solve_mem. 1,2:solve_bounds.
+  { (* (FElem a ?out ⋆ ?Rr)%sep m *)
+    (* Rewrites the `stack$@a` term in H10 to use a Bignum instead *)
     cbv [FElem].
-    seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a) H3. { transitivity 40%nat; trivial. }
+    seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a) H10. { transitivity 40%nat; trivial. }
     use_sep_assumption.
     cancel. cancel_seps_at_indices 0%nat 0%nat; cbn. trivial.
-    eapply RelationClasses.reflexivity.
-  - apply H2. (* bounded_by bin_xbounds ?x@{a1:=a0; H12:=H13; mCombined:=a1} *)
-  - apply H1. (* bounded_by bin_ybounds ?y@{a1:=a0; H12:=H13; mCombined:=a1} *)
-  - solve_mem.
-  - solve_mem.
-  - (* (FElem a2 ?out@{a1:=a0; H12:=H13; mCombined:=a1} ⋆ ?Rr@{a1:=a0; H12:=H13; mCombined:=a1})%sep a1 *)
+    eapply RelationClasses.reflexivity. }
+  3,4:solve_mem. 1,2:solve_bounds.
+  { (* (FElem a2 ?out ⋆ ?Rr)%sep a1 *)
     cbv [FElem].
-    seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a2) H12. { transitivity 40%nat; trivial. }
+    seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a2) H19. { transitivity 40%nat; trivial. }
     use_sep_assumption.
-    cancel. cancel_seps_at_indices 0%nat 0%nat; cbn; trivial. (* I think context of evars is causing problems? *)
-    eapply RelationClasses.reflexivity.
+    cancel. cancel_seps_at_indices 0%nat 0%nat; cbn; trivial.
+    eapply RelationClasses.reflexivity. }
+  3,4:solve_mem. 1,2:solve_bounds.
+  { (* (FElem a0 ?out ⋆ ?Rr)%sep a5 *)
+    cbv [FElem].
+    seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a0) H26. { transitivity 40%nat; trivial. }
+    use_sep_assumption.
+    cancel. cancel_seps_at_indices 0%nat 0%nat; cbn; trivial.
+    eapply RelationClasses.reflexivity. }
+  3,4:solve_mem. 1,2:solve_bounds.
+  { (* (FElem a4 ?out ⋆ ?Rr)%sep a8 *)
+    cbv [FElem].
+    seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a4) H33. { transitivity 40%nat; trivial. }
+    use_sep_assumption.
+    cancel. cancel_seps_at_indices 0%nat 0%nat; cbn; trivial.
+    eapply RelationClasses.reflexivity. }
+  3,4:solve_mem. 1,2:solve_bounds.
+  { (* (FElem a7 ?out ⋆ ?Rr)%sep a11 *)
+    cbv [FElem].
+    seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a7) H40. { transitivity 40%nat; trivial. }
+    use_sep_assumption.
+    cancel. cancel_seps_at_indices 0%nat 0%nat; cbn; trivial.
+    eapply RelationClasses.reflexivity. }
   - (* exists m' mStack' : SortedListWord.map word Init.Byte.byte,
   anybytes a 40 mStack' /\
   map.split a1 m' mStack' /\ list_map (get l0) [] (fun rets : list word => rets = [] /\ a0 = a0 /\ (FElem X1K X1 ⋆ FElem Y1K Y1 ⋆ R)%sep m') *)
