@@ -56,7 +56,7 @@ Definition add_precomputed := func! (ox, oy, oz, ot, X1, Y1, Z1, T1, ypx2, ymx2,
   fe25519_mul(ot, ox, oy)
 }.
 
-Definition add_precomputed_partial := func! (X1, Y1, T1, ypx2, ymx2, xy2d2) {
+Definition add_precomputed_partial := func! (ox, oy, X1, Y1, T1, ypx2, ymx2, xy2d2) {
   stackalloc 40 as YpX1;
   fe25519_add(YpX1, Y1, X1);
   stackalloc 40 as YmX1;
@@ -66,7 +66,13 @@ Definition add_precomputed_partial := func! (X1, Y1, T1, ypx2, ymx2, xy2d2) {
   stackalloc 40 as B;
   fe25519_mul(B, YmX1, ymx2);
   stackalloc 40 as C;
-  fe25519_mul(C, xy2d2, T1)
+  fe25519_mul(C, xy2d2, T1);
+  (* stackalloc 40 as Two;
+  fe25519_from_word(Two, $2);
+  stackalloc 40 as D;
+  fe25519_mul(D, Z1, Two); *)
+  fe25519_sub(ox, A, B);
+  fe25519_add(oy, A, B)
 }.
 
 Section WithParameters.
@@ -113,8 +119,8 @@ Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
 
 Global Instance spec_of_add_precomputed_partial : spec_of "add_precomputed_partial" :=
   fnspec! "add_precomputed_partial"
-    (X1K Y1K T1K ypx2K ymx2K xy2d2K : word) /
-    (X1 Y1 T1 ypx2 ymx2 xy2d2 : felem) (R : _ -> Prop),
+    (oxK oyK X1K Y1K T1K ypx2K ymx2K xy2d2K : word) /
+    (ox oy X1 Y1 T1 ypx2 ymx2 xy2d2 : felem) (R : _ -> Prop),
   { requires t m :=
       bounded_by tight_bounds X1 /\
       bounded_by tight_bounds Y1 /\
@@ -122,10 +128,13 @@ Global Instance spec_of_add_precomputed_partial : spec_of "add_precomputed_parti
       bounded_by loose_bounds ypx2 /\
       bounded_by loose_bounds ymx2 /\
       bounded_by loose_bounds xy2d2 /\
-      m =* (FElem X1K X1) * (FElem Y1K Y1) * (FElem T1K T1) * (FElem ypx2K ypx2) * (FElem ymx2K ymx2) * (FElem xy2d2K xy2d2) * R;
+      m =* (FElem X1K X1) * (FElem Y1K Y1) * (FElem T1K T1) * (FElem ypx2K ypx2) * (FElem ymx2K ymx2) * (FElem xy2d2K xy2d2) * (FElem oxK ox) * (FElem oyK oy) * R;
     ensures t' m' :=
       t = t' /\
-      m' =* (FElem X1K X1) * (FElem Y1K Y1) * (FElem T1K T1) * (FElem ypx2K ypx2) * (FElem ymx2K ymx2) * (FElem xy2d2K xy2d2) * R }.
+      exists ox' oy',
+        bounded_by loose_bounds ox' /\
+        bounded_by loose_bounds oy' /\
+        m' =* (FElem X1K X1) * (FElem Y1K Y1) * (FElem T1K T1) * (FElem ypx2K ypx2) * (FElem ymx2K ymx2) * (FElem xy2d2K xy2d2) * (FElem oxK ox') * (FElem oyK oy') * R }.
 
 
 Local Instance spec_of_fe25519_square : spec_of "fe25519_square" := Field.spec_of_UnOp un_square.
@@ -177,29 +186,43 @@ Local Ltac solve_stack a :=
 
 Lemma add_precomputed_partial_ok : program_logic_goal_for_function! add_precomputed_partial.
 Proof.
-  (* slightly painful way to split out all the memory and bounds conditions, and the final postconditions *)
-  unwrap_fn_step. 6:unwrap_fn_step. 11:unwrap_fn_step. 16:unwrap_fn_step. 21:unwrap_fn_step.
-  26:repeat straightline.
-  (* Solve each of the memory and bounds conditions piece-by-piece, as much as possible *)
-  3,4:solve_mem. 1,2:solve_bounds. solve_stack a.
-  3,4:solve_mem. 1,2:solve_bounds. solve_stack a2.
-  3,4:solve_mem. 1,2:solve_bounds. solve_stack a0.
-  3,4:solve_mem. 1,2:solve_bounds. solve_stack a4.
-  3,4:solve_mem. 1,2:solve_bounds. solve_stack a7.
-  - (* exists m' mStack' : SortedListWord.map word Init.Byte.byte,
-  anybytes a 40 mStack' /\
-  map.split a1 m' mStack' /\ list_map (get l0) [] (fun rets : list word => rets = [] /\ a0 = a0 /\ (FElem X1K X1 ⋆ FElem Y1K Y1 ⋆ R)%sep m') *)
-    (* Rewrites the FElem about `a` in H11 to be about bytes instead, so we can use it to prove things about `a` as bytes *)
-    cbv [FElem] in *.
-    seprewrite_in @Bignum.Bignum_to_bytes H47.
-    seprewrite_in @Bignum.Bignum_to_bytes H47.
-    seprewrite_in @Bignum.Bignum_to_bytes H47.
-    seprewrite_in @Bignum.Bignum_to_bytes H47.
-    seprewrite_in @Bignum.Bignum_to_bytes H47.
-    extract_ex1_and_emp_in H47.
+  (* Unwrap each call in the program. *)
+  (* Each produces 2 memory goals about the inputs, 2 bounds preconditions on the inputs, and 1 memory goal about the output. *)
+  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. solve_stack a.
+  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. solve_stack a2.
+  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. solve_stack a0.
+  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. solve_stack a4.
+  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. solve_stack a7.
+  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. ecancel_assumption.
+  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. ecancel_assumption.
 
-    repeat straightline; intuition eauto.
-Qed.
+  (* Solve the postconditions *)
+  repeat straightline.
+  (* Rewrites the FElem about `a` in H11 to be about bytes instead, so we can use it to prove things about `a` as bytes *)
+    cbv [FElem] in *.
+    (* seprewrite_in (@Bignum.Bignum_to_bytes felem_size_in_words a7 x3) H55. *) (* Ought to be able to specify a7, but types don't match *)
+    seprewrite_in @Bignum.Bignum_to_bytes H55.
+    seprewrite_in @Bignum.Bignum_to_bytes H55.
+    seprewrite_in @Bignum.Bignum_to_bytes H55.
+    seprewrite_in @Bignum.Bignum_to_bytes H55.
+    seprewrite_in @Bignum.Bignum_to_bytes H55.
+    seprewrite_in @Bignum.Bignum_to_bytes H55.
+    seprewrite_in @Bignum.Bignum_to_bytes H55.
+    extract_ex1_and_emp_in H55.
+
+    (* Solve stack/memory stuff *)
+    repeat straightline.
+
+    (* Post-conditions *)
+    exists x4,x5; (* eexists? *) ssplit. 1,2:solve_bounds.
+    seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 oxK) H55. { transitivity 40%nat; trivial. }
+    seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 oyK) H55. { transitivity 40%nat; trivial. }
+    use_sep_assumption. cancel. cancel_seps_at_indices 0%nat 1%nat; cbn.
+    (* Bignum.Bignum 10 oyK (map (c => word.of_Z (le_combine c)) (List.chunk (Pos.to_nat 4) (flat_map (w => le_split (Pos.to_nat 4) w) x5))) = Bignum.Bignum n oyK x5 *)
+    admit.
+    (* Bignum.Bignum 10 oxK (map (c => word.of_Z (le_combine c)) (List.chunk (Pos.to_nat 4) (flat_map (w => le_split (Pos.to_nat 4) w) x4))) = Bignum.Bignum n oyK x4 *)
+    admit.
+Admitted.
 
 Lemma add_precomputed_ok : program_logic_goal_for_function! add_precomputed.
 Proof.
