@@ -73,10 +73,10 @@ Qed. Optimize Heap.
 Require compiler.ToplevelLoop.
 Definition ml: MemoryLayout.MemoryLayout(word:=Naive.word32) := {|
   MemoryLayout.code_start    := word.of_Z 0x20400000;
-  MemoryLayout.code_pastend  := word.of_Z 0x21400000;
+  MemoryLayout.code_pastend  := word.of_Z 0x20407034;
   MemoryLayout.heap_start    := word.of_Z 0x80000000;
-  MemoryLayout.heap_pastend  := word.of_Z 0x80002000;
-  MemoryLayout.stack_start   := word.of_Z 0x80002000;
+  MemoryLayout.heap_pastend  := word.of_Z 0x80000650;
+  MemoryLayout.stack_start   := word.of_Z 0x80003A60;
   MemoryLayout.stack_pastend := word.of_Z 0x80004000;
 |}.
 
@@ -191,7 +191,7 @@ Proof.
     cbv [LowerPipeline.mem_available LowerPipeline.ptsto_bytes] in *.
     cbv [datamem_pastend datamem_start garagedoor_spec heap_start heap_pastend ml] in H6.
     SeparationLogic.extract_ex1_and_emp_in H6.
-    change (BinIntDef.Z.of_nat (Datatypes.length anybytes) = 0x2000) in H6_emp0.
+    change (BinIntDef.Z.of_nat (Datatypes.length anybytes) = 1616) in H6_emp0.
     Tactics.rapply WeakestPreconditionProperties.Proper_call;
       [|eapply link_initfn]; try eassumption.
     2: {
@@ -240,3 +240,13 @@ Qed.
 Print Assumptions link_loopfn. (* Closed under the global context *)
 Print Assumptions invariant_proof. (* propositional_extensionality, functional_extensionality_dep *)
 *)
+
+Compute garagedoor_stack_size. (* 360 words, ie 1440 bytes *)
+Compute List.length garagedoor_finfo. (* 38 functions *)
+Compute List.length garagedoor_insns. (* 7181 assembly instructions *)
+Compute List.length garagedoor_bytes. (* 28724 bytes, equals 7181*4 as expected *)
+
+(* with tightened memory layout: *)
+Compute (word.unsigned (ml.(code_pastend) ^- ml.(code_start))). (* 28724 bytes *)
+Compute (word.unsigned (ml.(heap_pastend) ^- ml.(heap_start))). (* 1616 bytes *)
+Compute (word.unsigned (ml.(stack_pastend) ^- ml.(stack_start))). (* 1440 bytes *)
