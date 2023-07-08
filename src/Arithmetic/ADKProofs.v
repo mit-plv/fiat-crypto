@@ -195,6 +195,14 @@ Section Nice_weight.
         rewrite <- nth_error_None in H. congruence.
       + reflexivity.
   Qed.
+
+  Lemma unstupid_nth_add_to_nth n x l d :
+    (n < length l)%nat ->
+    nth n (Positional.add_to_nth n x l) d = nth n l d + x.
+  Proof.
+    intros H. rewrite nth_add_to_nth. destruct (_ <? _)%nat eqn:E; try reflexivity.
+    apply Nat.ltb_nlt in E. lia.
+  Qed.
         
   Lemma mth_add_to_nth_full m n x l d :
     nth m (Positional.add_to_nth n x l) d = if (andb (m =? n) (m <? length l))%nat then (nth m l d + x) else (nth m l d).
@@ -1034,72 +1042,108 @@ Lemma to_associational_nonneg weight n p :
   everything_nonneg_assoc (Positional.to_associational weight n p).
 Proof.
   intros Hweight. cbv [everything_nonneg_assoc everything_nonneg_pos Positional.to_associational].
-  change _ with
-    ((fun p0 =>
-     Forall (fun v : Z => 0 <= v) p0 ->
-     Forall (fun wv : Z * Z => 0 <= fst wv /\ 0 <= snd wv) (combine (map weight (seq 0 n)) p0)) p).
-  apply list_induction_backwards.
-  - rewrite combine_nil_r. constructor.
-  - intros x p' IH H. destruct n.
-    + simpl. constructor.
-    + Search (combine _ (_ ++ _)). apply Forall_app in H. rewrite combine_app_one. destruct (_ <=? _)%nat eqn:E.
-      -- apply IH. destruct H as [H _]. apply H.
-      -- apply Forall_app. split.
-         ++ apply IH. Search (combine _ (_ ++ _)). destruct H as [H _]. assumption.
-         ++ apply Forall_cons; try apply Forall_nil. cbn [fst snd]. destruct H as [_ H].
-            inversion H. subst. split; try lia. Search nth. Check map_nth'.
-            rewrite (map_nth' _ _ _ 0%nat).
-            --- apply Hweight.
-            --- apply Nat.leb_nle in E. rewrite map_length in E. lia.
+  intros H. rewrite Forall_forall. rewrite Forall_forall in H. intros x Hx1.
+  assert (Hx2 := Hx1). destruct x as [x1 x2]. apply in_combine_l in Hx1. apply in_combine_r in Hx2.
+  rewrite in_map_iff in Hx1. destruct Hx1 as [x1' [Hx1' _] ].
+  apply H in Hx2. assert (Hweightx1' := Hweight x1'). simpl. lia.
+Qed. Check combine_nth.
+
+Lemma combine_nth' {A B : Type} (l : list A) (l' : list B) (n : nat) (d : A*B) :
+  (n < length (combine l l'))%nat -> nth n (combine l l') d = (nth n l (fst d), nth n l' (snd d)).
+Proof.
+  intros H. Search (length (combine _ _)). rewrite combine_length in H. rewrite combine_truncate_r.
+  rewrite combine_truncate_l. destruct d as [d1 d2]. rewrite combine_nth.
+  - Search (nth _ (firstn _ _)). repeat rewrite nth_firstn. replace (_ <? _)%nat with true.
+    replace (_ <? _)%nat with true.
+    + reflexivity.
+    + symmetry. apply Nat.ltb_lt. lia.
+    + symmetry. apply Nat.ltb_lt. rewrite firstn_length. lia.
+  - repeat rewrite firstn_length. lia.
 Qed.
+  
 
 Lemma to_associational_monotone weight n p p' :
   values_le_pos p p' ->
   values_le_assoc (Positional.to_associational weight n p) (Positional.to_associational weight n p').
 Proof.
-  cbv [values_le_pos values_le_assoc Positional.to_associational]. generalize dependent p'.
-  change _ with
-    ((fun p0 =>
-       forall p' : list Z,
-  Forall2 (fun v1 v2 : Z => v1 <= v2) p0 p' ->
-  Forall2 (fun wv1 wv2 : Z * Z => fst wv1 = fst wv2 /\ snd wv1 <= snd wv2)
-    (combine (map weight (seq 0 n)) p0) (combine (map weight (seq 0 n)) p')) p).
-  apply list_induction_backwards.
-  - intros p' H. inversion H. subst. repeat rewrite combine_nil_r. constructor.
-  - intros x p0 IH p' H. destruct (destruct_list_backwards' p') as [|[p'' [y H'] ] ].
-    + subst. inversion H as [H1|]. apply app_cons_not_nil in H1. destruct H1.
-    + subst. Check Forall2_app. Search (Forall2 (_ ++ _)). Admitted. (*apply Forall2_app in H.
-  intros H.
-  change _ with
-    ((fun p0 =>
-     Forall (fun v : Z => 0 <= v) p0 ->
-     Forall (fun wv : Z * Z => 0 <= fst wv /\ 0 <= snd wv) (combine (map weight (seq 0 n)) p0)) p).
-  apply list_induction_backwards.
-  - rewrite combine_nil_r. constructor.
-  - intros x p' IH H. destruct n.
-    + simpl. constructor.
-    + Search (combine _ (_ ++ _)). apply Forall_app in H. rewrite combine_app_one. destruct (_ <=? _)%nat eqn:E.
-      -- apply IH. destruct H as [H _]. apply H.
-      -- apply Forall_app. split.
-         ++ apply IH. Search (combine _ (_ ++ _)). destruct H as [H _]. assumption.
-         ++ apply Forall_cons; try apply Forall_nil. cbn [fst snd]. destruct H as [_ H].
-            inversion H. subst. split; try lia. Search nth. Check map_nth'.
-            rewrite (map_nth' _ _ _ 0%nat).
-            --- apply Hweight.
-            --- apply Nat.leb_nle in E. rewrite map_length in E. lia.  *)
+  cbv [values_le_pos values_le_assoc Positional.to_associational]. intros H.
+  Search Forall2. assert (Hlen := Forall2_length H).
+  rewrite Forall2_forall_iff in H; try apply Hlen.
+  - Check Forall2_forall_iff. rewrite (Forall2_forall_iff _ _ _ (0,0) (0,0)).
+    + intros i Hi. repeat rewrite nth_default_eq. Search (nth _ (combine _ _)).
+      repeat rewrite combine_nth'.
+      -- simpl. split; try reflexivity. rewrite combine_length in Hi.
+         assert (Hi': (i < length p)%nat) by lia. apply H in Hi'. repeat rewrite nth_default_eq in Hi'. apply Hi'.
+      -- rewrite combine_length in *. rewrite <- Hlen. apply Hi.
+      -- apply Hi.
+    + repeat rewrite combine_length. rewrite Hlen. reflexivity. 
+Qed.
 
-(*Lemma from_associational_nonneg weight n p :
+Print Positional.place.
+
+(*
+Search (?f (if _ then _ else _) = (if _ then ?f _ else ?f _)).
+The lemmas 'Z.mod_r_distr_if' and 'Associational.eval_if' seem a bit silly.
+ *)
+
+Lemma distr_if {A B : Type} (f : A -> B) (cond : bool) (a1 a2 : A) :
+  f (if cond then a1 else a2) = if cond then f a1 else f a2.
+Proof. destruct cond; reflexivity. Qed.
+
+Lemma place_indep weight t1 t2 t2' n :
+  fst (Positional.place weight (t1, t2) n) = fst (Positional.place weight (t1, t2') n).
+Proof.
+  cbv [Positional.place]. simpl. Search nat_rect. induction n as [|n' IHn'].
+  - reflexivity.
+  - simpl. Search (?f (if _ then _ else _) = (if _ then ?f _ else ?f _)). 
+    repeat rewrite (distr_if fst). rewrite IHn'. reflexivity.
+Qed.
+
+Lemma place_monotone weight t1 t2 t2' n :
   (forall i, 0 <= weight i) ->
-  everything_nonneg_assoc p ->
-  everything_nonneg_pos (Positional.from_associational weight n p).
-  Proof. Admitted.*)
+  0 <= t1 ->
+  t2 <= t2' ->
+  snd (Positional.place weight (t1, t2) n) <= snd (Positional.place weight (t1, t2') n).
+Proof.
+  intros Hweight Hnonneg Hle. cbv [Positional.place]. simpl. induction n as [|n' IHn'].
+  - intros. simpl. apply Zmult_le_compat_l; lia.
+  - simpl. Search (?f (if _ then _ else _) = (if _ then ?f _ else ?f _)).
+    destruct (_ =? _)%Z; try lia. simpl. apply Zmult_le_compat_l; try lia. Search (0 <= _ / _).
+    apply Z.div_nonneg; try lia. apply Hweight.
+Qed.
 
 Lemma from_associational_monotone weight n p p' :
   (forall i, 0 <= weight i) ->
   everything_nonneg_assoc p ->
   values_le_assoc p p' ->
   values_le_pos (Positional.from_associational weight n p) (Positional.from_associational weight n p').
-Proof. Admitted. Print amul. Print weight.
+Proof.
+  cbv [everything_nonneg_assoc values_le_assoc values_le_pos].
+  intros Hweight. generalize dependent p'. induction p as [|p0 p_ IHp_].
+  - intros p' Hp Hle. inversion Hle. subst. simpl. induction n as [|n' IHn'].
+    + cbv [Positional.zeros]. simpl. constructor.
+    + cbv [Positional.zeros]. simpl. constructor; try lia. apply IHn'.
+  - intros p' Hp Hle. inversion Hp as [|p0' p_' H1 H2]. subst.
+    inversion Hle as [|x1 x2 p'0 p'_ H4]. subst. simpl.
+    repeat rewrite unfold_Let_In. Search Positional.add_to_nth.
+    assert (IHp_' := IHp_ p'_ H2 H). clear IHp_. clear H Hle H2 Hp.
+    rewrite (Forall2_forall_iff _ _ _ 0 0) in IHp_'.
+    + rewrite (Forall2_forall_iff _ _ _ 0 0). intros i Hi. repeat rewrite nth_default_eq.
+      rewrite Positional.length_add_to_nth in Hi. assert (IHp_'' := IHp_' _ Hi). clear IHp_'.
+      repeat rewrite nth_default_eq in IHp_''.
+      destruct p0 as [p0_1 p0_2]. destruct x2 as [x2_1 x2_2]. simpl in *. destruct H4 as [HHH H4].
+      subst.
+      rewrite (place_indep _ _ p0_2 x2_2) in *. remember (fst _) as i' eqn:clearMe; clear clearMe.
+      destruct (dec (i = i')) as [E|E].
+      -- subst. Check nth_add_to_nth. repeat rewrite unstupid_nth_add_to_nth.
+         ++ destruct H1 as [H1_1 H1_2].
+            assert (plmono := place_monotone weight x2_1 p0_2 x2_2 (Init.Nat.pred n) Hweight H1_1 H4). lia.
+         ++ rewrite Positional.length_from_associational in *.  lia.
+         ++ rewrite Positional.length_from_associational in *. lia.
+      -- repeat rewrite mth_add_to_nth by lia. apply IHp_''.
+      -- repeat rewrite Positional.length_add_to_nth. repeat rewrite Positional.length_from_associational. lia.
+    + repeat rewrite Positional.length_from_associational. lia.
+Qed.
 
 Lemma amul_monotone_l weight n p p' q :
   (forall i, 0 <= weight i) ->
