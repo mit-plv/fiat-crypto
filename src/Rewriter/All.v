@@ -12,6 +12,7 @@ Require Import Crypto.Rewriter.Passes.RelaxBitwidthAdcSbb.
 Require Import Crypto.Rewriter.Passes.ToFancy.
 Require Import Crypto.Rewriter.Passes.ToFancyWithCasts.
 Require Import Crypto.Rewriter.Passes.UnfoldValueBarrier.
+Require Import Crypto.Rewriter.Passes.UnfoldThings.
 
 Module Compilers.
   Export NBE.Compilers.
@@ -28,6 +29,7 @@ Module Compilers.
   Export ToFancy.Compilers.
   Export ToFancyWithCasts.Compilers.
   Export UnfoldValueBarrier.Compilers.
+  Export UnfoldThings.Compilers.
 
   Module Import RewriteRules.
     Export NBE.Compilers.RewriteRules.
@@ -44,5 +46,6 @@ Module Compilers.
     Export ToFancy.Compilers.RewriteRules.
     Export ToFancyWithCasts.Compilers.RewriteRules.
     Export UnfoldValueBarrier.Compilers.RewriteRules.
+    Export UnfoldThings.Compilers.RewriteRules.
   End RewriteRules.
 End Compilers.

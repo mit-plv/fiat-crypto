@@ -88,6 +88,8 @@ Definition base_type_list_named : InductiveHList.hlist
       ; with_name zrange ZRange.zrange
       ; with_name string String.string]%hlist.
 
+Print Bool.bool_rect_nodep.
+
 Definition all_ident_named_interped : InductiveHList.hlist
   := [with_name ident_Literal (@ident.literal)
       ; with_name ident_comment (@ident.comment)
@@ -195,8 +197,11 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_fancy_sell ident.fancy.sell
       ; with_name ident_fancy_addm ident.fancy.addm
       ; with_name ident_adk_mul ident_adk_mul
-     ]%hlist.
+      ; with_name ident_if_then_else (@if_then_else)
+     ]%hlist. Print if_then_else.
 
 Definition scraped_data : ScrapedData.t
   := {| ScrapedData.base_type_list_named := base_type_list_named
         ; ScrapedData.all_ident_named_interped := all_ident_named_interped |}.
+
+#[global] Hint Unfold adk_mul : reification_proofs.

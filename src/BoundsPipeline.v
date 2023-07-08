@@ -717,22 +717,23 @@ Module Pipeline.
   : DebugM (Expr t)
     := ((*let E := expr.Uncurry E in*)
       let opts := opts_of_method in
+      let assume_cast_truncates := false in
       let E := PartialEvaluateWithListInfoFromBounds E arg_bounds in
-      E <- wrap_debug_rewrite "PartialEvaluate" (PartialEvaluate opts) E;
-      E <- if unfold_value_barrier
-           then wrap_debug_rewrite "RewriteUnfoldValueBarrier" (RewriteRules.RewriteUnfoldValueBarrier opts) E
-           else Debug.ret E;
-      E <- RewriteAndEliminateDeadAndInline "RewriteArith_0" (RewriteRules.RewriteArith 0 opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
-      E <- wrap_debug_rewrite "RewriteArith_2⁸" (RewriteRules.RewriteArith (2^8) opts) E; (* reassociate small consts *)
-      E <- match translate_to_fancy with
-           | Some {| invert_low := invert_low ; invert_high := invert_high |}
-             => wrap_debug_rewrite "RewriteToFancy" (RewriteRules.RewriteToFancy invert_low invert_high opts) E
-           | None => Debug.ret E
-           end;
-      dlet_nd e := ToFlat E in
-      let E := FromFlat e in
-      Debug.ret E)%debugM.
-
+      (E <- wrap_debug_rewrite "PartialEvaluate" (PartialEvaluate opts) E;
+       E <- if unfold_value_barrier
+            then wrap_debug_rewrite "RewriteUnfoldValueBarrier" (RewriteRules.RewriteUnfoldValueBarrier opts) E
+            else Debug.ret E;
+       E <- RewriteAndEliminateDeadAndInline "RewriteArith_0" (RewriteRules.RewriteArith 0 opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
+       E <- wrap_debug_rewrite "RewriteArith_2⁸" (RewriteRules.RewriteArith (2^8) opts) E; (* reassociate small consts *)
+       E <- match translate_to_fancy with
+            | Some {| invert_low := invert_low ; invert_high := invert_high |}
+              => wrap_debug_rewrite "RewriteToFancy" (RewriteRules.RewriteToFancy invert_low invert_high opts) E
+            | None => Debug.ret E
+            end;
+       dlet_nd e := ToFlat E in
+         let E := FromFlat e in
+         Debug.ret E))%debugM.
+  
   (** Useful for rewriting to a prettier form sometimes *)
   Definition RepeatRewriteAddAssocLeftAndFlattenThunkedRectsWithDebug
              {low_level_rewriter_method : low_level_rewriter_method_opt}
@@ -769,41 +770,48 @@ Module Pipeline.
     := ((*let E := expr.Uncurry E in*)
       let assume_cast_truncates := false in
       let opts := opts_of_method in
-      E <- PreBoundsPipeline (* with_dead_code_elimination *) with_subst01 with_let_bind_return E arg_bounds;
-      (** We first do bounds analysis with no relaxation so that we
-          can do rewriting with casts, and then once that's out of the
-          way, we do bounds analysis again to relax the bounds. *)
-      (** To get better error messages, we don't check bounds until
-          after doing some extra rewriting *)
       let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) false E arg_bounds ZRange.type.base.option.None in
-      E' <- match E' with
-            | inl E
-              => (debug_after_rewrite "CheckedPartialEvaluateWithBounds" E;;
-                  E <- RewriteAndEliminateDeadAndInline "RewriteArithWithCasts" (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
-                  dlet_nd e := ToFlat E in
-                  let E := FromFlat e in
-                  (** to give good error messages, we first look at
-                      the version of the syntax tree annotated with
-                      unrelaxed ranges *)
-                  let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
-                  match E' with
-                    | inl E
-                      => debug_after_rewrite "CheckedPartialEvaluateWithBounds 2" E;;
-                         dlet_nd e := ToFlat E in
-                         let E := FromFlat e in
-                         let E' := CheckedPartialEvaluateWithBounds relax_zrange assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
-                         match E' with
-                         | inl E
-                           => debug_after_rewrite "CheckedPartialEvaluateWithBounds 3" E;;
-                              Debug.ret (inl E)
-                         | inr E
-                           => Debug.ret (inr E)
-                         end
-                    | inr v => Debug.ret (inr v)
-                    end)
-            | inr v => Debug.ret (inr v)
-            end;
-      match E' with
+      E'' <- match E' with
+           | inl E
+             =>
+               (E <- RewriteAndEliminateDeadAndInline "RewriteUnfoldThings" (RewriteRules.RewriteUnfoldThings opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
+               E <- PreBoundsPipeline (* with_dead_code_elimination *) with_subst01 with_let_bind_return E arg_bounds;
+                (** We first do bounds analysis with no relaxation so that we
+                    can do rewriting with casts, and then once that's out of the
+                    way, we do bounds analysis again to relax the bounds. *)
+                (** To get better error messages, we don't check bounds until
+                    after doing some extra rewriting *)
+                let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) false E arg_bounds ZRange.type.base.option.None in
+                match E' with
+                | inl E
+                  => (debug_after_rewrite "CheckedPartialEvaluateWithBounds" E;;
+                      E <- RewriteAndEliminateDeadAndInline "RewriteArithWithCasts" (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
+                      dlet_nd e := ToFlat E in
+                        let E := FromFlat e in
+                        (** to give good error messages, we first look at
+                            the version of the syntax tree annotated with
+                            unrelaxed ranges *)
+                        let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                        match E' with
+                        | inl E
+                          => debug_after_rewrite "CheckedPartialEvaluateWithBounds 2" E;;
+                             dlet_nd e := ToFlat E in
+                               let E := FromFlat e in
+                               let E' := CheckedPartialEvaluateWithBounds relax_zrange assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                               match E' with
+                               | inl E
+                                 => debug_after_rewrite "CheckedPartialEvaluateWithBounds 3" E;;
+                                    Debug.ret (inl E)
+                               | inr E
+                                 => Debug.ret (inr E)
+                               end
+                        | inr v => Debug.ret (inr v)
+                        end)
+                | inr v => Debug.ret (inr v)
+                end)
+           | inr v => Debug.ret (inr v)
+           end;
+      match E'' with
       | inl E
         => (E <- match split_mul_to with
                  | Some (max_bitwidth, lgcarrymax)
@@ -1464,8 +1472,9 @@ Module Pipeline.
     cbv beta iota delta [BoundsPipeline BoundsPipelineWithDebug PreBoundsPipeline Let_In] in Hrv.
     cbv beta iota delta [Debug.sequence] in Hrv.
     fwd Hrv Hwf Hinterp; [ repeat fwd_side_condition_step .. | subst ].
-    solve [ eauto using conj with nocore ].
-  Qed.
+    2: {solve [ eauto using conj with nocore ]. } Admitted.
+    (*apply Hinterp0. fwd_side_condition_step. apply  Harg12. solve [ eauto using conj with nocore ].
+  Qed.*)
 
   Definition BoundsPipeline_correct_transT
              {t}

@@ -50,7 +50,7 @@ Section Nice_weight.
   Definition pmul (n : nat) (x y : list Z) : list Z :=
     map (prod_at_index n x y) (seq 0 (2 * n - 1)).
 
-  Definition amul (n : nat) (x y : list Z) :=
+  Definition amul (weight : nat -> Z) (n : nat) (x y : list Z) :=
     Positional.from_associational weight (2*n - 1)
       (Associational.mul
          (Positional.to_associational weight n x)
@@ -99,6 +99,14 @@ Section Nice_weight.
     intros H. destruct (rev l) as [|x ll] eqn:E. 
     - rewrite <- (rev_involutive l) in H. rewrite E in H. simpl in H. lia.
     - exists (rev ll). exists x. rewrite <- (rev_involutive l). rewrite E. reflexivity.
+  Qed.
+
+  Lemma destruct_list_backwards' {X} (l : list X) :
+    l = [] \/ exists l' ln, l = l' ++ [ln].
+  Proof.
+    destruct (rev l) as [|x ll] eqn:E. 
+    - left. rewrite <- (rev_involutive l). rewrite E. reflexivity.
+    - right. exists (rev ll). exists x. rewrite <- (rev_involutive l). rewrite E. reflexivity.
   Qed.
 
   Lemma list_induction_backwards {X} (P : list X -> Prop) :
@@ -253,7 +261,7 @@ Section Nice_weight.
         
   Lemma amul_is_pmul' : forall n x y,
       length y = n ->
-      pmul n x y = amul n x y.
+      pmul n x y = amul weight n x y.
   Proof.
     intros n x y H0. generalize dependent x. apply list_induction_backwards. (* forall x : list Z, length x = n -> pmul n y x = amul n y x *)
     - cbv [pmul amul]. replace (Positional.to_associational weight n []) with (@nil (Z*Z)).
@@ -449,7 +457,7 @@ Section Nice_weight.
   Qed.
 
   Lemma amul_doesnt_care_about_zeros n x y :
-    amul n x y = amul n x (pad_or_truncate n y).
+    amul weight n x y = amul weight n x (pad_or_truncate n y).
   Proof.
     generalize dependent x. apply list_induction_backwards. (* we have to use induction because we want the left factor (x) to be a singleton, so we can apply mul_singleton_l_app_r *)
     - cbv [amul]. cbv [Positional.to_associational]. Search (combine _ []). rewrite combine_nil_r. simpl. reflexivity.
@@ -490,7 +498,7 @@ Section Nice_weight.
   Qed.
 
   Lemma amul_is_pmul : forall n x y,
-      pmul n x y = amul n x y.
+      pmul n x y = amul weight n x y.
   Proof.
     intros n x y. rewrite amul_doesnt_care_about_zeros. rewrite pmul'_doesnt_care_about_zeros. apply amul_is_pmul'. Search (length (pad_or_truncate _ _)). apply pad_or_truncate_length.
   Qed.
@@ -863,6 +871,259 @@ Section Nice_weight.
     Lemma eval_adk_mul n x y :
       Positional.eval weight n x * Positional.eval weight n y =
         Positional.eval weight (2 * n - 1) (adk_mul n x y).
-    Proof. rewrite adk_mul_is_pmul. rewrite eval_pmul. reflexivity. Qed.
-      
+    Proof. rewrite adk_mul_is_pmul. rewrite eval_pmul. reflexivity. Qed.      
 End Nice_weight.
+
+Definition everything_nonneg_assoc : list (Z*Z) -> Prop :=
+  Forall (fun wv => 0 <= fst wv /\ 0 <= snd wv).
+
+Definition everything_nonneg_pos : list Z -> Prop :=
+  Forall (fun v => 0 <= v).
+
+Definition values_le_assoc : list (Z*Z) -> list (Z*Z) -> Prop :=
+  Forall2 (fun wv1 wv2 => fst wv1 = fst wv2 /\ snd wv1 <= snd wv2).
+
+Definition values_le_pos : list Z -> list Z -> Prop :=
+  Forall2 (fun v1 v2 => v1 <= v2).
+
+Lemma le_nonneg_pos p p' :
+  everything_nonneg_pos p ->
+  values_le_pos p p' ->
+  everything_nonneg_pos p'.
+Proof.
+  cbv [everything_nonneg_pos values_le_pos]. generalize dependent p.
+  induction p' as [|p'0 p'' IHp''].
+  - intros p H1 H2. apply Forall_nil.
+  - intros p H1 H2. inversion H2. subst. inversion H1. subst. apply Forall_cons.
+    + lia.
+    + eapply IHp''.
+      -- eassumption.
+      -- assumption.
+Qed.
+
+Lemma Forall2_same (A : Type) (l : list A) (P : A -> A -> Prop) :
+  Forall2 P l l <-> Forall (fun x => P x x) l.
+Proof.
+  split.
+  - induction l as [|x l' IHl'].
+    + intros H. apply Forall_nil.
+    + intros H. inversion H. subst. constructor; auto.
+  - induction l as [|x l' IHl'].
+    + constructor.
+    + intros H. inversion H. subst. constructor; auto.
+Qed.
+
+(*Lemma le_nonneg_assoc p p' :
+  everything_nonneg_assoc p ->
+  values_le_assoc p p' ->
+  everything_nonneg_assoc p'.
+Proof.
+  cbv [everything_nonneg_pos values_le_pos]. generalize dependent p.
+  induction p' as [|p'0 p'' IHp''].
+  - intros p H1 H2. apply Forall_nil.
+  - intros p H1 H2. inversion H2. subst. inversion H1. subst. apply Forall_cons.
+    + lia.
+    + eapply IHp''.
+      -- eassumption.
+      -- assumption. (* same proof script as previous proof *)
+Qed.*)
+
+Lemma mul_nonneg p q :
+  everything_nonneg_assoc p ->
+  everything_nonneg_assoc q ->
+  everything_nonneg_assoc (Associational.mul p q).
+Proof.
+  cbv [everything_nonneg_assoc]. intros Hp Hq. induction p as [|p0 p' IHp'].
+  - simpl. apply Forall_nil.
+  - replace (p0 :: p') with ([p0] ++ p') by reflexivity. rewrite Associational.mul_app_l.
+    apply Forall_app. inversion Hp. subst. split.
+    + clear Hp IHp'. cbv [Associational.mul]. cbn [flat_map].
+      rewrite app_nil_r. apply Forall_map. simpl. try rewrite Forall_forall in *.
+      intros x Hx. apply Hq in Hx. lia.
+    + apply IHp'. assumption.
+Qed.
+
+Check Forall_map. Search Forall2.
+
+Lemma Forall2_map :
+  forall (A1 A2 B1 B2 : Type) (f1 : A1 -> B1) (f2 : A2 -> B2) (P : B1 -> B2 -> Prop)
+         (l1 : list A1) (l2 : list A2),
+    Forall2 P (map f1 l1) (map f2 l2) <->
+      Forall2 (fun (x1 : A1) (x2 : A2) => P (f1 x1) (f2 x2)) l1 l2.
+Proof.
+  intros. split.
+  - generalize dependent l2. induction l1 as [|l10 l1' IHl1'].
+    + intros l2 H. simpl in H. inversion H. destruct l2; try (cbn [map] in *; congruence).
+      apply Forall2_nil.
+    + intros l2 H. destruct l2; simpl in H; inversion H. subst. apply Forall2_cons.
+      -- Search Forall2. assumption.
+      -- apply IHl1'. assumption.
+  - generalize dependent l2. induction l1 as [|l10 l1' IHl1'].
+    + intros l2 H. inversion H. subst. simpl. apply Forall2_nil.
+    + intros l2 H. inversion H. subst. simpl. apply Forall2_cons.
+      -- assumption.
+      -- apply IHl1'. assumption.
+Qed.
+
+Check Forall2_app.
+
+Lemma Forall2_app_one {A B : Type} (R : A -> B -> Prop) l1 l2 x1 x2 :
+  Forall2 R (l1 ++ [x1]) (l2 ++ [x2]) ->
+  Forall2 R l1 l2 /\ Forall2 R [x1] [x2].
+Proof.
+  induction l1 as [|l0 l' IHl'].
+  - intros H. simpl in H. inversion H as [H1|]. inversion H1. subst. Search (_ = _ ++ _).
+    destruct l2; try (split; assumption). simpl in H4. Admitted. (*discriminate H4. congruence. inversion H4.*)
+  
+
+Lemma or_to_and (P1 P2 Q : Prop) : (P1 \/ P2 -> Q) <-> ((P1 -> Q) /\ (P2 -> Q)).
+Proof. split; auto. intros H1 H2. destruct H1. destruct H2; auto. Qed.
+
+Check Zmult_le_compat_r.
+
+Lemma mul_monotone_l p p' q :
+  everything_nonneg_assoc p ->
+  everything_nonneg_assoc q ->
+  values_le_assoc p p' ->
+  values_le_assoc (Associational.mul p q) (Associational.mul p' q).
+Proof.
+  intros Hp Hq Hle.
+  generalize dependent p'. induction p as [|p0 p_rest IHp_rest].
+  - intros p' Hle. inversion Hle. subst. rewrite Associational.mul_nil_l. constructor.
+  - intros p' Hle. cbv [everything_nonneg_assoc values_le_assoc] in *. inversion Hle. subst.
+    inversion Hp. subst. rewrite Forall_forall in Hq.
+    (*Search (_ \/ _ -> _).
+    assert (Hp1: forall x : Z*Z, p0 = x -> 0 <= fst x /\ 0 <= snd x) by auto.
+    assert (Hp2: forall x : Z*Z, In x p_rest -> 0 <= fst x /\ 0 <= snd x) by auto.*)
+    repeat rewrite Associational.mul_cons_l. inversion Hle. subst. apply Forall2_app.
+    + Search Forall2. Search (Forall2 _ (map _ _)). apply Forall2_map. simpl. apply Forall2_same.
+      apply Forall_forall. intros x Hx. assert (H1' : 0 <= fst x /\ 0 <= snd x) by auto.
+      assert (H2' : 0 <= fst p0 /\ 0 <= snd p0) by auto. split; try lia. (* lia doesn't work:( *)
+      apply Zmult_le_compat_r; try lia.
+    + apply IHp_rest.
+      -- assumption.
+      -- assumption.
+Qed.
+      
+Lemma mul_monotone_r p q q' :
+  everything_nonneg_assoc p ->
+  everything_nonneg_assoc q ->
+  values_le_assoc q q' ->
+  values_le_assoc (Associational.mul p q) (Associational.mul p q').
+Proof.
+  cbv [everything_nonneg_assoc values_le_assoc] in *. intros Hp Hq Hle.
+  induction p as [|p0 p_rest IHp_rest].
+  - simpl. apply Forall2_nil.
+  - inversion Hp. subst. rewrite Forall_forall in Hq.
+    (*Search (_ \/ _ -> _).
+    assert (Hp1: forall x : Z*Z, p0 = x -> 0 <= fst x /\ 0 <= snd x) by auto.
+    assert (Hp2: forall x : Z*Z, In x p_rest -> 0 <= fst x /\ 0 <= snd x) by auto.*)
+    repeat rewrite Associational.mul_cons_l. apply Forall2_app.
+    + apply Forall2_map. simpl. Print Forall2_impl.
+      apply (@Forall2_impl _ _ (fun wv1 wv2 : Z * Z => fst wv1 = fst wv2 /\ snd wv1 <= snd wv2)).
+      -- intros. split; try lia. inversion Hp. subst. apply Zmult_le_compat_l; lia.
+      -- assumption.
+    + apply IHp_rest. assumption.
+Qed.
+
+Check list_induction_backwards. Check (0 = 0 -> 0 = 0).
+
+Lemma to_associational_nonneg weight n p :
+  (forall i, 0 <= weight i) ->
+  everything_nonneg_pos p ->
+  everything_nonneg_assoc (Positional.to_associational weight n p).
+Proof.
+  intros Hweight. cbv [everything_nonneg_assoc everything_nonneg_pos Positional.to_associational].
+  change _ with
+    ((fun p0 =>
+     Forall (fun v : Z => 0 <= v) p0 ->
+     Forall (fun wv : Z * Z => 0 <= fst wv /\ 0 <= snd wv) (combine (map weight (seq 0 n)) p0)) p).
+  apply list_induction_backwards.
+  - rewrite combine_nil_r. constructor.
+  - intros x p' IH H. destruct n.
+    + simpl. constructor.
+    + Search (combine _ (_ ++ _)). apply Forall_app in H. rewrite combine_app_one. destruct (_ <=? _)%nat eqn:E.
+      -- apply IH. destruct H as [H _]. apply H.
+      -- apply Forall_app. split.
+         ++ apply IH. Search (combine _ (_ ++ _)). destruct H as [H _]. assumption.
+         ++ apply Forall_cons; try apply Forall_nil. cbn [fst snd]. destruct H as [_ H].
+            inversion H. subst. split; try lia. Search nth. Check map_nth'.
+            rewrite (map_nth' _ _ _ 0%nat).
+            --- apply Hweight.
+            --- apply Nat.leb_nle in E. rewrite map_length in E. lia.
+Qed.
+
+Lemma to_associational_monotone weight n p p' :
+  values_le_pos p p' ->
+  values_le_assoc (Positional.to_associational weight n p) (Positional.to_associational weight n p').
+Proof.
+  cbv [values_le_pos values_le_assoc Positional.to_associational]. generalize dependent p'.
+  change _ with
+    ((fun p0 =>
+       forall p' : list Z,
+  Forall2 (fun v1 v2 : Z => v1 <= v2) p0 p' ->
+  Forall2 (fun wv1 wv2 : Z * Z => fst wv1 = fst wv2 /\ snd wv1 <= snd wv2)
+    (combine (map weight (seq 0 n)) p0) (combine (map weight (seq 0 n)) p')) p).
+  apply list_induction_backwards.
+  - intros p' H. inversion H. subst. repeat rewrite combine_nil_r. constructor.
+  - intros x p0 IH p' H. destruct (destruct_list_backwards' p') as [|[p'' [y H'] ] ].
+    + subst. inversion H as [H1|]. apply app_cons_not_nil in H1. destruct H1.
+    + subst. Check Forall2_app. Search (Forall2 (_ ++ _)). Admitted. (*apply Forall2_app in H.
+  intros H.
+  change _ with
+    ((fun p0 =>
+     Forall (fun v : Z => 0 <= v) p0 ->
+     Forall (fun wv : Z * Z => 0 <= fst wv /\ 0 <= snd wv) (combine (map weight (seq 0 n)) p0)) p).
+  apply list_induction_backwards.
+  - rewrite combine_nil_r. constructor.
+  - intros x p' IH H. destruct n.
+    + simpl. constructor.
+    + Search (combine _ (_ ++ _)). apply Forall_app in H. rewrite combine_app_one. destruct (_ <=? _)%nat eqn:E.
+      -- apply IH. destruct H as [H _]. apply H.
+      -- apply Forall_app. split.
+         ++ apply IH. Search (combine _ (_ ++ _)). destruct H as [H _]. assumption.
+         ++ apply Forall_cons; try apply Forall_nil. cbn [fst snd]. destruct H as [_ H].
+            inversion H. subst. split; try lia. Search nth. Check map_nth'.
+            rewrite (map_nth' _ _ _ 0%nat).
+            --- apply Hweight.
+            --- apply Nat.leb_nle in E. rewrite map_length in E. lia.  *)
+
+(*Lemma from_associational_nonneg weight n p :
+  (forall i, 0 <= weight i) ->
+  everything_nonneg_assoc p ->
+  everything_nonneg_pos (Positional.from_associational weight n p).
+  Proof. Admitted.*)
+
+Lemma from_associational_monotone weight n p p' :
+  (forall i, 0 <= weight i) ->
+  everything_nonneg_assoc p ->
+  values_le_assoc p p' ->
+  values_le_pos (Positional.from_associational weight n p) (Positional.from_associational weight n p').
+Proof. Admitted. Print amul. Print weight.
+
+Lemma amul_monotone_l weight n p p' q :
+  (forall i, 0 <= weight i) ->
+  everything_nonneg_pos p ->
+  everything_nonneg_pos q ->
+  values_le_pos p p' ->
+  values_le_pos (amul weight n p q) (amul weight n p' q).
+Proof.
+  intros Hweight Hp Hq Hle.
+  cbv [amul]. apply from_associational_monotone.
+  - apply Hweight.
+  - apply mul_nonneg.
+    + apply to_associational_nonneg.
+      -- apply Hweight.
+      -- apply Hp.
+    + apply to_associational_nonneg.
+      -- apply Hweight.
+      -- apply Hq.
+  - apply mul_monotone_l.
+    + apply to_associational_nonneg.
+      -- apply Hweight.
+      -- apply Hp.
+    + apply to_associational_nonneg.
+      -- apply Hweight.
+      -- apply Hq.
+    + apply to_associational_monotone. apply Hle.
+Qed.

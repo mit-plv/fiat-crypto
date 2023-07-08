@@ -870,6 +870,7 @@ Module Compilers.
                  | ident.fancy_sell
                  | ident.fancy_addm
                  | ident.adk_mul
+                 | ident.if_then_else _
                    => fun _ => type.interpM_return _ _ _ (inr ["Invalid identifier in arithmetic expression " ++ show idc]%string)
                  end%core%Cexpr%option%zrange.
 

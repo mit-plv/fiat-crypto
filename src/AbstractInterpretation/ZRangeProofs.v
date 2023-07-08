@@ -44,7 +44,7 @@ Require Import Crypto.Util.Tactics.PrintGoal.
 Require Import Crypto.Language.PreExtra.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.AbstractInterpretation.ZRange.
-Require Import Crypto.Arithmetic.ADKProofs.
+(*Require Import Crypto.Arithmetic.ADKProofs.*)
 
 Module Compilers.
   Import AbstractInterpretation.ZRange.Compilers.
@@ -587,6 +587,23 @@ Module Compilers.
                break_innermost_match; apply Bool.andb_true_iff; split; apply Z.leb_le; try apply Z.le_sub_1_iff; auto with zarith. }
           Qed.
 
+          Print interp_is_related.
+
+          Local Lemma interp_related_adk_mul :
+            interp_is_related ident.adk_mul.
+          Proof.
+            cbn [type.related_hetero ZRange.ident.option.interp ident.interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some ZRange.ident.option.of_literal].
+            cbv [respectful_hetero option_map list_case].
+            intros n0 n Hn x0 x Hx y0 y Hy. destruct n0 as [n_|]; try reflexivity.
+            destruct x0 as [x1|]; try reflexivity. destruct y0 as [y1|]; try reflexivity.
+            destruct (Crypto.Util.OptionList.Option.List.lift x1) as [x_bounds|]; try reflexivity.
+            destruct (Crypto.Util.OptionList.Option.List.lift y1) as [y_bounds|]; try reflexivity.
+            cbv [ZRange.ident.option.adk_output_bounds].
+            destruct (ZRange.ident.option.bounds_nonneg x_bounds) eqn:Ex; try reflexivity.
+            destruct (ZRange.ident.option.bounds_nonneg y_bounds) eqn:Ey; try reflexivity.
+            simpl.
+          Admitted.
+
           Lemma interp_related {t} (idc : ident t) : interp_is_related idc.
           Proof using Type.
             destruct idc.
@@ -597,6 +614,7 @@ Module Compilers.
                  | [ |- context[ident.List_partition] ] => apply interp_related_List_partition
                  | [ |- context[ident.List_filter] ] => apply interp_related_List_filter
                  | [ |- context[ident.fancy_rshi] ] => apply interp_related_fancy_rshi
+                 | [ |- context[ident.adk_mul] ] => apply interp_related_adk_mul
                  | _ => idtac
                  end.
             all: cbn [type.related_hetero ZRange.ident.option.interp ident.interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some ZRange.ident.option.of_literal].
@@ -708,7 +726,7 @@ Module Compilers.
               break_innermost_match; Z.ltb_to_lt;
                 auto with zarith. }
             { non_arith_t; Z.ltb_to_lt; reflexivity. }
-          (*Qed.*) Admitted.
+          Qed.
         End interp_related.
       End option.
     End ident.

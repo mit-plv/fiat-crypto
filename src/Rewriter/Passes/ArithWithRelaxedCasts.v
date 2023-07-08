@@ -16,7 +16,7 @@ Module Compilers.
 
   Module Import RewriteRules.
     Section __.
-      Definition VerifiedRewriterArithWithRelaxedCasts : VerifiedRewriter_with_args false false true unfold_things_rewrite_rules_proofs.
+      Definition VerifiedRewriterArithWithRelaxedCasts : VerifiedRewriter_with_args false false true arith_with_relaxed_casts_rewrite_rules_proofs.
       Proof using All. make_rewriter. Defined.
 
       Definition default_opts := Eval hnf in @default_opts VerifiedRewriterArithWithRelaxedCasts.

@@ -54,17 +54,15 @@ Print adk_mul.
 (*Print reifiable_friendlier_adk_prod_at_i.*)
 
 
-(*Definition unfold_thingsT : list (bool * Prop)
+Definition unfold_thingsT : list (bool * Prop)
   := Eval cbv [myapp mymap myflatten] in
     myflatten
       [mymap
          dont_do_again
-         [(forall (i n : nat),
-              (Z.to_nat ('1 + Z.min (Z.of_nat i) (Z.of_nat n + ('-1)) + (-Z.of_nat (i - (n - 1)))))
-              =
-                (Z.to_nat ('1 + Z.min (Z.of_nat i) (Z.of_nat n + ('-1)) + (- Z.of_nat (i - (n - 1))))))
+         [(forall n x y, ident_adk_mul n x y = ltac:(let rhs := eval cbv [adk_mul Let_In adk_mul' adk_mul_prod_at_i] in (adk_mul n x y) in exact rhs));
+          (forall (A : Type) (b : bool) x y, @if_then_else A b x y = if b then x else y)
          ]
-      ].*)
+      ].
 
 (* N.B. [ident.eagerly] does not play well with [do_again] *)
 Definition nbe_rewrite_rulesT : list (bool * Prop)
@@ -213,18 +211,14 @@ Definition unfold_value_barrier_rewrite_rulesT : list (bool * Prop)
            dont_do_again
            [(forall x, Z.value_barrier x = x)
            ]
-        ].
+        ]. Print List.map. Print adk_mul.
 
 Definition arith_rewrite_rulesT (max_const_val : Z) : list (bool * Prop)
   := Eval cbv [myapp mymap myflatten] in
       myflatten
         [mymap
            dont_do_again
-           [(*(forall n x y, ident_adk_mul n x y = adk_mul n x y) <---- causes make_rewriter to fail *)
-             (*(forall i n : nat,
-             (Z.to_nat (1 + ((Z.of_nat i + 1)/2 - 1) - Z.of_nat (i - (n - 1))%nat)%Z) =
-               (Z.to_nat (1 + ((Z.of_nat i + 1)/2 - 1) - Z.of_nat (i - (n - 1))%nat)%Z)) <---- also causes make_rewriter to fail *)
-            (*;*) (forall A B x y, @fst A B (x, y) = x)
+           [(forall A B x y, @fst A B (x, y) = x)
             ; (forall A B x y, @snd A B (x, y) = y)
             ; (forall v, 0 + v = v)
             ; (forall v, v + 0 = v)

@@ -24,6 +24,8 @@ Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.ListUtil.FoldBool.
+
 Import ListNotations. Local Open Scope Z_scope.
 
 Module Associational.
@@ -579,6 +581,8 @@ Module Associational.
         rewrite <- (nodupb_in_iff Z.eqb Z.eqb_eq) in E. cbv [value_at_weight]. simpl. rewrite Z.eqb_refl.
         apply not_in_value_0 in E. cbv [value_at_weight] in E. simpl. rewrite E. lia.
   Qed.
+
+  Print fold_andb_map. Print fold_right. Print Forall.
 
   Section Carries.
     Definition carryterm (w fw:Z) (t:Z * Z) :=
