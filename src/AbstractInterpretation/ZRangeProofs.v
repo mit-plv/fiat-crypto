@@ -1,4 +1,5 @@
 Require Import Coq.micromega.Lia.
+Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Classes.RelationPairs.
@@ -14,6 +15,8 @@ Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.OptionList.
+Import OptionList.Option.List.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.NatUtil.
@@ -44,7 +47,9 @@ Require Import Crypto.Util.Tactics.PrintGoal.
 Require Import Crypto.Language.PreExtra.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.AbstractInterpretation.ZRange.
-(*Require Import Crypto.Arithmetic.ADKProofs.*)
+Require Import Crypto.Arithmetic.ADKProofs.
+Require Import Crypto.Arithmetic.ADK.
+Require Import Crypto.Arithmetic.Core.
 
 Module Compilers.
   Import AbstractInterpretation.ZRange.Compilers.
@@ -587,7 +592,30 @@ Module Compilers.
                break_innermost_match; apply Bool.andb_true_iff; split; apply Z.leb_le; try apply Z.le_sub_1_iff; auto with zarith. }
           Qed.
 
-          Print interp_is_related.
+          Lemma fold_andb_map_Forall2 {A B : Type} (f : A -> B -> bool)  (l1 : list A) (l2 : list B) :
+            fold_andb_map f l1 l2 = true <-> Forall2 (fun x1 x2 => f x1 x2 = true) l1 l2.
+          Proof.
+            generalize dependent l2. induction l1 as [| x l1' IHl1'].
+            - destruct l2; simpl.
+              + split; constructor.
+              + split; intros H; inversion H.
+            - split; intros H.
+              + destruct l2; try (inversion H; fail). simpl in H. Search (_ && _ = true). apply andb_prop in H. destruct H as [H1 H2]. rewrite IHl1' in H2. constructor; assumption.
+              + inversion H. subst. simpl. apply Bool.andb_true_iff. rewrite IHl1'. split; assumption.
+          Qed.
+          
+          Lemma option_list_lift_Some {A : Type} (l1 : list (option A)) (l2 : list A) :
+            lift l1 = Some l2 ->
+            l1 = List.map Some l2.
+          Proof.
+            cbv [lift]. generalize dependent l2. induction l1 as [|x1 l1' IHl1'].
+            - intros l2 H. simpl in H. injection H as H. subst. reflexivity.
+            - simpl. intros l2 H. destruct x1 as [x1|]; try (inversion H; fail).
+              destruct (fold_right _ _ _) as [l2'_|] eqn:E; try (inversion H; fail). simpl in H.
+              destruct l2 as [|x2 l2'].
+              + injection H as H. inversion H.
+              + injection H as H1 H2. subst. simpl. f_equal. apply IHl1'. reflexivity.
+          Qed.
 
           Local Lemma interp_related_adk_mul :
             interp_is_related ident.adk_mul.
@@ -596,13 +624,21 @@ Module Compilers.
             cbv [respectful_hetero option_map list_case].
             intros n0 n Hn x0 x Hx y0 y Hy. destruct n0 as [n_|]; try reflexivity.
             destruct x0 as [x1|]; try reflexivity. destruct y0 as [y1|]; try reflexivity.
-            destruct (Crypto.Util.OptionList.Option.List.lift x1) as [x_bounds|]; try reflexivity.
-            destruct (Crypto.Util.OptionList.Option.List.lift y1) as [y_bounds|]; try reflexivity.
-            cbv [ZRange.ident.option.adk_output_bounds].
-            destruct (ZRange.ident.option.bounds_nonneg x_bounds) eqn:Ex; try reflexivity.
-            destruct (ZRange.ident.option.bounds_nonneg y_bounds) eqn:Ey; try reflexivity.
-            simpl.
-          Admitted.
+            destruct (Crypto.Util.OptionList.Option.List.lift x1) as [x_bounds|] eqn:E1; try reflexivity.
+            destruct (Crypto.Util.OptionList.Option.List.lift y1) as [y_bounds|] eqn:E2; try reflexivity.
+            destruct (Monotonicity.bounds_nonneg x_bounds) eqn:Ex; try reflexivity.
+            destruct (Monotonicity.bounds_nonneg y_bounds) eqn:Ey; try reflexivity.
+            simpl. cbv [ADK.ident_adk_mul].
+            rewrite fold_andb_map_map1. simpl in *. repeat rewrite fold_andb_map_Forall2 in *.
+            apply option_list_lift_Some in E1. apply option_list_lift_Some in E2. subst.
+            rewrite Forall.Forall2_map_l in Hx. rewrite Forall.Forall2_map_l in Hy.
+            Search Monotonicity.mul_output_bounds.
+            repeat rewrite adk_mul_is_mul.
+            repeat rewrite (SimpleWeight.mul_is_positional_mul 2) by lia.
+            Search Monotonicity.mul_output_bounds. apply Nat.eqb_eq in Hn. subst.
+            apply Monotonicity.mul_monotone; try assumption.
+            intros i. cbv [SimpleWeight.weight]. Search (0 <= _ ^ _)%Z. apply Z.pow_nonneg; lia.
+          Qed.
 
           Lemma interp_related {t} (idc : ident t) : interp_is_related idc.
           Proof using Type.

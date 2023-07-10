@@ -26,6 +26,8 @@ Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.ListUtil.FoldBool.
 Require Import Coq.Sorting.Permutation.
+Require Import Crypto.Util.ZRange.
+
 
 Import ListNotations. Local Open Scope Z_scope.
 
@@ -929,6 +931,9 @@ Module Positional.
   Proof. destruct (dec (n = 0)%nat) as [E|E].
          - subst. repeat rewrite eval0. lia.
          - cbv [mul]; push; trivial. lia.                     Qed.
+  Lemma length_mul (n:nat) (a b:list Z) :
+      length (mul n a b) = (2 * n - 1)%nat.
+  Proof. cbv [mul]. rewrite length_from_associational. reflexivity. Qed.
 
   Section mulmod.
     Context (s:Z) (s_nz:s <> 0)
@@ -1739,7 +1744,8 @@ Module Monotonicity.
   
     Definition values_le_pos : list Z -> list Z -> Prop :=
       Forall2 (fun v1 v2 => v1 <= v2).
-  
+
+    (* this already exists!  Forall2_Forall *)
     Lemma Forall2_same (A : Type) (l : list A) (P : A -> A -> Prop) :
       Forall2 P l l <-> Forall (fun x => P x x) l.
     Proof.
@@ -1767,7 +1773,8 @@ Module Monotonicity.
         + apply IHp'. assumption.
     Qed.
     Hint Resolve amul_nonneg : mono.
-  
+
+    (* this already exists! Forall2_map_l, _r*)
     Lemma Forall2_map :
       forall (A1 A2 B1 B2 : Type) (f1 : A1 -> B1) (f2 : A2 -> B2) (P : B1 -> B2 -> Prop)
              (l1 : list A1) (l2 : list A2),
@@ -1942,6 +1949,7 @@ Module Monotonicity.
       values_le_pos p p' ->
       values_le_pos (Positional.mul weight n p q) (Positional.mul weight n p' q).
     Proof. cbv [Positional.mul]. auto with mono. Qed.
+    Hint Resolve pmul_monotone_l : mono.
 
     Lemma pmul_monotone_r weight n p q q' :
       (forall i, 0 <= weight i) ->
@@ -1950,6 +1958,58 @@ Module Monotonicity.
       values_le_pos q q' ->
       values_le_pos (Positional.mul weight n p q) (Positional.mul weight n p q').
     Proof. cbv [Positional.mul]. auto with mono. Qed.
+    Hint Resolve pmul_monotone_r : mono.
+
+    Definition mul_output_bounds (weight : nat -> Z) (n : nat) (x_bounds y_bounds : list zrange) :
+      list zrange :=
+      let lower_bounds : list Z := Positional.mul weight n (map lower x_bounds) (map lower y_bounds) in
+      let upper_bounds := Positional.mul weight n (map upper x_bounds) (map upper y_bounds) in
+      map (fun lower_upper => Build_zrange (fst lower_upper) (snd lower_upper))
+        (combine lower_bounds upper_bounds).
+
+    Definition bounds_nonneg (bounds : list zrange) : bool :=
+      fold_right andb true (map (fun bound => (0 <=? lower bound)%Z) bounds).
+
+    Lemma bounds_nonneg_spec (bounds : list zrange) :
+      bounds_nonneg bounds = true <-> everything_nonneg_pos (map lower bounds).
+    Proof. Admitted.
+
+    Lemma bounded_values_le x x_bounds :
+      Forall2 (fun (r : zrange) (z : Z) => is_bounded_by_bool z r = true) x_bounds x <->
+        values_le_pos (map lower x_bounds) x /\ values_le_pos x (map upper x_bounds).
+    Proof. Admitted.
+
+    Lemma values_le_pos_trans x y z :
+      values_le_pos x y ->
+      values_le_pos y z ->
+      values_le_pos x z.
+    Proof. Admitted.
+
+    Lemma le_nonneg x y :
+      everything_nonneg_pos x ->
+      values_le_pos x y ->
+      everything_nonneg_pos y.
+    Proof. Admitted.
+    Hint Resolve le_nonneg : mono.
+
+    Lemma mul_monotone weight n x_bounds y_bounds x y :
+      (forall i : nat, 0 <= weight i) ->
+      bounds_nonneg x_bounds = true ->
+      bounds_nonneg y_bounds = true ->
+      Forall2 (fun (r : zrange) (z : Z) => is_bounded_by_bool z r = true) x_bounds x ->
+      Forall2 (fun (r : zrange) (z : Z) => is_bounded_by_bool z r = true) y_bounds y ->
+      Forall2 (fun (r : zrange) (z : Z) => is_bounded_by_bool z r = true)
+        (mul_output_bounds weight n x_bounds y_bounds)
+        (Positional.mul weight n x y).
+    Proof.
+      intros Hweight Hx_bounds Hy_bounds Hx Hy. repeat rewrite bounded_values_le in *.
+      destruct Hx as [Hxlower Hxupper]. destruct Hy as [Hylower Hyupper].
+      repeat rewrite bounds_nonneg_spec in *. cbv [mul_output_bounds]. repeat rewrite map_map. simpl.
+      rewrite map_fst_combine. rewrite map_snd_combine.
+      repeat rewrite firstn_all; repeat rewrite Positional.length_mul; try reflexivity. split.
+      - apply (values_le_pos_trans _ (Positional.mul weight n x (map lower y_bounds))); eauto with mono.
+      - apply (values_le_pos_trans _ (Positional.mul weight n x (map upper y_bounds))); eauto with mono.
+    Qed.
   End Monotonicity.
 End Monotonicity.
 

@@ -1,5 +1,7 @@
 Require Import Coq.micromega.Lia.
+Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
+Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ADK.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.ZRange.
@@ -501,26 +503,6 @@ Module Compilers.
              | None, None => None
              end.
         Local Notation tZ := (base.type.type_base base.type.Z).
-        Require Import Coq.Lists.List.
-
-        Search zrange.
-        
-        Definition bounds_nonneg (bounds : list zrange) :=
-          fold_right andb true (map (fun bound => (0 <=? lower bound)%Z) bounds).
-            
-        Definition adk_output_bounds_assuming_nonnegative_inputs (n : nat) (x_bounds y_bounds : list zrange) : list zrange :=
-          let lower_bounds : list Z := adk_mul n (map lower x_bounds) (map lower y_bounds) in
-          let upper_bounds := adk_mul n (map upper x_bounds) (map upper y_bounds) in
-          map (fun lower_upper => Build_zrange (fst lower_upper) (snd lower_upper))
-            (combine lower_bounds upper_bounds).
-
-        Definition adk_output_bounds (n : nat ) (x_bounds y_bounds : list zrange) :
-          option (list (option zrange)) :=
-          if bounds_nonneg x_bounds && bounds_nonneg y_bounds then
-            Some (map Some (adk_output_bounds_assuming_nonnegative_inputs n x_bounds y_bounds)) else
-            None.
-        (*Compute (adk_output_bounds 10 (repeat r[0x0 ~> 0x7fffffe] 10) (repeat r[0x0 ~> 0x7fffffe] 10)).*) Print Compilers.ident_if_then_else. Print ZRange.union. Print type.base.option.interp.
-        
         Definition interp {shiftr_avoid_uint1 : shiftr_avoid_uint1_opt} (assume_cast_truncates : bool) {t} (idc : ident t) : type.option.interp t
           := let interp_Z_cast := if assume_cast_truncates then interp_Z_cast_truncate else interp_Z_cast in
              match idc in ident.ident t return type.option.interp t with
@@ -601,7 +583,9 @@ Module Compilers.
               | Some n, Some x, Some y =>
                   match Option.List.lift x, Option.List.lift y with
                   | Some x, Some y =>
-                      adk_output_bounds n x y
+                      if Monotonicity.bounds_nonneg x && Monotonicity.bounds_nonneg y then
+                        Some (List.map Some (Monotonicity.mul_output_bounds (SimpleWeight.weight 2) n x y)) else
+                        None
                   | _, _ => None
                   end
               | _, _, _ => None
