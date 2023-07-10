@@ -25,6 +25,7 @@ Require Import bedrock2Examples.memconst.
 Require Import Rupicola.Examples.Net.IPChecksum.IPChecksum.
 Require Import Crypto.Bedrock.End2End.X25519.GarageDoor.
 Require Import Crypto.Bedrock.End2End.X25519.MontgomeryLadderProperties.
+Import Crypto.Bedrock.End2End.RupicolaCrypto.ChaCha20.
 Local Open Scope string_scope.
 Import Syntax Syntax.Coercions NotationsCustomEntry.
 Import ListNotations.
@@ -39,14 +40,29 @@ Definition memconst_pk := memconst garageowner.
 Definition ip_checksum := ip_checksum_br2fn.
 
 Definition funcs :=
-  &[, init; loop;
-    initfn; loopfn;
+  &[, (* Main loop *) init; loop; initfn; loopfn;
+
+    (* Ethernet & SPI drivers *)
+    lan9250_tx; recvEthernet; lan9250_init;
+    lan9250_wait_for_boot; lan9250_mac_write;
+    lan9250_writeword; lan9250_readword;
+    SPI.spi_xchg; SPI.spi_write; SPI.spi_read;
+
+    (* "Standard library" of bedrock2 *)
     memswap; memequal; memconst_pk;
-    ip_checksum;
-    ChaCha20.chacha20_block; ChaCha20.quarter;
-    lan9250_tx ]
-    ++lightbulb.function_impls
-    ++MontgomeryLadder.funcs.
+
+    (* Generated using Rupicola *)
+    ip_checksum; chacha20_block; quarter]
+
+    (* X25519, generated code and handwritten wrappers *)
+  ++MontgomeryLadder.funcs.
+
+(*
+Compute (length funcs-3)%nat. (* functions excluding main-loop boilerplate *)
+Compute ((length MontgomeryLadder.funcs - 2 + 3))%nat. (* generated functions *)
+Compute (length funcs-3 - (length MontgomeryLadder.funcs - 2 + 3))%nat. (* handwritten functions *)
+Compute bedrock2.ToCString.c_module funcs.
+*)
 
 Lemma chacha20_ok: forall functions, ChaCha20.spec_of_chacha20 (&,ChaCha20.chacha20_block::&,ChaCha20.quarter::functions).
   intros.
@@ -98,6 +114,9 @@ Definition garagedoor_stack_size := snd garagedoor_compiler_result.
 Definition garagedoor_finfo := snd (fst garagedoor_compiler_result).
 Definition garagedoor_insns := fst (fst garagedoor_compiler_result).
 Definition garagedoor_bytes := Pipeline.instrencode garagedoor_insns.
+(*
+Compute length garagedoor_bytes.
+*)
 Definition garagedoor_symbols : list byte := Symbols.symbols garagedoor_finfo.
 
 Require Import compiler.CompilerInvariant.
