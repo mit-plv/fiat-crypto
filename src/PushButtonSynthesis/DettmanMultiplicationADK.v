@@ -164,7 +164,7 @@ Section __.
           correctness)
          (only parsing, at level 10, summary at next level, correctness at next level).
 
-  Check reified_mul_gen. Print adk_mulmod.
+  Check reified_mul_gen. Print adk_mulmod. Check reified_mul_gen.
 
   Definition mul
     := Pipeline.BoundsPipeline

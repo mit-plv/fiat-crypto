@@ -30,8 +30,6 @@ Definition adk_mul (n : nat) (x y : list Z) : list Z :=
          (fun p _ g => fun f' => Let_In ((nth' 0%nat f' 0) + p) (fun x => g (x :: f'))) 
          products) [].
 
-(*Definition adk_mul (n : nat) (x y : list Z) : list Z := if (n =? 0)%nat then x else
-                                                            (if (n <? 9)%nat then y else x).*)
-(*Definition adk_mul (n : nat) (x y : list Z) : list Z := adk_mul' n x y x y.
-  *)
+Definition ident_adk_mul_prod_at_i := adk_mul_prod_at_i.
+
 Definition ident_adk_mul := adk_mul.

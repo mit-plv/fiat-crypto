@@ -7,6 +7,7 @@ Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBU
 
 Module Export DettmanMultiplicationADK.
   Import dettman_multiplication_with_adk_mod_ops.
+  Check adk_mulmod. Print adk_mulmod.
   Derive reified_mul_gen
          SuchThat (is_reification_of reified_mul_gen adk_mulmod)
          As reified_mul_gen_correct.

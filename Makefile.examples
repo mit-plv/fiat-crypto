@@ -132,7 +132,7 @@ $(foreach bw,64 32,$(eval $(call add_curve_keys,secp256k1_montgomery_scalar_$(bw
 $(foreach bw,64,$(eval $(call add_curve_keys,secp256k1_dettman_$(bw),DETTMAN_MULTIPLICATION,'secp256k1_dettman',$(bw),5 48 2 '2^256 - 4294968273',$(DETTMAN_MULTIPLICATION_FUNCTIONS),DETTMAN_MULTIPLICATION)))
 $(foreach bw,32,$(eval $(call add_curve_keys,secp256k1_dettman_$(bw),DETTMAN_MULTIPLICATION,'secp256k1_dettman',$(bw),10 22 6 '2^256 - 4294968273',$(DETTMAN_MULTIPLICATION_FUNCTIONS),DETTMAN_MULTIPLICATION)))
 
-$(foreach bw,32,$(eval $(call add_curve_keys,secp256k1_dettman_adk_$(bw),DETTMAN_MULTIPLICATION_ADK,'secp256k1_dettman_adk',$(bw),10 22 6 '2^256 - 4294968273',$(DETTMAN_MULTIPLICATION_ADK_FUNCTIONS),DETTMAN_MULTIPLICATION_ADK)))
+$(foreach bw,32,$(eval $(call add_curve_keys,secp256k1_dettman_adk_$(bw),DETTMAN_MULTIPLICATION_ADK,'secp256k1_dettman_adk',$(bw),10 26 6 '2^256 - 4294968273',$(DETTMAN_MULTIPLICATION_ADK_FUNCTIONS),DETTMAN_MULTIPLICATION_ADK)))
 
 $(foreach bw,64,$(eval $(call add_curve_keys,curve25519_solinas_$(bw),SOLINAS_REDUCTION,'curve25519_solinas',$(bw),'2^255 - 19',$(SOLINAS_REDUCTION_FUNCTIONS),SOLINAS_REDUCTION)))
 

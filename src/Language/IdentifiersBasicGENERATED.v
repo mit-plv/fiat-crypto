@@ -20,3 +20,5 @@ Module Compilers.
 
   Global Strategy -1000 [base_interp ident_interp].
 End Compilers.
+
+Print Compilers.ident_adk_mul.

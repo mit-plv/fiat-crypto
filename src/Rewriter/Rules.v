@@ -53,14 +53,31 @@ Print adk_mul.
 
 (*Print reifiable_friendlier_adk_prod_at_i.*)
 
+Print adk_mul.
+
+Compute (ltac:(let rhs := eval cbv [adk_mul adk_mul' Let_In adk_mul_prod_at_i] in (adk_mul 5 x y) in exact rhs)).
 
 Definition unfold_thingsT : list (bool * Prop)
   := Eval cbv [myapp mymap myflatten] in
     myflatten
       [mymap
          dont_do_again
-         [(forall n x y, ident_adk_mul n x y = ltac:(let rhs := eval cbv [adk_mul Let_In adk_mul' adk_mul_prod_at_i] in (adk_mul n x y) in exact rhs));
-          (forall (A : Type) (b : bool) x y, @if_then_else A b x y = if b then x else y)
+         [(forall n x y, ident_adk_mul n x y =
+                           dlet high_product : Z := (fun (i : nat) (l : list Z) (d : Z) => nth_default d l i) 
+                                                      (n - 1)%nat x 0 *
+                                                      (fun (i : nat) (l : list Z) (d : Z) => nth_default d l i) 
+                                                        (n - 1)%nat y 0 in
+             let products :=
+               map
+                 (fun i : nat =>
+                    (fun (i0 : nat) (l : list Z) (d : Z) => nth_default d l i0) i x 0 *
+                      (fun (i0 : nat) (l : list Z) (d : Z) => nth_default d l i0) i y 0) 
+                 (seq 0 (n - 1)) ++ [high_product] ++ repeat 0 (n - 1) in
+             list_rect (fun _ : list Z => list Z -> list Z)
+               (fun f : list Z => adk_mul' n x y products (rev f))
+               (fun (p : Z) (l : list Z) (g : (fun _ : list Z => list Z -> list Z) l) (f' : list Z) =>
+                  dlet x0 : Z := (fun (i : nat) (l0 : list Z) (d : Z) => nth_default d l0 i) 0%nat f' 0 + p in
+                  g (x0 :: f')) products [])
          ]
       ].
 
@@ -70,7 +87,8 @@ Definition nbe_rewrite_rulesT : list (bool * Prop)
       myflatten
         [mymap
            dont_do_again
-           [(forall A B x y, @fst A B (x, y) = x)
+           [(forall (A : Type) (b : bool) x y, @if_then_else A b x y = if b then x else y)
+            ; (forall A B x y, @fst A B (x, y) = x)
             ; (forall A B x y, @snd A B (x, y) = y)
             ; (forall P t f, @Thunked.bool_rect P t f true = t tt)
             ; (forall P t f, @Thunked.bool_rect P t f false = f tt)
@@ -1282,4 +1300,7 @@ Section with_bitwidth.
                              (Z.lor (singlewidth (Z.land (singlewidth y) (singlewidth a)))
                                     (singlewidth (Z.land (singlewidth x) (singlewidth b))))))
           ]%Z.
-End with_bitwidth.
+End with_bitwidth. Check Let_In.
+
+Lemma something x : x = dlet x := 5 in x.
+Proof. repeat autounfold with reification_proof. Abort.

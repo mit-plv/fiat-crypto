@@ -392,84 +392,9 @@ Module DettmanMultiplication.
     Section WithADK.
       (* now we'll add the option to use the adk algorithm in place of associational.mul *)
       Context (weight_friendly : forall i j : nat, weight i * weight j = weight (i + j)).
-
-      (*Definition ZZ_is_bounded_by_bool (x : Z) (bounds : Z*Z) : bool :=
-        (fst bounds <=? x) && (x <=? snd bounds).
-    
-      Definition is_bounded_by (l : list Z) (bounds : list (Z*Z)) : bool :=
-        fold_right andb true
-          (map (fun x_bound => ZZ_is_bounded_by_bool (fst x_bound) (snd x_bound))
-             (combine l bounds)).
-
-      Definition is_lower_bounded_by (bounds : list (Z*Z)) (xs : list Z) : bool :=
-        fold_right andb true
-          (map (fun bound_x => snd bound_x <=? fst (fst bound_x))
-             (combine bounds xs)).
-
-      (* if everything is nonnegative, then the output is nondecreasing in the inputs *)
-      Definition output_bounds (n : nat) (x_bounds y_bounds : list (Z*Z)) : list (Z*Z) :=
-        let lower_bounds := adk_mul n (map fst x_bounds) (map fst y_bounds) in
-        let upper_bounds := adk_mul n (map snd x_bounds) (map snd y_bounds) in
-        map (fun lower_upper => (fst lower_upper, snd lower_upper))
-          (combine lower_bounds upper_bounds).
-
-      Definition list_if_then_else {X} (cond : bool) (ifval elseval : list X) : list X :=
-        map (fun if_else => if cond then fst if_else else snd if_else) (combine ifval elseval).
-
-      Lemma list_if_then_else_spec {X} (cond : bool) (ifval elseval : list X) :
-        let len := Nat.min (length ifval) (length elseval) in
-        list_if_then_else cond ifval elseval =
-          if cond then (firstn len ifval) else (firstn len elseval).
-      Proof.
-        cbv [list_if_then_else]. destruct (length ifval <=? length elseval)%nat eqn:E.
-        - apply Nat.leb_le in E.
-          replace (Nat.min (length ifval) (length elseval)) with (length ifval) by lia.
-          destruct cond.
-          + rewrite firstn_all. rewrite <- (@firstn_all2 _ (length elseval)) by lia.
-            apply ListUtil.map_fst_combine. (* wow, eta reduction *)
-          + apply ListUtil.map_snd_combine.
-        - apply Nat.leb_nle in E.
-          replace (Nat.min (length ifval) (length elseval)) with (length elseval) by lia.
-          destruct cond.
-          + apply ListUtil.map_fst_combine.
-          + rewrite firstn_all. rewrite <- (@firstn_all2 _ (length ifval)) by lia.
-            apply ListUtil.map_snd_combine.
-      Qed.
-
-      Definition truncate (values : list Z) (upper_bounds : list Z) :=
-        map (fun x_upper => Z.land (fst x_upper) (Z.ones (Z.log2_up (snd x_upper)))) (combine values upper_bounds).
-    
-      Definition adk_mul_with_bounds (x_bounds y_bounds : list (Z*Z)) (x y : list Z) : list Z :=
-        list_if_then_else
-          (is_lower_bounded_by x_bounds (repeat 0 n) &&
-           is_lower_bounded_by y_bounds (repeat 0 n) &&
-           ZZ_is_bounded_by_bool (pmul.nth_reifiable 0 x 0) (pmul.nth_reifiable 0 x_bounds (0, 0)) &&
-           is_bounded_by y y_bounds)
-          (truncate (adk_mul n x y)
-             (map snd (output_bounds n x_bounds y_bounds)))
-          (pmul.pmul n x y). Print adk_mul.*)
-
-      Print adk_mul.
-      Definition adk_mul_alias : nat -> list Z -> list Z -> list Z :=
-        fun (n : nat) (x y : list Z) =>
-dlet high_product : Z := (fun (i : nat) (l : list Z) (d : Z) => nth_default d l i) 
-                           (n - 1)%nat x 0 *
-                         (fun (i : nat) (l : list Z) (d : Z) => nth_default d l i) 
-                           (n - 1)%nat y 0 in
-let products :=
-  map
-    (fun i : nat =>
-     (fun (i0 : nat) (l : list Z) (d : Z) => nth_default d l i0) i x 0 *
-     (fun (i0 : nat) (l : list Z) (d : Z) => nth_default d l i0) i y 0) 
-    (seq 0 (n - 1)) ++ [high_product] ++ repeat 0 (n - 1) in
-list_rect (fun _ : list Z => list Z -> list Z)
-  (fun f : list Z => adk_mul' n x y products (rev f))
-  (fun (p : Z) (l : list Z) (g : (fun _ : list Z => list Z -> list Z) l) (f' : list Z) =>
-   dlet x0 : Z := (fun (i : nat) (l0 : list Z) (d : Z) => nth_default d l0 i) 0%nat f' 0 + p in
-   g (x0 :: f')) products []. Print adk_mul.
       
-      Definition adk_mulmod (*(x_bounds y_bounds : list (Z*Z))*) (x y : list Z) : list Z :=
-       (* reduce_carry_borrow (Positional.to_associational weight n ( *)adk_mul (*_with_bounds x_bounds y_bounds*) n x y(* ))*)
+      Definition adk_mulmod (x y : list Z) : list Z :=
+       (*Positional.from_associational weight n (Positional.to_associational weight n ( *)ident_adk_mul n x y(* ) ) *)
           (*(Associational.mul
              (Positional.to_associational weight n x)
              (Positional.to_associational weight n y))*).
@@ -485,10 +410,8 @@ list_rect (fun _ : list Z => list Z -> list Z)
     End WithADK.
   End DettmanMultiplication.  
 End DettmanMultiplication.
-(*Require Import Crypto.BoundsPipeline.
-      Print Reify.
+Require Import Crypto.Language.API.
 Import
-  AbstractInterpretation.Compilers
   Language.Compilers
   Language.API.Compilers.
 
@@ -502,7 +425,7 @@ Print adk_mul_prod_at_i. Print nth_reifiable. Check adk_mulmod.
 Print adk_mulmod. Check reduce_carry_borrow. Print reduce_carry_borrow.
 Compute (ltac: (let r := Reify (adk_mulmod)
                             in
-                  exact r)).*)
+                  exact r)).
 
 (*Definition nn := 5%nat.
       Definition xx := [543; 654; 234; 123; 5698].
@@ -713,7 +636,7 @@ Module dettman_multiplication_with_adk_mod_ops.
       f_equal. lia.
     Qed. Print adk_mulmod.
 
-    (*Definition adk_mulmod := adk_mulmod s c register_width n last_reduction weight.*)
+    Definition adk_mulmod (s c : Z) (register_width n limbwidth last_reduction : nat) := adk_mulmod n.
 
     Lemma weight_friendly : forall i j : nat, weight i * weight j = weight (i + j).
     Proof.
@@ -723,8 +646,9 @@ Module dettman_multiplication_with_adk_mod_ops.
     Definition eval_adk_mulmod := eval_adk_mulmod s c register_width n last_reduction weight p_nz n_gteq_4 wprops weight_friendly.
   End dettman_multiplication_with_adk_mod_ops.
   Print eval_adk_mulmod.
-  Definition adk_mulmod (s c : Z) (register_width n limbwidth last_reduction : nat) :=
-   DettmanMultiplication.adk_mulmod n.
+  Print DettmanMultiplication.adk_mulmod. Print weight.
+  (*Definition adk_mulmod (s c : Z) (register_width n limbwidth last_reduction : nat) :=
+   DettmanMultiplication.adk_mulmod n weight.*)
 End dettman_multiplication_with_adk_mod_ops.
 Module Export Hints.
   Import dettman_multiplication_mod_ops.

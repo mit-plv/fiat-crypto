@@ -243,12 +243,10 @@ Module Compilers.
                 apply IHl1'' in IHhyp. clear IHl1''. destruct IHhyp as [IH1 IH2].
                 assert (H2': ZRange.type.base.option.is_bounded_by a a' = true).
                 { apply (H2 (pair a a')). simpl. left. reflexivity. }
-                clear H2. remember (H0 _ _ H2') as H0' eqn:clearMe. clear H0 clearMe.
+                clear H2. assert (H0' := H0 _ _ H2').
                 destruct (f a) as [r|]; try discriminate E'. injection E' as E'. subst.
                 simpl in H0'. destruct (g a') as [|] eqn:E'''; try discriminate H0'.
-                clear H0'. simpl. rewrite E'''. constructor.
-                -- f_equal. assumption.
-                -- intros v H. apply IH2. assumption.
+                clear H0'. simpl. rewrite E'''. constructor; assumption.
           Qed.
           
           Local Ltac handle_lt_le_t_step_fast :=

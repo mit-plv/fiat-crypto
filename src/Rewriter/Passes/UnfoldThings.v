@@ -13,7 +13,6 @@ Module Compilers.
   Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.GoalType.
   Import Rewriter.AllTactics.Compilers.RewriteRules.Tactic.
   Import Compilers.Classes.
-
   Module Import RewriteRules.
     Section __.
       Definition VerifiedRewriterUnfoldThings : VerifiedRewriter_with_args false false true unfold_things_rewrite_rules_proofs.
