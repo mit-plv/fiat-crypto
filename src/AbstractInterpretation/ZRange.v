@@ -506,7 +506,7 @@ Module Compilers.
         Definition interp {shiftr_avoid_uint1 : shiftr_avoid_uint1_opt} (assume_cast_truncates : bool) {t} (idc : ident t) : type.option.interp t
           := let interp_Z_cast := if assume_cast_truncates then interp_Z_cast_truncate else interp_Z_cast in
              match idc in ident.ident t return type.option.interp t with
-             | ident.if_then_else A => fun cond x y => ZRange.type.base.option.None
+             | ident.adk_mul_inner => fun a b c d e f => None
              | ident.Literal t v => @of_literal (base.type.type_base t) v
              | ident.comment _
              | ident.comment_no_keep _

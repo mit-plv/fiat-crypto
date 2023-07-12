@@ -81,18 +81,19 @@ Definition var_like_idents : InductiveHList.hlist
       ; ident.cast2
       ; Z.combine_at_bitwidth]%hlist.
 
-Print with_name. Print Named.a_name.
-Inductive Z_in_range (min max x : Z) (pf : is_bounded_by_bool x r[min ~> max] = true) :=
-| yes.
-
 Definition base_type_list_named : InductiveHList.hlist
   := [with_name Z BinInt.Z
       ; with_name bool Datatypes.bool
       ; with_name nat Datatypes.nat
       ; with_name zrange ZRange.zrange
       ; with_name string String.string
-      ; with_name zir Z_in_range
   ]%hlist.
+
+(*Definition Zclip (min max x : Z) : Z :=
+  Z.min (Z.max x min) max.*)
+
+Definition evaluation_barrier {A B : Type} (f : A -> B) (x : A) : B :=
+  f x.
 
 Definition all_ident_named_interped : InductiveHList.hlist
   := [with_name ident_Literal (@ident.literal)
@@ -200,20 +201,23 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_fancy_selm ident.fancy.selm
       ; with_name ident_fancy_sell ident.fancy.sell
       ; with_name ident_fancy_addm ident.fancy.addm
-      ; with_name ident_adk_mul ident_adk_mul
-      ; with_name ident_if_then_else (@if_then_else)
+      ; with_name ident_adk_mul adk_mul
+      ; with_name ident_adk_mul_inner adk_mul_inner
+      (*; with_name ident_adk_mul_prod_at_i adk_mul_prod_at_i*)
+      (*; with_name ident_if_then_else (@if_then_else)
+      ; with_name ident_eval_barrier (@evaluation_barrier)*)
      ]%hlist. Print if_then_else.
 
 Definition scraped_data : ScrapedData.t
   := {| ScrapedData.base_type_list_named := base_type_list_named
      ; ScrapedData.all_ident_named_interped := all_ident_named_interped |}.
 
-Require Import Rewriter.Util.LetIn.
+(*Require Import Rewriter.Util.LetIn.
 Lemma nonsense1 n x y :
   ADK.adk_mul n x y = ltac:(let rhs := eval cbv [adk_mul adk_mul' Let_In adk_mul_prod_at_i] in (adk_mul n x y) in exact rhs).
 Proof. reflexivity. Qed.
 Lemma nonsense2 :
   ADK.adk_mul = ADK.ident_adk_mul.
-Proof. reflexivity. Qed.
+Proof. reflexivity. Qed.*)
 
 (*#[global] Hint Rewrite nonsense1 : reification_proofs.*)

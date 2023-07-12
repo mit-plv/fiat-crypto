@@ -43,7 +43,7 @@ Section SimpleWeight.
   Definition friendly_adk_mul (n : nat) (x y : list Z) : list Z :=
     let products : list Z := map (fun i => (nth' i (firstn n x) 0) * (nth' i (firstn n y) 0)) (seq 0 (2*n - 1)) in
     let f_rev : list Z := fold_left (fun l p => (nth' 0%nat l 0) + p :: l) products [] in
-    adk_mul' n x y products (rev f_rev).
+    adk_mul' n x y (nth' (n - 1)%nat products 0) (rev f_rev).
   
   Lemma friendly_list_rect products_remaining f_so_far base_case :
     (list_rect
@@ -61,12 +61,19 @@ Section SimpleWeight.
   Lemma adk_mul_friendly (n : nat) (x y : list Z) :
     adk_mul n x y = friendly_adk_mul n x y.
   Proof.
-    cbv [adk_mul]. rewrite unfold_Let_In. rewrite friendly_list_rect.
+    cbv [adk_mul adk_mul_inner]. rewrite unfold_Let_In. rewrite friendly_list_rect.
     destruct (n =? 0)%nat eqn:E.
     - apply Nat.eqb_eq in E. subst. reflexivity.
     - apply Nat.eqb_neq in E.
       replace (_ ++ _ ++ _) with (map (fun i => (nth' i (firstn n x) 0) * (nth' i (firstn n y) 0)) (seq 0 (2*n - 1))).
-      + cbv [friendly_adk_mul]. reflexivity.
+      + cbv [friendly_adk_mul]. repeat rewrite nth_default_eq. Check map_nth'.
+        rewrite (map_nth' _ _ _ 0%nat).
+        -- repeat rewrite seq_nth.
+           ++ repeat rewrite nth_default_eq. Search (nth _ (firstn _ _)). repeat rewrite nth_firstn. replace (_ <? _)%nat with true.
+              --- f_equal.
+              --- symmetry. apply Nat.ltb_lt. lia.
+           ++ lia.
+        -- rewrite seq_length. lia.
       + replace (2 * n - 1)%nat with ((n - 1) + 1 + (n - 1))%nat by lia. repeat rewrite seq_app. repeat rewrite map_app.
         rewrite <- app_assoc. f_equal.
         -- apply map_ext_in. intros a Ha. apply in_seq in Ha. repeat rewrite nth_default_eq. repeat rewrite SimpleWeight.nth_firstn. destruct (a <? n)%nat eqn:E'; try reflexivity. apply Nat.ltb_nlt in E'. lia.
@@ -325,5 +332,5 @@ Section SimpleWeight.
     Lemma eval_adk_mul n x y :
       Positional.eval weight n x * Positional.eval weight n y =
         Positional.eval weight (2 * n - 1) (adk_mul n x y).
-    Proof. rewrite adk_mul_is_mul. rewrite eval_mul. reflexivity. Qed.      
+    Proof. rewrite adk_mul_is_mul. rewrite eval_mul. reflexivity. Qed.
 End SimpleWeight.

@@ -626,7 +626,7 @@ Module Compilers.
             destruct (Crypto.Util.OptionList.Option.List.lift y1) as [y_bounds|] eqn:E2; try reflexivity.
             destruct (Monotonicity.bounds_nonneg x_bounds) eqn:Ex; try reflexivity.
             destruct (Monotonicity.bounds_nonneg y_bounds) eqn:Ey; try reflexivity.
-            simpl. cbv [ADK.ident_adk_mul].
+            simpl.
             rewrite fold_andb_map_map1. simpl in *. repeat rewrite fold_andb_map_Forall2 in *.
             apply option_list_lift_Some in E1. apply option_list_lift_Some in E2. subst.
             rewrite Forall.Forall2_map_l in Hx. rewrite Forall.Forall2_map_l in Hy.

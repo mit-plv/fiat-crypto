@@ -327,7 +327,7 @@ Module Compilers.
     Notation fancy_sell := Compilers.ident_fancy_sell (only parsing).
     Notation fancy_addm := Compilers.ident_fancy_addm (only parsing).
     Notation adk_mul := Compilers.ident_adk_mul (only parsing).
-    Notation if_then_else := Compilers.ident_if_then_else (only parsing).
+    Notation adk_mul_inner := Compilers.ident_adk_mul_inner (only parsing).
 
     Notation option_Some := Compilers.ident_Some (only parsing).
     Notation option_None := Compilers.ident_None (only parsing).

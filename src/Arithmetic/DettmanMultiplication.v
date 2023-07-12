@@ -394,7 +394,7 @@ Module DettmanMultiplication.
       Context (weight_friendly : forall i j : nat, weight i * weight j = weight (i + j)).
       
       Definition adk_mulmod (x y : list Z) : list Z :=
-       (*Positional.from_associational weight n (Positional.to_associational weight n ( *)ident_adk_mul n x y(* ) ) *)
+       (*Positional.from_associational weight n (Positional.to_associational weight n ( *)adk_mul n x y(* ) ) *)
           (*(Associational.mul
              (Positional.to_associational weight n x)
              (Positional.to_associational weight n y))*).
@@ -410,7 +410,7 @@ Module DettmanMultiplication.
     End WithADK.
   End DettmanMultiplication.  
 End DettmanMultiplication.
-Require Import Crypto.Language.API.
+(*Require Import Crypto.Language.API.
 Import
   Language.Compilers
   Language.API.Compilers.
@@ -425,7 +425,7 @@ Print adk_mul_prod_at_i. Print nth_reifiable. Check adk_mulmod.
 Print adk_mulmod. Check reduce_carry_borrow. Print reduce_carry_borrow.
 Compute (ltac: (let r := Reify (adk_mulmod)
                             in
-                  exact r)).
+                  exact r)).*)
 
 (*Definition nn := 5%nat.
       Definition xx := [543; 654; 234; 123; 5698].
