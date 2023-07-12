@@ -1219,6 +1219,7 @@ Proof.
           | ident.fancy_addm
           | ident.adk_mul
           | ident.adk_mul_inner
+          | ident.if_then_else _
             => symex_T_error (Unhandled_identifier idc)
           end%symex).
   all: cbn in *.

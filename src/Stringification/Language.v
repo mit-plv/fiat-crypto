@@ -493,6 +493,7 @@ Module Compilers.
                 | ident.fancy_addm => neg_wrap_parens "fancy.addm"
                 | ident.adk_mul => neg_wrap_parens "adk_mul"
                 | ident.adk_mul_inner => neg_wrap_parens "adk_mul_inner"
+                | ident.if_then_else _ => neg_wrap_parens "if_then_else"
                 end.
         Global Instance show_ident {t} : Show (ident.ident t) := show_lvl_ident.
 
@@ -747,6 +748,7 @@ Module Compilers.
              | ident.fancy_addm as idc
              | ident.adk_mul as idc
              | ident.adk_mul_inner as idc
+             | ident.if_then_else _ as idc
                => fun args => (show_application with_casts (fun _ => show idc) args, ZRange.type.base.option.None)
              end.
       End ident.

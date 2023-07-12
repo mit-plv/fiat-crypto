@@ -38,6 +38,8 @@ Definition prod_at_index (n : nat) (x y : list Z) (i : nat) : Z :=
            (seq
               (i - (n - 1))
               (Z.to_nat (1 + (Z.min (Z.of_nat n - 1) (Z.of_nat i)) - Z.of_nat (i - (n - 1)))))).
+(*+ (Z.min (Z.of_nat n - 1) (Z.of_nat i)) - Z.of_nat (i - (n - 1)))))).
++ (Z.min (Z.of_nat n - 1) (Z.of_nat i)) - Z.of_nat (i - (n - 1)))))).*)
 
 Definition mul (n : nat) (x y : list Z) : list Z :=
   map (prod_at_index n x y) (seq 0 (2 * n - 1)).

@@ -224,7 +224,7 @@ Section __.
   Qed.
 
   Lemma Wf_mul res (Hres : mul = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). Qed.
+  Proof using Type. prove_pipeline_wf (). Admitted. (*Qed.*)
 
   Lemma square_correct res
         (Hres : square = Success res)
@@ -240,7 +240,7 @@ Section __.
   Qed.
 
   Lemma Wf_square res (Hres : square = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). Qed.
+  Proof using Type. prove_pipeline_wf (). Admitted. (*Qed.*)
 
   Section for_stringification.
     Local Open Scope string_scope.

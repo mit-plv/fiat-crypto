@@ -204,8 +204,8 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_adk_mul adk_mul
       ; with_name ident_adk_mul_inner adk_mul_inner
       (*; with_name ident_adk_mul_prod_at_i adk_mul_prod_at_i*)
-      (*; with_name ident_if_then_else (@if_then_else)
-      ; with_name ident_eval_barrier (@evaluation_barrier)*)
+      ; with_name ident_if_then_else (@if_then_else)
+      (*; with_name ident_eval_barrier (@evaluation_barrier)*)
      ]%hlist. Print if_then_else.
 
 Definition scraped_data : ScrapedData.t

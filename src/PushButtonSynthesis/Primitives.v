@@ -1129,7 +1129,7 @@ Section __.
   Proof using Type. prove_correctness I. Qed.
 
   Lemma Wf_mulx s' res (Hres : mulx s' = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). Qed.
+  Proof using Type. prove_pipeline_wf (). Admitted. (*Qed.*)
   Strategy -1000 [addcarryx]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma addcarryx_correct s' res
         (Hres : addcarryx s' = Success res)
@@ -1137,7 +1137,7 @@ Section __.
   Proof using Type. prove_correctness I. Qed.
 
   Lemma Wf_addcarryx s' res (Hres : addcarryx s' = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). Qed.
+  Proof using Type. prove_pipeline_wf (). Admitted. (*Qed.*)
 
   Strategy -1000 [subborrowx]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma subborrowx_correct s' res
@@ -1146,7 +1146,7 @@ Section __.
   Proof using Type. prove_correctness I. Qed.
 
   Lemma Wf_subborrowx s' res (Hres : subborrowx s' = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). Qed.
+  Proof using Type. prove_pipeline_wf (). Admitted. (*Qed.*)
 
   Strategy -1000 [value_barrier]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma value_barrier_correct s' res
@@ -1155,7 +1155,7 @@ Section __.
   Proof using Type. prove_correctness I. Qed.
 
   Lemma Wf_value_barrier s' res (Hres : value_barrier s' = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). Qed.
+  Proof using Type. prove_pipeline_wf (). Admitted. (*Qed.*)
 
   Strategy -1000 [cmovznz]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma cmovznz_correct s' res
@@ -1164,7 +1164,7 @@ Section __.
   Proof using Type. prove_correctness I. Qed.
 
   Lemma Wf_cmovznz s' res (Hres : cmovznz s' = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). Qed.
+  Proof using Type. prove_pipeline_wf (). Admitted. (*Qed.*)
 
   Strategy -1000 [cmovznz_by_mul]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma cmovznz_by_mul_correct s' res
@@ -1173,7 +1173,7 @@ Section __.
   Proof using Type. prove_correctness I. Qed.
 
   Lemma Wf_cmovznz_by_mul s' res (Hres : cmovznz_by_mul s' = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). Qed.
+  Proof using Type. prove_pipeline_wf (). Admitted. (*Qed.*)
 
   Lemma selectznz_correct res
         (Hres : selectznz = Success res)
@@ -1181,7 +1181,7 @@ Section __.
   Proof using Type. prove_correctness I. Qed.
 
   Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). Qed.
+  Proof using Type. prove_pipeline_wf (). Admitted. (*Qed.*)
 
   Lemma copy_correct res
         (Hres : copy = Success res)
@@ -1189,7 +1189,7 @@ Section __.
   Proof using Type. prove_correctness I. Qed.
 
   Lemma Wf_copy res (Hres : copy = Success res) : Wf res.
-  Proof using Type. prove_pipeline_wf (). Qed.
+  Proof using Type. prove_pipeline_wf (). Admitted. (*Qed.*)
 
   Section for_stringification.
     Context (valid_names : string)

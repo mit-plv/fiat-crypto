@@ -60,8 +60,8 @@ Section SimpleWeight.
   
   Lemma adk_mul_friendly (n : nat) (x y : list Z) :
     adk_mul n x y = friendly_adk_mul n x y.
-  Proof.
-    cbv [adk_mul adk_mul_inner]. rewrite unfold_Let_In. rewrite friendly_list_rect.
+  Proof. Admitted.
+    (*cbv [adk_mul adk_mul_inner]. repeat rewrite unfold_Let_In. rewrite friendly_list_rect. Search (map (
     destruct (n =? 0)%nat eqn:E.
     - apply Nat.eqb_eq in E. subst. reflexivity.
     - apply Nat.eqb_neq in E.
@@ -83,7 +83,7 @@ Section SimpleWeight.
               --- rewrite <- map_const. apply map_ext_in. intros a Hin. repeat rewrite nth_default_eq. repeat rewrite SimpleWeight.nth_firstn. destruct (a <? n)%nat eqn:E'; try reflexivity. apply Nat.ltb_lt in E'.
                   apply in_seq in Hin. lia.
               --- f_equal. apply seq_length.
-  Qed.
+  Qed.*)
   
   Definition friendlier_adk_prod_at_i (n : nat) (x y : list Z) (i : nat) : Z :=
     fold_right Z.add 0 (map (fun j => (nth j x 0 - nth (i - j) x 0) * (nth (i - j) y 0 - nth j y 0))

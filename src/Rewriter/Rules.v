@@ -55,13 +55,14 @@ Definition unfold_thingsT : list (bool * Prop)
   := Eval cbv [myapp mymap myflatten] in
     myflatten
       [mymap
-         dont_do_again
+         do_again
          [(forall n x y, adk_mul n x y = ltac:(let rhs := eval cbv [adk_mul] in (adk_mul n x y) in exact rhs))
           ; (forall A B f x ls, @map A B f (x :: ls) = f x :: map f ls)
           ; (forall A B f, @map A B f [] = [])
           ; (forall n x y hp p products' ls, adk_mul_inner n x y hp (p :: products') ls = dlet x0 : Z := nth_default 0 ls 0 + p in
                adk_mul_inner n x y hp products' (x0 :: ls))
-          ; (forall n x y hp ls, adk_mul_inner n x y hp [] ls = ltac:(let rhs := eval cbv [adk_mul' adk_mul_prod_at_i if_then_else] in (adk_mul' n x y hp (rev ls)) in exact rhs))
+          ; (forall n x y hp ls, adk_mul_inner n x y hp [] ls = ltac:(let rhs := eval cbv [adk_mul' adk_mul_prod_at_i] in (adk_mul' n x y hp (rev ls)) in exact rhs))
+          ; (forall A cond x y, @if_then_else A cond x y = if cond then x else y)
          ]
       ].
 
