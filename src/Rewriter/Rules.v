@@ -45,11 +45,6 @@ Local Notation "x <= y" := (is_tighter_than_bool (ZRange.normalize x) y = true) 
 Local Notation "x <= y <= z" := (andb (is_tighter_than_bool (ZRange.normalize x) y) (is_tighter_than_bool (ZRange.normalize y) z) = true) : zrange_scope.
 Local Notation litZZ x := (ident.literal (fst x), ident.literal (snd x)) (only parsing).
 Local Notation n r := (ZRange.normalize r) (only parsing).
-Print adk_mul_inner.
-(*Lemma yes n x y hp ls : adk_mul_inner n x y hp [] ls = [].
-Proof. cbn -[adk_mul']. reflexivity. Qed.*)
-Print adk_mul.
-        Check map.
 
 Definition unfold_thingsT : list (bool * Prop)
   := Eval cbv [myapp mymap myflatten] in
