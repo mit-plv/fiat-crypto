@@ -431,6 +431,12 @@ Module DettmanMultiplication.
         let products : list Z := map (fun i => (nth' i x 0) * (nth' i y 0)) (seq 0 (n - 1)) ++ [high_product] ++ (repeat 0 (n - 1)) in
         adk_mul'_alias n x y (nth' (n - 1)%nat products 0) (rev (f_rev products)).
 
+      Definition m : nat := 10.
+      Definition x := [1; 2; 3; 4; 5; 6; 7; 8; 9; 10].
+      Definition y := [10; 9; 8; 7; 6; 5; 4; 3; 2; 1].
+      Compute (friendly_adk_mul m x y).
+      Compute (SimpleWeight.mul m x y).
+
       Definition adk_mul_alias (n : nat) (x y : list Z) : list Z :=
         (*d*)let high_product : Z := (nth' (n - 1)%nat x 0) * (nth' (n - 1)%nat y 0) in
         let products : list Z := map (fun i => (nth' i x 0) * (nth' i y 0)) (seq 0 (n - 1)) ++ [high_product] ++ (repeat 0 (n - 1)) (*thye total length of products should be (2*n - 1), since this is
@@ -438,7 +444,7 @@ Module DettmanMultiplication.
         adk_mul_inner_alias n x y high_product products [].
       
       Definition adk_mulmod (x y : list Z) : list Z :=
-       reduce_carry_borrow ((Positional.to_associational weight n (friendly_adk_mul n x y) ))
+       reduce_carry_borrow ((Positional.to_associational weight (2*n - 1) (friendly_adk_mul n x y) ))
           (*(Associational.mul
              (Positional.to_associational weight n x)
              (Positional.to_associational weight n y))*).
