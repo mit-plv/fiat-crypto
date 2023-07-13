@@ -392,9 +392,53 @@ Module DettmanMultiplication.
     Section WithADK.
       (* now we'll add the option to use the adk algorithm in place of associational.mul *)
       Context (weight_friendly : forall i j : nat, weight i * weight j = weight (i + j)).
+      Local Notation nth' := (fun i l d => (nth_default d l i)).
+
+      Definition if_then_else_alias {A} (cond : bool) (if_thing : A) (else_thing : A) :=
+        if cond then if_thing else else_thing.
+
+      Definition adk_mul_prod_at_i_alias (n : nat) (x y : list Z) (high_product : Z) (f : list Z) (i : nat) : Z :=
+        fold_right Z.add 0 (map (fun j => (nth' j x 0 - nth' (i - j)%nat x 0) * (nth' (i - j)%nat y 0 - nth' j y 0))
+                              (seq (i - (n - 1)) (Z.to_nat (1 + ((Z.of_nat i + 1)/2 - 1) - Z.of_nat (i - (n - 1))%nat)%Z))) +
+          (if_then_else_alias (i =? 2 * n - 2)%nat
+             high_product
+             (if_then_else_alias (i <? n)%nat (nth' i f 0) (nth' i f 0 - nth' (i - n)%nat f 0))).
+  
+      Definition adk_mul'_alias (n : nat) (x y : list Z) (high_product : Z) (f : list Z) : list Z :=
+        map (fun i => adk_mul_prod_at_i_alias n x y high_product f i) (seq 0 (2*n - 1)).
+
+      (*Definition f_rev products :=
+        (list_rect
+           (fun _ => list Z)
+           []
+           (fun p _ f' => Let_In ((nth' 0%nat f' 0) + p) (fun x => x :: f'))
+           products).*)
+
+      Definition f_rev products :=
+        fold_right (fun (y : Z) (x : list Z) => Let_In (Let_In (nth_default 0 x 0) (fun z => z + y :: x)) (fun z => z)) [] (rev products).
+
+      Compute (f_rev [1; 2; 3; 4; 5]).
+
+      Definition adk_mul_inner_alias n x y high_product products ls :=
+        (list_rect
+           (fun _ => list Z -> list Z)
+           (fun f => adk_mul'_alias n x y high_product (rev f))
+           (fun p _ g => fun f' => (*Let_In ((nth' 0%nat f' 0) + p) (fun x => g (x :: f'))*) let x := ((nth' 0%nat f' 0) + p) in g (x :: f')) 
+           products) ls.
+      
+      Definition friendly_adk_mul (n : nat) (x y : list Z) : list Z :=
+        dlet high_product : Z := (nth' (n - 1)%nat x 0) * (nth' (n - 1)%nat y 0) in
+        let products : list Z := map (fun i => (nth' i x 0) * (nth' i y 0)) (seq 0 (n - 1)) ++ [high_product] ++ (repeat 0 (n - 1)) in
+        adk_mul'_alias n x y (nth' (n - 1)%nat products 0) (rev (f_rev products)).
+
+      Definition adk_mul_alias (n : nat) (x y : list Z) : list Z :=
+        (*d*)let high_product : Z := (nth' (n - 1)%nat x 0) * (nth' (n - 1)%nat y 0) in
+        let products : list Z := map (fun i => (nth' i x 0) * (nth' i y 0)) (seq 0 (n - 1)) ++ [high_product] ++ (repeat 0 (n - 1)) (*thye total length of products should be (2*n - 1), since this is
+                                                                                                                                      what we want the length of f to be.*) in     
+        adk_mul_inner_alias n x y high_product products [].
       
       Definition adk_mulmod (x y : list Z) : list Z :=
-       reduce_carry_borrow ((Positional.to_associational weight n (adk_mul_alias n x y) ))
+       (*reduce_carry_borrow ((Positional.to_associational weight n ( *)friendly_adk_mul n x y(* ) ))*)
           (*(Associational.mul
              (Positional.to_associational weight n x)
              (Positional.to_associational weight n y))*).
@@ -420,6 +464,7 @@ Import DettmanMultiplication.
 Locate "Reify".
 Check adk_mulmod.
 Print adk_mulmod. Check reduce_carry_borrow. Print reduce_carry_borrow.
+Print friendly_adk_mul.
 Compute (ltac: (let r := Reify (adk_mulmod)
                             in
                   exact r)).
@@ -635,7 +680,7 @@ Module dettman_multiplication_with_adk_mod_ops.
     Qed. Print adk_mulmod.
 
     Print adk_mulmod.
-    Definition adk_mulmod := adk_mulmod s c register_width n last_reduction weight. Check adk_mulmod.
+    Definition adk_mulmod (s c : Z) (register_width n limbwidth last_reduction : nat) := adk_mulmod (*s c register_width*) n (*last_reduction weight*). Check adk_mulmod.
 
     Lemma weight_friendly : forall i j : nat, weight i * weight j = weight (i + j).
     Proof.

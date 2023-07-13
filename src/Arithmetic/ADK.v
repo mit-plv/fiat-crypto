@@ -22,16 +22,19 @@ Definition adk_mul_inner n x y high_product products ls :=
   (list_rect
      (fun _ => list Z -> list Z)
      (fun f => adk_mul' n x y high_product (rev f))
-     (fun p _ g => fun f' => Let_In ((nth' 0%nat f' 0) + p) (fun x => g (x :: f'))) 
+     (fun p _ g => fun f' => (*Let_In ((nth' 0%nat f' 0) + p) (fun x => g (x :: f'))*) let x := ((nth' 0%nat f' 0) + p) in g (x :: f')) 
      products) ls.
 
-Definition adk_mul_alias (n : nat) (x y : list Z) : list Z :=
-  dlet high_product : Z := (nth' (n - 1)%nat x 0) * (nth' (n - 1)%nat y 0) in
+Definition friendly_adk_mul (n : nat) (x y : list Z) : list Z :=
+    let products : list Z := map (fun i => (nth' i (firstn n x) 0) * (nth' i (firstn n y) 0)) (seq 0 (2*n - 1)) in
+    let f_rev : list Z := fold_right (fun (y : Z) (x : list Z) => nth_default 0 x 0 + y :: x) [] (rev products) in
+    adk_mul' n x y (nth' (n - 1)%nat products 0) (rev f_rev).
+
+Definition adk_mul (n : nat) (x y : list Z) : list Z :=
+  (*d*)let high_product : Z := (nth' (n - 1)%nat x 0) * (nth' (n - 1)%nat y 0) in
       let products : list Z := map (fun i => (nth' i x 0) * (nth' i y 0)) (seq 0 (n - 1)) ++ [high_product] ++ (repeat 0 (n - 1)) (*thye total length of products should be (2*n - 1), since this is
                                                                                                                                     what we want the length of f to be.*) in
       adk_mul_inner n x y high_product products [].
-
-Definition adk_mul := adk_mul_alias.
 
 Definition prod_at_index (n : nat) (x y : list Z) (i : nat) : Z :=
       fold_right Z.add 0
