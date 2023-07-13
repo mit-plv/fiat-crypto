@@ -53,6 +53,7 @@ Require Crypto.AbstractInterpretation.Proofs.
 Require Crypto.Assembly.Parse.
 Require Crypto.Assembly.Equivalence.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Arithmetic.DettmanMultiplication.
 Import Coq.Lists.List. Import ListNotations. Local Open Scope Z_scope.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
@@ -644,7 +645,10 @@ Module Pipeline.
         debug_after_rewrite descr E;;
         Debug.ret E).
 
+  Check ToFlat.
+
   (* version where the rewriter is already wrapped with debug info *)
+
   Definition RewriteAndEliminateDeadAndInline_gen {debug_rewriting : debug_rewriting_opt} {t}
              (descr : string)
              (DoRewrite : Expr t -> DebugM (Expr t))
@@ -659,7 +663,8 @@ Module Pipeline.
            unless we pass through a uniformly concrete [var] type
            first *)
         dlet_nd e := ToFlat E in
-        let E := FromFlat e in
+          let E := FromFlat e in
+          (*let x := die in*)
         E <- if with_subst01 return DebugM (Expr t)
              then wrap_debug_rewrite ("subst01 for " ++ descr) (Subst01.Subst01 ident.is_comment) E
              else if with_dead_code_elimination return DebugM (Expr t)
@@ -701,6 +706,11 @@ Module Pipeline.
              | unreduced_naive => false
              end; |}.
 
+
+  Definition id {A B} (fake : A) (x : B) := x. Locate "=?".
+  Definition die {A B} (fake : A) (x : B) : B := (if (Nat.eqb (Z.to_nat ((id fake 2)^100)) 0%nat) then x else id fake x).
+
+
   Definition PreBoundsPipeline
              {opts : AbstractInterpretation.Options}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
@@ -718,20 +728,21 @@ Module Pipeline.
     := ((*let E := expr.Uncurry E in*)
       let opts := opts_of_method in
       let E := PartialEvaluateWithListInfoFromBounds E arg_bounds in
-      E <- wrap_debug_rewrite "PartialEvaluate" (PartialEvaluate opts) E;
+      (*die t*)
+      (E <- wrap_debug_rewrite "PartialEvaluate" (PartialEvaluate opts) E;
       E <- if unfold_value_barrier
            then wrap_debug_rewrite "RewriteUnfoldValueBarrier" (RewriteRules.RewriteUnfoldValueBarrier opts) E
            else Debug.ret E;
       E <- RewriteAndEliminateDeadAndInline "RewriteArith_0" (RewriteRules.RewriteArith 0 opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
-      (*E <- wrap_debug_rewrite "RewriteArith_2⁸" (RewriteRules.RewriteArith (2^8) opts) E; (* reassociate small consts *)
+      E <- wrap_debug_rewrite "RewriteArith_2⁸" (RewriteRules.RewriteArith (2^8) opts) E; (* reassociate small consts *)
       E <- match translate_to_fancy with
            | Some {| invert_low := invert_low ; invert_high := invert_high |}
              => wrap_debug_rewrite "RewriteToFancy" (RewriteRules.RewriteToFancy invert_low invert_high opts) E
            | None => Debug.ret E
            end;
       dlet_nd e := ToFlat E in
-      let E := FromFlat e in*)
-      Debug.ret E)%debugM.
+      let E := FromFlat e in
+      Debug.ret E))%debugM.
 
   (** Useful for rewriting to a prettier form sometimes *)
   Definition RepeatRewriteAddAssocLeftAndFlattenThunkedRectsWithDebug
@@ -768,26 +779,26 @@ Module Pipeline.
              (out_bounds : ZRange.type.base.option.interp (type.final_codomain t))
   : M (Expr t)
     := ((*let E := expr.Uncurry E in*)
-      (*let assume_cast_truncates := false in
-      let opts := opts_of_method in*)
+      let assume_cast_truncates := false in
+      let opts := opts_of_method in
       E <- PreBoundsPipeline (* with_dead_code_elimination *) with_subst01 with_let_bind_return E arg_bounds;
       (** We first do bounds analysis with no relaxation so that we
           can do rewriting with casts, and then once that's out of the
           way, we do bounds analysis again to relax the bounds. *)
       (** To get better error messages, we don't check bounds until
           after doing some extra rewriting *)
-      (*let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) false E arg_bounds ZRange.type.base.option.None in
+      let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) false E arg_bounds ZRange.type.base.option.None in
       E' <- match E' with
             | inl E
-              => ((*debug_after_rewrite "CheckedPartialEvaluateWithBounds 17" E;;
-                  E <- wrap_debug_rewrite "UnfoldThings 1" (RewriteRules.RewriteUnfoldThings opts) E; (* unfold adk_mul *)
+              => (debug_after_rewrite "CheckedPartialEvaluateWithBounds 17" E;;
+                  (*E <- wrap_debug_rewrite "UnfoldThings 1" (RewriteRules.RewriteUnfoldThings opts) E; (* unfold adk_mul *)
                   E <- PreBoundsPipeline (* with_dead_code_elimination *) with_subst01 with_let_bind_return E arg_bounds; (* unfold map, seq, etc. *)
                   E <- wrap_debug_rewrite "UnfoldThings 2" (RewriteRules.RewriteUnfoldThings opts) E; (* partly unfold adk_mul_inner *)
                   E <- wrap_debug_rewrite "UnfoldThings 3" (RewriteRules.RewriteUnfoldThings opts) E; (* continue unfolding adk_mul_inner *)
                   E <- wrap_debug_rewrite "UnfoldThings 4" (RewriteRules.RewriteUnfoldThings opts) E; (* finish unfolding adk_mul_inner *)
-                  (* shouldn't have to do this three times. how to get a rewrite rule to trigger a large (bounded in terms of the number of limbs) number of times in one pass? *)
-                  E <- PreBoundsPipeline (* with_dead_code_elimination *) with_subst01 with_let_bind_return E arg_bounds;
-                  E <- RewriteAndEliminateDeadAndInline "RewriteArithWithCasts" (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 with_let_bind_return E;*)
+                  (* shouldn't have to do this three times. how to get a rewrite rule to trigger a large (bounded in terms of the number of limbs/length of a list) number of times in one pass? *)
+                  E <- PreBoundsPipeline (* with_dead_code_elimination *) with_subst01 with_let_bind_return E arg_bounds;*)
+                  E <- RewriteAndEliminateDeadAndInline "RewriteArithWithCasts" (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
                   dlet_nd e := ToFlat E in
                   let E := FromFlat e in
                   (** to give good error messages, we first look at
@@ -810,10 +821,11 @@ Module Pipeline.
                     | inr v => Debug.ret (inr v)
                     end)
             | inr v => Debug.ret (inr v)
-            end;*)
-      (*match E' with
+            end;
+      die arg_bounds (
+      match E' with
       | inl E
-        =>*) (*(E <- match split_mul_to with
+        => (E <- match split_mul_to with
                  | Some (max_bitwidth, lgcarrymax)
                    => wrap_debug_rewrite "RewriteMulSplit" (RewriteRules.RewriteMulSplit max_bitwidth lgcarrymax opts) E
                  | None => Debug.ret E
@@ -846,13 +858,13 @@ Module Pipeline.
                    => wrap_debug_rewrite "RewriteNoSelect" (RewriteRules.RewriteNoSelect bitwidth opts) E
                  | None => Debug.ret E
                  end;
-            E <- wrap_debug_rewrite "RewriteStripLiteralCasts" (RewriteRules.RewriteStripLiteralCasts opts) E;*)
-            M.ret E
-      (*| inr (inl (b, E))
+            E <- wrap_debug_rewrite "RewriteStripLiteralCasts" (RewriteRules.RewriteStripLiteralCasts opts) E;
+            M.ret E)
+      | inr (inl (b, E))
         => M.err (Computed_bounds_are_not_tight_enough b out_bounds E arg_bounds)
       | inr (inr unsupported_casts)
         => M.err (Unsupported_casts_in_input E (@List.map { _ & forall var, _ } _ (fun '(existT t e) => existT _ t (e _)) unsupported_casts))
-      end*))%debugM.
+      end))%debugM.
 
   Definition BoundsPipeline
              {opts : BoundsPipelineOptions}

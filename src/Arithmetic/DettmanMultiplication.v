@@ -394,7 +394,7 @@ Module DettmanMultiplication.
       Context (weight_friendly : forall i j : nat, weight i * weight j = weight (i + j)).
       
       Definition adk_mulmod (x y : list Z) : list Z :=
-       reduce_carry_borrow ((Positional.to_associational weight n (adk_mul n x y) ))
+       reduce_carry_borrow ((Positional.to_associational weight n (adk_mul_alias n x y) ))
           (*(Associational.mul
              (Positional.to_associational weight n x)
              (Positional.to_associational weight n y))*).
@@ -410,22 +410,19 @@ Module DettmanMultiplication.
     End WithADK.
   End DettmanMultiplication.  
 End DettmanMultiplication.
-(*Require Import Crypto.Language.API.
+Require Import Crypto.Language.API.
 Import
   Language.Compilers
   Language.API.Compilers.
 
 Import Language.API.Compilers.API.
-Import pmul.
 Import DettmanMultiplication.
 Locate "Reify".
 Check adk_mulmod.
-Print pmul.adk_mul'.
-Print adk_mul_prod_at_i. Print nth_reifiable. Check adk_mulmod.
 Print adk_mulmod. Check reduce_carry_borrow. Print reduce_carry_borrow.
 Compute (ltac: (let r := Reify (adk_mulmod)
                             in
-                  exact r)).*)
+                  exact r)).
 
 (*Definition nn := 5%nat.
       Definition xx := [543; 654; 234; 123; 5698].
@@ -434,6 +431,7 @@ Compute (ltac: (let r := Reify (adk_mulmod)
       Compute (dedup_weights (DettmanMultiplication.adk_mul' nn weightt xx yy)).
       Compute (dedup_weights (Associational.mul (Positional.to_associational weightt nn xx)
                                                 (Positional.to_associational weightt nn yy))).*)
+Definition die : nat := Z.to_nat (2^100). (* can't figure out how to print-debug.  I guess crash-debugging is the next best thing??? *)
 
 Module dettman_multiplication_mod_ops.
   Section dettman_multiplication_mod_ops.
