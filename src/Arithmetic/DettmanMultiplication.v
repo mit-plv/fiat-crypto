@@ -438,7 +438,7 @@ Module DettmanMultiplication.
         adk_mul_inner_alias n x y high_product products [].
       
       Definition adk_mulmod (x y : list Z) : list Z :=
-       (*reduce_carry_borrow ((Positional.to_associational weight n ( *)friendly_adk_mul n x y(* ) ))*)
+       reduce_carry_borrow ((Positional.to_associational weight n (friendly_adk_mul n x y) ))
           (*(Associational.mul
              (Positional.to_associational weight n x)
              (Positional.to_associational weight n y))*).
@@ -680,7 +680,7 @@ Module dettman_multiplication_with_adk_mod_ops.
     Qed. Print adk_mulmod.
 
     Print adk_mulmod.
-    Definition adk_mulmod (s c : Z) (register_width n limbwidth last_reduction : nat) := adk_mulmod (*s c register_width*) n (*last_reduction weight*). Check adk_mulmod.
+    Definition adk_mulmod(* (s c : Z) (register_width n limbwidth last_reduction : nat)*) := adk_mulmod s c register_width n last_reduction weight. Check adk_mulmod.
 
     Lemma weight_friendly : forall i j : nat, weight i * weight j = weight (i + j).
     Proof.
