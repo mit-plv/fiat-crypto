@@ -53,7 +53,6 @@ Require Crypto.AbstractInterpretation.Proofs.
 Require Crypto.Assembly.Parse.
 Require Crypto.Assembly.Equivalence.
 Require Import Crypto.Util.Notations.
-Require Import Crypto.Arithmetic.DettmanMultiplication.
 Import Coq.Lists.List. Import ListNotations. Local Open Scope Z_scope.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
@@ -645,10 +644,7 @@ Module Pipeline.
         debug_after_rewrite descr E;;
         Debug.ret E).
 
-  Check ToFlat.
-
   (* version where the rewriter is already wrapped with debug info *)
-
   Definition RewriteAndEliminateDeadAndInline_gen {debug_rewriting : debug_rewriting_opt} {t}
              (descr : string)
              (DoRewrite : Expr t -> DebugM (Expr t))
@@ -663,8 +659,7 @@ Module Pipeline.
            unless we pass through a uniformly concrete [var] type
            first *)
         dlet_nd e := ToFlat E in
-          let E := FromFlat e in
-          (*let x := die in*)
+        let E := FromFlat e in
         E <- if with_subst01 return DebugM (Expr t)
              then wrap_debug_rewrite ("subst01 for " ++ descr) (Subst01.Subst01 ident.is_comment) E
              else if with_dead_code_elimination return DebugM (Expr t)
@@ -706,11 +701,6 @@ Module Pipeline.
              | unreduced_naive => false
              end; |}.
 
-
-  Definition id {A B} (fake : A) (x : B) := x. Locate "=?".
-  Definition die {A B} (fake : A) (x : B) : B := (if (Nat.eqb (Z.to_nat ((id fake 2)^100)) 0%nat) then x else id fake x).
-
-
   Definition PreBoundsPipeline
              {opts : AbstractInterpretation.Options}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
@@ -728,8 +718,7 @@ Module Pipeline.
     := ((*let E := expr.Uncurry E in*)
       let opts := opts_of_method in
       let E := PartialEvaluateWithListInfoFromBounds E arg_bounds in
-      (*die t*)
-      (E <- wrap_debug_rewrite "PartialEvaluate" (PartialEvaluate opts) E;
+      E <- wrap_debug_rewrite "PartialEvaluate" (PartialEvaluate opts) E;
       E <- if unfold_value_barrier
            then wrap_debug_rewrite "RewriteUnfoldValueBarrier" (RewriteRules.RewriteUnfoldValueBarrier opts) E
            else Debug.ret E;
@@ -742,7 +731,7 @@ Module Pipeline.
            end;
       dlet_nd e := ToFlat E in
       let E := FromFlat e in
-      Debug.ret E))%debugM.
+      Debug.ret E)%debugM.
 
   (** Useful for rewriting to a prettier form sometimes *)
   Definition RepeatRewriteAddAssocLeftAndFlattenThunkedRectsWithDebug
@@ -766,7 +755,6 @@ Module Pipeline.
              (E : DebugM (Expr t))
     : Expr t
     := Debug.eval_result (RepeatRewriteAddAssocLeftAndFlattenThunkedRectsWithDebug n E).
-  Print CheckedPartialEvaluateWithBounds. Check PreBoundsPipeline.
 
   Definition BoundsPipelineWithDebug
              {opts : BoundsPipelineOptions}
@@ -775,8 +763,8 @@ Module Pipeline.
              (relax_zrange := relax_zrange_gen only_signed possible_values)
              {t}
              (E : Expr t)
-             (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
-             (out_bounds : ZRange.type.base.option.interp (type.final_codomain t))
+             arg_bounds
+             out_bounds
   : M (Expr t)
     := ((*let E := expr.Uncurry E in*)
       let assume_cast_truncates := false in
@@ -790,14 +778,7 @@ Module Pipeline.
       let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) false E arg_bounds ZRange.type.base.option.None in
       E' <- match E' with
             | inl E
-              => (debug_after_rewrite "CheckedPartialEvaluateWithBounds 17" E;;
-                  (*E <- wrap_debug_rewrite "UnfoldThings 1" (RewriteRules.RewriteUnfoldThings opts) E; (* unfold adk_mul *)
-                  E <- PreBoundsPipeline (* with_dead_code_elimination *) with_subst01 with_let_bind_return E arg_bounds; (* unfold map, seq, etc. *)
-                  E <- wrap_debug_rewrite "UnfoldThings 2" (RewriteRules.RewriteUnfoldThings opts) E; (* partly unfold adk_mul_inner *)
-                  E <- wrap_debug_rewrite "UnfoldThings 3" (RewriteRules.RewriteUnfoldThings opts) E; (* continue unfolding adk_mul_inner *)
-                  E <- wrap_debug_rewrite "UnfoldThings 4" (RewriteRules.RewriteUnfoldThings opts) E; (* finish unfolding adk_mul_inner *)
-                  (* shouldn't have to do this three times. how to get a rewrite rule to trigger a large (bounded in terms of the number of limbs/length of a list) number of times in one pass? *)
-                  E <- PreBoundsPipeline (* with_dead_code_elimination *) with_subst01 with_let_bind_return E arg_bounds;*)
+              => (debug_after_rewrite "CheckedPartialEvaluateWithBounds" E;;
                   E <- RewriteAndEliminateDeadAndInline "RewriteArithWithCasts" (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
                   dlet_nd e := ToFlat E in
                   let E := FromFlat e in
@@ -822,7 +803,6 @@ Module Pipeline.
                     end)
             | inr v => Debug.ret (inr v)
             end;
-      die arg_bounds (
       match E' with
       | inl E
         => (E <- match split_mul_to with
@@ -864,7 +844,7 @@ Module Pipeline.
         => M.err (Computed_bounds_are_not_tight_enough b out_bounds E arg_bounds)
       | inr (inr unsupported_casts)
         => M.err (Unsupported_casts_in_input E (@List.map { _ & forall var, _ } _ (fun '(existT t e) => existT _ t (e _)) unsupported_casts))
-      end))%debugM.
+      end)%debugM.
 
   Definition BoundsPipeline
              {opts : BoundsPipelineOptions}
@@ -1483,9 +1463,9 @@ Module Pipeline.
     cbv [translate_to_fancy_opt_correct] in *.
     cbv beta iota delta [BoundsPipeline BoundsPipelineWithDebug PreBoundsPipeline Let_In] in Hrv.
     cbv beta iota delta [Debug.sequence] in Hrv.
-    (*fwd Hrv Hwf Hinterp; [ repeat fwd_side_condition_step .. | subst ].
+    fwd Hrv Hwf Hinterp; [ repeat fwd_side_condition_step .. | subst ].
     solve [ eauto using conj with nocore ].
-  Qed.*) Admitted.
+  Qed.
 
   Definition BoundsPipeline_correct_transT
              {t}
