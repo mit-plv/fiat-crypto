@@ -159,7 +159,7 @@ Proof.
   unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. solve_stack a4. (* fe25519_mul(B, YmX1, ymx2) *)
   unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. solve_stack a7. (* fe25519_mul(C, xy2d2, T1) *)
   unwrap_fn_step. solve_stack a10. (* fe25519_from_word(Two, $2) *)
-  unwrap_fn_step. 3,4:solve_mem. solve_bounds. (* 2 has loose_bounds *) admit. solve_stack a13. (* fe25519_mul(D, Z1, Two) *)
+  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. solve_stack a13. (* fe25519_mul(D, Z1, Two) *)
   unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. ecancel_assumption. (* fe25519_sub(ox, A, B) *)
   unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. ecancel_assumption. (* fe25519_add(oy, A, B) *)
   unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. ecancel_assumption. (* fe25519_add(oz, D, C) *)
