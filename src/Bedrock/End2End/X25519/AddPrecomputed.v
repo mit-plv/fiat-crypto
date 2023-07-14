@@ -1,36 +1,51 @@
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.ZArith.
-Require Import Crypto.Spec.Curve25519.
+Require Import bedrock2.Array.
+Require Import bedrock2.FE310CSemantics.
+Require Import bedrock2.Loops.
 Require Import bedrock2.Map.Separation.
+Require Import bedrock2.Map.SeparationLogic.
+Require Import bedrock2.NotationsCustomEntry.
+Require Import bedrock2.ProgramLogic.
+Require Import bedrock2.Scalars.
+Require Import bedrock2.Semantics.
 Require Import bedrock2.Syntax.
+Require Import bedrock2.WeakestPrecondition.
+Require Import bedrock2.WeakestPreconditionProperties.
+Require Import bedrock2.ZnWords.
+Require Import compiler.MMIO.
 Require Import compiler.Pipeline.
 Require Import compiler.Symbols.
-Require Import compiler.MMIO.
+Require Import coqutil.Byte.
+Require Import coqutil.Map.Interface.
+Require Import coqutil.Map.OfListWord.
+From coqutil.Tactics Require Import Tactics letexists eabstract rdelta reference_to_string ident_of_string.
 Require Import coqutil.Word.Bitwidth32.
+Require Import coqutil.Word.Bitwidth.
+Require Import coqutil.Word.Interface.
+Require Import Coq.Init.Byte.
+Require Import Coq.Lists.List.
+Require Import Coq.Strings.String.
+Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Group.AdditionChains.
-Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
 Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
+Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
 Require Import Crypto.Bedrock.End2End.X25519.Field25519.
 Require Import Crypto.Bedrock.Specs.Field.
-Require Import bedrock2.FE310CSemantics bedrock2.Semantics .
-Require Import bedrock2.WeakestPrecondition bedrock2.ProgramLogic.
-Require Import coqutil.Word.Interface coqutil.Word.Bitwidth.
-Require Import coqutil.Map.Interface bedrock2.Map.SeparationLogic.
-Require Import bedrock2.Array bedrock2.Scalars.
-Require Import bedrock2.ZnWords.
-Require Import coqutil.Tactics.Tactics.
-Require Import bedrock2.NotationsCustomEntry.
+Require Import Crypto.Spec.Curve25519.
 Require Import Curves.Edwards.XYZT.Precomputed.
+Require Crypto.Bedrock.Field.Synthesis.New.Signature.
 Local Open Scope string_scope.
 Local Open Scope Z_scope.
+Import LittleEndianList.
 Import ListNotations.
+Import ProgramLogic.Coercions.
+Import WeakestPrecondition.
 
-Local Instance frep25519 : Field.FieldRepresentation(field_parameters:=field_parameters) := field_representation n Field25519.s c.
+Local Existing Instance field_parameters.
+Local Instance frep25519 : Field.FieldRepresentation := field_representation n Field25519.s c.
 
 (* Better way to represent points in Bedrock2? *)
 Definition add_precomputed := func! (ox, oy, oz, ot, X1, Y1, Z1, T1, ypx2, ymx2, xy2d2) {
@@ -59,14 +74,9 @@ Definition add_precomputed := func! (ox, oy, oz, ot, X1, Y1, Z1, T1, ypx2, ymx2,
 }.
 
 Section WithParameters.
-  Check _: FieldRepresentation.
+  Context {two_lt_M: 2 < M_pos}.
 
-Import LittleEndianList.
 Local Coercion F.to_Z : F >-> Z.
-Require Import bedrock2.WeakestPrecondition bedrock2.Semantics bedrock2.ProgramLogic.
-Require Import bedrock2.Syntax bedrock2.Map.SeparationLogic.
-Require Import coqutil.Map.OfListWord Coq.Init.Byte coqutil.Byte.
-Import ProgramLogic.Coercions.
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
 Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 
@@ -106,21 +116,19 @@ Local Instance spec_of_fe25519_mul : spec_of "fe25519_mul" := Field.spec_of_BinO
 Local Instance spec_of_fe25519_add : spec_of "fe25519_add" := Field.spec_of_BinOp bin_add.
 Local Instance spec_of_fe25519_sub : spec_of "fe25519_sub" := Field.spec_of_BinOp bin_sub.
 Local Instance spec_of_fe25519_from_word : spec_of "fe25519_from_word" := Field.spec_of_from_word.
-Local Instance frep_ok : FieldRepresentation_ok(field_representation:=frep25519). Admitted. (* Should be an instance elsewhere I can grab? *)
-
-Import WeakestPrecondition.
-
-From coqutil.Tactics Require Import Tactics letexists eabstract rdelta reference_to_string ident_of_string.
-Require Import bedrock2.Syntax.
-Require Import bedrock2.WeakestPrecondition.
-Require Import bedrock2.WeakestPreconditionProperties.
-Require Import bedrock2.Loops.
-Require Import bedrock2.Map.SeparationLogic bedrock2.Scalars.
+(* TODO: use Field25519 version instead *)
+Local Instance frep25519_ok : FieldRepresentation_ok(field_representation:=frep25519).
+Proof.
+  apply Crypto.Bedrock.Field.Synthesis.New.Signature.field_representation_ok.
+  apply UnsaturatedSolinas.relax_valid.
+Qed.
 
 Local Arguments word.rep : simpl never.
 Local Arguments word.wrap : simpl never.
 Local Arguments word.unsigned : simpl never.
 Local Arguments word.of_Z : simpl never.
+
+Require Import AdmitAxiom.
 
 Local Ltac solve_bounds :=
   repeat match goal with
@@ -136,60 +144,69 @@ Local Ltac solve_mem :=
   | |- _%sep _ => ecancel_assumption
   end.
 
-Local Ltac unwrap_fn_step := repeat straightline; straightline_call; ssplit.
-
-Local Ltac solve_stack a :=
+Local Ltac solve_stack :=
   (* Rewrites the `stack$@a` term in H to use a Bignum instead *)
   cbv [FElem];
   match goal with
-  | H: _%sep ?m |- (Bignum.Bignum felem_size_in_words a _ * _)%sep ?m =>
+  | H: _%sep ?m |- (Bignum.Bignum felem_size_in_words ?a _ * _)%sep ?m =>
        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a) H
   end;
   [> transitivity 40%nat; trivial | ];
   (* proves the memory matches up *)
   use_sep_assumption; cancel; cancel_seps_at_indices 0%nat 0%nat; cbn; [> trivial | eapply RelationClasses.reflexivity].
 
+Local Ltac single_step :=
+  repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds; try solve_stack.
+
 Lemma add_precomputed_ok : program_logic_goal_for_function! add_precomputed.
 Proof.
   (* Unwrap each call in the program. *)
-  (* Each produces 2 memory goals about the inputs, 2 bounds preconditions on the inputs, and 1 memory goal about the output. *)
-  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. solve_stack a. (* fe25519_add(YpX1, Y1, X1) *)
-  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. solve_stack a2. (* fe25519_sub(YmX1, Y1, X1) *)
-  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. solve_stack a0. (* fe25519_mul(A, YpX1, ypx2) *)
-  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. solve_stack a4. (* fe25519_mul(B, YmX1, ymx2) *)
-  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. solve_stack a7. (* fe25519_mul(C, xy2d2, T1) *)
-  unwrap_fn_step. solve_stack a10. (* fe25519_from_word(Two, $2) *)
-  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. solve_stack a13. (* fe25519_mul(D, Z1, Two) *)
-  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. ecancel_assumption. (* fe25519_sub(ox, A, B) *)
-  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. ecancel_assumption. (* fe25519_add(oy, A, B) *)
-  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. ecancel_assumption. (* fe25519_add(oz, D, C) *)
-  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. ecancel_assumption. (* fe25519_sub(ot, D, C) *)
-  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. ecancel_assumption. (* fe25519_mul(ox, ox, ot) *)
-  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. ecancel_assumption. (* fe25519_mul(oy, oy, oz) *)
-  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. ecancel_assumption. (* fe25519_mul(oz, ot, oz) *)
-  unwrap_fn_step. 3,4:solve_mem. 1,2:solve_bounds. ecancel_assumption. (* fe25519_mul(ot, ox, oy) *)
+  (* Each binop produces 2 memory goals on the inputs, 2 bounds goals on the inputs, and 1 memory goal on the output. *)
+  single_step. (* fe25519_add(YpX1, Y1, X1) *)
+  single_step. (* fe25519_sub(YmX1, Y1, X1) *)
+(* Unshelve. all:exfalso;clear;admit. Optimize Proof. Qed. *)
+  single_step. (* fe25519_mul(A, YpX1, ypx2) *)
+  single_step. (* fe25519_mul(B, YmX1, ymx2) *)
+  single_step. (* fe25519_mul(C, xy2d2, T1) *)
+  single_step. (* fe25519_from_word(Two, $2) *)
+  single_step. (* fe25519_mul(D, Z1, Two) *)
+  single_step. (* fe25519_sub(ox, A, B) *)
+  single_step. (* fe25519_add(oy, A, B) *)
+  single_step. (* fe25519_add(oz, D, C) *)
+  single_step. (* fe25519_sub(ot, D, C) *)
+  single_step. (* fe25519_mul(ox, ox, ot) *)
+  single_step. (* fe25519_mul(oy, oy, oz) *)
+  single_step. (* fe25519_mul(oz, ot, oz) *)
+  single_step. (* fe25519_mul(ot, ox, oy) *)
 
   (* Solve the postconditions *)
   repeat straightline.
-  (* Rewrites the FElem about `a` in H11 to be about bytes instead, so we can use it to prove things about `a` as bytes *)
+  (* Rewrites the FElems for the stack (in H96) to be about bytes instead *)
     cbv [FElem] in *.
-    (* Ought to be able to avoid rewriting outputs, but not sure how to specify FElems to rewrite *)
-    (* Something like `seprewrite_in (@Bignum.Bignum_to_bytes felem_size_in_words a7 x3) H96.` should work, but types don't match *) 
-    do 11 (seprewrite_in @Bignum.Bignum_to_bytes H96).
+    (* Prevent output from being rewritten by seprewrite_in *) 
+    remember (Bignum.Bignum felem_size_in_words otK _) in H96.
+    remember (Bignum.Bignum felem_size_in_words ozK _) in H96.
+    remember (Bignum.Bignum felem_size_in_words oyK _) in H96.
+    remember (Bignum.Bignum felem_size_in_words oxK _) in H96.
+    do 7 (seprewrite_in @Bignum.Bignum_to_bytes H96).
+    subst P P0 P1 P2.
     extract_ex1_and_emp_in H96.
 
-    (* Solve stack/memory stuff *)
-    repeat straightline.
+  (* Solve stack/memory stuff *)
+  repeat straightline.
 
-    (* Post-conditions *)
-    exists x10,x11,x12,x13; (* eexists? *) ssplit. 2,3,4,5:solve_bounds.
-    { (* Correctness: result matches Gallina *) admit. }
-    { (* Safety: memory is what it should be *) 
-      seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 oxK) H96. { transitivity 40%nat; trivial. }
-      seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 oyK) H96. { transitivity 40%nat; trivial. }
-      seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 ozK) H96. { transitivity 40%nat; trivial. }
-      seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 otK) H96. { transitivity 40%nat; trivial. }
-      use_sep_assumption. cancel. admit. (* Matching types for outputs *)
-Admitted.
+  (* Post-conditions *)
+  exists x10,x11,x12,x13; (* eexists? *) ssplit. 2,3,4,5:solve_bounds.
+  { (* Correctness: result matches Gallina *)
+    cbv [bin_model bin_mul bin_add bin_sub] in *.
+    cbv match beta delta [m1add_precomputed_coordinates].
+    assert ((feval Z1 * F.of_Z M_pos (word.of_Z(width:=32) 2))%F = (feval Z1 + feval Z1)%F) as <-.
+    { rewrite word.unsigned_of_Z_nowrap by Lia.lia. (* import *) apply F.eq_to_Z_iff. rewrite F.to_Z_mul. rewrite F.to_Z_add. 
+      rewrite F.to_Z_of_Z. f_equal. rewrite Z.mod_small. all:Lia.lia. }
+    congruence.
+  }
+  (* Safety: memory is what it should be *)
+  ecancel_assumption.
+Qed.
 
 End WithParameters.
