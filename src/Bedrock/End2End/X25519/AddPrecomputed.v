@@ -36,6 +36,7 @@ Require Import Crypto.Bedrock.End2End.X25519.Field25519.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Spec.Curve25519.
 Require Import Curves.Edwards.XYZT.Precomputed.
+Require Import Lia.
 Require Crypto.Bedrock.Field.Synthesis.New.Signature.
 Local Open Scope string_scope.
 Local Open Scope Z_scope.
@@ -47,7 +48,6 @@ Import WeakestPrecondition.
 Local Existing Instance field_parameters.
 Local Instance frep25519 : Field.FieldRepresentation := field_representation n Field25519.s c.
 
-(* Better way to represent points in Bedrock2? *)
 Definition add_precomputed := func! (ox, oy, oz, ot, X1, Y1, Z1, T1, ypx2, ymx2, xy2d2) {
   stackalloc 40 as YpX1;
   fe25519_add(YpX1, Y1, X1);
@@ -62,7 +62,7 @@ Definition add_precomputed := func! (ox, oy, oz, ot, X1, Y1, Z1, T1, ypx2, ymx2,
   stackalloc 40 as Two;
   fe25519_from_word(Two, $2);
   stackalloc 40 as D;
-  fe25519_mul(D, Z1, Two); (* Should be Z1 + Z1, but mul has tighter bounds *)
+  fe25519_mul(D, Z1, Two); (* TODO: Should be Z1 + Z1, but mul has tighter bounds *)
   fe25519_sub(ox, A, B);
   fe25519_add(oy, A, B);
   fe25519_add(oz, D, C);
@@ -77,7 +77,7 @@ Section WithParameters.
   Context {two_lt_M: 2 < M_pos}.
 
 Local Coercion F.to_Z : F >-> Z.
-Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
+Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
 Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 
 Local Notation FElem := (FElem(FieldRepresentation:=frep25519)).
@@ -102,7 +102,6 @@ Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
     ensures t' m' :=
       t = t' /\
       exists ox' oy' oz' ot',
-        (* Need to specify implicit parameters? *)
         ((feval ox'), (feval oy'), (feval oz'), (feval ot')) = (@m1add_precomputed_coordinates (F M_pos) (F.add) (F.sub) (F.mul) ((feval X1), (feval Y1), (feval Z1), (feval T1)) ((feval ypx2), (feval ymx2), (feval xy2d2))) /\
         bounded_by loose_bounds ox' /\
         bounded_by loose_bounds oy' /\
@@ -164,7 +163,7 @@ Proof.
   (* Each binop produces 2 memory goals on the inputs, 2 bounds goals on the inputs, and 1 memory goal on the output. *)
   single_step. (* fe25519_add(YpX1, Y1, X1) *)
   single_step. (* fe25519_sub(YmX1, Y1, X1) *)
-(* Unshelve. all:exfalso;clear;admit. Optimize Proof. Qed. *)
+(* TODO: Debug Qed performance: Unshelve. all:exfalso;clear;admit. Optimize Proof. Qed. *)
   single_step. (* fe25519_mul(A, YpX1, ypx2) *)
   single_step. (* fe25519_mul(B, YmX1, ymx2) *)
   single_step. (* fe25519_mul(C, xy2d2, T1) *)
@@ -201,8 +200,8 @@ Proof.
     cbv [bin_model bin_mul bin_add bin_sub] in *.
     cbv match beta delta [m1add_precomputed_coordinates].
     assert ((feval Z1 * F.of_Z M_pos (word.of_Z(width:=32) 2))%F = (feval Z1 + feval Z1)%F) as <-.
-    { rewrite word.unsigned_of_Z_nowrap by Lia.lia. (* import *) apply F.eq_to_Z_iff. rewrite F.to_Z_mul. rewrite F.to_Z_add. 
-      rewrite F.to_Z_of_Z. f_equal. rewrite Z.mod_small. all:Lia.lia. }
+    { rewrite word.unsigned_of_Z_nowrap by lia. apply F.eq_to_Z_iff. rewrite F.to_Z_mul. rewrite F.to_Z_add. 
+      rewrite F.to_Z_of_Z. f_equal. rewrite Z.mod_small. all:lia. }
     congruence.
   }
   (* Safety: memory is what it should be *)
