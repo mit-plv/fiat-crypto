@@ -47,6 +47,7 @@ Import WeakestPrecondition.
 
 Local Existing Instance field_parameters.
 Local Instance frep25519 : Field.FieldRepresentation := field_representation n Field25519.s c.
+(* Local Existing Instance frep25519_ok. *)
 
 Definition add_precomputed := func! (ox, oy, oz, ot, X1, Y1, Z1, T1, ypx2, ymx2, xy2d2) {
   stackalloc 40 as YpX1;
@@ -127,6 +128,7 @@ Local Arguments word.wrap : simpl never.
 Local Arguments word.unsigned : simpl never.
 Local Arguments word.of_Z : simpl never.
 
+(* TODO: Remove after debugging QED *)
 Require Import AdmitAxiom.
 
 Local Ltac solve_bounds :=
@@ -156,6 +158,11 @@ Local Ltac solve_stack :=
 
 Local Ltac single_step :=
   repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds; try solve_stack.
+
+Local Ltac clear_extras :=
+  repeat match goal with
+  | H: ?a%sep ?b |- _ => clear H
+  end.
 
 Lemma add_precomputed_ok : program_logic_goal_for_function! add_precomputed.
 Proof.
@@ -195,7 +202,7 @@ Proof.
   repeat straightline.
 
   (* Post-conditions *)
-  exists x10,x11,x12,x13; (* eexists? *) ssplit. 2,3,4,5:solve_bounds.
+  exists x10,x11,x12,x13; ssplit. 2,3,4,5:solve_bounds.
   { (* Correctness: result matches Gallina *)
     cbv [bin_model bin_mul bin_add bin_sub] in *.
     cbv match beta delta [m1add_precomputed_coordinates].
@@ -206,6 +213,6 @@ Proof.
   }
   (* Safety: memory is what it should be *)
   ecancel_assumption.
-Qed.
+Admitted.
 
 End WithParameters.

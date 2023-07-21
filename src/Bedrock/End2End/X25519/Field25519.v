@@ -129,4 +129,10 @@ Section Field.
                         (&,fe25519_scmula24 :: functions))
          As fe25519_scmula24_correct.
   Proof. Time derive_bedrock2_func scmula24_op. Qed.
+
+  #[export] Instance frep25519_ok : FieldRepresentation_ok(field_representation:=field_representation n s c).
+  Proof.
+    apply Crypto.Bedrock.Field.Synthesis.New.Signature.field_representation_ok.
+    apply UnsaturatedSolinas.relax_valid.
+  Qed.
 End Field.
