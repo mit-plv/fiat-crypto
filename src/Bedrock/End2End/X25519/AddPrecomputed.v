@@ -122,15 +122,16 @@ Local Arguments word.wrap : simpl never.
 Local Arguments word.unsigned : simpl never.
 Local Arguments word.of_Z : simpl never.
 
-(* TODO: Remove after debugging QED *)
-Require Import AdmitAxiom.
+Local Ltac cbv_bounds H :=
+  cbv [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_sub un_outbounds bin_outbounds] in H;
+  cbv [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_sub un_outbounds bin_outbounds].
 
 Local Ltac solve_bounds :=
   repeat match goal with
   | H: bounded_by loose_bounds ?x |- bounded_by loose_bounds ?x => apply H
   | H: bounded_by tight_bounds ?x |- bounded_by tight_bounds ?x => apply H
   | H: bounded_by tight_bounds ?x |- bounded_by loose_bounds ?x => apply relax_bounds
-  | H: bounded_by _ ?x |- bounded_by _ ?x => cbv [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_sub un_outbounds bin_outbounds] in *
+  | H: bounded_by _ ?x |- bounded_by _ ?x => cbv_bounds H
   end.
 
 Local Ltac solve_mem :=
@@ -153,18 +154,49 @@ Local Ltac solve_stack :=
 Local Ltac single_step :=
   repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds; try solve_stack.
 
-Local Ltac clear_extras :=
-  repeat match goal with
-  | H: ?a%sep ?b |- _ => clear H
-  end.
+(* An example that demonstrates why we need to set Strategy in add_precomputed_ok below *)
+Example demo_strategy : forall x,
+  (@Field.bounded_by field_parameters (Zpos (xO (xO (xO (xO (xO xH))))))
+        BW32 (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
+        (@SortedListWord.map (Zpos (xO (xO (xO (xO (xO xH))))))
+           (Naive.word (Zpos (xO (xO (xO (xO (xO xH))))))) Naive.word32_ok
+           byte) frep25519
+        (@loose_bounds field_parameters (Zpos (xO (xO (xO (xO (xO xH))))))
+           BW32 (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
+           (@SortedListWord.map (Zpos (xO (xO (xO (xO (xO xH))))))
+              (Naive.word (Zpos (xO (xO (xO (xO (xO xH))))))) Naive.word32_ok
+              byte) frep25519) x =
+          @Field.bounded_by field_parameters (Zpos (xO (xO (xO (xO (xO xH))))))
+        BW32 (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
+        (@SortedListWord.map (Zpos (xO (xO (xO (xO (xO xH))))))
+           (Naive.word (Zpos (xO (xO (xO (xO (xO xH))))))) Naive.word32_ok
+           byte) frep25519
+        (@bin_outbounds (Zpos (xO (xO (xO (xO (xO xH)))))) BW32
+           (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
+           (@SortedListWord.map (Zpos (xO (xO (xO (xO (xO xH))))))
+              (Naive.word (Zpos (xO (xO (xO (xO (xO xH))))))) Naive.word32_ok
+              byte) field_parameters frep25519 (@add field_parameters)
+           (@bin_add (Zpos (xO (xO (xO (xO (xO xH)))))) BW32
+              (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
+              (@SortedListWord.map (Zpos (xO (xO (xO (xO (xO xH))))))
+                 (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
+                 Naive.word32_ok byte) field_parameters frep25519)) x).
+Proof.
+  (* reflexivity. *) (* Does not complete within 1 minute. *)
+  (* Now set Strategy precedence... *)
+  Strategy -1000 [bin_outbounds bin_add].
+  reflexivity. (* ...and completes immediately *)
+Qed.
 
 Lemma add_precomputed_ok : program_logic_goal_for_function! add_precomputed.
 Proof.
+  (* Without this, resolution of cbv stalls out Qed. *)
+  Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_sub un_outbounds bin_outbounds].
+
   (* Unwrap each call in the program. *)
   (* Each binop produces 2 memory goals on the inputs, 2 bounds goals on the inputs, and 1 memory goal on the output. *)
   single_step. (* fe25519_add(YpX1, Y1, X1) *)
   single_step. (* fe25519_sub(YmX1, Y1, X1) *)
-(* TODO: Debug Qed performance: Unshelve. all:exfalso;clear;admit. Optimize Proof. Qed. *)
   single_step. (* fe25519_mul(A, YpX1, ypx2) *)
   single_step. (* fe25519_mul(B, YmX1, ymx2) *)
   single_step. (* fe25519_mul(C, xy2d2, T1) *)
@@ -184,12 +216,12 @@ Proof.
   (* Rewrites the FElems for the stack (in H96) to be about bytes instead *)
     cbv [FElem] in *.
     (* Prevent output from being rewritten by seprewrite_in *) 
-    remember (Bignum.Bignum felem_size_in_words otK _) in H96.
-    remember (Bignum.Bignum felem_size_in_words ozK _) in H96.
-    remember (Bignum.Bignum felem_size_in_words oyK _) in H96.
-    remember (Bignum.Bignum felem_size_in_words oxK _) in H96.
+    remember (Bignum.Bignum felem_size_in_words otK _) as Pt in H96.
+    remember (Bignum.Bignum felem_size_in_words ozK _) as Pz in H96.
+    remember (Bignum.Bignum felem_size_in_words oyK _) as Py in H96.
+    remember (Bignum.Bignum felem_size_in_words oxK _) as Px in H96.
     do 7 (seprewrite_in @Bignum.Bignum_to_bytes H96).
-    subst P P0 P1 P2.
+    subst Pt Pz Py Px.
     extract_ex1_and_emp_in H96.
 
   (* Solve stack/memory stuff *)
@@ -207,6 +239,6 @@ Proof.
   }
   (* Safety: memory is what it should be *)
   ecancel_assumption.
-Admitted.
+Qed.
 
 End WithParameters.
