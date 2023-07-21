@@ -47,7 +47,7 @@ Import WeakestPrecondition.
 
 Local Existing Instance field_parameters.
 Local Instance frep25519 : Field.FieldRepresentation := field_representation n Field25519.s c.
-(* Local Existing Instance frep25519_ok. *)
+Local Existing Instance frep25519_ok.
 
 Definition add_precomputed := func! (ox, oy, oz, ot, X1, Y1, Z1, T1, ypx2, ymx2, xy2d2) {
   stackalloc 40 as YpX1;
@@ -116,12 +116,6 @@ Local Instance spec_of_fe25519_mul : spec_of "fe25519_mul" := Field.spec_of_BinO
 Local Instance spec_of_fe25519_add : spec_of "fe25519_add" := Field.spec_of_BinOp bin_add.
 Local Instance spec_of_fe25519_sub : spec_of "fe25519_sub" := Field.spec_of_BinOp bin_sub.
 Local Instance spec_of_fe25519_from_word : spec_of "fe25519_from_word" := Field.spec_of_from_word.
-(* TODO: use Field25519 version instead *)
-Local Instance frep25519_ok : FieldRepresentation_ok(field_representation:=frep25519).
-Proof.
-  apply Crypto.Bedrock.Field.Synthesis.New.Signature.field_representation_ok.
-  apply UnsaturatedSolinas.relax_valid.
-Qed.
 
 Local Arguments word.rep : simpl never.
 Local Arguments word.wrap : simpl never.
