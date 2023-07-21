@@ -127,8 +127,6 @@ Proof.
     (* use montladder correctness proof *)
     rewrite montladder_defn.
     eapply @montladder_correct; try (typeclasses eauto).
-    { apply Signature.field_representation_ok.
-      apply UnsaturatedSolinas.relax_valid. }
     { reflexivity. }
     { cbv [Core.__rupicola_program_marker]. tauto. }
     { exact I. }
@@ -140,8 +138,6 @@ Proof.
       cbv [LadderStep.spec_of_ladderstep]; intros.
       prepare_call. rewrite ladderstep_defn.
       eapply @LadderStep.ladderstep_correct; try (typeclasses eauto).
-      { apply Signature.field_representation_ok.
-        apply UnsaturatedSolinas.relax_valid. }
       { cbv [Core.__rupicola_program_marker]; tauto. }
       { repeat (apply peel_func_binop; [ lazy; congruence | ]).
         apply fe25519_mul_correct. }
@@ -156,7 +152,6 @@ Proof.
       { ecancel_assumption. } }
     { repeat (apply peel_func_unop; [ lazy; congruence | ]).
       unshelve eapply AdditionChains.fe25519_inv_correct_exp; try exact I.
-      { unshelve eapply Signature.field_representation_ok, UnsaturatedSolinas.relax_valid. }
       { repeat (apply peel_func_binop; [ lazy; congruence | ]).
         apply fe25519_square_correct. }
       { repeat (apply peel_func_binop; [ lazy; congruence | ]).
