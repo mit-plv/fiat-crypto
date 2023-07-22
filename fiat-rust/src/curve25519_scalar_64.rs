@@ -27,11 +27,43 @@ pub type fiat_25519_scalar_i2 = i8;
 
 /* The type fiat_25519_scalar_montgomery_domain_field_element is a field element in the Montgomery domain. */
 /* Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
-pub type fiat_25519_scalar_montgomery_domain_field_element = [u64; 4];
+#[derive(Clone, Copy)]
+pub struct fiat_25519_scalar_montgomery_domain_field_element(pub [u64; 4]);
+
+impl std::ops::Index<usize> for fiat_25519_scalar_montgomery_domain_field_element {
+    type Output = u64;
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl std::ops::IndexMut<usize> for fiat_25519_scalar_montgomery_domain_field_element {
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
+    }
+}
 
 /* The type fiat_25519_scalar_non_montgomery_domain_field_element is a field element NOT in the Montgomery domain. */
 /* Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
-pub type fiat_25519_scalar_non_montgomery_domain_field_element = [u64; 4];
+#[derive(Clone, Copy)]
+pub struct fiat_25519_scalar_non_montgomery_domain_field_element(pub [u64; 4]);
+
+impl std::ops::Index<usize> for fiat_25519_scalar_non_montgomery_domain_field_element {
+    type Output = u64;
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl std::ops::IndexMut<usize> for fiat_25519_scalar_non_montgomery_domain_field_element {
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
+    }
+}
 
 
 /// The function fiat_25519_scalar_addcarryx_u64 is an addition with carry.

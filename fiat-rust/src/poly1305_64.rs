@@ -22,11 +22,43 @@ pub type fiat_poly1305_i2 = i8;
 
 /* The type fiat_poly1305_loose_field_element is a field element with loose bounds. */
 /* Bounds: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]] */
-pub type fiat_poly1305_loose_field_element = [u64; 3];
+#[derive(Clone, Copy)]
+pub struct fiat_poly1305_loose_field_element(pub [u64; 3]);
+
+impl std::ops::Index<usize> for fiat_poly1305_loose_field_element {
+    type Output = u64;
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl std::ops::IndexMut<usize> for fiat_poly1305_loose_field_element {
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
+    }
+}
 
 /* The type fiat_poly1305_tight_field_element is a field element with tight bounds. */
 /* Bounds: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]] */
-pub type fiat_poly1305_tight_field_element = [u64; 3];
+#[derive(Clone, Copy)]
+pub struct fiat_poly1305_tight_field_element(pub [u64; 3]);
+
+impl std::ops::Index<usize> for fiat_poly1305_tight_field_element {
+    type Output = u64;
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl std::ops::IndexMut<usize> for fiat_poly1305_tight_field_element {
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
+    }
+}
 
 
 /// The function fiat_poly1305_addcarryx_u44 is an addition with carry.
