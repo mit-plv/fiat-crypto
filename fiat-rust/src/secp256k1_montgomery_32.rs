@@ -27,11 +27,43 @@ pub type fiat_secp256k1_montgomery_i2 = i8;
 
 /* The type fiat_secp256k1_montgomery_montgomery_domain_field_element is a field element in the Montgomery domain. */
 /* Bounds: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]] */
-pub type fiat_secp256k1_montgomery_montgomery_domain_field_element = [u32; 8];
+#[derive(Clone, Copy)]
+pub struct fiat_secp256k1_montgomery_montgomery_domain_field_element(pub [u32; 8]);
+
+impl std::ops::Index<usize> for fiat_secp256k1_montgomery_montgomery_domain_field_element {
+    type Output = u32;
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl std::ops::IndexMut<usize> for fiat_secp256k1_montgomery_montgomery_domain_field_element {
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
+    }
+}
 
 /* The type fiat_secp256k1_montgomery_non_montgomery_domain_field_element is a field element NOT in the Montgomery domain. */
 /* Bounds: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]] */
-pub type fiat_secp256k1_montgomery_non_montgomery_domain_field_element = [u32; 8];
+#[derive(Clone, Copy)]
+pub struct fiat_secp256k1_montgomery_non_montgomery_domain_field_element(pub [u32; 8]);
+
+impl std::ops::Index<usize> for fiat_secp256k1_montgomery_non_montgomery_domain_field_element {
+    type Output = u32;
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl std::ops::IndexMut<usize> for fiat_secp256k1_montgomery_non_montgomery_domain_field_element {
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
+    }
+}
 
 
 /// The function fiat_secp256k1_montgomery_addcarryx_u32 is an addition with carry.

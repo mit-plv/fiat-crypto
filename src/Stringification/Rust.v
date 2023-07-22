@@ -45,18 +45,32 @@ Module Rust.
     : list string
     := let '(name, (ty, array_len), description) := name_and_type_and_describe_typedef prefix private typedef in
        ((comment_block description)
-          ++ [(if private then "type " else "pub type ")
-                ++ name ++ " = " ++
+          ++ [
                 let ty_string := match ty with
                                  | Some ty => int_type_to_string internal_private prefix ty
                                  | None => "ℤ" (* blackboard bold Z for unbounded integers (which don't actually exist, and thus will error) *)
                                  end in
+                let visibility := (if private then "" else "pub ") in
                 match array_len with
-                | None (* just an integer *) => ty_string
-                | Some None (* unknown array length *) => "*mut " ++ ty_string
-                | Some (Some len) => "[" ++ ty_string ++ "; " ++ Decimal.Z.to_string (Z.of_nat len) ++ "]"
+                | None (* just an integer *) => visibility ++ "type " ++ name ++ " = " ++ ty_string ++ ";"
+                | Some None (* unknown array length *) => visibility ++ "type " ++ name ++ " = *mut " ++ ty_string ++ ";"
+                | Some (Some len) => "#[derive(Clone, Copy)]" ++ String.NewLine
+                  ++ visibility ++ "struct " ++ name ++ "(pub [" ++ ty_string ++ "; " ++ Decimal.Z.to_string (Z.of_nat len) ++ "]);" ++ String.NewLine ++ String.NewLine
+                  ++ "impl std::ops::Index<usize> for " ++ name ++ " {" ++ String.NewLine
+                  ++ "    type Output = " ++ ty_string ++ ";" ++ String.NewLine
+                  ++ "    #[inline]" ++ String.NewLine
+                  ++ "    fn index(&self, index: usize) -> &Self::Output {" ++ String.NewLine
+                  ++ "        &self.0[index]" ++ String.NewLine
+                  ++ "    }" ++ String.NewLine
+                  ++ "}" ++ String.NewLine ++ String.NewLine
+                  ++ "impl std::ops::IndexMut<usize> for " ++ name ++ " {" ++ String.NewLine
+                  ++ "    #[inline]" ++ String.NewLine
+                  ++ "    fn index_mut(&mut self, index: usize) -> &mut Self::Output {" ++ String.NewLine
+                  ++ "        &mut self.0[index]" ++ String.NewLine
+                  ++ "    }" ++ String.NewLine
+                  ++ "}"
                 end
-                ++ ";"]%string)%list.
+                ]%string)%list.
 
   (* Header imports and type defs *)
   Definition header
