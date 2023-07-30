@@ -8107,14 +8107,14 @@ Module Straightline.
 
       Fixpoint of_uncurried_scalar {t} (e : uexpr t) : option (scalar t) :=
           match e in Uncurried.expr.expr t return option (scalar t) with
-          | expr.Var t v as e => Some (Var t v)
-          | expr.TT as e => Some TT
-          | expr.Pair A B a b
+          | Uncurried.expr.Var t v as e => Some (Var t v)
+          | Uncurried.expr.TT as e => Some TT
+          | Uncurried.expr.Pair A B a b
             => match of_uncurried_scalar a, of_uncurried_scalar b with
                | Some x, Some y => Some (Pair x y)
                | _, _ => None
                end
-          | expr.AppIdent _ _ idc args
+          | Uncurried.expr.AppIdent _ _ idc args
             => match of_uncurried_scalar args with
                | Some x => of_uncurried_scalar_ident idc x
                | None => None
@@ -8439,10 +8439,10 @@ Module Straightline.
         uinterp e = straightline_interp (@of_uncurried _ dummy_arrow fuel _ e).
       Proof.
         induction fuel; intros; [ pose proof (depth_positive dummy_var e); lia | ].
-        destruct e; cbn [depth of_uncurried expr.interp interp]; intros; invert_ok_expr;
+        destruct e; cbn [depth of_uncurried Uncurried.expr.interp interp]; intros; invert_ok_expr;
           repeat match goal with
                  | |- context [of_uncurried_scalar _ ] => progress rewrite_ok_scalar
-                 | _ => progress (cbn [of_uncurried_step of_uncurried_ident fst snd mk_LetInAppIdent expr.interp interp depth] in * )
+                 | _ => progress (cbn [of_uncurried_step of_uncurried_ident fst snd mk_LetInAppIdent Uncurried.expr.interp interp depth] in * )
                  | _ => progress simpl_inversions
                  | _ => congruence
                  end; [ | | | | ].
@@ -8464,11 +8464,11 @@ Module Straightline.
           { auto. } }
         {
           match goal with H : interp_scalar _ = _ |- _ => rewrite H end.
-          rewrite <-interp_cast_correct.
+    (*      rewrite <-interp_cast_correct.*)
           reflexivity. }
         {
           match goal with H : interp_scalar _ = _ |- _ => rewrite H end.
-          rewrite <-interp_cast2_correct.
+     (*     rewrite <-interp_cast2_correct.*)
           cbn; break_match; reflexivity. }
         { invert_ok_scalar.
           rewrite <-H2.

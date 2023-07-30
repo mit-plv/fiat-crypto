@@ -237,9 +237,9 @@ Section EdDSA.
     Lemma Z_l_nonzero : Z.pos l <> 0%Z. discriminate. Qed.
 
     Lemma sign_correct (pk sk : word b) {mlen} (msg:word mlen)
-               : sign pk sk msg = EdDSA.sign pk sk msg.
+               : sign pk sk msg = Spec.EdDSA.sign pk sk msg.
     Proof using Agroup Ahomom ERepEnc_correct ErepB_correct H0 Proper_ERepEnc Proper_SRepAdd Proper_SRepERepMul Proper_SRepEnc Proper_SRepMul SRepAdd_correct SRepDecModLShort_correct SRepDecModL_correct SRepERepMul_correct SRepEnc_correct SRepMul_correct splitSecretPrngCurve_correct.
-      cbv [sign EdDSA.sign Let_In].
+      cbv [sign Spec.EdDSA.sign Let_In].
 
       let H := fresh "H" in
       pose proof (splitSecretPrngCurve_correct sk) as H;
