@@ -172,7 +172,7 @@ Module M.
     Proof. specialize (a2m4_nonsquare 0). fsatz. Qed.
 
     Lemma difference_preserved Q Q' :
-          M.eq
+          MontgomeryCurve.M.eq
             (Madd (Madd Q Q) (Mopp (Madd Q Q')))
             (Madd Q (Mopp Q')).
     Proof.
@@ -195,7 +195,7 @@ Module M.
       (* FIXME: what we actually want to do here is to rewrite with in
       match argument with
       [sumwise (fieldwise (n:=2) Feq) (fun _ _ => True)] *)
-      cbv [M.eq] in *; break_match; break_match_hyps;
+      cbv [MontgomeryCurve.M.eq] in *; break_match; break_match_hyps;
         destruct_head' @and; repeat split; subst;
           try solve [intuition congruence].
       congruence (* congruence failed, idk WHY *)
@@ -240,8 +240,8 @@ Module M.
     Lemma to_x_zero x : to_x (pair x 0) = 0.
     Proof. t. Qed.
 
-    Hint Unfold M.eq : points_as_coordinates.
-    Global Instance Proper_to_xz : Proper (M.eq ==> eq) to_xz.
+    Hint Unfold MontgomeryCurve.M.eq : points_as_coordinates.
+    Global Instance Proper_to_xz : Proper (MontgomeryCurve.M.eq ==> eq) to_xz.
     Proof. t. Qed.
 
     Global Instance  Reflexive_eq : Reflexive eq.
@@ -254,7 +254,7 @@ Module M.
     Lemma projective_to_xz Q : projective (to_xz Q).
     Proof. t. Qed.
 
-    Global Instance Proper_ladder_invariant : Proper (Feq ==> M.eq ==> M.eq ==> iff) ladder_invariant.
+    Global Instance Proper_ladder_invariant : Proper (Feq ==> MontgomeryCurve.M.eq ==> MontgomeryCurve.M.eq ==> iff) ladder_invariant.
     Proof. t. Qed.
 
     Local Notation montladder := (M.montladder(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)(Fzero:=Fzero)(Fone:=Fone)(Finv:=Finv)(cswap:=fun b x y => if b then pair y x else pair x y)).
