@@ -34,10 +34,10 @@ inline fn cast(comptime DestType: type, target: anytype) DestType {
 ///   eval out1 mod 115792089237316195423570985008687907853269984665640564039457584007908834671663 = (eval arg1 * eval arg2) mod 115792089237316195423570985008687907853269984665640564039457584007908834671663
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
-///   arg2: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
+///   arg1: [[0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xffffffffffff0]]
+///   arg2: [[0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xffffffffffff0]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x17fffffffffff]]
+///   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
 pub fn mul(out1: *[5]u64, arg1: [5]u64, arg2: [5]u64) void {
     @setRuntimeSafety(mode == .Debug);
 
@@ -87,9 +87,9 @@ pub fn mul(out1: *[5]u64, arg1: [5]u64, arg2: [5]u64) void {
 ///   eval out1 mod 115792089237316195423570985008687907853269984665640564039457584007908834671663 = (eval arg1 * eval arg1) mod 115792089237316195423570985008687907853269984665640564039457584007908834671663
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
+///   arg1: [[0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xffffffffffff0]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x17fffffffffff]]
+///   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
 pub fn square(out1: *[5]u64, arg1: [5]u64) void {
     @setRuntimeSafety(mode == .Debug);
 

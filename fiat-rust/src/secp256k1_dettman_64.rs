@@ -23,10 +23,10 @@
 ///   eval out1 mod 115792089237316195423570985008687907853269984665640564039457584007908834671663 = (eval arg1 * eval arg2) mod 115792089237316195423570985008687907853269984665640564039457584007908834671663
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
-///   arg2: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
+///   arg1: [[0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xffffffffffff0]]
+///   arg2: [[0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xffffffffffff0]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x17fffffffffff]]
+///   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
 #[inline]
 pub fn fiat_secp256k1_dettman_mul(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[u64; 5]) -> () {
   let x1: u128 = (((arg1[4]) as u128) * ((arg2[4]) as u128));
@@ -75,9 +75,9 @@ pub fn fiat_secp256k1_dettman_mul(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[
 ///   eval out1 mod 115792089237316195423570985008687907853269984665640564039457584007908834671663 = (eval arg1 * eval arg1) mod 115792089237316195423570985008687907853269984665640564039457584007908834671663
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
+///   arg1: [[0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xffffffffffff0]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x17fffffffffff]]
+///   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
 #[inline]
 pub fn fiat_secp256k1_dettman_square(out1: &mut [u64; 5], arg1: &[u64; 5]) -> () {
   let x1: u64 = ((arg1[3]) * 0x2);
