@@ -18,6 +18,8 @@ Import ListNotations.
 (* use in-memory lists; local ones are only used internally *)
 Global Existing Instances Types.rep.Z Types.rep.listZ_mem.
 
+Print PipelineOptions.
+Search split_multiret_to_opt.
 Global Instance pipeline_opts : PipelineOptions :=
   let _ := default_PipelineOptions in
   {| (* Abstract interpretation options; currently only involving (>>) uint1 bounds, which is not relevant to bedrock2 *)
@@ -25,12 +27,11 @@ Global Instance pipeline_opts : PipelineOptions :=
     {| AbstractInterpretation.shiftr_avoid_uint1 := false (* we need to not avoid uint1 to pass bounds analysis tightness, for some reason? *) |}
   (* Split multiplications into two outputs, not just one huge word *)
   ; should_split_mul := true
-  (* For functions that return multiple values, split into two LetIns (this is
-     because bedrock2 does not support multiple-sets, so they would have to be
-     split anyway) *)
-  ; should_split_multiret := true
+  (* Return two values for carry/borrow operations. *)
+  ; should_split_multiret := false
+  (* Leave carries as 1-bit integers, since these get special handling *)
+  ; widen_carry := false
   (* Make all words full-size, even if they could be smaller *)
-  ; widen_carry := true
   ; widen_bytes := true
   (* Unsigned integers *)
   ; only_signed := false

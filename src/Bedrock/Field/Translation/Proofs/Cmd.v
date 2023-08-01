@@ -35,6 +35,7 @@ Import Types.Notations.
 Section Cmd.
   Context 
     {width BW word mem locals env ext_spec varname_gen error}
+    {add_carryx_funcname sub_borrowx_funcname : string}
    `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
   Context {ok : ok}.
 
@@ -67,6 +68,25 @@ Section Cmd.
                    (ident.cons (t:=base.type.type_base base.type.Z))) x) l)
   | valid_nil :
       valid_cmd (expr.Ident (ident.nil (t:=base.type.type_base base.type.Z)))
+  | valid_add_get_carry :
+      forall r1 r2 (s : Z) x y,
+        range_good (width:=width) r1 = true ->
+        range_good (width:=width) r2 = true ->
+        s = 2 ^ width ->
+        valid_expr true x ->
+        valid_expr true y ->
+        valid_cmd (expr.App
+                     (expr.App (expr.Ident ident.Z_cast2)
+                               (expr.App
+                                  (expr.App
+                                     (expr.Ident ident.pair)
+                                     (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                                  (expr.Ident (ident.Literal (t:=base.type.zrange) r2))))
+                     (expr.App
+                        (expr.App
+                           (expr.App (expr.Ident ident.Z_add_get_carry)
+                                     (expr.Ident (ident.Literal (t:=base.type.Z) s)))
+                           x) y))
   | valid_inner :
       forall {t} e,
         valid_expr (t:=type.base t) true e ->
@@ -294,7 +314,9 @@ Section Cmd.
         G nextn :
     valid_expr true e1 ->
     wf3 G e1 e2 e3 ->
-    translate_cmd e3 nextn = assign nextn (translate_expr true e3).
+    translate_cmd (add_carryx_funcname:=add_carryx_funcname)
+                  (sub_borrowx_funcname:=sub_borrowx_funcname)
+                  e3 nextn = assign nextn (translate_expr true e3).
   Proof.
     inversion 1; cleanup_wf; try reflexivity; intros.
     all: repeat first [ reflexivity
@@ -386,7 +408,9 @@ Section Cmd.
       (* ret := fiat-crypto interpretation of e2 *)
       let ret1 : API.interp_type t := API.interp e2 in
       (* out := translation output for e3 *)
-      let out := translate_cmd e3 nextn in
+      let out := translate_cmd (add_carryx_funcname:=add_carryx_funcname)
+                               (sub_borrowx_funcname:=sub_borrowx_funcname)
+                               e3 nextn in
       let nvars := fst (fst out) in
       let ret2 := rtype_of_ltype _ (snd (fst out)) in
       let body := snd out in
@@ -421,17 +445,19 @@ Section Cmd.
     induction e1_valid; try (inversion 1; [ ]).
 
     (* inversion on wf3 leaves a mess; clean up hypotheses *)
+    Ltac invert_until_exposed H y :=
+      progress match y with
+               | expr.App _ _ => idtac (* don't invert original, already-inverted one *)
+               | _ => inversion H; clear H
+               end.
     all:repeat match goal with
                | _ => progress cleanup_wf
                | _ => progress cbn [varname_set]
                | H : wf3 _ ?x ?y _ |- _ =>
-                 (* for the cons case, repeatedly do inversion until the cons is exposed *)
+                 (* for cons and special functions, repeatedly do inversion until they are exposed *)
                  progress match x with
-                            context [Compilers.ident.cons] =>
-                            progress match y with
-                                     | expr.App _ _ => idtac (* don't invert original, already-inverted one *)
-                                     | _ => inversion H; clear H
-                                     end
+                          | expr.App _ _ =>invert_until_exposed H y
+                          | expr.Ident _ =>invert_until_exposed H y
                           end
                end.
 
@@ -447,7 +473,7 @@ Section Cmd.
                         [ eapply Proper_call | repeat intro
                           | eapply assign_correct; eauto;
                             eapply translate_expr_correct; solve [eauto] ]
-               | _ => progress cbn [invert_expr.invert_pair_cps invert_expr.invert_AppIdent2_cps Option.bind invert_expr.invert_App2_cps invert_expr.invert_App_cps invert_expr.invert_Ident invert_expr.is_pair Compilers.invertIdent Option.bind translate_ident2_for_cmd Crypto.Util.Option.bind]
+               | _ => progress cbn [translate_if_special_function (*translate_if_special3*) invert_AppIdent3_cps invert_AppIdent4_cps invert_expr.invert_pair_cps invert_expr.invert_AppIdent2_cps Option.bind invert_expr.invert_App2_cps invert_expr.invert_App_cps invert_expr.invert_Ident invert_expr.is_pair Compilers.invertIdent Option.bind translate_ident2_for_cmd Crypto.Util.Option.bind]
                end.
 
     { (* let-in (product of base types) *)
@@ -531,6 +557,32 @@ Section Cmd.
       cbv [locally_equivalent equivalent]; simplify; eauto;
         try reflexivity.
       right; reflexivity. }
+    { (* add_get_carry *)
+      eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
+      2:{
+        straightline.
+        cbn.
+        cbn [translate_expr].
+        Search translate_expr.
+        Print locally_equivalent.
+        Print equivalent.
+        simplify.
+        straightline.
+        econstructor.
+        cleanup.
+        Search translate_expr.
+        repeat match goal with
+               | _ => progress (intros; cleanup)
+               | H : _ |- _ => solve [apply H]
+               | _ => solve [new_context_ok]
+               | _ => congruence
+               end; [ ].
+        eapply only_differ_disjoint_undef_on; eauto with lia; [ ].
+        match goal with H : PropSet.sameset _ _ |- _ =>
+                        rewrite H end.
+        apply used_varnames_disjoint; lia. 
+        
+    }
     { (* valid expr *)
       simplify; subst; eauto; only_differ_ok.
       match goal with H : PropSet.sameset _ _ |- _ =>
