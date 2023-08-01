@@ -275,7 +275,7 @@ Section Cmd.
           := (ixy <- invert_expr.invert_AppIdent2_cps e (@translate_cmd) (@translate_cmd);
              let '(existT _ (i, translate_cmd_x, translate_cmd_y)) := ixy in
              let trx := translate_cmd_x nextn in
-             let try := translate_cmd_y (fst (fst trx) + nextn)%nat in
+             let try := translate_cmd_y (nextn + fst (fst trx))%nat in
              vars <- translate_ident2_for_cmd i (snd (fst trx)) (snd (fst try));
              Some ((fst (fst trx) + fst (fst try))%nat,
                    vars,
