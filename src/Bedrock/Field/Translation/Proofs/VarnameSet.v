@@ -8,9 +8,9 @@ Import Types.Notations.
 
 Section VarnameSet.
   Context 
-    {width BW word mem locals env ext_spec varname_gen error}
+    {width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
    `{parameters_sentinel : @parameters
-     width BW word mem locals env ext_spec varname_gen error}.
+     width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}.
   Context {listZ : rep.rep base_listZ}.
   Existing Instance rep.Z.
 

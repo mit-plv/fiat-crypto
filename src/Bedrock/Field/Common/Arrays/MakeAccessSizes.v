@@ -23,8 +23,8 @@ Import Types.Notations.
 
 Section __.
   Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+    {width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}.
   Existing Instances rep.Z rep.listZ_mem.
 
   Let all_access_sizes :=

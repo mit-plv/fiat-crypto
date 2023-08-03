@@ -12,8 +12,8 @@ Existing Instances rep.Z rep.listZ_mem.
 
 Section with_parameters.
   Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+    {width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}.
 
   Fixpoint list_lengths_repeat_base (n : nat) t : base_listonly nat t :=
     match t as t0 return base_listonly nat t0 with

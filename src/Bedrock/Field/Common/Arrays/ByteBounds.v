@@ -21,8 +21,8 @@ Import Partition.
 
 Section ByteBounds.
   Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+    {width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}.
   Context {ok : ok}.
   Context (n : nat).
 

@@ -17,8 +17,8 @@ Import Types.Notations.
 
 Section Flatten.
   Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+    {width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}.
   (* these conversions should happen before loading arguments and after
        storing return values, so they use in-memory lists *)
   Local Existing Instance rep.listZ_mem.

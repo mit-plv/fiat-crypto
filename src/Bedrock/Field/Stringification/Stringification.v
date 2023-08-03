@@ -29,8 +29,8 @@ Local Open Scope list_scope.
 
 Section with_parameters.
   Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+    {width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}.
 
   Fixpoint make_base_var_data {t}
     : base_ltype t -> list_lengths (type.base t) ->
@@ -114,8 +114,8 @@ Definition bedrock_func_to_lines (f : string * func)
   [c_func f].
 
 Definition wrap_call
-  {width BW word mem locals env ext_spec varname_gen error}
-  `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
+  {width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
+  `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
            {t}
            (indata : type.for_each_lhs_of_arrow var_data t)
            (outdata : base_var_data (type.final_codomain t))

@@ -37,8 +37,8 @@ Local Open Scope Z_scope.
 
 Section Generic.
   Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+    {width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}.
   Definition make_bedrock_func {t} insizes outsizes inlengths (res : API.Expr t)
   : func :=
     let innames := make_innames (inname_gen:=default_inname_gen) _ in
@@ -81,8 +81,8 @@ Local Hint Resolve MakeAccessSizes.bits_per_word_le_width
 
 Section WithParameters.
   Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+    {width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
+   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}.
   Context {ok : Types.ok}
           {field_parameters : FieldParameters}.
   Context (n n_bytes : nat) (weight : nat -> Z)

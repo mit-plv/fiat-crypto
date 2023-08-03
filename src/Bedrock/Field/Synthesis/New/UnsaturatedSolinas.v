@@ -27,8 +27,8 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Import ListNotations API.Compilers Types.Notations.
 
 Class unsaturated_solinas_ops
-  {width BW word mem locals env ext_spec varname_gen error}
-  {parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
+  {width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
+  {parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
   {field_parameters : FieldParameters}
   {n s c} : Type :=
   { mul_op :

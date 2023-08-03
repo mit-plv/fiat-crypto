@@ -6,8 +6,8 @@ Require Import Crypto.Language.API.
 Import API.Compilers.
 
 Record computed_op
-      {width BW word mem locals env ext_spec varname_gen error}
-      {parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
+      {width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
+      {parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
       {t} {op : Pipeline.ErrorT (API.Expr t)}
       {name : String.string}
       {insizes outsizes inlengths}
