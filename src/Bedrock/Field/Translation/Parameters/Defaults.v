@@ -46,6 +46,8 @@ Global Instance tight_upperbound_fraction : tight_upperbound_fraction_opt := def
 (* bedrock2 backend parameters *)
 Global Existing Instances Types.rep.Z Types.rep.listZ_mem.
 
+Local Definition add_carryx := "add_carryx"%string.
+Local Definition sub_borrowx := "sub_borrowx"%string.
 Local Definition ERROR := "ERROR"%string.
 
 Section Defs.

@@ -50,6 +50,23 @@ Section Field.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
 
+  Goal False.
+    Local Notation ttype := Language.Compilers.type.type.
+    Local Notation tbase := Language.Compilers.type.base.
+    Local Notation ttype_base := Language.Compilers.base.type.type_base.
+    Local Notation btype := Language.Compilers.base.type.type.
+    Local Notation blist := Language.Compilers.base.type.list.
+    Require Import IdentifiersBasicGENERATED.
+    Local Notation eAbs := Language.Compilers.expr.Abs.
+    Local Notation eApp := Language.Compilers.expr.App.
+    Local Notation eVar := Language.Compilers.expr.Var.
+    Local Notation eLetIn := Language.Compilers.expr.LetIn.
+    Local Notation eIdent := Language.Compilers.expr.Ident.
+    pose add_op.
+    cbn [add_op p224_ops] in c.
+
+  Qed.
+
   (**** Translate each field operation into bedrock2 and apply bedrock2 backend
         field pipeline proofs to prove the bedrock2 functions are correct. ****)
 

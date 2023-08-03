@@ -18,14 +18,6 @@ Section Cmd.
   Context
     {width BW word mem locals env ext_spec varname_gen error}
     `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
-  (* TODO: move these to DefaultParameters or something *)
-  (* Special function names. These will be translated to bedrock2 function calls
-     instead of all the way into operations. *)
-  Context
-    (* add_carryx should take (x, y, carry_in) as arguments and return (sum, carry_out). *)
-    {add_carryx_funcname : string}
-    (* sub_borrowx should take (x, y, borrow_in) as arguments and return (difference, borrow_out). *)
-    {sub_borrowx_funcname : string}
     .
   Existing Instance Types.rep.Z.
   Existing Instance Types.rep.listZ_local. (* local list representation *)
@@ -261,7 +253,13 @@ Section Cmd.
     match e in expr.expr t0
           return (nat * ltype t0 * Syntax.cmd.cmd) with
     | expr.LetIn (type.base t1) (type.base t2) x f =>
-      let trx := assign nextn (translate_expr true x) in
+      (* Special handling for functions that should result in calls to bedrock2
+         functions, e.g. add_carryx. *)
+      let result_if_special := translate_if_special_function (t:=type.base t1) x nextn in
+      let trx := match result_if_special with
+                 | Some res => res
+                 | None => assign nextn (translate_expr true x)
+                 end in
       let trf := translate_cmd (f (snd (fst trx))) (nextn + fst (fst trx)) in
       ((fst (fst trx) + fst (fst trf))%nat,
        snd (fst trf),
@@ -280,18 +278,11 @@ Section Cmd.
              Some ((fst (fst trx) + fst (fst try))%nat,
                    vars,
                    Syntax.cmd.seq (snd trx) (snd try)))%option in
-      (* Special handling for functions that should result in calls to bedrock2
-         functions, e.g. add_carryx. *)
-      let result_if_special := translate_if_special_function e nextn in
       match result_if_ident2 with
       | Some res => res
       | None =>
-        match result_if_special with
-        | Some res => res
-        | None =>
-          let v := translate_expr true e in
-          assign nextn v
-        end
+        let v := translate_expr true e in
+        assign nextn v
       end
     | expr.Ident type_listZ (ident.nil _) =>
       (0%nat, [], Syntax.cmd.skip)

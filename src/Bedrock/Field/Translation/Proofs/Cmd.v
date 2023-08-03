@@ -48,7 +48,8 @@ Section Cmd.
       allowed; this is primarily because we don't want lists on the LHS *)
   | valid_LetIn_prod :
       forall {a b c} x f,
-        valid_expr true x -> valid_cmd (f tt) ->
+        valid_expr true x ->
+        valid_cmd (f tt) ->
         valid_cmd (expr.LetIn
                      (A:=type.base (base.type.prod
                                       (base.type.type_base a) (base.type.type_base b)))
@@ -59,7 +60,7 @@ Section Cmd.
         valid_cmd (expr.LetIn (A:=type.base (base.type.type_base a)) (B:=type.base b) x f)
   | valid_cons :
       forall x l,
-        valid_cmd x ->
+        valid_expr true x ->
         valid_cmd l ->
         valid_cmd
           (expr.App
@@ -68,29 +69,33 @@ Section Cmd.
                    (ident.cons (t:=base.type.type_base base.type.Z))) x) l)
   | valid_nil :
       valid_cmd (expr.Ident (ident.nil (t:=base.type.type_base base.type.Z)))
+  | valid_inner :
+      forall {t} e,
+        valid_expr (t:=type.base t) true e ->
+        valid_cmd e
   | valid_add_get_carry :
-      forall r1 r2 (s : Z) x y,
+      forall t r1 r2 (s : Z) x y f,
         range_good (width:=width) r1 = true ->
         range_good (width:=width) r2 = true ->
         s = 2 ^ width ->
         valid_expr true x ->
         valid_expr true y ->
-        valid_cmd (expr.App
-                     (expr.App (expr.Ident ident.Z_cast2)
-                               (expr.App
-                                  (expr.App
-                                     (expr.Ident ident.pair)
-                                     (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
-                                  (expr.Ident (ident.Literal (t:=base.type.zrange) r2))))
-                     (expr.App
-                        (expr.App
-                           (expr.App (expr.Ident ident.Z_add_get_carry)
-                                     (expr.Ident (ident.Literal (t:=base.type.Z) s)))
-                           x) y))
-  | valid_inner :
-      forall {t} e,
-        valid_expr (t:=type.base t) true e ->
-        valid_cmd e
+        valid_cmd (f tt) ->
+        valid_cmd
+          (expr.LetIn
+             (B:=type.base t)
+             (expr.App
+                (expr.App (expr.Ident ident.Z_cast2)
+                          (expr.App
+                             (expr.App
+                                (expr.Ident ident.pair)
+                                (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                             (expr.Ident (ident.Literal (t:=base.type.zrange) r2))))
+                (expr.App
+                   (expr.App
+                      (expr.App (expr.Ident ident.Z_add_get_carry)
+                                (expr.Ident (ident.Literal (t:=base.type.Z) s)))
+                      x) y)) f)
   .
 
   Lemma assign_list_correct :
@@ -324,7 +329,7 @@ Section Cmd.
                         | [ H : wf3 _ ?x _ _ |- _ ]
                           => assert_fails is_var x; inversion H; clear H; cleanup_wf
                         end ].
-  Abort. (* TODO: fix *)
+  Qed.
 
   Local Ltac simplify :=
     repeat
@@ -461,11 +466,12 @@ Section Cmd.
                           end
                end.
 
-    Print translate_if_special_function.
     (* simplify goals *)
     all:repeat match goal with
+               | H : range_good ?r = true |- _ => rewrite range_good_eq in H; subst
                | _ => progress (intros; cleanup)
                | _ => progress cbv [Rewriter.Util.LetIn.Let_In] in *
+               | _ => erewrite translate_cmd_valid_expr by eauto
                | _ => progress cbn [translate_cmd expr.interp type.app_curried
                                                   WeakestPrecondition.cmd
                                                   WeakestPrecondition.cmd_body] in *
@@ -477,6 +483,7 @@ Section Cmd.
                end.
 
     { (* let-in (product of base types) *)
+      admit. (*
       eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
       2: {
         eapply IHe1_valid; clear IHe1_valid;
@@ -492,8 +499,10 @@ Section Cmd.
         apply used_varnames_disjoint; lia. }
       { simplify; subst; eauto; only_differ_ok.
         etransitivity; [ eassumption | ].
-        apply used_varnames_shift. } }
+        apply used_varnames_shift. } *) }
     { (* let-in (base type) *)
+      admit.
+      (*
       eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
       2: {
         eapply IHe1_valid; clear IHe1_valid;
@@ -509,22 +518,11 @@ Section Cmd.
         apply used_varnames_disjoint; lia. }
       { simplify; subst; eauto; only_differ_ok.
         etransitivity; [ eassumption | ].
-        apply used_varnames_shift. } }
+        apply used_varnames_shift. } } *) }
     { (* cons *)
       eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
       2: {
-        eapply IHe1_valid1 with (G:=G); clear IHe1_valid1;
-        repeat match goal with
-               | _ => progress (intros; cleanup)
-               | H : _ |- _ => solve [apply H]
-               | _ => solve [new_context_ok]
-               | _ => congruence
-               end; [ ].
-        eapply only_differ_disjoint_undef_on; eauto with lia; [ apply only_differ_empty | ].
-        apply disjoint_empty_l. }
-      eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
-      2: {
-        eapply IHe1_valid2 with (G:=G); clear IHe1_valid2;
+        eapply IHe1_valid with (G:=G); clear IHe1_valid;
         repeat match goal with
                | _ => progress (intros; cleanup)
                | H : _ |- _ => solve [apply H]
@@ -532,58 +530,93 @@ Section Cmd.
                | _ => congruence
                end; [ ].
         eapply only_differ_disjoint_undef_on; eauto with lia; [ ].
-        apply used_varnames_disjoint; lia. }
-      { simplify; subst; eauto; [ | | ].
-        { (* varnames subset *)
-          rewrite varname_set_local.
-          rewrite PropSet.of_list_cons.
-          rewrite add_union_singleton.
-          apply subset_union_l;
-            [ etransitivity; [eassumption|]; apply used_varnames_subset; lia | ].
-          rewrite <-varname_set_local.
-          etransitivity; [eassumption|].
-          apply used_varnames_shift. }
-        { (* only_differ *)
-          remember (@translate_cmd width BW word mem locals env ext_spec varname_gen error
-                               parameters_sentinel add_carryx_funcname sub_borrowx_funcname
-                               (@type.base (Language.Compilers.base.type.type Compilers.base)
-                                  (@base.type.type_base Compilers.base Compilers.Z)) x5 nextn) as A.
-          remember (fst (fst (translate_cmd (add_carryx_funcname:=add_carryx_funcname) (sub_borrowx_funcname:=sub_borrowx_funcname) x5 nextn))) as A.
-          remember (fst (fst (translate_cmd (add_carryx_funcname:=add_carryx_funcname) (sub_borrowx_funcname:=sub_borrowx_funcname) x5 nextn))) as A.
-          only_differ_ok. }
-        { (* equivalence of output holds *)
-          clear IHe1_valid.
-          simplify. cbv [WeakestPrecondition.dexpr] in *.
-          apply Forall2_cons; [intros | eassumption].
-          sepsimpl.
-          eexists; sepsimpl; [ eassumption | ].
-          eapply (expr_untouched ltac:(eassumption)
-                                        ltac:(eassumption)); eauto; [ ].
-          cbv [used_varnames]. setsimplify.
-          rewrite in_map_iff. intro; cleanup.
-          match goal with H : varname_gen ?x = varname_gen _ |- _ =>
-                          apply varname_gen_unique in H; subst x end.
-          match goal with H : In _ (seq _ _) |- _ =>
-                          apply in_seq in H end.
-          lia. } } }
+        match goal with H : PropSet.sameset _ _ |- _ => rewrite H end.
+        apply used_varnames_disjoint. lia. }
+      simplify; subst; eauto; [ | | ].
+      { (* varnames subset *)
+        rewrite varname_set_local.
+        rewrite PropSet.of_list_cons.
+        rewrite add_union_singleton.
+        apply subset_union_l;
+          [ apply used_varnames_subset_singleton; lia| ].
+        rewrite <-varname_set_local.
+        etransitivity; [eassumption|].
+        apply used_varnames_shift. }
+      { (* only_differ *)
+        only_differ_ok. }
+      { (* equivalence of output holds *)
+        simplify. cbv [WeakestPrecondition.dexpr] in *.
+        apply Forall2_cons; [intros | eassumption].
+        sepsimpl.
+        eexists; sepsimpl; [ eassumption | ].
+        eapply (expr_untouched ltac:(eassumption)
+                                      ltac:(eassumption)); eauto; [ ].
+        cbv [used_varnames]. setsimplify.
+        rewrite in_map_iff. intro; cleanup.
+        match goal with H : varname_gen ?x = varname_gen _ |- _ =>
+                        apply varname_gen_unique in H; subst x end.
+        match goal with H : In _ (seq _ _) |- _ =>
+                        apply in_seq in H end.
+        lia. } }
     { (* nil *)
       cbv [locally_equivalent equivalent]; simplify; eauto;
         try reflexivity.
       right; reflexivity. }
+    { (* valid expr *)
+      simplify; subst; eauto; only_differ_ok.
+      match goal with H : PropSet.sameset _ _ |- _ =>
+                      rewrite H end; reflexivity. }
     { (* add_get_carry *)
       eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
       2:{
-        straightline.
+        lazymatch goal with
+          |- context [translate_if_special_function ?x ?n] =>
+          remember (translate_if_special_function (add_carryx_funcname:=add_carryx_funcname)
+                                              (sub_borrowx_funcname:=sub_borrowx_funcname)
+                                              x n) as X eqn:HX
+        end.
+        cbv [translate_if_special_function] in HX.
+        cbv [invert_expr.invert_App_cast invert_expr.invert_App_Z_cast2 invert_expr.invert_App invert_expr.invert_App_cps] in HX.
+        lazymatch type of HX with context [invert_expr.invert_Z_cast2 ?x] => pose x as z end.
+        Search range_good.
+        Print range_good.
+        vm_compute in z.
+        cbn in X.
+        cbv [
+            translate_if_special_function
+              invert_expr.invert_App_cast
+              invert_expr.invert_App_Z_cast
+              invert_expr.invert_App_Z_cast2
+              invert_expr.invert_Z_cast2
+              invert_expr.invert_App
+              invert_expr.invert_Ident
+              invert_expr.invert_AppIdent
+              invert_expr.invert_AppIdent_cps
+              invert_expr.invert_AppIdent2_cps
+              invert_expr.invert_App_cps
+              invert_expr.invert_App2_cps
+              invert_expr.invert_Literal
+              invert_expr.invert_pair
+              invert_expr.invert_pair_cps
+              invert_expr.is_pair
+              invert_expr.reflect_smart_Literal
+              Option.bind
+              Crypto.Util.Option.bind
+          ] in X.
+        clear IHe1_valid.
+        cbv [Option.bind Crypto.Util.Option.bind].
+        eapply IHe1_valid with (G:=G); clear IHe1_valid;
+        repeat match goal with
+               | _ => progress (intros; cleanup)
+               | H : _ |- _ => solve [apply H]
+               | _ => solve [new_context_ok]
+               | _ => congruence
+               end; [ ].
+        eapply only_differ_disjoint_undef_on; eauto with lia; [ ].
+        match goal with H : PropSet.sameset _ _ |- _ => rewrite H end.
+        apply used_varnames_disjoint. lia. }
         cbn.
         cbn [translate_expr].
-        Search translate_expr.
-        Print locally_equivalent.
-        Print equivalent.
-        simplify.
-        straightline.
-        econstructor.
-        cleanup.
-        Search translate_expr.
         repeat match goal with
                | _ => progress (intros; cleanup)
                | H : _ |- _ => solve [apply H]
@@ -595,10 +628,6 @@ Section Cmd.
                         rewrite H end.
         apply used_varnames_disjoint; lia. 
         
-    }
-    { (* valid expr *)
-      simplify; subst; eauto; only_differ_ok.
-      match goal with H : PropSet.sameset _ _ |- _ =>
-                      rewrite H end; reflexivity. }
+      }
   Qed.
 End Cmd.

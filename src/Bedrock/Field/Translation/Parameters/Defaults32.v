@@ -27,6 +27,8 @@ Section Defaults_32.
   Instance default_parameters : Types.parameters
     (word := BasicC32Semantics.word)
     (varname_gen := default_varname_gen)
+    (add_carryx_funcname:=Defaults.add_carryx)
+    (sub_borrowx_funcname:=Defaults.sub_borrowx)
     (error := expr.var Defaults.ERROR)
     := tt.
   Instance default_parameters_ok : Types.ok.

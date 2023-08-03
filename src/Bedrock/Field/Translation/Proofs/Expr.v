@@ -375,6 +375,12 @@ Section Expr.
     apply Z.pow_pos_nonneg; lia.
   Qed.
 
+  Lemma range_good_eq r : range_good (width:=width) r = true -> r = max_range (width:=width).
+  Proof.
+    cbv [range_good].
+    destruct (ZRange.reflect_zrange_eq r (max_range (width:=width))); congruence.
+  Qed.
+
   (** TODO: Find a better place for this *)
   Hint Rewrite word.testbit_wrap : Ztestbit_full.
   Lemma translate_expr_correct' {t}

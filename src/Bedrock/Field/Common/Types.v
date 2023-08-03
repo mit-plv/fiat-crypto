@@ -38,13 +38,17 @@ Class parameters
   {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}
   {ext_spec: bedrock2.Semantics.ExtSpec}
   {varname_gen : nat -> String.string}
+  (* add_carryx should take 3 arguments (x,y,carry) and return 2 values (sum, carry) *)
+  {add_carryx_funcname : String.string}
+  (* sub_borrowx should take 3 arguments (x,y,borrow) and return 2 values (difference, borrow) *)
+  {sub_borrowx_funcname : String.string}
   {error : Syntax.expr.expr} := parameters_sentinel : unit.
 
 Section WithParameters.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
+  Context
+    {width BW word mem locals env ext_spec add_carryx sub_borrowx varname_gen error}
    `{parameters_sentinel : @parameters
-     width BW word mem locals env ext_spec varname_gen error}.
+     width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}.
   Local Notation parameters := (ltac:(let t := type of parameters_sentinel in exact t)) (only parsing).
   Class ok {parameters_sentinel : parameters} :=
     {
@@ -68,10 +72,10 @@ End WithParameters.
 
 Module rep.
   Section rep.
-    Context 
-      {width BW word mem locals env ext_spec varname_gen error}
+    Context
+      {width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
      `{parameters_sentinel : @parameters
-       width BW word mem locals env ext_spec varname_gen error}.
+       width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}.
     Local Notation parameters := (ltac:(let t := type of parameters_sentinel in exact t)) (only parsing).
 
     Class rep {parameters_sentinel : parameters} (t : base.type) :=
@@ -161,9 +165,9 @@ End rep.
 
 Section defs.
   Context
-    {width BW word mem locals env ext_spec varname_gen error}
+    {width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
    `{parameters_sentinel : @parameters
-     width BW word mem locals env ext_spec varname_gen error}.
+     width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}.
   Local Notation parameters := (ltac:(let t := type of parameters_sentinel in exact t)) (only parsing).
   Context
           (* list representation -- could be local or in-memory *)
