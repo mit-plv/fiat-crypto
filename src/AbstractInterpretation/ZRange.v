@@ -253,6 +253,25 @@ Module Compilers.
                        end
                | base.type.unit => fun 'tt 'tt => true
                end.
+          Definition option_map_2 {A B C} (f : A -> B -> C) (a : option A) (b : option B) :=
+            match a, b with Datatypes.Some a, Datatypes.Some b => Datatypes.Some (f a b) | _, _ => Datatypes.None end.
+          Fixpoint union {t} : interp t -> interp t -> interp t
+            := match t return interp t -> interp t -> interp t with
+               | base.type.type_base base.type.Z => option_map_2 ZRange.union
+               | base.type.unit | base.type.type_base _ => fun _ _ => None (* NOTE: could pass through x==y *)
+               | base.type.prod A B => fun '(a, b) '(a', b') =>
+                 (@union A a a', @union B b b')
+               | base.type.list A => RingMicromega.map_option2 (fun la lb =>
+                 if Nat.eqb (length la) (length lb)
+                 then Datatypes.Some (List.map (uncurry (@union A)) (List.combine la lb))
+                 else Datatypes.None)
+               | base.type.option A => RingMicromega.map_option2 (fun l r =>
+                 match l, r return option (option (interp A)) with
+                 | Datatypes.Some l, Datatypes.Some r => Datatypes.Some (Datatypes.Some (union l r))
+                 | Datatypes.None, Datatypes.None => Datatypes.Some (Datatypes.None)
+                 | _, _ => Datatypes.None
+                 end)
+               end.
           Fixpoint interp_beq {t1 t2} : interp t1 -> interp t2 -> bool
             := match t1, t2 return interp t1 -> interp t2 -> bool with
                | base.type.type_base _ as t1, base.type.type_base _ as t2 => option_beq_hetero base.interp_beq
@@ -623,13 +642,13 @@ Module Compilers.
                => fun t f b
                  => match b with
                    | Some b => if b then t tt else f tt
-                   | None => ZRange.type.base.option.None
+                   | None => type.base.option.union (t tt) (f tt)
                    end
              | ident.bool_rect_nodep _
                => fun t f b
                  => match b with
                    | Some b => if b then t else f
-                   | None => ZRange.type.base.option.None
+                   | None => type.base.option.union t f
                    end
              | ident.option_rect _ _
                => fun s n o

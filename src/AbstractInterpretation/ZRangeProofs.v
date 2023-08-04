@@ -55,6 +55,44 @@ Module Compilers.
         Module option.
           Lemma is_bounded_by_None t v : ZRange.type.base.option.is_bounded_by (@ZRange.type.base.option.None t) v = true.
           Proof. induction t; cbn; cbv [andb]; break_innermost_match; eauto. Qed.
+
+          Lemma tighter_than_union t (rx ry : ZRange.type.base.option.interp t) :
+            ZRange.type.base.option.is_tighter_than rx (ZRange.type.base.option.union rx ry) = true /\
+            ZRange.type.base.option.is_tighter_than ry (ZRange.type.base.option.union rx ry) = true.
+          Proof.
+            induction t; [destruct t|..]; destruct rx, ry; cbn [
+              ZRange.type.base.interp
+              ZRange.type.base.option.interp
+              ZRange.type.base.option.is_tighter_than
+              ZRange.type.base.is_tighter_than
+              ZRange.type.base.option.union
+              ZRange.type.base.option.option_map_2
+              RingMicromega.map_option2
+              ] in *; try auto 2.
+            { split. apply ZRange.is_tighter_than_bool_union_l. apply ZRange.is_tighter_than_bool_union_r. }
+            { rewrite 2 Bool.andb_true_iff; split; split; try apply IHt1; try apply IHt2. }
+            { break_innermost_match; [|intuition]. apply Nat.eqb_eq in Heqb.
+              rewrite 2 fold_andb_map_map. (* apply fold_andb_map_iff, conj; intros.
+              { rewrite List.combine_length, Heqb, Nat.min_id; trivial. }
+              cbv [uncurry]; break_innermost_match; inversion_prod; subst.
+                                            *) admit. }
+          Admitted.
+
+          Lemma is_bounded_by_union_l t (rx ry : ZRange.type.base.option.interp t) x :
+            ZRange.type.base.option.is_bounded_by rx x = true ->
+            ZRange.type.base.option.is_bounded_by (ZRange.type.base.option.union rx ry) x = true.
+          Proof.
+            eapply ZRange.type.base.option.is_tighter_than_is_bounded_by; try eassumption;
+            eapply tighter_than_union.
+          Qed.
+
+          Lemma is_bounded_by_union_r t (rx ry : ZRange.type.base.option.interp t) y :
+            ZRange.type.base.option.is_bounded_by ry y = true ->
+            ZRange.type.base.option.is_bounded_by (ZRange.type.base.option.union rx ry) y = true.
+          Proof.
+            eapply ZRange.type.base.option.is_tighter_than_is_bounded_by; try eassumption;
+            eapply tighter_than_union.
+          Qed.
         End option.
       End base.
 
@@ -244,7 +282,7 @@ Module Compilers.
                 -- f_equal. assumption.
                 -- intros v H. apply IH2. assumption.
           Qed.
-          
+
           Local Ltac handle_lt_le_t_step_fast :=
             first [ match goal with
                     | [ H : (?a <= ?b)%Z, H' : (?b <= ?a)%Z |- _ ]
@@ -703,6 +741,12 @@ Module Compilers.
                            | intros; mul_by_halves_t ].
             (** For command-line debugging, we display goals that should not remain *)
             all: [ > idtac "WARNING: Remaining goal:"; print_context_and_goal () .. | | ].
+            { destruct y1.
+              eapply type.base.option.is_bounded_by_union_l; eauto.
+              eapply type.base.option.is_bounded_by_union_r; eauto. }
+            { destruct y1.
+              eapply type.base.option.is_bounded_by_union_l; trivial.
+              eapply type.base.option.is_bounded_by_union_r; trivial. }
             { intros.
               rewrite Z.le_sub_1_iff.
               break_innermost_match; Z.ltb_to_lt;
