@@ -64,27 +64,62 @@ Compute (length funcs-3 - (length MontgomeryLadder.funcs - 2 + 3))%nat. (* handw
 Compute bedrock2.ToCString.c_module funcs.
 *)
 
-Lemma chacha20_ok: forall functions, ChaCha20.spec_of_chacha20 (&,ChaCha20.chacha20_block::&,ChaCha20.quarter::functions).
+Lemma chacha20_ok: forall functions,
+    map.get functions "chacha20_block" = Some ChaCha20.chacha20_block ->
+    map.get functions "quarter" = Some ChaCha20.quarter ->
+    ChaCha20.spec_of_chacha20 functions.
+Proof.
   intros.
-  simple eapply ChaCha20.chacha20_block_body_correct.
-  constructor.
-  eapply ChaCha20.quarter_body_correct.
-  constructor.
+  simple eapply ChaCha20.chacha20_block_body_correct; [constructor | eassumption | ].
+  eapply ChaCha20.quarter_body_correct; [constructor | eassumption ].
 Qed.
 
+Ltac pose_correctness lem :=
+  let H := fresh in
+  pose proof (lem (map.of_list funcs)) as H;
+  unfold program_logic_goal_for in H;
+  repeat lazymatch type of H with
+    | map.get (map.of_list _) _ = Some _ -> _ => specialize (H eq_refl)
+    end.
+
 Import SPI.
-Lemma link_loopfn : spec_of_loopfn funcs.
+Lemma link_loopfn : spec_of_loopfn (map.of_list funcs).
 Proof.
-  eapply loopfn_ok; try eapply memswap.memswap_ok; try eapply memequal_ok.
-    repeat (eapply recvEthernet_ok || eapply lightbulb_handle_ok);
-        eapply lan9250_readword_ok; eapply spi_xchg_ok;
-        (eapply spi_write_ok || eapply spi_read_ok).
-    eapply ip_checksum_br2fn_ok; exact I.
-    eapply x25519_base_ok; try eapply fe25519_from_word_correct; try eapply link_montladder; try eapply fe25519_to_bytes_correct.
-    eapply lan9250_tx_ok; try eapply lan9250_writeword_ok; try eapply spi_xchg_ok; (eapply spi_write_ok || eapply spi_read_ok).
-    eapply x25519_ok; try eapply fe25519_from_bytes_correct; try eapply link_montladder; try eapply fe25519_to_bytes_correct.
-    eapply chacha20_ok.
-Qed. Optimize Heap.
+  pose_correctness loopfn_ok.
+  pose_correctness memswap.memswap_ok.
+  pose_correctness memequal_ok.
+  pose_correctness recvEthernet_ok.
+  pose_correctness lan9250_readword_ok.
+  pose_correctness spi_xchg_ok.
+  pose_correctness spi_write_ok.
+  pose_correctness spi_read_ok.
+  pose_correctness (ip_checksum_br2fn_ok I).
+  pose_correctness x25519_base_ok.
+  pose_correctness fe25519_from_word_correct.
+  pose_correctness fe25519_to_bytes_correct.
+  pose_correctness lan9250_tx_ok.
+  pose_correctness lan9250_writeword_ok.
+  pose_correctness x25519_ok.
+  pose_correctness fe25519_from_bytes_correct.
+  pose_correctness chacha20_ok.
+  assert (spec_of_montladder (map.of_list funcs)). {
+    unfold spec_of_montladder, ScalarMult.MontgomeryLadder.spec_of_montladder.
+    intros.
+    eapply WP.extend_env_wp_call.
+    2: { eapply link_montladder. eassumption. }
+    clear. unfold funcs.
+    (* TODO this could be more computational *)
+    intros k v G.
+    unfold MontgomeryLadder.funcs, map.of_list in G.
+    rewrite ?map.get_put_dec in G.
+    repeat (destruct_one_match_hyp; [inversion G; subst; reflexivity | ]).
+    rewrite map.get_empty in G. discriminate G.
+  }
+  repeat match goal with
+         | HI: ?A -> _, HA: ?A |- _ => specialize (HI HA)
+         end.
+  assumption.
+Qed.
 
 Require compiler.ToplevelLoop.
 Definition ml: MemoryLayout.MemoryLayout(word:=Naive.word32) := {|
@@ -147,15 +182,23 @@ Proof.
   case H as (?&?&?&?&?&H); eauto.
 Qed.
 
-Lemma link_initfn : spec_of_initfn funcs.
+Lemma link_initfn : spec_of_initfn (map.of_list funcs).
 Proof.
-  eapply initfn_ok.
-  eapply memconst_ok.
-  eapply lan9250_init_ok;
-    try (eapply lan9250_wait_for_boot_ok || eapply lan9250_mac_write_ok);
-    (eapply lan9250_readword_ok || eapply lan9250_writeword_ok);
-        eapply spi_xchg_ok;
-        (eapply spi_write_ok || eapply spi_read_ok).
+  pose_correctness initfn_ok.
+  pose_correctness lan9250_init_ok.
+  pose_correctness lan9250_wait_for_boot_ok.
+  pose_correctness lan9250_mac_write_ok.
+  pose_correctness lan9250_readword_ok.
+  pose_correctness lan9250_writeword_ok.
+  pose_correctness spi_xchg_ok.
+  pose_correctness spi_write_ok.
+  pose_correctness spi_read_ok.
+  unfold spec_of_memconst_pk in *.
+  pose_correctness (memconst_ok "memconst_pk" garageowner).
+  repeat match goal with
+         | HI: ?A -> _, HA: ?A |- _ => specialize (HI HA)
+         end.
+  assumption.
 Qed. Optimize Heap.
 
 Import ToplevelLoop GoFlatToRiscv regs_initialized LowerPipeline.
@@ -202,12 +245,10 @@ Proof.
   1: instantiate (1:=snd init).
   3: instantiate (1:=snd loop).
   1,3: exact eq_refl.
-  1,2: cbv [hl_inv]; intros; eapply WeakestPreconditionProperties.sound_cmd.
-  1,3: eapply Crypto.Util.Bool.Reflect.reflect_bool; vm_compute; reflexivity.
+  1,2: cbv [hl_inv]; intros; eapply MetricSemantics.of_metrics_free; eapply WeakestPreconditionProperties.sound_cmd.
 
   all : repeat straightline; subst args.
-  { repeat straightline.
-    cbv [LowerPipeline.mem_available LowerPipeline.ptsto_bytes] in *.
+  { cbv [LowerPipeline.mem_available LowerPipeline.ptsto_bytes] in *.
     cbv [datamem_pastend datamem_start garagedoor_spec heap_start heap_pastend ml] in H6.
     SeparationLogic.extract_ex1_and_emp_in H6.
     change (BinIntDef.Z.of_nat (Datatypes.length anybytes) = 0x2000) in H6_emp0.
@@ -257,5 +298,5 @@ Qed.
 
 (*
 Print Assumptions link_loopfn. (* Closed under the global context *)
-Print Assumptions invariant_proof. (* propositional_extensionality, functional_extensionality_dep *)
+Print Assumptions garagedoor_invariant_proof. (* propositional_extensionality, functional_extensionality_dep *)
 *)

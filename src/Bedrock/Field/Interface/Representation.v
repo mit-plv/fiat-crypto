@@ -17,9 +17,9 @@ Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 
 Section Representation.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
   Context {field_parameters : FieldParameters}
           {p_ok : Types.ok}.
   Context (n n_bytes : nat) (weight : nat -> Z)
@@ -43,7 +43,7 @@ Section Representation.
     fun bs =>
       F.of_Z _ (Positional.eval
                            (ModOps.weight 8 1)
-                           n_bytes 
+                           n_bytes
                            (map byte.unsigned bs)).
 
   Local Instance frep : FieldRepresentation := {

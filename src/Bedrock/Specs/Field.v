@@ -116,11 +116,9 @@ End BignumToFieldRepresentationAdapterLemmas.
 Section FunctionSpecs.
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
-  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
   Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
   Context {locals_ok : map.ok locals}.
-  Context {env_ok : map.ok env}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}
           {field_representation : FieldRepresentation}.
@@ -249,13 +247,13 @@ Section FunctionSpecs.
     Definition r := 2 ^ width.
     Definition m' := Z.modinv (- M) r.
     Definition r' := Z.modinv (r) M.
-  
+
     Definition from_mont_model x := F.mul x (@F.of_Z M_pos (r' ^ (Z.of_nat felem_size_in_words)%Z)).
     Definition to_mont_model x := F.mul x (@F.of_Z M_pos (r ^ (Z.of_nat felem_size_in_words)%Z)).
-  
+
     Instance un_from_mont {from_mont : string} : UnOp from_mont :=
       {| un_model := from_mont_model; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.
-  
+
     Instance un_to_mont {to_mont : string} : UnOp to_mont :=
       {| un_model := to_mont_model; un_xbounds := tight_bounds; un_outbounds := loose_bounds|}.
 
@@ -268,11 +266,9 @@ Existing Instances spec_of_UnOp spec_of_BinOp bin_mul un_square bin_add bin_sub
 Section SpecProperties.
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
-  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
   Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
   Context {locals_ok : map.ok locals}.
-  Context {env_ok : map.ok env}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}
           {field_representation : FieldRepresentation}

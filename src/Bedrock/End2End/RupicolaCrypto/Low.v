@@ -157,7 +157,7 @@ Definition buf_pad {T} (buf: buffer_t T) (len: nat) (t: T) : buffer_t T := buf +
 Require Import bedrock2.NotationsCustomEntry.
 Section CompileBufPolymorphic.
   Import ProgramLogic.Coercions WeakestPrecondition.
-  Context (e : list (String.string * Syntax.func)).
+  Context (e : env).
   Context (T : Type) (sz : word) (pT : word -> T -> mem -> Prop).
 
   Declare Scope word_scope.
@@ -228,7 +228,7 @@ Section CompileBufPolymorphic.
     replace a with (word.add a (word.of_Z 0)) in HA by ring; eassumption.
   Qed.
 
-  
+
     Lemma buffer_at_full_capacity' (a : word) c (b : list T)
       :   length b = c ->
           Lift1Prop.iff1
@@ -356,7 +356,7 @@ Section CompileBufPolymorphic.
            assert (length stack = n :> Z) by Lia.lia)
   end.
   repeat straightline.
-  eapply Proper_cmd; [eapply Proper_call | intros ? ? ? ? | eapply H1 ]; cbn [app]; eauto; cycle 1.
+  eapply Proper_cmd; [ intros ? ? ? ? | eapply H1 ]; cbn [app]; eauto; cycle 1.
   { cbv [buffer_at]; cbn.
     sepsimpl; trivial.
     exists stack; cbn.
@@ -434,7 +434,7 @@ Section CompileBufPolymorphic.
     rewrite <-(firstn_skipn (Z.to_nat sz * length arr) pad) in H3.
     seprewrite_in @bytearray_append H3.
     unfold nlet_eq in H2.
-    eapply Proper_cmd; [eapply Proper_call| |eapply H2].
+    eapply Proper_cmd; [ |eapply H2].
     2: ecancel_assumption.
     2: {
       pose proof word.unsigned_range sz.
@@ -498,7 +498,7 @@ Section CompileBufPolymorphic.
     all: try eassumption.
     intros.
     eapply Proper_cmd;
-      [eapply Proper_call| |eapply H2].
+      [ |eapply H2].
     2:{ ecancel_assumption. }
     2:{ cbn [length] in *; lia. }
     intros t1 m1 l1 [Hm Hk].
@@ -626,7 +626,7 @@ Section CompileBufPolymorphic.
     rename x into pad.
     rewrite <-(firstn_skipn (Z.to_nat sz * length arr) pad) in H2.
     seprewrite_in @bytearray_append H2.
-    eapply Proper_cmd; [eapply Proper_call| |eapply H1].
+    eapply Proper_cmd; [ |eapply H1].
     2: ecancel_assumption.
     2: {
       pose proof word.unsigned_range sz.
@@ -669,7 +669,7 @@ Section CompileBufPolymorphic.
   Proof using dealloc_T.
     intros.  eapply deprecated_do_not_use_compile_buf_append with (arr:=[x]).  {
     ecancel_assumption. } { eassumption. } intros.  eapply Proper_cmd;
-    [eapply Proper_call| |eapply H1].  2:{ ecancel_assumption. } 2:{ cbn
+    [ |eapply H1].  2:{ ecancel_assumption. } 2:{ cbn
   [length] in *; lia. } intros t1 m1 l1 [Hm Hk].  cbv [nlet_eq] in *.  cbn
   [array] in *.  split; sepsimpl.  { ecancel_assumption. } eapply Hk.  Qed.
   End Deprecated.
@@ -1057,10 +1057,10 @@ Lemma compile_byte_memcpy (n : nat) (bs bs2 : list byte) :
     }
   Qed.
 
-  
+
 Lemma compile_word_memcpy (n : nat) (bs bs2 : list word) :
   let v := copy bs in
-  forall (e : list (String.string  * Syntax.func)) P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
+  forall (e : env) P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
          len a a2 len_expr a_expr a2_var t m l (R: mem -> Prop),
 
     map.get l a2_var = Some a2 ->
@@ -1109,12 +1109,12 @@ Proof using Type.
   rewrite !memcpy_identity in H10; eauto.
 Qed.
 
-  
+
 End CompileBufPolymorphic.
 
 
 
-  
+
 
 Ltac compile_buf_append:=
   lazymatch goal with
@@ -1129,7 +1129,7 @@ Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (buf_append _ _) 
        compile_buf_append; shelve : compiler.
 
 Section CompileBufByte.
-  Context (e : list (String.string * Syntax.func)).
+  Context (e : env).
   Context (T := byte) (sz : word := word.of_Z 1) (pT := ptsto(map:=mem)).
 
   Declare Scope word_scope.
@@ -1228,7 +1228,7 @@ Section CompileBufByte.
 End CompileBufByte.
 
 Section CompileBufWord32.
-  Context (e : list (String.string  * Syntax.func)).
+  Context (e : env).
   Context (T := word) (sz : word := word.of_Z 4) (pT := scalar32(word:=word)).
 
   Declare Scope word_scope.
@@ -1757,7 +1757,7 @@ Proof.
 
   unfold *)
    *)
-  
+
   Abort.
 (*  lia.
   admit.
@@ -1784,7 +1784,7 @@ Proof.
   repeat compile_step.
   rewrite poly1305_loop_nil.
   unfold nlet at 1.*)
-  
+
 
 (** ** Equivalence proof **)
 

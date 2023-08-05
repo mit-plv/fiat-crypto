@@ -38,51 +38,60 @@ Section Field.
   (**** Translate each field operation into bedrock2 and apply bedrock2 backend
         field pipeline proofs to prove the bedrock2 functions are correct. ****)
 
+  Local Notation functions_contain functions f :=
+    (Interface.map.get functions (fst f) = Some (snd f)).
+
   Derive fe1305_from_bytes
          SuchThat (forall functions,
+                      functions_contain functions fe1305_from_bytes ->
                       spec_of_from_bytes
                         (field_representation:=field_representation n s c)
-                        (fe1305_from_bytes :: functions))
+                        functions)
          As fe1305_from_bytes_correct.
   Proof. Time derive_bedrock2_func from_bytes_op. Qed.
 
   Derive fe1305_to_bytes
          SuchThat (forall functions,
+                      functions_contain functions fe1305_to_bytes ->
                       spec_of_to_bytes
                         (field_representation:=field_representation n s c)
-                        (fe1305_to_bytes :: functions))
+                        functions)
          As fe1305_to_bytes_correct.
   Proof. Time derive_bedrock2_func to_bytes_op. Qed.
 
   Derive fe1305_mul
          SuchThat (forall functions,
+                      functions_contain functions fe1305_mul ->
                       spec_of_BinOp bin_mul
                         (field_representation:=field_representation n s c)
-                        (fe1305_mul :: functions))
+                        functions)
          As fe1305_mul_correct.
   Proof. Time derive_bedrock2_func mul_op. Qed.
 
   Derive fe1305_square
          SuchThat (forall functions,
+                      functions_contain functions fe1305_square ->
                       spec_of_UnOp un_square
                         (field_representation:=field_representation n s c)
-                        (fe1305_square :: functions))
+                        functions)
          As fe1305_square_correct.
   Proof. Time derive_bedrock2_func square_op. Qed.
 
   Derive fe1305_add
          SuchThat (forall functions,
+                      functions_contain functions fe1305_add ->
                       spec_of_BinOp bin_add
                         (field_representation:=field_representation n s c)
-                        (fe1305_add :: functions))
+                        functions)
          As fe1305_add_correct.
   Proof. Time derive_bedrock2_func add_op. Qed.
 
   Derive fe1305_sub
          SuchThat (forall functions,
+                      functions_contain functions fe1305_sub ->
                       spec_of_BinOp bin_sub
                         (field_representation:=field_representation n s c)
-                        (fe1305_sub :: functions))
+                        functions)
          As fe1305_sub_correct.
   Proof. Time derive_bedrock2_func sub_op. Qed.
 End Field.
@@ -91,9 +100,9 @@ End Field.
 (*
 Require Import bedrock2.Syntax.
 Require Import compiler.Pipeline.
-Require Import compilerExamples.MMIO.
+Require Import compiler.MMIO.
 
-Definition funcs : list func :=
+Definition funcs : list (string * func) :=
   [ fe1305_mul;
     fe1305_add;
     fe1305_sub;
@@ -101,5 +110,8 @@ Definition funcs : list func :=
     fe1305_to_bytes;
     fe1305_from_bytes ].
 
-Compute compile (compile_ext_call (funname_env:=SortedListString.map)) (map.of_list funcs).
+#[local]
+Instance BWM_RV32IM : FlatToRiscvCommon.bitwidth_iset 32 Decode.RV32IM := eq_refl.
+
+Compute compile (compile_ext_call (funname_env:=SortedListString.map)) funcs.
 *)

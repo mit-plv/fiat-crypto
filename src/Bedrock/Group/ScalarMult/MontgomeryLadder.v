@@ -75,11 +75,9 @@ Section __.
 
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
-  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
   Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
   Context {locals_ok : map.ok locals}.
-  Context {env_ok : map.ok env}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}.
   Context {field_representaton : FieldRepresentation}.
@@ -220,26 +218,26 @@ Section __.
   Hint Extern 1 (spec_of "ladderstep") =>
   (simple refine (@spec_of_ladderstep _ _ _ _ _ _ _ _)) : typeclass_instances.
 
-  
+
   Hint Extern 1 (spec_of "cswap") =>
   (simple refine (spec_of_cswap)) : typeclass_instances.
-    
+
   (* TODO: this seems a bit delicate*)
   Ltac compile_cswap :=
     eapply compile_felem_cswap;
     [solve[repeat compile_step] ..
     | repeat compile_step;
       rewrite cswap_same;
-      compile_step;      
+      compile_step;
       match goal with
       | [|- (WeakestPrecondition.cmd _ _ _ _ _ (_ (let (_,_) := ?v in _)))] =>
         destruct v
       end].
-  
+
   Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (cswap _ _ _) _))) =>
   compile_cswap; shelve : compiler.
-  
-  
+
+
   Lemma word_unsigned_of_Z_eq z
     : 0 <= z < 2 ^ width -> word.unsigned (word.of_Z z : word) = z.
   Proof using word_ok.
@@ -303,7 +301,7 @@ Section __.
 
   Hint Extern 1 (spec_of "fe25519_inv") => (simple refine (spec_of_exp_large)) : typeclass_instances.
   Hint Extern 1 (spec_of "felem_cswap") => (simple refine (spec_of_cswap)) : typeclass_instances.
-  
+
     Derive montladder_body SuchThat
            (defn! "montladder" ("OUT", "K", "U")
                 { montladder_body },

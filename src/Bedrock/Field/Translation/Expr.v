@@ -10,9 +10,9 @@ Import API.Compilers.
 Import Types.Notations.
 
 Section Expr.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
   Context {ok : ok}.
   Existing Instance Types.rep.Z.
   Existing Instance Types.rep.listZ_local. (* local list representation *)

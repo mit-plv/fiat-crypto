@@ -27,9 +27,9 @@ Import Types.Notations.
    then returns local variables which we store. This file handles the
    loading/storing part of that process. *)
 Section Lists.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
   Local Existing Instance rep.Z.
 
   Fixpoint extract_listnames {t}

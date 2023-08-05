@@ -54,110 +54,40 @@ Local Instance Registers : map.map Z (@word.rep 32 Naive.word32)
 
 Require Import riscv.Spec.Decode.
 
-(* TODO: does something like this already exist? *)
-(* when the function name being called is not first in the list of functions,
-   peel off non-matching names *)
-Local Ltac prepare_call_step :=
-  lazymatch goal with
-  | |- ?call (?f :: ?funcs) ?fname ?t ?m ?args ?post =>
-    assert_fails (unify (fst f) fname);
-    let H := fresh in
-    assert (call funcs fname t m args post) as H;
-    [ | remember funcs; rewrite (surjective_pairing f);
-        cbn [WeakestPrecondition.call WeakestPrecondition.call_body ];
-        lazymatch goal with |- context[if (String.eqb ?x ?y) then _ else _] =>
-          let x' := (eval vm_compute in x) in change x with x';
-          let y' := (eval vm_compute in y) in change y with y';
-          destr (String.eqb x' y'); [ congruence | ]
-        end; exact H ]
-  end.
-Local Ltac prepare_call := repeat prepare_call_step.
-
-(* TODO: move to Spec.Field? *)
-Section Generic.
-  Context {width : Z} {BW : Bitwidth width} {word : word width}
-          {mem : map.map word.rep (Init.Byte.byte : Type)}
-          {locals : map.map string (word.rep (word:=word))}
-          {ext_spec : Semantics.ExtSpec}
-          {field_parameters : FieldParameters}
-          {field_representation : FieldRepresentation}.
-
-  Lemma peel_func_binop
-      {name} (op : BinOp name) funcs0 funcs :
-    fst funcs0 <> name ->
-    spec_of_BinOp op funcs ->
-    spec_of_BinOp op (funcs0 :: funcs).
-  Proof.
-    cbv [spec_of_BinOp binop_spec]; intros.
-    cbn [WeakestPrecondition.call WeakestPrecondition.call_body ].
-    destruct funcs0; cbn [fst snd] in *.
-    lazymatch goal with |- context[if (String.eqb ?x ?y) then _ else _] =>
-      destr (String.eqb x y); [ congruence | ]
-    end.
-    eauto.
-  Qed.
-
-  Lemma peel_func_unop
-      {name} (op : UnOp name) funcs0 funcs :
-    fst funcs0 <> name ->
-    spec_of_UnOp op funcs ->
-    spec_of_UnOp op (funcs0 :: funcs).
-  Proof.
-    cbv [spec_of_UnOp unop_spec]; intros.
-    cbn [WeakestPrecondition.call WeakestPrecondition.call_body ].
-    destruct funcs0; cbn [fst snd] in *.
-    lazymatch goal with |- context[if (String.eqb ?x ?y) then _ else _] =>
-      destr (String.eqb x y); [ congruence | ]
-    end.
-    eauto.
-  Qed.
-
-End Generic.
-
 Local Instance naive_word_riscv_ok :
   RiscvWordProperties.word.riscv_ok Naive.word32 := naive_word_riscv_ok 5.
 
-Lemma link_montladder : spec_of_montladder funcs.
+Lemma link_montladder : spec_of_montladder (map.of_list funcs).
 Proof.
     unfold spec_of_montladder, ScalarMult.MontgomeryLadder.spec_of_montladder.
     unfold funcs.
-    (* montladder is not at the front of the function list; remove everything
-       that doesn't match the name *)
-    prepare_call.
     (* use montladder correctness proof *)
     rewrite montladder_defn.
     eapply @montladder_correct; try (typeclasses eauto).
     { reflexivity. }
     { cbv [Core.__rupicola_program_marker]. tauto. }
     { exact I. }
-    { eapply CSwap.cswap_body_correct; [|exact I].
+    { reflexivity. }
+    { eapply CSwap.cswap_body_correct; [|exact I|reflexivity].
       unfold field_representation, Signature.field_representation, Representation.frep; cbn; unfold n; cbv; trivial. }
-    { eapply fe25519_copy_correct. }
-    { eapply fe25519_from_word_correct. }
+    { eapply fe25519_copy_correct. reflexivity. }
+    { eapply fe25519_from_word_correct. reflexivity. }
     {
       cbv [LadderStep.spec_of_ladderstep]; intros.
-      prepare_call. rewrite ladderstep_defn.
+      rewrite ladderstep_defn.
       eapply @LadderStep.ladderstep_correct; try (typeclasses eauto).
       { cbv [Core.__rupicola_program_marker]; tauto. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_mul_correct. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_add_correct. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_sub_correct. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_square_correct. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_scmula24_correct. }
+      { reflexivity. }
+      { apply fe25519_mul_correct. reflexivity. }
+      { apply fe25519_add_correct. reflexivity. }
+      { apply fe25519_sub_correct. reflexivity. }
+      { apply fe25519_square_correct. reflexivity. }
+      { apply fe25519_scmula24_correct. reflexivity. }
       { ecancel_assumption. } }
-    { repeat (apply peel_func_unop; [ lazy; congruence | ]).
-      unshelve eapply AdditionChains.fe25519_inv_correct_exp; try exact I.
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_square_correct. }
-      { repeat (apply peel_func_binop; [ lazy; congruence | ]).
-        apply fe25519_mul_correct. } }
-    { repeat (apply peel_func_unop; [ lazy; congruence | ]).
-      apply fe25519_mul_correct. }
+    { unshelve eapply AdditionChains.fe25519_inv_correct_exp; [exact I|reflexivity| | ].
+      { apply fe25519_square_correct. reflexivity. }
+      { apply fe25519_mul_correct. reflexivity. } }
+    { apply fe25519_mul_correct. reflexivity. }
 Qed.
 
 Lemma montladder_compiles_correctly :

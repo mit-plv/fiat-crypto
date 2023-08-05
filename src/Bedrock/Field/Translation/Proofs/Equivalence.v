@@ -14,10 +14,10 @@ Import API.Compilers.
 Import Types.Notations.
 
 Section Equivalent.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
    `{parameters_sentinel : @parameters
-     width BW word mem locals env ext_spec varname_gen error}.
+     width BW word mem locals ext_spec varname_gen error}.
   Local Notation parameters := (ltac:(let t := type of parameters_sentinel in exact t)) (only parsing).
   Context {listZ : rep.rep base_listZ}.
   Existing Instance rep.Z.
@@ -119,10 +119,10 @@ End Equivalent.
 
 (* equivalence with flat lists of words *)
 Section EquivalentFlat.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
    `{parameters_sentinel : @parameters
-     width BW word mem locals env ext_spec varname_gen error}.
+     width BW word mem locals ext_spec varname_gen error}.
   Local Notation parameters := (ltac:(let t := type of parameters_sentinel in exact t)) (only parsing).
   Existing Instances rep.listZ_mem rep.Z.
 

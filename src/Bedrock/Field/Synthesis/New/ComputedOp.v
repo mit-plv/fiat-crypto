@@ -6,8 +6,8 @@ Require Import Crypto.Language.API.
 Import API.Compilers.
 
 Record computed_op
-      {width BW word mem locals env ext_spec varname_gen error}
-      {parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
+      {width BW word mem locals ext_spec varname_gen error}
+      {parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}
       {t} {op : Pipeline.ErrorT (API.Expr t)}
       {name : String.string}
       {insizes outsizes inlengths}
@@ -17,7 +17,7 @@ Record computed_op
     res_eq : op = ErrorT.Success res;
     func_eq : b2_func = make_bedrock_func insizes outsizes inlengths res;
   }.
-Global Arguments computed_op {_ _ _ _ _ _ _ _ _ _ t}.
+Global Arguments computed_op {_ _ _ _ _ _ _ _ _ t}.
 
 Ltac make_computed_op :=
   eapply Build_computed_op;
