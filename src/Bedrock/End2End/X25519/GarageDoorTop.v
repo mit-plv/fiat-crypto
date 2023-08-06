@@ -105,7 +105,7 @@ Proof.
   assert (spec_of_montladder (map.of_list funcs)). {
     unfold spec_of_montladder, ScalarMult.MontgomeryLadder.spec_of_montladder.
     intros.
-    eapply WP.extend_env_wp_call.
+    eapply Semantics.extend_env_call.
     2: { eapply link_montladder. eassumption. }
     clear. unfold funcs.
     (* TODO this could be more computational *)
