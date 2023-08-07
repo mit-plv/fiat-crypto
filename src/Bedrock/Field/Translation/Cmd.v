@@ -18,7 +18,6 @@ Section Cmd.
   Context
     {width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}
     `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen add_carryx sub_borrowx error}.
-    .
   Existing Instance Types.rep.Z.
   Existing Instance Types.rep.listZ_local. (* local list representation *)
 
@@ -182,31 +181,37 @@ Section Cmd.
    *)
 
   (* Translate 3-argument special functions. *)
-  Definition translate_ident_special3 {a b c d} (i : ident (a -> b -> c -> d)) (nextn : nat)
-    : rtype a -> rtype b -> rtype c -> option (nat * ltype d * Syntax.cmd.cmd)
+  Definition translate_ident_special3 {var a b c d} (i : ident (a -> b -> c -> d)) (nextn : nat)
+    : API.expr (var:=var) a -> API.expr b -> API.expr c -> option (nat * ltype d * Syntax.cmd.cmd)
     := match i in ident t return
-             rtype (type.domain t) ->
-             rtype (type.domain (type.codomain t)) ->
-             rtype (type.domain (type.codomain (type.codomain t))) ->
+             API.expr (type.domain t) ->
+             API.expr (type.domain (type.codomain t)) ->
+             API.expr (type.domain (type.codomain (type.codomain t))) ->
              option (nat
                      * ltype (type.codomain (type.codomain (type.codomain t)))
                      * Syntax.cmd.cmd) with
        | ident.Z_add_get_carry =>
          fun s x y =>
-           if literal_eqb s width
+           (s <- invert_expr.invert_Literal s;
+           let x := translate_expr true x in
+           let y := translate_expr true y in
+           if s =? 2 ^ width
            then
              let sum := varname_gen nextn in
              let carry := varname_gen (S nextn) in
-             Some (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx_funcname [x; y; Syntax.expr.literal 0])
-           else None
+             Some (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx [x; y; Syntax.expr.literal 0])
+           else None)%option
        | ident.Z_sub_get_borrow =>
          fun s x y =>
-           if literal_eqb s width
+           (s <- invert_expr.invert_Literal s;
+           let x := translate_expr true x in
+           let y := translate_expr true y in
+           if s =? 2 ^ width
            then
              let diff := varname_gen nextn in
              let borrow := varname_gen (S nextn) in
-             Some (2%nat, (diff, borrow), Syntax.cmd.call [diff;borrow] sub_borrowx_funcname [x; y; Syntax.expr.literal 0])
-           else None
+             Some (2%nat, (diff, borrow), Syntax.cmd.call [diff;borrow] sub_borrowx [x; y; Syntax.expr.literal 0])
+           else None)%option
        | _ => fun _ _ _ => None
        end.
 
@@ -214,10 +219,7 @@ Section Cmd.
   Definition translate_if_special3
            {t} (e : @API.expr ltype t) (nextn : nat)
     : option (nat * ltype t * Syntax.cmd.cmd)
-    := (ixyz <- invert_AppIdent3_cps e
-                                   (fun t => translate_expr true (t:=t))
-                                   (fun t => translate_expr true (t:=t))
-                                   (fun t => translate_expr true (t:=t));
+    := (ixyz <- invert_AppIdent3_cps e (fun _ x => x) (fun _ x => x) (fun _ x => x);
        let '(existT _ (i, x, y, z)) := ixyz in
        translate_ident_special3 i nextn x y z)%option.
 
