@@ -97,6 +97,36 @@ Section Cmd.
                       (expr.App (expr.Ident ident.Z_add_get_carry)
                                 (expr.Ident (ident.Literal (t:=base.type.Z) s)))
                       x) y)) f)
+  | valid_add_with_get_carry :
+      forall t rc r1 r2 (s : Z) c x y f,
+        range_good (width:=width) r1 = true ->
+        range_good (width:=width) r2 = true ->
+        ZRange.lower rc = 0 ->
+        ZRange.upper rc = 1 ->
+        s = 2 ^ width ->
+        valid_expr false c ->
+        valid_expr true x ->
+        valid_expr true y ->
+        valid_cmd (f tt) ->
+        valid_cmd
+          (expr.LetIn
+             (B:=type.base t)
+             (expr.App
+                (expr.App (expr.Ident ident.Z_cast2)
+                          (expr.App
+                             (expr.App
+                                (expr.Ident ident.pair)
+                                (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                             (expr.Ident (ident.Literal (t:=base.type.zrange) r2))))
+                (expr.App
+                   (expr.App
+                      (expr.App
+                         (expr.App (expr.Ident ident.Z_add_with_get_carry)
+                                   (expr.Ident (ident.Literal (t:=base.type.Z) s)))
+                         (expr.App (expr.App (expr.Ident ident.Z_cast)
+                                             (expr.Ident (ident.Literal (t:=base.type.zrange) rc)))
+                                   c))
+                      x) y)) f)
   .
 
   Local Instance spec_of_add_carryx : spec_of add_carryx :=
@@ -384,6 +414,16 @@ Section Cmd.
     induction 1; intros; invert_wf3_until_exposed; reflexivity.
   Qed.
 
+  Lemma valid_expr_not_special4 {t}
+        (e1 : @API.expr (fun _ => unit) t)
+        (e2 : @API.expr API.interp_type t)
+        (e3 : @API.expr ltype t) G :
+    valid_expr false e1 ->
+    wf3 G e1 e2 e3 ->
+    forall nextn, translate_if_special4 e3 nextn = None.
+  Proof.
+    induction 1; intros; invert_wf3_until_exposed; reflexivity.
+  Qed.
 
   Lemma invert_App_Z_cast_Some {var} (x : @API.expr var type_Z) r :
     invert_expr.invert_App_Z_cast
@@ -412,9 +452,11 @@ Section Cmd.
     induction 1; intros; invert_wf3_until_exposed;
       try reflexivity; cbv [translate_if_special_function invert_expr.invert_App_cast].
     { rewrite invert_App_Z_cast_Some.
-      cbn. erewrite valid_expr_not_special3 by eauto. break_innermost_match; reflexivity. }
+      cbn. erewrite valid_expr_not_special3, valid_expr_not_special4 by eauto.
+      break_innermost_match; reflexivity. }
     { rewrite invert_App_Z_cast2_Some.
-      cbn. erewrite valid_expr_not_special3 by eauto. break_innermost_match; reflexivity. }
+      cbn. erewrite valid_expr_not_special3, valid_expr_not_special4 by eauto.
+      break_innermost_match; reflexivity. }
   Qed.
 
   (* Convenience lemma for add_with_get_carry case. *)
@@ -526,6 +568,18 @@ Section Cmd.
     = Some (existT _ (a, b, c) (i, f1 _ x, f2 _ y, f3 _ z)).
   Proof. reflexivity. Qed.
 
+  Lemma invert_AppIdent4_Some {P Q R S a b c d e var} (i : ident (a -> b -> c -> d -> e))
+        (w : expr a) (x : expr b) (y : expr c) (z : expr d)
+        (f1 : forall t x, P t)
+        (f2 : forall t x, Q t)
+        (f3 : forall t x, R t)
+        (f4 : forall t x, S t) :
+    invert_AppIdent4_cps (var:=var)
+                         (expr.App (expr.App (expr.App (expr.App (expr.Ident i) w) x) y) z)
+                         f1 f2 f3 f4
+    = Some (existT _ (a, b, c, d) (i, f1 _ w, f2 _ x, f3 _ y, f4 _ z)).
+  Proof. reflexivity. Qed.
+
   Lemma translate_add_get_carry nextn (x y : API.expr type_Z) r1 r2 :
     range_good (width:=width) r1 = true ->
     range_good (width:=width) r2 = true ->
@@ -548,15 +602,8 @@ Section Cmd.
   Proof.
     cbv [translate_if_special_function]; intros.
     repeat lazymatch goal with H : range_good ?r = true |- _ => apply range_good_eq in H; subst end.
-    cbn [invert_expr.invert_App_cast
-           invert_expr.invert_App_Z_cast2
-           invert_expr.invert_App invert_expr.invert_App_cps].
-    lazymatch goal with
-      |- context [invert_expr.invert_Z_cast2 ?x] =>
-      replace (invert_expr.invert_Z_cast2 x) with
-        (Some (max_range (width:=width), max_range (width:=width)))
-        by reflexivity
-    end.
+    cbn [invert_expr.invert_App_cast].
+    rewrite invert_App_Z_cast2_Some.
     cbn [Crypto.Util.Option.bind fst snd range_type_good range_base_good].
     rewrite !max_range_good. cbn [andb].
     cbv [translate_if_special3]. rewrite invert_AppIdent3_Some.
@@ -565,6 +612,61 @@ Section Cmd.
     cbn [type.domain]. rewrite invert_Literal_Some.
     cbn [Crypto.Util.Option.bind fst snd].
     rewrite Z.eqb_refl. reflexivity.
+  Qed.
+
+  Lemma translate_add_with_get_carry nextn (c x y : API.expr type_Z) rc r1 r2 :
+    range_good (width:=width) r1 = true ->
+    range_good (width:=width) r2 = true ->
+    ZRange.lower rc = 0 ->
+    ZRange.upper rc = 1 ->
+    let sum := varname_gen nextn in
+    let carry := varname_gen (S nextn) in
+    translate_if_special_function
+      (expr.App
+         (expr.App (expr.Ident ident.Z_cast2)
+                   (expr.App
+                      (expr.App
+                         (expr.Ident ident.pair)
+                         (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                      (expr.Ident (ident.Literal (t:=base.type.zrange) r2))))
+         (expr.App
+            (expr.App
+               (expr.App
+                  (expr.App (expr.Ident ident.Z_add_with_get_carry)
+                            (expr.Ident (ident.Literal (t:=base.type.Z) (2 ^ width))))
+                  (expr.App (expr.App (expr.Ident ident.Z_cast)
+                                      (expr.Ident (ident.Literal (t:=base.type.zrange) rc)))
+                            c))
+                  x) y)) nextn
+    = Some (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx [(translate_expr true x); (translate_expr true y); translate_expr false c]).
+  Proof.
+    cbv [translate_if_special_function]; intros.
+    repeat lazymatch goal with H : range_good ?r = true |- _ => apply range_good_eq in H; subst end.
+    cbn [invert_expr.invert_App_cast].
+    rewrite invert_App_Z_cast2_Some.
+    cbn [Crypto.Util.Option.bind fst snd range_type_good range_base_good].
+    rewrite !max_range_good. cbn [andb].
+    lazymatch goal with
+    | |- context [translate_if_special3 ?x ?n] =>
+      lazymatch type of x with
+      | API.expr ?t =>
+        change (translate_if_special3 x n) with (@None (nat * ltype t * Syntax.cmd.cmd))
+      end
+    end.
+    cbn iota. cbv [translate_if_special4].
+    rewrite invert_AppIdent4_Some.
+    cbn [Crypto.Util.Option.bind fst snd].
+    cbv [translate_ident_special4].
+    rewrite invert_App_Z_cast_Some.
+    cbn [Crypto.Util.Option.bind fst snd].
+    cbn [type.domain]. rewrite invert_Literal_Some.
+    cbn [Crypto.Util.Option.bind fst snd].
+    repeat lazymatch goal with
+           | H : ZRange.upper ?r = _ |- context [ZRange.upper ?r] => rewrite H
+           | H : ZRange.lower ?r = _ |- context [ZRange.lower ?r] => rewrite H
+           end.
+    rewrite !Z.eqb_refl. cbn [andb].
+    reflexivity.
   Qed.
 
   Local Ltac simplify :=
@@ -819,6 +921,98 @@ Section Cmd.
                | _ => reflexivity
                end. }
       straightline_call; [ rewrite Properties.word.unsigned_of_Z_0; lia | ].
+      sepsimpl; subst; cleanup.
+      eexists; split; [ reflexivity | ].
+      eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
+      2:{
+        eapply IHe1_valid; clear IHe1_valid;
+        repeat match goal with
+               | _ => progress (intros; cleanup)
+               | H : forall v1 v2 v3, wf3 _ (?f v1) _ _ |- wf3 _ (?f tt) _ _ => solve [apply (H tt)]
+               | H : ?P |- ?P => exact H
+               end; [ | | ].
+        { (* context varname_set *)
+          new_context_ok.
+          lazymatch goal with
+          | H : rep.varname_set _ _ \/ rep.varname_set _ _ |- _ =>
+            cbn  in H; destruct H as [H | H]; apply varname_gen_unique in H; lia
+          end. }
+        { (* undef on *)
+          repeat lazymatch goal with
+                 | |- map.undef_on (map.put _ _ _) _ => apply put_undef_on
+                 | H : forall n nvars, _ -> map.undef_on ?l (used_varnames n nvars)
+                                  |- map.undef_on ?l (used_varnames _ _) =>
+                   apply H; lia
+                 | |- ~ used_varnames _ _ _ => rewrite used_varnames_iff; intro; simplify
+                 | H : varname_gen _ = varname_gen _ |- _ => apply varname_gen_unique in H; lia
+                 end. }
+        { (* context equivalent *)
+          apply Forall_cons;
+            [ apply locally_equiv_pair; eauto; rewrite varname_gen_unique; lia | ].
+          eapply equivalent_not_in_context_forall; eauto;
+            repeat lazymatch goal with
+                   | |- map.only_differ (map.put _ _ _) _ _ =>
+                     eapply only_differ_trans; [ | solve [apply only_differ_put] ]
+                   | |- map.only_differ ?m _ ?m => solve [apply only_differ_empty]
+                   | |- map.only_differ _ _ (map.put _ _ _) =>
+                     apply only_differ_sym
+                   | |- disjoint (union _ _) _ =>
+                     apply disjoint_union_l_iff; split
+                   | |- disjoint empty_set _ =>
+                     solve [apply disjoint_empty_l]
+                   | |- disjoint (singleton_set _) _ =>
+                     symmetry; apply disjoint_singleton_r_iff
+                   | _ => solve [eauto with lia]
+                   end. } }
+      clear IHe1_valid.
+      simplify; subst; eauto; [ | | ].
+      { (* varnames subset *)
+        rewrite <-used_varnames_shift; eauto. }
+      { (* only_differ *)
+        only_differ_ok.
+        eauto using only_differ_succ, only_differ_zero. }
+      { (* equivalence of output holds *)
+        lazymatch goal with
+        | H : equivalent_base ?x1 ?y ?a ?l ?m |- equivalent_base ?x2 ?y ?a ?l ?m =>
+          replace x2 with x1; [ exact H | ]
+        end.
+        lazymatch goal with
+          | H : context [word.unsigned (word.of_Z 0)] |- _ =>
+            rewrite Properties.word.unsigned_of_Z_0 in H
+        end.
+        repeat lazymatch goal with
+               | H : word.unsigned _ = expr.interp ?iinterp ?x |- context [expr.interp ?iinterp ?x] =>
+                 rewrite <-H
+               end.
+        erewrite add_get_carry_full_equiv; eauto with lia. } }
+    { (* add_with_get_carry *)
+      rewrite translate_add_with_get_carry by auto. cbn [fst snd].
+      cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
+      Check translate_expr_correct.
+      Check translate_expr_correct'.
+      repeat lazymatch goal with
+             | H : valid_expr ?require_cast ?e |- _ =>
+               lazymatch goal with
+               | Hwf : wf3 ?G e ?e2 ?e3 |- _ =>
+                 let Htr := fresh in
+                 pose proof translate_expr_correct' e e2 e3 require_cast ltac:(eassumption) G _ Hwf ltac:(eassumption) as Htr; cbn iota in Htr; simplify
+               end;
+                 clear H
+             | H : Lift1Prop.ex1 _ _ |- _ => destruct H
+             | H : emp _ _ |- _ => destruct H; cleanup
+             end.
+      cbn [locally_equivalent_nobounds locally_equivalent_nobounds_base] in *.
+      eexists; split; [ | ].
+      { (* Argument expressions. *)
+        repeat lazymatch goal with
+               | |- dexprs _ _ (_ :: _) _ => apply dexprs_cons_iff; split
+               | H : dexpr map.empty ?l ?x _ |- WeakestPrecondition.expr ?m ?l ?x _ =>
+                 apply expr_empty; apply H
+               | _ => reflexivity
+               end. }
+      straightline_call.
+      {
+          }
       sepsimpl; subst; cleanup.
       eexists; split; [ reflexivity | ].
       eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].

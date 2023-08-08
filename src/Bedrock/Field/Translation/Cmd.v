@@ -120,66 +120,6 @@ Section Cmd.
       let '(existT t12 (f, x1, x2)) := e in
       Some (existT _ (t12, t3, t4) (f, x1, x2, x3, x4)))%option.
 
-  Check translate_expr.
-  (* End of day braindump:
-
-     - current prototype is probably shortest path to something that works for 3-4 functions
-     - downsides: breaks abstraction a bit to handle the details of casts etc. at the Cmd level
-     - general work to do:
-       - adapt valid_cmd to special-case the set of separate functions with their casts
-       - create specs for them and fix proofs
-       - adapt the computable version of valid_cmd to match and fix equivalence proof
-       - add 4-argument functions
-       - adjust pipeline args in Defaults.v as needed
-
-    Alternatives:
-      1. Unify translate_expr and translate_cmd layers
-         - Cmd handles variable naming and list/tuple assembly
-         - variable naming uses a counter -> introduces state for rec calls
-         - Expr handles most complicated logic; having no rec state is nice
-      2. Make translate_expr return Syntax.cmd.cmd but not handle the counter
-         - have translate_cmd look ahead to see if the expression is a special function
-         - if so, translate_cmd passes enough variable names to translate_expr to bind result
-         - translate_expr fails if wrong number of names
-         - downsides: extra argument to trace through translate_expr, proof complexity
-
-
-    Example add_get_carry occurrence for reference:
-
-                    (eApp
-                      (eApp (eIdent Compilers.ident_Z_cast2)
-                         (eApp
-                            (eApp (eIdent Compilers.ident_pair)
-                               (eIdent
-                                  (Compilers.ident_Literal
-                                     {| ZRange.lower := 0; ZRange.upper := 4294967295 |})))
-                            (eIdent (Compilers.ident_Literal {| ZRange.lower := 0; ZRange.upper := 1 |}))))
-                      (eApp
-                         (eApp
-                            (eApp (eIdent Compilers.ident_Z_add_get_carry)
-                               (eIdent (Compilers.ident_Literal 4294967296%Z)))
-                            (eApp
-                               (eApp (eIdent Compilers.ident_Z_cast)
-                                  (eIdent
-                                     (Compilers.ident_Literal
-                                        {| ZRange.lower := 0; ZRange.upper := 4294967295 |})))
-                               (eApp
-                                  (eApp
-                                     (eApp (eIdent Compilers.ident_List_nth_default)
-                                        (eIdent (Compilers.ident_Literal 0%Z))) 
-                                     (eVar x0)) (eIdent (Compilers.ident_Literal 0)))))
-                         (eApp
-                            (eApp (eIdent Compilers.ident_Z_cast)
-                               (eIdent
-                                  (Compilers.ident_Literal
-                                     {| ZRange.lower := 0; ZRange.upper := 4294967295 |})))
-                            (eApp
-                               (eApp
-                                  (eApp (eIdent Compilers.ident_List_nth_default)
-                                     (eIdent (Compilers.ident_Literal 0%Z))) (eVar x1))
-                               (eIdent (Compilers.ident_Literal 0))))))
-   *)
-
   (* Translate 3-argument special functions. *)
   Definition translate_ident_special3 {var a b c d} (i : ident (a -> b -> c -> d)) (nextn : nat)
     : API.expr (var:=var) a -> API.expr b -> API.expr c -> option (nat * ltype d * Syntax.cmd.cmd)
@@ -215,6 +155,63 @@ Section Cmd.
        | _ => fun _ _ _ => None
        end.
 
+  (* This is based on `translate_cast_exempt` from Expr.v *)
+  Definition translate_carry {t} (e : @API.expr ltype t) : rtype t :=
+    match e in expr.expr t0 return rtype t0 with
+    | expr.Ident type_Z (ident.Literal base.type.Z z) =>
+      if ZRange.is_bounded_by_bool z {| ZRange.lower := 0; ZRange.upper := 1 |}
+      then Syntax.expr.literal z
+      else make_error _
+    | expr.Var type_Z x => Syntax.expr.var x
+    | _ => make_error _
+    end.
+
+  (* Translate 4-argument special functions. *)
+  Definition translate_ident_special4 {var a b c d e} (i : ident (a -> b -> c -> d -> e)) (nextn : nat)
+    : API.expr (var:=var) a -> API.expr b -> API.expr c -> API.expr d -> option (nat * ltype e * Syntax.cmd.cmd)
+    := match i in ident t return
+             API.expr (type.domain t) ->
+             API.expr (type.domain (type.codomain t)) ->
+             API.expr (type.domain (type.codomain (type.codomain t))) ->
+             API.expr (type.domain (type.codomain (type.codomain (type.codomain t)))) ->
+             option (nat
+                     * ltype (type.codomain (type.codomain (type.codomain (type.codomain t))))
+                     * Syntax.cmd.cmd) with
+       | ident.Z_add_with_get_carry =>
+         fun s c x y =>
+           (s <- invert_expr.invert_Literal s;
+           rc <- invert_expr.invert_App_Z_cast c;
+           if ((ZRange.lower (fst rc) =? 0) && (ZRange.upper (fst rc) =? 1))%bool
+           then
+             if s =? 2 ^ width
+             then
+               let c := translate_carry (snd rc) in
+               let x := translate_expr true x in
+               let y := translate_expr true y in
+               let sum := varname_gen nextn in
+               let carry := varname_gen (S nextn) in
+               Some (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx [x; y; c])
+             else None
+           else None)%option
+       | ident.Z_sub_with_get_borrow =>
+         fun s b x y =>
+           (s <- invert_expr.invert_Literal s;
+           rb <- invert_expr.invert_App_Z_cast b;
+           if ((ZRange.lower (fst rb) =? 0) && (ZRange.upper (fst rb) =? 1))%bool
+           then
+             if s =? 2 ^ width
+             then
+               let b := translate_carry (snd rb) in
+               let x := translate_expr true x in
+               let y := translate_expr true y in
+               let diff := varname_gen nextn in
+               let borrow := varname_gen (S nextn) in
+               Some (2%nat, (diff, borrow), Syntax.cmd.call [diff;borrow] sub_borrowx [x; y; b])
+             else None
+           else None)%option
+       | _ => fun _ _ _ _ => None
+       end.
+
   (* Translates 3-argument special operations or returns None. *)
   Definition translate_if_special3
            {t} (e : @API.expr ltype t) (nextn : nat)
@@ -222,6 +219,14 @@ Section Cmd.
     := (ixyz <- invert_AppIdent3_cps e (fun _ x => x) (fun _ x => x) (fun _ x => x);
        let '(existT _ (i, x, y, z)) := ixyz in
        translate_ident_special3 i nextn x y z)%option.
+
+  (* Translates 4-argument special operations or returns None. *)
+  Definition translate_if_special4
+           {t} (e : @API.expr ltype t) (nextn : nat)
+    : option (nat * ltype t * Syntax.cmd.cmd)
+    := (iwxyz <- invert_AppIdent4_cps e (fun _ x => x) (fun _ x => x) (fun _ x => x) (fun _ x => x);
+       let '(existT _ (i, w, x, y, z)) := iwxyz in
+       translate_ident_special4 i nextn w x y z)%option.
 
   Fixpoint range_base_good {t} : Language.Compilers.base.interp (fun _ => ZRange.zrange) t -> bool :=
     match t as t0 return Language.Compilers.base.interp (base:=Compilers.base) (fun _ => ZRange.zrange) t0 -> bool with
@@ -244,7 +249,10 @@ Section Cmd.
     if range_type_good (fst rx)
     then
       (* Translate the rest of the function. *)
-      translate_if_special3 (snd rx) nextn
+      match translate_if_special3 (snd rx) nextn with
+      | Some res => Some res
+      | None => translate_if_special4 (snd rx) nextn
+      end
     else None)%option.
 
   Fixpoint translate_cmd
