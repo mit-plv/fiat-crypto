@@ -30,39 +30,22 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: recursive
-    - name: bootstrap
-      run: |
-        sudo mkdir /chroot
-        sudo apt-get -q -y -o Acquire::Retries=30 update
-        sudo apt-get -q -y -o Acquire::Retries=30 install debootstrap
-        sudo debootstrap --variant=minbase "$DEBIAN" /chroot http://debian-archive.trafficmanager.net/debian/ || ( cat /tmp/tmp.*/debootstrap/debootstrap.log ; exit 1 )
-        sudo mount proc /chroot/proc -t proc
-        sudo mount sysfs /chroot/sys -t sysfs
-        sudo chroot /chroot apt-get -q -y -o Acquire::Retries=30 install ca-certificates git make time jq python3 python-is-python3 ocaml coq libcoq-core-ocaml-dev libfindlib-ocaml-dev ocaml-findlib cabal-install
-        sudo chroot /chroot groupadd -g "$(id -g)" "$(id -g -n)"
-        sudo chroot /chroot useradd  -g "$(id -g)" -u "$(id -u)" "$(id -u -n)"
-        sudo mkdir -p "/chroot/$(pwd)"
-        sudo chown "$(id -u):$(id -g)" "/chroot/$(pwd)"
-        sudo mount --bind "$(pwd)" "/chroot/$(pwd)"
+    - name: setup Debian chroot
+      run: etc/ci/setup-debian-chroot.sh "$DEBIAN"
     - name: host build params
-      run: |
-        "$(pwd)/etc/ci/describe-system-config.sh"
+      run: etc/ci/describe-system-config.sh
     - name: chroot build params
-      run: |
-        sudo chroot /chroot setpriv --reuid "$(id -u)" --regid "$(id -g)" --init-groups \
-          "$(pwd)/etc/ci/describe-system-config.sh"
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/describe-system-config.sh
     - name: make deps
-      run: |
-        sudo chroot /chroot setpriv --reuid "$(id -u)" --regid "$(id -g)" --init-groups \
-          "$(pwd)/etc/ci/github-actions-make.sh" -C "$(pwd)" -j2 deps
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/github-actions-make.sh -j2 deps
     - name: all-except-generated
-      run: |
-        sudo chroot /chroot setpriv --reuid "$(id -u)" --regid "$(id -g)" --init-groups \
-          "$(pwd)/etc/ci/github-actions-make.sh" -C "$(pwd)" -j2 all-except-generated
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/github-actions-make.sh -j2 all-except-generated
     - name: generated-files
-      run: |
-        sudo chroot /chroot setpriv --reuid "$(id -u)" --regid "$(id -g)" --init-groups \
-          "$(pwd)/etc/ci/github-actions-make.sh" -C "$(pwd)" -j2 generated-files
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/github-actions-make.sh -j2 generated-files
     - run: tar -czvf generated-files.tgz fiat-*/
       if: ${{ failure() }}
     - name: upload generated files
@@ -78,9 +61,8 @@ jobs:
         path: src/ExtractionOCaml
       if: always ()
     - name: standalone-haskell
-      run: |
-        sudo chroot /chroot setpriv --reuid "$(id -u)" --regid "$(id -g)" --init-groups \
-          "$(pwd)/etc/ci/github-actions-make.sh" -C "$(pwd)" -j1 standalone-haskell GHCFLAGS='+RTS -M6G -RTS'
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/github-actions-make.sh -j1 standalone-haskell GHCFLAGS='+RTS -M6G -RTS'
     - name: upload Haskell files
       uses: actions/upload-artifact@v3
       with:
@@ -107,20 +89,8 @@ jobs:
       uses: actions/checkout@v3
       with:
         submodules: recursive
-    - name: bootstrap
-      run: |
-        sudo mkdir /chroot
-        sudo apt-get -q -y -o Acquire::Retries=30 update
-        sudo apt-get -q -y -o Acquire::Retries=30 install debootstrap
-        sudo debootstrap --variant=minbase "$DEBIAN" /chroot http://debian-archive.trafficmanager.net/debian/ || ( cat /tmp/tmp.*/debootstrap/debootstrap.log ; exit 1 )
-        sudo mount proc /chroot/proc -t proc
-        sudo mount sysfs /chroot/sys -t sysfs
-        sudo chroot /chroot apt-get -q -y -o Acquire::Retries=30 install ca-certificates git make time jq python3 python-is-python3 ocaml coq libcoq-core-ocaml-dev libfindlib-ocaml-dev ocaml-findlib cabal-install
-        sudo chroot /chroot groupadd -g "$(id -g)" "$(id -g -n)"
-        sudo chroot /chroot useradd  -g "$(id -g)" -u "$(id -u)" "$(id -u -n)"
-        sudo mkdir -p "/chroot/$(pwd)"
-        sudo chown "$(id -u):$(id -g)" "/chroot/$(pwd)"
-        sudo mount --bind "$(pwd)" "/chroot/$(pwd)"
+    - name: setup Debian chroot
+      run: etc/ci/setup-debian-chroot.sh "$DEBIAN"
     - name: Download a Build Artifact
       uses: actions/download-artifact@v3
       with:
@@ -129,8 +99,7 @@ jobs:
     - name: make binaries executable
       run: git check-ignore src/ExtractionOCaml/* | grep -v '\.' | xargs chmod +x
     - name: make only-test-amd64-files
-      run: |
-        sudo chroot /chroot setpriv --reuid "$(id -u)" --regid "$(id -g)" --init-groups \
-          "$(pwd)/etc/ci/github-actions-make.sh" -C "$(pwd)" -j2 only-test-amd64-files SLOWEST_FIRST=1
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/github-actions-make.sh -j2 only-test-amd64-files SLOWEST_FIRST=1
       env: 
         ALLOW_DIFF: 1

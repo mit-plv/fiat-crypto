@@ -29,3 +29,4 @@ group coqc --config
 group coqc --version
 group "true | coqtop"
 group etc/machine.sh
+group "echo PATH=$PATH"
