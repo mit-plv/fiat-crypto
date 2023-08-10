@@ -609,11 +609,9 @@ Section Cmd.
     = Some (existT _ (a, b, c, d) (i, f1 _ w, f2 _ x, f3 _ y, f4 _ z)).
   Proof. reflexivity. Qed.
 
-  Lemma translate_add_get_carry nextn (x y : API.expr type_Z) r1 r2 :
+  Lemma translate_add_get_carry (x y : API.expr type_Z) r1 r2 :
     range_good (width:=width) r1 = true ->
     range_good (width:=width) r2 = true ->
-    let sum := varname_gen nextn in
-    let carry := varname_gen (S nextn) in
     translate_if_special_function
       (expr.App
          (expr.App (expr.Ident ident.Z_cast2)
@@ -626,8 +624,11 @@ Section Cmd.
             (expr.App
                (expr.App (expr.Ident ident.Z_add_get_carry)
                          (expr.Ident (ident.Literal (t:=base.type.Z) (2 ^ width))))
-               x) y)) nextn
-    = Some (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx [(translate_expr true x); (translate_expr true y); Syntax.expr.literal 0]).
+               x) y))
+    = Some (fun nextn =>
+              let sum := varname_gen nextn in
+              let carry := varname_gen (S nextn) in
+              (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx [(translate_expr true x); (translate_expr true y); Syntax.expr.literal 0])).
   Proof.
     cbv [translate_if_special_function]; intros.
     repeat lazymatch goal with H : range_good ?r = true |- _ => apply range_good_eq in H; subst end.
@@ -643,13 +644,11 @@ Section Cmd.
     rewrite Z.eqb_refl. reflexivity.
   Qed.
 
-  Lemma translate_add_with_get_carry nextn (c x y : API.expr type_Z) rc r1 r2 :
+  Lemma translate_add_with_get_carry (c x y : API.expr type_Z) rc r1 r2 :
     range_good (width:=width) r1 = true ->
     range_good (width:=width) r2 = true ->
     ZRange.lower rc = 0 ->
     ZRange.upper rc = 1 ->
-    let sum := varname_gen nextn in
-    let carry := varname_gen (S nextn) in
     translate_if_special_function
       (expr.App
          (expr.App (expr.Ident ident.Z_cast2)
@@ -666,14 +665,17 @@ Section Cmd.
                   (expr.App (expr.App (expr.Ident ident.Z_cast)
                                       (expr.Ident (ident.Literal (t:=base.type.zrange) rc)))
                             c))
-                  x) y)) nextn
-    = Some (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx
+                  x) y))
+    = Some (fun nextn =>
+              let sum := varname_gen nextn in
+              let carry := varname_gen (S nextn) in
+              (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx
                                               [translate_expr true x
                                                ; translate_expr true y
                                                ; Syntax.expr.op
                                                    Syntax.bopname.and
                                                    (translate_expr false c)
-                                                   (Syntax.expr.literal 1)]).
+                                                   (Syntax.expr.literal 1)])).
   Proof.
     cbv [translate_if_special_function]; intros.
     repeat lazymatch goal with H : range_good ?r = true |- _ => apply range_good_eq in H; subst end.
@@ -682,10 +684,10 @@ Section Cmd.
     cbn [Crypto.Util.Option.bind fst snd range_type_good range_base_good].
     rewrite !max_range_good. cbn [andb].
     lazymatch goal with
-    | |- context [translate_if_special3 ?x ?n] =>
+    | |- context [translate_if_special3 ?x] =>
       lazymatch type of x with
       | API.expr ?t =>
-        change (translate_if_special3 x n) with (@None (nat * ltype t * Syntax.cmd.cmd))
+        change (translate_if_special3 x) with (@None (nat -> nat * ltype t * Syntax.cmd.cmd))
       end
     end.
     cbn iota. cbv [translate_if_special4].
