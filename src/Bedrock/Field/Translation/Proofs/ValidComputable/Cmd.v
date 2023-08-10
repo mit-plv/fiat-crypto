@@ -64,6 +64,68 @@ Section Cmd.
     | _ => fun _ => false
     end.
 
+  Definition valid_ident_special3 {a b c d} (i : ident (a -> b -> c -> d))
+    : @API.expr (fun _ => unit) a
+      -> @API.expr (fun _ => unit) b
+      -> @API.expr (fun _ => unit) c
+      -> bool
+    := match i in ident t return
+             API.expr (type.domain t) ->
+             API.expr (type.domain (type.codomain t)) ->
+             API.expr (type.domain (type.codomain (type.codomain t))) ->
+             bool with
+       | ident.Z_add_get_carry =>
+         fun s x y =>
+           match invert_expr.invert_Literal s with
+           | None => false
+           | Some s => s =? 2 ^ width
+           end
+       | _ => fun _ _ _ => false
+       end.
+
+  Definition valid_ident_special4 {a b c d e} (i : ident (a -> b -> c -> d -> e))
+    : @API.expr (fun _ => unit) a
+      -> @API.expr (fun _ => unit) b
+      -> @API.expr (fun _ => unit) c
+      -> @API.expr (fun _ => unit) d
+      -> bool
+    := match i in ident t return
+             API.expr (type.domain t) ->
+             API.expr (type.domain (type.codomain t)) ->
+             API.expr (type.domain (type.codomain (type.codomain t))) ->
+             API.expr (type.domain (type.codomain (type.codomain (type.codomain t)))) ->
+             bool with
+       | ident.Z_add_with_get_carry =>
+         fun s c x y =>
+           match invert_expr.invert_Literal s with
+           | None => false
+           | Some s =>
+             match invert_expr.invert_App_Z_cast c with
+             | None => false
+             | Some rc =>
+               if ((ZRange.lower (fst rc) =? 0) && (ZRange.upper (fst rc) =? 1))%bool
+               then s =? 2 ^ width
+               else false
+             end
+           end
+       | _ => fun _ _ _ _ => false
+       end.
+
+  Definition valid_special3_bool {t} (e : @API.expr (fun _ => unit) t) : bool :=
+    match Cmd.invert_AppIdent3_cps e (fun _ x => x) (fun _ x => x) (fun _ x => x) with
+    | Some (existT _ (i, x, y, z)) => valid_ident_special3 i x y z
+    | None => false
+    end.
+
+  Definition valid_special4_bool {t} (e : @API.expr (fun _ => unit) t) : bool :=
+    match Cmd.invert_AppIdent4_cps e (fun _ x => x) (fun _ x => x) (fun _ x => x) (fun _ x => x) with
+    | Some (existT _ (i, w, x, y, z)) => valid_ident_special4 i w x y z
+    | None => false
+    end.
+
+  Definition valid_special_bool {t} (e : @API.expr (fun _ => unit) t) : bool :=
+    valid_special3_bool e || valid_special4_bool e.
+
   Fixpoint valid_cmd_bool
            {t} (e : @API.expr (fun _ => unit) t) : bool :=
     if valid_expr_bool_if_base e
@@ -75,11 +137,11 @@ Section Cmd.
                         (base.type.type_base a)
                         (base.type.type_base b)))
           (type.base c) x f =>
-        valid_cmd_bool (f tt) && valid_expr_bool true x
+        valid_cmd_bool (f tt) && (valid_expr_bool true x || valid_special_bool x)
       | expr.LetIn
           (type.base (base.type.type_base a))
           (type.base b) x f =>
-        valid_cmd_bool (f tt) && valid_expr_bool true x
+        valid_cmd_bool (f tt) && (valid_expr_bool true x || valid_special_bool x)
       | expr.App (type.base s) _ f x =>
         (valid_cons_App1_bool f && valid_cmd_bool x)
       | expr.Ident _ i => is_nil_ident i
@@ -98,6 +160,24 @@ Section Cmd.
         apply valid_expr_bool_iff in H
       end.
     constructor; eauto.
+  Qed.
+
+  Lemma valid_special3_valid_cmd {s d} f x :
+    valid_special3_bool (t:=s) x = true ->
+    valid_cmd (t:=d) (f tt) ->
+    valid_cmd (t:=d) (expr.LetIn x f).
+  Proof.
+    cbv [valid_special3_bool].
+    cbv [Cmd.invert_AppIdent3_cps].
+    rewrite Inversion.Compilers.expr.invert_App_cps_id.
+  Qed.
+
+  Lemma valid_special_valid_cmd {s d} f x :
+    valid_special_bool (t:=s) x = true ->
+    valid_cmd (t:=d) (f tt) ->
+    valid_cmd (t:=d) (expr.LetIn x f).
+  Proof.
+    cbv [valid_special_bool].
   Qed.
 
   Lemma is_nil_ident_valid {t} i :

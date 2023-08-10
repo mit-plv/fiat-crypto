@@ -90,6 +90,8 @@ Section Cmd.
       e <- e;
       let '(existT t12 (f, x1, x2)) := e in
       Some (existT _ (t12, t3) (f, x1, x2, x3)))%option.
+  Definition invert_AppIdent3 {base_type ident var t} e :=
+    @invert_AppIdent3_cps base_type ident var t _ _ _ e (fun _ x => x) (fun _ x => x) (fun _ x => x).
   Definition invert_AppIdent4_cps
              {base_type : Type} {ident var : type base_type -> Type}
              {t Q R S T} (e : expr (ident:=ident) (var:=var) t)
@@ -119,6 +121,9 @@ Section Cmd.
       e <- e;
       let '(existT t12 (f, x1, x2)) := e in
       Some (existT _ (t12, t3, t4) (f, x1, x2, x3, x4)))%option.
+  Definition invert_AppIdent4 {base_type ident var t} e :=
+    @invert_AppIdent4_cps base_type ident var t _ _ _ _ e
+                          (fun _ x => x) (fun _ x => x) (fun _ x => x) (fun _ x => x).
 
   (* Translate 3-argument special functions. *)
   Definition translate_ident_special3 {var a b c d} (i : ident (a -> b -> c -> d))
@@ -162,7 +167,8 @@ Section Cmd.
 
   (* Translate 4-argument special functions. *)
   Definition translate_ident_special4 {var a b c d e} (i : ident (a -> b -> c -> d -> e))
-    : API.expr (var:=var) a -> API.expr b -> API.expr c -> API.expr d -> option (nat -> nat * ltype e * Syntax.cmd.cmd)
+    : API.expr (var:=var) a -> API.expr b -> API.expr c -> API.expr d
+      -> option (nat -> nat * ltype e * Syntax.cmd.cmd)
     := match i in ident t return
              API.expr (type.domain t) ->
              API.expr (type.domain (type.codomain t)) ->
@@ -214,18 +220,16 @@ Section Cmd.
        end.
 
   (* Translates 3-argument special operations or returns None. *)
-  Definition translate_if_special3
-           {t} (e : @API.expr ltype t)
+  Definition translate_if_special3 {t} (e : @API.expr ltype t)
     : option (nat -> nat * ltype t * Syntax.cmd.cmd)
-    := (ixyz <- invert_AppIdent3_cps e (fun _ x => x) (fun _ x => x) (fun _ x => x);
+    := (ixyz <- invert_AppIdent3 e;
        let '(existT _ (i, x, y, z)) := ixyz in
        translate_ident_special3 i x y z)%option.
 
   (* Translates 4-argument special operations or returns None. *)
-  Definition translate_if_special4
-           {t} (e : @API.expr ltype t)
+  Definition translate_if_special4 {t} (e : @API.expr ltype t)
     : option (nat -> nat * ltype t * Syntax.cmd.cmd)
-    := (iwxyz <- invert_AppIdent4_cps e (fun _ x => x) (fun _ x => x) (fun _ x => x) (fun _ x => x);
+    := (iwxyz <- invert_AppIdent4 e;
        let '(existT _ (i, w, x, y, z)) := iwxyz in
        translate_ident_special4 i w x y z)%option.
 

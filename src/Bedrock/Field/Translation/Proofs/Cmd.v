@@ -584,30 +584,141 @@ Section Cmd.
     reflexivity.
   Qed.
 
-  Lemma invert_Literal_Some {var t} (x : Compilers.base_interp t) :
+  Lemma invert_Literal_eq_Some {var t} (x : Compilers.base_interp t) :
     invert_expr.invert_Literal (var:=var) (expr.Ident (ident.Literal x)) = Some x.
   Proof. reflexivity. Qed.
 
-  Lemma invert_AppIdent3_Some {Q R S a b c d var} (i : ident (a -> b -> c -> d))
-        (x : expr a) (y : expr b) (z : expr c)
-        (f1 : forall t x, Q t)
-        (f2 : forall t x, R t)
-        (f3 : forall t x, S t) :
-    invert_AppIdent3_cps (var:=var) (expr.App (expr.App (expr.App (expr.Ident i) x) y) z) f1 f2 f3
-    = Some (existT _ (a, b, c) (i, f1 _ x, f2 _ y, f3 _ z)).
+  (* TODO: move to somewhere appropriate in rewriter *)
+  Lemma invert_AppIdent3_cps_id {base_type ident var t Q R S} {e : expr t}
+        (f1 : forall t x, Q t) (f2 : forall t x, R t) (f3 : forall t x, S t) :
+    @invert_AppIdent3_cps base_type ident var t Q R S e f1 f2 f3
+    = option_map
+        (fun '(@existT _ _ argtypes (i, x, y, z)) =>
+           existT
+             (fun argtypes =>
+                (ident (fst (fst argtypes) -> snd (fst argtypes) -> snd argtypes -> t)%etype
+                 * Q (fst (fst argtypes))
+                 * R (snd (fst argtypes))
+                 * S (snd argtypes))%type)
+             argtypes (i, f1 _ x, f2 _ y, f3 _ z))
+        (invert_AppIdent3 e).
+  Proof.
+    cbv [invert_AppIdent3 invert_AppIdent3_cps].
+    cbv [Crypto.Util.Option.bind].
+    repeat lazymatch goal with
+           | |- context [invert_expr.invert_App_cps ?x] =>
+             rewrite !(Inversion.Compilers.expr.invert_App_cps_id (e:=x));
+               destruct (invert_expr.invert_App x) as [ [? [? ?] ] | ];
+               cbn [option_map]; [ | reflexivity ]
+           | |- context [invert_expr.invert_AppIdent2_cps ?x] =>
+             rewrite !(Inversion.Compilers.expr.invert_AppIdent2_cps_id (e:=x));
+               destruct (invert_expr.invert_AppIdent2 x) as [ [? [ [? ?] ?] ] | ];
+               cbn [option_map]; [ | reflexivity ]
+           end.
+    reflexivity.
+  Qed.
+
+  (* TODO: move to somewhere appropriate in rewriter *)
+  Lemma invert_AppIdent4_cps_id {base_type ident var t Q R S T} {e : expr t}
+        (f1 : forall t x, Q t) (f2 : forall t x, R t) (f3 : forall t x, S t) (f4 : forall t x, T t) :
+    @invert_AppIdent4_cps base_type ident var t Q R S T e f1 f2 f3 f4
+    = option_map
+        (fun '(@existT _ _ argtypes (i, w, x, y, z)) =>
+           existT
+             (fun argtypes =>
+                (ident (fst (fst (fst argtypes)) -> snd (fst (fst argtypes)) -> snd (fst argtypes) -> snd argtypes -> t)%etype
+                 * Q (fst (fst (fst argtypes)))
+                 * R (snd (fst (fst argtypes)))
+                 * S (snd (fst argtypes))
+                 * T (snd argtypes))%type)
+             argtypes (i, f1 _ w, f2 _ x, f3 _ y, f4 _ z))
+        (invert_AppIdent4 e).
+  Proof.
+    cbv [invert_AppIdent4 invert_AppIdent4_cps].
+    cbv [Crypto.Util.Option.bind].
+    repeat lazymatch goal with
+           | |- context [invert_expr.invert_App_cps ?x] =>
+             rewrite !(Inversion.Compilers.expr.invert_App_cps_id (e:=x));
+               destruct (invert_expr.invert_App x) as [ [? [? ?] ] | ];
+               cbn [option_map]; [ | reflexivity ]
+           | |- context [invert_expr.invert_AppIdent2_cps ?x] =>
+             rewrite !(Inversion.Compilers.expr.invert_AppIdent2_cps_id (e:=x));
+               destruct (invert_expr.invert_AppIdent2 x) as [ [? [ [? ?] ?] ] | ];
+               cbn [option_map]; [ | reflexivity ]
+           end.
+    reflexivity.
+  Qed.
+
+  Lemma invert_AppIdent3_eq_Some {base_type ident var a b c d} (i : ident (a -> b -> c -> d)%etype)
+        (x : expr a) (y : expr b) (z : expr c) :
+    @invert_AppIdent3 base_type ident var _ (expr.App (expr.App (expr.App (expr.Ident i) x) y) z)
+    = Some (existT _ (a, b, c) (i, x, y, z)).
   Proof. reflexivity. Qed.
 
-  Lemma invert_AppIdent4_Some {P Q R S a b c d e var} (i : ident (a -> b -> c -> d -> e))
-        (w : expr a) (x : expr b) (y : expr c) (z : expr d)
-        (f1 : forall t x, P t)
-        (f2 : forall t x, Q t)
-        (f3 : forall t x, R t)
-        (f4 : forall t x, S t) :
-    invert_AppIdent4_cps (var:=var)
-                         (expr.App (expr.App (expr.App (expr.App (expr.Ident i) w) x) y) z)
-                         f1 f2 f3 f4
-    = Some (existT _ (a, b, c, d) (i, f1 _ w, f2 _ x, f3 _ y, f4 _ z)).
+  Lemma invert_AppIdent4_eq_Some {base_type ident var a b c d e} (i : ident (a -> b -> c -> d -> e)%etype)
+        (w : expr a) (x : expr b) (y : expr c) (z : expr d):
+    @invert_AppIdent4 base_type ident var _ (expr.App (expr.App (expr.App (expr.App (expr.Ident i) w) x) y) z)
+    = Some (existT _ (a, b, c,d ) (i, w, x, y, z)).
   Proof. reflexivity. Qed.
+
+  Lemma invert_AppIdent3_Some {base_type ident var t} v e :
+    @invert_AppIdent3 base_type ident var t e = Some v ->
+    e = (expr.App (expr.App (expr.App (expr.Ident (fst (fst (fst (projT2 v)))))
+                                      (snd (fst (fst (projT2 v)))))
+                            (snd (fst (projT2 v))))
+                  (snd (projT2 v))).
+  Proof.
+    cbv [invert_AppIdent3 invert_AppIdent3_cps]. cbv [Crypto.Util.Option.bind].
+    repeat lazymatch goal with
+           | |- context [invert_expr.invert_App_cps ?x] =>
+             let H := fresh in
+             rewrite !(Inversion.Compilers.expr.invert_App_cps_id (e:=x));
+               destruct (invert_expr.invert_App x) as [ [? [? ?] ] | ] eqn:H;
+               cbn [option_map]; [ | congruence ]
+           | |- context [invert_expr.invert_AppIdent2_cps ?x] =>
+             let H := fresh in
+             rewrite !(Inversion.Compilers.expr.invert_AppIdent2_cps_id (e:=x));
+               destruct (invert_expr.invert_AppIdent2 x) as [ [? [ [? ?] ?] ] | ] eqn:H;
+               cbn [option_map]; [ | congruence ]
+           | H : invert_expr.invert_App _ = Some _ |- _ =>
+             apply Inversion.Compilers.expr.invert_App_Some in H
+           | H : invert_expr.invert_AppIdent2 _ = Some _ |- _ =>
+             apply Inversion.Compilers.expr.invert_AppIdent2_Some in H
+           end.
+    subst; cbn [fst snd projT2].
+    inversion 1. subst; cbn [fst snd projT2].
+    reflexivity.
+  Qed.
+  Lemma invert_AppIdent4_Some {base_type ident var t} v e :
+    @invert_AppIdent4 base_type ident var t e = Some v ->
+    e = (expr.App (expr.App (expr.App (expr.App
+                                         (expr.Ident (fst (fst (fst (fst (projT2 v))))))
+                                         (snd (fst (fst (fst (projT2 v))))))
+                                      (snd (fst (fst (projT2 v)))))
+                            (snd (fst (projT2 v))))
+                  (snd (projT2 v))).
+  Proof.
+    cbv [invert_AppIdent4 invert_AppIdent4_cps]. cbv [Crypto.Util.Option.bind].
+    repeat lazymatch goal with
+           | |- context [invert_expr.invert_App_cps ?x] =>
+             let H := fresh in
+             rewrite !(Inversion.Compilers.expr.invert_App_cps_id (e:=x));
+               destruct (invert_expr.invert_App x) as [ [? [? ?] ] | ] eqn:H;
+               cbn [option_map]; [ | congruence ]
+           | |- context [invert_expr.invert_AppIdent2_cps ?x] =>
+             let H := fresh in
+             rewrite !(Inversion.Compilers.expr.invert_AppIdent2_cps_id (e:=x));
+               destruct (invert_expr.invert_AppIdent2 x) as [ [? [ [? ?] ?] ] | ] eqn:H;
+               cbn [option_map]; [ | congruence ]
+           | H : invert_expr.invert_App _ = Some _ |- _ =>
+             apply Inversion.Compilers.expr.invert_App_Some in H
+           | H : invert_expr.invert_AppIdent2 _ = Some _ |- _ =>
+             apply Inversion.Compilers.expr.invert_AppIdent2_Some in H
+           end.
+    subst; cbn [fst snd projT2].
+    inversion 1. subst; cbn [fst snd projT2].
+    reflexivity.
+  Qed.
 
   Lemma translate_add_get_carry (x y : API.expr type_Z) r1 r2 :
     range_good (width:=width) r1 = true ->
@@ -636,10 +747,10 @@ Section Cmd.
     rewrite invert_App_Z_cast2_Some.
     cbn [Crypto.Util.Option.bind fst snd range_type_good range_base_good].
     rewrite !max_range_good. cbn [andb].
-    cbv [translate_if_special3]. rewrite invert_AppIdent3_Some.
+    cbv [translate_if_special3]. rewrite invert_AppIdent3_eq_Some.
     cbn [Crypto.Util.Option.bind fst snd].
     cbv [translate_ident_special3].
-    cbn [type.domain]. rewrite invert_Literal_Some.
+    cbn [type.domain]. rewrite invert_Literal_eq_Some.
     cbn [Crypto.Util.Option.bind fst snd].
     rewrite Z.eqb_refl. reflexivity.
   Qed.
@@ -691,12 +802,12 @@ Section Cmd.
       end
     end.
     cbn iota. cbv [translate_if_special4].
-    rewrite invert_AppIdent4_Some.
+    rewrite invert_AppIdent4_eq_Some.
     cbn [Crypto.Util.Option.bind fst snd].
     cbv [translate_ident_special4].
     rewrite invert_App_Z_cast_Some.
     cbn [Crypto.Util.Option.bind fst snd].
-    cbn [type.domain]. rewrite invert_Literal_Some.
+    cbn [type.domain]. rewrite invert_Literal_eq_Some.
     cbn [Crypto.Util.Option.bind fst snd].
     repeat lazymatch goal with
            | H : ZRange.upper ?r = _ |- context [ZRange.upper ?r] => rewrite H
