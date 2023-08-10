@@ -409,7 +409,7 @@ Section Cmd.
         (e3 : @API.expr ltype t) G :
     valid_expr false e1 ->
     wf3 G e1 e2 e3 ->
-    forall nextn, translate_if_special3 e3 nextn = None.
+    translate_if_special3 e3 = None.
   Proof.
     induction 1; intros; invert_wf3_until_exposed; reflexivity.
   Qed.
@@ -420,7 +420,7 @@ Section Cmd.
         (e3 : @API.expr ltype t) G :
     valid_expr false e1 ->
     wf3 G e1 e2 e3 ->
-    forall nextn, translate_if_special4 e3 nextn = None.
+    translate_if_special4 e3 = None.
   Proof.
     induction 1; intros; invert_wf3_until_exposed; reflexivity.
   Qed.
@@ -447,7 +447,7 @@ Section Cmd.
         (e3 : @API.expr ltype t) G :
     valid_expr true e1 ->
     wf3 G e1 e2 e3 ->
-    forall nextn, translate_if_special_function e3 nextn = None.
+    translate_if_special_function e3 = None.
   Proof.
     induction 1; intros; invert_wf3_until_exposed;
       try reflexivity; cbv [translate_if_special_function invert_expr.invert_App_cast].
@@ -555,6 +555,35 @@ Section Cmd.
              end.
   Qed.
 
+  Lemma interp_and_carry x :
+    word.unsigned (word:=word)
+                  (Semantics.interp_binop Syntax.bopname.and x (word.of_Z 1)) = (word.unsigned x) mod 2.
+  Proof.
+    cbn [Semantics.interp_binop].
+    rewrite word.unsigned_and, !word.unsigned_of_Z.
+    pose proof word.width_pos.
+    assert (2 <= 2 ^ width) by (apply Pow.Z.pow_pos_le; lia).
+    cbv [word.wrap]. rewrite (Z.mod_small 1) by lia.
+    change 1 with (Z.ones 1). rewrite Z.land_ones by lia.
+    rewrite Z.pow_1_r.
+    lazymatch goal with
+    | |- (?x mod 2) mod _ = _ =>
+      pose proof (Z.mod_pos_bound x 2);
+        rewrite (Z.mod_small (x mod 2)) by lia
+    end.
+    reflexivity.
+  Qed.
+
+  Lemma interp_cast_carry r x :
+    ZRange.lower r = 0 -> ZRange.upper r = 1 -> PreExtra.ident.cast r x = word.wrap x mod 2.
+  Proof.
+    destruct r; cbn [ZRange.lower ZRange.upper]; intros; subst.
+    rewrite CastLemmas.ident.cast_out_of_bounds_simple_0_mod by lia.
+    pose proof word.width_pos. cbv [word.wrap].
+    rewrite Modulo.Z.mod_pow_same_base_smaller with (m:=1); try lia.
+    reflexivity.
+  Qed.
+
   Lemma invert_Literal_Some {var t} (x : Compilers.base_interp t) :
     invert_expr.invert_Literal (var:=var) (expr.Ident (ident.Literal x)) = Some x.
   Proof. reflexivity. Qed.
@@ -638,7 +667,13 @@ Section Cmd.
                                       (expr.Ident (ident.Literal (t:=base.type.zrange) rc)))
                             c))
                   x) y)) nextn
-    = Some (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx [(translate_expr true x); (translate_expr true y); translate_expr false c]).
+    = Some (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx
+                                              [translate_expr true x
+                                               ; translate_expr true y
+                                               ; Syntax.expr.op
+                                                   Syntax.bopname.and
+                                                   (translate_expr false c)
+                                                   (Syntax.expr.literal 1)]).
   Proof.
     cbv [translate_if_special_function]; intros.
     repeat lazymatch goal with H : range_good ?r = true |- _ => apply range_good_eq in H; subst end.
@@ -988,8 +1023,6 @@ Section Cmd.
     { (* add_with_get_carry *)
       rewrite translate_add_with_get_carry by auto. cbn [fst snd].
       cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
-      Check translate_expr_correct.
-      Check translate_expr_correct'.
       repeat lazymatch goal with
              | H : valid_expr ?require_cast ?e |- _ =>
                lazymatch goal with
@@ -1009,10 +1042,14 @@ Section Cmd.
                | H : dexpr map.empty ?l ?x _ |- WeakestPrecondition.expr ?m ?l ?x _ =>
                  apply expr_empty; apply H
                | _ => reflexivity
-               end. }
-      straightline_call.
-      {
-          }
+               end; [ ].
+        (* Carry argument is left over. *)
+        cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body].
+        eapply Proper_expr; [ | solve [apply expr_empty; eauto] ].
+        repeat intro; subst. reflexivity. }
+      straightline_call;
+        [ (* carry is < 2 *)
+          rewrite interp_and_carry; apply Z.mod_pos_bound; lia | ].
       sepsimpl; subst; cleanup.
       eexists; split; [ reflexivity | ].
       eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
@@ -1020,7 +1057,8 @@ Section Cmd.
         eapply IHe1_valid; clear IHe1_valid;
         repeat match goal with
                | _ => progress (intros; cleanup)
-               | H : forall v1 v2 v3, wf3 _ (?f v1) _ _ |- wf3 _ (?f tt) _ _ => solve [apply (H tt)]
+               | H : forall v1 v2 v3, wf3 _ (?f v1) _ _ |- wf3 _ (?f ?v1) _ (_ ?v3) =>
+                 solve [eapply (H v1 _ v3)]
                | H : ?P |- ?P => exact H
                end; [ | | ].
         { (* context varname_set *)
@@ -1068,14 +1106,20 @@ Section Cmd.
         | H : equivalent_base ?x1 ?y ?a ?l ?m |- equivalent_base ?x2 ?y ?a ?l ?m =>
           replace x2 with x1; [ exact H | ]
         end.
-        lazymatch goal with
-          | H : context [word.unsigned (word.of_Z 0)] |- _ =>
-            rewrite Properties.word.unsigned_of_Z_0 in H
-        end.
         repeat lazymatch goal with
                | H : word.unsigned _ = expr.interp ?iinterp ?x |- context [expr.interp ?iinterp ?x] =>
                  rewrite <-H
                end.
-        erewrite add_get_carry_full_equiv; eauto with lia. } }
+        lazymatch goal with
+        | H : context [word.unsigned
+                         (Semantics.interp_binop Syntax.bopname.and (word.of_Z ?x) (word.of_Z 1))]
+          |- context [Definitions.Z.add_with_get_carry_full _ (PreExtra.ident.cast ?r ?c) _ _] =>
+          (* more complex rewrite for the carry *)
+          replace (PreExtra.ident.cast r c)
+            with (word.unsigned (word:=word)
+                                (Semantics.interp_binop Syntax.bopname.and (word.of_Z x) (word.of_Z 1)))
+        end; [ erewrite add_with_get_carry_full_equiv; solve [eauto with lia] | ].
+        rewrite interp_and_carry, interp_cast_carry by auto.
+        rewrite word.unsigned_of_Z. reflexivity. } }
   Qed.
 End Cmd.

@@ -121,13 +121,14 @@ Section Cmd.
       Some (existT _ (t12, t3, t4) (f, x1, x2, x3, x4)))%option.
 
   (* Translate 3-argument special functions. *)
-  Definition translate_ident_special3 {var a b c d} (i : ident (a -> b -> c -> d)) (nextn : nat)
-    : API.expr (var:=var) a -> API.expr b -> API.expr c -> option (nat * ltype d * Syntax.cmd.cmd)
+  Definition translate_ident_special3 {var a b c d} (i : ident (a -> b -> c -> d))
+    : API.expr (var:=var) a -> API.expr b -> API.expr c -> option (nat -> nat * ltype d * Syntax.cmd.cmd)
     := match i in ident t return
              API.expr (type.domain t) ->
              API.expr (type.domain (type.codomain t)) ->
              API.expr (type.domain (type.codomain (type.codomain t))) ->
-             option (nat
+             option (nat ->
+                     nat
                      * ltype (type.codomain (type.codomain (type.codomain t)))
                      * Syntax.cmd.cmd) with
        | ident.Z_add_get_carry =>
@@ -137,9 +138,11 @@ Section Cmd.
            let y := translate_expr true y in
            if s =? 2 ^ width
            then
-             let sum := varname_gen nextn in
-             let carry := varname_gen (S nextn) in
-             Some (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx [x; y; Syntax.expr.literal 0])
+             Some (fun nextn =>
+                     let sum := varname_gen nextn in
+                     let carry := varname_gen (S nextn) in
+                     (2%nat, (sum,carry),
+                      Syntax.cmd.call [sum;carry] add_carryx [x; y; Syntax.expr.literal 0]))
            else None)%option
        | ident.Z_sub_get_borrow =>
          fun s x y =>
@@ -148,33 +151,25 @@ Section Cmd.
            let y := translate_expr true y in
            if s =? 2 ^ width
            then
-             let diff := varname_gen nextn in
-             let borrow := varname_gen (S nextn) in
-             Some (2%nat, (diff, borrow), Syntax.cmd.call [diff;borrow] sub_borrowx [x; y; Syntax.expr.literal 0])
+             Some (fun nextn =>
+                     let diff := varname_gen nextn in
+                     let borrow := varname_gen (S nextn) in
+                     (2%nat, (diff, borrow),
+                      Syntax.cmd.call [diff;borrow] sub_borrowx [x; y; Syntax.expr.literal 0]))
            else None)%option
        | _ => fun _ _ _ => None
        end.
 
-  (* This is based on `translate_cast_exempt` from Expr.v *)
-  Definition translate_carry {t} (e : @API.expr ltype t) : rtype t :=
-    match e in expr.expr t0 return rtype t0 with
-    | expr.Ident type_Z (ident.Literal base.type.Z z) =>
-      if ZRange.is_bounded_by_bool z {| ZRange.lower := 0; ZRange.upper := 1 |}
-      then Syntax.expr.literal z
-      else make_error _
-    | expr.Var type_Z x => Syntax.expr.var x
-    | _ => make_error _
-    end.
-
   (* Translate 4-argument special functions. *)
-  Definition translate_ident_special4 {var a b c d e} (i : ident (a -> b -> c -> d -> e)) (nextn : nat)
-    : API.expr (var:=var) a -> API.expr b -> API.expr c -> API.expr d -> option (nat * ltype e * Syntax.cmd.cmd)
+  Definition translate_ident_special4 {var a b c d e} (i : ident (a -> b -> c -> d -> e))
+    : API.expr (var:=var) a -> API.expr b -> API.expr c -> API.expr d -> option (nat -> nat * ltype e * Syntax.cmd.cmd)
     := match i in ident t return
              API.expr (type.domain t) ->
              API.expr (type.domain (type.codomain t)) ->
              API.expr (type.domain (type.codomain (type.codomain t))) ->
              API.expr (type.domain (type.codomain (type.codomain (type.codomain t)))) ->
-             option (nat
+             option (nat ->
+                     nat
                      * ltype (type.codomain (type.codomain (type.codomain (type.codomain t))))
                      * Syntax.cmd.cmd) with
        | ident.Z_add_with_get_carry =>
@@ -185,12 +180,15 @@ Section Cmd.
            then
              if s =? 2 ^ width
              then
-               let c := translate_carry (snd rc) in
+               let c := translate_expr false (snd rc) in
+               (* For carries we need to preserve the cast, because the proofs don't track bounds. *)
+               let c := Syntax.expr.op Syntax.bopname.and c (Syntax.expr.literal 1) in
                let x := translate_expr true x in
                let y := translate_expr true y in
-               let sum := varname_gen nextn in
-               let carry := varname_gen (S nextn) in
-               Some (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx [x; y; c])
+               Some (fun nextn =>
+                       let sum := varname_gen nextn in
+                       let carry := varname_gen (S nextn) in
+                       (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx [x; y; c]))
              else None
            else None)%option
        | ident.Z_sub_with_get_borrow =>
@@ -201,12 +199,15 @@ Section Cmd.
            then
              if s =? 2 ^ width
              then
-               let b := translate_carry (snd rb) in
+               let b := translate_expr false (snd rb) in
+               (* For carries we need to preserve the cast, because the proofs don't track bounds. *)
+               let b := Syntax.expr.op Syntax.bopname.and b (Syntax.expr.literal 1) in
                let x := translate_expr true x in
                let y := translate_expr true y in
-               let diff := varname_gen nextn in
-               let borrow := varname_gen (S nextn) in
-               Some (2%nat, (diff, borrow), Syntax.cmd.call [diff;borrow] sub_borrowx [x; y; b])
+               Some (fun nextn =>
+                       let diff := varname_gen nextn in
+                       let borrow := varname_gen (S nextn) in
+                       (2%nat, (diff, borrow), Syntax.cmd.call [diff;borrow] sub_borrowx [x; y; b]))
              else None
            else None)%option
        | _ => fun _ _ _ _ => None
@@ -214,19 +215,19 @@ Section Cmd.
 
   (* Translates 3-argument special operations or returns None. *)
   Definition translate_if_special3
-           {t} (e : @API.expr ltype t) (nextn : nat)
-    : option (nat * ltype t * Syntax.cmd.cmd)
+           {t} (e : @API.expr ltype t)
+    : option (nat -> nat * ltype t * Syntax.cmd.cmd)
     := (ixyz <- invert_AppIdent3_cps e (fun _ x => x) (fun _ x => x) (fun _ x => x);
        let '(existT _ (i, x, y, z)) := ixyz in
-       translate_ident_special3 i nextn x y z)%option.
+       translate_ident_special3 i x y z)%option.
 
   (* Translates 4-argument special operations or returns None. *)
   Definition translate_if_special4
-           {t} (e : @API.expr ltype t) (nextn : nat)
-    : option (nat * ltype t * Syntax.cmd.cmd)
+           {t} (e : @API.expr ltype t)
+    : option (nat -> nat * ltype t * Syntax.cmd.cmd)
     := (iwxyz <- invert_AppIdent4_cps e (fun _ x => x) (fun _ x => x) (fun _ x => x) (fun _ x => x);
        let '(existT _ (i, w, x, y, z)) := iwxyz in
-       translate_ident_special4 i nextn w x y z)%option.
+       translate_ident_special4 i w x y z)%option.
 
   Fixpoint range_base_good {t} : Language.Compilers.base.interp (fun _ => ZRange.zrange) t -> bool :=
     match t as t0 return Language.Compilers.base.interp (base:=Compilers.base) (fun _ => ZRange.zrange) t0 -> bool with
@@ -242,16 +243,16 @@ Section Cmd.
     end.
 
   Definition translate_if_special_function
-             {t} (e : @API.expr ltype t) (nextn : nat)
-    : option (nat * ltype t * Syntax.cmd.cmd) :=
+             {t} (e : @API.expr ltype t)
+    : option (nat -> nat * ltype t * Syntax.cmd.cmd) :=
     (* Expect an outer cast and strip it off. *)
     (rx <- invert_expr.invert_App_cast e;
     if range_type_good (fst rx)
     then
       (* Translate the rest of the function. *)
-      match translate_if_special3 (snd rx) nextn with
+      match translate_if_special3 (snd rx) with
       | Some res => Some res
-      | None => translate_if_special4 (snd rx) nextn
+      | None => translate_if_special4 (snd rx)
       end
     else None)%option.
 
@@ -265,9 +266,9 @@ Section Cmd.
     | expr.LetIn (type.base t1) (type.base t2) x f =>
       (* Special handling for functions that should result in calls to bedrock2
          functions, e.g. add_carryx. *)
-      let result_if_special := translate_if_special_function (t:=type.base t1) x nextn in
+      let result_if_special := translate_if_special_function (t:=type.base t1) x in
       let trx := match result_if_special with
-                 | Some res => res
+                 | Some res => res nextn
                  | None => assign nextn (translate_expr true x)
                  end in
       let trf := translate_cmd (f (snd (fst trx))) (nextn + fst (fst trx)) in
