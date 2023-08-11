@@ -154,7 +154,13 @@ Section WithParameters.
     | |- map word.unsigned _ = map word.unsigned _ => reflexivity
     | |- word.unsigned _ = word.unsigned _ => reflexivity
     | |- WeakestPrecondition.get _ _ _ =>
-      repeat (apply Util.get_put_diff; [ congruence | ]);
+      repeat (apply Util.get_put_diff; [
+                cbv [default_inname_gen default_outname_gen]; try congruence;
+                lazymatch goal with
+                | |- prefix_name_gen _ _ <> prefix_name_gen _ _ =>
+                  let H := fresh in
+                  intro H; eapply prefix_name_gen_unique in H; congruence
+                end | ]);
       apply Util.get_put_same; reflexivity
     | |- Forall (fun z => 0 <= z < 2 ^ (?e * 8))
                 (map word.unsigned _) =>
@@ -222,6 +228,7 @@ Section WithParameters.
     | |- API.Wf _ => assumption
     | |- @eq (list word.rep) _ _ => reflexivity
     | |- length [?p] = _ => reflexivity
+    | |- Cmd.spec_of_add_carryx _ => assumption
     | |- forall _, ~ VarnameSet.varname_set_args _ _ =>
       solve [auto using make_innames_varname_gen_disjoint]
     | |- forall _, ~ VarnameSet.varname_set_base (make_outnames _)
@@ -379,7 +386,9 @@ Section WithParameters.
 
     Lemma list_binop_correct f :
       f = make_bedrock_func insizes outsizes inlengths res ->
-      forall functions, (binop_spec _ ((name, f) :: functions)).
+      forall functions,
+        Cmd.spec_of_add_carryx (add_carryx:=add_carryx) functions ->
+        (binop_spec _ ((name, f) :: functions)).
     Proof.
       subst inlengths insizes outsizes.
       cbv [binop_spec list_binop_insizes list_binop_outsizes list_binop_inlengths].
@@ -388,9 +397,10 @@ Section WithParameters.
       2: {
         use_translate_func_correct
           constr:((map word.unsigned x, (map word.unsigned y, tt))) Rr;
-        translate_func_precondition_hammer.
+          translate_func_precondition_hammer; [ ].
         { (* lists_reserved_with_initial_context *)
-          lists_reserved_simplify pout; try solve_equivalence_side_conditions; solve_length out outbounds_length.
+          lists_reserved_simplify pout; try solve_equivalence_side_conditions.
+          solve_length out outbounds_length.
           } }
       { postcondition_simplify; [ | | ]; cycle -1.
         { refine (proj1 (Proper_sep_iff1 _ _ _ _ _ _ _) _);
