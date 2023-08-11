@@ -77,7 +77,7 @@ Section Cmd.
   | valid_add_get_carry :
       forall t r1 r2 (s : Z) x y f,
         range_good (width:=width) r1 = true ->
-        range_good (width:=width) r2 = true ->
+        is_carry_range r2 = true ->
         s = 2 ^ width ->
         valid_expr true x ->
         valid_expr true y ->
@@ -100,9 +100,8 @@ Section Cmd.
   | valid_add_with_get_carry :
       forall t rc r1 r2 (s : Z) c x y f,
         range_good (width:=width) r1 = true ->
-        range_good (width:=width) r2 = true ->
-        ZRange.lower rc = 0 ->
-        ZRange.upper rc = 1 ->
+        is_carry_range r2 = true ->
+        is_carry_range rc = true ->
         s = 2 ^ width ->
         valid_expr false c ->
         valid_expr true x ->
@@ -406,10 +405,10 @@ Section Cmd.
   Lemma valid_expr_not_special3 {t}
         (e1 : @API.expr (fun _ => unit) t)
         (e2 : @API.expr API.interp_type t)
-        (e3 : @API.expr ltype t) G :
+        (e3 : @API.expr ltype t) G r :
     valid_expr false e1 ->
     wf3 G e1 e2 e3 ->
-    translate_if_special3 e3 = None.
+    translate_if_special3 e3 r = None.
   Proof.
     induction 1; intros; invert_wf3_until_exposed; reflexivity.
   Qed.
@@ -417,22 +416,76 @@ Section Cmd.
   Lemma valid_expr_not_special4 {t}
         (e1 : @API.expr (fun _ => unit) t)
         (e2 : @API.expr API.interp_type t)
-        (e3 : @API.expr ltype t) G :
+        (e3 : @API.expr ltype t) G r :
     valid_expr false e1 ->
     wf3 G e1 e2 e3 ->
-    translate_if_special4 e3 = None.
+    translate_if_special4 e3 r = None.
   Proof.
     induction 1; intros; invert_wf3_until_exposed; reflexivity.
   Qed.
 
-  Lemma invert_App_Z_cast_Some {var} (x : @API.expr var type_Z) r :
+  (* TODO: move somewhere appropriate in the rewriter *)
+  Lemma invert_App_Z_cast_Some {var} (e : @API.expr var type_Z) r x :
+    invert_expr.invert_App_Z_cast e = Some (r, x) ->
+    e = (expr.App (expr.App (expr.Ident ident.Z_cast)
+                            (expr.Ident (ident.Literal (t:=Compilers.zrange) r))) x).
+  Proof.
+    cbv [invert_expr.invert_App_Z_cast Crypto.Util.Option.bind].
+    lazymatch goal with
+    | |- context [invert_expr.invert_App ?x] =>
+      let H := fresh in
+      destruct (invert_expr.invert_App x) as [ [? [? ?] ] | ] eqn:H;
+        [ | congruence ];
+        apply Inversion.Compilers.expr.invert_App_Some in H
+    end.
+    cbn [fst snd projT2] in *; subst.
+    break_match; try congruence; [ ]. intros.
+    repeat lazymatch goal with
+           | H : Some _ = Some _ |- _ => inversion H; subst; clear H
+           | H : invert_expr.invert_Z_cast _ = Some _ |- _ =>
+             apply InversionExtra.Compilers.expr.invert_Z_cast_Some_Z in H;
+               subst
+           end.
+    reflexivity.
+  Qed.
+
+  (* TODO: move somewhere appropriate in the rewriter *)
+  Lemma invert_App_Z_cast2_Some {var} (e : @API.expr var type_ZZ) r1 r2 x :
+    invert_expr.invert_App_Z_cast2 e = Some (r1, r2, x) ->
+    e = (expr.App (expr.App (expr.Ident ident.Z_cast2)
+                            (expr.App (expr.App (expr.Ident ident.pair)
+                                                (expr.Ident (ident.Literal (t:=Compilers.zrange) r1)))
+                                      (expr.Ident (ident.Literal (t:=Compilers.zrange) r2)))) x).
+  Proof.
+    cbv [invert_expr.invert_App_Z_cast2 Crypto.Util.Option.bind].
+    lazymatch goal with
+    | |- context [invert_expr.invert_App ?x] =>
+      let H := fresh in
+      destruct (invert_expr.invert_App x) as [ [? [? ?] ] | ] eqn:H;
+        [ | congruence ];
+        apply Inversion.Compilers.expr.invert_App_Some in H
+    end.
+    cbn [fst snd projT2] in *; subst.
+    break_match; try congruence; [ ]. intros.
+    repeat lazymatch goal with
+           | H : Some _ = Some _ |- _ => inversion H; subst; clear H
+           | H : invert_expr.invert_Z_cast2 _ = Some _ |- _ =>
+             apply InversionExtra.Compilers.expr.invert_Z_cast2_Some_ZZ in H;
+               subst
+           end.
+    reflexivity.
+  Qed.
+
+  (* TODO: move somewhere appropriate in the rewriter *)
+  Lemma invert_App_Z_cast_eq_Some {var} (x : @API.expr var type_Z) r :
     invert_expr.invert_App_Z_cast
       (expr.App (expr.App (expr.Ident ident.Z_cast)
                           (expr.Ident (ident.Literal r)))
                 x) = Some (r, x).
   Proof. reflexivity. Qed.
 
-  Lemma invert_App_Z_cast2_Some {var} (x : @API.expr var type_ZZ) r1 r2 :
+  (* TODO: move somewhere appropriate in the rewriter *)
+  Lemma invert_App_Z_cast2_eq_Some {var} (x : @API.expr var type_ZZ) r1 r2 :
     invert_expr.invert_App_Z_cast2
       (expr.App (expr.App (expr.Ident ident.Z_cast2)
                           (expr.App (expr.App (expr.Ident ident.pair)
@@ -451,10 +504,10 @@ Section Cmd.
   Proof.
     induction 1; intros; invert_wf3_until_exposed;
       try reflexivity; cbv [translate_if_special_function invert_expr.invert_App_cast].
-    { rewrite invert_App_Z_cast_Some.
+    { rewrite invert_App_Z_cast_eq_Some.
       cbn. erewrite valid_expr_not_special3, valid_expr_not_special4 by eauto.
       break_innermost_match; reflexivity. }
-    { rewrite invert_App_Z_cast2_Some.
+    { rewrite invert_App_Z_cast2_eq_Some.
       cbn. erewrite valid_expr_not_special3, valid_expr_not_special4 by eauto.
       break_innermost_match; reflexivity. }
   Qed.
@@ -584,6 +637,7 @@ Section Cmd.
     reflexivity.
   Qed.
 
+  (* TODO: move somewhere appropriate in the rewriter *)
   Lemma invert_Literal_eq_Some {var t} (x : Compilers.base_interp t) :
     invert_expr.invert_Literal (var:=var) (expr.Ident (ident.Literal x)) = Some x.
   Proof. reflexivity. Qed.
@@ -649,18 +703,21 @@ Section Cmd.
     reflexivity.
   Qed.
 
+  (* TODO: move somewhere appropriate in the rewriter *)
   Lemma invert_AppIdent3_eq_Some {base_type ident var a b c d} (i : ident (a -> b -> c -> d)%etype)
         (x : expr a) (y : expr b) (z : expr c) :
     @invert_AppIdent3 base_type ident var _ (expr.App (expr.App (expr.App (expr.Ident i) x) y) z)
     = Some (existT _ (a, b, c) (i, x, y, z)).
   Proof. reflexivity. Qed.
 
+  (* TODO: move somewhere appropriate in the rewriter *)
   Lemma invert_AppIdent4_eq_Some {base_type ident var a b c d e} (i : ident (a -> b -> c -> d -> e)%etype)
         (w : expr a) (x : expr b) (y : expr c) (z : expr d):
     @invert_AppIdent4 base_type ident var _ (expr.App (expr.App (expr.App (expr.App (expr.Ident i) w) x) y) z)
     = Some (existT _ (a, b, c,d ) (i, w, x, y, z)).
   Proof. reflexivity. Qed.
 
+  (* TODO: move somewhere appropriate in the rewriter *)
   Lemma invert_AppIdent3_Some {base_type ident var t} v e :
     @invert_AppIdent3 base_type ident var t e = Some v ->
     e = (expr.App (expr.App (expr.App (expr.Ident (fst (fst (fst (projT2 v)))))
@@ -689,6 +746,7 @@ Section Cmd.
     inversion 1. subst; cbn [fst snd projT2].
     reflexivity.
   Qed.
+  (* TODO: move somewhere appropriate in the rewriter *)
   Lemma invert_AppIdent4_Some {base_type ident var t} v e :
     @invert_AppIdent4 base_type ident var t e = Some v ->
     e = (expr.App (expr.App (expr.App (expr.App
@@ -720,9 +778,14 @@ Section Cmd.
     reflexivity.
   Qed.
 
+  Lemma is_carry_range_eq r : is_carry_range r = true -> r = {| ZRange.lower := 0; ZRange.upper := 1 |}.
+  Proof.
+    cbv [is_carry_range]. intro H; apply ZRange.zrange_bl in H. congruence.
+  Qed.
+
   Lemma translate_add_get_carry (x y : API.expr type_Z) r1 r2 :
     range_good (width:=width) r1 = true ->
-    range_good (width:=width) r2 = true ->
+    is_carry_range r2 = true ->
     translate_if_special_function
       (expr.App
          (expr.App (expr.Ident ident.Z_cast2)
@@ -742,24 +805,25 @@ Section Cmd.
               (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx [(translate_expr true x); (translate_expr true y); Syntax.expr.literal 0])).
   Proof.
     cbv [translate_if_special_function]; intros.
-    repeat lazymatch goal with H : range_good ?r = true |- _ => apply range_good_eq in H; subst end.
     cbn [invert_expr.invert_App_cast].
-    rewrite invert_App_Z_cast2_Some.
-    cbn [Crypto.Util.Option.bind fst snd range_type_good range_base_good].
-    rewrite !max_range_good. cbn [andb].
+    rewrite invert_App_Z_cast2_eq_Some.
+    cbn [Crypto.Util.Option.bind fst snd].
     cbv [translate_if_special3]. rewrite invert_AppIdent3_eq_Some.
     cbn [Crypto.Util.Option.bind fst snd].
     cbv [translate_ident_special3].
     cbn [type.domain]. rewrite invert_Literal_eq_Some.
     cbn [Crypto.Util.Option.bind fst snd].
+    repeat lazymatch goal with
+           | H : ?x = true |- context [?x] => rewrite H
+           end.
+    cbn [andb].
     rewrite Z.eqb_refl. reflexivity.
   Qed.
 
   Lemma translate_add_with_get_carry (c x y : API.expr type_Z) rc r1 r2 :
     range_good (width:=width) r1 = true ->
-    range_good (width:=width) r2 = true ->
-    ZRange.lower rc = 0 ->
-    ZRange.upper rc = 1 ->
+    is_carry_range r2 = true ->
+    is_carry_range rc = true ->
     translate_if_special_function
       (expr.App
          (expr.App (expr.Ident ident.Z_cast2)
@@ -789,32 +853,28 @@ Section Cmd.
                                                    (Syntax.expr.literal 1)])).
   Proof.
     cbv [translate_if_special_function]; intros.
-    repeat lazymatch goal with H : range_good ?r = true |- _ => apply range_good_eq in H; subst end.
     cbn [invert_expr.invert_App_cast].
-    rewrite invert_App_Z_cast2_Some.
-    cbn [Crypto.Util.Option.bind fst snd range_type_good range_base_good].
-    rewrite !max_range_good. cbn [andb].
+    rewrite invert_App_Z_cast2_eq_Some.
+    cbn [Crypto.Util.Option.bind fst snd].
     lazymatch goal with
-    | |- context [translate_if_special3 ?x] =>
+    | |- context [translate_if_special3 ?x ?r] =>
       lazymatch type of x with
       | API.expr ?t =>
-        change (translate_if_special3 x) with (@None (nat -> nat * ltype t * Syntax.cmd.cmd))
+        change (translate_if_special3 x r) with (@None (nat -> nat * ltype t * Syntax.cmd.cmd))
       end
     end.
     cbn iota. cbv [translate_if_special4].
     rewrite invert_AppIdent4_eq_Some.
     cbn [Crypto.Util.Option.bind fst snd].
     cbv [translate_ident_special4].
-    rewrite invert_App_Z_cast_Some.
+    rewrite invert_App_Z_cast_eq_Some.
     cbn [Crypto.Util.Option.bind fst snd].
     cbn [type.domain]. rewrite invert_Literal_eq_Some.
     cbn [Crypto.Util.Option.bind fst snd].
     repeat lazymatch goal with
-           | H : ZRange.upper ?r = _ |- context [ZRange.upper ?r] => rewrite H
-           | H : ZRange.lower ?r = _ |- context [ZRange.lower ?r] => rewrite H
+           | H : ?x = true |- context [?x] => rewrite H; cbn [andb]
            end.
-    rewrite !Z.eqb_refl. cbn [andb].
-    reflexivity.
+    rewrite !Z.eqb_refl. reflexivity.
   Qed.
 
   Local Ltac simplify :=

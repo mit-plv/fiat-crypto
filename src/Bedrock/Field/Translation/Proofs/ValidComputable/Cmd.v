@@ -8,6 +8,7 @@ Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Map.Interface.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Bedrock.Field.Common.Tactics.
+Require Import Crypto.Bedrock.Field.Translation.Cmd.
 Require Import Crypto.Bedrock.Field.Translation.Proofs.Expr.
 Require Import Crypto.Bedrock.Field.Translation.Proofs.Cmd.
 Require Import Crypto.Bedrock.Field.Translation.Proofs.ValidComputable.Expr.
@@ -64,67 +65,71 @@ Section Cmd.
     | _ => fun _ => false
     end.
 
+  Definition is_add_get_carry_ident {t} (i : ident.ident t) : bool :=
+    match i with
+    | ident.Z_add_get_carry => true
+    | _ => false
+    end.
+
+  Definition is_add_with_get_carry_ident {t} (i : ident.ident t) : bool :=
+    match i with
+    | ident.Z_add_with_get_carry => true
+    | _ => false
+    end.
+
   Definition valid_ident_special3 {a b c d} (i : ident (a -> b -> c -> d))
     : @API.expr (fun _ => unit) a
       -> @API.expr (fun _ => unit) b
       -> @API.expr (fun _ => unit) c
-      -> bool
-    := match i in ident t return
-             API.expr (type.domain t) ->
-             API.expr (type.domain (type.codomain t)) ->
-             API.expr (type.domain (type.codomain (type.codomain t))) ->
-             bool with
-       | ident.Z_add_get_carry =>
-         fun s x y =>
-           match invert_expr.invert_Literal s with
-           | None => false
-           | Some s => s =? 2 ^ width
-           end
-       | _ => fun _ _ _ => false
-       end.
+      -> bool :=
+    if is_add_get_carry_ident i
+    then (fun s x y => is_literalz s (2 ^ width))
+    else (fun _ _ _ => false).
+
+  Definition valid_carry_bool {t} : @API.expr (fun _ => unit) t -> bool :=
+    match t with
+    | type_Z =>
+      fun c =>
+        match invert_expr.invert_App_Z_cast c with
+          | Some rc =>
+            if ((ZRange.lower (fst rc) =? 0) && (ZRange.upper (fst rc) =? 1))%bool
+            then valid_expr_bool false (snd rc)
+            else false
+          | None => false
+        end
+    | _ => fun _ => false
+    end.
 
   Definition valid_ident_special4 {a b c d e} (i : ident (a -> b -> c -> d -> e))
     : @API.expr (fun _ => unit) a
       -> @API.expr (fun _ => unit) b
       -> @API.expr (fun _ => unit) c
       -> @API.expr (fun _ => unit) d
-      -> bool
-    := match i in ident t return
-             API.expr (type.domain t) ->
-             API.expr (type.domain (type.codomain t)) ->
-             API.expr (type.domain (type.codomain (type.codomain t))) ->
-             API.expr (type.domain (type.codomain (type.codomain (type.codomain t)))) ->
-             bool with
-       | ident.Z_add_with_get_carry =>
-         fun s c x y =>
-           match invert_expr.invert_Literal s with
-           | None => false
-           | Some s =>
-             match invert_expr.invert_App_Z_cast c with
-             | None => false
-             | Some rc =>
-               if ((ZRange.lower (fst rc) =? 0) && (ZRange.upper (fst rc) =? 1))%bool
-               then s =? 2 ^ width
-               else false
-             end
-           end
-       | _ => fun _ _ _ _ => false
-       end.
+      -> bool :=
+    if is_add_with_get_carry_ident i
+    then (fun s c x y => is_literalz s (2 ^ width) && valid_carry_bool c)
+    else (fun _ _ _ _ => false).
 
   Definition valid_special3_bool {t} (e : @API.expr (fun _ => unit) t) : bool :=
-    match Cmd.invert_AppIdent3_cps e (fun _ x => x) (fun _ x => x) (fun _ x => x) with
+    match invert_AppIdent3 e with
     | Some (existT _ (i, x, y, z)) => valid_ident_special3 i x y z
     | None => false
     end.
 
   Definition valid_special4_bool {t} (e : @API.expr (fun _ => unit) t) : bool :=
-    match Cmd.invert_AppIdent4_cps e (fun _ x => x) (fun _ x => x) (fun _ x => x) (fun _ x => x) with
+    match invert_AppIdent4 e with
     | Some (existT _ (i, w, x, y, z)) => valid_ident_special4 i w x y z
     | None => false
     end.
 
   Definition valid_special_bool {t} (e : @API.expr (fun _ => unit) t) : bool :=
-    valid_special3_bool e || valid_special4_bool e.
+    match invert_expr.invert_App_cast e with
+    | Some rx =>
+      if range_type_good (width:=width) (fst rx)
+      then valid_special3_bool (snd rx) || valid_special4_bool (snd rx)
+      else false
+    | None => false
+    end.
 
   Fixpoint valid_cmd_bool
            {t} (e : @API.expr (fun _ => unit) t) : bool :=
@@ -162,15 +167,74 @@ Section Cmd.
     constructor; eauto.
   Qed.
 
+  Lemma is_add_get_carry_ident_eq {t} i :
+    @is_add_get_carry_ident t i = true ->
+    (match t as t0 return ident.ident t0 -> Prop with
+     | type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ)) =>
+       fun i => i = ident.Z_add_get_carry
+     | _ => fun _ => False
+     end) i.
+  Proof.
+    cbv [is_add_get_carry_ident]; break_match; congruence.
+  Qed.
+
+  Lemma is_literalz_eq t (e : API.expr t) (x : Z) :
+    is_literalz e x = true ->
+    (match t as t0 return API.expr t0 -> Prop with
+     | type_Z => fun e => e = expr.Ident (ident.Literal (t:=Compilers.Z) x)
+     | _ => fun _ => False
+     end) e.
+  Proof.
+    cbv [is_literalz]. break_match; try congruence; [ ].
+    rewrite Z.eqb_eq; intros; subst; reflexivity.
+  Qed.
+
+  (*
+  Lemma valid_ident_special3_valid_cmd a b c d t i x y z (f : unit -> API.expr t) :
+    @valid_ident_special3 a b c d i x y z = true ->
+    valid_cmd (t:=t) (f tt) ->
+    valid_cmd (expr_let x := (expr.App (#i @ x @ y @ z) in
+                     f x).
+  Proof.
+    cbv [valid_ident_special3].
+    break_match; intros; [ | congruence ].
+    repeat lazymatch goal with
+           | H : is_add_get_carry_ident _ = true |- _ =>
+             apply is_add_get_carry_ident_eq in H;
+               break_match_hyps; try contradiction; [ ];
+                 subst
+           | H : is_literalz _ _ = true |- _ =>
+             apply is_literalz_eq in H; subst
+           end.
+    apply is_literalz_eq in H.
+  Qed. *)
+
+  (*
   Lemma valid_special3_valid_cmd {s d} f x :
     valid_special3_bool (t:=s) x = true ->
     valid_cmd (t:=d) (f tt) ->
     valid_cmd (t:=d) (expr.LetIn x f).
   Proof.
     cbv [valid_special3_bool].
-    cbv [Cmd.invert_AppIdent3_cps].
-    rewrite Inversion.Compilers.expr.invert_App_cps_id.
-  Qed.
+    break_match; [ | congruence ].
+    lazymatch goal with
+    | H : invert_AppIdent3 _ = Some _ |- _ =>
+      apply invert_AppIdent3_Some in H
+    end.
+    subst; cbn [fst snd projT2].
+    cbv [valid_ident_special3].
+    break_match; intros; [ | congruence ].
+    repeat lazymatch goal with
+           | H : is_add_get_carry_ident _ = true |- _ =>
+             apply is_add_get_carry_ident_eq in H;
+               break_match_hyps; try contradiction; [ ];
+                 subst
+           | H : is_literalz _ _ = true |- _ =>
+             apply is_literalz_eq in H; subst
+           end.
+    destruct i.
+    break_match.
+  Qed. *)
 
   Lemma valid_special_valid_cmd {s d} f x :
     valid_special_bool (t:=s) x = true ->
@@ -178,6 +242,32 @@ Section Cmd.
     valid_cmd (t:=d) (expr.LetIn x f).
   Proof.
     cbv [valid_special_bool].
+    break_match; try congruence; [ ].
+    repeat lazymatch goal with p : _ * _ |- _ => destruct p end; cbn [fst snd] in *.
+    lazymatch goal with
+    | |- (_ || _) = true -> _ =>
+      let H := fresh in intro H; rewrite orb_true_iff in H; destruct H
+    end.
+    { (* valid 3-argument function *)
+      cbv [valid_special3_bool] in *.
+      break_match_hyps; try congruence; [ ].
+      lazymatch goal with
+      | H : invert_AppIdent3 _ = Some _ |- _ =>
+        apply invert_AppIdent3_Some in H
+      end.
+      subst; cbn [fst snd projT2] in *.
+      cbv [valid_ident_special3] in *.
+      break_match_hyps; intros; [ | congruence ].
+      repeat lazymatch goal with
+             | p : _ * _ |- _ => destruct p; cbn [fst snd] in *
+             | H : is_add_get_carry_ident _ = true |- _ =>
+               apply is_add_get_carry_ident_eq in H;
+                 break_match_hyps; try contradiction; [ ];
+                   subst
+             | H : is_literalz _ _ = true |- _ =>
+               apply is_literalz_eq in H; subst
+             end.
+    destruct i.
   Qed.
 
   Lemma is_nil_ident_valid {t} i :
