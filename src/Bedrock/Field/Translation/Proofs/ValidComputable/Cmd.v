@@ -65,10 +65,20 @@ Section Cmd.
     | _ => fun _ => false
     end.
 
+  Local Notation range_for_type t :=
+    (type.interp (Language.Compilers.base.interp (base:=Compilers.base) (fun _ => ZRange.zrange)) t).
+
   Definition is_add_get_carry_ident {t} (i : ident.ident t) : bool :=
     match i with
     | ident.Z_add_get_carry => true
     | _ => false
+    end.
+
+  Definition is_word_and_carry_range {t} : range_for_type t -> bool :=
+    match t as t0 return range_for_type t0 -> bool with
+    | type_ZZ => fun r : range_for_type type_ZZ =>
+                 Expr.range_good (width:=width) (fst r) && is_carry_range (snd r)
+    | _ => fun _ => false
     end.
 
   Definition is_add_with_get_carry_ident {t} (i : ident.ident t) : bool :=
@@ -81,10 +91,15 @@ Section Cmd.
     : @API.expr (fun _ => unit) a
       -> @API.expr (fun _ => unit) b
       -> @API.expr (fun _ => unit) c
+      -> range_for_type d
       -> bool :=
     if is_add_get_carry_ident i
-    then (fun s x y => is_literalz s (2 ^ width))
-    else (fun _ _ _ => false).
+    then (fun s x y r =>
+            is_literalz s (2 ^ width)
+            && valid_expr_bool true x
+            && valid_expr_bool true y
+            && is_word_and_carry_range r)
+    else (fun _ _ _ _ => false).
 
   Definition valid_carry_bool {t} : @API.expr (fun _ => unit) t -> bool :=
     match t with
@@ -92,7 +107,7 @@ Section Cmd.
       fun c =>
         match invert_expr.invert_App_Z_cast c with
           | Some rc =>
-            if ((ZRange.lower (fst rc) =? 0) && (ZRange.upper (fst rc) =? 1))%bool
+            if is_carry_range (fst rc)
             then valid_expr_bool false (snd rc)
             else false
           | None => false
@@ -105,29 +120,33 @@ Section Cmd.
       -> @API.expr (fun _ => unit) b
       -> @API.expr (fun _ => unit) c
       -> @API.expr (fun _ => unit) d
+      -> range_for_type e
       -> bool :=
     if is_add_with_get_carry_ident i
-    then (fun s c x y => is_literalz s (2 ^ width) && valid_carry_bool c)
-    else (fun _ _ _ _ => false).
+    then (fun s c x y r =>
+            is_literalz s (2 ^ width)
+            && valid_expr_bool true x
+            && valid_expr_bool true y
+            && valid_carry_bool c
+            && is_word_and_carry_range r)
+    else (fun _ _ _ _ _ => false).
 
-  Definition valid_special3_bool {t} (e : @API.expr (fun _ => unit) t) : bool :=
+  Definition valid_special3_bool {t} (e : @API.expr (fun _ => unit) t) (r : range_for_type t) : bool :=
     match invert_AppIdent3 e with
-    | Some (existT _ (i, x, y, z)) => valid_ident_special3 i x y z
+    | Some (existT _ (i, x, y, z)) => valid_ident_special3 i x y z r
     | None => false
     end.
 
-  Definition valid_special4_bool {t} (e : @API.expr (fun _ => unit) t) : bool :=
+  Definition valid_special4_bool {t} (e : @API.expr (fun _ => unit) t) (r : range_for_type t) : bool :=
     match invert_AppIdent4 e with
-    | Some (existT _ (i, w, x, y, z)) => valid_ident_special4 i w x y z
+    | Some (existT _ (i, w, x, y, z)) => valid_ident_special4 i w x y z r
     | None => false
     end.
 
   Definition valid_special_bool {t} (e : @API.expr (fun _ => unit) t) : bool :=
     match invert_expr.invert_App_cast e with
     | Some rx =>
-      if range_type_good (width:=width) (fst rx)
-      then valid_special3_bool (snd rx) || valid_special4_bool (snd rx)
-      else false
+      valid_special3_bool (snd rx) (fst rx) || valid_special4_bool (snd rx) (fst rx)
     | None => false
     end.
 
@@ -178,6 +197,41 @@ Section Cmd.
     cbv [is_add_get_carry_ident]; break_match; congruence.
   Qed.
 
+  Lemma is_add_with_get_carry_ident_eq {t} i :
+    @is_add_with_get_carry_ident t i = true ->
+    (match t as t0 return ident.ident t0 -> Prop with
+     | type.arrow type_Z (type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))) =>
+       fun i => i = ident.Z_add_with_get_carry
+     | _ => fun _ => False
+     end) i.
+  Proof.
+    cbv [is_add_with_get_carry_ident]; break_match; congruence.
+  Qed.
+
+  Lemma valid_carry_bool_eq {t} e :
+    valid_carry_bool e = true ->
+    (match t as t0 return API.expr t0 -> Prop with
+     | type_Z => fun e =>
+                  exists (r : ZRange.zrange) (x : API.expr type_Z),
+                    e = expr.App (expr.App (expr.Ident ident.Z_cast)
+                                           (expr.Ident (ident.Literal
+                                                          (t:=Compilers.zrange)
+                                                          r)))
+                                 x
+                    /\ valid_expr_bool false x = true
+                    /\ is_carry_range r = true
+     | _ => fun _ => False
+     end) e.
+  Proof.
+    cbv [valid_carry_bool]. break_match; try congruence; [ ].
+    repeat lazymatch goal with
+           | p : _ * _ |- _ => destruct p; cbn [fst snd] in *
+           | H : invert_expr.invert_App_Z_cast _ = Some (_,_) |- _ =>
+             apply invert_App_Z_cast_Some in H; subst
+           end.
+    intros; do 2 eexists; repeat split; try reflexivity; auto.
+  Qed.
+
   Lemma is_literalz_eq t (e : API.expr t) (x : Z) :
     is_literalz e x = true ->
     (match t as t0 return API.expr t0 -> Prop with
@@ -189,57 +243,17 @@ Section Cmd.
     rewrite Z.eqb_eq; intros; subst; reflexivity.
   Qed.
 
-  (*
-  Lemma valid_ident_special3_valid_cmd a b c d t i x y z (f : unit -> API.expr t) :
-    @valid_ident_special3 a b c d i x y z = true ->
-    valid_cmd (t:=t) (f tt) ->
-    valid_cmd (expr_let x := (expr.App (#i @ x @ y @ z) in
-                     f x).
+  Lemma is_word_and_carry_range_eq  (r : range_for_type type_ZZ) :
+    is_word_and_carry_range r = true ->
+    Expr.range_good (width:=width) (fst r) = true /\ is_carry_range (snd r) = true.
   Proof.
-    cbv [valid_ident_special3].
-    break_match; intros; [ | congruence ].
-    repeat lazymatch goal with
-           | H : is_add_get_carry_ident _ = true |- _ =>
-             apply is_add_get_carry_ident_eq in H;
-               break_match_hyps; try contradiction; [ ];
-                 subst
-           | H : is_literalz _ _ = true |- _ =>
-             apply is_literalz_eq in H; subst
-           end.
-    apply is_literalz_eq in H.
-  Qed. *)
-
-  (*
-  Lemma valid_special3_valid_cmd {s d} f x :
-    valid_special3_bool (t:=s) x = true ->
-    valid_cmd (t:=d) (f tt) ->
-    valid_cmd (t:=d) (expr.LetIn x f).
-  Proof.
-    cbv [valid_special3_bool].
-    break_match; [ | congruence ].
-    lazymatch goal with
-    | H : invert_AppIdent3 _ = Some _ |- _ =>
-      apply invert_AppIdent3_Some in H
-    end.
-    subst; cbn [fst snd projT2].
-    cbv [valid_ident_special3].
-    break_match; intros; [ | congruence ].
-    repeat lazymatch goal with
-           | H : is_add_get_carry_ident _ = true |- _ =>
-             apply is_add_get_carry_ident_eq in H;
-               break_match_hyps; try contradiction; [ ];
-                 subst
-           | H : is_literalz _ _ = true |- _ =>
-             apply is_literalz_eq in H; subst
-           end.
-    destruct i.
-    break_match.
-  Qed. *)
+    cbv [is_word_and_carry_range]. rewrite Bool.andb_true_iff. tauto.
+  Qed.
 
   Lemma valid_special_valid_cmd {s d} f x :
     valid_special_bool (t:=s) x = true ->
-    valid_cmd (t:=d) (f tt) ->
-    valid_cmd (t:=d) (expr.LetIn x f).
+    valid_cmd (t:=type.base d) (f tt) ->
+    valid_cmd (t:=type.base d) (expr.LetIn x f).
   Proof.
     cbv [valid_special_bool].
     break_match; try congruence; [ ].
@@ -260,14 +274,54 @@ Section Cmd.
       break_match_hyps; intros; [ | congruence ].
       repeat lazymatch goal with
              | p : _ * _ |- _ => destruct p; cbn [fst snd] in *
+             | H : (_ && _) = true |- _ => apply Bool.andb_true_iff in H; destruct H
+             | H : @is_word_and_carry_range type_ZZ _ = true |- _ =>
+               apply is_word_and_carry_range_eq in H; destruct H
              | H : is_add_get_carry_ident _ = true |- _ =>
                apply is_add_get_carry_ident_eq in H;
                  break_match_hyps; try contradiction; [ ];
                    subst
              | H : is_literalz _ _ = true |- _ =>
                apply is_literalz_eq in H; subst
-             end.
-    destruct i.
+             | H : invert_expr.invert_App_Z_cast2 _ = Some _ |- _ =>
+               apply invert_App_Z_cast2_Some in H; subst
+             | _ => progress cbn [type.interp Language.Compilers.base.interp
+                                             invert_expr.invert_App_cast] in *
+             end; [ ].
+      { (* add_get_carry *)
+        eapply valid_add_get_carry; eauto;
+          apply valid_expr_bool_iff; auto. } }
+    { (* valid 4-argument function *)
+      cbv [valid_special4_bool] in *.
+      break_match_hyps; try congruence; [ ].
+      lazymatch goal with
+      | H : invert_AppIdent4 _ = Some _ |- _ =>
+        apply invert_AppIdent4_Some in H
+      end.
+      subst; cbn [fst snd projT2] in *.
+      cbv [valid_ident_special4] in *.
+      break_match_hyps; intros; [ | congruence ].
+      repeat lazymatch goal with
+             | p : _ * _ |- _ => destruct p; cbn [fst snd] in *
+             | H : (_ && _) = true |- _ => apply Bool.andb_true_iff in H; destruct H
+             | H : @is_word_and_carry_range type_ZZ _ = true |- _ =>
+               apply is_word_and_carry_range_eq in H; destruct H
+             | H : is_add_with_get_carry_ident _ = true |- _ =>
+               apply is_add_with_get_carry_ident_eq in H;
+                 break_match_hyps; try contradiction; [ ];
+                   subst
+             | H : is_literalz _ _ = true |- _ =>
+               apply is_literalz_eq in H; subst
+             | H : invert_expr.invert_App_Z_cast2 _ = Some _ |- _ =>
+               apply invert_App_Z_cast2_Some in H; subst
+             | H : valid_carry_bool _ = true |- _ =>
+               apply valid_carry_bool_eq in H; destruct H as [? [? [? [? ?] ] ] ]
+             | _ => progress cbn [type.interp Language.Compilers.base.interp
+                                             invert_expr.invert_App_cast] in *
+             end; [ ].
+      { (* add_with_get_carry *)
+        eapply valid_add_with_get_carry; eauto;
+          apply valid_expr_bool_iff; auto. } }
   Qed.
 
   Lemma is_nil_ident_valid {t} i :
@@ -350,15 +404,19 @@ Section Cmd.
             apply valid_expr_bool_iff in H
           | H : is_nil_ident _ = true |- _ =>
             apply is_nil_ident_valid in H; apply H
+          | H : _ || _ = true |- _ =>
+            apply Bool.orb_true_iff in H; destruct H
           | H : _ && _ = true |- _ =>
             apply Bool.andb_true_iff in H; destruct H
+          | H : valid_special_bool _ = true |- _ =>
+            apply valid_special_valid_cmd; solve [eauto]
           | H : false = true |- _ =>
             congruence
           | H : valid_cons_App1_bool _ = true |- _ =>
             apply valid_cons_App1_bool_impl1 in H; apply H;
               solve [eauto]
           | _ => constructor; solve [eauto]
-          end.
+             end.
   Qed.
 
   Lemma valid_cmd_bool_valid_expr {t} e :
@@ -369,15 +427,79 @@ Section Cmd.
     break_match; congruence.
   Qed.
 
+  Lemma valid_special_add_get_carry r1 r2 x y:
+    Expr.range_good (width:=width) r1 = true ->
+    is_carry_range r2 = true ->
+    valid_expr_bool (t:=type_Z) true x = true ->
+    valid_expr_bool (t:=type_Z) true y = true ->
+    valid_special_bool
+      (expr.App
+         (expr.App (expr.Ident ident.Z_cast2)
+                   (expr.App
+                      (expr.App
+                         (expr.Ident ident.pair)
+                         (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                      (expr.Ident (ident.Literal (t:=base.type.zrange) r2))))
+         (expr.App
+            (expr.App
+               (expr.App (expr.Ident ident.Z_add_get_carry)
+                         (expr.Ident (ident.Literal (t:=base.type.Z) (2 ^ width))))
+               x) y)) = true.
+  Proof.
+    intros. cbv [valid_special_bool]. cbn [invert_expr.invert_App_cast].
+    rewrite invert_App_Z_cast2_eq_Some. cbn [fst snd].
+    cbn. rewrite Z.eqb_refl.
+    repeat lazymatch goal with
+           | H : _?x = true |- context [?x] => rewrite H end.
+    reflexivity.
+  Qed.
+
+  Lemma valid_special_add_with_get_carry r1 r2 rc c x y:
+    Expr.range_good (width:=width) r1 = true ->
+    is_carry_range r2 = true ->
+    is_carry_range rc = true ->
+    valid_expr_bool (t:=type_Z) false c = true ->
+    valid_expr_bool (t:=type_Z) true x = true ->
+    valid_expr_bool (t:=type_Z) true y = true ->
+    valid_special_bool
+      (expr.App
+         (expr.App (expr.Ident ident.Z_cast2)
+                   (expr.App
+                      (expr.App
+                         (expr.Ident ident.pair)
+                         (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                      (expr.Ident (ident.Literal (t:=base.type.zrange) r2))))
+         (expr.App
+            (expr.App
+               (expr.App
+                  (expr.App (expr.Ident ident.Z_add_with_get_carry)
+                            (expr.Ident (ident.Literal (t:=base.type.Z) (2 ^ width))))
+                  (expr.App (expr.App (expr.Ident ident.Z_cast)
+                                      (expr.Ident (ident.Literal (t:=base.type.zrange) rc))) c))
+               x) y)) = true.
+  Proof.
+    intros. cbv [valid_special_bool]. cbn [invert_expr.invert_App_cast].
+    rewrite invert_App_Z_cast2_eq_Some. cbn [fst snd].
+    cbn. rewrite Z.eqb_refl.
+    repeat lazymatch goal with
+           | H : _?x = true |- context [?x] => rewrite H end.
+    reflexivity.
+  Qed.
+
   Lemma valid_cmd_bool_impl2 {t} e :
     valid_cmd e -> @valid_cmd_bool t e = true.
   Proof.
     induction 1; intros; subst; cbn;
       repeat match goal with
-             | H : valid_expr true _ |- _ =>
+             | H : valid_expr _ _ |- _ =>
                apply valid_expr_bool_iff in H
+             | |- _ && _ = true => apply Bool.andb_true_iff; split
+             | H : ?x = true |- ?x || _ = true => apply Bool.orb_true_iff; left; apply H
+             | H : ?x = true |- _ || ?x = true => apply Bool.orb_true_iff; right; apply H
+             | |- context [_ && false] => rewrite Bool.andb_false_r
+             | |- context [false || _] => rewrite Bool.orb_false_l
              end;
-      auto using Bool.andb_true_iff; [ ].
+      auto using valid_special_add_get_carry, valid_special_add_with_get_carry; [ ].
     { apply valid_cmd_bool_valid_expr.
       assumption. }
   Qed.

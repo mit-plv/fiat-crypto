@@ -89,6 +89,8 @@ Section Func.
              (locals : locals)
              (mem : mem)
              (functions : list (string*func)),
+        (* specifications of bedrock2 functions we might call *)
+        spec_of_add_carryx (add_carryx:=add_carryx) functions ->
         (* locals doesn't contain variables we could overwrite *)
         (forall n nvars,
             (nextn <= n)%nat ->
@@ -113,7 +115,7 @@ Section Func.
                (listZ:=rep.listZ_local) ret1 ret2 locals').
   Proof.
     revert G. cbv zeta.
-    induction e0_valid; intros *.
+    induction e0_valid; intros *; [ | ].
     { (* Abs *)
       inversion 1; cleanup_wf.
       cbn [translate_func']; intros.
@@ -514,6 +516,8 @@ Section Func.
              (argvalues : list word)
              (functions : list (string*func))
              (R : _ -> Prop),
+        (* specifications of bedrock2 functions we might call *)
+        spec_of_add_carryx (add_carryx:=add_carryx) functions ->
         (* argument values are the concatenation of true argument values
            and output pointer values *)
         argvalues = out_ptrs ++ flat_args ->
