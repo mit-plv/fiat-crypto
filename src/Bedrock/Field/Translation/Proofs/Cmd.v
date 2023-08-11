@@ -512,11 +512,16 @@ Section Cmd.
       break_innermost_match; reflexivity. }
   Qed.
 
+  Lemma is_carry_range_eq r : is_carry_range r = true -> r = {| ZRange.lower := 0; ZRange.upper := 1 |}.
+  Proof.
+    cbv [is_carry_range]. intro H; apply ZRange.zrange_bl in H. congruence.
+  Qed.
+
   (* Convenience lemma for add_with_get_carry case. *)
   Lemma add_get_carry_full_equiv (x y sum carry_out : @word.rep width word) r1 r2:
     word.unsigned sum + 2^width * word.unsigned carry_out
     = word.unsigned x + word.unsigned y ->
-    range_good (width:=width) r1 = true -> range_good (width:=width) r2 = true ->
+    range_good (width:=width) r1 = true -> is_carry_range r2 = true ->
     PreExtra.ident.cast2
       (r1, r2)
       (Definitions.Z.add_get_carry_full
@@ -530,6 +535,7 @@ Section Cmd.
     pose proof (Properties.word.unsigned_range carry_out).
     repeat lazymatch goal with
            | H : range_good _ = true |- _ => apply range_good_eq in H; subst
+           | H : is_carry_range _ = true |- _ => apply is_carry_range_eq in H; subst
            end.
     cbv [Definitions.Z.add_get_carry_full
            Definitions.Z.add_with_get_carry
@@ -542,6 +548,13 @@ Section Cmd.
     cbn [fst snd]. rewrite Z.log2_pow2, Z.eqb_refl by lia.
     cbn [fst snd]. rewrite Z.add_0_l.
     rewrite !CastLemmas.ident.cast_in_bounds by (apply is_bounded_by_bool_max_range; Z.div_mod_to_equations; nia).
+    rewrite CastLemmas.ident.cast_in_bounds.
+    2:{
+      cbv [ZRange.is_bounded_by_bool].
+      rewrite !Zle_imp_le_bool
+              by (cbn [ZRange.upper ZRange.lower];
+                  Z.div_mod_to_equations; nia).
+      reflexivity. }
     rewrite <-Heq. apply f_equal2.
     { Z.push_mod. rewrite Z.mod_same by lia. Z.push_pull_mod.
       rewrite Z.mod_small; lia. }
@@ -552,7 +565,8 @@ Section Cmd.
   Lemma add_with_get_carry_full_equiv (x y sum carry_in carry_out : @word.rep width word) r1 r2:
     word.unsigned sum + 2^width * word.unsigned carry_out
     = word.unsigned carry_in + word.unsigned x + word.unsigned y ->
-    range_good (width:=width) r1 = true -> range_good (width:=width) r2 = true ->
+    0 <= word.unsigned carry_in < 2 ->
+    range_good (width:=width) r1 = true -> is_carry_range r2 = true ->
     PreExtra.ident.cast2
       (r1, r2)
       (Definitions.Z.add_with_get_carry_full
@@ -567,6 +581,7 @@ Section Cmd.
     pose proof (Properties.word.unsigned_range carry_out).
     repeat lazymatch goal with
            | H : range_good _ = true |- _ => apply range_good_eq in H; subst
+           | H : is_carry_range _ = true |- _ => apply is_carry_range_eq in H; subst
            end.
     cbv [Definitions.Z.add_with_get_carry_full
            Definitions.Z.add_with_get_carry
@@ -578,6 +593,13 @@ Section Cmd.
     cbn [fst snd]. rewrite Z.log2_pow2, Z.eqb_refl by lia.
     cbn [fst snd].
     rewrite !CastLemmas.ident.cast_in_bounds by (apply is_bounded_by_bool_max_range; Z.div_mod_to_equations; nia).
+    rewrite CastLemmas.ident.cast_in_bounds.
+    2:{
+      cbv [ZRange.is_bounded_by_bool].
+      rewrite !Zle_imp_le_bool
+              by (cbn [ZRange.upper ZRange.lower];
+                  Z.div_mod_to_equations; nia).
+      reflexivity. }
     rewrite <-Heq. apply f_equal2.
     { Z.push_mod. rewrite Z.mod_same by lia. Z.push_pull_mod.
       rewrite Z.mod_small; lia. }
@@ -627,10 +649,9 @@ Section Cmd.
     reflexivity.
   Qed.
 
-  Lemma interp_cast_carry r x :
-    ZRange.lower r = 0 -> ZRange.upper r = 1 -> PreExtra.ident.cast r x = word.wrap x mod 2.
+  Lemma interp_cast_carry r x : is_carry_range r = true -> PreExtra.ident.cast r x = word.wrap x mod 2.
   Proof.
-    destruct r; cbn [ZRange.lower ZRange.upper]; intros; subst.
+    intro Hrange; apply is_carry_range_eq in Hrange. intros; subst.
     rewrite CastLemmas.ident.cast_out_of_bounds_simple_0_mod by lia.
     pose proof word.width_pos. cbv [word.wrap].
     rewrite Modulo.Z.mod_pow_same_base_smaller with (m:=1); try lia.
@@ -776,11 +797,6 @@ Section Cmd.
     subst; cbn [fst snd projT2].
     inversion 1. subst; cbn [fst snd projT2].
     reflexivity.
-  Qed.
-
-  Lemma is_carry_range_eq r : is_carry_range r = true -> r = {| ZRange.lower := 0; ZRange.upper := 1 |}.
-  Proof.
-    cbv [is_carry_range]. intro H; apply ZRange.zrange_bl in H. congruence.
   Qed.
 
   Lemma translate_add_get_carry (x y : API.expr type_Z) r1 r2 :
@@ -1291,7 +1307,8 @@ Section Cmd.
           replace (PreExtra.ident.cast r c)
             with (word.unsigned (word:=word)
                                 (Semantics.interp_binop Syntax.bopname.and (word.of_Z x) (word.of_Z 1)))
-        end; [ erewrite add_with_get_carry_full_equiv; solve [eauto with lia] | ].
+        end; [ erewrite add_with_get_carry_full_equiv; try solve [eauto with lia];
+               rewrite interp_and_carry; apply Z.mod_pos_bound; lia | ].
         rewrite interp_and_carry, interp_cast_carry by auto.
         rewrite word.unsigned_of_Z. reflexivity. } }
   Qed.
