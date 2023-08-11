@@ -17,7 +17,7 @@ Record computed_op
     res_eq : op = ErrorT.Success res;
     func_eq : b2_func = make_bedrock_func insizes outsizes inlengths res;
   }.
-Global Arguments computed_op {_ _ _ _ _ _ _ _ _ _ t}.
+Global Arguments computed_op {_ _ _ _ _ _ _ _ _ _ _ _ t}.
 
 Ltac make_computed_op :=
   eapply Build_computed_op;
