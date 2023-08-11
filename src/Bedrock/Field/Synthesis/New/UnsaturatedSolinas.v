@@ -377,7 +377,7 @@ Section UnsaturatedSolinas.
     forall functions,
       spec_of_BinOp bin_carry_add ((Field.carry_add,carry_add_func) :: functions).
   Proof using M_eq check_args_ok carry_add_func_eq ok
-        tight_bounds_tighter_than (*loose_bounds_tighter_than*).
+        tight_bounds_tighter_than.
     intros. cbv [spec_of_BinOp bin_carry_add]. rewrite carry_add_func_eq.
     pose proof carry_add_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq carry_add_op)
