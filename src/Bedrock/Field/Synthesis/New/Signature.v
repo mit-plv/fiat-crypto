@@ -154,13 +154,7 @@ Section WithParameters.
     | |- map word.unsigned _ = map word.unsigned _ => reflexivity
     | |- word.unsigned _ = word.unsigned _ => reflexivity
     | |- WeakestPrecondition.get _ _ _ =>
-      repeat (apply Util.get_put_diff; [
-                cbv [default_inname_gen default_outname_gen]; try congruence;
-                lazymatch goal with
-                | |- prefix_name_gen _ _ <> prefix_name_gen _ _ =>
-                  let H := fresh in
-                  intro H; eapply prefix_name_gen_unique in H; congruence
-                end | ]);
+      repeat (apply Util.get_put_diff; [ cbn; congruence | ]);
       apply Util.get_put_same; reflexivity
     | |- Forall (fun z => 0 <= z < 2 ^ (?e * 8))
                 (map word.unsigned _) =>
@@ -399,9 +393,8 @@ Section WithParameters.
           constr:((map word.unsigned x, (map word.unsigned y, tt))) Rr;
           translate_func_precondition_hammer; [ ].
         { (* lists_reserved_with_initial_context *)
-          lists_reserved_simplify pout; try solve_equivalence_side_conditions.
-          solve_length out outbounds_length.
-          } }
+          lists_reserved_simplify pout; try solve_equivalence_side_conditions;
+            solve_length out outbounds_length. } }
       { postcondition_simplify; [ | | ]; cycle -1.
         { refine (proj1 (Proper_sep_iff1 _ _ _ _ _ _ _) _);
             [symmetry; eapply FElem_array_truncated_scalar_iff1 | reflexivity | sepsimpl ].
@@ -473,7 +466,9 @@ Section WithParameters.
 
     Lemma list_unop_correct f :
       f = make_bedrock_func insizes outsizes inlengths res ->
-      forall functions, unop_spec _ ((name, f) :: functions).
+      forall functions,
+        Cmd.spec_of_add_carryx (add_carryx:=add_carryx) functions ->
+        unop_spec _ ((name, f) :: functions).
     Proof using inname_gen_varname_gen_disjoint outbounds_length
           outbounds_tighter_than_max outname_gen_varname_gen_disjoint
           ok relax_bounds res_Wf res_bounds res_eq res_valid.
@@ -548,6 +543,7 @@ Section WithParameters.
     Lemma from_word_correct f :
       f = make_bedrock_func insizes outsizes inlengths res ->
       forall functions,
+        Cmd.spec_of_add_carryx (add_carryx:=add_carryx) functions ->
         spec_of_from_word ((from_word, f) :: functions).
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok relax_bounds res_Wf
@@ -570,7 +566,7 @@ Section WithParameters.
           eapply (translate_func_correct (parameters_sentinel:=parameters_sentinel))
           with (out_ptrs:=[out_ptr]) (flat_args:=in_ptrs)
           (args:=b2_args).
-        16:instantiate (1:=R).
+        17:instantiate (1:=R).
         all:try translate_func_precondition_hammer.
         1:reflexivity.
         { cbv [Equivalence.equivalent_flat_args]; eexists 1%nat; split; [eexists|reflexivity].
@@ -655,11 +651,16 @@ Section WithParameters.
 
     Lemma felem_copy_correct f :
       f = make_bedrock_func insizes outsizes inlengths res ->
-      forall functions, spec_of_felem_copy ((felem_copy, f) :: functions).
+      forall functions,
+        Cmd.spec_of_add_carryx (add_carryx:=add_carryx) functions ->
+        spec_of_felem_copy ((felem_copy, f) :: functions).
     Proof.
       subst inlengths insizes outsizes.
       cbv [spec_of_felem_copy felem_copy_insizes felem_copy_outsizes felem_copy_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
+      lazymatch goal with
+      | H : (_ * _ * R)%sep _ |- _ => rename H into Hsep
+      end.
       cleanup. eapply Proper_call.
       2: {
         rename R into Rr.
@@ -671,7 +672,7 @@ Section WithParameters.
           cbn [type.app_curried fst snd].
           apply res_bounds.
           rewrite max_bounds_range_iff.
-          seprewrite_in @FElem_array_truncated_scalar_iff1 H0; extract_ex1_and_emp_in H0.
+          seprewrite_in @FElem_array_truncated_scalar_iff1 Hsep; extract_ex1_and_emp_in Hsep.
           ssplit; rewrite ?map_length; trivial.
           eapply List.Forall_map, Forall_forall; intros.
           rewrite MakeAccessSizes.bits_per_word_eq_width.
@@ -679,8 +680,8 @@ Section WithParameters.
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.
           all:try solve_equivalence_side_conditions;
-          seprewrite_in (FElem_array_truncated_scalar_iff1 pout) H0; extract_ex1_and_emp_in H0; try eassumption.
-          seprewrite_in (FElem_array_truncated_scalar_iff1 px) H0; extract_ex1_and_emp_in H0.
+          seprewrite_in (FElem_array_truncated_scalar_iff1 pout) Hsep; extract_ex1_and_emp_in Hsep; try eassumption.
+          seprewrite_in (FElem_array_truncated_scalar_iff1 px) Hsep; extract_ex1_and_emp_in Hsep.
           setoid_rewrite max_bounds_range_iff in res_bounds.
           rewrite (fun x pf => proj1 (res_bounds x pf)), ?map_length; trivial.
           ssplit; rewrite ?map_length; trivial.
@@ -694,7 +695,7 @@ Section WithParameters.
       cbn [List.hd] in *. rewrite MakeAccessSizes.bytes_per_word_eq.
       extract_ex1_and_emp_in_goal; ssplit;
         try (use_sep_assumption; cancel; cbv [seps]);
-        seprewrite_in (FElem_array_truncated_scalar_iff1 px) H0; extract_ex1_and_emp_in H0; trivial.
+        seprewrite_in (FElem_array_truncated_scalar_iff1 px) Hsep; extract_ex1_and_emp_in Hsep; trivial.
       Morphisms.f_equiv.
       rewrite H4.
       rewrite <-(res_eq x) at 2 by trivial.
@@ -766,6 +767,7 @@ Section WithParameters.
     Lemma from_bytes_correct f :
       f = make_bedrock_func insizes outsizes inlengths res ->
       forall functions,
+        Cmd.spec_of_add_carryx (add_carryx:=add_carryx) functions ->
         spec_of_from_bytes ((from_bytes, f) :: functions).
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok relax_bounds res_Wf
@@ -906,6 +908,7 @@ Section WithParameters.
     Lemma to_bytes_correct f :
       f = make_bedrock_func insizes outsizes inlengths res ->
       forall functions,
+        Cmd.spec_of_add_carryx (add_carryx:=add_carryx) functions ->
         spec_of_to_bytes ((to_bytes, f) :: functions).
     Proof using byte_bounds_length byte_bounds_tighter_than_max
           inname_gen_varname_gen_disjoint
@@ -954,8 +957,12 @@ Section WithParameters.
           | |- _ /\ _ => eexists
           end;
         change Field.tight_bounds with tight_bounds in *.
-        { seprewrite_in (@Util.array_truncated_scalar_ptsto_iff1) H10; cbn in H10.
-          rewrite H7, res_eq, partition_le_split in *; trivial. }
+        { 
+          lazymatch goal with
+          | H1 : ?x = expr.interp _ _ _, H2 : (Array.array _ _ _ ?x * Rr)%sep _ |- _ =>
+            seprewrite_in (@Util.array_truncated_scalar_ptsto_iff1) H2; cbn in H2;
+            rewrite H1, res_eq, partition_le_split in *
+          end; trivial. }
         rewrite <-partition_le_split, <-res_eq; eauto. }
     Qed.
   End ToBytes.
@@ -1034,6 +1041,7 @@ Context
     Lemma select_znz_correct f :
       f = make_bedrock_func insizes outsizes inlengths res ->
       forall functions,
+        Cmd.spec_of_add_carryx (add_carryx:=add_carryx) functions ->
         spec_of_selectznz ((select_znz, f) :: functions).
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok res_Wf
@@ -1042,8 +1050,11 @@ Context
       cbv [list_selectznz_insizes list_selectznz_outsizes list_selectznz_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
       cleanup.
-      pose proof (FElem_max_bounds _ _ _ _ H0) as Hxbounds.
-      pose proof (FElem_max_bounds _ _ _ _ H1) as Hybounds.
+      lazymatch goal with
+      | H0: (FElem px x * Rx)%sep _, H1: (FElem py y * Ry)%sep _ |- _ =>
+        pose proof (FElem_max_bounds _ _ _ _ H0) as Hxbounds;
+        pose proof (FElem_max_bounds _ _ _ _ H1) as Hybounds
+      end.
       match goal with
       | H : ZRange.is_bounded_by_bool _ _ = _ |- _ => rename H into Hbound
       | _ => idtac
