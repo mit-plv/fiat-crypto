@@ -1327,6 +1327,7 @@ Instance p_field_params : FieldParameters :=
   a24 := 1%F;
   mul := "fe1305_mul";
   add := "fe1305_add";
+  carry_add := "fe1305_carry_add";
   sub := "fe1305_sub";
   opp := "fe1305_opp";
   square := "fe1305_square";

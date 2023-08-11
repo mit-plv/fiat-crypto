@@ -78,6 +78,14 @@ Section Field.
          As fe1305_add_correct.
   Proof. Time derive_bedrock2_func add_op. Qed.
 
+  Derive fe1305_carry_add
+         SuchThat (forall functions,
+                      spec_of_BinOp bin_carry_add
+                        (field_representation:=field_representation n s c)
+                        (fe1305_carry_add :: functions))
+         As fe1305_carry_add_correct.
+  Proof. Time derive_bedrock2_func carry_add_op. Qed.
+
   Derive fe1305_sub
          SuchThat (forall functions,
                       spec_of_BinOp bin_sub
