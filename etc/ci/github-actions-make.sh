@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -x
+cd "$(dirname "$0")/../.." || exit 7
 
 if [ ! -z "${TOUCH}" ]; then
     make -j2 -t ${TOUCH} || exit $?
@@ -20,7 +21,7 @@ if [ "$1" == "--warnings" ]; then
     shift
 fi
 if [ ! -z "${reportify}" ]; then
-    reportify="COQC='$(pwd)/etc/coq-scripts/github/reportify-coq.sh'${reportify} ${COQBIN}coqc"
+    reportify="COQC=etc/coq-scripts/github/reportify-coq.sh${reportify} ${COQBIN}coqc"
 fi
 
 make_one_time_file_real=""

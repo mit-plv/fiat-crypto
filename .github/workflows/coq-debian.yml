@@ -1,0 +1,105 @@
+name: CI (Coq, Debian)
+
+on:
+  push:
+    branches: [ master , sp2019latest ]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  build:
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - env: { DEBIAN: "sid" }
+        - env: { DEBIAN: "bookworm" }
+
+    runs-on: 'ubuntu-22.04'
+    env: ${{ matrix.env }}
+    name: ${{ matrix.env.DEBIAN }}
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ matrix.env.DEBIAN }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: setup Debian chroot
+      run: etc/ci/setup-debian-chroot.sh "$DEBIAN"
+    - name: host build params
+      run: etc/ci/describe-system-config.sh
+    - name: chroot build params
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/describe-system-config.sh
+    - name: make deps
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/github-actions-make.sh -j2 deps
+    - name: all-except-generated
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/github-actions-make.sh -j2 all-except-generated
+    - name: generated-files
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/github-actions-make.sh -j2 generated-files
+    - run: tar -czvf generated-files.tgz fiat-*/
+      if: ${{ failure() }}
+    - name: upload generated files
+      uses: actions/upload-artifact@v3
+      with:
+        name: generated-files-${{ matrix.env.DEBIAN }}
+        path: generated-files.tgz
+      if: ${{ failure() }}
+    - name: upload OCaml files
+      uses: actions/upload-artifact@v3
+      with:
+        name: ExtractionOCaml-${{ matrix.env.DEBIAN }}
+        path: src/ExtractionOCaml
+      if: always ()
+    - name: standalone-haskell
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/github-actions-make.sh -j1 standalone-haskell GHCFLAGS='+RTS -M6G -RTS'
+    - name: upload Haskell files
+      uses: actions/upload-artifact@v3
+      with:
+        name: ExtractionHaskell-${{ matrix.env.DEBIAN }}
+        path: src/ExtractionHaskell
+      if: always ()
+    - name: display timing info
+      run: cat time-of-build-pretty.log
+    - name: display per-line timing info
+      run: etc/ci/github-actions-display-per-line-timing.sh
+
+  test-amd64:
+
+    runs-on: ubuntu-latest
+    env: { DEBIAN: "sid" }
+
+    concurrency:
+      group: ${{ github.workflow }}-test-amd64-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    needs: build
+
+    steps:
+    - name: checkout repo
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: setup Debian chroot
+      run: etc/ci/setup-debian-chroot.sh "$DEBIAN"
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: ExtractionOCaml-sid
+        path: src/ExtractionOCaml
+    - name: make binaries executable
+      run: git check-ignore src/ExtractionOCaml/* | grep -v '\.' | xargs chmod +x
+    - name: make only-test-amd64-files
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/github-actions-make.sh -j2 only-test-amd64-files SLOWEST_FIRST=1
+      env: 
+        ALLOW_DIFF: 1
