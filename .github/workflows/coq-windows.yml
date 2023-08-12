@@ -22,7 +22,7 @@ jobs:
 
     env:
       NJOBS: "2"
-      COQ_VERSION: "8.15.2" # https://packages.debian.org/testing/coq
+      COQ_VERSION: "8.16.0" # https://packages.debian.org/testing/coq
       COQEXTRAFLAGS: "-async-proofs-j 1"
       COQCHKEXTRAFLAGS: ""
       OPAMYES: "true"

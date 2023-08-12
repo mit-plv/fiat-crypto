@@ -19,7 +19,7 @@ jobs:
 
     env:
       NJOBS: "2"
-      COQ_VERSION: "8.15.2" # minimal major version required for bedrock2 components
+      COQ_VERSION: "8.16.0" # minimal major version required for bedrock2 components
       COQCHKEXTRAFLAGS: ""
       SKIP_BEDROCK2: "0"
 
