@@ -88,8 +88,6 @@ Module Compilers.
         Local Notation reify2 := (@reify base_type ident var2 abstract_domain' annotate2 bottom').
         Local Notation reflect1 := (@reflect base_type ident var1 abstract_domain' annotate1 bottom').
         Local Notation reflect2 := (@reflect base_type ident var2 abstract_domain' annotate2 bottom').
-        Local Notation bottomify1 := (@bottomify base_type ident var1 abstract_domain' bottom').
-        Local Notation bottomify2 := (@bottomify base_type ident var2 abstract_domain' bottom').
         Local Notation interp1 := (@interp base_type ident var1 abstract_domain' annotate1 bottom' skip_annotations_under interp_ident1).
         Local Notation interp2 := (@interp base_type ident var2 abstract_domain' annotate2 bottom' skip_annotations_under interp_ident2).
         Local Notation eval_with_bound'1 := (@eval_with_bound' base_type ident var1 abstract_domain' annotate1 bottom' skip_annotations_under interp_ident1).
@@ -227,24 +225,6 @@ Module Compilers.
                               end ].
         Qed.
 
-        Lemma wf_bottomify {t} G v1 v2
-              (Hwf : @wf_value G t v1 v2)
-          : wf_value_with_lets G (bottomify1 v1) (bottomify2 v2).
-        Proof using bottom'_Proper.
-          cbv [wf_value_with_lets] in *.
-          revert dependent G; induction t as [|s IHs d IHd]; intros;
-            cbn [bottomify wf_value]; fold (@value1) (@value2) in *; break_innermost_match;
-              constructor.
-          all: repeat first [ progress cbn [fst snd wf_value] in *
-                            | progress destruct_head'_and
-                            | assumption
-                            | apply bottom'_Proper
-                            | apply conj
-                            | progress intros
-                            | progress subst
-                            | solve [ eapply UnderLets.wf_splice; eauto ] ].
-        Qed.
-
         Local Ltac wf_interp_t :=
           repeat first [ progress cbv [wf_value_with_lets abstract_domain_R respectful] in *
                        | progress cbn [wf_value fst snd partial.bottom type.related eq_rect List.In] in *
@@ -256,7 +236,6 @@ Module Compilers.
                        | progress destruct_head'_or
                        | eapply UnderLets.wf_splice
                        | match goal with
-                         | [ |- UnderLets.wf _ _ (bottomify1 _) (bottomify2 _) ] => apply wf_bottomify
                          | [ |- UnderLets.wf _ _ _ _ ] => constructor
                          | [ |- and _ _ ] => apply conj
                          end

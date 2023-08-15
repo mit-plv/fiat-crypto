@@ -73,17 +73,10 @@ Module Compilers.
            | type.arrow s d => fun _ => bottom
            end.
 
-      (** We need to make sure that we ignore the state of
-         higher-order arrows *everywhere*, or else the proofs don't go
-         through.  So we sometimes need to replace the state of
-         arrow-typed values with [⊥]. *)
-      Fixpoint bottomify {t} : value t -> value_with_lets t
-        := match t return value t -> value_with_lets t with
-           | type.base t => fun '(st, v) => Base (bottom' t, v)
-           | type.arrow s d => fun f => Base (fun x => fx <-- f x; @bottomify d fx)
-           end%under_lets.
-
-      (** We drop the state of higher-order arrows *)
+      (** We drop the state of higher-order arrows, because we don't
+          fundamentally know anything about the inputs to such arrows.
+          We could in theory do a more fine-grained analysis of
+          passing in [bottom] for the higher-order arrow inputs *)
       Fixpoint reify (annotate_with_state : bool) (is_let_bound : bool) {t} : value t -> type.for_each_lhs_of_arrow abstract_domain t -> UnderLets (@expr var t)
         := match t return value t -> type.for_each_lhs_of_arrow abstract_domain t -> UnderLets (@expr var t) with
            | type.base t
@@ -134,9 +127,8 @@ Module Compilers.
                    f' x')
            | expr.App (type.arrow s' d') d f x
              => (x' <-- @interp annotate_with_state (s' -> d')%etype x;
-                   x'' <-- bottomify x';
                    f' <-- @interp annotate_with_state (_ -> d)%etype f;
-                   f' x'')
+                   f' x')
            | expr.LetIn (type.arrow _ _) B x f
              => (x' <-- @interp annotate_with_state _ x;
                    @interp annotate_with_state _ (f (Base x')))
@@ -162,23 +154,9 @@ Module Compilers.
       Section extract.
         Context (ident_extract : forall t, ident t -> abstract_domain t).
 
-        (** like [expr.interp (@ident_extract) e], except we replace
-            all higher-order state with bottom *)
-        Fixpoint extract' {t} (e : @expr abstract_domain t) : abstract_domain t
-          := match e in expr.expr t return abstract_domain t with
-             | expr.Ident t idc => ident_extract t idc
-             | expr.Var t v => v
-             | expr.Abs s d f => fun v : abstract_domain s => @extract' _ (f v)
-             | expr.App (type.base s) d f x
-               => @extract' _ f (@extract' _ x)
-             | expr.App (type.arrow s' d') d f x
-               => @extract' _ f (@bottom (type.arrow s' d'))
-             | expr.LetIn A B x f => dlet y := @extract' _ x in @extract' _ (f y)
-             end.
-
         Definition extract_gen {t} (e : @expr abstract_domain t) (bound : type.for_each_lhs_of_arrow abstract_domain t)
           : abstract_domain' (type.final_codomain t)
-          := type.app_curried (extract' e) bound.
+          := type.app_curried (expr.interp (@ident_extract) e) bound.
       End extract.
     End with_var.
 
@@ -357,7 +335,7 @@ Module Compilers.
           := @eta_expand_with_bound' base.type ident var abstract_domain' annotate bottom' t e st.
 
         Definition extract {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
-          := @extract_gen base.type ident abstract_domain' bottom' abstract_interp_ident t e bound.
+          := @extract_gen base.type ident abstract_domain' abstract_interp_ident t e bound.
       End with_var.
     End ident.
 
@@ -525,9 +503,9 @@ Module Compilers.
       Definition EtaExpandWithListInfoFromBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
         := EtaExpandWithBound default_relax_zrange e (type.map_for_each_lhs_of_arrow (@ZRange.type.option.strip_ranges) bound).
       Definition extract {opts : AbstractInterpretation.Options} (assume_cast_truncates : bool) {t} (e : expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
-        := @partial.ident.extract abstract_domain' bottom' (abstract_interp_ident assume_cast_truncates) t e bound.
+        := @partial.ident.extract abstract_domain' (abstract_interp_ident assume_cast_truncates) t e bound.
       Definition Extract {opts : AbstractInterpretation.Options} (assume_cast_truncates : bool) {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
-        := @partial.ident.extract abstract_domain' bottom' (abstract_interp_ident assume_cast_truncates) t (e _) bound.
+        := @partial.ident.extract abstract_domain' (abstract_interp_ident assume_cast_truncates) t (e _) bound.
     End specialized.
   End partial.
   Import API.
