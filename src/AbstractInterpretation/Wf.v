@@ -25,7 +25,9 @@ Require Import Rewriter.Language.Inversion.
 Require Import Crypto.Language.InversionExtra.
 Require Import Rewriter.Language.Wf.
 Require Import Rewriter.Language.UnderLetsProofs.
+Require Import Rewriter.Util.Decidable.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
+Require Import Crypto.AbstractInterpretation.ZRangeCommonProofs.
 Import Coq.Lists.List.
 
 Import EqNotations.
@@ -33,6 +35,7 @@ Module Compilers.
   Import Language.Compilers.
   Import UnderLets.Compilers.
   Import AbstractInterpretation.Compilers.
+  Import AbstractInterpretation.ZRangeCommonProofs.Compilers.
   Import Language.Inversion.Compilers.
   Import Language.InversionExtra.Compilers.
   Import Language.Wf.Compilers.
@@ -852,39 +855,7 @@ Module Compilers.
 
       Global Instance abstract_interp_ident_Proper {opts : AbstractInterpretation.Options} {assume_cast_truncates : bool} {t}
         : Proper (eq ==> @abstract_domain_R t) (abstract_interp_ident assume_cast_truncates t).
-      Proof using Type.
-        cbv [abstract_interp_ident abstract_domain_R type.related respectful type.interp]; intros idc idc' ?; subst idc'; destruct idc;
-          repeat first [ reflexivity
-                       | progress subst
-                       | progress cbn [ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp Crypto.Util.Option.bind] in *
-                       | progress cbv [Crypto.Util.Option.bind]
-                       | intro
-                       | progress destruct_head'_prod
-                       | progress destruct_head'_bool
-                       | progress destruct_head' option
-                       | progress inversion_option
-                       | discriminate
-                       | solve [ eauto ]
-                       | apply NatUtil.nat_rect_Proper_nondep
-                       | apply ListUtil.list_rect_Proper
-                       | apply ListUtil.list_rect_arrow_Proper
-                       | apply ListUtil.list_case_Proper
-                       | apply ListUtil.pointwise_map
-                       | apply ListUtil.fold_right_Proper
-                       | apply ListUtil.update_nth_Proper
-                       | apply (@nat_rect_Proper_nondep_gen (_ -> _) (eq ==> eq)%signature)
-                       | cbn; apply (f_equal (@Some _))
-                       | progress cbn [ZRange.ident.option.interp]
-                       | progress cbv [zrange_rect]
-                       | apply (f_equal2 pair)
-                       | break_innermost_match_step
-                       | match goal with
-                         | [ H : _ |- _ ] => erewrite H by (eauto; (eassumption || reflexivity))
-                         | [ H : forall x y, x = y -> _ |- _ ] => specialize (fun x => H x x eq_refl)
-                         | [ H : forall x, ?f x = ?g x, H1 : ?f ?y = _, H2 : ?g ?y = _ |- _ ]
-                           => specialize (H y); rewrite H1, H2 in H
-                         end ].
-      Qed.
+      Proof using Type. apply ZRange.ident.option.interp_Proper. Qed.
 
       Global Instance extract_list_state_Proper {t}
         : Proper (abstract_domain'_R _ ==> option_eq (SetoidList.eqlistA (@abstract_domain'_R t)))
