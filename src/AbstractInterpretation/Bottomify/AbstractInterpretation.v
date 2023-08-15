@@ -493,6 +493,7 @@ Module Compilers.
         Definition eta_expand_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
           := let assume_cast_truncates := false in
              let shiftr_avoid_uint1 : shiftr_avoid_uint1_opt := false (* this doesn't actually matter for [eta_expand_with_bound], which only invokes [abstract_interp_ident] on things like [fst], [snd], etc *) in
+             let fancy_and_powerful_but_exponentially_slow_bounds_analysis : fancy_and_powerful_but_exponentially_slow_bounds_analysis_opt := false in
              (@partial.ident.eta_expand_with_bound)
                var abstract_domain' annotate_expr bottom' (abstract_interp_ident assume_cast_truncates) extract_list_state extract_option_state is_annotated_for t e bound.
 
@@ -551,7 +552,7 @@ Module Compilers.
   End CheckCasts.
 
   Definition PartialEvaluateWithBounds
-             {shiftr_avoid_uint1 : shiftr_avoid_uint1_opt}
+             {opts : AbstractInterpretation.Options}
              (relax_zrange : zrange -> option zrange)
              (assume_cast_truncates : bool)
              (skip_annotations_under : forall t, ident t -> bool)
@@ -561,14 +562,14 @@ Module Compilers.
     : Expr t
     := partial.EvalWithBound relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations (GeneralizeVar.GeneralizeVar (e _)) bound.
   Definition PartialEvaluateWithListInfoFromBounds
-             {shiftr_avoid_uint1 : shiftr_avoid_uint1_opt}
+             {opts : AbstractInterpretation.Options}
              {t} (e : Expr t)
              (bound : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
     : Expr t
     := partial.EtaExpandWithListInfoFromBound (GeneralizeVar.GeneralizeVar (e _)) bound.
 
   Definition CheckedPartialEvaluateWithBounds
-             {shiftr_avoid_uint1 : shiftr_avoid_uint1_opt}
+             {opts : AbstractInterpretation.Options}
              (relax_zrange : zrange -> option zrange)
              (assume_cast_truncates : bool)
              (skip_annotations_under : forall t, ident t -> bool)
