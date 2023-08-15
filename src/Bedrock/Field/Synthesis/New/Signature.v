@@ -36,9 +36,9 @@ Import Syntax.Coercions.
 Local Open Scope Z_scope.
 
 Section Generic.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
   Definition make_bedrock_func {t} insizes outsizes inlengths (res : API.Expr t)
   : func :=
     let innames := make_innames (inname_gen:=default_inname_gen) _ in
@@ -80,9 +80,9 @@ Local Hint Resolve MakeAccessSizes.bits_per_word_le_width
   : translate_func_preconditions.
 
 Section WithParameters.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
   Context {ok : Types.ok}
           {field_parameters : FieldParameters}.
   Context (n n_bytes : nat) (weight : nat -> Z)
@@ -187,26 +187,30 @@ Section WithParameters.
 
   Ltac compute_names :=
     repeat lazymatch goal with
-           | |- context [@make_innames ?w ?B ?W ?M ?L ?E ?X ?G ?R ?p ?gen ?t] =>
-             let x := constr:(@make_innames w B W M L E X G R p gen t) in
+           | |- context [@make_innames ?w ?B ?W ?M ?L ?X ?G ?R ?p ?gen ?t] =>
+             let x := constr:(@make_innames w B W M L X G R p gen t) in
              let y := (eval compute in x) in
              change x with y
-           | |- context [@make_outnames  ?w ?B ?W ?M ?L ?E ?X ?G ?R ?p ?gen ?t] =>
-             let x := constr:(@make_outnames w B W M L E X G R p gen t) in
+           | |- context [@make_outnames  ?w ?B ?W ?M ?L ?X ?G ?R ?p ?gen ?t] =>
+             let x := constr:(@make_outnames w B W M L X G R p gen t) in
              let y := (eval compute in x) in
              change x with y
            end.
 
   Ltac use_translate_func_correct b2_args R_ :=
-    let arg_ptrs :=
-        lazymatch goal with
-          |- WeakestPrecondition.call _ _ _ _ ?args _ =>
-          args end in
-    let out_ptr := (eval compute in (hd (word.of_Z 0) arg_ptrs)) in
-    let in_ptrs := (eval compute in (tl arg_ptrs)) in
-    eapply (translate_func_correct (parameters_sentinel:=parameters_sentinel))
-    with (out_ptrs:=[out_ptr]) (flat_args:=in_ptrs)
-         (args:=b2_args) (R:=R_).
+    lazymatch goal with
+    | H: map.get ?functions ?name =
+           Some (fst (translate_func ?e0 ?argns ?argls ?argszs ?retns ?retszs))
+      |- WeakestPrecondition.call ?functions ?name _ _ ?arg_ptrs _ =>
+        let out_ptr := (eval compute in (hd (word.of_Z 0) arg_ptrs)) in
+        let in_ptrs := (eval compute in (tl arg_ptrs)) in
+        eapply (translate_func_correct (parameters_sentinel:=parameters_sentinel))
+          with (out_ptrs:=[out_ptr]) (flat_args:=in_ptrs)
+               (e:=e0) (argnames:=argns) (arglengths:=argls) (argsizes:=argszs)
+               (retnames:=retns) (retsizes:=retszs)
+               (args:=b2_args) (R:=R_);
+        [ .. | exact H]
+    end.
 
   Ltac types_autounfold :=
     repeat first [ progress autounfold with types pairs
@@ -259,7 +263,7 @@ Section WithParameters.
       sepsimpl; crush_sep; solve [solve_equivalence_side_conditions]
     | |- LoadStoreList.within_access_sizes_args _ _ =>
       autounfold with types access_sizes; cbn; ssplit; trivial;
-      solve_equivalence_side_conditions 
+      solve_equivalence_side_conditions
     | |- LoadStoreList.within_base_access_sizes _ _ =>
       autounfold with types access_sizes;
       first [ eapply MaxBounds.max_bounds_range_iff
@@ -379,11 +383,11 @@ Section WithParameters.
 
     Lemma list_binop_correct f :
       f = make_bedrock_func insizes outsizes inlengths res ->
-      forall functions, (binop_spec _ ((name, f) :: functions)).
+      forall functions, map.get functions name = Some f -> (binop_spec _ functions).
     Proof.
       subst inlengths insizes outsizes.
       cbv [binop_spec list_binop_insizes list_binop_outsizes list_binop_inlengths].
-      cbv beta; intros; subst f. cbv [make_bedrock_func].
+      cbv beta. intros. subst f. cbv [make_bedrock_func] in *.
       cleanup. eapply Proper_call.
       2: {
         use_translate_func_correct
@@ -463,13 +467,13 @@ Section WithParameters.
 
     Lemma list_unop_correct f :
       f = make_bedrock_func insizes outsizes inlengths res ->
-      forall functions, unop_spec _ ((name, f) :: functions).
+      forall functions, map.get functions name = Some f -> unop_spec _ functions.
     Proof using inname_gen_varname_gen_disjoint outbounds_length
           outbounds_tighter_than_max outname_gen_varname_gen_disjoint
           ok relax_bounds res_Wf res_bounds res_eq res_valid.
       subst inlengths insizes outsizes.
       cbv [unop_spec list_unop_insizes list_unop_outsizes list_unop_inlengths].
-      cbv beta; intros; subst f. cbv [make_bedrock_func].
+      cbv beta; intros; subst f. cbv [make_bedrock_func] in *.
       cleanup. eapply Proper_call.
       2: {
         use_translate_func_correct constr:((map word.unsigned x, tt)) Rr.
@@ -537,30 +541,18 @@ Section WithParameters.
 
     Lemma from_word_correct f :
       f = make_bedrock_func insizes outsizes inlengths res ->
-      forall functions,
-        spec_of_from_word ((from_word, f) :: functions).
+      forall functions, map.get functions from_word = Some f ->
+                        spec_of_from_word functions.
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok relax_bounds res_Wf
           res_bounds res_eq res_valid tight_bounds_tighter_than_max.
       subst inlengths insizes outsizes. cbv [spec_of_from_word].
       cbv [from_word_insizes from_word_outsizes from_word_inlengths].
-      cbv beta; intros; subst f. cbv [make_bedrock_func].
+      cbv beta; intros; subst f. cbv [make_bedrock_func] in *.
       cleanup.
       eapply Proper_call.
       2:{
-        (* inlined [use_translate_func_correct constr:((word.unsigned x, tt)) R] and edited R0 *)
-        let b2_args := constr:((word.unsigned x, tt)) in
-        let R_ := R in
-        let arg_ptrs :=
-          lazymatch goal with
-          |- WeakestPrecondition.call _ _ _ _ ?args _ =>
-          args end in
-          let out_ptr := (eval compute in (hd (word.of_Z 0) arg_ptrs)) in
-          let in_ptrs := (eval compute in (tl arg_ptrs)) in
-          eapply (translate_func_correct (parameters_sentinel:=parameters_sentinel))
-          with (out_ptrs:=[out_ptr]) (flat_args:=in_ptrs)
-          (args:=b2_args).
-        16:instantiate (1:=R).
+        use_translate_func_correct constr:((word.unsigned x, tt)) R.
         all:try translate_func_precondition_hammer.
         1:reflexivity.
         { cbv [Equivalence.equivalent_flat_args]; eexists 1%nat; split; [eexists|reflexivity].
@@ -645,11 +637,12 @@ Section WithParameters.
 
     Lemma felem_copy_correct f :
       f = make_bedrock_func insizes outsizes inlengths res ->
-      forall functions, spec_of_felem_copy ((felem_copy, f) :: functions).
+      forall functions, map.get functions felem_copy = Some f ->
+                        spec_of_felem_copy functions.
     Proof.
       subst inlengths insizes outsizes.
       cbv [spec_of_felem_copy felem_copy_insizes felem_copy_outsizes felem_copy_inlengths].
-      cbv beta; intros; subst f. cbv [make_bedrock_func].
+      cbv beta; intros; subst f. cbv [make_bedrock_func] in *.
       cleanup. eapply Proper_call.
       2: {
         rename R into Rr.
@@ -661,7 +654,7 @@ Section WithParameters.
           cbn [type.app_curried fst snd].
           apply res_bounds.
           rewrite max_bounds_range_iff.
-          seprewrite_in @FElem_array_truncated_scalar_iff1 H0; extract_ex1_and_emp_in H0.
+          seprewrite_in @FElem_array_truncated_scalar_iff1 H1; extract_ex1_and_emp_in H1.
           ssplit; rewrite ?map_length; trivial.
           eapply List.Forall_map, Forall_forall; intros.
           rewrite MakeAccessSizes.bits_per_word_eq_width.
@@ -669,8 +662,8 @@ Section WithParameters.
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.
           all:try solve_equivalence_side_conditions;
-          seprewrite_in (FElem_array_truncated_scalar_iff1 pout) H0; extract_ex1_and_emp_in H0; try eassumption.
-          seprewrite_in (FElem_array_truncated_scalar_iff1 px) H0; extract_ex1_and_emp_in H0.
+          seprewrite_in (FElem_array_truncated_scalar_iff1 pout) H1; extract_ex1_and_emp_in H1; try eassumption.
+          seprewrite_in (FElem_array_truncated_scalar_iff1 px) H1; extract_ex1_and_emp_in H1.
           setoid_rewrite max_bounds_range_iff in res_bounds.
           rewrite (fun x pf => proj1 (res_bounds x pf)), ?map_length; trivial.
           ssplit; rewrite ?map_length; trivial.
@@ -684,9 +677,9 @@ Section WithParameters.
       cbn [List.hd] in *. rewrite MakeAccessSizes.bytes_per_word_eq.
       extract_ex1_and_emp_in_goal; ssplit;
         try (use_sep_assumption; cancel; cbv [seps]);
-        seprewrite_in (FElem_array_truncated_scalar_iff1 px) H0; extract_ex1_and_emp_in H0; trivial.
+        seprewrite_in (FElem_array_truncated_scalar_iff1 px) H1; extract_ex1_and_emp_in H1; trivial.
       Morphisms.f_equiv.
-      rewrite H4.
+      rewrite H5.
       rewrite <-(res_eq x) at 2 by trivial.
       rewrite Util.map_unsigned_of_Z.
       erewrite map_word_wrap_bounded; trivial.
@@ -755,15 +748,15 @@ Section WithParameters.
     Import coqutil.Macros.symmetry.
     Lemma from_bytes_correct f :
       f = make_bedrock_func insizes outsizes inlengths res ->
-      forall functions,
-        spec_of_from_bytes ((from_bytes, f) :: functions).
+      forall functions, map.get functions from_bytes = Some f ->
+                        spec_of_from_bytes functions.
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok relax_bounds res_Wf
           res_bounds res_eq res_valid tight_bounds_length
           tight_bounds_tighter_than_max byte_bounds_length.
       subst inlengths insizes outsizes. cbv [spec_of_from_bytes].
       cbv [from_bytes_insizes from_bytes_outsizes from_bytes_inlengths].
-      cbv beta; intros; subst f. cbv [make_bedrock_func].
+      cbv beta; intros; subst f. cbv [make_bedrock_func] in *.
       cleanup.
       eapply Proper_call.
       2:{
@@ -895,15 +888,15 @@ Section WithParameters.
     Import coqutil.Macros.symmetry.
     Lemma to_bytes_correct f :
       f = make_bedrock_func insizes outsizes inlengths res ->
-      forall functions,
-        spec_of_to_bytes ((to_bytes, f) :: functions).
+      forall functions, map.get functions to_bytes = Some f ->
+                        spec_of_to_bytes functions.
     Proof using byte_bounds_length byte_bounds_tighter_than_max
           inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok res_Wf
           res_eq res_valid res_bounds.
       subst inlengths insizes outsizes. cbv [spec_of_to_bytes].
       cbv [to_bytes_insizes to_bytes_outsizes to_bytes_inlengths].
-      cbv beta; intros; subst f. cbv [make_bedrock_func].
+      cbv beta; intros; subst f. cbv [make_bedrock_func] in *.
       cleanup.
       eapply Proper_call.
       2:{
@@ -926,7 +919,7 @@ Section WithParameters.
       { lists_autounfold; cbn[type.app_curried fst snd];
         cbv[Equivalence.equivalent_listexcl_flat_base
         Equivalence.equivalent_listonly_flat_base
-        Equivalence.equivalent_flat_base]; lists_autounfold; 
+        Equivalence.equivalent_flat_base]; lists_autounfold;
         cbn[hd]; repeat intro;
         cbv[Core.postcondition_func_norets Core.postcondition_func];
         sepsimpl; try congruence;
@@ -944,8 +937,8 @@ Section WithParameters.
           | |- _ /\ _ => eexists
           end;
         change Field.tight_bounds with tight_bounds in *.
-        { seprewrite_in (@Util.array_truncated_scalar_ptsto_iff1) H10; cbn in H10.
-          rewrite H7, res_eq, partition_le_split in *; trivial. }
+        { seprewrite_in (@Util.array_truncated_scalar_ptsto_iff1) H11; cbn in H11.
+          rewrite H8, res_eq, partition_le_split in *; trivial. }
         rewrite <-partition_le_split, <-res_eq; eauto. }
     Qed.
   End ToBytes.
@@ -964,7 +957,7 @@ Context
       list_Z_bounded_by (@max_bounds width n) (map word.unsigned x) ->
       list_Z_bounded_by (@max_bounds width n) (map word.unsigned y) ->
       ZRange.is_bounded_by_bool (word.unsigned c) bit_range = true ->
-                 (API.interp (res _)    
+                 (API.interp (res _)
                              (word.unsigned c)
                              (map word.unsigned x)
                              (map word.unsigned y))
@@ -1014,26 +1007,26 @@ Context
               apply Expr.is_bounded_by_bool_width_range.
               eauto.
               pose proof Properties.word.unsigned_range. auto.
-    Qed. 
+    Qed.
 
     Lemma FElem_max_bounds : forall px x m R, (FElem px x * R)%sep m -> list_Z_bounded_by (@max_bounds width n) (map word.unsigned x).
     Proof.
       intros. eapply max_bounds_words. cbv [FElem Bignum.Bignum] in H. sepsimpl. eauto.
-    Qed. 
+    Qed.
 
     Lemma select_znz_correct f :
       f = make_bedrock_func insizes outsizes inlengths res ->
-      forall functions,
-        spec_of_selectznz ((select_znz, f) :: functions).
+      forall functions, map.get functions select_znz = Some f ->
+                        spec_of_selectznz functions.
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok res_Wf
           res_eq res_valid.
       subst inlengths insizes outsizes. cbv [spec_of_selectznz].
       cbv [list_selectznz_insizes list_selectznz_outsizes list_selectznz_inlengths].
-      cbv beta; intros; subst f. cbv [make_bedrock_func].
+      cbv beta; intros; subst f. cbv [make_bedrock_func] in *.
       cleanup.
-      pose proof (FElem_max_bounds _ _ _ _ H0) as Hxbounds.
-      pose proof (FElem_max_bounds _ _ _ _ H1) as Hybounds.
+      pose proof (FElem_max_bounds _ _ _ _ H1) as Hxbounds.
+      pose proof (FElem_max_bounds _ _ _ _ H2) as Hybounds.
       match goal with
       | H : ZRange.is_bounded_by_bool _ _ = _ |- _ => rename H into Hbound
       | _ => idtac

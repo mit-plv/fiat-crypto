@@ -24,11 +24,9 @@ Section __.
 
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
-  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
   Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
   Context {locals_ok : map.ok locals}.
-  Context {env_ok : map.ok env}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}.
   Context {field_representaton : FieldRepresentation}.
@@ -586,7 +584,7 @@ Section __.
           (cmd.call [] "felem_cswap" [expr.var mask_var; expr.var lhs_var; expr.var rhs_var])
           k_impl
         <{ pred (nlet_eq [lhs_var; rhs_var] v k) }>.
-  Proof using env_ok ext_spec_ok locals_ok mem_ok word_ok.
+  Proof using ext_spec_ok locals_ok mem_ok word_ok.
     unfold FElem, Field.FElem.
     rewrite !Bignum_as_array.
     repeat straightline' locals.

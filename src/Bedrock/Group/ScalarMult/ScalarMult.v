@@ -17,11 +17,9 @@ Module M.
   Section __.
     Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
     Context {locals: map.map String.string word}.
-    Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
     Context {ext_spec: bedrock2.Semantics.ExtSpec}.
     Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
     Context {locals_ok : map.ok locals}.
-    Context {env_ok : map.ok env}.
     Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
     Context {field_parameters : FieldParameters}
             {field_parameters_ok : FieldParameters_ok}
@@ -223,18 +221,15 @@ Module M.
       (* speedier proof if straightline doesn't try to compute the stack
          allocation sizes *)
       Local Opaque felem_size_in_bytes.
-      Lemma scmul_func_correct : forall functions, spec_of_scmul ((scmul, scmul_func)::functions).
+      Lemma scmul_func_correct : forall functions,
+          map.get functions scmul = Some scmul_func ->
+          spec_of_scmul functions.
       Proof.
         (* straightline doesn't work properly for setup, so the first step
            is inlined and changed here *)
         enter scmul_func. intros.
-        WeakestPrecondition.unfold1_call_goal.
-        (cbv beta match delta [WeakestPrecondition.call_body]).
-        lazymatch goal with
-        | |- if ?test then ?T else _ =>
-          replace test with true by (rewrite String.eqb_refl; reflexivity);
-            change_no_check T
-        end; (cbv beta match delta [WeakestPrecondition.func]).
+        eapply start_func. 1: eassumption.
+        cbv beta match delta [WeakestPrecondition.func].
 
         cbv [GElem x_representation grepresents xrepresents] in *.
         sepsimpl.

@@ -28,9 +28,9 @@ Local Open Scope string_scope.
 Local Open Scope list_scope.
 
 Section with_parameters.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
 
   Fixpoint make_base_var_data {t}
     : base_ltype t -> list_lengths (type.base t) ->
@@ -114,8 +114,8 @@ Definition bedrock_func_to_lines (f : string * func)
   [c_func f].
 
 Definition wrap_call
-  {width BW word mem locals env ext_spec varname_gen error}
-  `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
+  {width BW word mem locals ext_spec varname_gen error}
+  `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}
            {t}
            (indata : type.for_each_lhs_of_arrow var_data t)
            (outdata : base_var_data (type.final_codomain t))
@@ -185,7 +185,6 @@ Definition Bedrock2_ToFunctionLines
         (word:=Naive.word width)
         (locals:=SortedListString.map _)
         (mem:=SortedListWord.map(word_ok:=Naive.ok width width_pos) _ _)
-        (env:=SortedListString.map _)
         (ext_spec:=fun _ _ _ _ _ => False)
         (varname_gen := default_varname_gen)
         (error := expr.var Defaults.ERROR)

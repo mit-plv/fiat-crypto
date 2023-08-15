@@ -11,9 +11,9 @@ Import Types.Notations.
 Existing Instances rep.Z rep.listZ_mem.
 
 Section with_parameters.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
 
   Fixpoint list_lengths_repeat_base (n : nat) t : base_listonly nat t :=
     match t as t0 return base_listonly nat t0 with

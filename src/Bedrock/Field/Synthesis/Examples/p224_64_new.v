@@ -46,7 +46,7 @@ Section Field.
   Definition from_mont_string := prefix ++ "from_mont".
 
   (* Call fiat-crypto pipeline on all field operations *)
-  Instance p224_ops : @word_by_word_Montgomery_ops from_mont_string to_mont_string _ _ _ _ _ _ _ _ _ _ _ (WordByWordMontgomery.n m machine_wordsize) m.
+  Instance p224_ops : @word_by_word_Montgomery_ops from_mont_string to_mont_string _ _ _ _ _ _ _ _ _ _ (WordByWordMontgomery.n m machine_wordsize) m.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
 
@@ -65,7 +65,16 @@ Section Field.
         | |- context [spec_of_to_bytes] => eapply to_bytes_func_correct
         end.
 
-      Ltac derive_bedrock2_func op :=
+        Ltac epair :=
+          lazymatch goal with
+          | f := _ : string * Syntax.func |- _ =>
+            let p := open_constr:((_, _)) in
+            unify f p;
+            subst f
+          end.
+
+        Ltac derive_bedrock2_func op :=
+        epair;
         begin_derive_bedrock2_func;
         (* this goal fills in the evar, so do it first for [abstract] to be happy *)
         try lazymatch goal with
@@ -81,62 +90,73 @@ Section Field.
         | |- (_ = _)%Z => vm_compute; reflexivity
         end.
 
+  Local Notation functions_contain functions f :=
+    (Interface.map.get functions (fst f) = Some (snd f)).
+
   Derive p224_from_bytes
          SuchThat (forall functions,
+                      functions_contain functions p224_from_bytes ->
                       spec_of_from_bytes
                         (field_representation:=field_representation_raw m)
-                        (p224_from_bytes :: functions))
+                        functions)
          As p224_from_bytes_correct.
   Proof. Time derive_bedrock2_func from_bytes_op. Qed.
 
   Derive p224_to_bytes
          SuchThat (forall functions,
+                      functions_contain functions p224_to_bytes ->
                       spec_of_to_bytes
                         (field_representation:=field_representation_raw m)
-                        (p224_to_bytes :: functions))
+                        functions)
          As p224_to_bytes_correct.
   Proof. Time derive_bedrock2_func to_bytes_op. Qed.
 
   Derive p224_mul
          SuchThat (forall functions,
+                      functions_contain functions p224_mul ->
                       spec_of_BinOp bin_mul
                         (field_representation:=field_representation m)
-                        (p224_mul :: functions))
+                        functions)
          As p224_mul_correct.
   Proof. Time derive_bedrock2_func mul_op. Qed.
 
   Derive p224_square
          SuchThat (forall functions,
+                      functions_contain functions p224_square ->
                       spec_of_UnOp un_square
                         (field_representation:=field_representation m)
-                        (p224_square :: functions))
+                        functions)
          As p224_square_correct.
   Proof. Time derive_bedrock2_func square_op. Qed.
 
   Derive p224_add
          SuchThat (forall functions,
+                      functions_contain functions p224_add ->
                       spec_of_BinOp bin_add
                         (field_representation:=field_representation m)
-                        (p224_add :: functions))
+                        functions)
          As p224_add_correct.
   Proof. Time derive_bedrock2_func add_op. Qed.
 
   Derive p224_sub
          SuchThat (forall functions,
+                      functions_contain functions p224_sub ->
                       spec_of_BinOp bin_sub
                         (field_representation:=field_representation m)
-                        (p224_sub :: functions))
+                        functions)
          As p224_sub_correct.
   Proof. Time derive_bedrock2_func sub_op. Qed.
 
   (*TODO: adapt derive_bedrock2_func to also derive the remaining functions.*)
   Derive p224_from_mont
          SuchThat (forall functions,
+                      functions_contain functions p224_from_mont ->
                       spec_of_UnOp un_from_mont
                         (field_representation:=field_representation m)
-                        (p224_from_mont :: functions))
+                        functions)
          As p224_from_mont_correct.
   Proof.
+    epair.
     eapply (from_mont_func_correct _ _ _ from_mont_string to_mont_string).
         - vm_compute; reflexivity.
         - eapply Func.valid_func_bool_iff. abstract vm_cast_no_check (eq_refl true).
@@ -147,11 +167,13 @@ Section Field.
 
   Derive p224_to_mont
          SuchThat (forall functions,
+                      functions_contain functions p224_to_mont ->
                       spec_of_UnOp un_to_mont
                         (field_representation:=field_representation m)
-                        (p224_to_mont :: functions))
+                        functions)
          As to_from_mont_correct.
   Proof.
+    epair.
     eapply (to_mont_func_correct _ _ _ from_mont_string to_mont_string).
         - vm_compute; reflexivity.
         - eapply Func.valid_func_bool_iff. abstract vm_cast_no_check (eq_refl true).
@@ -160,11 +182,13 @@ Section Field.
 
   Derive p224_select_znz
            SuchThat (forall functions,
+                      functions_contain functions p224_select_znz ->
                       spec_of_selectznz
                         (field_representation:=field_representation m)
-                        (p224_select_znz :: functions))
+                        functions)
          As select_znz_correct.
   Proof.
+    epair.
     eapply select_znz_func_correct. 1,2:auto.
         - vm_compute; reflexivity.
         - eapply Func.valid_func_bool_iff. abstract vm_cast_no_check (eq_refl true).

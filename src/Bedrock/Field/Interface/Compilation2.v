@@ -7,11 +7,9 @@ Local Open Scope Z_scope.
 Section Compile.
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
-  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
   Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
   Context {locals_ok : map.ok locals}.
-  Context {env_ok : map.ok env}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}
           {field_representaton : FieldRepresentation}
@@ -137,7 +135,7 @@ Section Compile.
         (cmd.call [] name [expr.var out_var; expr.var x_var; expr.var y_var])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
-  Proof using env_ok ext_spec_ok locals_ok mem_ok word_ok.
+  Proof using ext_spec_ok locals_ok mem_ok word_ok.
     repeat straightline'.
     unfold FElem in *.
     sepsimpl.
@@ -182,7 +180,7 @@ Section Compile.
         (cmd.call [] name [expr.var out_var; expr.var x_var])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
-  Proof using env_ok ext_spec_ok locals_ok mem_ok word_ok.
+  Proof using ext_spec_ok locals_ok mem_ok word_ok.
     repeat straightline'.
     unfold FElem in *.
     sepsimpl.
@@ -262,7 +260,7 @@ Section Compile.
         (cmd.call [] felem_copy [expr.var out_var; expr.var x_var])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
-  Proof using env_ok ext_spec_ok locals_ok mem_ok word_ok.
+  Proof using ext_spec_ok locals_ok mem_ok word_ok.
     repeat straightline'.
     unfold FElem in *.
     sepsimpl.
@@ -304,7 +302,7 @@ Section Compile.
                   [expr.var out_var; expr.literal x])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
-  Proof using env_ok ext_spec_ok locals_ok mem_ok word_ok.
+  Proof using ext_spec_ok locals_ok mem_ok word_ok.
     repeat straightline'.
     unfold FElem in *.
     extract_ex1_and_emp_in H1.
@@ -347,7 +345,7 @@ Section Compile.
         (cmd.call [] from_bytes [expr.var out_var; expr.var x_var])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
-  Proof using env_ok ext_spec_ok locals_ok mem_ok word_ok.
+  Proof using ext_spec_ok locals_ok mem_ok word_ok.
     repeat straightline'.
     unfold FElem in *.
     sepsimpl.
@@ -389,7 +387,7 @@ Section Compile.
         (cmd.call [] to_bytes [expr.var out_var; expr.var x_var])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
-  Proof using env_ok ext_spec_ok locals_ok mem_ok word_ok.
+  Proof using ext_spec_ok locals_ok mem_ok word_ok.
     repeat straightline'.
     subst v.
     unfold FElem in *.

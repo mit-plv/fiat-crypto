@@ -29,11 +29,9 @@ Section FElems.
 
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
-  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
   Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
   Context {locals_ok : map.ok locals}.
-  Context {env_ok : map.ok env}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
 
   Section Impl.
@@ -498,7 +496,7 @@ Section FElems.
               cmd.seq (cmd.call [] "fe25519_inv" [expr.var out_var; expr.var x_var]) k_impl
 
               <{ pred (let/n x as out_var eq:Heq := v in k x Heq) }>.
-      Proof using F_M_pos env_ok ext_spec_ok field_representation_ok locals_ok mem_ok word_ok.
+      Proof using F_M_pos ext_spec_ok field_representation_ok locals_ok mem_ok word_ok.
         repeat straightline.
         repeat (eexists; split; eauto).
         straightline_call.
@@ -636,7 +634,7 @@ Section FElems.
     Lemma fe_inv_correct :
       Z.pos M_pos = 2^255-19 ->
       program_logic_goal_for_function! fe25519_inv.
-    Proof using env_ok ext_spec_ok field_representation_ok locals_ok mem_ok word_ok.
+    Proof using ext_spec_ok field_representation_ok locals_ok mem_ok word_ok.
       intros Hm HmPrime ? ** ? **.
       eapply Proper_call; [|eapply fe25519_inv_correct_exp; eauto 1; exact I].
       intros ? ** ? ** ? ** ?; intuition idtac.

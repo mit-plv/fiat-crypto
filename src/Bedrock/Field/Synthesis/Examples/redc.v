@@ -60,7 +60,7 @@ Section WithParameters.
 
   (* redc_step ought to take in small arrays B and S, and value a, and output an array S' *)
   (* S' should be small, and should eval to the same as (a * B + S) * ri modulo the prime *)
- 
+
   Instance spec_of_redc_step : spec_of "redc_step" :=
     fnspec! "redc_step" a Bstart Sstart len / B (bval: Z) S (sval: Z) R,
       { requires t m :=
@@ -158,6 +158,15 @@ Section WithParameters.
   .
   Proof.
     Admitted.
+
+  Local Ltac no_call :=
+    lazymatch goal with
+    | |- Semantics.call _ _ _ _ _ _ => fail
+    | |- _ => idtac
+    end.
+
+  Local Ltac original_eexists := eexists.
+  Local Tactic Notation "eexists" := no_call; original_eexists.
 
  Theorem redc_alt_ok :
       program_logic_goal_for_function! redc_alt.

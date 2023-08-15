@@ -1,4 +1,3 @@
-
 Require Import Coq.Unicode.Utf8.
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Loops.
@@ -143,11 +142,9 @@ Qed.
 Section with_parameters.
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
-  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
   Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
   Context {locals_ok : map.ok locals}.
-  Context {env_ok : map.ok env}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
 
 
@@ -242,7 +239,7 @@ Section with_parameters.
   Lemma ranged_for'_length_helper (from' : nat) scratch lst
     :  length (snd (ranged_for' 0 from'
                       (λ (acc : list T) (tok : ExitToken.t) (idx : Z) (_ : 0 - 1 < idx < from'),
-                        (tok, upd acc (Z.to_nat idx) (nth (Z.to_nat idx) lst default))) scratch : 
+                        (tok, upd acc (Z.to_nat idx) (nth (Z.to_nat idx) lst default))) scratch :
                    ExitToken.t * list T)) = length scratch.
   Proof.
     revert scratch lst.
@@ -263,8 +260,8 @@ Section with_parameters.
     }
   Qed.
 
-  
-  
+
+
   Lemma ranged_for'_invariant {A} n m (f : _ -> _ -> _ -> _) acc (P : A -> Prop)
     : (forall acc' tok idx, fst (f acc' tok idx) = tok) ->
       P acc ->
@@ -278,7 +275,7 @@ Section with_parameters.
     revert acc H0.
     pose proof (z_range_sound n m) as H'; revert H'.
     generalize ((z_range n m)).
-    
+
     induction l; simpl; intros; eauto.
     specialize (IHl ltac:(eauto)).
     specialize (H' a ltac:(tauto)).
@@ -288,7 +285,7 @@ Section with_parameters.
     eapply Hn; eauto.
   Qed.
 
-  
+
   Lemma skipn_ranged_for'_upd (from' : nat) scratch lst
     : skipn from'
         (snd
@@ -311,7 +308,7 @@ Section with_parameters.
     }
     lia.
   Qed.
-  
+
   Lemma map_predT_to_truncated_word ptr t
     : Lift1Prop.iff1 (t$@ptr) (array (truncated_word szT) sz_word ptr (map word_of_T t)).
   Proof.
@@ -335,8 +332,8 @@ Section with_parameters.
     }
   Qed.
 
-  
-  Lemma map_upd A B (f : A -> B) i (a : A) l 
+
+  Lemma map_upd A B (f : A -> B) i (a : A) l
     : map f (upd l i a) = upd (map f l) i (f a).
   Proof.
     eapply nth_error_ext;
@@ -360,7 +357,7 @@ Section with_parameters.
     {
       repeat rewrite ?nth_upd_diff, ?map_nth
         by (repeat rewrite ?List.map_length, ?List.upd_length; lia).
-      auto. 
+      auto.
     }
   Qed.
 
@@ -401,7 +398,7 @@ Section with_parameters.
     rewrite nd_as_ranged_for_all.
     rewrite ranged_for_all_as_ranged_for.
     repeat compile_step.
-    
+
     assert (~ a_var = to_var).
     {
       intro; subst.
@@ -487,7 +484,7 @@ Section with_parameters.
         assert (from' <= length acc).
         {
           unfold acc.
-          unfold a. 
+          unfold a.
           replace (from') with (Z.of_nat (Z.to_nat from')) by lia.
           rewrite ranged_for'_length_helper.
           lia.
@@ -505,11 +502,11 @@ Section with_parameters.
         apply skipn_ranged_for'_upd.
       }
       {
-        
+
         seprewrite_in map_predT_to_truncated_word H12.
         eapply array_store_of_sep in H12.
         destruct H12 as [? [? ?]].
-        
+
         eexists; split.
         { apply H11. }
         {
@@ -534,7 +531,7 @@ Section with_parameters.
           lia.
         }
         {
-          intros.          
+          intros.
           seprewrite map_predT_to_truncated_word.
           rewrite <- map_upd in H11.
           eauto.
@@ -586,7 +583,7 @@ Section with_parameters.
              lst_expr)
           k_impl
       <{ pred (nlet_eq [a_var] v k) }>.
-  Proof using T_Fits_ok env_ok ext_spec_ok locals_ok mem_ok word_ok.
+  Proof using T_Fits_ok ext_spec_ok locals_ok mem_ok word_ok.
     eauto using compile_broadcast_expr'.
   Qed.
 
@@ -686,14 +683,14 @@ Section with_parameters.
     reflexivity.
   Qed.
 
-  
+
   Lemma split_hd_tl {A} (a:A) (l:list A)
     : 0 < length l ->
       l = hd a l :: tl l.
   Proof.
     destruct l; simpl in *; [lia | auto].
   Qed.
-          
+
   Lemma broadcast_var l idx_var scratch a_ptr b_ptr a_var a_data R' R
     : Lift1Prop.iff1 R' (a_data$@a_ptr * R)%sep ->
       map.get l a_var = Some a_ptr ->
@@ -739,7 +736,7 @@ Section with_parameters.
     seprewrite_in map_predT_to_truncated_word H5.
     seprewrite_in map_predT_to_truncated_word H5.
     rewrite <- (firstn_skipn (length lstl) a_data) in H5.
-    rewrite map_app in H5.   
+    rewrite map_app in H5.
     seprewrite_in (array_append (T:=word)) H5.
     rewrite map_length in H5.
     rewrite firstn_length in H5.
@@ -818,7 +815,7 @@ Section with_parameters.
       rewrite word.byte_of_Z_unsigned in H.
       ecancel_assumption.
       apply byte_in_word_bounds.
-    }          
+    }
   Qed.
 
 
@@ -831,7 +828,7 @@ Section with_parameters.
 
   (*TODO: where to get this fact from?*)
   Axiom width_mul_8 : exists x, width = x * 8.
-  
+
   Instance word_ac_ok : FitsInLocal_ok word word_ac.
   Proof.
     constructor; unfold word_of_T, szT, predT, word_ac.
@@ -897,7 +894,7 @@ Section with_parameters.
     instantiate (1:= fun _ => True).
 
     exists (map.put map.empty (word.of_Z (Z.of_nat (length lstl))) (nth (length lstl) const_list x00)).
-    exists (map.remove (OfListWord.map.of_list_word const_list) (word.of_Z (Z.of_nat (length lstl)))). 
+    exists (map.remove (OfListWord.map.of_list_word const_list) (word.of_Z (Z.of_nat (length lstl)))).
     intuition idtac.
     {
       eapply map.split_comm.

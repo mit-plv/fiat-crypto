@@ -32,7 +32,6 @@ Class GroupRepresentation {G : Type} {width} {BW:Bitwidth.Bitwidth width} {word 
 Section FunctionSpecs.
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
-  Context {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
   Context {group_parameters : GroupParameters}
           {group_representaton : GroupRepresentation (G:=G)}
