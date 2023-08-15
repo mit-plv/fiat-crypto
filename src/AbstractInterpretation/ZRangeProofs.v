@@ -44,9 +44,12 @@ Require Import Crypto.Util.Tactics.PrintGoal.
 Require Import Crypto.Language.PreExtra.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.AbstractInterpretation.ZRange.
+Require Import Crypto.AbstractInterpretation.ZRangeCommonProofs.
 
 Module Compilers.
   Import AbstractInterpretation.ZRange.Compilers.
+  Import AbstractInterpretation.ZRangeCommonProofs.Compilers.
+  Import Rewriter.Language.Wf.Compilers. (* for properties about type.related_hetero *)
   Export ZRange.Settings.
 
   Module ZRange.
@@ -110,6 +113,14 @@ Module Compilers.
                   (assume_cast_truncates : bool).
           Local Notation interp_is_related idc
             := (type.related_hetero
+                  (fun t st v => ZRange.type.base.option.is_bounded_by st v = true)
+                  (ZRange.ident.option.interp assume_cast_truncates idc)
+                  (ident.interp idc)).
+          Local Notation interp_is_related_and_Proper idc
+            := (type.related_hetero_and_Proper
+                  (skip_base:=true)
+                  (fun t => eq)
+                  (fun t => eq)
                   (fun t st v => ZRange.type.base.option.is_bounded_by st v = true)
                   (ZRange.ident.option.interp assume_cast_truncates idc)
                   (ident.interp idc)).
@@ -621,9 +632,13 @@ Module Compilers.
                break_innermost_match; apply Bool.andb_true_iff; split; apply Z.leb_le; try apply Z.le_sub_1_iff; auto with zarith. }
           Qed.
 
-          Lemma interp_related {t} (idc : ident t) : interp_is_related idc.
+          (** In abstract interpretation, we only need this version of the lemma for less-than-third-order types, but in Assembly/Symbolic, we use it for all identifiers *)
+          Lemma interp_related {t} (idc : ident t) (*H : type.is_not_higher_order_than 3 t = true*) : interp_is_related idc.
           Proof using Type.
             destruct idc.
+            (*
+            (** clear out higher-than-third-order types *)
+            all: cbn in H; try congruence.*)
             all: lazymatch goal with
                  | [ |- context[ident.Z_cast] ] => apply interp_related_Z_cast
                  | [ |- context[ident.Z_cast2] ] => apply interp_related_Z_cast2
@@ -735,13 +750,24 @@ Module Compilers.
                                => Z.div_mod_to_quot_rem; nia
                              end
                            | intros; mul_by_halves_t ].
+            all: try solve [ non_arith_t; Z.ltb_to_lt; reflexivity ].
             (** For command-line debugging, we display goals that should not remain *)
-            all: [ > idtac "WARNING: Remaining goal:"; print_context_and_goal () .. | | ].
-            { intros.
-              rewrite Z.le_sub_1_iff.
-              break_innermost_match; Z.ltb_to_lt;
-                auto with zarith. }
-            { non_arith_t; Z.ltb_to_lt; reflexivity. }
+            all: [ > idtac "WARNING: Remaining goal:"; print_context_and_goal () .. ].
+          Qed.
+
+          Lemma interp_related_and_Proper {t} (idc : ident t) : interp_is_related_and_Proper idc.
+          Proof using Type.
+            destruct (type.is_not_higher_order_than 3 t) eqn:Hho.
+            { apply type.related_hetero_impl_related_hetero_and_Proper_eqv_not_higher_order_than_3.
+              all: try apply interp_related.
+              all: try apply ident.interp_Proper.
+              all: try apply ZRange.ident.option.interp_Proper.
+              all: try assumption.
+              all: try reflexivity. }
+            { destruct idc.
+              all: try (apply Bool.diff_true_false in Hho; exfalso; exact Hho).
+              (** For command-line debugging, we display goals that should not remain *)
+              all: [ > idtac "WARNING: Remaining goal of order > 3:"; print_context_and_goal () .. ]. }
           Qed.
         End interp_related.
       End option.
