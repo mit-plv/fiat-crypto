@@ -42,18 +42,19 @@ Module Compilers.
       Definition abstract_domain (t : type)
         := type.interp abstract_domain' t.
 
-      Fixpoint value (t : type)
+      (** A value should carry both an abstract state and a way of turning value's into expressions *)
+      Fixpoint value' (t : type)
         := match t return Type (* COQBUG(https://github.com/coq/coq/issues/7727) *) with
            | type.base t
-             => abstract_domain t * @expr var t
+             => @expr var t
            | type.arrow s d
-             => value s -> UnderLets (value d)
+             => abstract_domain s * value' s -> UnderLets (value' d)
            end%type.
 
-      Definition value_with_lets (t : type)
-        := UnderLets (value t).
+      Definition value (t : type) : Type
+        := abstract_domain t * UnderLets (value' t).
 
-      Context (interp_ident : bool (* annotate with state? *) -> forall t, ident t -> value_with_lets t).
+      Context (interp_ident : bool (* annotate with state? *) -> forall t, ident t -> value t).
 
       Fixpoint bottom {t} : abstract_domain t
         := match t with
@@ -67,47 +68,50 @@ Module Compilers.
            | type.arrow s d => (bottom, @bottom_for_each_lhs_of_arrow d)
            end.
 
-      Definition state_of_value {t} : value t -> abstract_domain t
-        := match t return value t -> abstract_domain t with
-           | type.base t => fun '(st, v) => st
-           | type.arrow s d => fun _ => bottom
-           end.
+      Definition state_of_value {t} : value t -> abstract_domain t := fst.
+      Definition project_value' {t} : value t -> UnderLets (value' t) := snd.
+      Definition Base_value' {t} : abstract_domain t * value' t -> value t
+        := fun x => (fst x, Base (snd x)).
+      Definition apply_value {s d} (f : value (s -> d)) (x : value s) : value d
+        := let '(x1, x2) := (state_of_value x, project_value' x) in
+           let '(f1, f2) := (state_of_value f, project_value' f) in
+           (f1 x1, (f2 <-- f2; x2 <-- x2; f2 (x1, x2))%under_lets).
 
-      (** We drop the state of higher-order arrows, because we don't
-          fundamentally know anything about the inputs to such arrows.
-          We could in theory do a more fine-grained analysis of
-          passing in [bottom] for the higher-order arrow inputs *)
       Fixpoint reify (annotate_with_state : bool) (is_let_bound : bool) {t} : value t -> type.for_each_lhs_of_arrow abstract_domain t -> UnderLets (@expr var t)
         := match t return value t -> type.for_each_lhs_of_arrow abstract_domain t -> UnderLets (@expr var t) with
            | type.base t
              => fun '(st, v) 'tt
-                => if annotate_with_state
-                   then annotate is_let_bound t st v
-                   else if is_let_bound
-                        then UnderLets.UnderLet v (fun v' => UnderLets.Base ($$v'))
-                        else UnderLets.Base v
-           | type.arrow s d
-             => fun f_e '(sv, dv)
-               => let sv := match s with
-                           | type.base _ => sv
-                           | type.arrow _ _ => bottom
-                           end in
-                 Base
-                   (λ x , (UnderLets.to_expr
-                             (fx <-- f_e (@reflect annotate_with_state _ (expr.Var x) sv);
-                                @reify annotate_with_state false _ fx dv)))
-           end%core%expr
+                => v <-- v;
+      if annotate_with_state
+      then annotate is_let_bound t st v
+      else if is_let_bound
+           then UnderLets.UnderLet v (fun v' => UnderLets.Base ($$v'))
+           else UnderLets.Base v
+    | type.arrow s d
+      => fun f_e '(sv, dv)
+         => let f := state_of_value f_e in
+            f_e <-- project_value' f_e;
+      Base
+        (λ x , UnderLets.to_expr
+                 (let sv := @reflect annotate_with_state _ (expr.Var x) sv in
+                  let sx := state_of_value sv in
+                  x <-- project_value' sv;
+                  fx <-- f_e (sx, x)%core;
+                  @reify annotate_with_state false _ (f sx, Base fx)%core dv))
+      end%core%expr%under_lets
       with reflect (annotate_with_state : bool) {t} : @expr var t -> abstract_domain t -> value t
            := match t return @expr var t -> abstract_domain t -> value t with
               | type.base t
-                => fun e st => (st, e)
+                => fun e st => Base_value' (st, e)
               | type.arrow s d
                 => fun e absf
-                   => (fun v
-                       => let stv := state_of_value v in
-                          (rv <-- (@reify annotate_with_state false s v bottom_for_each_lhs_of_arrow);
-                             Base (@reflect annotate_with_state d (e @ rv) (absf stv))%expr))
-              end%under_lets.
+                   => Base_value'
+                        (absf,
+                          (fun v
+                           => rv <-- @reify annotate_with_state false s (Base_value' v) bottom_for_each_lhs_of_arrow;
+                           (* TODO: Should we be feeding in [fst v], or should we bottom out the arguments to [fst v]? *)
+                           project_value' (@reflect annotate_with_state d (e @ rv) (absf (fst v)))%expr))
+              end%under_lets%core.
 
       Definition skip_annotations_for_App {var'} {t} (e : @expr var' t) : bool
         := match invert_AppIdent_curried e with
@@ -115,35 +119,50 @@ Module Compilers.
            | None => false
            end.
 
-      Fixpoint interp (annotate_with_state : bool) {t} (e : @expr value_with_lets t) : value_with_lets t
-        := let annotate_with_state := annotate_with_state && negb (skip_annotations_for_App e) in
-           match e in expr.expr t return value_with_lets t with
-           | expr.Ident t idc => interp_ident annotate_with_state _ idc (* Base (reflect (###idc) (abstract_interp_ident _ idc))*)
-           | expr.Var t v => v
-           | expr.Abs s d f => Base (fun x => @interp annotate_with_state d (f (Base x)))
-           | expr.App (type.base s) d f x
-             => (x' <-- @interp annotate_with_state _ x;
-                   f' <-- @interp annotate_with_state (_ -> d)%etype f;
-                   f' x')
-           | expr.App (type.arrow s' d') d f x
-             => (x' <-- @interp annotate_with_state (s' -> d')%etype x;
-                   f' <-- @interp annotate_with_state (_ -> d)%etype f;
-                   f' x')
+      Fixpoint interp (annotate_with_state : bool) {t} (e : @expr value t) : @expr abstract_domain t -> value t.
+        refine (let annotate_with_state := annotate_with_state && negb (skip_annotations_for_App e) in
+           match e in expr.expr t return @expr abstract_domain t -> value t with
+           | expr.Ident t idc => fun _ => interp_ident annotate_with_state _ idc (* Base (reflect (###idc) (abstract_interp_ident _ idc))*)
+           | expr.Var t v => fun _ => v
+           | expr.Abs s d f
+             => fun fe_st
+                => let f_st := expr.interp (fun t idc => state_of_value (interp_ident annotate_with_state _ idc)) fe_st in
+                   Base_value'
+                     (f_st,
+                       (fun x
+                        => project_value' (@interp annotate_with_state d (f (Base_value' x))
+                                             match invert_Abs fe_st with
+                                             | Some fe_st => fe_st (fst x)
+                                             | None (* should never happen *)
+                                               => _
+                                             end)))
+                     (*
+                  Base_value'
+                     (f_st, (fun x => project_value' (@interp annotate_with_state d (f (Base_value' x)) (f_st (fst x)))))*)
+           | expr.App s d f x
+             => (let x := @interp annotate_with_state s x in
+                 let f := @interp annotate_with_state (s -> d)%etype f in
+                 _ (*
+                 x' <-- project_value' x;
+                 f' <-- @interp annotate_with_state (s -> d)%etype f;
+                   f' x'*))
            | expr.LetIn (type.arrow _ _) B x f
-             => (x' <-- @interp annotate_with_state _ x;
-                   @interp annotate_with_state _ (f (Base x')))
+             => _ (* (x' <-- @interp annotate_with_state _ x;
+                   @interp annotate_with_state _ (f (Base x')))*)
            | expr.LetIn (type.base A) B x f
-             => (x' <-- @interp annotate_with_state _ x;
+             => _ (*(x' <-- @interp annotate_with_state _ x;
                    x'' <-- reify annotate_with_state true (* this forces a let-binder here *) x' tt;
-                   @interp annotate_with_state _ (f (Base (reflect annotate_with_state x'' (state_of_value x')))))
-           end%under_lets.
+                   @interp annotate_with_state _ (f (Base (reflect annotate_with_state x'' (state_of_value x')))))*)
+           end%under_lets).
+        Set Printing All.
+        refine DefaultValue.expr.default.
 
-      Definition eval_with_bound' (annotate_with_state : bool) {t} (e : @expr value_with_lets t)
+      Definition eval_with_bound' (annotate_with_state : bool) {t} (e : @expr value t)
                  (st : type.for_each_lhs_of_arrow abstract_domain t)
         : expr t
         := UnderLets.to_expr (e' <-- interp annotate_with_state e; reify annotate_with_state false e' st).
 
-      Definition eval' {t} (e : @expr value_with_lets t) : expr t
+      Definition eval' {t} (e : @expr value t) : expr t
         := eval_with_bound' false e bottom_for_each_lhs_of_arrow.
 
       Definition eta_expand_with_bound' {t} (e : @expr var t)
@@ -172,8 +191,8 @@ Module Compilers.
         Local Notation UnderLets := (@UnderLets base.type ident var).
         Context (abstract_domain' : base.type -> Type).
         Local Notation abstract_domain := (@abstract_domain base.type abstract_domain').
-        Local Notation value_with_lets := (@value_with_lets base.type ident var abstract_domain').
         Local Notation value := (@value base.type ident var abstract_domain').
+        Local Notation value' := (@value' base.type ident var abstract_domain').
         Context (annotate_expr : forall t, abstract_domain' t -> option (@expr var (t -> t)))
                 (bottom' : forall A, abstract_domain' A)
                 (abstract_interp_ident : forall t, ident t -> type.interp abstract_domain' t)
@@ -182,7 +201,7 @@ Module Compilers.
                 (is_annotated_for : forall t t', @expr var t -> abstract_domain' t' -> bool)
                 (annotation_to_cast : forall s d, @expr var (s -> d) -> option (@expr var s -> @expr var d))
                 (skip_annotations_under : forall t, ident t -> bool)
-                (strip_annotation : forall t, ident t -> option (value t)).
+                (strip_annotation : forall t, ident t -> option (value' t)).
 
         (** TODO: Is it okay to commute annotations? *)
         Definition update_annotation {t} (st : abstract_domain' t) (e : @expr var t) : @expr var t
@@ -242,7 +261,7 @@ Module Compilers.
                      | Some ls_st, None
                        => (retv <---- (List.map
                                          (fun '(n, st')
-                                          => let e' := (#ident.List_nth_default @ DefaultValue.expr.base.default @ e @ ##(n:nat))%expr in
+                                          => let e' := (#ident.List_nth_default @ DefaultValue'.expr.base.default @ e @ ##(n:nat))%expr in
                                              @annotate is_let_bound A st' e')
                                          (List.combine (List.seq 0 (List.length ls_st)) ls_st));
                              Base (reify_list retv))
@@ -266,8 +285,8 @@ Module Compilers.
         Local Notation reflect := (@reflect base.type ident var abstract_domain' annotate bottom').
 
         (** We manually rewrite with the rule for [nth_default], as the eliminator for eta-expanding lists in the input *)
-        Definition interp_ident (annotate_with_state : bool) {t} (idc : ident t) : value_with_lets t
-          := match idc in ident t return value_with_lets t with
+        Definition interp_ident (annotate_with_state : bool) {t} (idc : ident t) : value t
+          := match idc in ident t return value t with
              | ident.List_nth_default T as idc
                => let default := reflect annotate_with_state (###idc) (abstract_interp_ident _ idc) in
                   Base
@@ -321,12 +340,12 @@ Module Compilers.
         Definition strip_all_annotations {t} (e : @expr var t) : @expr var t
           := @strip_all_annotations' false t e.
 
-        Definition eval_with_bound (skip_annotations_under : forall t, ident t -> bool) (annotate_with_state : bool) {t} (e : @expr value_with_lets t)
+        Definition eval_with_bound (skip_annotations_under : forall t, ident t -> bool) (annotate_with_state : bool) {t} (e : @expr value t)
                    (st : type.for_each_lhs_of_arrow abstract_domain t)
           : @expr var t
           := @eval_with_bound' base.type ident var abstract_domain' annotate bottom' skip_annotations_under interp_ident annotate_with_state t e st.
 
-        Definition eval {t} (e : @expr value_with_lets t) : @expr var t
+        Definition eval {t} (e : @expr value t) : @expr var t
           := @eval' base.type ident var abstract_domain' annotate bottom' (fun _ _ => false) interp_ident t e.
 
         Definition eta_expand_with_bound {t} (e : @expr var t)
@@ -344,8 +363,8 @@ Module Compilers.
     Section specialized.
       Local Notation abstract_domain' := ZRange.type.base.option.interp.
       Local Notation abstract_domain := (@partial.abstract_domain base.type abstract_domain').
-      Local Notation value_with_lets var := (@value_with_lets base.type ident var abstract_domain').
       Local Notation value var := (@value base.type ident var abstract_domain').
+      Local Notation value' var := (@value' base.type ident var abstract_domain').
       Notation expr := (@expr base.type ident).
       Notation Expr := (@expr.Expr base.type ident).
       Local Notation type := (type base.type).
@@ -390,8 +409,8 @@ Module Compilers.
         Definition abstract_interp_ident {opts : AbstractInterpretation.Options} (assume_cast_truncates : bool) t (idc : ident t) : type.interp abstract_domain' t
           := ZRange.ident.option.interp assume_cast_truncates idc.
 
-        Definition always_strip_annotation {opts : AbstractInterpretation.Options} (assume_cast_truncates : bool) {var} t (idc : ident t) : option (value var t)
-          := match idc in ident t return option (value var t) with
+        Definition always_strip_annotation {opts : AbstractInterpretation.Options} (assume_cast_truncates : bool) {var} t (idc : ident t) : option (value' var t)
+          := match idc in ident t return option (value' var t) with
              | ident.Z_cast as idc
              | ident.Z_cast2 as idc
                => let tZ_type := (fun t (idc : ident (type.base _ -> type.base t -> type.base t)) => t) _ idc in (* we want Coq to pick up the Z type for bounds tightness, not the zrange type (where "tighter" means "equal") *)
@@ -415,7 +434,7 @@ Module Compilers.
              | _ => None
              end.
 
-        Definition strip_annotation {opts : AbstractInterpretation.Options} (assume_cast_truncates : bool) (strip_annotations : bool) {var} : forall t, ident t -> option (value var t)
+        Definition strip_annotation {opts : AbstractInterpretation.Options} (assume_cast_truncates : bool) (strip_annotations : bool) {var} : forall t, ident t -> option (value' var t)
           := if strip_annotations
              then always_strip_annotation assume_cast_truncates
              else fun _ _ => None.
