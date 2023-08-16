@@ -63,12 +63,39 @@ Section Expr.
                                       (expr.Ident ident.pair)
                                       (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
                                    (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x)
+  | valid_fst :
+      forall (x : API.expr type_ZZ),
+        (* need to ignore other tuple arg completely...
+           actually it's even OK if it's an error
+           but as is will fail on the cast2
+           - could add a different fst case that handles a cast2 and a var
+           - but translate_expr will still make an error if either range is bad
+           - need to change the actual behavior
+           - actually no, it won't make an error, it will just strip the cast
+           - but it will require a cast for the inner var because the outer was bad
+         *)
+        valid_expr false x ->
+        valid_expr false (expr.App (expr.Ident ident.fst) x)
+  | valid_snd :
+      forall (x : API.expr type_ZZ),
+        valid_expr false x ->
+        valid_expr false (expr.App (expr.Ident ident.snd) x)
   | valid_fst_var :
-      forall v,
-        valid_expr (t:=type_Z) false (expr.App (expr.Ident (@ident.fst base_Z base_Z)) (expr.Var v))
-  | valid_snd_var :
-      forall v,
-        valid_expr (t:=type_Z) false (expr.App (expr.Ident (@ident.snd base_Z base_Z)) (expr.Var v))
+      forall (x : API.expr type_ZZ),
+        valid_expr false x ->
+        valid_expr false
+                   (expr.App (expr.Ident ident.fst)
+                             (expr.App
+                                (expr.App (expr.Ident ident.Z_cast2)
+                                          (expr.App
+                                             (expr.App
+                                                (expr.Ident ident.pair)
+                                                (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                                             (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x)
+  | valid_snd :
+      forall (x : API.expr type_ZZ),
+        valid_expr false x ->
+        valid_expr false (expr.App (expr.Ident ident.snd) x)
   | valid_literalz :
       forall rc z,
         (is_bounded_by_bool z (max_range(width:=width)) || negb rc)%bool = true ->
@@ -465,6 +492,8 @@ Section Expr.
            - One option is to translate with the cast included if the range isn't good.
            - Another option is to somehow thread through the fst/snd to prove that this is actually dead code.
 
+           translate_expr will require casts if the first cast isn't good.
+           let'd do option 1
          *)
       lazymatch goal with
       | |- context [(?r1 =? ?r2)%zrange] =>

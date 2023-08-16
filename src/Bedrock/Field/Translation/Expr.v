@@ -209,9 +209,8 @@ Section Expr.
   Definition require_cast_for_arg
              {var t} (e : @API.expr var t) : bool :=
     match e with
-    | Zcast r => negb (range_good r)
-    | Zcast2 r1 r2 =>
-      negb (range_good r1 && range_good r2)
+    | Zcast r => false
+    | Zcast2 r1 r2 => false
     | expr.Ident _ ident.Z_mul_high => false
     | expr.Ident _ (ident.fst _ _) => false
     | expr.Ident _ (ident.snd _ _) => false
