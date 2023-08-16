@@ -65,11 +65,11 @@ Section Expr.
                                    (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x)
   | valid_fst :
       forall (x : API.expr type_ZZ),
-        valid_expr true x ->
+        valid_expr false x ->
         valid_expr false (expr.App (expr.Ident ident.fst) x)
   | valid_snd :
       forall (x : API.expr type_ZZ),
-        valid_expr true x ->
+        valid_expr false x ->
         valid_expr false (expr.App (expr.Ident ident.snd) x)
   | valid_literalz :
       forall rc z,
@@ -496,11 +496,7 @@ Section Expr.
       cbn [locally_equivalent_nobounds_base
              locally_equivalent_nobounds
              equivalent_base rep.equiv rep.Z] in *.
-      sepsimpl; eauto.
-      match goal with
-      | H : word.unsigned _ = _ |- _ => rewrite <-H
-      end.
-      rewrite word.of_Z_unsigned. auto. }
+      sepsimpl; eauto. }
     { (* snd *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
@@ -508,11 +504,7 @@ Section Expr.
       cbn [locally_equivalent_nobounds_base
              locally_equivalent_nobounds
              equivalent_base rep.equiv rep.Z] in *.
-      sepsimpl; eauto.
-      match goal with
-      | H : word.unsigned _ = _ |- _ => rewrite <-H
-      end.
-      rewrite word.of_Z_unsigned. auto. }
+      sepsimpl; eauto. }
     { (* literal Z *)
       cbn [locally_equivalent_nobounds_base
              locally_equivalent equivalent_base rep.equiv rep.Z].

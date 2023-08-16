@@ -46,7 +46,7 @@ Section Field.
   Definition from_mont_string := prefix ++ "from_mont".
 
   (* Call fiat-crypto pipeline on all field operations *)
-  Instance p224_ops : @word_by_word_Montgomery_ops from_mont_string to_mont_string _ _ _ _ _ _ _ _ _ _ _ (WordByWordMontgomery.n m machine_wordsize) m.
+  Instance p224_ops : @word_by_word_Montgomery_ops from_mont_string to_mont_string _ _ _ _ _ _ _ _ _ _ _ _ _ (WordByWordMontgomery.n m machine_wordsize) m.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
 
@@ -65,7 +65,7 @@ Section Field.
     pose add_op.
     cbn [add_op p224_ops] in c.
 
-  Qed.
+  Abort.
 
   (**** Translate each field operation into bedrock2 and apply bedrock2 backend
         field pipeline proofs to prove the bedrock2 functions are correct. ****)
@@ -97,6 +97,101 @@ Section Field.
           abstract vm_cast_no_check (eq_refl true)
         | |- (_ = _)%Z => vm_compute; reflexivity
         end.
+
+
+      Require Import Crypto.Language.API.
+      Import API.Compilers.
+      Print Func.valid_func_bool.
+      Locate API.expr.
+      Definition cmd_bool
+                 {t} (e : @API.expr (fun _ => unit) t) : bool :=
+        match e return bool with
+        | expr.LetIn
+            (type.base (base.type.prod
+                          (base.type.type_base a)
+                          (base.type.type_base b)))
+            (type.base c) x f =>
+          true
+        | expr.LetIn
+            (type.base (base.type.type_base a))
+            (type.base b) x f =>
+          true
+        | expr.App (type.base s) _ f x =>
+          true
+        | expr.Ident _ i => true
+        | _ => false
+        end.
+      Fixpoint func_bool {t} (e : @API.expr (fun _ => unit) t) : bool :=
+        match e with
+        | expr.Abs _ _ f =>func_bool (f tt)
+        | _ => cmd_bool e
+        end.
+      Lemma valid_expr_bool_if_base_LetIn {A B} (x : API.expr A) (f : unit -> API.expr B) :
+        Cmd.valid_expr_bool_if_base (expr.LetIn x f) = false.
+      Proof.
+        cbv [Cmd.valid_expr_bool_if_base].
+        destruct B; reflexivity.
+      Qed.
+      
+  Derive p224_add
+         SuchThat (forall functions,
+                      Cmd.spec_of_add_carryx (add_carryx:=Defaults.add_carryx) functions ->
+                      spec_of_BinOp bin_add
+                        (field_representation:=field_representation m)
+                        (p224_add :: functions))
+         As p224_add_correct.
+  Proof.
+    begin_derive_bedrock2_func.
+    4:{
+      eapply Func.valid_func_bool_iff.
+      cbn [add_op p224_ops res].
+      cbv [Func.valid_func_bool].
+      repeat  lazymatch goal with
+              | |- context [Func.valid_cmd_bool_if_base (eAbs ?x)] =>
+                change (Func.valid_cmd_bool_if_base (eAbs x)) with false
+              end.
+      cbv [Func.valid_cmd_bool_if_base].
+      cbv [Cmd.valid_cmd_bool].
+      rewrite valid_expr_bool_if_base_LetIn.
+      rewrite valid_expr_bool_if_base_LetIn.
+      rewrite valid_expr_bool_if_base_LetIn.
+      rewrite valid_expr_bool_if_base_LetIn.
+      rewrite valid_expr_bool_if_base_LetIn.
+      rewrite valid_expr_bool_if_base_LetIn.
+      rewrite !valid_expr_bool_if_base_LetIn.
+      Set Printing Depth 100000.
+      repeat match goal with
+             | |- context [Cmd.valid_expr_bool_if_base ?x] =>
+               change (Cmd.valid_expr_bool_if_base x) with false
+             end.
+      cbn iota.
+      lazymatch goal with
+      | |- context [Expr.valid_expr_bool true ?x] =>
+        pose (e:=Expr.valid_expr_bool true x)
+      end.
+      (*
+ Expr.valid_expr_bool true
+         (#Compilers.ident_Z_cast @ ###{| ZRange.lower := 0; ZRange.upper := 4294967295 |} @
+          (#Compilers.ident_Z_cast @ ###{| ZRange.lower := 0; ZRange.upper := 4294967295 |} @
+           (#Compilers.ident_Z_cast @ ###{| ZRange.lower := 0; ZRange.upper := 4294967295 |} @
+            (#Compilers.ident_fst @
+             (#Compilers.ident_Z_cast2 @
+              (###{| ZRange.lower := 0; ZRange.upper := 4294967295 |},
+              ###{| ZRange.lower := 0; ZRange.upper := 1 |}) @ $$tt)) &'
+            #Compilers.ident_Z_cast @ ###{| ZRange.lower := 0; ZRange.upper := 4294967295 |} @ $$tt)
+           || #Compilers.ident_Z_cast @ ###{| ZRange.lower := 0; ZRange.upper := 4294967295 |} @
+              (#Compilers.ident_Z_cast @ ###{| ZRange.lower := 0; ZRange.upper := 4294967295 |} @
+               (#Compilers.ident_fst @
+                (#Compilers.ident_Z_cast2 @
+                 (###{| ZRange.lower := 0; ZRange.upper := 4294967295 |},
+                 ###{| ZRange.lower := 0; ZRange.upper := 1 |}) @ $$tt)) &'
+               #Compilers.ident_Z_cast @ ###{| ZRange.lower := 0; ZRange.upper := 4294967295 |} @ $$tt)))
+*)
+      cbv in e.
+    Locate begin_derive_bedrock2_func.
+    Time derive_bedrock2_func add_op.
+  Qed.
+  Print p224_add.
 
   Derive p224_from_bytes
          SuchThat (forall functions,

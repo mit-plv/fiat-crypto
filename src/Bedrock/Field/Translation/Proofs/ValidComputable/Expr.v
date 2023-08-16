@@ -278,7 +278,7 @@ Section Expr.
         | expr.App type_ZZ type_Z f x =>
           (* fst or snd *)
           (valid_expr_App1_bool require_casts f)
-            && valid_expr_bool' NotPartial true x
+            && valid_expr_bool' NotPartial false x
         | expr.App type_ZZ type_ZZ f x =>
           (valid_expr_App1_bool require_casts f)
             && valid_expr_bool' NotPartial false x
@@ -476,7 +476,7 @@ Section Expr.
      | type.arrow type_ZZ type_Z =>
        fun i =>
          forall x : API.expr type_ZZ,
-           valid_expr true x ->
+           valid_expr false x ->
            valid_expr false (expr.App (expr.Ident i) x)
      | _ => fun _ => False
      end) i.
@@ -654,7 +654,7 @@ Section Expr.
      | type.arrow type_ZZ type_Z =>
        fun f =>
          forall x : API.expr type_ZZ,
-           valid_expr true x ->
+           valid_expr false x ->
            valid_expr rc (expr.App f x)
      | type.arrow type_ZZ type_ZZ =>
        fun f =>
@@ -958,6 +958,14 @@ Section Expr.
     constructor; eauto.
   Qed.
 
+  Lemma valid_expr_require_casts_weaken {t} (e : API.expr t) rc :
+    valid_expr true e ->
+    valid_expr rc e.
+  Proof.
+    destruct rc; [ tauto | ].
+    induction 1; try solve [constructor; eauto using Bool.orb_true_r].
+  Qed.
+
   Lemma valid_expr_bool'_impl1 {t} (e : API.expr t) :
     forall mode rc,
       valid_expr_bool' mode rc e = true ->
@@ -1082,7 +1090,7 @@ Section Expr.
       { (* fst/snd *)
         intros.
         apply (valid_expr_App1_bool_impl1
-                 (t := type_ZZ -> type_Z)); eauto. }
+                 (t := type_ZZ -> type_Z)); eauto using valid_expr_require_casts_weaken. }
       { (* cast ZZ *)
         intros.
         apply (valid_expr_App1_bool_impl1
@@ -1135,7 +1143,10 @@ Section Expr.
       auto using
            Bool.andb_true_iff, Bool.orb_true_iff,
       is_bounded_by_bool_max_range,
-      is_bounded_by_bool_width_range; [ | | ].
+      is_bounded_by_bool_width_range; [ | | | | ].
+    { (* fst *)
+      
+    }
     { (* lnot_modulo *)
       apply Bool.andb_true_iff; split;
         Z.ltb_to_lt; auto. }

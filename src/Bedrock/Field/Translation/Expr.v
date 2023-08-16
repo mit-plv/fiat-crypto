@@ -202,6 +202,7 @@ Section Expr.
 
   (* only require cast for the argument of (App f x) if:
      - f is not a cast
+     - f is not fst or snd
      - f is not mul_high (then, x = 2^width)
      - f is not (lnot_modulo _) (then x is allowed to be 2^width)
      - f is not (nth_default ?d ?l) (i doesn't need to fit in a word) *)
@@ -212,6 +213,8 @@ Section Expr.
     | Zcast2 r1 r2 =>
       negb (range_good r1 && range_good r2)
     | expr.Ident _ ident.Z_mul_high => false
+    | expr.Ident _ (ident.fst _ _) => false
+    | expr.Ident _ (ident.snd _ _) => false
     | expr.App
         _ _ (expr.Ident _ ident.Z_lnot_modulo)
         _ => false
