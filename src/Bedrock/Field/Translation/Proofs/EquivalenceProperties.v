@@ -20,9 +20,9 @@ Import API.Compilers.
 Import ListNotations Types.Notations.
 
 Section OnlyDiffer.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
   Context {ok : ok}.
   Local Existing Instance Types.rep.Z.
 
@@ -341,9 +341,9 @@ Global Hint Resolve
      equiv_listZ_only_differ_mem : equiv.
 
 Section ContextEquivalence.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
   Context {ok : ok}.
   Local Existing Instance Types.rep.Z.
 

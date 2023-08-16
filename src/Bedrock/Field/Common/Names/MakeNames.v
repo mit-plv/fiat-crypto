@@ -19,9 +19,9 @@ Import ListNotations.
 Existing Instances rep.Z rep.listZ_mem.
 
 Section with_parameters.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
   Context {inname_gen outname_gen : nat -> string}.
 
   Fixpoint make_names

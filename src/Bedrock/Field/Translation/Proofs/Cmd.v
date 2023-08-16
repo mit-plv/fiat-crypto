@@ -33,9 +33,9 @@ Import Wf.Compilers.expr.
 Import Types.Notations.
 
 Section Cmd.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
   Context {ok : ok}.
 
   Local Existing Instance Types.rep.Z.
@@ -91,7 +91,7 @@ Section Cmd.
       let nvars := fst (fst out) in
       let lhs := snd (fst out) in
       WeakestPrecondition.cmd
-        (WeakestPrecondition.call functions)
+        functions
         (snd out)
         tr mem locals
         (fun tr' mem' locals' =>
@@ -118,7 +118,7 @@ Section Cmd.
       cbn [rep.equiv rep.Z] in *. sepsimpl.
       repeat straightline.
       eexists; split; [ eapply expr_empty; eassumption | ].
-      eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
+      eapply Proper_cmd; [ repeat intro | ].
       2:{
         eapply IHrhs; eauto.
         { eapply Forall2_impl_strong; eauto.
@@ -178,7 +178,7 @@ Section Cmd.
       let nvars := fst (fst out) in
       let lhs := snd (fst out) in
       WeakestPrecondition.cmd
-        (WeakestPrecondition.call functions)
+        functions
         (snd out) tr mem locals
         (fun tr' mem' locals' =>
            tr = tr'
@@ -213,10 +213,9 @@ Section Cmd.
               | f_equal; lia ]. }
     { (* prod *)
       repeat straightline.
-      eapply Proper_cmd; [ solve [apply Proper_call]
-                         | repeat intro | eapply IHt1; solve [eauto] ].
+      eapply Proper_cmd; [ repeat intro | eapply IHt1; solve [eauto] ].
       cbv beta in *; cleanup; subst.
-      eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
+      eapply Proper_cmd; [ repeat intro | ].
       2:{
         eapply IHt2; eauto; [ | ].
          { eapply equivalent_only_differ_undef; eauto;
@@ -267,7 +266,7 @@ Section Cmd.
       let nvars := fst (fst out) in
       let lhs := snd (fst out) in
       WeakestPrecondition.cmd
-        (WeakestPrecondition.call functions)
+        functions
         (snd out) tr mem locals
         (fun tr' mem' locals' =>
            tr = tr'
@@ -405,7 +404,7 @@ Section Cmd.
         context_equiv G locals ->
         (* executing translation output is equivalent to interpreting e *)
         WeakestPrecondition.cmd
-          (WeakestPrecondition.call functions)
+          functions
           body tr mem locals
           (fun tr' mem' locals' =>
              tr = tr' /\
@@ -444,14 +443,14 @@ Section Cmd.
                                                   WeakestPrecondition.cmd
                                                   WeakestPrecondition.cmd_body] in *
                | _ => eapply Proper_cmd;
-                        [ eapply Proper_call | repeat intro
+                        [ repeat intro
                           | eapply assign_correct; eauto;
                             eapply translate_expr_correct; solve [eauto] ]
                | _ => progress cbn [invert_expr.invert_pair_cps invert_expr.invert_AppIdent2_cps Option.bind invert_expr.invert_App2_cps invert_expr.invert_App_cps invert_expr.invert_Ident invert_expr.is_pair Compilers.invertIdent Option.bind translate_ident2_for_cmd Crypto.Util.Option.bind]
                end.
 
     { (* let-in (product of base types) *)
-      eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
+      eapply Proper_cmd; [ repeat intro | ].
       2: {
         eapply IHe1_valid; clear IHe1_valid;
         repeat match goal with
@@ -468,7 +467,7 @@ Section Cmd.
         etransitivity; [ eassumption | ].
         apply used_varnames_shift. } }
     { (* let-in (base type) *)
-      eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
+      eapply Proper_cmd; [ repeat intro | ].
       2: {
         eapply IHe1_valid; clear IHe1_valid;
         repeat match goal with
@@ -485,7 +484,7 @@ Section Cmd.
         etransitivity; [ eassumption | ].
         apply used_varnames_shift. } }
     { (* cons *)
-      eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
+      eapply Proper_cmd; [ repeat intro | ].
       2: {
         eapply IHe1_valid with (G:=G); clear IHe1_valid;
         repeat match goal with

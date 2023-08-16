@@ -35,16 +35,15 @@ End Notations.
 Class parameters
   {width: Z} {BW: Bitwidth.Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}
   {locals: map.map String.string word}
-  {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}
   {ext_spec: bedrock2.Semantics.ExtSpec}
   {varname_gen : nat -> String.string}
   {error : Syntax.expr.expr} := parameters_sentinel : unit.
 
 Section WithParameters.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
    `{parameters_sentinel : @parameters
-     width BW word mem locals env ext_spec varname_gen error}.
+     width BW word mem locals ext_spec varname_gen error}.
   Local Notation parameters := (ltac:(let t := type of parameters_sentinel in exact t)) (only parsing).
   Class ok {parameters_sentinel : parameters} :=
     {
@@ -52,7 +51,6 @@ Section WithParameters.
       word_ok :> word.ok word;
       mem_ok :> map.ok mem;
       locals_ok :> map.ok locals;
-      env_ok :> map.ok env;
       ext_spec_ok :> Semantics.ext_spec.ok ext_spec;
 
       varname_gen_unique :
@@ -68,10 +66,10 @@ End WithParameters.
 
 Module rep.
   Section rep.
-    Context 
-      {width BW word mem locals env ext_spec varname_gen error}
+    Context
+      {width BW word mem locals ext_spec varname_gen error}
      `{parameters_sentinel : @parameters
-       width BW word mem locals env ext_spec varname_gen error}.
+       width BW word mem locals ext_spec varname_gen error}.
     Local Notation parameters := (ltac:(let t := type of parameters_sentinel in exact t)) (only parsing).
 
     Class rep {parameters_sentinel : parameters} (t : base.type) :=
@@ -161,9 +159,9 @@ End rep.
 
 Section defs.
   Context
-    {width BW word mem locals env ext_spec varname_gen error}
+    {width BW word mem locals ext_spec varname_gen error}
    `{parameters_sentinel : @parameters
-     width BW word mem locals env ext_spec varname_gen error}.
+     width BW word mem locals ext_spec varname_gen error}.
   Local Notation parameters := (ltac:(let t := type of parameters_sentinel in exact t)) (only parsing).
   Context
           (* list representation -- could be local or in-memory *)

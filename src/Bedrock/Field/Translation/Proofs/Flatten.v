@@ -29,9 +29,9 @@ Import Types.Notations.
    conversions between the two. *)
 
 Section Flatten.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
   Context {ok : ok}.
   (* these conversions should happen before loading arguments and after
        storing return values, so they use in-memory lists *)
@@ -183,7 +183,7 @@ Section Flatten.
       (varname_set_listonly names).
   Proof.
     induction t;
-      cbn [extract_listnames fst snd varname_set_listonly 
+      cbn [extract_listnames fst snd varname_set_listonly
                              flatten_listonly_base_ltype];
       break_match; intros; rewrite ?of_list_nil; try reflexivity;
         [ | ].

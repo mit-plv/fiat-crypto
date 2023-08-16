@@ -30,8 +30,8 @@ Import ListNotations API.Compilers Types.Notations.
 
 Class word_by_word_Montgomery_ops
   {from_mont to_mont : string}
-  {width BW word mem locals env ext_spec varname_gen error}
-  {parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
+  {width BW word mem locals ext_spec varname_gen error}
+  {parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}
   {field_parameters : FieldParameters}
   {n m} : Type :=
   { mul_op :
@@ -83,15 +83,15 @@ Class word_by_word_Montgomery_ops
         list_selectznz_insizes list_selectznz_outsizes (list_selectznz_inlengths n)
   }.
 
-Arguments word_by_word_Montgomery_ops {_ _ _ _ _ _ _ _ _ _ _ _ _} n.
+Arguments word_by_word_Montgomery_ops {_ _ _ _ _ _ _ _ _ _ _ _} n.
 
 (** We need to tell [check_args] that we are requesting these functions in order to get the relevant properties out *)
 Notation necessary_requests := ["to_bytes"; "from_bytes"]%string (only parsing).
 
 Section WordByWordMontgomery.
   Context
-  {width BW word mem locals env ext_spec error}
-  {parameters_sentinel : @parameters width BW word mem locals env ext_spec default_varname_gen error}
+  {width BW word mem locals ext_spec error}
+  {parameters_sentinel : @parameters width BW word mem locals ext_spec default_varname_gen error}
   {field_parameters : FieldParameters}
   {field_parameters_ok : FieldParameters_ok}
   {ok : Types.ok}.
@@ -176,7 +176,7 @@ Section WordByWordMontgomery.
           (to_bytes_func_eq : to_bytes_func = b2_func to_bytes_op)
           (from_mont_func_eq : from_mont_func = b2_func from_mont_op)
           (to_mont_func_eq : to_mont_func = b2_func to_mont_op)
-          (select_znz_func_eq : select_znz_func = b2_func (@select_znz_op from_mont to_mont _ _ _ _ _ _ _ _ _ _ _ _ _ _)).
+          (select_znz_func_eq : select_znz_func = b2_func (@select_znz_op from_mont to_mont _ _ _ _ _ _ _ _ _ _ _ _ _)).
 
   Local Notation weight := (uweight width) (only parsing).
   Definition eval_trans := (WordByWordMontgomery.from_montgomerymod width n m (WordByWordMontgomery.m' m width)).
@@ -332,15 +332,15 @@ Qed.
 
   Lemma mul_func_correct :
     valid_func (res mul_op _) ->
-    forall functions,
-      spec_of_BinOp bin_mul ((Field.mul, mul_func) :: functions). Set Printing All.
+    forall functions, Interface.map.get functions Field.mul = Some mul_func ->
+                      spec_of_BinOp bin_mul functions.
   Proof using M_eq check_args_ok mul_func_eq ok.
         (* tight_bounds_tighter_than. *)
-    intros. cbv [spec_of_BinOp bin_mul]. rewrite mul_func_eq.
+    cbv [spec_of_BinOp bin_mul]. rewrite mul_func_eq. intros.
     pose proof mul_correct
          m width _ ltac:(eassumption) _ (res_eq mul_op)
       as Hcorrect.
-    eapply list_binop_correct with (res:=res mul_op);
+    eapply list_binop_correct with (res:=res mul_op); [ .. | eassumption ];
     try handle_side_conditions; [| | eapply valid_max_bounds; eauto | apply valid_length].
     {
     (* output *value* is correct *)
@@ -352,7 +352,7 @@ Qed.
                bin_model bin_xbounds bin_ybounds
                un_model un_xbounds eval_trans
       ] in *.
-      specialize (Hcorrect (map Interface.word.unsigned x) (map Interface.word.unsigned y) H0 H1).
+      specialize (Hcorrect (map Interface.word.unsigned x) (map Interface.word.unsigned y) H1 H2).
       FtoZ. rewrite map_unsigned_of_Z. erewrite (MaxBounds.map_word_wrap_bounded).
       2: {
         eapply valid_max_bounds; eauto. destruct Hcorrect; eauto.
@@ -365,14 +365,14 @@ Qed.
 
   Lemma square_func_correct :
     valid_func (res square_op _) ->
-    forall functions,
-      spec_of_UnOp un_square ((Field.square, square_func) :: functions).
+    forall functions, Interface.map.get functions Field.square = Some square_func ->
+                      spec_of_UnOp un_square functions.
   Proof using M_eq check_args_ok ok square_func_eq.
-    intros. cbv [spec_of_UnOp un_square]. rewrite square_func_eq.
+    cbv [spec_of_UnOp un_square]. rewrite square_func_eq. intros.
     pose proof square_correct
          _ _ _ ltac:(eassumption) _ (res_eq square_op)
       as Hcorrect.
-    eapply list_unop_correct with (res:=res square_op);
+    eapply list_unop_correct with (res:=res square_op); [ .. | eassumption ];
       handle_side_conditions; [ | | apply valid_max_bounds | apply valid_length ].
     { (* output *value* is correct *)
     intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.
@@ -383,7 +383,7 @@ Qed.
              bin_model bin_xbounds bin_ybounds
              un_model un_xbounds eval_trans
     ] in *.
-    specialize (Hcorrect (map Interface.word.unsigned x) H0).
+    specialize (Hcorrect (map Interface.word.unsigned x) H1).
     rewrite map_unsigned_of_Z. erewrite (MaxBounds.map_word_wrap_bounded).
     2: {
       eapply valid_max_bounds; eauto. destruct Hcorrect; eauto.
@@ -398,14 +398,14 @@ Qed.
 
   Lemma add_func_correct :
     valid_func (res add_op _) ->
-    forall functions,
-      spec_of_BinOp bin_add ((Field.add, add_func) :: functions).
+    forall functions, Interface.map.get functions Field.add = Some add_func ->
+                      spec_of_BinOp bin_add functions.
   Proof using M_eq check_args_ok add_func_eq ok.
-    intros. cbv [spec_of_BinOp bin_add]. rewrite add_func_eq.
+    cbv [spec_of_BinOp bin_add]. rewrite add_func_eq. intros.
     pose proof add_correct
          _ _ _ ltac:(eassumption) _ (res_eq add_op)
       as Hcorrect.
-    eapply list_binop_correct with (res:=res add_op);
+    eapply list_binop_correct with (res:=res add_op); [ .. | eassumption ];
     handle_side_conditions; [ | | apply valid_max_bounds | apply valid_length ].
     { (* output *value* is correct *)
     intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.
@@ -416,7 +416,7 @@ Qed.
              bin_model bin_xbounds bin_ybounds
              un_model un_xbounds eval_trans
     ] in *.
-    specialize (Hcorrect (map Interface.word.unsigned x) (map Interface.word.unsigned y) H0 H1).
+    specialize (Hcorrect (map Interface.word.unsigned x) (map Interface.word.unsigned y) H1 H2).
     rewrite map_unsigned_of_Z. erewrite (MaxBounds.map_word_wrap_bounded).
     2: {
       eapply valid_max_bounds; eauto. destruct Hcorrect; eauto.
@@ -430,14 +430,14 @@ Qed.
 
   Lemma sub_func_correct :
     valid_func (res sub_op _) ->
-    forall functions,
-      spec_of_BinOp bin_sub ((Field.sub, sub_func) :: functions).
+    forall functions, Interface.map.get functions Field.sub = Some sub_func ->
+                      spec_of_BinOp bin_sub functions.
   Proof using M_eq check_args_ok sub_func_eq ok.
-    intros. cbv [spec_of_BinOp bin_sub]. rewrite sub_func_eq.
+    cbv [spec_of_BinOp bin_sub]. rewrite sub_func_eq. intros.
     pose proof sub_correct
          _ _ _ ltac:(eassumption) _ (res_eq sub_op)
       as Hcorrect.
-    eapply list_binop_correct with (res:=res sub_op);
+    eapply list_binop_correct with (res:=res sub_op); [ .. | eassumption ];
     handle_side_conditions; [ | | apply valid_max_bounds| apply valid_length ].
     { (* output *value* is correct *)
     intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.
@@ -448,7 +448,7 @@ Qed.
              bin_model bin_xbounds bin_ybounds
              un_model un_xbounds eval_trans
     ] in *.
-    specialize (Hcorrect (map Interface.word.unsigned x) (map Interface.word.unsigned y) H0 H1).
+    specialize (Hcorrect (map Interface.word.unsigned x) (map Interface.word.unsigned y) H1 H2).
     rewrite map_unsigned_of_Z. erewrite (MaxBounds.map_word_wrap_bounded).
     2: {
       eapply valid_max_bounds; eauto. destruct Hcorrect; eauto.
@@ -461,15 +461,15 @@ Qed.
 
   Lemma opp_func_correct :
     valid_func (res opp_op _) ->
-    forall functions,
-      spec_of_UnOp un_opp ((Field.opp, opp_func) :: functions).
+    forall functions, Interface.map.get functions Field.opp = Some opp_func ->
+                      spec_of_UnOp un_opp functions.
   Proof using M_eq check_args_ok opp_func_eq ok.
-    intros. cbv [spec_of_UnOp un_opp]. rewrite opp_func_eq.
+    cbv [spec_of_UnOp un_opp]. rewrite opp_func_eq. intros.
     pose proof opp_correct
          _ _ _ ltac:(eassumption) _ (res_eq opp_op)
       as Hcorrect.
 
-    eapply list_unop_correct with (res:=res opp_op);
+    eapply list_unop_correct with (res:=res opp_op); [ .. | eassumption ];
       handle_side_conditions; [ | | apply valid_max_bounds | apply valid_length ].
     { (* output *value* is correct *)
     intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.
@@ -480,7 +480,7 @@ Qed.
              bin_model bin_xbounds bin_ybounds
              un_model un_xbounds eval_trans
     ] in *.
-    specialize (Hcorrect (map Interface.word.unsigned x) H0).
+    specialize (Hcorrect (map Interface.word.unsigned x) H1).
     rewrite map_unsigned_of_Z. erewrite (MaxBounds.map_word_wrap_bounded).
     2: {
       eapply valid_max_bounds; eauto. destruct Hcorrect; eauto.
@@ -495,18 +495,20 @@ Qed.
   Lemma from_bytes_func_correct :
     valid_func (res from_bytes_op _) ->
     forall functions,
-      (@spec_of_from_bytes _ _ _ _ _ _ _ field_representation_raw) ((Field.from_bytes, from_bytes_func) :: functions).
+      Interface.map.get functions Field.from_bytes = Some from_bytes_func ->
+      (@spec_of_from_bytes _ _ _ _ _ _ _ field_representation_raw) functions.
   Proof using M_eq check_args_ok from_bytes_func_eq ok.
-    intros. cbv [spec_of_from_bytes]. rewrite from_bytes_func_eq.
+    cbv [spec_of_from_bytes]. rewrite from_bytes_func_eq. intros.
     pose proof from_bytes_correct
          _ _ _ ltac:(eassumption) _ (res_eq from_bytes_op)
       as Hcorrect.
 
     eapply Signature.from_bytes_correct with (res:=res from_bytes_op);
+      [ .. | eassumption | eassumption ];
       handle_side_conditions; [ apply valid_max_bounds | apply valid_length | | | ].
     { (* output length *)
       cbv [list_in_bounds WordByWordMontgomery.valid WordByWordMontgomery.small ] in *.
-      intuition idtac. rewrite H1. rewrite Partition.length_partition; trivial. }
+      intuition idtac. rewrite H5. rewrite Partition.length_partition; trivial. }
 
     { (* output *value* is correct *)
     intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.
@@ -517,7 +519,7 @@ Qed.
              bin_model bin_xbounds bin_ybounds
              un_model un_xbounds eval_trans
     ] in *.
-    specialize (Hcorrect (map Byte.byte.unsigned bs) H0).
+    specialize (Hcorrect (map Byte.byte.unsigned bs0) H2).
     rewrite map_unsigned_of_Z. erewrite (MaxBounds.map_word_wrap_bounded).
     2: {
       eapply valid_max_bounds; eauto. destruct Hcorrect; eauto.
@@ -532,23 +534,25 @@ Qed.
   Lemma to_bytes_func_correct :
     valid_func (res to_bytes_op _) ->
     forall functions,
-      (@spec_of_to_bytes _ _ _ _ _ _ _ field_representation_raw) ((Field.to_bytes, to_bytes_func) :: functions).
+      Interface.map.get functions Field.to_bytes = Some to_bytes_func ->
+      (@spec_of_to_bytes _ _ _ _ _ _ _ field_representation_raw) functions.
   Proof using M_eq check_args_ok ok to_bytes_func_eq.
-    intros. cbv [spec_of_to_bytes]. rewrite to_bytes_func_eq.
+    cbv [spec_of_to_bytes]. rewrite to_bytes_func_eq. intros.
     pose proof to_bytes_correct
          _ _ _ ltac:(eassumption) _ (res_eq to_bytes_op)
       as Hcorrect.
 
     eapply Signature.to_bytes_correct with (res:=res to_bytes_op);
+      [ .. | eassumption | eassumption ];
       handle_side_conditions; cbv [list_in_bounds]; [ | | | ].
     {
       intros. apply byte_bounds_range_iff; split; eauto.
-        - destruct H0. eapply WordByWordMontgomery.length_small; eauto.
-        - destruct H0. cbv [WordByWordMontgomery.small] in *.
-          rewrite H0. apply partition_bytes_range.
+        - destruct H2. eapply WordByWordMontgomery.length_small; eauto.
+        - destruct H2. cbv [WordByWordMontgomery.small] in *.
+          rewrite H2. apply partition_bytes_range.
     }
     {
-      intros. destruct H0. apply WordByWordMontgomery.length_small in H0. rewrite H0. eauto.
+      intros. destruct H2. apply WordByWordMontgomery.length_small in H2. rewrite H2. eauto.
     }
     { (* output *value* is correct *)
     intros. cbv [feval]. simpl.
@@ -560,7 +564,7 @@ Qed.
              un_model un_xbounds eval_trans
     ] in *.
 
-    specialize (Hcorrect (map Interface.word.unsigned x) H0).
+    specialize (Hcorrect (map Interface.word.unsigned x0) H2).
     rewrite Hcorrect. cbv [M] in M_eq. rewrite M_eq. auto.
      }
     { (* output *bounds* are correct *)
@@ -579,16 +583,16 @@ Qed.
             apply uwprops. lia.
           }
         rewrite Zmod_small.
-        2: { destruct H0. unfold WordByWordMontgomery.eval in H1. auto. }
+        2: { destruct H2. unfold WordByWordMontgomery.eval in H3. auto. }
           cbv [uweight].
           rewrite Zmod_small; auto. split.
-            + destruct H0. cbv [WordByWordMontgomery.eval] in H1. cbv [uweight] in H1. lia.
-            + destruct H0. cbv [WordByWordMontgomery.eval] in H1. cbv [uweight] in H1. destruct H1.
+            + destruct H2. cbv [WordByWordMontgomery.eval] in H3. cbv [uweight] in H3. lia.
+            + destruct H2. cbv [WordByWordMontgomery.eval] in H3. cbv [uweight] in H3. destruct H3.
               assert ( m < ModOps.weight 8 1 (n_bytes m))%Z.
               {
-                pose proof (use_curve_good _ _ _ check_args_ok).
+                pose proof (use_curve_good _ _ _ check_args_ok) as U.
                 assert (m < s m)%Z by lia.
-                cbv [uweight] in H3. lia.
+                cbv [uweight] in U. lia.
               }
             lia.
           - cbv [WordByWordMontgomery.eval]. rewrite Partition.eval_partition.
@@ -622,15 +626,16 @@ Qed.
   Lemma from_mont_func_correct :
   valid_func (res from_mont_op _) ->
   forall functions,
-    (@spec_of_UnOp _ _ _ _ _ _ _ _ from_mont) un_from_mont ((from_mont, from_mont_func) :: functions).
+    Interface.map.get functions from_mont = Some from_mont_func ->
+    (@spec_of_UnOp _ _ _ _ _ _ _ _ from_mont) un_from_mont functions.
     Proof using M_eq check_args_ok ok from_mont_func_eq.
     clear field_parameters_ok.
-    intros. cbv [spec_of_UnOp un_from_mont]. rewrite from_mont_func_eq.
+    cbv [spec_of_UnOp un_from_mont]. rewrite from_mont_func_eq. intros.
     pose proof from_montgomery_correct
         _ _ _ ltac:(eassumption) _ (res_eq from_mont_op)
       as Hcorrect.
 
-    eapply list_unop_correct with (res:=res from_mont_op);
+    eapply list_unop_correct with (res:=res from_mont_op); [ .. | eassumption ];
       handle_side_conditions; [ | | apply valid_max_bounds | apply valid_length ].
     { (* output *value* is correct *)
     intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.
@@ -641,17 +646,17 @@ Qed.
             bin_model bin_xbounds bin_ybounds
             un_model un_xbounds eval_trans
     ] in *.
-    specialize (Hcorrect (map Interface.word.unsigned x) H0).
+    specialize (Hcorrect (map Interface.word.unsigned x) H1).
     rewrite map_unsigned_of_Z. erewrite (MaxBounds.map_word_wrap_bounded).
     2: {
       eapply valid_max_bounds; eauto. destruct Hcorrect; eauto.
     }
     destruct Hcorrect. FtoZ. pose proof (WordByWordMontgomery.from_montgomerymod_correct width n m (@Field.r' width field_parameters) (m' m width)) as Hcorrect.
     cbv [WordByWordMontgomery.eval] in *.
-    edestruct Hcorrect as [Hvalue Hvalid]; [| | | | | | eapply H2| ]; try eapply use_curve_good; try eassumption; [pose proof r'_correct as Htemp; cbv [r' M] in Htemp; rewrite M_eq in Htemp; eauto |].
-    rewrite Hvalue. rewrite Z.mul_mod; try apply m_nz. rewrite H1. rewrite <- Z.mul_mod; try apply m_nz.
-    symmetry. rewrite Z.mul_mod; try apply m_nz. cbv [list_in_bounds] in *. clear H2.
-    edestruct Hcorrect as [Hvalue' _]; [| | | | | | eapply H0 |]; try eapply use_curve_good; try eassumption; [pose proof r'_correct as Htemp; cbv [r' M] in Htemp; rewrite M_eq in Htemp; eauto |].
+    edestruct Hcorrect as [Hvalue Hvalid]; [| | | | | | eapply H3| ]; try eapply use_curve_good; try eassumption; [pose proof r'_correct as Htemp; cbv [r' M] in Htemp; rewrite M_eq in Htemp; eauto |].
+    rewrite Hvalue. rewrite Z.mul_mod; try apply m_nz. rewrite H2. rewrite <- Z.mul_mod; try apply m_nz.
+    symmetry. rewrite Z.mul_mod; try apply m_nz. cbv [list_in_bounds] in *. clear H3.
+    edestruct Hcorrect as [Hvalue' _]; [| | | | | | eapply H1 |]; try eapply use_curve_good; try eassumption; [pose proof r'_correct as Htemp; cbv [r' M] in Htemp; rewrite M_eq in Htemp; eauto |].
     rewrite Hvalue'. rewrite <- Z.mul_mod; try apply m_nz.
     cbv [Field.r' PushButtonSynthesis.WordByWordMontgomery.r' Field.r r M felem_size_in_words]. rewrite M_eq.
     auto.
@@ -663,14 +668,15 @@ Qed.
   Lemma to_mont_func_correct :
   valid_func (res to_mont_op _) ->
   forall functions,
-    (@spec_of_UnOp _ _ _ _ _ _ _ _ to_mont) un_to_mont ((to_mont, to_mont_func) :: functions).
+    Interface.map.get functions to_mont = Some to_mont_func ->
+    (@spec_of_UnOp _ _ _ _ _ _ _ _ to_mont) un_to_mont functions.
     Proof using M_eq check_args_ok ok to_mont_func_eq.
-    intros. cbv [spec_of_UnOp un_to_mont]. rewrite to_mont_func_eq.
+    cbv [spec_of_UnOp un_to_mont]. rewrite to_mont_func_eq. intros ? ? GetF.
     pose proof to_montgomery_correct
         _ _ _ ltac:(eassumption) _ (res_eq to_mont_op)
       as Hcorrect.
 
-    eapply list_unop_correct with (res:=res to_mont_op);
+    eapply list_unop_correct with (res:=res to_mont_op); [ .. | eassumption ];
       handle_side_conditions; [ | | apply valid_max_bounds | apply valid_length].
     { (* output *value* is correct *)
     intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.
@@ -717,14 +723,16 @@ Qed.
 
   Lemma select_znz_func_correct :
   valid_func (res select_znz_op _) ->
-  forall functions,
-    spec_of_selectznz ((select_znz, select_znz_func) :: functions).
+  forall functions, Interface.map.get functions select_znz = Some select_znz_func ->
+                    spec_of_selectznz functions.
 Proof using M_eq check_args_ok select_znz_func_eq ok.
-  intros. cbv [spec_of_selectznz]. rewrite select_znz_func_eq.
+  cbv [spec_of_selectznz]. rewrite select_znz_func_eq. intros ? ? GetF * HH.
+  rename x into x', y into y'.
   pose proof selectznz_correct
        _ _ _ ltac:(eassumption) _ (res_eq select_znz_op)
     as Hcorrect.
   eapply Signature.select_znz_correct with (res:=res select_znz_op);
+    [ .. | eassumption | eassumption ];
     handle_side_conditions. intros x y c H0 H1 H2.
     unfold COperationSpecifications.WordByWordMontgomery.selectznz_correct in Hcorrect.
     edestruct (bit_range_eq 1 (fun n => 1%Z) _ H2) as [Hbit | Hbit].

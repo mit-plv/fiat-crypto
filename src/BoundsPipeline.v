@@ -536,6 +536,13 @@ Module Pipeline.
                     (fun '(b1, b2) => "The bounds " ++ show b1 ++ " are looser than the expected bounds " ++ show b2)
                     bs)).
 
+    (** show both with and without all casts, but don't try to convert to the low-level language like C *)
+    Definition show_lines_Expr_with_and_without_casts {t} : ShowLines (Expr t)
+      := fun syntax_tree
+         => ((let _ : PHOAS.with_all_casts := true in show_lines syntax_tree)
+               ++ ["Which with some casts elided is:"]
+               ++ (let _ : PHOAS.with_all_casts := false in show_lines syntax_tree))%list.
+
     Definition show_lines_Expr {t} (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t) (include_input_bounds : bool)
       : ShowLines (Expr t)
       := fun syntax_tree
@@ -549,13 +556,13 @@ Module Pipeline.
                     false (* do extra bounds check *) false (* internal static *) false (* static *) false (* all static *) false (* inline *) "" "f" syntax_tree (fun _ _ => nil) None arg_bounds ZRange.type.base.option.None (type.forall_each_lhs_of_arrow (@ToString.OfPHOAS.var_typedef_data_None)) ToString.OfPHOAS.base_var_typedef_data_None with
             | inl (E_lines, types_used)
               => ["The syntax tree:"]
-                   ++ show_lines syntax_tree
+                   ++ show_lines_Expr_with_and_without_casts syntax_tree
                    ++ [""; "which can be pretty-printed as:"]
                    ++ E_lines ++ [""]
                    ++ (if include_input_bounds then ["with input bounds " ++ show_lvl arg_bounds 0 ++ "." ++ String.NewLine]%string else [])
             | inr errs
               => (["(Unprintible syntax tree used in bounds analysis)" ++ String.NewLine]%string)
-                   ++ ["Stringification failed on the syntax tree:"] ++ show_lines syntax_tree ++ [errs]
+                   ++ ["Stringification failed on the syntax tree:"] ++ show_lines_Expr_with_and_without_casts syntax_tree ++ [errs]
             end%list.
 
     Global Instance show_lines_ErrorMessage : ShowLines ErrorMessage
@@ -590,9 +597,7 @@ Module Pipeline.
                    ++ ["Unsupported casts: " ++ @show_list _ (fun v => show (projT2 v)) ls]%string
             | Stringification_failed t e err
               => ["Stringification failed on the syntax tree:"]
-                   ++ (let _ : PHOAS.with_all_casts := true in show_lines e)
-                   ++ ["Which with some casts elided is:"]
-                   ++ (let _ : PHOAS.with_all_casts := false in show_lines e)
+                   ++ show_lines_Expr_with_and_without_casts e
                    ++ [err]
             | Invalid_argument msg
               => ["Invalid argument: " ++ msg]%string

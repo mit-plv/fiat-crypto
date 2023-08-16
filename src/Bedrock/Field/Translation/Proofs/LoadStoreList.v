@@ -34,9 +34,9 @@ Import API.Compilers.
 Import Types.Notations.
 
 Section LoadStoreList.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
   Context {ok : ok}.
 
   Local Existing Instance rep.Z.
@@ -316,7 +316,7 @@ Section LoadStoreList.
                       (listZ:=rep.listZ_mem) base_listZ)
            (locals : locals)
            (mem : mem)
-           (functions : list _)
+           functions
            (R : _ -> Prop),
       (forall (n : nat) (H : nextn <= n), name <> varname_gen n) ->
       base_access_sizes_good sizes ->
@@ -329,7 +329,7 @@ Section LoadStoreList.
       let names' : base_ltype (listZ:=rep.listZ_local) base_listZ
           := snd (fst out) in
       WeakestPrecondition.cmd
-        (WeakestPrecondition.call functions)
+        functions
         (snd out)
         tr mem locals
         (fun tr' mem' locals' =>
@@ -359,7 +359,7 @@ Section LoadStoreList.
       eexists; split; cbv [dlet.dlet].
       { eapply load_list_item_correct; try eassumption.
         cbn [Datatypes.length]; lia. }
-      eapply Proper_cmd; [ solve [apply Proper_call] | | ].
+      eapply Proper_cmd.
       2:{
         eapply IHrem; eauto with lia.
         eapply Proper_sep_iff1; [ | reflexivity | eassumption ].
@@ -414,7 +414,7 @@ Section LoadStoreList.
     forall (argnames : base_ltype t)
            (argsizes : base_access_sizes t)
            (args : base.interp t)
-           (functions : list _)
+           functions
            tr
            (locals : locals)
            (mem : mem)
@@ -441,7 +441,7 @@ Section LoadStoreList.
         let argvalues' := base_rtype_of_ltype argnames' in
         (* translated function produces equivalent results *)
         WeakestPrecondition.cmd
-          (WeakestPrecondition.call functions)
+          functions
           (snd out)
           tr mem locals
           (fun tr' mem' locals' =>
@@ -470,7 +470,7 @@ Section LoadStoreList.
         eauto using only_differ_zero with lia. }
     { (* product *)
       straightline.
-      eapply Proper_cmd; [ solve [apply Proper_call] | | ].
+      eapply Proper_cmd.
       2:{ eapply IHt1; eauto.
           { intros.
             match goal with
@@ -482,7 +482,7 @@ Section LoadStoreList.
             cancel_seps_at_indices 0%nat 0%nat; trivial.
             ecancel_done. } }
       repeat intro. cleanup; subst.
-      eapply Proper_cmd; [ solve [apply Proper_call] | | ].
+      eapply Proper_cmd.
       2:{ eapply IHt2; eauto.
           { intros.
             match goal with
@@ -522,8 +522,7 @@ Section LoadStoreList.
     clear IHt.
      cbn [flatten_base_rtype base_rtype_of_ltype] in *.
     eapply Proper_cmd;
-      [ solve [apply Proper_call]
-      | | eapply load_list_correct; eauto; reflexivity ].
+      [ | eapply load_list_correct; eauto; reflexivity ].
     repeat intro. cleanup; subst.
     repeat match goal with |- _ /\ _ => split end;
       eauto using only_differ_step. }
@@ -533,7 +532,7 @@ Section LoadStoreList.
     forall (argnames : type.for_each_lhs_of_arrow ltype t)
            (argsizes : type.for_each_lhs_of_arrow access_sizes t)
            (args : type.for_each_lhs_of_arrow API.interp_type t)
-           (functions : list _)
+           functions
            tr
            (locals : locals)
            (mem : mem)
@@ -561,7 +560,7 @@ Section LoadStoreList.
             type.map_for_each_lhs_of_arrow rtype_of_ltype argnames' in
         (* translated function produces equivalent results *)
         WeakestPrecondition.cmd
-          (WeakestPrecondition.call functions)
+          functions
           (snd out)
           tr mem locals
           (fun tr' mem' locals' =>
@@ -590,7 +589,7 @@ Section LoadStoreList.
     { (* arrow (base _) _ *)
       cleanup. straightline.
       eapply Proper_cmd.
-      3:{
+      2:{
         eapply load_all_lists_correct; eauto; [ ].
         intros.
         match goal with
@@ -598,9 +597,8 @@ Section LoadStoreList.
           setoid_rewrite not_union_iff in H;
             apply H; eauto
         end. }
-      { apply Proper_call. }
       { repeat intro; cleanup; subst.
-        eapply Proper_cmd; [ solve [apply Proper_call] | | ].
+        eapply Proper_cmd.
         2:{
           eapply IHt2; eauto.
         { intros.
@@ -640,7 +638,7 @@ Section LoadStoreList.
   Lemma store_list_correct :
     forall (size : access_size)
            (start : string)
-           (functions : list _)
+           functions
            (value_names2 value_names1 : list string)
            (rets1 rets2 rets : base.interp base_listZ)
            (i : nat)
@@ -674,7 +672,7 @@ Section LoadStoreList.
                           rets1 (expr.var start) size locals)
                (lists_reserved retlengths loc' size locals)) R m ->
       WeakestPrecondition.cmd
-        (WeakestPrecondition.call functions)
+        functions
         (store_list (width:=width) size (expr.var start) values2 i) tr m locals
         (fun tr' mem' locals' =>
            tr = tr' /\
@@ -776,7 +774,7 @@ Section LoadStoreList.
              | H : Forall _ (_ :: _) |- _ => inversion H; subst; clear H
              end.
 
-      eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
+      eapply Proper_cmd; [ repeat intro | ].
       2:{
         let s :=
             lazymatch goal with
@@ -870,7 +868,7 @@ Section LoadStoreList.
            (retsizes : base_access_sizes t)
            (vset : set string)
            (rets : base.interp t)
-           (functions : list _)
+           functions
            tr
            (locals : locals)
            (mem : mem)
@@ -898,7 +896,7 @@ Section LoadStoreList.
       base_access_sizes_good retsizes ->
       (* translated function produces equivalent results *)
       WeakestPrecondition.cmd
-        (WeakestPrecondition.call functions)
+        functions
         (snd out)
         tr mem locals
         (fun tr' mem' locals' =>
@@ -950,13 +948,13 @@ Section LoadStoreList.
                apply undef_on_union_iff in H
              end.
       eapply Proper_cmd;
-        [ solve [apply Proper_call] | repeat intro
+          [ repeat intro
           | eapply IHt1; try ecancel_assumption;
             try (apply undef_on_union_iff; split);
             solve [eauto] ].
       cbv beta in *. cleanup; subst.
       eapply Proper_cmd;
-        [ solve [apply Proper_call] | repeat intro | ].
+        [ repeat intro | ].
       2:{ eapply IHt2 with
               (vset:=union vset (varname_set_listexcl (fst retnames_mem)));
           try ecancel_assumption; eauto.
@@ -993,7 +991,7 @@ Section LoadStoreList.
       cbn [rep.Z rep.listZ_mem rep.equiv rep.rtype_of_ltype] in *.
       sepsimpl.
       eapply Proper_cmd;
-        [ solve [apply Proper_call] | repeat intro | ].
+        [ repeat intro | ].
       2:{
         eapply store_list_correct with
             (rets:=rets) (rets1:=[]) (rets2:=rets)

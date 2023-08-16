@@ -27,8 +27,8 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Import ListNotations API.Compilers Types.Notations.
 
 Class unsaturated_solinas_ops
-  {width BW word mem locals env ext_spec varname_gen error}
-  {parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}
+  {width BW word mem locals ext_spec varname_gen error}
+  {parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}
   {field_parameters : FieldParameters}
   {n s c} : Type :=
   { mul_op :
@@ -82,15 +82,15 @@ Class unsaturated_solinas_ops
         Field.to_bytes
         to_bytes_insizes to_bytes_outsizes (to_bytes_inlengths n);
   }.
-Arguments unsaturated_solinas_ops {_ _ _ _ _ _ _ _ _ _ _} n.
+Arguments unsaturated_solinas_ops {_ _ _ _ _ _ _ _ _ _} n.
 
 (** We need to tell [check_args] that we are requesting these functions in order to get the relevant properties out *)
 Notation necessary_requests := ["to_bytes"; "from_bytes"]%string (only parsing).
 
 Section UnsaturatedSolinas.
   Context
-  {width BW word mem locals env ext_spec error}
-  {parameters_sentinel : @parameters width BW word mem locals env ext_spec default_varname_gen error}
+  {width BW word mem locals ext_spec error}
+  {parameters_sentinel : @parameters width BW word mem locals ext_spec default_varname_gen error}
   {field_parameters : FieldParameters}
   {ok : Types.ok}.
 
@@ -312,15 +312,15 @@ Section UnsaturatedSolinas.
 
   Lemma mul_func_correct :
     valid_func (res mul_op _) ->
-    forall functions,
-      spec_of_BinOp bin_mul ((mul,mul_func) :: functions).
+    forall functions, Interface.map.get functions mul = Some mul_func ->
+                      spec_of_BinOp bin_mul functions.
   Proof using M_eq check_args_ok mul_func_eq ok
         tight_bounds_tighter_than.
-    intros. cbv [spec_of_BinOp bin_mul]. rewrite mul_func_eq.
+    cbv [spec_of_BinOp bin_mul]. rewrite mul_func_eq. intros.
     pose proof carry_mul_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq mul_op)
       as Hcorrect.
-    eapply list_binop_correct with (res:=res mul_op);
+    eapply list_binop_correct with (res:=res mul_op); [ .. | eassumption ];
     handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
       intros.
@@ -333,15 +333,15 @@ Section UnsaturatedSolinas.
 
   Lemma square_func_correct :
     valid_func (res square_op _) ->
-    forall functions,
-      spec_of_UnOp un_square ((square,square_func) :: functions).
+    forall functions, Interface.map.get functions square = Some square_func ->
+                      spec_of_UnOp un_square functions.
   Proof using M_eq check_args_ok ok square_func_eq
         tight_bounds_tighter_than.
-    intros. cbv [spec_of_UnOp un_square]. rewrite square_func_eq.
+    cbv [spec_of_UnOp un_square]. rewrite square_func_eq. intros.
     pose proof carry_square_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq square_op)
       as Hcorrect.
-    eapply list_unop_correct with (res:=res square_op);
+    eapply list_unop_correct with (res:=res square_op); [ .. | eassumption ];
       handle_side_conditions; [ | | loosen_bounds| bounds_length ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
@@ -353,15 +353,15 @@ Section UnsaturatedSolinas.
 
   Lemma add_func_correct :
     valid_func (res add_op _) ->
-    forall functions,
-      spec_of_BinOp bin_add ((Field.add,add_func) :: functions).
+    forall functions, Interface.map.get functions Field.add = Some add_func ->
+                      spec_of_BinOp bin_add functions.
   Proof using M_eq check_args_ok add_func_eq ok
         tight_bounds_tighter_than loose_bounds_tighter_than.
-    intros. cbv [spec_of_BinOp bin_add]. rewrite add_func_eq.
+    cbv [spec_of_BinOp bin_add]. rewrite add_func_eq. intros.
     pose proof add_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq add_op)
       as Hcorrect.
-    eapply list_binop_correct with (res:=res add_op);
+    eapply list_binop_correct with (res:=res add_op); [ .. | eassumption ];
     handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
       intros.
@@ -395,15 +395,15 @@ Section UnsaturatedSolinas.
 
   Lemma sub_func_correct :
     valid_func (res sub_op _) ->
-    forall functions,
-      spec_of_BinOp bin_sub ((Field.sub,sub_func) :: functions).
+    forall functions, Interface.map.get functions Field.sub = Some sub_func ->
+                      spec_of_BinOp bin_sub functions.
   Proof using M_eq check_args_ok sub_func_eq ok
         tight_bounds_tighter_than loose_bounds_tighter_than.
-    intros. cbv [spec_of_BinOp bin_sub]. rewrite sub_func_eq.
+    cbv [spec_of_BinOp bin_sub]. rewrite sub_func_eq. intros.
     pose proof sub_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq sub_op)
       as Hcorrect.
-    eapply list_binop_correct with (res:=res sub_op);
+    eapply list_binop_correct with (res:=res sub_op); [ .. | eassumption ];
     handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
       intros.
@@ -416,15 +416,15 @@ Section UnsaturatedSolinas.
 
   Lemma opp_func_correct :
     valid_func (res opp_op _) ->
-    forall functions,
-      spec_of_UnOp un_opp ((Field.opp, opp_func) :: functions).
+    forall functions, Interface.map.get functions Field.opp = Some opp_func ->
+                      spec_of_UnOp un_opp functions.
   Proof using M_eq check_args_ok loose_bounds_tighter_than opp_func_eq ok.
-    intros. cbv [spec_of_UnOp un_opp]. rewrite opp_func_eq.
+    cbv [spec_of_UnOp un_opp]. rewrite opp_func_eq. intros.
     pose proof opp_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq opp_op)
       as Hcorrect.
 
-    eapply list_unop_correct with (res:=res opp_op);
+    eapply list_unop_correct with (res:=res opp_op); [ .. | eassumption ];
       handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
@@ -436,17 +436,17 @@ Section UnsaturatedSolinas.
 
   Lemma scmula24_func_correct :
     valid_func (res scmula24_op _) ->
-    forall functions,
-      spec_of_UnOp un_scmula24 ((scmula24, scmula24_func) :: functions).
+    forall functions, Interface.map.get functions scmula24 = Some scmula24_func ->
+                      spec_of_UnOp un_scmula24 functions.
   Proof using M_eq check_args_ok ok scmula24_func_eq
         tight_bounds_tighter_than.
-    intros. cbv [spec_of_UnOp un_scmula24]. rewrite scmula24_func_eq.
+    cbv [spec_of_UnOp un_scmula24]. rewrite scmula24_func_eq. intros.
     pose proof carry_scmul_const_correct
          _ _ _ _ _ (ltac:(eassumption)) (F.to_Z a24) _
          (res_eq scmula24_op)
       as Hcorrect.
 
-    eapply list_unop_correct with (res:=res scmula24_op);
+    eapply list_unop_correct with (res:=res scmula24_op); [ .. | eassumption ];
       handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
@@ -471,66 +471,66 @@ Section UnsaturatedSolinas.
 
   Lemma felem_copy_func_correct :
     valid_func (res felem_copy_op _) ->
-    forall functions,
-      spec_of_felem_copy ((felem_copy, felem_copy_func) :: functions).
+    forall functions, Interface.map.get functions felem_copy = Some felem_copy_func ->
+                      spec_of_felem_copy functions.
   Proof using M_eq check_args_ok ok felem_copy_func_eq
         tight_bounds_tighter_than parameters_sentinel ok
 to_bytes_func_eq to_bytes_func sub_func_eq sub_func square_func_eq
 square_func scmula24_func_eq scmula24_func opp_func_eq opp_func mul_func_eq
 mul_func loose_bounds_tighter_than from_word_func_eq from_word_func
 from_bytes_func_eq from_bytes_func add_func_eq carry_add_func_eq.
-    intros. cbv [spec_of_felem_copy]. rewrite felem_copy_func_eq.
+    cbv [spec_of_felem_copy]. rewrite felem_copy_func_eq. intros.
     pose proof copy_correct _ _ _ _ _ ltac:(eassumption) _ (res_eq felem_copy_op)
       as Hcorrect.
 
-    eapply felem_copy_correct;
+    eapply felem_copy_correct; [ .. | eassumption | eassumption ];
       repeat handle_side_conditions; [ | ]; intros.
     { (* output *value* is correct *)
       unshelve erewrite (proj1 (Hcorrect _ _)); cycle 1.
       { rewrite map_map, List.map_ext_id; trivial; intros.
         rewrite ?Word.Interface.word.of_Z_unsigned; trivial. }
-      { subst n. exact (list_Z_bounded_by_unsigned x). } }
+      { rewrite <- H2. exact (list_Z_bounded_by_unsigned x0). } }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
   Qed.
 
   Lemma from_word_func_correct :
     valid_func (res from_word_op _) ->
-    forall functions,
-      spec_of_from_word ((from_word, from_word_func) :: functions).
+    forall functions, Interface.map.get functions from_word = Some from_word_func ->
+                      spec_of_from_word functions.
   Proof using M_eq check_args_ok from_word_func_eq ok
         tight_bounds_tighter_than.
-    intros. cbv [spec_of_from_word]. rewrite from_word_func_eq.
+    cbv [spec_of_from_word]. rewrite from_word_func_eq. intros.
     epose proof encode_word_correct _ _ _ _ _ ltac:(eassumption) _ (res_eq from_word_op)
       as Hcorrect.
     cbv [expr.Interp] in *; autounfold with solinas_specs in *; cbn [ZRange.lower ZRange.upper] in *.
 
-    eapply from_word_correct;
+    eapply from_word_correct; [ .. | eassumption | eassumption ];
       repeat handle_side_conditions.
     { (* value *)
       intros.
       destruct (Hcorrect (Interface.word.unsigned w)); clear Hcorrect.
       { pose proof Properties.word.unsigned_range w.
         eapply Bool.andb_true_iff; split; eapply Zle_is_le_bool; Lia.lia. }
-      rewrite <- M_eq in *; cbv [M] in *; eapply F.eq_of_Z_iff in H0.
-      rewrite <-H0.
+      rewrite <- M_eq in *; cbv [M] in *; eapply F.eq_of_Z_iff in H2.
+      rewrite <-H2.
       unfold feval.
       unfold Signature.field_representation.
       unfold Representation.eval_words, Representation.frep.
       cbv [Representation.eval_words].
       Morphisms.f_equiv. Morphisms.f_equiv.
       rewrite map_unsigned_of_Z, List.map_ext_id; trivial.
-      intros x Hx.
-      eapply relax_list_Z_bounded_by, MaxBounds.max_bounds_range_iff in H1;
-        try eapply tight_bounds_tighter_than; destruct H1.
-      eapply List.Forall_In in H2; eauto.
-      rewrite MakeAccessSizes.bits_per_word_eq_width in H2.
+      intros y Hy.
+      eapply relax_list_Z_bounded_by, MaxBounds.max_bounds_range_iff in H3;
+        try eapply tight_bounds_tighter_than; destruct H3.
+      eapply List.Forall_In in H4; eauto.
+      rewrite MakeAccessSizes.bits_per_word_eq_width in H4.
       unfold Interface.word.wrap; rewrite Z.mod_small; trivial. }
     { intros.
       destruct (Hcorrect (Interface.word.unsigned w)); clear Hcorrect.
       { pose proof Properties.word.unsigned_range w.
         eapply Bool.andb_true_iff; split; eapply Zle_is_le_bool; Lia.lia. }
-      rewrite <- M_eq in *; cbv [M] in *; eapply F.eq_of_Z_iff in H0.
+      rewrite <- M_eq in *; cbv [M] in *; eapply F.eq_of_Z_iff in H2.
       trivial. }
     { eauto using relax_list_Z_bounded_by, tight_bounds_tighter_than. }
   Qed.
@@ -538,15 +538,17 @@ from_bytes_func_eq from_bytes_func add_func_eq carry_add_func_eq.
   Lemma from_bytes_func_correct :
     valid_func (res from_bytes_op _) ->
     forall functions,
-      spec_of_from_bytes ((Field.from_bytes,from_bytes_func) :: functions).
+      Interface.map.get functions Field.from_bytes = Some from_bytes_func ->
+      spec_of_from_bytes functions.
   Proof using M_eq check_args_ok from_bytes_func_eq ok
         tight_bounds_tighter_than.
-    intros. cbv [spec_of_from_bytes]. rewrite from_bytes_func_eq.
+    cbv [spec_of_from_bytes]. rewrite from_bytes_func_eq. intros.
     pose proof UnsaturatedSolinas.from_bytes_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq from_bytes_op) (eq_refl true)
       as Hcorrect.
 
     eapply Signature.from_bytes_correct with (res:=res from_bytes_op);
+      [ .. | eassumption | eassumption ];
       handle_side_conditions; [ loosen_bounds | bounds_length | | | ].
     { intros. erewrite length_list_Z_bounded_by, length_byte_bounds; trivial. }
     { (* output *value* is correct *)
@@ -559,15 +561,16 @@ from_bytes_func_eq from_bytes_func add_func_eq carry_add_func_eq.
 
   Lemma to_bytes_func_correct :
     valid_func (res to_bytes_op _) ->
-    forall functions,
-      spec_of_to_bytes ((Field.to_bytes, to_bytes_func) :: functions).
+    forall functions, Interface.map.get functions Field.to_bytes = Some to_bytes_func ->
+                      spec_of_to_bytes functions.
   Proof using M_eq check_args_ok ok to_bytes_func_eq.
-    intros. cbv [spec_of_to_bytes]. rewrite to_bytes_func_eq.
+    cbv [spec_of_to_bytes]. rewrite to_bytes_func_eq. intros.
     pose proof UnsaturatedSolinas.to_bytes_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq to_bytes_op) (eq_refl true)
       as Hcorrect.
 
     eapply Signature.to_bytes_correct with (res:=res to_bytes_op);
+      [ .. | eassumption | eassumption ];
       handle_side_conditions; [ | | | ].
     {
       intros. eapply relax_list_Z_bounded_by; [| eauto]. apply byte_bounds_tighter_than.
@@ -635,7 +638,17 @@ Local Ltac begin_derive_bedrock2_func :=
   | |- context [spec_of_from_word] => rapply from_word_func_correct
   end.
 
+Ltac epair :=
+  lazymatch goal with
+  | f := _ : string * Syntax.func |- _ =>
+    let p := open_constr:((_, _)) in
+    unify f p;
+    subst f
+  | f := _ : Syntax.func |- _ => idtac
+  end.
+
 Ltac derive_bedrock2_func op :=
+  epair;
   begin_derive_bedrock2_func;
   (* this goal fills in the evar, so do it first for [abstract] to be happy *)
   try lazymatch goal with
@@ -679,27 +692,33 @@ Section Tests.
   Instance fe25519_ops : unsaturated_solinas_ops n s c.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
+  Local Notation functions_contain functions f :=
+    (Interface.map.get functions (fst f) = Some (snd f)).
+
   Derive fe25519_mul
          SuchThat (forall functions,
+                      functions_contain functions fe25519_mul ->
                       spec_of_BinOp bin_mul
                         (field_representation:=field_representation n s c)
-                        (fe25519_mul :: functions))
+                        functions)
          As fe25519_mul_correct.
   Proof. Time derive_bedrock2_func mul_op. Qed.
 
   Derive fe25519_square
          SuchThat (forall functions,
+                      functions_contain functions fe25519_square ->
                       spec_of_UnOp un_square
                         (field_representation:=field_representation n s c)
-                        (fe25519_square :: functions))
+                        functions)
          As fe25519_square_correct.
   Proof. Time derive_bedrock2_func square_op. Qed.
 
   Derive fe25519_add
          SuchThat (forall functions,
+                      functions_contain functions fe25519_add ->
                       spec_of_BinOp bin_add
                         (field_representation:=field_representation n s c)
-                        (fe25519_add :: functions))
+                        functions)
          As fe25519_add_correct.
   Proof. Time derive_bedrock2_func add_op. Qed.
 
@@ -713,41 +732,46 @@ Section Tests.
 
   Derive fe25519_sub
          SuchThat (forall functions,
+                      functions_contain functions fe25519_sub ->
                       spec_of_BinOp bin_sub
                         (field_representation:=field_representation n s c)
-                        (fe25519_sub :: functions))
+                        functions)
          As fe25519_sub_correct.
   Proof. Time derive_bedrock2_func sub_op. Qed.
 
   Derive fe25519_opp
          SuchThat (forall functions,
+                      functions_contain functions fe25519_opp ->
                       spec_of_UnOp un_opp
                         (field_representation:=field_representation n s c)
-                        (fe25519_opp :: functions))
+                        functions)
          As fe25519_opp_correct.
   Proof. Time derive_bedrock2_func opp_op. Qed.
 
   Derive fe25519_scmula24
          SuchThat (forall functions,
+                      functions_contain functions fe25519_scmula24 ->
                       spec_of_UnOp un_scmula24
                         (field_representation:=field_representation n s c)
-                        (fe25519_scmula24 :: functions))
+                        functions)
          As fe25519_scmula24_correct.
   Proof. Time derive_bedrock2_func scmula24_op. Qed.
 
   Derive fe25519_from_bytes
          SuchThat (forall functions,
+                      functions_contain functions fe25519_from_bytes ->
                       spec_of_from_bytes
                         (field_representation:=field_representation n s c)
-                        (fe25519_from_bytes :: functions))
+                        functions)
          As fe25519_from_bytes_correct.
   Proof. Time derive_bedrock2_func from_bytes_op. Qed.
 
   Derive fe25519_to_bytes
          SuchThat (forall functions,
+                      functions_contain functions fe25519_to_bytes ->
                       spec_of_to_bytes
                         (field_representation:=field_representation n s c)
-                        (fe25519_to_bytes :: functions))
+                        functions)
          As fe25519_to_bytes_correct.
   Proof. Time derive_bedrock2_func to_bytes_op. Qed.
 End Tests.

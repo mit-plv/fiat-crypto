@@ -23,9 +23,9 @@ Import API.Compilers.
 Import ListNotations Types.Notations.
 
 Section UsedVarnames.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
   Context {ok : ok}.
   Local Existing Instance Types.rep.Z.
   Local Instance varname_eqb_spec x y : BoolSpec _ _ _

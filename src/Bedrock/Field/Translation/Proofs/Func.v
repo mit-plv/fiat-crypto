@@ -36,9 +36,9 @@ Import Wf.Compilers.expr.
 Import Types.Notations.
 
 Section Func.
-  Context 
-    {width BW word mem locals env ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals env ext_spec varname_gen error}.
+  Context
+    {width BW word mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
   Context {ok : ok}.
 
   Local Existing Instance rep.Z.
@@ -88,7 +88,7 @@ Section Func.
       forall (tr : Semantics.trace)
              (locals : locals)
              (mem : mem)
-             (functions : list (string*func)),
+             functions,
         (* locals doesn't contain variables we could overwrite *)
         (forall n nvars,
             (nextn <= n)%nat ->
@@ -100,7 +100,7 @@ Section Func.
         context_equiv G locals ->
         (* executing translation output is equivalent to interpreting e *)
         WeakestPrecondition.cmd
-          (WeakestPrecondition.call functions)
+          functions
           body tr mem locals
           (fun tr' mem' locals' =>
              tr = tr' /\
@@ -142,7 +142,7 @@ Section Func.
       inversion 1; cleanup_wf;
       cbv [translate_func']; intros.
       all:eapply Proper_cmd;
-        [solve [apply Proper_call] | repeat intro
+         [ repeat intro
          | eapply (translate_cmd_correct (t:=type.base _));
            solve [eauto] ];
         cbv beta in *; cleanup; subst; tauto. }
@@ -505,14 +505,12 @@ Section Func.
          (function arguments, function return variable names, body) *)
       let out := translate_func
                    e argnames arglengths argsizes retnames retsizes in
-      let f : string*func := (fname, fst out) in
-      let lengths := snd out in
       forall tr
              (mem : mem)
              (flat_args : list word)
              (out_ptrs : list word)
              (argvalues : list word)
-             (functions : list (string*func))
+             (functions : Semantics.env)
              (R : _ -> Prop),
         (* argument values are the concatenation of true argument values
            and output pointer values *)
@@ -544,9 +542,10 @@ Section Func.
         (* seplogic frame for return values *)
         sep (lists_reserved_with_initial_context
                retlengths argnames retnames retsizes argvalues) R mem ->
+        map.get functions fname = Some (fst out) ->
         (* translated function produces equivalent results *)
         WeakestPrecondition.call
-          (f :: functions) fname tr mem argvalues
+          functions fname tr mem argvalues
           (fun tr' mem' flat_rets =>
              tr = tr' /\
              (* lengths of output lists match *)
@@ -559,10 +558,8 @@ Section Func.
                  R mem').
   Proof.
     cbv [translate_func]; intros. subst.
-    cbn [fst snd
-             WeakestPrecondition.call
-             WeakestPrecondition.call_body WeakestPrecondition.func].
-    rewrite eqb_refl.
+    eapply start_func. 1: eassumption.
+    cbn [fst snd WeakestPrecondition.func].
     match goal with
       |- exists l, map.of_list_zip ?ks ?vs = Some l /\ _ =>
       assert (NoDup ks);
@@ -592,11 +589,11 @@ Section Func.
         cbv [Option.bind] in *; repeat break_match_hyps; try congruence; [ ]
     end.
     cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
-    eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
+    eapply Proper_cmd; [ repeat intro | ].
     2 : { eapply load_arguments_correct; try eassumption; eauto.
           eapply equivalent_flat_args_iff1; eauto. }
     cbv beta in *. cleanup; subst.
-    eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
+    eapply Proper_cmd; [ repeat intro | ].
     2 : { eapply @translate_func'_correct with (args:=args);
           cbv [context_equiv]; intros; try apply Wf3_of_Wf; eauto; [ ].
           eapply only_differ_disjoint_undef_on; eauto;
@@ -613,7 +610,7 @@ Section Func.
           eapply disjoint_sym.
           eapply disjoint_used_varnames_lt; eauto with lia. }
     cbv beta in *. cleanup; subst.
-    eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
+    eapply Proper_cmd; [ repeat intro | ].
     2 : {
       cbv [lists_reserved_with_initial_context] in *.
       break_match_hyps; try congruence; [ ].
