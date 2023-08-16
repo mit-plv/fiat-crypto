@@ -1143,10 +1143,7 @@ Section Expr.
       auto using
            Bool.andb_true_iff, Bool.orb_true_iff,
       is_bounded_by_bool_max_range,
-      is_bounded_by_bool_width_range; [ | | | | ].
-    { (* fst *)
-      
-    }
+      is_bounded_by_bool_width_range; [ | | ].
     { (* lnot_modulo *)
       apply Bool.andb_true_iff; split;
         Z.ltb_to_lt; auto. }

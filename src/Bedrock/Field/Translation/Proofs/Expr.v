@@ -43,9 +43,9 @@ Section Expr.
       bool (* require_casts *) ->
       @API.expr (fun _ => unit) t -> Prop :=
   | valid_cast1 :
-      forall rc r x,
+      forall (rc : bool) r x,
         valid_expr false x ->
-        range_good (width:=width) r = true ->
+        (if rc then range_good (width:=width) r = true else True) ->
         valid_expr rc
                    (expr.App
                       (expr.App (expr.Ident ident.Z_cast)
@@ -53,8 +53,8 @@ Section Expr.
   | valid_cast2 :
       forall (rc : bool) r1 r2 x,
         valid_expr false x ->
-        range_good (width:=width) r1 = true ->
-        range_good (width:=width) r2 = true ->
+        (if rc then range_good (width:=width) r1 = true else True) ->
+        (if rc then range_good (width:=width) r2 = true else True) ->
         valid_expr rc
                    (expr.App
                       (expr.App (expr.Ident ident.Z_cast2)
@@ -63,14 +63,12 @@ Section Expr.
                                       (expr.Ident ident.pair)
                                       (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
                                    (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x)
-  | valid_fst :
-      forall (x : API.expr type_ZZ),
-        valid_expr false x ->
-        valid_expr false (expr.App (expr.Ident ident.fst) x)
-  | valid_snd :
-      forall (x : API.expr type_ZZ),
-        valid_expr false x ->
-        valid_expr false (expr.App (expr.Ident ident.snd) x)
+  | valid_fst_var :
+      forall v,
+        valid_expr (t:=type_Z) false (expr.App (expr.Ident (@ident.fst base_Z base_Z)) (expr.Var v))
+  | valid_snd_var :
+      forall v,
+        valid_expr (t:=type_Z) false (expr.App (expr.Ident (@ident.snd base_Z base_Z)) (expr.Var v))
   | valid_literalz :
       forall rc z,
         (is_bounded_by_bool z (max_range(width:=width)) || negb rc)%bool = true ->
@@ -459,12 +457,33 @@ Section Expr.
       cbn [locally_equivalent equivalent_base rep.equiv rep.Z
                               locally_equivalent_nobounds_base] in *.
       cbv [range_good max_range ident.literal] in *.
-      intros; progress reflect_beq_to_eq zrange_beq; subst.
-      rewrite ident.cast_out_of_bounds_simple_0_mod by lia.
       cleanup.
-      rewrite Z.sub_simpl_r.
-      erewrite word.of_Z_inj_mod
-        by (rewrite Z.mod_mod by lia; reflexivity).
+      destruct rc; try eexists; sepsimpl; [ | | ].
+      3:{
+        (* The problem is that the cast can't be safely ignored here.
+
+           - One option is to translate with the cast included if the range isn't good.
+           - Another option is to somehow thread through the fst/snd to prove that this is actually dead code.
+
+         *)
+      lazymatch goal with
+      | |- context [(?r1 =? ?r2)%zrange] =>
+        let H := fresh in
+        destruct (r1 =? r2)%zrange eqn:H;
+          [ apply zrange_bl in H; subst | ]
+      end.
+        Search ident.cast.
+
+        Check ident.cast
+      Print reflect_beq_to_eq.
+      destruct rc; try eexists; sepsimpl; [ | | ].
+      3:{
+        rewrite ident.cast_out_of_bounds_simple_0_mod by lia.
+        cleanup.
+        rewrite Z.sub_simpl_r.
+        erewrite word.of_Z_inj_mod
+          by (rewrite Z.mod_mod by lia; reflexivity).
+        intros; progress reflect_beq_to_eq zrange_beq; subst.
       destruct rc; try eexists; sepsimpl;
         try apply Z.mod_pos_bound; try lia;
           eauto; [ ].
