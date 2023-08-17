@@ -111,7 +111,7 @@ Section Expr.
       if literal_eqb x 0
       then if literal_eqb y (2^width - 1)
            then expr.op bopname.add (expr.literal (-1))
-                        (expr.op bopname.eq c (expr.literal 0))
+                        (expr.op bopname.and c (expr.literal 1))
            else base_make_error _
       else base_make_error _.
 
@@ -203,6 +203,7 @@ Section Expr.
   (* only require cast for the argument of (App f x) if:
      - f is not a cast
      - f is not fst or snd
+     - f is not zselect (x may be cast to the range [0,1])
      - f is not mul_high (then, x = 2^width)
      - f is not (lnot_modulo _) (then x is allowed to be 2^width)
      - f is not (nth_default ?d ?l) (i doesn't need to fit in a word) *)
@@ -214,6 +215,7 @@ Section Expr.
     | expr.Ident _ ident.Z_mul_high => false
     | expr.Ident _ (ident.fst _ _) => false
     | expr.Ident _ (ident.snd _ _) => false
+    | expr.Ident _ ident.Z_zselect => false
     | expr.App
         _ _ (expr.Ident _ ident.Z_lnot_modulo)
         _ => false

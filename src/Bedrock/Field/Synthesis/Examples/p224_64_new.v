@@ -165,13 +165,22 @@ Section Field.
                change (Cmd.valid_expr_bool_if_base x) with false
              end.
       cbn iota.
+      cbv [Cmd.valid_cons_App1_bool
+             Cmd.valid_cons_App2_bool
+             Cmd.is_cons_ident
+             Cmd.is_nil_ident].
+      repeat lazymatch goal with
+             | |- context [Expr.valid_expr_bool true ?x] =>
+               change (Expr.valid_expr_bool true x) with true
+             end.
+      cbn [orb andb].
       lazymatch goal with
       | |- context [Expr.valid_expr_bool true ?x] =>
         pose (e:=Expr.valid_expr_bool true x);
           assert (Expr.valid_expr true x)
       end.
       {
-        clear e.
+        lazy in e.
         Unset Printing Notations.
         repeat lazymatch goal with
                | |- Expr.valid_expr
@@ -182,35 +191,7 @@ Section Field.
                | _ => apply Expr.valid_binop; [ cbn; congruence | | ]
                end.
         Print Expr.valid_expr.
-        { apply Expr.valid_fst.
-          apply Expr.valid_cast2.
-        apply Expr.valid_binop; [ cbn; congruence | | ].
-        {
-          apply Expr.valid_cast1; [ | reflexivity .. ].
-        apply Expr.valid_binop; [ cbn; congruence | | ].
-        constructor.
-        apply Expr.valid_cast1; [ | reflexivity .. ].
-        apply Expr.valid_cast1; [ | reflexivity .. ].
-      cbv [Expr.valid_expr_bool] in e.
-      cbn in e.
-      (*
- Expr.valid_expr_bool true
-         (#Compilers.ident_Z_cast @ ###{| ZRange.lower := 0; ZRange.upper := 4294967295 |} @
-          (#Compilers.ident_Z_cast @ ###{| ZRange.lower := 0; ZRange.upper := 4294967295 |} @
-           (#Compilers.ident_Z_cast @ ###{| ZRange.lower := 0; ZRange.upper := 4294967295 |} @
-            (#Compilers.ident_fst @
-             (#Compilers.ident_Z_cast2 @
-              (###{| ZRange.lower := 0; ZRange.upper := 4294967295 |},
-              ###{| ZRange.lower := 0; ZRange.upper := 1 |}) @ $$tt)) &'
-            #Compilers.ident_Z_cast @ ###{| ZRange.lower := 0; ZRange.upper := 4294967295 |} @ $$tt)
-           || #Compilers.ident_Z_cast @ ###{| ZRange.lower := 0; ZRange.upper := 4294967295 |} @
-              (#Compilers.ident_Z_cast @ ###{| ZRange.lower := 0; ZRange.upper := 4294967295 |} @
-               (#Compilers.ident_fst @
-                (#Compilers.ident_Z_cast2 @
-                 (###{| ZRange.lower := 0; ZRange.upper := 4294967295 |},
-                 ###{| ZRange.lower := 0; ZRange.upper := 1 |}) @ $$tt)) &'
-               #Compilers.ident_Z_cast @ ###{| ZRange.lower := 0; ZRange.upper := 4294967295 |} @ $$tt)))
-*)
+        (* zselect recursively calls valid_expr, which now fails because of the [0,1] bound *)
       cbv in e.
     Locate begin_derive_bedrock2_func.
     Time derive_bedrock2_func add_op.
