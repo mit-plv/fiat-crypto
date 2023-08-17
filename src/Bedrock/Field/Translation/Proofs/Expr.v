@@ -45,7 +45,7 @@ Section Expr.
   | valid_cast1 :
       forall (rc : bool) r x,
         valid_expr false x ->
-        (if rc then range_good (width:=width) r = true else True) ->
+        range_good (width:=width) r = true ->
         valid_expr rc
                    (expr.App
                       (expr.App (expr.Ident ident.Z_cast)
@@ -53,8 +53,8 @@ Section Expr.
   | valid_cast2 :
       forall (rc : bool) r1 r2 x,
         valid_expr false x ->
-        (if rc then range_good (width:=width) r1 = true else True) ->
-        (if rc then range_good (width:=width) r2 = true else True) ->
+        range_good (width:=width) r1 = true ->
+        range_good (width:=width) r2 = true ->
         valid_expr rc
                    (expr.App
                       (expr.App (expr.Ident ident.Z_cast2)
@@ -63,39 +63,36 @@ Section Expr.
                                       (expr.Ident ident.pair)
                                       (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
                                    (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x)
-  | valid_fst :
-      forall (x : API.expr type_ZZ),
-        (* need to ignore other tuple arg completely...
-           actually it's even OK if it's an error
-           but as is will fail on the cast2
-           - could add a different fst case that handles a cast2 and a var
-           - but translate_expr will still make an error if either range is bad
-           - need to change the actual behavior
-           - actually no, it won't make an error, it will just strip the cast
-           - but it will require a cast for the inner var because the outer was bad
-         *)
+  | valid_fst_cast :
+      forall (x : API.expr type_ZZ) rc r1 r2,
         valid_expr false x ->
-        valid_expr false (expr.App (expr.Ident ident.fst) x)
-  | valid_snd :
-      forall (x : API.expr type_ZZ),
-        valid_expr false x ->
-        valid_expr false (expr.App (expr.Ident ident.snd) x)
-  | valid_fst_var :
-      forall (x : API.expr type_ZZ),
-        valid_expr false x ->
+        range_good (width:=width) r1 = true ->
+        (* it's okay to have a cast with a bad range on the non-selected tuple element *)
         valid_expr false
-                   (expr.App (expr.Ident ident.fst)
-                             (expr.App
-                                (expr.App (expr.Ident ident.Z_cast2)
-                                          (expr.App
-                                             (expr.App
-                                                (expr.Ident ident.pair)
-                                                (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
-                                             (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x)
-  | valid_snd :
-      forall (x : API.expr type_ZZ),
+                   (expr.App
+                      (expr.Ident ident.fst)
+                      (expr.App
+                         (expr.App (expr.Ident ident.Z_cast2)
+                                   (expr.App
+                                      (expr.App
+                                         (expr.Ident ident.pair)
+                                         (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                                      (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x))
+  | valid_snd_cast :
+      forall (x : API.expr type_ZZ) rc r1 r2,
         valid_expr false x ->
-        valid_expr false (expr.App (expr.Ident ident.snd) x)
+        range_good (width:=width) r2 = true ->
+        (* it's okay to have a cast with a bad range on the non-selected tuple element *)
+        valid_expr false
+                   (expr.App
+                      (expr.Ident ident.snd)
+                      (expr.App
+                         (expr.App (expr.Ident ident.Z_cast2)
+                                   (expr.App
+                                      (expr.App
+                                         (expr.Ident ident.pair)
+                                         (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                                      (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x))
   | valid_literalz :
       forall rc z,
         (is_bounded_by_bool z (max_range(width:=width)) || negb rc)%bool = true ->
@@ -332,7 +329,7 @@ Section Expr.
   Lemma require_cast_for_arg_binop {var t} :
     forall i : ident.ident t,
       translate_binop i <> None ->
-      require_cast_for_arg (width:=width) (var:=var) (expr.Ident i) = true.
+      require_cast_for_arg (var:=var) (expr.Ident i) = true.
   Proof.
     destruct i;
       cbn [translate_binop require_cast_for_arg];
@@ -342,7 +339,7 @@ Section Expr.
   Lemma require_cast_for_arg_binop2 {var s d} :
     forall (i : ident.ident (s -> d)) x,
       translate_binop i <> None ->
-      require_cast_for_arg (width:=width) (var:=var) (expr.App (expr.Ident i) x) = true.
+      require_cast_for_arg (var:=var) (expr.App (expr.Ident i) x) = true.
   Proof.
     (* destruct is too weak *)
     intro i.
@@ -484,35 +481,12 @@ Section Expr.
       cbn [locally_equivalent equivalent_base rep.equiv rep.Z
                               locally_equivalent_nobounds_base] in *.
       cbv [range_good max_range ident.literal] in *.
+      intros; progress reflect_beq_to_eq zrange_beq; subst.
+      rewrite ident.cast_out_of_bounds_simple_0_mod by lia.
       cleanup.
-      destruct rc; try eexists; sepsimpl; [ | | ].
-      3:{
-        (* The problem is that the cast can't be safely ignored here.
-
-           - One option is to translate with the cast included if the range isn't good.
-           - Another option is to somehow thread through the fst/snd to prove that this is actually dead code.
-
-           translate_expr will require casts if the first cast isn't good.
-           let'd do option 1
-         *)
-      lazymatch goal with
-      | |- context [(?r1 =? ?r2)%zrange] =>
-        let H := fresh in
-        destruct (r1 =? r2)%zrange eqn:H;
-          [ apply zrange_bl in H; subst | ]
-      end.
-        Search ident.cast.
-
-        Check ident.cast
-      Print reflect_beq_to_eq.
-      destruct rc; try eexists; sepsimpl; [ | | ].
-      3:{
-        rewrite ident.cast_out_of_bounds_simple_0_mod by lia.
-        cleanup.
-        rewrite Z.sub_simpl_r.
-        erewrite word.of_Z_inj_mod
-          by (rewrite Z.mod_mod by lia; reflexivity).
-        intros; progress reflect_beq_to_eq zrange_beq; subst.
+      rewrite Z.sub_simpl_r.
+      erewrite word.of_Z_inj_mod
+        by (rewrite Z.mod_mod by lia; reflexivity).
       destruct rc; try eexists; sepsimpl;
         try apply Z.mod_pos_bound; try lia;
           eauto; [ ].
@@ -537,22 +511,44 @@ Section Expr.
                               by (rewrite Z.mod_mod by lia; reflexivity);
                               solve [eauto]
                           end. }
-    { (* fst *)
+    { (* fst then cast *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
-      cbn [locally_equivalent equivalent] in *.
-      cbn [locally_equivalent_nobounds_base
-             locally_equivalent_nobounds
-             equivalent_base rep.equiv rep.Z] in *.
-      sepsimpl; eauto. }
-    { (* snd *)
+      cbv [range_good max_range ident.literal ident.cast2] in *.
+      cbn [locally_equivalent equivalent_base rep.equiv rep.Z fst snd
+                              locally_equivalent_nobounds_base] in *.
+      intros; progress reflect_beq_to_eq zrange_beq; subst.
+      rewrite !ident.cast_out_of_bounds_simple_0_mod by lia.
+      rewrite Z.sub_simpl_r.
+      repeat match goal with
+             | _ => progress sepsimpl
+             | _ => rewrite word.unsigned_of_Z
+             | _ => eassumption
+             | _ => eexists
+             | _ =>
+               erewrite word.of_Z_inj_mod
+                 by (rewrite Z.mod_mod by lia; reflexivity);
+                 solve [eauto]
+             end. }
+    { (* snd then cast *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
-      cbn [locally_equivalent equivalent] in *.
-      cbn [locally_equivalent_nobounds_base
-             locally_equivalent_nobounds
-             equivalent_base rep.equiv rep.Z] in *.
-      sepsimpl; eauto. }
+      cbv [range_good max_range ident.literal ident.cast2] in *.
+      cbn [locally_equivalent equivalent_base rep.equiv rep.Z fst snd
+                              locally_equivalent_nobounds_base] in *.
+      intros; progress reflect_beq_to_eq zrange_beq; subst.
+      rewrite !ident.cast_out_of_bounds_simple_0_mod by lia.
+      rewrite Z.sub_simpl_r.
+      repeat match goal with
+             | _ => progress sepsimpl
+             | _ => rewrite word.unsigned_of_Z
+             | _ => eassumption
+             | _ => eexists
+             | _ =>
+               erewrite word.of_Z_inj_mod
+                 by (rewrite Z.mod_mod by lia; reflexivity);
+                 solve [eauto]
+             end. }
     { (* literal Z *)
       cbn [locally_equivalent_nobounds_base
              locally_equivalent equivalent_base rep.equiv rep.Z].
