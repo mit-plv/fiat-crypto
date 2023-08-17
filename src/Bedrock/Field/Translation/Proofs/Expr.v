@@ -64,7 +64,7 @@ Section Expr.
                                       (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
                                    (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x)
   | valid_fst_cast :
-      forall (x : API.expr type_ZZ) rc r1 r2,
+      forall (x : API.expr type_ZZ) r1 r2,
         valid_expr false x ->
         range_good (width:=width) r1 = true ->
         (* it's okay to have a cast with a bad range on the non-selected tuple element *)
@@ -79,7 +79,7 @@ Section Expr.
                                          (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
                                       (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x))
   | valid_snd_cast :
-      forall (x : API.expr type_ZZ) rc r1 r2,
+      forall (x : API.expr type_ZZ) r1 r2,
         valid_expr false x ->
         range_good (width:=width) r2 = true ->
         (* it's okay to have a cast with a bad range on the non-selected tuple element *)
@@ -102,6 +102,8 @@ Section Expr.
         valid_expr false (expr.Ident (ident.Literal (t:=base.type.nat) n))
   | valid_var_z :
       forall rc v, valid_expr (t:=type_Z) rc (expr.Var v)
+  | valid_var_zz :
+      forall rc v, valid_expr (t:=type_ZZ) rc (expr.Var v)
   | valid_var_listz :
       forall rc v, valid_expr (t:=type_listZ) rc (expr.Var v)
   | valid_nth_default :

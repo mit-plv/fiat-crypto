@@ -167,8 +167,32 @@ Section Field.
       cbn iota.
       lazymatch goal with
       | |- context [Expr.valid_expr_bool true ?x] =>
-        pose (e:=Expr.valid_expr_bool true x)
+        pose (e:=Expr.valid_expr_bool true x);
+          assert (Expr.valid_expr true x)
       end.
+      {
+        clear e.
+        Unset Printing Notations.
+        repeat lazymatch goal with
+               | |- Expr.valid_expr
+                     _ (expr.App (expr.App (expr.Ident Compilers.ident_Z_cast) _)  _) =>
+                 apply Expr.valid_cast1; [ | reflexivity .. ]
+               | |- Expr.valid_expr _ (expr.Var _) =>
+                 apply Expr.valid_var_z
+               | _ => apply Expr.valid_binop; [ cbn; congruence | | ]
+               end.
+        Print Expr.valid_expr.
+        { apply Expr.valid_fst.
+          apply Expr.valid_cast2.
+        apply Expr.valid_binop; [ cbn; congruence | | ].
+        {
+          apply Expr.valid_cast1; [ | reflexivity .. ].
+        apply Expr.valid_binop; [ cbn; congruence | | ].
+        constructor.
+        apply Expr.valid_cast1; [ | reflexivity .. ].
+        apply Expr.valid_cast1; [ | reflexivity .. ].
+      cbv [Expr.valid_expr_bool] in e.
+      cbn in e.
       (*
  Expr.valid_expr_bool true
          (#Compilers.ident_Z_cast @ ###{| ZRange.lower := 0; ZRange.upper := 4294967295 |} @
