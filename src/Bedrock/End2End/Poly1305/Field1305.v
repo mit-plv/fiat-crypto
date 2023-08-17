@@ -88,9 +88,10 @@ Section Field.
 
   Derive fe1305_carry_add
          SuchThat (forall functions,
+                      functions_contain functions fe1305_carry_add ->
                       spec_of_BinOp bin_carry_add
                         (field_representation:=field_representation n s c)
-                        (fe1305_carry_add :: functions))
+                        (functions))
          As fe1305_carry_add_correct.
   Proof. Time derive_bedrock2_func carry_add_op. Qed.
 
@@ -113,6 +114,7 @@ Require Import compiler.MMIO.
 Definition funcs : list (string * func) :=
   [ fe1305_mul;
     fe1305_add;
+    fe1305_carry_add;
     fe1305_sub;
     fe1305_square;
     fe1305_to_bytes;
