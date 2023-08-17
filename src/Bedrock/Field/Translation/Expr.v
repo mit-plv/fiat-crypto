@@ -272,6 +272,7 @@ Section Expr.
       expr.literal (Z.of_nat n)
     | expr.Var type_listZ x => map expr.var x
     | expr.Var type_Z x => expr.var x
+    | expr.Var type_ZZ x => (expr.var (fst x), expr.var (snd x))
     | _ => make_error _
     end.
 

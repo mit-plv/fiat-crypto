@@ -581,6 +581,18 @@ Section Expr.
       destruct rc;
       try apply locally_equivalent_nobounds_impl;
       eauto. }
+    { (* var (Z * Z) *)
+      match goal with
+      | H : context_equiv _ _ |- _ =>
+        cbv [context_equiv] in H;
+          rewrite Forall_forall in H;
+          specialize (H _ ltac:(eassumption))
+      end.
+      cbv [equiv3 locally_equivalent] in *.
+      cbn [equivalent_base equivalent] in *.
+      destruct rc;
+      try apply locally_equivalent_nobounds_impl;
+      eauto. }
     { (* var (list Z) *)
       match goal with
       | H : context_equiv _ _ |- _ =>
