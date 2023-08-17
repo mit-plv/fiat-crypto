@@ -374,15 +374,15 @@ Section UnsaturatedSolinas.
 
   Lemma carry_add_func_correct :
     valid_func (res carry_add_op _) ->
-    forall functions,
-      spec_of_BinOp bin_carry_add ((Field.carry_add,carry_add_func) :: functions).
+    forall functions, Interface.map.get functions Field.carry_add = Some carry_add_func ->
+                      spec_of_BinOp bin_carry_add functions.
   Proof using M_eq check_args_ok carry_add_func_eq ok
         tight_bounds_tighter_than.
-    intros. cbv [spec_of_BinOp bin_carry_add]. rewrite carry_add_func_eq.
+    cbv [spec_of_BinOp bin_carry_add]. rewrite carry_add_func_eq. intros.
     pose proof carry_add_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq carry_add_op)
       as Hcorrect.
-    eapply list_binop_correct with (res:=res carry_add_op);
+    eapply list_binop_correct with (res:=res carry_add_op); [ .. | eassumption ];
     handle_side_conditions; [ | | loosen_bounds | bounds_length ].
     { (* output *value* is correct *)
       intros.
