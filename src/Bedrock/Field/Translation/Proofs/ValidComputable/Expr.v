@@ -49,7 +49,7 @@ Section Expr.
     end.
   Definition is_snd_ident_expr {t} (e : @API.expr (fun _ => unit) t) : bool :=
     match e with
-    | expr.Ident type_Z i => is_snd_ident i
+    | expr.Ident _ i => is_snd_ident i
     | _ => false
     end.
 
