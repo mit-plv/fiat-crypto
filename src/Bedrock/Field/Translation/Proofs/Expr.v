@@ -168,7 +168,7 @@ Section Expr.
       forall (c : API.expr type_Z) (x y : Z),
         x = 0 ->
         y = 2^width-1 ->
-        valid_expr true c ->
+        valid_expr false c ->
         valid_expr (t:=type_Z) false
                    (expr.App (expr.App
                                 (expr.App (expr.Ident ident.Z_zselect) c)
@@ -773,14 +773,33 @@ Section Expr.
       cbv [word.wrap]. Z.rewrite_mod_small.
       pose proof word.width_pos.
       break_match; subst; Z.rewrite_mod_small;
-        Z.ltb_to_lt; try lia.
-      all:pull_Zmod.
-      all:autorewrite with zsimplify_fast.
-      all:try reflexivity.
-      rewrite Z.mod_opp_l_nz
-        by (rewrite ?Z.mod_1_l; auto with zarith).
-      Z.rewrite_mod_small.
-      reflexivity. }
+        Z.ltb_to_lt; try lia; pull_Zmod;
+          autorewrite with zsimplify_fast;
+          try reflexivity;
+          lazymatch goal with
+          | H : 0 mod _ <> 0 |- _ =>
+            rewrite Z.mod_0_l in H; lia
+          | _ => idtac
+          end; [ | ].
+      {
+        Search WeakestPrecondition.expr.
+        apply dexpr_expr in IHvalid_expr.
+        sepsimpl.
+        Search context_equiv.
+        (* this won't work. translate_expr will still see the cast and require a cast on its argument because the range is bad.
+
+         we cooooould always add a special case for [0~>1] casts that just ands with 1. Then could pass carries for add_get_carry through expr, and this would also save all the trouble with tuples. *)
+        Print context_equiv.
+        Print equiv3.
+        Print equivalent_base.
+        destruct IHvalid_expr.
+
+      }
+      {
+        rewrite Z.mod_opp_l_nz
+          by (rewrite ?Z.mod_1_l; auto with zarith).
+        Z.rewrite_mod_small.
+        reflexivity. } }
     { (* opp *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
