@@ -60,10 +60,8 @@ Definition add_precomputed := func! (ox, oy, oz, ot, X1, Y1, Z1, T1, ypx2, ymx2,
   fe25519_mul(B, YmX1, ymx2);
   stackalloc 40 as C;
   fe25519_mul(C, xy2d2, T1);
-  stackalloc 40 as Two;
-  fe25519_from_word(Two, $2);
   stackalloc 40 as D;
-  fe25519_mul(D, Z1, Two); (* TODO: Should be Z1 + Z1, but mul has tighter bounds *)
+  fe25519_carry_add(D, Z1, Z1);
   fe25519_sub(ox, A, B);
   fe25519_add(oy, A, B);
   fe25519_add(oz, D, C);
@@ -94,7 +92,7 @@ Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
   { requires t m :=
       bounded_by tight_bounds X1 /\
       bounded_by tight_bounds Y1 /\
-      bounded_by loose_bounds Z1 /\
+      bounded_by tight_bounds Z1 /\
       bounded_by loose_bounds T1 /\
       bounded_by loose_bounds ypx2 /\
       bounded_by loose_bounds ymx2 /\
@@ -114,6 +112,7 @@ Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
 Local Instance spec_of_fe25519_square : spec_of "fe25519_square" := Field.spec_of_UnOp un_square.
 Local Instance spec_of_fe25519_mul : spec_of "fe25519_mul" := Field.spec_of_BinOp bin_mul.
 Local Instance spec_of_fe25519_add : spec_of "fe25519_add" := Field.spec_of_BinOp bin_add.
+Local Instance spec_of_fe25519_carry_add : spec_of "fe25519_carry_add" := Field.spec_of_BinOp bin_carry_add.
 Local Instance spec_of_fe25519_sub : spec_of "fe25519_sub" := Field.spec_of_BinOp bin_sub.
 Local Instance spec_of_fe25519_from_word : spec_of "fe25519_from_word" := Field.spec_of_from_word.
 
@@ -123,8 +122,8 @@ Local Arguments word.unsigned : simpl never.
 Local Arguments word.of_Z : simpl never.
 
 Local Ltac cbv_bounds H :=
-  cbv [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_sub un_outbounds bin_outbounds] in H;
-  cbv [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_sub un_outbounds bin_outbounds].
+  cbv [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds] in H;
+  cbv [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
 
 Local Ltac solve_bounds :=
   repeat match goal with
@@ -191,7 +190,7 @@ Qed.
 Lemma add_precomputed_ok : program_logic_goal_for_function! add_precomputed.
 Proof.
   (* Without this, resolution of cbv stalls out Qed. *)
-  Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_sub un_outbounds bin_outbounds].
+  Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
 
   (* Unwrap each call in the program. *)
   (* Each binop produces 2 memory goals on the inputs, 2 bounds goals on the inputs, and 1 memory goal on the output. *)
@@ -200,8 +199,7 @@ Proof.
   single_step. (* fe25519_mul(A, YpX1, ypx2) *)
   single_step. (* fe25519_mul(B, YmX1, ymx2) *)
   single_step. (* fe25519_mul(C, xy2d2, T1) *)
-  single_step. (* fe25519_from_word(Two, $2) *)
-  single_step. (* fe25519_mul(D, Z1, Two) *)
+  single_step. (* fe25519_carry_add(D, Z1, Z1) *)
   single_step. (* fe25519_sub(ox, A, B) *)
   single_step. (* fe25519_add(oy, A, B) *)
   single_step. (* fe25519_add(oz, D, C) *)
@@ -213,28 +211,25 @@ Proof.
 
   (* Solve the postconditions *)
   repeat straightline.
-  (* Rewrites the FElems for the stack (in H96) to be about bytes instead *)
+  (* Rewrites the FElems for the stack (in H88) to be about bytes instead *)
     cbv [FElem] in *.
     (* Prevent output from being rewritten by seprewrite_in *) 
-    remember (Bignum.Bignum felem_size_in_words otK _) as Pt in H96.
-    remember (Bignum.Bignum felem_size_in_words ozK _) as Pz in H96.
-    remember (Bignum.Bignum felem_size_in_words oyK _) as Py in H96.
-    remember (Bignum.Bignum felem_size_in_words oxK _) as Px in H96.
-    do 7 (seprewrite_in @Bignum.Bignum_to_bytes H96).
+    remember (Bignum.Bignum felem_size_in_words otK _) as Pt in H88.
+    remember (Bignum.Bignum felem_size_in_words ozK _) as Pz in H88.
+    remember (Bignum.Bignum felem_size_in_words oyK _) as Py in H88.
+    remember (Bignum.Bignum felem_size_in_words oxK _) as Px in H88.
+    do 6 (seprewrite_in @Bignum.Bignum_to_bytes H88).
     subst Pt Pz Py Px.
-    extract_ex1_and_emp_in H96.
+    extract_ex1_and_emp_in H88.
 
   (* Solve stack/memory stuff *)
   repeat straightline.
 
   (* Post-conditions *)
-  exists x10,x11,x12,x13; ssplit. 2,3,4,5:solve_bounds.
+  exists x9,x10,x11,x12; ssplit. 2,3,4,5:solve_bounds.
   { (* Correctness: result matches Gallina *)
-    cbv [bin_model bin_mul bin_add bin_sub] in *.
+    cbv [bin_model bin_mul bin_add bin_carry_add bin_sub] in *.
     cbv match beta delta [m1add_precomputed_coordinates].
-    assert ((feval Z1 * F.of_Z M_pos (word.of_Z(width:=32) 2))%F = (feval Z1 + feval Z1)%F) as <-.
-    { rewrite word.unsigned_of_Z_nowrap by lia. apply F.eq_to_Z_iff. rewrite F.to_Z_mul. rewrite F.to_Z_add. 
-      rewrite F.to_Z_of_Z. f_equal. rewrite Z.mod_small. all:lia. }
     congruence.
   }
   (* Safety: memory is what it should be *)
