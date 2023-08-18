@@ -39,6 +39,10 @@ Class unsaturated_solinas_ops
       computed_op
         (UnsaturatedSolinas.add n s c width) Field.add
         list_binop_insizes list_binop_outsizes (list_binop_inlengths n);
+    carry_add_op :
+      computed_op
+        (UnsaturatedSolinas.carry_add n s c width) Field.add
+        list_binop_insizes list_binop_outsizes (list_binop_inlengths n);
     sub_op :
       computed_op
         (UnsaturatedSolinas.sub n s c width) Field.sub
@@ -105,10 +109,11 @@ Section UnsaturatedSolinas.
                                  (@MaxBounds.max_bounds width n)).
 
   Context (ops : unsaturated_solinas_ops n s c)
-          mul_func add_func sub_func opp_func square_func
+          mul_func add_func carry_add_func sub_func opp_func square_func
           scmula24_func felem_copy_func from_word_func from_bytes_func to_bytes_func
           (mul_func_eq : mul_func = b2_func mul_op)
           (add_func_eq : add_func = b2_func add_op)
+          (carry_add_func_eq : carry_add_func = b2_func carry_add_op)
           (sub_func_eq : sub_func = b2_func sub_op)
           (opp_func_eq : opp_func = b2_func opp_op)
           (square_func_eq : square_func = b2_func square_op)
@@ -223,6 +228,7 @@ Section UnsaturatedSolinas.
         Solinas.carry_square_correct
         Solinas.carry_scmul_const_correct
         Solinas.add_correct
+        Solinas.carry_add_correct
         Solinas.sub_correct
         Solinas.opp_correct
         Solinas.carry_correct
@@ -366,6 +372,27 @@ Section UnsaturatedSolinas.
       intros. apply Hcorrect; auto. }
   Qed.
 
+  Lemma carry_add_func_correct :
+    valid_func (res carry_add_op _) ->
+    forall functions, Interface.map.get functions Field.carry_add = Some carry_add_func ->
+                      spec_of_BinOp bin_carry_add functions.
+  Proof using M_eq check_args_ok carry_add_func_eq ok
+        tight_bounds_tighter_than.
+    cbv [spec_of_BinOp bin_carry_add]. rewrite carry_add_func_eq. intros.
+    pose proof carry_add_correct
+         _ _ _ _ _ ltac:(eassumption) _ (res_eq carry_add_op)
+      as Hcorrect.
+    eapply list_binop_correct with (res:=res carry_add_op); [ .. | eassumption ];
+    handle_side_conditions; [ | | loosen_bounds | bounds_length ].
+    { (* output *value* is correct *)
+      intros.
+      specialize_correctness_hyp Hcorrect.
+      destruct Hcorrect. simpl_map_unsigned.
+      FtoZ; congruence. }
+    { (* output *bounds* are correct *)
+      intros. apply Hcorrect; auto. }
+  Qed.
+
   Lemma sub_func_correct :
     valid_func (res sub_op _) ->
     forall functions, Interface.map.get functions Field.sub = Some sub_func ->
@@ -451,7 +478,7 @@ Section UnsaturatedSolinas.
 to_bytes_func_eq to_bytes_func sub_func_eq sub_func square_func_eq
 square_func scmula24_func_eq scmula24_func opp_func_eq opp_func mul_func_eq
 mul_func loose_bounds_tighter_than from_word_func_eq from_word_func
-from_bytes_func_eq from_bytes_func add_func_eq.
+from_bytes_func_eq from_bytes_func add_func_eq carry_add_func_eq.
     cbv [spec_of_felem_copy]. rewrite felem_copy_func_eq. intros.
     pose proof copy_correct _ _ _ _ _ ltac:(eassumption) _ (res_eq felem_copy_op)
       as Hcorrect.
@@ -582,6 +609,7 @@ Definition field_parameters_prefixed
     M_pos a24
     (prefix ++ "mul")
     (prefix ++ "add")
+    (prefix ++ "carry_add")
     (prefix ++ "sub")
     (prefix ++ "opp")
     (prefix ++ "square")
@@ -600,6 +628,7 @@ Local Ltac begin_derive_bedrock2_func :=
   | |- context [spec_of_BinOp bin_mul] => rapply mul_func_correct
   | |- context [spec_of_UnOp un_square] => rapply square_func_correct
   | |- context [spec_of_BinOp bin_add] => rapply add_func_correct
+  | |- context [spec_of_BinOp bin_carry_add] => rapply carry_add_func_correct
   | |- context [spec_of_BinOp bin_sub] => rapply sub_func_correct
   | |- context [spec_of_UnOp un_opp] => rapply opp_func_correct
   | |- context [spec_of_UnOp un_scmula24] => rapply scmula24_func_correct
@@ -693,6 +722,14 @@ Section Tests.
          As fe25519_add_correct.
   Proof. Time derive_bedrock2_func add_op. Qed.
 
+  Derive fe25519_carry_add
+         SuchThat (forall functions,
+                      spec_of_BinOp bin_carry_add
+                        (field_representation:=field_representation n s c)
+                        (fe25519_carry_add :: functions))
+         As fe25519_carry_add_correct.
+  Proof. Time derive_bedrock2_func carry_add_op. Qed.
+
   Derive fe25519_sub
          SuchThat (forall functions,
                       functions_contain functions fe25519_sub ->
@@ -744,6 +781,7 @@ End Tests.
 Print fe25519_mul.
 Print fe25519_square.
 Print fe25519_add.
+Print fe25519_carry_add.
 Print fe25519_sub.
 Print fe25519_opp.
 Print fe25519_scmula24.

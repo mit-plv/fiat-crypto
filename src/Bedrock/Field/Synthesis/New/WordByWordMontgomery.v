@@ -758,6 +758,7 @@ Definition field_parameters_prefixed
     M_pos a24
     (prefix ++ "mul")
     (prefix ++ "add")
+    (prefix ++ "carry_add_dontuse")
     (prefix ++ "sub")
     (prefix ++ "opp")
     (prefix ++ "square")

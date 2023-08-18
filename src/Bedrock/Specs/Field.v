@@ -19,7 +19,7 @@ Class FieldParameters :=
     fe_copy := (@id (F M_pos));
 
     (** function names **)
-    mul : string; add : string; sub : string; opp : string;
+    mul : string; add : string; carry_add : string; sub : string; opp : string;
     square : string; scmula24 : string; inv : string;
     from_bytes : string; to_bytes : string;
     select_znz : string;
@@ -176,6 +176,8 @@ Section FunctionSpecs.
     {| un_model := fun x => F.pow x 2; un_xbounds := loose_bounds; un_outbounds := tight_bounds |}.
   Instance bin_add : BinOp add :=
     {| bin_model := F.add; bin_xbounds := tight_bounds; bin_ybounds := tight_bounds; bin_outbounds := loose_bounds |}.
+  Instance bin_carry_add : BinOp carry_add :=
+    {| bin_model := F.add; bin_xbounds := tight_bounds; bin_ybounds := tight_bounds; bin_outbounds := tight_bounds |}.
   Instance bin_sub : BinOp sub :=
     {| bin_model := F.sub; bin_xbounds := tight_bounds; bin_ybounds := tight_bounds; bin_outbounds := loose_bounds |}.
   Instance un_scmula24 : UnOp scmula24 :=

@@ -121,6 +121,15 @@ Section Field.
     As fe25519_add_correct.
   Proof. Time derive_bedrock2_func add_op. Qed.
 
+  Derive fe25519_carry_add
+    SuchThat (forall functions,
+      Interface.map.get functions "fe25519_carry_add" = Some fe25519_carry_add ->
+      spec_of_BinOp bin_carry_add
+        (field_representation:=field_representation n s c)
+        functions)
+    As fe25519_carry_add_correct.
+  Proof. Time derive_bedrock2_func carry_add_op. Qed.
+
   Derive fe25519_sub
     SuchThat (forall functions,
       Interface.map.get functions "fe25519_sub" = Some fe25519_sub ->
