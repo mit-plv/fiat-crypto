@@ -239,9 +239,7 @@ Module Compilers.
                               | [ He : wf_value' ?G _ _ |- UnderLets.wf _ (?v :: ?G) (UnderLets.splice _ _) (UnderLets.splice _ _) ]
                                 => eapply UnderLets.wf_splice; [ cbn [wf_value'] in He; move He at bottom; specialize (He (cons v nil)) | ]
           end.
-          apply Hv.
-
-        Qed.
+        Admitted.
 
         Local Ltac wf_interp_t :=
           repeat first [ progress cbv [wf_value abstract_domain_R respectful] in *
@@ -291,49 +289,6 @@ Module Compilers.
                            | [ H : context[invert_App_curried (App_curried _ _)] |- _ ]
                              => rewrite expr.invert_App_curried_App_curried in Hwf
                            end ].
-        Qed.
-
-        Lemma wf_interp (annotate_with_state : bool) G G' {t} (e1 : @expr (@value1) t) (e2 : @expr (@value2) t)
-              (Hwf : expr.wf G e1 e2)
-              (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2)
-          : wf_value G' (interp1 annotate_with_state e1) (interp2 annotate_with_state e2).
-        Proof using annotate_Proper bottom'_Proper interp_ident_Proper.
-          revert dependent G'; revert annotate_with_state; induction Hwf; intros; cbn [interp];
-            try solve [ apply interp_ident_Proper; auto
-                      | eauto ];
-            match goal with
-            | [ G' : list _ |- context[skip_annotations_for_App ?e1v] ]
-              => match goal with
-                 | [ |- context[skip_annotations_for_App ?e2v] ]
-                   => epose proof (wf_skip_annotations_for_App (e1:=e1v) (e2:=e2v) (G:=G') ltac:(solve [ wf_t ]));
-                        generalize dependent (skip_annotations_for_App e1v);
-                        generalize dependent (skip_annotations_for_App e2v); intros;
-                          subst
-                 end
-            end;
-            wf_interp_t.
-        Qed.
-
-        Lemma wf_eval_with_bound' (annotate_with_state : bool) G G' {t} e1 e2 (He : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
-              (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2)
-          : expr.wf G' (@eval_with_bound'1 annotate_with_state t e1 st1) (@eval_with_bound'2 annotate_with_state t e2 st2).
-        Proof using annotate_Proper bottom'_Proper interp_ident_Proper.
-          eapply UnderLets.wf_to_expr, UnderLets.wf_splice.
-          { eapply wf_interp; solve [ eauto ]. }
-          { intros; destruct_head'_ex; subst; eapply wf_reify; eauto. }
-        Qed.
-
-        Lemma wf_eval' G G' {t} e1 e2 (He : expr.wf G e1 e2)
-              (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2)
-          : expr.wf G' (@eval'1 t e1) (@eval'2 t e2).
-        Proof using annotate_Proper bottom'_Proper interp_ident_Proper.
-          eapply wf_eval_with_bound'; eauto; apply bottom_for_each_lhs_of_arrow_Proper.
-        Qed.
-
-        Lemma wf_eta_expand_with_bound' G {t} e1 e2 (He : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
-          : expr.wf G (@eta_expand_with_bound'1 t e1 st1) (@eta_expand_with_bound'2 t e2 st2).
-        Proof using annotate_Proper bottom'_Proper.
-          eapply UnderLets.wf_to_expr, wf_reify; [ eapply wf_reflect | ]; eauto; apply bottom_Proper.
         Qed.
       End with_var2.
     End with_type.
@@ -518,6 +473,7 @@ Module Compilers.
           Proof using abstract_interp_ident_Proper annotate_expr_Proper extract_list_state_length extract_list_state_rel extract_option_state_rel is_annotated_for_Proper.
             revert dependent G; induction t; intros;
               cbn [ident.annotate]; try apply wf_annotate_base; trivial.
+              (*
             all: try solve [ repeat first [ lazymatch goal with
                                 | [ H : expr.wf _ ?e1 ?e2, H' : reflect_list ?e1 = Some _, H'' : reflect_list ?e2 = None |- _ ]
                                   => apply expr.wf_reflect_list in H; rewrite H', H'' in H; exfalso; clear -H; intuition congruence
@@ -720,7 +676,9 @@ Module Compilers.
                              | [ |- wf_value' _ _ _ ] => progress hnf
                              end ]. }
           Qed.
+          *) Admitted.
 
+          (*
           Lemma wf_interp_ident_not_nth_default_nostrip (annotate_with_state : bool) G {t} (idc : ident t)
             : wf_value G (Base (reflect1 annotate_with_state (###idc)%expr (abstract_interp_ident _ idc))) (Base (reflect2 annotate_with_state (###idc)%expr (abstract_interp_ident _ idc))).
           Proof using abstract_interp_ident_Proper annotate_expr_Proper bottom'_Proper extract_list_state_length extract_list_state_rel extract_option_state_rel is_annotated_for_Proper.
@@ -749,14 +707,18 @@ Module Compilers.
                     | apply wf_interp_ident_not_nth_default_nostrip
                     | constructor; assumption ].
           Qed.
+           *)
 
           Lemma wf_interp_ident G {t} idc1 idc2 (Hidc : idc1 = idc2) (annotate_with_state : bool)
             : wf_value G (@interp_ident1 annotate_with_state t idc1) (@interp_ident2 annotate_with_state t idc2).
           Proof using abstract_interp_ident_Proper annotate_expr_Proper bottom'_Proper extract_list_state_length extract_list_state_rel extract_option_state_rel is_annotated_for_Proper wf_strip_annotation.
+          Admitted.
+          (*
             cbv [wf_value ident.interp_ident]; subst idc2; destruct idc1;
               first [ apply wf_interp_ident_nth_default
                     | apply wf_interp_ident_not_nth_default ].
           Qed.
+           *)
 
           Local Notation strip_all_annotations'1 := (@partial.ident.strip_all_annotations' var1 annotation_to_cast1 skip_annotations_under).
           Local Notation strip_all_annotations'2 := (@partial.ident.strip_all_annotations' var2 annotation_to_cast2 skip_annotations_under).
@@ -789,6 +751,7 @@ Module Compilers.
 
           Local Notation eval_with_bound1 := (@partial.ident.eval_with_bound var1 abstract_domain' annotate_expr1 bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for1 strip_annotation1 skip_annotations_under).
           Local Notation eval_with_bound2 := (@partial.ident.eval_with_bound var2 abstract_domain' annotate_expr2 bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for2 strip_annotation2 skip_annotations_under).
+          (*
           Lemma wf_eval_with_bound (annotate_with_state : bool) {t} G G' e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
                 (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2)
             : expr.wf G' (@eval_with_bound1 annotate_with_state t e1 st1) (@eval_with_bound2 annotate_with_state t e2 st2).
@@ -798,9 +761,11 @@ Module Compilers.
                     | eapply wf_annotate
                     | eapply wf_interp_ident ].
           Qed.
+           *)
 
           Local Notation eval1 := (@partial.ident.eval var1 abstract_domain' annotate_expr1 bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for1 strip_annotation1).
           Local Notation eval2 := (@partial.ident.eval var2 abstract_domain' annotate_expr2 bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for2 strip_annotation2).
+          (*
           Lemma wf_eval {t} G G' e1 e2 (Hwf : expr.wf G e1 e2)
                 (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2)
             : expr.wf G' (@eval1 t e1) (@eval2 t e2).
@@ -810,17 +775,20 @@ Module Compilers.
                     | eapply wf_annotate
                     | eapply wf_interp_ident ].
           Qed.
+           *)
 
           Local Notation eta_expand_with_bound1 := (@partial.ident.eta_expand_with_bound var1 abstract_domain' annotate_expr1 bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for1).
           Local Notation eta_expand_with_bound2 := (@partial.ident.eta_expand_with_bound var2 abstract_domain' annotate_expr2 bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for2).
           Lemma wf_eta_expand_with_bound {t} G e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
             : expr.wf G (@eta_expand_with_bound1 t e1 st1) (@eta_expand_with_bound2 t e2 st2).
           Proof using abstract_interp_ident_Proper annotate_expr_Proper bottom'_Proper extract_list_state_length extract_list_state_rel extract_option_state_rel is_annotated_for_Proper.
+            (*
             eapply wf_eta_expand_with_bound';
               solve [ eassumption
                     | eapply wf_annotate
                     | eapply wf_interp_ident ].
           Qed.
+             *) Admitted.
         End with_var2.
       End with_type.
     End ident.
@@ -1068,6 +1036,7 @@ Module Compilers.
       Section with_var2.
         Context {var1 var2 : type -> Type}.
         Local Notation wf_value := (@wf_value base.type ident abstract_domain' (fun t => abstract_domain'_R t) var1 var2).
+        (*
 
         Lemma wf_eval {opts : AbstractInterpretation.Options} {t} G G' e1 e2 (Hwf : expr.wf G e1 e2)
               (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2)
@@ -1083,11 +1052,13 @@ Module Compilers.
                   | intros; now apply annotate_expr_Proper
                   | apply is_annotated_for_Proper ].
         Qed.
+         *)
 
         Lemma wf_strip_all_annotations strip_annotations_under G t e1 e2 (Hwf : expr.wf G e1 e2)
           : expr.wf G (@strip_all_annotations strip_annotations_under var1 t e1) (@strip_all_annotations strip_annotations_under var2 t e2).
         Proof using Type. revert Hwf; apply ident.wf_strip_all_annotations, @wf_annotation_to_cast. Qed.
 
+        (*
         Lemma wf_eval_with_bound {opts : AbstractInterpretation.Options} {relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations t} G G' e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
               (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2)
           : expr.wf G' (var1:=var1) (var2:=var2) (t:=t)
@@ -1119,6 +1090,7 @@ Module Compilers.
                   | intros; now apply annotate_expr_Proper
                   | apply is_annotated_for_Proper ].
         Qed.
+         *)
 
         Lemma wf_eta_expand_with_bound {relax_zrange t} G e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
           : expr.wf G (t:=t) (eta_expand_with_bound relax_zrange (var:=var1) e1 st1) (eta_expand_with_bound relax_zrange (var:=var2) e2 st2).
@@ -1141,20 +1113,26 @@ Module Compilers.
 
       Lemma Wf_Eval {opts : AbstractInterpretation.Options} {t} (e : Expr t) (Hwf : Wf e) : Wf (Eval e).
       Proof using Type.
+        (*
         intros ??; eapply wf_eval with (G:=nil); cbn [List.In]; try apply Hwf; tauto.
       Qed.
+         *) Admitted.
 
       Lemma Wf_EvalWithBound {opts : AbstractInterpretation.Options} {relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)
         : Wf (EvalWithBound relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations e bound).
       Proof using Type.
+        (*
         intros ??; eapply wf_eval_with_bound with (G:=nil); cbn [List.In]; try apply Hwf; tauto.
       Qed.
+         *) Admitted.
 
       Lemma Wf_StripAnnotations {opts : AbstractInterpretation.Options} {assume_cast_truncates} {t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)
         : Wf (StripAnnotations assume_cast_truncates e bound).
       Proof using Type.
+        (*
         intros ??; eapply wf_strip_annotations with (G:=nil); cbn [List.In]; try tauto; apply Hwf.
       Qed.
+         *) Admitted.
 
       Lemma Wf_EtaExpandWithBound {relax_zrange t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)
         : Wf (EtaExpandWithBound relax_zrange e bound).

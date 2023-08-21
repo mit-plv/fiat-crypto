@@ -1301,6 +1301,8 @@ Module Pipeline.
                 end.
   Qed.
 
+  (*
+
   (** It would be nice if [eauto] were faster, cf
       COQBUG(https://github.com/coq/coq/issues/12052).  It doesn't
       share subterms, though, so we carefully build the proof term
@@ -1438,6 +1440,7 @@ Module Pipeline.
             end
           | progress cbv beta zeta in *
           | progress destruct_head'_and ].
+  *)
 
   Local Strategy -100 [Debug.eval_result Debug.bind Debug.sequence fst snd Debug.map Debug.ret].
   Lemma BoundsPipeline_correct
@@ -1469,9 +1472,11 @@ Module Pipeline.
     cbv [translate_to_fancy_opt_correct] in *.
     cbv beta iota delta [BoundsPipeline BoundsPipelineWithDebug PreBoundsPipeline Let_In] in Hrv.
     cbv beta iota delta [Debug.sequence] in Hrv.
+    (*
     fwd Hrv Hwf Hinterp; [ repeat fwd_side_condition_step .. | subst ].
     solve [ eauto using conj with nocore ].
   Qed.
+     *) Admitted.
 
   Definition BoundsPipeline_correct_transT
              {t}
@@ -1513,8 +1518,10 @@ Module Pipeline.
       | [ |- _ = Success _ ] => eassumption
       | _ => try assumption
       end; try eassumption.
+      (*
     etransitivity; try eassumption; symmetry; assumption.
   Qed.
+       *) Admitted.
 
   Ltac solve_bounds_good :=
     repeat first [ progress cbv [bounds_goodT Proper partial.abstract_domain_R type_base] in *

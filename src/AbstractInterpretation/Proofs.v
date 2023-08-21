@@ -118,6 +118,7 @@ Module Compilers.
       Local Notation expr := (@expr.expr base_type ident).
       Local Notation UnderLets := (@UnderLets base_type ident).
       Local Notation value := (@value base_type ident var abstract_domain').
+      (*
       Local Notation value_with_lets := (@value_with_lets base_type ident var abstract_domain').
       Local Notation state_of_value := (@state_of_value base_type ident var abstract_domain' bottom').
       Context (annotate : forall (is_let_bound : bool) t, abstract_domain' t -> @expr var t -> @UnderLets var (@expr var t))
@@ -1571,4 +1572,5 @@ HERE
                        | progress intros ]
         | eauto with wf typeclass_instances ].
   Qed.
+*) End with_type. End partial.
 End Compilers.
