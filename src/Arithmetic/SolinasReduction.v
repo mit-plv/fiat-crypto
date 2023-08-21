@@ -625,7 +625,7 @@ Module Saturated. Section __.
   *)
 
   Definition mulmod bound n c a b :=
-    let p := mul bound a b in
+    dlet p := mul bound a b in
     let (lo, hi) := add_mul_limb bound (firstn n p) c (skipn n p) in
     if (* true by range analysis *) c*Z.abs hi <=? weight bound 1 - c
     then reduce' bound 1 c lo [hi]
@@ -636,7 +636,7 @@ Module Saturated. Section __.
     (Hn : (n <= length a + length b <= n + n)%nat) (Hb : b <> nil)
     : eval bound (mulmod bound n c a b) mod m = (eval bound a * eval bound b) mod m.
   Proof.
-    cbv [mulmod].
+    cbv [Let_In mulmod].
     assert (1 <= length b)%nat by (destruct b; cbn [length] in *; congruence || lia).
     pose proof (eq_refl : weight bound n mod m = c) as Hc.
     pose proof eval_mul B a b as Hmul; fold bound in Hmul.

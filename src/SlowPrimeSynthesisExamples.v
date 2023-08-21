@@ -74,41 +74,6 @@ Module debugging_sat_solinas_25519.
     Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
     Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
 
-
-    Let n : nat := 3.
-    Let boundsn : list (ZRange.type.option.interp base.type.Z) := repeat (Some r[0 ~> (2^machine_wordsize - 1)]%zrange) n.
-
-    Import IdentifiersBasicGENERATED.Compilers.
-    Import API.Compilers.
-    Import APINotations.Compilers.
-
-    Import SolinasReduction.Saturated.
-
-    Definition bound (_ : Datatypes.nat) := Z.to_pos (2^64).
-
-    Local Instance : debug_rewriting_opt := true.
-    Local Instance : PHOAS.with_all_casts := true.
-
-Compute 
-         (Pipeline.BoundsPipelineToStringWithDebug
-            "fiat_" "fe4_mul_no_reduce"
-            false (* subst01 *)
-            false (* inline *)
-            possible_values
-            machine_wordsize
-            ltac:(let e := constr:(mul bound) in
-                  let e := eval cbv delta [mulmod mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
-                  let r := Reify e in
-                  exact r)
-                   (fun _ _ => []) (* comment *)
-                   (Some boundsn, (Some boundsn, tt))
-                   (None)
-                   (None, (None, tt))
-                   (None)).
-
-
-
-
     Let n : nat := 4.
     Let boundsn : list (ZRange.type.option.interp base.type.Z) := repeat (Some r[0 ~> (2^machine_wordsize - 1)]%zrange) n.
 
@@ -317,7 +282,9 @@ Compute
                   exact r)
                    (fun _ _ => []) (* comment *)
                    (Some boundsn, (Some boundsn, tt))
+                   (*
                    (Some (boundsn++boundsn))
+                    *) None
                    (None, (None, tt))
                    (None)
           : Pipeline.ErrorT _).
@@ -333,13 +300,15 @@ Compute
             possible_values
             machine_wordsize
             ltac:(
-                  let e := constr:(mulmod bound 1 38) in
+                  let e := constr:(mulmod bound 4 38) in
                   let e := eval cbv delta [mulmod mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
                   let r := Reify e in
                   exact r)
                    (fun _ _ => []) (* comment *)
                    (Some boundsn, (Some boundsn, tt))
+                   (*
                    (Some boundsn)
+                    *) None
                    (None, (None, tt))
                    (None)
           : Pipeline.ErrorT _).

@@ -809,6 +809,147 @@ Module Pipeline.
                     end)
             | inr v => Debug.ret (inr v)
             end;
+
+      let E' := match E' with
+                | inl E =>
+                    dlet_nd e := ToFlat E in
+                    let E := FromFlat e in
+                    CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) true E arg_bounds ZRange.type.base.option.None
+                | inr v => inr v
+                end in
+      E' <- match E' with
+            | inl E
+              => (debug_after_rewrite "CheckedPartialEvaluateWithBounds" E;;
+                  E <- RewriteAndEliminateDeadAndInline "RewriteArithWithCasts" (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
+                  dlet_nd e := ToFlat E in
+                  let E := FromFlat e in
+                  (** to give good error messages, we first look at
+                      the version of the syntax tree annotated with
+                      unrelaxed ranges *)
+                  let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                  match E' with
+                    | inl E
+                      => debug_after_rewrite "CheckedPartialEvaluateWithBounds 2" E;;
+                         dlet_nd e := ToFlat E in
+                         let E := FromFlat e in
+                         let E' := CheckedPartialEvaluateWithBounds relax_zrange assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                         match E' with
+                         | inl E
+                           => debug_after_rewrite "CheckedPartialEvaluateWithBounds 3" E;;
+                              Debug.ret (inl E)
+                         | inr E
+                           => Debug.ret (inr E)
+                         end
+                    | inr v => Debug.ret (inr v)
+                    end)
+            | inr v => Debug.ret (inr v)
+            end;
+
+      let E' := match E' with
+                | inl E =>
+                    dlet_nd e := ToFlat E in
+                    let E := FromFlat e in
+                    CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) true E arg_bounds ZRange.type.base.option.None
+                | inr v => inr v
+                end in
+      E' <- match E' with
+            | inl E
+              => (debug_after_rewrite "CheckedPartialEvaluateWithBounds" E;;
+                  E <- RewriteAndEliminateDeadAndInline "RewriteArithWithCasts" (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
+                  dlet_nd e := ToFlat E in
+                  let E := FromFlat e in
+                  (** to give good error messages, we first look at
+                      the version of the syntax tree annotated with
+                      unrelaxed ranges *)
+                  let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                  match E' with
+                    | inl E
+                      => debug_after_rewrite "CheckedPartialEvaluateWithBounds 2" E;;
+                         dlet_nd e := ToFlat E in
+                         let E := FromFlat e in
+                         let E' := CheckedPartialEvaluateWithBounds relax_zrange assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                         match E' with
+                         | inl E
+                           => debug_after_rewrite "CheckedPartialEvaluateWithBounds 3" E;;
+                              Debug.ret (inl E)
+                         | inr E
+                           => Debug.ret (inr E)
+                         end
+                    | inr v => Debug.ret (inr v)
+                    end)
+            | inr v => Debug.ret (inr v)
+            end;
+
+      let E' := match E' with
+                | inl E =>
+                    dlet_nd e := ToFlat E in
+                    let E := FromFlat e in
+                    CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) true E arg_bounds ZRange.type.base.option.None
+                | inr v => inr v
+                end in
+      E' <- match E' with
+            | inl E
+              => (debug_after_rewrite "CheckedPartialEvaluateWithBounds" E;;
+                  E <- RewriteAndEliminateDeadAndInline "RewriteArithWithCasts" (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
+                  dlet_nd e := ToFlat E in
+                  let E := FromFlat e in
+                  (** to give good error messages, we first look at
+                      the version of the syntax tree annotated with
+                      unrelaxed ranges *)
+                  let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                  match E' with
+                    | inl E
+                      => debug_after_rewrite "CheckedPartialEvaluateWithBounds 2" E;;
+                         dlet_nd e := ToFlat E in
+                         let E := FromFlat e in
+                         let E' := CheckedPartialEvaluateWithBounds relax_zrange assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                         match E' with
+                         | inl E
+                           => debug_after_rewrite "CheckedPartialEvaluateWithBounds 3" E;;
+                              Debug.ret (inl E)
+                         | inr E
+                           => Debug.ret (inr E)
+                         end
+                    | inr v => Debug.ret (inr v)
+                    end)
+            | inr v => Debug.ret (inr v)
+            end;
+
+      let E' := match E' with
+                | inl E =>
+                    dlet_nd e := ToFlat E in
+                    let E := FromFlat e in
+                    CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) true E arg_bounds ZRange.type.base.option.None
+                | inr v => inr v
+                end in
+      E' <- match E' with
+            | inl E
+              => (debug_after_rewrite "CheckedPartialEvaluateWithBounds" E;;
+                  E <- RewriteAndEliminateDeadAndInline "RewriteArithWithCasts" (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 with_let_bind_return E;
+                  dlet_nd e := ToFlat E in
+                  let E := FromFlat e in
+                  (** to give good error messages, we first look at
+                      the version of the syntax tree annotated with
+                      unrelaxed ranges *)
+                  let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                  match E' with
+                    | inl E
+                      => debug_after_rewrite "CheckedPartialEvaluateWithBounds 2" E;;
+                         dlet_nd e := ToFlat E in
+                         let E := FromFlat e in
+                         let E' := CheckedPartialEvaluateWithBounds relax_zrange assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                         match E' with
+                         | inl E
+                           => debug_after_rewrite "CheckedPartialEvaluateWithBounds 3" E;;
+                              Debug.ret (inl E)
+                         | inr E
+                           => Debug.ret (inr E)
+                         end
+                    | inr v => Debug.ret (inr v)
+                    end)
+            | inr v => Debug.ret (inr v)
+            end;
+
       match E' with
       | inl E
         => (E <- match split_mul_to with
