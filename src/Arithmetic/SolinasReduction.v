@@ -425,8 +425,8 @@ Module Saturated. Section __.
       let zc := z / weight bound (length lo) in
       if  ((0 <=? zc) && (zc <? bound (length lo)))%bool
       then
-        let h := fst (Z.add_with_get_carry_full (bound (length lo)) c h 0) in
-        let h := fst (Z.add_with_get_carry_full (bound (length lo)) o h 0) in
+        dlet h := fst (Z.add_with_get_carry_full (bound (length lo)) c h 0) in
+        dlet h := fst (Z.add_with_get_carry_full (bound (length lo)) o h 0) in
         h
       else h+c+o).
 
@@ -441,7 +441,7 @@ Module Saturated. Section __.
     let z := eval bound (firstn n acc) + x * eval bound ys in
     add_mul_limb' bound acc x ys = (encode bound n z, z / weight bound n).
   Proof.
-    cbv [add_mul_limb'].
+    cbv [add_mul_limb' Let_In].
     edestruct product_scan_correct as (h&c&o&Hlo&Hhi); rewrite Hlo, Hhi; clear Hlo.
     rewrite ?map_map, ?map_length, ?eval_app, ?eval_encode, ?length_encode, ?eval_cons, ?eval_nil, ?Z.add_with_get_carry_full_mod in *.
     cbn [uncurry] in *; rewrite ?eval_map_mul, ?Z.mul_0_r ,?Z.add_0_r in *; f_equal.
@@ -473,7 +473,7 @@ Module Saturated. Section __.
 
   Definition add_mul_small bound acc x ys : list Z * Z :=
     let '(lo, (h, c, o)) := product_scan bound acc (map (pair x) ys) 0 0 0 in
-    let hi := h + c + o in
+    dlet hi := h + c + o in
     if (Z.of_nat (length acc) <=? Z.of_nat (length ys))
     then (lo, hi)
     else
@@ -530,7 +530,7 @@ Module Saturated. Section __.
   Definition add_mul bound (acc xs ys : list Z) : list Z :=
     list_rect_fbb_b_b (fun _ acc => acc)
     (fun x _ rec bound acc =>
-      let acc := add_mul_limb_ bound acc x ys in
+      dlet acc := add_mul_limb_ bound acc x ys in
       hd 0 acc :: rec (stream.tl bound) (tl acc)
     ) xs bound acc.
 
