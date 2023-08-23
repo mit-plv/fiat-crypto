@@ -312,6 +312,90 @@ Module debugging_sat_solinas_25519.
                    (None, (None, tt))
                    (None)
           : Pipeline.ErrorT _).
+
+    Definition p256 := 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff%Z.
+    Definition p3 :=   0xffffffff00000001%Z.
+    Definition two_steps_of_p256_montgomery_friendly_reduction xs :=
+      let x := nth_default 0 xs 0 in
+      let y := nth_default 0 xs 1 in
+      let xs' := List.skipn 2 xs in
+
+      let (x't, h) := Z.mul_split (Z.pos (stream.hd bound)) (2^32) x in
+      let (x', c) := Z.add_with_get_carry_full (Z.pos (stream.hd bound)) 0 y x't in
+      let '(ys, (h, o, c)) := product_scan bound xs' [(2^32, x'); (p3, x); (p3, x'); (0, 0)] h c 0 in
+      ys ++ [h+o+c].
+
+    Lemma mf2redc_correct xs
+      (Hl : length xs = 6%nat)
+      (Hx : nth_default 0 xs 0 = eval bound xs mod 2^64)
+      (Hy : nth_default 0 xs 1 = eval bound xs / 2^64 mod 2^64)
+      (Hxs : eval bound (skipn 2 xs) = eval bound xs / 2^128) :
+      2^128 * eval bound (two_steps_of_p256_montgomery_friendly_reduction xs) mod p256 = eval bound xs mod p256.
+    Proof.
+      cbv [two_steps_of_p256_montgomery_friendly_reduction].
+      set (nth_default 0 xs 0) as x.
+      set (nth_default 0 xs 1) as y.
+      edestruct Z.mul_split as (tl, th) eqn:Et.
+      rewrite Z.mul_split_correct in Et; symmetry in Et; Prod.inversion_pair.
+      edestruct Z.add_with_get_carry_full as (x', c) eqn:Ex'.
+      symmetry; erewrite <-Z.mod_add with (b := x + 2^64*x') by (cbv; Lia.lia); symmetry; f_equal.
+      rewrite Z.add_with_get_carry_full_correct in Ex'; symmetry in Ex'; Prod.inversion_pair; rewrite ?Z.add_0_l in *.
+      edestruct  product_scan_correct as (h'&c'&o'&->&H'); simpl Datatypes.length in *.
+      rewrite H'; clear H' h' c' o'.
+      rewrite firstn_all2 by (rewrite ?skipn_length; Lia.lia).
+      cbn [List.map uncurry].
+      set (eval bound (cons _ _)) as E.
+      rewrite eval_app, eval_encode, ?length_encode, ?eval_cons, ?eval_nil, ?Z.mul_0_r, ?Z.add_0_r.
+      change (weight bound 4) with (2^256)%positive.
+      transitivity (2^128 * (eval bound xs / 2 ^ 128 + th + c + E)).
+      { Z.div_mod_to_equations; Lia.nia. }
+      unfold eval, PreExtra.list_rect_fbb_b, list_rect in E.
+      change (stream.hd _) with (2^64)%positive in *.
+      assert (E = 2^32 * x' + 2^64 * p3 * x + 2^128 * p3*x') as -> by (Z.div_mod_to_equations; Lia.nia).
+      cbv [p256 p3]; Z.div_mod_to_equations; Lia.nia.
+    Qed.
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (
+         Pipeline.BoundsPipelineToString
+            "fiat_" "p256mul2w"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(let e := constr:(two_steps_of_p256_montgomery_friendly_reduction) in
+            let e := eval cbv delta [two_steps_of_p256_montgomery_friendly_reduction mulmod mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let r := Reify e in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some (repeat (Some r[0 ~> (2^64 - 1)]%zrange) 6), tt)
+                   (Some (repeat (Some r[0 ~> (2^64 - 1)]%zrange) 4 ++ [(Some r[0 ~> 2]%zrange)]))
+                   (None, tt)
+                   None
+          : Pipeline.ErrorT _).
+         (*
+  fiat_mulx_u64(&x1, &x2, UINT64_C(0x100000000), (arg1[0]));
+  fiat_addcarryx_u64(&x3, &x4, 0x0, (arg1[1]), x1);
+  fiat_mulx_u64(&x5, &x6, UINT64_C(0x100000000), x3);
+  fiat_addcarryx_u64(&x7, &x8, x4, (arg1[2]), x2);
+  fiat_addcarryx_u64(&x9, &x10, 0x0, x7, x5);
+  fiat_mulx_u64(&x11, &x12, UINT64_C(0xffffffff00000001), (arg1[0]));
+  fiat_addcarryx_u64(&x13, &x14, x8, (arg1[3]), x6);
+  fiat_addcarryx_u64(&x15, &x16, x10, x13, x11);
+  fiat_mulx_u64(&x17, &x18, UINT64_C(0xffffffff00000001), x3);
+  fiat_addcarryx_u64(&x19, &x20, x14, (arg1[4]), x12);
+  fiat_addcarryx_u64(&x21, &x22, x16, x19, x17);
+  fiat_addcarryx_u64(&x23, &x24, x20, (arg1[5]), x18);
+  fiat_addcarryx_u64(&x25, &x26, x22, x23, 0x0);
+  x27 = ((uint64_t)x24 + x26);
+  out1[0] = x9;
+  out1[1] = x15;
+  out1[2] = x21;
+  out1[3] = x25;
+  out1[4] = x27;
+          *)
   End __.
 End debugging_sat_solinas_25519.
 
