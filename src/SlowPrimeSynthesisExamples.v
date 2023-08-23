@@ -313,34 +313,40 @@ Module debugging_sat_solinas_25519.
                    (None)
           : Pipeline.ErrorT _).
 
+    Definition product_scan_ bound acc ps h o c :=
+      let '(r, (h, o, c)) := product_scan bound acc ps h o c in
+      dlet r := r ++ [h+o+c] in
+      r.
+
     Definition p256 := 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff%Z.
     Definition p3 :=   0xffffffff00000001%Z.
     Definition two_steps_of_p256_montgomery_friendly_reduction xs :=
       let x := nth_default 0 xs 0 in
       let y := nth_default 0 xs 1 in
-      let xs' := List.skipn 2 xs in
+      let (x't, h) := Z.mul_split (2^64) (2^32) x in
+      let (x', c) := Z.add_with_get_carry_full (2^64) 0 y x't in
+      product_scan_ bound (skipn 2 xs) [(2^32, x'); (p3, x); (p3, x'); (0, 0)] h c 0.
 
-      let (x't, h) := Z.mul_split (Z.pos (stream.hd bound)) (2^32) x in
-      let (x', c) := Z.add_with_get_carry_full (Z.pos (stream.hd bound)) 0 y x't in
-      let '(ys, (h, o, c)) := product_scan bound xs' [(2^32, x'); (p3, x); (p3, x'); (0, 0)] h c 0 in
-      ys ++ [h+o+c].
-
-    Lemma mf2redc_correct xs
+    Lemma two_steps_of_p256_montgomery_friendly_reduction_correct xs
       (Hl : length xs = 6%nat)
       (Hx : nth_default 0 xs 0 = eval bound xs mod 2^64)
       (Hy : nth_default 0 xs 1 = eval bound xs / 2^64 mod 2^64)
       (Hxs : eval bound (skipn 2 xs) = eval bound xs / 2^128) :
       2^128 * eval bound (two_steps_of_p256_montgomery_friendly_reduction xs) mod p256 = eval bound xs mod p256.
     Proof.
-      cbv [two_steps_of_p256_montgomery_friendly_reduction].
+      cbv [Let_In two_steps_of_p256_montgomery_friendly_reduction product_scan_].
       set (nth_default 0 xs 0) as x.
       set (nth_default 0 xs 1) as y.
       edestruct Z.mul_split as (tl, th) eqn:Et.
       rewrite Z.mul_split_correct in Et; symmetry in Et; Prod.inversion_pair.
       edestruct Z.add_with_get_carry_full as (x', c) eqn:Ex'.
-      symmetry; erewrite <-Z.mod_add with (b := x + 2^64*x') by (cbv; Lia.lia); symmetry; f_equal.
       rewrite Z.add_with_get_carry_full_correct in Ex'; symmetry in Ex'; Prod.inversion_pair; rewrite ?Z.add_0_l in *.
       edestruct  product_scan_correct as (h'&c'&o'&->&H'); simpl Datatypes.length in *.
+      symmetry; erewrite <-Z.mod_add with (b := x + 2^64*x') by (cbv; Lia.lia); symmetry; f_equal.
+      change (Z.pos (stream.hd bound)) with (2^64) in *.
+      assert ((x + 2^64 * x')*p256 <= (2^128-1)*p256) by (cbv [p256]; Z.div_mod_to_equations; Lia.nia).
+      assert ((x + 2^64 * x')*p256 < 2^128*(p256-2^128+2^96-2^64)) by (cbv [p256]; Z.div_mod_to_equations; Lia.nia).
+      (* 0xffffffff00000000ffffffffffffffff00000001fffffffeffffffffffffffff *)
       rewrite H'; clear H' h' c' o'.
       rewrite firstn_all2 by (rewrite ?skipn_length; Lia.lia).
       cbn [List.map uncurry].
@@ -354,6 +360,13 @@ Module debugging_sat_solinas_25519.
       assert (E = 2^32 * x' + 2^64 * p3 * x + 2^128 * p3*x') as -> by (Z.div_mod_to_equations; Lia.nia).
       cbv [p256 p3]; Z.div_mod_to_equations; Lia.nia.
     Qed.
+
+    Definition p256_mul x y :=
+      dlet a := mul bound (firstn 2 x) y in
+      dlet a := two_steps_of_p256_montgomery_friendly_reduction a in
+      dlet a := add_mul bound a (skipn 2 x) y in
+      dlet a := two_steps_of_p256_montgomery_friendly_reduction a in
+      firstn 4 (condsub bound a (encode bound 4 p256)).
 
     Time Redirect "log"
          Compute
@@ -396,6 +409,29 @@ Module debugging_sat_solinas_25519.
   out1[3] = x25;
   out1[4] = x27;
           *)
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (
+         Pipeline.BoundsPipelineToString
+            "fiat_" "p256_mul"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(
+                  let e := constr:(p256_mul) in
+                  let e := eval cbv delta [two_steps_of_p256_montgomery_friendly_reduction p256_mul mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let r := Reify e in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, (Some boundsn, tt))
+                   (Some boundsn)
+                   (None, (None, tt))
+                   (None)
+          : Pipeline.ErrorT _).
+
   End __.
 End debugging_sat_solinas_25519.
 
