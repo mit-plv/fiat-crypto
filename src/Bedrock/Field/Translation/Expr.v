@@ -137,7 +137,7 @@ Section Expr.
 
   Definition is_cast_literal_ident {t} (i : ident.ident t) : bool :=
     match i with
-    | ident.Literal base.type.zrange r => true
+    | ident.Literal base.type.zrange r => range_maskable r
     | _ => false
     end.
   Definition is_cast_literal

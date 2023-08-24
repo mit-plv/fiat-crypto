@@ -170,7 +170,7 @@ Section Field.
              Cmd.valid_cons_App2_bool
              Cmd.is_cons_ident
              Cmd.is_nil_ident].
-      repeat lazymatch goal with
+      repeat match goal with
              | |- context [(Expr.valid_expr_bool true ?x || Cmd.valid_special_bool ?x)%bool] =>
                           first [ change (Expr.valid_expr_bool true x) with true; cbn [orb]
                                 | change (Cmd.valid_special_bool x) with true; rewrite Bool.orb_true_r ]

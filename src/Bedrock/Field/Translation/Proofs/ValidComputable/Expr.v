@@ -53,44 +53,6 @@ Section Expr.
     | _ => false
     end.
 
-  Definition valid_cast_literal_ident {t} (r : zrange) (i : ident.ident t) : bool :=
-    match i with
-    | ident.Literal base.type.zrange r' => zrange_beq r r'
-    | _ => false
-    end.
-
-  Definition valid_cast_literal {var t} (r : zrange) (e : @API.expr var t) : bool :=
-    match e with
-    | expr.Ident type_range i => valid_cast_literal_ident r i
-    | _ => false
-    end.
-
-  Definition valid_cast2_literal_App1
-             {var t} (r : zrange) (e : @API.expr var t) : bool :=
-    match e with
-    | expr.App
-        type_range (type.arrow type_range type_range2)
-        f r1 =>
-      is_cast2_literal_App2 f && valid_cast_literal r r1
-    | _ => false
-    end.
-  Definition valid_cast2_literal
-             {var t} (r : zrange) (e : @API.expr var t) : bool :=
-    match e with
-    | expr.App type_range type_range2 f r2 =>
-      valid_cast2_literal_App1 r f && valid_cast_literal r r2
-    | _ => false
-    end.
-
-  Definition valid_cast_bool {t} (r : zrange) (e : @API.expr (fun _ => unit) t) : bool :=
-    match e with
-    | expr.App type_range (type.arrow type_Z type_Z) f x =>
-      is_cast_ident_expr f && valid_cast_literal r x
-    | expr.App type_range2 (type.arrow type_ZZ type_ZZ) f x =>
-      is_cast_ident_expr f && valid_cast2_literal r x
-    | _ => false
-    end.
-
   Definition is_mul_high_ident {t} (i : ident.ident t) : bool :=
     match i with
     | ident.Z_mul_high => true
@@ -241,7 +203,7 @@ Section Expr.
   Definition valid_fst_cast_bool {t}
              (e : @API.expr (fun _ => unit) t) : bool :=
     match invert_expr.invert_Z_cast2 e with
-    | Some (r1, r2) => range_good (width:=width) r1
+    | Some (r1, r2) => range_maskable (width:=width) r1
     | None => false
     end.
 
@@ -249,7 +211,7 @@ Section Expr.
   Definition valid_snd_cast_bool {t}
              (e : @API.expr (fun _ => unit) t) : bool :=
     match invert_expr.invert_Z_cast2 e with
-    | Some (r1, r2) => range_good (width:=width) r2
+    | Some (r1, r2) => range_maskable (width:=width) r2
     | None => false
     end.
 
@@ -355,7 +317,7 @@ Section Expr.
                           (negb require_casts)
                             && valid_expr_bool' NotPartial true x
                         else (* must be a cast *)
-                          (valid_cast_bool (max_range (width:=width)) f)
+                          (is_cast (width:=width) f)
                             && valid_expr_bool' NotPartial false x
         | expr.App type_ZZ type_Z f x =>
           (* fst or snd *)
@@ -365,7 +327,7 @@ Section Expr.
                then (negb require_casts) && valid_expr_bool' Snd false x
                else false
         | expr.App type_ZZ type_ZZ f x =>
-          valid_cast_bool (max_range (width:=width)) f
+          is_cast (width:=width) f
           && valid_expr_bool' NotPartial false x
         | expr.Ident _ (ident.Literal base.type.Z z) =>
           is_bounded_by_bool z (@max_range width)|| negb require_casts
@@ -380,12 +342,12 @@ Section Expr.
 
   Definition valid_expr_bool {t} rc := @valid_expr_bool' NotPartial rc t.
 
-  Lemma valid_expr_App1_bool_type {t} r (e : API.expr t) :
-    valid_cast_bool r e = true ->
+  Lemma is_cast_type {var t} (e : API.expr t) :
+    is_cast (var:=var) (width:=width) e = true ->
     (t = type.arrow type_Z type_Z
      \/ t = type.arrow type_ZZ type_ZZ).
   Proof.
-    cbv [valid_cast_bool].
+    cbv [is_cast].
     break_match; try congruence.
     all:intros; tauto.
   Qed.
@@ -546,7 +508,7 @@ Section Expr.
        fun i =>
          forall (x : API.expr type_ZZ) r1 r2,
            valid_expr false x ->
-           range_good (width:=width) r1 = true ->
+           range_maskable (width:=width) r1 = true ->
            valid_expr false (expr.App (expr.Ident i)
                                       (expr.App (expr.App
                                                    (expr.Ident ident.Z_cast2)
@@ -572,7 +534,7 @@ Section Expr.
        fun i =>
          forall (x : API.expr type_ZZ) r1 r2,
            valid_expr false x ->
-           range_good (width:=width) r2 = true ->
+           range_maskable (width:=width) r2 = true ->
            valid_expr false (expr.App (expr.Ident i)
                                       (expr.App (expr.App
                                                    (expr.Ident ident.Z_cast2)
@@ -591,38 +553,42 @@ Section Expr.
       intros; constructor; eauto.
   Qed.
 
-  Lemma valid_cast_literal_ident_eq {t} r (i : ident.ident t) :
-    valid_cast_literal_ident r i = true ->
+  Lemma is_cast_literal_ident_eq {t} (i : ident.ident t) :
+    is_cast_literal_ident (width:=width) i = true ->
     (match t as t0 return ident.ident t0 -> Prop with
      | type_range =>
        fun i =>
-         i = ident.Literal (t:=base.type.zrange) r
+         exists r,
+           i = ident.Literal (t:=base.type.zrange) r
+           /\ range_maskable (width:=width) r = true
      | _ => fun _ => False
      end) i.
   Proof.
-    cbv [valid_cast_literal_ident].
+    cbv [is_cast_literal_ident].
     break_match; try congruence; [ ].
-    cbv [range_good]. intros; progress reflect_beq_to_eq zrange_beq; subst.
-    reflexivity.
+    intros; eexists; eauto.
   Qed.
 
-  Lemma valid_cast_literal_eq {t} r (e : API.expr t) :
-    valid_cast_literal r e = true ->
+  Lemma is_cast_literal_eq {t} (e : API.expr t) :
+    is_cast_literal (width:=width) e = true ->
     (match t as t0 return @API.expr (fun _ => unit) t0 -> Prop with
      | type_range =>
        fun e =>
-         e = expr.Ident (ident.Literal (t:=base.type.zrange) r)
+         exists r,
+           e = expr.Ident (ident.Literal (t:=base.type.zrange) r)
+           /\ range_maskable (width:=width) r = true
      | _ => fun _ => False
      end) e.
   Proof.
-    cbv [valid_cast_literal].
+    cbv [is_cast_literal].
     break_match; try congruence; [ ].
     intros;
-      match goal with
-      | H : valid_cast_literal_ident _ _ = true |- _ =>
-        apply valid_cast_literal_ident_eq in H
-      end.
-    subst; reflexivity.
+      repeat lazymatch goal with
+             | H : is_cast_literal_ident _ = true |- _ =>
+               apply is_cast_literal_ident_eq in H; destruct H
+             | H : _ /\ _ |- _ => destruct H
+             end.
+    eexists; split; subst; eauto.
   Qed.
 
   Lemma is_pair_range_eq {t} (i : ident.ident t) :
@@ -655,59 +621,67 @@ Section Expr.
     congruence.
   Qed.
 
-  Lemma valid_cast2_literal_App1_eq {t} r (e : API.expr t) :
-    valid_cast2_literal_App1 r e = true ->
+  Lemma is_cast2_literal_App1_eq {t} (e : API.expr t) :
+    is_cast2_literal_App1 (width:=width) e = true ->
     (match t as t0 return @API.expr (fun _ => unit) t0 -> Prop with
      | type.arrow type_range type_range2 =>
        fun e =>
-         e = expr.App
-               (expr.Ident ident.pair)
-               (expr.Ident
-                  (ident.Literal (t:=base.type.zrange) r))
+         exists r,
+           e = expr.App
+                 (expr.Ident ident.pair)
+                 (expr.Ident
+                    (ident.Literal (t:=base.type.zrange) r))
+           /\ range_maskable (width:=width) r = true
      | _ => fun _ => False
      end) e.
   Proof.
-    cbv [valid_cast2_literal_App1].
+    cbv [is_cast2_literal_App1].
     break_match; try congruence; [ ].
     intros;
       repeat match goal with
              | H : _ && _ = true |- _ =>
                apply andb_true_iff in H; destruct H
-             | H : valid_cast_literal _ _ = true |- _ =>
-               apply valid_cast_literal_eq in H; subst
+             | H : is_cast_literal _ = true |- _ =>
+               apply is_cast_literal_eq in H; destruct H; subst
              | H : is_cast2_literal_App2 _ = true |- _ =>
                apply is_cast2_literal_App2_eq in H; subst
+             | H : _ /\ _ |- _ => destruct H
              end.
-    reflexivity.
+    subst; eexists; eauto.
   Qed.
 
-  Lemma valid_cast2_literal_eq {t} r (e : API.expr t) :
-    valid_cast2_literal r e = true ->
+  Lemma is_cast2_literal_eq {t} (e : API.expr t) :
+    is_cast2_literal (width:=width) e = true ->
     (match t as t0 return @API.expr (fun _ => unit) t0 -> Prop with
      | type_range2 =>
        fun e =>
-         e = expr.App
-               (expr.App
-                  (expr.Ident ident.pair)
-                  (expr.Ident
-                     (ident.Literal (t:=base.type.zrange) r)))
-               (expr.Ident
-                  (ident.Literal (t:=base.type.zrange) r))
+         exists r1 r2,
+           e = expr.App
+                 (expr.App
+                    (expr.Ident ident.pair)
+                    (expr.Ident
+                       (ident.Literal (t:=base.type.zrange) r1)))
+                 (expr.Ident
+                    (ident.Literal (t:=base.type.zrange) r2))
+           /\ range_maskable (width:=width) r1 = true
+           /\ range_maskable (width:=width) r2 = true
      | _ => fun _ => False
      end) e.
   Proof.
-    cbv [valid_cast2_literal].
+    cbv [is_cast2_literal].
     break_match; try congruence; [ ].
     intros;
       repeat match goal with
              | H : _ && _ = true |- _ =>
                apply andb_true_iff in H; destruct H
-             | H : valid_cast_literal _ _ = true |- _ =>
-               apply valid_cast_literal_eq in H; subst
-             | H : valid_cast2_literal_App1 _ _ = true |- _ =>
-               apply valid_cast2_literal_App1_eq in H; subst
+             | H : is_cast_literal _ = true |- _ =>
+               apply is_cast_literal_eq in H; subst
+             | H : is_cast2_literal_App1 _ = true |- _ =>
+               apply is_cast2_literal_App1_eq in H; subst
+             | H : _ /\ _ |- _ => destruct H
+             | H : exists _, _ |- _ => destruct H
              end.
-    reflexivity.
+    subst; repeat eexists; eauto.
   Qed.
 
   Lemma is_cast_ident_expr_impl1 {t} rc (f : API.expr t) :
@@ -718,7 +692,7 @@ Section Expr.
          forall
            (r : API.expr type_range)
            (x : API.expr type_Z),
-           valid_cast_literal (max_range (width:=width)) r = true ->
+           is_cast_literal (width:=width) r = true ->
            valid_expr false x ->
            valid_expr rc (expr.App (expr.App f r) x)
      | type.arrow type_range2 (type.arrow type_ZZ type_ZZ) =>
@@ -726,7 +700,7 @@ Section Expr.
          forall
            (r : API.expr type_range2)
            (x : API.expr type_ZZ),
-           valid_cast2_literal (max_range (width:=width)) r = true ->
+           is_cast2_literal (width:=width) r = true ->
            valid_expr false x ->
            valid_expr rc (expr.App (expr.App f r) x)
      | _ => fun _ => False
@@ -736,20 +710,19 @@ Section Expr.
     break_match; try congruence; [ | ];
       intros;
       repeat lazymatch goal with
-             | H : exists _, _ |- _ => destruct H ;subst
-             | H : valid_cast_literal _ _ = true |- _ =>
-               apply valid_cast_literal_eq in H; subst
-             | H : valid_cast2_literal _ _ = true |- _ =>
-               apply valid_cast2_literal_eq in H; subst
+             | H : is_cast_literal _ = true |- _ =>
+               apply is_cast_literal_eq in H
+             | H : is_cast2_literal _ = true |- _ =>
+               apply is_cast2_literal_eq in H
+             | H : _ /\ _ |- _ => destruct H
+             | H : exists _, _ |- _ => destruct H
+             | _ => progress subst
              end.
-    { constructor;
-        cbv [range_good]; auto using zrange_lb. }
-    { constructor;
-        cbv [range_good]; auto using zrange_lb. }
+    all:constructor; eauto.
   Qed.
 
-  Lemma valid_cast_bool_impl1 {t} rc (f : API.expr t) :
-    valid_cast_bool (max_range (width:=width)) f = true ->
+  Lemma is_cast_impl1 {t} rc (f : API.expr t) :
+    is_cast (width:=width) f = true ->
     (match t as t0 return expr.expr t0 -> Prop with
      | type.arrow type_Z _ =>
        fun f =>
@@ -764,7 +737,7 @@ Section Expr.
      | _ => fun _ => False
      end) f.
   Proof.
-    cbv [valid_cast_bool].
+    cbv [is_cast].
     remember t.
     destruct t; try congruence.
     { intros; exfalso.
@@ -1242,8 +1215,8 @@ Section Expr.
         repeat match goal with
                | H : _ && _ = true |- _ =>
                  apply andb_true_iff in H; destruct H
-               | H: valid_cast_bool _ = true |- _ =>
-                 apply valid_cast_bool_type in H;
+               | H: is_cast _ = true |- _ =>
+                 apply is_cast_type in H;
                    destruct H; destruct H; congruence
                | IH : forall mode _ _,
                    match mode with
@@ -1279,7 +1252,7 @@ Section Expr.
         apply (IHe2 NotPartial); eauto. }
       { (* cast Z case *)
         intros.
-        apply (valid_cast_bool_impl1
+        apply (is_cast_impl1
                  (t := type_Z -> type_Z)); eauto; [ ].
         apply (IHe2 NotPartial); eauto. }
       { (* nth_default case *)
@@ -1304,7 +1277,7 @@ Section Expr.
         apply (IHe2 Snd); auto using valid_expr_Snd_valid_snd_casted. }
       { (* cast ZZ *)
         intros.
-        apply (valid_cast_bool_impl1
+        apply (is_cast_impl1
                  (t := type_ZZ -> type_ZZ)); eauto; [ ].
         eapply (IHe2 NotPartial); eauto. }
       { (* partially-applied binop case *)
@@ -1399,42 +1372,12 @@ Section Expr.
              | H : zrange_beq _ _ = true |- _ => progress reflect_beq_to_eq zrange_beq; subst
              | |- context [zrange_beq ?r ?r] => rewrite zrange_lb by reflexivity
              | _ => rewrite Z.eqb_refl
+             | |- (_ && _)%bool = true => apply Bool.andb_true_iff; split; Z.ltb_to_lt
              end;
       auto using
            Bool.andb_true_iff, Bool.orb_true_iff,
       is_bounded_by_bool_max_range,
-      is_bounded_by_bool_width_range; [ | | | ].
-    { (* fst *)
-      cbv [valid_fst_cast_bool].
-      lazymatch goal with
-      | |- context [invert_expr.invert_Z_cast2
-                     (expr.App _ (expr.App (expr.App (expr.Ident ident.pair)
-                                                     (expr.Ident (ident.Literal ?r1)))
-                                           (expr.Ident (ident.Literal ?r2))))] =>
-        let H := fresh in
-        pose proof (InversionExtra.Compilers.expr.invert_Z_cast2_Z_cast2
-                    (var:=fun _ => unit) (r1, r2)) as H;
-          cbn - [invert_expr.invert_Z_cast2] in H;
-          cbv [ident.literal] in H; rewrite H
-      end.
-      cbv [range_good]; rewrite zrange_lb by reflexivity; reflexivity. }
-    { (* snd *)
-      cbv [valid_snd_cast_bool].
-      lazymatch goal with
-      | |- context [invert_expr.invert_Z_cast2
-                     (expr.App _ (expr.App (expr.App (expr.Ident ident.pair)
-                                                     (expr.Ident (ident.Literal ?r1)))
-                                           (expr.Ident (ident.Literal ?r2))))] =>
-        let H := fresh in
-        pose proof (InversionExtra.Compilers.expr.invert_Z_cast2_Z_cast2
-                    (var:=fun _ => unit) (r1, r2)) as H;
-          cbn - [invert_expr.invert_Z_cast2] in H;
-          cbv [ident.literal] in H; rewrite H
-      end.
-      cbv [range_good]; rewrite zrange_lb by reflexivity; reflexivity. }
-    { (* lnot_modulo *)
-      apply Bool.andb_true_iff; split;
-        Z.ltb_to_lt; auto. }
+      is_bounded_by_bool_width_range; [ ].
     { (* binop *)
       match goal with
       | H : translate_binop ?i <> None
