@@ -21,6 +21,7 @@ Section Expr.
 
   (* for the second argument of shifts *)
   Definition width_range :=  r[0~>width-1]%zrange.
+  Definition bit_range := r[0~>1]%zrange.
 
   Local Notation Zcast r :=
     (@expr.App
@@ -39,16 +40,14 @@ Section Expr.
              (expr.Ident (@ident.Literal base.type.zrange r1)))
           (expr.Ident (@ident.Literal base.type.zrange r2)))).
 
-  (* Literal Zs or nats, and lists, do not need casts *)
+  (* Literal Zs, ranges, or nats, and lists, do not need casts *)
   Definition cast_exempt {var t} (e : @API.expr var t)
     : bool :=
     match e with
-    | (expr.Ident _ (ident.Literal base.type.Z z)) =>
-      true
-    | (expr.Ident _ (ident.Literal base.type.nat n)) =>
-      true
-    | expr.Var _ _ =>
-      true
+    | (expr.Ident _ (ident.Literal base.type.Z z)) => true
+    | (expr.Ident _ (ident.Literal base.type.nat n)) => true
+    | (expr.Ident _ (ident.Literal base.type.zrange r)) => true
+    | expr.Var _ _ => true
     | _ => false
     end.
 
@@ -133,15 +132,13 @@ Section Expr.
 
   Definition is_cast_literal_ident {t} (i : ident.ident t) : bool :=
     match i with
-    | ident.Literal base.type.zrange r =>
-      range_good r
+    | ident.Literal base.type.zrange r => true
     | _ => false
     end.
   Definition is_cast_literal
              {var t} (e : @API.expr var t) : bool :=
     match e with
-    | expr.Ident type_range i =>
-      is_cast_literal_ident i
+    | expr.Ident type_range i => is_cast_literal_ident i
     | _ => false
     end.
 
@@ -202,7 +199,7 @@ Section Expr.
 
   (* only require cast for the argument of (App f x) if:
      - f is not a cast
-     - f is not fst or snd
+     - f is not a tuple operation
      - f is not zselect (x may be cast to the range [0,1])
      - f is not mul_high (then, x = 2^width)
      - f is not (lnot_modulo _) (then x is allowed to be 2^width)
@@ -210,11 +207,15 @@ Section Expr.
   Definition require_cast_for_arg
              {var t} (e : @API.expr var t) : bool :=
     match e with
+    | expr.Ident _ (ident.fst _ _) => false
+    | expr.Ident _ (ident.snd _ _) => false
+    | expr.Ident _ (ident.pair _ _) => false
+    | expr.App _ _ (expr.Ident _ (ident.pair _ _)) _ => false
+    | expr.Ident _ ident.Z_cast => false
+    | expr.Ident _ ident.Z_cast2 => false
     | Zcast r => false
     | Zcast2 r1 r2 => false
     | expr.Ident _ ident.Z_mul_high => false
-    | expr.Ident _ (ident.fst _ _) => false
-    | expr.Ident _ (ident.snd _ _) => false
     | expr.Ident _ ident.Z_zselect => false
     | expr.App
         _ _ (expr.Ident _ ident.Z_lnot_modulo)
@@ -239,11 +240,28 @@ Section Expr.
     | _ => None
     end.
 
+  Definition rcast : rtype (type_range -> type_Z -> type_Z) :=
+    fun (r : Syntax.expr) (x : Syntax.expr) =>
+      (* We expect a mask to represent the range. If the mask is the same as the
+         word size, we can ignore it. *)
+      if literal_eqb r (2 ^ width - 1)
+      then x
+      else expr.op bopname.and x r.
+
+  Definition rcast2 : rtype (type_range2 -> type_ZZ -> type_ZZ) :=
+    fun (rr : Syntax.expr * Syntax.expr) (xy : Syntax.expr * Syntax.expr) =>
+      (* We expect a mask to represent the range. If the mask is the same as the
+         word size, we can ignore it. *)
+      let x := rcast (fst rr) (fst xy) in
+      let y := rcast (snd rr) (snd xy) in
+      (x, y).
+
   Definition translate_ident
            {t} (i : ident.ident t) : rtype t :=
     match i in ident.ident t0 return rtype t0 with
     | ident.fst _ _ => fst
     | ident.snd _ _ => snd
+    | ident.pair _ _ => fun x y => (x, y)
     | ident.Z_opp => fun x => expr.op bopname.sub (expr.literal 0) x
     | ident.List_nth_default base_Z => rnth_default
     | ident.Z_shiftr => rshiftr
@@ -252,8 +270,8 @@ Section Expr.
     | ident.Z_lnot_modulo => rlnot_modulo
     | ident.Z_zselect => rselect
     | ident.Z_mul_high => rmul_high
-    | ident.Z_cast => fun _ x => x
-    | ident.Z_cast2 => fun _ x => x
+    | ident.Z_cast => rcast
+    | ident.Z_cast2 => rcast2
     | i => match translate_binop i with
            | Some x => x
            | None => make_error _
@@ -272,6 +290,12 @@ Section Expr.
       else expr.literal z
     | (expr.Ident type_nat (ident.Literal base.type.nat n)) =>
       expr.literal (Z.of_nat n)
+    | (expr.Ident type_range (ident.Literal base.type.zrange r)) =>
+      (* Translate ranges into masks. Only ranges of the form [0~>2^n-1] should
+         get translated. *)
+      if ((lower r =? 0) && (upper r =? Z.ones (Z.log2 (upper r + 1))))%bool
+      then expr.literal (upper r)
+      else make_error _
     | expr.Var type_listZ x => map expr.var x
     | expr.Var type_Z x => expr.var x
     | expr.Var type_ZZ x => (expr.var (fst x), expr.var (snd x))

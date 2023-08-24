@@ -165,13 +165,19 @@ Section Expr.
                                        x)
                              (expr.Ident (ident.Literal (t:=base.type.Z) m)))
   | valid_zselect :
-      forall (c : API.expr type_Z) (x y : Z),
+      forall rc (c : API.expr type_Z) (x y : Z),
         x = 0 ->
         y = 2^width-1 ->
+        zrange_beq rc bit_range = true ->
         valid_expr false c ->
         valid_expr (t:=type_Z) false
                    (expr.App (expr.App
-                                (expr.App (expr.Ident ident.Z_zselect) c)
+                                (expr.App (expr.Ident ident.Z_zselect)
+                                          (expr.App
+                                             (expr.App
+                                                (expr.Ident ident.Z_cast)
+                                                (expr.Ident (ident.Literal (t:=base.type.zrange) rc)))
+                                             c))
                                 (expr.Ident (ident.Literal (t:=base.type.Z) x)))
                                 (expr.Ident (ident.Literal (t:=base.type.Z) y)))
   | valid_opp :
@@ -405,6 +411,33 @@ Section Expr.
     destruct (ZRange.reflect_zrange_eq r (max_range (width:=width))); congruence.
   Qed.
 
+  Lemma ones_of_pow2_minus1 n : 0 <= n -> Z.ones (Z.log2 (2 ^ n - 1 + 1)) = 2 ^ n - 1.
+  Proof.
+    intros. rewrite Z.sub_add, Z.log2_pow2, Z.ones_equiv by lia. lia.
+  Qed.
+
+  Lemma Z_land_1_r x : Z.land x 1 = x mod 2.
+  Proof.
+    change 1 with (2^1 - 1).
+    rewrite Land.Z.land_pow2 by lia.
+    reflexivity.
+  Qed.
+
+  Lemma mod_pow2_mod_2 x n : 0 < n -> (x mod 2 ^ n) mod 2 = x mod 2.
+  Proof.
+    intros. rewrite Modulo.Z.mod_pow_same_base_smaller with (m:=1) by lia.
+    reflexivity.
+  Qed.
+
+  Lemma mod_2_mod_pow2 x n : 0 < n -> (x mod 2) mod 2^n = x mod 2.
+  Proof.
+    intros.
+    destruct (Z.ltb_spec 1 n).
+    { rewrite Modulo.Z.mod_pow_same_base_larger with (b:=2) (n:=1) by lia.
+      reflexivity. }
+    { assert (n = 1) by lia; subst; rewrite Z.mod_mod by lia; reflexivity. }
+  Qed.
+
   (** TODO: Find a better place for this *)
   Hint Rewrite word.testbit_wrap : Ztestbit_full.
   Lemma translate_expr_correct' {t}
@@ -482,9 +515,15 @@ Section Expr.
                                ltac:(eassumption) ltac:(eassumption)).
       cbn [locally_equivalent equivalent_base rep.equiv rep.Z
                               locally_equivalent_nobounds_base] in *.
-      cbv [range_good max_range ident.literal] in *.
+      cbv [range_good rcast max_range ident.literal] in *.
       intros; progress reflect_beq_to_eq zrange_beq; subst.
-      rewrite ident.cast_out_of_bounds_simple_0_mod by lia.
+      pose proof word.width_pos.
+      repeat match goal with
+             | _ => progress cbn [upper lower andb literal_eqb invert_literal]
+             | _ => rewrite Z.eqb_refl by lia
+             | _ => rewrite ones_of_pow2_minus1 by lia
+             | _ => rewrite ident.cast_out_of_bounds_simple_0_mod by lia
+             end.
       cleanup.
       rewrite Z.sub_simpl_r.
       erewrite word.of_Z_inj_mod
@@ -496,34 +535,44 @@ Section Expr.
     { (* cast2 *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
-      cbv [range_good max_range ident.literal ident.cast2] in *.
+      cbv [range_good rcast rcast2 max_range ident.literal ident.cast2] in *.
       cbn [locally_equivalent equivalent_base rep.equiv rep.Z fst snd
                               locally_equivalent_nobounds_base] in *.
       cbn [Compilers.base_interp] in *.
       intros; progress reflect_beq_to_eq zrange_beq; subst.
       rewrite !ident.cast_out_of_bounds_simple_0_mod by lia.
       rewrite Z.sub_simpl_r.
-      destruct rc; repeat match goal with
-                          | _ => progress sepsimpl
-                          | _ => rewrite word.unsigned_of_Z
-                          | _ => eassumption
-                          | _ => eexists
-                          | _ =>
-                            erewrite word.of_Z_inj_mod
-                              by (rewrite Z.mod_mod by lia; reflexivity);
-                              solve [eauto]
-                          end. }
+      pose proof word.width_pos.
+      destruct rc;
+        repeat match goal with
+               | _ => progress sepsimpl
+               | _ => progress cbn [upper lower andb literal_eqb invert_literal]
+               | _ => rewrite Z.eqb_refl by lia
+               | _ => rewrite ones_of_pow2_minus1 by lia
+               | _ => rewrite ident.cast_out_of_bounds_simple_0_mod by lia
+               | _ => rewrite word.unsigned_of_Z
+               | _ => eassumption
+               | _ => eexists
+               | _ =>
+                 erewrite word.of_Z_inj_mod
+                   by (rewrite Z.mod_mod by lia; reflexivity);
+                   solve [eauto]
+               end. }
     { (* fst then cast *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
-      cbv [range_good max_range ident.literal ident.cast2] in *.
+      cbv [range_good max_range ident.literal ident.cast2 rcast rcast2] in *.
       cbn [locally_equivalent equivalent_base rep.equiv rep.Z fst snd
                               locally_equivalent_nobounds_base] in *.
       intros; progress reflect_beq_to_eq zrange_beq; subst.
-      rewrite !ident.cast_out_of_bounds_simple_0_mod by lia.
-      rewrite Z.sub_simpl_r.
+      pose proof word.width_pos.
       repeat match goal with
+             | _ => progress cbn [upper lower andb literal_eqb invert_literal]
              | _ => progress sepsimpl
+             | _ => rewrite Z.eqb_refl by lia
+             | _ => rewrite ones_of_pow2_minus1 by lia
+             | _ => rewrite ident.cast_out_of_bounds_simple_0_mod by lia
+             | _ => rewrite Z.sub_simpl_r
              | _ => rewrite word.unsigned_of_Z
              | _ => eassumption
              | _ => eexists
@@ -535,14 +584,18 @@ Section Expr.
     { (* snd then cast *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
-      cbv [range_good max_range ident.literal ident.cast2] in *.
+      cbv [range_good max_range ident.literal ident.cast2 rcast rcast2] in *.
       cbn [locally_equivalent equivalent_base rep.equiv rep.Z fst snd
                               locally_equivalent_nobounds_base] in *.
       intros; progress reflect_beq_to_eq zrange_beq; subst.
-      rewrite !ident.cast_out_of_bounds_simple_0_mod by lia.
-      rewrite Z.sub_simpl_r.
+      pose proof word.width_pos.
       repeat match goal with
+             | _ => progress cbn [upper lower andb literal_eqb invert_literal]
              | _ => progress sepsimpl
+             | _ => rewrite Z.eqb_refl by lia
+             | _ => rewrite ones_of_pow2_minus1 by lia
+             | _ => rewrite ident.cast_out_of_bounds_simple_0_mod by lia
+             | _ => rewrite Z.sub_simpl_r
              | _ => rewrite word.unsigned_of_Z
              | _ => eassumption
              | _ => eexists
@@ -760,46 +813,49 @@ Section Expr.
              locally_equivalent_nobounds_base
              locally_equivalent equivalent
              equivalent_base rep.equiv rep.Z ident.literal] in *.
-      cbv [WeakestPrecondition.dexpr ident.literal] in *.
+      intros; progress reflect_beq_to_eq zrange_beq; subst.
+      cbv [WeakestPrecondition.dexpr ident.literal bit_range rcast] in *.
       cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
                                     Semantics.interp_binop].
       sepsimpl_hyps.
-      eapply Proper_expr; [ | eassumption ].
-      repeat intro; subst.
-      rewrite Zselect.Z.zselect_correct.
-      apply word.unsigned_inj.
-      rewrite word.unsigned_add, word.unsigned_eqb.
-      rewrite <-Bool.pull_bool_if, !word.unsigned_of_Z.
-      cbv [word.wrap]. Z.rewrite_mod_small.
       pose proof word.width_pos.
-      break_match; subst; Z.rewrite_mod_small;
-        Z.ltb_to_lt; try lia; pull_Zmod;
-          autorewrite with zsimplify_fast;
-          try reflexivity;
-          lazymatch goal with
-          | H : 0 mod _ <> 0 |- _ =>
-            rewrite Z.mod_0_l in H; lia
-          | _ => idtac
-          end; [ | ].
-      {
-        Search WeakestPrecondition.expr.
-        apply dexpr_expr in IHvalid_expr.
-        sepsimpl.
-        Search context_equiv.
-        (* this won't work. translate_expr will still see the cast and require a cast on its argument because the range is bad.
-
-         we cooooould always add a special case for [0~>1] casts that just ands with 1. Then could pass carries for add_get_carry through expr, and this would also save all the trouble with tuples. *)
-        Print context_equiv.
-        Print equiv3.
-        Print equivalent_base.
-        destruct IHvalid_expr.
-
-      }
-      {
-        rewrite Z.mod_opp_l_nz
-          by (rewrite ?Z.mod_1_l; auto with zarith).
-        Z.rewrite_mod_small.
-        reflexivity. } }
+      repeat match goal with
+             | _ => progress cbn [upper lower andb literal_eqb invert_literal]
+             | _ => rewrite Z.eqb_refl by lia
+             | _ => rewrite ones_of_pow2_minus1 by lia
+             | _ => rewrite ident.cast_out_of_bounds_simple_0_mod by lia
+             end.
+      cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
+                                    Semantics.interp_binop].
+      rewrite Zselect.Z.zselect_correct.
+      replace (1 + 1) with 2 by lia.
+      break_match; Z.ltb_to_lt;
+        cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
+                                      Semantics.interp_binop].
+      all:eapply Proper_expr; [ | eassumption ].
+      all:repeat intro; subst.
+      all:apply word.unsigned_inj.
+      all:repeat lazymatch goal with
+                 | |- context [word.wrap _] => progress cbv [word.wrap]
+                 | |- context [word.unsigned (word.add _ _)] => rewrite word.unsigned_add by lia
+                 | |- context [word.unsigned (word.and _ _)] => rewrite word.unsigned_and by lia
+                 | |- context [word.eqb _ _] => rewrite word.unsigned_eqb by lia
+                 | |- context [word.unsigned (word.of_Z 0)] => rewrite word.unsigned_of_Z_0 by lia
+                 | |- context [word.unsigned (word.of_Z 1)] => rewrite word.unsigned_of_Z_1 by lia
+                 | |- context [word.unsigned (word.of_Z (-1))] => rewrite word.unsigned_of_Z_minus1 by lia
+                 | |- context [word.unsigned (word.of_Z _)] => rewrite word.unsigned_of_Z by lia
+                 | |- context [word.unsigned (if _ then _ else _)] => rewrite <-Bool.pull_bool_if by lia
+                 | |- context [(_ mod 2) mod (2 ^ _)] => rewrite mod_2_mod_pow2 by lia
+                 | |- context [(_ mod (2 ^ _)) mod 2] => rewrite mod_pow2_mod_2 by lia
+                 | |- context [_ ^ 1] => rewrite Z.pow_1_r by lia
+                 | |- context [Z.land _ 1] => rewrite Z_land_1_r by lia
+                 | |- context [Z.ones] => rewrite Z.ones_equiv
+                 | |- context [?n mod ?n] => rewrite Z.mod_same by lia
+                 | |- context [Z.pred ?n + 1] => replace (Z.pred n + 1) with n by lia
+                 | H : 1 = 2 ^ width - 1 |- _ => replace width with 1 in * by lia; clear H
+                 | _ => progress break_match; Z.ltb_to_lt; try lia; autorewrite with zsimplify_fast
+                 end.
+      all:reflexivity. }
     { (* opp *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
