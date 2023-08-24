@@ -19,7 +19,10 @@ Section Expr.
   Definition max_range : zrange := {| lower := 0; upper := 2 ^ width - 1 |}.
   Definition range_good (r : zrange) : bool := zrange_beq r max_range.
   Definition range_maskable (r : zrange) : bool :=
-    (lower r =? 0) && (upper r =? Z.ones (Z.log2 (upper r) + 1)).
+    (lower r =? 0)
+    && (0 <? upper r)
+    && (upper r =? Z.ones (Z.log2 (upper r) + 1))
+    && (Z.log2 (upper r) <? width).
 
   (* for the second argument of shifts *)
   Definition width_range :=  r[0~>width-1]%zrange.
@@ -280,6 +283,11 @@ Section Expr.
            end
     end.
 
+  Definition range_to_mask (r : zrange) : rtype type_range :=
+    if range_maskable r
+    then expr.literal (upper r)
+    else make_error _.
+
   Definition translate_cast_exempt {t}
              (require_in_bounds : bool)
              (e : @API.expr ltype t) : rtype t :=
@@ -293,11 +301,7 @@ Section Expr.
     | (expr.Ident type_nat (ident.Literal base.type.nat n)) =>
       expr.literal (Z.of_nat n)
     | (expr.Ident type_range (ident.Literal base.type.zrange r)) =>
-      (* Translate ranges into masks. Only ranges of the form [0~>2^n-1] should
-         get translated. *)
-      if range_maskable r
-      then expr.literal (upper r)
-      else make_error _
+      range_to_mask r
     | expr.Var type_listZ x => map expr.var x
     | expr.Var type_Z x => expr.var x
     | expr.Var type_ZZ x => (expr.var (fst x), expr.var (snd x))

@@ -45,7 +45,8 @@ Section Expr.
   | valid_cast1 :
       forall (rc : bool) r x,
         valid_expr false x ->
-        range_maskable r = true ->
+        range_maskable (width:=width) r = true ->
+        (if rc then range_good (width:=width) r = true else True) ->
         valid_expr rc
                    (expr.App
                       (expr.App (expr.Ident ident.Z_cast)
@@ -53,8 +54,10 @@ Section Expr.
   | valid_cast2 :
       forall (rc : bool) r1 r2 x,
         valid_expr false x ->
-        range_maskable r1 = true ->
-        range_maskable r2 = true ->
+        range_maskable (width:=width) r1 = true ->
+        range_maskable (width:=width) r2 = true ->
+        (if rc then range_good (width:=width) r1 = true else True) ->
+        (if rc then range_good (width:=width) r2 = true else True) ->
         valid_expr rc
                    (expr.App
                       (expr.App (expr.Ident ident.Z_cast2)
@@ -438,6 +441,63 @@ Section Expr.
     { assert (n = 1) by lia; subst; rewrite Z.mod_mod by lia; reflexivity. }
   Qed.
 
+  Lemma wrap_rcast r x :
+    range_maskable (width:=width) r = true ->
+    word.unsigned (word.of_Z (word:=word) (ident.cast r x)) = ident.cast r x.
+  Admitted.
+
+  Lemma expr_rcast_range_to_mask (m : mem) (l : locals) r x y :
+    range_maskable (width:=width) r = true ->
+    WeakestPrecondition.dexpr m l x (word.of_Z y) ->
+    WeakestPrecondition.dexpr m l (rcast (range_to_mask r) x)
+                              (word.of_Z (word:=word) (ident.cast r y)).
+  Proof.
+    intros; cbv [rcast range_to_mask].
+    lazymatch goal with | H : range_maskable ?r = true |- _ => rewrite H end.
+    cbn [literal_eqb invert_literal].
+    cbv [range_maskable] in *; intros.
+    repeat lazymatch goal with
+           | H : (_ && _)%bool = true |- _ => apply Bool.andb_true_iff in H; destruct H
+           | H : zrange_beq ?r1 ?r2 |- _ => progress reflect_beq_to_eq zrange_beq; subst
+           | _ => progress Z.ltb_to_lt
+           end.
+    destruct r as [rl ru]; cbn [lower upper] in *; subst.
+    rewrite ident.cast_out_of_bounds_simple_0_mod by lia.
+    assert (ru < 2 ^ width).
+    { lazymatch goal with H : ru = Z.ones _ |- _ => rewrite H end.
+      rewrite Z.ones_equiv. apply Z.lt_pred_le.
+      apply Z.pow_le_mono_r; lia. }
+    pose proof (Z.log2_nonneg ru).
+    break_match; Z.ltb_to_lt; subst;
+      cbv [WeakestPrecondition.dexpr ident.literal] in *;
+      cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
+                                    Semantics.interp_binop].
+    { rewrite Z.sub_simpl_r.
+      eapply Proper_expr; [ | eassumption ].
+      repeat intro; subst.
+      apply word.of_Z_inj_mod; Z.rewrite_mod_small.
+      reflexivity. }
+    {
+      cbv [WeakestPrecondition.literal dlet.dlet].
+      eapply Proper_expr; [ | eassumption ].
+      repeat intro; subst.
+      apply word.unsigned_inj.
+      rewrite word.unsigned_and, !word.unsigned_of_Z.
+      cbv [word.wrap].
+      Z.rewrite_mod_small.
+      lazymatch goal with H : ru = Z.ones _ |- _ => rewrite H end.
+      rewrite Z.land_ones by lia.
+      rewrite Z.ones_equiv.
+      lazymatch goal with
+      | |- context [Z.pred ?x + 1] => replace (Z.pred x + 1) with x by lia
+      end.
+      destruct (Z.eq_dec (Z.log2 ru + 1) width).
+      { subst. rewrite !Z.mod_mod; lia. }
+      { rewrite !Modulo.Z.mod_pow_same_base_larger by lia.
+        rewrite !Modulo.Z.mod_pow_same_base_smaller by lia.
+        reflexivity. } }
+  Qed.
+
   (** TODO: Find a better place for this *)
   Hint Rewrite word.testbit_wrap : Ztestbit_full.
   Lemma translate_expr_correct' {t}
@@ -515,49 +575,38 @@ Section Expr.
                                ltac:(eassumption) ltac:(eassumption)).
       cbn [locally_equivalent equivalent_base rep.equiv rep.Z
                               locally_equivalent_nobounds_base] in *.
-      cbv [range_good rcast max_range ident.literal] in *.
-      intros; progress reflect_beq_to_eq zrange_beq; subst.
-      pose proof word.width_pos.
-      repeat match goal with
-             | _ => progress cbn [upper lower andb literal_eqb invert_literal]
-             | _ => rewrite Z.eqb_refl by lia
-             | _ => rewrite ones_of_pow2_minus1 by lia
-             | _ => rewrite ident.cast_out_of_bounds_simple_0_mod by lia
-             end.
-      cleanup.
-      rewrite Z.sub_simpl_r.
-      erewrite word.of_Z_inj_mod
-        by (rewrite Z.mod_mod by lia; reflexivity).
-      destruct rc; try eexists; sepsimpl;
-        try apply Z.mod_pos_bound; try lia;
-          eauto; [ ].
-      rewrite word.unsigned_of_Z. reflexivity. }
+      cbv [range_good max_range ident.literal] in *.
+      break_match; break_match_hyps;
+        repeat lazymatch goal with
+               | H : (_ && _)%bool = true |- _ => apply Bool.andb_true_iff in H; destruct H
+               | H : zrange_beq ?r1 ?r2 = true |- _ => progress reflect_beq_to_eq zrange_beq; subst
+               | _ => progress Z.ltb_to_lt
+               end; [ | ].
+      { eexists; sepsimpl; eauto using wrap_rcast, expr_rcast_range_to_mask. }
+      { apply expr_rcast_range_to_mask; auto. } }
     { (* cast2 *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
-      cbv [range_good rcast rcast2 max_range ident.literal ident.cast2] in *.
+      cbv [range_good rcast2 max_range ident.literal ident.cast2] in *.
       cbn [locally_equivalent equivalent_base rep.equiv rep.Z fst snd
                               locally_equivalent_nobounds_base] in *.
       cbn [Compilers.base_interp] in *.
-      intros; progress reflect_beq_to_eq zrange_beq; subst.
-      rewrite !ident.cast_out_of_bounds_simple_0_mod by lia.
-      rewrite Z.sub_simpl_r.
-      pose proof word.width_pos.
-      destruct rc;
-        repeat match goal with
+      break_match; break_match_hyps;
+        repeat lazymatch goal with
+               | H : (_ && _)%bool = true |- _ => apply Bool.andb_true_iff in H; destruct H; Z.ltb_to_lt
+               | H : _ /\ _ |- _ => destruct H
+               | H : zrange_beq ?r1 ?r2 = true |- _ => progress reflect_beq_to_eq zrange_beq; subst
+               | |- WeakestPrecondition.dexpr _ _ (rcast (range_to_mask _) _) _ =>
+                 apply expr_rcast_range_to_mask; auto; eassumption
+               | |- Separation.sep _ _ map.empty => apply sep_empty_iff
+               | |- _ /\ _ => split
+               | |- Lift1Prop.ex1 _ _ => eexists
                | _ => progress sepsimpl
-               | _ => progress cbn [upper lower andb literal_eqb invert_literal]
-               | _ => rewrite Z.eqb_refl by lia
-               | _ => rewrite ones_of_pow2_minus1 by lia
-               | _ => rewrite ident.cast_out_of_bounds_simple_0_mod by lia
-               | _ => rewrite word.unsigned_of_Z
-               | _ => eassumption
-               | _ => eexists
-               | _ =>
-                 erewrite word.of_Z_inj_mod
-                   by (rewrite Z.mod_mod by lia; reflexivity);
-                   solve [eauto]
-               end. }
+               end; [ | ].
+      all:rewrite ident.cast_out_of_bounds_simple_0_mod by lia.
+      all:rewrite Z.sub_simpl_r by lia.
+      all:rewrite word.unsigned_of_Z; cbv [word.wrap].
+      all:Z.rewrite_mod_small; reflexivity. }
     { (* fst then cast *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
