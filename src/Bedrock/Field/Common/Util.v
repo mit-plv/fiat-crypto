@@ -27,6 +27,78 @@ Import ListNotations.
 
 Import AbstractInterpretation.Compilers.
 
+Section invert_expr.
+  (* TODO: move somewhere appropriate in the rewriter *)
+  Lemma invert_App_Z_cast_Some {var} e r x :
+    invert_expr.invert_App_Z_cast (var:=var) e = Some (r, x) ->
+    e = (expr.App (expr.App (expr.Ident ident.Z_cast)
+                            (expr.Ident (ident.Literal (t:=base.type.zrange) r))) x).
+  Proof.
+    cbv [invert_expr.invert_App_Z_cast Crypto.Util.Option.bind].
+    lazymatch goal with
+    | |- context [invert_expr.invert_App ?x] =>
+      let H := fresh in
+      destruct (invert_expr.invert_App x) as [ [? [? ?] ] | ] eqn:H;
+        [ | congruence ];
+        apply Inversion.Compilers.expr.invert_App_Some in H
+    end.
+    cbn [fst snd projT2] in *; subst.
+    break_match; try congruence; [ ]. intros.
+    repeat lazymatch goal with
+           | H : Some _ = Some _ |- _ => inversion H; subst; clear H
+           | H : invert_expr.invert_Z_cast _ = Some _ |- _ =>
+             apply InversionExtra.Compilers.expr.invert_Z_cast_Some_Z in H;
+               subst
+           end.
+    reflexivity.
+  Qed.
+
+  (* TODO: move somewhere appropriate in the rewriter *)
+  Lemma invert_App_Z_cast2_Some {var} e r1 r2 x :
+    invert_expr.invert_App_Z_cast2 (var:=var) e = Some (r1, r2, x) ->
+    e = (expr.App (expr.App (expr.Ident ident.Z_cast2)
+                            (expr.App (expr.App (expr.Ident ident.pair)
+                                                (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                                      (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x).
+  Proof.
+    cbv [invert_expr.invert_App_Z_cast2 Crypto.Util.Option.bind].
+    lazymatch goal with
+    | |- context [invert_expr.invert_App ?x] =>
+      let H := fresh in
+      destruct (invert_expr.invert_App x) as [ [? [? ?] ] | ] eqn:H;
+        [ | congruence ];
+        apply Inversion.Compilers.expr.invert_App_Some in H
+    end.
+    cbn [fst snd projT2] in *; subst.
+    break_match; try congruence; [ ]. intros.
+    repeat lazymatch goal with
+           | H : Some _ = Some _ |- _ => inversion H; subst; clear H
+           | H : invert_expr.invert_Z_cast2 _ = Some _ |- _ =>
+             apply InversionExtra.Compilers.expr.invert_Z_cast2_Some_ZZ in H;
+               subst
+           end.
+    reflexivity.
+  Qed.
+
+  (* TODO: move somewhere appropriate in the rewriter *)
+  Lemma invert_App_Z_cast_eq_Some {var} x r :
+    invert_expr.invert_App_Z_cast (var:=var)
+      (expr.App (expr.App (expr.Ident ident.Z_cast)
+                          (expr.Ident (ident.Literal r)))
+                x) = Some (r, x).
+  Proof. reflexivity. Qed.
+
+  (* TODO: move somewhere appropriate in the rewriter *)
+  Lemma invert_App_Z_cast2_eq_Some {var} x r1 r2 :
+    invert_expr.invert_App_Z_cast2 (var:=var)
+      (expr.App (expr.App (expr.Ident ident.Z_cast2)
+                          (expr.App (expr.App (expr.Ident ident.pair)
+                                              (expr.Ident (ident.Literal r1)))
+                                              (expr.Ident (ident.Literal r2))))
+                x) = Some (r1, r2, x).
+  Proof. reflexivity. Qed.
+End invert_expr.
+
 Section Maps.
   Local Hint Mode map.map - - : typeclass_instances.
   Context {key value} {key_eqb}

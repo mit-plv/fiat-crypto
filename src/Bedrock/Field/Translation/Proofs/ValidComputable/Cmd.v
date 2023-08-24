@@ -8,6 +8,7 @@ Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Map.Interface.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Bedrock.Field.Common.Tactics.
+Require Import Crypto.Bedrock.Field.Common.Util.
 Require Import Crypto.Bedrock.Field.Translation.Cmd.
 Require Import Crypto.Bedrock.Field.Translation.Proofs.Expr.
 Require Import Crypto.Bedrock.Field.Translation.Proofs.Cmd.

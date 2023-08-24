@@ -45,7 +45,7 @@ Section Expr.
   | valid_cast1 :
       forall (rc : bool) r x,
         valid_expr false x ->
-        range_good (width:=width) r = true ->
+        range_maskable r = true ->
         valid_expr rc
                    (expr.App
                       (expr.App (expr.Ident ident.Z_cast)
@@ -53,8 +53,8 @@ Section Expr.
   | valid_cast2 :
       forall (rc : bool) r1 r2 x,
         valid_expr false x ->
-        range_good (width:=width) r1 = true ->
-        range_good (width:=width) r2 = true ->
+        range_maskable r1 = true ->
+        range_maskable r2 = true ->
         valid_expr rc
                    (expr.App
                       (expr.App (expr.Ident ident.Z_cast2)
@@ -66,7 +66,8 @@ Section Expr.
   | valid_fst_cast :
       forall (x : API.expr type_ZZ) r1 r2,
         valid_expr false x ->
-        range_good (width:=width) r1 = true ->
+        (* TODO: either need to add condition that r1 can be made into a mask,
+           or change cast case to specify masks instead of "good" *)
         (* it's okay to have a cast with a bad range on the non-selected tuple element *)
         valid_expr false
                    (expr.App
@@ -81,7 +82,6 @@ Section Expr.
   | valid_snd_cast :
       forall (x : API.expr type_ZZ) r1 r2,
         valid_expr false x ->
-        range_good (width:=width) r2 = true ->
         (* it's okay to have a cast with a bad range on the non-selected tuple element *)
         valid_expr false
                    (expr.App
@@ -564,7 +564,6 @@ Section Expr.
       cbv [range_good max_range ident.literal ident.cast2 rcast rcast2] in *.
       cbn [locally_equivalent equivalent_base rep.equiv rep.Z fst snd
                               locally_equivalent_nobounds_base] in *.
-      intros; progress reflect_beq_to_eq zrange_beq; subst.
       pose proof word.width_pos.
       repeat match goal with
              | _ => progress cbn [upper lower andb literal_eqb invert_literal]

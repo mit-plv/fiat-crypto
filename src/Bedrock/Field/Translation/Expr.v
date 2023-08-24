@@ -18,6 +18,8 @@ Section Expr.
   Existing Instance Types.rep.listZ_local. (* local list representation *)
   Definition max_range : zrange := {| lower := 0; upper := 2 ^ width - 1 |}.
   Definition range_good (r : zrange) : bool := zrange_beq r max_range.
+  Definition range_maskable (r : zrange) : bool :=
+    (lower r =? 0) && (upper r =? Z.ones (Z.log2 (upper r) + 1)).
 
   (* for the second argument of shifts *)
   Definition width_range :=  r[0~>width-1]%zrange.
@@ -293,7 +295,7 @@ Section Expr.
     | (expr.Ident type_range (ident.Literal base.type.zrange r)) =>
       (* Translate ranges into masks. Only ranges of the form [0~>2^n-1] should
          get translated. *)
-      if ((lower r =? 0) && (upper r =? Z.ones (Z.log2 (upper r + 1))))%bool
+      if range_maskable r
       then expr.literal (upper r)
       else make_error _
     | expr.Var type_listZ x => map expr.var x

@@ -62,6 +62,7 @@ Section Field.
     Local Notation eVar := Language.Compilers.expr.Var.
     Local Notation eLetIn := Language.Compilers.expr.LetIn.
     Local Notation eIdent := Language.Compilers.expr.Ident.
+    Set Printing Depth 100000.
     pose add_op.
     cbn [add_op p224_ops] in c.
 
@@ -170,10 +171,53 @@ Section Field.
              Cmd.is_cons_ident
              Cmd.is_nil_ident].
       repeat lazymatch goal with
+             | |- context [(Expr.valid_expr_bool true ?x || Cmd.valid_special_bool ?x)%bool] =>
+                          first [ change (Expr.valid_expr_bool true x) with true; cbn [orb]
+                                | change (Cmd.valid_special_bool x) with true; rewrite Bool.orb_true_r ]
              | |- context [Expr.valid_expr_bool true ?x] =>
                change (Expr.valid_expr_bool true x) with true
              end.
       cbn [orb andb].
+      match goal with
+      | |- context [Cmd.valid_special_bool ?x] =>
+        match x with
+        | context [ident.Z_add_with_get_carry] =>
+          assert (Cmd.valid_special_bool x = true)
+        end
+      end.
+      { cbv [Cmd.valid_special_bool].
+        cbv [invert_expr.invert_App_cast].
+        rewrite Util.invert_App_Z_cast2_eq_Some.
+        cbn [fst snd].
+        lazymatch goal with
+        | |- context [Cmd.valid_special3_bool ?x ?r] =>
+          change (Cmd.valid_special3_bool x r) with false
+        end.
+        cbn [orb].
+        cbv [Cmd.valid_special4_bool].
+        rewrite Cmd.invert_AppIdent4_eq_Some.
+        cbv [Cmd.valid_ident_special4].
+        cbn [fst snd].
+        cbv [Cmd.is_add_with_get_carry_ident].
+        cbv [Expr.is_literalz].
+        rewrite Z.eqb_refl.
+        repeat lazymatch goal with
+               | |- context [Expr.valid_expr_bool true ?x] =>
+                 change (Expr.valid_expr_bool true x) with true
+               end.
+        cbn [andb].
+        cbv [Cmd.is_word_and_carry_range Expr.range_good Cmd.is_carry_range].
+        cbn [fst snd]. rewrite !ZRange.zrange_lb by reflexivity.
+        cbn [andb].
+        cbv [Cmd.valid_carry_bool].
+        rewrite Util.invert_App_Z_cast_eq_Some.
+        cbn [fst snd].
+        cbv [Cmd.is_carry_range].
+        rewrite !ZRange.zrange_lb by reflexivity.
+        (* same issue; snd has bad range *)
+      }
+        
+      rewrite !Bool.orb_false_r.
       lazymatch goal with
       | |- context [Expr.valid_expr_bool true ?x] =>
         pose (e:=Expr.valid_expr_bool true x);
@@ -190,11 +234,11 @@ Section Field.
                  apply Expr.valid_var_z
                | _ => apply Expr.valid_binop; [ cbn; congruence | | ]
                end.
-        Print Expr.valid_expr.
-        (* zselect recursively calls valid_expr, which now fails because of the [0,1] bound *)
-      cbv in e.
-    Locate begin_derive_bedrock2_func.
-    Time derive_bedrock2_func add_op.
+        apply Expr.valid_zselect; try reflexivity; [ ].
+        apply Expr.valid_snd_cast.
+        (* valid_snd_cast requires that the range is good, but it's [0,1] *)
+
+   Time derive_bedrock2_func add_op.
   Qed.
   Print p224_add.
 
