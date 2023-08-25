@@ -143,6 +143,7 @@ Section Field.
                         (p224_add :: functions))
          As p224_add_correct.
   Proof.
+   Time derive_bedrock2_func add_op.
     begin_derive_bedrock2_func.
     4:{
       eapply Func.valid_func_bool_iff.
@@ -209,6 +210,7 @@ Section Field.
         cbn [fst snd]. rewrite !ZRange.zrange_lb by reflexivity.
         cbn [andb].
         cbv [Cmd.valid_carry_bool].
+        Locate valid_carry_bool.
         (* problem is that valid_carry_bool only matches cast, while it should also accept a 0/1 literal *)
       }
         

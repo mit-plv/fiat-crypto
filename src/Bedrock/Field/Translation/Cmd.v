@@ -133,8 +133,8 @@ Section Cmd.
     (type.interp (Language.Compilers.base.interp (fun _ => ZRange.zrange)) t).
 
   (* Translate 3-argument special functions. *)
-  Definition translate_ident_special3 {var a b c d} (i : ident (a -> b -> c -> d))
-    : API.expr (var:=var) a -> API.expr b -> API.expr c
+  Definition translate_ident_special3 {a b c d} (i : ident (a -> b -> c -> d))
+    : API.expr (var:=ltype) a -> API.expr b -> API.expr c
       -> range_for_type d -> option (nat -> nat * ltype d * Syntax.cmd.cmd)
     := match i in ident t return
              API.expr (type.domain t) ->
@@ -180,9 +180,30 @@ Section Cmd.
        | _ => fun _ _ _ _ => None
        end.
 
+  (* Get the value of a carry argument, which may be either an expression casted
+     to the range [0,1] or a literal 0 or 1. *)
+  Definition translate_carry (c : @API.expr ltype type_Z) : rtype type_Z :=
+      match invert_expr.invert_App_Z_cast c with
+      | Some (r, c) =>
+        if is_carry_range r
+        then
+          let c := translate_expr (t:=type_Z) false c in
+          (* need to add an and with 1 to preserve the cast *)
+          Syntax.expr.op Syntax.bopname.and c (Syntax.expr.literal 1)
+        else make_error _
+      | None =>
+        match invert_expr.invert_Literal (invertIdent:=Compilers.invertIdent) c with
+        | Some v =>
+          if ((0 <=? v) && (v <? 2))%bool
+          then Syntax.expr.literal v
+          else make_error _
+        | None => make_error _
+        end
+      end.
+
   (* Translate 4-argument special functions. *)
-  Definition translate_ident_special4 {var a b c d e} (i : ident (a -> b -> c -> d -> e))
-    : API.expr (var:=var) a -> API.expr b -> API.expr c -> API.expr d
+  Definition translate_ident_special4 {a b c d e} (i : ident (a -> b -> c -> d -> e))
+    : API.expr (var:=ltype) a -> API.expr b -> API.expr c -> API.expr d
       -> range_for_type e
       -> option (nat -> nat * ltype e * Syntax.cmd.cmd)
     := match i in ident t return
@@ -198,45 +219,33 @@ Section Cmd.
        | ident.Z_add_with_get_carry =>
          fun s c x y out_range =>
            (s <- invert_expr.invert_Literal s;
-           rc <- invert_expr.invert_App_Z_cast c;
-           if is_carry_range (fst rc)
+           if (range_good (width:=width) (fst out_range) && is_carry_range (snd out_range))%bool
            then
-             if (range_good (width:=width) (fst out_range) && is_carry_range (snd out_range))%bool
+             if s =? 2 ^ width
              then
-               if s =? 2 ^ width
-               then
-                 let c := translate_expr false (snd rc) in
-                 (* For carries we need to preserve the cast, because the proofs don't track bounds. *)
-                 let c := Syntax.expr.op Syntax.bopname.and c (Syntax.expr.literal 1) in
-                 let x := translate_expr true x in
-                 let y := translate_expr true y in
-                 Some (fun nextn =>
-                         let sum := varname_gen nextn in
-                         let carry := varname_gen (S nextn) in
-                         (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx [x; y; c]))
-               else None
+               let c := translate_carry c in
+               let x := translate_expr true x in
+               let y := translate_expr true y in
+               Some (fun nextn =>
+                       let sum := varname_gen nextn in
+                       let carry := varname_gen (S nextn) in
+                       (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx [x; y; c]))
              else None
            else None)%option
        | ident.Z_sub_with_get_borrow =>
          fun s b x y out_range =>
            (s <- invert_expr.invert_Literal s;
-           rb <- invert_expr.invert_App_Z_cast b;
-           if is_carry_range (fst rb)
+           if (range_good (width:=width) (fst out_range) && is_carry_range (snd out_range))%bool
            then
-             if (range_good (width:=width) (fst out_range) && is_carry_range (snd out_range))%bool
+             if s =? 2 ^ width
              then
-               if s =? 2 ^ width
-               then
-                 let b := translate_expr false (snd rb) in
-                 (* For carries we need to preserve the cast, because the proofs don't track bounds. *)
-                 let b := Syntax.expr.op Syntax.bopname.and b (Syntax.expr.literal 1) in
-                 let x := translate_expr true x in
-                 let y := translate_expr true y in
-                 Some (fun nextn =>
-                         let diff := varname_gen nextn in
-                         let borrow := varname_gen (S nextn) in
-                         (2%nat, (diff, borrow), Syntax.cmd.call [diff;borrow] sub_borrowx [x; y; b]))
-               else None
+               let b := translate_carry b in
+               let x := translate_expr true x in
+               let y := translate_expr true y in
+               Some (fun nextn =>
+                       let diff := varname_gen nextn in
+                       let borrow := varname_gen (S nextn) in
+                       (2%nat, (diff, borrow), Syntax.cmd.call [diff;borrow] sub_borrowx [x; y; b]))
              else None
            else None)%option
        | _ => fun _ _ _ _ _ => None

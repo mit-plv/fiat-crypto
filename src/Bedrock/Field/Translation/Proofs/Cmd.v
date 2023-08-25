@@ -43,6 +43,21 @@ Section Cmd.
   Local Existing Instance Types.rep.Z.
   Local Existing Instance Types.rep.listZ_local.
 
+  (* Carries may be literals or any valid expression cast to the range (0,1). *)
+  Inductive valid_carry : @API.expr (fun _ => unit) type_Z -> Prop :=
+  | valid_carry_Literal :
+      forall v : Z,
+        0 <= v < 2 ->
+        valid_carry (expr.Ident (ident.Literal (t:=base.type.Z) v))
+  | valid_carry_cast :
+      forall rc (c : API.expr type_Z),
+        is_carry_range rc = true ->
+        valid_expr false c ->
+        valid_carry (expr.App (expr.App (expr.Ident ident.Z_cast)
+                                        (expr.Ident (ident.Literal (t:=base.type.zrange) rc)))
+                              c)
+  .
+
   Inductive valid_cmd :
     forall {t}, @API.expr (fun _ => unit) t -> Prop :=
   (* N.B. LetIn is split into cases so that only pairs of type_base and type_base are
@@ -98,12 +113,11 @@ Section Cmd.
                                 (expr.Ident (ident.Literal (t:=base.type.Z) s)))
                       x) y)) f)
   | valid_add_with_get_carry :
-      forall t rc r1 r2 (s : Z) c x y f,
+      forall t r1 r2 (s : Z) c x y f,
         range_good (width:=width) r1 = true ->
         is_carry_range r2 = true ->
-        is_carry_range rc = true ->
         s = 2 ^ width ->
-        valid_expr false c ->
+        valid_carry c ->
         valid_expr true x ->
         valid_expr true y ->
         valid_cmd (f tt) ->
@@ -122,9 +136,7 @@ Section Cmd.
                       (expr.App
                          (expr.App (expr.Ident ident.Z_add_with_get_carry)
                                    (expr.Ident (ident.Literal (t:=base.type.Z) s)))
-                         (expr.App (expr.App (expr.Ident ident.Z_cast)
-                                             (expr.Ident (ident.Literal (t:=base.type.zrange) rc)))
-                                   c))
+                         c)
                       x) y)) f)
   | valid_sub_get_borrow :
       forall t r1 r2 (s : Z) x y f,
@@ -150,12 +162,11 @@ Section Cmd.
                                 (expr.Ident (ident.Literal (t:=base.type.Z) s)))
                       x) y)) f)
   | valid_sub_with_get_borrow :
-      forall t rc r1 r2 (s : Z) c x y f,
+      forall t r1 r2 (s : Z) c x y f,
         range_good (width:=width) r1 = true ->
         is_carry_range r2 = true ->
-        is_carry_range rc = true ->
         s = 2 ^ width ->
-        valid_expr false c ->
+        valid_carry c ->
         valid_expr true x ->
         valid_expr true y ->
         valid_cmd (f tt) ->
@@ -174,9 +185,7 @@ Section Cmd.
                       (expr.App
                          (expr.App (expr.Ident ident.Z_sub_with_get_borrow)
                                    (expr.Ident (ident.Literal (t:=base.type.Z) s)))
-                         (expr.App (expr.App (expr.Ident ident.Z_cast)
-                                             (expr.Ident (ident.Literal (t:=base.type.zrange) rc)))
-                                   c))
+                         c)
                       x) y)) f)
   .
 
@@ -918,10 +927,9 @@ Section Cmd.
     rewrite Z.eqb_refl. reflexivity.
   Qed.
 
-  Lemma translate_add_with_get_carry (c x y : API.expr type_Z) rc r1 r2 :
+  Lemma translate_add_with_get_carry (c x y : API.expr type_Z) r1 r2 :
     range_good (width:=width) r1 = true ->
     is_carry_range r2 = true ->
-    is_carry_range rc = true ->
     translate_if_special_function
       (expr.App
          (expr.App (expr.Ident ident.Z_cast2)
@@ -935,20 +943,15 @@ Section Cmd.
                (expr.App
                   (expr.App (expr.Ident ident.Z_add_with_get_carry)
                             (expr.Ident (ident.Literal (t:=base.type.Z) (2 ^ width))))
-                  (expr.App (expr.App (expr.Ident ident.Z_cast)
-                                      (expr.Ident (ident.Literal (t:=base.type.zrange) rc)))
-                            c))
-                  x) y))
+                  c)
+               x) y))
     = Some (fun nextn =>
               let sum := varname_gen nextn in
               let carry := varname_gen (S nextn) in
               (2%nat, (sum,carry), Syntax.cmd.call [sum;carry] add_carryx
                                               [translate_expr true x
                                                ; translate_expr true y
-                                               ; Syntax.expr.op
-                                                   Syntax.bopname.and
-                                                   (translate_expr false c)
-                                                   (Syntax.expr.literal 1)])).
+                                               ; translate_carry c])).
   Proof.
     cbv [translate_if_special_function]; intros.
     cbn [invert_expr.invert_App_cast].
@@ -965,7 +968,6 @@ Section Cmd.
     rewrite invert_AppIdent4_eq_Some.
     cbn [Crypto.Util.Option.bind fst snd].
     cbv [translate_ident_special4].
-    rewrite invert_App_Z_cast_eq_Some.
     cbn [Crypto.Util.Option.bind fst snd].
     cbn [type.domain]. rewrite invert_Literal_eq_Some.
     cbn [Crypto.Util.Option.bind fst snd].
@@ -1012,10 +1014,9 @@ Section Cmd.
     rewrite Z.eqb_refl. reflexivity.
   Qed.
 
-  Lemma translate_sub_with_get_borrow (b x y : API.expr type_Z) rb r1 r2 :
+  Lemma translate_sub_with_get_borrow (b x y : API.expr type_Z) r1 r2 :
     range_good (width:=width) r1 = true ->
     is_carry_range r2 = true ->
-    is_carry_range rb = true ->
     translate_if_special_function
       (expr.App
          (expr.App (expr.Ident ident.Z_cast2)
@@ -1029,20 +1030,15 @@ Section Cmd.
                (expr.App
                   (expr.App (expr.Ident ident.Z_sub_with_get_borrow)
                             (expr.Ident (ident.Literal (t:=base.type.Z) (2 ^ width))))
-                  (expr.App (expr.App (expr.Ident ident.Z_cast)
-                                      (expr.Ident (ident.Literal (t:=base.type.zrange) rb)))
-                            b))
-                  x) y))
+                  b)
+               x) y))
     = Some (fun nextn =>
               let diff := varname_gen nextn in
               let borrow := varname_gen (S nextn) in
               (2%nat, (diff,borrow), Syntax.cmd.call [diff;borrow] sub_borrowx
                                                    [translate_expr true x
                                                     ; translate_expr true y
-                                                    ; Syntax.expr.op
-                                                        Syntax.bopname.and
-                                                        (translate_expr false b)
-                                                        (Syntax.expr.literal 1)])).
+                                                    ; translate_carry b])).
   Proof.
     cbv [translate_if_special_function]; intros.
     cbn [invert_expr.invert_App_cast].
@@ -1059,7 +1055,6 @@ Section Cmd.
     rewrite invert_AppIdent4_eq_Some.
     cbn [Crypto.Util.Option.bind fst snd].
     cbv [translate_ident_special4].
-    rewrite invert_App_Z_cast_eq_Some.
     cbn [Crypto.Util.Option.bind fst snd].
     cbn [type.domain]. rewrite invert_Literal_eq_Some.
     cbn [Crypto.Util.Option.bind fst snd].
@@ -1067,6 +1062,87 @@ Section Cmd.
            | H : ?x = true |- context [?x] => rewrite H; cbn [andb]
            end.
     rewrite !Z.eqb_refl. reflexivity.
+  Qed.
+
+  Ltac wf3_invert_hyp H :=
+    lazymatch type of H with
+    | wf3 _ (?f _) ?y ?z =>
+      (* first check if there is information to be gained by inverting this
+         hypothesis *)
+      (lazymatch y with
+       | f _ => lazymatch z with
+               | f _ => fail "already inverted"
+               | _ => idtac
+               end
+       | _ => idtac
+       end);
+      inversion H; clear H; cleanup_wf
+    end.
+
+  Ltac wf3_invert_until_exposed :=
+    repeat match goal with
+           | H : wf3 _ (?f _) ?y ?z |- _ => wf3_invert_hyp H
+           end.
+
+  Lemma translate_carry_correct
+        (e1 : @API.expr (fun _ => unit) type_Z)
+        (e2 : @API.expr API.interp_type type_Z)
+        (e3 : @API.expr ltype type_Z) :
+    valid_carry e1 ->
+    forall G locals,
+      wf3 G e1 e2 e3 ->
+      context_equiv G locals ->
+      (exists w,
+          word.unsigned w = API.interp e2
+          /\ dexpr map.empty locals (translate_carry e3) w)
+      /\ 0 <= API.interp e2 < 2.
+  Proof.
+    cbv zeta.
+    revert e2 e3; induction 1; intros.
+    { (* literal case *)
+      wf3_invert_until_exposed.
+      cbv [translate_carry].
+      lazymatch goal with
+      | |- context [invert_expr.invert_App_Z_cast ?x] =>
+        change (invert_expr.invert_App_Z_cast x) with (@None (ZRange.zrange * @API.expr ltype type_Z))
+      end.
+      rewrite invert_Literal_eq_Some.
+      pose proof word.width_pos.
+      assert (2 <= 2 ^ width) by (apply Pow.Z.pow_pos_le; lia).
+      break_match;
+        repeat lazymatch goal with
+               | H : (_ && _)%bool = true |- _ =>
+                 apply Bool.andb_true_iff in H; destruct H; LtbToLt.Z.ltb_to_lt
+               | H : (_ && _)%bool = false |- _ =>
+                 apply Bool.andb_false_iff in H; destruct H; LtbToLt.Z.ltb_to_lt
+               | _ => lia
+               end; [ ].
+      split.
+      { eexists; split; [ | reflexivity ].
+        rewrite word.unsigned_of_Z. cbv [word.wrap].
+        rewrite Z.mod_small by lia. reflexivity. }
+      { cbv [expr.interp Compilers.ident_interp ident.literal]; lia. } }
+    { (* cast case *)
+      wf3_invert_until_exposed.
+      cbv [translate_carry].
+      rewrite invert_App_Z_cast_eq_Some.
+      lazymatch goal with H : is_carry_range _ = true |- _ =>  rewrite H end.
+      cbn [expr.interp Compilers.ident_interp ident.literal].
+      rewrite interp_cast_carry by auto.
+      cbn [dexpr WeakestPrecondition.expr WeakestPrecondition.expr_body].
+      pose proof word.width_pos. cbv [word.wrap].
+      rewrite mod_pow2_mod_2 by lia.
+      split; [ | eapply Z.mod_pos_bound; lia ].
+      eexists; split.
+      2:{
+        eapply Proper_expr; [ repeat intro |
+                              eapply (translate_expr_correct' (t:=base_Z)) with (require_cast:=false);
+                              solve [eauto] ].
+        subst. reflexivity. }
+      { rewrite interp_and_carry.
+        rewrite !word.unsigned_of_Z. cbv [word.wrap].
+        rewrite mod_pow2_mod_2 by lia.
+        reflexivity. } }
   Qed.
 
   Local Ltac simplify :=
@@ -1185,9 +1261,14 @@ Section Cmd.
              locally_equivalent ret1 ret2 locals').
   Proof.
     revert e2 e3 G. cbv zeta.
+
+    (* useful property for carries *)
+    pose proof word.width_pos.
+    assert (2 <= 2 ^ width) by (apply Pow.Z.pow_pos_le; lia).
+
+    (* induction on expression *)
     induction e1_valid; try (inversion 1; [ ]).
 
-    (* inversion on wf3 leaves a mess; clean up hypotheses *)
     Ltac invert_until_exposed H y :=
       progress match y with
                | expr.App _ _ => idtac (* don't invert original, already-inverted one *)
@@ -1397,9 +1478,12 @@ Section Cmd.
                  pose proof translate_expr_correct' e e2 e3 require_cast ltac:(eassumption) G _ Hwf ltac:(eassumption) as Htr; cbn iota in Htr; simplify
                end;
                  clear H
+             | H : valid_carry ?c |- _ =>
+               eapply translate_carry_correct in H; [ | eassumption .. ]; simplify
              | H : Lift1Prop.ex1 _ _ |- _ => destruct H
              | H : emp _ _ |- _ => destruct H; cleanup
              end.
+      sepsimpl_hyps.
       cbn [locally_equivalent_nobounds locally_equivalent_nobounds_base] in *.
       eexists; split; [ | ].
       { (* Argument expressions. *)
@@ -1408,14 +1492,8 @@ Section Cmd.
                | H : dexpr map.empty ?l ?x _ |- WeakestPrecondition.expr ?m ?l ?x _ =>
                  apply expr_empty; apply H
                | _ => reflexivity
-               end; [ ].
-        (* Carry argument is left over. *)
-        cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body].
-        eapply Proper_expr; [ | solve [apply expr_empty; eauto] ].
-        repeat intro; subst. reflexivity. }
-      straightline_call;
-        [ (* carry is < 2 *)
-          rewrite interp_and_carry; apply Z.mod_pos_bound; lia | ].
+               end. }
+      straightline_call; [ lia | ].
       sepsimpl; subst; cleanup.
       eexists; split; [ reflexivity | ].
       eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
@@ -1476,18 +1554,7 @@ Section Cmd.
                | H : word.unsigned _ = expr.interp ?iinterp ?x |- context [expr.interp ?iinterp ?x] =>
                  rewrite <-H
                end.
-        lazymatch goal with
-        | H : context [word.unsigned
-                         (Semantics.interp_binop Syntax.bopname.and (word.of_Z ?x) (word.of_Z 1))]
-          |- context [Definitions.Z.add_with_get_carry_full _ (PreExtra.ident.cast ?r ?c) _ _] =>
-          (* more complex rewrite for the carry *)
-          replace (PreExtra.ident.cast r c)
-            with (word.unsigned (word:=word)
-                                (Semantics.interp_binop Syntax.bopname.and (word.of_Z x) (word.of_Z 1)))
-        end; [ erewrite add_with_get_carry_full_equiv; try solve [eauto with lia];
-               rewrite interp_and_carry; apply Z.mod_pos_bound; lia | ].
-        rewrite interp_and_carry, interp_cast_carry by auto.
-        rewrite word.unsigned_of_Z. reflexivity. } }
+        erewrite add_with_get_carry_full_equiv; eauto with lia. } }
     { (* sub_get_borrow *)
       (* TODO: the proof here is nearly identical to add_get_carry; some could
          be factored out into tactics. *)
@@ -1589,6 +1656,8 @@ Section Cmd.
                  pose proof translate_expr_correct' e e2 e3 require_cast ltac:(eassumption) G _ Hwf ltac:(eassumption) as Htr; cbn iota in Htr; simplify
                end;
                  clear H
+             | H : valid_carry ?c |- _ =>
+               eapply translate_carry_correct in H; [ | eassumption .. ]; simplify
              | H : Lift1Prop.ex1 _ _ |- _ => destruct H
              | H : emp _ _ |- _ => destruct H; cleanup
              end.
@@ -1600,14 +1669,8 @@ Section Cmd.
                | H : dexpr map.empty ?l ?x _ |- WeakestPrecondition.expr ?m ?l ?x _ =>
                  apply expr_empty; apply H
                | _ => reflexivity
-               end; [ ].
-        (* Carry argument is left over. *)
-        cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body].
-        eapply Proper_expr; [ | solve [apply expr_empty; eauto] ].
-        repeat intro; subst. reflexivity. }
-      straightline_call;
-        [ (* carry is < 2 *)
-          rewrite interp_and_carry; apply Z.mod_pos_bound; lia | ].
+               end. }
+      straightline_call; [ lia | ].
       sepsimpl; subst; cleanup.
       eexists; split; [ reflexivity | ].
       eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
@@ -1668,17 +1731,6 @@ Section Cmd.
                | H : word.unsigned _ = expr.interp ?iinterp ?x |- context [expr.interp ?iinterp ?x] =>
                  rewrite <-H
                end.
-        lazymatch goal with
-        | H : context [word.unsigned
-                         (Semantics.interp_binop Syntax.bopname.and (word.of_Z ?x) (word.of_Z 1))]
-          |- context [Definitions.Z.sub_with_get_borrow_full _ (PreExtra.ident.cast ?r ?c) _ _] =>
-          (* more complex rewrite for the carry *)
-          replace (PreExtra.ident.cast r c)
-            with (word.unsigned (word:=word)
-                                (Semantics.interp_binop Syntax.bopname.and (word.of_Z x) (word.of_Z 1)))
-        end; [ erewrite sub_with_get_borrow_full_equiv; try solve [eauto with lia];
-               rewrite interp_and_carry; apply Z.mod_pos_bound; lia | ].
-        rewrite interp_and_carry, interp_cast_carry by auto.
-        rewrite word.unsigned_of_Z. reflexivity. } }
+        erewrite sub_with_get_borrow_full_equiv; eauto with lia. } }
   Qed.
 End Cmd.
