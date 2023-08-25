@@ -63,36 +63,14 @@ Section Expr.
                                       (expr.Ident ident.pair)
                                       (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
                                    (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x)
-  | valid_fst_cast :
-      forall (x : API.expr type_ZZ) r1 r2,
+  | valid_fst :
+      forall (x : API.expr type_ZZ),
         valid_expr false x ->
-        range_maskable (width:=width) r1 = true ->
-        (* it's okay to have a cast with a bad range on the non-selected tuple element *)
-        valid_expr false
-                   (expr.App
-                      (expr.Ident ident.fst)
-                      (expr.App
-                         (expr.App (expr.Ident ident.Z_cast2)
-                                   (expr.App
-                                      (expr.App
-                                         (expr.Ident ident.pair)
-                                         (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
-                                      (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x))
-  | valid_snd_cast :
-      forall (x : API.expr type_ZZ) r1 r2,
+        valid_expr false (expr.App (expr.Ident ident.fst) x)
+  | valid_snd :
+      forall (x : API.expr type_ZZ),
         valid_expr false x ->
-        range_maskable (width:=width) r2 = true ->
-        (* it's okay to have a cast with a bad range on the non-selected tuple element *)
-        valid_expr false
-                   (expr.App
-                      (expr.Ident ident.snd)
-                      (expr.App
-                         (expr.App (expr.Ident ident.Z_cast2)
-                                   (expr.App
-                                      (expr.App
-                                         (expr.Ident ident.pair)
-                                         (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
-                                      (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x))
+        valid_expr false (expr.App (expr.Ident ident.snd) x)
   | valid_literalz :
       forall rc z,
         (is_bounded_by_bool z (max_range(width:=width)) || negb rc)%bool = true ->
@@ -623,20 +601,18 @@ Section Expr.
                end; [ | ].
       all:rewrite wrap_rcast by auto.
       all:reflexivity. }
-    { (* fst then cast *)
+    { (* fst *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
-      cbv [range_good max_range ident.literal ident.cast2 rcast2] in *.
       cbn [locally_equivalent equivalent_base rep.equiv rep.Z fst snd
                               locally_equivalent_nobounds_base] in *.
-      sepsimpl; auto using expr_rcast_range_to_mask. }
-    { (* snd then cast *)
+      apply IHvalid_expr. }
+    { (* snd *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
-      cbv [range_good max_range ident.literal ident.cast2 rcast2] in *.
       cbn [locally_equivalent equivalent_base rep.equiv rep.Z fst snd
                               locally_equivalent_nobounds_base] in *.
-      sepsimpl; auto using expr_rcast_range_to_mask. }
+      apply IHvalid_expr. }
     { (* literal Z *)
       cbn [locally_equivalent_nobounds_base
              locally_equivalent equivalent_base rep.equiv rep.Z].

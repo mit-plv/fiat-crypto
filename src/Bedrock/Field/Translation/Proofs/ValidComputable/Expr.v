@@ -199,22 +199,6 @@ Section Expr.
     | _ => false
     end.
 
-  (* Accepts a cast expression with range reqs only on the first element. *)
-  Definition valid_fst_cast_bool {t}
-             (e : @API.expr (fun _ => unit) t) : bool :=
-    match invert_expr.invert_Z_cast2 e with
-    | Some (r1, r2) => range_maskable (width:=width) r1
-    | None => false
-    end.
-
-  (* Accepts a cast expression with range reqs only on the second element. *)
-  Definition valid_snd_cast_bool {t}
-             (e : @API.expr (fun _ => unit) t) : bool :=
-    match invert_expr.invert_Z_cast2 e with
-    | Some (r1, r2) => range_maskable (width:=width) r2
-    | None => false
-    end.
-
   Definition valid_bit_range_cast {t} (e : @API.expr (fun _ => unit) t) : bool :=
     match invert_expr.invert_Z_cast e with
     | Some r => zrange_beq r bit_range
@@ -228,7 +212,7 @@ Section Expr.
      very last application in a multi-argument function, take a sneak peek ahead
      to see if the rest of the applications match a certain kind of operation,
      and then enforce any constraints on the last argument. *)
-  Inductive PartialMode := NotPartial | Binop | Shift | Select | Bit | Lnot | Fst | Snd.
+  Inductive PartialMode := NotPartial | Binop | Shift | Select | Bit | Lnot.
 
   Fixpoint valid_expr_bool'
            (mode : PartialMode) (require_casts : bool)
@@ -273,18 +257,6 @@ Section Expr.
           && valid_expr_bool' NotPartial true x
       | _ => false
       end
-    | Fst =>
-      match e with
-      | expr.App type_ZZ type_ZZ f x =>
-        valid_fst_cast_bool f && valid_expr_bool' NotPartial false x
-      | _ => false
-      end
-    | Snd =>
-      match e with
-      | expr.App type_ZZ type_ZZ f x =>
-        valid_snd_cast_bool f && valid_expr_bool' NotPartial false x
-      | _ => false
-      end
     | NotPartial =>
         match e with
         | expr.App type_nat _ f x =>
@@ -322,9 +294,9 @@ Section Expr.
         | expr.App type_ZZ type_Z f x =>
           (* fst or snd *)
           if is_fst_ident_expr f
-          then (negb require_casts) && valid_expr_bool' Fst false x
+          then (negb require_casts) && valid_expr_bool' NotPartial false x
           else if is_snd_ident_expr f
-               then (negb require_casts) && valid_expr_bool' Snd false x
+               then (negb require_casts) && valid_expr_bool' NotPartial false x
                else false
         | expr.App type_ZZ type_ZZ f x =>
           is_cast (width:=width) f
@@ -506,19 +478,9 @@ Section Expr.
     (match t as t0 return ident.ident t0 -> Prop with
      | type.arrow type_ZZ type_Z =>
        fun i =>
-         forall (x : API.expr type_ZZ) r1 r2,
+         forall (x : API.expr type_ZZ),
            valid_expr false x ->
-           range_maskable (width:=width) r1 = true ->
-           valid_expr false (expr.App (expr.Ident i)
-                                      (expr.App (expr.App
-                                                   (expr.Ident ident.Z_cast2)
-                                                   (expr.App
-                                                      (expr.App
-                                                         (expr.Ident ident.pair)
-                                                         (expr.Ident
-                                                            (ident.Literal (t:=Compilers.zrange) r1)))
-                                                      (expr.Ident
-                                                         (ident.Literal (t:=Compilers.zrange) r2)))) x))
+           valid_expr false (expr.App (expr.Ident i) x)
      | _ => fun _ => False
      end) i.
   Proof.
@@ -527,24 +489,14 @@ Section Expr.
       intros; constructor; eauto.
   Qed.
 
-  Lemma is_snd_ident_expr_impl1 {t} (i : ident.ident t) :
+  Lemma is_snd_ident_impl1 {t} (i : ident.ident t) :
     is_snd_ident i = true ->
     (match t as t0 return ident.ident t0 -> Prop with
      | type.arrow type_ZZ type_Z =>
        fun i =>
-         forall (x : API.expr type_ZZ) r1 r2,
+         forall (x : API.expr type_ZZ),
            valid_expr false x ->
-           range_maskable (width:=width) r2 = true ->
-           valid_expr false (expr.App (expr.Ident i)
-                                      (expr.App (expr.App
-                                                   (expr.Ident ident.Z_cast2)
-                                                   (expr.App
-                                                      (expr.App
-                                                         (expr.Ident ident.pair)
-                                                         (expr.Ident
-                                                            (ident.Literal (t:=Compilers.zrange) r1)))
-                                                      (expr.Ident
-                                                         (ident.Literal (t:=Compilers.zrange) r2)))) x))
+           valid_expr false (expr.App (expr.Ident i) x)
      | _ => fun _ => False
      end) i.
   Proof.
@@ -1073,34 +1025,6 @@ Section Expr.
     induction 1; try solve [constructor; eauto using Bool.orb_true_r].
   Qed.
 
-  Definition is_valid_fst_casted {t} (e : API.expr t) : bool :=
-    match e with
-    | expr.App type_ZZ type_ZZ f x =>
-      valid_fst_cast_bool f && valid_expr_bool' NotPartial false x
-    | _ => false
-    end.
-
-  Definition valid_expr_Fst_valid_fst_casted {t} (e : API.expr t) :
-    valid_expr_bool' Fst false e = true ->
-    is_valid_fst_casted e = true.
-  Proof.
-    destruct e; cbn [valid_expr_bool' is_valid_fst_casted]; congruence.
-  Qed.
-
-  Definition is_valid_snd_casted {t} (e : API.expr t) : bool :=
-    match e with
-    | expr.App type_ZZ type_ZZ f x =>
-      valid_snd_cast_bool f && valid_expr_bool' NotPartial false x
-    | _ => false
-    end.
-
-  Definition valid_expr_Snd_valid_snd_casted {t} (e : API.expr t) :
-    valid_expr_bool' Snd false e = true ->
-    is_valid_snd_casted e = true.
-  Proof.
-    destruct e; cbn [valid_expr_bool' is_valid_snd_casted]; congruence.
-  Qed.
-
   Lemma valid_expr_bool'_impl1 {t} (e : API.expr t) :
     forall mode rc,
       valid_expr_bool' mode rc e = true ->
@@ -1168,24 +1092,6 @@ Section Expr.
                valid_expr rc (expr.App f x)
          | _ => fun _ => False
          end) e
-      | Fst =>
-        (match t as t0 return expr.expr t0 -> Prop with
-         | type_ZZ =>
-           fun e =>
-             is_valid_fst_casted e = true ->
-             rc = false ->
-             valid_expr rc (expr.App (expr.Ident ident.fst) e)
-         | _ => fun _ => False
-         end) e
-      | Snd =>
-        (match t as t0 return expr.expr t0 -> Prop with
-         | type_ZZ =>
-           fun e =>
-             is_valid_snd_casted e = true ->
-             rc = false ->
-             valid_expr rc (expr.App (expr.Ident ident.snd) e)
-         | _ => fun _ => False
-         end) e
       | NotPartial => (exists b, t = type.base b) -> valid_expr rc e
       end.
   Proof.
@@ -1226,8 +1132,6 @@ Section Expr.
                    | Select => False
                    | Bit => False
                    | Lnot => False
-                   | Fst => False
-                   | Snd => False
                    end |- _ =>
                  specialize (IH NotPartial); (cbn match in IH)
                end.
@@ -1257,7 +1161,7 @@ Section Expr.
         apply (IHe2 NotPartial); eauto. }
       { (* nth_default case *)
         eauto using valid_expr_nth_default_bool_impl1. }
-      { (* fully-applied fst case *)
+      { (* fst case *)
         intros.
         repeat lazymatch goal with
                | H : is_fst_ident_expr _ = true |- _ =>
@@ -1265,7 +1169,7 @@ Section Expr.
                | H : negb ?b = true |- _ =>
                  destruct b; cbn [negb] in *; [ congruence | ]
                end.
-        apply (IHe2 Fst); auto using valid_expr_Fst_valid_fst_casted. }
+        apply valid_fst; eauto. }
       { (* fully-applied snd case *)
         intros.
         repeat lazymatch goal with
@@ -1274,16 +1178,15 @@ Section Expr.
                | H : negb ?b = true |- _ =>
                  destruct b; cbn [negb] in *; [ congruence | ]
                end.
-        apply (IHe2 Snd); auto using valid_expr_Snd_valid_snd_casted. }
+        apply valid_snd; eauto. }
       { (* cast ZZ *)
         intros.
         apply (is_cast_impl1
-                 (t := type_ZZ -> type_ZZ)); eauto; [ ].
-        eapply (IHe2 NotPartial); eauto. }
+                 (t := type_ZZ -> type_ZZ)); eauto. }
       { (* partially-applied binop case *)
         intros.
         apply (valid_expr_binop_bool_impl1
-                 (t:=type_Z -> type_Z -> type_Z)); eauto; [ ].
+                 (t:=type_Z -> type_Z -> type_Z)); eauto.
         eapply (IHe2 NotPartial); eauto. }
       { (* partially-applied shift case *)
         intros.
@@ -1316,33 +1219,7 @@ Section Expr.
         intros.
         apply (valid_expr_lnot_modulo_bool_impl1
                  (t:=type_Z -> type_Z -> type_Z)); eauto; [ ].
-        apply (IHe2 NotPartial); eauto. }
-      { (* partially-applied fst case *)
-        intros.
-        cbv [valid_fst_cast_bool] in *.
-        break_match_hyps; try congruence ; [ ].
-        lazymatch goal with
-        | H : invert_expr.invert_Z_cast2 _ = Some _ |- _ =>
-          apply InversionExtra.Compilers.expr.invert_Z_cast2_Some_ZZ in H;
-            cbn in H; subst
-        end.
-        cbv [ident.literal].
-        constructor; auto; [ ].
-        apply (IHe2 NotPartial); auto.
-        eexists; reflexivity. }
-      { (* partially-applied snd case *)
-        intros.
-        cbv [valid_snd_cast_bool] in *.
-        break_match_hyps; try congruence ; [ ].
-        lazymatch goal with
-        | H : invert_expr.invert_Z_cast2 _ = Some _ |- _ =>
-          apply InversionExtra.Compilers.expr.invert_Z_cast2_Some_ZZ in H;
-            cbn in H; subst
-        end.
-        cbv [ident.literal].
-        constructor; auto; [ ].
-        apply (IHe2 NotPartial); auto.
-        eexists; reflexivity. } }
+        apply (IHe2 NotPartial); eauto. } }
     { break_match; try congruence. }
   Qed.
 
