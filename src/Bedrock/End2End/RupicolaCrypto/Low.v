@@ -1329,6 +1329,7 @@ Instance p_field_params : FieldParameters :=
   add := "fe1305_add";
   carry_add := "fe1305_carry_add";
   sub := "fe1305_sub";
+  carry_sub := "fe1305_carry_sub";
   opp := "fe1305_opp";
   square := "fe1305_square";
   scmula24 := "fe1305_scmul1_dontuse";
