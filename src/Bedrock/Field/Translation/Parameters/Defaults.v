@@ -18,8 +18,6 @@ Import ListNotations.
 (* use in-memory lists; local ones are only used internally *)
 Global Existing Instances Types.rep.Z Types.rep.listZ_mem.
 
-Print PipelineOptions.
-Search split_multiret_to_opt.
 Global Instance pipeline_opts : PipelineOptions :=
   let _ := default_PipelineOptions in
   {| (* Abstract interpretation options; currently only involving (>>) uint1 bounds, which is not relevant to bedrock2 *)

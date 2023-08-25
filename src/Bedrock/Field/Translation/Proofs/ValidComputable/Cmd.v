@@ -302,40 +302,6 @@ Section Cmd.
     split; [ apply valid_carry_bool_impl1 | apply valid_carry_bool_impl2 ].
   Qed.
 
-  (* TODO: remove? *)
-  Lemma valid_carry_bool_eq {t} e :
-    valid_carry_bool e = true ->
-    (match t as t0 return API.expr t0 -> Prop with
-     | type_Z => fun e =>
-                  (exists (r : ZRange.zrange) (x : API.expr type_Z),
-                    e = expr.App (expr.App (expr.Ident ident.Z_cast)
-                                           (expr.Ident (ident.Literal
-                                                          (t:=Compilers.zrange)
-                                                          r)))
-                                 x
-                    /\ valid_expr_bool false x = true
-                    /\ is_carry_range r = true)
-                  \/ (exists (v : Z),
-                        e = (expr.Ident (ident.Literal (t:=base.type.Z) v))
-                        /\ 0 <= v < 2)
-     | _ => fun _ => False
-     end) e.
-  Proof.
-    cbv [valid_carry_bool].
-    break_match; try congruence; intros;
-      repeat lazymatch goal with
-             | p : _ * _ |- _ => destruct p; cbn [fst snd] in *
-             | H : (_ && _)%bool = true |- _ => apply Bool.andb_true_iff in H; destruct H; Z.ltb_to_lt
-             | H : invert_expr.invert_App_Z_cast _ = Some (_,_) |- _ =>
-               apply invert_App_Z_cast_Some in H; subst
-             | H : invert_expr.invert_Literal _ = Some _ |- _ =>
-               apply Inversion.Compilers.expr.invert_Literal_Some_base in H; subst
-
-             end; [ | ].
-    { left. do 2 eexists; repeat split; try reflexivity; auto. }
-    { right. eexists; repeat split; try reflexivity; auto. }
-  Qed.
-
   Lemma is_literalz_eq t (e : API.expr t) (x : Z) :
     is_literalz e x = true ->
     (match t as t0 return API.expr t0 -> Prop with
