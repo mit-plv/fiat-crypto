@@ -480,7 +480,7 @@ Proof.
   single_step. (* fe25519_sub(cZ, trZ, trX) *)
   single_step. (* fe25519_sub(cX, t0, cY) *)
   single_step. (* fe25519_sub(cT, trT, cZ) *)
-  admit. (* bounds issue on cZ -- 3 lines up needs carry_sub instead *)
+  admit. (* TODO: bounds issue on cZ -- 3 lines up needs carry_sub instead *)
   single_step. (* fe25519_mul(ox, cX, cT) *)
   single_step. (* fe25519_mul(oy, cY, cZ) *)
   single_step. (* fe25519_mul(oz, cZ, cT) *)
