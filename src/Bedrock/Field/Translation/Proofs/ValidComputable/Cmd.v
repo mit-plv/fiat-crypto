@@ -75,6 +75,12 @@ Section Cmd.
     | _ => false
     end.
 
+  Definition is_sub_get_borrow_ident {t} (i : ident.ident t) : bool :=
+    match i with
+    | ident.Z_sub_get_borrow => true
+    | _ => false
+    end.
+
   Definition is_word_and_carry_range {t} : range_for_type t -> bool :=
     match t as t0 return range_for_type t0 -> bool with
     | type_ZZ => fun r : range_for_type type_ZZ =>
@@ -85,6 +91,12 @@ Section Cmd.
   Definition is_add_with_get_carry_ident {t} (i : ident.ident t) : bool :=
     match i with
     | ident.Z_add_with_get_carry => true
+    | _ => false
+    end.
+
+  Definition is_sub_with_get_borrow_ident {t} (i : ident.ident t) : bool :=
+    match i with
+    | ident.Z_sub_with_get_borrow => true
     | _ => false
     end.
 
@@ -100,7 +112,13 @@ Section Cmd.
             && valid_expr_bool true x
             && valid_expr_bool true y
             && is_word_and_carry_range r)
-    else (fun _ _ _ _ => false).
+    else if is_sub_get_borrow_ident i
+         then (fun s x y r =>
+                 is_literalz s (2 ^ width)
+                 && valid_expr_bool true x
+                 && valid_expr_bool true y
+                 && is_word_and_carry_range r)
+         else (fun _ _ _ _ => false).
 
   Definition valid_carry_bool {t} : @API.expr (fun _ => unit) t -> bool :=
     match t with
@@ -130,7 +148,14 @@ Section Cmd.
             && valid_expr_bool true y
             && valid_carry_bool c
             && is_word_and_carry_range r)
-    else (fun _ _ _ _ _ => false).
+    else if is_sub_with_get_borrow_ident i
+         then (fun s c x y r =>
+                 is_literalz s (2 ^ width)
+                 && valid_expr_bool true x
+                 && valid_expr_bool true y
+                 && valid_carry_bool c
+                 && is_word_and_carry_range r)
+         else (fun _ _ _ _ _ => false).
 
   Definition valid_special3_bool {t} (e : @API.expr (fun _ => unit) t) (r : range_for_type t) : bool :=
     match invert_AppIdent3 e with
@@ -209,6 +234,28 @@ Section Cmd.
     cbv [is_add_with_get_carry_ident]; break_match; congruence.
   Qed.
 
+  Lemma is_sub_get_borrow_ident_eq {t} i :
+    @is_sub_get_borrow_ident t i = true ->
+    (match t as t0 return ident.ident t0 -> Prop with
+     | type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ)) =>
+       fun i => i = ident.Z_sub_get_borrow
+     | _ => fun _ => False
+     end) i.
+  Proof.
+    cbv [is_sub_get_borrow_ident]; break_match; congruence.
+  Qed.
+
+  Lemma is_sub_with_get_borrow_ident_eq {t} i :
+    @is_sub_with_get_borrow_ident t i = true ->
+    (match t as t0 return ident.ident t0 -> Prop with
+     | type.arrow type_Z (type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))) =>
+       fun i => i = ident.Z_sub_with_get_borrow
+     | _ => fun _ => False
+     end) i.
+  Proof.
+    cbv [is_sub_with_get_borrow_ident]; break_match; congruence.
+  Qed.
+
   Lemma valid_carry_bool_eq {t} e :
     valid_carry_bool e = true ->
     (match t as t0 return API.expr t0 -> Prop with
@@ -272,25 +319,32 @@ Section Cmd.
       end.
       subst; cbn [fst snd projT2] in *.
       cbv [valid_ident_special3] in *.
-      break_match_hyps; intros; [ | congruence ].
-      repeat lazymatch goal with
-             | p : _ * _ |- _ => destruct p; cbn [fst snd] in *
-             | H : (_ && _) = true |- _ => apply Bool.andb_true_iff in H; destruct H
-             | H : @is_word_and_carry_range type_ZZ _ = true |- _ =>
-               apply is_word_and_carry_range_eq in H; destruct H
-             | H : is_add_get_carry_ident _ = true |- _ =>
-               apply is_add_get_carry_ident_eq in H;
-                 break_match_hyps; try contradiction; [ ];
-                   subst
-             | H : is_literalz _ _ = true |- _ =>
-               apply is_literalz_eq in H; subst
-             | H : invert_expr.invert_App_Z_cast2 _ = Some _ |- _ =>
-               apply invert_App_Z_cast2_Some in H; subst
-             | _ => progress cbn [type.interp Language.Compilers.base.interp
-                                             invert_expr.invert_App_cast] in *
-             end; [ ].
+      break_match_hyps; intros; try congruence;
+        repeat lazymatch goal with
+               | p : _ * _ |- _ => destruct p; cbn [fst snd] in *
+               | H : (_ && _) = true |- _ => apply Bool.andb_true_iff in H; destruct H
+               | H : @is_word_and_carry_range type_ZZ _ = true |- _ =>
+                 apply is_word_and_carry_range_eq in H; destruct H
+               | H : is_add_get_carry_ident _ = true |- _ =>
+                 apply is_add_get_carry_ident_eq in H;
+                   break_match_hyps; try contradiction; [ ];
+                     subst
+               | H : is_sub_get_borrow_ident _ = true |- _ =>
+                 apply is_sub_get_borrow_ident_eq in H;
+                   break_match_hyps; try contradiction; [ ];
+                     subst
+               | H : is_literalz _ _ = true |- _ =>
+                 apply is_literalz_eq in H; subst
+               | H : invert_expr.invert_App_Z_cast2 _ = Some _ |- _ =>
+                 apply invert_App_Z_cast2_Some in H; subst
+               | _ => progress cbn [type.interp Language.Compilers.base.interp
+                                               invert_expr.invert_App_cast] in *
+               end; [ | ].
       { (* add_get_carry *)
         eapply valid_add_get_carry; eauto;
+          apply valid_expr_bool_iff; auto. }
+      { (* sub_get_borrow *)
+        eapply valid_sub_get_borrow; eauto;
           apply valid_expr_bool_iff; auto. } }
     { (* valid 4-argument function *)
       cbv [valid_special4_bool] in *.
@@ -301,27 +355,34 @@ Section Cmd.
       end.
       subst; cbn [fst snd projT2] in *.
       cbv [valid_ident_special4] in *.
-      break_match_hyps; intros; [ | congruence ].
-      repeat lazymatch goal with
-             | p : _ * _ |- _ => destruct p; cbn [fst snd] in *
-             | H : (_ && _) = true |- _ => apply Bool.andb_true_iff in H; destruct H
-             | H : @is_word_and_carry_range type_ZZ _ = true |- _ =>
-               apply is_word_and_carry_range_eq in H; destruct H
-             | H : is_add_with_get_carry_ident _ = true |- _ =>
-               apply is_add_with_get_carry_ident_eq in H;
-                 break_match_hyps; try contradiction; [ ];
-                   subst
-             | H : is_literalz _ _ = true |- _ =>
-               apply is_literalz_eq in H; subst
-             | H : invert_expr.invert_App_Z_cast2 _ = Some _ |- _ =>
-               apply invert_App_Z_cast2_Some in H; subst
-             | H : valid_carry_bool _ = true |- _ =>
-               apply valid_carry_bool_eq in H; destruct H as [? [? [? [? ?] ] ] ]
-             | _ => progress cbn [type.interp Language.Compilers.base.interp
-                                             invert_expr.invert_App_cast] in *
-             end; [ ].
+      break_match_hyps; intros; try congruence;
+        repeat lazymatch goal with
+               | p : _ * _ |- _ => destruct p; cbn [fst snd] in *
+               | H : (_ && _) = true |- _ => apply Bool.andb_true_iff in H; destruct H
+               | H : @is_word_and_carry_range type_ZZ _ = true |- _ =>
+                 apply is_word_and_carry_range_eq in H; destruct H
+               | H : is_add_with_get_carry_ident _ = true |- _ =>
+                 apply is_add_with_get_carry_ident_eq in H;
+                   break_match_hyps; try contradiction; [ ];
+                     subst
+               | H : is_sub_with_get_borrow_ident _ = true |- _ =>
+                 apply is_sub_with_get_borrow_ident_eq in H;
+                   break_match_hyps; try contradiction; [ ];
+                     subst
+               | H : is_literalz _ _ = true |- _ =>
+                 apply is_literalz_eq in H; subst
+               | H : invert_expr.invert_App_Z_cast2 _ = Some _ |- _ =>
+                 apply invert_App_Z_cast2_Some in H; subst
+               | H : valid_carry_bool _ = true |- _ =>
+                 apply valid_carry_bool_eq in H; destruct H as [? [? [? [? ?] ] ] ]
+               | _ => progress cbn [type.interp Language.Compilers.base.interp
+                                               invert_expr.invert_App_cast] in *
+               end; [ | ].
       { (* add_with_get_carry *)
         eapply valid_add_with_get_carry; eauto;
+          apply valid_expr_bool_iff; auto. }
+      { (* sub_with_get_borrow *)
+        eapply valid_sub_with_get_borrow; eauto;
           apply valid_expr_bool_iff; auto. } }
   Qed.
 
@@ -487,6 +548,65 @@ Section Cmd.
     reflexivity.
   Qed.
 
+  Lemma valid_special_sub_get_borrow r1 r2 x y:
+    Expr.range_good (width:=width) r1 = true ->
+    is_carry_range r2 = true ->
+    valid_expr_bool (t:=type_Z) true x = true ->
+    valid_expr_bool (t:=type_Z) true y = true ->
+    valid_special_bool
+      (expr.App
+         (expr.App (expr.Ident ident.Z_cast2)
+                   (expr.App
+                      (expr.App
+                         (expr.Ident ident.pair)
+                         (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                      (expr.Ident (ident.Literal (t:=base.type.zrange) r2))))
+         (expr.App
+            (expr.App
+               (expr.App (expr.Ident ident.Z_sub_get_borrow)
+                         (expr.Ident (ident.Literal (t:=base.type.Z) (2 ^ width))))
+               x) y)) = true.
+  Proof.
+    intros. cbv [valid_special_bool]. cbn [invert_expr.invert_App_cast].
+    rewrite invert_App_Z_cast2_eq_Some. cbn [fst snd].
+    cbn. rewrite Z.eqb_refl.
+    repeat lazymatch goal with
+           | H : _?x = true |- context [?x] => rewrite H end.
+    reflexivity.
+  Qed.
+
+  Lemma valid_special_sub_with_get_borrow r1 r2 rc c x y:
+    Expr.range_good (width:=width) r1 = true ->
+    is_carry_range r2 = true ->
+    is_carry_range rc = true ->
+    valid_expr_bool (t:=type_Z) false c = true ->
+    valid_expr_bool (t:=type_Z) true x = true ->
+    valid_expr_bool (t:=type_Z) true y = true ->
+    valid_special_bool
+      (expr.App
+         (expr.App (expr.Ident ident.Z_cast2)
+                   (expr.App
+                      (expr.App
+                         (expr.Ident ident.pair)
+                         (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                      (expr.Ident (ident.Literal (t:=base.type.zrange) r2))))
+         (expr.App
+            (expr.App
+               (expr.App
+                  (expr.App (expr.Ident ident.Z_sub_with_get_borrow)
+                            (expr.Ident (ident.Literal (t:=base.type.Z) (2 ^ width))))
+                  (expr.App (expr.App (expr.Ident ident.Z_cast)
+                                      (expr.Ident (ident.Literal (t:=base.type.zrange) rc))) c))
+               x) y)) = true.
+  Proof.
+    intros. cbv [valid_special_bool]. cbn [invert_expr.invert_App_cast].
+    rewrite invert_App_Z_cast2_eq_Some. cbn [fst snd].
+    cbn. rewrite Z.eqb_refl.
+    repeat lazymatch goal with
+           | H : _?x = true |- context [?x] => rewrite H end.
+    reflexivity.
+  Qed.
+
   Lemma valid_cmd_bool_impl2 {t} e :
     valid_cmd e -> @valid_cmd_bool t e = true.
   Proof.
@@ -500,7 +620,7 @@ Section Cmd.
              | |- context [_ && false] => rewrite Bool.andb_false_r
              | |- context [false || _] => rewrite Bool.orb_false_l
              end;
-      auto using valid_special_add_get_carry, valid_special_add_with_get_carry; [ ].
+      auto using valid_special_add_get_carry, valid_special_add_with_get_carry, valid_special_sub_get_borrow, valid_special_sub_with_get_borrow; [ ].
     { apply valid_cmd_bool_valid_expr.
       assumption. }
   Qed.

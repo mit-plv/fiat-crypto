@@ -126,19 +126,76 @@ Section Cmd.
                                              (expr.Ident (ident.Literal (t:=base.type.zrange) rc)))
                                    c))
                       x) y)) f)
+  | valid_sub_get_borrow :
+      forall t r1 r2 (s : Z) x y f,
+        range_good (width:=width) r1 = true ->
+        is_carry_range r2 = true ->
+        s = 2 ^ width ->
+        valid_expr true x ->
+        valid_expr true y ->
+        valid_cmd (f tt) ->
+        valid_cmd
+          (expr.LetIn
+             (B:=type.base t)
+             (expr.App
+                (expr.App (expr.Ident ident.Z_cast2)
+                          (expr.App
+                             (expr.App
+                                (expr.Ident ident.pair)
+                                (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                             (expr.Ident (ident.Literal (t:=base.type.zrange) r2))))
+                (expr.App
+                   (expr.App
+                      (expr.App (expr.Ident ident.Z_sub_get_borrow)
+                                (expr.Ident (ident.Literal (t:=base.type.Z) s)))
+                      x) y)) f)
+  | valid_sub_with_get_borrow :
+      forall t rc r1 r2 (s : Z) c x y f,
+        range_good (width:=width) r1 = true ->
+        is_carry_range r2 = true ->
+        is_carry_range rc = true ->
+        s = 2 ^ width ->
+        valid_expr false c ->
+        valid_expr true x ->
+        valid_expr true y ->
+        valid_cmd (f tt) ->
+        valid_cmd
+          (expr.LetIn
+             (B:=type.base t)
+             (expr.App
+                (expr.App (expr.Ident ident.Z_cast2)
+                          (expr.App
+                             (expr.App
+                                (expr.Ident ident.pair)
+                                (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                             (expr.Ident (ident.Literal (t:=base.type.zrange) r2))))
+                (expr.App
+                   (expr.App
+                      (expr.App
+                         (expr.App (expr.Ident ident.Z_sub_with_get_borrow)
+                                   (expr.Ident (ident.Literal (t:=base.type.Z) s)))
+                         (expr.App (expr.App (expr.Ident ident.Z_cast)
+                                             (expr.Ident (ident.Literal (t:=base.type.zrange) rc)))
+                                   c))
+                      x) y)) f)
   .
 
   Local Instance spec_of_add_carryx : spec_of add_carryx :=
     fnspec! add_carryx x y carry ~> sum carry_out,
-    { (* The required upper bound on `carry` isn't necessary for the
-         current `add_with_carry` to support the `ensures` clause, but
-         it does formalize an expected condition that future
-         implementations should be free to leverage. *)
-      requires t m := word.unsigned carry < 2;
+    { requires t m := word.unsigned carry < 2;
       ensures T M :=
         M = m /\ T = t /\
         word.unsigned sum + 2^width * word.unsigned carry_out =
         word.unsigned x + word.unsigned carry + word.unsigned y
+    }.
+
+  Local Instance spec_of_sub_borrowx : spec_of sub_borrowx :=
+    fnspec! sub_borrowx x y borrow ~> diff borrow_out,
+    { requires t m := word.unsigned borrow < 2;
+      ensures T M :=
+        M = m /\ T = t /\
+        word.unsigned diff - 2^width * word.unsigned borrow_out =
+        word.unsigned x - word.unsigned borrow - word.unsigned y
     }.
 
   Lemma assign_list_correct :
@@ -448,6 +505,51 @@ Section Cmd.
   Qed.
 
   (* Convenience lemma for add_with_get_carry case. *)
+  Lemma add_with_get_carry_full_equiv (x y sum carry_in carry_out : @word.rep width word) r1 r2:
+    word.unsigned sum + 2^width * word.unsigned carry_out
+    = word.unsigned carry_in + word.unsigned x + word.unsigned y ->
+    0 <= word.unsigned carry_in < 2 ->
+    range_good (width:=width) r1 = true -> is_carry_range r2 = true ->
+    PreExtra.ident.cast2
+      (r1, r2)
+      (Definitions.Z.add_with_get_carry_full
+         (2 ^ width) (word.unsigned carry_in) (word.unsigned x) (word.unsigned y))
+    = (word.unsigned sum, word.unsigned carry_out).
+  Proof.
+    pose proof word.width_pos. intro Heq. intros.
+    pose proof (Properties.word.unsigned_range x).
+    pose proof (Properties.word.unsigned_range y).
+    pose proof (Properties.word.unsigned_range carry_in).
+    pose proof (Properties.word.unsigned_range sum).
+    pose proof (Properties.word.unsigned_range carry_out).
+    repeat lazymatch goal with
+           | H : range_good _ = true |- _ => apply range_good_eq in H; subst
+           | H : is_carry_range _ = true |- _ => apply is_carry_range_eq in H; subst
+           end.
+    cbv [Definitions.Z.add_with_get_carry_full
+           Definitions.Z.add_with_get_carry
+           Definitions.Z.add_with_carry
+           Definitions.Z.get_carry
+           PreExtra.ident.cast2
+           Rewriter.Util.LetIn.Let_In
+        ].
+    cbn [fst snd]. rewrite Z.log2_pow2, Z.eqb_refl by lia.
+    cbn [fst snd].
+    rewrite !CastLemmas.ident.cast_in_bounds by (apply is_bounded_by_bool_max_range; Z.div_mod_to_equations; nia).
+    rewrite CastLemmas.ident.cast_in_bounds.
+    2:{
+      cbv [ZRange.is_bounded_by_bool].
+      rewrite !Zle_imp_le_bool
+              by (cbn [ZRange.upper ZRange.lower];
+                  Z.div_mod_to_equations; nia).
+      reflexivity. }
+    rewrite <-Heq. apply f_equal2.
+    { Z.push_mod. rewrite Z.mod_same by lia. Z.push_pull_mod.
+      rewrite Z.mod_small; lia. }
+    { Z.div_mod_to_equations; nia. }
+  Qed.
+
+  (* Convenience lemma for add_get_carry case. *)
   Lemma add_get_carry_full_equiv (x y sum carry_out : @word.rep width word) r1 r2:
     word.unsigned sum + 2^width * word.unsigned carry_out
     = word.unsigned x + word.unsigned y ->
@@ -491,32 +593,34 @@ Section Cmd.
     { Z.div_mod_to_equations; nia. }
   Qed.
 
-  (* Convenience lemma for add_with_get_carry case. *)
-  Lemma add_with_get_carry_full_equiv (x y sum carry_in carry_out : @word.rep width word) r1 r2:
-    word.unsigned sum + 2^width * word.unsigned carry_out
-    = word.unsigned carry_in + word.unsigned x + word.unsigned y ->
-    0 <= word.unsigned carry_in < 2 ->
+  (* Convenience lemma for sub_with_get_borrow case. *)
+  Lemma sub_with_get_borrow_full_equiv (x y diff borrow_in borrow_out : @word.rep width word) r1 r2:
+    word.unsigned diff - 2^width * word.unsigned borrow_out
+    = word.unsigned x - word.unsigned borrow_in - word.unsigned y ->
+    0 <= word.unsigned borrow_in < 2 ->
     range_good (width:=width) r1 = true -> is_carry_range r2 = true ->
     PreExtra.ident.cast2
       (r1, r2)
-      (Definitions.Z.add_with_get_carry_full
-         (2 ^ width) (word.unsigned carry_in) (word.unsigned x) (word.unsigned y))
-    = (word.unsigned sum, word.unsigned carry_out).
+      (Definitions.Z.sub_with_get_borrow_full
+         (2 ^ width) (word.unsigned borrow_in) (word.unsigned x) (word.unsigned y))
+    = (word.unsigned diff, word.unsigned borrow_out).
   Proof.
     pose proof word.width_pos. intro Heq. intros.
     pose proof (Properties.word.unsigned_range x).
     pose proof (Properties.word.unsigned_range y).
-    pose proof (Properties.word.unsigned_range carry_in).
-    pose proof (Properties.word.unsigned_range sum).
-    pose proof (Properties.word.unsigned_range carry_out).
+    pose proof (Properties.word.unsigned_range borrow_in).
+    pose proof (Properties.word.unsigned_range diff).
+    pose proof (Properties.word.unsigned_range borrow_out).
     repeat lazymatch goal with
            | H : range_good _ = true |- _ => apply range_good_eq in H; subst
            | H : is_carry_range _ = true |- _ => apply is_carry_range_eq in H; subst
            end.
-    cbv [Definitions.Z.add_with_get_carry_full
-           Definitions.Z.add_with_get_carry
-           Definitions.Z.add_with_carry
+    cbv [Definitions.Z.sub_with_get_borrow_full
+           Definitions.Z.sub_with_get_borrow
+           Definitions.Z.sub_with_borrow
            Definitions.Z.get_carry
+           Definitions.Z.get_borrow
+           Definitions.Z.add_with_carry
            PreExtra.ident.cast2
            Rewriter.Util.LetIn.Let_In
         ].
@@ -530,10 +634,58 @@ Section Cmd.
               by (cbn [ZRange.upper ZRange.lower];
                   Z.div_mod_to_equations; nia).
       reflexivity. }
-    rewrite <-Heq. apply f_equal2.
-    { Z.push_mod. rewrite Z.mod_same by lia. Z.push_pull_mod.
-      rewrite Z.mod_small; lia. }
-    { Z.div_mod_to_equations; nia. }
+    lazymatch goal with
+    | |- (?d1, ?b1) = (?d2, ?b2) =>
+      assert (b1 = b2) by (Z.div_mod_to_equations; nia);
+        apply f_equal2; [ Z.div_mod_to_equations; nia | lia ]
+    end.
+  Qed.
+
+  (* Convenience lemma for add_with_get_carry case. *)
+  Lemma sub_get_borrow_full_equiv (x y diff borrow_out : @word.rep width word) r1 r2:
+    word.unsigned diff - 2^width * word.unsigned borrow_out
+    = word.unsigned x - word.unsigned y ->
+    range_good (width:=width) r1 = true -> is_carry_range r2 = true ->
+    PreExtra.ident.cast2
+      (r1, r2)
+      (Definitions.Z.sub_get_borrow_full
+         (2 ^ width) (word.unsigned x) (word.unsigned y))
+    = (word.unsigned diff, word.unsigned borrow_out).
+  Proof.
+    pose proof word.width_pos. intro Heq. intros.
+    pose proof (Properties.word.unsigned_range x).
+    pose proof (Properties.word.unsigned_range y).
+    pose proof (Properties.word.unsigned_range diff).
+    pose proof (Properties.word.unsigned_range borrow_out).
+    repeat lazymatch goal with
+           | H : range_good _ = true |- _ => apply range_good_eq in H; subst
+           | H : is_carry_range _ = true |- _ => apply is_carry_range_eq in H; subst
+           end.
+    cbv [Definitions.Z.sub_get_borrow_full
+           Definitions.Z.sub_with_get_borrow
+           Definitions.Z.sub_with_borrow
+           Definitions.Z.add_with_carry
+           Definitions.Z.sub_get_borrow
+           Definitions.Z.get_carry
+           Definitions.Z.get_borrow
+           PreExtra.ident.cast2
+           Rewriter.Util.LetIn.Let_In
+        ].
+    cbn [fst snd]. rewrite Z.log2_pow2, Z.eqb_refl by lia.
+    cbn [fst snd]. rewrite Z.add_0_l.
+    rewrite !CastLemmas.ident.cast_in_bounds by (apply is_bounded_by_bool_max_range; Z.div_mod_to_equations; nia).
+    rewrite CastLemmas.ident.cast_in_bounds.
+    2:{
+      cbv [ZRange.is_bounded_by_bool].
+      rewrite !Zle_imp_le_bool
+              by (cbn [ZRange.upper ZRange.lower];
+                  Z.div_mod_to_equations; nia).
+      reflexivity. }
+    lazymatch goal with
+    | |- (?d1, ?b1) = (?d2, ?b2) =>
+      assert (b1 = b2) by (Z.div_mod_to_equations; nia);
+        apply f_equal2; [ Z.div_mod_to_equations; nia | lia ]
+    end.
   Qed.
 
   (* TODO: move to equivalence *)
@@ -823,6 +975,100 @@ Section Cmd.
     rewrite !Z.eqb_refl. reflexivity.
   Qed.
 
+  Lemma translate_sub_get_borrow (x y : API.expr type_Z) r1 r2 :
+    range_good (width:=width) r1 = true ->
+    is_carry_range r2 = true ->
+    translate_if_special_function
+      (expr.App
+         (expr.App (expr.Ident ident.Z_cast2)
+                   (expr.App
+                      (expr.App
+                         (expr.Ident ident.pair)
+                         (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                      (expr.Ident (ident.Literal (t:=base.type.zrange) r2))))
+         (expr.App
+            (expr.App
+               (expr.App (expr.Ident ident.Z_sub_get_borrow)
+                         (expr.Ident (ident.Literal (t:=base.type.Z) (2 ^ width))))
+               x) y))
+    = Some (fun nextn =>
+              let diff := varname_gen nextn in
+              let borrow := varname_gen (S nextn) in
+              (2%nat, (diff,borrow), Syntax.cmd.call [diff;borrow] sub_borrowx [(translate_expr true x); (translate_expr true y); Syntax.expr.literal 0])).
+  Proof.
+    cbv [translate_if_special_function]; intros.
+    cbn [invert_expr.invert_App_cast].
+    rewrite invert_App_Z_cast2_eq_Some.
+    cbn [Crypto.Util.Option.bind fst snd].
+    cbv [translate_if_special3]. rewrite invert_AppIdent3_eq_Some.
+    cbn [Crypto.Util.Option.bind fst snd].
+    cbv [translate_ident_special3].
+    cbn [type.domain]. rewrite invert_Literal_eq_Some.
+    cbn [Crypto.Util.Option.bind fst snd].
+    repeat lazymatch goal with
+           | H : ?x = true |- context [?x] => rewrite H
+           end.
+    cbn [andb].
+    rewrite Z.eqb_refl. reflexivity.
+  Qed.
+
+  Lemma translate_sub_with_get_borrow (b x y : API.expr type_Z) rb r1 r2 :
+    range_good (width:=width) r1 = true ->
+    is_carry_range r2 = true ->
+    is_carry_range rb = true ->
+    translate_if_special_function
+      (expr.App
+         (expr.App (expr.Ident ident.Z_cast2)
+                   (expr.App
+                      (expr.App
+                         (expr.Ident ident.pair)
+                         (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                      (expr.Ident (ident.Literal (t:=base.type.zrange) r2))))
+         (expr.App
+            (expr.App
+               (expr.App
+                  (expr.App (expr.Ident ident.Z_sub_with_get_borrow)
+                            (expr.Ident (ident.Literal (t:=base.type.Z) (2 ^ width))))
+                  (expr.App (expr.App (expr.Ident ident.Z_cast)
+                                      (expr.Ident (ident.Literal (t:=base.type.zrange) rb)))
+                            b))
+                  x) y))
+    = Some (fun nextn =>
+              let diff := varname_gen nextn in
+              let borrow := varname_gen (S nextn) in
+              (2%nat, (diff,borrow), Syntax.cmd.call [diff;borrow] sub_borrowx
+                                                   [translate_expr true x
+                                                    ; translate_expr true y
+                                                    ; Syntax.expr.op
+                                                        Syntax.bopname.and
+                                                        (translate_expr false b)
+                                                        (Syntax.expr.literal 1)])).
+  Proof.
+    cbv [translate_if_special_function]; intros.
+    cbn [invert_expr.invert_App_cast].
+    rewrite invert_App_Z_cast2_eq_Some.
+    cbn [Crypto.Util.Option.bind fst snd].
+    lazymatch goal with
+    | |- context [translate_if_special3 ?x ?r] =>
+      lazymatch type of x with
+      | API.expr ?t =>
+        change (translate_if_special3 x r) with (@None (nat -> nat * ltype t * Syntax.cmd.cmd))
+      end
+    end.
+    cbn iota. cbv [translate_if_special4].
+    rewrite invert_AppIdent4_eq_Some.
+    cbn [Crypto.Util.Option.bind fst snd].
+    cbv [translate_ident_special4].
+    rewrite invert_App_Z_cast_eq_Some.
+    cbn [Crypto.Util.Option.bind fst snd].
+    cbn [type.domain]. rewrite invert_Literal_eq_Some.
+    cbn [Crypto.Util.Option.bind fst snd].
+    repeat lazymatch goal with
+           | H : ?x = true |- context [?x] => rewrite H; cbn [andb]
+           end.
+    rewrite !Z.eqb_refl. reflexivity.
+  Qed.
+
   Local Ltac simplify :=
     repeat
       first [ progress (intros; cleanup)
@@ -904,6 +1150,7 @@ Section Cmd.
            (nextn : nat),
       (* specifications of bedrock2 functions we might call *)
       spec_of_add_carryx functions ->
+      spec_of_sub_borrowx functions ->
       (* ret := fiat-crypto interpretation of e2 *)
       let ret1 : API.interp_type t := API.interp e2 in
       (* out := translation output for e3 *)
@@ -1238,6 +1485,198 @@ Section Cmd.
             with (word.unsigned (word:=word)
                                 (Semantics.interp_binop Syntax.bopname.and (word.of_Z x) (word.of_Z 1)))
         end; [ erewrite add_with_get_carry_full_equiv; try solve [eauto with lia];
+               rewrite interp_and_carry; apply Z.mod_pos_bound; lia | ].
+        rewrite interp_and_carry, interp_cast_carry by auto.
+        rewrite word.unsigned_of_Z. reflexivity. } }
+    { (* sub_get_borrow *)
+      (* TODO: the proof here is nearly identical to add_get_carry; some could
+         be factored out into tactics. *)
+      rewrite translate_sub_get_borrow by auto. cbn [fst snd].
+      cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
+      repeat lazymatch goal with
+             | H : valid_expr _ ?e |- _ =>
+               lazymatch goal with
+               | Hwf : wf3 ?G e ?e2 ?e3 |- _ =>
+                 let Htr := fresh in
+                 pose proof translate_expr_correct e e2 e3 ltac:(eassumption) G _ Hwf ltac:(eassumption) as Htr;
+                   destruct Htr; sepsimpl
+               end;
+                 clear H
+             end.
+      eexists; split; [ | ].
+      { (* Argument expressions. *)
+        repeat lazymatch goal with
+               | |- dexprs _ _ (_ :: _) _ => apply dexprs_cons_iff; split
+               | H : dexpr map.empty ?l ?x _ |- WeakestPrecondition.expr ?m ?l ?x _ =>
+                 apply expr_empty; apply H
+               | _ => reflexivity
+               end. }
+      straightline_call; [ rewrite Properties.word.unsigned_of_Z_0; lia | ].
+      sepsimpl; subst; cleanup.
+      eexists; split; [ reflexivity | ].
+      eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
+      2:{
+        eapply IHe1_valid; clear IHe1_valid;
+        repeat match goal with
+               | _ => progress (intros; cleanup)
+               | H : forall v1 v2 v3, wf3 _ (?f v1) _ _ |- wf3 _ (?f tt) _ _ => solve [apply (H tt)]
+               | H : ?P |- ?P => exact H
+               end; [ | | ].
+        { (* context varname_set *)
+          new_context_ok.
+          lazymatch goal with
+          | H : rep.varname_set _ _ \/ rep.varname_set _ _ |- _ =>
+            cbn  in H; destruct H as [H | H]; apply varname_gen_unique in H; lia
+          end. }
+        { (* undef on *)
+          repeat lazymatch goal with
+                 | |- map.undef_on (map.put _ _ _) _ => apply put_undef_on
+                 | H : forall n nvars, _ -> map.undef_on ?l (used_varnames n nvars)
+                                  |- map.undef_on ?l (used_varnames _ _) =>
+                   apply H; lia
+                 | |- ~ used_varnames _ _ _ => rewrite used_varnames_iff; intro; simplify
+                 | H : varname_gen _ = varname_gen _ |- _ => apply varname_gen_unique in H; lia
+                 end. }
+        { (* context equivalent *)
+          apply Forall_cons;
+            [ apply locally_equiv_pair; eauto; rewrite varname_gen_unique; lia | ].
+          eapply equivalent_not_in_context_forall; eauto;
+            repeat lazymatch goal with
+                   | |- map.only_differ (map.put _ _ _) _ _ =>
+                     eapply only_differ_trans; [ | solve [apply only_differ_put] ]
+                   | |- map.only_differ ?m _ ?m => solve [apply only_differ_empty]
+                   | |- map.only_differ _ _ (map.put _ _ _) =>
+                     apply only_differ_sym
+                   | |- disjoint (union _ _) _ =>
+                     apply disjoint_union_l_iff; split
+                   | |- disjoint empty_set _ =>
+                     solve [apply disjoint_empty_l]
+                   | |- disjoint (singleton_set _) _ =>
+                     symmetry; apply disjoint_singleton_r_iff
+                   | _ => solve [eauto with lia]
+                   end. } }
+      clear IHe1_valid.
+      simplify; subst; eauto; [ | | ].
+      { (* varnames subset *)
+        rewrite <-used_varnames_shift; eauto. }
+      { (* only_differ *)
+        only_differ_ok.
+        eauto using only_differ_succ, only_differ_zero. }
+      { (* equivalence of output holds *)
+        lazymatch goal with
+        | H : equivalent_base ?x1 ?y ?a ?l ?m |- equivalent_base ?x2 ?y ?a ?l ?m =>
+          replace x2 with x1; [ exact H | ]
+        end.
+        lazymatch goal with
+          | H : context [word.unsigned (word.of_Z 0)] |- _ =>
+            rewrite Properties.word.unsigned_of_Z_0 in H
+        end.
+        repeat lazymatch goal with
+               | H : word.unsigned _ = expr.interp ?iinterp ?x |- context [expr.interp ?iinterp ?x] =>
+                 rewrite <-H
+               end.
+        erewrite sub_get_borrow_full_equiv; eauto with lia. } }
+    { (* sub_with_get_borrow *)
+      (* TODO: the proof here is nearly identical to add_with_get_carry; some could
+         be factored out into tactics. *)
+      rewrite translate_sub_with_get_borrow by auto. cbn [fst snd].
+      cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
+      repeat lazymatch goal with
+             | H : valid_expr ?require_cast ?e |- _ =>
+               lazymatch goal with
+               | Hwf : wf3 ?G e ?e2 ?e3 |- _ =>
+                 let Htr := fresh in
+                 pose proof translate_expr_correct' e e2 e3 require_cast ltac:(eassumption) G _ Hwf ltac:(eassumption) as Htr; cbn iota in Htr; simplify
+               end;
+                 clear H
+             | H : Lift1Prop.ex1 _ _ |- _ => destruct H
+             | H : emp _ _ |- _ => destruct H; cleanup
+             end.
+      cbn [locally_equivalent_nobounds locally_equivalent_nobounds_base] in *.
+      eexists; split; [ | ].
+      { (* Argument expressions. *)
+        repeat lazymatch goal with
+               | |- dexprs _ _ (_ :: _) _ => apply dexprs_cons_iff; split
+               | H : dexpr map.empty ?l ?x _ |- WeakestPrecondition.expr ?m ?l ?x _ =>
+                 apply expr_empty; apply H
+               | _ => reflexivity
+               end; [ ].
+        (* Carry argument is left over. *)
+        cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body].
+        eapply Proper_expr; [ | solve [apply expr_empty; eauto] ].
+        repeat intro; subst. reflexivity. }
+      straightline_call;
+        [ (* carry is < 2 *)
+          rewrite interp_and_carry; apply Z.mod_pos_bound; lia | ].
+      sepsimpl; subst; cleanup.
+      eexists; split; [ reflexivity | ].
+      eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
+      2:{
+        eapply IHe1_valid; clear IHe1_valid;
+        repeat match goal with
+               | _ => progress (intros; cleanup)
+               | H : forall v1 v2 v3, wf3 _ (?f v1) _ _ |- wf3 _ (?f ?v1) _ (_ ?v3) =>
+                 solve [eapply (H v1 _ v3)]
+               | H : ?P |- ?P => exact H
+               end; [ | | ].
+        { (* context varname_set *)
+          new_context_ok.
+          lazymatch goal with
+          | H : rep.varname_set _ _ \/ rep.varname_set _ _ |- _ =>
+            cbn  in H; destruct H as [H | H]; apply varname_gen_unique in H; lia
+          end. }
+        { (* undef on *)
+          repeat lazymatch goal with
+                 | |- map.undef_on (map.put _ _ _) _ => apply put_undef_on
+                 | H : forall n nvars, _ -> map.undef_on ?l (used_varnames n nvars)
+                                  |- map.undef_on ?l (used_varnames _ _) =>
+                   apply H; lia
+                 | |- ~ used_varnames _ _ _ => rewrite used_varnames_iff; intro; simplify
+                 | H : varname_gen _ = varname_gen _ |- _ => apply varname_gen_unique in H; lia
+                 end. }
+        { (* context equivalent *)
+          apply Forall_cons;
+            [ apply locally_equiv_pair; eauto; rewrite varname_gen_unique; lia | ].
+          eapply equivalent_not_in_context_forall; eauto;
+            repeat lazymatch goal with
+                   | |- map.only_differ (map.put _ _ _) _ _ =>
+                     eapply only_differ_trans; [ | solve [apply only_differ_put] ]
+                   | |- map.only_differ ?m _ ?m => solve [apply only_differ_empty]
+                   | |- map.only_differ _ _ (map.put _ _ _) =>
+                     apply only_differ_sym
+                   | |- disjoint (union _ _) _ =>
+                     apply disjoint_union_l_iff; split
+                   | |- disjoint empty_set _ =>
+                     solve [apply disjoint_empty_l]
+                   | |- disjoint (singleton_set _) _ =>
+                     symmetry; apply disjoint_singleton_r_iff
+                   | _ => solve [eauto with lia]
+                   end. } }
+      clear IHe1_valid.
+      simplify; subst; eauto; [ | | ].
+      { (* varnames subset *)
+        rewrite <-used_varnames_shift; eauto. }
+      { (* only_differ *)
+        only_differ_ok.
+        eauto using only_differ_succ, only_differ_zero. }
+      { (* equivalence of output holds *)
+        lazymatch goal with
+        | H : equivalent_base ?x1 ?y ?a ?l ?m |- equivalent_base ?x2 ?y ?a ?l ?m =>
+          replace x2 with x1; [ exact H | ]
+        end.
+        repeat lazymatch goal with
+               | H : word.unsigned _ = expr.interp ?iinterp ?x |- context [expr.interp ?iinterp ?x] =>
+                 rewrite <-H
+               end.
+        lazymatch goal with
+        | H : context [word.unsigned
+                         (Semantics.interp_binop Syntax.bopname.and (word.of_Z ?x) (word.of_Z 1))]
+          |- context [Definitions.Z.sub_with_get_borrow_full _ (PreExtra.ident.cast ?r ?c) _ _] =>
+          (* more complex rewrite for the carry *)
+          replace (PreExtra.ident.cast r c)
+            with (word.unsigned (word:=word)
+                                (Semantics.interp_binop Syntax.bopname.and (word.of_Z x) (word.of_Z 1)))
+        end; [ erewrite sub_with_get_borrow_full_equiv; try solve [eauto with lia];
                rewrite interp_and_carry; apply Z.mod_pos_bound; lia | ].
         rewrite interp_and_carry, interp_cast_carry by auto.
         rewrite word.unsigned_of_Z. reflexivity. } }

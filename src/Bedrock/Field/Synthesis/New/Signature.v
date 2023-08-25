@@ -223,6 +223,7 @@ Section WithParameters.
     | |- @eq (list word.rep) _ _ => reflexivity
     | |- length [?p] = _ => reflexivity
     | |- Cmd.spec_of_add_carryx _ => assumption
+    | |- Cmd.spec_of_sub_borrowx _ => assumption
     | |- forall _, ~ VarnameSet.varname_set_args _ _ =>
       solve [auto using make_innames_varname_gen_disjoint]
     | |- forall _, ~ VarnameSet.varname_set_base (make_outnames _)
@@ -382,6 +383,7 @@ Section WithParameters.
       f = make_bedrock_func insizes outsizes inlengths res ->
       forall functions,
         Cmd.spec_of_add_carryx (add_carryx:=add_carryx) functions ->
+        Cmd.spec_of_sub_borrowx (sub_borrowx:=sub_borrowx) functions ->
         (binop_spec _ ((name, f) :: functions)).
     Proof.
       subst inlengths insizes outsizes.
@@ -468,6 +470,7 @@ Section WithParameters.
       f = make_bedrock_func insizes outsizes inlengths res ->
       forall functions,
         Cmd.spec_of_add_carryx (add_carryx:=add_carryx) functions ->
+        Cmd.spec_of_sub_borrowx (sub_borrowx:=sub_borrowx) functions ->
         unop_spec _ ((name, f) :: functions).
     Proof using inname_gen_varname_gen_disjoint outbounds_length
           outbounds_tighter_than_max outname_gen_varname_gen_disjoint
@@ -544,6 +547,7 @@ Section WithParameters.
       f = make_bedrock_func insizes outsizes inlengths res ->
       forall functions,
         Cmd.spec_of_add_carryx (add_carryx:=add_carryx) functions ->
+        Cmd.spec_of_sub_borrowx (sub_borrowx:=sub_borrowx) functions ->
         spec_of_from_word ((from_word, f) :: functions).
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok relax_bounds res_Wf
@@ -565,8 +569,7 @@ Section WithParameters.
           let in_ptrs := (eval compute in (tl arg_ptrs)) in
           eapply (translate_func_correct (parameters_sentinel:=parameters_sentinel))
           with (out_ptrs:=[out_ptr]) (flat_args:=in_ptrs)
-          (args:=b2_args).
-        17:instantiate (1:=R).
+               (args:=b2_args) (R:=R).
         all:try translate_func_precondition_hammer.
         1:reflexivity.
         { cbv [Equivalence.equivalent_flat_args]; eexists 1%nat; split; [eexists|reflexivity].
@@ -653,6 +656,7 @@ Section WithParameters.
       f = make_bedrock_func insizes outsizes inlengths res ->
       forall functions,
         Cmd.spec_of_add_carryx (add_carryx:=add_carryx) functions ->
+        Cmd.spec_of_sub_borrowx (sub_borrowx:=sub_borrowx) functions ->
         spec_of_felem_copy ((felem_copy, f) :: functions).
     Proof.
       subst inlengths insizes outsizes.
@@ -697,8 +701,10 @@ Section WithParameters.
         try (use_sep_assumption; cancel; cbv [seps]);
         seprewrite_in (FElem_array_truncated_scalar_iff1 px) Hsep; extract_ex1_and_emp_in Hsep; trivial.
       Morphisms.f_equiv.
-      rewrite H4.
-      rewrite <-(res_eq x) at 2 by trivial.
+      rewrite <-(res_eq x) by trivial.
+      lazymatch goal with
+      | H : map word.unsigned _ = expr.interp _ _ _ |- _ => rewrite H
+      end.
       rewrite Util.map_unsigned_of_Z.
       erewrite map_word_wrap_bounded; trivial.
       eapply max_bounds_range_iff; ssplit; eauto.
@@ -768,6 +774,7 @@ Section WithParameters.
       f = make_bedrock_func insizes outsizes inlengths res ->
       forall functions,
         Cmd.spec_of_add_carryx (add_carryx:=add_carryx) functions ->
+        Cmd.spec_of_sub_borrowx (sub_borrowx:=sub_borrowx) functions ->
         spec_of_from_bytes ((from_bytes, f) :: functions).
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok relax_bounds res_Wf
@@ -909,6 +916,7 @@ Section WithParameters.
       f = make_bedrock_func insizes outsizes inlengths res ->
       forall functions,
         Cmd.spec_of_add_carryx (add_carryx:=add_carryx) functions ->
+        Cmd.spec_of_sub_borrowx (sub_borrowx:=sub_borrowx) functions ->
         spec_of_to_bytes ((to_bytes, f) :: functions).
     Proof using byte_bounds_length byte_bounds_tighter_than_max
           inname_gen_varname_gen_disjoint
@@ -1042,6 +1050,7 @@ Context
       f = make_bedrock_func insizes outsizes inlengths res ->
       forall functions,
         Cmd.spec_of_add_carryx (add_carryx:=add_carryx) functions ->
+        Cmd.spec_of_sub_borrowx (sub_borrowx:=sub_borrowx) functions ->
         spec_of_selectznz ((select_znz, f) :: functions).
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok res_Wf

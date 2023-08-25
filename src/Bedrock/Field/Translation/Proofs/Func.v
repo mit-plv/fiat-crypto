@@ -91,6 +91,7 @@ Section Func.
              (functions : list (string*func)),
         (* specifications of bedrock2 functions we might call *)
         spec_of_add_carryx (add_carryx:=add_carryx) functions ->
+        spec_of_sub_borrowx (sub_borrowx:=sub_borrowx) functions ->
         (* locals doesn't contain variables we could overwrite *)
         (forall n nvars,
             (nextn <= n)%nat ->
@@ -518,6 +519,7 @@ Section Func.
              (R : _ -> Prop),
         (* specifications of bedrock2 functions we might call *)
         spec_of_add_carryx (add_carryx:=add_carryx) functions ->
+        spec_of_sub_borrowx (sub_borrowx:=sub_borrowx) functions ->
         (* argument values are the concatenation of true argument values
            and output pointer values *)
         argvalues = out_ptrs ++ flat_args ->

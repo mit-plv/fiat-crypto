@@ -137,6 +137,7 @@ Section Field.
   Derive p224_add
          SuchThat (forall functions,
                       Cmd.spec_of_add_carryx (add_carryx:=Defaults.add_carryx) functions ->
+                      Cmd.spec_of_sub_borrowx (sub_borrowx:=Defaults.sub_borrowx) functions ->
                       spec_of_BinOp bin_add
                         (field_representation:=field_representation m)
                         (p224_add :: functions))
@@ -180,10 +181,7 @@ Section Field.
       cbn [orb andb].
       match goal with
       | |- context [Cmd.valid_special_bool ?x] =>
-        match x with
-        | context [ident.Z_add_with_get_carry] =>
-          assert (Cmd.valid_special_bool x = true)
-        end
+        assert (Cmd.valid_special_bool x = true)
       end.
       { cbv [Cmd.valid_special_bool].
         cbv [invert_expr.invert_App_cast].
@@ -199,6 +197,7 @@ Section Field.
         cbv [Cmd.valid_ident_special4].
         cbn [fst snd].
         cbv [Cmd.is_add_with_get_carry_ident].
+        cbv [Cmd.is_sub_with_get_borrow_ident].
         cbv [Expr.is_literalz].
         rewrite Z.eqb_refl.
         repeat lazymatch goal with
@@ -210,11 +209,7 @@ Section Field.
         cbn [fst snd]. rewrite !ZRange.zrange_lb by reflexivity.
         cbn [andb].
         cbv [Cmd.valid_carry_bool].
-        rewrite Util.invert_App_Z_cast_eq_Some.
-        cbn [fst snd].
-        cbv [Cmd.is_carry_range].
-        rewrite !ZRange.zrange_lb by reflexivity.
-        (* same issue; snd has bad range *)
+        (* problem is that valid_carry_bool only matches cast, while it should also accept a 0/1 literal *)
       }
         
       rewrite !Bool.orb_false_r.
