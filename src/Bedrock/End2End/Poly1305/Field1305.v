@@ -103,6 +103,15 @@ Section Field.
                         functions)
          As fe1305_sub_correct.
   Proof. Time derive_bedrock2_func sub_op. Qed.
+
+  Derive fe1305_carry_sub
+         SuchThat (forall functions,
+                      functions_contain functions fe1305_carry_sub ->
+                      spec_of_BinOp bin_carry_sub
+                        (field_representation:=field_representation n s c)
+                        (functions))
+         As fe1305_carry_sub_correct.
+  Proof. Time derive_bedrock2_func carry_sub_op. Qed.
 End Field.
 
 (* Uncomment below to sanity-check that compilation works *)
@@ -116,6 +125,7 @@ Definition funcs : list (string * func) :=
     fe1305_add;
     fe1305_carry_add;
     fe1305_sub;
+    fe1305_carry_sub;
     fe1305_square;
     fe1305_to_bytes;
     fe1305_from_bytes ].

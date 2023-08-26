@@ -760,6 +760,7 @@ Definition field_parameters_prefixed
     (prefix ++ "add")
     (prefix ++ "carry_add_dontuse")
     (prefix ++ "sub")
+    (prefix ++ "carry_sub_dontuse")
     (prefix ++ "opp")
     (prefix ++ "square")
     (prefix ++ "scmula24")
