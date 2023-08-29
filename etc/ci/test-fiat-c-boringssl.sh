@@ -9,6 +9,7 @@ echo "::group::Cloning BoringSSL"
     set -ex
     rm -rf boringssl
     git clone https://boringssl.googlesource.com/boringssl || exit $?
+    git -C boringssl log -1
 }) || exit $?
 echo "::endgroup::"
 
