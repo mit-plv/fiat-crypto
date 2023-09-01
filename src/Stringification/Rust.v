@@ -56,14 +56,14 @@ Module Rust.
                 | Some None (* unknown array length *) => visibility ++ "type " ++ name ++ " = *mut " ++ ty_string ++ ";"
                 | Some (Some len) => "#[derive(Clone, Copy)]" ++ String.NewLine
                   ++ visibility ++ "struct " ++ name ++ "(pub [" ++ ty_string ++ "; " ++ Decimal.Z.to_string (Z.of_nat len) ++ "]);" ++ String.NewLine ++ String.NewLine
-                  ++ "impl std::ops::Index<usize> for " ++ name ++ " {" ++ String.NewLine
+                  ++ "impl core::ops::Index<usize> for " ++ name ++ " {" ++ String.NewLine
                   ++ "    type Output = " ++ ty_string ++ ";" ++ String.NewLine
                   ++ "    #[inline]" ++ String.NewLine
                   ++ "    fn index(&self, index: usize) -> &Self::Output {" ++ String.NewLine
                   ++ "        &self.0[index]" ++ String.NewLine
                   ++ "    }" ++ String.NewLine
                   ++ "}" ++ String.NewLine ++ String.NewLine
-                  ++ "impl std::ops::IndexMut<usize> for " ++ name ++ " {" ++ String.NewLine
+                  ++ "impl core::ops::IndexMut<usize> for " ++ name ++ " {" ++ String.NewLine
                   ++ "    #[inline]" ++ String.NewLine
                   ++ "    fn index_mut(&mut self, index: usize) -> &mut Self::Output {" ++ String.NewLine
                   ++ "        &mut self.0[index]" ++ String.NewLine

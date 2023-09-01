@@ -30,7 +30,7 @@ pub type fiat_secp256k1_montgomery_i2 = i8;
 #[derive(Clone, Copy)]
 pub struct fiat_secp256k1_montgomery_montgomery_domain_field_element(pub [u64; 4]);
 
-impl std::ops::Index<usize> for fiat_secp256k1_montgomery_montgomery_domain_field_element {
+impl core::ops::Index<usize> for fiat_secp256k1_montgomery_montgomery_domain_field_element {
     type Output = u64;
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
@@ -38,7 +38,7 @@ impl std::ops::Index<usize> for fiat_secp256k1_montgomery_montgomery_domain_fiel
     }
 }
 
-impl std::ops::IndexMut<usize> for fiat_secp256k1_montgomery_montgomery_domain_field_element {
+impl core::ops::IndexMut<usize> for fiat_secp256k1_montgomery_montgomery_domain_field_element {
     #[inline]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.0[index]
@@ -50,7 +50,7 @@ impl std::ops::IndexMut<usize> for fiat_secp256k1_montgomery_montgomery_domain_f
 #[derive(Clone, Copy)]
 pub struct fiat_secp256k1_montgomery_non_montgomery_domain_field_element(pub [u64; 4]);
 
-impl std::ops::Index<usize> for fiat_secp256k1_montgomery_non_montgomery_domain_field_element {
+impl core::ops::Index<usize> for fiat_secp256k1_montgomery_non_montgomery_domain_field_element {
     type Output = u64;
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
@@ -58,7 +58,7 @@ impl std::ops::Index<usize> for fiat_secp256k1_montgomery_non_montgomery_domain_
     }
 }
 
-impl std::ops::IndexMut<usize> for fiat_secp256k1_montgomery_non_montgomery_domain_field_element {
+impl core::ops::IndexMut<usize> for fiat_secp256k1_montgomery_non_montgomery_domain_field_element {
     #[inline]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.0[index]

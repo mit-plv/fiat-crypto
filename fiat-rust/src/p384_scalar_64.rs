@@ -30,7 +30,7 @@ pub type fiat_p384_scalar_i2 = i8;
 #[derive(Clone, Copy)]
 pub struct fiat_p384_scalar_montgomery_domain_field_element(pub [u64; 6]);
 
-impl std::ops::Index<usize> for fiat_p384_scalar_montgomery_domain_field_element {
+impl core::ops::Index<usize> for fiat_p384_scalar_montgomery_domain_field_element {
     type Output = u64;
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
@@ -38,7 +38,7 @@ impl std::ops::Index<usize> for fiat_p384_scalar_montgomery_domain_field_element
     }
 }
 
-impl std::ops::IndexMut<usize> for fiat_p384_scalar_montgomery_domain_field_element {
+impl core::ops::IndexMut<usize> for fiat_p384_scalar_montgomery_domain_field_element {
     #[inline]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.0[index]
@@ -50,7 +50,7 @@ impl std::ops::IndexMut<usize> for fiat_p384_scalar_montgomery_domain_field_elem
 #[derive(Clone, Copy)]
 pub struct fiat_p384_scalar_non_montgomery_domain_field_element(pub [u64; 6]);
 
-impl std::ops::Index<usize> for fiat_p384_scalar_non_montgomery_domain_field_element {
+impl core::ops::Index<usize> for fiat_p384_scalar_non_montgomery_domain_field_element {
     type Output = u64;
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
@@ -58,7 +58,7 @@ impl std::ops::Index<usize> for fiat_p384_scalar_non_montgomery_domain_field_ele
     }
 }
 
-impl std::ops::IndexMut<usize> for fiat_p384_scalar_non_montgomery_domain_field_element {
+impl core::ops::IndexMut<usize> for fiat_p384_scalar_non_montgomery_domain_field_element {
     #[inline]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.0[index]
