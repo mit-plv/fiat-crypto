@@ -57,6 +57,7 @@ Local Coercion Z.pos : positive >-> Z.
 
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
+Local Opaque reified_add_gen. (* needed for making [autorewrite] not take a very long time *)
 Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very long time *)
 Local Opaque reified_square_gen.
 (* needed for making [autorewrite] with [Set Keyed Unification] fast *)
@@ -164,6 +165,18 @@ Section __.
           correctness)
          (only parsing, at level 10, summary at next level, correctness at next level).
 
+  Definition add
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         possible_values
+         (reified_add_gen
+            @ GallinaReify.Reify base
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify n)
+         (Some boundsn, (Some boundsn, tt))
+         (Some boundsn).
+
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -188,6 +201,15 @@ Section __.
          (Some boundsn, tt)
          (Some boundsn).
 
+  Definition sadd (prefix : string)
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "add" add
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " adds two field elements."]%string)
+             (add_correct weightf n m boundsn)).
+
   Definition smul (prefix : string)
     : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
@@ -210,6 +232,21 @@ Section __.
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
 
   Local Ltac prove_correctness _ := Primitives.prove_correctness use_curve_good.
+
+  Lemma add_correct res
+        (Hres : add = Success res)
+    : add_correct weight n m boundsn (Interp res).
+  Proof using curve_good.
+    prove_correctness ().
+    cbv [evalf weightf weight up_bound] in *.
+    match goal with
+    | H : machine_wordsize = _ |- _ => rewrite H in *
+    end.
+    apply (fun pf => @SolinasReduction.SolinasReduction.add_correct (@wprops _ _ pf)); auto; lia.
+  Qed.
+
+  Lemma Wf_add res (Hres : add = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma mul_correct res
         (Hres : mul = Success res)
@@ -247,7 +284,7 @@ Section __.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("mul", wrap_s smul); ("square", wrap_s ssquare)].
+      := [("add", wrap_s sadd); ("mul", wrap_s smul); ("square", wrap_s ssquare)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 
@@ -268,6 +305,15 @@ Section __.
 End __.
 
 Module Export Hints.
+#[global]
+  Hint Opaque
+       add
+  : wf_op_cache.
+#[global]
+  Hint Immediate
+       Wf_add
+  : wf_op_cache.
+
 #[global]
   Hint Opaque
        mul

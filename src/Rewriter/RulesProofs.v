@@ -82,13 +82,22 @@ Local Ltac start_proof :=
   repeat apply PrimitiveProd.Primitive.pair; try exact tt.
 
 Local Hint Resolve
+      prod_rect_eta
       eq_repeat_nat_rect
       eq_app_list_rect
       eq_combine_list_rect
       eq_firstn_nat_rect
       eq_skipn_nat_rect
       eq_update_nth_nat_rect
+      unfold1_nat_rect_fbb_b 
+      unfold1_nat_rect_fbb_b_b
+      unfold1_list_rect_fbb_b 
+      unfold1_list_rect_fbb_b_b
+      unfold1_list_rect_fbb_b_b_b
+      unfold1_list_rect_fbb_b_b_b_b
+      unfold1_list_rect_fbb_b_b_b_b_b
   : core.
+
 
 Lemma nbe_rewrite_rules_proofs
   : PrimitiveHList.hlist (@snd bool Prop) nbe_rewrite_rulesT.
@@ -151,6 +160,7 @@ Lemma arith_rewrite_rules_proofs (max_const_val : Z)
 Proof using Type.
   start_proof; auto; intros; try lia.
   all: autorewrite with zsimplify_const; try reflexivity.
+  all : try (replace (-y * k) with (-(y*k)) by lia; set (y*k) as yk; clearbody yk).
   all: repeat first [ reflexivity
                     | match goal with
                       | [ |- context[Z.shiftl] ] => rewrite Z.shiftl_mul_pow2 by auto with zarith
@@ -571,6 +581,15 @@ Proof using Type.
   all: repeat interp_good_t_step_arith.
   all: remove_casts; try fin_with_nia.
   all: try (reflect_hyps; lia).
+
+  { repeat match goal with H5 : _ |- _ => apply unfold_is_bounded_by_bool in H5; cbn in H5 end.
+    replace x with 1 in *; nia. }
+  { repeat match goal with H5 : _ |- _ => apply unfold_is_bounded_by_bool in H5; cbn in H5 end.
+    replace x with 1 in *; nia. }
+  { (* cmov c 0 -1 -> sbb 0 0 c *)
+    enough (- c mod (M + 1) = M) as E by (rewrite E; remove_casts; trivial).
+    match goal with H5 : _ |- _ => apply unfold_is_bounded_by_bool in H5; cbn in H5 end.
+    rewrite Z.mod_opp_l_nz; rewrite ?Z.mod_small; nia. }
 Qed.
 
 Lemma relaxed_rules_work rland rm1 rv v :

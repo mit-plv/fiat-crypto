@@ -12,13 +12,8 @@ Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.SolinasReduction.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
-Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
-Require Import Crypto.UnsaturatedSolinasHeuristics.
-Require Crypto.PushButtonSynthesis.SaturatedSolinas.
-Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
+Require Crypto.PushButtonSynthesis.Primitives.
 Require Crypto.Stringification.C.
-Require Crypto.Stringification.Go.
-Require Crypto.Stringification.Java.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Util.DebugMonad.
 Require Import Crypto.Util.ZUtil.ModInv.
@@ -48,7 +43,503 @@ Local Existing Instances
       Primitives.Options.default_SynthesisOptions
 | 100.
 Local Instance : unfold_value_barrier_opt := true.
+
+Module debugging_sat_solinas_25519.
+  Section __.
+    Import Stringification.C.
+    Import Stringification.C.Compilers.
+    Import Stringification.C.Compilers.ToString.
+
+    (* We split these off to make things a bit easier on typeclass resolution and speed things up. *)
+    Local Existing Instances ToString.C.OutputCAPI Pipeline.show_ErrorMessage.
+    Local Instance : only_signed_opt := false.
+    Local Instance : no_select_opt := false.
+    Local Instance : static_opt := true.
+    Local Instance : internal_static_opt := true.
+    Local Instance : inline_opt := true.
+    Local Instance : inline_internal_opt := true.
+    Local Instance : use_mul_for_cmovznz_opt := false.
+    Local Instance : emit_primitives_opt := true.
+    Local Instance : should_split_mul_opt := false.
+    Local Instance : should_split_multiret_opt := false.
+    Local Instance : widen_carry_opt := false.
+    Local Instance : widen_bytes_opt := true. (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
+
+    (** ======= these are the changable parameters ====== *)
+    Let machine_wordsize := 64.
+    (** ================================================= *)
+    Let possible_values := prefix_with_carry [machine_wordsize].
+    Local Instance : machine_wordsize_opt := machine_wordsize. (* for show *)
+    Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
+    Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
+    Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+
+    Let n : nat := 4.
+    Let boundsn : list (ZRange.type.option.interp base.type.Z) := repeat (Some r[0 ~> (2^machine_wordsize - 1)]%zrange) n.
+
+    Import IdentifiersBasicGENERATED.Compilers.
+    Import API.Compilers.
+    Import APINotations.Compilers.
+
+    Import SolinasReduction.Saturated.
+
+    Definition bound (_ : Datatypes.nat) := Z.to_pos (2^64).
+
+    (*
+    Definition mulmod (c : BinNums.Z := 38) (a b : list BinNums.Z) :=
+      let p := mul bound a b in
+      let (lo, hi) := add_mul_limb bound (firstn n p) c (skipn n p) in
+      if c * Z.abs hi <=? 2^machine_wordsize - c
+      then reduce' bound 1 c lo [hi]
+      else lo ++ [hi].
+     *)
+
+    (*
+    Ltac2 Set reify_debug_level := 1.
+    Check ltac:(
+              let e := constr:(addmod bound) in
+              let e := eval cbv delta [addmod reduce' add_mul_limb add_mul_limb' stream.map weight stream.prefixes] in e in
+              let r := Reify e in
+              exact r).
+    *)
+
+    Fail Check ltac:(
+      let e := constr:(weight (fun _ => 10)%positive 2) in
+      let e := eval cbv [stream.map weight] in e in
+      (* let e := eval cbv delta [stream.prefixes] in e in *)
+      idtac e;
+      let r := Reify e in exact r).
+    Check ltac:(
+      let e := constr:(weight (fun _ => 10)%positive 2) in
+      let e := eval cbv [stream.map weight] in e in
+      let e := eval cbv delta [stream.prefixes] in e in
+      idtac e;
+      let r := Reify e in exact r).
+
+    Goal True.
+    pose (
+         (Pipeline.BoundsPipelineWithDebug
+            false (* subst01 *)
+            possible_values
+            ltac:(
+              let e := constr:((fun xs ys => addmod bound 38 xs (map Z.opp ys))) in
+              let r := Reify e in
+              exact r)
+              (Some boundsn, (Some boundsn, tt))
+              (Some boundsn)
+         )) as k.
+    vm_compute in k.
+    Abort.
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (Pipeline.BoundsPipelineToString
+            "fiat_" "fe4_add"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(
+                  let e := constr:(addmod bound 38) in
+                  let r := Reify e in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, (Some boundsn, tt))
+                   (Some boundsn)
+                   (None, (None, tt))
+                   (None)).
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (Pipeline.BoundsPipelineToString
+            "fiat_" "fe4_sub"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(
+                  let e := constr:(submod bound 38) in
+                  let r := Reify e in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, (Some boundsn, tt))
+                   (Some boundsn)
+                   (None, (None, tt))
+                   (None)).
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (Pipeline.BoundsPipelineToString
+            "fiat_" "fe4_scmul"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(let e := constr:(fun ys x =>
+                    let (lo, hi) := add_mul_small bound [] x ys in
+                    reduce bound 1%nat 38 lo [hi]
+                  ) in
+                  let e := eval cbv delta [reduce reduce' add_mul_limb add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let r := Reify e in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, (Some (r[0 ~>2^58-1]%zrange), tt))
+                   (Some boundsn)
+                   (None, (None, tt))
+                   (None)).
+         (* with add_mul_limb Check eq_refl true : (0x97ffffffffffffda <=? 0xffffffffffffffda) = true. *)
+
+    Goal (Z.to_nat (weight bound 4/(2^255-19))) = 2%nat. trivial. all: fail. Abort.
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (Pipeline.BoundsPipelineToString
+            "fiat_" "fe4_canon"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(let e := constr:(canon bound (2^255-19)) in
+                  let e := eval cbv delta [n canon stream.map weight stream.prefixes] in e in
+                  let r := Reify e in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, tt)
+                   (Some boundsn)
+                   (None, tt)
+                   (None)).
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (Pipeline.BoundsPipelineToString
+            "fiat_" "fe4_select"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
+                  let r := Reify (select) in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some (r[0 ~>1]%zrange), (Some boundsn, (Some boundsn, tt)))
+                   (Some boundsn)
+                   (None, (None, (None, tt)))
+                   (None)).
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (Pipeline.BoundsPipelineToString
+            "fiat_" "fe4_cswap"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
+                  let r := Reify (cswap) in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some (r[0 ~>1]%zrange), (Some boundsn, (Some boundsn, tt)))
+                   (Some boundsn, Some boundsn)
+                   (None, (None, (None, tt)))
+                   (None, None)).
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (Pipeline.BoundsPipelineToString
+            "fiat_" "fe4_divmod255"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
+                  let r := Reify (fun xs => divmodw bound xs (2^255)) in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, tt)
+                   (Some (r[0 ~>1]%zrange), Some boundsn)
+                   (None, tt)
+                   (None, None)).
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (Pipeline.BoundsPipelineToString
+            "fiat_" "fe4_mul_no_reduce"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(let e := constr:(mul bound) in
+                  let e := eval cbv delta [mulmod mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let r := Reify e in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, (Some boundsn, tt))
+                   (*
+                   (Some (boundsn++boundsn))
+                    *) None
+                   (None, (None, tt))
+                   (None)
+          : Pipeline.ErrorT _).
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (
+         Pipeline.BoundsPipelineToString
+            "fiat_" "fe4_mul"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(
+                  let e := constr:(mulmod bound 4 38) in
+                  let e := eval cbv delta [mulmod mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let r := Reify e in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, (Some boundsn, tt))
+                   (*
+                   (Some boundsn)
+                    *) None
+                   (None, (None, tt))
+                   (None)
+          : Pipeline.ErrorT _).
+
+    Definition product_scan_ bound acc ps h o c :=
+      let '(r, (h, o, c)) := product_scan bound acc ps h o c in
+      dlet r := r ++ [h+o+c] in
+      r.
+
+    Definition p256 := 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff%Z.
+    Definition p3 :=   0xffffffff00000001%Z.
+    Definition two_steps_of_p256_montgomery_friendly_reduction xs :=
+      let x := nth_default 0 xs 0 in
+      let y := nth_default 0 xs 1 in
+      let (x't, h) := Z.mul_split (2^64) (2^32) x in
+      let (x', c) := Z.add_with_get_carry_full (2^64) 0 y x't in
+      product_scan_ bound (skipn 2 xs) [(2^32, x'); (p3, x); (p3, x'); (0, 0)] h c 0.
+
+    Lemma two_steps_of_p256_montgomery_friendly_reduction_correct xs
+      (Hl : length xs = 6%nat)
+      (Hx : nth_default 0 xs 0 = eval bound xs mod 2^64)
+      (Hy : nth_default 0 xs 1 = eval bound xs / 2^64 mod 2^64)
+      (Hxs : eval bound (skipn 2 xs) = eval bound xs / 2^128) :
+      2^128 * eval bound (two_steps_of_p256_montgomery_friendly_reduction xs) mod p256 = eval bound xs mod p256.
+    Proof.
+      cbv [Let_In two_steps_of_p256_montgomery_friendly_reduction product_scan_].
+      set (nth_default 0 xs 0) as x.
+      set (nth_default 0 xs 1) as y.
+      edestruct Z.mul_split as (tl, th) eqn:Et.
+      rewrite Z.mul_split_correct in Et; symmetry in Et; Prod.inversion_pair.
+      edestruct Z.add_with_get_carry_full as (x', c) eqn:Ex'.
+      rewrite Z.add_with_get_carry_full_correct in Ex'; symmetry in Ex'; Prod.inversion_pair; rewrite ?Z.add_0_l in *.
+      edestruct  product_scan_correct as (h'&c'&o'&->&H'); simpl Datatypes.length in *.
+      symmetry; erewrite <-Z.mod_add with (b := x + 2^64*x') by (cbv; Lia.lia); symmetry; f_equal.
+      change (Z.pos (stream.hd bound)) with (2^64) in *.
+      assert ((x + 2^64 * x')*p256 <= (2^128-1)*p256) by (cbv [p256]; Z.div_mod_to_equations; Lia.nia).
+      assert ((x + 2^64 * x')*p256 < 2^128*(p256-2^128+2^96-2^64)) by (cbv [p256]; Z.div_mod_to_equations; Lia.nia).
+      (* 0xffffffff00000000ffffffffffffffff00000001fffffffeffffffffffffffff *)
+      rewrite H'; clear H' h' c' o'.
+      rewrite firstn_all2 by (rewrite ?skipn_length; Lia.lia).
+      cbn [List.map uncurry].
+      set (eval bound (cons _ _)) as E.
+      rewrite eval_app, eval_encode, ?length_encode, ?eval_cons, ?eval_nil, ?Z.mul_0_r, ?Z.add_0_r.
+      change (weight bound 4) with (2^256)%positive.
+      transitivity (2^128 * (eval bound xs / 2 ^ 128 + th + c + E)).
+      { Z.div_mod_to_equations; Lia.nia. }
+      unfold eval, PreExtra.list_rect_fbb_b, list_rect in E.
+      change (stream.hd _) with (2^64)%positive in *.
+      assert (E = 2^32 * x' + 2^64 * p3 * x + 2^128 * p3*x') as -> by (Z.div_mod_to_equations; Lia.nia).
+      cbv [p256 p3]; Z.div_mod_to_equations; Lia.nia.
+    Qed.
+
+    Definition p256_mul x y :=
+      dlet a := mul bound (firstn 2 x) y in
+      dlet a := two_steps_of_p256_montgomery_friendly_reduction a in
+      dlet a := add_mul bound a (skipn 2 x) y in
+      dlet a := two_steps_of_p256_montgomery_friendly_reduction a in
+      firstn 4 (condsub bound a (encode bound 4 p256)).
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (
+         Pipeline.BoundsPipelineToString
+            "fiat_" "p256mul2w"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(let e := constr:(two_steps_of_p256_montgomery_friendly_reduction) in
+            let e := eval cbv delta [two_steps_of_p256_montgomery_friendly_reduction mulmod mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let r := Reify e in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some (repeat (Some r[0 ~> (2^64 - 1)]%zrange) 6), tt)
+                   (Some (repeat (Some r[0 ~> (2^64 - 1)]%zrange) 4 ++ [(Some r[0 ~> 2]%zrange)]))
+                   (None, tt)
+                   None
+          : Pipeline.ErrorT _).
+         (*
+  fiat_mulx_u64(&x1, &x2, UINT64_C(0x100000000), (arg1[0]));
+  fiat_addcarryx_u64(&x3, &x4, 0x0, (arg1[1]), x1);
+  fiat_mulx_u64(&x5, &x6, UINT64_C(0x100000000), x3);
+  fiat_addcarryx_u64(&x7, &x8, x4, (arg1[2]), x2);
+  fiat_addcarryx_u64(&x9, &x10, 0x0, x7, x5);
+  fiat_mulx_u64(&x11, &x12, UINT64_C(0xffffffff00000001), (arg1[0]));
+  fiat_addcarryx_u64(&x13, &x14, x8, (arg1[3]), x6);
+  fiat_addcarryx_u64(&x15, &x16, x10, x13, x11);
+  fiat_mulx_u64(&x17, &x18, UINT64_C(0xffffffff00000001), x3);
+  fiat_addcarryx_u64(&x19, &x20, x14, (arg1[4]), x12);
+  fiat_addcarryx_u64(&x21, &x22, x16, x19, x17);
+  fiat_addcarryx_u64(&x23, &x24, x20, (arg1[5]), x18);
+  fiat_addcarryx_u64(&x25, &x26, x22, x23, 0x0);
+  x27 = ((uint64_t)x24 + x26);
+  out1[0] = x9;
+  out1[1] = x15;
+  out1[2] = x21;
+  out1[3] = x25;
+  out1[4] = x27;
+          *)
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (
+         Pipeline.BoundsPipelineToString
+            "fiat_" "p256_mul"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(
+                  let e := constr:(p256_mul) in
+                  let e := eval cbv delta [two_steps_of_p256_montgomery_friendly_reduction p256_mul mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let r := Reify e in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, (Some boundsn, tt))
+                   (Some boundsn)
+                   (None, (None, tt))
+                   (None)
+          : Pipeline.ErrorT _).
+
+  End __.
+End debugging_sat_solinas_25519.
+
+
+(*
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
+*)
+
+Module debugging_sat_solinas_25519.
+  Section __.
+    Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
+    Import Stringification.C.
+    Import Stringification.C.Compilers.
+    Import Stringification.C.Compilers.ToString.
+
+    (* We split these off to make things a bit easier on typeclass resolution and speed things up. *)
+    Local Existing Instances ToString.C.OutputCAPI Pipeline.show_ErrorMessage.
+    Local Instance : only_signed_opt := false.
+    Local Instance : no_select_opt := false.
+    Local Instance : static_opt := true.
+    Local Instance : internal_static_opt := true.
+    Local Instance : inline_opt := true.
+    Local Instance : inline_internal_opt := true.
+    Local Instance : use_mul_for_cmovznz_opt := false.
+    Local Instance : emit_primitives_opt := true.
+    Local Instance : should_split_mul_opt := false.
+    Local Instance : should_split_multiret_opt := false.
+    Local Instance : widen_carry_opt := false.
+    Local Instance : widen_bytes_opt := true. (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
+
+    (** ======= these are the changable parameters ====== *)
+    Let s := 2^256.
+    Let c := [(1, 38)].
+    Let machine_wordsize := 64.
+    (** ================================================= *)
+    Let possible_values := prefix_with_carry [machine_wordsize].
+    Local Instance : machine_wordsize_opt := machine_wordsize. (* for show *)
+    Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
+    Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
+    Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+    Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
+    Let m := s - Associational.eval c.
+    (* Number of reductions is calculated as follows :
+         Let i be the highest limb index of c. Then, each reduction
+         decreases the number of extra limbs by (n-i-1). (The -1 comes
+         from possibly having an extra high partial product at the end
+         of a reduction.) So, to go from the n extra limbs we have
+         post-multiplication down to 0, we need ceil (n / (n - i - 1))
+         reductions.  In some cases. however, [n - i <= 1], and in
+         this case, we do [n] reductions (is this enough?). *)
+  Let nreductions : nat :=
+    let i := fold_right Z.max 0 (map (fun t => Z.log2 (fst t) / machine_wordsize) c) in
+    if Z.of_nat n - i <=? 1
+    then n
+    else Z.to_nat (Qceiling (Z.of_nat n / (Z.of_nat n - i - 1))).
+    Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
+    Let boundsn : list (ZRange.type.option.interp base.type.Z)
+      := repeat bound n.
+
+    Goal True.
+    pose (
+         (Pipeline.BoundsPipeline
+            false (* subst01 *)
+            possible_values
+            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
+                  let nreductions := (eval cbv in nreductions) (* needs to be reduced to reify correctly *) in
+                  let r := Reify (@SolinasReduction.add (2^machine_wordsize) s c n) in
+                  exact r)
+                   (Some boundsn, (Some boundsn, tt))
+                   (Some boundsn)
+                   )) as k.
+    cbv beta delta [Pipeline.BoundsPipeline Pipeline.BoundsPipelineWithDebug Debug.eval_result] in *.
+      Import Rewriter.Util.LetIn.
+      cbv zeta beta in k.
+      cbv [Pipeline.PreBoundsPipeline] in *.
+      set (E0:=(fun var : API.type -> Type => _)) in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      unfold DebugMonad.Debug.bind in (value of k) at 1; cbn [snd] in k.
+      set (E':=Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _ _ _) in k.
+      set (E:=snd _) in E'.
+      (* search for "select" *)
+      Compute E. (* good *)
+      (*
+         #IdentifiersBasicGENERATED.Compilers.ident_bool_rect @
+         (λ _ : var (type.base ()),
+          expr_let x20 := #IdentifiersBasicGENERATED.Compilers.ident_Z_zselect @
+                          (#IdentifiersBasicGENERATED.Compilers.ident_fst @
+         $$x18) @ ###0 @ ###38 in *)
+      Compute E'. (* bad *)
+      (*
+                         #IdentifiersBasicGENERATED.Compilers.ident_bool_rect @
+                         (λ _ : var (type.base ()),
+                          expr_let x12 := #IdentifiersBasicGENERATED.Compilers.ident_Z_add_with_get_carry @
+                                          ###18446744073709551616 @ ###0 @
+                                          (#IdentifiersBasicGENERATED.Compilers.ident_Z_zselect @
+                                           (#IdentifiersBasicGENERATED.Compilers.ident_fst @
+                                            $$x10) @ ###0 @ ###38) @
+                                          (#IdentifiersBasicGENERATED.Compilers.ident_fst @
+                                           $$x6) in
+       *)
+    Abort.
+  End __.
+End debugging_sat_solinas_25519.
 
 Module debugging_go_bits_add.
   Import Stringification.Go.
@@ -504,79 +995,6 @@ Module debugging_21271_from_bytes.
     Abort.
   End __.
 End debugging_21271_from_bytes.
-
-Module debugging_sat_solinas_25519.
-  Section __.
-    Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
-    Import Stringification.C.
-    Import Stringification.C.Compilers.
-    Import Stringification.C.Compilers.ToString.
-
-    (* We split these off to make things a bit easier on typeclass resolution and speed things up. *)
-    Local Existing Instances ToString.C.OutputCAPI Pipeline.show_ErrorMessage.
-    Local Instance : only_signed_opt := false.
-    Local Instance : no_select_opt := false.
-    Local Instance : static_opt := true.
-    Local Instance : internal_static_opt := true.
-    Local Instance : inline_opt := true.
-    Local Instance : inline_internal_opt := true.
-    Local Instance : use_mul_for_cmovznz_opt := false.
-    Local Instance : emit_primitives_opt := true.
-    Local Instance : should_split_mul_opt := false.
-    Local Instance : should_split_multiret_opt := false.
-    Local Instance : widen_carry_opt := false.
-    Local Instance : widen_bytes_opt := true. (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
-
-    (** ======= these are the changable parameters ====== *)
-    Let s := 2^256.
-    Let c := [(1, 38)].
-    Let machine_wordsize := 64.
-    (** ================================================= *)
-    Let possible_values := prefix_with_carry [machine_wordsize].
-    Local Instance : machine_wordsize_opt := machine_wordsize. (* for show *)
-    Local Instance : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
-    Local Instance : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
-    Local Instance : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
-    Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
-    Let m := s - Associational.eval c.
-    (* Number of reductions is calculated as follows :
-         Let i be the highest limb index of c. Then, each reduction
-         decreases the number of extra limbs by (n-i-1). (The -1 comes
-         from possibly having an extra high partial product at the end
-         of a reduction.) So, to go from the n extra limbs we have
-         post-multiplication down to 0, we need ceil (n / (n - i - 1))
-         reductions.  In some cases. however, [n - i <= 1], and in
-         this case, we do [n] reductions (is this enough?). *)
-  Let nreductions : nat :=
-    let i := fold_right Z.max 0 (map (fun t => Z.log2 (fst t) / machine_wordsize) c) in
-    if Z.of_nat n - i <=? 1
-    then n
-    else Z.to_nat (Qceiling (Z.of_nat n / (Z.of_nat n - i - 1))).
-    Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
-    Let boundsn : list (ZRange.type.option.interp base.type.Z)
-      := repeat bound n.
-
-    Time Redirect "log" Compute
-         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
-         (Pipeline.BoundsPipelineToString
-            "fiat" "mul"
-            false (* subst01 *)
-            false (* inline *)
-            possible_values
-            machine_wordsize
-            ltac:(let n := (eval cbv in n) (* needs to be reduced to reify correctly *) in
-                  let nreductions := (eval cbv in nreductions) (* needs to be reduced to reify correctly *) in
-                  let r := Reify (@Saturated.Rows.mulmod (weight machine_wordsize 1) (2^machine_wordsize) s c n nreductions) in
-                  exact r)
-                   (fun _ _ => []) (* comment *)
-                   (Some boundsn, (Some boundsn, tt))
-                   (Some boundsn, None (* Should be: Some r[0~>0]%zrange, but bounds analysis is not good enough *) )
-                   (None, (None, tt))
-                   (None, None)
-          : Pipeline.ErrorT _).
-    (* Finished transaction in 6.9 secs (4.764u,0.001s) (successful) *)
-  End __.
-End debugging_sat_solinas_25519.
 
 Module debugging_sat_solinas_25519_expanded_straightforward.
   Import PreExtra.

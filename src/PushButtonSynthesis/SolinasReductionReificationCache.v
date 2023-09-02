@@ -29,6 +29,11 @@ Import SolinasReduction.SolinasReduction.
 
 Module Export SolinasReduction.
 
+  Derive reified_add_gen
+         SuchThat (is_reification_of reified_add_gen add)
+         As reified_add_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+
   Derive reified_mul_gen
          SuchThat (is_reification_of reified_mul_gen mulmod)
          As reified_mul_gen_correct.
@@ -38,6 +43,14 @@ Module Export SolinasReduction.
          SuchThat (is_reification_of reified_square_gen squaremod)
          As reified_square_gen_correct.
   Proof. Time cache_reify (). Time Qed.
+
+  #[global]
+   Hint Extern 1 (_ = _) => apply_cached_reification addmod (proj1 reified_add_gen) : reify_cache_gen.
+  #[global]
+   Hint Immediate (proj2 reified_add_gen_correct) : wf_gen_cache.
+  #[global]
+   Hint Rewrite (proj1 reified_add_gen_correct) : interp_gen_cache.
+  Local Opaque reified_add_gen. (* needed for making [autorewrite] not take a very long time *)
 
   #[global]
    Hint Extern 1 (_ = _) => apply_cached_reification mulmod (proj1 reified_mul_gen) : reify_cache_gen.

@@ -27,6 +27,8 @@
 //   balance = [0x7fffff6, 0x7fffffe, 0x7fffffe, 0x7fffffe, 0x7fffffe]
 package poly1305
 
+import "math/bits"
+
 type uint1 uint64 // We use uint64 instead of a more narrow type for performance reasons; see https://github.com/mit-plv/fiat-crypto/pull/1006#issuecomment-892625927
 type int1 int64 // We use uint64 instead of a more narrow type for performance reasons; see https://github.com/mit-plv/fiat-crypto/pull/1006#issuecomment-892625927
 
@@ -363,75 +365,75 @@ func ToBytes(out1 *[17]uint8, arg1 *TightFieldElement) {
 	var x10 uint1
 	subborrowxU26(&x9, &x10, x8, arg1[4], 0x3ffffff)
 	var x11 uint32
-	cmovznzU32(&x11, x10, uint32(0x0), 0xffffffff)
-	var x12 uint32
-	var x13 uint1
-	addcarryxU26(&x12, &x13, 0x0, x1, (x11 & 0x3fffffb))
-	var x14 uint32
-	var x15 uint1
-	addcarryxU26(&x14, &x15, x13, x3, (x11 & 0x3ffffff))
-	var x16 uint32
-	var x17 uint1
-	addcarryxU26(&x16, &x17, x15, x5, (x11 & 0x3ffffff))
-	var x18 uint32
-	var x19 uint1
-	addcarryxU26(&x18, &x19, x17, x7, (x11 & 0x3ffffff))
-	var x20 uint32
-	var x21 uint1
-	addcarryxU26(&x20, &x21, x19, x9, (x11 & 0x3ffffff))
-	x22 := (x18 << 6)
-	x23 := (x16 << 4)
-	x24 := (x14 << 2)
-	x25 := (uint8(x12) & 0xff)
-	x26 := (x12 >> 8)
-	x27 := (uint8(x26) & 0xff)
-	x28 := (x26 >> 8)
-	x29 := (uint8(x28) & 0xff)
-	x30 := uint8((x28 >> 8))
-	x31 := (x24 + uint32(x30))
-	x32 := (uint8(x31) & 0xff)
-	x33 := (x31 >> 8)
-	x34 := (uint8(x33) & 0xff)
-	x35 := (x33 >> 8)
-	x36 := (uint8(x35) & 0xff)
-	x37 := uint8((x35 >> 8))
-	x38 := (x23 + uint32(x37))
-	x39 := (uint8(x38) & 0xff)
-	x40 := (x38 >> 8)
-	x41 := (uint8(x40) & 0xff)
-	x42 := (x40 >> 8)
-	x43 := (uint8(x42) & 0xff)
-	x44 := uint8((x42 >> 8))
-	x45 := (x22 + uint32(x44))
-	x46 := (uint8(x45) & 0xff)
-	x47 := (x45 >> 8)
-	x48 := (uint8(x47) & 0xff)
-	x49 := (x47 >> 8)
-	x50 := (uint8(x49) & 0xff)
-	x51 := uint8((x49 >> 8))
-	x52 := (uint8(x20) & 0xff)
-	x53 := (x20 >> 8)
-	x54 := (uint8(x53) & 0xff)
-	x55 := (x53 >> 8)
-	x56 := (uint8(x55) & 0xff)
-	x57 := uint8((x55 >> 8))
-	out1[0] = x25
-	out1[1] = x27
-	out1[2] = x29
-	out1[3] = x32
-	out1[4] = x34
-	out1[5] = x36
-	out1[6] = x39
-	out1[7] = x41
-	out1[8] = x43
-	out1[9] = x46
-	out1[10] = x48
-	out1[11] = x50
-	out1[12] = x51
-	out1[13] = x52
-	out1[14] = x54
-	out1[15] = x56
-	out1[16] = x57
+	x11, _ = bits.Sub32(uint32(0x0), uint32(0x0), uint32(x10))
+	var x13 uint32
+	var x14 uint1
+	addcarryxU26(&x13, &x14, 0x0, x1, (x11 & 0x3fffffb))
+	var x15 uint32
+	var x16 uint1
+	addcarryxU26(&x15, &x16, x14, x3, (x11 & 0x3ffffff))
+	var x17 uint32
+	var x18 uint1
+	addcarryxU26(&x17, &x18, x16, x5, (x11 & 0x3ffffff))
+	var x19 uint32
+	var x20 uint1
+	addcarryxU26(&x19, &x20, x18, x7, (x11 & 0x3ffffff))
+	var x21 uint32
+	var x22 uint1
+	addcarryxU26(&x21, &x22, x20, x9, (x11 & 0x3ffffff))
+	x23 := (x19 << 6)
+	x24 := (x17 << 4)
+	x25 := (x15 << 2)
+	x26 := (uint8(x13) & 0xff)
+	x27 := (x13 >> 8)
+	x28 := (uint8(x27) & 0xff)
+	x29 := (x27 >> 8)
+	x30 := (uint8(x29) & 0xff)
+	x31 := uint8((x29 >> 8))
+	x32 := (x25 + uint32(x31))
+	x33 := (uint8(x32) & 0xff)
+	x34 := (x32 >> 8)
+	x35 := (uint8(x34) & 0xff)
+	x36 := (x34 >> 8)
+	x37 := (uint8(x36) & 0xff)
+	x38 := uint8((x36 >> 8))
+	x39 := (x24 + uint32(x38))
+	x40 := (uint8(x39) & 0xff)
+	x41 := (x39 >> 8)
+	x42 := (uint8(x41) & 0xff)
+	x43 := (x41 >> 8)
+	x44 := (uint8(x43) & 0xff)
+	x45 := uint8((x43 >> 8))
+	x46 := (x23 + uint32(x45))
+	x47 := (uint8(x46) & 0xff)
+	x48 := (x46 >> 8)
+	x49 := (uint8(x48) & 0xff)
+	x50 := (x48 >> 8)
+	x51 := (uint8(x50) & 0xff)
+	x52 := uint8((x50 >> 8))
+	x53 := (uint8(x21) & 0xff)
+	x54 := (x21 >> 8)
+	x55 := (uint8(x54) & 0xff)
+	x56 := (x54 >> 8)
+	x57 := (uint8(x56) & 0xff)
+	x58 := uint8((x56 >> 8))
+	out1[0] = x26
+	out1[1] = x28
+	out1[2] = x30
+	out1[3] = x33
+	out1[4] = x35
+	out1[5] = x37
+	out1[6] = x40
+	out1[7] = x42
+	out1[8] = x44
+	out1[9] = x47
+	out1[10] = x49
+	out1[11] = x51
+	out1[12] = x52
+	out1[13] = x53
+	out1[14] = x55
+	out1[15] = x57
+	out1[16] = x58
 }
 
 // FromBytes deserializes a field element from bytes in little-endian order.

@@ -531,6 +531,14 @@ Module SolinasReduction.
             (length_saturated_bounds : length saturated_bounds = n).
     Local Notation eval := (Positional.eval wt n).
 
+    Definition add_correct
+               (add : list Z -> list Z -> list Z) :=
+      forall x y,
+        list_Z_bounded_by saturated_bounds x ->
+        list_Z_bounded_by saturated_bounds y ->
+        ((eval (add x y)) mod m = (eval x + eval y) mod m) /\
+          (list_Z_bounded_by saturated_bounds (add x y)).
+
     Definition mul_correct
                (mul : list Z -> list Z -> list Z) :=
       forall x y,

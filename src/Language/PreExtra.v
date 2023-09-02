@@ -135,3 +135,76 @@ Module Thunked.
   Notation nat_rect := Rewriter.Util.NatUtil.Thunked.nat_rect (only parsing).
   Notation option_rect := Rewriter.Util.Option.Thunked.option_rect (only parsing).
 End Thunked.
+
+Definition nat_rect_fbb_b {A B C} :=
+  @Coq.Init.Datatypes.nat_rect (fun _ => (A -> B) -> C).
+Definition nat_rect_fbb_b_b {A B C D} :=
+  @Coq.Init.Datatypes.nat_rect (fun _ => (A -> B) -> C -> D).
+
+Definition list_rect_fbb_b {T A B C} :=
+  @Coq.Init.Datatypes.list_rect T (fun _ => (A -> B) -> C).
+Definition list_rect_fbb_b_b {T A B C D} :=
+  @Coq.Init.Datatypes.list_rect T (fun _ => (A -> B) -> C -> D).
+Definition list_rect_fbb_b_b_b {T A B C D E} :=
+  @Coq.Init.Datatypes.list_rect T (fun _ => (A -> B) -> C -> D -> E).
+Definition list_rect_fbb_b_b_b_b {T A B C D E F} :=
+  @Coq.Init.Datatypes.list_rect T (fun _ => (A -> B) -> C -> D -> E -> F).
+Definition list_rect_fbb_b_b_b_b_b {T A B C D E F G} :=
+  @Coq.Init.Datatypes.list_rect T (fun _ => (A -> B) -> C -> D -> E -> F -> G).
+
+Lemma unfold1_nat_rect_fbb_b {A B C} fO fS n k :
+  @nat_rect_fbb_b A B C fO fS n k =
+    if Nat.eqb 0 n then fO k else fS (pred n) (nat_rect_fbb_b fO fS (pred n)) k.
+Proof. case n; trivial. Qed.
+
+Lemma unfold1_nat_rect_fbb_b_b {A B C D} fO fS n k x :
+  @nat_rect_fbb_b_b A B C D fO fS n k x =
+    if Nat.eqb 0 n then fO k x else fS (pred n) (nat_rect_fbb_b_b fO fS (pred n)) k x.
+Proof. case n; trivial. Qed.
+
+Lemma unfold1_list_rect_fbb_b {T A B C} fnil fcons l k :
+  @list_rect_fbb_b T A B C fnil fcons l k =
+    match l with
+    | nil => fnil k
+    | cons x l => fcons x l (list_rect_fbb_b fnil fcons l) k
+    end.
+Proof. case l; trivial. Qed.
+
+Lemma unfold1_list_rect_fbb_b_b {T A B C D} fnil fcons l k c :
+  @list_rect_fbb_b_b T A B C D fnil fcons l k c =
+    match l with
+    | nil => fnil k c
+    | cons x l => fcons x l (list_rect_fbb_b_b fnil fcons l) k c
+    end.
+Proof. case l; trivial. Qed.
+
+Lemma unfold1_list_rect_fbb_b_b_b {T A B C D E} fnil fcons l k c d :
+  @list_rect_fbb_b_b_b T A B C D E fnil fcons l k c d =
+    match l with
+    | nil => fnil k c d
+    | cons x l => fcons x l (list_rect_fbb_b_b_b fnil fcons l) k c d
+    end.
+Proof. case l; trivial. Qed.
+
+Lemma unfold1_list_rect_fbb_b_b_b_b {T A B C D E F} fnil fcons l k c d e :
+  @list_rect_fbb_b_b_b_b T A B C D E F fnil fcons l k c d e =
+    match l with
+    | nil => fnil k c d e
+    | cons x l => fcons x l (list_rect_fbb_b_b_b_b fnil fcons l) k c d e
+    end.
+Proof. case l; trivial. Qed.
+
+Lemma unfold1_list_rect_fbb_b_b_b_b_b {T A B C D E F G} fnil fcons l k c d e f :
+  @list_rect_fbb_b_b_b_b_b T A B C D E F G fnil fcons l k c d e f =
+    match l with
+    | nil => fnil k c d e f
+    | cons x l => fcons x l (list_rect_fbb_b_b_b_b_b fnil fcons l) k c d e f
+    end.
+Proof. case l; trivial. Qed.
+
+Import Coq.Classes.Morphisms.
+
+Global Instance Proper_nat_rect_fbb_b {A B C} :
+  Proper (((eq ==> eq) ==> eq) ==> (eq ==> ((eq ==> eq) ==> eq) ==> (eq ==> eq) ==> eq) ==> eq ==> (eq ==> eq) ==> eq) (@nat_rect_fbb_b A B C) | 10.
+Set Printing Implicit.
+Proof. cbv -[nat_rect]; intros ??? ??? n m ?; subst m. induction n; cbn; eauto. Qed.

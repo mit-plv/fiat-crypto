@@ -177,6 +177,7 @@ Module Compilers.
             := match t return ShowLevel (ZRange.type.base.interp t) with
                | base.type.unit => @show_lvl unit _
                | base.type.type_base base.type.Z => @show_lvl zrange _
+               | base.type.type_base Compilers.positive => @show_lvl positive _
                | base.type.type_base base.type.bool => @show_lvl bool _
                | base.type.type_base base.type.nat => @show_lvl nat _
                | base.type.type_base base.type.zrange => @show_lvl zrange _
@@ -192,6 +193,7 @@ Module Compilers.
               := match t return ShowLevel (ZRange.type.base.option.interp t) with
                  | base.type.unit => @show_lvl unit _
                  | base.type.type_base base.type.Z => @show_lvl (option zrange) _
+                 | base.type.type_base Compilers.positive => @show_lvl (option positive) _
                  | base.type.type_base base.type.bool => @show_lvl (option bool) _
                  | base.type.type_base base.type.nat => @show_lvl (option nat) _
                  | base.type.type_base base.type.zrange => @show_lvl (option zrange) _
@@ -222,6 +224,7 @@ Module Compilers.
           Global Instance show_base : Show base.type.base
             := fun t => match t with
                         | base.type.Z => "ℤ"
+                        | Compilers.positive => "ℤ⁺"
                         | base.type.bool => "𝔹"
                         | base.type.nat => "ℕ"
                         | base.type.zrange => "zrange"
@@ -245,6 +248,7 @@ Module Compilers.
           Global Instance show_lvl_base_interp {t} : ShowLevel (base.base_interp t)
             := match t with
                | base.type.Z => @show_lvl Z _
+               | Compilers.positive => @show_lvl positive _
                | base.type.bool => @show_lvl bool _
                | base.type.nat => @show_lvl nat _
                | base.type.zrange => @show_lvl zrange _
@@ -409,6 +413,14 @@ Module Compilers.
                 | ident.nat_rect P => neg_wrap_parens "nat_rect"
                 | ident.eager_nat_rect P => neg_wrap_parens "eager_nat_rect"
                 | ident.nat_rect_arrow P Q => neg_wrap_parens "nat_rect(→)"
+
+                | @Compilers.ident_nat_rect_fbb_b A B C => neg_wrap_parens "nat_rect_fbb_b"
+                | @Compilers.ident_nat_rect_fbb_b_b A B C D => neg_wrap_parens "nat_rect_fbb_b_b"
+                | @Compilers.ident_list_rect_fbb_b T A B C => neg_wrap_parens "list_rect_fbb_b"
+                | @Compilers.ident_list_rect_fbb_b_b T A B C D => neg_wrap_parens "list_rect_fbb_b_b"
+                | @Compilers.ident_list_rect_fbb_b_b_b T A B C D E => neg_wrap_parens "list_rect_fbb_b_b"
+                | @Compilers.ident_list_rect_fbb_b_b_b_b T A B C D E F => neg_wrap_parens "list_rect_fbb_b_b"
+                | @Compilers.ident_list_rect_fbb_b_b_b_b_b T A B C D E F G => neg_wrap_parens "list_rect_fbb_b_b"
                 | ident.eager_nat_rect_arrow P Q => neg_wrap_parens "eager_nat_rect(→)"
                 | ident.list_rect A P => neg_wrap_parens "list_rect"
                 | ident.eager_list_rect A P => neg_wrap_parens "eager_list_rect"
@@ -490,6 +502,11 @@ Module Compilers.
                 | ident.fancy_selm => neg_wrap_parens "fancy.selm"
                 | ident.fancy_sell => neg_wrap_parens "fancy.sell"
                 | ident.fancy_addm => neg_wrap_parens "fancy.addm"
+                | Compilers.ident_Pos_add => neg_wrap_parens "Pos.add"
+                | Compilers.ident_Pos_mul => neg_wrap_parens "Pos.mul"
+                | Compilers.ident_Z_abs => neg_wrap_parens "Z.abs"
+                | Compilers.ident_Z_pos => neg_wrap_parens "Z.pos"
+                | Compilers.ident_Z_to_pos => neg_wrap_parens "Z.to_pos"
                 end.
         Global Instance show_ident {t} : Show (ident.ident t) := show_lvl_ident.
 
@@ -508,8 +525,10 @@ Module Compilers.
               ; ("::", (RightAssoc, Level.level 60))
               ; ("++", (FullyAssoc, Level.level 60))
               ; ("*", (mul_assoc, mul_lvl))
+              ; ("*ℤ⁺", (mul_assoc, mul_lvl))
               ; ("/", (div_assoc, div_lvl))
               ; ("+", (add_assoc, add_lvl))
+              ; ("+ℤ⁺", (add_assoc, add_lvl))
               ; ("-", (sub_assoc, sub_lvl))
               ; ("^", (pow_assoc, pow_lvl))
               ; ("⊕", (LeftAssoc, Level.level 50))
@@ -579,6 +598,8 @@ Module Compilers.
              | ident.List_app _ => "++"
              | ident.Z_mul => "*"
              | ident.Z_add => "+"
+             | Compilers.ident_Pos_mul => "*ℤ⁺"
+             | Compilers.ident_Pos_add => "+ℤ⁺"
              | ident.Z_sub => "-"
              | ident.Z_pow => "^"
              | ident.Z_lxor => "⊕"
@@ -631,6 +652,8 @@ Module Compilers.
              | ident.List_app _ as idc
              | ident.Z_mul as idc
              | ident.Z_add as idc
+             | Compilers.ident_Pos_add as idc
+             | Compilers.ident_Pos_mul as idc
              | ident.Z_sub as idc
              | ident.Z_pow as idc
              | ident.Z_lxor as idc
@@ -686,6 +709,13 @@ Module Compilers.
              | ident.nat_rect _ as idc
              | ident.eager_nat_rect _ as idc
              | ident.eager_nat_rect_arrow _ _ as idc
+             | @Compilers.ident_nat_rect_fbb_b    _ _ _ as idc
+             | @Compilers.ident_nat_rect_fbb_b_b  _ _ _ _ as idc
+             | @Compilers.ident_list_rect_fbb_b   _ _ _ _ as idc
+             | @Compilers.ident_list_rect_fbb_b_b _ _ _ _ _ as idc
+             | @Compilers.ident_list_rect_fbb_b_b_b _ _ _ _ _ _ as idc
+             | @Compilers.ident_list_rect_fbb_b_b_b_b _ _ _ _ _ _ _ as idc
+             | @Compilers.ident_list_rect_fbb_b_b_b_b_b  _ _ _ _ _ _ _ _ as idc
              | ident.nat_rect_arrow _ _ as idc
              | ident.option_rect _ _ as idc
              | ident.list_rect _ _ as idc
@@ -710,6 +740,9 @@ Module Compilers.
              | ident.Z_log2_up as idc
              | ident.Z_of_nat as idc
              | ident.Z_to_nat as idc
+             | Compilers.ident_Z_pos as idc
+             | Compilers.ident_Z_to_pos as idc
+             | Compilers.ident_Z_abs as idc
              | ident.Z_min as idc
              | ident.Z_max as idc
              | ident.Z_mul_split as idc
