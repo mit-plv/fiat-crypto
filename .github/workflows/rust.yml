@@ -26,9 +26,9 @@ jobs:
     - name: cargo test
       run: cargo test --verbose
     - name: curve25519-dalek test
-      run: ../etc/ci/test-fiat-rust-curve25519-dalek.sh
+      run: (cd .. ; etc/ci/test-fiat-rust-curve25519-dalek.sh)
     - name: crate-crypto/Ed448-Goldilocks test
-      run: ../etc/ci/test-fiat-rust-crate-crypto-Ed448-Goldilocks.sh
+      run: (cd .. ; ../etc/ci/test-fiat-rust-crate-crypto-Ed448-Goldilocks.sh)
 
   build-nostd:
     name: Build on no_std target (thumbv7em-none-eabi)
