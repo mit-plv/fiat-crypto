@@ -6,6 +6,10 @@ on:
   schedule:
     - cron: '0 0 1 * *'
 
+defaults:
+  run:
+    working-directory: fiat-rust
+
 jobs:
   test-rust:
 
@@ -18,10 +22,31 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: cargo build
-      run: (cd fiat-rust; cargo build --verbose)
+      run: cargo build --verbose
     - name: cargo test
-      run: (cd fiat-rust; cargo test --verbose)
+      run: cargo test --verbose
     - name: curve25519-dalek test
-      run: etc/ci/test-fiat-rust-curve25519-dalek.sh
+      run: ../etc/ci/test-fiat-rust-curve25519-dalek.sh
     - name: crate-crypto/Ed448-Goldilocks test
-      run: etc/ci/test-fiat-rust-crate-crypto-Ed448-Goldilocks.sh
+      run: ../etc/ci/test-fiat-rust-crate-crypto-Ed448-Goldilocks.sh
+
+  build-nostd:
+    name: Build on no_std target (thumbv7em-none-eabi)
+    runs-on: ubuntu-latest
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: thumbv7em-none-eabi
+      - uses: taiki-e/install-action@cargo-hack
+      # No default features build
+      - name: no_std / no feat fiat-crypto
+        run: cargo build -p fiat-crypto --target thumbv7em-none-eabi --release --no-default-features
+      - name: no_std / cargo hack fiat-crypto
+        run: cargo hack build -p fiat-crypto --target thumbv7em-none-eabi --release --each-feature --exclude-features default,std
