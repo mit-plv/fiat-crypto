@@ -325,7 +325,7 @@ Module debugging_sat_solinas_25519.
       let y := nth_default 0 xs 1 in
       let (x't, h) := Z.mul_split (2^64) (2^32) x in
       let (x', c) := Z.add_with_get_carry_full (2^64) 0 y x't in
-      product_scan_ bound (skipn 2 xs) [(2^32, x'); (p3, x); (p3, x'); (0, 0)] h c 0.
+      product_scan_ bound (skipn 2 xs) ([(2^32, x'); (p3, x); (p3, x')] ++ repeat (0,0) (length xs - 5)) h c 0.
 
     Lemma two_steps_of_p256_montgomery_friendly_reduction_correct xs
       (Hl : length xs = 6%nat)
@@ -335,6 +335,7 @@ Module debugging_sat_solinas_25519.
       2^128 * eval bound (two_steps_of_p256_montgomery_friendly_reduction xs) mod p256 = eval bound xs mod p256.
     Proof.
       cbv [Let_In two_steps_of_p256_montgomery_friendly_reduction product_scan_].
+      rewrite Hl in *; simpl Nat.sub in *; simpl List.repeat in *; simpl List.app in *.
       set (nth_default 0 xs 0) as x.
       set (nth_default 0 xs 1) as y.
       edestruct Z.mul_split as (tl, th) eqn:Et.
@@ -431,6 +432,72 @@ Module debugging_sat_solinas_25519.
                    (None, (None, tt))
                    (None)
           : Pipeline.ErrorT _).
+
+    Definition sqr4 xs :=
+      let x0 := nth_default 0 xs 0 in
+      let x1 := nth_default 0 xs 1 in
+      let x2 := nth_default 0 xs 2 in
+      let x3 := nth_default 0 xs 3 in
+      dlet acc := product_scan_ bound [] [(0,0); (0,0); (0, 0); (x1, x2)] 0 0 0 in
+      dlet acc := product_scan_ bound acc [(0, 0); (x0, x1); (x0, x2); (x0, x3); (x1, x3); (x2, x3)] 0 0 0 in
+      dlet acc := add_ bound 0 acc acc in
+      product_scan_ bound acc [(x0,x0); (0, 0); (x1, x1); (0, 0); (x2, x2); (0, 0); (x3, x3)] 0 0 0.
+
+    Lemma sqr4_correct xs : eval bound (sqr4 xs) = eval bound xs * eval bound xs.
+    Proof.
+    Abort.
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (
+         Pipeline.BoundsPipelineToString
+            "fiat_" "sqr4"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(
+                  let e := constr:(sqr4) in
+                  let e := eval cbv delta [two_steps_of_p256_montgomery_friendly_reduction p256_mul mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let r := Reify e in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, tt)
+                   (Some (boundsn++boundsn))
+                   (None, tt)
+                   (None)
+          : Pipeline.ErrorT _).
+
+    Definition p256_sqr a :=
+      dlet a := sqr4 a in
+      dlet a := two_steps_of_p256_montgomery_friendly_reduction a in
+      dlet a := two_steps_of_p256_montgomery_friendly_reduction a in
+      dlet a' := firstn 4 (condsub bound a (encode bound 4 p256)) in
+      a'.
+
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (
+         Pipeline.BoundsPipelineToString
+            "fiat_" "p256_sqr"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(
+                  let e := constr:(p256_sqr) in
+                  let e := eval cbv delta [two_steps_of_p256_montgomery_friendly_reduction p256_mul mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let r := Reify e in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, tt)
+                   (Some boundsn)
+                   (None, tt)
+                   (None)
+          : Pipeline.ErrorT _).
+
 
   End __.
 End debugging_sat_solinas_25519.
