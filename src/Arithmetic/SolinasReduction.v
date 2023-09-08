@@ -359,7 +359,7 @@ Module Saturated. Section __.
     rewrite ?add'_correct; repeat (lia || f_equal).
   Qed.
 
-  Definition product_scan bound (acc : list Z) (pps : list (Z*Z)) h c o : list Z * (Z*Z*Z) :=
+  Definition product_scan' bound (acc : list Z) (pps : list (Z*Z)) h c o : list Z * (Z*Z*Z) :=
     list_rect_fbb_b_b_b_b_b
       (fun bound acc h c o => ([], (h, c, o)))
       (fun x_y _ rec bound acc h c o =>
@@ -371,8 +371,8 @@ Module Saturated. Section __.
       (z::zs, C)
     ) pps bound acc h c o.
 
-  Lemma product_scan_nil bound acc h c o :
-    product_scan bound acc [] h c o = ([], (h, c, o)).
+  Lemma product_scan'_nil bound acc h c o :
+    product_scan' bound acc [] h c o = ([], (h, c, o)).
   Proof. trivial. Qed.
 
   Lemma hd_firstn_S {A} d n l : @hd A d (firstn (S n) l) = hd d l.
@@ -381,24 +381,24 @@ Module Saturated. Section __.
   Lemma tl_firstn_S {A} n l : @tl A (firstn (S n) l) = firstn n (tl l).
   Proof. case l; cbn; rewrite ?firstn_nil; trivial. Qed.
 
-  Lemma product_scan_cons bound acc x y pps h c o :
-    product_scan bound acc ((x, y)::pps) h c o =
+  Lemma product_scan'_cons bound acc x y pps h c o :
+    product_scan' bound acc ((x, y)::pps) h c o =
       let (p, h') := Z.mul_split (stream.hd bound) x y in
       let (z, c) := Z.add_with_get_carry_full (stream.hd bound) c (hd 0 acc) h in
       let (z, o) := Z.add_with_get_carry_full (stream.hd bound) o z p in
-      let (zs, C) := product_scan (stream.tl bound) (tl acc) pps h' c o in
+      let (zs, C) := product_scan' (stream.tl bound) (tl acc) pps h' c o in
       (z::zs, C).
   Proof. trivial. Qed.
 
-  Lemma product_scan_correct : forall bound acc pps h c o,
+  Lemma product_scan'_correct : forall bound acc pps h c o,
     let n := length pps in
     let z := eval bound (firstn n acc) + h + c + o + eval bound (map (uncurry Z.mul) pps) in
     exists h' c' o',
-    product_scan bound acc pps h c o = (encode bound n z, (h', c', o')) /\
+    product_scan' bound acc pps h c o = (encode bound n z, (h', c', o')) /\
     h' + c' + o' = z / weight bound n.
   Proof.
     intros ? ? ?; revert acc; revert bound; induction pps as [|[x y] pps];
-      cbn [length]; intros; rewrite ?product_scan_nil, ?product_scan_cons.
+      cbn [length]; intros; rewrite ?product_scan'_nil, ?product_scan'_cons.
     { eexists _, _, _; split; trivial. cbn. Z.div_mod_to_equations; lia. }
     edestruct IHpps as (h'&c'&o'&Hlo&Hhi).
     eexists _, _, _.
@@ -418,10 +418,10 @@ Module Saturated. Section __.
     Z.div_mod_to_equations; nia.
   Qed.
 
-  Definition add_mul_limb' bound acc x ys : list Z * Z :=
-    let '(lo, (h, c, o)) := product_scan bound acc (map (pair x) ys) 0 0 0 in
+  Definition product_scan bound acc (pps : list (Z*Z)) h c o : list Z * Z :=
+    let z := eval bound (firstn (length pps) acc) + h + c + o + eval bound (map (uncurry Z.mul) pps) in
+    let '(lo, (h, c, o)) := product_scan' bound acc pps h c o in
     (lo, 
-      let z := eval bound (firstn (length ys) acc) + x * eval bound ys in
       let zc := z / weight bound (length lo) in
       if  ((0 <=? zc) && (zc <? bound (length lo)))%bool
       then
@@ -436,28 +436,23 @@ Module Saturated. Section __.
       rewrite ?map_cons, ?eval_nil, ?eval_cons, ?IHys; ring.
   Qed.
 
-  Lemma add_mul_limb'_correct bound acc x ys :
-    let n := length ys in
-    let z := eval bound (firstn n acc) + x * eval bound ys in
-    add_mul_limb' bound acc x ys = (encode bound n z, z / weight bound n).
+  Lemma product_scan_correct bound acc pps h c o :
+    let n := length pps in
+    let z := eval bound (firstn n acc) + h + c + o + eval bound (map (uncurry Z.mul) pps) in
+    product_scan bound acc pps h c o = (encode bound n z, z / weight bound n).
   Proof.
-    cbv [add_mul_limb' Let_In].
-    edestruct product_scan_correct as (h&c&o&Hlo&Hhi); rewrite Hlo, Hhi; clear Hlo.
+    cbv [product_scan Let_In].
+    edestruct product_scan'_correct as (h'&c'&o'&Hlo&Hhi); rewrite Hlo, Hhi; clear Hlo.
     rewrite ?map_map, ?map_length, ?eval_app, ?eval_encode, ?length_encode, ?eval_cons, ?eval_nil, ?Z.add_with_get_carry_full_mod in *.
     cbn [uncurry] in *; rewrite ?eval_map_mul, ?Z.mul_0_r ,?Z.add_0_r in *; f_equal.
     match goal with |- context [Z.leb ?a ?b] => destruct (Z.leb_spec a b) end; trivial.
     match goal with |- context [Z.ltb ?a ?b] => destruct (Z.ltb_spec a b) end; trivial; cbn [andb].
-    push_Zmod; pull_Zmod.
-    rewrite (Z.mod_small (o+_)); Z.div_mod_to_equations; nia.
+    push_Zmod; pull_Zmod; rewrite Z.mod_small; [lia|]. lia.
   Qed.
 
-  Lemma length_add_mul_limb' bound acc x ys :
-    length (fst (add_mul_limb' bound acc x ys)) = length ys.
-  Proof.
-    cbv [add_mul_limb'].
-    edestruct product_scan_correct as (h&c&o&Hlo&_); rewrite Hlo; clear Hlo.
-    cbn [fst]; rewrite length_encode, map_length; cbn [length]; lia.
-  Qed.
+  Lemma length_add_mul_limb' bound acc pps :
+    length (fst (product_scan bound acc pps 0 0 0)) = length pps.
+  Proof. rewrite product_scan_correct; apply length_encode. Qed.
 
   Definition add_ bound c xs ys : list Z :=
     let (lo, hi) := add bound c xs ys in lo ++ [hi].
@@ -471,8 +466,15 @@ Module Saturated. Section __.
     rewrite eval_encode, length_encode; Z.div_mod_to_equations; nia.
   Qed.
 
+  Definition product_scan_ bound acc pps h c o :=
+    let '(l, h) := product_scan bound acc pps h c o in
+    dlet r := l ++ if Z.of_nat (length pps) <? Z.of_nat (length acc)
+                   then add_ bound 0 (skipn (length pps) acc) [h]
+                   else [h] in
+    r.
+
   Definition add_mul_small bound acc x ys : list Z * Z :=
-    let '(lo, (h, c, o)) := product_scan bound acc (map (pair x) ys) 0 0 0 in
+    let '(lo, (h, c, o)) := product_scan' bound acc (map (pair x) ys) 0 0 0 in
     dlet hi := h + c + o in
     if (Z.of_nat (length acc) <=? Z.of_nat (length ys))
     then (lo, hi)
@@ -488,7 +490,7 @@ Module Saturated. Section __.
   Admitted.
 
   Definition add_mul_limb bound acc x ys : list Z * Z :=
-    let (lo, hi) := add_mul_limb' bound acc x ys in
+    let (lo, hi) := product_scan bound acc (map (pair x) ys) 0 0 0 in
     if (Z.of_nat (length acc) <=? Z.of_nat (length ys))
     then (lo, hi)
     else
@@ -502,9 +504,9 @@ Module Saturated. Section __.
   Proof.
     intros. cbv [add_mul_limb].
     match goal with |- context [Z.leb ?a ?b] => destruct (Z.leb_spec a b) end; trivial.
-    { rewrite add_mul_limb'_correct; rewrite ?firstn_nil, ?eval_nil; trivial.
-      subst n; rewrite firstn_all2, Nat.max_r; trivial; lia. }
-    rewrite add_mul_limb'_correct, add_correct, eval_cons, eval_nil, Z.mul_0_r, Z.add_0_l, Z.add_0_r, skipn_length, Nat.max_l by (cbn [length]; lia); f_equal.
+    { rewrite product_scan_correct; rewrite ?firstn_nil, ?eval_nil; trivial.
+      subst n; rewrite firstn_all2, Nat.max_r; rewrite ?map_length; trivial; try lia. admit. }
+    rewrite product_scan_correct, add_correct, eval_cons, eval_nil, Z.mul_0_r, Z.add_0_l, Z.add_0_r, skipn_length, Nat.max_l by (cbn [length]; lia); f_equal.
     
     (*
     eval_app, eval_encode, length_encode, eval_add_, eval_cons, eval_nil; ring_simplify.

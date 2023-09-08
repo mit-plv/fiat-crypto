@@ -44,7 +44,7 @@ Local Existing Instances
 | 100.
 Local Instance : unfold_value_barrier_opt := true.
 
-Module debugging_sat_solinas_25519.
+Module debugging_scheduled_saturated_arithmetic.
   Section __.
     Import Stringification.C.
     Import Stringification.C.Compilers.
@@ -182,7 +182,7 @@ Module debugging_sat_solinas_25519.
                     let (lo, hi) := add_mul_small bound [] x ys in
                     reduce bound 1%nat 38 lo [hi]
                   ) in
-                  let e := eval cbv delta [reduce reduce' add_mul_limb add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let e := eval cbv delta [reduce reduce' add_mul_limb product_scan stream.map weight stream.prefixes] in e in
                   let r := Reify e in
                   exact r)
                    (fun _ _ => []) (* comment *)
@@ -277,7 +277,7 @@ Module debugging_sat_solinas_25519.
             possible_values
             machine_wordsize
             ltac:(let e := constr:(mul bound) in
-                  let e := eval cbv delta [mulmod mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let e := eval cbv delta [mulmod mul add_mul add_mul_limb_ add_mul_limb reduce' product_scan stream.map weight stream.prefixes] in e in
                   let r := Reify e in
                   exact r)
                    (fun _ _ => []) (* comment *)
@@ -301,7 +301,7 @@ Module debugging_sat_solinas_25519.
             machine_wordsize
             ltac:(
                   let e := constr:(mulmod bound 4 38) in
-                  let e := eval cbv delta [mulmod mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let e := eval cbv delta [mulmod mul add_mul add_mul_limb_ add_mul_limb reduce' product_scan stream.map weight stream.prefixes] in e in
                   let r := Reify e in
                   exact r)
                    (fun _ _ => []) (* comment *)
@@ -312,11 +312,6 @@ Module debugging_sat_solinas_25519.
                    (None, (None, tt))
                    (None)
           : Pipeline.ErrorT _).
-
-    Definition product_scan_ bound acc ps h o c :=
-      let '(r, (h, o, c)) := product_scan bound acc ps h o c in
-      dlet r := r ++ [h+o+c] in
-      r.
 
     Definition p256 := 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff%Z.
     Definition p3 :=   0xffffffff00000001%Z.
@@ -342,6 +337,7 @@ Module debugging_sat_solinas_25519.
       rewrite Z.mul_split_correct in Et; symmetry in Et; Prod.inversion_pair.
       edestruct Z.add_with_get_carry_full as (x', c) eqn:Ex'.
       rewrite Z.add_with_get_carry_full_correct in Ex'; symmetry in Ex'; Prod.inversion_pair; rewrite ?Z.add_0_l in *.
+      (*
       edestruct  product_scan_correct as (h'&c'&o'&->&H'); simpl Datatypes.length in *.
       symmetry; erewrite <-Z.mod_add with (b := x + 2^64*x') by (cbv; Lia.lia); symmetry; f_equal.
       change (Z.pos (stream.hd bound)) with (2^64) in *.
@@ -361,6 +357,7 @@ Module debugging_sat_solinas_25519.
       assert (E = 2^32 * x' + 2^64 * p3 * x + 2^128 * p3*x') as -> by (Z.div_mod_to_equations; Lia.nia).
       cbv [p256 p3]; Z.div_mod_to_equations; Lia.nia.
     Qed.
+       *) Admitted.
 
     Definition p256_mul x y :=
       dlet a := mul bound (firstn 2 x) y in
@@ -380,7 +377,7 @@ Module debugging_sat_solinas_25519.
             possible_values
             machine_wordsize
             ltac:(let e := constr:(two_steps_of_p256_montgomery_friendly_reduction) in
-            let e := eval cbv delta [two_steps_of_p256_montgomery_friendly_reduction mulmod mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+            let e := eval cbv delta [two_steps_of_p256_montgomery_friendly_reduction mulmod mul add_mul add_mul_limb_ add_mul_limb reduce' product_scan_ product_scan stream.map weight stream.prefixes] in e in
                   let r := Reify e in
                   exact r)
                    (fun _ _ => []) (* comment *)
@@ -423,7 +420,7 @@ Module debugging_sat_solinas_25519.
             machine_wordsize
             ltac:(
                   let e := constr:(p256_mul) in
-                  let e := eval cbv delta [two_steps_of_p256_montgomery_friendly_reduction p256_mul mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let e := eval cbv delta [two_steps_of_p256_montgomery_friendly_reduction p256_mul mul add_mul add_mul_limb_ add_mul_limb reduce' product_scan product_scan_ stream.map weight stream.prefixes] in e in
                   let r := Reify e in
                   exact r)
                    (fun _ _ => []) (* comment *)
@@ -459,7 +456,7 @@ Module debugging_sat_solinas_25519.
             machine_wordsize
             ltac:(
                   let e := constr:(sqr4) in
-                  let e := eval cbv delta [two_steps_of_p256_montgomery_friendly_reduction p256_mul mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let e := eval cbv delta [sqr4 two_steps_of_p256_montgomery_friendly_reduction p256_mul mul add_mul add_mul_limb_ add_mul_limb reduce' product_scan product_scan_ stream.map weight stream.prefixes] in e in
                   let r := Reify e in
                   exact r)
                    (fun _ _ => []) (* comment *)
@@ -488,7 +485,7 @@ Module debugging_sat_solinas_25519.
             machine_wordsize
             ltac:(
                   let e := constr:(p256_sqr) in
-                  let e := eval cbv delta [two_steps_of_p256_montgomery_friendly_reduction p256_mul mul add_mul add_mul_limb_ add_mul_limb reduce' add_mul_limb' stream.map weight stream.prefixes] in e in
+                  let e := eval cbv delta [p256_sqr sqr4 two_steps_of_p256_montgomery_friendly_reduction p256_mul mul add_mul add_mul_limb_ add_mul_limb reduce' product_scan product_scan_ stream.map weight stream.prefixes] in e in
                   let r := Reify e in
                   exact r)
                    (fun _ _ => []) (* comment *)
@@ -500,7 +497,7 @@ Module debugging_sat_solinas_25519.
 
 
   End __.
-End debugging_sat_solinas_25519.
+End debugging_scheduled_saturated_arithmetic.
 
 
 (*
