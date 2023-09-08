@@ -75,7 +75,7 @@ Definition add_precomputed := func! (ox, oy, oz, ot, X1, Y1, Z1, T1, ypx2, ymx2,
 }.
 
 (* Equivalent of m1double in src/Curves/Edwards/XYZT/Basic.v *)
-(* TODO: T is unused..? *)
+(* Note: T is unused, but leaving in place in case we want to switch to a point struct in the future *)
 Definition double := func! (ox, oy, oz, ot, X, Y, Z, T) {
   stackalloc 40 as trX;
   fe25519_square(trX, X);
