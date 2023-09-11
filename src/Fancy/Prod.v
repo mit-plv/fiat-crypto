@@ -114,7 +114,7 @@ Ltac step_rhs :=
   match goal with
   | H: ?x = spec ?i ?args _
     |- context [spec ?i ?args ?cc] =>
-    replace (spec i args cc) with x by idtac
+    replace (spec i args cc) with x by first [assumption | symmetry;assumption]
   end;
   match goal with
   | H : ?y = (?x mod ?m)%Z |- context [(?x mod ?m)%Z] =>
