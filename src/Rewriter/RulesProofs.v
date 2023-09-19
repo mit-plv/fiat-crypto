@@ -590,6 +590,8 @@ Proof using Type.
     enough (- c mod (M + 1) = M) as E by (rewrite E; remove_casts; trivial).
     match goal with H5 : _ |- _ => apply unfold_is_bounded_by_bool in H5; cbn in H5 end.
     rewrite Z.mod_opp_l_nz; rewrite ?Z.mod_small; nia. }
+  { repeat match goal with H5 : _ |- _ => apply unfold_is_bounded_by_bool in H5; cbn in H5 end.
+    assert (c = 0 \/ c = 1) as [->| ->] by lia;  cbn; try assert (-1 / s = -1) as -> by trivial; trivial. }
 Qed.
 
 Lemma relaxed_rules_work rland rm1 rv v :

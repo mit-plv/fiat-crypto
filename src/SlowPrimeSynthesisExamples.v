@@ -430,6 +430,13 @@ Module debugging_scheduled_saturated_arithmetic.
                    (None)
           : Pipeline.ErrorT _).
 
+    Import BinInt.
+    Definition diagonal b (pps : list (Z * Z)) :=
+      flat_map (fun '(x, y) =>
+        let '(lo, hi) := Z.mul_split b x y in
+        [lo; hi]
+      ) pps.
+
     Definition sqr4 xs :=
       let x0 := nth_default 0 xs 0 in
       let x1 := nth_default 0 xs 1 in
@@ -438,7 +445,8 @@ Module debugging_scheduled_saturated_arithmetic.
       dlet acc := product_scan_ bound [] [(0,0); (0,0); (0, 0); (x1, x2)] 0 0 0 in
       dlet acc := product_scan_ bound acc [(0, 0); (x0, x1); (x0, x2); (x0, x3); (x1, x3); (x2, x3)] 0 0 0 in
       dlet acc := add_ bound 0 acc acc in
-      product_scan_ bound acc [(x0,x0); (0, 0); (x1, x1); (0, 0); (x2, x2); (0, 0); (x3, x3)] 0 0 0.
+      dlet acc := firstn 8 (add_ bound 0 acc (diagonal (2^64) [(x0,x0); (x1, x1); (x2, x2); (x3, x3)]))
+      in acc.
 
     Lemma sqr4_correct xs : eval bound (sqr4 xs) = eval bound xs * eval bound xs.
     Proof.
@@ -473,9 +481,13 @@ Module debugging_scheduled_saturated_arithmetic.
       dlet a' := firstn 4 (condsub bound a (encode bound 4 p256)) in
       a'.
 
-    Time Redirect "log"
-         Compute
-         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+    (*
+    Require Stringification.JSON.
+    Local Existing Instance JSON.JSON.OutputJSONAPI.
+    *)
+    From bedrock2 Require Import PrintString.
+    Goal False.
+      let t := constr:(match
          (
          Pipeline.BoundsPipelineToString
             "fiat_" "p256_sqr"
@@ -493,7 +505,11 @@ Module debugging_scheduled_saturated_arithmetic.
                    (Some boundsn)
                    (None, tt)
                    (None)
-          : Pipeline.ErrorT _).
+          : Pipeline.ErrorT _)
+          with ErrorT.Success s => fst s | _ => "" end
+        ) in
+      let t := eval vm_compute in t in
+      print_string t.
 
 
   End __.

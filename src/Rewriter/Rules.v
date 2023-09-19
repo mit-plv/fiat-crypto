@@ -455,6 +455,11 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
                      adc_no_carry_to_add = true -> s ∈ rs -> (n rx - n ry - n rc <= r[0~>s-1])%zrange
                      -> cstZZ rv r[0~>0] (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ ry y))
                         = (cstZ rv (cstZ rx x - cstZ ry y - cstZ rc c), (cstZ r[0~>0] ('0))))
+               (* 0-0-c passes through the carry *)
+               ; (forall rv rs s c rx ry,
+                     s ∈ rs -> 0 ∈ rx -> 0 ∈ ry -> -1 / s = -1
+                     -> cstZZ rv r[0~>1] (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ r[0~>1] c) (cstZ rx ('0)) (cstZ ry ('0)))
+                        = (cstZ rv (-(cstZ r[0~>1]c) mod 's), (cstZ r[0~>1] c)))
              ]%Z%zrange
          ; mymap
              dont_do_again
