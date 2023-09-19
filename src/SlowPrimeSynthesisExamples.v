@@ -9,7 +9,9 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Arithmetic.Core.
-Require Import Crypto.Arithmetic.SolinasReduction.
+Require Import Crypto.Arithmetic.WeightStream.
+Require Import Crypto.Arithmetic.SaturatedPseudoMersenne.
+Require Import Crypto.Arithmetic.P256ADX.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
 Require Crypto.PushButtonSynthesis.Primitives.
@@ -81,7 +83,8 @@ Module debugging_scheduled_saturated_arithmetic.
     Import API.Compilers.
     Import APINotations.Compilers.
 
-    Import SolinasReduction.Saturated.
+    Import WeightStream.Saturated.
+    Import SaturatedPseudoMersenne.
 
     Definition bound (_ : Datatypes.nat) := Z.to_pos (2^64).
 
@@ -313,58 +316,29 @@ Module debugging_scheduled_saturated_arithmetic.
                    (None)
           : Pipeline.ErrorT _).
 
-    Definition p256 := 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff%Z.
-    Definition p3 :=   0xffffffff00000001%Z.
-    Definition two_steps_of_p256_montgomery_friendly_reduction xs :=
-      let x := nth_default 0 xs 0 in
-      let y := nth_default 0 xs 1 in
-      let (x't, h) := Z.mul_split (2^64) (2^32) x in
-      let (x', c) := Z.add_with_get_carry_full (2^64) 0 y x't in
-      product_scan_ bound (skipn 2 xs) ([(2^32, x'); (p3, x); (p3, x')] ++ repeat (0,0) (length xs - 5)) h c 0.
+Import P256ADX.
 
-    Lemma two_steps_of_p256_montgomery_friendly_reduction_correct xs
-      (Hl : length xs = 6%nat)
-      (Hx : nth_default 0 xs 0 = eval bound xs mod 2^64)
-      (Hy : nth_default 0 xs 1 = eval bound xs / 2^64 mod 2^64)
-      (Hxs : eval bound (skipn 2 xs) = eval bound xs / 2^128) :
-      2^128 * eval bound (two_steps_of_p256_montgomery_friendly_reduction xs) mod p256 = eval bound xs mod p256.
-    Proof.
-      cbv [Let_In two_steps_of_p256_montgomery_friendly_reduction product_scan_].
-      rewrite Hl in *; simpl Nat.sub in *; simpl List.repeat in *; simpl List.app in *.
-      set (nth_default 0 xs 0) as x.
-      set (nth_default 0 xs 1) as y.
-      edestruct Z.mul_split as (tl, th) eqn:Et.
-      rewrite Z.mul_split_correct in Et; symmetry in Et; Prod.inversion_pair.
-      edestruct Z.add_with_get_carry_full as (x', c) eqn:Ex'.
-      rewrite Z.add_with_get_carry_full_correct in Ex'; symmetry in Ex'; Prod.inversion_pair; rewrite ?Z.add_0_l in *.
-      (*
-      edestruct  product_scan_correct as (h'&c'&o'&->&H'); simpl Datatypes.length in *.
-      symmetry; erewrite <-Z.mod_add with (b := x + 2^64*x') by (cbv; Lia.lia); symmetry; f_equal.
-      change (Z.pos (stream.hd bound)) with (2^64) in *.
-      assert ((x + 2^64 * x')*p256 <= (2^128-1)*p256) by (cbv [p256]; Z.div_mod_to_equations; Lia.nia).
-      assert ((x + 2^64 * x')*p256 < 2^128*(p256-2^128+2^96-2^64)) by (cbv [p256]; Z.div_mod_to_equations; Lia.nia).
-      (* 0xffffffff00000000ffffffffffffffff00000001fffffffeffffffffffffffff *)
-      rewrite H'; clear H' h' c' o'.
-      rewrite firstn_all2 by (rewrite ?skipn_length; Lia.lia).
-      cbn [List.map uncurry].
-      set (eval bound (cons _ _)) as E.
-      rewrite eval_app, eval_encode, ?length_encode, ?eval_cons, ?eval_nil, ?Z.mul_0_r, ?Z.add_0_r.
-      change (weight bound 4) with (2^256)%positive.
-      transitivity (2^128 * (eval bound xs / 2 ^ 128 + th + c + E)).
-      { Z.div_mod_to_equations; Lia.nia. }
-      unfold eval, PreExtra.list_rect_fbb_b, list_rect in E.
-      change (stream.hd _) with (2^64)%positive in *.
-      assert (E = 2^32 * x' + 2^64 * p3 * x + 2^128 * p3*x') as -> by (Z.div_mod_to_equations; Lia.nia).
-      cbv [p256 p3]; Z.div_mod_to_equations; Lia.nia.
-    Qed.
-       *) Admitted.
-
-    Definition p256_mul x y :=
-      dlet a := mul bound (firstn 2 x) y in
-      dlet a := two_steps_of_p256_montgomery_friendly_reduction a in
-      dlet a := add_mul bound a (skipn 2 x) y in
-      dlet a := two_steps_of_p256_montgomery_friendly_reduction a in
-      firstn 4 (condsub bound a (encode bound 4 p256)).
+    Time Redirect "log"
+         Compute
+         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
+         (
+         Pipeline.BoundsPipelineToString
+            "fiat_" "sqr4"
+            false (* subst01 *)
+            false (* inline *)
+            possible_values
+            machine_wordsize
+            ltac:(
+                  let e := constr:(sqr4) in
+                  let e := eval cbv delta [sqr4 two_steps_of_p256_montgomery_friendly_reduction p256_mul mul add_mul add_mul_limb_ add_mul_limb reduce' product_scan product_scan_ stream.map weight stream.prefixes] in e in
+                  let r := Reify e in
+                  exact r)
+                   (fun _ _ => []) (* comment *)
+                   (Some boundsn, tt)
+                   (Some (boundsn++boundsn))
+                   (None, tt)
+                   (None)
+          : Pipeline.ErrorT _).
 
     Time Redirect "log"
          Compute
@@ -430,57 +404,6 @@ Module debugging_scheduled_saturated_arithmetic.
                    (None)
           : Pipeline.ErrorT _).
 
-    Import BinInt.
-    Definition diagonal b (pps : list (Z * Z)) :=
-      flat_map (fun '(x, y) =>
-        let '(lo, hi) := Z.mul_split b x y in
-        [lo; hi]
-      ) pps.
-
-    Definition sqr4 xs :=
-      let x0 := nth_default 0 xs 0 in
-      let x1 := nth_default 0 xs 1 in
-      let x2 := nth_default 0 xs 2 in
-      let x3 := nth_default 0 xs 3 in
-      dlet acc := product_scan_ bound [] [(0,0); (0,0); (0, 0); (x1, x2)] 0 0 0 in
-      dlet acc := product_scan_ bound acc [(0, 0); (x0, x1); (x0, x2); (x0, x3); (x1, x3); (x2, x3)] 0 0 0 in
-      dlet acc := add_ bound 0 acc acc in
-      dlet acc := firstn 8 (add_ bound 0 acc (diagonal (2^64) [(x0,x0); (x1, x1); (x2, x2); (x3, x3)]))
-      in acc.
-
-    Lemma sqr4_correct xs : eval bound (sqr4 xs) = eval bound xs * eval bound xs.
-    Proof.
-    Abort.
-
-    Time Redirect "log"
-         Compute
-         Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
-         (
-         Pipeline.BoundsPipelineToString
-            "fiat_" "sqr4"
-            false (* subst01 *)
-            false (* inline *)
-            possible_values
-            machine_wordsize
-            ltac:(
-                  let e := constr:(sqr4) in
-                  let e := eval cbv delta [sqr4 two_steps_of_p256_montgomery_friendly_reduction p256_mul mul add_mul add_mul_limb_ add_mul_limb reduce' product_scan product_scan_ stream.map weight stream.prefixes] in e in
-                  let r := Reify e in
-                  exact r)
-                   (fun _ _ => []) (* comment *)
-                   (Some boundsn, tt)
-                   (Some (boundsn++boundsn))
-                   (None, tt)
-                   (None)
-          : Pipeline.ErrorT _).
-
-    Definition p256_sqr a :=
-      dlet a := sqr4 a in
-      dlet a := two_steps_of_p256_montgomery_friendly_reduction a in
-      dlet a := two_steps_of_p256_montgomery_friendly_reduction a in
-      dlet a' := firstn 4 (condsub bound a (encode bound 4 p256)) in
-      a'.
-
     (*
     Require Stringification.JSON.
     Local Existing Instance JSON.JSON.OutputJSONAPI.
@@ -510,6 +433,7 @@ Module debugging_scheduled_saturated_arithmetic.
         ) in
       let t := eval vm_compute in t in
       print_string t.
+    Abort.
 
 
   End __.
