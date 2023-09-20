@@ -20,8 +20,8 @@ pub type fiat_poly1305_i1 = i8;
 pub type fiat_poly1305_u2 = u8;
 pub type fiat_poly1305_i2 = i8;
 
-/* The type fiat_poly1305_loose_field_element is a field element with loose bounds. */
-/* Bounds: [[0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000]] */
+/** The type fiat_poly1305_loose_field_element is a field element with loose bounds. */
+/** Bounds: [[0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000]] */
 #[derive(Clone, Copy)]
 pub struct fiat_poly1305_loose_field_element(pub [u32; 5]);
 
@@ -40,8 +40,8 @@ impl core::ops::IndexMut<usize> for fiat_poly1305_loose_field_element {
     }
 }
 
-/* The type fiat_poly1305_tight_field_element is a field element with tight bounds. */
-/* Bounds: [[0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000]] */
+/** The type fiat_poly1305_tight_field_element is a field element with tight bounds. */
+/** Bounds: [[0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000]] */
 #[derive(Clone, Copy)]
 pub struct fiat_poly1305_tight_field_element(pub [u32; 5]);
 
