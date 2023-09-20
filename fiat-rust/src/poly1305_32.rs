@@ -15,9 +15,13 @@
 #![allow(unused_parens)]
 #![allow(non_camel_case_types)]
 
+/* fiat_poly1305_u1 represents one byte. */
 pub type fiat_poly1305_u1 = u8;
+/* fiat_poly1305_i1 represents one byte. */
 pub type fiat_poly1305_i1 = i8;
+/* fiat_poly1305_u2 represents one byte. */
 pub type fiat_poly1305_u2 = u8;
+/* fiat_poly1305_i2 represents one byte. */
 pub type fiat_poly1305_i2 = i8;
 
 /** The type fiat_poly1305_loose_field_element is a field element with loose bounds. */

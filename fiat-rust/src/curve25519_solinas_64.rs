@@ -10,9 +10,13 @@
 #![allow(unused_parens)]
 #![allow(non_camel_case_types)]
 
+/* fiat_curve25519_solinas_u1 represents one byte. */
 pub type fiat_curve25519_solinas_u1 = u8;
+/* fiat_curve25519_solinas_i1 represents one byte. */
 pub type fiat_curve25519_solinas_i1 = i8;
+/* fiat_curve25519_solinas_u2 represents one byte. */
 pub type fiat_curve25519_solinas_u2 = u8;
+/* fiat_curve25519_solinas_i2 represents one byte. */
 pub type fiat_curve25519_solinas_i2 = i8;
 
 
