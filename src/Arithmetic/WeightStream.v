@@ -466,44 +466,16 @@ Module Saturated.
   Proof.
   Admitted.
 
-  Definition add_mul_limb bound acc x ys : list Z * Z :=
-    let (lo, hi) := product_scan bound acc (map (pair x) ys) 0 0 0 in
-    if (Z.of_nat (length acc) <=? Z.of_nat (length ys))
-    then (lo, hi)
-    else
-      let (mid, hi) := add (stream.skipn (length ys) bound) (*suboptimal*)0 (skipn (length ys) acc) [hi] in
-      (lo ++ mid, hi).
-
-  Lemma add_mul_limb_correct bound acc x ys :
-    let z := eval bound acc + x * eval bound ys in
-    let n := Nat.max (length acc) (length ys) in
-    add_mul_limb bound acc x ys = (encode bound n z, z / weight bound n).
-  Proof.
-    intros. cbv [add_mul_limb].
-    match goal with |- context [Z.leb ?a ?b] => destruct (Z.leb_spec a b) end; trivial.
-    { rewrite product_scan_correct; rewrite ?firstn_nil, ?eval_nil; trivial.
-      subst n; rewrite firstn_all2, Nat.max_r; rewrite ?map_length; trivial; try lia. admit. }
-    rewrite product_scan_correct, add_correct, eval_cons, eval_nil, Z.mul_0_r, Z.add_0_l, Z.add_0_r, skipn_length, Nat.max_l by (cbn [length]; lia); f_equal.
-    
-    (*
-    eval_app, eval_encode, length_encode, eval_add_, eval_cons, eval_nil; ring_simplify.
-    epose proof eval_app bound _ _ as H; rewrite (firstn_skipn (length ys) acc) in H.
-    destruct (Nat.leb_spec (length ys) (length acc)).
-    { rewrite firstn_length_le in H by trivial. Z.div_mod_to_equations; nia. }
-    { rewrite !skipn_all2, eval_nil in * by lia. Z.div_mod_to_equations; nia. }
-     *)
-  Admitted.
-
   Definition add_mul_limb_ bound acc x ys : list Z :=
-    let (lo, hi) := add_mul_limb bound acc x ys in lo ++ [hi].
+    product_scan_ bound acc (map (pair x) ys) 0 0 0.
 
   Lemma eval_add_mul_limb_ bound acc x ys :
     eval bound (add_mul_limb_ bound acc x ys) = eval bound acc + x * eval bound ys.
   Proof.
     cbv [add_mul_limb_].
-    break_match; Prod.inversion_prod; subst;
-    rewrite add_mul_limb_correct, eval_app, eval_cons, eval_nil by lia; cbn [fst snd]; ring_simplify.
-    rewrite eval_encode, length_encode; Z.div_mod_to_equations; nia.
+    rewrite eval_product_scan_, map_map.
+    cbv [uncurry]. rewrite eval_map_mul.
+    nia.
   Qed.
 
   Definition add_mul bound (acc xs ys : list Z) : list Z :=
@@ -577,21 +549,23 @@ Module Saturated.
     break_match; rewrite ?eval_encode, ?Z.add_0_l, ?Z.add_opp_r in *; trivial; try (Z.div_mod_to_equations; nia).
   Qed.
 
-  Definition canon bound m (x : list Z) :=
+  Definition canon' bound m u (x : list Z) : list Z :=
     dlet m' := encode bound (length x) m in
     NatUtil.nat_rect_arrow_nodep id (fun _ rec x => dlet x := condsub bound x m' in rec x)
-    (Z.to_nat (weight bound (length x)/m)) x.
+    (Z.to_nat ((u-1)/m)) x.
 
-  Lemma canon_correct bound m x
-    (Hm : 0 < m < weight bound (length x))
+  Lemma canon'_correct bound m u x
+    (Hm : 0 < m < u)
+    (Hx : eval bound x < u)
+    (Hlen : m < weight bound (length x))
     (Hcanon : encode bound (length x) (eval bound x) = x) :
-    canon bound m x = encode bound (length x) (eval bound x mod m).
+    canon' bound m u x = encode bound (length x) (eval bound x mod m).
   Proof.
     pose proof eval_encode bound (length x) (eval bound x) as Heval; rewrite Hcanon in Heval.
-    assert (0 <= eval bound x < m + Z.of_nat (Z.to_nat (weight bound (length x) / m)) * m)
+    assert (0 <= eval bound x < m + Z.of_nat (Z.to_nat ((u-1)/m)) * m)
       by (Z.div_mod_to_equations; nia).
-    cbv [canon Let_In];
-    remember (length x) as n in *; set (Z.to_nat (weight bound n / m)) as q in *; clearbody q.
+    cbv [canon' Let_In];
+    remember (length x) as n in *; set (Z.to_nat ((u-1)/m)) as q in *; clearbody q.
     clear Heval; revert dependent x; induction q; cbn -[condsub Z.of_nat]; intros; subst n.
     { rewrite Z.mod_small; auto; lia. }
     rewrite ?Nat2Z.inj_succ, <-Z.add_1_l, Z.mul_add_distr_r, Z.mul_1_l, Z.add_assoc in *.
@@ -604,8 +578,48 @@ Module Saturated.
       push_Zmod; pull_Zmod; rewrite ?Z.sub_0_r; trivial. }
     { f_equal; rewrite ?Z.mod_small; Z.div_mod_to_equations; nia. }
     { rewrite Z.mod_small; try split; try (Z.div_mod_to_equations; lia). }
+    { rewrite Z.mod_small; try split; try (Z.div_mod_to_equations; lia). }
   Qed.
 
+  Lemma eval_canon' bound m u x
+    (Hm : 0 < m < u)
+    (Hx : 0 <= eval bound x < u)
+    (Hlen : m < weight bound (length x))
+    (Hval : eval bound x < weight bound (length x)) :
+    eval bound (canon' bound m u x) = (eval bound x mod m).
+  Proof.
+    assert (0 <= eval bound x < m + Z.of_nat (Z.to_nat ((u-1)/m)) * m)
+      by (Z.div_mod_to_equations; nia).
+    cbv [canon' Let_In];
+    remember (length x) as n in *; set (Z.to_nat ((u-1)/m)) as q in *; clearbody q.
+    revert dependent x; induction q; cbn [canon' NatUtil.nat_rect_arrow_nodep NatUtil.nat_rect_nodep nat_rect id]; intros; subst n.
+    { rewrite Z.mod_small; auto; lia. }
+    rewrite ?Nat2Z.inj_succ, <-Z.add_1_l, Z.mul_add_distr_r, Z.mul_1_l, Z.add_assoc in *.
+    rewrite condsub_correct; rewrite ?eval_encode, ?length_encode; try (Z.div_mod_to_equations; nia).
+    break_match. rewrite ?(Z.mod_small m) in * by lia.
+    { rewrite IHq; trivial; try split; try (Z.div_mod_to_equations; nia). }
+    rewrite IHq; rewrite ?eval_encode, ?length_encode; try lia.
+
+    all : rewrite !(Z.mod_small _ (weight _ _)) in * by (Z.div_mod_to_equations; nia).
+    all : try (Z.div_mod_to_equations; lia).
+    push_Zmod; pull_Zmod; rewrite ?Z.sub_0_r; trivial.
+  Qed.
+
+  Definition canon bound m u x :=
+    if ((0 <? m) && (m <? u) && (m <? weight bound (length x)))%bool
+    then canon' bound m u x
+    else encode bound (length x) (eval bound x mod m).
+
+  Lemma canon_correct bound m u x (H : eval bound x < u) :
+    encode bound (length x) (eval bound x) = x ->
+    canon bound m u x = encode bound (length x) (eval bound x mod m).
+  Proof.
+    cbv [canon].
+    destruct (Z.ltb_spec 0 m); trivial.
+    destruct (Z.ltb_spec m u); trivial.
+    destruct (Z.ltb_spec m (weight bound (length x))); trivial; cbn [andb].
+    apply canon'_correct; intuition idtac.
+  Qed.
 
   Definition divmodw bound (xs : list Z) (s : Z) : Z * list Z :=
     list_rect_fbb_b_b (fun _ _ => (0, [])) (fun x xs  rec bound s =>

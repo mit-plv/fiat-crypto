@@ -59,24 +59,27 @@ Proof.
   lia.
 Qed.
 
-Definition p256_mul x y :=
+Definition p256_mul' x y :=
   dlet a := mul bound (firstn 2 x) y in
   dlet a := two_steps_of_p256_montgomery_reduction a in
   dlet a := add_mul bound a (skipn 2 x) y in
   dlet a := two_steps_of_p256_montgomery_reduction a in
-  let a := condsub bound a (encode bound 4 p256) in
-  firstn 4 a.
+  canon' bound p256 (p256+p256) a.
+Definition p256_mul x y := firstn 4 (p256_mul' x y).
 
 Require Import AdmitAxiom.
-Lemma p256_mul_correct x y
-  (Hlx : (2 <= length x)%nat) :
-  eval bound (p256_mul x y) mod p256 =
-  eval bound x * eval bound y mod p256.
+Lemma p256_mul'_correct x y
+  (Hlx : (2 <= length x)%nat)
+  (Hx : 0 <= eval bound x < p256)
+  (Hy : 0 <= eval bound y < p256) :
+  let z := eval bound (p256_mul' x y) in
+  2^256 * z mod p256 = eval bound x * eval bound y mod p256 /\
+  0 <= z < p256.
 Proof.
   pose proof firstn_skipn 2 x as H; eapply (f_equal (eval bound)) in H.
   rewrite eval_app, firstn_length_le in H by trivial.
 
-  cbv beta delta [p256_mul Let_In].
+  cbv beta delta [p256_mul' Let_In].
   set (skipn 2 x) as xhi in *.
   set (firstn 2 x) as xlo in *.
   change (stream.skipn 2 bound) with bound in *.
@@ -91,6 +94,14 @@ Proof.
       change g';
       let H := fresh "H" x in
       pose proof eq_refl : x = v as H; clearbody x
+  | H: context G [let x := ?v in @?C x] |- _ =>
+      let x := fresh x in
+      set v as x;
+      let g' := context G [C x] in
+      let g' := eval cbv beta in g' in
+      change g' in H;
+      let H := fresh "H" x in
+      pose proof eq_refl : x = v as H; clearbody x
   end.
 
   eapply (f_equal (eval bound)) in Hy0.
@@ -98,16 +109,15 @@ Proof.
   change (fun _ => _) with bound in *.
 
   pose proof two_steps_of_p256_montgomery_reduction_correct y0 as HH.
-  rewrite <-Hy1, Hy0 in HH; clear Hy1; cbv zeta in HH; case HH as [Hy1 HH'].
-  clear HH'.
+  rewrite <-Hy1, Hy0 in HH; clear Hy1; cbv zeta in HH; case HH as [Hy1 HH'1].
   
   eapply (f_equal (eval bound)) in Hy2.
   rewrite (eval_add_mul (Z.to_pos (2^64))) in Hy2.
   change (fun _ => _) with bound in *.
 
   pose proof two_steps_of_p256_montgomery_reduction_correct y2 as HH.
-  rewrite <-Hy3, Hy2 in HH; clear Hy3; cbv zeta in HH; case HH as [Hy3 HH'].
-  clear HH'.
+  pose proof Hy3 as Hy3'.
+  rewrite <-Hy3, Hy2 in HH; clear Hy3; cbv zeta in HH; case HH as [Hy3 HH'2].
 
   assert (HH : (2 ^ 256 * eval bound y3) mod p256 =
     ((2^128 * eval bound y1) mod p256 + 2^128 * eval bound xhi * eval bound y) mod p256).
@@ -116,17 +126,49 @@ Proof.
   replace (eval bound xlo * eval bound y + 2 ^ 128 * eval bound xhi * eval bound y)
     with (eval bound x * eval bound y) in HH by nia.
 
-  rewrite condsub_correct in Ha.
-  assert (eval bound a mod p256 = eval bound x * eval bound y mod p256) by admit.
-  assert (0 <= eval bound a < p256) by admit.
-
-  pose proof eval_firstn_encode bound 4 4 (eval bound a) ltac:(lia).
-  change (Z.pos (weight bound 4)) with (2^256) in *.
-  rewrite (Z.mod_small _ (2^256)) in * by (cbv [p256] in *; lia).
-
-  all : admit.
+  assert (0 <= eval bound xlo < 2^128).
+  { rewrite <-eval_hd_tl; cbn [hd tl]; rewrite !eval_cons.
+    rewrite <-eval_hd_tl; cbn [hd tl]; rewrite !eval_cons.
+    assert (tl (tl xlo) = nil) as ->.
+    { destruct x; trivial. destruct x; trivial. }
+    rewrite eval_nil, Z.mul_0_r, Z.add_0_r.
+    change (Z.pos (stream.hd bound)) with (2^64).
+    admit. }
+  unshelve epose proof (proj1 (HH'1 ltac:(admit) ltac:(admit) ltac:(admit)) _).
+  { cbv [p256] in *; nia. }
+  unshelve epose proof (proj1 (HH'2 ltac:(admit) ltac:(admit) ltac:(admit)) _).
+  { cbv [p256] in *; nia. }
+  rewrite eval_canon' in Hz; cycle 1.
+  { cbv; auto. }
+  { cbv [p256] in *; nia. }
+  admit.
+  admit.
+  subst z; split.
+  { rewrite Z.mul_mod_idemp_r by (cbv; discriminate); congruence. }
+  apply Z.mod_pos_bound; lia.
 Qed.
-Print Assumptions p256_mul_correct.
+
+Print Assumptions p256_mul'_correct.
+(* To be discharged during partial evaluation:
+used in p256_mul'_correct to prove
+ 0 <= hd 0 xlo + 2 ^ 64 * hd 0 (tl xlo) < 2 ^ 128
+used in p256_mul'_correct to prove
+ p256 < weight bound (length y3)
+used in p256_mul'_correct to prove
+ eval bound y3 < weight bound (length y3)
+used in p256_mul'_correct to prove
+ 0 <= hd 0 (tl y2) < 2 ^ 64
+used in p256_mul'_correct to prove
+ 0 <= hd 0 y2 < 2 ^ 64
+used in p256_mul'_correct to prove
+ 0 <= eval bound y1 + eval bound xhi * eval bound y
+used in p256_mul'_correct to prove
+ 0 <= hd 0 (tl y0) < 2 ^ 64
+used in p256_mul'_correct to prove
+ 0 <= hd 0 y0 < 2 ^ 64
+used in p256_mul'_correct to prove
+ 0 <= eval bound xlo * eval bound y
+*)
 
 Definition diagonal b (pps : list (Z * Z)) :=
   flat_map (fun '(x, y) =>

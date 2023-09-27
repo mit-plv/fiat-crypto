@@ -1,13 +1,17 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.derive.Derive.
-Require Import Crypto.Arithmetic.P256ADX. Import WeightStream Saturated.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Local Open Scope Z_scope.
-
+Require Import Crypto.Arithmetic.P256ADX. Import WeightStream Saturated.
 Import
   Language.API.Compilers
   Language.Wf.Compilers.
-Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
+Import Basic.GallinaAndReifiedIdentList IdentifiersBasicGENERATED.Compilers.
+Import Coq.ZArith.ZArith.
+Import Coq.derive.Derive.
+Import Crypto.PushButtonSynthesis.ReificationCache.
+Import
+  Language.API.Compilers
+  Language.Wf.Compilers.
 
 Derive reified_p256_mul
        SuchThat (is_reification_of reified_p256_mul p256_mul)
@@ -17,7 +21,7 @@ Proof.
   instantiate (1:=
     (ltac:(
       let e := constr:(p256_mul) in
-      let e := eval cbv delta [two_steps_of_p256_montgomery_reduction p256_mul mul add_mul add_mul_limb_ add_mul_limb product_scan product_scan_ stream.map weight stream.prefixes] in e in
+      let e := eval cbv delta [two_steps_of_p256_montgomery_reduction p256_mul p256_mul' mul add_mul add_mul_limb_ product_scan product_scan_ stream.map weight stream.prefixes stream.firstn canon] in e in
       let r := Reify e in
       exact r))
     ) in (value of reified_p256_mul).
@@ -33,7 +37,7 @@ Proof.
   instantiate (1:=
     (ltac:(
       let e := constr:(p256_sqr) in
-      let e := eval cbv delta [p256_sqr sqr4 two_steps_of_p256_montgomery_reduction p256_mul mul add_mul add_mul_limb_ add_mul_limb product_scan product_scan_ stream.map weight stream.prefixes] in e in
+      let e := eval cbv delta [p256_sqr sqr4 two_steps_of_p256_montgomery_reduction p256_mul p256_mul' mul add_mul add_mul_limb_ product_scan product_scan_ stream.map weight stream.prefixes stream.firstn canon] in e in
       let r := Reify e in
       exact r))
     ) in (value of reified_p256_sqr).
