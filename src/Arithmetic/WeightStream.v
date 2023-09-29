@@ -560,6 +560,26 @@ Module Saturated.
   Lemma length_mul bound xs ys : ys <> [] ->  length (mul bound xs ys) = (length xs + length ys)%nat.
   Admitted.
 
+  Definition diagonal b (pps : list (Z * Z)) :=
+    flat_map (fun '(x, y) =>
+      let '(lo, hi) := Z.mul_split b x y in
+      [lo; hi]
+    ) pps.
+
+  Lemma eval_diagonal (b : positive) pps :
+    eval (fun _ => b) (diagonal b pps) =
+    eval (fun _ => Pos.mul b b) (map (uncurry Z.mul) pps).
+  Proof.
+    induction pps as [|[x y] ]; [trivial|].
+    cbn [diagonal flat_map map fst snd uncurry].
+    progress change (flat_map _ ?xs) with (diagonal (Z.pos b) xs).
+    rewrite Z.mul_split_correct.
+    cbn [app]; rewrite ?eval_cons, ?eval_nil; cbn [length].
+    progress repeat change (stream.tl ?b) with b.
+    progress repeat change (stream.hd ?b) with (b O); cbv beta.
+    Z.div_mod_to_equations; nia.
+  Qed.
+
   Definition select' c a b := map (uncurry (Z.zselect c)) (combine a b).
 
   Lemma select'_correct c a b : length a = length b -> select' c a b = if dec (c = 0) then a else b.

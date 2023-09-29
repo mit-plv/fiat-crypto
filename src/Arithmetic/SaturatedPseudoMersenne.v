@@ -113,7 +113,7 @@ Definition mul_short_mod bound c n (a b : list Z) :=
 
 Definition mulmod bound n c a b :=
   dlet p := mul bound a b in
-  let (lo, hi) := add_mul_limb bound (firstn n p) c (skipn n p) in
+  let (lo, hi) := add_mul_small bound (firstn n p) c (skipn n p) in
   if (* true by range analysis *) c*Z.abs hi <=? weight bound 1 - c
   then reduce' bound 1 c lo [hi]
   else lo ++ [hi].
@@ -134,7 +134,7 @@ Proof.
   apply (f_equal (fun x => x mod m)) in Hsplit.
   revert Hsplit; push_Zmod; rewrite ?Hc; pull_Zmod; intro.
   change (stream.skipn n bound) with bound in *.
-  rewrite add_mul_limb_correct.
+  rewrite add_mul_small_correct.
   set (t := eval bound (firstn n (mul bound a b)) +
     c * eval bound (skipn n (mul bound a b))) in *.
   progress replace (Nat.max (length (firstn n (mul bound a b))) (length (skipn n (mul bound a b))))
