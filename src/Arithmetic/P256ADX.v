@@ -27,7 +27,7 @@ Lemma two_steps_of_p256_montgomery_reduction_correct xs :
     0 <= eval bound xs -> 0 <= hd 0 xs < 2^64 -> 0 <= hd 0 (tl xs) < 2^64  ->
     (eval bound xs <= ( p256+2^129-2^97)*(2^128-1) -> 0 <= z <  p256 + p256) /\
     (eval bound xs <= (2^256+2^129-2^96)*(2^128-1) -> 0 <= z < 2^256 + p256) /\
-    (eval bound xs <= p256*p256 -> 0 <= z < 2^128 * p256)).
+    (eval bound xs <= (2^256-2^223)*(2^256-2^223) -> 0 <= z < 2^128 * p256)).
 Proof.
   cbv [Let_In two_steps_of_p256_montgomery_reduction].
   pose proof eval_hd_tl bound xs; pose proof eval_hd_tl bound (tl xs).
@@ -54,7 +54,7 @@ Proof.
   assert (0 <= 2^128 * z) by (rewrite Hz; cbv [p256]; Z.div_mod_to_equations; lia).
   assert (0 <= 2^384 -2^352 +2^320 + (x + 2^64 * x')*p256 < 2^128*(p256+p256)) by (cbv [p256]; Z.div_mod_to_equations; lia).
   assert (0 <= (2^256+2^129-2^96)*(2^128-1) + (x + 2^64 * x')*p256 < 2^128*(p256+2^256)) by (cbv [p256]; Z.div_mod_to_equations; lia).
-  assert (0 <= p256*p256 + (x + 2^64 * x')*p256 < 2^128*2^128*p256) by (cbv [p256]; Z.div_mod_to_equations; lia).
+  assert (0 <= (2^256-2^223)*(2^256-2^223) + (x + 2^64 * x')*p256 < 2^128*2^128*p256) by (cbv [p256]; Z.div_mod_to_equations; lia).
   lia.
 Qed.
 
@@ -399,11 +399,11 @@ Definition p256_sqr a :=
   a.
 
 Lemma p256_sqr_correct x
-  (Hy : 0 <= eval bound x < p256)
+  (Hy : 0 <= eval bound x (* < p256*) < 2^256-2^223 )
   (z := p256_sqr x)
   (Hcompiles : z <> nil) :
   2^256 * eval bound z mod p256 = eval bound x * eval bound x mod p256 /\
-  (0 <= eval bound x < p256 -> 0 <= eval bound z < p256).
+  0 <= eval bound z < p256.
 Proof.
   cbv beta delta [p256_sqr Let_In] in *.
   repeat lift_let.
@@ -411,11 +411,11 @@ Proof.
   repeat match reverse goal with
          | x := ?v |- _ =>
              let H := fresh "H" x in
-             pose proof eq_refl x : x = v as H;
+             (* assert (x = v) as H by exact eq_refl; (*COQBUG?: Qed hangs*) *)
+             assert (x = v) as H by reflexivity;
              move H before x;
              clearbody x
          end.
-  clear; exfalso; admit. Qed.
   
   repeat match goal with
   | H : context G [match ?x with _ => _ end] |- _ =>
