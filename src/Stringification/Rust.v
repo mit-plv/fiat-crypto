@@ -107,13 +107,12 @@ Module Rust.
            ++ [""])%list%string.
 
   (* Instead of "macros for minimum-width integer constants" we tried to
-     use numeric casts in Rust. It turns out that it wasn't needed and Rust
-     will figure out the types of the litterals, so disabling this for
-     now *)
+     use numeric casts in Rust. *)
   Definition cast_literal (prefix : string) (t : ToString.int.type) : option string :=
-    if Z.ltb (ToString.int.bitwidth_of t) 8
-    then None
-    else None.
+    let width := if Z.ltb (ToString.int.bitwidth_of t) 8
+    then 8
+    else (ToString.int.bitwidth_of t) in
+    Some ( (if int.is_unsigned t then "u" else "i") ++ Decimal.Z.to_string width )%string.
 
 
   (* Zoe: In fiat-crypto C functions are void and as such, they receive
@@ -153,7 +152,7 @@ Module Rust.
   (* Integer literal to string *)
   Definition int_literal_to_string (prefix : string) (t : IR.type.primitive) (v : BinInt.Z) : string :=
     match t, cast_literal prefix (ToString.int.of_zrange_relaxed r[v ~> v]) with
-    | IR.type.Z, Some cast => "(" ++ HexString.of_Z v ++ cast ++ ")"
+    | IR.type.Z, Some cast => HexString.of_Z v ++ "_" ++ cast
     | IR.type.Z, None => (* just print hex value, no cast *) HexString.of_Z v
     | IR.type.Zptr, _ => "#error ""literal address " ++ HexString.of_Z v ++ """;"
     end.
