@@ -77,7 +77,7 @@ Module Export OCamlPrimitives : OCamlPrimitivesT.
 End OCamlPrimitives.
 
 Extract Inductive int
-        => "Int.t" [ "0" "Pervasives.succ" ]
+    => "Int.t" [ "0" "(fun n -> n+1)" ]
                    "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
 (* We cannot inline these constants due to COQBUG(https://github.com/coq/coq/issues/16169) *)
 Extract (*Inlined*) Constant in_channel => "in_channel".
