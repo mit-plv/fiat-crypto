@@ -20,8 +20,8 @@ pub type fiat_p448_i1 = i8;
 pub type fiat_p448_u2 = u8;
 pub type fiat_p448_i2 = i8;
 
-/* The type fiat_p448_loose_field_element is a field element with loose bounds. */
-/* Bounds: [[0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000]] */
+/** The type fiat_p448_loose_field_element is a field element with loose bounds. */
+/** Bounds: [[0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000]] */
 #[derive(Clone, Copy)]
 pub struct fiat_p448_loose_field_element(pub [u64; 8]);
 
@@ -40,8 +40,8 @@ impl core::ops::IndexMut<usize> for fiat_p448_loose_field_element {
     }
 }
 
-/* The type fiat_p448_tight_field_element is a field element with tight bounds. */
-/* Bounds: [[0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000]] */
+/** The type fiat_p448_tight_field_element is a field element with tight bounds. */
+/** Bounds: [[0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000]] */
 #[derive(Clone, Copy)]
 pub struct fiat_p448_tight_field_element(pub [u64; 8]);
 

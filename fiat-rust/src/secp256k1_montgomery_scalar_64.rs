@@ -25,8 +25,8 @@ pub type fiat_secp256k1_montgomery_scalar_i1 = i8;
 pub type fiat_secp256k1_montgomery_scalar_u2 = u8;
 pub type fiat_secp256k1_montgomery_scalar_i2 = i8;
 
-/* The type fiat_secp256k1_montgomery_scalar_montgomery_domain_field_element is a field element in the Montgomery domain. */
-/* Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
+/** The type fiat_secp256k1_montgomery_scalar_montgomery_domain_field_element is a field element in the Montgomery domain. */
+/** Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
 #[derive(Clone, Copy)]
 pub struct fiat_secp256k1_montgomery_scalar_montgomery_domain_field_element(pub [u64; 4]);
 
@@ -45,8 +45,8 @@ impl core::ops::IndexMut<usize> for fiat_secp256k1_montgomery_scalar_montgomery_
     }
 }
 
-/* The type fiat_secp256k1_montgomery_scalar_non_montgomery_domain_field_element is a field element NOT in the Montgomery domain. */
-/* Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
+/** The type fiat_secp256k1_montgomery_scalar_non_montgomery_domain_field_element is a field element NOT in the Montgomery domain. */
+/** Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
 #[derive(Clone, Copy)]
 pub struct fiat_secp256k1_montgomery_scalar_non_montgomery_domain_field_element(pub [u64; 4]);
 

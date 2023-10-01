@@ -25,8 +25,8 @@ pub type fiat_p224_i1 = i8;
 pub type fiat_p224_u2 = u8;
 pub type fiat_p224_i2 = i8;
 
-/* The type fiat_p224_montgomery_domain_field_element is a field element in the Montgomery domain. */
-/* Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
+/** The type fiat_p224_montgomery_domain_field_element is a field element in the Montgomery domain. */
+/** Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
 #[derive(Clone, Copy)]
 pub struct fiat_p224_montgomery_domain_field_element(pub [u64; 4]);
 
@@ -45,8 +45,8 @@ impl core::ops::IndexMut<usize> for fiat_p224_montgomery_domain_field_element {
     }
 }
 
-/* The type fiat_p224_non_montgomery_domain_field_element is a field element NOT in the Montgomery domain. */
-/* Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
+/** The type fiat_p224_non_montgomery_domain_field_element is a field element NOT in the Montgomery domain. */
+/** Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
 #[derive(Clone, Copy)]
 pub struct fiat_p224_non_montgomery_domain_field_element(pub [u64; 4]);
 
