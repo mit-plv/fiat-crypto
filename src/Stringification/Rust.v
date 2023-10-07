@@ -391,7 +391,7 @@ Module Rust.
     let '(args, rets, body) := f in
     ((if inline then "#[inline]" ++ String.NewLine else "") ++ (if private then "fn " else "pub fn ") ++ name ++
       "(" ++ String.concat ", " (to_arg_list internal_private all_private prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow internal_private all_private prefix args) ++
-      ") -> () {")%string :: (List.map (fun s => "  " ++ s)%string (to_strings internal_private prefix body)) ++ ["}"%string]%list.
+      ") {")%string :: (List.map (fun s => "  " ++ s)%string (to_strings internal_private prefix body)) ++ ["}"%string]%list.
 
   (** In Rust, there is no munging of return arguments (they remain
       passed by pointers), so all variables are live *)

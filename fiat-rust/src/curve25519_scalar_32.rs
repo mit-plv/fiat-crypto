@@ -80,7 +80,7 @@ impl core::ops::IndexMut<usize> for fiat_25519_scalar_non_montgomery_domain_fiel
 ///   out1: [0x0 ~> 0xffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_25519_scalar_addcarryx_u32(out1: &mut u32, out2: &mut fiat_25519_scalar_u1, arg1: fiat_25519_scalar_u1, arg2: u32, arg3: u32) -> () {
+pub fn fiat_25519_scalar_addcarryx_u32(out1: &mut u32, out2: &mut fiat_25519_scalar_u1, arg1: fiat_25519_scalar_u1, arg2: u32, arg3: u32) {
   let x1: u64 = (((arg1 as u64) + (arg2 as u64)) + (arg3 as u64));
   let x2: u32 = ((x1 & (0xffffffff as u64)) as u32);
   let x3: fiat_25519_scalar_u1 = ((x1 >> 32) as fiat_25519_scalar_u1);
@@ -102,7 +102,7 @@ pub fn fiat_25519_scalar_addcarryx_u32(out1: &mut u32, out2: &mut fiat_25519_sca
 ///   out1: [0x0 ~> 0xffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_25519_scalar_subborrowx_u32(out1: &mut u32, out2: &mut fiat_25519_scalar_u1, arg1: fiat_25519_scalar_u1, arg2: u32, arg3: u32) -> () {
+pub fn fiat_25519_scalar_subborrowx_u32(out1: &mut u32, out2: &mut fiat_25519_scalar_u1, arg1: fiat_25519_scalar_u1, arg2: u32, arg3: u32) {
   let x1: i64 = (((arg2 as i64) - (arg1 as i64)) - (arg3 as i64));
   let x2: fiat_25519_scalar_i1 = ((x1 >> 32) as fiat_25519_scalar_i1);
   let x3: u32 = ((x1 & (0xffffffff as i64)) as u32);
@@ -123,7 +123,7 @@ pub fn fiat_25519_scalar_subborrowx_u32(out1: &mut u32, out2: &mut fiat_25519_sc
 ///   out1: [0x0 ~> 0xffffffff]
 ///   out2: [0x0 ~> 0xffffffff]
 #[inline]
-pub fn fiat_25519_scalar_mulx_u32(out1: &mut u32, out2: &mut u32, arg1: u32, arg2: u32) -> () {
+pub fn fiat_25519_scalar_mulx_u32(out1: &mut u32, out2: &mut u32, arg1: u32, arg2: u32) {
   let x1: u64 = ((arg1 as u64) * (arg2 as u64));
   let x2: u32 = ((x1 & (0xffffffff as u64)) as u32);
   let x3: u32 = ((x1 >> 32) as u32);
@@ -143,7 +143,7 @@ pub fn fiat_25519_scalar_mulx_u32(out1: &mut u32, out2: &mut u32, arg1: u32, arg
 /// Output Bounds:
 ///   out1: [0x0 ~> 0xffffffff]
 #[inline]
-pub fn fiat_25519_scalar_cmovznz_u32(out1: &mut u32, arg1: fiat_25519_scalar_u1, arg2: u32, arg3: u32) -> () {
+pub fn fiat_25519_scalar_cmovznz_u32(out1: &mut u32, arg1: fiat_25519_scalar_u1, arg2: u32, arg3: u32) {
   let x1: fiat_25519_scalar_u1 = (!(!arg1));
   let x2: u32 = ((((((0x0 as fiat_25519_scalar_i2) - (x1 as fiat_25519_scalar_i2)) as fiat_25519_scalar_i1) as i64) & (0xffffffff as i64)) as u32);
   let x3: u32 = ((x2 & arg3) | ((!x2) & arg2));
@@ -160,7 +160,7 @@ pub fn fiat_25519_scalar_cmovznz_u32(out1: &mut u32, arg1: fiat_25519_scalar_u1,
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_mul(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element, arg2: &fiat_25519_scalar_montgomery_domain_field_element) -> () {
+pub fn fiat_25519_scalar_mul(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element, arg2: &fiat_25519_scalar_montgomery_domain_field_element) {
   let x1: u32 = (arg1[1]);
   let x2: u32 = (arg1[2]);
   let x3: u32 = (arg1[3]);
@@ -1235,7 +1235,7 @@ pub fn fiat_25519_scalar_mul(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_square(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element) -> () {
+pub fn fiat_25519_scalar_square(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element) {
   let x1: u32 = (arg1[1]);
   let x2: u32 = (arg1[2]);
   let x3: u32 = (arg1[3]);
@@ -2311,7 +2311,7 @@ pub fn fiat_25519_scalar_square(out1: &mut fiat_25519_scalar_montgomery_domain_f
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_add(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element, arg2: &fiat_25519_scalar_montgomery_domain_field_element) -> () {
+pub fn fiat_25519_scalar_add(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element, arg2: &fiat_25519_scalar_montgomery_domain_field_element) {
   let mut x1: u32 = 0;
   let mut x2: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x1, &mut x2, 0x0, (arg1[0]), (arg2[0]));
@@ -2399,7 +2399,7 @@ pub fn fiat_25519_scalar_add(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_sub(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element, arg2: &fiat_25519_scalar_montgomery_domain_field_element) -> () {
+pub fn fiat_25519_scalar_sub(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element, arg2: &fiat_25519_scalar_montgomery_domain_field_element) {
   let mut x1: u32 = 0;
   let mut x2: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_subborrowx_u32(&mut x1, &mut x2, 0x0, (arg1[0]), (arg2[0]));
@@ -2469,7 +2469,7 @@ pub fn fiat_25519_scalar_sub(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_opp(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element) -> () {
+pub fn fiat_25519_scalar_opp(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element) {
   let mut x1: u32 = 0;
   let mut x2: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_subborrowx_u32(&mut x1, &mut x2, 0x0, (0x0 as u32), (arg1[0]));
@@ -2539,7 +2539,7 @@ pub fn fiat_25519_scalar_opp(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_from_montgomery(out1: &mut fiat_25519_scalar_non_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element) -> () {
+pub fn fiat_25519_scalar_from_montgomery(out1: &mut fiat_25519_scalar_non_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element) {
   let x1: u32 = (arg1[0]);
   let mut x2: u32 = 0;
   let mut x3: u32 = 0;
@@ -3093,7 +3093,7 @@ pub fn fiat_25519_scalar_from_montgomery(out1: &mut fiat_25519_scalar_non_montgo
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_to_montgomery(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_non_montgomery_domain_field_element) -> () {
+pub fn fiat_25519_scalar_to_montgomery(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_non_montgomery_domain_field_element) {
   let x1: u32 = (arg1[1]);
   let x2: u32 = (arg1[2]);
   let x3: u32 = (arg1[3]);
@@ -4104,7 +4104,7 @@ pub fn fiat_25519_scalar_to_montgomery(out1: &mut fiat_25519_scalar_montgomery_d
 /// Output Bounds:
 ///   out1: [0x0 ~> 0xffffffff]
 #[inline]
-pub fn fiat_25519_scalar_nonzero(out1: &mut u32, arg1: &[u32; 8]) -> () {
+pub fn fiat_25519_scalar_nonzero(out1: &mut u32, arg1: &[u32; 8]) {
   let x1: u32 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | ((arg1[6]) | (arg1[7]))))))));
   *out1 = x1;
 }
@@ -4121,7 +4121,7 @@ pub fn fiat_25519_scalar_nonzero(out1: &mut u32, arg1: &[u32; 8]) -> () {
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 #[inline]
-pub fn fiat_25519_scalar_selectznz(out1: &mut [u32; 8], arg1: fiat_25519_scalar_u1, arg2: &[u32; 8], arg3: &[u32; 8]) -> () {
+pub fn fiat_25519_scalar_selectznz(out1: &mut [u32; 8], arg1: fiat_25519_scalar_u1, arg2: &[u32; 8], arg3: &[u32; 8]) {
   let mut x1: u32 = 0;
   fiat_25519_scalar_cmovznz_u32(&mut x1, arg1, (arg2[0]), (arg3[0]));
   let mut x2: u32 = 0;
@@ -4160,7 +4160,7 @@ pub fn fiat_25519_scalar_selectznz(out1: &mut [u32; 8], arg1: fiat_25519_scalar_
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x1f]]
 #[inline]
-pub fn fiat_25519_scalar_to_bytes(out1: &mut [u8; 32], arg1: &[u32; 8]) -> () {
+pub fn fiat_25519_scalar_to_bytes(out1: &mut [u8; 32], arg1: &[u32; 8]) {
   let x1: u32 = (arg1[7]);
   let x2: u32 = (arg1[6]);
   let x3: u32 = (arg1[5]);
@@ -4264,7 +4264,7 @@ pub fn fiat_25519_scalar_to_bytes(out1: &mut [u8; 32], arg1: &[u32; 8]) -> () {
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0x1fffffff]]
 #[inline]
-pub fn fiat_25519_scalar_from_bytes(out1: &mut [u32; 8], arg1: &[u8; 32]) -> () {
+pub fn fiat_25519_scalar_from_bytes(out1: &mut [u32; 8], arg1: &[u8; 32]) {
   let x1: u32 = (((arg1[31]) as u32) << 24);
   let x2: u32 = (((arg1[30]) as u32) << 16);
   let x3: u32 = (((arg1[29]) as u32) << 8);
@@ -4338,7 +4338,7 @@ pub fn fiat_25519_scalar_from_bytes(out1: &mut [u32; 8], arg1: &[u8; 32]) -> () 
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_set_one(out1: &mut fiat_25519_scalar_montgomery_domain_field_element) -> () {
+pub fn fiat_25519_scalar_set_one(out1: &mut fiat_25519_scalar_montgomery_domain_field_element) {
   out1[0] = 0x8d98951d;
   out1[1] = 0xd6ec3174;
   out1[2] = 0x737dcf70;
@@ -4358,7 +4358,7 @@ pub fn fiat_25519_scalar_set_one(out1: &mut fiat_25519_scalar_montgomery_domain_
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 #[inline]
-pub fn fiat_25519_scalar_msat(out1: &mut [u32; 9]) -> () {
+pub fn fiat_25519_scalar_msat(out1: &mut [u32; 9]) {
   out1[0] = 0x5cf5d3ed;
   out1[1] = 0x5812631a;
   out1[2] = 0xa2f79cd6;
@@ -4399,7 +4399,7 @@ pub fn fiat_25519_scalar_msat(out1: &mut [u32; 9]) -> () {
 ///   out4: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 ///   out5: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 #[inline]
-pub fn fiat_25519_scalar_divstep(out1: &mut u32, out2: &mut [u32; 9], out3: &mut [u32; 9], out4: &mut [u32; 8], out5: &mut [u32; 8], arg1: u32, arg2: &[u32; 9], arg3: &[u32; 9], arg4: &[u32; 8], arg5: &[u32; 8]) -> () {
+pub fn fiat_25519_scalar_divstep(out1: &mut u32, out2: &mut [u32; 9], out3: &mut [u32; 9], out4: &mut [u32; 8], out5: &mut [u32; 8], arg1: u32, arg2: &[u32; 9], arg3: &[u32; 9], arg4: &[u32; 8], arg5: &[u32; 8]) {
   let mut x1: u32 = 0;
   let mut x2: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x1, &mut x2, 0x0, (!arg1), (0x1 as u32));
@@ -4816,7 +4816,7 @@ pub fn fiat_25519_scalar_divstep(out1: &mut u32, out2: &mut [u32; 9], out3: &mut
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 #[inline]
-pub fn fiat_25519_scalar_divstep_precomp(out1: &mut [u32; 8]) -> () {
+pub fn fiat_25519_scalar_divstep_precomp(out1: &mut [u32; 8]) {
   out1[0] = 0x36a7cb92;
   out1[1] = 0xd70af844;
   out1[2] = 0xb0b8b159;

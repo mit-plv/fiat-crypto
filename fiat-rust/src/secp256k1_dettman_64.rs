@@ -28,7 +28,7 @@
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x17fffffffffff]]
 #[inline]
-pub fn fiat_secp256k1_dettman_mul(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[u64; 5]) -> () {
+pub fn fiat_secp256k1_dettman_mul(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[u64; 5]) {
   let x1: u128 = (((arg1[4]) as u128) * ((arg2[4]) as u128));
   let x2: u64 = ((x1 >> 64) as u64);
   let x3: u64 = ((x1 & (0xffffffffffffffff as u128)) as u64);
@@ -79,7 +79,7 @@ pub fn fiat_secp256k1_dettman_mul(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x17fffffffffff]]
 #[inline]
-pub fn fiat_secp256k1_dettman_square(out1: &mut [u64; 5], arg1: &[u64; 5]) -> () {
+pub fn fiat_secp256k1_dettman_square(out1: &mut [u64; 5], arg1: &[u64; 5]) {
   let x1: u64 = ((arg1[3]) * 0x2);
   let x2: u64 = ((arg1[2]) * 0x2);
   let x3: u64 = ((arg1[1]) * 0x2);

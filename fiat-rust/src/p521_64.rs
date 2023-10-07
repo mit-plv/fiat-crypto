@@ -75,7 +75,7 @@ impl core::ops::IndexMut<usize> for fiat_p521_tight_field_element {
 ///   out1: [0x0 ~> 0x3ffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_p521_addcarryx_u58(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) -> () {
+pub fn fiat_p521_addcarryx_u58(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) {
   let x1: u64 = (((arg1 as u64) + arg2) + arg3);
   let x2: u64 = (x1 & 0x3ffffffffffffff);
   let x3: fiat_p521_u1 = ((x1 >> 58) as fiat_p521_u1);
@@ -97,7 +97,7 @@ pub fn fiat_p521_addcarryx_u58(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fi
 ///   out1: [0x0 ~> 0x3ffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_p521_subborrowx_u58(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) -> () {
+pub fn fiat_p521_subborrowx_u58(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) {
   let x1: i64 = ((((((arg2 as i128) - (arg1 as i128)) as i64) as i128) - (arg3 as i128)) as i64);
   let x2: fiat_p521_i1 = ((x1 >> 58) as fiat_p521_i1);
   let x3: u64 = (((x1 as i128) & (0x3ffffffffffffff as i128)) as u64);
@@ -119,7 +119,7 @@ pub fn fiat_p521_subborrowx_u58(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: f
 ///   out1: [0x0 ~> 0x1ffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_p521_addcarryx_u57(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) -> () {
+pub fn fiat_p521_addcarryx_u57(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) {
   let x1: u64 = (((arg1 as u64) + arg2) + arg3);
   let x2: u64 = (x1 & 0x1ffffffffffffff);
   let x3: fiat_p521_u1 = ((x1 >> 57) as fiat_p521_u1);
@@ -141,7 +141,7 @@ pub fn fiat_p521_addcarryx_u57(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fi
 ///   out1: [0x0 ~> 0x1ffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_p521_subborrowx_u57(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) -> () {
+pub fn fiat_p521_subborrowx_u57(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) {
   let x1: i64 = ((((((arg2 as i128) - (arg1 as i128)) as i64) as i128) - (arg3 as i128)) as i64);
   let x2: fiat_p521_i1 = ((x1 >> 57) as fiat_p521_i1);
   let x3: u64 = (((x1 as i128) & (0x1ffffffffffffff as i128)) as u64);
@@ -161,7 +161,7 @@ pub fn fiat_p521_subborrowx_u57(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: f
 /// Output Bounds:
 ///   out1: [0x0 ~> 0xffffffffffffffff]
 #[inline]
-pub fn fiat_p521_cmovznz_u64(out1: &mut u64, arg1: fiat_p521_u1, arg2: u64, arg3: u64) -> () {
+pub fn fiat_p521_cmovznz_u64(out1: &mut u64, arg1: fiat_p521_u1, arg2: u64, arg3: u64) {
   let x1: fiat_p521_u1 = (!(!arg1));
   let x2: u64 = ((((((0x0 as fiat_p521_i2) - (x1 as fiat_p521_i2)) as fiat_p521_i1) as i128) & (0xffffffffffffffff as i128)) as u64);
   let x3: u64 = ((x2 & arg3) | ((!x2) & arg2));
@@ -174,7 +174,7 @@ pub fn fiat_p521_cmovznz_u64(out1: &mut u64, arg1: fiat_p521_u1, arg2: u64, arg3
 ///   eval out1 mod m = (eval arg1 * eval arg2) mod m
 ///
 #[inline]
-pub fn fiat_p521_carry_mul(out1: &mut fiat_p521_tight_field_element, arg1: &fiat_p521_loose_field_element, arg2: &fiat_p521_loose_field_element) -> () {
+pub fn fiat_p521_carry_mul(out1: &mut fiat_p521_tight_field_element, arg1: &fiat_p521_loose_field_element, arg2: &fiat_p521_loose_field_element) {
   let x1: u128 = (((arg1[8]) as u128) * (((arg2[8]) * 0x2) as u128));
   let x2: u128 = (((arg1[8]) as u128) * (((arg2[7]) * 0x2) as u128));
   let x3: u128 = (((arg1[8]) as u128) * (((arg2[6]) * 0x2) as u128));
@@ -315,7 +315,7 @@ pub fn fiat_p521_carry_mul(out1: &mut fiat_p521_tight_field_element, arg1: &fiat
 ///   eval out1 mod m = (eval arg1 * eval arg1) mod m
 ///
 #[inline]
-pub fn fiat_p521_carry_square(out1: &mut fiat_p521_tight_field_element, arg1: &fiat_p521_loose_field_element) -> () {
+pub fn fiat_p521_carry_square(out1: &mut fiat_p521_tight_field_element, arg1: &fiat_p521_loose_field_element) {
   let x1: u64 = (arg1[8]);
   let x2: u64 = (x1 * 0x2);
   let x3: u64 = ((arg1[8]) * 0x2);
@@ -436,7 +436,7 @@ pub fn fiat_p521_carry_square(out1: &mut fiat_p521_tight_field_element, arg1: &f
 ///   eval out1 mod m = eval arg1 mod m
 ///
 #[inline]
-pub fn fiat_p521_carry(out1: &mut fiat_p521_tight_field_element, arg1: &fiat_p521_loose_field_element) -> () {
+pub fn fiat_p521_carry(out1: &mut fiat_p521_tight_field_element, arg1: &fiat_p521_loose_field_element) {
   let x1: u64 = (arg1[0]);
   let x2: u64 = ((x1 >> 58) + (arg1[1]));
   let x3: u64 = ((x2 >> 58) + (arg1[2]));
@@ -474,7 +474,7 @@ pub fn fiat_p521_carry(out1: &mut fiat_p521_tight_field_element, arg1: &fiat_p52
 ///   eval out1 mod m = (eval arg1 + eval arg2) mod m
 ///
 #[inline]
-pub fn fiat_p521_add(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element, arg2: &fiat_p521_tight_field_element) -> () {
+pub fn fiat_p521_add(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element, arg2: &fiat_p521_tight_field_element) {
   let x1: u64 = ((arg1[0]) + (arg2[0]));
   let x2: u64 = ((arg1[1]) + (arg2[1]));
   let x3: u64 = ((arg1[2]) + (arg2[2]));
@@ -501,7 +501,7 @@ pub fn fiat_p521_add(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_
 ///   eval out1 mod m = (eval arg1 - eval arg2) mod m
 ///
 #[inline]
-pub fn fiat_p521_sub(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element, arg2: &fiat_p521_tight_field_element) -> () {
+pub fn fiat_p521_sub(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element, arg2: &fiat_p521_tight_field_element) {
   let x1: u64 = ((0x7fffffffffffffe + (arg1[0])) - (arg2[0]));
   let x2: u64 = ((0x7fffffffffffffe + (arg1[1])) - (arg2[1]));
   let x3: u64 = ((0x7fffffffffffffe + (arg1[2])) - (arg2[2]));
@@ -528,7 +528,7 @@ pub fn fiat_p521_sub(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_
 ///   eval out1 mod m = -eval arg1 mod m
 ///
 #[inline]
-pub fn fiat_p521_opp(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element) -> () {
+pub fn fiat_p521_opp(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element) {
   let x1: u64 = (0x7fffffffffffffe - (arg1[0]));
   let x2: u64 = (0x7fffffffffffffe - (arg1[1]));
   let x3: u64 = (0x7fffffffffffffe - (arg1[2]));
@@ -561,7 +561,7 @@ pub fn fiat_p521_opp(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p521_selectznz(out1: &mut [u64; 9], arg1: fiat_p521_u1, arg2: &[u64; 9], arg3: &[u64; 9]) -> () {
+pub fn fiat_p521_selectznz(out1: &mut [u64; 9], arg1: fiat_p521_u1, arg2: &[u64; 9], arg3: &[u64; 9]) {
   let mut x1: u64 = 0;
   fiat_p521_cmovznz_u64(&mut x1, arg1, (arg2[0]), (arg3[0]));
   let mut x2: u64 = 0;
@@ -599,7 +599,7 @@ pub fn fiat_p521_selectznz(out1: &mut [u64; 9], arg1: fiat_p521_u1, arg2: &[u64;
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x1]]
 #[inline]
-pub fn fiat_p521_to_bytes(out1: &mut [u8; 66], arg1: &fiat_p521_tight_field_element) -> () {
+pub fn fiat_p521_to_bytes(out1: &mut [u8; 66], arg1: &fiat_p521_tight_field_element) {
   let mut x1: u64 = 0;
   let mut x2: fiat_p521_u1 = 0;
   fiat_p521_subborrowx_u58(&mut x1, &mut x2, 0x0, (arg1[0]), 0x3ffffffffffffff);
@@ -870,7 +870,7 @@ pub fn fiat_p521_to_bytes(out1: &mut [u8; 66], arg1: &fiat_p521_tight_field_elem
 /// Input Bounds:
 ///   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x1]]
 #[inline]
-pub fn fiat_p521_from_bytes(out1: &mut fiat_p521_tight_field_element, arg1: &[u8; 66]) -> () {
+pub fn fiat_p521_from_bytes(out1: &mut fiat_p521_tight_field_element, arg1: &[u8; 66]) {
   let x1: u64 = ((((arg1[65]) as fiat_p521_u1) as u64) << 56);
   let x2: u64 = (((arg1[64]) as u64) << 48);
   let x3: u64 = (((arg1[63]) as u64) << 40);
@@ -1029,7 +1029,7 @@ pub fn fiat_p521_from_bytes(out1: &mut fiat_p521_tight_field_element, arg1: &[u8
 ///   out1 = arg1
 ///
 #[inline]
-pub fn fiat_p521_relax(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element) -> () {
+pub fn fiat_p521_relax(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element) {
   let x1: u64 = (arg1[0]);
   let x2: u64 = (arg1[1]);
   let x3: u64 = (arg1[2]);
