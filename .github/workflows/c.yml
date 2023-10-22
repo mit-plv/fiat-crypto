@@ -37,6 +37,6 @@ jobs:
     - name: make only-test-bedrock2-files CC=gcc
       run: make only-test-bedrock2-files CC=gcc EXTERNAL_DEPENDENCIES=1
     - name: BoringSSL C test
-      run: EXTRA_CFLAGS="" etc/ci/test-fiat-c-boringssl.sh fiat-c/src
+      run: EXTRA_CFLAGS="" PATCH_FOLDER="etc/ci/boringssl-patches/" etc/ci/test-fiat-c-boringssl.sh fiat-c/src
     - name: BoringSSL bedrock2 test
-      run: EXTRA_CFLAGS="$(make bedrock2-extra-cflags SKIP_INCLUDE=1 2>/dev/null)" etc/ci/test-fiat-c-boringssl.sh fiat-bedrock2/src
+      run: EXTRA_CFLAGS="$(make bedrock2-extra-cflags SKIP_INCLUDE=1 2>/dev/null)" PATCH_FOLDER="etc/ci/boringssl-bedrock2-patches/" etc/ci/test-fiat-c-boringssl.sh fiat-bedrock2/src

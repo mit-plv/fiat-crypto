@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # USAGE: $0 SUBCOMPONENT (e.g., fiat-c/src)
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 ################################################################################
 # Tests for BoringSSL
 ################################################################################
@@ -22,6 +24,10 @@ if [ -z "$SUBCOMPONENT" ]; then
 fi
 SUBCOMPONENT_PATH="$(cd "$SUBCOMPONENT" && pwd)"
 
+if [ ! -z "${PATCH_FOLDER}" ]; then
+    PATCH_FOLDER="$(realpath "${PATCH_FOLDER}")"
+fi
+
 pushd boringssl >/dev/null
 
 echo "::group::Patching BoringSSL"
@@ -31,6 +37,13 @@ echo "::group::Patching BoringSSL"
       for i in "curve25519_32.h" "curve25519_64.h" "p256_32.h" "p256_64.h"; do
         cp "${SUBCOMPONENT_PATH}/${i/.h/.c}" "$i" || exit $?
       done ) || exit $?
+    ( cd third_party/fiat && git --no-pager diff )
+    if [ ! -z "${PATCH_FOLDER}" ]; then
+        ( cd third_party/fiat &&
+          for i in "${PATCH_FOLDER}"/*.patch; do
+              git apply "$i"
+          done ) || exit $?
+    fi
     ( cd third_party/fiat && git --no-pager diff )
 }) || exit $?
 echo "::endgroup::"
