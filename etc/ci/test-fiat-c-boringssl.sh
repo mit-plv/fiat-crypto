@@ -40,7 +40,7 @@ echo "::group::Building BoringSSL"
     set -ex
     mkdir build
     cd build
-    cmake -GNinja .. -DCMAKE_CXX_FLAGS="-Wno-error=unused-function ${EXTRA_CFLAGS}" -DCMAKE_C_FLAGS="-Wno-error=unused-function ${EXTRA_CFLAGS}" || exit $?
+    cmake -GNinja .. -DOPENSSL_NO_ASM=1 -DCMAKE_CXX_FLAGS="-Wno-error=unused-function ${EXTRA_CFLAGS}" -DCMAKE_C_FLAGS="-Wno-error=unused-function ${EXTRA_CFLAGS}" || exit $?
     ninja || exit $?
 }) || exit $?
 echo "::endgroup::"
