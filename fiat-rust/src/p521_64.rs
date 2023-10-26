@@ -15,13 +15,13 @@
 #![allow(unused_parens)]
 #![allow(non_camel_case_types)]
 
-/* fiat_p521_u1 represents one byte. */
+/** fiat_p521_u1 represents values of 1 bits, stored in one byte. */
 pub type fiat_p521_u1 = u8;
-/* fiat_p521_i1 represents one byte. */
+/** fiat_p521_i1 represents values of 1 bits, stored in one byte. */
 pub type fiat_p521_i1 = i8;
-/* fiat_p521_u2 represents one byte. */
+/** fiat_p521_u2 represents values of 2 bits, stored in one byte. */
 pub type fiat_p521_u2 = u8;
-/* fiat_p521_i2 represents one byte. */
+/** fiat_p521_i2 represents values of 2 bits, stored in one byte. */
 pub type fiat_p521_i2 = i8;
 
 /** The type fiat_p521_loose_field_element is a field element with loose bounds. */
