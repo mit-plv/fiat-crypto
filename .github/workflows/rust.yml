@@ -52,6 +52,7 @@ jobs:
     needs: [test-rust, build-nostd]
     if: always()
     steps:
+    - uses: actions/checkout@v4
     - run: echo 'The triggering workflow (test-rust) passed'
       if: ${{ needs.test-rust.result == 'success' }}
     - run: echo 'The triggering workflow (test-rust) failed' && false
