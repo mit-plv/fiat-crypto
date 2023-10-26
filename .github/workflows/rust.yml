@@ -46,3 +46,17 @@ jobs:
         run: cargo build -p fiat-crypto --target thumbv7em-none-eabi --release --no-default-features
       - name: no_std / cargo hack fiat-crypto
         run: cargo hack build -p fiat-crypto --target thumbv7em-none-eabi --release --each-feature --exclude-features default,std
+
+  test-rust-check-all:
+    runs-on: ubuntu-latest
+    needs: [test-rust, build-nostd]
+    if: always()
+    steps:
+    - run: echo 'The triggering workflow (test-rust) passed'
+      if: ${{ needs.test-rust.result == 'success' }}
+    - run: echo 'The triggering workflow (test-rust) failed' && false
+      if: ${{ needs.test-rust.result != 'success' }}
+    - run: echo 'The triggering workflow (build-nostd) passed'
+      if: ${{ needs.build-nostd.result == 'success' }}
+    - run: echo 'The triggering workflow (build-nostd) failed' && false
+      if: ${{ needs.build-nostd.result != 'success' }}
