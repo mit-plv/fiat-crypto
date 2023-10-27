@@ -37,24 +37,25 @@ Section ExtendedCoordinates.
     Context {a_eq_minus1:a = Fopp 1}.
     (* https://hyperelliptic.org/EFD/g1p/data/twisted/extended-1/addition/madd-2008-hwcd-3,
        but with halved precomputed coordinates (making D unnecessary) *)
-    Definition m1add_precomputed_coordinates (P:F*F*F*F) (Q:precomputed_point) : F*F*F*F :=
-    let '(X1, Y1, Z1, T1) := P in
+    Definition m1add_precomputed_coordinates (P:F*F*F*F*F) (Q:precomputed_point) : F*F*F*F*F :=
+    let '(X1, Y1, Z1, Ta, Tb) := P in
     let '(half_ypx, half_ymx, xyd) := Q in
     let YpX1 := Y1+X1 in
     let YmX1 := Y1-X1 in
     let A := YmX1*half_ymx in
     let B := YpX1*half_ypx in
+    let T1 := Ta*Tb in
     let C := xyd*T1 in (* = T1*2d*T2, since Z2=1 so T2=X2*Y2 *)
-    let X3 := B-A in
+    let E := B-A in
     let F := Z1-C in
-    let Z3 := Z1+C in
-    let Y3 := B+A in
+    let G := Z1+C in
+    let H := B+A in
     (* X/Z, Y/Z = x, y *)
-    let T3 := X3*Y3 in
-    let X3 := X3*F in
-    let Y3 := Z3*Y3 in
-    let Z3 := F*Z3 in
-    (X3, Y3, Z3, T3).
+    let X3 := E*F in
+    let Y3 := G*H in
+    let Z3 := F*G in
+    (* Leave T split in two parts *)
+    (X3, Y3, Z3, E, H).
 
     Create HintDb points_as_coordinates discriminated.
     Hint Unfold XYZT.Basic.point XYZT.Basic.coordinates XYZT.Basic.from_twisted XYZT.Basic.m1add
@@ -62,9 +63,9 @@ Section ExtendedCoordinates.
     Local Notation m1add := (Basic.m1add(nonzero_a:=nonzero_a)(square_a:=square_a)(a_eq_minus1:=a_eq_minus1)(nonsquare_d:=nonsquare_d)(k_eq_2d:=reflexivity _)).
     Local Notation XYZT_of_twisted := (Basic.from_twisted(nonzero_a:=nonzero_a)(d:=d)).
     Lemma m1add_precomputed_coordinates_correct P Q :
-      let '(X1, Y1, Z1, T1) := m1add_precomputed_coordinates (XYZT.Basic.coordinates P) (of_twisted Q) in
-      let '(X2, Y2, Z2, T2) := coordinates (m1add P (XYZT_of_twisted Q)) in
-            Z2*X1 = Z1*X2 /\ Z2*Y1 = Z1*Y2 /\ X1*Y1 = Z1*T1.
+      let '(X1, Y1, Z1, Ta1, Tb1) := m1add_precomputed_coordinates (XYZT.Basic.coordinates P) (of_twisted Q) in
+      let '(X2, Y2, Z2, _, _) := coordinates (m1add P (XYZT_of_twisted Q)) in
+            Z2*X1 = Z1*X2 /\ Z2*Y1 = Z1*Y2 /\ X1*Y1 = Z1*Ta1*Tb1.
     Proof.
       repeat match goal with
              | _ => progress autounfold with points_as_coordinates in *
