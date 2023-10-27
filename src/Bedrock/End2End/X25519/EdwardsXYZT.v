@@ -51,23 +51,21 @@ Local Existing Instance field_parameters.
 Local Instance frep25519 : Field.FieldRepresentation := field_representation n Field25519.s c.
 Local Existing Instance frep25519_ok.
 
-Definition add_precomputed := func! (ox, oy, oz, ot, X1, Y1, Z1, T1, ypx2, ymx2, xy2d2) {
+Definition add_precomputed := func! (ox, oy, oz, ot, X1, Y1, Z1, T1, half_ypx, half_ymx, xyd) {
   stackalloc 40 as YpX1;
   fe25519_add(YpX1, Y1, X1);
   stackalloc 40 as YmX1;
   fe25519_sub(YmX1, Y1, X1);
   stackalloc 40 as A;
-  fe25519_mul(A, YpX1, ypx2);
+  fe25519_mul(A, YpX1, half_ypx);
   stackalloc 40 as B;
-  fe25519_mul(B, YmX1, ymx2);
+  fe25519_mul(B, YmX1, half_ymx);
   stackalloc 40 as C;
-  fe25519_mul(C, xy2d2, T1);
-  stackalloc 40 as D;
-  fe25519_carry_add(D, Z1, Z1);
+  fe25519_mul(C, xyd, T1);
   fe25519_sub(ox, A, B);
   fe25519_add(oy, A, B);
-  fe25519_add(oz, D, C);
-  fe25519_sub(ot, D, C);
+  fe25519_add(oz, Z1, C);
+  fe25519_sub(ot, Z1, C);
   fe25519_mul(ox, ox, ot);
   fe25519_mul(oy, oy, oz);
   fe25519_mul(oz, ot, oz);
@@ -133,26 +131,26 @@ Local Notation m1double :=
 
 Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
   fnspec! "add_precomputed"
-    (oxK oyK ozK otK X1K Y1K Z1K T1K ypx2K ymx2K xy2d2K : word) /
-    (ox oy oz ot X1 Y1 Z1 T1 ypx2 ymx2 xy2d2 : felem) (R : _ -> Prop),
+    (oxK oyK ozK otK X1K Y1K Z1K T1K half_ypxK half_ymxK xydK : word) /
+    (ox oy oz ot X1 Y1 Z1 T1 half_ypx half_ymx xyd : felem) (R : _ -> Prop),
   { requires t m :=
       bounded_by tight_bounds X1 /\
       bounded_by tight_bounds Y1 /\
       bounded_by tight_bounds Z1 /\
       bounded_by loose_bounds T1 /\
-      bounded_by loose_bounds ypx2 /\
-      bounded_by loose_bounds ymx2 /\
-      bounded_by loose_bounds xy2d2 /\
-      m =* (FElem X1K X1) * (FElem Y1K Y1) * (FElem Z1K Z1) * (FElem T1K T1) * (FElem ypx2K ypx2) * (FElem ymx2K ymx2) * (FElem xy2d2K xy2d2) * (FElem oxK ox) * (FElem oyK oy) * (FElem ozK oz) * (FElem otK ot) * R;
+      bounded_by loose_bounds half_ypx /\
+      bounded_by loose_bounds half_ymx /\
+      bounded_by loose_bounds xyd /\
+      m =* (FElem X1K X1) * (FElem Y1K Y1) * (FElem Z1K Z1) * (FElem T1K T1) * (FElem half_ypxK half_ypx) * (FElem half_ymxK half_ymx) * (FElem xydK xyd) * (FElem oxK ox) * (FElem oyK oy) * (FElem ozK oz) * (FElem otK ot) * R;
     ensures t' m' :=
       t = t' /\
       exists ox' oy' oz' ot',
-        ((feval ox'), (feval oy'), (feval oz'), (feval ot')) = (@m1add_precomputed_coordinates (F M_pos) (F.add) (F.sub) (F.mul) ((feval X1), (feval Y1), (feval Z1), (feval T1)) ((feval ypx2), (feval ymx2), (feval xy2d2))) /\
+        ((feval ox'), (feval oy'), (feval oz'), (feval ot')) = (@m1add_precomputed_coordinates (F M_pos) (F.add) (F.sub) (F.mul) ((feval X1), (feval Y1), (feval Z1), (feval T1)) ((feval half_ypx), (feval half_ymx), (feval xyd))) /\
         bounded_by loose_bounds ox' /\
         bounded_by loose_bounds oy' /\
         bounded_by loose_bounds oz' /\
         bounded_by loose_bounds ot' /\
-        m' =* (FElem X1K X1) * (FElem Y1K Y1) * (FElem Z1K Z1) * (FElem T1K T1) * (FElem ypx2K ypx2) * (FElem ymx2K ymx2) * (FElem xy2d2K xy2d2) * (FElem oxK ox') * (FElem oyK oy') * (FElem ozK oz') * (FElem otK ot') * R }.
+        m' =* (FElem X1K X1) * (FElem Y1K Y1) * (FElem Z1K Z1) * (FElem T1K T1) * (FElem half_ypxK half_ypx) * (FElem half_ymxK half_ymx) * (FElem xydK xyd) * (FElem oxK ox') * (FElem oyK oy') * (FElem ozK oz') * (FElem otK ot') * R }.
 
 Global Instance spec_of_double : spec_of "double" :=
   fnspec! "double"
@@ -264,14 +262,13 @@ Proof.
   (* Each binop produces 2 memory goals on the inputs, 2 bounds goals on the inputs, and 1 memory goal on the output. *)
   single_step. (* fe25519_add(YpX1, Y1, X1) *)
   single_step. (* fe25519_sub(YmX1, Y1, X1) *)
-  single_step. (* fe25519_mul(A, YpX1, ypx2) *)
-  single_step. (* fe25519_mul(B, YmX1, ymx2) *)
-  single_step. (* fe25519_mul(C, xy2d2, T1) *)
-  single_step. (* fe25519_carry_add(D, Z1, Z1) *)
+  single_step. (* fe25519_mul(A, YpX1, half_ypx) *)
+  single_step. (* fe25519_mul(B, YmX1, half_ymx) *)
+  single_step. (* fe25519_mul(C, xyd, T1) *)
   single_step. (* fe25519_sub(ox, A, B) *)
   single_step. (* fe25519_add(oy, A, B) *)
-  single_step. (* fe25519_add(oz, D, C) *)
-  single_step. (* fe25519_sub(ot, D, C) *)
+  single_step. (* fe25519_add(oz, Z1, C) *)
+  single_step. (* fe25519_sub(ot, Z1, C) *)
   single_step. (* fe25519_mul(ox, ox, ot) *)
   single_step. (* fe25519_mul(oy, oy, oz) *)
   single_step. (* fe25519_mul(oz, ot, oz) *)
@@ -279,22 +276,22 @@ Proof.
 
   (* Solve the postconditions *)
   repeat straightline.
-  (* Rewrites the FElems for the stack (in H88) to be about bytes instead *)
+  (* Rewrites the FElems for the stack (in H80) to be about bytes instead *)
     cbv [FElem] in *.
     (* Prevent output from being rewritten by seprewrite_in *) 
-    remember (Bignum.Bignum felem_size_in_words otK _) as Pt in H88.
-    remember (Bignum.Bignum felem_size_in_words ozK _) as Pz in H88.
-    remember (Bignum.Bignum felem_size_in_words oyK _) as Py in H88.
-    remember (Bignum.Bignum felem_size_in_words oxK _) as Px in H88.
-    do 6 (seprewrite_in @Bignum.Bignum_to_bytes H88).
+    remember (Bignum.Bignum felem_size_in_words otK _) as Pt in H80.
+    remember (Bignum.Bignum felem_size_in_words ozK _) as Pz in H80.
+    remember (Bignum.Bignum felem_size_in_words oyK _) as Py in H80.
+    remember (Bignum.Bignum felem_size_in_words oxK _) as Px in H80.
+    do 5 (seprewrite_in @Bignum.Bignum_to_bytes H80).
     subst Pt Pz Py Px.
-    extract_ex1_and_emp_in H88.
+    extract_ex1_and_emp_in H80.
 
   (* Solve stack/memory stuff *)
   repeat straightline.
 
   (* Post-conditions *)
-  exists x9,x10,x11,x12; ssplit. 2,3,4,5:solve_bounds.
+  exists x8,x9,x10,x11; ssplit. 2,3,4,5:solve_bounds.
   { (* Correctness: result matches Gallina *)
     cbv [bin_model bin_mul bin_add bin_carry_add bin_sub] in *.
     cbv match beta delta [m1add_precomputed_coordinates].

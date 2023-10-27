@@ -37,12 +37,12 @@ Section ExtendedCoordinates.
     Context {a_eq_minus1:a = Fopp 1}.
     Definition m1add_precomputed_coordinates (P:F*F*F*F) (Q:precomputed_point) : F*F*F*F :=
     let '(X1, Y1, Z1, T1) := P in
-    let '(ypx2, ymx2, xy2d2) := Q in
+    let '(half_ypx, half_ymx, xyd) := Q in
     let YpX1 := Y1+X1 in
     let YmX1 := Y1-X1 in
-    let A := YpX1*ypx2 in
-    let B := YmX1*ymx2 in
-    let C := xy2d2*T1 in
+    let A := YpX1*half_ypx in
+    let B := YmX1*half_ymx in
+    let C := xyd*T1 in
     let X3 := A-B in
     let Y3 := A+B in
     let Z3 := Z1+C in
