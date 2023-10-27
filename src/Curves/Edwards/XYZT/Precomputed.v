@@ -27,11 +27,11 @@ Section ExtendedCoordinates.
   Local Notation Epoint := (@E.point F Feq Fone Fadd Fmul a d).
 
   Local Notation onCurve x y := (a*x^2 + y^2 = 1 + d*x^2*y^2) (only parsing).
-  Definition precomputed_point : Type := F*F*F.
+  Definition precomputed_point : Type := F*F*F. (* (y+x)/2, (y-x)/2, dxy *)
 
   Definition of_twisted (P:Epoint) :=
     let '(x, y) := E.coordinates P in
-    (y+x, y-x, (let xy := x*y in xy+xy)*d).
+    ((y+x)/(1+1), (y-x)/(1+1), x*y*d). (* 1+1 ew *)
 
   Section TwistMinusOne.
     Context {a_eq_minus1:a = Fopp 1}.
@@ -43,11 +43,10 @@ Section ExtendedCoordinates.
     let A := YpX1*ypx2 in
     let B := YmX1*ymx2 in
     let C := xy2d2*T1 in
-    let D := Z1+Z1 in
     let X3 := A-B in
     let Y3 := A+B in
-    let Z3 := D+C in
-    let T3 := D-C in
+    let Z3 := Z1+C in
+    let T3 := Z1-C in
     (* X/Z, Y/T = x, y *)
     let X3 := X3*T3 in
     let Y3 := Y3*Z3 in
