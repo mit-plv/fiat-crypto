@@ -57,19 +57,20 @@ Definition add_precomputed := func! (ox, oy, oz, ot, X1, Y1, Z1, T1, half_ypx, h
   stackalloc 40 as YmX1;
   fe25519_sub(YmX1, Y1, X1);
   stackalloc 40 as A;
-  fe25519_mul(A, YpX1, half_ypx);
+  fe25519_mul(A, YmX1, half_ymx);
   stackalloc 40 as B;
-  fe25519_mul(B, YmX1, half_ymx);
+  fe25519_mul(B, YpX1, half_ypx);
   stackalloc 40 as C;
   fe25519_mul(C, xyd, T1);
-  fe25519_sub(ox, A, B);
-  fe25519_add(oy, A, B);
+  fe25519_sub(ox, B, A);
+  stackalloc 40 as F;
+  fe25519_sub(F, Z1, C);
   fe25519_add(oz, Z1, C);
-  fe25519_sub(ot, Z1, C);
-  fe25519_mul(ox, ox, ot);
-  fe25519_mul(oy, oy, oz);
-  fe25519_mul(oz, ot, oz);
-  fe25519_mul(ot, ox, oy)
+  fe25519_add(oy, B, A);
+  fe25519_mul(ot, ox, oy);
+  fe25519_mul(ox, ox, F);
+  fe25519_mul(oy, oz, oy);
+  fe25519_mul(oz, F, oz)
 }.
 
 (* Equivalent of m1double in src/Curves/Edwards/XYZT/Basic.v *)
@@ -262,36 +263,36 @@ Proof.
   (* Each binop produces 2 memory goals on the inputs, 2 bounds goals on the inputs, and 1 memory goal on the output. *)
   single_step. (* fe25519_add(YpX1, Y1, X1) *)
   single_step. (* fe25519_sub(YmX1, Y1, X1) *)
-  single_step. (* fe25519_mul(A, YpX1, half_ypx) *)
-  single_step. (* fe25519_mul(B, YmX1, half_ymx) *)
+  single_step. (* fe25519_mul(A, YmX1, half_ymx) *)
+  single_step. (* fe25519_mul(B, YpX1, half_ypx) *)
   single_step. (* fe25519_mul(C, xyd, T1) *)
-  single_step. (* fe25519_sub(ox, A, B) *)
-  single_step. (* fe25519_add(oy, A, B) *)
+  single_step. (* fe25519_sub(ox, B, A) *)
+  single_step. (* fe25519_sub(F, Z1, C) *)
   single_step. (* fe25519_add(oz, Z1, C) *)
-  single_step. (* fe25519_sub(ot, Z1, C) *)
-  single_step. (* fe25519_mul(ox, ox, ot) *)
-  single_step. (* fe25519_mul(oy, oy, oz) *)
-  single_step. (* fe25519_mul(oz, ot, oz) *)
+  single_step. (* fe25519_add(oy, B, A) *)
   single_step. (* fe25519_mul(ot, ox, oy) *)
+  single_step. (* fe25519_mul(ox, ox, F) *)
+  single_step. (* fe25519_mul(oy, oy, oz) *)
+  single_step. (* fe25519_mul(oz, F, oz) *)
 
   (* Solve the postconditions *)
   repeat straightline.
-  (* Rewrites the FElems for the stack (in H80) to be about bytes instead *)
+  (* Rewrites the FElems for the stack (in H84) to be about bytes instead *)
     cbv [FElem] in *.
     (* Prevent output from being rewritten by seprewrite_in *) 
-    remember (Bignum.Bignum felem_size_in_words otK _) as Pt in H80.
-    remember (Bignum.Bignum felem_size_in_words ozK _) as Pz in H80.
-    remember (Bignum.Bignum felem_size_in_words oyK _) as Py in H80.
-    remember (Bignum.Bignum felem_size_in_words oxK _) as Px in H80.
-    do 5 (seprewrite_in @Bignum.Bignum_to_bytes H80).
+    remember (Bignum.Bignum felem_size_in_words otK _) as Pt in H84.
+    remember (Bignum.Bignum felem_size_in_words ozK _) as Pz in H84.
+    remember (Bignum.Bignum felem_size_in_words oyK _) as Py in H84.
+    remember (Bignum.Bignum felem_size_in_words oxK _) as Px in H84.
+    do 6 (seprewrite_in @Bignum.Bignum_to_bytes H84).
     subst Pt Pz Py Px.
-    extract_ex1_and_emp_in H80.
+    extract_ex1_and_emp_in H84.
 
   (* Solve stack/memory stuff *)
   repeat straightline.
 
   (* Post-conditions *)
-  exists x8,x9,x10,x11; ssplit. 2,3,4,5:solve_bounds.
+  exists x9,x10,x11,x8; ssplit. 2,3,4,5:solve_bounds.
   { (* Correctness: result matches Gallina *)
     cbv [bin_model bin_mul bin_add bin_carry_add bin_sub] in *.
     cbv match beta delta [m1add_precomputed_coordinates].
