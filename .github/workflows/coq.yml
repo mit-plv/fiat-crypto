@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-20.04
 
     strategy:
+      fail-fast: false
       matrix:
         env:
         - { COQ_VERSION: "master", COQ_PACKAGE: "coq"       , PPA: "ppa:jgross-h/coq-master-daily"            , SKIP_DISPLAY_TEST: "1", CC: "gcc", ALLOW_DIFF: ""  }
