@@ -23,7 +23,7 @@ group lsb_release -a
 group ulimit -aH
 group ulimit -aS
 group ghc --version
-group gcc -v
+group gcc --version
 group ocamlc -config
 group coqc --config
 group coqc --version
