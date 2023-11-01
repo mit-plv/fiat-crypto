@@ -49,11 +49,11 @@ jobs:
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
         export: CI ALLOW_DIFF SKUP_DISPLAY_TEST CC
         custom_script: |
-           startGroup 'install gcc'
-           sudo apt-get update -q
-           sudo apt-get install g++-7 libssl-dev -y --allow-unauthenticated
-           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
-           endGroup
+           #startGroup 'install gcc'
+           #sudo apt-get update -q
+           #sudo apt-get install g++-7 libssl-dev -y --allow-unauthenticated
+           #sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
+           #endGroup
            startGroup 'some-early util'
            etc/ci/github-actions-docker-make.sh -j2 some-early util
            endGroup
