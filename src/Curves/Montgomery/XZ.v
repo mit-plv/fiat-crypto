@@ -37,7 +37,7 @@ Module M.
       end.
 
     Let char_ge_3:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos (BinNat.N.two)).
-    Proof using char_ge_5. eapply Algebra.Hierarchy.char_ge_weaken; eauto; vm_decide. Qed.
+    Proof. clear -char_ge_5. eapply Algebra.Hierarchy.char_ge_weaken; eauto; vm_decide. Qed.
 
     (* From Curve25519 paper by djb, appendix B. Credited to Montgomery *)
     Context {a24:F} {a24_correct:(1+1+1+1)*a24 = a-(1+1)}.

@@ -1376,7 +1376,7 @@ Module Import ListWSfun_gen_proofs.
 
       Let elements_iff :
         MapsTo x e m <-> InA (@eq_key_elt _) (x,e) (elements m).
-      Proof using Type.
+      Proof.
         clear; cbv [MapsTo].
         rewrite InA_alt.
         cbv [eq_key_elt]; cbn [fst snd].
@@ -1645,7 +1645,7 @@ Module Import ListWSfun_gen_proofs.
       Variable cmp : elt -> elt -> bool.
 
       Let equal_iff : equal cmp m m' = true <-> Equivb cmp m m'.
-      Proof using Type.
+      Proof.
         clear; cbv [equal Equivb] in *.
         cbv [Equiv In Cmp].
         setoid_rewrite find_iff.
