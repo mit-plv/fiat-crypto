@@ -127,7 +127,7 @@ Section montgomery.
         break_match; rewrite partial_reduce_correct; t_fin_correct.
       Qed.
 
-      Let m_small : 0 <= m < R. Proof using N'_in_range. auto with zarith. Qed.
+      Let m_small : 0 <= m < R. Proof. auto with zarith. Qed.
 
       Section generic.
         Lemma prereduce_in_range_gen B
