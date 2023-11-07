@@ -4,6 +4,7 @@ on:
   push:
     branches: [ master , sp2019latest , v8.6 , v8.8 , v8.10 ]
   pull_request:
+  merge_group:
   workflow_dispatch:
   schedule:
     - cron: '0 0 1 * *'
@@ -121,5 +122,5 @@ jobs:
       run: chmod +x src/ExtractionOCaml/*
     - name: only-test-amd64-files
       run: etc/ci/github-actions-make.sh -f Makefile.examples -j2 only-test-amd64-files SLOWEST_FIRST=1
-      env: 
+      env:
         ALLOW_DIFF: 1

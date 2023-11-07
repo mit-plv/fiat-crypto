@@ -3,6 +3,7 @@ name: Test Generated JSON
 on:
   push:
   pull_request:
+  merge_group:
   schedule:
     - cron: '0 0 1 * *'
 

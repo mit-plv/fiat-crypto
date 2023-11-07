@@ -4,6 +4,7 @@ on:
   push:
     branches: [ master , sp2019latest ]
   pull_request:
+  merge_group:
   workflow_dispatch:
   schedule:
     - cron: '0 0 1 * *'
@@ -101,5 +102,5 @@ jobs:
     - name: make only-test-amd64-files
       shell: in-debian-chroot.sh {0}
       run: etc/ci/github-actions-make.sh -j2 only-test-amd64-files SLOWEST_FIRST=1
-      env: 
+      env:
         ALLOW_DIFF: 1
