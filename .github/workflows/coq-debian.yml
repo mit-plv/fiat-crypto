@@ -17,7 +17,7 @@ jobs:
       matrix:
         include:
         - env: { DEBIAN: "sid" }
-        - env: { DEBIAN: "bookworm" }
+        #- env: { DEBIAN: "bookworm" }# restore once 8.17 lands in Debian stable
 
     runs-on: 'ubuntu-22.04'
     env: ${{ matrix.env }}
