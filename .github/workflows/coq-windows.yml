@@ -41,6 +41,9 @@ jobs:
       uses: ocaml/setup-ocaml@v2
       with:
         ocaml-compiler: 4.11.1
+        opam-repositories: |
+          opam-repository-mingw: https://github.com/ocaml-opam/opam-repository-mingw.git#sunset
+          default: https://github.com/ocaml/opam-repository.git
     - run: opam repo add coq-released https://coq.inria.fr/opam/released
     - run: opam update
     - run: opam depext coq.${{ env.COQ_VERSION }}
