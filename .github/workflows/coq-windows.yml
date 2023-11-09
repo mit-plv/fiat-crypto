@@ -23,7 +23,7 @@ jobs:
 
     env:
       NJOBS: "2"
-      COQ_VERSION: "8.16.0" # https://packages.debian.org/testing/coq
+      COQ_VERSION: "8.17.0" # minimal major version required for bedrock2 components
       COQEXTRAFLAGS: "-async-proofs-j 1"
       COQCHKEXTRAFLAGS: ""
       OPAMYES: "true"
@@ -41,6 +41,9 @@ jobs:
       uses: ocaml/setup-ocaml@v2
       with:
         ocaml-compiler: 4.11.1
+        opam-repositories: |
+          opam-repository-mingw: https://github.com/ocaml-opam/opam-repository-mingw.git#sunset
+          default: https://github.com/ocaml/opam-repository.git
     - run: opam depext coq.${{ env.COQ_VERSION }}
     - run: opam pin add --kind=version coq ${{ env.COQ_VERSION }}
 
