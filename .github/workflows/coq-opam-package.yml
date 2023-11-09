@@ -112,8 +112,7 @@ jobs:
     - run: opam repo add coq-released https://coq.inria.fr/opam/released
     - run: opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
     - run: opam update
-    - run: opam install opam-depext
-    - run: opam exec -- opam-depext coq.${{ matrix.coq-version }}
+    - run: opam depext coq.${{ matrix.coq-version }}
     - run: opam pin --kind=version add coq ${{ matrix.coq-version }}
 
     - name: echo more build params
