@@ -63,6 +63,14 @@ jobs:
         name: generated-files-${{ matrix.alpine }}
         path: generated-files.tgz
       if: ${{ failure() }}
+    - name: package-standalone-ocaml
+      shell: alpine.sh {0}
+      run: make package-standalone-ocaml
+    - name: upload standalone files
+      uses: actions/upload-artifact@v3
+      with:
+        name: standalone-${{ matrix.alpine }}
+        path: standalone.tar.gz
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
       with:

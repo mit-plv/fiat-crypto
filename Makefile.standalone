@@ -2,6 +2,8 @@
 # files on .v files, so that we can compile them by invoking this
 # makefile directly even when Coq is not available
 
+SELF := $(lastword $(MAKEFILE_LIST))
+
 include Makefile.config
 
 GHC?=ghc
@@ -19,6 +21,11 @@ CAMLOPT_PERF ?= $(OCAMLOPTP)
 CAMLOPT_PERF_SHOW:=OCAMLOPTP
 endif
 
+PACKAGE ?= standalone.tar.gz
+PACKAGE_CMD ?= tar -czvf
+PACKAGE_CMD_FUNC ?= $(PACKAGE_CMD) $(1) $(2)
+MKTEMP_D ?= etc/ci/mktemp_d.sh
+
 ENSURE_STACK_LIMIT := . etc/ensure_stack_limit.sh || true
 
 .PHONY: \
@@ -26,6 +33,7 @@ ENSURE_STACK_LIMIT := . etc/ensure_stack_limit.sh || true
 	standalone install-standalone uninstall-standalone \
 	standalone-ocaml install-standalone-ocaml uninstall-standalone-ocaml \
 	standalone-haskell install-standalone-haskell uninstall-standalone-haskell \
+	package-standalone package-standalone-ocaml package-standalone-haskell \
 	#
 
 # pass -w -20 to disable the unused argument warning
@@ -93,3 +101,15 @@ uninstall-standalone-ocaml uninstall-standalone-haskell:
 
 install-standalone: install-standalone-ocaml # install-standalone-haskell
 uninstall-standalone: uninstall-standalone-ocaml # uninstall-standalone-haskell
+
+package-standalone: package-standalone-ocaml # package-standalone-haskell
+
+package-standalone-ocaml package-standalone-haskell : package-standalone-% :
+	$(SHOW)'PACKAGE STANDALONE $*'
+	$(HIDE)rm -f "$(PACKAGE)"
+	+$(HIDE)standalonedir="$$(TMPDIR="$$(pwd)" $(MKTEMP_D))"; \
+	 $(MAKE) -f $(SELF) install-standalone-$* BINDIR="$$standalonedir" && \
+	 cd "$$standalonedir" && \
+	 $(call PACKAGE_CMD_FUNC,../$(PACKAGE),./*) && \
+	 cd ../ && \
+	 rm -rf "$$standalonedir"
