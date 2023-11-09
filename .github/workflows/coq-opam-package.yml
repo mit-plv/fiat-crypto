@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        coq-version: ['dev', '8.16.0']
+        coq-version: ['dev', '8.18.0', '8.17.0']
         ocaml-compiler: ['4.11.1']
         os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
         coq-extra-flags: ['-async-proofs-j 1', '']
