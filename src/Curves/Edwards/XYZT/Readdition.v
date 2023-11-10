@@ -57,27 +57,26 @@ Section ExtendedCoordinates.
   (* Define a new cached point type *)
   Definition cached :=
     { C | let '(half_YmX,half_YpX,Z,Td) := C in
-          exists (P : point),
-          let '(X1,Y1,Z1,Ta,Tb) := coordinates P in
-          half_YmX = (Y1-X1)/2 /\
-          half_YpX = (Y1+X1)/2 /\
-          Z1 = Z /\
-          Td = (Ta*Tb)*d }.
+          let X := half_YpX - half_YmX in
+          let Y := half_YpX + half_YmX in
+          let T := Td * (Finv d) in
+            a * X^2*Z^2 + Y^2*Z^2 = (Z^2)^2 + d * X^2 * Y^2
+            /\ X * Y = Z * T
+            /\ Z <> 0 }.
   Definition cached_coordinates (C:cached) : F*F*F*F := proj1_sig C.
 
-  Program Definition m1_prep (P : point) : cached :=
-      match coordinates P return F*F*F*F with
+  Program Definition m1_prep (P : F*F*F*F*F) : F*F*F*F :=
+      match P with
         (X, Y, Z, Ta, Tb) =>
         let half_YmX := (Y-X)/2 in
         let half_YpX := (Y+X)/2 in
         let Td := Ta*Tb*d in
         (half_YmX, half_YpX, Z, Td)
       end.
-    Next Obligation. admit. Admitted.
 
   Program Definition m1_readd
-      (P1 : point) (C : cached) : point :=
-    match coordinates P1, C return F*F*F*F*F with
+      (P1 : F*F*F*F*F) (C : F*F*F*F) : F*F*F*F*F :=
+    match P1, C with
       (X1, Y1, Z1, Ta1, Tb1), (half_YmX, half_YpX, Z2, Td) =>
       let A := (Y1-X1)*half_YmX in
       let B := (Y1+X1)*half_YpX in
@@ -92,11 +91,23 @@ Section ExtendedCoordinates.
       let Z3 := F*G in
       (X3, Y3, Z3, E, H)
     end.
-  Next Obligation. admit. Admitted.
 
+
+  Create HintDb points_as_coordinates discriminated.
+  Hint Unfold XYZT.Basic.point XYZT.Basic.coordinates XYZT.Basic.m1add
+       E.point E.coordinates m1_readd m1_prep : points_as_coordinates.
   Lemma readd_correct P Q :
-    Basic.eq (m1_readd P (m1_prep Q)) (m1add P Q).
-  admit.
-  Admitted.
+    let '(X1, Y1, Z1, Ta1, Tb1) := m1_readd (coordinates P) (m1_prep (coordinates Q)) in
+    let '(X2, Y2, Z2, _, _) := coordinates (m1add P Q) in
+      Z2*X1 = Z1*X2 /\ Z2*Y1 = Z1*Y2 /\ X1*Y1 = Z1*Ta1*Tb1.
+  Proof.
+    repeat match goal with
+           | _ => progress autounfold with points_as_coordinates in *
+           | _ => progress destruct_head' @prod
+           | _ => progress destruct_head' @sig
+           | _ => progress cbv [proj1_sig fst snd]
+           | |- _ /\ _ => split
+           end; fsatz.
+  Qed.
 
 End ExtendedCoordinates.
