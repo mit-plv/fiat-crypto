@@ -2,14 +2,16 @@ name: CI (Coq, Alpine)
 
 on:
   push:
-    branches: [ master  ]
+    branches: [ master ]
   pull_request:
+  merge_group:
   workflow_dispatch:
   schedule:
     - cron: '0 0 1 * *'
 
 jobs:
   build:
+
     strategy:
       fail-fast: false
       matrix:
@@ -19,9 +21,11 @@ jobs:
 
     runs-on: ubuntu-latest
     name: ${{ matrix.alpine }}
+
     concurrency:
-      group: ${{ github.workflow }}-${{ matrix.alpine }}-${{ github.head_ref || github.run_id }}
+      group: ${{ github.workflow }}-alpine-${{ matrix.alpine }}-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
+
     steps:
     - uses: actions/checkout@v4
       with:
@@ -30,23 +34,54 @@ jobs:
       with:
         branch: ${{ matrix.alpine }}
         extra-repositories: https://dl-cdn.alpinelinux.org/alpine/edge/testing
-        packages: git make jq gcc musl-dev python3 ocaml ocaml-findlib ghc cabal coq ocaml-zarith
+        packages: git make jq gcc musl-dev python3 ocaml ocaml-findlib ghc cabal coq ocaml-zarith bash
     - name: work around coq issue 15663
       shell: alpine.sh --root {0}
       run: |
         ln -s /usr/lib/coq /usr/lib/ocaml/coq
         ln -s /usr/lib/coq-core /usr/lib/ocaml/coq-core
         ln -s /usr/lib/coqide-server /usr/lib/ocaml/coqide-server
+    - name: host build params
+      run: etc/ci/describe-system-config.sh
+    - name: chroot build params
+      shell: alpine.sh {0}
+      run: etc/ci/describe-system-config.sh
     - name: make deps
       shell: alpine.sh {0}
-      run: make -j2 deps
+      run: etc/ci/github-actions-make.sh -j2 deps
     - name: all-except-generated
       shell: alpine.sh {0}
-      run: make -j2 all-except-generated
+      run: etc/ci/github-actions-make.sh -j2 all-except-generated
     - name: generated-files
-      if: github.event_name == 'pull_request' || ${{ matrix.env.VERSION }} != 'master'
       shell: alpine.sh {0}
-      run: make -j2 generated-files
+      run: etc/ci/github-actions-make.sh -j2 generated-files
+    - run: tar -czvf generated-files.tgz fiat-*/
+      if: ${{ failure() }}
+    - name: upload generated files
+      uses: actions/upload-artifact@v3
+      with:
+        name: generated-files-${{ matrix.alpine }}
+        path: generated-files.tgz
+      if: ${{ failure() }}
+    - name: upload OCaml files
+      uses: actions/upload-artifact@v3
+      with:
+        name: ExtractionOCaml-${{ matrix.alpine }}
+        path: src/ExtractionOCaml
+      if: always ()
+    - name: standalone-haskell
+      shell: alpine.sh {0}
+      run: etc/ci/github-actions-make.sh -j1 standalone-haskell GHCFLAGS='+RTS -M6G -RTS'
+    - name: upload Haskell files
+      uses: actions/upload-artifact@v3
+      with:
+        name: ExtractionHaskell-${{ matrix.alpine }}
+        path: src/ExtractionHaskell
+      if: always ()
+    - name: display timing info
+      run: cat time-of-build-pretty.log
+    - name: display per-line timing info
+      run: etc/ci/github-actions-display-per-line-timing.sh
 
   alpine-check-all:
     runs-on: ubuntu-latest
