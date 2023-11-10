@@ -11,6 +11,7 @@ Import Ltac2.Constr.Unsafe.
 Require Rewriter.Util.InductiveHList.
 Require Rewriter.Util.LetIn.
 Import InductiveHList.Notations.
+Require Import Rewriter.Util.Tactics2.DestCase.
 Require Import Ltac2.Printf.
 
 (* TODO: move to Util *)
@@ -28,8 +29,9 @@ Ltac2 Set reify_preprocess_extra :=
             => let t := Constr.type term in
             '(@ZRange.zrange_rect_nodep $t $f $x) *)
          match Constr.Unsafe.kind term with
-         | Constr.Unsafe.Case cinfo ret_ty cinv x branches
-           => match Constr.Unsafe.kind ret_ty with
+         | Constr.Unsafe.Case _ _ _ _ _
+           => let (cinfo, ret_ty, cinv, x, branches) := destCase term in
+             match Constr.Unsafe.kind ret_ty with
               | Constr.Unsafe.Lambda xb ret_ty
                 => let ty := Constr.Unsafe.substnl [x] 0 ret_ty in
                    lazy_match! Constr.Binder.type xb with
