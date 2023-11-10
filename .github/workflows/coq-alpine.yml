@@ -47,3 +47,13 @@ jobs:
       if: github.event_name == 'pull_request' || ${{ matrix.env.VERSION }} != 'master'
       shell: alpine.sh {0}
       run: make -j2 generated-files
+
+  alpine-check-all:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: always()
+    steps:
+    - run: echo 'build passed'
+      if: ${{ needs.build.result == 'success' }}
+    - run: echo 'build failed' && false
+      if: ${{ needs.build.result != 'success' }}
