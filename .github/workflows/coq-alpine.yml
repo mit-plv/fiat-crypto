@@ -1,0 +1,49 @@
+name: CI (Coq, Alpine)
+
+on:
+  push:
+    branches: [ master  ]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - alpine: 'edge'
+#        - alpine: 'latest-stable'
+
+    runs-on: ubuntu-latest
+    name: ${{ matrix.alpine }}
+    concurrency:
+      group: ${{ github.workflow }}-${{ matrix.alpine }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - uses: jirutka/setup-alpine@v1
+      with:
+        branch: ${{ matrix.alpine }}
+        extra-repositories: https://dl-cdn.alpinelinux.org/alpine/edge/testing
+        packages: git make jq gcc musl-dev python3 ocaml ocaml-findlib ghc cabal coq ocaml-zarith
+    - name: work around coq issue 15663
+      shell: alpine.sh --root {0}
+      run: |
+        ln -s /usr/lib/coq /usr/lib/ocaml/coq
+        ln -s /usr/lib/coq-core /usr/lib/ocaml/coq-core
+        ln -s /usr/lib/coqide-server /usr/lib/ocaml/coqide-server
+    - name: make deps
+      shell: alpine.sh {0}
+      run: make -j2 deps
+    - name: all-except-generated
+      shell: alpine.sh {0}
+      run: make -j2 all-except-generated
+    - name: generated-files
+      if: github.event_name == 'pull_request' || ${{ matrix.env.VERSION }} != 'master'
+      shell: alpine.sh {0}
+      run: make -j2 generated-files
