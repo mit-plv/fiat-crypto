@@ -58,7 +58,7 @@ jobs:
       shell: cmd
 
     - name: echo build params
-      run: ./etc/ci/describe-system-config-win.bat
+      run: %cd%\etc\ci\describe-system-config-win.bat
       shell: cmd
     - name: deps
       run: |
