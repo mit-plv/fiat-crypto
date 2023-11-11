@@ -5,17 +5,17 @@ cd ../..
 
 if [ ! -z "${SHELL}" ]; then
     run() {
-        "${SHELL}" -c "$@" || true
+        "${SHELL}" -c "$*" || true
     }
 else
     run() {
-        /bin/sh -c "$@" || true
+        /bin/sh -c "$*" || true
     }
 fi
 
 if [ ! -z "$CI" ]; then
     group() {
-        echo "::group::$@"
+        echo "::group::$*"
         run "$@"
         echo "::endgroup::"
     }
@@ -28,11 +28,11 @@ group uname -a
 group lsb_release -a
 group ulimit -aH
 group ulimit -aS
-group "cat /etc/os-release"
-group "cat /proc/cpuinfo"
-group "cat /proc/meminfo"
-group "apk info"
-group "dpkg -l"
+group cat /etc/os-release
+group cat /proc/cpuinfo
+group cat /proc/meminfo
+group apk info
+group dpkg -l
 group ghc --version
 group ghc -v
 group gcc --version
