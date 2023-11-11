@@ -48,13 +48,13 @@ jobs:
       run: etc/ci/describe-system-config.sh
     - name: make deps
       shell: alpine.sh {0}
-      run: make TIMED=1 -j2 deps
+      run: make TIMED=1 TIMING=1 -j2 deps
     - name: all-except-generated
       shell: alpine.sh {0}
-      run: make TIMED=1 -j2 all-except-generated
+      run: make TIMED=1 TIMING=1 -j2 all-except-generated
     - name: generated-files
       shell: alpine.sh {0}
-      run: make TIMED=1 -j2 generated-files
+      run: make TIMED=1 TIMING=1 -j2 generated-files
     - run: tar -czvf generated-files.tgz fiat-*/
       if: ${{ failure() }}
     - name: upload generated files
@@ -71,7 +71,7 @@ jobs:
       if: always ()
     - name: standalone-haskell
       shell: alpine.sh {0}
-      run: make TIMED=1 -j1 standalone-haskell GHCFLAGS='+RTS -M6G -RTS'
+      run: make TIMED=1 TIMING=1 -j1 standalone-haskell GHCFLAGS='+RTS -M6G -RTS'
     - name: upload Haskell files
       uses: actions/upload-artifact@v3
       with:
@@ -79,7 +79,7 @@ jobs:
         path: src/ExtractionHaskell
       if: always ()
     - name: display timing info
-      run: cat time-of-build-pretty.log
+      run: cat time-of-build-pretty.log || true
     - name: display per-line timing info
       run: etc/ci/github-actions-display-per-line-timing.sh
 
