@@ -55,6 +55,14 @@ jobs:
         name: generated-files-${{ matrix.env.DEBIAN }}
         path: generated-files.tgz
       if: ${{ failure() }}
+    - name: package-standalone-ocaml
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/github-actions-make.sh package-standalone-ocaml
+    - name: upload standalone files
+      uses: actions/upload-artifact@v3
+      with:
+        name: standalone-${{ matrix.env.DEBIAN }}
+        path: standalone.tar.gz
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
       with:

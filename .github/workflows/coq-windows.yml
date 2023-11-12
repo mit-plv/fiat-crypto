@@ -49,7 +49,7 @@ jobs:
 
     - name: Install System Dependencies
       run: |
-        %CYGWIN_ROOT%\setup-x86_64.exe -qnNdO -P time
+        %CYGWIN_ROOT%\setup-x86_64.exe -qnNdO -P time,zip
       shell: cmd
 
     - name: Work around https://github.com/actions/checkout/issues/766
@@ -68,6 +68,10 @@ jobs:
     - name: standalone-ocaml
       run: |
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} standalone-ocaml'
+      shell: cmd
+    - name: package-standalone-ocaml
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh package-standalone-ocaml PACKAGE=standalone.zip PACKAGE_CMD=zip'
       shell: cmd
     - name: coq
       run: |
@@ -90,6 +94,11 @@ jobs:
       with:
         name: ExtractionOCaml
         path: src/ExtractionOCaml
+    - name: upload standalone files
+      uses: actions/upload-artifact@v3
+      with:
+        name: standalone-windows
+        path: standalone.zip
     - name: display timing info
       run: type time-of-build-pretty.log
       shell: cmd

@@ -61,6 +61,11 @@ jobs:
         eval $(opam env)
         etc/ci/github-actions-make.sh -j2 all
 
+    - name: package standalone files
+      run: |
+        eval $(opam env)
+        etc/ci/github-actions-make.sh package-standalone-ocaml
+
     - name: only-test-amd64-files-lite
       run: |
         eval $(opam env)
@@ -71,6 +76,11 @@ jobs:
       with:
         name: ExtractionOCaml
         path: src/ExtractionOCaml
+    - name: upload standalone files
+      uses: actions/upload-artifact@v3
+      with:
+        name: standalone-macos
+        path: standalone.tar.gz
     - name: display timing info
       run: cat time-of-build-pretty.log
     - name: display per-line timing info

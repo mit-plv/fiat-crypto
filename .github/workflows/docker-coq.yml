@@ -66,6 +66,13 @@ jobs:
         name: generated-files-${{ matrix.env.COQ_VERSION }}
         path: generated-files.tgz
       if: ${{ failure() }}
+    - name: package-standalone-ocaml
+      run: etc/ci/github-actions-make.sh -f Makefile.standalone package-standalone-ocaml
+    - name: upload standalone files
+      uses: actions/upload-artifact@v3
+      with:
+        name: standalone-docker-coq-${{ matrix.env.DOCKER_COQ_VERSION }}
+        path: standalone.tar.gz
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
       with:
