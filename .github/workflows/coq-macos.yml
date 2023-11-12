@@ -10,7 +10,7 @@ on:
     - cron: '0 0 1 * *'
 
 jobs:
-  build-macos:
+  build:
 
     runs-on: macOS-11
 
@@ -96,3 +96,13 @@ jobs:
 #        eval $(opam env)
 #        make TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"
 #      if: github.event_name != 'pull_request'
+
+  macos-check-all:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: always()
+    steps:
+    - run: echo 'build passed'
+      if: ${{ needs.build.result == 'success' }}
+    - run: echo 'build failed' && false
+      if: ${{ needs.build.result != 'success' }}
