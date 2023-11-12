@@ -18,6 +18,8 @@ else
 CAMLOPT_PERF ?= $(OCAMLOPTP)
 CAMLOPT_PERF_SHOW:=OCAMLOPTP
 endif
+CAMLEXTRAFLAGS ?=
+STANDALONE_CAMLFLAGS ?= -package unix -w -20 -g $(CAMLEXTRAFLAGS)
 
 ENSURE_STACK_LIMIT := . etc/ensure_stack_limit.sh || true
 
@@ -33,12 +35,12 @@ ENSURE_STACK_LIMIT := . etc/ensure_stack_limit.sh || true
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.cmi) : %.cmi : %.ml
 	$(SHOW)'$(CAMLOPT_PERF_SHOW) $*.mli'
 	$(HIDE)$(ENSURE_STACK_LIMIT); \
-	 $(TIMER) $(CAMLOPT_PERF) -package unix -w -20 -g $*.mli
+	 $(TIMER) $(CAMLOPT_PERF) $(STANDALONE_CAMLFLAGS) $*.mli
 
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml %.cmi
 	$(SHOW)'$(CAMLOPT_PERF_SHOW) $< -o $@'
 	$(HIDE)$(ENSURE_STACK_LIMIT); \
-	 $(TIMER) $(CAMLOPT_PERF) -package unix -linkpkg -w -20 -g -I src/ExtractionOCaml/ -o $@ $<
+	 $(TIMER) $(CAMLOPT_PERF) $(STANDALONE_CAMLFLAGS) -linkpkg -I src/ExtractionOCaml/ -o $@ $<
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
 	$(SHOW)'GHC $< -o $@'
