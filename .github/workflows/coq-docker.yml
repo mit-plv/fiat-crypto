@@ -113,7 +113,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-test-amd64-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
-    needs: docker-build
+    needs: build
 
     steps:
     - name: checkout repo
