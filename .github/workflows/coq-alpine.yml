@@ -86,6 +86,9 @@ jobs:
         name: ExtractionHaskell-${{ matrix.alpine }}
         path: src/ExtractionHaskell
       if: always ()
+    - name: only-test-amd64-files-lite
+      shell: alpine.sh {0}
+      run: make TIMED=1 TIMING=1 -j2 only-test-amd64-files-lite SLOWEST_FIRST=1
     - name: display timing info
       run: cat time-of-build-pretty.log || true
     - name: display per-line timing info

@@ -78,51 +78,20 @@ jobs:
         name: ExtractionHaskell-${{ matrix.env.DEBIAN }}
         path: src/ExtractionHaskell
       if: always ()
+    - name: only-test-amd64-files-lite
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/github-actions-make.sh -j2 only-test-amd64-files-lite SLOWEST_FIRST=1
     - name: display timing info
       run: cat time-of-build-pretty.log
     - name: display per-line timing info
       run: etc/ci/github-actions-display-per-line-timing.sh
 
-  test-amd64:
-
-    runs-on: ubuntu-latest
-    env: { DEBIAN: "sid" }
-
-    concurrency:
-      group: ${{ github.workflow }}-test-amd64-${{ github.head_ref || github.run_id }}
-      cancel-in-progress: true
-    needs: build
-
-    steps:
-    - name: checkout repo
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - name: setup Debian chroot
-      run: etc/ci/setup-debian-chroot.sh "$DEBIAN"
-    - name: Download a Build Artifact
-      uses: actions/download-artifact@v3
-      with:
-        name: ExtractionOCaml-sid
-        path: src/ExtractionOCaml
-    - name: make binaries executable
-      run: git check-ignore src/ExtractionOCaml/* | grep -v '\.' | xargs chmod +x
-    - name: make only-test-amd64-files
-      shell: in-debian-chroot.sh {0}
-      run: etc/ci/github-actions-make.sh -j2 only-test-amd64-files SLOWEST_FIRST=1
-      env:
-        ALLOW_DIFF: 1
-
   debian-check-all:
     runs-on: ubuntu-latest
-    needs: [build, test-amd64]
+    needs: [build]
     if: always()
     steps:
     - run: echo 'build passed'
       if: ${{ needs.build.result == 'success' }}
-    - run: echo 'test-amd64 passed'
-      if: ${{ needs.test-amd64.result == 'success' }}
     - run: echo 'build failed' && false
       if: ${{ needs.build.result != 'success' }}
-    - run: echo 'test-amd64 failed' && false
-      if: ${{ needs.test-amd64.result != 'success' }}
