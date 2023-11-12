@@ -147,6 +147,9 @@ jobs:
       contents: write  # IMPORTANT: mandatory for making GitHub Releases
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Fetch all history for all tags and branches
+        tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
     - name: Download standalone MacOS
       uses: actions/download-artifact@v3
       with:
@@ -157,9 +160,14 @@ jobs:
     - name: Unpack files
       run: |
         mkdir dist
-        mv dist-macos/standalone.tar.gz dist/fiat-crypto-macos.tar.gz
+        ( cd dist-macos && tar -xzvf standalone.tar.gz )
+        arch="$(etc/ci/find-arch.sh dist-macos/word_by_word_montgomery)"
+        tag="$(git describe --tags HEAD)"
+        fname="Fiat-Cryptography_${tag}_macOS_${arch}.tar.gz"
+        echo "$fname"
+        mv dist-macos/standalone.tar.gz "dist/$fname"
         find dist
-        tar -tvf dist/fiat-crypto-macos.tar.gz
+        tar -tvf "dist/$fname"
     - name: Upload artifacts to GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}

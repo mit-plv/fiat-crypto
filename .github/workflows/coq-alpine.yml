@@ -161,6 +161,9 @@ jobs:
       contents: write  # IMPORTANT: mandatory for making GitHub Releases
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Fetch all history for all tags and branches
+        tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
     - name: Download standalone edge
       uses: actions/download-artifact@v3
       with:
@@ -171,9 +174,15 @@ jobs:
     - name: Unpack files
       run: |
         mkdir dist
-        mv dist-edge/standalone.tar.gz dist/fiat-crypto-alpine-edge.tar.gz
+        echo "::group::find arch"
+        ( cd dist-edge && tar -xzvf standalone.tar.gz )
+        arch="$(etc/ci/find-arch.sh dist-edge/word_by_word_montgomery "unknown")"
+        tag="$(git describe --tags HEAD)"
+        fname="Fiat-Cryptography_${tag}_Linux_${arch}.tar.gz"
+        echo "$fname"
+        mv dist-edge/standalone.tar.gz "dist/$fname"
         find dist
-        tar -tvf dist/fiat-crypto-alpine-edge.tar.gz
+        tar -tvf "dist/$fname"
     - name: Upload artifacts to GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}
