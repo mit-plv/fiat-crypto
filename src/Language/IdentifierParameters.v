@@ -46,11 +46,11 @@ Ltac2 Set reify_preprocess_extra :=
          end
      end.
 
-Local Ltac2 Notation "red_flags" s(strategy) := s.
+Local Ltac2 Notation "red_flags:(" s(strategy) ")" := s.
 
 (* TODO: Move to util *)
 Ltac2 eval_cbv_beta (c : constr) :=
-  Std.eval_cbv (red_flags beta) c.
+  Std.eval_cbv red_flags:(beta) c.
 
 Ltac2 Set reify_ident_preprocess_extra :=
   fun ctx_tys term
