@@ -26,6 +26,8 @@ jobs:
       COQCHKEXTRAFLAGS: ""
       SKIP_BEDROCK2: "0"
 
+    name: macos
+
     steps:
     - uses: actions/checkout@v4
       with:

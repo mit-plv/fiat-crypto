@@ -22,7 +22,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     env: ${{ matrix.env }}
-    name: ${{ matrix.env.COQ_VERSION }}
+    name: docker-${{ matrix.env.COQ_VERSION }}
 
     concurrency:
       group: ${{ github.workflow }}-${{ matrix.env.COQ_VERSION }}-${{ github.head_ref || github.run_id }}

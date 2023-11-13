@@ -18,6 +18,7 @@ jobs:
   build:
 
     runs-on: windows-latest
+    name: windows
 
     concurrency:
       group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}

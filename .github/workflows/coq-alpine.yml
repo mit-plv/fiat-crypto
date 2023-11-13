@@ -22,7 +22,7 @@ jobs:
 #        - alpine: 'latest-stable'
 
     runs-on: ubuntu-latest
-    name: ${{ matrix.alpine }}
+    name: alpine-${{ matrix.alpine }}
 
     concurrency:
       group: ${{ github.workflow }}-alpine-${{ matrix.alpine }}-${{ github.head_ref || github.run_id }}

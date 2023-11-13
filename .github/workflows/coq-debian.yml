@@ -23,7 +23,7 @@ jobs:
 
     runs-on: 'ubuntu-22.04'
     env: ${{ matrix.env }}
-    name: ${{ matrix.env.DEBIAN }}
+    name: debian-${{ matrix.env.DEBIAN }}
 
     concurrency:
       group: ${{ github.workflow }}-${{ matrix.env.DEBIAN }}-${{ github.head_ref || github.run_id }}
