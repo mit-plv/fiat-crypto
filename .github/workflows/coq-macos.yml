@@ -132,6 +132,9 @@ jobs:
           echo "::group::otool -L $prog"
           otool -L $prog
           echo "::endgroup::"
+          echo "::group::lipo -info $prog"
+          lipo -info $prog
+          echo "::endgroup::"
           echo "::group::$prog"
           ./$prog -h
           echo "::endgroup::"
