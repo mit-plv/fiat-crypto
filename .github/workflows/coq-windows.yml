@@ -141,6 +141,12 @@ jobs:
       run: |
         Expand-Archive -Path dist/fiat-crypto-windows.zip -DestinationPath dist
         Get-ChildItem dist
+    - run: .\dist\word_by_word_montgomery.exe -h
+    - run: .\dist\unsaturated_solinas.exe -h
+    - run: .\dist\saturated_solinas.exe -h
+    - run: .\dist\base_conversion.exe -h
+    - name: Set up MSVC Environment for dumpbin
+      uses: ilammy/msvc-dev-cmd@v1
     - name: Check Executable Dependencies
       run: |
         $executables = @(
@@ -160,10 +166,6 @@ jobs:
           dumpbin.exe /dependents $prog
           Write-Host "::endgroup::"
         }
-    - run: .\dist\word_by_word_montgomery.exe -h
-    - run: .\dist\unsaturated_solinas.exe -h
-    - run: .\dist\saturated_solinas.exe -h
-    - run: .\dist\base_conversion.exe -h
 
   publish-standalone:
     runs-on: ubuntu-latest
