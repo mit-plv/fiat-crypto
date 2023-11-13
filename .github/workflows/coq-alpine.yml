@@ -53,7 +53,7 @@ jobs:
       run: make TIMED=1 TIMING=1 -j2 deps
     - name: all-except-generated
       shell: alpine.sh {0}
-      run: make TIMED=1 TIMING=1 -j2 all-except-generated
+      run: make TIMED=1 TIMING=1 -j2 CAMLEXTRAFLAGS="-ccopt -static" all-except-generated
     - name: generated-files
       shell: alpine.sh {0}
       run: make TIMED=1 TIMING=1 -j2 generated-files
@@ -134,10 +134,10 @@ jobs:
           file $prog
           echo "::endgroup::"
           echo "::group::ldd $prog"
-          ldd $prog
+          ldd $prog || true
           echo "::endgroup::"
           echo "::group::$prog"
-          ./$prog -h || echo "::error::$prog does not run on host" # does not work yet
+          ./$prog -h
           echo "::endgroup::"
         done
     - uses: jirutka/setup-alpine@v1
