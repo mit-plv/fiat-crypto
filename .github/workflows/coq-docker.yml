@@ -126,7 +126,7 @@ jobs:
         name: ExtractionOCaml-master
         path: src/ExtractionOCaml
     - name: make binaries executable
-      run: chmod +x src/ExtractionOCaml/*
+      run: git check-ignore src/ExtractionOCaml/* | grep -v '\.' | xargs chmod +x
     - name: only-test-amd64-files
       run: etc/ci/github-actions-make.sh -f Makefile.examples -j2 only-test-amd64-files SLOWEST_FIRST=1
       env:
