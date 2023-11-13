@@ -6,6 +6,8 @@ on:
   pull_request:
   merge_group:
   workflow_dispatch:
+  release:
+    types: [published]
   schedule:
     - cron: '0 0 1 * *'
 
@@ -97,12 +99,92 @@ jobs:
 #        make TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"
 #      if: github.event_name != 'pull_request'
 
+  test-standalone:
+    runs-on: macos-latest
+    needs: build
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download standalone MacOS
+      uses: actions/download-artifact@v3
+      with:
+        name: standalone-macos
+        path: dist-macos/
+    - name: List files
+      run: find dist-macos
+    - name: Rename files
+      run: |
+        mkdir dist
+        mv dist-macos/standalone.tar.gz dist/fiat-crypto-macos.tar.gz
+        find dist
+        tar -tvf dist/fiat-crypto-macos.tar.gz
+    - name: Unpack Files
+      run: |
+        cd dist
+        tar -xzvf fiat-crypto-macos.tar.gz
+        ls -la .
+    - name: Test files
+      run: |
+        cd dist
+        for prog in word_by_word_montgomery unsaturated_solinas saturated_solinas base_conversion; do
+          echo "::group::file $prog"
+          file $prog
+          echo "::endgroup::"
+          echo "::group::otool -L $prog"
+          otool -L $prog
+          echo "::endgroup::"
+          echo "::group::lipo -info $prog"
+          lipo -info $prog
+          echo "::endgroup::"
+          echo "::group::$prog"
+          ./$prog -h
+          echo "::endgroup::"
+        done
+
+  publish-standalone:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write  # IMPORTANT: mandatory for making GitHub Releases
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download standalone MacOS
+      uses: actions/download-artifact@v3
+      with:
+        name: standalone-macos
+        path: dist-macos/
+    - name: List files
+      run: find dist-macos
+    - name: Unpack files
+      run: |
+        mkdir dist
+        mv dist-macos/standalone.tar.gz dist/fiat-crypto-macos.tar.gz
+        find dist
+        tar -tvf dist/fiat-crypto-macos.tar.gz
+    - name: Upload artifacts to GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      # Upload to GitHub Release using the `gh` CLI.
+      # `dist/` contains the built packages
+      run: >-
+        gh release upload
+        '${{ github.ref_name }}' dist/**
+        --repo '${{ github.repository }}'
+      if: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name == 'release' }}
+
   macos-check-all:
     runs-on: ubuntu-latest
-    needs: [build]
+    needs: [build, test-standalone, publish-standalone]
     if: always()
     steps:
     - run: echo 'build passed'
       if: ${{ needs.build.result == 'success' }}
+    - run: echo 'test-standalone passed'
+      if: ${{ needs.test-standalone.result == 'success' }}
+    - run: echo 'publish-standalone passed'
+      if: ${{ needs.publish-standalone.result == 'success' }}
     - run: echo 'build failed' && false
       if: ${{ needs.build.result != 'success' }}
+    - run: echo 'test-standalone failed' && false
+      if: ${{ needs.test-standalone.result != 'success' }}
+    - run: echo 'publish-standalone failed' && false
+      if: ${{ needs.publish-standalone.result != 'success' }}
