@@ -90,9 +90,12 @@ Module Rust.
         ""]%string
            ++ (List.flat_map
                  (fun bw
-                  => (if IntSet.mem (int.of_bitwidth false bw) bitwidths_used || IntSet.mem (int.of_bitwidth true bw) bitwidths_used
-                      then [type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth false bw) ++ " = u8;"; (* C: typedef unsigned char prefix_uint1 *)
-                           type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth true bw) ++ " = i8;" ]%string (* C: typedef signed char prefix_int1 *)
+                  => let type_suffix (b : bool) := (int.of_bitwidth b bw) in
+                     let typedef_name (b : bool) := int_type_to_string internal_private prefix (type_suffix b) in
+                     let type_comment (name : string) := String.concat String.NewLine (comment_block [( name ++ " represents values of " ++ show bw ++ " bits, stored in one byte.")%string]) in
+                     (if IntSet.mem (type_suffix false) bitwidths_used || IntSet.mem (type_suffix true) bitwidths_used
+                      then [type_comment (typedef_name false) ++ String.NewLine ++ type_prefix ++ (typedef_name false) ++ " = u8;"; (* C: typedef unsigned char prefix_uint1 *)
+                            type_comment (typedef_name true ) ++ String.NewLine ++ type_prefix ++ (typedef_name true)  ++ " = i8;"]%string (* C: typedef signed char prefix_int1 *)
                       else []))
                  [1; 2])
            ++ (if skip_typedefs
