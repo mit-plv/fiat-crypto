@@ -17,6 +17,7 @@ Require Import Crypto.Util.Strings.NamingConventions.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Strings.Show.
+Require Import Crypto.Util.Strings.Show.Enum.
 Require Import Crypto.Util.Strings.Sorting.
 Require Import Crypto.Util.Strings.ParseFlagOptions.
 Require Import Crypto.Util.DebugMonad.
@@ -44,6 +45,32 @@ Import
   Stringification.C.Compilers.
 
 Module ForExtraction.
+  Variant SynthesisKind : Set :=
+    | word_by_word_montgomery
+    | unsaturated_solinas
+    | saturated_solinas
+    | dettman_multiplication
+    | solinas_reduction
+    | base_conversion
+  .
+
+  Derive SynthesisKind_Listable SuchThat (@FinitelyListable SynthesisKind SynthesisKind_Listable) As SynthesisKind_FinitelyListable.
+  Proof. prove_ListableDerive. Qed.
+  Global Existing Instances SynthesisKind_Listable SynthesisKind_FinitelyListable.
+
+  Global Instance show_SynthesisKind : Show SynthesisKind.
+  Proof. prove_Show_enum (). Defined.
+  Global Instance show_lvl_SynthesisKind : ShowLevel SynthesisKind := show_SynthesisKind.
+
+  Definition parse_SynthesisKind_list : list (string * SynthesisKind)
+    := Eval vm_compute in
+      List.map
+        (fun r => (String.replace "_" "-" (show r), r))
+        (list_all SynthesisKind).
+
+  Definition parse_SynthesisKind_act : ParserAction SynthesisKind
+    := parse_strs parse_SynthesisKind_list.
+
   Definition parse_string_and {T} (parse_T : string -> option T) (s : string) : option (string * T)
     := option_map (@pair _ _ s) (parse_T s).
   Definition parse_Z (s : string) : option Z := parseZ_arith_strict s.
@@ -62,6 +89,9 @@ Module ForExtraction.
           ls <-- List.map ParseArithmetic.Q_to_Z_strict ls;
           Some ls).
 
+  Definition parse_SynthesisKind (s : string) : option SynthesisKind
+    := finalize parse_SynthesisKind_act s.
+
   Definition parse_list_REG (s : string) : option (list REG)
     := finalize (parse_comma_list parse_REG) s.
 
@@ -76,9 +106,6 @@ Module ForExtraction.
 
   Definition parse_callee_saved_registers (s : string) : option assembly_callee_saved_registers_opt
     := finalize parse_assembly_callee_saved_registers_opt s.
-
-  (* Workaround for lack of notation in 8.8 *)
-  Local Notation "x =? y" := (if string_dec x y then true else false) : string_scope.
 
   Definition parse_n (n : string) : option MaybeLimbCount
     := match parse_nat n with
@@ -301,6 +328,10 @@ Module ForExtraction.
                     end)%string
                 special_options)).
 
+  Definition synthesis_kind_spec : anon_argT
+    := ("synthesis_kind",
+         Arg.CustomSymbol parse_SynthesisKind_list,
+         ["The algorithm for field arithmetic.  Further options depend on the choice of algorithm, and can be viewed by passing -h after this argument.  Note that no options other than -h are permitted before this argument."]).
   Definition curve_description_spec : anon_argT
     := ("curve_description",
         Arg.String,
@@ -1003,6 +1034,7 @@ Module ForExtraction.
            end.
 
       Definition PipelineMain
+                 {prog_name_count : Arg.prog_name_countT}
                  {supported_languages : supported_languagesT}
                  {A}
                  {io_driver : IODriverAPI A}
@@ -1105,6 +1137,7 @@ Module ForExtraction.
         }.
 
     Definition PipelineMain
+               {prog_name_count : Arg.prog_name_countT}
                {supported_languages : supported_languagesT}
                {A}
                {io_driver : IODriverAPI A}
@@ -1147,6 +1180,7 @@ Module ForExtraction.
         }.
 
     Definition PipelineMain
+               {prog_name_count : Arg.prog_name_countT}
                {supported_languages : supported_languagesT}
                {A}
                {io_driver : IODriverAPI A}
@@ -1182,6 +1216,7 @@ Module ForExtraction.
         }.
 
     Definition PipelineMain
+               {prog_name_count : Arg.prog_name_countT}
                {supported_languages : supported_languagesT}
                {A}
                {io_driver : IODriverAPI A}
@@ -1228,6 +1263,7 @@ Module ForExtraction.
         }.
 
     Definition PipelineMain
+               {prog_name_count : Arg.prog_name_countT}
                {supported_languages : supported_languagesT}
                {A}
                {io_driver : IODriverAPI A}
@@ -1263,6 +1299,7 @@ Module ForExtraction.
       }.
 
     Definition PipelineMain
+               {prog_name_count : Arg.prog_name_countT}
                {supported_languages : supported_languagesT}
                {A}
                {io_driver : IODriverAPI A}
@@ -1331,6 +1368,7 @@ Module ForExtraction.
         }.
 
     Definition PipelineMain
+               {prog_name_count : Arg.prog_name_countT}
                {supported_languages : supported_languagesT}
                {A}
                {io_driver : IODriverAPI A}
@@ -1338,4 +1376,46 @@ Module ForExtraction.
       : A
       := Parameterized.PipelineMain argv.
   End BaseConversion.
+
+  (** The combined binary that delegates *)
+  Module FiatCrypto.
+    Definition PipelineMain
+      {supported_languages : supported_languagesT}
+      {A}
+      {io_driver : IODriverAPI A}
+      (argv : list string)
+      : A
+      := let spec
+           := {| Arg.named_args := []
+              ; Arg.anon_args := [synthesis_kind_spec]
+              ; Arg.anon_opt_args := []
+              ; Arg.anon_opt_repeated_arg := None |} in
+         match Arg.parse_argv (List.firstn 2 argv) spec with
+         | ErrorT.Success (tt as _named_data, anon_data, tt as _anon_opt_data, tt as _anon_opt_repeated_data)
+           => let synthesis_kind := anon_data in
+              let prog_name_count : Arg.prog_name_countT := 2%nat in
+              match synthesis_kind with
+              | word_by_word_montgomery
+                => WordByWordMontgomery.PipelineMain (prog_name_count:=prog_name_count) argv
+              | unsaturated_solinas
+                => UnsaturatedSolinas.PipelineMain (prog_name_count:=prog_name_count) argv
+              | saturated_solinas
+                => SaturatedSolinas.PipelineMain (prog_name_count:=prog_name_count) argv
+              | dettman_multiplication
+                => DettmanMultiplication.PipelineMain (prog_name_count:=prog_name_count) argv
+              | solinas_reduction
+                => SolinasReduction.PipelineMain (prog_name_count:=prog_name_count) argv
+              | base_conversion
+                => BaseConversion.PipelineMain (prog_name_count:=prog_name_count) argv
+              end
+         | ErrorT.Error err
+           => let display := Arg.show_list_parse_error spec err in
+              if Arg.is_real_error err
+              then error display
+              else (* just a requested help/usage message *)
+                write_stdout_then
+                  (List.map (fun s => s ++ String.NewLine)%string display)
+                  ret
+         end.
+  End FiatCrypto.
 End ForExtraction.

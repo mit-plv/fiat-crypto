@@ -72,9 +72,9 @@ jobs:
       run: |
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} standalone-ocaml'
       shell: cmd
-    - name: package-standalone-ocaml
+    - name: install-standalone-unified-ocaml
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh package-standalone-ocaml PACKAGE=standalone.zip PACKAGE_CMD=zip'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist'
       shell: cmd
     - name: coq
       run: |
@@ -101,7 +101,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: standalone-windows
-        path: standalone.zip
+        path: dist/fiat_crypto.exe
     - name: display timing info
       run: type time-of-build-pretty.log
       shell: cmd
@@ -130,43 +130,26 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: standalone-windows
-        path: dist-windows/
+        path: dist/
     - name: List files
-      run: Get-ChildItem dist-windows -Name
-    - name: Rename files
-      run: |
-        New-Item -ItemType Directory -Path dist
-        Move-Item dist-windows/standalone.zip dist/fiat-crypto-windows.zip
-        Get-ChildItem dist -Name
-    - name: Unpack files
-      run: |
-        Expand-Archive -Path dist/fiat-crypto-windows.zip -DestinationPath dist
-        Get-ChildItem dist
-    - run: .\dist\word_by_word_montgomery.exe -h
-    - run: .\dist\unsaturated_solinas.exe -h
-    - run: .\dist\saturated_solinas.exe -h
-    - run: .\dist\base_conversion.exe -h
+      run: Get-ChildItem dist -Name
+    - run: .\dist\fiat_crypto.exe  -h
+    - run: .\dist\fiat_crypto.exe word-by-word-montgomery -h
+    - run: .\dist\fiat_crypto.exe unsaturated-solinas -h
+    - run: .\dist\fiat_crypto.exe saturated-solinas -h
+    - run: .\dist\fiat_crypto.exe base-conversion -h
     - name: Set up MSVC Environment for dumpbin
       uses: ilammy/msvc-dev-cmd@v1
     - name: Check Executable Dependencies
       run: |
-        $executables = @(
-          ".\dist\word_by_word_montgomery.exe",
-          ".\dist\unsaturated_solinas.exe",
-          ".\dist\saturated_solinas.exe",
-          ".\dist\base_conversion.exe"
-        )
+        Write-Host "::group::File Info - fiat_crypto"
+        Get-Item .\dist\fiat_crypto.exe | Format-List
+        dumpbin.exe /headers .\dist\fiat_crypto.exe
+        Write-Host "::endgroup::"
 
-        foreach ($prog in $executables) {
-          Write-Host "::group::File Info - $prog"
-          Get-Item $prog | Format-List
-          dumpbin.exe /headers $prog
-          Write-Host "::endgroup::"
-
-          Write-Host "::group::DLL Dependencies - $prog"
-          dumpbin.exe /dependents $prog
-          Write-Host "::endgroup::"
-        }
+        Write-Host "::group::DLL Dependencies - fiat_crypto"
+        dumpbin.exe /dependents .\dist\fiat_crypto.exe
+        Write-Host "::endgroup::"
 
   publish-standalone:
     runs-on: ubuntu-latest
@@ -182,20 +165,17 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: standalone-windows
-        path: dist-windows/
+        path: dist/
     - name: List files
-      run: find dist-windows
-    - name: Unpack files
+      run: find dist
+    - name: Rename files
       run: |
-        mkdir dist
-        ( cd dist-windows && unzip standalone.zip )
-        arch="$(etc/ci/find-arch.sh dist-windows/word_by_word_montgomery "x86_64")"
+        arch="$(etc/ci/find-arch.sh dist/fiat_crypto.exe "x86_64")"
         tag="$(git describe --tags HEAD)"
-        fname="Fiat-Cryptography_${tag}_Windows_${arch}.zip"
+        fname="Fiat-Cryptography_${tag}_Windows_${arch}.exe"
         echo "$fname"
-        mv dist-windows/standalone.zip "dist/$fname"
+        mv dist/fiat_crypto.exe "dist/$fname"
         find dist
-        unzip -l "dist/$fname"
     - name: Upload artifacts to GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}

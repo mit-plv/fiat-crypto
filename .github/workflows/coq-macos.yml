@@ -65,10 +65,10 @@ jobs:
         eval $(opam env)
         etc/ci/github-actions-make.sh -j2 all
 
-    - name: package standalone files
+    - name: install-standalone-unified-ocaml
       run: |
         eval $(opam env)
-        etc/ci/github-actions-make.sh package-standalone-ocaml
+        etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
 
     - name: only-test-amd64-files-lite
       run: |
@@ -84,7 +84,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: standalone-macos
-        path: standalone.tar.gz
+        path: dist/fiat_crypto
     - name: display timing info
       run: cat time-of-build-pretty.log
     - name: display per-line timing info
@@ -110,37 +110,22 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: standalone-macos
-        path: dist-macos/
+        path: dist/
     - name: List files
-      run: find dist-macos
-    - name: Rename files
-      run: |
-        mkdir dist
-        mv dist-macos/standalone.tar.gz dist/fiat-crypto-macos.tar.gz
-        find dist
-        tar -tvf dist/fiat-crypto-macos.tar.gz
-    - name: Unpack Files
-      run: |
-        cd dist
-        tar -xzvf fiat-crypto-macos.tar.gz
-        ls -la .
+      run: find dist
+    - run: chmod +x dist/fiat_crypto
     - name: Test files
       run: |
-        cd dist
-        for prog in word_by_word_montgomery unsaturated_solinas saturated_solinas base_conversion; do
-          echo "::group::file $prog"
-          file $prog
-          echo "::endgroup::"
-          echo "::group::otool -L $prog"
-          otool -L $prog
-          echo "::endgroup::"
-          echo "::group::lipo -info $prog"
-          lipo -info $prog
-          echo "::endgroup::"
-          echo "::group::$prog"
-          ./$prog -h
-          echo "::endgroup::"
-        done
+        echo "::group::file fiat_crypto"
+        file dist/fiat_crypto
+        echo "::endgroup::"
+        echo "::group::otool -L fiat_crypto"
+        otool -L dist/fiat_crypto
+        echo "::endgroup::"
+        echo "::group::lipo -info fiat_crypto"
+        lipo -info dist/fiat_crypto
+        echo "::endgroup::"
+        etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto
 
   publish-standalone:
     runs-on: ubuntu-latest
@@ -156,20 +141,17 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: standalone-macos
-        path: dist-macos/
+        path: dist/
     - name: List files
-      run: find dist-macos
-    - name: Unpack files
+      run: find dist
+    - name: Rename files
       run: |
-        mkdir dist
-        ( cd dist-macos && tar -xzvf standalone.tar.gz )
-        arch="$(etc/ci/find-arch.sh dist-macos/word_by_word_montgomery)"
+        arch="$(etc/ci/find-arch.sh dist/fiat_crypto)"
         tag="$(git describe --tags HEAD)"
-        fname="Fiat-Cryptography_${tag}_macOS_${arch}.tar.gz"
+        fname="Fiat-Cryptography_${tag}_macOS_${arch}"
         echo "$fname"
-        mv dist-macos/standalone.tar.gz "dist/$fname"
+        mv dist/fiat_crypto "dist/$fname"
         find dist
-        tar -tvf "dist/$fname"
     - name: Upload artifacts to GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}

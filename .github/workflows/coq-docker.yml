@@ -68,13 +68,13 @@ jobs:
         name: generated-files-${{ matrix.env.COQ_VERSION }}
         path: generated-files.tgz
       if: ${{ failure() }}
-    - name: package-standalone-ocaml
-      run: etc/ci/github-actions-make.sh -f Makefile.standalone package-standalone-ocaml
+    - name: install-standalone-unified-ocaml
+      run: make -f Makefile.standalone install-standalone-unified-ocaml BINDIR=dist
     - name: upload standalone files
       uses: actions/upload-artifact@v3
       with:
         name: standalone-docker-coq-${{ matrix.env.DOCKER_COQ_VERSION }}
-        path: standalone.tar.gz
+        path: dist/fiat_crypto
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
       with:
@@ -82,7 +82,7 @@ jobs:
         path: src/ExtractionOCaml
       if: always ()
     - name: standalone-haskell
-      run: etc/ci/github-actions-make.sh -f Makefile.standalone -j1 standalone-haskell GHCFLAGS='+RTS -M6G -RTS'
+      run: etc/ci/github-actions-make.sh -f Makefile.standalone -j1 standalone-haskell GHCFLAGS='+RTS -M7G -RTS'
     - name: upload Haskell files
       uses: actions/upload-artifact@v3
       with:
@@ -151,34 +151,19 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: standalone-docker-coq-${{ matrix.docker-coq-version }}
-        path: dist-docker-coq-${{ matrix.docker-coq-version }}/
+        path: dist/
     - name: List files
-      run: find dist-docker-coq-${{ matrix.docker-coq-version }}
-    - name: Rename files
-      run: |
-        mkdir dist
-        mv dist-docker-coq-${{ matrix.docker-coq-version }}/standalone.tar.gz dist/fiat-crypto-docker-coq-${{ matrix.docker-coq-version }}.tar.gz
-        find dist
-        tar -tvf dist/fiat-crypto-docker-coq-${{ matrix.docker-coq-version }}.tar.gz
-    - name: Unpack Files
-      run: |
-        cd dist
-        tar -xzvf fiat-crypto-docker-coq-${{ matrix.docker-coq-version }}.tar.gz
-        ls -la .
+      run: find dist
+    - run: chmod +x dist/fiat_crypto
     - name: Test files (host)
       run: |
-        cd dist
-        for prog in word_by_word_montgomery unsaturated_solinas saturated_solinas base_conversion; do
-          echo "::group::file $prog"
-          file $prog
-          echo "::endgroup::"
-          echo "::group::ldd $prog"
-          ldd $prog
-          echo "::endgroup::"
-          echo "::group::$prog"
-          ./$prog -h
-          echo "::endgroup::"
-        done
+        echo "::group::file fiat_crypto"
+        file dist/fiat_crypto
+        echo "::endgroup::"
+        echo "::group::ldd fiat_crypto"
+        ldd dist/fiat_crypto
+        echo "::endgroup::"
+        etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto
     - name: Test files (container)
       uses: coq-community/docker-coq-action@v1
       with:
@@ -189,18 +174,13 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y file
           echo "::endgroup::"
-          cd dist
-          for prog in word_by_word_montgomery unsaturated_solinas saturated_solinas base_conversion; do
-            echo "::group::file $prog"
-            file $prog
-            echo "::endgroup::"
-            echo "::group::ldd $prog"
-            ldd $prog
-            echo "::endgroup::"
-            echo "::group::$prog"
-            ./$prog -h
-            echo "::endgroup::"
-          done
+          echo "::group::file fiat_crypto"
+          file dist/fiat_crypto
+          echo "::endgroup::"
+          echo "::group::ldd fiat_crypto"
+          ldd dist/fiat_crypto
+          echo "::endgroup::"
+          etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto
 
   publish-standalone-dry-run:
     runs-on: ubuntu-latest
@@ -216,21 +196,18 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: standalone-docker-coq-dev
-        path: dist-docker-coq-dev/
+        path: dist/
     - name: List files
-      run: find dist-docker-coq-dev
-    - name: Unpack files
+      run: find dist
+    - name: Rename files
       run: |
-        mkdir dist
         echo "::group::find arch"
-        ( cd dist-docker-coq-dev && tar -xzvf standalone.tar.gz )
-        arch="$(etc/ci/find-arch.sh dist-docker-coq-dev/word_by_word_montgomery "unknown")"
+        arch="$(etc/ci/find-arch.sh dist/fiat_crypto "unknown")"
         tag="$(git describe --tags HEAD)"
-        fname="Fiat-Cryptography_${tag}_Linux_docker_dev_${arch}.tar.gz"
+        fname="Fiat-Cryptography_${tag}_Linux_docker_dev_${arch}"
         echo "$fname"
-        mv dist-docker-coq-dev/standalone.tar.gz "dist/$fname"
+        mv dist/fiat_crypto "dist/$fname"
         find dist
-        tar -tvf "dist/$fname"
 #    - name: Upload artifacts to GitHub Release
 #      env:
 #        GITHUB_TOKEN: ${{ github.token }}

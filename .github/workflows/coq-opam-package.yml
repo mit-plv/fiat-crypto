@@ -165,7 +165,8 @@ jobs:
       if: ${{ always() && runner.os == 'Windows' }}
 
     - run: opam list
-    - run: opam exec -- word_by_word_montgomery -h
-    - run: opam exec -- unsaturated_solinas -h
-    - run: opam exec -- saturated_solinas -h
-    - run: opam exec -- base_conversion -h
+    - run: opam exec -- fiat_crypto -h
+    - run: opam exec -- fiat_crypto word-by-word-montgomery -h
+    - run: opam exec -- fiat_crypto unsaturated-solinas -h
+    - run: opam exec -- fiat_crypto saturated-solinas -h
+    - run: opam exec -- fiat_crypto base-conversion -h

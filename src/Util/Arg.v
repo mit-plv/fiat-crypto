@@ -548,15 +548,24 @@ Definition default_named_results {ls}
      | (_, s, _) :: ss => @default_named_results' _ ss default_named_result
      end.
 
-Definition parse_argv (argv : list string) (arg_spec : arg_spec)
+Class prog_name_countT := prog_name_count : nat.
+Global Typeclasses Opaque prog_name_countT.
+Ltac fill_default_prog_name_countT _
+  := lazymatch goal with
+     | [ H : prog_name_countT |- prog_name_countT ] => exact H
+     | [ |- prog_name_countT ] => exact 1%nat
+     end.
+Global Hint Extern 1 prog_name_countT => fill_default_prog_name_countT () : typeclass_instances.
+
+Definition parse_argv {prog_name_count : prog_name_countT} (argv : list string) (arg_spec : arg_spec)
   : parse_result (arg_spec_results arg_spec)
-  := match argv with
-     | nil => Error missing_prog_name
-     | prog_name :: argv
-       => (res <- consume_args (10 + (List.length argv)) argv arg_spec (missing prog_name) (wrong prog_name) (too_many_args prog_name) (internal_error prog_name) (no_keyed_arg prog_name) (help prog_name) (out_of_fuel prog_name);
+  := if (List.length argv <? prog_name_count)%nat
+     then Error missing_prog_name
+     else let '(prog_names, argv) := (List.firstn prog_name_count argv, List.skipn prog_name_count argv) in
+          let prog_name := String.concat " " prog_names in
+          (res <- consume_args (10 + (List.length argv)) argv arg_spec (missing prog_name) (wrong prog_name) (too_many_args prog_name) (internal_error prog_name) (no_keyed_arg prog_name) (help prog_name) (out_of_fuel prog_name);
           let '(upd, anon_data, anon_opt_data, anon_opt_repeated_data) := res in
-          Success (upd default_named_results, anon_data, anon_opt_data, anon_opt_repeated_data))
-     end%error.
+          Success (upd default_named_results, anon_data, anon_opt_data, anon_opt_repeated_data))%error.
 
 Definition is_real_error (e : parse_error) : bool := match e with help _ => false | _ => true end.
 

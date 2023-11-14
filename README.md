@@ -52,9 +52,9 @@ Then run:
 
 You can check out [our CI](https://github.com/mit-plv/fiat-crypto/actions?query=branch%3Amaster+workflow%3A%22CI+%28Coq%29%22) to see how long the build should take; as of the last update to this line in the README, it takes about 1h10m to run `make -j2` on Coq 8.11.1.
 
-If you want to build only the command-line binaries used for generating code, you can save a bit of time by making only the `standalone-ocaml` target with
+If you want to build only the command-line binaries used for generating code, you can save a bit of time by making only the `standalone-unified-ocaml` target with
 
-    make standalone-ocaml
+    make standalone-unified-ocaml
 
 Usage (Generating C Files)
 --------------------------
@@ -76,29 +76,36 @@ Just the compilers generating these C files can be made with
 or `make standalone-haskell` for compiler binaries generated with Haskell, or `make standalone` for both the Haskell and OCaml compiler binaries.
 The binaries are located in `src/ExtractionOcaml/` and `src/ExtractionHaskell/` respectively.
 
-There is a separate compiler binary for each implementation strategy:
+There is one compiler binary for all implementation strategies:
 
- - `saturated_solinas`
- - `unsaturated_solinas`
- - `word_by_word_montgomery`
+ - `fiat_crypto`
+
+This binary takes arguments for the strategy:
+
+ - `saturated-solinas`
+ - `unsaturated-solinas`
+ - `word-by-word-montgomery`
+ - `dettman-multiplication`
+ - `solinas-reduction`
+ - `base-conversion`
 
 Passing no arguments, or passing `-h` or `--help` (or any other invalid arguments) will result in a usage message being printed.  These binaries output C code on stdout.
 
 Here are some examples of ways to invoke the binaries (from the directories that they live in):
 
     # Generate code for 2^255-19
-    ./unsaturated_solinas '25519' '64' '5' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
-    ./unsaturated_solinas '25519' '32' '10' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
+    ./fiat_crypto unsaturated-solinas '25519' '64' '5' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
+    ./fiat_crypto unsaturated-solinas '25519' '32' '10' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
 
     # Generate code for NIST-P256 (2^256 - 2^224 + 2^192 + 2^96 - 1)
-    ./word_by_word_montgomery 'p256' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_32.c
-    ./word_by_word_montgomery 'p256' '64' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_64.c
+    ./fiat_crypto word-by-word-montgomery 'p256' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_32.c
+    ./fiat_crypto word-by-word-montgomery 'p256' '64' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_64.c
 
 You can find more examples in the [`Makefile`](./Makefile).
 
 Note that for large primes, you may need to increase the stack size to avoid stack overflows.  For example:
 
-    ulimit -S -s 1048576; ./word_by_word_montgomery --static gost_512_paramSetB 32 '2^511 + 111'
+    ulimit -S -s 1048576; ./fiat_crypto word-by-word-montgomery --static gost_512_paramSetB 32 '2^511 + 111'
 
 This sets the stack size to 1 GB (= 1024 MB = 1024 * 1024 KB = 1048576 KB) before running the command.
 As of the last edit of this line, this command takes about an hour to run, but does in fact complete successfully.
@@ -124,27 +131,34 @@ Just the compilers generating these bedrock2/C files can be made with
 or `make standalone-haskell` for binaries generated with Haskell, or `make standalone` for both the Haskell and OCaml binaries.
 The binaries are located in `src/ExtractionOcaml/` and `src/ExtractionHaskell/` respectively.
 
-There is a separate compiler binary for each implementation strategy:
+There is one compiler binary for all implementation strategies:
 
- - `bedrock2_saturated_solinas`
- - `bedrock2_unsaturated_solinas`
- - `bedrock2_word_by_word_montgomery`
+ - `bedrock2_fiat_crypto`
+
+This binary takes arguments for the strategy:
+
+ - `saturated-solinas`
+ - `unsaturated-solinas`
+ - `word-by-word-montgomery`
+ - `dettman-multiplication`
+ - `solinas-reduction`
+ - `base-conversion`
 
 Passing no arguments, or passing `-h` or `--help` (or any other invalid arguments) will result in a usage message being printed.  These binaries output bedrock2/C code on stdout.
 
 Here are some examples of ways to invoke the binaries (from the directories that they live in):
 
     # Generate code for 2^255-19
-    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '64' '5' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
-    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '32' '10' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
+    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '64' '5' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
+    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '32' '10' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
 
     # Generate code for NIST-P256 (2^256 - 2^224 + 2^192 + 2^96 - 1)
-    ./bedrock2_word_by_word_montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_32.c
-    ./bedrock2_word_by_word_montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '64' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_64.c
+    ./bedrock2_fiat_crypto word-by-word-montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_32.c
+    ./bedrock2_fiat_crypto word-by-word-montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '64' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_64.c
 
     # Generate code for 2^130 - 5
-    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '64' '3' '2^130 - 5' > poly1305_64.c
-    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '32' '5' '2^130 - 5' > poly1305_32.c
+    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '64' '3' '2^130 - 5' > poly1305_64.c
+    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '32' '5' '2^130 - 5' > poly1305_32.c
 
 You can find more examples in [`Makefile.examples`](./Makefile.examples).
 

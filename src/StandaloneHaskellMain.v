@@ -144,3 +144,8 @@ Module BaseConversion.
   Definition main : IO_unit
     := main_gen ForExtraction.BaseConversion.PipelineMain.
 End BaseConversion.
+
+Module FiatCrypto.
+  Definition main : IO_unit
+    := main_gen ForExtraction.FiatCrypto.PipelineMain.
+End FiatCrypto.

@@ -32,10 +32,18 @@ ENSURE_STACK_LIMIT := . etc/ensure_stack_limit.sh || true
 
 .PHONY: \
 	perf-standalone \
+	standalone-unified install-standalone-unified install-standalone-unified \
+	standalone-separate install-standalone-separate uninstall-standalone-separate \
 	standalone install-standalone uninstall-standalone \
+	standalone-unified-ocaml install-standalone-unified-ocaml uninstall-standalone-unified-ocaml \
+	standalone-separate-ocaml install-standalone-separate-ocaml uninstall-standalone-separate-ocaml \
 	standalone-ocaml install-standalone-ocaml uninstall-standalone-ocaml \
+	standalone-unified-haskell install-standalone-unified-haskell uninstall-standalone-unified-haskell \
+	standalone-separate-haskell install-standalone-separate-haskell uninstall-standalone-separate-haskell \
 	standalone-haskell install-standalone-haskell uninstall-standalone-haskell \
 	package-standalone package-standalone-ocaml package-standalone-haskell \
+	package-standalone-unified package-standalone-unified-ocaml package-standalone-unified-haskell \
+	package-standalone-separate package-standalone-separate-ocaml package-standalone-separate-haskell \
 	#
 
 # pass -w -20 to disable the unused argument warning
@@ -55,19 +63,33 @@ $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
 	$(HIDE)$(TIMER) $(GHC) $(GHCFLAGS) -o $@ $<
 
 standalone: standalone-haskell standalone-ocaml
+standalone-unified: standalone-unified-haskell standalone-unified-ocaml
+standalone-separate: standalone-separate-haskell standalone-separate-ocaml
 perf-standalone: $(PERF_STANDALONE:%=src/ExtractionOCaml/%)
 
-standalone-ocaml: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%)
-standalone-haskell: $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%)
-
+standalone-ocaml: standalone-unified-ocaml standalone-separate-ocaml
+standalone-unified-ocaml: $(UNIFIED_STANDALONE_OCAML:%=src/ExtractionOCaml/%)
+standalone-separate-ocaml: $(SEPARATE_STANDALONE_OCAML:%=src/ExtractionOCaml/%)
+standalone-haskell: standalone-unified-haskell standalone-separate-haskell
+standalone-unified-haskell: $(UNIFIED_STANDALONE_HASKELL:%=src/ExtractionHaskell/%)
+standalone-separate-haskell: $(SEPARATE_STANDALONE_HASKELL:%=src/ExtractionHaskell/%)
+# FIXME HERE
 uninstall-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
+uninstall-standalone-unified-ocaml: FILESTOINSTALL=$(UNIFIED_OCAML_BINARIES)
+uninstall-standalone-separate-ocaml: FILESTOINSTALL=$(SEPARATE_OCAML_BINARIES)
 uninstall-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
+uninstall-standalone-unified-haskell: FILESTOINSTALL=$(UNIFIED_HASKELL_BINARIES)
+uninstall-standalone-separate-haskell: FILESTOINSTALL=$(SEPARATE_HASKELL_BINARIES)
 
 ifeq ($(SKIP_BEDROCK2),1)
 install-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
+install-standalone-unified-ocaml: FILESTOINSTALL=$(UNIFIED_OCAML_BINARIES)
+install-standalone-separate-ocaml: FILESTOINSTALL=$(SEPARATE_OCAML_BINARIES)
 install-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
+install-standalone-unified-haskell: FILESTOINSTALL=$(UNIFIED_HASKELL_BINARIES)
+install-standalone-separate-haskell: FILESTOINSTALL=$(SEPARATE_HASKELL_BINARIES)
 
-install-standalone-ocaml install-standalone-haskell:
+install-standalone-ocaml install-standalone-unified-ocaml install-standalone-separate-ocaml install-standalone-haskell install-standalone-unified-haskell install-standalone-separate-haskell:
 	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
 	 if ! [ -f "$$f" ]; then >&2 echo $$f does not exist; code=1; fi \
 	done; exit $$code
@@ -78,9 +100,13 @@ install-standalone-ocaml install-standalone-haskell:
 	done
 else
 install-standalone-ocaml: FILESTOINSTALL=$(WITH_BEDROCK2_OCAML_BINARIES)
+install-standalone-unified-ocaml: FILESTOINSTALL=$(WITH_BEDROCK2_UNIFIED_OCAML_BINARIES)
+install-standalone-separate-ocaml: FILESTOINSTALL=$(WITH_BEDROCK2_SEPARATE_OCAML_BINARIES)
 install-standalone-haskell: FILESTOINSTALL=$(WITH_BEDROCK2_HASKELL_BINARIES)
+install-standalone-unified-haskell: FILESTOINSTALL=$(WITH_BEDROCK2_UNIFIED_HASKELL_BINARIES)
+install-standalone-separate-haskell: FILESTOINSTALL=$(WITH_BEDROCK2_SEPARATE_HASKELL_BINARIES)
 
-install-standalone-ocaml install-standalone-haskell:
+install-standalone-ocaml install-standalone-unified-ocaml install-standalone-separate-ocaml install-standalone-haskell install-standalone-unified-haskell install-standalone-separate-haskell:
 	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
 	 if ! [ -f "$$f" ]; then >&2 echo $$f does not exist; code=1; fi \
 	done; exit $$code
@@ -94,7 +120,7 @@ install-standalone-ocaml install-standalone-haskell:
 	done
 endif
 
-uninstall-standalone-ocaml uninstall-standalone-haskell:
+uninstall-standalone-ocaml uninstall-standalone-unified-ocaml uninstall-standalone-separate-ocaml uninstall-standalone-haskell uninstall-standalone-unified-haskell uninstall-standalone-separate-haskell:
 	$(HIDE)for f in $(FILESTOINSTALL); do \
 	 instf="$(BINDIR)/`basename $$f`" &&\
 	 rm -f "$$instf" &&\
@@ -102,11 +128,17 @@ uninstall-standalone-ocaml uninstall-standalone-haskell:
 	done
 
 install-standalone: install-standalone-ocaml # install-standalone-haskell
+install-standalone-unified: install-standalone-unified-ocaml # install-standalone-unified-haskell
+install-standalone-separate: install-standalone-separate-ocaml # install-standalone-separate-haskell
 uninstall-standalone: uninstall-standalone-ocaml # uninstall-standalone-haskell
+uninstall-standalone-unified: uninstall-standalone-unified-ocaml # uninstall-standalone-unified-haskell
+uninstall-standalone-separate: uninstall-standalone-separate-ocaml # uninstall-standalone-separate-haskell
 
 package-standalone: package-standalone-ocaml # package-standalone-haskell
+package-standalone-unified: package-standalone-unified-ocaml # package-standalone-unified-haskell
+package-standalone-separate: package-standalone-separate-ocaml # package-standalone-separate-haskell
 
-package-standalone-ocaml package-standalone-haskell : package-standalone-% :
+package-standalone-ocaml package-standalone-unified-ocaml package-standalone-separate-ocaml package-standalone-haskell package-standalone-unified-haskell package-standalone-separate-haskell : package-standalone-% :
 	$(SHOW)'PACKAGE STANDALONE $*'
 	$(HIDE)rm -f "$(PACKAGE)"
 	+$(HIDE)standalonedir="$$(TMPDIR="$$(pwd)" $(MKTEMP_D))"; \
