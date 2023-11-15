@@ -85,6 +85,18 @@ jobs:
       with:
         name: standalone-macos
         path: dist/fiat_crypto
+    - name: install
+      run: |
+        eval $(opam env)
+        etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 install install-standalone-ocaml
+    - name: install-without-bedrock2
+      run: |
+        eval $(opam env)
+        etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 install-without-bedrock2 install-standalone-ocaml
+    - name: install-dev
+      run: |
+        eval $(opam env)
+        etc/ci/github-actions-make.sh EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 install install-standalone-ocaml
     - name: display timing info
       run: cat time-of-build-pretty.log
     - name: display per-line timing info
