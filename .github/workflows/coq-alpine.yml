@@ -65,14 +65,14 @@ jobs:
         name: generated-files-${{ matrix.alpine }}
         path: generated-files.tgz
       if: ${{ failure() }}
-    - name: package-standalone-ocaml
+    - name: install-standalone-unified-ocaml
       shell: alpine.sh {0}
-      run: make package-standalone-ocaml
+      run: make install-standalone-unified-ocaml BINDIR=dist
     - name: upload standalone files
       uses: actions/upload-artifact@v3
       with:
         name: standalone-${{ matrix.alpine }}
-        path: standalone.tar.gz
+        path: dist/fiat_crypto
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
       with:
@@ -81,7 +81,7 @@ jobs:
       if: always ()
     - name: standalone-haskell
       shell: alpine.sh {0}
-      run: make TIMED=1 TIMING=1 -j1 standalone-haskell GHCFLAGS='+RTS -M6G -RTS'
+      run: make TIMED=1 TIMING=1 -j1 standalone-haskell GHCFLAGS='+RTS -M7G -RTS'
     - name: upload Haskell files
       uses: actions/upload-artifact@v3
       with:
@@ -112,47 +112,26 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: standalone-${{ matrix.alpine }}
-        path: dist-${{ matrix.alpine }}/
+        path: dist/
     - name: List files
-      run: find dist-edge
-    - name: Rename files
-      run: |
-        mkdir dist
-        mv dist-${{ matrix.alpine }}/standalone.tar.gz dist/fiat-crypto-alpine-${{ matrix.alpine }}.tar.gz
-        find dist
-        tar -tvf dist/fiat-crypto-alpine-${{ matrix.alpine }}.tar.gz
-    - name: Unpack files
-      run: |
-        cd dist
-        tar -xzvf fiat-crypto-alpine-${{ matrix.alpine }}.tar.gz
-        ls -la .
+      run: find dist
+    - run: chmod +x dist/fiat_crypto
     - name: Test files (host)
       run: |
-        cd dist
-        for prog in word_by_word_montgomery unsaturated_solinas saturated_solinas base_conversion; do
-          echo "::group::file $prog"
-          file $prog
-          echo "::endgroup::"
-          echo "::group::ldd $prog"
-          ldd $prog || true
-          echo "::endgroup::"
-          echo "::group::$prog"
-          ./$prog -h
-          echo "::endgroup::"
-        done
+        echo "::group::file fiat_crypto"
+        file dist/fiat_crypto
+        echo "::endgroup::"
+        echo "::group::ldd fiat_crypto"
+        ldd dist/fiat_crypto || true
+        echo "::endgroup::"
+        etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto
     - uses: jirutka/setup-alpine@v1
       with:
         branch: ${{ matrix.alpine }}
         extra-repositories: https://dl-cdn.alpinelinux.org/alpine/edge/testing
     - name: Test files (container)
       shell: alpine.sh {0}
-      run: |
-        cd dist
-        for prog in word_by_word_montgomery unsaturated_solinas saturated_solinas base_conversion; do
-          echo "::group::$prog"
-          ./$prog -h
-          echo "::endgroup::"
-        done
+      run: etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto
 
   publish-standalone:
     runs-on: ubuntu-latest
@@ -168,21 +147,19 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: standalone-edge
-        path: dist-edge/
+        path: dist/
     - name: List files
-      run: find dist-edge
-    - name: Unpack files
+      run: find dist
+    - name: Rename files
       run: |
-        mkdir dist
         echo "::group::find arch"
-        ( cd dist-edge && tar -xzvf standalone.tar.gz )
-        arch="$(etc/ci/find-arch.sh dist-edge/word_by_word_montgomery "unknown")"
+        arch="$(etc/ci/find-arch.sh dist/fiat_crypto "unknown")"
         tag="$(git describe --tags HEAD)"
-        fname="Fiat-Cryptography_${tag}_Linux_${arch}.tar.gz"
+        fname="Fiat-Cryptography_${tag}_Linux_${arch}"
         echo "$fname"
-        mv dist-edge/standalone.tar.gz "dist/$fname"
+        mv dist/fiat_crypto "dist/$fname"
         find dist
-        tar -tvf "dist/$fname"
+        file "dist/$fname"
     - name: Upload artifacts to GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}
