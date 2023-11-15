@@ -2,7 +2,7 @@
 # files on .v files, so that we can compile them by invoking this
 # makefile directly even when Coq is not available
 
-SELF := $(lastword $(MAKEFILE_LIST))
+SELF_MAKEFILE_STANDALONE := $(lastword $(MAKEFILE_LIST))
 
 include Makefile.config
 
@@ -110,7 +110,7 @@ package-standalone-ocaml package-standalone-haskell : package-standalone-% :
 	$(SHOW)'PACKAGE STANDALONE $*'
 	$(HIDE)rm -f "$(PACKAGE)"
 	+$(HIDE)standalonedir="$$(TMPDIR="$$(pwd)" $(MKTEMP_D))"; \
-	 $(MAKE) -f $(SELF) install-standalone-$* BINDIR="$$standalonedir" && \
+	 $(MAKE) -f $(SELF_MAKEFILE_STANDALONE) install-standalone-$* BINDIR="$$standalonedir" && \
 	 cd "$$standalonedir" && \
 	 $(call PACKAGE_CMD_FUNC,../$(PACKAGE),./*) && \
 	 cd ../ && \
