@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - env: { COQ_VERSION: "master", DOCKER_COQ_VERSION: "dev", DOCKER_OCAML_VERSION: "default", SKIP_VALIDATE: "" , COQCHKEXTRAFLAGS: "-bytecode-compiler yes", EXTRA_GH_REPORTIFY: "--warnings", ALLOW_DIFF: "1" }
+        - env: { COQ_VERSION: "master", DOCKER_COQ_VERSION: "dev", DOCKER_OCAML_VERSION: "default", SKIP_VALIDATE: "" , COQCHKEXTRAFLAGS: "-bytecode-compiler yes", EXTRA_GH_REPORTIFY: "--warnings", ALLOW_DIFF: "1", CI: "1" }
           os: 'ubuntu-latest'
 
     runs-on: ${{ matrix.os }}
