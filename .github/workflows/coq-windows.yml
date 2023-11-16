@@ -102,6 +102,18 @@ jobs:
       with:
         name: standalone-windows
         path: dist/fiat_crypto.exe
+    - name: install
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 install install-standalone-ocaml'
+      shell: cmd
+    - name: install-without-bedrock2
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 install-without-bedrock2 install-standalone-ocaml'
+      shell: cmd
+    - name: install-dev
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 install install-standalone-ocaml'
+      shell: cmd
     - name: display timing info
       run: type time-of-build-pretty.log
       shell: cmd
