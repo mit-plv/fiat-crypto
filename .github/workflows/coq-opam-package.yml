@@ -143,7 +143,7 @@ jobs:
         echo ::endgroup::
 
     - run: opam exec -- opam-depext coq-fiat-crypto
-    - run: opam install coq-fiat-crypto ${{ matrix.opam-jobs-flag }}
+    - run: opam install coq-fiat-crypto --with-test ${{ matrix.opam-jobs-flag }}
       env:
         COQEXTRAFLAGS: ${{ matrix.coq-extra-flags }}
 
