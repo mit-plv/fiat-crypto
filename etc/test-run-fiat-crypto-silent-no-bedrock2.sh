@@ -12,5 +12,5 @@ fi
 for prog in word-by-word-montgomery unsaturated-solinas saturated-solinas base-conversion; do
   lang_line="$("${fiat_crypto}" $prog -h | grep -- --lang)"
   search='Defaults to C if'
-  printf "%s\n" "${lang_line}" | grep -q "$search" || { printf "::error::Missing %s in %s\n" "${search}" "${lang_line}"; exit 1; }
+  printf "%s\n" "${lang_line}" | grep -q "$search" || { printf "::error::%s: Missing %s in %s\n" "${prog}" "${search}" "${lang_line}"; exit 1; }
 done
