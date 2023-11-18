@@ -56,7 +56,43 @@ jobs:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
         export: CI ALLOW_DIFF COQCHKEXTRAFLAGS
-        custom_script: etc/ci/github-actions-docker-make.sh ${EXTRA_GH_REPORTIFY} -j2 all-except-generated
+        custom_script: etc/ci/github-actions-docker-make.sh ${EXTRA_GH_REPORTIFY} -j2 all-except-generated-and-js-of-ocaml
+    - name: standalone-js-of-ocaml
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
+        ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS
+        custom_script: |
+          eval $(opam env)
+          opam install -y js_of_ocaml
+          etc/ci/github-actions-docker-make.sh ${EXTRA_GH_REPORTIFY} -j2 standalone-js-of-ocaml
+    - name: install-standalone-js-of-ocaml
+      run: make -f Makefile.standalone install-standalone-js-of-ocaml
+    - name: backup .gitignore
+      run: mv .gitignore{,.bak}
+    - name: Deploy js_of_ocaml 🚀 ${{ ( github.ref != 'refs/heads/master' && '(dry run)' ) || '' }}
+      uses: JamesIves/github-pages-deploy-action@v4.4.3
+      with:
+        branch: gh-pages # The branch the action should deploy to.
+        folder: fiat-html # The folder the action should deploy.
+        git-config-email: JasonGross@users.noreply.github.com
+        target-folder: .
+        single-commit: true # otherwise the repo will get too big
+        dry-run: ${{ github.ref != 'refs/heads/master' }}
+    - name: restore .gitignore
+      run: mv .gitignore{.bak,}
+    - name: upload standalone js files
+      uses: actions/upload-artifact@v3
+      with:
+        name: standalone-html-docker-coq-${{ matrix.env.DOCKER_COQ_VERSION }}
+        path: fiat-html
+    - name: upload js_of_ocaml files
+      uses: actions/upload-artifact@v3
+      with:
+        name: ExtractionJsOfOCaml-${{ matrix.env.COQ_VERSION }}
+        path: src/ExtractionJsOfOCaml
+      if: always ()
     - name: generated-files
       run: etc/ci/github-actions-make.sh ${EXTRA_GH_REPORTIFY} -f Makefile.examples -j2 generated-files
       if: github.event_name == 'pull_request' || ${{ matrix.env.COQ_VERSION }} != 'master'

@@ -49,6 +49,7 @@ jobs:
           default: https://github.com/ocaml/opam-repository.git
     - run: opam depext coq.${{ env.COQ_VERSION }}
     - run: opam pin add --kind=version coq ${{ env.COQ_VERSION }}
+    - run: opam install js_of_ocaml
 
     - name: Install System Dependencies
       run: |
@@ -76,13 +77,22 @@ jobs:
       run: |
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist'
       shell: cmd
+
     - name: coq
       run: |
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 coq'
       shell: cmd
-    - name: all-except-generated
+    - name: all-except-generated-and-js-of-ocaml
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 all-except-generated'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 all-except-generated-and-js-of-ocaml'
+      shell: cmd
+    - name: standalone-js-of-ocaml
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 standalone-js-of-ocaml'
+      shell: cmd
+    - name: install-standalone-js-of-ocaml
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh install-standalone-js-of-ocaml'
       shell: cmd
     - name: c-files lite-generated-files
       run: |
@@ -97,11 +107,21 @@ jobs:
       with:
         name: ExtractionOCaml
         path: src/ExtractionOCaml
+    - name: upload js_of_ocaml files
+      uses: actions/upload-artifact@v3
+      with:
+        name: ExtractionJsOfOCaml
+        path: src/ExtractionJsOfOCaml
     - name: upload standalone files
       uses: actions/upload-artifact@v3
       with:
         name: standalone-windows
         path: dist/fiat_crypto.exe
+    - name: upload standalone js files
+      uses: actions/upload-artifact@v3
+      with:
+        name: standalone-html-windows
+        path: fiat-html
     - name: install
       run: |
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 install install-standalone-ocaml'
