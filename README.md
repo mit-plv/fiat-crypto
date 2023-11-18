@@ -9,9 +9,13 @@ Building
 [![CI (Coq, Windows)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-windows.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-windows.yml?query=branch%3Amaster)
 [![CI (Coq, MacOS)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-macos.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-macos.yml?query=branch%3Amaster)
 
+[![Release][release-shield]][release-link]
 [![Zulip][zulip-shield]][zulip-link]
 [![Rust Crate][crate-shield]][crate-link]
 [![Go Reference][pkg.go-shield]][pkg.go-link]
+
+[release-shield]: https://img.shields.io/github/v/release/mit-plv/fiat-crypto.svg?logo=github&include_prereleases
+[release-link]: https://github.com/mit-plv/fiat-crypto/releases
 
 [zulip-shield]: https://img.shields.io/badge/chat-on%20zulip-informational.svg
 [zulip-link]: https://coq.zulipchat.com/#narrow/stream/247791-fiat-crypto
