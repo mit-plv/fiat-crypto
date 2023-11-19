@@ -1,9 +1,8 @@
-Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.NArith.NArith.
 Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Program.Program.
-Require Import Coq.Numbers.Natural.Peano.NPeano Util.NatUtil.
+Require Import Util.NatUtil.
 Require Import Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Bool.Bool.
 
@@ -817,7 +816,7 @@ Module Export Hints4.
   Hint Rewrite @wordToN_cast_word : push_wordToN.
 End Hints4.
 
-Import NPeano Nat.
+Import Nat.
 Local Infix "++" := combine.
 
 Definition zext_ge n {m} {pf:m <= n} (w:word m) : word n :=
@@ -897,7 +896,7 @@ Proof.
            => progress change min' with min
          end.
   generalize (split1 _ _ x); generalize (split2 _ _ x); clear x; simpl.
-  apply Min.min_case_strong; intros Hbc x0 x1;
+  apply Nat.min_case_strong; intros Hbc x0 x1;
     pose proof (wordToNat_bound x0); pose proof (wordToNat_bound x1).
   { assert (b - c = 0) by lia.
     assert (2^b <= 2^c) by auto using pow_le_mono_r with arith.
@@ -928,7 +927,7 @@ Proof.
   rewrite <- (combine_split _ _ x) at 2.
   rewrite wand_combine, !wordToNat_combine, wand_kill, wand_unit, wordToNat_wzero.
   generalize (split1 _ _ x); generalize (split2 _ _ x); clear x; simpl.
-  apply Min.min_case_strong; intros Hbc x0 x1;
+  apply Nat.min_case_strong; intros Hbc x0 x1;
     pose proof (wordToNat_bound x0); pose proof (wordToNat_bound x1).
   { assert (b - c = 0) by lia.
     assert (2^b <= 2^c) by auto using pow_le_mono_r with arith.

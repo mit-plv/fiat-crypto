@@ -2,7 +2,6 @@ Require bbv.WordScope Crypto.Util.WordUtil.
 Require Import Coq.ZArith.BinIntDef.
 Require Crypto.Algebra.Hierarchy Algebra.ScalarMult.
 Require Coq.ZArith.Znumtheory Coq.ZArith.BinInt.
-Require Coq.Numbers.Natural.Peano.NPeano.
 
 Require Import Crypto.Spec.ModularArithmetic.
 

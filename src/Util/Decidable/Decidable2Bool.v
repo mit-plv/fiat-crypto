@@ -37,7 +37,7 @@ Lemma dec_nat_eq_to_bool a b
   : (if dec (a = b) then true else false) = Nat.eqb a b.
 Proof.
   destruct (Nat.eqb a b) eqn:H; break_match; try reflexivity.
-  { apply beq_nat_true in H; congruence. }
+  { apply Nat.eqb_eq in H; congruence. }
   { rewrite Nat.eqb_refl in H; congruence. }
 Qed.
 #[global]

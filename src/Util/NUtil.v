@@ -1,6 +1,5 @@
 Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.NArith.NArith.
-Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.Util.NatUtil Crypto.Util.Decidable.
 Require Export Crypto.Util.NUtil.WithoutReferenceToZ.
 Require bbv.WordScope.

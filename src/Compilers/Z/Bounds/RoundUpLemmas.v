@@ -1,4 +1,5 @@
 Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
+Require Import Coq.Arith.PeanoNat.
 Require Import Crypto.Compilers.Z.Bounds.Interpretation.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -27,8 +28,8 @@ Proof.
            | _ => progress simpl in *
            | _ => progress break_innermost_match_step
            | _ => progress break_innermost_match_hyps_step
-           | [ H : ?leb _ _ = true |- _ ] => apply NPeano.Nat.leb_le in H
-           | [ H : ?leb _ _ = false |- _ ] => apply NPeano.Nat.leb_gt in H
+           | [ H : ?leb _ _ = true |- _ ] => apply Nat.leb_le in H
+           | [ H : ?leb _ _ = false |- _ ] => apply Nat.leb_gt in H
            | _ => lia *
            end. }
 Qed.

@@ -71,7 +71,7 @@ Section language.
       unfold mname_list_unique; intro H; split; intros k N;
         rewrite <- ?firstn_map, <- ?skipn_map, ?skipn_skipn, ?firstn_firstn_min, ?firstn_skipn_add;
         intros; eapply H; try eassumption.
-      { apply Min.min_case_strong.
+      { apply Nat.min_case_strong.
         { match goal with H : _ |- _ => rewrite skipn_firstn in H end;
             eauto using In_firstn. }
         { intro; match goal with H : _ |- _ => rewrite skipn_all in H by (rewrite firstn_length; lia * ) end.

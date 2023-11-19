@@ -176,7 +176,7 @@ Module F.
     Qed.
   End FandZ.
   Section FandNat.
-    Import NPeano Nat.
+    Import Nat.
     Local Infix "mod" := modulo : nat_scope.
     Local Open Scope nat_scope.
 

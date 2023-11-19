@@ -240,14 +240,14 @@ Section language.
     : fst (natize_interp_flat_type base v1) = length (flatten_binding_list v1 v2) + base.
   Proof using Type.
     revert base; induction t; simpl; [ reflexivity | reflexivity | ].
-    intros; rewrite List.app_length, <- plus_assoc.
+    intros; rewrite List.app_length, <- Nat.add_assoc.
     rewrite_hyp <- ?*; reflexivity.
   Qed.
   Lemma length_natize_interp_flat_type2 {t} (base : nat) (v1 : interp_flat_type var1 t) (v2 : interp_flat_type var2 t)
     : fst (natize_interp_flat_type base v2) = length (flatten_binding_list v1 v2) + base.
   Proof using Type.
     revert base; induction t; simpl; [ reflexivity | reflexivity | ].
-    intros; rewrite List.app_length, <- plus_assoc.
+    intros; rewrite List.app_length, <- Nat.add_assoc.
     rewrite_hyp <- ?*; reflexivity.
   Qed.
 
@@ -285,7 +285,7 @@ Section language.
        | TT, TT => rTrue
        | TT, _ => rFalse
        | Var t0 x, Var t1 y
-         => match beq_nat (fst x) (fst y), List.nth_error G (List.length G - S (fst x)) with
+         => match Nat.eqb (fst x) (fst y), List.nth_error G (List.length G - S (fst x)) with
            | true, Some v => eq_type_and_var v (existT _ (t0, t1) (snd x, snd y))
            | _, _ => rFalse
            end

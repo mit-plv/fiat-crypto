@@ -5,7 +5,6 @@ Require Export Crypto.Util.Decidable.
 Require Coq.PArith.BinPos.
 Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 
-Require Coq.Numbers.Natural.Peano.NPeano.
 Require Coq.Lists.List.
 
 Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
