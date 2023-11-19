@@ -26,7 +26,7 @@ JS_OF_OCAML ?= js_of_ocaml
 STANDALONE_CAMLFLAGS ?= -package unix -w -20 -g $(CAMLEXTRAFLAGS)
 STANDALONE_JS_CAMLFLAGS ?= -package js_of_ocaml $(STANDALONE_CAMLFLAGS)
 JS_OF_OCAML_EXTRAFLAGS ?=
-JS_OF_OCAML_FLAGS ?= --source-map --no-inline $(JS_OF_OCAML_EXTRAFLAGS)
+JS_OF_OCAML_FLAGS ?= --source-map --no-inline --enable=effects $(JS_OF_OCAML_EXTRAFLAGS)
 
 PACKAGE ?= standalone.tar.gz
 PACKAGE_CMD ?= tar -czvf
