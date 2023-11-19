@@ -26,6 +26,9 @@ Building
 [pkg.go-shield]: https://pkg.go.dev/badge/github.com/mit-plv/fiat-crypto/fiat-go.svg
 [pkg.go-link]: https://pkg.go.dev/github.com/mit-plv/fiat-crypto/fiat-go
 
+🌐 Try out synthesis [on the web](https://mit-plv.github.io/fiat-crypto/)!
+(Supported by [`js_of_ocaml`](https://ocsigen.org/js_of_ocaml/latest/manual/overview) compilation.)
+
 This repository requires [Coq](https://coq.inria.fr/) [8.17](https://github.com/coq/coq/releases/tag/V8.17.0) or later.
 Note that if you install Coq from Ubuntu aptitude packages, you need `libcoq-ocaml-dev` in addition to `coq`.
 Note that in some cases (such as installing Coq via homebrew on Mac), you may also need to install `ocaml-findlib` (for `ocamlfind`).
