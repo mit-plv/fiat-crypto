@@ -1,4 +1,5 @@
 // Written with help from https://chat.openai.com/share/74d5901c-9005-4560-8307-582ff54e403e
+const SYNTHESIS_CACHE_VERSION = 1;
 document.addEventListener('DOMContentLoaded', function() {
     const errorDiv = document.getElementById('error');
     const outputDiv = document.getElementById('output');
@@ -10,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputArgs = document.getElementById('inputArgs');
     const synthesizeButton = document.getElementById('synthesizeButton');
     const cancelButton = document.getElementById('cancelButton');
+    const clearCacheButton = document.getElementById('clearCacheButton');
     const permalink = document.getElementById('permalink');
     const statusSpan = document.getElementById('status');
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -135,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function handleSynthesisResult(result) {
+    function handleSynthesisResultData(result) {
         const success = result[0];
         const exceptionText = result[1];
         const stdout = result[2];
@@ -168,40 +170,82 @@ document.addEventListener('DOMContentLoaded', function() {
         updateStatus(""); // Clear status
     }
 
+    function handleSynthesisResult(result, cached) {
+        const cachedString = cached ? ` (cached on ${result.timestamp})` : '';
+        if (result.success) {
+            clearOutput();
+            updateStatus(`Synthesis${cachedString} completed in ${result.time} seconds`);
+            handleSynthesisResultData(result.result);
+        } else {
+            handleException(result.result);
+            updateStatus(`Synthesis${cachedString} failed in ${result.time} seconds`);
+        }
+    }
 
+    let synthesisWorker;
 
-    var curSynthesisPromise;
+    function setupSynthesisWorker() {
+        synthesisWorker = new Worker("fiat_crypto_worker.js");
+
+        synthesisWorker.onmessage = function(e) {
+            console.log(`Early synthesis result: ${e.data}`);
+        };
+
+        synthesisWorker.onerror = function(err) {
+            handleException(err);
+        };
+    }
+
+    function cancelSynthesisWorker() {
+        if (synthesisWorker) {
+            synthesisWorker.terminate();
+            console.log("Synthesis worker terminated.");
+        }
+        setupSynthesisWorker(); // Re-setup the worker for future use
+    }
+
     function handleSynthesis(args) {
         const startTime = performance.now();
+        const cacheKey = 'synthesize_' + JSON.stringify(args);
+        const cached = localStorage.getItem(cacheKey);
         console.log({'synthesize args': args});
         updateStatus("Synthesizing...");
         updatePermalink(args);
-        const synthesisPromise = new Promise((resolve, reject) => {
-            try {
-                resolve(synthesize(args))
-            } catch (error) {
-                reject(error);
+
+        if (cached) {
+            const cachedData = JSON.parse(cached);
+            if (cachedData.version === SYNTHESIS_CACHE_VERSION) {
+                handleSynthesisResult(cachedData, true);
+                return;
+            } else {
+                console.log(`cache miss: version ${cachedData.version}, expected ${SYNTHESIS_CACHE_VERSION}`)
             }
-        });
-        curSynthesisPromise = synthesisPromise;
-        synthesisPromise
-            .then((value) => {
-                if (curSynthesisPromise === synthesisPromise) {
-                    const endTime = performance.now();
-                    clearOutput();
-                    updateStatus(`Synthesis completed in ${(endTime - startTime) / 1000} seconds`);
-                    handleSynthesisResult(value);
-                } else {
-                    console.log(`Synthesis of ${args} completed after being canceled: ${value}`);
+        }
+
+        const recieveMessage = function (success) {
+            return function(e) {
+                const endTime = performance.now();
+                const timeTaken = (endTime - startTime) / 1000;
+                const now = new Date();
+                const resultData = {
+                    result: e.data,
+                    time: timeTaken,
+                    success: success,
+                    timestamp: now.toISOString(),
+                    version: SYNTHESIS_CACHE_VERSION
+                };
+                try {
+                    localStorage.setItem(cacheKey, JSON.stringify(resultData));
+                } catch (e) {
+                    console.error(`Failed: localStorage.setItem(${JSON.stringify(cacheKey)}, ${JSON.stringify(JSON.stringify(resultData))})`);
                 }
-            })
-            .catch((err) => {
-                if (curSynthesisPromise === synthesisPromise) {
-                    handleException(err);
-                } else {
-                    console.log(`Synthesis of ${args} errored after being canceled: ${err}`);
-                }
-            });
+                handleSynthesisResult(resultData, false);
+            };
+        };
+
+        synthesisWorker.postMessage(args);
+        synthesisWorker.onmessage = recieveMessage(true);
+        synthesisWorker.onerror = recieveMessage(false);
     }
 
     function parseAndRun(argv) {
@@ -213,6 +257,8 @@ document.addEventListener('DOMContentLoaded', function() {
             displayError(`Error: ${e.message}: ${argv}`);
         }
     }
+
+    setupSynthesisWorker();
 
     const queryParams = new URLSearchParams(window.location.search);
     const argv = queryParams.get('argv');
@@ -267,5 +313,10 @@ document.addEventListener('DOMContentLoaded', function() {
         synthesizeButton.disabled = false;
         cancelButton.disabled = true;
         updateStatus("");
+        cancelSynthesisWorker();
+    });
+
+    clearCacheButton.addEventListener('click', function() {
+        localStorage.clear();
     });
 });
