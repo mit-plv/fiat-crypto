@@ -1,6 +1,5 @@
 Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
-Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.Lists.List.
 Require Import Coq.funind.Recdef.
 Require Import Crypto.Util.ListUtil Crypto.Util.NatUtil.
@@ -116,7 +115,7 @@ Section Pow2BaseProofs.
       erewrite base_from_limb_widths_step; eauto.
       f_equal.
       simpl.
-      destruct (NPeano.Nat.eq_dec i 0).
+      destruct (Nat.eq_dec i 0).
       - subst; unfold sum_firstn; simpl.
         apply nth_error_exists_first in nth_err_w.
         destruct nth_err_w as [l' lw_destruct]; subst.
@@ -162,7 +161,7 @@ Section Pow2BaseProofs.
     autorewrite with simpl_firstn simpl_skipn in *.
     rewrite H, skipn_app, skipn_all by auto with arith distr_length; clear H.
     simpl; distr_length.
-    apply Min.min_case_strong; intro;
+    apply Nat.min_case_strong; intro;
       unfold sum_firstn; autorewrite with natsimplify simpl_skipn simpl_firstn;
         reflexivity.
   Qed.

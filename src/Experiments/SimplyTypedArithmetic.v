@@ -7385,7 +7385,7 @@ Section rcarry_mul.
       rewrite negb_false_iff in *.
       Z.ltb_to_lt.
       rewrite Qle_bool_iff in *.
-      rewrite NPeano.Nat.eqb_neq in *.
+      rewrite Nat.eqb_neq in *.
       intros.
       cbv [Qnum Qden limbwidth Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *.
       rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *.

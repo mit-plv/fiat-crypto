@@ -112,6 +112,7 @@ Module Coq.
     End PreOmega.
   End omega.
 End Coq.
+
 Ltac Coq.omega.PreOmega.zify_nat_op ::=
  match goal with
   (* misc type conversions: positive/N/Z to nat *)
@@ -139,8 +140,8 @@ Ltac Coq.omega.PreOmega.zify_nat_op ::=
   | |- context [ Z.of_nat (minus ?a ?b) ] => rewrite (Nat2Z.inj_sub_max a b)
 
   (* pred -> minus ... -1 -> Z.max (Z.sub ... -1) 0 *)
-  | H : context [ Z.of_nat (pred ?a) ] |- _ => rewrite (pred_of_minus a) in H
-  | |- context [ Z.of_nat (pred ?a) ] => rewrite (pred_of_minus a)
+ | H : context [ Z.of_nat (pred ?a) ] |- _ => rewrite <-(Nat.sub_1_r a) in H
+ | |- context [ Z.of_nat (pred ?a) ] => rewrite <-(Nat.sub_1_r a)
 
   (* mult -> Z.mul and a positivity hypothesis *)
   | H : context [ Z.of_nat (mult ?a ?b) ] |- _ =>

@@ -4,7 +4,6 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.Arith.Peano_dec.
 Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
-Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Pointed.
 Require Import Crypto.Util.Prod.
@@ -172,10 +171,10 @@ Module Export List.
   Proof.
    revert start. induction len as [|len IHlen]; simpl; intros.
    - rewrite <- plus_n_O. split;[easy|].
-     intros (H,H'). apply (Lt.lt_irrefl _ (Lt.le_lt_trans _ _ _ H H')).
+     intros (H,H'). apply (Nat.lt_irrefl _ (Nat.le_lt_trans _ _ _ H H')).
    - rewrite IHlen, <- plus_n_Sm; simpl; split.
      * intros [H|H]; subst; intuition auto with arith.
-     * intros (H,H'). destruct (Lt.le_lt_or_eq _ _ H); intuition.
+     * intros (H,H'). destruct (proj1 (Nat.lt_eq_cases _ _) H); intuition.
   Qed.
 
   Section Facts.
@@ -226,7 +225,7 @@ Module Export List.
     Lemma firstn_length_le: forall l:list A, forall n:nat,
           n <= length l -> length (firstn n l) = n.
     Proof using Type. induction l as [|x xs Hrec].
-           - simpl. intros n H. apply le_n_0_eq in H. rewrite <- H. now simpl.
+           - simpl. intros n H. apply Nat.le_0_r in H. rewrite H. now simpl.
            - destruct n as [|n].
              * now simpl.
              * simpl. intro H. apply le_S_n in H. now rewrite (Hrec n H).
@@ -238,7 +237,7 @@ Module Export List.
     Proof using Type. induction n as [|k iHk]; intros l1 l2.
            - now simpl.
            - destruct l1 as [|x xs].
-             * unfold List.firstn at 2, length. now rewrite 2!app_nil_l, <- minus_n_O.
+             * unfold List.firstn at 2, length. now rewrite 2!app_nil_l, Nat.sub_0_r.
              * rewrite <- app_comm_cons. simpl. f_equal. apply iHk.
     Qed.
 
@@ -247,7 +246,7 @@ Module Export List.
         firstn ((length l1) + n) (l1 ++ l2) = l1 ++ firstn n l2.
     Proof using Type. induction n as [| k iHk];intros l1 l2.
            - unfold List.firstn at 2. rewrite <- plus_n_O, app_nil_r.
-             rewrite firstn_app. rewrite <- minus_diag_reverse.
+             rewrite firstn_app. rewrite Nat.sub_diag.
              unfold List.firstn at 2. rewrite app_nil_r. apply firstn_all.
            - destruct l2 as [|x xs].
              * simpl. rewrite app_nil_r. apply firstn_all2. auto with arith.
@@ -1360,7 +1359,7 @@ Lemma firstn_firstn : forall {A} m n (l : list A), (n <= m)%nat ->
   firstn n (firstn m l) = firstn n l.
 Proof.
   intros A m n l H; rewrite firstn_firstn_min.
-  apply Min.min_case_strong; intro; [ reflexivity | ].
+  apply Nat.min_case_strong; intro; [ reflexivity | ].
   assert (n = m) by lia; subst; reflexivity.
 Qed.
 
@@ -1874,7 +1873,7 @@ Proof.
   intros A d l i; induction n as [|n IHn]; break_match; autorewrite with push_nth_default; auto; try lia.
   + rewrite (firstn_succ d) by lia.
     autorewrite with push_nth_default; repeat (break_match_hyps; break_match; distr_length);
-      rewrite Min.min_l in * by lia; try lia.
+      rewrite Nat.min_l in * by lia; try lia.
     - apply IHn; lia.
     - replace i with n in * by lia.
       rewrite Nat.sub_diag.

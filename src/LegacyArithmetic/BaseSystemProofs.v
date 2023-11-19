@@ -1,7 +1,7 @@
 Require Import Coq.Lists.List Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Crypto.Util.ListUtil.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
-Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
+Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop Coq.Arith.Arith.
 Require Import Crypto.LegacyArithmetic.BaseSystem.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Notations.
@@ -101,7 +101,7 @@ Section BaseSystemProofs.
   Qed.
   Hint Rewrite peel_decode.
 
-  Hint Rewrite plus_0_r.
+  Hint Rewrite Nat.add_0_r.
 
   Lemma set_higher : forall bs vs x,
     decode' bs (vs++x::nil) = decode' bs vs + nth_default 0 bs (length vs) * x.
@@ -128,7 +128,7 @@ Section BaseSystemProofs.
       assert (HH: nth_error (z0 :: l) 0 = Some z) by
           (
             pose proof @nth_error_skipn _ (length vs) bs 0;
-            rewrite plus_0_r in *;
+            rewrite Nat.add_0_r in *;
             congruence); simpl in HH; congruence. }
   Qed.
 End BaseSystemProofs.

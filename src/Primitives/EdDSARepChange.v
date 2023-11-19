@@ -12,7 +12,6 @@ Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Pro
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Option Crypto.Util.Logic Crypto.Util.Relations Crypto.Util.WordUtil Util.LetIn Util.NatUtil.
 Require Import Crypto.Spec.ModularArithmetic Crypto.Arithmetic.PrimeFieldTheorems.
-Import NPeano.
 
 Import Notations.
 

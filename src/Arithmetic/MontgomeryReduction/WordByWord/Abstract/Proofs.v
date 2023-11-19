@@ -89,7 +89,7 @@ Section WordByWordMontgomery.
        numlimbs_drop_high
        using (repeat autounfold with word_by_word_montgomery; t_small)
     : push_numlimbs.
-  Hint Rewrite <- Max.succ_max_distr pred_Sn Min.succ_min_distr : push_numlimbs.
+  Hint Rewrite <- Nat.succ_max_distr pred_Sn Nat.succ_min_distr : push_numlimbs.
 
 
   (* Recurse for a as many iterations as A has limbs, varying A := A, S := 0, r, bounds *)
@@ -167,7 +167,7 @@ Section WordByWordMontgomery.
       repeat autounfold with word_by_word_montgomery; rewrite Z.mul_split_mod.
       repeat autorewrite with push_numlimbs.
       change Init.Nat.max with Nat.max.
-      rewrite <- ?(Max.max_assoc (numlimbs S)).
+      rewrite <- ?(Nat.max_assoc (numlimbs S)).
       reflexivity.
     Qed.
 
@@ -326,11 +326,11 @@ Section WordByWordMontgomery.
   Local Ltac t_min_max_step _ :=
     match goal with
     | [ |- context[Init.Nat.max ?x ?y] ]
-      => first [ rewrite (Max.max_l x y) by lia
-               | rewrite (Max.max_r x y) by lia ]
+      => first [ rewrite (Nat.max_l x y) by lia
+               | rewrite (Nat.max_r x y) by lia ]
     | [ |- context[Init.Nat.min ?x ?y] ]
-      => first [ rewrite (Min.min_l x y) by lia
-               | rewrite (Min.min_r x y) by lia ]
+      => first [ rewrite (Nat.min_l x y) by lia
+               | rewrite (Nat.min_r x y) by lia ]
     | _ => progress change Init.Nat.max with Nat.max
     | _ => progress change Init.Nat.min with Nat.min
     end.
@@ -364,7 +364,7 @@ Section WordByWordMontgomery.
                      | rewrite Nat.min_comm, Nat.min_max_distr ]. }
     rewrite Hgen; clear Hgen.
     destruct count; [ reflexivity | ].
-    repeat apply Max.max_case_strong; apply Min.min_case_strong; lia.
+    repeat apply Nat.max_case_strong; apply Nat.min_case_strong; lia.
   Qed.
 
 

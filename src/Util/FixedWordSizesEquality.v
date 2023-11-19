@@ -31,7 +31,7 @@ Proof.
   destruct (NatUtil.nat_eq_dec x y) as [pf|pf]; [ intros; assumption | ].
   intro H; exfalso.
   let pf := pf in
-  abstract (apply pf; eapply NPeano.Nat.pow_inj_r; [ | eassumption ]; lia).
+  abstract (apply pf; eapply Nat.pow_inj_r; [ | eassumption ]; lia).
 Defined.
 Lemma pow2_inj_helper_refl x p : pow2_inj_helper x x p = eq_refl.
 Proof.
