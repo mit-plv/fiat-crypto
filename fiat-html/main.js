@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const stderrDiv = document.getElementById('stderrContainer');
     const stdoutBox = document.getElementById('stdout');
     const stderrBox = document.getElementById('stderr');
+    const versionBox = document.getElementById('version')
     const inputForm = document.getElementById('inputForm');
     const inputArgs = document.getElementById('inputArgs');
     const synthesizeButton = document.getElementById('synthesizeButton');
@@ -319,4 +320,6 @@ document.addEventListener('DOMContentLoaded', function() {
     clearCacheButton.addEventListener('click', function() {
         localStorage.clear();
     });
+
+    versionBox.textContent = `${fiat_crypto_version}`;
 });

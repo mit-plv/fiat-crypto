@@ -33,9 +33,11 @@
         .form-row { display: flex; flex-wrap: wrap; align-items: center; }
         .form-row label, .form-row button, .status-span, .permalink-span { margin-right: 10px; }
         .status-span, .permalink-span { flex-grow: 1; text-align: right; }
+        .version { color: #333; }
     </style>
 </head>
 <body>
+    <div id="versionContainer"><span class="version">Fiat Cryptography <span id="version"></span> (<a href="https://github.com/mit-plv/fiat-crypto">GitHub Source</a>)</span></div>
     <form id="inputForm" class="hidden">
         <div class="form-row">
             <input type="text" id="inputArgs" placeholder="Enter arguments">
@@ -65,6 +67,7 @@
         <button class="copy-button" data-target="stderr">Copy</button>
       </div>
     </div>
+    <script src="version.js"></script>
     <script src="main.js"></script>
     <script src="copy-button.js"></script>
 </body>

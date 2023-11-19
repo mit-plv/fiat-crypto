@@ -69,6 +69,7 @@ jobs:
           etc/ci/github-actions-docker-make.sh ${EXTRA_GH_REPORTIFY} -j2 standalone-js-of-ocaml
     - name: install-standalone-js-of-ocaml
       run: make -f Makefile.standalone install-standalone-js-of-ocaml
+    - run: make -f Makefile.js-html fiat-html/version.js
     - name: backup .gitignore
       run: mv .gitignore{,.bak}
     - name: Deploy js_of_ocaml 🚀 ${{ ( github.ref != 'refs/heads/master' && '(dry run)' ) || '' }}

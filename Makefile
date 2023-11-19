@@ -335,6 +335,7 @@ Makefile.coq: Makefile _CoqProject
 
 include Makefile.examples
 include Makefile.standalone
+include Makefile.js-html
 
 $(STANDALONE:%=src/ExtractionOCaml/%.ml): src/StandaloneOCamlMain.vo
 $(BEDROCK2_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Bedrock/Standalone/StandaloneOCamlMain.vo

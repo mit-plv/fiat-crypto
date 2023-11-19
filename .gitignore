@@ -222,6 +222,7 @@ fiat-amd64/*.description
 fiat-amd64/*.invocation
 fiat-html/fiat_crypto.js
 fiat-html/fiat_crypto.map
+fiat-html/version.js
 /Makefile.test-amd64-files.mk
 
 # Rust
