@@ -52,6 +52,15 @@ jobs:
         OPAMYES: "true"
         OPAMCONFIRMLEVEL: "unsafe-yes"
 
+    - name: Install js_of_ocaml
+      run: |
+        set -e
+        eval $(opam env)
+        opam install js_of_ocaml
+      env:
+        OPAMYES: "true"
+        OPAMCONFIRMLEVEL: "unsafe-yes"
+
     - name: echo build params
       run: |
         eval $(opam env)
@@ -70,6 +79,11 @@ jobs:
         eval $(opam env)
         etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
 
+    - name: install-standalone-js-of-ocaml
+      run: |
+        eval $(opam env)
+        etc/ci/github-actions-make.sh install-standalone-js-of-ocaml
+
     - name: only-test-amd64-files-lite
       run: |
         eval $(opam env)
@@ -80,11 +94,21 @@ jobs:
       with:
         name: ExtractionOCaml
         path: src/ExtractionOCaml
+    - name: upload js_of_ocaml files
+      uses: actions/upload-artifact@v3
+      with:
+        name: ExtractionJsOfOCaml
+        path: src/ExtractionJsOfOCaml
     - name: upload standalone files
       uses: actions/upload-artifact@v3
       with:
         name: standalone-macos
         path: dist/fiat_crypto
+    - name: upload standalone js files
+      uses: actions/upload-artifact@v3
+      with:
+        name: standalone-html-macos
+        path: fiat-html
     - name: install
       run: |
         eval $(opam env)

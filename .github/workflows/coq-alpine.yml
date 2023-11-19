@@ -51,9 +51,37 @@ jobs:
     - name: make deps
       shell: alpine.sh {0}
       run: make TIMED=1 TIMING=1 -j2 deps
-    - name: all-except-generated
+    - name: all-except-generated-and-js-of-ocaml
       shell: alpine.sh {0}
-      run: make TIMED=1 TIMING=1 -j2 CAMLEXTRAFLAGS="-ccopt -static" all-except-generated
+      run: make TIMED=1 TIMING=1 -j2 CAMLEXTRAFLAGS="-ccopt -static" all-except-generated-and-js-of-ocaml
+    - name: install-standalone-unified-ocaml
+      shell: alpine.sh {0}
+      run: make install-standalone-unified-ocaml BINDIR=dist
+#    - name: install-standalone-js-of-ocaml
+#      shell: alpine.sh {0}
+#      run: make install-standalone-js-of-ocaml
+    - name: upload standalone files
+      uses: actions/upload-artifact@v3
+      with:
+        name: standalone-${{ matrix.alpine }}
+        path: dist/fiat_crypto
+#    - name: upload standalone js files
+#      uses: actions/upload-artifact@v3
+#      with:
+#        name: standalone-html-${{ matrix.alpine }}
+#        path: fiat-html
+    - name: upload OCaml files
+      uses: actions/upload-artifact@v3
+      with:
+        name: ExtractionOCaml-${{ matrix.alpine }}
+        path: src/ExtractionOCaml
+      if: always ()
+#    - name: upload js_of_ocaml files
+#      uses: actions/upload-artifact@v3
+#      with:
+#        name: ExtractionJsOfOCaml-${{ matrix.alpine }}
+#        path: src/ExtractionJsOfOCaml
+#      if: always ()
     - name: generated-files
       shell: alpine.sh {0}
       run: make TIMED=1 TIMING=1 -j2 generated-files
@@ -65,20 +93,6 @@ jobs:
         name: generated-files-${{ matrix.alpine }}
         path: generated-files.tgz
       if: ${{ failure() }}
-    - name: install-standalone-unified-ocaml
-      shell: alpine.sh {0}
-      run: make install-standalone-unified-ocaml BINDIR=dist
-    - name: upload standalone files
-      uses: actions/upload-artifact@v3
-      with:
-        name: standalone-${{ matrix.alpine }}
-        path: dist/fiat_crypto
-    - name: upload OCaml files
-      uses: actions/upload-artifact@v3
-      with:
-        name: ExtractionOCaml-${{ matrix.alpine }}
-        path: src/ExtractionOCaml
-      if: always ()
     - name: standalone-haskell
       shell: alpine.sh {0}
       run: make TIMED=1 TIMING=1 -j1 standalone-haskell GHCFLAGS='+RTS -M7G -RTS'

@@ -43,9 +43,9 @@ jobs:
     - name: make deps
       shell: in-debian-chroot.sh {0}
       run: etc/ci/github-actions-make.sh -j2 deps
-    - name: all-except-generated
+    - name: all-except-generated-and-js-of-ocaml
       shell: in-debian-chroot.sh {0}
-      run: etc/ci/github-actions-make.sh -j2 all-except-generated
+      run: etc/ci/github-actions-make.sh -j2 all-except-generated-and-js-of-ocaml
     - name: generated-files
       shell: in-debian-chroot.sh {0}
       run: etc/ci/github-actions-make.sh -j2 generated-files
@@ -60,16 +60,33 @@ jobs:
     - name: install-standalone-unified-ocaml
       shell: in-debian-chroot.sh {0}
       run: etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
+    - name: standalone-js-of-ocaml
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/github-actions-make.sh -j2 standalone-js-of-ocaml
+    - name: install-standalone-js-of-ocaml
+      shell: in-debian-chroot.sh {0}
+      run: etc/ci/github-actions-make.sh install-standalone-js-of-ocaml
     - name: upload standalone files
       uses: actions/upload-artifact@v3
       with:
         name: standalone-${{ matrix.env.DEBIAN }}
         path: dist/fiat_crypto
+    - name: upload standalone js files
+      uses: actions/upload-artifact@v3
+      with:
+        name: standalone-html-${{ matrix.env.DEBIAN }}
+        path: fiat-html
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
       with:
         name: ExtractionOCaml-${{ matrix.env.DEBIAN }}
         path: src/ExtractionOCaml
+      if: always ()
+    - name: upload js_of_ocaml files
+      uses: actions/upload-artifact@v3
+      with:
+        name: ExtractionJsOfOCaml-${{ matrix.env.DEBIAN }}
+        path: src/ExtractionJsOfOCaml
       if: always ()
     - name: standalone-haskell
       shell: in-debian-chroot.sh {0}
