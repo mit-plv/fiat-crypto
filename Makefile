@@ -345,7 +345,7 @@ $(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.ml): src/StandaloneJsOfOCam
 $(BEDROCK2_STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.ml): src/Bedrock/Standalone/StandaloneJsOfOCamlMain.vo
 # $(PERF_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Rewriter/PerfTesting/StandaloneHaskellMain.vo
 
-pre-standalone-extracted: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs)
+pre-standalone-extracted: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) $(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.ml) $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs)
 
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) : %.ml : %.v
 	$(SHOW)'COQC $<'
