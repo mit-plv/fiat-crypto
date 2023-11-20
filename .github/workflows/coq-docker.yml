@@ -65,6 +65,7 @@ jobs:
         export: CI ALLOW_DIFF COQCHKEXTRAFLAGS
         custom_script: |
           eval $(opam env)
+          opam update -y
           opam install -y js_of_ocaml
           etc/ci/github-actions-docker-make.sh ${EXTRA_GH_REPORTIFY} -j2 standalone-js-of-ocaml
     - name: install-standalone-js-of-ocaml
