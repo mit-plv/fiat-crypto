@@ -26,8 +26,8 @@ Section Field.
   Definition n : nat := 4.
   Definition m : Z := (2^224 - 2^96 + 1)%Z.
 
-  Existing Instances Defaults32.default_parameters
-           Defaults32.default_parameters_ok.
+  Existing Instances Bitwidth32.BW32
+    Defaults32.default_parameters Defaults32.default_parameters_ok.
   Definition prefix : string := "p224_"%string.
 
   (* Define p224 field *)

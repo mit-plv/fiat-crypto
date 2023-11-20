@@ -15,8 +15,8 @@ Section Field.
   Definition s : Z := 2^130.
   Definition c : list (Z * Z) := [(1, 5)]%Z.
 
-  Existing Instances Defaults32.default_parameters
-           Defaults32.default_parameters_ok.
+  Existing Instances Bitwidth32.BW32
+    Defaults32.default_parameters Defaults32.default_parameters_ok.
   Definition prefix : string := "fe1305_"%string.
 
   (* Define Poly1305 field *)
