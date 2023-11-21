@@ -152,9 +152,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleException(err) {
-        let errorMessage = `Synthesis failed: ${escapeHtml(err.toString())}`;
+        const errHtml = err === undefined ? 'undefined error message' : escapeHtml(err.toString());
+        let errorMessage = `Synthesis failed: ${errHtml}`;
 
-        if (/stack size exceeded|[Tt]oo much recursion/.test(err.message)) {
+        if (err === undefined || /stack size exceeded|[Tt]oo much recursion/.test(err.message)) {
             if (!isSafari) {
                 errorMessage += "<br>Unfortunately Chrome, Firefox, and the ECMAScript Standard don't support proper tail-call elimination for unfortunate <a href=\"https://stackoverflow.com/a/54721813/377022\">historical</a> <a href=\"https://medium.com/indigoag-eng/tail-call-optimization-in-the-wild-26a10e450c73\">reasons</a>.";
 
