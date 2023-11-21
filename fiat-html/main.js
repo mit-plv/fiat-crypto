@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleSynthesisResult(result, cached) {
-        const extraCachedString = result.fiat_crypto_version == fiat_crypto_version ? '' : `in ${result.fiat_crypto_version}`;
+        const extraCachedString = result.fiat_crypto_version == fiat_crypto_version ? '' : ` in ${result.fiat_crypto_version}`;
         const cachedString = cached ? ` (cached on ${result.timestamp}${extraCachedString})` : '';
         if (result.success) {
             clearOutput();
