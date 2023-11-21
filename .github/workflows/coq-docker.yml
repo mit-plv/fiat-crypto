@@ -32,6 +32,8 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+        fetch-depth: 0 # Fetch all history for all tags and branches, for fiat-html/version.js
+        tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
     - name: echo host build params
       run: etc/ci/describe-system-config.sh
     - name: echo container build params

@@ -11,6 +11,8 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+        fetch-depth: 0 # Fetch all history for all tags and branches, for fiat-html/version.js
+        tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
     - run: make -f Makefile.js-html EXTRA_HTML_VERSION_INFO="-manual" fiat-html/version.js
     - name: backup .gitignore
       run: mv .gitignore{,.bak}
