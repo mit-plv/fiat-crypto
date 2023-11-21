@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleException(err) {
-        const errHtml = err === undefined ? 'undefined error message' : escapeHtml(err.toString());
+        const errHtml = err === undefined ? 'undefined error message (try opening the developer console)' : escapeHtml(err.toString());
         let errorMessage = `Synthesis failed: ${errHtml}`;
 
         if (err === undefined || /stack size exceeded|[Tt]oo much recursion/.test(err.message)) {
