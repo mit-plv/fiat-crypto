@@ -231,9 +231,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const timeTaken = (endTime - startTime) / 1000;
                 const now = new Date();
                 const resultData = {
-                    result: e.data,
+                    result: success ? (e.data.error !== undefined ? e.data.error : e.data.result) : e.data,
                     time: timeTaken,
-                    success: success,
+                    success: success && e.data !== undefined && e.data.error === undefined,
                     timestamp: now.toISOString(),
                     version: SYNTHESIS_CACHE_VERSION,
                     fiat_crypto_version: fiat_crypto_version,

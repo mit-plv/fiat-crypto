@@ -1,5 +1,9 @@
 self.importScripts("fiat_crypto.js");
 self.onmessage = function(e) {
-    const result = synthesize(e.data);
-    postMessage(result);
+    try {
+        const result = synthesize(e.data);
+        postMessage({result: result});
+    } catch (err) {
+        postMessage({error: err});
+    }
 };
