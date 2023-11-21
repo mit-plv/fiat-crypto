@@ -1,4 +1,5 @@
 // Written with help from https://chat.openai.com/share/74d5901c-9005-4560-8307-582ff54e403e
+const SYNTHESIS_CACHE_VERSION = 1;
 document.addEventListener('DOMContentLoaded', function() {
     const errorDiv = document.getElementById('error');
     const outputDiv = document.getElementById('output');
@@ -16,7 +17,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusSpan = document.getElementById('status');
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
     const isMacOrIOS = /Macintosh|MacIntel|MacPPC|Mac68K|iPhone|iPad|iPod/.test(navigator.platform);
-    const SYNTHESIS_CACHE_VERSION = `2~${fiat_crypto_version}`;
 
     function splitUnescapedSpaces(input) {
         return input
@@ -173,7 +173,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleSynthesisResult(result, cached) {
-        const cachedString = cached ? ` (cached on ${result.timestamp})` : '';
+        const extraCachedString = result.fiat_crypto_version == fiat_crypto_version ? '' : `in ${result.fiat_crypto_version}`;
+        const cachedString = cached ? ` (cached on ${result.timestamp}${extraCachedString})` : '';
         if (result.success) {
             clearOutput();
             updateStatus(`Synthesis${cachedString} completed in ${result.time} seconds`);
@@ -220,7 +221,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 handleSynthesisResult(cachedData, true);
                 return;
             } else {
-                console.log(`cache miss: version ${cachedData.version}, expected ${SYNTHESIS_CACHE_VERSION}`)
+                console.log(`cache miss: version ${cachedData.version} (${cachedData.fiat_crypto_version}), expected ${SYNTHESIS_CACHE_VERSION}`)
             }
         }
 
@@ -234,7 +235,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     time: timeTaken,
                     success: success,
                     timestamp: now.toISOString(),
-                    version: SYNTHESIS_CACHE_VERSION
+                    version: SYNTHESIS_CACHE_VERSION,
+                    fiat_crypto_version: fiat_crypto_version,
                 };
                 try {
                     localStorage.setItem(cacheKey, JSON.stringify(resultData));
