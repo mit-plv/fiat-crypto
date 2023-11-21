@@ -177,11 +177,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const cachedString = cached ? ` (cached on ${result.timestamp}${extraCachedString})` : '';
         if (result.success) {
             clearOutput();
-            updateStatus(`Synthesis${cachedString} completed in ${result.time} seconds`);
+            updateStatus(`Synthesis completed in ${result.time} seconds${cachedString}`);
             handleSynthesisResultData(result.result);
         } else {
             handleException(result.result);
-            updateStatus(`Synthesis${cachedString} failed in ${result.time} seconds`);
+            updateStatus(`Synthesis failed in ${result.time} seconds${cachedString}`);
         }
     }
 
