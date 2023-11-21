@@ -101,14 +101,20 @@ Passing no arguments, or passing `-h` or `--help` (or any other invalid argument
 Here are some examples of ways to invoke the binaries (from the directories that they live in):
 
     # Generate code for 2^255-19
-    ./fiat_crypto unsaturated-solinas '25519' '64' '5' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
-    ./fiat_crypto unsaturated-solinas '25519' '32' '10' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
+    ./fiat_crypto unsaturated-solinas '25519' '64' '5' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c # 1
+    ./fiat_crypto unsaturated-solinas '25519' '32' '10' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c # 2
 
     # Generate code for NIST-P256 (2^256 - 2^224 + 2^192 + 2^96 - 1)
-    ./fiat_crypto word-by-word-montgomery 'p256' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_32.c
-    ./fiat_crypto word-by-word-montgomery 'p256' '64' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_64.c
+    ./fiat_crypto word-by-word-montgomery 'p256' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_32.c # 3
+    ./fiat_crypto word-by-word-montgomery 'p256' '64' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_64.c # 4
 
+Try out the above on the web [🌐<sub>1</sub>][web-1-link] [🌐<sub>2</sub>][web-2-link] [🌐<sub>3</sub>][web-3-link] [🌐<sub>4</sub>][web-4-link].
 You can find more examples in the [`Makefile`](./Makefile).
+
+[web-1-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22unsaturated-solinas%22%2C%2225519%22%2C%2264%22%2C%225%22%2C%222%5E255-19%22%2C%22carry_mul%22%2C%22carry_square%22%2C%22carry_scmul121666%22%2C%22carry%22%2C%22add%22%2C%22sub%22%2C%22opp%22%2C%22selectznz%22%2C%22to_bytes%22%2C%22from_bytes%22%5D&interactive
+[web-2-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22unsaturated-solinas%22%2C%2225519%22%2C%2232%22%2C%2210%22%2C%222%5E255-19%22%2C%22carry_mul%22%2C%22carry_square%22%2C%22carry_scmul121666%22%2C%22carry%22%2C%22add%22%2C%22sub%22%2C%22opp%22%2C%22selectznz%22%2C%22to_bytes%22%2C%22from_bytes%22%5D&interactive
+[web-3-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22word-by-word-montgomery%22%2C%22p256%22%2C%2232%22%2C%222%5E256-2%5E224%2B2%5E192%2B2%5E96-1%22%5D&interactive
+[web-4-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22word-by-word-montgomery%22%2C%22p256%22%2C%2264%22%2C%222%5E256-2%5E224%2B2%5E192%2B2%5E96-1%22%5D&interactive
 
 Note that for large primes, you may need to increase the stack size to avoid stack overflows.  For example:
 
@@ -156,18 +162,26 @@ Passing no arguments, or passing `-h` or `--help` (or any other invalid argument
 Here are some examples of ways to invoke the binaries (from the directories that they live in):
 
     # Generate code for 2^255-19
-    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '64' '5' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
-    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '32' '10' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
+    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '64' '5' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c # 1
+    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '32' '10' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c # 2
 
     # Generate code for NIST-P256 (2^256 - 2^224 + 2^192 + 2^96 - 1)
-    ./bedrock2_fiat_crypto word-by-word-montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_32.c
-    ./bedrock2_fiat_crypto word-by-word-montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '64' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_64.c
+    ./bedrock2_fiat_crypto word-by-word-montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_32.c # 3
+    ./bedrock2_fiat_crypto word-by-word-montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '64' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_64.c # 4
 
     # Generate code for 2^130 - 5
-    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '64' '3' '2^130 - 5' > poly1305_64.c
-    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '32' '5' '2^130 - 5' > poly1305_32.c
+    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '64' '3' '2^130 - 5' > poly1305_64.c # 5
+    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '32' '5' '2^130 - 5' > poly1305_32.c # 6
 
+Try out the above on the web [🌐<sub>1</sub>][web-bedrock2-1-link] [🌐<sub>2</sub>][web-bedrock2-2-link] [🌐<sub>3</sub>][web-bedrock2-3-link] [🌐<sub>4</sub>][web-bedrock2-4-link] [🌐<sub>5</sub>][web-bedrock2-5-link] [🌐<sub>6</sub>][web-bedrock2-6-link].
 You can find more examples in [`Makefile.examples`](./Makefile.examples).
+
+[web-bedrock2-1-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22unsaturated-solinas%22%2C%22--lang%22%2C%22bedrock2%22%2C%22--no-wide-int%22%2C%22--widen-carry%22%2C%22--widen-bytes%22%2C%22--split-multiret%22%2C%22--no-select%22%2C%2225519%22%2C%2264%22%2C%225%22%2C%222%5E255-19%22%2C%22carry_mul%22%2C%22carry_square%22%2C%22carry_scmul121666%22%2C%22carry%22%2C%22add%22%2C%22sub%22%2C%22opp%22%2C%22selectznz%22%2C%22to_bytes%22%2C%22from_bytes%22%5D&interactive
+[web-bedrock2-2-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22unsaturated-solinas%22%2C%22--lang%22%2C%22bedrock2%22%2C%22--no-wide-int%22%2C%22--widen-carry%22%2C%22--widen-bytes%22%2C%22--split-multiret%22%2C%22--no-select%22%2C%2225519%22%2C%2232%22%2C%2210%22%2C%222%5E255-19%22%2C%22carry_mul%22%2C%22carry_square%22%2C%22carry_scmul121666%22%2C%22carry%22%2C%22add%22%2C%22sub%22%2C%22opp%22%2C%22selectznz%22%2C%22to_bytes%22%2C%22from_bytes%22%5D&interactive
+[web-bedrock2-3-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22word-by-word-montgomery%22%2C%22--lang%22%2C%22bedrock2%22%2C%22--no-wide-int%22%2C%22--widen-carry%22%2C%22--widen-bytes%22%2C%22--split-multiret%22%2C%22--no-select%22%2C%22p256%22%2C%2232%22%2C%222%5E256-2%5E224%2B2%5E192%2B2%5E96-1%22%5D&interactive
+[web-bedrock2-4-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22word-by-word-montgomery%22%2C%22--lang%22%2C%22bedrock2%22%2C%22--no-wide-int%22%2C%22--widen-carry%22%2C%22--widen-bytes%22%2C%22--split-multiret%22%2C%22--no-select%22%2C%22p256%22%2C%2264%22%2C%222%5E256-2%5E224%2B2%5E192%2B2%5E96-1%22%5D&interactive
+[web-bedrock2-5-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22unsaturated-solinas%22%2C%22--lang%22%2C%22bedrock2%22%2C%22--no-wide-int%22%2C%22--widen-carry%22%2C%22--widen-bytes%22%2C%22--split-multiret%22%2C%22--no-select%22%2C%22poly1305%22%2C%2264%22%2C%223%22%2C%222%5E130-5%22%5D&interactive
+[web-bedrock2-6-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22unsaturated-solinas%22%2C%22--lang%22%2C%22bedrock2%22%2C%22--no-wide-int%22%2C%22--widen-carry%22%2C%22--widen-bytes%22%2C%22--split-multiret%22%2C%22--no-select%22%2C%22poly1305%22%2C%2232%22%2C%225%22%2C%222%5E130-5%22%5D&interactive
 
 License
 -------
