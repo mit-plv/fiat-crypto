@@ -488,8 +488,8 @@ clean::
 cleanall:: clean
 	rm -rf src/Rewriter/PerfTesting/Specific/generated
 
-install: coq
-install-without-bedrock2: coq-without-bedrock2
+install: coq $(filter %.vo,$(FILESTOINSTALL))
+install-without-bedrock2: coq-without-bedrock2 $(filter %.vo,$(filter-out $(BEDROCK2_FILES_PATTERN),$(FILESTOINSTALL)))
 
 install-without-bedrock2:
 	$(HIDE)$(MAKE) -f Makefile.coq install FILESTOINSTALL="$(filter-out $(BEDROCK2_FILES_PATTERN),$(FILESTOINSTALL))"
