@@ -35,6 +35,8 @@ PACKAGE ?= standalone.tar.gz
 PACKAGE_CMD ?= tar -czvf
 PACKAGE_CMD_FUNC ?= $(PACKAGE_CMD) $(1) $(2)
 MKTEMP_D ?= etc/ci/mktemp_d.sh
+GZIP ?= gzip
+GZIP_KEEP_FLAGS ?= -k
 
 ENSURE_STACK_LIMIT := . etc/ensure_stack_limit.sh || true
 
@@ -87,6 +89,10 @@ $(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.wasm) : %.wasm : %.byte
 	$(SHOW)'WASM_OF_OCAML $<'
 	$(HIDE)$(ENSURE_STACK_LIMIT); \
 	 $(TIMER) $(WASM_OF_OCAML) $(WASM_OF_OCAML_FLAGS) $<
+
+$(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.wat.gz) : %.wat.gz : %.wasm
+	$(SHOW)'GZIP $*'
+	$(HIDE)$(TIMER) $(GZIP) $(GZIP_KEEP_FLAGS) $*.wat
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
 	$(SHOW)'GHC $< -o $@'
