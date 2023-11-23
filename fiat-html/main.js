@@ -162,9 +162,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 errorMessage += "<br>Unfortunately Chrome, Firefox, and the ECMAScript Standard don't support proper tail-call elimination for unfortunate <a href=\"https://stackoverflow.com/a/54721813/377022\">historical</a> <a href=\"https://medium.com/indigoag-eng/tail-call-optimization-in-the-wild-26a10e450c73\">reasons</a>.";
 
                 if (!isMacOrIOS) {
-                    errorMessage += "<br>Consider opening this page in <a href=\"https://www.apple.com/safari/\">Safari</a> on a Mac or iOS device instead.";
+                    errorMessage += "<br>Consider using WASM or opening this page in <a href=\"https://www.apple.com/safari/\">Safari</a> on a Mac or iOS device instead.";
                 } else {
-                    errorMessage += "<br>Consider opening this page in <a href=\"https://www.apple.com/safari/\">Safari</a> instead.";
+                    errorMessage += "<br>Consider using WASM or opening this page in <a href=\"https://www.apple.com/safari/\">Safari</a> instead.";
                 }
             }
         }
