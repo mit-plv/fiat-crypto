@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleException(err) {
-        const errHtml = err === undefined ? 'undefined error message (try opening the developer console)' : escapeHtml(err.toString());
+        const errHtml = err === undefined ? 'undefined error message (try opening the developer console)' : escapeHtml(`${err.name}: ${err.message}`);
         let errorMessage = `Synthesis failed: ${errHtml}`;
 
         if (err === undefined || /stack size exceeded|[Tt]oo much recursion/.test(err.message)) {
@@ -207,6 +207,20 @@ document.addEventListener('DOMContentLoaded', function() {
         setupSynthesisWorker(); // Re-setup the worker for future use
     }
 
+    // https://betterprogramming.pub/serializing-error-in-javascript-27c3a048dc3b
+    function errorJSONReplacer(key, value) {
+        // JSON.stringify does not deal with errors
+        if (value instanceof Error) {
+            return {
+                name: value.name,
+                message: value.message,
+                stack: value.stack,
+                cause: value.cause,
+            };
+        }
+        return value;
+    }
+
     function handleSynthesis(args) {
         const startTime = performance.now();
         const cacheKey = 'synthesize_' + JSON.stringify(args);
@@ -239,7 +253,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     fiat_crypto_version: fiat_crypto_version,
                 };
                 try {
-                    localStorage.setItem(cacheKey, JSON.stringify(resultData));
+                    localStorage.setItem(cacheKey, JSON.stringify(resultData, errorJSONReplacer));
                 } catch (e) {
                     console.error(`Failed: localStorage.setItem(${JSON.stringify(cacheKey)}, ${JSON.stringify(JSON.stringify(resultData))})`);
                 }
