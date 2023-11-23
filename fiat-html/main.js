@@ -342,7 +342,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.querySelector('input[value="json"]').checked = true;
                 inputForm.classList.remove('hidden');
             }
-            parseAndRun(argv);
+            // hack around synthesize not being ready :-(
+            if (wasmCheckbox.checked) {
+                setTimeout(function () { parseAndRun(argv); }, 1000);
+            } else {
+                parseAndRun(argv);
+            }
         } else {
             inputForm.classList.remove('hidden');
         }
