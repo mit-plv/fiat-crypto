@@ -195,10 +195,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function setupWorkers() {
         fiatCryptoWorker = new Worker("fiat_crypto_worker.js");
-        wasmFiatCryptoWorker = new Worker("wasm_fiat_crypto_worker.js");
+        //wasmFiatCryptoWorker = new Worker("wasm_fiat_crypto_worker.js");
 
         // Common setup for both workers
-        [fiatCryptoWorker, wasmFiatCryptoWorker].forEach(worker => {
+        [fiatCryptoWorker/*, wasmFiatCryptoWorker*/].forEach(worker => {
             worker.onmessage = function(e) {
                 console.log(`Early synthesis result: ${e.data}`);
             };
@@ -209,8 +209,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    let curSynthesisPromise;
     function cancelWorkers() {
-        [fiatCryptoWorker, wasmFiatCryptoWorker].forEach(worker => worker.terminate());
+        [fiatCryptoWorker/*, wasmFiatCryptoWorker*/].forEach(worker => worker.terminate());
+        curSynthesisPromise = null;
         console.log("Synthesis workers terminated.");
 
         // Re-setup workers
@@ -229,6 +231,32 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         }
         return value;
+    }
+
+    function wasmSynthesize(args, onmessage, onerror) {
+        const synthesisPromise = new Promise((resolve, reject) => {
+            try {
+                resolve(synthesize(args))
+            } catch (error) {
+                reject(error);
+            }
+        });
+        curSynthesisPromise = synthesisPromise;
+        synthesisPromise
+            .then((value) => {
+                if (curSynthesisPromise === synthesisPromise) {
+                    onmessage({data: {result: value}});
+                } else {
+                    console.log(`Synthesis of ${args} completed after being canceled: ${value}`);
+                }
+            })
+            .catch((err) => {
+                if (curSynthesisPromise === synthesisPromise) {
+                    onerror({data: err});
+                } else {
+                    console.log(`Synthesis of ${args} errored after being canceled: ${err}`);
+                }
+            });
     }
 
     function handleSynthesis(args) {
@@ -274,10 +302,14 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         };
 
-        const currentWorker = useWasm ? wasmFiatCryptoWorker : fiatCryptoWorker;
-        currentWorker.postMessage(args);
-        currentWorker.onmessage = recieveMessage(true);
-        currentWorker.onerror = recieveMessage(false);
+        if (useWasm) {
+            wasmSynthesize(args, recieveMessage(true), recieveMessage(false));
+        } else {
+            const currentWorker = /*useWasm ? wasmFiatCryptoWorker :*/ fiatCryptoWorker;
+            currentWorker.postMessage(args);
+            currentWorker.onmessage = recieveMessage(true);
+            currentWorker.onerror = recieveMessage(false);
+        }
     }
 
     function parseAndRun(argv) {
