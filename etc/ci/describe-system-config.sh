@@ -16,7 +16,7 @@ fi
 if [ ! -z "$CI" ]; then
     group() {
         echo "::group::$*"
-        run "$@"
+        2>&1 run "$@"
         echo "::endgroup::"
     }
 else
@@ -37,6 +37,8 @@ group ghc --version
 group ghc -v
 group gcc --version
 group gcc -v
+group opam switch
+group opam list
 group ocamlc -config
 group coqc --config
 group coqc --version
