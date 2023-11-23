@@ -175,34 +175,7 @@ Ltac nsatz_contradict :=
 
 Module Export Hints.
   Export Crypto.Util.FixCoqMistakes.
-  Global Existing Instances
-         Ncring_tac.Ifind0
-         Ncring_tac.Iclosed_nil
-         Ncring_tac.Iclosed_cons
-         Ncring_tac.reify_zero
-         Ncring_tac.reify_one
-         Ncring_tac.reify_add
-         Ncring_tac.reify_sub
-         Ncring_tac.reify_opp
-         Ncring_tac.reify_nil
-         Ncring_tac.reify_cons
-  .
-  Global Existing Instances
-         Ncring_tac.IfindS
-         Ncring_tac.reify_pow
-  | 1.
-  Global Existing Instances
-         Ncring_tac.reify_mul_ext
-  | 9.
-  Global Existing Instances
-         Ncring_tac.reify_mul
-  | 10.
-  Global Existing Instances
-         Ncring_tac.reifyZ0
-         Ncring_tac.reifyZpos
-         Ncring_tac.reifyZneg
-  | 11.
-  Global Existing Instance Ncring_tac.reify_var | 100.
+  Export (hints) Ncring_tac.
   Global Existing Instances
          Ncring_initial.Zops
          Ncring_initial.Zr
