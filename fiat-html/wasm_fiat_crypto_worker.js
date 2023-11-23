@@ -1,9 +1,15 @@
 self.importScripts("wasm_fiat_crypto.js");
-self.onmessage = function(e) {
-    try {
-        const result = synthesize(e.data);
-        postMessage({result: result});
-    } catch (err) {
-        postMessage({error: err});
-    }
-};
+let pending = [];
+self.onmessage = function (e) { pending.push(e); };
+setTimeout(function () {
+    self.onmessage = function(e) {
+        try {
+            const result = synthesize(e.data);
+            postMessage({result: result});
+        } catch (err) {
+            postMessage({error: err});
+        }
+    };
+    pending.forEach(e => { self.onmessage(e); });
+    pending = [];
+}, 1000);
