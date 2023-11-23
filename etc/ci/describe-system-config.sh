@@ -41,6 +41,7 @@ group opam switch
 group opam list
 group ocamlc -config
 group js_of_ocaml --version
+group wasm_of_ocaml --version
 group coqc --config
 group coqc --version
 group "true | coqtop"
