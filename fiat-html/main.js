@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const stdoutBox = document.getElementById('stdout');
     const stderrBox = document.getElementById('stderr');
     const versionBox = document.getElementById('version');
+    const wasmCheckbox = document.getElementById('wasm');
     const inputForm = document.getElementById('inputForm');
     const inputArgs = document.getElementById('inputArgs');
     const synthesizeButton = document.getElementById('synthesizeButton');
@@ -122,7 +123,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updatePermalink(args) {
-        const queryString = `?argv=${encodeURIComponent(JSON.stringify(args.slice(1)))}&interactive`;
+        const wasmString = wasmCheckbox.checked ? '&wasm' : '';
+        const queryString = `?argv=${encodeURIComponent(JSON.stringify(args.slice(1)))}&interactive${wasmString}`;
         // Handle both file and http(s) URLs
         let baseUrl = window.location.href.split('?')[0]; // Get base URL without query string
         permalink.href = baseUrl + queryString;
@@ -160,9 +162,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 errorMessage += "<br>Unfortunately Chrome, Firefox, and the ECMAScript Standard don't support proper tail-call elimination for unfortunate <a href=\"https://stackoverflow.com/a/54721813/377022\">historical</a> <a href=\"https://medium.com/indigoag-eng/tail-call-optimization-in-the-wild-26a10e450c73\">reasons</a>.";
 
                 if (!isMacOrIOS) {
-                    errorMessage += "<br>Consider opening this page in <a href=\"https://www.apple.com/safari/\">Safari</a> on a Mac or iOS device instead.";
+                    errorMessage += "<br>Consider using WASM or opening this page in <a href=\"https://www.apple.com/safari/\">Safari</a> on a Mac or iOS device instead.";
                 } else {
-                    errorMessage += "<br>Consider opening this page in <a href=\"https://www.apple.com/safari/\">Safari</a> instead.";
+                    errorMessage += "<br>Consider using WASM or opening this page in <a href=\"https://www.apple.com/safari/\">Safari</a> instead.";
                 }
             }
         }
@@ -173,7 +175,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleSynthesisResult(result, cached) {
-        const extraCachedString = result.fiat_crypto_version == fiat_crypto_version ? '' : ` in ${result.fiat_crypto_version}`;
+        const extraCachedString = [
+            result.fiat_crypto_version == fiat_crypto_version ? '' : ` in ${result.fiat_crypto_version}`,
+            result.method === undefined ? '' : ` via ${result.method}`,
+        ].join('');
         const cachedString = cached ? ` (cached on ${result.timestamp}${extraCachedString})` : '';
         if (result.success) {
             clearOutput();
@@ -185,26 +190,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    let synthesisWorker;
+    let fiatCryptoWorker;
+    let wasmFiatCryptoWorker;
 
-    function setupSynthesisWorker() {
-        synthesisWorker = new Worker("fiat_crypto_worker.js");
+    function setupWorkers() {
+        fiatCryptoWorker = new Worker("fiat_crypto_worker.js");
+        wasmFiatCryptoWorker = new Worker("wasm_fiat_crypto_worker.js");
 
-        synthesisWorker.onmessage = function(e) {
-            console.log(`Early synthesis result: ${e.data}`);
-        };
+        // Common setup for both workers
+        [fiatCryptoWorker, wasmFiatCryptoWorker].forEach(worker => {
+            worker.onmessage = function(e) {
+                console.log(`Early synthesis result: ${e.data}`);
+            };
 
-        synthesisWorker.onerror = function(err) {
-            handleException(err);
-        };
+            worker.onerror = function(err) {
+                handleException(err);
+            };
+        });
     }
 
-    function cancelSynthesisWorker() {
-        if (synthesisWorker) {
-            synthesisWorker.terminate();
-            console.log("Synthesis worker terminated.");
-        }
-        setupSynthesisWorker(); // Re-setup the worker for future use
+    function cancelWorkers() {
+        [fiatCryptoWorker, wasmFiatCryptoWorker].forEach(worker => worker.terminate());
+        console.log("Synthesis workers terminated.");
+
+        // Re-setup workers
+        setupWorkers();
     }
 
     // https://betterprogramming.pub/serializing-error-in-javascript-27c3a048dc3b
@@ -239,6 +249,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        const useWasm = wasmCheckbox.checked;
+
         const recieveMessage = function (success) {
             return function(e) {
                 const endTime = performance.now();
@@ -251,6 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     timestamp: now.toISOString(),
                     version: SYNTHESIS_CACHE_VERSION,
                     fiat_crypto_version: fiat_crypto_version,
+                    method: useWasm ? 'wasm_of_ocaml' : 'js_of_ocaml',
                 };
                 try {
                     localStorage.setItem(cacheKey, JSON.stringify(resultData, errorJSONReplacer));
@@ -261,9 +274,10 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         };
 
-        synthesisWorker.postMessage(args);
-        synthesisWorker.onmessage = recieveMessage(true);
-        synthesisWorker.onerror = recieveMessage(false);
+        const currentWorker = useWasm ? wasmFiatCryptoWorker : fiatCryptoWorker;
+        currentWorker.postMessage(args);
+        currentWorker.onmessage = recieveMessage(true);
+        currentWorker.onerror = recieveMessage(false);
     }
 
     function parseAndRun(argv) {
@@ -276,22 +290,35 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    setupSynthesisWorker();
+    function nonFalseQueryParam(value) {
+        return value !== null && value != 'false' && value != '0';
+    }
 
-    const queryParams = new URLSearchParams(window.location.search);
-    const argv = queryParams.get('argv');
-    const interactive = queryParams.get('interactive');
+    function parseQueryParams() {
+        const queryParams = new URLSearchParams(window.location.search);
+        const argv = queryParams.get('argv');
+        const interactive = queryParams.get('interactive');
+        const wasm = queryParams.get('wasm')
 
-    if (argv) {
-        if (interactive !== null && interactive != 'false' && interactive != '0') {
-            inputArgs.value = decodeURIComponent(argv);
-            document.querySelector('input[value="json"]').checked = true;
+        if (nonFalseQueryParam(wasm)) {
+            wasmCheckbox.checked = true;
+        }
+
+        if (argv) {
+            if (nonFalseQueryParam(interactive)) {
+                inputArgs.value = decodeURIComponent(argv);
+                document.querySelector('input[value="json"]').checked = true;
+                inputForm.classList.remove('hidden');
+            }
+            parseAndRun(argv);
+        } else {
             inputForm.classList.remove('hidden');
         }
-        parseAndRun(argv);
-    } else {
-        inputForm.classList.remove('hidden');
+
+        setupWorkers();
     }
+
+    parseQueryParams();
 
     inputArgs.addEventListener('input', validateInput);
 
@@ -331,7 +358,7 @@ document.addEventListener('DOMContentLoaded', function() {
         synthesizeButton.disabled = false;
         cancelButton.disabled = true;
         updateStatus("");
-        cancelSynthesisWorker();
+        cancelWorkers();
     });
 
     clearCacheButton.addEventListener('click', function() {

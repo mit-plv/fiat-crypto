@@ -5,7 +5,7 @@
     <title>Fiat Cryptography Web Interface</title>
     <style>
         .error { color: red; white-space: pre-wrap; }
-        code { display: block; white-space: pre-wrap; border: 1px solid #ddd; padding: 10px; position: relative; }
+        /*code { display: block; white-space: pre-wrap; border: 1px solid #ddd; padding: 10px; position: relative; }*/
         .code-container {
             position: relative;
         }
@@ -15,7 +15,8 @@
             white-space: pre-wrap;
             border: 1px solid #ddd;
             padding: 10px;
-            margin-bottom: 20px; /* Space for the button, adjust as needed */
+            position: relative;
+            /*margin-bottom: 20px;*/ /* Space for the button, adjust as needed */
         }
 
         .copy-button {
@@ -49,6 +50,11 @@
             <label>
                 <input type="radio" name="inputType" value="string" checked> Input String
             </label>
+            <label>
+                <input type="checkbox" id="wasm" name="codeKind" value="wasm"> Use WASM <span id="extraWasmLabel"></span>
+            </label>
+        </div>
+        <div class="form-row">
             <button type="button" id="synthesizeButton">Synthesize</button>
             <button type="button" id="cancelButton" disabled>Cancel</button>
             <span id="status" class="status-span hidden"></span>
@@ -59,16 +65,19 @@
     <div id="error" class="error hidden"></div>
     <div id="output" class="hidden">
       <div id="stdoutContainer" class="code-container">
-        <code id="stdout"></code>
+        <code id="stdout" class="code"></code>
         <button class="copy-button" data-target="stdout">Copy</button>
       </div>
       <div id="stderrContainer" class="code-container hidden">
-        <code id="stderr"></code>
+        <code id="stderr" class="code"></code>
         <button class="copy-button" data-target="stderr">Copy</button>
       </div>
     </div>
     <script src="version.js"></script>
+    <script src="https://unpkg.com/wasm-feature-detect/dist/umd/index.js"></script>
     <script src="main.js"></script>
+    <!-- N.B. disable-wasm-option.js must come after main.js so that the wasm box is unchecked correctly after parsing argv -->
+    <script src="disable-wasm-option.js"></script>
     <script src="copy-button.js"></script>
 </body>
 </html>
