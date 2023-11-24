@@ -255,7 +255,7 @@ jobs:
     - name: Download a Build Artifact
       uses: actions/download-artifact@v3
       with:
-        name: ExtractionJsOfOCaml-soruce-${{ matrix.coq-version }}
+        name: ExtractionJsOfOCaml-source-${{ matrix.coq-version }}
         path: src/ExtractionJsOfOCaml
     - name: standalone-wasm-of-ocaml
       run: |
