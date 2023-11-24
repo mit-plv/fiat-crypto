@@ -110,7 +110,7 @@ standalone-haskell: standalone-unified-haskell standalone-separate-haskell
 standalone-unified-haskell: $(UNIFIED_STANDALONE_HASKELL:%=src/ExtractionHaskell/%)
 standalone-separate-haskell: $(SEPARATE_STANDALONE_HASKELL:%=src/ExtractionHaskell/%)
 standalone-js-of-ocaml: $(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.js)
-standalone-wasm-of-ocaml: $(STANDALONE_WASM_OF_OCAML:%=src/ExtractionJsOfOCaml/%.wasm)
+standalone-wasm-of-ocaml: $(STANDALONE_WASM_OF_OCAML:%=src/ExtractionJsOfOCaml/%.wasm) $(STANDALONE_WASM_OF_OCAML:%=src/ExtractionJsOfOCaml/%.wat.gz)
 
 uninstall-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
 uninstall-standalone-unified-ocaml: FILESTOINSTALL=$(UNIFIED_OCAML_BINARIES)
