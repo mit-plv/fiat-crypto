@@ -214,11 +214,72 @@ jobs:
         name: fiat-html-js-of-ocaml
         path: fiat-html
 
-  deploy-js-of-ocaml:
-    needs: build-js-of-ocaml
+  build-wasm-of-ocaml:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        coq-version: [ 'master' ]
+        ocaml-compiler: [ '4.14.1' ]
+    concurrency:
+      group: ${{ github.workflow }}-build-wasm-of-ocaml-${{ matrix.coq-version }}-${{ matrix.ocaml-compiler }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Set up OCaml
+      uses: ocaml/setup-ocaml@v2
+      with:
+        ocaml-compiler: ${{ matrix.ocaml-compiler }}
+    - name: echo build params
+      run: etc/ci/describe-system-config.sh
+    - name: Set up binaryen >= 116
+      uses: acifani/setup-tinygo@v2
+      with:
+        tinygo-version: '0.30.0'
+        binaryen-version: '116'
+    - name: set up custom dune and wasm_of_ocaml
+      run: |
+        eval $(opam env)
+        opam update -y
+        opam pin add -y 'https://github.com/ocaml-wasm/dune.git#wasm'
+        opam pin add -y --no-action --cli=2.1 --with-version 5.3.0 https://github.com/ocaml-wasm/wasm_of_ocaml.git
+    - name: install wasm_of_ocaml
+      run: |
+        eval $(opam env)
+        opam install -y wasm_of_ocaml-compiler ocamlfind
+    - name: echo build params
+      run: etc/ci/describe-system-config.sh
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: ExtractionJsOfOCaml-source-${{ matrix.coq-version }}
+        path: src/ExtractionJsOfOCaml
+    - name: standalone-wasm-of-ocaml
+      run: |
+        eval $(opam env)
+        etc/ci/github-actions-make.sh --warnings -f Makefile.standalone -j2 standalone-wasm-of-ocaml
+    - name: install-standalone-wasm-of-ocaml
+      run: make -f Makefile.standalone install-standalone-wasm-of-ocaml
+    - name: upload wasm_of_ocaml build files
+      uses: actions/upload-artifact@v3
+      with:
+        name: ExtractionJsOfOCaml-${{ matrix.coq-version }}-ocaml-${{ matrix.ocaml-compiler }}+wasm
+        path: src/ExtractionJsOfOCaml
+      if: always ()
+    - name: Upload wasm_of_ocaml outputs
+      uses: actions/upload-artifact@v3
+      with:
+        name: fiat-html-wasm-of-ocaml
+        path: fiat-html
+
+  deploy-js-wasm-of-ocaml:
+    needs: [build-js-of-ocaml, build-wasm-of-ocaml]
     runs-on: ubuntu-latest
     concurrency:
-      group: ${{ github.workflow }}-deploy-js-of-ocaml-${{ github.head_ref || github.run_id }}
+      group: ${{ github.workflow }}-deploy-js-wasm-of-ocaml-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
     steps:
     - uses: actions/checkout@v4
@@ -231,12 +292,21 @@ jobs:
       with:
         name: fiat-html-js-of-ocaml
         path: fiat-html
+    - run: find fiat-html
+    - run: ls -la fiat-html
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: fiat-html-wasm-of-ocaml
+        path: fiat-html
+    - run: find fiat-html
+    - run: ls -la fiat-html
     - run: make -f Makefile.js-html fiat-html/version.js
     - run: find fiat-html
     - run: ls -la fiat-html
     - name: backup .gitignore
       run: mv .gitignore{,.bak}
-    - name: Deploy js_of_ocaml 🚀 ${{ ( github.ref != 'refs/heads/master' && '(dry run)' ) || '' }}
+    - name: Deploy js_of_ocaml and wasm_of_ocaml 🚀 ${{ ( github.ref != 'refs/heads/master' && '(dry run)' ) || '' }}
       uses: JamesIves/github-pages-deploy-action@v4.4.3
       with:
         branch: gh-pages # The branch the action should deploy to.
@@ -424,7 +494,7 @@ jobs:
 
   docker-check-all:
     runs-on: ubuntu-latest
-    needs: [build, validate, build-js-of-ocaml, deploy-js-of-ocaml, generated-files, standalone-haskell, test-amd64, test-standalone, publish-standalone-dry-run]
+    needs: [build, validate, build-js-of-ocaml, build-wasm-of-ocaml, deploy-js-wasm-of-ocaml, generated-files, standalone-haskell, test-amd64, test-standalone, publish-standalone-dry-run]
     if: always()
     steps:
     - run: echo 'build passed'
@@ -433,8 +503,10 @@ jobs:
       if: ${{ needs.validate.result == 'success' }}
     - run: echo 'build-js-of-ocaml passed'
       if: ${{ needs.build-js-of-ocaml.result == 'success' }}
-    - run: echo 'deploy-js-of-ocaml passed'
-      if: ${{ needs.deploy-js-of-ocaml.result == 'success' }}
+    - run: echo 'build-wasm-of-ocaml passed'
+      if: ${{ needs.build-wasm-of-ocaml.result == 'success' }}
+    - run: echo 'deploy-js-wasm-of-ocaml passed'
+      if: ${{ needs.deploy-js-wasm-of-ocaml.result == 'success' }}
     - run: echo 'generated-files passed'
       if: ${{ needs.generated-files.result == 'success' }}
     - run: echo 'standalone-haskell passed'
@@ -451,8 +523,10 @@ jobs:
       if: ${{ needs.validate.result != 'success' }}
     - run: echo 'build-js-of-ocaml failed' && false
       if: ${{ needs.build-js-of-ocaml.result != 'success' }}
-    - run: echo 'deploy-js-of-ocaml failed' && false
-      if: ${{ needs.deploy-js-of-ocaml.result != 'success' }}
+    - run: echo 'build-wasm-of-ocaml failed' && false
+      if: ${{ needs.build-wasm-of-ocaml.result != 'success' }}
+    - run: echo 'deploy-js-wasm-of-ocaml failed' && false
+      if: ${{ needs.deploy-js-wasm-of-ocaml.result != 'success' }}
     - run: echo 'generated-files failed' && false
       if: ${{ needs.generated-files.result != 'success' }}
     - run: echo 'standalone-haskell failed' && false

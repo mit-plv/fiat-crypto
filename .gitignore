@@ -208,6 +208,9 @@ src/ExtractionJsOfOCaml/*.ml
 src/ExtractionJsOfOCaml/*.mli
 src/ExtractionJsOfOCaml/*.js
 src/ExtractionJsOfOCaml/*.map
+src/ExtractionJsOfOCaml/*.wasm
+src/ExtractionJsOfOCaml/*.wat
+src/ExtractionJsOfOCaml/*.wat.gz
 src/Rewriter/PerfTesting/Specific/generated/*.v
 src/Rewriter/PerfTesting/Specific/generated/*.log
 src/Rewriter/PerfTesting/Specific/generated/*.sh
@@ -222,6 +225,10 @@ fiat-amd64/*.description
 fiat-amd64/*.invocation
 fiat-html/fiat_crypto.js
 fiat-html/fiat_crypto.map
+fiat-html/wasm_fiat_crypto.js
+fiat-html/wasm_fiat_crypto.wat
+fiat-html/wasm_fiat_crypto.wat.gz
+fiat-html/wasm_fiat_crypto.wasm
 fiat-html/version.js
 /Makefile.test-amd64-files.mk
 
