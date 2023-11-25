@@ -78,7 +78,8 @@ Class unsaturated_solinas_ops
         Field.to_bytes
         to_bytes_insizes to_bytes_outsizes (to_bytes_inlengths n);
   }.
-Arguments unsaturated_solinas_ops {_ _ _ _ _ _ _ _ _ _ _} n.
+(* TODO(wrharris): review: added two `_` to account for new function names. Need to add another for mul_split. *)
+Arguments unsaturated_solinas_ops {_ _ _ _ _ _ _ _ _ _ _ _ _} n.
 
 (** We need to tell [check_args] that we are requesting these functions in order to get the relevant properties out *)
 Notation necessary_requests := ["to_bytes"; "from_bytes"]%string (only parsing).
@@ -86,7 +87,8 @@ Notation necessary_requests := ["to_bytes"; "from_bytes"]%string (only parsing).
 Section UnsaturatedSolinas.
   Context
   {width BW word mem locals env ext_spec error}
-  {parameters_sentinel : @parameters width BW word mem locals env ext_spec default_varname_gen error}
+  (* TODO(wrharris): review: added "add_carryx", "sub_borrowx" *)
+  {parameters_sentinel : @parameters width BW word mem locals env ext_spec default_varname_gen "add_carryx" "sub_borrowx" error}
   {field_parameters : FieldParameters}
   {ok : Types.ok}.
 
@@ -314,8 +316,9 @@ Section UnsaturatedSolinas.
     pose proof carry_mul_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq mul_op)
       as Hcorrect.
+    (* TODO(wrharris): prove admitted cases *)
     eapply list_binop_correct with (res:=res mul_op);
-    handle_side_conditions; [ | | loosen_bounds | bounds_length ].
+    handle_side_conditions; [ | | loosen_bounds | bounds_length | admit | admit ].
     { (* output *value* is correct *)
       intros.
       specialize_correctness_hyp Hcorrect.
@@ -323,7 +326,7 @@ Section UnsaturatedSolinas.
       FtoZ; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-  Qed.
+  Admitted.
 
   Lemma square_func_correct :
     valid_func (res square_op _) ->
@@ -335,15 +338,16 @@ Section UnsaturatedSolinas.
     pose proof carry_square_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq square_op)
       as Hcorrect.
+    (* TODO(wrharris): prove admitted cases *)
     eapply list_unop_correct with (res:=res square_op);
-      handle_side_conditions; [ | | loosen_bounds| bounds_length ].
+      handle_side_conditions; [ | | loosen_bounds| bounds_length | admit | admit ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       rewrite F.pow_2_r. FtoZ; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-  Qed.
+  Admitted.
 
   Lemma add_func_correct :
     valid_func (res add_op _) ->
@@ -356,7 +360,7 @@ Section UnsaturatedSolinas.
          _ _ _ _ _ ltac:(eassumption) _ (res_eq add_op)
       as Hcorrect.
     eapply list_binop_correct with (res:=res add_op);
-    handle_side_conditions; [ | | loosen_bounds | bounds_length ].
+    handle_side_conditions; [ | | loosen_bounds | bounds_length | admit | admit ].
     { (* output *value* is correct *)
       intros.
       specialize_correctness_hyp Hcorrect.
@@ -364,7 +368,7 @@ Section UnsaturatedSolinas.
       FtoZ; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-  Qed.
+  Admitted.
 
   Lemma sub_func_correct :
     valid_func (res sub_op _) ->
@@ -377,7 +381,7 @@ Section UnsaturatedSolinas.
          _ _ _ _ _ ltac:(eassumption) _ (res_eq sub_op)
       as Hcorrect.
     eapply list_binop_correct with (res:=res sub_op);
-    handle_side_conditions; [ | | loosen_bounds | bounds_length ].
+    handle_side_conditions; [ | | loosen_bounds | bounds_length | admit | admit ].
     { (* output *value* is correct *)
       intros.
       specialize_correctness_hyp Hcorrect.
@@ -385,7 +389,7 @@ Section UnsaturatedSolinas.
       rewrite <-F.of_Z_sub. FtoZ. congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-  Qed.
+  Admitted.
 
   Lemma opp_func_correct :
     valid_func (res opp_op _) ->
@@ -398,14 +402,14 @@ Section UnsaturatedSolinas.
       as Hcorrect.
 
     eapply list_unop_correct with (res:=res opp_op);
-      handle_side_conditions; [ | | loosen_bounds | bounds_length ].
+      handle_side_conditions; [ | | loosen_bounds | bounds_length | admit | admit ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ. rewrite Z.sub_0_l; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-  Qed.
+  Admitted.
 
   Lemma scmula24_func_correct :
     valid_func (res scmula24_op _) ->
@@ -420,14 +424,14 @@ Section UnsaturatedSolinas.
       as Hcorrect.
 
     eapply list_unop_correct with (res:=res scmula24_op);
-      handle_side_conditions; [ | | loosen_bounds | bounds_length ].
+      handle_side_conditions; [ | | loosen_bounds | bounds_length | admit | admit ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ. congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-  Qed.
+  Admitted.
 
   Lemma list_Z_bounded_by_unsigned (xs : list (@Interface.word.rep _ word)) :
     list_Z_bounded_by
@@ -457,7 +461,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
       as Hcorrect.
 
     eapply felem_copy_correct;
-      repeat handle_side_conditions; [ | ]; intros.
+      repeat handle_side_conditions; [ | | admit | admit ]; intros.
     { (* output *value* is correct *)
       unshelve erewrite (proj1 (Hcorrect _ _)); cycle 1.
       { rewrite map_map, List.map_ext_id; trivial; intros.
@@ -465,7 +469,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
       { subst n. exact (list_Z_bounded_by_unsigned x). } }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-  Qed.
+  Admitted.
 
   Lemma from_word_func_correct :
     valid_func (res from_word_op _) ->
@@ -506,7 +510,11 @@ from_bytes_func_eq from_bytes_func add_func_eq.
       rewrite <- M_eq in *; cbv [M] in *; eapply F.eq_of_Z_iff in H0.
       trivial. }
     { eauto using relax_list_Z_bounded_by, tight_bounds_tighter_than. }
-  Qed.
+    { (* add_carryx: *)
+      admit. }
+    { (* sub_borrowx: *)
+      admit. }
+  Admitted.
 
   Lemma from_bytes_func_correct :
     valid_func (res from_bytes_op _) ->
@@ -520,7 +528,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
       as Hcorrect.
 
     eapply Signature.from_bytes_correct with (res:=res from_bytes_op);
-      handle_side_conditions; [ loosen_bounds | bounds_length | | | ].
+      handle_side_conditions; [ loosen_bounds | bounds_length | | | | admit | admit ].
     { intros. erewrite length_list_Z_bounded_by, length_byte_bounds; trivial. }
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
@@ -528,7 +536,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
       FtoZ. simpl_map_unsigned. congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-  Qed.
+  Admitted.
 
   Lemma to_bytes_func_correct :
     valid_func (res to_bytes_op _) ->
@@ -541,7 +549,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
       as Hcorrect.
 
     eapply Signature.to_bytes_correct with (res:=res to_bytes_op);
-      handle_side_conditions; [ | | | ].
+      handle_side_conditions; [ | | | | admit | admit ].
     {
       intros. eapply relax_list_Z_bounded_by; [| eauto]. apply byte_bounds_tighter_than.
     }
@@ -563,7 +571,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
       apply partition_bounded_by_prime_bytes_bounds.
       apply Z.mod_pos_bound.
       apply modulus_fits_in_bytes. }
-  Qed.
+  Admitted.
 
 End UnsaturatedSolinas.
 

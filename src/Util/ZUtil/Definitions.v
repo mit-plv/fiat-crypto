@@ -96,6 +96,9 @@ Module Z.
        then mul_split_at_bitwidth (Z.log2 s) x y
        else ((x * y) mod s, (x * y) / s).
 
+  Definition mul_low (s x y : Z) : Z
+    := fst (mul_split s x y).
+
   Definition mul_high (s x y : Z) : Z
     := snd (mul_split s x y).
 

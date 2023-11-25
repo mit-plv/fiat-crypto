@@ -188,6 +188,8 @@ Definition Bedrock2_ToFunctionLines
         (env:=SortedListString.map _)
         (ext_spec:=fun _ _ _ _ _ => False)
         (varname_gen := default_varname_gen)
+        (add_carryx_funcname := "add_carryx")
+        (sub_borrowx_funcname := "sub_borrowx")
         (error := expr.var Defaults.ERROR)
         := tt in
       let innames := make_innames (parameters_sentinel:=p)(inname_gen:=default_inname_gen) t in
