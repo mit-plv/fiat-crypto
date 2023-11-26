@@ -640,7 +640,7 @@ For `Language.v`, there is a semi-arbitrary split between two files
 
 - `Wf.v`: Depends on `Inversion.v`
   Defines:
-  + expr.wf, expr.Wf, expr.wf3, expr.Wf3
+  + expr.wf, expr.Wf, expr.wf3, expr.wf4, expr.Wf3, expr.Wf4
   + GeneralizeVar.Flat.wf
   + `expr.inversion_wf` (and variants), which invert `wf` hypotheses
   + `expr.wf_t` (and variants wf_unsafe_t and wf_safe_t) which make
