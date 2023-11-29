@@ -1110,7 +1110,7 @@ Module SolinasReduction.
       weight x1 <= weight x2.
     Proof using Type.
       intros H.
-      apply le_lt_or_eq in H.
+      apply Nat.lt_eq_cases in H.
       intuition.
       pose proof (weight_mono x1 x2 ltac:(auto)); lia.
       subst; lia.

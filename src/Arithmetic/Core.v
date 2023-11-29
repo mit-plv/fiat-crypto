@@ -858,8 +858,8 @@ Module Positional.
     destruct (dec (i < S n)%nat);
       break_innermost_match; cbn [fst snd] in *; Z.ltb_to_lt; [ | rewrite IHn | | rewrite IHn ];
         break_innermost_match;
-        rewrite ?Min.min_l in * by lia;
-        rewrite ?Min.min_r in * by lia;
+        rewrite ?Nat.min_l in * by lia;
+        rewrite ?Nat.min_r in * by lia;
         eauto with lia.
     { rewrite weight_mul_iff in * by auto.
       destruct_head'_or; try lia.

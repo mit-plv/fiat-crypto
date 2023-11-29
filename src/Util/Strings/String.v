@@ -1,4 +1,5 @@
 Require Import Coq.micromega.Lia.
+Require Import Coq.Arith.PeanoNat.
 Require Import Coq.Strings.String.
 Require Import Coq.Strings.Ascii.
 Require Import Crypto.Util.Strings.Ascii.
@@ -130,7 +131,7 @@ Lemma length_substring n1 n2 s
 Proof.
   revert n1 n2; induction s as [|a s IHs]; intros; cbn.
   { destruct n1, n2; cbn; reflexivity. }
-  { destruct n1; [ destruct n2 | ]; cbn; rewrite ?IHs, <- ?Minus.minus_n_O; reflexivity. }
+  { destruct n1; [ destruct n2 | ]; cbn; rewrite ?IHs, <- ?Nat.sub_0_r; reflexivity. }
 Qed.
 
 Lemma length_append s1 s2 : length (s1 ++ s2) = length s1 + length s2.

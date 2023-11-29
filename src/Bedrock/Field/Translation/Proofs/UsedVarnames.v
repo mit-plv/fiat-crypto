@@ -52,7 +52,7 @@ Section UsedVarnames.
              | |- exists _, _ => eexists; solve [eauto with lia]
              end; [ ].
     match goal with H : _ <= _ |- _ =>
-                    apply le_lt_or_eq in H; destruct H; [right | left]
+                    apply Nat.lt_eq_cases in H; destruct H; [right | left]
     end.
     { eexists; eauto with lia. }
     { congruence. }

@@ -230,13 +230,13 @@ Module Z.
     rewrite Z.shiftl_mul_pow2 by apply Nat2Z.is_nonneg.
     replace (b * 2 ^ Z.of_nat n) with
       ((b * 2 ^ Z.of_nat (n - m)) * 2 ^ Z.of_nat m) by
-      (rewrite (le_plus_minus m n) at 2; try assumption;
-       rewrite Nat2Z.inj_add, Z.pow_add_r by apply Nat2Z.is_nonneg; ring).
+        (rewrite <-(Nat.sub_add m n H) at 2;
+          rewrite Nat2Z.inj_add, Z.pow_add_r by apply Nat2Z.is_nonneg; ring).
     rewrite Z.mod_add by (pose proof (Z.pow_pos_nonneg 2 (Z.of_nat m)); lia).
     symmetry. apply Znumtheory.Zmod_div_mod; try (apply Z.pow_pos_nonneg; lia).
-    rewrite (le_plus_minus m n) by assumption.
+    rewrite <-(Nat.sub_add m n) by assumption.
     rewrite Nat2Z.inj_add, Z.pow_add_r by apply Nat2Z.is_nonneg.
-    apply Z.divide_factor_l.
+    now rewrite Z.mul_comm; apply Z.divide_factor_l.
   Qed.
 
   Lemma shiftl_add x y z : 0 <= z -> (x + y) << z = (x << z) + (y << z).
