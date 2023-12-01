@@ -131,7 +131,7 @@ Lemma length_substring n1 n2 s
 Proof.
   revert n1 n2; induction s as [|a s IHs]; intros; cbn.
   { destruct n1, n2; cbn; reflexivity. }
-  { destruct n1; [ destruct n2 | ]; cbn; rewrite ?IHs, <- ?Nat.sub_0_r; reflexivity. }
+  { destruct n1; [ destruct n2 | ]; cbn; rewrite ?IHs, ?Nat.sub_0_r; reflexivity. }
 Qed.
 
 Lemma length_append s1 s2 : length (s1 ++ s2) = length s1 + length s2.
