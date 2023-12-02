@@ -64,6 +64,23 @@ Module Compilers.
         : ZRange.type.option.is_bounded_by x v = true
           -> type.related_hetero (fun t x v => ZRange.type.base.option.is_bounded_by x v = true) x v.
         Proof. induction t; cbn in *; intuition congruence. Qed.
+
+        Lemma is_bounded_by_impl_eqv_refl t
+          (x : ZRange.type.option.interp t) (v : type.interp base.interp t)
+          : ZRange.type.option.is_bounded_by x v = true
+            -> v == v.
+        Proof. induction t; cbn; try reflexivity; try congruence. Qed.
+
+        Lemma andb_bool_for_each_lhs_of_arrow_is_bounded_by_impl_and_for_each_lhs_of_arrow_eqv_refl t
+          (x : type.for_each_lhs_of_arrow ZRange.type.option.interp t) (v : type.for_each_lhs_of_arrow (type.interp base.interp) t)
+          : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) x v = true
+            -> type.and_for_each_lhs_of_arrow (@type.eqv) v v.
+        Proof.
+          induction t; cbn; [ reflexivity | ].
+          rewrite Bool.andb_true_iff.
+          intros [H0 H1].
+          split; eauto using is_bounded_by_impl_eqv_refl.
+        Qed.
       End option.
     End type.
 
@@ -244,7 +261,7 @@ Module Compilers.
                 -- f_equal. assumption.
                 -- intros v H. apply IH2. assumption.
           Qed.
-          
+
           Local Ltac handle_lt_le_t_step_fast :=
             first [ match goal with
                     | [ H : (?a <= ?b)%Z, H' : (?b <= ?a)%Z |- _ ]
