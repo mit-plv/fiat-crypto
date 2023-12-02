@@ -1,4 +1,5 @@
 Require Import Coq.Classes.Morphisms.
+Require Import Coq.Arith.PeanoNat.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
@@ -268,7 +269,7 @@ Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
                (Hlength (to_list a ta) (to_list b tb) (length_to_list ta) (length_to_list tb)).
 
 Definition map2 {n A B C} (f:A -> B -> C) (xs:tuple A n) (ys:tuple B n) : tuple C n
-  := on_tuple2 (map2 f) (fun la lb pfa pfb => eq_trans (@map2_length _ _ _ _ la lb) (eq_trans (f_equal2 _ pfa pfb) (Min.min_idempotent _))) xs ys.
+  := on_tuple2 (map2 f) (fun la lb pfa pfb => eq_trans (@map2_length _ _ _ _ la lb) (eq_trans (f_equal2 _ pfa pfb) (Nat.min_idempotent _))) xs ys.
 
 Lemma to_list'_ext {n A} (xs ys:tuple' A n) : to_list' n xs = to_list' n ys -> xs = ys.
 Proof using Type.

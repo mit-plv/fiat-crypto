@@ -715,8 +715,8 @@ Module Compilers.
                            | break_innermost_match_hyps_step
                            | congruence
                            | rewrite List.combine_length in *
-                           | rewrite NPeano.Nat.min_r in * by lia
-                           | rewrite NPeano.Nat.min_l in * by lia
+                           | rewrite Nat.min_r in * by lia
+                           | rewrite Nat.min_l in * by lia
                            | progress expr.inversion_wf_one_constr
                            | progress expr.invert_match
                            | match goal with

@@ -2944,7 +2944,7 @@ Proof.
                         | [ |- List.map word.unsigned _ = _ ]
                           => saturate_lengths;
                              adjust_Foralls_firstn_skipn;
-                             try rewrite ListUtil.List.firstn_firstn, Min.min_idempotent;
+                             try rewrite ListUtil.List.firstn_firstn, Nat.min_idempotent;
                              try eassumption
                         | _ => idtac
                         end .. ];

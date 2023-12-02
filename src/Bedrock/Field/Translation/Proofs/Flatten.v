@@ -1,4 +1,5 @@
 Require Import Coq.Strings.String.
+Require Import Coq.Arith.PeanoNat.
 Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
 Require Import bedrock2.Syntax.
@@ -55,7 +56,7 @@ Section Flatten.
              end.
     erewrite <-IHt1, <-IHt2 by ecancel_assumption.
     rewrite skipn_length, firstn_length.
-    apply Min.min_case_strong; intros; lia.
+    apply Nat.min_case_strong; intros; lia.
   Qed.
 
   (* given these structures have the same type, they'll have the same size in
@@ -80,7 +81,7 @@ Section Flatten.
              end.
     erewrite <-IHt2, <-flatten_base_samelength by ecancel_assumption.
     rewrite skipn_length, firstn_length.
-    apply Min.min_case_strong; intros; lia.
+    apply Nat.min_case_strong; intros; lia.
   Qed.
 
   Lemma of_list_zip_flatten_argnames {t}
@@ -278,6 +279,6 @@ Section Flatten.
              end.
     erewrite <-IHt1, <-IHt2 by ecancel_assumption.
     rewrite skipn_length, firstn_length.
-    apply Min.min_case_strong; intros; lia.
+    apply Nat.min_case_strong; intros; lia.
   Qed.
 End Flatten.
