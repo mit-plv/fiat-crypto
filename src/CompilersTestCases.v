@@ -63,34 +63,34 @@ Module testrewrite.
                           ((\ x , expr_let y := ##5 in $$y + ($$y + (#ident.fst @ $$x + #ident.snd @ $$x)))
                              @ (##1, ##7))%expr).
 
-  Redirect "log" Eval cbv in partial.eval_with_bound partial.default_relax_zrange false (@ident.is_comment) false
+  Redirect "log" Eval cbv in partial.EvalWithBound partial.default_relax_zrange false (@ident.is_comment) false
                                       (RewriteRules.RewriteNBE RewriteRules.default_opts (fun var =>
                 (\z , ((\ x , expr_let y := ##5 in $$y + ($$z + (#ident.fst @ $$x + #ident.snd @ $$x)))
-                         @ (##1, ##7)))%expr) _)
+                         @ (##1, ##7)))%expr))
                 (Datatypes.Some r[0~>100]%zrange, Datatypes.tt).
 End testrewrite.
 Module testpartial.
   Import expr.
   Import ident.
 
-  Redirect "log" Eval compute in partial.eval
-                          (#ident.fst @ (expr_let x := ##10 in ($$x, $$x)))%expr.
+  Redirect "log" Eval compute in partial.Eval
+                          (fun _ => #ident.fst @ (expr_let x := ##10 in ($$x, $$x)))%expr.
 
   Notation "x + y" := (@expr.Ident base.type ident _ _ (ident.Z_add) @ x @ y)%expr : expr_scope.
 
-  Redirect "log" Eval compute in partial.eval
-                          ((\ x , expr_let y := ##5 in #ident.fst @ $$x + (#ident.fst @ $$x + ($$y + $$y)))
+  Redirect "log" Eval compute in partial.Eval
+                          (fun _ => (\ x , expr_let y := ##5 in #ident.fst @ $$x + (#ident.fst @ $$x + ($$y + $$y)))
                              @ (##1, ##1))%expr.
 
-  Redirect "log" Eval compute in partial.eval
-                          ((\ x , expr_let y := ##5 in $$y + ($$y + (#ident.fst @ $$x + #ident.snd @ $$x)))
+  Redirect "log" Eval compute in partial.Eval
+                          (fun _ => (\ x , expr_let y := ##5 in $$y + ($$y + (#ident.fst @ $$x + #ident.snd @ $$x)))
                              @ (##1, ##7))%expr.
 
 
-  Redirect "log" Eval cbv in partial.eval_with_bound
+  Redirect "log" Eval cbv in partial.EvalWithBound
                 partial.default_relax_zrange
                 false (@ident.is_comment) false
-                (\z , ((\ x , expr_let y := ##5 in $$y + ($$z + (#ident.fst @ $$x + #ident.snd @ $$x)))
+                (fun _ => \z , ((\ x , expr_let y := ##5 in $$y + ($$z + (#ident.fst @ $$x + #ident.snd @ $$x)))
                          @ (##1, ##7)))%expr
                 (Datatypes.Some r[0~>100]%zrange, Datatypes.tt).
 End testpartial.
