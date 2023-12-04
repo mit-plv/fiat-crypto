@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ZUtil.Definitions.
 
 Require Import Crypto.Util.Notations.
@@ -167,6 +168,39 @@ Module ZRange.
     cbn [lower upper].
     rewrite Z.max_comm; reflexivity.
   Qed.
+
+  Module ToConstant.
+    Module Option.
+      Definition union {A} (A_beq : A -> A -> bool) (x y : option A) : option A
+        := if option_beq A_beq x y
+           then x
+           else None.
+
+      Definition apply_to_range {A} (A_beq : A -> A -> bool) (f : BinInt.Z -> option A) (v : zrange) : option A
+        := let (l, u) := eta v in
+           union A_beq (f l) (f u).
+
+      Definition two_corners {A} (A_beq : A -> A -> bool) (f : Z -> option A) (v : zrange) : option A
+        := apply_to_range A_beq f v.
+      Definition four_corners {A} (A_beq : A -> A -> bool) (f : Z -> Z -> option A) (x y : zrange) : option A
+        := apply_to_range A_beq (fun x => two_corners A_beq (f x) y) x.
+      Definition eight_corners {A} (A_beq : A -> A -> bool) (f : Z -> Z -> Z -> option A) (x y z : zrange) : option A
+        := apply_to_range A_beq (fun x => four_corners A_beq (f x) y z) x.
+    End Option.
+
+    Definition union {A} (A_beq : A -> A -> bool) (x y : A) : option A
+      := ToConstant.Option.union A_beq (Some x) (Some y).
+
+    Definition apply_to_range {A} (A_beq : A -> A -> bool) (f : BinInt.Z -> A) (v : zrange) : option A
+      := Option.apply_to_range A_beq (fun x => Some (f x)) v.
+
+    Definition two_corners {A} (A_beq : A -> A -> bool) (f : Z -> A) (v : zrange) : option A
+      := Option.two_corners A_beq (fun x => Some (f x)) v.
+    Definition four_corners {A} (A_beq : A -> A -> bool) (f : Z -> Z -> A) (x y : zrange) : option A
+      := Option.four_corners A_beq (fun x y => Some (f x y)) x y.
+    Definition eight_corners {A} (A_beq : A -> A -> bool) (f : Z -> Z -> Z -> A) (x y z : zrange) : option A
+      := Option.eight_corners A_beq (fun x y z => Some (f x y z)) x y z.
+  End ToConstant.
 
   Definition extend_land_lor_bounds (v : zrange) : zrange
     := let (l, u) := eta v in
