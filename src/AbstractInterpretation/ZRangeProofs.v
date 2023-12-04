@@ -65,11 +65,29 @@ Module Compilers.
           -> type.related_hetero (fun t x v => ZRange.type.base.option.is_bounded_by x v = true) x v.
         Proof. induction t; cbn in *; intuition congruence. Qed.
 
+        Lemma is_bounded_by_impl_related_hetero_and_Proper {skip_base} t
+              (x : ZRange.type.option.interp t) (v : type.interp base.interp t)
+        : ZRange.type.option.is_bounded_by x v = true
+          -> type.related_hetero_and_Proper (skip_base:=skip_base) (fun _ => eq) (fun _ => eq) (fun t x v => ZRange.type.base.option.is_bounded_by x v = true) x v.
+        Proof. induction t; cbn in *; break_innermost_match; intuition congruence. Qed.
+
         Lemma is_bounded_by_impl_eqv_refl t
           (x : ZRange.type.option.interp t) (v : type.interp base.interp t)
           : ZRange.type.option.is_bounded_by x v = true
+            -> x == x /\ v == v.
+        Proof. induction t; cbn; split; try reflexivity; try congruence. Qed.
+
+        Lemma is_bounded_by_impl_eqv_refl1 t
+          (x : ZRange.type.option.interp t) (v : type.interp base.interp t)
+          : ZRange.type.option.is_bounded_by x v = true
+            -> x == x.
+        Proof. intros; eapply is_bounded_by_impl_eqv_refl; eassumption. Qed.
+
+        Lemma is_bounded_by_impl_eqv_refl2 t
+          (x : ZRange.type.option.interp t) (v : type.interp base.interp t)
+          : ZRange.type.option.is_bounded_by x v = true
             -> v == v.
-        Proof. induction t; cbn; try reflexivity; try congruence. Qed.
+        Proof. intros; eapply is_bounded_by_impl_eqv_refl; eassumption. Qed.
 
         Lemma andb_bool_for_each_lhs_of_arrow_is_bounded_by_impl_and_for_each_lhs_of_arrow_eqv_refl t
           (x : type.for_each_lhs_of_arrow ZRange.type.option.interp t) (v : type.for_each_lhs_of_arrow (type.interp base.interp) t)
@@ -79,7 +97,7 @@ Module Compilers.
           induction t; cbn; [ reflexivity | ].
           rewrite Bool.andb_true_iff.
           intros [H0 H1].
-          split; eauto using is_bounded_by_impl_eqv_refl.
+          split; eauto using is_bounded_by_impl_eqv_refl2.
         Qed.
       End option.
     End type.
