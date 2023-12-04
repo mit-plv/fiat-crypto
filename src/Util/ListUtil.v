@@ -337,6 +337,19 @@ Module Export List.
   (** new operations *)
   Definition enumerate {A} (ls : list A) : list (nat * A)
     := combine (seq 0 (length ls)) ls.
+
+  Section map2.
+    Context {A B C}
+      (f : A -> B -> C).
+
+    Fixpoint map2 (la : list A) (lb : list B) : list C :=
+      match la, lb with
+      | nil, _ => nil
+      | _, nil => nil
+      | a :: la', b :: lb'
+        => f a b :: map2 la' lb'
+      end.
+  End map2.
 End List.
 
 #[global]
@@ -370,19 +383,6 @@ Definition list_beq_hetero {A B} (f : A -> B -> bool)
 Definition sum_firstn l n := fold_right Z.add 0%Z (firstn n l).
 
 Definition sum xs := sum_firstn xs (length xs).
-
-Section map2.
-  Context {A B C}
-          (f : A -> B -> C).
-
-  Fixpoint map2 (la : list A) (lb : list B) : list C :=
-    match la, lb with
-    | nil, _ => nil
-    | _, nil => nil
-    | a :: la', b :: lb'
-      => f a b :: map2 la' lb'
-    end.
-End map2.
 
 (* xs[n] := f xs[n] *)
 Fixpoint update_nth {T} n f (xs:list T) {struct n} :=
@@ -3481,7 +3481,7 @@ Module Reifiable.
       intros H. induction l as [| x' l'].
       - simpl in H. destruct H.
       - simpl in H. destruct H as [H|H].
-        + rewrite H. clear H. simpl. destruct (existsb (eqb x) (nodupb l')) eqn:E. 
+        + rewrite H. clear H. simpl. destruct (existsb (eqb x) (nodupb l')) eqn:E.
           -- rewrite existsb_eqb_true_iff in E. rewrite <- nodupb_in_iff in E.
              apply IHl' in E. apply E.
           -- exists []. exists (nodupb l'). split.
