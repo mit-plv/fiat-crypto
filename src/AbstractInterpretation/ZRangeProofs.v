@@ -41,6 +41,7 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.PrintGoal.
+Require Import Crypto.Util.Tactics.DoWithHyp.
 Require Import Crypto.Language.PreExtra.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.AbstractInterpretation.ZRange.
@@ -58,6 +59,61 @@ Module Compilers.
         Module option.
           Lemma is_bounded_by_None t v : ZRange.type.base.option.is_bounded_by (@ZRange.type.base.option.None t) v = true.
           Proof. induction t; cbn; cbv [andb]; break_innermost_match; eauto. Qed.
+
+          Lemma tighter_than_union t (rx ry : ZRange.type.base.option.interp t) :
+            ZRange.type.base.option.is_tighter_than rx (ZRange.type.base.option.union rx ry) = true /\
+              ZRange.type.base.option.is_tighter_than ry (ZRange.type.base.option.union rx ry) = true.
+          Proof.
+            induction t; [destruct t|..]; destruct rx, ry;
+              cbn [
+                  ZRange.type.base.interp
+                    ZRange.type.base.option.interp
+                    ZRange.type.base.option.is_tighter_than
+                    ZRange.type.base.is_tighter_than
+                    ZRange.type.base.option.union
+                    Option.map2
+                    Option.bind2
+                ] in *; auto 2.
+            all: fold (@ZRange.type.base.option.interp) in *.
+            all: break_innermost_match; reflect_hyps; inversion_option; subst; auto 2.
+            all: split_and.
+            all: cbn [option_beq].
+            all: rewrite ?Bool.andb_true_iff; auto.
+            all: try now split; first [ apply ZRange.is_tighter_than_bool_union_l | apply ZRange.is_tighter_than_bool_union_r ].
+            all: do 2 try (match goal with
+                           | [ |- context[?x = true] ]
+                             => lazymatch x with true => fail | false => fail | _ => idtac end;
+                                destruct x eqn:?; progress reflect_hyps
+                           end;
+                           cbn [ZRange.type.base.option.None] in *;
+                           auto 2; subst; try congruence).
+            { rewrite 2 fold_andb_map_map.
+              rewrite 2 fold_andb_map_iff.
+              rewrite List.combine_length.
+              do_with_hyp' ltac:(fun H => rewrite H).
+              rewrite Nat.min_id.
+              repeat split; intros *; destruct_head'_prod; cbn [uncurry fst snd].
+              all: rewrite In_nth_error_iff.
+              all: intros [n H']; revert H'.
+              all: rewrite !nth_error_combine.
+              all: break_innermost_match; intros; inversion_option; inversion_pair; subst; auto. }
+          Qed.
+
+          Lemma is_bounded_by_union_l t (rx ry : ZRange.type.base.option.interp t) x :
+            ZRange.type.base.option.is_bounded_by rx x = true ->
+            ZRange.type.base.option.is_bounded_by (ZRange.type.base.option.union rx ry) x = true.
+          Proof.
+            eapply ZRange.type.base.option.is_tighter_than_is_bounded_by; try eassumption;
+              eapply tighter_than_union.
+          Qed.
+
+          Lemma is_bounded_by_union_r t (rx ry : ZRange.type.base.option.interp t) y :
+            ZRange.type.base.option.is_bounded_by ry y = true ->
+            ZRange.type.base.option.is_bounded_by (ZRange.type.base.option.union rx ry) y = true.
+          Proof.
+            eapply ZRange.type.base.option.is_tighter_than_is_bounded_by; try eassumption;
+              eapply tighter_than_union.
+          Qed.
         End option.
       End base.
 
@@ -484,6 +540,16 @@ Module Compilers.
                            | [ H : (forall a b, ?R0 a b = true -> forall c d, ?R1 c d = true -> forall e f, (forall g h, ?R3 g h = true -> ?R4 (e g) (f h) = true) -> forall i j, ?R5 i j = true -> ?R6 (?F _ _ _ _) (?G _ _ _ _) = true)
                                |- ?R6 (?F _ _ _ _) (?G _ _ _ _) = true ]
                              => apply H; clear H
+                           end
+                         | match goal with
+                           | [ |- ZRange.type.base.option.is_bounded_by (ZRange.type.base.option.union _ _) (Bool.Thunked.bool_rect _ _ _ true) = true ]
+                             => apply ZRange.type.base.option.is_bounded_by_union_l
+                           | [ |- ZRange.type.base.option.is_bounded_by (ZRange.type.base.option.union _ _) (Bool.Thunked.bool_rect _ _ _ false) = true ]
+                             => apply ZRange.type.base.option.is_bounded_by_union_r
+                           | [ |- ZRange.type.base.option.is_bounded_by (ZRange.type.base.option.union _ _) (Bool.bool_rect_nodep _ _ true) = true ]
+                             => apply ZRange.type.base.option.is_bounded_by_union_l
+                           | [ |- ZRange.type.base.option.is_bounded_by (ZRange.type.base.option.union _ _) (Bool.bool_rect_nodep _ _ false) = true ]
+                             => apply ZRange.type.base.option.is_bounded_by_union_r
                            end ].
 
           Local Lemma mul_by_halves_bounds x y n :
@@ -751,6 +817,7 @@ Module Compilers.
                              end
                            | intros; mul_by_halves_t ].
             all: try solve [ non_arith_t; Z.ltb_to_lt; reflexivity ].
+            all: try solve [ cbv [ZRange.ToConstant.four_corners ZRange.ToConstant.Option.four_corners ZRange.ToConstant.Option.apply_to_range ZRange.ToConstant.Option.two_corners ZRange.ToConstant.Option.union option_beq Bool.eqb] in *; non_arith_t; Z.ltb_to_lt; lia ].
             (** For command-line debugging, we display goals that should not remain *)
             all: [ > idtac "WARNING: Remaining goal:"; print_context_and_goal () .. ].
           Qed.
