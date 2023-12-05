@@ -315,7 +315,7 @@ Proof using Type.
 Qed.
 
 Lemma to_list_map2 {A B C n xs ys} (f : A -> B -> C)
-  : ListUtil.map2 f (@to_list A n xs) (@to_list B n ys) = @to_list C n (map2 f xs ys).
+  : List.map2 f (@to_list A n xs) (@to_list B n ys) = @to_list C n (map2 f xs ys).
 Proof using Type.
   tuples_from_lists; unfold map2, on_tuple2.
   repeat (rewrite to_list_from_list || rewrite from_list_to_list).
@@ -388,7 +388,7 @@ Proof using Type.
   destruct lxs as [|x' lxs']; [simpl in *; discriminate|].
   let lys := match goal with lxs : list B |- _ => lxs end in
   destruct lys as [|y' lys']; [simpl in *; discriminate|].
-  change ( f x y ::  ListUtil.map2 f (to_list (S n) (from_list (S n) (x' :: lxs') x1))
+  change ( f x y ::  List.map2 f (to_list (S n) (from_list (S n) (x' :: lxs') x1))
     (to_list (S n) (from_list (S n) (y' :: lys') x0)) = f x y :: to_list (S n) (map2 f (from_list (S n) (x' :: lxs') x1) (from_list (S n) (y' :: lys') x0)) ).
   tuple_maps_to_list_maps.
   reflexivity.

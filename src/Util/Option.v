@@ -29,11 +29,28 @@ Definition lift {A} (x : option (option A)) : option (option A)
 
 Notation map := option_map (only parsing). (* so we have [Option.map] *)
 
+Definition map2 {A B C} (f : A -> B -> C) (v1 : option A) (v2 : option B) : option C
+  := match v1, v2 with
+     | None, _
+     | _, None
+       => None
+     | Some v1, Some v2 => Some (f v1 v2)
+     end.
+
 Definition bind {A B} (v : option A) (f : A -> option B) : option B
   := match v with
      | Some v => f v
      | None => None
      end.
+
+Definition bind2 {A B C} (v1 : option A) (v2 : option B) (f : A -> B -> option C) : option C
+  := match v1, v2 with
+     | None, _
+     | _, None
+       => None
+     | Some x1, Some x2 => f x1 x2
+     end.
+Global Arguments bind2 {A B C} !v1 !v2 / f.
 
 Definition sequence {A} (v1 v2 : option A) : option A
   := match v1 with
@@ -59,6 +76,7 @@ Module Export Notations.
 
   Notation "'olet' x .. y <- X ; B" := (bind X (fun x => .. (fun y => B%option) .. )) : option_scope.
   Notation "A <- X ; B" := (bind X (fun A => B%option)) : option_scope.
+  (*Notation "A , A' <- X , X' ; B" := (bind2 X X' (fun A A' => B%option)) : option_scope.*)
   Infix ";;" := sequence : option_scope.
   Infix ";;;" := sequence_return : option_scope.
 End Notations.
