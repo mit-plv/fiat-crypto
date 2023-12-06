@@ -31,7 +31,7 @@ jobs:
     - name: GCC Problem Matcher
       uses: ammaraskar/gcc-problem-matcher@0.2.0
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       id: go
     - name: make only-test-c-files CC=gcc
       run: make only-test-c-files CC=gcc EXTERNAL_DEPENDENCIES=1
