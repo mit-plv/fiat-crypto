@@ -536,13 +536,17 @@ Module Compilers.
              | ident.Nat_pred as idc
                => option_map (ident.interp idc)
              | ident.Z_of_nat as idc
-               => option_map (fun n => r[Z.of_nat n~>Z.of_nat n]%zrange)
+             | ident.Z_pos as idc
+               => option_map (fun n => r[ident.interp idc n~>ident.interp idc n]%zrange)
              | ident.Z_to_nat as idc
+             | ident.Z_to_pos as idc
                => fun v => v <- to_literal v; Some (ident.interp idc v)
              | ident.List_length _
                => option_map (@List.length _)
              | ident.value_barrier
                => fun x => x
+             | ident.Pos_mul as idc
+             | ident.Pos_add as idc
              | ident.Nat_max as idc
              | ident.Nat_mul as idc
              | ident.Nat_add as idc
@@ -675,18 +679,22 @@ Module Compilers.
                          n
                    | None => ZRange.type.base.option.None
                    end
-             | ident.nat_rect_arrow _ _
-             | ident.eager_nat_rect_arrow _ _
-               => fun O_case S_case n v
-                 => match n with
+             | ident.nat_rect_arrow _ _ as idc
+             | ident.eager_nat_rect_arrow _ _ as idc
+               (*
+             | ident.nat_rect_fbb_b _ _ _ as idc
+             | ident.nat_rect_fbb_b_b _ _ _ _ as idc
+                *)
+               => fun O_case S_case n
+                  => let t := ((fun t (idc : ident (_ -> _ -> _ -> t)) => t) _ idc) in
+                   match n return type.option.interp t with
                    | Some n
                      => nat_rect
                          _
                          O_case
                          (fun n' rec => S_case (Some n') rec)
                          n
-                         v
-                   | None => ZRange.type.base.option.None
+                   | None => ZRange.type.option.None
                    end
              | ident.list_rect _ _
              | ident.eager_list_rect _ _
@@ -700,18 +708,25 @@ Module Compilers.
                          ls
                    | None => ZRange.type.base.option.None
                    end
-             | ident.list_rect_arrow _ _ _
-             | ident.eager_list_rect_arrow _ _ _
-               => fun N C ls v
-                 => match ls with
+             | ident.list_rect_arrow _ _ _ as idc
+             | ident.eager_list_rect_arrow _ _ _ as idc
+               (*
+             | ident.list_rect_fbb_b _ _ _ _ as idc
+             | ident.list_rect_fbb_b_b _ _ _ _ _ as idc
+             | ident.list_rect_fbb_b_b_b _ _ _ _ _ _ as idc
+             | ident.list_rect_fbb_b_b_b_b _ _ _ _ _ _ _ as idc
+             | ident.list_rect_fbb_b_b_b_b_b _ _ _ _ _ _ _ _ as idc
+                *)
+               => fun N C ls
+                 => let t := ((fun t (idc : ident (_ -> _ -> _ -> t)) => t) _ idc) in
+                   match ls return type.option.interp t with
                    | Some ls
                      => list_rect
                          _
                          N
                          (fun x xs rec => C x (Some xs) rec)
                          ls
-                         v
-                   | None => ZRange.type.base.option.None
+                   | None => ZRange.type.option.None
                    end
              | ident.list_case _ _
                => fun N C ls
@@ -763,6 +778,8 @@ Module Compilers.
              | ident.Z_log2 as idc
              | ident.Z_log2_up as idc
                => fun x => x <- x; Some (ZRange.two_corners (ident.interp idc) x)
+             | ident.Z_abs as idc
+               => fun x => x <- x; Some (ZRange.two_corners_and_zero (ident.interp idc) x)
              | ident.Z_max as idc
              | ident.Z_min as idc
              | ident.Z_add as idc

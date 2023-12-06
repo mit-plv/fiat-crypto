@@ -793,6 +793,8 @@ Module Compilers.
                  | ident.Nat_add
                  | ident.Nat_sub
                  | ident.Nat_eqb
+                 | ident.Pos_add
+                 | ident.Pos_mul
                  | ident.prod_rect _ _ _
                  | ident.bool_rect _
                  | ident.bool_rect_nodep _
@@ -807,6 +809,15 @@ Module Compilers.
                  | ident.eager_list_rect _ _
                  | ident.list_rect_arrow _ _ _
                  | ident.eager_list_rect_arrow _ _ _
+                 (*
+                 | ident.nat_rect_fbb_b _ _ _
+                 | ident.nat_rect_fbb_b_b _ _ _ _
+                 | ident.list_rect_fbb_b _ _ _ _
+                 | ident.list_rect_fbb_b_b _ _ _ _ _
+                 | ident.list_rect_fbb_b_b_b _ _ _ _ _ _
+                 | ident.list_rect_fbb_b_b_b_b _ _ _ _ _ _ _
+                 | ident.list_rect_fbb_b_b_b_b_b _ _ _ _ _ _ _ _
+                  *)
                  | ident.list_case _ _
                  | ident.List_length _
                  | ident.List_seq
@@ -834,10 +845,13 @@ Module Compilers.
                  | ident.Z_gtb
                  | ident.Z_min
                  | ident.Z_max
+                 | ident.Z_abs
                  | ident.Z_log2
                  | ident.Z_log2_up
                  | ident.Z_of_nat
                  | ident.Z_to_nat
+                 | ident.Z_pos
+                 | ident.Z_to_pos
                  | ident.Z_ltz
                  | ident.Z_zselect
                  | ident.Z_mul_split
