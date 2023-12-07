@@ -860,7 +860,6 @@ Module Compilers.
                *)
               destruct idc.
               all: try (apply Bool.diff_true_false in Hho; exfalso; exact Hho).
-              (*
               all: cbn [interp_is_related_and_Proper type.interp type.related interp_is_related] in *;
                 cbv [Proper respectful respectful_hetero] in *.
               all: cbn [ZRange.ident.option.interp ident.interp].
@@ -1064,7 +1063,6 @@ Module Compilers.
                         solve [ go () ])
                 | _ => idtac
                 end.
-               *)
               (** For command-line debugging, we display goals that should not remain *)
               all: [ > idtac "WARNING: Remaining goal of order > 3:"; print_context_and_goal () .. ]. }
           Time Qed.

@@ -411,7 +411,6 @@ Module Compilers.
                 | ident.eager_nat_rect P => neg_wrap_parens "eager_nat_rect"
                 | ident.nat_rect_arrow P Q => neg_wrap_parens "nat_rect(→)"
                 | ident.eager_nat_rect_arrow P Q => neg_wrap_parens "eager_nat_rect(→)"
-                (*
                 | @ident.nat_rect_fbb_b A B C => neg_wrap_parens "nat_rect_fbb_b"
                 | @ident.nat_rect_fbb_b_b A B C D => neg_wrap_parens "nat_rect_fbb_b_b"
                 | @ident.list_rect_fbb_b T A B C => neg_wrap_parens "list_rect_fbb_b"
@@ -419,7 +418,6 @@ Module Compilers.
                 | @ident.list_rect_fbb_b_b_b T A B C D E => neg_wrap_parens "list_rect_fbb_b_b"
                 | @ident.list_rect_fbb_b_b_b_b T A B C D E F => neg_wrap_parens "list_rect_fbb_b_b"
                 | @ident.list_rect_fbb_b_b_b_b_b T A B C D E F G => neg_wrap_parens "list_rect_fbb_b_b"
-                 *)
                 | ident.list_rect A P => neg_wrap_parens "list_rect"
                 | ident.eager_list_rect A P => neg_wrap_parens "eager_list_rect"
                 | ident.list_rect_arrow A P Q => neg_wrap_parens "list_rect(→)"
@@ -706,7 +704,6 @@ Module Compilers.
              | ident.eager_nat_rect _ as idc
              | ident.eager_nat_rect_arrow _ _ as idc
              | ident.nat_rect_arrow _ _ as idc
-             (*
              | @ident.nat_rect_fbb_b    _ _ _ as idc
              | @ident.nat_rect_fbb_b_b  _ _ _ _ as idc
              | @ident.list_rect_fbb_b   _ _ _ _ as idc
@@ -714,7 +711,6 @@ Module Compilers.
              | @ident.list_rect_fbb_b_b_b _ _ _ _ _ _ as idc
              | @ident.list_rect_fbb_b_b_b_b _ _ _ _ _ _ _ as idc
              | @ident.list_rect_fbb_b_b_b_b_b  _ _ _ _ _ _ _ _ as idc
-              *)
              | ident.option_rect _ _ as idc
              | ident.list_rect _ _ as idc
              | ident.eager_list_rect _ _ as idc

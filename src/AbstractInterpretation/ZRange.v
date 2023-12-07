@@ -681,10 +681,8 @@ Module Compilers.
                    end
              | ident.nat_rect_arrow _ _ as idc
              | ident.eager_nat_rect_arrow _ _ as idc
-               (*
              | ident.nat_rect_fbb_b _ _ _ as idc
              | ident.nat_rect_fbb_b_b _ _ _ _ as idc
-                *)
                => fun O_case S_case n
                   => let t := ((fun t (idc : ident (_ -> _ -> _ -> t)) => t) _ idc) in
                    match n return type.option.interp t with
@@ -710,13 +708,11 @@ Module Compilers.
                    end
              | ident.list_rect_arrow _ _ _ as idc
              | ident.eager_list_rect_arrow _ _ _ as idc
-               (*
              | ident.list_rect_fbb_b _ _ _ _ as idc
              | ident.list_rect_fbb_b_b _ _ _ _ _ as idc
              | ident.list_rect_fbb_b_b_b _ _ _ _ _ _ as idc
              | ident.list_rect_fbb_b_b_b_b _ _ _ _ _ _ _ as idc
              | ident.list_rect_fbb_b_b_b_b_b _ _ _ _ _ _ _ _ as idc
-                *)
                => fun N C ls
                  => let t := ((fun t (idc : ident (_ -> _ -> _ -> t)) => t) _ idc) in
                    match ls return type.option.interp t with
