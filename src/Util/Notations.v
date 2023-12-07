@@ -205,3 +205,6 @@ Reserved Notation "##### x" (at level 9, x at level 9, format "##### x").
 Reserved Notation "\ x .. y , t" (at level 200, x binder, y binder, right associativity, format "\  x .. y , '//' t").
 (** If we use "( x |? y )", it conflicts with things like [destruct x as [?|?]; ...] *)
 Reserved Notation "( x | ? y )" (format "(  x  | ?  y  )").
+
+Notation "'subst!' y 'for' x 'in' f" := (match y with x => f end) (at level 10, only parsing).
+Notation "'typeof!' x" := (match _ as T with T => subst! x : T for _ in T end) (at level 10, only parsing).
