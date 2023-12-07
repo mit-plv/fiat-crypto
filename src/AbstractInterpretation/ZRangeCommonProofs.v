@@ -9,6 +9,7 @@ Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.ZUtil.Morphisms.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.DoWithHyp.
 Require Import Crypto.AbstractInterpretation.ZRange.
 
 Module Compilers.
@@ -36,6 +37,14 @@ Module Compilers.
                            | progress inversion_option
                            | discriminate
                            | solve [ eauto ]
+                           | apply (@list_rect_Proper_gen _ ((_ -> _) -> _ -> _ -> _ -> _ -> _) ((eq ==> eq) ==> eq ==> eq ==> eq ==> eq ==> eq)%signature)
+                           | apply (@list_rect_Proper_gen _ ((_ -> _) -> _ -> _ -> _ -> _) ((eq ==> eq) ==> eq ==> eq ==> eq ==> eq)%signature)
+                           | apply (@list_rect_Proper_gen _ ((_ -> _) -> _ -> _ -> _) ((eq ==> eq) ==> eq ==> eq ==> eq)%signature)
+                           | apply (@list_rect_Proper_gen _ ((_ -> _) -> _ -> _) ((eq ==> eq) ==> eq ==> eq)%signature)
+                           | apply (@list_rect_Proper_gen _ ((_ -> _) -> _) ((eq ==> eq) ==> eq)%signature)
+                           | apply (@nat_rect_Proper_nondep_gen ((_ -> _) -> _ -> _) ((eq ==> eq) ==> eq ==> eq)%signature)
+                           | apply (@nat_rect_Proper_nondep_gen ((_ -> _) -> _) ((eq ==> eq) ==> eq)%signature)
+                           | apply (@nat_rect_Proper_nondep_gen (_ -> _) (eq ==> eq)%signature)
                            | apply NatUtil.nat_rect_Proper_nondep
                            | apply ListUtil.list_rect_Proper
                            | apply ListUtil.list_rect_arrow_Proper
@@ -43,7 +52,6 @@ Module Compilers.
                            | apply ListUtil.pointwise_map
                            | apply ListUtil.fold_right_Proper
                            | apply ListUtil.update_nth_Proper
-                           | apply (@nat_rect_Proper_nondep_gen (_ -> _) (eq ==> eq)%signature)
                            | cbn; apply (f_equal (@Some _))
                            | progress cbn [ZRange.ident.option.interp]
                            | progress cbv [zrange_rect]
@@ -54,7 +62,8 @@ Module Compilers.
                              | [ H : forall x y, x = y -> _ |- _ ] => specialize (fun x => H x x eq_refl)
                              | [ H : forall x, ?f x = ?g x, H1 : ?f ?y = _, H2 : ?g ?y = _ |- _ ]
                                => specialize (H y); rewrite H1, H2 in H
-                             end ].
+                             end
+                           | do_with_exactly_one_hyp ltac:(fun H => apply H; clear H) ].
           Qed.
         End interp_related.
       End option.
