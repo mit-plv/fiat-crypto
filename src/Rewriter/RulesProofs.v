@@ -65,6 +65,7 @@ Require Crypto.Util.PrimitiveHList.
 Require Import Crypto.Language.PreExtra.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.Rewriter.Rules.
+Require Import Rewriter.Util.Prod.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Notations.
@@ -82,6 +83,7 @@ Local Ltac start_proof :=
   repeat apply PrimitiveProd.Primitive.pair; try exact tt.
 
 Local Hint Resolve
+      prod_rect_nodep_eta
       eq_repeat_nat_rect
       eq_app_list_rect
       eq_combine_list_rect
@@ -89,6 +91,9 @@ Local Hint Resolve
       eq_skipn_nat_rect
       eq_update_nth_nat_rect
   : core.
+
+(* to catch [prod_rect] and not just [prod_rect_nodep] *)
+Local Hint Extern 0 (prod_rect _ _ _ = _)  => solve [ apply prod_rect_nodep_eta ] : core.
 
 Lemma nbe_rewrite_rules_proofs
   : PrimitiveHList.hlist (@snd bool Prop) nbe_rewrite_rulesT.
@@ -598,9 +603,9 @@ Proof.
       -- rewrite <- Z.mod_divide_full. assumption.
     + rewrite H2. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper)). lia.
     + lia.
-    + rewrite H2. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper)). lia.  
+    + rewrite H2. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper)). lia.
 Qed.
-      
+
 Lemma arith_with_relaxed_casts_rewrite_rules_proofs
   : PrimitiveHList.hlist (@snd bool Prop) arith_with_relaxed_casts_rewrite_rulesT.
 Proof using Type.
@@ -608,7 +613,7 @@ Proof using Type.
   - apply relaxed_rules_work; assumption.
   - rewrite Z.land_comm. apply relaxed_rules_work; assumption.
 Qed.
-      
+
 Lemma strip_literal_casts_rewrite_rules_proofs
   : PrimitiveHList.hlist (@snd bool Prop) strip_literal_casts_rewrite_rulesT.
 Proof using Type.
