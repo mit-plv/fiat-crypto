@@ -207,4 +207,4 @@ Reserved Notation "\ x .. y , t" (at level 200, x binder, y binder, right associ
 Reserved Notation "( x | ? y )" (format "(  x  | ?  y  )").
 
 Notation "'subst!' y 'for' x 'in' f" := (match y with x => f end) (at level 10, only parsing).
-Notation "'typeof!' x" := (match _ as T with T => subst! x : T for _ in T end) (at level 10, only parsing).
+Notation "'typeof!' x" := (match x with y => ltac:(let T := type of y in exact T) end) (at level 10, only parsing).
