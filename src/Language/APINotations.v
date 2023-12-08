@@ -81,21 +81,17 @@ Module Compilers.
   Global Arguments ident_nat_rect_arrow {_ _} : assert.
   Global Arguments ident_eager_nat_rect {_} : assert.
   Global Arguments ident_eager_nat_rect_arrow {_ _} : assert.
-  (*
   Global Arguments ident_nat_rect_fbb_b {_ _ _} : assert.
   Global Arguments ident_nat_rect_fbb_b_b {_ _ _ _} : assert.
-*)
   Global Arguments ident_list_rect {_ _} : assert.
   Global Arguments ident_eager_list_rect {_ _} : assert.
   Global Arguments ident_eager_list_rect_arrow {_ _ _} : assert.
   Global Arguments ident_list_rect_arrow {_ _ _} : assert.
-  (*
   Global Arguments ident_list_rect_fbb_b {_ _ _ _} : assert.
   Global Arguments ident_list_rect_fbb_b_b {_ _ _ _ _} : assert.
   Global Arguments ident_list_rect_fbb_b_b_b {_ _ _ _ _ _} : assert.
   Global Arguments ident_list_rect_fbb_b_b_b_b {_ _ _ _ _ _ _} : assert.
   Global Arguments ident_list_rect_fbb_b_b_b_b_b {_ _ _ _ _ _ _ _} : assert.
-*)
   Global Arguments ident_list_case {_ _} : assert.
   Global Arguments ident_List_length {_} : assert.
   Global Arguments ident_List_firstn {_} : assert.
@@ -257,21 +253,17 @@ Module Compilers.
     Notation nat_rect_arrow := Compilers.ident_nat_rect_arrow (only parsing).
     Notation eager_nat_rect := Compilers.ident_eager_nat_rect (only parsing).
     Notation eager_nat_rect_arrow := Compilers.ident_eager_nat_rect_arrow (only parsing).
-    (*
     Notation nat_rect_fbb_b := Compilers.ident_nat_rect_fbb_b (only parsing).
     Notation nat_rect_fbb_b_b := Compilers.ident_nat_rect_fbb_b_b (only parsing).
-*)
     Notation list_rect := Compilers.ident_list_rect (only parsing).
     Notation list_rect_arrow := Compilers.ident_list_rect_arrow (only parsing).
     Notation eager_list_rect := Compilers.ident_eager_list_rect (only parsing).
     Notation eager_list_rect_arrow := Compilers.ident_eager_list_rect_arrow (only parsing).
-    (*
     Notation list_rect_fbb_b := Compilers.ident_list_rect_fbb_b (only parsing).
     Notation list_rect_fbb_b_b := Compilers.ident_list_rect_fbb_b_b (only parsing).
     Notation list_rect_fbb_b_b_b := Compilers.ident_list_rect_fbb_b_b_b (only parsing).
     Notation list_rect_fbb_b_b_b_b := Compilers.ident_list_rect_fbb_b_b_b_b (only parsing).
     Notation list_rect_fbb_b_b_b_b_b := Compilers.ident_list_rect_fbb_b_b_b_b_b (only parsing).
-*)
     Notation list_case := Compilers.ident_list_case (only parsing).
     Notation List_length := Compilers.ident_List_length (only parsing).
     Notation List_seq := Compilers.ident_List_seq (only parsing).

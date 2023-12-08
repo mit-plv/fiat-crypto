@@ -1187,7 +1187,6 @@ Proof.
           | ident.eager_list_rect _ _
           | ident.list_rect_arrow _ _ _
           | ident.eager_list_rect_arrow _ _ _
-          (*
           | ident.nat_rect_fbb_b _ _ _
           | ident.nat_rect_fbb_b_b _ _ _ _
           | ident.list_rect_fbb_b _ _ _ _
@@ -1195,7 +1194,6 @@ Proof.
           | ident.list_rect_fbb_b_b_b _ _ _ _ _ _
           | ident.list_rect_fbb_b_b_b_b _ _ _ _ _ _ _
           | ident.list_rect_fbb_b_b_b_b_b _ _ _ _ _ _ _ _
-           *)
           | ident.list_case _ _
           | ident.List_map _ _
           | ident.List_flat_map _ _

@@ -3,6 +3,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Classes.RelationPairs.
 Require Import Coq.Relations.Relations.
+Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.BasicLemmas.
@@ -46,6 +47,7 @@ Require Import Crypto.Language.PreExtra.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.AbstractInterpretation.ZRange.
 Require Import Crypto.AbstractInterpretation.ZRangeCommonProofs.
+Import ListNotations. Import EqNotations.
 
 Module Compilers.
   Import AbstractInterpretation.ZRange.Compilers.
@@ -118,8 +120,11 @@ Module Compilers.
       End base.
 
       Module option.
+        Lemma app_curried_None {t args} : type.app_curried (@ZRange.type.option.None t) args = ZRange.type.base.option.None.
+        Proof. induction t; cbn; auto. Qed.
+
         Lemma is_bounded_by_impl_related_hetero t
-              (x : ZRange.type.option.interp t) (v : type.interp base.interp t)
+          (x : ZRange.type.option.interp t) (v : type.interp base.interp t)
         : ZRange.type.option.is_bounded_by x v = true
           -> type.related_hetero (fun t x v => ZRange.type.base.option.is_bounded_by x v = true) x v.
         Proof. induction t; cbn in *; intuition congruence. Qed.
@@ -844,229 +849,184 @@ Module Compilers.
             all: [ > idtac "WARNING: Remaining goal:"; print_context_and_goal () .. ].
           Qed.
 
+          Variant rect_arg_kind := fin (_ : API.type) | recr.
+          Definition ctor_descr := list rect_arg_kind.
+          Definition rect_spec := list ctor_descr.
+          Definition interp_rect_arg_kind (recrT : API.type) (r : rect_arg_kind) : API.type
+            := match r with
+               | fin t => t
+               | recr => recrT
+               end.
+          Fixpoint interp_ctor_descr (containerT : API.type) (motive : API.type) (r : ctor_descr) : API.type
+            := match r with
+               | nil => motive
+               | cons (fin t) rs => t -> interp_ctor_descr containerT motive rs
+               | cons recr rs => containerT -> motive -> interp_ctor_descr containerT motive rs
+               end%etype.
+          Fixpoint interp_rect (containerT : API.type) (motive : API.type) (r : rect_spec) : API.type
+            := match r with
+               | nil => containerT -> motive
+               | cons r rs => interp_ctor_descr containerT motive r -> interp_rect containerT motive rs
+               end%etype.
+          Variant rect_kind := rect_nat | rect_list (t : base.type).
+
+          Definition rect_spec_of_kind (r : rect_kind) : rect_spec
+            := match r with
+               | rect_nat => [ [] ; [recr] ]
+               | rect_list t => [ [] ; [fin (type.base t); recr] ]
+               end.
+          Definition rect_container_of_kind (r : rect_kind) : base.type
+            := match r with
+               | rect_nat => base.type.type_base base.type.nat
+               | rect_list t => base.type.list t
+               end.
+
+          (* TODO: move? *)
+          (** N.B. We don't say yes for thunked recursors, which are a bit different in shape *)
+          Definition is_rect {t} (idc : ident t) : option { k : rect_kind & { m : _ | t = interp_rect (type.base (rect_container_of_kind k)) m (rect_spec_of_kind k) } }.
+          Proof.
+            refine match idc with
+                   | ident.nat_rect_arrow _ _
+                   | ident.eager_nat_rect_arrow _ _
+                   | ident.nat_rect_fbb_b _ _ _
+                   | ident.nat_rect_fbb_b_b _ _ _ _
+                     => Some (existT _ rect_nat _)
+                   | ident.list_rect_arrow _ _ _
+                   | ident.eager_list_rect_arrow _ _ _
+                   | ident.list_rect_fbb_b _ _ _ _
+                   | ident.list_rect_fbb_b_b _ _ _ _ _
+                   | ident.list_rect_fbb_b_b_b _ _ _ _ _ _
+                   | ident.list_rect_fbb_b_b_b_b _ _ _ _ _ _ _
+                   | ident.list_rect_fbb_b_b_b_b_b _ _ _ _ _ _ _ _
+                     => Some (existT _ (rect_list _) _)
+                   | _
+                     => None
+                   end.
+            all: eexists; cbv; reflexivity.
+          Defined.
+
+          Lemma rect_interp_rect {t} {idc : ident t} {k} (H : is_rect idc = Some k)
+            : match k with
+              | existT rect_nat (exist p H)
+                => forall z s, let f := (rew [API.interp_type] H in ident.interp idc) in f z s 0 = z /\ forall n, f z s (S n) = s n (f z s n)
+              | existT (rect_list _) (exist p H)
+                => forall n c, let f := (rew [API.interp_type] H in ident.interp idc) in f n c nil = n /\ forall x xs, f n c (cons x xs) = c x xs (f n c xs)
+              end.
+          Proof using Type.
+            fold (@type.interp) in *.
+            destruct idc; cbn in H; inversion_option; subst.
+            all: cbn; repeat split.
+          Qed.
+
+          Lemma rect_ZRange_interp_rect {t} {idc : ident t} {k} (H : is_rect idc = Some k)
+            : match k with
+              | existT rect_nat (exist p H)
+                => forall z s, let f := (rew [ZRange.type.option.interp] H in ZRange.ident.option.interp assume_cast_truncates idc) in f z s None = ZRange.type.option.None /\ f z s (Some 0) = z /\ forall n, f z s (Some (S n)) = s (Some n) (f z s (Some n))
+              | existT (rect_list _) (exist p H)
+                => forall n c, let f := (rew [ZRange.type.option.interp] H in ZRange.ident.option.interp assume_cast_truncates idc) in f n c None = ZRange.type.option.None /\ f n c (Some nil) = n /\ forall x xs, f n c (Some (cons x xs)) = c x (Some xs) (f n c (Some xs))
+              end.
+          Proof using Type.
+            fold (@type.interp) in *.
+            fold (@ZRange.type.base.option.interp) in *.
+            destruct idc; cbn in H; inversion_option; subst.
+            all: cbn; repeat split.
+          Qed.
+
           Lemma interp_related_and_Proper {t} (idc : ident t) : interp_is_related_and_Proper idc.
           Proof using Type.
-            destruct (type.is_not_higher_order_than 3 t) eqn:Hho.
+            destruct (type.is_not_higher_order_than 3 t) eqn:Hho;
+              [ | destruct (is_rect idc) eqn:Hrect ].
             { apply type.related_hetero_impl_related_hetero_and_Proper_eqv_not_higher_order_than_3.
               all: try apply interp_related.
               all: try apply ident.interp_Proper.
               all: try apply ZRange.ident.option.interp_Proper.
               all: try assumption.
               all: try reflexivity. }
-            { (*
-              pose proof (interp_related idc) as Hir.
+            { apply type.related_hetero_and_Proper_iff_app_curried.
+              all: try now intros; hnf.
+              repeat split.
+              all: try now apply ident.interp_Proper.
+              all: try now apply ZRange.ident.option.interp_Proper.
+              all: [ > ].
+              intros x y Hxy.
+
+              (*pose proof (interp_related idc) as Hir.*)
               pose proof (ident.interp_Proper idc idc eq_refl) as Hip.
               pose proof (ZRange.ident.option.interp_Proper assume_cast_truncates idc idc eq_refl) as Hzip.
-               *)
-              destruct idc.
-              all: try (apply Bool.diff_true_false in Hho; exfalso; exact Hho).
-              (*
-              all: cbn [interp_is_related_and_Proper type.interp type.related interp_is_related] in *;
-                cbv [Proper respectful respectful_hetero] in *.
-              all: cbn [ZRange.ident.option.interp ident.interp].
-              all: cbn [ZRange.type.base.option.interp ZRange.type.option.None ZRange.type.base.interp].
-              all: cbn [base.interp IdentifiersBasicGENERATED.Compilers.base_interp].
-              all: cbv [
-                       nat_rect_fbb_b
-                         nat_rect_fbb_b_b
-                         list_rect_fbb_b
-                         list_rect_fbb_b_b
-                         list_rect_fbb_b_b_b
-                         list_rect_fbb_b_b_b_b
-                         list_rect_fbb_b_b_b_b_b
-                     ] in *.
-              all: cbn [Language.Compilers.base.interp IdentifiersBasicGENERATED.Compilers.base_interp ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by base.interp_beq].
-              all: lazymatch goal with
-                   | [ |- (forall (a1 : ?A1) (a2 : @?A2 a1) (a3 : @?A3 a1 a2) (a4 : @?A4 a1 a2 a3) (a5 : @?A5 a1 a2 a3 a4) (a6 : @?A6 a1 a2 a3 a4 a5) (a7 a8 : ?optT) (a9 : a7 = a8), @?AP a1 a2 a4 a5 a7 a8)
-                          /\ (forall (b1 : ?B1) (b2 : @?B2 b1) (b3 : @?B3 b1 b2) (b4 : @?B4 b1 b2 b3) (b5 : @?B5 b1 b2 b3 b4) (b6 : @?B6 b1 b2 b3 b4 b5) (b7 b8 : ?T) (b9 : b7 = b8), @?BP b1 b2 b4 b5 b7 b8)
-                          /\ (forall (c1 : ?C1) (c2 : @?C2 c1) (c3 : @?C3 c1 c2),
-                                 (forall (d4 : @?D4 c1 c2 c3) (d5 : @?D5 c1 c2 c3 d4) (d6 : @?D6 c1 c2 c3 d4 d5) (d7 d8 : ?optT) (d9 : d7 = d8), @?DP c1 c2 d4 d5 d7 d8)
-                                 /\ (forall (e4 : @?E4 c1 c2 c3) (e5 : @?E5 c1 c2 c3 e4) (e6 : @?E6 c1 c2 c3 e4 e5) (e7 e8 : ?T) (e9 : e7 = e8), @?EP c1 c2 e4 e5 e7 e8)
-                                 /\ (forall (f4 : @?F4 c1 c2 c3) (f5 : @?F5 c1 c2 c3 f4) (f6 : @?F6 c1 c2 c3 f4 f5),
-                                        (forall (g7 g8 : ?optT) (g9 : g7 = g8), @?GP c1 c2 f4 f5 g7 g8)
-                                        /\ (forall (h7 h8 : ?T) (h9 : h7 = h8), @?HP c1 c2 f4 f5 h7 h8)
-                                        /\ (forall (i7 : ?optT) (i8 : ?T) (i9 : @?TR i7 i8), @?IP c1 c2 f4 f5 i7 i8))) ]
-                     => let G'
-                          := constr:(forall (i7 : optT) (i8 : T),
-                                        (forall (a1 : A1) (a2 : A2 a1) (a3 : A3 a1 a2) (a4 : A4 a1 a2 a3) (a5 : A5 a1 a2 a3 a4) (a6 : A6 a1 a2 a3 a4 a5), AP a1 a2 a4 a5 i7 i7)
-                                        /\ (forall (b1 : B1) (b2 : B2 b1) (b3 : B3 b1 b2) (b4 : B4 b1 b2 b3) (b5 : B5 b1 b2 b3 b4) (b6 : B6 b1 b2 b3 b4 b5), BP b1 b2 b4 b5 i8 i8)
-                                        /\ (forall (c1 : C1) (c2 : C2 c1) (c3 : C3 c1 c2),
-                                               (forall (d4 : D4 c1 c2 c3) (d5 : D5 c1 c2 c3 d4) (d6 : D6 c1 c2 c3 d4 d5), DP c1 c2 d4 d5 i7 i7)
-                                               /\ (forall (e4 : E4 c1 c2 c3) (e5 : E5 c1 c2 c3 e4) (e6 : E6 c1 c2 c3 e4 e5), EP c1 c2 e4 e5 i8 i8)
-                                               /\ (forall (f4 : F4 c1 c2 c3) (f5 : F5 c1 c2 c3 f4) (f6 : F6 c1 c2 c3 f4 f5),
-                                                      GP c1 c2 f4 f5 i7 i7
-                                                      /\ HP c1 c2 f4 f5 i8 i8
-                                                      /\ (TR i7 i8 -> IP c1 c2 f4 f5 i7 i8)))) in
-                        cut G';
-                        [ clear;
-                          change (G'
-                                  -> ((forall (a1 : A1) (a2 : A2 a1) (a3 : A3 a1 a2) (a4 : A4 a1 a2 a3) (a5 : A5 a1 a2 a3 a4) (a6 : A6 a1 a2 a3 a4 a5) (a7 a8 : optT) (a9 : a7 = a8), AP a1 a2 a4 a5 a7 a8)
-                                      /\ (forall (b1 : B1) (b2 : B2 b1) (b3 : B3 b1 b2) (b4 : B4 b1 b2 b3) (b5 : B5 b1 b2 b3 b4) (b6 : B6 b1 b2 b3 b4 b5) (b7 b8 : T) (b9 : b7 = b8), BP b1 b2 b4 b5 b7 b8)
-                                      /\ (forall (c1 : C1) (c2 : C2 c1) (c3 : C3 c1 c2),
-                                             (forall (d4 : D4 c1 c2 c3) (d5 : D5 c1 c2 c3 d4) (d6 : D6 c1 c2 c3 d4 d5) (d7 d8 : optT) (d9 : d7 = d8), DP c1 c2 d4 d5 d7 d8)
-                                             /\ (forall (e4 : E4 c1 c2 c3) (e5 : E5 c1 c2 c3 e4) (e6 : E6 c1 c2 c3 e4 e5) (e7 e8 : T) (e9 : e7 = e8), EP c1 c2 e4 e5 e7 e8)
-                                             /\ (forall (f4 : F4 c1 c2 c3) (f5 : F5 c1 c2 c3 f4) (f6 : F6 c1 c2 c3 f4 f5),
-                                                    (forall (g7 g8 : optT) (g9 : g7 = g8), GP c1 c2 f4 f5 g7 g8)
-                                                    /\ (forall (h7 h8 : T) (h9 : h7 = h8), HP c1 c2 f4 f5 h7 h8)
-                                                    /\ (forall (i7 : optT) (i8 : T) (i9 : TR i7 i8), IP c1 c2 f4 f5 i7 i8)))));
-                          intro H'; revert H';
-                          try generalize AP BP DP EP GP HP IP;
-                          try generalize optT T;
-                          try generalize F6;
-                          try generalize E6;
-                          try generalize D6;
-                          try generalize C3;
-                          try generalize B3 B6;
-                          try generalize A3 A6;
-                          intros
-                        | shelve ]
-                   | _ => (** For command-line debugging, we display goals that should not remain *)
-                       idtac "WARNING: Remaining goal of order > 3:"; print_context_and_goal ();
-                       shelve
+              pose proof Hrect as Hrect'.
+              apply rect_interp_rect in Hrect.
+              apply rect_ZRange_interp_rect in Hrect'.
+              fold base.interp in *.
+              fold (@type.interp) in *.
+              fold (@ZRange.type.base.option.interp) in *.
+              fold (@ZRange.type.option.interp) in *.
+              clear Hho.
+              let k := match goal with H : sigT _ |- _ => H end in
+              destruct k as [k [p Ht] ].
+              subst t.
+
+              generalize dependent (ident.interp idc).
+              generalize dependent (ZRange.ident.option.interp assume_cast_truncates idc).
+              clear idc.
+              destruct_head' rect_kind.
+              all: cbn [eq_rect].
+              all: cbn [interp_rect rect_spec_of_kind interp_ctor_descr rect_container_of_kind type.app_curried type.final_codomain ZRange.type.option.interp type.interp type.and_for_each_lhs_of_arrow type.for_each_lhs_of_arrow] in *.
+              all: destruct_head'_prod; cbn [fst snd] in *.
+              all: intros; split_and.
+              all: repeat match goal with
+                     | [ H : type.related_hetero_and_Proper _ _ _ _ _ |- _ ]
+                       => apply type.related_hetero_and_Proper_iff_app_curried in H;
+                          [ | clear H; repeat intro; hnf; reflexivity .. ]
+                     end.
+              all: destruct_head'_and.
+              all: cbn [type.related] in *.
+              all: cbv [Proper] in *.
+              all: cbn in *.
+              all: specialize_by first [ exact tt | exact I ].
+              all: destruct_head' option; reflect_hyps; subst.
+              all: eliminate_hprop_eq.
+              all: match goal with
+                   | [ |- ?R (type.app_curried (?f (Some ?n)) ?x) (type.app_curried (?g ?n) ?y) = true ]
+                     => revert dependent y; revert dependent x;
+                        induction n; intros
+                   | [ |- ?R (type.app_curried (?f None) ?x) (type.app_curried (?g ?n) ?y) = true ]
+                     => revert dependent y; revert dependent x;
+                        induction n; intros
+                   | [ |- ?R (type.app_curried (?f (Some ?n')) ?x) (type.app_curried (?g ?n) ?y) = true ]
+                     => revert dependent y; revert dependent x;
+                        revert dependent n'; induction n; intro n'; destruct n'; intros
                    end.
-              all: repeat split; repeat intro; subst; eapply H'.
-              all: try eassumption.
-              all: try reflexivity.
-              all: try solve [ constructor ].
-              all: fail.
-              Unshelve.
-              all: cbv beta.
-              Time
-                all: intros [x|] y;
-              [ revert x; induction y; cbn [nat_rect list_rect];
-                [ intro x; induction x; cbn [nat_rect list_rect];
-                  [ solve [
-                        repeat split; intros;
-                        auto;
-                        repeat first [ do_with_exactly_one_hyp ltac:(fun H => apply H; clear H)
-                                     | reflexivity ]
-                      ]
-                  | pose 1 as GOAL ]
-                | intro x;
-                  repeat match goal with
-                    | [ y : ?T |- _ ]
-                      => lazymatch T with
-                         | nat => idtac
-                         | list _ => idtac
-                         end;
-                  tryif constr_eq y x then fail else revert dependent y
-                  end;
-                  induction x; cbn [nat_rect list_rect];
-                  [ pose 2 as GOAL
-                  | pose 3 as GOAL ] ]
-              | induction y; cbn [nat_rect list_rect];
-                [ repeat split; intros; auto;
-                  solve [
-                      repeat first [ lazymatch goal with
-                                     | [ |- ZRange.type.base.option.is_bounded_by ZRange.type.base.option.None _ = true ]
-                                       => apply type.base.option.is_bounded_by_None
-                                     end
-                                   | do_with_exactly_one_hyp ltac:(fun H => apply H; clear H)
-                                   | reflexivity ]
-                    ]
-                | pose 4 as GOAL ]
-              ].
-              Time
-                all:
-                lazymatch goal with
-                | [ GOAL := 1 |- _ ]
-                  => try time (repeat split; intros; auto;
-                               reflect_hyps; destruct_head'_False;
-                               solve [
-                                   repeat first [ do_with_hyp' ltac:(fun H => solve [ apply H; auto ])
-                                                | do_with_exactly_one_hyp ltac:(fun H => apply H); intros; auto
-                                                | reflexivity
-                                                | solve [ auto ]
-                                                | progress subst
-                                                | progress intros ]
-                                 ]
-                       )
-                | _ => idtac
-                end.
-              Time
-                all:
-                lazymatch goal with
-                | [ GOAL := 4 |- _ ]
-                  => try time
-                         (repeat split; intros; auto;
-                          let rec go _ :=
-                            repeat first [ lazymatch goal with
-                                           | [ |- ZRange.type.base.option.is_bounded_by ZRange.type.base.option.None _ = true ]
-                                             => apply type.base.option.is_bounded_by_None
-                                           end
-                                         | do_with_hyp' ltac:(fun H => solve [ apply H; auto ])
-                                         | do_with_exactly_one_hyp ltac:(fun H => apply H); auto; intros
-                                         | reflexivity
-                                         | solve [ auto ]
-                                         | progress subst
-                                         | progress intros
-                                         | do_with_hyp' ltac:(fun H => apply H; solve [ go () ]) ] in
-                          solve [ go () ])
-                | _ => idtac
-                end.
-              Time
-                all:
-                lazymatch goal with
-                | [ GOAL := 2 |- _ ]
-                  => try time
-                       (repeat split; intros; auto;
-                        reflect_hyps; destruct_head'_False;
-                        solve [
-                            repeat first [ do_with_hyp' ltac:(fun H => solve [ apply H; auto ])
-                                         | do_with_exactly_one_hyp ltac:(fun H => apply H); intros; auto
-                                         | reflexivity
-                                         | solve [ auto ]
-                                         | solve [ constructor ]
-                                         | progress subst
-                                         | progress intros ]
-                          ]
-                       )
-                | _ => idtac
-                end.
-              Time
-                all:
-                lazymatch goal with
-                | [ GOAL := 3 |- _ ]
-                  => try time
-                       (repeat split; intros; auto;
-                        let rec go _ :=
-                          repeat first [ do_with_hyp' ltac:(fun H => solve [ apply H; auto ])
-                                       | do_with_exactly_one_hyp ltac:(fun H => apply H); auto; intros
-                                       | reflexivity
-                                       | solve [ auto ]
-                                       | solve [ constructor ]
-                                       | progress subst
-                                       | progress intros
-                                       | do_with_hyp' ltac:(fun H => apply H; solve [ go () ]) ] in
-                        solve [ go () ])
-                | _ => idtac
-                end.
-              Time
-                all:
-                lazymatch goal with
-                | [ GOAL := 3 |- _ ]
-                  => try time
-                       (repeat split; intros; auto;
-                        cbn [fold_andb_map] in *;
-                        lazymatch goal with
-                        | [ H : andb _ _ = true |- _ ] => rewrite Bool.andb_true_iff in H; destruct H
-                        | _ => idtac
-                        end;
-                        let rec go _ :=
-                          repeat first [ do_with_hyp' ltac:(fun H => solve [ apply H; auto ])
-                                       | do_with_exactly_one_hyp ltac:(fun H => apply H); auto; intros
-                                       | reflexivity
-                                       | solve [ auto ]
-                                       | solve [ constructor ]
-                                       | progress subst
-                                       | progress intros
-                                       | do_with_hyp' ltac:(fun H => apply H; solve [ go () ]) ] in
-                        solve [ go () ])
-                | _ => idtac
-                end.
-               *)
+              all: repeat do_with_hyp' ltac:(fun H => rewrite !H; []).
+              all: auto.
+              all: repeat match goal with
+                     | [ H : forall x y : _ * (_ * (_ * _)), _ |- _ ]
+                       => specialize (fun x1 y1 x2 y2 x3 y3 x4 y4 => H (x1, (x2, (x3, x4))) (y1, (y2, (y3, y4))))
+                     | [ H : forall x y : _ * _ * _, _ |- _ ]
+                       => specialize (fun x1 y1 x2 y2 x3 y3 => H (x1, x2, x3) (y1, y2, y3))
+                     | [ H : forall x y : _ * (_ * _), _ |- _ ]
+                       => specialize (fun x1 y1 x2 y2 x3 y3 => H (x1, (x2, x3)) (y1, (y2, y3)))
+                     end.
+              all: cbn [fst snd] in *.
+              all: try do_with_exactly_one_hyp ltac:(fun H => apply H).
+              all: repeat split; intros; auto.
+              all: rewrite ?ZRange.type.option.app_curried_None.
+              all: try apply type.base.option.is_bounded_by_None.
+              all: rewrite ?type.related_hetero_and_Proper_iff_app_curried by now intros; hnf.
+              all: repeat split; intros; cbv [Proper] in *.
+              all: auto.
+              all: repeat match goal with
+                   | [ |- ?x = true ] => destruct x eqn:?; reflect_hyps; congruence
+                     end.
+              all: repeat do_with_hyp' ltac:(fun H => rewrite !H; []).
+              all: reflect_hyps; destruct_head'_False.
+              all: cbn [fold_andb_map] in *; rewrite ?Bool.andb_true_iff in *; destruct_head'_and.
+              all: auto.
+              all: try now repeat do_with_hyp' ltac:(fun H => apply H); repeat intro; subst; auto. }
+            { destruct idc.
+              all: try (apply Bool.diff_true_false in Hho; exfalso; exact Hho).
+              all: try solve [ cbn in Hrect; inversion_option ].
               (** For command-line debugging, we display goals that should not remain *)
-              all: [ > idtac "WARNING: Remaining goal of order > 3:"; print_context_and_goal () .. ]. }
+              all: [ > idtac "WARNING: Remaining non-rect goal of order > 3:"; print_context_and_goal () .. ]. }
           Time Qed.
         End interp_related.
       End option.
