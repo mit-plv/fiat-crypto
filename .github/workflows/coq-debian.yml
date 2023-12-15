@@ -126,7 +126,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Download standalone ${{ matrix.debian }}
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: standalone-${{ matrix.debian }}
         path: dist/
@@ -166,7 +166,7 @@ jobs:
         fetch-depth: 0 # Fetch all history for all tags and branches
         tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
     - name: Download standalone sid
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: standalone-sid
         path: dist/
