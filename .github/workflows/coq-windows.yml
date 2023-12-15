@@ -103,22 +103,22 @@ jobs:
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} only-test-amd64-files-lite SLOWEST_FIRST=1'
       shell: cmd
     - name: upload OCaml files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ExtractionOCaml
         path: src/ExtractionOCaml
     - name: upload js_of_ocaml files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ExtractionJsOfOCaml
         path: src/ExtractionJsOfOCaml
     - name: upload standalone files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: standalone-windows
         path: dist/fiat_crypto.exe
     - name: upload standalone js files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: standalone-html-windows
         path: fiat-html
@@ -142,7 +142,7 @@ jobs:
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; etc/ci/github-actions-display-per-line-timing.sh'
       shell: cmd
 #    - name: upload timing and .vo info
-#      uses: actions/upload-artifact@v3
+#      uses: actions/upload-artifact@v4
 #      with:
 #        name: build-outputs
 #        path: .
