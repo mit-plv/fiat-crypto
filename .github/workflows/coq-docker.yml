@@ -65,19 +65,19 @@ jobs:
         export: CI ALLOW_DIFF COQCHKEXTRAFLAGS
         custom_script: etc/ci/github-actions-docker-make.sh ${EXTRA_GH_REPORTIFY} -j2 pre-standalone-extracted
     - name: upload OCaml files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ExtractionOCaml-${{ matrix.env.COQ_VERSION }}
         path: src/ExtractionOCaml
       if: always ()
     - name: upload js_of_ocaml source files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ExtractionJsOfOCaml-source-${{ matrix.env.COQ_VERSION }}
         path: src/ExtractionJsOfOCaml
       if: always ()
     - name: upload Haskell source files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ExtractionHaskell-source-${{ matrix.env.COQ_VERSION }}
         path: src/ExtractionHaskell
@@ -85,13 +85,13 @@ jobs:
     - name: install-standalone-unified-ocaml
       run: make -f Makefile.standalone install-standalone-unified-ocaml BINDIR=dist
     - name: upload standalone files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: standalone-docker-coq-${{ matrix.env.DOCKER_COQ_VERSION }}
         path: dist/fiat_crypto
     - run: git config --file .gitmodules --get-regexp path | awk '{ print $2 }' | xargs tar -czvf fiat-crypto-build.tar.gz src
     - name: Upload built files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: build-outputs-docker-coq-${{ matrix.env.DOCKER_COQ_VERSION }}-ocaml-${{ matrix.env.DOCKER_OCAML_VERSION }}
         path: fiat-crypto-build.tar.gz
@@ -203,13 +203,13 @@ jobs:
     - name: install-standalone-js-of-ocaml
       run: make -f Makefile.standalone install-standalone-js-of-ocaml
     - name: upload js_of_ocaml build files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ExtractionJsOfOCaml-${{ matrix.coq-version }}-ocaml-${{ matrix.ocaml-compiler }}
         path: src/ExtractionJsOfOCaml
       if: always ()
     - name: Upload js_of_ocaml outputs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: fiat-html-js-of-ocaml
         path: fiat-html
@@ -264,13 +264,13 @@ jobs:
     - name: install-standalone-wasm-of-ocaml
       run: make -f Makefile.standalone install-standalone-wasm-of-ocaml
     - name: upload wasm_of_ocaml build files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ExtractionJsOfOCaml-${{ matrix.coq-version }}-ocaml-${{ matrix.ocaml-compiler }}+wasm
         path: src/ExtractionJsOfOCaml
       if: always ()
     - name: Upload wasm_of_ocaml outputs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: fiat-html-wasm-of-ocaml
         path: fiat-html
@@ -346,7 +346,7 @@ jobs:
     - run: tar -czvf generated-files.tgz fiat-*/
       if: ${{ failure() }}
     - name: upload generated files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: generated-files-${{ matrix.coq-version }}
         path: generated-files.tgz
@@ -374,7 +374,7 @@ jobs:
     - name: standalone-haskell
       run: etc/ci/github-actions-make.sh -f Makefile.standalone -j1 standalone-haskell GHCFLAGS='+RTS -M7G -RTS'
     - name: upload Haskell files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ExtractionHaskell-${{ matrix.coq-version }}
         path: src/ExtractionHaskell
