@@ -159,7 +159,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Download standalone Windows
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: standalone-windows
         path: dist/
@@ -194,7 +194,7 @@ jobs:
         fetch-depth: 0 # Fetch all history for all tags and branches
         tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
     - name: Download standalone Windows
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: standalone-windows
         path: dist/

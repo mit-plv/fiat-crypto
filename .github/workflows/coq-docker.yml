@@ -150,7 +150,7 @@ jobs:
       with:
         submodules: recursive
     - name: Download a Build Artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: build-outputs-docker-coq-${{ matrix.env.DOCKER_COQ_VERSION }}-ocaml-${{ matrix.env.DOCKER_OCAML_VERSION }}
         path: .
@@ -192,7 +192,7 @@ jobs:
     - name: echo build params
       run: etc/ci/describe-system-config.sh
     - name: Download a Build Artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ExtractionJsOfOCaml-source-${{ matrix.coq-version }}
         path: src/ExtractionJsOfOCaml
@@ -253,7 +253,7 @@ jobs:
     - name: echo build params
       run: etc/ci/describe-system-config.sh
     - name: Download a Build Artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ExtractionJsOfOCaml-source-${{ matrix.coq-version }}
         path: src/ExtractionJsOfOCaml
@@ -288,14 +288,14 @@ jobs:
         fetch-depth: 0 # Fetch all history for all tags and branches, for fiat-html/version.js
         tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
     - name: Download a Build Artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: fiat-html-js-of-ocaml
         path: fiat-html
     - run: find fiat-html
     - run: ls -la fiat-html
     - name: Download a Build Artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: fiat-html-wasm-of-ocaml
         path: fiat-html
@@ -334,7 +334,7 @@ jobs:
       with:
         submodules: recursive
     - name: Download a Build Artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ExtractionOCaml-${{ matrix.coq-version }}
         path: src/ExtractionOCaml
@@ -367,7 +367,7 @@ jobs:
       with:
         submodules: recursive
     - name: Download a Build Artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ExtractionHaskell-source-${{ matrix.coq-version }}
         path: src/ExtractionHaskell
@@ -396,7 +396,7 @@ jobs:
       with:
         submodules: recursive
     - name: Download a Build Artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ExtractionOCaml-master
         path: src/ExtractionOCaml
@@ -421,7 +421,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Download standalone Docker
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: standalone-docker-coq-${{ matrix.docker-coq-version }}
         path: dist/
@@ -466,7 +466,7 @@ jobs:
         fetch-depth: 0 # Fetch all history for all tags and branches
         tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
     - name: Download standalone Docker
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: standalone-docker-coq-dev
         path: dist/
