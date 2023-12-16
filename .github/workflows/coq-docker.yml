@@ -340,6 +340,8 @@ jobs:
         path: src/ExtractionOCaml
     - name: make binaries executable
       run: git check-ignore src/ExtractionOCaml/* | grep -v '\.' | xargs chmod +x
+    - name: touch binaries to prevent rebuilding
+      run: git check-ignore src/ExtractionOCaml/* | grep -v '\.' | xargs touch
     - name: generated-files
       run: etc/ci/github-actions-make.sh --warnings -f Makefile.examples -j2 generated-files
       if: github.event_name == 'pull_request'
