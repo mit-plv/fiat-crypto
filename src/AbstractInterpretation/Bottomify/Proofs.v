@@ -39,8 +39,8 @@ Require Import Rewriter.Language.Wf.
 Require Import Crypto.Language.API.
 Require Import Crypto.CastLemmas.
 Require Import Rewriter.Language.UnderLetsProofs.
-Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
-Require Import Crypto.AbstractInterpretation.Wf.
+Require Import Crypto.AbstractInterpretation.Bottomify.AbstractInterpretation.
+Require Import Crypto.AbstractInterpretation.Bottomify.Wf.
 Require Import Crypto.AbstractInterpretation.ZRangeProofs.
 
 Module Compilers.
@@ -51,9 +51,9 @@ Module Compilers.
   Import Language.Wf.Compilers.
   Import Language.API.Compilers.
   Import UnderLetsProofs.Compilers.
-  Import AbstractInterpretation.Wf.Compilers.
+  Import AbstractInterpretation.Bottomify.Wf.Compilers.
   Import AbstractInterpretation.ZRangeProofs.Compilers.
-  Import AbstractInterpretation.Wf.Compilers.partial.
+  Import AbstractInterpretation.Bottomify.Wf.Compilers.partial.
   Import invert_expr.
 
   Local Notation related_bounded' b v1 v2

@@ -26,7 +26,7 @@ Require Import Crypto.Language.InversionExtra.
 Require Import Rewriter.Language.Wf.
 Require Import Rewriter.Language.UnderLetsProofs.
 Require Import Rewriter.Util.Decidable.
-Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
+Require Import Crypto.AbstractInterpretation.Bottomify.AbstractInterpretation.
 Require Import Crypto.AbstractInterpretation.ZRangeCommonProofs.
 Import Coq.Lists.List.
 
