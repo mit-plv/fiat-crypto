@@ -36,7 +36,7 @@ jobs:
       with:
         branch: ${{ matrix.alpine }}
         extra-repositories: https://dl-cdn.alpinelinux.org/alpine/edge/testing
-        packages: git make jq gcc musl-dev python3 ocaml ocaml-findlib ghc cabal coq ocaml-zarith bash sudo
+        packages: git make jq gcc musl-dev python3 ocaml ocaml-findlib ghc cabal coq ocaml-zarith bash
     - name: work around coq issue 15663
       shell: alpine.sh --root {0}
       run: |
@@ -106,14 +106,14 @@ jobs:
       shell: alpine.sh {0}
       run: make TIMED=1 TIMING=1 -j2 only-test-amd64-files-lite SLOWEST_FIRST=1
     - name: install
-      shell: alpine.sh {0}
-      run: sudo make EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 install install-standalone-ocaml
+      shell: alpine.sh --root {0}
+      run: make EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 install install-standalone-ocaml
     - name: install-without-bedrock2
-      shell: alpine.sh {0}
-      run: sudo make EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 install-without-bedrock2 install-standalone-ocaml
+      shell: alpine.sh --root {0}
+      run: make EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 install-without-bedrock2 install-standalone-ocaml
     - name: install-dev
-      shell: alpine.sh {0}
-      run: sudo make EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 install install-standalone-ocaml
+      shell: alpine.sh --root {0}
+      run: make EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 install install-standalone-ocaml
     - name: display timing info
       run: cat time-of-build-pretty.log || true
     - name: display per-line timing info
