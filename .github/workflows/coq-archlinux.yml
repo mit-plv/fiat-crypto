@@ -29,11 +29,6 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-    - name: work around coq issue 15663
-      run: |
-        ln -s /usr/lib/coq /usr/lib/ocaml/coq
-        ln -s /usr/lib/coq-core /usr/lib/ocaml/coq-core
-        ln -s /usr/lib/coqide-server /usr/lib/ocaml/coqide-server
     - name: Work around https://github.com/actions/checkout/issues/766
       run: git config --global --add safe.directory "*"
     - name: chroot build params
