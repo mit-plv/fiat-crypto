@@ -29,7 +29,7 @@ jobs:
       run: make only-test-java-files EXTERNAL_DEPENDENCIES=1
     - name: make documentation
       run: make only-javadoc EXTERNAL_DEPENDENCIES=1
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v3
       with:
         name: fiat-javadoc
         path: fiat-java/doc
