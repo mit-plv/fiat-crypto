@@ -41,6 +41,7 @@ group opam switch
 group opam list
 group ocamlc -config
 group ocamlc -where
+group ocamlfind printconf destdir
 group ocamlfind list
 group ocamlfind query findlib
 group ocamlfind query zarith
