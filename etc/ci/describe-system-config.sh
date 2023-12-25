@@ -33,6 +33,7 @@ group cat /proc/cpuinfo
 group cat /proc/meminfo
 group apk info
 group dpkg -l
+group pacman -Qs
 group ghc --version
 group ghc -v
 group gcc --version
