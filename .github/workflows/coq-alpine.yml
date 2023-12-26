@@ -61,23 +61,23 @@ jobs:
 #      shell: alpine.sh {0}
 #      run: make install-standalone-js-of-ocaml
     - name: upload standalone files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: standalone-${{ matrix.alpine }}
         path: dist/fiat_crypto
 #    - name: upload standalone js files
-#      uses: actions/upload-artifact@v4
+#      uses: actions/upload-artifact@v3
 #      with:
 #        name: standalone-html-${{ matrix.alpine }}
 #        path: fiat-html
     - name: upload OCaml files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: ExtractionOCaml-${{ matrix.alpine }}
         path: src/ExtractionOCaml
       if: always ()
 #    - name: upload js_of_ocaml files
-#      uses: actions/upload-artifact@v4
+#      uses: actions/upload-artifact@v3
 #      with:
 #        name: ExtractionJsOfOCaml-${{ matrix.alpine }}
 #        path: src/ExtractionJsOfOCaml
@@ -88,7 +88,7 @@ jobs:
     - run: tar -czvf generated-files.tgz fiat-*/
       if: ${{ failure() }}
     - name: upload generated files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: generated-files-${{ matrix.alpine }}
         path: generated-files.tgz
@@ -97,7 +97,7 @@ jobs:
       shell: alpine.sh {0}
       run: make TIMED=1 TIMING=1 -j1 standalone-haskell GHCFLAGS='+RTS -M7G -RTS'
     - name: upload Haskell files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: ExtractionHaskell-${{ matrix.alpine }}
         path: src/ExtractionHaskell
@@ -132,7 +132,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Download standalone ${{ matrix.alpine }}
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v3
       with:
         name: standalone-${{ matrix.alpine }}
         path: dist/
@@ -167,7 +167,7 @@ jobs:
         fetch-depth: 0 # Fetch all history for all tags and branches
         tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
     - name: Download standalone edge
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v3
       with:
         name: standalone-edge
         path: dist/
