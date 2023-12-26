@@ -21,7 +21,7 @@ jobs:
       with:
         branch: gh-pages # The branch the action should deploy to.
         folder: fiat-html # The folder the action should deploy.
-        git-config-email: JasonGross@users.noreply.github.com
+        git-config-email: actions@users.noreply.github.com
         target-folder: .
         single-commit: true # otherwise the repo will get too big
         dry-run: ${{ github.ref != 'refs/heads/master' }}
