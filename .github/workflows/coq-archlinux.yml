@@ -47,7 +47,7 @@ jobs:
     - run: tar -czvf generated-files.tgz fiat-*/
       if: ${{ failure() }}
     - name: upload generated files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: generated-files-archlinux
         path: generated-files.tgz
@@ -59,23 +59,23 @@ jobs:
     #- name: install-standalone-js-of-ocaml
     #  run: etc/ci/github-actions-make.sh install-standalone-js-of-ocaml
     - name: upload standalone files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: standalone-archlinux
         path: dist/fiat_crypto
     #- name: upload standalone js files
-    #  uses: actions/upload-artifact@v4
+    #  uses: actions/upload-artifact@v3
     #  with:
     #    name: standalone-html-archlinux
     #    path: fiat-html
     - name: upload OCaml files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: ExtractionOCaml-archlinux
         path: src/ExtractionOCaml
       if: always ()
     #- name: upload js_of_ocaml files
-    #  uses: actions/upload-artifact@v4
+    #  uses: actions/upload-artifact@v3
     #  with:
     #    name: ExtractionJsOfOCaml-archlinux
     #    path: src/ExtractionJsOfOCaml
@@ -83,7 +83,7 @@ jobs:
     - name: standalone-haskell
       run: etc/ci/github-actions-make.sh -j1 standalone-haskell GHCFLAGS='+RTS -M7G -RTS'
     - name: upload Haskell files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: ExtractionHaskell-archlinux
         path: src/ExtractionHaskell
@@ -111,7 +111,7 @@ jobs:
         pacman --noconfirm -Syu git --needed
     - uses: actions/checkout@v4
     - name: Download standalone archlinux
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v3
       with:
         name: standalone-archlinux
         path: dist/
@@ -139,7 +139,7 @@ jobs:
         fetch-depth: 0 # Fetch all history for all tags and branches
         tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
     - name: Download standalone archlinux
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v3
       with:
         name: standalone-archlinux
         path: dist/
