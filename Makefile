@@ -398,7 +398,12 @@ DISPLAY_NON_GENERATED_VO := $(filter-out $(DISPLAY_GENERATED_VO),$(DISPLAY_NON_J
 
 .PHONY: $(DISPLAY_VO:.vo=.log.diff)
 $(DISPLAY_VO:.vo=.log.diff) : %.log.diff : %.log %.log.expected
-	diff $*.log.expected $*.log
+	$(SHOW)'DIFF $*'
+	$(HIDE)if diff $*.log.expected $*.log; then \
+	   echo '$* PASSED'; \
+	 else \
+	   echo '$* FAILED'; \
+	 fi
 
 c: $(filter-out $(UNMADE_C_FILES),$(DISPLAY_NON_JAVA_VO:Display.vo=.c) $(DISPLAY_NON_GENERATED_VO:Display.vo=.h))
 
