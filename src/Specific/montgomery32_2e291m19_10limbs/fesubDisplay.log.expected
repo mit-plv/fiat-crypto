@@ -1,0 +1,38 @@
+λ x x0 : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x20, x21, x19, x17, x15, x13, x11, x9, x7, x5, (x38, x39, x37, x35, x33, x31, x29, x27, x25, x23))%core,
+ uint32_t x41, uint8_t/*bool*/ x42 = subborrow_u32(0x0, x5, x23);
+ uint32_t x44, uint8_t/*bool*/ x45 = subborrow_u32(x42, x7, x25);
+ uint32_t x47, uint8_t/*bool*/ x48 = subborrow_u32(x45, x9, x27);
+ uint32_t x50, uint8_t/*bool*/ x51 = subborrow_u32(x48, x11, x29);
+ uint32_t x53, uint8_t/*bool*/ x54 = subborrow_u32(x51, x13, x31);
+ uint32_t x56, uint8_t/*bool*/ x57 = subborrow_u32(x54, x15, x33);
+ uint32_t x59, uint8_t/*bool*/ x60 = subborrow_u32(x57, x17, x35);
+ uint32_t x62, uint8_t/*bool*/ x63 = subborrow_u32(x60, x19, x37);
+ uint32_t x65, uint8_t/*bool*/ x66 = subborrow_u32(x63, x21, x39);
+ uint32_t x68, uint8_t/*bool*/ x69 = subborrow_u32(x66, x20, x38);
+ uint32_t x70 = cmovznz32(x69, 0x0, 0xffffffff);
+ uint32_t x71 = (x70 & 0xffffffed);
+ uint32_t x73, uint8_t/*bool*/ x74 = addcarryx_u32(0x0, x41, x71);
+ uint32_t x75 = (x70 & 0xffffffff);
+ uint32_t x77, uint8_t/*bool*/ x78 = addcarryx_u32(x74, x44, x75);
+ uint32_t x79 = (x70 & 0xffffffff);
+ uint32_t x81, uint8_t/*bool*/ x82 = addcarryx_u32(x78, x47, x79);
+ uint32_t x83 = (x70 & 0xffffffff);
+ uint32_t x85, uint8_t/*bool*/ x86 = addcarryx_u32(x82, x50, x83);
+ uint32_t x87 = (x70 & 0xffffffff);
+ uint32_t x89, uint8_t/*bool*/ x90 = addcarryx_u32(x86, x53, x87);
+ uint32_t x91 = (x70 & 0xffffffff);
+ uint32_t x93, uint8_t/*bool*/ x94 = addcarryx_u32(x90, x56, x91);
+ uint32_t x95 = (x70 & 0xffffffff);
+ uint32_t x97, uint8_t/*bool*/ x98 = addcarryx_u32(x94, x59, x95);
+ uint32_t x99 = (x70 & 0xffffffff);
+ uint32_t x101, uint8_t/*bool*/ x102 = addcarryx_u32(x98, x62, x99);
+ uint32_t x103 = (x70 & 0xffffffff);
+ uint32_t x105, uint8_t/*bool*/ x106 = addcarryx_u32(x102, x65, x103);
+ uint8_t x107 = ((uint8_t)x70 & 0x7);
+ uint32_t x109, uint8_t/*bool*/ _ = addcarryx_u32(x106, x68, x107);
+ (Return x109, Return x105, Return x101, Return x97, Return x93, Return x89, Return x85, Return x81, Return x77, Return x73))
+(x, x0)%core
+     : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → ReturnType (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)

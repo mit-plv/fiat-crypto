@@ -1,0 +1,47 @@
+λ x : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x23, x24, x22, x20, x18, x16, x14, x12, x10, x8, x6, x4, x2)%core,
+ uint32_t x26, uint8_t/*bool*/ x27 = subborrow_u32(0x0, 0x0, x2);
+ uint32_t x29, uint8_t/*bool*/ x30 = subborrow_u32(x27, 0x0, x4);
+ uint32_t x32, uint8_t/*bool*/ x33 = subborrow_u32(x30, 0x0, x6);
+ uint32_t x35, uint8_t/*bool*/ x36 = subborrow_u32(x33, 0x0, x8);
+ uint32_t x38, uint8_t/*bool*/ x39 = subborrow_u32(x36, 0x0, x10);
+ uint32_t x41, uint8_t/*bool*/ x42 = subborrow_u32(x39, 0x0, x12);
+ uint32_t x44, uint8_t/*bool*/ x45 = subborrow_u32(x42, 0x0, x14);
+ uint32_t x47, uint8_t/*bool*/ x48 = subborrow_u32(x45, 0x0, x16);
+ uint32_t x50, uint8_t/*bool*/ x51 = subborrow_u32(x48, 0x0, x18);
+ uint32_t x53, uint8_t/*bool*/ x54 = subborrow_u32(x51, 0x0, x20);
+ uint32_t x56, uint8_t/*bool*/ x57 = subborrow_u32(x54, 0x0, x22);
+ uint32_t x59, uint8_t/*bool*/ x60 = subborrow_u32(x57, 0x0, x24);
+ uint32_t x62, uint8_t/*bool*/ x63 = subborrow_u32(x60, 0x0, x23);
+ uint32_t x64 = cmovznz32(x63, 0x0, 0xffffffff);
+ uint32_t x65 = (x64 & 0xffffffeb);
+ uint32_t x67, uint8_t/*bool*/ x68 = addcarryx_u32(0x0, x26, x65);
+ uint32_t x69 = (x64 & 0xffffffff);
+ uint32_t x71, uint8_t/*bool*/ x72 = addcarryx_u32(x68, x29, x69);
+ uint32_t x73 = (x64 & 0xffffffff);
+ uint32_t x75, uint8_t/*bool*/ x76 = addcarryx_u32(x72, x32, x73);
+ uint32_t x77 = (x64 & 0xffffffff);
+ uint32_t x79, uint8_t/*bool*/ x80 = addcarryx_u32(x76, x35, x77);
+ uint32_t x81 = (x64 & 0xffffffff);
+ uint32_t x83, uint8_t/*bool*/ x84 = addcarryx_u32(x80, x38, x81);
+ uint32_t x85 = (x64 & 0xffffffff);
+ uint32_t x87, uint8_t/*bool*/ x88 = addcarryx_u32(x84, x41, x85);
+ uint32_t x89 = (x64 & 0xffffffff);
+ uint32_t x91, uint8_t/*bool*/ x92 = addcarryx_u32(x88, x44, x89);
+ uint32_t x93 = (x64 & 0xffffffff);
+ uint32_t x95, uint8_t/*bool*/ x96 = addcarryx_u32(x92, x47, x93);
+ uint32_t x97 = (x64 & 0xffffffff);
+ uint32_t x99, uint8_t/*bool*/ x100 = addcarryx_u32(x96, x50, x97);
+ uint32_t x101 = (x64 & 0xffffffff);
+ uint32_t x103, uint8_t/*bool*/ x104 = addcarryx_u32(x100, x53, x101);
+ uint32_t x105 = (x64 & 0xffffffff);
+ uint32_t x107, uint8_t/*bool*/ x108 = addcarryx_u32(x104, x56, x105);
+ uint32_t x109 = (x64 & 0xffffffff);
+ uint32_t x111, uint8_t/*bool*/ x112 = addcarryx_u32(x108, x59, x109);
+ uint8_t x113 = ((uint8_t)x64 & 0x1f);
+ uint32_t x115, uint8_t/*bool*/ _ = addcarryx_u32(x112, x62, x113);
+ (Return x115, Return x111, Return x107, Return x103, Return x99, Return x95, Return x91, Return x87, Return x83, Return x79, Return x75, Return x71, Return x67))
+x
+     : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → ReturnType (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)
