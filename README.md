@@ -6,6 +6,7 @@ Building
 [![CI (Coq, Docker)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-docker.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-docker.yml?query=branch%3Amaster)
 [![CI (Coq, Debian)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-debian.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-debian.yml?query=branch%3Amaster)
 [![CI (Coq, Alpine)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-alpine.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-alpine.yml?query=branch%3Amaster)
+[![CI (Coq, Arch Linux)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-archlinux.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-archlinux.yml?query=branch%3Amaster)
 [![CI (Coq, Windows)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-windows.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-windows.yml?query=branch%3Amaster)
 [![CI (Coq, MacOS)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-macos.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-macos.yml?query=branch%3Amaster)
 
