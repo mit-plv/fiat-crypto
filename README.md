@@ -362,19 +362,19 @@ The files contain:
 
   + `Language.v`: Defines parts of the PHOAS basic infrastructure
         parameterized over base types and identifiers including:
-    . PHOAS
-    . reification
-    . denotation/intepretation
-    . utilities for inverting PHOAS exprs
-    . default/dummy values of PHOAS exprs
-    . default instantiation of generic PHOAS types
-    . Gallina reification of ground terms
-    . Flat/indexed syntax trees, and conversions to and from PHOAS
+    * PHOAS
+    * reification
+    * denotation/intepretation
+    * utilities for inverting PHOAS exprs
+    * default/dummy values of PHOAS exprs
+    * default instantiation of generic PHOAS types
+    * Gallina reification of ground terms
+    * Flat/indexed syntax trees, and conversions to and from PHOAS
 
     Defines the passes:
-    . ToFlat
-    . FromFlat
-    . GeneralizeVar
+    * ToFlat
+    * FromFlat
+    * GeneralizeVar
 
   + `API.v`: Specializes the type of PHOAS expressions to the
     particular identifiers we're using, and defines convenience
@@ -405,9 +405,9 @@ The files contain:
     is used to ensure that when we output C code, aliasing the input
     and the output arrays doesn't cause issues).
     Defines the passes:
-    . SubstVar
-    . SubstVarLike
-    . SubstVarOrIdent
+    * SubstVar
+    * SubstVarLike
+    * SubstVarOrIdent
 
   The following files in `Language/` are used only by the rewriter:
 
@@ -444,8 +444,8 @@ The files contain:
     from PHOAS to code in a language as strings.  (Depends on
     `AbstractInterpretation.v` for ZRange utilities.)  Defines the
     passes:
-    . ToString.LinesToString
-    . ToString.ToFunctionLines
+    * ToString.LinesToString
+    * ToString.ToFunctionLines
 
   + `IR.v`: Defines a common IR for C and Rust (and maybe eventually
     other languages), and builds most of the infrastructure necessary
