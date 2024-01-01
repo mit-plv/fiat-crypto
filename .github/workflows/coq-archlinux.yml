@@ -25,7 +25,8 @@ jobs:
     steps:
     - name: Install system dependencies
       run: |
-        pacman-key --refresh-keys
+        # pacman-key --refresh-keys # too slow
+        pacman --noconfirm -Syu archlinux-keyring
         pacman --noconfirm -Syu base-devel git make python3 which jq ghc ghc-static time diffutils coq ocaml-zarith --needed
     - uses: actions/checkout@v4
       with:
