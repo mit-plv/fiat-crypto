@@ -23,7 +23,7 @@ Section with_context.
   Local Notation lookupb := (@lookupb base_type_code Name var Context).
   Local Notation extend := (@extend base_type_code Name var Context).
   Local Notation remove := (@remove base_type_code Name var Context).
-  Local Notation lookup := (@lookup base_type_code Name var Context).
+  Local Notation lookup t := (@lookup base_type_code Name var Context t).
 
   Global Instance context_equiv_Equivalence : Equivalence context_equiv | 10.
   Proof. split; repeat intro; congruence. Qed.
