@@ -37,7 +37,7 @@ Section ExtendedCoordinates.
   (* Match this context to the Basic.ExtendedCoordinates context *)
   Local Notation point := (point(F:=F)(Feq:=Feq)(Fzero:=Fzero)(Fadd:=Fadd)(Fmul:=Fmul)(a:=a)(d:=d)).
   Local Notation coordinates := (coordinates(F:=F)(Feq:=Feq)(Fzero:=Fzero)(Fadd:=Fadd)(Fmul:=Fmul)(a:=a)(d:=d)).
-  Context {a_eq_minus1:a = Fopp 1} {twice_d} {k_eq_2d:twice_d = d+d}.
+  Context {a_eq_minus1:a = Fopp 1} {twice_d} {k_eq_2d:twice_d = d+d} {nonzero_d: d<>0}.
   Local Notation m1add := (m1add(F:=F)(Feq:=Feq)(Fzero:=Fzero)(Fone:=Fone)(Fopp:=Fopp)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)(Finv:=Finv)(Fdiv:=Fdiv)(field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=Feq_dec)(a:=a)(d:=d)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)(a_eq_minus1:=a_eq_minus1)(twice_d:=twice_d)(k_eq_2d:=k_eq_2d)).
 
   (* Define a new cached point type *)
@@ -45,10 +45,15 @@ Section ExtendedCoordinates.
     { C | let '(half_YmX,half_YpX,Z,Td) := C in
           let X := half_YpX - half_YmX in
           let Y := half_YpX + half_YmX in
+          let T := Td / d in
             a * X^2*Z^2 + Y^2*Z^2 = (Z^2)^2 + d * X^2 * Y^2
-            /\ X * Y * d = Z * Td
+            /\ X * Y = Z * T
             /\ Z <> 0 }.
   Definition cached_coordinates (C:cached) : F*F*F*F := proj1_sig C.
+  Definition cached_eq (C1 C2:cached) :=
+    let '(hYmX1, hYpX1, Z1, _) := cached_coordinates C1 in
+    let '(hYmX2, hYpX2, Z2, _) := cached_coordinates C2 in
+    Z2*(hYpX1-hYmX1) = Z1*(hYpX2-hYmX2) /\ Z2*(hYpX1+hYmX1) = Z1*(hYpX2+hYmX2).
 
   (* Stolen from Basic; should be a way to reuse instead? *)
   Ltac t_step :=
@@ -60,10 +65,34 @@ Section ExtendedCoordinates.
     | _ => progress destruct_head' @Basic.point
     | _ => progress destruct_head' @cached
     | _ => progress destruct_head' and
-    | _ => progress cbv [eq CompleteEdwardsCurve.E.eq E.eq E.zero E.add E.opp fst snd coordinates E.coordinates proj1_sig] in *
+    | _ => progress cbv [eq CompleteEdwardsCurve.E.eq E.eq E.zero E.add E.opp fst snd cached_coordinates coordinates E.coordinates proj1_sig] in *
     | |- _ /\ _ => split | |- _ <-> _ => split
     end.
   Ltac t := repeat t_step; try Field.fsatz.
+
+  (* Stolen from Basic *)
+  Program Definition to_twisted (P:point) : Epoint :=
+    let XYZTT := coordinates P in let Ta := snd XYZTT in
+                                  let XYZT  := fst XYZTT in
+                                  let Tb := snd XYZT in
+                                  let XYZ := fst XYZT in      let Z := snd XYZ in
+                                                              let XY   := fst XYZ in       let Y := snd XY in
+                                                                                           let X    := fst XY in
+                                                                                           let iZ := Finv Z in ((X*iZ), (Y*iZ)).
+  Next Obligation. t. Qed.
+  Global Instance Proper_to_twisted : Proper (eq==>E.eq) to_twisted.
+  Proof using Type. cbv [to_twisted]; t. Qed.
+
+  Program Definition cached_to_twisted (C:cached) : Epoint :=
+    let MPZT := cached_coordinates C in
+      let Td  := snd MPZT in
+      let MPZ := fst MPZT in
+        let Z  := snd MPZ in
+        let MP := fst MPZ in
+          let hYpX := snd MP in
+          let hYmX := fst MP in
+            let iZ := Finv Z in (((hYpX-hYmX)*iZ), ((hYpX+hYmX)*iZ)).
+  Next Obligation. t. Qed.
 
   Program Definition m1_prep (P : point) : cached :=
       match coordinates P return F*F*F*F with
@@ -92,8 +121,11 @@ Section ExtendedCoordinates.
       let Z3 := F*G in
       (X3, Y3, Z3, E, H)
     end.
-  Next Obligation. t. admit. Admitted.
-
+  Next Obligation.
+    match goal with
+    | [ |- match (let (_, _) := coordinates ?P1 in let (_, _) := _ in let (_, _) := _ in let (_, _) := _ in let (_, _) := proj1_sig ?C in _) with _ => _ end ]
+      => pose proof (E.denominator_nonzero _ nonzero_a square_a _ nonsquare_d _ _ (proj2_sig (to_twisted P1))  _ _  (proj2_sig (cached_to_twisted C)))
+    end; t. Qed.
 
   Create HintDb points_as_coordinates discriminated.
   Hint Unfold XYZT.Basic.point XYZT.Basic.coordinates XYZT.Basic.m1add
