@@ -42,13 +42,13 @@ Module debugging_no_asm.
 ;"        mov [ rsp + 0x58 ], r14; saving to stack"
            ])) by admit.
     clearbody k; subst k.
-    set (k := string_dec _ _) in (value of v) at 1; vm_compute in k; subst k; cbv beta iota in v.
+    set (k := (_ =? _)%string) in (value of v) at 1; vm_compute in k; subst k; cbv beta iota in v.
     vm_compute ForExtraction.parse_args in v.
     cbv beta iota zeta in v.
     vm_compute concat in v.
     cbv [ForExtraction.output_file_name ForExtraction.asm_output_file_name] in v.
     cbn [Option.sequence_return nth_error] in v.
-    set (k := string_dec _ _) in (value of v).
+    set (k := (_ =? _)%string) in (value of v).
     vm_compute in k; subst k.
     cbv beta iota zeta in v.
     cbv [ForExtraction.Parameterized.Pipeline] in v.
@@ -57,7 +57,7 @@ Module debugging_no_asm.
     cbv [ForExtraction.UnsaturatedSolinas.api] in v.
     cbn [fst snd] in v.
     repeat (set (x := ((_ ++ _)%string)) in (value of v) at 1; vm_compute in x; subst x).
-    repeat (set (x := string_dec _ _) in (value of v) at 1; vm_compute in x; subst x).
+    repeat (set (x := (_ =? _)%string) in (value of v) at 1; vm_compute in x; subst x).
     cbv beta iota zeta in v.
     repeat (set (x := ((_ ++ _)%list)) in (value of v) at 1; vm_compute in x; subst x).
     cbv [ForExtraction.Synthesize] in v.
@@ -134,7 +134,7 @@ Module debugging_typedef_bounds.
     vm_compute concat in v.
     cbv [ForExtraction.output_file_name ForExtraction.asm_output_file_name] in v.
     cbn [Option.sequence_return nth_error] in v.
-    set (k := string_dec _ _) in (value of v).
+    set (k := (_ =? _)%string) in (value of v).
     vm_compute in k; subst k.
     cbv beta iota zeta in v.
     cbv [ForExtraction.Parameterized.Pipeline] in v.
@@ -143,7 +143,7 @@ Module debugging_typedef_bounds.
     cbv [ForExtraction.UnsaturatedSolinas.api] in v.
     cbn [fst snd] in v.
     repeat (set (x := ((_ ++ _)%string)) in (value of v) at 1; vm_compute in x; subst x).
-    repeat (set (x := string_dec _ _) in (value of v) at 1; vm_compute in x; subst x).
+    repeat (set (x := (_ =? _)%string) in (value of v) at 1; vm_compute in x; subst x).
     cbv beta iota zeta in v.
     repeat (set (x := ((_ ++ _)%list)) in (value of v) at 1; vm_compute in x; subst x).
     cbv [ForExtraction.Synthesize] in v.

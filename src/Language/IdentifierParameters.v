@@ -11,6 +11,7 @@ Import Ltac2.Constr.Unsafe.
 Require Rewriter.Util.InductiveHList.
 Require Rewriter.Util.LetIn.
 Import InductiveHList.Notations.
+Require Import Rewriter.Util.Tactics2.DestCase.
 Require Import Ltac2.Printf.
 
 (* TODO: move to Util *)
@@ -28,8 +29,9 @@ Ltac2 Set reify_preprocess_extra :=
             => let t := Constr.type term in
             '(@ZRange.zrange_rect_nodep $t $f $x) *)
          match Constr.Unsafe.kind term with
-         | Constr.Unsafe.Case cinfo ret_ty cinv x branches
-           => match Constr.Unsafe.kind ret_ty with
+         | Constr.Unsafe.Case _ _ _ _ _
+           => let (cinfo, ret_ty, cinv, x, branches) := destCase term in
+             match Constr.Unsafe.kind ret_ty with
               | Constr.Unsafe.Lambda xb ret_ty
                 => let ty := Constr.Unsafe.substnl [x] 0 ret_ty in
                    lazy_match! Constr.Binder.type xb with
@@ -44,13 +46,11 @@ Ltac2 Set reify_preprocess_extra :=
          end
      end.
 
+Local Ltac2 Notation "red_flags:(" s(strategy) ")" := s.
+
 (* TODO: Move to util *)
 Ltac2 eval_cbv_beta (c : constr) :=
-  Std.eval_cbv { Std.rBeta := true; Std.rMatch := false;
-                 Std.rFix := false; Std.rCofix := false;
-                 Std.rZeta := false; Std.rDelta := false;
-                 Std.rConst := [] }
-               c.
+  Std.eval_cbv (red_flags:(beta)) c.
 
 Ltac2 Set reify_ident_preprocess_extra :=
   fun ctx_tys term
@@ -80,6 +80,7 @@ Definition var_like_idents : InductiveHList.hlist
 
 Definition base_type_list_named : InductiveHList.hlist
   := [with_name Z BinInt.Z
+      ; with_name positive BinPos.positive
       ; with_name bool Datatypes.bool
       ; with_name nat Datatypes.nat
       ; with_name zrange ZRange.zrange
@@ -110,10 +111,17 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_eager_nat_rect (ident.eagerly (@Thunked.nat_rect))
       ; with_name ident_nat_rect_arrow (@nat_rect_arrow_nodep)
       ; with_name ident_eager_nat_rect_arrow (ident.eagerly (@nat_rect_arrow_nodep))
+      ; with_name ident_nat_rect_fbb_b (@nat_rect_fbb_b)
+      ; with_name ident_nat_rect_fbb_b_b (@nat_rect_fbb_b_b)
       ; with_name ident_list_rect (@Thunked.list_rect)
       ; with_name ident_eager_list_rect (ident.eagerly (@Thunked.list_rect))
       ; with_name ident_list_rect_arrow (@list_rect_arrow_nodep)
       ; with_name ident_eager_list_rect_arrow (ident.eagerly (@list_rect_arrow_nodep))
+      ; with_name ident_list_rect_fbb_b (@list_rect_fbb_b)
+      ; with_name ident_list_rect_fbb_b_b (@list_rect_fbb_b_b)
+      ; with_name ident_list_rect_fbb_b_b_b (@list_rect_fbb_b_b_b)
+      ; with_name ident_list_rect_fbb_b_b_b_b (@list_rect_fbb_b_b_b_b)
+      ; with_name ident_list_rect_fbb_b_b_b_b_b (@list_rect_fbb_b_b_b_b_b)
       ; with_name ident_list_case (@Thunked.list_case)
       ; with_name ident_List_length (@List.length)
       ; with_name ident_List_seq (@List.seq)
@@ -131,6 +139,8 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_List_update_nth (@update_nth)
       ; with_name ident_List_nth_default (@nth_default)
       ; with_name ident_eager_List_nth_default (ident.eagerly (@nth_default))
+      ; with_name ident_Pos_add Pos.add
+      ; with_name ident_Pos_mul Pos.mul
       ; with_name ident_Z_add Z.add
       ; with_name ident_Z_mul Z.mul
       ; with_name ident_Z_pow Z.pow
@@ -147,12 +157,15 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_Z_log2_up Z.log2_up
       ; with_name ident_Z_of_nat Z.of_nat
       ; with_name ident_Z_to_nat Z.to_nat
+      ; with_name ident_Z_pos Z.pos
+      ; with_name ident_Z_to_pos Z.to_pos
       ; with_name ident_Z_shiftr Z.shiftr
       ; with_name ident_Z_shiftl Z.shiftl
       ; with_name ident_Z_land Z.land
       ; with_name ident_Z_lor Z.lor
       ; with_name ident_Z_min Z.min
       ; with_name ident_Z_max Z.max
+      ; with_name ident_Z_abs Z.abs
       ; with_name ident_Z_mul_split Z.mul_split
       ; with_name ident_Z_mul_high Z.mul_high
       ; with_name ident_Z_add_get_carry Z.add_get_carry_full

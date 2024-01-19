@@ -56,6 +56,7 @@ Definition nbe_rewrite_rulesT : list (bool * Prop)
             ; (forall P t f, @Thunked.bool_rect P t f true = t tt)
             ; (forall P t f, @Thunked.bool_rect P t f false = f tt)
             ; (forall A B C f x y, @prod_rect A B (fun _ => C) f (x, y) = f x y)
+            ; (forall A B C f p, @prod_rect A B (fun _ : A * B => C) f p = dlet p := p in f (fst p) (snd p))
 
             ; (forall A x n,
                   @List.repeat A x ('n)

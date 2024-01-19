@@ -9,13 +9,16 @@ on:
   pull_request:
   merge_group:
   workflow_dispatch:
+  release:
+    types: [published]
   schedule:
     - cron: '0 0 1 * *'
 
 jobs:
-  build-windows:
+  build:
 
     runs-on: windows-latest
+    name: windows
 
     concurrency:
       group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -34,7 +37,7 @@ jobs:
       with:
         submodules: recursive
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.x
     - name: Set up OCaml
@@ -46,10 +49,11 @@ jobs:
           default: https://github.com/ocaml/opam-repository.git
     - run: opam depext coq.${{ env.COQ_VERSION }}
     - run: opam pin add --kind=version coq ${{ env.COQ_VERSION }}
+    - run: opam install js_of_ocaml
 
     - name: Install System Dependencies
       run: |
-        %CYGWIN_ROOT%\setup-x86_64.exe -qnNdO -P time
+        %CYGWIN_ROOT%\setup-x86_64.exe -qnNdO -P time,zip
       shell: cmd
 
     - name: Work around https://github.com/actions/checkout/issues/766
@@ -58,7 +62,8 @@ jobs:
       shell: cmd
 
     - name: echo build params
-      run: etc/ci/describe-system-config-win.bat
+      run: |
+        %cd%\etc\ci\describe-system-config-win.bat
       shell: cmd
     - name: deps
       run: |
@@ -68,13 +73,26 @@ jobs:
       run: |
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} standalone-ocaml'
       shell: cmd
+    - name: install-standalone-unified-ocaml
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist'
+      shell: cmd
+
     - name: coq
       run: |
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 coq'
       shell: cmd
-    - name: all-except-generated
+    - name: all-except-generated-and-js-of-ocaml
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 all-except-generated'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 all-except-generated-and-js-of-ocaml'
+      shell: cmd
+    - name: standalone-js-of-ocaml
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 standalone-js-of-ocaml'
+      shell: cmd
+    - name: install-standalone-js-of-ocaml
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh install-standalone-js-of-ocaml'
       shell: cmd
     - name: c-files lite-generated-files
       run: |
@@ -89,6 +107,33 @@ jobs:
       with:
         name: ExtractionOCaml
         path: src/ExtractionOCaml
+    - name: upload js_of_ocaml files
+      uses: actions/upload-artifact@v3
+      with:
+        name: ExtractionJsOfOCaml
+        path: src/ExtractionJsOfOCaml
+    - name: upload standalone files
+      uses: actions/upload-artifact@v3
+      with:
+        name: standalone-windows
+        path: dist/fiat_crypto.exe
+    - name: upload standalone js files
+      uses: actions/upload-artifact@v3
+      with:
+        name: standalone-html-windows
+        path: fiat-html
+    - name: install
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 install install-standalone-ocaml'
+      shell: cmd
+    - name: install-without-bedrock2
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 install-without-bedrock2 install-standalone-ocaml'
+      shell: cmd
+    - name: install-dev
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 install install-standalone-ocaml'
+      shell: cmd
     - name: display timing info
       run: type time-of-build-pretty.log
       shell: cmd
@@ -107,3 +152,87 @@ jobs:
 #        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- make TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"'
 #      shell: cmd
 #      if: github.event_name != 'pull_request'
+
+  test-standalone:
+    runs-on: windows-latest
+    needs: build
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download standalone Windows
+      uses: actions/download-artifact@v3
+      with:
+        name: standalone-windows
+        path: dist/
+    - name: List files
+      run: Get-ChildItem dist -Name
+    - run: .\dist\fiat_crypto.exe  -h
+    - run: .\dist\fiat_crypto.exe word-by-word-montgomery -h
+    - run: .\dist\fiat_crypto.exe unsaturated-solinas -h
+    - run: .\dist\fiat_crypto.exe saturated-solinas -h
+    - run: .\dist\fiat_crypto.exe base-conversion -h
+    - name: Set up MSVC Environment for dumpbin
+      uses: ilammy/msvc-dev-cmd@v1
+    - name: Check Executable Dependencies
+      run: |
+        Write-Host "::group::File Info - fiat_crypto"
+        Get-Item .\dist\fiat_crypto.exe | Format-List
+        dumpbin.exe /headers .\dist\fiat_crypto.exe
+        Write-Host "::endgroup::"
+
+        Write-Host "::group::DLL Dependencies - fiat_crypto"
+        dumpbin.exe /dependents .\dist\fiat_crypto.exe
+        Write-Host "::endgroup::"
+
+  publish-standalone:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write  # IMPORTANT: mandatory for making GitHub Releases
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Fetch all history for all tags and branches
+        tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
+    - name: Download standalone Windows
+      uses: actions/download-artifact@v3
+      with:
+        name: standalone-windows
+        path: dist/
+    - name: List files
+      run: find dist
+    - name: Rename files
+      run: |
+        arch="$(etc/ci/find-arch.sh dist/fiat_crypto.exe "x86_64")"
+        tag="$(git describe --tags HEAD)"
+        fname="Fiat-Cryptography_${tag}_Windows_${arch}.exe"
+        echo "$fname"
+        mv dist/fiat_crypto.exe "dist/$fname"
+        find dist
+    - name: Upload artifacts to GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      # Upload to GitHub Release using the `gh` CLI.
+      # `dist/` contains the built packages
+      run: >-
+        gh release upload
+        '${{ github.ref_name }}' dist/**
+        --repo '${{ github.repository }}'
+      if: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name == 'release' }}
+
+  windows-check-all:
+    runs-on: ubuntu-latest
+    needs: [build, test-standalone, publish-standalone]
+    if: always()
+    steps:
+    - run: echo 'build passed'
+      if: ${{ needs.build.result == 'success' }}
+    - run: echo 'test-standalone passed'
+      if: ${{ needs.test-standalone.result == 'success' }}
+    - run: echo 'publish-standalone passed'
+      if: ${{ needs.publish-standalone.result == 'success' }}
+    - run: echo 'build failed' && false
+      if: ${{ needs.build.result != 'success' }}
+    - run: echo 'test-standalone failed' && false
+      if: ${{ needs.test-standalone.result != 'success' }}
+    - run: echo 'publish-standalone failed' && false
+      if: ${{ needs.publish-standalone.result != 'success' }}

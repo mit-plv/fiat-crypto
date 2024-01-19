@@ -7,7 +7,7 @@
 	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
 	bedrock2-compiler clean-bedrock2-compiler install-bedrock2-compiler \
 	rupicola clean-rupicola install-rupicola \
-	util all-except-generated all \
+	util all-except-generated all all-except-generated-and-js-of-ocaml all-except-js-of-ocaml \
 	bedrock2-backend \
 	deps \
 	nobigmem print-nobigmem \
@@ -53,6 +53,7 @@ endif
 # coq .vo files that are not compiled using coq_makefile
 SPECIAL_VOFILES := \
 	src/ExtractionOCaml/%.vo \
+	src/ExtractionJsOfOCaml/%.vo \
 	src/ExtractionHaskell/%.vo \
 	src/Rewriter/PerfTesting/Specific/generated/%.vo
 GREP_EXCLUDE_SPECIAL := grep -v '^\(src/Extraction\(OCaml\|Haskell\)/\|src/Rewriter/PerfTesting/Specific/generated/\)'
@@ -69,8 +70,10 @@ PERFTESTING_VO := \
 	src/Rewriter/PerfTesting/Core.vo \
 	src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
 BEDROCK2_FILES_PATTERN := \
+	src/ExtractionJsOfOCaml/bedrock2_% \
 	src/ExtractionOCaml/bedrock2_% \
 	src/ExtractionHaskell/bedrock2_% \
+	src/ExtractionJsOfOCaml/with_bedrock2_% \
 	src/ExtractionOCaml/with_bedrock2_% \
 	src/ExtractionHaskell/with_bedrock2_% \
 	src/Assembly/WithBedrock/% \
@@ -148,8 +151,10 @@ CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS) fiat-amd64.test)
 
 all-except-compiled: coq pre-standalone-extracted check-output
-all-except-generated: standalone-ocaml perf-standalone all-except-compiled
-all: all-except-generated generated-files copy-to-fiat-rust copy-to-fiat-go
+all-except-generated-and-js-of-ocaml: standalone-ocaml perf-standalone all-except-compiled
+all-except-generated: all-except-generated-and-js-of-ocaml standalone-js-of-ocaml
+all-except-js-of-ocaml: all-except-generated-and-js-of-ocaml generated-files
+all: all-except-generated-and-js-of-ocaml standalone-js-of-ocaml generated-files copy-to-fiat-rust copy-to-fiat-go
 	@true
 coq: $(REGULAR_VOFILES)
 coq-without-bedrock2: $(REGULAR_EXCEPT_BEDROCK2_VOFILES)
@@ -330,15 +335,18 @@ Makefile.coq: Makefile _CoqProject
 
 include Makefile.examples
 include Makefile.standalone
+include Makefile.js-html
 
 $(STANDALONE:%=src/ExtractionOCaml/%.ml): src/StandaloneOCamlMain.vo
 $(BEDROCK2_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Bedrock/Standalone/StandaloneOCamlMain.vo
 $(PERF_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
 $(STANDALONE:%=src/ExtractionHaskell/%.hs): src/StandaloneHaskellMain.vo
 $(BEDROCK2_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Bedrock/Standalone/StandaloneHaskellMain.vo
+$(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.ml): src/StandaloneJsOfOCamlMain.vo
+$(BEDROCK2_STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.ml): src/Bedrock/Standalone/StandaloneJsOfOCamlMain.vo
 # $(PERF_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Rewriter/PerfTesting/StandaloneHaskellMain.vo
 
-pre-standalone-extracted: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs)
+pre-standalone-extracted: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) $(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.ml) $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs)
 
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) : %.ml : %.v
 	$(SHOW)'COQC $<'
@@ -346,7 +354,13 @@ $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) : %.ml : %.v
 	$(HIDE)cat $*.tmp.ml | tr -d '\r' > $@ && rm $*.tmp.ml
 	$(HIDE)cat $*.tmp.mli | tr -d '\r' > $*.mli && rm $*.tmp.mli
 
-$(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/haskell.sed
+$(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.ml) : %.ml : %.v
+	$(SHOW)'COQC $<'
+	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $<
+	$(HIDE)cat $*.tmp.ml | tr -d '\r' > $@ && rm $*.tmp.ml
+	$(HIDE)cat $*.tmp.mli | tr -d '\r' > $*.mli && rm $*.tmp.mli
+
+$(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/haskell.sed src/StandaloneHaskellMain.vo
 	$(SHOW)'COQC $< > $@'
 	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
 	$(HIDE)cat $@.tmp | tr -d '\r' | sed -f src/haskell.sed > $@ && rm $@.tmp
@@ -474,8 +488,8 @@ clean::
 cleanall:: clean
 	rm -rf src/Rewriter/PerfTesting/Specific/generated
 
-install: coq
-install-without-bedrock2: coq-without-bedrock2
+install: coq $(filter %.vo,$(FILESTOINSTALL))
+install-without-bedrock2: coq-without-bedrock2 $(filter %.vo,$(filter-out $(BEDROCK2_FILES_PATTERN),$(FILESTOINSTALL)))
 
 install-without-bedrock2:
 	$(HIDE)$(MAKE) -f Makefile.coq install FILESTOINSTALL="$(filter-out $(BEDROCK2_FILES_PATTERN),$(FILESTOINSTALL))"

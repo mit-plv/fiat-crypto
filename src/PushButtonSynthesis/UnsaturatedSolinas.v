@@ -139,7 +139,7 @@ Section __.
   Definition m_enc_min : list Z :=
     let wt := weight (Qnum limbwidth) (Qden limbwidth) in
     let fw := List.map (fun i => wt (S i) / wt i) (seq 0 n) in
-    let m_enc_min := map2 Z.sub tight_upperbounds fw in
+    let m_enc_min := List.map2 Z.sub tight_upperbounds fw in
     if List.forallb (Z.eqb 0) m_enc_min
     then set_nth (n-1) 1 m_enc_min
     else m_enc_min.

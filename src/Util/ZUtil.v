@@ -1,5 +1,5 @@
 Require Coq.ZArith.Zpower Coq.ZArith.Znumtheory Coq.ZArith.ZArith Coq.ZArith.Zdiv.
-Require Coq.micromega.Lia Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
+Require Coq.micromega.Lia Coq.Arith.Arith.
 Require Crypto.Util.ZUtil.AddGetCarry.
 Require Crypto.Util.ZUtil.AddModulo.
 Require Crypto.Util.ZUtil.CC.

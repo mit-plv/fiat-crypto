@@ -56,7 +56,7 @@ Section Bignum.
           | _ => idtac
           end.
         2:{
-          rewrite firstn_length, Min.min_l by lia.
+          rewrite firstn_length, Nat.min_l by lia.
           destruct Bitwidth.width_cases; subst width; trivial. }
         rewrite chunk_app_chunk; cycle 1.
         { destruct Bitwidth.width_cases; subst width; cbv; inversion 1. }

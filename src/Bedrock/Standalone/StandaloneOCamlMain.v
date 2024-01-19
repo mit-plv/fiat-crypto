@@ -46,6 +46,11 @@ Module Bedrock2First.
     Definition main : unit
       := main_gen ForExtraction.BaseConversion.PipelineMain.
   End BaseConversion.
+
+  Module FiatCrypto.
+    Definition main : unit
+      := main_gen ForExtraction.FiatCrypto.PipelineMain.
+  End FiatCrypto.
 End Bedrock2First.
 
 Module Bedrock2Later.
@@ -85,4 +90,9 @@ Module Bedrock2Later.
     Definition main : unit
       := main_gen ForExtraction.BaseConversion.PipelineMain.
   End BaseConversion.
+
+  Module FiatCrypto.
+    Definition main : unit
+      := main_gen ForExtraction.FiatCrypto.PipelineMain.
+  End FiatCrypto.
 End Bedrock2Later.

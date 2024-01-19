@@ -459,6 +459,7 @@ Module Pipeline.
          | base.type.unit
            => fun 'tt 'tt => (false, nil, nil)
          | base.type.type_base base.type.nat
+         | base.type.type_base base.type.positive
          | base.type.type_base base.type.bool
          | base.type.type_base base.type.zrange
          | base.type.type_base base.type.string

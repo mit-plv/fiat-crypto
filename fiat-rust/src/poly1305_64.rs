@@ -15,9 +15,13 @@
 #![allow(unused_parens)]
 #![allow(non_camel_case_types)]
 
+/** fiat_poly1305_u1 represents values of 1 bits, stored in one byte. */
 pub type fiat_poly1305_u1 = u8;
+/** fiat_poly1305_i1 represents values of 1 bits, stored in one byte. */
 pub type fiat_poly1305_i1 = i8;
+/** fiat_poly1305_u2 represents values of 2 bits, stored in one byte. */
 pub type fiat_poly1305_u2 = u8;
+/** fiat_poly1305_i2 represents values of 2 bits, stored in one byte. */
 pub type fiat_poly1305_i2 = i8;
 
 /** The type fiat_poly1305_loose_field_element is a field element with loose bounds. */

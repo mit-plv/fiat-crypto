@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fiat Cryptography Web Interface</title>
+    <style>
+        .error { color: red; white-space: pre-wrap; }
+        /*code { display: block; white-space: pre-wrap; border: 1px solid #ddd; padding: 10px; position: relative; }*/
+        .code-container {
+            position: relative;
+        }
+
+        .code {
+            display: block;
+            white-space: pre-wrap;
+            border: 1px solid #ddd;
+            padding: 10px;
+            position: relative;
+            /*margin-bottom: 20px;*/ /* Space for the button, adjust as needed */
+        }
+
+        .copy-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #f8f8f8;
+            padding: 5px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            z-index: 1;
+        }
+        .hidden { display: none; }
+        #inputArgs { width: 100%; box-sizing: border-box; }
+        .form-row { display: flex; flex-wrap: wrap; align-items: center; }
+        .form-row label, .form-row button, .status-span, .permalink-span { margin-right: 10px; }
+        .status-span, .permalink-span { flex-grow: 1; text-align: right; }
+        .version { color: #333; }
+    </style>
+</head>
+<body>
+    <div id="versionContainer"><span class="version">Fiat Cryptography <span id="version"></span> (<a href="https://github.com/mit-plv/fiat-crypto">GitHub Source</a>)</span></div>
+    <form id="inputForm" class="hidden">
+        <div class="form-row">
+            <input type="text" id="inputArgs" placeholder="Enter arguments">
+        </div>
+        <div class="form-row">
+            <label>
+                <input type="radio" name="inputType" value="json"> Input JSON Array
+            </label>
+            <label>
+                <input type="radio" name="inputType" value="string" checked> Input String
+            </label>
+            <label>
+                <input type="checkbox" id="wasm" name="codeKind" value="wasm"> Use WASM <span id="extraWasmLabel"></span>
+            </label>
+        </div>
+        <div class="form-row">
+            <button type="button" id="synthesizeButton">Synthesize</button>
+            <button type="button" id="cancelButton" disabled>Cancel</button>
+            <span id="status" class="status-span hidden"></span>
+            <a id="permalink" class="permalink-span hidden" href="#">Pseudopermalink</a>
+            <button type="button" id="clearCacheButton">Clear Cache</button>
+        </div>
+    </form>
+    <div id="error" class="error hidden"></div>
+    <div id="output" class="hidden">
+      <div id="stdoutContainer" class="code-container">
+        <code id="stdout" class="code"></code>
+        <button class="copy-button" data-target="stdout">Copy</button>
+      </div>
+      <div id="stderrContainer" class="code-container hidden">
+        <code id="stderr" class="code"></code>
+        <button class="copy-button" data-target="stderr">Copy</button>
+      </div>
+    </div>
+    <script src="version.js"></script>
+    <script src="https://unpkg.com/wasm-feature-detect/dist/umd/index.js"></script>
+    <script src="main.js"></script>
+    <!-- N.B. disable-wasm-option.js must come after main.js so that the wasm box is unchecked correctly after parsing argv -->
+    <script src="disable-wasm-option.js"></script>
+    <script src="copy-button.js"></script>
+</body>
+</html>

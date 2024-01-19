@@ -1042,26 +1042,12 @@ Proof.
           | ident.Literal base.type.Z v
             => App (const v, nil)
           | ident.Z_add => fun x y => App (addZ, [x; y])
-
-          | ident.Z_modulo
-            => symex_T_error (Unhandled_identifier idc)
           | ident.Z_mul => fun x y => App (mulZ, [x; y])
-          | ident.Z_pow
-            => symex_T_error (Unhandled_identifier idc)
           | ident.Z_sub => fun x y => y' <- App (negZ, [y]); App (addZ, [x;y'])
-          | ident.Z_opp
-          | ident.Z_div
-          | ident.Z_log2
-          | ident.Z_log2_up
-          | ident.Z_to_nat
-            => symex_T_error (Unhandled_identifier idc)
           | ident.Z_shiftr => fun x y => App (shrZ, [x; y])
           | ident.Z_shiftl => fun x y => App (shlZ, [x; y])
           | ident.Z_land => fun x y => App (andZ, [x; y])
           | ident.Z_lor => fun x y => App (orZ, [x; y])
-          | ident.Z_min
-          | ident.Z_max
-            => symex_T_error (Unhandled_identifier idc)
           | ident.Z_mul_split => fun bs x y =>
             vs <- RevealWidth bs; s <- App (const (Z.of_N vs), nil);
             v <- App (mulZ, [x; y]);
@@ -1096,21 +1082,10 @@ Proof.
             a <- App (add s, [x;y';z']);
             c <- App (subborrowZ s, [x;y;z]);
             symex_return (a, c)
-          | ident.Z_ltz
-            => symex_T_error (Unhandled_identifier idc)
           | ident.Z_zselect => fun c x y => App (Symbolic.selectznz, [c; x; y])
-          | ident.Z_add_modulo
-            => symex_T_error (Unhandled_identifier idc)
           | ident.Z_truncating_shiftl => fun s x y =>
             s <- RevealConstant s;
             App (shl s, [x; y])
-          | ident.Z_bneg
-          | ident.Z_lnot_modulo
-          | ident.Z_lxor
-          | ident.Z_rshi
-          | ident.Z_cc_m
-          | ident.Z_combine_at_bitwidth
-            => symex_T_error (Unhandled_identifier idc)
 
           | ident.comment _
           | ident.comment_no_keep _
@@ -1119,11 +1094,6 @@ Proof.
             => fun v => symex_return v
           | ident.tt
             => symex_return tt
-          | ident.Literal base.type.bool _ as idc
-          | ident.Literal base.type.string _ as idc
-          | ident.None _ as idc
-          | ident.Some _ as idc
-            => symex_T_error (Unhandled_identifier idc)
           | ident.Literal base.type.zrange v
           | ident.Literal base.type.nat v
             => symex_return v
@@ -1176,6 +1146,29 @@ Proof.
           | ident.Z_of_nat
             => fun n => App (const (Z.of_nat n), nil)
 
+          | ident.Z_modulo
+          | ident.Z_pow
+          | ident.Z_opp
+          | ident.Z_div
+          | ident.Z_log2
+          | ident.Z_log2_up
+          | ident.Z_to_nat
+          | ident.Z_min
+          | ident.Z_max
+          | ident.Z_abs
+          | ident.Z_ltz
+          | ident.Z_add_modulo
+          | ident.Z_bneg
+          | ident.Z_lnot_modulo
+          | ident.Z_lxor
+          | ident.Z_rshi
+          | ident.Z_cc_m
+          | ident.Z_combine_at_bitwidth
+          | ident.Literal base.type.bool _
+          | ident.Literal base.type.string _
+          | ident.Literal base.type.positive _
+          | ident.None _
+          | ident.Some _
           | ident.Z_eqb
           | ident.Z_leb
           | ident.Z_ltb
@@ -1194,6 +1187,13 @@ Proof.
           | ident.eager_list_rect _ _
           | ident.list_rect_arrow _ _ _
           | ident.eager_list_rect_arrow _ _ _
+          | ident.nat_rect_fbb_b _ _ _
+          | ident.nat_rect_fbb_b_b _ _ _ _
+          | ident.list_rect_fbb_b _ _ _ _
+          | ident.list_rect_fbb_b_b _ _ _ _ _
+          | ident.list_rect_fbb_b_b_b _ _ _ _ _ _
+          | ident.list_rect_fbb_b_b_b_b _ _ _ _ _ _ _
+          | ident.list_rect_fbb_b_b_b_b_b _ _ _ _ _ _ _ _
           | ident.list_case _ _
           | ident.List_map _ _
           | ident.List_flat_map _ _
@@ -1203,6 +1203,10 @@ Proof.
           | ident.List_update_nth _
           | ident.option_rect _ _
           | ident.zrange_rect _
+          | ident.Pos_add
+          | ident.Pos_mul
+          | ident.Z_pos
+          | ident.Z_to_pos
           | ident.fancy_add
           | ident.fancy_addc
           | ident.fancy_sub

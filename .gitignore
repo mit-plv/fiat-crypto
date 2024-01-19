@@ -163,7 +163,25 @@ src/ExtractionHaskell/unsaturated_solinas
 src/ExtractionHaskell/solinas_reduction
 src/ExtractionHaskell/word_by_word_montgomery
 src/ExtractionHaskell/base_conversion
+src/ExtractionHaskell/bedrock2_base_conversion
+src/ExtractionHaskell/bedrock2_dettman_multiplication
+src/ExtractionHaskell/bedrock2_fiat_crypto
+src/ExtractionHaskell/bedrock2_saturated_solinas
+src/ExtractionHaskell/bedrock2_solinas_reduction
+src/ExtractionHaskell/bedrock2_unsaturated_solinas
+src/ExtractionHaskell/bedrock2_word_by_word_montgomery
+src/ExtractionHaskell/fiat_crypto
+src/ExtractionHaskell/with_bedrock2_base_conversion
+src/ExtractionHaskell/with_bedrock2_dettman_multiplication
+src/ExtractionHaskell/with_bedrock2_fiat_crypto
+src/ExtractionHaskell/with_bedrock2_saturated_solinas
+src/ExtractionHaskell/with_bedrock2_solinas_reduction
+src/ExtractionHaskell/with_bedrock2_unsaturated_solinas
+src/ExtractionHaskell/with_bedrock2_word_by_word_montgomery
 src/ExtractionHaskell/*.hs
+src/ExtractionOCaml/bedrock2_fiat_crypto
+src/ExtractionOCaml/fiat_crypto
+src/ExtractionOCaml/with_bedrock2_fiat_crypto
 src/ExtractionOCaml/saturated_solinas
 src/ExtractionOCaml/dettman_multiplication
 src/ExtractionOCaml/unsaturated_solinas
@@ -186,6 +204,13 @@ src/ExtractionOCaml/perf_unsaturated_solinas
 src/ExtractionOCaml/perf_word_by_word_montgomery
 src/ExtractionOCaml/*.ml
 src/ExtractionOCaml/*.mli
+src/ExtractionJsOfOCaml/*.ml
+src/ExtractionJsOfOCaml/*.mli
+src/ExtractionJsOfOCaml/*.js
+src/ExtractionJsOfOCaml/*.map
+src/ExtractionJsOfOCaml/*.wasm
+src/ExtractionJsOfOCaml/*.wat
+src/ExtractionJsOfOCaml/*.wat.gz
 src/Rewriter/PerfTesting/Specific/generated/*.v
 src/Rewriter/PerfTesting/Specific/generated/*.log
 src/Rewriter/PerfTesting/Specific/generated/*.sh
@@ -198,6 +223,13 @@ fiat-amd64/*.status
 fiat-amd64/*.only-status
 fiat-amd64/*.description
 fiat-amd64/*.invocation
+fiat-html/fiat_crypto.js
+fiat-html/fiat_crypto.map
+fiat-html/wasm_fiat_crypto.js
+fiat-html/wasm_fiat_crypto.wat
+fiat-html/wasm_fiat_crypto.wat.gz
+fiat-html/wasm_fiat_crypto.wasm
+fiat-html/version.js
 /Makefile.test-amd64-files.mk
 
 # Rust
