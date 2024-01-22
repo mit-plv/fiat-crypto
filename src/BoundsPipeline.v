@@ -660,12 +660,6 @@ Module Pipeline.
              (E : Expr t)
     : DebugM (Expr t)
     := (E <- DoRewrite E;
-        (* Note that DCE evaluates the expr with two different [var]
-           arguments, and so results in a pipeline that is 2x slower
-           unless we pass through a uniformly concrete [var] type
-           first *)
-        dlet_nd e := ToFlat E in
-        let E := FromFlat e in
         E <- if with_subst01 return DebugM (Expr t)
              then wrap_debug_rewrite ("subst01 for " ++ descr) (Subst01.Subst01 ident.is_comment) E
              else if with_dead_code_elimination return DebugM (Expr t)
@@ -675,8 +669,6 @@ Module Pipeline.
              then wrap_debug_rewrite ("LetBindReturn for " ++ descr) (UnderLets.LetBindReturn (@ident.is_var_like)) E
              else Debug.ret E;
         E <- DoRewrite E; (* after inlining, see if any new rewrite redexes are available *)
-        dlet_nd e := ToFlat E in
-        let E := FromFlat e in
         E <- if with_dead_code_elimination
              then wrap_debug_rewrite ("DCE after " ++ descr) (DeadCodeElimination.EliminateDead ident.is_comment) E
              else Debug.ret E;
@@ -1150,7 +1142,7 @@ Module Pipeline.
     first [ progress destruct_head'_and
           | progress cbv [Classes.base Classes.ident Classes.ident_interp Classes.base_interp Classes.exprInfo] in *
           | progress intros
-          | progress rewrite_strat repeat topdown hints interp
+          | progress rewrite_strat repeat topdown choice (hints interp_extra) (hints interp)
           | solve [ typeclasses eauto with nocore interp_extra wf_extra ]
           | solve [ typeclasses eauto ]
           | break_innermost_match_step
