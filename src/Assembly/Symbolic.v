@@ -1565,7 +1565,7 @@ Module dag <: Dag.
                       | lia
                       | exfalso; assumption
                       | rewrite Nat2N.id in *
-                      | rewrite nth_error_app
+                      | rewrite ListUtil.nth_error_app
                       | rewrite Nat.sub_diag in *
                       | rewrite nth_error_length_error in * by lia
                       | rewrite @nth_error_nil_error in *
