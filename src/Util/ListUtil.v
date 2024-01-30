@@ -2245,7 +2245,7 @@ Proof.
   destruct lt_dec; [ | rewrite nth_error_length_error; rewrite ?List.rev_length; try reflexivity; lia ].
   revert dependent n; induction ls as [|x xs IHxs]; cbn [length List.rev]; try lia; try reflexivity; intros;
     try solve [ destruct n; reflexivity ]; [].
-  { rewrite nth_error_app, List.rev_length, Nat.sub_succ.
+  { rewrite ListUtil.nth_error_app, List.rev_length, Nat.sub_succ.
     destruct lt_dec.
     { rewrite IHxs by lia.
       rewrite <- (Nat.succ_pred_pos (length xs - n)) by lia.
