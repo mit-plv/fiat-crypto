@@ -2656,7 +2656,7 @@ Lemma nth_error_rev A n ls : List.nth_error (@List.rev A ls) n = if lt_dec n (le
 Proof.
   destruct lt_dec; [ | rewrite nth_error_length_error; rewrite ?List.rev_length; try reflexivity; lia ].
   revert dependent n; induction ls as [|x xs IHxs]; cbn [length List.rev]; try reflexivity; intros; try lia.
-  { rewrite nth_error_app, List.rev_length, Nat.sub_succ.
+  { rewrite ListUtil.nth_error_app, List.rev_length, Nat.sub_succ.
     destruct lt_dec.
     { rewrite IHxs by lia.
       rewrite <- (Nat.succ_pred_pos (length xs - n)) by lia.
@@ -3330,7 +3330,7 @@ Section find_index.
       specialize (H' _ eq_refl); congruence. }
     { rewrite find_none_iff_nth_error in H.
       intros n a; specialize (H n (n, a)).
-      rewrite nth_error_combine, nth_error_seq in H.
+      rewrite nth_error_combine, ListUtil.nth_error_seq in H.
       edestruct lt_dec; [ | rewrite nth_error_length_error by lia; congruence ].
       edestruct nth_error eqn:?; intros; Option.inversion_option; subst; specialize (H eq_refl); assumption. }
   Qed.
@@ -3343,9 +3343,9 @@ Section find_index.
     edestruct find eqn:H; cbn; [ | split; [ congruence | ] ].
     { rewrite find_some_iff in H.
       destruct H as [n' H].
-      rewrite nth_error_combine, nth_error_seq in H.
+      rewrite nth_error_combine, ListUtil.nth_error_seq in H.
       setoid_rewrite nth_error_combine in H.
-      setoid_rewrite nth_error_seq in H.
+      setoid_rewrite ListUtil.nth_error_seq in H.
       break_innermost_match_hyps; split; intro H'; destruct_head'_and; Option.inversion_option; subst; cbn in *.
       all: repeat apply conj; eauto.
       { let H := match goal with H : forall n, n < _ -> _ |- _ => H end in
@@ -3364,7 +3364,7 @@ Section find_index.
           congruence. } } }
     { rewrite find_none_iff_nth_error in H.
       intros [ [a [H0 H1]] ?]; specialize (H n (n, a)).
-      rewrite nth_error_combine, nth_error_seq, H0 in H.
+      rewrite nth_error_combine, ListUtil.nth_error_seq, H0 in H.
       break_innermost_match_hyps; [ | rewrite nth_error_length_error in H0 by lia; congruence ].
       specialize (H eq_refl); cbn in *.
       congruence. }
