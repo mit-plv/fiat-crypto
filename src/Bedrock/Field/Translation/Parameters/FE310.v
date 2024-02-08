@@ -32,6 +32,8 @@ Section Defaults_32.
     (mem:=SortedListWord.map _ _)
     (varname_gen := default_varname_gen)
     (error := expr.var Defaults.ERROR)
+    (add_carryx_funcname := "add_carryx")
+    (sub_borrowx_funcname := "add_carryx")
     := tt.
   Instance default_parameters_ok : Types.ok.
   Proof. constructor; try exact _; try apply prefix_name_gen_unique. Qed.

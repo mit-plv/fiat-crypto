@@ -46,6 +46,55 @@ Section Field.
          As fe1305_from_bytes_correct.
   Proof. Time derive_bedrock2_func from_bytes_op. Qed.
 
+  (* TODO(wrharris): remove debug code *)
+  Eval compute in 
+    (res to_bytes_op
+       (fun
+          _ : Language.Compilers.type.type
+                (Language.Compilers.base.type.type
+                   IdentifiersBasicGENERATED.Compilers.base) => unit)).
+
+  Eval compute in to_bytes_op.
+
+  Goal Func.valid_func_bool (res to_bytes_op (fun _ => unit)) = true.
+    let x := constr:(res to_bytes_op (fun _ => unit)) in
+    let y := (eval vm_compute in x) in
+    change x with y.
+    cbv [Func.valid_func_bool].
+    cbv [Func.valid_cmd_bool_if_base].
+    cbv [Cmd.valid_cmd_bool].
+    cbv [Cmd.valid_expr_bool_if_base].
+    cbv [Expr.valid_expr_bool].
+    cbv [Expr.valid_expr_bool'].
+    cbv [Cmd.valid_special_bool].
+    cbv [Expr.is_opp_ident_expr].
+
+  Goal False.
+       (* Import things to make names shorter *)
+       Require Import IdentifiersBasicGENERATED.
+       Require Import Rewriter.Language.Language.
+
+       Set Printing Depth 100000.
+
+       (* The below lines will show the bedrock2 translation of `to_bytes.
+       * Look for "ERROR" to see where in the translation ran into
+       an expression it couldn't handle. *)
+       pose (F:=b2_func to_bytes_op).
+       pose (G:= Func.valid_func_bool (res to_bytes_op (fun _ => unit))).
+       pose (H:=res to_bytes_op (fun _ => unit)).
+       cbv in H.
+
+       lazy [b2_func to_bytes_op fe1305_ops] in F.
+       clear F.
+
+       (* The below lines will show the fiat-crypto pipeline output expression for
+       modular multiplication. It's a big expression, so printing it takes a few
+       minutes. *)
+       pose (X:=res mul_op).
+       Time lazy [res mul_op p224_ops] in X.
+
+  Abort.
+
   Derive fe1305_to_bytes
          SuchThat (forall functions,
                       spec_of_to_bytes
