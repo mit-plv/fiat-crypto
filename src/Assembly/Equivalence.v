@@ -135,11 +135,11 @@ Definition assembly_stack_size {calling_convention : assembly_callee_saved_regis
      end.
 
 Class assembly_conventions_opt :=
-  { assembly_calling_registers_ :> assembly_calling_registers_opt
-  ; assembly_stack_size_ :> assembly_stack_size_opt
-  ; assembly_output_first_ :> assembly_output_first_opt
-  ; assembly_argument_registers_left_to_right_ :> assembly_argument_registers_left_to_right_opt
-  ; assembly_callee_saved_registers_ :> assembly_callee_saved_registers_opt
+  { #[global] assembly_calling_registers_ :: assembly_calling_registers_opt
+  ; #[global] assembly_stack_size_ :: assembly_stack_size_opt
+  ; #[global] assembly_output_first_ :: assembly_output_first_opt
+  ; #[global] assembly_argument_registers_left_to_right_ :: assembly_argument_registers_left_to_right_opt
+  ; #[global] assembly_callee_saved_registers_ :: assembly_callee_saved_registers_opt
   }.
 Definition default_assembly_conventions : assembly_conventions_opt
   := {| assembly_calling_registers_ := None

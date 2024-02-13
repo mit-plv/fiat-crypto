@@ -154,9 +154,9 @@ Module Compilers.
          |}.
 
     Class output_options_opt :=
-      { skip_typedefs_ :> skip_typedefs_opt
-      ; relax_adc_sbb_return_carry_to_bitwidth_ :> relax_adc_sbb_return_carry_to_bitwidth_opt
-      ; language_specific_cast_adjustment_ :> language_specific_cast_adjustment_opt
+      { #[global] skip_typedefs_ :: skip_typedefs_opt
+      ; #[global] relax_adc_sbb_return_carry_to_bitwidth_ :: relax_adc_sbb_return_carry_to_bitwidth_opt
+      ; #[global] language_specific_cast_adjustment_ :: language_specific_cast_adjustment_opt
       }.
 
     Definition default_output_options : output_options_opt

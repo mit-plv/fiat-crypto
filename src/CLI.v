@@ -587,57 +587,57 @@ Module ForExtraction.
   Class ParsedSynthesizeOptions :=
     {
       (** Is the code static / private *)
-      static :> static_opt
+      #[global] static :: static_opt
       (** Is the internal code static / private *)
-      ; internal_static :> internal_static_opt
+      ; #[global] internal_static :: internal_static_opt
       (** Is the code inlined *)
-      ; inline :> inline_opt
+      ; #[global] inline :: inline_opt
       (** Is the internal code inlined *)
-      ; inline_internal :> inline_internal_opt
+      ; #[global] inline_internal :: inline_internal_opt
       (** Should we only use signed integers *)
-      ; only_signed :> only_signed_opt
+      ; #[global] only_signed :: only_signed_opt
       (** Should we emit expressions requiring cmov *)
-      ; no_select :> no_select_opt
+      ; #[global] no_select :: no_select_opt
       (** Should we emit primitive operations *)
-      ; emit_primitives :> emit_primitives_opt
+      ; #[global] emit_primitives :: emit_primitives_opt
       (** Various output options including: *)
       (** Should we skip emitting typedefs for field elements *)
       (** Should we relax the bounds on the return carry type of sbb/adc operations? *)
-      ; output_options :> output_options_opt
+      ; #[global] output_options :: output_options_opt
       (** Should we use the alternate implementation of cmovznz *)
-      ; use_mul_for_cmovznz :> use_mul_for_cmovznz_opt
+      ; #[global] use_mul_for_cmovznz :: use_mul_for_cmovznz_opt
       (** Various abstract interpretation options *)
       (** Should we avoid uint1 at the output of shiftr *)
-      ; abstract_interpretation_options :> AbstractInterpretation.Options
+      ; #[global] abstract_interpretation_options :: AbstractInterpretation.Options
       (** Should we split apart oversized operations? *)
-      ; should_split_mul :> should_split_mul_opt
+      ; #[global] should_split_mul :: should_split_mul_opt
       (** Should we split apart multi-return operations? *)
-      ; should_split_multiret :> should_split_multiret_opt
+      ; #[global] should_split_multiret :: should_split_multiret_opt
       (** Should we remove use of value_barrier? *)
-      ; unfold_value_barrier :> unfold_value_barrier_opt
+      ; #[global] unfold_value_barrier :: unfold_value_barrier_opt
       (** Should we widen the carry to the full bitwidth? *)
-      ; widen_carry :> widen_carry_opt
+      ; #[global] widen_carry :: widen_carry_opt
       (** Should we widen the byte type to the full bitwidth? *)
-      ; widen_bytes :> widen_bytes_opt
+      ; #[global] widen_bytes :: widen_bytes_opt
       (** Should we ignore function-name mismatch errors when there's only one assembly function and only one actual function requested? *)
-      ; ignore_unique_asm_names :> ignore_unique_asm_names_opt
+      ; #[global] ignore_unique_asm_names :: ignore_unique_asm_names_opt
       (** What method should we use for rewriting? *)
-      ; low_level_rewriter_method :> low_level_rewriter_method_opt
+      ; #[global] low_level_rewriter_method :: low_level_rewriter_method_opt
         := default_low_level_rewriter_method
       (** What's the bitwidth? *)
-      ; machine_wordsize :> machine_wordsize_opt
+      ; #[global] machine_wordsize :: machine_wordsize_opt
       (** What's the package name *)
-      ; internal_package_name :> package_name_opt
+      ; #[global] internal_package_name :: package_name_opt
       (** What's the class name *)
-      ; internal_class_name :> class_name_opt
+      ; #[global] internal_class_name :: class_name_opt
       (** What's are the naming conventions to use? *)
-      ; language_naming_conventions :> language_naming_conventions_opt
+      ; #[global] language_naming_conventions :: language_naming_conventions_opt
       (** Documentation options *)
-      ; documentation_options :> documentation_options_opt
+      ; #[global] documentation_options :: documentation_options_opt
       (** assembly equivalence checker options *)
-      ; equivalence_checker_options :> equivalence_checker_options_opt
+      ; #[global] equivalence_checker_options :: equivalence_checker_options_opt
       (** error if there are un-requested assembly functions *)
-      ; error_on_unused_assembly_functions :> error_on_unused_assembly_functions_opt
+      ; #[global] error_on_unused_assembly_functions :: error_on_unused_assembly_functions_opt
       (** don't prepend fiat to prefix *)
       ; no_prefix_fiat : bool
       (** Extra lines before the documentation header *)
@@ -645,15 +645,15 @@ Module ForExtraction.
       (** Extra lines at the beginning of the documentation header *)
       ; extra_early_header_lines : list string
       (** Debug rewriting *)
-      ; debug_rewriting :> debug_rewriting_opt
+      ; #[global] debug_rewriting :: debug_rewriting_opt
       (** Print debug info on success too *)
       ; debug_on_success : bool
     }.
   Class SynthesizeOptions :=
     {
-      parsed_synthesize_options :> ParsedSynthesizeOptions
+      #[global] parsed_synthesize_options :: ParsedSynthesizeOptions
       (** Lines of assembly hints *)
-      ; assembly_hints_lines :> assembly_hints_lines_opt
+      ; #[global] assembly_hints_lines :: assembly_hints_lines_opt
     }.
 
   (** We define a class for holding the various options about file interaction that we don't pass to [Synthesize] *)
