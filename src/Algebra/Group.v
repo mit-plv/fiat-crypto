@@ -97,10 +97,10 @@ Section GroupByIsomorphism.
 
   Class isomorphic_groups :=
     {
-      isomorphic_groups_group_G :> @group G EQ OP ID INV;
-      isomorphic_groups_group_H :> @group H eq op id inv;
-      isomorphic_groups_hom_GH :> @Monoid.is_homomorphism G EQ OP H eq op phi;
-      isomorphic_groups_hom_HG :> @Monoid.is_homomorphism H eq op G EQ OP phi';
+      #[global] isomorphic_groups_group_G :: @group G EQ OP ID INV;
+      #[global] isomorphic_groups_group_H :: @group H eq op id inv;
+      #[global] isomorphic_groups_hom_GH :: @Monoid.is_homomorphism G EQ OP H eq op phi;
+      #[global] isomorphic_groups_hom_HG :: @Monoid.is_homomorphism H eq op G EQ OP phi';
     }.
 
   Lemma group_by_isomorphism
@@ -144,10 +144,10 @@ Section CommutativeGroupByIsomorphism.
 
   Class isomorphic_commutative_groups :=
     {
-      isomorphic_commutative_groups_group_G :> @commutative_group G EQ OP ID INV;
-      isomorphic_commutative_groups_group_H :> @commutative_group H eq op id inv;
-      isomorphic_commutative_groups_hom_GH :> @Monoid.is_homomorphism G EQ OP H eq op phi;
-      isomorphic_commutative_groups_hom_HG :> @Monoid.is_homomorphism H eq op G EQ OP phi';
+      #[global] isomorphic_commutative_groups_group_G :: @commutative_group G EQ OP ID INV;
+      #[global] isomorphic_commutative_groups_group_H :: @commutative_group H eq op id inv;
+      #[global] isomorphic_commutative_groups_hom_GH :: @Monoid.is_homomorphism G EQ OP H eq op phi;
+      #[global] isomorphic_commutative_groups_hom_HG :: @Monoid.is_homomorphism H eq op G EQ OP phi';
     }.
 
   Lemma commutative_group_by_isomorphism
