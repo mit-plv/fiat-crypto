@@ -88,7 +88,9 @@ EXCLUDED_VOFILES := $(filter $(EXCLUDE_PATTERN),$(VOFILES))
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
 LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
-	src/Curves/Weierstrass/Jacobian.vo \
+	src/Curves/Weierstrass/Jacobian/Jacobian.vo \
+	src/Curves/Weierstrass/Jacobian/CoZ.vo \
+	src/Curves/Weierstrass/Jacobian/ScalarMult.vo \
 	src/Curves/Weierstrass/Projective.vo \
 	src/Rewriter/RulesGood.vo \
 	src/Rewriter/All.vo \
@@ -96,7 +98,9 @@ LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	$(EXCLUDED_VO)
 NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/AffineProofs.vo \
-	src/Curves/Weierstrass/Jacobian.vo \
+	src/Curves/Weierstrass/Jacobian/Jacobian.vo \
+	src/Curves/Weierstrass/Jacobian/CoZ.vo \
+	src/Curves/Weierstrass/Jacobian/ScalarMult.vo \
 	src/Curves/Weierstrass/Projective.vo \
 	$(PERFTESTING_VO) \
 	$(EXCLUDED_VO)
