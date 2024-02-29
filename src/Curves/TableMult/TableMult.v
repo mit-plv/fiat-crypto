@@ -1243,7 +1243,7 @@ Section TableMult.
       intros.
       unfold positify.
       pose proof oddify_bounds e.
-      intuition.
+      intuition auto with core.
       - apply Z.div_pos; lia.
       - apply Z.div_lt_upper_bound; lia.
     Qed.

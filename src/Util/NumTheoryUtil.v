@@ -58,6 +58,7 @@ Lemma x_nonneg: 0 <= x. Proof using prime_p x_id. clear -prime_p x_id. Z.prime_b
 
 Lemma x_id_inv : x = (p - 1) / 2.
 Proof using x_id.
+  clear neq_p_2.
   intros; apply Zeq_plus_swap in x_id.
   replace (p - 1) with (2 * ((p - 1) / 2)) in x_id by
     (symmetry; apply Z_div_exact_2; [lia | rewrite <- x_id; apply Z_mod_mult]).

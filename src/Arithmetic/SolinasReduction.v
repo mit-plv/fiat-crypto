@@ -1215,6 +1215,7 @@ Module SolinasReduction.
           eval weight (2 * n) (mul_no_reduce base n p q) =
             eval weight n p * Positional.eval weight n q.
       Proof using base_nz n_gt_1 wprops.
+        clear dependent s.
         intros p q.
         cbv [mul_no_reduce].
         break_match.
@@ -1260,6 +1261,7 @@ Module SolinasReduction.
       Theorem length_mul_no_reduce : forall p q,
           length (mul_no_reduce base n p q) = (2 * n)%nat.
       Proof using base_nz n_gt_1 wprops.
+        clear dependent s.
         intros; unfold mul_no_reduce; break_match; push.
       Qed.
       Hint Rewrite length_mul_no_reduce : push_length.
@@ -1322,6 +1324,7 @@ Module SolinasReduction.
             (combine (map weight (seq 0 n)) (firstn n p),
               (combine (map weight (seq 0 (m1 - n))) (skipn n p))).
       Proof using n_gt_1 wprops.
+        clear dependent s.
         intros m1 p ? ?.
         replace m1 with (n + (m1 - n))%nat at 1 by lia.
         rewrite <-(firstn_skipn n p) at 1.
@@ -2432,13 +2435,13 @@ Module SolinasReduction.
       Lemma sat_mul_comm (p q : list (Z * Z)) :
         Associational.eval (Associational.sat_mul base p q) =
           Associational.eval (Associational.sat_mul base q p).
-      Proof using base_nz n_gt_1. push; lia. Qed.
+      Proof using base_nz n_gt_1. clear dependent s. push; lia. Qed.
 
       Lemma sat_mul_distr (p q1 q2 : list (Z * Z)) :
         Associational.eval (Associational.sat_mul base p (q1 ++ q2)) =
           Associational.eval (Associational.sat_mul base p q1) +
             Associational.eval (Associational.sat_mul base p q2).
-      Proof using base_nz n_gt_1. push; lia. Qed.
+      Proof using base_nz n_gt_1. clear dependent s. push; lia. Qed.
 
       Lemma cons_to_app {A} a (p : list A) :
         a :: p = [a] ++ p.
@@ -2451,6 +2454,7 @@ Module SolinasReduction.
         eval weight m (fst (Rows.flatten' weight state inp)) =
           (Rows.eval weight m inp + eval weight m (fst state) + weight m * snd state) mod weight m.
       Proof using n_gt_1 wprops.
+        clear dependent s.
         intros.
         rewrite Rows.flatten'_correct with (n:=m) by auto.
         push.
@@ -2463,13 +2467,14 @@ Module SolinasReduction.
 
       Lemma sum_one x :
         sum [x] = x.
-      Proof. cbn; lia. Qed.
+      Proof. clear dependent s; cbn; lia. Qed.
 
       Lemma square_indiv_cons (p : list (Z * Z)) (a : Z * Z) :
         Associational.eval (sqr_indiv base (a :: p)) =
           Associational.eval (sqr_indiv base [a]) +
             Associational.eval (sqr_indiv base p).
       Proof using base_nz n_gt_1.
+        clear dependent s.
         cbv [sqr_indiv sqr_indiv'].
         cbn [fold_right].
         push.
@@ -2480,6 +2485,7 @@ Module SolinasReduction.
         Associational.eval (sqr_indiv base (p ++ q)) =
           Associational.eval (sqr_indiv base p) + Associational.eval (sqr_indiv base q).
       Proof using base_nz n_gt_1.
+        clear dependent s.
         generalize dependent q.
         induction p as [| a p IHp] using rev_ind; intros q.
         push.
@@ -2497,6 +2503,7 @@ Module SolinasReduction.
                                                                                   (Associational.eval (sat_mul base [(weight 2, x1)] [(weight 2, x1)]) +
                                                                                      Associational.eval (sat_mul base [(weight 3, x2)] [(weight 3, x2)])))).
       Proof using base_nz wprops n_gt_1.
+        clear dependent s.
         intros x x0 x1 x2 q H.
         rewrite H.
         cbv [to_associational].
@@ -2519,6 +2526,7 @@ Module SolinasReduction.
         p = x :: x0 :: x1 :: x2 :: q ->
         length (square1 base (to_associational weight 4 p)) = 8%nat.
       Proof using base_nz wprops n_gt_1.
+        clear dependent s.
         intros x x0 x1 x2 q H.
         cbv [square1].
         push.
@@ -2547,6 +2555,7 @@ Module SolinasReduction.
                  (Associational.eval (sat_mul base [(weight 3, x2)] [(weight 1, x0)]) +
                     Associational.eval (sat_mul base [(weight 3, x2)] [(weight 2, x1)]))).
       Proof using base_nz wprops n_gt_1.
+        clear dependent s.
         intros x x0 x1 x2 q bound H H1.
         rewrite H1.
         cbv [to_associational].
@@ -2612,6 +2621,7 @@ Module SolinasReduction.
         p = x :: x0 :: x1 :: x2 :: q ->
         0 <= eval weight 8 (square1 base (to_associational weight 4 p)) < weight 7.
       Proof using base_nz wprops n_gt_1.
+        clear dependent s.
         intros x x0 x1 x2 q bound H H0.
         erewrite eval_square1; [| eauto | eauto].
         rewrite H0 in H.
@@ -2635,6 +2645,7 @@ Module SolinasReduction.
       Theorem eval_square_no_reduce (p : list Z) :
         eval weight (2 * n) (square_no_reduce base n p) = (eval weight n p) * (eval weight n p).
       Proof using base_nz wprops n_gt_1.
+        clear dependent s.
         rewrite <-eval_mul_no_reduce with (base:=base) by lia.
         cbv [square_no_reduce].
         break_match.
@@ -2729,6 +2740,7 @@ Module SolinasReduction.
       Theorem length_square_no_reduce (p : list Z):
         length (square_no_reduce base n p) = (2 * n)%nat.
       Proof using base_nz wprops n_gt_1.
+        clear dependent s.
         cbv [square_no_reduce].
         break_match.
         rewrite Nat.eqb_eq in Heqb.

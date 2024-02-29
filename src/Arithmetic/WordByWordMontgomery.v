@@ -1020,11 +1020,12 @@ Module WordByWordMontgomery.
       Qed.
       Lemma sub_bound : 0 <= eval (sub Av Bv) < eval N.
       Proof using small_Bv small_Av R_numlimbs_nz Bv_bound Av_bound small_N r_big' partition_Proper lgr_big N_nz N_lt_R.
+        clear dependent ri; clear dependent k.
         generalize eval_sub; break_innermost_match; Z.ltb_to_lt; lia.
       Qed.
       Lemma opp_bound : 0 <= eval (opp Av) < eval N.
       Proof using small_Av R_numlimbs_nz Av_bound small_N r_big' partition_Proper lgr_big N_nz N_lt_R.
-        clear Bv small_Bv Bv_bound.
+        clear Bv small_Bv Bv_bound k k_correct ri ri_correct.
         generalize eval_opp; break_innermost_match; Z.ltb_to_lt; lia.
       Qed.
     End add_sub.
