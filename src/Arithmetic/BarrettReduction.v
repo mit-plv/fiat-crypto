@@ -314,7 +314,7 @@ Module Fancy.
       Proof.
         intros. subst a b. autorewrite with push_Zmul.
         ring_simplify_subterms. rewrite Z.pow_2_r.
-        rewrite Z.div_add_exact by (push_Zmod; autorewrite with zsimplify; lia).
+        rewrite Z.div_add_exact by (push_Zmod; rewrite ?Zmod_0_l; lia).
         repeat match goal with
                | |- context [d * ?a * ?b * ?c] =>
                  replace (d * a * b * c) with (a * b * c * d) by ring

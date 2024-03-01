@@ -1106,7 +1106,7 @@ Module Positional.
     Lemma length_sub a b
       : length a = n -> length b = n ->
         length (sub a b) = n.
-    Proof using length_balance. intros; cbv [sub scmul negate_snd]; repeat distr_length. Qed.
+    Proof using length_balance. clear dependent s. intros; cbv [sub scmul negate_snd]; repeat distr_length. Qed.
     Hint Rewrite length_sub : distr_length.
     Definition opp (a:list Z) : list Z
       := sub (zeros n) a.
@@ -1119,7 +1119,7 @@ Module Positional.
     Proof using m_nz s_nz weight_0 weight_nz eval_balance length_balance. intros; cbv [opp]; push; distr_length; auto.       Qed.
     Lemma length_opp a
       : length a = n -> length (opp a) = n.
-    Proof using length_balance. cbv [opp]; intros; repeat distr_length.            Qed.
+    Proof using length_balance. clear dependent s. cbv [opp]; intros; repeat distr_length.            Qed.
   End sub.
   Hint Rewrite @eval_scmul @eval_opp @eval_sub : push_eval.
   Hint Rewrite @length_scmul @length_sub @length_opp : distr_length.

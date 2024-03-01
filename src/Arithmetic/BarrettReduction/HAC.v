@@ -61,6 +61,7 @@ Section barrett.
 
     Lemma r_mod_3m_eq_orig : r_mod_3m = r_mod_3m_orig.
     Proof using base_pos k_big_enough m_pos m_small offset_nonneg r1 r2.
+      clear μ_good x_nonneg.
       assert (0 <= r1 < b^(k+offset)) by (subst r1; auto with zarith).
       assert (0 <= r2 < b^(k+offset)) by (subst r2; auto with zarith).
       subst r_mod_3m r_mod_3m_orig; cbv zeta.
