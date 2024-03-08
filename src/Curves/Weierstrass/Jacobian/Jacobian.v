@@ -588,5 +588,43 @@ Module Jacobian.
         eq (double P) (double_minus_3 P).
       Proof. faster_t. Qed.
     End AEqMinus3.
+    (** If [a] is 0, one can substitute a faster implementation of [double]. *)
+    Section AEqZero.
+      Context (a_eq_zero : a = Fzero).
+
+      (** See http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#doubling-dbl-2009-l *)
+      Program Definition double_aeq0 (P : point) : point :=
+        match proj1_sig P return F*F*F with
+        | (x_in, y_in, z_in) =>
+            let A := x_in^2 in
+            let B := y_in^2 in
+            let C := B^2 in
+            let t0 := x_in + B in
+            let t1 := t0^2 in
+            let t2 := t1 - A in
+            let t3 := t2 - C in
+            let D := t3 + t3 in
+            let E := A + A + A in
+            let F := E^2 in
+            let t4 := D + D in
+            let x_out := F - t4 in
+            let t5 := D - x_out in
+            let four_C := C + C in
+            let four_C := four_C + four_C in
+            let t6 := four_C + four_C in
+            let t7 := E * t5 in
+            let y_out := t7 - t6 in
+            let t8 := y_in * z_in in
+            let z_out := t8 + t8 in
+            (x_out, y_out, z_out)
+        end.
+      Next Obligation. Proof. t. Qed.
+
+      Hint Unfold double_aeq0 : points_as_coordinates.
+
+      Lemma double_aeq0_eq_double (P : point) :
+        eq (double P) (double_aeq0 P).
+      Proof. faster_t. Qed.
+    End AEqZero.
   End Jacobian.
 End Jacobian.
