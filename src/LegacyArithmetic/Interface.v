@@ -163,16 +163,16 @@ Section InstructionGallery.
 
   Class is_spread_left_immediate (sprl : spread_left_immediate) :=
     {
-      decode_fst_spread_left_immediate :> forall r count,
+      decode_fst_spread_left_immediate :: forall r count,
           0 <= count < n
           -> decode (fst (sprl r count)) =~> (decode r << count) mod 2^n;
-      decode_snd_spread_left_immediate :> forall r count,
+      decode_snd_spread_left_immediate :: forall r count,
         0 <= count < n
         -> decode (snd (sprl r count)) =~> (decode r << count) >> n
 
     }.
 
-  Class mask_keep_low := { mkl :> W -> imm -> W }.
+  Class mask_keep_low := { mkl :: W -> imm -> W }.
   Global Coercion mkl : mask_keep_low >-> Funclass.
 
   Class is_mask_keep_low (mkl : mask_keep_low) :=
@@ -184,7 +184,7 @@ Section InstructionGallery.
 
   Class is_bitwise_and (and : bitwise_and) :=
     {
-      decode_bitwise_and :> forall x y, decode (and x y) <~=~> Z.land (decode x) (decode y)
+      decode_bitwise_and :: forall x y, decode (and x y) <~=~> Z.land (decode x) (decode y)
     }.
 
   (** Quoting http://www.felixcloutier.com/x86/AND.html:
@@ -197,8 +197,8 @@ Section InstructionGallery.
 
   Class is_bitwise_and_with_CF (andf : bitwise_and_with_CF) :=
     {
-      decode_snd_bitwise_and_with_CF :> forall x y, decode (snd (andf x y)) <~=~> Z.land (decode x) (decode y);
-      fst_bitwise_and_with_CF :> forall x y, fst (andf x y) =~> false
+      decode_snd_bitwise_and_with_CF :: forall x y, decode (snd (andf x y)) <~=~> Z.land (decode x) (decode y);
+      fst_bitwise_and_with_CF :: forall x y, fst (andf x y) =~> false
     }.
 
   Class bitwise_or := { or : W -> W -> W }.
@@ -206,7 +206,7 @@ Section InstructionGallery.
 
   Class is_bitwise_or (or : bitwise_or) :=
     {
-      decode_bitwise_or :> forall x y, decode (or x y) <~=~> Z.lor (decode x) (decode y)
+      decode_bitwise_or :: forall x y, decode (or x y) <~=~> Z.lor (decode x) (decode y)
     }.
 
   (** Quoting http://www.felixcloutier.com/x86/OR.html:
@@ -219,8 +219,8 @@ Section InstructionGallery.
 
   Class is_bitwise_or_with_CF (orf : bitwise_or_with_CF) :=
     {
-      decode_snd_bitwise_or_with_CF :> forall x y, decode (snd (orf x y)) <~=~> Z.lor (decode x) (decode y);
-      fst_bitwise_or_with_CF :> forall x y, fst (orf x y) =~> false
+      decode_snd_bitwise_or_with_CF :: forall x y, decode (snd (orf x y)) <~=~> Z.lor (decode x) (decode y);
+      fst_bitwise_or_with_CF :: forall x y, fst (orf x y) =~> false
     }.
 
   Local Notation bit b := (if b then 1 else 0).
@@ -230,8 +230,8 @@ Section InstructionGallery.
 
   Class is_add_with_carry (adc : add_with_carry) :=
     {
-      bit_fst_add_with_carry :> forall x y c, bit (fst (adc x y c)) <~=~> (decode x + decode y + bit c) >> n;
-      decode_snd_add_with_carry :> forall x y c, decode (snd (adc x y c)) <~=~> (decode x + decode y + bit c) mod (2^n)
+      bit_fst_add_with_carry :: forall x y c, bit (fst (adc x y c)) <~=~> (decode x + decode y + bit c) >> n;
+      decode_snd_add_with_carry :: forall x y c, decode (snd (adc x y c)) <~=~> (decode x + decode y + bit c) mod (2^n)
     }.
 
   Class sub_with_carry := { subc : W -> W -> bool -> bool * W }.
@@ -239,8 +239,8 @@ Section InstructionGallery.
 
   Class is_sub_with_carry (subc:W->W->bool->bool*W) :=
     {
-      fst_sub_with_carry :> forall x y c, fst (subc x y c) <~=~> ((decode x - decode y - bit c) <? 0);
-      decode_snd_sub_with_carry :> forall x y c, decode (snd (subc x y c)) <~=~> (decode x - decode y - bit c) mod 2^n
+      fst_sub_with_carry :: forall x y c, fst (subc x y c) <~=~> ((decode x - decode y - bit c) <? 0);
+      decode_snd_sub_with_carry :: forall x y c, decode (snd (subc x y c)) <~=~> (decode x - decode y - bit c) mod 2^n
     }.
 
   Class multiply := { mul : W -> W -> W }.
@@ -279,17 +279,17 @@ Section InstructionGallery.
       forall x y, decode (mulhwhh x y) <~=~> ((decode x >> w) * (decode y >> w)) mod 2^n.
   Class is_mul_double (muldw : multiply_double) :=
     {
-      decode_fst_mul_double :>
+      decode_fst_mul_double ::
         forall x y, decode (fst (muldw x y)) =~> (decode x * decode y) mod 2^n;
-      decode_snd_mul_double :>
+      decode_snd_mul_double ::
         forall x y, decode (snd (muldw x y)) =~> (decode x * decode y) >> n
     }.
 
   Class is_mul_double_with_CF (muldwf : multiply_double_with_CF) :=
     {
-      decode_fst_mul_double_with_CF :>
+      decode_fst_mul_double_with_CF ::
         forall x y, decode (fst (snd (muldwf x y))) =~> (decode x * decode y) mod 2^n;
-      decode_snd_mul_double_with_CF :>
+      decode_snd_mul_double_with_CF ::
         forall x y, decode (snd (snd (muldwf x y))) =~> (decode x * decode y) >> n
     }.
 
@@ -388,34 +388,34 @@ Module fancy_machine.
   Class instructions (n : Z) :=
     {
       W : Type (* [n]-bit word *);
-      decode :> decoder n W;
-      ldi :> load_immediate W;
-      shrd :> shift_right_doubleword_immediate W;
-      shl :> shift_left_immediate W;
-      shr :> shift_right_immediate W;
-      adc :> add_with_carry W;
-      subc :> sub_with_carry W;
-      mulhwll :> multiply_low_low W;
-      mulhwhl :> multiply_high_low W;
-      mulhwhh :> multiply_high_high W;
-      selc :> select_conditional W;
-      addm :> add_modulo W
+      decode :: decoder n W;
+      ldi :: load_immediate W;
+      shrd :: shift_right_doubleword_immediate W;
+      shl :: shift_left_immediate W;
+      shr :: shift_right_immediate W;
+      adc :: add_with_carry W;
+      subc :: sub_with_carry W;
+      mulhwll :: multiply_low_low W;
+      mulhwhl :: multiply_high_low W;
+      mulhwhh :: multiply_high_high W;
+      selc :: select_conditional W;
+      addm :: add_modulo W
     }.
 
   Class arithmetic {n_over_two} (ops:instructions (2 * n_over_two)) :=
     {
-      decode_range :> is_decode decode;
-      load_immediate :> is_load_immediate ldi;
-      shift_right_doubleword_immediate :> is_shift_right_doubleword_immediate shrd;
-      shift_left_immediate :> is_shift_left_immediate shl;
-      shift_right_immediate :> is_shift_right_immediate shr;
-      add_with_carry :> is_add_with_carry adc;
-      sub_with_carry :> is_sub_with_carry subc;
-      multiply_low_low :> is_mul_low_low n_over_two mulhwll;
-      multiply_high_low :> is_mul_high_low n_over_two mulhwhl;
-      multiply_high_high :> is_mul_high_high n_over_two mulhwhh;
-      select_conditional :> is_select_conditional selc;
-      add_modulo :> is_add_modulo addm
+      decode_range :: is_decode decode;
+      load_immediate :: is_load_immediate ldi;
+      shift_right_doubleword_immediate :: is_shift_right_doubleword_immediate shrd;
+      shift_left_immediate :: is_shift_left_immediate shl;
+      shift_right_immediate :: is_shift_right_immediate shr;
+      add_with_carry :: is_add_with_carry adc;
+      sub_with_carry :: is_sub_with_carry subc;
+      multiply_low_low :: is_mul_low_low n_over_two mulhwll;
+      multiply_high_low :: is_mul_high_low n_over_two mulhwhl;
+      multiply_high_high :: is_mul_high_high n_over_two mulhwhh;
+      select_conditional :: is_select_conditional selc;
+      add_modulo :: is_add_modulo addm
     }.
 End fancy_machine.
 
@@ -425,30 +425,30 @@ Module x86.
   Class instructions (n : Z) :=
     {
       W : Type (* [n]-bit word *);
-      decode :> decoder n W;
-      ldi :> load_immediate W;
-      shrdf :> shift_right_doubleword_immediate_with_CF W;
-      shlf :> shift_left_immediate_with_CF W;
-      shrf :> shift_right_immediate_with_CF W;
-      adc :> add_with_carry W;
-      subc :> sub_with_carry W;
-      muldwf :> multiply_double_with_CF W;
-      selc :> select_conditional W;
-      orf :> bitwise_or_with_CF W
+      decode :: decoder n W;
+      ldi :: load_immediate W;
+      shrdf :: shift_right_doubleword_immediate_with_CF W;
+      shlf :: shift_left_immediate_with_CF W;
+      shrf :: shift_right_immediate_with_CF W;
+      adc :: add_with_carry W;
+      subc :: sub_with_carry W;
+      muldwf :: multiply_double_with_CF W;
+      selc :: select_conditional W;
+      orf :: bitwise_or_with_CF W
     }.
 
   Class arithmetic {n} (ops:instructions n) :=
     {
-      decode_range :> is_decode decode;
-      load_immediate :> is_load_immediate ldi;
-      shift_right_doubleword_immediate_with_CF :> is_shift_right_doubleword_immediate_with_CF shrdf;
-      shift_left_immediate_with_CF :> is_shift_left_immediate_with_CF shlf;
-      shift_right_immediate_with_CF :> is_shift_right_immediate_with_CF shrf;
-      add_with_carry :> is_add_with_carry adc;
-      sub_with_carry :> is_sub_with_carry subc;
-      multiply_double_with_CF :> is_mul_double_with_CF muldwf;
-      select_conditional :> is_select_conditional selc;
-      bitwise_or_with_CF :> is_bitwise_or_with_CF orf
+      decode_range :: is_decode decode;
+      load_immediate :: is_load_immediate ldi;
+      shift_right_doubleword_immediate_with_CF :: is_shift_right_doubleword_immediate_with_CF shrdf;
+      shift_left_immediate_with_CF :: is_shift_left_immediate_with_CF shlf;
+      shift_right_immediate_with_CF :: is_shift_right_immediate_with_CF shrf;
+      add_with_carry :: is_add_with_carry adc;
+      sub_with_carry :: is_sub_with_carry subc;
+      multiply_double_with_CF :: is_mul_double_with_CF muldwf;
+      select_conditional :: is_select_conditional selc;
+      bitwise_or_with_CF :: is_bitwise_or_with_CF orf
     }.
 End x86.
 
