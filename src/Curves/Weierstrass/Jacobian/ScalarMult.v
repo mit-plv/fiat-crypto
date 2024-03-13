@@ -355,16 +355,7 @@ Module ScalarMult.
       destruct (tplu_inner_is_point (X, Y, Z) ltac:(auto) HP) as (A & B & C).
       rewrite (surjective_pairing (tplu_inner _)).
       replace (if testbit 1%Z then (snd (tplu_inner (X, Y, Z)), fst (tplu_inner (X, Y, Z))) else (fst (tplu_inner (X, Y, Z)), snd (tplu_inner (X, Y, Z)))) with ((if testbit 1%Z then snd (tplu_inner (X, Y, Z)) else fst (tplu_inner (X, Y, Z)), if testbit 1%Z then fst (tplu_inner (X, Y, Z)) else snd (tplu_inner (X, Y, Z)))) by (destruct (testbit 1%Z); reflexivity).
-      pose (CD := (while (fun '(_, i) => (i <? scalarbitsz)%Z)
-        (fun '(R1, R0, i) =>
-         let
-         '(R2, R3) := if testbit i then (R0, R1) else (R1, R0) in
-          let
-          '(R4, R5) :=
-           let '(P, Q) := zdau_inner R2 R3 in if testbit i then (Q, P) else (P, Q) in
-           (R4, R5, Z.succ i)) (Z.to_nat scalarbitsz)
-        (if testbit 1%Z then snd (tplu_inner (X, Y, Z)) else fst (tplu_inner (X, Y, Z)),
-          if testbit 1%Z then fst (tplu_inner (X, Y, Z)) else snd (tplu_inner (X, Y, Z)), 2%Z))).
+      set (CD := while _ _ _ _).
       pose (inv := fun '(R1, R0, i) => is_point R1 /\ is_point R0 /\ (i >= 0)%Z /\ snd R1 = snd R0).
       assert (HCD: inv CD).
       { unfold CD. set (measure := fun (state : ((F*F*F)*(F*F*F)*BinNums.Z)) => ((Z.to_nat scalarbitsz) + 2 - (Z.to_nat (snd state)))%nat).
@@ -663,14 +654,7 @@ Module ScalarMult.
         set (R1 := if testbitn 1 then proj1_sig (snd TPLU) else proj1_sig (fst TPLU)).
         set (R0 := if testbitn 1 then proj1_sig (fst TPLU) else proj1_sig (snd TPLU)).
         replace (if testbitn 1 then (proj1_sig (snd TPLU), proj1_sig (fst TPLU)) else (proj1_sig (fst TPLU), proj1_sig (snd TPLU))) with (R1, R0) by (destruct (testbitn 1); reflexivity).
-        set (WW := while (fun '(_, i) => (i <? scalarbitsz)%Z)
-        (fun '(R2, R3, i) =>
-         let
-         '(R4, R5) := if testbitn i then (R3, R2) else (R2, R3) in
-          let
-          '(R6, R7) :=
-           let '(P0, Q) := zdau_inner R4 R5 in if testbitn i then (Q, P0) else (P0, Q)
-          in (R6, R7, Z.succ i)) (Z.to_nat scalarbitsz) (R1, R0, 2%Z)).
+        set (WW := while _ _ _ _).
         set (inv :=
                fun '(R1, R0, i) =>
                  is_point R1 /\ is_point R0 /\ snd R1 = snd R0 /\
