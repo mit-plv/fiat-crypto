@@ -1,0 +1,24 @@
+## Garagedoor app (init, loop, initfn, loopfn) [Bedrock2]
+Crypto.Bedrock.End2End.X25519.GarageDoor
+Crypto.Bedrock.End2End.X25519.GarageDoorTop
+
+## Ethernet/LAN/SPI (lan9250_tx) [Bedrock2]
+134 lines of bedrock2Examples.LAN9250
+
+## Bedrock2 library functions (memswap, memequal, memconst) [Bedrock2]
+bedrock2Examples.memequal
+bedrock2Examples.memswap
+bedrock2Examples.memconst
+
+## Chacha20 (chacha20_block, quarter) [Rupicola]
+Crypto.Bedrock.End2End.RupicolaCrypto.ChaCha20
+
+## Montgomery ladder (x25519, x25519_base) [Bedrock2]
+Crypto.Bedrock.End2End.X25519.MontgomeryLadder
+Crypto.Bedrock.End2End.X25519.MontgomeryLadderProperties
+
+## Montgomery ladder (montladder, ladderstep) [Rupicola]
+Crypto.Bedrock.End2End.RupicolaCrypto.Spec
+
+## Modular inversion using addition-chain exponentiation (fe25519_inv) [simpl & Rupicola]
+Crypto.Bedrock.Group.AdditionChains
