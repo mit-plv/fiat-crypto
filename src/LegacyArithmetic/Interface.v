@@ -83,13 +83,13 @@ Section InstructionGallery.
   Global Coercion ldi : load_immediate >-> Funclass.
 
   Class is_load_immediate {ldi : load_immediate}  :=
-    decode_load_immediate :> forall x, 0 <= x < 2^n -> decode (ldi x) =~> x.
+    decode_load_immediate :: forall x, 0 <= x < 2^n -> decode (ldi x) =~> x.
 
   Class shift_right_doubleword_immediate := { shrd : W -> W -> imm -> W }.
   Global Coercion shrd : shift_right_doubleword_immediate >-> Funclass.
 
   Class is_shift_right_doubleword_immediate (shrd : shift_right_doubleword_immediate) :=
-    decode_shift_right_doubleword :>
+    decode_shift_right_doubleword ::
       forall high low count,
         0 <= count < n
         -> decode (shrd high low count) <~=~> (((decode high << n) + decode low) >> count) mod 2^n.
@@ -112,7 +112,7 @@ Section InstructionGallery.
   Global Coercion shrdf : shift_right_doubleword_immediate_with_CF >-> Funclass.
 
   Class is_shift_right_doubleword_immediate_with_CF (shrdf : shift_right_doubleword_immediate_with_CF) :=
-    decode_snd_shift_right_doubleword_with_CF :>
+    decode_snd_shift_right_doubleword_with_CF ::
       forall high low count,
         0 <= count < n
         -> decode (snd (shrdf high low count)) <~=~> (((decode high << n) + decode low) >> count) mod 2^n.
@@ -121,7 +121,7 @@ Section InstructionGallery.
   Global Coercion shl : shift_left_immediate >-> Funclass.
 
   Class is_shift_left_immediate (shl : shift_left_immediate) :=
-    decode_shift_left_immediate :>
+    decode_shift_left_immediate ::
       forall r count, 0 <= count < n -> decode (shl r count) <~=~> (decode r << count) mod 2^n.
 
   (** Quoting http://www.felixcloutier.com/x86/SAL:SAR:SHL:SHR.html:
@@ -141,21 +141,21 @@ Section InstructionGallery.
   Global Coercion shlf : shift_left_immediate_with_CF >-> Funclass.
 
   Class is_shift_left_immediate_with_CF (shlf : shift_left_immediate_with_CF) :=
-    decode_shift_left_immediate_with_CF :>
+    decode_shift_left_immediate_with_CF ::
       forall r count, 0 <= count < n -> decode (snd (shlf r count)) <~=~> (decode r << count) mod 2^n.
 
   Class shift_right_immediate := { shr : W -> imm -> W }.
   Global Coercion shr : shift_right_immediate >-> Funclass.
 
   Class is_shift_right_immediate (shr : shift_right_immediate) :=
-    decode_shift_right_immediate :>
+    decode_shift_right_immediate ::
       forall r count, 0 <= count < n -> decode (shr r count) <~=~> (decode r >> count).
 
   Class shift_right_immediate_with_CF := { shrf : W -> imm -> bool * W }.
   Global Coercion shrf : shift_right_immediate_with_CF >-> Funclass.
 
   Class is_shift_right_immediate_with_CF (shrf : shift_right_immediate_with_CF) :=
-    decode_shift_right_immediate_with_CF :>
+    decode_shift_right_immediate_with_CF ::
       forall r count, 0 <= count < n -> decode (snd (shrf r count)) <~=~> (decode r >> count).
 
   Class spread_left_immediate := { sprl : W -> imm -> tuple W 2 (* [(low, high)] *) }.
@@ -176,7 +176,7 @@ Section InstructionGallery.
   Global Coercion mkl : mask_keep_low >-> Funclass.
 
   Class is_mask_keep_low (mkl : mask_keep_low) :=
-    decode_mask_keep_low :> forall r count,
+    decode_mask_keep_low :: forall r count,
       0 <= count < n -> decode (mkl r count) <~=~> decode r mod 2^count.
 
   Class bitwise_and := { and : W -> W -> W }.
@@ -247,7 +247,7 @@ Section InstructionGallery.
   Global Coercion mul : multiply >-> Funclass.
 
   Class is_mul (mul : multiply) :=
-    decode_mul :> forall x y, decode (mul x y) <~=~> (decode x * decode y).
+    decode_mul :: forall x y, decode (mul x y) <~=~> (decode x * decode y).
 
   Class multiply_low_low := { mulhwll : W -> W -> W }.
   Global Coercion mulhwll : multiply_low_low >-> Funclass.
@@ -269,13 +269,13 @@ Section InstructionGallery.
   Global Coercion muldwf : multiply_double_with_CF >-> Funclass.
 
   Class is_mul_low_low (w:Z) (mulhwll : multiply_low_low) :=
-    decode_mul_low_low :>
+    decode_mul_low_low ::
       forall x y, decode (mulhwll x y) <~=~> ((decode x mod 2^w) * (decode y mod 2^w)) mod 2^n.
   Class is_mul_high_low (w:Z) (mulhwhl : multiply_high_low) :=
-    decode_mul_high_low :>
+    decode_mul_high_low ::
       forall x y, decode (mulhwhl x y) <~=~> ((decode x >> w) * (decode y mod 2^w)) mod 2^n.
   Class is_mul_high_high (w:Z) (mulhwhh : multiply_high_high) :=
-    decode_mul_high_high :>
+    decode_mul_high_high ::
       forall x y, decode (mulhwhh x y) <~=~> ((decode x >> w) * (decode y >> w)) mod 2^n.
   Class is_mul_double (muldw : multiply_double) :=
     {
@@ -297,14 +297,14 @@ Section InstructionGallery.
   Global Coercion selc : select_conditional >-> Funclass.
 
   Class is_select_conditional (selc : select_conditional) :=
-    decode_select_conditional :> forall b x y,
+    decode_select_conditional :: forall b x y,
       decode (selc b x y) <~=~> if b then decode x else decode y.
 
   Class add_modulo := { addm : W -> W -> W (* modulus *) -> W }.
   Global Coercion addm : add_modulo >-> Funclass.
 
   Class is_add_modulo (addm : add_modulo) :=
-    decode_add_modulo :> forall x y modulus,
+    decode_add_modulo :: forall x y modulus,
         decode (addm x y modulus) <~=~> (if (decode x + decode y) <? decode modulus
                                          then (decode x + decode y)
                                          else (decode x + decode y) - decode modulus).
