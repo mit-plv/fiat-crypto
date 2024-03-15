@@ -20,172 +20,75 @@ Require Import Crypto.Util.Tuple.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 
+Module Z.
+(* Note: ideally we would contribute this to Coq *)
+Lemma mod_pow2_succ_r a n (Hi : Z.le 0 n) : (a mod 2 ^ Z.succ n = a mod 2 ^ n + Z.b2z (Z.testbit a n) * 2 ^ n)%Z.
+Proof.
+  clear -Hi.
+  rewrite Z_div_mod_eq_full with (a:=(a mod _)%Z) (b:=(2^n)%Z).
+  rewrite <-(Z.mod_small ((a mod 2 ^ Z.succ n / 2 ^ n)) 2); cycle 1.
+  { rewrite Z.pow_succ_r by lia; Z.div_mod_to_equations; nia. }
+  rewrite <-Z.mod_pow2_bits_low with (n:=Z.succ n) by lia.
+  rewrite <-Znumtheory.Zmod_div_mod; cycle 1.
+  { lia. } { lia. } { exists 2%Z. rewrite <-Z.pow_succ_r; f_equal; lia. }
+  rewrite Z.testbit_spec'; lia.
+Qed.
+End Z.
+
 Module ScalarMult.
   Section JoyeDoubleAddDecomposition.
     (* Joye's double-add ladder for computing [n]P basically tracks the
        values of two sequences [SS i]P and [TT i]P.
        This section proves some properties on the sequences SS and TT.
      *)
-    Variables n scalarbitsz : Z.
-    Hypotheses (Hn : (0 <= n < 2^scalarbitsz)%Z)
-      (Hscalarbitsz : (0 < scalarbitsz)%Z).
-    Local Notation testbitn := (Z.testbit n).
+    Variables n : Z.
+    Local Coercion Z.of_nat : nat >-> Z.
 
-    (* Highly regular right-to-left algorithms for scalar multiplication *)
-    (* Marc Joye *)
-    (* §2.1 Double-add algorithm *)
-    Fixpoint SS (i : nat) :=
-      match i with
-      | O => Z.b2z (testbitn 0)
-      | S j => if (testbitn (Z.of_nat i)) then (2 * SS j + TT j)%Z else SS j
-      end
-    with TT (i : nat ) :=
-           match i with
-           | O => 2 - Z.b2z (testbitn 0)
-           | S j => if (testbitn (Z.of_nat i)) then TT j else (2 * TT j + SS j)%Z
-           end.
+    Definition SS (i : nat) : Z := n mod 2 ^ Z.succ i.
+    Definition TT (i: nat) : Z := 2^Z.succ i - SS i.
 
-    Definition SS' (i : nat) :=
-      (n mod (2 ^ (Z.of_nat (S i))))%Z.
+    Lemma SS_plus_TT k : (SS k + TT k = 2^(Z.of_nat (S k)))%Z.
+    Proof. cbv [SS TT]; lia. Qed.
 
-    Definition TT' (i: nat) := (2^(Z.of_nat (S i)) - SS' i)%Z.
-
-    Lemma SS_succ (i : nat) :
-      SS (S i) = if (testbitn (Z.of_nat (S i))) then (2 * SS i + TT i)%Z else SS i.
-    Proof. reflexivity. Qed.
-
-    Lemma TT_succ (i : nat) :
-      TT (S i) = if (testbitn (Z.of_nat (S i))) then TT i else (2 * TT i + SS i)%Z.
-    Proof. reflexivity. Qed.
-
-    Lemma SS_succ' (i : nat) :
-      SS' (S i) = ((Z.b2z (testbitn (Z.of_nat (S i))) * 2^(Z.of_nat (S i))) + SS' i)%Z.
+    Lemma SS_succ i : SS (S i) = if (Z.testbit n (Z.of_nat (S i))) then (2 * SS i + TT i)%Z else SS i.
     Proof.
-      unfold SS'. repeat rewrite <- Pow2Mod.Z.pow2_mod_spec; try lia.
-      replace (Z.of_nat (S (S i))) with (Z.of_nat (S i) + 1)%Z by lia.
-      rewrite Pow2Mod.Z.pow2_mod_split; try lia.
-      repeat rewrite Pow2Mod.Z.pow2_mod_spec; try lia.
-      rewrite Z.add_comm, <- Z.add_lor_land.
-      replace (Z.land _ _) with 0%Z.
-      2: { apply Z.bits_inj'; intros; rewrite Z.bits_0, Z.land_spec.
-           rewrite Z.testbit_mod_pow2; [|lia].
-           destruct (dec (Z.lt n0 (Z.of_nat (S i)))).
-           - rewrite Z.mul_pow2_bits_low, Bool.andb_false_r; auto.
-           - rewrite (proj2 (Z.ltb_nlt n0 _)), Bool.andb_false_l; auto. }
-      rewrite Z.add_0_r. f_equal.
-      rewrite Z.shiftl_mul_pow2; [|lia]. f_equal.
-      rewrite <- Z.bit0_mod, Z.shiftr_spec, Z.add_0_l; lia.
+      cbv [TT SS].
+      pose proof Z.mod_pow2_succ_r n (S i); case Z.testbit in *; cbv [Z.b2z] in *; lia.
     Qed.
 
-    Lemma SS_is_SS' (i : nat) :
-      SS i = SS' i :> Z
-    with TT_is_TT' (i : nat) :
-      TT i = TT' i :> Z.
+    Lemma TT_succ i : TT (S i) = if (Z.testbit n (Z.of_nat (S i))) then TT i else (2 * TT i + SS i)%Z.
     Proof.
-      { destruct i.
-        - unfold SS, SS'. apply Z.bit0_mod.
-        - rewrite SS_succ'. cbn [SS].
-          destruct (testbitn (Z.of_nat (S i))).
-          + rewrite TT_is_TT'. unfold TT'.
-            rewrite <- SS_is_SS'. cbv [Z.b2z]. lia.
-          + cbv [Z.b2z]. rewrite <- SS_is_SS'. lia. }
-      { destruct i.
-        - unfold TT, TT', SS'.
-          f_equal. apply Z.bit0_mod.
-        - cbn [TT]. unfold TT'; fold TT'.
-          rewrite SS_succ'. destruct (testbitn (Z.of_nat (S i))).
-          + cbv [Z.b2z]. rewrite TT_is_TT'. unfold TT'; fold TT'.
-            replace (2 ^ Z.of_nat (S (S i)))%Z with (2 * 2 ^ Z.of_nat (S i))%Z.
-            2:{ repeat rewrite <- two_power_nat_equiv.
-                rewrite (two_power_nat_S (S i)). reflexivity. }
-            lia.
-          + cbv [Z.b2z]. rewrite TT_is_TT'.
-            unfold TT'; fold TT'. rewrite SS_is_SS'.
-            replace (2 ^ Z.of_nat (S (S i)))%Z with (2 * 2 ^ Z.of_nat (S i))%Z.
-            2:{ repeat rewrite <- two_power_nat_equiv.
-                rewrite (two_power_nat_S (S i)). reflexivity. }
-            lia. }
+      cbv [TT SS].
+      rewrite Nat2Z.inj_succ by lia.
+      pose proof Z.mod_pow2_succ_r n (Z.succ i); case Z.testbit in *; cbv [Z.b2z] in *; rewrite ?Z.pow_succ_r in *; lia.
     Qed.
 
-    Lemma SSn :
+    Lemma SS_monotone0 (k : nat) : (SS 0 <= SS k)%Z.
+    Proof.
+      cbv [SS].
+      rewrite Z.pow_1_r, Z.pow_succ_r, Znumtheory.Zmod_div_mod with (n:=2) (m:=(2*2^k)%Z)
+        by (try exists (2^k)%Z; lia).
+      apply Z.mod_bound_pos_le; Z.div_mod_to_equations; lia.
+    Qed.
+
+    Lemma TT_monotone0 (k : nat) : (TT 0 <= TT k)%Z.
+    Proof.
+      cbv [TT SS]; set (z := Z.succ k).
+      enough (n mod 2 ^ z < 2 ^ z + (n mod 2 ^ Z.succ 0 - 1))%Z by lia; rewrite Z.pow_1_r.
+      enough (n mod 2 = 0 -> n mod 2 ^ z <> Z.pred (2^z))%Z by try (Z.div_mod_to_equations; nia); intros ? X.
+      apply (f_equal (fun x => Z.testbit x 0)) in X.
+      rewrite <-Z.ones_equiv, Z.ones_spec_low, Z.mod_pow2_bits_low, Z.bit0_eqb in X; lia.
+    Qed.
+
+    Lemma SSn scalarbitsz (Hn : (0 <= n < 2^scalarbitsz)%Z) (Hscalarbitsz : (0 < scalarbitsz)%Z) :
       SS (Z.to_nat (scalarbitsz - 1)%Z) = n :> Z.
     Proof.
-      rewrite SS_is_SS'. unfold SS'.
-      rewrite <- Pow2Mod.Z.pow2_mod_spec; [|lia].
-      apply Pow2Mod.Z.pow2_mod_id_iff; try lia.
-      replace (Z.of_nat (S (Z.to_nat (scalarbitsz - 1))))%Z with scalarbitsz; lia.
-    Qed.
-
-    Lemma SS_plus_TT (k: nat) :
-      (SS k + TT k)%Z = (2^(Z.of_nat (S k)))%Z :> Z.
-    Proof.
-      rewrite SS_is_SS', TT_is_TT'.
-      unfold TT'. lia.
-    Qed.
-
-    Lemma SS_sub_TT0 :
-      (TT 0 - SS 0)%Z = (2 * (1 - Z.b2z (testbitn 0)))%Z :> Z.
-    Proof. unfold TT, SS. lia. Qed.
-
-    Lemma SS_sub_TT_S (k : nat) :
-      if testbitn (Z.of_nat (S k)) then
-        (SS (S k) - TT (S k))%Z = (2 * SS k)%Z :> Z
-      else
-        (TT (S k) - SS (S k))%Z = (2 * TT k)%Z :> Z.
-    Proof. cbn [SS TT]. destruct (testbitn (Z.of_nat (S k))); lia. Qed.
-
-    Lemma SS_pos (k : nat) :
-      (0 <= SS k)%Z.
-    Proof. rewrite SS_is_SS'. apply Z_mod_nonneg_nonneg; lia. Qed.
-
-    Lemma TT_pos (k : nat) :
-      (0 <= TT k)%Z.
-    Proof.
-      induction k.
-      - cbn [TT]. destruct (testbitn 0); simpl; lia.
-      - cbn [TT]. destruct (testbitn _); auto.
-        generalize (SS_pos k); lia.
-    Qed.
-
-    Lemma SS_monotone (k : nat) :
-      (SS k <= SS (S k))%Z.
-    Proof.
-      replace (SS (S k)) with (if (testbitn (Z.of_nat (S k))) then (2 * SS k + TT k)%Z else SS k) by reflexivity.
-      generalize (SS_pos k). generalize (TT_pos k).
-      destruct (testbitn _); lia.
-    Qed.
-
-    Lemma TT_monotone (k : nat) :
-      (TT k <= TT (S k))%Z.
-    Proof.
-      replace (TT (S k)) with (if (testbitn (Z.of_nat (S k))) then TT k else (2 * TT k + SS k)%Z) by reflexivity.
-      generalize (SS_pos k). generalize (TT_pos k).
-      destruct (testbitn _); lia.
-    Qed.
-
-    Lemma SS_monotone0 (k : nat) :
-      (SS 0 <= SS k)%Z.
-    Proof. induction k; [lia|transitivity (SS k); auto; apply SS_monotone]. Qed.
-
-    Lemma TT_monotone0 (k : nat) :
-      (TT 0 <= TT k)%Z.
-    Proof. induction k; [lia|transitivity (TT k); auto; apply TT_monotone]. Qed.
-
-    Lemma SS_upper_bound (k : nat) :
-      (SS k <= n)%Z.
-    Proof. rewrite SS_is_SS'; apply Z.mod_le; lia. Qed.
-
-    Lemma SS_upper_bound1 (k : nat) :
-      (SS k < 2^(Z.of_nat (S k)))%Z.
-    Proof. rewrite SS_is_SS'. apply Z.mod_pos_bound. lia. Qed.
-
-    Lemma TT_upper_bound (k : nat) :
-      (TT k <= 2^(Z.of_nat (S k)))%Z.
-    Proof.
-      rewrite TT_is_TT'; unfold TT'. rewrite <- SS_is_SS'.
-      generalize (SS_upper_bound1 k). generalize (SS_pos k). lia.
+      cbv [SS].
+      assert (Z.succ (Z.to_nat (scalarbitsz - 1)) = scalarbitsz) as -> by lia.
+      apply Z.mod_small; trivial.
     Qed.
   End JoyeDoubleAddDecomposition.
+
   Section JoyeLadder.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv} {a b:F}
             {field:@Algebra.Hierarchy.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
@@ -371,8 +274,8 @@ Module ScalarMult.
 
       Local Notation testbitn := (Z.testbit n).
       (* Local Notation n' := (if testbitn 0 then n else (n + 1)%Z). *)
-      Local Notation n' := (Z.setbit n 0).
-      Local Notation testbitn' := (Z.testbit n').
+      Local Notation n' := (Z.setbit n 0) (only parsing).
+      Local Notation testbitn' := (Z.testbit n') (only parsing).
 
       (* Technically, if q is the order of the curve, and scalarbitsz = [log2 q],
          and ordP is close to q, then only the last two values of SS and TT are
@@ -383,40 +286,36 @@ Module ScalarMult.
       Context {HSS : forall i, (1 <= i < scalarbitsz)%Z -> not (Weq (scalarmult (SS n' (Z.to_nat i)) P) ∞) }
               {HTT : forall i, (1 <= i < scalarbitsz)%Z -> not (Weq (scalarmult (TT n' (Z.to_nat i)) P) ∞) }.
 
-      Lemma Hn' :
-        (2 <= n' < 2^scalarbitsz)%Z.
+      Lemma Hn' : (2 <= n' < 2^scalarbitsz)%Z.
       Proof.
         rewrite Z.setbit_spec'; simpl; split.
         - etransitivity; [|apply LandLorShiftBounds.Z.lor_lower]; lia.
         - apply (LandLorShiftBounds.Z.lor_range n 1 scalarbitsz); lia.
       Qed.
 
-      Lemma Htestbitn'0 :
-        testbitn' 0 = true :> bool.
+      Lemma Htestbitn'0 : testbitn' 0 = true :> bool.
       Proof. rewrite Z.setbit_eqb; lia. Qed.
 
-      Lemma Htestbitn' :
-         forall j, (1 <= j)%Z ->
-              testbitn j = testbitn' j :> bool.
-      Proof. intros; rewrite Z.setbit_neq; auto; lia. Qed.
-
-      Lemma SS_TT1 :
-        ((if testbitn 1 then SS n' 1 else TT n' 1) = 3 :> Z)%Z.
-      Proof.
-        rewrite SS_is_SS', TT_is_TT'; eauto.
-        unfold TT'. replace (2 ^ Z.of_nat 2)%Z with 4%Z by lia.
-        rewrite SS_succ'; eauto. unfold SS'. rewrite <- Z.bit0_mod.
-        rewrite Htestbitn'0, Htestbitn'; [|lia].
-        replace (Z.of_nat 1) with 1%Z by lia.
-        destruct (testbitn' 1); simpl; lia.
-      Qed.
+      Lemma Htestbitn' j (Hj : (1 <= j)%Z) : testbitn j = testbitn' j :> bool.
+      Proof. rewrite Z.setbit_neq; trivial; lia. Qed.
 
       Lemma SS0 : (SS n' 0 = 1%Z :> Z).
-      Proof. cbn [SS]; rewrite Htestbitn'0; reflexivity. Qed.
+      Proof. cbv [SS]. rewrite Z.pow_1_r, <-Z.bit0_mod, Z.setbit_eq; trivial; lia.  Qed.
 
       Lemma TT0 : (TT n' 0 = 1%Z :> Z).
-      Proof. cbn [TT]; rewrite Htestbitn'0; reflexivity. Qed.
+      Proof. cbv [TT]. rewrite SS0; trivial. Qed.
 
+      Lemma SS_1 : SS n' 1 = (if Z.testbit n' 1 then 3%Z else 1%Z) :> Z.
+      Proof.
+        cbv [SS n']; rewrite <-Z.land_ones, Z.land_comm by lia.
+        destruct n; cbn; trivial; repeat (destruct p; cbn; trivial).
+      Qed.
+
+      Lemma TT_1 : TT n' 1 = (if Z.testbit n' 1 then 1%Z else 3%Z) :> Z.
+      Proof. cbv [TT]. rewrite SS_1. case Z.testbit; lia. Qed.
+
+      Lemma SS_TT1 : ((if testbitn 1 then SS n' 1 else TT n' 1) = 3 :> Z)%Z.
+      Proof. rewrite SS_1, TT_1, Z.setbit_neq; try lia; case testbitn; trivial. Qed.
       Lemma HordP3 :
         (3 < ordP)%Z.
       Proof.
@@ -481,7 +380,7 @@ Module ScalarMult.
       Hint Unfold fst snd proj1_sig : points_as_coordinates.
       Hint Unfold fieldwise fieldwise' : points_as_coordinates.
 
-      Lemma eq_proof_irr (P1 P2 : point) :
+      Lemma eq_fieldwise (P1 P2 : point) :
         fieldwise (n:=3) Feq
           (proj1_sig P1) (proj1_sig P2) ->
         eq P1 P2.
@@ -491,7 +390,7 @@ Module ScalarMult.
         y_of (of_affine P) <> 0.
       Proof.
         intro Hy. assert (HA : eq (of_affine P) (opp (of_affine P))).
-        - apply eq_proof_irr. destruct P as [ [ [X Y] | u] HP]; simpl; cbv in Hy; repeat split; fsatz.
+        - apply eq_fieldwise. destruct P as [ [ [X Y] | u] HP]; simpl; cbv in Hy; repeat split; fsatz.
         - apply (mult_two_power 1%Z ltac:(lia)).
           replace Wzero with (scalarmult 0%Z P) by reflexivity.
           eapply scalarmult_eq_weq_conversion.
@@ -539,12 +438,11 @@ Module ScalarMult.
         destruct H; [left; repeat split; fsatz|right; repeat split; fsatz].
       Qed.
 
-      Lemma tplu_scalarmult' (Hz1 : z_of (of_affine P) = 1) :
-        eq (fst (tplu (of_affine P) Hz1)) (scalarmult' 3 (of_affine P))
-        /\ eq (snd (tplu (of_affine P) Hz1)) (scalarmult' 1 (of_affine P))
-        /\ co_z (fst (tplu (of_affine P) Hz1)) (snd (tplu (of_affine P) Hz1)).
+      Lemma tplu_scalarmult' (Hz1 : z_of (of_affine P) = 1) {p q} (H : tplu (of_affine P) Hz1 = (p, q) :> _) :
+        eq p (scalarmult' 3 (of_affine P)) /\ eq q (scalarmult' 1 (of_affine P)) /\ co_z p q.
       Proof.
-        unfold tplu. generalize (dblu_scalarmult' (of_affine P) Hz1 Pynz).
+        intros; unfold tplu. generalize (dblu_scalarmult' (of_affine P) Hz1 Pynz).
+        inversion_prod; subst p q.
         rewrite (surjective_pairing (dblu _ _)) at 1.
         set (P1 := (snd (dblu (of_affine P) Hz1))).
         set (P2 := (fst (dblu (of_affine P) Hz1))). intros [A1 A2].
@@ -554,26 +452,26 @@ Module ScalarMult.
             replace Wzero with (scalarmult 0%Z P) by reflexivity.
             apply scalarmult_eq_weq_conversion.
             replace 1%Z with (2 - 1)%Z by lia.
-            rewrite (@scalarmult_sub_l point eq add zero opp Pgroup scalarmult' (@scalarmult_ref_is_scalarmult _ _ _ _ _ Pgroup) 2 1).
+            rewrite (@scalarmult_sub_l _ _ _ _ _ Pgroup _ (@scalarmult_ref_is_scalarmult _ _ _ _ _ Pgroup) 2 1).
             rewrite A.
-            rewrite <- (@scalarmult_sub_l point eq add zero opp Pgroup scalarmult' (@scalarmult_ref_is_scalarmult _ _ _ _ _ Pgroup)).
+            rewrite <- (@scalarmult_sub_l _ _ _ _ _ Pgroup _ (@scalarmult_ref_is_scalarmult _ _ _ _ _ Pgroup)).
             replace (2 - 2)%Z with 0%Z by lia. reflexivity.
           - rewrite A1, A2 in A.
             elim (HordP_alt 3%Z ltac:(generalize HordP3; lia)).
             replace Wzero with (scalarmult 0%Z P) by reflexivity.
             apply scalarmult_eq_weq_conversion.
             replace 3%Z with (1 - -2)%Z by lia.
-            rewrite (@scalarmult_sub_l point eq add zero opp Pgroup scalarmult' (@scalarmult_ref_is_scalarmult _ _ _ _ _ Pgroup)).
+            rewrite (@scalarmult_sub_l _ _ _ _ _ Pgroup _ (@scalarmult_ref_is_scalarmult _ _ _ _ _ Pgroup)).
             rewrite A.
-            rewrite <- (@scalarmult_opp_l point eq add zero opp Pgroup scalarmult' (@scalarmult_ref_is_scalarmult _ _ _ _ _ Pgroup)).
-            rewrite <- (@scalarmult_sub_l point eq add zero opp Pgroup scalarmult' (@scalarmult_ref_is_scalarmult _ _ _ _ _ Pgroup)).
+            rewrite <- (@scalarmult_opp_l _ _ _ _ _ Pgroup _ (@scalarmult_ref_is_scalarmult _ _ _ _ _ Pgroup)).
+            rewrite <- (@scalarmult_sub_l _ _ _ _ _ Pgroup _ (@scalarmult_ref_is_scalarmult _ _ _ _ _ Pgroup)).
             replace (- (2) - -2)%Z with 0%Z by lia. reflexivity. }
-        generalize (@Jacobian.zaddu_correct F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv a b field char_ge_3 Feq_dec P1 P2 (CoZ.Jacobian.tplu_obligation_1 (of_affine P) Hz1) Hxne).
+        generalize (@Jacobian.zaddu_correct _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (CoZ.Jacobian.tplu_obligation_1 (of_affine P) Hz1) Hxne).
         rewrite (surjective_pairing (zaddu _ _ _)) at 1.
-        intros (A & B & C).
-        repeat try split; [rewrite <- A|rewrite <- B, A2; reflexivity|assumption].
-        rewrite A1, A2, <- (@scalarmult_add_l point eq add zero opp Pgroup scalarmult' (@scalarmult_ref_is_scalarmult _ _ _ _ _ Pgroup) 1 2).
-        replace (1 + 2)%Z with 3%Z by lia. reflexivity.
+        intros (A & B & C); subst P1 P2.
+        repeat try split; trivial.
+        { rewrite <-A, A1, A2, (@scalarmult_add_l point eq add zero opp Pgroup scalarmult' (@scalarmult_ref_is_scalarmult _ _ _ _ _ Pgroup) 1 2); reflexivity. } 
+        { rewrite <-B. rewrite A2. reflexivity. }
       Qed.
 
       Lemma add_opp_zero (A : point) :
@@ -607,8 +505,7 @@ Module ScalarMult.
         apply proj1_sig_eq in HA1. cbn [proj1_sig cswap_co_z_points] in HA1.
         assert (A3 = (if testbitn 1 then A2 else A1) :> point) as HA3 by (destruct (testbitn 1); inversion HA1; auto).
         assert (A4 = (if testbitn 1 then A1 else A2) :> point) as HA4 by (destruct (testbitn 1); inversion HA1; auto).
-        clear HA1. destruct (tplu_scalarmult' (tplu_co_z_points_obligation_1 P HPnz)) as (HeqA1 & HeqA2 & _).
-        rewrite Htplu in HeqA1, HeqA2. cbn [fst snd] in HeqA1, HeqA2.
+        clear HA1.  destruct (tplu_scalarmult' (tplu_co_z_points_obligation_1 P HPnz) Htplu) as (HeqA1 & HeqA2 & _).
         (* While loop *)
         set (WW := while _ _ _ _).
         (* Invariant is:
@@ -632,13 +529,9 @@ Module ScalarMult.
             unfold inv. cbn [proj1_sig].
             split; [lia|].
             split.
-            + replace (Z.to_nat (2 - 1)%Z) with 1%nat by lia.
-              cbn [TT SS]. rewrite Htestbitn'0.
-              replace (Z.of_nat 1%nat) with 1%Z by lia.
-              rewrite <- (Htestbitn' 1%Z ltac:(lia)).
-              cbn [Z.b2z]. replace (2 - 1)%Z with 1%Z by lia.
-              replace (2 * 1 + 1)%Z with 3%Z by lia.
-              rewrite HA3, HA4. destruct (testbitn 1); split; assumption.
+            + change (Z.to_nat (2 - 1)) with 1%nat.
+              rewrite SS_1, TT_1, <-Htestbitn', HA3, HA4 by lia.
+              case Z.testbit; auto.
             + intros AB Hxe. destruct (co_xz_implies A3 A4 Hxe HA34) as [Heq|Hopp]; [rewrite HA3, HA4 in Heq|rewrite HA3, HA4 in Hopp].
               * eapply (HordP_alt 2 ltac:(lia)).
                 replace Wzero with (scalarmult 0 P) by reflexivity.
@@ -771,8 +664,8 @@ Module ScalarMult.
                   ];
                   replace zero with (scalarmult' 0 (of_affine P)) in Q by reflexivity;
                   apply scalarmult_eq_weq_conversion in Q;
-                  generalize (SS_monotone0 n' scalarbitsz ltac:(generalize Hn'; lia) ltac:(lia) (Z.to_nat (i - 1)%Z)); rewrite SS0; intro QS;
-                  generalize (TT_monotone0 n' scalarbitsz ltac:(generalize Hn'; lia) ltac:(lia) (Z.to_nat (i - 1)%Z)); rewrite TT0; intro QT;
+                  generalize (SS_monotone0 n' (Z.to_nat (i - 1)%Z)); rewrite SS0; intro QS;
+                  generalize (TT_monotone0 n' (Z.to_nat (i - 1)%Z)); rewrite TT0; intro QT;
                   [ destruct (proj1 (HordP (2 * SS n' (Z.to_nat (i - 1)%Z)) ltac:(lia)) Q) as [l Hl];
                     generalize (Znumtheory.prime_mult 2%Z Znumtheory.prime_2 l ordP ltac:(exists (SS n' (Z.to_nat (i - 1)%Z)); lia));
                     intros [A|A];
