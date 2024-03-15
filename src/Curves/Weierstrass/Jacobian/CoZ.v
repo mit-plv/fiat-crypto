@@ -467,8 +467,8 @@ Module Jacobian.
       co_z P (opp P).
     Proof. unfold co_z; faster_t. Qed.
 
-    Definition make_co_z_inner (P Q : F*F*F) : (F*F*F) * (F*F*F) :=
-      match P, Q with
+    Program Definition make_co_z (P Q : point) (HQaff : z_of Q = 1) : point*point :=
+      match proj1_sig P, proj1_sig Q return (F*F*F)*(F*F*F) with
       | (x1, y1, z1), (x2, y2, z2) =>
           let t1 := x2 in
           let t2 := y2 in
@@ -479,29 +479,25 @@ Module Jacobian.
           let t2 := t3 * t2 in
           (P, (t1, t2, t3))
       end.
-
-    Hint Unfold is_point co_z make_co_z_inner : points_as_coordinates.
-
-    Program Definition make_co_z (P Q : point) (HQaff : z_of Q = 1) : (point * point) :=
-      make_co_z_inner (proj1_sig P) (proj1_sig Q).
     Next Obligation. Proof. faster_t. Qed.
     Next Obligation. Proof. faster_t. Qed.
 
-    Hint Unfold make_co_z : points_as_coordinates.
+    Hint Unfold is_point co_z make_co_z : points_as_coordinates.
 
     Lemma make_co_z_correct (P Q : point) (HQaff : z_of Q = 1)
       (HPnz : z_of P <> 0) :
-      eq P (fst (make_co_z P Q HQaff))
-      /\ eq Q (snd (make_co_z P Q HQaff))
-      /\ co_z (fst (make_co_z P Q HQaff)) (snd (make_co_z P Q HQaff)).
+      let '(A, B) := make_co_z P Q HQaff in
+      eq P A
+      /\ eq Q B
+      /\ co_z A B.
     Proof. faster_t. Qed.
 
     (* Scalar Multiplication on Weierstraß Elliptic Curves from Co-Z Arithmetic *)
     (* Goundar, Joye, Miyaji, Rivain, Vanelli *)
     (* Algorithm 19 Co-Z addition with update (register allocation) *)
     (* 6 field registers, 5M, 2S *)
-    Definition zaddu_inner (P Q : F*F*F) : (F*F*F)*(F*F*F) :=
-      match P, Q with
+    Program Definition zaddu (P Q : point) (H : co_z P Q) : point * point :=
+      match proj1_sig P, proj1_sig Q return (F*F*F)*(F*F*F) with
       | (x1, y1, z1), (x2, y2, z2) =>
           let t1 := x1 in
           let t2 := y1 in
@@ -524,11 +520,6 @@ Module Jacobian.
           let t5 := t5 - t2 in
           ((t4, t5, t3), (t1, t2, t3))
       end.
-
-    Hint Unfold zaddu_inner : points_as_coordinates.
-
-    Program Definition zaddu (P Q : point) (H : co_z P Q) : point * point :=
-      zaddu_inner (proj1_sig P) (proj1_sig Q).
     Next Obligation. Proof. faster_t_noclear. Qed.
     Next Obligation. Proof. faster_t. Qed.
 
@@ -561,8 +552,8 @@ Module Jacobian.
     (* Goundar, Joye, Miyaji, Rivain, Vanelli *)
     (* Algorithm 20 Conjugate co-Z addition (register allocation) *)
     (* 7 field registers, 6M, 3S*)
-    Definition zaddc_inner (P Q : F*F*F) : (F*F*F) * (F*F*F) :=
-      match P, Q with
+    Program Definition zaddc (P Q : point) (H : co_z P Q) : point * point :=
+      match proj1_sig P, proj1_sig Q return (F*F*F)*(F*F*F) with
       | (x1, y1, z1), (x2, y2, z2) =>
           let t1 := x1 in
           let t2 := y1 in
@@ -596,12 +587,6 @@ Module Jacobian.
           let t2 := t2 + t6 in
           ((t1, t2, t3), (t4, t5, t3))
       end.
-
-    Hint Unfold zaddc_inner : points_as_coordinates.
-
-    Program Definition zaddc (P Q : point)
-      (H : co_z P Q) : point * point :=
-      zaddc_inner (proj1_sig P) (proj1_sig Q).
     Next Obligation. Proof. faster_t_noclear. Qed.
     Next Obligation. Proof. faster_t_noclear. Qed.
 
@@ -633,8 +618,8 @@ Module Jacobian.
     (* Goundar, Joye, Miyaji, Rivain, Vanelli *)
     (* Algorithm 21 Co-Z doubling with update (register allocation) *)
     (* 6 field registers, 1M, 5S *)
-    Definition dblu_inner (P : F*F*F) : (F*F*F) * (F*F*F) :=
-      match P with
+    Program Definition dblu (P : point) (H: z_of P = 1) : point * point :=
+      match proj1_sig P return (F*F*F)*(F*F*F) with
       | (x1, y1, _) =>
           let t0 :=  a in
           let t1 := x1 in
@@ -660,12 +645,6 @@ Module Jacobian.
           let t5 := t5 - t2 in
           ((t4, t5, t3), (t1, t2, t3))
       end.
-
-    Hint Unfold dblu_inner : points_as_coordinates.
-
-    Program Definition dblu (P : point)
-      (H: z_of P = 1) : point * point :=
-      dblu_inner (proj1_sig P).
     Next Obligation. Proof. faster_t. Qed.
     Next Obligation. Proof. faster_t. Qed.
 
@@ -699,25 +678,11 @@ Module Jacobian.
     (* Goundar, Joye, Miyaji, Rivain, Vanelli *)
     (* Algorithm 22 Co-Z tripling with update (register allocation) *)
     (* 6M, 7S *)
-    Definition tplu_inner (P : F*F*F) : (F*F*F)*(F*F*F) :=
-      zaddu_inner (snd (dblu_inner P)) (fst (dblu_inner P)).
-
-    Hint Unfold tplu_inner : points_as_coordinates.
-
     Program Definition tplu (P : point) (H : z_of P = 1) : point * point :=
-      tplu_inner (proj1_sig P).
-    Next Obligation. Proof. faster_t. Qed.
-    Next Obligation. Proof. faster_t. Qed.
-
-    Program Definition tplu2 (P : point) (H : z_of P = 1) : point * point :=
       zaddu (snd (dblu P H)) (fst (dblu P H)) _.
     Next Obligation. faster_t. Qed.
 
-    Hint Unfold tplu tplu2 : points_as_coordinates.
-
-    Lemma tplu_tplu2 (P : point) (H : z_of P = 1) :
-      eq (fst (tplu P H)) (fst (tplu2 P H)) /\ eq (snd (tplu P H)) (snd (tplu2 P H)).
-    Proof. faster_t. Qed.
+    Hint Unfold tplu : points_as_coordinates.
 
     Lemma tplu_correct0 (P : point) (H : z_of P = 1) (Hyz : y_of P = 0) :
       let '(R1, R2) := tplu P H in
@@ -730,13 +695,9 @@ Module Jacobian.
       eq (add (double P) P) R1 /\ eq P R2 /\ co_z R1 R2.
     Proof.
       rewrite (surjective_pairing (tplu P H)).
-      rewrite (proj1 (tplu_tplu2 P H)) at 2.
-      rewrite (proj2 (tplu_tplu2 P H)) at 1.
-      unfold co_z.
-      replace (z_of (fst (tplu P H))) with (z_of (fst (tplu2 P H))) by faster_t.
-      replace (z_of (snd (tplu P H))) with (z_of (snd (tplu2 P H))) by faster_t.
-      unfold tplu2. generalize (zaddu_correct_alt (snd (dblu P H)) (fst (dblu P H)) (tplu2_obligation_1 P H)).
-      destruct (zaddu (snd (dblu P H)) (fst (dblu P H)) (tplu2_obligation_1 P H)) as [R1 R2] eqn:Hzaddu.
+      unfold co_z, tplu.
+      generalize (zaddu_correct_alt (snd (dblu P H)) (fst (dblu P H)) (tplu_obligation_1 P H)).
+      destruct (zaddu (snd (dblu P H)) (fst (dblu P H)) (tplu_obligation_1 P H)) as [R1 R2] eqn:Hzaddu.
       intros A B. specialize (A B). destruct A as [A1 [A2 A3] ].
       generalize (dblu_correct P H Hynz).
       rewrite (surjective_pairing (dblu P H)). intros [B1 [B2 B3] ].
@@ -802,8 +763,8 @@ Module Jacobian.
     (* Goundar, Joye, Miyaji, Rivain, Vanelli *)
     (* Algorithm 23 Co-Z doubling-addition with update (register allocation) *)
     (* 8 field registers, 9M, 7S (instead of 11M, 5S) *)
-    Definition zdau_inner (P Q : F*F*F) : (F*F*F) * (F*F*F) :=
-      match P, Q return (F*F*F)*(F*F*F) with
+    Program Definition zdau (P Q : point) (H : co_z P Q) : point * point :=
+      match proj1_sig P, proj1_sig Q return (F*F*F)*(F*F*F) with
       | (x1, y1, z1), (x2, y2, z2) =>
           let t1 := x1 in
           let t2 := y1 in
@@ -855,14 +816,10 @@ Module Jacobian.
           let t5 := t7 - t5 in
           ((t1, t2, t3), (t4, t5, t3))
       end.
-
-    Hint Unfold zdau_inner : points_as_coordinates.
-
-    Program Definition zdau (P Q : point)
-      (H : co_z P Q) : point * point :=
-      zdau_inner (proj1_sig P) (proj1_sig Q).
     Next Obligation. Proof. faster_t_noclear. Qed.
     Next Obligation. Proof. faster_t_noclear. Qed.
+
+    Hint Unfold zdau : points_as_coordinates.
 
     Lemma zdau_naive_eq_zdau (P Q : point) (H : co_z P Q) :
       let '(R1, R2) := zdau_naive P Q H in
