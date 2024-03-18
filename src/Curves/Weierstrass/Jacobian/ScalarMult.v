@@ -269,7 +269,7 @@ Module ScalarMult.
               {P : Wpoint} {HPnz : P <> ∞ :> Wpoint}
               {ordP : Z} {HordPpos : (2 < ordP)%Z}
               {HordPodd : Z.odd ordP = true :> bool}
-              {HordP : forall l, (l <> 0 :> Z)%Z -> ((Weq (scalarmult l P) ∞) <-> exists k, (l = k * ordP :> Z)%Z)}
+              {HordP : forall l, (Weq (scalarmult l P) ∞) <-> exists k, (l = k * ordP :> Z)%Z}
               {HordPn : (n + 2 < ordP)%Z}.
 
       Local Notation testbitn := (Z.testbit n).
@@ -350,7 +350,7 @@ Module ScalarMult.
       Proof.
         eapply (Zlt_0_ind (fun x => ~ Weq (scalarmult (2 ^ x) P) Wzero)).
         intros x Hind Hxpos Heqz.
-        destruct (proj1 (HordP (2^x)%Z ltac:(lia)) Heqz) as [l Hl].
+        destruct (proj1 (HordP (2^x)%Z) Heqz) as [l Hl].
         destruct (Z.eq_dec x 0); [subst x|].
         - simpl in Hl. clear -Hl HordPpos.
           generalize (Z.divide_1_r_nonneg ordP ltac:(lia) ltac:(exists l; lia)).
@@ -362,7 +362,7 @@ Module ScalarMult.
           rewrite Hm in Hl.
           assert ((2 ^ Z.pred x)%Z = (m * ordP)%Z :> Z) by lia.
           apply (Hind (Z.pred x) ltac:(lia)).
-          eapply HordP; [lia|exists m; assumption].
+          eapply HordP. exists m; assumption.
       Qed.
 
       Lemma scalarmult_eq_weq_conversion (k1 k2 : Z) :
@@ -408,7 +408,7 @@ Module ScalarMult.
         not (Weq (scalarmult k P) ∞).
       Proof.
         intros Hbds Heq.
-        destruct (proj1 (HordP k ltac:(lia)) Heq) as [l Hl].
+        destruct (proj1 (HordP k) Heq) as [l Hl].
         clear -Hbds Hl. generalize (Zmult_gt_0_lt_0_reg_r ordP l ltac:(lia) ltac:(lia)).
         intros. generalize (proj1 (Z.mul_le_mono_pos_r 1%Z l ordP ltac:(lia)) ltac:(lia)). lia.
       Qed.
@@ -470,7 +470,7 @@ Module ScalarMult.
         rewrite (surjective_pairing (zaddu _ _ _)) at 1.
         intros (A & B & C); subst P1 P2.
         repeat try split; trivial.
-        { rewrite <-A, A1, A2, (@scalarmult_add_l point eq add zero opp Pgroup scalarmult' (@scalarmult_ref_is_scalarmult _ _ _ _ _ Pgroup) 1 2); reflexivity. } 
+        { rewrite <-A, A1, A2, (@scalarmult_add_l point eq add zero opp Pgroup scalarmult' (@scalarmult_ref_is_scalarmult _ _ _ _ _ Pgroup) 1 2); reflexivity. }
         { rewrite <-B. rewrite A2. reflexivity. }
       Qed.
 
@@ -666,12 +666,12 @@ Module ScalarMult.
                   apply scalarmult_eq_weq_conversion in Q;
                   generalize (SS_monotone0 n' (Z.to_nat (i - 1)%Z)); rewrite SS0; intro QS;
                   generalize (TT_monotone0 n' (Z.to_nat (i - 1)%Z)); rewrite TT0; intro QT;
-                  [ destruct (proj1 (HordP (2 * SS n' (Z.to_nat (i - 1)%Z)) ltac:(lia)) Q) as [l Hl];
+                  [ destruct (proj1 (HordP (2 * SS n' (Z.to_nat (i - 1)%Z))) Q) as [l Hl];
                     generalize (Znumtheory.prime_mult 2%Z Znumtheory.prime_2 l ordP ltac:(exists (SS n' (Z.to_nat (i - 1)%Z)); lia));
                     intros [A|A];
                     destruct A as [m Hm];
                     [|replace ordP with (0 + 2 * m)%Z in HordPodd by lia; rewrite Z.odd_add_mul_2 in HordPodd; simpl in HordPodd; congruence]
-                  | destruct (proj1 (HordP (2 * TT n' (Z.to_nat (i - 1)%Z)) ltac:(lia)) Q) as [l Hl];
+                  | destruct (proj1 (HordP (2 * TT n' (Z.to_nat (i - 1)%Z))) Q) as [l Hl];
                     generalize (Znumtheory.prime_mult 2%Z Znumtheory.prime_2 l ordP ltac:(exists (TT n' (Z.to_nat (i - 1)%Z)); lia));
                     intros [A|A];
                     destruct A as [m Hm];
@@ -680,9 +680,9 @@ Module ScalarMult.
                   subst l; rewrite <- Z.mul_assoc, <- Z.mul_shuffle3 in Hl;
                   apply (Z.mul_reg_l _ _ 2%Z ltac:(lia)) in Hl;
                   [ apply (HSS (i - 1)%Z ltac:(lia));
-                    apply (proj2 (HordP (SS n' (Z.to_nat (i - 1)%Z)) ltac:(lia)))
+                    apply (proj2 (HordP (SS n' (Z.to_nat (i - 1)%Z))))
                   | apply (HTT (i - 1)%Z ltac:(lia));
-                    apply (proj2 (HordP (TT n' (Z.to_nat (i - 1)%Z)) ltac:(lia)))
+                    apply (proj2 (HordP (TT n' (Z.to_nat (i - 1)%Z))))
                   ];
                   eauto. }
               * (* measure decreases *)
