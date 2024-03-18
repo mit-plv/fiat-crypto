@@ -598,13 +598,26 @@ Module ScalarMult.
                   - destruct (testbitn i) eqn:Hti;
                     rewrite (Htestbitn' i ltac:(lia)) in Hti;
                     rewrite HR1, HR0, <- (scalarmult_add_l (groupG:=Pgroup) (mul_is_scalarmult:=scalarmult_ref_is_scalarmult (groupG:=Pgroup))), <- (scalarmult_opp_l (groupG:=Pgroup) (mul_is_scalarmult:=scalarmult_ref_is_scalarmult (groupG:=Pgroup))) in W1;
-                    apply scalarmult_difference in W1;
-                    [replace (SS _ _ + TT _ _ - - SS _ _)%Z with (SS n' (S (Z.to_nat (i - 1)%Z))) in W1 by (rewrite SS_succ, Nat2Z.inj_succ, Z2Nat.id, Z.sub_1_r, Z.succ_pred, Hti; lia)|replace (TT _ _ + SS _ _ - - TT _ _)%Z with (TT n' (S (Z.to_nat (i - 1)%Z))) in W1 by (rewrite TT_succ, Nat2Z.inj_succ, Z2Nat.id, Z.sub_1_r, Z.succ_pred, Hti; lia)];
-                    rewrite <- Z2Nat.inj_succ, Z.sub_1_r, Z.succ_pred in W1; try lia;
-                    [apply (HSS i ltac:(lia))|apply (HTT i ltac:(lia))];
-                    replace Wzero with (scalarmult 0 P) by reflexivity;
-                    apply scalarmult_eq_weq_conversion;
-                    rewrite W1; reflexivity. }
+                    apply scalarmult_difference in W1.
+                    all: match goal with
+                         | H : eq (scalarmult' ?X _) zero |- _ =>
+                             match X with
+                             | (SS _ _ + _ - _)%Z =>
+                                 replace X with (SS n' (S (Z.to_nat (i - 1)%Z))) in H by (rewrite SS_succ, Nat2Z.inj_succ, Z2Nat.id, Z.sub_1_r, Z.succ_pred, Hti; lia)
+                             | (TT _ _ + _ - _)%Z =>
+                                 replace X with (TT n' (S (Z.to_nat (i - 1)%Z))) in H by (rewrite TT_succ, Nat2Z.inj_succ, Z2Nat.id, Z.sub_1_r, Z.succ_pred, Hti; lia)
+                             end
+                         end.
+                    all: rewrite <- Z2Nat.inj_succ, Z.sub_1_r, Z.succ_pred in W1; try lia.
+                    all: match goal with
+                         | H : eq (scalarmult' (SS _ _) _) zero |- _ =>
+                             apply (HSS i ltac:(lia))
+                         | _ =>
+                             apply (HTT i ltac:(lia))
+                         end.
+                    all: replace Wzero with (scalarmult 0 P) by reflexivity.
+                    all: apply scalarmult_eq_weq_conversion.
+                    all: rewrite W1; reflexivity. }
                 generalize (@Jacobian.zdau_correct_alt F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv a b field char_ge_3 Feq_dec char_ge_12 ltac:(unfold id in *; fsatz) B1 B2 (zdau_co_z_points_obligation_1 (exist (fun '(A, B) => co_z A B) (B1, B2) HB12) B1 B2 eq_refl) HBx ltac:(rewrite HY; simpl; apply HYx)).
                 rewrite HZDAU. intros (HC1 & HC2 & _).
                 destruct (cswap_co_z_points (testbitn i) _) as ((D1 & D2) & HD12) eqn:HD.
@@ -639,52 +652,51 @@ Module ScalarMult.
                   repeat rewrite <- (scalarmult_add_l (groupG:=Pgroup) (mul_is_scalarmult:=scalarmult_ref_is_scalarmult (groupG:=Pgroup)));
                   rewrite Z.add_diag, <- (scalarmult_opp_l (groupG:=Pgroup) (mul_is_scalarmult:=scalarmult_ref_is_scalarmult (groupG:=Pgroup)));
                   intros [Q|Q]; apply scalarmult_difference in Q;
-                  (* 4 cases *)
-                  [ (* Case 1 : [2 * (SS (i - 1))]P ≠ ∞*)
-                    replace (2 * SS n' (Z.to_nat (i - 1)) + TT n' (Z.to_nat (i - 1)) - TT n' (Z.to_nat (i - 1)))%Z with (2 * SS n' (Z.to_nat (i - 1)))%Z in Q by lia
-                  | (* Case 2 : [2^(i+1)]P ≠ ∞ *)
-                    replace (2 * SS n' (Z.to_nat (i - 1)) + TT n' (Z.to_nat (i - 1)) - - TT n' (Z.to_nat (i - 1)))%Z with (2 * (SS n' (Z.to_nat (i - 1)) + TT n' (Z.to_nat (i - 1))))%Z in Q by lia;
-                    rewrite SS_plus_TT, <- Z2Nat.inj_succ, Z.sub_1_r, Z.succ_pred, Z2Nat.id, <- Z.pow_succ_r in Q; try lia; eauto
-                  | (* Case 3 : [2 * (TT (i - 1))]P ≠ ∞*)
-                    replace (2 * TT n' (Z.to_nat (i - 1)) + SS n' (Z.to_nat (i - 1)) - SS n' (Z.to_nat (i - 1)))%Z with (2 * TT n' (Z.to_nat (i - 1)))%Z in Q by lia
-                  | (* Case 4 : [2^(i+1)]P ≠ ∞ *)
-                    replace (2 * TT n' (Z.to_nat (i - 1)) + SS n' (Z.to_nat (i - 1)) - - SS n' (Z.to_nat (i - 1)))%Z with (2 * (SS n' (Z.to_nat (i - 1)) + TT n' (Z.to_nat (i - 1))))%Z in Q by lia;
-                    rewrite SS_plus_TT, <- Z2Nat.inj_succ, Z.sub_1_r, Z.succ_pred, Z2Nat.id, <- Z.pow_succ_r in Q; try lia; eauto
-                  ];
-                  [ (* Cases 2 and 4 are identical; solve them first *)
-                  | eapply (mult_two_power (Z.succ i) ltac:(lia));
-                    replace Wzero with (scalarmult 0 P) by reflexivity;
-                    apply scalarmult_eq_weq_conversion;
-                    rewrite Q; reflexivity
-                  |
-                  | eapply (mult_two_power (Z.succ i) ltac:(lia));
-                    replace Wzero with (scalarmult 0 P) by reflexivity;
-                    apply scalarmult_eq_weq_conversion;
-                    rewrite Q; reflexivity
-                  ];
-                  replace zero with (scalarmult' 0 (of_affine P)) in Q by reflexivity;
-                  apply scalarmult_eq_weq_conversion in Q;
-                  generalize (SS_monotone0 n' (Z.to_nat (i - 1)%Z)); rewrite SS0; intro QS;
-                  generalize (TT_monotone0 n' (Z.to_nat (i - 1)%Z)); rewrite TT0; intro QT;
-                  [ destruct (proj1 (HordP (2 * SS n' (Z.to_nat (i - 1)%Z))) Q) as [l Hl];
-                    generalize (Znumtheory.prime_mult 2%Z Znumtheory.prime_2 l ordP ltac:(exists (SS n' (Z.to_nat (i - 1)%Z)); lia));
-                    intros [A|A];
-                    destruct A as [m Hm];
-                    [|replace ordP with (0 + 2 * m)%Z in HordPodd by lia; rewrite Z.odd_add_mul_2 in HordPodd; simpl in HordPodd; congruence]
-                  | destruct (proj1 (HordP (2 * TT n' (Z.to_nat (i - 1)%Z))) Q) as [l Hl];
-                    generalize (Znumtheory.prime_mult 2%Z Znumtheory.prime_2 l ordP ltac:(exists (TT n' (Z.to_nat (i - 1)%Z)); lia));
-                    intros [A|A];
-                    destruct A as [m Hm];
-                    [|replace ordP with (0 + 2 * m)%Z in HordPodd by lia; rewrite Z.odd_add_mul_2 in HordPodd; simpl in HordPodd; congruence]
-                  ];
-                  subst l; rewrite <- Z.mul_assoc, <- Z.mul_shuffle3 in Hl;
-                  apply (Z.mul_reg_l _ _ 2%Z ltac:(lia)) in Hl;
-                  [ apply (HSS (i - 1)%Z ltac:(lia));
-                    apply (proj2 (HordP (SS n' (Z.to_nat (i - 1)%Z))))
-                  | apply (HTT (i - 1)%Z ltac:(lia));
-                    apply (proj2 (HordP (TT n' (Z.to_nat (i - 1)%Z))))
-                  ];
-                  eauto. }
+                  (* 3 cases *)
+                  match goal with
+                  | H : eq (scalarmult' ?X _) zero |- _ =>
+                      match X with
+                      | Z.sub _ ?Y =>
+                          match Y with
+                          | (- _)%Z => (* Case [2^(i+1)]P ≠ ∞ *)
+                              replace X with (2 * (SS n' (Z.to_nat (i - 1)) + TT n' (Z.to_nat (i - 1))))%Z in H by lia
+                          | (TT _ _) => (* Case [2 * (SS (i - 1))]P ≠ ∞ *)
+                              replace X with (2 * SS n' (Z.to_nat (i - 1)))%Z in H by lia;
+                              shelve
+                          | (SS _ _) => (* Case [2 * (TT (i - 1))]P ≠ ∞ *)
+                              replace X with (2 * TT n' (Z.to_nat (i - 1)))%Z in H by lia;
+                              shelve
+                          end
+                      end
+                  end.
+                  (* Solve case [2^(i+1)]P ≠ ∞ first *)
+                  all: rewrite SS_plus_TT, <- Z2Nat.inj_succ, Z.sub_1_r, Z.succ_pred, Z2Nat.id, <- Z.pow_succ_r in Q; try lia; eauto.
+                  all: eapply (mult_two_power (Z.succ i) ltac:(lia)).
+                  all: replace Wzero with (scalarmult 0 P) by reflexivity.
+                  all: apply scalarmult_eq_weq_conversion.
+                  all: rewrite Q; reflexivity.
+                  Unshelve. (* Solve the other cases *)
+                  all: replace zero with (scalarmult' 0 (of_affine P)) in Q by reflexivity.
+                  all: apply scalarmult_eq_weq_conversion in Q.
+                  all: generalize (SS_monotone0 n' (Z.to_nat (i - 1)%Z)); rewrite SS0; intro QS.
+                  all: generalize (TT_monotone0 n' (Z.to_nat (i - 1)%Z)); rewrite TT0; intro QT.
+                  all: match goal with
+                       | H : Weq (scalarmult (Z.mul 2%Z ?X) P) (_ 0%Z _) |- _ =>
+                           destruct (proj1 (HordP (Z.mul 2%Z X)) Q) as [l Hl];
+                           generalize (Znumtheory.prime_mult 2%Z Znumtheory.prime_2 l ordP ltac:(exists X; lia))
+                       end.
+                  all: intros [A|A]; destruct A as [m Hm];
+                       [|replace ordP with (0 + 2 * m)%Z in HordPodd by lia; rewrite Z.odd_add_mul_2 in HordPodd; simpl in HordPodd; congruence].
+                  all: subst l; rewrite <- Z.mul_assoc, <- Z.mul_shuffle3 in Hl.
+                  all: apply (Z.mul_reg_l _ _ 2%Z ltac:(lia)) in Hl.
+                  all: match goal with
+                       | H : SS _ (Z.to_nat ?X) = (_ * ordP)%Z :> Z |- _ =>
+                           apply (HSS X ltac:(lia));
+                           apply (proj2 (HordP (SS n' (Z.to_nat X))))
+                       | H : TT _ (Z.to_nat ?X) = (_ * ordP)%Z :> Z |- _ =>
+                           apply (HTT X ltac:(lia));
+                           apply (proj2 (HordP (TT n' (Z.to_nat X))))
+                       end; eauto. }
               * (* measure decreases *)
                 apply Z.ltb_lt in Hltb.
                 unfold measure; simpl; lia.
