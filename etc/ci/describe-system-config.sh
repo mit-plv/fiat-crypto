@@ -31,7 +31,10 @@ group ulimit -aS
 group cat /etc/os-release
 group cat /proc/cpuinfo
 group cat /proc/meminfo
+group cat /etc/alpine-release
 group apk info
+group apk info coq
+group apk --print-arch
 group dpkg -l
 group pacman -Qs
 group ghc --version
