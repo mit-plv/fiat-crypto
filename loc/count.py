@@ -61,11 +61,15 @@ def printLibraries():
         for file in files:
             print(f'  {file}')
 
-def cloc_list_of_coq_files(filePaths):
-    p = subprocess.Popen(['cloc', '--list-file=-', '--include-lang=Coq',
+def cloc_list_of_coq_files(filePaths, name):
+    listPath = './loc/FileLists/' + name + '.txt'
+    with open(listPath, 'w') as f:
+        for line in filePaths:
+            f.write(f"{line}\n")
+    p = subprocess.Popen(['cloc', '--list-file=' + listPath, '--include-lang=Coq',
                           '--csv', '--quiet', '--hide-rate'],
                          stdout=PIPE, stdin=PIPE, stderr=PIPE, text=True)
-    (stdout_data, stderr_data) = p.communicate(input = '\n'.join(filePaths))
+    (stdout_data, stderr_data) = p.communicate()
     if stderr_data:
         print(stderr_data)
     #sample output:
@@ -80,7 +84,7 @@ printLibraries()
 
 def go():
     for root, files in getLibraries().items():
-        c = cloc_list_of_coq_files(files)
+        c = cloc_list_of_coq_files(files, root)
         print(f'{root}: {c}')
 
 go()
