@@ -28,13 +28,28 @@ def parseLoadPath():
 loadPath = parseLoadPath()
 
 def rootOfLogicalDir(logicalDir):
-    m = re.match(r'([^.]+)', logicalDir)
-    root = m[1]
+    a = logicalDir.split('.')
+    root = a[0]
     # we treat the toplevel Ltac2 root as if it was under Coq
     if root == 'Ltac2':
         return 'Coq'
+    elif root == 'Crypto' and len(a) > 1:
+        if a[1] == 'Bedrock' and len(a) > 2:
+            if a[2] == 'Field' and len(a) > 3:
+                return a[0] + '.' + a[1] + '.' + a[2] + '.' + a[3]
+            else:
+                return a[0] + '.' + a[1] + '.' + a[2]
+        else:
+            return a[0] + '.' + a[1]
     else:
         return root
+
+def rootToSortKey(root):
+    if root == 'Coq':
+        return 'A'
+    if root.startswith('Crypto'):
+        return root[2:]
+    return root
 
 # returns a dictionary that maps logical roots (eg Coq, bedrock2, riscv, Crypto, ...)
 # to lists of absolute paths
@@ -80,11 +95,10 @@ def cloc_list_of_coq_files(filePaths, name):
     a = stdout_data.split(',')
     return int(a[-1]) # last number is the one we want
 
-printLibraries()
-
 def go():
-    for root, files in getLibraries().items():
-        c = cloc_list_of_coq_files(files, root)
+    libs = getLibraries()
+    for root in sorted(libs.keys(), key=rootToSortKey):
+        c = cloc_list_of_coq_files(libs[root], root)
         print(f'{root}: {c}')
 
 go()
