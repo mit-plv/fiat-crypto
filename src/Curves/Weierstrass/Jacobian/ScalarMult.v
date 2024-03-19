@@ -44,36 +44,36 @@ Module ScalarMult.
     Variables n : Z.
     Local Coercion Z.of_nat : nat >-> Z.
 
-    Definition SS (i : nat) : Z := n mod 2 ^ Z.succ i.
-    Definition TT (i: nat) : Z := 2^Z.succ i - SS i.
+    Definition SS (i : nat) : Z := n mod 2 ^ i.
+    Definition TT (i : nat) : Z := 2^i - SS i.
 
-    Lemma SS_plus_TT k : (SS k + TT k = 2^(Z.of_nat (S k)))%Z.
+    Lemma SS_plus_TT k : (SS k + TT k = 2^(Z.of_nat k))%Z.
     Proof. cbv [SS TT]; lia. Qed.
 
-    Lemma SS_succ i : SS (S i) = if (Z.testbit n (Z.of_nat (S i))) then (2 * SS i + TT i)%Z else SS i.
+    Lemma SS_succ i : SS (S i) = if (Z.testbit n (Z.of_nat i)) then (2 * SS i + TT i)%Z else SS i.
     Proof.
       cbv [TT SS].
-      pose proof Z.mod_pow2_succ_r n (S i); case Z.testbit in *; cbv [Z.b2z] in *; lia.
+      pose proof Z.mod_pow2_succ_r n i; case Z.testbit in *; cbv [Z.b2z] in *; lia.
     Qed.
 
-    Lemma TT_succ i : TT (S i) = if (Z.testbit n (Z.of_nat (S i))) then TT i else (2 * TT i + SS i)%Z.
+    Lemma TT_succ i : TT (S i) = if (Z.testbit n (Z.of_nat i)) then TT i else (2 * TT i + SS i)%Z.
     Proof.
       cbv [TT SS].
       rewrite Nat2Z.inj_succ by lia.
-      pose proof Z.mod_pow2_succ_r n (Z.succ i); case Z.testbit in *; cbv [Z.b2z] in *; rewrite ?Z.pow_succ_r in *; lia.
+      pose proof Z.mod_pow2_succ_r n i; case Z.testbit in *; cbv [Z.b2z] in *; rewrite ?Z.pow_succ_r in *; lia.
     Qed.
 
-    Lemma SS_monotone0 (k : nat) : (SS 0 <= SS k)%Z.
+    Lemma SS_monotone1 (k : nat) : (SS 1 <= SS (S k))%Z.
     Proof.
       cbv [SS].
-      rewrite Z.pow_1_r, Z.pow_succ_r, Znumtheory.Zmod_div_mod with (n:=2) (m:=(2*2^k)%Z)
+      rewrite Z.pow_1_r, Nat2Z.inj_succ, Z.pow_succ_r, Znumtheory.Zmod_div_mod with (n:=2) (m:=(2*2^k)%Z)
         by (try exists (2^k)%Z; lia).
       apply Z.mod_bound_pos_le; Z.div_mod_to_equations; lia.
     Qed.
 
-    Lemma TT_monotone0 (k : nat) : (TT 0 <= TT k)%Z.
+    Lemma TT_monotone1 (k : nat) : (TT 1 <= TT (S k))%Z.
     Proof.
-      cbv [TT SS]; set (z := Z.succ k).
+      cbv [TT SS]; repeat rewrite Nat2Z.inj_succ. set (z := Z.succ k).
       enough (n mod 2 ^ z < 2 ^ z + (n mod 2 ^ Z.succ 0 - 1))%Z by lia; rewrite Z.pow_1_r.
       enough (n mod 2 = 0 -> n mod 2 ^ z <> Z.pred (2^z))%Z by try (Z.div_mod_to_equations; nia); intros ? X.
       apply (f_equal (fun x => Z.testbit x 0)) in X.
@@ -81,10 +81,9 @@ Module ScalarMult.
     Qed.
 
     Lemma SSn scalarbitsz (Hn : (0 <= n < 2^scalarbitsz)%Z) (Hscalarbitsz : (0 < scalarbitsz)%Z) :
-      SS (Z.to_nat (scalarbitsz - 1)%Z) = n :> Z.
+      SS (Z.to_nat scalarbitsz) = n :> Z.
     Proof.
-      cbv [SS].
-      assert (Z.succ (Z.to_nat (scalarbitsz - 1)) = scalarbitsz) as -> by lia.
+      cbv [SS]. rewrite Z2Nat.id by lia.
       apply Z.mod_small; trivial.
     Qed.
   End JoyeDoubleAddDecomposition.
@@ -283,8 +282,8 @@ Module ScalarMult.
          See §3.1 of "Faster Montgomery and double-add ladders for short
          Weierstrass curves" (Mike Hamburg, CHES'20) for instance.
        *)
-      Context {HSS : forall i, (1 <= i < scalarbitsz)%Z -> not (Weq (scalarmult (SS n' (Z.to_nat i)) P) ∞) }
-              {HTT : forall i, (1 <= i < scalarbitsz)%Z -> not (Weq (scalarmult (TT n' (Z.to_nat i)) P) ∞) }.
+      Context {HSS : forall i, (2 <= i <= scalarbitsz)%Z -> not (Weq (scalarmult (SS n' (Z.to_nat i)) P) ∞) }
+              {HTT : forall i, (2 <= i <= scalarbitsz)%Z -> not (Weq (scalarmult (TT n' (Z.to_nat i)) P) ∞) }.
 
       Lemma Hn' : (2 <= n' < 2^scalarbitsz)%Z.
       Proof.
@@ -299,29 +298,30 @@ Module ScalarMult.
       Lemma Htestbitn' j (Hj : (1 <= j)%Z) : testbitn j = testbitn' j :> bool.
       Proof. rewrite Z.setbit_neq; trivial; lia. Qed.
 
-      Lemma SS0 : (SS n' 0 = 1%Z :> Z).
+      Lemma SS1 : (SS n' 1 = 1%Z :> Z).
       Proof. cbv [SS]. rewrite Z.pow_1_r, <-Z.bit0_mod, Z.setbit_eq; trivial; lia.  Qed.
 
-      Lemma TT0 : (TT n' 0 = 1%Z :> Z).
-      Proof. cbv [TT]. rewrite SS0; trivial. Qed.
+      Lemma TT1 : (TT n' 1 = 1%Z :> Z).
+      Proof. cbv [TT]. rewrite SS1; trivial. Qed.
 
-      Lemma SS_1 : SS n' 1 = (if Z.testbit n' 1 then 3%Z else 1%Z) :> Z.
+      Lemma SS_2 : SS n' 2 = (if Z.testbit n' 1 then 3%Z else 1%Z) :> Z.
       Proof.
         cbv [SS n']; rewrite <-Z.land_ones, Z.land_comm by lia.
         destruct n; cbn; trivial; repeat (destruct p; cbn; trivial).
       Qed.
 
-      Lemma TT_1 : TT n' 1 = (if Z.testbit n' 1 then 1%Z else 3%Z) :> Z.
-      Proof. cbv [TT]. rewrite SS_1. case Z.testbit; lia. Qed.
+      Lemma TT_2 : TT n' 2 = (if Z.testbit n' 1 then 1%Z else 3%Z) :> Z.
+      Proof. cbv [TT]. rewrite SS_2. case Z.testbit; lia. Qed.
 
-      Lemma SS_TT1 : ((if testbitn 1 then SS n' 1 else TT n' 1) = 3 :> Z)%Z.
-      Proof. rewrite SS_1, TT_1, Z.setbit_neq; try lia; case testbitn; trivial. Qed.
+      Lemma SS_TT2 : ((if testbitn 1 then SS n' 2 else TT n' 2) = 3 :> Z)%Z.
+      Proof. rewrite SS_2, TT_2, Z.setbit_neq; try lia; case testbitn; trivial. Qed.
+
       Lemma HordP3 :
         (3 < ordP)%Z.
       Proof.
         destruct (Z.eq_dec 3 ordP); [|lia].
-        generalize SS_TT1; intros HSSTT.
-        destruct (testbitn 1); [elim (HSS 1 ltac:(lia))|elim (HTT 1 ltac:(lia))]; replace (Z.to_nat 1) with 1%nat by lia; rewrite HSSTT; eapply HordP; try lia.
+        generalize SS_TT2; intros HSSTT.
+        destruct (testbitn 1); [elim (HSS 2 ltac:(lia))|elim (HTT 2 ltac:(lia))]; replace (Z.to_nat 2) with 2%nat by lia; rewrite HSSTT; eapply HordP; try lia.
       Qed.
 
       Lemma n'_alt :
@@ -510,16 +510,16 @@ Module ScalarMult.
         set (WW := while _ _ _ _).
         (* Invariant is:
            - loop counter i is such that 2 ≤ i ≤ scalarbitsz
-           - R1 = [TT (i - 1)]P
-           - R0 = [SS (i - 1)]P
+           - R1 = [TT i]P
+           - R0 = [SS i]P
            - additional condition to ensure that the ladder state does not encounter the neutral point
         *)
         set (inv :=
                fun '(R1R0, i) =>
                  let '(R1, R0) := proj1_sig (R1R0:co_z_points) in
                  (2 <= i <= scalarbitsz)%Z  /\
-                     (eq R1 (scalarmult' (TT n' (Z.to_nat (i - 1)%Z)) (of_affine P))
-                     /\ eq R0 (scalarmult' (SS n' (Z.to_nat (i - 1)%Z)) (of_affine P)))
+                     (eq R1 (scalarmult' (TT n' (Z.to_nat i)) (of_affine P))
+                     /\ eq R0 (scalarmult' (SS n' (Z.to_nat i)) (of_affine P)))
                      /\ ((i < scalarbitsz)%Z -> x_of R1 <> x_of R0)).
         assert (WWinv : inv WW /\ (snd WW = scalarbitsz :> Z)).
         { set (measure := fun (state : (co_z_points*Z)) => ((Z.to_nat scalarbitsz) + 2 - (Z.to_nat (snd state)))%nat).
@@ -529,8 +529,8 @@ Module ScalarMult.
             unfold inv. cbn [proj1_sig].
             split; [lia|].
             split.
-            + change (Z.to_nat (2 - 1)) with 1%nat.
-              rewrite SS_1, TT_1, <-Htestbitn', HA3, HA4 by lia.
+            + change (Z.to_nat 2) with 2%nat.
+              rewrite SS_2, TT_2, <-Htestbitn', HA3, HA4 by lia.
               case Z.testbit; auto.
             + intros AB Hxe. destruct (co_xz_implies A3 A4 Hxe HA34) as [Heq|Hopp]; [rewrite HA3, HA4 in Heq|rewrite HA3, HA4 in Hopp].
               * eapply (HordP_alt 2 ltac:(lia)).
@@ -578,11 +578,11 @@ Module ScalarMult.
                 destruct (zaddu B1 B2 (zdau_co_z_points_obligation_1 (exist (fun '(A, B) => co_z A B) (B1, B2) HB12) B1 B2 eq_refl)) as (Y1 & Y2) eqn:HY.
                 (* Since co-Z formulas are incomplete, we need to show that we won't hit the neutral point for ZDAU *)
                 assert (HYx : x_of Y1 <> x_of Y2).
-                { (* We need to prove that [SS (i - 1) + TT (i - 1)]P and
-                     [SS (i - 1)]P or [TT (i - 1)]P
+                { (* We need to prove that [SS i + TT i]P and
+                     [SS i]P or [TT i]P
                      (depending on testbitn i) have different X coordinates, i.e.,
-                     [SS (i - 1) + TT (i - 1) ± SS (i - 1)]P ≠ ∞
-                     or [SS (i - 1) + TT (i - 1) ± TT (i - 1)]P ≠ ∞
+                     [SS i + TT i ± SS i]P ≠ ∞
+                     or [SS i + TT i ± TT i]P ≠ ∞
                   *)
                   intro XX. generalize (Jacobian.zaddu_correct B1 B2 (zdau_co_z_points_obligation_1 (exist (fun '(A, B) => co_z A B) (B1, B2) HB12) B1 B2 eq_refl) HBx).
                   rewrite HY. intros (W1 & W2 & W3).
@@ -591,7 +591,7 @@ Module ScalarMult.
                     rewrite HR1, HR0, <- (scalarmult_add_l (groupG:=Pgroup) (mul_is_scalarmult:=scalarmult_ref_is_scalarmult (groupG:=Pgroup))) in W1;
                     apply scalarmult_difference in W1;
                     rewrite Z.add_simpl_l in W1;
-                    [apply (HTT (i - 1)%Z ltac:(lia))|apply (HSS (i - 1)%Z ltac:(lia))];
+                    [apply (HTT i ltac:(lia))|apply (HSS i ltac:(lia))];
                     replace Wzero with (scalarmult 0 P) by reflexivity;
                     apply scalarmult_eq_weq_conversion;
                     rewrite W1; reflexivity.
@@ -603,17 +603,17 @@ Module ScalarMult.
                          | H : eq (scalarmult' ?X _) zero |- _ =>
                              match X with
                              | (SS _ _ + _ - _)%Z =>
-                                 replace X with (SS n' (S (Z.to_nat (i - 1)%Z))) in H by (rewrite SS_succ, Nat2Z.inj_succ, Z2Nat.id, Z.sub_1_r, Z.succ_pred, Hti; lia)
+                                 replace X with (SS n' (S (Z.to_nat i))) in H by (rewrite SS_succ, Z2Nat.id, Hti; lia)
                              | (TT _ _ + _ - _)%Z =>
-                                 replace X with (TT n' (S (Z.to_nat (i - 1)%Z))) in H by (rewrite TT_succ, Nat2Z.inj_succ, Z2Nat.id, Z.sub_1_r, Z.succ_pred, Hti; lia)
+                                 replace X with (TT n' (S (Z.to_nat i))) in H by (rewrite TT_succ, Z2Nat.id, Hti; lia)
                              end
                          end.
-                    all: rewrite <- Z2Nat.inj_succ, Z.sub_1_r, Z.succ_pred in W1; try lia.
+                    all: rewrite <- Z2Nat.inj_succ in W1; try lia.
                     all: match goal with
                          | H : eq (scalarmult' (SS _ _) _) zero |- _ =>
-                             apply (HSS i ltac:(lia))
+                             apply (HSS (Z.succ i) ltac:(lia))
                          | _ =>
-                             apply (HTT i ltac:(lia))
+                             apply (HTT (Z.succ i) ltac:(lia))
                          end.
                     all: replace Wzero with (scalarmult 0 P) by reflexivity.
                     all: apply scalarmult_eq_weq_conversion.
@@ -629,13 +629,12 @@ Module ScalarMult.
                 (* invariant preservation *)
                 (* counter still within bounds *)
                 split; [lia|]. rewrite HD1, HD2. split.
-                { (* New values are indeed [SS i]P and [TT i]P *)
+                { (* New values are indeed [SS (i+1)]P and [TT (i+1)]P *)
                   destruct (testbitn i) eqn:Hti;
                   rewrite (Htestbitn' i ltac:(lia)) in Hti;
                   rewrite <- HC1, <- HC2, HB1, HB2;
-                  replace (Z.to_nat (Z.succ i - 1)) with (S (Z.to_nat (i - 1)%Z)) by lia;
-                  rewrite SS_succ, TT_succ;
-                  replace (Z.of_nat (S (Z.to_nat (i - 1)))) with i by lia;
+                  replace (Z.to_nat (Z.succ i)) with (S (Z.to_nat i)) by lia;
+                  rewrite SS_succ, TT_succ, Z2Nat.id by lia;
                   rewrite Hti; split; try assumption;
                   rewrite <- Jacobian.add_double; try reflexivity;
                   rewrite HR0, HR1;
@@ -659,18 +658,18 @@ Module ScalarMult.
                       | Z.sub _ ?Y =>
                           match Y with
                           | (- _)%Z => (* Case [2^(i+1)]P ≠ ∞ *)
-                              replace X with (2 * (SS n' (Z.to_nat (i - 1)) + TT n' (Z.to_nat (i - 1))))%Z in H by lia
-                          | (TT _ _) => (* Case [2 * (SS (i - 1))]P ≠ ∞ *)
-                              replace X with (2 * SS n' (Z.to_nat (i - 1)))%Z in H by lia;
+                              replace X with (2 * (SS n' (Z.to_nat i) + TT n' (Z.to_nat i)))%Z in H by lia
+                          | (TT _ _) => (* Case [2 * (SS i)]P ≠ ∞ *)
+                              replace X with (2 * SS n' (Z.to_nat i))%Z in H by lia;
                               shelve
-                          | (SS _ _) => (* Case [2 * (TT (i - 1))]P ≠ ∞ *)
-                              replace X with (2 * TT n' (Z.to_nat (i - 1)))%Z in H by lia;
+                          | (SS _ _) => (* Case [2 * (TT i)]P ≠ ∞ *)
+                              replace X with (2 * TT n' (Z.to_nat i))%Z in H by lia;
                               shelve
                           end
                       end
                   end.
                   (* Solve case [2^(i+1)]P ≠ ∞ first *)
-                  all: rewrite SS_plus_TT, <- Z2Nat.inj_succ, Z.sub_1_r, Z.succ_pred, Z2Nat.id, <- Z.pow_succ_r in Q; try lia; eauto.
+                  all: rewrite SS_plus_TT, Z2Nat.id, <- Z.pow_succ_r in Q; try lia; eauto.
                   all: eapply (mult_two_power (Z.succ i) ltac:(lia)).
                   all: replace Wzero with (scalarmult 0 P) by reflexivity.
                   all: apply scalarmult_eq_weq_conversion.
@@ -678,8 +677,8 @@ Module ScalarMult.
                   Unshelve. (* Solve the other cases *)
                   all: replace zero with (scalarmult' 0 (of_affine P)) in Q by reflexivity.
                   all: apply scalarmult_eq_weq_conversion in Q.
-                  all: generalize (SS_monotone0 n' (Z.to_nat (i - 1)%Z)); rewrite SS0; intro QS.
-                  all: generalize (TT_monotone0 n' (Z.to_nat (i - 1)%Z)); rewrite TT0; intro QT.
+                  all: generalize (SS_monotone1 n' (Z.to_nat i)); rewrite SS1; intro QS.
+                  all: generalize (TT_monotone1 n' (Z.to_nat i)); rewrite TT1; intro QT.
                   all: match goal with
                        | H : Weq (scalarmult (Z.mul 2%Z ?X) P) (_ 0%Z _) |- _ =>
                            destruct (proj1 (HordP (Z.mul 2%Z X)) Q) as [l Hl];
