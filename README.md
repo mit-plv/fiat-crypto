@@ -44,7 +44,7 @@ Package Manager | Command Line Invocation |
 Aptitude (Ubuntu / Debian) | `apt install coq ocaml-findlib libcoq-ocaml-dev jq` |
 Homebrew (OS X) | `brew install coq ocaml-findlib coreutils jq` |
 Pacman (Archlinux) | `pacman -S coq ocaml-findlib ocaml-zarith jq` |
-APK (Alpine) | `apk install ocaml ocaml-findlib coq ocaml-zarith jq make` |
+APK (Alpine) | `apk add --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing ocaml ocaml-findlib coq ocaml-zarith jq make` |
 
 You can clone this repository with
 
