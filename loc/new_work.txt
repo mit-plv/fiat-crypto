@@ -10,15 +10,13 @@ bedrock2Examples.memequal
 bedrock2Examples.memswap
 bedrock2Examples.memconst
 
-## ?TODO incomplete? Chacha20 (chacha20_block, quarter) [Rupicola]
+## Chacha20 (chacha20_block, quarter) [Rupicola]
 Crypto.Bedrock.End2End.RupicolaCrypto.ChaCha20
 Crypto.Bedrock.End2End.RupicolaCrypto.Broadcast
-# Crypto.Bedrock.End2End.RupicolaCrypto.Spec
+45 lines of Crypto.Bedrock.End2End.RupicolaCrypto.Spec
 
-
-## ?TODO incomplete? Montgomery ladder (x25519, x25519_base) [Bedrock2]
+## Montgomery ladder (x25519, x25519_base) [Bedrock2]
 Crypto.Bedrock.End2End.X25519.MontgomeryLadder
-Crypto.Bedrock.End2End.X25519.MontgomeryLadderProperties
 
 ## Montgomery ladder (montladder, ladderstep) [Rupicola]
 Crypto.Bedrock.Group.ScalarMult.LadderStep
