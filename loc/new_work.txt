@@ -12,13 +12,19 @@ bedrock2Examples.memconst
 
 ## ?TODO incomplete? Chacha20 (chacha20_block, quarter) [Rupicola]
 Crypto.Bedrock.End2End.RupicolaCrypto.ChaCha20
+Crypto.Bedrock.End2End.RupicolaCrypto.Broadcast
+# Crypto.Bedrock.End2End.RupicolaCrypto.Spec
+
 
 ## ?TODO incomplete? Montgomery ladder (x25519, x25519_base) [Bedrock2]
 Crypto.Bedrock.End2End.X25519.MontgomeryLadder
 Crypto.Bedrock.End2End.X25519.MontgomeryLadderProperties
 
-## ?TODO incomplete? Montgomery ladder (montladder, ladderstep) [Rupicola]
-Crypto.Bedrock.End2End.RupicolaCrypto.Spec
+## Montgomery ladder (montladder, ladderstep) [Rupicola]
+Crypto.Bedrock.Group.ScalarMult.LadderStep
+Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder
+Crypto.Bedrock.Group.ScalarMult.MontgomeryEquivalence
+Crypto.Bedrock.Group.ScalarMult.CSwap
 
 ## ?TODO incomplete? Modular inversion (fe25519_inv) [simpl, Rupicola]
 Crypto.Bedrock.Group.AdditionChains
