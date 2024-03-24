@@ -24,5 +24,5 @@ Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder
 Crypto.Bedrock.Group.ScalarMult.MontgomeryEquivalence
 Crypto.Bedrock.Group.ScalarMult.CSwap
 
-## ?TODO incomplete? Modular inversion (fe25519_inv) [simpl, Rupicola]
+## Modular inversion (fe25519_inv) [simpl, Rupicola]
 Crypto.Bedrock.Group.AdditionChains
