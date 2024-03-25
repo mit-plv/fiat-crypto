@@ -1,0 +1,133 @@
+LOC methods:
+
+File lists copied from https://github.com/mit-plv/fiat-crypto/blob/garagedoor-loc/loc/new_work.txt
+
+## Chacha20 (chacha20_block, quarter) [Rupicola]
+Crypto.Bedrock.End2End.RupicolaCrypto.ChaCha20
+Crypto.Bedrock.End2End.RupicolaCrypto.Broadcast
+Crypto.Bedrock.End2End.RupicolaCrypto.Spec*
+
++(only the relevant lines: 45 lines)
+
+## Montgomery ladder (montladder, ladderstep) [Rupicola]
+Crypto.Bedrock.Group.ScalarMult.LadderStep
+Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder
+Crypto.Bedrock.Group.ScalarMult.MontgomeryEquivalence
+Crypto.Bedrock.Group.ScalarMult.CSwap
+
+For each of ChaCha20 and Montgomery, compute the following:
+For each file:
+1. record line numbers and the new purpose whenever the purpose of the code changes from one of these to another:
+	- Imports
+	- High-level algorithm
+	- main proofs
+	- Rupicola lemmas & extensions
+	- Generic lemmas & automation
+2. Compute lines of code for each category via summing the differences between line numbers
+
+Line numbers:
+
+==========================================
+
+#ChaCha
+
+!src/Bedrock/End2End/RupicolaCrypto/ChaCha20.v
+1: imports
+29: rupicola extension
+102: generic lemmas & automation
+113: rupicola extension
+255: main proof
+347: rupicola extension
+376: main proof
+438: high-level algorithm
+450: generic lemmas & automation
+459: main proof
+524: generic lemmas & automation
+543: main proof
+566: generic lemmas & automation
+589: main proof
+603: generic lemmas & automation
+639: main proof
+803: rupicola extension
+809: generic lemmas & automation
+1008: rupicola extension
+1167: generic lemmas & automation
+1267: rupicola extension
+1517: generic lemmas & automation
+1546: rupicola extension
+1599: main proof
+1936: imports
+1947: last line
+
+
+!src/Bedrock/End2End/RupicolaCrypto/Broadcast.v
+1: imports
+23: generic lemmas & automation
+99: rupicola extension
+142: generic lemmas & automation
+192: rupicola extension
+239: rupicola extension
+312: generic lemmas & automation
+364: rupicola extension
+687: generic lemmas & automation
+694: rupicola extension
+762: generic lemmas & automation
+784: rupicola extension
+958: last line
+
+
+!src/Bedrock/End2End/RupicolaCrypto/Spec.v
+1: imports
+11: poly1305 (exclude)
+26: high-level algorithm
+60: unused (exclude)
+77: last line
+
+#Montgomery
+
+!src/Bedrock/Group/ScalarMult/LadderStep.v
+1: imports
+7: high-level algorithm
+33: main proof
+150: last line
+
+!src/Bedrock/Group/ScalarMult/MontgomeryLadder.v
+1: imports
+21: rupicola extension
+44: high-level algorithm
+109: rupicola extension
+199: main proof
+206: generic lemmas & automation
+216: main proof
+241: generic lemmas & automation
+252: rupicola extension
+283: main proof
+290: generic lemmas & automation
+300: main proof
+339: last line
+
+
+!src/Bedrock/Group/ScalarMult/MontgomeryEquivalence.v
+1: imports
+16: main proof
+83: last line
+
+!src/Bedrock/Group/ScalarMult/CSwap.v
+1: imports
+22: main proof
+55: generic lemmas & automation
+61: main proof
+116: generic lemmas & automation
+204: main proof
+278: generic lemmas & automation
+402: main proof
+487: rupicola extension
+514: main proof
+543: generic lemmas & automation
+556: main proof
+673: last line
+
+
+
+
+
