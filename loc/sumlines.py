@@ -44,9 +44,14 @@ def __main__():
         with open(tempname, "a+") as temp:
             with open(currentFile) as curr:
                 for i, line in enumerate(curr):
-                    if start <= i and i < stop:
-                        temp.write(line) #TODO: does this write newlines?    
+                    # account for 1-indexing
+                    idx = i + 1
+                    if start <= idx and idx < stop:
+                        temp.write(line)
         loc = cloc_one_coq_file(tempname)
+        #with open(tempname) as t:
+        #    print("==========================================")
+        #    input(t.read())
         os.remove(tempname)
         return loc
         
