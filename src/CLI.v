@@ -417,6 +417,10 @@ Module ForExtraction.
     := ([Arg.long_key "cmovznz-by-mul"], Arg.Unit, ["Use an alternative implementation of cmovznz using multiplication rather than bitwise-and with -1."]).
   Definition shiftr_avoid_uint1_spec : named_argT
     := ([Arg.long_key "shiftr-avoid-uint1"], Arg.Unit, ["Avoid uint1 types at the output of (>>) operations."]).
+  Definition fancy_and_powerful_but_exponentially_slow_bounds_analysis_spec : named_argT
+    := ([Arg.long_key "fancy-and-powerful-but-exponentially-slow-bounds-analysis"],
+         Arg.Unit,
+         ["Use a more powerful bound analysis implementation that is unfortunately exponentially slow in the number of lines of code. If you know how to implement PHOAS passes of type [expr var -> var * expr var] or if you want to reimplement our bounds analysis pass in a first-order expression representation instead of PHOAS, please contact us! See https://github.com/mit-plv/fiat-crypto/pull/1761 for more details."]).
   Definition tight_bounds_multiplier_default := default_tight_upperbound_fraction.
   Definition tight_bounds_multiplier_spec : named_argT
     := ([Arg.long_key "tight-bounds-mul-by"],
@@ -712,6 +716,7 @@ Module ForExtraction.
         ; relax_primitive_carry_to_bitwidth_spec
         ; cmovznz_by_mul_spec
         ; shiftr_avoid_uint1_spec
+        ; fancy_and_powerful_but_exponentially_slow_bounds_analysis_spec
         ; only_signed_spec
         ; hint_file_spec
         ; output_file_spec
@@ -769,6 +774,7 @@ Module ForExtraction.
              , relax_primitive_carry_to_bitwidthv
              , cmovznz_by_mulv
              , shiftr_avoid_uint1v
+             , fancy_and_powerful_but_exponentially_slow_bounds_analysisv
              , only_signedv
              , hint_file_namesv
              , output_file_namev
@@ -849,6 +855,7 @@ Module ForExtraction.
                   ; use_mul_for_cmovznz := to_bool cmovznz_by_mulv
                   ; abstract_interpretation_options :=
                       {| AbstractInterpretation.shiftr_avoid_uint1 := to_bool shiftr_avoid_uint1v
+                      ; AbstractInterpretation.fancy_and_powerful_but_exponentially_slow_bounds_analysis := to_bool fancy_and_powerful_but_exponentially_slow_bounds_analysisv
                       |}
                   ; emit_primitives := negb (to_bool no_primitivesv)
                   ; output_options :=

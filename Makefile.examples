@@ -108,9 +108,13 @@ INVALID_GO_BASE_FILES := $(BASE_FILES_NEEDING_INT128)
 GO_EXTRA_UNSATURATED_SOLINAS_FUNCTIONS := carry_add carry_sub carry_opp
 GO_EXTRA_WORD_BY_WORD_MONTGOMERY_FUNCTIONS :=
 
+# We add a test for --fancy-and-powerful-but-exponentially-slow-bounds-analysis so that it's not dead code.
+# It doesn't really matter which curve we add this flag to, as long as it's fast.
+FANCY_BOUNDS_ANALYSIS_FLAG := --fancy-and-powerful-but-exponentially-slow-bounds-analysis
+
 $(foreach bw,64 32,$(eval $(call add_curve_keys,curve25519_$(bw),UNSATURATED_SOLINAS,'25519',$(bw),'(auto)' '2^255 - 19',$(FUNCTIONS_FOR_25519),UNSATURATED_SOLINAS)))
-$(eval $(call add_curve_keys,poly1305_64,UNSATURATED_SOLINAS,'poly1305',64,'3' '2^130 - 5',$(UNSATURATED_SOLINAS_FUNCTIONS),UNSATURATED_SOLINAS))
-$(eval $(call add_curve_keys,poly1305_32,UNSATURATED_SOLINAS,'poly1305',32,'(auto)' '2^130 - 5',$(UNSATURATED_SOLINAS_FUNCTIONS),UNSATURATED_SOLINAS))
+$(eval $(call add_curve_keys,poly1305_64,UNSATURATED_SOLINAS,'poly1305',64,'3' '2^130 - 5' $(FANCY_BOUNDS_ANALYSIS_FLAG),$(UNSATURATED_SOLINAS_FUNCTIONS),UNSATURATED_SOLINAS))
+$(eval $(call add_curve_keys,poly1305_32,UNSATURATED_SOLINAS,'poly1305',32,'(auto)' '2^130 - 5' $(FANCY_BOUNDS_ANALYSIS_FLAG),$(UNSATURATED_SOLINAS_FUNCTIONS),UNSATURATED_SOLINAS))
 $(foreach bw,64 32,$(eval $(call add_curve_keys,p521_$(bw),UNSATURATED_SOLINAS,'p521',$(bw),'(auto)' '2^521 - 1',$(UNSATURATED_SOLINAS_FUNCTIONS),UNSATURATED_SOLINAS)))
 ## 2^224 - 2^96 + 1 ## does not bounds check
 #$(eval $(call add_curve_keys,p224_solinas_64,UNSATURATED_SOLINAS,'p224',64,'4' '2^224 - 2^96 + 1',$(UNSATURATED_SOLINAS_FUNCTIONS),UNSATURATED_SOLINAS))

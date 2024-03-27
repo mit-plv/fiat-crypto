@@ -468,13 +468,15 @@ Module debugging_21271_from_bytes.
       vm_compute in e.
       set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
       cbv [CheckedPartialEvaluateWithBounds] in k''.
+      cbv [AbstractInterpretation.fancy_and_powerful_but_exponentially_slow_bounds_analysis Pipeline.AbstractInterpretation_opts Primitives.Options.absint_opts Primitives.Options.default_PipelineOptions Pipeline.AbstractInterpretation_opts Pipeline.default_BoundsPipelineOptions AbstractInterpretation.default_Options] in k''.
+      cbv [Bottomify.AbstractInterpretation.Compilers.CheckedPartialEvaluateWithBounds] in k''.
       clear -k''.
       cbv [Rewriter.Util.LetIn.Let_In] in k''.
       set (e' := (GeneralizeVar.FromFlat (GeneralizeVar.ToFlat e))) in (value of k'').
       vm_compute in e'; clear e; rename e' into e.
-      set (b := (partial.Extract _ _ _)) in (value of k'').
+      set (b := (Bottomify.AbstractInterpretation.Compilers.partial.Extract _ _ _)) in (value of k'').
       clear -b.
-      cbv [partial.Extract partial.ident.extract partial.extract_gen type.app_curried partial.extract'] in b.
+      cbv [Bottomify.AbstractInterpretation.Compilers.partial.Extract partial.ident.extract partial.extract_gen type.app_curried partial.extract] in b.
       subst e.
       cbv beta iota zeta in b.
       Import Rewriter.Util.LetIn.
@@ -1961,6 +1963,8 @@ Module debugging_p256_uint1.
         => set (k' := e) in (value of k)
       end; vm_compute in k'; subst k'.
       cbv [CheckedPartialEvaluateWithBounds] in k.
+      cbv [AbstractInterpretation.fancy_and_powerful_but_exponentially_slow_bounds_analysis Pipeline.AbstractInterpretation_opts Primitives.Options.absint_opts Primitives.Options.default_PipelineOptions Pipeline.AbstractInterpretation_opts Pipeline.default_BoundsPipelineOptions AbstractInterpretation.default_Options] in k.
+      cbv [Bottomify.AbstractInterpretation.Compilers.CheckedPartialEvaluateWithBounds] in k.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
       set (k' := GeneralizeVar.FromFlat (GeneralizeVar.ToFlat _)) in (value of k).
       vm_compute in k'.
@@ -1987,7 +1991,7 @@ Module debugging_p256_uint1.
       cbv [split_multiret_to should_split_multiret should_split_multiret_opt_instance_0] in k.
       vm_compute ZRange.type.base.option.is_tighter_than in k.
       cbv beta iota zeta in k.
-      set (k' := PartialEvaluateWithBounds _ _ _ _ _ _) in (value of k) at 1.
+      set (k' := Bottomify.AbstractInterpretation.Compilers.PartialEvaluateWithBounds _ _ _ _ _ _) in (value of k) at 1.
       vm_compute in k'.
     Abort.
   End __.
