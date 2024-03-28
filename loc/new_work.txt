@@ -27,7 +27,7 @@ Crypto.Bedrock.Group.ScalarMult.CSwap
 ## Modular inversion (fe25519_inv) [simpl, Rupicola]
 Crypto.Bedrock.Group.AdditionChains
 
-## ?TODO is this accurate?? FC-to-Bedrock2 compiler (no concrete resulting bedrock2 functions) [Coq]
+## FC-to-Bedrock2 compiler (no concrete resulting bedrock2 functions) [Generic Coq]
 Crypto.Bedrock.Field.Synthesis.New.ComputedOp
 Crypto.Bedrock.Field.Synthesis.New.Signature
 Crypto.Bedrock.Field.Translation.Cmd
@@ -49,7 +49,7 @@ Crypto.Bedrock.Field.Translation.Proofs.ValidComputable.Expr
 Crypto.Bedrock.Field.Translation.Proofs.ValidComputable.Func
 Crypto.Bedrock.Field.Translation.Proofs.VarnameSet
 
-## ?TODO is this accurate?? Invoking FC-to-Bedrock2 compiler (all fe25519_... functions except fe25519_inv) [Coq]
+## Invoking FC-to-Bedrock2 compiler (all fe25519_... functions except fe25519_inv) [Generic Coq]
 Crypto.Bedrock.End2End.X25519.Field25519
 Crypto.Bedrock.Field.Translation.Parameters.FE310
 Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas
