@@ -42,7 +42,7 @@ Definition montladder_post (pOUT pK pU : word.rep (word:=Naive.word32))
          (BW:=BW32)
          (field_representaton:=field_representation n s c)
          (Some Field.tight_bounds) pOUT
-         (montladder_gallina Field.M_pos Field.a24 (Z.to_nat (Z.log2 Curve25519.order)) K U)
+         (@XZ.M.montladder _ F.zero F.one F.add F.sub F.mul F.inv a24 (Z.log2 Curve25519.order) (Z.testbit K) U)
          ⋆ Array.array ptsto (word.of_Z 1) pK Kbytes
          ⋆ FElem (BW:=BW32)
                  (field_representaton:=field_representation n s c)
