@@ -1,5 +1,6 @@
 Require Crypto.Bedrock.Group.Loops.
 Require Import Crypto.Curves.Montgomery.XZ.
+Require Import Crypto.Curves.Montgomery.XZProofs.
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Alloc.
 Require Import Rupicola.Lib.SepLocals.
@@ -45,7 +46,7 @@ Notation "'let/n' ( v , w , x , y , z ) := val 'in' body" :=
 
 Section Gallina.
   Local Open Scope F_scope.
-  Context (m : positive) (a24 : F m) (count : nat).
+  Context {m : positive} (a24 : F m) (count : nat).
   Definition montladder_gallina (k : Z) (u : F m)
     : F m :=
     let/n X1 := stack 1 in
@@ -128,6 +129,32 @@ Section Gallina.
       cbn [fst snd to_pair] in Heqp0; inversion_clear Heqp0; trivial. }
     { reflexivity. }
   Qed.
+
+  Context
+    (field : @Hierarchy.field (F m) eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div)
+    (Hm' : (28 <= m)%positive)
+     a (a24_correct : (1 + 1 + 1 + 1) * a24 = a - (1 + 1))
+    (a2m4_nonsq : ~(exists r, F.mul r r = F.sub (F.mul a a) (F.of_Z _ 4)))
+    (b : F m) (b_nonzero : b <> 0).
+  
+  Local Instance char_ge_28 : @Ring.char_ge (F m) eq 0 1 F.opp F.add F.sub F.mul 28.
+  Proof. eapply Algebra.Hierarchy.char_ge_weaken; try eapply F.char_gt; trivial. Qed.
+
+  Context {char_ge_3 : @Ring.char_ge (F m) eq 0 1 F.opp F.add F.sub F.mul 3}. (* appears in statement *)
+  Import MontgomeryCurve Montgomery.Affine.
+  Local Notation X0 := (@M.X0 _ eq F.zero F.add F.mul a b).
+  Local Notation add := (M.add(field:=field)(char_ge_3:=char_ge_3)(a:=a)(b_nonzero:=b_nonzero)).
+  Local Notation opp := (M.opp(field:=field)(a:=a)(b_nonzero:=b_nonzero)).
+  Local Notation scalarmult := (@ScalarMult.scalarmult_ref _ add M.zero opp).
+  Add Ring Private_ring : (F.ring_theory m) (morphism (F.ring_morph m), constants [F.is_constant]).
+
+  Lemma montladder_gallina_equiv_affine n P :
+    montladder_gallina n (X0 P) = X0 (scalarmult (n mod 2^Z.of_nat count) P).
+  Proof.
+    unshelve erewrite montladder_gallina_equiv, M.montladder_correct;
+      try lia; try exact _; trivial using F.inv_0.
+   { intros r Hr. apply a2m4_nonsq; exists r. rewrite Hr. f_equal. ring. }
+  Qed.
 End Gallina.
 
 Section __.
@@ -146,7 +173,19 @@ Section __.
   Section MontLadder.
     Context scalarbits (scalarbits_small : word.wrap (Z.of_nat scalarbits) = Z.of_nat scalarbits).
     Local Notation "bs $@ a" := (array ptsto (word.of_Z 1) a bs) (at level 20).
+    Let m : positive := M_pos.
+    Context
+      (field : @Hierarchy.field (F m) eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div) (Hm' : (28 <= m)%positive)
+      (a : F m) (b : F m) (b_nonzero : b <> F.zero).
 
+    Context {char_ge_3 : @Ring.char_ge (F m) eq F.zero F.one F.opp F.add F.sub F.mul 3}. (* appears in statement *)
+    Import MontgomeryCurve Montgomery.Affine.
+    Local Notation X0 := (@M.X0 _ eq F.zero F.add F.mul a b).
+    Local Notation add := (M.add(field:=field)(char_ge_3:=char_ge_3)(a:=a)(b_nonzero:=b_nonzero)).
+    Local Notation opp := (M.opp(field:=field)(a:=a)(b_nonzero:=b_nonzero)).
+    Local Notation scalarmult := (@ScalarMult.scalarmult_ref _ add M.zero opp).
+
+    Import MontgomeryCurve.
     Instance spec_of_montladder : spec_of "montladder" :=
       fnspec! "montladder"
             (pOUT pK pU : word)
@@ -154,13 +193,13 @@ Section __.
             out_bound OUT
             R,
       { requires tr mem :=
+          mem =* FElem out_bound pOUT OUT * Kbytes$@pK * FElem (Some tight_bounds) pU U *  R /\
           LittleEndianList.le_combine Kbytes = K /\
-          Z.of_nat scalarbits <= 8*Z.of_nat (length Kbytes) /\
-          (FElem out_bound pOUT OUT * Kbytes$@pK * FElem (Some tight_bounds) pU U
-           *  R)%sep mem;
+          Z.of_nat scalarbits <= 8*Z.of_nat (length Kbytes);
         ensures tr' mem' :=
-          tr' = tr
-          /\ (let OUT := @M.montladder _ F.zero F.one F.add F.sub F.mul F.inv a24 (Z.of_nat scalarbits) (Z.testbit K) U in
+          tr' = tr /\ (
+          forall P, U = MontgomeryCurve.M.X0 (Fzero:=F.zero) P ->
+          let OUT := MontgomeryCurve.M.X0 (Fzero:=F.zero) (scalarmult (K mod 2^Z.of_nat scalarbits) P) in 
               (FElem (Some tight_bounds) pOUT OUT * Kbytes$@pK
                * FElem (Some tight_bounds) pU U
                * R)%sep mem') }.
@@ -204,6 +243,7 @@ Section __.
      bedrock_cmd:($out_var = (load1($x_var+$i_var>>coq:(3))>>($i_var&coq:(7)))&coq:(1); coq:(k_impl))
      <{ pred (nlet_eq [out_var] v k) }>.
  Proof using mem_ok scalarbits word_ok.
+   clear dependent m.
    repeat straightline.
    repeat (eexists; split; repeat straightline'; eauto); cbn [Semantics.interp_binop].
 
@@ -255,15 +295,16 @@ Section __.
   Existing Instance felem_alloc.
 
 
-  Lemma cswap_same {A} b (a : A): cswap b a a = \<a,a\>.
+  Lemma cswap_same {A} : forall b (a : A), cswap b a a = \<a,a\>.
   Proof using Type.
-    destruct b; reflexivity.
+    intros b0; destruct b0; reflexivity.
   Qed.
 
   Local Ltac ecancel_assumption ::= ecancel_assumption_impl.
 
   Lemma scalarbits_bound : Z.of_nat scalarbits < 2 ^ width.
   Proof using scalarbits_small.
+    clear dependent m.
     rewrite <- scalarbits_small.
     unfold word.wrap.
     apply Z_mod_lt.
@@ -309,23 +350,23 @@ Section __.
   simple eapply word_unsigned_of_Z_eq; [ ZnWords |] : compiler.
 
   (*TODO: should this go in core rupicola?*)
-  Lemma compile_copy_bool {tr m l functions} (x: bool) :
+  Lemma compile_copy_bool {tr _m l functions} (x: bool) :
     let v := x in
     forall P (pred: P v -> predicate)
            (k: nlet_eq_k P v) k_impl
            x_expr var,
 
-      WeakestPrecondition.dexpr m l x_expr (word.of_Z (Z.b2z v)) ->
+      WeakestPrecondition.dexpr _m l x_expr (word.of_Z (Z.b2z v)) ->
 
       (let v := v in
        <{ Trace := tr;
-          Memory := m;
+          Memory := _m;
           Locals := map.put l var (word.of_Z (Z.b2z v));
           Functions := functions }>
        k_impl
        <{ pred (k v eq_refl) }>) ->
       <{ Trace := tr;
-         Memory := m;
+         Memory := _m;
          Locals := l;
          Functions := functions }>
       cmd.seq (cmd.set var x_expr) k_impl
@@ -356,7 +397,9 @@ Section __.
     | cons _ ?xs => let i := find_implication xs y in constr:(S i)
     end.
 
-  Context { F_M_pos : Z.pos M_pos = 2^255-19 }.
+  Context { F_M_pos : M_pos = (2^255-19)%positive }.
+  Context (a24_correct : F.mul (1 + 1 + 1 + 1) Field.a24 = F.sub a (1 + 1))
+          (Ha : ~(exists r, F.mul r r = F.sub (F.mul a a) (F.of_Z _ 4))).
 
   Hint Extern 1 (spec_of "fe25519_inv") => (simple refine (spec_of_exp_large)) : typeclass_instances.
   Hint Extern 1 (spec_of "felem_cswap") => (simple refine (spec_of_cswap)) : typeclass_instances.
@@ -364,23 +407,29 @@ Section __.
     Derive montladder_body SuchThat
            (defn! "montladder" ("OUT", "K", "U")
                 { montladder_body },
-             implements montladder_gallina
+             implements (montladder_gallina(m:=M_pos))
                         using ["felem_cswap"; felem_copy; from_word;
                                "ladderstep"; "fe25519_inv"; mul])
            As montladder_correct.
     Proof.
       pose proof scalarbits_bound.
-      cbv [spec_of_montladder]; intros; eapply Semantics.weaken_call; cycle 1; intros.
-      { rewrite <-montladder_gallina_equiv. match goal with H : ?e t' m' rets |- _ => exact H end. }
+      cbv [spec_of_montladder]; intros; eapply Semantics.weaken_call with
+        (post1:=fun t' m' rets => rets = [] /\ t' = tr /\
+           ((FElem (Some tight_bounds) pOUT (montladder_gallina a24 scalarbits K U)
+            ⋆ Kbytes $@ pK ⋆ FElem (Some tight_bounds) pU U ⋆ R) m')); cycle 1; intros.
+      { DestructHead.destruct_head and; Tactics.ssplit; trivial; intros.
+        pose proof LittleEndianList.le_combine_bound Kbytes. subst U.
+        erewrite montladder_gallina_equiv_affine in *; eauto; try lia. }
 
       compile_setup.
-      repeat compile_step.
+      repeat compile_step; shelve_unifiable.
       eapply compile_nlet_as_nlet_eq.
       eapply compile_felem_cswap; repeat compile_step.
 
       eapply compile_nlet_as_nlet_eq.
       eapply compile_felem_cswap; repeat compile_step.
 
+      lia. (* m = 2^255-19 *)
       compile_step.
     Qed.
 

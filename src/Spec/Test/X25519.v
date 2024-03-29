@@ -5,11 +5,8 @@ Require Import Coq.NArith.BinNatDef.
 Require Import Coq.ZArith.BinIntDef.
 Require Import Coq.PArith.BinPosDef.
 Require Import Spec.ModularArithmetic Spec.Curve25519 Spec.MxDH Crypto.Util.Decidable.
-Definition F := F Curve25519.p.
-Definition a : F := F.of_Z _ 486662.
-Definition a24 : F := ((a - F.of_Z _ 2) / F.of_Z _ 4)%F.
 Definition cswap {T} (swap:bool) (a b:T) := if swap then (b, a) else (a, b).
-Definition monty s : F -> F := @MxDH.montladder F F.zero F.one F.add F.sub F.mul F.inv a24 cswap 255 (BinNat.N.testbit_nat s).
+Definition monty s : F p -> F p := @MxDH.montladder _ F.zero F.one F.add F.sub F.mul F.inv M.a24 cswap 255 (BinNat.N.testbit_nat s).
 
 Example one_basepoint : F.to_Z (monty 1 (F.of_Z _ 9)) = 9%Z.
 Proof. vm_decide_no_check. Qed.
@@ -28,7 +25,7 @@ Example order_basepoint : F.to_Z (monty (N.pos l) (F.of_Z _ 9)) = 0%Z.
 Proof. vm_decide_no_check. Qed. (* note: ideally we'd check that z=0 *)
 
 Definition double x := (* takes as input affine x, returns projective x/z *)
-  fst (@MxDH.ladderstep F F.add F.sub F.mul a24 (F.of_Z _ 0) (x, F.of_Z _ 1) (x, F.of_Z _ 1)).
+  fst (@MxDH.ladderstep _ F.add F.sub F.mul M.a24 (F.of_Z _ 0) (x, F.of_Z _ 1) (x, F.of_Z _ 1)).
 (* EllipticCurve(GF(2^255 - 19), [0,486662,0,1,0]).torsion_polynomial(8).roots(multiplicities=False) *)
 (* Point of order 2: *)
 Lemma double_zero : snd (double (F.of_Z _ 0)) = F.of_Z _ 0. vm_decide_no_check. Qed.
@@ -36,7 +33,7 @@ Lemma double_zero : snd (double (F.of_Z _ 0)) = F.of_Z _ 0. vm_decide_no_check. 
 Lemma double_one  : fst (double (F.of_Z _ 1)) = F.of_Z _ 0. vm_decide_no_check. Qed.
 Lemma double_minusone:fst(double(F.of_Z _(-1)))=F.of_Z _ 0. vm_decide_no_check. Qed.
 (* Points of order 8: *)
-Definition order8_x1 : F := F.of_Z _ 39382357235489614581723060781553021112529911719440698176882885853963445705823.
-Definition order8_x2 : F := F.of_Z _ 325606250916557431795983626356110631294008115727848805560023387167927233504.
+Definition order8_x1 := F.of_Z p 39382357235489614581723060781553021112529911719440698176882885853963445705823.
+Definition order8_x2 := F.of_Z p 325606250916557431795983626356110631294008115727848805560023387167927233504.
 Lemma double_order8_x1 : fst (double order8_x1) = snd (double order8_x1). vm_decide_no_check. Qed.
 Lemma double_order8_x2 : fst (double order8_x2) = snd (double order8_x2). vm_decide_no_check. Qed.
