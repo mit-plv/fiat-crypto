@@ -42,12 +42,12 @@ jobs:
     - name: chroot build params
       shell: alpine.sh {0}
       run: etc/ci/describe-system-config.sh
-    - name: make deps
+    - name: etc/ci/github-actions-make.sh deps
       shell: alpine.sh {0}
-      run: make TIMED=1 TIMING=1 -j2 deps
+      run: etc/ci/github-actions-make.sh -j2 deps
     - name: all-except-generated-and-js-of-ocaml
       shell: alpine.sh {0}
-      run: make TIMED=1 TIMING=1 -j2 CAMLEXTRAFLAGS="-ccopt -static" all-except-generated-and-js-of-ocaml
+      run: etc/ci/github-actions-make.sh -j2 CAMLEXTRAFLAGS="-ccopt -static" all-except-generated-and-js-of-ocaml
     - name: install-standalone-unified-ocaml
       shell: alpine.sh {0}
       run: make install-standalone-unified-ocaml BINDIR=dist
@@ -78,7 +78,7 @@ jobs:
 #      if: always ()
     - name: generated-files
       shell: alpine.sh {0}
-      run: make TIMED=1 TIMING=1 -j2 generated-files
+      run: etc/ci/github-actions-make.sh -j2 generated-files
     - run: tar -czvf generated-files.tgz fiat-*/
       if: ${{ failure() }}
     - name: upload generated files
@@ -89,7 +89,7 @@ jobs:
       if: ${{ failure() }}
     - name: standalone-haskell
       shell: alpine.sh {0}
-      run: make TIMED=1 TIMING=1 -j1 standalone-haskell GHCFLAGS='+RTS -M7G -RTS'
+      run: etc/ci/github-actions-make.sh -j1 standalone-haskell GHCFLAGS='+RTS -M7G -RTS'
     - name: upload Haskell files
       uses: actions/upload-artifact@v3
       with:
@@ -98,7 +98,7 @@ jobs:
       if: always ()
     - name: only-test-amd64-files-lite
       shell: alpine.sh {0}
-      run: make TIMED=1 TIMING=1 -j2 only-test-amd64-files-lite SLOWEST_FIRST=1
+      run: etc/ci/github-actions-make.sh -j2 only-test-amd64-files-lite SLOWEST_FIRST=1
     - name: install
       shell: alpine.sh {0}
       run: sudo make EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 install install-standalone-ocaml
