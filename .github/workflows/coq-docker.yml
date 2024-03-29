@@ -239,7 +239,7 @@ jobs:
       uses: acifani/setup-tinygo@v2
       with:
         tinygo-version: '0.30.0'
-        binaryen-version: '116'
+        binaryen-version: '117'
     - name: set up custom dune and wasm_of_ocaml
       run: |
         eval $(opam env)
