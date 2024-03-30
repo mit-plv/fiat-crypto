@@ -1,3 +1,5 @@
+Require Crypto.Bedrock.Group.Loops.
+Require Import Crypto.Curves.Montgomery.XZ.
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Alloc.
 Require Import Rupicola.Lib.SepLocals.
@@ -43,7 +45,8 @@ Notation "'let/n' ( v , w , x , y , z ) := val 'in' body" :=
 
 Section Gallina.
   Local Open Scope F_scope.
-  Definition montladder_gallina (m : positive) (a24 : F m) (count : nat) (k : Z) (u : F m)
+  Context (m : positive) (a24 : F m) (count : nat).
+  Definition montladder_gallina (k : Z) (u : F m)
     : F m :=
     let/n X1 := stack 1 in
     let/n Z1 := stack 0 in
@@ -69,6 +72,62 @@ Section Gallina.
     let/n OUT := (F.inv Z1) in
     let/n OUT := (X1 * OUT) in
     OUT.
+
+  (*TODO: which of ladderstep_gallina and M.xzladderstep should we change? either?*)
+  Definition reorder_pairs {A B C D} (p : \<<A , B , C , D\>>) : (A*B)*(C*D) :=
+    (P2.car p, P2.car (P2.cdr p),((P2.car (P2.cdr (P2.cdr p))),(P2.cdr (P2.cdr (P2.cdr p))))).
+
+  (* TODO: should M.montladder change to accomodate this? *)
+  Definition to_pair {A B} p : A*B := (P2.car p, P2.cdr p).
+
+  Lemma invert_reorder_pairs {A B C D} (p : \<<A , B , C , D\>>) w x y z
+    : reorder_pairs p = (w,x, (y,z)) <-> p = \<w,x,y,z\>.
+  Proof.
+    destruct p as [? [? [? ?]]].
+    cbv.
+    intuition congruence.
+  Qed.
+  
+  Lemma ladderstep_gallina_equiv X1 P1 P2 :
+    reorder_pairs (ladderstep_gallina _ a24 X1 (fst P1) (snd P1) (fst P2) (snd P2)) =
+    @M.xzladderstep _ F.add F.sub F.mul a24 X1 P1 P2.
+  Proof.
+    intros. cbv [ladderstep_gallina M.xzladderstep].
+    destruct P1 as [x1 z1]. destruct P2 as [x2 z2].
+    cbv [Rewriter.Util.LetIn.Let_In nlet]. cbn [fst snd].
+    rewrite !F.pow_2_r; trivial.
+  Qed.
+
+  Lemma montladder_gallina_equiv n point :
+    montladder_gallina n point =
+    @M.montladder _ F.zero F.one F.add F.sub F.mul F.inv a24 (Z.of_nat count) (Z.testbit n) point.
+  Proof.
+    cbv [montladder_gallina M.montladder Rewriter.Util.LetIn.Let_In stack].
+    do 5 (unfold nlet at 1); cbn [fst snd P2.car P2.cdr].
+    rewrite Loops.downto_while.
+    match goal with
+    | |- ?lhs = ?rhs =>
+      match lhs with context [Loops.while ?ltest ?lbody ?fuel ?linit] =>
+      match rhs with context [Loops.while ?rtest ?rbody ?fuel ?rinit] =>
+      rewrite (Loops.while.preservation ltest lbody rtest rbody
+        (fun s1 s2 => s1 = let '(x2, z2, x3, z3, swap, i) := s2 in
+        (\<x2, z2, x3, z3, swap\>, i))) with (init2:=rinit)
+    end end end.
+    { rewrite !Nat2Z.id. destruct (Loops.while _ _ _ _) eqn:? at 1 2.
+      destruct_products. case b; reflexivity. }
+    { intros. destruct_products. congruence. }
+    { intros. destruct_products. Prod.inversion_prod. LtbToLt.Z.ltb_to_lt. subst.
+      rewrite !Z2Nat.id by lia.
+      cbv [nlet M.cswap].
+      repeat match goal with
+             | H : (_,_) = (_,_) |- _ => inversion H; subst; clear H
+             | _ => progress BreakMatch.break_match
+             | _ => progress BreakMatch.break_match_hyps
+             end;
+      rewrite <- ladderstep_gallina_equiv, invert_reorder_pairs in Heqp0;
+      cbn [fst snd to_pair] in Heqp0; inversion_clear Heqp0; trivial. }
+    { reflexivity. }
+  Qed.
 End Gallina.
 
 Section __.
@@ -101,7 +160,7 @@ Section __.
            *  R)%sep mem;
         ensures tr' mem' :=
           tr' = tr
-          /\ (let OUT := montladder_gallina M_pos a24 scalarbits K U in
+          /\ (let OUT := @M.montladder _ F.zero F.one F.add F.sub F.mul F.inv a24 (Z.of_nat scalarbits) (Z.testbit K) U in
               (FElem (Some tight_bounds) pOUT OUT * Kbytes$@pK
                * FElem (Some tight_bounds) pU U
                * R)%sep mem') }.
@@ -311,6 +370,9 @@ Section __.
            As montladder_correct.
     Proof.
       pose proof scalarbits_bound.
+      cbv [spec_of_montladder]; intros; eapply Semantics.weaken_call; cycle 1; intros.
+      { rewrite <-montladder_gallina_equiv. match goal with H : ?e t' m' rets |- _ => exact H end. }
+
       compile_setup.
       repeat compile_step.
       eapply compile_nlet_as_nlet_eq.

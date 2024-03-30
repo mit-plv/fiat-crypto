@@ -257,7 +257,7 @@ Module M.
     Global Instance Proper_ladder_invariant : Proper (Feq ==> MontgomeryCurve.M.eq ==> MontgomeryCurve.M.eq ==> iff) ladder_invariant.
     Proof. t. Qed.
 
-    Local Notation montladder := (M.montladder(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)(Fzero:=Fzero)(Fone:=Fone)(Finv:=Finv)(cswap:=fun b x y => if b then pair y x else pair x y)).
+    Local Notation montladder := (M.montladder(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)(Fzero:=Fzero)(Fone:=Fone)(Finv:=Finv)).
     Local Notation scalarmult := (@ScalarMult.scalarmult_ref Mpoint Madd M.zero Mopp).
 
     Import Crypto.Util.Loops.
@@ -310,7 +310,7 @@ Module M.
         { (* measure decreases *)
           cbv [Let_In]; break_match; cbn; rewrite Z.succ_pred; apply Znat.Z2Nat.inj_lt; lia. } }
         { (* if loop exited, invariant implies postcondition *)
-          break_match; break_match_hyps; setoid_subst_rel Feq; fsatz. } }
+          cbv [M.cswap]; break_match; break_match_hyps; setoid_subst_rel Feq; fsatz. } }
     Qed.
 
     Lemma montladder_correct_nz
@@ -384,6 +384,7 @@ Module M.
           destruct_head' @and; autorewrite with cancel_pair in *.
           replace i with ((-(1))%Z) in * by lia; clear Hi Hbranch.
           rewrite Z.succ_m1, Z.shiftr_0_r in *.
+          cbv [M.cswap];
           destruct swap eqn:Hswap; rewrite <-!to_x_inv00 by assumption;
             eauto using projective_to_xz, proper_to_x_projective. } }
     Qed.

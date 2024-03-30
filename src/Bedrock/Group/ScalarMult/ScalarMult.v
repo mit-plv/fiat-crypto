@@ -4,7 +4,6 @@ Require Import coqutil.Byte.
 Require Import Crypto.Algebra.Hierarchy.
 Require Import Crypto.Algebra.ScalarMult.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryEquivalence.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Specs.Group.

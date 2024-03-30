@@ -53,7 +53,9 @@ Require Import coqutil.Map.OfListWord Coq.Init.Byte coqutil.Byte.
 Import ProgramLogic.Coercions.
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
 Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
-Definition x25519_gallina := montladder_gallina (Field.M_pos(FieldParameters:=field_parameters)) Field.a24 (Z.to_nat (Z.log2 (Z.pos order))).
+Definition x25519_gallina K U : F (2^255-19) := 
+  @XZ.M.montladder _ F.zero F.one F.add F.sub F.mul F.inv (F.div (F.of_Z _ 486662 - F.of_Z _ 2) (F.of_Z _ 4))
+  (Z.to_nat (Z.log2 (Z.pos order))) (Z.testbit K) U.
 Global Instance spec_of_x25519 : spec_of "x25519" :=
   fnspec! "x25519" out sk pk / (o s p : list Byte.byte) (R : _ -> Prop),
   { requires t m := m =* s$@sk * p$@pk * o$@out * R /\

@@ -220,7 +220,7 @@ Definition garagedoor_iteration : state -> list (lightbulb_spec.OP _) -> state -
      udp_local ++ udp_remote ++
      be2 udp_length ++ be2 0 ++
      garagedoor_header ++
-     le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (F.of_Z Field.M_pos 9)))))
+     le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (F.of_Z _ 9)))))
   ioh /\ SEED=seed /\ SK=sk.
 
 Local Instance spec_of_recvEthernet : spec_of "recvEthernet" := spec_of_recvEthernet.
@@ -387,7 +387,7 @@ Proof.
     subst pPPP.
     seprewrite_in_by (Array.bytearray_append cmp1) H33 SepAutoArray.listZnWords.
 
-    remember (le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (Field.feval_bytes _)))) as vv.
+    set (k := (Field.feval_bytes _)); remember (le_split 32 (F.to_Z (x25519_gallina (le_combine sk) k))) as vv; subst k.
     repeat straightline.
     pose proof (List.firstn_skipn 16 vv) as Hvv.
     pose proof (@firstn_length_le _ vv 16 ltac:(subst vv; rewrite ?length_le_split; ZnWords)).
@@ -852,7 +852,7 @@ Optimize Proof. Optimize Heap.
   { rewrite ?app_length, ?length_le_split. SepAutoArray.listZnWords. }
   { ZnWords. }
 
-  pose proof length_le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (F.of_Z Field.M_pos 9))) as Hpkl.
+  pose proof length_le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (F.of_Z _ 9))) as Hpkl.
   seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
   seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
 

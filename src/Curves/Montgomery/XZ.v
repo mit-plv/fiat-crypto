@@ -113,7 +113,7 @@ Module M.
         ((x2, z2), (x3, z3))%core
       end.
 
-    Context {cswap:bool->F->F->F*F}.
+    Definition cswap (b : bool) (x y : F) := if b then pair y x else pair x y.
     Local Notation xor := Coq.Init.Datatypes.xorb.
     Local Open Scope core_scope.
 
