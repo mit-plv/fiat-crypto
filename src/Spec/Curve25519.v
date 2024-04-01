@@ -68,3 +68,32 @@ Proof.
   Proof_certif 2 prime_2] _).
   native_cast_no_check (@eq_refl bool true).
 Time Qed. (* 1s *)
+
+Local Notation F := (F p).
+
+Require PrimeFieldTheorems.
+
+Lemma field : @Hierarchy.field F eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div.
+Proof. apply PrimeFieldTheorems.F.field_modulo, prime_p. Qed.
+Lemma char_ge_3 : @Ring.char_ge F eq F.zero F.one F.opp F.add F.sub F.mul 3.
+Proof. eapply Hierarchy.char_ge_weaken; try apply ModularArithmeticTheorems.F.char_gt; Decidable.vm_decide. Qed.
+
+Require Import Spec.MontgomeryCurve.
+Module M.
+  Definition a : F := F.of_Z _ 486662.
+  Definition b : F := F.one.
+  Definition a24 : F := ((a - F.of_Z _ 2) / F.of_Z _ 4)%F.
+  Definition point := @M.point F eq F.add F.mul a F.one.
+  Definition B : point :=
+    exist _ (inl (F.of_Z _ 9, F.of_Z _ 14781619447589544791020593568409986887264606134616475288964881837755586237401)) eq_refl.
+
+  Lemma a2m4_nonzero : F.sub (F.mul a a) (F.of_Z _ 4) <> F.zero. Decidable.vm_decide. Qed.
+  Lemma a2m4_nonsq : ~(exists r, F.mul r r = F.sub (F.mul a a) (F.of_Z _ 4)).
+  Proof. epose (@PrimeFieldTheorems.F.Decidable_square p prime_p eq_refl); Decidable.vm_decide. Qed.
+  Lemma b_nonzero : b <> F.zero. Decidable.vm_decide. Qed.
+
+  Definition add := (M.add(field:=field)(char_ge_3:=char_ge_3)(a:=a)(b_nonzero:=b_nonzero)).
+  Definition opp := (M.opp(field:=field)(a:=a)(b_nonzero:=b_nonzero)).
+  Definition X0 := (M.X0(Feq:=eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)).
+  Definition scalarmult := (@ScalarMult.scalarmult_ref _ add M.zero opp).
+End M.

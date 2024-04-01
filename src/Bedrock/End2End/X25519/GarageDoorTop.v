@@ -24,7 +24,6 @@ Require Import bedrock2Examples.memswap.
 Require Import bedrock2Examples.memconst.
 Require Import Rupicola.Examples.Net.IPChecksum.IPChecksum.
 Require Import Crypto.Bedrock.End2End.X25519.GarageDoor.
-Require Import Crypto.Bedrock.End2End.X25519.MontgomeryLadderProperties.
 Import Crypto.Bedrock.End2End.RupicolaCrypto.ChaCha20.
 Local Open Scope string_scope.
 Import Syntax Syntax.Coercions NotationsCustomEntry.

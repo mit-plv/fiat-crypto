@@ -1,3 +1,4 @@
+Require Crypto.Spec.Curve25519.
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Loops.
 Require Import Rupicola.Lib.ControlFlow.DownTo.
@@ -457,9 +458,6 @@ Section FElems.
         compile.
       Qed.
 
-      Print Assumptions exp_6_body. (* does not depend on [width] or [word] *)
-      Print Assumptions exp_97_body. (* depends on [width] and  [word] :/ *)
-
       Derive fe25519_inv SuchThat
              (defn! "fe25519_inv" ("res", "x") { fe25519_inv },
               implements (exp (2^255-21)) using [square; mul])
@@ -469,7 +467,6 @@ Section FElems.
       Qed.
 
       Context { F_M_pos : Z.pos M_pos = 2^255-19 }.
-      Require Import Crypto.Spec.Curve25519.
 
       Lemma compile_inv : forall m l tr functions x,
             let v := F.inv x in

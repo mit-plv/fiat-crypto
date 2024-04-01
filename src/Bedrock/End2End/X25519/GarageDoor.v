@@ -40,9 +40,24 @@ Local Open Scope string_scope.
 Import Syntax Syntax.Coercions NotationsCustomEntry.
 Import ListNotations.
 Import Coq.Init.Byte.
+Import Tuple LittleEndianList.
+Local Coercion F.to_Z : F >-> Z.
 
 Definition garageowner : list byte :=
   [x7b; x06; x18; x0c; x54; x0c; xca; x9f; xa3; x16; x0b; x2f; x2b; x69; x89; x63; x77; x4c; xc1; xef; xdc; x04; x91; x46; x76; x8b; xb2; xbf; x43; x0e; x34; x34].
+
+Definition garageowner_P : Curve25519.M.point.
+refine (
+  let x := F.of_Z _ (le_combine garageowner) in
+  let y2 := (x*x*x + Curve25519.M.a*x*x +x)%F in
+  let sqrtm1 := (F.pow (F.of_Z _ 2) ((N.pos p-1)/4)) in
+  let y := F.sqrt_5mod8 sqrtm1 y2 in
+  exist _ (inl (x, y)) _).
+Decidable.vm_decide.
+Defined.
+
+Lemma garageowner_P_correct : le_split 32 (Curve25519.M.X0 garageowner_P) = garageowner.
+Proof. vm_compute. reflexivity. Qed.
 
 Local Notation ST := 0x80000000.
 Local Notation PK := 0x80000040.
@@ -164,7 +179,6 @@ Qed.
 
 Local Open Scope list_scope.
 Require Crypto.Bedrock.End2End.RupicolaCrypto.Spec.
-Import Tuple LittleEndianList.
 Local Definition be2 z := rev (le_split 2 z).
 Local Coercion to_list : tuple >-> list.
 Local Coercion Z.b2z : bool >-> Z.
@@ -200,7 +214,7 @@ Definition garagedoor_iteration : state -> list (lightbulb_spec.OP _) -> state -
       (TracePredicate.one ("st", lightbulb_spec.GPIO_DATA_ADDR _, action))) ioh
    /\ (
     let m := firstn 16 garagedoor_payload in
-    let v := le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (Field.feval_bytes(FieldRepresentation:=frep25519) garageowner))) in
+    let v := le_split 32 (M.X0 (Curve25519.M.scalarmult (le_combine sk mod 2^255) garageowner_P)) in
     exists set0 set1 : Naive.word32,
     (word.unsigned set0 = 1 <-> firstn 16 v = m) /\
     (word.unsigned set1 = 1 <->  skipn 16 v = m) /\
@@ -220,7 +234,7 @@ Definition garagedoor_iteration : state -> list (lightbulb_spec.OP _) -> state -
      udp_local ++ udp_remote ++
      be2 udp_length ++ be2 0 ++
      garagedoor_header ++
-     le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (F.of_Z _ 9)))))
+     le_split 32 (M.X0 (Curve25519.M.scalarmult (le_combine sk mod 2^255) Curve25519.M.B))))
   ioh /\ SEED=seed /\ SK=sk.
 
 Local Instance spec_of_recvEthernet : spec_of "recvEthernet" := spec_of_recvEthernet.
@@ -363,6 +377,7 @@ Proof.
     repeat straightline.
     straightline_call; ssplit; try ecancel_assumption; try trivial; try ZnWords.
     { cbv. inversion 1. }
+    { instantiate (1:=garageowner_P). Decidable.vm_decide. }
 
     rename Lppp into Lihl; assert (List.length ppp = 40)%nat as Lppp by ZnWords.
 
@@ -387,7 +402,7 @@ Proof.
     subst pPPP.
     seprewrite_in_by (Array.bytearray_append cmp1) H33 SepAutoArray.listZnWords.
 
-    set (k := (Field.feval_bytes _)); remember (le_split 32 (F.to_Z (x25519_gallina (le_combine sk) k))) as vv; subst k.
+    remember (le_split 32 (M.X0 (Curve25519.M.scalarmult (le_combine sk mod 2^255) garageowner_P))) as vv.
     repeat straightline.
     pose proof (List.firstn_skipn 16 vv) as Hvv.
     pose proof (@firstn_length_le _ vv 16 ltac:(subst vv; rewrite ?length_le_split; ZnWords)).
@@ -852,7 +867,7 @@ Optimize Proof. Optimize Heap.
   { rewrite ?app_length, ?length_le_split. SepAutoArray.listZnWords. }
   { ZnWords. }
 
-  pose proof length_le_split 32 (F.to_Z (x25519_gallina (le_combine sk) (F.of_Z _ 9))) as Hpkl.
+  pose proof length_le_split 32 (F.to_Z (M.X0 (Curve25519.M.scalarmult (le_combine sk mod 2^255) Curve25519.M.B))) as Hpkl.
   seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
   seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
 
