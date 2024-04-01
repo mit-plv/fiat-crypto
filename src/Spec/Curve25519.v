@@ -78,12 +78,24 @@ Proof. apply PrimeFieldTheorems.F.field_modulo, prime_p. Qed.
 Lemma char_ge_3 : @Ring.char_ge F eq F.zero F.one F.opp F.add F.sub F.mul 3.
 Proof. eapply Hierarchy.char_ge_weaken; try apply ModularArithmeticTheorems.F.char_gt; Decidable.vm_decide. Qed.
 
+Require Import Spec.CompleteEdwardsCurve.
+Module E.
+  Definition a : F := F.opp 1.
+  Definition d : F := F.div (F.opp (F.of_Z _ 121665)) (F.of_Z _ 121666).
+  Definition point := @E.point F eq F.one F.add F.mul a d.
+  Definition B : E.point.
+    refine (
+    exist _ (F.of_Z _ 15112221349535400772501151409588531511454012693041857206046113283949847762202, F.div (F.of_Z _ 4) (F.of_Z _ 5)) _).
+    Decidable.vm_decide.
+  Qed.
+End E.
+
 Require Import Spec.MontgomeryCurve.
 Module M.
   Definition a : F := F.of_Z _ 486662.
   Definition b : F := F.one.
   Definition a24 : F := ((a - F.of_Z _ 2) / F.of_Z _ 4)%F.
-  Definition point := @M.point F eq F.add F.mul a F.one.
+  Definition point := @M.point F eq F.add F.mul a b.
   Definition B : point :=
     exist _ (inl (F.of_Z _ 9, F.of_Z _ 14781619447589544791020593568409986887264606134616475288964881837755586237401)) eq_refl.
 

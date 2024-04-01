@@ -31,15 +31,9 @@ Module M.
 
     Context {a b: F} {b_nonzero:b <> 0}.
 
-    Program Definition opp (P:@M.point F Feq Fadd Fmul a b) : @M.point F Feq Fadd Fmul a b :=
-      match P return F*F+∞ with
-      | inl (x, y) => inl (x, -y)
-      | ∞ => ∞
-      end.
-    Next Obligation. Proof. destruct_head @M.point; cbv; break_match; trivial; fsatz. Qed.
-
-    Local Notation add := (M.add(b_nonzero:=b_nonzero)).
     Local Notation point := (@M.point F Feq Fadd Fmul a b).
+    Local Notation add := (M.add(b_nonzero:=b_nonzero)(a:=a)).
+    Local Notation opp := (M.opp(b_nonzero:=b_nonzero)(a:=a)).
 
     Local Notation "2" := (1+1).
     Local Notation "3" := (1+2).
