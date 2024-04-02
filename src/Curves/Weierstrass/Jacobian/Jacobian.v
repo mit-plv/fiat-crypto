@@ -539,7 +539,7 @@ Module Jacobian.
       eq (add P Q) (add_mixed P Q H).
     Proof. faster_t. Qed.
 
-    Lemma Proper_add : Proper (eq ==> eq ==> eq) add. Proof. faster_t_noclear. Qed.
+    Global Instance Proper_add : Proper (eq ==> eq ==> eq) add. Proof. faster_t_noclear. Qed.
     Import BinPos.
     Lemma to_affine_add P Q
       : W.eq (to_affine (add P Q)) (W.add (to_affine P) (to_affine Q)).
