@@ -165,21 +165,23 @@ Lemma compiler_emitted_valid_instructions :
   bverify.bvalidInstructions Decode.RV32IM garagedoor_insns = true.
 Proof. vm_cast_no_check (eq_refl true). Qed.
 
-Definition good_trace(s : state)(t : Semantics.trace)(s' : state) :=
+Definition good_transitions (s : state)(t : Semantics.trace)(s' : state) :=
   exists ioh, SPI.mmio_trace_abstraction_relation ioh t /\
               (BootSeq +++ stateful garagedoor_iteration s s') ioh.
+Definition good_trace t := exists s0 s, good_transitions s0 t s.
+
 Import ExprImpEventLoopSpec.
 Definition garagedoor_spec : ProgramSpec := {|
   datamem_start := MemoryLayout.heap_start ml;
   datamem_pastend := MemoryLayout.heap_pastend ml;
-  goodTrace t := exists s0 s, good_trace s0 t s;
-  isReady t m := exists s0 s, good_trace s0 t s /\ exists bs R, memrep bs R s m |}.
+  goodTrace := good_trace;
+  isReady t m := exists s0 s, good_transitions s0 t s /\ exists bs R, memrep bs R s m |}.
 
 Lemma good_trace_from_isRead a a0 : isReady garagedoor_spec a a0 ->
   isReady garagedoor_spec a a0 /\
   ExprImpEventLoopSpec.goodTrace garagedoor_spec a.
 Proof.
-  cbv [isReady goodTrace garagedoor_spec]; intuition eauto.
+  cbv [isReady goodTrace garagedoor_spec good_trace]; intuition eauto.
   case H as (?&?&?&?&?&H); eauto.
 Qed.
 
@@ -202,39 +204,31 @@ Proof.
   assumption.
 Qed. Optimize Heap.
 
+Import Word.Naive.
 Import ToplevelLoop GoFlatToRiscv regs_initialized LowerPipeline.
-Require Import bedrock2.WordNotations. Local Open Scope word_scope.
 Import bedrock2.Map.Separation. Local Open Scope sep_scope.
 Require Import bedrock2.ReversedListNotations.
-Local Notation run_one_riscv_instr := (mcomp_sat (run1 Decode.RV32IM)).
+Local Notation run1 := (mcomp_sat (run1 Decode.RV32IM)).
 Local Notation RiscvMachine := MetricRiscvMachine.
 Implicit Types mach : RiscvMachine.
+Local Coercion word.unsigned : word.rep >-> Z.
 
-Theorem garagedoor_invariant_proof: exists invariant: RiscvMachine -> Prop,
-   (forall mach,
-    getPc mach = code_start ml /\
-    getNextPc mach = getPc mach ^+ /[4] /\
-    regs_initialized (getRegs mach) /\
-    getLog mach = [] /\
-    (forall a, \[code_start ml] <= \[a] < \[code_pastend ml] -> In a (getXAddrs mach)) /\
-    valid_machine mach /\
-    (imem (code_start ml) (code_pastend ml) garagedoor_insns ⋆
-     mem_available (heap_start ml) (heap_pastend ml) ⋆
-     mem_available (stack_start ml) (stack_pastend ml)) (getMem mach)
-    -> invariant mach) /\
-   (forall mach, invariant mach -> run_one_riscv_instr mach invariant) /\
-   (forall mach, invariant mach -> exists extend s0 s1, good_trace s0 (getLog mach ;++ extend) s1).
+Definition initial_conditions mach :=
+  mach.(getPc) = code_start ml /\
+  mach.(getNextPc) = word.add mach.(getPc) (word.of_Z 4) /\
+  regs_initialized (getRegs mach) /\
+  mach.(getLog) = [] /\
+  (forall a : word32, code_start ml <= a < code_pastend ml -> In a (getXAddrs mach)) /\
+  valid_machine mach /\
+  (imem (code_start ml) (code_pastend ml) garagedoor_insns ⋆
+   mem_available (heap_start ml) (heap_pastend ml) ⋆
+   mem_available (stack_start ml) (stack_pastend ml)) (getMem mach).
+
+Lemma initial_conditions_sufficient mach :
+  initial_conditions mach ->
+  CompilerInvariant.initial_conditions compile_ext_call ml garagedoor_spec mach.
 Proof.
-  exists (ll_inv compile_ext_call ml garagedoor_spec).
-  unshelve epose proof compiler_invariant_proofs _ _ _ _ _ garagedoor_spec as HCI; shelve_unifiable; try exact _.
-  { exact (naive_word_riscv_ok 5%nat). }
-  { eapply SortedListString.ok. }
-  { eapply compile_ext_call_correct. }
-  { intros. cbv [compile_ext_call compile_interact]; BreakMatch.break_match; trivial. }
-  { exact ml_ok. }
-  ssplit; intros; ssplit; eapply HCI; eauto; [].
-
-  clear HCI. destruct H as (? & ? & ? & ? & ? & ? & ?).
+  intros (? & ? & ? & ? & ? & ? & ?).
   econstructor.
   eexists garagedoor_insns.
   eexists garagedoor_finfo.
@@ -272,7 +266,7 @@ Proof.
     rewrite <-(List.firstn_skipn 1520 (skipn 32 (skipn 64 anybytes))) in M.
     do 2 seprewrite_in @Array.bytearray_append M.
     rewrite ?firstn_length, ?skipn_length, ?Nat2Z.inj_min, ?Nat2Z.inj_sub, H6_emp0 in M.
-    cbv [isReady garagedoor_spec good_trace]. eexists (_,_), (_,_); fwd. eauto.
+    cbv [isReady garagedoor_spec good_trace good_transitions]. eexists (_,_), (_,_); fwd. eauto.
     { rewrite <-app_nil_l. eapply TracePredicate.concat_app; eauto. econstructor. }
     cbv [memrep]. ssplit.
     { use_sep_assumption. cancel.
@@ -289,15 +283,40 @@ Proof.
       [|eapply link_loopfn]; try eassumption.
     intros ? ? ? ?; repeat straightline; eapply good_trace_from_isRead.
     eexists; fwd; try eassumption.
-    cbv [good_trace] in *; repeat straightline.
+    cbv [good_trace good_transitions] in *; repeat straightline.
     { subst a.  (eexists; split; [eapply Forall2_app; eauto|]).
       eapply stateful_app_r, stateful_singleton; eauto. } }
+Qed.
 
-  Unshelve.
-  all : trivial using SortedListString.ok.
+Theorem garagedoor_invariant_proof: exists invariant: RiscvMachine -> Prop,
+   (forall mach, initial_conditions mach -> invariant mach) /\
+   (forall mach, invariant mach -> run1 mach invariant) /\
+   (forall mach, invariant mach -> exists extend, good_trace (getLog mach ;++ extend)).
+Proof.
+  exists (ll_inv compile_ext_call ml garagedoor_spec).
+  unshelve epose proof compiler_invariant_proofs _ _ _ _ _ garagedoor_spec as HCI; shelve_unifiable; try exact _.
+  { exact (naive_word_riscv_ok 5%nat). }
+  { eapply SortedListString.ok. }
+  { eapply @compile_ext_call_correct; try exact _; eapply @SortedListString.ok. }
+  { intros. cbv [compile_ext_call compile_interact]; BreakMatch.break_match; trivial. }
+  { exact ml_ok. }
+  ssplit; intros; ssplit; eapply HCI; eauto using initial_conditions_sufficient.
+Qed.
+
+Import OmniSmallstepCombinators.
+
+Theorem garagedoor_correct mach : initial_conditions mach ->
+  always run1 (eventually run1 (fun mach' => good_trace mach'.(getLog))) mach.
+Proof.
+  intros H%initial_conditions_sufficient; revert H.
+  unshelve Tactics.rapply @always_eventually_good_trace; trivial using ml_ok, @Naive.word32_ok.
+  { eapply (naive_word_riscv_ok 5%nat). }
+  { eapply @SortedListString.ok. }
+  { eapply @compile_ext_call_correct; try exact _. eapply @SortedListString.ok. }
 Qed.
 
 (*
 Print Assumptions link_loopfn. (* Closed under the global context *)
 Print Assumptions garagedoor_invariant_proof. (* propositional_extensionality, functional_extensionality_dep *)
+Print Assumptions garagedoor_correct. (* propositional_extensionality, functional_extensionality_dep *)
 *)
