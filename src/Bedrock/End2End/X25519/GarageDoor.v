@@ -23,18 +23,7 @@ Require Import bedrock2Examples.memequal.
 Require Import bedrock2Examples.memswap.
 Require Import bedrock2Examples.memconst.
 Require Import Rupicola.Examples.Net.IPChecksum.IPChecksum.
-
-(******)
-
 Require Crypto.Bedrock.End2End.RupicolaCrypto.ChaCha20.
-(*
-Require bedrock2.BasicC32Semantics.
-Goal bedrock2.BasicC32Semantics.ext_spec = bedrock2.FE310CSemantics.ext_spec.
-  reflexivity.
-  cbn.
-Require bedrock2.FE310CSemantics*)
-
-(******)
 
 Local Open Scope string_scope.
 Import Syntax Syntax.Coercions NotationsCustomEntry.
@@ -214,7 +203,7 @@ Definition garagedoor_iteration : state -> list (lightbulb_spec.OP _) -> state -
       (TracePredicate.one ("st", lightbulb_spec.GPIO_DATA_ADDR _, action))) ioh
    /\ (
     let m := firstn 16 garagedoor_payload in
-    let v := le_split 32 (M.X0 (Curve25519.M.scalarmult (le_combine sk mod 2^255) garageowner_P)) in
+    let v := x25519_spec sk garageowner_P in
     exists set0 set1 : Naive.word32,
     (word.unsigned set0 = 1 <-> firstn 16 v = m) /\
     (word.unsigned set1 = 1 <->  skipn 16 v = m) /\
@@ -234,7 +223,7 @@ Definition garagedoor_iteration : state -> list (lightbulb_spec.OP _) -> state -
      udp_local ++ udp_remote ++
      be2 udp_length ++ be2 0 ++
      garagedoor_header ++
-     le_split 32 (M.X0 (Curve25519.M.scalarmult (le_combine sk mod 2^255) Curve25519.M.B))))
+     x25519_spec sk Curve25519.M.B))
   ioh /\ SEED=seed /\ SK=sk.
 
 Local Instance spec_of_recvEthernet : spec_of "recvEthernet" := spec_of_recvEthernet.
@@ -402,16 +391,16 @@ Proof.
     subst pPPP.
     seprewrite_in_by (Array.bytearray_append cmp1) H33 SepAutoArray.listZnWords.
 
-    remember (le_split 32 (M.X0 (Curve25519.M.scalarmult (le_combine sk mod 2^255) garageowner_P))) as vv.
+    remember (x25519_spec sk garageowner_P) as vv.
     repeat straightline.
     pose proof (List.firstn_skipn 16 vv) as Hvv.
-    pose proof (@firstn_length_le _ vv 16 ltac:(subst vv; rewrite ?length_le_split; ZnWords)).
+    pose proof (@firstn_length_le _ vv 16 ltac:(subst vv; rewrite length_x25519_spec; ZnWords)).
     pose proof skipn_length 16 vv.
     forget (List.firstn 16 vv) as vv0.
     forget (List.skipn 16 vv) as vv1.
     subst vv.
     rewrite <-Hvv in H33.
-    rewrite length_le_split in *.
+    rewrite length_x25519_spec in *.
     seprewrite_in_by (Array.bytearray_append vv0) H33 SepAutoArray.listZnWords.
 
     repeat straightline.
@@ -864,10 +853,10 @@ Optimize Proof. Optimize Heap.
   progress rewrite ?word.unsigned_sru_nowrap, ?word.unsigned_of_Z_nowrap in H37 by ZnWords.
 
   straightline_call; [ssplit; cycle -1|]; try ecancel_assumption.
-  { rewrite ?app_length, ?length_le_split. SepAutoArray.listZnWords. }
+  { rewrite ?app_length, ?length_x25519_spec. SepAutoArray.listZnWords. }
   { ZnWords. }
 
-  pose proof length_le_split 32 (F.to_Z (M.X0 (Curve25519.M.scalarmult (le_combine sk mod 2^255) Curve25519.M.B))) as Hpkl.
+  pose proof length_x25519_spec sk Curve25519.M.B as Hpkl.
   seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
   seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
 

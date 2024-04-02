@@ -93,6 +93,8 @@ Proof.
   pose_correctness spi_write_ok.
   pose_correctness spi_read_ok.
   pose_correctness (ip_checksum_br2fn_ok I).
+  pose_correctness memmove.memmove_ok_array.
+  pose_correctness clamp.clamp_correct.
   pose_correctness x25519_base_ok.
   pose_correctness fe25519_from_word_correct.
   pose_correctness fe25519_to_bytes_correct.

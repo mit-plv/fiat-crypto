@@ -6,6 +6,8 @@ Require Import Crypto.Spec.MontgomeryCurve.
 Require Import Crypto.Spec.Curve25519.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Syntax.
+Require Import bedrock2Examples.memmove.
+Require Import bedrock2.SepAutoArray.
 Require Import compiler.Pipeline.
 Require Import compiler.Symbols.
 Require Import compiler.MMIO.
@@ -18,6 +20,7 @@ Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
 Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
 Require Import Crypto.Bedrock.End2End.X25519.Field25519.
+Require Import Crypto.Bedrock.End2End.X25519.clamp.
 Local Open Scope string_scope.
 Import ListNotations.
 
@@ -32,18 +35,24 @@ Proof. vm_compute. subst; exact eq_refl. Qed.
 Require Import bedrock2.NotationsCustomEntry.
 
 Definition x25519 := func! (out, sk, pk) {
+  stackalloc 32 as K;
+  memmove(K, sk, $32);
+  clamp(K);
   stackalloc 40 as U;
   fe25519_from_bytes(U, pk);
   stackalloc 40 as OUT;
-  montladder(OUT, sk, U);
+  montladder(OUT, K, U);
   fe25519_to_bytes(out, OUT)
 }.
 
 Definition x25519_base := func! (out, sk) {
+  stackalloc 32 as K;
+  memmove(K, sk, $32);
+  clamp(K);
   stackalloc 40 as U;
   fe25519_from_word(U, $9);
   stackalloc 40 as OUT;
-  montladder(OUT, sk, U);
+  montladder(OUT, K, U);
   fe25519_to_bytes(out, OUT)
 }.
 
@@ -51,19 +60,27 @@ Import LittleEndianList.
 Local Coercion F.to_Z : F >-> Z.
 Require Import bedrock2.WeakestPrecondition bedrock2.Semantics bedrock2.ProgramLogic.
 Require Import bedrock2.Syntax bedrock2.Map.SeparationLogic.
-Require Import coqutil.Map.OfListWord Coq.Init.Byte coqutil.Byte.
+Require Import Coq.Init.Byte coqutil.Byte.
 Import ProgramLogic.Coercions.
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
 Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
+
+Definition x25519_spec s P := le_split 32 (M.X0 (Curve25519.M.scalarmult (Curve25519.clamp (le_combine s)) P)).
+Lemma length_x25519_spec s P : length (x25519_spec s P) = 32%nat. Proof. apply length_le_split. Qed.
 
 Global Instance spec_of_x25519 : spec_of "x25519" :=
   fnspec! "x25519" out sk pk / (o s p : list Byte.byte) P (R : _ -> Prop),
   { requires t m := m =* s$@sk * p$@pk * o$@out * R /\
       length s = 32%nat /\ length p = 32%nat /\ length o = 32%nat /\
       byte.unsigned (nth 31 p x00) <= 0x7f /\ Field.feval_bytes(field_parameters:=field_parameters) p = Curve25519.M.X0 P;
-    ensures t' m := t=t' /\ m=* s$@sk ⋆ p$@pk ⋆ R ⋆
-      (le_split 32 (M.X0 (Curve25519.M.scalarmult (le_combine s mod 2^255) P))$@out) }.
+    ensures t' m := t=t' /\ m=* s$@sk ⋆ p$@pk ⋆ R ⋆ (x25519_spec s P)$@out }.
 
+Global Instance spec_of_x25519_base : spec_of "x25519_base" :=
+  fnspec! "x25519_base" out sk / (o s : list Byte.byte) (R : _ -> Prop),
+  { requires t m := m =* s$@sk * o$@out * R /\ length s = 32%nat /\ length o = 32%nat;
+    ensures t' m := t=t' /\ m=* s$@sk ⋆ R ⋆ (x25519_spec s Curve25519.M.B)$@out }.
+
+Local Instance spec_of_memmove_array : spec_of "memmove" := spec_of_memmove_array.
 Local Instance spec_of_fe25519_from_word : spec_of "fe25519_from_word" := Field.spec_of_from_word.
 Local Instance spec_of_fe25519_from_bytes : spec_of "fe25519_from_bytes" := Field.spec_of_from_bytes.
 Local Instance spec_of_fe25519_to_bytes : spec_of "fe25519_to_bytes" := Field.spec_of_to_bytes.
@@ -81,12 +98,16 @@ Local Arguments word.of_Z : simpl never.
 Lemma x25519_ok : program_logic_goal_for_function! x25519.
 Proof.
   repeat straightline.
-  seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a) H2. { transitivity 40%nat; trivial. }
+  
+  straightline_call; ssplit; try ecancel_assumption; repeat straightline; try listZnWords; [].
+  straightline_call; ssplit; try ecancel_assumption; repeat straightline; try listZnWords; [].
+
+  seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a0) H17. { transitivity 40%nat; trivial. }
 
   straightline_call; ssplit.
   { eexists. ecancel_assumption. }
   { cbv [Field.FElem].
-    use_sep_assumption. cancel. cancel_seps_at_indices 0%nat 0%nat; cbn; trivial. eapply RelationClasses.reflexivity. }
+    use_sep_assumption. cancel. cancel_seps_at_indices 0%nat 0%nat; cbn [seps]; eapply RelationClasses.reflexivity. }
   { unfold Field.bytes_in_bounds, frep25519, field_representation, Signature.field_representation, Representation.frep.
     match goal with |- ?P ?x ?z => let y := eval cbv in x in change (P y z) end; cbn.
     repeat (destruct p as [|? p]; try (cbn [length] in *;discriminate); []).
@@ -100,7 +121,7 @@ Proof.
     eapply byte.unsigned_range. }
   repeat straightline.
 
-  seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a2) H16. { transitivity 40%nat; trivial. }
+  seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a2) H24. { transitivity 40%nat; trivial. }
 
   straightline_call; ssplit.
   { unfold FElem, Field.FElem in *; extract_ex1_and_emp_in_goal; ssplit.
@@ -109,10 +130,10 @@ Proof.
     all : eauto.
     { instantiate (1:=None). exact I. } }
   { reflexivity. }
-  { rewrite H3. vm_compute. inversion 1. }
+  { rewrite ?length_le_split. vm_compute. inversion 1. }
   repeat straightline.
 
-  specialize (H23 P ltac:(assumption)). cbv [FElem] in H23. extract_ex1_and_emp_in H23.
+  specialize (H31 P ltac:(assumption)). cbv [FElem] in H31. extract_ex1_and_emp_in H31.
   straightline_call; ssplit.
   { ecancel_assumption. }
   { transitivity 32%nat; auto. }
@@ -122,43 +143,46 @@ Proof.
   repeat straightline.
 
   cbv [Field.FElem] in *.
-  seprewrite_in @Bignum.Bignum_to_bytes H26.
-  seprewrite_in @Bignum.Bignum_to_bytes H26.
-  extract_ex1_and_emp_in H26.
+  seprewrite_in @Bignum.Bignum_to_bytes H34.
+  seprewrite_in @Bignum.Bignum_to_bytes H34.
+  extract_ex1_and_emp_in H34.
+  pose proof length_le_split 32 (Curve25519.clamp (le_combine s)).
 
   repeat straightline; intuition eauto.
-  rewrite H30 in *.
-  use_sep_assumption; cancel. reflexivity.
+  cbv [x25519_spec].
+  use_sep_assumption; cancel.
+  rewrite H38, le_combine_split.
+  do 7 Morphisms.f_equiv.
+  pose proof clamp_range (le_combine s).
+  (rewrite_strat bottomup Z.mod_small); change (Z.of_nat (Z.to_nat (Z.log2 (Z.pos order)))) with 255; try Lia.lia.
 Qed.
-
-Global Instance spec_of_x25519_base : spec_of "x25519_base" :=
-  fnspec! "x25519_base" out sk / (o s : list Byte.byte) (R : _ -> Prop),
-  { requires t m := m =* s$@sk * o$@out * R /\ length s = 32%nat /\ length o = 32%nat;
-    ensures t' m := t=t' /\ m=* s$@sk ⋆ R ⋆
-      le_split 32 (M.X0 (Curve25519.M.scalarmult (le_combine s mod 2^255) Curve25519.M.B))$@out }.
 
 Lemma x25519_base_ok : program_logic_goal_for_function! x25519_base.
 Proof.
   repeat straightline.
-  seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a) H2. { transitivity 40%nat; trivial. }
+
+  straightline_call; ssplit; try ecancel_assumption; repeat straightline; try listZnWords; [].
+  straightline_call; ssplit; try ecancel_assumption; repeat straightline; try listZnWords; [].
+
+  seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a0) H14. { transitivity 40%nat; trivial. }
   straightline_call; ssplit.
   { cbv [Field.FElem]. cbn. cbv [n]. ecancel_assumption. }
   repeat straightline.
 
-  seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a2) H13. { transitivity 40%nat; trivial. }
+  seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a2) H21. { transitivity 40%nat; trivial. }
 
   straightline_call; ssplit.
   { unfold FElem, Field.FElem in *; extract_ex1_and_emp_in_goal; ssplit.
        { use_sep_assumption. cancel; repeat ecancel_step.
-       cancel_seps_at_indices 0%nat 0%nat; trivial. cbn; reflexivity. }
+       cancel_seps_at_indices 0%nat 0%nat; trivial. cbn [seps]. reflexivity. }
     all : eauto.
     { instantiate (1:=None). exact I. } }
   { reflexivity. }
-  { rewrite H3. vm_compute. inversion 1. }
+  { rewrite length_le_split. vm_compute. inversion 1. }
   repeat straightline.
 
-  specialize (H20 Curve25519.M.B eq_refl).
-  unfold FElem in H20. extract_ex1_and_emp_in H20.
+  specialize (H28 Curve25519.M.B eq_refl).
+  unfold FElem in H28. extract_ex1_and_emp_in H28.
   straightline_call; ssplit.
   { ecancel_assumption. }
   { transitivity 32%nat; auto. }
@@ -168,13 +192,18 @@ Proof.
   repeat straightline.
 
   cbv [Field.FElem] in *.
-  seprewrite_in @Bignum.Bignum_to_bytes H23.
-  seprewrite_in @Bignum.Bignum_to_bytes H23.
-  extract_ex1_and_emp_in H23.
+  seprewrite_in @Bignum.Bignum_to_bytes H31.
+  seprewrite_in @Bignum.Bignum_to_bytes H31.
+  extract_ex1_and_emp_in H31.
+  pose proof length_le_split 32 (Curve25519.clamp (le_combine s)).
 
   repeat straightline; intuition eauto.
-  rewrite H27 in *.
-  use_sep_assumption; cancel. reflexivity.
+  cbv [x25519_spec].
+  use_sep_assumption; cancel.
+  rewrite H35, le_combine_split.
+  do 7 Morphisms.f_equiv.
+  pose proof clamp_range (le_combine s).
+  (rewrite_strat bottomup Z.mod_small); change (Z.of_nat (Z.to_nat (Z.log2 (Z.pos order)))) with 255; try Lia.lia.
 Qed.
 
 Require Import coqutil.Word.Naive.
@@ -197,7 +226,9 @@ Definition funcs :=
     fe25519_add;
     fe25519_sub;
     fe25519_square;
-    fe25519_scmula24 ].
+    fe25519_scmula24;
+    clamp;
+    memmove ].
 
 Require Import bedrock2.ToCString.
 Definition montladder_c_module := list_byte_of_string (ToCString.c_module funcs).

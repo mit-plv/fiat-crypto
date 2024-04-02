@@ -109,3 +109,5 @@ Module M.
   Definition X0 := (M.X0(Feq:=eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)).
   Definition scalarmult := (@ScalarMult.scalarmult_ref _ add M.zero opp).
 End M.
+
+Definition clamp k := let s := k/8 mod 2^251 in 8*(2^251 + s).
