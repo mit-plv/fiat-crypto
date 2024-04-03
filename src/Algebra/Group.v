@@ -87,6 +87,16 @@ Section Homomorphism.
     apply inv_unique.
     rewrite <- Monoid.homomorphism, left_inverse, homomorphism_id; reflexivity.
   Qed.
+
+  Lemma compose_homomorphism
+    {H2 eq2 op2 id2 inv2} {groupH2:@group H2 eq2 op2 id2 inv2}
+    {phi2:H->H2}`{homom2:@Monoid.is_homomorphism H eq op H2 eq2 op2 phi2}
+    : @Monoid.is_homomorphism G EQ OP H2 eq2 op2 (fun x => phi2 (phi x)).
+  Proof.
+    split; repeat intro.
+    { do 2 rewrite homomorphism. f_equiv. }
+    { f_equiv. f_equiv. trivial. }
+  Qed.
 End Homomorphism.
 
 Section GroupByIsomorphism.
