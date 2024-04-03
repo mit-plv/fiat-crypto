@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith. Local Open Scope Z_scope.
+Require Import Crypto.Util.Decidable.
 Require Import Crypto.Spec.ModularArithmetic. Local Open Scope F_scope.
 Require Import Crypto.Curves.EdwardsMontgomery. Import M.
 Require Import Crypto.Curves.Edwards.TwistIsomorphism.
@@ -11,19 +12,26 @@ Import MontgomeryCurve CompleteEdwardsCurve.
 
 Local Definition a' := (M.a + (1 + 1)) / M.b.
 Local Definition d' := (M.a - (1 + 1)) / M.b.
-Definition r := sqrt (F.inv ((a' / M.b) / E.a)).
+Local Definition r := sqrt (F.inv ((a' / M.b) / E.a)).
 
-Local Lemma is_twist : E.a * d' = a' * E.d. Proof. Decidable.vm_decide. Qed.
-Local Lemma nonzero_a' : a' <> 0. Proof. Decidable.vm_decide. Qed.
-Local Lemma r_correct : E.a = r * r * a'. Proof. Decidable.vm_decide. Qed.
+Local Lemma is_twist : E.a * d' = a' * E.d. Proof. vm_decide. Qed.
+Local Lemma nonzero_a' : a' <> 0. Proof. vm_decide. Qed.
+Local Lemma r_correct : E.a = r * r * a'. Proof. vm_decide. Qed.
 
-Definition Montgomery_of_Edwards (P : Curve25519.E.point) : Curve25519.M.point :=
-  @of_Edwards _ _ _ _ _  _ _ _ _ _ field _ char_ge_3 M.a M.b M.b_nonzero a' d' eq_refl eq_refl nonzero_a'
-    (@E.point2_of_point1 _ _ _ _ _ _ _ _ _ _ field _ E.a E.d a' d' is_twist E.nonzero_a nonzero_a' r r_correct P).
-
-Definition Edwards_of_Montgomery (P : Curve25519.M.point) : Curve25519.E.point :=
+Module E.
+Definition of_Montgomery (P : Curve25519.M.point) : Curve25519.E.point :=
  @E.point1_of_point2 _ _ _ _ _ _ _ _ _ _ field _ E.a E.d a' d' is_twist E.nonzero_a nonzero_a' r r_correct
    (@to_Edwards _ _ _ _ _ _ _ _ _ _ field _ M.a M.b M.b_nonzero a' d' eq_refl eq_refl nonzero_a' P).
+Lemma of_Montgomery_B : E.eq E.B (of_Montgomery M.B). Proof. vm_decide. Qed.
+End E.
+
+Module M.
+Definition of_Edwards (P : Curve25519.E.point) : Curve25519.M.point :=
+  @of_Edwards _ _ _ _ _  _ _ _ _ _ field _ char_ge_3 M.a M.b M.b_nonzero a' d' eq_refl eq_refl nonzero_a'
+    (@E.point2_of_point1 _ _ _ _ _ _ _ _ _ _ field _ E.a E.d a' d' is_twist E.nonzero_a nonzero_a' r r_correct P).
+Lemma of_Edwards_B : M.eq M.B (of_Edwards E.B). Proof.
+Proof. simple notypeclasses refine (@dec_bool _ _ _). apply Affine.M.Decidable_eq. vm_decide. Qed.
+End M.
 
 Local Notation Eopp := ((@AffineProofs.E.opp _ _ _ _ _ _ _ _ _ _ field _ E.a E.d E.nonzero_a)).
 
@@ -46,6 +54,6 @@ Proof.
   pose proof Group.compose_homomorphism(homom:=cb)(homom2:=ba)(groupH2:=ltac:(eapply A)) as ca.
   split; try exact ac; try exact ca; try exact A; try exact C.
   Unshelve.
-  all : try (pose (@PrimeFieldTheorems.F.Decidable_square p prime_p eq_refl); Decidable.vm_decide).
-  all : try (eapply Hierarchy.char_ge_weaken; try apply ModularArithmeticTheorems.F.char_gt; Decidable.vm_decide).
+  all : try (pose (@PrimeFieldTheorems.F.Decidable_square p prime_p eq_refl); vm_decide).
+  all : try (eapply Hierarchy.char_ge_weaken; try apply ModularArithmeticTheorems.F.char_gt; vm_decide).
 Qed.
