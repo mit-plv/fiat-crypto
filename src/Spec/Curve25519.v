@@ -82,7 +82,17 @@ Require Import Spec.CompleteEdwardsCurve.
 Module E.
   Definition a : F := F.opp 1.
   Definition d : F := F.div (F.opp (F.of_Z _ 121665)) (F.of_Z _ 121666).
+
+  Lemma nonzero_a : a <> F.zero. Proof. Decidable.vm_decide. Qed.
+  Lemma square_a : exists sqrt_a, F.mul sqrt_a sqrt_a = a.
+  Proof. epose (@PrimeFieldTheorems.F.Decidable_square p prime_p eq_refl); Decidable.vm_decide. Qed.
+  Lemma nonsquare_d : forall x, F.mul x x <> d.
+  Proof. epose (@PrimeFieldTheorems.F.Decidable_square p prime_p eq_refl); Decidable.vm_decide. Qed.
+
   Definition point := @E.point F eq F.one F.add F.mul a d.
+  Definition add := E.add(field:=field)(char_ge_3:=char_ge_3)(a:=a)(d:=d)
+    (nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d).
+  Definition zero := E.zero(field:=field)(a:=a)(d:=d)(nonzero_a:=nonzero_a).
   Definition B : E.point.
     refine (
     exist _ (F.of_Z _ 15112221349535400772501151409588531511454012693041857206046113283949847762202, F.div (F.of_Z _ 4) (F.of_Z _ 5)) _).
