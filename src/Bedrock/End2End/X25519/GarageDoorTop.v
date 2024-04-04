@@ -172,7 +172,7 @@ Definition only_mmio_satisfying P t :=
 Local Notation labeled_transitions := stateful.
 Local Notation boot_seq := BootSeq.
 
-Definition protocol_spec t := exists s s', labeled_transitions protocol_step s s' t.
+Definition protocol_spec l := exists s s', labeled_transitions protocol_step s s' l.
 Definition io_spec : list LogItem -> Prop := only_mmio_satisfying (boot_seq +++ protocol_spec).
 
 Import ExprImpEventLoopSpec.
