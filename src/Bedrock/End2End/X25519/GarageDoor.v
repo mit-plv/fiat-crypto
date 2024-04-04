@@ -174,7 +174,13 @@ Local Coercion Z.b2z : bool >-> Z.
 
 Record state := { prng_state : list byte ; x25519_ephemeral_secret : list byte }.
 
-Definition protocol_step : state -> list _ -> state -> Prop :=
+Local Notation MMIO := (string * word.rep * word.rep)%type.
+Goal True.
+  pose (lightbulb_spec.lan9250_writepacket Naive.word32 :
+   list Init.Byte.byte -> list MMIO -> Prop).
+Abort.
+
+Definition protocol_step : state -> list MMIO -> state -> Prop :=
   fun '(Build_state seed sk) ioh '(Build_state SEED SK) =>
   (lightbulb_spec.lan9250_recv_no_packet _ ioh \/
     lightbulb_spec.lan9250_recv_packet_too_long _ ioh \/
