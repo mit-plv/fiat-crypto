@@ -172,23 +172,65 @@ Definition only_mmio_satisfying P t :=
 Local Notation labeled_transitions := stateful.
 Local Notation boot_seq := BootSeq.
 
-Definition protocol_invariant (s s' : state) (trace : list RiscvMachine.LogItem) :=
-  only_mmio_satisfying (boot_seq +++ labeled_transitions protocol_step s s') trace.
-Definition protocol_spec t := exists s s', protocol_invariant s s' t.
+Definition protocol_spec t := exists s s', labeled_transitions protocol_step s s' t.
+Definition io_spec : list LogItem -> Prop := only_mmio_satisfying (boot_seq +++ protocol_spec).
 
 Import ExprImpEventLoopSpec.
 Definition garagedoor_spec : ProgramSpec := {|
   datamem_start := MemoryLayout.heap_start ml;
   datamem_pastend := MemoryLayout.heap_pastend ml;
-  goodTrace := protocol_spec;
-  isReady t m := exists s s', protocol_invariant s' s t /\ exists bs R, memrep bs R s m |}.
+  goodTrace := io_spec;
+  isReady t m := exists s s', only_mmio_satisfying (boot_seq +++ labeled_transitions protocol_step s' s) t /\ exists bs R, memrep bs R s m |}.
 
-Lemma good_trace_from_isRead a a0 : isReady garagedoor_spec a a0 ->
+Import DestructHead.
+Lemma only_mmio_satisfying_app P Q t :
+  only_mmio_satisfying (P +++ Q) t <->
+  (only_mmio_satisfying P +++ only_mmio_satisfying Q) t.
+Proof.
+  cbv [only_mmio_satisfying mmio_trace_abstraction_relation]; split; intros;
+    repeat (destruct_head' @ex; destruct_head' @Logic.and; destruct_head' @concat);
+    subst; eauto using Forall2_app, concat_app.
+  eapply Forall2_app_inv_l in H; case H as (?&?&?&?&?); subst.
+  eapply concat_app; eauto.
+Qed.
+Lemma only_mmio_satisfying_ex [A] P t :
+  only_mmio_satisfying (fun t => exists x : A, P x t) t <->
+  exists x : A, only_mmio_satisfying (P x) t.
+Proof.
+  cbv [only_mmio_satisfying mmio_trace_abstraction_relation]; split; intros;
+    repeat (destruct_head' @ex; destruct_head' @Logic.and);
+    eauto using Forall2_app.
+Qed.
+Import Coq.Classes.Morphisms.
+Global Instance Proper_only_mmio_satisfying : 
+  Proper (Morphisms.pointwise_relation _ iff ==> Morphisms.pointwise_relation _ iff) only_mmio_satisfying.
+Proof.
+  cbv [only_mmio_satisfying mmio_trace_abstraction_relation].
+  split; intros (?&?&?); eexists; split; eauto; eapply H; eauto.
+Qed.
+Lemma concat_ex_r A B P Q (t : list A) :
+  Morphisms.pointwise_relation (list A) iff
+  (P +++ (fun t => exists x : B, Q x t)) (fun t => exists x : B, (P +++ Q x) t).
+Proof.
+  repeat intro;
+  unfold "+++"; split; intros;
+    repeat (destruct_head' @ex; destruct_head' @Logic.and; destruct_head' @concat);
+    subst; eauto 6.
+Qed.
+
+Lemma good_trace_from_isReady a a0 : isReady garagedoor_spec a a0 ->
   isReady garagedoor_spec a a0 /\
   ExprImpEventLoopSpec.goodTrace garagedoor_spec a.
 Proof.
-  cbv [isReady goodTrace garagedoor_spec protocol_spec]; intuition eauto.
-  case H as (?&?&?&?&?&H); eauto.
+  cbv [isReady goodTrace garagedoor_spec io_spec protocol_spec]; intuition eauto;
+    repeat (destruct_head' @ex; destruct_head' @Logic.and).
+  eapply Proper_only_mmio_satisfying.
+  { intros ?. eapply concat_ex_r; eauto. }
+  eapply only_mmio_satisfying_ex; eexists.
+  eapply Proper_only_mmio_satisfying.
+  { intros ?. eapply concat_ex_r; eauto. }
+  eapply only_mmio_satisfying_ex; eexists.
+  eauto.
 Qed.
 
 Lemma link_initfn : spec_of_initfn (map.of_list funcs).
@@ -266,14 +308,14 @@ Proof.
         Morphisms.f_equiv. }
       { rewrite firstn_length, skipn_length. Lia.lia. }
       { Lia.lia. } }
-    intros ? m ? ?; repeat straightline; eapply good_trace_from_isRead.
+    intros ? m ? ?; repeat straightline; eapply good_trace_from_isReady.
     subst a; rewrite app_nil_r.
     lazymatch goal with H: sep _ _ m |- _ => rename H into M end.
     rewrite <-(List.firstn_skipn 0x20 (List.firstn _ anybytes)) in M.
     rewrite <-(List.firstn_skipn 1520 (skipn 32 (skipn 64 anybytes))) in M.
     do 2 seprewrite_in @Array.bytearray_append M.
     rewrite ?firstn_length, ?skipn_length, ?Nat2Z.inj_min, ?Nat2Z.inj_sub, H6_emp0 in M.
-    cbv [isReady garagedoor_spec protocol_spec protocol_invariant only_mmio_satisfying].
+    cbv [isReady garagedoor_spec protocol_spec io_spec only_mmio_satisfying].
     eexists (Build_state _ _), (Build_state _ _); fwd. eauto.
     { rewrite <-app_nil_l. eapply TracePredicate.concat_app; eauto. econstructor. }
     cbv [memrep]. ssplit.
@@ -285,13 +327,14 @@ Proof.
     all : repeat rewrite ?firstn_length, ?skipn_length; try Lia.lia. }
 
   {  match goal with H : goodTrace _ _ |- _ => clear H end.
-    cbv [isReady goodTrace protocol_spec protocol_invariant garagedoor_spec] in *; repeat straightline.
+    cbv [isReady goodTrace protocol_spec io_spec garagedoor_spec] in *; repeat straightline.
     DestructHead.destruct_head' state.
     Tactics.rapply WeakestPreconditionProperties.Proper_call;
       [|eapply link_loopfn]; try eassumption.
-    intros ? ? ? ?; repeat straightline; eapply good_trace_from_isRead.
+    intros ? ? ? ?; repeat straightline; eapply good_trace_from_isReady.
     eexists; fwd; try eassumption.
-    cbv [protocol_spec protocol_invariant only_mmio_satisfying] in *; repeat straightline.
+    cbv [only_mmio_satisfying protocol_spec io_spec] in *; repeat straightline.
+    try move H6 at bottom.
     { subst a.  (eexists; split; [eapply Forall2_app; eauto|]).
       eapply stateful_app_r, stateful_singleton; eauto. } }
 Qed.
@@ -299,7 +342,7 @@ Qed.
 Theorem garagedoor_invariant_proof: exists invariant: RiscvMachine -> Prop,
    (forall mach, initial_conditions mach -> invariant mach) /\
    (forall mach, invariant mach -> run1 mach invariant) /\
-   (forall mach, invariant mach -> exists extend, protocol_spec (getLog mach ;++ extend)).
+   (forall mach, invariant mach -> exists extend, io_spec (getLog mach ;++ extend)).
 Proof.
   exists (ll_inv compile_ext_call ml garagedoor_spec).
   unshelve epose proof compiler_invariant_proofs _ _ _ _ _ garagedoor_spec as HCI; shelve_unifiable; try exact _.
@@ -313,8 +356,8 @@ Qed.
 
 Import OmniSmallstepCombinators.
 
-Theorem garagedoor_correct : forall mach, initial_conditions mach ->
-  always run1 (eventually run1 (fun mach' => protocol_spec mach'.(getLog))) mach.
+Theorem garagedoor_correct : forall mach : RiscvMachine, initial_conditions mach ->
+  always run1 (eventually run1 (fun mach' => io_spec mach'.(getLog))) mach.
 Proof.
   intros ? H%initial_conditions_sufficient; revert H.
   unshelve Tactics.rapply @always_eventually_good_trace; trivial using ml_ok, @Naive.word32_ok.
