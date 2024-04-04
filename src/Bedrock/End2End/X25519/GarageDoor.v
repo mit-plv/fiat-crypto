@@ -172,10 +172,10 @@ Local Definition be2 z := rev (le_split 2 z).
 Local Coercion to_list : tuple >-> list.
 Local Coercion Z.b2z : bool >-> Z.
 
-Definition state : Type := list byte * list byte. (* seed, xs25519 secret key *)
+Record state := { prng_state : list byte ; x25519_ephemeral_secret : list byte }.
 
-Definition garagedoor_iteration : state -> list (lightbulb_spec.OP _) -> state -> Prop :=
-  fun '(seed, sk) ioh '(SEED, SK) =>
+Definition protocol_step : state -> list _ -> state -> Prop :=
+  fun '(Build_state seed sk) ioh '(Build_state SEED SK) =>
   (lightbulb_spec.lan9250_recv_no_packet _ ioh \/
     lightbulb_spec.lan9250_recv_packet_too_long _ ioh \/
     TracePredicate.concat TracePredicate.any (lightbulb_spec.spi_timeout _) ioh) /\ SEED=seed /\ SK=sk \/
@@ -232,7 +232,7 @@ Local Instance spec_of_memswap : spec_of "memswap" := spec_of_memswap.
 Local Instance spec_of_memequal : spec_of "memequal" := spec_of_memequal.
 
 
-Definition memrep bs R : state -> map.rep(map:=SortedListWord.map _ _) -> Prop := fun '(seed, sk) m =>
+Definition memrep bs R : state -> map.rep(map:=SortedListWord.map _ _) -> Prop := fun '(Build_state seed sk) m =>
   m =*
     seed$@(word.of_Z ST) *
     sk$@(word.add (word.of_Z ST) (word.of_Z 32)) *
@@ -244,11 +244,11 @@ Definition memrep bs R : state -> map.rep(map:=SortedListWord.map _ _) -> Prop :
 
 Global Instance spec_of_loopfn : spec_of "loopfn" :=
   fnspec! "loopfn" / seed sk bs R,
-  { requires t m := memrep bs R (seed, sk) m;
-    ensures T M := exists SEED SK BS, memrep BS R (SEED, SK) M /\
+  { requires t m := memrep bs R (Build_state seed sk) m;
+    ensures T M := exists SEED SK BS, memrep BS R (Build_state SEED SK) M /\
     exists iol, T = iol ++ t /\
     exists ioh, SPI.mmio_trace_abstraction_relation ioh iol /\
-    garagedoor_iteration (seed, sk) ioh (SEED, SK) }.
+    protocol_step (Build_state seed sk) ioh (Build_state SEED SK) }.
 
 Import ZnWords.
 Import coqutil.Tactics.autoforward.
@@ -260,7 +260,7 @@ Local Existing Instance ChaCha20.spec_of_chacha20.
 Lemma loopfn_ok : program_logic_goal_for_function! loopfn.
 Proof.
   straightline.
-  cbv [memrep garagedoor_iteration] in *.
+  cbv [memrep protocol_step] in *.
   repeat straightline.
   rename H11 into Lseed. rename H12 into Lsk. rename H13 into H11.
   straightline_call; try ecancel_assumption; trivial; repeat straightline.
