@@ -44,9 +44,9 @@ Local Arguments of_Edwards {_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _} _ _ { _ _ _ }.
 Lemma EdwardsMontgomery25519 : @Group.isomorphic_commutative_groups
        Curve25519.E.point E.eq Curve25519.E.add Curve25519.E.zero Eopp Curve25519.M.point
        M.eq Curve25519.M.add M.zero Curve25519.M.opp
-       Montgomery_of_Edwards Edwards_of_Montgomery.
+       M.of_Edwards E.of_Montgomery.
 Proof.
-  cbv [Montgomery_of_Edwards Edwards_of_Montgomery].
+  cbv [M.of_Edwards E.of_Montgomery].
   epose proof E.twist_isomorphism(a1:=E.a)(a2:=a')(d1:=E.d)(d2:=d')(r:=r) as AB.
   epose proof EdwardsMontgomeryIsomorphism(a:=Curve25519.M.a)(b:=Curve25519.M.b)as BC.
   destruct AB as [A B ab ba], BC as [_ C bc cb].
