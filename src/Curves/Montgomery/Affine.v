@@ -31,6 +31,8 @@ Module M.
     Local Notation add := (M.add(b_nonzero:=b_nonzero)).
     Local Notation point := (@M.point F Feq Fadd Fmul a b).
 
+    Global Instance Decidable_eq : Decidable.DecidableRel (@M.eq _ Feq Fadd Fmul a b) := _.
+
     Section MontgomeryWeierstrass.
       Local Notation "2" := (1+1).
       Local Notation "3" := (1+2).

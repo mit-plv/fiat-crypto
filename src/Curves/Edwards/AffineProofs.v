@@ -46,6 +46,8 @@ Module E.
     Program Definition opp (P:point) : point := (Fopp (fst P), (snd P)).
     Next Obligation. match goal with P : point |- _ => destruct P as [ [??]?] end; cbv; fsatz. Qed.
 
+    Global Instance Decidable_eq : Decidable.DecidableRel (@E.eq _ Feq Fone Fadd Fmul a d) := _.
+
     Ltac t_step :=
       match goal with
       | _ => solve [trivial | exact _ ]

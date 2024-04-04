@@ -97,7 +97,7 @@ Module E.
     refine (
     exist _ (F.of_Z _ 15112221349535400772501151409588531511454012693041857206046113283949847762202, F.div (F.of_Z _ 4) (F.of_Z _ 5)) _).
     Decidable.vm_decide.
-  Qed.
+  Defined.
 End E.
 
 Require Import Spec.MontgomeryCurve.
