@@ -258,6 +258,11 @@ Import bedrock2.Map.Separation. Local Open Scope sep_scope.
 Require Import bedrock2.ReversedListNotations.
 Local Notation run1 := (mcomp_sat (run1 Decode.RV32IM)).
 Local Notation RiscvMachine := MetricRiscvMachine.
+Goal True.
+  pose (run1 : RiscvMachine -> (RiscvMachine -> Prop) -> Prop).
+  pose (always(iset:=Decode.RV32IM) : (RiscvMachine -> Prop) -> RiscvMachine -> Prop).
+Abort.
+
 Implicit Types mach : RiscvMachine.
 Local Coercion word.unsigned : word.rep >-> Z.
 
