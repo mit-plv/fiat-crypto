@@ -30,6 +30,7 @@ compiler.util /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/bedro
 bedrock2Examples /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/bedrock2/bedrock2/src/bedrock2Examples
 bedrock2 /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/bedrock2/bedrock2/src/bedrock2
 bedrock2.Map /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/bedrock2/bedrock2/src/bedrock2/Map
+bedrock2.old_dma /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/bedrock2/bedrock2/src/bedrock2/old_dma
 Rupicola /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/src/Rupicola
 Rupicola.Examples /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/src/Rupicola/Examples
 Rupicola.Examples.Assoc /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/src/Rupicola/Examples/Assoc
@@ -57,6 +58,7 @@ coqutil.Datatypes /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/b
 coqutil.Ltac2Lib /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/bedrock2/deps/coqutil/src/coqutil/Ltac2Lib
 coqutil.Macros /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/bedrock2/deps/coqutil/src/coqutil/Macros
 coqutil.Map /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/bedrock2/deps/coqutil/src/coqutil/Map
+coqutil.Semantics /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/bedrock2/deps/coqutil/src/coqutil/Semantics
 coqutil.Sorting /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/bedrock2/deps/coqutil/src/coqutil/Sorting
 coqutil.Tactics /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/bedrock2/deps/coqutil/src/coqutil/Tactics
 coqutil.Word /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/rupicola/bedrock2/deps/coqutil/src/coqutil/Word
@@ -121,6 +123,7 @@ Crypto.Curves.Edwards.XYZT /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/s
 Crypto.Curves.Montgomery /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/src/Curves/Montgomery
 Crypto.Curves.TableMult /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/src/Curves/TableMult
 Crypto.Curves.Weierstrass /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/src/Curves/Weierstrass
+Crypto.Curves.Weierstrass.Jacobian /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/src/Curves/Weierstrass/Jacobian
 Crypto.ExtractionHaskell /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/src/ExtractionHaskell
 Crypto.ExtractionJsOfOCaml /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/src/ExtractionJsOfOCaml
 Crypto.ExtractionOCaml /home/sam/git/fiat-crypto-garagedoor-loc-coq-8.18.0/src/ExtractionOCaml

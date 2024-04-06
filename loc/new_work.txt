@@ -17,11 +17,11 @@ Crypto.Bedrock.End2End.RupicolaCrypto.Broadcast
 
 ## Montgomery ladder (x25519, x25519_base) [Bedrock2]
 Crypto.Bedrock.End2End.X25519.MontgomeryLadder
+Crypto.Bedrock.End2End.X25519.clamp
 
 ## Montgomery ladder (montladder, ladderstep) [Rupicola]
 Crypto.Bedrock.Group.ScalarMult.LadderStep
 Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder
-Crypto.Bedrock.Group.ScalarMult.MontgomeryEquivalence
 Crypto.Bedrock.Group.ScalarMult.CSwap
 
 ## Modular inversion (fe25519_inv) [simpl, Rupicola]

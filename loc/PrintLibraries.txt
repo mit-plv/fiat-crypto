@@ -285,6 +285,77 @@ Loaded library files:
   Coq.ZArith.Zwf
   Coqprime.Z.Pmod
   Coqprime.PrimalityTest.PocklingtonCertificat
+  Crypto.Algebra.Hierarchy
+  Crypto.Util.ZUtil.Peano
+  Crypto.Util.Logic
+  Crypto.Util.Relations
+  Crypto.Algebra.Monoid
+  Crypto.Algebra.Group
+  Crypto.Algebra.ScalarMult
+  Coq.setoid_ring.Algebra_syntax
+  Coq.setoid_ring.Ncring
+  Coq.setoid_ring.Ncring_polynom
+  Coq.setoid_ring.Ncring_initial
+  Coq.setoid_ring.Ncring_tac
+  Coq.setoid_ring.Cring
+  Crypto.Util.Tactics.OnSubterms
+  Crypto.Util.Tactics.Revert
+  Crypto.Algebra.Ring
+  Crypto.Util.Tactics.FindHyp
+  Crypto.Util.Tactics.UniquePose
+  Crypto.Util.Tactics.DebugPrint
+  Coq.setoid_ring.Integral_domain
+  Coq.nsatz.NsatzTactic
+  Crypto.Algebra.Nsatz
+  Crypto.Util.Factorize
+  Crypto.Algebra.IntegralDomain
+  Crypto.Algebra.Field
+  Crypto.Arithmetic.ModularArithmeticTheorems
+  Coq.Logic.FunctionalExtensionality
+  Coq.Logic.HLevels
+  Coq.QArith.Qabs
+  Coq.QArith.Qpower
+  Coq.QArith.Qround
+  Coq.Logic.ConstructiveEpsilon
+  Coq.Reals.Cauchy.PosExtra
+  Coq.Reals.Cauchy.QExtra
+  Coq.Reals.Cauchy.ConstructiveExtra
+  Coq.Reals.Cauchy.ConstructiveCauchyReals
+  Coq.Reals.Abstract.ConstructiveReals
+  Coq.Reals.Cauchy.ConstructiveCauchyRealsMult
+  Coq.Reals.Cauchy.ConstructiveCauchyAbs
+  Coq.QArith.QOrderedType
+  Coq.QArith.Qminmax
+  Coq.Reals.Cauchy.ConstructiveRcomplete
+  Coq.Reals.ClassicalDedekindReals
+  Coq.Reals.Abstract.ConstructiveAbs
+  Coq.Reals.Abstract.ConstructiveLimits
+  Coq.Reals.Abstract.ConstructiveLUB
+  Coq.Reals.Rdefinitions
+  Coq.Reals.Raxioms
+  Coq.Reals.Rpow_def
+  Coq.setoid_ring.RealField
+  Coq.Reals.RIneq
+  Coq.Reals.DiscrR
+  Coq.Reals.Rbase
+  Coq.Reals.R_Ifp
+  Coq.Reals.Rbasic_fun
+  Coq.Reals.R_sqr
+  Coq.Reals.SplitAbsolu
+  Coq.Reals.SplitRmult
+  Coq.Arith.Even
+  Coq.Arith.Div2
+  Coq.Reals.ArithProp
+  Coq.Reals.Rfunctions
+  Coq.nsatz.Nsatz
+  Crypto.Util.ZUtil.Tactics.ZeroBounds
+  Crypto.Arithmetic.PrimeFieldTheorems
+  Crypto.Curves.Edwards.Pre
+  Crypto.Spec.CompleteEdwardsCurve
+  Crypto.Util.Tactics.Contains
+  Crypto.Util.Tactics.SetoidSubst
+  Crypto.Util.Sum
+  Crypto.Spec.MontgomeryCurve
   Crypto.Spec.Curve25519
   coqutil.sanity
   coqutil.Datatypes.PrimitivePair
@@ -304,7 +375,6 @@ Loaded library files:
   Coq.Logic.Hurkens
   Coq.Logic.ClassicalFacts
   Coq.Logic.PropExtensionality
-  Coq.Logic.FunctionalExtensionality
   coqutil.Datatypes.PropSet
   coqutil.Map.Interface
   bedrock2.Lift1Prop
@@ -348,6 +418,7 @@ Loaded library files:
   coqutil.Map.Solver
   compiler.util.Common
   riscv.Platform.MetricLogging
+  coqutil.Tactics.invert_hyp
   coqutil.Tactics.Simp
   bedrock2.MetricLogging
   bedrock2.MetricSemantics
@@ -464,6 +535,8 @@ Loaded library files:
   bedrock2.WeakestPreconditionProperties
   compiler.UseImmediateDef
   compiler.UseImmediate
+  compiler.DeadCodeElimDef
+  compiler.DeadCodeElim
   compiler.Pipeline
   Coq.Strings.HexString
   coqutil.Map.Z_keyed_SortedListMap
@@ -479,70 +552,6 @@ Loaded library files:
   coqutil.Word.Bitwidth32
   bedrock2.FE310CSemantics
   compiler.MMIO
-  Crypto.Algebra.Hierarchy
-  Crypto.Util.ZUtil.Peano
-  Crypto.Util.Logic
-  Crypto.Util.Relations
-  Crypto.Algebra.Monoid
-  Crypto.Algebra.Group
-  Crypto.Algebra.ScalarMult
-  Coq.setoid_ring.Algebra_syntax
-  Coq.setoid_ring.Ncring
-  Coq.setoid_ring.Ncring_polynom
-  Coq.setoid_ring.Ncring_initial
-  Coq.setoid_ring.Ncring_tac
-  Coq.setoid_ring.Cring
-  Crypto.Util.Tactics.OnSubterms
-  Crypto.Util.Tactics.Revert
-  Crypto.Algebra.Ring
-  Crypto.Util.Tactics.FindHyp
-  Crypto.Util.Tactics.UniquePose
-  Crypto.Util.Tactics.DebugPrint
-  Coq.setoid_ring.Integral_domain
-  Coq.nsatz.NsatzTactic
-  Crypto.Algebra.Nsatz
-  Crypto.Util.Factorize
-  Crypto.Algebra.IntegralDomain
-  Crypto.Algebra.Field
-  Crypto.Arithmetic.ModularArithmeticTheorems
-  Coq.Logic.HLevels
-  Coq.QArith.Qabs
-  Coq.QArith.Qpower
-  Coq.QArith.Qround
-  Coq.Logic.ConstructiveEpsilon
-  Coq.Reals.Cauchy.PosExtra
-  Coq.Reals.Cauchy.QExtra
-  Coq.Reals.Cauchy.ConstructiveExtra
-  Coq.Reals.Cauchy.ConstructiveCauchyReals
-  Coq.Reals.Abstract.ConstructiveReals
-  Coq.Reals.Cauchy.ConstructiveCauchyRealsMult
-  Coq.Reals.Cauchy.ConstructiveCauchyAbs
-  Coq.QArith.QOrderedType
-  Coq.QArith.Qminmax
-  Coq.Reals.Cauchy.ConstructiveRcomplete
-  Coq.Reals.ClassicalDedekindReals
-  Coq.Reals.Abstract.ConstructiveAbs
-  Coq.Reals.Abstract.ConstructiveLimits
-  Coq.Reals.Abstract.ConstructiveLUB
-  Coq.Reals.Rdefinitions
-  Coq.Reals.Raxioms
-  Coq.Reals.Rpow_def
-  Coq.setoid_ring.RealField
-  Coq.Reals.RIneq
-  Coq.Reals.DiscrR
-  Coq.Reals.Rbase
-  Coq.Reals.R_Ifp
-  Coq.Reals.Rbasic_fun
-  Coq.Reals.R_sqr
-  Coq.Reals.SplitAbsolu
-  Coq.Reals.SplitRmult
-  Coq.Arith.Even
-  Coq.Arith.Div2
-  Coq.Reals.ArithProp
-  Coq.Reals.Rfunctions
-  Coq.nsatz.Nsatz
-  Crypto.Util.ZUtil.Tactics.ZeroBounds
-  Crypto.Arithmetic.PrimeFieldTheorems
   bedrock2.ArrayCasts
   coqutil.Tactics.letexists
   coqutil.Tactics.eabstract
@@ -627,7 +636,6 @@ Loaded library files:
   Crypto.Util.ZUtil.ZSimplify.Simple
   Crypto.Util.ZUtil.Log2
   Crypto.Util.ZUtil.Tactics.PeelLe
-  Crypto.Util.Tactics.Contains
   Crypto.Util.ZUtil.Tactics.LinearSubstitute
   Crypto.Util.ZUtil.Tactics.SplitMinMax
   Crypto.Util.ZUtil.N2Z
@@ -641,8 +649,6 @@ Loaded library files:
   Crypto.Util.ZUtil.LandLorBounds
   Crypto.Util.ZUtil.Morphisms
   Crypto.Util.ListUtil.SetoidList
-  Crypto.Util.Tactics.SetoidSubst
-  Crypto.Util.Sum
   Crypto.Util.Comparison
   Crypto.Util.PrimitiveProd
   Crypto.Util.Bool.Reflect
@@ -1043,22 +1049,23 @@ Loaded library files:
   Rupicola.Lib.Arrays
   Rupicola.Lib.SepLocals
   Crypto.Bedrock.Group.ScalarMult.CSwap
+  Crypto.Util.Loops
+  Crypto.Bedrock.Group.Loops
+  Crypto.Spec.WeierstrassCurve
+  Crypto.Curves.Montgomery.Affine
+  Crypto.Curves.Montgomery.XZ
+  Crypto.Curves.Weierstrass.Affine
+  Crypto.Curves.Weierstrass.AffineProofs
+  Crypto.Curves.Montgomery.AffineProofs
+  Crypto.Curves.Montgomery.AffineInstances
+  Crypto.Curves.Montgomery.XZProofs
   bedrock2.NotationsCustomEntry
   Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder
   coqutil.Word.Naive
   coqutil.Map.SortedListWord
   Crypto.Bedrock.Field.Translation.Parameters.FE310
   Crypto.Bedrock.End2End.X25519.Field25519
-  bedrock2.ToCString
-  riscv.Utility.RegisterNameNotations
-  riscv.Utility.InstructionNotations
-  Crypto.Bedrock.End2End.X25519.MontgomeryLadder
-  bedrock2.ReversedListNotations
-  bedrock2.TracePredicate
-  bedrock2Examples.lightbulb_spec
-  bedrock2Examples.SPI
-  bedrock2.AbsintWordToZ
-  bedrock2Examples.LAN9250
+  bedrock2Examples.memmove
   coqutil.Datatypes.Inhabited
   coqutil.Sorting.OrderToPermutation
   bedrock2.TacticError
@@ -1068,6 +1075,17 @@ Loaded library files:
   bedrock2.TransferSepsOrder
   bedrock2.SepAuto
   bedrock2.SepAutoArray
+  Crypto.Bedrock.End2End.X25519.clamp
+  bedrock2.ToCString
+  Crypto.Bedrock.End2End.X25519.MontgomeryLadder
+  bedrock2.ReversedListNotations
+  bedrock2.TracePredicate
+  bedrock2Examples.lightbulb_spec
+  bedrock2Examples.SPI
+  bedrock2.AbsintWordToZ
+  Coq.Unicode.Utf8_core
+  Coq.Unicode.Utf8
+  bedrock2Examples.LAN9250
   bedrock2Examples.lightbulb
   bedrock2Examples.memequal
   bedrock2Examples.memswap
@@ -1076,17 +1094,14 @@ Loaded library files:
   Rupicola.Examples.Net.IPChecksum.Spec
   Rupicola.Examples.Net.IPChecksum.Impl
   Rupicola.Examples.Net.IPChecksum.IPChecksum
-  Coq.Unicode.Utf8_core
-  Coq.Unicode.Utf8
   Crypto.Bedrock.End2End.RupicolaCrypto.Broadcast
   Crypto.Bedrock.End2End.RupicolaCrypto.Spec
   Crypto.Bedrock.End2End.RupicolaCrypto.ChaCha20
   Crypto.Bedrock.End2End.X25519.GarageDoor
-  compiler.NaiveRiscvWordProperties
-  Crypto.Bedrock.End2End.X25519.MontgomeryLadderProperties
   compiler.ExprImpEventLoopSpec
   compiler.ToplevelLoop
   riscv.Utility.bverify
+  coqutil.Semantics.OmniSmallstepCombinators
   compiler.CompilerInvariant
-  bedrock2.WordNotations
+  compiler.NaiveRiscvWordProperties
   Crypto.Bedrock.End2End.X25519.GarageDoorTop
