@@ -131,18 +131,13 @@ Proof.
   repeat straightline.
   lazymatch goal with
   | H : Field.feval_bytes ?x = M.X0 ?P, H' : context [montladder_gallina] |- _ =>
-      rewrite H in H'; unfold M.X0 in H';
-      rewrite (@montladder_gallina_equiv_affine (Curve25519.p) _ _ (Curve25519.field)) with
-        (b_nonzero:=Curve25519.M.b_nonzero) (char_ge_3:=Curve25519.char_ge_3) in H'
+      rewrite H in H'; unfold M.X0 in H'
   end.
-  Search M.a.
-  Print Curve25519.M.
-  Print Curve25519.M.
   lazymatch goal with
   | H : context [montladder_gallina] |- _ =>
-      rewrite montladder_gallina_equiv_affine in H;
-      unfold FElem, Field.FElem in H;
-      extract_ex1_and_emp_in H
+      rewrite (@montladder_gallina_equiv_affine (Curve25519.p) _ _ (Curve25519.field)) with
+      (b_nonzero:=Curve25519.M.b_nonzero) (char_ge_3:=Curve25519.char_ge_3) in H;
+      [ unfold FElem, Field.FElem in H; extract_ex1_and_emp_in H | Lia.lia | vm_decide | apply M.a2m4_nonsq ]
   end.
   straightline_call; ssplit.
   { ecancel_assumption. }
@@ -167,43 +162,7 @@ Proof.
   do 7 Morphisms.f_equiv.
   pose proof clamp_range (le_combine s).
   change (Z.of_nat (Z.to_nat (Z.log2 (Z.pos order)))) with 255.
-  lazymatch goal with
-  | H : Field.feval_bytes ?x = M.X0 ?P |- _ => rewrite H
-  end.
-  unfold M.X0.
-  erewrite @XZProofs.M.montladder_correct with (char_ge_3:=Curve25519.char_ge_3);
-    [ |
-    (try apply F.inv_0; try apply char_ge_28; try Lia.lia) .. ].
-  2:{
-    Search M.a24.
-    Search Field.a24.
-    Search M.a.
-    
-    change Field.a24 with M.a24.
-    unfold M.a24.
-    Search ((_ / _) * _)%F.
-    Lia.lia.
-    Print field_parameters.
-    Search field_parameters.
-    Print M.a24.
-    Search Field.a24.
-    Print M.a.
-    Print Field.a24.
-    unfold Field.a24.
-    reflexivity.
-  apply F.char_gt.
   (rewrite_strat bottomup Z.mod_small); [ reflexivity | .. ]; try Lia.lia.
-  Check @XZProofs.M.montladder_correct.
-  Search Ring.char_ge.
-  (*
-goal 1 (ID 28633) is:
- Ring.char_ge 28
-goal 2 (ID 28638) is:
- ((1 + 1 + 1 + 1) * Field.a24)%F = (M.a - (1 + 1))%F
-goal 3 (ID 28639) is:
- forall r : F Curve25519.p, (r * r)%F <> (M.a * M.a - (1 + 1 + 1 + 1))%F
-
-*)
 Qed.
 
 Lemma x25519_base_ok : program_logic_goal_for_function! x25519_base.
@@ -229,8 +188,6 @@ Proof.
   { reflexivity. }
   { rewrite length_le_split. vm_compute. inversion 1. }
   repeat straightline.
-
-  specialize (H28 Curve25519.M.B eq_refl).
   unfold FElem in H28. extract_ex1_and_emp_in H28.
   straightline_call; ssplit.
   { ecancel_assumption. }
@@ -252,7 +209,18 @@ Proof.
   rewrite H35, le_combine_split.
   do 7 Morphisms.f_equiv.
   pose proof clamp_range (le_combine s).
-  (rewrite_strat bottomup Z.mod_small); change (Z.of_nat (Z.to_nat (Z.log2 (Z.pos order)))) with 255; try Lia.lia.
+  change (Z.of_nat (Z.to_nat (Z.log2 (Z.pos order)))) with 255.
+  (rewrite_strat bottomup Z.mod_small); [ | Lia.lia .. ].
+  lazymatch goal with
+  | |- montladder_gallina _ _ _ ?x = _ => change x with (M.X0 M.B)
+  end.
+  unfold M.X0.
+  rewrite (@montladder_gallina_equiv_affine (Curve25519.p) _ _ (Curve25519.field)) with
+      (b_nonzero:=Curve25519.M.b_nonzero) (char_ge_3:=Curve25519.char_ge_3);
+    [ | Lia.lia | vm_decide | apply M.a2m4_nonsq ].
+  change (Z.of_nat (Z.to_nat (Z.log2 (Z.pos order)))) with 255.
+  (rewrite_strat bottomup Z.mod_small); [ | Lia.lia .. ].
+  reflexivity.
 Qed.
 
 Require Import coqutil.Word.Naive.
@@ -292,9 +260,6 @@ Proof.
   { reflexivity. }
   { Decidable.vm_decide. }
   { Decidable.vm_decide. }
-  { Decidable.vm_decide. }
-  { eapply M.a2m4_nonsq. }
-  { exact I. }
   { reflexivity. }
   { eapply CSwap.cswap_body_correct; [|exact I|reflexivity].
     unfold field_representation, Signature.field_representation, Representation.frep; cbn; unfold n; cbv; trivial. }
