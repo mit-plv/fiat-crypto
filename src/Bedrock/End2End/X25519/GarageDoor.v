@@ -181,14 +181,14 @@ Goal True.
 Abort.
 
 Definition protocol_step : state -> list MMIO -> state -> Prop :=
-  fun '(Build_state seed sk) ioh '(Build_state SEED SK) =>
+  fun '(Build_state seed x25519_ephemeral_secret) ioh '(Build_state SEED SK) =>
   (lightbulb_spec.lan9250_recv_no_packet _ ioh \/
     lightbulb_spec.lan9250_recv_packet_too_long _ ioh \/
-    TracePredicate.concat TracePredicate.any (lightbulb_spec.spi_timeout _) ioh) /\ SEED=seed /\ SK=sk \/
+    TracePredicate.concat TracePredicate.any (lightbulb_spec.spi_timeout _) ioh) /\ SEED=seed /\ SK=x25519_ephemeral_secret \/
   (exists incoming, lightbulb_spec.lan9250_recv _ incoming ioh /\
   let ethertype := le_combine (rev (firstn 2 (skipn 12 incoming))) in ethertype < 1536 \/
   let ipproto := nth 23 incoming x00 in (ipproto <> x11 \/
-  length incoming <> 14+20+8 +2+16 +4 /\ length incoming <> 14+20+8 +2+32 +4)%nat) /\ SEED=seed /\ SK=sk \/
+  length incoming <> 14+20+8 +2+16 +4 /\ length incoming <> 14+20+8 +2+32 +4)%nat) /\ SEED=seed /\ SK=x25519_ephemeral_secret \/
   exists (mac_local mac_remote : tuple byte 6),
   exists (ethertype : Z) (ih_const : tuple byte 2) (ip_length : Z) (ip_idff : tuple byte 5),
   exists (ipproto := x11) (ip_checksum : Z) (ip_local ip_remote : tuple byte 4),
@@ -209,28 +209,29 @@ Definition protocol_step : state -> list MMIO -> state -> Prop :=
       (TracePredicate.one ("st", lightbulb_spec.GPIO_DATA_ADDR _, action))) ioh
    /\ (
     let m := firstn 16 garagedoor_payload in
-    let v := x25519_spec sk garageowner_P in
+    let v := x25519_spec x25519_ephemeral_secret garageowner_P in
     exists set0 set1 : Naive.word32,
     (word.unsigned set0 = 1 <-> firstn 16 v = m) /\
     (word.unsigned set1 = 1 <->  skipn 16 v = m) /\
     action = word.or (word.and doorstate (word.of_Z (Z.clearbit (Z.clearbit (2^32-1) 11) 12))) (word.slu (word.or (word.slu set1 (word.of_Z 1)) set0) (word.of_Z 11)) /\
-    (word.unsigned (word.or set0 set1) = 0 -> SEED=seed /\ SK=sk) /\
+    (word.unsigned (word.or set0 set1) = 0 -> SEED=seed /\ SK=x25519_ephemeral_secret) /\
     (word.unsigned (word.or set0 set1) <> 0 -> SEED++SK = RupicolaCrypto.Spec.chacha20_block seed (ChaCha20.le_split 4 (word.of_Z 0) ++ firstn 12 garageowner))
     )) \/
   TracePredicate.concat (lightbulb_spec.lan9250_recv _ incoming)
   (lightbulb_spec.lan9250_send _
     (let ip_length := 62 in
      let udp_length := 42 in
+
      mac_remote ++ mac_local ++ be2 ethertype ++
-     let ih C := ih_const ++ be2 ip_length ++
-                 ip_idff ++ [ipproto] ++ le_split 2 C ++
-                 ip_local ++ ip_remote in
-     ih (Spec.ip_checksum (ih 0)) ++
-     udp_local ++ udp_remote ++
-     be2 udp_length ++ be2 0 ++
+     let ip_hdr checksum := ih_const ++ be2 ip_length ++
+                            ip_idff ++ [ipproto] ++ le_split 2 checksum ++
+                            ip_local ++ ip_remote in
+     ip_hdr (IPChecksum.Spec.ip_checksum (ip_hdr 0)) ++
+     udp_local ++ udp_remote ++ be2 udp_length ++ be2 0 ++
      garagedoor_header ++
-     x25519_spec sk Curve25519.M.B))
-  ioh /\ SEED=seed /\ SK=sk.
+       x25519_spec x25519_ephemeral_secret Curve25519.M.B
+
+  )) ioh /\ SEED=seed /\ SK=x25519_ephemeral_secret.
 
 Local Instance spec_of_recvEthernet : spec_of "recvEthernet" := spec_of_recvEthernet.
 Local Instance spec_of_lan9250_tx : spec_of "lan9250_tx" := spec_of_lan9250_tx.
