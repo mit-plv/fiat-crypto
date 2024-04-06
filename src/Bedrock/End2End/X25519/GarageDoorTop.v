@@ -173,7 +173,7 @@ Local Notation labeled_transitions := stateful.
 Local Notation boot_seq := BootSeq.
 
 Definition protocol_spec l := exists s s', labeled_transitions protocol_step s s' l.
-Definition io_spec : list LogItem -> Prop := only_mmio_satisfying (boot_seq +++ protocol_spec).
+Definition io_spec : list _ -> Prop := only_mmio_satisfying (boot_seq +++ protocol_spec).
 
 Import ExprImpEventLoopSpec.
 Definition garagedoor_spec : ProgramSpec := {|
@@ -259,6 +259,7 @@ Require Import bedrock2.ReversedListNotations.
 Local Notation run1 := (mcomp_sat (run1 Decode.RV32IM)).
 Local Notation RiscvMachine := MetricRiscvMachine.
 Goal True.
+  pose (lan9250_writepacket (bs : list byte) : list MMIO -> Prop).
   pose (run1 : RiscvMachine -> (RiscvMachine -> Prop) -> Prop).
   pose (always(iset:=Decode.RV32IM) : (RiscvMachine -> Prop) -> RiscvMachine -> Prop).
 Abort.
