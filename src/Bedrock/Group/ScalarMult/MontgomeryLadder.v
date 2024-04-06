@@ -198,8 +198,7 @@ Section __.
           Z.of_nat scalarbits <= 8*Z.of_nat (length Kbytes);
         ensures tr' mem' :=
           tr' = tr /\ (
-          forall P, U = MontgomeryCurve.M.X0 (Fzero:=F.zero) P ->
-          let OUT := MontgomeryCurve.M.X0 (Fzero:=F.zero) (scalarmult (K mod 2^Z.of_nat scalarbits) P) in 
+          let OUT := montladder_gallina a24 scalarbits K U in 
               (FElem (Some tight_bounds) pOUT OUT * Kbytes$@pK
                * FElem (Some tight_bounds) pU U
                * R)%sep mem') }.
@@ -404,6 +403,8 @@ Section __.
   Hint Extern 1 (spec_of "fe25519_inv") => (simple refine (spec_of_exp_large)) : typeclass_instances.
   Hint Extern 1 (spec_of "felem_cswap") => (simple refine (spec_of_cswap)) : typeclass_instances.
 
+  Hint Extern 1 => simple eapply compile_felem_cswap; shelve : compiler.
+  Local Hint Extern 10 => lia : compiler_side_conditions.
     Derive montladder_body SuchThat
            (defn! "montladder" ("OUT", "K", "U")
                 { montladder_body },
@@ -413,24 +414,7 @@ Section __.
            As montladder_correct.
     Proof.
       pose proof scalarbits_bound.
-      cbv [spec_of_montladder]; intros; eapply Semantics.weaken_call with
-        (post1:=fun t' m' rets => rets = [] /\ t' = tr /\
-           ((FElem (Some tight_bounds) pOUT (montladder_gallina a24 scalarbits K U)
-            ⋆ Kbytes $@ pK ⋆ FElem (Some tight_bounds) pU U ⋆ R) m')); cycle 1; intros.
-      { DestructHead.destruct_head and; Tactics.ssplit; trivial; intros.
-        pose proof LittleEndianList.le_combine_bound Kbytes. subst U.
-        erewrite montladder_gallina_equiv_affine in *; eauto; try lia. }
-
-      compile_setup.
-      repeat compile_step; shelve_unifiable.
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_felem_cswap; repeat compile_step.
-
-      eapply compile_nlet_as_nlet_eq.
-      eapply compile_felem_cswap; repeat compile_step.
-
-      lia. (* m = 2^255-19 *)
-      compile_step.
+      compile.
     Qed.
 
   End MontLadder.

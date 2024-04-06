@@ -85,10 +85,7 @@ Local Instance spec_of_fe25519_from_word : spec_of "fe25519_from_word" := Field.
 Local Instance spec_of_fe25519_from_bytes : spec_of "fe25519_from_bytes" := Field.spec_of_from_bytes.
 Local Instance spec_of_fe25519_to_bytes : spec_of "fe25519_to_bytes" := Field.spec_of_to_bytes.
 Local Instance spec_of_montladder : spec_of "montladder" :=
-  spec_of_montladder
-    (Z.to_nat (Z.log2 Curve25519.order))
-    Crypto.Spec.Curve25519.field
-    Curve25519.M.a Curve25519.M.b Curve25519.M.b_nonzero (char_ge_3:=Curve25519.char_ge_3).
+  spec_of_montladder (Z.to_nat (Z.log2 Curve25519.order)).
 
 Local Arguments word.rep : simpl never.
 Local Arguments word.wrap : simpl never.
@@ -132,12 +129,27 @@ Proof.
   { reflexivity. }
   { rewrite ?length_le_split. vm_compute. inversion 1. }
   repeat straightline.
-
-  specialize (H31 P ltac:(assumption)). cbv [FElem] in H31. extract_ex1_and_emp_in H31.
+  lazymatch goal with
+  | H : Field.feval_bytes ?x = M.X0 ?P, H' : context [montladder_gallina] |- _ =>
+      rewrite H in H'; unfold M.X0 in H';
+      rewrite (@montladder_gallina_equiv_affine (Curve25519.p) _ _ (Curve25519.field)) with
+        (b_nonzero:=Curve25519.M.b_nonzero) (char_ge_3:=Curve25519.char_ge_3) in H'
+  end.
+  Search M.a.
+  Print Curve25519.M.
+  Print Curve25519.M.
+  lazymatch goal with
+  | H : context [montladder_gallina] |- _ =>
+      rewrite montladder_gallina_equiv_affine in H;
+      unfold FElem, Field.FElem in H;
+      extract_ex1_and_emp_in H
+  end.
   straightline_call; ssplit.
   { ecancel_assumption. }
   { transitivity 32%nat; auto. }
-  { eexists. ecancel_assumption. }
+  { eexists. 
+    unfold FElem, Field.FElem in *; extract_ex1_and_emp_in_goal; ssplit.
+    ecancel_assumption. }
   { intuition idtac. }
   repeat straightline_cleanup.
   repeat straightline.
@@ -154,7 +166,44 @@ Proof.
   rewrite H38, le_combine_split.
   do 7 Morphisms.f_equiv.
   pose proof clamp_range (le_combine s).
-  (rewrite_strat bottomup Z.mod_small); change (Z.of_nat (Z.to_nat (Z.log2 (Z.pos order)))) with 255; try Lia.lia.
+  change (Z.of_nat (Z.to_nat (Z.log2 (Z.pos order)))) with 255.
+  lazymatch goal with
+  | H : Field.feval_bytes ?x = M.X0 ?P |- _ => rewrite H
+  end.
+  unfold M.X0.
+  erewrite @XZProofs.M.montladder_correct with (char_ge_3:=Curve25519.char_ge_3);
+    [ |
+    (try apply F.inv_0; try apply char_ge_28; try Lia.lia) .. ].
+  2:{
+    Search M.a24.
+    Search Field.a24.
+    Search M.a.
+    
+    change Field.a24 with M.a24.
+    unfold M.a24.
+    Search ((_ / _) * _)%F.
+    Lia.lia.
+    Print field_parameters.
+    Search field_parameters.
+    Print M.a24.
+    Search Field.a24.
+    Print M.a.
+    Print Field.a24.
+    unfold Field.a24.
+    reflexivity.
+  apply F.char_gt.
+  (rewrite_strat bottomup Z.mod_small); [ reflexivity | .. ]; try Lia.lia.
+  Check @XZProofs.M.montladder_correct.
+  Search Ring.char_ge.
+  (*
+goal 1 (ID 28633) is:
+ Ring.char_ge 28
+goal 2 (ID 28638) is:
+ ((1 + 1 + 1 + 1) * Field.a24)%F = (M.a - (1 + 1))%F
+goal 3 (ID 28639) is:
+ forall r : F Curve25519.p, (r * r)%F <> (M.a * M.a - (1 + 1 + 1 + 1))%F
+
+*)
 Qed.
 
 Lemma x25519_base_ok : program_logic_goal_for_function! x25519_base.
