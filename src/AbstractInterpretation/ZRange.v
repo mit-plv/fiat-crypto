@@ -20,18 +20,30 @@ Module Compilers.
       Class shiftr_avoid_uint1_opt := shiftr_avoid_uint1 : bool.
 #[global]
       Typeclasses Opaque shiftr_avoid_uint1_opt.
+      Class fancy_and_powerful_but_exponentially_slow_bounds_analysis_opt := fancy_and_powerful_but_exponentially_slow_bounds_analysis : bool.
+      #[global]
+      Typeclasses Opaque fancy_and_powerful_but_exponentially_slow_bounds_analysis_opt.
       Module AbstractInterpretation.
         Local Set Primitive Projections.
         Class Options
           := { shiftr_avoid_uint1 : shiftr_avoid_uint1_opt
+             ; fancy_and_powerful_but_exponentially_slow_bounds_analysis : fancy_and_powerful_but_exponentially_slow_bounds_analysis_opt
              }.
         Definition default_Options : Options
-          := {| shiftr_avoid_uint1 := false |}.
+          := {| shiftr_avoid_uint1 := false
+             ; fancy_and_powerful_but_exponentially_slow_bounds_analysis := false
+             |}.
         Module Export Exports.
           Global Existing Instance Build_Options.
           Global Existing Instance shiftr_avoid_uint1.
-          Global Hint Cut [ ( _ * ) shiftr_avoid_uint1 ( _ * ) Build_Options ] : typeclass_instances.
+          Global Existing Instance fancy_and_powerful_but_exponentially_slow_bounds_analysis.
+          Global Hint Cut [ ( _ * )
+                              ( shiftr_avoid_uint1
+                              | fancy_and_powerful_but_exponentially_slow_bounds_analysis
+                              )
+                              ( _ * ) Build_Options ] : typeclass_instances.
           Global Coercion shiftr_avoid_uint1 : Options >-> shiftr_avoid_uint1_opt.
+          Global Coercion fancy_and_powerful_but_exponentially_slow_bounds_analysis : Options >-> fancy_and_powerful_but_exponentially_slow_bounds_analysis_opt.
         End Exports.
       End AbstractInterpretation.
       Export AbstractInterpretation.Exports.
