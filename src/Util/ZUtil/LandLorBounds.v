@@ -228,11 +228,15 @@ Module Z.
     rewrite (Z.land_comm (Z.pos x)), Z.land_assoc.
     apply Z.land_upper_bound_l; rewrite ?Z.land_nonneg; t.
   Qed.
-  Global Hint Resolve land_round_bound_pos_r (fun v x => proj1 (land_round_bound_pos_r v x)) (fun v x => proj2 (land_round_bound_pos_r v x)) : zarith.
+  Global Hint Resolve land_round_bound_pos_r : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (land_round_bound_pos_r v x)) : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj2 (land_round_bound_pos_r v x)) : zarith.
   Lemma land_round_bound_pos_l v x
     : 0 <= Z.land (Z.pos x) v <= Z.land (Z.round_lor_land_bound (Z.pos x)) v.
   Proof. rewrite <- !(Z.land_comm v); apply land_round_bound_pos_r. Qed.
-  Global Hint Resolve land_round_bound_pos_l (fun v x => proj1 (land_round_bound_pos_l v x)) (fun v x => proj2 (land_round_bound_pos_l v x)) : zarith.
+  Global Hint Resolve land_round_bound_pos_l : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (land_round_bound_pos_l v x)) : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj2 (land_round_bound_pos_l v x)) : zarith.
 
   Lemma land_round_bound_neg_r v x
     : Z.land v (Z.round_lor_land_bound (Z.neg x)) <= Z.land v (Z.neg x) <= v.
@@ -244,11 +248,15 @@ Module Z.
     rewrite !Z.land_assoc.
     etransitivity; [ apply Z.land_le; cbn; lia | ]; lia.
   Qed.
-  Global Hint Resolve land_round_bound_neg_r (fun v x => proj1 (land_round_bound_neg_r v x)) (fun v x => proj2 (land_round_bound_neg_r v x)) : zarith.
+  Global Hint Resolve land_round_bound_neg_r : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (land_round_bound_neg_r v x)) : zarith.
+  Global Hint Extern 0 =>  simple apply (fun v x => proj2 (land_round_bound_neg_r v x)) : zarith.
   Lemma land_round_bound_neg_l v x
     : Z.land (Z.round_lor_land_bound (Z.neg x)) v <= Z.land (Z.neg x) v <= v.
   Proof. rewrite <- !(Z.land_comm v); apply land_round_bound_neg_r. Qed.
-  Global Hint Resolve land_round_bound_neg_l (fun v x => proj1 (land_round_bound_neg_l v x)) (fun v x => proj2 (land_round_bound_neg_l v x)) : zarith.
+  Global Hint Resolve land_round_bound_neg_l : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (land_round_bound_neg_l v x)) : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj2 (land_round_bound_neg_l v x)) : zarith.
 
   Lemma lor_round_bound_neg_r v x
     : Z.lor v (Z.round_lor_land_bound (Z.neg x)) <= Z.lor v (Z.neg x) <= -1.
@@ -262,11 +270,15 @@ Module Z.
     Z.peel_le.
     apply Z.land_upper_bound_l; rewrite ?Z.land_nonneg; t.
   Qed.
-  Global Hint Resolve lor_round_bound_neg_r (fun v x => proj1 (lor_round_bound_neg_r v x)) (fun v x => proj2 (lor_round_bound_neg_r v x)) : zarith.
+  Global Hint Resolve lor_round_bound_neg_r : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (lor_round_bound_neg_r v x)) : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj2 (lor_round_bound_neg_r v x)) : zarith.
   Lemma lor_round_bound_neg_l v x
     : Z.lor (Z.round_lor_land_bound (Z.neg x)) v <= Z.lor (Z.neg x) v <= -1.
   Proof. rewrite <- !(Z.lor_comm v); apply lor_round_bound_neg_r. Qed.
-  Global Hint Resolve lor_round_bound_neg_l (fun v x => proj1 (lor_round_bound_neg_l v x)) (fun v x => proj2 (lor_round_bound_neg_l v x)) : zarith.
+  Global Hint Resolve lor_round_bound_neg_l : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (lor_round_bound_neg_l v x)) : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj2 (lor_round_bound_neg_l v x)) : zarith.
 
   Lemma lor_round_bound_pos_r v x
     : v <= Z.lor v (Z.pos x) <= Z.lor v (Z.round_lor_land_bound (Z.pos x)).
@@ -278,11 +290,15 @@ Module Z.
     rewrite !Z.lor_assoc.
     etransitivity; [ | apply Z.lor_lower; rewrite ?Z.lor_nonneg; cbn; lia ]; lia.
   Qed.
-  Global Hint Resolve lor_round_bound_pos_r (fun v x => proj1 (lor_round_bound_pos_r v x)) (fun v x => proj2 (lor_round_bound_pos_r v x)) : zarith.
+  Global Hint Resolve lor_round_bound_pos_r : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (lor_round_bound_pos_r v x)) : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj2 (lor_round_bound_pos_r v x)) : zarith.
   Lemma lor_round_bound_pos_l v x
     : v <= Z.lor (Z.pos x) v <= Z.lor (Z.round_lor_land_bound (Z.pos x)) v.
   Proof. rewrite <- !(Z.lor_comm v); apply lor_round_bound_pos_r. Qed.
-  Global Hint Resolve lor_round_bound_pos_l (fun v x => proj1 (lor_round_bound_pos_l v x)) (fun v x => proj2 (lor_round_bound_pos_l v x)) : zarith.
+  Global Hint Resolve lor_round_bound_pos_l : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (lor_round_bound_pos_l v x)) : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj2 (lor_round_bound_pos_l v x)) : zarith.
 
   Lemma land_round_bound_pos_r' v x : Z.land v (Z.pos x) <= Z.land v (Z.round_lor_land_bound (Z.pos x)). Proof. auto with zarith. Qed.
   Lemma land_round_bound_pos_l' v x : Z.land (Z.pos x) v <= Z.land (Z.round_lor_land_bound (Z.pos x)) v. Proof. auto with zarith. Qed.
@@ -324,12 +340,37 @@ Module Export Hints.
   Hint Rewrite Z.lor_round_lor_land_bound_r : zsimplify_fast zsimplify.
 #[global]
   Hint Rewrite Z.lor_round_lor_land_bound_l : zsimplify_fast zsimplify.
-  Global Hint Resolve Z.land_round_bound_pos_r (fun v x => proj1 (Z.land_round_bound_pos_r v x)) (fun v x => proj2 (Z.land_round_bound_pos_r v x)) : zarith.
-  Global Hint Resolve Z.land_round_bound_pos_l (fun v x => proj1 (Z.land_round_bound_pos_l v x)) (fun v x => proj2 (Z.land_round_bound_pos_l v x)) : zarith.
-  Global Hint Resolve Z.land_round_bound_neg_r (fun v x => proj1 (Z.land_round_bound_neg_r v x)) (fun v x => proj2 (Z.land_round_bound_neg_r v x)) : zarith.
-  Global Hint Resolve Z.land_round_bound_neg_l (fun v x => proj1 (Z.land_round_bound_neg_l v x)) (fun v x => proj2 (Z.land_round_bound_neg_l v x)) : zarith.
-  Global Hint Resolve Z.lor_round_bound_neg_r (fun v x => proj1 (Z.lor_round_bound_neg_r v x)) (fun v x => proj2 (Z.lor_round_bound_neg_r v x)) : zarith.
-  Global Hint Resolve Z.lor_round_bound_neg_l (fun v x => proj1 (Z.lor_round_bound_neg_l v x)) (fun v x => proj2 (Z.lor_round_bound_neg_l v x)) : zarith.
-  Global Hint Resolve Z.lor_round_bound_pos_r (fun v x => proj1 (Z.lor_round_bound_pos_r v x)) (fun v x => proj2 (Z.lor_round_bound_pos_r v x)) : zarith.
-  Global Hint Resolve Z.lor_round_bound_pos_l (fun v x => proj1 (Z.lor_round_bound_pos_l v x)) (fun v x => proj2 (Z.lor_round_bound_pos_l v x)) : zarith.
+
+  Global Hint Resolve Z.land_round_bound_pos_r : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (Z.land_round_bound_pos_r v x)) : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj2 (Z.land_round_bound_pos_r v x)) : zarith.
+
+  Global Hint Resolve Z.land_round_bound_pos_l : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (Z.land_round_bound_pos_l v x)) : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj2 (Z.land_round_bound_pos_l v x)) : zarith.
+
+  Global Hint Resolve Z.land_round_bound_neg_r : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (Z.land_round_bound_neg_r v x)) : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj2 (Z.land_round_bound_neg_r v x)) : zarith.
+
+  Global Hint Resolve Z.land_round_bound_neg_l : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (Z.land_round_bound_neg_l v x)) : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj2 (Z.land_round_bound_neg_l v x)) : zarith.
+
+  Global Hint Resolve Z.lor_round_bound_neg_r : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (Z.lor_round_bound_neg_r v x)) : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj2 (Z.lor_round_bound_neg_r v x)) : zarith.
+
+  Global Hint Resolve Z.lor_round_bound_neg_l : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (Z.lor_round_bound_neg_l v x)) : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj2 (Z.lor_round_bound_neg_l v x)) : zarith.
+
+  Global Hint Resolve Z.lor_round_bound_pos_r : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (Z.lor_round_bound_pos_r v x)) : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj2 (Z.lor_round_bound_pos_r v x)) : zarith.
+
+  Global Hint Resolve Z.lor_round_bound_pos_l : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj1 (Z.lor_round_bound_pos_l v x)) : zarith.
+  Global Hint Extern 0 => simple apply (fun v x => proj2 (Z.lor_round_bound_pos_l v x)) : zarith.
+
 End Hints.

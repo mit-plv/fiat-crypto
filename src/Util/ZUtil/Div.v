@@ -365,8 +365,8 @@ Module Z.
       autorewrite with zsimplify; try reflexivity.
   Qed.
 
-  Global Hint Resolve (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1))
-       (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)) : zarith.
+  Global Hint Extern 2 => simple apply (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)) : zarith.
+  Global Hint Extern 2 => simple apply (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)) : zarith.
 
   Lemma sub_pos_bound_div_eq a b X : 0 <= a < X -> 0 <= b < X -> (a - b) / X = if a <? b then -1 else 0.
   Proof.
@@ -491,8 +491,8 @@ Module Export Hints.
   Global Hint Resolve Z.div_mul_le_le_offset : zarith.
 #[global]
   Hint Rewrite Z.div_x_y_x using zutil_arith : zsimplify.
-  Global Hint Resolve (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1))
-         (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)) : zarith.
+  Global Hint Extern 2 => simple apply (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)) : zarith.
+  Global Hint Extern 2 => simple apply (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)) : zarith.
 #[global]
   Hint Rewrite Z.sub_pos_bound_div_eq Z.add_opp_pos_bound_div_eq using zutil_arith : zstrip_div.
   Global Hint Resolve Z.div_small_sym : zarith.

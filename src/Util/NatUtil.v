@@ -15,9 +15,10 @@ Create HintDb natsimplify discriminated.
 Global Existing Instance Nat.le_preorder.
 Global Hint Resolve Nat.max_l Nat.max_r Nat.le_max_l Nat.le_max_r: arith.
 Global Hint Resolve Nat.min_l Nat.min_r Nat.le_min_l Nat.le_min_r: arith.
-
 Global Hint Resolve mod_bound_pos Nat.add_le_mono : arith.
-Global Hint Resolve (fun x y p q => proj1 (@Nat.mod_bound_pos x y p q)) (fun x y p q => proj2 (@Nat.mod_bound_pos x y p q)) : arith.
+
+Global Hint Extern 2 (le _) => simple apply (fun x y p q => proj1 (@Nat.mod_bound_pos x y p q)) : arith.
+Global Hint Extern 2 => simple apply (fun x y p q => proj2 (@Nat.mod_bound_pos x y p q)) : arith.
 
 #[global]
 Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using lia : natsimplify.
@@ -474,7 +475,8 @@ Module Export Hints.
   Global Hint Resolve Nat.max_l Nat.max_r Nat.le_max_l Nat.le_max_r: arith.
   Global Hint Resolve Nat.min_l Nat.min_r Nat.le_min_l Nat.le_min_r: arith.
   Global Hint Resolve mod_bound_pos Nat.add_le_mono : arith.
-  Global Hint Resolve (fun x y p q => proj1 (@Nat.mod_bound_pos x y p q)) (fun x y p q => proj2 (@Nat.mod_bound_pos x y p q)) : arith.
+  Global Hint Extern 2 (le _) => simple apply (fun x y p q => proj1 (@Nat.mod_bound_pos x y p q)) : arith.
+  Global Hint Extern 2 => simple apply (fun x y p q => proj2 (@Nat.mod_bound_pos x y p q)) : arith.
 #[global]
   Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using lia : natsimplify.
 #[global]
