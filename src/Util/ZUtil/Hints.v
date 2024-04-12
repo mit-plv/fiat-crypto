@@ -6,8 +6,10 @@ Require Export Crypto.Util.ZUtil.Hints.Ztestbit.
 Require Export Crypto.Util.ZUtil.Hints.PullPush.
 Require Export Crypto.Util.ZUtil.ZSimplify.Core.
 
-Global Hint Resolve (fun a b H => proj1 (Z.log2_lt_pow2 a b H)) (fun a b H => proj1 (Z.log2_le_pow2 a b H)) : concl_log2.
-Global Hint Resolve (fun a b H => proj2 (Z.log2_lt_pow2 a b H)) (fun a b H => proj2 (Z.log2_le_pow2 a b H)) : hyp_log2.
+Global Hint Extern 2 => simple apply (fun a b H => proj1 (Z.log2_lt_pow2 a b H)) : concl_log2.
+Global Hint Extern 2 => simple apply (fun a b H => proj1 (Z.log2_le_pow2 a b H)) : concl_log2.
+Global Hint Extern 2 => simple apply (fun a b H => proj1 (Z.log2_lt_pow2 a b H)) : hyp_log2.
+Global Hint Extern 2 => simple apply (fun a b H => proj1 (Z.log2_le_pow2 a b H)) : hyp_log2.
 
 (** For the occasional lemma that can remove the use of [Z.div] *)
 #[global]

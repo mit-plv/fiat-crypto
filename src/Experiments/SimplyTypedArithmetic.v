@@ -551,10 +551,11 @@ Section mod_ops.
     { t_weight_with (@pow_ceil_mul_nat_multiples 2). }
     { intros; apply Z.gt_lt. t_weight_with (@pow_ceil_mul_nat_divide 2). }
   Defined.
-  Local Hint Immediate (weight_0 wprops).
-  Local Hint Immediate (weight_positive wprops).
-  Local Hint Immediate (weight_multiples wprops).
-  Local Hint Immediate (weight_divides wprops).
+
+  Local Hint Extern 0 => simple apply (weight_0 wprops).
+  Local Hint Extern 0 => simple apply (weight_positive wprops).
+  Local Hint Extern 0 => simple apply (weight_multiples wprops).
+  Local Hint Extern 0 => simple apply (weight_divides wprops).
   Local Hint Resolve Z.positive_is_nonzero Z.lt_gt.
 
   Local Lemma weight_1_gt_1 : weight 1 > 1.
