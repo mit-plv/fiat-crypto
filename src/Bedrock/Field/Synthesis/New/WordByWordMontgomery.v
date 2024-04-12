@@ -767,9 +767,9 @@ Definition field_parameters_prefixed
     (prefix ++ "inv")
     (prefix ++ "from_bytes")
     (prefix ++ "to_bytes")
-    (prefix ++ "felem_copy")
-    (prefix ++ "small_literal")
     (prefix ++ "select_znz")
+    (prefix ++ "felem_copy")
+    (prefix ++ "from_word")
 .
 
 
