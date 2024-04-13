@@ -16,4 +16,4 @@ jobs:
           printf "github.actor == '%s'\n" "${{ github.actor }}"
       - name: merge
         run: gh pr merge --auto --squash --delete-branch "$PR_URL"
-        if: ${{ ( github.actor == 'dependabot[bot]' ) || ( github.actor == 'github-actions[bot]' && github.event.pull_request.title == 'Rust Crate Version Bump' ) }}
+        if: ${{ github.actor == 'dependabot[bot]' }}
