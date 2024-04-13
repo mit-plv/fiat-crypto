@@ -7,12 +7,13 @@ permissions:
 jobs:
   dependabot-automerge:
     runs-on: ubuntu-latest
-    if: ${{ github.actor == 'dependabot[bot]' }}
     env:
       PR_URL: ${{github.event.pull_request.html_url}}
       GH_TOKEN: ${{ github.token }}
     steps:
-      #- name: approve
-      #  run: gh pr review --approve "$PR_URL"
+      - name: describe for '${{ github.event.pull_request.title }}'
+        run: |
+          printf "github.actor == '%s'\n" "${{ github.actor }}"
       - name: merge
         run: gh pr merge --auto --squash --delete-branch "$PR_URL"
+        if: ${{ ( github.actor == 'dependabot[bot]' ) || ( github.actor == 'github-actions[bot]' && github.event.pull_request.title == 'Rust Crate Version Bump' ) }}
