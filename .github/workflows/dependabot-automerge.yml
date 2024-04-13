@@ -10,6 +10,7 @@ jobs:
     if: ${{ github.actor == 'dependabot[bot]' }}
     env:
       PR_URL: ${{github.event.pull_request.html_url}}
+      GH_TOKEN: ${{ github.token }}
     steps:
       #- name: approve
       #  run: gh pr review --approve "$PR_URL"
