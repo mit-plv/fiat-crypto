@@ -62,3 +62,4 @@ group "true | coqtop"
 group etc/machine.sh
 group "echo PATH=$PATH"
 group "echo SHELL=$SHELL"
+etc/ci/github-actions-record-coq-info.sh

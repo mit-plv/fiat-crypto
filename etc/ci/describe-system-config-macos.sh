@@ -35,3 +35,4 @@ group coqc --config
 group coqc --version
 group "true | coqtop"
 group etc/machine.sh
+etc/ci/github-actions-record-coq-info.sh
