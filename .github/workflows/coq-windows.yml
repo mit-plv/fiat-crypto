@@ -63,8 +63,8 @@ jobs:
 
     - name: echo build params
       run: |
-        %cd%\etc\ci\describe-system-config-win.bat
-      shell: cmd
+        .\etc\ci\describe-system-config-win.ps1
+      shell: pwsh
     - name: deps
       run: |
         %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} deps'
