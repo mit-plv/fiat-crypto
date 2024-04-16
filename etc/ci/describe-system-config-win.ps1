@@ -30,7 +30,7 @@ Print-Group -name "opam list" -command { opam list }
 Print-Group -name "ocamlc -config" -command { opam exec -- ocamlc -config }
 Print-Group -name "coqc --config" -command { opam exec -- coqc --config }
 Print-Group -name "coqc --version" -command { opam exec -- coqc --version }
-Print-Group -name "coqtop version" -command { opam exec -- coqtop < $null }
+Print-Group -name "coqtop version" -command { "" | opam exec -- coqtop }
 
 # Using make with environmental variables
 Print-Group -name "make printenv" -command { & "$CYGWIN_ROOT\bin\bash.exe" -l -c 'cd "$PWD"; opam exec -- make printenv' }
