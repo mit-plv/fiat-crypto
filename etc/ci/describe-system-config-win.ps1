@@ -1,10 +1,3 @@
-# Ensure this script is only running in a subprocess
-if (-not $env:in_subprocess) {
-    $env:in_subprocess = "y"
-    Start-Process PowerShell.exe -ArgumentList "-NoExit", "-File", "$PSCommandPath", "@args"
-    exit
-}
-
 # Set the script directory variable
 $SCRIPT_DIR = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
 
@@ -17,7 +10,7 @@ function Print-Group {
 }
 
 # Using WMI to get CPU information
-Print-Group -name "wmic cpu get" -command { wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status }
+Print-Group -name "wmic cpu get" -command { Get-CimInstance -ClassName CIM_Processor | Select Caption, DeviceID, Name, NumberOfCores, MaxClockSpeed, Status }
 Print-Group -name "wmic cpu list /format:list" -command { wmic cpu list /format:list }
 
 # Running git configuration commands via bash
@@ -33,8 +26,7 @@ Print-Group -name "coqc --version" -command { opam exec -- coqc --version }
 Print-Group -name "coqtop version" -command { "" | opam exec -- coqtop }
 
 # Using make with environmental variables
-Print-Group -name "make printenv" -command { & "$CYGWIN_ROOT\bin\bash.exe" -l -c 'cd "$PWD"; opam exec -- make printenv' }
-Print-Group -name "PATH" -command { & "$CYGWIN_ROOT\bin\bash.exe" -l -c 'cd "$PWD"; echo "${PATH}"' }
+Print-Group -name "make printenv" -command { opam exec -- make printenv }
+Print-Group -name "PATH=$PATH" -command { & "$CYGWIN_ROOT\bin\bash.exe" -l -c 'echo "${PATH}"' }
 
-# Executing another PowerShell script
-& PowerShell.exe -ExecutionPolicy Bypass -File "$SCRIPT_DIR\github-actions-record-coq-info.ps1"
+Print-Group -name "Writing info to '$env:GITHUB_STEP_SUMMARY'" -command { & PowerShell.exe -ExecutionPolicy Bypass -File "$SCRIPT_DIR\github-actions-record-coq-info.ps1" }
