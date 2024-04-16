@@ -19,11 +19,15 @@ Module Z.
     lia.
   Qed.
 #[global]
-  Hint Resolve nonneg_pow_pos (fun n => nonneg_pow_pos 2 n Z.lt_0_2) : zarith.
+  Hint Resolve nonneg_pow_pos : zarith.
+#[global]
+  Hint Extern 1 => simple apply (fun n => nonneg_pow_pos 2 n Z.lt_0_2) : zarith.
   Lemma nonneg_pow_pos_helper a b dummy : 0 < a -> 0 <= dummy < a^b -> 0 <= b.
   Proof. eauto with zarith lia. Qed.
 #[global]
-  Hint Resolve nonneg_pow_pos_helper (fun n dummy => nonneg_pow_pos_helper 2 n dummy Z.lt_0_2) : zarith.
+  Hint Resolve nonneg_pow_pos_helper : zarith.
+#[global]
+  Hint Extern 2 => simple apply (fun n dummy => nonneg_pow_pos_helper 2 n dummy Z.lt_0_2) : zarith.
 
   Lemma div_pow2succ : forall n x, (0 <= x) ->
     n / 2 ^ Z.succ x = Z.div2 (n / 2 ^ x).
