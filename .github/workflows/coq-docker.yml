@@ -39,7 +39,7 @@ jobs:
       with:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
-        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
         custom_script: |
           eval $(opam env)
           etc/ci/describe-system-config.sh
@@ -48,21 +48,21 @@ jobs:
       with:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
-        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
         custom_script: etc/ci/github-actions-docker-make.sh COQBIN="$(dirname "$(which coqc)")/" -j2 deps
     - name: all-except-generated-and-js-of-ocaml
       uses: coq-community/docker-coq-action@v1
       with:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
-        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
         custom_script: etc/ci/github-actions-docker-make.sh ${EXTRA_GH_REPORTIFY} -j2 all-except-generated-and-js-of-ocaml
     - name: pre-standalone-extracted
       uses: coq-community/docker-coq-action@v1
       with:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
-        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
         custom_script: etc/ci/github-actions-docker-make.sh ${EXTRA_GH_REPORTIFY} -j2 pre-standalone-extracted
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
@@ -100,7 +100,7 @@ jobs:
       with:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
-        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
         custom_script: |
           sudo git config --global --add safe.directory "*"
           sudo make EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 COQBIN="$(dirname "$(which coqc)")/" install install-standalone-ocaml
@@ -109,7 +109,7 @@ jobs:
       with:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
-        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
         custom_script: |
           sudo git config --global --add safe.directory "*"
           sudo make EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 COQBIN="$(dirname "$(which coqc)")/" install-without-bedrock2 install-standalone-ocaml
@@ -118,7 +118,7 @@ jobs:
       with:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
-        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
         custom_script: |
           sudo git config --global --add safe.directory "*"
           sudo make EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 COQBIN="$(dirname "$(which coqc)")/" install install-standalone-ocaml
@@ -161,7 +161,7 @@ jobs:
       with:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
-        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
         custom_script: etc/ci/github-actions-docker-make.sh TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"
       if: env.SKIP_VALIDATE == '' && github.event_name != 'pull_request'
 

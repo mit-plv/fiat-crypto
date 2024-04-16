@@ -1,12 +1,21 @@
 #!/bin/sh
 
+outfile="${1:-$GITHUB_STEP_SUMMARY}"
+
 # summarize coqc version to make it easier to read
 COQC_VERSION_SHORT="$(coqc --print-version 2>/dev/null | cut -d " " -f 1)"
 COQC_VERSION="$(coqc --version 2>/dev/null | tr '\n' ',' | sed 's/,$//g')"
-COQTOP_VERSION="$(true | coqtop 2>&1)"
-if [ ! -z "$GITHUB_STEP_SUMMARY" ] && [ ! -z "$COQC_VERSION" ]; then
-    printf '%s\n\n' "<details><summary>${COQC_VERSION}</summary>" >> "$GITHUB_STEP_SUMMARY"
-    printf '%s\n' '```' >> "$GITHUB_STEP_SUMMARY"
-    printf '%s\n' "${COQTOP_VERSION}" >> "$GITHUB_STEP_SUMMARY"
-    printf '%s\n%s\n' '```' '</details>' >> "$GITHUB_STEP_SUMMARY"
+COQTOP_VERSION="$(coqtop </dev/null 2>&1)"
+if [ ! -z "$outfile" ]; then
+    if [ ! -z "$COQC_VERSION" ]; then
+        echo "Writing $COQC_VERSION to $outfile..."
+        printf '%s\n\n' "<details><summary>${COQC_VERSION}</summary>" >> "$outfile"
+        printf '%s\n' '```' >> "$outfile"
+        printf '%s\n' "${COQTOP_VERSION}" >> "$outfile"
+        printf '%s\n%s\n' '```' '</details>' >> "$outfile"
+    else
+        echo "Not writing missing coqc version to $outfile"
+    fi
+else
+    echo "GITHUB_STEP_SUMMARY is unset"
 fi

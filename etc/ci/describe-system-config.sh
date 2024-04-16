@@ -24,10 +24,7 @@ else
 fi
 
 group lscpu
-group uname -a
 group lsb_release -a
-group ulimit -aH
-group ulimit -aS
 group cat /etc/os-release
 group cat /proc/cpuinfo
 group cat /proc/meminfo
@@ -35,31 +32,6 @@ group cat /etc/alpine-release
 group apk info
 group apk info coq
 group apk --print-arch
-group dpkg -l
+group dpkg -l | cat
 group pacman -Qs
-group ghc --version
-group ghc -v
-group gcc --version
-group gcc -v
-group opam switch
-group opam list
-group ocamlc -config
-group ocamlc -where
-group ocamlfind printconf destdir
-group ocamlfind list
-group ocamlfind query findlib
-group ocamlfind query zarith
-group ocamlfind query coq
-group ocamlfind query coq-core
-group ocamlfind query coq-core.plugins
-group ocamlfind query coq-core.plugins.ltac
-group "ocamlfind query coq | xargs find"
-group js_of_ocaml --version
-group wasm_of_ocaml --version
-group coqc --config
-group coqc --version
-group "true | coqtop"
-group etc/machine.sh
-group "echo PATH=$PATH"
-group "echo SHELL=$SHELL"
-etc/ci/github-actions-record-coq-info.sh
+. etc/ci/describe-system-config-common-groups.sh

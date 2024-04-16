@@ -39,7 +39,7 @@ jobs:
       run: etc/ci/describe-system-config.sh
     - name: chroot build params
       shell: in-debian-chroot.sh {0}
-      run: CI=1 etc/ci/describe-system-config.sh
+      run: CI=1 GITHUB_STEP_SUMMARY="$GITHUB_STEP_SUMMARY" etc/ci/describe-system-config.sh
     - name: make deps
       shell: in-debian-chroot.sh {0}
       run: etc/ci/github-actions-make.sh -j2 deps
