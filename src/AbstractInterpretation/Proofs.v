@@ -149,7 +149,10 @@ Module Compilers.
       Local Notation bottom_Proper := (@bottom_Proper base_type abstract_domain' bottom' abstract_domain'_R bottom'_Proper).
       Local Notation bottom_for_each_lhs_of_arrow_Proper := (@bottom_for_each_lhs_of_arrow_Proper base_type abstract_domain' bottom' abstract_domain'_R bottom'_Proper).
 
-      Local Hint Resolve (@bottom_Proper) (@bottom_for_each_lhs_of_arrow_Proper) : core typeclass_instances.
+      Local Hint Extern 0 (Proper _) => simple apply (@bottom_Proper) : typeclass_instances.
+      Local Hint Extern 0 (Proper _) => simple apply (@bottom_for_each_lhs_of_arrow_Proper) : typeclass_instances.
+      Local Hint Extern 0 => simple apply (@bottom_Proper) : core.
+      Local Hint Extern 0 => simple apply (@bottom_for_each_lhs_of_arrow_Proper) : core.
 
       Fixpoint related_bounded_value {t} : abstract_domain t -> value t -> type.interp base_interp t -> Prop
         := match t return abstract_domain t -> value t -> type.interp base_interp t -> Prop with
