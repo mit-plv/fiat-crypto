@@ -3,7 +3,6 @@ Require Import Coq.Arith.Arith.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Coq.Bool.Bool.
-Require Import Coq.Bool.Bvector.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Stabilization.
 Require Import Crypto.Util.ListUtil.
