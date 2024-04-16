@@ -7,6 +7,6 @@ COQTOP_VERSION="$(true | coqtop 2>&1)"
 if [ ! -z "$GITHUB_STEP_SUMMARY" ] && [ ! -z "$COQC_VERSION" ]; then
     printf '%s\n\n' "<details><summary>${COQC_VERSION}</summary>" >> "$GITHUB_STEP_SUMMARY"
     printf '%s\n' '```' >> "$GITHUB_STEP_SUMMARY"
-    printf '%s\n' "${COQTOP_VERSION} >> "$GITHUB_STEP_SUMMARY"
+    printf '%s\n' "${COQTOP_VERSION}" >> "$GITHUB_STEP_SUMMARY"
     printf '%s\n%s\n' '```' '</details>' >> "$GITHUB_STEP_SUMMARY"
 fi
