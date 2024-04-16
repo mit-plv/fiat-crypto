@@ -62,46 +62,26 @@ jobs:
       shell: cmd
 
     - name: echo build params
-      run: |
-        .\etc\ci\describe-system-config-win.ps1
-      shell: pwsh
+      run: .\etc\ci\describe-system-config-win.ps1
     - name: deps
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} deps'
-      shell: cmd
+      run: opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} deps
     - name: standalone-ocaml
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} standalone-ocaml'
-      shell: cmd
+      run: opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} standalone-ocaml
     - name: install-standalone-unified-ocaml
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist'
-      shell: cmd
+      run: opam exec -- etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
 
     - name: coq
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 coq'
-      shell: cmd
+      run: opam exec -- etc/ci/github-actions-make.sh -j1 coq
     - name: all-except-generated-and-js-of-ocaml
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 all-except-generated-and-js-of-ocaml'
-      shell: cmd
+      run: opam exec -- etc/ci/github-actions-make.sh -j1 all-except-generated-and-js-of-ocaml
     - name: standalone-js-of-ocaml
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j1 standalone-js-of-ocaml'
-      shell: cmd
+      run: opam exec -- etc/ci/github-actions-make.sh -j1 standalone-js-of-ocaml
     - name: install-standalone-js-of-ocaml
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh install-standalone-js-of-ocaml'
-      shell: cmd
+      run: opam exec -- etc/ci/github-actions-make.sh install-standalone-js-of-ocaml
     - name: c-files lite-generated-files
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} c-files lite-generated-files'
-      shell: cmd
+      run: opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} c-files lite-generated-files
     - name: only-test-amd64-files-lite
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} only-test-amd64-files-lite SLOWEST_FIRST=1'
-      shell: cmd
+      run: opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} only-test-amd64-files-lite SLOWEST_FIRST=1
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
       with:
@@ -123,24 +103,17 @@ jobs:
         name: standalone-html-windows
         path: fiat-html
     - name: install
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 install install-standalone-ocaml'
-      shell: cmd
+      run: opam exec -- etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 install install-standalone-ocaml
     - name: install-without-bedrock2
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 install-without-bedrock2 install-standalone-ocaml'
-      shell: cmd
+      run: opam exec -- etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 install-without-bedrock2 install-standalone-ocaml
     - name: install-dev
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 install install-standalone-ocaml'
-      shell: cmd
+      run: opam exec -- etc/ci/github-actions-make.sh EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 install install-standalone-ocaml
     - name: display timing info
       run: type time-of-build-pretty.log
       shell: cmd
     - name: display per-line timing info
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; etc/ci/github-actions-display-per-line-timing.sh'
-      shell: cmd
+      run: etc/ci/github-actions-display-per-line-timing.sh
+      shell: bash
 #    - name: upload timing and .vo info
 #      uses: actions/upload-artifact@v3
 #      with:
