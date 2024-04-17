@@ -16,5 +16,4 @@ jobs:
           printf "github.actor == '%s'\n" "${{ github.actor }}"
       - name: merge
         run: gh pr merge --auto --squash --delete-branch "$PR_URL"
-        if: ${{ github.actor == 'dependabot[bot]' 
-        }}
+        if: ${{ github.actor == 'dependabot[bot]' }}
