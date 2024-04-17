@@ -16,7 +16,7 @@ Module IntegralDomain.
     Global Instance Integral_domain :
       @Integral_domain.Integral_domain T zero one add mul sub opp eq Ring.Ncring_Ring_ops
                                        Ring.Ncring_Ring Ring.Cring_Cring_commutative_ring.
-    Proof using Type. split; cbv; eauto using zero_product_zero_factor, one_neq_zero. Qed.
+    Proof using Type. split; cbv; pose zero_product_zero_factor; pose one_neq_zero; eauto. Qed.
   End IntegralDomain.
 
   Module _LargeCharacteristicReflective.

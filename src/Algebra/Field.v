@@ -13,7 +13,7 @@ Section Field.
 
   Lemma right_multiplicative_inverse : forall x : T, ~ eq x zero -> eq (mul x (inv x)) one.
   Proof using Type*.
-    intros. rewrite commutative. auto using left_multiplicative_inverse.
+    intros. rewrite commutative. pose left_multiplicative_inverse; eauto.
   Qed.
 
   Lemma left_inv_unique x ix : ix * x = one -> ix = inv x.
@@ -72,7 +72,7 @@ Section Field.
 
   Global Instance integral_domain : @integral_domain T eq zero one opp add sub mul.
   Proof using Type*.
-    split; auto using field_commutative_ring, field_is_zero_neq_one, is_mul_nonzero_nonzero.
+    split; eauto using field_commutative_ring, field_is_zero_neq_one, is_mul_nonzero_nonzero.
   Qed.
 End Field.
 
@@ -90,7 +90,7 @@ Section Homomorphism.
     intros.
     eapply inv_unique.
     rewrite <-Ring.homomorphism_mul.
-    rewrite left_multiplicative_inverse; auto using Ring.homomorphism_one.
+    rewrite left_multiplicative_inverse; pose Ring.homomorphism_one; eauto.
   Qed.
 
   Lemma homomorphism_multiplicative_inverse_complete

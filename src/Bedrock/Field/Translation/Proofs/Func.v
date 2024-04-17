@@ -442,7 +442,7 @@ Section Func.
         pose proof H; apply map.only_differ_putmany in H
       end.
 
-      erewrite IHt1; eauto using only_differ_trans; [ |
+      erewrite IHt1; pose only_differ_trans; eauto ; [ |
         apply disjoint_union_l_iff; intuition trivial;
         symmetry; eapply NoDup_disjoint; eauto ].
       erewrite IHt2 by eauto using only_differ_trans.
