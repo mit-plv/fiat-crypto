@@ -18,96 +18,84 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - env: { DEBIAN: "sid" }
-        #- env: { DEBIAN: "bookworm" }# restore once 8.17 lands in Debian stable
+        - debian: "sid"
+        #- debian: "bookworm" # restore once 8.17 lands in Debian stable
 
     runs-on: 'ubuntu-22.04'
-    env: ${{ matrix.env }}
-    name: debian-${{ matrix.env.DEBIAN }}
+    name: debian-${{ matrix.debian }}
+    container: debian:${{ matrix.debian }}
 
     concurrency:
-      group: ${{ github.workflow }}-${{ matrix.env.DEBIAN }}-${{ github.head_ref || github.run_id }}
+      group: ${{ github.workflow }}-${{ matrix.debian }}-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
 
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-    - name: setup Debian chroot
-      run: etc/ci/setup-debian-chroot.sh "$DEBIAN"
-    - name: host build params
+    - name: install system dependencies
+      run: |
+        apt-get -o Acquire::Retries=30 update -y
+        apt-get -q -y --allow-unauthenticated -o Acquire::Retries=30 install sudo git make time jq python3 python-is-python3 ocaml coq libcoq-core-ocaml-dev libfindlib-ocaml-dev ocaml-findlib cabal-install js-of-ocaml
+    - name: container build params
       run: etc/ci/describe-system-config.sh
-    - name: chroot build params
-      shell: in-debian-chroot.sh {0}
-      run: CI=1 etc/ci/describe-system-config.sh
     - name: make deps
-      shell: in-debian-chroot.sh {0}
       run: etc/ci/github-actions-make.sh -j2 deps
     - name: all-except-generated-and-js-of-ocaml
-      shell: in-debian-chroot.sh {0}
       run: etc/ci/github-actions-make.sh -j2 all-except-generated-and-js-of-ocaml
     - name: generated-files
-      shell: in-debian-chroot.sh {0}
       run: etc/ci/github-actions-make.sh -j2 generated-files
     - run: tar -czvf generated-files.tgz fiat-*/
       if: ${{ failure() }}
     - name: upload generated files
       uses: actions/upload-artifact@v3
       with:
-        name: generated-files-${{ matrix.env.DEBIAN }}
+        name: generated-files-${{ matrix.debian }}
         path: generated-files.tgz
       if: ${{ failure() }}
     - name: install-standalone-unified-ocaml
-      shell: in-debian-chroot.sh {0}
       run: etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
     - name: standalone-js-of-ocaml
-      shell: in-debian-chroot.sh {0}
       run: etc/ci/github-actions-make.sh -j2 standalone-js-of-ocaml
     - name: install-standalone-js-of-ocaml
-      shell: in-debian-chroot.sh {0}
       run: etc/ci/github-actions-make.sh install-standalone-js-of-ocaml
     - name: upload standalone files
       uses: actions/upload-artifact@v3
       with:
-        name: standalone-${{ matrix.env.DEBIAN }}
+        name: standalone-${{ matrix.debian }}
         path: dist/fiat_crypto
     - name: upload standalone js files
       uses: actions/upload-artifact@v3
       with:
-        name: standalone-html-${{ matrix.env.DEBIAN }}
+        name: standalone-html-${{ matrix.debian }}
         path: fiat-html
     - name: upload OCaml files
       uses: actions/upload-artifact@v3
       with:
-        name: ExtractionOCaml-${{ matrix.env.DEBIAN }}
+        name: ExtractionOCaml-${{ matrix.debian }}
         path: src/ExtractionOCaml
       if: always ()
     - name: upload js_of_ocaml files
       uses: actions/upload-artifact@v3
       with:
-        name: ExtractionJsOfOCaml-${{ matrix.env.DEBIAN }}
+        name: ExtractionJsOfOCaml-${{ matrix.debian }}
         path: src/ExtractionJsOfOCaml
       if: always ()
     - name: standalone-haskell
-      shell: in-debian-chroot.sh {0}
       run: etc/ci/github-actions-make.sh -j1 standalone-haskell GHCFLAGS='+RTS -M7G -RTS'
     - name: upload Haskell files
       uses: actions/upload-artifact@v3
       with:
-        name: ExtractionHaskell-${{ matrix.env.DEBIAN }}
+        name: ExtractionHaskell-${{ matrix.debian }}
         path: src/ExtractionHaskell
       if: always ()
     - name: only-test-amd64-files-lite
-      shell: in-debian-chroot.sh {0}
       run: etc/ci/github-actions-make.sh -j2 only-test-amd64-files-lite SLOWEST_FIRST=1
     - name: install
-      shell: in-debian-chroot.sh {0}
       run: sudo etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 install install-standalone-ocaml
     - name: install-without-bedrock2
-      shell: in-debian-chroot.sh {0}
       run: sudo etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 install-without-bedrock2 install-standalone-ocaml
     - name: install-dev
-      shell: in-debian-chroot.sh {0}
       run: sudo etc/ci/github-actions-make.sh EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 install install-standalone-ocaml
     - name: display timing info
       run: cat time-of-build-pretty.log
