@@ -30,13 +30,13 @@ jobs:
       cancel-in-progress: true
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
     - name: install system dependencies
       run: |
         apt-get -o Acquire::Retries=30 update -y
         apt-get -q -y --allow-unauthenticated -o Acquire::Retries=30 install sudo git make time jq python3 python-is-python3 ocaml coq libcoq-core-ocaml-dev libfindlib-ocaml-dev ocaml-findlib cabal-install js-of-ocaml
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
     - name: container build params
       run: etc/ci/describe-system-config.sh
     - name: make deps
