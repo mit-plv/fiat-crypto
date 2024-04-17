@@ -64,9 +64,9 @@ jobs:
     - name: echo build params
       run: .\etc\ci\describe-system-config-win.ps1
     - name: deps
-      run: opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} deps
+      run: opam exec -- etc/ci/github-actions-make.sh -j$NJOBS deps
     - name: standalone-ocaml
-      run: opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} standalone-ocaml
+      run: opam exec -- etc/ci/github-actions-make.sh -j$NJOBS standalone-ocaml
     - name: install-standalone-unified-ocaml
       run: opam exec -- etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
 
