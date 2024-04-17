@@ -37,6 +37,9 @@ if [ -z "${SED_Z}" ]; then
     SED_Z="${SED} -z"
 fi
 
+export SED
+export SED_Z
+
 make_one_time_file_real=""
 unameOut="$(uname -s)"
 if [[ "${unameOut}" == CYGWIN* ]]; then
