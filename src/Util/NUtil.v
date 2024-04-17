@@ -9,23 +9,6 @@ Require Import Crypto.Util.ZUtil.Z2Nat.
 Require Import Crypto.Util.ZUtil.Shift.
 
 Module N.
-  Lemma shiftr_size : forall n bound, N.size_nat n <= bound ->
-    N.shiftr_nat n bound = 0%N.
-  Proof.
-    intros n bound H.
-    rewrite <- (Nat2N.id bound).
-    rewrite Nshiftr_nat_equiv.
-    destruct (N.eq_dec n 0); subst; [apply N.shiftr_0_l|].
-    apply N.shiftr_eq_0.
-    rewrite N.size_nat_equiv in *.
-    rewrite N.size_log2 in * by auto.
-    apply N.le_succ_l.
-    rewrite <- N.compare_le_iff.
-    rewrite N2Nat.inj_compare.
-    rewrite <- Compare_dec.nat_compare_le.
-    rewrite Nat2N.id.
-    auto.
-  Qed.
 
 #[global]
   Hint Rewrite
@@ -52,30 +35,6 @@ Module N.
     replace 2 with (N.to_nat 2) by auto.
     autorewrite with N_nat_conv.
     reflexivity.
-  Qed.
-
-  Lemma shiftr_succ : forall n i,
-    N.to_nat (N.shiftr_nat n i) =
-    if N.testbit_nat n i
-    then S (2 * N.to_nat (N.shiftr_nat n (S i)))
-    else (2 * N.to_nat (N.shiftr_nat n (S i))).
-  Proof.
-    intros n i.
-    rewrite Nshiftr_nat_S.
-    case_eq (N.testbit_nat n i); intro testbit_i;
-      pose proof (Nshiftr_nat_spec n i 0) as shiftr_n_odd;
-      rewrite Nbit0_correct in shiftr_n_odd; simpl in shiftr_n_odd;
-      rewrite testbit_i in shiftr_n_odd.
-    + pose proof (Ndiv2_double_plus_one (N.shiftr_nat n i) shiftr_n_odd) as Nsucc_double_shift.
-      rewrite succ_double_to_nat in Nsucc_double_shift.
-      apply Nat2N.inj.
-      rewrite Nsucc_double_shift.
-      apply N2Nat.id.
-    + pose proof (Ndiv2_double (N.shiftr_nat n i) shiftr_n_odd) as Nsucc_double_shift.
-      rewrite double_to_nat in Nsucc_double_shift.
-      apply Nat2N.inj.
-      rewrite Nsucc_double_shift.
-      apply N2Nat.id.
   Qed.
 
   Section ZN.
