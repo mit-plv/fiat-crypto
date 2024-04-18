@@ -32,7 +32,7 @@ Module E.
       end.
 
     Program Definition zero : point := (0, 1).
-    Next Obligation. eauto using Pre.onCurve_zero. Qed.
+    Next Obligation. pose Pre.onCurve_zero; eauto. Qed.
 
     Program Definition add (P1 P2:point) : point :=
       match coordinates P1, coordinates P2 return (F*F) with

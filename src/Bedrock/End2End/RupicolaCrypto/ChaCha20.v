@@ -168,7 +168,7 @@ Lemma array_dexpr_locals_put
     map.get l x = None → Forall2 (DEXPR m l) exp w → Forall2 (DEXPR m #{ … l; x => v }#) exp w.
 Proof.
   induction 2; constructor;
-    eauto using dexpr_locals_put.
+    solve [eauto|epose dexpr_locals_put; eauto].
 Qed.
 
 (* we leave prior valiues abstract to support compound operations *)

@@ -19,7 +19,9 @@ Section Ring.
   Global Instance Ncring_Ring_ops : @Ncring.Ring_ops T zero one add mul sub opp eq := {}.
   Global Instance Ncring_Ring : @Ncring.Ring T zero one add mul sub opp eq Ncring_Ring_ops.
   Proof using Type*.
-    split; exact _ || cbv; intros; eauto using left_identity, right_identity, commutative, associative, right_inverse, left_distributive, right_distributive, ring_sub_definition with core typeclass_instances.
+    split; exact _ || cbv; intros;
+    pose left_identity; pose right_identity; pose commutative; pose associative; pose right_inverse; pose left_distributive; pose right_distributive; pose ring_sub_definition;
+    eauto with core typeclass_instances.
     - (* TODO: why does [eauto using @left_identity with typeclass_instances] not work? *)
       eapply @left_identity; eauto with typeclass_instances.
     - eapply @right_identity; eauto with typeclass_instances.

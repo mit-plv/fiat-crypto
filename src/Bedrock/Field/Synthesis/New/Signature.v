@@ -172,7 +172,7 @@ Section WithParameters.
     | |- map word.unsigned ?x = map byte.unsigned _ =>
       is_evar x;
       erewrite Util.map_unsigned_of_Z,MaxBounds.map_word_wrap_bounded
-        by eauto using byte_unsigned_within_max_bounds;
+        by (eapply byte_unsigned_within_max_bounds; eauto);
       reflexivity
     | _ => equivalence_side_conditions_hook
     end.

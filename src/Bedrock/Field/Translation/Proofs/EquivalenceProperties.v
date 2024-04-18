@@ -53,7 +53,7 @@ Section OnlyDiffer.
   Proof.
     cbv [equivalent_base rep.equiv rep.Z WeakestPrecondition.dexpr].
     repeat intro; sepsimpl; subst; eexists; sepsimpl; eauto.
-    eauto using expr_only_differ_undef.
+    pose expr_only_differ_undef; eauto.
   Qed.
 
   Section Local.
