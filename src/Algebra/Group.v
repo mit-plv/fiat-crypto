@@ -10,13 +10,13 @@ Section BasicProperties.
   Local Open Scope eq_scope.
 
   Lemma cancel_left : forall z x y, z*x = z*y <-> x = y.
-  Proof using Type*. eauto using Monoid.cancel_left, left_inverse. Qed.
+  Proof using Type*. epose Monoid.cancel_left; epose left_inverse; eauto. Qed.
   Lemma cancel_right : forall z x y, x*z = y*z <-> x = y.
-  Proof using Type*. eauto using Monoid.cancel_right, right_inverse. Qed.
+  Proof using Type*. epose Monoid.cancel_right; epose right_inverse; eauto. Qed.
   Lemma inv_inv x : inv(inv(x)) = x.
-  Proof using Type*. eauto using Monoid.inv_inv, left_inverse. Qed.
+  Proof using Type*. epose Monoid.inv_inv; epose left_inverse; eauto. Qed.
   Lemma inv_op_ext x y : (inv y*inv x)*(x*y) =id.
-  Proof using Type*. eauto using Monoid.inv_op, left_inverse. Qed.
+  Proof using Type*. epose Monoid.inv_op; epose left_inverse; eauto. Qed.
 
   Lemma inv_unique x ix : ix * x = id -> ix = inv x.
   Proof using Type*.
