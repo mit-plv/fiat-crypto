@@ -156,7 +156,7 @@ Section ZeroNeqOne.
 
   Lemma one_neq_zero : not (eq one zero).
   Proof using Type*.
-    intro HH; symmetry in HH. auto using zero_neq_one.
+    intro HH; symmetry in HH. epose zero_neq_one; auto.
   Qed.
 End ZeroNeqOne.
 

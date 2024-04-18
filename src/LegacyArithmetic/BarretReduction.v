@@ -33,7 +33,7 @@ Section barrett.
            /\ small_valid barrett_reduce }.
   Proof.
     intro x. evar (pr : SmallT); exists pr. intros x_valid.
-    assert (0 <= decode_large x < b^(k+offset) * b^(k-offset)) by auto using decode_medium_valid.
+    assert (0 <= decode_large x < b^(k+offset) * b^(k-offset)) by eauto using decode_medium_valid.
     assert (0 <= decode_large x < b^(2 * k)) by (autorewrite with pull_Zpow zsimplify in *; lia).
     assert ((decode_large x) mod b^(k-offset) < b^(k-offset)) by auto with zarith lia.
     rewrite (barrett_reduction_small m b (decode_large x) k μ offset) by lia.
