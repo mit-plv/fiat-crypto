@@ -17,19 +17,21 @@ jobs:
       fail-fast: false
       matrix:
         coq-version: ['dev', '8.19.0', '8.18.0']
-        ocaml-compiler: ['4.11.1']
         os: [{name: 'Ubuntu',
               runs-on: 'ubuntu-latest',
+              ocaml-compiler: '4.08.1',
               coq-extra-flags: '',
               extra-ocaml-repositories: '',
               opam-jobs-flag: ''},
              {name: 'macOS',
               runs-on: 'macos-latest',
+              ocaml-compiler: '4.14.2',
               coq-extra-flags: '',
               extra-ocaml-repositories: '',
               opam-jobs-flag: ''},
              {name: 'Windows',
               runs-on: 'windows-latest',
+              ocaml-compiler: '4.11.1',
               coq-extra-flags: '-async-proofs-j 1',
               extra-ocaml-repositories: 'opam-repository-mingw: https://github.com/ocaml-opam/opam-repository-mingw.git#sunset',
               opam-jobs-flag: '-j 1'}]
@@ -43,7 +45,7 @@ jobs:
     - name: Set up OCaml
       uses: ocaml/setup-ocaml@v2
       with:
-        ocaml-compiler: ${{ matrix.ocaml-compiler }}
+        ocaml-compiler: ${{ matrix.os.ocaml-compiler }}
         opam-repositories: |-
           ${{ matrix.os.extra-ocaml-repositories }}
           default: https://github.com/ocaml/opam-repository.git
