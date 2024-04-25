@@ -50,6 +50,7 @@ Section Field.
         | |- context [spec_of_from_bytes] => eapply from_bytes_func_correct
         | |- context [spec_of_to_bytes] => eapply to_bytes_func_correct
         | |- context [spec_of_selectznz] => eapply select_znz_func_correct
+        | |- context [spec_of_felem_copy] => eapply felem_copy_func_correct
         | |- context [spec_of_UnOp un_from_mont] => eapply (from_mont_func_correct _ _ _ from_mont_string to_mont_string)
         | |- context [spec_of_UnOp un_to_mont] => eapply (to_mont_func_correct _ _ _ from_mont_string to_mont_string)
         end.
@@ -82,7 +83,14 @@ Section Field.
   Local Notation functions_contain functions f :=
     (Interface.map.get functions (fst f) = Some (snd f)).
 
-
+  Derive secp256k1_felem_copy
+         SuchThat (forall functions,
+                      functions_contain functions secp256k1_felem_copy ->
+                      spec_of_felem_copy
+                        (field_representation:=field_representation_raw m)
+                        functions)
+         As secp256k1_felem_copy_correct.
+  Proof. Time derive_bedrock2_func felem_copy_op. Qed.
 
   Derive secp256k1_from_bytes
          SuchThat (forall functions,
