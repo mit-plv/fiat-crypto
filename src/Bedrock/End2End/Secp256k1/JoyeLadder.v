@@ -31,6 +31,7 @@ Require Import Crypto.Bedrock.Field.Synthesis.New.WordByWordMontgomery.
 Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
 Require Import Crypto.Bedrock.End2End.Secp256k1.Field256k1.
 Require Import Crypto.Bedrock.End2End.Secp256k1.JacobianCoZ.
+Require Import Crypto.Bedrock.End2End.Secp256k1.Addchain.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Util.Decidable.
 Require Import Curves.Weierstrass.Jacobian.Jacobian.
@@ -49,8 +50,8 @@ Local Existing Instance field_parameters.
 Local Instance frep256k1 : Field.FieldRepresentation := field_representation Field256k1.m.
 Local Existing Instance frep256k1_ok.
 
-Definition laddermul :=
-  func! (oX, oY, oZ, k, X, Y) {
+Definition secp256k1_laddermul :=
+  func! (oX, oY, k, X, Y) {
     i = coq:(2);
     swap = (load1(k+coq:(1)>>coq:(3))>>(coq:(1)&coq:(7)))&coq:(1);
     stackalloc 32 as X0;
@@ -58,6 +59,7 @@ Definition laddermul :=
     stackalloc 32 as X1;
     stackalloc 32 as Y1;
     stackalloc 32 as Z;
+    stackalloc 32 as oZ;
     secp256k1_tplu(X1, Y1, X0, Y0, Z, X, Y);
     secp256k1_felem_cswap(swap, X0, X1);
     secp256k1_felem_cswap(swap, Y0, Y1);
@@ -77,7 +79,10 @@ Definition laddermul :=
     secp256k1_zaddu(X1, Y1, oX, oY, oZ, X0, Y0, tX, tY, Z);
     swap = (load1(k+coq:(0)>>coq:(3))>>(coq:(0)&coq:(7)))&coq:(1);
     secp256k1_felem_cswap(swap, oX, X1);
-    secp256k1_felem_cswap(swap, oY, Y1)
+    secp256k1_felem_cswap(swap, oY, Y1);
+    secp256k1_inv(Z, oZ);
+    secp256k1_mul(oX, oX, Z);
+    secp256k1_mul(oY, oY, Z)
 }.
 
 Require Import bedrock2.ToCString.
@@ -97,11 +102,11 @@ Definition funcs :=
   &[,secp256k1_make_co_z;
      secp256k1_felem_cswap;
      secp256k1_zaddu;
-     (* secp256k1_zaddc; *)
      secp256k1_dblu;
      secp256k1_tplu;
      secp256k1_zdau;
-     laddermul].
+     secp256k1_inv;
+     secp256k1_laddermul].
 
 Compute (ToCString.c_module funcs).
 
