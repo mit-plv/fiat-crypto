@@ -181,7 +181,7 @@ Section WithParameters.
       ensures t' m' :=
         t = t' /\
         exists z',
-        feval z' = (F.pow vx (2^256 - 2^32 - 977 - 2)) /\
+        feval z' = (F.inv vx) /\
         bounded_by tight_bounds z' /\
         m' =* (FElem zK z') * (FElem xK x) * R
     }.
@@ -376,7 +376,8 @@ Section WithParameters.
            | H : feval ?a = _ |- context [feval ?a] => rewrite H
            end.
     cbv [un_model bin_model un_square bin_mul].
-    unfold vx.
+    unfold vx. rewrite (@F.Fq_inv_fermat _ _ two_lt_M).
+    rewrite F_M_pos.
     repeat match goal with
     | |- context [F.pow (F.pow (feval x) ?a) ?b] => rewrite (F.pow_pow_l (feval x) a b)
     | |- context [F.mul (feval x) (F.pow (feval x) ?n)] => rewrite <- (F.pow_succ_r (feval x) n)
