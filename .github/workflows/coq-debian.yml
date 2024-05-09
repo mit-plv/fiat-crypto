@@ -121,6 +121,8 @@ jobs:
     - name: List files
       run: find dist
     - run: chmod +x dist/fiat_crypto
+    - name: host build params
+      run: etc/ci/describe-system-config.sh
     - name: Test files (host)
       run: |
         echo "::group::file fiat_crypto"
@@ -129,7 +131,10 @@ jobs:
         echo "::group::ldd fiat_crypto"
         ldd dist/fiat_crypto
         echo "::endgroup::"
-        etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto
+        etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto || {
+          printf '::warning::Debian ${{ matrix.debian }} binary does not run on ubuntu: %s\n' \
+            "$(etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto 2>&1 | tr '\n' '~' | sed 's/~/%0A/g')";
+        }
     - name: setup Debian chroot
       run: etc/ci/setup-debian-chroot.sh "${{ matrix.debian }}"
     - name: Test files (container)
