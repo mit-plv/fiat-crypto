@@ -1,5 +1,7 @@
 #!/bin/sh
 
+eval $(opam env) || true
+
 group uname -a
 group ulimit -aH
 group ulimit -aS
