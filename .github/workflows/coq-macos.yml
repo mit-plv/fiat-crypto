@@ -180,8 +180,12 @@ jobs:
         etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto
 
   publish-standalone:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ['', '-x86_64', '-arm64']
     runs-on: ubuntu-latest
-    needs: combine-standalone
+    needs: [build, combine-standalone]
     permissions:
       contents: write  # IMPORTANT: mandatory for making GitHub Releases
     steps:
@@ -189,10 +193,10 @@ jobs:
       with:
         fetch-depth: 0 # Fetch all history for all tags and branches
         tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
-    - name: Download standalone MacOS
+    - name: Download standalone MacOS${{ matrix.arch }}
       uses: actions/download-artifact@v3
       with:
-        name: standalone-macos
+        name: standalone-macos${{ matrix.arch }}
         path: dist/
     - name: List files
       run: find dist
@@ -204,7 +208,7 @@ jobs:
         echo "$fname"
         mv dist/fiat_crypto "dist/$fname"
         find dist
-    - name: Upload artifacts to GitHub Release
+    - name: Upload macOS-${{ matrix.arch }} artifacts to GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}
       # Upload to GitHub Release using the `gh` CLI.
