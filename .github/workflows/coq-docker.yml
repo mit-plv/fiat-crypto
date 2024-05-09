@@ -24,6 +24,9 @@ jobs:
     env: ${{ matrix.env }}
     name: docker-${{ matrix.env.COQ_VERSION }}
 
+    outputs:
+      coq_image_name: ${{ steps.set-output-step.outputs.coq_image_name }}
+
     concurrency:
       group: ${{ github.workflow }}-${{ matrix.env.COQ_VERSION }}-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
@@ -122,6 +125,41 @@ jobs:
         custom_script: |
           sudo git config --global --add safe.directory "*"
           sudo make EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 COQBIN="$(dirname "$(which coqc)")/" install install-standalone-ocaml
+    - name: Save COQ_IMAGE
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
+        ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY COQ_IMAGE
+        custom_script: |
+          printf "'%s'\n" "${COQ_IMAGE}"
+          printf "%s" "${COQ_IMAGE}" > .coqimage
+    - name: Set COQ_IMAGE
+      run: |
+        COQ_IMAGE="$(cat .coqimage)"
+        # N.B. This block can be removed once https://github.com/coq-community/docker-coq-action/pull/89 is merged
+        # we can just do `echo "COQ_IMAGE=$(cat .coqimage)" >> $GITHUB_ENV` then
+        if [ -z "${COQ_IMAGE}" ]; then
+          echo "::warning::.coqimage is empty, parsing docker images for coqorg/coq:.*${{ matrix.env.DOCKER_COQ_VERSION }}.*"
+          echo "::group::docker images"
+          docker images
+          echo "::endgroup::"
+          echo "::group::docker images --format '{{.Repository}}:{{.Tag}}'"
+          docker images --filter "reference=coqorg/coq*" --format "{{.Repository}}:{{.Tag}}"
+          echo "::endgroup::"
+          COQ_IMAGE="$(docker images --filter "reference=coqorg/coq*" --format "{{.Repository}}:{{.Tag}}" | grep -o 'coqorg/coq:.*${{ matrix.env.DOCKER_COQ_VERSION }}.*')"
+        fi
+        echo "COQ_IMAGE=${COQ_IMAGE}" >> $GITHUB_ENV
+    - run: docker save "$COQ_IMAGE" -o image.tar
+    - name: Set coq_image_name Output to ${{ runner.os }}-docker-${{ hashFiles('image.tar') }}
+      id: set-output-step
+      run: |
+        echo "coq_image_name=${{ runner.os }}-docker-${{ hashFiles('image.tar') }}" >> $GITHUB_OUTPUT
+    - name: Cache Docker image
+      uses: actions/cache@v3
+      with:
+        path: image.tar
+        key: ${{ runner.os }}-docker-${{ hashFiles('image.tar') }}
     - name: display timing info
       run: cat time-of-build-pretty.log
     - name: display per-line timing info
@@ -149,6 +187,13 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+    - name: Restore cached Docker image ${{ needs.build.outputs.coq_image_name }}
+      uses: actions/cache@v3
+      with:
+        path: image.tar
+        key: ${{ needs.build.outputs.coq_image_name }}
+    - name: Load Docker image
+      run: docker load -i image.tar
     - name: Download a Build Artifact
       uses: actions/download-artifact@v3
       with:
