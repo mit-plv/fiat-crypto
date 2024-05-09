@@ -83,22 +83,22 @@ jobs:
     - name: only-test-amd64-files-lite
       run: opam exec -- etc/ci/github-actions-make.sh -j${{ env.NJOBS }} only-test-amd64-files-lite SLOWEST_FIRST=1
     - name: upload OCaml files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ExtractionOCaml
         path: src/ExtractionOCaml
     - name: upload js_of_ocaml files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ExtractionJsOfOCaml
         path: src/ExtractionJsOfOCaml
     - name: upload standalone files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: standalone-windows
         path: dist/fiat_crypto.exe
     - name: upload standalone js files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: standalone-html-windows
         path: fiat-html
@@ -115,7 +115,7 @@ jobs:
       run: etc/ci/github-actions-display-per-line-timing.sh
       shell: bash
 #    - name: upload timing and .vo info
-#      uses: actions/upload-artifact@v3
+#      uses: actions/upload-artifact@v4
 #      with:
 #        name: build-outputs
 #        path: .
@@ -132,7 +132,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Download standalone Windows
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: standalone-windows
         path: dist/
@@ -167,7 +167,7 @@ jobs:
         fetch-depth: 0 # Fetch all history for all tags and branches
         tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
     - name: Download standalone Windows
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: standalone-windows
         path: dist/
