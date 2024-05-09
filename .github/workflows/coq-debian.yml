@@ -109,7 +109,7 @@ jobs:
         include:
         - debian: sid
         #- debian: bookworm # restore once 8.17 lands in Debian stable
-    runs-on: ubuntu-latest
+    runs-on: 'ubuntu-22.04'
     needs: build
     steps:
     - uses: actions/checkout@v4
@@ -121,6 +121,8 @@ jobs:
     - name: List files
       run: find dist
     - run: chmod +x dist/fiat_crypto
+    - name: host build params
+      run: etc/ci/describe-system-config.sh
     - name: Test files (host)
       run: |
         echo "::group::file fiat_crypto"
