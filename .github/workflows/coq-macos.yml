@@ -58,12 +58,19 @@ jobs:
       run: etc/ci/describe-system-config-macos.sh
     - name: deps
       run: opam exec -- etc/ci/github-actions-make.sh -j2 deps
+    - name: all-except-js-of-ocaml
+      run: opam exec -- etc/ci/github-actions-make.sh -j2 all-except-js-of-ocaml
+    - name: pre-standalone-extracted
+      run: opam exec -- etc/ci/github-actions-make.sh -j2 pre-standalone-extracted
     - name: all
       run: opam exec -- etc/ci/github-actions-make.sh -j2 all
+      if: ${{ matrix.os.arch != 'arm64' }}
+      # js_of_ocaml is too heavy for M1 GH Action runners which have only 7GB RAM, cf https://github.com/ocsigen/js_of_ocaml/issues/1612, https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners#standard-github-hosted-runners-for-public-repositories
     - name: install-standalone-unified-ocaml
       run: opam exec -- etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
     - name: install-standalone-js-of-ocaml
       run: opam exec -- etc/ci/github-actions-make.sh install-standalone-js-of-ocaml
+      if: ${{ matrix.os.arch != 'arm64' }}
     - name: only-test-amd64-files-lite
       run: opam exec -- etc/ci/github-actions-make.sh -j2 only-test-amd64-files-lite SLOWEST_FIRST=1
 
