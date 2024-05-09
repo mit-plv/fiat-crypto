@@ -5,6 +5,7 @@ group ulimit -aH
 group ulimit -aS
 group ghc --version
 group ghc -v
+group ldd --version
 group gcc --version
 group gcc -v
 group opam switch

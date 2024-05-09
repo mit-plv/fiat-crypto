@@ -25,6 +25,11 @@ Print-Group -name "coqc --config" -command { opam exec -- coqc --config }
 Print-Group -name "coqc --version" -command { opam exec -- coqc --version }
 Print-Group -name "coqtop version" -command { "" | opam exec -- coqtop }
 
+# gcc
+Print-Group -name "gcc -v" -command { opam exec -- gcc -v }
+Print-Group -name "gcc --version" -command { opam exec -- gcc --version }
+Print-Group -name "ldd --version" -command { opam exec -- ldd --version }
+
 # Using make with environmental variables
 Print-Group -name "make printenv" -command { opam exec -- make printenv }
 Print-Group -name "PATH=$PATH" -command { & "$CYGWIN_ROOT\bin\bash.exe" -l -c 'echo "${PATH}"' }
