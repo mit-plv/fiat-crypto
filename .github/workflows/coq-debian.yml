@@ -109,7 +109,7 @@ jobs:
         include:
         - debian: sid
         #- debian: bookworm # restore once 8.17 lands in Debian stable
-    runs-on: 'ubuntu-22.04'
+    runs-on: ubuntu-latest
     needs: build
     steps:
     - uses: actions/checkout@v4
@@ -131,7 +131,10 @@ jobs:
         echo "::group::ldd fiat_crypto"
         ldd dist/fiat_crypto
         echo "::endgroup::"
-        etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto
+        etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto || {
+          printf '::warning::Debian ${{ matrix.debian }} binary does not run on ubuntu: %s\n' \
+            "$(etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto 2>&1 | tr '\n' '~' | sed 's/~/%0A/g')";
+        }
     - name: setup Debian chroot
       run: etc/ci/setup-debian-chroot.sh "${{ matrix.debian }}"
     - name: Test files (container)
