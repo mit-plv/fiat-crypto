@@ -4,6 +4,8 @@
 # this makefile directly as long as the compiled binaries are lying
 # around
 
+.SUFFIXES:
+
 include Makefile.config
 
 CFLAGS?=
