@@ -2,6 +2,8 @@
 # files on .v files, so that we can compile them by invoking this
 # makefile directly even when Coq is not available
 
+.SUFFIXES:
+
 SELF_MAKEFILE_STANDALONE := $(lastword $(MAKEFILE_LIST))
 
 include Makefile.config
