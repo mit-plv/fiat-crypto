@@ -130,31 +130,13 @@ jobs:
       with:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
-        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY COQ_IMAGE
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY COQ_IMAGE GITHUB_ENV
         custom_script: |
-          printf "'%s'\n" "${COQ_IMAGE}"
-          printf "%s" "${COQ_IMAGE}" > .coqimage
-    - name: Set COQ_IMAGE
-      run: |
-        COQ_IMAGE="$(cat .coqimage)"
-        # N.B. This block can be removed once https://github.com/coq-community/docker-coq-action/pull/89 is merged
-        # we can just do `echo "COQ_IMAGE=$(cat .coqimage)" >> $GITHUB_ENV` then
-        if [ -z "${COQ_IMAGE}" ]; then
-          echo "::warning::.coqimage is empty, parsing docker images for coqorg/coq:.*${{ matrix.env.DOCKER_COQ_VERSION }}.*"
-          echo "::group::docker images"
-          docker images
-          echo "::endgroup::"
-          echo "::group::docker images --format '{{.Repository}}:{{.Tag}}'"
-          docker images --filter "reference=coqorg/coq*" --format "{{.Repository}}:{{.Tag}}"
-          echo "::endgroup::"
-          COQ_IMAGE="$(docker images --filter "reference=coqorg/coq*" --format "{{.Repository}}:{{.Tag}}" | grep -o 'coqorg/coq:.*${{ matrix.env.DOCKER_COQ_VERSION }}.*')"
-        fi
-        echo "COQ_IMAGE=${COQ_IMAGE}" >> $GITHUB_ENV
+          echo "COQ_IMAGE=${COQ_IMAGE}" | tee -a $GITHUB_ENV
     - run: docker save "$COQ_IMAGE" -o image.tar
     - name: Set coq_image_name Output to ${{ runner.os }}-docker-${{ hashFiles('image.tar') }}
       id: set-output-step
-      run: |
-        echo "coq_image_name=${{ runner.os }}-docker-${{ hashFiles('image.tar') }}" >> $GITHUB_OUTPUT
+      run: echo "coq_image_name=${{ runner.os }}-docker-${{ hashFiles('image.tar') }}" >> $GITHUB_OUTPUT
     - name: Cache Docker image
       uses: actions/cache@v3
       with:
