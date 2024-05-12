@@ -130,10 +130,9 @@ jobs:
       with:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
-        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY COQ_IMAGE GITHUB_ENV
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY COQ_IMAGE
         custom_script: |
-          echo "COQ_IMAGE=${COQ_IMAGE}" | tee -a $GITHUB_ENV
-    - run: docker save "$COQ_IMAGE" -o image.tar
+          docker save "$COQ_IMAGE" -o image.tar
     - name: Set coq_image_name Output to ${{ runner.os }}-docker-${{ hashFiles('image.tar') }}
       id: set-output-step
       run: echo "coq_image_name=${{ runner.os }}-docker-${{ hashFiles('image.tar') }}" >> $GITHUB_OUTPUT
