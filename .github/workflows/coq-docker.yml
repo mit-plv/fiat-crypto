@@ -138,7 +138,7 @@ jobs:
       id: set-output-step
       run: echo "coq_image_name=${{ runner.os }}-docker-${{ hashFiles('image.tar') }}" >> $GITHUB_OUTPUT
     - name: Cache Docker image
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: image.tar
         key: ${{ runner.os }}-docker-${{ hashFiles('image.tar') }}
@@ -170,7 +170,7 @@ jobs:
       with:
         submodules: recursive
     - name: Restore cached Docker image ${{ needs.build.outputs.coq_image_name }}
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: image.tar
         key: ${{ needs.build.outputs.coq_image_name }}
