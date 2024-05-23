@@ -206,19 +206,22 @@ Module ScalarMult.
     Definition joye_ladder_inner (scalarbitsz : Z) (testbit : Z -> bool) (P : point)
       (HPaff : z_of P = 1) : point :=
       (* Initialization *)
-      let b := testbit 1%Z in
-      let R1R0 := cswap_co_z_points b (tplu_co_z_points P HPaff) in
+      let swap := testbit 1%Z in
+      let R1R0 := tplu_co_z_points P HPaff in
       (* loop *)
-      let '(R1R0, _) :=
-        (@while (co_z_points*Z) (fun '(_, i) => (Z.ltb i scalarbitsz))
-           (fun '(R1R0, i) =>
+      let '(R1R0, swap, _) :=
+        (@while (co_z_points*bool*Z) (fun '(_, _, i) => (Z.ltb i scalarbitsz))
+           (fun '(R1R0, swap, i) =>
               let b := testbit i in
-              let R1R0 := cswap_co_z_points b R1R0 in
-              let R1R0 := cswap_co_z_points b (zdau_co_z_points R1R0) in
+              let swap := xorb swap b in
+              let R1R0 := cswap_co_z_points swap R1R0 in
+              let R1R0 := zdau_co_z_points R1R0 in
+              let swap := b in
               let i := Z.succ i in
-              (R1R0, i))
-           (Z.to_nat scalarbitsz) (* bound on loop iterations *)
-           (R1R0, 2%Z)) in
+              (R1R0, swap, i))
+           (Z.to_nat scalarbitsz - 2) (* bound on loop iterations *)
+           (R1R0, swap, 2%Z)) in
+      let R1R0 := cswap_co_z_points swap R1R0 in
       snd (proj1_sig R1R0).
 
     (* Wrapper around joye_ladder_inner for points in affine coordinates,
@@ -283,25 +286,28 @@ Module ScalarMult.
              (joye_ladder_inner bitsz testbit1 P HPaff).
         Proof.
           unfold joye_ladder_inner.
-          rewrite (surjective_pairing (while _ _ _ (cswap_co_z_points (testbit0 _) _, _))).
-          rewrite (surjective_pairing (while _ _ _ (cswap_co_z_points (testbit1 _) _, _))).
+          rewrite (surjective_pairing (while _ _ _ (_, testbit0 _, _))).
+          rewrite (surjective_pairing (while _ _ _ (_, testbit1 _, _))).
+          rewrite (surjective_pairing (fst (while _ _ _ (_, testbit0 _, _)))).
+          rewrite (surjective_pairing (fst (while _ _ _ (_, testbit1 _, _)))).
           rewrite bit0_irr by lia.
           match goal with
-          | |- eq (snd (proj1_sig (fst (while ?T0 ?B0 ?F0 ?I0))))
-                 (snd (proj1_sig (fst (while ?T1 ?B1 ?F1 ?I1)))) =>
+          | |- eq (snd (proj1_sig (cswap_co_z_points (snd (fst (while ?T0 ?B0 ?F0 ?I0))) _)))
+                 (snd (proj1_sig (cswap_co_z_points (snd (fst (while ?T1 ?B1 ?F1 ?I1))) _))) =>
               set (test0 := T0);
               set (body0 := B0);
               set (fuel := F0);
               set (init0 := I0);
               set (body1 := B1)
           end.
-          apply (while.preservation test0 body0 test0 body1 (fun s1 s2 => eq (snd (proj1_sig (fst s1))) (snd (proj1_sig (fst s2))) /\ (s1 = s2 :> (co_z_points * Z)) /\ (2 <= snd s1)%Z)).
-          - intros s1 s2 (_ & <- & _). reflexivity.
-          - unfold test0. intros (PQ1 & i1) (PQ2 & i2) _.
-            cbn [fst snd]. intros (_ & Heq & Hi). inversion Heq; clear Heq.
-            subst PQ1; subst i1.
+          eelim (while.preservation test0 body0 test0 body1 (fun s1 s2 => (s1 = s2 :> (co_z_points * bool * Z)) /\ (2 <= snd s1)%Z)).
+          { intros A B. rewrite A. reflexivity. }
+          - intros s1 s2 (<- & _). reflexivity.
+          - unfold test0. intros ((PQ1 & b1) & i1) ((PQ2 & b2) & i2) _.
+            cbn [fst snd]. intros (Heq & Hi). inversion Heq; clear Heq.
+            subst PQ1; subst b1; subst i1.
             unfold body0, body1. rewrite bit0_irr by lia.
-            split; [reflexivity|split; [reflexivity|simpl; lia] ].
+            split; [reflexivity|simpl; lia].
           - repeat (split; try reflexivity).
         Qed.
 
@@ -579,38 +585,37 @@ Module ScalarMult.
           rewrite (sig_eta (tplu_co_z_points _ _)) in Htplu.
           apply proj1_sig_eq in Htplu; simpl in Htplu.
           (* Initialize the ladder state with ([3]P, [1]P) or its symmetric *)
-          destruct (cswap_co_z_points (testbitn 1) _) as ((A3 & A4) & HA34) eqn:HA1.
-          rewrite (sig_eta (cswap_co_z_points _ _)) in HA1.
-          apply proj1_sig_eq in HA1. cbn [proj1_sig cswap_co_z_points] in HA1.
-          assert (A3 = (if testbitn 1 then A2 else A1) :> point) as HA3 by (destruct (testbitn 1); inversion HA1; auto).
-          assert (A4 = (if testbitn 1 then A1 else A2) :> point) as HA4 by (destruct (testbitn 1); inversion HA1; auto).
-          clear HA1. destruct (tplu_scalarmult' Htplu) as (HeqA1 & HeqA2 & _).
+          destruct (tplu_scalarmult' Htplu) as (HeqA1 & HeqA2 & _).
           set (inv :=
-                 fun '(R1R0, i) =>
+                 fun '(R1R0, swap, i) =>
                    let '(R1, R0) := proj1_sig (R1R0:co_z_points) in
                    (2 <= i <= scalarbitsz)%Z /\
-                     (eq R1 (scalarmult' (TT n (Z.to_nat i)) P)
-                      /\ eq R0 (scalarmult' (SS n (Z.to_nat i)) P))
-                   /\ ((i < scalarbitsz)%Z -> x_of R1 <> x_of R0)).
+                     (eq (if (swap: bool) then R0 else R1) (scalarmult' (TT n (Z.to_nat i)) P)
+                      /\ eq (if swap then R1 else R0) (scalarmult' (SS n (Z.to_nat i)) P))
+                   /\ ((i < scalarbitsz)%Z -> x_of R1 <> x_of R0)
+                   /\ (swap = testbitn (i - 1) :> bool)).
           assert (HH : forall (A B : Prop), A -> (A -> B) -> A /\ B) by tauto.
-          assert (WWinv : inv WW /\ (snd WW = scalarbitsz :> Z)).
-          { set (measure := fun (state : (co_z_points*Z)) => ((Z.to_nat scalarbitsz) + 2 - (Z.to_nat (snd state)))%nat).
-            unfold WW. replace (Z.to_nat scalarbitsz) with (measure (exist _ (A3, A4) HA34, 2%Z)) by (unfold measure; simpl; lia).
-            eapply (while.by_invariant inv measure (fun s => inv s /\ (snd s = scalarbitsz :> Z))).
+          assert (WWinv : inv WW /\ (snd WW = scalarbitsz :> Z) /\ (snd (fst WW) = testbitn (scalarbitsz - 1) :> bool)).
+          { set (measure := fun (state : (co_z_points*bool*Z)) => ((Z.to_nat scalarbitsz) - (Z.to_nat (snd state)))%nat).
+            unfold WW. replace (Z.to_nat scalarbitsz - 2)%nat with (measure (exist _ (A1, A2) HA12, testbitn 1, 2%Z)) by (unfold measure; simpl; lia).
+            eapply (while.by_invariant inv measure (fun s => inv s /\ (snd s = scalarbitsz :> Z) /\ (snd (fst s) = testbitn (scalarbitsz - 1) :> bool))).
             - (* Invariant holds at beginning *)
               unfold inv. cbn [proj1_sig].
               split; [lia|]. apply HH.
               + change (Z.to_nat 2) with 2%nat.
-                rewrite SS2, TT2, HA3, HA4.
+                rewrite SS2, TT2.
                 case Z.testbit; auto.
-              + intros [He1 He2] Hxe. symmetry.
-                apply (SS_TT_xne 2%Z A4 A3 ltac:(apply co_z_comm; exact HA34) ltac:(lia)); eauto.
+              + intros [He1 He2]. split.
+                * intros Hxe.
+                  generalize (SS_TT_xne 2%Z (if testbitn 1 then A1 else A2) (if testbitn 1 then A2 else A1) ltac:(destruct (testbitn 1); [|apply co_z_comm]; exact HA12) ltac:(lia) He2 He1).
+                  case Z.testbit; [|symmetry]; auto.
+                * reflexivity.
             - (* Invariant is preserved by the loop,
                measure decreases,
                and post-condition i = scalarbitsz. *)
-              intros s Hs. destruct s as (R1R0 & i).
+              intros s Hs. destruct s as ((R1R0 & swap) & i).
               destruct R1R0 as ((R1 & R0) & HCOZ).
-              destruct Hs as (Hi & (HR1 & HR0) & Hx).
+              destruct Hs as (Hi & (HR1 & HR0) & Hx & Hswape).
               destruct (Z.ltb i scalarbitsz) eqn:Hltb.
               + apply Z.ltb_lt in Hltb.
                 split.
@@ -621,54 +626,55 @@ Module ScalarMult.
                    (R1, R0) <- cswap (testbitn i) (R1, R0);
                    *)
                   (* Start by giving names to all intermediate values *)
-                  unfold inv. destruct (cswap_co_z_points (testbitn i) (exist _ _ _)) as ((B1 & B2) & HB12) eqn:Hswap1.
+                  unfold inv. destruct (cswap_co_z_points (xorb swap (testbitn i)) (exist _ _ _)) as ((B1 & B2) & HB12) eqn:Hswap1.
                   rewrite (sig_eta (cswap_co_z_points _ _)) in Hswap1.
                   apply proj1_sig_eq in Hswap1. simpl in Hswap1.
-                  assert (HB1: B1 = (if testbitn i then R0 else R1) :> point) by (destruct (testbitn i); congruence).
-                  assert (HB2: B2 = (if testbitn i then R1 else R0) :> point) by (destruct (testbitn i); congruence).
+                  assert (HB1: B1 = (if xorb swap (testbitn i) then R0 else R1) :> point) by (destruct (xorb swap (testbitn i)); congruence).
+                  assert (HB2: B2 = (if xorb swap (testbitn i) then R1 else R0) :> point) by (destruct (xorb swap (testbitn i)); congruence).
                   clear Hswap1.
                   destruct (zdau_co_z_points _) as ((C1 & C2) & HC12) eqn:HZDAU.
                   rewrite (sig_eta (zdau_co_z_points _)) in HZDAU.
                   apply proj1_sig_eq in HZDAU. simpl in HZDAU.
-                  assert (HBx : x_of B1 <> x_of B2) by (rewrite HB1, HB2; destruct (testbitn i); [symmetry|]; auto).
+                  assert (HBx : x_of B1 <> x_of B2) by (rewrite HB1, HB2; destruct (xorb swap (testbitn i)); [symmetry|]; auto).
                   destruct (zaddu B1 B2 (zdau_co_z_points_obligation_1 (exist (fun '(A, B) => co_z A B) (B1, B2) HB12) B1 B2 eq_refl)) as (Y1 & Y2) eqn:HY.
-                  assert (HYx : x_of Y1 <> x_of Y2) by (eapply zaddu_SS_TT; eauto; lia).
+                  assert (HYx : x_of Y1 <> x_of Y2) by (eapply zaddu_SS_TT; eauto; try lia; destruct swap; destruct (testbitn i); auto).
                   generalize (@Jacobian.zdau_correct_alt F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv a b field char_ge_3 Feq_dec char_ge_12 ltac:(unfold id in *; fsatz) B1 B2 (zdau_co_z_points_obligation_1 (exist (fun '(A, B) => co_z A B) (B1, B2) HB12) B1 B2 eq_refl) HBx ltac:(rewrite HY; simpl; apply HYx)).
                   rewrite HZDAU. intros (HC1 & HC2 & _).
-                  destruct (cswap_co_z_points (testbitn i) _) as ((D1 & D2) & HD12) eqn:HD.
-                  rewrite (sig_eta (cswap_co_z_points _ _)) in HD.
-                  apply proj1_sig_eq in HD. cbn [proj1_sig cswap_co_z_points] in HD.
-                  assert (HD1 : D1 = (if testbitn i then C2 else C1) :> point) by (destruct (testbitn i); congruence).
-                  assert (HD2 : D2 = (if testbitn i then C1 else C2) :> point) by (destruct (testbitn i); congruence).
-                  clear HD. simpl.
+                  (* clear HD. *) simpl.
                   (* invariant preservation *)
                   (* counter still within bounds *)
-                  split; [lia|]. rewrite HD1, HD2. apply HH.
+                  split; [lia|]. (* rewrite HD1, HD2. *) apply HH.
                   { (* New values are indeed [SS (i+1)]P and [TT (i+1)]P *)
                     destruct (testbitn i) eqn:Hti;
+                    destruct swap eqn:Hswap;
                     rewrite <- HC1, <- HC2, HB1, HB2;
                     replace (Z.to_nat (Z.succ i)) with (S (Z.to_nat i)) by lia;
                     rewrite SS_succ, TT_succ, Z2Nat.id by lia;
                     rewrite Hti; split; try assumption;
                     rewrite <- Jacobian.add_double; try reflexivity;
-                    rewrite HR0, HR1;
+                    cbv [xorb]; rewrite HR0, HR1;
                     repeat rewrite <- (scalarmult_add_l (groupG:=Pgroup) (mul_is_scalarmult:=scalarmult_ref_is_scalarmult (groupG:=Pgroup)));
                     rewrite <- Z.add_diag; reflexivity. }
                   { (* Make sure we don't hit bad values *)
-                    intros [He1 He2] Hxe. symmetry. eapply (SS_TT_xne (Z.succ i)); eauto.
+                    intros [He1 He2].
+                    split; [|f_equal; lia].
+                    intros Hxe He. eapply (SS_TT_xne (Z.succ i) (if testbitn i then C1 else C2) (if testbitn i then C2 else C1)); eauto.
                     - destruct (testbitn i); [|apply co_z_comm]; auto.
-                    - lia. }
+                    - lia.
+                    - destruct (testbitn i); [|symmetry]; auto.
+                   }
                 * (* measure decreases *)
                   apply Z.ltb_lt in Hltb.
                   unfold measure; simpl; lia.
               + (* Post-condition *)
                 simpl; split; auto.
-                rewrite Z.ltb_nlt in Hltb. lia. }
-          destruct WWinv as (Hinv & Hj).
-          destruct WW as (R1R0 & i). destruct R1R0 as ((R1 & R0) & HCOZ).
-          simpl in Hj; subst i. destruct Hinv as (_ & (_ & HR0) & _).
+                rewrite Z.ltb_nlt in Hltb. split; [|rewrite Hswape; f_equal]; try lia. }
+          destruct WWinv as (Hinv & Hj & Hswap).
+          destruct WW as ((R1R0 & swap) & i). destruct R1R0 as ((R1 & R0) & HCOZ).
+          simpl in Hj; subst i. simpl in Hswap; subst swap.
+          destruct Hinv as (_ & (_ & HR0) & _).
           rewrite (SSn n scalarbitsz ltac:(lia) ltac:(lia)) in HR0.
-          exact HR0.
+          simpl. destruct (testbitn (scalarbitsz - 1)); simpl; exact HR0.
         Qed.
       End Inner.
 

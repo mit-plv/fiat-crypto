@@ -247,7 +247,6 @@ Section WithParameters.
     pose (inv := fun (v: nat) (t: trace) (m: @map.rep word byte BasicC32Semantics.mem) (l: @map.rep string word locals) => t = tr /\
                           exists i (Hi: 1 <= i <= to),
                           v = Z.to_nat (to - i) /\
-                            (* TODO: automate how to recover the frame *)
                           (exists vx, ((FElem pvar vx) * R)%sep m /\
                                    feval vx = F.pow (feval vvar) (N.pow 2%N (Z.to_N (i - 1))) /\
                                    bounded_by un_outbounds vx) /\
