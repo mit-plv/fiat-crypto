@@ -1,5 +1,5 @@
 Require Import bedrock2.Array.
-Require Import bedrock2.FE310CSemantics.
+Require Import bedrock2.BasicC64Semantics.
 Require Import bedrock2.Loops.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
@@ -18,7 +18,7 @@ Require Import coqutil.Byte.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.OfListWord.
 From coqutil.Tactics Require Import Tactics letexists eabstract rdelta reference_to_string ident_of_string.
-Require Import coqutil.Word.Bitwidth32.
+Require Import coqutil.Word.Bitwidth64.
 Require Import coqutil.Word.Bitwidth.
 Require Import coqutil.Word.Interface.
 Require Import Coq.Init.Byte.
@@ -165,7 +165,7 @@ Section WithParameters.
   Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 
   Local Notation FElem := (FElem(FieldRepresentation:=frep256k1)).
-  Local Notation word := (Naive.word 32).
+  Local Notation word := (Naive.word 64).
   Local Notation felem := (felem(FieldRepresentation:=frep256k1)).
 
   Local Instance spec_of_secp256k1_square : spec_of "secp256k1_square" := Field.spec_of_UnOp un_square.
@@ -211,7 +211,7 @@ Section WithParameters.
     cbv [FElem];
     match goal with
     | H: _%sep ?m |- (Bignum.Bignum felem_size_in_words ?a _ * _)%sep ?m =>
-        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 8 a) H
+        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H
     end;
     [> transitivity 32%nat; trivial | ];
     (* proves the memory matches up *)
@@ -244,7 +244,7 @@ Section WithParameters.
                 }) tr mem loc post.
   Proof.
     intros. repeat straightline.
-    pose (inv := fun (v: nat) (t: trace) (m: @map.rep word byte BasicC32Semantics.mem) (l: @map.rep string word locals) => t = tr /\
+    pose (inv := fun (v: nat) (t: trace) (m: @map.rep word byte _) (l: @map.rep string word locals) => t = tr /\
                           exists i (Hi: 1 <= i <= to),
                           v = Z.to_nat (to - i) /\
                           (exists vx, ((FElem pvar vx) * R)%sep m /\
@@ -386,5 +386,3 @@ Section WithParameters.
   Qed.
 
 End WithParameters.
-
-

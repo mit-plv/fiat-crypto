@@ -18,7 +18,7 @@ Require Import coqutil.Byte.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.OfListWord.
 From coqutil.Tactics Require Import Tactics letexists eabstract rdelta reference_to_string ident_of_string.
-Require Import coqutil.Word.Bitwidth32.
+Require Import coqutil.Word.Bitwidth64.
 Require Import coqutil.Word.Bitwidth.
 Require Import coqutil.Word.Interface.
 Require Import Coq.Init.Byte.
@@ -233,7 +233,7 @@ Definition secp256k1_zdau :=
     secp256k1_sub(Y2, T7, T5)     (* let t5 := t7 - t5 in *)
 }.
 
-Definition secp256k1_felem_cswap := CSwap.felem_cswap(word:=Naive.word32)(field_parameters:=field_parameters)(field_representaton:=frep256k1).
+Definition secp256k1_felem_cswap := CSwap.felem_cswap(word:=Naive.word64)(field_parameters:=field_parameters)(field_representaton:=frep256k1).
 
 (* Compute ToCString.c_func ("secp256k1_zaddu", secp256k1_zaddu). *)
 (* Compute ToCString.c_func ("secp256k1_felem_cswap", secp256k1_felem_cswap). *)
@@ -243,15 +243,15 @@ Section WithParameters.
   Context {char_ge_3 : (@Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add F.sub F.mul (BinNat.N.succ_pos BinNat.N.two))}.
   Context {field:@Algebra.Hierarchy.field (F M_pos) Logic.eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div}.
   Context {a b : F M_pos}.
-  Context {zero_a : a = F.zero}
-          {seven_b : b = F.of_Z _ 7}.
+  Context {zero_a : id a = F.zero}
+          {seven_b : id b = F.of_Z _ 7}.
 
   Local Coercion F.to_Z : F >-> Z.
   Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
   Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 
   Local Notation FElem := (FElem(FieldRepresentation:=frep256k1)).
-  Local Notation word := (Naive.word 32).
+  Local Notation word := (Naive.word 64).
   Local Notation felem := (felem(FieldRepresentation:=frep256k1)).
   Local Notation point := (Jacobian.point(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
   Local Notation co_z := (Jacobian.co_z(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
@@ -510,7 +510,7 @@ Section WithParameters.
     cbv [FElem];
     match goal with
     | H: _%sep ?m |- (Bignum.Bignum felem_size_in_words ?a _ * _)%sep ?m =>
-        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 8 a) H
+        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H
     end;
     [> transitivity 32%nat; trivial | ];
     (* proves the memory matches up *)
@@ -518,22 +518,6 @@ Section WithParameters.
 
   Local Ltac single_step :=
     repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds; try solve_stack.
-
-  Local Ltac single_copy_step :=
-    repeat straightline; straightline_call; first (
-    match goal with
-    | H: context [array ptsto _ ?a _] |- context [FElem ?a _] =>
-        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 8 a) H; [trivial|]
-    end;
-    multimatch goal with
-    | |- _ ?m1 =>
-        multimatch goal with
-        | H:_ ?m2
-          |- _ =>
-            syntactic_unify._syntactic_unify_deltavar m1 m2;
-            refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H); clear H
-        end
-    end; cancel; repeat ecancel_step; cancel_seps_at_indices 0%nat 0%nat; [reflexivity|]; solve [ecancel]).
 
   Lemma secp256k1_jopp_ok : program_logic_goal_for_function! secp256k1_jopp.
   Proof.
@@ -653,7 +637,7 @@ Section WithParameters.
 
     do 9 single_step.
     single_step.
-    seprewrite_in (Bignum.Bignum_of_bytes 8 a4) H72; [ trivial |  ];
+    seprewrite_in (Bignum.Bignum_of_bytes 4 a4) H72; [ trivial |  ];
     multimatch goal with
     | |- _ ?m1 =>
         multimatch goal with
@@ -684,7 +668,7 @@ Section WithParameters.
     1,2: cbv match beta delta [dblu proj1_sig fst snd].
     1,2: destruct P; cbv [proj1_sig] in H24.
     1,2: rewrite H24; cbv match zeta.
-    1,2: rewrite F.pow_2_r in *; subst a; repeat (apply pair_equal_spec; split); try congruence.
+    1,2: rewrite F.pow_2_r in *; cbv [id] in zero_a; subst a; repeat (apply pair_equal_spec; split); try congruence.
     1,2,3: repeat match goal with
                   | H: feval ?x = _ |- context [feval ?x] => rewrite H
                   end; ring.
@@ -696,13 +680,12 @@ Section WithParameters.
   Proof.
     Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
 
-    clear zero_a seven_b.
     repeat straightline.
     eapply Proper_call; cycle -1; [eapply H|try eabstract (solve [ Morphisms.solve_proper ])..]; [ .. | intros ? ? ? ? ].
     ssplit; [eexists; eassumption|..]; try eassumption.
     repeat match goal with
     | H: context [array ptsto _ ?a _] |- context [FElem ?a _] =>
-        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 8 a) H; [trivial|]
+        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H; [trivial|]
     end.
     multimatch goal with
     | |- _ ?m1 =>

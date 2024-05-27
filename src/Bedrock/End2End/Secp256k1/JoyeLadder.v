@@ -1,5 +1,5 @@
 Require Import bedrock2.Array.
-Require Import bedrock2.FE310CSemantics.
+Require Import bedrock2.BasicC64Semantics.
 Require Import bedrock2.Loops.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
@@ -18,7 +18,7 @@ Require Import coqutil.Byte.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.OfListWord.
 From coqutil.Tactics Require Import Tactics letexists eabstract rdelta reference_to_string ident_of_string.
-Require Import coqutil.Word.Bitwidth32.
+Require Import coqutil.Word.Bitwidth64.
 Require Import coqutil.Word.Bitwidth.
 Require Import coqutil.Word.Interface.
 Require Import Coq.Init.Byte.
@@ -107,7 +107,7 @@ Section WithParameters.
   Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 
   Local Notation FElem := (FElem(FieldRepresentation:=frep256k1)).
-  Local Notation word := (Naive.word 32).
+  Local Notation word := (Naive.word 64).
   Local Notation felem := (felem(FieldRepresentation:=frep256k1)).
   Local Notation Wpoint := (WeierstrassCurve.W.point(F:=F M_pos)(Feq:=Logic.eq)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)).
   Local Notation Wzero := (WeierstrassCurve.W.zero(F:=F M_pos)(Feq:=Logic.eq)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)).
@@ -154,7 +154,7 @@ Section WithParameters.
     (* Rewrites the `stack$@a` term in H to use a Bignum instead *)
     match goal with
     | H: _%sep ?m |- (Bignum.Bignum felem_size_in_words ?a _ * _)%sep ?m =>
-        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 8 a) H
+        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H
     end;
     [> transitivity 32%nat; trivial | ];
     (* proves the memory matches up *)
@@ -200,7 +200,7 @@ Section WithParameters.
       (kbytes$@kptr * R)%sep mem ->
       LittleEndianList.le_combine kbytes = k ->
       wi = word.of_Z i ->
-      (0 <= i < 2 ^ 32)%Z ->
+      (0 <= i < 2 ^ 64)%Z ->
       (i < 8 * Z.of_nat (List.length kbytes)) ->
 
       (forall tr' mem' loc',
@@ -388,7 +388,7 @@ Section WithParameters.
               let swap := b in
               let i := Z.succ i in
               (R1R0, swap, i)):(co_z_points*bool*BinInt.Z)->(co_z_points*bool*BinInt.Z)).
-    pose (inv := fun (v: nat) (t: trace) (m: @map.rep word byte BasicC32Semantics.mem) (l: @map.rep string word locals) =>
+    pose (inv := fun (v: nat) (t: trace) (m: @map.rep word byte _) (l: @map.rep string word locals) =>
                    t = tr /\
                    exists i (Hi: 2 <= i <= scalarbitsz),
                      v = Z.to_nat (scalarbitsz - i) /\
@@ -423,7 +423,7 @@ Section WithParameters.
     fold iter_res in Hiter. rewrite (surjective_pairing iter_res) in Hiter.
     rewrite (surjective_pairing (fst iter_res)) in Hiter.
     destruct Hiter as (Hvi' & loc' & Hloc' & -> & Hmem).
-    assert (Hsmall: scalarbitsz < 2 ^ 32) by (rewrite <- scalarbitsz_small; apply Z.mod_pos_bound; lia).
+    assert (Hsmall: scalarbitsz < 2 ^ 64) by (rewrite <- scalarbitsz_small; apply Z.mod_pos_bound; lia).
     eexists ?[b]; ssplit.
     eexists; split; [apply map.get_put_same|].
     eapply Core.WeakestPrecondition_dexpr_expr; [|apply ExprCompiler.expr_compile_Z_literal].
@@ -576,7 +576,7 @@ Section WithParameters.
     1-2: solve_bounds.
     repeat match goal with
     | H: context [Array.array ptsto _ ?a _] |- context [Field.FElem ?a _] =>
-        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 8 a) H; [trivial|]
+        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H; [trivial|]
     end.
     multimatch goal with
     | |- _ ?m1 =>
@@ -675,7 +675,7 @@ Section WithParameters.
     1-3:solve_bounds.
     repeat match goal with
     | H: context [Array.array ptsto _ ?a _] |- context [Field.FElem ?a _] =>
-        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 8 a) H; [trivial|]
+        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H; [trivial|]
     end.
     multimatch goal with
     | |- _ ?m1 =>
@@ -733,7 +733,7 @@ Section WithParameters.
     1-3: solve_bounds.
     repeat match goal with
     | H: context [Array.array ptsto _ ?a _] |- context [Field.FElem ?a _] =>
-        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 8 a) H; [trivial|]
+        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H; [trivial|]
     end.
     multimatch goal with
     | |- _ ?m1 =>
@@ -944,27 +944,67 @@ Section WithParameters.
 
 End WithParameters.
 
-(* Require Import bedrock2.ToCString. *)
-(* Require Import coqutil.Macros.WithBaseName. *)
-(* Definition funcs := *)
-(*   List.app *)
-(*   [ secp256k1_opp; *)
-(*     secp256k1_mul; *)
-(*     secp256k1_add; *)
-(*     secp256k1_sub; *)
-(*     secp256k1_square; *)
-(*     secp256k1_to_bytes; *)
-(*     secp256k1_from_bytes; *)
-(*     secp256k1_from_mont; *)
-(*     secp256k1_to_mont; *)
-(*     secp256k1_select_znz] *)
-(*   &[,secp256k1_make_co_z; *)
-(*      secp256k1_felem_cswap; *)
-(*      secp256k1_zaddu; *)
-(*      secp256k1_dblu; *)
-(*      secp256k1_tplu; *)
-(*      secp256k1_zdau; *)
-(*      secp256k1_inv; *)
-(*      (secp256k1_laddermul 256%Z)]. *)
+Require Import bedrock2.ToCString.
+Require Import coqutil.Macros.WithBaseName.
+Definition funcs :=
+  let secp256k1_laddermul := (secp256k1_laddermul 256%Z) in
+  List.app
+  [ secp256k1_opp;
+    secp256k1_mul;
+    secp256k1_add;
+    secp256k1_sub;
+    secp256k1_square;
+    secp256k1_to_bytes;
+    secp256k1_from_bytes;
+    secp256k1_from_mont;
+    secp256k1_to_mont;
+    secp256k1_select_znz;
+    secp256k1_felem_copy;
+    ("felem_cswap", secp256k1_felem_cswap)]
+  &[,secp256k1_make_co_z;
+     secp256k1_zaddu;
+     secp256k1_dblu;
+     secp256k1_tplu;
+     secp256k1_zdau;
+     secp256k1_inv;
+     secp256k1_laddermul
+     ].
+
+Lemma link_secp256k1_felem_copy :
+  spec_of_secp256k1_felem_copy (map.of_list funcs).
+Proof. apply secp256k1_felem_copy_correct. reflexivity. Qed.
+(* ^-- Why is only felem_copy so slow ???!!! *)
+
+(* Assume m = 2 ^ 256 - 2 ^ 32 - 977 is prime *)
+Lemma link_secp256k1_laddermul (secp256k1_prime: Znumtheory.prime m) :
+  @spec_of_laddermul (F.field_modulo M_pos) (0%F) (F.of_Z _ 7%Z) (256%Z) (map.of_list funcs).
+Proof.
+  eapply spec_of_laddermul_ok; repeat
+  match goal with
+  | |- map.get _ _ = _ => reflexivity
+  | |- spec_of_secp256k1_tplu _ => eapply secp256k1_tplu_ok
+  | |- spec_of_dblu _ => eapply secp256k1_dblu_ok
+  | |- spec_of_zaddu _ => eapply secp256k1_zaddu_ok
+  | |- spec_of_secp256k1_opp _ => eapply secp256k1_opp_correct
+  | |- spec_of_secp256k1_zaddu _ => eapply secp256k1_zaddu_ok
+  | |- spec_of_secp256k1_zdau _ => eapply secp256k1_zdau_ok
+  | |- spec_of_secp256k1_make_co_z _ => eapply secp256k1_make_co_z_ok
+  | |- spec_of_secp256k1_inv _ => eapply secp256k1_inv_ok
+  | |- JacobianCoZ.spec_of_secp256k1_add _ => eapply secp256k1_add_correct
+  | |- JacobianCoZ.spec_of_secp256k1_sub _ => eapply secp256k1_sub_correct
+  | |- spec_of_secp256k1_mul _ => eapply secp256k1_mul_correct
+  | |- JacobianCoZ.spec_of_secp256k1_mul _ => eapply secp256k1_mul_correct
+  | |- JacobianCoZ.spec_of_secp256k1_square _ => eapply secp256k1_square_correct
+  | |- Addchain.spec_of_secp256k1_mul _ => eapply secp256k1_mul_correct
+  | |- Addchain.spec_of_secp256k1_square _ => eapply secp256k1_square_correct
+  | |- spec_of_secp256k1_cswap _ => eapply cswap_body_correct
+  | |- spec_of_secp256k1_felem_copy _ => apply link_secp256k1_felem_copy
+  | |- Z.of_nat _ < 2 ^ 64 => unfold field_representation, Signature.field_representation, Representation.frep; cbn; cbv; trivial
+  | |- Core.__rupicola_program_marker _ => cbv [Core.__rupicola_program_marker]; tauto
+  | _ => idtac
+  end.
+  Unshelve.
+  all: cbn; reflexivity.
+Qed.
 
 (* Compute (ToCString.c_module funcs). *)

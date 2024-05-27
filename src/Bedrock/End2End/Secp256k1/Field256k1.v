@@ -5,17 +5,16 @@ Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Representation.
 Require Import Crypto.Bedrock.Field.Synthesis.New.ComputedOp.
 Require Import Crypto.Bedrock.Field.Synthesis.New.WordByWordMontgomery.
-Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults32.
+Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults64.
 Require Import Crypto.Bedrock.Specs.Field.
 Import ListNotations.
 
 (* Parameters for Secp256k1 field. *)
 Section Field.
-  Definition n : nat := 10.
   Definition m : Z := (2^256 - 2^32 - 977)%Z.
 
-  Existing Instances Bitwidth32.BW32
-    Defaults32.default_parameters Defaults32.default_parameters_ok.
+  Existing Instances Bitwidth64.BW64
+    Defaults64.default_parameters Defaults64.default_parameters_ok.
   Definition prefix : string := "secp256k1_"%string.
 
   (* Define Secp256k1 field *)
@@ -40,7 +39,7 @@ Section Field.
   (**** Translate each field operation into bedrock2 and apply bedrock2 backend
         field pipeline proofs to prove the bedrock2 functions are correct. ****)
 
-        Local Ltac begin_derive_bedrock2_func :=
+  Local Ltac begin_derive_bedrock2_func :=
         lazymatch goal with
         | |- context [spec_of_BinOp bin_mul] => eapply mul_func_correct
         | |- context [spec_of_UnOp un_square] => eapply square_func_correct
@@ -55,30 +54,30 @@ Section Field.
         | |- context [spec_of_UnOp un_to_mont] => eapply (to_mont_func_correct _ _ _ from_mont_string to_mont_string)
         end.
 
-        Ltac epair :=
-          lazymatch goal with
-          | f := _ : string * Syntax.func |- _ =>
-            let p := open_constr:((_, _)) in
-            unify f p;
-            subst f
-          end.
+  Ltac epair :=
+    lazymatch goal with
+    | f := _ : string * Syntax.func |- _ =>
+             let p := open_constr:((_, _)) in
+             unify f p;
+             subst f
+    end.
 
-        Ltac derive_bedrock2_func op :=
-        epair;
-        begin_derive_bedrock2_func;
-        (* this goal fills in the evar, so do it first for [abstract] to be happy *)
-        try lazymatch goal with
-            | |- _ = b2_func _ => vm_compute; reflexivity
-            end;
-        (* solve all the remaining goals *)
-        lazymatch goal with
-        | |- _ = @ErrorT.Success ?ErrT unit tt =>
-          abstract (vm_cast_no_check (@eq_refl _ (@ErrorT.Success ErrT unit tt)))
-        | |- Func.valid_func _ =>
-          eapply Func.valid_func_bool_iff;
-          abstract vm_cast_no_check (eq_refl true)
-        | |- (_ = _)%Z => vm_compute; reflexivity
-        end.
+  Ltac derive_bedrock2_func op :=
+    epair;
+    begin_derive_bedrock2_func;
+    (* this goal fills in the evar, so do it first for [abstract] to be happy *)
+    try lazymatch goal with
+      | |- _ = b2_func _ => vm_compute; reflexivity
+      end;
+    (* solve all the remaining goals *)
+    lazymatch goal with
+    | |- _ = @ErrorT.Success ?ErrT unit tt =>
+        abstract (vm_cast_no_check (@eq_refl _ (@ErrorT.Success ErrT unit tt)))
+    | |- Func.valid_func _ =>
+        eapply Func.valid_func_bool_iff;
+        abstract vm_cast_no_check (eq_refl true)
+    | |- (_ = _)%Z => vm_compute; reflexivity
+    end.
 
   Local Notation functions_contain functions f :=
     (Interface.map.get functions (fst f) = Some (snd f)).
