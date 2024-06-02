@@ -399,7 +399,7 @@ jobs:
         name: ExtractionHaskell-source-${{ matrix.coq-version }}
         path: src/ExtractionHaskell
     - name: standalone-haskell
-      run: etc/ci/github-actions-make.sh -f Makefile.standalone -j1 standalone-haskell GHCFLAGS='+RTS -M7G -RTS'
+      run: etc/ci/github-actions-make.sh -f Makefile.standalone -j1 standalone-haskell GHCFLAGS='+RTS -M9G -RTS'
     - name: upload Haskell files
       uses: actions/upload-artifact@v4
       with:
