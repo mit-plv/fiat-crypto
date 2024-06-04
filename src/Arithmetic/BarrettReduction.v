@@ -101,7 +101,7 @@ Section Generic.
     rewrite xt_correct, q1_correct, q3_correct by auto with lia.
     assert (exists cond : bool, ((mu * (x / b^(k-1))) / b^(k+1)) = x / M + (if cond then -1 else 0)) as Hq3.
     { destruct q_nice_strong with (b:=b) (k:=k) (m:=mu) (offset:=1) (a:=x) (n:=M) as [cond Hcond];
-        eauto using Z.lt_gt with zarith. }
+        eauto 2 using Z.lt_gt with zarith. }
     eauto using r_correct with lia.
   Qed.
 End Generic.
