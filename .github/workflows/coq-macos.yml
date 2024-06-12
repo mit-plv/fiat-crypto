@@ -53,6 +53,7 @@ jobs:
       run: brew install gnu-time gnu-sed coreutils grep
     - run: opam update
     - run: opam pin add coq ${COQ_VERSION}
+    - run: opam pin add js_of_ocaml-compiler https://github.com/OlivierNicole/js_of_ocaml.git#optim_sourcemap_link
     - run: opam install js_of_ocaml
     - name: echo build params
       run: etc/ci/describe-system-config-macos.sh
@@ -64,8 +65,6 @@ jobs:
       run: opam exec -- etc/ci/github-actions-make.sh -j2 pre-standalone-extracted
     - name: all
       run: opam exec -- etc/ci/github-actions-make.sh -j2 all
-      if: ${{ matrix.os.arch != 'arm64' }}
-      # js_of_ocaml is too heavy for M1 GH Action runners which have only 7GB RAM, cf https://github.com/ocsigen/js_of_ocaml/issues/1612, https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners#standard-github-hosted-runners-for-public-repositories
     - name: install-standalone-unified-ocaml
       run: opam exec -- etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
     - name: install-standalone-js-of-ocaml
