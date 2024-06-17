@@ -153,6 +153,10 @@ jobs:
       with:
         name: standalone-${{ matrix.debian }}
         path: dist/
+    - name: install system dependencies
+      run: |
+        apt-get -o Acquire::Retries=30 update -y
+        apt-get -q -y --allow-unauthenticated -o Acquire::Retries=30 install sudo time file
     - name: List files
       run: find dist
     - run: chmod +x dist/fiat_crypto
