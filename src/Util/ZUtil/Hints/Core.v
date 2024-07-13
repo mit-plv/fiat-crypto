@@ -112,6 +112,15 @@ Module Coq.
     End PreOmega.
   End omega.
 End Coq.
+Module Stdlib.
+  Module omega.
+    Module PreOmega.
+      Definition Z_of_nat' := Z.of_nat.
+      Ltac hide_Z_of_nat a := idtac.
+      Ltac zify_nat_op := idtac.
+    End PreOmega.
+  End omega.
+End Stdlib.
 
 Ltac Coq.omega.PreOmega.zify_nat_op ::=
  match goal with
