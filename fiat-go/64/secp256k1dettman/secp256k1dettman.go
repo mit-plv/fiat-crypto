@@ -38,10 +38,10 @@ type int1 int64 // We use uint64 instead of a more narrow type for performance r
 //   eval out1 mod 115792089237316195423570985008687907853269984665640564039457584007908834671663 = (eval arg1 * eval arg2) mod 115792089237316195423570985008687907853269984665640564039457584007908834671663
 //
 // Input Bounds:
-//   arg1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
-//   arg2: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
+//   arg1: [[0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xffffffffffff0]]
+//   arg2: [[0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xffffffffffff0]]
 // Output Bounds:
-//   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x17fffffffffff]]
+//   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
 func Mul(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
 	var x1 uint64
 	var x2 uint64
@@ -301,9 +301,9 @@ func Mul(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
 //   eval out1 mod 115792089237316195423570985008687907853269984665640564039457584007908834671663 = (eval arg1 * eval arg1) mod 115792089237316195423570985008687907853269984665640564039457584007908834671663
 //
 // Input Bounds:
-//   arg1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
+//   arg1: [[0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xffffffffffff0]]
 // Output Bounds:
-//   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x17fffffffffff]]
+//   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
 func Square(out1 *[5]uint64, arg1 *[5]uint64) {
 	x1 := (arg1[3] * 0x2)
 	x2 := (arg1[2] * 0x2)
