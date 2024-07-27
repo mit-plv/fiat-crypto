@@ -222,7 +222,7 @@ Proof.
   rewrite <- (option_leq_to_eq_to_leq p), <- (option_leq_to_eq_to_leq q); simpl; reflexivity.
 Qed.
 
-Definition invert_Some {A} (x : option A) : match x with
+Definition invert_Some {A : Type} (x : option A) : match x with
                                             | Some _ => A
                                             | None => unit
                                             end
