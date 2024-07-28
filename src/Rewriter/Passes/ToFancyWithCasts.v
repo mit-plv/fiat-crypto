@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import ZArith.
 Require Import Crypto.Util.ZRange.
 Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.

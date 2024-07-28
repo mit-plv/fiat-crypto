@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.ZArith.Znumtheory.
+From Coq Require Import ZArith Lia.
+From Coq Require Import Znumtheory.
 Require Import Crypto.Util.ZUtil.Tactics.CompareToSgn.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.

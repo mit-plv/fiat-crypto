@@ -1,8 +1,8 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.Arith.Arith.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
-Require Import Coq.Bool.Bool.
+From Coq Require Import Lia.
+From Coq Require Import Arith.
+From Coq Require Import ZArith.
+From Coq Require Import List.
+From Coq Require Import Bool.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Stabilization.
 Require Import Crypto.Util.ListUtil.

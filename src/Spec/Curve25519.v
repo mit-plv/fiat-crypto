@@ -1,4 +1,4 @@
-Require Import Coq.PArith.BinPosDef.
+From Coq Require Import BinPosDef.
 Require Import Spec.ModularArithmetic.
 Local Open Scope positive_scope.
 
@@ -10,7 +10,7 @@ Notation twist_order := (4*l2).
 
 Lemma orders_match : (2*(p + 1) - order = twist_order)%Z. Proof. exact eq_refl. Qed.
 
-Require Import Coq.ZArith.Znumtheory Coq.Lists.List. Import ListNotations. 
+From Coq Require Import Znumtheory List. Import ListNotations. 
 From Coqprime.PrimalityTest Require Import Pocklington PocklingtonCertificat.
 
 Lemma prime_p : prime p.

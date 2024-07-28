@@ -1,15 +1,15 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.MSets.MSetPositive.
-Require Import Coq.FSets.FMapPositive.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Strings.String.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Bool.Bool.
-Require Import Coq.Structures.Orders.
-Require Import Coq.Structures.OrdersEx.
-Require Import Coq.MSets.MSetInterface.
-Require Import Coq.MSets.MSetPositive.
-Require Import Coq.Strings.HexString.
+From Coq Require Import ZArith.
+From Coq Require Import MSetPositive.
+From Coq Require Import FMapPositive.
+From Coq Require Import Lia.
+From Coq Require Import String.
+From Coq Require Import Ascii.
+From Coq Require Import Bool.
+From Coq Require Import Orders.
+From Coq Require Import OrdersEx.
+From Coq Require Import MSetInterface.
+From Coq Require Import MSetPositive.
+From Coq Require Import HexString.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Prod.

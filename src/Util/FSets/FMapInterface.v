@@ -1,6 +1,6 @@
-Require Import Coq.FSets.FMapInterface.
-Require Import Coq.Structures.Equalities.
-Require Import Coq.Structures.Orders.
+From Coq Require Import FMapInterface.
+From Coq Require Import Equalities.
+From Coq Require Import Orders.
 Require Import Crypto.Util.Structures.Equalities.
 Require Import Crypto.Util.Structures.Orders.
 

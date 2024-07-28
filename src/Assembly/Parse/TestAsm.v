@@ -1,5 +1,5 @@
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
+From Coq Require Import String.
+From Coq Require Import List.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Assembly.Parse.

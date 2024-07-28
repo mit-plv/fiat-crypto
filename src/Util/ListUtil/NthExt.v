@@ -1,6 +1,6 @@
 (* We copy some proofs from the standard library so we can use them in older versions of Coq; once we get a new enough Coq, this file should go away *)
-Require Import Coq.Lists.List.
-Require Import Coq.Arith.Arith.
+From Coq Require Import List.
+From Coq Require Import Arith.
 Import ListNotations.
 Local Open Scope list_scope.
 Module Export List.

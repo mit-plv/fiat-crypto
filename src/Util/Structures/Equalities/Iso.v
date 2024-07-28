@@ -1,5 +1,5 @@
-Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
-Require Import Coq.Structures.Equalities.
+From Coq Require Import Morphisms Setoid.
+From Coq Require Import Equalities.
 Require Import Crypto.Util.GlobalSettings.
 Require Import Crypto.Util.FixCoqMistakes.
 

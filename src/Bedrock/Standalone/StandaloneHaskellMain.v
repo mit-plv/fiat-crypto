@@ -1,5 +1,5 @@
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.String.
+From Coq Require Import List.
+From Coq Require Import String.
 Require Import Crypto.CLI.
 Require Export Crypto.StandaloneHaskellMain.
 Require Import Crypto.Bedrock.Field.Stringification.Stringification.

@@ -1,5 +1,5 @@
 (** * Fixes *)
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import Morphisms.
 Require Export Crypto.Util.GlobalSettings.
 
 (** Coq is poorly designed in some ways.  We fix some of these issues

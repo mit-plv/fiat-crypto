@@ -1,7 +1,7 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.Arith.Arith.
-Require Import Coq.Bool.Bool.
-Require Import Coq.Lists.List.
+From Coq Require Import Lia.
+From Coq Require Import Arith.
+From Coq Require Import Bool.
+From Coq Require Import List.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Bool.Reflect.

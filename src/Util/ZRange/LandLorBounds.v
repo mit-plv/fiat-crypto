@@ -1,6 +1,6 @@
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+From Coq Require Import Morphisms.
+From Coq Require Import ZArith.
+From Coq Require Import Lia.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.LandLorBounds.
 Require Import Crypto.Util.ZUtil.LandLorShiftBounds.

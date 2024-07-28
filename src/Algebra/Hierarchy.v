@@ -1,10 +1,10 @@
 Require Export Crypto.Util.FixCoqMistakes.
 Require Export Crypto.Util.Decidable.
 
-Require Coq.PArith.BinPos.
-Require Import Coq.Classes.Morphisms.
+From Coq Require BinPos.
+From Coq Require Import Morphisms.
 
-Require Coq.Lists.List.
+From Coq Require List.
 
 Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
 

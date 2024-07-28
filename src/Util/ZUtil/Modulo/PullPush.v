@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.ZArith.Znumtheory Coq.ZArith.Zpow_facts.
+From Coq Require Import ZArith Lia.
+From Coq Require Import Znumtheory Zpow_facts.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.ZSimplify.Core.
 Local Open Scope Z_scope.

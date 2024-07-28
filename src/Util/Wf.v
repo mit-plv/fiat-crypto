@@ -1,9 +1,12 @@
 (** * Miscellaneous Well-Foundedness Facts *)
-Require Import Coq.Setoids.Setoid Coq.Program.Program Coq.Program.Wf Coq.Arith.Wf_nat Coq.Classes.Morphisms Coq.Init.Wf.
-Require Import Coq.Lists.SetoidList.
-Require Import Coq.Arith.PeanoNat.
+From Coq Require Import Setoid Program.
+From Coq.Program Require Import Wf.
+From Coq Require Import Wf_nat Morphisms.
+From Coq.Init Require Import Wf.
+From Coq Require Import SetoidList.
+From Coq Require Import PeanoNat.
 Require Export Crypto.Util.FixCoqMistakes.
-Require Coq.Arith.EqNat.
+From Coq Require EqNat.
 
 Local Set Implicit Arguments.
 Local Unset Uniform Inductive Parameters.

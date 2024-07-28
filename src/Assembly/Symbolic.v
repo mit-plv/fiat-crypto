@@ -1,17 +1,17 @@
 Require Crypto.Assembly.Parse.
-Require Import Coq.Program.Tactics.
-Require Import Coq.derive.Derive.
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.NArith.NArith.
-Require Import Coq.Sorting.Permutation.
-Require Import Coq.Structures.Equalities.
-Require Import Coq.Structures.OrderedType.
-Require Import Coq.Structures.Orders.
-Require Import Coq.FSets.FMapInterface.
-Require Import Coq.FSets.FMapPositive.
-Require Import Coq.FSets.FMapFacts.
+From Coq.Program Require Import Tactics.
+From Coq Require Import Derive.
+From Coq Require Import List.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
+From Coq Require Import NArith.
+From Coq Require Import Permutation.
+From Coq Require Import Equalities.
+From Coq Require Import OrderedType.
+From Coq Require Import Orders.
+From Coq Require Import FMapInterface.
+From Coq Require Import FMapPositive.
+From Coq Require Import FMapFacts.
 Require Crypto.Util.ZRange.
 Require Crypto.Util.Tuple.
 Require Import Util.OptionList.
@@ -79,7 +79,7 @@ Require Import Crypto.Util.Strings.Parse.Common.
 Require Import Crypto.Util.Tactics.WarnIfGoalsRemain.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import coqutil.Z.bitblast.
-Require Import Coq.Strings.String.
+From Coq Require Import String.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.Strings.Show.Enum.
 Require Import Crypto.Assembly.Syntax.

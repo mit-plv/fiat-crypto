@@ -1,8 +1,8 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.Program.Basics.
-Require Import Coq.Sorting.Sorted.
-Require Import Coq.Lists.List.
-Require Import Coq.Lists.SetoidList.
+From Coq Require Import Lia.
+From Coq Require Import Basics.
+From Coq Require Import Sorted.
+From Coq Require Import List.
+From Coq Require Import SetoidList.
 Import ListNotations.
 Local Open Scope list_scope.
 

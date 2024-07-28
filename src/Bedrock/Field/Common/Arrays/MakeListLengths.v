@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import List.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Language.API.

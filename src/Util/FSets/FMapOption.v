@@ -1,9 +1,9 @@
-Require Import Coq.Bool.Bool.
-Require Import Coq.Lists.List.
-Require Import Coq.Structures.Orders.
-Require Import Coq.Structures.OrdersEx.
-Require Import Coq.FSets.FMapInterface.
-Require Import Coq.FSets.FMapFacts.
+From Coq Require Import Bool.
+From Coq Require Import List.
+From Coq Require Import Orders.
+From Coq Require Import OrdersEx.
+From Coq Require Import FMapInterface.
+From Coq Require Import FMapFacts.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.SetoidList.
 Require Import Crypto.Util.Compose.

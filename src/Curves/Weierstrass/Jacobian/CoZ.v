@@ -1,4 +1,4 @@
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import Morphisms.
 
 Require Import Crypto.Spec.WeierstrassCurve.
 Require Import Crypto.Curves.Weierstrass.Affine Crypto.Curves.Weierstrass.AffineProofs.
@@ -11,7 +11,7 @@ Require Import Crypto.Util.Tactics.SetoidSubst.
 Require Import Crypto.Util.Notations Crypto.Util.LetIn.
 Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.Sigma.
 Require Import Crypto.Util.FsatzAutoLemmas.
-Require Import Coq.PArith.BinPos.
+From Coq Require Import BinPos.
 
 Module Jacobian.
   Section Co_Z.

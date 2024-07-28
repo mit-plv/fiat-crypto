@@ -1,8 +1,8 @@
-Require Import Coq.Strings.Ascii Coq.Strings.String.
-Require Import Coq.Numbers.BinNums.
-Require Import Coq.Numbers.DecimalString.
-Require Coq.Numbers.DecimalN.
-Require Coq.Numbers.DecimalZ.
+From Coq Require Import Ascii String.
+From Coq Require Import BinNums.
+From Coq Require Import DecimalString.
+From Coq Require DecimalN.
+From Coq Require DecimalZ.
 Import BinPosDef.
 Import BinIntDef.
 Import BinNatDef.

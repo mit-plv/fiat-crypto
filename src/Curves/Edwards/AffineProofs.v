@@ -1,9 +1,10 @@
 Require Export Crypto.Spec.CompleteEdwardsCurve.
 
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.ScalarMult Crypto.Util.Decidable.
-Require Import Coq.Logic.Eqdep_dec.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Relations.Relation_Definitions.
+From Coq Require Import Eqdep_dec.
+From Coq Require Import Morphisms.
+From Coq Require Import Relation_Definitions.
+From Coq Require Field_tac.
 Require Import Crypto.Util.Tuple Crypto.Util.Notations.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.DestructHead.

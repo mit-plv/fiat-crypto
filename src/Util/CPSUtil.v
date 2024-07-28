@@ -1,5 +1,5 @@
-Require Import Coq.Lists.List. Import ListNotations.
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
+From Coq Require Import List. Import ListNotations.
+From Coq Require Import ZArith Lia.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.ListUtil.

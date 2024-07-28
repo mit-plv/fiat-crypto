@@ -1,8 +1,8 @@
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
+From Coq Require Import List.
+From Coq Require Import Lia.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.
-Require Import Coq.NArith.NArith.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import NArith.
+From Coq Require Import ZArith.
 Require Import Crypto.AbstractInterpretation.ZRange.
 Require Import Crypto.Util.ErrorT.
 Import Coq.Lists.List. (* [map] is [List.map] not [ErrorT.map] *)

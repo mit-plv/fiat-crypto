@@ -1,5 +1,5 @@
 (** Definitions for use in pre-reified rewriter rules *)
-Require Import Coq.ZArith.BinInt.
+From Coq Require Import BinInt.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZUtil.Definitions.

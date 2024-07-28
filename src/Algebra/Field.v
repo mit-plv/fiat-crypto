@@ -1,9 +1,9 @@
 Require Import Crypto.Util.Relations Crypto.Util.Notations.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.DebugPrint.
-Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms.
+From Coq Require Import RelationClasses Morphisms.
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Ring Crypto.Algebra.IntegralDomain.
-Require Coq.setoid_ring.Field_theory.
+From Coq Require Field_theory.
 
 Section Field.
   Context {T eq zero one opp add mul sub inv div} `{@field T eq zero one opp add sub mul inv div}.

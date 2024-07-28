@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.derive.Derive.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import Derive.
+From Coq Require Import List.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.

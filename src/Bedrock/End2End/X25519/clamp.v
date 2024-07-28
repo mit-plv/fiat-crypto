@@ -53,9 +53,9 @@ Qed.
 
 
 From Coq Require Import ZArith Lia.
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.Init.Byte.
+From Coq Require Import String.
+From Coq Require Import List.
+From Coq.Init Require Import Byte.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.NotationsCustomEntry.

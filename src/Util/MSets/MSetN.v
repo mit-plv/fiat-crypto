@@ -1,11 +1,11 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.Bool.Bool.
-Require Import Coq.Lists.List.
-Require Import Coq.Structures.Orders.
-Require Import Coq.Structures.OrdersEx.
-Require Import Coq.MSets.MSetInterface.
-Require Import Coq.MSets.MSetPositive.
-Require Import Coq.NArith.NArith.
+From Coq Require Import Lia.
+From Coq Require Import Bool.
+From Coq Require Import List.
+From Coq Require Import Orders.
+From Coq Require Import OrdersEx.
+From Coq Require Import MSetInterface.
+From Coq Require Import MSetPositive.
+From Coq Require Import NArith.
 Require Import Crypto.Util.MSets.MSetIso.
 Require Import Crypto.Util.Structures.Equalities.Iso.
 Require Import Crypto.Util.Structures.Orders.Iso.

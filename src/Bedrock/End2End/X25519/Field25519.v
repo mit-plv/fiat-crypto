@@ -1,7 +1,7 @@
 Require Import Crypto.Spec.Curve25519.
-Require Import Coq.Strings.String. Local Open Scope string_scope.
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import String. Local Open Scope string_scope.
+From Coq Require Import List.
+From Coq Require Import ZArith.
 Require Import coqutil.Word.Bitwidth32.
 Require Import coqutil.Macros.WithBaseName.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.

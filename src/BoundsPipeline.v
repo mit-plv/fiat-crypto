@@ -2,10 +2,10 @@
 (** This file assembles the various compiler stages together into a
     composed pipeline.  It is the final interface for the compiler,
     right before integration with Arithmetic. *)
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.QArith.QArith_base.
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.String.
+From Coq Require Import ZArith.
+From Coq Require Import QArith_base.
+From Coq Require Import List.
+From Coq Require Import String.
 Require Import Crypto.Util.ZUtil.Log2.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.

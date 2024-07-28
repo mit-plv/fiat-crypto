@@ -1,6 +1,7 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Algebra.Nsatz.
-Require Import Coq.derive.Derive.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith Lia.
+Require Import Crypto.Algebra.Nsatz.
+From Coq Require Import Derive.
+From Coq Require Import List.
 Require Import Crypto.Algebra.Ring.
 Require Import Crypto.Arithmetic.BaseConversion.
 Require Import Crypto.Arithmetic.Core.

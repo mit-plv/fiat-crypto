@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import ZArith.
 Require Export Crypto.Util.ZUtil.Hints.Core.
 
 (** "push" means transform [-f x] to [f (-x)]; "pull" means go the other way *)

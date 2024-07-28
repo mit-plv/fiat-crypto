@@ -1,6 +1,6 @@
-Require Coq.setoid_ring.Ncring.
-Require Coq.setoid_ring.Cring.
-Require Import Coq.Classes.Morphisms.
+From Coq Require Ncring.
+From Coq Require Cring.
+From Coq Require Import Morphisms.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.OnSubterms.
 Require Import Crypto.Util.Tactics.Revert.
@@ -8,7 +8,7 @@ Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Group Crypto.Algebra.Monoid.
 Require Import Crypto.Algebra.Ring.
 Require Import Crypto.Util.Tactics.DestructHead.
-Require Coq.ZArith.ZArith Coq.PArith.PArith.
+From Coq Require ZArith PArith.
 
 
 Section Ring.

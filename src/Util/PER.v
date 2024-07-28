@@ -1,4 +1,4 @@
-Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Relations.Relation_Definitions.
+From Coq Require Import RelationClasses Morphisms Relation_Definitions.
 
 Lemma PER_valid_l {A} {R : relation A} {HS : Symmetric R} {HT : Transitive R} x y (H : R x y) : Proper R x.
 Proof. hnf; etransitivity; eassumption || symmetry; eassumption. Qed.

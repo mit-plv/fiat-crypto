@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import ZArith.
 Require Import Crypto.Util.ZUtil.Definitions.
 Local Open Scope Z_scope.
 

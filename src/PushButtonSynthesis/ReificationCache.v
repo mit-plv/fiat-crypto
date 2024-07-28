@@ -2,7 +2,7 @@
 (** This file defines the cache that holds reified versions of
     operations, as well as the tactics that reify and apply things
     from the cache. *)
-Require Import Coq.Relations.Relation_Definitions.
+From Coq Require Import Relation_Definitions.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SubstEvars.
 Require Import Crypto.Language.API.

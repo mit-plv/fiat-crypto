@@ -1,6 +1,6 @@
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import String.
+From Coq Require Import List.
+From Coq Require Import ZArith.
 Require Import bedrock2.Syntax.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Spec.ModularArithmetic.
@@ -626,7 +626,7 @@ End UnsaturatedSolinas.
 
 (* Prototyping full pipeline: *)
 
-Require Import Coq.Strings.String.
+From Coq Require Import String.
 Require Import Crypto.Bedrock.Field.Translation.Proofs.ValidComputable.Func.
 
 (* TODO: move somewhere common *)

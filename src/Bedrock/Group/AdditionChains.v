@@ -7,7 +7,7 @@ Require Import Crypto.Arithmetic.FLia.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Algebra.Hierarchy.
-Require Import Numbers.DecimalString.
+From Coq Require Import DecimalString.
 
 Local Open Scope Z_scope.
 

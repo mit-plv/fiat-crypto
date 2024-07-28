@@ -1,7 +1,7 @@
-Require Import Coq.Lists.List Coq.Lists.SetoidList.
-Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
-Require Import Coq.Structures.Equalities.
-Require Import Coq.Structures.Orders.
+From Coq Require Import List SetoidList.
+From Coq Require Import Morphisms Setoid.
+From Coq Require Import Equalities.
+From Coq Require Import Orders.
 Require Import Crypto.Util.Structures.Equalities.
 Require Import Crypto.Util.Structures.Equalities.List.
 Require Import Crypto.Util.Structures.Orders.

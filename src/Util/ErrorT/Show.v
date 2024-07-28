@@ -1,5 +1,5 @@
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.String.
+From Coq Require Import List.
+From Coq Require Import String.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ErrorT.
 Import ListNotations.

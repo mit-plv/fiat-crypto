@@ -1,4 +1,4 @@
-Require Import Coq.Program.Tactics.
+From Coq.Program Require Import Tactics.
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Loops.
 Require Import bedrock2.Semantics.

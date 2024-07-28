@@ -1,4 +1,4 @@
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import Morphisms.
 
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.Curves.Edwards.AffineProofs.
 Require Import Crypto.Curves.Edwards.XYZT.Basic.

@@ -21,10 +21,10 @@ From coqutil.Tactics Require Import Tactics letexists eabstract rdelta reference
 Require Import coqutil.Word.Bitwidth32.
 Require Import coqutil.Word.Bitwidth.
 Require Import coqutil.Word.Interface.
-Require Import Coq.Init.Byte.
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.String.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import Init.Byte.
+From Coq Require Import List.
+From Coq Require Import String.
+From Coq Require Import ZArith.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.

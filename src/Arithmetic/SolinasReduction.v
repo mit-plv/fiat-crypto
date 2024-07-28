@@ -1,9 +1,9 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.QArith.QArith.
-Require Import Coq.QArith.Qround.
-Require Import Coq.Strings.String.
-Require Import Coq.derive.Derive.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import QArith.
+From Coq Require Import Qround.
+From Coq Require Import String.
+From Coq Require Import Derive.
+From Coq Require Import List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
@@ -11,11 +11,11 @@ Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.UniformWeight.
 Require Import Crypto.Arithmetic.Saturated.
 Require Import (*hints*) Coq.btauto.Algebra.
-Require Coq.Structures.OrdersEx.
+From Coq Require OrdersEx.
 Require Import Crypto.Util.ListUtil.StdlibCompat.
 Require Import Crypto.Util.ZUtil.ModInv.
 
-Require Import Coq.micromega.Lia.
+From Coq Require Import Lia.
 Require Import Crypto.Algebra.Ring.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn.
@@ -32,7 +32,7 @@ Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
-Require Import Coq.ZArith.Znat.
+From Coq Require Import Znat.
 
 Require Import Crypto.Util.CPSUtil.
 Require Import Crypto.Util.CPSNotations.

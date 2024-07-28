@@ -1,5 +1,5 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
 Local Open Scope Z_scope.
 
 Module Z.

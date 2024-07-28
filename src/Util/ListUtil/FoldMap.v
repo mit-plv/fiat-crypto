@@ -1,4 +1,4 @@
-Require Import Coq.Lists.List.
+From Coq Require Import List.
 
 Module List.
   Section FoldMap. (* map over a list in the state monad *)

@@ -1,4 +1,4 @@
-Require Coq.ZArith.ZArith.
+From Coq Require ZArith.
 
 Lemma unit_eq (x y:unit) : x = y. destruct x, y; reflexivity. Qed.
 Global Hint Resolve unit_eq : core.

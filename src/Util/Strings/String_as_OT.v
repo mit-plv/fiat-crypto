@@ -1,8 +1,8 @@
-Require Import Coq.Structures.Orders.
-Require Import Coq.Structures.OrdersEx.
-Require Import Coq.Strings.Ascii Coq.Strings.String.
-Require Import Coq.Arith.Arith.
-Require Import Coq.NArith.NArith.
+From Coq Require Import Orders.
+From Coq Require Import OrdersEx.
+From Coq Require Import Ascii String.
+From Coq Require Import Arith.
+From Coq Require Import NArith.
 Require Export Crypto.Util.FixCoqMistakes.
 
 (** This should disappear whenever we bump the minimum version to a version where https://github.com/coq/coq/pull/14096 has been merged *)

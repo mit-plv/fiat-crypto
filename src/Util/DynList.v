@@ -1,4 +1,4 @@
-Require Import Coq.Lists.List.
+From Coq Require Import List.
 Require Export Crypto.Util.FixCoqMistakes.
 Local Set Universe Polymorphism.
 Inductive dyn_list := nil | cons {T} (x : T) (xs : dyn_list).

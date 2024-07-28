@@ -1,6 +1,6 @@
 (** * Push-Button Synthesis of fancy mongomery reduction : Reification Cache *)
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.derive.Derive.
+From Coq Require Import ZArith.
+From Coq Require Import Derive.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.FancyMontgomeryReduction.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.

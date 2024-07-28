@@ -1,8 +1,8 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.NArith.NArith.
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.derive.Derive.
+From Coq Require Import ZArith.
+From Coq Require Import NArith.
+From Coq Require Import String.
+From Coq Require Import List.
+From Coq Require Import Derive.
 Require Import Crypto.Util.Option.
 Require Crypto.Util.Tuple.
 Require Crypto.Util.OptionList.

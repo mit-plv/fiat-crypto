@@ -1,11 +1,11 @@
-Require Import Coq.Strings.Ascii Coq.Strings.String Coq.Lists.List.
-Require Import Coq.Numbers.BinNums.
-Require Import Coq.QArith.QArith.
-Require Import Coq.ZArith.BinInt.
+From Coq Require Import Ascii String List.
+From Coq Require Import BinNums.
+From Coq Require Import QArith.
+From Coq Require Import BinInt.
 Require Import Crypto.Util.Option.
-Require Coq.Strings.BinaryString.
-Require Coq.Strings.OctalString.
-Require Coq.Strings.HexString.
+From Coq Require BinaryString.
+From Coq Require OctalString.
+From Coq Require HexString.
 Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.Parse.Common.
 Require Import Crypto.Util.Option.

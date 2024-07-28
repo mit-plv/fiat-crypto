@@ -1,5 +1,5 @@
-From Coq Require Import ZArith.ZArith MSets.MSetPositive FSets.FMapPositive
-     Strings.String Strings.Ascii Bool.Bool Lists.List Strings.HexString.
+From Coq Require Import ZArith MSetPositive FMapPositive
+     String Ascii Bool List HexString.
 From Crypto.Util Require Import
      ListUtil
      Strings.String Strings.Decimal Strings.Show

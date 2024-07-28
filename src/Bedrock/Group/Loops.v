@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import List.
 Require Import Rupicola.Lib.ControlFlow.DownTo.
 Require Import Crypto.Util.Loops.
 Require Import Crypto.Util.ListUtil.

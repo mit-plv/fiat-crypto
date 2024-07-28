@@ -1,6 +1,6 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Lists.List.
+From Coq Require Import Lia.
+From Coq Require Import Morphisms.
+From Coq Require Import List.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.DestructHead.

@@ -1,5 +1,5 @@
-Require Import Coq.Sorting.Permutation.
-Require Import Coq.Lists.List.
+From Coq Require Import Permutation.
+From Coq Require Import List.
 Require Export Crypto.Util.FixCoqMistakes.
 Import ListNotations.
 Local Open Scope list_scope.

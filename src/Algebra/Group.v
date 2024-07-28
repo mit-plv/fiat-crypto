@@ -1,4 +1,5 @@
-Require Import Coq.Classes.Morphisms Crypto.Util.Relations (*Crypto.Util.Tactics*).
+From Coq Require Import Morphisms.
+Require Import Crypto.Util.Relations (*Crypto.Util.Tactics*).
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Monoid.
 
 Section BasicProperties.

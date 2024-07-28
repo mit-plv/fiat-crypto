@@ -1,5 +1,5 @@
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Structures.Equalities.
+From Coq Require Import Morphisms.
+From Coq Require Import Equalities.
 Require Export Crypto.Util.FixCoqMistakes.
 
 Module Type UsualEqualityTypeOrig <: EqualityTypeOrig

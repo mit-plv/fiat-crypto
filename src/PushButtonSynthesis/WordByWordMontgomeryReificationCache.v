@@ -1,6 +1,6 @@
 (** * Push-Button Synthesis of Word-By-Word Montgomery: Reification Cache *)
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.derive.Derive.
+From Coq Require Import ZArith.
+From Coq Require Import Derive.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.Freeze.

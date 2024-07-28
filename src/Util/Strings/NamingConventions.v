@@ -1,6 +1,6 @@
-Require Import Coq.derive.Derive.
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.String.
+From Coq Require Import Derive.
+From Coq Require Import List.
+From Coq Require Import String.
 Require Import Crypto.Util.Strings.String.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Strings.Show.

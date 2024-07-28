@@ -1,8 +1,8 @@
-Require Import Coq.Strings.String.
-Require Import Coq.MSets.MSetAVL.
-Require Import Coq.MSets.MSetFacts.
-Require Import Coq.MSets.MSetInterface.
-Require Import Coq.Structures.OrdersEx.
+From Coq Require Import String.
+From Coq Require Import MSetAVL.
+From Coq Require Import MSetFacts.
+From Coq Require Import MSetInterface.
+From Coq Require Import OrdersEx.
 Require Export Crypto.Util.FixCoqMistakes.
 (* TODO: use tries instead? *)
 

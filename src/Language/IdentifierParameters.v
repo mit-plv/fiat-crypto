@@ -1,5 +1,5 @@
-Require Import Coq.Strings.String.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import String.
+From Coq Require Import ZArith.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Definitions.

@@ -1,9 +1,9 @@
-Require Import Coq.QArith.QArith.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.String.
-Require Import Coq.Strings.HexString.
+From Coq Require Import QArith.
+From Coq Require Import ZArith.
+From Coq Require Import Ascii.
+From Coq Require Import List.
+From Coq Require Import String.
+From Coq Require Import HexString.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Parse.

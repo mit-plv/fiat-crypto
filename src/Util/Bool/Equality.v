@@ -1,3 +1,3 @@
-Require Import Coq.Bool.Bool.
+From Coq Require Import Bool.
 
 Scheme Equality for bool.

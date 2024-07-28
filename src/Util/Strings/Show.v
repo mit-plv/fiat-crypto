@@ -1,9 +1,9 @@
-Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.QArith.QArith_base.
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.String Coq.Strings.Ascii.
+From Coq Require Import BinInt BinNat QArith_base.
+From Coq Require Import List.
+From Coq Require Import String Ascii.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.Util.ZUtil.Definitions.
-Require Import Coq.Strings.HexString.
+From Coq Require Import HexString.
 Require Import Crypto.Util.Strings.Decimal.
 Require Export Crypto.Util.Level.
 Import ListNotations. Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope string_scope.

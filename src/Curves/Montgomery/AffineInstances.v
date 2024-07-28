@@ -1,10 +1,10 @@
-Require Import Coq.PArith.BinPosDef.
+From Coq Require Import BinPosDef.
 Require Import Crypto.Algebra.Field.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
 Require Import Crypto.Spec.WeierstrassCurve Crypto.Curves.Weierstrass.Affine.
 Require Import Crypto.Curves.Weierstrass.AffineProofs.
 Require Import Crypto.Curves.Montgomery.AffineProofs.
-Require Import Coq.Classes.RelationClasses.
+From Coq Require Import RelationClasses.
 
 Module M.
   Section MontgomeryCurve.

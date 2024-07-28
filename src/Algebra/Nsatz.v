@@ -2,8 +2,8 @@
   periodically check whether we still need it -- once enough bugs get fixed
   in mailine, we hope to drop this implementation *)
 
-Require Coq.nsatz.NsatzTactic.
-Require Import Coq.Lists.List.
+From Coq Require NsatzTactic.
+From Coq Require Import List.
 
 (** For compat with https://github.com/coq/coq/pull/12073 *)
 Module Nsatz.
@@ -50,7 +50,7 @@ Ltac nsatz_get_reified_givens reified_package :=
 Ltac nsatz_get_reified_goal reified_package :=
   lazymatch reified_package with (_, _, ?goal) => goal end.
 
-Require Import Coq.setoid_ring.Ring_polynom.
+From Coq Require Import Ring_polynom.
 (* Kludge for 8.4/8.5 compatibility *)
 Module Import mynsatz_compute.
   Import Coq.nsatz.NsatzTactic.

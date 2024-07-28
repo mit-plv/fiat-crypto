@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Sorting.Mergesort.
+From Coq Require Import ZArith.
+From Coq Require Import Lia.
+From Coq Require Import Mergesort.
 
 
 Module TAPOrder <: Orders.TotalLeBool.

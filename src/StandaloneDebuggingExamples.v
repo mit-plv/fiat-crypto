@@ -1,6 +1,6 @@
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Strings.String.
+From Coq Require Import List.
+From Coq Require Import Ascii.
+From Coq Require Import String.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.CLI.
 Require Import Crypto.Util.Notations.
@@ -9,7 +9,7 @@ Import ListNotations. Local Open Scope string_scope.
 
 Module debugging_no_asm.
   Import StandaloneOCamlMain.UnsaturatedSolinas.
-  Import Coq.ZArith.ZArith.
+  Import ZArith.
   Open Scope Z_scope.
   Goal True.
     pose main as v.
@@ -117,7 +117,7 @@ Module debugging_typedef_bounds.
     clearbody k; subst k.
     cbv beta iota zeta delta [ForExtraction.UnsaturatedSolinas.PipelineMain ForExtraction.Parameterized.PipelineMain] in v.
     vm_compute Arg.parse_argv in v.
-    Import Coq.ZArith.ZArith.
+    Import ZArith.
     Open Scope Z_scope.
     cbv beta iota in v.
     vm_compute Arg.split_type_of_list' in v.

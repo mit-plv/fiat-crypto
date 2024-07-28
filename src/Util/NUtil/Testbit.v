@@ -1,5 +1,5 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.NArith.NArith.
+From Coq Require Import Lia.
+From Coq Require Import NArith.
 
 Module N.
   Lemma testbit_ones n i : N.testbit (N.ones n) i = N.ltb i n.

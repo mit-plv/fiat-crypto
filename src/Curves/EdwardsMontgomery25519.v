@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith. Local Open Scope Z_scope.
+From Coq Require Import ZArith. Local Open Scope Z_scope.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Spec.ModularArithmetic. Local Open Scope F_scope.
 Require Import Crypto.Curves.EdwardsMontgomery. Import M.

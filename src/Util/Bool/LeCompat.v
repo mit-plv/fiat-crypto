@@ -1,4 +1,4 @@
-Require Import Coq.Bool.Bool.
+From Coq Require Import Bool.
 (* Compat for Coq 8.9 *)
 Module Export Coq.
   Module Export Bool.

@@ -1,4 +1,4 @@
-Require Import Coq.PArith.BinPosDef.
+From Coq Require Import BinPosDef.
 
 Local Open Scope positive_scope.
 (** Append two sequences *)

@@ -1,7 +1,7 @@
 (** * Push-Button Synthesis of Saturated Solinas: Reification Cache *)
-Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.derive.Derive.
+From Coq Require Import QArith_base Qround.
+From Coq Require Import ZArith.
+From Coq Require Import Derive.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Saturated.

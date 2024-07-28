@@ -1,8 +1,8 @@
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Arith.PeanoNat.
-Require Import Coq.Relations.Relation_Definitions.
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
+From Coq Require Import Morphisms.
+From Coq Require Import PeanoNat.
+From Coq Require Import Relation_Definitions.
+From Coq Require Import List.
+From Coq Require Import Lia.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -1180,7 +1180,7 @@ Proof using Type.
   eapply nth_default_to_list'.
 Qed.
 
-Require Import Coq.Lists.SetoidList.
+From Coq Require Import SetoidList.
 
 Global Instance fieldwise'_Proper
   : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ impl) ==> eq ==> eq ==> impl) (@fieldwise' A B n) | 10.

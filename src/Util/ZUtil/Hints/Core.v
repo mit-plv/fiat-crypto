@@ -1,7 +1,7 @@
 (** * Declaration of Hint Databases with lemmas about ℤ from the standard library *)
-Require Import Coq.micromega.Lia Coq.micromega.Lqa.
-Require Import Coq.ZArith.ZArith.
-(* Should we [Require Import Coq.ZArith.Zhints.]? *)
+From Coq Require Import Lia Lqa.
+From Coq Require Import ZArith.
+(* Should we [From Coq Require Import Zhints.]? *)
 
 Global Hint Extern 1 => lia : lia.
 Global Hint Extern 1 => lra : lra.

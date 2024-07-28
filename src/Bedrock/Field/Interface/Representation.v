@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
+From Coq Require Import ZArith.
+From Coq Require Import List.
+From Coq Require Import Lia.
 Require Import coqutil.Byte.
 Require Import coqutil.Word.Interface.
 Require Import bedrock2.Semantics.

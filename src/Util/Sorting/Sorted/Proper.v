@@ -1,8 +1,8 @@
-Require Import Coq.Lists.List.
-Require Import Coq.Lists.SetoidList.
-Require Import Coq.Lists.SetoidPermutation.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Sorting.Sorted.
+From Coq Require Import List.
+From Coq Require Import SetoidList.
+From Coq Require Import SetoidPermutation.
+From Coq Require Import Morphisms.
+From Coq Require Import Sorted.
 Require Import Crypto.Util.Tactics.SplitInContext.
 
 Local Set Implicit Arguments.

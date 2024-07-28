@@ -1,5 +1,5 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
+From Coq Require Import Lia.
+From Coq Require Import ZArith Znumtheory.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.

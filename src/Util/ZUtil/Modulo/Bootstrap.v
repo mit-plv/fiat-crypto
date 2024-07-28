@@ -1,6 +1,6 @@
 (** Basic lemmas about [Z.modulo] for bootstrapping various tactics *)
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+From Coq Require Import ZArith.
+From Coq Require Import Lia.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Local Open Scope Z_scope.
 

@@ -1,5 +1,5 @@
-Require Import Coq.Lists.List.
-Require Import Coq.MSets.MSetInterface.
+From Coq Require Import List.
+From Coq Require Import MSetInterface.
 Require Import Crypto.Util.Strings.Show.
 
 Module ShowWSetsOn (E : Equalities.DecidableType) (W : WSetsOn E).

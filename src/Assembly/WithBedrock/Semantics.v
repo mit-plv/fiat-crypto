@@ -1,10 +1,10 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.NArith.NArith.
-Require Import Coq.FSets.FMapPositive.
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Bool.Bool.
+From Coq Require Import ZArith.
+From Coq Require Import NArith.
+From Coq Require Import FMapPositive.
+From Coq Require Import String.
+From Coq Require Import List.
+From Coq Require Import Morphisms.
+From Coq Require Import Bool.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Bool.Reflect.

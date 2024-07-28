@@ -1,4 +1,4 @@
-Require Coq.setoid_ring.Integral_domain.
+From Coq Require Integral_domain.
 Require Crypto.Algebra.Nsatz.
 Require Import Crypto.Util.Factorize.
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Ring.

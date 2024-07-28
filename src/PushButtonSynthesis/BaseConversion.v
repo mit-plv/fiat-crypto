@@ -1,11 +1,11 @@
 (** * Push-Button Synthesis of Unsaturated Solinas *)
-Require Import Coq.Strings.String.
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.MSets.MSetPositive.
-Require Import Coq.Lists.List.
-Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
-Require Import Coq.derive.Derive.
+From Coq Require Import String.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
+From Coq Require Import MSetPositive.
+From Coq Require Import List.
+From Coq Require Import QArith_base Qround.
+From Coq Require Import Derive.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.FoldBool.

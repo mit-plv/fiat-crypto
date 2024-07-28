@@ -1,9 +1,9 @@
 (* Test vectors from <https://tools.ietf.org/html/rfc7748#section-5.2>,
    with hex values converted to decimal using python like this:
    > int.from_bytes(binascii.unhexlify('deadbeef'), 'little') *)
-Require Import Coq.NArith.BinNatDef.
-Require Import Coq.ZArith.BinIntDef.
-Require Import Coq.PArith.BinPosDef.
+From Coq Require Import BinNatDef.
+From Coq Require Import BinIntDef.
+From Coq Require Import BinPosDef.
 Require Import Spec.ModularArithmetic Spec.Curve25519 Spec.MxDH Crypto.Util.Decidable.
 Definition cswap {T} (swap:bool) (a b:T) := if swap then (b, a) else (a, b).
 Definition monty s : F p -> F p := @MxDH.montladder _ F.zero F.one F.add F.sub F.mul F.inv M.a24 cswap 255 (BinNat.N.testbit_nat s).
