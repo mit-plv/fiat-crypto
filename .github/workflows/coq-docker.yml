@@ -208,7 +208,7 @@ jobs:
       with:
         submodules: recursive
     - name: Set up OCaml
-      uses: ocaml/setup-ocaml@v2
+      uses: ocaml/setup-ocaml@v3
       with:
         ocaml-compiler: ${{ matrix.ocaml-compiler }}
     - name: opam install deps
@@ -257,7 +257,7 @@ jobs:
       with:
         submodules: recursive
     - name: Set up OCaml
-      uses: ocaml/setup-ocaml@v2
+      uses: ocaml/setup-ocaml@v3
       with:
         ocaml-compiler: ${{ matrix.ocaml-compiler }}
     - name: echo build params
