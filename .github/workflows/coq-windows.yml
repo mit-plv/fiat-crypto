@@ -44,6 +44,7 @@ jobs:
       uses: ocaml/setup-ocaml@v3
       with:
         ocaml-compiler: 4.13.1
+    - run: opam pin add ocamlfind 'git+https://github.com/db4/ocamlfind.git#win32-fix'
     - run: opam pin add --kind=version coq ${{ env.COQ_VERSION }}
     - run: opam install js_of_ocaml
 
