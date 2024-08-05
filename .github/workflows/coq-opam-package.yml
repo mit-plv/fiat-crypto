@@ -31,7 +31,7 @@ jobs:
               opam-jobs-flag: ''},
              {name: 'Windows',
               runs-on: 'windows-latest',
-              ocaml-compiler: '4.11.1',
+              ocaml-compiler: '4.13.1',
               coq-extra-flags: '-async-proofs-j 1',
               extra-ocaml-repositories: 'opam-repository-mingw: https://github.com/ocaml-opam/opam-repository-mingw.git#sunset',
               opam-jobs-flag: '-j 1'}]
