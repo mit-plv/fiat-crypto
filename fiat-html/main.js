@@ -304,6 +304,8 @@ document.addEventListener('DOMContentLoaded', function() {
             wasmCheckbox.checked = true;
         }
 
+        setupWorkers();
+
         if (argv) {
             if (nonFalseQueryParam(interactive)) {
                 inputArgs.value = decodeURIComponent(argv);
@@ -314,8 +316,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             inputForm.classList.remove('hidden');
         }
-
-        setupWorkers();
     }
 
     parseQueryParams();
