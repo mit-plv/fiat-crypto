@@ -58,7 +58,7 @@ jobs:
     - name: install-standalone-unified-ocaml
       run: etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
     - name: standalone-js-of-ocaml
-      run: etc/ci/github-actions-make.sh -j2 standalone-js-of-ocaml
+      run: etc/ci/github-actions-make.sh -j1 standalone-js-of-ocaml
     - name: install-standalone-js-of-ocaml
       run: etc/ci/github-actions-make.sh install-standalone-js-of-ocaml
     - name: upload standalone files
