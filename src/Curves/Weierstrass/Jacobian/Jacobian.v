@@ -551,8 +551,44 @@ Module Jacobian.
     (** If [a] is -3, one can substitute a faster implementation of [double]. *)
     Section AEqMinus3.
       Context (a_eq_minus3 : a = Fopp (1+1+1)).
+      Definition Fsquare x := x^2.
+      Definition Ftriple x := x+x+x.
+      Definition Fhalve x := x/(1+1).
+      Hint Unfold Fsquare Ftriple Fhalve : points_as_coordinates.
 
-      Program Definition double_minus_3 (P : point) : point :=
+      (* Based on "Guide to Elliptic Curve Cryptography" HMV'04 page 90 *)
+      Definition double_minus_3 (P : point) : point. simple refine (exist _
+        match proj1_sig P with
+        | (x, y, z) =>
+          let D := Fadd y y in
+          let tmp := Fsquare z in
+          let D := Fsquare D in
+          let out_z := Fmul z y in
+          let out_z := Fadd out_z out_z in
+          let A := Fadd x tmp in
+          let tmp := Fsub x tmp in
+          let tmp := Ftriple tmp in
+          let out_y := Fsquare D in
+          let A := Fmul A tmp in
+          let D := Fmul D x in
+          let out_x := Fsquare A in
+          let tmp := Fadd D D in
+          let out_x := Fsub out_x tmp in
+          let D := Fsub D out_x in
+          let D := Fmul D A in
+          let out_y := Fhalve out_y in
+          let out_y := Fsub D out_y in
+          (out_x, out_y, out_z)
+        end _); abstract faster_t.
+      Defined.
+
+      Hint Unfold double_minus_3 : points_as_coordinates.
+
+      Lemma double_minus_3_eq_double (P : point) :
+        eq (double P) (double_minus_3 P).
+      Proof. faster_t. Qed.
+
+      Program Definition double_minus_3_without_halving (P : point) : point :=
         match proj1_sig P return F*F*F with
         | (x_in, y_in, z_in) =>
           let delta := z_in^2 in
@@ -582,10 +618,10 @@ Module Jacobian.
         end.
       Next Obligation. Proof. t. Qed.
 
-      Hint Unfold double_minus_3 : points_as_coordinates.
+      Hint Unfold double_minus_3_without_halving : points_as_coordinates.
 
-      Lemma double_minus_3_eq_double (P : point) :
-        eq (double P) (double_minus_3 P).
+      Lemma double_minus_3_without_halving_eq_double (P : point) :
+        eq (double_minus_3_without_halving P) (double_minus_3 P).
       Proof. faster_t. Qed.
     End AEqMinus3.
   End Jacobian.
