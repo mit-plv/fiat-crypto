@@ -45,6 +45,16 @@ Section Func.
       | _ => false
       end.
 
+  (* wrharris: debugging *)
+  Fixpoint invalid_func {t : API.type} (e : @API.expr (fun _ => unit) t) : option Cmd.InvalidSubCmd :=
+    if valid_cmd_bool_if_base e
+    then None
+    else
+      match e with
+      | expr.Abs (type.base _) _ f => invalid_func (f tt)
+      | _ => Cmd.invalid_cmd e
+      end.
+
   Lemma valid_func_valid_cmd {t} e :
     valid_cmd_bool_if_base (t:=t) e = true ->
     valid_func e.

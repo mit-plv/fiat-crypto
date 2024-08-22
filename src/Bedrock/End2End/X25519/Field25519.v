@@ -34,6 +34,9 @@ Section Field.
   Instance translation_parameters : Types.parameters
     (varname_gen := default_varname_gen)
     (error := Syntax.expr.var Defaults.ERROR)
+    (* TODO(wrharris): check these names. *)
+    (add_carryx_funcname := "add_with_carry")
+    (sub_borrowx_funcname := "sub_with_borrow")
     := tt.
   Instance translation_parameters_ok : Types.ok.
   Proof using ext_spec_ok. constructor; try exact _; apply prefix_name_gen_unique. Qed.

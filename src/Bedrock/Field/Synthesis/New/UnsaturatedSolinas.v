@@ -79,7 +79,7 @@ Class unsaturated_solinas_ops
         to_bytes_insizes to_bytes_outsizes (to_bytes_inlengths n);
   }.
 (* TODO(wrharris): review: added two `_` to account for new function names. Need to add another for mul_split. *)
-Arguments unsaturated_solinas_ops {_ _ _ _ _ _ _ _ _ _ _ _ _} n.
+Arguments unsaturated_solinas_ops {_ _ _ _ _ _ _ _ _ _ _ _ _}.
 
 (** We need to tell [check_args] that we are requesting these functions in order to get the relevant properties out *)
 Notation necessary_requests := ["to_bytes"; "from_bytes"]%string (only parsing).

@@ -53,6 +53,66 @@ Section Expr.
     | _ => false
     end.
 
+  Definition is_add_get_carry_ident {t} (i : ident.ident t) : bool :=
+    match i with
+    | ident.Z_add_get_carry => true
+    | _ => false
+    end.
+
+  Definition is_mul_split_ident {t} (i : ident.ident t) : bool :=
+    match i with
+    | ident.Z_mul_split => true
+    | _ => false
+    end.
+
+  Definition is_sub_get_borrow_ident {t} (i : ident.ident t) : bool :=
+    match i with
+    | ident.Z_sub_get_borrow => true
+    | _ => false
+    end.
+  
+  Definition is_sub_with_get_borrow_ident {t} (i : ident.ident t) : bool :=
+    match i with
+    | ident.Z_sub_with_get_borrow => true
+    | _ => false
+    end.
+    
+  Definition is_add_with_get_carry_ident {t} (i : ident.ident t) : bool :=
+    match i with
+    | ident.Z_add_with_get_carry => true
+    | _ => false
+    end.
+
+  Definition is_add_get_carry_expr {t} (e : @API.expr (fun _ => unit) t) : bool :=
+    match e with
+    | expr.Ident _ i => is_add_get_carry_ident i
+    | _ => false
+    end.
+
+  Definition is_mul_split_expr {t} (e : @API.expr (fun _ => unit) t) : bool :=
+    match e with
+    | expr.Ident _ i => is_mul_split_ident i
+    | _ => false
+    end.
+
+  Definition is_add_with_get_carry_expr {t} (e : @API.expr (fun _ => unit) t) : bool :=
+    match e with
+    | expr.Ident _ i => is_add_with_get_carry_ident i
+    | _ => false
+    end.
+
+  Definition is_sub_with_get_borrow_expr {t} (e : @API.expr (fun _ => unit) t) : bool :=
+    match e with
+    | expr.Ident _ i => is_sub_with_get_borrow_ident i
+    | _ => false
+    end.
+
+  Definition is_sub_get_borrow_expr {t} (e : @API.expr (fun _ => unit) t) : bool :=
+    match e with
+    | expr.Ident _ i => is_sub_get_borrow_ident i
+    | _ => false
+    end.
+
   Definition is_mul_high_ident {t} (i : ident.ident t) : bool :=
     match i with
     | ident.Z_mul_high => true
@@ -212,7 +272,7 @@ Section Expr.
      very last application in a multi-argument function, take a sneak peek ahead
      to see if the rest of the applications match a certain kind of operation,
      and then enforce any constraints on the last argument. *)
-  Inductive PartialMode := NotPartial | Binop | Shift | Select | Bit | Lnot.
+  Inductive PartialMode : Set := NotPartial | Binop | Shift | Select | Bit | Lnot | BuiltinAndArg0 | BuiltinAndArg1 | BuiltinAndArg2.
 
   Fixpoint valid_expr_bool'
            (mode : PartialMode) (require_casts : bool)
@@ -255,6 +315,28 @@ Section Expr.
       | expr.App type_Z (type.arrow type_Z type_Z) f x =>
         (valid_expr_lnot_modulo_bool require_casts f)
           && valid_expr_bool' NotPartial true x
+      | _ => false
+      end
+    | BuiltinAndArg2 =>
+      match e with
+      | expr.App type_Z (type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))) f x =>
+        (is_add_with_get_carry_expr f || is_sub_with_get_borrow_expr f)
+        && valid_expr_bool' NotPartial false x
+      | _ => false
+      end
+    | BuiltinAndArg1 =>
+      match e with
+      | expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ)) f x =>
+        (is_add_get_carry_expr f || is_sub_get_borrow_expr f || is_mul_split_expr f
+         || valid_expr_bool' BuiltinAndArg2 false f)
+        && valid_expr_bool' NotPartial false x
+      | _ => false
+      end
+    | BuiltinAndArg0 =>
+      match e with
+      | expr.App type_Z (type.arrow type_Z type_ZZ) f x =>
+        valid_expr_bool' BuiltinAndArg1 require_casts f
+        && valid_expr_bool' NotPartial false x
       | _ => false
       end
     | NotPartial =>
@@ -301,8 +383,11 @@ Section Expr.
         | expr.App type_ZZ type_ZZ f x =>
           is_cast (width:=width) f
           && valid_expr_bool' NotPartial false x
+        | expr.App type_Z type_ZZ f x =>
+          valid_expr_bool' BuiltinAndArg0 require_casts f
+          && valid_expr_bool' NotPartial require_casts x
         | expr.Ident _ (ident.Literal base.type.Z z) =>
-          is_bounded_by_bool z (@max_range width)|| negb require_casts
+          is_bounded_by_bool z (@max_range width) || negb require_casts
         | expr.Ident _ (ident.Literal base.type.nat n) =>
           negb require_casts
         | expr.Var type_Z v => true
@@ -312,7 +397,63 @@ Section Expr.
         end
     end.
 
+  (* TODO wrharris - Invalid* and invalid_* added for debugging *)
+  Inductive InvalidSubExpr : Type :=
+    UnmatchedIdent : forall {t} , @API.expr (fun _ => unit) t -> InvalidSubExpr
+  | UnmatchedVar : forall {t} , @API.expr (fun _ => unit) t -> InvalidSubExpr
+  | UnmatchedAbs : forall {t} , @API.expr (fun _ => unit) t -> InvalidSubExpr
+  | UnmatchedApp: forall {t}, @API.expr (fun _ => unit) t -> InvalidSubExpr
+  | UnmatchedAppArg: forall {t}, @API.expr (fun _ => unit) t -> InvalidSubExpr
+  | UnmatchedArg0: forall {t}, @API.expr (fun _ => unit) t -> InvalidSubExpr
+  | UnmatchedArg1: forall {t}, @API.expr (fun _ => unit) t -> InvalidSubExpr
+  | UnmatchedArg2: forall {t}, @API.expr (fun _ => unit) t -> InvalidSubExpr
+  | UnmatchedLetIn : forall {t} , @API.expr (fun _ => unit) t -> InvalidSubExpr
+  | UnmatchedMode : PartialMode -> InvalidSubExpr
+  | InvalidZZToZZNonCast : @API.expr (fun _ => unit) type_ZZ -> InvalidSubExpr
+  .
+
+  Fixpoint invalid_expr_bool'
+    (mode : PartialMode) (require_casts : bool)
+    {t} (e : @API.expr (fun _ => unit) t) : option InvalidSubExpr :=
+    match mode with
+    | BuiltinAndArg2 =>
+      match e with
+      | expr.App type_Z (type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))) f x => Some(UnmatchedIdent(f))
+      | _ => Some(UnmatchedArg2(e))
+      end
+    | BuiltinAndArg1 =>
+      match e with
+      | expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ)) f x => invalid_expr_bool' BuiltinAndArg2 false f
+      | _ => Some(UnmatchedArg1(e))
+      end
+    | BuiltinAndArg0 =>
+      match e with
+      | expr.App type_Z (type.arrow type_Z type_ZZ) f x =>
+        invalid_expr_bool' BuiltinAndArg1 false f
+      | _ => Some(UnmatchedArg0(e))
+      end
+    | NotPartial =>
+        match e with
+        | expr.App type_nat _ f x => Some(UnmatchedIdent(e))
+        | expr.App type_Z type_Z f x => Some(UnmatchedIdent(e))
+        | expr.App type_Z type_ZZ f _ => invalid_expr_bool' BuiltinAndArg0 false f
+        | expr.App type_ZZ type_Z f x => Some(UnmatchedIdent(e))
+        | expr.App type_ZZ type_ZZ f x => 
+          if is_cast (width:=width) f then invalid_expr_bool' NotPartial false x
+          else Some (InvalidZZToZZNonCast (expr.App f x))
+        | expr.App type_Z (type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))) _ _ => Some(UnmatchedApp(e))
+        | expr.Ident _ _ => Some(UnmatchedIdent e)
+        | expr.Var _ _ => Some(UnmatchedVar e)
+        | expr.Abs _ _ _ => Some(UnmatchedAbs e)
+        | expr.App s d f x => Some(UnmatchedAppArg e)
+        | expr.LetIn _ _ _ _ => Some(UnmatchedLetIn e)
+        end
+    | m => Some(UnmatchedMode(m))
+    end.
+
   Definition valid_expr_bool {t} rc := @valid_expr_bool' NotPartial rc t.
+
+  Definition invalid_expr_bool {t} rc := @invalid_expr_bool' NotPartial rc t.
 
   Lemma is_cast_type {var t} (e : API.expr t) :
     is_cast (var:=var) (width:=width) e = true ->
@@ -908,6 +1049,56 @@ Section Expr.
     congruence.
   Qed.
 
+  Lemma is_add_get_carry_expr_eq {t} (f : API.expr t) :
+    is_add_get_carry_expr f = true ->
+    (match t as t0 return API.expr t0 -> Prop with
+     | type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ)) =>
+       fun f => f = expr.Ident ident.Z_add_get_carry
+     | _ => fun _ => False
+     end) f.
+  Proof.
+    cbv [is_add_get_carry_expr is_add_get_carry_ident].
+    break_match; congruence.
+  Qed.
+
+  Lemma is_add_with_get_carry_expr_eq {t} (f : API.expr t) :
+    is_add_with_get_carry_expr f = true ->
+    (match t as t0 return API.expr t0 -> Prop with
+     | type.arrow type_Z
+         (type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))) =>
+       fun f => f = expr.Ident ident.Z_add_with_get_carry
+     | _ => fun _ => False
+     end) f.
+  Proof.
+    cbv [is_add_with_get_carry_expr is_add_with_get_carry_ident].
+    break_match; congruence.
+  Qed.
+
+  Lemma is_sub_get_borrow_expr_eq {t} (f : API.expr t) :
+    is_sub_get_borrow_expr f = true ->
+    (match t as t0 return API.expr t0 -> Prop with
+     | type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ)) =>
+       fun f => f = expr.Ident ident.Z_sub_get_borrow
+     | _ => fun _ => False
+     end) f.
+  Proof.
+    cbv [is_sub_get_borrow_expr is_sub_get_borrow_ident].
+    break_match; congruence.
+  Qed.
+
+  Lemma is_sub_with_get_borrow_expr_eq {t} (f : API.expr t) :
+    is_sub_with_get_borrow_expr f = true ->
+    (match t as t0 return API.expr t0 -> Prop with
+     | type.arrow type_Z
+         (type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))) =>
+       fun f => f = expr.Ident ident.Z_sub_with_get_borrow
+     | _ => fun _ => False
+     end) f.
+  Proof.
+    cbv [is_sub_with_get_borrow_expr is_sub_with_get_borrow_ident].
+    break_match; congruence.
+  Qed.
+
   Lemma is_fst_ident_expr_eq {t} (f : API.expr t) :
     is_fst_ident_expr f = true ->
     (match t as t0 return API.expr t0 -> Prop with
@@ -1093,6 +1284,26 @@ Section Expr.
          | _ => fun _ => False
          end) e
       | NotPartial => (exists b, t = type.base b) -> valid_expr rc e
+      | BuiltinAndArg2 => 
+        (match t as t0 return expr.expr t0 -> Prop with
+         | type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ)) =>
+             fun f => forall x, valid_expr rc x -> valid_expr rc (expr.App f x)
+         | _ => fun _ => False
+         end) e
+      | BuiltinAndArg1 =>
+        (match t as t0 return expr.expr t0 -> Prop with
+         | type.arrow type_Z (type.arrow type_Z type_ZZ) =>
+            fun f => forall x, valid_expr rc x -> valid_expr rc (expr.App f x)
+         | _ => fun _ => False
+         end
+        ) e
+      | BuiltinAndArg0 => 
+        (match t as t0 return expr.expr t0 -> Prop with
+          | type.arrow type_Z type_ZZ =>
+              fun f => forall x, valid_expr rc x -> valid_expr rc (expr.App f x)
+          | _ => fun _ => False
+          end
+        ) e
       end.
   Proof.
     induction e; intros;
@@ -1132,6 +1343,10 @@ Section Expr.
                    | Select => False
                    | Bit => False
                    | Lnot => False
+                   | BuiltinAndArg2 => False
+                   | BuiltinAndArg1 => False
+                   | BuiltinAndArg0 => False
+                   (* TODO wrharris - add cases here? *)
                    end |- _ =>
                  specialize (IH NotPartial); (cbn match in IH)
                end.
@@ -1159,6 +1374,12 @@ Section Expr.
         apply (is_cast_impl1
                  (t := type_Z -> type_Z)); eauto; [ ].
         apply (IHe2 NotPartial); eauto. }
+      { (* TODO harrisw - type_Z -> type_ZZ case *)
+        intros.
+        apply (IHe1 BuiltinAndArg0 rc); try assumption.
+        apply (IHe2 NotPartial rc); try assumption.
+        admit.
+      }
       { (* nth_default case *)
         eauto using valid_expr_nth_default_bool_impl1. }
       { (* fst case *)
@@ -1219,9 +1440,17 @@ Section Expr.
         intros.
         apply (valid_expr_lnot_modulo_bool_impl1
                  (t:=type_Z -> type_Z -> type_Z)); eauto; [ ].
-        apply (IHe2 NotPartial); eauto. } }
+        apply (IHe2 NotPartial); eauto. } 
+      { (* TODO harrisw - has hyp with BuiltinAndArg1 *)
+        admit. }
+      { (* TODO harrisw - has hyp with BuiltinAndArg2 *)
+        admit. }
+      { (* TODO harrisw - add_with_get_carry or add_with_get_borrow *)
+        admit.
+      }
+    }
     { break_match; try congruence. }
-  Qed.
+  Admitted.
 
   Lemma valid_expr_bool_impl1 {t} (e : API.expr t) :
     (exists b, t = type.base b) ->
@@ -1254,14 +1483,15 @@ Section Expr.
       auto using
            Bool.andb_true_iff, Bool.orb_true_iff,
       is_bounded_by_bool_max_range,
-      is_bounded_by_bool_width_range; [ ].
+      is_bounded_by_bool_width_range; [ | ].
     { (* binop *)
       match goal with
       | H : translate_binop ?i <> None
         |- context [match translate_binop ?i with _ => _ end] =>
         destruct (translate_binop i)
       end; cbn [andb]; congruence. }
-  Qed.
+    { admit. }
+  Admitted.
 
   Lemma valid_expr_bool_iff {t} (e : API.expr (type.base t)) :
     forall rc,

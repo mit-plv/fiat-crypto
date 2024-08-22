@@ -9,6 +9,11 @@ Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults32.
 Require Import Crypto.Bedrock.Specs.Field.
 Import ListNotations.
 
+Require Import Crypto.Language.API.
+Import API.Compilers.
+Import Cmd.
+Import Expr.
+
 (* Parameters for Poly1305 field. *)
 Section Field.
   Definition n : nat := 5.
@@ -47,27 +52,7 @@ Section Field.
   Proof. Time derive_bedrock2_func from_bytes_op. Qed.
 
   (* TODO(wrharris): remove debug code *)
-  Eval compute in 
-    (res to_bytes_op
-       (fun
-          _ : Language.Compilers.type.type
-                (Language.Compilers.base.type.type
-                   IdentifiersBasicGENERATED.Compilers.base) => unit)).
-
-  Eval compute in to_bytes_op.
-
-  Goal Func.valid_func_bool (res to_bytes_op (fun _ => unit)) = true.
-    let x := constr:(res to_bytes_op (fun _ => unit)) in
-    let y := (eval vm_compute in x) in
-    change x with y.
-    cbv [Func.valid_func_bool].
-    cbv [Func.valid_cmd_bool_if_base].
-    cbv [Cmd.valid_cmd_bool].
-    cbv [Cmd.valid_expr_bool_if_base].
-    cbv [Expr.valid_expr_bool].
-    cbv [Expr.valid_expr_bool'].
-    cbv [Cmd.valid_special_bool].
-    cbv [Expr.is_opp_ident_expr].
+  (*
 
   Goal False.
        (* Import things to make names shorter *)
@@ -94,6 +79,9 @@ Section Field.
        Time lazy [res mul_op p224_ops] in X.
 
   Abort.
+  *)
+
+  Eval compute in Func.invalid_func (res to_bytes_op (fun _ => unit)).
 
   Derive fe1305_to_bytes
          SuchThat (forall functions,
@@ -102,6 +90,8 @@ Section Field.
                         (fe1305_to_bytes :: functions))
          As fe1305_to_bytes_correct.
   Proof. Time derive_bedrock2_func to_bytes_op. Qed.
+
+  Eval compute in Func.invalid_func (res mul_op (fun _ => unit)).
 
   Derive fe1305_mul
          SuchThat (forall functions,

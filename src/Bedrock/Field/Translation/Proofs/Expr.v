@@ -169,6 +169,18 @@ Section Expr.
         valid_expr (t:=type_Z) true x ->
         valid_expr (t:=type_Z) true y ->
         valid_expr (t:=type_Z) false (expr.App (expr.App (expr.Ident i) x) y)
+  | valid_add_with_get_carry :
+      forall (width carry : API.expr type_Z),
+        (* TODO(wrharris): add conditions on width, carry *)
+        valid_expr (t:=type.arrow type_Z (type.arrow type_Z type_ZZ)) false
+          (expr.App
+            (expr.App
+              (expr.Ident
+                ident.Z_add_with_get_carry
+              )
+              width)
+          carry)
+        (* TODO(wrharris): add condition on `sub_with_borrow` *)
   .
 
   (* version generalized to any t, necessary to destruct i *)
@@ -869,7 +881,10 @@ Section Expr.
       rewrite word.unsigned_sub, word.unsigned_of_Z_0.
       rewrite !word.unsigned_of_Z.
       f_equal. lia. }
-  Qed.
+    { (* TODO(wrharris): add_with_get_carry? *)
+      admit.
+    }
+  Admitted.
 
   Lemma translate_expr_correct {t}
         (* three exprs, representing the same Expr with different vars *)
