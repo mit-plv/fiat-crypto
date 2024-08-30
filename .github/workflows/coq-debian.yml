@@ -38,7 +38,9 @@ jobs:
       with:
         submodules: recursive
     - name: work around broken git config
-      run: git config --global --add safe.directory "*"
+      run: |
+        git config --global --add safe.directory "*"
+        sudo git config --global --add safe.directory "*"
     - name: container build params
       run: etc/ci/describe-system-config.sh
     - name: make deps
