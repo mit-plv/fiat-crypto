@@ -15,6 +15,7 @@ pub mod p384_32;
 pub mod p384_64;
 pub mod p384_scalar_32;
 pub mod p384_scalar_64;
+pub mod p434_32;
 pub mod p434_64;
 pub mod p448_solinas_32;
 pub mod p448_solinas_64;
