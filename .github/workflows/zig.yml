@@ -19,7 +19,7 @@ jobs:
       - name: Install Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
-          version: master
+          version: 0.13.0
       - uses: actions/checkout@v4
       - name: Test Zig files
         run: (cd fiat-zig && zig build && zig build test)
