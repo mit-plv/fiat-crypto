@@ -75,3 +75,15 @@ test "secp256k1_montgomery" {
     const expected = "aaa4b177db43ac4d443d0171c3bd2ec9db6c0bf91c1941217b81d250614324dc";
     try testVector(@import("secp256k1_montgomery_64.zig"), expected);
 }
+
+test "sm2" {
+    const expected = "e8ebc77c1c0a46d06f64f1155a55c4a7f98f6a896f584433def06a4cd9bcb3be";
+    try testVector(@import("sm2_32.zig"), expected);
+    try testVector(@import("sm2_64.zig"), expected);
+}
+
+test "sm2scalar" {
+    const expected = "d2b9c5b06df4aab19daec578107eaf2a0c38f57f7483f6f24cc6dea78ac89a1f";
+    try testVector(@import("sm2_scalar_32.zig"), expected);
+    try testVector(@import("sm2_scalar_64.zig"), expected);
+}

@@ -28,3 +28,7 @@ pub mod secp256k1_montgomery_32;
 pub mod secp256k1_montgomery_64;
 pub mod secp256k1_montgomery_scalar_32;
 pub mod secp256k1_montgomery_scalar_64;
+pub mod sm2_32;
+pub mod sm2_64;
+pub mod sm2_scalar_32;
+pub mod sm2_scalar_64;
