@@ -11,16 +11,15 @@ Require Import bedrock2.Syntax.
 Require Import bedrock2.WeakestPrecondition.
 Require Import bedrock2.WeakestPreconditionProperties.
 Require Import bedrock2.ZnWords.
-Require Import compiler.MMIO.
-Require Import compiler.Pipeline.
-Require Import compiler.Symbols.
 Require Import coqutil.Byte.
 Require Import coqutil.Map.Interface.
+Require Import coqutil.Map.Properties.
 Require Import coqutil.Map.OfListWord.
 From coqutil.Tactics Require Import Tactics letexists eabstract rdelta reference_to_string ident_of_string.
 Require Import coqutil.Word.Bitwidth64.
 Require Import coqutil.Word.Bitwidth.
 Require Import coqutil.Word.Interface.
+Require Import coqutil.Word.Properties.
 Require Import Coq.Init.Byte.
 Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
@@ -30,7 +29,7 @@ Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Bedrock.Field.Synthesis.New.WordByWordMontgomery.
 Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
-Require Import Crypto.Bedrock.End2End.Secp256k1.Field256k1.
+Require Import Crypto.Bedrock.Secp256k1.Field256k1.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Arithmetic.FLia.
 Require Import Crypto.Algebra.Hierarchy.
