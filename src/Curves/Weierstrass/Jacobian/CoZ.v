@@ -24,7 +24,7 @@ Module Jacobian.
     Local Infix "+" := Fadd. Local Infix "-" := Fsub.
     Local Infix "*" := Fmul. Local Infix "/" := Fdiv.
     Local Notation "x ^ 2" := (x*x). Local Notation "x ^ 3" := (x^2*x).
-    Local Notation "2" := (1+1). Local Notation "4" := (2+2).
+    Local Notation "2" := (1+1). Local Notation "4" := (1+1+1+1).
     Local Notation "8" := (4+4). Local Notation "27" := (4*4 + 4+4 +1+1+1).
     Local Notation Wpoint := (@W.point F Feq Fadd Fmul a b).
     Context {char_ge_12:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 12%positive}
@@ -67,8 +67,8 @@ Module Jacobian.
       | _ => progress destruct_head'_sum
       | _ => progress destruct_head'_bool
       | _ => progress destruct_head'_or
-      | H: context[@dec ?P ?pf] |- _ => destruct (@dec P pf)
-      | |- context[@dec ?P ?pf]      => destruct (@dec P pf)
+      | H: context[@dec ?P ?pf] |- _ => destruct (@dec P pf) || destruct (@dec P pf) at 1
+      | |- context[@dec ?P ?pf]      => destruct (@dec P pf) || destruct (@dec P pf) at 1
       | |- ?P => lazymatch type of P with Prop => split end
       end.
     Ltac prept := repeat prept_step.
@@ -405,36 +405,57 @@ Module Jacobian.
                   end;
                   fsatz ].
 
-    Hint Unfold Jacobian.double negb andb : points_as_coordinates.
-    Hint Unfold W.eq W.add Jacobian.to_affine Jacobian.of_affine Jacobian.add Jacobian.add_impl Jacobian.opp : points_as_coordinates.
-
-    (* These could go into Jacobian.v *)
-    Global Instance Proper_opp : Proper (eq ==> eq) opp. Proof. faster_t_noclear. Qed.
+    Local Hint Unfold W.add W.add' W.zero W.opp : points_as_coordinates.
+    Local Hint Unfold Jacobian.double Jacobian.double_impl negb andb : points_as_coordinates.
+    Local Hint Unfold Jacobian.to_affine Jacobian.to_affine_impl Jacobian.of_affine Jacobian.of_affine_impl Jacobian.add Jacobian.add_impl Jacobian.opp : points_as_coordinates.
 
     Lemma of_affine_add P Q
       : eq (of_affine (W.add P Q)) (add (of_affine P) (of_affine Q)).
-    Proof. t. Qed.
-
-    Lemma add_opp (P : point) :
-      z_of (add P (opp P)) = 0.
-    Proof. faster_t_noclear. Qed.
+    Proof. rewrite Jacobian.eq_iff, Jacobian.to_affine_add, 3Jacobian.to_affine_of_affine; reflexivity. Qed.
 
     Lemma add_comm (P Q : point) :
       eq (add P Q) (add Q P).
-    Proof. faster_t_noclear. Qed.
+    Proof.
+      pose proof W.commutative_group(discriminant_nonzero:=discriminant_nonzero) _.
+      rewrite Jacobian.eq_iff, 2Jacobian.to_affine_add.
+      rewrite Hierarchy.commutative. reflexivity.
+    Qed.
 
     Lemma add_zero_l (P Q : point) (H : z_of P = 0) :
       eq (add P Q) Q.
-    Proof. faster_t. Qed.
+    Proof.
+      pose proof W.commutative_group(discriminant_nonzero:=discriminant_nonzero) _.
+      rewrite Jacobian.eq_iff, Jacobian.to_affine_add.
+      rewrite (proj1 (Jacobian.iszero_iff P)), Hierarchy.left_identity; [reflexivity|].
+      case P as [ [ []?] ?]; cbv [Jacobian.iszero z_of proj1_sig snd] in *; trivial.
+    Qed.
 
     Lemma add_zero_r (P Q : point) (H : z_of Q = 0) :
       eq (add P Q) P.
-    Proof. faster_t. Qed.
+    Proof. rewrite add_comm, add_zero_l; trivial; reflexivity. Qed.
 
     Lemma add_double (P Q : point) :
       eq P Q ->
       eq (add P Q) (double P).
-    Proof. faster_t_noclear. Qed.
+    Proof.
+      rewrite 2Jacobian.eq_iff, Jacobian.to_affine_add, Jacobian.to_affine_double.
+      intros ->; reflexivity.
+    Qed.
+
+    Lemma add_opp_same_r (P : point) :
+      eq (add P (opp P)) (of_affine W.zero).
+    Proof.
+      pose proof W.commutative_group(discriminant_nonzero:=discriminant_nonzero) _.
+      rewrite Jacobian.eq_iff, Jacobian.to_affine_add, Jacobian.to_affine_of_affine, Jacobian.to_affine_opp.
+      rewrite Hierarchy.right_inverse. reflexivity.
+    Qed.
+
+    Lemma z_of_eq_zero (P : point) : eq P (of_affine W.zero) -> z_of P = 0.
+    Proof. prept. match goal with H : 0 <> 0 |- _ => case (H ltac:(reflexivity)) end. Qed.
+
+    Lemma z_of_add_opp_same_r (P : point) :
+      z_of (add P (opp P)) = 0.
+    Proof. apply z_of_eq_zero, add_opp_same_r. Qed.
 
     (* This uses assumptions not present in Jacobian.v,
        namely char_ge_12 and discriminant_nonzero. *)
@@ -465,7 +486,7 @@ Module Jacobian.
 
     Lemma opp_co_z (P : point) :
       co_z P (opp P).
-    Proof. unfold co_z; faster_t. Qed.
+    Proof. unfold co_z. prept. Qed.
 
     Program Definition make_co_z (P Q : point) (HQaff : z_of Q = 1) : point*point :=
       match proj1_sig P, proj1_sig Q return (F*F*F)*(F*F*F) with
@@ -479,8 +500,8 @@ Module Jacobian.
           let t2 := t3 * t2 in
           (P, (t1, t2, t3))
       end.
-    Next Obligation. Proof. faster_t. Qed.
-    Next Obligation. Proof. faster_t. Qed.
+    Next Obligation. Proof. prept. Qed.
+    Next Obligation. Proof. prept. par: faster_t. Qed.
 
     Hint Unfold is_point co_z make_co_z : points_as_coordinates.
 
@@ -520,17 +541,17 @@ Module Jacobian.
           let t5 := t5 - t2 in
           ((t4, t5, t3), (t1, t2, t3))
       end.
-    Next Obligation. Proof. faster_t_noclear. Qed.
-    Next Obligation. Proof. faster_t. Qed.
+    Next Obligation. Proof. prept. all : faster_t_noclear. Qed.
+    Next Obligation. Proof. prept. all : faster_t. Qed.
 
-    Hint Unfold zaddu : points_as_coordinates.
+    Hint Unfold zaddu Jacobian.add_nz_nz : points_as_coordinates.
 
     (* ZADDU(P, Q) = (P + Q, P) if P <> Q, Q <> -P *)
     Lemma zaddu_correct (P Q : point) (H : co_z P Q)
       (Hneq : x_of P <> x_of Q):
       let '(R1, R2) := zaddu P Q H in
       eq (add P Q) R1 /\ eq P R2 /\ co_z R1 R2.
-    Proof. faster_t_noclear. Qed.
+    Proof. prept. par : faster_t_noclear. Qed.
 
     Lemma zaddu_correct_alt (P Q : point) (H : co_z P Q) :
       let '(R1, R2) := zaddu P Q H in
@@ -546,7 +567,7 @@ Module Jacobian.
     Lemma zaddu_correct0 (P : point) :
       let '(R1, R2) := zaddu P (opp P) (opp_co_z P) in
       z_of R1 = 0 /\ co_z R1 R2.
-    Proof. faster_t_noclear. Qed.
+    Proof. prept. all : faster_t_noclear. Qed.
 
     (* Scalar Multiplication on Weierstraß Elliptic Curves from Co-Z Arithmetic *)
     (* Goundar, Joye, Miyaji, Rivain, Vanelli *)
@@ -587,8 +608,8 @@ Module Jacobian.
           let t2 := t2 + t6 in
           ((t1, t2, t3), (t4, t5, t3))
       end.
-    Next Obligation. Proof. faster_t_noclear. Qed.
-    Next Obligation. Proof. faster_t_noclear. Qed.
+    Next Obligation. Proof. prept. all : faster_t_noclear. Qed.
+    Next Obligation. Proof. prept. all : faster_t_noclear. Qed.
 
     Hint Unfold zaddc : points_as_coordinates.
     (* ZADDC(P, Q) = (P + Q, P - Q) if P <> Q, Q <> -P *)
@@ -596,7 +617,7 @@ Module Jacobian.
       (Hneq : x_of P <> x_of Q):
       let '(R1, R2) := zaddc P Q H in
       eq (add P Q) R1 /\ eq (add P (opp Q)) R2 /\ co_z R1 R2.
-    Proof. faster_t_noclear. Qed.
+    Proof. prept. par : faster_t_noclear. Qed.
 
     Lemma zaddc_correct_alt (P Q : point) (H : co_z P Q) :
       let '(R1, R2) := zaddc P Q H in
@@ -735,7 +756,7 @@ Module Jacobian.
         rewrite add_assoc, add_comm. reflexivity.
       - rewrite <- A2, <- B1, <- B2.
         rewrite (add_comm P Q).
-        rewrite add_assoc. rewrite add_zero_r; [reflexivity|apply add_opp].
+        rewrite add_assoc. rewrite add_zero_r; [reflexivity|apply z_of_add_opp_same_r].
     Qed.
 
     Lemma zdau_naive_correct_alt (P Q : point) (H : co_z P Q)
@@ -756,7 +777,7 @@ Module Jacobian.
         rewrite add_assoc, add_comm. reflexivity.
       - rewrite <- A2, <- B1, <- B2.
         rewrite (add_comm P Q).
-        rewrite add_assoc. rewrite add_zero_r; [reflexivity|apply add_opp].
+        rewrite add_assoc. rewrite add_zero_r; [reflexivity|apply z_of_add_opp_same_r].
     Qed.
 
     (* Scalar Multiplication on Weierstraß Elliptic Curves from Co-Z Arithmetic *)
@@ -816,8 +837,8 @@ Module Jacobian.
           let t5 := t7 - t5 in
           ((t1, t2, t3), (t4, t5, t3))
       end.
-    Next Obligation. Proof. faster_t_noclear. Qed.
-    Next Obligation. Proof. faster_t_noclear. Qed.
+    Next Obligation. Proof. prept. par:setoid_subst_rel Feq; faster_t_noclear. Qed.
+    Next Obligation. Proof. prept. par:faster_t_noclear. Qed.
 
     Hint Unfold zdau : points_as_coordinates.
 
@@ -825,7 +846,7 @@ Module Jacobian.
       let '(R1, R2) := zdau_naive P Q H in
       let '(S1, S2) := zdau P Q H in
       eq R1 S1 /\ eq R2 S2.
-    Proof. faster_t. all: try fsatz. Qed.
+    Proof. prept. par : faster_t; try fsatz. Qed.
 
     (* Direct proof is intensive, which is why we need the naive implementation *)
     Lemma zdau_correct (P Q : point) (H : co_z P Q)

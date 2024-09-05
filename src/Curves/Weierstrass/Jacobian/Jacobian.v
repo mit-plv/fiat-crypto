@@ -1,11 +1,13 @@
 Require Import Coq.Classes.Morphisms.
 
 Require Import Crypto.Spec.WeierstrassCurve.
+Require Import Curves.Weierstrass.Affine.
 Require Import Crypto.Util.Decidable Crypto.Algebra.Field.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SetoidSubst.
+Require Import Util.Tactics.Beta1.
 Require Import Crypto.Util.Notations Crypto.Util.LetIn.
 Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.Sigma.
 Require Import Crypto.Util.FsatzAutoLemmas.
@@ -29,9 +31,7 @@ Module Jacobian.
       match proj1_sig P, proj1_sig Q with
       | (X1, Y1, Z1), (X2, Y2, Z2) =>
         if dec (Z1 = 0) then Z2 = 0
-        else Z2 <> 0 /\
-             X1*Z2^2 = X2*Z1^2
-             /\ Y1*Z2^3 = Y2*Z1^3
+        else Z2 <> 0 /\ X1*Z2^2 = X2*Z1^2 /\ Y1*Z2^3 = Y2*Z1^3
       end.
 
     (* These cases are not needed to solve the goal, but handling them early speeds things up considerably *)
@@ -42,13 +42,53 @@ Module Jacobian.
       | [ H : ?T, H' : ~?T |- _ ] => solve [ exfalso; apply H', H ]
       end.
 
+    Ltac lift_let :=
+      match goal with
+      | H : context G [let x := ?v in @?c x] |- _ =>
+          first [is_var v | is_constructor v];
+          let cx := beta1 constr:(c v) in
+          let G' := context G [cx] in
+          change G' in (type of H)
+      | H : context G [let x := ?v in @?c x] |- _ =>
+          let y := fresh x in
+          pose v as y;
+          let cx := beta1 constr:(c y) in
+          let G' := context G [cx] in
+          change G' in (type of H)
+      | H := context G [let x := ?v in @?c x] |- _ =>
+          first [is_var v | is_constructor v];
+          let cx := beta1 constr:(c v) in
+          let G' := context G [cx] in
+          change G' in (value of H)
+      | H := context G [let x := ?v in @?c x] |- _ =>
+          let y := fresh x in
+          pose v as y;
+          let cx := beta1 constr:(c y) in
+          let G' := context G [cx] in
+          change G' in (value of H)
+      | |- context G [let x := ?v in @?c x] =>
+          first [is_var v | is_constructor v];
+          let cx := beta1 constr:(c v) in
+          let G' := context G [cx] in
+          change G'
+      | |- context G [let x := ?v in @?c x] =>
+          let y := fresh x in
+          pose v as y;
+          let cx := beta1 constr:(c y) in
+          let G' := context G [cx] in
+          change G'
+      end.
+
+    Ltac subst_lets := repeat match goal with x := _ |- _ => subst x end.
+
     Ltac prept_step :=
       match goal with
       | _ => progress prept_step_opt
       | _ => progress intros
+      | _ => lift_let
       (*| _ => progress specialize_by_assumption*)
       (*| _ => progress specialize_by trivial*)
-      | _ => progress cbv [proj1_sig fst snd] in *
+      | _ => progress cbv beta match delta [proj1_sig fst snd] in *
       | _ => progress autounfold with points_as_coordinates in *
       | _ => progress destruct_head'_True
       | _ => progress destruct_head'_unit
@@ -63,92 +103,111 @@ Module Jacobian.
       | |- ?P => lazymatch type of P with Prop => split end
       end.
     Ltac prept := repeat prept_step.
-    Ltac t := prept; trivial; try contradiction; fsatz.
+    Ltac t := prept; trivial; try contradiction; subst_lets; fsatz.
 
     Create HintDb points_as_coordinates discriminated.
     Hint Unfold Proper respectful Reflexive Symmetric Transitive : points_as_coordinates.
-    Hint Unfold point eq W.eq W.point W.coordinates proj1_sig fst snd : points_as_coordinates.
+    Hint Unfold point eq W.eq W.point W.coordinates W.eq W.add W.zero proj1_sig fst snd : points_as_coordinates.
 
     Global Instance Equivalence_eq : Equivalence eq.
     Proof. t. Qed.
 
-    Program Definition of_affine (P:Wpoint) : point :=
-      match W.coordinates P return F*F*F with
+    Definition of_affine_impl (P : F*F + unit) : F*F*F :=
+      match  P with
       | inl (x, y) => (x, y, 1)
       | inr _ => (0, 0, 0)
       end.
-    Next Obligation. Proof. t. Qed.
 
-    Program Definition to_affine (P:point) : Wpoint :=
-      match proj1_sig P return F*F+_ with
+    Definition of_affine (P : Wpoint) : point. refine (
+      exist _ (of_affine_impl (proj1_sig P)) _).
+    Proof. abstract (cbv [of_affine_impl]; t). Defined.
+
+    Definition to_affine_impl (P : F*F*F) : F*F+unit :=
+      match P return F*F+_ with
       | (X, Y, Z) =>
         if dec (Z = 0) then inr tt
         else inl (X/Z^2, Y/Z^3)
       end.
-    Next Obligation. Proof. t. Qed.
 
-    Hint Unfold to_affine of_affine : points_as_coordinates.
+    Definition to_affine (P:point) : Wpoint. refine (exist _ (
+      to_affine_impl (proj1_sig P)) _).
+    Proof. abstract (cbv [to_affine_impl]; t). Defined.
+
+    Hint Unfold to_affine_impl to_affine of_affine_impl of_affine : points_as_coordinates.
+
     Global Instance Proper_of_affine : Proper (W.eq ==> eq) of_affine. Proof. t. Qed.
-    Global Instance Proper_to_affine : Proper (eq ==> W.eq) to_affine. Proof. t. Qed.
-    Lemma to_affine_of_affine P : W.eq (to_affine (of_affine P)) P. Proof. t. Qed.
-    Lemma of_affine_to_affine P : eq (of_affine (to_affine P)) P. Proof. t. Qed.
 
-    Program Definition opp (P:point) : point :=
+    Lemma to_affine_of_affine P : W.eq (to_affine (of_affine P)) P.
+    Proof. t. Qed.
+
+    Lemma eq_iff P Q : eq P Q <-> W.eq (to_affine P) (to_affine Q). Proof. t. Qed.
+
+    Global Instance Proper_to_affine : Proper (eq ==> W.eq) to_affine.
+    Proof. cbv [respectful Proper]; intros. apply eq_iff; trivial. Qed.
+
+    Lemma of_affine_to_affine P : eq (of_affine (to_affine P)) P.
+    Proof. apply eq_iff, to_affine_of_affine. Qed.
+
+    Definition iszero (P : point) := snd (proj1_sig P) = 0.
+
+    Hint Unfold iszero : points_as_coordiantes.
+
+    Lemma iszero_iff P : iszero P <-> W.eq (to_affine P) W.zero.
+    Proof. cbv [iszero W.zero]; t. Qed.
+
+    Definition opp (P:point) : point. refine (exist _ (
       match proj1_sig P return F*F*F with
       | (X, Y, Z) => (X, Fopp Y, Z)
-      end.
-    Next Obligation. Proof. t. Qed.
+      end) _).
+    Proof. abstract t. Defined.
 
-    (** See http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#doubling-dbl-2007-bl *)
-    Program Definition double (P : point) : point :=
-      match proj1_sig P return F*F*F with
-      | (x_in, y_in, z_in) =>
-        let xx := x_in^2 in
-        let yy := y_in^2 in
-        let yyyy := yy^2 in
-        let zz := z_in^2 in
-        (** [s = 2*((x_in + yy)^2 - xx - yyyy)] *)
-        let s := x_in + yy in
-        let s := s^2 in
-        let s := s - xx in
-        let s := s - yyyy in
-        let s := s + s in
-        (** [m = 3*xx + a*zz^2] *)
-        let m := zz^2 in
-        let m := a * m in
-        let m := m + xx in
-        let m := m + xx in
-        let m := m + xx in
-        (** [x_out = m^2 - 2*s] *)
-        let x_out := m^2 in
-        let x_out := x_out - s in
-        let x_out := x_out - s in
-        (** [z_out = (y_in + z_in)^2 - yy - zz] *)
-        let z_out := y_in + z_in in
-        let z_out := z_out^2 in
-        let z_out := z_out - yy in
-        let z_out := z_out - zz in
-        (** [y_out = m*(s-x_out) - 8*yyyy] *)
-        let yyyy := yyyy + yyyy in
-        let yyyy := yyyy + yyyy in
-        let yyyy := yyyy + yyyy in
-        let y_out := s - x_out in
-        let y_out := y_out * m in
-        let y_out := y_out - yyyy in
-        (x_out, y_out, z_out)
-      end.
-    Next Obligation. Proof. t. Qed.
+    Hint Unfold opp W.opp : points_as_coordinates.
 
-    Definition z_is_zero_or_one (Q : point) : Prop :=
-      match proj1_sig Q with
-      | (_, _, z) => z = 0 \/ z = 1
-      end.
+    Global Instance Proper_opp : Proper (eq ==> eq) opp. Proof. t. Qed.
 
-    Definition add_precondition (Q : point) (mixed : bool) : Prop :=
-      match mixed with
-      | false => True
-      | true => z_is_zero_or_one Q
-      end.
+    Lemma to_affine_opp P : W.eq (to_affine (opp P)) (W.opp (to_affine P)).
+    Proof. t. Qed.
+
+    (** From http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#doubling-dbl-2007-bl *)
+    Definition double_impl (P : F*F*F) : F*F*F :=
+      let z := snd P in let x := fst (fst P) in let y := snd (fst P) in
+      let xx := x^2 in
+      let yy := y^2 in
+      let yyyy := yy^2 in
+      let zz := z^2 in
+      (** [s = 2*((x + yy)^2 - xx - yyyy)] *)
+      let s := x + yy in
+      let s := s^2 in
+      let s := s - xx in
+      let s := s - yyyy in
+      let s := s + s in
+      (** [m = 3*xx + a*zz^2] *)
+      let m := zz^2 in
+      let m := a * m in
+      let m := m + xx in
+      let m := m + xx in
+      let m := m + xx in
+      (** [x_out = m^2 - 2*s] *)
+      let x_out := m^2 in
+      let x_out := x_out - s in
+      let x_out := x_out - s in
+      (** [z_out = (y + z)^2 - yy - zz] *)
+      let z_out := y + z in
+      let z_out := z_out^2 in
+      let z_out := z_out - yy in
+      let z_out := z_out - zz in
+      (** [y_out = m*(s-x_out) - 8*yyyy] *)
+      let yyyy := yyyy + yyyy in
+      let yyyy := yyyy + yyyy in
+      let yyyy := yyyy + yyyy in
+      let y_out := s - x_out in
+      let y_out := y_out * m in
+      let y_out := y_out - yyyy in
+      (x_out, y_out, z_out).
+
+    Definition double (P : point) : point. refine (exist _ (
+      double_impl (proj1_sig P)) _).
+    Proof. abstract (cbv [double_impl]; t). Defined.
 
     Local Ltac clear_neq :=
       repeat match goal with
@@ -454,7 +513,7 @@ Module Jacobian.
     Local Ltac pre_faster_t :=
       pre_pre_faster_t; speed_up_fsatz_check; clean_up_speed_up_fsatz.
     Local Ltac faster_t_noclear :=
-      pre_faster_t; fsatz.
+      pre_faster_t; subst_lets; fsatz.
     Local Ltac faster_t :=
       pre_faster_t;
       try solve [ lazymatch goal with
@@ -463,130 +522,250 @@ Module Jacobian.
                   end;
                   fsatz ].
 
-    Hint Unfold double negb andb add_precondition z_is_zero_or_one : points_as_coordinates.
-    Program Definition add_impl (mixed : bool) (P Q : point)
-            (H : add_precondition Q mixed) : point :=
-      match proj1_sig P, proj1_sig Q return F*F*F with
-      | (x1, y1, z1), (x2, y2, z2) =>
-        let z1nz := if dec (z1 = 0) then false else true in
-        let z2nz := if dec (z2 = 0) then false else true in
-        let z1z1 := z1^2 in
-        let '(u1, s1, two_z1z2) := if negb mixed
-                                   then
-                                     let z2z2 := z2^2 in
-                                     let u1 := x1 * z2z2 in
-                                     let two_z1z2 := z1 + z2 in
-                                     let two_z1z2 := two_z1z2^2 in
-                                     let two_z1z2 := two_z1z2 - z1z1 in
-                                     let two_z1z2 := two_z1z2 - z2z2 in
-                                     let s1 := z2 * z2z2 in
-                                     let s1 := s1 * y1 in
-                                     (u1, s1, two_z1z2)
-                                   else
-                                     let u1 := x1 in
-                                     let two_z1z2 := z1 + z1 in
-                                     let s1 := y1 in
-                                     (u1, s1, two_z1z2)
-        in
-        let u2 := x2 * z1z1 in
-        let h := u2 - u1 in
-        let xneq := if dec (h = 0) then false else true in
-        let z_out := h * two_z1z2 in
-        let z1z1z1 := z1 * z1z1 in
-        let s2 := y2 * z1z1z1 in
-        let r := s2 - s1 in
-        let r := r + r in
-        let yneq := if dec (r = 0) then false else true in
-        if (negb xneq && negb yneq && z1nz && z2nz)%bool
-        then proj1_sig (double P)
-        else
-          let i := h + h in
-          let i := i^2 in
-          let j := h * i in
-          let v := u1 * i in
-          let x_out := r^2 in
-          let x_out := x_out - j in
-          let x_out := x_out - v in
-          let x_out := x_out - v in
-          let y_out := v - x_out in
-          let y_out := y_out * r in
-          let s1j := s1 * j in
-          let y_out := y_out - s1j in
-          let y_out := y_out - s1j in
-          let x_out := if z1nz then x_out else x2 in
-          let x3 := if z2nz then x_out else x1 in
-          let y_out := if z1nz then y_out else y2 in
-          let y3 := if z2nz then y_out else y1 in
-          let z_out := if z1nz then z_out else z2 in
-          let z3 := if z2nz then z_out else z1 in
-          (x3, y3, z3)
-      end.
-    Next Obligation. Proof. faster_t_noclear. Qed.
+    Hint Unfold double double_impl to_affine : points_as_coordinates.
+
+    Lemma to_affine_double P : W.eq (to_affine (double P)) (W.add (to_affine P) (to_affine P)).
+    Proof. Time faster_t_noclear. Qed.
+
+    Lemma Proper_double : Proper (eq ==> eq) double.
+    Proof. intros ???H. apply eq_iff. rewrite 2 to_affine_double, H; reflexivity. Qed.
+
+
+    Definition add_impl (P Q : F*F*F) (affine_Q : bool) : F*F*F :=
+      let z1 := snd P in let z2 := snd Q in let y1 := snd (fst P) in let y2 := snd (fst Q) in let x1 := fst (fst P) in let x2 := fst (fst Q) in
+      let u1 := x1*z2^2 in
+      let u2 := x2*z1^2 in
+      let s1 := y1*z2^3 in
+      let s2 := y2*z1^3 in
+      let z := z1*z2 in
+      let t := u1+u2 in
+      let m := if dec (s1+s2 = 0) then u2-u1 else s1+s2 in
+      let q := Fopp t*m^2 in
+      let r := if dec (s1+s2 = 0) then s2-s1 else t^2-u1*u2 + a*(z^2)^2 in
+      let x3 := r^2+q in
+      let y3 := Fopp (r*((1+1)*x3+q)+m*(s1+s2)^3)/(1+1) in
+      let z3 := m * z in
+      if dec (s1+s2 = 0)
+      then if dec (u1 = u2) then (0, 0, 0) else (x3, y3, z3)
+      else (x3, y3, z3).
+    Hint Unfold add_impl : points_as_coordinates.
+
+    Definition add_nz_nz (P Q : point) : point. refine (
+      exist _ (add_impl (proj1_sig P) (proj1_sig Q) false) _).
+    Proof. abstract faster_t_noclear. Defined.
+    Hint Unfold add_nz_nz : points_as_coordinates.
+
+    Hint Unfold W.add' : points_as_coordinates.
+
+    Lemma to_affine_add_nz_nz (P Q : point) (HP : ~ iszero P) (HQ : ~ iszero Q) :
+      W.eq (to_affine (add_nz_nz P Q)) (W.add (to_affine P) (to_affine Q)).
+    Proof.
+      rewrite <-W.add'_correct.
+      case P as [((x1&y1)&z1)?], Q as [((x2&y2)&z2)?].
+      cbv [iszero] in *; prept.
+      par: faster_t_noclear.
+    Qed.
 
     Definition add (P Q : point) : point :=
-      add_impl false P Q I.
-    Definition add_mixed (P : point) (Q : point) (H : z_is_zero_or_one Q) :=
-      add_impl true P Q H.
+      if dec (snd (proj1_sig P) = 0) then Q
+      else if dec (snd (proj1_sig Q) = 0) then P
+      else add_nz_nz P Q.
+    Hint Unfold add : points_as_coordinates.
 
-    Hint Unfold W.eq W.add to_affine add add_mixed add_impl : points_as_coordinates.
+    Lemma to_affine_add (P Q : point) :
+      W.eq (to_affine (add P Q)) (W.add (to_affine P) (to_affine Q)).
+    Proof.
+      cbv [add].
+      case dec as [HP|HP]; try (setoid_rewrite iszero_iff in HP; rewrite HP; faster_t).
+      case dec as [HQ|HQ]; try (setoid_rewrite iszero_iff in HQ; rewrite HQ; faster_t).
+      rewrite to_affine_add_nz_nz by trivial; reflexivity.
+    Qed.
 
-    Lemma Proper_double : Proper (eq ==> eq) double. Proof. faster_t_noclear. Qed.
-    Lemma to_affine_double P :
-      W.eq (to_affine (double P)) (W.add (to_affine P) (to_affine P)).
-    Proof. faster_t_noclear. Qed.
+    Global Instance Proper_add : Proper (eq ==> eq ==> eq) add.
+    Proof. repeat intros ???H. apply eq_iff. rewrite ? to_affine_add; f_equiv; f_equiv; trivial. Qed.
 
-    Lemma add_mixed_eq_add (P : point) (Q : point) (H : z_is_zero_or_one Q) :
-      eq (add P Q) (add_mixed P Q H).
+    Definition add_inequal_impl (P Q : F*F*F) (affine_Q : bool) : (F*F*F)*bool :=
+      let z1 := snd P in let z2 := snd Q in let y1 := snd (fst P) in let y2 := snd (fst Q) in let x1 := fst (fst P) in let x2 := fst (fst Q) in
+      let z1z1 := z1^2 in
+      let u2 := x2*z1z1 in
+      let z2z2 := if affine_Q then Fone else z2^2 in
+      let u1 := if affine_Q then x1 else x1 * z2z2 in
+      let h := u2 - u1 in
+      let s2 := z1*z1z1 in
+      let out_z := h * z1 in
+      let out_z := if affine_Q then out_z else out_z * z2 in
+      let s2 := s2*y2 in
+      let s1 := if affine_Q then y1 else z2*z2z2*y1 in
+      let r := s2 - s1 in
+      let doubling := if dec (h = 0) then if dec(r = 0) then true else false else false in
+      let Hsqr := h^2 in
+      let out_x := r^2 in
+      let Hcub := Hsqr*h in
+      let u2 := u1 * Hsqr in
+      let out_x := out_x - Hcub in
+      let out_x := out_x - u2 in
+      let out_x := out_x - u2 in
+      let h := u2 - out_x in
+      let s2 := Hcub * s1 in
+      let h := h * r in
+      let out_y := h - s2 in
+      ((out_x, out_y, out_z), doubling).
+
+    Hint Unfold add_inequal_impl : points_as_coordinates.
+
+    Definition add_inequal_nz_nz (P Q : point) (_ : ~ eq P Q) : point. refine (exist _ (
+      fst (add_inequal_impl (proj1_sig P) (proj1_sig Q) false)) _).
+    Proof. abstract faster_t_noclear. Defined.
+
+    Definition add_affine_inequal_nz_nz (P : point) (Q : Wpoint) (_ : ~ eq P (of_affine Q)) : point. refine (exist _ (
+      fst (add_inequal_impl (proj1_sig P) (proj1_sig (of_affine Q)) false)) _).
+    Proof. abstract faster_t_noclear. Defined.
+
+    Hint Unfold add_inequal_impl add_inequal_nz_nz add_affine_inequal_nz_nz : points_as_coordinates.
+
+    Lemma snd_add_inequal_impl (P Q : point) (HP : ~ iszero P) (HQ : ~ iszero Q) :
+      snd (add_inequal_impl (proj1_sig P) (proj1_sig Q) false) = true :> bool <-> eq P Q.
+    Proof.
+      case P as [((x1&y1)&z1)?], Q as [((x2&y2)&z2)?].
+      split; [|clear HP; clear HQ; t]; cbv [iszero] in *.
+      prept; try congruence; try t.
+    Qed.
+
+    Lemma to_affine_add_inequal_nz_nz P Q (H : ~ eq P Q)(HP : ~ iszero P) (HQ : ~ iszero Q)  :
+      W.eq (to_affine (add_inequal_nz_nz P Q H)) (W.add (to_affine P) (to_affine Q)).
+    Proof. 
+      case P as [((x1&y1)&z1)?], Q as [((x2&y2)&z2)?].
+      cbv [iszero] in *; prept; try apply H; prept.
+      par : faster_t_noclear.
+    Qed.
+
+    Definition add_inequal (P Q : point) (H : ~ eq P Q) : point :=
+      if dec (snd (proj1_sig P) = 0) then Q
+      else if dec (snd (proj1_sig Q) = 0) then P
+      else add_inequal_nz_nz P Q H.
+    Hint Unfold add_inequal : points_as_coordinates.
+
+    Lemma to_affine_add_inequal (P Q : point) H :
+      W.eq (to_affine (add_inequal P Q H)) (W.add (to_affine P) (to_affine Q)).
+    Proof.
+      cbv [add_inequal].
+      case dec as [HP|HP]; try (setoid_rewrite iszero_iff in HP; rewrite HP; t).
+      case dec as [HQ|HQ]; try (setoid_rewrite iszero_iff in HQ; rewrite HQ; t).
+      rewrite to_affine_add_inequal_nz_nz by trivial; reflexivity.
+    Qed.
+
+    Lemma add_affine_inequal_nz_nz_correct P Q H H':
+      eq (add_affine_inequal_nz_nz  P Q H) (add_inequal_nz_nz P (of_affine Q) H').
     Proof. faster_t. Qed.
 
-    Global Instance Proper_add : Proper (eq ==> eq ==> eq) add. Proof. faster_t_noclear. Qed.
-    Import BinPos.
-    Lemma to_affine_add P Q
-      : W.eq (to_affine (add P Q)) (W.add (to_affine P) (to_affine Q)).
+    Lemma to_affine_add_affine_inequal_nz_nz P Q H (_ : ~ iszero P) (_ : ~ W.eq Q W.zero) :
+      W.eq (to_affine (add_affine_inequal_nz_nz P Q H)) (W.add (to_affine P) Q).
     Proof.
-      Time prept; try contradiction; speed_up_fsatz; clean_up_speed_up_fsatz. (* 15.009 secs (14.871u,0.048s) *)
-      Time all: fsatz. (* 6.335 secs (6.172u,0.163s) *)
-      Time Qed. (* 1.924 secs (1.928u,0.s) *)
+      unshelve rewrite @add_affine_inequal_nz_nz_correct, @to_affine_add_inequal_nz_nz, @to_affine_of_affine;
+        trivial; try reflexivity.
+      rewrite iszero_iff, to_affine_of_affine; trivial.
+    Qed.
+
+    Definition add_affine_inequal (P : point) (Q : Wpoint) (H : ~ eq P _) : point :=
+      if dec (snd (proj1_sig P) = 0) then of_affine Q
+      else match W.coordinates Q with inr _ => P | _ =>
+      add_affine_inequal_nz_nz P Q H end.
+    Hint Unfold add_affine_inequal : points_as_coordinates.
+
+    Lemma to_affine_add_affine_inequal P Q H :
+      W.eq (to_affine (add_affine_inequal P Q H)) (W.add (to_affine P) Q).
+    Proof.
+      cbv [add_affine_inequal].
+      case dec as [HP|HP]; try (setoid_rewrite iszero_iff in HP; rewrite HP; t).
+      case W.coordinates as [|[] ] eqn:E.
+      { rewrite to_affine_add_affine_inequal_nz_nz; trivial; try reflexivity.
+        cbv [W.eq]; rewrite E; cbv [W.coordinates W.zero]; case p; intuition idtac. }
+      eassert (W.eq Q W.zero) as ->. { cbv [W.eq W.zero]. rewrite E. exact I. }
+      faster_t.
+    Qed.
 
     (** If [a] is -3, one can substitute a faster implementation of [double]. *)
     Section AEqMinus3.
       Context (a_eq_minus3 : a = Fopp (1+1+1)).
+      Definition Fsquare x := x^2.
+      Definition Ftriple x := x+x+x.
+      Definition Fhalve x := x/(1+1).
 
-      Program Definition double_minus_3 (P : point) : point :=
-        match proj1_sig P return F*F*F with
-        | (x_in, y_in, z_in) =>
-          let delta := z_in^2 in
-          let gamma := y_in^2 in
-          let beta := x_in * gamma in
-          let ftmp := x_in - delta in
-          let ftmp2 := x_in + delta in
-          let tmptmp := ftmp2 + ftmp2 in
-          let ftmp2 := ftmp2 + tmptmp in
-          let alpha := ftmp * ftmp2 in
-          let x_out := alpha^2 in
-          let fourbeta := beta + beta in
-          let fourbeta := fourbeta + fourbeta in
-          let tmptmp := fourbeta + fourbeta in
-          let x_out := x_out - tmptmp in
-          let delta := gamma + delta in
-          let ftmp := y_in + z_in in
-          let z_out := ftmp^2 in
-          let z_out := z_out - delta in
-          let y_out := fourbeta - x_out in
-          let gamma := gamma + gamma in
-          let gamma := gamma^2 in
-          let y_out := alpha * y_out in
-          let gamma := gamma + gamma in
-          let y_out := y_out - gamma in
-          (x_out, y_out, z_out)
-        end.
-      Next Obligation. Proof. t. Qed.
+      (* Based on "Guide to Elliptic Curve Cryptography" HMV'04 page 90 *)
+      Definition double_minus3_impl P :=
+        let x := fst (fst P) in let y := snd (fst P) in let z := snd P in
+        let D := Fadd y y in
+        let tmp := Fsquare z in
+        let D := Fsquare D in
+        let out_z := Fmul z y in
+        let out_z := Fadd out_z out_z in
+        let A := Fadd x tmp in
+        let tmp := Fsub x tmp in
+        let tmp := Ftriple tmp in
+        let out_y := Fsquare D in
+        let A := Fmul A tmp in
+        let D := Fmul D x in
+        let out_x := Fsquare A in
+        let tmp := Fadd D D in
+        let out_x := Fsub out_x tmp in
+        let D := Fsub D out_x in
+        let D := Fmul D A in
+        let out_y := Fhalve out_y in
+        let out_y := Fsub D out_y in
+        (out_x, out_y, out_z).
+
+      Hint Unfold Fsquare Ftriple Fhalve double_minus3_impl : points_as_coordinates.
+
+      Definition double_minus_3 (P : point) : point. refine (exist _
+        (double_minus3_impl (proj1_sig P))
+        _).
+      Proof. abstract faster_t. Defined.
 
       Hint Unfold double_minus_3 : points_as_coordinates.
 
       Lemma double_minus_3_eq_double (P : point) :
         eq (double P) (double_minus_3 P).
       Proof. faster_t. Qed.
+
+      Definition double_minus3_without_halving_impl P :=
+        let x := fst (fst P) in let y := snd (fst P) in let z := snd P in
+        let delta := z^2 in
+        let gamma := y^2 in
+        let beta := x * gamma in
+        let ftmp := x - delta in
+        let ftmp2 := x + delta in
+        let tmptmp := ftmp2 + ftmp2 in
+        let ftmp2 := ftmp2 + tmptmp in
+        let alpha := ftmp * ftmp2 in
+        let x_out := alpha^2 in
+        let fourbeta := beta + beta in
+        let fourbeta := fourbeta + fourbeta in
+        let tmptmp := fourbeta + fourbeta in
+        let x_out := x_out - tmptmp in
+        let delta := gamma + delta in
+        let ftmp := y + z in
+        let z_out := ftmp^2 in
+        let z_out := z_out - delta in
+        let y_out := fourbeta - x_out in
+        let gamma := gamma + gamma in
+        let gamma := gamma^2 in
+        let y_out := alpha * y_out in
+        let gamma := gamma + gamma in
+        let y_out := y_out - gamma in
+        (x_out, y_out, z_out).
+
+      Hint Unfold double_minus3_without_halving_impl : points_as_coordinates.
+
+      Definition double_minus3_without_halving (P : point) : point. refine (exist _
+        (double_minus3_without_halving_impl (proj1_sig P))
+        _).
+      Proof. abstract faster_t. Defined.
+
+      Hint Unfold double_minus3_without_halving : points_as_coordinates.
+
+      Lemma double_minus3_without_halving_eq_double (P : point) :
+        eq (double_minus3_without_halving P) (double_minus_3 P).
+      Proof. abstract faster_t. Qed.
     End AEqMinus3.
   End Jacobian.
 End Jacobian.
