@@ -159,7 +159,14 @@ Module Jacobian.
       match proj1_sig P return F*F*F with
       | (X, Y, Z) => (X, Fopp Y, Z)
       end) _).
-    Proof. abstract t. Qed.
+    Proof. abstract t. Defined.
+
+    Hint Unfold opp W.opp : points_as_coordinates.
+
+    Global Instance Proper_opp : Proper (eq ==> eq) opp. Proof. t. Qed.
+
+    Lemma to_affine_opp P : W.eq (to_affine (opp P)) (W.opp (to_affine P)).
+    Proof. t. Qed.
 
     (** From http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#doubling-dbl-2007-bl *)
     Definition double_impl (P : F*F*F) : F*F*F :=

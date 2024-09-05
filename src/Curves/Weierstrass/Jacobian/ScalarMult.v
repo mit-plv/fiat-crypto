@@ -402,9 +402,9 @@ Module ScalarMult.
         Lemma add_opp_zero (A : point) :
           eq (add A (opp A)) zero.
         Proof.
-          generalize (Jacobian.add_opp A).
+          generalize (Jacobian.add_opp_same_r(discriminant_nonzero:=discriminant_nonzero) A).
           destruct (add A (opp A)) as (((X & Y) & Z) & H).
-          cbn. intros HP; destruct (dec (Z = 0)); fsatz.
+          cbn. intros HP; destruct (dec (Z = 0)); t.
         Qed.
 
         Lemma scalarmult_difference (A : point) (n1 n2 : Z):
@@ -503,6 +503,8 @@ Module ScalarMult.
                      apply (HTT (Z.succ i) ltac:(lia))
                  end; auto.
         Qed.
+
+        Hint Unfold Jacobian.of_affine_impl : points_as_coordinates.
 
         Lemma SS_TT_xne (i : Z) (R0 R1 : point) (HCOZ : co_z R0 R1)
           (Hi : (2 <= i < scalarbitsz)%Z)
