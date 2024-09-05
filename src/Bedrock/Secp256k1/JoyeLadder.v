@@ -11,16 +11,15 @@ Require Import bedrock2.Syntax.
 Require Import bedrock2.WeakestPrecondition.
 Require Import bedrock2.WeakestPreconditionProperties.
 Require Import bedrock2.ZnWords.
-Require Import compiler.MMIO.
-Require Import compiler.Pipeline.
-Require Import compiler.Symbols.
 Require Import coqutil.Byte.
 Require Import coqutil.Map.Interface.
+Require Import coqutil.Map.Properties.
 Require Import coqutil.Map.OfListWord.
 From coqutil.Tactics Require Import Tactics letexists eabstract rdelta reference_to_string ident_of_string.
 Require Import coqutil.Word.Bitwidth64.
 Require Import coqutil.Word.Bitwidth.
 Require Import coqutil.Word.Interface.
+Require Import coqutil.Word.Properties.
 Require Import Coq.Init.Byte.
 Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
@@ -29,9 +28,9 @@ Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Bedrock.Field.Synthesis.New.WordByWordMontgomery.
 Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
-Require Import Crypto.Bedrock.End2End.Secp256k1.Field256k1.
-Require Import Crypto.Bedrock.End2End.Secp256k1.JacobianCoZ.
-Require Import Crypto.Bedrock.End2End.Secp256k1.Addchain.
+Require Import Crypto.Bedrock.Secp256k1.Field256k1.
+Require Import Crypto.Bedrock.Secp256k1.JacobianCoZ.
+Require Import Crypto.Bedrock.Secp256k1.Addchain.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Util.Decidable.
 Require Import Curves.Weierstrass.Jacobian.Jacobian.
@@ -571,8 +570,8 @@ Section WithParameters.
     repeat straightline.
     single_step.
     instantiate (3 := Jacobian.of_affine P).
-    unfold Jacobian.of_affine, WeierstrassCurve.W.coordinates.
-    cbn [proj1_sig]. rewrite (sig_eta P). rewrite H15. eexists. reflexivity.
+    unfold Jacobian.of_affine, Jacobian.of_affine_impl, WeierstrassCurve.W.coordinates.
+    cbn [proj1_sig]. rewrite H15. eexists. reflexivity.
     1-2: solve_bounds.
     repeat match goal with
     | H: context [Array.array ptsto _ ?a _] |- context [Field.FElem ?a _] =>
@@ -928,7 +927,7 @@ Section WithParameters.
           destruct R1' as (((?X & ?Y) & ?Z) & ?H).
           destruct R0' as (((?X & ?Y) & ?Z) & ?H).
           destruct vswap; repeat rewrite red_proj1_sig; f_equal; f_equal; ring. }
-    unfold Jacobian.to_affine. rewrite red_proj1_sig.
+    unfold Jacobian.to_affine, Jacobian.to_affine_impl. rewrite red_proj1_sig.
     destruct (Z.testbit k 0); [rewrite H83|rewrite H82];
     match goal with
     | |- context [if ?test then _ else _] => destruct test
