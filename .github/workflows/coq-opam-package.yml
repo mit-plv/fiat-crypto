@@ -40,6 +40,7 @@ jobs:
 
     env:
       OPAMYES: "true"
+      OPAMCONFIRMLEVEL: "unsafe-yes"
 
     steps:
     - name: Set up OCaml
@@ -97,9 +98,7 @@ jobs:
       if: ${{ runner.os == 'Windows' }}
 
     - name: Work around https://github.com/actions/checkout/issues/766 / https://github.com/ocaml/setup-ocaml/issues/479 / https://github.com/actions/checkout/issues/767 / https://github.com/actions/checkout/issues/760
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'git config --global --add safe.directory "*"'
-      shell: cmd
+      run: opam exec -- git config --global --add safe.directory "*"
       if: ${{ runner.os == 'Windows' }}
 
     - name: echo opam build params
@@ -150,9 +149,7 @@ jobs:
       if: ${{ always() && runner.os == 'Windows' }}
 
     - name: cat opam logs (Windows)
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'for i in $(find ~/.opam/log/ -type f); do echo "::group::$i"; cat "$i"; echo "::endgroup::"; done'
-      shell: cmd
+      run: opam exec -- bash -l -c 'for i in $(find ~/.opam/log/ -type f); do echo "::group::$i"; cat "$i"; echo "::endgroup::"; done'
       if: ${{ always() && runner.os == 'Windows' }}
 
     - run: opam list
