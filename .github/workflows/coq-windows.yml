@@ -49,7 +49,7 @@ jobs:
     - run: opam install js_of_ocaml
     - run: opam install conf-time
     - name: Work around https://github.com/actions/checkout/issues/766
-      run: opam exec -- bash -l -c 'git config --global --add safe.directory "*"'
+      run: opam exec -- git config --global --add safe.directory "*"
     - name: echo build params
       run: .\etc\ci\describe-system-config-win.ps1
     - name: deps
