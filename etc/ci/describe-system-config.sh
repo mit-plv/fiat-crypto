@@ -32,6 +32,6 @@ group cat /etc/alpine-release
 group apk info
 group apk info coq
 group apk --print-arch
+. etc/ci/describe-system-config-common-groups.sh
 group dpkg -l | cat
 group pacman -Qs
-. etc/ci/describe-system-config-common-groups.sh
