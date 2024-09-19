@@ -21,19 +21,19 @@ jobs:
               runs-on: 'ubuntu-latest',
               ocaml-compiler: '4.09.1',
               coq-extra-flags: '',
-              extra-ocaml-repositories: '',
+              ocamlfind-pin: '',
               opam-jobs-flag: ''},
              {name: 'macOS',
               runs-on: 'macos-latest',
               ocaml-compiler: '4.14.2',
               coq-extra-flags: '',
-              extra-ocaml-repositories: '',
+              ocamlfind-pin: '',
               opam-jobs-flag: ''},
              {name: 'Windows',
               runs-on: 'windows-latest',
               ocaml-compiler: '4.13.1',
               coq-extra-flags: '-async-proofs-j 1',
-              extra-ocaml-repositories: 'opam-repository-mingw: https://github.com/ocaml-opam/opam-repository-mingw.git#sunset',
+              ocamlfind-pin: 'git+https://github.com/ocaml/ocamlfind.git#master',
               opam-jobs-flag: '-j 1'}]
 
     runs-on: ${{ matrix.os.runs-on }}
@@ -47,9 +47,6 @@ jobs:
       uses: ocaml/setup-ocaml@v3
       with:
         ocaml-compiler: ${{ matrix.os.ocaml-compiler }}
-        opam-repositories: |-
-          ${{ matrix.os.extra-ocaml-repositories }}
-          default: https://github.com/ocaml/opam-repository.git
 
     - name: echo Linux build params
       run: |
@@ -114,7 +111,8 @@ jobs:
     - run: opam repo add coq-released https://coq.inria.fr/opam/released
     - run: opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
     - run: opam update
-    - run: opam depext coq.${{ matrix.coq-version }}
+    - run: opam pin add ocamlfind '${{ matrix.os.ocamlfind-pin }}'
+      if: matrix.os.ocamlfind-pin != ''
     - run: opam pin --kind=version add coq ${{ matrix.coq-version }}
 
     - name: echo more build params
@@ -132,7 +130,6 @@ jobs:
         echo "" | opam exec -- coqtop
         echo ::endgroup::
 
-    - run: opam exec -- opam-depext coq-fiat-crypto
     - run: opam install coq-fiat-crypto --with-test ${{ matrix.os.opam-jobs-flag }}
       env:
         COQEXTRAFLAGS: ${{ matrix.os.coq-extra-flags }}
