@@ -54,6 +54,7 @@ rm -f finished.ok
 python "./etc/coq-scripts/timing/make-one-time-file.py" ${make_one_time_file_real} "time-of-build.log" "time-of-build-pretty.log" || exit $?
 
 git status
+git ls-files --others --exclude-standard
 git diff
 
 cat time-of-build-pretty.log
