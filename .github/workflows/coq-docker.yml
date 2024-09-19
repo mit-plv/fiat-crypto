@@ -271,7 +271,7 @@ jobs:
       run: |
         eval $(opam env)
         opam update -y
-        opam pin add -y --no-action --with-version 3.16 'https://github.com/ocaml-wasm/dune.git#wasm'
+        opam pin add -y --no-action --with-version 3.17 'https://github.com/ocaml-wasm/dune.git#wasm'
         opam pin add -y --no-action --cli=2.1 --with-version 5.3.0 https://github.com/ocaml-wasm/wasm_of_ocaml.git
     - name: install wasm_of_ocaml
       run: |
