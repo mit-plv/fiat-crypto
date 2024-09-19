@@ -366,7 +366,7 @@ jobs:
         name: ExtractionOCaml-${{ matrix.coq-version }}
         path: src/ExtractionOCaml
     - name: make binaries executable
-      run: git check-ignore src/ExtractionOCaml/* | grep -v '\.' | xargs chmod +x
+      run: git check-ignore src/ExtractionOCaml/* src/ExtractionOCaml/*/* | grep -v '\.' | xargs chmod +x
     - name: generated-files
       run: etc/ci/github-actions-make.sh --warnings -f Makefile.examples -j2 generated-files
       if: github.event_name == 'pull_request'
@@ -428,7 +428,7 @@ jobs:
         name: ExtractionOCaml-master
         path: src/ExtractionOCaml
     - name: make binaries executable
-      run: git check-ignore src/ExtractionOCaml/* | grep -v '\.' | xargs chmod +x
+      run: git check-ignore src/ExtractionOCaml/* src/ExtractionOCaml/*/* | grep -v '\.' | xargs chmod +x
     - name: only-test-amd64-files
       run: etc/ci/github-actions-make.sh -f Makefile.examples -j2 only-test-amd64-files SLOWEST_FIRST=1
       env:
