@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
+From Coq Require Import ZArith Lia.
+Require Import QArith_base Qround Crypto.Util.QUtil.
 Require Import Crypto.Arithmetic.BaseConversion.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.

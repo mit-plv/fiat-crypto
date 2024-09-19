@@ -1,5 +1,5 @@
 (** * Push-Button Synthesis of Bitcoin Multiplication: Reification Cache *)
-Require Import Coq.derive.Derive.
+From Coq Require Import Derive.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.Arithmetic.DettmanMultiplication.
 

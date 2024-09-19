@@ -1,8 +1,8 @@
 (* IF YOU CHANGE THIS FILE YOU MUST ALSO CHANGE src/Bedrock/Field/Stringification/LoadStoreListVarData.v ! *)
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import String.
+From Coq Require Import List.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
 Require Import bedrock2.Array.
 Require Import bedrock2.Scalars.
 Require Import bedrock2.Syntax.

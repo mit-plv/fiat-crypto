@@ -1,13 +1,13 @@
-Require Coq.setoid_ring.Ncring.
-Require Coq.setoid_ring.Cring.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.micromega.Lia.
+From Coq Require Ncring.
+From Coq Require Cring.
+From Coq Require Import Morphisms.
+From Coq Require Import Lia.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.OnSubterms.
 Require Import Crypto.Util.Tactics.Revert.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Group Crypto.Algebra.Monoid.
-Require Coq.ZArith.ZArith Coq.PArith.PArith.
+From Coq Require ZArith PArith.
 
 
 Section Ring.
@@ -451,7 +451,7 @@ Definition char_ge
 Existing Class char_ge.
 
 (*** Tactics for ring equations *)
-Require Export Coq.setoid_ring.Ring_tac.
+From Coq Require Export Ring_tac.
 Ltac ring_simplify_subterms := tac_on_subterms ltac:(fun t => ring_simplify t).
 
 Ltac ring_simplify_subterms_in_all :=

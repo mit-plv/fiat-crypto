@@ -1,7 +1,7 @@
 (* This file is a partial duplicate of LoadStoreList.v, but talks about var_data instead of ltype *)
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.String.
+From Coq Require Import String.
+From Coq Require Import List.
+From Coq Require Import String.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Language.API.
 Require Import Crypto.Bedrock.Field.Common.Types.

@@ -1,7 +1,7 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.Arith.Arith.
-Require Import Coq.Lists.List.
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import Lia.
+From Coq Require Import Arith.
+From Coq Require Import List.
+From Coq Require Import Morphisms.
 Require Export Crypto.Util.FixCoqMistakes.
 Import ListNotations.
 Local Set Implicit Arguments.

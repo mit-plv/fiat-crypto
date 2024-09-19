@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith Coq.Classes.RelationClasses.
+From Coq Require Import ZArith RelationClasses.
 
 Local Open Scope Z_scope.
 

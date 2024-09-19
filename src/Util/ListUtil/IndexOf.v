@@ -1,4 +1,4 @@
-Require Import Coq.Lists.List.
+From Coq Require Import List.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Tactics.BreakMatch.
 

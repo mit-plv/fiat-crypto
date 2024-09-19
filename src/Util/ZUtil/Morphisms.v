@@ -1,8 +1,8 @@
 (** * [Proper] morphisms for ℤ constants *)
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Classes.RelationPairs.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
+From Coq Require Import Morphisms.
+From Coq Require Import RelationPairs.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.LandLorBounds.

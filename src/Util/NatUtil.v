@@ -1,9 +1,9 @@
-Require Coq.Logic.Eqdep_dec.
-Require Import Coq.NArith.NArith.
-Require Import Coq.Arith.Arith.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Relations.Relation_Definitions.
-Require Import Coq.micromega.Lia.
+From Coq Require Eqdep_dec.
+From Coq Require Import NArith.
+From Coq Require Import Arith.
+From Coq Require Import Morphisms.
+From Coq Require Import Relation_Definitions.
+From Coq Require Import Lia.
 Import Nat.
 
 Scheme Equality for nat.

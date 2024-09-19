@@ -1,12 +1,12 @@
 (** * Some lemmas about [Bool.reflect] *)
-Require Import Coq.Classes.CMorphisms.
-Require Import Coq.Strings.String.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Bool.Bool.
-Require Import Coq.Classes.RelationClasses.
-Require Import Coq.Arith.Arith.
-Require Import Coq.ZArith.BinInt Coq.ZArith.ZArith_dec.
-Require Import Coq.NArith.BinNat.
+From Coq Require Import CMorphisms.
+From Coq Require Import String.
+From Coq Require Import Ascii.
+From Coq Require Import Bool.
+From Coq Require Import RelationClasses.
+From Coq Require Import Arith.
+From Coq Require Import BinInt ZArith_dec.
+From Coq Require Import BinNat.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Prod.
@@ -59,8 +59,8 @@ Proof. apply reflect_to_brel; assumption. Qed.
 Lemma reflect_rect_dep {P b} (Q : reflect P b -> Type)
       (H : forall pf : if b then P else ~P,
           (if b return (reflect P b -> Type) -> (if b then P else ~P) -> Type
-           then fun Q pf => Q (ReflectT _ pf)
-           else fun Q pf => Q (ReflectF _ pf))
+           then fun Q pf => Q (@ReflectT _ pf)
+           else fun Q pf => Q (@ReflectF _ pf))
             Q pf)
   : forall x, Q x.
 Proof. intro x; destruct x; apply H. Defined.
@@ -295,8 +295,8 @@ Local Hint Resolve internal_prod_dec_bl internal_prod_dec_lb
 Local Hint Extern 0 => solve [ solve_reflect ] : typeclass_instances.
 Local Hint Extern 1 => progress inversion_sigma : core.
 
-Global Instance reflect_True : reflect True true | 0 := ReflectT _ I.
-Global Instance reflect_False : reflect False false | 0 := ReflectF _ (fun x => x).
+Global Instance reflect_True : reflect True true | 0 := @ReflectT _ I.
+Global Instance reflect_False : reflect False false | 0 := @ReflectF _ (fun x => x).
 Global Instance reflect_or {A B a b} `{reflect A a, reflect B b} : reflect (A \/ B) (orb a b) | 10. exact _. Qed.
 Global Instance reflect_and {A B a b} `{reflect A a, reflect B b} : reflect (A /\ B) (andb a b) | 10. exact _. Qed.
 Global Instance reflect_impl_or {A B bona} `{reflect (B \/ ~A) bona} : reflect (A -> B) bona | 15. exact _. Qed.

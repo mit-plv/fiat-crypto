@@ -1,5 +1,5 @@
-Require Import ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+Require Import PArith BinInt ZArith.
+From Coq Require Import Lia.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 
 Local Open Scope Z_scope.

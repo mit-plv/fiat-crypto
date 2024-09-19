@@ -1,7 +1,7 @@
 Require Import Crypto.Util.Decidable Crypto.Util.Notations Crypto.Algebra.Hierarchy.
 
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.Curves.Edwards.XYZT.Basic.
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import Morphisms.
 
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.

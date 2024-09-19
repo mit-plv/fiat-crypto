@@ -1,14 +1,14 @@
 Require Export Crypto.Spec.ModularArithmetic.
 Require Export Crypto.Arithmetic.ModularArithmeticTheorems.
-Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Field_theory Coq.setoid_ring.Field_tac.
+From Coq Require Export Ring_theory Field_theory Field_tac.
 
-Require Import Coq.nsatz.Nsatz.
-Require Import Coq.micromega.Lia.
+From Coq Require Import Nsatz.
+From Coq Require Import Lia.
 Require Import Crypto.Arithmetic.ModularArithmeticPre.
 Require Import Crypto.Util.NumTheoryUtil.
-Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
-Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.ZArith.ZArith Coq.ZArith.Znumtheory Coq.NArith.NArith. (* import Zdiv before Znumtheory *)
-Require Import Coq.Logic.Eqdep_dec.
+From Coq Require Import Morphisms Setoid.
+From Coq Require Import BinInt BinNat ZArith Znumtheory NArith. (* import Zdiv before Znumtheory *)
+From Coq Require Import Eqdep_dec.
 Require Import Crypto.Util.NumTheoryUtil.
 Require Import Crypto.Util.ZUtil.Odd.
 Require Import Crypto.Util.ZUtil.Modulo.

@@ -1,7 +1,7 @@
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import List.
+From Coq Require Import ZArith.
 Require Import Lia.
-Require Import Coq.Sorting.Permutation.
+From Coq Require Import Permutation.
 Import ListNotations.
 
 Local Open Scope Z_scope.

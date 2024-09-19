@@ -1,5 +1,8 @@
 (** * Miscellaneous Well-Foundedness Facts *)
-Require Import Coq.Setoids.Setoid Coq.Program.Program Coq.Program.Wf Coq.Arith.Wf_nat Coq.Classes.Morphisms Coq.Init.Wf.
+From Coq Require Import Setoid Program.
+From Coq.Program Require Import Wf.
+From Coq Require Import Wf_nat Morphisms.
+From Coq.Init Require Import Wf.
 Require Import Crypto.Util.Telescope.Core.
 Require Import Crypto.Util.Telescope.Instances.
 Require Import Crypto.Util.Telescope.Equality.

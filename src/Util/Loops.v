@@ -1,4 +1,4 @@
-Require Import Coq.micromega.Lia.
+From Coq Require Import Lia.
 
 Module Import core.
   Section Loops.

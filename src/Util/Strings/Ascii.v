@@ -1,5 +1,5 @@
-Require Import Coq.NArith.NArith.
-Require Import Coq.Strings.Ascii.
+From Coq Require Import NArith.
+From Coq Require Import Ascii.
 Require Import Crypto.Util.Notations.
 
 Local Open Scope bool_scope.

@@ -1,4 +1,4 @@
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import Morphisms.
 Require Import Crypto.Algebra.Hierarchy.
 Require Import Crypto.Algebra.Field.
 Require Import Crypto.Spec.CompleteEdwardsCurve.

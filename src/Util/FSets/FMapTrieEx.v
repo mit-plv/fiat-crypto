@@ -1,6 +1,6 @@
-Require Import Coq.Structures.OrderedTypeEx.
-Require Import Coq.FSets.FMapPositive.
-Require Import Coq.FSets.FMapInterface.
+From Coq Require Import OrderedTypeEx.
+From Coq Require Import FMapPositive.
+From Coq Require Import FMapInterface.
 Require Import Crypto.Util.FSets.FMapInterface.
 Require Import Crypto.Util.FSets.FMapTrie.
 Require Import Crypto.Util.FSets.FMapTrie.ShapeEx.

@@ -1,7 +1,7 @@
 (** * Push-Button Synthesis Examples *)
-Require Import Coq.Strings.String.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
+From Coq Require Import String.
+From Coq Require Import ZArith.
+From Coq Require Import List.
 Require Import Crypto.Util.ZRange.
 Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.

@@ -1,8 +1,8 @@
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
-Require Import Coq.QArith.Qabs.
+From Coq Require Import List.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
+From Coq Require Import QArith_base Qround.
+From Coq Require Import Qabs.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.

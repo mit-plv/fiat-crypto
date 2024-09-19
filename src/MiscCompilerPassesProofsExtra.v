@@ -1,8 +1,8 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.MSets.MSetPositive.
-Require Import Coq.FSets.FMapPositive.
+From Coq Require Import ZArith.
+From Coq Require Import List.
+From Coq Require Import Morphisms.
+From Coq Require Import MSetPositive.
+From Coq Require Import FMapPositive.
 Require Import Rewriter.Language.Language.
 Require Import Rewriter.Language.Inversion.
 Require Import Crypto.Language.API.

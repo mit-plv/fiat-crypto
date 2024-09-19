@@ -1,9 +1,9 @@
 (** * Push-Button Synthesis of Barrett Reduction *)
-Require Import Coq.Strings.String.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
-Require Import Coq.derive.Derive.
-Require Import Coq.micromega.Lia.
+From Coq Require Import String.
+From Coq Require Import ZArith.
+From Coq Require Import List.
+From Coq Require Import Derive.
+From Coq Require Import Lia.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZRange.

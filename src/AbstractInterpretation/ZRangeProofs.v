@@ -1,9 +1,9 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Classes.RelationPairs.
-Require Import Coq.Relations.Relations.
-Require Import Coq.Lists.List.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
+From Coq Require Import Morphisms.
+From Coq Require Import RelationPairs.
+From Coq Require Import Relations.
+From Coq Require Import List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.BasicLemmas.

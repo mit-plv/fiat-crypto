@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List. Import ListNotations.
+From Coq Require Import ZArith.
+From Coq Require Import List. Import ListNotations.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Notations.

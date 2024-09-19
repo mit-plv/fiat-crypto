@@ -1,4 +1,4 @@
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import Morphisms.
 Require Import Crypto.Spec.WeierstrassCurve Crypto.Algebra.ScalarMult.
 Require Import Crypto.Curves.Weierstrass.Jacobian.Jacobian.
 Require Import Crypto.Curves.Weierstrass.Affine Crypto.Curves.Weierstrass.AffineProofs.
@@ -17,8 +17,8 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Shift.
 Require Import Crypto.Util.ZUtil.Peano.
 Require Import Crypto.Util.Tuple.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+From Coq Require Import ZArith.
+From Coq Require Import Lia.
 
 Module Z.
 (* Note: ideally we would contribute this to Coq *)

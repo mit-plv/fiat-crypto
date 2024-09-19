@@ -1,4 +1,4 @@
-Require Import Coq.PArith.BinPosDef.
+From Coq Require Import BinPosDef.
 Require Import Crypto.Algebra.Field.
 Require Import Crypto.Util.GlobalSettings.
 Require Import Crypto.Util.Sum Crypto.Util.Prod.

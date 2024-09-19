@@ -1,7 +1,7 @@
-Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid Crypto.Util.Relations.
+From Coq Require Import Morphisms. Require Setoid Crypto.Util.Relations.
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Ring Crypto.Algebra.Field.
 Require Import Crypto.Util.Notations Crypto.Util.Decidable (*Crypto.Util.Tactics*).
-Require Import Coq.PArith.BinPos.
+From Coq Require Import BinPos.
 
 Section Edwards.
   Context {F eq zero one opp add sub mul inv div}

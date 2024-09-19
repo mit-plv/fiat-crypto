@@ -1,10 +1,10 @@
-Require Import Coq.micromega.Lia.
+From Coq Require Import Lia.
 Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.Arithmetic.ModularArithmeticPre.
 
-Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv Coq.ZArith.Znumtheory Coq.NArith.NArith. (* import Zdiv before Znumtheory *)
-Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
-Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Ring_tac.
+From Coq Require Import ZArith Zdiv Znumtheory NArith NArithRing. (* import Zdiv before Znumtheory *)
+From Coq Require Import Morphisms Setoid.
+From Coq Require Export Ring_theory Ring_tac.
 
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.ScalarMult.
 Require Crypto.Algebra.Ring Crypto.Algebra.Field.

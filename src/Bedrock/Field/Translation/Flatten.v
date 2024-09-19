@@ -1,6 +1,6 @@
 (* IF YOU CHANGE THIS FILE YOU MUST ALSO CHANGE src/Bedrock/Field/Stringification/FlattenVarData.v ! *)
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
+From Coq Require Import String.
+From Coq Require Import List.
 Require Import bedrock2.Array.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Semantics.

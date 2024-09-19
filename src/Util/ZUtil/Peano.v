@@ -1,6 +1,6 @@
 (** * Basic Peano-arithmetic-like properties of ℤ *)
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.BinInt.
+From Coq Require Import Lia.
+From Coq Require Import BinInt.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Decidable.

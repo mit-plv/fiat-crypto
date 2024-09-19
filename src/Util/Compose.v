@@ -1,4 +1,4 @@
-Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
+From Coq Require Import Morphisms Setoid.
 Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.GlobalSettings.
 Require Import Crypto.Util.Notations.

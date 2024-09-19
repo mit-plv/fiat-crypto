@@ -1,8 +1,8 @@
-Require Import Coq.Structures.OrderedTypeEx.
-Require Import Coq.Strings.Ascii Coq.Strings.String.
-Require Import Coq.Arith.Arith.
-Require Import Coq.NArith.NArith.
-Require Import Coq.Structures.OrderedType.
+From Coq Require Import OrderedTypeEx.
+From Coq Require Import Ascii String.
+From Coq Require Import Arith.
+From Coq Require Import NArith.
+From Coq Require Import OrderedType.
 Require Export Crypto.Util.FixCoqMistakes.
 
 (** This is copied verbatim from coq/theories/Structures/OrderedTypeEx.v, and should be removed once we bump the version requirement to 8.12, where we get the benefit of https://github.com/coq/coq/pull/12044 *)

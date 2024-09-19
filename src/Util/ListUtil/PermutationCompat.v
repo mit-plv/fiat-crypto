@@ -1,5 +1,5 @@
-Require Import Coq.Lists.List.
-Require Import Coq.Sorting.Permutation.
+From Coq Require Import List.
+From Coq Require Import Permutation.
 Import List Setoid Compare_dec Morphisms FinFun PeanoNat Permutation.
 Import ListNotations.
 Local Set Implicit Arguments.

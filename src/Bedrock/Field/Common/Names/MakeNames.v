@@ -1,7 +1,7 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Strings.String.
+From Coq Require Import ZArith.
+From Coq Require Import List.
+From Coq Require Import Lia.
+From Coq Require Import String.
 Require Import coqutil.Datatypes.List.
 Require Import coqutil.Datatypes.PropSet.
 Require Import Crypto.Bedrock.Field.Common.Tactics.

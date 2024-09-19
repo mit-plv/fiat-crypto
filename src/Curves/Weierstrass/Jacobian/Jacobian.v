@@ -1,4 +1,4 @@
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import Morphisms.
 
 Require Import Crypto.Spec.WeierstrassCurve.
 Require Import Curves.Weierstrass.Affine.

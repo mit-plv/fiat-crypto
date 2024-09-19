@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.setoid_ring.Ring_tac.
+From Coq Require Import ZArith.
+From Coq Require Import Ring_tac.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.SideConditions.CorePackages.
 Require Export Crypto.Util.FixCoqMistakes.

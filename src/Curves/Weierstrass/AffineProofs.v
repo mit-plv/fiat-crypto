@@ -1,9 +1,9 @@
-Require Import Coq.Numbers.BinNums.
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import BinNums.
+From Coq Require Import Morphisms.
 Require Import Crypto.Spec.WeierstrassCurve Crypto.Curves.Weierstrass.Affine.
 Require Import Crypto.Algebra.Field Crypto.Algebra.Hierarchy.
 Require Import Crypto.Util.Decidable Crypto.Util.Tactics.DestructHead Crypto.Util.Tactics.BreakMatch.
-Require Import Coq.PArith.BinPos.
+From Coq Require Import BinPos.
 
 Module W.
   Section W.

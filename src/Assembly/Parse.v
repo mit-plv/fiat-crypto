@@ -1,8 +1,8 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.derive.Derive.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import Derive.
+From Coq Require Import Ascii.
+From Coq Require Import String.
+From Coq Require Import List.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Equality.
 Require Import Crypto.Util.OptionList.

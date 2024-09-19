@@ -1,9 +1,9 @@
-Require Export Coq.extraction.Extraction.
-Require Export Coq.extraction.ExtrOcamlBasic.
-Require Export Coq.extraction.ExtrOcamlString.
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Strings.String.
+From Coq Require Export Extraction.
+From Coq Require Export ExtrOcamlBasic.
+From Coq Require Export ExtrOcamlString.
+From Coq Require Import List.
+From Coq Require Import Ascii.
+From Coq Require Import String.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.CLI.
 Require Import Crypto.StandaloneMonadicUtils.

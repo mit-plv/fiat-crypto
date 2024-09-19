@@ -1,9 +1,9 @@
-Require Import Coq.Sorting.Permutation.
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
-Require Import Coq.NArith.NArith.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import Permutation.
+From Coq Require Import List.
+From Coq Require Import Lia.
+From Coq Require Import NArith.
+From Coq Require Import ZArith.
+From Coq Require Import Morphisms.
 Require Import Crypto.Language.PreExtra.
 Require Import Crypto.Language.API.
 Require Import Crypto.Language.APINotations.

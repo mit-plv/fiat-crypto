@@ -1,11 +1,11 @@
 (** Coq version of OCaml's Arg module *)
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Strings.String.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Strings.OctalString.
-Require Import Coq.Strings.HexString.
-Require Import Coq.Strings.BinaryString.
+From Coq Require Import List.
+From Coq Require Import Ascii.
+From Coq Require Import String.
+From Coq Require Import ZArith.
+From Coq Require Import OctalString.
+From Coq Require Import HexString.
+From Coq Require Import BinaryString.
 Require Import Crypto.Util.Strings.Ascii.
 Require Import Crypto.Util.Strings.String.
 Require Import Crypto.Util.Strings.Decimal.

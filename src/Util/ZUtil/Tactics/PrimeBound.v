@@ -1,4 +1,4 @@
-Require Import Coq.micromega.Lia Coq.ZArith.Znumtheory.
+From Coq Require Import Lia Znumtheory.
 
 Module Z.
   Ltac prime_bound := match goal with

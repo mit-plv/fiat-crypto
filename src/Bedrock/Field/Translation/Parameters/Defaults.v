@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import String.
+From Coq Require Import List.
 Require Import coqutil.Word.Interface.
 Require Import bedrock2.Syntax.
 Require Import Crypto.Bedrock.Field.Common.Types.

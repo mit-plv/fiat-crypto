@@ -1,6 +1,6 @@
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import String.
+From Coq Require Import List.
+From Coq Require Import ZArith.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Spec.MontgomeryCurve.
 Require Import Crypto.Spec.Curve25519.
@@ -60,7 +60,8 @@ Import LittleEndianList.
 Local Coercion F.to_Z : F >-> Z.
 Require Import bedrock2.WeakestPrecondition bedrock2.Semantics bedrock2.ProgramLogic.
 Require Import bedrock2.Syntax bedrock2.Map.SeparationLogic.
-Require Import Coq.Init.Byte coqutil.Byte.
+From Coq.Init Require Import Byte.
+Require Import coqutil.Byte.
 Import ProgramLogic.Coercions.
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
 Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").

@@ -15,9 +15,9 @@ Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
 Require Import Crypto.Curves.Montgomery.AffineInstances.
 Require Import Crypto.Curves.Montgomery.XZ BinPos.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+From Coq Require Import Morphisms.
+From Coq Require Import ZArith.
+From Coq Require Import Lia.
 
 Module M.
   Section MontgomeryCurve.
@@ -264,7 +264,7 @@ Module M.
     Local Notation scalarmult := (@ScalarMult.scalarmult_ref Mpoint Madd M.zero Mopp).
 
     Import Crypto.Util.Loops.
-    Import Coq.ZArith.BinInt.
+    Import BinInt.
 
     Lemma to_x_inv00 (HFinv:Finv 0 = 0) x z : to_x (pair x z) = x * Finv z.
     Proof. t_fast; setoid_subst_rel Feq; rewrite ?HFinv in *; fsatz. Qed.

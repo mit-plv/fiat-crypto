@@ -1,8 +1,8 @@
-Require Export Coq.extraction.Extraction.
-Require Export Coq.extraction.ExtrHaskellBasic.
-Require Export Coq.extraction.ExtrHaskellString.
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.String.
+From Coq Require Export Extraction.
+From Coq Require Export ExtrHaskellBasic.
+From Coq Require Export ExtrHaskellString.
+From Coq Require Import List.
+From Coq Require Import String.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.CLI.
 Require Import Crypto.Util.Notations.

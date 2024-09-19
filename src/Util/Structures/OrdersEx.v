@@ -1,8 +1,8 @@
-Require Import Coq.PArith.PArith Coq.ZArith.ZArith Coq.NArith.NArith.
-Require Coq.Structures.OrderedTypeEx.
-Require Import Coq.Structures.Equalities.
-Require Import Coq.Structures.Orders.
-Require Import Coq.Structures.OrdersEx.
+From Coq Require Import PArith ZArith NArith.
+From Coq Require OrderedTypeEx.
+From Coq Require Import Equalities.
+From Coq Require Import Orders.
+From Coq Require Import OrdersEx.
 Require Import Crypto.Util.Structures.Equalities.
 Require Import Crypto.Util.Structures.Equalities.Iso.
 Require Import Crypto.Util.Structures.Orders.
@@ -67,7 +67,7 @@ Module NIsoOptionPositive <: IsoOrderedType OptionPositiveOrderedTypeBits.
 End NIsoOptionPositive.
 
 Module NIsoOptionPositiveOrig <: IsoOrderedTypeOrig OptionPositiveOrderedTypeBitsOrig.
-  Import Structures.OrderedType.
+  Import OrderedType.
   Include NIsoOptionPositiveCommon.
   Definition compare (x y : t) : Compare lt eq x y.
   Proof.
@@ -146,7 +146,7 @@ Module ZIsoSumNegN <: IsoOrderedType SumNegNOrderedTypeBits.
 End ZIsoSumNegN.
 
 Module ZIsoSumNegNOrig <: IsoOrderedTypeOrig SumNegNOrderedTypeBitsOrig.
-  Import Structures.OrderedType.
+  Import OrderedType.
   Include ZIsoSumNegNCommon.
   Definition compare (x y : t) : Compare lt eq x y.
   Proof.

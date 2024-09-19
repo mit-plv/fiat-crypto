@@ -1,7 +1,7 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.QArith.QArith_base.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import QArith_base.
+From Coq Require Import Lia.
+From Coq Require Import List.
 Require Import Crypto.Util.SideConditions.ReductionPackages.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Decidable.

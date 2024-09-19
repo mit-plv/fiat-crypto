@@ -1,6 +1,6 @@
-Require Import Coq.NArith.NArith.
-Require Import Coq.micromega.Lia.
-Require Coq.Sorting.Mergesort.
+From Coq Require Import NArith.
+From Coq Require Import Lia.
+From Coq Require Mergesort.
 
 Module N.
   Module Order <: Orders.TotalLeBool.

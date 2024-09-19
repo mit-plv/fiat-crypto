@@ -1,9 +1,9 @@
 Require Rupicola.Lib.Tactics.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List. (* after strings *)
-Require Import Coq.QArith.QArith.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import Lia.
+From Coq Require Import String.
+From Coq Require Import List. (* after strings *)
+From Coq Require Import QArith.
+From Coq Require Import ZArith.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.ProgramLogic.

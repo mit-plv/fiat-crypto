@@ -1,7 +1,7 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
-Require Import Coq.Structures.Orders.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
+From Coq Require Import List.
+From Coq Require Import Orders.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.EquivModulo.

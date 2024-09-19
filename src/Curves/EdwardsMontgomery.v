@@ -1,4 +1,4 @@
-Require Import Coq.PArith.BinPosDef.
+From Coq Require Import BinPosDef.
 Require Import Crypto.Algebra.Field.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.GlobalSettings.
@@ -7,7 +7,7 @@ Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
 Require Import Crypto.Spec.CompleteEdwardsCurve  Crypto.Curves.Edwards.AffineProofs.
-Require Import Coq.setoid_ring.Field_theory.
+From Coq Require Import Field_theory.
 Require Import Field_tac.
 Require Import UniquePose.
 

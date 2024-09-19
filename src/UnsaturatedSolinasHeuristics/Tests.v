@@ -1,6 +1,6 @@
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import String.
+From Coq Require Import List.
+From Coq Require Import ZArith.
 Require Import Crypto.Util.Option.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Util.Strings.Show.

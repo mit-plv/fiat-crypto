@@ -1,5 +1,5 @@
-Require Import Coq.Program.Basics Coq.Program.Tactics.
-Require Import Coq.Classes.Morphisms.
+From Coq.Program Require Import Basics Tactics.
+From Coq Require Import Morphisms.
 
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Algebra.Field.

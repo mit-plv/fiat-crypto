@@ -1,7 +1,7 @@
 (** * C Operation Specifications *)
 (** The specifications for the various operations to be synthesized. *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith Lia.
+From Coq Require Import List.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.BaseConversion.

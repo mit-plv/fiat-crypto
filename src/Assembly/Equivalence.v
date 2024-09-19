@@ -1,7 +1,7 @@
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.NArith.NArith.
+From Coq Require Import String.
+From Coq Require Import List.
+From Coq Require Import ZArith.
+From Coq Require Import NArith.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Parse.
 Require Import Crypto.Assembly.Symbolic.

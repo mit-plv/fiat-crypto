@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.Zpower Coq.ZArith.Znumtheory Coq.ZArith.ZArith Coq.ZArith.Zdiv.
-Require Import Coq.micromega.Lia Coq.Arith.Arith.
+From Coq Require Import Zpower Znumtheory ZArith Zdiv.
+From Coq Require Import Lia Arith.
 Require Import Crypto.Util.ZUtil.Divide.
 Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.ZUtil.Odd.

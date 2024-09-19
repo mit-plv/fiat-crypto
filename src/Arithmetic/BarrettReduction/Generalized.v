@@ -8,7 +8,7 @@
     ± 1] to [k ± offset]).  This leads to weaker conditions on the
     base ([b]), exponent ([k]), and the [offset] than those given in
     the HAC. *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
+From Coq Require Import ZArith Lia.
 Require Import Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.ZUtil.Pow.

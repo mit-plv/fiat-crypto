@@ -4,7 +4,7 @@
     [eq].  We build up enough lemmas about this structure to deal
     nicely with proofs of equality that come up in practice in this
     project. *)
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import Morphisms.
 Require Import Crypto.Util.Isomorphism.
 Require Import Crypto.Util.HProp.
 

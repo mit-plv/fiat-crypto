@@ -1,10 +1,10 @@
-Require Import Coq.NArith.NArith.
-Require Import Coq.Arith.Arith.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
-Require Import Coq.Sorting.Permutation.
-Require Import Coq.Setoids.Setoid.
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import NArith.
+From Coq Require Import Arith.
+From Coq Require Import ZArith.
+From Coq Require Import List.
+From Coq Require Import Permutation.
+From Coq Require Import Setoid.
+From Coq Require Import Morphisms.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Import ListNotations.
 

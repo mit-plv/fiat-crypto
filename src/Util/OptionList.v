@@ -1,5 +1,5 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.Lists.List.
+From Coq Require Import Lia.
+From Coq Require Import List.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SplitInContext.

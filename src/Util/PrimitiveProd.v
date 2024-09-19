@@ -5,7 +5,7 @@
     between two such pairs, or when we want such an equality, we have
     a systematic way of reducing such equalities to equalities at
     simpler types. *)
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import Morphisms.
 Require Import Crypto.Util.IffT.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.GlobalSettings.

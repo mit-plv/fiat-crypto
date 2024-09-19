@@ -1,5 +1,5 @@
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Lists.List.
+From Coq Require Import Morphisms.
+From Coq Require Import List.
 Require Import Crypto.Util.Bool.
 Import ListNotations. Open Scope bool_scope.
 

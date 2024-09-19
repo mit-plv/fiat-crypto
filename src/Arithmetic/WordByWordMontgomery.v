@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith Lia.
+From Coq Require Import List.
 Require Import Crypto.Algebra.Ring.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.Freeze.

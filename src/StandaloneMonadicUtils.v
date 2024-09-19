@@ -1,6 +1,6 @@
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Strings.String.
+From Coq Require Import List.
+From Coq Require Import Ascii.
+From Coq Require Import String.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.CLI.
 Require Import Crypto.Util.Notations.

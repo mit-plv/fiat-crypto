@@ -1,6 +1,6 @@
-Require Import Coq.Strings.Ascii Coq.Strings.String Coq.Lists.List.
-Require Import Coq.QArith.QArith_base.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import Ascii String List.
+From Coq Require Import QArith_base.
+From Coq Require Import ZArith.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Strings.ParseArithmetic.

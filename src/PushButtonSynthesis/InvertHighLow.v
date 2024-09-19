@@ -1,6 +1,6 @@
 (** * Push-Button Synthesis fancy argument definitions *)
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import List.
 Local Open Scope Z_scope.
 
 Section with_wordmax.

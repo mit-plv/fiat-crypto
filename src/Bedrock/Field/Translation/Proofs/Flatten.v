@@ -1,7 +1,7 @@
-Require Import Coq.Strings.String.
-Require Import Coq.Arith.PeanoNat.
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
+From Coq Require Import String.
+From Coq Require Import PeanoNat.
+From Coq Require Import List.
+From Coq Require Import Lia.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.

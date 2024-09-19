@@ -1,7 +1,7 @@
-Require Import Coq.Strings.String.
-Require Import Coq.Sorting.Mergesort.
-Require Import Coq.Structures.Orders.
-Require Import Coq.Structures.OrdersEx.
+From Coq Require Import String.
+From Coq Require Import Mergesort.
+From Coq Require Import Orders.
+From Coq Require Import OrdersEx.
 Require Import Crypto.Util.Strings.String_as_OT.
 
 Module Ascii_as_OTFull := OT_to_Full Ascii_as_OT <+ OTF_LtIsTotal.

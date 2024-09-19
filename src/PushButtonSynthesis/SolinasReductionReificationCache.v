@@ -1,9 +1,9 @@
 (** * Push-Button Synthesis of Solinas Reduction: Reification Cache *)
-Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
-Require Import Coq.Init.Nat.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.ZArith.BinInt.
-Require Import Coq.derive.Derive.
+From Coq Require Import QArith_base Qround.
+From Coq Require Import Nat.
+From Coq Require Import ZArith.
+From Coq Require Import BinInt.
+From Coq Require Import Derive.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Saturated.
@@ -11,8 +11,8 @@ Require Import Crypto.Arithmetic.SolinasReduction.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 
 Require Import Crypto.Language.IdentifierParameters.
-Require Import Coq.Strings.String.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import String.
+From Coq Require Import ZArith.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Definitions.

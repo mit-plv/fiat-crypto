@@ -1,5 +1,5 @@
 Require Import Crypto.Util.FixCoqMistakes.
-Require Import Coq.Classes.Morphisms Coq.Relations.Relation_Definitions.
+From Coq Require Import Morphisms Relation_Definitions.
 Require Import Crypto.Util.Tactics.GetGoal.
 Require Import Crypto.Util.Notations.
 Require Rewriter.Util.LetIn.

@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Lists.List. Import ListNotations.
+From Coq Require Import ZArith.
+From Coq Require Import Lia.
+From Coq Require Import List. Import ListNotations.
 Require Import Crypto.Algebra.Ring. (* for ring_simplify_subterms *)
 Require Import Crypto.Fancy.Spec. Import Spec.Registers.
 Require Import Crypto.Fancy.Compiler.

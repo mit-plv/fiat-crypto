@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.MSets.MSetPositive.
-Require Import Coq.FSets.FMapPositive.
+From Coq Require Import ZArith.
+From Coq Require Import MSetPositive.
+From Coq Require Import FMapPositive.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Import Rewriter.Language.Language.
 Require Import Crypto.Util.LetIn.

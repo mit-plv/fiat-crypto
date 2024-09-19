@@ -1,7 +1,7 @@
-Require Import Coq.Bool.Bool.
-Require Import Coq.derive.Derive.
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.Lists.List. Import ListNotations.
+From Coq Require Import Bool.
+From Coq Require Import Derive.
+From Coq Require Import ZArith Lia.
+From Coq Require Import List. Import ListNotations.
 Require Import Rewriter.Language.Language. Import Language.Compilers.
 Require Import Crypto.Language.API. Import Language.API.Compilers.
 Require Import Rewriter.Language.Wf. Import Language.Wf.Compilers.

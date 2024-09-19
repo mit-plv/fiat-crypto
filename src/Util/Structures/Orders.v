@@ -1,6 +1,6 @@
-Require Import Coq.btauto.Btauto.
-Require Import Coq.Structures.Equalities.
-Require Import Coq.Structures.Orders.
+From Coq Require Import Btauto.
+From Coq Require Import Equalities.
+From Coq Require Import Orders.
 Require Import Crypto.Util.Structures.Equalities.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -109,7 +109,7 @@ Module TransitiveLeBool_of_TotalOrderBool (Import T : TotalOrderBool') <: LebIsT
   Qed.
 End TransitiveLeBool_of_TotalOrderBool.
 
-Require Import Coq.Structures.OrderedType.
+From Coq Require Import OrderedType.
 
 Module Type MiniOrderedType := MiniOrderedType.
 Module Type OrderedTypeOrig := OrderedType.OrderedType.

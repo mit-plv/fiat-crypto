@@ -1,6 +1,6 @@
-Require Import Coq.Lists.List.
-Require Import Coq.Setoids.Setoid.
-Require Import Coq.Lists.SetoidList.
+From Coq Require Import List.
+From Coq Require Import Setoid.
+From Coq Require Import SetoidList.
 Require Import Crypto.Util.Option.
 
 Import ListNotations.

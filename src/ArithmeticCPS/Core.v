@@ -1,7 +1,7 @@
 (* Following http://adam.chlipala.net/theses/andreser.pdf chapter 3 *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.Structures.Orders.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith Lia.
+From Coq Require Import Orders.
+From Coq Require Import List.
 Require Import Crypto.Algebra.Nsatz.
 Require Import Crypto.Arithmetic.ModularArithmeticTheorems.
 Require Import Crypto.Util.Decidable.

@@ -1,7 +1,7 @@
 (** * Push-Button Synthesis of Barrett Reduction: Reification Cache *)
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.derive.Derive.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import Derive.
+From Coq Require Import List.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Arithmetic.BarrettReduction.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.

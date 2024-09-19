@@ -1,6 +1,6 @@
 (** * Push-Button Synthesis of Bernstein-Yang Inversion: Reification Cache *)
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.derive.Derive.
+From Coq Require Import ZArith.
+From Coq Require Import Derive.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.ZUtil.Pow.
 Require Import Crypto.Arithmetic.Core.

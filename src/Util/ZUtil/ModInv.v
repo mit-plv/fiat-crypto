@@ -1,7 +1,7 @@
 (*** Compute the modular inverse of a ℤ *)
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Logic.Eqdep_dec.
-Require Import Coq.micromega.Lia.
+From Coq Require Import ZArith.
+From Coq Require Import Eqdep_dec.
+From Coq Require Import Lia.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.Tactics.BreakMatch.

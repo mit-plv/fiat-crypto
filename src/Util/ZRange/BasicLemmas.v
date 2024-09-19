@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Classes.RelationClasses.
-Require Import Coq.micromega.Lia.
+From Coq Require Import ZArith.
+From Coq Require Import RelationClasses.
+From Coq Require Import Lia.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.

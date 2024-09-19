@@ -1,5 +1,5 @@
 (* Rewritten versions of poly1305 and chacha20 that you can compile with Rupicola *)
-Require Import Coq.Unicode.Utf8.
+From Coq Require Import Utf8.
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Loops.
 (*TODO: move this file to Rupicola.Lib*)

@@ -1,6 +1,6 @@
 (* Proofs shared by Wf and Proofs *)
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Relations.Relations.
+From Coq Require Import Morphisms.
+From Coq Require Import Relations.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ListUtil.

@@ -11,9 +11,9 @@ Require Import coqutil.Map.Interface.
 
 
 From coqutil.Tactics Require Import Tactics letexists eabstract.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import ZArith.
 From coqutil.Z Require Import div_mod_to_equations Lia.
-Require Import Coq.Program.Tactics.
+From Coq.Program Require Import Tactics.
 
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
 Import Markers.

@@ -1,4 +1,4 @@
-Require Import Coq.Strings.String.
+From Coq Require Import String.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ZRange.
 Local Open Scope string_scope.
