@@ -31,8 +31,7 @@ jobs:
       COQCHKEXTRAFLAGS: ""
       OPAMYES: "true"
       OPAMCONFIRMLEVEL: "unsafe-yes"
-      CC: "gcc" # there doesn't seem to be a way to make opam install cc
-
+      
     steps:
     - uses: actions/checkout@v4
       with:
@@ -54,7 +53,7 @@ jobs:
     - name: echo build params
       run: .\etc\ci\describe-system-config-win.ps1
     - name: deps
-      run: opam exec -- bash etc/ci/github-actions-make.sh -j${{ env.NJOBS }} deps
+      run: opam exec -- bash etc/ci/github-actions-make.sh -j${{ env.NJOBS }} CC=gcc deps
     - name: standalone-ocaml
       run: opam exec -- bash etc/ci/github-actions-make.sh -j${{ env.NJOBS }} standalone-ocaml
     - name: install-standalone-unified-ocaml
