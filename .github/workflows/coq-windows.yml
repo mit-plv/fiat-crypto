@@ -31,6 +31,7 @@ jobs:
       COQCHKEXTRAFLAGS: ""
       OPAMYES: "true"
       OPAMCONFIRMLEVEL: "unsafe-yes"
+      CC: "gcc" # there doesn't seem to be a way to make opam install cc
 
     steps:
     - uses: actions/checkout@v4
