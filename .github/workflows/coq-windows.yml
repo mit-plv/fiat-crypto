@@ -53,24 +53,24 @@ jobs:
     - name: echo build params
       run: .\etc\ci\describe-system-config-win.ps1
     - name: deps
-      run: opam exec -- etc/ci/github-actions-make.sh -j${{ env.NJOBS }} deps
+      run: opam exec -- bash etc/ci/github-actions-make.sh -j${{ env.NJOBS }} deps
     - name: standalone-ocaml
-      run: opam exec -- etc/ci/github-actions-make.sh -j${{ env.NJOBS }} standalone-ocaml
+      run: opam exec -- bash etc/ci/github-actions-make.sh -j${{ env.NJOBS }} standalone-ocaml
     - name: install-standalone-unified-ocaml
-      run: opam exec -- etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
+      run: opam exec -- bash etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
 
     - name: coq
-      run: opam exec -- etc/ci/github-actions-make.sh -j1 coq
+      run: opam exec -- bash etc/ci/github-actions-make.sh -j1 coq
     - name: all-except-generated-and-js-of-ocaml
-      run: opam exec -- etc/ci/github-actions-make.sh -j1 all-except-generated-and-js-of-ocaml
+      run: opam exec -- bash etc/ci/github-actions-make.sh -j1 all-except-generated-and-js-of-ocaml
     - name: standalone-js-of-ocaml
-      run: opam exec -- etc/ci/github-actions-make.sh -j1 standalone-js-of-ocaml
+      run: opam exec -- bash etc/ci/github-actions-make.sh -j1 standalone-js-of-ocaml
     - name: install-standalone-js-of-ocaml
-      run: opam exec -- etc/ci/github-actions-make.sh install-standalone-js-of-ocaml
+      run: opam exec -- bash etc/ci/github-actions-make.sh install-standalone-js-of-ocaml
     - name: c-files lite-generated-files
-      run: opam exec -- etc/ci/github-actions-make.sh -j${{ env.NJOBS }} c-files lite-generated-files
+      run: opam exec -- bash etc/ci/github-actions-make.sh -j${{ env.NJOBS }} c-files lite-generated-files
     - name: only-test-amd64-files-lite
-      run: opam exec -- etc/ci/github-actions-make.sh -j${{ env.NJOBS }} only-test-amd64-files-lite SLOWEST_FIRST=1
+      run: opam exec -- bash etc/ci/github-actions-make.sh -j${{ env.NJOBS }} only-test-amd64-files-lite SLOWEST_FIRST=1
     - name: upload OCaml files
       uses: actions/upload-artifact@v4
       with:
@@ -92,11 +92,11 @@ jobs:
         name: standalone-html-windows
         path: fiat-html
     - name: install
-      run: opam exec -- etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 install install-standalone-ocaml
+      run: opam exec -- bash etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 install install-standalone-ocaml
     - name: install-without-bedrock2
-      run: opam exec -- etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 install-without-bedrock2 install-standalone-ocaml
+      run: opam exec -- bash etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 install-without-bedrock2 install-standalone-ocaml
     - name: install-dev
-      run: opam exec -- etc/ci/github-actions-make.sh EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 install install-standalone-ocaml
+      run: opam exec -- bash etc/ci/github-actions-make.sh EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 install install-standalone-ocaml
     - name: display timing info
       run: type time-of-build-pretty.log
       shell: cmd
