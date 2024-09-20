@@ -98,7 +98,7 @@ jobs:
       if: ${{ runner.os == 'Windows' }}
 
     - name: Work around https://github.com/actions/checkout/issues/766 / https://github.com/ocaml/setup-ocaml/issues/479 / https://github.com/actions/checkout/issues/767 / https://github.com/actions/checkout/issues/760
-      run: opam exec -- git config --global --add safe.directory "*"
+      run: opam exec -- bash -l -c 'git config --global --add safe.directory "*"'
       if: ${{ runner.os == 'Windows' }}
 
     - name: echo opam build params
