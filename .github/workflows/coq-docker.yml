@@ -273,10 +273,10 @@ jobs:
         opam update -y
         opam pin add -y --no-action --with-version 3.17 'https://github.com/ocaml-wasm/dune.git#wasm'
         opam pin add -y --no-action --cli=2.1 --with-version 5.3.0 https://github.com/ocaml-wasm/wasm_of_ocaml.git
+    - name: install dune
+      run: opam install -y dune
     - name: install wasm_of_ocaml
-      run: |
-        eval $(opam env)
-        opam install -y wasm_of_ocaml-compiler ocamlfind
+      run: opam install -y wasm_of_ocaml-compiler ocamlfind
     - name: echo build params
       run: etc/ci/describe-system-config.sh
     - name: Download a Build Artifact
