@@ -1819,7 +1819,7 @@ Hint Rewrite <- @firstn_update_nth : pull_firstn.
 #[global]
 Hint Rewrite <- @firstn_update_nth : push_update_nth.
 
-Require Import Coq.Lists.SetoidList.
+From Coq Require Import SetoidList.
 Global Instance Proper_nth_default : forall A eq,
   Proper (eq==>eqlistA eq==>Logic.eq==>eq) (nth_default (A:=A)).
 Proof.

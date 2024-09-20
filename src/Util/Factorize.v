@@ -1,4 +1,4 @@
-Require Import Coq.Bool.Sumbool.
+From Coq Require Import Sumbool.
 Require Import Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Import Coq.NArith.NArith.
 Require Import Coq.PArith.PArith.
