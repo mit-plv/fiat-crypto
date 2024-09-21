@@ -170,7 +170,7 @@ install-standalone-ocaml install-standalone-unified-ocaml install-standalone-sep
 
 install-standalone-wasm-of-ocaml::
 	$(HIDE)code=0; if [ -z "$(strip $(wildcard $(EXTRAFILESTOINSTALL1)))" ]; then \
-	  >&2 echo "Missing $(EXTRAFILESTOINSTALL1)"; code=1;
+	  >&2 echo "Missing $(EXTRAFILESTOINSTALL1)"; code=1; \
 	fi; \
 	if [ -z "$(strip $(wildcard $(EXTRAFILESTOINSTALL2)))" ]; then \
 	  >&2 echo "Missing $(EXTRAFILESTOINSTALL2)"; code=1; \
