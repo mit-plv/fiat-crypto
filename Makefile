@@ -498,8 +498,8 @@ install-without-bedrock2: coq-without-bedrock2 $(filter %.vo,$(filter-out $(BEDR
 install-without-bedrock2:
 	$(HIDE)$(MAKE) -f Makefile.coq install FILESTOINSTALL="$(filter-out $(BEDROCK2_FILES_PATTERN),$(FILESTOINSTALL))"
 
-install-standalone-ocaml: standalone-ocaml
-install-standalone-haskell: standalone-haskell
+install-standalone-ocaml:: standalone-ocaml
+install-standalone-haskell:: standalone-haskell
 
 .PHONY: validate
 validate: Makefile.coq

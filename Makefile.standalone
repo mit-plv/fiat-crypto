@@ -114,60 +114,96 @@ standalone-separate-haskell: $(SEPARATE_STANDALONE_HASKELL:%=src/ExtractionHaske
 standalone-js-of-ocaml: $(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.js)
 standalone-wasm-of-ocaml: $(STANDALONE_WASM_OF_OCAML:%=src/ExtractionJsOfOCaml/%.wasm) $(STANDALONE_WASM_OF_OCAML:%=src/ExtractionJsOfOCaml/%.wat.gz)
 
-uninstall-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
-uninstall-standalone-unified-ocaml: FILESTOINSTALL=$(UNIFIED_OCAML_BINARIES)
-uninstall-standalone-separate-ocaml: FILESTOINSTALL=$(SEPARATE_OCAML_BINARIES)
-uninstall-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
-uninstall-standalone-unified-haskell: FILESTOINSTALL=$(UNIFIED_HASKELL_BINARIES)
-uninstall-standalone-separate-haskell: FILESTOINSTALL=$(SEPARATE_HASKELL_BINARIES)
-uninstall-standalone-js-of-ocaml: FILESTOINSTALL=$(JS_OF_OCAML_FILES)
-uninstall-standalone-wasm-of-ocaml: FILESTOINSTALL=$(WASM_OF_OCAML_FILES)
+uninstall-standalone-ocaml:: FILESTOINSTALL=$(OCAML_BINARIES)
+uninstall-standalone-unified-ocaml:: FILESTOINSTALL=$(UNIFIED_OCAML_BINARIES)
+uninstall-standalone-separate-ocaml:: FILESTOINSTALL=$(SEPARATE_OCAML_BINARIES)
+uninstall-standalone-haskell:: FILESTOINSTALL=$(HASKELL_BINARIES)
+uninstall-standalone-unified-haskell:: FILESTOINSTALL=$(UNIFIED_HASKELL_BINARIES)
+uninstall-standalone-separate-haskell:: FILESTOINSTALL=$(SEPARATE_HASKELL_BINARIES)
+uninstall-standalone-js-of-ocaml:: FILESTOINSTALL=$(JS_OF_OCAML_FILES)
+uninstall-standalone-wasm-of-ocaml:: FILESTOINSTALL=$(WASM_OF_OCAML_FILES)
+uninstall-standalone-wasm-of-ocaml: EXTRAFILESTOINSTALL=$(WASM_OF_OCAML_EXTRA_FILES)
+uninstall-standalone-wasm-of-ocaml:: EXTRAFILESBASEDIR=$(WASM_OF_OCAML_BASEDIR)
 
-install-standalone-ocaml install-standalone-unified-ocaml install-standalone-separate-ocaml install-standalone-haskell install-standalone-unified-haskell install-standalone-separate-haskell: PERMS=0755
-install-standalone-js-of-ocaml install-standalone-wasm-of-ocaml: PERMS=0644
-install-standalone-ocaml install-standalone-unified-ocaml install-standalone-separate-ocaml install-standalone-haskell install-standalone-unified-haskell install-standalone-separate-haskell: INSTALLDIR=$(BINDIR)
-install-standalone-js-of-ocaml: INSTALLDIR=$(JSDIR)
-install-standalone-wasm-of-ocaml: INSTALLDIR=$(WASMDIR)
+install-standalone-ocaml install-standalone-unified-ocaml install-standalone-separate-ocaml install-standalone-haskell install-standalone-unified-haskell install-standalone-separate-haskell:: PERMS=0755
+install-standalone-js-of-ocaml install-standalone-wasm-of-ocaml:: PERMS=0644
+install-standalone-ocaml install-standalone-unified-ocaml install-standalone-separate-ocaml install-standalone-haskell install-standalone-unified-haskell install-standalone-separate-haskell:: INSTALLDIR=$(BINDIR)
+install-standalone-js-of-ocaml:: INSTALLDIR=$(JSDIR)
+install-standalone-wasm-of-ocaml:: INSTALLDIR=$(WASMDIR)
 
 
 
 ifeq ($(SKIP_BEDROCK2),1)
-install-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
-install-standalone-unified-ocaml: FILESTOINSTALL=$(UNIFIED_OCAML_BINARIES)
-install-standalone-separate-ocaml: FILESTOINSTALL=$(SEPARATE_OCAML_BINARIES)
-install-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
-install-standalone-unified-haskell: FILESTOINSTALL=$(UNIFIED_HASKELL_BINARIES)
-install-standalone-separate-haskell: FILESTOINSTALL=$(SEPARATE_HASKELL_BINARIES)
-install-standalone-js-of-ocaml: FILESTOINSTALL=$(JS_OF_OCAML_FILES)
-install-standalone-wasm-of-ocaml: FILESTOINSTALL=$(WASM_OF_OCAML_FILES)
+install-standalone-ocaml:: FILESTOINSTALL=$(OCAML_BINARIES)
+install-standalone-unified-ocaml:: FILESTOINSTALL=$(UNIFIED_OCAML_BINARIES)
+install-standalone-separate-ocaml:: FILESTOINSTALL=$(SEPARATE_OCAML_BINARIES)
+install-standalone-haskell:: FILESTOINSTALL=$(HASKELL_BINARIES)
+install-standalone-unified-haskell:: FILESTOINSTALL=$(UNIFIED_HASKELL_BINARIES)
+install-standalone-separate-haskell:: FILESTOINSTALL=$(SEPARATE_HASKELL_BINARIES)
+install-standalone-js-of-ocaml:: FILESTOINSTALL=$(JS_OF_OCAML_FILES)
+install-standalone-wasm-of-ocaml:: FILESTOINSTALL=$(WASM_OF_OCAML_FILES)
+install-standalone-wasm-of-ocaml:: EXTRAFILESTOINSTALL1=$(WASM_OF_OCAML_EXTRA_FILES_WASM)
+install-standalone-wasm-of-ocaml:: EXTRAFILESTOINSTALL2=$(WASM_OF_OCAML_EXTRA_FILES_WASM_MAP)
+install-standalone-wasm-of-ocaml:: EXTRAFILESTOINSTALL=$(WASM_OF_OCAML_EXTRA_FILES)
+install-standalone-wasm-of-ocaml:: EXTRAFILESBASEDIR=$(WASM_OF_OCAML_BASEDIR)
 
 else
-install-standalone-ocaml: FILESTOINSTALL=$(WITH_BEDROCK2_OCAML_BINARIES)
-install-standalone-unified-ocaml: FILESTOINSTALL=$(WITH_BEDROCK2_UNIFIED_OCAML_BINARIES)
-install-standalone-separate-ocaml: FILESTOINSTALL=$(WITH_BEDROCK2_SEPARATE_OCAML_BINARIES)
-install-standalone-haskell: FILESTOINSTALL=$(WITH_BEDROCK2_HASKELL_BINARIES)
-install-standalone-unified-haskell: FILESTOINSTALL=$(WITH_BEDROCK2_UNIFIED_HASKELL_BINARIES)
-install-standalone-separate-haskell: FILESTOINSTALL=$(WITH_BEDROCK2_SEPARATE_HASKELL_BINARIES)
-install-standalone-js-of-ocaml: FILESTOINSTALL=$(WITH_BEDROCK2_JS_OF_OCAML_FILES)
-install-standalone-wasm-of-ocaml: FILESTOINSTALL=$(WITH_BEDROCK2_WASM_OF_OCAML_FILES)
+install-standalone-ocaml:: FILESTOINSTALL=$(WITH_BEDROCK2_OCAML_BINARIES)
+install-standalone-unified-ocaml:: FILESTOINSTALL=$(WITH_BEDROCK2_UNIFIED_OCAML_BINARIES)
+install-standalone-separate-ocaml:: FILESTOINSTALL=$(WITH_BEDROCK2_SEPARATE_OCAML_BINARIES)
+install-standalone-haskell:: FILESTOINSTALL=$(WITH_BEDROCK2_HASKELL_BINARIES)
+install-standalone-unified-haskell:: FILESTOINSTALL=$(WITH_BEDROCK2_UNIFIED_HASKELL_BINARIES)
+install-standalone-separate-haskell:: FILESTOINSTALL=$(WITH_BEDROCK2_SEPARATE_HASKELL_BINARIES)
+install-standalone-js-of-ocaml:: FILESTOINSTALL=$(WITH_BEDROCK2_JS_OF_OCAML_FILES)
+install-standalone-wasm-of-ocaml:: FILESTOINSTALL=$(WITH_BEDROCK2_WASM_OF_OCAML_FILES)
+install-standalone-wasm-of-ocaml:: EXTRAFILESTOINSTALL1=$(WITH_BEDROCK2_WASM_OF_OCAML_EXTRA_FILES_WASM)
+install-standalone-wasm-of-ocaml:: EXTRAFILESTOINSTALL2=$(WITH_BEDROCK2_WASM_OF_OCAML_EXTRA_FILES_WASM_MAP)
+install-standalone-wasm-of-ocaml:: EXTRAFILESTOINSTALL=$(WITH_BEDROCK2_WASM_OF_OCAML_EXTRA_FILES)
+install-standalone-wasm-of-ocaml:: EXTRAFILESBASEDIR=$(WITH_BEDROCK2_WASM_OF_OCAML_BASEDIR)
 
 endif
 
-install-standalone-ocaml install-standalone-unified-ocaml install-standalone-separate-ocaml install-standalone-haskell install-standalone-unified-haskell install-standalone-separate-haskell install-standalone-js-of-ocaml install-standalone-wasm-of-ocaml:
+install-standalone-ocaml install-standalone-unified-ocaml install-standalone-separate-ocaml install-standalone-haskell install-standalone-unified-haskell install-standalone-separate-haskell install-standalone-js-of-ocaml install-standalone-wasm-of-ocaml::
 	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
 	 if ! [ -f "$$f" ]; then >&2 echo $$f does not exist; code=1; fi \
 	done; exit $$code
+
+install-standalone-wasm-of-ocaml::
+	$(HIDE)code=0; if [ -z "$(strip $(wildcard $(EXTRAFILESTOINSTALL1)))" ]; then \
+	  >&2 echo "Missing $(EXTRAFILESTOINSTALL1)"; code=1;
+	fi; \
+	if [ -z "$(strip $(wildcard $(EXTRAFILESTOINSTALL2)))" ]; then \
+	  >&2 echo "Missing $(EXTRAFILESTOINSTALL2)"; code=1; \
+	fi; \
+	exit $$code
+
+install-standalone-ocaml install-standalone-unified-ocaml install-standalone-separate-ocaml install-standalone-haskell install-standalone-unified-haskell install-standalone-separate-haskell install-standalone-js-of-ocaml install-standalone-wasm-of-ocaml::
 	$(HIDE)for f in $(FILESTOINSTALL); do\
 	   install -d "$(INSTALLDIR)/" &&\
 	   install -m $(PERMS) "$$f" "$(INSTALLDIR)/" &&\
 	   echo INSTALL "$$f" "$(INSTALLDIR)/";\
 	done
 
-uninstall-standalone-ocaml uninstall-standalone-unified-ocaml uninstall-standalone-separate-ocaml uninstall-standalone-haskell uninstall-standalone-unified-haskell uninstall-standalone-separate-haskell uninstall-standalone-wasm-of-ocaml uninstall-standalone-js-of-ocaml:
+install-standalone-wasm-of-ocaml::
+	$(HIDE)for f in $(patsubst $(EXTRAFILESBASEDIR)%,%,$(wildcard $(EXTRAFILESTOINSTALL))); do\
+	  fdir="$$(dirname "$$f")" &&\
+	  fname="$$(basename "$$f")" &&\
+	  install -d "$(INSTALLDIR)/$$fdir" &&\
+	  install -m $(PERMS) "$(EXTRAFILESBASEDIR)$$f" "$(INSTALLDIR)/$$fdir/" &&\
+	  echo INSTALL "$(EXTRAFILESBASEDIR)$$f" "$(INSTALLDIR)/$$fdir/";\
+	done
+
+uninstall-standalone-ocaml uninstall-standalone-unified-ocaml uninstall-standalone-separate-ocaml uninstall-standalone-haskell uninstall-standalone-unified-haskell uninstall-standalone-separate-haskell uninstall-standalone-wasm-of-ocaml uninstall-standalone-js-of-ocaml::
 	$(HIDE)for f in $(FILESTOINSTALL); do \
 	 instf="$(INSTALLDIR)/`basename $$f`" &&\
 	 rm -f "$$instf" &&\
 	 echo RM "$$instf"; \
+	done
+
+uninstall-standalone-wasm-of-ocaml::
+	$(HIDE)for f in $(wildcard $(patsubst $(EXTRAFILESBASEDIR)%,$(INSTALLDIR)/%,$(EXTRAFILESTOINSTALL))); do\
+	  rm -f "$$f" &&\
+	  echo RM "$$f"; \
 	done
 
 install-standalone: install-standalone-ocaml # install-standalone-haskell
