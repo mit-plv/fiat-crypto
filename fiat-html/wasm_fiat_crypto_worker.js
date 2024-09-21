@@ -1,4 +1,4 @@
-self.importScripts("wasm_fiat_crypto.js");
+self.importScripts("wasm/fiat_crypto.js");
 let pending = [];
 self.onmessage = function (e) { pending.push(e); };
 setTimeout(function () {

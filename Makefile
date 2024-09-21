@@ -73,9 +73,9 @@ BEDROCK2_FILES_PATTERN := \
 	src/ExtractionJsOfOCaml/bedrock2_% \
 	src/ExtractionOCaml/bedrock2_% \
 	src/ExtractionHaskell/bedrock2_% \
-	src/ExtractionJsOfOCaml/with_bedrock2_% \
-	src/ExtractionOCaml/with_bedrock2_% \
-	src/ExtractionHaskell/with_bedrock2_% \
+	src/ExtractionJsOfOCaml/WithBedrock/% \
+	src/ExtractionOCaml/WithBedrock/% \
+	src/ExtractionHaskell/WithBedrock/% \
 	src/Assembly/WithBedrock/% \
 	src/Bedrock/% # it's important to catch not just the .vo files, but also the .glob files, etc, because this is used to filter FILESTOINSTALL
 EXCLUDE_PATTERN :=
