@@ -1156,7 +1156,7 @@ Proof.
     repeat intro; subst; auto; reflexivity.
 Qed.
 
-Require Import Coq.Lists.SetoidList.
+From Coq Require Import SetoidList.
 
 Global Instance fieldwise'_Proper
   : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ impl) ==> eq ==> eq ==> impl) (@fieldwise' A B n) | 10.

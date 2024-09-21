@@ -1,4 +1,4 @@
-Require Import Coq.Bool.Sumbool.
+From Coq Require Import Sumbool.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Named.Syntax.

@@ -1,4 +1,4 @@
-Require Import Coq.Lists.SetoidList.
+From Coq Require Import SetoidList.
 Require Import Crypto.Spec.MxDH.
 Require Import Crypto.Algebra.Monoid Crypto.Algebra.Group Crypto.Algebra.Ring Crypto.Algebra.Field.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod.

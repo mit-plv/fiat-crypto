@@ -2,28 +2,17 @@
   periodically check whether we still need it -- once enough bugs get fixed
   in mailine, we hope to drop this implementation *)
 
-Require Coq.nsatz.Nsatz.
-Require Import Coq.Lists.List.
+From Coq Require NsatzTactic.
+From Coq Require Import List.
 Require Export Crypto.Util.FixCoqMistakes.
-
-(** For compat with https://github.com/coq/coq/pull/12073 *)
-Module Nsatz.
-  Import nsatz.Nsatz.
-  Notation check_correct := check_correct.
-  Ltac Nsatz_nsatz := nsatz.
-  Ltac nsatz := Nsatz_nsatz.
-  Notation PEevalR := PEevalR.
-  Notation psos_r1 := psos_r1.
-  Notation psos_r1b := psos_r1b.
-End Nsatz.
 
 Generalizable All Variables.
 Lemma cring_sub_diag_iff {R zero eq sub} `{cring:Cring.Cring (R:=R) (ring0:=zero) (ring_eq:=eq) (sub:=sub)}
   : forall x y, eq (sub x y) zero <-> eq x y.
 Proof.
   split;intros Hx.
-  { eapply Nsatz.psos_r1b. eapply Hx. }
-  { eapply Nsatz.psos_r1. eapply Hx. }
+  { eapply NsatzTactic.psos_r1b. eapply Hx. }
+  { eapply NsatzTactic.psos_r1. eapply Hx. }
 Qed.
 
 Ltac get_goal := lazymatch goal with |- ?g => g end.
@@ -54,15 +43,9 @@ Ltac nsatz_get_reified_goal reified_package :=
   lazymatch reified_package with (_, _, ?goal) => goal end.
 
 Require Import Coq.setoid_ring.Ring_polynom.
-(* Kludge for 8.4/8.5 compatibility *)
-Module Import mynsatz_compute.
-  Import nsatz.Nsatz.
-  Global Ltac mynsatz_compute x := nsatz_compute x.
-End mynsatz_compute.
-Ltac nsatz_compute x := mynsatz_compute x.
 
 Ltac nsatz_compute_to_goal sugar nparams reified_goal power reified_givens :=
-  nsatz_compute (PEc sugar :: PEc nparams :: PEpow reified_goal power :: reified_givens).
+  NsatzTactic.nsatz_compute (PEc sugar :: PEc nparams :: PEpow reified_goal power :: reified_givens).
 
 Ltac nsatz_compute_get_leading_coefficient :=
   lazymatch goal with
@@ -111,15 +94,15 @@ Ltac nsatz_domain_sugar_power domain sugar power :=
     nsatz_rewrite_and_revert domain;
     let reified_package := nsatz_reify_equations eq zero in
     let fv := nsatz_get_free_variables reified_package in
-    let interp := constr:(@Nsatz.PEevalR _ _ _ _ _ _ _ _ Fops fv) in
+    let interp := constr:(@NsatzTactic.PEevalR _ _ _ _ _ _ _ _ Fops fv) in
     let reified_givens := nsatz_get_reified_givens reified_package in
     let reified_goal := nsatz_get_reified_goal reified_package in
     nsatz_compute_to_goal sugar nparams reified_goal power reified_givens;
     let a := nsatz_compute_get_leading_coefficient in
     let crt := nsatz_compute_get_certificate in
     intros _ (* discard [nsatz_compute] output *); intros;
-    apply (fun Haa refl cond => @Integral_domain.Rintegral_domain_pow _ _ _ _ _ _ _ _ _ _ _ domain (interp a) _ (BinNat.N.to_nat power) Haa (@Nsatz.check_correct _ _ _ _ _ _ _ _ _ _ FCring fv reified_givens (PEmul a (PEpow reified_goal power)) crt refl cond));
-    [ nsatz_nonzero; cbv iota beta delta [Nsatz.PEevalR PEeval InitialRing.gen_phiZ InitialRing.gen_phiPOS]
+    apply (fun Haa refl cond => @Integral_domain.Rintegral_domain_pow _ _ _ _ _ _ _ _ _ _ _ domain (interp a) _ (BinNat.N.to_nat power) Haa (@NsatzTactic.check_correct _ _ _ _ _ _ _ _ _ _ FCring fv reified_givens (PEmul a (PEpow reified_goal power)) crt refl cond));
+    [ nsatz_nonzero; cbv iota beta delta [NsatzTactic.PEevalR PEeval InitialRing.gen_phiZ InitialRing.gen_phiPOS]
     | solve [vm_cast_no_check (eq_refl true)] (* if this fails, the prover returned a bad certificate *)
     | solve [repeat (split; [assumption|]); exact I] ]
   end.
@@ -182,7 +165,7 @@ Module Export Hints.
          Ncring_initial.gen_phiZ_morph
          Ncring_initial.multiplication_phi_ring
   .
-  Import nsatz.Nsatz.
+  Import NsatzTactic.
   Global Existing Instances
          Qops
          Qri

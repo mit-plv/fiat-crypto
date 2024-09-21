@@ -1,6 +1,6 @@
 (** * Context made from an associative list, without modules *)
-Require Import Coq.Bool.Sumbool.
-Require Import Coq.Lists.List.
+From Coq Require Import Sumbool.
+From Coq Require Import List.
 Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.ContextDefinitions.
 Require Import Crypto.Util.Tactics.BreakMatch.

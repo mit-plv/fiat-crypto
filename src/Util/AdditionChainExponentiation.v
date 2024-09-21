@@ -1,5 +1,5 @@
 Require Import Coq.funind.FunInd.
-Require Import Coq.Lists.List Coq.Lists.SetoidList. Import ListNotations.
+From Coq Require Import List SetoidList. Import ListNotations.
 Require Import Coq.Numbers.BinNums Coq.NArith.BinNat.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Algebra.Monoid Crypto.Algebra.ScalarMult.

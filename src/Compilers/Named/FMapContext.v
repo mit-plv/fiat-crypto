@@ -1,4 +1,4 @@
-Require Import Coq.Bool.Sumbool.
+From Coq Require Import Sumbool.
 Require Import Coq.FSets.FMapInterface.
 Require Import Coq.FSets.FMapFacts.
 Require Import Crypto.Compilers.Named.Context.
