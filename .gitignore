@@ -239,6 +239,7 @@ fiat-html/wasm/fiat_crypto.wat
 fiat-html/wasm/fiat_crypto.wat.gz
 fiat-html/wasm/fiat_crypto.wasm
 fiat-html/wasm/fiat_crypto.wasm.map
+fiat-html/wasm/fiat_crypto.assets/
 fiat-html/version.js
 /Makefile.test-amd64-files.mk
 
