@@ -9,6 +9,7 @@ Building
 [![CI (Coq, Arch Linux)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-archlinux.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-archlinux.yml?query=branch%3Amaster)
 [![CI (Coq, Windows)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-windows.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-windows.yml?query=branch%3Amaster)
 [![CI (Coq, MacOS)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-macos.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-macos.yml?query=branch%3Amaster)
+[![CI (opam)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-opam-package.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-opam-package.yml?query=branch%3Amaster)
 
 [![Release][release-shield]][release-link]
 [![Zulip][zulip-shield]][zulip-link]
