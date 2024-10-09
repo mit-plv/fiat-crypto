@@ -18,7 +18,7 @@ jobs:
       matrix:
         coq-version: ['dev', '8.19.0', '8.18.0']
         os: [{name: 'Ubuntu',
-              runs-on: 'ubuntu-latest',
+              runs-on: 'ubuntu-22.04',
               ocaml-compiler: '4.09.1',
               coq-extra-flags: '',
               ocamlfind-pin: '',
