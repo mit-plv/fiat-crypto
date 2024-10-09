@@ -1,4 +1,4 @@
-name: Test opam package
+name: CI (Coq, opam)
 
 # Note that we must split up each command into a separate step for Windows, because otherwise we don't get error code
 # See also https://github.com/avsm/setup-ocaml/issues/72
