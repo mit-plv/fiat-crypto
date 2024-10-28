@@ -87,7 +87,12 @@ endif
 EXCLUDED_VOFILES := $(filter $(EXCLUDE_PATTERN),$(VOFILES))
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
-LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
+LITE_UNMADE_VOFILES := \
+	src/Bedrock/Secp256k1/Addchain.vo \
+	src/Bedrock/Secp256k1/Field256k1.vo \
+	src/Bedrock/Secp256k1/JacobianCoZ.vo \
+	src/Bedrock/Secp256k1/JoyeLadder.vo \
+	src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Jacobian/Jacobian.vo \
 	src/Curves/Weierstrass/Jacobian/CoZ.vo \
 	src/Curves/Weierstrass/Jacobian/ScalarMult.vo \
