@@ -1,4 +1,4 @@
-From Coq Require Import Lia Morphisms Morphisms_Prop.
+From Coq Require Import ZArith Lia Morphisms Morphisms_Prop.
 Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.Arithmetic.ModularArithmeticPre.
 
