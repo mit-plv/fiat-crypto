@@ -1,5 +1,5 @@
 From Coq Require Import Ascii String List.
-From Coq Require Import BinNums.
+From Coq Require Import BinNat.
 From Coq Require Import QArith.
 From Coq Require Import BinInt.
 Require Import Crypto.Util.Option.
