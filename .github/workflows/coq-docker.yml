@@ -334,7 +334,7 @@ jobs:
     - name: backup .gitignore
       run: mv .gitignore{,.bak}
     - name: Deploy js_of_ocaml and wasm_of_ocaml 🚀 ${{ ( github.ref != 'refs/heads/master' && '(dry run)' ) || '' }}
-      uses: JamesIves/github-pages-deploy-action@v4.6.8
+      uses: JamesIves/github-pages-deploy-action@v4.6.9
       with:
         branch: gh-pages # The branch the action should deploy to.
         folder: fiat-html # The folder the action should deploy.
