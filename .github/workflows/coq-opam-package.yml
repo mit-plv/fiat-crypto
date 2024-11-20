@@ -43,6 +43,14 @@ jobs:
       OPAMCONFIRMLEVEL: "unsafe-yes"
 
     steps:
+    - name: Work around https://github.com/ocaml/opam-repository/pull/26891#issuecomment-2486598516
+      run: |
+        # Alternative: brew update; brew upgrade; brew install pkgconf
+        brew unlink pkg-config
+        brew install pkgconf
+        brew link pkg-config
+      if: ${{ runner.os == 'macOS' }}
+        
     - name: Set up OCaml
       uses: ocaml/setup-ocaml@v3
       with:
