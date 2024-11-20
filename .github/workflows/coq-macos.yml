@@ -54,6 +54,7 @@ jobs:
         # Alternative: brew update; brew upgrade; brew install pkgconf
         brew unlink pkg-config
         brew install pkgconf
+        brew unlink pkgconf
         brew link pkg-config
     - name: Install system dependencies
       run: brew install gnu-time gnu-sed coreutils grep
