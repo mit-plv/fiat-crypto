@@ -48,6 +48,7 @@ jobs:
         # Alternative: brew update; brew upgrade; brew install pkgconf
         brew unlink pkg-config
         brew install pkgconf
+        brew unlink pkgconf
         brew link pkg-config
       if: ${{ runner.os == 'macOS' }}
         
