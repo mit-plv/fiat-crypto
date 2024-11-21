@@ -49,6 +49,13 @@ jobs:
       with:
         ocaml-compiler: ${{ matrix.ocaml-compiler }}
 
+    - name: Work around https://github.com/ocaml/opam-repository/pull/26891#issuecomment-2486598516
+      run: |
+        # Alternative: brew update; brew upgrade; brew install pkgconf
+        brew unlink pkg-config
+        brew install pkgconf
+        brew unlink pkgconf
+        brew link pkg-config
     - name: Install system dependencies
       run: brew install gnu-time gnu-sed coreutils grep
     - run: opam update
