@@ -1,4 +1,6 @@
-From Coq Require Init.Byte String. Export Init.Byte(byte(..)) String.
+From Coq Require Init.Byte String.
+From Coq Require Export Init.Byte(byte(..)).
+Export String.
 Require Export coqutil.Datatypes.List. Export Lists.List List.ListNotations.
 From Coq Require Export BinInt. Export Zdiv. Local Open Scope Z_scope.
 Require Export coqutil.Byte coqutil.Word.LittleEndianList.
