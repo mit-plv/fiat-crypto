@@ -12,6 +12,13 @@ Require Import coqutil.Datatypes.List.
 
 Section Utils.
   (* These should be moved to ListUtil ? Maybe ? *)
+  Lemma nth_error_cons {A: Type} (x: A) xs n:
+    nth_error (x :: xs) n = match n with
+                           | O => Some x
+                           | S n => nth_error xs n
+                           end.
+  Proof. destruct n; reflexivity. Qed.
+
   Lemma fold_right_eq_ext {A B: Type} {eq: A->A->Prop}
     `{RelationClasses.Equivalence A eq}
     (f g: B -> A -> A) (v: A) (xs: list B):
@@ -35,7 +42,7 @@ Section Utils.
       apply Hl in Hz. apply ListUtil.length0_nil in Hz.
       rewrite Hz in Hzz. elim (in_nil Hzz). }
     induction l; intros Hl k x Hx; simpl in Hx.
-    - rewrite nth_error_nil in Hx; inversion Hx.
+    - rewrite ListUtil.nth_error_nil_error in Hx; inversion Hx.
     - rewrite ListUtil.nth_error_app, Hl in Hx; [|apply in_eq].
       destruct (Compare_dec.lt_dec k c).
       + rewrite PeanoNat.Nat.div_small, PeanoNat.Nat.mod_small by Lia.lia.
@@ -110,7 +117,7 @@ Section Utils.
     split.
     - intros; split; [eapply Forall2_length; eauto|].
       induction H; intros.
-      + rewrite nth_error_nil in H; congruence.
+      + rewrite ListUtil.nth_error_nil_error in H; congruence.
       + destruct k; simpl in *.
         * inversion H1; inversion H2; subst x; subst y; auto.
         * eapply IHForall2; eauto.
@@ -226,9 +233,9 @@ Section Utils.
     assert (IH: forall n (xs: list A), (length xs <= n) -> forall k : nat, nth_error xs k = Option.bind (nth_error (chunks2 xs) (PeanoNat.Nat.div k 2)) (fun chunk : list A => nth_error chunk (PeanoNat.Nat.modulo k 2))).
     { induction n; intros xs Hxs k.
       - destruct xs; simpl in Hxs; [|Lia.lia].
-        simpl. repeat rewrite nth_error_nil. reflexivity.
+        simpl. repeat rewrite ListUtil.nth_error_nil_error. reflexivity.
       - rewrite (PeanoNat.Nat.Div0.div_mod k 2) at 1.
-        destruct (@Decidable.dec_eq_list_nil_r _ xs) as [->|Hnn]; [simpl; repeat rewrite nth_error_nil; reflexivity|].
+        destruct (@Decidable.dec_eq_list_nil_r _ xs) as [->|Hnn]; [simpl; repeat rewrite ListUtil.nth_error_nil_error; reflexivity|].
         rewrite chunks2_cons; auto. rewrite nth_error_cons.
         assert (length xs = 1 \/ 2 <= length xs)%nat as [He|Hle] by (destruct xs; simpl in *; [congruence|]; Lia.lia).
         + rewrite skipn_all2 by Lia.lia. cbn [chunks2].
@@ -238,7 +245,7 @@ Section Utils.
           assert (S (S k) = k + 2)%nat as -> by Lia.lia.
           rewrite NatUtil.div_minus by Lia.lia.
           rewrite (ListUtil.nth_error_length_error _ (2 * _ + _)%nat [a]) by (simpl; Lia.lia).
-          rewrite PeanoNat.Nat.add_1_r, nth_error_nil. reflexivity.
+          rewrite PeanoNat.Nat.add_1_r, ListUtil.nth_error_nil_error. reflexivity.
         + destruct k; [simpl; destruct xs; reflexivity|].
           destruct k; [simpl; destruct xs; [reflexivity|destruct xs; reflexivity]|].
           assert (S (S k) = k + 2)%nat as -> by Lia.lia.
@@ -1712,7 +1719,7 @@ Section CyclotomicDecomposition.
         destruct pl; [cbn in Hpl1; congruence|].
         destruct pl; [|cbn in Hpl1; congruence].
         rewrite nth_error_cons in Hv1.
-        destruct k; [|rewrite nth_error_nil in Hv1; congruence].
+        destruct k; [|rewrite ListUtil.nth_error_nil_error in Hv1; congruence].
         assert (v1 = p) as -> by congruence.
         apply Forall2_cons_iff in HF. destruct HF as [Heq HF].
         rewrite (Polynomial.peq_proper_degree _ _ Heq).
@@ -2390,7 +2397,7 @@ Section CyclotomicDecomposition.
           cbv [Polynomial.degree_lt Polynomial.convert].
           generalize (NatUtil.pow_nonzero 2 (n - S i) ltac:(Lia.lia)). Lia.lia. }
         assert (Peq v1 Pone) as ->; [|reflexivity].
-        assert (Hv1eq: v1 = Pmod (nth_default Pzero (ListUtil.List.map2 (fun p q0 : P => Pmod p q0) (repeat Pone (length (cyclotomic_decomposition n i))) (cyclotomic_decomposition n i)) kk) (nth_default Pzero (cyclotomic_decomposition n (S i)) (kk + (kk + 0))) \/ v1 = Pmod (nth_default Pzero (ListUtil.List.map2 (fun p q0 : P => Pmod p q0) (repeat Pone (length (cyclotomic_decomposition n i))) (cyclotomic_decomposition n i)) kk) (nth_default Pzero (cyclotomic_decomposition n (S i)) (kk + (kk + 0) + 1))) by (destruct (PeanoNat.Nat.modulo k 2) as [|n']; [simpl in Hv1; inversion Hv1; subst v1; auto|destruct n' as [|n']; simpl in Hv1; [inversion Hv1; subst v1; auto|rewrite nth_error_nil in Hv1; congruence]]).
+        assert (Hv1eq: v1 = Pmod (nth_default Pzero (ListUtil.List.map2 (fun p q0 : P => Pmod p q0) (repeat Pone (length (cyclotomic_decomposition n i))) (cyclotomic_decomposition n i)) kk) (nth_default Pzero (cyclotomic_decomposition n (S i)) (kk + (kk + 0))) \/ v1 = Pmod (nth_default Pzero (ListUtil.List.map2 (fun p q0 : P => Pmod p q0) (repeat Pone (length (cyclotomic_decomposition n i))) (cyclotomic_decomposition n i)) kk) (nth_default Pzero (cyclotomic_decomposition n (S i)) (kk + (kk + 0) + 1))) by (destruct (PeanoNat.Nat.modulo k 2) as [|n']; [simpl in Hv1; inversion Hv1; subst v1; auto|destruct n' as [|n']; simpl in Hv1; [inversion Hv1; subst v1; auto|rewrite ListUtil.nth_error_nil_error in Hv1; congruence]]).
         assert (Hone: Peq (nth_default Pzero (ListUtil.List.map2 (fun p q0 : P => Pmod p q0) (repeat Pone (length (cyclotomic_decomposition n i))) (cyclotomic_decomposition n i)) kk) Pone).
         { assert (kk = PeanoNat.Nat.div k 2) as Hkkeq by congruence.
           rewrite <- Hkkeq in *. rewrite cyclotomic_decomposition_length.
