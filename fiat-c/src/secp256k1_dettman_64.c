@@ -36,10 +36,10 @@ FIAT_SECP256K1_DETTMAN_FIAT_EXTENSION typedef unsigned __int128 fiat_secp256k1_d
  *   eval out1 mod 115792089237316195423570985008687907853269984665640564039457584007908834671663 = (eval arg1 * eval arg2) mod 115792089237316195423570985008687907853269984665640564039457584007908834671663
  *
  * Input Bounds:
- *   arg1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
- *   arg2: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
+ *   arg1: [[0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xffffffffffff0]]
+ *   arg2: [[0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xffffffffffff0]]
  * Output Bounds:
- *   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x17fffffffffff]]
+ *   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
  */
 static FIAT_SECP256K1_DETTMAN_FIAT_INLINE void fiat_secp256k1_dettman_mul(uint64_t out1[5], const uint64_t arg1[5], const uint64_t arg2[5]) {
   fiat_secp256k1_dettman_uint128 x1;
@@ -122,9 +122,9 @@ static FIAT_SECP256K1_DETTMAN_FIAT_INLINE void fiat_secp256k1_dettman_mul(uint64
  *   eval out1 mod 115792089237316195423570985008687907853269984665640564039457584007908834671663 = (eval arg1 * eval arg1) mod 115792089237316195423570985008687907853269984665640564039457584007908834671663
  *
  * Input Bounds:
- *   arg1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
+ *   arg1: [[0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xfffffffffffff0], [0x0 ~> 0xffffffffffff0]]
  * Output Bounds:
- *   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x17fffffffffff]]
+ *   out1: [[0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1ffffffffffffe], [0x0 ~> 0x1fffffffffffe]]
  */
 static FIAT_SECP256K1_DETTMAN_FIAT_INLINE void fiat_secp256k1_dettman_square(uint64_t out1[5], const uint64_t arg1[5]) {
   uint64_t x1;

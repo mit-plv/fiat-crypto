@@ -88,12 +88,11 @@ Section __.
 
   Local Notation possible_values := possible_values_of_machine_wordsize.
 
-  Definition input_magnitude := Option.value inbounds_multiplier 1.
-  Definition output_magnitude_first_limbs : Q := input_magnitude / 2 + 1 / 2.
-  Definition output_magnitude_last_limb : Q := input_magnitude / 2 + 1 / 4.
+  Definition input_magnitude := Option.value inbounds_multiplier 8.
+  Definition output_magnitude_first_limbs : Q := 1.
+  Definition output_magnitude_last_limb : Q := 1.
   (* Where these bounds came from:
-     https://github.com/bitcoin-core/secp256k1/blob/0eb3000417fcf996e3805d0eb00f0f32b8849315/src/field_5x52_impl.h#L545
-     These bounds are correct, and reasonably tight, for the following parameters:
+    https://github.com/bitcoin-core/secp256k1/blob/26392da2fb7153addae0bd604495eb96f995d76c/src/field_impl.h#L329-L334
            s = 2^256
            c = 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
            n = 5
