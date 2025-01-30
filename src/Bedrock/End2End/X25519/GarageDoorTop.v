@@ -24,13 +24,14 @@ Require Import bedrock2Examples.memswap.
 Require Import bedrock2Examples.memconst.
 Require Import Rupicola.Examples.Net.IPChecksum.IPChecksum.
 Require Import Crypto.Bedrock.End2End.X25519.GarageDoor.
+Require Import bedrock2.SemanticsRelations.
 Import Crypto.Bedrock.End2End.RupicolaCrypto.ChaCha20.
 Local Open Scope string_scope.
 Import Syntax Syntax.Coercions NotationsCustomEntry.
 Import ListNotations.
 Import Coq.Init.Byte.
 Import coqutil.Macros.WithBaseName.
-Import WeakestPrecondition ProgramLogic SeparationLogic.
+Import LeakageSemantics LeakageWeakestPrecondition LeakageProgramLogic SeparationLogic.
 
 (* these wrappers exist because CompilerInvariant requires execution proofs with arbitrary locals in the starting state, which ProgramLogic does not support *)
 Definition init := func! { initfn() } .
@@ -76,13 +77,14 @@ Qed.
 Ltac pose_correctness lem :=
   let H := fresh in
   pose proof (lem (map.of_list funcs)) as H;
-  unfold program_logic_goal_for in H;
+  unfold LeakageProgramLogic.program_logic_goal_for, ProgramLogic.program_logic_goal_for in H;
   repeat lazymatch type of H with
     | map.get (map.of_list _) _ = Some _ -> _ => specialize (H eq_refl)
     end.
 
 Import SPI.
-Lemma link_loopfn : spec_of_loopfn (map.of_list funcs).
+
+Lemma link_loopfn {pick_sp: PickSp} : spec_of_loopfn (map.of_list funcs).
 Proof.
   pose_correctness loopfn_ok.
   pose_correctness memswap.memswap_ok.
@@ -233,7 +235,7 @@ Proof.
   eauto.
 Qed.
 
-Lemma link_initfn : spec_of_initfn (map.of_list funcs).
+Lemma link_initfn {pick_sp: PickSp} : spec_of_initfn (map.of_list funcs).
 Proof.
   pose_correctness initfn_ok.
   pose_correctness lan9250_init_ok.
@@ -271,6 +273,7 @@ Local Coercion word.unsigned : word.rep >-> Z.
 Definition initial_conditions mach :=
   0x20400000 = mach.(getPc) /\
   [] = mach.(getLog) /\
+  Some [] = mach.(getTrace) /\
   mach.(getNextPc) = word.add mach.(getPc) (word.of_Z 4) /\
   regs_initialized (getRegs mach) /\
   (forall a : word32, code_start ml <= a < code_pastend ml -> In a (getXAddrs mach)) /\
@@ -283,7 +286,7 @@ Lemma initial_conditions_sufficient mach :
   initial_conditions mach ->
   CompilerInvariant.initial_conditions compile_ext_call ml garagedoor_spec mach.
 Proof.
-  intros (? & ? & ? & ? & ? & ? & ?).
+  intros (? & ? & ? & ? & ? & ? & ? & ?).
   econstructor.
   eexists garagedoor_insns.
   eexists garagedoor_finfo.
@@ -295,33 +298,33 @@ Proof.
   1: instantiate (1:=snd init).
   3: instantiate (1:=snd loop).
   1,3: exact eq_refl.
-  1,2: cbv [hl_inv]; intros; eapply MetricSemantics.of_metrics_free; eapply WeakestPreconditionProperties.sound_cmd.
+  1,2: cbv [hl_inv]; intros; eapply metricleakage_to_leakage_exec; eapply LeakageWeakestPreconditionProperties.sound_cmd.
   3: { eapply word.unsigned_inj. rewrite <-H. trivial. }
 
   all : repeat straightline; subst args.
   { cbv [LowerPipeline.mem_available LowerPipeline.ptsto_bytes] in *.
-    cbv [datamem_pastend datamem_start garagedoor_spec heap_start heap_pastend ml] in H6.
-    SeparationLogic.extract_ex1_and_emp_in H6.
-    change (BinIntDef.Z.of_nat (Datatypes.length anybytes) = 0x2000) in H6_emp0.
-    Tactics.rapply WeakestPreconditionProperties.Proper_call;
+    cbv [datamem_pastend datamem_start garagedoor_spec heap_start heap_pastend ml] in H7.
+    SeparationLogic.extract_ex1_and_emp_in H7.
+    change (BinIntDef.Z.of_nat (Datatypes.length anybytes) = 0x2000) in H7_emp0.
+    Tactics.rapply LeakageWeakestPreconditionProperties.Proper_call;
       [|eapply link_initfn]; try eassumption.
     2: {
-      rewrite <-(List.firstn_skipn 0x40 anybytes) in H6.
-      rewrite <-(List.firstn_skipn 0x20 (List.skipn _ anybytes)) in H6.
-      do 2 seprewrite_in @Array.bytearray_append H6.
-      rewrite 2firstn_length, skipn_length, 2Nat2Z.inj_min, Nat2Z.inj_sub, H6_emp0 in H6.
+      rewrite <-(List.firstn_skipn 0x40 anybytes) in H7.
+      rewrite <-(List.firstn_skipn 0x20 (List.skipn _ anybytes)) in H7.
+      do 2 seprewrite_in @Array.bytearray_append H7.
+      rewrite 2firstn_length, skipn_length, 2Nat2Z.inj_min, Nat2Z.inj_sub, H7_emp0 in H7.
       split.
       { use_sep_assumption. cancel. cancel_seps_at_indices 0%nat 0%nat; [|ecancel_done].
         Morphisms.f_equiv. }
       { rewrite firstn_length, skipn_length. Lia.lia. }
       { Lia.lia. } }
-    intros ? m ? ?; repeat straightline; eapply good_trace_from_isReady.
-    subst a; rewrite app_nil_r.
+    intros ? ? m ? ?; repeat straightline; eapply good_trace_from_isReady.
+    subst a0; rewrite app_nil_r.
     lazymatch goal with H: sep _ _ m |- _ => rename H into M end.
     rewrite <-(List.firstn_skipn 0x20 (List.firstn _ anybytes)) in M.
     rewrite <-(List.firstn_skipn 1520 (skipn 32 (skipn 64 anybytes))) in M.
     do 2 seprewrite_in @Array.bytearray_append M.
-    rewrite ?firstn_length, ?skipn_length, ?Nat2Z.inj_min, ?Nat2Z.inj_sub, H6_emp0 in M.
+    rewrite ?firstn_length, ?skipn_length, ?Nat2Z.inj_min, ?Nat2Z.inj_sub, H7_emp0 in M.
     cbv [isReady garagedoor_spec protocol_spec io_spec only_mmio_satisfying].
     eexists (Build_state _ _), (Build_state _ _); fwd. eauto.
     { rewrite <-app_nil_l. eapply TracePredicate.concat_app; eauto. econstructor. }
@@ -336,13 +339,13 @@ Proof.
   {  match goal with H : goodTrace _ _ |- _ => clear H end.
     cbv [isReady goodTrace protocol_spec io_spec garagedoor_spec] in *; repeat straightline.
     DestructHead.destruct_head' state.
-    Tactics.rapply WeakestPreconditionProperties.Proper_call;
+    Tactics.rapply LeakageWeakestPreconditionProperties.Proper_call;
       [|eapply link_loopfn]; try eassumption.
     intros ? ? ? ?; repeat straightline; eapply good_trace_from_isReady.
     eexists; fwd; try eassumption.
     cbv [only_mmio_satisfying protocol_spec io_spec] in *; repeat straightline.
     try move H6 at bottom.
-    { subst a.  (eexists; split; [eapply Forall2_app; eauto|]).
+    { subst a0. eexists; split; [eapply Forall2_app; eauto|].
       eapply stateful_app_r, stateful_singleton; eauto. } }
 Qed.
 
@@ -352,7 +355,7 @@ Theorem garagedoor_invariant_proof: exists invariant: RiscvMachine -> Prop,
    (forall mach, invariant mach -> exists extend, io_spec (getLog mach ;++ extend)).
 Proof.
   exists (ll_inv compile_ext_call ml garagedoor_spec).
-  unshelve epose proof compiler_invariant_proofs _ _ _ _ _ garagedoor_spec as HCI; shelve_unifiable; try exact _.
+  unshelve epose proof compiler_invariant_proofs _ _ _ _ _ _ garagedoor_spec as HCI; shelve_unifiable; try exact _.
   { exact (naive_word_riscv_ok 5%nat). }
   { eapply SortedListString.ok. }
   { eapply @compile_ext_call_correct; try exact _; eapply @SortedListString.ok. }
@@ -367,7 +370,7 @@ Theorem garagedoor_correct : forall mach : RiscvMachine, initial_conditions mach
   always run1 (eventually run1 (fun mach' => io_spec mach'.(getLog))) mach.
 Proof.
   intros ? H%initial_conditions_sufficient; revert H.
-  unshelve Tactics.rapply @always_eventually_good_trace; trivial using ml_ok, @Naive.word32_ok.
+  unshelve Tactics.rapply @always_eventually_good_trace; trivial using ml_ok, @Naive.word32_ok; cycle 1.
   { eapply (naive_word_riscv_ok 5%nat). }
   { eapply @SortedListString.ok. }
   { eapply @compile_ext_call_correct; try exact _. eapply @SortedListString.ok. }
