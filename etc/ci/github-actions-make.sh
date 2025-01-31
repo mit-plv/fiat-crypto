@@ -61,7 +61,7 @@ cat time-of-build-pretty.log
 if [ ! -f finished.ok ]; then
     # see https://stackoverflow.com/a/15394738/377022 for more alternatives
     if [[ ! " $* " =~ " validate " ]]; then
-        make "$@" ${OUTPUT_SYNC} TIMED=1 TIMING=1 VERBOSE=1 || exit $?
+        make "$@" TIMED=1 TIMING=1 VERBOSE=1 || exit $?
     else
         exit 1
     fi
