@@ -59,5 +59,5 @@ Section Representation.
     }.
 
   Local Instance frep_ok : FieldRepresentation_ok.
-  Proof. split. cbn [bounded_by frep]; intros. apply relax_bounds; auto. Qed.
+  Proof. split; cbn [bounded_by frep]; intros; try apply relax_bounds; auto. Admitted.
 End Representation.

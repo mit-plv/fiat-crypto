@@ -1,4 +1,5 @@
 Require Import coqutil.Byte coqutil.Word.LittleEndianList.
+Require Import bedrock2.anybytes.
 Require Import Rupicola.Lib.Api.
 Require Import Crypto.Algebra.Hierarchy.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
@@ -65,12 +66,13 @@ Definition Placeholder
            {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}
            {field_representation : FieldRepresentation(mem:=mem)}
            (p : word) : mem -> Prop :=
-  Memory.anybytes(mem:=mem) p felem_size_in_bytes.
+  anybytes.anybytes(mem:=mem) p felem_size_in_bytes.
 
 Class FieldRepresentation_ok
       {field_parameters : FieldParameters}
       {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}
       {field_representation : FieldRepresentation} := {
+    size_fits : felem_size_in_bytes <= 2^width;
     relax_bounds :
       forall X : felem, bounded_by tight_bounds X
                         -> bounded_by loose_bounds X;
@@ -92,12 +94,12 @@ Section BignumToFieldRepresentationAdapterLemmas.
     repeat intro.
     cbv [Lift1Prop.ex1]; split; intros;
       repeat match goal with
-             | H : anybytes _ _ _ |- _ => eapply Array.anybytes_to_array_1 in H
+             | H : anybytes _ _ _ |- _ => eapply anybytes_to_array_1 in H
              | H : exists _, _ |- _ => destruct H
              | H : _ /\ _ |- _ => destruct H
              end.
       all : repeat match goal with
-             | H : anybytes _ _ _ |- _ => eapply Array.anybytes_to_array_1 in H
+             | H : anybytes _ _ _ |- _ => eapply anybytes_to_array_1 in H
              | H : exists _, _ |- _ => destruct H
              | H : _ /\ _ |- _ => destruct H
              end.
@@ -106,7 +108,7 @@ Section BignumToFieldRepresentationAdapterLemmas.
     { eapply Bignum_to_bytes in H; sepsimpl.
       let H := match goal with
                | H : Array.array _ _ _ _ _ |- _ => H end in
-      eapply Array.array_1_to_anybytes in H.
+      eapply array_1_to_anybytes in H.
       unshelve (erewrite (_:_*_=_); eassumption).
       rewrite H; destruct Bitwidth.width_cases as [W|W];
         symmetry in W; destruct W; cbn; clear; lia. }

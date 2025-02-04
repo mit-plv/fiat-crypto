@@ -19,6 +19,7 @@ Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.Memory. Import WithoutTuples.
 Require Import coqutil.Map.Interface. (* coercions *)
+Require Import coqutil.Map.OfListWord.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndianList.
 Import Word.Naive.
@@ -29,21 +30,7 @@ Section Memory.
   Context {width: Z} {word: word width} {mem: map.map word byte}.
   Context {mem_ok: map.ok mem} {word_ok: word.ok word}.
   Local Infix "$+" := map.putmany (at level 70).
-  Local Notation "xs $@ a" := (map.of_list_word_at a xs) (at level 10, format "xs $@ a").
   Local Notation unchecked_store_bytes := (unchecked_store_bytes (mem:=mem) (word:=word)).
-  Lemma unchecked_store_bytes_unchecked_store_bytes m a bs1 bs2 :
-    length bs1 = length bs2 ->
-    unchecked_store_bytes (unchecked_store_bytes m a bs1) a bs2 =
-    unchecked_store_bytes m a bs2.
-  Proof using mem_ok word_ok.
-    cbv [unchecked_store_bytes]; intros.
-    eapply map.map_ext; intros.
-    rewrite !map.get_putmany_dec, !map.get_of_list_word_at;
-      repeat (destruct_one_match; trivial).
-    epose proof proj1 (List.nth_error_Some bs1 (BinInt.Z.to_nat (word.unsigned (word.sub k a)))) ltac:(congruence).
-    rewrite H in H0.
-    eapply List.nth_error_Some in E; intuition idtac.
-  Qed.
 
   (* not sure where to put this since depends on sep *)
   Import Map.Interface Word.Interface BinInt.
@@ -58,7 +45,7 @@ Section Memory.
     (Hlen : length bs1 = length bs2)
     : sep R (bs2$@a) (unchecked_store_bytes m a bs2).
   Proof using mem_ok word_ok.
-    destruct Hsep as (?&?&(?&Hd)&HR&?);
+    destruct Hsep as (?&?&(?&Hd)&HR&?); cbv [exact] in *;
       cbv [sepclause_of_map] in *; subst.
     setoid_rewrite unchecked_store_bytes_unchecked_store_bytes; trivial.
     eexists _, _; split; split; try exact HR; try exact eq_refl.

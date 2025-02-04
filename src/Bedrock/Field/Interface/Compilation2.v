@@ -75,6 +75,7 @@ Section Compile.
     size_in_bytes_mod := felem_size_in_bytes_mod;
     |}.
   Proof.
+    { apply field_representation_ok. }
     {
       intros; intros m H.
       apply FElem'_from_bytes.
