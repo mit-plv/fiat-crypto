@@ -98,6 +98,14 @@ jobs:
       with:
         name: build-outputs-docker-coq-${{ matrix.env.DOCKER_COQ_VERSION }}-ocaml-${{ matrix.env.DOCKER_OCAML_VERSION }}
         path: fiat-crypto-build.tar.gz
+    - run: find . -name "*.timing" | xargs tar -czvf timing-files.tgz
+      if: failure()
+    - name: upload generated timing files
+      uses: actions/upload-artifact@v4
+      with:
+        name: timing-files-${{ matrix.env.COQ_VERSION }}
+        path: timing-files.tgz
+      if: failure()
     - name: install
       uses: coq-community/docker-coq-action@v1
       with:
@@ -371,13 +379,13 @@ jobs:
       run: etc/ci/github-actions-make.sh --warnings -f Makefile.examples -j2 generated-files
       if: github.event_name == 'pull_request'
     - run: tar -czvf generated-files.tgz fiat-*/
-      if: ${{ failure() }}
+      if: failure()
     - name: upload generated files
       uses: actions/upload-artifact@v4
       with:
         name: generated-files-${{ matrix.coq-version }}
         path: generated-files.tgz
-      if: ${{ failure() }}
+      if: failure()
 
   standalone-haskell:
     needs: build

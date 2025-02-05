@@ -71,6 +71,15 @@ jobs:
       run: opam exec -- bash etc/ci/github-actions-make.sh -j${{ env.NJOBS }} c-files lite-generated-files
     - name: only-test-amd64-files-lite
       run: opam exec -- bash etc/ci/github-actions-make.sh -j${{ env.NJOBS }} only-test-amd64-files-lite SLOWEST_FIRST=1
+    - run: Get-ChildItem -Recurse -Filter *.timing | %{ $_.FullName } | & { tar -czvf timing-files.tgz -InputObject $_ }
+      shell: pwsh
+      # if: failure()
+    - name: upload generated timing files
+      uses: actions/upload-artifact@v4
+      with:
+        name: timing-files-windows
+        path: timing-files.tgz
+      if: failure()
     - name: upload OCaml files
       uses: actions/upload-artifact@v4
       with:

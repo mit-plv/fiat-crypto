@@ -80,13 +80,21 @@ jobs:
       shell: alpine.sh {0}
       run: etc/ci/github-actions-make.sh -j2 generated-files
     - run: tar -czvf generated-files.tgz fiat-*/
-      if: ${{ failure() }}
+      if: failure()
     - name: upload generated files
       uses: actions/upload-artifact@v4
       with:
         name: generated-files-${{ matrix.alpine }}
         path: generated-files.tgz
-      if: ${{ failure() }}
+      if: failure()
+    - run: find . -name "*.timing" | xargs tar -czvf timing-files.tgz
+      if: failure()
+    - name: upload generated timing files
+      uses: actions/upload-artifact@v4
+      with:
+        name: timing-files-${{ matrix.alpine }}
+        path: timing-files.tgz
+      if: failure()
     - name: standalone-haskell
       shell: alpine.sh {0}
       run: etc/ci/github-actions-make.sh -j1 standalone-haskell GHCFLAGS='+RTS -M7G -RTS'
