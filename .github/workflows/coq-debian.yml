@@ -50,13 +50,21 @@ jobs:
     - name: generated-files
       run: etc/ci/github-actions-make.sh -j2 generated-files
     - run: tar -czvf generated-files.tgz fiat-*/
-      if: ${{ failure() }}
+      if: failure()
     - name: upload generated files
       uses: actions/upload-artifact@v4
       with:
         name: generated-files-${{ matrix.debian }}
         path: generated-files.tgz
-      if: ${{ failure() }}
+      if: failure()
+    - run: find . -name "*.timing" | xargs tar -czvf timing-files.tgz
+      if: failure()
+    - name: upload generated timing files
+      uses: actions/upload-artifact@v4
+      with:
+        name: timing-files-${{ matrix.debian }}
+        path: timing-files.tgz
+      if: failure()
     - name: install-standalone-unified-ocaml
       run: etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
     - name: standalone-js-of-ocaml

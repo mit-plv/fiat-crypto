@@ -73,6 +73,14 @@ jobs:
       run: opam exec -- etc/ci/github-actions-make.sh -j2 all
       if: ${{ matrix.os.arch != 'arm64' }}
       # js_of_ocaml is too heavy for M1 GH Action runners which have only 7GB RAM, cf https://github.com/ocsigen/js_of_ocaml/issues/1612, https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners#standard-github-hosted-runners-for-public-repositories
+    - run: find . -name "*.timing" | xargs tar -czvf timing-files.tgz
+      if: failure()
+    - name: upload generated timing files
+      uses: actions/upload-artifact@v4
+      with:
+        name: timing-files-${{ matrix.os.runs-on }}
+        path: timing-files.tgz
+      if: failure()
     - name: install-standalone-unified-ocaml
       run: opam exec -- etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
     - name: install-standalone-js-of-ocaml
