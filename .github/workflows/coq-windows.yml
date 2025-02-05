@@ -44,10 +44,14 @@ jobs:
       uses: ocaml/setup-ocaml@v3
       with:
         ocaml-compiler: 4.13.1
-    - run: Get-ChildItem -Path . -Filter "*.timing" -Recurse | Compress-Archive -DestinationPath timing-files.zip
+    - name: aggregate timing files for upload
+      run: |
+        $files = Get-ChildItem -Path . -Filter "*.timing" -Recurse
+        $files | ForEach-Object { Write-Output "Adding: $_" }
+        $files | Compress-Archive -DestinationPath timing-files.zip -Force
       shell: pwsh
+    - run: opam pin add 'ocamlfind>=1.9.7'
     - run: exit 1
-    - run: opam pin add ocamlfind 'git+https://github.com/ocaml/ocamlfind.git#master'
     - run: opam pin add --kind=version coq ${{ env.COQ_VERSION }}
     - run: opam install js_of_ocaml
     - run: opam install conf-time conf-gcc
@@ -74,7 +78,11 @@ jobs:
       run: opam exec -- bash etc/ci/github-actions-make.sh -j${{ env.NJOBS }} c-files lite-generated-files
     - name: only-test-amd64-files-lite
       run: opam exec -- bash etc/ci/github-actions-make.sh -j${{ env.NJOBS }} only-test-amd64-files-lite SLOWEST_FIRST=1
-    - run: Get-ChildItem -Path . -Filter "*.timing" -Recurse | Compress-Archive -DestinationPath timing-files.zip
+    - name: aggregate timing files for upload
+      run: |
+        $files = Get-ChildItem -Path . -Filter "*.timing" -Recurse
+        $files | ForEach-Object { Write-Output "Adding: $_" }
+        $files | Compress-Archive -DestinationPath timing-files.zip -Force
       shell: pwsh
       # if: failure()
     - name: upload generated timing files
