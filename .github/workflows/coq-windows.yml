@@ -71,7 +71,7 @@ jobs:
       run: opam exec -- bash etc/ci/github-actions-make.sh -j${{ env.NJOBS }} c-files lite-generated-files
     - name: only-test-amd64-files-lite
       run: opam exec -- bash etc/ci/github-actions-make.sh -j${{ env.NJOBS }} only-test-amd64-files-lite SLOWEST_FIRST=1
-    - run: Get-ChildItem -Recurse -Filter *.timing | %{ $_.FullName } | & { tar -czvf timing-files.tgz -InputObject $_ }
+    - run: Get-ChildItem -Recurse -Filter *.timing | Select-Object -ExpandProperty FullName | tar -czvf timing-files.tgz -T -
       shell: pwsh
       # if: failure()
     - name: upload generated timing files
