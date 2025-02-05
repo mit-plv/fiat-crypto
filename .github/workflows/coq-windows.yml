@@ -44,6 +44,8 @@ jobs:
       uses: ocaml/setup-ocaml@v3
       with:
         ocaml-compiler: 4.13.1
+    - run: opam exec -- find . -name '*.timing' | opam exec -- xargs tar -czvf timing-files.tgz
+    - run: exit 1
     - run: opam pin add ocamlfind 'git+https://github.com/ocaml/ocamlfind.git#master'
     - run: opam pin add --kind=version coq ${{ env.COQ_VERSION }}
     - run: opam install js_of_ocaml
@@ -71,8 +73,7 @@ jobs:
       run: opam exec -- bash etc/ci/github-actions-make.sh -j${{ env.NJOBS }} c-files lite-generated-files
     - name: only-test-amd64-files-lite
       run: opam exec -- bash etc/ci/github-actions-make.sh -j${{ env.NJOBS }} only-test-amd64-files-lite SLOWEST_FIRST=1
-    - run: Get-ChildItem -Recurse -Filter *.timing | Select-Object -ExpandProperty FullName | tar -czvf timing-files.tgz -T -
-      shell: pwsh
+    - run: opam exec -- find . -name '*.timing' | opam exec -- xargs tar -czvf timing-files.tgz
       # if: failure()
     - name: upload generated timing files
       uses: actions/upload-artifact@v4
