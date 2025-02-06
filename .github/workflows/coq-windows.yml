@@ -77,7 +77,7 @@ jobs:
         $files | ForEach-Object { Write-Output "Adding: $_" }
         $files | Compress-Archive -DestinationPath timing-files.zip -Force
       shell: pwsh
-      # if: failure()
+      if: failure()
     - name: upload generated timing files
       uses: actions/upload-artifact@v4
       with:
