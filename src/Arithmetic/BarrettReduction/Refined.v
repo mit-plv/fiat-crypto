@@ -26,6 +26,7 @@ Section Qround_half_up.
     destruct x as (x_num & x_den).
     cbv [Qlt Qle] in *. simpl in *. lia.
   Qed.
+
   Lemma Qround_half_up_approx (x: Q):
     Qabs (x - Qround_half_up x) <= 1#2.
   Proof.
@@ -292,24 +293,22 @@ Section RefinedBarrettReduction.
   Qed.
 End RefinedBarrettReduction.
 
-(* Section MLKEM_Example. *)
-(*   Local Coercion inject_Z : Z >-> Q. *)
-(*   Local Coercion Zpos : positive >-> Z. *)
-(*   Let M := 16%Z. *)
-(*   Let q := 3329%positive. *)
-(*   Let k := 2%positive. *)
+Module ExampleMLKEM.
+  Local Coercion inject_Z : Z >-> Q.
+  Local Coercion Zpos : positive >-> Z.
+  Definition M := 16%Z.
+  Definition q := 3329%positive.
+  Definition k := 2%positive.
 
-(*   Let R_pow := Eval compute in (M - 1 + Z.log2 q)%Z. (* 26%Z *) *)
-(*   Let c := Eval compute in Qround_half_up ((Z.pow 2 R_pow)#q). (* 20159%Z *) *)
-(*   Let v := Eval compute in Z.shiftl 1 (R_pow - 1)%Z. (* 33554432%Z *) *)
+  Definition R_pow := Eval compute in (M - 1 + Z.log2 q)%Z. (* 26%Z *)
+  Definition c := Eval compute in Qround_half_up ((Z.pow 2 R_pow)#q). (* 20159%Z *)
+  Definition v := Eval compute in Z.shiftl 1 (R_pow - 1)%Z. (* 33554432%Z *)
 
-(*   Lemma Hk: Qabs (((Z.pow 2 (M - 1 + Z.log2 q)%Z)#q) - Qround_half_up ((Z.pow 2 (M - 1 + Z.log2 q)%Z)#q)) <= 1#(Pos.pow 2 k). *)
-(*   Proof. compute. congruence. Qed. *)
+  Lemma Hk: Qabs (((Z.pow 2 (M - 1 + Z.log2 q)%Z)#q) - Qround_half_up ((Z.pow 2 (M - 1 + Z.log2 q)%Z)#q)) <= 1#(Pos.pow 2 k).
+  Proof. compute. congruence. Qed.
 
-(*   Lemma HOddq: Z.Odd q. *)
-(*   Proof. exists (q/2)%Z. reflexivity. Qed. *)
+  Lemma HOddq: Z.Odd q. Proof. exists (q/2)%Z. reflexivity. Qed.
 
-(* (* *)
 (* For comparison https://github.com/pq-crystals/kyber/blob/main/ref/reduce.c *)
 (* int16_t barrett_reduce(int16_t a) { *)
 (*   int16_t t; *)
@@ -319,17 +318,17 @@ End RefinedBarrettReduction.
 (*   t *= KYBER_Q; *)
 (*   return a - t; *)
 (* } *)
-(* *) *)
-(*   Definition mlkem_barrett_reduce (a: Z): Z := *)
-(*     let t := (a * 20159)%Z in *)
-(*     let t := (t + 33554432)%Z in *)
-(*     let t := Z.shiftr t 26 in *)
-(*     (a - q * t)%Z. *)
 
-(*   Lemma MLKEM_barrett_reduce_correct (a: Z) (Ha: (Z.abs a <= Z.pow 2 15)%Z): *)
-(*     mlkem_barrett_reduce a = signed_mod a q. *)
-(*   Proof. *)
-(*     assert (mlkem_barrett_reduce a = barrett_reduce_approx R_pow c v a q) as -> by reflexivity. *)
-(*     apply (barrett_reduce_approx_correct Qround_half_up M R_pow c v a k q ltac:(reflexivity) ltac:(reflexivity) ltac:(reflexivity) Hk HOddq ltac:(lia) ltac:(apply Ha) ltac:(apply Ha)). *)
-(*   Qed. *)
-(* End MLKEM_Example. *)
+  Definition mlkem_barrett_reduce (a: Z): Z :=
+    let t := (a * 20159)%Z in
+    let t := (t + 33554432)%Z in
+    let t := Z.shiftr t 26 in
+    (a - q * t)%Z.
+
+  Lemma MLKEM_barrett_reduce_correct (a: Z) (Ha: (Z.abs a <= Z.pow 2 15)%Z):
+    mlkem_barrett_reduce a = signed_mod a q.
+  Proof.
+    assert (mlkem_barrett_reduce a = barrett_reduce_approx R_pow c v a q) as -> by reflexivity.
+    apply (barrett_reduce_approx_correct Qround_half_up M R_pow c v a k q ltac:(reflexivity) ltac:(reflexivity) ltac:(reflexivity) Hk HOddq ltac:(unfold M; lia) ltac:(apply Ha) ltac:(apply Ha)).
+  Qed.
+End ExampleMLKEM.
