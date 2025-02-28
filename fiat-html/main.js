@@ -1,12 +1,15 @@
 // Written with help from https://chat.openai.com/share/74d5901c-9005-4560-8307-582ff54e403e
-const SYNTHESIS_CACHE_VERSION = 1;
-document.addEventListener('DOMContentLoaded', function() {
+const SYNTHESIS_CACHE_VERSION = 2;
+document.addEventListener('DOMContentLoaded', function () {
     const errorDiv = document.getElementById('error');
     const outputDiv = document.getElementById('output');
     const stdoutDiv = document.getElementById('stdoutContainer');
     const stderrDiv = document.getElementById('stderrContainer');
     const stdoutBox = document.getElementById('stdout');
     const stderrBox = document.getElementById('stderr');
+    const stdinBox = document.getElementById('stdin');
+    const filesBox = document.getElementById('files');
+    const outputFilesBox = document.getElementById('outputFiles');
     const versionBox = document.getElementById('version');
     const wasmCheckbox = document.getElementById('wasm');
     const inputForm = document.getElementById('inputForm');
@@ -26,25 +29,55 @@ document.addEventListener('DOMContentLoaded', function() {
             .split(/ +/)               // Split by spaces
             .filter(s => s)
             .map(s => s
-                 .replace(/\u0000/g, '\\')  // Restore backslashes
-                 .replace(/\u0001/g, ' ')   // Restore spaces
-                );
+                .replace(/\u0000/g, '\\')  // Restore backslashes
+                .replace(/\u0001/g, ' ')   // Restore spaces
+            );
     }
 
     function joinWithEscaping(inputArray) {
         return inputArray
             .map(s => s
-                 .replace(/\\/g, '\\\\')  // Escape backslashes
-                 .replace(/ /g, '\\ ')   // Escape spaces
-                )
+                .replace(/\\/g, '\\\\')  // Escape backslashes
+                .replace(/ /g, '\\ ')   // Escape spaces
+            )
             .join(' ');
     }
 
-    function parseToStringArray(str) {
+    function parseToStringArray(str, name) {
         let args = JSON.parse(str);
         if (!Array.isArray(args) || !args.every(arg => typeof arg === 'string')) {
-            throw new Error('Invalid: Not an array of strings');
+            throw new Error(`Invalid: ${name} is not an array of strings`);
         }
+        return args;
+    }
+
+    function parseToStringArrayArray(str, name) {
+        let args = JSON.parse(str);
+        if (!Array.isArray(args) || !args.every(arg => Array.isArray(arg) && arg.every(arg2 => typeof arg2 === 'string'))) {
+            throw new Error(`Invalid: ${name} is not an array of arrays of strings`);
+        }
+        return args;
+    }
+
+    function parseToStringMapStringArray(str, name) {
+        let args = JSON.parse(str);
+        if (typeof args !== 'object') {
+            throw new Error(`Invalid: ${name} is not an object`);
+        }
+        if (args === null) {
+            throw new Error(`Invalid: ${name} is null`);
+        }
+        if (Array.isArray(args)) {
+            throw new Error(`Invalid: ${name} is an array, not a mapping from strings to arrays of strings`);
+        }
+        Object.entries(args).forEach(([key, value]) => {
+            if (typeof key !== 'string') {
+                throw new Error(`Invalid: ${name} has non-string key ${key}`);
+            }
+            if (!Array.isArray(value) || !value.every(value2 => typeof value2 === 'string')) {
+                throw new Error(`Invalid: ${name} has non-array value ${value} for key ${key}`);
+            }
+        });
         return args;
     }
 
@@ -74,6 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
         errorDiv.textContent = '';
         stdoutBox.textContent = '';
         stderrBox.textContent = '';
+        outputFilesBox.textContent = '';
         errorDiv.classList.add('hidden');
         outputDiv.classList.add('hidden');
         stderrDiv.classList.add('hidden');
@@ -104,9 +138,10 @@ document.addEventListener('DOMContentLoaded', function() {
         enableForm();
     }
 
-    function displayOutput(stdout, stderr) {
+    function displayOutput(stdout, stderr, outputFiles) {
         stdoutBox.textContent = stdout;
         stderrBox.textContent = stderr;
+        outputFilesBox.textContent = outputFiles;
         outputDiv.classList.remove('hidden');
         if (stdout) {
             stdoutDiv.classList.remove('hidden');
@@ -124,7 +159,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updatePermalink(args) {
         const wasmString = wasmCheckbox.checked ? '&wasm' : '';
-        const queryString = `?argv=${encodeURIComponent(JSON.stringify(args.slice(1)))}&interactive${wasmString}`;
+        const stdinString = stdinBox.value ? `&stdin=${encodeURIComponent(stdinBox.value)}` : '';
+        const filesString = filesBox.value ? `&files=${encodeURIComponent(filesBox.value)}` : '';
+        const inputType = document.querySelector('input[name="inputType"]:checked').value === 'json' ? `&inputType=json` : '';
+        const inputTypeString = inputType !== 'string' ? `&inputType=${inputType}` : '';
+        const queryString = `?argv=${encodeURIComponent(JSON.stringify(args.slice(1)))}${stdinString}${filesString}${inputTypeString}&interactive${wasmString}`;
         // Handle both file and http(s) URLs
         let baseUrl = window.location.href.split('?')[0]; // Get base URL without query string
         permalink.href = baseUrl + queryString;
@@ -150,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!success) {
             displayError(exceptionText.join('\n'));
         }
-        displayOutput(stdout.join(''), stderr.join(''));
+        displayOutput(stdout.join(''), stderr.join(''), JSON.stringify(files));
     }
 
     function handleException(err) {
@@ -199,11 +238,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Common setup for both workers
         [fiatCryptoWorker, wasmFiatCryptoWorker].forEach(worker => {
-            worker.onmessage = function(e) {
+            worker.onmessage = function (e) {
                 console.log(`Early synthesis result: ${e.data}`);
             };
 
-            worker.onerror = function(err) {
+            worker.onerror = function (err) {
                 handleException(err);
             };
         });
@@ -231,11 +270,11 @@ document.addEventListener('DOMContentLoaded', function() {
         return value;
     }
 
-    function handleSynthesis(args) {
+    function handleSynthesis(args, stdin, files) {
         const startTime = performance.now();
-        const cacheKey = 'synthesize_' + JSON.stringify(args);
+        const cacheKey = 'synthesize_' + JSON.stringify([args, stdin, files]);
         const cached = localStorage.getItem(cacheKey);
-        console.log({'synthesize args': args});
+        console.log({ 'synthesize args': [args, stdin, files] });
         updateStatus("Synthesizing...");
         updatePermalink(args);
 
@@ -252,7 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const useWasm = wasmCheckbox.checked;
 
         const recieveMessage = function (success) {
-            return function(e) {
+            return function (e) {
                 const endTime = performance.now();
                 const timeTaken = (endTime - startTime) / 1000;
                 const now = new Date();
@@ -275,18 +314,21 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         const currentWorker = useWasm ? wasmFiatCryptoWorker : fiatCryptoWorker;
-        currentWorker.postMessage(args);
+        const filesList = Object.entries(files).map(([name, contents]) => [name, ...contents]);
+        currentWorker.postMessage([[args], stdin, filesList]);
         currentWorker.onmessage = recieveMessage(true);
         currentWorker.onerror = recieveMessage(false);
     }
 
-    function parseAndRun(argv) {
+    function parseAndRun(argv, stdinv, filesv) {
         try {
-            let args = parseToStringArray(decodeURIComponent(argv));
+            let args = parseToStringArray(decodeURIComponent(argv), 'argv');
             args.unshift('fiat_crypto.js');
-            handleSynthesis(args);
+            let stdin = parseToStringArrayArray(decodeURIComponent(stdinv), 'stdin');
+            let files = parseToStringMapStringArray(decodeURIComponent(filesv), 'files');
+            handleSynthesis(args, stdin, files);
         } catch (e) {
-            displayError(`Error: ${e.message}: ${argv}`);
+            displayError(`Error: ${e.message}: ${argv}, ${stdinv}, ${filesv}`);
         }
     }
 
@@ -294,11 +336,25 @@ document.addEventListener('DOMContentLoaded', function() {
         return value !== null && value != 'false' && value != '0';
     }
 
+    function updateInputType(inputType) {
+        if (inputType === 'string') {
+            if (isValidJsonStringArray(inputArgs.value)) {
+                inputArgs.value = joinWithEscaping(JSON.parse(inputArgs.value));
+            }
+        } else if (inputType === 'json') {
+            inputArgs.value = JSON.stringify(splitUnescapedSpaces(inputArgs.value));
+        }
+        validateInput();
+    }
+
     function parseQueryParams() {
         const queryParams = new URLSearchParams(window.location.search);
         const argv = queryParams.get('argv');
         const interactive = queryParams.get('interactive');
         const wasm = queryParams.get('wasm')
+        const inputType = queryParams.get('inputType') || 'string';
+        const stdin = queryParams.get('stdin') || '[]';
+        const files = queryParams.get('files') || '{}';
 
         if (nonFalseQueryParam(wasm)) {
             wasmCheckbox.checked = true;
@@ -309,10 +365,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (argv) {
             if (nonFalseQueryParam(interactive)) {
                 inputArgs.value = decodeURIComponent(argv);
-                document.querySelector('input[value="json"]').checked = true;
+                stdinBox.value = decodeURIComponent(stdin);
+                filesBox.value = decodeURIComponent(files);
+                document.querySelector(`input[value="${inputType}"]`).checked = true;
+                updateInputType(inputType);
                 inputForm.classList.remove('hidden');
             }
-            parseAndRun(argv);
+            parseAndRun(argv, stdin, files);
         } else {
             inputForm.classList.remove('hidden');
         }
@@ -323,19 +382,12 @@ document.addEventListener('DOMContentLoaded', function() {
     inputArgs.addEventListener('input', validateInput);
 
     document.querySelectorAll('input[name="inputType"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            if (this.value === 'string') {
-                if (isValidJsonStringArray(inputArgs.value)) {
-                    inputArgs.value = joinWithEscaping(JSON.parse(inputArgs.value));
-                }
-            } else if (this.value === 'json') {
-                inputArgs.value = JSON.stringify(splitUnescapedSpaces(inputArgs.value));
-            }
-            validateInput();
+        radio.addEventListener('change', function () {
+            updateInputType(this.value);
         });
     });
 
-    synthesizeButton.addEventListener('click', function() {
+    synthesizeButton.addEventListener('click', function () {
         // Disable form elements
         inputArgs.disabled = true;
         synthesizeButton.disabled = true;
@@ -344,15 +396,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const argsType = document.querySelector('input[name="inputType"]:checked').value;
         const args = argsType === 'json' ? JSON.parse(inputArgs.value) : splitUnescapedSpaces(inputArgs.value);
         args.unshift('fiat_crypto.js');
-        handleSynthesis(args);
+        const stdin = JSON.parse(stdinBox.value) || [];
+        const files = JSON.parse(filesBox.value) || {};
+        handleSynthesis(args, stdin, files);
     });
 
-    inputForm.addEventListener('submit', function(event) {
+    inputForm.addEventListener('submit', function (event) {
         event.preventDefault(); // Prevent the default form submission
         synthesizeButton.click(); // Programmatically click the synthesize button
     });
 
-    cancelButton.addEventListener('click', function() {
+    cancelButton.addEventListener('click', function () {
         // Cancel synthesis if possible and re-enable form elements
         inputArgs.disabled = false;
         synthesizeButton.disabled = false;
@@ -361,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
         cancelWorkers();
     });
 
-    clearCacheButton.addEventListener('click', function() {
+    clearCacheButton.addEventListener('click', function () {
         localStorage.clear();
     });
 
