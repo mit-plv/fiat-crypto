@@ -136,8 +136,41 @@ Definition string_to_Coq_string (s : string) : String.string
   := String.string_of_list_ascii
        (List.map (fun n:nat => string_get s n) (List.seq 0 (string_length s))).
 
+Definition js_to_list_map {A : Set} {B} (f : A -> B) (a : Js_t (js_array A)) : list B
+  := List.map f (Array_to_list (js_to_array a)).
+
+Definition js_to_Coq_string (s : Js_t js_string) : String.string
+  := string_to_Coq_string (js_to_string s).
+
 Definition valid_synthesis_kinds_list : list string
   := List.map string_of_Coq_string (List.map fst ForExtraction.parse_SynthesisKind_list).
+
+(** js_of_ocaml doesn't support product types very well (or at least I wasn't able to find them), so we kludge together a unified input of list [(list (list string))]
+    We assume input of the form [[argv]; stdin; (filename1 :: file1_contents); (filename2 :: file2_contents); ...] *)
+Fixpoint split_files {A} (l : list (list A)) : (list (A * list A)) + (nat -> list String.string) :=
+  match l with
+  | [] => inl []
+  | [] :: _ => inr (fun n => ["Anomaly: file " ++ Show.show n ++ " has no name"]%string)
+  | (name :: contents) :: ls =>
+      match split_files ls with
+      | inl files => inl ((name, contents) :: files)
+      | inr errs_fn => inr (fun n => errs_fn (S n))
+      end
+  end%list.
+
+Definition split_unified_input {A} {show_A : Show.Show A} (l : list (list (list A))) : (list A * list (list A) * list (A * list A)) + list String.string :=
+  match l with
+  | [ [argv] ; stdin ; files ] =>
+    match split_files files with
+    | inl files => inl (argv, stdin, files)
+    | inr errs_fn => inr (errs_fn O)
+    end
+  | [argv ; _stdin ; _files] => inr ["Anomaly: argv should be a singleton list of strings, not " ++ Show.show argv ++ " (" ++ Show.show l ++ ")"]%string
+  | [_argv ; _stdin ] => inr ["Anomaly: missing files, got only " ++ Show.show l]%string
+  | [argv] => inr ["Anomaly: missing stdin, got only " ++ Show.show argv]%string
+  | [] => inr ["Anomaly: empty input"]%string
+  | _argv :: _stdin :: _files :: extra => inr ["Anomaly: got more than three arguments: " ++ Show.show extra ++ " (" ++ Show.show l ++ ")"]%string
+  end%list.
 
 Global Existing Instance IODriverTrace.
 
@@ -146,15 +179,18 @@ Definition main_gen
                          (argv : list String.string),
       A)
   : unit
-  := let stdin := [] in
-     let files := [] in
-     let js_of_Coq_string s := js_of_string (string_of_Coq_string s) in
+  := let js_of_Coq_string s := js_of_string (string_of_Coq_string s) in
      let js_of_list_string ls := js_of_array (Array_of_list (List.map js_of_Coq_string ls)) in
-     let synthesize : js_callback (Js_t (js_array (Js_t js_string)) -> Js_t (js_array Js_Unsafe_any))
+     let synthesize : js_callback (Js_t (js_array (Js_t (js_array (Js_t (js_array (Js_t js_string)))))) -> Js_t (js_array Js_Unsafe_any))
        := js_wrap_callback
-            (fun argv
-             => let argv := List.map string_to_Coq_string (List.map js_to_string (Array_to_list (js_to_array argv))) in
-                let '(result, (stdout, stderr), new_files) := eval_trace (PipelineMain argv) stdin files split_stdout_stderr in
+            (fun argv_stdin_files =>
+                let argv_stdin_files := js_to_list_map (js_to_list_map (js_to_list_map js_to_Coq_string)) argv_stdin_files in
+                let '(result, (stdout, stderr), new_files) :=
+                  match split_unified_input argv_stdin_files with
+                  | inl (argv, stdin, files) =>
+                      eval_trace (PipelineMain argv) stdin files split_stdout_stderr
+                  | inr errs => (None, ([], errs), [])
+                  end in
                 js_of_array
                   (Array_of_list
                      [Js_Unsafe_inject (js_of_bool (Option.is_None result))
