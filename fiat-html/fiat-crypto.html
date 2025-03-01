@@ -33,6 +33,15 @@
             z-index: 1;
         }
 
+        /*.output-filename {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            z-index: 1;
+        }*/
+
         .hidden {
             display: none;
         }
@@ -132,7 +141,7 @@
 
         .file-name {
             margin-bottom: 5px;
-            width: calc(100% - 30px);
+            width: calc(100% - 60px);
             padding: 5px;
         }
 
@@ -203,10 +212,10 @@
                     <h3>Standard Input</h3>
                     <div class="stdin-entries" id="stdinEntries"></div>
                     <button type="button" id="addStdinButton" class="add-btn">+</button>
-                    <textarea id="stdin" class="hidden" placeholder="Enter stdin" readonly></textarea>
+                    <textarea id="stdinTextArea" class="hidden" placeholder="Enter stdin" readonly></textarea>
                 </div>
                 <div class="files-column">
-                    <h3>Input Files</h3>
+                    <h3>Input Files <button type="button" id="addFileButton" class="add-btn">+</button></h3>
                     <div class="file-entries" id="fileEntries">
                         <div class="file-entry">
                             <input type="text" class="file-name" placeholder="Filename">
@@ -214,8 +223,7 @@
                             <button type="button" class="remove-btn">-</button>
                         </div>
                     </div>
-                    <button type="button" id="addFileButton" class="add-btn">+</button>
-                    <textarea id="files" class="hidden" placeholder="Enter files" readonly></textarea>
+                    <textarea id="filesTextArea" class="hidden" placeholder="Enter files" readonly></textarea>
                 </div>
             </div>
         </div>

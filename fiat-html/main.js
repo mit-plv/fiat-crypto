@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Create a container for each output file
         const fileEntries = Object.entries(files);
-
+        
         // Add or remove 'hidden' class based on whether there are files
         if (fileEntries.length > 0) {
             // Create HTML for each file
@@ -115,9 +115,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Create file container with HTML template literal
                 const fileHtml = `
                     <div class="code-container">
+                        <pre class="output-filename">${escapeHtml(filename)}:</pre>
                         <code id="output-file-${escapeHtml(filename)}" class="code"></code>
                         <button class="copy-button" data-target="output-file-${escapeHtml(filename)}">Copy</button>
-                        <span class="output-filename">${escapeHtml(filename)}</span>
                     </div>
                 `;
 
@@ -222,7 +222,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!success) {
             displayError(exceptionText.join('\n'));
         }
-        displayOutput(stdout.join(''), stderr.join(''), files);
+        const filesMap = {};
+        for (const [key, value] of files) {
+            filesMap[key] = value.join('');
+        }
+        displayOutput(stdout.join(''), stderr.join(''), filesMap);
     }
 
     function handleException(err) {
@@ -247,6 +251,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function handleSynthesisResult(result, cached) {
+        console.log({ 'handleSynthesisResult result': result });
         const extraCachedString = [
             result.fiat_crypto_version == fiat_crypto_version ? '' : ` in ${result.fiat_crypto_version}`,
             result.method === undefined ? '' : ` via ${result.method}`,
@@ -398,8 +403,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (argv) {
             if (nonFalseQueryParam(interactive)) {
                 inputArgs.value = decodeURIComponent(argv);
-                populateStdinEntries(decodeURIComponent(stdin));
-                populateFileEntries(decodeURIComponent(files));
+                populateStdinEntries(JSON.parse(decodeURIComponent(stdin)));
+                populateFileEntries(JSON.parse(decodeURIComponent(files)));
                 document.querySelector(`input[value="${inputType}"]`).checked = true;
                 updateInputType(inputType);
                 inputForm.classList.remove('hidden');

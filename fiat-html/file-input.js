@@ -1,61 +1,4 @@
-function getStdinFromFormBoxRaw() {
-    const stdinBox = document.getElementById('stdin');
-    return stdinBox.value;
-}
-
-function getFilesFromFormBoxRaw() {
-    const filesBox = document.getElementById('files');
-    return filesBox.value;
-}
-
-
-function getStdinFromFormBox() {
-    return JSON.parse(getStdinFromFormBoxRaw() || '[]');
-}
-
-function getFilesFromFormBox() {
-    return JSON.parse(getFilesFromFormBoxRaw() || '{}');
-}
-
-function populateStdinEntries(stdin) {
-    const stdinEntries = document.getElementById('stdinEntries');
-
-    if (stdin === undefined) {
-        stdin = getStdinFromFormBox();
-    }
-    const entries = stdinEntries.querySelectorAll('.stdin-entry');
-    entries.forEach(entry => {
-        entry.remove();
-    });
-    stdin.forEach(line => {
-        const entry = createStdinEntry(line);
-        stdinEntries.appendChild(entry);
-    });
-}
-
-function populateFileEntries(files) {
-    const fileEntries = document.getElementById('fileEntries');
-
-    if (files === undefined) {
-        files = getFilesFromFormBox();
-    }
-    const entries = fileEntries.querySelectorAll('.file-entry');
-    entries.forEach(entry => {
-        entry.remove();
-    });
-    Object.entries(files).forEach(([filename, content]) => {
-        const entry = createFileEntry(filename, content);
-        fileEntries.appendChild(entry);
-    });
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-    const stdinEntries = document.getElementById('stdinEntries');
-    const fileEntries = document.getElementById('fileEntries');
-    const addStdinButton = document.getElementById('addStdinButton');
-    const addFileButton = document.getElementById('addFileButton');
-    const stdinBox = document.getElementById('stdin');
-    const filesBox = document.getElementById('files');
+(function () {
 
     // Function to create a new file entry
     function createFileEntry(filename, content) {
@@ -126,8 +69,62 @@ document.addEventListener('DOMContentLoaded', function () {
         return entry;
     }
 
+
+    function getStdinFromFormBoxRaw() {
+        const stdinBox = document.getElementById('stdinTextArea');
+        return stdinBox.value;
+    }
+
+    function getFilesFromFormBoxRaw() {
+        const filesBox = document.getElementById('filesTextArea');
+        return filesBox.value;
+    }
+
+
+    function getStdinFromFormBox() {
+        return JSON.parse(getStdinFromFormBoxRaw() || '[]');
+    }
+
+    function getFilesFromFormBox() {
+        return JSON.parse(getFilesFromFormBoxRaw() || '{}');
+    }
+
+    function populateStdinEntries(stdin) {
+        const stdinEntries = document.getElementById('stdinEntries');
+
+        if (stdin === undefined) {
+            stdin = getStdinFromFormBox();
+        }
+        const entries = stdinEntries.querySelectorAll('.stdin-entry');
+        entries.forEach(entry => {
+            entry.remove();
+        });
+        stdin.forEach(line => {
+            const entry = createStdinEntry(line);
+            stdinEntries.appendChild(entry);
+        });
+    }
+
+    function populateFileEntries(files) {
+        const fileEntries = document.getElementById('fileEntries');
+
+        if (files === undefined) {
+            files = getFilesFromFormBox();
+        }
+        const entries = fileEntries.querySelectorAll('.file-entry');
+        entries.forEach(entry => {
+            entry.remove();
+        });
+        Object.entries(files).forEach(([filename, content]) => {
+            const entry = createFileEntry(filename, content);
+            fileEntries.appendChild(entry);
+        });
+    }
+
     // Function to update the hidden stdin input value
     function updateStdinValue() {
+        const stdinEntries = document.getElementById('stdinEntries');
+        const stdinBox = document.getElementById('stdinTextArea');
         const entries = stdinEntries.querySelectorAll('.stdin-entry');
         const stdinArray = Array.from(entries).map(entry => {
             const textarea = entry.querySelector('.stdin-textarea');
@@ -138,6 +135,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to update the hidden files input value
     function updateFilesValue() {
+        const fileEntries = document.getElementById('fileEntries');
+        const filesBox = document.getElementById('filesTextArea');
         const entries = fileEntries.querySelectorAll('.file-entry');
         const filesObj = {};
 
@@ -153,15 +152,27 @@ document.addEventListener('DOMContentLoaded', function () {
         filesBox.value = JSON.stringify(filesObj);
     }
 
-    // Add event listeners for adding new entries
-    addStdinButton.addEventListener('click', function () {
-        stdinEntries.appendChild(createStdinEntry());
-    });
+    window.getStdinFromFormBox = getStdinFromFormBox;
+    window.getFilesFromFormBox = getFilesFromFormBox;
+    window.getStdinFromFormBoxRaw = getStdinFromFormBoxRaw;
+    window.getFilesFromFormBoxRaw = getFilesFromFormBoxRaw;
+    window.populateStdinEntries = populateStdinEntries;
+    window.populateFileEntries = populateFileEntries;
 
-    addFileButton.addEventListener('click', function () {
-        fileEntries.appendChild(createFileEntry());
-    });
+    document.addEventListener('DOMContentLoaded', function () {
+        const addStdinButton = document.getElementById('addStdinButton');
+        const addFileButton = document.getElementById('addFileButton');
 
-    populateStdinEntries();
-    populateFileEntries();
-});
+        // Add event listeners for adding new entries
+        addStdinButton.addEventListener('click', function () {
+            stdinEntries.appendChild(createStdinEntry());
+        });
+
+        addFileButton.addEventListener('click', function () {
+            fileEntries.appendChild(createFileEntry());
+        });
+
+        populateStdinEntries();
+        populateFileEntries();
+    });
+})();
