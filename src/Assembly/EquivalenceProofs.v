@@ -1847,7 +1847,7 @@ Qed.
 (* TODO: this is Symbolic.get_reg; move to SymbolicProofs? *)
 Lemma get_reg_set_reg_full s rn rn' v
   : get_reg (set_reg s rn v) rn'
-    = if ((rn <? ((fun n (_ : Tuple.tuple _ n) => n) _ s)) && (rn =? rn'))%nat%bool
+    = if ((rn <? ((fun n (_ : Tuple.tuple _ n) => N.of_nat n) _ s)) && (rn =? rn'))%N%bool
       then Some v
       else get_reg s rn'.
 Proof.
@@ -1863,7 +1863,7 @@ Qed.
 
 (* TODO: this is Symbolic.get_reg; move to SymbolicProofs? *)
 Local Lemma get_reg_set_reg_same s rn v
-      (H : (rn < (fun n (_ : Tuple.tuple _ n) => n) _ s)%nat)
+      (H : (rn < (fun n (_ : Tuple.tuple _ n) => N.of_nat n) _ s)%N)
   : get_reg (set_reg s rn v) rn = Some v.
 Proof.
   rewrite get_reg_set_reg_full; break_innermost_match; reflect_hyps; cbv beta in *; try reflexivity; lia.
