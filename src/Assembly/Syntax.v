@@ -3,7 +3,11 @@ From Coq Require Import NArith.
 From Coq Require Import String.
 From Coq Require Import List.
 From Coq Require Import Derive.
+Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Bool.Reflect.
+Require Import Crypto.Util.Listable.
+Require Import Crypto.Util.ListUtil.
 Require Crypto.Util.Tuple.
 Require Crypto.Util.OptionList.
 Import ListNotations.
@@ -11,8 +15,6 @@ Import ListNotations.
 Local Open Scope list_scope.
 
 Local Set Implicit Arguments.
-Local Set Boolean Equality Schemes.
-Local Set Decidable Equality Schemes.
 Local Set Primitive Projections.
 
 Inductive REG :=
@@ -22,10 +24,27 @@ Inductive REG :=
 | ah | al | ch | cl | dh | dl | bh | bl |  spl |  bpl |  sil |  dil | r8b | r9b | r10b | r11b | r12b | r13b | r14b | r15b
 .
 
+Derive REG_Listable SuchThat (@FinitelyListable REG REG_Listable) As REG_FinitelyListable.
+Proof. prove_ListableDerive. Qed.
+Global Existing Instances REG_Listable REG_FinitelyListable.
+Definition REG_beq : REG -> REG -> bool := eqb_of_listable.
+Definition REG_dec_bl : forall x y, REG_beq x y = true -> x = y := eqb_of_listable_bl.
+Definition REG_dec_lb : forall x y, x = y -> REG_beq x y = true := eqb_of_listable_lb.
+Definition REG_eq_dec : forall x y : REG, {x = y} + {x <> y} := eq_dec_of_listable.
+
 Definition CONST := Z.
 Coercion CONST_of_Z (x : Z) : CONST := x.
 
 Inductive AccessSize := byte | word | dword | qword.
+
+Derive AccessSize_Listable SuchThat (@FinitelyListable AccessSize AccessSize_Listable) As AccessSize_FinitelyListable.
+Proof. prove_ListableDerive. Qed.
+Global Existing Instances AccessSize_Listable AccessSize_FinitelyListable.
+Definition AccessSize_beq : AccessSize -> AccessSize -> bool := eqb_of_listable.
+Definition AccessSize_dec_bl : forall x y, AccessSize_beq x y = true -> x = y := eqb_of_listable_bl.
+Definition AccessSize_dec_lb : forall x y, x = y -> AccessSize_beq x y = true := eqb_of_listable_lb.
+Definition AccessSize_eq_dec : forall x y : AccessSize, {x = y} + {x <> y} := eq_dec_of_listable.
+
 Coercion bits_of_AccessSize (x : AccessSize) : N
   := match x with
      | byte => 8
@@ -41,11 +60,27 @@ Definition mem_of_reg (r : REG) : MEM :=
 
 Inductive FLAG := CF | PF | AF | ZF | SF | OF.
 
+Derive FLAG_Listable SuchThat (@FinitelyListable FLAG FLAG_Listable) As FLAG_FinitelyListable.
+Proof. prove_ListableDerive. Qed.
+Global Existing Instances FLAG_Listable FLAG_FinitelyListable.
+Definition FLAG_beq : FLAG -> FLAG -> bool := eqb_of_listable.
+Definition FLAG_dec_bl : forall x y, FLAG_beq x y = true -> x = y := eqb_of_listable_bl.
+Definition FLAG_dec_lb : forall x y, x = y -> FLAG_beq x y = true := eqb_of_listable_lb.
+Definition FLAG_eq_dec : forall x y : FLAG, {x = y} + {x <> y} := eq_dec_of_listable.
+
 Inductive OpPrefix :=
 | rep
 | repz
 | repnz
 .
+
+Derive OpPrefix_Listable SuchThat (@FinitelyListable OpPrefix OpPrefix_Listable) As OpPrefix_FinitelyListable.
+Proof. prove_ListableDerive. Qed.
+Global Existing Instances OpPrefix_Listable OpPrefix_FinitelyListable.
+Definition OpPrefix_beq : OpPrefix -> OpPrefix -> bool := eqb_of_listable.
+Definition OpPrefix_dec_bl : forall x y, OpPrefix_beq x y = true -> x = y := eqb_of_listable_bl.
+Definition OpPrefix_dec_lb : forall x y, x = y -> OpPrefix_beq x y = true := eqb_of_listable_lb.
+Definition OpPrefix_eq_dec : forall x y : OpPrefix, {x = y} + {x <> y} := eq_dec_of_listable.
 
 Inductive OpCode :=
 | adc
@@ -62,10 +97,10 @@ Inductive OpCode :=
 | cmovo
 | cmp
 | db
-| dd
-| dec
-| dq
 | dw
+| dd
+| dq
+| dec
 | imul
 | inc
 | je
@@ -94,6 +129,64 @@ Inductive OpCode :=
 | xchg
 | xor
 .
+
+Derive OpCode_Listable SuchThat (@FinitelyListable OpCode OpCode_Listable) As OpCode_FinitelyListable.
+Proof. prove_ListableDerive. Qed.
+Global Existing Instances OpCode_Listable OpCode_FinitelyListable.
+Definition OpCode_beq : OpCode -> OpCode -> bool := eqb_of_listable.
+Definition OpCode_dec_bl : forall x y, OpCode_beq x y = true -> x = y := eqb_of_listable_bl.
+Definition OpCode_dec_lb : forall x y, x = y -> OpCode_beq x y = true := eqb_of_listable_lb.
+Definition OpCode_eq_dec : forall x y : OpCode, {x = y} + {x <> y} := eq_dec_of_listable.
+
+Definition accesssize_of_declaration (opc : OpCode) : option AccessSize :=
+  match opc with
+  | db => Some byte
+  | dd => Some dword
+  | dq => Some qword
+  | dw => Some word
+  | adc
+  | adcx
+  | add
+  | adox
+  | and
+  | bzhi
+  | call
+  | clc
+  | cmovb
+  | cmovc
+  | cmovnz
+  | cmovo
+  | cmp
+  | dec
+  | imul
+  | inc
+  | je
+  | jmp
+  | lea
+  | mov
+  | movzx
+  | mul
+  | mulx
+  | or
+  | pop
+  | push
+  | rcr
+  | ret
+  | sar
+  | sbb
+  | setc
+  | seto
+  | shl
+  | shlx
+  | shr
+  | shrx
+  | shrd
+  | sub
+  | test
+  | xchg
+  | xor
+    => None
+  end.
 
 Record JUMP_LABEL := { jump_near : bool ; label_name : string }.
 
@@ -172,154 +265,73 @@ Definition operand_size (x : ARG) (operation_size : N) : N :=
   | None => operation_size
   end.
 
-
-Definition reg_index (r : REG) : nat
-  :=  match r with
-      |     rax
-      |     eax
-      |      ax
-      |(ah | al)
-       => 0
-      |     rcx
-      |     ecx
-      |      cx
-      |(ch | cl)
-       => 1
-      |     rdx
-      |     edx
-      |      dx
-      |(dh | dl)
-       => 2
-      |     rbx
-      |     ebx
-      |      bx
-      |(bh | bl)
-       => 3
-      | rsp
-      | esp
-      |  sp
-      |( spl)
-       => 4
-      | rbp
-      | ebp
-      |  bp
-      |( bpl)
-       => 5
-      | rsi
-      | esi
-      |  si
-      |( sil)
-       => 6
-      | rdi
-      | edi
-      |  di
-      |( dil)
-       => 7
-      | r8
-      | r8d
-      | r8w
-      | r8b
-        => 8
-      | r9
-      | r9d
-      | r9w
-      | r9b
-        => 9
-      | r10
-      | r10d
-      | r10w
-      | r10b
-        => 10
-      | r11
-      | r11d
-      | r11w
-      | r11b
-        => 11
-      | r12
-      | r12d
-      | r12w
-      | r12b
-        => 12
-      | r13
-      | r13d
-      | r13w
-      | r13b
-        => 13
-      | r14
-      | r14d
-      | r14w
-      | r14b
-        => 14
-      | r15
-      | r15d
-      | r15w
-      | r15b
-        => 15
-      end.
 Definition reg_offset (r : REG) : N :=
-      match r with
-      |(    rax |     rcx |     rdx |     rbx | rsp  | rbp  | rsi  | rdi  | r8  | r9  | r10  | r11  | r12  | r13  | r14  | r15 )
-      |(    eax |     ecx |     edx |     ebx | esp  | ebp  | esi  | edi  | r8d | r9d | r10d | r11d | r12d | r13d | r14d | r15d)
-      |(     ax |      cx |      dx |      bx |  sp  |  bp  |  si  |  di  | r8w | r9w | r10w | r11w | r12w | r13w | r14w | r15w)
-      |(     al |      cl |      dl |      bl |  spl |  bpl |  sil |  dil | r8b | r9b | r10b | r11b | r12b | r13b | r14b | r15b)
-       => 0
-      |(ah      | ch      | dh      | bh      )
-       => 8
-      end.
+    match r with
+    |(ah      | ch      | dh      | bh      )
+      => 8
+    | _ => 0
+    end.
+
+Definition widest_register_of (r : REG) : REG :=
+  match r with
+  | ((al | ah) | ax | eax | rax) => rax
+  | ((cl | ch) | cx | ecx | rcx) => rcx
+  | ((dl | dh) | dx | edx | rdx) => rdx
+  | ((bl | bh) | bx | ebx | rbx) => rbx
+  | (spl | sp | esp | rsp) => rsp
+  | (bpl | bp | ebp | rbp) => rbp
+  | (sil | si | esi | rsi) => rsi
+  | (dil | di | edi | rdi) => rdi
+  | (r8b | r8w | r8d | r8) => r8
+  | (r9b | r9w | r9d | r9) => r9
+  | (r10b | r10w | r10d | r10) => r10
+  | (r11b | r11w | r11d | r11) => r11
+  | (r12b | r12w | r12d | r12) => r12
+  | (r13b | r13w | r13d | r13) => r13
+  | (r14b | r14w | r14d | r14) => r14
+  | (r15b | r15w | r15d | r15) => r15
+  end.
+
+Definition widest_registers := Eval lazy in List.filter (fun x => REG_beq x (widest_register_of x)) (list_all REG).
+
+Definition wide_reg_index_pairs := Eval lazy in List.map (fun '(n, r) => (N.of_nat n, r)) (List.enumerate widest_registers).
+
+Definition eta_reg {A} : (REG -> A) -> (REG -> A).
+Proof.
+  intros f r; pose (f r) as fr; destruct r.
+  all: let v := eval cbv in fr in exact v.
+Defined.
+
+Definition reg_index (r : REG) : N := Eval lazy in
+  eta_reg (fun r =>
+    Option.value
+      (option_map (@fst _ _) (find (fun '(n, r') => REG_beq (widest_register_of r) r') wide_reg_index_pairs))
+      0%N)
+    r.
+
+Definition widest_register_of_index_opt (n : N) : option REG
+  := List.nth_error (List.map (@snd _ _) wide_reg_index_pairs) (N.to_nat n).
+
+(** convenience printing function *)
+Definition widest_register_of_index (n : N) : REG
+  := Option.value (widest_register_of_index_opt n) rax.
+
+Definition widest_reg_size_of (r : REG) : N :=
+  reg_size (widest_register_of_index (reg_index r)).
+
 Definition index_and_shift_and_bitcount_of_reg (r : REG) :=
   (reg_index r, reg_offset r, reg_size r).
 
-Definition regs_of_index (index : nat) : list (list REG) :=
-  match index with
-  |  0 => [ [  al ; ah] ; [  ax] ; [ eax] ; [rax] ]
-  |  1 => [ [  cl ; ch] ; [  cx] ; [ ecx] ; [rcx] ]
-  |  2 => [ [  dl ; dh] ; [  dx] ; [ edx] ; [rdx] ]
-  |  3 => [ [  bl ; bh] ; [  bx] ; [ ebx] ; [rbx] ]
-  |  4 => [ [ spl     ] ; [  sp] ; [ esp] ; [rsp] ]
-  |  5 => [ [ bpl     ] ; [  bp] ; [ ebp] ; [rbp] ]
-  |  6 => [ [ sil     ] ; [  si] ; [ esi] ; [rsi] ]
-  |  7 => [ [ dil     ] ; [  di] ; [ edi] ; [rdi] ]
-  |  8 => [ [ r8b     ] ; [ r8w] ; [ r8d] ; [r8 ] ]
-  |  9 => [ [ r9b     ] ; [ r9w] ; [ r9d] ; [r9 ] ]
-  | 10 => [ [r10b     ] ; [r10w] ; [r10d] ; [r10] ]
-  | 11 => [ [r11b     ] ; [r11w] ; [r11d] ; [r11] ]
-  | 12 => [ [r12b     ] ; [r12w] ; [r12d] ; [r12] ]
-  | 13 => [ [r13b     ] ; [r13w] ; [r13d] ; [r13] ]
-  | 14 => [ [r14b     ] ; [r14w] ; [r14d] ; [r14] ]
-  | 15 => [ [r15b     ] ; [r15w] ; [r15d] ; [r15] ]
-  | _  => []
-  end.
-
-(** convenience printing function *)
-Definition widest_register_of_index (n : nat) : REG
-  := match n with
-     | 0 => rax
-     | 1 => rcx
-     | 2 => rdx
-     | 3 => rbx
-     | 4 => rsp
-     | 5 => rbp
-     | 6 => rsi
-     | 7 => rdi
-     | 8 => r8
-     | 9 => r9
-     | 10 => r10
-     | 11 => r11
-     | 12 => r12
-     | 13 => r13
-     | 14 => r14
-     | 15 => r15
-     | _ => rax
-     end%nat.
+Definition overlapping_registers (r : REG) : list REG := Eval lazy in eta_reg
+  (fun r => List.filter (fun r' => REG_beq (widest_register_of r) (widest_register_of r')) (list_all REG))
+  r.
 
 Definition reg_of_index_and_shift_and_bitcount_opt :=
   fun '(index, offset, size) =>
-    let sz := N.log2 (size / 8) in
-    let offset_n := (offset / 8)%N in
-    if ((8 * 2^sz =? size) && (offset =? offset_n * 8))%N%bool
-    then (rs <- nth_error (regs_of_index index) (N.to_nat sz);
-          nth_error rs (N.to_nat offset_n))%option
-    else None.
+    (wr <- widest_register_of_index_opt index;
+    let rs := overlapping_registers wr in
+    List.find (fun r => ((reg_size r =? size) && (reg_offset r =? offset))%N%bool) rs)%option.
+
 Definition reg_of_index_and_shift_and_bitcount :=
   fun '(index, offset, size) =>
     match reg_of_index_and_shift_and_bitcount_opt (index, offset, size) with
@@ -327,59 +339,6 @@ Definition reg_of_index_and_shift_and_bitcount :=
     | None => widest_register_of_index index
     end.
 
-Lemma widest_register_of_index_correct
-  : forall n,
-    (~exists r, reg_index r = n)
-    \/ (let r := widest_register_of_index n in reg_index r = n
-       /\ forall r', reg_index r' = n -> r = r' \/ (reg_size r' < reg_size r)%N).
-Proof.
-  intro n; set (r := widest_register_of_index n).
-  cbv in r.
-  repeat match goal with r := context[match ?n with _ => _ end] |- _ => destruct n; [ right | ] end;
-    [ .. | left; intros [ [] H]; cbv in H; congruence ].
-  all: subst r; split; [ reflexivity | ].
-  all: intros [] H; cbv in H; try (exfalso; congruence).
-  all: try (left; reflexivity).
-  all: try (right; vm_compute; reflexivity).
-Qed.
-
-Lemma reg_of_index_and_shift_and_bitcount_opt_correct v r
-  : reg_of_index_and_shift_and_bitcount_opt v = Some r <-> index_and_shift_and_bitcount_of_reg r = v.
-Proof.
-  split; [ | intro; subst; destruct r; vm_compute; reflexivity ].
-  cbv [index_and_shift_and_bitcount_of_reg]; destruct v as [ [index shift] bitcount ].
-  cbv [reg_of_index_and_shift_and_bitcount_opt].
-  generalize (shift / 8)%N (N.log2 (bitcount / 8)); intros *.
-  repeat first [ congruence
-               | progress subst
-               | match goal with
-                 | [ H : _ /\ _ |- _ ] => destruct H
-                 | [ H : N.to_nat _ = _ |- _ ] => apply (f_equal N.of_nat) in H; rewrite N2Nat.id in H; subst
-                 | [ |- Some _ = Some _ -> _ ] => inversion 1; subst
-                 | [ |- context[match ?x with _ => _ end] ] => destruct x eqn:?; subst
-                 end
-               | progress cbv [regs_of_index]
-               | match goal with
-                 | [ |- context[nth_error _ ?n] ] => destruct n eqn:?; cbn [nth_error Option.bind]
-                 end
-               | rewrite Bool.andb_true_iff, ?N.eqb_eq in * |- ].
-  all: vm_compute; reflexivity.
-Qed.
-
-Lemma reg_of_index_and_shift_and_bitcount_of_reg r
-  : reg_of_index_and_shift_and_bitcount (index_and_shift_and_bitcount_of_reg r) = r.
-Proof. destruct r; vm_compute; reflexivity. Qed.
-
-Lemma reg_of_index_and_shift_and_bitcount_eq v r
-  : reg_of_index_and_shift_and_bitcount v = r
-    -> (index_and_shift_and_bitcount_of_reg r = v
-        \/ ((~exists r, index_and_shift_and_bitcount_of_reg r = v)
-            /\ r = widest_register_of_index (fst (fst v)))).
-Proof.
-  cbv [reg_of_index_and_shift_and_bitcount].
-  destruct v as [ [index offset] size ].
-  destruct reg_of_index_and_shift_and_bitcount_opt eqn:H;
-    [ left | right; split; [ intros [r' H'] | ] ]; subst; try reflexivity.
-  { rewrite reg_of_index_and_shift_and_bitcount_opt_correct in H; assumption. }
-  { rewrite <- reg_of_index_and_shift_and_bitcount_opt_correct in H'; congruence. }
-Qed.
+Class assembly_program_options := {
+  default_rel : bool ;
+}.

@@ -53,23 +53,23 @@ Definition havoc_flag (st : flag_state) (f : FLAG) : flag_state
 Definition havoc_flags : flag_state
   := (None, None, None, None, None, None).
 
-Definition reg_state := Tuple.tuple Z 16.
+Definition reg_state := Tuple.tuple Z (compute! (List.length widest_registers)).
 Definition bitmask_of_reg (r : REG) : Z
   := let '(idx, shift, bitcount) := index_and_shift_and_bitcount_of_reg r in
      Z.shiftl (Z.ones (Z.of_N bitcount)) (Z.of_N shift).
 Definition get_reg (st : reg_state) (r : REG) : Z
   := let '(idx, shift, bitcount) := index_and_shift_and_bitcount_of_reg r in
-  let rv := Tuple.nth_default 0%Z idx st in
+  let rv := Tuple.nth_default 0%Z (N.to_nat idx) st in
   Z.land (Z.shiftr rv (Z.of_N shift)) (Z.ones (Z.of_N bitcount)).
 Definition set_reg (st : reg_state) (r : REG) (v : Z) : reg_state
   := let '(idx, shift, bitcount) := index_and_shift_and_bitcount_of_reg r in
      Tuple.from_list_default 0%Z _ (ListUtil.update_nth
-       idx
+       (N.to_nat idx)
        (fun curv => Z.lor (Z.shiftl (Z.land v (Z.ones (Z.of_N bitcount))) (Z.of_N shift))
                           (Z.ldiff curv (Z.shiftl (Z.ones (Z.of_N bitcount)) (Z.of_N shift))))
        (Tuple.to_list _ st)).
 Definition annotate_reg_state (st : reg_state) : list (REG * Z)
-  := List.map (fun '(n, v) => (widest_register_of_index n, v)) (enumerate (Tuple.to_list _ st)).
+  := List.combine widest_registers (Tuple.to_list _ st).
 Ltac print_reg_state st := let st' := (eval cbv in (annotate_reg_state st)) in idtac st'.
 
 (* Kludge since [byte] isn't present in Coq 8.9 *)

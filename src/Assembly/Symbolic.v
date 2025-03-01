@@ -3829,7 +3829,7 @@ Definition simplify {opts : symbolic_options_computed_opt} (dag : dag) (e : node
 Lemma eval_simplify {opts : symbolic_options_computed_opt} G d n v : gensym_dag_ok G d -> eval_node G d n v -> eval G d (simplify d n) v.
 Proof using Type. eauto using Rewrite.eval_expr, eval_node_reveal_node_at_least. Qed.
 
-Definition reg_state := Tuple.tuple (option idx) 16.
+Definition reg_state := Tuple.tuple (option idx) (compute! (List.length widest_registers)).
 Definition flag_state := Tuple.tuple (option idx) 6.
 Definition mem_state := list (idx * idx).
 
@@ -3863,16 +3863,16 @@ Definition reverse_lookup_flag (st : flag_state) (i : idx) : option FLAG
        (List.find (fun v => option_beq N.eqb (Some i) (fst v))
                   (Tuple.to_list _ (Tuple.map2 (@pair _ _) st (CF, PF, AF, ZF, SF, OF)))).
 
-Definition get_reg (st : reg_state) (ri : nat) : option idx
-  := Tuple.nth_default None ri st.
-Definition set_reg (st : reg_state) ri (i : idx) : reg_state
+Definition get_reg (st : reg_state) (ri : N) : option idx
+  := Tuple.nth_default None (N.to_nat ri) st.
+Definition set_reg (st : reg_state) (ri : N) (i : idx) : reg_state
   := Tuple.from_list_default None _ (ListUtil.set_nth
-       ri
+       (N.to_nat ri)
        (Some i)
        (Tuple.to_list _ st)).
 Definition reverse_lookup_widest_reg (st : reg_state) (i : idx) : option REG
   := option_map
-       (fun v => widest_register_of_index (fst v))
+       (fun v => widest_register_of_index (N.of_nat (fst v)))
        (List.find (fun v => option_beq N.eqb (Some i) (snd v))
                   (List.enumerate (Tuple.to_list _ st))).
 
@@ -3906,7 +3906,7 @@ Definition update_mem_with (st : symbolic_state) (f : mem_state -> mem_state) : 
   := {| dag_state := st.(dag_state); symbolic_reg_state := st.(symbolic_reg_state) ; symbolic_flag_state := st.(symbolic_flag_state) ; symbolic_mem_state := f st.(symbolic_mem_state) |}.
 
 Global Instance show_reg_state : Show reg_state := fun st =>
-  show (List.map (fun '(n, v) => (widest_register_of_index n, v)) (ListUtil.List.enumerate (Option.List.map id (Tuple.to_list _ st)))).
+  show (List.combine widest_registers (Option.List.map id (Tuple.to_list _ st))).
 
 Global Instance show_flag_state : Show flag_state :=
   fun '(cfv, pfv, afv, zfv, sfv, ofv) => (
@@ -3953,7 +3953,7 @@ Module error.
   Local Unset Decidable Equality Schemes.
   Variant error :=
   | get_flag (f : FLAG) (s : flag_state)
-  | get_reg (r : nat + REG) (s : reg_state)
+  | get_reg (r : N + REG) (s : reg_state)
   | load (a : idx) (s : symbolic_state)
   | remove (a : idx) (s : symbolic_state)
   | remove_has_duplicates (a : idx) (vs : list idx) (s : symbolic_state)
@@ -3977,7 +3977,7 @@ Module error.
             => ["In flag state " ++ show_flag_state s;
                 "Flag " ++ show f ++ " was read without being set."]
           | get_reg (inl i) s
-            => ["Invalid reg index " ++ show_nat i]
+            => ["Invalid reg index " ++ show i]
           | get_reg (inr r) s
             => ["In reg state " ++ show_reg_state s;
                 "Register " ++ show (r : REG) ++ " read without being set."]
@@ -4042,7 +4042,7 @@ Definition mapM_ {A B} (f: A -> M B) l : M unit := _ <- mapM f l; ret tt.
 
 Definition error_get_reg_of_reg_index ri : symbolic_state -> error
   := error.get_reg (let r := widest_register_of_index ri in
-                    if (reg_index r =? ri)%nat
+                    if (reg_index r =? ri)%N
                     then inr r
                     else inl ri).
 

@@ -35,8 +35,8 @@ Bind Scope REG_scope with REG.
 Infix "=?" := REG_beq : REG_scope.
 
 Global Instance REG_beq_spec : reflect_rel (@eq REG) REG_beq | 10
-  := reflect_of_beq internal_REG_dec_bl internal_REG_dec_lb.
-Definition REG_beq_eq x y : (x =? y)%REG = true <-> x = y := conj (@internal_REG_dec_bl _ _) (@internal_REG_dec_lb _ _).
+  := reflect_of_beq REG_dec_bl REG_dec_lb.
+Definition REG_beq_eq x y : (x =? y)%REG = true <-> x = y := conj (@REG_dec_bl _ _) (@REG_dec_lb _ _).
 Lemma REG_beq_neq x y : (x =? y)%REG = false <-> x <> y.
 Proof. rewrite <- REG_beq_eq; destruct (x =? y)%REG; intuition congruence. Qed.
 Global Instance REG_beq_compat : Proper (eq ==> eq ==> eq) REG_beq | 10.
@@ -95,8 +95,8 @@ Bind Scope AccessSize_scope with AccessSize.
 Infix "=?" := AccessSize_beq : AccessSize_scope.
 
 Global Instance AccessSize_beq_spec : reflect_rel (@eq AccessSize) AccessSize_beq | 10
-  := reflect_of_beq internal_AccessSize_dec_bl internal_AccessSize_dec_lb.
-Definition AccessSize_beq_eq x y : (x =? y)%AccessSize = true <-> x = y := conj (@internal_AccessSize_dec_bl _ _) (@internal_AccessSize_dec_lb _ _).
+  := reflect_of_beq AccessSize_dec_bl AccessSize_dec_lb.
+Definition AccessSize_beq_eq x y : (x =? y)%AccessSize = true <-> x = y := conj (@AccessSize_dec_bl _ _) (@AccessSize_dec_lb _ _).
 Lemma AccessSize_beq_neq x y : (x =? y)%AccessSize = false <-> x <> y.
 Proof. rewrite <- AccessSize_beq_eq; destruct (x =? y)%AccessSize; intuition congruence. Qed.
 Global Instance AccessSize_beq_compat : Proper (eq ==> eq ==> eq) AccessSize_beq | 10.
@@ -141,8 +141,8 @@ Bind Scope FLAG_scope with FLAG.
 Infix "=?" := FLAG_beq : FLAG_scope.
 
 Global Instance FLAG_beq_spec : reflect_rel (@eq FLAG) FLAG_beq | 10
-  := reflect_of_beq internal_FLAG_dec_bl internal_FLAG_dec_lb.
-Definition FLAG_beq_eq x y : (x =? y)%FLAG = true <-> x = y := conj (@internal_FLAG_dec_bl _ _) (@internal_FLAG_dec_lb _ _).
+  := reflect_of_beq FLAG_dec_bl FLAG_dec_lb.
+Definition FLAG_beq_eq x y : (x =? y)%FLAG = true <-> x = y := conj (@FLAG_dec_bl _ _) (@FLAG_dec_lb _ _).
 Lemma FLAG_beq_neq x y : (x =? y)%FLAG = false <-> x <> y.
 Proof. rewrite <- FLAG_beq_eq; destruct (x =? y)%FLAG; intuition congruence. Qed.
 Global Instance FLAG_beq_compat : Proper (eq ==> eq ==> eq) FLAG_beq | 10.
@@ -155,8 +155,8 @@ Bind Scope OpCode_scope with OpCode.
 Infix "=?" := OpCode_beq : OpCode_scope.
 
 Global Instance OpCode_beq_spec : reflect_rel (@eq OpCode) OpCode_beq | 10
-  := reflect_of_beq internal_OpCode_dec_bl internal_OpCode_dec_lb.
-Definition OpCode_beq_eq x y : (x =? y)%OpCode = true <-> x = y := conj (@internal_OpCode_dec_bl _ _) (@internal_OpCode_dec_lb _ _).
+  := reflect_of_beq OpCode_dec_bl OpCode_dec_lb.
+Definition OpCode_beq_eq x y : (x =? y)%OpCode = true <-> x = y := conj (@OpCode_dec_bl _ _) (@OpCode_dec_lb _ _).
 Lemma OpCode_beq_neq x y : (x =? y)%OpCode = false <-> x <> y.
 Proof. rewrite <- OpCode_beq_eq; destruct (x =? y)%OpCode; intuition congruence. Qed.
 Global Instance OpCode_beq_compat : Proper (eq ==> eq ==> eq) OpCode_beq | 10.
@@ -169,8 +169,8 @@ Bind Scope OpPrefix_scope with OpPrefix.
 Infix "=?" := OpPrefix_beq : OpPrefix_scope.
 
 Global Instance OpPrefix_beq_spec : reflect_rel (@eq OpPrefix) OpPrefix_beq | 10
-  := reflect_of_beq internal_OpPrefix_dec_bl internal_OpPrefix_dec_lb.
-Definition OpPrefix_beq_eq x y : (x =? y)%OpPrefix = true <-> x = y := conj (@internal_OpPrefix_dec_bl _ _) (@internal_OpPrefix_dec_lb _ _).
+  := reflect_of_beq OpPrefix_dec_bl OpPrefix_dec_lb.
+Definition OpPrefix_beq_eq x y : (x =? y)%OpPrefix = true <-> x = y := conj (@OpPrefix_dec_bl _ _) (@OpPrefix_dec_lb _ _).
 Lemma OpPrefix_beq_neq x y : (x =? y)%OpPrefix = false <-> x <> y.
 Proof. rewrite <- OpPrefix_beq_eq; destruct (x =? y)%OpPrefix; intuition congruence. Qed.
 Global Instance OpPrefix_beq_compat : Proper (eq ==> eq ==> eq) OpPrefix_beq | 10.
