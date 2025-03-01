@@ -1847,26 +1847,32 @@ Qed.
 (* TODO: this is Symbolic.get_reg; move to SymbolicProofs? *)
 Lemma get_reg_set_reg_full s rn rn' v
   : get_reg (set_reg s rn v) rn'
-    = if ((rn <? ((fun n (_ : Tuple.tuple _ n) => N.of_nat n) _ s)) && (rn =? rn'))%N%bool
+    = if ((rn <? ((fun n (_ : Tuple.tuple _ n) => N.of_nat n) _ s)) && (rn =? rn') && negb (REG_beq (widest_register_of_index rn') rip))%N%bool
       then Some v
       else get_reg s rn'.
 Proof.
   cbv [get_reg set_reg].
-  break_innermost_match; split_andb; reflect_hyps; subst.
+  break_innermost_match; split_andb; reflect_hyps; subst; try reflexivity; try congruence.
   all: rewrite <- !Tuple.nth_default_to_list.
   all: rewrite ?@Tuple.length_to_list in *.
   all: unshelve erewrite Tuple.from_list_default_eq, Tuple.to_list_from_list, set_nth_nth_default_full;
     rewrite ?length_set_nth, ?Tuple.length_to_list; try easy.
   all: break_innermost_match; try lia; try reflexivity.
+  all: try (assert (rn = rn') by lia; subst); try congruence.
+  all: repeat match goal with
+      | [ H : ~(?a /\ ?b) |- _ ] => assert (~a) by intuition auto; clear H
+      end.
+  all: try lia.
   now rewrite nth_default_out_of_bounds by now rewrite Tuple.length_to_list; lia.
 Qed.
 
 (* TODO: this is Symbolic.get_reg; move to SymbolicProofs? *)
 Local Lemma get_reg_set_reg_same s rn v
       (H : (rn < (fun n (_ : Tuple.tuple _ n) => N.of_nat n) _ s)%N)
-  : get_reg (set_reg s rn v) rn = Some v.
+  : get_reg (set_reg s rn v) rn = if REG_beq (widest_register_of_index rn) rip then None else Some v.
 Proof.
-  rewrite get_reg_set_reg_full; break_innermost_match; reflect_hyps; cbv beta in *; try reflexivity; lia.
+  rewrite get_reg_set_reg_full; cbv [get_reg is_ip_register_index].
+  break_innermost_match; reflect_hyps; cbv beta in *; try reflexivity; try lia.
 Qed.
 
 Lemma compute_array_address_ok {opts : symbolic_options_computed_opt} {descr:description} G s s' base i idx base_val
