@@ -94,8 +94,10 @@ Section WithDag.
 Context (d : dag).
 Local Notation eval := (Symbolic.eval G d).
 
+(* TODO: FIX ME use access size here *)
 Definition R_reg (x : option idx) (v : Z) : Prop :=
   (forall i, x = Some i -> eval i v) /\ (v = Z.land v (Z.ones 64)).
+
 Definition R_regs : Symbolic.reg_state -> Semantics.reg_state -> Prop :=
   Tuple.fieldwise R_reg.
 
@@ -232,8 +234,10 @@ Qed.
 Lemma R_flags_subsumed d s m (HR : R_flags d s m) d' (Hlt : d :< d')
   : R_flags' d' s m.
 Proof using Type.
-  cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *;
-    intuition eauto using R_flag_subsumed.
+  cbv [R_flags] in *.
+  revert HR.
+  eapply Tuple.fieldwise_Proper; [ repeat intro | reflexivity .. ].
+  eapply R_flag_subsumed; eassumption.
 Qed.
 
 Lemma R_reg_subsumed d s m (HR : R_reg d s m) d' (Hlt : d :< d')
@@ -243,8 +247,10 @@ Proof using Type. cbv [R_reg] in *; intuition eauto. Qed.
 Lemma R_regs_subsumed d s m (HR : R_regs d s m) d' (Hlt : d :< d')
   : R_regs' d' s m.
 Proof using Type.
-  cbv [R_regs Tuple.fieldwise Tuple.fieldwise'] in *;
-    intuition eauto using R_reg_subsumed.
+  cbv [R_regs] in *.
+  revert HR.
+  eapply Tuple.fieldwise_Proper; [ repeat intro | reflexivity .. ].
+  eapply R_reg_subsumed; eassumption.
 Qed.
 
 Local Existing Instance Naive.word64_ok.
@@ -349,7 +355,7 @@ Proof using Type. cbv; destruct v; trivial. Qed.
 
 (* workaround: using cbn instead of this lemma makes Qed hang after next rewrite in same hyp *)
 Lemma unfold_bind {A B} ma amb s :
-  @bind A B ma amb s = ltac:(let t := eval unfold bind, ErrorT.bind in (@bind A B ma amb s) in exact t).
+  @bind A B ma amb s = ltac:(let t := eval unfold bind, ErrorT.bind in ( @bind A B ma amb s ) in exact t).
 Proof using Type. exact eq_refl. Qed.
 
 Local Hint Resolve gensym_dag_ok_of_R : core.
@@ -481,7 +487,7 @@ Lemma GetReg_R {opts : symbolic_options_computed_opt} {descr:description} s m (H
   (H : GetReg r s = Success (i, s'))
   : R s' m  /\ s :< s' /\ eval s' i (get_reg m r).
 Proof using Type.
-  cbv [GetReg GetReg64 bind some_or get_reg index_and_shift_and_bitcount_of_reg] in *.
+  cbv [GetReg GetRegFull bind some_or get_reg index_and_shift_and_bitcount_of_reg] in *.
   pose proof (get_reg_R s _ ltac:(eassumption) (reg_index r)) as Hr.
   destruct Symbolic.get_reg in *; [|inversion H]; cbn in H.
   specialize (Hr _ eq_refl); case Hr as (v&Hi0&Hv).
@@ -499,8 +505,8 @@ Ltac step_GetReg :=
     [eassumption|..|clear H]
   end.
 
-Lemma Address_R {opts : symbolic_options_computed_opt} {descr:description} s m (HR : R s m) (sa:AddressSize) o a s' (H : Symbolic.Address o s = Success (a, s'))
-  : R s' m /\ s :< s' /\ exists v, eval s' a v /\ @DenoteAddress sa m o = v.
+Lemma Address_R {popts : assembly_program_options} {opts : symbolic_options_computed_opt} {descr:description} s m (HR : R s m) (sa:AddressSize) o a s' (H : Symbolic.Address o s = Success (a, s'))
+  : R s' m /\ s :< s' /\ exists v, eval s' a v /\ @DenoteAddress popts sa m o = (None, v).
 Proof using Type.
   destruct o as [? ? ? ?]; cbv [Address DenoteAddress Syntax.mem_base_reg Syntax.mem_offset Syntax.mem_scale_reg err ret] in *; repeat step_symex.
   all : repeat first [ progress inversion_ErrorT
@@ -548,18 +554,18 @@ Qed.
 Lemma Load64_R s m (HR : R s m) (a : idx)
   va (Ha : eval s a va)
   i s' (H : Load64 a s = Success (i, s'))
-  : s' = s /\ exists v, eval s i v /\ get_mem m va 8 = Some v /\ v = Z.land v (Z.ones 64).
+  : s' = s /\ exists v, eval s i v /\ get_mem m (None, va) 8 = Some v /\ v = Z.land v (Z.ones 64).
 Proof using Type.
   cbv [Load64 some_or Symbolic.load option_map] in *.
   destruct find as [(?&?)|] eqn:? in *;
     inversion_ErrorT; Prod.inversion_prod; subst.
   split;trivial.
   eapply ListUtil.find_some_iff in Heqo;
-    repeat (cbn in *; destruct_head'_and; destruct_head'_ex).
+    repeat (cbn [fst] in *; destruct_head'_and; destruct_head'_ex).
   clear H1. autoforward with typeclass_instances in H0; subst.
   eapply nth_error_split in H;
-    repeat (cbn in *; destruct_head'_and; destruct_head'_ex).
-  destruct s'; cbn in *; destruct_head'_and; subst.
+    repeat (destruct_head'_and; destruct_head'_ex).
+  destruct s'; cbn [Symbolic.symbolic_mem_state Symbolic.dag_state R] in *; destruct_head'_and; subst.
   progress unfold machine_mem_state in *.
   eapply R_mem_Permutation in H4;
     [|symmetry; eapply Permutation.Permutation_middle].
@@ -567,7 +573,7 @@ Proof using Type.
   eapply load_bytes_Rcell64 in H4; eauto; [];
     repeat (destruct_head'_and; destruct_head'_ex).
   eexists; split; try eassumption; split.
-  { destruct_one_match; simpl in *; try congruence. }
+  { destruct_one_match; congruence. }
   { epose proof le_combine_bound x as HH.
     erewrite length_load_bytes in HH by eassumption.
     rewrite Z.land_ones, Z.mod_small; lia. }
@@ -647,7 +653,7 @@ Proof using Type.
 Qed.
 
 Lemma store8 m a
-  old (Hold : get_mem m a 8 = Some old) b
+  old (Hold : get_mem m (None, a) 8 = Some old) b
   m'  (Hm': set_mem m a 8 (Z.lor (Z.land b (Z.ones 8)) (Z.ldiff old (Z.ones 8))) = Some m')
   : set_mem m a 1 b = Some m'.
 Proof using Type.
@@ -712,9 +718,9 @@ Proof using Type.
 Qed.
 
 
-Lemma GetOperand_R {opts : symbolic_options_computed_opt} {descr:description} s m (HR: R s m) (so:OperationSize) (sa:AddressSize) a i s'
+Lemma GetOperand_R {popts : assembly_program_options} {opts : symbolic_options_computed_opt} {descr:description} s m (HR: R s m) (so:OperationSize) (sa:AddressSize) a i s'
   (H : GetOperand a s = Success (i, s'))
-  : R s' m /\ s :< s' /\ exists v, eval s' i v /\ DenoteOperand sa so m a = Some v.
+  : R s' m /\ s :< s' /\ exists v, eval s' i v /\ @DenoteOperand popts sa so m a = Some v.
 Proof using Type.
   cbv [GetOperand DenoteOperand err] in *; break_innermost_match; inversion_ErrorT.
   { eapply GetReg_R in H; intuition eauto. }
@@ -738,11 +744,14 @@ Proof using Type.
       simpl load_bytes.
       change (Pos.to_nat 1) with 1%nat.
       cbv [load_bytes footprint List.map seq List.option_all].
+      eta_expand; break_innermost_match_step; eta_expand; try congruence; [].
       setoid_rewrite E0.
       eexists; split; eauto.
       cbv [le_combine].
       rewrite Z.shiftl_0_l, Z.lor_0_r.
-      change (Z.lor (Byte.byte.unsigned b) (Z.shiftl (le_combine l) 8) = x) in H4.
+      let H4 := multimatch goal with H : _ |- _ => H end in
+      let H5 := multimatch goal with H : _ |- _ => H end in
+      change (Z.lor (Byte.byte.unsigned b) (Z.shiftl (le_combine l) 8) = x) in H4;
       rewrite <-H4 in H5 at 2; rewrite H5; clear H4 H5.
       f_equal.
       rewrite <-Byte.byte.wrap_unsigned at 1; setoid_rewrite <-Z.land_ones; [|clear;lia].
@@ -751,8 +760,11 @@ Proof using Type.
       rewrite Z.land_lor_distr_l.
       bitblast.Z.bitblast. subst.
       rewrite (Z.testbit_neg_r _ (_-8)) by lia; Btauto.btauto. }
-    { setoid_rewrite H4.
+    { destruct DenoteAddress; cbn [fst snd] in *; subst.
+      let H4 := multimatch goal with H : _ |- _ => H end in
+      setoid_rewrite H4.
       eexists; split; eauto; f_equal.
+      let H5 := multimatch goal with H : _ |- _ => H end in
       rewrite H5 at 1; trivial. } }
   { step_symex; repeat (eauto||econstructor). }
 Qed.
@@ -767,13 +779,13 @@ Ltac step_GetOperand :=
   end.
 
 (* note: do the two SetOperand both truncate inputs or not?... *)
-Lemma R_SetOperand {opts : symbolic_options_computed_opt} {descr:description} s m (HR : R s m)
+Lemma R_SetOperand {popts : assembly_program_options} {opts : symbolic_options_computed_opt} {descr:description} s m (HR : R s m)
   (sz:OperationSize) (sa:AddressSize) a i _tt s' (H : Symbolic.SetOperand a i s = Success (_tt, s'))
   v (Hv : eval s i v)
   : exists m', SetOperand sa sz m a v = Some m' /\ R s' m' /\ s :< s'.
 Proof using Type.
   destruct a in *; cbn in H; cbv [err] in *; inversion_ErrorT; [ | ];
-    cbv [SetOperand Crypto.Util.Option.bind SetReg64 update_reg_with Symbolic.update_reg_with] in *;
+    cbv [SetOperand Crypto.Util.Option.bind SetRegFull update_reg_with Symbolic.update_reg_with] in *;
     repeat (BreakMatch.break_innermost_match_hyps; Prod.inversion_prod; ErrorT.inversion_ErrorT; subst).
 
   { repeat step_symex.
@@ -801,7 +813,7 @@ Proof using Type.
     { cbn -[Z.ones]; rewrite !Z.land_ones, Zmod_mod by (clear;lia); trivial. } }
   { eexists; split; [exact eq_refl|].
     repeat (step_symex; []).
-    cbv [GetReg64 some_or] in *.
+    cbv [GetRegFull some_or] in *.
     pose proof (get_reg_R s _ ltac:(eassumption) (reg_index r)) as Hr.
     destruct (Symbolic.get_reg _ _) in *; cbn [ErrorT.bind] in H;
       ErrorT.inversion_ErrorT; Prod.inversion_prod; subst;cbn [fst snd] in *.
@@ -819,7 +831,7 @@ Proof using Type.
     cbv [R_reg]; intuition idtac; try Option.inversion_option; subst; try eval_same_expr_goal;
     cbv [bitmask_of_reg index_and_shift_and_bitcount_of_reg].
     { rewrite <-Tuple.nth_default_to_list. cbv [nth_default]; rewrite H5. trivial. }
-    assert (Z.of_N (reg_size r) + Z.of_N (reg_offset r) <= 64) by (destruct r; clear; cbv; discriminate).
+    (* assert (Z.of_N (reg_size r) + Z.of_N (reg_offset r) <= 64) by (destruct r; clear; cbv; discriminate). *)
     eapply Z.bits_inj_iff'; intros j Hj.
     rewrite Z.land_spec, Z.testbit_ones_nonneg by (clear -Hj; lia).
     destr.destr (j <? 64); rewrite ?Bool.andb_true_r, ?Bool.andb_false_r; trivial; [].

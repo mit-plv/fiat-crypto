@@ -4,6 +4,7 @@ From Coq Require Import ZArith.
 From Coq Require Import NArith.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Parse.
+Require Import Crypto.Assembly.Equality.
 Require Import Crypto.Assembly.Symbolic.
 Require Import Crypto.Util.Strings.Parse.Common.
 Require Import Crypto.Util.ErrorT.
@@ -277,8 +278,8 @@ Definition show_annotated_Line : Show AnnotatedLine
               end)%string.
 
 Global Instance show_lines_AnnotatedLines : ShowLines AnnotatedLines
-  := fun '(ls, ss)
-     => let d := dag.eager.force ss.(dag_state) in
+  := fun '(ls, sst)
+     => let d := dag.eager.force sst.(dag_state) in
         List.map (fun l => show_annotated_Line (l, d)) ls.
 
 Fixpoint remove_common_indices {T} (eqb : T -> T -> bool) (xs ys : list T) (start_idx : nat) : list (nat * T) * list T
@@ -731,11 +732,11 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
 Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
   := fun err => String.concat String.NewLine (show_lines err).
 
-Definition merge_fresh_symbol {descr:description} : dag.M idx := fun d => merge_node (dag.gensym 64%N d) d.
+Definition merge_fresh_symbol {descr:description} (sz : OperationSize) : dag.M idx := fun d => merge_node (dag.gensym sz d) d.
 Definition merge_literal {descr:description} (l:Z) : dag.M idx := merge_node ((const l, nil)).
 
 Definition SetRegFresh {opts : symbolic_options_computed_opt} {descr:description} (r : REG) : M idx :=
-  (idx <- lift_dag merge_fresh_symbol;
+  (idx <- lift_dag (merge_fresh_symbol (widest_reg_size_of r));
   _ <- SetReg r idx;
   Symbolic.ret idx).
 
@@ -812,13 +813,13 @@ Fixpoint simplify_input_type
      end%error.
 
 Definition build_inputarray {descr:description} (len : nat) : dag.M (list idx) :=
-  List.foldmap (fun _ => merge_fresh_symbol) (List.seq 0 len).
+  List.foldmap (fun _ => merge_fresh_symbol 64%N) (List.seq 0 len).
 
 Fixpoint build_inputs {descr:description} (types : type_spec) : dag.M (list (idx + list idx))
   := match types with
      | [] => dag.ret []
      | None :: tys
-       => (idx <- merge_fresh_symbol;
+       => (idx <- merge_fresh_symbol 64%N;
            rest <- build_inputs tys;
            dag.ret (inl idx :: rest))
      | Some len :: tys
@@ -858,12 +859,12 @@ Fixpoint build_merge_base_addresses {opts : symbolic_options_computed_opt} {desc
            Symbolic.ret (inl addr :: rest))
      end%N%x86symex.
 
-Fixpoint dag_gensym_n {descr:description} (n : nat) : dag.M (list symbol) :=
-  match n with
-  | O => dag.ret nil
-  | S n =>
-      (i <- merge_fresh_symbol;
-       rest <- dag_gensym_n n;
+Fixpoint dag_gensym_ls {descr:description} (ls : list OperationSize) : dag.M (list symbol) :=
+  match ls with
+  | nil => dag.ret nil
+  | sz :: ls =>
+      (i <- merge_fresh_symbol sz;
+       rest <- dag_gensym_ls ls;
        dag.ret (cons i rest))
   end%dagM.
 
@@ -1275,7 +1276,7 @@ Definition init_symbolic_state_descr : description := Build_description "init_sy
 
 Definition init_symbolic_state (d : dag) : symbolic_state
   := let _ := init_symbolic_state_descr in
-     let '(initial_reg_idxs, d) := dag_gensym_n (List.length widest_registers) d in
+     let '(initial_reg_idxs, d) := dag_gensym_ls (List.map reg_size widest_registers) d in
      {|
        dag_state := d;
        symbolic_reg_state := Tuple.from_list_default None _ (List.map Some initial_reg_idxs);

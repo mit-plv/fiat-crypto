@@ -155,7 +155,8 @@ Definition parse_OpCode_list : list (string * OpCode)
         ; (".word", dw)
         ; (".long", dd)
         ; (".int", dd)
-        ; (".quad", dq)].
+        ; (".quad", dq)
+        ; (".octa", do)].
 
 Definition parse_OpCode : ParserAction OpCode
   := parse_strs_case_insensitive parse_OpCode_list.

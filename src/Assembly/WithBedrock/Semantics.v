@@ -9,6 +9,7 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.Strings.StringMap.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Notations.
@@ -86,10 +87,19 @@ Require Import coqutil.Map.Interface. (* coercions *)
 Require Import coqutil.Word.LittleEndianList.
 Require Import bedrock2.Memory. Import WithoutTuples.
 Require coqutil.Word.Naive coqutil.Map.SortedListWord.
+
 Definition mem_state := (SortedListWord.map (Naive.word 64) Byte.byte).
 
-Definition get_mem (st : mem_state) (addr : Z) (nbytes : nat) : option Z
-  := (bs <- load_bytes st (word.of_Z addr) nbytes; Some (LittleEndianList.le_combine bs))%option.
+Definition get_mem (st : mem_state) (addr : option (string * bool) * Z) (nbytes : nat) : option Z :=
+  let '(base_label, offset) := addr in
+  match base_label with
+  | Some (base_label, true) => None (* TODO: NOT YET IMPLEMENTED *)
+  | Some (_, false) => None
+  | None =>
+      bs <- load_bytes st (word.of_Z offset) nbytes;
+      Some (LittleEndianList.le_combine bs)
+  end%option.
+
 Definition set_mem (st : mem_state) (addr : Z) (nbytes : nat) (v : Z) : option mem_state
   := store_bytes st (word.of_Z addr) (LittleEndianList.le_split nbytes v).
 
@@ -104,29 +114,36 @@ Definition update_mem_with (st : machine_state) (f : mem_state -> mem_state) : m
 Definition DenoteConst (sz : N) (a : CONST) : Z :=
   Z.land a (Z.ones (Z.of_N sz)).
 
-Definition DenoteAddress (sa : N) (st : machine_state) (a : MEM) : Z :=
+Definition DenoteAddress {opts:assembly_program_options} (sa : N) (st : machine_state) (a : MEM) : option (string * bool) * Z :=
+  let '(lbl, base_reg) :=
+    match mem_base_label a, mem_base_reg a with
+    | Some lbl, Some rip => (Some (lbl, true), None)
+    | Some lbl, r => (Some (lbl, default_rel), r)
+    | None, r => (None, r)
+    end in
+  (lbl,
   Z.land (
-    match mem_base_reg  a with Some     r  => get_reg st r                    | _ => 0 end +
+    match base_reg        with Some     r  => get_reg st r                    | _ => 0 end +
     match mem_scale_reg a with Some (z, r) => get_reg st r * DenoteConst sa z | _ => 0 end +
     match mem_offset    a with Some  z     =>                DenoteConst sa z | _ => 0 end
-  ) (Z.ones (Z.of_N sa)).
+  ) (Z.ones (Z.of_N sa))).
 
-Definition DenoteOperand (sa s : N) (st : machine_state) (a : ARG) : option Z :=
+Definition DenoteOperand {opts:assembly_program_options} (sa s : N) (st : machine_state) (a : ARG) : option Z :=
   match a with
   | reg a => Some (get_reg st a)
   | mem a => get_mem st (DenoteAddress sa st a) (N.to_nat (N.div (operand_size a s) 8))
   | const a => Some (DenoteConst (operand_size a s) a)
   | label _ => None
-  end.
+  end%option.
 
 Definition SetMem (st : machine_state) (addr : Z) (nbytes : nat) (v : Z) : option machine_state :=
   ms <- set_mem st addr nbytes v;
   Some (update_mem_with st (fun _ => ms)).
 
-Definition SetOperand (sa s : N) (st : machine_state) (a : ARG) (v : Z) : option machine_state :=
+Definition SetOperand {opts:assembly_program_options} (sa s : N) (st : machine_state) (a : ARG) (v : Z) : option machine_state :=
   match a with
   | reg a => Some (update_reg_with st (fun rs => set_reg rs a v))
-  | mem a => SetMem st (DenoteAddress sa st a) (N.to_nat (N.div (operand_size a s) 8)) v
+  | mem a => let '(_lbl, addr) := DenoteAddress sa st a in SetMem st addr (N.to_nat (N.div (operand_size a s) 8)) v
   | const a => None
   | label _ => None
   end.
@@ -158,7 +175,7 @@ Definition rcrcnt s cnt : Z :=
 
 (* NOTE: currently immediate operands are treated as if sign-extension has been
  * performed ahead of time. *)
-Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstruction) : option machine_state :=
+Definition DenoteNormalInstruction {opts:assembly_program_options} (st : machine_state) (instr : NormalInstruction) : option machine_state :=
   let sa := 64%N in
   let stack_addr_size := 64%N in
   match operation_size instr with Some s =>
@@ -196,7 +213,9 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     then SetOperand sa s st dst v
     else Some st
   | lea, [reg dst; mem src] => (* Flags Affected: None *)
-    Some (update_reg_with st (fun rs => set_reg rs dst (DenoteAddress sa st src)))
+    let '(lbl, addr) := DenoteAddress sa st src in
+    _ <- match lbl with None => Some tt | Some _ => None end; (* We don't support extracting label addresses *)
+    Some (update_reg_with st (fun rs => set_reg rs dst addr))
   | (add | adc) as opc, [dst; src] =>
     c <- (match opc with adc => get_flag st CF | _ => Some false end);
     let c := Z.b2z c in
@@ -381,6 +400,10 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | dw, _
   | dd, _
   | dq, _
+  | do, _
+  | dt, _
+  | dy, _
+  | dz, _
   | mulx, _
   | mul, _
   | call, _
@@ -452,7 +475,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
  end | _ => None end | _ => None end%Z%option.
 
 
-Definition DenoteRawLine (st : machine_state) (rawline : RawLine) : option machine_state :=
+Definition DenoteRawLine {opts:assembly_program_options} (st : machine_state) (rawline : RawLine) : option machine_state :=
   match rawline with
   | EMPTY
   | LABEL _
@@ -466,10 +489,10 @@ Definition DenoteRawLine (st : machine_state) (rawline : RawLine) : option machi
     => None
   end.
 
-Definition DenoteLine (st : machine_state) (line : Line) : option machine_state
+Definition DenoteLine {opts:assembly_program_options} (st : machine_state) (line : Line) : option machine_state
   := DenoteRawLine st line.(rawline).
 
-Fixpoint DenoteLines (st : machine_state) (lines : Lines) : option machine_state
+Fixpoint DenoteLines {opts:assembly_program_options} (st : machine_state) (lines : Lines) : option machine_state
   := match lines with
      | [] => Some st
      | line :: lines
