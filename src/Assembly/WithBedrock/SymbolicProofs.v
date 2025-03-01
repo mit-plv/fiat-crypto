@@ -480,7 +480,7 @@ Lemma GetReg_R {opts : symbolic_options_computed_opt} {descr:description} s m (H
   : R s' m  /\ s :< s' /\ eval s' i (get_reg m r).
 Proof using Type.
   cbv [GetReg GetReg64 bind some_or get_reg index_and_shift_and_bitcount_of_reg] in *.
-  pose proof (get_reg_R s _ ltac:(eassumption) (reg_index r)) as Hr.
+  pose proof (get_reg_R s _ ltac:(eassumption) (N.to_nat (reg_index r))) as Hr.
   destruct Symbolic.get_reg in *; [|inversion H]; cbn in H.
   specialize (Hr _ eq_refl); case Hr as (v&Hi0&Hv).
   rewrite Hv; clear Hv.

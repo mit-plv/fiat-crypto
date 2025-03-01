@@ -4,6 +4,7 @@ From Coq Require Import ZArith.
 From Coq Require Import NArith.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Parse.
+Require Import Crypto.Assembly.Equality.
 Require Import Crypto.Assembly.Symbolic.
 Require Import Crypto.Util.Strings.Parse.Common.
 Require Import Crypto.Util.ErrorT.
@@ -277,8 +278,8 @@ Definition show_annotated_Line : Show AnnotatedLine
               end)%string.
 
 Global Instance show_lines_AnnotatedLines : ShowLines AnnotatedLines
-  := fun '(ls, ss)
-     => let d := dag.eager.force ss.(dag_state) in
+  := fun '(ls, sst)
+     => let d := dag.eager.force sst.(dag_state) in
         List.map (fun l => show_annotated_Line (l, d)) ls.
 
 Fixpoint remove_common_indices {T} (eqb : T -> T -> bool) (xs ys : list T) (start_idx : nat) : list (nat * T) * list T

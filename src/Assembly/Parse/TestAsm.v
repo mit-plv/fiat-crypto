@@ -13,10 +13,25 @@ Require Crypto.Assembly.Parse.Examples.fiat_p256_square_optimised_seed103.
 Require Crypto.Assembly.Parse.Examples.fiat_p256_square_optimised_seed46.
 Require Crypto.Assembly.Parse.Examples.fiat_p256_square_optimised_seed6.
 Require Crypto.Assembly.Parse.Examples.boringssl_nasm_full_mul_p256.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_gcc_14_1_O0.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_gcc_14_1_O1.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_gcc_14_1_O2.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_gcc_14_1_O3.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_gcc_14_1_Os.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_clang_19_1_0_O0.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_clang_19_1_0_O1.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_clang_19_1_0_O2.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_clang_19_1_0_O3.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_clang_19_1_0_Os.
 Import ListNotations.
 Local Open Scope list_scope.
 Local Open Scope string_scope.
 
+(* Compute match (parse fiat_25519_all_clang_19_1_0_O1.example) with Success v => show v | Error e => show e end. *)
+Goal parse_correct_on_debug fiat_25519_all_clang_19_1_0_O2.example.
+Proof. Time native_compute.
+    match goal with |- ?x = _ => pose (y := show x); vm_compute in y end.
+ exact eq_refl. Abort.
 (* for i in $(echo *.asm | xargs wc -l | sort -h | grep -o '[^ ]*ȧsm'); do echo "Goal parse_correct_on_debug ${i%.*}.example."; echo "Proof. Time native_compute. exact eq_refl. Abort."; echo 'Redirect "log" Compute parse '"${i%.*}.example."; done *)
 Goal parse_correct_on_debug fiat_25519_carry_square_optimised_seed20.example.
 Proof. Time native_compute. exact eq_refl. Abort.
@@ -48,3 +63,33 @@ Proof. Time native_compute. exact eq_refl. Abort.
 Goal parse_correct_on_debug boringssl_nasm_full_mul_p256.example.
 Proof. Time native_compute. exact eq_refl. Abort.
 (*Redirect "log" Compute parse boringssl_nasm_full_mul_p256.example.*)
+Goal parse_correct_on_debug fiat_25519_all_gcc_14_1_O0.example.
+Proof. Time native_compute. exact eq_refl. Abort.
+(* Redirect "log" Compute parse fiat_25519_all_gcc_14_1_O0.example. *)
+Goal parse_correct_on_debug fiat_25519_all_gcc_14_1_O1.example.
+Proof. Time native_compute. exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_gcc_14_1_O1.example.*)
+Goal parse_correct_on_debug fiat_25519_all_gcc_14_1_O2.example.
+Proof. Time native_compute. exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_gcc_14_1_O2.example.*)
+Goal parse_correct_on_debug fiat_25519_all_gcc_14_1_O3.example.
+Proof. Time native_compute. exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_gcc_14_1_O3.example.*)
+Goal parse_correct_on_debug fiat_25519_all_gcc_14_1_Os.example.
+Proof. Time native_compute. exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_gcc_14_1_Os.example.*)
+Goal parse_correct_on_debug fiat_25519_all_clang_19_1_0_O0.example.
+Proof. Time native_compute. exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_clang_19_1_0_O0.example.*)
+Goal parse_correct_on_debug fiat_25519_all_clang_19_1_0_O1.example.
+Proof. Time native_compute. exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_clang_19_1_0_O1.example.*)
+Goal parse_correct_on_debug fiat_25519_all_clang_19_1_0_O2.example.
+Proof. Time native_compute. exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_clang_19_1_0_O2.example.*)
+Goal parse_correct_on_debug fiat_25519_all_clang_19_1_0_O3.example.
+Proof. Time native_compute. exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_clang_19_1_0_O3.example.*)
+Goal parse_correct_on_debug fiat_25519_all_clang_19_1_0_Os.example.
+Proof. Time native_compute. exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_clang_19_1_0_Os.example.*)
