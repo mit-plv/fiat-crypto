@@ -32,11 +32,39 @@ Declare Scope REG_scope.
 Delimit Scope REG_scope with REG.
 Bind Scope REG_scope with REG.
 
+
+Definition REG_beq (r1 r2 : REG) : bool :=
+  (prod_beq _ _ (prod_beq _ _ N.eqb N.eqb) N.eqb)
+    (index_and_shift_and_bitcount_of_reg r1) (index_and_shift_and_bitcount_of_reg r2).
+
+Lemma REG_dec_lb : forall r1 r2 : REG, r1 = r2 -> REG_beq r1 r2 = true.
+Proof.
+  intros r1 r2 H.
+  subst r2; destruct r1.
+  all: reflexivity.
+Defined.
+
+Lemma REG_dec_bl : forall r1 r2 : REG, REG_beq r1 r2 = true -> r1 = r2.
+Proof.
+  cbv [REG_beq].
+  intros r1 r2 H.
+  rewrite <- (reg_of_index_and_shift_and_bitcount_of_index_and_shift_and_bitcount_of_reg r1), <- (reg_of_index_and_shift_and_bitcount_of_index_and_shift_and_bitcount_of_reg r2).
+  reflect_hyps.
+  rewrite H.
+  reflexivity.
+Defined.
+
+Definition REG_eq_dec (x y : REG) : {x = y} + {x <> y} :=
+  (if REG_beq x y as b return (REG_beq x y = b -> _)
+    then fun pf => left (REG_dec_bl x y pf)
+    else fun pf => right (fun pf' => diff_false_true (eq_trans (eq_sym pf) (REG_dec_lb x y pf'))))
+     eq_refl.
+
 Infix "=?" := REG_beq : REG_scope.
 
 Global Instance REG_beq_spec : reflect_rel (@eq REG) REG_beq | 10
-  := reflect_of_beq internal_REG_dec_bl internal_REG_dec_lb.
-Definition REG_beq_eq x y : (x =? y)%REG = true <-> x = y := conj (@internal_REG_dec_bl _ _) (@internal_REG_dec_lb _ _).
+  := reflect_of_beq REG_dec_bl REG_dec_lb.
+Definition REG_beq_eq x y : (x =? y)%REG = true <-> x = y := conj (@REG_dec_bl _ _) (@REG_dec_lb _ _).
 Lemma REG_beq_neq x y : (x =? y)%REG = false <-> x <> y.
 Proof. rewrite <- REG_beq_eq; destruct (x =? y)%REG; intuition congruence. Qed.
 Global Instance REG_beq_compat : Proper (eq ==> eq ==> eq) REG_beq | 10.
@@ -108,6 +136,7 @@ Bind Scope MEM_scope with MEM.
 
 Definition MEM_beq (x y : MEM) : bool
   := ((option_beq AccessSize_beq x.(mem_bits_access_size) y.(mem_bits_access_size))
+      && option_beq String.eqb x.(mem_constant_location_label) y.(mem_constant_location_label)
       && option_beq String.eqb x.(mem_base_label) y.(mem_base_label)
       && (option_beq REG_beq x.(mem_base_reg) y.(mem_base_reg))
       && (option_beq (prod_beq _ _ Z.eqb REG_beq) x.(mem_scale_reg) y.(mem_scale_reg))

@@ -100,16 +100,20 @@ Definition parse_label : ParserAction string
        (fun '(char, ls) => string_of_list_ascii (char :: ls))
        (([a-zA-Z] || parse_any_ascii "._?$") ;;
         (([a-zA-Z] || parse_any_ascii "0123456789_$#@~.?")* )).
+Definition parse_non_access_size_label : ParserAction string
+:= parse_lookahead_not parse_AccessSize ;;R parse_label.
 
 Definition parse_MEM : ParserAction MEM
   := parse_map
-       (fun '(access_size, (br (*base reg*), sr (*scale reg, including z *), offset, base_label))
+       (fun '(access_size, (constant_location_label, (br (*base reg*), sr (*scale reg, including z *), offset, base_label)))
         => {| mem_bits_access_size := access_size:option AccessSize
            ; mem_base_reg := br:option REG
+           ; mem_constant_location_label := constant_location_label:option string
            ; mem_base_label := base_label
            ; mem_scale_reg := sr:option (Z * REG)
            ; mem_offset := offset:option Z |})
        (((strip_whitespace_after parse_AccessSize)?) ;;
+        (parse_non_access_size_label?) ;;
         (parse_option_list_map
            (fun '(offset, vars)
             => (vars <-- List.map (fun '(c, (v, e), vs) => match vs, e with [], 1%Z => Some (c, v) | _, _ => None end) vars;
@@ -160,7 +164,8 @@ Definition parse_OpCode_list : list (string * OpCode)
   := Eval vm_compute in
       List.map
         (fun r => (show r, r))
-        (list_all OpCode).
+        (list_all OpCode)
+      ++ [(".quad", dq); (".word", dw); (".byte", db)].
 
 Definition parse_OpCode : ParserAction OpCode
   := parse_strs_case_insensitive parse_OpCode_list.
@@ -254,11 +259,23 @@ Global Instance show_lvl_MEM : ShowLevel MEM
   := fun m
      => (match m.(mem_bits_access_size) with
          | Some n
-           => show_lvl_app (fun 'tt => if n =? 8 then "byte" else if n =? 64 then "QWORD PTR" else "BAD SIZE")%N (* TODO: Fix casing and stuff *)
+           => show_lvl_app (fun 'tt => if n =? 8 then "byte"
+                                      else if n =? 16 then "word"
+                                      else if n =? 32 then "dword"
+                                      else if n =? 64 then "QWORD PTR"
+                                      else if n =? 128 then "XMMWORD PTR"
+                                      else if n =? 256 then "YMMWORD PTR"
+                                      else if n =? 512 then "ZMMWORD PTR"
+                                      else "BAD SIZE")%N (* TODO: Fix casing and stuff *)
          | None => show_lvl
          end)
           (fun 'tt
-           => let reg_part
+           => let label_part :=
+                match m.(mem_constant_location_label) with
+                | None => ""
+                | Some l => l
+                end in
+              let reg_part
                 := (match m.(mem_base_reg), m.(mem_scale_reg) with
                     | (*"[Reg]"          *) Some br, None         => show_REG br
                     | (*"[Reg + Z * Reg]"*) Some br, Some (z, sr) => show_REG br  ++ " + " ++  Decimal.show_Z z  ++ " * " ++ show_REG sr (*only matching '+' here, because there cannot be a negative scale. *)
@@ -275,9 +292,13 @@ Global Instance show_lvl_MEM : ShowLevel MEM
                                  then "0x08 * " ++ Decimal.show_Z (offset / 8)
                                  else Hex.show_Z offset)
                     end%Z) in
-              "[" ++ match m.(mem_base_label) with
+              label_part ++ "[" ++ match m.(mem_base_label) with
                      | None => reg_part ++ offset_part
-                     | Some l => "((" ++ l ++ offset_part ++ "))"
+                     | Some l =>
+                        let l_offset := l ++ offset_part in
+                        if reg_part =? ""
+                        then "((" ++ l_offset ++ "))"
+                        else reg_part ++ " + " ++ l_offset
                      end
                   ++ "]").
 Global Instance show_MEM : Show MEM := show_lvl_MEM.

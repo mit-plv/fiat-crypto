@@ -59,17 +59,17 @@ Definition bitmask_of_reg (r : REG) : Z
      Z.shiftl (Z.ones (Z.of_N bitcount)) (Z.of_N shift).
 Definition get_reg (st : reg_state) (r : REG) : Z
   := let '(idx, shift, bitcount) := index_and_shift_and_bitcount_of_reg r in
-  let rv := Tuple.nth_default 0%Z idx st in
+  let rv := Tuple.nth_default 0%Z (N.to_nat idx) st in
   Z.land (Z.shiftr rv (Z.of_N shift)) (Z.ones (Z.of_N bitcount)).
 Definition set_reg (st : reg_state) (r : REG) (v : Z) : reg_state
   := let '(idx, shift, bitcount) := index_and_shift_and_bitcount_of_reg r in
      Tuple.from_list_default 0%Z _ (ListUtil.update_nth
-       idx
+       (N.to_nat idx)
        (fun curv => Z.lor (Z.shiftl (Z.land v (Z.ones (Z.of_N bitcount))) (Z.of_N shift))
                           (Z.ldiff curv (Z.shiftl (Z.ones (Z.of_N bitcount)) (Z.of_N shift))))
        (Tuple.to_list _ st)).
 Definition annotate_reg_state (st : reg_state) : list (REG * Z)
-  := List.map (fun '(n, v) => (widest_register_of_index n, v)) (enumerate (Tuple.to_list _ st)).
+  := List.map (fun '(n, v) => (widest_register_of_index (N.of_nat n), v)) (enumerate (Tuple.to_list _ st)).
 Ltac print_reg_state st := let st' := (eval cbv in (annotate_reg_state st)) in idtac st'.
 
 (* Kludge since [byte] isn't present in Coq 8.9 *)
@@ -415,6 +415,40 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | test, _
   | xor, _
   | xchg, _ => None
+  (* not yet supported *)
+  | cmove, _
+  | cmovne, _
+  | leave, _
+  | movabs, _
+  | movdqa, _
+  | movdqu, _
+  | movq, _
+  | movd, _
+  | movsx, _
+  | movups, _
+  | neg, _
+  | nop, _
+  | not, _
+  | paddq, _
+  | psubq, _
+  | pshufd, _
+  | pshufw, _
+  | punpcklqdq, _
+  | punpckhqdq, _
+  | pslld, _
+  | psrld, _
+  | pand, _
+  | pandn, _
+  | por, _
+  | pxor, _
+  | psrad, _
+  | rol, _
+  | ror, _
+  | sal, _
+  | sete, _
+  | setne, _
+  | shld, _
+    => None
  end | _ => None end | _ => None end%Z%option.
 
 

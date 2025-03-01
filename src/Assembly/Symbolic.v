@@ -3872,7 +3872,7 @@ Definition set_reg (st : reg_state) ri (i : idx) : reg_state
        (Tuple.to_list _ st)).
 Definition reverse_lookup_widest_reg (st : reg_state) (i : idx) : option REG
   := option_map
-       (fun v => widest_register_of_index (fst v))
+       (fun v => widest_register_of_index (N.of_nat (fst v)))
        (List.find (fun v => option_beq N.eqb (Some i) (snd v))
                   (List.enumerate (Tuple.to_list _ st))).
 
@@ -3906,7 +3906,7 @@ Definition update_mem_with (st : symbolic_state) (f : mem_state -> mem_state) : 
   := {| dag_state := st.(dag_state); symbolic_reg_state := st.(symbolic_reg_state) ; symbolic_flag_state := st.(symbolic_flag_state) ; symbolic_mem_state := f st.(symbolic_mem_state) |}.
 
 Global Instance show_reg_state : Show reg_state := fun st =>
-  show (List.map (fun '(n, v) => (widest_register_of_index n, v)) (ListUtil.List.enumerate (Option.List.map id (Tuple.to_list _ st)))).
+  show (List.map (fun '(n, v) => (widest_register_of_index (N.of_nat n), v)) (ListUtil.List.enumerate (Option.List.map id (Tuple.to_list _ st)))).
 
 Global Instance show_flag_state : Show flag_state :=
   fun '(cfv, pfv, afv, zfv, sfv, ofv) => (
@@ -3934,15 +3934,15 @@ Global Instance ShowLines_symbolic_state : ShowLines symbolic_state :=
  fun X : symbolic_state =>
  match X with
  | {|
-     dag_state := ds;
+     dag_state := dagst;
      symbolic_reg_state := rs;
-     symbolic_flag_state := fs;
+     symbolic_flag_state := flst;
      symbolic_mem_state := ms
    |} =>
    ["(*symbolic_state*) {|";
-   "  dag_state :="] ++ show_lines ds ++ [";";
+   "  dag_state :="] ++ show_lines dagst ++ [";";
    ("  symbolic_reg_state := " ++ show rs ++ ";")%string;
-   ("  symbolic_flag_state := " ++ show fs ++";")%string;
+   ("  symbolic_flag_state := " ++ show flst ++";")%string;
    "  symbolic_mem_state :="] ++show_lines ms ++ [";";
    "|}"]
  end%list%string.
@@ -4042,14 +4042,14 @@ Definition mapM_ {A B} (f: A -> M B) l : M unit := _ <- mapM f l; ret tt.
 
 Definition error_get_reg_of_reg_index ri : symbolic_state -> error
   := error.get_reg (let r := widest_register_of_index ri in
-                    if (reg_index r =? ri)%nat
+                    if (reg_index r =? ri)%N
                     then inr r
-                    else inl ri).
+                    else inl (N.to_nat ri)).
 
 Definition GetFlag f : M idx :=
   some_or (fun s => get_flag s f) (error.get_flag f).
 Definition GetReg64 ri : M idx :=
-  some_or (fun st => get_reg st ri) (error_get_reg_of_reg_index ri).
+  some_or (fun st => get_reg st (N.to_nat ri)) (error_get_reg_of_reg_index ri).
 Definition Load64 (a : idx) : M idx := some_or (load a) (error.load a).
 Definition Remove64 (a : idx) : M idx
   := fun s => let '(vs, m) := remove a s in
@@ -4094,10 +4094,10 @@ Definition SetReg {opts : symbolic_options_computed_opt} {descr:description} r (
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   if N.eqb sz 64
   then v <- App (slice 0 64, [v]);
-       SetReg64 rn v (* works even if old value is unspecified *)
+       SetReg64 (N.to_nat rn) v (* works even if old value is unspecified *)
   else old <- GetReg64 rn;
        v <- App ((set_slice lo sz), [old; v]);
-       SetReg64 rn v.
+       SetReg64 (N.to_nat rn) v.
 
 Class AddressSize := address_size : OperationSize.
 Definition Address {opts : symbolic_options_computed_opt} {descr:description} {sa : AddressSize} (a : MEM) : M idx :=
