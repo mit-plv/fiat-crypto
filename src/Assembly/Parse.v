@@ -140,7 +140,12 @@ Definition parse_OpCode_list : list (string * OpCode)
   := Eval vm_compute in
       List.map
         (fun r => (show r, r))
-        (list_all OpCode).
+        (list_all OpCode)
+      ++ [(".byte", db)
+        ; (".word", dw)
+        ; (".long", dd)
+        ; (".int", dd)
+        ; (".quad", dq)].
 
 Definition parse_OpCode : ParserAction OpCode
   := parse_strs_case_insensitive parse_OpCode_list.
@@ -234,7 +239,14 @@ Global Instance show_lvl_MEM : ShowLevel MEM
   := fun m
      => (match m.(mem_bits_access_size) with
          | Some n
-           => show_lvl_app (fun 'tt => if n =? 8 then "byte" else if n =? 64 then "QWORD PTR" else "BAD SIZE")%N (* TODO: Fix casing and stuff *)
+           => show_lvl_app (fun 'tt => if n =?   8 then "byte"
+                                  else if n =?  16 then "word"
+                                  else if n =?  32 then "dword"
+                                  else if n =?  64 then "QWORD PTR"
+                                  else if n =? 128 then "XMMWORD PTR"
+                                  else if n =? 256 then "YMMWORD PTR"
+                                  else if n =? 512 then "ZMMWORD PTR"
+                                  else                  "BAD SIZE")%N (* TODO: Fix casing and stuff *)
          | None => show_lvl
          end)
           (fun 'tt

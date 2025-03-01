@@ -415,6 +415,40 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | test, _
   | xor, _
   | xchg, _ => None
+  (* not yet supported *)
+  | cmove, _
+  | cmovne, _
+  | leave, _
+  | movabs, _
+  | movdqa, _
+  | movdqu, _
+  | movq, _
+  | movd, _
+  | movsx, _
+  | movups, _
+  | neg, _
+  | nop, _
+  | not, _
+  | paddq, _
+  | psubq, _
+  | pshufd, _
+  | pshufw, _
+  | punpcklqdq, _
+  | punpckhqdq, _
+  | pslld, _
+  | psrld, _
+  | pand, _
+  | pandn, _
+  | por, _
+  | pxor, _
+  | psrad, _
+  | rol, _
+  | ror, _
+  | sal, _
+  | sete, _
+  | setne, _
+  | shld, _
+    => None
  end | _ => None end | _ => None end%Z%option.
 
 

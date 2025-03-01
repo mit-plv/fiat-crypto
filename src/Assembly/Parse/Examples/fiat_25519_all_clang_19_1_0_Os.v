@@ -896,4 +896,5 @@ Example example : list string := [
 "pop     r14";
 "pop     r15";
 "pop     rbp";
+"ret";
 ""].
