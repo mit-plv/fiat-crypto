@@ -76,6 +76,8 @@ Makefile.coq.conf
 Makefile.coq.bak
 Makefile-coq.conf
 
+*.v.bak
+
 /remake_curves.log
 /finished.ok
 /time-of-build-pretty.log
@@ -163,13 +165,13 @@ src/ExtractionHaskell/unsaturated_solinas
 src/ExtractionHaskell/solinas_reduction
 src/ExtractionHaskell/word_by_word_montgomery
 src/ExtractionHaskell/base_conversion
-src/ExtractionHaskell/bedrock2_base_conversion
-src/ExtractionHaskell/bedrock2_dettman_multiplication
-src/ExtractionHaskell/bedrock2_fiat_crypto
-src/ExtractionHaskell/bedrock2_saturated_solinas
-src/ExtractionHaskell/bedrock2_solinas_reduction
-src/ExtractionHaskell/bedrock2_unsaturated_solinas
-src/ExtractionHaskell/bedrock2_word_by_word_montgomery
+src/ExtractionHaskell/WithBedrock/base_conversion
+src/ExtractionHaskell/WithBedrock/dettman_multiplication
+src/ExtractionHaskell/WithBedrock/fiat_crypto
+src/ExtractionHaskell/WithBedrock/saturated_solinas
+src/ExtractionHaskell/WithBedrock/solinas_reduction
+src/ExtractionHaskell/WithBedrock/unsaturated_solinas
+src/ExtractionHaskell/WithBedrock/word_by_word_montgomery
 src/ExtractionHaskell/fiat_crypto
 src/ExtractionHaskell/WithBedrock/base_conversion
 src/ExtractionHaskell/WithBedrock/dettman_multiplication
@@ -178,8 +180,8 @@ src/ExtractionHaskell/WithBedrock/saturated_solinas
 src/ExtractionHaskell/WithBedrock/solinas_reduction
 src/ExtractionHaskell/WithBedrock/unsaturated_solinas
 src/ExtractionHaskell/WithBedrock/word_by_word_montgomery
-src/ExtractionHaskell/*.hs
-src/ExtractionOCaml/bedrock2_fiat_crypto
+src/ExtractionHaskell/**/*.hs
+src/ExtractionOCaml/WithBedrock/fiat_crypto
 src/ExtractionOCaml/fiat_crypto
 src/ExtractionOCaml/WithBedrock/fiat_crypto
 src/ExtractionOCaml/saturated_solinas
@@ -194,6 +196,7 @@ src/ExtractionOCaml/bedrock2_unsaturated_solinas
 src/ExtractionOCaml/bedrock2_solinas_reduction
 src/ExtractionOCaml/bedrock2_word_by_word_montgomery
 src/ExtractionOCaml/bedrock2_base_conversion
+src/ExtractionOCaml/bedrock2_fiat_crypto
 src/ExtractionOCaml/WithBedrock/saturated_solinas
 src/ExtractionOCaml/WithBedrock/dettman_multiplication
 src/ExtractionOCaml/WithBedrock/unsaturated_solinas
