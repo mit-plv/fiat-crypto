@@ -180,6 +180,7 @@ src/ExtractionHaskell/WithBedrock/saturated_solinas
 src/ExtractionHaskell/WithBedrock/solinas_reduction
 src/ExtractionHaskell/WithBedrock/unsaturated_solinas
 src/ExtractionHaskell/WithBedrock/word_by_word_montgomery
+src/ExtractionHaskell/WithBedrock/fiat_crypto
 src/ExtractionHaskell/**/*.hs
 src/ExtractionOCaml/WithBedrock/fiat_crypto
 src/ExtractionOCaml/fiat_crypto
@@ -203,6 +204,7 @@ src/ExtractionOCaml/WithBedrock/unsaturated_solinas
 src/ExtractionOCaml/WithBedrock/solinas_reduction
 src/ExtractionOCaml/WithBedrock/word_by_word_montgomery
 src/ExtractionOCaml/WithBedrock/base_conversion
+src/ExtractionOCaml/WithBedrock/fiat_crypto
 src/ExtractionOCaml/perf_unsaturated_solinas
 src/ExtractionOCaml/perf_word_by_word_montgomery
 src/ExtractionOCaml/*.ml
