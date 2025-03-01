@@ -3863,8 +3863,12 @@ Definition reverse_lookup_flag (st : flag_state) (i : idx) : option FLAG
        (List.find (fun v => option_beq N.eqb (Some i) (fst v))
                   (Tuple.to_list _ (Tuple.map2 (@pair _ _) st (CF, PF, AF, ZF, SF, OF)))).
 
+Definition is_ip_register_index (ri : N) : bool :=
+  REG_beq (widest_register_of_index ri) rip.
 Definition get_reg (st : reg_state) (ri : N) : option idx
-  := Tuple.nth_default None (N.to_nat ri) st.
+  := if is_ip_register_index ri
+     then None
+     else Tuple.nth_default None (N.to_nat ri) st.
 Definition set_reg (st : reg_state) (ri : N) (i : idx) : reg_state
   := Tuple.from_list_default None _ (ListUtil.set_nth
        (N.to_nat ri)
