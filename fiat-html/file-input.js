@@ -73,17 +73,28 @@ document.addEventListener('DOMContentLoaded', function () {
         template.innerHTML = fileEntryHTML.trim();
         const entry = template.content.firstElementChild.cloneNode(true);
 
-        entry.querySelector('.file-name').value = filename;
-        entry.querySelector('.file-content').value = content;
-
+        const nameInput = entry.querySelector('.file-name');
+        const contentTextarea = entry.querySelector('.file-content');
         const removeButton = entry.querySelector('.remove-btn');
+
+        nameInput.value = filename;
+        contentTextarea.value = content;
+        // Update placeholder based on filename
+        const updatePlaceholder = () => {
+            const filename = nameInput.value.trim();
+            contentTextarea.placeholder = filename ? `${filename} contents` : 'File content';
+        };
+
+        // Set initial placeholder
+        updatePlaceholder();
+
+        // Add event listener to update placeholder when filename changes
+        nameInput.addEventListener('input', updatePlaceholder);
+
         removeButton.addEventListener('click', function () {
             entry.remove();
             updateFilesValue();
         });
-
-        const nameInput = entry.querySelector('.file-name');
-        const contentTextarea = entry.querySelector('.file-content');
 
         nameInput.addEventListener('input', updateFilesValue);
         contentTextarea.addEventListener('input', updateFilesValue);
