@@ -9,11 +9,16 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-        fetch-depth: 0 # Fetch all history for all tags and branches, for fiat-html/version.js
-        tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
-    - run: make -f Makefile.js-html EXTRA_HTML_VERSION_INFO="-manual" fiat-html/version.js
+    - name: Copy files from gh-pages
+      run: |
+        git clone https://github.com/mit-plv/fiat-crypto.git --branch gh-pages --single-branch --depth 1 fiat-crypto-gh-pages
+        cp -r fiat-crypto-gh-pages/* fiat-html/
+        rm -rf fiat-crypto-gh-pages
+        git ls-files fiat-html/ | xargs git checkout HEAD --
+    - name: Make version.js
+      run: make -f Makefile.js-html EXTRA_HTML_VERSION_INFO="-manual" fiat-html/version.js
+    - run: find fiat-html
+      if: always()
     - name: backup .gitignore
       run: mv .gitignore{,.bak}
     - name: Deploy js_of_ocaml 🚀 ${{ ( github.ref != 'refs/heads/master' && '(dry run)' ) || '' }}
@@ -23,7 +28,7 @@ jobs:
         folder: fiat-html # The folder the action should deploy.
         git-config-email: JasonGross@users.noreply.github.com
         target-folder: .
-        single-commit: true # otherwise the repo will get too big
+        single-commit: false # keep the history on manual deploy
         dry-run: ${{ github.ref != 'refs/heads/master' }}
     - name: restore .gitignore
       run: mv .gitignore{.bak,}
