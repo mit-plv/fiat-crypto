@@ -7,9 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const stderrDiv = document.getElementById('stderrContainer');
     const stdoutBox = document.getElementById('stdout');
     const stderrBox = document.getElementById('stderr');
-    const stdinBox = document.getElementById('stdin');
-    const filesBox = document.getElementById('files');
-    const outputFilesBox = document.getElementById('outputFiles');
+    const outputFilesContainer = document.getElementById('outputFilesContainer');
     const versionBox = document.getElementById('version');
     const wasmCheckbox = document.getElementById('wasm');
     const inputForm = document.getElementById('inputForm');
@@ -103,11 +101,44 @@ document.addEventListener('DOMContentLoaded', function () {
         cancelButton.disabled = true;
     }
 
+    function setOutputFiles(files) {
+        // Clear the output files container
+        outputFilesContainer.innerHTML = '';
+
+        // Create a container for each output file
+        const fileEntries = Object.entries(files);
+
+        // Add or remove 'hidden' class based on whether there are files
+        if (fileEntries.length > 0) {
+            // Create HTML for each file
+            fileEntries.forEach(([filename, contents]) => {
+                // Create file container with HTML template literal
+                const fileHtml = `
+                    <div class="code-container">
+                        <code id="output-file-${escapeHtml(filename)}" class="code"></code>
+                        <button class="copy-button" data-target="output-file-${escapeHtml(filename)}">Copy</button>
+                        <span class="output-filename">${escapeHtml(filename)}</span>
+                    </div>
+                `;
+
+                // Parse the HTML and add to container
+                const template = document.createElement('template');
+                template.innerHTML = fileHtml.trim();
+                const entry = template.content.firstElementChild.cloneNode(true);
+                entry.querySelector('.code').textContent = contents;
+                outputFilesContainer.appendChild(entry);
+            });
+            outputFilesContainer.classList.remove('hidden');
+        } else {
+            outputFilesContainer.classList.add('hidden');
+        }
+    }
+
     function clearOutput() {
         errorDiv.textContent = '';
         stdoutBox.textContent = '';
         stderrBox.textContent = '';
-        outputFilesBox.textContent = '';
+        setOutputFiles({});
         errorDiv.classList.add('hidden');
         outputDiv.classList.add('hidden');
         stderrDiv.classList.add('hidden');
@@ -141,7 +172,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function displayOutput(stdout, stderr, outputFiles) {
         stdoutBox.textContent = stdout;
         stderrBox.textContent = stderr;
-        outputFilesBox.textContent = outputFiles;
+        setOutputFiles(outputFiles);
         outputDiv.classList.remove('hidden');
         if (stdout) {
             stdoutDiv.classList.remove('hidden');
@@ -159,8 +190,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updatePermalink(args) {
         const wasmString = wasmCheckbox.checked ? '&wasm' : '';
-        const stdinString = stdinBox.value ? `&stdin=${encodeURIComponent(stdinBox.value)}` : '';
-        const filesString = filesBox.value ? `&files=${encodeURIComponent(filesBox.value)}` : '';
+        const stdin = getStdinFromFormBoxRaw();
+        const files = getFilesFromFormBoxRaw();
+        const stdinString = stdin ? `&stdin=${encodeURIComponent(stdin)}` : '';
+        const filesString = files ? `&files=${encodeURIComponent(files)}` : '';
         const inputType = document.querySelector('input[name="inputType"]:checked').value === 'json' ? `&inputType=json` : '';
         const inputTypeString = inputType !== 'string' ? `&inputType=${inputType}` : '';
         const queryString = `?argv=${encodeURIComponent(JSON.stringify(args.slice(1)))}${stdinString}${filesString}${inputTypeString}&interactive${wasmString}`;
@@ -189,7 +222,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!success) {
             displayError(exceptionText.join('\n'));
         }
-        displayOutput(stdout.join(''), stderr.join(''), JSON.stringify(files));
+        displayOutput(stdout.join(''), stderr.join(''), files);
     }
 
     function handleException(err) {
@@ -365,8 +398,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (argv) {
             if (nonFalseQueryParam(interactive)) {
                 inputArgs.value = decodeURIComponent(argv);
-                stdinBox.value = decodeURIComponent(stdin);
-                filesBox.value = decodeURIComponent(files);
+                populateStdinEntries(decodeURIComponent(stdin));
+                populateFileEntries(decodeURIComponent(files));
                 document.querySelector(`input[value="${inputType}"]`).checked = true;
                 updateInputType(inputType);
                 inputForm.classList.remove('hidden');
@@ -396,8 +429,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const argsType = document.querySelector('input[name="inputType"]:checked').value;
         const args = argsType === 'json' ? JSON.parse(inputArgs.value) : splitUnescapedSpaces(inputArgs.value);
         args.unshift('fiat_crypto.js');
-        const stdin = JSON.parse(stdinBox.value) || [];
-        const files = JSON.parse(filesBox.value) || {};
+        const stdin = getStdinFromFormBox();
+        const files = getFilesFromFormBox();
         handleSynthesis(args, stdin, files);
     });
 
