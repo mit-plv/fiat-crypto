@@ -207,3 +207,11 @@ Reserved Notation "\ x .. y , t" (at level 200, x binder, y binder, right associ
 Reserved Notation "( x | ? y )" (format "(  x  | ?  y  )").
 
 Notation "'typeof!' x" := (match x with y => ltac:(let T := type of y in exact T) end) (at level 10, only parsing).
+
+Notation "'compute!' x" := (match x with y => ltac:(let z := (eval compute in y) in exact z) end) (at level 10, only parsing).
+Notation "'cbv!' x" := (match x with y => ltac:(let z := (eval cbv in y) in exact z) end) (at level 10, only parsing).
+Notation "'lazy!' x" := (match x with y => ltac:(let z := (eval lazy in y) in exact z) end) (at level 10, only parsing).
+Notation "'cbn!' x" := (match x with y => ltac:(let z := (eval cbn in y) in exact z) end) (at level 10, only parsing).
+Notation "'simpl!' x" := (match x with y => ltac:(let z := (eval simpl in y) in exact z) end) (at level 10, only parsing).
+Notation "'native_compute!' x" := (match x with y => ltac:(let z := (eval native_compute in y) in exact z) end) (at level 10, only parsing).
+Notation "'vm_compute!' x" := (match x with y => ltac:(let z := (eval vm_compute in y) in exact z) end) (at level 10, only parsing).
