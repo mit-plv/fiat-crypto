@@ -87,6 +87,63 @@ Section Ring.
 
 End Ring.
 
+Section ProductRing.
+  Context {R EQ ZERO ONE OPP ADD SUB MUL} `{@ring R EQ ZERO ONE OPP ADD SUB MUL}.
+  Context {S eq zero one opp add sub mul} `{@ring S eq zero one opp add sub mul}.
+
+  Definition apply_binop_pair (f: R -> R -> R) (g: S -> S -> S) (x y: R * S): (R * S) :=
+    (f (fst x) (fst y), g (snd x) (snd y)).
+
+  Definition apply_unop_pair {R' S'} (f: R -> R') (g: S -> S') (x: R * S): (R' * S') :=
+    (f (fst x), g (snd x)).
+
+  Lemma product_ring:
+    @ring (R * S) (fun x y => EQ (fst x) (fst y) /\ eq (snd x) (snd y)) (ZERO, zero) (ONE, one) (apply_unop_pair OPP opp) (apply_binop_pair ADD add) (apply_binop_pair SUB sub) (apply_binop_pair MUL mul).
+  Proof.
+    repeat constructor; simpl;
+      [apply monoid_is_associative
+      |apply monoid_is_associative
+      |apply monoid_is_left_identity
+      |apply monoid_is_left_identity
+      |apply monoid_is_right_identity
+      |apply monoid_is_right_identity
+      |apply monoid_op_Proper; tauto
+      |apply monoid_op_Proper; tauto
+      |reflexivity|reflexivity
+      |symmetry; tauto|symmetry; tauto
+      |transitivity (fst y); tauto|transitivity (snd y); tauto
+      |apply group_is_left_inverse
+      |apply group_is_left_inverse
+      |apply group_is_right_inverse
+      |apply group_is_right_inverse
+      |apply group_inv_Proper; tauto
+      |apply group_inv_Proper; tauto
+      |apply (commutative_group_is_commutative H.(ring_commutative_group_add))
+      |apply (commutative_group_is_commutative H0.(ring_commutative_group_add))
+      |apply monoid_is_associative
+      |apply monoid_is_associative
+      |apply monoid_is_left_identity
+      |apply monoid_is_left_identity
+      |apply monoid_is_right_identity
+      |apply monoid_is_right_identity
+      |apply monoid_op_Proper; tauto
+      |apply monoid_op_Proper; tauto
+      |reflexivity|reflexivity
+      |symmetry; tauto|symmetry; tauto
+      |transitivity (fst y); tauto|transitivity (snd y); tauto
+      |apply ring_is_left_distributive
+      |apply ring_is_left_distributive
+      |apply ring_is_right_distributive
+      |apply ring_is_right_distributive
+      |apply ring_sub_definition
+      |apply ring_sub_definition
+      |apply ring_mul_Proper; tauto
+      |apply ring_mul_Proper; tauto
+      |apply ring_sub_Proper; tauto
+      |apply ring_sub_Proper; tauto].
+  Qed.
+End ProductRing.
+
 Section Homomorphism.
   Context {R EQ ZERO ONE OPP ADD SUB MUL} `{@ring R EQ ZERO ONE OPP ADD SUB MUL}.
   Context {S eq zero one opp add sub mul} `{@ring S eq zero one opp add sub mul}.
@@ -100,6 +157,14 @@ Section Homomorphism.
       homomorphism_one : phi ONE = one
     }.
   Global Existing Instance homomorphism_is_homomorphism.
+
+  Class is_isomorphism {psi:S->R} :=
+    {
+      isomorphism_is_homomorphism : is_homomorphism;
+      isomorphism_is_surjective : forall a, eq (phi (psi a)) a;
+      isomorphism_is_injective : forall a b, eq (phi a) (phi b) -> EQ a b;
+    }.
+  Global Existing Instance isomorphism_is_homomorphism.
 
   Context `{phi_homom:is_homomorphism}.
 
@@ -122,6 +187,90 @@ Section Homomorphism.
     Monoid.is_homomorphism (phi:=phi) (OP:=MUL) (op:=mul) (EQ:=EQ) (eq:=eq).
   Proof using phi_homom. split; destruct phi_homom; assumption || exact _. Qed.
 End Homomorphism.
+
+Section Isomorphism.
+  Context {R EQ ZERO ONE OPP ADD SUB MUL} `{@ring R EQ ZERO ONE OPP ADD SUB MUL}.
+  Context {S eq zero one opp add sub mul} `{@ring S eq zero one opp add sub mul}.
+  Context {phi:R->S} {psi:S->R}.
+
+  Context `{phi_isom:@is_isomorphism R EQ ONE ADD MUL S eq one add mul phi psi}.
+
+  Lemma isomorphism_inv:
+    @is_isomorphism S eq one add mul R EQ ONE ADD MUL psi phi.
+  Proof.
+    assert (psi_inj: forall a b, EQ (psi a) (psi b) -> eq a b).
+    { intros a b Heq. rewrite <- (isomorphism_is_surjective a), <- (isomorphism_is_surjective b), Heq. reflexivity. }
+    assert (psi_surj: forall a, EQ (psi (phi a)) a).
+    { intros a. apply isomorphism_is_injective.
+      rewrite isomorphism_is_surjective. reflexivity. }
+    split; auto.
+    repeat match goal with
+           | [ H : is_isomorphism |- _ ] => destruct H; try clear H
+           | [ H : is_homomorphism |- _ ] => destruct H; try clear H
+           | [ H : Monoid.is_homomorphism |- _ ] => destruct H; try clear H
+           | [ H : field |- _ ] => destruct H; try clear H
+           | [ H : commutative_ring |- _ ] => destruct H; try clear H
+           | [ H : ring |- _ ] => destruct H; try clear H
+           | [ H : commutative_group |- _ ] => destruct H; try clear H
+           | [ H : group |- _ ] => destruct H; try clear H
+           | [ H : monoid |- _ ] => destruct H; try clear H
+           | [ H : is_commutative |- _ ] => destruct H; try clear H
+           | [ H : is_left_distributive |- _ ] => destruct H; try clear H
+           | [ H : is_right_distributive |- _ ] => destruct H; try clear H
+           | [ H : is_zero_neq_one |- _ ] => destruct H; try clear H
+           | [ H : is_associative |- _ ] => destruct H; try clear H
+           | [ H : is_left_identity |- _ ] => destruct H; try clear H
+           | [ H : is_right_identity |- _ ] => destruct H; try clear H
+           | [ H : Equivalence _ |- _ ] => destruct H; try clear H
+           | [ H : is_left_inverse |- _ ] => destruct H; try clear H
+           | [ H : is_right_inverse |- _ ] => destruct H; try clear H
+           | _ => intro
+           | _ => split
+           | [ |- EQ _ _ ] => apply isomorphism_is_injective0
+           | _ => progress erewrite homomorphism_zero, homomorphism_one0, homomorphism_opp, homomorphism, homomorphism_sub, homomorphism_mul0 by reflexivity
+           end.
+    - rewrite homomorphism. repeat rewrite isomorphism_is_surjective0. reflexivity.
+    - repeat rewrite isomorphism_is_surjective0. assumption.
+    - rewrite homomorphism_mul0. repeat rewrite isomorphism_is_surjective0. reflexivity.
+    - rewrite isomorphism_is_surjective0, homomorphism_one0. reflexivity.
+  Qed.
+End Isomorphism.
+
+Section HomomorphismComposition.
+  Context {R EQ ZERO ONE OPP ADD SUB MUL} `{@ring R EQ ZERO ONE OPP ADD SUB MUL}.
+  Context {S eq zero one opp add sub mul} `{@ring S eq zero one opp add sub mul}.
+  Context {T Eq Zero One Opp Add Sub Mul} `{@ring T Eq Zero One Opp Add Sub Mul}.
+  Context {phi:R->S} {psi:S->T}.
+  Context `{@is_homomorphism R EQ ONE ADD MUL S eq one add mul phi}.
+  Context `{@is_homomorphism S eq one add mul T Eq One Add Mul psi}.
+
+  Lemma compose_homomorphism:
+    @is_homomorphism R EQ ONE ADD MUL T Eq One Add Mul (fun x => psi (phi x)).
+  Proof.
+    constructor.
+    - apply Group.compose_homomorphism.
+    - intros. rewrite H2.(homomorphism_mul), H3.(homomorphism_mul). reflexivity.
+    - rewrite H2.(homomorphism_one), H3.(homomorphism_one). reflexivity.
+  Qed.
+End HomomorphismComposition.
+
+Section IsomorphismComposition.
+  Context {R EQ ZERO ONE OPP ADD SUB MUL} `{@ring R EQ ZERO ONE OPP ADD SUB MUL}.
+  Context {S eq zero one opp add sub mul} `{@ring S eq zero one opp add sub mul}.
+  Context {T Eq Zero One Opp Add Sub Mul} `{@ring T Eq Zero One Opp Add Sub Mul}.
+  Context {phi1:R->S} {phi2:S->T} {psi1:S->R} {psi2:T->S}.
+  Context `{@is_isomorphism R EQ ONE ADD MUL S eq one add mul phi1 psi1}.
+  Context `{@is_isomorphism S eq one add mul T Eq One Add Mul phi2 psi2}.
+
+  Lemma compose_isomorphism:
+    @is_isomorphism R EQ ONE ADD MUL T Eq One Add Mul (fun x => phi2 (phi1 x)) (fun x => psi1 (psi2 x)).
+  Proof.
+    split.
+    - apply compose_homomorphism.
+    - intros. repeat rewrite isomorphism_is_surjective. reflexivity.
+    - intros. do 2 apply isomorphism_is_injective. assumption.
+  Qed.
+End IsomorphismComposition.
 
 (* TODO: file a Coq bug for rewrite_strat -- it should accept ltac variables *)
 Ltac push_homomorphism phi :=
@@ -164,12 +313,12 @@ Ltac pull_homomorphism phi :=
   (rewrite_strat bottomup (terms _pull_homomrphism_0 _pull_homomrphism_1 _pull_homomrphism_p _pull_homomrphism_o _pull_homomrphism_s _pull_homomrphism_m));
   clear _pull_homomrphism_0 _pull_homomrphism_1 _pull_homomrphism_p _pull_homomrphism_o _pull_homomrphism_s _pull_homomrphism_m.
 
-
-Section Isomorphism.
+Section ByIsomorphism.
   Context {F EQ ZERO ONE OPP ADD SUB MUL} {ringF:@ring F EQ ZERO ONE OPP ADD SUB MUL}.
   Context {H} {eq : H -> H -> Prop} {zero one : H} {opp : H -> H} {add sub mul : H -> H -> H} {inv : H -> H} {div : H -> H -> H}.
   Context {phi:F->H} {phi':H->F}.
   Local Infix "=" := EQ. Local Infix "=" := EQ : type_scope.
+
   Context (phi'_phi_id : forall A, phi' (phi A) = A)
           (phi'_eq : forall a b, EQ (phi' a) (phi' b) <-> eq a b)
           {phi'_zero : phi' zero = ZERO}
@@ -212,7 +361,7 @@ Section Isomorphism.
            | _ => solve [ eauto ]
            end.
   Qed.
-End Isomorphism.
+End ByIsomorphism.
 
 Section TacticSupportCommutative.
   Context {T eq zero one opp add sub mul} `{@commutative_ring T eq zero one opp add sub mul}.
