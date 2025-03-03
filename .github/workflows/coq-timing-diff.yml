@@ -1,0 +1,122 @@
+name: CI (Coq, timing-diff, docker, dev)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - env: { COQ_VERSION: "master", DOCKER_COQ_VERSION: "dev", DOCKER_OCAML_VERSION: "default", SKIP_VALIDATE: "" , COQCHKEXTRAFLAGS: "-bytecode-compiler yes", EXTRA_GH_REPORTIFY: "--warnings", ALLOW_DIFF: "1", CI: "1" }
+          os: 'ubuntu-latest'
+
+    runs-on: ${{ matrix.os }}
+    env: ${{ matrix.env }}
+    name: docker-${{ matrix.env.COQ_VERSION }}
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ matrix.env.COQ_VERSION }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: echo host build params
+      run: etc/ci/describe-system-config.sh
+    - name: echo container build params
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
+        ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
+        custom_script: |
+          eval $(opam env)
+          etc/ci/describe-system-config.sh
+    - name: deps
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
+        ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
+        custom_script: etc/ci/github-actions-docker-make.sh COQBIN="$(dirname "$(which coqc)")/" -j2 deps
+    - name: all-except-generated-and-js-of-ocaml
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
+        ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
+        custom_script: etc/ci/github-actions-docker-make.sh ${EXTRA_GH_REPORTIFY} -j2 all-except-generated-and-js-of-ocaml
+    - name: pre-standalone-extracted
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
+        ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
+        custom_script: etc/ci/github-actions-docker-make.sh ${EXTRA_GH_REPORTIFY} -j2 pre-standalone-extracted
+    - name: run timing diff
+      id: timing_diff
+      run: |
+        # Get the current branch name
+        CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
+
+        # Check if this is a PR
+        # Check if this branch has an associated PR
+        PR_NUMBER=$(gh pr list --head $CURRENT_BRANCH --json number --jq '.[0].number')
+        if [[ -n "$PR_NUMBER" ]]; then
+          # Get the base branch from the PR
+          BASE_BRANCH=$(gh pr view $PR_NUMBER --json baseRefName --jq '.baseRefName')
+          echo "This branch has PR #$PR_NUMBER from $CURRENT_BRANCH to $BASE_BRANCH"
+          # Get the merge-base of the base branch and current commit
+          BASE_SHA=$(git merge-base origin/$BASE_BRANCH $GITHUB_SHA)
+        else
+          # For non-PRs, use merge-base of current branch and master as base_sha
+          echo "This is not a PR, using merge-base with master"
+          BASE_SHA=$(git merge-base origin/master $GITHUB_SHA)
+        fi
+
+        echo "Using base SHA: $BASE_SHA"
+        echo "Current branch: $CURRENT_BRANCH"
+
+        # Run the timing diff script
+        etc/coq-scripts/timing/make-pretty-timed-diff-branch.sh "$BASE_SHA" "$CURRENT_BRANCH"
+
+        echo "base_sha=${BASE_SHA}" >> $GITHUB_OUTPUT
+        echo "current_branch=${CURRENT_BRANCH}" >> $GITHUB_OUTPUT
+
+    - name: Display commits between base and current
+      id: display_commits
+      run: |
+        BASE_SHA=${{ steps.timing_diff.outputs.base_sha }}
+        CURRENT_BRANCH=${{ steps.timing_diff.outputs.current_branch }}
+
+        echo "### Commits between base and current branch" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # Get each commit hash between base and current branch
+        COMMIT_HASHES=$(git log --pretty=format:"%H" $BASE_SHA..$CURRENT_BRANCH)
+
+        # For each commit, create a separate details/summary section
+        for COMMIT in $COMMIT_HASHES; do
+          # Get commit details
+          COMMIT_SHORT=$(git log -1 --pretty=format:"%h" $COMMIT)
+          COMMIT_SUBJECT=$(git log -1 --pretty=format:"%s" $COMMIT)
+          COMMIT_FULL=$(git log -1 --pretty=format:"%B" $COMMIT)
+
+          # Add to step summary - just oneline in summary
+          printf "<details>\n" >> $GITHUB_STEP_SUMMARY
+          printf "<summary>%s: %s</summary>\n" "$COMMIT_SHORT" "$COMMIT_SUBJECT" >> $GITHUB_STEP_SUMMARY
+          printf "\n" >> $GITHUB_STEP_SUMMARY
+          # printf "```\n" >> $GITHUB_STEP_SUMMARY
+          printf "%s\n" "$COMMIT_FULL" >> $GITHUB_STEP_SUMMARY
+          # printf "```\n" >> $GITHUB_STEP_SUMMARY
+          printf "</details>\n" >> $GITHUB_STEP_SUMMARY
+          printf "\n" >> $GITHUB_STEP_SUMMARY
+
+          # Output to GitHub Actions log with groups - oneline in group name
+          printf "::group::%s: %s\n" "$COMMIT_SHORT" "$COMMIT_SUBJECT"
+          git log -1 --pretty=fuller $COMMIT
+          printf "::endgroup::\n"
+        done
