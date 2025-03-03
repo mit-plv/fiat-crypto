@@ -412,3 +412,19 @@ Fixpoint strip_leading_newlines (s : list string) : list string
 
 Definition strip_trailing_newlines (s : list string) : list string
   := List.rev_append (strip_leading_newlines (List.rev_append s nil)) nil.
+
+(** [is_substring s1 s2] returns [true] if [s1] is a substring of [s2] *)
+Definition is_substring (s1 s2 : string) : bool :=
+  if (s1 =? "")%string
+  then true
+  else
+    match split s1 s2 with
+    | nil => false
+    | _ :: nil => false
+    | _ :: _ :: _ => true
+    end.
+
+Lemma is_substring_correct s1 s2 :
+  is_substring s1 s2 = true <-> exists n, substring n (String.length s1) s2 = s1.
+Proof.
+Abort.
