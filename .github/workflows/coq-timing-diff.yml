@@ -38,12 +38,15 @@ jobs:
     - name: compute base sha and current branch
       id: git_ids
       run: |
+        git remote add upstream https://github.com/mit-plv/fiat-crypto.git
+        git remote update
         # Get the current branch name
         CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
+        echo "Current branch: $CURRENT_BRANCH"
 
         # Check if this is a PR
         # Check if this branch has an associated PR
-        PR_NUMBER=$(gh pr list --head $CURRENT_BRANCH --json number --jq '.[0].number')
+        PR_NUMBER=$(gh pr list --repo mit-plv/fiat-crypto --head $CURRENT_BRANCH --json number --jq '.[0].number')
         if [[ -n "$PR_NUMBER" ]]; then
           # Get the base branch from the PR
           BASE_BRANCH=$(gh pr view $PR_NUMBER --json baseRefName --jq '.baseRefName')
@@ -57,7 +60,6 @@ jobs:
         fi
 
         echo "Using base SHA: $BASE_SHA"
-        echo "Current branch: $CURRENT_BRANCH"
         git log --oneline $BASE_SHA..$CURRENT_BRANCH
 
         echo "base_sha=${BASE_SHA}" >> $GITHUB_OUTPUT
@@ -94,6 +96,7 @@ jobs:
           CURRENT_BRANCH=${{ steps.git_ids.outputs.current_branch }}
 
           # Run the timing diff script
+          eval $(opam env)
           etc/coq-scripts/timing/make-pretty-timed-diff-branch.sh "$BASE_SHA" "$CURRENT_BRANCH"
 
     - name: Display commits between base and current
