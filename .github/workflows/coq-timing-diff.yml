@@ -2,6 +2,12 @@ name: CI (Coq, timing-diff, docker, dev)
 
 on:
   workflow_dispatch:
+    inputs:
+      build_target:
+        description: 'Build target for timing diff'
+        required: false
+        # default: 'standalone-ocaml lite-generated-files'
+        type: string
 
 jobs:
   build:
@@ -97,7 +103,7 @@ jobs:
 
           # Run the timing diff script
           eval $(opam env)
-          etc/coq-scripts/timing/make-pretty-timed-diff-branch.sh "$BASE_SHA" "$CURRENT_BRANCH"
+          etc/coq-scripts/timing/make-pretty-timed-diff-branch.sh "$BASE_SHA" "$CURRENT_BRANCH" ${{ github.event.inputs.build_target }}
 
     - name: Display commits between base and current
       run: |
