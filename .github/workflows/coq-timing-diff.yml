@@ -59,6 +59,8 @@ jobs:
           etc/ci/describe-system-config.sh
     - name: compute base sha and current branch
       id: git_ids
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
         # Get the current branch name
         CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
