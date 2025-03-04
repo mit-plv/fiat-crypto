@@ -37,6 +37,10 @@ jobs:
       cancel-in-progress: true
 
     steps:
+    - name: record inputs to summary
+      run: |
+        printf "%s@%s make %s\n\n" "${{ github.event.inputs.target_repository || github.repository }}" "${{ github.event.inputs.target_branch || github.ref }}" "${{ github.event.inputs.build_target }}"
+        printf "%s@%s make %s\n\n" "${{ github.event.inputs.target_repository || github.repository }}" "${{ github.event.inputs.target_branch || github.ref }}" "${{ github.event.inputs.build_target }}" >> $GITHUB_STEP_SUMMARY
     - uses: actions/checkout@v4
       with:
         submodules: recursive
