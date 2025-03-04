@@ -63,22 +63,25 @@ jobs:
         GH_TOKEN: ${{ github.token }}
       run: |
         # Get the current branch name
-        CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
+        CURRENT_BRANCH=${{ github.event.inputs.target_branch || github.ref }}
         echo "Current branch: $CURRENT_BRANCH"
 
         # Check if this is a PR
         # Check if this branch has an associated PR
         PR_NUMBER=$(gh pr list --repo mit-plv/fiat-crypto --head $CURRENT_BRANCH --json number --jq '.[0].number')
+        git remote add upstream https://github.com/mit-plv/fiat-crypto.git
         if [[ -n "$PR_NUMBER" ]]; then
           # Get the base branch from the PR
           BASE_BRANCH=$(gh pr view $PR_NUMBER --json baseRefName --jq '.baseRefName')
           echo "This branch has PR #$PR_NUMBER from $CURRENT_BRANCH to $BASE_BRANCH"
           # Get the merge-base of the base branch and current commit
-          BASE_SHA=$(git merge-base origin/$BASE_BRANCH $GITHUB_SHA)
+          git fetch upstream $BASE_BRANCH
+          BASE_SHA=$(git merge-base upstream/$BASE_BRANCH $GITHUB_SHA)
         else
           # For non-PRs, use merge-base of current branch and master as base_sha
           echo "This is not a PR, using merge-base with master"
-          BASE_SHA=$(git merge-base origin/master $GITHUB_SHA)
+          git fetch upstream master
+          BASE_SHA=$(git merge-base upstream/master $GITHUB_SHA)
         fi
 
         echo "Using base SHA: $BASE_SHA"
