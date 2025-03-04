@@ -13,6 +13,16 @@ Require Crypto.Assembly.Parse.Examples.fiat_p256_square_optimised_seed103.
 Require Crypto.Assembly.Parse.Examples.fiat_p256_square_optimised_seed46.
 Require Crypto.Assembly.Parse.Examples.fiat_p256_square_optimised_seed6.
 Require Crypto.Assembly.Parse.Examples.boringssl_nasm_full_mul_p256.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_gcc_14_1_O0.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_gcc_14_1_O1.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_gcc_14_1_O2.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_gcc_14_1_O3.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_gcc_14_1_Os.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_clang_19_1_0_O0.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_clang_19_1_0_O1.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_clang_19_1_0_O2.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_clang_19_1_0_O3.
+Require Crypto.Assembly.Parse.Examples.fiat_25519_all_clang_19_1_0_Os.
 Import ListNotations.
 Local Open Scope list_scope.
 Local Open Scope string_scope.
