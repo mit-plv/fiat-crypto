@@ -15,8 +15,7 @@ on:
         type: string
       target_branch:
         description: 'Target branch to checkout'
-        required: false
-        default: ''
+        required: true
         type: string
 
 jobs:
@@ -44,8 +43,6 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-        repository: ${{ github.event.inputs.target_repository || github.repository }}
-        ref: ${{ github.event.inputs.target_branch || github.ref }}
     - name: echo host build params
       run: etc/ci/describe-system-config.sh
     - name: echo container build params
@@ -63,25 +60,33 @@ jobs:
         GH_TOKEN: ${{ github.token }}
       run: |
         # Get the current branch name
-        CURRENT_BRANCH=${{ github.event.inputs.target_branch || github.ref }}
+        CURRENT_BRANCH=${{ github.event.inputs.target_branch }}
         echo "Current branch: $CURRENT_BRANCH"
 
         # Check if this is a PR
         # Check if this branch has an associated PR
         PR_NUMBER=$(gh pr list --repo mit-plv/fiat-crypto --head $CURRENT_BRANCH --json number --jq '.[0].number')
-        git remote add upstream https://github.com/mit-plv/fiat-crypto.git
+        # Add remote for target repository if specified
+        if [[ -n "${{ github.event.inputs.target_repository }}" && "${{ github.event.inputs.target_repository }}" != "${{ github.repository }}" ]]; then
+          echo "Adding remote for target repository: ${{ github.event.inputs.target_repository }}"
+          git remote add target_repo "https://github.com/${{ github.event.inputs.target_repository }}.git"
+          git checkout -b $CURRENT_BRANCH target_repo/$CURRENT_BRANCH
+        else
+          git checkout -b $CURRENT_BRANCH origin/$CURRENT_BRANCH
+        fi
         if [[ -n "$PR_NUMBER" ]]; then
           # Get the base branch from the PR
           BASE_BRANCH=$(gh pr view $PR_NUMBER --json baseRefName --jq '.baseRefName')
           echo "This branch has PR #$PR_NUMBER from $CURRENT_BRANCH to $BASE_BRANCH"
           # Get the merge-base of the base branch and current commit
-          git fetch upstream $BASE_BRANCH
-          BASE_SHA=$(git merge-base upstream/$BASE_BRANCH $GITHUB_SHA)
+          git fetch origin $BASE_BRANCH
+          BASE_SHA=$(git merge-base target_repo/$BASE_BRANCH $CURRENT_BRANCH)
+
         else
           # For non-PRs, use merge-base of current branch and master as base_sha
           echo "This is not a PR, using merge-base with master"
-          git fetch upstream master
-          BASE_SHA=$(git merge-base upstream/master $GITHUB_SHA)
+          git fetch origin master
+          BASE_SHA=$(git merge-base master $CURRENT_BRANCH)
         fi
 
         echo "Using base SHA: $BASE_SHA"
