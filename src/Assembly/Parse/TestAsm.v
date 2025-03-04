@@ -58,3 +58,33 @@ Proof. Time native_compute. exact eq_refl. Abort.
 Goal parse_correct_on_debug boringssl_nasm_full_mul_p256.example.
 Proof. Time native_compute. exact eq_refl. Abort.
 (*Redirect "log" Compute parse boringssl_nasm_full_mul_p256.example.*)
+Goal parse_correct_on_debug fiat_25519_all_gcc_14_1_O0.example.
+Proof. Time native_compute. Fail exact eq_refl. Abort.
+(* Redirect "log" Compute parse fiat_25519_all_gcc_14_1_O0.example. *)
+Goal parse_correct_on_debug fiat_25519_all_gcc_14_1_O1.example.
+Proof. Time native_compute. Fail exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_gcc_14_1_O1.example.*)
+Goal parse_correct_on_debug fiat_25519_all_gcc_14_1_O2.example.
+Proof. Time native_compute. Fail exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_gcc_14_1_O2.example.*)
+Goal parse_correct_on_debug fiat_25519_all_gcc_14_1_O3.example.
+Proof. Time native_compute. Fail exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_gcc_14_1_O3.example.*)
+Goal parse_correct_on_debug fiat_25519_all_gcc_14_1_Os.example.
+Proof. Time native_compute. Fail exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_gcc_14_1_Os.example.*)
+Goal parse_correct_on_debug fiat_25519_all_clang_19_1_0_O0.example.
+Proof. Time native_compute. Fail exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_clang_19_1_0_O0.example.*)
+Goal parse_correct_on_debug fiat_25519_all_clang_19_1_0_O1.example.
+Proof. Time native_compute. Fail exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_clang_19_1_0_O1.example.*)
+Goal parse_correct_on_debug fiat_25519_all_clang_19_1_0_O2.example.
+Proof. Time native_compute. Fail exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_clang_19_1_0_O2.example.*)
+Goal parse_correct_on_debug fiat_25519_all_clang_19_1_0_O3.example.
+Proof. Time native_compute. Fail exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_clang_19_1_0_O3.example.*)
+Goal parse_correct_on_debug fiat_25519_all_clang_19_1_0_Os.example.
+Proof. Time native_compute. Fail exact eq_refl. Abort.
+(*Redirect "log" Compute parse fiat_25519_all_clang_19_1_0_Os.example.*)
