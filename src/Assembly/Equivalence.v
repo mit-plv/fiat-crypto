@@ -1275,10 +1275,10 @@ Definition init_symbolic_state_descr : description := Build_description "init_sy
 
 Definition init_symbolic_state (d : dag) : symbolic_state
   := let _ := init_symbolic_state_descr in
-     let '(initial_reg_idxs, d) := dag_gensym_n 16 d in
+     let '(initial_reg_idxs, d) := dag_gensym_n (List.length widest_registers) d in
      {|
        dag_state := d;
-       symbolic_reg_state := Tuple.from_list_default None 16 (List.map Some initial_reg_idxs);
+       symbolic_reg_state := Tuple.from_list_default None _ (List.map Some initial_reg_idxs);
        symbolic_mem_state := [];
        symbolic_flag_state := Tuple.repeat None 6;
      |}.

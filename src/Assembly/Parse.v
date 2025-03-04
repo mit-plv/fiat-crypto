@@ -22,33 +22,17 @@ Local Open Scope list_scope.
 Local Open Scope string_scope.
 Local Open Scope parse_scope.
 
-Derive REG_Listable SuchThat (@FinitelyListable REG REG_Listable) As REG_FinitelyListable.
-Proof. prove_ListableDerive. Qed.
-Global Existing Instances REG_Listable REG_FinitelyListable.
-
 Global Instance show_REG : Show REG.
 Proof. prove_Show_enum (). Defined.
 Global Instance show_lvl_REG : ShowLevel REG := show_REG.
-
-Derive FLAG_Listable SuchThat (@FinitelyListable FLAG FLAG_Listable) As FLAG_FinitelyListable.
-Proof. prove_ListableDerive. Qed.
-Global Existing Instances FLAG_Listable FLAG_FinitelyListable.
 
 Global Instance show_FLAG : Show FLAG.
 Proof. prove_Show_enum (). Defined.
 Global Instance show_lvl_FLAG : ShowLevel FLAG := show_FLAG.
 
-Derive OpCode_Listable SuchThat (@FinitelyListable OpCode OpCode_Listable) As OpCode_FinitelyListable.
-Proof. prove_ListableDerive. Qed.
-Global Existing Instances OpCode_Listable OpCode_FinitelyListable.
-
 Global Instance show_OpCode : Show OpCode.
 Proof. prove_Show_enum (). Defined.
 Global Instance show_lvl_OpCode : ShowLevel OpCode := show_OpCode.
-
-Derive OpPrefix_Listable SuchThat (@FinitelyListable OpPrefix OpPrefix_Listable) As OpPrefix_FinitelyListable.
-Proof. prove_ListableDerive. Qed.
-Global Existing Instances OpPrefix_Listable OpPrefix_FinitelyListable.
 
 Global Instance show_OpPrefix : Show OpPrefix.
 Proof. prove_Show_enum (). Defined.
@@ -71,10 +55,6 @@ Definition parse_FLAG_list : list (string * FLAG)
 
 Definition parse_FLAG : ParserAction FLAG
   := parse_strs parse_FLAG_list.
-
-Derive AccessSize_Listable SuchThat (@FinitelyListable AccessSize AccessSize_Listable) As AccessSize_FinitelyListable.
-Proof. prove_ListableDerive. Qed.
-Global Existing Instances AccessSize_Listable AccessSize_FinitelyListable.
 
 Global Instance show_AccessSize : Show AccessSize.
 Proof. prove_Show_enum (). Defined.

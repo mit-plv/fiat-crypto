@@ -78,7 +78,7 @@ Qed.
 Import Map.Interface Map.Separation. (* for coercions *)
 Require Import bedrock2.Array.
 Require Import bedrock2.ZnWords.
-Require Import Rupicola.Lib.Tactics. (* for sepsimpl *)
+(*Require Import Rupicola.Lib.Tactics. (* for sepsimpl *)*)
 Import LittleEndianList.
 Import coqutil.Word.Interface.
 Definition cell64 wa (v : Z) : Semantics.mem_state -> Prop :=
@@ -245,7 +245,7 @@ Definition init_symbolic_state_G (m : machine_state)
         let '(initial_reg_idxs, (G, d)) := dag_gensym_n_G vals st in
         (G,
          {| dag_state := d
-            ; symbolic_reg_state := Tuple.from_list_default None 16 (List.map Some initial_reg_idxs)
+            ; symbolic_reg_state := Tuple.from_list_default None _ (List.map Some initial_reg_idxs)
             ; symbolic_flag_state := Tuple.repeat None 6
             ; symbolic_mem_state := []
          |}).
@@ -254,7 +254,7 @@ Lemma init_symbolic_state_eq_G G d m
   : init_symbolic_state d = snd (init_symbolic_state_G m (G, d)).
 Proof.
   cbv [init_symbolic_state init_symbolic_state_G].
-  epose proof (dag_gensym_n_eq_G G d (Tuple.to_list 16 m.(machine_reg_state))) as H.
+  epose proof (dag_gensym_n_eq_G G d (Tuple.to_list _ m.(machine_reg_state))) as H.
   rewrite Tuple.length_to_list in H; rewrite H; clear H.
   eta_expand; cbn [fst snd].
   reflexivity.
@@ -266,9 +266,9 @@ Lemma init_symbolic_state_G_ok m G d G' ss
       (H : init_symbolic_state_G m (G, d) = (G', ss))
       (d' := ss.(dag_state))
       (Hframe : frame m)
-      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list 16 m.(machine_reg_state)))
+      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list _ m.(machine_reg_state)))
   : R frame G' ss m
-    /\ (forall reg, Option.is_Some (Symbolic.get_reg ss.(symbolic_reg_state) (reg_index reg)) = true)
+    /\ (forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg ss.(symbolic_reg_state) (reg_index reg)) = true)
     /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
@@ -286,16 +286,17 @@ Proof.
          erewrite length_Forall2, Tuple.length_to_list
            by (eapply dag_gensym_n_G_ok; [ | eta_expand; reflexivity | ]; assumption).
          reflexivity. }
+       break_innermost_match; try congruence; [].
        erewrite map_nth_default with (x:=0%N); [ reflexivity | ].
        erewrite length_Forall2, Tuple.length_to_list
          by (eapply dag_gensym_n_G_ok; [ | eta_expand; reflexivity | ]; assumption).
        clear; cbv [reg_index]; break_innermost_match; lia. }
   set (v := dag_gensym_n_G _ _) in *; clearbody v; destruct_head'_prod; cbn [fst snd] in *.
-  eassert (H' : Tuple.to_list 16 m.(machine_reg_state) = _).
+  eassert (H' : Tuple.to_list _ m.(machine_reg_state) = _).
   { repeat match goal with H : _ |- _ => clear H end.
       cbv [Tuple.to_list Tuple.to_list'].
       set_evars; eta_expand; subst_evars; reflexivity. }
-  generalize dependent (Tuple.to_list 16 m.(machine_reg_state)); intros; subst.
+  generalize dependent (Tuple.to_list _ m.(machine_reg_state)); intros; subst.
   repeat match goal with H : context[?x :: _] |- _ => assert_fails is_var x; set x in * end.
   repeat match goal with H : Forall2 _ ?v (_ :: _) |- _ => is_var v; inversion H; clear H; subst end.
   repeat match goal with H : Forall2 _ ?v nil |- _ => is_var v; inversion H; clear H; subst end.
@@ -313,11 +314,11 @@ Lemma init_symbolic_state_ok m G d
       (Hd : gensym_dag_ok G d)
       (ss := init_symbolic_state d)
       (d' := ss.(dag_state))
-      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list 16 m.(machine_reg_state)))
+      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list _ m.(machine_reg_state)))
       (Hframe : frame m)
   : exists G',
     R frame G' ss m
-    /\ (forall reg, Option.is_Some (Symbolic.get_reg ss.(symbolic_reg_state) (reg_index reg)) = true)
+    /\ (forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg ss.(symbolic_reg_state) (reg_index reg)) = true)
     /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
@@ -332,12 +333,12 @@ Lemma get_reg_of_R_regs G d r mr reg
   : forall idx', Symbolic.get_reg r (reg_index reg) = Some idx' -> eval_idx_Z G d idx' (Semantics.get_reg mr reg).
 Proof.
   assert (reg_offset reg = 0%N) by now destruct reg.
-  assert (reg_index reg < length (Tuple.to_list _ r))
+  assert (N.to_nat (reg_index reg) < List.length (Tuple.to_list _ r))
     by now rewrite Tuple.length_to_list; destruct reg; cbv [reg_index]; lia.
   cbv [Symbolic.get_reg Semantics.get_reg R_regs] in *.
   rewrite Tuple.fieldwise_to_list_iff in Hreg.
   erewrite @Forall2_forall_iff in Hreg by now rewrite !Tuple.length_to_list.
-  specialize (Hreg (reg_index reg) ltac:(assumption)); rewrite !@Tuple.nth_default_to_list in *.
+  specialize (Hreg (N.to_nat (reg_index reg)) ltac:(assumption)); rewrite !@Tuple.nth_default_to_list in *.
   cbv [index_and_shift_and_bitcount_of_reg] in *.
   generalize dependent (reg_size reg); intros; subst.
   generalize dependent (reg_offset reg); intros; subst.
@@ -353,6 +354,7 @@ Proof.
   cbv [R_reg] in Hreg.
   destruct Hreg as [Hreg Hreg'].
   rewrite <- Hreg'.
+  break_innermost_match_hyps; inversion_option.
   now apply Hreg.
 Qed.
 
@@ -464,7 +466,7 @@ Definition R_regs_preserved_v rn (m : Semantics.reg_state)
   := Z.land (Tuple.nth_default 0%Z rn m) (Z.ones 64).
 
 Definition R_regs_preserved G d G' d' (m : Semantics.reg_state) rs rs'
-  := forall rn idx, Symbolic.get_reg rs' rn = Some idx -> exists idx', Symbolic.get_reg rs rn = Some idx' /\ let v := R_regs_preserved_v rn m in eval_idx_Z G d idx' v -> eval_idx_Z G' d' idx v.
+  := forall rn idx, Symbolic.get_reg rs' rn = Some idx -> exists idx', Symbolic.get_reg rs rn = Some idx' /\ let v := R_regs_preserved_v (N.to_nat rn) m in eval_idx_Z G d idx' v -> eval_idx_Z G' d' idx v.
 
 Global Instance R_regs_preserved_Reflexive G d m : Reflexive (R_regs_preserved G d G d m) | 100.
 Proof. intro; cbv [R_regs_preserved]; eauto. Qed.
@@ -476,19 +478,22 @@ Lemma R_regs_subsumed_get_reg_same_eval G d G' d' rs rs' rm
 Proof.
   cbv [R_regs Symbolic.get_reg R_regs_preserved R_regs_preserved_v] in *.
   rewrite @Tuple.fieldwise_to_list_iff, @Forall2_forall_iff_nth_error in *.
-  intro i; specialize (H i); specialize (H_impl i).
+  intro i; specialize (H i); specialize (H_impl (N.of_nat i)).
   rewrite <- !@Tuple.nth_default_to_list in *.
   cbv [nth_default option_eq] in *.
   repeat first [ progress destruct_head'_and
                | progress destruct_head'_ex
+               | progress inversion_option
                | rewrite @Tuple.length_to_list in *
                | progress cbv [R_reg eval_idx_Z] in *
                | progress break_innermost_match
                | progress break_innermost_match_hyps
+               | rewrite !Nat2N.id in *
                | now auto
                | progress intros
                | progress subst
                | match goal with
+                 | [ H : ?x = Some ?a, H' : ?x = Some ?b |- _ ] => rewrite H in H'
                  | [ H : nth_error _ _ = None |- _ ] => apply nth_error_error_length in H
                  | [ H : ?i >= ?n, H' : context[nth_error (Tuple.to_list ?n _) ?i] |- _ ]
                    => rewrite nth_error_length_error in H' by now rewrite Tuple.length_to_list; lia
@@ -501,12 +506,13 @@ Qed.
 
 Lemma R_regs_preserved_set_reg G d G' d' rs rs' ri rm v
       (H : R_regs_preserved G d G' d' rm rs rs')
-      (H_same : (ri < 16)%nat -> exists idx, Symbolic.get_reg rs ri = Some idx /\ let v' := R_regs_preserved_v ri rm in eval_idx_Z G d idx v' -> eval_idx_Z G' d' v v')
+      (H_same : (ri < N.of_nat (List.length widest_registers))%N -> exists idx, Symbolic.get_reg rs ri = Some idx /\ let v' := R_regs_preserved_v (N.to_nat ri) rm in eval_idx_Z G d idx v' -> eval_idx_Z G' d' v v')
   : R_regs_preserved G d G' d' rm rs (Symbolic.set_reg rs' ri v).
 Proof.
   cbv [R_regs_preserved] in *.
   intros rn idx; specialize (H rn).
   rewrite get_reg_set_reg_full; intro.
+  vm_compute (length widest_registers) in *.
   repeat first [ progress break_innermost_match_hyps
                | progress inversion_option
                | progress subst
@@ -527,7 +533,7 @@ Qed.
 
 Lemma R_regs_preserved_fold_left_set_reg_index {T1 T2} G d G' d' rs rs' rm (r_idxs : list (_ * (_ * T1 + _ * T2)))
       (H : R_regs_preserved G d G' d' rm rs rs')
-      (H_same : Forall (fun '(r, v) => let v := match v with inl (v, _) => v | inr (v, _) => v end in exists idx, Symbolic.get_reg rs (reg_index r) = Some idx /\ let v' := R_regs_preserved_v (reg_index r) rm in eval_idx_Z G d idx v' -> eval_idx_Z G' d' v v') r_idxs)
+      (H_same : Forall (fun '(r, v) => let v := match v with inl (v, _) => v | inr (v, _) => v end in exists idx, Symbolic.get_reg rs (reg_index r) = Some idx /\ let v' := R_regs_preserved_v (N.to_nat (reg_index r)) rm in eval_idx_Z G d idx v' -> eval_idx_Z G' d' v v') r_idxs)
   : R_regs_preserved
       G d G' d' rm
       rs
@@ -548,12 +554,12 @@ Qed.
 Lemma Semantics_get_reg_eq_nth_default_of_R_regs G d ss ms r
       (Hsz : reg_size r = 64%N)
       (HR : R_regs G d ss ms)
-  : Semantics.get_reg ms r = Tuple.nth_default 0%Z (reg_index r) (ms : Semantics.reg_state).
+  : Semantics.get_reg ms r = Tuple.nth_default 0%Z (N.to_nat (reg_index r)) (ms : Semantics.reg_state).
 Proof.
   assert (Hro : reg_offset r = 0%N) by now revert Hsz; clear; cbv; destruct r; lia.
   cbv [R_regs R_reg] in HR.
   rewrite Tuple.fieldwise_to_list_iff, Forall2_forall_iff_nth_error in HR.
-  specialize (HR (reg_index r)).
+  specialize (HR (N.to_nat (reg_index r))).
   cbv [Semantics.get_reg index_and_shift_and_bitcount_of_reg].
   rewrite Hro, Hsz; change (Z.of_N 0) with 0%Z; change (Z.of_N 64) with 64%Z.
   rewrite Z.shiftr_0_r, <- Tuple.nth_default_to_list; cbv [nth_default option_eq] in *.
@@ -563,7 +569,7 @@ Qed.
 Lemma Semantics_get_reg_eq_nth_default_of_R frame G ss ms r
       (Hsz : reg_size r = 64%N)
       (HR : R frame G ss ms)
-  : Semantics.get_reg ms r = Tuple.nth_default 0%Z (reg_index r) (ms : Semantics.reg_state).
+  : Semantics.get_reg ms r = Tuple.nth_default 0%Z (N.to_nat (reg_index r)) (ms : Semantics.reg_state).
 Proof.
   destruct ss, ms; eapply Semantics_get_reg_eq_nth_default_of_R_regs; try eassumption; apply HR.
 Qed.
@@ -586,7 +592,7 @@ Lemma Forall2_R_regs_preserved_same_helper G d reg_available idxs m rs
   : Forall (fun '(r, v)
             => let v := match v with inl (v, _) => v | inr (v, _) => v end in
                exists idx, Symbolic.get_reg rs (reg_index r) = Some idx
-                           /\ let v' := R_regs_preserved_v (reg_index r) m in eval_idx_Z G d idx v' -> eval_idx_Z G d v v')
+                           /\ let v' := R_regs_preserved_v (N.to_nat (reg_index r)) m in eval_idx_Z G d idx v' -> eval_idx_Z G d v v')
            (List.combine reg_available idxs).
 Proof.
   cbv [get_asm_reg] in *.
@@ -610,7 +616,7 @@ Proof.
                | progress cbv [index_and_shift_and_bitcount_of_reg] in *
                | solve [ eauto ]
                | match goal with
-                 | [ H : (forall reg, Option.is_Some (Symbolic.get_reg ?s (reg_index reg)) = true)
+                 | [ H : (forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg ?s (reg_index reg)) = true)
                      |- context[Symbolic.get_reg ?s (reg_index ?ri)] ]
                    => generalize (H ri); cbv [Option.is_Some]; break_innermost_match;
                       try congruence
@@ -1466,7 +1472,7 @@ Lemma build_merge_stack_placeholders_ok_R {opts : symbolic_options_computed_opt}
       (HR : R frame' G s ms)
       (Hrsp : (rsp_val - 8 * Z.of_nat (List.length stack_vals))%Z = word.unsigned base_stack_word_val)
       (Hframe : Lift1Prop.iff1 frame' (frame * array cell64 (word.of_Z 8) base_stack_word_val stack_vals)%sep)
-      (Hreg_good : forall reg, Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
+      (Hreg_good : forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
       (Hrsp_val : Z.land rsp_val (Z.ones 64) = Z.land (Semantics.get_reg ms rsp) (Z.ones 64))
   : exists G',
     ((exists rsp_idx,
@@ -1481,7 +1487,7 @@ Lemma build_merge_stack_placeholders_ok_R {opts : symbolic_options_computed_opt}
     /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n)
     /\ R frame G' s' ms
-    /\ (forall reg, Option.is_Some (Symbolic.get_reg r' (reg_index reg)) = true).
+    /\ (forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg r' (reg_index reg)) = true).
 
 Proof.
   eapply build_merge_stack_placeholders_ok in H; [ | try eassumption .. ]; [ | destruct s; apply HR .. ]; [].
@@ -1785,7 +1791,7 @@ Lemma build_merge_base_addresses_ok_R
       (H : build_merge_base_addresses (dereference_scalar:=dereference_scalar) idxs reg_available s = Success (outputaddrs, s'))
       (Hreg_available_wide : Forall (fun reg => let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg reg in sz = 64%N) reg_available)
       (HR : R frame' G s ms)
-      (Hreg_good : forall reg, Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
+      (Hreg_good : forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
       (Hruntime_reg : get_asm_reg ms reg_available = runtime_reg)
       addr_vals addr_ptr_vals
       (Haddr_ptr_vals : List.map word.unsigned addr_ptr_vals = List.firstn (List.length idxs) runtime_reg)
@@ -1877,7 +1883,7 @@ Lemma build_merge_base_addresses_ok_R
     /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n)
     /\ R frame G' s' ms
-    /\ (forall reg, Option.is_Some (Symbolic.get_reg r' (reg_index reg)) = true).
+    /\ (forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg r' (reg_index reg)) = true).
 Proof.
   eapply build_merge_base_addresses_ok in H; [ | try eassumption .. ]; [ | destruct s; apply HR .. ]; [].
   destruct H as [G' H]; exists G'.
@@ -1898,7 +1904,7 @@ Proof.
     { Foralls_to_nth_error; intuition idtac. }
     { intros.
       match goal with
-      | [ H : (forall reg, Option.is_Some (Symbolic.get_reg ?s (reg_index reg)) = true)
+      | [ H : (forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg ?s (reg_index reg)) = true)
           |- context[Symbolic.get_reg ?s (reg_index ?ri)] ]
         => generalize (H ri); cbv [Option.is_Some]; break_innermost_match;
            try congruence
@@ -1976,7 +1982,7 @@ Lemma mapM_GetReg_ok_R_full {opts : symbolic_options_computed_opt} {descr:descri
       (Hbounded : Forall (fun v => (0 <= v < 2^64)%Z) reg_vals)
       (Hregval_len : List.length regs = List.length reg_vals)
       (HR : R frame G s ms)
-      (Hreg_good : forall reg, Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
+      (Hreg_good : forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
   : ((exists reg_idxs,
          List.map (get_reg r) (List.map reg_index regs) = List.map Some reg_idxs
          /\ Forall2 (eval_idx_Z G s') reg_idxs reg_vals)
@@ -1987,7 +1993,7 @@ Lemma mapM_GetReg_ok_R_full {opts : symbolic_options_computed_opt} {descr:descri
     /\ gensym_dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n)
     /\ R frame G s' ms
-    /\ (forall reg, Option.is_Some (Symbolic.get_reg r' (reg_index reg)) = true).
+    /\ (forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg r' (reg_index reg)) = true).
 Proof.
   eapply mapM_GetReg_ok_bounded in H; [ | try eassumption .. ]; [ | destruct s; apply HR .. ]; [].
   all: intuition idtac.
@@ -2008,7 +2014,7 @@ Lemma mapM_GetReg_ok_R {opts : symbolic_options_computed_opt} {descr:description
       (reg_vals := List.map (Semantics.get_reg ms) regs)
       (Hwide : Forall (fun reg => let '(_, _, sz) := index_and_shift_and_bitcount_of_reg reg in sz = 64%N) regs)
       (HR : R frame G s ms)
-      (Hreg_good : forall reg, Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
+      (Hreg_good : forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
   : ((exists reg_idxs,
          List.map (get_reg r) (List.map reg_index regs) = List.map Some reg_idxs
          /\ Forall2 (eval_idx_Z G s') reg_idxs reg_vals)
@@ -2019,7 +2025,7 @@ Lemma mapM_GetReg_ok_R {opts : symbolic_options_computed_opt} {descr:description
     /\ gensym_dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n)
     /\ R frame G s' ms
-    /\ (forall reg, Option.is_Some (Symbolic.get_reg r' (reg_index reg)) = true).
+    /\ (forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg r' (reg_index reg)) = true).
 Proof.
   subst reg_vals.
   eapply mapM_GetReg_ok_R_full in H; [ eassumption | try eassumption .. ].
@@ -2038,7 +2044,7 @@ Lemma SymexLines_ok_R {opts : symbolic_options_computed_opt}
       (r := s.(symbolic_reg_state))
       (r' := s'.(symbolic_reg_state))
       (H : Symbolic.SymexLines asm s = Success (_tt, s'))
-      (Hreg_good : forall reg, Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
+      (Hreg_good : forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
       (HR : R frame G s m)
   : exists m',
     Semantics.DenoteLines m asm = Some m'
@@ -2046,7 +2052,7 @@ Lemma SymexLines_ok_R {opts : symbolic_options_computed_opt}
     /\ (forall e n, eval G d e n -> eval G d' e n)
     /\ R frame G s' m'
     /\ same_mem_addressed s s'
-    /\ (forall reg, Option.is_Some (Symbolic.get_reg r' (reg_index reg)) = true).
+    /\ (forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg r' (reg_index reg)) = true).
 Proof.
   destruct _tt.
   pose proof H as H'; eapply SymexLines_mem_same in H'.
@@ -2117,7 +2123,7 @@ Lemma LoadArray_ok_R {opts : symbolic_options_computed_opt} {descr:description} 
       (HR : R frame G s ms)
       (Hbase : eval_idx_Z G d base (Z.land base_val (Z.ones 64)))
       (Hbase_word_val : base_val = word.unsigned base_word_val)
-      (Hreg_good : forall reg, Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
+      (Hreg_good : forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
   : ((exists (addrs : list idx),
          Permutation m (List.combine addrs idxs ++ m')
          /\ List.length idxs = len
@@ -2131,7 +2137,7 @@ Lemma LoadArray_ok_R {opts : symbolic_options_computed_opt} {descr:description} 
             Forall2 (eval_idx_Z G d') idxs vals
             /\ Forall (fun v => 0 <= v < 2^64)%Z vals
             /\ R (frame * array cell64 (word.of_Z 8) base_word_val vals)%sep G s' ms)
-        /\ (forall reg, Option.is_Some (Symbolic.get_reg r' (reg_index reg)) = true)).
+        /\ (forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg r' (reg_index reg)) = true)).
 Proof.
   replace (Z.land base_val (Z.ones 64)) with base_val in Hbase
       by now (subst; rewrite Z.land_ones by lia; rewrite Z.mod_small by apply Properties.word.unsigned_range).
@@ -2429,7 +2435,7 @@ Lemma LoadOutputs_ok_R {opts : symbolic_options_computed_opt} {descr:description
                                        => dereference_scalar = true
                                      | _ => True
                                      end) outputaddrs)
-      (Hreg_good : forall reg, Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
+      (Hreg_good : forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
   : (exists output_vals_words (output_vals' : list Z) (outputaddrs' : list (idx + list idx)) vals,
         output_vals' = List.map word.unsigned output_vals_words
         /\ Forall (fun v => (0 <= v < 2^64)%Z) output_vals'
@@ -2496,7 +2502,7 @@ Lemma LoadOutputs_ok_R {opts : symbolic_options_computed_opt} {descr:description
     /\ f = f'
     /\ gensym_dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n)
-    /\ (forall reg, Option.is_Some (Symbolic.get_reg r' (reg_index reg)) = true).
+    /\ (forall reg, is_ip_register_index (reg_index reg) = false -> Option.is_Some (Symbolic.get_reg r' (reg_index reg)) = true).
 Proof.
   pose dereference_scalar as dereference_scalar'.
   pose proof (fun (*i*) rv (*(H : nth_error outputaddrs i = Some (inl (inl rv)))*) H1 => @Forall2_get_reg_of_R_regs G d r ms [rv] (Forall_cons _ H1 (Forall_nil _)) ltac:(destruct s; apply HR)).

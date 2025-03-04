@@ -1,5 +1,6 @@
 From Coq Require Import List.
 From Coq Require Import Lia.
+Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.
 From Coq Require Import NArith.
 From Coq Require Import ZArith.
@@ -314,17 +315,18 @@ Qed.
 
 Lemma get_reg_R_regs d s m (HR : R_regs d s m) ri :
   forall i, Symbolic.get_reg s ri = Some i ->
-  exists v, eval d i v /\ Tuple.nth_default 0 ri m = v.
+  exists v, eval d i v /\ Tuple.nth_default 0 (N.to_nat ri) m = v.
 Proof using Type.
   cbv [Symbolic.get_reg]; intros.
   rewrite <-Tuple.nth_default_to_list in H.
-  cbv [nth_default] in H; BreakMatch.break_match_hyps; subst; [|solve[congruence] ].
-  destruct s,m; cbn in *; cbv [R_regs R_reg] in *.
+  break_innermost_match_hyps; inversion_option.
+  cbv [nth_default] in H; break_match_hyps; subst; [|solve[congruence] ].
+  destruct s,m; cbn -[is_ip_register_index] in *; cbv [R_regs R_reg] in *.
   eapply Tuple.fieldwise_to_list_iff in HR.
   eapply Forall.Forall2_forall_iff_nth_error in HR; cbv [Crypto.Util.Option.option_eq] in HR.
 
   rewrite Heqo in HR.
-  BreakMatch.break_match_hyps; [|solve[contradiction]].
+  break_match_hyps; [|solve[contradiction]].
   specialize (proj1 HR _ eq_refl).
   eexists; split; [eassumption|].
 
@@ -336,7 +338,7 @@ Qed.
 
 Lemma get_reg_R s m (HR : R s m) ri :
   forall i, Symbolic.get_reg s ri = Some i ->
-  exists v, eval s i v /\ Tuple.nth_default 0 ri (m : reg_state) = v.
+  exists v, eval s i v /\ Tuple.nth_default 0 (N.to_nat ri) (m : reg_state) = v.
 Proof using Type.
   destruct s, m; apply get_reg_R_regs, HR.
 Qed.

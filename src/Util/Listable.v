@@ -7,6 +7,7 @@ Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Bool.Reflect.
 Import ListNotations.
 
+(* TODO: move to using [N] for performance instead of [nat] *)
 Class Listable T := { list_all : list T ; find_index : T -> nat }.
 
 Arguments find_index {T} {_} _.
