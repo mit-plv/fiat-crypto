@@ -6,7 +6,17 @@ on:
       build_target:
         description: 'Build target for timing diff'
         required: false
-        # default: 'standalone-ocaml lite-generated-files'
+        default: 'standalone-ocaml lite-generated-files'
+        type: string
+      target_repository:
+        description: 'Target repository to checkout (e.g., username/repo)'
+        required: false
+        default: ''
+        type: string
+      target_branch:
+        description: 'Target branch to checkout'
+        required: false
+        default: ''
         type: string
 
 jobs:
@@ -30,6 +40,8 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+        repository: ${{ github.event.inputs.target_repository || github.repository }}
+        ref: ${{ github.event.inputs.target_branch || github.ref }}
     - name: echo host build params
       run: etc/ci/describe-system-config.sh
     - name: echo container build params
