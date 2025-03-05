@@ -9,7 +9,7 @@ Import ListNotations. Local Open Scope string_scope.
 
 Module debugging_no_asm.
   Import StandaloneOCamlMain.UnsaturatedSolinas.
-  Import ZArith.
+  Import Coq.ZArith.ZArith.
   Open Scope Z_scope.
   Goal True.
     pose main as v.
@@ -73,7 +73,7 @@ Module debugging_no_asm.
     cbv beta iota in v.
     vm_compute Parse.parse_validated in v.
     cbv beta iota in v.
-    vm_compute Parse.split_code_to_functions in v.
+    vm_compute Parse.split_code_to_global_functions in v.
     cbv beta iota in v.
     set (k := map _ _) in (value of v) at 1.
     cbn [map] in k.

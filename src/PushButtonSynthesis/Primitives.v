@@ -1288,7 +1288,7 @@ Section __.
               | Error err => Error (Pipeline.Assembly_parsing_error fname err)
               | Success v
                 => (vs <- parse_asm_files_lines ls;
-                    Success ((fname, Assembly.Parse.split_code_to_functions v) :: vs))
+                    Success ((fname, Assembly.Parse.split_code_to_global_functions v) :: vs))
               end
          end%error.
 

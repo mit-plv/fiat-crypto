@@ -80,16 +80,26 @@ Definition parse_label : ParserAction string
        (fun '(char, ls) => string_of_list_ascii (char :: ls))
        (([a-zA-Z] || parse_any_ascii "._?$") ;;
         (([a-zA-Z] || parse_any_ascii "0123456789_$#@~.?")* )).
+Definition parse_non_access_size_label : ParserAction string
+:= parse_lookahead_not parse_AccessSize ;;R parse_label.
 
 Definition parse_MEM : ParserAction MEM
-  := parse_map
-       (fun '(access_size, (br (*base reg*), sr (*scale reg, including z *), offset, base_label))
-        => {| mem_bits_access_size := access_size:option AccessSize
-           ; mem_base_reg := br:option REG
-           ; mem_base_label := base_label
-           ; mem_scale_reg := sr:option (Z * REG)
-           ; mem_offset := offset:option Z |})
+  := parse_option_list_map
+       (fun '(access_size, (constant_location_label, (br (*base reg*), sr (*scale reg, including z *), offset, base_label)))
+        => match base_label, constant_location_label with
+           | Some _, Some _ => (* invalid? *) None
+           | Some _ as lbl, None
+           | None, Some _ as lbl
+           | None, None as lbl =>
+               Some
+                {| mem_bits_access_size := access_size:option AccessSize
+                ; mem_base_reg := br:option REG
+                ; mem_base_label := lbl
+                ; mem_scale_reg := sr:option (Z * REG)
+                ; mem_offset := offset:option Z |}
+          end)
        (((strip_whitespace_after parse_AccessSize)?) ;;
+        (parse_non_access_size_label?) ;;
         (parse_option_list_map
            (fun '(offset, vars)
             => (vars <-- List.map (fun '(c, (v, e), vs) => match vs, e with [], 1%Z => Some (c, v) | _, _ => None end) vars;
@@ -267,11 +277,21 @@ Global Instance show_lvl_MEM : ShowLevel MEM
                                  then "0x08 * " ++ Decimal.show_Z (offset / 8)
                                  else Hex.show_Z offset)
                     end%Z) in
-              "[" ++ match m.(mem_base_label) with
-                     | None => reg_part ++ offset_part
-                     | Some l => "((" ++ l ++ offset_part ++ "))"
-                     end
-                  ++ "]").
+              match m.(mem_base_label), m.(mem_base_reg), m.(mem_offset), m.(mem_scale_reg) with
+              | Some lbl, Some rip, None, None => lbl ++ "[" ++ reg_part ++ offset_part ++ "]"
+              | Some lbl, _, _, _ => let l_offset := lbl ++ offset_part in
+                  "[" ++
+                      (if reg_part =? ""
+                      then "((" ++ l_offset ++ "))"
+                      else reg_part ++ " + " ++ l_offset)
+                      ++ "]"
+              | None, _, _, _ =>
+                  "[" ++
+                    (if reg_part =? ""
+                    then "((" ++ offset_part ++ "))"
+                    else reg_part ++ offset_part)
+                    ++ "]"
+              end).
 Global Instance show_MEM : Show MEM := show_lvl_MEM.
 
 Global Instance show_lvl_JUMP_LABEL : ShowLevel JUMP_LABEL
@@ -490,20 +510,86 @@ Definition find_globals (ls : Lines) : list string
                  end)
        ls.
 
-Fixpoint split_code_to_functions' (globals : list string) (ls : Lines) : Lines (* prefix *) * list (string (* global name *) * Lines)
+Definition find_labels (ls : Lines) : list string
+  := Option.List.map
+       (fun l => match l.(rawline) with
+                 | LABEL name => Some name
+                 | _ => None
+                 end)
+       ls.
+
+Fixpoint split_code_to_functions' (label_is_function : string -> bool) (ls : Lines) : Lines (* prefix *) * list (string (* global name *) * Lines)
   := match ls with
      | [] => ([], [])
      | l :: ls
-       => let '(prefix, rest) := split_code_to_functions' globals ls in
+       => let '(prefix, rest) := split_code_to_functions' label_is_function ls in
           let default := (l :: prefix, rest) in
           match l.(rawline) with
-          | LABEL name => if List.existsb (fun n => name =? n)%string globals
+          | LABEL name => if label_is_function name
                           then ([], (name, l::prefix) :: rest)
                           else default
           | _ => default
           end
      end.
 
-Definition split_code_to_functions (ls : Lines) : Lines (* prefix *) * list (string (* global name *) * Lines)
+Definition string_matches_loose (allow_prefix : bool) (allow_suffix : bool) (longer_string shorter_string : string) : bool
+  := match allow_prefix, allow_suffix with
+     | false, false => shorter_string =? longer_string
+     | true, false => String.endswith shorter_string longer_string
+     | false, true => String.startswith shorter_string longer_string
+     | true, true => String.is_substring shorter_string longer_string
+     end.
+Definition split_code_to_listed_functions {allow_prefix allow_suffix : bool} (functions : list string) (ls : Lines) : Lines (* prefix *) * list (string (* global name *) * Lines)
+  := split_code_to_functions' (fun name => List.existsb (fun f => string_matches_loose allow_prefix allow_suffix f name)%string functions) ls.
+Definition split_code_to_global_functions (ls : Lines) : Lines (* prefix *) * list (string (* global name *) * Lines)
   := let globals := find_globals ls in
-     split_code_to_functions' globals ls.
+     split_code_to_listed_functions (allow_prefix:=false) (allow_suffix:=false) globals ls.
+Definition split_code_at_labels (ls : Lines) : Lines (* prefix *) * list (string (* label name *) * Lines)
+  := let labels := find_labels ls in
+     split_code_to_listed_functions (allow_prefix:=false) (allow_suffix:=false) labels ls.
+
+Fixpoint get_initial_data (ls : Lines) : list (AccessSize * list Z)
+  := let get_arg_consts args :=
+           Option.List.lift
+            (List.map (fun arg => match arg with
+                                    | const c => Some c
+                                    | _ => None
+                                    end)
+                     args) in
+     match ls with
+     | [] => []
+     | l :: ls
+       => match l.(rawline) with
+          | INSTR instr =>
+              match accesssize_of_declaration instr.(op) with
+              | None => []
+              | Some size =>
+                  let csts := get_arg_consts instr.(args) in
+                  match csts with
+                  | Some csts => (size, csts) :: get_initial_data ls
+                  | None => []
+                  end
+              end
+          | LABEL _
+          | EMPTY
+          | GLOBAL _
+          | DEFAULT_REL
+            => get_initial_data ls
+          | SECTION _
+          | ALIGN _
+             => []
+          end
+     end.
+
+Definition get_labeled_data (ls : Lines) : list (string * list (AccessSize * list Z)) :=
+  let '(_, labeled_data) := split_code_at_labels ls in
+  let labeled_data := List.map (fun '(lbl, lines) => (lbl, get_initial_data lines)) labeled_data in
+  let labeled_data := List.filter (fun '(_, data) => match data with nil => false | _ => true end) labeled_data in
+  labeled_data.
+
+Definition parse_assembly_options (ls : Lines) : assembly_program_options
+  := {| default_rel := Option.is_Some (List.find (fun l => match l.(rawline) with
+                                | DEFAULT_REL => true
+                                | _ => false
+                                end) ls)
+     |}.
