@@ -3863,8 +3863,12 @@ Definition reverse_lookup_flag (st : flag_state) (i : idx) : option FLAG
        (List.find (fun v => option_beq N.eqb (Some i) (fst v))
                   (Tuple.to_list _ (Tuple.map2 (@pair _ _) st (CF, PF, AF, ZF, SF, OF)))).
 
+Definition is_ip_register_index (ri : N) : bool :=
+  REG_beq (widest_register_of_index ri) rip.
 Definition get_reg (st : reg_state) (ri : N) : option idx
-  := Tuple.nth_default None (N.to_nat ri) st.
+  := if is_ip_register_index ri
+     then None
+     else Tuple.nth_default None (N.to_nat ri) st.
 Definition set_reg (st : reg_state) (ri : N) (i : idx) : reg_state
   := Tuple.from_list_default None _ (ListUtil.set_nth
        (N.to_nat ri)
@@ -3934,15 +3938,15 @@ Global Instance ShowLines_symbolic_state : ShowLines symbolic_state :=
  fun X : symbolic_state =>
  match X with
  | {|
-     dag_state := ds;
+     dag_state := dagst;
      symbolic_reg_state := rs;
-     symbolic_flag_state := fs;
+     symbolic_flag_state := flst;
      symbolic_mem_state := ms
    |} =>
    ["(*symbolic_state*) {|";
-   "  dag_state :="] ++ show_lines ds ++ [";";
+   "  dag_state :="] ++ show_lines dagst ++ [";";
    ("  symbolic_reg_state := " ++ show rs ++ ";")%string;
-   ("  symbolic_flag_state := " ++ show fs ++";")%string;
+   ("  symbolic_flag_state := " ++ show flst ++";")%string;
    "  symbolic_mem_state :="] ++show_lines ms ++ [";";
    "|}"]
  end%list%string.
@@ -4044,11 +4048,11 @@ Definition error_get_reg_of_reg_index ri : symbolic_state -> error
   := error.get_reg (let r := widest_register_of_index ri in
                     if (reg_index r =? ri)%N
                     then inr r
-                    else inl ri).
+                    else inl (N.to_nat ri)).
 
 Definition GetFlag f : M idx :=
   some_or (fun s => get_flag s f) (error.get_flag f).
-Definition GetReg64 ri : M idx :=
+Definition GetRegFull ri : M idx :=
   some_or (fun st => get_reg st ri) (error_get_reg_of_reg_index ri).
 Definition Load64 (a : idx) : M idx := some_or (load a) (error.load a).
 Definition Remove64 (a : idx) : M idx
@@ -4067,7 +4071,7 @@ Definition PreserveFlag {T} (f : FLAG) (k : M T) : M T :=
   x <- k;
   _ <- (fun s => Success (tt, update_flag_with s (fun s => set_flag_internal s f vf)));
   ret x.
-Definition SetReg64 rn i : M unit :=
+Definition SetRegFull rn i : M unit :=
   fun s => Success (tt, update_reg_with s (fun s => set_reg s rn i)).
 Definition Store64 (a v : idx) : M unit :=
   ms <- some_or (store a v) (error.store a v);
@@ -4088,16 +4092,17 @@ Definition RevealConst (i : idx) : M Z :=
 
 Definition GetReg {opts : symbolic_options_computed_opt} {descr:description} r : M idx :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
-  v <- GetReg64 rn;
+  v <- GetRegFull rn;
   App ((slice lo sz), [v]).
 Definition SetReg {opts : symbolic_options_computed_opt} {descr:description} r (v : idx) : M unit :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
-  if N.eqb sz 64
-  then v <- App (slice 0 64, [v]);
-       SetReg64 rn v (* works even if old value is unspecified *)
-  else old <- GetReg64 rn;
+  let widest_size := reg_size (widest_register_of_index rn) in
+  if (sz =? widest_size)%N
+  then v <- App (slice 0 widest_size, [v]);
+       SetRegFull rn v (* works even if old value is unspecified *)
+  else old <- GetRegFull rn;
        v <- App ((set_slice lo sz), [old; v]);
-       SetReg64 rn v.
+       SetRegFull rn v.
 
 Class AddressSize := address_size : OperationSize.
 Definition Address {opts : symbolic_options_computed_opt} {descr:description} {sa : AddressSize} (a : MEM) : M idx :=

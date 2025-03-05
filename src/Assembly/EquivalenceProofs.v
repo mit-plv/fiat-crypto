@@ -915,11 +915,11 @@ Module dagG.
   Definition M A := (symbol -> option Z) * dag -> A * ((symbol -> option Z) * dag).
 End dagG.
 
-Definition merge_fresh_symbol_G {descr:description} (v : Z) : dagG.M idx
-  := fun '(G, d) => let '(idx, d) := merge_fresh_symbol d in (idx, (ctx_set idx v G, d)).
+Definition merge_fresh_symbol_G {descr:description} (size : OperationSize) (v : Z) : dagG.M idx
+  := fun '(G, d) => let '(idx, d) := merge_fresh_symbol size d in (idx, (ctx_set idx v G, d)).
 
 Definition build_inputarray_G {descr:description} (vals : list Z) : dagG.M (list idx)
-  := List.foldmap merge_fresh_symbol_G vals.
+  := List.foldmap (merge_fresh_symbol_G 64%N) vals.
 
 Fixpoint build_inputs_G {descr:description} (vals : list (Z + list Z))
   : dagG.M (list (idx + list idx))
@@ -932,18 +932,19 @@ Fixpoint build_inputs_G {descr:description} (vals : list (Z + list Z))
              (inr idxs :: rest, st)
      | inl v :: args
        => fun st
-          => let '(idx, st) := merge_fresh_symbol_G v st in
+          => let '(idx, st) := merge_fresh_symbol_G 64%N v st in
              let '(rest, st) := build_inputs_G args st in
              (inl idx :: rest, st)
      end.
 
-Fixpoint dag_gensym_n_G {descr:description} (vals : list Z) : dagG.M (list idx)
-  := match vals with
-     | nil => fun st => ([], st)
-     | v :: vs
+Fixpoint dag_gensym_ls_G {descr:description} (sizes : list OperationSize) (vals : list Z) : dagG.M (list idx)
+  := match sizes, vals with
+     | nil, nil => fun st => ([], st)
+     | nil, _ :: _ | _ :: _, nil => fun st => ([], st)
+     | size :: sizes, v :: vs
        => fun st
-          => let '(idx, st) := merge_fresh_symbol_G v st in
-             let '(rest, st) := dag_gensym_n_G vs st in
+          => let '(idx, st) := merge_fresh_symbol_G size v st in
+             let '(rest, st) := dag_gensym_ls_G sizes vs st in
              (idx :: rest, st)
      end.
 
@@ -968,7 +969,7 @@ Definition lift_dag_G {A} (v : dagG.M A) : G.M A
                     Some (v, (G, update_dag_with s (fun _ => d))).
 
 Definition SetRegFresh_G {opts : symbolic_options_computed_opt} {descr:description} (r : REG) (v : Z) : G.M idx
-  := (idx <- lift_dag_G (merge_fresh_symbol_G v);
+  := (idx <- lift_dag_G (merge_fresh_symbol_G (widest_reg_size_of r) v);
       _ <- G.lift (SetReg r idx);
       G.ret idx)%GM.
 
@@ -1107,17 +1108,17 @@ Proof.
   all: intros; break_match; intuition.
 Qed.
 
-Lemma merge_fresh_symbol_eq_G {descr:description} G d v
-      (res := merge_fresh_symbol_G v (G, d))
-  : merge_fresh_symbol d = (fst res, snd (snd res)).
+Lemma merge_fresh_symbol_eq_G {descr:description} G sz d v
+      (res := merge_fresh_symbol_G sz v (G, d))
+  : merge_fresh_symbol sz d = (fst res, snd (snd res)).
 Proof.
   subst res; cbv [merge_fresh_symbol_G]; break_innermost_match; reflexivity.
 Qed.
 
-Lemma merge_fresh_symbol_G_ok {descr:description} G d v G' d' idx
+Lemma merge_fresh_symbol_G_ok {descr:description} G sz d v G' d' idx
       (Hd : gensym_dag_ok G d)
-      (H : merge_fresh_symbol_G v (G, d) = (idx, (G', d')))
-  : eval_idx_Z G' d' idx (Z.land v (Z.ones (Z.of_N 64)))
+      (H : merge_fresh_symbol_G sz v (G, d) = (idx, (G', d')))
+  : eval_idx_Z G' d' idx (Z.land v (Z.ones (Z.of_N sz)))
     /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
@@ -1177,15 +1178,16 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma merge_fresh_symbol_G_ok_bounded {descr:description} G d v G' d' idx
+Lemma merge_fresh_symbol_G_ok_bounded {descr:description} G sz d v G' d' idx
       (Hd : gensym_dag_ok G d)
-      (H : merge_fresh_symbol_G v (G, d) = (idx, (G', d')))
-      (Hv : (0 <= v < 2^64)%Z)
+      (H : merge_fresh_symbol_G sz v (G, d) = (idx, (G', d')))
+      (Hv : (0 <= v < 2^Z.of_N sz)%Z)
   : eval_idx_Z G' d' idx v
     /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
-  replace v with (Z.land v (Z.ones (Z.of_N 64))); [ now apply merge_fresh_symbol_G_ok | rewrite land_ones_eq_of_bounded by assumption ].
+  subst.
+  replace v with (Z.land v (Z.ones (Z.of_N sz))); [ now apply merge_fresh_symbol_G_ok | rewrite land_ones_eq_of_bounded by assumption ].
   reflexivity.
 Qed.
 
@@ -1225,8 +1227,8 @@ Proof.
                  | match goal with
                    | [ H : ?x :: ?xs = ?y :: ?ys |- _ ] => assert (x = y /\ xs = ys) by (now inversion H; split); clear H
                    end ].
-    let lem := match goal with |- context[merge_fresh_symbol_G ?v (?G, ?d)] => constr:(merge_fresh_symbol_G_ok_bounded G d v) end in
-    pose proof (lem _ _ _ ltac:(assumption) ltac:(repeat rewrite <- surjective_pairing; reflexivity) ltac:(lia)).
+    let lem := match goal with |- context[merge_fresh_symbol_G ?sz ?v (?G, ?d)] => constr:(merge_fresh_symbol_G_ok_bounded G sz d v) end in
+    epose proof (lem _ _ _ ltac:(assumption) ltac:(repeat rewrite <- surjective_pairing; reflexivity) ltac:(lia)).
     repeat first [ progress subst
                  | progress destruct_head'_and
                  | assumption
@@ -1254,33 +1256,30 @@ Proof.
   repeat first [ eassumption | apply path_prod | reflexivity ].
 Qed.
 
-Lemma dag_gensym_n_eq_G {descr:description} G d vals (len := List.length vals)
-  : dag_gensym_n len d = (fst (dag_gensym_n_G vals (G, d)), snd (snd (dag_gensym_n_G vals (G, d)))).
+Lemma dag_gensym_ls_eq_G {descr:description} G d ls vals (Hlen : List.length vals = List.length ls)
+  : dag_gensym_ls ls d = (fst (dag_gensym_ls_G ls vals (G, d)), snd (snd (dag_gensym_ls_G ls vals (G, d)))).
 Proof.
-  subst len.
-  revert G d; induction vals as [|v vals IHvals]; cbn [dag_gensym_n dag_gensym_n_G fst snd List.length]; [ reflexivity | ]; intros.
+  revert G d vals Hlen; induction ls as [|sz ls IH], vals; cbn [dag_gensym_ls dag_gensym_ls_G fst snd List.length]; try reflexivity; intros; try congruence; [].
   cbv [dag.bind dag.ret]; eta_expand; cbn [fst snd].
-  erewrite !@merge_fresh_symbol_eq_G, IHvals; cbn [fst snd]; eta_expand; reflexivity.
+  erewrite !@merge_fresh_symbol_eq_G, IH; cbn [fst snd]; eta_expand; try reflexivity; congruence.
 Qed.
 
-Lemma dag_gensym_n_G_ok {descr:description} G d vals G' d' ia
+Lemma dag_gensym_ls_G_ok {descr:description} G d ls vals G' d' ia
       (Hd : gensym_dag_ok G d)
-      (H : dag_gensym_n_G vals (G, d) = (ia, (G', d')))
-      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) vals)
+      (H : dag_gensym_ls_G ls vals (G, d) = (ia, (G', d')))
+      (Hbounds : Forall2 (fun sz v => (0 <= v < 2^Z.of_N sz)%Z) ls vals)
   : Forall2 (eval_idx_Z G' d') ia vals
     /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
   revert ia G d G' d' Hd H.
-  induction vals as [|v vals IHvals], ia as [|i ia]; cbn [dag_gensym_n_G]; intros;
+  induction Hbounds as [|???? Hbound Hbounds IH], ia as [|i ia]; cbn [dag_gensym_ls_G]; intros;
     try solve [ inversion_prod; subst; eta_expand; cbn [fst snd] in *; eauto; try congruence ].
   { break_innermost_match_hyps.
-    inversion Hbounds; subst; clear Hbounds.
-    destruct_head'_prod.
-    specialize (fun H => IHvals ltac:(assumption) _ _ _ _ _ H ltac:(eassumption)).
-    match goal with H : pair _ _ = pair _ _ |- _ => inversion H; clear H end; subst.
-    let lem := match goal with H : context[merge_fresh_symbol_G ?v (?G, ?d)] |- _ => constr:(merge_fresh_symbol_G_ok_bounded G d v) end in
-    pose proof (lem _ _ _ ltac:(assumption) ltac:(eassumption) ltac:(lia)).
+    inversion_prod; inversion_list; subst.
+    let lem := match goal with |- context[merge_fresh_symbol_G ?sz ?v (?G, ?d)] => constr:(merge_fresh_symbol_G_ok_bounded G sz d v) end in
+    pose proof (lem _ _ _ ltac:(assumption) ltac:(repeat rewrite <- surjective_pairing; reflexivity) ltac:(lia)) as H'.
+    specialize (IH _ _ _ _ _ ltac:(apply H') ltac:(repeat rewrite <- surjective_pairing; reflexivity)).
     destruct_head'_and; specialize_by_assumption.
     repeat first [ progress subst
                  | progress destruct_head'_and
@@ -1295,18 +1294,18 @@ Proof.
                    end ]. }
 Qed.
 
-Lemma dag_gensym_n_ok {descr:description} G d len idxs args d'
+Lemma dag_gensym_ls_ok {descr:description} G d ls idxs args d'
       (d_ok : gensym_dag_ok G d)
-      (H : dag_gensym_n len d = (idxs, d'))
-      (Hargs : List.length args = len)
-      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) args)
+      (H : dag_gensym_ls ls d = (idxs, d'))
+      (Hargs : List.length args = List.length ls)
+      (Hbounds : Forall2 (fun sz v => (0 <= v < 2^Z.of_N sz)%Z) ls args)
   : exists G',
     Forall2 (eval_idx_Z G' d') idxs args
     /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
-  subst len; erewrite dag_gensym_n_eq_G in H; inversion_prod.
-  eexists; eapply dag_gensym_n_G_ok; try eassumption.
+  erewrite dag_gensym_ls_eq_G in H by eassumption; inversion_prod.
+  eexists; eapply dag_gensym_ls_G_ok; try eassumption.
   repeat first [ eassumption | apply path_prod | reflexivity ].
 Qed.
 
@@ -1333,7 +1332,7 @@ Proof.
                     | reflexivity
                     | match goal with
                       | [ H : pair _ _ = pair _ _ |- _ ] => inversion H; clear H
-                      | [ H : merge_fresh_symbol _ = _, H' : merge_fresh_symbol_G _ _ = _ |- _ ] => erewrite merge_fresh_symbol_eq_G, H' in H
+                      | [ H : merge_fresh_symbol _ _ = _, H' : merge_fresh_symbol_G _ _ _ = _ |- _ ] => erewrite merge_fresh_symbol_eq_G, H' in H
                       | [ H : build_inputarray _ _ = _, H' : build_inputarray_G _ _ = _ |- _ ] => erewrite build_inputarray_eq_G, H' in H
                       | [ H : build_inputs _ _ = _, H' : build_inputs_G _ _ = _ |- _ ] => erewrite IHvals, H' in H
                       end ].
@@ -1359,7 +1358,7 @@ Proof.
                       | solve [ eauto ]
                       | match goal with
                         | [ H : ?x :: ?xs = ?y :: ?ys |- _ ] => assert (x = y /\ xs = ys) by (now inversion H; split); clear H
-                        | [ H : merge_fresh_symbol_G _ _ = _ |- _ ] => apply merge_fresh_symbol_G_ok_bounded in H; [ | (assumption  + lia) .. ]
+                        | [ H : merge_fresh_symbol_G _ _ _ = _ |- _ ] => apply merge_fresh_symbol_G_ok_bounded in H; [ | (assumption  + lia) .. ]
                         | [ H : build_inputarray_G _ _ = _ |- _ ] => apply build_inputarray_G_ok in H; [ | assumption .. ]
                         | [ H : build_inputs_G _ _ = _ |- _ ] => apply IHvals in H; [ | assumption .. ]
                         | [ H : Forall _ (_ :: _) |- _ ] => inversion H; clear H
@@ -1535,7 +1534,8 @@ Qed.
 
 Lemma SetReg_ok {opts : symbolic_options_computed_opt} {descr:description} G s s' reg idx rn lo sz v
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
-      (H64 : sz = 64%N)
+      (width := reg_size (widest_register_of_index rn))
+      (Hwide : sz = width)
       (H : SetReg reg idx s = Success (tt, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -1549,13 +1549,13 @@ Lemma SetReg_ok {opts : symbolic_options_computed_opt} {descr:description} G s s
       (Hidx : eval_idx_Z G d idx v)
   : ((exists idx',
          set_reg r rn idx' = r'
-         /\ eval_idx_Z G d' idx' (Z.land v (Z.ones 64)))
+         /\ eval_idx_Z G d' idx' (Z.land v (Z.ones (Z.of_N width))))
      /\ f = f'
      /\ m = m')
     /\ gensym_dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof.
-  cbv [SetReg Symbolic.bind ErrorT.bind Crypto.Util.Option.bind GetReg SetReg64] in *.
+  cbv [SetReg Symbolic.bind ErrorT.bind Crypto.Util.Option.bind GetReg SetRegFull] in *.
   break_match_hyps.
   all: repeat first [ progress inversion_option
                     | progress cbn [fst snd dag_state symbolic_reg_state symbolic_flag_state symbolic_mem_state] in *
@@ -1595,7 +1595,8 @@ Qed.
 
 Lemma SetReg_ok_bounded {opts : symbolic_options_computed_opt} {descr:description} G s s' reg idx rn lo sz v
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
-      (H64 : sz = 64%N)
+      (width := reg_size (widest_register_of_index rn))
+      (Hwide : sz = width)
       (H : SetReg reg idx s = Success (tt, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -1607,7 +1608,7 @@ Lemma SetReg_ok_bounded {opts : symbolic_options_computed_opt} {descr:descriptio
       (m' := s'.(symbolic_mem_state))
       (Hd : gensym_dag_ok G d)
       (Hidx : eval_idx_Z G d idx v)
-      (Hv : (0 <= v < 2^64)%Z)
+      (Hv : (0 <= v < 2^Z.of_N width)%Z)
   : ((exists idx',
          set_reg r rn idx' = r'
          /\ eval_idx_Z G d' idx' v)
@@ -1616,13 +1617,14 @@ Lemma SetReg_ok_bounded {opts : symbolic_options_computed_opt} {descr:descriptio
     /\ gensym_dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof.
-  replace v with (Z.land v (Z.ones (Z.of_N 64))); [ eapply SetReg_ok; eassumption | rewrite land_ones_eq_of_bounded by assumption ].
+  replace v with (Z.land v (Z.ones (Z.of_N width))); [ eapply SetReg_ok; eassumption | rewrite land_ones_eq_of_bounded by assumption ].
   reflexivity.
 Qed.
 
 Lemma SetRegFresh_G_ok {opts : symbolic_options_computed_opt} {descr:description} G G' s s' reg idx rn lo sz v
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
-      (H64 : sz = 64%N)
+      (width := reg_size (widest_register_of_index rn))
+      (Hwide : sz = width)
       (H : SetRegFresh_G reg v (G, s) = Some (idx, (G', s')))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -1633,10 +1635,10 @@ Lemma SetRegFresh_G_ok {opts : symbolic_options_computed_opt} {descr:description
       (m := s.(symbolic_mem_state))
       (m' := s'.(symbolic_mem_state))
       (Hd : gensym_dag_ok G d)
-  : (eval_idx_Z G' d' idx (Z.land v (Z.ones 64))
+  : (eval_idx_Z G' d' idx (Z.land v (Z.ones (Z.of_N width)))
      /\ (exists idx',
             set_reg r rn idx' = r'
-            /\ eval_idx_Z G' d' idx' (Z.land v (Z.ones 64)))
+            /\ eval_idx_Z G' d' idx' (Z.land v (Z.ones (Z.of_N width))))
      /\ f = f'
      /\ m = m')
     /\ gensym_dag_ok G' d'
@@ -1652,11 +1654,12 @@ Proof.
                | progress subst_prod
                | progress cbv [update_dag_with] in *
                | progress cbn [dag_state symbolic_reg_state symbolic_flag_state symbolic_mem_state] in *
+               | progress cbv [index_and_shift_and_bitcount_of_reg] in *
                | rewrite Z.land_same_r in *
                | solve [ cbv [eval_idx_Z] in *; eauto ]
                | match goal with
                  | [ H := _ |- _ ] => subst H
-                 | [ H : merge_fresh_symbol_G _ _ = _ |- _ ]
+                 | [ H : merge_fresh_symbol_G _ _ _ = _ |- _ ]
                    => apply merge_fresh_symbol_G_ok in H; [ | assumption .. ]
                  | [ H : SetReg _ _ _ = _ |- _ ]
                    => eapply SetReg_ok in H;
@@ -1667,8 +1670,9 @@ Proof.
 Qed.
 
 Lemma SetRegFresh_G_ok_bounded {opts : symbolic_options_computed_opt} {descr:description} G G' s s' reg idx rn lo sz v
+      (width := widest_reg_size_of reg)
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
-      (H64 : sz = 64%N)
+      (Hwidth : sz = width)
       (H : SetRegFresh_G reg v (G, s) = Some (idx, (G', s')))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -1679,7 +1683,7 @@ Lemma SetRegFresh_G_ok_bounded {opts : symbolic_options_computed_opt} {descr:des
       (m := s.(symbolic_mem_state))
       (m' := s'.(symbolic_mem_state))
       (Hd : gensym_dag_ok G d)
-      (Hv : (0 <= v < 2^64)%Z)
+      (Hv : (0 <= v < 2^Z.of_N width)%Z)
   : (eval_idx_Z G' d' idx v
      /\ (exists idx',
             set_reg r rn idx' = r'
@@ -1689,13 +1693,16 @@ Lemma SetRegFresh_G_ok_bounded {opts : symbolic_options_computed_opt} {descr:des
     /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
-  replace v with (Z.land v (Z.ones (Z.of_N 64))); [ eapply SetRegFresh_G_ok; eassumption | rewrite land_ones_eq_of_bounded by assumption ].
+  cbv [widest_reg_size_of index_and_shift_and_bitcount_of_reg] in *.
+  inversion_prod; subst.
+  replace v with (Z.land v (Z.ones (Z.of_N width))); [ eapply SetRegFresh_G_ok; try eassumption; reflexivity | rewrite land_ones_eq_of_bounded by assumption ].
   reflexivity.
 Qed.
 
 Lemma GetReg_ok {opts : symbolic_options_computed_opt} {descr:description} G s s' reg idx rn lo sz v
+      (width := widest_reg_size_of reg)
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
-      (H64 : sz = 64%N)
+      (Hwidth : sz = width)
       (H : GetReg reg s = Success (idx, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -1710,14 +1717,14 @@ Lemma GetReg_ok {opts : symbolic_options_computed_opt} {descr:description} G s s
   : ((exists idx',
          get_reg r rn = Some idx'
          /\ eval_idx_Z G d idx' v)
-     /\ eval_idx_Z G d' idx (Z.land v (Z.ones 64))
+     /\ eval_idx_Z G d' idx (Z.land v (Z.ones (Z.of_N width)))
      /\ r = r'
      /\ f = f'
      /\ m = m')
     /\ gensym_dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof.
-  cbv [GetReg GetReg64 some_or Symbolic.bind ErrorT.bind Symbolic.App Merge] in *.
+  cbv [GetReg GetRegFull some_or Symbolic.bind ErrorT.bind Symbolic.App Merge] in *.
   subst sz.
   assert (lo = 0%N) by (
       clear -Hreg; inversion_prod; subst;
@@ -1753,8 +1760,9 @@ Proof.
 Qed.
 
 Lemma GetReg_ok_bounded {opts : symbolic_options_computed_opt} {descr:description} G s s' reg idx rn lo sz v
+      (width := widest_reg_size_of reg)
       (Hreg : index_and_shift_and_bitcount_of_reg reg = (rn, lo, sz))
-      (H64 : sz = 64%N)
+      (Hwidth : sz = width)
       (H : GetReg reg s = Success (idx, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
@@ -1766,7 +1774,7 @@ Lemma GetReg_ok_bounded {opts : symbolic_options_computed_opt} {descr:descriptio
       (m' := s'.(symbolic_mem_state))
       (Hd : gensym_dag_ok G d)
       (Hr : forall idx', get_reg r rn = Some idx' -> eval_idx_Z G d idx' v)
-      (Hv : (0 <= v < 2^64)%Z)
+      (Hv : (0 <= v < 2^Z.of_N width)%Z)
   : ((exists idx',
          get_reg r rn = Some idx'
          /\ eval_idx_Z G d idx' v)
@@ -1777,7 +1785,7 @@ Lemma GetReg_ok_bounded {opts : symbolic_options_computed_opt} {descr:descriptio
     /\ gensym_dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof.
-  replace v with (Z.land v (Z.ones (Z.of_N 64))) at 1; [ eapply GetReg_ok; eassumption | rewrite land_ones_eq_of_bounded by assumption ].
+  replace v with (Z.land v (Z.ones (Z.of_N width))) at 1; [ eapply GetReg_ok; eassumption | rewrite land_ones_eq_of_bounded by assumption ].
   reflexivity.
 Qed.
 
@@ -1847,26 +1855,32 @@ Qed.
 (* TODO: this is Symbolic.get_reg; move to SymbolicProofs? *)
 Lemma get_reg_set_reg_full s rn rn' v
   : get_reg (set_reg s rn v) rn'
-    = if ((rn <? ((fun n (_ : Tuple.tuple _ n) => N.of_nat n) _ s)) && (rn =? rn'))%N%bool
+    = if ((rn <? ((fun n (_ : Tuple.tuple _ n) => N.of_nat n) _ s)) && (rn =? rn') && negb (REG_beq (widest_register_of_index rn') rip))%N%bool
       then Some v
       else get_reg s rn'.
 Proof.
   cbv [get_reg set_reg].
-  break_innermost_match; split_andb; reflect_hyps; subst.
+  break_innermost_match; split_andb; reflect_hyps; subst; try reflexivity; try congruence.
   all: rewrite <- !Tuple.nth_default_to_list.
   all: rewrite ?@Tuple.length_to_list in *.
   all: unshelve erewrite Tuple.from_list_default_eq, Tuple.to_list_from_list, set_nth_nth_default_full;
     rewrite ?length_set_nth, ?Tuple.length_to_list; try easy.
   all: break_innermost_match; try lia; try reflexivity.
+  all: try (assert (rn = rn') by lia; subst); try congruence.
+  all: repeat match goal with
+      | [ H : ~(?a /\ ?b) |- _ ] => assert (~a) by intuition auto; clear H
+      end.
+  all: try lia.
   now rewrite nth_default_out_of_bounds by now rewrite Tuple.length_to_list; lia.
 Qed.
 
 (* TODO: this is Symbolic.get_reg; move to SymbolicProofs? *)
 Local Lemma get_reg_set_reg_same s rn v
       (H : (rn < (fun n (_ : Tuple.tuple _ n) => N.of_nat n) _ s)%N)
-  : get_reg (set_reg s rn v) rn = Some v.
+  : get_reg (set_reg s rn v) rn = if REG_beq (widest_register_of_index rn) rip then None else Some v.
 Proof.
-  rewrite get_reg_set_reg_full; break_innermost_match; reflect_hyps; cbv beta in *; try reflexivity; lia.
+  rewrite get_reg_set_reg_full; cbv [get_reg is_ip_register_index].
+  break_innermost_match; reflect_hyps; cbv beta in *; try reflexivity; try lia.
 Qed.
 
 Lemma compute_array_address_ok {opts : symbolic_options_computed_opt} {descr:description} G s s' base i idx base_val
@@ -2227,7 +2241,7 @@ Lemma build_merge_base_addresses_G_ok
            (m' := s'.(symbolic_mem_state))
            (Hd : gensym_dag_ok G d)
            (Hruntime_reg_bounded : Forall (fun v => (0 <= v < 2^64)%Z) runtime_reg)
-           (Hreg_available_wide : Forall (fun reg => let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg reg in sz = 64%N) reg_available),
+           (Hreg_available_wide : Forall (fun reg => reg_size reg = widest_reg_size_of reg /\ let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg reg in sz = 64%N) reg_available),
     ((exists (outputaddrs' : list (idx * option idx + idx * list idx)),
          let addrs_vals_of := fun base_reg_val addrs' => List.map (fun i => Z.land (base_reg_val + 8 * Z.of_nat i) (Z.ones 64)) (seq 0 (List.length addrs')) in
          fold_left (fun rst '(r, idx')
@@ -2317,7 +2331,7 @@ Proof.
         runtime_reg as [|runtime_reg runtime_regs];
     try specialize (IH reg_availables runtime_regs).
   all: repeat first [ progress cbn [build_merge_base_addresses_G List.length firstn] in *
-                    | progress cbv [Symbolic.bind ErrorT.bind Symbolic.ret G.ret G.lift G.bind Crypto.Util.Option.bind] in *
+                    | progress cbv [Symbolic.bind ErrorT.bind Symbolic.ret G.ret G.lift G.bind Crypto.Util.Option.bind widest_reg_size_of] in *
                     | progress intros
                     | progress inversion_option
                     | progress inversion_prod
@@ -2363,7 +2377,7 @@ Proof.
                  (*
                       | [ H : symbolic_flag_state _ = symbolic_flag_state ?x, H' : symbolic_flag_state ?x = _ |- _ ]
                         => is_var x; destruct x*)
-                 end
+                end
                | break_innermost_match_hyps_step
                | apply conj; eauto 10; []
                | progress cbv [index_and_shift_and_bitcount_of_reg] in * ].
@@ -2382,6 +2396,7 @@ Proof.
                | rewrite <- ?app_assoc; progress cbn [List.app]
                | rewrite !app_assoc
                | rewrite app_nil_r
+               | progress change (Z.of_N 64) with 64%Z in *
                | progress cbv [option_eq] in *
                | progress inversion_prod
                | progress subst
@@ -2406,6 +2421,9 @@ Proof.
                  | [ |- ?x ++ ?y = ?y ] => cut (x = []); [ now intros -> | ]
                  | [ |- ?y ++ ?x = ?y ] => cut (x = []); [ now intros ->; rewrite app_nil_r | ]
                  | [ |- rev ?x = nil ] => cut (x = []); [ now intros -> | ]
+                 | [ H : ?x = 64%N |- context[?x] ] => rewrite H in *
+                 | [ H : ?x = 64%N, H' : context[?x] |- _ ] => rewrite H in *
+                 | [ H : 64%N = ?x |- _ ] => progress symmetry in H
                  | [ H : eval_idx_Z _ _ ?i ?v |- eval_idx_Z _ _ ?i ?v' ]
                    => cut (v' = v); [ intros ->; eapply lift_eval_idx_Z_impl; [ | exact H ]; eauto | rewrite !Z.land_ones, !Z.mod_small by lia ]
                  (*| [ |- match ?e with inl _ => ?v | inr _ => _ end = ?v' ]
@@ -2419,6 +2437,12 @@ Proof.
                    => erewrite map_ext; [ eapply Forall2_weaken; [ | exact H ] | cbv beta ];
                       [ eauto using lift_eval_idx_Z_impl
                       | intros; rewrite !Z.land_ones by lia; push_Zmod; pull_Zmod ]
+                 end
+               | rewrite Z.mod_small by lia
+               | progress (push_Zmod; pull_Zmod)
+               | match goal with
+                 | [ H : eval_idx_Z _ _ ?i ?v |- eval_idx_Z _ _ ?i ?v' ]
+                    => cut (v' = v); [ intros ->; eapply lift_eval_idx_Z_impl; [ | exact H ]; eauto | rewrite !Z.land_ones by lia ]
                  end ].
 Qed.
 
@@ -2510,7 +2534,7 @@ Lemma build_merge_base_addresses_ok
       (H : build_merge_base_addresses (dereference_scalar:=dereference_scalar) idxs reg_available s = Success (outputaddrs, s'))
       (Hd : gensym_dag_ok G d)
       (Hruntime_reg_bounded : Forall (fun v => (0 <= v < 2^64)%Z) runtime_reg)
-      (Hreg_available_wide : Forall (fun reg => let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg reg in sz = 64%N) reg_available)
+      (Hreg_available_wide : Forall (fun reg => reg_size reg = widest_reg_size_of reg /\ let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg reg in sz = 64%N) reg_available)
   : exists G',
     ((exists (outputaddrs' : list (idx * option idx + idx * list idx)),
          let addrs_vals_of := fun base_reg_val addrs' => List.map (fun i => Z.land (base_reg_val + 8 * Z.of_nat i) (Z.ones 64)) (seq 0 (List.length addrs')) in
