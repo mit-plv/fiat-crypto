@@ -81,19 +81,34 @@ Definition parse_label : ParserAction string
        (([a-zA-Z] || parse_any_ascii "._?$") ;;
         (([a-zA-Z] || parse_any_ascii "0123456789_$#@~.?")* )).
 
-Definition parse_MEM : ParserAction MEM
-  := parse_map
-       (fun '(access_size, (br (*base reg*), sr (*scale reg, including z *), offset, base_label))
-        => {| mem_bits_access_size := access_size:option AccessSize
-           ; mem_base_reg := br:option REG
-           ; mem_base_label := base_label
-           ; mem_scale_reg := sr:option (Z * REG)
-           ; mem_offset := offset:option Z |})
+Definition parse_non_access_size_label : ParserAction string
+  := parse_lookahead_not parse_AccessSize ;;R parse_label.
+
+Definition parse_rip_relative_kind : ParserAction rip_relative_kind
+ := parse_map (fun _ => explicitly_rip_relative) "rip".
+
+Definition parse_MEM {opts : assembly_program_options} : ParserAction MEM
+  := parse_option_list_map
+       (fun '(access_size, (constant_location_label, (br (*base reg*), sr (*scale reg, including z *), offset, base_label, rip_relative)))
+        => match base_label, constant_location_label with
+           | Some _, Some _ => (* invalid? *) None
+           | Some _ as lbl, None
+           | None, Some _ as lbl
+           | None, None as lbl =>
+               Some
+                {| mem_bits_access_size := access_size:option AccessSize
+                ; mem_base_reg := br:option REG
+                ; mem_base_label := lbl
+                ; mem_scale_reg := sr:option (Z * REG)
+                ; mem_offset := offset:option Z
+                ; rip_relative := rip_relative:rip_relative_kind |}
+          end)
        (((strip_whitespace_after parse_AccessSize)?) ;;
+        (parse_non_access_size_label?) ;;
         (parse_option_list_map
            (fun '(offset, vars)
             => (vars <-- List.map (fun '(c, (v, e), vs) => match vs, e with [], 1%Z => Some (c, v) | _, _ => None end) vars;
-                let regs : list (Z * REG) := Option.List.map (fun '(c, v) => match v with inl v => Some (c, v) | inr _ => None end) vars in
+                let regs : list (Z * (REG + rip_relative_kind)) := Option.List.map (fun '(c, v) => match v with inl v => Some (c, v) | inr _ => None end) vars in
                 let labels : list (Z * string) := Option.List.map (fun '(c, v) => match v with inr v => Some (c, v) | inl _ => None end) vars in
                 base_label <- match labels with
                               | [] => Some None
@@ -104,15 +119,17 @@ Definition parse_MEM : ParserAction MEM
                 base_scale_reg <- match regs with
                                   | [] => Some (None, None)
                                   | [(1%Z, r)] => Some (Some r, None)
-                                  | [(s, r)] => Some (None, Some (s, r))
-                                  | [(1%Z, r1); (s, r2)]
-                                  | [(s, r2); (1%Z, r1)]
+                                  | [(s, inl r)] => Some (None, Some (s, r))
+                                  | [(1%Z, r1); (s, inl r2)]
+                                  | [(s, inl r2); (1%Z, r1)]
                                     => Some (Some r1, Some (s, r2))
                                   | _ => None
                                   end;
                 let '(br, sr) := base_scale_reg in
-                Some (br (*base reg*), sr (*scale reg, including z *), offset, base_label))%option)
-           ("[" ;;R parse_Z_poly_strict (sum_beq _ _ REG_beq String.eqb) (parse_or_else_gen (fun x => x) parse_REG parse_label) ;;L "]"))).
+                let rip_relative := match br with Some (inr k) => k | _ => if default_rel then implicitly_rip_relative else not_rip_relative end in
+                let br := (br <- br; match br with inl br => Some br | inr _ => None end)%option in
+                Some (br (*base reg*), sr (*scale reg, including z *), offset, base_label, rip_relative))%option)
+           ("[" ;;R parse_Z_poly_strict (sum_beq _ _ (sum_beq _ _ REG_beq rip_relative_kind_beq) String.eqb) (parse_or_else_gen (fun x => x) (parse_or_else_gen (fun x => x) parse_REG parse_rip_relative_kind) parse_label) ;;L "]"))).
 
 Definition parse_CONST (const_keyword : bool) : ParserAction CONST
   := if const_keyword
@@ -128,7 +145,7 @@ Definition parse_JUMP_LABEL : ParserAction JUMP_LABEL
        ((strip_whitespace_after "NEAR ")? ;; parse_label).
 
 (* we only parse something as a label if it cannot possibly be anything else, because asm is terrible and has ambiguous parses otherwise :-( *)
-Definition parse_ARG (const_keyword : bool) : ParserAction ARG
+Definition parse_ARG {opts : assembly_program_options} (const_keyword : bool) : ParserAction ARG
   := parse_or_else
        (parse_alt_list
           [parse_map reg parse_REG
@@ -155,7 +172,7 @@ Definition parse_OpPrefix : ParserAction OpPrefix
   := parse_strs parse_OpPrefix_list.
 
 (** assumes no leading nor trailing whitespace and no comment *)
-Definition parse_RawLine : ParserAction RawLine
+Definition parse_RawLine {opts : assembly_program_options} : ParserAction RawLine
   := fun s
      => let s := String.trim s in
         (* get the first space-separated opcode *)
@@ -196,7 +213,7 @@ Definition parse_RawLine : ParserAction RawLine
                       parsed_prefix
                end.
 
-Definition parse_Line (line_num : N) : ParserAction Line
+Definition parse_Line {opts : assembly_program_options} (line_num : N) : ParserAction Line
   := fun s
      => let '(indentv, rest_linev) := take_while_drop_while Ascii.is_whitespace s in
         let '(precommentv, commentv)
@@ -213,11 +230,21 @@ Definition parse_Line (line_num : N) : ParserAction Line
           (parse_RawLine rawlinev).
 
 (* the error is the unparsable lines *)
-Fixpoint parse_Lines' (l : list string) (line_num : N) : ErrorT (list string) Lines
+Fixpoint parse_Lines' {opts : assembly_program_options} (l : list string) (line_num : N) : ErrorT (list string) Lines
   := match l with
      | [] => Success []
      | l :: ls
-       => match finalize (parse_Line line_num) l, parse_Lines' ls (line_num + 1) with
+       => let '(result, next_opts) :=
+            match finalize (@parse_Line opts line_num) l with
+            | None => (None, opts)
+            | Some result =>
+                (Some result,
+                match result.(rawline) with
+                | DEFAULT_REL => {| default_rel := true |}
+                | _ => opts
+                end)
+            end in
+          match result, @parse_Lines' next_opts ls (line_num + 1) with
           | None, Error ls => Error (("Line " ++ show line_num ++ ": " ++ l) :: ls)
           | None, Success _ => Error (("Line " ++ show line_num ++ ": " ++ l) :: nil)
           | Some _, Error ls => Error ls
@@ -225,10 +252,13 @@ Fixpoint parse_Lines' (l : list string) (line_num : N) : ErrorT (list string) Li
           end
      end.
 
-Definition parse_Lines (l : list string) : ErrorT (list string) Lines
+Definition parse_Lines {opts : assembly_program_options} (l : list string) : ErrorT (list string) Lines
   := parse_Lines' (String.split_newlines l) 1.
 
-Notation parse := parse_Lines (only parsing).
+#[export] Instance default_assembly_program_options : assembly_program_options
+  := {| default_rel := false |}.
+
+Notation parse := (@parse_Lines default_assembly_program_options) (only parsing).
 
 Global Instance show_lvl_MEM : ShowLevel MEM
   := fun m
@@ -238,11 +268,19 @@ Global Instance show_lvl_MEM : ShowLevel MEM
          | None => show_lvl
          end)
           (fun 'tt
-           => let reg_part
-                := (match m.(mem_base_reg), m.(mem_scale_reg) with
-                    | (*"[Reg]"          *) Some br, None         => show_REG br
-                    | (*"[Reg + Z * Reg]"*) Some br, Some (z, sr) => show_REG br  ++ " + " ++  Decimal.show_Z z  ++ " * " ++ show_REG sr (*only matching '+' here, because there cannot be a negative scale. *)
-                    | (*"[      Z * Reg]"*) None,    Some (z, sr) =>                           Decimal.show_Z z  ++ " * " ++ show_REG sr
+           => let is_explict_rip_relative := match m.(rip_relative) with explicitly_rip_relative => true | _ => false end in
+              let base_reg_str :=
+                match is_explict_rip_relative, m.(mem_base_reg) with
+                | false, Some br => Some (show_REG br)
+                | false, None => None
+                | true, None => Some "rip"
+                | true, Some br => Some ("rip + " ++ show_REG br) (* but this should not happen *)
+                end in
+              let reg_part
+                := (match base_reg_str, m.(mem_scale_reg) with
+                    | (*"[Reg]"          *) Some br, None         => br
+                    | (*"[Reg + Z * Reg]"*) Some br, Some (z, sr) => br ++ " + " ++ Decimal.show_Z z ++ " * " ++ show_REG sr (*only matching '+' here, because there cannot be a negative scale. *)
+                    | (*"[      Z * Reg]"*) None,    Some (z, sr) =>                Decimal.show_Z z ++ " * " ++ show_REG sr
                     | (*"[             ]"*) None,    None         => "" (* impossible, because only offset is invalid, but we seem to need it for coq because both are option's*)
                     end%Z) in
               let offset_part
@@ -255,11 +293,21 @@ Global Instance show_lvl_MEM : ShowLevel MEM
                                  then "0x08 * " ++ Decimal.show_Z (offset / 8)
                                  else Hex.show_Z offset)
                     end%Z) in
-              "[" ++ match m.(mem_base_label) with
-                     | None => reg_part ++ offset_part
-                     | Some l => "((" ++ l ++ offset_part ++ "))"
-                     end
-                  ++ "]").
+              match m.(mem_base_label), is_explict_rip_relative, m.(mem_offset), m.(mem_scale_reg) with
+              | Some lbl, true, None, None => lbl ++ "[" ++ reg_part ++ offset_part ++ "]"
+              | Some lbl, _, _, _ => let l_offset := lbl ++ offset_part in
+                  "[" ++
+                      (if reg_part =? ""
+                      then "((" ++ l_offset ++ "))"
+                      else reg_part ++ " + " ++ l_offset)
+                      ++ "]"
+              | None, _, _, _ =>
+                  "[" ++
+                    (if reg_part =? ""
+                    then "((" ++ offset_part ++ "))"
+                    else reg_part ++ offset_part)
+                    ++ "]"
+              end).
 Global Instance show_MEM : Show MEM := show_lvl_MEM.
 
 Global Instance show_lvl_JUMP_LABEL : ShowLevel JUMP_LABEL
@@ -478,20 +526,86 @@ Definition find_globals (ls : Lines) : list string
                  end)
        ls.
 
-Fixpoint split_code_to_functions' (globals : list string) (ls : Lines) : Lines (* prefix *) * list (string (* global name *) * Lines)
+Definition find_labels (ls : Lines) : list string
+  := Option.List.map
+       (fun l => match l.(rawline) with
+                 | LABEL name => Some name
+                 | _ => None
+                 end)
+       ls.
+
+Fixpoint split_code_to_functions' (label_is_function : string -> bool) (ls : Lines) : Lines (* prefix *) * list (string (* global name *) * Lines)
   := match ls with
      | [] => ([], [])
      | l :: ls
-       => let '(prefix, rest) := split_code_to_functions' globals ls in
+       => let '(prefix, rest) := split_code_to_functions' label_is_function ls in
           let default := (l :: prefix, rest) in
           match l.(rawline) with
-          | LABEL name => if List.existsb (fun n => name =? n)%string globals
+          | LABEL name => if label_is_function name
                           then ([], (name, l::prefix) :: rest)
                           else default
           | _ => default
           end
      end.
 
-Definition split_code_to_functions (ls : Lines) : Lines (* prefix *) * list (string (* global name *) * Lines)
+Definition string_matches_loose (allow_prefix : bool) (allow_suffix : bool) (longer_string shorter_string : string) : bool
+  := match allow_prefix, allow_suffix with
+     | false, false => shorter_string =? longer_string
+     | true, false => String.endswith shorter_string longer_string
+     | false, true => String.startswith shorter_string longer_string
+     | true, true => String.is_substring shorter_string longer_string
+     end.
+Definition split_code_to_listed_functions {allow_prefix allow_suffix : bool} (functions : list string) (ls : Lines) : Lines (* prefix *) * list (string (* global name *) * Lines)
+  := split_code_to_functions' (fun name => List.existsb (fun f => string_matches_loose allow_prefix allow_suffix f name)%string functions) ls.
+Definition split_code_to_global_functions (ls : Lines) : Lines (* prefix *) * list (string (* global name *) * Lines)
   := let globals := find_globals ls in
-     split_code_to_functions' globals ls.
+     split_code_to_listed_functions (allow_prefix:=false) (allow_suffix:=false) globals ls.
+Definition split_code_at_labels (ls : Lines) : Lines (* prefix *) * list (string (* label name *) * Lines)
+  := let labels := find_labels ls in
+     split_code_to_listed_functions (allow_prefix:=false) (allow_suffix:=false) labels ls.
+
+Fixpoint get_initial_data (ls : Lines) : list (AccessSize * list Z)
+  := let get_arg_consts args :=
+           Option.List.lift
+            (List.map (fun arg => match arg with
+                                    | const c => Some c
+                                    | _ => None
+                                    end)
+                     args) in
+     match ls with
+     | [] => []
+     | l :: ls
+       => match l.(rawline) with
+          | INSTR instr =>
+              match accesssize_of_declaration instr.(op) with
+              | None => []
+              | Some size =>
+                  let csts := get_arg_consts instr.(args) in
+                  match csts with
+                  | Some csts => (size, csts) :: get_initial_data ls
+                  | None => []
+                  end
+              end
+          | LABEL _
+          | EMPTY
+          | GLOBAL _
+          | DEFAULT_REL
+            => get_initial_data ls
+          | SECTION _
+          | ALIGN _
+             => []
+          end
+     end.
+
+Definition get_labeled_data (ls : Lines) : list (string * list (AccessSize * list Z)) :=
+  let '(_, labeled_data) := split_code_at_labels ls in
+  let labeled_data := List.map (fun '(lbl, lines) => (lbl, get_initial_data lines)) labeled_data in
+  let labeled_data := List.filter (fun '(_, data) => match data with nil => false | _ => true end) labeled_data in
+  labeled_data.
+
+(* Definition parse_assembly_options (ls : Lines) : assembly_program_options
+  := {| default_rel := Option.is_Some (List.find (fun l => match l.(rawline) with
+                                | DEFAULT_REL => true
+                                | _ => false
+                                end) ls)
+     |}. *)
