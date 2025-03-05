@@ -70,8 +70,10 @@ jobs:
         if [[ -n "${{ github.event.inputs.target_repository }}" && "${{ github.event.inputs.target_repository }}" != "${{ github.repository }}" ]]; then
           echo "Adding remote for target repository: ${{ github.event.inputs.target_repository }}"
           git remote add target_repo "https://github.com/${{ github.event.inputs.target_repository }}.git"
+          git fetch target_repo $CURRENT_BRANCH || true
           git checkout -b $CURRENT_BRANCH target_repo/$CURRENT_BRANCH
         else
+          git fetch origin $CURRENT_BRANCH || true
           git checkout -b $CURRENT_BRANCH origin/$CURRENT_BRANCH
         fi
         if [[ -n "$PR_NUMBER" ]]; then
@@ -79,13 +81,13 @@ jobs:
           BASE_BRANCH=$(gh pr view $PR_NUMBER --json baseRefName --jq '.baseRefName')
           echo "This branch has PR #$PR_NUMBER from $CURRENT_BRANCH to $BASE_BRANCH"
           # Get the merge-base of the base branch and current commit
-          git fetch origin $BASE_BRANCH
+          git fetch origin $BASE_BRANCH || true
           BASE_SHA=$(git merge-base target_repo/$BASE_BRANCH $CURRENT_BRANCH)
 
         else
           # For non-PRs, use merge-base of current branch and master as base_sha
           echo "This is not a PR, using merge-base with master"
-          git fetch origin master
+          git fetch origin master || true
           BASE_SHA=$(git merge-base master $CURRENT_BRANCH)
         fi
 
