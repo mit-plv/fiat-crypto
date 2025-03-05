@@ -4,17 +4,17 @@ const fmt = std.fmt;
 fn testVector(comptime fiat: type, expected_s: []const u8) !void {
     // Find the type of the limbs and the size of the serialized representation.
     const repr = switch (@typeInfo(@TypeOf(fiat.fromBytes))) {
-        .Fn => |f| .{
+        .@"fn" => |f| .{
             .Limbs = switch (@typeInfo(f.params[0].type.?)) {
-                .Pointer => |p| p.child,
+                .pointer => |p| p.child,
                 else => unreachable,
             },
-            .Bytes = f.params[1].type.?,
+            .bytes = f.params[1].type.?,
         },
         else => unreachable,
     };
     const Limbs = repr.Limbs;
-    const Bytes = repr.Bytes;
+    const Bytes = repr.bytes;
     const encoded_length = @sizeOf(Bytes);
 
     // Trigger most available functions.
