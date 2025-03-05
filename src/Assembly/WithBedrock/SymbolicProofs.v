@@ -314,7 +314,7 @@ Qed.
 
 Lemma get_reg_R_regs d s m (HR : R_regs d s m) ri :
   forall i, Symbolic.get_reg s ri = Some i ->
-  exists v, eval d i v /\ Tuple.nth_default 0 ri m = v.
+  exists v, eval d i v /\ Tuple.nth_default 0 (N.to_nat ri) m = v.
 Proof using Type.
   cbv [Symbolic.get_reg]; intros.
   rewrite <-Tuple.nth_default_to_list in H.
@@ -336,7 +336,7 @@ Qed.
 
 Lemma get_reg_R s m (HR : R s m) ri :
   forall i, Symbolic.get_reg s ri = Some i ->
-  exists v, eval s i v /\ Tuple.nth_default 0 ri (m : reg_state) = v.
+  exists v, eval s i v /\ Tuple.nth_default 0 (N.to_nat ri) (m : reg_state) = v.
 Proof using Type.
   destruct s, m; apply get_reg_R_regs, HR.
 Qed.
