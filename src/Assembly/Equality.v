@@ -102,6 +102,20 @@ Proof. rewrite <- AccessSize_beq_eq; destruct (x =? y)%AccessSize; intuition con
 Global Instance AccessSize_beq_compat : Proper (eq ==> eq ==> eq) AccessSize_beq | 10.
 Proof. repeat intro; subst; reflexivity. Qed.
 
+Declare Scope rip_relative_kind_scope.
+Delimit Scope rip_relative_kind_scope with rip_relative_kind.
+Bind Scope rip_relative_kind_scope with rip_relative_kind.
+
+Infix "=?" := rip_relative_kind_beq : rip_relative_kind_scope.
+
+Global Instance rip_relative_kind_beq_spec : reflect_rel (@eq rip_relative_kind) rip_relative_kind_beq | 10
+  := reflect_of_beq internal_rip_relative_kind_dec_bl internal_rip_relative_kind_dec_lb.
+Definition rip_relative_kind_beq_eq x y : (x =? y)%rip_relative_kind = true <-> x = y := conj (@internal_rip_relative_kind_dec_bl _ _) (@internal_rip_relative_kind_dec_lb _ _).
+Lemma rip_relative_kind_beq_neq x y : (x =? y)%rip_relative_kind = false <-> x <> y.
+Proof. rewrite <- rip_relative_kind_beq_eq; destruct (x =? y)%rip_relative_kind; intuition congruence. Qed.
+Global Instance rip_relative_kind_beq_compat : Proper (eq ==> eq ==> eq) rip_relative_kind_beq | 10.
+Proof. repeat intro; subst; reflexivity. Qed.
+
 Declare Scope MEM_scope.
 Delimit Scope MEM_scope with MEM.
 Bind Scope MEM_scope with MEM.
@@ -111,7 +125,8 @@ Definition MEM_beq (x y : MEM) : bool
       && option_beq String.eqb x.(mem_base_label) y.(mem_base_label)
       && (option_beq REG_beq x.(mem_base_reg) y.(mem_base_reg))
       && (option_beq (prod_beq _ _ Z.eqb REG_beq) x.(mem_scale_reg) y.(mem_scale_reg))
-      && (option_beq Z.eqb x.(mem_offset) y.(mem_offset)))%bool.
+      && (option_beq Z.eqb x.(mem_offset) y.(mem_offset))
+      && (rip_relative_kind_beq x.(rip_relative) y.(rip_relative)))%bool.
 Global Arguments MEM_beq !_ !_ / .
 
 Infix "=?" := MEM_beq : MEM_scope.
