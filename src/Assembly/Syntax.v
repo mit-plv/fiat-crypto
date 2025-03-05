@@ -93,6 +93,8 @@ Inductive OpCode :=
 | clc
 | cmovb
 | cmovc
+| cmove    (* Conditional move if equal *)
+| cmovne   (* Conditional move if not equal *)
 | cmovnz
 | cmovo
 | cmp
@@ -106,21 +108,51 @@ Inductive OpCode :=
 | je
 | jmp
 | lea
+| leave     (* Function epilogue instruction *)
 | mov
+| movabs    (* Move absolute value into register *)
+| movdqa    (* Move aligned packed data *)
+| movdqu    (* Move unaligned packed data *)
+| movq      (* Move quadword *)
+| movd      (* Move doubleword *)
+| movsx     (* Move with sign extension *)
+| movups    (* Move unaligned packed single-precision floating-point values *)
 | movzx
 | mul
 | mulx
+| neg       (* Two's complement negation *)
+| nop       (* No operation *)
+| not       (* Bitwise NOT *)
 | or
+| paddq     (* Add packed quadword integers *)
 | pop
+| psubq     (* Subtract packed quadword integers *)
+| pshufd    (* Shuffle packed doublewords *)
+| pshufw    (* Shuffle packed words *)
+| punpcklqdq (* Unpack and interleave low quadwords *)
+| punpckhqdq (* Unpack and interleave high quadwords *)
+| pslld     (* Shift packed single-precision floating-point values left *)
+| psrld     (* Shift packed single-precision floating-point values right *)
+| pand      (* Bitwise AND *)
+| pandn     (* Bitwise AND NOT *)
+| por       (* Bitwise OR *)
+| pxor      (* Bitwise XOR *)
+| psrad     (* Shift packed signed integers right arithmetic *)
 | push
 | rcr
 | ret
+| rol       (* Rotate left *)
+| ror       (* Rotate right *)
+| sal       (* Shift arithmetic left (functionally equivalent to shl) *)
 | sar
 | sbb
 | setc
+| sete      (* Set byte if equal *)
+| setne     (* Set byte if not equal *)
 | seto
 | shl
 | shlx
+| shld
 | shr
 | shrx
 | shrd
@@ -154,6 +186,8 @@ Definition accesssize_of_declaration (opc : OpCode) : option AccessSize :=
   | clc
   | cmovb
   | cmovc
+  | cmove
+  | cmovne
   | cmovnz
   | cmovo
   | cmp
@@ -163,21 +197,51 @@ Definition accesssize_of_declaration (opc : OpCode) : option AccessSize :=
   | je
   | jmp
   | lea
+  | leave
   | mov
+  | movabs
+  | movdqa
+  | movdqu
+  | movq
+  | movd
+  | movsx
+  | movups
   | movzx
   | mul
   | mulx
+  | neg
+  | nop
+  | not
   | or
+  | paddq
   | pop
+  | psubq
+  | pshufd
+  | pshufw
+  | punpcklqdq
+  | punpckhqdq
+  | pslld
+  | psrld
+  | pand
+  | pandn
+  | por
+  | pxor
+  | psrad
   | push
   | rcr
   | ret
+  | rol
+  | ror
+  | sal
   | sar
   | sbb
   | setc
+  | sete
+  | setne
   | seto
   | shl
   | shlx
+  | shld
   | shr
   | shrx
   | shrd
