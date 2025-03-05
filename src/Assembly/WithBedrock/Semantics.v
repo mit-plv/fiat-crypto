@@ -456,6 +456,7 @@ Definition DenoteRawLine (st : machine_state) (rawline : RawLine) : option machi
   match rawline with
   | EMPTY
   | LABEL _
+  | DIRECTIVE _
     => Some st
   | INSTR instr
     => DenoteNormalInstruction st instr

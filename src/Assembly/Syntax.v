@@ -269,6 +269,7 @@ Inductive RawLine :=
 | DEFAULT_REL
 | EMPTY
 | INSTR (instr : NormalInstruction)
+| DIRECTIVE (d : string)
 .
 Coercion INSTR : NormalInstruction >-> RawLine.
 Record Line := { indent : string ; rawline :> RawLine ; pre_comment_whitespace : string ; comment : option string ; line_number : N}.

@@ -4395,6 +4395,7 @@ Definition SymexRawLine {opts : symbolic_options_computed_opt} {descr:descriptio
   match rawline with
   | EMPTY
   | LABEL _
+  | DIRECTIVE _
     => ret tt
   | INSTR instr
     => SymexNormalInstruction instr

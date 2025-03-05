@@ -161,16 +161,16 @@ Definition parse_OpPrefix : ParserAction OpPrefix
 
 (** assumes no leading nor trailing whitespace and no comment *)
 Definition parse_RawLine : ParserAction RawLine
-  := fun s
-     => let s := String.trim s in
+  := fun s => (
+        let s := String.trim s in
         (* get the first space-separated opcode *)
         let '(mnemonic, args) := String.take_while_drop_while (fun ch => negb (Ascii.is_whitespace ch)) s in
         let args := String.trim args in
-        if (String.to_upper mnemonic =? "SECTION")
+        if (String.to_upper mnemonic =? "SECTION") || (String.to_upper mnemonic =? ".SECTION")
         then [(SECTION args, "")]
-        else if (String.to_upper mnemonic =? "GLOBAL")
+        else if (String.to_upper mnemonic =? "GLOBAL") || (String.to_upper mnemonic =? ".GLOBAL") || (String.to_upper mnemonic =? ".GLOBL")
         then [(GLOBAL args, "")]
-        else if (String.to_upper mnemonic =? "ALIGN")
+        else if (String.to_upper mnemonic =? "ALIGN") || (String.to_upper mnemonic =? ".ALIGN")
         then [(ALIGN args, "")]
         else if (String.to_upper mnemonic =? "DEFAULT") && (String.to_upper args =? "REL")
         then [(DEFAULT_REL, "")]
@@ -178,6 +178,20 @@ Definition parse_RawLine : ParserAction RawLine
         then [(LABEL (substring 0 (pred (String.length s)) s), "")]
         else if (s =? "")
         then [(EMPTY, "")]
+        else if (List.find (String.eqb (String.to_lower s))
+          [".cfi_def_cfa_offset"
+           ; ".cfi_endproc"
+           ; ".cfi_offset"
+           ; ".cfi_startproc"
+           ; ".file"
+           ; ".ident"
+           ; ".intel_syntax"
+           ; ".loc"
+           ; ".size"
+           ; ".text"
+           ; ".type"
+           ])
+        then [(DIRECTIVE s, "")]
         else let parsed_prefix := (parse_OpPrefix ;;L ε) mnemonic in
              List.flat_map
                (fun '(parsed_prefix, mnemonic, args)
@@ -199,7 +213,7 @@ Definition parse_RawLine : ParserAction RawLine
                           let args := String.trim args in
                           (Some parsed_prefix, mnemonic, args))
                       parsed_prefix
-               end.
+               end)%bool.
 
 Definition parse_Line (line_num : N) : ParserAction Line
   := fun s
@@ -312,6 +326,7 @@ Global Instance show_RawLine : Show RawLine
         | LABEL name => name ++ ":"
         | EMPTY => ""
         | INSTR instr => show instr
+        | DIRECTIVE s => s
         end.
 
 Global Instance show_Line : Show Line
