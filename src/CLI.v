@@ -505,6 +505,10 @@ Module ForExtraction.
     := ([Arg.long_key "output-asm"],
         Arg.String,
         ["The name of the file to write generated assembly to.  Use - for stdout.  (default: -)"]).
+  Definition asm_label_exact_match_spec : named_argT
+    := ([Arg.long_key "asm-label-exact-match"],
+        Arg.Unit,
+        ["Assembly labels must exactly match the requested function names, rather than permitting arbitrary prefixes and suffixes.  Only relevant when --hints-file is specified."]).
   Definition asm_reg_spec : named_argT
     := ([Arg.long_key "asm-reg"],
         Arg.Custom (parse_string_and parse_list_REG) "REG",
@@ -716,6 +720,7 @@ Module ForExtraction.
         ; hint_file_spec
         ; output_file_spec
         ; asm_output_spec
+        ; asm_label_exact_match_spec
         ; asm_reg_spec
         ; asm_callee_saved_registers_spec
         ; asm_stack_size_spec
@@ -773,6 +778,7 @@ Module ForExtraction.
              , hint_file_namesv
              , output_file_namev
              , asm_output_file_namev
+             , asm_label_exact_matchv
              , asm_regv
              , asm_callee_saved_registersv
              , asm_stack_sizev
@@ -863,6 +869,8 @@ Module ForExtraction.
                       ; assembly_stack_size_ := to_N_opt asm_stack_sizev
                       ; assembly_output_first_ := negb (to_bool asm_input_firstv)
                       ; assembly_argument_registers_left_to_right_ := negb (to_bool asm_reg_rtlv)
+                      ; assembly_labels_fuzzy_suffixes_ := negb (to_bool asm_label_exact_matchv)
+                      ; assembly_labels_fuzzy_prefixes_ := negb (to_bool asm_label_exact_matchv)
                       |}
                     ; symbolic_options_ :=
                       {| asm_rewriting_pipeline := to_rewriting_pipeline_list asm_rewriting_pipelinev
