@@ -4386,6 +4386,9 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
        rsp' <- Symeval (s:=stack_addr_size) (add stack_addr_size@(rsp', PreARG ((Z.of_N s/8)%Z)));
        _    <- SetOperand rsp rsp';
                SetOperand dst v
+
+  | nop, [] => ret tt
+
   | _, _ => err (error.unimplemented_instruction instr)
  end
   | Some prefix => err (error.unimplemented_prefix instr) end

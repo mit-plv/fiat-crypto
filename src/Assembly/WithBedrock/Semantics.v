@@ -369,6 +369,8 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
        st   <- SetOperand stack_addr_size s st rsp rsp';
                SetOperand sa s st dst v
 
+  | nop, [] => Some st
+
   | ret, _ => None (* not sure what to do with this ret, maybe exlude it? *)
 
   | adc, _
