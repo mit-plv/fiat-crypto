@@ -588,6 +588,7 @@ Fixpoint get_initial_data (ls : Lines) : list (AccessSize * list Z)
           | LABEL _
           | EMPTY
           | GLOBAL _
+          | DIRECTIVE _
           | DEFAULT_REL
             => get_initial_data ls
           | SECTION _
