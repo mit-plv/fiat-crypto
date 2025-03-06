@@ -29,6 +29,17 @@ Import ListNotations.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
 
+
+(** Permit labels to have arbitrary suffixes *)
+Class assembly_labels_fuzzy_suffixes_opt := assembly_labels_fuzzy_suffixes : bool.
+#[global]
+Typeclasses Opaque assembly_labels_fuzzy_suffixes_opt.
+Definition default_assembly_labels_fuzzy_suffixes : assembly_labels_fuzzy_suffixes_opt := true.
+(** Permit labels to have arbitrary prefixes *)
+Class assembly_labels_fuzzy_prefixes_opt := assembly_labels_fuzzy_prefixes : bool.
+#[global]
+Typeclasses Opaque assembly_labels_fuzzy_prefixes_opt.
+Definition default_assembly_labels_fuzzy_prefixes : assembly_labels_fuzzy_prefixes_opt := true.
 (** List of registers used for outputs/inputs *)
 Class assembly_calling_registers_opt := assembly_calling_registers' : option (list REG).
 #[global]
@@ -140,6 +151,8 @@ Class assembly_conventions_opt :=
   ; #[global] assembly_output_first_ :: assembly_output_first_opt
   ; #[global] assembly_argument_registers_left_to_right_ :: assembly_argument_registers_left_to_right_opt
   ; #[global] assembly_callee_saved_registers_ :: assembly_callee_saved_registers_opt
+  ; #[global] assembly_labels_fuzzy_suffixes_ :: assembly_labels_fuzzy_suffixes_opt
+  ; #[global] assembly_labels_fuzzy_prefixes_ :: assembly_labels_fuzzy_prefixes_opt
   }.
 Definition default_assembly_conventions : assembly_conventions_opt
   := {| assembly_calling_registers_ := None
@@ -147,6 +160,8 @@ Definition default_assembly_conventions : assembly_conventions_opt
      ; assembly_output_first_ := true
      ; assembly_argument_registers_left_to_right_ := true
      ; assembly_callee_saved_registers_ := default_assembly_callee_saved_registers
+     ; assembly_labels_fuzzy_suffixes_ := default_assembly_labels_fuzzy_suffixes
+     ; assembly_labels_fuzzy_prefixes_ := default_assembly_labels_fuzzy_prefixes
      |}.
 
 Module Export Options.

@@ -1322,17 +1322,18 @@ Section __.
                     end)
                 assembly_data in
          (* combine normal data with corresponding assembly data *)
-         let ls := List.map (fun '(n1, normal_data)
-                             => ((n1, normal_data), List.find (fun '(n2, _) => n1 =? n2)%string assembly_data))
+         let cmp longer_string shorter_string := Assembly.Parse.string_matches_loose assembly_labels_fuzzy_prefixes assembly_labels_fuzzy_suffixes longer_string shorter_string in
+         let ls := List.map (fun '(n, normal_data)
+                             => ((n, normal_data), List.find (fun '(n_asm, _) => cmp n_asm n) assembly_data))
                             normal_data in
          (* split out the normal data that has assembly data from the normal data that doesn't *)
          let '(lsAB, lsB) := List.partition (fun '(_, o) => match o with Some _ => true | None => false end) ls in
          (* get the assembly functions that have no corresponding normal function *)
-         let lsA := List.filter (fun '(n1, _) => negb (List.existsb (fun '(n2, _) => (n1 =? n2)%string) normal_data)) assembly_data in
+         let lsA := List.filter (fun '(n_asm, _) => negb (List.existsb (fun '(n, _) => cmp n_asm n) normal_data)) assembly_data in
          (* flatten out assembly functions and move the file names first *)
-         let lsA := List.flat_map (fun '(function_name, ls) => List.map (fun '(file_name, v) => (file_name, (function_name, v))) ls) lsA in
+         let lsA := List.flat_map (fun '(function_name_asm, ls) => List.map (fun '(file_name, v) => (file_name, (function_name_asm, v))) ls) lsA in
          (* group by files for assembly data *)
-         let lsA := List.groupAllBy (fun '(n1, _) '(n2, _) => (n1 =? n2)%string) lsA in
+         let lsA := List.groupAllBy (fun '(n1_asm, _) '(n2_asm, _) => (n1_asm =? n2_asm)%string) lsA in
          let lsA
            := Option.List.map
                 (fun ls
@@ -1344,7 +1345,7 @@ Section __.
          (Option.List.map
             (fun '((n, normal_data), assembly_data)
              => match assembly_data with
-                | Some (_n (* should be equal to n *), assembly_data) => Some (n, (assembly_data, normal_data))
+                | Some (_n_asm, assembly_data) => Some (n, (assembly_data, normal_data))
                 | None => (* should not happen *) None
                 end)
             lsAB,
