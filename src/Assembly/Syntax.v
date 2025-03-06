@@ -53,10 +53,21 @@ Coercion bits_of_AccessSize (x : AccessSize) : N
      | qword => 64
      end.
 
-Record MEM := { mem_bits_access_size : option AccessSize ; mem_base_reg : option REG ; mem_scale_reg : option (Z * REG) ; mem_base_label : option string ; mem_offset : option Z }.
+Local Set Boolean Equality Schemes.
+Local Set Decidable Equality Schemes.
+Variant rip_relative_kind := explicitly_rip_relative | implicitly_rip_relative | not_rip_relative.
+Local Unset Boolean Equality Schemes.
+Local Unset Decidable Equality Schemes.
+Global Coercion bool_of_rip_relative_kind (x : rip_relative_kind) : bool :=
+  match x with
+  | explicitly_rip_relative => true
+  | implicitly_rip_relative => true
+  | not_rip_relative => false
+  end.
+Record MEM := { mem_bits_access_size : option AccessSize ; mem_base_reg : option REG ; mem_scale_reg : option (Z * REG) ; mem_base_label : option string ; mem_offset : option Z ; rip_relative : rip_relative_kind }.
 
 Definition mem_of_reg (r : REG) : MEM :=
-  {| mem_base_reg := Some r ; mem_offset := None ; mem_scale_reg := None ; mem_bits_access_size := None ; mem_base_label := None |}.
+  {| mem_base_reg := Some r ; mem_offset := None ; mem_scale_reg := None ; mem_bits_access_size := None ; mem_base_label := None ; rip_relative := not_rip_relative |}.
 
 Inductive FLAG := CF | PF | AF | ZF | SF | OF.
 
