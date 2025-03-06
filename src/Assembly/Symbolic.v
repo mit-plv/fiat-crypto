@@ -4351,6 +4351,12 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
     v <- Symeval (or s@(shr s@(lo, cnt), shl s@(hi, cnt')));
     _ <- SetOperand dst v;
     HavocFlags
+  | shld, [hi as dst; lo; cnt] =>
+    let cnt := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
+    let cnt' := addZ@(Z.of_N s, PreApp negZ [cnt]) in
+    v <- Symeval (or s@(shr s@(lo, cnt'), shl s@(hi, cnt)));
+    _ <- SetOperand dst v;
+    HavocFlags
   | inc, [dst] =>
     v <- Symeval (add s@(dst, PreARG 1%Z));
     o <- Symeval (addoverflow s@(dst, PreARG 1%Z));
