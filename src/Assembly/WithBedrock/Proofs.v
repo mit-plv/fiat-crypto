@@ -3346,9 +3346,9 @@ Theorem check_equivalence_correct
            /\ R_runtime_output (output_scalars_are_pointers:=output_scalars_are_pointers) frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st')
       asm.
 Proof.
-  cbv beta delta [check_equivalence ErrorT.bind] in H.
+  cbv beta delta [check_equivalence map_symex_asm ErrorT.bind] in H.
   repeat
-    first [ rewrite List.ErrorT.List.bind_list_cps_id, <- List.ErrorT.List.eq_bind_list_lift in H;
+    first [ rewrite List.ErrorT.List.bind_list_cps_id, <- !List.ErrorT.List.eq_bind_list_lift in H;
             cbv beta delta [ErrorT.bind] in H
           | match type of H with
             | (let n := ?v in _) = _
@@ -3373,26 +3373,52 @@ Proof.
                  destruct v eqn:?; [ change (T = rhs) in H | change (F = rhs) in H ];
                  cbv beta in H
             end ]; try discriminate; [].
-  cbv beta delta [map_error ErrorT.map2 id] in *.
-  break_innermost_match_hyps; inversion_ErrorT; subst.
-  rewrite @List.ErrorT.List.lift_Success_Forall2_iff in *.
-  progress rewrite ?@Forall2_map_l_iff, ?@Forall2_map_r_iff in *.
-  Foralls_to_nth_error.
-  intros; inversion_ErrorT; subst.
-  progress reflect_hyps.
-  subst.
-  pose proof empty_gensym_dag_ok.
-  let H := fresh in pose proof Hargs as H; eapply build_input_runtime_ok_nil in H; [ | eassumption .. ].
-  pose proof (word_args_to_Z_args_bounded word_args).
-  repeat first [ assumption
+  progress cbv beta delta [map_error ErrorT.map2 id] in *.
+  repeat first [ match goal with
+                 | [ H : context G[let x := ?y in @?P x] |- _ ] =>
+                     tryif is_var y then
+                       let G' := context G[P y] in
+                       progress change G' in H
+                     else
+                       let h := fresh x in
+                       set (h := y) in *;
+                       let G' := context G[P h] in
+                       progress change G' in H
+                 | [ H : context[let x := ?y in _] |- _ ] => tryif is_var y then fail else let h := fresh x in set (h := y) in *
+                 | [ H : context[List.ErrorT.List.bind_list] |- _ ]
+                   => rewrite List.ErrorT.List.bind_list_cps_id, <- !List.ErrorT.List.eq_bind_list_lift in H;
+                      cbv beta delta [ErrorT.bind] in H
+                 | [ H := Some _ |- _ ] => subst H
+                 | [ H := None |- _ ] => subst H
+                 | [ H := List.map _ _ |- _ ] => subst H
+                 | [ H : context[match List.ErrorT.List.lift ?x with _ => _ end] |- _ ]
+                   => destruct (List.ErrorT.List.lift x) eqn:?
+                 end
+               | progress cbv beta in *
+               | progress inversion_ErrorT
+               | progress subst
+               | progress break_innermost_match_hyps
+               | progress rewrite @List.ErrorT.List.lift_Success_Forall2_iff in *
+               | progress rewrite ?@Forall2_map_l_iff, ?@Forall2_map_r_iff in * ].
+  all: Foralls_to_nth_error.
+  all: intros; inversion_ErrorT; inversion_pair; subst.
+  all: progress reflect_hyps.
+  all: subst.
+  all: pose proof empty_gensym_dag_ok.
+  all: let H := fresh in pose proof Hargs as H; eapply build_input_runtime_ok_nil in H; [ | eassumption .. ].
+  all: pose proof (word_args_to_Z_args_bounded word_args).
+  all: repeat
+         first [ assumption
                | match goal with
                  | [ H : build_inputs _ _ = _ |- _ ] => move H at bottom; eapply build_inputs_ok in H; [ | eassumption .. ]
                  | [ H : symex_PHOAS ?expr ?inputs ?d = Success _, H' : build_input_runtime _ ?ri = Some _ |- _ ]
-                   => move H at bottom; eapply symex_PHOAS_correct with (runtime_inputs:=ri) in H; [ | eassumption .. ]
+                   => move H at bottom; eapply symex_PHOAS_correct with (runtime_inputs:=ri) in H;
+                      [ | try eassumption .. ];
+                      [ | first [ assumption | eapply Forall2_weaken; [ apply lift_eval_idx_or_list_idx_impl | eassumption ] ] .. ]
                  | [ H : symex_asm_func _ _ _ _ _ _ _ = Success _ |- _ ]
                    => move H at bottom; eapply symex_asm_func_correct in H;
-                      [ | try (eassumption + apply surjective_pairing + reflexivity) .. ];
-                      [ | clear H; eapply Forall2_weaken; [ apply lift_eval_idx_or_list_idx_impl | eassumption ] ]
+                      [ | (eassumption + apply surjective_pairing + reflexivity + trivial) .. ];
+                      [ | clear H; first [ assumption | eapply Forall2_weaken; [ apply lift_eval_idx_or_list_idx_impl | eassumption ] ] ]
                  end
                | progress destruct_head'_ex
                | progress destruct_head'_and
@@ -3402,6 +3428,7 @@ Proof.
                | match goal with
                  | [ H : ?x = Some ?a, H' : ?x = Some ?b |- _ ]
                    => rewrite H in H'; inversion_option
+                 | [ H : ?x = Some _, H' : ?x = None |- _ ] => exfalso; clear -H H'; rewrite H in H'; inversion_option
                  | [ H : forall args, Forall2 ?P args ?v -> Forall2 _ _ _, H' : Forall2 ?P _ ?v |- _ ]
                    => specialize (H _ H')
                  | [ Himpl : forall e n, eval ?G1 ?d1 e n -> eval ?G2 ?d2 e n,
@@ -3413,7 +3440,7 @@ Proof.
                       subst
                  | [ H := _ |- _ ] => subst H
                  end ].
-  do 3 eexists; repeat first [ eassumption | apply conj ]; trivial.
+  all: do 3 eexists; repeat first [ eassumption | apply conj ]; trivial.
 Qed.
 
 Theorem generate_assembly_of_hinted_expr_correct

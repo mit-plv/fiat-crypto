@@ -401,6 +401,8 @@ Module Export Options.
      than every time, because it is (currently) quadratic to compute
      in the number of passes *)
   Class rewriting_passes_opt := rewriting_passes : list rewrite_pass.
+  (** Should we symex the assembly first, even though this may be more inefficient? *)
+  Class debug_symex_asm_first_opt := debug_symex_asm_first : bool.
   Definition default_rewriting_passes
              {rewriting_pipeline : rewriting_pipeline_opt}
              {rewriting_pass_filter : rewriting_pass_filter_opt}
@@ -410,17 +412,20 @@ Module Export Options.
   Class symbolic_options_opt :=
     { asm_rewriting_pipeline : rewriting_pipeline_opt
     ; asm_rewriting_pass_filter : rewriting_pass_filter_opt
+    ; asm_debug_symex_asm_first : debug_symex_asm_first_opt
     }.
 
   (* This holds the list of computed options, which are passed around between methods *)
   Class symbolic_options_computed_opt :=
     { asm_rewriting_passes : rewriting_passes_opt
+    ; asm_debug_symex_asm_first_computed : debug_symex_asm_first_opt
     }.
 
   (* N.B. The default rewriting pass filter should not be changed here, but instead changed in CLI.v where it is derived from a default string *)
   Definition default_symbolic_options : symbolic_options_opt
     := {| asm_rewriting_pipeline := default_rewrite_pass_order
        ; asm_rewriting_pass_filter := fun _ => true
+       ; asm_debug_symex_asm_first := false
        |}.
 End Options.
 Module Export Hints.
@@ -431,6 +436,8 @@ Module Export Hints.
          asm_rewriting_pipeline
          asm_rewriting_pass_filter
          asm_rewriting_passes
+         asm_debug_symex_asm_first
+         asm_debug_symex_asm_first_computed
   .
   #[global]
    Hint Cut [
@@ -438,6 +445,8 @@ Module Export Hints.
         (asm_rewriting_pipeline
         | asm_rewriting_pass_filter
         | asm_rewriting_passes
+        | asm_debug_symex_asm_first
+        | asm_debug_symex_asm_first_computed
         ) ( _ * )
         (Build_symbolic_options_opt
         | Build_symbolic_options_computed_opt
