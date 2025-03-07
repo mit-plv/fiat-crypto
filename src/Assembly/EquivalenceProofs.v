@@ -737,8 +737,8 @@ Theorem symex_PHOAS_correct
         {opts : symbolic_options_computed_opt}
         {t} (expr : API.Expr t)
         (d : dag)
-        (inputs : list (idx + list idx)) (runtime_inputs : list (Z + list Z))
-        (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
+        (inputs : list (N * (idx + list idx))) (runtime_inputs : list (Z + list Z))
+        (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) (List.map snd inputs) runtime_inputs)
         (rets : list (idx + list idx))
         (d' : dag)
         (Hwf : API.Wf expr)
@@ -800,32 +800,36 @@ Qed.
 End WithFixedCtx.
 
 
-Definition val_or_list_val_matches_spec (arg : Z + list Z) (spec : option nat)
+Definition val_or_list_val_matches_spec_nosize (arg : Z + list Z) (spec : option nat)
   := match arg, spec with
      | inl _, None => True
      | inr ls, Some len => List.length ls = len
      | inl _, Some _ | inr _, None => False
      end.
-
-
+Definition val_or_list_val_matches_spec (arg : N * (Z + list Z)) (spec : N * option nat)
+  := fst arg = fst spec /\ val_or_list_val_matches_spec_nosize (snd arg) (snd spec).
 
 Local Ltac build_runtime_ok_t_step :=
   first [ progress subst
         | progress destruct_head'_unit
         | progress inversion_option
         | progress inversion_prod
+        | progress inversion_list
         | progress destruct_head'_prod
         | progress destruct_head'_and
         | progress destruct_head'_ex
-        | progress cbv [Crypto.Util.Option.bind Rewriter.Util.Option.bind ErrorT.bind] in *
-        | progress cbn [val_or_list_val_matches_spec] in *
+        | progress cbv [Crypto.Util.Option.bind Rewriter.Util.Option.bind ErrorT.bind val_or_list_val_matches_spec] in *
+        | progress cbn [val_or_list_val_matches_spec_nosize] in *
         | progress cbn [fst snd ZRange.type.base.option.is_bounded_by type.andb_bool_for_each_lhs_of_arrow] in *
         | progress split_andb
         | progress break_innermost_match_hyps
         | rewrite <- !List.app_assoc in *
+        | rewrite !List.map_app in *
+        | rewrite !length_map in *
         | discriminate
         | progress specialize_by_assumption
         | match goal with
+          | [ H : S _ = S _ |- _ ] => inversion H; clear H
           | [ H : ?x = Some _ |- context[?x] ] => rewrite H
           | [ H : forall extra, ?f (?x ++ extra) = Some _ |- context[?f (?x ++ _)] ] => rewrite !H
           | [ H : Success _ = Success _ |- _ ] => inversion H; clear H
@@ -846,11 +850,27 @@ Local Ltac build_runtime_ok_t_step :=
           | [ |- Forall2 _ (_ ++ _) (_ ++ _) ] => apply Forall2_app
           | [ H : FoldBool.fold_andb_map _ _ _ = true |- List.length _ = List.length _ ]
             => apply FoldBool.fold_andb_map_length in H
+            | [ H : FoldBool.fold_andb_map _ _ _ = true |- List.length _ = S (List.length _) ]
+              => apply FoldBool.fold_andb_map_length in H
+          | [ H : Option.List.lift _ = Some _ |- List.length _ = List.length _ ]
+            => apply Option.List.lift_Some_nth_error_all_iff in H
+          | [ H : Option.List.lift _ = Some _ |- List.length _ = S (List.length _) ]
+            => apply Option.List.lift_Some_nth_error_all_iff in H
+          | [ H : context[@List.length ?A ?x] |- context[@List.length ?B ?x] ]
+            => progress change A with B in *
+          | [ H : context[@List.length ?A ?x], H' : context[@List.length ?B ?x] |- _ ]
+            => progress change A with B in *
+          | [ H : List.map _ ?x = _ :: _ |- _ ]
+            => is_var x; destruct x; cbn [List.map] in H
           end
         | progress intros
         | apply conj
         | reflexivity
-        | (idtac + symmetry); assumption ].
+        | (idtac + symmetry); assumption
+        | progress cbn [ZRange.type.base.option.lift_Some List.length List.map ZRange.type.base.bitwidth] in *
+        | progress cbv [option_map] in *
+        | progress break_match_hyps
+        | congruence ].
 
 Lemma build_base_runtime_ok t arg_bounds args types PHOAS_args extra
       (H : simplify_base_type t arg_bounds = Success types)
@@ -859,7 +879,7 @@ Lemma build_base_runtime_ok t arg_bounds args types PHOAS_args extra
   : exists args',
     args = args' ++ extra
     /\ (forall extra', build_base_runtime t (args' ++ extra') = Some (PHOAS_args, extra'))
-    /\ Forall2 val_or_list_val_matches_spec args' types.
+    /\ Forall2 val_or_list_val_matches_spec_nosize args' (List.map snd types).
 Proof using Type.
   revert args extra types H Hargs HPHOAS_args; induction t; intros;
     cbn [simplify_base_type build_base_runtime type.for_each_lhs_of_arrow Language.Compilers.base.interp] in *;
@@ -868,6 +888,7 @@ Proof using Type.
                  | constructor ].
 Qed.
 
+
 Lemma build_runtime_ok t arg_bounds args types PHOAS_args extra
       (H : simplify_type t arg_bounds = Success types)
       (Hargs : build_runtime t args = Some (PHOAS_args, extra))
@@ -875,7 +896,7 @@ Lemma build_runtime_ok t arg_bounds args types PHOAS_args extra
   : exists args',
     args = args' ++ extra
     /\ (forall extra', build_runtime t (args' ++ extra') = Some (PHOAS_args, extra'))
-    /\ Forall2 val_or_list_val_matches_spec args' types.
+    /\ Forall2 val_or_list_val_matches_spec_nosize args' (List.map snd types).
 Proof using Type.
   revert args extra types H Hargs HPHOAS_args; induction t; intros;
     cbn [simplify_type build_runtime type.for_each_lhs_of_arrow] in *;
@@ -889,7 +910,7 @@ Lemma build_input_runtime_ok t arg_bounds args input_types PHOAS_args extra
   : exists args',
     args = args' ++ extra
     /\ (forall extra', build_input_runtime t (args' ++ extra') = Some (PHOAS_args, extra'))
-    /\ Forall2 val_or_list_val_matches_spec args' input_types.
+    /\ Forall2 val_or_list_val_matches_spec_nosize args' (List.map snd input_types).
 Proof using Type.
   revert args extra input_types H Hargs HPHOAS_args; induction t as [|t1 ? t2]; intros;
     [ eexists [] | pose proof (build_runtime_ok t1) ];
@@ -902,7 +923,7 @@ Lemma build_input_runtime_ok_nil t arg_bounds args input_types PHOAS_args
       (H : simplify_input_type t arg_bounds = Success input_types)
       (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
       (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
-  : Forall2 val_or_list_val_matches_spec args input_types.
+  : Forall2 val_or_list_val_matches_spec_nosize args (List.map snd input_types).
 Proof using Type.
   pose proof (build_input_runtime_ok t arg_bounds args input_types PHOAS_args [] H Hargs HPHOAS_args).
   destruct_head'_ex; destruct_head'_and; subst; rewrite app_nil_r; assumption.
@@ -976,18 +997,18 @@ Fixpoint build_merge_base_addresses_G
          {opts : symbolic_options_computed_opt}
          {descr:description}
          {dereference_scalar:bool}
-         (items : list (idx + list idx)) (reg_available : list REG) (runtime_reg : list Z) {struct items}
+         (items : list (N * (idx + list idx))) (reg_available : list REG) (runtime_reg : list Z) {struct items}
   : G.M (list ((REG + idx) + idx))
   := match items, reg_available, runtime_reg with
      | [], _, _ | _, [], _ => G.ret []
      | _, _, []
        => fun _ => None
-     | inr idxs :: xs, r :: reg_available, rv :: runtime_reg
+     | (sz, inr idxs) :: xs, r :: reg_available, rv :: runtime_reg
        => (base <- SetRegFresh_G r rv; (* note: overwrites initial value *)
-           addrs <- G.lift (build_merge_array_addresses base idxs);
+           addrs <- G.lift (build_merge_array_addresses (bytes_per_element:=sz) base idxs);
            rest <- build_merge_base_addresses_G (dereference_scalar:=dereference_scalar) xs reg_available runtime_reg;
            G.ret (inr base :: rest))
-     | inl idx :: xs, r :: reg_available, rv :: runtime_reg =>
+     | (_sz, inl idx) :: xs, r :: reg_available, rv :: runtime_reg =>
           (addr <- (if dereference_scalar
                     then
                       (addr <- SetRegFresh_G r rv;
@@ -1010,7 +1031,7 @@ Definition build_merge_stack_placeholders_G {opts : symbolic_options_computed_op
   := (let stack_size := List.length stack_vals in
       stack_placeholders <- lift_dag_G (build_inputarray_G stack_vals);
       stack_base <- compute_stack_base_G rsp_val stack_size;
-      _ <- G.lift (build_merge_array_addresses stack_base stack_placeholders);
+      _ <- G.lift (build_merge_array_addresses (bytes_per_element:=8) stack_base stack_placeholders);
      G.ret stack_base)%GM.
 
 (* TODO: Move to SymbolicProofs? *)
@@ -1313,8 +1334,11 @@ Qed.
 Definition type_spec_of_runtime {A} (ls : list (A + list A)) : list (option nat)
   := List.map (fun v => match v with inl _ => None | inr ls => Some (List.length ls) end) ls.
 
-Lemma type_spec_of_runtime_val_or_list_val_matches_spec vals types
-  : types = type_spec_of_runtime vals <-> Forall2 val_or_list_val_matches_spec vals types.
+Lemma length_type_spec_of_runtime A ls : List.length (@type_spec_of_runtime A ls) = List.length ls.
+Proof. cbv [type_spec_of_runtime]; rewrite length_map; reflexivity. Qed.
+
+Lemma type_spec_of_runtime_val_or_list_val_matches_spec_nosize vals types
+  : types = type_spec_of_runtime vals <-> Forall2 val_or_list_val_matches_spec_nosize vals types.
 Proof.
   split.
   { intro; subst; induction vals; cbn; constructor; break_innermost_match; cbn; eauto. }
@@ -1322,21 +1346,52 @@ Proof.
     repeat (subst || cbn in * || destruct_head' option || break_innermost_match || intuition). }
 Qed.
 
-Lemma build_inputs_eq_G {descr:description} G d vals (types := type_spec_of_runtime vals)
-  : build_inputs types d = (fst (build_inputs_G vals (G, d)), snd (snd (build_inputs_G vals (G, d)))).
+Lemma build_inputs_eq_G_and_length {descr:description} G d vals types (Htypes : List.map snd types = type_spec_of_runtime vals)
+  : build_inputs types d = (List.combine (List.map fst types) (fst (build_inputs_G vals (G, d))), snd (snd (build_inputs_G vals (G, d))))
+    /\ List.length types = List.length (fst (build_inputs_G vals (G, d))).
 Proof.
-  revert G d; subst types; induction vals as [|v vals IHvals]; [ reflexivity | ].
-  cbn [build_inputs type_spec_of_runtime List.map build_inputs_G]; fold (type_spec_of_runtime vals); intros.
-  cbv [dag.bind dag.ret]; break_innermost_match; destruct_head'_prod; cbn [fst snd].
-  all: repeat first [ progress cbn [fst snd] in *
+  remember (G, d) as Gd eqn:HGd.
+  revert types Htypes G d Gd HGd; induction vals as [|v vals IHvals], types as [|ty types].
+  all: cbn [build_inputs type_spec_of_runtime List.map build_inputs_G List.map List.combine List.length fst snd].
+  all: try solve [ intros; subst; inversion_list; repeat constructor ].
+  all: [ > ].
+  fold (type_spec_of_runtime vals); intros.
+  inversion_list.
+  specialize (IHvals _ ltac:(eassumption)).
+  split_and.
+  cbv [dag.bind dag.ret]; break_innermost_match; destruct_head'_prod; cbn [fst snd] in *; inversion_list; inversion_option; subst; split.
+  all: repeat first [ progress cbn [fst snd List.length] in *
                     | progress subst
                     | reflexivity
+                    | progress inversion_pair
+                    | apply (f_equal S)
+                    | rewrite <- surjective_pairing
                     | match goal with
-                      | [ H : pair _ _ = pair _ _ |- _ ] => inversion H; clear H
                       | [ H : merge_fresh_symbol _ = _, H' : merge_fresh_symbol_G _ _ = _ |- _ ] => erewrite merge_fresh_symbol_eq_G, H' in H
                       | [ H : build_inputarray _ _ = _, H' : build_inputarray_G _ _ = _ |- _ ] => erewrite build_inputarray_eq_G, H' in H
-                      | [ H : build_inputs _ _ = _, H' : build_inputs_G _ _ = _ |- _ ] => erewrite IHvals, H' in H
-                      end ].
+                      | [ H : build_inputs _ _ = _, H' : build_inputs_G _ _ = _, IHvals : forall G d Gd, _ -> _ = _ |- _ ] => erewrite IHvals, H' in H
+                      | [ H : forall G d Gd, _ = _ -> List.length ?t = List.length _ |- List.length ?t = List.length _ ] => eapply H
+                      end
+                    | progress inversion_prod ].
+Qed.
+
+Lemma build_inputs_eq_G {descr:description} G d vals types (Htypes : List.map snd types = type_spec_of_runtime vals)
+  : build_inputs types d = (List.combine (List.map fst types) (fst (build_inputs_G vals (G, d))), snd (snd (build_inputs_G vals (G, d)))).
+Proof. eapply build_inputs_eq_G_and_length; assumption. Qed.
+
+Lemma length_types_eq_length_fst_build_inputs_G {descr:description} G d vals types (Htypes : List.map (@snd N _) types = type_spec_of_runtime vals)
+  : List.length types = List.length (fst (build_inputs_G vals (G, d))).
+Proof. eapply build_inputs_eq_G_and_length; assumption. Qed.
+
+Lemma length_fst_build_inputs_G {descr:description} Gd vals
+  : List.length (fst (build_inputs_G vals Gd)) = List.length vals.
+Proof.
+  destruct Gd; erewrite <- length_types_eq_length_fst_build_inputs_G with (types := List.combine (List.map _ _) _); revgoals.
+  { rewrite map_snd_combine, firstn_all; try reflexivity.
+    rewrite length_map; reflexivity. }
+  { rewrite length_combine, length_map, length_type_spec_of_runtime, Nat.min_id; reflexivity. }
+  Unshelve.
+  now constructor.
 Qed.
 
 Lemma build_inputs_G_ok {descr:description} G d vals G' d' inputs
@@ -1378,16 +1433,19 @@ Lemma build_inputs_ok {descr:description} G d types inputs args d'
                                   | inl v => (0 <= v < 2^64)%Z
                                   | inr vs => Forall (fun v => (0 <= v < 2^64)%Z) vs
                                   end) args)
-      (Hargs : Forall2 val_or_list_val_matches_spec args types)
+      (Hargs : Forall2 val_or_list_val_matches_spec_nosize args (List.map snd types))
   : exists G',
-    Forall2 (eval_idx_or_list_idx G' d') inputs args
+    Forall2 (eval_idx_or_list_idx G' d') (List.map snd inputs) args
     /\ gensym_dag_ok G' d'
     /\ (forall e n, eval G d e n -> eval G' d' e n).
 Proof.
-  apply type_spec_of_runtime_val_or_list_val_matches_spec in Hargs; subst types.
+  apply type_spec_of_runtime_val_or_list_val_matches_spec_nosize in Hargs.
   erewrite build_inputs_eq_G in H; inversion_prod.
   eexists; eapply build_inputs_G_ok; try eassumption.
-  repeat first [ eassumption | apply path_prod | reflexivity ].
+  all: repeat first [ eassumption | apply path_prod; cbn [fst snd] | reflexivity ].
+  all: subst inputs.
+  all: rewrite map_snd_combine, length_map, firstn_all; try reflexivity.
+  all: apply length_types_eq_length_fst_build_inputs_G; assumption.
 Qed.
 
 Lemma lift_dag_eq_G {A} G v_G v s s' res
@@ -1869,8 +1927,8 @@ Proof.
   rewrite get_reg_set_reg_full; break_innermost_match; reflect_hyps; cbv beta in *; try reflexivity; lia.
 Qed.
 
-Lemma compute_array_address_ok {opts : symbolic_options_computed_opt} {descr:description} G s s' base i idx base_val
-      (H : compute_array_address base i s = Success (idx, s'))
+Lemma compute_array_address_ok {opts : symbolic_options_computed_opt} {descr:description} bytes_per_element G s s' base i idx base_val
+      (H : compute_array_address (bytes_per_element:=bytes_per_element) base i s = Success (idx, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
       (r := s.(symbolic_reg_state))
@@ -1881,7 +1939,7 @@ Lemma compute_array_address_ok {opts : symbolic_options_computed_opt} {descr:des
       (m' := s'.(symbolic_mem_state))
       (Hd : gensym_dag_ok G d)
       (Hidx : eval_idx_Z G d base base_val)
-  : (eval_idx_Z G d' idx (Z.land (base_val + 8 * Z.of_nat i) (Z.ones 64))
+  : (eval_idx_Z G d' idx (Z.land (base_val + Z.of_N bytes_per_element * Z.of_nat i) (Z.ones 64))
      /\ r = r'
      /\ f = f'
      /\ m = m')
@@ -1930,14 +1988,13 @@ Proof.
                            [ solve [ intros ->; eauto 10 ]
                            | ]
                       end
-                    | progress change (Z.of_N 64) with 64%Z
                     | rewrite !Z.land_ones by lia
                     | progress autorewrite with zsimplify_const
                     | progress (push_Zmod; pull_Zmod) ].
 Qed.
 
-Lemma compute_array_address_ok_bounded {opts : symbolic_options_computed_opt} {descr:description} G s s' base i idx base_val
-      (H : compute_array_address base i s = Success (idx, s'))
+Lemma compute_array_address_ok_bounded {opts : symbolic_options_computed_opt} {descr:description} bytes_per_element G s s' base i idx base_val
+      (H : compute_array_address (bytes_per_element:=bytes_per_element) base i s = Success (idx, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
       (r := s.(symbolic_reg_state))
@@ -1948,22 +2005,22 @@ Lemma compute_array_address_ok_bounded {opts : symbolic_options_computed_opt} {d
       (m' := s'.(symbolic_mem_state))
       (Hd : gensym_dag_ok G d)
       (Hidx : eval_idx_Z G d base base_val)
-      (Hv : (0 <= base_val + 8 * Z.of_nat i < 2^64)%Z)
-  : (eval_idx_Z G d' idx (base_val + 8 * Z.of_nat i)
+      (Hv : (0 <= base_val + Z.of_N bytes_per_element * Z.of_nat i < 2^64)%Z)
+  : (eval_idx_Z G d' idx (base_val + Z.of_N bytes_per_element * Z.of_nat i)
      /\ r = r'
      /\ f = f'
      /\ m = m')
     /\ gensym_dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof.
-  set (v := (base_val + 8 * Z.of_nat i)%Z) in *.
+  set (v := (base_val + Z.of_N bytes_per_element * Z.of_nat i)%Z) in *.
   replace v with (Z.land v (Z.ones (Z.of_N 64))); [ eapply compute_array_address_ok; eassumption | rewrite land_ones_eq_of_bounded by assumption ].
   reflexivity.
 Qed.
 
-Lemma build_merge_array_addresses_ok {opts : symbolic_options_computed_opt} {descr:description} G s s'
+Lemma build_merge_array_addresses_ok {opts : symbolic_options_computed_opt} {descr:description} bytes_per_element G s s'
       base base_val items addrs
-      (H : build_merge_array_addresses base items s = Success (addrs, s'))
+      (H : build_merge_array_addresses (bytes_per_element:=bytes_per_element) base items s = Success (addrs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
       (r := s.(symbolic_reg_state))
@@ -1973,7 +2030,7 @@ Lemma build_merge_array_addresses_ok {opts : symbolic_options_computed_opt} {des
       (m := s.(symbolic_mem_state))
       (m' := s'.(symbolic_mem_state))
       (Hd : gensym_dag_ok G d)
-      (addrs_vals := List.map (fun i => Z.land (base_val + 8 * Z.of_nat i) (Z.ones 64)) (seq 0 (List.length items)))
+      (addrs_vals := List.map (fun i => Z.land (base_val + Z.of_N bytes_per_element * Z.of_nat i) (Z.ones 64)) (seq 0 (List.length items)))
       (Hbase : eval_idx_Z G d base base_val)
   : (r = r'
      /\ f = f'
@@ -1988,7 +2045,7 @@ Proof.
     (R_inv := fun st => eval_idx_Z G st base base_val)
     (R_static := fun _ => True)
     (R := fun st i_array_val_idx array_addr_idx
-          => eval_idx_Z G st.(dag_state) array_addr_idx (Z.land (base_val + 8 * Z.of_nat (fst (i_array_val_idx))) (Z.ones 64)))
+          => eval_idx_Z G st.(dag_state) array_addr_idx (Z.land (base_val + Z.of_N bytes_per_element * Z.of_nat (fst (i_array_val_idx))) (Z.ones 64)))
     (upd_flag := fun st _ => st)
     (upd_reg := fun st _ => st)
     in H;
@@ -2201,7 +2258,7 @@ Ltac handle_eval_eval :=
 
 Lemma build_merge_base_addresses_G_ok
       {opts : symbolic_options_computed_opt} {descr:description} {dereference_scalar:bool}
-  : forall (idxs : list (idx + list idx))
+  : forall idxs
            (reg_available : list REG)
            (runtime_reg : list Z)
            G s G' s'
@@ -2215,7 +2272,8 @@ Lemma build_merge_base_addresses_G_ok
                                              else eval_idx_Z G d idx rv
                                 | inr _ => True
                                 end)
-                            idxs (List.firstn (List.length idxs) runtime_reg))
+                      (List.map snd idxs)
+                      (List.firstn (List.length idxs) runtime_reg))
            (Hreg : Nat.min (List.length idxs) (List.length reg_available) <= List.length runtime_reg)
            (Henough_reg : List.length idxs <= List.length reg_available)
            (d' := s'.(dag_state))
@@ -2228,9 +2286,9 @@ Lemma build_merge_base_addresses_G_ok
            (Hd : gensym_dag_ok G d)
            (Hruntime_reg_bounded : Forall (fun v => (0 <= v < 2^64)%Z) runtime_reg)
            (Hreg_available_wide : Forall (fun reg => let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg reg in sz = 64%N) reg_available),
-    ((exists (outputaddrs' : list (idx * option idx + idx * list idx)),
-         let addrs_vals_of := fun base_reg_val addrs' => List.map (fun i => Z.land (base_reg_val + 8 * Z.of_nat i) (Z.ones 64)) (seq 0 (List.length addrs')) in
-         fold_left (fun rst '(r, idx')
+    ((exists (outputaddrs' : list (N * (idx * option idx + idx * list idx))),
+         let addrs_vals_of := fun sz base_reg_val addrs' => List.map (fun i => Z.land (base_reg_val + Z.of_N sz * Z.of_nat i) (Z.ones 64)) (seq 0 (List.length addrs')) in
+         fold_left (fun rst '(r, (_sz, idx'))
                     => set_reg rst (reg_index r)
                                match idx' with
                                | inl (idx', _) => idx'
@@ -2241,7 +2299,7 @@ Lemma build_merge_base_addresses_G_ok
          = r'
          /\ ((* TODO: Is this too specific a spec? *)
              List.rev (List.flat_map
-                         (fun '(idx', idx)
+                         (fun '((_sz, idx'), idx)
                           => match idx', idx with
                              | inl (reg_val, Some addr), inl val => if dereference_scalar then [(addr, val)] else []
 
@@ -2249,12 +2307,12 @@ Lemma build_merge_base_addresses_G_ok
                              | inr (base', addrs'), inr items
                                => List.combine addrs' items
                              end)
-                         (List.combine outputaddrs' idxs))
+                         (List.combine outputaddrs' (List.map snd idxs)))
                       ++ m)
             = m'
          /\ (* outputaddrs' base / array *)
            Forall2
-             (fun idx' v =>
+             (fun '(sz, idx') v =>
                 match idx' with
                 | inl (idx', addr') (* scalars *)
                   => eval_idx_Z G' d' idx' (Z.land v (Z.ones 64))
@@ -2265,7 +2323,7 @@ Lemma build_merge_base_addresses_G_ok
                     /\ *) eval_idx_Z G' d' base' (Z.land base_reg_val (Z.ones 64))) *)
                   => eval_idx_Z G' d' base' (Z.land v (Z.ones 64))
                      /\ (* arrays : Forall2 (eval_idx_Z G' d') addrs addrs_vals *)
-                       Forall2 (eval_idx_Z G' d') addrs' (addrs_vals_of v addrs')
+                       Forall2 (eval_idx_Z G' d') addrs' (addrs_vals_of sz v addrs')
                 end)
              outputaddrs'
              (List.firstn (List.length outputaddrs') runtime_reg)
@@ -2289,7 +2347,7 @@ Lemma build_merge_base_addresses_G_ok
                 end)
              outputaddrs
              (List.firstn (List.length outputaddrs) reg_available)
-         /\ Forall2 (fun addr idx =>
+         /\ Forall2 (fun '(sz, addr) idx =>
                        match addr, idx with
                        | inl (idx, _), inl val_idx
                          => if dereference_scalar
@@ -2298,8 +2356,8 @@ Lemma build_merge_base_addresses_G_ok
                        | inr (_, ls), inr ls' => List.length ls = List.length ls'
                        | inl _, inr _ | inr _, inl _ => False
                        end)
-                    outputaddrs' idxs
-         /\ Forall2 (fun addr idx =>
+                    outputaddrs' (List.map snd idxs)
+         /\ Forall2 (fun addr '(sz, idx) =>
                        match addr, idx with
                        | inl (inl _), inl (_, None) => dereference_scalar = false
                        | inl (inr addr), inl (_, Some addr') => dereference_scalar = true /\ addr = addr'
@@ -2336,7 +2394,7 @@ Proof.
                | assumption
                | progress specialize_by_assumption
                | progress specialize_by (eapply Forall2_weaken; [ | eassumption ]; intros; break_innermost_match; eauto using lift_eval_idx_Z_impl)
-               | progress cbn [length firstn List.combine fold_left flat_map rev Symbolic.dag_state Symbolic.symbolic_reg_state Symbolic.symbolic_mem_state Symbolic.symbolic_flag_state update_mem_with fst snd] in *
+               | progress cbn [length firstn List.combine fold_left flat_map rev Symbolic.dag_state Symbolic.symbolic_reg_state Symbolic.symbolic_mem_state Symbolic.symbolic_flag_state update_mem_with fst snd List.map] in *
                | progress destruct_head' symbolic_state
                | match goal with
                  | [ H : (_, _) = (_, _) |- _ ] => inversion H; clear H
@@ -2369,11 +2427,11 @@ Proof.
                | progress cbv [index_and_shift_and_bitcount_of_reg] in * ].
   (* above is all reversible, evar-free; below is irreversible *)
   all: exactly_once ((lazymatch goal with |- context[inr _ :: _] => idtac end;
-                      eexists (inr (_, _) :: _))
+                      eexists ((_, inr (_, _)) :: _))
                      + (lazymatch goal with |- context[inl (inl _) :: _] => idtac end;
-                        eexists (inl (_, None) :: _))
+                        eexists ((8%N, inl (_, None)) :: _))
                      + (lazymatch goal with |- context[inl (inr _) :: _] => idtac end;
-                        eexists (inl (_, Some _) :: _))).
+                        eexists ((8%N, inl (_, Some _)) :: _))).
   all: repeat
          repeat
          first [ progress cbn [length firstn List.combine fold_left flat_map rev] in *
@@ -2483,7 +2541,7 @@ Qed.
 
 Lemma build_merge_base_addresses_ok
       {opts : symbolic_options_computed_opt} {descr:description} {dereference_scalar:bool}
-      (idxs : list (idx + list idx))
+      (idxs : list (N * (idx + list idx)))
       (reg_available : list REG)
       (runtime_reg : list Z)
       G s
@@ -2495,7 +2553,7 @@ Lemma build_merge_base_addresses_ok
                                         else eval_idx_Z G d idx rv
                            | inr _ => True
                            end)
-                       idxs (List.firstn (List.length idxs) runtime_reg))
+                       (List.map snd idxs) (List.firstn (List.length idxs) runtime_reg))
       (Hreg : Nat.min (List.length idxs) (List.length reg_available) <= List.length runtime_reg)
       (Henough_reg : List.length idxs <= List.length reg_available)
       s'
@@ -2512,9 +2570,9 @@ Lemma build_merge_base_addresses_ok
       (Hruntime_reg_bounded : Forall (fun v => (0 <= v < 2^64)%Z) runtime_reg)
       (Hreg_available_wide : Forall (fun reg => let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg reg in sz = 64%N) reg_available)
   : exists G',
-    ((exists (outputaddrs' : list (idx * option idx + idx * list idx)),
-         let addrs_vals_of := fun base_reg_val addrs' => List.map (fun i => Z.land (base_reg_val + 8 * Z.of_nat i) (Z.ones 64)) (seq 0 (List.length addrs')) in
-         fold_left (fun rst '(r, idx')
+    ((exists (outputaddrs' : list (N * (idx * option idx + idx * list idx))),
+         let addrs_vals_of := fun sz base_reg_val addrs' => List.map (fun i => Z.land (base_reg_val + Z.of_N sz * Z.of_nat i) (Z.ones 64)) (seq 0 (List.length addrs')) in
+         fold_left (fun rst '(r, (sz, idx'))
                     => set_reg rst (reg_index r)
                                match idx' with
                                | inl (idx', _) => idx'
@@ -2525,7 +2583,7 @@ Lemma build_merge_base_addresses_ok
          = r'
          /\ ((* TODO: Is this too specific a spec? *)
              List.rev (List.flat_map
-                         (fun '(idx', idx)
+                         (fun '((sz, idx'), idx)
                           => match idx', idx with
                              | inl (reg_val, Some addr), inl val => if dereference_scalar then [(addr, val)] else []
 
@@ -2533,12 +2591,12 @@ Lemma build_merge_base_addresses_ok
                              | inr (base', addrs'), inr items
                                => List.combine addrs' items
                              end)
-                         (List.combine outputaddrs' idxs))
+                         (List.combine outputaddrs' (List.map snd idxs)))
                       ++ m)
             = m'
          /\ (* outputaddrs' base / array *)
            Forall2
-             (fun idx' v =>
+             (fun '(sz, idx') v =>
                 match idx' with
                 | inl (idx', addr') (* scalars *)
                   => eval_idx_Z G' d' idx' (Z.land v (Z.ones 64))
@@ -2549,7 +2607,7 @@ Lemma build_merge_base_addresses_ok
                     /\ *) eval_idx_Z G' d' base' (Z.land base_reg_val (Z.ones 64))) *)
                   => eval_idx_Z G' d' base' (Z.land v (Z.ones 64))
                      /\ (* arrays : Forall2 (eval_idx_Z G' d') addrs addrs_vals *)
-                       Forall2 (eval_idx_Z G' d') addrs' (addrs_vals_of v addrs')
+                       Forall2 (eval_idx_Z G' d') addrs' (addrs_vals_of sz v addrs')
                 end)
              outputaddrs'
              (List.firstn (List.length outputaddrs') runtime_reg)
@@ -2573,7 +2631,7 @@ Lemma build_merge_base_addresses_ok
                 end)
              outputaddrs
              (List.firstn (List.length outputaddrs) reg_available)
-         /\ Forall2 (fun addr idx =>
+         /\ Forall2 (fun '(sz, addr) idx =>
                        match addr, idx with
                        | inl (idx, _), inl val_idx
                          => if dereference_scalar
@@ -2582,8 +2640,8 @@ Lemma build_merge_base_addresses_ok
                        | inr (_, ls), inr ls' => List.length ls = List.length ls'
                        | inl _, inr _ | inr _, inl _ => False
                        end)
-                    outputaddrs' idxs
-         /\ Forall2 (fun addr idx =>
+                    outputaddrs' (List.map snd idxs)
+         /\ Forall2 (fun addr '(sz, idx) =>
                        match addr, idx with
                        | inl (inl _), inl (_, None) => dereference_scalar = false
                        | inl (inr addr), inl (_, Some addr') => dereference_scalar = true /\ addr = addr'
@@ -3347,8 +3405,8 @@ Proof.
 Qed.
 
 Local Existing Instance Permutation_cons | 0.
-Lemma LoadArray_ok {opts : symbolic_options_computed_opt} {descr:description} G s s' base base_val len idxs
-      (H : LoadArray base len s = Success (idxs, s'))
+Lemma LoadArray_ok {opts : symbolic_options_computed_opt} {descr:description} bytes_per_element G s s' base base_val len idxs
+      (H : LoadArray (bytes_per_element:=bytes_per_element) base len s = Success (idxs, s'))
       (d := s.(dag_state))
       (d' := s'.(dag_state))
       (r := s.(symbolic_reg_state))
@@ -3362,7 +3420,7 @@ Lemma LoadArray_ok {opts : symbolic_options_computed_opt} {descr:description} G 
   : ((exists addrs : list idx,
          Permutation m (List.combine addrs idxs ++ m')
          /\ List.length idxs = len
-         /\ Forall2 (eval_idx_Z G d') addrs (List.map (fun i => Z.land (base_val + 8 * Z.of_nat i) (Z.ones 64)) (seq 0 len))
+         /\ Forall2 (eval_idx_Z G d') addrs (List.map (fun i => Z.land (base_val + Z.of_N bytes_per_element * Z.of_nat i) (Z.ones 64)) (seq 0 len))
          /\ Forall (fun addr => Forall (fun x => (fst x =? addr)%N = false) m') addrs)
      /\ r = r'
      /\ f = f')
@@ -3482,11 +3540,11 @@ Lemma LoadOutputs_ok {opts : symbolic_options_computed_opt} {descr:description} 
                                      | inl (inr _) => dereference_scalar = true
                                      | _ => True
                                      end) outputaddrs)
-  : ((exists outputaddrs' : list (idx + list idx),
-         Forall2 (fun idxs '((base, len), base_val)
+  : ((exists outputaddrs' : list (N * (idx + list idx)),
+         Forall2 (fun '(sz, idxs) '((base, len), base_val)
                   => match idxs, base, len with
                      | inr idxs, inr base, Some len
-                       => Forall2 (eval_idx_Z G d') idxs (List.map (fun i => Z.land (base_val + 8 * Z.of_nat i) (Z.ones 64)) (seq 0 len))
+                       => Forall2 (eval_idx_Z G d') idxs (List.map (fun i => Z.land (base_val + Z.of_N sz * Z.of_nat i) (Z.ones 64)) (seq 0 len))
                      | inl idx, inl (inl r), None
                        => (exists idx',
                               get_reg s' (reg_index r) = Some idx'
@@ -3499,9 +3557,9 @@ Lemma LoadOutputs_ok {opts : symbolic_options_computed_opt} {descr:description} 
                      | _, _, _ => False
                      end)
                  outputaddrs'
-                 (List.combine (List.combine outputaddrs output_types) output_vals)
+                 (List.combine (List.combine outputaddrs (List.map snd output_types)) output_vals)
          /\ Permutation m (List.flat_map
-                             (fun '(addrs, idxs)
+                             (fun '((sz, addrs), idxs)
                               => match addrs, idxs with
                                  | inr addrs, inr idxs
                                    => List.combine addrs idxs
@@ -3514,7 +3572,7 @@ Lemma LoadOutputs_ok {opts : symbolic_options_computed_opt} {descr:description} 
                              (List.combine outputaddrs' idxs)
                              ++ m')
          /\ Forall2
-              (fun addrs idxs
+              (fun '(sz, addrs) idxs
                => match addrs, idxs with
                   | inl idx, inl val_idx
                     => if dereference_scalar
@@ -3526,11 +3584,12 @@ Lemma LoadOutputs_ok {opts : symbolic_options_computed_opt} {descr:description} 
                   end)
               outputaddrs'
               idxs
-         /\ Forall (fun addrs => match addrs with
-                                 | inl idx => True
-                                 | inr addrs
-                                   => Forall (fun addr => Forall (fun x => (fst x =? addr)%N = false) m') addrs
-                                 end)
+         /\ Forall (fun '(sz, addrs)
+                    => match addrs with
+                       | inl idx => True
+                       | inr addrs
+                         => Forall (fun addr => Forall (fun x => (fst x =? addr)%N = false) m') addrs
+                       end)
                    outputaddrs'
          /\ List.length output_types = List.length outputaddrs)
      /\ r = r'
@@ -3611,9 +3670,9 @@ Proof.
                     | progress destruct_head' symbolic_state ].
   all: lazymatch goal with
        | [ |- context[Forall2 _ _ ((inr _, _, _) :: _)] ]
-         => eexists (inr _ :: _)
+         => eexists ((_, inr _) :: _)
        | [ |- context[Forall2 _ _ ((inl _, _, _) :: _)] ]
-         => eexists (inl _ :: _)
+         => eexists ((8%N, inl _) :: _)
        end.
   all: repeat first [ rewrite Forall2_cons_cons_iff
                     | match goal with

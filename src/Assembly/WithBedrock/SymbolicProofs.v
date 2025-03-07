@@ -105,14 +105,14 @@ Definition R_flag (x : option idx) (ob : option bool) : Prop :=
 Definition R_flags : Symbolic.flag_state -> Semantics.flag_state -> Prop :=
   Tuple.fieldwise R_flag.
 
-Definition R_cell64 (ia iv : idx) : mem_state -> Prop :=
+Definition R_cell (nbytes : N) (ia iv : idx) : mem_state -> Prop :=
   Lift1Prop.ex1 (fun a =>
   Lift1Prop.ex1 (fun bs => sep (emp (
       eval ia (word.unsigned a) /\
-      length bs = 8%nat /\ eval iv (le_combine bs)))
+      length bs = N.to_nat nbytes /\ eval iv (le_combine bs)))
     (eq (OfListWord.map.of_list_word_at a bs)))).
 
-Fixpoint R_mem (sm : Symbolic.mem_state) : mem_state -> Prop :=
+Fixpoint R_mem (nbytes : N) (sm : Symbolic.mem_state) : mem_state -> Prop :=
   match sm with
   | nil => frame
   | cons (ia, iv) sm' => sep (R_cell64 ia iv) (R_mem sm')
