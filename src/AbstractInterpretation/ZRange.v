@@ -53,6 +53,28 @@ Module Compilers.
              | base.type.list A => list (interp A)
              | base.type.option A => option (interp A)
              end%type.
+        Fixpoint bitwidth {t} : interp t -> binterp t
+          := match t with
+            | base.type.type_base base.type.Z => fun r => ZRange.bitwidth r
+            | base.type.type_base _ as t
+            | base.type.unit as t
+              => fun x => x
+            | base.type.prod A B => fun '(a, b) => (@bitwidth A a, @bitwidth B b)
+            | base.type.list A => List.map (@bitwidth A)
+            | base.type.option A => option_map (@bitwidth A)
+            end.
+        Fixpoint of_bitwidth (signed : bool) {t} : binterp t -> interp t
+          := match t with
+             | base.type.type_base base.type.Z => fun r => ZRange.of_bitwidth signed r
+             | base.type.type_base _ as t
+             | base.type.unit as t
+               => fun x => x
+             | base.type.prod A B => fun '(a, b) => (@of_bitwidth signed A a, @of_bitwidth signed B b)
+             | base.type.list A => List.map (@of_bitwidth signed A)
+             | base.type.option A => option_map (@of_bitwidth signed A)
+             end%type.
+        Notation of_bitwidth_unsigned := (@of_bitwidth false).
+        Notation of_bitwidth_signed := (@of_bitwidth true).
         Fixpoint map_ranges (f : zrange -> zrange) {t} : interp t -> interp t
           := match t with
              | base.type.type_base base.type.Z => f
@@ -406,6 +428,18 @@ Module Compilers.
            | type.base x => @base.is_bounded_by x
            | type.arrow s d => fun _ _ => false
            end.
+      Fixpoint bitwidth (signed : bool) {t} : interp t -> einterp t
+        := match t with
+           | type.base x => @base.bitwidth x
+           | type.arrow s d => fun fr sz => @bitwidth signed d (fr (@of_bitwidth signed s sz))
+           end
+      with of_bitwidth (signed : bool) {t} : einterp t -> interp t
+        := match t with
+           | type.base x => @base.of_bitwidth signed x
+           | type.arrow s d => fun fr sz => @of_bitwidth signed d (fr (@bitwidth signed s sz))
+           end.
+      Notation of_bitwidth_unsigned := (@of_bitwidth false).
+      Notation of_bitwidth_signed := (@of_bitwidth true).
       Module option.
         (** turn a [type] into a [Set] describing the type of optional
             bounds on that base type; bounds on a [Z] may be either a
