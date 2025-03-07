@@ -168,6 +168,11 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | (mov | movzx | movabs | movdqa | movdqu | movq | movd | movups), [dst; src] => (* Note: unbundle when switching from N to Z *)
     v <- DenoteOperand sa s st src;
     SetOperand sa s st dst v
+  | movsx, [dst; src] => (* Move with Sign-Extend *)
+    v <- DenoteOperand sa s st src;
+    src_size <- standalone_operand_size src ;
+    let v := signed src_size v in
+    SetOperand sa s st dst v
   | xchg, [a; b] => (* Flags Affected: None *)
     va <- DenoteOperand sa s st a;
     vb <- DenoteOperand sa s st b;
