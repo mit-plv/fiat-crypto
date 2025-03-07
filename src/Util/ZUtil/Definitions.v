@@ -166,6 +166,9 @@ Module Z.
 
   Definition twos_complement_mul ma mb a b :=
     (sign_extend ma (ma + mb) a) * (sign_extend mb (ma + mb) b).
+
+  Definition signed (s : N) (n : Z) : Z :=
+    Z.land (Z.shiftl 1 (Z.of_N s-1) + n) (Z.ones (Z.of_N s)) - Z.shiftl 1 (Z.of_N s-1).
 End Z.
 
 Module Export Notations.
