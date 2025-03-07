@@ -1452,30 +1452,61 @@ Section check_equivalence.
     Local Notation map_err_None v := (ErrorT.map_error (fun e => (None, e)) v).
     Local Notation map_err_Some label v := (ErrorT.map_error (fun e => (Some label, e)) v).
 
-    Definition check_equivalence : ErrorT (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError) unit :=
+    Definition map_symex_asm (inputs : list (idx + list idx)) (output_types : type_spec) (d : dag)
+      : ErrorT
+          (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError)
+          (list ((string (* fname *) * Lines (* asm lines *)) * (list (idx + list idx) * symbolic_state))) :=
       let reg_available := assembly_calling_registers (* registers available for calling conventions *) in
-      let d := dag.empty in
-      input_types <- map_err_None (simplify_input_type t arg_bounds);
-      output_types <- map_err_None (simplify_base_type (type.final_codomain t) out_bounds);
-      let '(inputs, d) := build_inputs (descr:=Build_description "build_inputs" true ) input_types d in
-
-      PHOAS_output <- map_err_None (symex_PHOAS expr inputs d);
-      let '(PHOAS_output, d) := PHOAS_output in
-
-      let first_new_idx_after_all_old_idxs : option idx := Some (dag.size d) in
-
-      _ <-- (List.map
+      (ls <-- (List.map
                (fun '((fname, asm) as label)
                 => (asm <- map_err_Some label (strip_ret asm);
                     let stack_size : nat := N.to_nat (assembly_stack_size asm) in
                     symevaled_asm <- map_err_Some label (symex_asm_func (dereference_output_scalars:=false) d assembly_callee_saved_registers output_types stack_size inputs reg_available asm);
-                    let '(asm_output, s) := symevaled_asm in
-
-                    if list_beq _ (sum_beq _ _ N.eqb (list_beq _ N.eqb)) asm_output PHOAS_output
-                    then Success tt
-                    else Error (Some label, Unable_to_unify asm_output PHOAS_output first_new_idx_after_all_old_idxs s)))
+                    Success (label, symevaled_asm)))
                asm);
-    Success tt.
+      Success ls)%error.
+
+    Definition check_equivalence : ErrorT (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError) unit :=
+      let d := dag.empty in
+      input_types <- map_err_None (simplify_input_type t arg_bounds);
+      output_types <- map_err_None (simplify_base_type (type.final_codomain t) out_bounds);
+      let '(inputs, d) := build_inputs (descr:=Build_description "build_inputs" true) input_types d in
+
+      ls <- (
+        if negb debug_symex_asm_first then (
+          PHOAS_output <- map_err_None (symex_PHOAS expr inputs d);
+          let '(PHOAS_output, d) := PHOAS_output in
+
+          let first_new_idx_after_all_old_idxs : option idx := Some (dag.size d) in
+
+          asm_output <- map_symex_asm inputs output_types d;
+
+          let ls := List.map (fun '(lbl, (asm_output, s)) => (lbl, asm_output, PHOAS_output, s, first_new_idx_after_all_old_idxs)) asm_output in
+          Success ls
+        ) else ( (* debug version, do asm first *)
+          asm_output <- map_symex_asm inputs output_types d;
+
+          ls <-- (List.map (fun '(lbl, (asm_output, s)) =>
+              let d := s.(dag_state) in
+              let first_new_idx_after_all_old_idxs : option idx := Some (dag.size d) in
+
+              PHOAS_output <- map_err_None (symex_PHOAS expr inputs d);
+              let '(PHOAS_output, d) := PHOAS_output in
+
+              let s := {| dag_state := d; symbolic_reg_state := s.(symbolic_reg_state); symbolic_flag_state := s.(symbolic_flag_state); symbolic_mem_state := s.(symbolic_mem_state) |} in
+
+              Success (lbl, asm_output, PHOAS_output, s, first_new_idx_after_all_old_idxs))
+            asm_output);
+          Success ls
+      ));
+
+      _ <-- List.map (fun '(lbl, asm_output, PHOAS_output, s, first_new_idx_after_all_old_idxs) =>
+              if list_beq _ (sum_beq _ _ N.eqb (list_beq _ N.eqb)) asm_output PHOAS_output
+              then Success tt
+              else Error (Some lbl, Unable_to_unify asm_output PHOAS_output first_new_idx_after_all_old_idxs s))
+            ls;
+      Success tt.
+
 
     (** We don't actually generate assembly, we just check equivalence and pass assembly through unchanged *)
     Definition generate_assembly_of_hinted_expr : ErrorT (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError) (list (string * Lines))

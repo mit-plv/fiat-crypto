@@ -547,6 +547,10 @@ Module ForExtraction.
     := ([Arg.long_key "asm-rewriting-passes"],
          Arg.String,
          ["A comma-separated list of rewriting passes to enable.  Prefix with - to disable a pass.  This list only impacts passes listed in --asm-rewriting-pipeline.  Default : " ++ (if default_asm_rewriting_passes =? "" then "(none)" else default_asm_rewriting_passes)]%string ++ describe_flag_options "rewriting pass" "Enable all rewriting passes" special_asm_rewriting_pass_flags known_asm_rewriting_pass_flags_with_spec)%list.
+  Definition asm_debug_symex_asm_first_spec : named_argT
+    := ([Arg.long_key "debug-asm-symex-first"],
+        Arg.Unit,
+        ["Debug option: If true, the assembly equivalence checker will symex the assembly first, even though this may be more inefficient.  This may be useful for having a more concise description of errors in assembly symbolic execution."]).
   Definition doc_text_before_function_name_spec : named_argT
     := ([Arg.long_key "doc-text-before-function-name"],
         Arg.String,
@@ -730,6 +734,7 @@ Module ForExtraction.
         ; asm_error_on_unique_names_mismatch_spec
         ; asm_rewriting_pipeline_spec
         ; asm_rewriting_passes_spec
+        ; asm_debug_symex_asm_first_spec
         ; doc_text_before_function_name_spec
         ; doc_text_before_type_name_spec
         ; doc_newline_before_package_declaration_spec
@@ -788,6 +793,7 @@ Module ForExtraction.
              , asm_error_on_unique_names_mismatchv
              , asm_rewriting_pipelinev
              , asm_rewriting_passesv
+             , asm_debug_symex_asm_firstv
              , doc_text_before_function_namev
              , doc_text_before_type_namev
              , doc_newline_before_package_declarationv
@@ -875,6 +881,7 @@ Module ForExtraction.
                     ; symbolic_options_ :=
                       {| asm_rewriting_pipeline := to_rewriting_pipeline_list asm_rewriting_pipelinev
                       ; asm_rewriting_pass_filter := fun p => asm_rewriting_pass_filterv (show_rewrite_pass p)
+                      ; asm_debug_symex_asm_first := to_bool asm_debug_symex_asm_firstv
                       |}
                     |}
                   ; ignore_unique_asm_names := negb (to_bool asm_error_on_unique_names_mismatchv)
