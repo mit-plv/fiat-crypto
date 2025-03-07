@@ -24,6 +24,7 @@ Require Import Crypto.Util.ZUtil.Land.
 Require Import Crypto.Util.ZUtil.Land.Fold.
 Require Import Crypto.Util.ZUtil.Ones.
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.Signed.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Option.
@@ -587,7 +588,6 @@ Import ListNotations.
 
 Section WithContext.
   Context (ctx : symbol -> option Z).
-  Definition signed s n : Z := (Z.land (Z.shiftl 1 (Z.of_N s-1) + n) (Z.ones (Z.of_N s)) - Z.shiftl 1 (Z.of_N s-1))%Z.
   Definition op_to_Z_binop (o : op) : option _
       := match o with
          | add _ => Some Z.add
@@ -618,12 +618,12 @@ Section WithContext.
     | subborrow s, cons a args' =>
         Some ((- Z.shiftr (a - List.fold_right Z.add 0 args') (Z.of_N s)) mod 2)
     | addoverflow s, args => Some (Z.b2z (negb (Z.eqb
-      (signed s (keep s (List.fold_right Z.add 0 args)))
-                         (List.fold_right Z.add 0%Z (List.map (signed s) args)))))
+      (Z.signed s (keep s (List.fold_right Z.add 0 args)))
+                         (List.fold_right Z.add 0%Z (List.map (Z.signed s) args)))))
     | neg s, [a] => Some (keep s (- a))
     | shl s, [a; b] => Some (keep s (Z.shiftl a b))
     | shr s, [a; b] => Some (keep s (Z.shiftr a b))
-    | sar s, [a; b] => Some (keep s (Z.shiftr (signed s a) b))
+    | sar s, [a; b] => Some (keep s (Z.shiftr (Z.signed s a) b))
     | rcr s, [v1; cf; cnt] => Some (
         let v1c := Z.lor v1 (Z.shiftl cf (Z.of_N s)) in
         let l := Z.lor v1c (Z.shiftl v1 (1+Z.of_N s)) in
@@ -2595,18 +2595,6 @@ Proof using Type.
   rewrite Z.ones_equiv in * |- ; rewrite Z.shiftr_div_pow2, Z.div_small; cbn; lia.
 Qed.
 
-Lemma signed_small s v (Hv : (0 <= v <= Z.ones (Z.of_N s-1))%Z) : signed s v = v.
-Proof using Type.
-  destruct (N.eq_dec s 0); subst; cbv [signed].
-  { rewrite Z.land_0_r. cbn in *; Lia.lia. }
-  rewrite !Z.land_ones, !Z.shiftl_mul_pow2, ?Z.add_0_r, ?Z.mul_1_l by Lia.lia.
-  rewrite Z.ones_equiv in Hv.
-  rewrite Z.mod_small; try ring.
-  enough (2 ^ Z.of_N s = 2 ^ (Z.of_N s - 1) + 2 ^ (Z.of_N s - 1))%Z; try Lia.lia.
-  replace (Z.of_N s) with (1+(Z.of_N s-1))%Z at 1 by Lia.lia.
-  rewrite Z.pow_add_r; try Lia.lia.
-Qed.
-
 Definition addoverflow_small (d : dag) :=
   fun e => match e with
     ExprApp (addoverflow s, ([_]|[_;_]|[_;_;_]) as args) =>
@@ -2623,7 +2611,7 @@ Proof using Type.
   BreakMatch.break_match_hyps; Option.inversion_option; t;
     epose proof Z.ones_equiv (Z.of_N s -1);
     destruct_head'_and; reflect_hyps; destruct_head'_and.
-  all : rewrite Z.land_ones, !Z.mod_small, !signed_small, !Z.eqb_refl; trivial.
+  all : rewrite Z.land_ones, !Z.mod_small, !Z.signed_small, !Z.eqb_refl; trivial.
   all : try split; try Lia.lia.
   all : replace (Z.of_N s) with (1+(Z.of_N s-1))%Z at 1 by Lia.lia;
   rewrite Z.pow_add_r; try Lia.lia.
@@ -2684,19 +2672,6 @@ Lemma fold_right_filter_identity A B f init F xs
 Proof.
   apply fold_right_filter_identity_gen with (G:=id); cbv [id]; intuition (subst; eauto).
 Qed.
-
-Lemma signed_0 s : signed s 0 = 0%Z.
-Proof using Type.
-  destruct (N.eq_dec s 0); subst; trivial.
-  cbv [signed].
-  rewrite !Z.land_ones, !Z.shiftl_mul_pow2, ?Z.add_0_r, ?Z.mul_1_l by Lia.lia.
-  rewrite Z.mod_small; try ring.
-  split; try (eapply Z.pow_lt_mono_r; Lia.lia).
-  eapply Z.pow_nonneg; Lia.lia.
-Qed.
-#[global]
-Hint Rewrite signed_0 : zsimplify_const zsimplify zsimplify_fast.
-Global Hint Resolve signed_0 : zarith.
 
 Lemma interp_op_drop_identity o id : identity o = Some id ->
   forall G xs, interp_op G o xs = interp_op G o (List.filter (fun v => negb (Z.eqb v id)) xs).

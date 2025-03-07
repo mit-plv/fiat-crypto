@@ -12,6 +12,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Assembly.Syntax.
 Require Crypto.Util.Tuple.
 Import ListNotations.
@@ -148,9 +149,6 @@ Definition HavocFlagsFromResult s st v : machine_state :=
 Definition PreserveFlag (st : machine_state) (f : FLAG) st' :=
   update_flag_with st (fun fs => set_flag_internal fs f (get_flag st' f)).
 
-Definition signed (s : N) (z : Z) : Z :=
-  Z.land (Z.shiftl 1 (Z.of_N s-1) + z) (Z.ones (Z.of_N s)) - Z.shiftl 1 (Z.of_N s-1).
-
 Definition rcrcnt s cnt : Z :=
   if N.eqb s 8 then Z.land cnt 0x1f mod 9 else
   if N.eqb s 16 then Z.land cnt 0x1f mod 17 else
@@ -207,7 +205,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     st <- SetOperand sa s st dst v;
     let st := HavocFlagsFromResult s st v in
     let st := SetFlag st CF (Z.odd (Z.shiftr (v1 + v2 + c) (Z.of_N s))) in
-    Some (SetFlag st OF (negb (signed s v =? signed s v1 + signed s v2 + signed s c)%Z))
+    Some (SetFlag st OF (negb (Z.signed s v =? Z.signed s v1 + Z.signed s v2 + Z.signed s c)%Z))
   | (adcx | adox) as opc, [dst; src] =>
     let flag := match opc with adcx => CF | _ => OF end in
     v1 <- DenoteOperand sa s st dst;
@@ -226,19 +224,19 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     st <- SetOperand sa s st dst v;
     let st := HavocFlagsFromResult s st v in
     let st := SetFlag st CF (Z.odd (Z.shiftr (v1 - (v2 + c)) (Z.of_N s))) in
-    Some (SetFlag st OF (negb (signed s v =? signed s v1 - (signed s v2 + c))%Z))
+    Some (SetFlag st OF (negb (Z.signed s v =? Z.signed s v1 - (Z.signed s v2 + c))%Z))
   | dec, [dst] =>
     v1 <- DenoteOperand sa s st dst;
     let v := Z.land (v1 - 1) (Z.ones (Z.of_N s)) in
     st <- SetOperand sa s st dst v;
     let st := PreserveFlag (HavocFlagsFromResult s st v) CF st in
-    Some (SetFlag st OF (negb (signed s v =? signed s v1 - 1)%Z))
+    Some (SetFlag st OF (negb (Z.signed s v =? Z.signed s v1 - 1)%Z))
   | inc, [dst] =>
     v1 <- DenoteOperand sa s st dst;
     let v := Z.land (v1 + 1) (Z.ones (Z.of_N s)) in
     st <- SetOperand sa s st dst v;
     let st := PreserveFlag (HavocFlagsFromResult s st v) CF st in
-    Some (SetFlag st OF (negb (signed s v =? signed s v1 + 1)%Z))
+    Some (SetFlag st OF (negb (Z.signed s v =? Z.signed s v1 + 1)%Z))
   | mulx, [hi; lo; src2] => (* Flags Affected: None *)
     let src1 : ARG := rdx in (* Note: assumes s=64 *)
     v1 <- DenoteOperand sa s st src1;
@@ -269,7 +267,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     v1 <- DenoteOperand sa s st dst;
     cnt' <- DenoteOperand sa s st cnt;
     let cnt := Z.land cnt' (Z.of_N s-1) in
-    let v := Z.land (Z.shiftr (signed s v1) cnt) (Z.ones (Z.of_N s)) in
+    let v := Z.land (Z.shiftr (Z.signed s v1) cnt) (Z.ones (Z.of_N s)) in
     st <- SetOperand sa s st dst v;
     Some (if cnt =? 0 then st else
       let st := HavocFlagsFromResult s st v in
@@ -324,7 +322,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     if cnt =? 0 then Some st else
     if Z.of_N s <? cnt then Some (HavocFlags st) else
       let st := HavocFlagsFromResult s st l in
-      let signchange := xorb (signed s lv <? 0)%Z (signed s v <? 0)%Z in
+      let signchange := xorb (Z.signed s lv <? 0)%Z (Z.signed s v <? 0)%Z in
       (* Note: IA-32 SDM does not make it clear what sign change is in question *)
       let st := if cnt =? 1 then SetFlag st OF signchange else st in
       let st := SetFlag st CF (Z.testbit l (cnt-1)) in

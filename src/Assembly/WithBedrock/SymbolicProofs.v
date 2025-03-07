@@ -8,6 +8,7 @@ Require Import Crypto.Util.ErrorT.
 Import Coq.Lists.List. (* [map] is [List.map] not [ErrorT.map] *)
 Require Import Crypto.Util.ListUtil.IndexOf.
 Require Import Crypto.Util.Tactics.WarnIfGoalsRemain.
+Require Import Crypto.Util.ZUtil.Definitions.
 Require Crypto.Util.Option.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Symbolic.
@@ -1198,7 +1199,6 @@ Proof using Type.
              end; eauto; try Lia.lia; try congruence.
              eexists. split. eauto.
              f_equal. f_equal.
-             change Symbolic.signed with Semantics.signed.
              rewrite ?Z.add_0_r.
              f_equal.
              1:congruence.
@@ -1225,7 +1225,6 @@ Proof using Type.
              end; eauto; try Lia.lia; try congruence.
              eexists. split. eauto.
              f_equal. f_equal.
-             change Symbolic.signed with Semantics.signed.
              rewrite ?Z.add_0_r.
              f_equal.
              1:congruence.
@@ -1244,9 +1243,9 @@ Proof using Type.
              | _ => destruct_one_match
              | _ => progress intuition idtac
              end; rewrite ?Z.add_0_r, ?Z.odd_opp; eauto; try Lia.lia; try congruence.
-             replace (Semantics.signed n 0) with 0; cycle 1.
+             replace (Z.signed n 0) with 0; cycle 1.
              { pose_operation_size_cases. clear -H0; intuition (subst; cbv; trivial). }
-             rewrite Z.add_0_r; cbv [Semantics.signed Symbolic.signed]; congruence. }
+             rewrite Z.add_0_r; cbv [Z.signed]; congruence. }
 
   Unshelve. all : match goal with H : context[Syntax.adc] |- _ => idtac | _ => shelve end.
   { destruct s';
@@ -1259,8 +1258,7 @@ Proof using Type.
              | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn -[Syntax.operation_size] in * ; subst)
              | _ => destruct_one_match
              | _ => progress intuition idtac
-             end; rewrite ?Z.add_assoc, ?Z.add_0_r, ?Z.odd_opp; eauto; try Lia.lia; try congruence.
-             change Symbolic.signed with Semantics.signed. congruence. }
+             end; rewrite ?Z.add_assoc, ?Z.add_0_r, ?Z.odd_opp; eauto; try Lia.lia; try congruence. }
 
   Unshelve. all : match goal with H : context[Syntax.adcx] |- _ => idtac | _ => shelve end.
   { cbn [fold_right] in *; rewrite ?Z.bit0_odd, ?Z.add_0_r, ?Z.add_assoc in *; assumption. }
