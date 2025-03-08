@@ -11,6 +11,18 @@ Module ZRange.
 
   Local Notation eta v := r[ lower v ~> upper v ].
 
+  Definition bitwidth (v : zrange) : Z
+    := let bitwidth_of z := (if (z =? 0) then 0 else if (z <? 0) then Z.log2_up (-z) else Z.log2_up (z+1))%Z in
+       Z.max (bitwidth_of (lower v)) (bitwidth_of (upper v)).
+
+  Definition of_bitwidth (signed : bool) (bitwidth : Z) : zrange
+    := if signed
+       then r[ -2 ^ (bitwidth - 1) ~> 2 ^ (bitwidth - 1) - 1 ]
+       else r[ 0 ~> 2 ^ bitwidth - 1 ].
+
+  Notation of_bitwidth_unsigned := (of_bitwidth false).
+  Notation of_bitwidth_signed := (of_bitwidth true).
+
   Definition flip (v : zrange) : zrange
     := r[ upper v ~> lower v ].
 
