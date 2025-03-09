@@ -3,6 +3,7 @@ From Coq Require Import Lia.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.
 From Coq Require Import NArith.
 From Coq Require Import ZArith.
+Require Import Crypto.Util.ZUtil.Testbit.
 Require Import Crypto.AbstractInterpretation.ZRange.
 Require Import Crypto.Util.ErrorT.
 Import Coq.Lists.List. (* [map] is [List.map] not [ErrorT.map] *)
@@ -1342,6 +1343,18 @@ Proof using Type.
     1: lia.
     3: enough (0 <= Z.land v3 (Z.of_N n - 1)) by lia; eapply Z.land_nonneg; right.
     1,2,3:pose_operation_size_cases; intuition (subst; cbn; clear; lia). }
+
+  Unshelve. all : match goal with H : context[Syntax.shld] |- _ => idtac | _ => shelve end; shelve_unifiable.
+  { repeat match goal with H : ?x = Some _, H' : ?x = Some _ |- _ => rewrite H' in *; Option.inversion_option end.
+    progress subst.
+    replace (Z.land (Z.of_N n) (Z.ones (Z.of_N n))) with (Z.of_N n)
+      by (rewrite Z.land_ones, Z.mod_small; try split; try lia; apply Zpow_facts.Zpower2_lt_lin; lia).
+    assert (0 <= Z.of_N n - 1) by (pose_operation_size_cases; intuition (subst; cbn; clear; lia)).
+    rewrite <- !Z.shiftl_opp_r.
+    rewrite !Z.shiftl_lor.
+    rewrite <- !Z.land_lor_distr_l, <- Z.land_assoc, Z.land_diag.
+    rewrite !Z.shiftl_shiftl by (try apply Z.land_nonneg; lia).
+    f_equal; f_equal; f_equal; try lia. }
 
   Unshelve. all : match goal with H : context[Syntax.shlx] |- _ => idtac | _ => shelve end; shelve_unifiable.
   { rewrite <- Z.land_assoc.
