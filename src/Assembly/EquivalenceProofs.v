@@ -737,8 +737,8 @@ Theorem symex_PHOAS_correct
         {opts : symbolic_options_computed_opt}
         {t} (expr : API.Expr t)
         (d : dag)
-        (inputs : list (idx + list idx)) (runtime_inputs : list (Z + list Z))
-        (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) inputs runtime_inputs)
+        (inputs : list (N * (idx + list idx))) (runtime_inputs : list (Z + list Z))
+        (Hinputs : List.Forall2 (eval_idx_or_list_idx G d) (List.map snd inputs) runtime_inputs)
         (rets : list (idx + list idx))
         (d' : dag)
         (Hwf : API.Wf expr)
@@ -808,12 +808,12 @@ Definition val_or_list_val_matches_spec (arg : Z + list Z) (spec : option nat)
      end.
 
 
-
 Local Ltac build_runtime_ok_t_step :=
   first [ progress subst
         | progress destruct_head'_unit
         | progress inversion_option
         | progress inversion_prod
+        | progress inversion_list
         | progress destruct_head'_prod
         | progress destruct_head'_and
         | progress destruct_head'_ex
@@ -823,9 +823,12 @@ Local Ltac build_runtime_ok_t_step :=
         | progress split_andb
         | progress break_innermost_match_hyps
         | rewrite <- !List.app_assoc in *
+        | rewrite !List.map_app in *
+        | rewrite !length_map in *
         | discriminate
         | progress specialize_by_assumption
         | match goal with
+          | [ H : S _ = S _ |- _ ] => inversion H; clear H
           | [ H : ?x = Some _ |- context[?x] ] => rewrite H
           | [ H : forall extra, ?f (?x ++ extra) = Some _ |- context[?f (?x ++ _)] ] => rewrite !H
           | [ H : Success _ = Success _ |- _ ] => inversion H; clear H
@@ -846,11 +849,27 @@ Local Ltac build_runtime_ok_t_step :=
           | [ |- Forall2 _ (_ ++ _) (_ ++ _) ] => apply Forall2_app
           | [ H : FoldBool.fold_andb_map _ _ _ = true |- List.length _ = List.length _ ]
             => apply FoldBool.fold_andb_map_length in H
+            | [ H : FoldBool.fold_andb_map _ _ _ = true |- List.length _ = S (List.length _) ]
+              => apply FoldBool.fold_andb_map_length in H
+          | [ H : Option.List.lift _ = Some _ |- List.length _ = List.length _ ]
+            => apply Option.List.lift_Some_nth_error_all_iff in H
+          | [ H : Option.List.lift _ = Some _ |- List.length _ = S (List.length _) ]
+            => apply Option.List.lift_Some_nth_error_all_iff in H
+          | [ H : context[@List.length ?A ?x] |- context[@List.length ?B ?x] ]
+            => progress change A with B in *
+          | [ H : context[@List.length ?A ?x], H' : context[@List.length ?B ?x] |- _ ]
+            => progress change A with B in *
+          | [ H : List.map _ ?x = _ :: _ |- _ ]
+            => is_var x; destruct x; cbn [List.map] in H
           end
         | progress intros
         | apply conj
         | reflexivity
-        | (idtac + symmetry); assumption ].
+        | (idtac + symmetry); assumption
+        | progress cbn [ZRange.type.base.option.lift_Some List.length List.map ZRange.type.base.bitwidth] in *
+        | progress cbv [option_map] in *
+        | progress break_match_hyps
+        | congruence ].
 
 Lemma build_base_runtime_ok t arg_bounds args types PHOAS_args extra
       (H : simplify_base_type t arg_bounds = Success types)
@@ -859,7 +878,7 @@ Lemma build_base_runtime_ok t arg_bounds args types PHOAS_args extra
   : exists args',
     args = args' ++ extra
     /\ (forall extra', build_base_runtime t (args' ++ extra') = Some (PHOAS_args, extra'))
-    /\ Forall2 val_or_list_val_matches_spec args' types.
+    /\ Forall2 val_or_list_val_matches_spec args' (List.map snd types).
 Proof using Type.
   revert args extra types H Hargs HPHOAS_args; induction t; intros;
     cbn [simplify_base_type build_base_runtime type.for_each_lhs_of_arrow Language.Compilers.base.interp] in *;
@@ -868,6 +887,7 @@ Proof using Type.
                  | constructor ].
 Qed.
 
+
 Lemma build_runtime_ok t arg_bounds args types PHOAS_args extra
       (H : simplify_type t arg_bounds = Success types)
       (Hargs : build_runtime t args = Some (PHOAS_args, extra))
@@ -875,7 +895,7 @@ Lemma build_runtime_ok t arg_bounds args types PHOAS_args extra
   : exists args',
     args = args' ++ extra
     /\ (forall extra', build_runtime t (args' ++ extra') = Some (PHOAS_args, extra'))
-    /\ Forall2 val_or_list_val_matches_spec args' types.
+    /\ Forall2 val_or_list_val_matches_spec args' (List.map snd types).
 Proof using Type.
   revert args extra types H Hargs HPHOAS_args; induction t; intros;
     cbn [simplify_type build_runtime type.for_each_lhs_of_arrow] in *;
@@ -889,7 +909,7 @@ Lemma build_input_runtime_ok t arg_bounds args input_types PHOAS_args extra
   : exists args',
     args = args' ++ extra
     /\ (forall extra', build_input_runtime t (args' ++ extra') = Some (PHOAS_args, extra'))
-    /\ Forall2 val_or_list_val_matches_spec args' input_types.
+    /\ Forall2 val_or_list_val_matches_spec args' (List.map snd input_types).
 Proof using Type.
   revert args extra input_types H Hargs HPHOAS_args; induction t as [|t1 ? t2]; intros;
     [ eexists [] | pose proof (build_runtime_ok t1) ];
@@ -902,7 +922,7 @@ Lemma build_input_runtime_ok_nil t arg_bounds args input_types PHOAS_args
       (H : simplify_input_type t arg_bounds = Success input_types)
       (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
       (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
-  : Forall2 val_or_list_val_matches_spec args input_types.
+  : Forall2 val_or_list_val_matches_spec args (List.map snd input_types).
 Proof using Type.
   pose proof (build_input_runtime_ok t arg_bounds args input_types PHOAS_args [] H Hargs HPHOAS_args).
   destruct_head'_ex; destruct_head'_and; subst; rewrite app_nil_r; assumption.
