@@ -353,17 +353,21 @@ Makefile.test-amd64-files.mk: fiat-amd64/gentest.py $(AMD64_ASM_FILES)
 include Makefile.test-amd64-files.mk
 
 .PHONY: test-amd64-files-print-report test-amd64-files-lite-print-report only-test-amd64-files-print-report only-test-amd64-files-lite-print-report
+.PHONY: test-amd64-files-print-report-after-make test-amd64-files-lite-print-report-after-make only-test-amd64-files-print-report-after-make only-test-amd64-files-lite-print-report-after-make
 
 test-amd64-files-print-report:: STATUS_FILES=$(AMD64_ASM_STATUS_FILES)
-only-test-amd64-files-print-report:: STATUS_FILES=$(AMD64_ASM_ONLY_STATUS_FILES)
+only-test-amd64-files-print-report only-test-amd64-files-print-report-after-make:: STATUS_FILES=$(AMD64_ASM_ONLY_STATUS_FILES)
 test-amd64-files-lite-print-report:: STATUS_FILES=$(AMD64_ASM_SMALL_STATUS_FILES)
-only-test-amd64-files-lite-print-report:: STATUS_FILES=$(AMD64_ASM_SMALL_ONLY_STATUS_FILES)
+only-test-amd64-files-lite-print-report only-test-amd64-files-lite-print-report-after-make:: STATUS_FILES=$(AMD64_ASM_SMALL_ONLY_STATUS_FILES)
 test-amd64-files-status: STATUS_FILES=$(AMD64_ASM_STATUS_FILES)
 only-test-amd64-files-status: STATUS_FILES=$(AMD64_ASM_ONLY_STATUS_FILES)
 test-amd64-files-lite-status: STATUS_FILES=$(AMD64_ASM_SMALL_STATUS_FILES)
 only-test-amd64-files-lite-status: STATUS_FILES=$(AMD64_ASM_SMALL_ONLY_STATUS_FILES)
 
-test-amd64-files-print-report only-test-amd64-files-print-report test-amd64-files-lite-print-report only-test-amd64-files-lite-print-report::
+only-test-amd64-files-print-report-after-make:: | only-test-amd64-files-status
+only-test-amd64-files-lite-print-report-after-make:: | only-test-amd64-files-lite-status
+
+test-amd64-files-print-report only-test-amd64-files-print-report test-amd64-files-lite-print-report only-test-amd64-files-lite-print-report test-amd64-files-print-report-after-make only-test-amd64-files-print-report-after-make test-amd64-files-lite-print-report-after-make only-test-amd64-files-lite-print-report-after-make::
 	@ export passed=$$(cat $(STATUS_FILES) 2>/dev/null | grep -c '^0$$'); \
 	  export total=$(words $(STATUS_FILES)); \
 	  export failed=$$(expr $${total} - $${passed}); \
@@ -383,11 +387,11 @@ test-amd64-files test-amd64-files-lite: $(UNSATURATED_SOLINAS) $(WORD_BY_WORD_MO
 
 test-amd64-files: test-amd64-files-print-report test-amd64-files-status
 
-only-test-amd64-files: only-test-amd64-files-print-report only-test-amd64-files-status
+only-test-amd64-files: only-test-amd64-files-print-report-after-make only-test-amd64-files-status
 
 test-amd64-files-lite: test-amd64-files-lite-print-report test-amd64-files-lite-status
 
-only-test-amd64-files-lite: only-test-amd64-files-lite-print-report only-test-amd64-files-lite-status
+only-test-amd64-files-lite: only-test-amd64-files-lite-print-report-after-make only-test-amd64-files-lite-status
 
 etc/tscfreq: etc/tscfreq.c
 	$(CC) etc/tscfreq.c -s -Os -o etc/tscfreq
