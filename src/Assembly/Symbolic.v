@@ -4183,8 +4183,16 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
   let s : OperationSize := s in
   let resize_reg r := some_or (fun _ => reg_of_index_and_shift_and_bitcount_opt (reg_index r, 0%N (* offset *), s)) (fun _ => error.unimplemented_instruction instr) in
   match instr.(Syntax.op), instr.(args) with
-  | (mov | movzx), [dst; src] => (* Note: unbundle when switching from N to Z *)
+  | (mov | movzx | movabs | movdqa | movdqu | movq | movd | movups), [dst; src] => (* Note: unbundle when switching from N to Z *)
     v <- GetOperand src;
+    SetOperand dst v
+  | movsx, [dst; src] => (* Move with Sign-Extend *)
+    v <- GetOperand src;
+    src_size <- match standalone_operand_size src with
+                | Some s => ret s
+                | None => err (error.ambiguous_operation_size instr)
+                end;
+    let v := signed src_size v in
     SetOperand dst v
   | xchg, [a; b] => (* Note: unbundle when switching from N to Z *)
     va <- GetOperand a;
