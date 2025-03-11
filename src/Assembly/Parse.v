@@ -160,6 +160,7 @@ Definition parse_OpCode_list : list (string * OpCode)
         (list_all OpCode)
       ++ [(".byte", db)
         ; (".word", dw)
+        ; (".short", dw)
         ; (".long", dd)
         ; (".int", dd)
         ; (".quad", dq)].
@@ -195,8 +196,12 @@ Definition parse_RawLine {opts : assembly_program_options} : ParserAction RawLin
         then [(LABEL (substring 0 (pred (String.length s)) s), "")]
         else if (s =? "")
         then [(EMPTY, "")]
-        else if (List.find (String.eqb (String.to_lower s))
-          [".cfi_def_cfa_offset"
+        else if (List.find (String.eqb (String.to_lower mnemonic))
+          [".addrsig"
+           ; ".addrsig_sym"
+           ; ".cfi_def_cfa"
+           ; ".cfi_def_cfa_offset"
+           ; ".cfi_def_cfa_register"
            ; ".cfi_endproc"
            ; ".cfi_offset"
            ; ".cfi_startproc"
@@ -204,6 +209,7 @@ Definition parse_RawLine {opts : assembly_program_options} : ParserAction RawLin
            ; ".ident"
            ; ".intel_syntax"
            ; ".loc"
+           ; ".p2align"
            ; ".size"
            ; ".text"
            ; ".type"
