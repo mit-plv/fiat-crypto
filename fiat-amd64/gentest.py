@@ -46,7 +46,7 @@ directories = tuple(i for i in sys.argv[1:] if i not in ('--makefile',))
 
 asm_op_names = OrderedDict()
 
-regex = re.compile(r'fiat_(?P<name>[^_]+(_(solinas|montgomery|dettman))?)_(?P<op>(carry_)?(square|mul))')
+regex = re.compile(r'fiat_(?P<name>[^_]+(_(solinas|montgomery|dettman))?)_(?P<op>(carry_)?(square|mul|from_bytes|to_bytes|add|sub|opp))')
 for dirname in directories:
     m = regex.match(os.path.basename(dirname))
     if m:
