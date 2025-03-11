@@ -9,6 +9,7 @@ Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Strings.Parse.Common.
 Require Import Crypto.Util.Strings.ParseArithmetic.
 Require Import Crypto.Util.Strings.String.
+Require Crypto.Util.Strings.Ascii.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.Strings.Show.Enum.
 Require Import Crypto.Util.Listable.
@@ -177,6 +178,52 @@ Definition parse_OpPrefix_list : list (string * OpPrefix)
 Definition parse_OpPrefix : ParserAction OpPrefix
   := parse_strs parse_OpPrefix_list.
 
+Definition chars_to_escape_list : list (string * ascii)
+  := Eval vm_compute in
+      List.map
+        (fun '(name, char) => (String name EmptyString, char))
+        [("b", Ascii.Backspace)
+        ; ("f", Ascii.FormFeed)
+        ; ("n", Ascii.LF)
+        ; ("r", Ascii.CR)
+        ; ("t", Ascii.HorizontalTab)
+        ; ("v", Ascii.VerticalTab)
+        ; ("""", """")
+        ; ("'", "'")
+        ; ("\", "\")
+        ; ("0", Ascii.Null)
+        ]%char.
+Definition parse_escaped_char : ParserAction ascii :=
+  "\" ;;R
+    (parse_or_else
+        (parse_map ascii_of_N
+            (("x" ;;R parse_N_fixed_digits 16 false 2)
+            || (parse_N_fixed_digits 8 false 3)))
+        (parse_strs chars_to_escape_list)).
+
+Definition should_escape (ch : ascii) : bool
+  := (List.existsb (Ascii.eqb ch) (List.map snd chars_to_escape_list))
+      || negb (Ascii.is_printable ch).
+
+Definition escape_char (ch : ascii) : string :=
+  match List.find (fun '(escape_str, ch') => Ascii.eqb ch ch') chars_to_escape_list, should_escape ch with
+  | Some (escape_str, _), _ => "\" ++ escape_str
+  | None, true =>
+    let hex := Hex.show_N (Ascii.N_of_ascii ch) in
+    let hex := String.substring 2 (String.length hex) hex in
+    let hex := if (String.length hex <? 2)%nat then "0" ++ hex else hex in
+    let hex := if (String.length hex <? 2)%nat then "0" ++ hex else hex in
+    "\x" ++ hex
+  | None, false => String ch EmptyString
+  end%string.
+
+Definition escape_string (s : string) : string :=
+  String.concat "" (List.map escape_char (list_ascii_of_string s)).
+
+Definition unescape_string (s : string) : string :=
+  Option.value (finalize (parse_map string_of_list_ascii ( (parse_or_else parse_escaped_char (fun s => match s with EmptyString => [] | String char s => [(char, s)] end)* ))) s) s.
+
+
 (** assumes no leading nor trailing whitespace and no comment *)
 Definition parse_RawLine {opts : assembly_program_options} : ParserAction RawLine
   := fun s => (
@@ -194,6 +241,10 @@ Definition parse_RawLine {opts : assembly_program_options} : ParserAction RawLin
         then [(DEFAULT_REL, "")]
         else if String.endswith ":" s
         then [(LABEL (substring 0 (pred (String.length s)) s), "")]
+        else if (String.to_upper mnemonic =? ".ASCII") && (String.startswith """" args) && (String.endswith """" args)
+        then [(ASCII (unescape_string (String.substring 1 (String.length args - 2) args)), "")]
+        else if (String.to_upper mnemonic =? ".ASCIZ") && (String.startswith """" args) && (String.endswith """" args)
+        then [(ASCIZ (unescape_string (String.substring 1 (String.length args - 2) args)), "")]
         else if (s =? "")
         then [(EMPTY, "")]
         else if (List.find (String.eqb (String.to_lower mnemonic))
@@ -381,6 +432,8 @@ Global Instance show_RawLine : Show RawLine
         | EMPTY => ""
         | INSTR instr => show instr
         | DIRECTIVE s => s
+        | ASCII s => ".ascii """ ++ escape_string s ++ """"
+        | ASCIZ s => ".asciz """ ++ escape_string s ++ """"
         end.
 
 Global Instance show_Line : Show Line
@@ -627,6 +680,8 @@ Fixpoint get_initial_data (ls : Lines) : list (AccessSize * list Z)
             => get_initial_data ls
           | SECTION _
           | ALIGN _
+          | ASCII _
+          | ASCIZ _
              => []
           end
      end.

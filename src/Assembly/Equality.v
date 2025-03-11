@@ -273,6 +273,7 @@ Definition RawLine_beq (x y : RawLine) : bool
      | INSTR x, INSTR y => NormalInstruction_beq x y
      | ALIGN x, ALIGN y => String.eqb x y
      | DIRECTIVE x, DIRECTIVE y => String.eqb x y
+     | ASCII_ z x, ASCII_ z' y => Bool.eqb z z' && String.eqb x y
      | SECTION _, _
      | GLOBAL _, _
      | LABEL _, _
@@ -281,8 +282,9 @@ Definition RawLine_beq (x y : RawLine) : bool
      | ALIGN _, _
      | DEFAULT_REL, _
      | DIRECTIVE _, _
+     | ASCII_ _ _, _
        => false
-     end.
+     end%bool.
 Global Arguments RawLine_beq !_ !_ / .
 
 Infix "=?" := RawLine_beq : RawLine_scope.

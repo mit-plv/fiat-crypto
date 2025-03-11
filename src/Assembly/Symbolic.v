@@ -4389,6 +4389,7 @@ Definition SymexRawLine {opts : symbolic_options_computed_opt} {descr:descriptio
   | EMPTY
   | LABEL _
   | DIRECTIVE _
+  | ASCII_ _ _
     => ret tt
   | INSTR instr
     => SymexNormalInstruction instr

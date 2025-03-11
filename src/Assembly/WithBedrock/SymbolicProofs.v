@@ -1374,12 +1374,12 @@ Lemma SymexLines_R {opts : symbolic_options_computed_opt} s m (HR : R s m) asm :
 Proof using Type.
   revert dependent m; revert dependent s; induction asm; cbn [SymexLines DenoteLines]; intros.
   { inversion H; subst; eauto. }
-  destruct a.
-  rewrite unfold_bind in H; destruct_one_match_hyp; inversion_ErrorT.
+  destruct_head' Line.
+  rewrite unfold_bind in *; destruct_one_match_hyp; inversion_ErrorT.
   cbv [SymexLine SymexRawLine DenoteLine DenoteRawLine ret err Crypto.Util.Option.bind] in *; cbn in *.
-  destruct_one_match_hyp; inversion_ErrorT; subst; eauto; destruct v.
+  destruct_one_match_hyp; inversion_ErrorT; subst; eauto; destruct_head'_prod.
   eapply SymexNornalInstruction_R in E; eauto. destruct E as (m1&Hm1&Rm1&?). rewrite Hm1.
-  eapply IHasm in H; eauto. destruct H as (?&?&?&?). eauto 9.
+  eapply IHasm in H; eauto. destruct H as (?&?&?&?). break_innermost_match; eauto 9.
 Qed.
 End WithCtx1'.
 End WithFrame.
