@@ -339,7 +339,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     if cnt =? 0 then Some st else
     if Z.of_N s <? cnt then Some (HavocFlags st) else
       let st := HavocFlagsFromResult s st l in
-      let signchange := xorb (signed s hv <? 0)%Z (signed s v <? 0)%Z in
+      let signchange := xorb (Z.signed s hv <? 0)%Z (Z.signed s v <? 0)%Z in
       (* Note: IA-32 SDM does not make it clear what sign change is in question *)
       let st := if cnt =? 1 then SetFlag st OF signchange else st in
       let st := SetFlag st CF (Z.testbit hv (Z.of_N s - cnt)) in
