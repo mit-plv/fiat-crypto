@@ -428,3 +428,10 @@ Lemma is_substring_correct s1 s2 :
   is_substring s1 s2 = true <-> exists n, substring n (String.length s1) s2 = s1.
 Proof.
 Abort.
+
+Definition strip_trailing_newline (s : string) : string :=
+  if endswith LF s
+  then if endswith CRLF s
+  then substring 0 (String.length s - 2) s
+  else substring 0 (String.length s - 1) s
+  else s.
