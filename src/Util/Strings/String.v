@@ -335,11 +335,14 @@ Abort.
 Definition replace (from to s : string) : string
   := concat to (split from s).
 
+Notation Null := (String Ascii.Null "").
+Notation Backspace := (String Ascii.Backspace "").
 Notation NewLine := (String Ascii.NewLine "").
 Notation CR := (String Ascii.CR "").
 Notation LF := (String Ascii.LF "").
 Notation CRLF := (String Ascii.CR (String Ascii.LF "")).
 Notation Tab := (String Ascii.Tab "").
+Notation NewPage := (String Ascii.NewPage "").
 
 (** Given a list of strings, breaks all strings within the list at
     CFLF, CF, and LF.  Useful for normalizing a newline-separated list
