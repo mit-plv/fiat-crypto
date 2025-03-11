@@ -327,6 +327,23 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
       let st := if cnt =? 1 then SetFlag st OF signchange else st in
       let st := SetFlag st CF (Z.testbit l (cnt-1)) in
       Some (HavocFlag st AF)
+  | shld, [dst as hi; lo; cnt] =>
+    lv <- DenoteOperand sa s st lo;
+    hv <- DenoteOperand sa s st hi;
+    cnt <- DenoteOperand sa s st cnt;
+    let l := Z.lor lv (Z.shiftl hv (Z.of_N s)) in
+    let l_shifted := Z.shiftl l (Z.land cnt (Z.of_N s-1)) in
+    let l_shifted_hi := Z.shiftr l_shifted (Z.of_N s) in
+    let v := Z.land l_shifted_hi (Z.ones (Z.of_N s)) in
+    st <- SetOperand sa s st dst v;
+    if cnt =? 0 then Some st else
+    if Z.of_N s <? cnt then Some (HavocFlags st) else
+      let st := HavocFlagsFromResult s st l in
+      let signchange := xorb (signed s hv <? 0)%Z (signed s v <? 0)%Z in
+      (* Note: IA-32 SDM does not make it clear what sign change is in question *)
+      let st := if cnt =? 1 then SetFlag st OF signchange else st in
+      let st := SetFlag st CF (Z.testbit hv (Z.of_N s - cnt)) in
+      Some (HavocFlag st AF)
   | (and | xor | or) as opc, [dst; src] =>
     let f := match opc with and => Z.land | xor => Z.lxor | _ => Z.lor end in
     v1 <- DenoteOperand sa s st dst;
