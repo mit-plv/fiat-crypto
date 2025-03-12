@@ -66,15 +66,6 @@ Local Open Scope list_scope.
 (* TODO: move to global settings *)
 Local Set Keyed Unification.
 
-Local Lemma land_ones_eq_of_bounded v n
-      (H : (0 <= v < 2 ^ (Z.of_N n))%Z)
-  : Z.land v (Z.ones (Z.of_N n)) = v.
-Proof.
-  rewrite Z.land_ones by lia.
-  rewrite Z.mod_small by lia.
-  reflexivity.
-Qed.
-
 Import Map.Interface Map.Separation. (* for coercions *)
 Require Import bedrock2.Array.
 Require Import bedrock2.ZnWords.
@@ -304,7 +295,7 @@ Proof.
   cbv [R_regs R_reg Tuple.fieldwise Tuple.fieldwise' eval_idx_Z] in *; cbn [fst snd].
   repeat apply conj; intros; inversion_option; subst; try assumption.
   all: change 64%Z with (Z.of_N 64).
-  all: rewrite land_ones_eq_of_bounded; [ reflexivity | ].
+  all: rewrite Z.land_ones_eq_of_bounded; [ reflexivity | ].
   all: assumption.
 Qed.
 
