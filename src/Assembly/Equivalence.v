@@ -421,18 +421,19 @@ Definition describe_idx_from_state
                    | ExprApp (old _ _, _) => true
                    | _ => false
                    end in
-     match is_old, description_from_state, show_full with
-     | true, Some descr, _
-     | _, Some descr, true
+     match is_old, description_from_state, show_full, dag.lookup st.(dag_state) idx with
+     | true, Some descr, false, _
+     | _, Some descr, _, None
        => [show idx ++ " is " ++ descr ++ "."]
-     | true, None, _
+     | _, Some descr, true, Some e
+       => [show idx ++ " is " ++ descr ++ " (" ++ show_node_lite e ++ ")."]
+     | true, None, _, _
        => [show idx ++ " is a special value no longer present in the symbolic machine state at the end of execution."]
-     | _, _, false => []
-     | _, None, true
-       => [show idx ++ " is " ++ match dag.lookup st.(dag_state) idx with
-                                 | Some e => show_node_lite e
-                                 | None => "not in the dag"
-                                 end]
+     | _, _, false, _ => []
+     | _, None, true, Some e
+       => [show idx ++ " is " ++ show_node_lite e ++ "."]
+     | _, None, true, None
+       => [show idx ++ " is not in the dag."]
      end%string.
 
 Definition iteratively_describe_idxs_after
