@@ -281,7 +281,10 @@ Inductive RawLine :=
 | EMPTY
 | INSTR (instr : NormalInstruction)
 | DIRECTIVE (d : string)
+| ASCII_ (null_terminated : bool) (s : string)
 .
+Notation ASCII := (ASCII_ false).
+Notation ASCIZ := (ASCII_ true).
 Coercion INSTR : NormalInstruction >-> RawLine.
 Record Line := { indent : string ; rawline :> RawLine ; pre_comment_whitespace : string ; comment : option string ; line_number : N}.
 Definition Lines := list Line.

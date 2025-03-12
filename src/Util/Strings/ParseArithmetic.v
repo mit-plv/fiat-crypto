@@ -64,7 +64,6 @@ Definition parse_digits_gen_step (base : N) : ParserAction N
                              (String (ascii_of_N (v - 10 + N_of_ascii "a")) "", v)])
            (List.map N.of_nat (List.seq 0 (N.to_nat base))))).
 
-
 (*
 Definition parse_oct_digits : ParserAction (list N)
   := Eval cbv -[ParserAction parse_alt_gen parse_impossible parse_str parse_star] in
@@ -91,6 +90,21 @@ Local Coercion inject_Z : Z >-> Q.
 
 Definition parse_N_digits (base : N) (first_digit_numeric : bool) : ParserAction N
   := (parse_map (digits_to_N base) ((parse_digits_gen_step (if first_digit_numeric then N.min 10 base else base);;->{cons}(parse_digits_gen_step base)* ))).
+
+Definition parse_N_fixed_digits (base : N) (first_digit_numeric : bool) (n : nat) : ParserAction N := (
+  let parse_first_digit := parse_digits_gen_step (if first_digit_numeric then N.min 10 base else base) in
+  let parse_nil := parse_map (fun _ => nil) "" in
+  parse_map (digits_to_N base)
+    match n with
+    | O => parse_nil
+    | S n =>
+        fold_right (fun p ps => p ;;->{cons} ps)
+          parse_nil
+          (parse_first_digit :: List.repeat (parse_digits_gen_step base) n)
+    end)%parse.
+
+Notation parse_oct_char := (parse_digits_gen_step 8 false 1).
+Notation parse_hex_char := (parse_digits_gen_step 16 false 1).
 
 Definition parse_num_gen {P P'} (allow_neg : bool) (base : N) (parse_prefix : option (ParserAction P)) (parse_postfix : option (ParserAction P'))  : ParserAction Q
   := (let parse_E_exponent
