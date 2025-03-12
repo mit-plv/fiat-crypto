@@ -404,6 +404,8 @@ Module Export Options.
   Class rewriting_passes_opt := rewriting_passes : list rewrite_pass.
   (** Should we symex the assembly first, even though this may be more inefficient? *)
   Class debug_symex_asm_first_opt := debug_symex_asm_first : bool.
+  (** How deep should we reveal nodes? *)
+  Class node_reveal_depth_opt := node_reveal_depth : nat.
   Definition default_rewriting_passes
              {rewriting_pipeline : rewriting_pipeline_opt}
              {rewriting_pass_filter : rewriting_pass_filter_opt}
@@ -414,12 +416,16 @@ Module Export Options.
     { asm_rewriting_pipeline : rewriting_pipeline_opt
     ; asm_rewriting_pass_filter : rewriting_pass_filter_opt
     ; asm_debug_symex_asm_first : debug_symex_asm_first_opt
+    ; asm_node_reveal_depth : node_reveal_depth_opt
     }.
+
+  Definition default_node_reveal_depth := 3%nat.
 
   (* This holds the list of computed options, which are passed around between methods *)
   Class symbolic_options_computed_opt :=
     { asm_rewriting_passes : rewriting_passes_opt
     ; asm_debug_symex_asm_first_computed : debug_symex_asm_first_opt
+    ; asm_node_reveal_depth_computed : node_reveal_depth_opt
     }.
 
   (* N.B. The default rewriting pass filter should not be changed here, but instead changed in CLI.v where it is derived from a default string *)
@@ -427,6 +433,7 @@ Module Export Options.
     := {| asm_rewriting_pipeline := default_rewrite_pass_order
        ; asm_rewriting_pass_filter := fun _ => true
        ; asm_debug_symex_asm_first := false
+       ; asm_node_reveal_depth := default_node_reveal_depth
        |}.
 End Options.
 Module Export Hints.
@@ -439,6 +446,8 @@ Module Export Hints.
          asm_rewriting_passes
          asm_debug_symex_asm_first
          asm_debug_symex_asm_first_computed
+         asm_node_reveal_depth
+         asm_node_reveal_depth_computed
   .
   #[global]
    Hint Cut [
@@ -448,6 +457,8 @@ Module Export Hints.
         | asm_rewriting_passes
         | asm_debug_symex_asm_first
         | asm_debug_symex_asm_first_computed
+        | asm_node_reveal_depth
+        | asm_node_reveal_depth_computed
         ) ( _ * )
         (Build_symbolic_options_opt
         | Build_symbolic_options_computed_opt
@@ -3808,7 +3819,7 @@ Qed.
 End Rewrite.
 
 Definition simplify {opts : symbolic_options_computed_opt} (dag : dag) (e : node idx) :=
-  Rewrite.expr dag (reveal_node_at_least dag 3 e).
+  Rewrite.expr dag (reveal_node_at_least dag node_reveal_depth e).
 
 Lemma eval_simplify {opts : symbolic_options_computed_opt} G d n v : gensym_dag_ok G d -> eval_node G d n v -> eval G d (simplify d n) v.
 Proof using Type. eauto using Rewrite.eval_expr, eval_node_reveal_node_at_least. Qed.
