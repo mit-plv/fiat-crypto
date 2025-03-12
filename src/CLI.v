@@ -523,6 +523,10 @@ Module ForExtraction.
     := ([Arg.long_key "asm-node-reveal-depth"],
         Arg.Custom (parse_string_and parse_nat) "ℕ",
         ["The depth of nodes to reveal in the assembly equivalence checker.  Only relevant when --hints-file is specified.  In most situations, this should not have to be changed.  Defaults to " ++ show default_node_reveal_depth ++ "."]).
+  Definition asm_symex_bounds_reveal_depth_spec : named_argT
+    := ([Arg.long_key "asm-symex-bounds-reveal-depth"],
+        Arg.Custom (parse_string_and parse_nat) "ℕ",
+        ["The depth of nodes to reveal in the assembly equivalence checker when deriving bounds for expressions via structure.  Only relevant when --hints-file is specified.  In most situations, this should not have to be changed.  Defaults to " ++ show default_symex_bounds_reveal_depth ++ "."]).
   Definition asm_stack_size_spec : named_argT
     := ([Arg.long_key "asm-stack-size"],
         Arg.Custom (parse_string_and parse_N) "ℕ",
@@ -739,6 +743,7 @@ Module ForExtraction.
         ; asm_rewriting_pipeline_spec
         ; asm_rewriting_passes_spec
         ; asm_node_reveal_depth_spec
+        ; asm_symex_bounds_reveal_depth_spec
         ; asm_debug_symex_asm_first_spec
         ; doc_text_before_function_name_spec
         ; doc_text_before_type_name_spec
@@ -799,6 +804,7 @@ Module ForExtraction.
              , asm_rewriting_pipelinev
              , asm_rewriting_passesv
              , asm_node_reveal_depthv
+             , asm_symex_bounds_reveal_depthv
              , asm_debug_symex_asm_firstv
              , doc_text_before_function_namev
              , doc_text_before_type_namev
@@ -892,6 +898,7 @@ Module ForExtraction.
                       ; asm_rewriting_pass_filter := fun p => asm_rewriting_pass_filterv (show_rewrite_pass p)
                       ; asm_debug_symex_asm_first := to_bool asm_debug_symex_asm_firstv
                       ; asm_node_reveal_depth := to_nat_default asm_node_reveal_depthv default_node_reveal_depth
+                      ; asm_symex_bounds_reveal_depth := to_nat_default asm_symex_bounds_reveal_depthv default_symex_bounds_reveal_depth
                       |}
                     |}
                   ; ignore_unique_asm_names := negb (to_bool asm_error_on_unique_names_mismatchv)
