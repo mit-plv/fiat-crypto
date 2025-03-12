@@ -4,6 +4,9 @@
     function createFileEntry(filename, content) {
         filename = filename || '';
         content = content || '';
+        if (Array.isArray(content)) {
+            content = content.join('');
+        }
         const fileEntryHTML = `
             <div class="file-entry">
                 <input type="text" class="file-name" placeholder="Filename">
