@@ -542,7 +542,7 @@ Module ForExtraction.
   Definition asm_rewriting_pipeline_spec : named_argT
     := ([Arg.long_key "asm-rewriting-pipeline"],
          Arg.Custom (parse_string_and parse_list_rewrite_pass) "REWRITE_PASS",
-         ["Specifies the order and multiplicity of rewriting passes used in the assembly equivalence checker.  Default: " ++ default_asm_rewriting_passes]).
+         ["Specifies the order and multiplicity of rewriting passes used in the assembly equivalence checker.  Default: " ++ default_asm_rewriting_pipeline]).
   Definition asm_rewriting_passes_spec : named_argT
     := ([Arg.long_key "asm-rewriting-passes"],
          Arg.String,
