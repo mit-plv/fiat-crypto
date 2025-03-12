@@ -438,10 +438,11 @@ Global Instance show_RawLine : Show RawLine
 
 Global Instance show_Line : Show Line
   := fun l
-     => l.(indent) ++ show l.(rawline) ++ l.(pre_comment_whitespace) ++ match l.(comment) with
-                                                                        | Some c => ";" ++ c
-                                                                        | None => ""
-                                                                        end.
+     => strip_trailing_newline
+           (l.(indent) ++ show l.(rawline) ++ l.(pre_comment_whitespace) ++ match l.(comment) with
+                                                                            | Some c => ";" ++ c
+                                                                            | None => ""
+                                                                            end).
 
 Definition show_Line_with_line_number : Show Line
   := fun l => show l ++ "; (line " ++ show l.(line_number) ++ ")".
