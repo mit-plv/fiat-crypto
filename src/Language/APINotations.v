@@ -451,6 +451,7 @@ Module Compilers.
   Ltac Reify_rhs _ :=
     ltac2:(_Reify_rhs ()).
 
+  Local Set Default Proof Mode "Classic".
   Global Hint Extern 1 (@expr.Reified_of _ _ _ _ ?t ?v ?rv)
   => cbv [expr.Reified_of]; Reify_rhs (); reflexivity : typeclass_instances.
 
