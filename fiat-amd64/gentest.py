@@ -61,10 +61,11 @@ for dirname in directories:
     m = regex.match(os.path.basename(dirname))
     if m:
         for fname in os.listdir(dirname):
-            groups = m.groupdict()
-            asm_op_names.setdefault((groups["name"], groups["op"]), []).append(
-                os.path.join(dirname, fname)
-            )
+            if fname.endswith(".asm") or fname.endswith(".s"):
+                groups = m.groupdict()
+                asm_op_names.setdefault((groups["name"], groups["op"]), []).append(
+                    os.path.join(dirname, fname)
+                )
 
 
 def asm_op_names_key(val):
@@ -221,7 +222,8 @@ for item in asm_op_names_items:
         assert False, name
     if output_makefile:
         short_fnames = [
-            removesuffix(os.path.basename(fname), ".asm") for fname in fnames
+            removesuffix(removesuffix(os.path.basename(fname), ".asm"), ".s")
+            for fname in fnames
         ]
         description = f'{name} {prime.replace(" ", "")} ({op}) ({binary_descr}) ({" ".join(short_fnames)})'
         output_name = f"fiat-amd64/{name}-{op}"
