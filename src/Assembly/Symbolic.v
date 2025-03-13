@@ -45,6 +45,7 @@ Require Import Crypto.Util.ListUtil.FoldMap. Import FoldMap.List.
 Require Import Crypto.Util.ListUtil.IndexOf. Import IndexOf.List.
 Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.ListUtil.Permutation.
+Require Import Crypto.Util.ListUtil.Injective. Import Injective.List.
 Require Import Crypto.Util.ListUtil.Partition.
 Require Import Crypto.Util.ListUtil.Filter.
 Require Import Crypto.Util.ListUtil.PermutationCompat. Import ListUtil.PermutationCompat.Coq.Sorting.Permutation.
@@ -1937,6 +1938,28 @@ Section WithDag.
     (_:interp_op ctx op args' = Some n)
     : eval_node (op, args) n.
 
+  Definition expr_dag_beq_fueled_step (expr_dag_beq_fueled : expr -> expr -> bool) :=
+    fix expr_dag_beq (e1 e2 : expr) : bool :=
+      match e1, e2 with
+      | ExprRef i, ExprRef j => N.eqb i j
+      | ExprApp (op1, args1), ExprApp (op2, args2) =>
+          op_beq op1 op2 && list_beq _ expr_dag_beq args1 args2
+      | _, _ => match reveal_expr 1 e1, reveal_expr 1 e2 with
+      | ExprRef i, ExprRef j => N.eqb i j
+      | ExprApp (op1, args1), ExprApp (op2, args2) =>
+          op_beq op1 op2 && list_beq _ expr_dag_beq_fueled args1 args2
+      | _, _ => false
+      end end.
+
+  Fixpoint expr_dag_beq_fueled (fuel : nat) (e1 e2 : expr) : bool :=
+    expr_dag_beq_fueled_step
+      match fuel with
+      | O => expr_beq
+      | S fuel => expr_dag_beq_fueled fuel
+      end
+      e1 e2.
+
+  Definition expr_dag_beq e1 e2 := expr_dag_beq_fueled (S (N.to_nat (dag.size dag))) e1 e2.
 
   Section eval_ind.
     Context (P : expr -> Z -> Prop)
@@ -2052,6 +2075,165 @@ Section WithDag.
       all: eapply Forall2_weaken; [ | eassumption ]; cbv beta.
       all: intros; destruct_head'_and; eauto. }
   Qed.
+
+  Lemma reveal0 : forall e, reveal 0 e = ExprRef e.
+  Proof using Type. reflexivity. Qed.
+
+  Lemma reveal_expr0 : forall e, reveal_expr 0 e = e.
+  Proof using Type. destruct e; cbn [reveal_expr]; break_innermost_match; now rewrite ?reveal0. Qed.
+
+  Lemma expr_dag_beq_fueled_step_refl
+    expr_dag_beq_fueled (Hexpr_dag_beq_fueled : forall e, expr_dag_beq_fueled e e = true)
+    : forall e, expr_dag_beq_fueled_step expr_dag_beq_fueled e e = true.
+  Proof using Type.
+    induction e; cbn; break_innermost_match; rewrite ?Bool.andb_true_iff; try split.
+    all: try apply unreflect_bool; try reflexivity.
+    cbn in *.
+    let H := match goal with H : Forall _ _ |- _ => H end in
+    induction H; cbn; trivial.
+    rewrite Bool.andb_true_iff.
+    split; eauto.
+  Qed.
+
+  Lemma expr_dag_beq_fueled_refl : forall fuel e, expr_dag_beq_fueled fuel e e = true.
+  Proof using Type.
+    induction fuel as [|fuel IH]; cbn.
+    all: apply expr_dag_beq_fueled_step_refl; eauto.
+    intros; apply unreflect_bool; reflexivity.
+  Qed.
+
+  Lemma expr_dag_beq_fueled_step_sym_iff
+    expr_dag_beq_fueled (Hexpr_dag_beq_fueled : forall e1 e2, expr_dag_beq_fueled e1 e2 = true <-> expr_dag_beq_fueled e2 e1 = true)
+    : forall e1 e2, expr_dag_beq_fueled_step expr_dag_beq_fueled e1 e2 = true <-> expr_dag_beq_fueled_step expr_dag_beq_fueled e2 e1 = true.
+  Proof using Type.
+    clear ctx.
+    induction e1, e2; cbn; break_innermost_match; try tauto.
+    all: rewrite ?Bool.andb_true_iff.
+    all: try (split; intro; reflect_hyps; subst; try apply unreflect_bool; try reflexivity; assumption).
+    all: match goal with
+         | [ |- ?a /\ ?b <-> ?a' /\ ?b' ]
+           => cut ((a <-> a') /\ (b <-> b')); [ tauto | ]
+         end.
+    all: split; [ split; intros; reflect_hyps; subst; apply unreflect_bool; reflexivity | ].
+    all: cbv [reveal_step] in *; break_innermost_match_hyps.
+    all: lazymatch goal with
+         | [ H : ExprApp _ = ExprApp _ |- _ ] => inversion H; clear H
+         | [ H : ExprRef _ = ExprApp _ |- _ ] => inversion H
+         | [ H : ExprApp _ = ExprRef _ |- _ ] => inversion H
+         | _ => idtac
+         end.
+    all: subst.
+    all: try erewrite (@map_ext _ _ (reveal_expr 0)), map_id in * by (intros; apply reveal_expr0).
+    all: cbn [snd] in *.
+    all: match goal with
+         | [ |- list_beq _ _ ?x ?y = true <-> list_beq _ _ ?y ?x = true ]
+           => generalize y; induction x as [|?? IH']; let y := fresh in intro y; destruct y
+         end.
+    all: cbn [list_beq snd]; try tauto.
+    all: try match goal with H : Forall _ (_ :: _) |- _ => inversion H; clear H end.
+    all: rewrite !Bool.andb_true_iff, IH'.
+    all: cbn [snd] in *.
+    all: try (eapply Forall_weaken; [ | eassumption ]).
+    all: eauto.
+    all: lazymatch goal with
+         | [ |- ?a /\ ?b <-> ?a' /\ ?b' ]
+           => cut ((a <-> a') /\ (b <-> b')); [ tauto | ]
+         end.
+    all: try (split; try tauto; eauto).
+  Qed.
+
+  Lemma expr_dag_beq_fueled_sym_iff : forall fuel e1 e2, expr_dag_beq_fueled fuel e1 e2 = true <-> expr_dag_beq_fueled fuel e2 e1 = true.
+  Proof using Type.
+    induction fuel as [|fuel IH]; cbn.
+    all: apply expr_dag_beq_fueled_step_sym_iff; eauto.
+    intros; split; intros; reflect_hyps; apply unreflect_bool; subst; reflexivity.
+  Qed.
+
+  Lemma expr_dag_beq_fueled_sym : forall fuel e1 e2, expr_dag_beq_fueled fuel e1 e2 = expr_dag_beq_fueled fuel e2 e1.
+  Proof using Type.
+    intros fuel e1 e2.
+    generalize (@expr_dag_beq_fueled_sym_iff fuel e1 e2).
+    do 2 destruct expr_dag_beq_fueled; intros; repeat split; destruct_head' iff; try tauto.
+    symmetry; tauto.
+  Qed.
+
+  Lemma eval_expr_dag_beq_fueled_step_impl
+    expr_dag_beq_fueled (Hexpr_dag_beq_fueled : forall e v, eval e v -> forall e', expr_dag_beq_fueled e e' = true -> eval e' v)
+
+    : forall e v, eval e v -> forall e', expr_dag_beq_fueled_step expr_dag_beq_fueled e e' = true -> eval e' v.
+  Proof using Type.
+    induction 1, e'; cbn; cbv [reveal_step].
+    all: break_innermost_match; intros; reflect_hyps; subst.
+    all: try now exfalso.
+    all: repeat first [ progress subst
+                      | progress inversion_option
+                      | progress inversion_pair
+                      | progress destruct_head'_and
+                      | exfalso; assumption
+                      | rewrite Bool.andb_true_iff in *
+                      | progress cbv [reveal_step] in *
+                      | progress reflect_hyps
+                      | progress break_innermost_match_hyps
+                      | erewrite (@map_ext _ _ (reveal_expr 0)), map_id in * by (intros; apply reveal_expr0) ].
+    all: try solve [ econstructor; try eassumption; eapply Forall2_weaken; [ | eassumption ]; cbv beta; try tauto ].
+    all: econstructor; try eassumption.
+    all: rewrite ?Forall2_map_l in *.
+    all: try match goal with H : dag.lookup _ _ = Some _ |- _ => clear H end.
+    all: try match goal with H : interp_op _ _ _ = Some _ |- _ => clear H end.
+    all: lazymatch goal with
+         | [ H : Forall2 _ ?x ?y |- Forall2 _ ?x' ?y' ]
+           => (revert dependent x' + idtac); (revert dependent y' + idtac); induction H; cbn in *; intros
+         end.
+    all: subst.
+    all: break_innermost_match_hyps; try congruence.
+    all: try solve [ constructor ].
+    all: lazymatch goal with
+         | [ H : List.map _ ?x = [] |- _ ] => is_var x; destruct x
+         | [ H : List.map _ ?x = _ :: _ |- _ ] => is_var x; destruct x
+         | _ => idtac
+         end.
+    all: cbn in *.
+    all: inversion_list.
+    all: repeat first [ progress subst
+                      | progress inversion_option
+                      | progress inversion_pair
+                      | progress destruct_head'_and
+                      | exfalso; assumption
+                      | rewrite Bool.andb_true_iff in *
+                      | progress cbv [reveal_step] in *
+                      | progress reflect_hyps
+                      | progress break_innermost_match_hyps
+                      | solve [ constructor; eauto ]
+                      | erewrite (@map_ext _ _ (reveal_expr 0)), map_id in * by (intros; apply reveal_expr0) ].
+  Qed.
+
+  Lemma eval_expr_dag_beq_fueled_impl : forall fuel e v, eval e v -> forall e', expr_dag_beq_fueled fuel e e' = true -> eval e' v.
+  Proof using Type.
+    induction fuel as [|fuel IH]; cbn.
+    all: apply eval_expr_dag_beq_fueled_step_impl; eauto.
+    intros; intros; reflect_hyps; subst; eauto.
+  Qed.
+
+  Lemma eval_expr_dag_beq_fueled : forall fuel e e', expr_dag_beq_fueled fuel e e' = true -> forall v, eval e v <-> eval e' v.
+  Proof using Type.
+    split; intro; eapply eval_expr_dag_beq_fueled_impl; eauto.
+    eapply expr_dag_beq_fueled_sym_iff; eauto.
+  Qed.
+
+  Lemma expr_dag_beq_refl : forall e, expr_dag_beq e e = true.
+  Proof using Type. apply expr_dag_beq_fueled_refl. Qed.
+
+  Lemma expr_dag_beq_sym_iff : forall e1 e2, expr_dag_beq e1 e2 = true <-> expr_dag_beq e2 e1 = true.
+  Proof using Type. apply expr_dag_beq_fueled_sym_iff. Qed.
+
+  Lemma expr_dag_beq_sym : forall e1 e2, expr_dag_beq e1 e2 = expr_dag_beq e2 e1.
+  Proof using Type. apply expr_dag_beq_fueled_sym. Qed.
+
+  Lemma eval_expr_dag_beq_impl : forall e v, eval e v -> forall e', expr_dag_beq e e' = true -> eval e' v.
+  Proof using Type. apply eval_expr_dag_beq_fueled_impl. Qed.
+
+  Lemma eval_expr_dag_beq : forall e e', expr_dag_beq e e' = true -> forall v, eval e v <-> eval e' v.
+  Proof using Type. apply eval_expr_dag_beq_fueled. Qed.
 End WithDag.
 
 Definition merge_node {descr : description} (n : node idx) : dag.M idx
@@ -3352,7 +3534,7 @@ Proof. t; cbn in *; rewrite ?Z.shiftl_mul_pow2, ?Z.land_0_r by lia; repeat (lia 
 Definition split_consts (d : dag) (o : op) (i : Z) : list expr -> list (expr * Z)
   := List.map
        (fun e
-        => match e with
+        => match reveal_expr_at_least d 2 e with
            | ExprApp (o', args)
              => if op_beq o' o
                 then
@@ -3387,7 +3569,7 @@ Definition group_consts (d : dag) (ls : list (expr * Z)) : list (expr * list Z)
                   | [] => None
                   | (e, z) :: xs => Some (e, z :: List.map snd xs)
                   end)
-       (List.groupAllBy (fun x y => expr_beq (fst x) (fst y)) ls).
+       (List.groupAllBy (fun x y => expr_dag_beq d (fst x) (fst y)) ls).
 
 (* o is like add *)
 (* spec: if interp0_op o zs is always Some _, then Forall2 (fun '(e, zs) '(e', z) => e = e' /\ interp0_op o zs = Some z) input output *)
@@ -3405,7 +3587,7 @@ Definition app_consts (d : dag) (o : op) (ls : list (expr * Z)) : list expr
   := List.map (fun '(e, z) => let z := ExprApp (const z, []) in
                               let default := ExprApp (o, [e; z]) in
                               if associative o
-                              then match e with
+                              then match reveal_expr_at_least d 1 e with
                                    | ExprApp (o', args)
                                      => if op_beq o' o
                                         then ExprApp (o, args ++ [z])
@@ -3414,7 +3596,7 @@ Definition app_consts (d : dag) (o : op) (ls : list (expr * Z)) : list expr
               ls.
 
 Definition combine_consts_pre [opts : symbolic_options_computed_opt] (d : dag) : expr -> expr :=
-  fun e => match e with ExprApp (o, args) =>
+  fun e => match reveal_expr_at_least d 1 e with ExprApp (o, args) =>
     if commutative o && associative o && op_always_interps o then match combines_to o with
     | Some o' => match identity o' with
     | Some idv =>
@@ -3424,11 +3606,11 @@ Definition combine_consts_pre [opts : symbolic_options_computed_opt] (d : dag) :
 Definition cleanup_combine_consts [opts : symbolic_options_computed_opt] (d : dag) : expr -> expr :=
   let simp_outside := List.fold_left (fun e f => f e) [flatten_associative d] in
   let simp_inside := List.fold_left (fun e f => f e) [constprop d;drop_identity d;unary_truncate d;truncate_small d] in
-  fun e => simp_outside match e with ExprApp (o, args)  =>
+  fun e => simp_outside match reveal_expr_at_least d 1 e with ExprApp (o, args)  =>
     ExprApp (o, List.map simp_inside args)
                    | _ => e end.
 
-Definition combine_consts [opts : symbolic_options_computed_opt] (d : dag) : expr -> expr := fun e => cleanup_combine_consts d (combine_consts_pre d (reveal_expr_at_least d 3 e)).
+Definition combine_consts [opts : symbolic_options_computed_opt] (d : dag) : expr -> expr := fun e => cleanup_combine_consts d (combine_consts_pre d e).
 #[local] Instance describe_combine_consts : description_of Rewrite.combine_consts
   := "Rewrites expressions like (x + x * 5) into (x * 6)".
 
