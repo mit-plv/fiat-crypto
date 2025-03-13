@@ -72,31 +72,32 @@ Require Import bedrock2.ZnWords.
 Require Import Rupicola.Lib.Tactics. (* for sepsimpl *)
 Import LittleEndianList.
 Import coqutil.Word.Interface.
-Definition cell64 wa (v : Z) : Semantics.mem_state -> Prop :=
+Definition cell (nbytes : N) wa (v : Z) : Semantics.mem_state -> Prop :=
   Lift1Prop.ex1 (fun bs => sep (emp (
-      length bs = 8%nat /\ v = le_combine bs))
+      length bs = N.to_nat nbytes /\ v = le_combine bs))
                                (eq (OfListWord.map.of_list_word_at wa bs))).
+Notation cell64 := (cell 8).
 
-Definition R_scalar_or_array {dereference_scalar:bool}
+Definition R_scalar_or_array {dereference_scalar:bool} {bytes_per_element : N}
            (val : Z + list Z) (asm_val : Naive.word 64)
   := match val with
-     | inr array_vals => array cell64 (word.of_Z 8) asm_val array_vals
+     | inr array_vals => array (cell bytes_per_element) (word.of_Z (Z.of_N bytes_per_element)) asm_val array_vals
      | inl scalar_val => if dereference_scalar
-                         then cell64 asm_val scalar_val
+                         then cell bytes_per_element asm_val scalar_val
                          else emp (word.unsigned asm_val = scalar_val)
      end.
 Definition R_list_scalar_or_array_nolen {dereference_scalar:bool}
-           (Z_vals : list (Z + list Z)) (asm_vals : list (Naive.word 64))
+           (sizes : list N) (Z_vals : list (Z + list Z)) (asm_vals : list (Naive.word 64))
   := List.fold_right
        sep
        (emp True)
        (List.map
-          (fun '(val, asm_val) => R_scalar_or_array (dereference_scalar:=dereference_scalar) val asm_val)
-          (List.combine Z_vals asm_vals)).
+          (fun '((sz, val), asm_val) => R_scalar_or_array (dereference_scalar:=dereference_scalar) (bytes_per_element:=sz) val asm_val)
+          (List.combine (List.combine sizes Z_vals) asm_vals)).
 Definition R_list_scalar_or_array {dereference_scalar:bool}
-           (Z_vals : list (Z + list Z)) (asm_vals : list (Naive.word 64))
-  := sep (emp (List.length Z_vals = List.length asm_vals))
-         (R_list_scalar_or_array_nolen (dereference_scalar:=dereference_scalar) Z_vals asm_vals).
+           (sizes : list N) (Z_vals : list (Z + list Z)) (asm_vals : list (Naive.word 64))
+  := sep (emp (List.length Z_vals = List.length asm_vals /\ List.length sizes = List.length Z_vals))
+         (R_list_scalar_or_array_nolen (dereference_scalar:=dereference_scalar) sizes Z_vals asm_vals).
 
 Definition get_asm_reg (m : Semantics.reg_state) (reg_available : list REG) : list Z
   := List.map (Semantics.get_reg m) reg_available.
@@ -104,7 +105,7 @@ Definition get_asm_reg (m : Semantics.reg_state) (reg_available : list REG) : li
 Definition R_runtime_input_mem
            {output_scalars_are_pointers:bool}
            (frame : Semantics.mem_state -> Prop)
-           (output_types : type_spec) (runtime_inputs : list (Z + list Z))
+           (output_types : type_spec) (input_sizes : list N) (runtime_inputs : list (Z + list Z))
            (stack_size : nat) (stack_base : Naive.word 64)
            (asm_arguments_out asm_arguments_in : list (Naive.word 64))
            (runtime_reg : list Z)
@@ -113,7 +114,7 @@ Definition R_runtime_input_mem
   := exists (stack_placeholder_values : list Z) (output_placeholder_values : list (Z + list Z)),
     Forall (fun v : Z => (0 <= v < 2 ^ 64)%Z) stack_placeholder_values
     /\ stack_size = List.length stack_placeholder_values
-    /\ Forall2 val_or_list_val_matches_spec output_placeholder_values output_types
+    /\ Forall2 val_or_list_val_matches_spec_nosize output_placeholder_values (List.map snd output_types)
     /\ Forall (fun v => match v with
                         | inl v => (0 <= v < 2^64)%Z
                         | inr vs => Forall (fun v => (0 <= v < 2^64)%Z) vs
@@ -129,15 +130,15 @@ Definition R_runtime_input_mem
         output_placeholder_values
         (firstn (length output_types) runtime_reg)
     /\ ((frame *
-           R_list_scalar_or_array (dereference_scalar:=output_scalars_are_pointers) output_placeholder_values asm_arguments_out *
-           R_list_scalar_or_array (dereference_scalar:=false) runtime_inputs asm_arguments_in *
+           R_list_scalar_or_array (dereference_scalar:=output_scalars_are_pointers) (List.map fst output_types) output_placeholder_values asm_arguments_out *
+           R_list_scalar_or_array (dereference_scalar:=false) input_sizes runtime_inputs asm_arguments_in *
            array cell64 (word.of_Z 8) stack_base stack_placeholder_values)%sep)
          m.
 
 Definition R_runtime_input
            {output_scalars_are_pointers:bool}
            (frame : Semantics.mem_state -> Prop)
-           (output_types : type_spec) (runtime_inputs : list (Z + list Z))
+           (output_types : type_spec) (input_sizes : list N) (runtime_inputs : list (Z + list Z))
            (stack_size : nat) (stack_base : Naive.word 64)
            (asm_pointer_arguments_out asm_pointer_arguments_in : list (Naive.word 64))
            (reg_available : list REG) (runtime_reg : list Z)
@@ -152,7 +153,7 @@ Definition R_runtime_input
     /\ List.length asm_arguments_out = List.length output_types
     /\ List.map word.unsigned asm_arguments_out = List.firstn (List.length output_types) runtime_reg
     /\ List.map word.unsigned asm_arguments_in = List.firstn (List.length runtime_inputs) (List.skipn (List.length output_types) runtime_reg)
-    /\ List.map fst (List.filter (fun '(_, v) => output_scalars_are_pointers || Option.is_Some v)%bool (List.combine asm_arguments_out output_types)) = asm_pointer_arguments_out
+    /\ List.map fst (List.filter (fun '(_, v) => output_scalars_are_pointers || Option.is_Some v)%bool (List.combine asm_arguments_out (List.map snd output_types))) = asm_pointer_arguments_out
     /\ List.map fst (List.filter (fun '(_, v) => match v with inl _ => false | inr _ => true end)%bool (List.combine asm_arguments_in runtime_inputs)) = asm_pointer_arguments_in
     /\ (Semantics.get_reg m rsp - 8 * Z.of_nat stack_size)%Z = word.unsigned stack_base
     /\ (* it must be the case that all the scalars in the real input values match what's in registers / the calling convention *)
@@ -163,12 +164,13 @@ Definition R_runtime_input
                       end)
         runtime_inputs
         (firstn (length runtime_inputs) (skipn (length output_types) runtime_reg))
-    /\ R_runtime_input_mem (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types runtime_inputs stack_size stack_base asm_arguments_out asm_arguments_in runtime_reg m.
+    /\ R_runtime_input_mem (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types input_sizes runtime_inputs stack_size stack_base asm_arguments_out asm_arguments_in runtime_reg m.
 
 (* TODO : should we preserve inputs? *)
 Definition R_runtime_output_mem
            {output_scalars_are_pointers:bool}
            (frame : Semantics.mem_state -> Prop)
+           (output_sizes : list N)
            (runtime_outputs : list (Z + list Z)) (input_types : type_spec)
            (stack_size : nat) (stack_base : Naive.word 64)
            (asm_arguments_out asm_arguments_in : list (Naive.word 64))
@@ -177,20 +179,21 @@ Definition R_runtime_output_mem
   := exists (stack_placeholder_values : list Z) (input_placeholder_values : list (Z + list Z)),
     Forall (fun v : Z => (0 <= v < 2 ^ 64)%Z) stack_placeholder_values
     /\ stack_size = List.length stack_placeholder_values
-    /\ Forall2 val_or_list_val_matches_spec input_placeholder_values input_types
+    /\ Forall2 val_or_list_val_matches_spec_nosize input_placeholder_values (List.map snd input_types)
     /\ Forall (fun v => match v with
                         | inl v => (0 <= v < 2^64)%Z
                         | inr vs => Forall (fun v => (0 <= v < 2^64)%Z) vs
                         end) input_placeholder_values
     /\ ((frame *
-           R_list_scalar_or_array (dereference_scalar:=output_scalars_are_pointers) runtime_outputs asm_arguments_out *
-           R_list_scalar_or_array (dereference_scalar:=false) input_placeholder_values asm_arguments_in *
+           R_list_scalar_or_array (dereference_scalar:=output_scalars_are_pointers) output_sizes runtime_outputs asm_arguments_out *
+           R_list_scalar_or_array (dereference_scalar:=false) (List.map fst input_types) input_placeholder_values asm_arguments_in *
            array cell64 (word.of_Z 8) stack_base stack_placeholder_values)%sep)
          m.
 
 Definition R_runtime_output
            {output_scalars_are_pointers:bool}
            (frame : Semantics.mem_state -> Prop)
+           (output_sizes : list N)
            (runtime_outputs : list (Z + list Z)) (input_types : type_spec)
            (stack_size : nat) (stack_base : Naive.word 64)
            (asm_pointer_arguments_out asm_pointer_arguments_in : list (Naive.word 64))
@@ -201,8 +204,8 @@ Definition R_runtime_output
     Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list _ m.(machine_reg_state))
     /\ get_asm_reg m callee_saved_registers = runtime_callee_saved_registers
     /\ List.map fst (List.filter (fun '(_, v) => output_scalars_are_pointers || match v with inl _ => false | inr _ => true end)%bool (List.combine asm_arguments_out runtime_outputs)) = asm_pointer_arguments_out
-    /\ List.map fst (List.filter (fun '(_, v) => Option.is_Some v)%bool (List.combine asm_arguments_in input_types)) = asm_pointer_arguments_in
-    /\ R_runtime_output_mem (output_scalars_are_pointers:=output_scalars_are_pointers) frame runtime_outputs input_types stack_size stack_base asm_arguments_out asm_arguments_in m.
+    /\ List.map fst (List.filter (fun '(_, (_, v)) => Option.is_Some v)%bool (List.combine asm_arguments_in input_types)) = asm_pointer_arguments_in
+    /\ R_runtime_output_mem (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_sizes runtime_outputs input_types stack_size stack_base asm_arguments_out asm_arguments_in m.
 
 Definition word_args_to_Z_args
   : list (Naive.word 64 + list (Naive.word 64)) -> list (Z + list Z)
@@ -211,7 +214,7 @@ Definition word_args_to_Z_args
                         | inr vs => inr (List.map word.unsigned vs)
                         end).
 
-Lemma word_args_to_Z_args_bounded args
+Lemma word_args_to_Z_args_bounded args (sizes : list N)
   : Forall (fun v => match v with
                      | inl v => (0 <= v < 2^64)%Z
                      | inr vs => Forall (fun v => (0 <= v < 2^64)%Z) vs
@@ -618,33 +621,35 @@ Proof.
   all: eauto.
 Qed.
 
-Lemma R_list_scalar_or_array_cons_iff dereference_scalar i1 i2 w1 w2
+Lemma R_list_scalar_or_array_cons_iff dereference_scalar s1 s2 i1 i2 w1 w2
   : Lift1Prop.iff1
-      (@R_list_scalar_or_array dereference_scalar (i1 :: i2) (w1 :: w2))
-      (@R_scalar_or_array dereference_scalar i1 w1 * @R_list_scalar_or_array dereference_scalar i2 w2)%sep.
+      (@R_list_scalar_or_array dereference_scalar (s1 :: s2) (i1 :: i2) (w1 :: w2))
+      (@R_scalar_or_array dereference_scalar s1 i1 w1 * @R_list_scalar_or_array dereference_scalar s2 i2 w2)%sep.
 Proof.
   cbv [R_list_scalar_or_array R_list_scalar_or_array_nolen]; cbn [List.length List.combine List.map fold_right].
   SeparationLogic.cancel; cbn [seps]; split; cbv [emp]; intros; sepsimpl; inversion_nat_eq; subst; congruence.
 Qed.
 
-Lemma R_list_scalar_or_array_nolen_app_iff dereference_scalar i1 i2 w1 w2
+Lemma R_list_scalar_or_array_nolen_app_iff dereference_scalar s1 s2 i1 i2 w1 w2
       (H : List.length i1 = List.length w1)
+      (Hs : List.length s1 = List.length i1)
   : Lift1Prop.iff1
-      (@R_list_scalar_or_array_nolen dereference_scalar (i1 ++ i2) (w1 ++ w2))
-      (@R_list_scalar_or_array_nolen dereference_scalar i1 w1 * @R_list_scalar_or_array_nolen dereference_scalar i2 w2)%sep.
+      (@R_list_scalar_or_array_nolen dereference_scalar (s1 ++ s2) (i1 ++ i2) (w1 ++ w2))
+      (@R_list_scalar_or_array_nolen dereference_scalar s1 i1 w1 * @R_list_scalar_or_array_nolen dereference_scalar s2 i2 w2)%sep.
 Proof.
   cbv [R_list_scalar_or_array_nolen].
-  rewrite !combine_app_samelength, map_app, fold_right_app by assumption.
-  generalize (List.combine i1 w1).
+  rewrite !combine_app_samelength, map_app, fold_right_app by now rewrite ?length_combine, ?Hs, ?H, ?Nat.min_idempotent.
+  generalize (List.combine (List.combine s1 i1) w1).
   intro l; induction l as [|?? IH]; cbn [List.map fold_right]; [ | rewrite IH ];
     SeparationLogic.cancel; cbn [seps].
 Qed.
 
-Lemma R_list_scalar_or_array_app_iff dereference_scalar i1 i2 w1 w2
+Lemma R_list_scalar_or_array_app_iff dereference_scalar s1 s2 i1 i2 w1 w2
       (H : List.length i1 = List.length w1)
+      (Hs : List.length s1 = List.length i1)
   : Lift1Prop.iff1
-      (@R_list_scalar_or_array dereference_scalar (i1 ++ i2) (w1 ++ w2))
-      (@R_list_scalar_or_array dereference_scalar i1 w1 * @R_list_scalar_or_array dereference_scalar i2 w2)%sep.
+      (@R_list_scalar_or_array dereference_scalar (s1 ++ s2) (i1 ++ i2) (w1 ++ w2))
+      (@R_list_scalar_or_array dereference_scalar s1 i1 w1 * @R_list_scalar_or_array dereference_scalar s2 i2 w2)%sep.
 Proof.
   cbv [R_list_scalar_or_array].
   rewrite R_list_scalar_or_array_nolen_app_iff by assumption.
@@ -696,8 +701,8 @@ Proof.
     rewrite ?SeparationLogic.sep_emp_l; cbv [emp]; tauto. }
 Qed.
 
-Lemma R_cell64_ex_cell64_iff G d ia iv
-  : Lift1Prop.iff1 (R_cell64 G d ia iv)
+Lemma R_cell_ex_cell_iff G d nbytes ia iv
+  : Lift1Prop.iff1 (R_cell nbytes G d ia iv)
                    (Lift1Prop.ex1
                       (fun a
                        => Lift1Prop.ex1
@@ -720,24 +725,24 @@ Proof.
   all: sepsimpl; subst; [ > apply le_combine_bound | eapply Z.lt_le_trans; [ apply le_combine_bound | ] ].
   rewrite (ltac:(eassumption) : List.length _ = _); reflexivity.
 Qed.
-
-Lemma bounded_of_cell64 wa v m
-      (H : cell64 wa v m)
-  : (0 <= v < 2^64)%Z.
+Print cell.
+Lemma bounded_of_cell nbytes wa v m
+      (H : cell nbytes wa v m)
+  : (0 <= v < 2^(8 * Z.of_N nbytes))%Z.
 Proof.
-  cbv [cell64] in H.
+  cbv [cell] in H.
   sepsimpl; subst; [ apply le_combine_bound | eapply Z.lt_le_trans; [ apply le_combine_bound | ] ].
-  rewrite H; reflexivity.
+  rewrite H; zify; reflexivity.
 Qed.
 
-Lemma bounded_of_array_cell64 v
+Lemma bounded_of_array_cell nbytes v
   : forall wa base m
-           (H : array cell64 base wa v m),
-    Forall (fun v => 0 <= v < 2^64)%Z v.
+           (H : array (cell nbytes) base wa v m),
+    Forall (fun v => 0 <= v < 2^(8 * Z.of_N nbytes))%Z v.
 Proof.
   induction v as [|v vs IH]; cbn [array]; constructor; cbv [sep] in *; sepsimpl.
-  all: try now eapply bounded_of_cell64; eassumption.
-  eauto.
+  all: try now eapply bounded_of_cell; eassumption.
+  all: eauto.
 Qed.
 
 (* TODO: move? *)
@@ -754,14 +759,14 @@ Proof.
   split; intro; sepsimpl; eauto.
 Qed.
 
-Lemma R_mem_combine_ex_array_iff frame G d n addrs val_idxs base_value base_word_value init
-      (Haddrs : Forall2 (eval_idx_Z G d) addrs (List.map (fun i => Z.land (base_value + 8 * Z.of_nat i) (Z.ones 64)) (seq init n)))
+Lemma R_mem_combine_ex_array_iff frame G d n bytes_per_cell addrs val_idxs base_value base_word_value init
+      (Haddrs : Forall2 (eval_idx_Z G d) addrs (List.map (fun i => Z.land (base_value + Z.of_N bytes_per_cell * Z.of_nat i) (Z.ones 64)) (seq init n)))
       (*(Hn : List.length val_idxs = n)*)
       (Hbase : base_value = word.unsigned base_word_value)
   : Lift1Prop.iff1
       (R_mem frame G d (List.combine addrs val_idxs))
       (Lift1Prop.ex1 (fun vals
-                      => emp (Forall2 (eval_idx_Z G d) (firstn n val_idxs) vals /\ Forall (fun v => 0 <= v < 2^64)%Z vals) * frame * array cell64 (word.of_Z 8) (word.add base_word_value (word.of_Z (8 * Z.of_nat init))) vals))%sep.
+                      => emp (Forall2 (eval_idx_Z G d) (firstn n val_idxs) vals /\ Forall (fun v => 0 <= v < 2^(8 * Z.of_N bytes_per_cell))%Z vals) * frame * array (cell bytes_per_cell) (word.of_Z (Z.of_N bytes_per_cell)) (word.add base_word_value (word.of_Z (Z.of_N bytes_per_cell * Z.of_nat init))) vals))%sep.
 Proof.
   subst.
   revert val_idxs n init Haddrs.
@@ -855,7 +860,7 @@ Lemma R_mem_combine_array_iff_helper frame G d addrs val_idxs base_value base_wo
   : Lift1Prop.iff1 (R_mem frame G d (List.combine addrs val_idxs))
                    (frame * (emp (Forall (fun v => 0 <= v < 2^64)%Z vals) * array cell64 (word.of_Z 8) (word.add base_word_value (word.of_Z (8 * Z.of_nat init))) vals))%sep.
 Proof.
-  rewrite (@sep_emp_holds_l _ _ (@bounded_of_array_cell64 _ _ _)).
+  rewrite (@sep_emp_holds_l _ _ (@bounded_of_array_cell _ _ _ _)).
   rewrite R_mem_combine_ex_array_iff by eassumption.
   subst.
   cbv [Lift1Prop.iff1 Lift1Prop.ex1]; split; intros; [ | exists vals ]; sepsimpl; eauto.
@@ -902,9 +907,9 @@ Local Ltac cleanup_min :=
                     | rewrite (Nat.min_r x y) in * by assumption ]
          end.
 
-Lemma bounded_of_R_scalar_or_array {dereference_scalar:bool} v
+Lemma bounded_of_R_scalar_or_array {dereference_scalar:bool} {bytes_per_element:N} v
   : forall ws m
-           (H : R_scalar_or_array (dereference_scalar:=dereference_scalar) v ws m),
+           (H : R_scalar_or_array (dereference_scalar:=dereference_scalar) (bytes_per_element:=bytes_per_element) v ws m),
     match v with
     | inl v => 0 <= v < 2^64
     | inr vs => Forall (fun v => 0 <= v < 2^64) vs
@@ -1428,7 +1433,7 @@ Lemma build_inputs_ok_R {descr:description} G ss types inputs args d' frame ms
       (d := ss.(dag_state))
       (H : build_inputs types d = (inputs, d'))
       (HR : R frame G ss ms)
-      (Hargs : Forall2 val_or_list_val_matches_spec args types)
+      (Hargs : Forall2 val_or_list_val_matches_spec_nosize args types)
       (Hbounds : Forall (fun v => match v with
                                   | inl v => (0 <= v < 2^64)%Z
                                   | inr vs => Forall (fun v => (0 <= v < 2^64)%Z) vs
@@ -3004,7 +3009,7 @@ Proof.
                                     | [ |- Forall _ ?ls ]
                                       => rewrite Forall_forall_iff_nth_error in Hreg_wide_enough;
                                          cbv [get_asm_reg] in *;
-                                         cbv [val_or_list_val_matches_spec] in *;
+                                         cbv [val_or_list_val_matches_spec_nosize] in *;
                                          subst;
                                          Foralls_to_nth_error;
                                          cbv [index_and_shift_and_bitcount_of_reg] in *; inversion_pair; subst;
@@ -3083,8 +3088,8 @@ Proof.
              | _ => idtac
              end).
   all: lazymatch goal with
-       | [ |- Forall2 val_or_list_val_matches_spec _ _ ]
-         => cbv [eval_idx_or_list_idx val_or_list_val_matches_spec type_spec_of_runtime] in *;
+       | [ |- Forall2 val_or_list_val_matches_spec_nosize _ _ ]
+         => cbv [eval_idx_or_list_idx val_or_list_val_matches_spec_nosize type_spec_of_runtime] in *;
             rewrite ?@Forall2_map_l_iff, ?@Forall2_map_r_iff in *;
             saturate_lengths;
             Foralls_to_nth_error;
@@ -3105,7 +3110,7 @@ Proof.
   all: apply List.Forall2_filter_same.
   all: pose proof Hreg_wide_enough as Hreg_wide_enough'.
   all: rewrite Forall_forall_iff_nth_error in Hreg_wide_enough;
-    cbv [get_asm_reg val_or_list_val_matches_spec] in *;
+    cbv [get_asm_reg val_or_list_val_matches_spec_nosize] in *;
     rewrite <- !@Forall2_eq, ?@Forall2_map_l_iff, ?@Forall2_map_r_iff in *;
     saturate_lengths;
     Foralls_to_nth_error.
