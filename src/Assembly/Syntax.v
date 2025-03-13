@@ -312,7 +312,7 @@ Definition standalone_operand_size (x : ARG) : option N :=
 Definition opcode_size (op : OpCode) :=
   match op with
   | seto | setc => Some 8
-  | ret => Some 64 (* irrelevant? *)
+  | ret | nop => Some 64 (* irrelevant? *)
   | clc => Some 1 (* irrelevant? *)
   | _ => None
   end%N.
