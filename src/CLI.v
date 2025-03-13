@@ -519,6 +519,10 @@ Module ForExtraction.
          Arg.Custom (parse_string_and parse_callee_saved_registers) "REG",
          ["Either '" ++ show System_V_AMD64 ++ "' (indicating " ++ String.concat "," (List.map show system_v_amd64_assembly_callee_saved_registers) ++ "), '" ++ show Microsoft_x64 ++ "' (indicating " ++ String.concat "," (List.map show microsoft_x64_assembly_callee_saved_registers) ++ "), or a comma-separated list of registers which are callee-saved / non-volatile.  Only relevant when --hints-file is specified."
           ; "Defaults to " ++ show default_assembly_callee_saved_registers ++ "."]).
+  Definition asm_node_reveal_depth_spec : named_argT
+    := ([Arg.long_key "asm-node-reveal-depth"],
+        Arg.Custom (parse_string_and parse_nat) "ℕ",
+        ["The depth of nodes to reveal in the assembly equivalence checker.  Only relevant when --hints-file is specified.  In most situations, this should not have to be changed.  Defaults to " ++ show default_node_reveal_depth ++ "."]).
   Definition asm_stack_size_spec : named_argT
     := ([Arg.long_key "asm-stack-size"],
         Arg.Custom (parse_string_and parse_N) "ℕ",
@@ -734,6 +738,7 @@ Module ForExtraction.
         ; asm_error_on_unique_names_mismatch_spec
         ; asm_rewriting_pipeline_spec
         ; asm_rewriting_passes_spec
+        ; asm_node_reveal_depth_spec
         ; asm_debug_symex_asm_first_spec
         ; doc_text_before_function_name_spec
         ; doc_text_before_type_name_spec
@@ -793,6 +798,7 @@ Module ForExtraction.
              , asm_error_on_unique_names_mismatchv
              , asm_rewriting_pipelinev
              , asm_rewriting_passesv
+             , asm_node_reveal_depthv
              , asm_debug_symex_asm_firstv
              , doc_text_before_function_namev
              , doc_text_before_type_namev
@@ -806,6 +812,7 @@ Module ForExtraction.
        let to_bool ls := (0 <? List.length ls)%nat in
        let to_string_list ls := List.map (@snd _ _) ls in
        let to_N_list ls := List.map (@snd _ _) (List.map (@snd _ _) ls) in
+       let to_nat_list ls := List.map (@snd _ _) (List.map (@snd _ _) ls) in
        let to_Z_flat_list ls := List.flat_map (@snd _ _) (List.map (@snd _ _) ls) in
        let to_reg_list ls := match List.map (@snd _ _) (List.map (@snd _ _) ls) with
                              | nil => None
@@ -820,6 +827,8 @@ Module ForExtraction.
        let to_assembly_callee_saved_registers_default ls default := Option.value (to_assembly_callee_saved_registers_opt ls) default in
        let to_N_opt ls := choose_one_of_many (to_N_list ls) in
        let to_N_default ls default := Option.value (to_N_opt ls) default in
+       let to_nat_opt ls := choose_one_of_many (to_nat_list ls) in
+       let to_nat_default ls default := Option.value (to_nat_opt ls) default in
        let to_string_opt ls := choose_one_of_many (to_string_list ls) in
        let to_string_default ls default := Option.value (to_string_opt ls) default in
        let to_capitalization_data_opt ls := choose_one_of_many (List.map (fun '(_, (_, v)) => v) ls) in
@@ -882,6 +891,7 @@ Module ForExtraction.
                       {| asm_rewriting_pipeline := to_rewriting_pipeline_list asm_rewriting_pipelinev
                       ; asm_rewriting_pass_filter := fun p => asm_rewriting_pass_filterv (show_rewrite_pass p)
                       ; asm_debug_symex_asm_first := to_bool asm_debug_symex_asm_firstv
+                      ; asm_node_reveal_depth := to_nat_default asm_node_reveal_depthv default_node_reveal_depth
                       |}
                     |}
                   ; ignore_unique_asm_names := negb (to_bool asm_error_on_unique_names_mismatchv)
