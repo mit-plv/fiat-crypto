@@ -119,8 +119,6 @@ Module WordByWordMontgomery.
       Definition pre_redc : T (S R_numlimbs)
         := snd (redc_loop A_numlimbs (A, @zero (1 + R_numlimbs)%nat)).
 
-      Locate conditional_sub.
-      Check conditional_sub.
       Definition redc : T R_numlimbs
         := conditional_sub pre_redc N.
 
