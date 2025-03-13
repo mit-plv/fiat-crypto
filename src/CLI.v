@@ -522,7 +522,7 @@ Module ForExtraction.
   Definition asm_node_reveal_depth_spec : named_argT
     := ([Arg.long_key "asm-node-reveal-depth"],
         Arg.Custom (parse_string_and parse_nat) "ℕ",
-        ["The depth of nodes to reveal in the assembly equivalence checker.  Only relevant when --hints-file is specified.  In most situations, this should not have to be changed.  Defaults to " ++ show default_node_reveal_depth ++ "."]).
+        ["The depth of nodes to preemptively reveal in the assembly equivalence checker.  Only relevant when --hints-file is specified.  In most situations, this should not have to be changed, and, moreover, changing it to any value > 1 should not make much difference.  Defaults to " ++ show default_node_reveal_depth ++ "."]).
   Definition asm_symex_bounds_reveal_depth_spec : named_argT
     := ([Arg.long_key "asm-symex-bounds-reveal-depth"],
         Arg.Custom (parse_string_and parse_nat) "ℕ",

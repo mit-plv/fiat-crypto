@@ -404,10 +404,11 @@ Module Export Options.
   Class rewriting_passes_opt := rewriting_passes : list rewrite_pass.
   (** Should we symex the assembly first, even though this may be more inefficient? *)
   Class debug_symex_asm_first_opt := debug_symex_asm_first : bool.
-  (** How deep should we reveal nodes? *)
+  (** How deep should we preemptively reveal nodes? *)
   Class node_reveal_depth_opt := node_reveal_depth : nat.
   (** How much should we reveal expressions when deriving bounds for expressions via structure? *)
   Class symex_bounds_reveal_depth_opt := symex_bounds_reveal_depth : nat.
+  Definition default_node_reveal_depth := 1%nat.
   Definition default_symex_bounds_reveal_depth := 1%nat.
   Definition default_rewriting_passes
              {rewriting_pipeline : rewriting_pipeline_opt}
@@ -422,8 +423,6 @@ Module Export Options.
     ; asm_node_reveal_depth : node_reveal_depth_opt
     ; asm_symex_bounds_reveal_depth : symex_bounds_reveal_depth_opt
     }.
-
-  Definition default_node_reveal_depth := 3%nat.
 
   (* This holds the list of computed options, which are passed around between methods *)
   Class symbolic_options_computed_opt :=
