@@ -38,6 +38,7 @@ Require Import Crypto.Spec.Curve25519.
 Require Import Crypto.Util.Decidable.
 Require Import Curves.Edwards.XYZT.Basic.
 Require Import Curves.Edwards.XYZT.Precomputed.
+Require Import Curves.Edwards.XYZT.Readdition.
 Require Import Lia.
 Require Crypto.Bedrock.Field.Synthesis.New.Signature.
 Local Open Scope string_scope.
@@ -100,6 +101,31 @@ Definition double := func! (ox, oy, oz, ota, otb, X, Y, Z, Ta, Tb) {
   fe25519_mul(oz, cZ, cT)
 }.
 
+(* Equivalent of m1_readd in src/Curves/Edwards/XYZT/Readdition.v *)
+(* I should fix the variable naming *)
+Definition readd := func! (ox, oy, oz, ota, otb, X1, Y1, Z1, Ta1, Tb1, half_YmX, half_YpX, Z2, Td) {
+  stackalloc 40 as A;
+  fe25519_sub(A, Y1, X1);
+  fe25519_mul(A, A, half_YmX);
+  stackalloc 40 as B;
+  fe25519_add(B, Y1, X1);
+  fe25519_mul(B, B, half_YpX);
+  stackalloc 40 as C;
+  fe25519_mul(C, Ta1, Tb1);
+  fe25519_mul(C, C, Td);
+  stackalloc 40 as D;
+  fe25519_mul(D, Z1, Z2);
+  fe25519_sub(ota, B, A);
+  stackalloc 40 as F;
+  fe25519_sub(F, D, C);
+  stackalloc 40 as G;
+  fe25519_add(G, D, C);
+  fe25519_add(otb, B, A);
+  fe25519_mul(ox, ota, F);
+  fe25519_mul(oy, G, otb);
+  fe25519_mul(oz, F, G)
+}.
+
 Section WithParameters.
   Context {two_lt_M: 2 < M_pos}.
   (* TODO: Can we provide actual values/proofs for these, rather than just sticking them in the context? *)
@@ -109,17 +135,21 @@ Section WithParameters.
           {nonzero_a : a <> F.zero}
           {square_a : exists sqrt_a, (F.mul sqrt_a sqrt_a) = a}
           {nonsquare_d : forall x, (F.mul x x) <> d}.
-  Context {a_eq_minus1:a = F.opp F.one} {twice_d} {k_eq_2d:twice_d = (F.add d d)}.
+  Context {a_eq_minus1:a = F.opp F.one} {twice_d} {k_eq_2d:twice_d = (F.add d d)} {nonzero_d: d<>F.zero}.
 
 Local Coercion F.to_Z : F >-> Z.
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
 Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
+
+Locate FElem.
+Search FElem "bytes".
 
 Local Notation FElem := (FElem(FieldRepresentation:=frep25519)).
 Local Notation bounded_by := (bounded_by(FieldRepresentation:=frep25519)).
 Local Notation word := (Naive.word 32).
 Local Notation felem := (felem(FieldRepresentation:=frep25519)).
 Local Notation point := (point(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(d:=d)).
+Local Notation cached := (cached(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(d:=d)).
 Local Notation coordinates := (coordinates(Feq:=Logic.eq)).
 Local Notation m1double :=
   (m1double(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
@@ -127,6 +157,12 @@ Local Notation m1double :=
            (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
            (a:=a)(d:=d)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)
            (a_eq_minus1:=a_eq_minus1)(twice_d:=twice_d)(k_eq_2d:=k_eq_2d)).
+Local Notation m1_readd :=
+  (m1_readd(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
+           (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
+           (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
+           (a:=a)(d:=d)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)
+           (a_eq_minus1:=a_eq_minus1)(twice_d:=twice_d)(k_eq_2d:=k_eq_2d)(nonzero_d:=nonzero_d)).
 
 
 Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
@@ -176,6 +212,37 @@ Global Instance spec_of_double : spec_of "double" :=
         bounded_by loose_bounds ota' /\ (* could be tight_bounds if we need it, but I don't think we do *)
         bounded_by tight_bounds otb' /\
         m' =* (FElem XK X) * (FElem YK Y) * (FElem ZK Z) * (FElem TaK Ta) * (FElem TbK Tb) * (FElem oxK ox') * (FElem oyK oy') * (FElem ozK oz') * (FElem otaK ota') * (FElem otbK otb') * R }.
+
+
+(*func! (ox, oy, oz, ota, otb, X1, Y1, Z1, Ta1, Tb1, half_YmX, half_YpX, Z2, Td) {*)
+(* Shit, I need to work on that coordinate naming *)
+Global Instance spec_of_readd : spec_of "readd" :=
+  fnspec! "readd"
+    ( ox oy oz ota otb X1 Y1 Z1 Ta1 Tb1 half_YmX half_YpX Z2 Td : word) /
+    ( eox eoy eoz eota eotb eX eY eZ eTa1 eTb1 ehalf_YmX ehalf_YpX eZ2 eTd : felem) (p : point) (c: cached) (R : _ -> Prop),
+  { requires t m :=
+      coordinates p = ((feval eX), (feval eY), (feval eZ), (feval eTa1), (feval eTb1)) /\
+      bounded_by tight_bounds eX /\
+      bounded_by tight_bounds eY /\
+      bounded_by tight_bounds eZ /\
+      bounded_by loose_bounds eTa1 /\
+      bounded_by loose_bounds eTb1 /\
+      cached_coordinates c = ((feval ehalf_YmX), (feval ehalf_YpX), (feval eZ2), (feval eTd)) /\
+      bounded_by loose_bounds ehalf_YmX /\
+      bounded_by loose_bounds ehalf_YpX /\
+      bounded_by loose_bounds eZ2 /\
+      bounded_by loose_bounds eTd /\
+      m =* (FElem X1 eX) * (FElem Y1 eY) * (FElem Z1 eZ) * (FElem Ta1 eTa1) * (FElem Tb1 eTb1) * (FElem half_YmX ehalf_YmX) * (FElem half_YpX ehalf_YpX) * (FElem Z2 eZ2) * (FElem Td eTd) * (FElem ox eox) * (FElem oy eoy) * (FElem oz eoz) * (FElem ota eota) * (FElem otb eotb) * R;
+    ensures t' m' :=
+      t = t' /\
+      exists eox' eoy' eoz' eota' eotb',
+        ((feval eox'), (feval eoy'), (feval eoz'), (feval eota'), (feval eotb')) = coordinates (@m1_readd p c)/\
+        bounded_by tight_bounds eox' /\
+        bounded_by tight_bounds eoy' /\
+        bounded_by tight_bounds eoz' /\
+        bounded_by loose_bounds eota' /\
+        bounded_by loose_bounds eotb' /\
+        m' =*(FElem X1 eX) * (FElem Y1 eY) * (FElem Z1 eZ) * (FElem Ta1 eTa1) * (FElem Tb1 eTb1) * (FElem half_YmX ehalf_YmX) * (FElem half_YpX ehalf_YpX) * (FElem Z2 eZ2) * (FElem Td eTd)* (FElem ox eox') * (FElem oy eoy') * (FElem oz eoz') * (FElem ota eota') * (FElem otb eotb') * R }.
 
 
 Local Instance spec_of_fe25519_square : spec_of "fe25519_square" := Field.spec_of_UnOp un_square.
@@ -255,6 +322,45 @@ Proof.
   (* Now set Strategy precedence... *)
   Strategy -1000 [bin_outbounds bin_add].
   reflexivity. (* ...and completes immediately *)
+Qed.
+
+Lemma readd_ok : program_logic_goal_for_function! readd.
+Proof.
+  repeat single_step. repeat straightline_cleanup.
+
+  exists l5. split.
+ - simpl. reflexivity. (* Local variables *)
+ - cbv [FElem] in *.
+
+ (* Prove the deallocation. Rewrite the last stack to byte representation and remember output variable names for later. *)
+  remember (Bignum.Bignum felem_size_in_words ox _) as Ox in H92.
+  remember (Bignum.Bignum felem_size_in_words oy _) as Oy in H92.
+  remember (Bignum.Bignum felem_size_in_words oz _) as Oz in H92.
+  remember (Bignum.Bignum felem_size_in_words ota _) as Ota in H92.
+  remember (Bignum.Bignum felem_size_in_words otb _) as Otb in H92.
+  do 6 (seprewrite_in @Bignum.Bignum_to_bytes H92).
+  subst Ox Oy Oz Ota Otb.
+  extract_ex1_and_emp_in H92.
+  (* Now the hypothesis is in a format that straightline can solve. *)
+  repeat straightline.
+
+  (* Bounds *)
+  exists x10, x11, x12, x6, x9.
+  ssplit; solve_bounds.
+
+  (* Correctness *)
+  cbv [bin_model bin_mul bin_add bin_carry_add bin_sub] in *.
+  cbv match beta delta [m1_readd coordinates proj1_sig].
+  (* Get the elements out of c and p *)
+  destruct p. cbv match beta delta [coordinates proj1_sig] in H13. rewrite H13.
+  destruct c. cbv match beta delta [cached_coordinates proj1_sig] in H19. rewrite H19.
+  congruence.
+
+  (* Memory after program execution. *)
+  ecancel_assumption.
+
+  (* Without this, resolution of cbv stalls out Qed. *)
+  Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
 Qed.
 
 Lemma add_precomputed_ok : program_logic_goal_for_function! add_precomputed.
