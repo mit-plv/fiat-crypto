@@ -141,9 +141,6 @@ Local Coercion F.to_Z : F >-> Z.
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
 Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 
-Locate FElem.
-Search FElem "bytes".
-
 Local Notation FElem := (FElem(FieldRepresentation:=frep25519)).
 Local Notation bounded_by := (bounded_by(FieldRepresentation:=frep25519)).
 Local Notation word := (Naive.word 32).
