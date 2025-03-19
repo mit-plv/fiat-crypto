@@ -13,11 +13,11 @@
           "0x0"
         ],
         "ubound": [
-          "0x1ffffffffffffe",
-          "0x1ffffffffffffe",
-          "0x1ffffffffffffe",
-          "0x1ffffffffffffe",
-          "0x1fffffffffffe"
+          "0xfffffffffffff0",
+          "0xfffffffffffff0",
+          "0xfffffffffffff0",
+          "0xfffffffffffff0",
+          "0xffffffffffff0"
         ]
       },
       {
@@ -31,11 +31,11 @@
           "0x0"
         ],
         "ubound": [
-          "0x1ffffffffffffe",
-          "0x1ffffffffffffe",
-          "0x1ffffffffffffe",
-          "0x1ffffffffffffe",
-          "0x1fffffffffffe"
+          "0xfffffffffffff0",
+          "0xfffffffffffff0",
+          "0xfffffffffffff0",
+          "0xfffffffffffff0",
+          "0xffffffffffff0"
         ]
       }
     ],
@@ -55,7 +55,7 @@
           "0x1ffffffffffffe",
           "0x1ffffffffffffe",
           "0x1ffffffffffffe",
-          "0x17fffffffffff"
+          "0x1fffffffffffe"
         ]
       }
     ],
@@ -2123,11 +2123,11 @@
           "0x0"
         ],
         "ubound": [
-          "0x1ffffffffffffe",
-          "0x1ffffffffffffe",
-          "0x1ffffffffffffe",
-          "0x1ffffffffffffe",
-          "0x1fffffffffffe"
+          "0xfffffffffffff0",
+          "0xfffffffffffff0",
+          "0xfffffffffffff0",
+          "0xfffffffffffff0",
+          "0xffffffffffff0"
         ]
       }
     ],
@@ -2147,7 +2147,7 @@
           "0x1ffffffffffffe",
           "0x1ffffffffffffe",
           "0x1ffffffffffffe",
-          "0x17fffffffffff"
+          "0x1fffffffffffe"
         ]
       }
     ],
