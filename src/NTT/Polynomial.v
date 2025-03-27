@@ -62,6 +62,37 @@ Section NoDup.
     - apply IHNoDup. intros; apply Hinj; auto; right; auto.
   Qed.
 End NoDup.
+Section Forall2.
+  Global Instance Forall2_Equivalence {A: Type} {R} `{Equivalence A R}:
+    Equivalence (Forall2 R).
+  Proof.
+    constructor.
+    - intro. destruct x; [constructor|].
+      rewrite (Forall2_forall_iff _ _ _ a a ltac:(reflexivity)).
+      intros. reflexivity.
+    - intros x y He. induction He; [constructor|].
+      constructor; auto. symmetry; auto.
+    - intros x y z Hl. revert z. induction Hl; intros; auto.
+      inversion H1; subst; clear H1. constructor; auto.
+      transitivity y; auto.
+  Qed.
+  Lemma Forall2_Forall_combine {A B: Type} (R: A -> B -> Prop) (l1: list A) (l2: list B):
+    Forall2 R l1 l2 ->
+    Forall (fun '(a, b) => R a b) (combine l1 l2).
+  Proof. induction 1; intros; simpl; constructor; auto. Qed.
+  Lemma Forall2_app_inv {A B: Type} (R: A -> B -> Prop) (l1 l2: list A) (l1' l2': list B):
+    length l1 = length l1' ->
+    Forall2 R (l1 ++ l2) (l1' ++ l2') ->
+    Forall2 R l1 l1' /\ Forall2 R l2 l2'.
+  Proof.
+    revert l1' l2 l2'. induction l1; simpl; intros l1' l2 l2' Hl HF.
+    - symmetry in Hl; apply length0_nil in Hl; subst l1'.
+      simpl in HF. split; [constructor|auto].
+    - destruct l1' as [|b l1']; [simpl in Hl; congruence|].
+      simpl in Hl. simpl in HF. inversion HF; subst; clear HF.
+      split; [constructor; auto|]; apply (IHl1 l1' l2 l2' ltac:(congruence) H4).
+  Qed.
+End Forall2.
 
 Section Bigop.
   Context {A:Type} {eq:A->A->Prop} {op:A->A->A} {id:A} {inv:A->A} {group: @commutative_group A eq op id inv}.
@@ -630,7 +661,7 @@ Section Theorems.
            apply commutative_ring_is_commutative. }
       apply bigop_permutation.
       apply Permutation_nth with (d := (fun i : nat => (n - i)%nat) 0%nat).
-      rewrite map_length, seq_length; split; [reflexivity|].
+      rewrite length_map, length_seq; split; [reflexivity|].
       exists (fun i => (n - i)%nat).
       split; [intro; Lia.lia|].
       split; [red; intros; Lia.lia|].
@@ -2214,7 +2245,7 @@ Section Theorems.
 
     Lemma to_list_length (p: P) (n: nat):
       length (to_list n p) = n :> _.
-    Proof. unfold to_list. rewrite map_length, seq_length. reflexivity. Qed.
+    Proof. unfold to_list. rewrite length_map, length_seq. reflexivity. Qed.
 
     Lemma to_list_nth_default_inbounds (p: P) (n: nat) d:
       forall k,
@@ -2222,7 +2253,7 @@ Section Theorems.
         nth_default d (to_list n p) k = coeff p k.
     Proof.
       intros. unfold to_list.
-      erewrite map_nth_default by (rewrite seq_length; auto).
+      erewrite map_nth_default by (rewrite length_seq; auto).
       instantiate (1 := 0%nat).
       rewrite nth_default_seq_inbounds; auto.
       reflexivity.
@@ -2385,7 +2416,7 @@ Section Theorems.
 
       Program Definition opp' (p: Pquot'): Pquot' :=
         List.map Fopp (proj1_sig p).
-      Next Obligation. rewrite map_length, (proj2_sig p). reflexivity. Qed.
+      Next Obligation. rewrite length_map, (proj2_sig p). reflexivity. Qed.
 
       Program Definition add' (p1 p2: Pquot'): Pquot' :=
         List.map2 Fadd (proj1_sig p1) (proj1_sig p2).
@@ -2616,1445 +2647,525 @@ Section Theorems.
             cbv in Hb'. rewrite Hbb2 by Lia.lia; reflexivity.
       Qed.
     End PquotRingListIsomorphism.
-
-
-
-
-  (*   Lemma degree_cyclotomic n a: *)
-  (*     degree (Psub (base n) (Pconst a)) = match n with O => if Feq_dec a 1 then None else Some n | S _ => Some n end :> _. *)
-  (*   Proof. *)
-  (*     pose (p := Psub (base n) (Pconst a)); fold p. *)
-  (*     generalize (degree_definition p). *)
-  (*     destruct (degree p) as [np|] eqn:Hnp; [intros [A1 A2]|intro A]. *)
-  (*     - destruct (dec_eq_nat np n) as [->|Hn]. *)
-  (*       + destruct n; [|reflexivity]. *)
-  (*         unfold p in A1; rewrite sub_definition, base_definition, const_definition in A1. *)
-  (*         destruct (dec_eq_nat _ _); [|congruence]. *)
-  (*         rewrite ring_sub_definition in A1. *)
-  (*         destruct (Feq_dec a 1) as [Heq|]; [rewrite Heq in A1|reflexivity]. *)
-  (*         rewrite right_inverse in A1; elim A1; reflexivity. *)
-  (*       + assert (np < n \/ n < np)%nat as [Hlt|Hlt] by Lia.lia. *)
-  (*         * generalize (A2 n ltac:(Lia.lia)). *)
-  (*           unfold p. rewrite sub_definition, base_definition, const_definition. *)
-  (*           destruct (dec_eq_nat _ _); [|congruence]. destruct n; [Lia.lia|]. *)
-  (*           rewrite ring_sub_definition, Group.inv_id, right_identity. *)
-  (*           intro X; symmetry in X; elim (zero_neq_one X). *)
-  (*         * unfold p in A1. rewrite sub_definition, base_definition, const_definition in A1. *)
-  (*           destruct (dec_eq_nat n np); [Lia.lia|]. *)
-  (*           destruct np; [Lia.lia|]. *)
-  (*           elim A1. rewrite ring_sub_definition, Group.inv_id. *)
-  (*           apply right_identity. *)
-  (*     - generalize (A n); destruct n. *)
-  (*       + unfold p; rewrite sub_definition, base_definition, const_definition. *)
-  (*         destruct (dec_eq_nat _ _); [|congruence]. *)
-  (*         rewrite ring_sub_definition. *)
-  (*         intro X; apply Group.inv_unique in X. *)
-  (*         rewrite Group.inv_inv in X. destruct (Feq_dec a 1) as [|Hn]; [reflexivity|elim Hn; symmetry; assumption]. *)
-  (*       + unfold p; rewrite sub_definition, base_definition, const_definition. *)
-  (*         destruct (dec_eq_nat _ _); [|congruence]. *)
-  (*         rewrite ring_sub_definition, Group.inv_id, right_identity. *)
-  (*         intro X; symmetry in X; elim (zero_neq_one X). *)
-  (*   Qed. *)
-
-  (*   (* Pmod (Σ p_i) q = Σ (Pmod p_i q) *) *)
-  (*   Lemma Pmod_bigop {I} (idx: list I) p q: *)
-  (*     Peq (Pmod (@bigop _ Padd Pzero _ idx p) q) (@bigop _ Padd Pzero _ idx (fun k => Pmod (p k) q)). *)
-  (*   Proof. *)
-  (*     induction idx; simpl; [apply Pmod_0_l|]. *)
-  (*     rewrite <- IHidx, Pmod_distr. reflexivity. *)
-  (*   Qed. *)
-
-  (*   (* P mod (X^n - a) = Σ_{i=0}^{n - 1} (p_i + a * p_{i+n})X^i when deg(P)<=2n-1*) *)
-  (*   Lemma Pmod_cyclotomic p n a (Hnpos: (n > 0)%nat) (Hmp: (measure p <= 2 * n)%nat): *)
-  (*     Peq (Pmod p (Psub (base n) (Pconst a))) *)
-  (*         (@bigop _ Padd Pzero _ (seq 0 n) (fun k => Pmul (Pconst ((coeff p k) + a * (coeff p (k + n)%nat))) (base k))). *)
-  (*   Proof. *)
-  (*     generalize (degree_cyclotomic n a); intro Hna. *)
-  (*     destruct n as [|n'] eqn:Hneq; [Lia.lia|]. *)
-  (*     destruct (dec_le_nat (measure p) n) as [Hle|Hnle]. *)
-  (*     - assert (Hlt: degree_lt (degree p) (Some n)) by (unfold measure, convert in Hle; destruct (degree p); cbv; auto; Lia.lia). *)
-  (*       rewrite Hneq, <- Hna in Hlt. *)
-  (*       rewrite Pmod_small, <- Hneq; auto. *)
-  (*       assert (n = (measure p) + (n - measure p) :> _)%nat as -> by Lia.lia. *)
-  (*       rewrite seq_add, bigop_app; simpl. *)
-  (*       rewrite (bigop_ext_eq (seq (measure p) _) _ (fun _ => Pzero)). *)
-  (*       2: intros i Hi k; apply in_seq in Hi; rewrite zero_definition, mul_const_base_coeff; destruct (dec_eq_nat i k); [|reflexivity]; rewrite measure_definition, measure_definition, mul_0_r by Lia.lia; apply left_identity. *)
-  (*       rewrite bigop_const, mul_0_r, right_identity. *)
-  (*     rewrite (Pdecompose_eq p) at 1. unfold Pdecompose. *)
-  (*     apply bigop_ext_eq. intros i Hi; apply in_seq in Hi. *)
-  (*     rewrite (measure_definition p (i + _)) by Lia.lia. *)
-  (*     rewrite mul_0_r, right_identity. reflexivity. *)
-  (*     - rewrite <- Hneq in *. rewrite (Pdecompose_eq p). unfold Pdecompose. *)
-  (*       assert (measure p = n + (measure p - n) :> _)%nat as -> by Lia.lia. *)
-  (*       rewrite seq_add, bigop_app, Pmod_distr. *)
-  (*       rewrite (Pmod_bigop (seq 0 n)). *)
-  (*       rewrite (bigop_ext_eq (seq 0 n) _ (fun k => (Pmul (Pconst (coeff p k)) (base k)))). *)
-  (*       2: intros i Hi; apply in_seq in Hi; rewrite Pmod_small; [reflexivity|]. *)
-  (*       2: rewrite mul_degree_eq, degree_base, degree_const, Hna. *)
-  (*       2: destruct (Feq_dec _ 0); cbv; auto; Lia.lia. *)
-  (*       rewrite (bigop_ext_eq (seq (0 + n)%nat _) _ (fun k => Padd (Pmul (Pmul (Pconst (coeff p k)) (base (k - n)%nat)) (Psub (base n) (Pconst a))) (Pmul (Pconst (a * coeff p ((k - n) + n)%nat)) (base (k - n)%nat)))). *)
-  (*       2:{ intros i Hi; apply in_seq in Hi. *)
-  (*           rewrite left_distributive, <- associative, base_mul_base. *)
-  (*           assert (i - n + n = i :> _)%nat as -> by Lia.lia. *)
-  (*           rewrite <- (associative (Pconst _)), (commutative (base _)). *)
-  (*           rewrite (associative (Pconst _)), const_mul_const, (commutative _ a). *)
-  (*           rewrite ring_sub_definition, <- associative. *)
-  (*           rewrite left_inverse, right_identity. reflexivity. } *)
-  (*       rewrite <- bigop_same_index, Pmod_distr. *)
-  (*       rewrite Pmod_bigop at 1. *)
-  (*       rewrite (bigop_ext_eq (seq (0 + n)%nat _) (fun k => Pmod _ _) (fun _ => Pzero)) by (intros; apply Pmod_mul). *)
-  (*       rewrite bigop_const, mul_0_r, left_identity. *)
-  (*       rewrite <- (bigop_shift 0%nat n (measure p - n)%nat (fun i : nat => Pmul (Pconst (a * coeff p (i + n))) (base i))). *)
-  (*       rewrite (bigop_widen _ (seq 0 (measure _ - _)%nat) (seq (measure p - n)%nat (2 * n - measure p)%nat)). *)
-  (*       2:{ intros i Hi k. apply in_seq in Hi. *)
-  (*           rewrite mul_const_base_coeff, zero_definition. *)
-  (*           destruct (dec_eq_nat i k); [|reflexivity]. *)
-  (*           rewrite measure_definition by Lia.lia; apply mul_0_r. } *)
-  (*       rewrite <- seq_app. *)
-  (*       assert ((measure p - n + (2 * n - measure p)) = n :> _)%nat as -> by Lia.lia. *)
-  (*       rewrite Pmod_bigop, bigop_same_index. *)
-  (*       apply bigop_ext_eq; intros i Hi. apply in_seq in Hi. *)
-  (*       rewrite Pmod_small by (rewrite Hna, mul_degree_eq, degree_base, degree_const; destruct (Feq_dec _ _); cbv; auto; Lia.lia). *)
-  (*       rewrite <- right_distributive, const_add_const. reflexivity. *)
-  (*   Qed. *)
-
-  (*   (* First n coefficients of P *) *)
-  (*   Definition to_list (n: nat) (p: P): list F := *)
-  (*     List.map (coeff p) (seq 0%nat n). *)
-
-  (*   Definition of_list (l: list F): P := *)
-  (*     @bigop _ Padd Pzero _ (seq 0%nat (length l)) (fun k => Pmul (Pconst (nth_default 0 l k)) (base k)). *)
-
-  (*   Lemma to_list_length (p: P) (n: nat): *)
-  (*     length (to_list n p) = n :> _. *)
-  (*   Proof. unfold to_list. rewrite map_length, seq_length. reflexivity. Qed. *)
-
-  (*   Lemma to_list_nth_default_inbounds (p: P) (n: nat) d: *)
-  (*     forall k, *)
-  (*       (k < n)%nat -> *)
-  (*       nth_default d (to_list n p) k = coeff p k. *)
-  (*   Proof. *)
-  (*     intros. unfold to_list. *)
-  (*     erewrite map_nth_default by (rewrite seq_length; auto). *)
-  (*     instantiate (1 := 0%nat). *)
-  (*     rewrite nth_default_seq_inbounds; auto. *)
-  (*     reflexivity. *)
-  (*   Qed. *)
-
-  (*   Lemma of_list_to_list (p: P) (n: nat) (Hlt: degree_lt (degree p) (Some n)): *)
-  (*     Peq (of_list (to_list n p)) p. *)
-  (*   Proof. *)
-  (*     intro k. unfold of_list. rewrite Pdecompose_coeff, to_list_length. *)
-  (*     generalize (degree_definition p). intro Hp. *)
-  (*     destruct (degree p) as [np|] eqn:Hpdeg; [destruct Hp as [Hp1 Hp2]|]. *)
-  (*     - cbv in Hlt. destruct (dec_lt_nat k n). *)
-  (*       + unfold to_list. assert (coeff p (S np) = 0) as <- by (apply Hp2; Lia.lia). *)
-  (*         rewrite map_nth_default_always, nth_default_seq_inbounds; auto. *)
-  (*         reflexivity. *)
-  (*       + symmetry; apply Hp2; Lia.lia. *)
-  (*     - destruct (dec_lt_nat k n); [|symmetry; apply Hp]. *)
-  (*       unfold to_list. rewrite <- (Hp k), map_nth_default_always, nth_default_seq_inbounds; auto. *)
-  (*       reflexivity. *)
-  (*   Qed. *)
-
-  (*   Definition Pmod_cyclotomic_list (l: list F) (n: nat) (a: F) := *)
-  (*     List.fold_left *)
-  (*       (fun l i => *)
-  (*          let tmp := a * (nth_default 0 l (i + n)%nat) in *)
-  (*          let l' := set_nth (i + n)%nat ((nth_default 0 l i) - tmp) l in *)
-  (*          set_nth i ((nth_default 0 l i) + tmp) l') *)
-  (*       (seq 0%nat n) *)
-  (*       l. *)
-
-  (*   Lemma Pmod_cyclotomic_list_length l n a: *)
-  (*     length (Pmod_cyclotomic_list l n a) = length l :> _. *)
-  (*   Proof. *)
-  (*     unfold Pmod_cyclotomic_list. apply fold_left_invariant. *)
-  (*     - reflexivity. *)
-  (*     - intros. repeat rewrite length_set_nth; auto. *)
-  (*   Qed. *)
-
-  (*   Lemma Pmod_cyclotomic_list_nth_default l n a *)
-  (*     (Hlength: (length l >= 2 * n)%nat): *)
-  (*     forall d k, *)
-  (*       nth_default d (Pmod_cyclotomic_list l n a) k = *)
-  (*         if (dec_lt_nat k n) then *)
-  (*           let xk := nth_default 0 l k in *)
-  (*           let xkn := nth_default 0 l (k + n)%nat in *)
-  (*           xk + (a * xkn) *)
-  (*         else if (dec_lt_nat k (2 * n)) then *)
-  (*                let xk := nth_default 0 l k in *)
-  (*                let xkn := nth_default 0 l (k - n)%nat in *)
-  (*                xkn - (a * xk) *)
-  (*              else nth_default d l k. *)
-  (*   Proof. *)
-  (*     revert l Hlength. unfold Pmod_cyclotomic_list. *)
-  (*     set (f := (fun (p: nat) (l : list F) (i : nat) => set_nth i (nth_default 0 l i + a * nth_default 0 l (i + p)) (set_nth (i + p) (nth_default 0 l i - a * nth_default 0 l (i + p)) l))). *)
-  (*     fold (f n). revert n. *)
-  (*     assert (IH: forall (n : nat) (p: nat) (l : list F), *)
-  (*                (n <= p)%nat -> *)
-  (*                (length l >= 2 * p)%nat -> *)
-  (*                forall (d : F) (k : nat), *)
-  (*                  nth_default d (fold_left (f p) (seq 0 n) l) k = *)
-  (*                    (if dec_lt_nat k n *)
-  (*                     then nth_default 0 l k + a * nth_default 0 l (k + p) *)
-  (*                     else *)
-  (*                       if dec_le_nat p k *)
-  (*                       then *)
-  (*                         if dec_lt_nat k (p + n) then *)
-  (*                           nth_default 0 l (k - p) - a * nth_default 0 l k *)
-  (*                         else nth_default d l k *)
-  (*                       else nth_default d l k)). *)
-  (*     { induction n; intros p l Hp Hl d k. *)
-  (*       - simpl. rewrite PeanoNat.Nat.add_0_r. *)
-  (*         destruct (dec_le_nat p k); [|reflexivity]. *)
-  (*         destruct (dec_lt_nat k p); [Lia.lia|]. reflexivity. *)
-  (*       - rewrite seq_S, PeanoNat.Nat.add_0_l, fold_left_app. cbn [fold_left]. *)
-  (*         assert (Hlength': length (fold_left (f p) (seq 0 n) l) = length l :> _). *)
-  (*         { apply fold_left_invariant; [reflexivity|]. *)
-  (*           intros. unfold f. repeat rewrite length_set_nth. auto. } *)
-  (*         unfold f at 1. rewrite set_nth_nth_default_full, length_set_nth, Hlength'. *)
-  (*         destruct (Compare_dec.lt_dec k (length l)). *)
-  (*         2: { destruct (dec_lt_nat k (S n)); [Lia.lia|]. *)
-  (*              destruct (dec_le_nat p k); [|rewrite nth_default_out_of_bounds by Lia.lia; reflexivity]. *)
-  (*              destruct (dec_lt_nat k (p + S n)); [Lia.lia|]. *)
-  (*              rewrite nth_default_out_of_bounds by Lia.lia. reflexivity. } *)
-  (*         destruct (PeanoNat.Nat.eq_dec k n); [subst k|]. *)
-  (*         { destruct (dec_lt_nat n (S n)) as [_|]; [|Lia.lia]. *)
-  (*           rewrite IHn by Lia.lia. *)
-  (*           destruct (dec_lt_nat n n) as [|_]; [Lia.lia|]. *)
-  (*           destruct (dec_le_nat p n); [Lia.lia|]. *)
-  (*           rewrite IHn by Lia.lia. *)
-  (*           destruct (dec_lt_nat (n + p) n) as [|_]; [Lia.lia|]. *)
-  (*           destruct (dec_le_nat p (n + p)); [|Lia.lia]. *)
-  (*           destruct (dec_lt_nat (n + p) (p + n)); [Lia.lia|]. *)
-  (*           reflexivity. } *)
-  (*         rewrite set_nth_nth_default_full, Hlength'. *)
-  (*         destruct (Compare_dec.lt_dec k (length l)) as [_|]; [|Lia.lia]. *)
-  (*         destruct (PeanoNat.Nat.eq_dec k (n + p)); [subst k|]. *)
-  (*         { destruct (dec_lt_nat (n + p) (S n)); [Lia.lia|]. *)
-  (*           destruct (dec_le_nat p (n + p)); [|Lia.lia]. *)
-  (*           destruct (dec_lt_nat (n + p) (p + S n)); [|Lia.lia]. *)
-  (*           do 2 rewrite IHn by Lia.lia. *)
-  (*           destruct (dec_lt_nat n n); [Lia.lia|]. *)
-  (*           destruct (dec_le_nat p n); [Lia.lia|]. *)
-  (*           assert (n + p - p = n :> _)%nat as -> by Lia.lia. *)
-  (*           destruct (dec_lt_nat (n + p) n); [Lia.lia|]. *)
-  (*           destruct (dec_le_nat p (n + p)); [|Lia.lia]. *)
-  (*           destruct (dec_lt_nat (n + p) (p + n)); [Lia.lia|]. reflexivity. } *)
-  (*         rewrite IHn by Lia.lia. destruct (dec_lt_nat k n). *)
-  (*         { destruct (dec_lt_nat k (S n)); [|Lia.lia]. reflexivity. } *)
-  (*         destruct (dec_lt_nat k (S n)); [Lia.lia|]. *)
-  (*         destruct (dec_le_nat p k); [|reflexivity]. *)
-  (*         destruct (dec_lt_nat k (p + n)). *)
-  (*         { destruct (dec_lt_nat k (p + S n)); [|Lia.lia]. reflexivity. } *)
-  (*         destruct (dec_lt_nat k (p + S n)); [Lia.lia|]. reflexivity. } *)
-  (*     intros. rewrite IH by Lia.lia. *)
-  (*     destruct (dec_lt_nat k n); [reflexivity|]. *)
-  (*     destruct (dec_le_nat n k); [|Lia.lia]. *)
-  (*     assert (2 * n = n + n :> _)%nat as -> by Lia.lia. reflexivity. *)
-  (*   Qed. *)
-
-  (*   Lemma Pmod_cyclotomic_list_correct (p: P) (n: nat) (a: F) *)
-  (*     (Hnpos: (n > 0)%nat) (Hmp: (measure p <= 2 * n)%nat): *)
-  (*     Peq *)
-  (*       (Pmod p (Psub (base n) (Pconst a))) *)
-  (*       (of_list (firstn n (Pmod_cyclotomic_list (to_list (2 * n)%nat p) n a))) /\ *)
-  (*     Peq *)
-  (*       (Pmod p (Padd (base n) (Pconst a))) *)
-  (*       (of_list (skipn n (Pmod_cyclotomic_list (to_list (2 * n)%nat p) n a))). *)
-  (*   Proof. *)
-  (*     assert (Peq (Padd (base n) (Pconst a)) (Psub (base n) (Pconst (Fopp a)))) as -> by (rewrite ring_sub_definition, opp_const, Group.inv_inv; reflexivity). *)
-  (*     do 2 (rewrite Pmod_cyclotomic; auto). *)
-  (*     split. *)
-  (*     - intro k. unfold of_list. do 2 rewrite Pdecompose_coeff. *)
-  (*       rewrite firstn_length, Pmod_cyclotomic_list_length, to_list_length. *)
-  (*       assert (Nat.min n (2 * n) = n :> _) as -> by Lia.lia. *)
-  (*       destruct (dec_lt_nat k n); [|reflexivity]. *)
-  (*       rewrite nth_default_firstn, Pmod_cyclotomic_list_length, to_list_length. *)
-  (*       destruct (Compare_dec.le_dec n (2 * n)) as [_|]; [|Lia.lia]. *)
-  (*       destruct (Compare_dec.lt_dec k n); [|Lia.lia]. *)
-  (*       rewrite Pmod_cyclotomic_list_nth_default by (rewrite to_list_length; Lia.lia). *)
-  (*       destruct (dec_lt_nat k n); [|Lia.lia]. *)
-  (*       cbn zeta. do 2 (rewrite to_list_nth_default_inbounds by Lia.lia). *)
-  (*       reflexivity. *)
-  (*     - intro k. unfold of_list. do 2 rewrite Pdecompose_coeff. *)
-  (*       rewrite skipn_length, Pmod_cyclotomic_list_length, to_list_length. *)
-  (*       assert (2 * n - n = n :> _)%nat as -> by Lia.lia. *)
-  (*       destruct (dec_lt_nat k n); [|reflexivity]. *)
-  (*       rewrite nth_default_skipn, Pmod_cyclotomic_list_nth_default by (rewrite to_list_length; Lia.lia). *)
-  (*       destruct (dec_lt_nat (n + k) n); [Lia.lia|]. *)
-  (*       destruct (dec_lt_nat (n + k) (2 * n)); [|Lia.lia]. *)
-  (*       cbn zeta. assert (n + k - n = k :> _)%nat as -> by Lia.lia. *)
-  (*       do 2 (rewrite to_list_nth_default_inbounds by Lia.lia). *)
-  (*       rewrite ring_sub_definition, <- Ring.mul_opp_l. *)
-  (*       assert (k + n = n + k :> _)%nat as -> by Lia.lia. *)
-  (*       reflexivity. *)
-  (*   Qed. *)
-
-  (* End Decomposition. *)
-
-  (* Section Pquot. *)
-  (*   Context {Finv: F -> F}{Fdiv: F -> F -> F} *)
-  (*     {field: @field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv} *)
-  (*     {char_ge_3: @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos (BinNat.N.two))}. *)
-  (*   Local Infix "/" := Fdiv. *)
-
-  (*   Local Notation Pdivmod := (@Pdivmod Fdiv). *)
-  (*   Local Notation Pdiv := (@Pdiv Fdiv). *)
-  (*   Local Notation Pmod := (@Pmod Fdiv). *)
-  (*   Local Notation Pgcd := (@Pgcd Fdiv). *)
-  (*   Local Notation Pegcd := (@Pegcd Fdiv). *)
-  (*   Local Notation Pdivides := (@Pdivides Fdiv). *)
-  (*   Local Notation coprime := (@coprime Fdiv). *)
-
-  (*   Definition Pquot (q: P): Type := { p: P | Peq p (Pmod p q) }. *)
-
-  (*   Section PquotOperations. *)
-  (*     Definition to_P {q} (p: Pquot q) := proj1_sig p. *)
-  (*     Context {q: P}. *)
-  (*     Program Definition of_P (p: P): Pquot q := Pmod p q. *)
-  (*     Next Obligation. symmetry. apply Pmod_mod_eq. Qed. *)
-
-  (*     Definition eq1 {q'} (p1: Pquot q) (p2: Pquot q'): Prop := *)
-  (*       Peq (to_P p1) (to_P p2). *)
-  (*     Definition zero: Pquot q := of_P Pzero. *)
-  (*     Definition one: Pquot q := of_P Pone. *)
-
-  (*     Definition add (p1 p2: Pquot q): Pquot q := *)
-  (*       of_P (Padd (to_P p1) (to_P p2)). *)
-  (*     Definition mul (p1 p2: Pquot q): Pquot q := *)
-  (*       of_P (Pmul (to_P p1) (to_P p2)). *)
-  (*     Definition opp (p: Pquot q): Pquot q := *)
-  (*       of_P (Popp (to_P p)). *)
-  (*     Definition sub (p1 p2: Pquot q): Pquot q := *)
-  (*       add p1 (opp p2). *)
-
-  (*     Global Instance peq_proper_of_P: Proper (Peq ==> eq1) of_P. *)
-  (*     Proof. intros x y Heq. unfold eq1; simpl. rewrite Heq. reflexivity. Qed. *)
-  (*   End PquotOperations. *)
-  (*   Section PquotRing. *)
-  (*     Context {q: P}. *)
-
-  (*     Ltac unwrap_Pquot := *)
-  (*       match goal with *)
-  (*       | |- Proper _ _ => unfold Proper, respectful *)
-  (*       | |- Reflexive _ => unfold Reflexive *)
-  (*       | |- Symmetric _ => unfold Symmetric *)
-  (*       | |- Transitive _ => unfold Transitive *)
-  (*       | |- _ => idtac end; *)
-  (*       intros; *)
-  (*       repeat match goal with | [ x : Pquot _ |- _ ] => destruct x end; *)
-  (*       lazy iota beta delta [eq1 zero one add mul opp sub of_P to_P proj1_sig] in *. *)
-  (*     Global Instance PquotRing: *)
-  (*       @commutative_ring (Pquot q) eq1 zero one opp add sub mul. *)
-  (*     Proof. *)
-  (*       repeat constructor; unwrap_Pquot. *)
-  (*       - rewrite Padd_mod_idemp_l, Padd_mod_idemp_r, associative. *)
-  (*         reflexivity. *)
-  (*       - rewrite Pmod_0_l, left_identity. *)
-  (*         symmetry; assumption. *)
-  (*       - rewrite Pmod_0_l, right_identity. *)
-  (*         symmetry; assumption. *)
-  (*       - rewrite H, H0. reflexivity. *)
-  (*       - reflexivity. *)
-  (*       - symmetry; assumption. *)
-  (*       - etransitivity; eauto. *)
-  (*       - rewrite Padd_mod_idemp_l, left_inverse. reflexivity. *)
-  (*       - rewrite Padd_mod_idemp_r, right_inverse. reflexivity. *)
-  (*       - rewrite H; reflexivity. *)
-  (*       - rewrite commutative; reflexivity. *)
-  (*       - rewrite Pmul_mod_idemp_l, Pmul_mod_idemp_r, associative. *)
-  (*         reflexivity. *)
-  (*       - rewrite Pmul_mod_idemp_l, left_identity. symmetry; assumption. *)
-  (*       - rewrite Pmul_mod_idemp_r, right_identity. symmetry; assumption. *)
-  (*       - rewrite H, H0. reflexivity. *)
-  (*       - reflexivity. *)
-  (*       - symmetry; assumption. *)
-  (*       - etransitivity; eauto. *)
-  (*       - rewrite Padd_mod_idemp_l, Padd_mod_idemp_r, Pmul_mod_idemp_r, <- left_distributive. *)
-  (*         reflexivity. *)
-  (*       - rewrite Padd_mod_idemp_l, Padd_mod_idemp_r, Pmul_mod_idemp_l, <- right_distributive. *)
-  (*         reflexivity. *)
-  (*       - reflexivity. *)
-  (*       - rewrite H, H0. reflexivity. *)
-  (*       - rewrite H, H0. reflexivity. *)
-  (*       - rewrite commutative. reflexivity. *)
-  (*     Qed. *)
-  (*   End PquotRing. *)
-  (*   Section PquotSame. *)
-  (*     Variable (p1 p2: P) (Heq: Peq p1 p2). *)
-
-  (*     Program Definition phi_same (x: Pquot p1): Pquot p2 := proj1_sig x. *)
-  (*     Next Obligation. destruct x as [x Hx]; simpl; rewrite <- Heq. assumption. Qed. *)
-
-  (*     Program Definition psi_same (x: Pquot p2): Pquot p1 := proj1_sig x. *)
-  (*     Next Obligation. destruct x as [x Hx]; simpl; rewrite Heq. assumption. Qed. *)
-
-  (*     Lemma Pquot_homomorphism_same: *)
-  (*       @Ring.is_homomorphism (Pquot p1) eq1 one add mul (Pquot p2) eq1 one add mul phi_same *)
-  (*       /\ @Ring.is_homomorphism (Pquot p2) eq1 one add mul (Pquot p1) eq1 one add mul psi_same. *)
-  (*     Proof. *)
-  (*       apply (Ring.ring_by_isomorphism (zero:=zero) (opp:=opp) (sub:=sub)). *)
-  (*       - intro a; destruct a as [a Ha]; unfold eq1; simpl; reflexivity. *)
-  (*       - intros a b; destruct a as [a Ha]; destruct b as [b Hb]; unfold eq1; simpl; reflexivity. *)
-  (*       - unfold eq1; simpl. rewrite Heq; reflexivity. *)
-  (*       - unfold eq1; simpl. rewrite Heq; reflexivity. *)
-  (*       - intro a; destruct a as [a Ha]; unfold eq1; simpl; rewrite Heq; reflexivity. *)
-  (*       - intros a b; destruct a as [a Ha]; destruct b as [b Hb]; unfold eq1; simpl; rewrite Heq; reflexivity. *)
-  (*       - intros a b; destruct a as [a Ha]; destruct b as [b Hb]; unfold eq1; simpl; rewrite Heq; reflexivity. *)
-  (*       - intros a b; destruct a as [a Ha]; destruct b as [b Hb]; unfold eq1; simpl; rewrite Heq; reflexivity. *)
-  (*     Qed. *)
-  (*   End PquotSame. *)
-  (*   Section CRT2. *)
-  (*     (* Chinese Remainder Theorem (Algebraic form), base case *) *)
-  (*     Variable (p p1 p2: P) (Hcoprime: coprime p1 p2) (Hp_eq: Peq p (Pmul p1 p2)). *)
-
-  (*     Definition phi2 (x: Pquot p): (Pquot p1 * Pquot p2) := *)
-  (*       (of_P (to_P x), of_P (to_P x)). *)
-
-  (*     Definition psi2 (xy: Pquot p1 * Pquot p2): Pquot p := *)
-  (*       let x := to_P (fst xy) in *)
-  (*       let y := to_P (snd xy) in *)
-  (*       let u := fst (Pegcd p1 p2) in *)
-  (*       let v := snd (Pegcd p1 p2) in *)
-  (*       of_P (Padd (Pmul y (Pmul (Pdiv u (Pgcd p1 p2)) p1)) (Pmul x (Pmul (Pdiv v (Pgcd p1 p2)) p2))). *)
-
-  (*     Definition EQ2 (x y: Pquot p1 * Pquot p2) := *)
-  (*       eq1 (fst x) (fst y) /\ eq1 (snd x) (snd y). *)
-
-  (*     Global Instance EQ_proper_psi2: Proper (EQ2 ==> eq1) psi2. *)
-  (*     Proof. *)
-  (*       intros x y. unfold EQ2, eq1, psi2; simpl. intros (HEQ1 & HEQ2). *)
-  (*       destruct x as [x1 x2]. destruct y as [y1 y2]. *)
-  (*       simpl in *. *)
-  (*       rewrite HEQ1, HEQ2. reflexivity. *)
-  (*     Qed. *)
-
-  (*     Global Instance eq_proper_phi2: Proper (eq1 ==> EQ2) phi2. *)
-  (*     Proof. *)
-  (*       intros x y. unfold EQ2, eq1, phi2; simpl. intro HEQ. *)
-  (*       rewrite HEQ; split; reflexivity. *)
-  (*     Qed. *)
-
-  (*     Definition ZERO2: Pquot p1 * Pquot p2 := (zero, zero). *)
-
-  (*     Lemma ZERO_def2: EQ2 (phi2 zero) ZERO2. *)
-  (*     Proof. unfold phi2, ZERO2, EQ2, eq1; simpl; repeat rewrite Pmod_0_l; split; reflexivity. Qed. *)
-
-  (*     Definition ONE2: Pquot p1 * Pquot p2 := (one, one). *)
-
-  (*     Lemma ONE_def2: EQ2 (phi2 one) ONE2. *)
-  (*     Proof. *)
-  (*       unfold phi2, ONE2, EQ2, eq1; simpl. *)
-  (*       rewrite Hp_eq. *)
-  (*       destruct (Peq_dec p1 Pzero) as [->|Hp1nz]. *)
-  (*       { rewrite mul_0_l, Pmod_0_r, Pmod_0_r. *)
-  (*         split; reflexivity. } *)
-  (*       destruct (Peq_dec p2 Pzero) as [->|Hp2nz]. *)
-  (*       { rewrite mul_0_r, Pmod_0_r, Pmod_0_r. *)
-  (*         split; reflexivity. } *)
-  (*       destruct (degree p1) as [np1|] eqn:Hp1; [|apply zero_degree in Hp1; contradiction]. *)
-  (*       destruct (degree p2) as [np2|] eqn:Hp2; [|apply zero_degree in Hp2; contradiction]. *)
-  (*       generalize (mul_degree_eq p1 p2); rewrite Hp1, Hp2; simpl. intro Hp12. *)
-  (*       assert (np1 + np2 = 0%nat :> _ \/ (np1 + np2 > 0))%nat as [He|Hn] by Lia.lia. *)
-  (*       - assert (np1 = 0 :> _)%nat as He1 by Lia.lia. *)
-  (*         assert (np2 = 0 :> _)%nat as He2 by Lia.lia. *)
-  (*         rewrite He1 in Hp1; rewrite He2 in Hp2; rewrite He in Hp12. *)
-  (*         generalize (Pdivides_degree_zero _ Pone Hp1). *)
-  (*         generalize (Pdivides_degree_zero _ Pone Hp2). *)
-  (*         generalize (Pdivides_degree_zero _ Pone Hp12). *)
-  (*         unfold Pdivides. intros A1 A2 A12. *)
-  (*         rewrite A1, A2, A12, Pmod_0_l, Pmod_0_l. split; reflexivity. *)
-  (*       - rewrite (Pmod_small Pone (Pmul p1 p2) ltac:(rewrite degree_one, Hp12; cbv -[Nat.add]; Lia.lia)). *)
-  (*         split; reflexivity. *)
-  (*     Qed. *)
-
-  (*     Definition OPP2 (x: Pquot p1 * Pquot p2): Pquot p1 * Pquot p2 := *)
-  (*       (opp (fst x), opp (snd x)). *)
-
-  (*     Definition ADD2 (x y: Pquot p1 * Pquot p2): Pquot p1 * Pquot p2 := *)
-  (*       (add (fst x) (fst y), add (snd x) (snd y)). *)
-
-  (*     Definition SUB2 (x y: Pquot p1 * Pquot p2): Pquot p1 * Pquot p2 := *)
-  (*       (sub (fst x) (fst y), sub (snd x) (snd y)). *)
-
-  (*     Definition MUL2 (x y: Pquot p1 * Pquot p2): Pquot p1 * Pquot p2 := *)
-  (*       (mul (fst x) (fst y), mul (snd x) (snd y)). *)
-
-  (*     Lemma SUB_def2 x y: *)
-  (*       EQ2 (SUB2 x y) (ADD2 x (OPP2 y)). *)
-  (*     Proof. *)
-  (*       destruct x as [[x1 Hx1] [x2 Hx2]]. *)
-  (*       destruct y as [[y1 Hy1] [y2 Hy2]]. *)
-  (*       unfold EQ2, SUB2, OPP2, eq1; simpl. *)
-  (*       repeat rewrite Pmod_opp. split; reflexivity. *)
-  (*     Qed. *)
-
-  (*     Lemma phi_injective2: *)
-  (*       forall x y, eq1 (fst (phi2 x)) (fst (phi2 y)) -> *)
-  (*              eq1 (snd (phi2 x)) (snd (phi2 y)) -> *)
-  (*              eq1 x y. *)
-  (*     Proof. *)
-  (*       intros x y Heq1 Heq2. *)
-  (*       destruct x, y. unfold phi2, eq1 in *; simpl in *. *)
-  (*       assert (Hdiv: Pdivides (Pmul p1 p2) (Psub x x0)). *)
-  (*       { apply coprime_divides; auto. *)
-  (*         - rewrite (Pdivmod_eq_spec x p1), (Pdivmod_eq_spec x0 p1), ring_sub_definition. *)
-  (*           rewrite <- Heq1, Group.inv_op. *)
-  (*           rewrite <- (associative (Pmul _ _) (Pmod _ _)). *)
-  (*           rewrite (associative (Pmod x p1)). *)
-  (*           rewrite right_inverse, left_identity. *)
-  (*           rewrite <- mul_opp_l, <- right_distributive. *)
-  (*           apply Pdivides_iff. eexists; reflexivity. *)
-  (*         - rewrite (Pdivmod_eq_spec x p2), (Pdivmod_eq_spec x0 p2), ring_sub_definition. *)
-  (*           rewrite <- Heq2, Group.inv_op. *)
-  (*           rewrite <- (associative (Pmul _ _) (Pmod _ _)). *)
-  (*           rewrite (associative (Pmod x p2)). *)
-  (*           rewrite right_inverse, left_identity. *)
-  (*           rewrite <- mul_opp_l, <- right_distributive. *)
-  (*           apply Pdivides_iff. eexists; reflexivity. } *)
-  (*       apply sub_zero_iff. apply Pdivides_iff in Hdiv. *)
-  (*       rewrite Hp_eq in p0, p3. *)
-  (*       destruct Hdiv as (c & Hdiv). *)
-  (*       destruct (Peq_dec (Pmul p1 p2) Pzero) as [Hz|Hnz]; [rewrite Hdiv, Hz, mul_0_r; reflexivity|]. *)
-  (*       generalize (Pmod_degree_lt x (Pmul p1 p2) Hnz). rewrite <- p0. intro Hltx0. *)
-  (*       generalize (Pmod_degree_lt x0 (Pmul p1 p2) Hnz). rewrite <- p3. intro Hltx3. *)
-  (*       apply IntegralDomain.IntegralDomain.nonzero_product_iff_nonzero_factors in Hnz. *)
-  (*       destruct Hnz as (Hnz1 & Hnz2). *)
-  (*       destruct (degree p1) as [np1|] eqn:Hp1; [|apply zero_degree in Hp1; contradiction]. *)
-  (*       destruct (degree p2) as [np2|] eqn:Hp2; [|apply zero_degree in Hp2; contradiction]. *)
-  (*       generalize (mul_degree_eq p1 p2). rewrite Hp1, Hp2; simpl; intro Hp12. *)
-  (*       assert (Hlt: degree_lt (degree (Psub x x0)) (degree (Pmul p1 p2))). *)
-  (*       { eapply degree_le_lt_trans; [apply sub_degree|]. *)
-  (*         apply degree_max_lub_lt; eauto. } *)
-  (*       rewrite Hdiv, (mul_degree_eq c), Hp12 in Hlt. *)
-  (*       rewrite Hdiv. destruct (degree c) as [nc|] eqn:Hc; [|apply zero_degree in Hc; rewrite Hc, mul_0_l; reflexivity]. *)
-  (*       cbv -[Nat.add] in Hlt. Lia.lia. *)
-  (*     Qed. *)
-
-  (*     Lemma psi_phi_id2 x: *)
-  (*       eq1 (psi2 (phi2 x)) x. *)
-  (*     Proof. *)
-  (*       generalize (Pegcd_bezout_coprime _ _ Hcoprime). *)
-  (*       pose (u := (Pdiv (fst (Pegcd p1 p2)) (Pgcd p1 p2))). *)
-  (*       pose (v := (Pdiv (snd (Pegcd p1 p2)) (Pgcd p1 p2))). *)
-  (*       fold u v. intro Huv. *)
-  (*       assert (Hu: Peq (Pmul u p1) (Psub Pone (Pmul v p2))). *)
-  (*       { rewrite <- Huv, ring_sub_definition, <- associative, right_inverse. *)
-  (*         rewrite right_identity; reflexivity. } *)
-  (*       assert (Hv: Peq (Pmul v p2) (Psub Pone (Pmul u p1))). *)
-  (*       { rewrite <- Huv, ring_sub_definition, <- associative, (commutative (Pmul v p2)), associative, right_inverse. *)
-  (*         rewrite left_identity; reflexivity. } *)
-  (*       destruct x as (x & Hx). *)
-  (*       pose (a1 := Pmod x p1). pose (a2 := Pmod x p2). *)
-  (*       destruct (Peq_dec p1 Pzero) as [Hp1|Hp1nz]. *)
-  (*       { unfold eq1; simpl; fold u v. *)
-  (*         rewrite Hv, Hp1 in *. rewrite Hp_eq. *)
-  (*         rewrite Pmod_0_r, mul_0_r, mul_0_r, mul_0_l, Pmod_0_r, left_identity. *)
-  (*         rewrite ring_sub_definition, Group.inv_id, right_identity, right_identity. *)
-  (*         reflexivity. } *)
-  (*       destruct (Peq_dec p2 Pzero) as [Hp2|Hp2nz]. *)
-  (*       { unfold eq1; simpl; fold u v. *)
-  (*         rewrite Hu, Hp2 in *. rewrite Hp_eq. *)
-  (*         rewrite Pmod_0_r, mul_0_r, mul_0_r, mul_0_r, Pmod_0_r, right_identity. *)
-  (*         rewrite ring_sub_definition, Group.inv_id, right_identity, right_identity. *)
-  (*         reflexivity. } *)
-  (*       destruct (degree p1) as [np1|] eqn:Hp1; [|apply zero_degree in Hp1; contradiction]. *)
-  (*       destruct (degree p2) as [np2|] eqn:Hp2; [|apply zero_degree in Hp2; contradiction]. *)
-  (*       assert (Ha1: degree_lt (degree a1) (degree (Pmul p1 p2))). *)
-  (*       { generalize (Pmod_degree_lt x p1 Hp1nz); intro. *)
-  (*         eapply degree_lt_le_trans; eauto. *)
-  (*         rewrite mul_degree_eq, Hp1, Hp2. *)
-  (*         cbv -[Nat.add]. Lia.lia. } *)
-  (*       assert (Ha2: degree_lt (degree a2) (degree (Pmul p1 p2))). *)
-  (*       { generalize (Pmod_degree_lt x p2 Hp2nz); intro. *)
-  (*         eapply degree_lt_le_trans; eauto. *)
-  (*         rewrite mul_degree_eq, Hp1, Hp2. *)
-  (*         cbv -[Nat.add]. Lia.lia. } *)
-  (*       apply phi_injective2; unfold eq1; simpl; fold u v. *)
-  (*       - rewrite Hv. fold a1 a2. *)
-  (*         assert (Peq (Padd (Pmul a2 (Pmul u p1)) (Pmul a1 (Psub Pone (Pmul u p1)))) (Padd a1 (Pmul (Pmul (Psub a2 a1) u) p1))) as ->. *)
-  (*         { rewrite ring_sub_definition, (left_distributive a1), right_identity, associative, (commutative _ a1), <- associative, mul_opp_r, <- mul_opp_l, <- right_distributive, <- ring_sub_definition, associative. *)
-  (*           reflexivity. } *)
-  (*         rewrite Hp_eq, Pmod_distr, (commutative p1 p2), Pmul_mod_distr_r. *)
-  (*         rewrite (Pmod_small a1); [|rewrite commutative; assumption]. *)
-  (*         rewrite Pmod_add_r. unfold a1. rewrite Pmod_mod_eq. reflexivity. *)
-  (*       - rewrite Hu. fold a1 a2. *)
-  (*         assert (Peq (Padd (Pmul a2 (Psub Pone (Pmul v p2))) (Pmul a1 (Pmul v p2))) (Padd a2 (Pmul (Pmul (Psub a1 a2) v) p2))) as ->. *)
-  (*         { rewrite ring_sub_definition, (left_distributive a2), right_identity, associative, mul_opp_r, <- mul_opp_l, associative, <- (associative a2), <- right_distributive, <- right_distributive, (commutative _ a1), <- ring_sub_definition. *)
-  (*           reflexivity. } *)
-  (*         rewrite Hp_eq, Pmod_distr, Pmul_mod_distr_r. *)
-  (*         rewrite (Pmod_small a2) by assumption. *)
-  (*         rewrite Pmod_add_r. unfold a2. rewrite Pmod_mod_eq. reflexivity. *)
-  (*     Qed. *)
-
-  (*     Lemma phi_psi_id2 x: *)
-  (*       EQ2 (phi2 (psi2 x)) x. *)
-  (*     Proof. *)
-  (*       destruct x as [[x1 Hx1] [x2 Hx2]]. unfold phi2, psi2, EQ2, eq1; simpl. *)
-  (*       generalize (Pegcd_bezout_coprime p1 p2 Hcoprime). *)
-  (*       pose (u := (Pdiv (fst (Pegcd p1 p2)) (Pgcd p1 p2))). *)
-  (*       pose (v := (Pdiv (snd (Pegcd p1 p2)) (Pgcd p1 p2))). *)
-  (*       fold u v. intro Huv. *)
-  (*       assert (Hu: Peq (Pmul u p1) (Psub Pone (Pmul v p2))). *)
-  (*       { rewrite <- Huv, ring_sub_definition, <- associative, right_inverse. *)
-  (*         rewrite right_identity; reflexivity. } *)
-  (*       assert (Hv: Peq (Pmul v p2) (Psub Pone (Pmul u p1))). *)
-  (*       { rewrite <- Huv, ring_sub_definition, <- associative, (commutative (Pmul v p2)), associative, right_inverse. *)
-  (*         rewrite left_identity; reflexivity. } *)
-  (*       destruct (Peq_dec p1 Pzero) as [Hp1|Hp1nz]. *)
-  (*       { rewrite Hv, Hp1 in *. rewrite Hp_eq. *)
-  (*         rewrite Pmod_0_r, mul_0_r, mul_0_r, mul_0_l, Pmod_0_r, left_identity. *)
-  (*         rewrite ring_sub_definition, Group.inv_id, right_identity, right_identity. *)
-  (*         split; [reflexivity|]. unfold coprime in Hcoprime. *)
-  (*         rewrite Pgcd_0_l in Hcoprime. *)
-  (*         generalize (Pdivides_degree_zero p2 x1 Hcoprime). *)
-  (*         unfold Pdivides; intro A; rewrite A, Hx2. *)
-  (*         symmetry; apply (Pdivides_degree_zero p2 x2 Hcoprime). } *)
-  (*       destruct (Peq_dec p2 Pzero) as [Hp2|Hp2nz]. *)
-  (*       { unfold eq1; simpl; fold u v. *)
-  (*         rewrite Hu, Hp2 in *. rewrite Hp_eq. *)
-  (*         rewrite Pmod_0_r, mul_0_r, mul_0_r, mul_0_r, Pmod_0_r, right_identity. *)
-  (*         rewrite ring_sub_definition, Group.inv_id, right_identity, right_identity. *)
-  (*         split; [|reflexivity]. unfold coprime in Hcoprime. *)
-  (*         rewrite Pgcd_0_r in Hcoprime. *)
-  (*         generalize (Pdivides_degree_zero p1 x2 Hcoprime). *)
-  (*         unfold Pdivides; intro A; rewrite A, Hx1. *)
-  (*         symmetry; apply (Pdivides_degree_zero p1 x1 Hcoprime). } *)
-  (*       destruct (degree p1) as [np1|] eqn:Hp1; [|apply zero_degree in Hp1; contradiction]. *)
-  (*       destruct (degree p2) as [np2|] eqn:Hp2; [|apply zero_degree in Hp2; contradiction]. *)
-  (*       assert (Ha1: degree_lt (degree x1) (degree (Pmul p1 p2))). *)
-  (*       { generalize (Pmod_degree_lt x1 p1 Hp1nz); intro. *)
-  (*         rewrite Hx1. eapply degree_lt_le_trans; eauto. *)
-  (*         rewrite mul_degree_eq, Hp1, Hp2. *)
-  (*         cbv -[Nat.add]. Lia.lia. } *)
-  (*       assert (Ha2: degree_lt (degree x2) (degree (Pmul p1 p2))). *)
-  (*       { generalize (Pmod_degree_lt x2 p2 Hp2nz); intro. *)
-  (*         rewrite Hx2. eapply degree_lt_le_trans; eauto. *)
-  (*         rewrite mul_degree_eq, Hp1, Hp2. *)
-  (*         cbv -[Nat.add]. Lia.lia. } *)
-  (*       split; rewrite Pmod_distr. *)
-  (*       - rewrite Hp_eq, associative, (commutative _ p1), Pmul_mod_distr_l. *)
-  (*         rewrite Hv, ring_sub_definition, (left_distributive x1), right_identity. *)
-  (*         rewrite (commutative p1), Pmod_add_l, <- mul_opp_l. *)
-  (*         rewrite Pmod_distr, (associative x1), (commutative _ p1), Pmul_mod_distr_l, (commutative p1 (Pmod _ _)), Pmod_add_r. *)
-  (*         rewrite (Pmod_small x1); auto. symmetry; assumption. *)
-  (*       - rewrite Hp_eq, (associative x1 v), Pmul_mod_distr_r. *)
-  (*         rewrite Hu, ring_sub_definition, (left_distributive x2), right_identity. *)
-  (*         rewrite Pmod_add_r, Pmod_distr, <- mul_opp_l. *)
-  (*         rewrite (associative x2), Pmul_mod_distr_r, Pmod_add_r. *)
-  (*         rewrite (Pmod_small x2); auto. symmetry; assumption. *)
-  (*     Qed. *)
-
-  (*     Lemma psi_EQ2 a b: *)
-  (*       eq1 (psi2 a) (psi2 b) <-> EQ2 a b. *)
-  (*     Proof. *)
-  (*       split; [intro A|intro A; rewrite A; reflexivity]. *)
-  (*       rewrite <- (phi_psi_id2 a), A, phi_psi_id2. reflexivity. *)
-  (*     Qed. *)
-
-  (*     Lemma psi_ZERO2: *)
-  (*       eq1 (psi2 ZERO2) (zero: Pquot p). *)
-  (*     Proof. rewrite <- ZERO_def2. apply psi_phi_id2. Qed. *)
-
-  (*     Lemma psi_ONE2: *)
-  (*       eq1 (psi2 ONE2) (one : Pquot p). *)
-  (*     Proof. rewrite <- ONE_def2. apply psi_phi_id2. Qed. *)
-
-  (*     Lemma psi_OPP2 a: *)
-  (*       eq1 (psi2 (OPP2 a)) (opp (psi2 a)). *)
-  (*     Proof. *)
-  (*       destruct a as [[a1 Ha1] [a2 Ha2]]. unfold OPP2, psi2, eq1; simpl. *)
-  (*       rewrite Pmod_opp, Pmod_opp, mul_opp_l, mul_opp_l, <- Group.inv_op, Pmod_opp, Pmod_opp, Pmod_mod_eq. *)
-  (*       rewrite <- Ha1, <- Ha2, (commutative (Pmul a1 _)). reflexivity. *)
-  (*     Qed. *)
-
-  (*     Lemma psi_ADD2 a b: *)
-  (*       eq1 (psi2 (ADD2 a b)) (add (psi2 a) (psi2 b)). *)
-  (*     Proof. *)
-  (*       destruct a as [[a1 Ha1] [a2 Ha2]]. *)
-  (*       destruct b as [[b1 Hb1] [b2 Hb2]]. *)
-  (*       unfold ADD2, psi2, eq1; simpl. *)
-  (*       rewrite Hp_eq, (Pmod_distr a1 b1), (Pmod_distr a2 b2), <- (Pmod_distr _ _ (Pmul p1 p2)), Pmod_mod_eq. *)
-  (*       rewrite <- Ha1, <- Ha2, <- Hb1, <- Hb2. *)
-  (*       rewrite <- (associative (Pmul a2 _) (Pmul a1 _)), (associative (Pmul a1 _) (Pmul b2 _)), (commutative (Pmul a1 _) (Pmul b2 _)), <- (associative (Pmul b2 _)), <- right_distributive, (associative (Pmul a2 _)), <- right_distributive. *)
-  (*       reflexivity. *)
-  (*     Qed. *)
-
-  (*     Lemma psi_SUB2 a b: *)
-  (*       eq1 (psi2 (SUB2 a b)) (sub (psi2 a) (psi2 b)). *)
-  (*     Proof. rewrite ring_sub_definition, SUB_def2, psi_ADD2, psi_OPP2. reflexivity. Qed. *)
-
-  (*     Lemma psi_MUL2 a b: *)
-  (*       eq1 (psi2 (MUL2 a b)) (mul (psi2 a) (psi2 b)). *)
-  (*     Proof. *)
-  (*       generalize (phi_psi_id2 (MUL2 a b)); intros [A B]. *)
-  (*       generalize (Pegcd_bezout_coprime p1 p2 Hcoprime). *)
-  (*       pose (u := (Pdiv (fst (Pegcd p1 p2)) (Pgcd p1 p2))). *)
-  (*       pose (v := (Pdiv (snd (Pegcd p1 p2)) (Pgcd p1 p2))). *)
-  (*       fold u v. intro Huv. *)
-  (*       assert (Hu: Peq (Pmul u p1) (Psub Pone (Pmul v p2))). *)
-  (*       { rewrite <- Huv, ring_sub_definition, <- associative, right_inverse. *)
-  (*         rewrite right_identity; reflexivity. } *)
-  (*       assert (Hv: Peq (Pmul v p2) (Psub Pone (Pmul u p1))). *)
-  (*       { rewrite <- Huv, ring_sub_definition, <- associative, (commutative (Pmul v p2)), associative, right_inverse. *)
-  (*         rewrite left_identity; reflexivity. } *)
-  (*       destruct (Peq_dec p1 Pzero) as [Hp1|Hp1nz]. *)
-  (*       { destruct a as [[a1 Ha1] [a2 Ha2]]. *)
-  (*         destruct b as [[b1 Hb1] [b2 Hb2]]. *)
-  (*         unfold MUL2, psi2, eq1; simpl. clear A B. *)
-  (*         rewrite Hp1, mul_0_r, left_identity in Huv. *)
-  (*         fold u v. rewrite Hp_eq, Huv, Hp1, mul_0_r, Pmod_0_r, mul_0_r, left_identity, right_identity, mul_0_l, Pmod_0_r, mul_0_r, left_identity, right_identity, Pmod_0_r, mul_0_r, right_identity, left_identity, Pmod_0_r, Pmod_0_r. reflexivity. } *)
-  (*       destruct (Peq_dec p2 Pzero) as [Hp2|Hp2nz]. *)
-  (*       { destruct a as [[a1 Ha1] [a2 Ha2]]. *)
-  (*         destruct b as [[b1 Hb1] [b2 Hb2]]. *)
-  (*         unfold MUL2, psi2, eq1; simpl. clear A B. *)
-  (*         rewrite Hp2, mul_0_r, right_identity in Huv. *)
-  (*         fold u v. rewrite Hp_eq, Huv, Hp2, mul_0_r, Pmod_0_r, mul_0_r, right_identity, right_identity, mul_0_r, Pmod_0_r, right_identity, mul_0_r, right_identity, Pmod_0_r, Pmod_0_r, right_identity, mul_0_r, Pmod_0_r, right_identity. reflexivity. } *)
-  (*       destruct (degree p1) as [np1|] eqn:Hp1; [|apply zero_degree in Hp1; contradiction]. *)
-  (*       destruct (degree p2) as [np2|] eqn:Hp2; [|apply zero_degree in Hp2; contradiction]. *)
-  (*       destruct a as [[a1 Ha1] [a2 Ha2]]. *)
-  (*       destruct b as [[b1 Hb1] [b2 Hb2]]. *)
-  (*       apply phi_injective2; [rewrite A|rewrite B]; clear A B. *)
-  (*       - unfold MUL2, psi2, eq1; simpl. fold u v. *)
-  (*         rewrite Hp_eq, Pmod_mul_mod_l, <- (Pmul_mod_idemp (Pmod _ _) (Pmod _ _) p1). *)
-  (*         rewrite Pmod_mul_mod_l, Pmod_mul_mod_l. *)
-  (*         rewrite (associative a2 u), Pmod_add_l. *)
-  (*         rewrite (associative b2 u), Pmod_add_l. *)
-  (*         rewrite Hv, ring_sub_definition, (left_distributive a1), (left_distributive b1), right_identity, right_identity, <- mul_opp_l. *)
-  (*         rewrite (associative a1 (Popp u)), Pmod_add_r. *)
-  (*         rewrite (associative b1 (Popp u)), Pmod_add_r. *)
-  (*         rewrite Pmul_mod_idemp. reflexivity. *)
-  (*       - unfold MUL2, psi2, eq1; simpl. fold u v. *)
-  (*         rewrite Hp_eq, Pmod_mul_mod_r, <- (Pmul_mod_idemp (Pmod _ _) (Pmod _ _) p2). *)
-  (*         rewrite Pmod_mul_mod_r, Pmod_mul_mod_r. *)
-  (*         rewrite (associative a1 v), Pmod_add_r. *)
-  (*         rewrite (associative b1 v), Pmod_add_r. *)
-  (*         rewrite Hu, ring_sub_definition, (left_distributive a2), (left_distributive b2), right_identity, right_identity, <- mul_opp_l. *)
-  (*         rewrite (associative a2 (Popp v)), Pmod_add_r. *)
-  (*         rewrite (associative b2 (Popp v)), Pmod_add_r. *)
-  (*         rewrite Pmul_mod_idemp. reflexivity. *)
-  (*     Qed. *)
-
-  (*     Lemma CRT_ring_isomorphism2: *)
-  (*       @ring _ EQ2 ZERO2 ONE2 OPP2 ADD2 SUB2 MUL2 *)
-  (*       /\ @Ring.is_homomorphism _ eq1 one add mul _ EQ2 ONE2 ADD2 MUL2 phi2 *)
-  (*       /\ @Ring.is_homomorphism _ EQ2 ONE2 ADD2 MUL2 _ eq1 one add mul psi2. *)
-  (*     Proof. *)
-  (*       apply Ring.ring_by_isomorphism. *)
-  (*       - apply psi_phi_id2. *)
-  (*       - apply psi_EQ2. *)
-  (*       - apply psi_ZERO2. *)
-  (*       - apply psi_ONE2. *)
-  (*       - apply psi_OPP2. *)
-  (*       - apply psi_ADD2. *)
-  (*       - apply psi_SUB2. *)
-  (*       - apply psi_MUL2. *)
-  (*     Qed. *)
-  (*   End CRT2. *)
-  (*   Section Negacyclic. *)
-  (*     (* Negacyclic polynomials X^n + a *) *)
-  (*     Definition negacyclic (n: nat) (a: F): P := (Padd (base n) (Pconst a)). *)
-  (*     (* "Posicyclic" polynomials X^n - a *) *)
-  (*     Definition posicyclic (n: nat) (a: F): P := (Psub (base n) (Pconst a)). *)
-  (*     Global Instance peq_negacyclic_proper n: Proper (Feq ==> Peq) (negacyclic n). *)
-  (*     Proof. intros a1 a2 Ha; unfold negacyclic. rewrite Ha. reflexivity. Qed. *)
-  (*     Global Instance peq_posicyclic_proper n: Proper (Feq ==> Peq) (posicyclic n). *)
-  (*     Proof. intros a1 a2 Ha; unfold posicyclic. rewrite Ha. reflexivity. Qed. *)
-  (*     Lemma negacyclic_degree n a (Hngt0: (n > 0)%nat): *)
-  (*       degree (negacyclic n a) = Some n :> _. *)
-  (*     Proof. *)
-  (*       assert (X: coeff (negacyclic n a) n = 1). *)
-  (*       { unfold negacyclic. *)
-  (*         rewrite add_definition, base_definition, const_definition. *)
-  (*         destruct (dec_eq_nat n n); [|congruence]. destruct n; [Lia.lia|]. *)
-  (*         apply right_identity. } *)
-  (*       generalize (degree_definition (negacyclic n a)). *)
-  (*       destruct (degree (negacyclic n a)) as [np1|] eqn:Hnp1. *)
-  (*       - intros [A B]. unfold negacyclic in A. *)
-  (*         unfold negacyclic in A. rewrite add_definition, base_definition, const_definition in A. *)
-  (*         destruct (dec_eq_nat n np1); [auto|]. *)
-  (*         destruct np1; [|elim A; apply right_identity]. *)
-  (*         rewrite B in X by Lia.lia. elim (zero_neq_one X). *)
-  (*       - intros A. rewrite A in X. elim (zero_neq_one X). *)
-  (*     Qed. *)
-  (*     Lemma posicyclic_degree n a (Hngt0: (n > 0)%nat): *)
-  (*       degree (posicyclic n a) = Some n :> _. *)
-  (*     Proof. *)
-  (*       assert (X: coeff (posicyclic n a) n = 1). *)
-  (*       { unfold posicyclic. *)
-  (*         rewrite sub_definition, base_definition, const_definition. *)
-  (*         destruct (dec_eq_nat n n); [|congruence]. destruct n; [Lia.lia|]. *)
-  (*         rewrite ring_sub_definition, Group.inv_id. *)
-  (*         apply right_identity. } *)
-  (*       generalize (degree_definition (posicyclic n a)). *)
-  (*       destruct (degree (posicyclic n a)) as [np1|] eqn:Hnp1. *)
-  (*       - intros [A B]. unfold posicyclic in A. *)
-  (*         unfold posicyclic in A. rewrite sub_definition, base_definition, const_definition in A. *)
-  (*         destruct (dec_eq_nat n np1); [auto|]. *)
-  (*         destruct np1; [|elim A; rewrite ring_sub_definition, Group.inv_id; apply right_identity]. *)
-  (*         rewrite B in X by Lia.lia. elim (zero_neq_one X). *)
-  (*       - intros A. rewrite A in X. elim (zero_neq_one X). *)
-  (*     Qed. *)
-  (*     Lemma negacyclic_opp n a: *)
-  (*       Peq (negacyclic n (Fopp a)) (posicyclic n a). *)
-  (*     Proof. unfold negacyclic, posicyclic; rewrite ring_sub_definition, opp_const. reflexivity. Qed. *)
-  (*     Lemma posicyclic_opp n a: *)
-  (*       Peq (posicyclic n (Fopp a)) (negacyclic n a). *)
-  (*     Proof. rewrite (peq_negacyclic_proper _ a (Fopp (Fopp a)) ltac:(symmetry; apply Group.inv_inv)), negacyclic_opp. reflexivity. Qed. *)
-  (*     Lemma posicyclic_decomposition n a: *)
-  (*       Peq (posicyclic (2 * n)%nat (a * a)) (Pmul (posicyclic n a) (negacyclic n a)). *)
-  (*     Proof. *)
-  (*       unfold posicyclic, negacyclic. *)
-  (*       rewrite right_distributive, left_distributive, left_distributive. *)
-  (*       rewrite base_mul_base, const_mul_const, (commutative (base n) (Pconst a)). *)
-  (*       assert (n + n = 2 * n :> _)%nat as -> by Lia.lia. *)
-  (*       rewrite (ring_sub_definition (Padd _ _)), Group.inv_op. *)
-  (*       rewrite (associative _ (Popp _)), <- (associative (base _) (Pmul _ _)). *)
-  (*       rewrite (commutative (Pmul _ _) (Popp _)). *)
-  (*       rewrite associative, <- associative, right_inverse, right_identity. *)
-  (*       rewrite <- ring_sub_definition. reflexivity. *)
-  (*     Qed. *)
-  (*     Lemma posicyclic_decomposition_coprime n a (Hngt0: (n > 0)%nat) (Hanz: a <> 0): *)
-  (*       coprime (posicyclic n a) (negacyclic n a). *)
-  (*     Proof. *)
-  (*       assert (A: a + a <> 0). *)
-  (*       { rewrite <- (ring_monoid_mul.(monoid_is_right_identity).(right_identity) a). *)
-  (*         rewrite <- left_distributive. *)
-  (*         apply IntegralDomain.IntegralDomain.nonzero_product_iff_nonzero_factors. *)
-  (*         split; auto. *)
-  (*         generalize (char_ge_3 (BinPosDef.Pos.of_nat 2%nat) ltac:(simpl; Lia.lia)); simpl. *)
-  (*         rewrite left_identity; auto. } *)
-  (*       assert (Hnz: not (Peq (negacyclic n a) Pzero)). *)
-  (*       { intro X. generalize (negacyclic_degree n a Hngt0). *)
-  (*         rewrite X, degree_zero. congruence. } *)
-  (*       assert (Hmod12: Peq (Pmod (posicyclic n a) (negacyclic n a)) (Pconst (Fopp (a + a)))). *)
-  (*       { symmetry; eapply (Pdivmod_eq_iff (posicyclic n a) (negacyclic n a) Hnz Pone). *)
-  (*         - rewrite left_identity. unfold negacyclic. *)
-  (*           rewrite <- associative, const_add_const, Group.inv_op, associative, right_inverse, left_identity, <- opp_const, <- ring_sub_definition. *)
-  (*           reflexivity. *)
-  (*         - rewrite degree_const, negacyclic_degree; auto. *)
-  (*           destruct (Feq_dec (Fopp _) 0); cbv; auto; Lia.lia. } *)
-  (*       unfold coprime. *)
-  (*       rewrite Pgcd_mod, Pdivides_gcd; [|apply Pdivides_degree_zero]; rewrite (Hmod12); rewrite degree_const; destruct (Feq_dec (Fopp (a + a)) 0); auto. *)
-  (*       all: apply (proj1 (Group.inv_id_iff _)) in f; contradiction. *)
-  (*     Qed. *)
-  (*   End Negacyclic. *)
-  (*   Section Cyclotomic_NTT_base. *)
-  (*     Variable (n: nat) (a: F) (p p1 p2: P). *)
-  (*     Hypothesis Hngt0: (n > 0)%nat. *)
-  (*     Hypothesis Hanz: a <> 0. *)
-  (*     Hypothesis Hpeq: Peq p (posicyclic (2 * n)%nat (a * a)). *)
-  (*     Hypothesis Hpeq1: Peq p1 (posicyclic n a). *)
-  (*     Hypothesis Hpeq2: Peq p2 (negacyclic n a). *)
-
-  (*     Definition NTT_base_psi_unpacked (x y: P): P := *)
-  (*       (* (x + y)/2 + (1/2a)(x - y)X^n*) *)
-  (*       (Padd (Pmul (Pconst (Finv (1 + 1))) (Padd x y)) (Pmul (Pmul (Pconst (Finv (a + a))) (base n)) (Psub x y))). *)
-
-  (*     Lemma NTT_base_psi_unpacked_alt_eq x y: *)
-  (*       Peq (Pmul (Pconst (1 + 1)) (NTT_base_psi_unpacked x y)) (Padd (Padd x y) (Pmul (Pmul (Pconst (Finv a)) (base n)) (Psub x y))). *)
-  (*     Proof. *)
-  (*       unfold NTT_base_psi_unpacked. *)
-  (*       repeat rewrite <- (associative (op:=Pmul)). intro k. *)
-  (*       rewrite add_definition, mul_const_coeff_l, add_definition, mul_const_coeff_l. *)
-  (*       rewrite add_definition, mul_const_coeff_l, mul_const_coeff_l. *)
-  (*       assert (Finv (a + a) = Finv (1 + 1) * Finv a) as ->. *)
-  (*       { symmetry. apply Field.inv_unique. *)
-  (*         assert (a + a = a * (1 + 1)) as -> by (rewrite left_distributive, right_identity; reflexivity). *)
-  (*         rewrite <- (associative (Finv (1 + 1))), (associative (Finv a)), left_multiplicative_inverse; auto. *)
-  (*         rewrite left_identity, left_multiplicative_inverse; [reflexivity|]. *)
-  (*         generalize (char_ge_3 (BinPos.Pos.of_nat 2%nat) ltac:(simpl; Lia.lia)); simpl; rewrite left_identity; auto. } *)
-  (*       rewrite <- (associative (Finv (1 + 1))), <- left_distributive. *)
-  (*       rewrite associative, right_multiplicative_inverse, left_identity; [reflexivity|]. *)
-  (*       generalize (char_ge_3 (BinPos.Pos.of_nat 2%nat) ltac:(simpl; Lia.lia)); simpl; rewrite left_identity; auto. *)
-  (*     Qed. *)
-
-  (*     Definition NTT_base_psi_unpacked_list (l: list F) (n: nat) (z: F) := *)
-  (*       fold_left *)
-  (*         (fun l i => *)
-  (*            let tmp := nth_default 0 l i in *)
-  (*            let l0 := set_nth i (tmp + nth_default 0 l (i + n)) l in *)
-  (*            let l1 := set_nth (i + n) (tmp - nth_default 0 l (i + n)) l0 in *)
-  (*            set_nth (i + n) (z * nth_default 0 l1 (i + n)) l1) *)
-  (*         (seq 0%nat n) l. *)
-
-  (*     Lemma NTT_base_psi_unpacked_list_length l k z: *)
-  (*       length (NTT_base_psi_unpacked_list l k z) = length l :> _. *)
-  (*     Proof. *)
-  (*       unfold NTT_base_psi_unpacked_list. apply fold_left_invariant. *)
-  (*       - reflexivity. *)
-  (*       - intros. repeat rewrite length_set_nth. auto. *)
-  (*     Qed. *)
-
-  (*     Lemma NTT_base_psi_unpacked_list_nth_default (l: list F) (k: nat) (z: F): *)
-  (*       length l >= 2 * k -> *)
-  (*       forall (d : F) (i : nat), *)
-  (*         nth_default d (NTT_base_psi_unpacked_list l k z) i = *)
-  (*           (if dec_lt_nat i k *)
-  (*            then *)
-  (*              let x1 := nth_default 0 l i in *)
-  (*              let x2 := nth_default 0 l (i + k) in x1 + x2 *)
-  (*            else *)
-  (*              if dec_lt_nat i (2 * k) *)
-  (*              then *)
-  (*                let x1 := nth_default 0 l (i - k) in *)
-  (*                let x2 := nth_default 0 l i in z * (x1 - x2) *)
-  (*              else nth_default d l i). *)
-  (*     Proof. *)
-  (*       unfold NTT_base_psi_unpacked_list. *)
-  (*       set (f := (fun (p: nat) (l : list F) (i : nat) => set_nth (i + p) (z * nth_default 0 (set_nth (i + p) (nth_default 0 l i - nth_default 0 l (i + p)) (set_nth i (nth_default 0 l i + nth_default 0 l (i + p)) l)) (i + p)) (set_nth (i + p) (nth_default 0 l i - nth_default 0 l (i + p)) (set_nth i (nth_default 0 l i + nth_default 0 l (i + p)) l)))). *)
-  (*       fold (f k). *)
-  (*       assert (IH: forall (k : nat) (p: nat) (l : list F), *)
-  (*                (k <= p)%nat -> *)
-  (*                (length l >= 2 * p)%nat -> *)
-  (*                forall (d : F) (i : nat), *)
-  (*                  nth_default d (fold_left (f p) (seq 0 k) l) i = *)
-  (*                    (if dec_lt_nat i k *)
-  (*                     then nth_default 0 l i + nth_default 0 l (i + p) *)
-  (*                     else *)
-  (*                       if dec_le_nat p i *)
-  (*                       then *)
-  (*                         if dec_lt_nat i (p + k) then *)
-  (*                           z * (nth_default 0 l (i - p) - nth_default 0 l i) *)
-  (*                         else nth_default d l i *)
-  (*                       else nth_default d l i)). *)
-  (*       { intros xk. induction xk; intros xp xl Hxp Hxl d i. *)
-  (*         - simpl. destruct (dec_le_nat xp i); [|reflexivity]. *)
-  (*           rewrite PeanoNat.Nat.add_0_r. *)
-  (*           destruct (dec_lt_nat i xp); [Lia.lia|reflexivity]. *)
-  (*         - rewrite seq_S, fold_left_app, PeanoNat.Nat.add_0_l. *)
-  (*           cbn [fold_left]. unfold f at 1. *)
-  (*           assert (Hlength': length (fold_left (f xp) (seq 0 xk) xl) = length xl :> _). *)
-  (*           { apply fold_left_invariant; [reflexivity|]. *)
-  (*             intros. unfold f. repeat rewrite length_set_nth. auto. } *)
-  (*           repeat rewrite set_nth_nth_default_full. *)
-  (*           repeat rewrite length_set_nth, Hlength'. *)
-  (*           destruct (Compare_dec.lt_dec i (length xl)). *)
-  (*           2:{ destruct (dec_lt_nat i (S xk)); [Lia.lia|]. *)
-  (*               destruct (dec_le_nat xp i); [|Lia.lia]. *)
-  (*               destruct (dec_lt_nat i (xp + S xk)); [Lia.lia|]. *)
-  (*               rewrite nth_default_out_of_bounds by Lia.lia. reflexivity. } *)
-  (*           destruct (PeanoNat.Nat.eq_dec i (xk + xp)). *)
-  (*           { subst i. rewrite NatUtil.eq_nat_dec_refl. *)
-  (*             destruct (dec_le_nat xp (xk + xp)); [|Lia.lia]. *)
-  (*             destruct (dec_lt_nat (xk + xp) (xp + S xk)); [|Lia.lia]. *)
-  (*             destruct (Compare_dec.lt_dec (xk + xp) (length xl)); [|Lia.lia]. *)
-  (*             destruct (dec_lt_nat (xk + xp) (S xk)); [Lia.lia|]. *)
-  (*             assert (xk + xp - xp = xk :> _)%nat as -> by Lia.lia. *)
-  (*             do 2 (rewrite IHxk by Lia.lia). *)
-  (*             destruct (dec_lt_nat xk xk); [Lia.lia|]. *)
-  (*             destruct (dec_lt_nat xk (xp + xk)); [|Lia.lia]. *)
-  (*             destruct (dec_lt_nat (xk + xp) xk); [Lia.lia|]. *)
-  (*             destruct (dec_le_nat xp (xk + xp)); [|Lia.lia]. *)
-  (*             destruct (dec_lt_nat (xk + xp) (xp + xk)); [Lia.lia|]. *)
-  (*             destruct (dec_le_nat xp xk); [Lia.lia|]. *)
-  (*             reflexivity. } *)
-  (*           destruct (PeanoNat.Nat.eq_dec i xk). *)
-  (*           { subst i. do 2 (rewrite IHxk by Lia.lia). *)
-  (*             destruct (dec_lt_nat xk xk) as [|_]; [Lia.lia|]. *)
-  (*             destruct (dec_lt_nat xk (xp + xk)) as [_|]; [|Lia.lia]. *)
-  (*             destruct (dec_lt_nat xk (S xk)) as [_|]; [|Lia.lia]. *)
-  (*             destruct (dec_lt_nat (xk + xp) (xp + xk)) as [|_]; [Lia.lia|]. *)
-  (*             destruct (dec_lt_nat (xk + xp) xk) as [|_]; [Lia.lia|]. *)
-  (*             destruct (dec_le_nat xp xk) as [|_]; [Lia.lia|]. *)
-  (*             destruct (dec_le_nat xp (xk + xp)); reflexivity. } *)
-  (*           rewrite IHxk by Lia.lia. *)
-  (*           destruct (dec_lt_nat i xk). *)
-  (*           { destruct (dec_lt_nat i (S xk)) as [_|]; [|Lia.lia]. *)
-  (*             reflexivity. } *)
-  (*           destruct (dec_lt_nat i (S xk)) as [|_]; [Lia.lia|]. *)
-  (*           destruct (dec_le_nat xp i); [|reflexivity]. *)
-  (*           destruct (dec_lt_nat i (xp + xk)). *)
-  (*           { destruct (dec_lt_nat i (xp + S xk)); [|Lia.lia]. *)
-  (*             reflexivity. } *)
-  (*           destruct (dec_lt_nat i (xp + S xk)); [Lia.lia|]. reflexivity. } *)
-  (*       intros. rewrite IH by Lia.lia. *)
-  (*       destruct (dec_lt_nat i k); [reflexivity|]. *)
-  (*       destruct (dec_le_nat k i); [|Lia.lia]. *)
-  (*       assert (k + k = 2 * k :> _)%nat as -> by Lia.lia. *)
-  (*       reflexivity. *)
-  (*     Qed. *)
-
-  (*     Lemma NTT_base_psi_unpacked_list_spec x1 x2: *)
-  (*       (measure x1 <= n)%nat -> *)
-  (*       (measure x2 <= n)%nat -> *)
-  (*       Peq (Pmul (Pconst (1 + 1)) (NTT_base_psi_unpacked x1 x2)) *)
-  (*           (of_list (NTT_base_psi_unpacked_list (to_list n x1 ++ to_list n x2) n (Finv a))). *)
-  (*     Proof. *)
-  (*       intros Hx1 Hx2. rewrite NTT_base_psi_unpacked_alt_eq. *)
-  (*       intro k. *)
-  (*       rewrite add_definition, add_definition, mul_definition. *)
-  (*       unfold mul_coeff. *)
-  (*       rewrite (bigop_ext_eq _ _ (fun i => if dec_eq_nat n i then Finv a * (coeff x1 (k - i) - coeff x2 (k - i)) else 0)). *)
-  (*       2:{ intros. rewrite mul_const_base_coeff, sub_definition. *)
-  (*            destruct (dec_eq_nat n i); [reflexivity|]. *)
-  (*            rewrite Ring.mul_0_l. reflexivity. } *)
-  (*       unfold of_list. rewrite Pdecompose_coeff. *)
-  (*       rewrite NTT_base_psi_unpacked_list_length, app_length, to_list_length, to_list_length. *)
-  (*       destruct (dec_lt_nat k (n + n)). *)
-  (*       2:{ do 2 (rewrite measure_definition by Lia.lia). *)
-  (*           rewrite left_identity, left_identity. *)
-  (*           rewrite (bigop_ext_eq _ _ (fun _ => 0)). *)
-  (*           - rewrite bigop_const, Ring.mul_0_r; reflexivity. *)
-  (*           - intros i Hi. apply in_seq in Hi. *)
-  (*             destruct (dec_eq_nat n i); [|reflexivity]. *)
-  (*             subst i. do 2 rewrite measure_definition by Lia.lia. *)
-  (*             rewrite (proj2 (Ring.sub_zero_iff 0 0)) by reflexivity. *)
-  (*             rewrite Ring.mul_0_r. reflexivity. } *)
-  (*       rewrite NTT_base_psi_unpacked_list_nth_default by (rewrite app_length, to_list_length, to_list_length; Lia.lia). *)
-  (*       destruct (dec_lt_nat k (2 * n)) as [_|]; [|Lia.lia]. *)
-  (*       destruct (dec_lt_nat k n). *)
-  (*       { cbn zeta. rewrite (bigop_ext_eq _ _ (fun _ => 0)). *)
-  (*         2:{ intros i Hi. apply in_seq in Hi. *)
-  (*             destruct (dec_eq_nat n i); [Lia.lia|]. reflexivity. } *)
-  (*         rewrite bigop_const, Ring.mul_0_r, right_identity. *)
-  (*         do 2 rewrite nth_default_app. *)
-  (*         rewrite to_list_length. destruct (Compare_dec.lt_dec k n); [|Lia.lia]. *)
-  (*         destruct (Compare_dec.lt_dec (k + n) n); [Lia.lia|]. *)
-  (*         do 2 (rewrite to_list_nth_default_inbounds by Lia.lia). *)
-  (*         assert (k + n - n = k :> _)%nat as -> by Lia.lia. *)
-  (*         reflexivity. } *)
-  (*       cbn zeta. do 2 rewrite measure_definition by Lia.lia. *)
-  (*       do 2 rewrite left_identity. do 2 rewrite nth_default_app. *)
-  (*       rewrite to_list_length. destruct (Compare_dec.lt_dec (k - n) n); [|Lia.lia]. *)
-  (*       destruct (Compare_dec.lt_dec k n); [Lia.lia|]. *)
-  (*       do 2 (rewrite to_list_nth_default_inbounds by Lia.lia). *)
-  (*       assert (S k = S n + (k - n) :> _)%nat as -> by Lia.lia. *)
-  (*       rewrite seq_add, bigop_app, seq_S, bigop_app, bigop_cons, bigop_nil. *)
-  (*       rewrite (bigop_ext_eq _ _ (fun _ => 0)). *)
-  (*       2:{ intros i Hi. apply in_seq in Hi. *)
-  (*           destruct (dec_eq_nat n i); [Lia.lia|]. reflexivity. } *)
-  (*       rewrite bigop_const, Ring.mul_0_r, left_identity. *)
-  (*       rewrite (bigop_ext_eq _ _ (fun _ => 0)). *)
-  (*       2:{ intros i Hi. apply in_seq in Hi. *)
-  (*           destruct (dec_eq_nat n i); [Lia.lia|]. reflexivity. } *)
-  (*       rewrite bigop_const, Ring.mul_0_r, right_identity, right_identity. *)
-  (*       destruct (dec_eq_nat n (0 + n)) as [_|]; [|Lia.lia]. *)
-  (*       rewrite PeanoNat.Nat.add_0_l. reflexivity. *)
-  (*     Qed. *)
-
-  (*     Global Instance peq_NTT_base_psi_unpacked_proper: Proper (Peq ==> Peq ==> Peq) (NTT_base_psi_unpacked). *)
-  (*     Proof. *)
-  (*       intros pp1 pp1' Hp1 pp2 pp2' Hp2. unfold NTT_base_psi_unpacked. *)
-  (*       rewrite Hp1, Hp2. reflexivity. *)
-  (*     Qed. *)
-
-  (*     Program Definition NTT_base_psi (xy: Pquot p1 * Pquot p2) : Pquot p := *)
-  (*       NTT_base_psi_unpacked (proj1_sig (fst xy)) (proj1_sig (snd xy)). *)
-  (*     Next Obligation. *)
-  (*       assert (degree_p1: degree p1 = Some n :> _) by (rewrite Hpeq1; apply posicyclic_degree; auto). *)
-  (*       assert (degree_p2: degree p2 = Some n :> _) by (rewrite Hpeq2; apply negacyclic_degree; auto). *)
-  (*       assert (Hpnz: not (Peq p Pzero)). *)
-  (*       { rewrite Hpeq; intro X. generalize (posicyclic_degree (2 * n)%nat (a * a) ltac:(Lia.lia)). *)
-  (*         rewrite X, degree_zero. congruence. } *)
-  (*       assert (Hpmul: Peq p (Pmul p1 p2)) by (rewrite Hpeq, Hpeq1, Hpeq2; apply posicyclic_decomposition). *)
-  (*       assert (Hpnz1: not (Peq p1 Pzero)) by (apply (proj1 (IntegralDomain.IntegralDomain.nonzero_product_iff_nonzero_factors p1 p2) ltac:(generalize Hpnz; rewrite Hpmul; auto))). *)
-  (*       assert (Hpnz2: not (Peq p2 Pzero)) by (apply (proj1 (IntegralDomain.IntegralDomain.nonzero_product_iff_nonzero_factors p1 p2) ltac:(generalize Hpnz; rewrite Hpmul; auto))). *)
-  (*       unfold NTT_base_psi_unpacked. *)
-  (*       symmetry; apply Pmod_small. *)
-  (*       destruct p0 as [x Hx]. destruct p3 as [y Hy]. simpl. *)
-  (*       rewrite Hpeq, posicyclic_decomposition. *)
-  (*       rewrite mul_degree_eq, posicyclic_degree, negacyclic_degree; auto. *)
-  (*       generalize (Pmod_degree_lt x p1 Hpnz1); rewrite <- Hx, degree_p1. intro Hxlt. *)
-  (*       generalize (Pmod_degree_lt y p2 Hpnz2); rewrite <- Hy, degree_p2. intro Hylt. *)
-  (*       eapply degree_le_lt_trans; [eapply add_degree|]. *)
-  (*       rewrite mul_degree_eq, mul_degree_eq, mul_degree_eq, degree_const, degree_const, degree_base. *)
-  (*       assert (H2nz: (1 + 1 <> 0)) by (generalize (char_ge_3 (BinPos.Pos.of_nat 2%nat) ltac:(simpl; Lia.lia)); simpl; rewrite left_identity; auto). *)
-  (*       destruct (Feq_dec (Finv (1 + 1)) 0) as [He|Hn]. *)
-  (*       { assert (Hzn1: 0 <> 1) by apply zero_neq_one. *)
-  (*         elim Hzn1. rewrite <- (left_multiplicative_inverse (1 + 1) H2nz). *)
-  (*         rewrite He, mul_0_l. reflexivity. } *)
-  (*       assert (H2anz: a + a <> 0). *)
-  (*       { assert (a + a = a * (1 + 1)) as -> by (rewrite left_distributive, right_identity; reflexivity). *)
-  (*         apply IntegralDomain.IntegralDomain.nonzero_product_iff_nonzero_factors; auto. } *)
-  (*       destruct (Feq_dec (Finv (a + a)) 0) as [He|Hn']. *)
-  (*       { assert (Hzn1: 0 <> 1) by apply zero_neq_one. *)
-  (*         elim Hzn1. rewrite <- (left_multiplicative_inverse (a + a) H2anz). *)
-  (*         rewrite He, mul_0_l. reflexivity. } *)
-  (*       rewrite degree_add_0_l, degree_add_0_l. *)
-  (*       apply degree_max_lub_lt; [eapply degree_le_lt_trans; [apply add_degree|]; apply degree_max_lub_lt; [destruct (degree x)|destruct (degree y)]; cbv -[Nat.add] in *; Lia.lia|]. *)
-  (*       apply degree_lt_add_mono_l; [congruence|]. *)
-  (*       eapply degree_le_lt_trans; [apply sub_degree|]. *)
-  (*       apply degree_max_lub_lt; auto. *)
-  (*     Qed. *)
-
-  (*     Lemma NTT_base_psi_phi_id x: *)
-  (*       eq1 (NTT_base_psi (phi2 p p1 p2 x)) x. *)
-  (*     Proof. *)
-  (*       assert (Hpnz: not (Peq p Pzero)). *)
-  (*       { rewrite Hpeq; intro X. generalize (posicyclic_degree (2 * n)%nat (a * a) ltac:(Lia.lia)). *)
-  (*         rewrite X, degree_zero. congruence. } *)
-  (*       destruct x as [x Hx]. *)
-  (*       unfold phi2, eq1; cbn. unfold NTT_base_psi_unpacked. *)
-  (*       rewrite Hpeq1, Hpeq2. *)
-  (*       assert (Hm: (measure x <= 2 * n)%nat). *)
-  (*       { unfold measure; rewrite Hx. *)
-  (*         generalize (Pmod_degree_lt x p Hpnz). *)
-  (*         rewrite Hpeq, posicyclic_degree by Lia.lia. *)
-  (*         assert (2 * n = S (pred (2 * n)) :> _)%nat as -> by Lia.lia. *)
-  (*         destruct (degree (Pmod x p)); cbv; auto; Lia.lia. } *)
-  (*       rewrite (Pdecompose_eq x) at 5. *)
-  (*       rewrite (Pmod_cyclotomic x n a Hngt0 Hm). *)
-  (*       unfold negacyclic. *)
-  (*       rewrite <- (Group.inv_inv a), <- opp_const, <- ring_sub_definition. *)
-  (*       rewrite (Pmod_cyclotomic x n (Fopp a) Hngt0 Hm). *)
-  (*       rewrite ring_sub_definition, bigop_inv, bigop_same_index, bigop_same_index. *)
-  (*       rewrite bigop_l_distr, bigop_l_distr. *)
-  (*       unfold Pdecompose. *)
-  (*       rewrite (bigop_ext_eq (seq 0 n) _ (fun k : nat => Pmul (Pconst (coeff x k)) (base k))) at 1. *)
-  (*       2:{ intros i Hi; apply in_seq in Hi. *)
-  (*           rewrite <- right_distributive, const_add_const. *)
-  (*           rewrite mul_opp_l, <- (associative (coeff x i)). *)
-  (*           rewrite (associative (a * _)), (commutative (a * _)). *)
-  (*           rewrite <- (associative (coeff x i)), right_inverse, right_identity. *)
-  (*           rewrite associative, const_mul_const. *)
-  (*           assert (coeff x i + coeff x i = (1 + 1) * coeff x i) as -> by (rewrite right_distributive, left_identity; reflexivity). *)
-  (*           rewrite associative, left_multiplicative_inverse. *)
-  (*           2: generalize (char_ge_3 (BinPosDef.Pos.of_nat 2%nat) ltac:(simpl; Lia.lia)); simpl; rewrite left_identity; auto. *)
-  (*           rewrite left_identity. reflexivity. } *)
-  (*       rewrite (bigop_ext_eq (seq 0 n) (fun i => Pmul (Pmul _ _) _) (fun k : nat => Pmul (Pconst (coeff x (k + n))) (base (k + n)))). *)
-  (*       2:{ intros i Hi; apply in_seq in Hi. *)
-  (*           rewrite Group.inv_inv, <- mul_opp_l, <- right_distributive. *)
-  (*           rewrite opp_const, const_add_const, Group.inv_op, <- mul_opp_l. *)
-  (*           rewrite Group.inv_inv, associative. *)
-  (*           rewrite <- (associative (Pconst (Finv _))), (commutative (base n)). *)
-  (*           rewrite associative, const_mul_const, <- associative. *)
-  (*           rewrite (commutative (base n)), base_mul_base. *)
-  (*           rewrite associative, <- (associative (coeff x i)), <- right_distributive. *)
-  (*           rewrite (commutative (coeff x i)), <- (associative (_ * _)), right_inverse. *)
-  (*           rewrite right_identity, associative, left_multiplicative_inverse, left_identity; [reflexivity|]. *)
-  (*           assert (a + a = a * (1 + 1)) as -> by (rewrite left_distributive, right_identity; reflexivity). *)
-  (*           intro X; apply zero_product_zero_factor in X. *)
-  (*           destruct X; [auto|]. *)
-  (*           generalize (char_ge_3 (BinPosDef.Pos.of_nat 2%nat) ltac:(simpl; Lia.lia)); simpl; rewrite left_identity; auto. } *)
-  (*       rewrite (bigop_shift 0 n n (fun k => Pmul (Pconst (coeff x (k + n)%nat)) (base (k + n)%nat))). *)
-  (*       rewrite (bigop_ext_eq (seq (0 + n) n) _ (fun k : nat => Pmul (Pconst (coeff x k)) (base k))). *)
-  (*       2:{ intros i Hi; apply in_seq in Hi. *)
-  (*           assert (i - n + n = i :> _)%nat as -> by Lia.lia. reflexivity. } *)
-  (*       rewrite <- bigop_app, <- seq_add. *)
-  (*       assert (n + n = 2 * n :> _)%nat as -> by Lia.lia. *)
-  (*       rewrite (bigop_widen _ (seq 0 (measure _)) (seq (0 + measure x)%nat (2 * n - measure x)%nat)). *)
-  (*       2: intros i Hi k; apply in_seq in Hi; rewrite mul_const_base_coeff, zero_definition; destruct (dec_eq_nat i k); [apply measure_definition; Lia.lia|reflexivity]. *)
-  (*       rewrite <- seq_add. assert (_ + (_ - _) = 2 * n :> _)%nat as -> by Lia.lia. *)
-  (*       reflexivity. *)
-  (*     Qed. *)
-
-  (*     Global Instance EQ_proper_NTT_base_psi: Proper ((EQ2 _ _) ==> eq1) NTT_base_psi. *)
-  (*     Proof. *)
-  (*       intros x y. unfold EQ2, eq1, psi2; simpl. unfold NTT_base_psi_unpacked. intros (HEQ1 & HEQ2). *)
-  (*       destruct x as [x1 x2]. destruct y as [y1 y2]. *)
-  (*       simpl in *. *)
-  (*       rewrite HEQ1, HEQ2. reflexivity. *)
-  (*     Qed. *)
-
-  (*     Lemma NTT_base_psi_is_psi2 x: *)
-  (*       eq1 (NTT_base_psi x) (psi2 p _ _ x). *)
-  (*     Proof. *)
-  (*       assert (Hpmul: Peq p (Pmul p1 p2)) by (rewrite Hpeq, Hpeq1, Hpeq2; apply posicyclic_decomposition). *)
-  (*       assert (Hco: coprime p1 p2) by (rewrite Hpeq1, Hpeq2; apply (posicyclic_decomposition_coprime n a Hngt0 Hanz)). *)
-  (*       assert (He: eq1 (NTT_base_psi x) (NTT_base_psi (phi2 p p1 p2 (psi2 p p1 p2 x)))). *)
-  (*       { rewrite (phi_psi_id2 p p1 p2 Hco Hpmul x) at 1. reflexivity. } *)
-  (*       generalize (NTT_base_psi_phi_id (psi2 p p1 p2 x)). intro He2. *)
-  (*       unfold eq1 in *. rewrite He, He2. reflexivity. *)
-  (*     Qed. *)
-
-  (*     Lemma NTT_base_psi_inj: *)
-  (*       forall x y : Pquot p1 * Pquot p2, *)
-  (*         eq1 (NTT_base_psi x) (NTT_base_psi y) <-> EQ2 p1 p2 x y. *)
-  (*     Proof. *)
-  (*       assert (Hpmul: Peq p (Pmul p1 p2)) by (rewrite Hpeq, Hpeq1, Hpeq2; apply posicyclic_decomposition). *)
-  (*       assert (Hco: coprime p1 p2) by (rewrite Hpeq1, Hpeq2; apply (posicyclic_decomposition_coprime n a Hngt0 Hanz)). *)
-  (*       intros; rewrite NTT_base_psi_is_psi2, NTT_base_psi_is_psi2. *)
-  (*       apply (psi_EQ2 _ _ _ Hco Hpmul). *)
-  (*     Qed. *)
-
-  (*     Lemma NTT_base_psi_inj_aux: *)
-  (*       forall x1 (Hx1: Peq x1 (Pmod x1 p1)) *)
-  (*         x2 (Hx2: Peq x2 (Pmod x2 p1)) *)
-  (*         y1 (Hy1: Peq y1 (Pmod y1 p2)) *)
-  (*         y2 (Hy2: Peq y2 (Pmod y2 p2)), *)
-  (*         Peq (NTT_base_psi_unpacked x1 y1) (NTT_base_psi_unpacked x2 y2) <-> (Peq x1 x2 /\ Peq y1 y2). *)
-  (*     Proof. *)
-  (*       intros. apply (NTT_base_psi_inj (exist _ x1 Hx1, exist _ y1 Hy1) (exist _ x2 Hx2, exist _ y2 Hy2)). *)
-  (*     Qed. *)
-
-  (*     Lemma NTT_ring_isomorphism2: *)
-  (*       @ring _ (EQ2 p1 p2) (ZERO2 p1 p2) (ONE2 p1 p2) (OPP2 p1 p2) (ADD2 p1 p2) (SUB2 p1 p2) (MUL2 p1 p2) *)
-  (*       /\ @Ring.is_homomorphism _ eq1 one add mul _ (EQ2 p1 p2) (ONE2 p1 p2) (ADD2 p1 p2) (MUL2 p1 p2) (phi2 p p1 p2) *)
-  (*       /\ @Ring.is_homomorphism _ (EQ2 p1 p2) (ONE2 p1 p2) (ADD2 p1 p2) (MUL2 p1 p2) _ eq1 one add mul NTT_base_psi. *)
-  (*     Proof. *)
-  (*       assert (Hpmul: Peq p (Pmul p1 p2)) by (rewrite Hpeq, Hpeq1, Hpeq2; apply posicyclic_decomposition). *)
-  (*       assert (Hco: coprime p1 p2) by (rewrite Hpeq1, Hpeq2; apply (posicyclic_decomposition_coprime n a Hngt0 Hanz)). *)
-  (*       apply Ring.ring_by_isomorphism. *)
-  (*       - apply NTT_base_psi_phi_id. *)
-  (*       - apply NTT_base_psi_inj. *)
-  (*       - rewrite NTT_base_psi_is_psi2. apply (psi_ZERO2 _ _ _ Hco Hpmul). *)
-  (*       - rewrite NTT_base_psi_is_psi2. apply (psi_ONE2 _ _ _ Hco Hpmul). *)
-  (*       - intros; rewrite NTT_base_psi_is_psi2, NTT_base_psi_is_psi2. *)
-  (*         apply psi_OPP2. *)
-  (*       - intros; rewrite NTT_base_psi_is_psi2, NTT_base_psi_is_psi2, NTT_base_psi_is_psi2. *)
-  (*         apply psi_ADD2. apply Hpmul. *)
-  (*       - intros; rewrite NTT_base_psi_is_psi2, NTT_base_psi_is_psi2, NTT_base_psi_is_psi2. *)
-  (*         apply psi_SUB2. apply Hpmul. *)
-  (*       - intros; rewrite NTT_base_psi_is_psi2, NTT_base_psi_is_psi2, NTT_base_psi_is_psi2. *)
-  (*         apply (psi_MUL2 _ _ _ Hco Hpmul). *)
-  (*     Qed. *)
-  (*   End Cyclotomic_NTT_base. *)
-  (* End Pquot. *)
-  (* Section Pquotl. *)
-  (*   Context {Finv: F -> F}{Fdiv: F -> F -> F} *)
-  (*     {field: @field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv} *)
-  (*     {char_ge_3: @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos (BinNat.N.two))}. *)
-  (*   Local Infix "/" := Fdiv. *)
-
-  (*   Local Notation Pdivmod := (@Pdivmod Fdiv). *)
-  (*   Local Notation Pdiv := (@Pdiv Fdiv). *)
-  (*   Local Notation Pmod := (@Pmod Fdiv). *)
-  (*   Local Notation Pgcd := (@Pgcd Fdiv). *)
-  (*   Local Notation Pegcd := (@Pegcd Fdiv). *)
-  (*   Local Notation Pdivides := (@Pdivides Fdiv). *)
-  (*   Local Notation coprime := (@coprime Fdiv). *)
-
-  (*   Definition Pquotl (ql: list P): Type := { pl: list P | List.Forall2 (fun p q => Peq p (Pmod p q)) pl ql }. *)
-
-  (*   Section PquotlOperations. *)
-  (*     Definition to_pl {ql} (pl: Pquotl ql) := proj1_sig pl. *)
-
-  (*     Context {ql: list P}. *)
-  (*     Lemma to_pl_length (pl: Pquotl ql): length (to_pl pl) = length ql :> _. *)
-  (*     Proof. destruct pl as [pl Hpl]; simpl. eapply Forall2_length; eauto. Qed. *)
-
-  (*     Program Definition of_pl (pl: list P) (Hpl: length pl = length ql :> _): Pquotl ql := *)
-  (*       map2 (fun p q => Pmod p q) pl ql. *)
-  (*     Next Obligation. *)
-  (*       revert pl Hpl. induction ql; intros pl Hpl; [destruct pl; simpl in Hpl; try constructor; congruence|]. *)
-  (*       destruct pl; [simpl in Hpl; congruence|]. *)
-  (*       eapply Forall2_cons; [rewrite Pmod_mod_eq; reflexivity|]. *)
-  (*       apply IHl. simpl in Hpl; congruence. *)
-  (*     Qed. *)
-
-  (*     Definition eql {ql'} (pl1: Pquotl ql) (pl2: Pquotl ql'): Prop := *)
-  (*       List.Forall2 Peq (to_pl pl1) (to_pl pl2). *)
-
-  (*     Program Definition zerol: Pquotl ql := repeat Pzero (length ql). *)
-  (*     Next Obligation. induction ql; simpl; constructor; auto. rewrite Pmod_0_l. reflexivity. Qed. *)
-
-  (*     Lemma nth_error_zerol: *)
-  (*       forall k, (k < length ql) -> (nth_error (to_pl zerol) k = Some Pzero :> _). *)
-  (*     Proof. intros. simpl. apply List.nth_error_repeat; auto. Qed. *)
-
-  (*     Definition onel: Pquotl ql := of_pl (repeat Pone (length ql)) ltac:(apply repeat_length). *)
-
-  (*     Program Definition addl (p1 p2: Pquotl ql): Pquotl ql := *)
-  (*       map2 Padd (to_pl p1) (to_pl p2). *)
-  (*     Next Obligation. *)
-  (*       destruct p1 as [p1 Hp1]. destruct p2 as [p2 Hp2]. *)
-  (*       simpl. revert p2 Hp2. induction Hp1. *)
-  (*       - intros. inversion Hp2. constructor. *)
-  (*       - intros. destruct p2 as [|z]; inversion Hp2. *)
-  (*         simpl. constructor; auto. *)
-  (*         subst. rewrite Pmod_distr, <- H, <- H3. reflexivity. *)
-  (*     Qed. *)
-
-  (*     Program Definition mull (p1 p2: Pquotl ql): Pquotl ql := *)
-  (*       of_pl (map2 Pmul (to_pl p1) (to_pl p2)) _. *)
-  (*     Next Obligation. rewrite map2_length, to_pl_length, to_pl_length, PeanoNat.Nat.min_id. reflexivity. Qed. *)
-
-  (*     Program Definition oppl (pl: Pquotl ql): Pquotl ql := *)
-  (*       List.map Popp (to_pl pl). *)
-  (*     Next Obligation. *)
-  (*       destruct pl as [pl Hpl]. simpl. induction Hpl; simpl; constructor; auto. *)
-  (*       rewrite Pmod_opp, <- H. reflexivity. *)
-  (*     Qed. *)
-
-  (*     Program Definition subl (p1 p2: Pquotl ql): Pquotl ql := *)
-  (*       map2 Psub (to_pl p1) (to_pl p2). *)
-  (*     Next Obligation. *)
-  (*       destruct p1 as [p1 Hp1]. destruct p2 as [p2 Hp2]. *)
-  (*       simpl. revert p2 Hp2. induction Hp1. *)
-  (*       - intros. inversion Hp2. constructor. *)
-  (*       - intros. destruct p2 as [|z]; inversion Hp2. *)
-  (*         simpl. constructor; auto. *)
-  (*         subst. rewrite ring_sub_definition, Pmod_distr, Pmod_opp, <- H, <- H3. reflexivity. *)
-  (*     Qed. *)
-  (*   End PquotlOperations. *)
-  (*   Section Pquotl1. *)
-  (*     (* Pquotl [q] isomorphic to Pquot q *) *)
-  (*     Context {q: P}. Local Notation ql := (q::nil). *)
-  (*     Local Notation Pquot := (@Pquot Fdiv). *)
-  (*     Program Definition pquot_phi (p: Pquot q): Pquotl ql := *)
-  (*       (proj1_sig p)::nil. *)
-  (*     Next Obligation. destruct p as [p Hp]; simpl. repeat constructor; auto. Qed. *)
-
-  (*     Program Definition pquot_psi (p: Pquotl ql): Pquot q := *)
-  (*       List.hd Pzero (to_pl p). *)
-  (*     Next Obligation. *)
-  (*       generalize (to_pl_length p). simpl. *)
-  (*       destruct p as [p Hp]. simpl in *. inversion Hp; subst. *)
-  (*       simpl. auto. *)
-  (*     Qed. *)
-
-  (*     Lemma Pquotl1_ring_isomorphism: *)
-  (*       @ring (Pquotl ql) eql zerol onel oppl addl subl mull *)
-  (*       /\ @Ring.is_homomorphism (Pquot q) eq1 one add mul (Pquotl ql) eql onel addl mull pquot_phi *)
-  (*       /\ @Ring.is_homomorphism (Pquotl ql) eql onel addl mull (Pquot q) eq1 one add mul pquot_psi. *)
-  (*     Proof. *)
-  (*       apply Ring.ring_by_isomorphism. *)
-  (*       - intros x. destruct x as [x Hx]; unfold eq1; reflexivity. *)
-  (*       - intros a b. destruct a as [a Ha]; destruct b as [b Hb]. *)
-  (*         unfold eq1, eql; simpl. destruct a as [|x]; inversion Ha; subst. *)
-  (*         destruct b as [|y]; inversion Hb; subst. *)
-  (*         inversion H4; inversion H6; subst. *)
-  (*         simpl. split; intros; [repeat constructor; auto|]. *)
-  (*         inversion H; auto. *)
-  (*       - unfold pquot_psi, zerol, zero, eq1; simpl; rewrite Pmod_0_l; reflexivity. *)
-  (*       - unfold pquot_psi, onel, one, eq1; simpl; reflexivity. *)
-  (*       - intro a. destruct a as [a Ha]; unfold eq1; simpl. *)
-  (*         inversion Ha; subst. simpl. rewrite Pmod_opp. *)
-  (*         rewrite H2 at 1. reflexivity. *)
-  (*       - intros a b. destruct a as [a Ha]; destruct b as [b Hb]. *)
-  (*         unfold eq1; simpl. inversion Ha; subst. inversion Hb; subst; simpl. *)
-  (*         rewrite H2, H4 at 1. rewrite Pmod_distr. reflexivity. *)
-  (*       - intros a b. destruct a as [a Ha]; destruct b as [b Hb]. *)
-  (*         unfold eq1; simpl. inversion Ha; subst. inversion Hb; subst; simpl. *)
-  (*         rewrite Pmod_opp, <- H4, ring_sub_definition. *)
-  (*         rewrite H2, H4 at 1. rewrite Pmod_distr, Pmod_opp. reflexivity. *)
-  (*       - intros a b. destruct a as [a Ha]; destruct b as [b Hb]. *)
-  (*         unfold eq1; simpl. inversion Ha; subst. inversion Hb; subst; simpl. *)
-  (*         reflexivity. *)
-  (*     Qed. *)
-
-  (*     Lemma Pquotl1_commutative_ring: *)
-  (*       @commutative_ring (Pquotl ql) eql zerol onel oppl addl subl mull. *)
-  (*     Proof. *)
-  (*       constructor. *)
-  (*       - apply Pquotl1_ring_isomorphism. *)
-  (*       - constructor. intros. *)
-  (*         destruct x as [x Hx]; destruct y as [y Hy]. *)
-  (*         unfold eql; simpl. inversion Hx; inversion Hy; subst. *)
-  (*         constructor. *)
-  (*         + rewrite commutative; reflexivity. *)
-  (*         + inversion H3; inversion H8; simpl. constructor. *)
-  (*     Qed. *)
-  (*   End Pquotl1. *)
-  (*   Section PquotlRing. *)
-  (*     Context {ql: list P}. *)
-
-  (*     Global Instance PquotlRing: *)
-  (*       @commutative_ring (Pquotl ql) eql zerol onel oppl addl subl mull. *)
-  (*     Proof. *)
-  (*       split; repeat constructor; intros; *)
-  (*         match goal with *)
-  (*         | |- Proper _ _ => unfold Proper, respectful *)
-  (*         | |- Reflexive _ => unfold Reflexive *)
-  (*         | |- Symmetric _ => unfold Symmetric *)
-  (*         | |- Transitive _ => unfold Transitive *)
-  (*         | |- _ => idtac end; *)
-  (*         intros; repeat match goal with *)
-  (*                   | [ x : Pquotl ql  |- _ ] => destruct x as [?a ?A] *)
-  (*                   | [ H : Forall2 _ ?a ql |- _ ] => revert a H *)
-  (*                   end; *)
-  (*         lazy iota beta delta [eql zerol onel addl mull oppl subl] in *; simpl in *. *)
-  (*       - induction ql; intros. *)
-  (*         + inversion A; inversion A0; inversion A1; subst; simpl; constructor. *)
-  (*         + inversion A; inversion A0; inversion A1; subst; simpl; constructor; auto. *)
-  (*           apply associative. *)
-  (*       - induction ql; intros. *)
-  (*         + inversion A; subst; simpl; constructor. *)
-  (*         + inversion A; subst; simpl; constructor; auto. *)
-  (*           rewrite left_identity; reflexivity. *)
-  (*       - induction ql; intros. *)
-  (*         + inversion A; subst; simpl; constructor. *)
-  (*         + inversion A; subst; simpl; constructor; auto. *)
-  (*           rewrite right_identity; reflexivity. *)
-  (*       - revert H H0; repeat match goal with | [ H : Forall2 _ ?a ql |- _ ] => revert a H end. *)
-  (*         induction ql; intros. *)
-  (*         + inversion A; inversion A0; inversion A1; inversion A2; subst; constructor. *)
-  (*         + inversion A; inversion A0; inversion A1; inversion A2; subst; simpl; constructor; auto; inversion H; inversion H0; subst; auto. *)
-  (*           rewrite H6, H16; reflexivity. *)
-  (*       - induction ql; intros. *)
-  (*         + inversion A; subst; constructor. *)
-  (*         + inversion A; subst; constructor; auto. reflexivity. *)
-  (*       - apply Forall2_flip. eapply Forall2_impl; eauto. *)
-  (*         intros; symmetry; auto. *)
-  (*       - revert H H0; repeat match goal with | [ H : Forall2 _ ?a ql |- _ ] => revert a H end. *)
-  (*         induction ql; intros. *)
-  (*         + inversion A; inversion A0; inversion A1; subst; constructor. *)
-  (*         + inversion A; inversion A0; inversion A1; subst; simpl; constructor; auto; inversion H; inversion H0; subst; auto. *)
-  (*           * rewrite H6, H16; reflexivity. *)
-  (*           * eapply IHl; eauto. *)
-  (*             clear -field. induction l2; constructor; auto. intro; reflexivity. *)
-  (*       - induction ql; intros. *)
-  (*         + inversion A; subst; constructor. *)
-  (*         + inversion A; subst; simpl; constructor; auto. *)
-  (*           rewrite left_inverse; reflexivity. *)
-  (*       - induction ql; intros. *)
-  (*         + inversion A; subst; constructor. *)
-  (*         + inversion A; subst; simpl; constructor; auto. *)
-  (*           rewrite right_inverse; reflexivity. *)
-  (*       - revert H. revert a A a0 A0. induction ql; intros. *)
-  (*         + inversion A; inversion A0; subst; constructor. *)
-  (*         + inversion A; inversion A0; subst; inversion H; subst; constructor; auto. *)
-  (*           rewrite H5; reflexivity. *)
-  (*       - induction ql; intros. *)
-  (*         + inversion A; inversion A0; subst; constructor. *)
-  (*         + inversion A; inversion A0; subst; simpl; constructor; auto. *)
-  (*           apply commutative. *)
-  (*       - induction ql; intros. *)
-  (*         + inversion A; inversion A0; inversion A1; subst; constructor. *)
-  (*         + inversion A; inversion A0; inversion A1; subst; simpl; constructor; auto. *)
-  (*           rewrite Pmul_mod_idemp_l, Pmul_mod_idemp_r, associative. *)
-  (*           reflexivity. *)
-  (*       - induction ql; intros. *)
-  (*         + inversion A; subst; constructor. *)
-  (*         + inversion A; subst; simpl; constructor; auto. *)
-  (*           rewrite Pmul_mod_idemp_l, left_identity. symmetry; assumption. *)
-  (*       - induction ql; intros. *)
-  (*         + inversion A; subst; constructor. *)
-  (*         + inversion A; subst; simpl; constructor; auto. *)
-  (*           rewrite Pmul_mod_idemp_r, right_identity. symmetry; assumption. *)
-  (*       - revert H H0; repeat match goal with | [ H : Forall2 _ ?a ql |- _ ] => revert a H end. *)
-  (*         induction ql; intros. *)
-  (*         + inversion A; inversion A0; inversion A1; inversion A2; subst; constructor. *)
-  (*         + inversion A; inversion A0; inversion A1; inversion A2; subst; simpl; constructor; auto; inversion H; inversion H0; subst; auto. *)
-  (*           rewrite H6, H16; reflexivity. *)
-  (*       - intros a _. induction a; constructor; auto. reflexivity. *)
-  (*       - apply Forall2_flip. eapply Forall2_impl; eauto. intros; symmetry; auto. *)
-  (*       - clear A A0 A1. revert H H0. revert a1 a0 a. induction a1; intros; auto. *)
-  (*         + inversion H; inversion H0; subst; try congruence; constructor. *)
-  (*         + inversion H; subst. *)
-  (*           inversion H0; subst; constructor; auto. *)
-  (*           * rewrite H3; auto. *)
-  (*           * eapply IHa1; eauto. *)
-  (*       - induction ql; intros. *)
-  (*         + inversion A; inversion A0; inversion A1; subst; constructor. *)
-  (*         + inversion A; inversion A0; inversion A1; subst; simpl; constructor; auto. *)
-  (*           rewrite <- Pmod_distr, <- left_distributive. reflexivity. *)
-  (*       - induction ql; intros. *)
-  (*         + inversion A; inversion A0; inversion A1; subst; constructor. *)
-  (*         + inversion A; inversion A0; inversion A1; subst; simpl; constructor; auto. *)
-  (*           rewrite <- Pmod_distr, <- right_distributive. reflexivity. *)
-  (*       - induction ql; intros. *)
-  (*         + inversion A; inversion A0; subst; constructor. *)
-  (*         + inversion A; inversion A0; subst; simpl; constructor; auto. *)
-  (*           rewrite ring_sub_definition; reflexivity. *)
-  (*       - revert H H0; repeat match goal with | [ H : Forall2 _ ?a ql |- _ ] => revert a H end. *)
-  (*         induction ql; intros. *)
-  (*         + inversion A; inversion A0; inversion A1; inversion A2; subst; constructor. *)
-  (*         + inversion A; inversion A0; inversion A1; inversion A2; subst; simpl; constructor; auto; inversion H; inversion H0; subst; auto. *)
-  (*           rewrite H6, H16; reflexivity. *)
-  (*       - revert H H0; repeat match goal with | [ H : Forall2 _ ?a ql |- _ ] => revert a H end. *)
-  (*         induction ql; intros. *)
-  (*         + inversion A; inversion A0; inversion A1; inversion A2; subst; constructor. *)
-  (*         + inversion A; inversion A0; inversion A1; inversion A2; subst; simpl; constructor; auto; inversion H; inversion H0; subst; auto. *)
-  (*           rewrite H6, H16; reflexivity. *)
-  (*       - induction ql; intros. *)
-  (*         + inversion A; inversion A0; subst; constructor. *)
-  (*         + inversion A; inversion A0; subst; simpl; constructor; auto. *)
-  (*           rewrite commutative. reflexivity. *)
-  (*     Qed. *)
-  (*   End PquotlRing. *)
-  (* End Pquotl. *)
+  End Pquot.
+  Section Pquotl.
+    Context {Finv: F -> F}{Fdiv: F -> F -> F}
+      {field: @field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
+      {char_ge_3: @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos (BinNat.N.two))}.
+    Local Infix "/" := Fdiv.
+
+    Local Notation Pdivmod := (@Pdivmod Fdiv).
+    Local Notation Pdiv := (@Pdiv Fdiv).
+    Local Notation Pmod := (@Pmod Fdiv).
+    Local Notation Pgcd := (@Pgcd Fdiv).
+    Local Notation Pegcd := (@Pegcd Fdiv).
+    Local Notation Pdivides := (@Pdivides Fdiv).
+    Local Notation coprime := (@coprime Fdiv).
+
+    Definition Pquotl (ql: list P): Type := { pl: list P | List.Forall2 (fun p q => Peq p (Pmod p q)) pl ql }.
+
+    Section PquotlOperations.
+      Definition to_pl {ql} (pl: Pquotl ql) := proj1_sig pl.
+
+      Context {ql: list P}.
+      Lemma to_pl_length (pl: Pquotl ql): length (to_pl pl) = length ql :> _.
+      Proof. destruct pl as [pl Hpl]; simpl. eapply Forall2_length; eauto. Qed.
+
+      Program Definition of_pl (pl: list P) (Hpl: length pl = length ql :> _): Pquotl ql :=
+        map2 (fun p q => Pmod p q) pl ql.
+      Next Obligation.
+        revert pl Hpl. induction ql; intros pl Hpl; [destruct pl; simpl in Hpl; try constructor; congruence|].
+        destruct pl; [simpl in Hpl; congruence|].
+        eapply Forall2_cons; [rewrite Pmod_mod_eq; reflexivity|].
+        apply IHl. simpl in Hpl; congruence.
+      Qed.
+
+      Definition eql {ql'} (pl1: Pquotl ql) (pl2: Pquotl ql'): Prop :=
+        List.Forall2 Peq (to_pl pl1) (to_pl pl2).
+
+      Program Definition zerol: Pquotl ql := repeat Pzero (length ql).
+      Next Obligation. induction ql; simpl; constructor; auto. rewrite Pmod_0_l. reflexivity. Qed.
+
+      Lemma nth_error_zerol:
+        forall k, (k < length ql) -> (nth_error (to_pl zerol) k = Some Pzero :> _).
+      Proof. intros. simpl. apply List.nth_error_repeat; auto. Qed.
+
+      Definition onel: Pquotl ql := of_pl (repeat Pone (length ql)) ltac:(apply repeat_length).
+
+      Program Definition addl (p1 p2: Pquotl ql): Pquotl ql :=
+        map2 Padd (to_pl p1) (to_pl p2).
+      Next Obligation.
+        destruct p1 as [p1 Hp1]. destruct p2 as [p2 Hp2].
+        simpl. revert p2 Hp2. induction Hp1.
+        - intros. inversion Hp2. constructor.
+        - intros. destruct p2 as [|z]; inversion Hp2.
+          simpl. constructor; auto.
+          subst. rewrite Pmod_distr, <- H, <- H3. reflexivity.
+      Qed.
+
+      Program Definition mull (p1 p2: Pquotl ql): Pquotl ql :=
+        of_pl (map2 Pmul (to_pl p1) (to_pl p2)) _.
+      Next Obligation. rewrite map2_length, to_pl_length, to_pl_length, PeanoNat.Nat.min_id. reflexivity. Qed.
+
+      Program Definition oppl (pl: Pquotl ql): Pquotl ql :=
+        List.map Popp (to_pl pl).
+      Next Obligation.
+        destruct pl as [pl Hpl]. simpl. induction Hpl; simpl; constructor; auto.
+        rewrite Pmod_opp, <- H. reflexivity.
+      Qed.
+
+      Program Definition subl (p1 p2: Pquotl ql): Pquotl ql :=
+        map2 Psub (to_pl p1) (to_pl p2).
+      Next Obligation.
+        destruct p1 as [p1 Hp1]. destruct p2 as [p2 Hp2].
+        simpl. revert p2 Hp2. induction Hp1.
+        - intros. inversion Hp2. constructor.
+        - intros. destruct p2 as [|z]; inversion Hp2.
+          simpl. constructor; auto.
+          subst. rewrite ring_sub_definition, Pmod_distr, Pmod_opp, <- H, <- H3. reflexivity.
+      Qed.
+    End PquotlOperations.
+    Section PquotlRing.
+      Context {ql: list P}.
+
+      Global Instance PquotlRing:
+        @commutative_ring (Pquotl ql) eql zerol onel oppl addl subl mull.
+      Proof.
+        split; repeat constructor; intros;
+          match goal with
+          | |- Proper _ _ => unfold Proper, respectful
+          | |- Reflexive _ => unfold Reflexive
+          | |- Symmetric _ => unfold Symmetric
+          | |- Transitive _ => unfold Transitive
+          | |- _ => idtac end;
+          intros; repeat match goal with
+                    | [ x : Pquotl ql  |- _ ] => destruct x as [?a ?A]
+                    | [ H : Forall2 _ ?a ql |- _ ] => revert a H
+                    end;
+          lazy iota beta delta [eql zerol onel addl mull oppl subl] in *; simpl in *.
+        - induction ql; intros.
+          + inversion A; inversion A0; inversion A1; subst; simpl; constructor.
+          + inversion A; inversion A0; inversion A1; subst; simpl; constructor; auto.
+            apply associative.
+        - induction ql; intros.
+          + inversion A; subst; simpl; constructor.
+          + inversion A; subst; simpl; constructor; auto.
+            rewrite left_identity; reflexivity.
+        - induction ql; intros.
+          + inversion A; subst; simpl; constructor.
+          + inversion A; subst; simpl; constructor; auto.
+            rewrite right_identity; reflexivity.
+        - revert H H0; repeat match goal with | [ H : Forall2 _ ?a ql |- _ ] => revert a H end.
+          induction ql; intros.
+          + inversion A; inversion A0; inversion A1; inversion A2; subst; constructor.
+          + inversion A; inversion A0; inversion A1; inversion A2; subst; simpl; constructor; auto; inversion H; inversion H0; subst; auto.
+            rewrite H6, H16; reflexivity.
+        - induction ql; intros.
+          + inversion A; subst; constructor.
+          + inversion A; subst; constructor; auto. reflexivity.
+        - apply Forall2_flip. eapply Forall2_impl; eauto.
+          intros; symmetry; auto.
+        - revert H H0; repeat match goal with | [ H : Forall2 _ ?a ql |- _ ] => revert a H end.
+          induction ql; intros.
+          + inversion A; inversion A0; inversion A1; subst; constructor.
+          + inversion A; inversion A0; inversion A1; subst; simpl; constructor; auto; inversion H; inversion H0; subst; auto.
+            * rewrite H6, H16; reflexivity.
+            * eapply IHl; eauto.
+              clear -field. induction l2; constructor; auto. intro; reflexivity.
+        - induction ql; intros.
+          + inversion A; subst; constructor.
+          + inversion A; subst; simpl; constructor; auto.
+            rewrite left_inverse; reflexivity.
+        - induction ql; intros.
+          + inversion A; subst; constructor.
+          + inversion A; subst; simpl; constructor; auto.
+            rewrite right_inverse; reflexivity.
+        - revert H. revert a A a0 A0. induction ql; intros.
+          + inversion A; inversion A0; subst; constructor.
+          + inversion A; inversion A0; subst; inversion H; subst; constructor; auto.
+            rewrite H5; reflexivity.
+        - induction ql; intros.
+          + inversion A; inversion A0; subst; constructor.
+          + inversion A; inversion A0; subst; simpl; constructor; auto.
+            apply commutative.
+        - induction ql; intros.
+          + inversion A; inversion A0; inversion A1; subst; constructor.
+          + inversion A; inversion A0; inversion A1; subst; simpl; constructor; auto.
+            rewrite Pmul_mod_idemp_l, Pmul_mod_idemp_r, associative.
+            reflexivity.
+        - induction ql; intros.
+          + inversion A; subst; constructor.
+          + inversion A; subst; simpl; constructor; auto.
+            rewrite Pmul_mod_idemp_l, left_identity. symmetry; assumption.
+        - induction ql; intros.
+          + inversion A; subst; constructor.
+          + inversion A; subst; simpl; constructor; auto.
+            rewrite Pmul_mod_idemp_r, right_identity. symmetry; assumption.
+        - revert H H0; repeat match goal with | [ H : Forall2 _ ?a ql |- _ ] => revert a H end.
+          induction ql; intros.
+          + inversion A; inversion A0; inversion A1; inversion A2; subst; constructor.
+          + inversion A; inversion A0; inversion A1; inversion A2; subst; simpl; constructor; auto; inversion H; inversion H0; subst; auto.
+            rewrite H6, H16; reflexivity.
+        - intros a _. induction a; constructor; auto. reflexivity.
+        - apply Forall2_flip. eapply Forall2_impl; eauto. intros; symmetry; auto.
+        - clear A A0 A1. revert H H0. revert a1 a0 a. induction a1; intros; auto.
+          + inversion H; inversion H0; subst; try congruence; constructor.
+          + inversion H; subst.
+            inversion H0; subst; constructor; auto.
+            * rewrite H3; auto.
+            * eapply IHa1; eauto.
+        - induction ql; intros.
+          + inversion A; inversion A0; inversion A1; subst; constructor.
+          + inversion A; inversion A0; inversion A1; subst; simpl; constructor; auto.
+            rewrite <- Pmod_distr, <- left_distributive. reflexivity.
+        - induction ql; intros.
+          + inversion A; inversion A0; inversion A1; subst; constructor.
+          + inversion A; inversion A0; inversion A1; subst; simpl; constructor; auto.
+            rewrite <- Pmod_distr, <- right_distributive. reflexivity.
+        - induction ql; intros.
+          + inversion A; inversion A0; subst; constructor.
+          + inversion A; inversion A0; subst; simpl; constructor; auto.
+            rewrite ring_sub_definition; reflexivity.
+        - revert H H0; repeat match goal with | [ H : Forall2 _ ?a ql |- _ ] => revert a H end.
+          induction ql; intros.
+          + inversion A; inversion A0; inversion A1; inversion A2; subst; constructor.
+          + inversion A; inversion A0; inversion A1; inversion A2; subst; simpl; constructor; auto; inversion H; inversion H0; subst; auto.
+            rewrite H6, H16; reflexivity.
+        - revert H H0; repeat match goal with | [ H : Forall2 _ ?a ql |- _ ] => revert a H end.
+          induction ql; intros.
+          + inversion A; inversion A0; inversion A1; inversion A2; subst; constructor.
+          + inversion A; inversion A0; inversion A1; inversion A2; subst; simpl; constructor; auto; inversion H; inversion H0; subst; auto.
+            rewrite H6, H16; reflexivity.
+        - induction ql; intros.
+          + inversion A; inversion A0; subst; constructor.
+          + inversion A; inversion A0; subst; simpl; constructor; auto.
+            rewrite commutative. reflexivity.
+      Qed.
+    End PquotlRing.
+    Section PquotlRingListIsomorphism.
+      Context {ql: list P} {Hqlnz: Forall (fun q => not (Peq q Pzero)) ql}.
+      Definition Pquotl': Type :=
+        { l : list F | length l = list_sum (List.map (fun q => measure q - 1)%nat ql) :> _ }.
+
+      Program Definition to_listl' (pl: Pquotl ql): Pquotl' :=
+        List.concat (List.map (fun '(p, q) => to_list (measure q - 1)%nat p) (combine (proj1_sig pl) ql)).
+      Next Obligation.
+        rewrite length_concat. f_equal.
+        rewrite map_map.
+        rewrite (map_ext _ (fun '(p, q) => (measure q - 1)%nat)) at 1 by (intros [p q]; simpl; apply to_list_length).
+        clear. destruct pl as (pl & Hpl); simpl.
+        induction Hpl; simpl; [reflexivity|].
+        rewrite IHHpl; reflexivity.
+      Qed.
+
+      Program Definition of_listl' (pl: Pquotl'): Pquotl ql :=
+        let fix aux xs ys :=
+          match ys with
+          | nil => nil
+          | y::ys => (of_list (firstn (measure y - 1)%nat xs)) :: (aux (skipn (measure y - 1)%nat xs) ys)
+          end
+        in aux (proj1_sig pl) ql.
+      Next Obligation.
+        destruct pl as (pl & Hpl). simpl.
+        revert pl Hpl. induction Hqlnz; intros; [constructor|].
+        simpl in *. assert (Hpl2: length (skipn (measure x - 1)%nat pl) = list_sum (map (fun q : P => (measure q - 1)%nat) l) :> _).
+        { rewrite skipn_length, Hpl. Lia.lia. }
+        constructor.
+        - symmetry. apply Pmod_small.
+          assert (degree x = Some (length (firstn (measure x - 1)%nat pl)) :> _) as ->.
+          { rewrite length_firstn, Hpl.
+            rewrite PeanoNat.Nat.min_l by Lia.lia.
+            unfold measure. unfold convert. pose proof (degree_definition x) as Hx.
+            pose proof (zero_degree x).
+            destruct (degree x); [f_equal; Lia.lia|elim f; tauto]. }
+          apply of_list_degree_lt.
+        - apply IHf; auto.
+      Qed.
+
+      Definition eql' (p1 p2: Pquotl'): Prop := List.Forall2 Feq (proj1_sig p1) (proj1_sig p2).
+
+      Global Instance Peq_proper_to_list n:
+        Proper (Peq ==> Forall2 Feq) (to_list n).
+      Proof.
+        intros x y He. eapply (Forall2_forall_iff _ _ _ Fzero Fzero).
+        - repeat rewrite to_list_length. reflexivity.
+        - rewrite to_list_length. intros.
+          repeat rewrite to_list_nth_default_inbounds; auto.
+      Qed.
+
+      Global Instance eql_proper_to_listl':
+        Proper (eql ==> eql') to_listl'.
+      Proof.
+        intros x y. destruct x as (x & Hx). destruct y as (y & Hy).
+        unfold eql, eql'; simpl. intro Heq.
+        clear Hx Hy. clear Hqlnz. revert x y Heq.
+        induction ql; intros; simpl; [repeat rewrite combine_nil_r; constructor|].
+        inversion Heq; subst; clear Heq; simpl.
+        - constructor.
+        - apply Forall2_app.
+          + apply Peq_proper_to_list; auto.
+          + apply IHl. auto.
+      Qed.
+
+      Program Definition zerol': Pquotl' := List.repeat Fzero (list_sum (List.map (fun q => measure q - 1)%nat ql)).
+      Next Obligation. apply repeat_length. Qed.
+
+      Definition onel': Pquotl' := to_listl' onel.
+
+      Program Definition oppl' (p: Pquotl'): Pquotl' :=
+        List.map Fopp (proj1_sig p).
+      Next Obligation. rewrite length_map, (proj2_sig p). reflexivity. Qed.
+
+      Program Definition addl' (p1 p2: Pquotl'): Pquotl' :=
+        List.map2 Fadd (proj1_sig p1) (proj1_sig p2).
+      Next Obligation. rewrite map2_length, (proj2_sig p1), (proj2_sig p2), PeanoNat.Nat.min_id; reflexivity. Qed.
+
+      Program Definition subl' (p1 p2: Pquotl'): Pquotl' :=
+        List.map2 Fsub (proj1_sig p1) (proj1_sig p2).
+      Next Obligation. rewrite map2_length, (proj2_sig p1), (proj2_sig p2), PeanoNat.Nat.min_id; reflexivity. Qed.
+
+      Definition mull' (p1 p2: Pquotl'): Pquotl' :=
+        to_listl' (mull (of_listl' p1) (of_listl' p2)).
+
+      Lemma PquotlRing_by_isomorphism:
+        @ring (Pquotl') eql' zerol' onel' oppl' addl' subl' mull'
+        /\ @is_homomorphism _ eql onel addl mull _ eql' onel' addl' mull' to_listl'
+        /\ @is_homomorphism _ eql' onel' addl' mull' _ eql onel addl mull of_listl'.
+      Proof.
+        assert (forall A : Pquotl ql, eql (of_listl' (to_listl' A)) A) as Heql.
+        { intros pl. destruct pl as (pl & Hpl).
+          unfold eql; simpl. induction Hpl; [constructor|].
+          simpl. constructor.
+          - rewrite firstn_app_sharp by apply to_list_length.
+            apply of_list_to_list. rewrite H.
+            assert (Some _ = degree y :> _) as ->.
+            { inversion Hqlnz; subst. pose proof (degree_definition y).
+              unfold measure, convert. destruct (degree y); [f_equal; Lia.lia|elim H2].
+              intro; rewrite zero_definition; auto. }
+            apply Pmod_degree_lt. inversion Hqlnz; auto.
+          - rewrite skipn_app_sharp by apply to_list_length.
+            apply IHHpl. inversion Hqlnz; auto. }
+        apply (ring_by_isomorphism (ringF:=(@PquotlRing ql).(commutative_ring_ring)) (phi:=to_listl') (phi':=of_listl')); auto.
+        + clear Heql. intros; destruct a as (a & Ha). destruct b as (b & Hb).
+          unfold eql, eql'; simpl.
+          revert a b Ha Hb. induction Hqlnz.
+          * simpl; intros. apply length0_nil in Ha. apply length0_nil in Hb.
+            subst. split; auto.
+          * simpl; intros. split; intros.
+            { rewrite <- (firstn_skipn (measure x - 1)%nat a).
+              rewrite <- (firstn_skipn (measure x - 1)%nat b).
+              inversion H0; subst.
+              apply Forall2_app. rewrite (Forall2_forall_iff _ _ _ Fzero Fzero).
+              - rewrite length_firstn, Ha, PeanoNat.Nat.min_l by Lia.lia.
+                intros. pose proof (H4 i) as HX.
+                unfold of_list in HX.
+                do 2 rewrite Pdecompose_coeff in HX.
+                rewrite length_firstn, Ha, PeanoNat.Nat.min_l in HX by Lia.lia.
+                rewrite length_firstn, Hb, PeanoNat.Nat.min_l in HX by Lia.lia.
+                destruct (dec_lt_nat i (measure x - 1)%nat); [|Lia.lia]; auto.
+              - rewrite length_firstn, Ha, PeanoNat.Nat.min_l by Lia.lia.
+                rewrite length_firstn, Hb, PeanoNat.Nat.min_l by Lia.lia.
+                reflexivity.
+              - apply IHf; auto.
+                + rewrite skipn_length, Ha; Lia.lia.
+                + rewrite skipn_length, Hb; Lia.lia. }
+            { constructor.
+              - intros i. unfold of_list. do 2 rewrite Pdecompose_coeff.
+                rewrite length_firstn, Ha, PeanoNat.Nat.min_l by Lia.lia.
+                rewrite length_firstn, Hb, PeanoNat.Nat.min_l by Lia.lia.
+                destruct (dec_lt_nat _ _); [|reflexivity].
+                do 2 rewrite nth_default_firstn. rewrite Ha, Hb.
+                destruct (Compare_dec.le_dec _ _); [|Lia.lia].
+                destruct (Compare_dec.lt_dec _ _); [|Lia.lia].
+                rewrite Forall2_forall_iff in H0 by congruence.
+                apply H0. rewrite Ha; Lia.lia.
+              - apply IHf; auto.
+                + rewrite skipn_length, Ha; Lia.lia.
+                + rewrite skipn_length, Hb; Lia.lia.
+                + rewrite (Forall2_forall_iff _ _ _ Fzero Fzero) by (do 2 rewrite skipn_length; rewrite Ha, Hb; reflexivity).
+                  rewrite skipn_length, Ha.
+                  intros; do 2 rewrite nth_default_skipn.
+                  rewrite (Forall2_forall_iff _ _ _ Fzero Fzero) in H0 by congruence.
+                  apply H0. rewrite Ha. Lia.lia. }
+        + unfold eql; simpl. clear Heql; induction Hqlnz; simpl; constructor.
+          * rewrite firstn_repeat, PeanoNat.Nat.min_l by Lia.lia.
+            intro i. rewrite zero_definition.
+            unfold of_list; rewrite Pdecompose_coeff.
+            rewrite repeat_length, nth_default_repeat.
+            destruct (dec_lt_nat _ _); [|reflexivity].
+            destruct (dec _); reflexivity.
+          * rewrite skipn_repeat. assert (_ - 1 + _ - _ = list_sum (map (fun q : P => (measure q - 1)%nat) l) :> _)%nat as -> by Lia.lia.
+            apply IHf; auto.
+        + unfold eql; simpl. clear Heql; induction Hqlnz; simpl; constructor.
+          * rewrite firstn_app_sharp by apply to_list_length.
+            rewrite of_list_to_list; [reflexivity|].
+            assert (Some _ = degree x :> _) as ->; [|apply Pmod_degree_lt]; auto.
+            unfold measure, convert. pose proof (degree_definition x).
+            destruct (degree x); [f_equal; Lia.lia|].
+            elim H. intro; rewrite zero_definition; auto.
+          * rewrite skipn_app_sharp by apply to_list_length.
+            apply IHf; auto.
+        + intros a. destruct a as (a & Ha); unfold eql; simpl.
+          revert a Ha. clear Heql; induction Hqlnz; simpl; intros; constructor.
+          * intro k. rewrite opp_definition.
+            unfold of_list. do 2 rewrite Pdecompose_coeff.
+            do 2 rewrite length_firstn. rewrite length_map.
+            destruct (dec_lt_nat _ _); [|rewrite Group.inv_id; reflexivity].
+            rewrite firstn_map, (map_nth_default _ _ _ _ Fzero); [reflexivity|].
+            rewrite length_firstn. assumption.
+          * rewrite skipn_map. apply IHf; auto.
+            rewrite length_skipn, Ha. Lia.lia.
+        + intros a b; destruct a as (a & Ha); destruct b as (b & Hb).
+          unfold eql; simpl. revert a Ha b Hb. clear Heql; induction Hqlnz; simpl; intros; constructor.
+          * intro k. unfold of_list. rewrite add_definition.
+            repeat rewrite Pdecompose_coeff.
+            repeat rewrite length_firstn. rewrite map2_length.
+            rewrite Ha, Hb, PeanoNat.Nat.min_id.
+            repeat rewrite PeanoNat.Nat.min_l by Lia.lia.
+            destruct (dec_lt_nat _ _); [|rewrite right_identity; reflexivity].
+            repeat rewrite nth_default_firstn.
+            rewrite (nth_default_map2 _ _ _ _ _ Fzero Fzero).
+            repeat rewrite map2_length, Ha, Hb, PeanoNat.Nat.min_id.
+            destruct (Compare_dec.le_dec _ _); [|Lia.lia].
+            destruct (Compare_dec.lt_dec _ _); [|Lia.lia].
+            destruct (Compare_dec.lt_dec _ _); [|Lia.lia]. reflexivity.
+          * etransitivity; [|apply IHf; auto; rewrite skipn_length; [rewrite Ha|rewrite Hb]; Lia.lia].
+            match goal with
+            | |- Forall2 Peq (?f _ l) (?g _ _) =>
+                assert (Proper (Forall2 Feq ==> Forall2 Peq) (fun x => f x l)) as Hp
+            end.
+            { intros u v Huv. clear -Huv field cring poly_defs.
+              revert u v Huv; induction l; intros; simpl; constructor.
+              - intro k. unfold of_list. repeat rewrite Pdecompose_coeff.
+                repeat rewrite length_firstn. rewrite <- (Forall2_length Huv).
+                destruct (dec_lt_nat _ _); [|reflexivity].
+                do 2 rewrite nth_default_firstn. rewrite <- (Forall2_length Huv).
+                rewrite (Forall2_forall_iff _ _ _ Fzero Fzero (Forall2_length Huv)) in Huv.
+                destruct (Compare_dec.le_dec _ _); [|apply Huv; Lia.lia].
+                destruct (Compare_dec.lt_dec _ _); [apply Huv; Lia.lia|reflexivity].
+              - apply IHl. rewrite (Forall2_forall_iff _ _ _ Fzero Fzero).
+                + intros. repeat rewrite nth_default_skipn.
+                  rewrite (Forall2_forall_iff _ _ _ Fzero Fzero (Forall2_length Huv)) in Huv.
+                  apply Huv. rewrite skipn_length in H. Lia.lia.
+                + repeat rewrite skipn_length. rewrite (Forall2_length Huv). reflexivity. }
+            apply Hp. rewrite (Forall2_forall_iff _ _ _ Fzero Fzero).
+            { intros. rewrite nth_default_skipn, (nth_default_map2 _ _ _ _ _ Fzero Fzero), (nth_default_map2 _ _ _ _ _ Fzero Fzero).
+              do 2 rewrite nth_default_skipn.
+              rewrite Ha, Hb, PeanoNat.Nat.min_id.
+              rewrite length_skipn, length_skipn, Ha, Hb, PeanoNat.Nat.min_id.
+              destruct (Compare_dec.lt_dec _ _); destruct (Compare_dec.lt_dec _ _); try Lia.lia; reflexivity. }
+            { rewrite length_skipn, map2_length, map2_length, length_skipn, length_skipn.
+              rewrite Ha, Hb. Lia.lia. }
+        + intros a b. destruct a as (a & Ha). destruct b as (b & Hb).
+          unfold eql; simpl. revert a Ha b Hb. clear Heql; induction Hqlnz; simpl; intros; constructor.
+          * intro k. unfold of_list. rewrite sub_definition.
+            repeat rewrite Pdecompose_coeff.
+            repeat rewrite length_firstn. rewrite map2_length.
+            rewrite Ha, Hb, PeanoNat.Nat.min_id.
+            repeat rewrite PeanoNat.Nat.min_l by Lia.lia.
+            destruct (dec_lt_nat _ _); [|rewrite ring_sub_definition, Group.inv_id, right_identity; reflexivity].
+            repeat rewrite nth_default_firstn.
+            rewrite (nth_default_map2 _ _ _ _ _ Fzero Fzero).
+            repeat rewrite map2_length, Ha, Hb, PeanoNat.Nat.min_id.
+            destruct (Compare_dec.le_dec _ _); [|Lia.lia].
+            destruct (Compare_dec.lt_dec _ _); [|Lia.lia].
+            destruct (Compare_dec.lt_dec _ _); [|Lia.lia]. reflexivity.
+          * etransitivity; [|apply IHf; auto; rewrite skipn_length; [rewrite Ha|rewrite Hb]; Lia.lia].
+            match goal with
+            | |- Forall2 Peq (?f _ l) (?g _ _) =>
+                assert (Proper (Forall2 Feq ==> Forall2 Peq) (fun x => f x l)) as Hp
+            end.
+            { intros u v Huv. clear -Huv field cring poly_defs.
+              revert u v Huv; induction l; intros; simpl; constructor.
+              - intro k. unfold of_list. repeat rewrite Pdecompose_coeff.
+                repeat rewrite length_firstn. rewrite <- (Forall2_length Huv).
+                destruct (dec_lt_nat _ _); [|reflexivity].
+                do 2 rewrite nth_default_firstn. rewrite <- (Forall2_length Huv).
+                rewrite (Forall2_forall_iff _ _ _ Fzero Fzero (Forall2_length Huv)) in Huv.
+                destruct (Compare_dec.le_dec _ _); [|apply Huv; Lia.lia].
+                destruct (Compare_dec.lt_dec _ _); [apply Huv; Lia.lia|reflexivity].
+              - apply IHl. rewrite (Forall2_forall_iff _ _ _ Fzero Fzero).
+                + intros. repeat rewrite nth_default_skipn.
+                  rewrite (Forall2_forall_iff _ _ _ Fzero Fzero (Forall2_length Huv)) in Huv.
+                  apply Huv. rewrite skipn_length in H. Lia.lia.
+                + repeat rewrite skipn_length. rewrite (Forall2_length Huv). reflexivity. }
+            apply Hp. rewrite (Forall2_forall_iff _ _ _ Fzero Fzero).
+            { intros. rewrite nth_default_skipn, (nth_default_map2 _ _ _ _ _ Fzero Fzero), (nth_default_map2 _ _ _ _ _ Fzero Fzero).
+              do 2 rewrite nth_default_skipn.
+              rewrite Ha, Hb, PeanoNat.Nat.min_id.
+              rewrite length_skipn, length_skipn, Ha, Hb, PeanoNat.Nat.min_id.
+              destruct (Compare_dec.lt_dec _ _); destruct (Compare_dec.lt_dec _ _); try Lia.lia; reflexivity. }
+            { rewrite length_skipn, map2_length, map2_length, length_skipn, length_skipn.
+              rewrite Ha, Hb. Lia.lia. }
+        + intros a b. unfold mull'. apply Heql.
+      Qed.
+
+      Global Instance PquotlRing':
+        @commutative_ring (Pquotl') eql' zerol' onel' oppl' addl' subl' mull'.
+      Proof.
+        constructor.
+        - apply PquotlRing_by_isomorphism.
+        - constructor. intros x y.
+          unfold eql', mull'.
+          apply eql_proper_to_listl'. apply commutative.
+      Qed.
+
+      Lemma PquotlRingIsomorphism:
+        @Ring.is_isomorphism (Pquotl ql) eql onel addl mull Pquotl' eql' onel' addl' mull' to_listl' of_listl'.
+      Proof.
+        constructor.
+        - apply PquotlRing_by_isomorphism.
+        - intro a. destruct a as (a & Ha).
+          unfold eql'; simpl. revert a Ha.
+          induction Hqlnz; simpl; intros.
+          + simpl in Ha. apply length0_nil in Ha. subst a.
+            constructor.
+          + rewrite <- (firstn_skipn (measure x - 1)%nat a) at 3.
+            apply Forall2_app.
+            * rewrite <- (to_list_of_list (firstn (measure x - 1)%nat a)) at 2.
+              rewrite length_firstn, Ha, PeanoNat.Nat.min_l by Lia.lia.
+              reflexivity.
+            * apply IHf; auto.
+              rewrite length_skipn, Ha; Lia.lia.
+        - intros a b. destruct a as (a & Ha). destruct b as (b & Hb).
+          unfold eql, eql'; simpl. revert a Ha b Hb. induction Hqlnz; simpl; intros a Ha b Hb Hab.
+          + inversion Ha; inversion Hb; constructor.
+          + inversion Ha; subst; clear Ha.
+            inversion Hb; subst; clear Hb.
+            simpl in Hab. apply Forall2_app_inv in Hab; [|do 2 rewrite to_list_length; reflexivity].
+            destruct Hab as (Hab1 & Hab2).
+            constructor; [|apply IHf; auto].
+            rewrite (Forall2_forall_iff _ _ _ Fzero Fzero) in Hab1 by (do 2 rewrite to_list_length; reflexivity).
+            unfold to_list in Hab1. rewrite length_map, length_seq in Hab1.
+            assert (forall k, (k >= measure x - 1)%nat -> coeff x0 k = Fzero) as Hx0.
+            { assert (degree_lt (degree x0) (Some (measure x - 1)%nat)) as Hx.
+              { assert (Some _ = degree x :> _) as ->.
+                - unfold measure, convert.
+                  pose proof (degree_definition x) as Hx.
+                  destruct (degree x); [f_equal; Lia.lia|].
+                  elim H. intro. rewrite zero_definition. apply Hx.
+                - rewrite H3. apply Pmod_degree_lt; auto. }
+              pose proof (degree_definition x0) as Hx0.
+              destruct (degree x0); intros; apply Hx0.
+              unfold degree_lt in Hx. simpl in Hx. Lia.lia. }
+            assert (forall k, (k >= measure x - 1)%nat -> coeff x1 k = Fzero) as Hx1.
+            { assert (degree_lt (degree x1) (Some (measure x - 1)%nat)) as Hx.
+              { assert (Some _ = degree x :> _) as ->.
+                - unfold measure, convert.
+                  pose proof (degree_definition x) as Hx.
+                  destruct (degree x); [f_equal; Lia.lia|].
+                  elim H. intro. rewrite zero_definition. apply Hx.
+                - rewrite H5. apply Pmod_degree_lt; auto. }
+              pose proof (degree_definition x1) as Hx1.
+              destruct (degree x1); intros; apply Hx1.
+              unfold degree_lt in Hx. simpl in Hx. Lia.lia. }
+            intro k. destruct (dec_lt_nat k (measure x - 1)%nat).
+            * generalize (Hab1 k l2).
+              do 2 rewrite (map_nth_default _ _ _ _ 0%nat) by (rewrite length_seq; auto).
+              rewrite nth_default_seq_inbounds by assumption.
+              simpl. auto.
+            * rewrite Hx0, Hx1 by Lia.lia. reflexivity.
+      Qed.
+    End PquotlRingListIsomorphism.
+  End Pquotl.
 End Theorems.
