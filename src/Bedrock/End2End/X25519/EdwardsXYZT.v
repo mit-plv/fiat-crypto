@@ -102,7 +102,6 @@ Definition double := func! (ox, oy, oz, ota, otb, X, Y, Z, Ta, Tb) {
 }.
 
 (* Equivalent of m1_readd in src/Curves/Edwards/XYZT/Readdition.v *)
-(* I should fix the variable naming *)
 Definition readd := func! (ox, oy, oz, ota, otb, X1, Y1, Z1, Ta1, Tb1, half_YmX, half_YpX, Z2, Td) {
   stackalloc 40 as A;
   fe25519_sub(A, Y1, X1);
@@ -429,11 +428,11 @@ Proof.
  - cbv [FElem] in *.
 
  (* Prove the deallocation. Rewrite the last stack to byte representation and remember output variable names for later. *)
-  remember (Bignum.Bignum felem_size_in_words ox _) as Ox in H92.
-  remember (Bignum.Bignum felem_size_in_words oy _) as Oy in H92.
-  remember (Bignum.Bignum felem_size_in_words oz _) as Oz in H92.
-  remember (Bignum.Bignum felem_size_in_words ota _) as Ota in H92.
-  remember (Bignum.Bignum felem_size_in_words otb _) as Otb in H92.
+  remember (Bignum.Bignum felem_size_in_words oxK _) as Ox in H92.
+  remember (Bignum.Bignum felem_size_in_words oyK _) as Oy in H92.
+  remember (Bignum.Bignum felem_size_in_words ozK _) as Oz in H92.
+  remember (Bignum.Bignum felem_size_in_words otaK _) as Ota in H92.
+  remember (Bignum.Bignum felem_size_in_words otbK _) as Otb in H92.
   do 6 (seprewrite_in @Bignum.Bignum_to_bytes H92).
   subst Ox Oy Oz Ota Otb.
   extract_ex1_and_emp_in H92.
