@@ -210,36 +210,33 @@ Global Instance spec_of_double : spec_of "double" :=
         bounded_by tight_bounds otb' /\
         m' =* (FElem XK X) * (FElem YK Y) * (FElem ZK Z) * (FElem TaK Ta) * (FElem TbK Tb) * (FElem oxK ox') * (FElem oyK oy') * (FElem ozK oz') * (FElem otaK ota') * (FElem otbK otb') * R }.
 
-
-(*func! (ox, oy, oz, ota, otb, X1, Y1, Z1, Ta1, Tb1, half_YmX, half_YpX, Z2, Td) {*)
-(* Shit, I need to work on that coordinate naming *)
 Global Instance spec_of_readd : spec_of "readd" :=
   fnspec! "readd"
-    ( ox oy oz ota otb X1 Y1 Z1 Ta1 Tb1 half_YmX half_YpX Z2 Td : word) /
-    ( eox eoy eoz eota eotb eX eY eZ eTa1 eTb1 ehalf_YmX ehalf_YpX eZ2 eTd : felem) (p : point) (c: cached) (R : _ -> Prop),
+    ( oxK oyK ozK otaK otbK X1K Y1K Z1K Ta1K Tb1K half_YmXK half_YpXK Z2K TdK : word) /
+    ( ox oy oz ota otb X1 Y1 Z1 Ta1 Tb1 half_YmX half_YpX Z2 Td : felem) (p : point) (c: cached) (R : _ -> Prop),
   { requires t m :=
-      coordinates p = ((feval eX), (feval eY), (feval eZ), (feval eTa1), (feval eTb1)) /\
-      bounded_by tight_bounds eX /\
-      bounded_by tight_bounds eY /\
-      bounded_by tight_bounds eZ /\
-      bounded_by loose_bounds eTa1 /\
-      bounded_by loose_bounds eTb1 /\
-      cached_coordinates c = ((feval ehalf_YmX), (feval ehalf_YpX), (feval eZ2), (feval eTd)) /\
-      bounded_by loose_bounds ehalf_YmX /\
-      bounded_by loose_bounds ehalf_YpX /\
-      bounded_by loose_bounds eZ2 /\
-      bounded_by loose_bounds eTd /\
-      m =* (FElem X1 eX) * (FElem Y1 eY) * (FElem Z1 eZ) * (FElem Ta1 eTa1) * (FElem Tb1 eTb1) * (FElem half_YmX ehalf_YmX) * (FElem half_YpX ehalf_YpX) * (FElem Z2 eZ2) * (FElem Td eTd) * (FElem ox eox) * (FElem oy eoy) * (FElem oz eoz) * (FElem ota eota) * (FElem otb eotb) * R;
+      coordinates p = ((feval X1), (feval Y1), (feval Z1), (feval Ta1), (feval Tb1)) /\
+      bounded_by tight_bounds X1 /\
+      bounded_by tight_bounds Y1 /\
+      bounded_by tight_bounds Z1 /\
+      bounded_by loose_bounds Ta1 /\
+      bounded_by loose_bounds Tb1 /\
+      cached_coordinates c = ((feval half_YmX), (feval half_YpX), (feval Z2), (feval Td)) /\
+      bounded_by loose_bounds half_YmX /\
+      bounded_by loose_bounds half_YpX /\
+      bounded_by loose_bounds Z2 /\
+      bounded_by loose_bounds Td /\
+      m =* (FElem X1K X1) * (FElem Y1K Y1) * (FElem Z1K Z1) * (FElem Ta1K Ta1) * (FElem Tb1K Tb1) * (FElem half_YmXK half_YmX) * (FElem half_YpXK half_YpX) * (FElem Z2K Z2) * (FElem TdK Td) * (FElem oxK ox) * (FElem oyK oy) * (FElem ozK oz) * (FElem otaK ota) * (FElem otbK otb) * R;
     ensures t' m' :=
       t = t' /\
-      exists eox' eoy' eoz' eota' eotb',
-        ((feval eox'), (feval eoy'), (feval eoz'), (feval eota'), (feval eotb')) = coordinates (@m1_readd p c)/\
-        bounded_by tight_bounds eox' /\
-        bounded_by tight_bounds eoy' /\
-        bounded_by tight_bounds eoz' /\
-        bounded_by loose_bounds eota' /\
-        bounded_by loose_bounds eotb' /\
-        m' =*(FElem X1 eX) * (FElem Y1 eY) * (FElem Z1 eZ) * (FElem Ta1 eTa1) * (FElem Tb1 eTb1) * (FElem half_YmX ehalf_YmX) * (FElem half_YpX ehalf_YpX) * (FElem Z2 eZ2) * (FElem Td eTd)* (FElem ox eox') * (FElem oy eoy') * (FElem oz eoz') * (FElem ota eota') * (FElem otb eotb') * R }.
+      exists ox' oy' oz' ota' otb',
+        ((feval ox'), (feval oy'), (feval oz'), (feval ota'), (feval otb')) = coordinates (@m1_readd p c)/\
+        bounded_by tight_bounds ox' /\
+        bounded_by tight_bounds oy' /\
+        bounded_by tight_bounds oz' /\
+        bounded_by loose_bounds ota' /\
+        bounded_by loose_bounds otb' /\
+        m' =*(FElem X1K X1) * (FElem Y1K Y1) * (FElem Z1K Z1) * (FElem Ta1K Ta1) * (FElem Tb1K Tb1) * (FElem half_YmXK half_YmX) * (FElem half_YpXK half_YpX) * (FElem Z2K Z2) * (FElem TdK Td)* (FElem oxK ox') * (FElem oyK oy') * (FElem ozK oz') * (FElem otaK ota') * (FElem otbK otb') * R }.
 
 
 Local Instance spec_of_fe25519_square : spec_of "fe25519_square" := Field.spec_of_UnOp un_square.
@@ -319,45 +316,6 @@ Proof.
   (* Now set Strategy precedence... *)
   Strategy -1000 [bin_outbounds bin_add].
   reflexivity. (* ...and completes immediately *)
-Qed.
-
-Lemma readd_ok : program_logic_goal_for_function! readd.
-Proof.
-  repeat single_step. repeat straightline_cleanup.
-
-  exists l5. split.
- - simpl. reflexivity. (* Local variables *)
- - cbv [FElem] in *.
-
- (* Prove the deallocation. Rewrite the last stack to byte representation and remember output variable names for later. *)
-  remember (Bignum.Bignum felem_size_in_words ox _) as Ox in H92.
-  remember (Bignum.Bignum felem_size_in_words oy _) as Oy in H92.
-  remember (Bignum.Bignum felem_size_in_words oz _) as Oz in H92.
-  remember (Bignum.Bignum felem_size_in_words ota _) as Ota in H92.
-  remember (Bignum.Bignum felem_size_in_words otb _) as Otb in H92.
-  do 6 (seprewrite_in @Bignum.Bignum_to_bytes H92).
-  subst Ox Oy Oz Ota Otb.
-  extract_ex1_and_emp_in H92.
-  (* Now the hypothesis is in a format that straightline can solve. *)
-  repeat straightline.
-
-  (* Bounds *)
-  exists x10, x11, x12, x6, x9.
-  ssplit; solve_bounds.
-
-  (* Correctness *)
-  cbv [bin_model bin_mul bin_add bin_carry_add bin_sub] in *.
-  cbv match beta delta [m1_readd coordinates proj1_sig].
-  (* Get the elements out of c and p *)
-  destruct p. cbv match beta delta [coordinates proj1_sig] in H13. rewrite H13.
-  destruct c. cbv match beta delta [cached_coordinates proj1_sig] in H19. rewrite H19.
-  congruence.
-
-  (* Memory after program execution. *)
-  ecancel_assumption.
-
-  (* Without this, resolution of cbv stalls out Qed. *)
-  Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
 Qed.
 
 Lemma add_precomputed_ok : program_logic_goal_for_function! add_precomputed.
@@ -459,6 +417,46 @@ Proof.
   }
   (* Safety: memory is what it should be *)
   ecancel_assumption.
+Qed.
+
+
+Lemma readd_ok : program_logic_goal_for_function! readd.
+Proof.
+  repeat single_step. repeat straightline_cleanup.
+
+  exists l5. split.
+ - simpl. reflexivity. (* Local variables *)
+ - cbv [FElem] in *.
+
+ (* Prove the deallocation. Rewrite the last stack to byte representation and remember output variable names for later. *)
+  remember (Bignum.Bignum felem_size_in_words ox _) as Ox in H92.
+  remember (Bignum.Bignum felem_size_in_words oy _) as Oy in H92.
+  remember (Bignum.Bignum felem_size_in_words oz _) as Oz in H92.
+  remember (Bignum.Bignum felem_size_in_words ota _) as Ota in H92.
+  remember (Bignum.Bignum felem_size_in_words otb _) as Otb in H92.
+  do 6 (seprewrite_in @Bignum.Bignum_to_bytes H92).
+  subst Ox Oy Oz Ota Otb.
+  extract_ex1_and_emp_in H92.
+  (* Now the hypothesis is in a format that straightline can solve. *)
+  repeat straightline.
+
+  (* Bounds *)
+  exists x10, x11, x12, x6, x9.
+  ssplit; solve_bounds.
+
+  (* Correctness *)
+  cbv [bin_model bin_mul bin_add bin_carry_add bin_sub] in *.
+  cbv match beta delta [m1_readd coordinates proj1_sig].
+  (* Get the elements out of c and p *)
+  destruct p. cbv match beta delta [coordinates proj1_sig] in H13. rewrite H13.
+  destruct c. cbv match beta delta [cached_coordinates proj1_sig] in H19. rewrite H19.
+  congruence.
+
+  (* Memory after program execution. *)
+  ecancel_assumption.
+
+  (* Without this, resolution of cbv stalls out Qed. *)
+  Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
 Qed.
 
 End WithParameters.
