@@ -19,11 +19,19 @@ Existing Instances Naive.word Naive.word32_ok BW32.
 Existing Instances SortedListWord.map SortedListWord.ok.
 
 (* Parameters for Curve25519 field (32-bit machine). *)
+(* I think this is the thing that creates the 25519 field and its operations. But how? 
+  For the curve, the modulus should be 2^255 - 19 hence the name. Ah I think that modulos is for the field as well, but I didn't quite catch that yet.
+  d is (-121665/121666) 
+ Aha, but first we probably need the field over which to define the curve, this is what we see here?
+ The thing below defines something called field_parameters_prefixed *)
+Locate field_parameters_prefixed.
+(* Alright, let's go to UnsaturatedSolinas *)
+(* Aha, this is kind of covered by chapter 5 of the thesis*)
 Section Field.
   Context {ext_spec: Semantics.ExtSpec} {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Definition n : nat := 10.
   Definition s : Z := 2^255.
-  Definition c : list (Z * Z) := [(1, 19)]%Z.
+  Definition c : list (Z * Z) := [(1, 19)]%Z. (* 1 is the weight, i.e. just a multiplicator *)
 
   Definition prefix : string := "fe25519_"%string.
 
@@ -49,6 +57,20 @@ Section Field.
   (**** Translate each field operation into bedrock2 and apply bedrock2 backend
         field pipeline proofs to prove the bedrock2 functions are correct. ****)
 
+Locate field_representation.
+Print field_representation. (* This helps: n s c are all passed to the unsaturated solinas stuff, the rest is basic machine ops. Asking about understanding the unsaturated solinas stuff should help me.
+The loose_bounds and tight_bounds definitions I was looking for should be in UnsaturatedSolinasHeuristics.loose_bounds *)
+(*How does field_representation work here? It's based on n, s, and c
+n is the number of limbs! At least I think it is. It's not that I found proof. *)
+
+Print UnsaturatedSolinasHeuristics.limbwidth.
+(* eval is the function that tells me what happens with the list of numbers, I very much expect the result would be 19 here. But yea, that's clearly the number of bits (?) required to
+represent a number in that field divided by the number of limbs. So what this does is a limbwidth that's always the same and rounded up, i.e. we probably have a few bits to many here and there.
+So my rough understanding now is that field_representation n s c, is the field generated with context of our machince words, etc using s - (eval c) as prime number and n is number of limbs
+used for reductions. In that sense tight and loose bound are most likely how reduced our number is, but I still need to understand the theory of that. *)
+(* To check what this does, I should check spec_from_bytes, though something like spec_of_BinOp bin_mul is probably far more interesting *)
+Locate bin_mul.
+Locate spec_of_BinOp.
   Derive fe25519_from_bytes
     SuchThat (forall functions,
       Interface.map.get functions "fe25519_from_bytes" = Some fe25519_from_bytes ->
