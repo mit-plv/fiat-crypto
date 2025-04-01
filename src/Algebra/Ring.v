@@ -254,6 +254,31 @@ Section HomomorphismComposition.
   Qed.
 End HomomorphismComposition.
 
+Section ProductHomomorphism.
+  Context {R EQ ZERO ONE OPP ADD SUB MUL} `{@ring R EQ ZERO ONE OPP ADD SUB MUL}.
+  Context {S eq zero one opp add sub mul} `{@ring S eq zero one opp add sub mul}.
+  Context {R' EQ' ZERO' ONE' OPP' ADD' SUB' MUL'} `{@ring R' EQ' ZERO' ONE' OPP' ADD' SUB' MUL'}.
+  Context {S' eq' zero' one' opp' add' sub' mul'} `{@ring S' eq' zero' one' opp' add' sub' mul'}.
+  Context {phi:R->S} {psi:R'->S'}.
+  Context `{@is_homomorphism R EQ ONE ADD MUL S eq one add mul phi}.
+  Context `{@is_homomorphism R' EQ' ONE' ADD' MUL' S' eq' one' add' mul' psi}.
+
+  Lemma product_homomorphism:
+    @is_homomorphism
+      (R * R') (fun x y => EQ (fst x) (fst y) /\ EQ' (snd x) (snd y)) (ONE, ONE') (apply_binop_pair ADD ADD') (apply_binop_pair MUL MUL')
+      (S * S') (fun x y => eq (fst x) (fst y) /\ eq' (snd x) (snd y)) (one, one') (apply_binop_pair add add') (apply_binop_pair mul mul')
+      (apply_unop_pair phi psi).
+  Proof.
+    repeat match goal with
+           | H: is_homomorphism |- _ => destruct H; clear H
+           | H: Monoid.is_homomorphism |- _ => destruct H; clear H
+           end.
+    repeat constructor; simpl; auto.
+    - destruct H3; auto.
+    - destruct H3; auto.
+  Qed.
+End ProductHomomorphism.
+
 Section IsomorphismComposition.
   Context {R EQ ZERO ONE OPP ADD SUB MUL} `{@ring R EQ ZERO ONE OPP ADD SUB MUL}.
   Context {S eq zero one opp add sub mul} `{@ring S eq zero one opp add sub mul}.
@@ -271,6 +296,29 @@ Section IsomorphismComposition.
     - intros. do 2 apply isomorphism_is_injective. assumption.
   Qed.
 End IsomorphismComposition.
+
+Section ProductIsomorphism.
+  Context {R EQ ZERO ONE OPP ADD SUB MUL} `{@ring R EQ ZERO ONE OPP ADD SUB MUL}.
+  Context {S eq zero one opp add sub mul} `{@ring S eq zero one opp add sub mul}.
+  Context {R' EQ' ZERO' ONE' OPP' ADD' SUB' MUL'} `{@ring R' EQ' ZERO' ONE' OPP' ADD' SUB' MUL'}.
+  Context {S' eq' zero' one' opp' add' sub' mul'} `{@ring S' eq' zero' one' opp' add' sub' mul'}.
+  Context {phi:R->S} {phi':R'->S'} {psi:S->R} {psi':S'->R'}.
+  Context `{@is_isomorphism R EQ ONE ADD MUL S eq one add mul phi psi}.
+  Context `{@is_isomorphism R' EQ' ONE' ADD' MUL' S' eq' one' add' mul' phi' psi'}.
+
+  Lemma product_isomorphism:
+    @is_isomorphism
+      (R * R') (fun x y => EQ (fst x) (fst y) /\ EQ' (snd x) (snd y)) (ONE, ONE') (apply_binop_pair ADD ADD') (apply_binop_pair MUL MUL')
+      (S * S') (fun x y => eq (fst x) (fst y) /\ eq' (snd x) (snd y)) (one, one') (apply_binop_pair add add') (apply_binop_pair mul mul')
+      (apply_unop_pair phi phi')
+      (apply_unop_pair psi psi').
+  Proof.
+    split.
+    - apply product_homomorphism.
+    - intros. simpl. split; [apply H3|apply H4].
+    - intros a b [HA HB]. split; [apply H3|apply H4]; auto.
+  Qed.
+End ProductIsomorphism.
 
 (* TODO: file a Coq bug for rewrite_strat -- it should accept ltac variables *)
 Ltac push_homomorphism phi :=

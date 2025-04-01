@@ -2386,6 +2386,33 @@ Section Theorems.
         - rewrite commutative. reflexivity.
       Qed.
     End PquotRing.
+    Section PquotConvertRingIsomorphism.
+      Program Definition Pquot_convert {q1 q2} (Heq: Peq q1 q2) (p: Pquot q1): Pquot q2 := proj1_sig p.
+      Next Obligation.
+        rewrite (proj2_sig p). apply peq_mod_proper; auto. apply (proj2_sig p).
+      Qed.
+
+      Lemma Pquot_convert_isomorphism {q1 q2} (Heq1: Peq q1 q2) (Heq2: Peq q2 q1):
+        @Ring.is_isomorphism
+          (Pquot q1) eq1 one add mul
+          (Pquot q2) eq1 one add mul
+          (Pquot_convert Heq1)
+          (Pquot_convert Heq2).
+      Proof.
+        constructor.
+        - repeat constructor.
+          + intros a b. destruct a as (a & Ha). destruct b as (b & Hb).
+            unfold eq1; cbn. apply peq_mod_proper; [reflexivity|assumption].
+          + intros a b H. destruct a as (a & Ha). destruct b as (b & Hb).
+            unfold eq1 in *; cbn in *. assumption.
+          + intros a b. destruct a as (a & Ha). destruct b as (b & Hb).
+            unfold eq1; cbn. apply peq_mod_proper; [reflexivity|assumption].
+          + unfold eq1; cbn. apply peq_mod_proper; [reflexivity|assumption].
+        - intro a. destruct a as (a & Ha); unfold eq1; simpl. reflexivity.
+        - intros a b. destruct a as (a & Ha). destruct b as (b & Hb).
+          unfold eq1; simpl. auto.
+      Qed.
+    End PquotConvertRingIsomorphism.
     Section PquotRingListIsomorphism.
       Context {q: P} {Hqnz: not (Peq q Pzero)}.
       Definition Pquot': Type :=
@@ -2842,6 +2869,124 @@ Section Theorems.
             rewrite commutative. reflexivity.
       Qed.
     End PquotlRing.
+    Section PquotlAppRingIsomorphism.
+      Context {ql1 ql2: list P}.
+
+      Program Definition Pquotl_app (pl: Pquotl ql1 * Pquotl ql2): Pquotl (ql1 ++ ql2) :=
+       (proj1_sig (fst pl)) ++ (proj1_sig (snd pl)).
+      Next Obligation. apply Forall2_app; [apply (proj2_sig p)|apply (proj2_sig p0)]. Qed.
+
+      Program Definition Pquotl_split (pl: Pquotl (ql1 ++ ql2)): (Pquotl ql1 * Pquotl ql2) :=
+        (firstn (length ql1) (proj1_sig pl), skipn (length ql1) (proj1_sig pl)).
+      Next Obligation.
+        destruct pl as (pl & Hpl); simpl.
+        pose proof (Forall2_length Hpl) as Hlen.
+        rewrite length_app in Hlen.
+        rewrite <- (firstn_skipn (length ql1) pl) in Hpl.
+        assert (length (firstn (length ql1) pl) = length ql1 :> _) as Hql1 by (rewrite length_firstn, Hlen, PeanoNat.Nat.min_l by Lia.lia; reflexivity).
+        apply (Forall2_app_inv _ _ _ _ _ Hql1 Hpl).
+      Qed.
+      Next Obligation.
+        destruct pl as (pl & Hpl); simpl.
+        pose proof (Forall2_length Hpl) as Hlen.
+        rewrite length_app in Hlen.
+        rewrite <- (firstn_skipn (length ql1) pl) in Hpl.
+        assert (length (firstn (length ql1) pl) = length ql1 :> _) as Hql1 by (rewrite length_firstn, Hlen, PeanoNat.Nat.min_l by Lia.lia; reflexivity).
+        apply (Forall2_app_inv _ _ _ _ _ Hql1 Hpl).
+      Qed.
+
+      Lemma PquotlAppRingIsomorphism:
+        @Ring.is_isomorphism (Pquotl ql1 * Pquotl ql2) (fun x y => eql (fst x) (fst y) /\ eql (snd x) (snd y)) (onel, onel) (apply_binop_pair addl addl) (apply_binop_pair mull mull) (Pquotl (ql1 ++ ql2)) eql onel addl mull Pquotl_app Pquotl_split.
+      Proof.
+        constructor.
+        - constructor.
+          + constructor.
+            * intros pl1 pl2. destruct pl1 as (pl1 & pl1'). destruct pl2 as (pl2 & pl2').
+              destruct pl1 as (pl1 & Hpl1). destruct pl2 as (pl2 & Hpl2).
+              destruct pl1' as (pl1' & Hpl1'). destruct pl2' as (pl2' & Hpl2').
+              unfold eql; simpl. rewrite <- map2_app by (rewrite (Forall2_length Hpl1), (Forall2_length Hpl2); reflexivity).
+              reflexivity.
+            * intros pl1 pl2. destruct pl1 as (pl1 & pl1'). destruct pl2 as (pl2 & pl2').
+              destruct pl1 as (pl1 & Hpl1). destruct pl2 as (pl2 & Hpl2).
+              destruct pl1' as (pl1' & Hpl1'). destruct pl2' as (pl2' & Hpl2').
+              unfold eql; simpl. intros (Heql & Heql').
+              apply Forall2_app; auto.
+          + intros pl1 pl2. destruct pl1 as (pl1 & pl1'). destruct pl2 as (pl2 & pl2').
+            destruct pl1 as (pl1 & Hpl1). destruct pl2 as (pl2 & Hpl2).
+            destruct pl1' as (pl1' & Hpl1'). destruct pl2' as (pl2' & Hpl2').
+            unfold eql; simpl. rewrite <- map2_app by (rewrite map2_length, (Forall2_length Hpl1), (Forall2_length Hpl2), PeanoNat.Nat.min_id; reflexivity).
+            rewrite <- map2_app by (rewrite (Forall2_length Hpl1), (Forall2_length Hpl2); reflexivity).
+            reflexivity.
+          + unfold eql; simpl. rewrite length_app, repeat_app, map2_app; [reflexivity|].
+            apply repeat_length.
+        - intro pl; destruct pl as (pl & Hpl).
+          unfold eql; simpl. rewrite firstn_skipn.
+          reflexivity.
+        - intros pl1 pl2. destruct pl1 as (pl1 & pl1'). destruct pl2 as (pl2 & pl2').
+          destruct pl1 as (pl1 & Hpl1). destruct pl2 as (pl2 & Hpl2).
+          destruct pl1' as (pl1' & Hpl1'). destruct pl2' as (pl2' & Hpl2').
+          unfold eql; simpl; intros Heql.
+          apply Forall2_app_inv; auto.
+          apply Forall2_length in Hpl1, Hpl2. congruence.
+      Qed.
+    End PquotlAppRingIsomorphism.
+    Section PquotlConvertRingIsomorphism.
+      Program Definition Pquotl_convert {ql1 ql2} (Heql: Forall2 Peq ql1 ql2) (pl: Pquotl ql1): Pquotl ql2 :=
+        proj1_sig pl.
+      Next Obligation.
+        pose proof (Hlen1 := Forall2_length Heql).
+        pose proof (Hlen2 := Forall2_length (proj2_sig pl)).
+        pose proof (X := proj2_sig pl). simpl in X.
+        rewrite (ListUtil.Forall2_forall_iff _ _ _ Pzero Pzero) by congruence.
+        rewrite (ListUtil.Forall2_forall_iff _ _ _ Pzero Pzero) in Heql by congruence.
+        rewrite (ListUtil.Forall2_forall_iff _ _ _ Pzero Pzero) in X by congruence.
+        intros. rewrite (X i H). apply peq_mod_proper.
+        - apply (X i H).
+        - apply (Heql i ltac:(congruence)).
+      Qed.
+
+      Lemma Pquotl_convert_isomorphism {ql1 ql2} (Heql1: Forall2 Peq ql1 ql2) (Heql2: Forall2 Peq ql2 ql1):
+        @Ring.is_isomorphism
+          (Pquotl ql1) eql onel addl mull
+          (Pquotl ql2) eql onel addl mull
+          (Pquotl_convert Heql1)
+          (Pquotl_convert Heql2).
+      Proof.
+        constructor.
+        - repeat constructor.
+          + intros a b. destruct a as (a & Ha). destruct b as (b & Hb).
+            unfold eql; cbn. rewrite (ListUtil.Forall2_forall_iff _ _ _ Pzero); reflexivity.
+          + intros a b. destruct a as (a & Ha). destruct b as (b & Hb).
+            unfold eql; cbn. auto.
+          + intros a b. destruct a as (a & Ha). destruct b as (b & Hb).
+            unfold eql; cbn. rewrite (ListUtil.Forall2_forall_iff _ _ _ Pzero Pzero).
+            * repeat rewrite ListUtil.map2_length. rewrite (Forall2_length Ha), (Forall2_length Hb).
+              repeat rewrite min_l by Lia.lia. intros.
+              repeat rewrite (ListUtil.nth_default_map2 _ _ _ _ _ Pzero Pzero).
+              repeat rewrite ListUtil.map2_length. rewrite (Forall2_length Ha), (Forall2_length Hb), <- (Forall2_length Heql1).
+              repeat rewrite min_l by Lia.lia. intros.
+              destruct (Compare_dec.lt_dec _ _); [|Lia.lia].
+              apply peq_mod_proper; [reflexivity|].
+              apply (proj1 (ListUtil.Forall2_forall_iff _ _ _ Pzero Pzero (Forall2_length Heql1)) Heql1); auto.
+            * repeat rewrite ListUtil.map2_length. rewrite (Forall2_length Heql1).
+              reflexivity.
+          + unfold eql; cbn. rewrite (Forall2_length Heql1).
+            rewrite (ListUtil.Forall2_forall_iff _ _ _ Pzero Pzero) by (do 2 rewrite ListUtil.map2_length; rewrite (Forall2_length Heql1); reflexivity).
+            rewrite ListUtil.map2_length. rewrite (Forall2_length Heql1), repeat_length, min_l by Lia.lia.
+            intros. repeat rewrite (ListUtil.nth_default_map2 _ _ _ _ _ Pzero Pzero).
+            rewrite repeat_length, (Forall2_length Heql1), min_l by Lia.lia.
+            rewrite ListUtil.nth_default_repeat.
+            destruct (Compare_dec.lt_dec _ _); [|Lia.lia].
+            destruct (Decidable.dec _); [|Lia.lia].
+            apply peq_mod_proper; [reflexivity|].
+            apply (proj1 (ListUtil.Forall2_forall_iff _ _ _ Pzero Pzero (Forall2_length Heql1)) Heql1).
+            rewrite (Forall2_length Heql1); auto.
+        - intro a; destruct a as (a & Ha). unfold eql; simpl.
+          reflexivity.
+        - intros a b. destruct a as (a & Ha). destruct b as (b & Hb).
+          unfold eql; cbn. auto.
+      Qed.
+    End PquotlConvertRingIsomorphism.
     Section PquotlRingListIsomorphism.
       Context {ql: list P} {Hqlnz: Forall (fun q => not (Peq q Pzero)) ql}.
       Definition Pquotl': Type :=
