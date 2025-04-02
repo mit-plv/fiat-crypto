@@ -95,7 +95,7 @@ Section Bignum.
       { destruct Bitwidth.width_cases; subst width; inversion 1. }
       { intros; apply LittleEndianList.length_le_split. }
       erewrite List.map_ext with (g:=fun x=>x), map_id; try cancel; cbv [seps].
-      { rewrite sep_emp_emp. setoid_rewrite H. 
+      { rewrite sep_emp_emp. setoid_rewrite H.
         cbv [Lift1Prop.iff1 emp]; intuition (
           destruct Bitwidth.width_cases; subst width; subst; cbn in *; try nia). }
       intros.

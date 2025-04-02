@@ -118,13 +118,13 @@ Proof.
   induction vars; intros; try  now (simpl; auto).
   specialize (IHvars (S offset)).
   simpl in H.
-  
+
   assert (length lst > offset).
   {
     eapply sub_nz_implies_lt; eauto.
     lia.
   }
-  assert (1 + length vars = (length lst) - offset).  
+  assert (1 + length vars = (length lst) - offset).
   {
     replace (1 + Z.of_nat (length vars)) with (Z.of_nat (S (length vars))) by lia.
     rewrite H.
@@ -158,7 +158,7 @@ Proof.
   rewrite <- ListUtil.skipn_0 with (xs := lst) at 3.
   intros; apply array_locs_is_combine'; lia.
 Qed.
-  
+
 Definition load_to_vars vars (lst : list expr) k_impl : cmd :=
   List.fold_right (fun '(x,e) k_impl => cmd.seq (cmd.set x e) k_impl) k_impl (combine vars lst).
 
@@ -174,7 +174,7 @@ Qed.
 (* we leave prior valiues abstract to support compound operations *)
 Inductive locals_array_expr (P : mem -> Prop) : locals -> list string -> list expr -> list _ -> Prop :=
 | locals_array_expr_nil l : locals_array_expr l [] [] []
-| locals_array_expr_cons l v vars e lst_expr i lst 
+| locals_array_expr_cons l v vars e lst_expr i lst
   : (forall m, P m -> DEXPR m l e i) ->
     (forall i, locals_array_expr (map.put l v i) vars lst_expr lst) ->
     locals_array_expr l (v::vars) (e::lst_expr) (i::lst).
@@ -196,7 +196,7 @@ Lemma compile_set_locals_array {t m l e} (lst : list word):
       (*TODO: want to put arbitrary value for everything but current var
         (simplification of actual invariant, which is everything before current var)
         TODO: need to know current var for this
-       
+
       Forall2 (fun e i => forall v',  DEXPR m l e i) lst_expr lst ->
        *)
       locals_array_expr (eq m) l vars lst_expr lst ->
@@ -224,7 +224,7 @@ Proof.
   unfold nlet_eq.
   generalize (pred (k lst eq_refl)).
   clear pred k.
-  
+
   revert k_impl.
   revert dependent lst_expr.
   revert dependent lst.
@@ -250,7 +250,7 @@ Proof.
   (*(pose proof (H0 a (ltac:(simpl; intuition)))).*)
   (*eapply array_dexpr_locals_put; eauto.*)
   { inversion H; subst; auto. }
-Qed.    
+Qed.
 
 Section Bedrock2.
 
@@ -258,7 +258,7 @@ Section Bedrock2.
   Delimit Scope word_scope with word.
   Local Infix "+" := word.add : word_scope.
   Local Infix "*" := word.mul : word_scope.
-  
+
   Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
   Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 
@@ -266,7 +266,7 @@ Section Bedrock2.
   Definition le_split n (l : word) := le_split n (word.unsigned l).
 
   (* copied from Low.v, anticipating its removal *)
-  Section Low.    
+  Section Low.
 
 Local Notation "a + b" := (word.add (word := word) a b).
 Local Notation "a ^ b" := (word.xor (word := word) a b).
@@ -330,7 +330,7 @@ Proof.
 Qed.
 
   End Low.
-  
+
 Definition quarterround x y z t (st : list word) :=
   let '\<a,b,c,d\> := quarter_gallina (nth x st (word.of_Z 0))
                         (nth y st (word.of_Z 0))
@@ -372,7 +372,7 @@ Notation "'let/n' ( x0 , y0 , z0 , t0 , x1 , y1 , z1 , t1 , x2 , y2 , z2 , t2 , 
       x3 name, y3 name, z3 name, t3 name,
       body at level 200,
       only parsing).
-  
+
   Definition chacha20_block' (*256bit*)key (*32bit+96bit*)nonce :=
   nlet ["qv0"; "qv1"; "qv2"; "qv3"; "qv4"; "qv5"; "qv6"; "qv7";
          "qv8"; "qv9"; "qv10"; "qv11"; "qv12"; "qv13"; "qv14"; "qv15"] (*512bit*)
@@ -424,9 +424,9 @@ Notation "'let/n' ( x0 , y0 , z0 , t0 , x1 , y1 , z1 , t1 , x2 , y2 , z2 , t2 , 
      qv4,qv5,qv6,qv7,
      qv8,qv9,qv10,qv11,
         qv12,qv13,qv14,qv15\> in
-    let ss := [qv0; qv1; qv2; qv3; 
-         qv4; qv5; qv6; qv7; 
-         qv8; qv9; qv10; qv11; 
+    let ss := [qv0; qv1; qv2; qv3;
+         qv4; qv5; qv6; qv7;
+         qv8; qv9; qv10; qv11;
          qv12; qv13; qv14; qv15] in
   nlet ["qv0"; "qv1"; "qv2"; "qv3"; "qv4"; "qv5"; "qv6"; "qv7";
          "qv8"; "qv9"; "qv10"; "qv11"; "qv12"; "qv13"; "qv14"; "qv15"] (*512bit*)
@@ -475,7 +475,7 @@ Section Derive.
   Proof.
     compile.
   Qed.
-  
+
 Lemma compile_quarter : forall {tr mem locals functions} a b c d,
       let v := quarter_gallina a b c d in
 
@@ -483,7 +483,7 @@ Lemma compile_quarter : forall {tr mem locals functions} a b c d,
              a_var b_var c_var d_var,
 
         spec_of_quarter functions ->
-        
+
         map.get locals a_var = Some a ->
         map.get locals b_var = Some b ->
         map.get locals c_var = Some c ->
@@ -501,10 +501,10 @@ Lemma compile_quarter : forall {tr mem locals functions} a b c d,
            Memory := mem;
            Locals := locals;
            Functions := functions }>
-        
+
         cmd.seq (cmd.call [a_var; b_var; c_var; d_var] "quarter" [expr.var a_var; expr.var b_var; expr.var c_var; expr.var d_var])
                 k_impl
-                
+
         <{ pred (nlet_eq [a_var; b_var; c_var; d_var] v k) }>.
   Proof.
     repeat straightline.
@@ -515,12 +515,12 @@ Lemma compile_quarter : forall {tr mem locals functions} a b c d,
 End Derive.
 
 
-  
+
   Existing Instance spec_of_quarter.
 
   Existing Instance word_ac_ok.
 
-  
+
   Lemma nat_iter_rel {A B} (R : A -> B -> Prop) acca accb fa fb n
     : R acca accb ->
       (forall acca accb, R acca accb -> R (fa acca) (fb accb)) ->
@@ -530,7 +530,7 @@ End Derive.
     induction n; simpl; eauto.
   Qed.
 
-  
+
   Lemma nat_iter_pred {A} (R : A -> Prop) f acc n
     : R acc ->
       (forall acc, R acc -> R (f acc)) ->
@@ -539,7 +539,7 @@ End Derive.
     intros.
     induction n; simpl; eauto.
   Qed.
-  
+
   Lemma length_quarterround a b c d l
     : length (Spec.quarterround a b c d l) = length l.
   Proof.
@@ -549,7 +549,7 @@ End Derive.
     rewrite !upd_length.
     reflexivity.
   Qed.
-  
+
 Lemma quarterround_ok x y z t st :
   Forall (in_bounds 32) st ->
   List.map word.of_Z (Spec.quarterround x y z t st) =
@@ -655,16 +655,16 @@ Qed.
   rewrite <- ListUtil.flat_map_map with (f:=word.unsigned(word:=word)).
   f_equal.
   subst x1.
-  
+
   revert dependent x0;  intro x0; simple apply destruct_16 with (a:=x0); intros.
-  
+
   erewrite (map_ext _ _ word_add_pair_eqn).
   rewrite <- map_map with (g:= word.unsigned (word:=word)).
   f_equal.
   change (λ x1 : Z * Z, (word.of_Z (fst x1) + word.of_Z (snd x1))%word)
     with (fun x2 => (fun x => (fst x) + (snd x))%word ((fun x1 => (word.of_Z (word:=word)(fst x1), word.of_Z (snd x1))) x2)).
 
-  
+
   rewrite <- map_map.
   erewrite map_ext with (g:=(λ '(s, t), (s + t)%word)).
   2:{
@@ -680,7 +680,7 @@ Qed.
     repeat (f_equal;[]).
     reflexivity.
   }
-  
+
 
   lazymatch goal with |- map word.of_Z ?lhs = _ => set lhs end.
   assert (length l = 16%nat) as Hlen.
@@ -719,7 +719,7 @@ Qed.
     1:repeat apply quarterround_in_bounds; auto.
     repeat rewrite length_quarterround; auto.
   }
-  
+
   {
     destruct H.
     repeat rewrite quarterround_ok.
@@ -886,8 +886,8 @@ Proof.
     subst;
     repeat rewrite ?map.get_remove_same, ?map.get_remove_diff by tauto;
     reflexivity.
-Qed.  
-  
+Qed.
+
 (*TODO: generalize*)
 Lemma map_remove_many_comm (l : locals) vars a
   : (map_remove_many (map.remove l a) vars) = map.remove (map_remove_many l vars) a.
@@ -957,7 +957,7 @@ Proof.
   rewrite map_remove_remove_comm.
   apply IHvars; auto.
 Qed.
-  
+
 Lemma map_put_remove_many_in s i vars (l : locals)
         : In s vars ->
           (map_remove_many #{ … l; s => i }# vars)
@@ -978,7 +978,7 @@ Proof.
 Qed.
 
 
-      
+
 Lemma map_put_remove_many_notin s i vars (l : locals)
         : ~ In s vars ->
           (map_remove_many #{ … l; s => i }# vars)
@@ -991,7 +991,7 @@ Proof.
     rewrite map.remove_put_diff; auto.
 Qed.
 
-      
+
 Lemma map_remove_remove_many_notin s vars (l : locals)
         : ~ In s vars ->
           (map_remove_many (map.remove l s) vars)
@@ -1003,8 +1003,8 @@ Proof.
     intuition (subst; eauto).
     rewrite map_remove_comm; auto.
 Qed.
-  
-      
+
+
 Lemma expr_load_word_of_array_helper m l len lst e ptr R (n : nat)
   : length lst = len ->
     n <= len ->
@@ -1015,7 +1015,7 @@ Lemma expr_load_word_of_array_helper m l len lst e ptr R (n : nat)
     locals_array_expr (eq m) l vars (map (load_offset e) (z_range n len)) (skipn n lst).
 Proof.
   remember (len - n)%nat as diff.
-  
+
   revert l n Heqdiff R lst.
   induction diff.
   {
@@ -1054,10 +1054,10 @@ Proof.
       change (@nth (@Naive.rep 32) n lst (@word.of_Z 32 word 0))
         with (@nth (@word.rep _ word) n lst (@word.of_Z 32 word 0)).
       replace (nth n lst (word.of_Z 0))
-        with (truncate_word access_size.word (nth n lst (word.of_Z 0))).      
+        with (truncate_word access_size.word (nth n lst (word.of_Z 0))).
       eapply array_load_of_sep; eauto.
       {
-        
+
         change (Naive.unsigned ?a) with (word.unsigned (word:=word) a).
         rewrite word.unsigned_of_Z.
         (*lia.
@@ -1142,7 +1142,7 @@ Proof.
     rewrite Nat.mul_comm.
     rewrite Nat.div_up_exact; lia.
   }
-  
+
   unfold le_combine.
   unfold bs2ws, zs2ws, bs2zs in *.
   rewrite <- map_map with (g:= word.of_Z (word:=word)).
@@ -1153,7 +1153,7 @@ Qed.
 
 
 
-  
+
 Definition store_offset e o :=
   cmd.store access_size.word
     (expr.op bopname.add (expr.literal (4*o)) e).
@@ -1190,7 +1190,7 @@ Proof.
       specialize (H a1); inversion H; subst; eauto.
     }
     apply IHl1.
-    intros.    
+    intros.
     specialize (H a1); inversion H; subst; eauto.
   }
 Qed.
@@ -1286,14 +1286,14 @@ Proof.
   revert m.
   induction lst.
   {
-    
+
     intros until R;
       intros Hm Hlst.
     eapply Forall2_distr_forall in Hlst.
     eapply Forall2_distr_forall in Hlst.
     eapply Forall2_distr_forall in Hlst; eauto.
     inversion Hlst; subst.
-                  
+
     cbn [length Nat.add] in *.
     rewrite z_range_nil by lia.
     intros HA HB HC.
@@ -1307,7 +1307,7 @@ Proof.
     cbn [length].
     intros.
     inversion H0; subst; clear H0.
-    
+
     cbn [length].
     replace (S (length l0) + n) with ((length l0) + (n+1)%nat) by lia.
     rewrite z_range_cons by lia.
@@ -1439,7 +1439,7 @@ Import coqutil.Word.LittleEndianList (le_combine_split).
     }
   }
 Qed.
-  
+
 
 Lemma compile_store_locals_array {t m l e} (lst : list word):
     let v := lst in
@@ -1503,7 +1503,7 @@ Lemma array_expr_compile_word_add P l vars
 Proof.
   induction 1;
     inversion 1;
-    subst;    
+    subst;
     cbn [combine map];
     constructor;
     eauto.
@@ -1513,18 +1513,18 @@ Proof.
   }
 Qed.
 
-    
+
   (*used because concrete computation on maps seems to be slow here*)
   Ltac eval_map_get :=
     repeat rewrite map.get_put_diff by (cbv; congruence);
     rewrite map.get_put_same; reflexivity.
 
-  
-        
+
+
   Ltac dedup s :=
     repeat rewrite map.put_put_diff with (k1:=s) by congruence;
     rewrite ?map.put_put_same with (k:=s).
-  
+
 Lemma forall_distr_Forall2' {A B C} (P : A -> B -> C -> Prop) l1 l2
   : length l1 = length l2 ->
     (forall (a:A), Forall2 (P a) l1 l2) ->
@@ -1537,7 +1537,7 @@ Proof.
   }
   {
     apply IHl1; try lia.
-    intros.    
+    intros.
     specialize (H0 a0); inversion H0; subst; eauto.
   }
 Qed.
@@ -1565,7 +1565,7 @@ Proof.
     cbn [length]; congruence.
   }
 Qed.
-  
+
 Lemma locals_array_expr_app m l vars le1 le2 l1 l2
   : locals_array_expr m l (firstn (length l1) vars) le1 l1 ->
     (forall l1', length l1' = length l1 ->
@@ -1628,7 +1628,7 @@ Proof.
       }
       compile_step.
       cbn [List.fold_left];
-        repeat rewrite ?map.remove_put_same, ?map.remove_put_diff, ?map.remove_empty by congruence.        
+        repeat rewrite ?map.remove_put_same, ?map.remove_put_diff, ?map.remove_empty by congruence.
       compile_step.
     }
     {
@@ -1640,7 +1640,7 @@ Proof.
       }
       compile_step.
       cbn [List.fold_left];
-        repeat rewrite ?map.remove_put_same, ?map.remove_put_diff, ?map.remove_empty by congruence.     
+        repeat rewrite ?map.remove_put_same, ?map.remove_put_diff, ?map.remove_empty by congruence.
       compile_step.
     }
   }
@@ -1648,7 +1648,7 @@ Proof.
   let l' := eval cbn in l in
     change l with l'.
 
-  
+
   rewrite  Nat_iter_as_nd_ranged_for_all with (i:=0).
   change (0 + Z.of_nat 10) with 10%Z.
 
@@ -1675,7 +1675,7 @@ Proof.
 
     Optimize Proof.
     Optimize Heap.
-    
+
 
 
   (* TODO: why doesn't simple eapply work? *)
@@ -1688,12 +1688,12 @@ Proof.
         simple eapply compile_nlet_as_nlet_eq;
         change (lp from' (ExitToken.new, ?y)) with ((fun v => lp from' (ExitToken.new, v)) y).
       simple eapply compile_quarter; [ now (eval_map_get || (repeat compile_step)) ..|].
-      
+
       Optimize Proof.
       Optimize Heap.
       compile_step.
 
-      
+
       (*TODO: compile_step takes too long (related to computations on maps?)*)
       unshelve refine (compile_unsets _ _ _); [ shelve | intros |  ]; cycle 1.
       simple apply compile_skip.
@@ -1701,12 +1701,12 @@ Proof.
       cbv beta delta [lp].
       split; [tauto|].
       split.
-      
+
       {
-        
+
         (*TODO: why are quarter calls getting subst'ed?*)
         cbv [P2.car P2.cdr fst snd].
-        cbv [map.remove_many fold_left].      
+        cbv [map.remove_many fold_left].
         cbv [gs].
 
         Ltac concrete_maps_equal :=
@@ -1727,20 +1727,20 @@ Proof.
 
   Optimize Proof.
   Optimize Heap.
-  
+
   compile_step.
   compile_step.
   compile_step.
   compile_step.
   compile_step.
-  
+
   simple eapply compile_nlet_as_nlet_eq.
   (*TODO: need to strengthen this a la broadcast
     so that it allows other vars to change, doesn't need fresh names
    *)
   simple eapply compile_set_locals_array.
   {
-    
+
 (*TODO: generalize to all ops*)
     eapply array_expr_compile_word_add.
     {
@@ -1755,7 +1755,7 @@ Proof.
         eval_map_get.
     }
     {
-      
+
       repeat (apply locals_array_expr_app; intros).
       {
         let x := eval cbn -[word.of_Z] in (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) in
@@ -1788,7 +1788,7 @@ Proof.
           compile_step.
         }
       }
-      {        
+      {
           rewrite !map_length, !length_chunk, H5.
           all: try lia.
           repeat (set (Nat.div_up _ _) as x;
@@ -1840,15 +1840,15 @@ Proof.
   dedup "qv14".
   dedup "qv15".
 
-  
+
   Optimize Proof.
   Optimize Heap.
-  
+
   (*TODO: earlier in derivation: why is key counted to 32? definitely wrong*)
   (*TODO: do I need to eval the combine?*)
   rewrite <- ListUtil.flat_map_map.
   (*change (flat_map _ (map _ v1)) with (bytes_of_w32s v1).*)
-  
+
   simple eapply compile_nlet_as_nlet_eq.
   change (pred (let/n x as "st" eq:_ := _ in x))
     with (pred (let/n v1 as "st" eq:_ := v1 in
@@ -1902,7 +1902,7 @@ Proof.
   }
   compile_step.
   unfold nlet_eq.
-  
+
   (*TODO: compile_step takes too long (related to computations on maps?)*)
   unshelve refine (compile_unsets _ _ _); [ shelve | intros |  ]; cycle 1.
   simple apply compile_skip.
@@ -1933,7 +1933,7 @@ Proof.
 Qed.
 
 
-(*  
+(*
 
 Local Open Scope string_scope.
 Import Syntax Syntax.Coercions NotationsCustomEntry.

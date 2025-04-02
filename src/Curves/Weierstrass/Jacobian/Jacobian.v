@@ -633,7 +633,7 @@ Module Jacobian.
 
     Lemma to_affine_add_inequal_nz_nz P Q (H : ~ eq P Q)(HP : ~ iszero P) (HQ : ~ iszero Q)  :
       W.eq (to_affine (add_inequal_nz_nz P Q H)) (W.add (to_affine P) (to_affine Q)).
-    Proof. 
+    Proof.
       case P as [((x1&y1)&z1)?], Q as [((x2&y2)&z2)?].
       cbv [iszero] in *; prept; try apply H; prept.
       par : faster_t_noclear.

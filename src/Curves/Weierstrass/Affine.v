@@ -23,7 +23,7 @@ Module W.
 
     Global Instance Equivalence_eq : Equivalence (@W.eq _ Feq Fadd Fmul a b).
     Proof.
-      cbv [W.eq W.coordinates]; split; repeat intros [ [ []|[] ] ?]; intuition try solve 
+      cbv [W.eq W.coordinates]; split; repeat intros [ [ []|[] ] ?]; intuition try solve
         [contradiction | apply reflexivity | apply symmetry; trivial | eapply transitivity; eauto 1].
     Qed.
 

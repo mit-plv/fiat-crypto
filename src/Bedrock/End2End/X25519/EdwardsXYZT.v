@@ -342,7 +342,7 @@ Proof.
   repeat straightline.
   (* Rewrites the FElems for the stack (in H93) to be about bytes instead *)
     cbv [FElem] in *.
-    (* Prevent output from being rewritten by seprewrite_in *) 
+    (* Prevent output from being rewritten by seprewrite_in *)
     remember (Bignum.Bignum felem_size_in_words ozK _) as Pz in H93.
     remember (Bignum.Bignum felem_size_in_words oyK _) as Py in H93.
     remember (Bignum.Bignum felem_size_in_words oxK _) as Px in H93.
@@ -391,7 +391,7 @@ Proof.
   repeat straightline.
   (* Rewrites the FElems for the stack (in H87) to be about bytes instead *)
     cbv [FElem] in *.
-    (* Prevent output from being rewritten by seprewrite_in *) 
+    (* Prevent output from being rewritten by seprewrite_in *)
     remember (Bignum.Bignum felem_size_in_words ozK _) as Pz in H87.
     remember (Bignum.Bignum felem_size_in_words oyK _) as Py in H87.
     remember (Bignum.Bignum felem_size_in_words oxK _) as Px in H87.

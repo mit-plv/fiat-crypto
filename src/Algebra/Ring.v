@@ -26,9 +26,9 @@ Section Ring.
       eapply @left_identity; eauto with typeclass_instances.
     - eapply @right_identity; eauto with typeclass_instances.
     - eapply associative.
-  Qed. 
+  Qed.
 
-  
+
   Lemma mul_0_l : forall x, 0 * x = 0.
   Proof using Type*. apply Ncring.ring_mul_0_l. Qed.
 
@@ -39,10 +39,10 @@ Section Ring.
   Proof using Type*. rewrite ring_sub_definition. rewrite left_identity. reflexivity. Qed.
 
   Lemma mul_opp_r x y : x * opp y = opp (x * y).
-  Proof using Type*. symmetry. apply Ncring.ring_opp_mul_r. Qed. 
+  Proof using Type*. symmetry. apply Ncring.ring_opp_mul_r. Qed.
 
   Lemma mul_opp_l x y : opp x * y = opp (x * y).
-  Proof using Type*. symmetry. apply Ncring.ring_opp_mul_l. Qed. 
+  Proof using Type*. symmetry. apply Ncring.ring_opp_mul_l. Qed.
 
   Definition opp_zero_iff : forall x, opp x = 0 <-> x = 0 := Group.inv_id_iff.
 
@@ -84,7 +84,7 @@ Section Ring.
     forall x y : T, not (eq (mul x y) zero) <-> (not (eq x zero) /\ not (eq y zero)).
   Proof using Type*. intros; rewrite zero_product_iff_zero_factor; tauto. Qed.
 
-  
+
 End Ring.
 
 Section Homomorphism.

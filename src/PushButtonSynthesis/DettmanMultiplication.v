@@ -82,7 +82,7 @@ Section __.
        notice where the constant 0s are, and remove them. *)
   Definition possible_values_of_machine_wordsize
     := prefix_with_carry [machine_wordsize; 2 * machine_wordsize].
-  
+
   Local Notation c := (Associational.eval c_).
   Definition m := s - c.
 

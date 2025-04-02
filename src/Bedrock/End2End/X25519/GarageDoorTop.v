@@ -204,7 +204,7 @@ Proof.
     eauto using Forall2_app.
 Qed.
 Import Coq.Classes.Morphisms.
-Global Instance Proper_only_mmio_satisfying : 
+Global Instance Proper_only_mmio_satisfying :
   Proper (Morphisms.pointwise_relation _ iff ==> Morphisms.pointwise_relation _ iff) only_mmio_satisfying.
 Proof.
   cbv [only_mmio_satisfying mmio_trace_abstraction_relation].

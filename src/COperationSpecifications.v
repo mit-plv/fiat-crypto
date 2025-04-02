@@ -202,7 +202,7 @@ Module selectznz.
       -> list_Z_bounded_by saturated_bounds y
       -> (selectznz cond x y) = (if Decidable.dec (cond = 0) then x else y)
       /\ list_Z_bounded_by saturated_bounds (selectznz cond x y).
-         
+
   End __.
 
 

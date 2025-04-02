@@ -88,7 +88,7 @@ Section Gallina.
     cbv.
     intuition congruence.
   Qed.
-  
+
   Lemma ladderstep_gallina_equiv X1 P1 P2 :
     reorder_pairs (ladderstep_gallina _ a24 X1 (fst P1) (snd P1) (fst P2) (snd P2)) =
     @M.xzladderstep _ F.add F.sub F.mul a24 X1 P1 P2.
@@ -136,7 +136,7 @@ Section Gallina.
      a (a24_correct : (1 + 1 + 1 + 1) * a24 = a - (1 + 1))
     (a2m4_nonsq : ~(exists r, F.mul r r = F.sub (F.mul a a) (F.of_Z _ 4)))
     (b : F m) (b_nonzero : b <> 0).
-  
+
   Local Instance char_ge_28 : @Ring.char_ge (F m) eq 0 1 F.opp F.add F.sub F.mul 28.
   Proof. eapply Algebra.Hierarchy.char_ge_weaken; try eapply F.char_gt; trivial. Qed.
 
@@ -198,7 +198,7 @@ Section __.
           Z.of_nat scalarbits <= 8*Z.of_nat (length Kbytes);
         ensures tr' mem' :=
           tr' = tr /\ (
-          let OUT := montladder_gallina a24 scalarbits K U in 
+          let OUT := montladder_gallina a24 scalarbits K U in
               (FElem (Some tight_bounds) pOUT OUT * Kbytes$@pK
                * FElem (Some tight_bounds) pU U
                * R)%sep mem') }.

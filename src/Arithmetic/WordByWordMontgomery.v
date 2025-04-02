@@ -94,7 +94,7 @@ Module WordByWordMontgomery.
 
       Lemma a_S3: a' = a  -> a'_S3 = snd A'_S3.
       Proof using Type. intros; cbv [a'_S3 A'_S3 Let_In];  subst; reflexivity. Qed.
-      
+
     End Iteration.
 
     Section loop.
@@ -124,7 +124,7 @@ Module WordByWordMontgomery.
 
       Definition pre_redc_from (S': T (S R_numlimbs)) : T (S R_numlimbs)
         := snd (redc_loop A_numlimbs (A, S')).
-      
+
       Definition redc_body_alt: Z * T (S R_numlimbs) -> T (S R_numlimbs)
         := fun '(a, S') => a'_S3 B k S' a.
 
@@ -142,7 +142,7 @@ Module WordByWordMontgomery.
     Lemma redc_loop_alt_from_eq:
       forall {A_numlimbs: nat} (A: T A_numlimbs) (B: T R_numlimbs) (k: Z) (S_old: T (S R_numlimbs)),
         redc_loop_alt_from (length A) A B k S_old = pre_redc_from (length A) A B k S_old.
-      Proof. 
+      Proof.
         intros. generalize dependent S_old. induction A.
         - reflexivity.
         - intros.
@@ -163,7 +163,7 @@ Module WordByWordMontgomery.
       Proof.
         intros. reflexivity.
       Qed.
-      
+
     Theorem redc_alt_eq:
       forall {A_numlimbs: nat} (A: T A_numlimbs) (B: T R_numlimbs) (k : Z),
         redc (length A) A B k = redc_alt (length A) A B k.
@@ -1124,7 +1124,7 @@ Module WordByWordMontgomery.
         | rewrite !m_enc_correct_montgomery; eapply redc_mod_N ];
         t_fin.
     Qed.
-        
+
     Definition onemod : list Z := Partition.partition weight n 1.
 
     Definition onemod_correct : eval onemod = 1 /\ valid onemod.

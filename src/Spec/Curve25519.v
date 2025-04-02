@@ -10,7 +10,7 @@ Notation twist_order := (4*l2).
 
 Lemma orders_match : (2*(p + 1) - order = twist_order)%Z. Proof. exact eq_refl. Qed.
 
-From Coq Require Import Znumtheory List. Import ListNotations. 
+From Coq Require Import Znumtheory List. Import ListNotations.
 From Coqprime.PrimalityTest Require Import Pocklington PocklingtonCertificat.
 
 Lemma prime_p : prime p.
@@ -64,7 +64,7 @@ Proof.
   Pock_certif 383 5 [(191, 1); (2, 1)] 1;
   Pock_certif 191 7 [(5, 1); (2, 1)] 1; Pock_certif 7 3 [(2, 1)] 1;
   Pock_certif 5 2 [(2, 2)] 1;
-  Proof_certif 3 prime_3; 
+  Proof_certif 3 prime_3;
   Proof_certif 2 prime_2] _).
   native_cast_no_check (@eq_refl bool true).
 Time Qed. (* 1s *)

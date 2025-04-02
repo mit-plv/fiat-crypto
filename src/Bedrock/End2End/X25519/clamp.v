@@ -10,7 +10,7 @@ Module Z.
   Qed.
 End Z.
 
-Local Ltac t := 
+Local Ltac t :=
   try (eapply Z.bits_inj'; intros i Hi);
   repeat match goal with
   | _ => progress subst
@@ -103,13 +103,13 @@ Proof.
   seprewrite_in @Array.bytearray_append H1; rewrite ?app_length, ?firstn_length_le in * by lia.
   rewrite <-!Properties.word.add_assoc, <-!Properties.word.ring_morph_add  in *; simpl Z.add in *.
 
-  assert (length (skipn 30 s) = 1)%nat by (rewrite skipn_length; lia). 
-  assert (length (firstn 30 s) = 30)%nat by (rewrite firstn_length; lia). 
+  assert (length (skipn 30 s) = 1)%nat by (rewrite skipn_length; lia).
+  assert (length (firstn 30 s) = 30)%nat by (rewrite firstn_length; lia).
   destruct (skipn 30 s) as [|b31 [] ] eqn:? in *; try (cbn [length] in *; congruence).
   cbn [Array.array] in *.
 
   repeat straightline.
-  
+
   eassert (Hrw : Lift1Prop.iff1 (ptsto a (Byte.byte.of_Z v0)) ([Byte.byte.of_Z v0]$@a)) by (cbn [Array.array]; cancel).
   repeat seprewrite_in Hrw H4.
   repeat seprewrite_in (symmetry! @Array.array_cons) H4.

@@ -13,7 +13,7 @@ Module Z.
   Proof. reflexivity. Qed.
 
   Lemma truncating_shiftl_correct_land_ones bw x y
-  : Z.truncating_shiftl bw x y = (x << y) &' 
+  : Z.truncating_shiftl bw x y = (x << y) &'
       Z.ones ltac:(match eval hnf in (1 mod 0) with | 0 => exact (Z.max 0 bw) | _ => exact bw end).
   Proof.
     rewrite truncating_shiftl_correct.

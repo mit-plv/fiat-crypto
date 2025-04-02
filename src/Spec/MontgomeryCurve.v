@@ -68,10 +68,10 @@ Module M.
       | ∞ => ∞
       end.
     Next Obligation.
-    Proof. 
+    Proof.
       DestructHead.destruct_head @point; cbv; BreakMatch.break_match; trivial; Field.fsatz.
     Qed.
-    
+
     Definition X0 (P : point) : F :=
       match coordinates P with
       | (x, y) => x

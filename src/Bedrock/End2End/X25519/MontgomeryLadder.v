@@ -96,7 +96,7 @@ Local Arguments word.of_Z : simpl never.
 Lemma x25519_ok : program_logic_goal_for_function! x25519.
 Proof.
   repeat straightline.
-  
+
   straightline_call; ssplit; try ecancel_assumption; repeat straightline; try listZnWords; [].
   straightline_call; ssplit; try ecancel_assumption; repeat straightline; try listZnWords; [].
 
@@ -143,7 +143,7 @@ Proof.
   straightline_call; ssplit.
   { ecancel_assumption. }
   { transitivity 32%nat; auto. }
-  { eexists. 
+  { eexists.
     unfold FElem, Field.FElem in *; extract_ex1_and_emp_in_goal; ssplit.
     ecancel_assumption. }
   { intuition idtac. }

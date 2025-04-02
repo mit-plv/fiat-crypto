@@ -410,7 +410,7 @@ Module Z.
 
   Lemma opp_mod2 a : a mod 2 = - a mod 2.
   Proof. rewrite !Zmod_odd, Z.odd_opp; reflexivity. Qed.
-  
+
   Lemma mod_pow_same_base_larger a b n m :
     0 <= n < m -> 0 < b ->
     (a mod (b^n)) mod (b^m) = a mod b^n.
