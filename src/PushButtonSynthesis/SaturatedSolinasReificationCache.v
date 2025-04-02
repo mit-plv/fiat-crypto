@@ -24,8 +24,9 @@ Module Export SaturatedSolinas.
   Proof. Time cache_reify (). Time Qed.
 #[global]
   Hint Extern 1 (_ = _) => apply_cached_reification mulmod (proj1 reified_mul_gen_correct) : reify_cache_gen.
-#[global]
-  Hint Immediate (proj2 reified_mul_gen_correct) : wf_gen_cache.
+  Local Definition reified_mul_gen_correct_proj2 := proj2 reified_mul_gen_correct.
+
+  Hint Immediate reified_mul_gen_correct_proj2 : wf_gen_cache.
 #[global]
   Hint Rewrite (proj1 reified_mul_gen_correct) : interp_gen_cache.
   Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very long time *)

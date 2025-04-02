@@ -165,22 +165,32 @@ Section freeze_mod_ops.
 
   Definition wprops_bytes := (@wprops 8 1 ltac:(clear; lia)).
   Local Notation wprops := (@wprops limbwidth_num limbwidth_den limbwidth_good).
+  Local Definition wprops' := wprops.
 
-  Local Notation wunique := (@weight_unique limbwidth_num limbwidth_den limbwidth_good).
-  Local Notation wunique_bytes := (@weight_unique 8 1 ltac:(clear; lia)) (only parsing).
+  Local Definition wunique := (@weight_unique limbwidth_num limbwidth_den limbwidth_good).
+  Local Definition wunique_bytes := (@weight_unique 8 1 ltac:(clear; lia)).
 
-  Local Hint Immediate (wprops) : core.
-  Local Hint Immediate (wprops_bytes) : core.
-  Local Hint Immediate (weight_0 wprops) : core.
-  Local Hint Immediate (weight_positive wprops) : core.
-  Local Hint Immediate (weight_multiples wprops) : core.
-  Local Hint Immediate (weight_divides wprops) : core.
-  Local Hint Immediate (weight_0 wprops_bytes) : core.
-  Local Hint Immediate (weight_positive wprops_bytes) : core.
-  Local Hint Immediate (weight_multiples wprops_bytes) : core.
-  Local Hint Immediate (weight_divides wprops_bytes) : core.
-  Local Hint Immediate (wunique) (wunique_bytes) : core.
-  Local Hint Resolve (wunique) (wunique_bytes) : core.
+  Local Definition weight_0_wprops := weight_0 wprops.
+  Local Definition weight_positive_wprops := weight_positive wprops.
+  Local Definition weight_multiples_wprops := weight_multiples wprops.
+  Local Definition weight_divides_wprops := weight_divides wprops.
+  Local Definition weight_0_wprops_bytes := weight_0 wprops_bytes.
+  Local Definition weight_positive_wprops_bytes := weight_positive wprops_bytes.
+  Local Definition weight_multiples_wprops_bytes := weight_multiples wprops_bytes.
+  Local Definition weight_divides_wprops_bytes := weight_divides wprops_bytes.
+
+  Local Hint Immediate wprops' : core.
+  Local Hint Immediate wprops_bytes : core.
+  Local Hint Immediate weight_0_wprops : core.
+  Local Hint Immediate weight_positive_wprops : core.
+  Local Hint Immediate weight_multiples_wprops : core.
+  Local Hint Immediate weight_divides_wprops : core.
+  Local Hint Immediate weight_0_wprops_bytes : core.
+  Local Hint Immediate weight_positive_wprops_bytes : core.
+  Local Hint Immediate weight_multiples_wprops_bytes : core.
+  Local Hint Immediate weight_divides_wprops_bytes : core.
+  Local Hint Immediate wunique wunique_bytes : core.
+  Local Hint Resolve wunique wunique_bytes : core.
 
   Definition bytes_n
     := Eval cbv [Qceiling Qdiv inject_Z Qfloor Qmult Qopp Qnum Qden Qinv Pos.mul]

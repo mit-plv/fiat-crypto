@@ -168,7 +168,7 @@ Section __.
   Context {field_parameters : FieldParameters}.
   Context {field_representaton : FieldRepresentation}.
   Context {field_representation_ok : FieldRepresentation_ok}.
-  Hint Resolve @relax_bounds : compiler.
+  Hint Resolve relax_bounds : compiler.
 
   Section MontLadder.
     Context scalarbits (scalarbits_small : word.wrap (Z.of_nat scalarbits) = Z.of_nat scalarbits).

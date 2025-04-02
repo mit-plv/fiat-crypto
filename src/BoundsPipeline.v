@@ -1180,7 +1180,7 @@ Module Pipeline.
     : Wf (Debug.eval_result (@wrap_debug_rewrite debug_rewriting t descr DoRewrite E)).
   Proof. cbv [wrap_debug_rewrite Let_In] in *; repeat (wf_interp_t; handle_debug_t). Qed.
 
-  Global Hint Resolve @Wf_wrap_debug_rewrite : wf wf_extra.
+  Global Hint Resolve Wf_wrap_debug_rewrite : wf wf_extra.
   Global Hint Opaque wrap_debug_rewrite : wf wf_extra.
 
   Lemma Interp_wrap_debug_rewrite {debug_rewriting : debug_rewriting_opt} {t} descr DoRewrite
@@ -1205,7 +1205,7 @@ Module Pipeline.
     : Wf (Debug.eval_result (@RewriteAndEliminateDeadAndInline_gen debug_rewriting t descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return E)).
   Proof. cbv [RewriteAndEliminateDeadAndInline_gen Let_In] in *; repeat (wf_interp_t; handle_debug_t). Qed.
 
-  Global Hint Resolve @Wf_RewriteAndEliminateDeadAndInline_gen : wf wf_extra.
+  Global Hint Resolve Wf_RewriteAndEliminateDeadAndInline_gen : wf wf_extra.
   Global Hint Opaque RewriteAndEliminateDeadAndInline_gen : wf wf_extra.
 
   Lemma Interp_RewriteAndEliminateDeadAndInline_gen {debug_rewriting : debug_rewriting_opt} {t} descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return
@@ -1230,7 +1230,7 @@ Module Pipeline.
     : Wf (Debug.eval_result (@RewriteAndEliminateDeadAndInline debug_rewriting t descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return E)).
   Proof. cbv [RewriteAndEliminateDeadAndInline Let_In]; wf_interp_t. Qed.
 
-  Global Hint Resolve @Wf_RewriteAndEliminateDeadAndInline : wf wf_extra.
+  Global Hint Resolve Wf_RewriteAndEliminateDeadAndInline : wf wf_extra.
   Global Hint Opaque RewriteAndEliminateDeadAndInline : wf wf_extra.
 
   Lemma Interp_RewriteAndEliminateDeadAndInline {debug_rewriting : debug_rewriting_opt} {t} descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return

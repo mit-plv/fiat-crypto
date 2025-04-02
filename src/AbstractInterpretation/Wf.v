@@ -157,7 +157,9 @@ Module Compilers.
           destruct t; [ destruct v1, v2, Hv | ]; cbn in *; cbv [respectful]; eauto; intros; apply bottom_Proper.
         Qed.
 
-        Local Hint Resolve (fun A (P : list A -> Prop) => ex_intro P nil) (fun A (x : A) (P : list A -> Prop) => ex_intro P (cons x nil)) : core.
+        Local Definition ex_intro_nil A (P : list A -> Prop) := ex_intro P nil.
+        Local Definition ex_intro_singleton A (x : A) (P : list A -> Prop) := ex_intro P (cons x nil).
+        Local Hint Resolve ex_intro_nil ex_intro_singleton : core.
         Local Hint Constructors expr.wf ex : core.
         Local Hint Unfold List.In : core.
 

@@ -305,21 +305,32 @@ Section base_conversion_mod_ops.
   Local Notation src_wprops := (@wprops src_limbwidth_num src_limbwidth_den src_limbwidth_good).
   Local Notation dst_wprops := (@wprops dst_limbwidth_num dst_limbwidth_den dst_limbwidth_good).
 
-  Local Notation src_wunique := (@weight_unique src_limbwidth_num src_limbwidth_den src_limbwidth_good).
-  Local Notation dst_wunique := (@weight_unique dst_limbwidth_num dst_limbwidth_den dst_limbwidth_good).
+  Local Definition src_wunique := (@weight_unique src_limbwidth_num src_limbwidth_den src_limbwidth_good).
+  Local Definition dst_wunique := (@weight_unique dst_limbwidth_num dst_limbwidth_den dst_limbwidth_good).
 
-  Local Hint Immediate (src_wprops) : core.
-  Local Hint Immediate (src_wunique) : core.
-  Local Hint Immediate (weight_0 src_wprops) : core.
-  Local Hint Immediate (weight_positive src_wprops) : core.
-  Local Hint Immediate (weight_multiples src_wprops) : core.
-  Local Hint Immediate (weight_divides src_wprops) : core.
-  Local Hint Immediate (dst_wprops) : core.
-  Local Hint Immediate (dst_wunique) : core.
-  Local Hint Immediate (weight_0 dst_wprops) : core.
-  Local Hint Immediate (weight_positive dst_wprops) : core.
-  Local Hint Immediate (weight_multiples dst_wprops) : core.
-  Local Hint Immediate (weight_divides dst_wprops) : core.
+  Local Definition src_wprops' := src_wprops.
+  Local Definition dst_wprops' := dst_wprops.
+  Local Definition weight_0_src_wprops := weight_0 src_wprops.
+  Local Definition weight_positive_src_wprops := weight_positive src_wprops.
+  Local Definition weight_multiples_src_wprops := weight_multiples src_wprops.
+  Local Definition weight_divides_src_wprops := weight_divides src_wprops.
+  Local Definition weight_0_dst_wprops := weight_0 dst_wprops.
+  Local Definition weight_positive_dst_wprops := weight_positive dst_wprops.
+  Local Definition weight_multiples_dst_wprops := weight_multiples dst_wprops.
+  Local Definition weight_divides_dst_wprops := weight_divides dst_wprops.
+
+  Local Hint Immediate src_wprops' : core.
+  Local Hint Immediate src_wunique : core.
+  Local Hint Immediate weight_0_src_wprops : core.
+  Local Hint Immediate weight_positive_src_wprops : core.
+  Local Hint Immediate weight_multiples_src_wprops : core.
+  Local Hint Immediate weight_divides_src_wprops : core.
+  Local Hint Immediate dst_wprops' : core.
+  Local Hint Immediate dst_wunique : core.
+  Local Hint Immediate weight_0_dst_wprops : core.
+  Local Hint Immediate weight_positive_dst_wprops : core.
+  Local Hint Immediate weight_multiples_dst_wprops : core.
+  Local Hint Immediate weight_divides_dst_wprops : core.
 
   Definition convert_bases (v : list Z)
     := BaseConversion.convert_bases src_weight dst_weight src_n dst_n v.
