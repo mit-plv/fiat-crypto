@@ -37,7 +37,7 @@ Section __.
    *)
   Context (felem_size_in_words_small
     : Z.of_nat felem_size_in_words < 2^width).
-  Hint Resolve @relax_bounds : compiler.
+  Hint Resolve relax_bounds : compiler.
 
 
   Notation all_1s := (word.of_Z (-1) : word).

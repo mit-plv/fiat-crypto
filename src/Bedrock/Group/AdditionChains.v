@@ -326,7 +326,7 @@ Section FElems.
     End Lowering.
 
     Section Compilation.
-      Hint Resolve @relax_bounds : compiler.
+      Hint Resolve relax_bounds : compiler.
 
       Create HintDb lowering.
       Hint Unfold exp_by_squaring : lowering.

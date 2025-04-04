@@ -45,8 +45,11 @@ Module Z.
     := fun a b c y p H0 H1 => Logic.eq_sym (@Logic.eq_trans _ y _ _ (Logic.eq_sym p) (@Z.pow_sub_r a b c H0 H1)).
 #[global]
   Hint Resolve pow_sub_r' pow_sub_r'_sym Z.eq_le_incl : zarith.
+
+  Local Definition f_equal_pow_b b := f_equal (fun e => b ^ e).
+  Local Definition f_equal_pow_e e := f_equal (fun b => b ^ e).
 #[global]
-  Hint Resolve (fun b => f_equal (fun e => b ^ e)) (fun e => f_equal (fun b => b ^ e)) : zarith.
+  Hint Resolve f_equal_pow_b f_equal_pow_e : zarith.
 
   Lemma two_p_two_eq_four : 2^(2) = 4.
   Proof. reflexivity. Qed.
