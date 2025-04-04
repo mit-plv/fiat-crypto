@@ -270,21 +270,9 @@ jobs:
         ocaml-compiler: ${{ matrix.ocaml-compiler }}
     - name: echo build params
       run: etc/ci/describe-system-config.sh
-    - name: Set up binaryen >= 118
-      uses: acifani/setup-tinygo@v2
-      with:
-        tinygo-version: '0.30.0'
-        binaryen-version: '118'
-    - name: set up custom dune and wasm_of_ocaml
-      run: |
-        eval $(opam env)
-        opam update -y
-        opam pin add -y --no-action --with-version 3.17 https://github.com/ocaml/dune.git
-        opam pin add -y --no-action --with-version 5.8.2-wasm https://github.com/ocaml-wasm/wasm_of_ocaml.git
+    - run: opam update -y
     - name: install wasm_of_ocaml
-      run: |
-        eval $(opam env)
-        opam install -y wasm_of_ocaml-compiler ocamlfind
+      run: opam install -y wasm_of_ocaml-compiler ocamlfind
     - name: echo build params
       run: etc/ci/describe-system-config.sh
     - name: Download a Build Artifact
