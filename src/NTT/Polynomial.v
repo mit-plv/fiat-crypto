@@ -2286,6 +2286,16 @@ Section Theorems.
       reflexivity.
     Qed.
 
+    Lemma to_list_scale (n: nat) (a: F) (p: P):
+      Forall2 Feq (List.map (Fmul a) (to_list n p)) (to_list n (Pmul (Pconst a) p)).
+    Proof.
+      rewrite (Forall2_forall_iff _ _ _ 0 0) by (rewrite length_map, to_list_length, to_list_length; reflexivity).
+      intros i Hi. rewrite length_map in Hi.
+      rewrite (map_nth_default _ _ _ _ 0); auto.
+      rewrite to_list_length in Hi. rewrite to_list_nth_default_inbounds, to_list_nth_default_inbounds; auto.
+      rewrite mul_const_coeff_l. reflexivity.
+    Qed.
+
     Lemma of_list_degree_lt (l: list F):
       degree_lt (degree (of_list l)) (Some (length l)).
     Proof.
@@ -2414,15 +2424,15 @@ Section Theorems.
       Qed.
     End PquotConvertRingIsomorphism.
     Section PquotRingListIsomorphism.
-      Context {q: P} {Hqnz: not (Peq q Pzero)}.
-      Definition Pquot': Type :=
-        { l : list F | length l = (measure q  - 1)%nat :> _ }.
+      Definition Pquot' (q: P): Type :=
+        { l : list F | length l = (measure q - 1)%nat :> _ }.
 
-      Program Definition to_list' (p: Pquot q): Pquot' :=
+      Context {q: P} {Hqnz: not (Peq q Pzero)}.
+      Program Definition to_list' (p: Pquot q): Pquot' q :=
         to_list (measure q - 1)%nat (proj1_sig p).
       Next Obligation. apply to_list_length. Qed.
 
-      Program Definition of_list' (p: Pquot'): Pquot q :=
+      Program Definition of_list' (p: Pquot' q): Pquot q :=
         of_list (proj1_sig p).
       Next Obligation.
         symmetry. apply Pmod_small.
@@ -2434,43 +2444,43 @@ Section Theorems.
         apply of_list_degree_lt.
       Qed.
 
-      Definition eq' (p1 p2: Pquot'): Prop := List.Forall2 Feq (proj1_sig p1) (proj1_sig p2).
+      Definition eq' (p1 p2: Pquot' q): Prop := List.Forall2 Feq (proj1_sig p1) (proj1_sig p2).
 
-      Program Definition zero': Pquot' := List.repeat Fzero (measure q - 1)%nat.
+      Program Definition zero': Pquot' q := List.repeat Fzero (measure q - 1)%nat.
       Next Obligation. apply repeat_length. Qed.
 
-      Definition one': Pquot' := to_list' one.
+      Definition one': Pquot' q := to_list' one.
 
-      Program Definition opp' (p: Pquot'): Pquot' :=
+      Program Definition opp' (p: Pquot' q): Pquot' q :=
         List.map Fopp (proj1_sig p).
       Next Obligation. rewrite length_map, (proj2_sig p). reflexivity. Qed.
 
-      Program Definition add' (p1 p2: Pquot'): Pquot' :=
+      Program Definition add' (p1 p2: Pquot' q): Pquot' q :=
         List.map2 Fadd (proj1_sig p1) (proj1_sig p2).
       Next Obligation. rewrite map2_length, (proj2_sig p1), (proj2_sig p2), PeanoNat.Nat.min_id; reflexivity. Qed.
 
-      Program Definition sub' (p1 p2: Pquot'): Pquot' :=
+      Program Definition sub' (p1 p2: Pquot' q): Pquot' q :=
         List.map2 Fsub (proj1_sig p1) (proj1_sig p2).
       Next Obligation. rewrite map2_length, (proj2_sig p1), (proj2_sig p2), PeanoNat.Nat.min_id; reflexivity. Qed.
 
-      Definition mul' (p1 p2: Pquot'): Pquot' :=
+      Definition mul' (p1 p2: Pquot' q): Pquot' q :=
         to_list' (mul (of_list' p1) (of_list' p2)).
 
       Global Instance PquotRing':
-        @commutative_ring (Pquot') eq' zero' one' opp' add' sub' mul'.
+        @commutative_ring (Pquot' q) eq' zero' one' opp' add' sub' mul'.
       Proof.
         repeat match goal with
                | [ H : eq' _ _  |- _ ] => unfold eq' in H; rewrite (Forall2_forall_iff _ _ _ Fzero Fzero) in H
-               | [ |- eq' _ _ ] => apply (Forall2_forall_iff _ _ _ Fzero Fzero); repeat rewrite (proj2_sig (_: Pquot')); [reflexivity|]
+               | [ |- eq' _ _ ] => apply (Forall2_forall_iff _ _ _ Fzero Fzero); repeat rewrite (proj2_sig (_: Pquot' q)); [reflexivity|]
                | |- context [nth_default _ (map2 _ _ _) _] => rewrite (nth_default_map2 _ _ _ _ _ Fzero Fzero)
-               | |- context [nth_default _ (map _ _) _] => rewrite (map_nth_default _ _ _ _ Fzero) by (rewrite (proj2_sig (_: Pquot')); assumption)
+               | |- context [nth_default _ (map _ _) _] => rewrite (map_nth_default _ _ _ _ Fzero) by (rewrite (proj2_sig (_: Pquot' q)); assumption)
                | |- context [nth_default _ (map _ _) _] => rewrite (map_nth_default _ _ _ _ 0%nat) by (rewrite length_seq; assumption)
                | |- context [nth_default _ (repeat _ _) _] => rewrite (nth_default_repeat _ _ _ Fzero)
                | |- context [nth_default _ (seq 0%nat _) _] => rewrite nth_default_seq_inbounds, PeanoNat.Nat.add_0_l by assumption
                | |- context [length (map _ _)] => rewrite length_map
                | |- context [length (map2 _ _ _)] => rewrite map2_length
-               | H :context [length (proj1_sig _)] |- _ => rewrite (proj2_sig (_: Pquot')) in H
-               | |- context [length (proj1_sig _)] => rewrite (proj2_sig (_: Pquot'))
+               | H :context [length (proj1_sig _)] |- _ => rewrite (proj2_sig (_: Pquot' q)) in H
+               | |- context [length (proj1_sig _)] => rewrite (proj2_sig (_: Pquot' q))
                | |- context [length (seq _ _)] => rewrite length_seq
                | |- context [length (repeat _ _)] => rewrite repeat_length
                | |- context [Nat.min _ _] => rewrite PeanoNat.Nat.min_id
@@ -2537,11 +2547,11 @@ Section Theorems.
           end.
           assert (Peq (of_list (proj1_sig x)) (of_list (proj1_sig y))) as ->.
           { intro. unfold of_list; repeat rewrite Pdecompose_coeff.
-            repeat rewrite (proj2_sig (_: Pquot')).
+            repeat rewrite (proj2_sig (_: Pquot' q)).
             destruct (dec_lt_nat k _); [apply H; auto|reflexivity]. }
           assert (Peq (of_list (proj1_sig x0)) (of_list (proj1_sig y0))) as ->.
           { intro. unfold of_list; repeat rewrite Pdecompose_coeff.
-            repeat rewrite (proj2_sig (_: Pquot')).
+            repeat rewrite (proj2_sig (_: Pquot' q)).
             destruct (dec_lt_nat k _); [apply H0; auto|reflexivity]. }
           reflexivity.
         - reflexivity.
@@ -2556,7 +2566,7 @@ Section Theorems.
           + intro. rewrite add_definition. unfold of_list.
             repeat rewrite Pdecompose_coeff. rewrite map2_length.
             erewrite nth_default_map2.
-            repeat (rewrite (proj2_sig (_: Pquot'))).
+            repeat (rewrite (proj2_sig (_: Pquot' q))).
             rewrite PeanoNat.Nat.min_id.
             destruct (dec_lt_nat _ _); [|rewrite left_identity; reflexivity].
             destruct (Compare_dec.lt_dec _ _); [|Lia.lia].
@@ -2575,7 +2585,7 @@ Section Theorems.
           + intro. rewrite add_definition. unfold of_list.
             repeat rewrite Pdecompose_coeff. rewrite map2_length.
             erewrite nth_default_map2.
-            repeat (rewrite (proj2_sig (_: Pquot'))).
+            repeat (rewrite (proj2_sig (_: Pquot' q))).
             rewrite PeanoNat.Nat.min_id.
             destruct (dec_lt_nat _ _); [|rewrite left_identity; reflexivity].
             destruct (Compare_dec.lt_dec _ _); [|Lia.lia].
@@ -2592,11 +2602,11 @@ Section Theorems.
           end.
           assert (Peq (of_list (proj1_sig x)) (of_list (proj1_sig y))) as ->.
           { intro. unfold of_list; repeat rewrite Pdecompose_coeff.
-            repeat rewrite (proj2_sig (_: Pquot')).
+            repeat rewrite (proj2_sig (_: Pquot' q)).
             destruct (dec_lt_nat k _); [apply H; auto|reflexivity]. }
           assert (Peq (of_list (proj1_sig x0)) (of_list (proj1_sig y0))) as ->.
           { intro. unfold of_list; repeat rewrite Pdecompose_coeff.
-            repeat rewrite (proj2_sig (_: Pquot')).
+            repeat rewrite (proj2_sig (_: Pquot' q)).
             destruct (dec_lt_nat k _); [apply H0; auto|reflexivity]. }
           reflexivity.
         - rewrite H, H0 by Lia.lia. reflexivity.
@@ -2608,11 +2618,11 @@ Section Theorems.
       Qed.
 
       Lemma PquotRingIsomorphism:
-        @Ring.is_isomorphism (Pquot q) eq1 one add mul Pquot' eq' one' add' mul' to_list' of_list'.
+        @Ring.is_isomorphism (Pquot q) eq1 one add mul (Pquot' q) eq' one' add' mul' to_list' of_list'.
       Proof.
         constructor.
         - repeat split.
-          + intros. unfold eq'. apply (Forall2_forall_iff _ _ _ Fzero Fzero); repeat rewrite (proj2_sig (_: Pquot')); [reflexivity|].
+          + intros. unfold eq'. apply (Forall2_forall_iff _ _ _ Fzero Fzero); repeat rewrite (proj2_sig (_: Pquot' q)); [reflexivity|].
             intros. unfold to_list'; simpl.
             rewrite (nth_default_map2 _ _ _ _ _ Fzero Fzero).
             repeat rewrite to_list_length. rewrite PeanoNat.Nat.min_id.
@@ -2628,7 +2638,7 @@ Section Theorems.
             rewrite (Pmod_small (Padd _ _) q Hadd i).
             rewrite add_definition. reflexivity.
           + intros x y Heq. unfold eq'.
-            apply (Forall2_forall_iff _ _ _ Fzero Fzero); repeat rewrite (proj2_sig (_: Pquot')); [reflexivity|].
+            apply (Forall2_forall_iff _ _ _ Fzero Fzero); repeat rewrite (proj2_sig (_: Pquot' q)); [reflexivity|].
             intros. simpl.
             repeat rewrite to_list_nth_default_inbounds by assumption.
             apply Heq.
@@ -2647,10 +2657,10 @@ Section Theorems.
               2,4: apply Pmod_degree_lt; auto.
               1-2: unfold measure, convert; pose proof (zero_degree q) as Hq; destruct (degree q); try tauto; simpl; f_equal; Lia.lia.
           + unfold eq', to_list', one'. simpl.
-            apply (Forall2_forall_iff _ _ _ Fzero Fzero); repeat rewrite (proj2_sig (_: Pquot')); reflexivity.
-        - intros. apply (Forall2_forall_iff _ _ _ Fzero Fzero); repeat rewrite (proj2_sig (_: Pquot')); [reflexivity|].
+            apply (Forall2_forall_iff _ _ _ Fzero Fzero); repeat rewrite (proj2_sig (_: Pquot' q)); reflexivity.
+        - intros. apply (Forall2_forall_iff _ _ _ Fzero Fzero); repeat rewrite (proj2_sig (_: Pquot' q)); [reflexivity|].
           intros. simpl. rewrite to_list_nth_default_inbounds by assumption.
-          unfold of_list. rewrite Pdecompose_coeff. rewrite (proj2_sig (_: Pquot')).
+          unfold of_list. rewrite Pdecompose_coeff. rewrite (proj2_sig (_: Pquot' q)).
           destruct (dec_lt_nat _ _); [|Lia.lia]. reflexivity.
         - intros. destruct a as (a & Ha). destruct b as (b & Hb).
           unfold eq', to_list' in H; simpl in H.
@@ -2869,6 +2879,40 @@ Section Theorems.
             rewrite commutative. reflexivity.
       Qed.
     End PquotlRing.
+    Section Pquotl1.
+      Context {q: P}. Local Notation Pquot := (@Pquot Fdiv).
+      Program Definition to_pquotl1 (p: Pquot q): Pquotl (q::nil) :=
+        (proj1_sig p)::nil.
+      Next Obligation. repeat constructor. apply (proj2_sig p). Qed.
+
+      Program Definition from_pquotl1 (p: Pquotl (q::nil)): Pquot q :=
+        List.hd Pzero (proj1_sig p).
+      Next Obligation.
+        destruct p as (p & Hp).
+        simpl; inversion Hp; subst; clear Hp.
+        inversion H3. simpl. auto.
+      Qed.
+
+      Lemma PquotlRingIsomorphism1:
+        @Ring.is_isomorphism
+          (Pquot q) eq1 one add mul
+          (Pquotl (q::nil)) eql onel addl mull
+          to_pquotl1
+          from_pquotl1.
+      Proof.
+        repeat constructor.
+        - destruct a as (a & Ha); destruct b as (b & Hb); simpl.
+          rewrite Pmod_distr, <- Ha, <- Hb. reflexivity.
+        - apply H.
+        - destruct x as (x & Hx); destruct y as (y & Hy); simpl.
+          reflexivity.
+        - simpl. reflexivity.
+        - intros (a & Ha). unfold eql; simpl.
+          inversion Ha; subst; clear Ha. inversion H3. reflexivity.
+        - intros (a & Ha) (b & Hb). unfold eql, eq1; simpl.
+          inversion 1; subst; auto.
+      Qed.
+    End Pquotl1.
     Section PquotlAppRingIsomorphism.
       Context {ql1 ql2: list P}.
 
@@ -2988,11 +3032,11 @@ Section Theorems.
       Qed.
     End PquotlConvertRingIsomorphism.
     Section PquotlRingListIsomorphism.
-      Context {ql: list P} {Hqlnz: Forall (fun q => not (Peq q Pzero)) ql}.
-      Definition Pquotl': Type :=
+      Definition Pquotl' (ql: list P): Type :=
         { l : list F | length l = list_sum (List.map (fun q => measure q - 1)%nat ql) :> _ }.
 
-      Program Definition to_listl' (pl: Pquotl ql): Pquotl' :=
+      Context {ql: list P} {Hqlnz: Forall (fun q => not (Peq q Pzero)) ql}.
+      Program Definition to_listl' (pl: Pquotl ql): Pquotl' ql :=
         List.concat (List.map (fun '(p, q) => to_list (measure q - 1)%nat p) (combine (proj1_sig pl) ql)).
       Next Obligation.
         rewrite length_concat. f_equal.
@@ -3003,7 +3047,7 @@ Section Theorems.
         rewrite IHHpl; reflexivity.
       Qed.
 
-      Program Definition of_listl' (pl: Pquotl'): Pquotl ql :=
+      Program Definition of_listl' (pl: Pquotl' ql): Pquotl ql :=
         let fix aux xs ys :=
           match ys with
           | nil => nil
@@ -3027,7 +3071,7 @@ Section Theorems.
         - apply IHf; auto.
       Qed.
 
-      Definition eql' (p1 p2: Pquotl'): Prop := List.Forall2 Feq (proj1_sig p1) (proj1_sig p2).
+      Definition eql' (p1 p2: Pquotl' ql): Prop := List.Forall2 Feq (proj1_sig p1) (proj1_sig p2).
 
       Global Instance Peq_proper_to_list n:
         Proper (Peq ==> Forall2 Feq) (to_list n).
@@ -3052,28 +3096,28 @@ Section Theorems.
           + apply IHl. auto.
       Qed.
 
-      Program Definition zerol': Pquotl' := List.repeat Fzero (list_sum (List.map (fun q => measure q - 1)%nat ql)).
+      Program Definition zerol': Pquotl' ql := List.repeat Fzero (list_sum (List.map (fun q => measure q - 1)%nat ql)).
       Next Obligation. apply repeat_length. Qed.
 
-      Definition onel': Pquotl' := to_listl' onel.
+      Definition onel': Pquotl' ql := to_listl' onel.
 
-      Program Definition oppl' (p: Pquotl'): Pquotl' :=
+      Program Definition oppl' (p: Pquotl' ql): Pquotl' ql :=
         List.map Fopp (proj1_sig p).
       Next Obligation. rewrite length_map, (proj2_sig p). reflexivity. Qed.
 
-      Program Definition addl' (p1 p2: Pquotl'): Pquotl' :=
+      Program Definition addl' (p1 p2: Pquotl' ql): Pquotl' ql :=
         List.map2 Fadd (proj1_sig p1) (proj1_sig p2).
       Next Obligation. rewrite map2_length, (proj2_sig p1), (proj2_sig p2), PeanoNat.Nat.min_id; reflexivity. Qed.
 
-      Program Definition subl' (p1 p2: Pquotl'): Pquotl' :=
+      Program Definition subl' (p1 p2: Pquotl' ql): Pquotl' ql :=
         List.map2 Fsub (proj1_sig p1) (proj1_sig p2).
       Next Obligation. rewrite map2_length, (proj2_sig p1), (proj2_sig p2), PeanoNat.Nat.min_id; reflexivity. Qed.
 
-      Definition mull' (p1 p2: Pquotl'): Pquotl' :=
+      Definition mull' (p1 p2: Pquotl' ql): Pquotl' ql :=
         to_listl' (mull (of_listl' p1) (of_listl' p2)).
 
       Lemma PquotlRing_by_isomorphism:
-        @ring (Pquotl') eql' zerol' onel' oppl' addl' subl' mull'
+        @ring (Pquotl' ql) eql' zerol' onel' oppl' addl' subl' mull'
         /\ @is_homomorphism _ eql onel addl mull _ eql' onel' addl' mull' to_listl'
         /\ @is_homomorphism _ eql' onel' addl' mull' _ eql onel addl mull of_listl'.
       Proof.
@@ -3246,7 +3290,7 @@ Section Theorems.
       Qed.
 
       Global Instance PquotlRing':
-        @commutative_ring (Pquotl') eql' zerol' onel' oppl' addl' subl' mull'.
+        @commutative_ring (Pquotl' ql) eql' zerol' onel' oppl' addl' subl' mull'.
       Proof.
         constructor.
         - apply PquotlRing_by_isomorphism.
@@ -3256,7 +3300,7 @@ Section Theorems.
       Qed.
 
       Lemma PquotlRingIsomorphism:
-        @Ring.is_isomorphism (Pquotl ql) eql onel addl mull Pquotl' eql' onel' addl' mull' to_listl' of_listl'.
+        @Ring.is_isomorphism (Pquotl ql) eql onel addl mull (Pquotl' ql) eql' onel' addl' mull' to_listl' of_listl'.
       Proof.
         constructor.
         - apply PquotlRing_by_isomorphism.
@@ -3312,5 +3356,132 @@ Section Theorems.
             * rewrite Hx0, Hx1 by Lia.lia. reflexivity.
       Qed.
     End PquotlRingListIsomorphism.
+    Section PquotlRingListMoreIsomorphisms.
+      Program Definition Pquotl_convert' {ql1 ql2} (Heql: ql1 = ql2 :> _) (pl: Pquotl' ql1): Pquotl' ql2 :=
+        proj1_sig pl.
+      Next Obligation. exact (proj2_sig pl). Qed.
+
+      Lemma Pquotl_convert_isomorphism'
+        {ql1 ql2 : list P}
+        (Hqlnz1: Forall (fun q => ~ Peq q Pzero) ql1)
+        (Hqlnz2: Forall (fun q => ~ Peq q Pzero) ql2)
+        (Heql1 : ql1 = ql2 :> _) (Heql2: ql2 = ql1 :> _):
+        @Ring.is_isomorphism
+          (Pquotl' ql1) eql' onel' addl' (mull' (Hqlnz:=Hqlnz1))
+          (Pquotl' ql2) eql' onel' addl' (mull' (Hqlnz:=Hqlnz2))
+          (Pquotl_convert' Heql1)
+          (Pquotl_convert' Heql2).
+      Proof.
+        repeat match goal with
+               | x: Pquotl' _ |- _ => destruct x
+               | H: eql' _ _ |- _ => unfold eql' in H
+               | |- eql' _ _ => unfold eql'
+               | |- _ => constructor
+               | |- _ => intro
+               end; cbn -[mull' onel'] in *; auto; try reflexivity.
+        - cbn. rewrite Heql1. reflexivity.
+        - rewrite Heql1. reflexivity.
+      Qed.
+
+      Program Definition Pquotl_app' {ql1 ql2} (pl: Pquotl' ql1 * Pquotl' ql2): Pquotl' (ql1 ++ ql2) :=
+        (proj1_sig (fst pl)) ++ (proj1_sig (snd pl)).
+      Next Obligation.
+        rewrite length_app, map_app, list_sum_app, (proj2_sig p), (proj2_sig p0). reflexivity.
+      Qed.
+
+      Program Definition Pquotl_split' {ql1 ql2} (pl: Pquotl' (ql1 ++ ql2)): (Pquotl' ql1 * Pquotl' ql2) :=
+        (firstn (list_sum (map (fun q : P => (measure q - 1)%nat) ql1)) (proj1_sig pl), skipn (list_sum (map (fun q : P => (measure q - 1)%nat) ql1)) (proj1_sig pl)).
+      Next Obligation.
+        rewrite length_firstn, (proj2_sig pl), map_app, list_sum_app, PeanoNat.Nat.min_l by Lia.lia.
+        reflexivity.
+      Qed.
+      Next Obligation.
+        rewrite length_skipn, (proj2_sig pl), map_app, list_sum_app. Lia.lia.
+      Qed.
+
+      Lemma PquotlAppRingIsomorphism'
+        {ql1 ql2}
+        (Hqlnz: Forall (fun q => ~ Peq q Pzero) (ql1 ++ ql2))
+        (Hqlnz1: Forall (fun q => ~ Peq q Pzero) ql1)
+        (Hqlnz2: Forall (fun q => ~ Peq q Pzero) ql2):
+        @Ring.is_isomorphism
+          (Pquotl' ql1 * Pquotl' ql2)
+          (fun x y => eql' (fst x) (fst y) /\ eql' (snd x) (snd y)) (onel', onel')
+          (apply_binop_pair addl' addl') (apply_binop_pair (mull' (Hqlnz:=Hqlnz1)) (mull' (Hqlnz:=Hqlnz2)))
+          (Pquotl' (ql1 ++ ql2))
+          eql' onel' addl' (mull' (Hqlnz:=Hqlnz))
+          Pquotl_app'
+          Pquotl_split'.
+      Proof.
+        repeat match goal with
+               | x: Pquotl' _ |- _ => destruct x
+               | H: eql' _ _ |- _ => unfold eql' in H
+               | H: _ /\ _ |- _ => destruct H
+               | |- eql' _ _ => unfold eql'
+               | |- _ => constructor
+               | |- _ => intro
+               end; cbn -[mull' onel'] in *.
+        - rewrite <- map2_app; [reflexivity|].
+          rewrite (proj2_sig (fst a)), (proj2_sig (fst b)). reflexivity.
+        - apply Forall2_app; auto.
+        - cbn -[of_listl'].
+          rewrite <- concat_app, <- map_app, <- combine_app_samelength by (rewrite map2_length, map2_length, to_pl_length, to_pl_length, PeanoNat.Nat.min_id, PeanoNat.Nat.min_id; reflexivity).
+          rewrite <- map2_app by (rewrite map2_length, to_pl_length, to_pl_length; apply PeanoNat.Nat.min_id).
+          rewrite <- map2_app by (rewrite to_pl_length, to_pl_length; reflexivity).
+          assert (forall (x: Pquotl' ql1 * Pquotl' ql2), to_pl (of_listl' (Hqlnz:=Hqlnz) (Pquotl_app' x)) = to_pl (of_listl' (Hqlnz:=Hqlnz1) (fst x)) ++ to_pl (of_listl' (Hqlnz:=Hqlnz2) (snd x)) :> _) as HX; [|do 2 rewrite HX; reflexivity].
+          { cbn. intros z; match goal with |- context [?x (_ ++ _) _] => set (f := x) end.
+            assert (forall b1 b2 a1 a2, (length a1 = list_sum (map (fun q : P => (measure q - 1)%nat) b1) :> _) -> f (a1 ++ a2) (b1 ++ b2) = f a1 b1 ++ f a2 b2 :> _) as X; [|apply X; apply (proj2_sig (fst z))].
+            induction b1; intros.
+            - simpl in H. apply length0_nil in H. subst a1.
+              reflexivity.
+            - simpl in H. rewrite <- (firstn_skipn (measure a - 1)%nat a1).
+              simpl. rewrite firstn_app_inleft by (rewrite length_app, length_firstn, H, PeanoNat.Nat.min_l; Lia.lia).
+              f_equal. rewrite <- IHb1.
+              + f_equal. rewrite skipn_app_inleft; [reflexivity|].
+                rewrite length_app, length_firstn, H, PeanoNat.Nat.min_l; Lia.lia.
+              + rewrite length_skipn, length_app, length_firstn, length_skipn, H.
+                rewrite PeanoNat.Nat.min_l by Lia.lia. Lia.lia. }
+        - cbn. rewrite <- concat_app, <- map_app, <- combine_app_samelength by (rewrite map2_length, repeat_length; apply PeanoNat.Nat.min_id).
+          rewrite <- map2_app by apply repeat_length.
+          rewrite <- repeat_app, length_app. reflexivity.
+        - rewrite firstn_skipn. reflexivity.
+        - apply Forall2_app_inv in H; [destruct H; auto|].
+          rewrite (proj2_sig (fst a)), (proj2_sig (fst b)). reflexivity.
+        - apply Forall2_app_inv in H; [destruct H; auto|].
+          rewrite (proj2_sig (fst a)), (proj2_sig (fst b)). reflexivity.
+      Qed.
+
+      Program Definition to_pquotl1' {q} (p: Pquot' q): Pquotl' (q::nil) :=
+        (proj1_sig p).
+      Next Obligation. rewrite (proj2_sig p). Lia.lia. Qed.
+
+      Program Definition from_pquotl1' {q} (p: Pquotl' (q::nil)): Pquot' q :=
+        (proj1_sig p).
+      Next Obligation. destruct p as (p & Hp); simpl; rewrite Hp; simpl; Lia.lia. Qed.
+
+      Lemma PquotlRingIsomorphism1' {q} (Hqnz: ~ Peq q Pzero) (Hqlnz: Forall (fun q => ~ Peq q Pzero) (q::nil)):
+        @Ring.is_isomorphism
+          (Pquot' q) eq' one' add' (mul' (Hqnz:=Hqnz))
+          (Pquotl' (q::nil)) eql' onel' addl' (mull' (Hqlnz:=Hqlnz))
+          to_pquotl1'
+          from_pquotl1'.
+      Proof.
+        repeat match goal with
+               | x: Pquotl' _ |- _ => destruct x
+               | x: Pquot' _ |- _ => destruct x
+               | H: eql' _ _ |- _ => unfold eql' in H
+               | H: eq' _ _ |- _ => unfold eq' in H
+               | H: _ /\ _ |- _ => destruct H
+               | |- eql' _ _ => unfold eql'
+               | |- eq' _ _ => unfold eq'
+               | |- _ => constructor
+               | |- _ => intro
+               end; cbn -[of_list]; auto; try reflexivity.
+        - rewrite app_nil_r. apply Peq_proper_to_list.
+          apply peq_mod_proper; [|reflexivity].
+          do 2 (rewrite firstn_all; auto). reflexivity.
+        - rewrite app_nil_r. reflexivity.
+      Qed.
+    End PquotlRingListMoreIsomorphisms.
   End Pquotl.
 End Theorems.

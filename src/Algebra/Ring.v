@@ -234,6 +234,20 @@ Section Isomorphism.
     - rewrite homomorphism_mul0. repeat rewrite isomorphism_is_surjective0. reflexivity.
     - rewrite isomorphism_is_surjective0, homomorphism_one0. reflexivity.
   Qed.
+
+  Lemma isomorphism_funext (f:R->S) (g:S->R)
+    (Hf: forall x, f x = phi x) (Hg: forall x, g x = psi x):
+    @is_isomorphism R EQ ONE ADD MUL S eq one add mul f g.
+  Proof.
+    repeat match goal with
+           | [ H : is_isomorphism |- _ ] => destruct H; try clear H
+           | [ H : is_homomorphism |- _ ] => destruct H; try clear H
+           | [ H : Monoid.is_homomorphism |- _ ] => destruct H; try clear H
+           | _ => split
+           | _ => intro
+           end; repeat rewrite Hf; repeat rewrite Hg; auto.
+    repeat rewrite Hf in H1. auto.
+  Qed.
 End Isomorphism.
 
 Section HomomorphismComposition.
