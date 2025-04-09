@@ -202,12 +202,17 @@ Module WordByWordMontgomery.
     Local Lemma r_big : r > 1.
     Proof using lgr_big. clear -lgr_big; subst r. auto with zarith. Qed.
     Local Notation wprops := (@uwprops lgr lgr_big).
+    Let wprops' := wprops.
+    Let weight_0_wprops := weight_0 wprops.
+    Let weight_positive_wprops := weight_positive wprops.
+    Let weight_multiples_wprops := weight_multiples wprops.
+    Let weight_divides_wprops := weight_divides wprops.
 
-    Local Hint Immediate (wprops) : core.
-    Local Hint Immediate (weight_0 wprops) : core.
-    Local Hint Immediate (weight_positive wprops) : core.
-    Local Hint Immediate (weight_multiples wprops) : core.
-    Local Hint Immediate (weight_divides wprops) : core.
+    Local Hint Immediate wprops' : core.
+    Local Hint Immediate weight_0_wprops : core.
+    Local Hint Immediate weight_positive_wprops : core.
+    Local Hint Immediate weight_multiples_wprops : core.
+    Local Hint Immediate weight_divides_wprops : core.
     Local Hint Immediate r_big : core.
 
     Lemma length_small {n v} : @small n v -> length v = n.
@@ -1049,12 +1054,17 @@ Module WordByWordMontgomery.
 
     Local Notation wprops := (@uwprops bitwidth bitwidth_big).
     Local Notation small := (@small bitwidth n).
+    Let wprops' := wprops.
+    Let weight_0_wprops := weight_0 wprops.
+    Let weight_positive_wprops := weight_positive wprops.
+    Let weight_multiples_wprops := weight_multiples wprops.
+    Let weight_divides_wprops := weight_divides wprops.
 
-    Local Hint Immediate (wprops) : core.
-    Local Hint Immediate (weight_0 wprops) : core.
-    Local Hint Immediate (weight_positive wprops) : core.
-    Local Hint Immediate (weight_multiples wprops) : core.
-    Local Hint Immediate (weight_divides wprops) : core.
+    Local Hint Immediate wprops' : core.
+    Local Hint Immediate weight_0_wprops : core.
+    Local Hint Immediate weight_positive_wprops : core.
+    Local Hint Immediate weight_multiples_wprops : core.
+    Local Hint Immediate weight_divides_wprops : core.
 
     Local Lemma r'_correct_alt : ((r mod m) * (r' mod m)) mod m = 1.
     Proof using r'_correct. pull_Zmod; apply r'_correct. Qed.

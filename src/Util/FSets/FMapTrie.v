@@ -258,6 +258,80 @@ Module Import ListWSfun_gen_proofs.
     Local Notation "'M'.map_o'" := M'_map_o.
     Local Notation "'M'.empty_1''" := M'_empty_1'.
     Context {args : args}.
+    Local Definition T_t' := T_t.
+    Local Definition Y_t' := Y_t.
+    Local Definition Y_eq' := Y_eq.
+    Local Definition Y_eq_refl' := Y_eq_refl.
+    Local Definition Y_eq_sym' := Y_eq_sym.
+    Local Definition Y_eq_trans' := Y_eq_trans.
+    Local Definition Y_eq_dec' := Y_eq_dec.
+    Local Definition E_t' := E_t.
+    Local Definition E_eq' := E_eq.
+    Local Definition E_eq_refl' := E_eq_refl.
+    Local Definition E_eq_sym' := E_eq_sym.
+    Local Definition E_eq_trans' := E_eq_trans.
+    Local Definition E_eq_dec' := E_eq_dec.
+    Local Definition E'_eq_alt' := E'_eq_alt.
+    Local Definition M_t' := M_t.
+    Local Definition M_empty' := M_empty.
+    Local Definition M_is_empty' := M_is_empty.
+    Local Definition M_add' := M_add.
+    Local Definition M_find' := M_find.
+    Local Definition M_remove' := M_remove.
+    Local Definition M_mem' := M_mem.
+    Local Definition M_map' := M_map.
+    Local Definition M_mapi' := M_mapi.
+    Local Definition M_map2' := M_map2.
+    Local Definition M_elements' := M_elements.
+    Local Definition M_cardinal' := M_cardinal.
+    Local Definition M_fold' := M_fold.
+    Local Definition M_equal' := M_equal.
+    Local Definition M_MapsTo' := M_MapsTo.
+    Local Definition M_In' := M_In.
+    Local Definition M_Empty' := M_Empty.
+    Local Definition M_eq_key' := M_eq_key.
+    Local Definition M_eq_key_elt' := M_eq_key_elt.
+    Local Definition M_MapsTo_1' := M_MapsTo_1.
+    Local Definition M_mem_1' := M_mem_1.
+    Local Definition M_mem_2' := M_mem_2.
+    Local Definition M_empty_1' := M_empty_1.
+    Local Definition M_is_empty_1' := M_is_empty_1.
+    Local Definition M_is_empty_2' := M_is_empty_2.
+    Local Definition M_add_1' := M_add_1.
+    Local Definition M_add_2' := M_add_2.
+    Local Definition M_add_3' := M_add_3.
+    Local Definition M_remove_1' := M_remove_1.
+    Local Definition M_remove_2' := M_remove_2.
+    Local Definition M_remove_3' := M_remove_3.
+    Local Definition M_find_1' := M_find_1.
+    Local Definition M_find_2' := M_find_2.
+    Local Definition M_elements_1' := M_elements_1.
+    Local Definition M_elements_2' := M_elements_2.
+    Local Definition M_elements_3w' := M_elements_3w.
+    Local Definition M_cardinal_1' := M_cardinal_1.
+    Local Definition M_fold_1' := M_fold_1.
+    Local Definition M_Equal' := M_Equal.
+    Local Definition M_Equiv' := M_Equiv.
+    Local Definition M_Equivb' := M_Equivb.
+    Local Definition M_equal_1' := M_equal_1.
+    Local Definition M_equal_2' := M_equal_2.
+    Local Definition M_map_1' := M_map_1.
+    Local Definition M_map_2' := M_map_2.
+    Local Definition M_mapi_1' := M_mapi_1.
+    Local Definition M_mapi_2' := M_mapi_2.
+    Local Definition M_map2_1' := M_map2_1.
+    Local Definition M_map2_2' := M_map2_2.
+    Local Definition M'_find_mapsto_iff' := M'_find_mapsto_iff.
+    Local Definition M'_add_o' := M'_add_o.
+    Local Definition M'_remove_o' := M'_remove_o.
+    Local Definition M'_mapi_o_ex' := M'_mapi_o_ex.
+    Local Definition M'_mapi_o_ex_impl' := M'_mapi_o_ex_impl.
+    Local Definition M'_map2_o' := M'_map2_o.
+    Local Definition M'_is_empty_iff' := M'_is_empty_iff.
+    Local Definition M'_find_empty' := M'_find_empty.
+    Local Definition M'_forall_In_elements_snd_iff' := M'_forall_In_elements_snd_iff.
+    Local Definition M'_map_o' := M'_map_o.
+    Local Definition M'_empty_1'' := M'_empty_1'.
     Local Existing Instances everything Y_eq_refl Y_eq_sym Y_eq_trans E_eq_refl E_eq_sym E_eq_trans.
     Local Existing Instances
           M'_Proper_eq_key_elt_iff
@@ -282,8 +356,8 @@ Module Import ListWSfun_gen_proofs.
           M'_Proper_Equiv_eq_flip_impl_pointwise
           M'_Proper_Equiv_eq_iff_pointwise
     | 10.
-    Local Hint Resolve Y.eq_refl E.eq_refl : core.
-    Local Hint Immediate Y.eq_sym E.eq_sym : core.
+    Local Hint Resolve Y_eq_refl' E_eq_refl' : core.
+    Local Hint Immediate Y_eq_sym' E_eq_sym' : core.
     Local Hint Extern 1 (ProperProxy (@M_Equal _ _) _) => apply reflexive_proper_proxy : typeclass_instances.
     Local Instance Y_eq_equiv : Equivalence Y.eq. Proof. split; exact _. Defined.
     Local Instance E_eq_equiv : Equivalence E.eq. Proof. split; exact _. Defined.
@@ -847,15 +921,15 @@ Module Import ListWSfun_gen_proofs.
       : list_map_alt.
 
     Hint Rewrite Empty_alt_iff (*Equiv_alt_iff*)
-         M.cardinal_1
-         M.fold_1
-         M'.find_mapsto_iff
-         M'.find_empty
-         M'.add_o
-         M'.remove_o
-         M'.map_o
-         M'.map2_o
-         E'.eq_alt
+         M_cardinal_1
+         M_fold_1
+         M'_find_mapsto_iff
+         M'_find_empty
+         M'_add_o
+         M'_remove_o
+         M'_map_o
+         M'_map2_o
+         E'_eq_alt
          Bool.andb_true_iff
          InA_app_iff
          map_length
@@ -867,36 +941,36 @@ Module Import ListWSfun_gen_proofs.
       : list_map_alt.
 
     Hint Resolve
-         M.MapsTo_1
-         M.mem_1
-         M.empty_1
-         M'.empty_1'
-         M.is_empty_1
-         M.add_1
-         M.remove_1
-         M.find_1
-         M.elements_1
-         M.equal_1
-         M.map_1
-         M.mapi_1
-         M.map2_1
+         M_MapsTo_1'
+         M_mem_1'
+         M_empty_1'
+         M'_empty_1''
+         M_is_empty_1'
+         M_add_1'
+         M_remove_1'
+         M_find_1'
+         M_elements_1'
+         M_equal_1'
+         M_map_1'
+         M_mapi_1'
+         M_map2_1'
       : list_map_alt1.
     Hint Resolve
-         M.mem_2
-         M.is_empty_2
-         M.add_2
-         M.remove_2
-         M.find_2
-         M.elements_2
-         M.equal_2
-         M.map_2
-         M.mapi_2
-         M.map2_2
+         M_mem_2'
+         M_is_empty_2'
+         M_add_2'
+         M_remove_2'
+         M_find_2'
+         M_elements_2'
+         M_equal_2'
+         M_map_2'
+         M_mapi_2'
+         M_map2_2'
       : list_map_alt2.
     Hint Resolve
-         M.add_3
-         M.remove_3
-         M.elements_3w
+         M_add_3'
+         M_remove_3'
+         M_elements_3w'
       : list_map_alt3.
 
     Hint Constructors ex and or
