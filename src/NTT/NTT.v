@@ -138,30 +138,6 @@ Section CyclotomicDecomposition.
     Let m1 := (posicyclic (Nat.pow 2 (k - 1)) (zeta ^ (N.of_nat (Nat.div l 2)))).
     Let m2 := (posicyclic (Nat.pow 2 (k - 1)) (zeta ^ (N.of_nat (Nat.pow 2 m + Nat.div l 2)))).
 
-    Local Lemma length_preserved:
-      (measure (posicyclic (Nat.pow 2 k) (zeta ^ l)) - 1 = list_sum (map (fun q0 : P => (measure q0 - 1)%nat) (rec_decomposition r' k l)) :>_)%nat.
-    Proof.
-      rewrite posicyclic_measure by (pose proof (NatUtil.pow_nonzero 2 k ltac:(congruence)); Lia.lia).
-      assert (_ + _ - _ = Nat.pow 2 k :> _)%nat as -> by Lia.lia.
-      unfold rec_decomposition, list_sum.
-      do 2 rewrite ListUtil.fold_right_map.
-      rewrite (ListUtil.fold_right_ext _ _ _ (fun x y => Nat.pow 2 (k - r') + y)%nat).
-      2:{ intros. rewrite posicyclic_measure by (pose proof (NatUtil.pow_nonzero 2 (k - r')%nat ltac:(congruence)); Lia.lia).
-          Lia.lia. }
-      assert (forall l, fold_right (fun _ y => (Nat.pow 2 (k - r') + y)%nat) 0%nat l = ((length l) * Nat.pow 2 (k - r'))%nat :> _) as ->.
-      { induction l0; simpl; [reflexivity|].
-        rewrite IHl0. reflexivity. }
-      rewrite rec_decompose_length, <- PeanoNat.Nat.pow_add_r.
-      f_equal. Lia.lia.
-    Qed.
-
-    Local Lemma length_preserved':
-      Pquot' (posicyclic (Nat.pow 2 k) (zeta ^ l)) = Pquotl' (rec_decomposition r' k l).
-    Proof.
-      unfold Pquot', Pquotl'.
-      rewrite length_preserved. reflexivity.
-    Qed.
-
     Local Lemma r_leq_k': (r' <= k - 1)%nat. Proof. Lia.lia. Qed.
     Local Lemma r_leq_m': (r' <= m)%nat. Proof. Lia.lia. Qed.
     Local Lemma r_leq_l_lhs: (Nat.modulo (Nat.div l 2) (Nat.pow 2 r') = 0)%nat.
@@ -443,6 +419,22 @@ Section CyclotomicDecomposition.
                  (Pquotl_split'
                     (Pquotl_convert' (ql1:=[m1; m2]) (ql2:=[m1]++[m2]) ltac:(reflexivity) (ntt2' p)))))).
 
+    Lemma proj1_sig_ntt_bodyl_eq f (Hf: forall k' l' Hr' Hk' Hl' p, proj1_sig (rec_ntt' r' k' l' Hr' Hk' Hl' p) = f r' k' l' (proj1_sig p)):
+      forall p,
+        proj1_sig (ntt_bodyl' p) =
+          (f r' (k - 1)%nat (Nat.div l 2)
+            (firstn (Nat.pow 2 (k - 1))
+               (Pmod_cyclotomic_list (Nat.pow 2 (k - 1)) (zeta ^ N.of_nat (Nat.div l 2)) (proj1_sig p)))) ++
+            (f r' (k - 1)%nat (Nat.pow 2 m + Nat.div l 2)%nat
+               (skipn (Nat.pow 2 (k - 1))
+                  (Pmod_cyclotomic_list (Nat.pow 2 (k - 1)) (zeta ^ N.of_nat (Nat.div l 2)) (proj1_sig p)))).
+    Proof.
+      intro p; cbn -[F.inv Nat.div].
+      do 2 rewrite Hf. cbn -[F.inv Nat.div].
+      unfold m1. rewrite posicyclic_measure by (pose proof (NatUtil.pow_nonzero 2 (k - 1) ltac:(congruence)); Lia.lia).
+      f_equal; f_equal; f_equal; Lia.lia.
+    Qed.
+
     Definition intt_bodyl' (pl: Pquotl' decomposition_body'): Pquot' m0 :=
       intt2'
         (Pquotl_convert' eq_refl
@@ -455,6 +447,27 @@ Section CyclotomicDecomposition.
                     (rec_intt' r' (k - 1) (Nat.pow 2 m + Nat.div l 2) r_leq_k' r_leq_m' r_leq_l_rhs)
                     (Pquotl_split'
                        (Pquotl_convert' decomposition_body_eq'' pl)))))).
+
+    Lemma proj1_sig_intt_bodyl_eq f (Hf: forall k' l' Hr' Hk' Hl' p, proj1_sig (rec_intt' r' k' l' Hr' Hk' Hl' p) = f r' k' l' (proj1_sig p)):
+      forall p,
+        proj1_sig (intt_bodyl' p) =
+          map (F.mul (F.inv (1 + 1)))
+            (recompose_cyclotomic_list (Nat.pow 2 (k - 1)) (F.inv (zeta ^ N.of_nat (Nat.div l 2)))
+               ((f r' (k - 1)%nat (Nat.div l 2) (firstn (Nat.pow 2 (k - 1)) (proj1_sig p))) ++
+                (f r' (k - 1)%nat (Nat.pow 2 m + Nat.div l 2)%nat (skipn (Nat.pow 2 (k - 1)) (proj1_sig p))))).
+    Proof.
+      intro p; cbn -[F.inv Nat.div].
+      do 2 rewrite Hf. cbn -[F.inv Nat.div].
+      assert (list_sum _ = Nat.pow 2 (k - 1)) as ->; [|reflexivity].
+      unfold rec_decomposition. rewrite map_map.
+      rewrite (map_ext _ (fun _ => Nat.pow 2 (k - 1 - r'))).
+      2: intros; rewrite posicyclic_measure by (pose proof (NatUtil.pow_nonzero 2 (k - 1 - r') ltac:(congruence)); Lia.lia); Lia.lia.
+      unfold list_sum.
+      assert (forall k l, fold_right Nat.add 0%nat (map (fun _ => k) l) = k * length l)%nat as ->.
+      { induction l0; simpl; [|rewrite IHl0]; Lia.lia. }
+      rewrite rec_decompose_length, <- PeanoNat.Nat.pow_add_r.
+      f_equal; Lia.lia.
+    Qed.
 
     Lemma ntt_isomorphism':
       @Ring.is_isomorphism _ eq1 one add mul _ eql onel addl mull ntt_body' intt_body'.
@@ -589,6 +602,14 @@ Section CyclotomicDecomposition.
     end.
 
   Fixpoint decompose (r l: nat): list nat := decompose_body decompose r l.
+
+  Lemma length_decompose:
+    forall r l, length (decompose r l) = Nat.pow 2 r.
+  Proof.
+    induction r; intros; [reflexivity|].
+    cbn. unfold decompose_body'. rewrite length_app.
+    rewrite IHr, IHr. Lia.lia.
+  Qed.
 
   Definition decomposition (r k l: nat) :=
     List.map (fun n => posicyclic (Nat.pow 2 (k - r)%nat) (zeta ^ (N.of_nat n))) (decompose r l).
