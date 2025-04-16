@@ -9,8 +9,170 @@ Require Import coqutil.Datatypes.List.
 Require Import NTT.Polynomial NTT.NTT.
 Require PrimeFieldTheorems.
 
+Section Utils.
+  (* There is only equivalence if c <> 0 *)
+  Lemma flat_map_constant_nth_error {A B: Type} (c: nat) (f: A -> list B) (l: list A):
+    (forall x : A, In x l -> length (f x) = c) ->
+    forall k x, nth_error (flat_map f l) k = Some x ->
+           exists y, nth_error l (PeanoNat.Nat.div k c) = Some y /\
+                nth_error (f y) (PeanoNat.Nat.modulo k c) = Some x.
+  Proof.
+    destruct (NatUtil.nat_eq_dec c 0%nat) as [->|Hcnz].
+    { intros Hl k x Hx. apply nth_error_In in Hx.
+      apply in_flat_map in Hx. destruct Hx as [z [Hz Hzz]].
+      apply Hl in Hz. apply ListUtil.length0_nil in Hz.
+      rewrite Hz in Hzz. elim (in_nil Hzz). }
+    induction l; intros Hl k x Hx; simpl in Hx.
+    - rewrite ListUtil.nth_error_nil_error in Hx; inversion Hx.
+    - rewrite ListUtil.nth_error_app, Hl in Hx; [|apply in_eq].
+      destruct (Compare_dec.lt_dec k c).
+      + rewrite PeanoNat.Nat.div_small, PeanoNat.Nat.mod_small by Lia.lia.
+        simpl. eexists; split; eauto.
+      + apply IHl in Hx; [|intros; apply Hl; apply in_cons; auto].
+        assert (k = (k - c) + c)%nat as -> by Lia.lia.
+        rewrite NatUtil.div_minus by Lia.lia.
+        assert (k - c + c = (k - c) + 1 * c)%nat as -> by Lia.lia.
+        rewrite PeanoNat.Nat.Div0.mod_add.
+        assert (_ + 1 = S (PeanoNat.Nat.div (k - c) c))%nat as -> by Lia.lia.
+        simpl. exact Hx.
+  Qed.
+End Utils.
+
+Section Zetas.
+  (* Define the array that contains the powers of zeta *)
+
+  Local Coercion N.of_nat: nat >-> N.
+  Context {q: positive} {prime_q: prime q}.
+  Local Notation F := (F q).
+  Local Open Scope F_scope.
+  Context {field: @Hierarchy.field F eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div}
+    {char_ge_3: @Ring.char_ge F eq F.zero F.one F.opp F.add F.sub F.mul (BinNat.N.succ_pos (BinNat.N.two))}.
+
+  Context {zeta: F} {m: nat} {Hm: zeta ^ (N.pow 2 m) = F.opp 1}.
+
+  (* We only keep one half of the coefficients since the other half can be recovered from it *)
+  Fixpoint zeta_powers (l i: nat) :=
+    match i with
+    | O => @decompose m O l
+    | S i => (zeta_powers l i) ++ (List.map (fun k => nth_default 0%nat (@decompose m (S i) l) (2 * k)%nat) (seq 0%nat (Nat.pow 2 i)))
+    end.
+
+  Lemma zeta_powers_length (l i: nat):
+    length (zeta_powers l i) = Nat.pow 2 i.
+  Proof.
+    induction i; [reflexivity|].
+    simpl; rewrite length_app, length_map, length_seq, IHi.
+    Lia.lia.
+  Qed.
+
+  Lemma decompose_zeta_powers_nth:
+    forall i j k l, (S i <= j)%nat ->
+               (k < Nat.pow 2 i)%nat ->
+               exists v, nth_error (zeta_powers l j) (Nat.pow 2 i + k) = Some v /\
+                    nth_error (@decompose m (S i) l) (2 * k)%nat = Some v.
+  Proof.
+    assert (IH: forall l j i, (S i <= j)%nat -> exists tl, zeta_powers l j = zeta_powers l i ++ (map (fun k : nat => nth_default 0%nat (@decompose m (S i) l) (2 * k)) (seq 0 (Nat.pow 2 i))) ++ tl).
+    { induction j; intros i Hi; [Lia.lia|].
+      assert (S i <= j \/ i = j) as [Hlt|<-] by Lia.lia.
+      - simpl. destruct (IHj _ Hlt) as [tl Heq].
+        rewrite Heq. repeat rewrite <- List.app_assoc.
+        eexists; f_equal.
+      - exists nil. rewrite List.app_nil_r. reflexivity. }
+    intros i j k l Hj Hk.
+    pose proof (zeta_powers_length l j) as Hlenj.
+    pose proof (PeanoNat.Nat.pow_le_mono_r 2%nat _ _ ltac:(Lia.lia) Hj) as Hle.
+    rewrite PeanoNat.Nat.pow_succ_r' in Hle.
+    destruct (ListUtil.nth_error_length_exists_value (Nat.pow 2 i + k) (zeta_powers l j) ltac:(Lia.lia)) as [x Hx].
+    eexists; split; eauto.
+    destruct (IH l _ _ Hj) as [tl Heq].
+    rewrite Heq, nth_error_app2 in Hx by (rewrite zeta_powers_length; Lia.lia).
+    rewrite zeta_powers_length in Hx.
+    rewrite nth_error_app1 in Hx by (rewrite length_map, length_seq; Lia.lia).
+    rewrite nth_error_map in Hx.
+    replace (Nat.pow 2 i + k - _)%nat with k in Hx by Lia.lia.
+    rewrite ListUtil.nth_error_seq in Hx.
+    destruct (Compare_dec.lt_dec k (Nat.pow 2 i)) as [_|]; [|Lia.lia].
+    rewrite PeanoNat.Nat.add_0_l in Hx. cbn [option_map] in Hx.
+    erewrite ListUtil.nth_error_Some_nth_default; eauto.
+    rewrite length_decompose, PeanoNat.Nat.pow_succ_r'. Lia.lia.
+  Qed.
+
+  Lemma decompose_nth:
+    forall i k l,
+      (2 * k + 1 < Nat.pow 2 i)%nat ->
+      exists v, nth_error (@NTT.decompose m i l) (2 * k) = Some v /\
+           nth_error (@NTT.decompose m i l) (2 * k + 1) = Some (Nat.pow 2 m + v)%nat.
+  Proof.
+    induction i; intros k l Hk.
+    - rewrite PeanoNat.Nat.pow_0_r in Hk; Lia.lia.
+    - cbn [NTT.decompose decompose_body].
+      unfold decompose_body'.
+      rewrite PeanoNat.Nat.pow_succ_r' in Hk.
+      destruct (Decidable.dec_lt_nat (2 * k + 1) (Nat.pow 2 i)) as [Hlt|Hnlt].
+      + rewrite nth_error_app1 by (rewrite length_decompose; Lia.lia).
+        rewrite nth_error_app1 by (rewrite length_decompose; Lia.lia).
+        apply IHi; auto.
+      + destruct (Decidable.dec_lt_nat (Nat.pow 2 i) (2 * k + 1)) as [Hlt'|Hnlt'].
+        * assert (Nat.pow 2 i <= 2 * k) as Hle by Lia.lia.
+          rewrite nth_error_app2 by (rewrite length_decompose; Lia.lia).
+          rewrite nth_error_app2 by (rewrite length_decompose; Lia.lia).
+          rewrite length_decompose. destruct i; [simpl in *; Lia.lia|].
+          rewrite PeanoNat.Nat.pow_succ_r' in *.
+          assert (2 * k - 2 * Nat.pow 2 i = 2 * (k - Nat.pow 2 i))%nat as -> by Lia.lia.
+          assert (2 * k + 1 - 2 * Nat.pow 2 i = 2 * (k - Nat.pow 2 i) + 1)%nat as -> by Lia.lia.
+          apply IHi. Lia.lia.
+        * assert (Nat.pow 2 i = 2 * k + 1)%nat as Heq by Lia.lia.
+          clear -Heq Hk. destruct i.
+          { simpl in *. assert (k = 0)%nat as -> by Lia.lia.
+            simpl. eauto. }
+          { assert (Nat.even (Nat.pow 2 (S i)) = true) as HX by (rewrite PeanoNat.Nat.even_pow by congruence; reflexivity).
+            rewrite Heq, PeanoNat.Nat.even_odd in HX. congruence. }
+  Qed.
+
+  Lemma decompose_S_eq:
+    forall i l,
+      @NTT.decompose m (S i) l = flat_map (fun v => [Nat.div v 2; Nat.pow 2 m + Nat.div v 2]%nat) (@NTT.decompose m i l).
+  Proof.
+    induction i; intros; [reflexivity|].
+    assert (decompose (S i) l = @decompose m i (Nat.div l 2) ++ @decompose m i (Nat.pow 2 m + Nat.div l 2))%nat as -> by reflexivity.
+    rewrite flat_map_app. repeat rewrite <- IHi.
+    reflexivity.
+  Qed.
+
+  Lemma decompose_S_nth:
+    forall i k l,
+      forall v, nth_error (@NTT.decompose m i l) k = Some v ->
+           nth_error (@NTT.decompose m (S i) l) (2 * k) = Some (Nat.div v 2) /\
+           nth_error (@NTT.decompose m (S i) l) (2 * k + 1) = Some (Nat.pow 2 m + Nat.div v 2)%nat.
+  Proof.
+    intros i k l v Hv. rewrite decompose_S_eq.
+    pose proof (nth_error_Some_bound_index _ _ _ Hv) as Hk.
+    rewrite length_decompose in Hk.
+    assert (Hk': 2 * k + 1 < 2 * Nat.pow 2 i) by Lia.lia.
+    assert (Nat.div (2 * k) 2 = k)%nat as X1 by (symmetry; apply (PeanoNat.Nat.div_unique _ 2 k 0); Lia.lia).
+    assert (Nat.div (2 * k + 1) 2 = k)%nat as X2 by (symmetry; apply (PeanoNat.Nat.div_unique _ 2 k 1); Lia.lia).
+    split.
+    all: match goal with
+         | |- nth_error ?ll ?ii = _ =>
+             assert (Hll: (length ll = 2 * Nat.pow 2 i)%nat) by (rewrite (flat_map_const_length _ 2%nat) by reflexivity; rewrite length_decompose; reflexivity);
+             destruct (ListUtil.nth_error_length_exists_value ii ll ltac:(Lia.lia)) as [v' Hv'];
+             rewrite Hv';
+             apply (flat_map_constant_nth_error 2%nat) in Hv'; try reflexivity;
+             destruct Hv' as (y & Hy & <-);
+             assert (y = v) as -> by congruence
+         end.
+    - rewrite (PeanoNat.Nat.mul_comm 2), PeanoNat.Nat.Div0.mod_mul.
+      reflexivity.
+    - assert (Nat.modulo _ _ = 1)%nat as ->; [|reflexivity].
+      symmetry; apply (PeanoNat.Nat.mod_unique _ 2 k 1); Lia.lia.
+  Qed.
+
+  Definition zetas (l i: nat) := List.map (fun k => F.pow zeta (N.of_nat k)) (zeta_powers l i).
+
+End Zetas.
+
 Section Gallina.
-  (* Lower-level Gallina code for implementing NTT *)
+  (* Lower-level Gallina code for implementing (inverse) NTT *)
 
   Local Coercion N.of_nat: nat >-> N.
   Context {q: positive} {prime_q: prime q}.
@@ -37,7 +199,7 @@ Section Gallina.
       | S r' =>
           let p' := Pmod_cyclotomic_list (Nat.pow 2 (k - 1)) (zeta ^ N.of_nat (Nat.div l 2)) p in
           (nttl_gallina r' (k - 1)%nat (Nat.div l 2) (firstn (Nat.pow 2 (k - 1)) p')) ++
-            (nttl_gallina r' (k - 1)%nat (Nat.pow 2 m + Nat.div l 2)%nat (skipn (Nat.pow 2 (k - 1)) p'))
+          (nttl_gallina r' (k - 1)%nat (Nat.pow 2 m + Nat.div l 2)%nat (skipn (Nat.pow 2 (k - 1)) p'))
       end.
 
     Lemma nttl_gallina_spec:
@@ -57,7 +219,7 @@ Section Gallina.
           map (F.mul (F.inv (1 + 1)))
             (recompose_cyclotomic_list (Nat.pow 2 (k - 1)) (F.inv (zeta ^ N.of_nat (Nat.div l 2)))
                ((inttl_gallina r' (k - 1)%nat (Nat.div l 2) (firstn (Nat.pow 2 (k - 1)) p)) ++
-                  (inttl_gallina r' (k - 1)%nat (Nat.pow 2 m + Nat.div l 2)%nat (skipn (Nat.pow 2 (k - 1)) p))))
+                (inttl_gallina r' (k - 1)%nat (Nat.pow 2 m + Nat.div l 2)%nat (skipn (Nat.pow 2 (k - 1)) p))))
       end.
 
     Lemma inttl_gallina_spec:
@@ -74,7 +236,7 @@ Section Gallina.
   End Unopt.
 
   Section Delayed_mul.
-    (* Delay the multiplications by F.inv (1 + 1) to the end *)
+    (* Delay the multiplications by F.inv (1 + 1) to the end for the inverse ntt *)
     Fixpoint inttl_nomul_gallina r k l (p: list F) :=
       match r with
       | O => p
@@ -148,4 +310,425 @@ Section Gallina.
     Qed.
   End Delayed_mul.
 
+  Section PrecomputedZetas.
+    (* Use precomputed zetas *)
+    Variable (precomp_zetas: list F).
+    Hypothesis (precomp_zetas_eq: precomp_zetas = @zetas q zeta m (Nat.pow 2 m) m).
+
+    Section Forward.
+      Fixpoint nttl_precomp (r k u v: nat) (p: list F) :=
+        match r with
+        | O => p
+        | S r' =>
+            let p' := Pmod_cyclotomic_list (Nat.pow 2 (k - 1)) (nth_default 0%F precomp_zetas (Nat.pow 2 u + v)) p in
+            (nttl_precomp r' (k - 1)%nat (S u) (2 * v) (firstn (Nat.pow 2 (k - 1)) p')) ++
+            (nttl_precomp r' (k - 1)%nat (S u) (2 * v + 1) (skipn (Nat.pow 2 (k - 1)) p'))
+        end.
+
+      Lemma nttl_precomp_length:
+        forall r k u v p,
+          length (nttl_precomp r k u v p) = length p.
+      Proof.
+        induction r; [reflexivity|].
+        intros k u v p. cbn.
+        rewrite length_app, IHr, IHr, <- length_app, firstn_skipn, PolynomialCRT.Pmod_cyclotomic_list_length.
+        reflexivity.
+      Qed.
+
+      Lemma nttl_precomp_spec:
+        forall r k u v l p,
+          (r + u <= m) ->
+          (v < Nat.pow 2 u) ->
+          nth_default 0%nat (@NTT.decompose m u (Nat.pow 2 m)) v = l ->
+          nttl_precomp r k u v p = nttl_gallina r k l p.
+      Proof.
+        induction r; [reflexivity|].
+        cbn -[decompose Nat.div Nat.mul]; intros k u v l p Hru Hv Heq.
+        pose proof (ListUtil.nth_error_Some_nth_default v 0%nat (@decompose m u (Nat.pow 2 m)) ltac:(rewrite length_decompose; assumption)) as Hl.
+        rewrite Heq in Hl.
+        pose proof (@decompose_S_nth m u v (Nat.pow 2 m) l Hl) as (Hll & Hlr).
+        rewrite precomp_zetas_eq; unfold zetas.
+        assert (Hlt: Nat.pow 2 u + v < Nat.pow 2 m).
+        { apply (PeanoNat.Nat.lt_le_trans _ (Nat.pow 2 (S u))).
+          - rewrite PeanoNat.Nat.pow_succ_r'.
+            Lia.lia.
+          - apply PeanoNat.Nat.pow_le_mono_r; Lia.lia. }
+        rewrite (ListUtil.map_nth_default _ _ _ _ 0%nat) by (rewrite zeta_powers_length; auto).
+        destruct (@decompose_zeta_powers_nth m u m v (Nat.pow 2 m) ltac:(Lia.lia) Hv) as (x & Hx1 & Hx2).
+        rewrite (ListUtil.nth_error_value_eq_nth_default _ _ _ Hx1).
+        assert (x = Nat.div l 2) as -> by congruence.
+        assert (Hv': 2 * v + 1 < Nat.pow 2 (S u)) by (rewrite PeanoNat.Nat.pow_succ_r'; Lia.lia).
+        f_equal; apply IHr; try Lia.lia.
+        - apply (ListUtil.nth_error_value_eq_nth_default _ _ _ Hll).
+        - apply (ListUtil.nth_error_value_eq_nth_default _ _ _ Hlr).
+      Qed.
+
+      Lemma nttl_precomp_S_eq:
+        forall r k u v p,
+          (S r <= k)%nat ->
+          length p = Nat.pow 2 k ->
+          nttl_precomp (S r) k u v p =
+          concat
+            (map (fun '(i, chk) => Pmod_cyclotomic_list (Nat.pow 2 (k - S r)) (nth_default 0%F precomp_zetas (Nat.pow 2 (u + r) + i)) chk)
+               (enumerate ((Nat.pow 2 r) * v) (chunk (Nat.pow 2 (k - r)) (nttl_precomp r k u v p)))).
+      Proof.
+        induction r; intros k u v p Hr_leq_l Hlength.
+        - cbn -[chunk]. rewrite PeanoNat.Nat.sub_0_r, PeanoNat.Nat.add_0_r.
+          pose proof (NatUtil.pow_nonzero 2 k ltac:(congruence)) as Hnz.
+          rewrite chunk_small by Lia.lia.
+          cbn. rewrite app_nil_r, firstn_skipn, PeanoNat.Nat.add_0_r. reflexivity.
+        - assert (nttl_precomp (S (S r)) k u v p = let p' := Pmod_cyclotomic_list (Nat.pow 2 (k - 1)) (nth_default 0%F precomp_zetas (Nat.pow 2 u + v)) p in
+            (nttl_precomp (S r) (k - 1)%nat (S u) (2 * v) (firstn (Nat.pow 2 (k - 1)) p')) ++
+            (nttl_precomp (S r) (k - 1)%nat (S u) (2 * v + 1) (skipn (Nat.pow 2 (k - 1)) p'))) as -> by reflexivity.
+          assert (Nat.pow 2 k = 2 * (Nat.pow 2 (k - 1)))%nat as Hlength' by (rewrite <- PeanoNat.Nat.pow_succ_r'; f_equal; Lia.lia).
+          cbn zeta. rewrite (IHr (k - 1)%nat), (IHr (k - 1)%nat); try Lia.lia.
+          2: rewrite length_skipn, PolynomialCRT.Pmod_cyclotomic_list_length, Hlength; Lia.lia.
+          2: rewrite length_firstn, PolynomialCRT.Pmod_cyclotomic_list_length, Hlength, PeanoNat.Nat.min_l by Lia.lia; reflexivity.
+          rewrite <- concat_app, <- map_app.
+          match goal with
+          | |- context [enumerate _ ?l ++ enumerate _ _] =>
+              assert (Nat.pow 2 r * (2 * v + 1) = (Nat.pow 2 r * (2 * v)) + length l)%nat as ->
+          end.
+          { rewrite length_chunk by (apply NatUtil.pow_nonzero; Lia.lia).
+            rewrite nttl_precomp_length, length_firstn, PolynomialCRT.Pmod_cyclotomic_list_length, Hlength.
+            rewrite PeanoNat.Nat.min_l by Lia.lia.
+            assert (Nat.pow 2 (k - 1) = Nat.pow 2 r * Nat.pow 2 (k - 1 - r))%nat as -> by (rewrite <- PeanoNat.Nat.pow_add_r; f_equal; Lia.lia).
+            rewrite Nat.div_up_exact by (apply NatUtil.pow_nonzero; Lia.lia). Lia.lia. }
+          rewrite <- enumerate_app, <- chunk_app.
+          2: apply NatUtil.pow_nonzero; congruence.
+          2:{ rewrite nttl_precomp_length, length_firstn, PolynomialCRT.Pmod_cyclotomic_list_length, Hlength, PeanoNat.Nat.min_l by Lia.lia.
+              assert (Nat.pow 2 (k - 1) = Nat.pow 2 r * Nat.pow 2 (k - 1 - r))%nat as -> by (rewrite <- PeanoNat.Nat.pow_add_r; f_equal; Lia.lia).
+              apply PeanoNat.Nat.Div0.mod_mul. }
+          f_equal. match goal with | |- map ?f ?x = map ?g ?y => assert (x = y) as -> end.
+          { f_equal.
+            - rewrite PeanoNat.Nat.mul_assoc, (PeanoNat.Nat.mul_comm _ 2), <- PeanoNat.Nat.pow_succ_r'; reflexivity.
+            - assert (k - 1 - r = k - S r)%nat as -> by Lia.lia.
+              reflexivity. }
+          apply map_ext; intros.
+          assert (k - 1 - (S r) = k - S (S r))%nat as -> by Lia.lia.
+          assert (S u + r = u + S r)%nat as -> by Lia.lia.
+          reflexivity.
+      Qed.
+    End Forward.
+    Section Backward.
+      (* TODO *)
+    End Backward.
+  End PrecomputedZetas.
+
+  Section Loops.
+    (* Gallina code closer to loops *)
+
+    (* [fold_left f (seq start len) state] is roughly equivalent to
+       [for (i = start; i < start + len; i++) { f i; }]
+       where [f] transforms the state *)
+
+    Section ForwardNTT.
+      Variable (precomp_zetas: list F).
+      Hypothesis (precomp_zetas_eq: precomp_zetas = @zetas q zeta m (Nat.pow 2 m) m).
+
+      (* Decompose one polynomial of size [2 * len] *)
+      Definition polynomial_decompose_loop (start len: nat) (z: F) (p: list F) :=
+        List.fold_left
+          (fun (p: list F) (i: nat) =>
+             let t0 := nth_default 0 p (i + len) in
+             let t1 := z * t0 in
+             let t2 := nth_default 0 p i in
+             let p' := ListUtil.set_nth (i + len) (t2 - t1) p in
+             ListUtil.set_nth i (t2 + t1) p')
+          (seq start len)
+          p.
+
+      Lemma polynomial_decompose_loop_spec:
+        forall start len z p,
+          polynomial_decompose_loop start len z p = (firstn start p) ++ Pmod_cyclotomic_list len z (skipn start p).
+      Proof.
+        intros. destruct (Decidable.dec_le_nat (length p) start).
+        - rewrite firstn_all2 by Lia.lia.
+          rewrite skipn_all by Lia.lia.
+          assert (Pmod_cyclotomic_list _ _ _ = nil) as ->.
+          { apply ListUtil.length0_nil.
+            rewrite PolynomialCRT.Pmod_cyclotomic_list_length. reflexivity. }
+          rewrite app_nil_r.
+          unfold polynomial_decompose_loop.
+          match goal with
+          | |- fold_left ?f _ _ = _ =>
+              assert (forall k, fold_left f (seq start k) p = p) as ->; [|reflexivity]
+          end.
+          induction k.
+          + reflexivity.
+          + rewrite seq_S, fold_left_app, IHk.
+            cbn. apply nth_error_ext. intro i.
+            do 2 rewrite ListUtil.nth_set_nth.
+            rewrite ListUtil.length_set_nth.
+            destruct (Compare_dec.lt_dec i (length p)).
+            * do 2 (destruct (PeanoNat.Nat.eq_dec _ _); [Lia.lia|]).
+              reflexivity.
+            * repeat rewrite ListUtil.nth_error_length_error by Lia.lia.
+              repeat (destruct (PeanoNat.Nat.eq_dec _ _)); reflexivity.
+        - unfold polynomial_decompose_loop, Pmod_cyclotomic_list.
+          apply nth_error_ext; intros i.
+          destruct (Decidable.dec_lt_nat i start).
+          + rewrite nth_error_app1 by (rewrite length_firstn, PeanoNat.Nat.min_l; Lia.lia).
+            rewrite nth_error_firstn by assumption.
+            match goal with
+            | |- context [fold_left ?f _ _] =>
+                assert (forall k, nth_error (fold_left f (seq start k) p) i = nth_error p i) as ->; [|reflexivity]
+            end.
+            induction k; [reflexivity|].
+            rewrite seq_S, fold_left_app.
+            cbn [fold_left].
+            repeat rewrite ListUtil.nth_set_nth.
+            repeat rewrite ListUtil.length_set_nth.
+            destruct (PeanoNat.Nat.eq_dec i _); [Lia.lia|].
+            destruct (PeanoNat.Nat.eq_dec i _); [Lia.lia|].
+            apply IHk.
+          + rewrite nth_error_app2 by (rewrite length_firstn, PeanoNat.Nat.min_l; Lia.lia).
+            rewrite length_firstn, PeanoNat.Nat.min_l by Lia.lia.
+            match goal with
+            | |- nth_error (fold_left ?f _ _) i = nth_error (fold_left ?g _ _) _ =>
+                assert (forall k i, (i >= start) -> nth_error (fold_left f (seq start k) p) i = nth_error (fold_left g (seq 0 k) (skipn start p)) (i - start)) as ->; [|reflexivity|Lia.lia]
+            end.
+            clear. induction k; intros i Hi.
+            * cbn. rewrite nth_error_skipn. f_equal; Lia.lia.
+            * do 2 (rewrite seq_S, fold_left_app).
+              rewrite PeanoNat.Nat.add_0_l.
+              cbn [fold_left].
+              repeat rewrite ListUtil.nth_set_nth.
+              repeat rewrite ListUtil.length_set_nth.
+              pose proof (IHk (start + k)%nat ltac:(Lia.lia)) as IHk1.
+              pose proof (IHk (start + k + len)%nat ltac:(Lia.lia)) as IHk2.
+              match goal with
+              | |- context [length (fold_left ?f ?l ?x)] =>
+                  assert (length (fold_left f l x) = length x) as Hl1
+              end; [|rewrite Hl1].
+              { clear; induction k; [reflexivity|].
+                rewrite seq_S, fold_left_app.
+                cbn [fold_left]. repeat rewrite ListUtil.length_set_nth.
+                rewrite IHk. reflexivity. }
+              match goal with
+              | |- context [length (fold_left ?f ?l ?x)] =>
+                  assert (length (fold_left f l x) = length x) as Hl2
+              end; [|rewrite Hl2].
+              { clear; induction k; [reflexivity|].
+                rewrite seq_S, fold_left_app.
+                cbn [fold_left]. repeat rewrite ListUtil.length_set_nth.
+                rewrite IHk. reflexivity. }
+              rewrite length_skipn.
+              replace (start + k - start)%nat with k in IHk1 by Lia.lia.
+              replace (start + k + len - start)%nat with (k + len)%nat in IHk2 by Lia.lia.
+              destruct (PeanoNat.Nat.eq_dec i (start + k)) as [->|].
+              { destruct (PeanoNat.Nat.eq_dec _ _) as [->|]; [|Lia.lia].
+                do 2 (destruct (Compare_dec.lt_dec _ _)); try Lia.lia; auto.
+                f_equal.
+                rewrite (ListUtil.nth_error_Some_nth_default _ 0) in IHk1 by (rewrite Hl1; auto).
+                rewrite (ListUtil.nth_error_Some_nth_default _ 0) in IHk1 by (rewrite Hl2, length_skipn; auto).
+                f_equal; try congruence.
+                f_equal.
+                destruct (Compare_dec.lt_dec (start + k + len) (length p)).
+                - rewrite (ListUtil.nth_error_Some_nth_default _ 0) in IHk2 by (rewrite Hl1; auto).
+                  rewrite (ListUtil.nth_error_Some_nth_default _ 0) in IHk2 by (rewrite Hl2, length_skipn; Lia.lia).
+                  congruence.
+                - rewrite ListUtil.nth_default_out_of_bounds by (rewrite Hl1; Lia.lia).
+                  rewrite ListUtil.nth_default_out_of_bounds by (rewrite Hl2, length_skipn; Lia.lia).
+                  reflexivity. }
+              destruct (PeanoNat.Nat.eq_dec (i - start) k); [Lia.lia|].
+              destruct (PeanoNat.Nat.eq_dec i _); destruct (PeanoNat.Nat.eq_dec (i - start) _); try Lia.lia; [|apply IHk; Lia.lia].
+              do 2 (destruct (Compare_dec.lt_dec _ _)); try Lia.lia; auto.
+              f_equal.
+              rewrite (ListUtil.nth_error_Some_nth_default _ 0) in IHk1 by (rewrite Hl1; Lia.lia).
+              rewrite (ListUtil.nth_error_Some_nth_default _ 0) in IHk1 by (rewrite Hl2, length_skipn; Lia.lia).
+              rewrite (ListUtil.nth_error_Some_nth_default _ 0) in IHk2 by (rewrite Hl1; Lia.lia).
+              rewrite (ListUtil.nth_error_Some_nth_default _ 0) in IHk2 by (rewrite Hl2, length_skipn; Lia.lia).
+              congruence.
+      Qed.
+
+      (* One layer decomposition *)
+      Definition polynomial_list_loop (k old_len len: nat) (state: nat * nat * list F) :=
+        List.fold_left
+          (fun state _ =>
+             let '(l, start, p) := state in
+             let l := (l + 1)%nat in
+             let z := nth_default 0 precomp_zetas l in
+             let p := polynomial_decompose_loop start len z p in
+             let start := (start + old_len)%nat in
+             (l, start, p))
+          (seq 0 k)
+          state.
+
+      Lemma polynomial_list_loop_spec:
+        forall k old_len len l start p,
+          (0 < 2 * len <= old_len)%nat ->
+          (start + k * old_len <= length p) ->
+          polynomial_list_loop k old_len len (l, start, p) = (l + k, start + k * old_len, firstn start p ++ concat (map (fun '(i, chk) => Pmod_cyclotomic_list len (nth_default 0%F precomp_zetas (l + 1 + i)) chk) (enumerate 0 (firstn k (chunk old_len (skipn start p))))) ++ skipn (start + k * old_len) p)%nat.
+      Proof.
+        unfold polynomial_list_loop.
+        induction k; intros old_len len l start p Hold_len Hp.
+        - cbn. repeat rewrite PeanoNat.Nat.add_0_r.
+          rewrite firstn_skipn. reflexivity.
+        - rewrite seq_S, fold_left_app, PeanoNat.Nat.add_0_l.
+          cbn [fold_left].
+          rewrite IHk by Lia.lia.
+          rewrite polynomial_decompose_loop_spec.
+          f_equal; [f_equal; Lia.lia|].
+          rewrite firstn_app, firstn_firstn.
+          rewrite PeanoNat.Nat.min_r by Lia.lia.
+          rewrite length_firstn, PeanoNat.Nat.min_l by Lia.lia.
+          rewrite skipn_app, length_firstn, PeanoNat.Nat.min_l by Lia.lia.
+          assert (start + k * old_len - start = k * old_len)%nat as -> by Lia.lia.
+          rewrite (skipn_all (start + k * old_len) (firstn _ _)) by (rewrite length_firstn; Lia.lia).
+          rewrite app_nil_l. rewrite firstn_app.
+          assert (k < (length (chunk old_len (skipn start p))))%nat as Hk.
+          { rewrite length_chunk, length_skipn by Lia.lia.
+            apply (PeanoNat.Nat.lt_le_trans _ (Nat.div_up (S k * old_len) old_len)).
+            - rewrite Nat.div_up_exact by Lia.lia. Lia.lia.
+            - apply PeanoNat.Nat.Div0.div_le_mono. Lia.lia. }
+          match goal with | |- context [length (concat ?l)] => assert (length (concat l) = k * old_len)%nat as Hco end.
+          { rewrite length_concat.
+            assert (forall c l, (forall x, In x l -> x = c) -> list_sum l = c * length l)%nat as Hl.
+            { clear. induction l; intros; simpl.
+              - rewrite PeanoNat.Nat.mul_0_r. reflexivity.
+              - rewrite IHl by (intros; apply H; right; auto).
+                rewrite (H a ltac:(left; reflexivity)). Lia.lia. }
+            rewrite (Hl old_len).
+            2:{ intros x Hx. rewrite in_map_iff in Hx.
+                destruct Hx as (y & Hy & Hin).
+                subst x. rewrite in_map_iff in Hin.
+                destruct Hin as ((i & chk) & Hz & Hzz).
+                subst y. rewrite PolynomialCRT.Pmod_cyclotomic_list_length.
+                apply in_combine_r in Hzz.
+                rewrite firstn_chunk in Hzz by Lia.lia.
+                apply In_nth_error in Hzz. destruct Hzz as (j & Hj).
+                pose proof (ListUtil.nth_error_value_length _ _ _ _ Hj) as Hjj.
+                rewrite length_chunk in Hjj by Lia.lia.
+                rewrite (nth_error_chunk old_len ltac:(Lia.lia) _ _ Hjj) in Hj.
+                inversion Hj; subst chk; clear Hj.
+                rewrite length_firstn, length_skipn, length_firstn, length_skipn.
+                rewrite (PeanoNat.Nat.min_l (k * _)) by Lia.lia.
+                rewrite length_firstn, length_skipn in Hjj.
+                rewrite PeanoNat.Nat.min_l in Hjj by Lia.lia.
+                rewrite Nat.div_up_exact in Hjj by Lia.lia.
+                apply PeanoNat.Nat.min_l.
+                rewrite <- PeanoNat.Nat.mul_sub_distr_r.
+                transitivity (1 * old_len)%nat; try Lia.lia.
+                apply PeanoNat.Nat.mul_le_mono_r. Lia.lia. }
+            rewrite length_map, length_map.
+            unfold enumerate. rewrite length_combine, length_seq, PeanoNat.Nat.min_id.
+            rewrite length_firstn, PeanoNat.Nat.min_l; Lia.lia. }
+          rewrite Hco, PeanoNat.Nat.sub_diag, firstn_O, app_nil_r.
+          rewrite (ListUtil.firstn_all (k * old_len)) by Lia.lia.
+          rewrite skipn_app. rewrite Hco, PeanoNat.Nat.sub_diag, skipn_O.
+          rewrite (skipn_all (k * old_len)) by Lia.lia.
+          rewrite app_nil_l. rewrite (ListUtil.firstn_succ nil) by Lia.lia.
+          rewrite enumerate_app, length_firstn.
+          rewrite PeanoNat.Nat.min_l by Lia.lia.
+          rewrite map_app, concat_app. repeat rewrite <- app_assoc. f_equal.
+          f_equal. cbn. assert (l + k + 1 = l + S k)%nat as -> by Lia.lia.
+          rewrite app_nil_r, (nth_default_eq _ _ nil).
+          rewrite length_chunk in Hk by Lia.lia.
+          rewrite nth_chunk by Lia.lia.
+          rewrite skipn_skipn. assert (start + k * old_len = k * old_len + start)%nat as <- by Lia.lia.
+          assert (forall n1 n2 a l, (2 * n1 <= n2)%nat -> Pmod_cyclotomic_list n1 a l = Pmod_cyclotomic_list n1 a (firstn n2 l) ++ (skipn n2 l)) as X.
+          { clear. unfold Pmod_cyclotomic_list.
+            set (f a n1 := (fun (l0 : list F) (i : nat) => ListUtil.set_nth i (nth_default 0 l0 i + a * nth_default 0 l0 (i + n1)) (ListUtil.set_nth (i + n1) (nth_default 0 l0 i - a * nth_default 0 l0 (i + n1)) l0))).
+            assert (forall k n1 n2 a l, (k <= n1)%nat -> (2 * n1 <= n2)%nat -> fold_left (f a n1) (seq 0 k) l = fold_left (f a n1) (seq 0 k) (firstn n2 l) ++ skipn n2 l) as X; [|intros; apply X; auto].
+            induction k; intros n1 n2 a l Hk Hl.
+            - cbn. rewrite firstn_skipn. reflexivity.
+            - destruct (Decidable.dec_lt_nat n2 (length l)) as [Hlt|Hnlt].
+              + rewrite seq_S, fold_left_app, fold_left_app, PeanoNat.Nat.add_0_l.
+                rewrite (IHk n1 n2) by Lia.lia. cbn. unfold f.
+                repeat rewrite ListUtil.nth_default_app.
+                assert (length (fold_left (f a n1) (seq 0 k) (firstn n2 l)) = length (firstn n2 l)) as Y; [|unfold f in Y; repeat rewrite Y].
+                { clear. induction k; [reflexivity|].
+                  rewrite seq_S, fold_left_app.
+                  simpl; unfold f in *; repeat rewrite ListUtil.length_set_nth. auto. }
+                rewrite length_firstn, PeanoNat.Nat.min_l by Lia.lia.
+                destruct (Compare_dec.lt_dec _ n2); [|Lia.lia].
+                destruct (Compare_dec.lt_dec _ n2); [|Lia.lia].
+                assert (forall A k (x: A) l1 l2, (k < length l1) -> ListUtil.set_nth k x (l1 ++ l2) = ListUtil.set_nth k x l1 ++ l2) as Z; [|repeat rewrite Z; auto; [rewrite ListUtil.length_set_nth|]; rewrite Y, length_firstn; Lia.lia].
+                clear. intros.
+                apply nth_error_ext; intros.
+                rewrite ListUtil.nth_set_nth, nth_error_app, nth_error_app, length_app, ListUtil.length_set_nth, ListUtil.nth_set_nth.
+                destruct (PeanoNat.Nat.eq_dec i k) as [->|Hn]; auto.
+                destruct (Compare_dec.lt_dec k _); [|Lia.lia].
+                rewrite (proj2 (PeanoNat.Nat.ltb_lt _ _) H).
+                destruct (Compare_dec.lt_dec _ _); [reflexivity|Lia.lia].
+              + rewrite skipn_all by Lia.lia.
+                rewrite firstn_all2 by Lia.lia.
+                rewrite app_nil_r; reflexivity. }
+          rewrite (X len old_len) by Lia.lia.
+          assert (l + 1 + k = l + S k)%nat as -> by Lia.lia.
+          rewrite skipn_skipn. f_equal. f_equal. Lia.lia.
+      Qed.
+
+      (* Iterate the layer decomposition n times *)
+      Definition polynomial_layer_decomposition_loop (start n: nat) (state: nat * nat * list F) :=
+        List.fold_left
+          (fun state i =>
+             let '(l, len, p) := state in
+             let old_len := len in
+             let len := Nat.shiftr len 1 in
+             let start := 0%nat in
+             let '(l, start, p) := polynomial_list_loop (Nat.shiftl 1 i) old_len len (l, start, p) in
+             (l, len, p))
+          (seq start n)
+          state.
+
+      Definition ntt_loop (r n: nat) (p: list F) :=
+        let l := 0%nat in
+        let len := Nat.pow 2 n in
+        let '(_, _, p) := polynomial_layer_decomposition_loop 0 r (l, len, p)
+        in p.
+
+      Lemma ntt_loop_spec:
+        forall r n p (Hr_leq_n: (r <= n)%nat) (Hr_leq_m: (r <= m)%nat) (Hp: length p = Nat.pow 2 n),
+          ntt_loop r n p = nttl_gallina r n (Nat.pow 2 m) p.
+      Proof.
+        unfold ntt_loop.
+        intros. rewrite <- (@nttl_precomp_spec precomp_zetas precomp_zetas_eq r n 0 0); try Lia.lia; try reflexivity; [|cbv; Lia.lia].
+        do 2 rewrite (surjective_pairing _).
+        revert r n p Hr_leq_n Hr_leq_m Hp.
+        assert (IH: forall r n p (Hr_leq_n: (r <= n)%nat) (Hr_leq_m: (r <= m)%nat) (Hp: length p = Nat.pow 2 n), polynomial_layer_decomposition_loop 0 r (0%nat, Nat.pow 2 n, p) = ((Nat.pow 2 r) - 1, Nat.pow 2 (n - r), nttl_precomp precomp_zetas r n 0 0 p)%nat).
+        { induction r; intros.
+          - cbv -[Nat.pow Nat.sub].
+            rewrite PeanoNat.Nat.sub_0_r. reflexivity.
+          - unfold polynomial_layer_decomposition_loop.
+            match goal with
+            | |- context [fold_left ?f ?l ?state] =>
+                assert (fold_left f l state = f (polynomial_layer_decomposition_loop 0 r state) r) as ->
+            end.
+            { rewrite seq_S, fold_left_app, PeanoNat.Nat.add_0_l. reflexivity. }
+            rewrite nttl_precomp_S_eq by Lia.lia.
+            rewrite IHr by Lia.lia.
+            assert (Nat.shiftr (Nat.pow 2 (n - r)) 1 = Nat.pow 2 (n - S r)) as ->.
+            { rewrite PeanoNat.Nat.shiftr_div_pow2.
+              rewrite <- PeanoNat.Nat.pow_sub_r by Lia.lia.
+              f_equal; Lia.lia. }
+            clear IHr.
+            rewrite PeanoNat.Nat.shiftl_1_l.
+            rewrite polynomial_list_loop_spec.
+            3:{ rewrite nttl_precomp_length.
+                rewrite <- PeanoNat.Nat.pow_add_r.
+                assert (r + (n - r) = n)%nat as ->; Lia.lia. }
+            2:{ rewrite <- PeanoNat.Nat.pow_succ_r'.
+                assert (S (n - S r) = n - r)%nat as -> by Lia.lia.
+                pose proof (NatUtil.pow_nonzero 2 (n - r) ltac:(Lia.lia)); Lia.lia. }
+            assert (Nat.pow 2 r - 1 + _ = 2 * Nat.pow 2 r - 1)%nat as -> by Lia.lia.
+            rewrite <- PeanoNat.Nat.pow_succ_r'.
+            rewrite <- PeanoNat.Nat.pow_add_r.
+            assert (r + (n - r) = n)%nat as -> by Lia.lia.
+            rewrite firstn_O, app_nil_l, PeanoNat.Nat.mul_0_r, skipn_O, skipn_all by (rewrite nttl_precomp_length; Lia.lia).
+            rewrite app_nil_r, PeanoNat.Nat.add_0_l, firstn_all2.
+            2:{ rewrite length_chunk by (apply NatUtil.pow_nonzero; congruence).
+                rewrite nttl_precomp_length, Hp.
+                assert (Nat.pow 2 n = Nat.pow 2 r * Nat.pow 2 (n - r))%nat as -> by (rewrite <- PeanoNat.Nat.pow_add_r; f_equal; Lia.lia).
+                rewrite Nat.div_up_exact; [|apply NatUtil.pow_nonzero]; Lia.lia. }
+            f_equal. f_equal. apply map_ext; intros a; destruct a.
+            f_equal. f_equal. pose proof (NatUtil.pow_nonzero 2 r ltac:(congruence)); Lia.lia. }
+        intros; rewrite IH; auto.
+      Qed.
+    End ForwardNTT.
+    Section BackwardNTT.
+      (* TODO*)
+    End BackwardNTT.
+  End Loops.
 End Gallina.
