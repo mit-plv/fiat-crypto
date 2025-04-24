@@ -68,6 +68,20 @@ Module Rust.
                   ++ "    fn index_mut(&mut self, index: usize) -> &mut Self::Output {" ++ String.NewLine
                   ++ "        &mut self.0[index]" ++ String.NewLine
                   ++ "    }" ++ String.NewLine
+                  ++ "}" ++ String.NewLine ++ String.NewLine
+                  ++ "impl<'a> IndexConst<&'a " ++ name ++ "> {" ++ String.NewLine
+                  ++ "    #[allow(unused)]" ++ String.NewLine
+                  ++ "    #[inline(always)]" ++ String.NewLine
+                  ++ "    const fn index(self, i: usize) -> &'a " ++ ty_string ++ " {" ++ String.NewLine
+                  ++ "        &self.0.0[i]" ++ String.NewLine
+                  ++ "    }" ++ String.NewLine
+                  ++ "}" ++ String.NewLine ++ String.NewLine
+                  ++ "impl<'a, 'b> IndexConst<&'a mut &'b mut " ++ name ++ "> {" ++ String.NewLine
+                  ++ "    #[allow(unused)]" ++ String.NewLine
+                  ++ "    #[inline(always)]" ++ String.NewLine
+                  ++ "    const fn index_mut(self, i: usize) -> &'a mut " ++ ty_string ++ " {" ++ String.NewLine
+                  ++ "        &mut self.0.0[i]" ++ String.NewLine
+                  ++ "    }" ++ String.NewLine
                   ++ "}"
                 end
                 ]%string)%list.
@@ -87,6 +101,23 @@ Module Rust.
        (["";
         "#![allow(unused_parens)]";
         "#![allow(non_camel_case_types)]";
+        "";
+        "struct IndexConst<T: ?Sized>(T);";
+        "";
+        "impl<'a, T, const N: usize> IndexConst<&'a [T; N]> {";
+        "    #[inline(always)]";
+        "    #[allow(unused)]";
+        "    const fn index(self, i: usize) -> &'a T {";
+        "        &self.0[i]";
+        "    }";
+        "}";
+        "impl<'a, 'b, T, const N: usize> IndexConst<&'a mut &'b mut [T; N]> {";
+        "    #[inline(always)]";
+        "    #[allow(unused)]";
+        "    const fn index_mut(self, i: usize) -> &'a mut T {";
+        "        &mut self.0[i]";
+        "    }";
+        "}";
         ""]%string
            ++ (List.flat_map
                  (fun bw
@@ -172,7 +203,7 @@ Module Rust.
        (* integer literals *)
        | (IR.literal v @@@ _) => int_literal_to_string prefix IR.type.Z v
        (* array dereference *)
-       | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "])"
+       | (IR.List_nth n @@@ IR.Var _ v) => "(*IndexConst(" ++ v ++ ").index(" ++ Decimal.Z.to_string (Z.of_nat n) ++ "))"
        (* (de)referencing *)
        | (IR.Addr @@@ IR.Var _ v) => "&mut " ++ v (* borrow a mutable ref to v *)
        | (IR.Dereference @@@ e) => "( *" ++ arith_to_string internal_private prefix e ++ " )"
@@ -251,7 +282,7 @@ Module Rust.
     | IR.Comment lines _ =>
       String.concat String.NewLine (comment_block (ToString.preprocess_comment_block lines))
     | IR.AssignNth name n val =>
-      name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string internal_private prefix val ++ ";"
+      "*IndexConst(&mut " ++ name ++ ").index_mut(" ++ Decimal.Z.to_string (Z.of_nat n) ++ ") = " ++ arith_to_string internal_private prefix val ++ ";"
     end.
 
   Definition to_strings {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) (e : IR.expr) : list string :=
@@ -275,11 +306,11 @@ Module Rust.
       fun '(va, vb) => (to_base_arg_list internal_private all_private prefix mode va ++ to_base_arg_list internal_private all_private prefix mode vb)%list
     | base.type.list tZ =>
       fun '(n, r, len, typedef) =>
-        let modifier := match mode with
-                        | In => (* arrays for inputs are immutable borrows *) "&"
-                        | Out => (* arrays for outputs are mutable borrows *) "&mut "
+        let (modifier1, modifier2) := match mode with
+                        | In => (* arrays for inputs are immutable *) ("", "&")
+                        | Out => (* arrays for outputs are mutable *) ("mut ", "&mut ")
                         end in
-        [n ++ ": " ++ modifier ++ primitive_array_type_to_string internal_private all_private prefix IR.type.Z r len typedef]
+        [modifier1 ++ n ++ ": " ++ modifier2 ++ primitive_array_type_to_string internal_private all_private prefix IR.type.Z r len typedef]
     | base.type.list _ => fun _ => ["#error ""complex list"";"]
     | base.type.option _ => fun _ => ["#error option;"]
     | base.type.unit => fun _ => ["#error unit;"]
@@ -392,7 +423,7 @@ Module Rust.
              (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * IR.expr)
     : list string :=
     let '(args, rets, body) := f in
-    ((if inline then "#[inline]" ++ String.NewLine else "") ++ (if private then "fn " else "pub fn ") ++ name ++
+    ((if inline then "#[inline]" ++ String.NewLine else "") ++ (if private then "const fn " else "pub const fn ") ++ name ++
       "(" ++ String.concat ", " (to_arg_list internal_private all_private prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow internal_private all_private prefix args) ++
       ") {")%string :: (List.map (fun s => "  " ++ s)%string (to_strings internal_private prefix body)) ++ ["}"%string]%list.
 

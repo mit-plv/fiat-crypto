@@ -15,6 +15,23 @@
 #![allow(unused_parens)]
 #![allow(non_camel_case_types)]
 
+struct IndexConst<T: ?Sized>(T);
+
+impl<'a, T, const N: usize> IndexConst<&'a [T; N]> {
+    #[inline(always)]
+    #[allow(unused)]
+    const fn index(self, i: usize) -> &'a T {
+        &self.0[i]
+    }
+}
+impl<'a, 'b, T, const N: usize> IndexConst<&'a mut &'b mut [T; N]> {
+    #[inline(always)]
+    #[allow(unused)]
+    const fn index_mut(self, i: usize) -> &'a mut T {
+        &mut self.0[i]
+    }
+}
+
 
 
 /// The function fiat_secp256k1_dettman_mul multiplies two field elements.
@@ -28,64 +45,64 @@
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x5fffff]]
 #[inline]
-pub fn fiat_secp256k1_dettman_mul(out1: &mut [u32; 10], arg1: &[u32; 10], arg2: &[u32; 10]) {
-  let x1: u64 = ((((arg1[8]) as u64) * ((arg2[9]) as u64)) + (((arg1[9]) as u64) * ((arg2[8]) as u64)));
+pub const fn fiat_secp256k1_dettman_mul(mut out1: &mut [u32; 10], arg1: &[u32; 10], arg2: &[u32; 10]) {
+  let x1: u64 = ((((*IndexConst(arg1).index(8)) as u64) * ((*IndexConst(arg2).index(9)) as u64)) + (((*IndexConst(arg1).index(9)) as u64) * ((*IndexConst(arg2).index(8)) as u64)));
   let x2: u32 = ((x1 >> 26) as u32);
   let x3: u32 = ((x1 & (0x3ffffff as u64)) as u32);
-  let x4: u64 = (((((arg1[0]) as u64) * ((arg2[7]) as u64)) + ((((arg1[1]) as u64) * ((arg2[6]) as u64)) + ((((arg1[2]) as u64) * ((arg2[5]) as u64)) + ((((arg1[3]) as u64) * ((arg2[4]) as u64)) + ((((arg1[4]) as u64) * ((arg2[3]) as u64)) + ((((arg1[5]) as u64) * ((arg2[2]) as u64)) + ((((arg1[6]) as u64) * ((arg2[1]) as u64)) + (((arg1[7]) as u64) * ((arg2[0]) as u64))))))))) + ((x3 as u64) * (0x3d10 as u64)));
+  let x4: u64 = (((((*IndexConst(arg1).index(0)) as u64) * ((*IndexConst(arg2).index(7)) as u64)) + ((((*IndexConst(arg1).index(1)) as u64) * ((*IndexConst(arg2).index(6)) as u64)) + ((((*IndexConst(arg1).index(2)) as u64) * ((*IndexConst(arg2).index(5)) as u64)) + ((((*IndexConst(arg1).index(3)) as u64) * ((*IndexConst(arg2).index(4)) as u64)) + ((((*IndexConst(arg1).index(4)) as u64) * ((*IndexConst(arg2).index(3)) as u64)) + ((((*IndexConst(arg1).index(5)) as u64) * ((*IndexConst(arg2).index(2)) as u64)) + ((((*IndexConst(arg1).index(6)) as u64) * ((*IndexConst(arg2).index(1)) as u64)) + (((*IndexConst(arg1).index(7)) as u64) * ((*IndexConst(arg2).index(0)) as u64))))))))) + ((x3 as u64) * (0x3d10 as u64)));
   let x5: u32 = ((x4 >> 26) as u32);
   let x6: u32 = ((x4 & (0x3ffffff as u64)) as u32);
-  let x7: u64 = ((x2 as u64) + (((arg1[9]) as u64) * ((arg2[9]) as u64)));
+  let x7: u64 = ((x2 as u64) + (((*IndexConst(arg1).index(9)) as u64) * ((*IndexConst(arg2).index(9)) as u64)));
   let x8: u32 = ((x7 >> 32) as u32);
   let x9: u32 = ((x7 & (0xffffffff as u64)) as u32);
-  let x10: u64 = (((x5 as u64) + (((((arg1[0]) as u64) * ((arg2[8]) as u64)) + ((((arg1[1]) as u64) * ((arg2[7]) as u64)) + ((((arg1[2]) as u64) * ((arg2[6]) as u64)) + ((((arg1[3]) as u64) * ((arg2[5]) as u64)) + ((((arg1[4]) as u64) * ((arg2[4]) as u64)) + ((((arg1[5]) as u64) * ((arg2[3]) as u64)) + ((((arg1[6]) as u64) * ((arg2[2]) as u64)) + ((((arg1[7]) as u64) * ((arg2[1]) as u64)) + (((arg1[8]) as u64) * ((arg2[0]) as u64)))))))))) + ((x3 as u64) << 10))) + ((x9 as u64) * (0x3d10 as u64)));
+  let x10: u64 = (((x5 as u64) + (((((*IndexConst(arg1).index(0)) as u64) * ((*IndexConst(arg2).index(8)) as u64)) + ((((*IndexConst(arg1).index(1)) as u64) * ((*IndexConst(arg2).index(7)) as u64)) + ((((*IndexConst(arg1).index(2)) as u64) * ((*IndexConst(arg2).index(6)) as u64)) + ((((*IndexConst(arg1).index(3)) as u64) * ((*IndexConst(arg2).index(5)) as u64)) + ((((*IndexConst(arg1).index(4)) as u64) * ((*IndexConst(arg2).index(4)) as u64)) + ((((*IndexConst(arg1).index(5)) as u64) * ((*IndexConst(arg2).index(3)) as u64)) + ((((*IndexConst(arg1).index(6)) as u64) * ((*IndexConst(arg2).index(2)) as u64)) + ((((*IndexConst(arg1).index(7)) as u64) * ((*IndexConst(arg2).index(1)) as u64)) + (((*IndexConst(arg1).index(8)) as u64) * ((*IndexConst(arg2).index(0)) as u64)))))))))) + ((x3 as u64) << 10))) + ((x9 as u64) * (0x3d10 as u64)));
   let x11: u32 = ((x10 >> 26) as u32);
   let x12: u32 = ((x10 & (0x3ffffff as u64)) as u32);
-  let x13: u64 = (((x11 as u64) + (((((arg1[0]) as u64) * ((arg2[9]) as u64)) + ((((arg1[1]) as u64) * ((arg2[8]) as u64)) + ((((arg1[2]) as u64) * ((arg2[7]) as u64)) + ((((arg1[3]) as u64) * ((arg2[6]) as u64)) + ((((arg1[4]) as u64) * ((arg2[5]) as u64)) + ((((arg1[5]) as u64) * ((arg2[4]) as u64)) + ((((arg1[6]) as u64) * ((arg2[3]) as u64)) + ((((arg1[7]) as u64) * ((arg2[2]) as u64)) + ((((arg1[8]) as u64) * ((arg2[1]) as u64)) + (((arg1[9]) as u64) * ((arg2[0]) as u64))))))))))) + ((x9 as u64) << 10))) + ((x8 as u64) * (0xf4400 as u64)));
+  let x13: u64 = (((x11 as u64) + (((((*IndexConst(arg1).index(0)) as u64) * ((*IndexConst(arg2).index(9)) as u64)) + ((((*IndexConst(arg1).index(1)) as u64) * ((*IndexConst(arg2).index(8)) as u64)) + ((((*IndexConst(arg1).index(2)) as u64) * ((*IndexConst(arg2).index(7)) as u64)) + ((((*IndexConst(arg1).index(3)) as u64) * ((*IndexConst(arg2).index(6)) as u64)) + ((((*IndexConst(arg1).index(4)) as u64) * ((*IndexConst(arg2).index(5)) as u64)) + ((((*IndexConst(arg1).index(5)) as u64) * ((*IndexConst(arg2).index(4)) as u64)) + ((((*IndexConst(arg1).index(6)) as u64) * ((*IndexConst(arg2).index(3)) as u64)) + ((((*IndexConst(arg1).index(7)) as u64) * ((*IndexConst(arg2).index(2)) as u64)) + ((((*IndexConst(arg1).index(8)) as u64) * ((*IndexConst(arg2).index(1)) as u64)) + (((*IndexConst(arg1).index(9)) as u64) * ((*IndexConst(arg2).index(0)) as u64))))))))))) + ((x9 as u64) << 10))) + ((x8 as u64) * (0xf4400 as u64)));
   let x14: u32 = ((x13 >> 26) as u32);
   let x15: u32 = ((x13 & (0x3ffffff as u64)) as u32);
-  let x16: u64 = ((x14 as u64) + (((((arg1[1]) as u64) * ((arg2[9]) as u64)) + ((((arg1[2]) as u64) * ((arg2[8]) as u64)) + ((((arg1[3]) as u64) * ((arg2[7]) as u64)) + ((((arg1[4]) as u64) * ((arg2[6]) as u64)) + ((((arg1[5]) as u64) * ((arg2[5]) as u64)) + ((((arg1[6]) as u64) * ((arg2[4]) as u64)) + ((((arg1[7]) as u64) * ((arg2[3]) as u64)) + ((((arg1[8]) as u64) * ((arg2[2]) as u64)) + (((arg1[9]) as u64) * ((arg2[1]) as u64)))))))))) + ((x8 << 16) as u64)));
+  let x16: u64 = ((x14 as u64) + (((((*IndexConst(arg1).index(1)) as u64) * ((*IndexConst(arg2).index(9)) as u64)) + ((((*IndexConst(arg1).index(2)) as u64) * ((*IndexConst(arg2).index(8)) as u64)) + ((((*IndexConst(arg1).index(3)) as u64) * ((*IndexConst(arg2).index(7)) as u64)) + ((((*IndexConst(arg1).index(4)) as u64) * ((*IndexConst(arg2).index(6)) as u64)) + ((((*IndexConst(arg1).index(5)) as u64) * ((*IndexConst(arg2).index(5)) as u64)) + ((((*IndexConst(arg1).index(6)) as u64) * ((*IndexConst(arg2).index(4)) as u64)) + ((((*IndexConst(arg1).index(7)) as u64) * ((*IndexConst(arg2).index(3)) as u64)) + ((((*IndexConst(arg1).index(8)) as u64) * ((*IndexConst(arg2).index(2)) as u64)) + (((*IndexConst(arg1).index(9)) as u64) * ((*IndexConst(arg2).index(1)) as u64)))))))))) + ((x8 << 16) as u64)));
   let x17: u32 = ((x16 >> 26) as u32);
   let x18: u32 = ((x16 & (0x3ffffff as u64)) as u32);
   let x19: u32 = (x15 >> 22);
   let x20: u32 = (x15 & 0x3fffff);
-  let x21: u64 = ((((arg1[0]) as u64) * ((arg2[0]) as u64)) + (((x19 + (x18 << 4)) as u64) * (0x3d1 as u64)));
+  let x21: u64 = ((((*IndexConst(arg1).index(0)) as u64) * ((*IndexConst(arg2).index(0)) as u64)) + (((x19 + (x18 << 4)) as u64) * (0x3d1 as u64)));
   let x22: u32 = ((x21 >> 26) as u32);
   let x23: u32 = ((x21 & (0x3ffffff as u64)) as u32);
-  let x24: u64 = ((x17 as u64) + ((((arg1[2]) as u64) * ((arg2[9]) as u64)) + ((((arg1[3]) as u64) * ((arg2[8]) as u64)) + ((((arg1[4]) as u64) * ((arg2[7]) as u64)) + ((((arg1[5]) as u64) * ((arg2[6]) as u64)) + ((((arg1[6]) as u64) * ((arg2[5]) as u64)) + ((((arg1[7]) as u64) * ((arg2[4]) as u64)) + ((((arg1[8]) as u64) * ((arg2[3]) as u64)) + (((arg1[9]) as u64) * ((arg2[2]) as u64))))))))));
+  let x24: u64 = ((x17 as u64) + ((((*IndexConst(arg1).index(2)) as u64) * ((*IndexConst(arg2).index(9)) as u64)) + ((((*IndexConst(arg1).index(3)) as u64) * ((*IndexConst(arg2).index(8)) as u64)) + ((((*IndexConst(arg1).index(4)) as u64) * ((*IndexConst(arg2).index(7)) as u64)) + ((((*IndexConst(arg1).index(5)) as u64) * ((*IndexConst(arg2).index(6)) as u64)) + ((((*IndexConst(arg1).index(6)) as u64) * ((*IndexConst(arg2).index(5)) as u64)) + ((((*IndexConst(arg1).index(7)) as u64) * ((*IndexConst(arg2).index(4)) as u64)) + ((((*IndexConst(arg1).index(8)) as u64) * ((*IndexConst(arg2).index(3)) as u64)) + (((*IndexConst(arg1).index(9)) as u64) * ((*IndexConst(arg2).index(2)) as u64))))))))));
   let x25: u32 = ((x24 >> 26) as u32);
   let x26: u32 = ((x24 & (0x3ffffff as u64)) as u32);
-  let x27: u64 = (((x22 as u64) + (((((arg1[0]) as u64) * ((arg2[1]) as u64)) + (((arg1[1]) as u64) * ((arg2[0]) as u64))) + (((x19 + (x18 << 4)) as u64) << 6))) + ((x26 as u64) * (0x3d10 as u64)));
+  let x27: u64 = (((x22 as u64) + (((((*IndexConst(arg1).index(0)) as u64) * ((*IndexConst(arg2).index(1)) as u64)) + (((*IndexConst(arg1).index(1)) as u64) * ((*IndexConst(arg2).index(0)) as u64))) + (((x19 + (x18 << 4)) as u64) << 6))) + ((x26 as u64) * (0x3d10 as u64)));
   let x28: u32 = ((x27 >> 26) as u32);
   let x29: u32 = ((x27 & (0x3ffffff as u64)) as u32);
-  let x30: u64 = ((x25 as u64) + ((((arg1[3]) as u64) * ((arg2[9]) as u64)) + ((((arg1[4]) as u64) * ((arg2[8]) as u64)) + ((((arg1[5]) as u64) * ((arg2[7]) as u64)) + ((((arg1[6]) as u64) * ((arg2[6]) as u64)) + ((((arg1[7]) as u64) * ((arg2[5]) as u64)) + ((((arg1[8]) as u64) * ((arg2[4]) as u64)) + (((arg1[9]) as u64) * ((arg2[3]) as u64)))))))));
+  let x30: u64 = ((x25 as u64) + ((((*IndexConst(arg1).index(3)) as u64) * ((*IndexConst(arg2).index(9)) as u64)) + ((((*IndexConst(arg1).index(4)) as u64) * ((*IndexConst(arg2).index(8)) as u64)) + ((((*IndexConst(arg1).index(5)) as u64) * ((*IndexConst(arg2).index(7)) as u64)) + ((((*IndexConst(arg1).index(6)) as u64) * ((*IndexConst(arg2).index(6)) as u64)) + ((((*IndexConst(arg1).index(7)) as u64) * ((*IndexConst(arg2).index(5)) as u64)) + ((((*IndexConst(arg1).index(8)) as u64) * ((*IndexConst(arg2).index(4)) as u64)) + (((*IndexConst(arg1).index(9)) as u64) * ((*IndexConst(arg2).index(3)) as u64)))))))));
   let x31: u32 = ((x30 >> 26) as u32);
   let x32: u32 = ((x30 & (0x3ffffff as u64)) as u32);
-  let x33: u64 = (((x28 as u64) + (((((arg1[0]) as u64) * ((arg2[2]) as u64)) + ((((arg1[1]) as u64) * ((arg2[1]) as u64)) + (((arg1[2]) as u64) * ((arg2[0]) as u64)))) + ((x26 as u64) << 10))) + ((x32 as u64) * (0x3d10 as u64)));
+  let x33: u64 = (((x28 as u64) + (((((*IndexConst(arg1).index(0)) as u64) * ((*IndexConst(arg2).index(2)) as u64)) + ((((*IndexConst(arg1).index(1)) as u64) * ((*IndexConst(arg2).index(1)) as u64)) + (((*IndexConst(arg1).index(2)) as u64) * ((*IndexConst(arg2).index(0)) as u64)))) + ((x26 as u64) << 10))) + ((x32 as u64) * (0x3d10 as u64)));
   let x34: u32 = ((x33 >> 26) as u32);
   let x35: u32 = ((x33 & (0x3ffffff as u64)) as u32);
-  let x36: u64 = ((x31 as u64) + ((((arg1[4]) as u64) * ((arg2[9]) as u64)) + ((((arg1[5]) as u64) * ((arg2[8]) as u64)) + ((((arg1[6]) as u64) * ((arg2[7]) as u64)) + ((((arg1[7]) as u64) * ((arg2[6]) as u64)) + ((((arg1[8]) as u64) * ((arg2[5]) as u64)) + (((arg1[9]) as u64) * ((arg2[4]) as u64))))))));
+  let x36: u64 = ((x31 as u64) + ((((*IndexConst(arg1).index(4)) as u64) * ((*IndexConst(arg2).index(9)) as u64)) + ((((*IndexConst(arg1).index(5)) as u64) * ((*IndexConst(arg2).index(8)) as u64)) + ((((*IndexConst(arg1).index(6)) as u64) * ((*IndexConst(arg2).index(7)) as u64)) + ((((*IndexConst(arg1).index(7)) as u64) * ((*IndexConst(arg2).index(6)) as u64)) + ((((*IndexConst(arg1).index(8)) as u64) * ((*IndexConst(arg2).index(5)) as u64)) + (((*IndexConst(arg1).index(9)) as u64) * ((*IndexConst(arg2).index(4)) as u64))))))));
   let x37: u32 = ((x36 >> 26) as u32);
   let x38: u32 = ((x36 & (0x3ffffff as u64)) as u32);
-  let x39: u64 = (((x34 as u64) + (((((arg1[0]) as u64) * ((arg2[3]) as u64)) + ((((arg1[1]) as u64) * ((arg2[2]) as u64)) + ((((arg1[2]) as u64) * ((arg2[1]) as u64)) + (((arg1[3]) as u64) * ((arg2[0]) as u64))))) + ((x32 as u64) << 10))) + ((x38 as u64) * (0x3d10 as u64)));
+  let x39: u64 = (((x34 as u64) + (((((*IndexConst(arg1).index(0)) as u64) * ((*IndexConst(arg2).index(3)) as u64)) + ((((*IndexConst(arg1).index(1)) as u64) * ((*IndexConst(arg2).index(2)) as u64)) + ((((*IndexConst(arg1).index(2)) as u64) * ((*IndexConst(arg2).index(1)) as u64)) + (((*IndexConst(arg1).index(3)) as u64) * ((*IndexConst(arg2).index(0)) as u64))))) + ((x32 as u64) << 10))) + ((x38 as u64) * (0x3d10 as u64)));
   let x40: u32 = ((x39 >> 26) as u32);
   let x41: u32 = ((x39 & (0x3ffffff as u64)) as u32);
-  let x42: u64 = ((x37 as u64) + ((((arg1[5]) as u64) * ((arg2[9]) as u64)) + ((((arg1[6]) as u64) * ((arg2[8]) as u64)) + ((((arg1[7]) as u64) * ((arg2[7]) as u64)) + ((((arg1[8]) as u64) * ((arg2[6]) as u64)) + (((arg1[9]) as u64) * ((arg2[5]) as u64)))))));
+  let x42: u64 = ((x37 as u64) + ((((*IndexConst(arg1).index(5)) as u64) * ((*IndexConst(arg2).index(9)) as u64)) + ((((*IndexConst(arg1).index(6)) as u64) * ((*IndexConst(arg2).index(8)) as u64)) + ((((*IndexConst(arg1).index(7)) as u64) * ((*IndexConst(arg2).index(7)) as u64)) + ((((*IndexConst(arg1).index(8)) as u64) * ((*IndexConst(arg2).index(6)) as u64)) + (((*IndexConst(arg1).index(9)) as u64) * ((*IndexConst(arg2).index(5)) as u64)))))));
   let x43: u32 = ((x42 >> 26) as u32);
   let x44: u32 = ((x42 & (0x3ffffff as u64)) as u32);
-  let x45: u64 = (((x40 as u64) + (((((arg1[0]) as u64) * ((arg2[4]) as u64)) + ((((arg1[1]) as u64) * ((arg2[3]) as u64)) + ((((arg1[2]) as u64) * ((arg2[2]) as u64)) + ((((arg1[3]) as u64) * ((arg2[1]) as u64)) + (((arg1[4]) as u64) * ((arg2[0]) as u64)))))) + ((x38 as u64) << 10))) + ((x44 as u64) * (0x3d10 as u64)));
+  let x45: u64 = (((x40 as u64) + (((((*IndexConst(arg1).index(0)) as u64) * ((*IndexConst(arg2).index(4)) as u64)) + ((((*IndexConst(arg1).index(1)) as u64) * ((*IndexConst(arg2).index(3)) as u64)) + ((((*IndexConst(arg1).index(2)) as u64) * ((*IndexConst(arg2).index(2)) as u64)) + ((((*IndexConst(arg1).index(3)) as u64) * ((*IndexConst(arg2).index(1)) as u64)) + (((*IndexConst(arg1).index(4)) as u64) * ((*IndexConst(arg2).index(0)) as u64)))))) + ((x38 as u64) << 10))) + ((x44 as u64) * (0x3d10 as u64)));
   let x46: u32 = ((x45 >> 26) as u32);
   let x47: u32 = ((x45 & (0x3ffffff as u64)) as u32);
-  let x48: u64 = ((x43 as u64) + ((((arg1[6]) as u64) * ((arg2[9]) as u64)) + ((((arg1[7]) as u64) * ((arg2[8]) as u64)) + ((((arg1[8]) as u64) * ((arg2[7]) as u64)) + (((arg1[9]) as u64) * ((arg2[6]) as u64))))));
+  let x48: u64 = ((x43 as u64) + ((((*IndexConst(arg1).index(6)) as u64) * ((*IndexConst(arg2).index(9)) as u64)) + ((((*IndexConst(arg1).index(7)) as u64) * ((*IndexConst(arg2).index(8)) as u64)) + ((((*IndexConst(arg1).index(8)) as u64) * ((*IndexConst(arg2).index(7)) as u64)) + (((*IndexConst(arg1).index(9)) as u64) * ((*IndexConst(arg2).index(6)) as u64))))));
   let x49: u32 = ((x48 >> 26) as u32);
   let x50: u32 = ((x48 & (0x3ffffff as u64)) as u32);
-  let x51: u64 = (((x46 as u64) + (((((arg1[0]) as u64) * ((arg2[5]) as u64)) + ((((arg1[1]) as u64) * ((arg2[4]) as u64)) + ((((arg1[2]) as u64) * ((arg2[3]) as u64)) + ((((arg1[3]) as u64) * ((arg2[2]) as u64)) + ((((arg1[4]) as u64) * ((arg2[1]) as u64)) + (((arg1[5]) as u64) * ((arg2[0]) as u64))))))) + ((x44 as u64) << 10))) + ((x50 as u64) * (0x3d10 as u64)));
+  let x51: u64 = (((x46 as u64) + (((((*IndexConst(arg1).index(0)) as u64) * ((*IndexConst(arg2).index(5)) as u64)) + ((((*IndexConst(arg1).index(1)) as u64) * ((*IndexConst(arg2).index(4)) as u64)) + ((((*IndexConst(arg1).index(2)) as u64) * ((*IndexConst(arg2).index(3)) as u64)) + ((((*IndexConst(arg1).index(3)) as u64) * ((*IndexConst(arg2).index(2)) as u64)) + ((((*IndexConst(arg1).index(4)) as u64) * ((*IndexConst(arg2).index(1)) as u64)) + (((*IndexConst(arg1).index(5)) as u64) * ((*IndexConst(arg2).index(0)) as u64))))))) + ((x44 as u64) << 10))) + ((x50 as u64) * (0x3d10 as u64)));
   let x52: u32 = ((x51 >> 26) as u32);
   let x53: u32 = ((x51 & (0x3ffffff as u64)) as u32);
-  let x54: u64 = ((x49 as u64) + ((((arg1[7]) as u64) * ((arg2[9]) as u64)) + ((((arg1[8]) as u64) * ((arg2[8]) as u64)) + (((arg1[9]) as u64) * ((arg2[7]) as u64)))));
+  let x54: u64 = ((x49 as u64) + ((((*IndexConst(arg1).index(7)) as u64) * ((*IndexConst(arg2).index(9)) as u64)) + ((((*IndexConst(arg1).index(8)) as u64) * ((*IndexConst(arg2).index(8)) as u64)) + (((*IndexConst(arg1).index(9)) as u64) * ((*IndexConst(arg2).index(7)) as u64)))));
   let x55: u32 = ((x54 >> 32) as u32);
   let x56: u32 = ((x54 & (0xffffffff as u64)) as u32);
-  let x57: u64 = (((x52 as u64) + (((((arg1[0]) as u64) * ((arg2[6]) as u64)) + ((((arg1[1]) as u64) * ((arg2[5]) as u64)) + ((((arg1[2]) as u64) * ((arg2[4]) as u64)) + ((((arg1[3]) as u64) * ((arg2[3]) as u64)) + ((((arg1[4]) as u64) * ((arg2[2]) as u64)) + ((((arg1[5]) as u64) * ((arg2[1]) as u64)) + (((arg1[6]) as u64) * ((arg2[0]) as u64)))))))) + ((x50 as u64) << 10))) + ((x56 as u64) * (0x3d10 as u64)));
+  let x57: u64 = (((x52 as u64) + (((((*IndexConst(arg1).index(0)) as u64) * ((*IndexConst(arg2).index(6)) as u64)) + ((((*IndexConst(arg1).index(1)) as u64) * ((*IndexConst(arg2).index(5)) as u64)) + ((((*IndexConst(arg1).index(2)) as u64) * ((*IndexConst(arg2).index(4)) as u64)) + ((((*IndexConst(arg1).index(3)) as u64) * ((*IndexConst(arg2).index(3)) as u64)) + ((((*IndexConst(arg1).index(4)) as u64) * ((*IndexConst(arg2).index(2)) as u64)) + ((((*IndexConst(arg1).index(5)) as u64) * ((*IndexConst(arg2).index(1)) as u64)) + (((*IndexConst(arg1).index(6)) as u64) * ((*IndexConst(arg2).index(0)) as u64)))))))) + ((x50 as u64) << 10))) + ((x56 as u64) * (0x3d10 as u64)));
   let x58: u32 = ((x57 >> 26) as u32);
   let x59: u32 = ((x57 & (0x3ffffff as u64)) as u32);
   let x60: u64 = (((x58 as u64) + ((x6 as u64) + ((x56 as u64) << 10))) + ((x55 as u64) * (0xf4400 as u64)));
@@ -95,16 +112,16 @@ pub fn fiat_secp256k1_dettman_mul(out1: &mut [u32; 10], arg1: &[u32; 10], arg2: 
   let x64: u32 = ((x63 >> 26) as u32);
   let x65: u32 = ((x63 & (0x3ffffff as u64)) as u32);
   let x66: u32 = (x64 + x20);
-  out1[0] = x23;
-  out1[1] = x29;
-  out1[2] = x35;
-  out1[3] = x41;
-  out1[4] = x47;
-  out1[5] = x53;
-  out1[6] = x59;
-  out1[7] = x62;
-  out1[8] = x65;
-  out1[9] = x66;
+  *IndexConst(&mut out1).index_mut(0) = x23;
+  *IndexConst(&mut out1).index_mut(1) = x29;
+  *IndexConst(&mut out1).index_mut(2) = x35;
+  *IndexConst(&mut out1).index_mut(3) = x41;
+  *IndexConst(&mut out1).index_mut(4) = x47;
+  *IndexConst(&mut out1).index_mut(5) = x53;
+  *IndexConst(&mut out1).index_mut(6) = x59;
+  *IndexConst(&mut out1).index_mut(7) = x62;
+  *IndexConst(&mut out1).index_mut(8) = x65;
+  *IndexConst(&mut out1).index_mut(9) = x66;
 }
 
 /// The function fiat_secp256k1_dettman_square squares a field element.
@@ -117,73 +134,73 @@ pub fn fiat_secp256k1_dettman_mul(out1: &mut [u32; 10], arg1: &[u32; 10], arg2: 
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x5fffff]]
 #[inline]
-pub fn fiat_secp256k1_dettman_square(out1: &mut [u32; 10], arg1: &[u32; 10]) {
-  let x1: u32 = ((arg1[8]) * 0x2);
-  let x2: u32 = ((arg1[7]) * 0x2);
-  let x3: u32 = ((arg1[6]) * 0x2);
-  let x4: u32 = ((arg1[5]) * 0x2);
-  let x5: u32 = ((arg1[4]) * 0x2);
-  let x6: u32 = ((arg1[3]) * 0x2);
-  let x7: u32 = ((arg1[2]) * 0x2);
-  let x8: u32 = ((arg1[1]) * 0x2);
-  let x9: u32 = ((arg1[0]) * 0x2);
-  let x10: u64 = ((x1 as u64) * ((arg1[9]) as u64));
+pub const fn fiat_secp256k1_dettman_square(mut out1: &mut [u32; 10], arg1: &[u32; 10]) {
+  let x1: u32 = ((*IndexConst(arg1).index(8)) * 0x2);
+  let x2: u32 = ((*IndexConst(arg1).index(7)) * 0x2);
+  let x3: u32 = ((*IndexConst(arg1).index(6)) * 0x2);
+  let x4: u32 = ((*IndexConst(arg1).index(5)) * 0x2);
+  let x5: u32 = ((*IndexConst(arg1).index(4)) * 0x2);
+  let x6: u32 = ((*IndexConst(arg1).index(3)) * 0x2);
+  let x7: u32 = ((*IndexConst(arg1).index(2)) * 0x2);
+  let x8: u32 = ((*IndexConst(arg1).index(1)) * 0x2);
+  let x9: u32 = ((*IndexConst(arg1).index(0)) * 0x2);
+  let x10: u64 = ((x1 as u64) * ((*IndexConst(arg1).index(9)) as u64));
   let x11: u32 = ((x10 >> 26) as u32);
   let x12: u32 = ((x10 & (0x3ffffff as u64)) as u32);
-  let x13: u64 = ((((x9 as u64) * ((arg1[7]) as u64)) + (((x8 as u64) * ((arg1[6]) as u64)) + (((x7 as u64) * ((arg1[5]) as u64)) + ((x6 as u64) * ((arg1[4]) as u64))))) + ((x12 as u64) * (0x3d10 as u64)));
+  let x13: u64 = ((((x9 as u64) * ((*IndexConst(arg1).index(7)) as u64)) + (((x8 as u64) * ((*IndexConst(arg1).index(6)) as u64)) + (((x7 as u64) * ((*IndexConst(arg1).index(5)) as u64)) + ((x6 as u64) * ((*IndexConst(arg1).index(4)) as u64))))) + ((x12 as u64) * (0x3d10 as u64)));
   let x14: u32 = ((x13 >> 26) as u32);
   let x15: u32 = ((x13 & (0x3ffffff as u64)) as u32);
-  let x16: u64 = ((x11 as u64) + (((arg1[9]) as u64) * ((arg1[9]) as u64)));
+  let x16: u64 = ((x11 as u64) + (((*IndexConst(arg1).index(9)) as u64) * ((*IndexConst(arg1).index(9)) as u64)));
   let x17: u32 = ((x16 >> 32) as u32);
   let x18: u32 = ((x16 & (0xffffffff as u64)) as u32);
-  let x19: u64 = (((x14 as u64) + ((((x9 as u64) * ((arg1[8]) as u64)) + (((x8 as u64) * ((arg1[7]) as u64)) + (((x7 as u64) * ((arg1[6]) as u64)) + (((x6 as u64) * ((arg1[5]) as u64)) + (((arg1[4]) as u64) * ((arg1[4]) as u64)))))) + ((x12 as u64) << 10))) + ((x18 as u64) * (0x3d10 as u64)));
+  let x19: u64 = (((x14 as u64) + ((((x9 as u64) * ((*IndexConst(arg1).index(8)) as u64)) + (((x8 as u64) * ((*IndexConst(arg1).index(7)) as u64)) + (((x7 as u64) * ((*IndexConst(arg1).index(6)) as u64)) + (((x6 as u64) * ((*IndexConst(arg1).index(5)) as u64)) + (((*IndexConst(arg1).index(4)) as u64) * ((*IndexConst(arg1).index(4)) as u64)))))) + ((x12 as u64) << 10))) + ((x18 as u64) * (0x3d10 as u64)));
   let x20: u32 = ((x19 >> 26) as u32);
   let x21: u32 = ((x19 & (0x3ffffff as u64)) as u32);
-  let x22: u64 = (((x20 as u64) + ((((x9 as u64) * ((arg1[9]) as u64)) + (((x8 as u64) * ((arg1[8]) as u64)) + (((x7 as u64) * ((arg1[7]) as u64)) + (((x6 as u64) * ((arg1[6]) as u64)) + ((x5 as u64) * ((arg1[5]) as u64)))))) + ((x18 as u64) << 10))) + ((x17 as u64) * (0xf4400 as u64)));
+  let x22: u64 = (((x20 as u64) + ((((x9 as u64) * ((*IndexConst(arg1).index(9)) as u64)) + (((x8 as u64) * ((*IndexConst(arg1).index(8)) as u64)) + (((x7 as u64) * ((*IndexConst(arg1).index(7)) as u64)) + (((x6 as u64) * ((*IndexConst(arg1).index(6)) as u64)) + ((x5 as u64) * ((*IndexConst(arg1).index(5)) as u64)))))) + ((x18 as u64) << 10))) + ((x17 as u64) * (0xf4400 as u64)));
   let x23: u32 = ((x22 >> 26) as u32);
   let x24: u32 = ((x22 & (0x3ffffff as u64)) as u32);
-  let x25: u64 = ((x23 as u64) + ((((x8 as u64) * ((arg1[9]) as u64)) + (((x7 as u64) * ((arg1[8]) as u64)) + (((x6 as u64) * ((arg1[7]) as u64)) + (((x5 as u64) * ((arg1[6]) as u64)) + (((arg1[5]) as u64) * ((arg1[5]) as u64)))))) + ((x17 << 16) as u64)));
+  let x25: u64 = ((x23 as u64) + ((((x8 as u64) * ((*IndexConst(arg1).index(9)) as u64)) + (((x7 as u64) * ((*IndexConst(arg1).index(8)) as u64)) + (((x6 as u64) * ((*IndexConst(arg1).index(7)) as u64)) + (((x5 as u64) * ((*IndexConst(arg1).index(6)) as u64)) + (((*IndexConst(arg1).index(5)) as u64) * ((*IndexConst(arg1).index(5)) as u64)))))) + ((x17 << 16) as u64)));
   let x26: u32 = ((x25 >> 26) as u32);
   let x27: u32 = ((x25 & (0x3ffffff as u64)) as u32);
   let x28: u32 = (x24 >> 22);
   let x29: u32 = (x24 & 0x3fffff);
-  let x30: u64 = ((((arg1[0]) as u64) * ((arg1[0]) as u64)) + (((x28 + (x27 << 4)) as u64) * (0x3d1 as u64)));
+  let x30: u64 = ((((*IndexConst(arg1).index(0)) as u64) * ((*IndexConst(arg1).index(0)) as u64)) + (((x28 + (x27 << 4)) as u64) * (0x3d1 as u64)));
   let x31: u32 = ((x30 >> 26) as u32);
   let x32: u32 = ((x30 & (0x3ffffff as u64)) as u32);
-  let x33: u64 = ((x26 as u64) + (((x7 as u64) * ((arg1[9]) as u64)) + (((x6 as u64) * ((arg1[8]) as u64)) + (((x5 as u64) * ((arg1[7]) as u64)) + ((x4 as u64) * ((arg1[6]) as u64))))));
+  let x33: u64 = ((x26 as u64) + (((x7 as u64) * ((*IndexConst(arg1).index(9)) as u64)) + (((x6 as u64) * ((*IndexConst(arg1).index(8)) as u64)) + (((x5 as u64) * ((*IndexConst(arg1).index(7)) as u64)) + ((x4 as u64) * ((*IndexConst(arg1).index(6)) as u64))))));
   let x34: u32 = ((x33 >> 26) as u32);
   let x35: u32 = ((x33 & (0x3ffffff as u64)) as u32);
-  let x36: u64 = (((x31 as u64) + (((x9 as u64) * ((arg1[1]) as u64)) + (((x28 + (x27 << 4)) as u64) << 6))) + ((x35 as u64) * (0x3d10 as u64)));
+  let x36: u64 = (((x31 as u64) + (((x9 as u64) * ((*IndexConst(arg1).index(1)) as u64)) + (((x28 + (x27 << 4)) as u64) << 6))) + ((x35 as u64) * (0x3d10 as u64)));
   let x37: u32 = ((x36 >> 26) as u32);
   let x38: u32 = ((x36 & (0x3ffffff as u64)) as u32);
-  let x39: u64 = ((x34 as u64) + (((x6 as u64) * ((arg1[9]) as u64)) + (((x5 as u64) * ((arg1[8]) as u64)) + (((x4 as u64) * ((arg1[7]) as u64)) + (((arg1[6]) as u64) * ((arg1[6]) as u64))))));
+  let x39: u64 = ((x34 as u64) + (((x6 as u64) * ((*IndexConst(arg1).index(9)) as u64)) + (((x5 as u64) * ((*IndexConst(arg1).index(8)) as u64)) + (((x4 as u64) * ((*IndexConst(arg1).index(7)) as u64)) + (((*IndexConst(arg1).index(6)) as u64) * ((*IndexConst(arg1).index(6)) as u64))))));
   let x40: u32 = ((x39 >> 26) as u32);
   let x41: u32 = ((x39 & (0x3ffffff as u64)) as u32);
-  let x42: u64 = (((x37 as u64) + ((((x9 as u64) * ((arg1[2]) as u64)) + (((arg1[1]) as u64) * ((arg1[1]) as u64))) + ((x35 as u64) << 10))) + ((x41 as u64) * (0x3d10 as u64)));
+  let x42: u64 = (((x37 as u64) + ((((x9 as u64) * ((*IndexConst(arg1).index(2)) as u64)) + (((*IndexConst(arg1).index(1)) as u64) * ((*IndexConst(arg1).index(1)) as u64))) + ((x35 as u64) << 10))) + ((x41 as u64) * (0x3d10 as u64)));
   let x43: u32 = ((x42 >> 26) as u32);
   let x44: u32 = ((x42 & (0x3ffffff as u64)) as u32);
-  let x45: u64 = ((x40 as u64) + (((x5 as u64) * ((arg1[9]) as u64)) + (((x4 as u64) * ((arg1[8]) as u64)) + ((x3 as u64) * ((arg1[7]) as u64)))));
+  let x45: u64 = ((x40 as u64) + (((x5 as u64) * ((*IndexConst(arg1).index(9)) as u64)) + (((x4 as u64) * ((*IndexConst(arg1).index(8)) as u64)) + ((x3 as u64) * ((*IndexConst(arg1).index(7)) as u64)))));
   let x46: u32 = ((x45 >> 26) as u32);
   let x47: u32 = ((x45 & (0x3ffffff as u64)) as u32);
-  let x48: u64 = (((x43 as u64) + ((((x9 as u64) * ((arg1[3]) as u64)) + ((x8 as u64) * ((arg1[2]) as u64))) + ((x41 as u64) << 10))) + ((x47 as u64) * (0x3d10 as u64)));
+  let x48: u64 = (((x43 as u64) + ((((x9 as u64) * ((*IndexConst(arg1).index(3)) as u64)) + ((x8 as u64) * ((*IndexConst(arg1).index(2)) as u64))) + ((x41 as u64) << 10))) + ((x47 as u64) * (0x3d10 as u64)));
   let x49: u32 = ((x48 >> 26) as u32);
   let x50: u32 = ((x48 & (0x3ffffff as u64)) as u32);
-  let x51: u64 = ((x46 as u64) + (((x4 as u64) * ((arg1[9]) as u64)) + (((x3 as u64) * ((arg1[8]) as u64)) + (((arg1[7]) as u64) * ((arg1[7]) as u64)))));
+  let x51: u64 = ((x46 as u64) + (((x4 as u64) * ((*IndexConst(arg1).index(9)) as u64)) + (((x3 as u64) * ((*IndexConst(arg1).index(8)) as u64)) + (((*IndexConst(arg1).index(7)) as u64) * ((*IndexConst(arg1).index(7)) as u64)))));
   let x52: u32 = ((x51 >> 26) as u32);
   let x53: u32 = ((x51 & (0x3ffffff as u64)) as u32);
-  let x54: u64 = (((x49 as u64) + ((((x9 as u64) * ((arg1[4]) as u64)) + (((x8 as u64) * ((arg1[3]) as u64)) + (((arg1[2]) as u64) * ((arg1[2]) as u64)))) + ((x47 as u64) << 10))) + ((x53 as u64) * (0x3d10 as u64)));
+  let x54: u64 = (((x49 as u64) + ((((x9 as u64) * ((*IndexConst(arg1).index(4)) as u64)) + (((x8 as u64) * ((*IndexConst(arg1).index(3)) as u64)) + (((*IndexConst(arg1).index(2)) as u64) * ((*IndexConst(arg1).index(2)) as u64)))) + ((x47 as u64) << 10))) + ((x53 as u64) * (0x3d10 as u64)));
   let x55: u32 = ((x54 >> 26) as u32);
   let x56: u32 = ((x54 & (0x3ffffff as u64)) as u32);
-  let x57: u64 = ((x52 as u64) + (((x3 as u64) * ((arg1[9]) as u64)) + ((x2 as u64) * ((arg1[8]) as u64))));
+  let x57: u64 = ((x52 as u64) + (((x3 as u64) * ((*IndexConst(arg1).index(9)) as u64)) + ((x2 as u64) * ((*IndexConst(arg1).index(8)) as u64))));
   let x58: u32 = ((x57 >> 26) as u32);
   let x59: u32 = ((x57 & (0x3ffffff as u64)) as u32);
-  let x60: u64 = (((x55 as u64) + ((((x9 as u64) * ((arg1[5]) as u64)) + (((x8 as u64) * ((arg1[4]) as u64)) + ((x7 as u64) * ((arg1[3]) as u64)))) + ((x53 as u64) << 10))) + ((x59 as u64) * (0x3d10 as u64)));
+  let x60: u64 = (((x55 as u64) + ((((x9 as u64) * ((*IndexConst(arg1).index(5)) as u64)) + (((x8 as u64) * ((*IndexConst(arg1).index(4)) as u64)) + ((x7 as u64) * ((*IndexConst(arg1).index(3)) as u64)))) + ((x53 as u64) << 10))) + ((x59 as u64) * (0x3d10 as u64)));
   let x61: u32 = ((x60 >> 26) as u32);
   let x62: u32 = ((x60 & (0x3ffffff as u64)) as u32);
-  let x63: u64 = ((x58 as u64) + (((x2 as u64) * ((arg1[9]) as u64)) + (((arg1[8]) as u64) * ((arg1[8]) as u64))));
+  let x63: u64 = ((x58 as u64) + (((x2 as u64) * ((*IndexConst(arg1).index(9)) as u64)) + (((*IndexConst(arg1).index(8)) as u64) * ((*IndexConst(arg1).index(8)) as u64))));
   let x64: u32 = ((x63 >> 32) as u32);
   let x65: u32 = ((x63 & (0xffffffff as u64)) as u32);
-  let x66: u64 = (((x61 as u64) + ((((x9 as u64) * ((arg1[6]) as u64)) + (((x8 as u64) * ((arg1[5]) as u64)) + (((x7 as u64) * ((arg1[4]) as u64)) + (((arg1[3]) as u64) * ((arg1[3]) as u64))))) + ((x59 as u64) << 10))) + ((x65 as u64) * (0x3d10 as u64)));
+  let x66: u64 = (((x61 as u64) + ((((x9 as u64) * ((*IndexConst(arg1).index(6)) as u64)) + (((x8 as u64) * ((*IndexConst(arg1).index(5)) as u64)) + (((x7 as u64) * ((*IndexConst(arg1).index(4)) as u64)) + (((*IndexConst(arg1).index(3)) as u64) * ((*IndexConst(arg1).index(3)) as u64))))) + ((x59 as u64) << 10))) + ((x65 as u64) * (0x3d10 as u64)));
   let x67: u32 = ((x66 >> 26) as u32);
   let x68: u32 = ((x66 & (0x3ffffff as u64)) as u32);
   let x69: u64 = (((x67 as u64) + ((x15 as u64) + ((x65 as u64) << 10))) + ((x64 as u64) * (0xf4400 as u64)));
@@ -193,14 +210,14 @@ pub fn fiat_secp256k1_dettman_square(out1: &mut [u32; 10], arg1: &[u32; 10]) {
   let x73: u32 = ((x72 >> 26) as u32);
   let x74: u32 = ((x72 & (0x3ffffff as u64)) as u32);
   let x75: u32 = (x73 + x29);
-  out1[0] = x32;
-  out1[1] = x38;
-  out1[2] = x44;
-  out1[3] = x50;
-  out1[4] = x56;
-  out1[5] = x62;
-  out1[6] = x68;
-  out1[7] = x71;
-  out1[8] = x74;
-  out1[9] = x75;
+  *IndexConst(&mut out1).index_mut(0) = x32;
+  *IndexConst(&mut out1).index_mut(1) = x38;
+  *IndexConst(&mut out1).index_mut(2) = x44;
+  *IndexConst(&mut out1).index_mut(3) = x50;
+  *IndexConst(&mut out1).index_mut(4) = x56;
+  *IndexConst(&mut out1).index_mut(5) = x62;
+  *IndexConst(&mut out1).index_mut(6) = x68;
+  *IndexConst(&mut out1).index_mut(7) = x71;
+  *IndexConst(&mut out1).index_mut(8) = x74;
+  *IndexConst(&mut out1).index_mut(9) = x75;
 }
