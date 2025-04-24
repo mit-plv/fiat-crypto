@@ -15,6 +15,9 @@
 #![allow(unused_parens)]
 #![allow(non_camel_case_types)]
 
+/// Since `Index` and `IndexMut` aren't callable in `const` contexts yet, this helper type helps unify
+/// arrays and user-defined array-wrapper types into a single type which can be indexed in `const`
+/// contexts. Once `const trait`s are stabilized this type can go away
 struct IndexConst<T: ?Sized>(T);
 
 impl<'a, T, const N: usize> IndexConst<&'a [T; N]> {
