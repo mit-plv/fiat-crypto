@@ -41,7 +41,7 @@ jobs:
       with:
         python-version: 3.x
     - name: Set up OCaml
-      uses: ocaml/setup-ocaml@v3
+      uses: ocaml/setup-ocaml@v3.2
       with:
         ocaml-compiler: 4.13.1
     - run: opam install conf-time conf-gcc
