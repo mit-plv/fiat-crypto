@@ -1,7 +1,7 @@
 .SUFFIXES:
 
 PROFILE?=
-OTHERFLAGS += -w -notation-overridden,-deprecated-hint-constr,-fragile-hint-constr,-native-compiler-disabled,-ambiguous-paths,-masking-absolute-name
+OTHERFLAGS += -w -notation-overridden,-native-compiler-disabled,-ambiguous-paths,-masking-absolute-name
 ifneq ($(PROFILE),)
 OTHERFLAGS += -profile-ltac
 endif
