@@ -23,72 +23,72 @@
 ///   eval out1 mod 115792089237316195423570985008687907853269984665640564039457584007908834671663 = (eval arg1 * eval arg2) mod 115792089237316195423570985008687907853269984665640564039457584007908834671663
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7ffffe]]
-///   arg2: [[0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7ffffe]]
+///   arg1: [[0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3fffff0]]
+///   arg2: [[0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3fffff0]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x5fffff]]
+///   out1: [[0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7ffffe]]
 #[inline]
 pub fn fiat_secp256k1_dettman_mul(out1: &mut [u32; 10], arg1: &[u32; 10], arg2: &[u32; 10]) {
   let x1: u64 = ((((arg1[8]) as u64) * ((arg2[9]) as u64)) + (((arg1[9]) as u64) * ((arg2[8]) as u64)));
   let x2: u32 = ((x1 >> 26) as u32);
   let x3: u32 = ((x1 & (0x3ffffff as u64)) as u32);
   let x4: u64 = (((((arg1[0]) as u64) * ((arg2[7]) as u64)) + ((((arg1[1]) as u64) * ((arg2[6]) as u64)) + ((((arg1[2]) as u64) * ((arg2[5]) as u64)) + ((((arg1[3]) as u64) * ((arg2[4]) as u64)) + ((((arg1[4]) as u64) * ((arg2[3]) as u64)) + ((((arg1[5]) as u64) * ((arg2[2]) as u64)) + ((((arg1[6]) as u64) * ((arg2[1]) as u64)) + (((arg1[7]) as u64) * ((arg2[0]) as u64))))))))) + ((x3 as u64) * (0x3d10 as u64)));
-  let x5: u32 = ((x4 >> 26) as u32);
+  let x5: u64 = (x4 >> 26);
   let x6: u32 = ((x4 & (0x3ffffff as u64)) as u32);
   let x7: u64 = ((x2 as u64) + (((arg1[9]) as u64) * ((arg2[9]) as u64)));
   let x8: u32 = ((x7 >> 32) as u32);
   let x9: u32 = ((x7 & (0xffffffff as u64)) as u32);
-  let x10: u64 = (((x5 as u64) + (((((arg1[0]) as u64) * ((arg2[8]) as u64)) + ((((arg1[1]) as u64) * ((arg2[7]) as u64)) + ((((arg1[2]) as u64) * ((arg2[6]) as u64)) + ((((arg1[3]) as u64) * ((arg2[5]) as u64)) + ((((arg1[4]) as u64) * ((arg2[4]) as u64)) + ((((arg1[5]) as u64) * ((arg2[3]) as u64)) + ((((arg1[6]) as u64) * ((arg2[2]) as u64)) + ((((arg1[7]) as u64) * ((arg2[1]) as u64)) + (((arg1[8]) as u64) * ((arg2[0]) as u64)))))))))) + ((x3 as u64) << 10))) + ((x9 as u64) * (0x3d10 as u64)));
-  let x11: u32 = ((x10 >> 26) as u32);
+  let x10: u64 = ((x5 + (((((arg1[0]) as u64) * ((arg2[8]) as u64)) + ((((arg1[1]) as u64) * ((arg2[7]) as u64)) + ((((arg1[2]) as u64) * ((arg2[6]) as u64)) + ((((arg1[3]) as u64) * ((arg2[5]) as u64)) + ((((arg1[4]) as u64) * ((arg2[4]) as u64)) + ((((arg1[5]) as u64) * ((arg2[3]) as u64)) + ((((arg1[6]) as u64) * ((arg2[2]) as u64)) + ((((arg1[7]) as u64) * ((arg2[1]) as u64)) + (((arg1[8]) as u64) * ((arg2[0]) as u64)))))))))) + ((x3 as u64) << 10))) + ((x9 as u64) * (0x3d10 as u64)));
+  let x11: u64 = (x10 >> 26);
   let x12: u32 = ((x10 & (0x3ffffff as u64)) as u32);
-  let x13: u64 = (((x11 as u64) + (((((arg1[0]) as u64) * ((arg2[9]) as u64)) + ((((arg1[1]) as u64) * ((arg2[8]) as u64)) + ((((arg1[2]) as u64) * ((arg2[7]) as u64)) + ((((arg1[3]) as u64) * ((arg2[6]) as u64)) + ((((arg1[4]) as u64) * ((arg2[5]) as u64)) + ((((arg1[5]) as u64) * ((arg2[4]) as u64)) + ((((arg1[6]) as u64) * ((arg2[3]) as u64)) + ((((arg1[7]) as u64) * ((arg2[2]) as u64)) + ((((arg1[8]) as u64) * ((arg2[1]) as u64)) + (((arg1[9]) as u64) * ((arg2[0]) as u64))))))))))) + ((x9 as u64) << 10))) + ((x8 as u64) * (0xf4400 as u64)));
-  let x14: u32 = ((x13 >> 26) as u32);
+  let x13: u64 = ((x11 + (((((arg1[0]) as u64) * ((arg2[9]) as u64)) + ((((arg1[1]) as u64) * ((arg2[8]) as u64)) + ((((arg1[2]) as u64) * ((arg2[7]) as u64)) + ((((arg1[3]) as u64) * ((arg2[6]) as u64)) + ((((arg1[4]) as u64) * ((arg2[5]) as u64)) + ((((arg1[5]) as u64) * ((arg2[4]) as u64)) + ((((arg1[6]) as u64) * ((arg2[3]) as u64)) + ((((arg1[7]) as u64) * ((arg2[2]) as u64)) + ((((arg1[8]) as u64) * ((arg2[1]) as u64)) + (((arg1[9]) as u64) * ((arg2[0]) as u64))))))))))) + ((x9 as u64) << 10))) + ((x8 as u64) * (0xf4400 as u64)));
+  let x14: u64 = (x13 >> 26);
   let x15: u32 = ((x13 & (0x3ffffff as u64)) as u32);
-  let x16: u64 = ((x14 as u64) + (((((arg1[1]) as u64) * ((arg2[9]) as u64)) + ((((arg1[2]) as u64) * ((arg2[8]) as u64)) + ((((arg1[3]) as u64) * ((arg2[7]) as u64)) + ((((arg1[4]) as u64) * ((arg2[6]) as u64)) + ((((arg1[5]) as u64) * ((arg2[5]) as u64)) + ((((arg1[6]) as u64) * ((arg2[4]) as u64)) + ((((arg1[7]) as u64) * ((arg2[3]) as u64)) + ((((arg1[8]) as u64) * ((arg2[2]) as u64)) + (((arg1[9]) as u64) * ((arg2[1]) as u64)))))))))) + ((x8 << 16) as u64)));
-  let x17: u32 = ((x16 >> 26) as u32);
+  let x16: u64 = (x14 + (((((arg1[1]) as u64) * ((arg2[9]) as u64)) + ((((arg1[2]) as u64) * ((arg2[8]) as u64)) + ((((arg1[3]) as u64) * ((arg2[7]) as u64)) + ((((arg1[4]) as u64) * ((arg2[6]) as u64)) + ((((arg1[5]) as u64) * ((arg2[5]) as u64)) + ((((arg1[6]) as u64) * ((arg2[4]) as u64)) + ((((arg1[7]) as u64) * ((arg2[3]) as u64)) + ((((arg1[8]) as u64) * ((arg2[2]) as u64)) + (((arg1[9]) as u64) * ((arg2[1]) as u64)))))))))) + ((x8 as u64) << 16)));
+  let x17: u64 = (x16 >> 26);
   let x18: u32 = ((x16 & (0x3ffffff as u64)) as u32);
   let x19: u32 = (x15 >> 22);
   let x20: u32 = (x15 & 0x3fffff);
   let x21: u64 = ((((arg1[0]) as u64) * ((arg2[0]) as u64)) + (((x19 + (x18 << 4)) as u64) * (0x3d1 as u64)));
-  let x22: u32 = ((x21 >> 26) as u32);
+  let x22: u64 = (x21 >> 26);
   let x23: u32 = ((x21 & (0x3ffffff as u64)) as u32);
-  let x24: u64 = ((x17 as u64) + ((((arg1[2]) as u64) * ((arg2[9]) as u64)) + ((((arg1[3]) as u64) * ((arg2[8]) as u64)) + ((((arg1[4]) as u64) * ((arg2[7]) as u64)) + ((((arg1[5]) as u64) * ((arg2[6]) as u64)) + ((((arg1[6]) as u64) * ((arg2[5]) as u64)) + ((((arg1[7]) as u64) * ((arg2[4]) as u64)) + ((((arg1[8]) as u64) * ((arg2[3]) as u64)) + (((arg1[9]) as u64) * ((arg2[2]) as u64))))))))));
-  let x25: u32 = ((x24 >> 26) as u32);
+  let x24: u64 = (x17 + ((((arg1[2]) as u64) * ((arg2[9]) as u64)) + ((((arg1[3]) as u64) * ((arg2[8]) as u64)) + ((((arg1[4]) as u64) * ((arg2[7]) as u64)) + ((((arg1[5]) as u64) * ((arg2[6]) as u64)) + ((((arg1[6]) as u64) * ((arg2[5]) as u64)) + ((((arg1[7]) as u64) * ((arg2[4]) as u64)) + ((((arg1[8]) as u64) * ((arg2[3]) as u64)) + (((arg1[9]) as u64) * ((arg2[2]) as u64))))))))));
+  let x25: u64 = (x24 >> 26);
   let x26: u32 = ((x24 & (0x3ffffff as u64)) as u32);
-  let x27: u64 = (((x22 as u64) + (((((arg1[0]) as u64) * ((arg2[1]) as u64)) + (((arg1[1]) as u64) * ((arg2[0]) as u64))) + (((x19 + (x18 << 4)) as u64) << 6))) + ((x26 as u64) * (0x3d10 as u64)));
-  let x28: u32 = ((x27 >> 26) as u32);
+  let x27: u64 = ((x22 + (((((arg1[0]) as u64) * ((arg2[1]) as u64)) + (((arg1[1]) as u64) * ((arg2[0]) as u64))) + (((x19 + (x18 << 4)) as u64) << 6))) + ((x26 as u64) * (0x3d10 as u64)));
+  let x28: u64 = (x27 >> 26);
   let x29: u32 = ((x27 & (0x3ffffff as u64)) as u32);
-  let x30: u64 = ((x25 as u64) + ((((arg1[3]) as u64) * ((arg2[9]) as u64)) + ((((arg1[4]) as u64) * ((arg2[8]) as u64)) + ((((arg1[5]) as u64) * ((arg2[7]) as u64)) + ((((arg1[6]) as u64) * ((arg2[6]) as u64)) + ((((arg1[7]) as u64) * ((arg2[5]) as u64)) + ((((arg1[8]) as u64) * ((arg2[4]) as u64)) + (((arg1[9]) as u64) * ((arg2[3]) as u64)))))))));
-  let x31: u32 = ((x30 >> 26) as u32);
+  let x30: u64 = (x25 + ((((arg1[3]) as u64) * ((arg2[9]) as u64)) + ((((arg1[4]) as u64) * ((arg2[8]) as u64)) + ((((arg1[5]) as u64) * ((arg2[7]) as u64)) + ((((arg1[6]) as u64) * ((arg2[6]) as u64)) + ((((arg1[7]) as u64) * ((arg2[5]) as u64)) + ((((arg1[8]) as u64) * ((arg2[4]) as u64)) + (((arg1[9]) as u64) * ((arg2[3]) as u64)))))))));
+  let x31: u64 = (x30 >> 26);
   let x32: u32 = ((x30 & (0x3ffffff as u64)) as u32);
-  let x33: u64 = (((x28 as u64) + (((((arg1[0]) as u64) * ((arg2[2]) as u64)) + ((((arg1[1]) as u64) * ((arg2[1]) as u64)) + (((arg1[2]) as u64) * ((arg2[0]) as u64)))) + ((x26 as u64) << 10))) + ((x32 as u64) * (0x3d10 as u64)));
-  let x34: u32 = ((x33 >> 26) as u32);
+  let x33: u64 = ((x28 + (((((arg1[0]) as u64) * ((arg2[2]) as u64)) + ((((arg1[1]) as u64) * ((arg2[1]) as u64)) + (((arg1[2]) as u64) * ((arg2[0]) as u64)))) + ((x26 as u64) << 10))) + ((x32 as u64) * (0x3d10 as u64)));
+  let x34: u64 = (x33 >> 26);
   let x35: u32 = ((x33 & (0x3ffffff as u64)) as u32);
-  let x36: u64 = ((x31 as u64) + ((((arg1[4]) as u64) * ((arg2[9]) as u64)) + ((((arg1[5]) as u64) * ((arg2[8]) as u64)) + ((((arg1[6]) as u64) * ((arg2[7]) as u64)) + ((((arg1[7]) as u64) * ((arg2[6]) as u64)) + ((((arg1[8]) as u64) * ((arg2[5]) as u64)) + (((arg1[9]) as u64) * ((arg2[4]) as u64))))))));
-  let x37: u32 = ((x36 >> 26) as u32);
+  let x36: u64 = (x31 + ((((arg1[4]) as u64) * ((arg2[9]) as u64)) + ((((arg1[5]) as u64) * ((arg2[8]) as u64)) + ((((arg1[6]) as u64) * ((arg2[7]) as u64)) + ((((arg1[7]) as u64) * ((arg2[6]) as u64)) + ((((arg1[8]) as u64) * ((arg2[5]) as u64)) + (((arg1[9]) as u64) * ((arg2[4]) as u64))))))));
+  let x37: u64 = (x36 >> 26);
   let x38: u32 = ((x36 & (0x3ffffff as u64)) as u32);
-  let x39: u64 = (((x34 as u64) + (((((arg1[0]) as u64) * ((arg2[3]) as u64)) + ((((arg1[1]) as u64) * ((arg2[2]) as u64)) + ((((arg1[2]) as u64) * ((arg2[1]) as u64)) + (((arg1[3]) as u64) * ((arg2[0]) as u64))))) + ((x32 as u64) << 10))) + ((x38 as u64) * (0x3d10 as u64)));
-  let x40: u32 = ((x39 >> 26) as u32);
+  let x39: u64 = ((x34 + (((((arg1[0]) as u64) * ((arg2[3]) as u64)) + ((((arg1[1]) as u64) * ((arg2[2]) as u64)) + ((((arg1[2]) as u64) * ((arg2[1]) as u64)) + (((arg1[3]) as u64) * ((arg2[0]) as u64))))) + ((x32 as u64) << 10))) + ((x38 as u64) * (0x3d10 as u64)));
+  let x40: u64 = (x39 >> 26);
   let x41: u32 = ((x39 & (0x3ffffff as u64)) as u32);
-  let x42: u64 = ((x37 as u64) + ((((arg1[5]) as u64) * ((arg2[9]) as u64)) + ((((arg1[6]) as u64) * ((arg2[8]) as u64)) + ((((arg1[7]) as u64) * ((arg2[7]) as u64)) + ((((arg1[8]) as u64) * ((arg2[6]) as u64)) + (((arg1[9]) as u64) * ((arg2[5]) as u64)))))));
-  let x43: u32 = ((x42 >> 26) as u32);
+  let x42: u64 = (x37 + ((((arg1[5]) as u64) * ((arg2[9]) as u64)) + ((((arg1[6]) as u64) * ((arg2[8]) as u64)) + ((((arg1[7]) as u64) * ((arg2[7]) as u64)) + ((((arg1[8]) as u64) * ((arg2[6]) as u64)) + (((arg1[9]) as u64) * ((arg2[5]) as u64)))))));
+  let x43: u64 = (x42 >> 26);
   let x44: u32 = ((x42 & (0x3ffffff as u64)) as u32);
-  let x45: u64 = (((x40 as u64) + (((((arg1[0]) as u64) * ((arg2[4]) as u64)) + ((((arg1[1]) as u64) * ((arg2[3]) as u64)) + ((((arg1[2]) as u64) * ((arg2[2]) as u64)) + ((((arg1[3]) as u64) * ((arg2[1]) as u64)) + (((arg1[4]) as u64) * ((arg2[0]) as u64)))))) + ((x38 as u64) << 10))) + ((x44 as u64) * (0x3d10 as u64)));
-  let x46: u32 = ((x45 >> 26) as u32);
+  let x45: u64 = ((x40 + (((((arg1[0]) as u64) * ((arg2[4]) as u64)) + ((((arg1[1]) as u64) * ((arg2[3]) as u64)) + ((((arg1[2]) as u64) * ((arg2[2]) as u64)) + ((((arg1[3]) as u64) * ((arg2[1]) as u64)) + (((arg1[4]) as u64) * ((arg2[0]) as u64)))))) + ((x38 as u64) << 10))) + ((x44 as u64) * (0x3d10 as u64)));
+  let x46: u64 = (x45 >> 26);
   let x47: u32 = ((x45 & (0x3ffffff as u64)) as u32);
-  let x48: u64 = ((x43 as u64) + ((((arg1[6]) as u64) * ((arg2[9]) as u64)) + ((((arg1[7]) as u64) * ((arg2[8]) as u64)) + ((((arg1[8]) as u64) * ((arg2[7]) as u64)) + (((arg1[9]) as u64) * ((arg2[6]) as u64))))));
-  let x49: u32 = ((x48 >> 26) as u32);
+  let x48: u64 = (x43 + ((((arg1[6]) as u64) * ((arg2[9]) as u64)) + ((((arg1[7]) as u64) * ((arg2[8]) as u64)) + ((((arg1[8]) as u64) * ((arg2[7]) as u64)) + (((arg1[9]) as u64) * ((arg2[6]) as u64))))));
+  let x49: u64 = (x48 >> 26);
   let x50: u32 = ((x48 & (0x3ffffff as u64)) as u32);
-  let x51: u64 = (((x46 as u64) + (((((arg1[0]) as u64) * ((arg2[5]) as u64)) + ((((arg1[1]) as u64) * ((arg2[4]) as u64)) + ((((arg1[2]) as u64) * ((arg2[3]) as u64)) + ((((arg1[3]) as u64) * ((arg2[2]) as u64)) + ((((arg1[4]) as u64) * ((arg2[1]) as u64)) + (((arg1[5]) as u64) * ((arg2[0]) as u64))))))) + ((x44 as u64) << 10))) + ((x50 as u64) * (0x3d10 as u64)));
-  let x52: u32 = ((x51 >> 26) as u32);
+  let x51: u64 = ((x46 + (((((arg1[0]) as u64) * ((arg2[5]) as u64)) + ((((arg1[1]) as u64) * ((arg2[4]) as u64)) + ((((arg1[2]) as u64) * ((arg2[3]) as u64)) + ((((arg1[3]) as u64) * ((arg2[2]) as u64)) + ((((arg1[4]) as u64) * ((arg2[1]) as u64)) + (((arg1[5]) as u64) * ((arg2[0]) as u64))))))) + ((x44 as u64) << 10))) + ((x50 as u64) * (0x3d10 as u64)));
+  let x52: u64 = (x51 >> 26);
   let x53: u32 = ((x51 & (0x3ffffff as u64)) as u32);
-  let x54: u64 = ((x49 as u64) + ((((arg1[7]) as u64) * ((arg2[9]) as u64)) + ((((arg1[8]) as u64) * ((arg2[8]) as u64)) + (((arg1[9]) as u64) * ((arg2[7]) as u64)))));
+  let x54: u64 = (x49 + ((((arg1[7]) as u64) * ((arg2[9]) as u64)) + ((((arg1[8]) as u64) * ((arg2[8]) as u64)) + (((arg1[9]) as u64) * ((arg2[7]) as u64)))));
   let x55: u32 = ((x54 >> 32) as u32);
   let x56: u32 = ((x54 & (0xffffffff as u64)) as u32);
-  let x57: u64 = (((x52 as u64) + (((((arg1[0]) as u64) * ((arg2[6]) as u64)) + ((((arg1[1]) as u64) * ((arg2[5]) as u64)) + ((((arg1[2]) as u64) * ((arg2[4]) as u64)) + ((((arg1[3]) as u64) * ((arg2[3]) as u64)) + ((((arg1[4]) as u64) * ((arg2[2]) as u64)) + ((((arg1[5]) as u64) * ((arg2[1]) as u64)) + (((arg1[6]) as u64) * ((arg2[0]) as u64)))))))) + ((x50 as u64) << 10))) + ((x56 as u64) * (0x3d10 as u64)));
-  let x58: u32 = ((x57 >> 26) as u32);
+  let x57: u64 = ((x52 + (((((arg1[0]) as u64) * ((arg2[6]) as u64)) + ((((arg1[1]) as u64) * ((arg2[5]) as u64)) + ((((arg1[2]) as u64) * ((arg2[4]) as u64)) + ((((arg1[3]) as u64) * ((arg2[3]) as u64)) + ((((arg1[4]) as u64) * ((arg2[2]) as u64)) + ((((arg1[5]) as u64) * ((arg2[1]) as u64)) + (((arg1[6]) as u64) * ((arg2[0]) as u64)))))))) + ((x50 as u64) << 10))) + ((x56 as u64) * (0x3d10 as u64)));
+  let x58: u64 = (x57 >> 26);
   let x59: u32 = ((x57 & (0x3ffffff as u64)) as u32);
-  let x60: u64 = (((x58 as u64) + ((x6 as u64) + ((x56 as u64) << 10))) + ((x55 as u64) * (0xf4400 as u64)));
+  let x60: u64 = ((x58 + ((x6 as u64) + ((x56 as u64) << 10))) + ((x55 as u64) * (0xf4400 as u64)));
   let x61: u32 = ((x60 >> 26) as u32);
   let x62: u32 = ((x60 & (0x3ffffff as u64)) as u32);
   let x63: u64 = ((x61 as u64) + ((x12 as u64) + ((x55 as u64) << 16)));
@@ -113,9 +113,9 @@ pub fn fiat_secp256k1_dettman_mul(out1: &mut [u32; 10], arg1: &[u32; 10], arg2: 
 ///   eval out1 mod 115792089237316195423570985008687907853269984665640564039457584007908834671663 = (eval arg1 * eval arg1) mod 115792089237316195423570985008687907853269984665640564039457584007908834671663
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7ffffe]]
+///   arg1: [[0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3ffffff0], [0x0 ~> 0x3fffff0]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x5fffff]]
+///   out1: [[0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7fffffe], [0x0 ~> 0x7ffffe]]
 #[inline]
 pub fn fiat_secp256k1_dettman_square(out1: &mut [u32; 10], arg1: &[u32; 10]) {
   let x1: u32 = ((arg1[8]) * 0x2);
@@ -131,62 +131,62 @@ pub fn fiat_secp256k1_dettman_square(out1: &mut [u32; 10], arg1: &[u32; 10]) {
   let x11: u32 = ((x10 >> 26) as u32);
   let x12: u32 = ((x10 & (0x3ffffff as u64)) as u32);
   let x13: u64 = ((((x9 as u64) * ((arg1[7]) as u64)) + (((x8 as u64) * ((arg1[6]) as u64)) + (((x7 as u64) * ((arg1[5]) as u64)) + ((x6 as u64) * ((arg1[4]) as u64))))) + ((x12 as u64) * (0x3d10 as u64)));
-  let x14: u32 = ((x13 >> 26) as u32);
+  let x14: u64 = (x13 >> 26);
   let x15: u32 = ((x13 & (0x3ffffff as u64)) as u32);
   let x16: u64 = ((x11 as u64) + (((arg1[9]) as u64) * ((arg1[9]) as u64)));
   let x17: u32 = ((x16 >> 32) as u32);
   let x18: u32 = ((x16 & (0xffffffff as u64)) as u32);
-  let x19: u64 = (((x14 as u64) + ((((x9 as u64) * ((arg1[8]) as u64)) + (((x8 as u64) * ((arg1[7]) as u64)) + (((x7 as u64) * ((arg1[6]) as u64)) + (((x6 as u64) * ((arg1[5]) as u64)) + (((arg1[4]) as u64) * ((arg1[4]) as u64)))))) + ((x12 as u64) << 10))) + ((x18 as u64) * (0x3d10 as u64)));
-  let x20: u32 = ((x19 >> 26) as u32);
+  let x19: u64 = ((x14 + ((((x9 as u64) * ((arg1[8]) as u64)) + (((x8 as u64) * ((arg1[7]) as u64)) + (((x7 as u64) * ((arg1[6]) as u64)) + (((x6 as u64) * ((arg1[5]) as u64)) + (((arg1[4]) as u64) * ((arg1[4]) as u64)))))) + ((x12 as u64) << 10))) + ((x18 as u64) * (0x3d10 as u64)));
+  let x20: u64 = (x19 >> 26);
   let x21: u32 = ((x19 & (0x3ffffff as u64)) as u32);
-  let x22: u64 = (((x20 as u64) + ((((x9 as u64) * ((arg1[9]) as u64)) + (((x8 as u64) * ((arg1[8]) as u64)) + (((x7 as u64) * ((arg1[7]) as u64)) + (((x6 as u64) * ((arg1[6]) as u64)) + ((x5 as u64) * ((arg1[5]) as u64)))))) + ((x18 as u64) << 10))) + ((x17 as u64) * (0xf4400 as u64)));
-  let x23: u32 = ((x22 >> 26) as u32);
+  let x22: u64 = ((x20 + ((((x9 as u64) * ((arg1[9]) as u64)) + (((x8 as u64) * ((arg1[8]) as u64)) + (((x7 as u64) * ((arg1[7]) as u64)) + (((x6 as u64) * ((arg1[6]) as u64)) + ((x5 as u64) * ((arg1[5]) as u64)))))) + ((x18 as u64) << 10))) + ((x17 as u64) * (0xf4400 as u64)));
+  let x23: u64 = (x22 >> 26);
   let x24: u32 = ((x22 & (0x3ffffff as u64)) as u32);
-  let x25: u64 = ((x23 as u64) + ((((x8 as u64) * ((arg1[9]) as u64)) + (((x7 as u64) * ((arg1[8]) as u64)) + (((x6 as u64) * ((arg1[7]) as u64)) + (((x5 as u64) * ((arg1[6]) as u64)) + (((arg1[5]) as u64) * ((arg1[5]) as u64)))))) + ((x17 << 16) as u64)));
-  let x26: u32 = ((x25 >> 26) as u32);
+  let x25: u64 = (x23 + ((((x8 as u64) * ((arg1[9]) as u64)) + (((x7 as u64) * ((arg1[8]) as u64)) + (((x6 as u64) * ((arg1[7]) as u64)) + (((x5 as u64) * ((arg1[6]) as u64)) + (((arg1[5]) as u64) * ((arg1[5]) as u64)))))) + ((x17 as u64) << 16)));
+  let x26: u64 = (x25 >> 26);
   let x27: u32 = ((x25 & (0x3ffffff as u64)) as u32);
   let x28: u32 = (x24 >> 22);
   let x29: u32 = (x24 & 0x3fffff);
   let x30: u64 = ((((arg1[0]) as u64) * ((arg1[0]) as u64)) + (((x28 + (x27 << 4)) as u64) * (0x3d1 as u64)));
-  let x31: u32 = ((x30 >> 26) as u32);
+  let x31: u64 = (x30 >> 26);
   let x32: u32 = ((x30 & (0x3ffffff as u64)) as u32);
-  let x33: u64 = ((x26 as u64) + (((x7 as u64) * ((arg1[9]) as u64)) + (((x6 as u64) * ((arg1[8]) as u64)) + (((x5 as u64) * ((arg1[7]) as u64)) + ((x4 as u64) * ((arg1[6]) as u64))))));
-  let x34: u32 = ((x33 >> 26) as u32);
+  let x33: u64 = (x26 + (((x7 as u64) * ((arg1[9]) as u64)) + (((x6 as u64) * ((arg1[8]) as u64)) + (((x5 as u64) * ((arg1[7]) as u64)) + ((x4 as u64) * ((arg1[6]) as u64))))));
+  let x34: u64 = (x33 >> 26);
   let x35: u32 = ((x33 & (0x3ffffff as u64)) as u32);
-  let x36: u64 = (((x31 as u64) + (((x9 as u64) * ((arg1[1]) as u64)) + (((x28 + (x27 << 4)) as u64) << 6))) + ((x35 as u64) * (0x3d10 as u64)));
-  let x37: u32 = ((x36 >> 26) as u32);
+  let x36: u64 = ((x31 + (((x9 as u64) * ((arg1[1]) as u64)) + (((x28 + (x27 << 4)) as u64) << 6))) + ((x35 as u64) * (0x3d10 as u64)));
+  let x37: u64 = (x36 >> 26);
   let x38: u32 = ((x36 & (0x3ffffff as u64)) as u32);
-  let x39: u64 = ((x34 as u64) + (((x6 as u64) * ((arg1[9]) as u64)) + (((x5 as u64) * ((arg1[8]) as u64)) + (((x4 as u64) * ((arg1[7]) as u64)) + (((arg1[6]) as u64) * ((arg1[6]) as u64))))));
-  let x40: u32 = ((x39 >> 26) as u32);
+  let x39: u64 = (x34 + (((x6 as u64) * ((arg1[9]) as u64)) + (((x5 as u64) * ((arg1[8]) as u64)) + (((x4 as u64) * ((arg1[7]) as u64)) + (((arg1[6]) as u64) * ((arg1[6]) as u64))))));
+  let x40: u64 = (x39 >> 26);
   let x41: u32 = ((x39 & (0x3ffffff as u64)) as u32);
-  let x42: u64 = (((x37 as u64) + ((((x9 as u64) * ((arg1[2]) as u64)) + (((arg1[1]) as u64) * ((arg1[1]) as u64))) + ((x35 as u64) << 10))) + ((x41 as u64) * (0x3d10 as u64)));
-  let x43: u32 = ((x42 >> 26) as u32);
+  let x42: u64 = ((x37 + ((((x9 as u64) * ((arg1[2]) as u64)) + (((arg1[1]) as u64) * ((arg1[1]) as u64))) + ((x35 as u64) << 10))) + ((x41 as u64) * (0x3d10 as u64)));
+  let x43: u64 = (x42 >> 26);
   let x44: u32 = ((x42 & (0x3ffffff as u64)) as u32);
-  let x45: u64 = ((x40 as u64) + (((x5 as u64) * ((arg1[9]) as u64)) + (((x4 as u64) * ((arg1[8]) as u64)) + ((x3 as u64) * ((arg1[7]) as u64)))));
-  let x46: u32 = ((x45 >> 26) as u32);
+  let x45: u64 = (x40 + (((x5 as u64) * ((arg1[9]) as u64)) + (((x4 as u64) * ((arg1[8]) as u64)) + ((x3 as u64) * ((arg1[7]) as u64)))));
+  let x46: u64 = (x45 >> 26);
   let x47: u32 = ((x45 & (0x3ffffff as u64)) as u32);
-  let x48: u64 = (((x43 as u64) + ((((x9 as u64) * ((arg1[3]) as u64)) + ((x8 as u64) * ((arg1[2]) as u64))) + ((x41 as u64) << 10))) + ((x47 as u64) * (0x3d10 as u64)));
-  let x49: u32 = ((x48 >> 26) as u32);
+  let x48: u64 = ((x43 + ((((x9 as u64) * ((arg1[3]) as u64)) + ((x8 as u64) * ((arg1[2]) as u64))) + ((x41 as u64) << 10))) + ((x47 as u64) * (0x3d10 as u64)));
+  let x49: u64 = (x48 >> 26);
   let x50: u32 = ((x48 & (0x3ffffff as u64)) as u32);
-  let x51: u64 = ((x46 as u64) + (((x4 as u64) * ((arg1[9]) as u64)) + (((x3 as u64) * ((arg1[8]) as u64)) + (((arg1[7]) as u64) * ((arg1[7]) as u64)))));
-  let x52: u32 = ((x51 >> 26) as u32);
+  let x51: u64 = (x46 + (((x4 as u64) * ((arg1[9]) as u64)) + (((x3 as u64) * ((arg1[8]) as u64)) + (((arg1[7]) as u64) * ((arg1[7]) as u64)))));
+  let x52: u64 = (x51 >> 26);
   let x53: u32 = ((x51 & (0x3ffffff as u64)) as u32);
-  let x54: u64 = (((x49 as u64) + ((((x9 as u64) * ((arg1[4]) as u64)) + (((x8 as u64) * ((arg1[3]) as u64)) + (((arg1[2]) as u64) * ((arg1[2]) as u64)))) + ((x47 as u64) << 10))) + ((x53 as u64) * (0x3d10 as u64)));
-  let x55: u32 = ((x54 >> 26) as u32);
+  let x54: u64 = ((x49 + ((((x9 as u64) * ((arg1[4]) as u64)) + (((x8 as u64) * ((arg1[3]) as u64)) + (((arg1[2]) as u64) * ((arg1[2]) as u64)))) + ((x47 as u64) << 10))) + ((x53 as u64) * (0x3d10 as u64)));
+  let x55: u64 = (x54 >> 26);
   let x56: u32 = ((x54 & (0x3ffffff as u64)) as u32);
-  let x57: u64 = ((x52 as u64) + (((x3 as u64) * ((arg1[9]) as u64)) + ((x2 as u64) * ((arg1[8]) as u64))));
-  let x58: u32 = ((x57 >> 26) as u32);
+  let x57: u64 = (x52 + (((x3 as u64) * ((arg1[9]) as u64)) + ((x2 as u64) * ((arg1[8]) as u64))));
+  let x58: u64 = (x57 >> 26);
   let x59: u32 = ((x57 & (0x3ffffff as u64)) as u32);
-  let x60: u64 = (((x55 as u64) + ((((x9 as u64) * ((arg1[5]) as u64)) + (((x8 as u64) * ((arg1[4]) as u64)) + ((x7 as u64) * ((arg1[3]) as u64)))) + ((x53 as u64) << 10))) + ((x59 as u64) * (0x3d10 as u64)));
-  let x61: u32 = ((x60 >> 26) as u32);
+  let x60: u64 = ((x55 + ((((x9 as u64) * ((arg1[5]) as u64)) + (((x8 as u64) * ((arg1[4]) as u64)) + ((x7 as u64) * ((arg1[3]) as u64)))) + ((x53 as u64) << 10))) + ((x59 as u64) * (0x3d10 as u64)));
+  let x61: u64 = (x60 >> 26);
   let x62: u32 = ((x60 & (0x3ffffff as u64)) as u32);
-  let x63: u64 = ((x58 as u64) + (((x2 as u64) * ((arg1[9]) as u64)) + (((arg1[8]) as u64) * ((arg1[8]) as u64))));
+  let x63: u64 = (x58 + (((x2 as u64) * ((arg1[9]) as u64)) + (((arg1[8]) as u64) * ((arg1[8]) as u64))));
   let x64: u32 = ((x63 >> 32) as u32);
   let x65: u32 = ((x63 & (0xffffffff as u64)) as u32);
-  let x66: u64 = (((x61 as u64) + ((((x9 as u64) * ((arg1[6]) as u64)) + (((x8 as u64) * ((arg1[5]) as u64)) + (((x7 as u64) * ((arg1[4]) as u64)) + (((arg1[3]) as u64) * ((arg1[3]) as u64))))) + ((x59 as u64) << 10))) + ((x65 as u64) * (0x3d10 as u64)));
-  let x67: u32 = ((x66 >> 26) as u32);
+  let x66: u64 = ((x61 + ((((x9 as u64) * ((arg1[6]) as u64)) + (((x8 as u64) * ((arg1[5]) as u64)) + (((x7 as u64) * ((arg1[4]) as u64)) + (((arg1[3]) as u64) * ((arg1[3]) as u64))))) + ((x59 as u64) << 10))) + ((x65 as u64) * (0x3d10 as u64)));
+  let x67: u64 = (x66 >> 26);
   let x68: u32 = ((x66 & (0x3ffffff as u64)) as u32);
-  let x69: u64 = (((x67 as u64) + ((x15 as u64) + ((x65 as u64) << 10))) + ((x64 as u64) * (0xf4400 as u64)));
+  let x69: u64 = ((x67 + ((x15 as u64) + ((x65 as u64) << 10))) + ((x64 as u64) * (0xf4400 as u64)));
   let x70: u32 = ((x69 >> 26) as u32);
   let x71: u32 = ((x69 & (0x3ffffff as u64)) as u32);
   let x72: u64 = ((x70 as u64) + ((x21 as u64) + ((x64 as u64) << 16)));
