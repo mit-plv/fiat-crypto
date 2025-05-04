@@ -3,6 +3,7 @@ Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
+Require Znumtheory.
 
 Open Scope Z_scope.
 
