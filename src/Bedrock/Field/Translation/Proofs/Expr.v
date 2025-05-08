@@ -706,7 +706,7 @@ Section Expr.
              equivalent_base rep.equiv rep.Z ident.literal] in *.
       cbv [WeakestPrecondition.dexpr ident.literal] in *.
       cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
-                                    Semantics.interp_binop].
+          Semantics.interp_binop Semantics.interp_op1].
       sepsimpl_hyps.
       eapply Proper_expr; [ | eassumption ].
       repeat intro; subst.
@@ -720,7 +720,8 @@ Section Expr.
         Z.ltb_to_lt; try lia.
       all:pull_Zmod.
       all:autorewrite with zsimplify_fast.
-      all:try reflexivity.
+      all:rewrite <-?word.ring_morph_opp, ?word.unsigned_of_Z.
+      all:cbv [word.wrap]; rewrite ?Zplus_mod_idemp_l, ?Zmod_mod; trivial.
       rewrite Z.mod_opp_l_nz
         by (rewrite ?Z.mod_1_l; auto with zarith).
       Z.rewrite_mod_small.
