@@ -54,6 +54,7 @@ Section Defs.
     | expr.literal _ => true
     | expr.var x => negb (String.eqb x ERROR)
     | expr.load _ a => error_free_expr a
+    | expr.op1 _ x => error_free_expr x
     | expr.op _ x y => (error_free_expr x && error_free_expr y)%bool
     | expr.inlinetable _ _ index => error_free_expr index
     | expr.ite c a b => (error_free_expr c && error_free_expr a && error_free_expr b)%bool
