@@ -10,6 +10,13 @@ Require PrimeFieldTheorems.
 
 Require Import coqutil.Datatypes.List.
 
+(** This file formalizes the (algebraic form of the) Number-Theoretic Theorem.
+    Specifically, provided `ζ` such that `ζ^{2^m} = 1`, we define [decompose] such that `X^{2^n} + 1 = Π_{k ∈ decompose r n 2^m } (X^{2^{n - r}} - ζ^k)` when `r ≤ min(n, m)`.
+    We then recursively define a ring isomorphism using the Chinese Remainder Theorem from `R[X]/(X^{2^n} + 1)` to `Π_{k ∈ decompose r n 2^m } R[X]/(X^{2^{n - r}} - ζ^k)`.
+
+    We also define the corresponding versions using list representations ([nttl] and [inttl]), they are shown correct with regards to the ones using the polynomial representation.
+*)
+
 Section CyclotomicDecomposition.
   Local Coercion N.of_nat: nat >-> N.
   Context {q: positive} {prime_q: prime q}.
@@ -759,7 +766,7 @@ Section CyclotomicDecomposition.
   Proof. intros; apply nttl_rec_isomorphism. Qed.
 End CyclotomicDecomposition.
 
-Section SanityCheck.
+Module NTTSanityCheck.
   Local Definition bitrev (n: nat) (i: nat): nat :=
     let fix aux k := match k with
                      | O => if Nat.testbit i 0%nat then PeanoNat.Nat.setbit 0%nat (n - 1)%nat else 0%nat
@@ -783,4 +790,4 @@ Section SanityCheck.
   Local Lemma kyber_ok:
     (@decompose 7%nat 7%nat (Nat.pow 2 7)) = List.map (fun k => (2 * (bitrev7 k) + 1)%nat) (seq 0 128%nat).
   Proof. reflexivity. Qed.
-End SanityCheck.
+End NTTSanityCheck.

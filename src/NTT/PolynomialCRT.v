@@ -4,6 +4,12 @@ From Crypto.NTT Require Import Polynomial.
 From Coq Require Import List.
 From Coq.Classes Require Import Morphisms.
 
+(** This file formalizes the (algebraic form of the) Chinese Remainder Theorem for polynomials.
+    Specifically, `R[X]/P` is isomorphic to `R[X]/P1 × R[X]/P2` when P = P1 \times P2 and P1, P2 are coprime.
+    This is then further specialized for the case where P is of the form `X^2n - a^2 = (X^n - a)(X^n + a)`.
+    We further give explicit formulas for `φ: R[X]/(X^2n - a^2) → R[X]/(X^n - a) × R[X]/(X^n + a)` and `ψ: R[X]/(X^n - a) × R[X]/(X^n + a) → R[X]/(X^2n - a^2)`.
+*)
+
 Section Theorems.
   Context {F:Type}{Feq:F->F->Prop}{Fzero Fone:F}{Fopp:F->F}{Fadd Fsub Fmul:F->F->F}
     {Feq_dec:DecidableRel Feq}.

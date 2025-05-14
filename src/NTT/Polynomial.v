@@ -1,100 +1,24 @@
 From Coq Require Import List Permutation.
 From Coq Require Program.Tactics Program.Wf.
-From Coq.Classes Require Import Morphisms.
-From Crypto.Util Require Import Decidable ListUtil.
+From Coq Require Import Morphisms.
+From Crypto.Util Require Import Decidable ListUtil ListUtil.Permutation ListUtil.Forall.
 From Crypto.Algebra Require Import Hierarchy Ring Field.
 
-Section Permutation_fold_right.
-  (* TODO: move to ListUtil *)
-  Lemma fold_right_permutation {A B} (R:B->B->Prop) `{RelationClasses.Equivalence B R}
-    (f:A->B->B) (b: B) `{Hf : forall x, Morphisms.Proper (Morphisms.respectful R R) (f x)} (l1 l2: list A):
-    (forall j1 a1 j2 a2 b,
-        j1 <> j2 -> nth_error l1 j1 = Some a1 -> nth_error l1 j2 = Some a2 ->
-        R (f a1 (f a2 b)) (f a2 (f a1 b))) ->
-    Permutation l1 l2 -> R (fold_right f b l1) (fold_right f b l2).
-  Proof.
-    intros Hf'. induction 1.
-    - simpl. reflexivity.
-    - simpl. rewrite IHPermutation; [reflexivity|].
-      intros. apply (Hf' (S j1) _ (S j2)); auto.
-    - simpl. apply (Hf' O _ (S O)); auto.
-    - etransitivity.
-      + apply IHPermutation1, Hf'.
-      + apply IHPermutation2. intros j1 a1 j2 a2 b' ? ? ?.
-        destruct (proj1 (Permutation_nth_error _ _) H0_) as (Hlen & g & Hinj & Hg).
-        apply (Hf' (g j1) _ (g j2)); try rewrite <- Hg; auto.
-  Qed.
-End Permutation_fold_right.
-Section NoDup.
-  (* TODO: move to ListUtil *)
-  Lemma NoDup_app {A} (l1 l2: list A):
-    NoDup (l1 ++ l2) <-> NoDup l1 /\ (forall x, In x l1 -> ~ In x l2) /\ NoDup l2.
-  Proof.
-    induction l1; simpl.
-    - split; intros.
-      + split; [apply NoDup_nil|].
-        split; auto.
-      + destruct H as (? & ? & ?); auto.
-    - split; intros.
-      + inversion H; subst; clear H.
-        apply IHl1 in H3. destruct H3 as (? & ? & ?).
-        split; [apply NoDup_cons; auto; intro; apply H2; apply in_app_iff; left; auto|].
-        split; auto.
-        intros. destruct H3 as [<-|?]; [|apply H0; auto].
-        intro; apply H2. apply in_app_iff; right; auto.
-      + destruct H as (Hl1 & Hin & Hl2).
-        inversion Hl1; subst; clear Hl1.
-        apply NoDup_cons; [|apply IHl1; repeat split; auto].
-        intro X. apply in_app_iff in X. destruct X; [elim H1; auto|].
-        eapply Hin; eauto.
-  Qed.
-  Lemma NoDup_map {A B} (l: list A) (f: A -> B):
-    (forall x y, In x l -> In y l -> f x = f y -> x = y) ->
-    NoDup l ->
-    NoDup (map f l).
-  Proof.
-    intro Hinj. induction 1; [apply NoDup_nil|].
-    simpl. apply NoDup_cons.
-    - intro Hin. apply in_map_iff in Hin.
-      destruct Hin as (y & Heq & Hin).
-      apply H. rewrite (Hinj x y); auto.
-      left; auto. right; auto.
-    - apply IHNoDup. intros; apply Hinj; auto; right; auto.
-  Qed.
-End NoDup.
-Section Forall2.
-  Global Instance Forall2_Equivalence {A: Type} {R} `{Equivalence A R}:
-    Equivalence (Forall2 R).
-  Proof.
-    constructor.
-    - intro. destruct x; [constructor|].
-      rewrite (Forall2_forall_iff _ _ _ a a ltac:(reflexivity)).
-      intros. reflexivity.
-    - intros x y He. induction He; [constructor|].
-      constructor; auto. symmetry; auto.
-    - intros x y z Hl. revert z. induction Hl; intros; auto.
-      inversion H1; subst; clear H1. constructor; auto.
-      transitivity y; auto.
-  Qed.
-  Lemma Forall2_Forall_combine {A B: Type} (R: A -> B -> Prop) (l1: list A) (l2: list B):
-    Forall2 R l1 l2 ->
-    Forall (fun '(a, b) => R a b) (combine l1 l2).
-  Proof. induction 1; intros; simpl; constructor; auto. Qed.
-  Lemma Forall2_app_inv {A B: Type} (R: A -> B -> Prop) (l1 l2: list A) (l1' l2': list B):
-    length l1 = length l1' ->
-    Forall2 R (l1 ++ l2) (l1' ++ l2') ->
-    Forall2 R l1 l1' /\ Forall2 R l2 l2'.
-  Proof.
-    revert l1' l2 l2'. induction l1; simpl; intros l1' l2 l2' Hl HF.
-    - symmetry in Hl; apply length0_nil in Hl; subst l1'.
-      simpl in HF. split; [constructor|auto].
-    - destruct l1' as [|b l1']; [simpl in Hl; congruence|].
-      simpl in Hl. simpl in HF. inversion HF; subst; clear HF.
-      split; [constructor; auto|]; apply (IHl1 l1' l2 l2' ltac:(congruence) H4).
-  Qed.
-End Forall2.
+(** This file defines a theory of univariate polynomials with coefficients defined over a commutative ring R.
+    Specifically, we
+    - prove that R[X] is a commutative ring
+    - define Euclidean division when R is a field
+    - define the polynomial quotient ring R[X]/Q as `Pquot Q`
+    - show that `Pquot Q` is isomorphic to `{ l: list R | length l = degree Q }` when Q != 0
+    - define `Pquotl [Q1; ...; Qn]` representing R[X]/Q1 × ... × R[X]/Qn
+    - show that it is a commutative ring isomorphic to `{ l: list R | length l = Σ_{1≤i≤n} degree Qi }`
+*)
 
 Section Bigop.
+  (** Define [bigop op idx f] where [op] is the operation of a commutative group.
+      If [op] is an addition, this corresponds to Σ_{i ∈ idx} f(i)
+      If [op] is a multiplication, this corresponds to Π_{i ∈ idx} f(i)
+   *)
   Context {A:Type} {eq:A->A->Prop} {op:A->A->A} {id:A} {inv:A->A} {group: @commutative_group A eq op id inv}.
 
   Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
@@ -102,6 +26,10 @@ Section Bigop.
   (* Iteratively apply op over a sequence indexed by a list of indices of some type I *)
   Definition bigop {I} (idx: list I) (f: I -> A) :=
     List.fold_right (fun i x => op (f i) x) id idx.
+
+  Lemma bigop_alt_eq {I} (idx: list I) (f: I -> A):
+    bigop idx f = List.fold_right op id (map f idx).
+  Proof. rewrite fold_right_map. reflexivity. Qed.
 
   Lemma bigop_ext_eq {I} (idx: list I) (f g: I -> A):
     (forall i, In i idx -> f i = g i) ->
@@ -176,10 +104,12 @@ Section Bigop.
     Permutation idx1 idx2 ->
     bigop idx1 f = bigop idx2 f.
   Proof.
-    intros. unfold bigop. apply fold_right_permutation; auto; try typeclasses eauto.
-    - intros. intros a b Heq. rewrite Heq; reflexivity.
-    - intros. rewrite (associative (f a1)), (commutative (f a1)), <- (associative (f a2)).
-      reflexivity.
+    intros. do 2 rewrite bigop_alt_eq.
+    apply fold_right_Proper_commutative_associative_Permutation_Equivalence.
+    - apply commutative.
+    - apply associative.
+    - reflexivity.
+    - apply Permutation_map. auto.
   Qed.
 
   Lemma bigop_rev {I} (f: I -> A) idx:
@@ -723,20 +653,19 @@ Section Theorems.
       assert (Hnd: forall f, NoDup (flat_map (fun i : nat => map (fun j : nat => (i, j)) (seq 0 (f i))) (seq 0 (S n)))).
       { intro f; induction n.
         - simpl. rewrite app_nil_r.
-          apply NoDup_map; [|apply seq_NoDup].
+          apply NoDup_map_NoDup_ForallPairs; [|apply seq_NoDup].
           intros ? ? ? ? Heq; inversion Heq; subst; reflexivity.
         - rewrite seq_S, flat_map_app.
-          apply NoDup_app. split; auto.
-          split.
-          + intros. destruct x as (i & j).
+          apply List.NoDup_app; auto.
+          + cbn [flat_map]. rewrite app_nil_r.
+            apply NoDup_map_NoDup_ForallPairs; [|apply seq_NoDup].
+            intros x y Hx Hy He. inversion He; subst; reflexivity.
+          + intros x H. destruct x as (i & j).
             apply bigop_flatten_index_char in H.
             destruct H as (Hi & Hj). apply in_seq in Hi, Hj.
             intro H. apply bigop_flatten_index_char in H.
             destruct H as (Hi' & _).
-            apply in_inv in Hi'. destruct Hi' as [H|H]; [Lia.lia|eapply in_nil; eauto].
-          + cbn [flat_map]. rewrite app_nil_r.
-            apply NoDup_map; [|apply seq_NoDup].
-            intros. inversion H1; subst; reflexivity. }
+            apply in_inv in Hi'. destruct Hi' as [H|H]; [Lia.lia|eapply in_nil; eauto]. }
       generalize (bigop_flatten_index_char (seq 0%nat (S n)) (fun i => seq 0%nat (S i))). intro Hin1.
       generalize (bigop_flatten_index_char (seq 0%nat (S n)) (fun i => seq 0%nat (S (n - i)%nat))). intro Hin2.
       set (psi := (fun '(i, j) => (i + j, i)%nat)).
@@ -759,7 +688,7 @@ Section Theorems.
       generalize (in_map_iff phi (flat_map (fun i : nat => map (fun j : nat => (i, j)) (seq 0 (S i))) (seq 0 (S n)))). intro Hin1'.
       apply bigop_permutation. apply NoDup_Permutation.
       { apply Hnd. }
-      { apply NoDup_map.
+      { apply NoDup_map_NoDup_ForallPairs.
         - intros x y Hx Hy Heq.
           destruct x as (x1 & y1). destruct y as (x2 & y2).
           apply Hin1 in Hx, Hy.
