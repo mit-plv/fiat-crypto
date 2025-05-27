@@ -1473,6 +1473,68 @@ Qed.
 #[global]
 Hint Rewrite @set_nth_app_r using (lia || distr_length; lia) : simpl_set_nth.
 
+Lemma firstn_set_nth_out_of_bounds {A} k n x (l: list A):
+  (k <= n)%nat ->
+  firstn k (set_nth n x l) = firstn k l.
+Proof.
+  intros Hk. apply nth_error_ext; intros i.
+  do 2 rewrite nth_error_firstn.
+  destruct (Nat.ltb_spec i k); auto.
+  rewrite nth_set_nth. destruct (Nat.eq_dec i n); [Lia.lia|reflexivity].
+Qed.
+
+Lemma firstn_set_nth_inbounds {A} k n x (l: list A):
+  (n < k)%nat ->
+  firstn k (set_nth n x l) = set_nth n x (firstn k l).
+Proof.
+  intros Hk. apply nth_error_ext; intros i.
+  rewrite nth_error_firstn, nth_set_nth, nth_set_nth, nth_error_firstn, length_firstn.
+  destruct (Nat.eq_dec i n) as [->|]; [|reflexivity].
+  destruct (Nat.ltb_spec n k); [|Lia.lia].
+  destruct (lt_dec n (length l)).
+  - destruct (lt_dec _ _); [reflexivity|Lia.lia].
+  - rewrite Nat.min_r by Lia.lia.
+    destruct (lt_dec _ _); [Lia.lia|reflexivity].
+Qed.
+
+Lemma skipn_set_nth_out_of_bounds {A} k n x (l: list A):
+  (n < k)%nat ->
+  skipn k (set_nth n x l) = skipn k l.
+Proof.
+  intros Hk. apply nth_error_ext; intros i.
+  do 2 rewrite nth_error_skipn.
+  rewrite nth_set_nth.
+  destruct (Nat.eq_dec _ _); [Lia.lia|]. reflexivity.
+Qed.
+
+Lemma skipn_set_nth_inbounds {A} k n x (l: list A):
+  (k <= n)%nat ->
+  skipn k (set_nth n x l) = set_nth (n - k)%nat x (skipn k l).
+Proof.
+  intros Hk. apply nth_error_ext; intros i.
+  rewrite nth_error_skipn, nth_set_nth, nth_set_nth, nth_error_skipn, length_skipn.
+  do 2 destruct (Nat.eq_dec _ _); try Lia.lia; try reflexivity.
+  do 2 destruct (lt_dec _ _); try Lia.lia; reflexivity.
+Qed.
+
+Lemma set_nth_out_of_bounds {A} n x (l: list A):
+  (length l <= n)%nat ->
+  set_nth n x l = l.
+Proof.
+  intros. rewrite <- (app_nil_r l) at 1.
+  rewrite set_nth_app_r; auto.
+  rewrite set_nth_nil, app_nil_r. reflexivity.
+Qed.
+
+Lemma map_set_nth {A B} (f: A -> B) n x (l: list A):
+  map f (set_nth n x l) = set_nth n (f x) (map f l).
+Proof.
+  apply nth_error_ext; intros i.
+  rewrite nth_error_map, nth_set_nth, nth_set_nth, length_map, nth_error_map.
+  destruct (Nat.eq_dec i n); [|reflexivity].
+  destruct (lt_dec _ _); reflexivity.
+Qed.
+
 Lemma skipn_nth_default : forall {T} n us (d : T), (n < length us)%nat ->
  skipn n us = nth_default d us n :: skipn (S n) us.
 Proof.

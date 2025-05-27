@@ -3,7 +3,7 @@ Require Import Coq.NArith.BinNat.
 From Coq.Classes Require Import Morphisms.
 Require Import Spec.ModularArithmetic.
 Require Import Arithmetic.ModularArithmeticTheorems.
-Require Import Coq.ZArith.Znumtheory.
+Require Import Coq.ZArith.BinInt.
 Require Import Coq.ZArith.Znumtheory Coq.Lists.List. Import ListNotations.
 Require Import coqutil.Datatypes.List.
 Require Import NTT.Polynomial NTT.NTT.
@@ -15,7 +15,7 @@ Require PrimeFieldTheorems.
     - Use the same precomputed array of ζ^k for the NTT and iNTT
     - Delayed multiplicative inversion in the iNTT
 
-    TODO: delayed reduction (applies only when the field modulus is much smaller than the word size, and only when using a signed field representation (?))
+    TODO: delayed reduction for inverse NTT
 *)
 
 Section Utils.
@@ -69,7 +69,7 @@ Section Zetas.
   Proof.
     assert (IH: forall l j i, (S i <= j)%nat -> exists tl, zeta_powers l j = zeta_powers l i ++ (map (fun k : nat => nth_default 0%nat (@decompose m (S i) l) (2 * k)) (seq 0 (Nat.pow 2 i))) ++ tl).
     { induction j; intros i Hi; [Lia.lia|].
-      assert (S i <= j \/ i = j) as [Hlt|<-] by Lia.lia.
+      assert (S i <= j \/ i = j)%nat as [Hlt|<-] by Lia.lia.
       - simpl. destruct (IHj _ Hlt) as [tl Heq].
         rewrite Heq. repeat rewrite <- List.app_assoc.
         eexists; f_equal.
@@ -346,7 +346,7 @@ Section Gallina.
     Qed.
 
     Lemma inttl_nomul_gallina_spec:
-      forall r k l p (Hr_leq_k: (r <= k)%nat) (Hp: length p >= Nat.pow 2 k),
+      forall r k l p (Hr_leq_k: (r <= k)%nat) (Hp: (length p >= Nat.pow 2 k)%nat),
         inttl_gallina r k l p = List.map (F.mul (F.inv (F.pow (1 + 1) r))) (inttl_nomul_gallina r k l p).
     Proof.
       induction r; intros.
@@ -354,7 +354,7 @@ Section Gallina.
         intro. rewrite F.pow_0_r, Hierarchy.commutative, <- Hierarchy.field_div_definition.
         apply Field.div_one.
       - cbn [inttl_gallina inttl_nomul_gallina].
-        assert (Hp': length p >= 2 * Nat.pow 2 (k - 1)) by (rewrite <- PeanoNat.Nat.pow_succ_r'; assert (S (k - 1) = k) as -> by Lia.lia; assumption).
+        assert (Hp': (length p >= 2 * Nat.pow 2 (k - 1))%nat) by (rewrite <- PeanoNat.Nat.pow_succ_r'; assert (S (k - 1) = k) as -> by Lia.lia; assumption).
         rewrite IHr by (try rewrite length_firstn; Lia.lia).
         rewrite IHr by (try rewrite length_skipn; Lia.lia).
         rewrite <- map_app.
@@ -425,8 +425,8 @@ Section Gallina.
 
       Lemma nttl_precomp_spec:
         forall r k u v l p,
-          (r + u <= m) ->
-          (v < Nat.pow 2 u) ->
+          (r + u <= m)%nat ->
+          (v < Nat.pow 2 u)%nat ->
           nth_default 0%nat (@NTT.decompose m u (Nat.pow 2 m)) v = l ->
           nttl_precomp r k u v p = nttl_gallina r k l p.
       Proof.
@@ -436,7 +436,7 @@ Section Gallina.
         rewrite Heq in Hl.
         pose proof (@decompose_S_nth m u v (Nat.pow 2 m) l Hl) as (Hll & Hlr).
         rewrite precomp_zetas_eq; unfold zetas.
-        assert (Hlt: Nat.pow 2 u + v < Nat.pow 2 m).
+        assert (Hlt: (Nat.pow 2 u + v < Nat.pow 2 m)%nat).
         { apply (PeanoNat.Nat.lt_le_trans _ (Nat.pow 2 (S u))).
           - rewrite PeanoNat.Nat.pow_succ_r'.
             Lia.lia.
@@ -522,8 +522,8 @@ Section Gallina.
 
       Lemma inttl_precomp_spec:
         forall r k u v l p,
-          (r + u <= m) ->
-          (v < Nat.pow 2 u) ->
+          (r + u <= m)%nat ->
+          (v < Nat.pow 2 u)%nat ->
           nth_default 0%nat (@NTT.decompose m u (Nat.pow 2 m)) v = l ->
           inttl_precomp r k u v p = inttl_nomul_gallina r k l p.
       Proof.
@@ -540,7 +540,7 @@ Section Gallina.
           assert (N.of_nat _ ^ _ = 2 ^ N.succ (N.of_nat m))%N as -> by Lia.lia.
           apply (zeta_pow_succ_m (Hm:=Hm)). }
         rewrite precomp_zetas_eq; unfold zetas.
-        assert (Hlt: 2 * Nat.pow 2 u - 1 - v < Nat.pow 2 m).
+        assert (Hlt: (2 * Nat.pow 2 u - 1 - v < Nat.pow 2 m)%nat).
         { apply (PeanoNat.Nat.lt_le_trans _ (Nat.pow 2 (S u))).
           - rewrite PeanoNat.Nat.pow_succ_r'.
             Lia.lia.
@@ -686,7 +686,7 @@ Section Gallina.
             rewrite length_firstn, PeanoNat.Nat.min_l by Lia.lia.
             match goal with
             | |- nth_error (fold_left ?f _ _) i = nth_error (fold_left ?g _ _) _ =>
-                assert (forall k i, (i >= start) -> nth_error (fold_left f (seq start k) p) i = nth_error (fold_left g (seq 0 k) (skipn start p)) (i - start)) as ->; [|reflexivity|Lia.lia]
+                assert (forall k i, (i >= start)%nat -> nth_error (fold_left f (seq start k) p) i = nth_error (fold_left g (seq 0 k) (skipn start p)) (i - start)) as ->; [|reflexivity|Lia.lia]
             end.
             clear. induction k; intros i Hi.
             * cbn. rewrite nth_error_skipn. f_equal; Lia.lia.
@@ -758,7 +758,7 @@ Section Gallina.
       Lemma polynomial_list_loop_spec:
         forall k old_len len l start p,
           (0 < 2 * len <= old_len)%nat ->
-          (start + k * old_len <= length p) ->
+          (start + k * old_len <= length p)%nat ->
           polynomial_list_loop k old_len len (l, start, p) = (l + k, start + k * old_len, firstn start p ++ concat (map (fun '(i, chk) => Pmod_cyclotomic_list len (nth_default 0%F precomp_zetas (l + 1 + i)) chk) (enumerate 0 (firstn k (chunk old_len (skipn start p))))) ++ skipn (start + k * old_len) p)%nat.
       Proof.
         unfold polynomial_list_loop.
@@ -844,7 +844,7 @@ Section Gallina.
                 rewrite length_firstn, PeanoNat.Nat.min_l by Lia.lia.
                 destruct (Compare_dec.lt_dec _ n2); [|Lia.lia].
                 destruct (Compare_dec.lt_dec _ n2); [|Lia.lia].
-                assert (forall A k (x: A) l1 l2, (k < length l1) -> ListUtil.set_nth k x (l1 ++ l2) = ListUtil.set_nth k x l1 ++ l2) as Z; [|repeat rewrite Z; auto; [rewrite ListUtil.length_set_nth|]; rewrite Y, length_firstn; Lia.lia].
+                assert (forall A k (x: A) l1 l2, (k < length l1)%nat -> ListUtil.set_nth k x (l1 ++ l2) = ListUtil.set_nth k x l1 ++ l2) as Z; [|repeat rewrite Z; auto; [rewrite ListUtil.length_set_nth|]; rewrite Y, length_firstn; Lia.lia].
                 clear. intros.
                 apply nth_error_ext; intros.
                 rewrite ListUtil.nth_set_nth, ListUtil.nth_error_app, ListUtil.nth_error_app, length_app, ListUtil.length_set_nth, ListUtil.nth_set_nth.
@@ -1068,7 +1068,7 @@ Section Gallina.
         forall k old_len len l start p,
           (k <= l)%nat ->
           (0 < 2 * old_len <= len)%nat ->
-          (start + k * len <= length p) ->
+          (start + k * len <= length p)%nat ->
           inverse_polynomial_list_loop k old_len len (l, start, p) =
             (l - k, start + k * len, firstn start p ++ concat (map (fun '(i, chk) => recompose_cyclotomic_list old_len (F.opp (nth_default 0%F precomp_zetas (l - 1 - i))) chk) (enumerate 0 (firstn k (chunk len (skipn start p))))) ++ skipn (start + k * len) p)%nat.
       Proof.
@@ -1310,4 +1310,1017 @@ Section Gallina.
         pose proof (NatUtil.pow_nonzero 2 (n - Nat.min n m) ltac:(congruence)); Lia.lia.
     Qed.
   End Loops.
+
+  Section Delayed_add_sub_reduce.
+    (* TODO: Parameterize over the field representation *)
+
+    (* We delay reducing modulo q in the butterfly operation as late as possible.
+       t := b * z (mod q)
+       y0 := x + t (mod q)
+       y1 := x - t (mod q)
+
+       becomes
+
+       t := b * z (mod q)
+       y0 := x + t
+       y1 := x + (q - t)          // assuming unsigned representation
+       ...
+       reduce y0, y1 at some point later *)
+    Variable (precomp_zetas: list Z).
+    Hypothesis (precomp_zetas_eq: precomp_zetas = List.map F.to_Z (@zetas q zeta m (Nat.pow 2 m) m)).
+
+    Lemma precomp_zetas_eq':
+      map (F.of_Z q) precomp_zetas = (@zetas q zeta m (Nat.pow 2 m) m).
+    Proof.
+      rewrite precomp_zetas_eq, map_map, (map_ext _ id); [apply map_id|].
+      apply F.of_Z_to_Z.
+    Qed.
+
+    Lemma precomp_zetas_bounds:
+      forall i, 0 <= (nth_default 0%Z precomp_zetas i) < q.
+    Proof.
+      intros. rewrite precomp_zetas_eq.
+      rewrite <- (@F.to_Z_0 q), ListUtil.map_nth_default_always.
+      apply F.to_Z_range; Lia.lia.
+    Qed.
+
+    Variables (Zreduce: Z -> Z) (Zreduce_bounds: Z).
+
+    (* Assumes Zreduce is a modular reduction operation *)
+    Hypothesis Zreduce_ok: forall x, (0 <= x <= Zreduce_bounds)%Z -> Zreduce x = Z.modulo x q.
+
+    (* Assumes Zreduce can at least reduces the multiplication of two field elements *)
+    Hypothesis Zreduce_bounds_ge_q2: (q * q <= Zreduce_bounds)%Z.
+
+    Lemma Zreduce_0:
+      Zreduce 0 = 0%Z.
+    Proof. rewrite Zreduce_ok; [apply Z.mod_0_l; congruence|Lia.lia]. Qed.
+
+    Lemma Zreduce_small:
+      forall x, (0 <= x < q)%Z -> Zreduce x = x.
+    Proof. intros; rewrite Zreduce_ok; [apply Z.mod_small; auto|Lia.nia]. Qed.
+
+    Lemma Zreduce_mod:
+      forall x, Zreduce (x mod q) = x mod q.
+    Proof. intros; apply Zreduce_small. apply Zdiv.Z_mod_lt. Lia.lia. Qed.
+
+    (* We can do k_iter iterations before having to reduce *)
+    Local Notation k_iter := (Z.div Zreduce_bounds (q * q)).
+
+    (* k_iter is at least 1, so worst case scenario is reducing after each iteration *)
+    Local Lemma k_iter_ge_1:
+      (1 <= k_iter)%Z.
+    Proof.
+      transitivity ((q * q) / (q * q))%Z; [|apply Div.Z.div_le_mono_nonneg; Lia.lia].
+      rewrite Z.div_same; Lia.lia.
+    Qed.
+
+    Local Lemma k_iter_times_q2_le_reduce_bounds:
+      (k_iter * q * q <= Zreduce_bounds)%Z.
+    Proof.
+      rewrite <- Z.mul_assoc, Z.mul_comm.
+      apply Zdiv.Z_mult_div_ge. Lia.lia.
+    Qed.
+
+    Section Bounded_by.
+      (* We are going to manipulate coefficients bounded by a multiple of q.
+         This section defines this predicate and some related lemmas.
+      *)
+      Definition Zbounded_by (n: nat) (x: Z) :=
+        (0 <= x <= n * q)%Z.
+
+      Lemma bounded_by_monotone (i j: nat) (x: Z):
+        (i <= j)%nat ->
+        Zbounded_by i x ->
+        Zbounded_by j x.
+      Proof. unfold Zbounded_by; Lia.nia. Qed.
+
+      Lemma bounded_by_0_r:
+        forall n, Zbounded_by n 0.
+      Proof. unfold Zbounded_by; Lia.lia. Qed.
+
+      Lemma mod_bounded_by_1:
+        forall x, Zbounded_by 1 (x mod q).
+      Proof.
+        intros. pose proof (Zdiv.Z_mod_lt x q ltac:(Lia.lia)).
+        unfold Zbounded_by. Lia.lia.
+      Qed.
+
+      Lemma bounded_by_reduce_eq (n: nat) (x: Z):
+        (n <= k_iter * q)%Z ->
+        Zbounded_by n x ->
+        Zreduce x = F.to_Z (@F.of_Z q x).
+      Proof.
+        unfold Zbounded_by. intros. rewrite F.to_Z_of_Z.
+        apply Zreduce_ok. split; [Lia.lia|].
+        etransitivity; [|apply k_iter_times_q2_le_reduce_bounds].
+        Lia.nia.
+      Qed.
+
+      Lemma bounded_by_reduce (n: nat) (x: Z):
+        (n <= k_iter * q)%Z ->
+        Zbounded_by n x ->
+        Zbounded_by 1 (Zreduce x).
+      Proof.
+        intros. rewrite (bounded_by_reduce_eq n); auto.
+        pose proof (@F.to_Z_range q (F.of_Z q x) ltac:(Lia.lia)).
+        unfold Zbounded_by; Lia.lia.
+      Qed.
+
+      Lemma bounded_by_add (n: nat) (x y: Z):
+        Zbounded_by n x ->
+        Zbounded_by 1 y ->
+        Zbounded_by (n + 1)%nat (x + y).
+      Proof. unfold Zbounded_by; intros. Lia.lia. Qed.
+
+      Lemma bounded_by_sub (n: nat) (x y: Z):
+        Zbounded_by n x ->
+        Zbounded_by 1 y ->
+        Zbounded_by (n + 1)%nat (x + (q - y)).
+      Proof. unfold Zbounded_by; intros. Lia.lia. Qed.
+
+      Lemma bounded_by_mul (n: nat) (x y: Z):
+        Zbounded_by n x ->
+        Zbounded_by 1 y ->
+        Zbounded_by (n * Pos.to_nat q)%nat (x * y).
+      Proof. unfold Zbounded_by; intros. Lia.nia. Qed.
+    End Bounded_by.
+
+    Section ForwardNTT.
+      (* We parameterize over whether reducing is done *)
+      Definition polynomial_decompose_loop_may_reduce (reduce_bool: bool) (start len: nat) (z: Z) (p: list Z) :=
+        List.fold_left
+          (fun (p: list Z) (i: nat) =>
+             let t0 := nth_default 0%Z p (i + len) in
+             let t1 := Zreduce (z * t0)%Z in
+             let t2 := nth_default 0%Z p i in
+             let p' := ListUtil.set_nth (i + len) ((if reduce_bool then Zreduce else id) (t2 + (q - t1)))%Z p in
+             ListUtil.set_nth i ((if reduce_bool then Zreduce else id) (t2 + t1))%Z p')
+          (seq start len)
+          p.
+
+      Lemma polynomial_decompose_loop_may_reduce_spec:
+        forall reduce_bool start len z p (ll lr: nat),
+          (0 <= z < q)%Z ->
+          (ll <= k_iter * q)%Z ->
+          (lr <= k_iter)%Z ->
+          (1 <= ll)%nat -> (1 <= lr)%nat ->
+          Forall (Zbounded_by ll) (firstn start p) ->
+          Forall (Zbounded_by lr) (skipn start p) ->
+          let p' := polynomial_decompose_loop_may_reduce reduce_bool start len z p in
+          let p_spec' := (polynomial_decompose_loop start len (F.of_Z q z) (List.map (F.of_Z q) p)) in
+          (* bounds specs *)
+          Forall (Zbounded_by ll) (firstn start p') /\
+          Forall (Zbounded_by (if reduce_bool then 1 else lr + 1)) (firstn (2 * len) (skipn start p')) /\
+          Forall (Zbounded_by lr) (skipn (start + 2 * len) p') /\
+          (* functional specs *)
+          (List.map F.to_Z p_spec' = List.map Zreduce p') /\
+          (if reduce_bool then firstn (2 * len) (skipn start (List.map F.to_Z p_spec')) = firstn (2 * len) (skipn start p') else True) /\
+          (firstn start p' = firstn start p) /\
+          (skipn (start + 2 * len) p' = skipn (start + 2 * len) p).
+      Proof.
+        set (f_rec := fun u (reduce_bool: bool) start len z p => List.fold_left
+                                            (fun (p: list Z) (i: nat) =>
+                                               let t0 := nth_default 0%Z p (i + len) in
+                                               let t1 := Zreduce (z * t0)%Z in
+                                               let t2 := nth_default 0%Z p i in
+                                               let p' := ListUtil.set_nth (i + len) ((if reduce_bool then Zreduce else id) (t2 + (q - t1)))%Z p in
+                                               ListUtil.set_nth i ((if reduce_bool then Zreduce else id) (t2 + t1))%Z p')
+                                            (seq start u)
+                                            p).
+        set (f_spec_rec := fun u start len z p => List.fold_left
+                                                 (fun (p: list F) (i: nat) =>
+                                                    let t0 := nth_default 0 p (i + len) in
+                                                    let t1 := z * t0 in
+                                                    let t2 := nth_default 0 p i in
+                                                    let p' := ListUtil.set_nth (i + len) (t2 - t1) p in
+                                                    ListUtil.set_nth i (t2 + t1) p')
+                                                 (seq start u)
+                                                 p).
+        assert (forall reduce_bool u start len z p (ll lr: nat),
+                  (u <= len)%nat ->
+                  (0 <= z < q)%Z ->
+                  (ll <= k_iter * q)%Z ->
+                  (lr <= k_iter)%Z ->
+                  (1 <= ll)%nat -> (1 <= lr)%nat ->
+                  Forall (Zbounded_by ll) (firstn start p) ->
+                  Forall (Zbounded_by lr) (skipn start p) ->
+                  let p' := f_rec u reduce_bool start len z p in
+                  let p_spec' := f_spec_rec u start len (F.of_Z q z) (List.map (F.of_Z q) p) in
+                  (firstn start p' = firstn start p) /\
+                  Forall (Zbounded_by (if reduce_bool then 1 else lr + 1)) (firstn u (skipn start p')) /\
+                  (firstn (len - u) (skipn (start + u) p') = firstn (len - u) (skipn (start + u) p)) /\
+                  Forall (Zbounded_by (if reduce_bool then 1 else lr + 1)) (firstn u (skipn (start + len) p')) /\
+                  (skipn (start + len + u) p' = skipn (start + len + u) p) /\
+                  (List.map F.to_Z p_spec' = List.map Zreduce p') /\
+                  (if reduce_bool then firstn u (skipn start (List.map F.to_Z p_spec')) = firstn u (skipn start p') /\ firstn u (skipn (start + len) (List.map F.to_Z p_spec')) = firstn u (skipn (start + len) p') else True)) as IH.
+        { induction u; intros start len z p ll lr Hu Hz Hllred Hk_iter Hllpos Hlrpos Hll Hlr.
+          - assert (f_rec _ _ _ _ _ _ = p) as -> by reflexivity.
+            cbn. rewrite <- (firstn_skipn len (skipn start p)) in Hlr.
+            rewrite skipn_skipn, Forall_app in Hlr. destruct Hlr as (Hlr1 & Hlr2).
+            rewrite PeanoNat.Nat.add_0_r, PeanoNat.Nat.add_0_r, PeanoNat.Nat.sub_0_r, (PeanoNat.Nat.add_comm start len).
+            repeat split; auto. 2: destruct reduce_bool; split; reflexivity.
+            rewrite map_map. apply map_ext_in.
+            intros x Hx. symmetry.
+            assert (ll <= Nat.max ll lr)%nat as Z0 by Lia.lia.
+            assert (lr <= Nat.max ll lr)%nat as Z1 by Lia.lia.
+            apply (@Forall_impl _ (Zbounded_by ll) (Zbounded_by (Nat.max ll lr)%nat) ltac:(intros; apply (bounded_by_monotone ll); auto)) in Hll.
+            apply (@Forall_impl _ (Zbounded_by lr) (Zbounded_by (Nat.max ll lr)%nat) ltac:(intros; apply (bounded_by_monotone lr); auto)) in Hlr1, Hlr2.
+            apply (bounded_by_reduce_eq (Nat.max ll lr)); [Lia.nia|].
+            rewrite <- (firstn_skipn start) in Hx.
+            apply in_app_or in Hx. destruct Hx as [Hx|Hx].
+            + apply (Forall_In Hll); auto.
+            + rewrite <- (firstn_skipn len), skipn_skipn in Hx.
+              apply in_app_or in Hx. destruct Hx as [Hx|Hx]; [apply (Forall_In Hlr1)|apply (Forall_In Hlr2)]; auto.
+          - assert (Hlrred: (lr + 1 <= k_iter * q)%Z).
+            { transitivity (2 * lr)%Z; [Lia.lia|].
+              pose proof (prime_ge_2 q prime_q). Lia.nia. }
+            assert (Hz': Zbounded_by 1 z) by (unfold Zbounded_by; Lia.lia).
+            pose proof (IHu start len z p ll lr ltac:(Lia.lia) Hz Hllred Hk_iter Hllpos Hlrpos Hll Hlr) as (Hleft & Hmid1 & Hmid2 & Hmid3 & Hright & Hrec & Hrec_eq).
+            unfold f_rec. rewrite seq_S, fold_left_app. cbn [fold_left].
+            assert (fold_left _ _ _ = f_rec u reduce_bool start len z p) as -> by reflexivity.
+            assert (Hll': Forall (Zbounded_by ll) (firstn start (f_rec u reduce_bool start len z p))) by congruence.
+            assert (Hlr': Forall (Zbounded_by lr) (skipn (start + len + u) (f_rec u reduce_bool start len z p))).
+            { rewrite Hright, <- (PeanoNat.Nat.add_assoc start), (PeanoNat.Nat.add_comm start), <- skipn_skipn.
+              apply Forall.Forall_skipn. auto. }
+            assert (Hmid: Forall (Zbounded_by lr) (firstn (len - u) (skipn (start + u) (f_rec u reduce_bool start len z p)))%Z).
+            { rewrite Hmid2, (PeanoNat.Nat.add_comm start), <- skipn_skipn.
+              apply Forall.Forall_firstn. apply Forall.Forall_skipn. auto. }
+            assert (X1: Zbounded_by lr (nth_default 0%Z (f_rec u reduce_bool start len z p) (start + u + len))).
+            { assert (start + u + len = (start + len + u) + 0)%nat as -> by Lia.lia.
+              rewrite <- ListUtil.nth_default_skipn.
+              apply Forall_nth_default; auto. apply bounded_by_0_r. }
+            assert (X2: Zbounded_by lr (nth_default 0%Z (f_rec u reduce_bool start len z p) (start + u))).
+            { rewrite <- (PeanoNat.Nat.add_0_r (start + u)), <- ListUtil.nth_default_skipn.
+              assert (nth_default _ _ _ = nth_default 0 (firstn (len - u) (skipn (start + u) (f_rec u reduce_bool start len z p))) 0)%Z as ->.
+              - rewrite ListUtil.nth_default_firstn; destruct (Compare_dec.lt_dec 0 _); [|Lia.lia]; destruct (Compare_dec.le_dec _ _); reflexivity.
+              - apply Forall_nth_default; auto. apply bounded_by_0_r. }
+            assert (Hlen: length (map F.to_Z (f_spec_rec u start len (F.of_Z q z) (map (F.of_Z q) p))) = length (map Zreduce (f_rec u reduce_bool start len z p))) by congruence.
+            do 2 rewrite length_map in Hlen.
+            repeat split.
+            + repeat (rewrite ListUtil.firstn_set_nth_out_of_bounds by Lia.lia).
+              exact Hleft.
+            + repeat (rewrite ListUtil.skipn_set_nth_inbounds by Lia.lia).
+              destruct (Compare_dec.lt_dec u (length (skipn start (f_rec u reduce_bool  start len z p)))) as [Hlt | Hnlt].
+              * rewrite (ListUtil.firstn_succ 0%Z) by (repeat rewrite ListUtil.length_set_nth; assumption).
+                repeat rewrite (ListUtil.firstn_set_nth_out_of_bounds) by Lia.lia.
+                rewrite Forall_app; split; auto.
+                repeat rewrite ListUtil.set_nth_nth_default_full.
+                repeat rewrite ListUtil.length_set_nth.
+                destruct (Compare_dec.lt_dec _ _) as [_|?]; [|Lia.lia].
+                destruct (PeanoNat.Nat.eq_dec u _) as [_|?]; [|Lia.lia].
+                constructor; [|constructor].
+                destruct (reduce_bool); cbn [id].
+                { eapply bounded_by_reduce; [|apply bounded_by_add; eauto].
+                  - Lia.lia.
+                  - rewrite (Z.mul_comm z).
+                    eapply bounded_by_reduce; [|apply bounded_by_mul; eauto].
+                    Lia.nia. }
+                apply bounded_by_add; auto.
+                rewrite (Z.mul_comm z). eapply bounded_by_reduce; [|apply bounded_by_mul; eauto].
+                Lia.nia.
+              * rewrite firstn_all2 by (repeat rewrite ListUtil.length_set_nth; Lia.lia).
+                repeat rewrite ListUtil.set_nth_out_of_bounds by (repeat rewrite ListUtil.length_set_nth; Lia.lia).
+                rewrite firstn_all2 in Hmid1 by Lia.lia; auto.
+            + rewrite ListUtil.skipn_set_nth_out_of_bounds by Lia.lia.
+              rewrite (PeanoNat.Nat.add_comm start), <- skipn_skipn, <- ListUtil.skipn_firstn.
+              rewrite ListUtil.skipn_set_nth_inbounds by Lia.lia.
+              rewrite ListUtil.firstn_set_nth_out_of_bounds by Lia.lia.
+              assert (S u = 1 + u)%nat as -> by Lia.lia.
+              rewrite <- skipn_skipn, ListUtil.skipn_firstn, skipn_skipn, (PeanoNat.Nat.add_comm u), Hmid2.
+              rewrite skipn_firstn_comm, skipn_skipn; f_equal; [Lia.lia|].
+              f_equal; Lia.lia.
+            + rewrite ListUtil.skipn_set_nth_out_of_bounds by Lia.lia.
+              rewrite ListUtil.skipn_set_nth_inbounds by Lia.lia.
+              assert (start + u + len - _ = u)%nat as -> by Lia.lia.
+              destruct (Compare_dec.lt_dec u (length (skipn (start + len) (f_rec u reduce_bool start len z p)))) as [Hlt|Hnlt].
+              * rewrite (ListUtil.firstn_succ 0%Z) by (rewrite ListUtil.length_set_nth; Lia.lia).
+                rewrite ListUtil.firstn_set_nth_out_of_bounds by Lia.lia.
+                rewrite ListUtil.set_nth_nth_default by Lia.lia.
+                rewrite NatUtil.eq_nat_dec_refl.
+                apply Forall_app; split; auto.
+                constructor; [|constructor].
+                destruct reduce_bool; cbn [id].
+                { eapply bounded_by_reduce; [|apply bounded_by_sub; eauto].
+                  - Lia.lia.
+                  - rewrite (Z.mul_comm z).
+                    eapply bounded_by_reduce; [|apply bounded_by_mul; eauto].
+                    Lia.nia. }
+                apply bounded_by_sub; auto.
+                rewrite (Z.mul_comm z).
+                eapply bounded_by_reduce; [|apply bounded_by_mul; eauto]. Lia.nia.
+              * rewrite firstn_all2 by (rewrite ListUtil.length_set_nth; Lia.lia).
+                rewrite firstn_all2 in Hmid3 by Lia.lia.
+                rewrite ListUtil.set_nth_out_of_bounds by Lia.lia.
+                assumption.
+            + do 2 rewrite ListUtil.skipn_set_nth_out_of_bounds by Lia.lia.
+              assert (start + len + S u = 1 + (start + len + u))%nat as -> by Lia.lia.
+              rewrite <- skipn_skipn, Hright, skipn_skipn. reflexivity.
+            + unfold f_spec_rec. rewrite seq_S, fold_left_app.
+              cbn [fold_left]. assert (fold_left _ _ _ = f_spec_rec u start len (F.of_Z q z) (map (F.of_Z q) p)) as -> by reflexivity.
+              apply nth_error_ext. intros i.
+              do 2 rewrite nth_error_map.
+              repeat rewrite ListUtil.nth_set_nth.
+              repeat rewrite ListUtil.length_set_nth.
+              assert (Hcomm: forall (b: bool) e, Zreduce ((if b then Zreduce else id) e) = (if b then Zreduce else id) (Zreduce e)) by (intros; destruct b; reflexivity).
+              repeat rewrite Hlen. destruct (PeanoNat.Nat.eq_dec i (start + u)).
+              * destruct (Compare_dec.lt_dec i _); [|reflexivity].
+                cbn -[F.of_Z]. f_equal. subst i.
+                rewrite F.to_Z_add, F.to_Z_mul.
+                repeat rewrite <- (ListUtil.map_nth_default_always F.to_Z).
+                rewrite Hrec, F.to_Z_0, F.to_Z_of_Z.
+                rewrite (Z.mod_small z) by Lia.lia.
+                rewrite <- Zreduce_0 at 2.
+                rewrite <- Zreduce_0 at 1.
+                do 2 rewrite ListUtil.map_nth_default_always.
+                rewrite (bounded_by_reduce_eq lr _ ltac:(Lia.nia) X1).
+                rewrite (bounded_by_reduce_eq lr _ ltac:(Lia.nia) X2).
+                repeat rewrite F.to_Z_of_Z.
+                rewrite (Z.mul_comm z (nth_default _ _ _)), Hcomm.
+                erewrite (bounded_by_reduce_eq (lr * Pos.to_nat q)%nat (_ * z) ltac:(Lia.nia)) by (apply bounded_by_mul; auto).
+                rewrite F.to_Z_of_Z.
+                rewrite (bounded_by_reduce_eq (lr + 1)%nat _ ltac:(Lia.lia)).
+                2: apply bounded_by_add; [|apply mod_bounded_by_1]; auto.
+                rewrite F.to_Z_of_Z.
+                destruct reduce_bool; [rewrite Zreduce_mod|cbv [id]];
+                rewrite Zdiv.Zmult_mod_idemp_r, Zdiv.Zplus_mod_idemp_r, Zdiv.Zplus_mod_idemp_r, Zdiv.Zplus_mod_idemp_l;
+                f_equal; Lia.lia.
+              * destruct (PeanoNat.Nat.eq_dec _ _) as [->|].
+                2:{ do 2 rewrite <- nth_error_map. rewrite Hrec. reflexivity. }
+                destruct (Compare_dec.lt_dec _ _); [|reflexivity].
+                cbn [option_map]. f_equal.
+                rewrite Hierarchy.ring_sub_definition.
+                rewrite F.to_Z_add, F.to_Z_opp, F.to_Z_mul, F.to_Z_of_Z.
+                rewrite (Z.mod_small z) by Lia.lia.
+                repeat rewrite <- (ListUtil.map_nth_default_always F.to_Z).
+                rewrite Hrec, F.to_Z_0.
+                rewrite <- Zreduce_0 at 2.
+                rewrite <- Zreduce_0 at 1.
+                do 2 rewrite ListUtil.map_nth_default_always.
+                rewrite (bounded_by_reduce_eq lr _ ltac:(Lia.nia) X1).
+                rewrite (bounded_by_reduce_eq lr _ ltac:(Lia.nia) X2).
+                repeat rewrite F.to_Z_of_Z. repeat rewrite (Z.mul_comm z).
+                rewrite (bounded_by_reduce_eq (lr * Pos.to_nat q)%nat (_ * z) ltac:(Lia.nia)) by (apply bounded_by_mul; auto).
+                rewrite F.to_Z_of_Z.
+                rewrite Hcomm, (bounded_by_reduce_eq (lr + 1)%nat _ ltac:(Lia.lia)).
+                2: apply bounded_by_sub; [|apply mod_bounded_by_1]; auto.
+                rewrite F.to_Z_of_Z, Zdiv.Zmult_mod_idemp_l.
+                destruct (Z.eq_dec ((nth_default 0 (f_rec u reduce_bool start len z p) (start + u + len) * z) mod q) 0)%Z as [->|Hnz].
+                { destruct reduce_bool; [rewrite Zreduce_mod|cbv [id]].
+                  all: rewrite Z.sub_0_r, Z.add_0_r, Z.mod_mod by Lia.lia.
+                  all: rewrite <- Zdiv.Zplus_mod_idemp_r, Zdiv.Z_mod_same_full, Z.add_0_r.
+                  all: reflexivity. }
+                rewrite Modulo.Z.mod_opp_small.
+                2: pose proof (Zdiv.Z_mod_lt ((nth_default 0%Z (f_rec u reduce_bool start len z p) (start + u + len)) * z) q ltac:(Lia.lia)); Lia.lia.
+                rewrite Zdiv.Zplus_mod_idemp_l.
+                destruct reduce_bool; [rewrite Zreduce_mod|cbv [id]]; reflexivity.
+            + unfold f_spec_rec. rewrite seq_S, fold_left_app.
+              cbn [fold_left]. assert (fold_left _ _ _ = f_spec_rec u start len (F.of_Z q z) (map (F.of_Z q) p)) as -> by reflexivity.
+              destruct reduce_bool; [|exact I].
+              destruct (Compare_dec.lt_dec u (length (skipn start (f_spec_rec u start len (F.of_Z q z) (map (F.of_Z q) p))))) as [Hlt|Hnlt].
+              { rewrite length_skipn in Hlt.
+                destruct Hrec_eq as (Hrec1 & Hrec2). split.
+                - rewrite (ListUtil.firstn_succ 0%Z) by (rewrite length_skipn, length_map, ListUtil.length_set_nth, ListUtil.length_set_nth; Lia.lia).
+                  rewrite (ListUtil.firstn_succ 0%Z) by (rewrite length_skipn, ListUtil.length_set_nth, ListUtil.length_set_nth; Lia.lia).
+                  f_equal.
+                  + rewrite firstn_skipn_comm, firstn_map.
+                    do 2 rewrite ListUtil.firstn_set_nth_out_of_bounds by Lia.lia.
+                    rewrite <- firstn_map, <- firstn_skipn_comm, Hrec1. symmetry.
+                    rewrite firstn_skipn_comm.
+                    do 2 rewrite ListUtil.firstn_set_nth_out_of_bounds by Lia.lia.
+                     rewrite <- firstn_skipn_comm; auto.
+                  + f_equal. do 2 rewrite ListUtil.nth_default_skipn.
+                    rewrite <- (@F.to_Z_0 q) at 1.
+                    rewrite ListUtil.map_nth_default_always.
+                    repeat rewrite ListUtil.set_nth_nth_default_full.
+                    repeat rewrite NatUtil.eq_nat_dec_refl.
+                    repeat rewrite ListUtil.length_set_nth.
+                    destruct (Compare_dec.lt_dec _ _) as [_|]; [|Lia.lia].
+                    destruct (Compare_dec.lt_dec _ _) as [_|]; [|Lia.lia].
+                    rewrite F.to_Z_add, F.to_Z_mul, F.to_Z_of_Z.
+                    do 2 rewrite <- (ListUtil.map_nth_default_always F.to_Z), Hrec.
+                    repeat rewrite F.to_Z_0.
+                    rewrite <- Zreduce_0 at 2. rewrite <- Zreduce_0 at 1.
+                    do 2 rewrite ListUtil.map_nth_default_always.
+                    rewrite (Z.mod_small z) by Lia.lia.
+                    rewrite (bounded_by_reduce_eq lr _ ltac:(Lia.nia)); auto.
+                    rewrite (bounded_by_reduce_eq lr _ ltac:(Lia.nia)); auto.
+                    rewrite (bounded_by_reduce_eq (lr + 1) _ ltac:(Lia.lia)).
+                    2:{ apply bounded_by_add; auto.
+                        rewrite Z.mul_comm.
+                        eapply bounded_by_reduce; [|apply bounded_by_mul; eauto].
+                        Lia.nia. }
+                    rewrite (bounded_by_reduce_eq (lr * Pos.to_nat q) _ ltac:(Lia.nia)) by (rewrite Z.mul_comm; apply bounded_by_mul; auto).
+                    repeat rewrite F.to_Z_of_Z.
+                    rewrite Zdiv.Zplus_mod_idemp_l, Zdiv.Zmult_mod_idemp_r.
+                    reflexivity.
+                - rewrite skipn_map.
+                  do 2 rewrite (ListUtil.skipn_set_nth_out_of_bounds (start + len) (start + u)) by Lia.lia.
+                  repeat rewrite ListUtil.skipn_set_nth_inbounds by Lia.lia.
+                  assert (start + u + len - _ = u)%nat as -> by Lia.lia.
+                  destruct (Compare_dec.lt_dec u (length (skipn (start + len) (f_spec_rec u start len (F.of_Z q z) (map (F.of_Z q) p))))) as [Hlt2|Hnlt].
+                  + rewrite (ListUtil.firstn_succ 0%Z) by (rewrite length_map, ListUtil.length_set_nth; Lia.lia).
+                    rewrite firstn_map, ListUtil.firstn_set_nth_out_of_bounds by Lia.lia.
+                    rewrite length_skipn in Hlt2.
+                    rewrite (ListUtil.firstn_succ 0%Z) by (rewrite ListUtil.length_set_nth, length_skipn; Lia.lia).
+                    rewrite ListUtil.firstn_set_nth_out_of_bounds by Lia.lia.
+                    rewrite <- firstn_map, <- skipn_map, Hrec2. f_equal.
+                    f_equal. rewrite <- (@F.to_Z_0 q) at 1.
+                    rewrite ListUtil.map_nth_default_always.
+                    repeat rewrite ListUtil.set_nth_nth_default_full.
+                    repeat rewrite length_skipn.
+                    repeat rewrite NatUtil.eq_nat_dec_refl.
+                    rewrite Hlen. destruct (Compare_dec.lt_dec _ _) as [_|]; [|Lia.lia].
+                    rewrite Hierarchy.ring_sub_definition.
+                    rewrite F.to_Z_add, F.to_Z_opp, F.to_Z_mul, F.to_Z_of_Z.
+                    rewrite (Z.mod_small z) by Lia.lia.
+                    repeat rewrite <- (ListUtil.map_nth_default_always F.to_Z).
+                    rewrite Hrec, F.to_Z_0.
+                    rewrite <- Zreduce_0 at 2.
+                    rewrite <- Zreduce_0 at 1.
+                    do 2 rewrite ListUtil.map_nth_default_always.
+                    rewrite (bounded_by_reduce_eq lr _ ltac:(Lia.nia) X1).
+                    rewrite (bounded_by_reduce_eq lr _ ltac:(Lia.nia) X2).
+                    repeat rewrite F.to_Z_of_Z. repeat rewrite (Z.mul_comm z).
+                    rewrite (bounded_by_reduce_eq (lr * Pos.to_nat q)%nat (_ * z) ltac:(Lia.nia)) by (apply bounded_by_mul; auto).
+                    rewrite F.to_Z_of_Z.
+                    rewrite (bounded_by_reduce_eq (lr + 1)%nat).
+                    2:{ transitivity (2 * lr)%Z; [Lia.lia|].
+                        pose proof (prime_ge_2 q prime_q).
+                        Lia.nia. }
+                    2: apply bounded_by_sub; [|apply mod_bounded_by_1]; auto.
+                    rewrite F.to_Z_of_Z, Zdiv.Zmult_mod_idemp_l.
+                    destruct (Z.eq_dec ((nth_default 0 (f_rec u true start len z p) (start + u + len) * z) mod q) 0)%Z as [->|Hnz].
+                    { rewrite Z.sub_0_r, Z.add_0_r, Z.mod_mod by Lia.lia.
+                      rewrite <- Zdiv.Zplus_mod_idemp_r, Zdiv.Z_mod_same_full, Z.add_0_r.
+                      reflexivity. }
+                    rewrite Modulo.Z.mod_opp_small.
+                    2: pose proof (Zdiv.Z_mod_lt ((nth_default 0%Z (f_rec u true start len z p) (start + u + len)) * z) q ltac:(Lia.lia)); Lia.lia.
+                    rewrite Zdiv.Zplus_mod_idemp_l. reflexivity.
+                  + rewrite length_skipn in Hnlt.
+                    rewrite firstn_all2 by (rewrite length_map, ListUtil.length_set_nth, length_skipn; Lia.lia).
+                    rewrite firstn_all2 in Hrec2 by (rewrite length_skipn, length_map; Lia.lia).
+                    rewrite firstn_all2 by (rewrite ListUtil.length_set_nth, length_skipn; Lia.lia).
+                    rewrite firstn_all2 in Hrec2 by (rewrite length_skipn; Lia.lia).
+                    rewrite <- Hrec2. rewrite ListUtil.map_set_nth, skipn_map. f_equal.
+                    rewrite Hierarchy.ring_sub_definition.
+                    rewrite F.to_Z_add, F.to_Z_opp, F.to_Z_mul, F.to_Z_of_Z.
+                    rewrite (Z.mod_small z) by Lia.lia.
+                    repeat rewrite <- (ListUtil.map_nth_default_always F.to_Z).
+                    rewrite Hrec, F.to_Z_0.
+                    rewrite <- Zreduce_0 at 2.
+                    rewrite <- Zreduce_0 at 1.
+                    do 2 rewrite ListUtil.map_nth_default_always.
+                    rewrite (bounded_by_reduce_eq lr _ ltac:(Lia.nia) X1).
+                    rewrite (bounded_by_reduce_eq lr _ ltac:(Lia.nia) X2).
+                    repeat rewrite F.to_Z_of_Z. repeat rewrite (Z.mul_comm z).
+                    rewrite (bounded_by_reduce_eq (lr * Pos.to_nat q)%nat (_ * z) ltac:(Lia.nia)) by (apply bounded_by_mul; auto).
+                    rewrite F.to_Z_of_Z.
+                    rewrite (bounded_by_reduce_eq (lr + 1)%nat).
+                    2:{ transitivity (2 * lr)%Z; [Lia.lia|].
+                        pose proof (prime_ge_2 q prime_q).
+                        Lia.nia. }
+                    2: apply bounded_by_sub; [|apply mod_bounded_by_1]; auto.
+                    rewrite F.to_Z_of_Z, Zdiv.Zmult_mod_idemp_l.
+                    destruct (Z.eq_dec ((nth_default 0 (f_rec u true start len z p) (start + u + len) * z) mod q) 0)%Z as [->|Hnz].
+                    { rewrite Z.sub_0_r, Z.add_0_r, Z.mod_mod by Lia.lia.
+                      rewrite <- Zdiv.Zplus_mod_idemp_r, Zdiv.Z_mod_same_full, Z.add_0_r.
+                      reflexivity. }
+                    rewrite Modulo.Z.mod_opp_small.
+                    2: pose proof (Zdiv.Z_mod_lt ((nth_default 0%Z (f_rec u true start len z p) (start + u + len)) * z) q ltac:(Lia.lia)); Lia.lia.
+                    rewrite Zdiv.Zplus_mod_idemp_l. reflexivity. }
+              rewrite length_skipn in Hnlt.
+              repeat rewrite ListUtil.set_nth_out_of_bounds by (repeat rewrite ListUtil.length_set_nth; Lia.lia).
+              rewrite firstn_all2 by (rewrite length_skipn, length_map; Lia.lia).
+              rewrite firstn_all2 by (rewrite length_skipn; Lia.lia).
+              rewrite firstn_all2 by (rewrite length_skipn, length_map; Lia.lia).
+              rewrite firstn_all2 by (rewrite length_skipn; Lia.lia).
+              rewrite firstn_all2 in Hrec_eq by (rewrite length_skipn, length_map; Lia.lia).
+              rewrite firstn_all2 in Hrec_eq by (rewrite length_skipn; Lia.lia).
+              rewrite firstn_all2 in Hrec_eq by (rewrite length_skipn, length_map; Lia.lia).
+              rewrite firstn_all2 in Hrec_eq by (rewrite length_skipn; Lia.lia).
+              assumption. }
+        intros reduce_bool start len z p ll lr Hz Hllred Hk_iter Hllpos Hlrpos Hl Hr p' p_spec'.
+        assert (p' = f_rec len reduce_bool start len z p) as -> by reflexivity.
+        assert (p_spec' = f_spec_rec len start len (F.of_Z q z) (map (F.of_Z q) p)) as -> by reflexivity.
+        pose proof (IH reduce_bool len start len z p ll lr ltac:(Lia.lia) Hz Hllred Hk_iter Hllpos Hlrpos Hl Hr) as (Hleft & Hmid1 & Hmid2 & Hmid3 & Hright & Hrec & Hrec_eq).
+        clear Hmid2. rewrite Hleft.
+        split; auto. assert (start + 2 * len = start + len + len)%nat as -> by Lia.lia.
+        rewrite Hright.
+        rewrite <- (firstn_skipn len (firstn _ _)), firstn_firstn, PeanoNat.Nat.min_l by Lia.lia.
+        rewrite Forall_app, ListUtil.skipn_firstn, skipn_skipn, (PeanoNat.Nat.add_comm len start).
+        assert (2 * len - len = len)%nat as -> by Lia.lia. split; auto.
+        rewrite <- (PeanoNat.Nat.add_assoc start), (PeanoNat.Nat.add_comm start), <- skipn_skipn.
+        split; [apply Forall.Forall_skipn; auto|].
+        split; auto. split; [|split; auto].
+        destruct reduce_bool; [|exact I].
+        rewrite <- (firstn_skipn len (firstn _ _)), firstn_firstn, PeanoNat.Nat.min_l by Lia.lia.
+        rewrite ListUtil.skipn_firstn, skipn_skipn, (PeanoNat.Nat.add_comm len start).
+        assert (2 * len - len = len)%nat as -> by Lia.lia.
+        destruct Hrec_eq; f_equal; auto.
+      Qed.
+
+      Local Notation polynomial_decompose_loop_no_reduce := (polynomial_decompose_loop_may_reduce false).
+      Local Notation polynomial_decompose_loop_with_reduce := (polynomial_decompose_loop_may_reduce true).
+
+      Definition polynomial_list_loop_may_reduce (reduce_bool: bool) (k old_len len: nat) (state: nat * nat * list Z) :=
+        List.fold_left
+          (fun state _ =>
+             let '(l, start, p) := state in
+             let l := (l + 1)%nat in
+             let z := nth_default 0%Z precomp_zetas l in
+             let p := polynomial_decompose_loop_may_reduce reduce_bool start len z p in
+             let start := (start + old_len)%nat in
+             (l, start, p))
+          (seq 0 k)
+          state.
+
+      Lemma polynomial_list_loop_may_reduce_spec:
+        forall reduce_bool k old_len len l start p (ll lr: nat),
+          (0 < len)%nat ->
+          (old_len = 2 * len)%nat ->
+          (start + k * old_len <= length p)%nat ->
+          (ll <= k_iter * q)%Z ->
+          (lr <= k_iter)%Z ->
+          (1 <= ll)%nat -> (1 <= lr)%nat ->
+          Forall (Zbounded_by ll) (firstn start p) ->
+          Forall (Zbounded_by lr) (skipn start p) ->
+          let '(l', start', p') := polynomial_list_loop_may_reduce reduce_bool k old_len len (l, start, p) in
+          let '(l_spec', start_spec', p_spec') := polynomial_list_loop (List.map (F.of_Z q) precomp_zetas) k old_len len (l, start, map (F.of_Z q) p) in
+          (l' = l + k)%nat /\ l' = l_spec' /\
+          (start' = start + k * old_len)%nat /\ start' = start_spec' /\
+          Forall (Zbounded_by ll) (firstn start p') /\
+          Forall (Zbounded_by (if reduce_bool then 1 else lr + 1)) (firstn (k * old_len) (skipn start p')) /\
+          Forall (Zbounded_by lr) (skipn (start + k * old_len) p') /\
+          map F.to_Z p_spec' = map Zreduce p' /\
+          (if reduce_bool then firstn (k * old_len) (skipn start (map F.to_Z p_spec')) = firstn (k * old_len) (skipn start p') else True) /\
+          (firstn start p' = firstn start p) /\
+          (skipn (start + k * old_len) p' = skipn (start + k * old_len) p).
+      Proof.
+        induction k; intros old_len len l start p ll lr Hlen_pos Hold_len Hlen_le Hllred Hk_iter Hllpos Hlrpos Hleft Hright.
+        - cbn. repeat rewrite PeanoNat.Nat.add_0_r. repeat split; auto.
+          + rewrite map_map. apply map_ext_in.
+            intros a Ha; rewrite F.to_Z_of_Z. symmetry.
+            apply (bounded_by_reduce_eq (Nat.max ll lr)); [Lia.nia|].
+            rewrite <- (firstn_skipn start) in Ha. apply in_app_or in Ha.
+            destruct Ha as [Ha|Ha].
+            * apply (bounded_by_monotone ll (Nat.max ll lr) _ ltac:(Lia.lia)).
+              eapply Forall_In; eauto.
+            * apply (bounded_by_monotone lr (Nat.max ll lr) _ ltac:(Lia.lia)).
+              eapply Forall_In; eauto.
+          + destruct reduce_bool; auto.
+        - assert (Hlrred: (lr + 1 <= k_iter * q)%Z).
+          { transitivity (2 * lr)%Z; [Lia.lia|].
+            pose proof (prime_ge_2 q prime_q). Lia.nia. }
+          pose proof (IHk old_len len l start p ll lr Hlen_pos Hold_len ltac:(Lia.lia) Hllred Hk_iter Hllpos Hlrpos Hleft Hright) as IH.
+          unfold polynomial_list_loop_may_reduce.
+          rewrite seq_S, fold_left_app. cbn [fold_left].
+          assert (fold_left _ _ _ = polynomial_list_loop_may_reduce reduce_bool k old_len len (l, start, p)) as -> by reflexivity.
+          unfold polynomial_list_loop.
+          rewrite seq_S, fold_left_app. cbn [fold_left].
+          assert (fold_left _ _ _ = polynomial_list_loop (map (F.of_Z q) precomp_zetas) k old_len len (l, start, map (F.of_Z q) p)) as -> by reflexivity.
+          destruct (polynomial_list_loop_may_reduce reduce_bool k old_len len (l, start, p)) as ((l' & start') & p') eqn:Hp'.
+          destruct (polynomial_list_loop (map (F.of_Z q) precomp_zetas) k old_len len (l, start, map (F.of_Z q) p)) as ((l_spec' & start_spec') & p_spec') eqn:Hp_spec'.
+          destruct IH as (-> & <- & -> & <- & Xleft & Xmid & Xright & Xcont_eq & Xeq & Xleft_eq & Xright_eq).
+          do 4 (split; [Lia.lia|]).
+          assert (Xleft': Forall (Zbounded_by (Nat.max ll (if reduce_bool then 1 else lr + 1))%nat) (firstn (start + k * old_len) p')).
+          { rewrite <- (firstn_skipn start), firstn_firstn, skipn_firstn_comm, PeanoNat.Nat.min_l by Lia.lia.
+            assert (_ + _ - _= k * old_len)%nat as -> by Lia.lia.
+            apply Forall_app; split; eapply Forall_impl; try eassumption; intros; eapply bounded_by_monotone; try eassumption; Lia.lia. }
+          pose proof (polynomial_decompose_loop_may_reduce_spec reduce_bool (start + k * old_len) len (nth_default 0%Z precomp_zetas (l + k + 1)) p' (Nat.max ll (if reduce_bool then 1 else lr + 1)) lr (precomp_zetas_bounds _) ltac:(destruct reduce_bool; Lia.lia) Hk_iter ltac:(Lia.lia) Hlrpos Xleft' Xright) as (Y1 & Y2 & Y3 & Y4 & Y5 & Y6 & Y7).
+          assert (firstn start _ = firstn start (firstn (start + k * old_len) (polynomial_decompose_loop_may_reduce reduce_bool  (start + k * old_len) len (nth_default 0%Z precomp_zetas (l + k + 1)) p'))) as -> by (rewrite firstn_firstn, PeanoNat.Nat.min_l by Lia.lia; reflexivity).
+          rewrite Y6, firstn_firstn, PeanoNat.Nat.min_l by Lia.lia. split; [assumption|].
+          assert (start + S k * old_len = start + k * old_len + 2 * len)%nat as -> by Lia.lia.
+          rewrite Y7. rewrite (PeanoNat.Nat.add_comm _ (2 * len)), <- (skipn_skipn (2 * len)), <- (skipn_skipn (2 * len)), Xright_eq.
+          repeat split; auto.
+          + rewrite <- (firstn_skipn (k * old_len)), firstn_firstn, PeanoNat.Nat.min_l by Lia.lia.
+            rewrite firstn_skipn_comm, Y6, skipn_firstn_comm.
+            assert (_ + _ - _ = k * old_len)%nat as -> by Lia.lia.
+            apply Forall_app; split; [assumption|].
+            rewrite skipn_firstn_comm, skipn_skipn, (PeanoNat.Nat.add_comm (k * old_len)).
+            assert (S k * old_len - k * old_len = 2 * len)%nat as -> by Lia.lia.
+            assumption.
+          + apply Forall.Forall_skipn; congruence.
+          + assert (p_spec' = map (F.of_Z q) p') as ->.
+            { transitivity (map (F.of_Z q) (map Zreduce p')).
+              - symmetry. rewrite <- Xcont_eq, map_map.
+                erewrite map_ext; [apply map_id|].
+                intros; apply F.of_Z_to_Z.
+              - symmetry. rewrite map_map. apply map_ext_in.
+                intros a Ha. rewrite (bounded_by_reduce_eq (Nat.max ll (lr + 1)) _ ltac:(Lia.nia)).
+                + rewrite F.of_Z_to_Z. reflexivity.
+                + rewrite <- (firstn_skipn start) in Ha. apply in_app_or in Ha.
+                  destruct Ha as [Ha|Ha]; [apply (bounded_by_monotone ll (Nat.max ll (lr + 1)) _ ltac:(Lia.lia)); eapply (Forall_In Xleft); eauto|].
+                  rewrite <- (firstn_skipn (k * old_len)) in Ha.
+                  rewrite skipn_skipn, (PeanoNat.Nat.add_comm (k * old_len)) in Ha.
+                  apply in_app_or in Ha.
+                  destruct Ha as [Ha|Ha]; [|apply (bounded_by_monotone lr (Nat.max ll (lr + 1)) _ ltac:(Lia.lia)); eapply (Forall_In Xright); eauto].
+                  apply (bounded_by_monotone (if reduce_bool then 1 else (lr + 1)) (Nat.max ll (lr + 1)) _ ltac:(destruct reduce_bool; Lia.lia)).
+                  apply (Forall_In Xmid). auto. }
+            assert (0 = F.of_Z q 0) as -> by reflexivity.
+            rewrite ListUtil.map_nth_default_always, Y4.
+            reflexivity.
+          + assert (p_spec' = map (F.of_Z q) p') as ->.
+            { transitivity (map (F.of_Z q) (map Zreduce p')).
+              - symmetry. rewrite <- Xcont_eq, map_map.
+                erewrite map_ext; [apply map_id|].
+                intros; apply F.of_Z_to_Z.
+              - symmetry. rewrite map_map. apply map_ext_in.
+                intros a Ha. rewrite (bounded_by_reduce_eq (Nat.max ll (lr + 1)) _ ltac:(Lia.nia)).
+                + rewrite F.of_Z_to_Z. reflexivity.
+                + rewrite <- (firstn_skipn start) in Ha. apply in_app_or in Ha.
+                  destruct Ha as [Ha|Ha]; [apply (bounded_by_monotone ll (Nat.max ll (lr + 1)) _ ltac:(Lia.lia)); eapply (Forall_In Xleft); eauto|].
+                  rewrite <- (firstn_skipn (k * old_len)) in Ha.
+                  rewrite skipn_skipn, (PeanoNat.Nat.add_comm (k * old_len)) in Ha.
+                  apply in_app_or in Ha.
+                  destruct Ha as [Ha|Ha]; [|apply (bounded_by_monotone lr (Nat.max ll (lr + 1)) _ ltac:(Lia.lia)); eapply (Forall_In Xright); eauto].
+                  apply (bounded_by_monotone (if reduce_bool then 1 else (lr + 1)) (Nat.max ll (lr + 1)) _ ltac:(destruct reduce_bool; Lia.lia)).
+                  apply (Forall_In Xmid). auto. }
+            destruct reduce_bool; [|exact I].
+            assert (0 = F.of_Z q 0) as -> by reflexivity.
+            rewrite ListUtil.map_nth_default_always, Y4.
+            rewrite Y4 in Y5.
+            assert (S k * old_len = k * old_len + 2 * len)%nat as -> by Lia.lia.
+            rewrite <- (firstn_skipn (k * old_len) (firstn _ (skipn _ (map _ _)))), firstn_firstn, PeanoNat.Nat.min_l by Lia.lia.
+            rewrite (firstn_skipn_comm (k * old_len)), firstn_map, Y6.
+            rewrite (skipn_firstn_comm (k * old_len)), skipn_skipn, (PeanoNat.Nat.add_comm _ start).
+            assert (_ + _ - _ = 2 * len)%nat as -> by Lia.lia.
+            rewrite Y5.
+            rewrite <- (firstn_skipn (k * old_len) (firstn (k * old_len + _) _)), firstn_firstn, PeanoNat.Nat.min_l by Lia.lia.
+            rewrite (firstn_skipn_comm (k * old_len)), Y6.
+            rewrite (skipn_firstn_comm (k * old_len)), skipn_skipn, (PeanoNat.Nat.add_comm _ start).
+            assert (_ + _ - _ = 2 * len)%nat as -> by Lia.lia.
+            f_equal. rewrite skipn_map, skipn_firstn_comm.
+            assert (_ + _ - _ = k * old_len)%nat as -> by Lia.lia.
+            rewrite <- Xeq, map_map.
+            erewrite (map_ext (fun x => F.to_Z (F.of_Z q x))); [|apply F.to_Z_of_Z].
+            rewrite skipn_map, firstn_map, map_map. apply map_ext.
+            apply Zreduce_mod.
+      Qed.
+
+      Lemma polynomial_list_full_loop_may_reduce_spec:
+        forall reduce_bool k old_len len l p (bound: nat),
+          (0 < len)%nat ->
+          (old_len = 2 * len)%nat ->
+          (k * old_len = length p)%nat ->
+          (1 <= bound)%nat ->
+          (bound <= k_iter)%Z ->
+          Forall (Zbounded_by bound) p ->
+          let '(l', _, p') := polynomial_list_loop_may_reduce reduce_bool k old_len len (l, 0%nat, p) in
+          let '(l_spec', _, p_spec') := polynomial_list_loop (List.map (F.of_Z q) precomp_zetas) k old_len len (l, 0%nat, map (F.of_Z q) p) in
+          (l' = l + k)%nat /\ l' = l_spec' /\
+          Forall (Zbounded_by (if reduce_bool then 1 else bound + 1)) p' /\
+          map F.to_Z p_spec' = map Zreduce p' /\
+          (if reduce_bool then (map F.to_Z p_spec') = p' else True) /\
+          length p' = length p.
+      Proof.
+        intros reduce_bool k old_len len l p bound Hlen_pos Hold_len Hlen Hboundpos Hk_iter Hbounded.
+        pose proof (polynomial_list_loop_may_reduce_spec reduce_bool k old_len len l 0%nat p bound bound Hlen_pos Hold_len ltac:(Lia.lia) ltac:(Lia.nia) Hk_iter Hboundpos Hboundpos ltac:(rewrite firstn_O; constructor) ltac:(rewrite skipn_O; assumption)) as Hspec.
+        destruct (polynomial_list_loop_may_reduce reduce_bool k old_len len (l, 0%nat, p)) as ((l' & ?) & p') eqn:Hp'.
+        destruct (polynomial_list_loop (map (F.of_Z q) precomp_zetas) k old_len len (l, 0%nat, map (F.of_Z q) p)) as ((l_spec' & ?) & p_spec') eqn:Hp_spec'.
+        destruct Hspec as (-> & -> & _ & _ & _ & Hbounded' & _ & Hcont_eq & Heq & _ & _).
+        rewrite skipn_O, Hlen in *.
+        assert (length p = length p') as Hlen_eq.
+        { transitivity (length (map Zreduce p')); [|apply length_map].
+          rewrite <- Hcont_eq, length_map.
+          rewrite polynomial_list_loop_spec in Hp_spec' by (try rewrite length_map; Lia.lia).
+          inversion Hp_spec'; subst p_spec'.
+          rewrite length_app, length_skipn, length_map, Hlen, PeanoNat.Nat.sub_diag, PeanoNat.Nat.add_0_r.
+          rewrite (length_concat_same_length old_len).
+          - unfold enumerate. rewrite length_map, length_combine, length_seq, length_firstn, length_chunk, length_map, <- Hlen, Nat.div_up_exact by Lia.lia.
+            repeat rewrite PeanoNat.Nat.min_l by Lia.lia. reflexivity.
+          - apply Forall_map, Forall.Forall_forall_iff_nth_error. unfold enumerate.
+            intros i (j & chk) Hchk.
+            rewrite PolynomialCRT.Pmod_cyclotomic_list_length.
+            rewrite ListUtil.nth_error_combine in Hchk.
+            destruct (nth_error (seq 0 _) i); [|congruence].
+            rewrite ListUtil.nth_error_firstn in Hchk.
+            destruct (Compare_dec.lt_dec i k); [|congruence].
+            destruct (nth_error (chunk old_len _) i) eqn:Hnth; [|congruence].
+            inversion Hchk; subst n1; subst l1; clear Hchk.
+            rewrite (nth_error_chunk old_len ltac:(Lia.lia)) in Hnth by (rewrite length_map, <- Hlen, Nat.div_up_exact; Lia.lia).
+            inversion Hnth; subst chk; clear Hnth.
+            rewrite length_firstn, length_skipn, length_map, <- Hlen.
+            rewrite PeanoNat.Nat.min_l; Lia.nia. }
+        rewrite Hlen_eq, firstn_all in *.
+        repeat split; auto.
+        rewrite firstn_all2 in Heq; auto.
+        rewrite Hcont_eq, length_map; Lia.lia.
+      Qed.
+
+      Local Notation polynomial_list_loop_no_reduce := (polynomial_list_loop_may_reduce false).
+
+      Local Notation polynomial_list_loop_with_reduce := (polynomial_list_loop_may_reduce true).
+
+      (* Do not reduce for n iterations, then reduce during n+1-th iteration *)
+      Definition polynomial_layer_decomposition_loop_delay_reduce (start n: nat) (state: nat * nat * list Z) :=
+        let '(l, len, p) :=
+          List.fold_left
+            (fun state i =>
+               let '(l, len, p) := state in
+               let old_len := len in
+               let len := Nat.shiftr len 1 in
+               let start := 0%nat in
+               let '(l, _, p) := polynomial_list_loop_no_reduce (Nat.shiftl 1 i) old_len len (l, start, p) in
+               (l, len, p))
+            (seq start n)
+            state in
+        let old_len := len in
+        let len := Nat.shiftr len 1 in
+        let '(l, _, p) := polynomial_list_loop_with_reduce (Nat.shiftl 1 (start + n)) old_len len (l, 0%nat, p) in
+        (l, len, p).
+
+      Lemma polynomial_layer_decomposition_loop_delay_reduce_spec:
+        forall r start n l len p,
+          ((n + 1)%nat <= k_iter)%Z ->
+          (S n <= r - start)%nat ->
+          length p = Nat.pow 2 r ->
+          len = Nat.pow 2 (r - start) ->
+          let '(l', len', p') :=
+            polynomial_layer_decomposition_loop_delay_reduce start n (l, len, List.map F.to_Z p) in
+          let '(l_spec', len_spec', p_spec') :=
+            polynomial_layer_decomposition_loop (List.map (@F.of_Z q) precomp_zetas) start (S n) (l, len, p) in
+          l' = l_spec' /\ l' = (l + (Nat.pow 2 (start + S n) - Nat.pow 2 start))%nat /\
+          len' = len_spec' /\ len' = Nat.shiftr len (n + 1)%nat /\
+          p' = List.map F.to_Z p_spec' /\
+          length p' = length p.
+      Proof.
+        set (f_rec := fun start n state =>
+                        List.fold_left
+                          (fun state i =>
+                             let '(l, len, p) := state in
+                             let old_len := len in
+                             let len := Nat.shiftr len 1 in
+                             let start := 0%nat in
+                             let '(l, _, p) := polynomial_list_loop_no_reduce (Nat.shiftl 1 i) old_len len (l, start, p) in
+                             (l, len, p))
+                          (seq start n)
+                          state).
+        assert
+          (IHrec: forall r start n l len p,
+              ((n + 1)%nat <= k_iter)%Z ->
+              (S n <= r - start)%nat ->
+              length p = Nat.pow 2 r ->
+              len = Nat.pow 2 (r - start) ->
+              let '(l', len', p') :=
+                f_rec start n (l, len, List.map F.to_Z p) in
+              let '(l_spec', len_spec', p_spec') :=
+                polynomial_layer_decomposition_loop (List.map (@F.of_Z q) precomp_zetas) start n (l, len, p) in
+              l' = l_spec' /\ (l' = l + (Nat.pow 2 (start + n) - Nat.pow 2 start))%nat /\
+              len' = len_spec' /\ len' = Nat.shiftr len n /\
+              Forall (Zbounded_by (1 + n)%nat) p' /\
+              map Zreduce p' = List.map F.to_Z p_spec' /\
+              length p' = length p).
+        { induction n; intros l len p Hk_iter Hstart Hp Hlen.
+          - cbn. rewrite PeanoNat.Nat.add_0_r, PeanoNat.Nat.sub_diag, PeanoNat.Nat.add_0_r, map_map, length_map.
+            repeat split; auto.
+            + apply Forall_map, Forall_forall; intros.
+              pose proof (F.to_Z_range x ltac:(Lia.lia)) as Hx.
+              unfold Zbounded_by; Lia.lia.
+            + apply map_ext; intros.
+              apply Zreduce_small. apply F.to_Z_range. Lia.lia.
+          - unfold f_rec. rewrite seq_S, fold_left_app. cbn [fold_left].
+            assert (fold_left _ _ _ = f_rec start n (l, len, map F.to_Z p)) as -> by reflexivity.
+            unfold polynomial_layer_decomposition_loop. rewrite seq_S, fold_left_app.
+            cbn [fold_left].
+            assert (fold_left _ _ _ = polynomial_layer_decomposition_loop (map (F.of_Z q) precomp_zetas) start n (l, len, p)) as -> by reflexivity.
+            pose proof (IHn l len p ltac:(Lia.nia) ltac:(Lia.nia) Hp Hlen) as IH.
+            destruct (f_rec start n (l, len, map F.to_Z p)) as ((l' & len') & p') eqn:Hp'.
+            destruct (polynomial_layer_decomposition_loop (map (F.of_Z q) precomp_zetas) start n (l, len, p)) as ((l_spec' & len_spec') & p_spec') eqn:Hp_spec'.
+            destruct IH as (<- & -> & <- & -> & IHbound & IHcont & Hlen_preserved).
+            rewrite PeanoNat.Nat.shiftr_shiftr.
+            assert (Hshiftr: forall i, (i <= r - start)%nat -> Nat.shiftr len i = Nat.pow 2 (r - start - i)).
+            { intros. subst len. rewrite PeanoNat.Nat.shiftr_div_pow2.
+              rewrite <- PeanoNat.Nat.pow_sub_r by Lia.lia. reflexivity. }
+            assert (Hpow2nz: forall k, (0 < Nat.pow 2 k)%nat).
+            { intros; pose proof (NatUtil.pow_nonzero 2 k ltac:(congruence)). Lia.lia. }
+            repeat rewrite Hshiftr by Lia.lia.
+            pose proof (polynomial_list_full_loop_may_reduce_spec false (Nat.shiftl 1 (start + n)) (Nat.pow 2 (r - start - n)) (Nat.pow 2 (r - start - (n + 1))%nat) (l + (Nat.pow 2 (start + n) - Nat.pow 2 start))%nat p' (1 + n)%nat (Hpow2nz _) ltac:(rewrite <- PeanoNat.Nat.pow_succ_r'; f_equal; Lia.lia) ltac:(rewrite PeanoNat.Nat.shiftl_mul_pow2, PeanoNat.Nat.mul_1_l, <- PeanoNat.Nat.pow_add_r, Hlen_preserved, Hp; f_equal; Lia.lia) ltac:(Lia.nia) ltac:(Lia.lia) IHbound) as HH.
+            destruct (polynomial_list_loop_no_reduce (Nat.shiftl 1 (start + n)) (Nat.pow 2 (r - start - n)) (Nat.pow 2 (r - start - (n + 1))) ((l + (Nat.pow 2 (start + n) - Nat.pow 2 start))%nat, 0%nat, p')) as ((l2' & ?) & p2') eqn:Hp2'.
+            assert (p_spec' = map (F.of_Z q) p') as ->.
+            { transitivity (map (F.of_Z q) (map Zreduce p')).
+              - rewrite IHcont, map_map, (map_ext _ id), map_id; auto.
+                intros. rewrite F.of_Z_to_Z. reflexivity.
+              - rewrite map_map. apply map_ext_in.
+                intros a Ha. rewrite (bounded_by_reduce_eq (1 + n) _ ltac:(Lia.nia)).
+                + rewrite F.of_Z_to_Z. reflexivity.
+                + apply (Forall_In IHbound); auto. }
+            destruct (polynomial_list_loop (map (F.of_Z q) precomp_zetas) (Nat.shiftl 1 (start + n)) (Nat.pow 2 (r - start - n)) (Nat.pow 2 (r - start - (n + 1))) ((l + (Nat.pow 2 (start + n) - Nat.pow 2 start))%nat, 0%nat, map (F.of_Z q) p')) as ((l_spec2' & ?) & p_spec2') eqn:Hp_spec2'.
+            destruct HH as (-> & <- & Hbounds & Hcont_eq & _ & Hlen_eq).
+            repeat split; try Lia.lia; auto.
+            + assert (start + S n = S (start + n))%nat as -> by Lia.lia.
+              rewrite PeanoNat.Nat.pow_succ_r', PeanoNat.Nat.shiftl_mul_pow2, PeanoNat.Nat.mul_1_l.
+              pose proof (PeanoNat.Nat.pow_le_mono_r 2 start (start + n)%nat ltac:(congruence) ltac:(Lia.lia)).
+              Lia.lia.
+            + f_equal; Lia.lia.
+            + replace (S n) with (n + 1)%nat by Lia.lia. auto. }
+        intros r start n l len p Hk_iter Hstart Hp Hlen.
+        specialize (IHrec r start n l len p Hk_iter Hstart Hp Hlen).
+        unfold polynomial_layer_decomposition_loop_delay_reduce.
+        assert (fold_left _ _ _ = f_rec start n (l, len, map F.to_Z p)) as -> by reflexivity.
+        destruct (f_rec start n (l, len, map F.to_Z p)) as ((l' & len') & p') eqn:Hp'.
+        unfold polynomial_layer_decomposition_loop.
+        rewrite seq_S, fold_left_app. cbn [fold_left].
+        assert (fold_left _ _ _ = polynomial_layer_decomposition_loop (map (F.of_Z q) precomp_zetas) start n (l, len, p)) as -> by reflexivity.
+        destruct (polynomial_layer_decomposition_loop (map (F.of_Z q) precomp_zetas) start n (l, len, p)) as ((l_spec' & len_spec') & p_spec') eqn:Hp_spec'.
+        destruct IHrec as (<- & -> & <- & -> & Hbounds & Hcont_eq & Hlen_eq).
+        rewrite PeanoNat.Nat.shiftr_shiftr.
+        assert (p_spec' = map (F.of_Z q) p') as ->.
+        { transitivity (map (F.of_Z q) (map Zreduce p')).
+          - rewrite Hcont_eq, map_map, (map_ext _ id), map_id; auto.
+            intros. rewrite F.of_Z_to_Z. reflexivity.
+          - rewrite map_map. apply map_ext_in.
+            intros a Ha. rewrite (bounded_by_reduce_eq (1 + n) _ ltac:(Lia.nia)).
+            + rewrite F.of_Z_to_Z. reflexivity.
+            + apply (Forall_In Hbounds); auto. }
+        assert (Hshiftr: forall i, (i <= r - start)%nat -> Nat.shiftr len i = Nat.pow 2 (r - start - i)).
+        { intros. subst len. rewrite PeanoNat.Nat.shiftr_div_pow2.
+          rewrite <- PeanoNat.Nat.pow_sub_r by Lia.lia. reflexivity. }
+        assert (Hpow2nz: forall k, (0 < Nat.pow 2 k)%nat).
+        { intros; pose proof (NatUtil.pow_nonzero 2 k ltac:(congruence)). Lia.lia. }
+        repeat rewrite Hshiftr by Lia.lia.
+        pose proof (polynomial_list_full_loop_may_reduce_spec true (Nat.shiftl 1 (start + n)) (Nat.pow 2 (r - start - n)) (Nat.pow 2 (r - start - (n + 1))%nat) (l + (Nat.pow 2 (start + n) - Nat.pow 2 start))%nat p' (1 + n)%nat (Hpow2nz _) ltac:(rewrite <- PeanoNat.Nat.pow_succ_r'; f_equal; Lia.lia) ltac:(rewrite Hlen_eq, PeanoNat.Nat.shiftl_mul_pow2, PeanoNat.Nat.mul_1_l, <- PeanoNat.Nat.pow_add_r, Hp; f_equal; Lia.lia) ltac:(Lia.nia) ltac:(Lia.lia) Hbounds) as HH.
+        destruct (polynomial_list_loop_with_reduce (Nat.shiftl 1 (start + n)) (Nat.pow 2 (r - start - n)) (Nat.pow 2 (r - start - (n + 1))) ((l + (Nat.pow 2 (start + n) - Nat.pow 2 start))%nat, 0%nat, p')) as ((l2' & ?) & p2') eqn:Hp2'.
+        destruct (polynomial_list_loop (map (F.of_Z q) precomp_zetas) (Nat.shiftl 1 (start + n)) (Nat.pow 2 (r - start - n)) (Nat.pow 2 (r - start - (n + 1))) ((l + (Nat.pow 2 (start + n) - Nat.pow 2 start))%nat, 0%nat, map (F.of_Z q) p')) as ((l_spec2' & ?) & p_spec2') eqn:Hp_spec2'.
+        destruct HH as (-> & <- & Hbounds' & _ & <- & Hlen_eq').
+        repeat split; auto.
+        2: transitivity (length p'); auto.
+        assert (start + S n = S (start + n))%nat as -> by Lia.lia.
+        rewrite PeanoNat.Nat.pow_succ_r', PeanoNat.Nat.shiftl_mul_pow2, PeanoNat.Nat.mul_1_l.
+        pose proof (PeanoNat.Nat.pow_le_mono_r 2 start (start + n)%nat ltac:(congruence) ltac:(Lia.lia)).
+        Lia.lia.
+      Qed.
+
+      (* Assumes length p = 2^n *)
+      (* Does a * k_iter loop iterations *)
+      Definition ntt_loop_delay_reduce_no_remainder (a n: nat) (p: list Z) :=
+        let l := 0%nat in
+        let len := Nat.pow 2 n in
+        let '(_, _, p) :=
+          List.fold_left
+            (fun state i =>
+               let '(l, len, p) := state in
+               let '(l, len, p) := polynomial_layer_decomposition_loop_delay_reduce (i * Z.to_nat k_iter)%nat (Z.to_nat k_iter - 1)%nat (l, len, p) in
+               (l, len, p))
+            (seq 0 a)
+            (l, len, p) in
+        p.
+
+      (* Assumes length p = 2^n *)
+      (* Does a * k_iter + r loop iterations assuming 0 < r < k_iter *)
+      Definition ntt_loop_delay_reduce_with_remainder (a r n: nat) (p: list Z) :=
+        let l := 0%nat in
+        let len := Nat.pow 2 n in
+        let '(l, len, p) :=
+          List.fold_left
+            (fun state i =>
+               let '(l, len, p) := state in
+               let '(l, len, p) := polynomial_layer_decomposition_loop_delay_reduce (i * Z.to_nat k_iter)%nat (Z.to_nat k_iter - 1)%nat (l, len, p) in
+               (l, len, p))
+            (seq 0 a)
+            (l, len, p) in
+        let '(_, _, p) :=
+          polynomial_layer_decomposition_loop_delay_reduce (a * Z.to_nat k_iter)%nat (r - 1)%nat (l, len, p) in
+        p.
+
+      Lemma ntt_loop_delay_reduce_specs:
+        (forall a n p,
+          length p = Nat.pow 2 n ->
+          (a * Z.to_nat k_iter <= n)%nat ->
+          ntt_loop_delay_reduce_no_remainder a n (List.map F.to_Z p) = List.map F.to_Z (ntt_loop (List.map (F.of_Z q) precomp_zetas) (a * Z.to_nat k_iter)%nat n p)) /\
+        (forall a (r: nat) n p,
+          length p = Nat.pow 2 n ->
+          (a * Z.to_nat k_iter + r <= n)%nat ->
+          (0 < r < k_iter)%Z ->
+          ntt_loop_delay_reduce_with_remainder a r n (List.map F.to_Z p) = List.map F.to_Z (ntt_loop (List.map (F.of_Z q) precomp_zetas) (a * Z.to_nat k_iter + r)%nat n p)).
+      Proof.
+        set (f_rec :=
+               fun a n p =>
+                 List.fold_left
+                   (fun state i =>
+                      let '(l, len, p) := state in
+                      let '(l, len, p) := polynomial_layer_decomposition_loop_delay_reduce (i * Z.to_nat k_iter)%nat (Z.to_nat k_iter - 1)%nat (l, len, p) in
+                      (l, len, p))
+                   (seq 0 a)
+                   (0%nat, Nat.pow 2 n, p)).
+        assert (forall a n p, ntt_loop_delay_reduce_no_remainder a n p = snd (f_rec a n p)) as Hf_rec_eq.
+        { intros. unfold ntt_loop_delay_reduce_no_remainder, f_rec.
+          do 2 rewrite (surjective_pairing _). reflexivity. }
+        assert (forall a r n p, ntt_loop_delay_reduce_with_remainder a r n p = snd (polynomial_layer_decomposition_loop_delay_reduce (a * Z.to_nat k_iter)%nat (r - 1)%nat (f_rec a n p))) as Hf_rec_eq'.
+        { intros. unfold ntt_loop_delay_reduce_with_remainder.
+          assert (fold_left _ _ _ = f_rec a n p) as -> by reflexivity.
+          do 4 (rewrite (surjective_pairing _)). reflexivity. }
+        set (f_rec_spec :=
+               fun r n p =>
+                 polynomial_layer_decomposition_loop (map (F.of_Z q) precomp_zetas) 0%nat r (0%nat, Nat.pow 2 n, p)).
+        assert (forall r n p, ntt_loop (map (F.of_Z q) precomp_zetas) r n p = snd (f_rec_spec r n p)) as Hf_rec_spec_eq.
+        { intros. unfold ntt_loop, f_rec_spec. do 2 rewrite (surjective_pairing _).
+          reflexivity. }
+        assert (forall a n p,
+                   length p = Nat.pow 2 n ->
+                   (a * Z.to_nat k_iter <= n)%nat ->
+                   let '(l', len', p') :=
+                     f_rec a n (map F.to_Z p) in
+                   let '(l_spec', len_spec', p_spec') :=
+                     f_rec_spec (a * Z.to_nat k_iter)%nat n p in
+                   l' = l_spec' /\
+                   len' = len_spec' /\ len' = Nat.pow 2 (n - a * Z.to_nat k_iter)%nat /\
+                   p' = List.map F.to_Z p_spec' /\
+                   length p' = length p) as IH.
+        { induction a; intros n p Hlenp Hn.
+          - cbn. repeat split; try reflexivity.
+            + rewrite PeanoNat.Nat.sub_0_r; reflexivity.
+            + rewrite length_map. reflexivity.
+          - unfold f_rec. rewrite seq_S, fold_left_app.
+            cbn [fold_left]. assert (fold_left _ _ _ = f_rec a n (map F.to_Z p)) as -> by reflexivity.
+            unfold f_rec_spec, polynomial_layer_decomposition_loop.
+            rewrite PeanoNat.Nat.mul_succ_l, ListUtil.seq_add, PeanoNat.Nat.add_0_l, PeanoNat.Nat.add_0_l.
+            rewrite fold_left_app.
+            assert (fold_left _ (seq 0 _) _ = f_rec_spec (a * Z.to_nat k_iter)%nat n p) as -> by reflexivity.
+            assert (fold_left _ _ _ = polynomial_layer_decomposition_loop (map (F.of_Z q) precomp_zetas) (a * Z.to_nat k_iter)%nat (Z.to_nat k_iter)%nat (f_rec_spec (a * Z.to_nat k_iter)%nat n p)) as -> by reflexivity.
+            specialize (IHa n p Hlenp ltac:(Lia.nia)).
+            destruct (f_rec a n (map F.to_Z p)) as ((l' & len') & p') eqn:Hp'.
+            destruct (f_rec_spec (a * Z.to_nat k_iter)%nat n p) as ((l_spec' & len_spec') & p_spec') eqn:Hp_spec'.
+            destruct IHa as (<- & <- & Hlen_eq' & -> & Hlen_eq).
+            rewrite length_map in Hlen_eq.
+            pose proof (polynomial_layer_decomposition_loop_delay_reduce_spec n (a * Z.to_nat k_iter)%nat (Z.to_nat k_iter - 1)%nat l' len' p_spec' ltac:(pose proof k_iter_ge_1; Lia.lia) ltac:(pose proof k_iter_ge_1; Lia.lia) ltac:(transitivity (length p); auto) Hlen_eq') as IH.
+            destruct (polynomial_layer_decomposition_loop_delay_reduce (a * Z.to_nat (Zreduce_bounds / (Z.pos q * Z.pos q))) (Z.to_nat (Zreduce_bounds / (Z.pos q * Z.pos q)) - 1) (l', len', map F.to_Z p_spec')) as ((l2' & len2') & p2') eqn:Hp2'.
+            rewrite PeanoNat.Nat.add_1_r, <- PeanoNat.pred_of_minus, (PeanoNat.Nat.lt_succ_pred 0) in IH by (pose proof k_iter_ge_1; Lia.lia).
+            destruct (polynomial_layer_decomposition_loop (map (F.of_Z q) precomp_zetas) (a * Z.to_nat (Zreduce_bounds / (Z.pos q * Z.pos q))) (Z.to_nat (Zreduce_bounds / (Z.pos q * Z.pos q))) (l', len', p_spec')) as ((l_spec2' & len_spec2') & p_spec2') eqn:Hp_spec2'.
+            destruct IH as (<- & -> & <- & -> & -> & ->).
+            repeat split; auto.
+            rewrite Hlen_eq', PeanoNat.Nat.shiftr_div_pow2.
+            rewrite <- PeanoNat.Nat.pow_sub_r by Lia.lia.
+            f_equal. Lia.lia. }
+        split.
+        { intros a n p Hlenp Hn.
+          rewrite Hf_rec_eq, Hf_rec_spec_eq.
+          specialize (IH a n p Hlenp Hn).
+          destruct (f_rec a n (map F.to_Z p)) as ((l' & len') & p') eqn:Hp'.
+          destruct (f_rec_spec (a * Z.to_nat k_iter)%nat n p) as ((l_spec' & len_spec') & p_spec') eqn:Hp_spec'.
+          destruct IH as (<- & <- & -> & -> & _). cbn. reflexivity. }
+        { intros a r n p Hlenp Hn Hr.
+          rewrite Hf_rec_eq', Hf_rec_spec_eq.
+          specialize (IH a n p Hlenp ltac:(Lia.lia)).
+          unfold f_rec_spec, polynomial_layer_decomposition_loop.
+          rewrite ListUtil.seq_add, PeanoNat.Nat.add_0_l.
+          rewrite fold_left_app.
+          assert (fold_left _ (seq 0 _) _ = f_rec_spec (a * Z.to_nat k_iter)%nat n p) as -> by reflexivity.
+          assert (fold_left _ _ _ = polynomial_layer_decomposition_loop (map (F.of_Z q) precomp_zetas) (a * Z.to_nat k_iter)%nat r (f_rec_spec (a * Z.to_nat k_iter)%nat n p)) as -> by reflexivity.
+          destruct (f_rec a n (map F.to_Z p)) as ((l' & len') & p') eqn:Hp'.
+          destruct (f_rec_spec (a * Z.to_nat k_iter)%nat n p) as ((l_spec' & len_spec') & p_spec') eqn:Hp_spec'.
+          destruct IH as (<- & <- & Hlen_eq' & -> & Hlen_eq).
+          rewrite length_map in Hlen_eq.
+          pose proof (polynomial_layer_decomposition_loop_delay_reduce_spec n (a * Z.to_nat k_iter)%nat (r - 1)%nat l' len' p_spec' ltac:(pose proof k_iter_ge_1; Lia.lia) ltac:(pose proof k_iter_ge_1; Lia.lia) ltac:(transitivity (length p); auto) Hlen_eq') as HH.
+          destruct (polynomial_layer_decomposition_loop_delay_reduce (a * Z.to_nat (Zreduce_bounds / (Z.pos q * Z.pos q))) (r - 1)%nat (l', len', map F.to_Z p_spec')) as ((l2' & len2') & p2') eqn:Hp2'.
+          replace (S (r - 1)) with r in HH by Lia.lia.
+          destruct (polynomial_layer_decomposition_loop (map (F.of_Z q) precomp_zetas) (a * Z.to_nat (Zreduce_bounds / (Z.pos q * Z.pos q))) r (l', len', p_spec')) as ((l_spec2' & len_spec2') & p_spec2') eqn:Hp_spec2'.
+          destruct HH as (? & ? & ? & ? & ? & ?). cbn; auto. }
+      Qed.
+
+      Lemma ntt_loop_delay_reduce_no_remainder_spec:
+        forall a n p,
+          length p = Nat.pow 2 n ->
+          (a * Z.to_nat k_iter <= n)%nat ->
+          ntt_loop_delay_reduce_no_remainder a n (List.map F.to_Z p) = List.map F.to_Z (ntt_loop (List.map (F.of_Z q) precomp_zetas) (a * Z.to_nat k_iter)%nat n p).
+      Proof. exact (proj1 ntt_loop_delay_reduce_specs). Qed.
+
+      Lemma ntt_loop_delay_reduce_with_remainder_spec:
+        forall a (r: nat) n p,
+          length p = Nat.pow 2 n ->
+          (a * Z.to_nat k_iter + r <= n)%nat ->
+          (0 < r < k_iter)%Z ->
+          ntt_loop_delay_reduce_with_remainder a r n (List.map F.to_Z p) = List.map F.to_Z (ntt_loop (List.map (F.of_Z q) precomp_zetas) (a * Z.to_nat k_iter + r)%nat n p).
+      Proof. exact (proj2 ntt_loop_delay_reduce_specs). Qed.
+
+      Lemma ntt_loop_delay_reduce_full_spec:
+        forall n p,
+          let a := Nat.div (Nat.min n m) (Z.to_nat k_iter) in
+          let r := Nat.modulo (Nat.min n m) (Z.to_nat k_iter) in
+          map F.to_Z (proj1_sig (nttl n p)) =
+            if PeanoNat.Nat.eq_dec r 0 then
+              ntt_loop_delay_reduce_no_remainder a n (map F.to_Z (proj1_sig p))
+            else
+              ntt_loop_delay_reduce_with_remainder a r n (map F.to_Z (proj1_sig p)).
+      Proof.
+        intros. rewrite (ntt_loop_full_spec (map (F.of_Z q) precomp_zetas) precomp_zetas_eq').
+        assert (Nat.min n m = a * Z.to_nat k_iter + r)%nat as Heq.
+        { rewrite (PeanoNat.Nat.div_mod_eq (Nat.min n m) (Z.to_nat k_iter)).
+          Lia.lia. }
+        rewrite Heq.
+        destruct (PeanoNat.Nat.eq_dec r 0) as [->|Hrnz].
+        - rewrite PeanoNat.Nat.add_0_r in *.
+          rewrite <- ntt_loop_delay_reduce_no_remainder_spec; auto.
+          + rewrite (proj2_sig p), PolynomialCRT.posicyclic_measure; [Lia.lia|].
+            pose proof (NatUtil.pow_nonzero 2 n ltac:(congruence)). Lia.lia.
+          + rewrite <- Heq. Lia.lia.
+        - rewrite <- ntt_loop_delay_reduce_with_remainder_spec; auto.
+          + rewrite (proj2_sig p), PolynomialCRT.posicyclic_measure; [Lia.lia|].
+            pose proof (NatUtil.pow_nonzero 2 n ltac:(congruence)). Lia.lia.
+          + rewrite <- Heq; Lia.lia.
+          + pose proof (NatUtil.mod_bound_lt (Nat.min n m) (Z.to_nat k_iter) ltac:(pose proof k_iter_ge_1; Lia.lia)).
+            split; Lia.lia.
+      Qed.
+    End ForwardNTT.
+  End Delayed_add_sub_reduce.
 End Gallina.
