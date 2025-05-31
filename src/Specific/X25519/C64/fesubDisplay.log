@@ -1,7 +1,13 @@
-λ x x0 : word64 * word64 * word64 * word64 * word64,
-Interp-η
-(λ var : Syntax.base_type → Type,
- λ '(x10, x11, x9, x7, x5, (x18, x19, x17, x15, x13))%core,
- (((0xffffffffffffe + x10) - x18), ((0xffffffffffffe + x11) - x19), ((0xffffffffffffe + x9) - x17), ((0xffffffffffffe + x7) - x15), ((0xfffffffffffda + x5) - x13)))
-(x, x0)%core
+λ x x0 : word64 * word64 * word64 * word64 * word64, Interp-η
+  λ var : Syntax.base_type → Type, (λ x1 : var (Syntax.TWord 6) * var (Syntax.TWord 6) * var (Syntax.TWord 6) * var (Syntax.TWord 6) * var (Syntax.TWord 6) * (var (Syntax.TWord 6) * var (Syntax.TWord 6) * var (Syntax.TWord 6) * var (Syntax.TWord 6) * var (Syntax.TWord 6)), let (H, H0) := x1 in
+                                    let (H1, H2) := H in
+                                    let (H3, H4) := H1 in
+                                    let (H5, H6) := H3 in
+                                    let (H7, H8) := H5 in
+                                    let (H9, H10) := H0 in
+                                    let (H11, H12) := H9 in
+                                    let (H13, H14) := H11 in
+                                    let (H15, H16) := H13 in
+                                    (Op (Syntax.Sub (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Op (Syntax.Add (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Const 4503599627370494, Return H7), Return H15), Op (Syntax.Sub (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Op (Syntax.Add (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Const 4503599627370494, Return H8), Return H16), Op (Syntax.Sub (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Op (Syntax.Add (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Const 4503599627370494, Return H6), Return H14), Op (Syntax.Sub (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Op (Syntax.Add (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Const 4503599627370494, Return H4), Return H12), Op (Syntax.Sub (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Op (Syntax.Add (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Const 4503599627370458, Return H2), Return H10)))%expr
+  (x, x0)%core
      : word64 * word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
