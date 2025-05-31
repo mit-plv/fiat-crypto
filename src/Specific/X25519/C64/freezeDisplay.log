@@ -1,23 +1,34 @@
-λ x : word64 * word64 * word64 * word64 * word64,
-Interp-η
-(λ var : Syntax.base_type → Type,
- λ '(x7, x8, x6, x4, x2)%core,
- uint64_t x10, uint8_t/*bool*/ x11 = subborrow_u51(0x0, x2, 0x7ffffffffffed);
- uint64_t x13, uint8_t/*bool*/ x14 = subborrow_u51(x11, x4, 0x7ffffffffffff);
- uint64_t x16, uint8_t/*bool*/ x17 = subborrow_u51(x14, x6, 0x7ffffffffffff);
- uint64_t x19, uint8_t/*bool*/ x20 = subborrow_u51(x17, x8, 0x7ffffffffffff);
- uint64_t x22, uint8_t/*bool*/ x23 = subborrow_u51(x20, x7, 0x7ffffffffffff);
- uint64_t x24 = cmovznz64(x23, 0x0, 0xffffffffffffffffL);
- uint64_t x25 = (x24 & 0x7ffffffffffed);
- uint64_t x27, uint8_t/*bool*/ x28 = addcarryx_u51(0x0, x10, x25);
- uint64_t x29 = (x24 & 0x7ffffffffffff);
- uint64_t x31, uint8_t/*bool*/ x32 = addcarryx_u51(x28, x13, x29);
- uint64_t x33 = (x24 & 0x7ffffffffffff);
- uint64_t x35, uint8_t/*bool*/ x36 = addcarryx_u51(x32, x16, x33);
- uint64_t x37 = (x24 & 0x7ffffffffffff);
- uint64_t x39, uint8_t/*bool*/ x40 = addcarryx_u51(x36, x19, x37);
- uint64_t x41 = (x24 & 0x7ffffffffffff);
- uint64_t x43, uint8_t/*bool*/ _ = addcarryx_u51(x40, x22, x41);
- (Return x43, Return x39, Return x35, Return x31, Return x27))
-x
+λ x : word64 * word64 * word64 * word64 * word64, Interp-η
+  λ var : Syntax.base_type → Type, (λ x0 : var (Syntax.TWord 6) * var (Syntax.TWord 6) * var (Syntax.TWord 6) * var (Syntax.TWord 6) * var (Syntax.TWord 6), let (H, H0) := x0 in
+                                    let (H1, H2) := H in
+                                    let (H3, H4) := H1 in
+                                    let (H5, H6) := H3 in
+                                    uint64_t * uint8_t/*bool*/ x1 = Op (Syntax.SubWithGetBorrow 51 (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 0)) (Const 0, Return H0, Const 2251799813685229);
+                                    let (H7, H8) := x1 in
+                                    uint64_t * uint8_t/*bool*/ x2 = Op (Syntax.SubWithGetBorrow 51 (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 0)) (Return H8, Return H2, Const 2251799813685247);
+                                    let (H9, H10) := x2 in
+                                    uint64_t * uint8_t/*bool*/ x3 = Op (Syntax.SubWithGetBorrow 51 (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 0)) (Return H10, Return H4, Const 2251799813685247);
+                                    let (H11, H12) := x3 in
+                                    uint64_t * uint8_t/*bool*/ x4 = Op (Syntax.SubWithGetBorrow 51 (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 0)) (Return H12, Return H6, Const 2251799813685247);
+                                    let (H13, H14) := x4 in
+                                    uint64_t * uint8_t/*bool*/ x5 = Op (Syntax.SubWithGetBorrow 51 (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 0)) (Return H14, Return H5, Const 2251799813685247);
+                                    let (H15, H16) := x5 in
+                                    uint64_t x6 = Op (Syntax.Zselect (Syntax.TWord 0) (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 6)) (Return H16, Const 0, Const 18446744073709551615);
+                                    uint64_t x7 = Op (Syntax.Land (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x6, Const 2251799813685229);
+                                    uint64_t * uint8_t/*bool*/ x8 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 0)) (Const 0, Return H7, Return x7);
+                                    let (H17, H18) := x8 in
+                                    uint64_t x9 = Op (Syntax.Land (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x6, Const 2251799813685247);
+                                    uint64_t * uint8_t/*bool*/ x10 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 0)) (Return H18, Return H9, Return x9);
+                                    let (H19, H20) := x10 in
+                                    uint64_t x11 = Op (Syntax.Land (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x6, Const 2251799813685247);
+                                    uint64_t * uint8_t/*bool*/ x12 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 0)) (Return H20, Return H11, Return x11);
+                                    let (H21, H22) := x12 in
+                                    uint64_t x13 = Op (Syntax.Land (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x6, Const 2251799813685247);
+                                    uint64_t * uint8_t/*bool*/ x14 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 0)) (Return H22, Return H13, Return x13);
+                                    let (H23, H24) := x14 in
+                                    uint64_t x15 = Op (Syntax.Land (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x6, Const 2251799813685247);
+                                    uint64_t * uint8_t/*bool*/ x16 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 0)) (Return H24, Return H15, Return x15);
+                                    let (H25, _) := x16 in
+                                    (Return H25, Return H23, Return H21, Return H19, Return H17))%expr
+  x
      : word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)

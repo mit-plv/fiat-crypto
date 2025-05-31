@@ -1,9 +1,9 @@
 Require Import Coq.Strings.Ascii Coq.Strings.String.
 Require Import Coq.Numbers.BinNums.
 Require Export Crypto.Util.FixCoqMistakes.
-Import BinNatDef.
-Import BinIntDef.
-Import BinPosDef.
+Require Import BinNatDef.
+Require Import BinIntDef.
+Require Import BinPosDef.
 
 Local Open Scope positive_scope.
 Local Open Scope string_scope.

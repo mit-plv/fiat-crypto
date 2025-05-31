@@ -1,37 +1,38 @@
-λ x : word64 * word64 * word64 * word64 * word64,
-Interp-η
-(λ var : Syntax.base_type → Type,
- λ '(x7, x8, x6, x4, x2)%core,
- uint64_t x9 = (x2 * 0x2);
- uint64_t x10 = (x4 * 0x2);
- uint64_t x11 = ((x6 * 0x2) * 0x13);
- uint64_t x12 = (x7 * 0x13);
- uint64_t x13 = (x12 * 0x2);
- uint128_t x14 = ((((uint128_t)x2 * x2) + ((uint128_t)x13 * x4)) + ((uint128_t)x11 * x8));
- uint128_t x15 = ((((uint128_t)x9 * x4) + ((uint128_t)x13 * x6)) + ((uint128_t)x8 * (x8 * 0x13)));
- uint128_t x16 = ((((uint128_t)x9 * x6) + ((uint128_t)x4 * x4)) + ((uint128_t)x13 * x8));
- uint128_t x17 = ((((uint128_t)x9 * x8) + ((uint128_t)x10 * x6)) + ((uint128_t)x7 * x12));
- uint128_t x18 = ((((uint128_t)x9 * x7) + ((uint128_t)x10 * x8)) + ((uint128_t)x6 * x6));
- uint64_t x19 = (uint64_t) (x14 >> 0x33);
- uint64_t x20 = ((uint64_t)x14 & 0x7ffffffffffff);
- uint128_t x21 = (x19 + x15);
- uint64_t x22 = (uint64_t) (x21 >> 0x33);
- uint64_t x23 = ((uint64_t)x21 & 0x7ffffffffffff);
- uint128_t x24 = (x22 + x16);
- uint64_t x25 = (uint64_t) (x24 >> 0x33);
- uint64_t x26 = ((uint64_t)x24 & 0x7ffffffffffff);
- uint128_t x27 = (x25 + x17);
- uint64_t x28 = (uint64_t) (x27 >> 0x33);
- uint64_t x29 = ((uint64_t)x27 & 0x7ffffffffffff);
- uint128_t x30 = (x28 + x18);
- uint64_t x31 = (uint64_t) (x30 >> 0x33);
- uint64_t x32 = ((uint64_t)x30 & 0x7ffffffffffff);
- uint64_t x33 = (x20 + (0x13 * x31));
- uint64_t x34 = (x33 >> 0x33);
- uint64_t x35 = (x33 & 0x7ffffffffffff);
- uint64_t x36 = (x34 + x23);
- uint64_t x37 = (x36 >> 0x33);
- uint64_t x38 = (x36 & 0x7ffffffffffff);
- return (Return x32, Return x29, (x37 + x26), Return x38, Return x35))
-x
+λ x : word64 * word64 * word64 * word64 * word64, Interp-η
+  λ var : Syntax.base_type → Type, (λ x0 : var (Syntax.TWord 6) * var (Syntax.TWord 6) * var (Syntax.TWord 6) * var (Syntax.TWord 6) * var (Syntax.TWord 6), let (H, H0) := x0 in
+                                    let (H1, H2) := H in
+                                    let (H3, H4) := H1 in
+                                    let (H5, H6) := H3 in
+                                    uint64_t x1 = Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return H0, Const 2);
+                                    uint64_t x2 = Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return H2, Const 2);
+                                    uint64_t x3 = Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return H4, Const 2), Const 19);
+                                    uint64_t x4 = Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return H5, Const 19);
+                                    uint64_t x5 = Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x4, Const 2);
+                                    uint128_t x6 = Op (Syntax.Add (Syntax.TWord 7) (Syntax.TWord 7) (Syntax.TWord 7)) (Op (Syntax.Add (Syntax.TWord 7) (Syntax.TWord 7) (Syntax.TWord 7)) (Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 7)) (Return H0, Return H0), Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 7)) (Return x5, Return H2)), Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 7)) (Return x3, Return H6));
+                                    uint128_t x7 = Op (Syntax.Add (Syntax.TWord 7) (Syntax.TWord 7) (Syntax.TWord 7)) (Op (Syntax.Add (Syntax.TWord 7) (Syntax.TWord 7) (Syntax.TWord 7)) (Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 7)) (Return x1, Return H2), Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 7)) (Return x5, Return H4)), Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 7)) (Return H6, Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return H6, Const 19)));
+                                    uint128_t x8 = Op (Syntax.Add (Syntax.TWord 7) (Syntax.TWord 7) (Syntax.TWord 7)) (Op (Syntax.Add (Syntax.TWord 7) (Syntax.TWord 7) (Syntax.TWord 7)) (Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 7)) (Return x1, Return H4), Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 7)) (Return H2, Return H2)), Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 7)) (Return x5, Return H6));
+                                    uint128_t x9 = Op (Syntax.Add (Syntax.TWord 7) (Syntax.TWord 7) (Syntax.TWord 7)) (Op (Syntax.Add (Syntax.TWord 7) (Syntax.TWord 7) (Syntax.TWord 7)) (Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 7)) (Return x1, Return H6), Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 7)) (Return x2, Return H4)), Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 7)) (Return H5, Return x4));
+                                    uint128_t x10 = Op (Syntax.Add (Syntax.TWord 7) (Syntax.TWord 7) (Syntax.TWord 7)) (Op (Syntax.Add (Syntax.TWord 7) (Syntax.TWord 7) (Syntax.TWord 7)) (Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 7)) (Return x1, Return H5), Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 7)) (Return x2, Return H6)), Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 7)) (Return H4, Return H4));
+                                    uint64_t x11 = Op (Syntax.Shr (Syntax.TWord 7) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x6, Const 51);
+                                    uint64_t x12 = Op (Syntax.Land (Syntax.TWord 7) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x6, Const 2251799813685247);
+                                    uint128_t x13 = Op (Syntax.Add (Syntax.TWord 6) (Syntax.TWord 7) (Syntax.TWord 7)) (Return x11, Return x7);
+                                    uint64_t x14 = Op (Syntax.Shr (Syntax.TWord 7) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x13, Const 51);
+                                    uint64_t x15 = Op (Syntax.Land (Syntax.TWord 7) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x13, Const 2251799813685247);
+                                    uint128_t x16 = Op (Syntax.Add (Syntax.TWord 6) (Syntax.TWord 7) (Syntax.TWord 7)) (Return x14, Return x8);
+                                    uint64_t x17 = Op (Syntax.Shr (Syntax.TWord 7) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x16, Const 51);
+                                    uint64_t x18 = Op (Syntax.Land (Syntax.TWord 7) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x16, Const 2251799813685247);
+                                    uint128_t x19 = Op (Syntax.Add (Syntax.TWord 6) (Syntax.TWord 7) (Syntax.TWord 7)) (Return x17, Return x9);
+                                    uint64_t x20 = Op (Syntax.Shr (Syntax.TWord 7) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x19, Const 51);
+                                    uint64_t x21 = Op (Syntax.Land (Syntax.TWord 7) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x19, Const 2251799813685247);
+                                    uint128_t x22 = Op (Syntax.Add (Syntax.TWord 6) (Syntax.TWord 7) (Syntax.TWord 7)) (Return x20, Return x10);
+                                    uint64_t x23 = Op (Syntax.Shr (Syntax.TWord 7) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x22, Const 51);
+                                    uint64_t x24 = Op (Syntax.Land (Syntax.TWord 7) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x22, Const 2251799813685247);
+                                    uint64_t x25 = Op (Syntax.Add (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x12, Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Const 19, Return x23));
+                                    uint64_t x26 = Op (Syntax.Shr (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x25, Const 51);
+                                    uint64_t x27 = Op (Syntax.Land (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x25, Const 2251799813685247);
+                                    uint64_t x28 = ((uint64_t)x26 + x15);
+                                    uint64_t x29 = Op (Syntax.Shr (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x28, Const 51);
+                                    uint64_t x30 = Op (Syntax.Land (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x28, Const 2251799813685247);
+                                    (Return x24, Return x21, ((uint64_t)x29 + x18), Return x30, Return x27))%expr
+  x
      : word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)

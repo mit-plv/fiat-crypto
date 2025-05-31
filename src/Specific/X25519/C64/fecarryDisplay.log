@@ -1,27 +1,28 @@
-λ x : word64 * word64 * word64 * word64 * word64,
-Interp-η
-(λ var : Syntax.base_type → Type,
- λ '(x7, x8, x6, x4, x2)%core,
- uint64_t x9 = (x2 >> 0x33);
- uint64_t x10 = (x2 & 0x7ffffffffffff);
- uint64_t x11 = (x9 + x4);
- uint64_t x12 = (x11 >> 0x33);
- uint64_t x13 = (x11 & 0x7ffffffffffff);
- uint64_t x14 = (x12 + x6);
- uint64_t x15 = (x14 >> 0x33);
- uint64_t x16 = (x14 & 0x7ffffffffffff);
- uint64_t x17 = (x15 + x8);
- uint64_t x18 = (x17 >> 0x33);
- uint64_t x19 = (x17 & 0x7ffffffffffff);
- uint64_t x20 = (x18 + x7);
- uint64_t x21 = (x20 >> 0x33);
- uint64_t x22 = (x20 & 0x7ffffffffffff);
- uint64_t x23 = (x10 + (0x13 * x21));
- uint64_t x24 = (x23 >> 0x33);
- uint64_t x25 = (x23 & 0x7ffffffffffff);
- uint64_t x26 = (x24 + x13);
- uint64_t x27 = (x26 >> 0x33);
- uint64_t x28 = (x26 & 0x7ffffffffffff);
- return (Return x22, Return x19, (x27 + x16), Return x28, Return x25))
-x
+λ x : word64 * word64 * word64 * word64 * word64, Interp-η
+  λ var : Syntax.base_type → Type, (λ x0 : var (Syntax.TWord 6) * var (Syntax.TWord 6) * var (Syntax.TWord 6) * var (Syntax.TWord 6) * var (Syntax.TWord 6), let (H, H0) := x0 in
+                                    let (H1, H2) := H in
+                                    let (H3, H4) := H1 in
+                                    let (H5, H6) := H3 in
+                                    uint64_t x1 = Op (Syntax.Shr (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return H0, Const 51);
+                                    uint64_t x2 = Op (Syntax.Land (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return H0, Const 2251799813685247);
+                                    uint64_t x3 = ((uint64_t)x1 + H2);
+                                    uint64_t x4 = Op (Syntax.Shr (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x3, Const 51);
+                                    uint64_t x5 = Op (Syntax.Land (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x3, Const 2251799813685247);
+                                    uint64_t x6 = ((uint64_t)x4 + H4);
+                                    uint64_t x7 = Op (Syntax.Shr (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x6, Const 51);
+                                    uint64_t x8 = Op (Syntax.Land (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x6, Const 2251799813685247);
+                                    uint64_t x9 = ((uint64_t)x7 + H6);
+                                    uint64_t x10 = Op (Syntax.Shr (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x9, Const 51);
+                                    uint64_t x11 = Op (Syntax.Land (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x9, Const 2251799813685247);
+                                    uint64_t x12 = ((uint64_t)x10 + H5);
+                                    uint64_t x13 = Op (Syntax.Shr (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x12, Const 51);
+                                    uint64_t x14 = Op (Syntax.Land (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x12, Const 2251799813685247);
+                                    uint64_t x15 = Op (Syntax.Add (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x2, Op (Syntax.Mul (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Const 19, Return x13));
+                                    uint64_t x16 = Op (Syntax.Shr (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x15, Const 51);
+                                    uint64_t x17 = Op (Syntax.Land (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x15, Const 2251799813685247);
+                                    uint64_t x18 = ((uint64_t)x16 + x5);
+                                    uint64_t x19 = Op (Syntax.Shr (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x18, Const 51);
+                                    uint64_t x20 = Op (Syntax.Land (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6)) (Return x18, Const 2251799813685247);
+                                    (Return x14, Return x11, ((uint64_t)x19 + x8), Return x20, Return x17))%expr
+  x
      : word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
