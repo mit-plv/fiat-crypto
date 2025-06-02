@@ -47,7 +47,6 @@ Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.ListUtil.Permutation.
 Require Import Crypto.Util.ListUtil.Partition.
 Require Import Crypto.Util.ListUtil.Filter.
-Require Import Crypto.Util.ListUtil.PermutationCompat. Import ListUtil.PermutationCompat.Coq.Sorting.Permutation.
 Require Import Crypto.Util.NUtil.Sorting.
 Require Import Crypto.Util.NUtil.Testbit.
 Require Import Crypto.Util.FSets.FMapOption.
@@ -60,7 +59,6 @@ Require Import Crypto.Util.FSets.FMapInterface.
 Require Import Crypto.Util.FSets.FMapFacts.
 Require Import Crypto.Util.FSets.FMapTrieEx.
 Require Import Crypto.Util.MSets.MSetN.
-Require Import Crypto.Util.ListUtil.PermutationCompat.
 Require Import Crypto.Util.Bool.LeCompat.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SetEvars.
