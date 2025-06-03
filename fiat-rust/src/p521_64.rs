@@ -15,6 +15,26 @@
 #![allow(unused_parens)]
 #![allow(non_camel_case_types)]
 
+/// Since `Index` and `IndexMut` aren't callable in `const` contexts yet, this helper type helps unify
+/// arrays and user-defined array-wrapper types into a single type which can be indexed in `const`
+/// contexts. Once `const trait`s are stabilized this type can go away
+struct IndexConst<T: ?Sized>(T);
+
+impl<'a, T, const N: usize> IndexConst<&'a [T; N]> {
+    #[inline(always)]
+    #[allow(unused)]
+    const fn index(self, i: usize) -> &'a T {
+        &self.0[i]
+    }
+}
+impl<'a, 'b, T, const N: usize> IndexConst<&'a mut &'b mut [T; N]> {
+    #[inline(always)]
+    #[allow(unused)]
+    const fn index_mut(self, i: usize) -> &'a mut T {
+        &mut self.0[i]
+    }
+}
+
 /** fiat_p521_u1 represents values of 1 bits, stored in one byte. */
 pub type fiat_p521_u1 = u8;
 /** fiat_p521_i1 represents values of 1 bits, stored in one byte. */
@@ -44,6 +64,22 @@ impl core::ops::IndexMut<usize> for fiat_p521_loose_field_element {
     }
 }
 
+impl<'a> IndexConst<&'a fiat_p521_loose_field_element> {
+    #[allow(unused)]
+    #[inline(always)]
+    const fn index(self, i: usize) -> &'a u64 {
+        &self.0.0[i]
+    }
+}
+
+impl<'a, 'b> IndexConst<&'a mut &'b mut fiat_p521_loose_field_element> {
+    #[allow(unused)]
+    #[inline(always)]
+    const fn index_mut(self, i: usize) -> &'a mut u64 {
+        &mut self.0.0[i]
+    }
+}
+
 /** The type fiat_p521_tight_field_element is a field element with tight bounds. */
 /** Bounds: [[0x0 ~> 0x400000000000000], [0x0 ~> 0x400000000000000], [0x0 ~> 0x400000000000000], [0x0 ~> 0x400000000000000], [0x0 ~> 0x400000000000000], [0x0 ~> 0x400000000000000], [0x0 ~> 0x400000000000000], [0x0 ~> 0x400000000000000], [0x0 ~> 0x200000000000000]] */
 #[derive(Clone, Copy)]
@@ -64,6 +100,22 @@ impl core::ops::IndexMut<usize> for fiat_p521_tight_field_element {
     }
 }
 
+impl<'a> IndexConst<&'a fiat_p521_tight_field_element> {
+    #[allow(unused)]
+    #[inline(always)]
+    const fn index(self, i: usize) -> &'a u64 {
+        &self.0.0[i]
+    }
+}
+
+impl<'a, 'b> IndexConst<&'a mut &'b mut fiat_p521_tight_field_element> {
+    #[allow(unused)]
+    #[inline(always)]
+    const fn index_mut(self, i: usize) -> &'a mut u64 {
+        &mut self.0.0[i]
+    }
+}
+
 
 /// The function fiat_p521_addcarryx_u58 is an addition with carry.
 ///
@@ -79,7 +131,7 @@ impl core::ops::IndexMut<usize> for fiat_p521_tight_field_element {
 ///   out1: [0x0 ~> 0x3ffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_p521_addcarryx_u58(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) {
+pub const fn fiat_p521_addcarryx_u58(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) {
   let x1: u64 = (((arg1 as u64) + arg2) + arg3);
   let x2: u64 = (x1 & 0x3ffffffffffffff);
   let x3: fiat_p521_u1 = ((x1 >> 58) as fiat_p521_u1);
@@ -101,7 +153,7 @@ pub fn fiat_p521_addcarryx_u58(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fi
 ///   out1: [0x0 ~> 0x3ffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_p521_subborrowx_u58(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) {
+pub const fn fiat_p521_subborrowx_u58(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) {
   let x1: i64 = ((((((arg2 as i128) - (arg1 as i128)) as i64) as i128) - (arg3 as i128)) as i64);
   let x2: fiat_p521_i1 = ((x1 >> 58) as fiat_p521_i1);
   let x3: u64 = (((x1 as i128) & (0x3ffffffffffffff as i128)) as u64);
@@ -123,7 +175,7 @@ pub fn fiat_p521_subborrowx_u58(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: f
 ///   out1: [0x0 ~> 0x1ffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_p521_addcarryx_u57(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) {
+pub const fn fiat_p521_addcarryx_u57(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) {
   let x1: u64 = (((arg1 as u64) + arg2) + arg3);
   let x2: u64 = (x1 & 0x1ffffffffffffff);
   let x3: fiat_p521_u1 = ((x1 >> 57) as fiat_p521_u1);
@@ -145,7 +197,7 @@ pub fn fiat_p521_addcarryx_u57(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fi
 ///   out1: [0x0 ~> 0x1ffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_p521_subborrowx_u57(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) {
+pub const fn fiat_p521_subborrowx_u57(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: fiat_p521_u1, arg2: u64, arg3: u64) {
   let x1: i64 = ((((((arg2 as i128) - (arg1 as i128)) as i64) as i128) - (arg3 as i128)) as i64);
   let x2: fiat_p521_i1 = ((x1 >> 57) as fiat_p521_i1);
   let x3: u64 = (((x1 as i128) & (0x1ffffffffffffff as i128)) as u64);
@@ -165,7 +217,7 @@ pub fn fiat_p521_subborrowx_u57(out1: &mut u64, out2: &mut fiat_p521_u1, arg1: f
 /// Output Bounds:
 ///   out1: [0x0 ~> 0xffffffffffffffff]
 #[inline]
-pub fn fiat_p521_cmovznz_u64(out1: &mut u64, arg1: fiat_p521_u1, arg2: u64, arg3: u64) {
+pub const fn fiat_p521_cmovznz_u64(out1: &mut u64, arg1: fiat_p521_u1, arg2: u64, arg3: u64) {
   let x1: fiat_p521_u1 = (!(!arg1));
   let x2: u64 = ((((((0x0 as fiat_p521_i2) - (x1 as fiat_p521_i2)) as fiat_p521_i1) as i128) & (0xffffffffffffffff as i128)) as u64);
   let x3: u64 = ((x2 & arg3) | ((!x2) & arg2));
@@ -178,88 +230,88 @@ pub fn fiat_p521_cmovznz_u64(out1: &mut u64, arg1: fiat_p521_u1, arg2: u64, arg3
 ///   eval out1 mod m = (eval arg1 * eval arg2) mod m
 ///
 #[inline]
-pub fn fiat_p521_carry_mul(out1: &mut fiat_p521_tight_field_element, arg1: &fiat_p521_loose_field_element, arg2: &fiat_p521_loose_field_element) {
-  let x1: u128 = (((arg1[8]) as u128) * (((arg2[8]) * 0x2) as u128));
-  let x2: u128 = (((arg1[8]) as u128) * (((arg2[7]) * 0x2) as u128));
-  let x3: u128 = (((arg1[8]) as u128) * (((arg2[6]) * 0x2) as u128));
-  let x4: u128 = (((arg1[8]) as u128) * (((arg2[5]) * 0x2) as u128));
-  let x5: u128 = (((arg1[8]) as u128) * (((arg2[4]) * 0x2) as u128));
-  let x6: u128 = (((arg1[8]) as u128) * (((arg2[3]) * 0x2) as u128));
-  let x7: u128 = (((arg1[8]) as u128) * (((arg2[2]) * 0x2) as u128));
-  let x8: u128 = (((arg1[8]) as u128) * (((arg2[1]) * 0x2) as u128));
-  let x9: u128 = (((arg1[7]) as u128) * (((arg2[8]) * 0x2) as u128));
-  let x10: u128 = (((arg1[7]) as u128) * (((arg2[7]) * 0x2) as u128));
-  let x11: u128 = (((arg1[7]) as u128) * (((arg2[6]) * 0x2) as u128));
-  let x12: u128 = (((arg1[7]) as u128) * (((arg2[5]) * 0x2) as u128));
-  let x13: u128 = (((arg1[7]) as u128) * (((arg2[4]) * 0x2) as u128));
-  let x14: u128 = (((arg1[7]) as u128) * (((arg2[3]) * 0x2) as u128));
-  let x15: u128 = (((arg1[7]) as u128) * (((arg2[2]) * 0x2) as u128));
-  let x16: u128 = (((arg1[6]) as u128) * (((arg2[8]) * 0x2) as u128));
-  let x17: u128 = (((arg1[6]) as u128) * (((arg2[7]) * 0x2) as u128));
-  let x18: u128 = (((arg1[6]) as u128) * (((arg2[6]) * 0x2) as u128));
-  let x19: u128 = (((arg1[6]) as u128) * (((arg2[5]) * 0x2) as u128));
-  let x20: u128 = (((arg1[6]) as u128) * (((arg2[4]) * 0x2) as u128));
-  let x21: u128 = (((arg1[6]) as u128) * (((arg2[3]) * 0x2) as u128));
-  let x22: u128 = (((arg1[5]) as u128) * (((arg2[8]) * 0x2) as u128));
-  let x23: u128 = (((arg1[5]) as u128) * (((arg2[7]) * 0x2) as u128));
-  let x24: u128 = (((arg1[5]) as u128) * (((arg2[6]) * 0x2) as u128));
-  let x25: u128 = (((arg1[5]) as u128) * (((arg2[5]) * 0x2) as u128));
-  let x26: u128 = (((arg1[5]) as u128) * (((arg2[4]) * 0x2) as u128));
-  let x27: u128 = (((arg1[4]) as u128) * (((arg2[8]) * 0x2) as u128));
-  let x28: u128 = (((arg1[4]) as u128) * (((arg2[7]) * 0x2) as u128));
-  let x29: u128 = (((arg1[4]) as u128) * (((arg2[6]) * 0x2) as u128));
-  let x30: u128 = (((arg1[4]) as u128) * (((arg2[5]) * 0x2) as u128));
-  let x31: u128 = (((arg1[3]) as u128) * (((arg2[8]) * 0x2) as u128));
-  let x32: u128 = (((arg1[3]) as u128) * (((arg2[7]) * 0x2) as u128));
-  let x33: u128 = (((arg1[3]) as u128) * (((arg2[6]) * 0x2) as u128));
-  let x34: u128 = (((arg1[2]) as u128) * (((arg2[8]) * 0x2) as u128));
-  let x35: u128 = (((arg1[2]) as u128) * (((arg2[7]) * 0x2) as u128));
-  let x36: u128 = (((arg1[1]) as u128) * (((arg2[8]) * 0x2) as u128));
-  let x37: u128 = (((arg1[8]) as u128) * ((arg2[0]) as u128));
-  let x38: u128 = (((arg1[7]) as u128) * ((arg2[1]) as u128));
-  let x39: u128 = (((arg1[7]) as u128) * ((arg2[0]) as u128));
-  let x40: u128 = (((arg1[6]) as u128) * ((arg2[2]) as u128));
-  let x41: u128 = (((arg1[6]) as u128) * ((arg2[1]) as u128));
-  let x42: u128 = (((arg1[6]) as u128) * ((arg2[0]) as u128));
-  let x43: u128 = (((arg1[5]) as u128) * ((arg2[3]) as u128));
-  let x44: u128 = (((arg1[5]) as u128) * ((arg2[2]) as u128));
-  let x45: u128 = (((arg1[5]) as u128) * ((arg2[1]) as u128));
-  let x46: u128 = (((arg1[5]) as u128) * ((arg2[0]) as u128));
-  let x47: u128 = (((arg1[4]) as u128) * ((arg2[4]) as u128));
-  let x48: u128 = (((arg1[4]) as u128) * ((arg2[3]) as u128));
-  let x49: u128 = (((arg1[4]) as u128) * ((arg2[2]) as u128));
-  let x50: u128 = (((arg1[4]) as u128) * ((arg2[1]) as u128));
-  let x51: u128 = (((arg1[4]) as u128) * ((arg2[0]) as u128));
-  let x52: u128 = (((arg1[3]) as u128) * ((arg2[5]) as u128));
-  let x53: u128 = (((arg1[3]) as u128) * ((arg2[4]) as u128));
-  let x54: u128 = (((arg1[3]) as u128) * ((arg2[3]) as u128));
-  let x55: u128 = (((arg1[3]) as u128) * ((arg2[2]) as u128));
-  let x56: u128 = (((arg1[3]) as u128) * ((arg2[1]) as u128));
-  let x57: u128 = (((arg1[3]) as u128) * ((arg2[0]) as u128));
-  let x58: u128 = (((arg1[2]) as u128) * ((arg2[6]) as u128));
-  let x59: u128 = (((arg1[2]) as u128) * ((arg2[5]) as u128));
-  let x60: u128 = (((arg1[2]) as u128) * ((arg2[4]) as u128));
-  let x61: u128 = (((arg1[2]) as u128) * ((arg2[3]) as u128));
-  let x62: u128 = (((arg1[2]) as u128) * ((arg2[2]) as u128));
-  let x63: u128 = (((arg1[2]) as u128) * ((arg2[1]) as u128));
-  let x64: u128 = (((arg1[2]) as u128) * ((arg2[0]) as u128));
-  let x65: u128 = (((arg1[1]) as u128) * ((arg2[7]) as u128));
-  let x66: u128 = (((arg1[1]) as u128) * ((arg2[6]) as u128));
-  let x67: u128 = (((arg1[1]) as u128) * ((arg2[5]) as u128));
-  let x68: u128 = (((arg1[1]) as u128) * ((arg2[4]) as u128));
-  let x69: u128 = (((arg1[1]) as u128) * ((arg2[3]) as u128));
-  let x70: u128 = (((arg1[1]) as u128) * ((arg2[2]) as u128));
-  let x71: u128 = (((arg1[1]) as u128) * ((arg2[1]) as u128));
-  let x72: u128 = (((arg1[1]) as u128) * ((arg2[0]) as u128));
-  let x73: u128 = (((arg1[0]) as u128) * ((arg2[8]) as u128));
-  let x74: u128 = (((arg1[0]) as u128) * ((arg2[7]) as u128));
-  let x75: u128 = (((arg1[0]) as u128) * ((arg2[6]) as u128));
-  let x76: u128 = (((arg1[0]) as u128) * ((arg2[5]) as u128));
-  let x77: u128 = (((arg1[0]) as u128) * ((arg2[4]) as u128));
-  let x78: u128 = (((arg1[0]) as u128) * ((arg2[3]) as u128));
-  let x79: u128 = (((arg1[0]) as u128) * ((arg2[2]) as u128));
-  let x80: u128 = (((arg1[0]) as u128) * ((arg2[1]) as u128));
-  let x81: u128 = (((arg1[0]) as u128) * ((arg2[0]) as u128));
+pub const fn fiat_p521_carry_mul(mut out1: &mut fiat_p521_tight_field_element, arg1: &fiat_p521_loose_field_element, arg2: &fiat_p521_loose_field_element) {
+  let x1: u128 = (((*IndexConst(arg1).index(8)) as u128) * (((*IndexConst(arg2).index(8)) * 0x2) as u128));
+  let x2: u128 = (((*IndexConst(arg1).index(8)) as u128) * (((*IndexConst(arg2).index(7)) * 0x2) as u128));
+  let x3: u128 = (((*IndexConst(arg1).index(8)) as u128) * (((*IndexConst(arg2).index(6)) * 0x2) as u128));
+  let x4: u128 = (((*IndexConst(arg1).index(8)) as u128) * (((*IndexConst(arg2).index(5)) * 0x2) as u128));
+  let x5: u128 = (((*IndexConst(arg1).index(8)) as u128) * (((*IndexConst(arg2).index(4)) * 0x2) as u128));
+  let x6: u128 = (((*IndexConst(arg1).index(8)) as u128) * (((*IndexConst(arg2).index(3)) * 0x2) as u128));
+  let x7: u128 = (((*IndexConst(arg1).index(8)) as u128) * (((*IndexConst(arg2).index(2)) * 0x2) as u128));
+  let x8: u128 = (((*IndexConst(arg1).index(8)) as u128) * (((*IndexConst(arg2).index(1)) * 0x2) as u128));
+  let x9: u128 = (((*IndexConst(arg1).index(7)) as u128) * (((*IndexConst(arg2).index(8)) * 0x2) as u128));
+  let x10: u128 = (((*IndexConst(arg1).index(7)) as u128) * (((*IndexConst(arg2).index(7)) * 0x2) as u128));
+  let x11: u128 = (((*IndexConst(arg1).index(7)) as u128) * (((*IndexConst(arg2).index(6)) * 0x2) as u128));
+  let x12: u128 = (((*IndexConst(arg1).index(7)) as u128) * (((*IndexConst(arg2).index(5)) * 0x2) as u128));
+  let x13: u128 = (((*IndexConst(arg1).index(7)) as u128) * (((*IndexConst(arg2).index(4)) * 0x2) as u128));
+  let x14: u128 = (((*IndexConst(arg1).index(7)) as u128) * (((*IndexConst(arg2).index(3)) * 0x2) as u128));
+  let x15: u128 = (((*IndexConst(arg1).index(7)) as u128) * (((*IndexConst(arg2).index(2)) * 0x2) as u128));
+  let x16: u128 = (((*IndexConst(arg1).index(6)) as u128) * (((*IndexConst(arg2).index(8)) * 0x2) as u128));
+  let x17: u128 = (((*IndexConst(arg1).index(6)) as u128) * (((*IndexConst(arg2).index(7)) * 0x2) as u128));
+  let x18: u128 = (((*IndexConst(arg1).index(6)) as u128) * (((*IndexConst(arg2).index(6)) * 0x2) as u128));
+  let x19: u128 = (((*IndexConst(arg1).index(6)) as u128) * (((*IndexConst(arg2).index(5)) * 0x2) as u128));
+  let x20: u128 = (((*IndexConst(arg1).index(6)) as u128) * (((*IndexConst(arg2).index(4)) * 0x2) as u128));
+  let x21: u128 = (((*IndexConst(arg1).index(6)) as u128) * (((*IndexConst(arg2).index(3)) * 0x2) as u128));
+  let x22: u128 = (((*IndexConst(arg1).index(5)) as u128) * (((*IndexConst(arg2).index(8)) * 0x2) as u128));
+  let x23: u128 = (((*IndexConst(arg1).index(5)) as u128) * (((*IndexConst(arg2).index(7)) * 0x2) as u128));
+  let x24: u128 = (((*IndexConst(arg1).index(5)) as u128) * (((*IndexConst(arg2).index(6)) * 0x2) as u128));
+  let x25: u128 = (((*IndexConst(arg1).index(5)) as u128) * (((*IndexConst(arg2).index(5)) * 0x2) as u128));
+  let x26: u128 = (((*IndexConst(arg1).index(5)) as u128) * (((*IndexConst(arg2).index(4)) * 0x2) as u128));
+  let x27: u128 = (((*IndexConst(arg1).index(4)) as u128) * (((*IndexConst(arg2).index(8)) * 0x2) as u128));
+  let x28: u128 = (((*IndexConst(arg1).index(4)) as u128) * (((*IndexConst(arg2).index(7)) * 0x2) as u128));
+  let x29: u128 = (((*IndexConst(arg1).index(4)) as u128) * (((*IndexConst(arg2).index(6)) * 0x2) as u128));
+  let x30: u128 = (((*IndexConst(arg1).index(4)) as u128) * (((*IndexConst(arg2).index(5)) * 0x2) as u128));
+  let x31: u128 = (((*IndexConst(arg1).index(3)) as u128) * (((*IndexConst(arg2).index(8)) * 0x2) as u128));
+  let x32: u128 = (((*IndexConst(arg1).index(3)) as u128) * (((*IndexConst(arg2).index(7)) * 0x2) as u128));
+  let x33: u128 = (((*IndexConst(arg1).index(3)) as u128) * (((*IndexConst(arg2).index(6)) * 0x2) as u128));
+  let x34: u128 = (((*IndexConst(arg1).index(2)) as u128) * (((*IndexConst(arg2).index(8)) * 0x2) as u128));
+  let x35: u128 = (((*IndexConst(arg1).index(2)) as u128) * (((*IndexConst(arg2).index(7)) * 0x2) as u128));
+  let x36: u128 = (((*IndexConst(arg1).index(1)) as u128) * (((*IndexConst(arg2).index(8)) * 0x2) as u128));
+  let x37: u128 = (((*IndexConst(arg1).index(8)) as u128) * ((*IndexConst(arg2).index(0)) as u128));
+  let x38: u128 = (((*IndexConst(arg1).index(7)) as u128) * ((*IndexConst(arg2).index(1)) as u128));
+  let x39: u128 = (((*IndexConst(arg1).index(7)) as u128) * ((*IndexConst(arg2).index(0)) as u128));
+  let x40: u128 = (((*IndexConst(arg1).index(6)) as u128) * ((*IndexConst(arg2).index(2)) as u128));
+  let x41: u128 = (((*IndexConst(arg1).index(6)) as u128) * ((*IndexConst(arg2).index(1)) as u128));
+  let x42: u128 = (((*IndexConst(arg1).index(6)) as u128) * ((*IndexConst(arg2).index(0)) as u128));
+  let x43: u128 = (((*IndexConst(arg1).index(5)) as u128) * ((*IndexConst(arg2).index(3)) as u128));
+  let x44: u128 = (((*IndexConst(arg1).index(5)) as u128) * ((*IndexConst(arg2).index(2)) as u128));
+  let x45: u128 = (((*IndexConst(arg1).index(5)) as u128) * ((*IndexConst(arg2).index(1)) as u128));
+  let x46: u128 = (((*IndexConst(arg1).index(5)) as u128) * ((*IndexConst(arg2).index(0)) as u128));
+  let x47: u128 = (((*IndexConst(arg1).index(4)) as u128) * ((*IndexConst(arg2).index(4)) as u128));
+  let x48: u128 = (((*IndexConst(arg1).index(4)) as u128) * ((*IndexConst(arg2).index(3)) as u128));
+  let x49: u128 = (((*IndexConst(arg1).index(4)) as u128) * ((*IndexConst(arg2).index(2)) as u128));
+  let x50: u128 = (((*IndexConst(arg1).index(4)) as u128) * ((*IndexConst(arg2).index(1)) as u128));
+  let x51: u128 = (((*IndexConst(arg1).index(4)) as u128) * ((*IndexConst(arg2).index(0)) as u128));
+  let x52: u128 = (((*IndexConst(arg1).index(3)) as u128) * ((*IndexConst(arg2).index(5)) as u128));
+  let x53: u128 = (((*IndexConst(arg1).index(3)) as u128) * ((*IndexConst(arg2).index(4)) as u128));
+  let x54: u128 = (((*IndexConst(arg1).index(3)) as u128) * ((*IndexConst(arg2).index(3)) as u128));
+  let x55: u128 = (((*IndexConst(arg1).index(3)) as u128) * ((*IndexConst(arg2).index(2)) as u128));
+  let x56: u128 = (((*IndexConst(arg1).index(3)) as u128) * ((*IndexConst(arg2).index(1)) as u128));
+  let x57: u128 = (((*IndexConst(arg1).index(3)) as u128) * ((*IndexConst(arg2).index(0)) as u128));
+  let x58: u128 = (((*IndexConst(arg1).index(2)) as u128) * ((*IndexConst(arg2).index(6)) as u128));
+  let x59: u128 = (((*IndexConst(arg1).index(2)) as u128) * ((*IndexConst(arg2).index(5)) as u128));
+  let x60: u128 = (((*IndexConst(arg1).index(2)) as u128) * ((*IndexConst(arg2).index(4)) as u128));
+  let x61: u128 = (((*IndexConst(arg1).index(2)) as u128) * ((*IndexConst(arg2).index(3)) as u128));
+  let x62: u128 = (((*IndexConst(arg1).index(2)) as u128) * ((*IndexConst(arg2).index(2)) as u128));
+  let x63: u128 = (((*IndexConst(arg1).index(2)) as u128) * ((*IndexConst(arg2).index(1)) as u128));
+  let x64: u128 = (((*IndexConst(arg1).index(2)) as u128) * ((*IndexConst(arg2).index(0)) as u128));
+  let x65: u128 = (((*IndexConst(arg1).index(1)) as u128) * ((*IndexConst(arg2).index(7)) as u128));
+  let x66: u128 = (((*IndexConst(arg1).index(1)) as u128) * ((*IndexConst(arg2).index(6)) as u128));
+  let x67: u128 = (((*IndexConst(arg1).index(1)) as u128) * ((*IndexConst(arg2).index(5)) as u128));
+  let x68: u128 = (((*IndexConst(arg1).index(1)) as u128) * ((*IndexConst(arg2).index(4)) as u128));
+  let x69: u128 = (((*IndexConst(arg1).index(1)) as u128) * ((*IndexConst(arg2).index(3)) as u128));
+  let x70: u128 = (((*IndexConst(arg1).index(1)) as u128) * ((*IndexConst(arg2).index(2)) as u128));
+  let x71: u128 = (((*IndexConst(arg1).index(1)) as u128) * ((*IndexConst(arg2).index(1)) as u128));
+  let x72: u128 = (((*IndexConst(arg1).index(1)) as u128) * ((*IndexConst(arg2).index(0)) as u128));
+  let x73: u128 = (((*IndexConst(arg1).index(0)) as u128) * ((*IndexConst(arg2).index(8)) as u128));
+  let x74: u128 = (((*IndexConst(arg1).index(0)) as u128) * ((*IndexConst(arg2).index(7)) as u128));
+  let x75: u128 = (((*IndexConst(arg1).index(0)) as u128) * ((*IndexConst(arg2).index(6)) as u128));
+  let x76: u128 = (((*IndexConst(arg1).index(0)) as u128) * ((*IndexConst(arg2).index(5)) as u128));
+  let x77: u128 = (((*IndexConst(arg1).index(0)) as u128) * ((*IndexConst(arg2).index(4)) as u128));
+  let x78: u128 = (((*IndexConst(arg1).index(0)) as u128) * ((*IndexConst(arg2).index(3)) as u128));
+  let x79: u128 = (((*IndexConst(arg1).index(0)) as u128) * ((*IndexConst(arg2).index(2)) as u128));
+  let x80: u128 = (((*IndexConst(arg1).index(0)) as u128) * ((*IndexConst(arg2).index(1)) as u128));
+  let x81: u128 = (((*IndexConst(arg1).index(0)) as u128) * ((*IndexConst(arg2).index(0)) as u128));
   let x82: u128 = (x81 + (x36 + (x35 + (x33 + (x30 + (x26 + (x21 + (x15 + x8))))))));
   let x83: u128 = (x82 >> 58);
   let x84: u64 = ((x82 & (0x3ffffffffffffff as u128)) as u64);
@@ -302,15 +354,15 @@ pub fn fiat_p521_carry_mul(out1: &mut fiat_p521_tight_field_element, arg1: &fiat
   let x121: fiat_p521_u1 = ((x120 >> 58) as fiat_p521_u1);
   let x122: u64 = (x120 & 0x3ffffffffffffff);
   let x123: u64 = ((x121 as u64) + x98);
-  out1[0] = x119;
-  out1[1] = x122;
-  out1[2] = x123;
-  out1[3] = x101;
-  out1[4] = x104;
-  out1[5] = x107;
-  out1[6] = x110;
-  out1[7] = x113;
-  out1[8] = x116;
+  *IndexConst(&mut out1).index_mut(0) = x119;
+  *IndexConst(&mut out1).index_mut(1) = x122;
+  *IndexConst(&mut out1).index_mut(2) = x123;
+  *IndexConst(&mut out1).index_mut(3) = x101;
+  *IndexConst(&mut out1).index_mut(4) = x104;
+  *IndexConst(&mut out1).index_mut(5) = x107;
+  *IndexConst(&mut out1).index_mut(6) = x110;
+  *IndexConst(&mut out1).index_mut(7) = x113;
+  *IndexConst(&mut out1).index_mut(8) = x116;
 }
 
 /// The function fiat_p521_carry_square squares a field element and reduces the result.
@@ -319,68 +371,68 @@ pub fn fiat_p521_carry_mul(out1: &mut fiat_p521_tight_field_element, arg1: &fiat
 ///   eval out1 mod m = (eval arg1 * eval arg1) mod m
 ///
 #[inline]
-pub fn fiat_p521_carry_square(out1: &mut fiat_p521_tight_field_element, arg1: &fiat_p521_loose_field_element) {
-  let x1: u64 = (arg1[8]);
+pub const fn fiat_p521_carry_square(mut out1: &mut fiat_p521_tight_field_element, arg1: &fiat_p521_loose_field_element) {
+  let x1: u64 = (*IndexConst(arg1).index(8));
   let x2: u64 = (x1 * 0x2);
-  let x3: u64 = ((arg1[8]) * 0x2);
-  let x4: u64 = (arg1[7]);
+  let x3: u64 = ((*IndexConst(arg1).index(8)) * 0x2);
+  let x4: u64 = (*IndexConst(arg1).index(7));
   let x5: u64 = (x4 * 0x2);
-  let x6: u64 = ((arg1[7]) * 0x2);
-  let x7: u64 = (arg1[6]);
+  let x6: u64 = ((*IndexConst(arg1).index(7)) * 0x2);
+  let x7: u64 = (*IndexConst(arg1).index(6));
   let x8: u64 = (x7 * 0x2);
-  let x9: u64 = ((arg1[6]) * 0x2);
-  let x10: u64 = (arg1[5]);
+  let x9: u64 = ((*IndexConst(arg1).index(6)) * 0x2);
+  let x10: u64 = (*IndexConst(arg1).index(5));
   let x11: u64 = (x10 * 0x2);
-  let x12: u64 = ((arg1[5]) * 0x2);
-  let x13: u64 = ((arg1[4]) * 0x2);
-  let x14: u64 = ((arg1[3]) * 0x2);
-  let x15: u64 = ((arg1[2]) * 0x2);
-  let x16: u64 = ((arg1[1]) * 0x2);
-  let x17: u128 = (((arg1[8]) as u128) * ((x1 * 0x2) as u128));
-  let x18: u128 = (((arg1[7]) as u128) * ((x2 * 0x2) as u128));
-  let x19: u128 = (((arg1[7]) as u128) * ((x4 * 0x2) as u128));
-  let x20: u128 = (((arg1[6]) as u128) * ((x2 * 0x2) as u128));
-  let x21: u128 = (((arg1[6]) as u128) * ((x5 * 0x2) as u128));
-  let x22: u128 = (((arg1[6]) as u128) * ((x7 * 0x2) as u128));
-  let x23: u128 = (((arg1[5]) as u128) * ((x2 * 0x2) as u128));
-  let x24: u128 = (((arg1[5]) as u128) * ((x5 * 0x2) as u128));
-  let x25: u128 = (((arg1[5]) as u128) * ((x8 * 0x2) as u128));
-  let x26: u128 = (((arg1[5]) as u128) * ((x10 * 0x2) as u128));
-  let x27: u128 = (((arg1[4]) as u128) * ((x2 * 0x2) as u128));
-  let x28: u128 = (((arg1[4]) as u128) * ((x5 * 0x2) as u128));
-  let x29: u128 = (((arg1[4]) as u128) * ((x8 * 0x2) as u128));
-  let x30: u128 = (((arg1[4]) as u128) * ((x11 * 0x2) as u128));
-  let x31: u128 = (((arg1[4]) as u128) * ((arg1[4]) as u128));
-  let x32: u128 = (((arg1[3]) as u128) * ((x2 * 0x2) as u128));
-  let x33: u128 = (((arg1[3]) as u128) * ((x5 * 0x2) as u128));
-  let x34: u128 = (((arg1[3]) as u128) * ((x8 * 0x2) as u128));
-  let x35: u128 = (((arg1[3]) as u128) * (x12 as u128));
-  let x36: u128 = (((arg1[3]) as u128) * (x13 as u128));
-  let x37: u128 = (((arg1[3]) as u128) * ((arg1[3]) as u128));
-  let x38: u128 = (((arg1[2]) as u128) * ((x2 * 0x2) as u128));
-  let x39: u128 = (((arg1[2]) as u128) * ((x5 * 0x2) as u128));
-  let x40: u128 = (((arg1[2]) as u128) * (x9 as u128));
-  let x41: u128 = (((arg1[2]) as u128) * (x12 as u128));
-  let x42: u128 = (((arg1[2]) as u128) * (x13 as u128));
-  let x43: u128 = (((arg1[2]) as u128) * (x14 as u128));
-  let x44: u128 = (((arg1[2]) as u128) * ((arg1[2]) as u128));
-  let x45: u128 = (((arg1[1]) as u128) * ((x2 * 0x2) as u128));
-  let x46: u128 = (((arg1[1]) as u128) * (x6 as u128));
-  let x47: u128 = (((arg1[1]) as u128) * (x9 as u128));
-  let x48: u128 = (((arg1[1]) as u128) * (x12 as u128));
-  let x49: u128 = (((arg1[1]) as u128) * (x13 as u128));
-  let x50: u128 = (((arg1[1]) as u128) * (x14 as u128));
-  let x51: u128 = (((arg1[1]) as u128) * (x15 as u128));
-  let x52: u128 = (((arg1[1]) as u128) * ((arg1[1]) as u128));
-  let x53: u128 = (((arg1[0]) as u128) * (x3 as u128));
-  let x54: u128 = (((arg1[0]) as u128) * (x6 as u128));
-  let x55: u128 = (((arg1[0]) as u128) * (x9 as u128));
-  let x56: u128 = (((arg1[0]) as u128) * (x12 as u128));
-  let x57: u128 = (((arg1[0]) as u128) * (x13 as u128));
-  let x58: u128 = (((arg1[0]) as u128) * (x14 as u128));
-  let x59: u128 = (((arg1[0]) as u128) * (x15 as u128));
-  let x60: u128 = (((arg1[0]) as u128) * (x16 as u128));
-  let x61: u128 = (((arg1[0]) as u128) * ((arg1[0]) as u128));
+  let x12: u64 = ((*IndexConst(arg1).index(5)) * 0x2);
+  let x13: u64 = ((*IndexConst(arg1).index(4)) * 0x2);
+  let x14: u64 = ((*IndexConst(arg1).index(3)) * 0x2);
+  let x15: u64 = ((*IndexConst(arg1).index(2)) * 0x2);
+  let x16: u64 = ((*IndexConst(arg1).index(1)) * 0x2);
+  let x17: u128 = (((*IndexConst(arg1).index(8)) as u128) * ((x1 * 0x2) as u128));
+  let x18: u128 = (((*IndexConst(arg1).index(7)) as u128) * ((x2 * 0x2) as u128));
+  let x19: u128 = (((*IndexConst(arg1).index(7)) as u128) * ((x4 * 0x2) as u128));
+  let x20: u128 = (((*IndexConst(arg1).index(6)) as u128) * ((x2 * 0x2) as u128));
+  let x21: u128 = (((*IndexConst(arg1).index(6)) as u128) * ((x5 * 0x2) as u128));
+  let x22: u128 = (((*IndexConst(arg1).index(6)) as u128) * ((x7 * 0x2) as u128));
+  let x23: u128 = (((*IndexConst(arg1).index(5)) as u128) * ((x2 * 0x2) as u128));
+  let x24: u128 = (((*IndexConst(arg1).index(5)) as u128) * ((x5 * 0x2) as u128));
+  let x25: u128 = (((*IndexConst(arg1).index(5)) as u128) * ((x8 * 0x2) as u128));
+  let x26: u128 = (((*IndexConst(arg1).index(5)) as u128) * ((x10 * 0x2) as u128));
+  let x27: u128 = (((*IndexConst(arg1).index(4)) as u128) * ((x2 * 0x2) as u128));
+  let x28: u128 = (((*IndexConst(arg1).index(4)) as u128) * ((x5 * 0x2) as u128));
+  let x29: u128 = (((*IndexConst(arg1).index(4)) as u128) * ((x8 * 0x2) as u128));
+  let x30: u128 = (((*IndexConst(arg1).index(4)) as u128) * ((x11 * 0x2) as u128));
+  let x31: u128 = (((*IndexConst(arg1).index(4)) as u128) * ((*IndexConst(arg1).index(4)) as u128));
+  let x32: u128 = (((*IndexConst(arg1).index(3)) as u128) * ((x2 * 0x2) as u128));
+  let x33: u128 = (((*IndexConst(arg1).index(3)) as u128) * ((x5 * 0x2) as u128));
+  let x34: u128 = (((*IndexConst(arg1).index(3)) as u128) * ((x8 * 0x2) as u128));
+  let x35: u128 = (((*IndexConst(arg1).index(3)) as u128) * (x12 as u128));
+  let x36: u128 = (((*IndexConst(arg1).index(3)) as u128) * (x13 as u128));
+  let x37: u128 = (((*IndexConst(arg1).index(3)) as u128) * ((*IndexConst(arg1).index(3)) as u128));
+  let x38: u128 = (((*IndexConst(arg1).index(2)) as u128) * ((x2 * 0x2) as u128));
+  let x39: u128 = (((*IndexConst(arg1).index(2)) as u128) * ((x5 * 0x2) as u128));
+  let x40: u128 = (((*IndexConst(arg1).index(2)) as u128) * (x9 as u128));
+  let x41: u128 = (((*IndexConst(arg1).index(2)) as u128) * (x12 as u128));
+  let x42: u128 = (((*IndexConst(arg1).index(2)) as u128) * (x13 as u128));
+  let x43: u128 = (((*IndexConst(arg1).index(2)) as u128) * (x14 as u128));
+  let x44: u128 = (((*IndexConst(arg1).index(2)) as u128) * ((*IndexConst(arg1).index(2)) as u128));
+  let x45: u128 = (((*IndexConst(arg1).index(1)) as u128) * ((x2 * 0x2) as u128));
+  let x46: u128 = (((*IndexConst(arg1).index(1)) as u128) * (x6 as u128));
+  let x47: u128 = (((*IndexConst(arg1).index(1)) as u128) * (x9 as u128));
+  let x48: u128 = (((*IndexConst(arg1).index(1)) as u128) * (x12 as u128));
+  let x49: u128 = (((*IndexConst(arg1).index(1)) as u128) * (x13 as u128));
+  let x50: u128 = (((*IndexConst(arg1).index(1)) as u128) * (x14 as u128));
+  let x51: u128 = (((*IndexConst(arg1).index(1)) as u128) * (x15 as u128));
+  let x52: u128 = (((*IndexConst(arg1).index(1)) as u128) * ((*IndexConst(arg1).index(1)) as u128));
+  let x53: u128 = (((*IndexConst(arg1).index(0)) as u128) * (x3 as u128));
+  let x54: u128 = (((*IndexConst(arg1).index(0)) as u128) * (x6 as u128));
+  let x55: u128 = (((*IndexConst(arg1).index(0)) as u128) * (x9 as u128));
+  let x56: u128 = (((*IndexConst(arg1).index(0)) as u128) * (x12 as u128));
+  let x57: u128 = (((*IndexConst(arg1).index(0)) as u128) * (x13 as u128));
+  let x58: u128 = (((*IndexConst(arg1).index(0)) as u128) * (x14 as u128));
+  let x59: u128 = (((*IndexConst(arg1).index(0)) as u128) * (x15 as u128));
+  let x60: u128 = (((*IndexConst(arg1).index(0)) as u128) * (x16 as u128));
+  let x61: u128 = (((*IndexConst(arg1).index(0)) as u128) * ((*IndexConst(arg1).index(0)) as u128));
   let x62: u128 = (x61 + (x45 + (x39 + (x34 + x30))));
   let x63: u128 = (x62 >> 58);
   let x64: u64 = ((x62 & (0x3ffffffffffffff as u128)) as u64);
@@ -423,15 +475,15 @@ pub fn fiat_p521_carry_square(out1: &mut fiat_p521_tight_field_element, arg1: &f
   let x101: fiat_p521_u1 = ((x100 >> 58) as fiat_p521_u1);
   let x102: u64 = (x100 & 0x3ffffffffffffff);
   let x103: u64 = ((x101 as u64) + x78);
-  out1[0] = x99;
-  out1[1] = x102;
-  out1[2] = x103;
-  out1[3] = x81;
-  out1[4] = x84;
-  out1[5] = x87;
-  out1[6] = x90;
-  out1[7] = x93;
-  out1[8] = x96;
+  *IndexConst(&mut out1).index_mut(0) = x99;
+  *IndexConst(&mut out1).index_mut(1) = x102;
+  *IndexConst(&mut out1).index_mut(2) = x103;
+  *IndexConst(&mut out1).index_mut(3) = x81;
+  *IndexConst(&mut out1).index_mut(4) = x84;
+  *IndexConst(&mut out1).index_mut(5) = x87;
+  *IndexConst(&mut out1).index_mut(6) = x90;
+  *IndexConst(&mut out1).index_mut(7) = x93;
+  *IndexConst(&mut out1).index_mut(8) = x96;
 }
 
 /// The function fiat_p521_carry reduces a field element.
@@ -440,16 +492,16 @@ pub fn fiat_p521_carry_square(out1: &mut fiat_p521_tight_field_element, arg1: &f
 ///   eval out1 mod m = eval arg1 mod m
 ///
 #[inline]
-pub fn fiat_p521_carry(out1: &mut fiat_p521_tight_field_element, arg1: &fiat_p521_loose_field_element) {
-  let x1: u64 = (arg1[0]);
-  let x2: u64 = ((x1 >> 58) + (arg1[1]));
-  let x3: u64 = ((x2 >> 58) + (arg1[2]));
-  let x4: u64 = ((x3 >> 58) + (arg1[3]));
-  let x5: u64 = ((x4 >> 58) + (arg1[4]));
-  let x6: u64 = ((x5 >> 58) + (arg1[5]));
-  let x7: u64 = ((x6 >> 58) + (arg1[6]));
-  let x8: u64 = ((x7 >> 58) + (arg1[7]));
-  let x9: u64 = ((x8 >> 58) + (arg1[8]));
+pub const fn fiat_p521_carry(mut out1: &mut fiat_p521_tight_field_element, arg1: &fiat_p521_loose_field_element) {
+  let x1: u64 = (*IndexConst(arg1).index(0));
+  let x2: u64 = ((x1 >> 58) + (*IndexConst(arg1).index(1)));
+  let x3: u64 = ((x2 >> 58) + (*IndexConst(arg1).index(2)));
+  let x4: u64 = ((x3 >> 58) + (*IndexConst(arg1).index(3)));
+  let x5: u64 = ((x4 >> 58) + (*IndexConst(arg1).index(4)));
+  let x6: u64 = ((x5 >> 58) + (*IndexConst(arg1).index(5)));
+  let x7: u64 = ((x6 >> 58) + (*IndexConst(arg1).index(6)));
+  let x8: u64 = ((x7 >> 58) + (*IndexConst(arg1).index(7)));
+  let x9: u64 = ((x8 >> 58) + (*IndexConst(arg1).index(8)));
   let x10: u64 = ((x1 & 0x3ffffffffffffff) + (x9 >> 57));
   let x11: u64 = ((((x10 >> 58) as fiat_p521_u1) as u64) + (x2 & 0x3ffffffffffffff));
   let x12: u64 = (x10 & 0x3ffffffffffffff);
@@ -461,15 +513,15 @@ pub fn fiat_p521_carry(out1: &mut fiat_p521_tight_field_element, arg1: &fiat_p52
   let x18: u64 = (x7 & 0x3ffffffffffffff);
   let x19: u64 = (x8 & 0x3ffffffffffffff);
   let x20: u64 = (x9 & 0x1ffffffffffffff);
-  out1[0] = x12;
-  out1[1] = x13;
-  out1[2] = x14;
-  out1[3] = x15;
-  out1[4] = x16;
-  out1[5] = x17;
-  out1[6] = x18;
-  out1[7] = x19;
-  out1[8] = x20;
+  *IndexConst(&mut out1).index_mut(0) = x12;
+  *IndexConst(&mut out1).index_mut(1) = x13;
+  *IndexConst(&mut out1).index_mut(2) = x14;
+  *IndexConst(&mut out1).index_mut(3) = x15;
+  *IndexConst(&mut out1).index_mut(4) = x16;
+  *IndexConst(&mut out1).index_mut(5) = x17;
+  *IndexConst(&mut out1).index_mut(6) = x18;
+  *IndexConst(&mut out1).index_mut(7) = x19;
+  *IndexConst(&mut out1).index_mut(8) = x20;
 }
 
 /// The function fiat_p521_add adds two field elements.
@@ -478,25 +530,25 @@ pub fn fiat_p521_carry(out1: &mut fiat_p521_tight_field_element, arg1: &fiat_p52
 ///   eval out1 mod m = (eval arg1 + eval arg2) mod m
 ///
 #[inline]
-pub fn fiat_p521_add(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element, arg2: &fiat_p521_tight_field_element) {
-  let x1: u64 = ((arg1[0]) + (arg2[0]));
-  let x2: u64 = ((arg1[1]) + (arg2[1]));
-  let x3: u64 = ((arg1[2]) + (arg2[2]));
-  let x4: u64 = ((arg1[3]) + (arg2[3]));
-  let x5: u64 = ((arg1[4]) + (arg2[4]));
-  let x6: u64 = ((arg1[5]) + (arg2[5]));
-  let x7: u64 = ((arg1[6]) + (arg2[6]));
-  let x8: u64 = ((arg1[7]) + (arg2[7]));
-  let x9: u64 = ((arg1[8]) + (arg2[8]));
-  out1[0] = x1;
-  out1[1] = x2;
-  out1[2] = x3;
-  out1[3] = x4;
-  out1[4] = x5;
-  out1[5] = x6;
-  out1[6] = x7;
-  out1[7] = x8;
-  out1[8] = x9;
+pub const fn fiat_p521_add(mut out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element, arg2: &fiat_p521_tight_field_element) {
+  let x1: u64 = ((*IndexConst(arg1).index(0)) + (*IndexConst(arg2).index(0)));
+  let x2: u64 = ((*IndexConst(arg1).index(1)) + (*IndexConst(arg2).index(1)));
+  let x3: u64 = ((*IndexConst(arg1).index(2)) + (*IndexConst(arg2).index(2)));
+  let x4: u64 = ((*IndexConst(arg1).index(3)) + (*IndexConst(arg2).index(3)));
+  let x5: u64 = ((*IndexConst(arg1).index(4)) + (*IndexConst(arg2).index(4)));
+  let x6: u64 = ((*IndexConst(arg1).index(5)) + (*IndexConst(arg2).index(5)));
+  let x7: u64 = ((*IndexConst(arg1).index(6)) + (*IndexConst(arg2).index(6)));
+  let x8: u64 = ((*IndexConst(arg1).index(7)) + (*IndexConst(arg2).index(7)));
+  let x9: u64 = ((*IndexConst(arg1).index(8)) + (*IndexConst(arg2).index(8)));
+  *IndexConst(&mut out1).index_mut(0) = x1;
+  *IndexConst(&mut out1).index_mut(1) = x2;
+  *IndexConst(&mut out1).index_mut(2) = x3;
+  *IndexConst(&mut out1).index_mut(3) = x4;
+  *IndexConst(&mut out1).index_mut(4) = x5;
+  *IndexConst(&mut out1).index_mut(5) = x6;
+  *IndexConst(&mut out1).index_mut(6) = x7;
+  *IndexConst(&mut out1).index_mut(7) = x8;
+  *IndexConst(&mut out1).index_mut(8) = x9;
 }
 
 /// The function fiat_p521_sub subtracts two field elements.
@@ -505,25 +557,25 @@ pub fn fiat_p521_add(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_
 ///   eval out1 mod m = (eval arg1 - eval arg2) mod m
 ///
 #[inline]
-pub fn fiat_p521_sub(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element, arg2: &fiat_p521_tight_field_element) {
-  let x1: u64 = ((0x7fffffffffffffe + (arg1[0])) - (arg2[0]));
-  let x2: u64 = ((0x7fffffffffffffe + (arg1[1])) - (arg2[1]));
-  let x3: u64 = ((0x7fffffffffffffe + (arg1[2])) - (arg2[2]));
-  let x4: u64 = ((0x7fffffffffffffe + (arg1[3])) - (arg2[3]));
-  let x5: u64 = ((0x7fffffffffffffe + (arg1[4])) - (arg2[4]));
-  let x6: u64 = ((0x7fffffffffffffe + (arg1[5])) - (arg2[5]));
-  let x7: u64 = ((0x7fffffffffffffe + (arg1[6])) - (arg2[6]));
-  let x8: u64 = ((0x7fffffffffffffe + (arg1[7])) - (arg2[7]));
-  let x9: u64 = ((0x3fffffffffffffe + (arg1[8])) - (arg2[8]));
-  out1[0] = x1;
-  out1[1] = x2;
-  out1[2] = x3;
-  out1[3] = x4;
-  out1[4] = x5;
-  out1[5] = x6;
-  out1[6] = x7;
-  out1[7] = x8;
-  out1[8] = x9;
+pub const fn fiat_p521_sub(mut out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element, arg2: &fiat_p521_tight_field_element) {
+  let x1: u64 = ((0x7fffffffffffffe + (*IndexConst(arg1).index(0))) - (*IndexConst(arg2).index(0)));
+  let x2: u64 = ((0x7fffffffffffffe + (*IndexConst(arg1).index(1))) - (*IndexConst(arg2).index(1)));
+  let x3: u64 = ((0x7fffffffffffffe + (*IndexConst(arg1).index(2))) - (*IndexConst(arg2).index(2)));
+  let x4: u64 = ((0x7fffffffffffffe + (*IndexConst(arg1).index(3))) - (*IndexConst(arg2).index(3)));
+  let x5: u64 = ((0x7fffffffffffffe + (*IndexConst(arg1).index(4))) - (*IndexConst(arg2).index(4)));
+  let x6: u64 = ((0x7fffffffffffffe + (*IndexConst(arg1).index(5))) - (*IndexConst(arg2).index(5)));
+  let x7: u64 = ((0x7fffffffffffffe + (*IndexConst(arg1).index(6))) - (*IndexConst(arg2).index(6)));
+  let x8: u64 = ((0x7fffffffffffffe + (*IndexConst(arg1).index(7))) - (*IndexConst(arg2).index(7)));
+  let x9: u64 = ((0x3fffffffffffffe + (*IndexConst(arg1).index(8))) - (*IndexConst(arg2).index(8)));
+  *IndexConst(&mut out1).index_mut(0) = x1;
+  *IndexConst(&mut out1).index_mut(1) = x2;
+  *IndexConst(&mut out1).index_mut(2) = x3;
+  *IndexConst(&mut out1).index_mut(3) = x4;
+  *IndexConst(&mut out1).index_mut(4) = x5;
+  *IndexConst(&mut out1).index_mut(5) = x6;
+  *IndexConst(&mut out1).index_mut(6) = x7;
+  *IndexConst(&mut out1).index_mut(7) = x8;
+  *IndexConst(&mut out1).index_mut(8) = x9;
 }
 
 /// The function fiat_p521_opp negates a field element.
@@ -532,25 +584,25 @@ pub fn fiat_p521_sub(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_
 ///   eval out1 mod m = -eval arg1 mod m
 ///
 #[inline]
-pub fn fiat_p521_opp(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element) {
-  let x1: u64 = (0x7fffffffffffffe - (arg1[0]));
-  let x2: u64 = (0x7fffffffffffffe - (arg1[1]));
-  let x3: u64 = (0x7fffffffffffffe - (arg1[2]));
-  let x4: u64 = (0x7fffffffffffffe - (arg1[3]));
-  let x5: u64 = (0x7fffffffffffffe - (arg1[4]));
-  let x6: u64 = (0x7fffffffffffffe - (arg1[5]));
-  let x7: u64 = (0x7fffffffffffffe - (arg1[6]));
-  let x8: u64 = (0x7fffffffffffffe - (arg1[7]));
-  let x9: u64 = (0x3fffffffffffffe - (arg1[8]));
-  out1[0] = x1;
-  out1[1] = x2;
-  out1[2] = x3;
-  out1[3] = x4;
-  out1[4] = x5;
-  out1[5] = x6;
-  out1[6] = x7;
-  out1[7] = x8;
-  out1[8] = x9;
+pub const fn fiat_p521_opp(mut out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element) {
+  let x1: u64 = (0x7fffffffffffffe - (*IndexConst(arg1).index(0)));
+  let x2: u64 = (0x7fffffffffffffe - (*IndexConst(arg1).index(1)));
+  let x3: u64 = (0x7fffffffffffffe - (*IndexConst(arg1).index(2)));
+  let x4: u64 = (0x7fffffffffffffe - (*IndexConst(arg1).index(3)));
+  let x5: u64 = (0x7fffffffffffffe - (*IndexConst(arg1).index(4)));
+  let x6: u64 = (0x7fffffffffffffe - (*IndexConst(arg1).index(5)));
+  let x7: u64 = (0x7fffffffffffffe - (*IndexConst(arg1).index(6)));
+  let x8: u64 = (0x7fffffffffffffe - (*IndexConst(arg1).index(7)));
+  let x9: u64 = (0x3fffffffffffffe - (*IndexConst(arg1).index(8)));
+  *IndexConst(&mut out1).index_mut(0) = x1;
+  *IndexConst(&mut out1).index_mut(1) = x2;
+  *IndexConst(&mut out1).index_mut(2) = x3;
+  *IndexConst(&mut out1).index_mut(3) = x4;
+  *IndexConst(&mut out1).index_mut(4) = x5;
+  *IndexConst(&mut out1).index_mut(5) = x6;
+  *IndexConst(&mut out1).index_mut(6) = x7;
+  *IndexConst(&mut out1).index_mut(7) = x8;
+  *IndexConst(&mut out1).index_mut(8) = x9;
 }
 
 /// The function fiat_p521_selectznz is a multi-limb conditional select.
@@ -565,34 +617,34 @@ pub fn fiat_p521_opp(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p521_selectznz(out1: &mut [u64; 9], arg1: fiat_p521_u1, arg2: &[u64; 9], arg3: &[u64; 9]) {
+pub const fn fiat_p521_selectznz(mut out1: &mut [u64; 9], arg1: fiat_p521_u1, arg2: &[u64; 9], arg3: &[u64; 9]) {
   let mut x1: u64 = 0;
-  fiat_p521_cmovznz_u64(&mut x1, arg1, (arg2[0]), (arg3[0]));
+  fiat_p521_cmovznz_u64(&mut x1, arg1, (*IndexConst(arg2).index(0)), (*IndexConst(arg3).index(0)));
   let mut x2: u64 = 0;
-  fiat_p521_cmovznz_u64(&mut x2, arg1, (arg2[1]), (arg3[1]));
+  fiat_p521_cmovznz_u64(&mut x2, arg1, (*IndexConst(arg2).index(1)), (*IndexConst(arg3).index(1)));
   let mut x3: u64 = 0;
-  fiat_p521_cmovznz_u64(&mut x3, arg1, (arg2[2]), (arg3[2]));
+  fiat_p521_cmovznz_u64(&mut x3, arg1, (*IndexConst(arg2).index(2)), (*IndexConst(arg3).index(2)));
   let mut x4: u64 = 0;
-  fiat_p521_cmovznz_u64(&mut x4, arg1, (arg2[3]), (arg3[3]));
+  fiat_p521_cmovznz_u64(&mut x4, arg1, (*IndexConst(arg2).index(3)), (*IndexConst(arg3).index(3)));
   let mut x5: u64 = 0;
-  fiat_p521_cmovznz_u64(&mut x5, arg1, (arg2[4]), (arg3[4]));
+  fiat_p521_cmovznz_u64(&mut x5, arg1, (*IndexConst(arg2).index(4)), (*IndexConst(arg3).index(4)));
   let mut x6: u64 = 0;
-  fiat_p521_cmovznz_u64(&mut x6, arg1, (arg2[5]), (arg3[5]));
+  fiat_p521_cmovznz_u64(&mut x6, arg1, (*IndexConst(arg2).index(5)), (*IndexConst(arg3).index(5)));
   let mut x7: u64 = 0;
-  fiat_p521_cmovznz_u64(&mut x7, arg1, (arg2[6]), (arg3[6]));
+  fiat_p521_cmovznz_u64(&mut x7, arg1, (*IndexConst(arg2).index(6)), (*IndexConst(arg3).index(6)));
   let mut x8: u64 = 0;
-  fiat_p521_cmovznz_u64(&mut x8, arg1, (arg2[7]), (arg3[7]));
+  fiat_p521_cmovznz_u64(&mut x8, arg1, (*IndexConst(arg2).index(7)), (*IndexConst(arg3).index(7)));
   let mut x9: u64 = 0;
-  fiat_p521_cmovznz_u64(&mut x9, arg1, (arg2[8]), (arg3[8]));
-  out1[0] = x1;
-  out1[1] = x2;
-  out1[2] = x3;
-  out1[3] = x4;
-  out1[4] = x5;
-  out1[5] = x6;
-  out1[6] = x7;
-  out1[7] = x8;
-  out1[8] = x9;
+  fiat_p521_cmovznz_u64(&mut x9, arg1, (*IndexConst(arg2).index(8)), (*IndexConst(arg3).index(8)));
+  *IndexConst(&mut out1).index_mut(0) = x1;
+  *IndexConst(&mut out1).index_mut(1) = x2;
+  *IndexConst(&mut out1).index_mut(2) = x3;
+  *IndexConst(&mut out1).index_mut(3) = x4;
+  *IndexConst(&mut out1).index_mut(4) = x5;
+  *IndexConst(&mut out1).index_mut(5) = x6;
+  *IndexConst(&mut out1).index_mut(6) = x7;
+  *IndexConst(&mut out1).index_mut(7) = x8;
+  *IndexConst(&mut out1).index_mut(8) = x9;
 }
 
 /// The function fiat_p521_to_bytes serializes a field element to bytes in little-endian order.
@@ -603,34 +655,34 @@ pub fn fiat_p521_selectznz(out1: &mut [u64; 9], arg1: fiat_p521_u1, arg2: &[u64;
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x1]]
 #[inline]
-pub fn fiat_p521_to_bytes(out1: &mut [u8; 66], arg1: &fiat_p521_tight_field_element) {
+pub const fn fiat_p521_to_bytes(mut out1: &mut [u8; 66], arg1: &fiat_p521_tight_field_element) {
   let mut x1: u64 = 0;
   let mut x2: fiat_p521_u1 = 0;
-  fiat_p521_subborrowx_u58(&mut x1, &mut x2, 0x0, (arg1[0]), 0x3ffffffffffffff);
+  fiat_p521_subborrowx_u58(&mut x1, &mut x2, 0x0, (*IndexConst(arg1).index(0)), 0x3ffffffffffffff);
   let mut x3: u64 = 0;
   let mut x4: fiat_p521_u1 = 0;
-  fiat_p521_subborrowx_u58(&mut x3, &mut x4, x2, (arg1[1]), 0x3ffffffffffffff);
+  fiat_p521_subborrowx_u58(&mut x3, &mut x4, x2, (*IndexConst(arg1).index(1)), 0x3ffffffffffffff);
   let mut x5: u64 = 0;
   let mut x6: fiat_p521_u1 = 0;
-  fiat_p521_subborrowx_u58(&mut x5, &mut x6, x4, (arg1[2]), 0x3ffffffffffffff);
+  fiat_p521_subborrowx_u58(&mut x5, &mut x6, x4, (*IndexConst(arg1).index(2)), 0x3ffffffffffffff);
   let mut x7: u64 = 0;
   let mut x8: fiat_p521_u1 = 0;
-  fiat_p521_subborrowx_u58(&mut x7, &mut x8, x6, (arg1[3]), 0x3ffffffffffffff);
+  fiat_p521_subborrowx_u58(&mut x7, &mut x8, x6, (*IndexConst(arg1).index(3)), 0x3ffffffffffffff);
   let mut x9: u64 = 0;
   let mut x10: fiat_p521_u1 = 0;
-  fiat_p521_subborrowx_u58(&mut x9, &mut x10, x8, (arg1[4]), 0x3ffffffffffffff);
+  fiat_p521_subborrowx_u58(&mut x9, &mut x10, x8, (*IndexConst(arg1).index(4)), 0x3ffffffffffffff);
   let mut x11: u64 = 0;
   let mut x12: fiat_p521_u1 = 0;
-  fiat_p521_subborrowx_u58(&mut x11, &mut x12, x10, (arg1[5]), 0x3ffffffffffffff);
+  fiat_p521_subborrowx_u58(&mut x11, &mut x12, x10, (*IndexConst(arg1).index(5)), 0x3ffffffffffffff);
   let mut x13: u64 = 0;
   let mut x14: fiat_p521_u1 = 0;
-  fiat_p521_subborrowx_u58(&mut x13, &mut x14, x12, (arg1[6]), 0x3ffffffffffffff);
+  fiat_p521_subborrowx_u58(&mut x13, &mut x14, x12, (*IndexConst(arg1).index(6)), 0x3ffffffffffffff);
   let mut x15: u64 = 0;
   let mut x16: fiat_p521_u1 = 0;
-  fiat_p521_subborrowx_u58(&mut x15, &mut x16, x14, (arg1[7]), 0x3ffffffffffffff);
+  fiat_p521_subborrowx_u58(&mut x15, &mut x16, x14, (*IndexConst(arg1).index(7)), 0x3ffffffffffffff);
   let mut x17: u64 = 0;
   let mut x18: fiat_p521_u1 = 0;
-  fiat_p521_subborrowx_u57(&mut x17, &mut x18, x16, (arg1[8]), 0x1ffffffffffffff);
+  fiat_p521_subborrowx_u57(&mut x17, &mut x18, x16, (*IndexConst(arg1).index(8)), 0x1ffffffffffffff);
   let mut x19: u64 = 0;
   fiat_p521_cmovznz_u64(&mut x19, x18, (0x0 as u64), 0xffffffffffffffff);
   let mut x20: u64 = 0;
@@ -798,72 +850,72 @@ pub fn fiat_p521_to_bytes(out1: &mut [u8; 66], arg1: &fiat_p521_tight_field_elem
   let x173: u64 = (x171 >> 8);
   let x174: u8 = ((x173 & (0xff as u64)) as u8);
   let x175: fiat_p521_u1 = ((x173 >> 8) as fiat_p521_u1);
-  out1[0] = x44;
-  out1[1] = x46;
-  out1[2] = x48;
-  out1[3] = x50;
-  out1[4] = x52;
-  out1[5] = x54;
-  out1[6] = x56;
-  out1[7] = x59;
-  out1[8] = x61;
-  out1[9] = x63;
-  out1[10] = x65;
-  out1[11] = x67;
-  out1[12] = x69;
-  out1[13] = x71;
-  out1[14] = x74;
-  out1[15] = x76;
-  out1[16] = x78;
-  out1[17] = x80;
-  out1[18] = x82;
-  out1[19] = x84;
-  out1[20] = x86;
-  out1[21] = x89;
-  out1[22] = x91;
-  out1[23] = x93;
-  out1[24] = x95;
-  out1[25] = x97;
-  out1[26] = x99;
-  out1[27] = x101;
-  out1[28] = x102;
-  out1[29] = x103;
-  out1[30] = x105;
-  out1[31] = x107;
-  out1[32] = x109;
-  out1[33] = x111;
-  out1[34] = x113;
-  out1[35] = x115;
-  out1[36] = x118;
-  out1[37] = x120;
-  out1[38] = x122;
-  out1[39] = x124;
-  out1[40] = x126;
-  out1[41] = x128;
-  out1[42] = x130;
-  out1[43] = x133;
-  out1[44] = x135;
-  out1[45] = x137;
-  out1[46] = x139;
-  out1[47] = x141;
-  out1[48] = x143;
-  out1[49] = x145;
-  out1[50] = x148;
-  out1[51] = x150;
-  out1[52] = x152;
-  out1[53] = x154;
-  out1[54] = x156;
-  out1[55] = x158;
-  out1[56] = x160;
-  out1[57] = x161;
-  out1[58] = x162;
-  out1[59] = x164;
-  out1[60] = x166;
-  out1[61] = x168;
-  out1[62] = x170;
-  out1[63] = x172;
-  out1[64] = x174;
-  out1[65] = (x175 as u8);
+  *IndexConst(&mut out1).index_mut(0) = x44;
+  *IndexConst(&mut out1).index_mut(1) = x46;
+  *IndexConst(&mut out1).index_mut(2) = x48;
+  *IndexConst(&mut out1).index_mut(3) = x50;
+  *IndexConst(&mut out1).index_mut(4) = x52;
+  *IndexConst(&mut out1).index_mut(5) = x54;
+  *IndexConst(&mut out1).index_mut(6) = x56;
+  *IndexConst(&mut out1).index_mut(7) = x59;
+  *IndexConst(&mut out1).index_mut(8) = x61;
+  *IndexConst(&mut out1).index_mut(9) = x63;
+  *IndexConst(&mut out1).index_mut(10) = x65;
+  *IndexConst(&mut out1).index_mut(11) = x67;
+  *IndexConst(&mut out1).index_mut(12) = x69;
+  *IndexConst(&mut out1).index_mut(13) = x71;
+  *IndexConst(&mut out1).index_mut(14) = x74;
+  *IndexConst(&mut out1).index_mut(15) = x76;
+  *IndexConst(&mut out1).index_mut(16) = x78;
+  *IndexConst(&mut out1).index_mut(17) = x80;
+  *IndexConst(&mut out1).index_mut(18) = x82;
+  *IndexConst(&mut out1).index_mut(19) = x84;
+  *IndexConst(&mut out1).index_mut(20) = x86;
+  *IndexConst(&mut out1).index_mut(21) = x89;
+  *IndexConst(&mut out1).index_mut(22) = x91;
+  *IndexConst(&mut out1).index_mut(23) = x93;
+  *IndexConst(&mut out1).index_mut(24) = x95;
+  *IndexConst(&mut out1).index_mut(25) = x97;
+  *IndexConst(&mut out1).index_mut(26) = x99;
+  *IndexConst(&mut out1).index_mut(27) = x101;
+  *IndexConst(&mut out1).index_mut(28) = x102;
+  *IndexConst(&mut out1).index_mut(29) = x103;
+  *IndexConst(&mut out1).index_mut(30) = x105;
+  *IndexConst(&mut out1).index_mut(31) = x107;
+  *IndexConst(&mut out1).index_mut(32) = x109;
+  *IndexConst(&mut out1).index_mut(33) = x111;
+  *IndexConst(&mut out1).index_mut(34) = x113;
+  *IndexConst(&mut out1).index_mut(35) = x115;
+  *IndexConst(&mut out1).index_mut(36) = x118;
+  *IndexConst(&mut out1).index_mut(37) = x120;
+  *IndexConst(&mut out1).index_mut(38) = x122;
+  *IndexConst(&mut out1).index_mut(39) = x124;
+  *IndexConst(&mut out1).index_mut(40) = x126;
+  *IndexConst(&mut out1).index_mut(41) = x128;
+  *IndexConst(&mut out1).index_mut(42) = x130;
+  *IndexConst(&mut out1).index_mut(43) = x133;
+  *IndexConst(&mut out1).index_mut(44) = x135;
+  *IndexConst(&mut out1).index_mut(45) = x137;
+  *IndexConst(&mut out1).index_mut(46) = x139;
+  *IndexConst(&mut out1).index_mut(47) = x141;
+  *IndexConst(&mut out1).index_mut(48) = x143;
+  *IndexConst(&mut out1).index_mut(49) = x145;
+  *IndexConst(&mut out1).index_mut(50) = x148;
+  *IndexConst(&mut out1).index_mut(51) = x150;
+  *IndexConst(&mut out1).index_mut(52) = x152;
+  *IndexConst(&mut out1).index_mut(53) = x154;
+  *IndexConst(&mut out1).index_mut(54) = x156;
+  *IndexConst(&mut out1).index_mut(55) = x158;
+  *IndexConst(&mut out1).index_mut(56) = x160;
+  *IndexConst(&mut out1).index_mut(57) = x161;
+  *IndexConst(&mut out1).index_mut(58) = x162;
+  *IndexConst(&mut out1).index_mut(59) = x164;
+  *IndexConst(&mut out1).index_mut(60) = x166;
+  *IndexConst(&mut out1).index_mut(61) = x168;
+  *IndexConst(&mut out1).index_mut(62) = x170;
+  *IndexConst(&mut out1).index_mut(63) = x172;
+  *IndexConst(&mut out1).index_mut(64) = x174;
+  *IndexConst(&mut out1).index_mut(65) = (x175 as u8);
 }
 
 /// The function fiat_p521_from_bytes deserializes a field element from bytes in little-endian order.
@@ -874,73 +926,73 @@ pub fn fiat_p521_to_bytes(out1: &mut [u8; 66], arg1: &fiat_p521_tight_field_elem
 /// Input Bounds:
 ///   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x1]]
 #[inline]
-pub fn fiat_p521_from_bytes(out1: &mut fiat_p521_tight_field_element, arg1: &[u8; 66]) {
-  let x1: u64 = ((((arg1[65]) as fiat_p521_u1) as u64) << 56);
-  let x2: u64 = (((arg1[64]) as u64) << 48);
-  let x3: u64 = (((arg1[63]) as u64) << 40);
-  let x4: u64 = (((arg1[62]) as u64) << 32);
-  let x5: u64 = (((arg1[61]) as u64) << 24);
-  let x6: u64 = (((arg1[60]) as u64) << 16);
-  let x7: u64 = (((arg1[59]) as u64) << 8);
-  let x8: u8 = (arg1[58]);
-  let x9: u64 = (((arg1[57]) as u64) << 50);
-  let x10: u64 = (((arg1[56]) as u64) << 42);
-  let x11: u64 = (((arg1[55]) as u64) << 34);
-  let x12: u64 = (((arg1[54]) as u64) << 26);
-  let x13: u64 = (((arg1[53]) as u64) << 18);
-  let x14: u64 = (((arg1[52]) as u64) << 10);
-  let x15: u64 = (((arg1[51]) as u64) << 2);
-  let x16: u64 = (((arg1[50]) as u64) << 52);
-  let x17: u64 = (((arg1[49]) as u64) << 44);
-  let x18: u64 = (((arg1[48]) as u64) << 36);
-  let x19: u64 = (((arg1[47]) as u64) << 28);
-  let x20: u64 = (((arg1[46]) as u64) << 20);
-  let x21: u64 = (((arg1[45]) as u64) << 12);
-  let x22: u64 = (((arg1[44]) as u64) << 4);
-  let x23: u64 = (((arg1[43]) as u64) << 54);
-  let x24: u64 = (((arg1[42]) as u64) << 46);
-  let x25: u64 = (((arg1[41]) as u64) << 38);
-  let x26: u64 = (((arg1[40]) as u64) << 30);
-  let x27: u64 = (((arg1[39]) as u64) << 22);
-  let x28: u64 = (((arg1[38]) as u64) << 14);
-  let x29: u64 = (((arg1[37]) as u64) << 6);
-  let x30: u64 = (((arg1[36]) as u64) << 56);
-  let x31: u64 = (((arg1[35]) as u64) << 48);
-  let x32: u64 = (((arg1[34]) as u64) << 40);
-  let x33: u64 = (((arg1[33]) as u64) << 32);
-  let x34: u64 = (((arg1[32]) as u64) << 24);
-  let x35: u64 = (((arg1[31]) as u64) << 16);
-  let x36: u64 = (((arg1[30]) as u64) << 8);
-  let x37: u8 = (arg1[29]);
-  let x38: u64 = (((arg1[28]) as u64) << 50);
-  let x39: u64 = (((arg1[27]) as u64) << 42);
-  let x40: u64 = (((arg1[26]) as u64) << 34);
-  let x41: u64 = (((arg1[25]) as u64) << 26);
-  let x42: u64 = (((arg1[24]) as u64) << 18);
-  let x43: u64 = (((arg1[23]) as u64) << 10);
-  let x44: u64 = (((arg1[22]) as u64) << 2);
-  let x45: u64 = (((arg1[21]) as u64) << 52);
-  let x46: u64 = (((arg1[20]) as u64) << 44);
-  let x47: u64 = (((arg1[19]) as u64) << 36);
-  let x48: u64 = (((arg1[18]) as u64) << 28);
-  let x49: u64 = (((arg1[17]) as u64) << 20);
-  let x50: u64 = (((arg1[16]) as u64) << 12);
-  let x51: u64 = (((arg1[15]) as u64) << 4);
-  let x52: u64 = (((arg1[14]) as u64) << 54);
-  let x53: u64 = (((arg1[13]) as u64) << 46);
-  let x54: u64 = (((arg1[12]) as u64) << 38);
-  let x55: u64 = (((arg1[11]) as u64) << 30);
-  let x56: u64 = (((arg1[10]) as u64) << 22);
-  let x57: u64 = (((arg1[9]) as u64) << 14);
-  let x58: u64 = (((arg1[8]) as u64) << 6);
-  let x59: u64 = (((arg1[7]) as u64) << 56);
-  let x60: u64 = (((arg1[6]) as u64) << 48);
-  let x61: u64 = (((arg1[5]) as u64) << 40);
-  let x62: u64 = (((arg1[4]) as u64) << 32);
-  let x63: u64 = (((arg1[3]) as u64) << 24);
-  let x64: u64 = (((arg1[2]) as u64) << 16);
-  let x65: u64 = (((arg1[1]) as u64) << 8);
-  let x66: u8 = (arg1[0]);
+pub const fn fiat_p521_from_bytes(mut out1: &mut fiat_p521_tight_field_element, arg1: &[u8; 66]) {
+  let x1: u64 = ((((*IndexConst(arg1).index(65)) as fiat_p521_u1) as u64) << 56);
+  let x2: u64 = (((*IndexConst(arg1).index(64)) as u64) << 48);
+  let x3: u64 = (((*IndexConst(arg1).index(63)) as u64) << 40);
+  let x4: u64 = (((*IndexConst(arg1).index(62)) as u64) << 32);
+  let x5: u64 = (((*IndexConst(arg1).index(61)) as u64) << 24);
+  let x6: u64 = (((*IndexConst(arg1).index(60)) as u64) << 16);
+  let x7: u64 = (((*IndexConst(arg1).index(59)) as u64) << 8);
+  let x8: u8 = (*IndexConst(arg1).index(58));
+  let x9: u64 = (((*IndexConst(arg1).index(57)) as u64) << 50);
+  let x10: u64 = (((*IndexConst(arg1).index(56)) as u64) << 42);
+  let x11: u64 = (((*IndexConst(arg1).index(55)) as u64) << 34);
+  let x12: u64 = (((*IndexConst(arg1).index(54)) as u64) << 26);
+  let x13: u64 = (((*IndexConst(arg1).index(53)) as u64) << 18);
+  let x14: u64 = (((*IndexConst(arg1).index(52)) as u64) << 10);
+  let x15: u64 = (((*IndexConst(arg1).index(51)) as u64) << 2);
+  let x16: u64 = (((*IndexConst(arg1).index(50)) as u64) << 52);
+  let x17: u64 = (((*IndexConst(arg1).index(49)) as u64) << 44);
+  let x18: u64 = (((*IndexConst(arg1).index(48)) as u64) << 36);
+  let x19: u64 = (((*IndexConst(arg1).index(47)) as u64) << 28);
+  let x20: u64 = (((*IndexConst(arg1).index(46)) as u64) << 20);
+  let x21: u64 = (((*IndexConst(arg1).index(45)) as u64) << 12);
+  let x22: u64 = (((*IndexConst(arg1).index(44)) as u64) << 4);
+  let x23: u64 = (((*IndexConst(arg1).index(43)) as u64) << 54);
+  let x24: u64 = (((*IndexConst(arg1).index(42)) as u64) << 46);
+  let x25: u64 = (((*IndexConst(arg1).index(41)) as u64) << 38);
+  let x26: u64 = (((*IndexConst(arg1).index(40)) as u64) << 30);
+  let x27: u64 = (((*IndexConst(arg1).index(39)) as u64) << 22);
+  let x28: u64 = (((*IndexConst(arg1).index(38)) as u64) << 14);
+  let x29: u64 = (((*IndexConst(arg1).index(37)) as u64) << 6);
+  let x30: u64 = (((*IndexConst(arg1).index(36)) as u64) << 56);
+  let x31: u64 = (((*IndexConst(arg1).index(35)) as u64) << 48);
+  let x32: u64 = (((*IndexConst(arg1).index(34)) as u64) << 40);
+  let x33: u64 = (((*IndexConst(arg1).index(33)) as u64) << 32);
+  let x34: u64 = (((*IndexConst(arg1).index(32)) as u64) << 24);
+  let x35: u64 = (((*IndexConst(arg1).index(31)) as u64) << 16);
+  let x36: u64 = (((*IndexConst(arg1).index(30)) as u64) << 8);
+  let x37: u8 = (*IndexConst(arg1).index(29));
+  let x38: u64 = (((*IndexConst(arg1).index(28)) as u64) << 50);
+  let x39: u64 = (((*IndexConst(arg1).index(27)) as u64) << 42);
+  let x40: u64 = (((*IndexConst(arg1).index(26)) as u64) << 34);
+  let x41: u64 = (((*IndexConst(arg1).index(25)) as u64) << 26);
+  let x42: u64 = (((*IndexConst(arg1).index(24)) as u64) << 18);
+  let x43: u64 = (((*IndexConst(arg1).index(23)) as u64) << 10);
+  let x44: u64 = (((*IndexConst(arg1).index(22)) as u64) << 2);
+  let x45: u64 = (((*IndexConst(arg1).index(21)) as u64) << 52);
+  let x46: u64 = (((*IndexConst(arg1).index(20)) as u64) << 44);
+  let x47: u64 = (((*IndexConst(arg1).index(19)) as u64) << 36);
+  let x48: u64 = (((*IndexConst(arg1).index(18)) as u64) << 28);
+  let x49: u64 = (((*IndexConst(arg1).index(17)) as u64) << 20);
+  let x50: u64 = (((*IndexConst(arg1).index(16)) as u64) << 12);
+  let x51: u64 = (((*IndexConst(arg1).index(15)) as u64) << 4);
+  let x52: u64 = (((*IndexConst(arg1).index(14)) as u64) << 54);
+  let x53: u64 = (((*IndexConst(arg1).index(13)) as u64) << 46);
+  let x54: u64 = (((*IndexConst(arg1).index(12)) as u64) << 38);
+  let x55: u64 = (((*IndexConst(arg1).index(11)) as u64) << 30);
+  let x56: u64 = (((*IndexConst(arg1).index(10)) as u64) << 22);
+  let x57: u64 = (((*IndexConst(arg1).index(9)) as u64) << 14);
+  let x58: u64 = (((*IndexConst(arg1).index(8)) as u64) << 6);
+  let x59: u64 = (((*IndexConst(arg1).index(7)) as u64) << 56);
+  let x60: u64 = (((*IndexConst(arg1).index(6)) as u64) << 48);
+  let x61: u64 = (((*IndexConst(arg1).index(5)) as u64) << 40);
+  let x62: u64 = (((*IndexConst(arg1).index(4)) as u64) << 32);
+  let x63: u64 = (((*IndexConst(arg1).index(3)) as u64) << 24);
+  let x64: u64 = (((*IndexConst(arg1).index(2)) as u64) << 16);
+  let x65: u64 = (((*IndexConst(arg1).index(1)) as u64) << 8);
+  let x66: u8 = (*IndexConst(arg1).index(0));
   let x67: u64 = (x65 + (x66 as u64));
   let x68: u64 = (x64 + x67);
   let x69: u64 = (x63 + x68);
@@ -1016,15 +1068,15 @@ pub fn fiat_p521_from_bytes(out1: &mut fiat_p521_tight_field_element, arg1: &[u8
   let x139: u64 = (x3 + x138);
   let x140: u64 = (x2 + x139);
   let x141: u64 = (x1 + x140);
-  out1[0] = x74;
-  out1[1] = x83;
-  out1[2] = x92;
-  out1[3] = x100;
-  out1[4] = x108;
-  out1[5] = x117;
-  out1[6] = x126;
-  out1[7] = x134;
-  out1[8] = x141;
+  *IndexConst(&mut out1).index_mut(0) = x74;
+  *IndexConst(&mut out1).index_mut(1) = x83;
+  *IndexConst(&mut out1).index_mut(2) = x92;
+  *IndexConst(&mut out1).index_mut(3) = x100;
+  *IndexConst(&mut out1).index_mut(4) = x108;
+  *IndexConst(&mut out1).index_mut(5) = x117;
+  *IndexConst(&mut out1).index_mut(6) = x126;
+  *IndexConst(&mut out1).index_mut(7) = x134;
+  *IndexConst(&mut out1).index_mut(8) = x141;
 }
 
 /// The function fiat_p521_relax is the identity function converting from tight field elements to loose field elements.
@@ -1033,23 +1085,23 @@ pub fn fiat_p521_from_bytes(out1: &mut fiat_p521_tight_field_element, arg1: &[u8
 ///   out1 = arg1
 ///
 #[inline]
-pub fn fiat_p521_relax(out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element) {
-  let x1: u64 = (arg1[0]);
-  let x2: u64 = (arg1[1]);
-  let x3: u64 = (arg1[2]);
-  let x4: u64 = (arg1[3]);
-  let x5: u64 = (arg1[4]);
-  let x6: u64 = (arg1[5]);
-  let x7: u64 = (arg1[6]);
-  let x8: u64 = (arg1[7]);
-  let x9: u64 = (arg1[8]);
-  out1[0] = x1;
-  out1[1] = x2;
-  out1[2] = x3;
-  out1[3] = x4;
-  out1[4] = x5;
-  out1[5] = x6;
-  out1[6] = x7;
-  out1[7] = x8;
-  out1[8] = x9;
+pub const fn fiat_p521_relax(mut out1: &mut fiat_p521_loose_field_element, arg1: &fiat_p521_tight_field_element) {
+  let x1: u64 = (*IndexConst(arg1).index(0));
+  let x2: u64 = (*IndexConst(arg1).index(1));
+  let x3: u64 = (*IndexConst(arg1).index(2));
+  let x4: u64 = (*IndexConst(arg1).index(3));
+  let x5: u64 = (*IndexConst(arg1).index(4));
+  let x6: u64 = (*IndexConst(arg1).index(5));
+  let x7: u64 = (*IndexConst(arg1).index(6));
+  let x8: u64 = (*IndexConst(arg1).index(7));
+  let x9: u64 = (*IndexConst(arg1).index(8));
+  *IndexConst(&mut out1).index_mut(0) = x1;
+  *IndexConst(&mut out1).index_mut(1) = x2;
+  *IndexConst(&mut out1).index_mut(2) = x3;
+  *IndexConst(&mut out1).index_mut(3) = x4;
+  *IndexConst(&mut out1).index_mut(4) = x5;
+  *IndexConst(&mut out1).index_mut(5) = x6;
+  *IndexConst(&mut out1).index_mut(6) = x7;
+  *IndexConst(&mut out1).index_mut(7) = x8;
+  *IndexConst(&mut out1).index_mut(8) = x9;
 }

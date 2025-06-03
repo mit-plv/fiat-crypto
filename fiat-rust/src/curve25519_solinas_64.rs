@@ -10,6 +10,26 @@
 #![allow(unused_parens)]
 #![allow(non_camel_case_types)]
 
+/// Since `Index` and `IndexMut` aren't callable in `const` contexts yet, this helper type helps unify
+/// arrays and user-defined array-wrapper types into a single type which can be indexed in `const`
+/// contexts. Once `const trait`s are stabilized this type can go away
+struct IndexConst<T: ?Sized>(T);
+
+impl<'a, T, const N: usize> IndexConst<&'a [T; N]> {
+    #[inline(always)]
+    #[allow(unused)]
+    const fn index(self, i: usize) -> &'a T {
+        &self.0[i]
+    }
+}
+impl<'a, 'b, T, const N: usize> IndexConst<&'a mut &'b mut [T; N]> {
+    #[inline(always)]
+    #[allow(unused)]
+    const fn index_mut(self, i: usize) -> &'a mut T {
+        &mut self.0[i]
+    }
+}
+
 /** fiat_curve25519_solinas_u1 represents values of 1 bits, stored in one byte. */
 pub type fiat_curve25519_solinas_u1 = u8;
 /** fiat_curve25519_solinas_i1 represents values of 1 bits, stored in one byte. */
@@ -34,7 +54,7 @@ pub type fiat_curve25519_solinas_i2 = i8;
 ///   out1: [0x0 ~> 0xffffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_curve25519_solinas_addcarryx_u64(out1: &mut u64, out2: &mut fiat_curve25519_solinas_u1, arg1: fiat_curve25519_solinas_u1, arg2: u64, arg3: u64) {
+pub const fn fiat_curve25519_solinas_addcarryx_u64(out1: &mut u64, out2: &mut fiat_curve25519_solinas_u1, arg1: fiat_curve25519_solinas_u1, arg2: u64, arg3: u64) {
   let x1: u128 = (((arg1 as u128) + (arg2 as u128)) + (arg3 as u128));
   let x2: u64 = ((x1 & (0xffffffffffffffff as u128)) as u64);
   let x3: fiat_curve25519_solinas_u1 = ((x1 >> 64) as fiat_curve25519_solinas_u1);
@@ -56,7 +76,7 @@ pub fn fiat_curve25519_solinas_addcarryx_u64(out1: &mut u64, out2: &mut fiat_cur
 ///   out1: [0x0 ~> 0xffffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_curve25519_solinas_subborrowx_u64(out1: &mut u64, out2: &mut fiat_curve25519_solinas_u1, arg1: fiat_curve25519_solinas_u1, arg2: u64, arg3: u64) {
+pub const fn fiat_curve25519_solinas_subborrowx_u64(out1: &mut u64, out2: &mut fiat_curve25519_solinas_u1, arg1: fiat_curve25519_solinas_u1, arg2: u64, arg3: u64) {
   let x1: i128 = (((arg2 as i128) - (arg1 as i128)) - (arg3 as i128));
   let x2: fiat_curve25519_solinas_i1 = ((x1 >> 64) as fiat_curve25519_solinas_i1);
   let x3: u64 = ((x1 & (0xffffffffffffffff as i128)) as u64);
@@ -77,7 +97,7 @@ pub fn fiat_curve25519_solinas_subborrowx_u64(out1: &mut u64, out2: &mut fiat_cu
 ///   out1: [0x0 ~> 0xffffffffffffffff]
 ///   out2: [0x0 ~> 0xffffffffffffffff]
 #[inline]
-pub fn fiat_curve25519_solinas_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u64, arg2: u64) {
+pub const fn fiat_curve25519_solinas_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u64, arg2: u64) {
   let x1: u128 = ((arg1 as u128) * (arg2 as u128));
   let x2: u64 = ((x1 & (0xffffffffffffffff as u128)) as u64);
   let x3: u64 = ((x1 >> 64) as u64);
@@ -97,7 +117,7 @@ pub fn fiat_curve25519_solinas_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u6
 /// Output Bounds:
 ///   out1: [0x0 ~> 0xffffffffffffffff]
 #[inline]
-pub fn fiat_curve25519_solinas_cmovznz_u64(out1: &mut u64, arg1: fiat_curve25519_solinas_u1, arg2: u64, arg3: u64) {
+pub const fn fiat_curve25519_solinas_cmovznz_u64(out1: &mut u64, arg1: fiat_curve25519_solinas_u1, arg2: u64, arg3: u64) {
   let x1: fiat_curve25519_solinas_u1 = (!(!arg1));
   let x2: u64 = ((((((0x0 as fiat_curve25519_solinas_i2) - (x1 as fiat_curve25519_solinas_i2)) as fiat_curve25519_solinas_i1) as i128) & (0xffffffffffffffff as i128)) as u64);
   let x3: u64 = ((x2 & arg3) | ((!x2) & arg2));
@@ -115,55 +135,55 @@ pub fn fiat_curve25519_solinas_cmovznz_u64(out1: &mut u64, arg1: fiat_curve25519
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_curve25519_solinas_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) {
+pub const fn fiat_curve25519_solinas_mul(mut out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) {
   let mut x1: u64 = 0;
   let mut x2: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x1, &mut x2, (arg1[3]), (arg2[3]));
+  fiat_curve25519_solinas_mulx_u64(&mut x1, &mut x2, (*IndexConst(arg1).index(3)), (*IndexConst(arg2).index(3)));
   let mut x3: u64 = 0;
   let mut x4: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x3, &mut x4, (arg1[3]), (arg2[2]));
+  fiat_curve25519_solinas_mulx_u64(&mut x3, &mut x4, (*IndexConst(arg1).index(3)), (*IndexConst(arg2).index(2)));
   let mut x5: u64 = 0;
   let mut x6: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x5, &mut x6, (arg1[3]), (arg2[1]));
+  fiat_curve25519_solinas_mulx_u64(&mut x5, &mut x6, (*IndexConst(arg1).index(3)), (*IndexConst(arg2).index(1)));
   let mut x7: u64 = 0;
   let mut x8: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x7, &mut x8, (arg1[3]), (arg2[0]));
+  fiat_curve25519_solinas_mulx_u64(&mut x7, &mut x8, (*IndexConst(arg1).index(3)), (*IndexConst(arg2).index(0)));
   let mut x9: u64 = 0;
   let mut x10: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x9, &mut x10, (arg1[2]), (arg2[3]));
+  fiat_curve25519_solinas_mulx_u64(&mut x9, &mut x10, (*IndexConst(arg1).index(2)), (*IndexConst(arg2).index(3)));
   let mut x11: u64 = 0;
   let mut x12: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x11, &mut x12, (arg1[2]), (arg2[2]));
+  fiat_curve25519_solinas_mulx_u64(&mut x11, &mut x12, (*IndexConst(arg1).index(2)), (*IndexConst(arg2).index(2)));
   let mut x13: u64 = 0;
   let mut x14: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x13, &mut x14, (arg1[2]), (arg2[1]));
+  fiat_curve25519_solinas_mulx_u64(&mut x13, &mut x14, (*IndexConst(arg1).index(2)), (*IndexConst(arg2).index(1)));
   let mut x15: u64 = 0;
   let mut x16: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x15, &mut x16, (arg1[2]), (arg2[0]));
+  fiat_curve25519_solinas_mulx_u64(&mut x15, &mut x16, (*IndexConst(arg1).index(2)), (*IndexConst(arg2).index(0)));
   let mut x17: u64 = 0;
   let mut x18: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x17, &mut x18, (arg1[1]), (arg2[3]));
+  fiat_curve25519_solinas_mulx_u64(&mut x17, &mut x18, (*IndexConst(arg1).index(1)), (*IndexConst(arg2).index(3)));
   let mut x19: u64 = 0;
   let mut x20: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x19, &mut x20, (arg1[1]), (arg2[2]));
+  fiat_curve25519_solinas_mulx_u64(&mut x19, &mut x20, (*IndexConst(arg1).index(1)), (*IndexConst(arg2).index(2)));
   let mut x21: u64 = 0;
   let mut x22: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x21, &mut x22, (arg1[1]), (arg2[1]));
+  fiat_curve25519_solinas_mulx_u64(&mut x21, &mut x22, (*IndexConst(arg1).index(1)), (*IndexConst(arg2).index(1)));
   let mut x23: u64 = 0;
   let mut x24: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x23, &mut x24, (arg1[1]), (arg2[0]));
+  fiat_curve25519_solinas_mulx_u64(&mut x23, &mut x24, (*IndexConst(arg1).index(1)), (*IndexConst(arg2).index(0)));
   let mut x25: u64 = 0;
   let mut x26: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x25, &mut x26, (arg1[0]), (arg2[3]));
+  fiat_curve25519_solinas_mulx_u64(&mut x25, &mut x26, (*IndexConst(arg1).index(0)), (*IndexConst(arg2).index(3)));
   let mut x27: u64 = 0;
   let mut x28: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x27, &mut x28, (arg1[0]), (arg2[2]));
+  fiat_curve25519_solinas_mulx_u64(&mut x27, &mut x28, (*IndexConst(arg1).index(0)), (*IndexConst(arg2).index(2)));
   let mut x29: u64 = 0;
   let mut x30: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x29, &mut x30, (arg1[0]), (arg2[1]));
+  fiat_curve25519_solinas_mulx_u64(&mut x29, &mut x30, (*IndexConst(arg1).index(0)), (*IndexConst(arg2).index(1)));
   let mut x31: u64 = 0;
   let mut x32: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x31, &mut x32, (arg1[0]), (arg2[0]));
+  fiat_curve25519_solinas_mulx_u64(&mut x31, &mut x32, (*IndexConst(arg1).index(0)), (*IndexConst(arg2).index(0)));
   let mut x33: u64 = 0;
   let mut x34: fiat_curve25519_solinas_u1 = 0;
   fiat_curve25519_solinas_addcarryx_u64(&mut x33, &mut x34, 0x0, x28, x7);
@@ -312,10 +332,10 @@ pub fn fiat_curve25519_solinas_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &
   let mut x131: u64 = 0;
   let mut x132: fiat_curve25519_solinas_u1 = 0;
   fiat_curve25519_solinas_addcarryx_u64(&mut x131, &mut x132, 0x0, x130, x122);
-  out1[0] = x131;
-  out1[1] = x124;
-  out1[2] = x126;
-  out1[3] = x128;
+  *IndexConst(&mut out1).index_mut(0) = x131;
+  *IndexConst(&mut out1).index_mut(1) = x124;
+  *IndexConst(&mut out1).index_mut(2) = x126;
+  *IndexConst(&mut out1).index_mut(3) = x128;
 }
 
 /// The function fiat_curve25519_solinas_square squares a field element.
@@ -328,22 +348,22 @@ pub fn fiat_curve25519_solinas_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_curve25519_solinas_square(out1: &mut [u64; 4], arg1: &[u64; 4]) {
+pub const fn fiat_curve25519_solinas_square(mut out1: &mut [u64; 4], arg1: &[u64; 4]) {
   let mut x1: u64 = 0;
   let mut x2: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x1, &mut x2, (arg1[0]), (arg1[3]));
+  fiat_curve25519_solinas_mulx_u64(&mut x1, &mut x2, (*IndexConst(arg1).index(0)), (*IndexConst(arg1).index(3)));
   let mut x3: u64 = 0;
   let mut x4: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x3, &mut x4, (arg1[0]), (arg1[2]));
+  fiat_curve25519_solinas_mulx_u64(&mut x3, &mut x4, (*IndexConst(arg1).index(0)), (*IndexConst(arg1).index(2)));
   let mut x5: u64 = 0;
   let mut x6: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x5, &mut x6, (arg1[0]), (arg1[1]));
+  fiat_curve25519_solinas_mulx_u64(&mut x5, &mut x6, (*IndexConst(arg1).index(0)), (*IndexConst(arg1).index(1)));
   let mut x7: u64 = 0;
   let mut x8: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x7, &mut x8, (arg1[3]), (arg1[2]));
+  fiat_curve25519_solinas_mulx_u64(&mut x7, &mut x8, (*IndexConst(arg1).index(3)), (*IndexConst(arg1).index(2)));
   let mut x9: u64 = 0;
   let mut x10: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x9, &mut x10, (arg1[3]), (arg1[1]));
+  fiat_curve25519_solinas_mulx_u64(&mut x9, &mut x10, (*IndexConst(arg1).index(3)), (*IndexConst(arg1).index(1)));
   let mut x11: u64 = 0;
   let mut x12: fiat_curve25519_solinas_u1 = 0;
   fiat_curve25519_solinas_addcarryx_u64(&mut x11, &mut x12, 0x0, x6, x3);
@@ -359,7 +379,7 @@ pub fn fiat_curve25519_solinas_square(out1: &mut [u64; 4], arg1: &[u64; 4]) {
   let x19: u64 = ((x18 as u64) + x8);
   let mut x20: u64 = 0;
   let mut x21: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x20, &mut x21, (arg1[1]), (arg1[2]));
+  fiat_curve25519_solinas_mulx_u64(&mut x20, &mut x21, (*IndexConst(arg1).index(1)), (*IndexConst(arg1).index(2)));
   let mut x22: u64 = 0;
   let mut x23: fiat_curve25519_solinas_u1 = 0;
   fiat_curve25519_solinas_addcarryx_u64(&mut x22, &mut x23, 0x0, x13, x20);
@@ -393,16 +413,16 @@ pub fn fiat_curve25519_solinas_square(out1: &mut [u64; 4], arg1: &[u64; 4]) {
   let x42: u64 = (((x41 as u64) + (x29 as u64)) + (x29 as u64));
   let mut x43: u64 = 0;
   let mut x44: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x43, &mut x44, (arg1[3]), (arg1[3]));
+  fiat_curve25519_solinas_mulx_u64(&mut x43, &mut x44, (*IndexConst(arg1).index(3)), (*IndexConst(arg1).index(3)));
   let mut x45: u64 = 0;
   let mut x46: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x45, &mut x46, (arg1[2]), (arg1[2]));
+  fiat_curve25519_solinas_mulx_u64(&mut x45, &mut x46, (*IndexConst(arg1).index(2)), (*IndexConst(arg1).index(2)));
   let mut x47: u64 = 0;
   let mut x48: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x47, &mut x48, (arg1[1]), (arg1[1]));
+  fiat_curve25519_solinas_mulx_u64(&mut x47, &mut x48, (*IndexConst(arg1).index(1)), (*IndexConst(arg1).index(1)));
   let mut x49: u64 = 0;
   let mut x50: u64 = 0;
-  fiat_curve25519_solinas_mulx_u64(&mut x49, &mut x50, (arg1[0]), (arg1[0]));
+  fiat_curve25519_solinas_mulx_u64(&mut x49, &mut x50, (*IndexConst(arg1).index(0)), (*IndexConst(arg1).index(0)));
   let mut x51: u64 = 0;
   let mut x52: fiat_curve25519_solinas_u1 = 0;
   fiat_curve25519_solinas_addcarryx_u64(&mut x51, &mut x52, 0x0, x30, x50);
@@ -479,8 +499,8 @@ pub fn fiat_curve25519_solinas_square(out1: &mut [u64; 4], arg1: &[u64; 4]) {
   let mut x100: u64 = 0;
   let mut x101: fiat_curve25519_solinas_u1 = 0;
   fiat_curve25519_solinas_addcarryx_u64(&mut x100, &mut x101, 0x0, x99, x91);
-  out1[0] = x100;
-  out1[1] = x93;
-  out1[2] = x95;
-  out1[3] = x97;
+  *IndexConst(&mut out1).index_mut(0) = x100;
+  *IndexConst(&mut out1).index_mut(1) = x93;
+  *IndexConst(&mut out1).index_mut(2) = x95;
+  *IndexConst(&mut out1).index_mut(3) = x97;
 }
