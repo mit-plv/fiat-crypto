@@ -502,12 +502,11 @@ Section __.
          Memory := m;
          Locals := l;
          Functions := functions }>
-      cmd.seq (cmd.set var (expr.op bopname.sub (expr.literal (-1)) (expr.var x_var)))
+      cmd.seq (cmd.set var (expr.op1 op1.not (expr.var x_var)))
               k_impl
       <{ pred (nlet_eq [var] v k) }>.
   Proof using field_representaton word_ok.
     repeat (eexists; split; eauto).
-    apply word_not_impl.
   Qed.
   Hint Extern 10 => simple eapply compile_word_not; shelve : compiler.
 
