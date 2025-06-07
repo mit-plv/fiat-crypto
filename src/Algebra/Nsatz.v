@@ -2,6 +2,7 @@
   periodically check whether we still need it -- once enough bugs get fixed
   in mailine, we hope to drop this implementation *)
 
+From Coq Require Import QArith ZArith Rings_Z.
 From Coq Require NsatzTactic.
 From Coq Require Import List.
 Require Export Crypto.Util.FixCoqMistakes.
@@ -159,19 +160,21 @@ Ltac nsatz_contradict :=
 Module Export Hints.
   Export Crypto.Util.FixCoqMistakes.
   Export (hints) Ncring_tac.
+  Import NsatzTactic.
   Global Existing Instances
          Ncring_initial.Zops
          Ncring_initial.Zr
          Ncring_initial.gen_phiZ_morph
          Ncring_initial.multiplication_phi_ring
+         Ncring.eq_notation
+         Ncring.zero_notation
   .
-  Import NsatzTactic.
   Global Existing Instances
+         Rings_Z.Zdi
+         Rings_Z.Zcri
          Qops
          Qri
          Qcri
          Qdi
-         Zcri
-         Zdi
   .
 End Hints.
