@@ -272,8 +272,7 @@ Local Ltac prove_id :=
          | _ => break_innermost_match_step
          | _ => contradiction
          | _ => reflexivity
-         | _ => nsatz
-         | _ => solve [auto]
+         | _ => solve [nsatz | auto]
          end.
 
 Create HintDb push_basesystem_eval discriminated.
@@ -290,7 +289,7 @@ Local Ltac prove_eval :=
          | H : Some _ = Some _ |- _ => progress (inversion H; subst)
          | _ => discriminate
          | _ => reflexivity
-         | _ => nsatz
+         | _ => solve[nsatz]
          | _ => progress rewrite Nat.succ_pred in * by assumption
          end.
 
