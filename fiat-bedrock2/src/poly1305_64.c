@@ -427,13 +427,13 @@ void internal_fiat_poly1305_selectznz(uintptr_t out0, uintptr_t in0, uintptr_t i
   x5 = _br2_load((in2)+((uintptr_t)(UINTMAX_C(16))), sizeof(uintptr_t));
   /*skip*/
   /*skip*/
-  x6 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x6 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x7 = (x6)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x8 = ((x3)&(x6))|((x0)&(x7));
-  x9 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x9 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x10 = (x9)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x11 = ((x4)&(x9))|((x1)&(x10));
-  x12 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x12 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x13 = (x12)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x14 = ((x5)&(x12))|((x2)&(x13));
   x15 = x8;
@@ -485,7 +485,7 @@ void internal_fiat_poly1305_to_bytes(uintptr_t out0, uintptr_t in0) {
   x18 = (x15)+(x17);
   x19 = (x16)&((uintptr_t)(UINTMAX_C(8796093022207)));
   x20 = ((x18)<<_br2_shamt((uintptr_t)(UINTMAX_C(21))))-((x16)>>_br2_shamt((uintptr_t)(UINTMAX_C(43))));
-  x21 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x20)==((uintptr_t)(UINTMAX_C(0)))));
+  x21 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((x20)==((uintptr_t)(UINTMAX_C(0)))));
   x22 = (x5)+((x21)&((uintptr_t)(UINTMAX_C(17592186044411))));
   x23 = (uintptr_t)((x22)<(x5));
   x24 = (x22)&((uintptr_t)(UINTMAX_C(17592186044415)));

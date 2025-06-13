@@ -641,19 +641,19 @@ void internal_fiat_25519_selectznz(uintptr_t out0, uintptr_t in0, uintptr_t in1,
   x9 = _br2_load((in2)+((uintptr_t)(UINTMAX_C(32))), sizeof(uintptr_t));
   /*skip*/
   /*skip*/
-  x10 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x10 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x11 = (x10)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x12 = ((x5)&(x10))|((x0)&(x11));
-  x13 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x13 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x14 = (x13)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x15 = ((x6)&(x13))|((x1)&(x14));
-  x16 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x16 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x17 = (x16)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x18 = ((x7)&(x16))|((x2)&(x17));
-  x19 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x19 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x20 = (x19)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x21 = ((x8)&(x19))|((x3)&(x20));
-  x22 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x22 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x23 = (x22)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x24 = ((x9)&(x22))|((x4)&(x23));
   x25 = x12;
@@ -725,7 +725,7 @@ void internal_fiat_25519_to_bytes(uintptr_t out0, uintptr_t in0) {
   x34 = (x31)+(x33);
   x35 = (x32)&((uintptr_t)(UINTMAX_C(2251799813685247)));
   x36 = ((x34)<<_br2_shamt((uintptr_t)(UINTMAX_C(13))))-((x32)>>_br2_shamt((uintptr_t)(UINTMAX_C(51))));
-  x37 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x36)==((uintptr_t)(UINTMAX_C(0)))));
+  x37 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((x36)==((uintptr_t)(UINTMAX_C(0)))));
   x38 = (x7)+((x37)&((uintptr_t)(UINTMAX_C(2251799813685229))));
   x39 = (uintptr_t)((x38)<(x7));
   x40 = (x38)&((uintptr_t)(UINTMAX_C(2251799813685247)));
