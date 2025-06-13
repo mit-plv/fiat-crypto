@@ -288,7 +288,7 @@ void internal_fiat_curve25519_solinas_mul(uintptr_t out0, uintptr_t in0, uintptr
   x199 = (uintptr_t)((x198)<(x184));
   x200 = (x199)+(x189);
   x201 = (uintptr_t)((x200)<(x189));
-  x202 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x201)==((uintptr_t)(UINTMAX_C(0)))));
+  x202 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((x201)==((uintptr_t)(UINTMAX_C(0)))));
   x203 = (x202)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x204 = (((uintptr_t)(UINTMAX_C(38)))&(x202))|(((uintptr_t)(UINTMAX_C(0)))&(x203));
   x205 = (x204)+(x194);
@@ -480,7 +480,7 @@ void internal_fiat_curve25519_solinas_square(uintptr_t out0, uintptr_t in0) {
   x155 = (uintptr_t)((x154)<(x140));
   x156 = (x155)+(x145);
   x157 = (uintptr_t)((x156)<(x145));
-  x158 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x157)==((uintptr_t)(UINTMAX_C(0)))));
+  x158 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((x157)==((uintptr_t)(UINTMAX_C(0)))));
   x159 = (x158)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x160 = (((uintptr_t)(UINTMAX_C(38)))&(x158))|(((uintptr_t)(UINTMAX_C(0)))&(x159));
   x161 = (x160)+(x150);

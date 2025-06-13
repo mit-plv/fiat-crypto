@@ -1446,28 +1446,28 @@ void internal_fiat_p448_selectznz(uintptr_t out0, uintptr_t in0, uintptr_t in1, 
   x15 = _br2_load((in2)+((uintptr_t)(UINTMAX_C(56))), sizeof(uintptr_t));
   /*skip*/
   /*skip*/
-  x16 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x16 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x17 = (x16)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x18 = ((x8)&(x16))|((x0)&(x17));
-  x19 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x19 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x20 = (x19)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x21 = ((x9)&(x19))|((x1)&(x20));
-  x22 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x22 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x23 = (x22)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x24 = ((x10)&(x22))|((x2)&(x23));
-  x25 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x25 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x26 = (x25)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x27 = ((x11)&(x25))|((x3)&(x26));
-  x28 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x28 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x29 = (x28)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x30 = ((x12)&(x28))|((x4)&(x29));
-  x31 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x31 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x32 = (x31)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x33 = ((x13)&(x31))|((x5)&(x32));
-  x34 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x34 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x35 = (x34)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x36 = ((x14)&(x34))|((x6)&(x35));
-  x37 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
+  x37 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((in0)==((uintptr_t)(UINTMAX_C(0)))));
   x38 = (x37)^((uintptr_t)(UINTMAX_C(18446744073709551615)));
   x39 = ((x15)&(x37))|((x7)&(x38));
   x40 = x18;
@@ -1569,7 +1569,7 @@ void internal_fiat_p448_to_bytes(uintptr_t out0, uintptr_t in0) {
   x58 = (x55)+(x57);
   x59 = (x56)&((uintptr_t)(UINTMAX_C(72057594037927935)));
   x60 = ((x58)<<_br2_shamt((uintptr_t)(UINTMAX_C(8))))-((x56)>>_br2_shamt((uintptr_t)(UINTMAX_C(56))));
-  x61 = ((uintptr_t)(UINTMAX_C(-1)))+((uintptr_t)((x60)==((uintptr_t)(UINTMAX_C(0)))));
+  x61 = (-((uintptr_t)(UINTMAX_C(1))))+((uintptr_t)((x60)==((uintptr_t)(UINTMAX_C(0)))));
   x62 = (x10)+((x61)&((uintptr_t)(UINTMAX_C(72057594037927935))));
   x63 = (uintptr_t)((x62)<(x10));
   x64 = (x62)&((uintptr_t)(UINTMAX_C(72057594037927935)));
