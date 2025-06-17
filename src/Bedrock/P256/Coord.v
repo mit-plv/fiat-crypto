@@ -1,0 +1,489 @@
+Require Import Bedrock.P256.Specs.
+
+Import Specs.NotationsCustomEntry Specs.coord Specs.point.
+
+Import bedrock2.Syntax bedrock2.NotationsCustomEntry
+LittleEndianList
+ZArith.BinInt
+BinInt BinNat Init.Byte
+PrimeFieldTheorems ModInv
+micromega.Lia
+coqutil.Byte
+Lists.List micromega.Lia
+Jacobian
+Coq.Strings.String Coq.Lists.List 
+ProgramLogic WeakestPrecondition
+ProgramLogic.Coercions
+Word.Interface OfListWord Separation SeparationLogic
+letexists
+BasicC64Semantics
+ListIndexNotations
+SepAutoArray
+symmetry
+PeanoNat micromega.Lia
+Tactics
+UniquePose
+micromega.Lia Word.Properties
+coqutil.Tactics.Tactics.
+
+Import ListIndexNotations.
+Local Open Scope list_index_scope.
+Local Open Scope Z_scope.
+Local Open Scope bool_scope.
+Local Open Scope string_scope.
+Local Open Scope list_scope.
+
+Local Notation "xs $@ a" := (map.of_list_word_at a xs)
+  (at level 10, format "xs $@ a").
+Local Notation "$ n" := (match word.of_Z n return word with w => w end) (at level 9, format "$ n").
+Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
+Local Coercion F.to_Z : F >-> Z.
+
+
+Definition p256_coord_nonzero := func! (p_x) ~> nz {
+  unpack! nz = br_broadcast_nonzero(load(p_x) | load(p_x.+$8) | load(p_x.+$8.+$8) | load(p_x.+$8.+$8.+$8))
+}.
+
+Definition p256_point_iszero := func! (p_P) ~> z {
+  unpack! nz = p256_coord_nonzero(p_P.+$32.+$32);
+  z = ~nz
+}.
+
+Definition p256_coord_sub := func!(out, x, y) {
+  unpack! t0, borrow = full_sub(load(x),          load(y),          $0);
+  unpack! t1, borrow = full_sub(load(x+$8),       load(y+$8),       borrow);
+  unpack! t2, borrow = full_sub(load(x+$8+$8),    load(y+$8+$8),    borrow);
+  unpack! t3, borrow = full_sub(load(x+$8+$8+$8), load(y+$8+$8+$8), borrow);
+  unpack! mask = br_value_barrier(-borrow);
+  unpack! r0, carry = full_add(t0, mask,                       $0);
+  unpack! r1, carry = full_add(t1, mask & $0xffffffff,         carry);
+  unpack! r2, carry = full_add(t2, $0,                         carry);
+  unpack! r3, carry = full_add(t3, mask & $0xffffffff00000001, carry);
+  store(out,          r0);
+  store(out+$8,       r1);
+  store(out+$8+$8,    r2);
+  store(out+$8+$8+$8, r3)
+}.
+
+Definition u256_shr := func!(p_out, p_x, n) {
+  x0 = load(p_x); x1 = load(p_x+$8); x2 = load(p_x+$8+$8); x3 = load(p_x+$8+$8+$8);
+  unpack! y0 = shrd(x0, x1, n);
+  unpack! y1 = shrd(x1, x2, n);
+  unpack! y2 = shrd(x2, x3, n);
+  y3 = x3 >> n;
+  store(p_out, y0); store(p_out+$8, y1); store(p_out+$8+$8, y2); store(p_out+$8+$8+$8, y3)
+}.
+
+Definition u256_set_p256_minushalf_conditional := func!(out, mask) {
+  mh0 = $-1; mh1 = mh0>>$33; mh2 = mh0<<$63; mh3 = mh0<<$32>>$1; (* minus one half modulo p256 *)
+  store(mmh,          mask&mh0);
+  store(mmh+$8,       mask&mh1);
+  store(mmh+$8+$8,    mask&mh2);
+  store(mmh+$8+$8+$8, mask&mh3)
+}.
+
+Definition p256_coord_halve := func!(y, x) {
+  stackalloc 32 as mmh;
+  unpack! m = br_broadcast_odd(load(x));
+  u256_set_p256_minushalf_conditional(mmh, m);
+  u256_shr(y, x, $1);
+  p256_coord_sub(y, y, mmh)
+}.
+
+Definition p256_coord_add := func!(p_out, p_x, p_y) {
+  unpack! t0, carry = full_add(load(p_x),          load(p_y),          $0);
+  unpack! t1, carry = full_add(load(p_x+$8),       load(p_y+$8),       carry);
+  unpack! t2, carry = full_add(load(p_x+$8+$8),    load(p_y+$8+$8),    carry);
+  unpack! t3, carry = full_add(load(p_x+$8+$8+$8), load(p_y+$8+$8+$8), carry);
+  unpack! r0, borrow = full_sub(t0, $0xffffffffffffffff, $0);
+  unpack! r1, borrow = full_sub(t1, $0xffffffff,         borrow);
+  unpack! r2, borrow = full_sub(t2, $0,                  borrow);
+  unpack! r3, borrow = full_sub(t3, $0xffffffff00000001, borrow);
+  unpack! r4, borrow = full_sub(carry, $0, borrow);
+  unpack! r0 = br_cmov(borrow, t0, r0);
+  unpack! r1 = br_cmov(borrow, t1, r1);
+  unpack! r2 = br_cmov(borrow, t2, r2);
+  unpack! r3 = br_cmov(borrow, t3, r3);
+  store(p_out,          r0);
+  store(p_out+$8,       r1);
+  store(p_out+$8+$8,    r2);
+  store(p_out+$8+$8+$8, r3)
+}.
+
+
+Lemma fiat_coord_nonzero_ok : program_logic_goal_for_function! p256_coord_nonzero.
+Proof.
+  repeat straightline.
+  rename H0 into Hm.
+  cbv [coord.to_bytes] in *.
+  set (x * coord.R)%F as xR in *.
+  do 4 (
+    rewrite <-(firstn_skipn 8 (le_split _ _)), List.firstn_le_split, skipn_le_split, ?Z.shiftr_shiftr in Hm by lia;
+    simpl Nat.min in Hm; simpl Nat.sub in Hm; set (le_split 8 _) in Hm);
+  rewrite List.le_split_0_l in Hm.
+  simpl Z.mul in *; simpl Z.add in *.
+  subst l0 l1 l2 l3.
+
+  progress change (sepclause_of_map ?m) with (eq m) in *.
+  repeat (seprewrite_in (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm; rewrite ?length_app, ?length_le_split, ?length_nil; try trivial; try lia).
+  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split; lia).
+  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split; lia).
+  rewrite ?le_combine_split, ?Z.shiftr_div_pow2 in Hm by lia.
+  simpl Z.of_nat in *.
+  simpl Z.mul in *.
+
+  repeat (straightline || straightline_call).
+  clear Hm.
+
+  subst x1. f_equal. f_equal. apply Bool.eq_true_iff_eq.
+  rewrite Z.eqb_eq, F.eqb_eq.
+  rewrite <-word.unsigned_of_Z_0, !word.unsigned_inj_iff by exact _.
+  rewrite !word.lor_0_iff, !word.zero_of_Z_iff, !Zdiv.Zmod_mod by exact _.
+
+  rewrite coord.zero_iff; fold xR.
+  rewrite F.zero_iff_to_Z.
+  pose proof F.to_Z_range xR eq_refl as range.
+  clearbody xR; clear x; set (F.to_Z xR) as x in *; clearbody x.
+  clear -range.
+  Time PreOmega.Z.to_euclidean_division_equations.
+  cbv [p256] in *.
+  lia.
+Qed.
+
+Lemma p256_point_iszero_ok : program_logic_goal_for_function! p256_point_iszero.
+Proof.
+  repeat straightline.
+
+  rename H0 into Hm.
+  cbv [point.to_bytes] in *.
+  progress change (sepclause_of_map ?m) with (eq m) in Hm.
+  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?app_length, ?length_coord; trivial; try lia).
+  progress change (@eq Interface.map.rep ?m) with (sepclause_of_map m) in *.
+  simpl Z.of_nat in *.
+
+  straightline_call; [eexists; ecancel_assumption|]; repeat straightline.
+
+  split; try reflexivity.
+
+  subst z x0.
+  setoid_rewrite word.not_broadcast; rewrite Bool.negb_involutive; trivial.
+Qed.
+
+
+
+
+
+
+
+Lemma p256_coord_halve_ok :
+  let '_ := spec_of_p256_coord_sub_nonmont in
+  program_logic_goal_for_function! p256_coord_halve.
+Proof.
+  straightline; repeat straightline_cleanup.
+
+  pose proof (conj H3 H4) as Hm; clear H4 H3; pattern m in Hm.
+  progress change (?P m) with (id P m) in Hm.
+  repeat straightline.
+  eapply sep_and_l_fwd in Hm; case Hm as [Hm Hm'].
+
+  letexists; split.
+  { cbn. repeat straightline. eexists; split; [|reflexivity].
+    cbv [coord.to_bytes] in Hm.
+    rewrite <-(firstn_skipn 8 (le_split _ _)), List.firstn_le_split, skipn_le_split, ?Z.shiftr_shiftr in Hm by lia.
+    progress change (sepclause_of_map ?m) with (eq m) in Hm.
+    seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_le_split; trivial; lia).
+    seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split; lia).
+    seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split; lia).
+    rewrite le_combine_split in Hm.
+    repeat straightline. }
+
+  straightline_call; [eexists; ecancel_assumption|]; repeat straightline.
+  
+  seprewrite_in_by ptsto_bytes.array1_iff_eq_of_list_word_at Hm0 ltac:(Lia.lia).
+  progress change (@eq Interface.map.rep ?m) with (sepclause_of_map m) in Hm0.
+
+  straightline_call; ssplit; [ ecancel_assumption | trivial |].
+  repeat straightline_cleanup.
+  specialize (H11 _ eq_refl).
+  repeat straightline.
+
+  eapply sep_and_r_fwd in H10; case H10 as [Hm3 Hm3'].
+
+  straightline_call; ssplit.
+  { eexists. cbv [coord.to_bytes] in *. ecancel_assumption. }
+  { cbv [coord.to_bytes] in *. ecancel_assumption. }
+  { trivial. }
+  { eapply F.to_Z_range, eq_refl. }
+  { etransitivity; try eapply F.to_Z_range; eapply eq_refl. }
+  { ZnWords.ZnWords. }
+
+  repeat straightline.
+  rewrite ?Z.pow_1_r in *.
+  
+  set (Z.odd _) as b in *.
+
+  eapply WeakestPreconditionProperties.Proper_call; cycle -1;
+  [ eapply H2 | .. | intros ? ? ? ?]; ssplit.
+  { eexists.
+    use_sep_assumption; cancel.
+    cancel_seps_at_indices 0%nat 0%nat; [|cancel].
+
+    instantiate (1:=F.of_Z _ (F.to_Z (x*coord.R)%F / 2)).
+    rewrite F.to_Z_of_Z, Z.mod_small; trivial.
+    specialize (F.to_Z_range (x*coord.R) eq_refl); clear; PreOmega.Z.to_euclidean_division_equations; lia. }
+  { eexists. use_sep_assumption. cancel.
+    cancel_seps_at_indices 1%nat 0%nat. { exact eq_refl. }
+    cancel. }
+  { ecancel_assumption. }
+  { rewrite ?length_coord, ?length_le_split; trivial. }
+  
+  repeat straightline.
+
+  (* stackdealloc *)
+  progress change (sepclause_of_map ?m) with (eq m) in H12.
+  progress repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) H12 ltac:(rewrite ?length_le_split; Lia.lia).
+  progress repeat match type of H12 with context [Array.array ptsto _ _ (le_split 32 ?x)] =>
+    unique pose proof (length_le_split 32 x) end.
+  progress repeat straightline.
+  progress repeat seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) H12 ltac:(rewrite ?length_le_split; Lia.lia).
+  progress change (@eq Interface.map.rep ?m) with (sepclause_of_map m) in H12.
+
+  (* postcondition *)
+  use_sep_assumption.
+  cancel.
+  cancel_seps_at_indices 0%nat 0%nat; [|cancel].
+  f_equal.
+  f_equal.
+  subst x2 b.
+  cbv [coord.to_bytes F.div].
+  progress Morphisms.f_equiv; [].
+  progress Morphisms.f_equiv; [].
+  Add Field Private_field : (Algebra.Field.field_theory_for_stdlib_tactic (T:=F p256)).
+  transitivity (x * coord.R * F.inv (1 + 1))%F; [|ring].
+  set (x*coord.R)%F as xR; set (F.inv (1 + 1)) as i2.
+
+  (* NOTE: back-and-forth rewrite between Z.modulo and Z.odd *)
+  rewrite word.unsigned_of_Z; cbv [word.wrap]; rewrite Zdiv.Zmod_mod, Zdiv.Zodd_mod, Zdiv.Z.mod_mod_divide by (apply Divide.Z.divide_pow_le with (n:=1); lia).
+  symmetry; rewrite <-(F.of_Z_to_Z xR) at 1; rewrite (Z.div_mod xR 2) at 1 by lia.
+  rewrite Div.Z.div_sub_mod_exact, Zdiv.Zmod_odd by lia.
+
+  assert (F.of_Z p256 2 * i2 = F.one)%F as Hi2 by (cbv [i2]; clear; Decidable.vm_decide).
+  case Z.odd; cbn [Z.eqb Pos.eqb]; rewrite ?F.of_Z_add, ?F.of_Z_mul; fold (@F.zero p256); fold (@F.one p256); ring [Hi2].
+Qed.
+
+Import shrd.
+Lemma u256_shr_ok : program_logic_goal_for_function! u256_shr.
+Proof.
+  straightline; repeat straightline_cleanup.
+  cbv [coord.to_bytes] in *.
+  let domem Hm :=
+  do 4 (
+    rewrite <-(firstn_skipn 8 (le_split _ _)), List.firstn_le_split, skipn_le_split, ?Z.shiftr_shiftr in Hm by lia;
+    simpl Nat.min in Hm; simpl Nat.sub in Hm; set (le_split 8 _) in Hm) in
+  domem H2.
+  rewrite <-(firstn_skipn 8 out), <-(firstn_skipn 8 out[_:]), <-(firstn_skipn 8 out[_:][_:]), ?skipn_skipn, ?firstn_skipn in H3.
+  subst l l0 l1 l2.
+  rewrite ?length_le_split in *.
+
+  let domem Hm :=
+  progress change (sepclause_of_map ?m) with (eq m) in Hm;
+  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_app, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil, ?Nat.min_l by (trivial; lia); trivial; lia);
+  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split, ?length_le_split, ?length_firstn, ?length_skipn; lia);
+  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split, ?length_firstn, ?length_skipn; lia);
+  rewrite ?le_combine_split in Hm by lia 
+  in domem H2; domem H3.
+
+  simpl Z.of_nat in *; simpl Z.mul in *; simpl Z.add in *; simpl Nat.add in *.
+  progress repeat (straightline || straightline_call); try ZnWords.ZnWords.
+
+  cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar Scalars.littleendian] in H14.
+  repeat seprewrite_in_by ptsto_bytes.ptsto_bytes_iff_eq_of_list_word_at H14 ltac:(try rewrite ?length_le_split, ?Scalars.bytes_per_width_bytes_per_word; cbv [Memory.bytes_per_word]; try ZnWords.ZnWords).
+  rewrite ?HList.tuple.to_list_of_list, ?Scalars.bytes_per_width_bytes_per_word in H14.
+  change (Memory.bytes_per access_size.word) with 8%nat in H14.
+  repeat seprewrite_in_by (@ptsto_bytes.list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
+  progress change (@eq Interface.map.rep ?m) with (sepclause_of_map m) in H14.
+  rewrite <-?app_assoc in H14.
+  revert H14;
+  eassert ((_ ++ _) = _) as ->; [|intros;ecancel_assumption].
+  eapply le_combine_inj; rewrite ?length_app, ?length_le_combine, ?length_le_split; trivial.
+  rewrite !le_combine_app, !le_combine_split, ?length_le_split; change (2^(8%nat*8)) with (2^64).
+  rewrite ?Z.mod_small by (cbv [p256] in *; ZnWords.ZnWords).
+  subst y3; rewrite word.unsigned_sru_nowrap, Z.shiftr_div_pow2  by ZnWords.ZnWords.
+  subst x3 x2 x1 x0.
+  progress rewrite ?word.unsigned_of_Z in *; cbv [word.wrap] in *; rewrite <-?Z.land_ones in * by lia.
+  pose proof word.unsigned_range n.
+  DestructHead.destruct_head' @and.
+  simpl Z.mul.
+  all : rewrite ?H11, ?H12, ?H13.
+  Import bitblast.
+  all : apply Z.bits_inj'; intros i Hi;
+  repeat rewrite <-?Z.shiftr_div_pow2, ?Z.land_spec, ?Z.lor_spec, ?Z.shiftr_spec', ?Z.shiftl_spec', ?Z.testbit_ones by try ZnWords.ZnWords.
+  all: repeat (((case Z.ltb_spec; [|]; intros)||(case Z.leb_spec; [|]; intros)); rewrite
+      ?Bool.andb_true_l, ?Bool.andb_true_r, ?Bool.orb_true_l, ?Bool.orb_true_r, 
+      ?Bool.andb_false_l, ?Bool.andb_false_r, ?Bool.orb_false_l, ?Bool.orb_false_r,
+      ?Z.testbit_0_l, ?Z.testbit_neg_r, ?Z.testbit_high
+    by intuition (idtac;
+         match goal with
+         | H : ?x < ?y^?a |- ?x < ?y^?b =>
+             apply (Z.lt_le_trans _ (y^a)), Z.pow_le_mono_r; lia
+         | _ => lia
+         end);
+    cbn [negb]; trivial; try lia).
+    all:f_equal; try lia.
+Qed.
+
+
+
+
+
+
+
+
+
+
+Import full_sub full_add.
+Local Existing Instances spec_of_full_sub spec_of_full_add.
+
+Import Specs.
+
+Lemma p256_coord_sub_nonmont_ok :
+  let '_ := spec_of_p256_coord_sub_nonmont in
+  program_logic_goal_for_function! p256_coord_sub.
+Proof.
+  straightline; repeat straightline_cleanup.
+  cbv [coord.to_bytes] in *.
+  let domem Hm :=
+  do 4 (
+    rewrite <-(firstn_skipn 8 (le_split _ _)), List.firstn_le_split, skipn_le_split, ?Z.shiftr_shiftr in Hm by lia;
+    simpl Nat.min in Hm; simpl Nat.sub in Hm; set (le_split 8 _) in Hm) in
+  domem H8; domem H9.
+  rewrite <-(firstn_skipn 8 out), <-(firstn_skipn 8 out[_:]), <-(firstn_skipn 8 out[_:][_:]), ?skipn_skipn, ?firstn_skipn in H10.
+  subst l l0 l1 l2 l3 l4 l5 l6.
+  rewrite ?length_le_split in *.
+
+  let domem Hm :=
+  progress change (sepclause_of_map ?m) with (eq m) in Hm;
+  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_app, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil, ?Nat.min_l by (trivial; lia); trivial; lia);
+  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split, ?length_le_split, ?length_firstn, ?length_skipn; lia);
+  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split, ?length_firstn, ?length_skipn; lia);
+  rewrite ?le_combine_split, ?Z.shiftr_div_pow2 in Hm by lia 
+  in domem H8; domem H9; domem H10.
+
+  simpl Z.of_nat in *; simpl Z.mul in *; simpl Z.add in *; simpl Nat.add in *.
+  repeat (straightline || straightline_call); try ZnWords.ZnWords.
+
+  cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar Scalars.littleendian] in H23.
+  repeat seprewrite_in_by ptsto_bytes.ptsto_bytes_iff_eq_of_list_word_at H23 ltac:(try rewrite ?length_le_split, ?Scalars.bytes_per_width_bytes_per_word; cbv [Memory.bytes_per_word]; try ZnWords.ZnWords).
+  rewrite ?HList.tuple.to_list_of_list, ?Scalars.bytes_per_width_bytes_per_word in H23.
+  change (Memory.bytes_per access_size.word) with 8%nat in H23.
+  repeat seprewrite_in_by (@ptsto_bytes.list_word_at_app_of_adjacent_eq) H23 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
+  progress change (@eq Interface.map.rep ?m) with (sepclause_of_map m) in H23.
+  rewrite <-?app_assoc in H23.
+  revert H23;
+  eassert ((_ ++ _) = _) as ->; [|intros;ecancel_assumption].
+  eapply le_combine_inj; rewrite ?length_app, ?length_le_combine, ?length_le_split; trivial.
+  rewrite !le_combine_app, !le_combine_split, ?length_le_split; change (2^(8%nat*8)) with (2^64).
+  pose proof F.to_Z_range ((x - y)) eq_refl.
+  rewrite ?Z.mod_small by (cbv [p256] in *; ZnWords.ZnWords).
+
+  pose proof F.to_Z_range x eq_refl.
+  pose proof F.to_Z_range y eq_refl.
+  rewrite F.to_Z_sub.
+  rewrite ?word.unsigned_of_Z in *; cbv [word.wrap] in *; rewrite ?Zdiv.Zmod_mod in *.
+
+  cbv [Semantics.interp_op1] in *.
+  assert (x9 = word.of_Z 0 /\ F.to_Z y <= F.to_Z x
+        \/x9 = word.of_Z 1 /\ F.to_Z x < F.to_Z y) as [ [-> ?]|[-> ?]] by
+      (rewrite <-!word.unsigned_inj_iff; cbv [p256] in *; ZnWords.ZnWords).
+  { rewrite ?Z.add_0_r in *; cbv [p256] in *. ZnWords.ZnWords. }
+  rewrite <-(Z.mod_add _ 1), Z.mod_small by (cbv [p256] in *; ZnWords.ZnWords).
+  rewrite word.and_m1_l, ?word.unsigned_of_Z_nowrap in * by lia.
+  cbv [p256] in *; ZnWords.ZnWords.
+Qed.
+
+Import DestructHead.
+Lemma p256_coord_sub_ok : program_logic_goal_for_function! p256_coord_sub.
+Proof.
+  cbv [program_logic_goal_for spec_of_p256_coord_sub ]; intros; destruct_head' @and; destruct_head' @ex.
+  eapply WeakestPreconditionProperties.Proper_call; [|unshelve (eapply p256_coord_sub_nonmont_ok; trivial)]; cycle 1.
+  { exact (F.mul x coord.R). } { exact (F.mul y coord.R). } { shelve. } { exact out. }
+  { repeat intro; intuition eauto using ex_intro with nocore. }
+  repeat intro.
+  cbv [coord.to_bytes] in *.
+  assert ((x-y)*coord.R = x*coord.R - y*coord.R)%F as -> by ring; eauto.
+Qed.
+
+
+Definition spec_of_p256_coord_add_nonmont : spec_of "p256_coord_add" :=
+  fnspec! "p256_coord_add" p_out p_x p_y / out (x y : F p256) R,
+  { requires t m := m =*> (le_split 32 x)$@p_x /\ m =*> (le_split 32 y)$@p_y /\ m =* out$@p_out * R /\ length out = 32%nat;
+    ensures t' m := t' = t /\ m =* (le_split 32 (x+y)%F)$@p_out * R }.
+
+Lemma p256_coord_add_nonmont_ok :
+  let '_ := spec_of_p256_coord_add_nonmont in
+  program_logic_goal_for_function! p256_coord_add.
+Proof.
+  straightline; repeat straightline_cleanup.
+  clear H H0 H1. clear H3 H4 H5 H6.
+  clear H8; rename H12 into H8.
+  clear H9; rename H13 into H9.
+  clear H10; rename H14 into H10.
+
+  cbv [coord.to_bytes] in *.
+  let domem Hm :=
+  do 4 (
+    rewrite <-(firstn_skipn 8 (le_split _ _)), List.firstn_le_split, skipn_le_split, ?Z.shiftr_shiftr in Hm by lia;
+    simpl Nat.min in Hm; simpl Nat.add in Hm; set (le_split 8 _) in Hm) in
+  domem H8; domem H9.
+  rewrite <-(firstn_skipn 8 out), <-(firstn_skipn 8 out[_:]), <-(firstn_skipn 8 out[_:][_:]), ?skipn_skipn, ?firstn_skipn in H10.
+  subst l l0 l1 l2 l3 l4 l5 l6.
+  rewrite ?length_le_split in *.
+
+  let domem Hm :=
+  progress change (sepclause_of_map ?m) with (eq m) in Hm;
+  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_app, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil, ?Nat.min_l by (trivial; lia); trivial; lia);
+  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split, ?length_le_split, ?length_firstn, ?length_skipn; lia);
+  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split, ?length_firstn, ?length_skipn; lia);
+  rewrite ?le_combine_split, ?Z.shiftr_div_pow2 in Hm by lia 
+  in domem H8; domem H9; domem H10.
+
+  simpl Z.of_nat in *; simpl Z.mul in *; simpl Z.add in *; simpl Nat.add in *.
+  repeat (straightline || straightline_call); try ZnWords.ZnWords.
+
+  rename H18 into H23.
+  cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar Scalars.littleendian] in H23.
+  repeat seprewrite_in_by ptsto_bytes.ptsto_bytes_iff_eq_of_list_word_at H23 ltac:(try rewrite ?length_le_split, ?Scalars.bytes_per_width_bytes_per_word; cbv [Memory.bytes_per_word]; try ZnWords.ZnWords).
+  rewrite ?HList.tuple.to_list_of_list, ?Scalars.bytes_per_width_bytes_per_word in H23.
+  change (Memory.bytes_per access_size.word) with 8%nat in H23.
+  repeat seprewrite_in_by (@ptsto_bytes.list_word_at_app_of_adjacent_eq) H23 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
+  progress change (@eq Interface.map.rep ?m) with (sepclause_of_map m) in H23.
+  rewrite <-?app_assoc in H23.
+  revert H23; eassert ((_ ++ _) = _)%list as ->; [|intros;ecancel_assumption].
+  eapply le_combine_inj; rewrite ?length_app, ?length_le_combine, ?length_le_split; trivial.
+  rewrite !le_combine_app, !le_combine_split, ?length_le_split; change (2^(8%nat*8)) with (2^64).
+  pose proof F.to_Z_range ((x + y)) eq_refl.
+  rewrite ?Z.mod_small by (cbv [p256] in *; ZnWords.ZnWords).
+
+  pose proof F.to_Z_range x eq_refl.
+  pose proof F.to_Z_range y eq_refl.
+  rewrite F.to_Z_add.
+  rewrite ?word.unsigned_of_Z in *; cbv [word.wrap] in *; rewrite ?Zdiv.Zmod_mod, ?Z.mod_0_l, ?Z.add_0_r, ?Z.sub_0_r in * by (clear; lia).
+
+  destruct Z.eqb eqn:Hborrow in *; [apply Z.eqb_eq in Hborrow|apply Z.eqb_neq in Hborrow]; repeat straightline.
+  { rewrite <-(Z.mod_add _ (-1)) by inversion 1; rewrite Z.mod_small; cbv [p256] in *; ZnWords.ZnWords. }
+  { rewrite Z.mod_small; cbv [p256] in *; try ZnWords.ZnWords. }
+Qed.
+
+Lemma p256_coord_add_ok : program_logic_goal_for_function! p256_coord_add.
+Proof.
+  cbv [program_logic_goal_for spec_of_p256_coord_add ]; intros; destruct_head' @and; destruct_head' @ex.
+  eapply WeakestPreconditionProperties.Proper_call; [|unshelve (eapply p256_coord_add_nonmont_ok; trivial)]; cycle 1.
+  { exact (F.mul x coord.R). } { exact (F.mul y coord.R). } { shelve. } { exact out. }
+  { repeat intro; intuition eauto using ex_intro with nocore. }
+  repeat intro.
+  cbv [coord.to_bytes] in *.
+  assert ((x+y)*coord.R = x*coord.R + y*coord.R)%F as -> by ring; eauto.
+Qed.
+
+Lemma u256_set_p256_minushalf_conditional_ok : program_logic_goal_for_function! u256_set_p256_minushalf_conditional.
+Admitted.
