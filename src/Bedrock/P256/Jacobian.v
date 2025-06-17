@@ -214,6 +214,7 @@ Proof.
     { ecancel_assumption. }
     { rewrite H10, length_point; trivial. }
     { trivial. }
+    { clear; ZnWords.ZnWords. }
     repeat straightline.
     (* stackdealloc *)
     progress repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) H42 ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
@@ -294,6 +295,7 @@ Import Curves.Weierstrass.AffineProofs.
     { ecancel_assumption. }
     { rewrite H10, length_point; trivial. }
     { trivial. }
+    { clear; ZnWords.ZnWords. }
     repeat straightline.
     (* stackdealloc *)
     progress repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) H31 ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).

@@ -121,6 +121,31 @@ Definition br_cmov := func! (c, vnz, vz) ~> r {
   r = m & vnz | ~m & vz
 }.
 
+Lemma br_cmov_ok : program_logic_goal_for_function! br_cmov.
+Proof.
+  repeat (straightline || straightline_call).
+  subst r x; cbn [Semantics.interp_op1] in *.
+  pose proof word.unsigned_range vz.
+  pose proof word.unsigned_range vnz.
+  case Z.eqb_spec; intros; unfold word.broadcast in *; cbn [Z.b2z negb].
+  all : apply word.unsigned_inj;
+    repeat rewrite ?word.unsigned_or, word.unsigned_and, ?word.unsigned_opp, ?word.unsigned_not, ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; cbv [word.wrap].
+  all : apply Z.bits_inj'; intros i Hi;
+    repeat rewrite <-?Z.land_ones, ?Z.land_spec, ?Z.lor_spec, ?Z.testbit_ones, ?Z.lnot_spec, ?Z.testbit_0_l by try ZnWords.ZnWords.
+  all: repeat (((case Z.ltb_spec; [|]; intros)||(case Z.leb_spec; [|]; intros)); rewrite
+      ?Bool.andb_true_l, ?Bool.andb_true_r, ?Bool.orb_true_l, ?Bool.orb_true_r, 
+      ?Bool.andb_false_l, ?Bool.andb_false_r, ?Bool.orb_false_l, ?Bool.orb_false_r,
+      ?Z.testbit_0_l, ?prove_Zeq_bitwise.testbit_minus1, ?Z.testbit_neg_r, ?Z.testbit_high
+    by intuition (idtac;
+         match goal with
+         | H : ?x < ?y^?a |- ?x < ?y^?b =>
+             apply (Z.lt_le_trans _ (y^a)), Z.pow_le_mono_r; lia
+         | _ => lia
+         end);
+    cbn [negb]; trivial; try lia).
+Qed.
+
+
 Definition br_memset := func! (p_d, v, n) {
   while n {
     store1(p_d, v);
@@ -138,14 +163,10 @@ Definition br_memcxor := func! (p_d, p_s, n, m) {
 }.
 
 
-Lemma br_cmov_ok : program_logic_goal_for_function! br_cmov.
-Admitted.
-
 Lemma br_memcpy_ok : program_logic_goal_for_function! br_memcpy.
 Proof.
-  repeat (straightline || straightline_call); intuition eauto; try ecancel_assumption.
-  (* TODO: add to spec of memcpy: n <= 2 ^ (64 - 1) *)
-Admitted.
+  repeat (straightline || straightline_call); intuition eauto; try ecancel_assumption; trivial.
+Qed.
 
 Lemma br_memset_ok : program_logic_goal_for_function! br_memset.
 Admitted.
