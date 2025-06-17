@@ -124,7 +124,6 @@ Proof.
   simpl Z.mul in *; simpl Z.add in *.
   subst l0 l1 l2 l3.
 
-  progress change (sepclause_of_map ?m) with (eq m) in *.
   repeat (seprewrite_in (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm; rewrite ?length_app, ?length_le_split, ?length_nil; try trivial; try lia).
   repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split; lia).
   repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split; lia).
@@ -156,14 +155,10 @@ Proof.
 
   rename H0 into Hm.
   cbv [point.to_bytes] in *.
-  progress change (sepclause_of_map ?m) with (eq m) in Hm.
   repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?app_length, ?length_coord; trivial; try lia).
-  progress change (@eq Interface.map.rep ?m) with (sepclause_of_map m) in *.
   simpl Z.of_nat in *.
 
   straightline_call; [eexists; ecancel_assumption|]; repeat straightline.
-
-  split; try reflexivity.
 
   subst z x0.
   setoid_rewrite word.not_broadcast; rewrite Bool.negb_involutive; trivial.
@@ -190,7 +185,6 @@ Proof.
   { cbn. repeat straightline. eexists; split; [|reflexivity].
     cbv [coord.to_bytes] in Hm.
     rewrite <-(firstn_skipn 8 (le_split _ _)), List.firstn_le_split, skipn_le_split, ?Z.shiftr_shiftr in Hm by lia.
-    progress change (sepclause_of_map ?m) with (eq m) in Hm.
     seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_le_split; trivial; lia).
     seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split; lia).
     seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split; lia).
@@ -200,7 +194,6 @@ Proof.
   straightline_call; [eexists; ecancel_assumption|]; repeat straightline.
   
   seprewrite_in_by ptsto_bytes.array1_iff_eq_of_list_word_at Hm0 ltac:(Lia.lia).
-  progress change (@eq Interface.map.rep ?m) with (sepclause_of_map m) in Hm0.
 
   straightline_call; ssplit; [ ecancel_assumption | trivial |].
   repeat straightline_cleanup.
@@ -240,13 +233,11 @@ Proof.
   repeat straightline.
 
   (* stackdealloc *)
-  progress change (sepclause_of_map ?m) with (eq m) in H12.
   progress repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) H12 ltac:(rewrite ?length_le_split; Lia.lia).
   progress repeat match type of H12 with context [Array.array ptsto _ _ (le_split 32 ?x)] =>
     unique pose proof (length_le_split 32 x) end.
   progress repeat straightline.
   progress repeat seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) H12 ltac:(rewrite ?length_le_split; Lia.lia).
-  progress change (@eq Interface.map.rep ?m) with (sepclause_of_map m) in H12.
 
   (* postcondition *)
   use_sep_assumption.
@@ -286,7 +277,6 @@ Proof.
   rewrite ?length_le_split in *.
 
   let domem Hm :=
-  progress change (sepclause_of_map ?m) with (eq m) in Hm;
   repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_app, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil, ?Nat.min_l by (trivial; lia); trivial; lia);
   repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split, ?length_le_split, ?length_firstn, ?length_skipn; lia);
   repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split, ?length_firstn, ?length_skipn; lia);
@@ -301,7 +291,6 @@ Proof.
   rewrite ?HList.tuple.to_list_of_list, ?Scalars.bytes_per_width_bytes_per_word in H14.
   change (Memory.bytes_per access_size.word) with 8%nat in H14.
   repeat seprewrite_in_by (@ptsto_bytes.list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
-  progress change (@eq Interface.map.rep ?m) with (sepclause_of_map m) in H14.
   rewrite <-?app_assoc in H14.
   revert H14;
   eassert ((_ ++ _) = _) as ->; [|intros;ecancel_assumption].
@@ -333,14 +322,6 @@ Proof.
 Qed.
 
 
-
-
-
-
-
-
-
-
 Import full_sub full_add.
 Local Existing Instances spec_of_full_sub spec_of_full_add.
 
@@ -362,7 +343,6 @@ Proof.
   rewrite ?length_le_split in *.
 
   let domem Hm :=
-  progress change (sepclause_of_map ?m) with (eq m) in Hm;
   repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_app, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil, ?Nat.min_l by (trivial; lia); trivial; lia);
   repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split, ?length_le_split, ?length_firstn, ?length_skipn; lia);
   repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split, ?length_firstn, ?length_skipn; lia);
@@ -377,7 +357,6 @@ Proof.
   rewrite ?HList.tuple.to_list_of_list, ?Scalars.bytes_per_width_bytes_per_word in H23.
   change (Memory.bytes_per access_size.word) with 8%nat in H23.
   repeat seprewrite_in_by (@ptsto_bytes.list_word_at_app_of_adjacent_eq) H23 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
-  progress change (@eq Interface.map.rep ?m) with (sepclause_of_map m) in H23.
   rewrite <-?app_assoc in H23.
   revert H23;
   eassert ((_ ++ _) = _) as ->; [|intros;ecancel_assumption].
@@ -440,7 +419,6 @@ Proof.
   rewrite ?length_le_split in *.
 
   let domem Hm :=
-  progress change (sepclause_of_map ?m) with (eq m) in Hm;
   repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_app, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil, ?Nat.min_l by (trivial; lia); trivial; lia);
   repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split, ?length_le_split, ?length_firstn, ?length_skipn; lia);
   repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split, ?length_firstn, ?length_skipn; lia);
@@ -456,7 +434,6 @@ Proof.
   rewrite ?HList.tuple.to_list_of_list, ?Scalars.bytes_per_width_bytes_per_word in H23.
   change (Memory.bytes_per access_size.word) with 8%nat in H23.
   repeat seprewrite_in_by (@ptsto_bytes.list_word_at_app_of_adjacent_eq) H23 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
-  progress change (@eq Interface.map.rep ?m) with (sepclause_of_map m) in H23.
   rewrite <-?app_assoc in H23.
   revert H23; eassert ((_ ++ _) = _)%list as ->; [|intros;ecancel_assumption].
   eapply le_combine_inj; rewrite ?length_app, ?length_le_combine, ?length_le_split; trivial.
