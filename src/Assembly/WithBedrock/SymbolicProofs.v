@@ -51,9 +51,6 @@ Section Memory.
   Import Map.Interface Word.Interface BinInt.
   Local Coercion Z.of_nat : nat >-> Z.
   Local Coercion word.unsigned : word.rep >-> Z.
-  Let sepclause_of_map {key value map} (m : @map.rep key value map)
-    : map.rep -> Prop := Logic.eq m.
-  Local Coercion sepclause_of_map : Interface.map.rep >-> Funclass.
 
   Lemma unchecked_store_bytes_of_sep
     m a bs1 bs2 R (Hsep : sep R (bs1$@a) m)
