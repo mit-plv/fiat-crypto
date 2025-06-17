@@ -40,6 +40,26 @@ Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+
 Local Coercion F.to_Z : F >-> Z.
 
 
+#[export] Instance spec_of_u256_shr : spec_of "u256_shr" :=
+  fnspec! "u256_shr" p_out p_x n / out (x : Z) R,
+  { requires t m := m =*> (le_split 32 x)$@p_x /\ m =* out$@p_out * R /\ length out = 32%nat /\
+    0 <= x < 2^256 /\ word.unsigned n < 64;
+    ensures t' m := let r : Z := x/2^n in
+          t' = t /\ m =* (le_split 32 r)$@p_out * R }.
+
+Definition spec_of_p256_coord_sub_nonmont : spec_of "p256_coord_sub" :=
+  fnspec! "p256_coord_sub" p_out p_x p_y / out (x y : F p256) R,
+  { requires t m := m =*> (le_split 32 x)$@p_x /\ m =*> (le_split 32 y)$@p_y /\ m =* out$@p_out * R /\ length out = 32%nat;
+    ensures t' m := t' = t /\ m =* (le_split 32 (x-y)%F)$@p_out * R }.
+
+#[export] Instance spec_of_p256_coord_set_minushalf_conditional : spec_of "u256_set_p256_minushalf_conditional" :=
+  fnspec! "u256_set_p256_minushalf_conditional" p_out mask / b out R,
+  { requires t m := m =* out$@p_out * R /\ length out = 32%nat /\ mask = word.broadcast b;
+    ensures t' m := exists r : F p256,
+      t' = t /\ m =* (le_split 32 r)$@p_out * R /\ (r = if b then F.opp (1/(1+1)) else F.zero)
+  }.
+
+
 Definition p256_coord_nonzero := func! (p_x) ~> nz {
   unpack! nz = br_broadcast_nonzero(load(p_x) | load(p_x.+$8) | load(p_x.+$8.+$8) | load(p_x.+$8.+$8.+$8))
 }.
@@ -74,12 +94,12 @@ Definition u256_shr := func!(p_out, p_x, n) {
   store(p_out, y0); store(p_out+$8, y1); store(p_out+$8+$8, y2); store(p_out+$8+$8+$8, y3)
 }.
 
-Definition u256_set_p256_minushalf_conditional := func!(out, mask) {
-  mh0 = $-1; mh1 = mh0>>$33; mh2 = mh0<<$63; mh3 = mh0<<$32>>$1; (* minus one half modulo p256 *)
-  store(mmh,          mask&mh0);
-  store(mmh+$8,       mask&mh1);
-  store(mmh+$8+$8,    mask&mh2);
-  store(mmh+$8+$8+$8, mask&mh3)
+Definition u256_set_p256_minushalf_conditional := func!(p_out, mask) {
+  mh0 = -$1; mh1 = mh0>>$33; mh2 = mh0<<$63; mh3 = mh0<<$32>>$1; (* minus one half modulo p256 *)
+  store(p_out,          mask&mh0);
+  store(p_out+$8,       mask&mh1);
+  store(p_out+$8+$8,    mask&mh2);
+  store(p_out+$8+$8+$8, mask&mh3)
 }.
 
 Definition p256_coord_halve := func!(y, x) {
@@ -110,6 +130,12 @@ Definition p256_coord_add := func!(p_out, p_x, p_y) {
   store(p_out+$8+$8+$8, r3)
 }.
 
+Local Ltac length_tac :=
+  repeat rewrite
+    ?length_coord, ?length_point,
+    ?length_app, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil,
+    ?Nat.min_l
+    by (trivial; lia); trivial; lia.
 
 Lemma fiat_coord_nonzero_ok : program_logic_goal_for_function! p256_coord_nonzero.
 Proof.
@@ -124,10 +150,10 @@ Proof.
   simpl Z.mul in *; simpl Z.add in *.
   subst l0 l1 l2 l3.
 
-  repeat (seprewrite_in (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm; rewrite ?length_app, ?length_le_split, ?length_nil; try trivial; try lia).
-  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split; lia).
-  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split; lia).
-  rewrite ?le_combine_split, ?Z.shiftr_div_pow2 in Hm by lia.
+  repeat (seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm length_tac).
+  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm length_tac.
+  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac.
+  rewrite ?le_combine_split, ?Z.shiftr_div_pow2 in Hm by length_tac.
   simpl Z.of_nat in *.
   simpl Z.mul in *.
 
@@ -195,9 +221,7 @@ Proof.
   
   seprewrite_in_by ptsto_bytes.array1_iff_eq_of_list_word_at Hm0 ltac:(Lia.lia).
 
-  straightline_call; ssplit; [ ecancel_assumption | trivial |].
-  repeat straightline_cleanup.
-  specialize (H11 _ eq_refl).
+  straightline_call; ssplit; [ ecancel_assumption | trivial | exact eq_refl | ].
   repeat straightline.
 
   eapply sep_and_r_fwd in H10; case H10 as [Hm3 Hm3'].
@@ -228,16 +252,16 @@ Proof.
     cancel_seps_at_indices 1%nat 0%nat. { exact eq_refl. }
     cancel. }
   { ecancel_assumption. }
-  { rewrite ?length_coord, ?length_le_split; trivial. }
+  { length_tac. }
   
   repeat straightline.
 
   (* stackdealloc *)
-  progress repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) H12 ltac:(rewrite ?length_le_split; Lia.lia).
+  progress repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) H12 length_tac.
   progress repeat match type of H12 with context [Array.array ptsto _ _ (le_split 32 ?x)] =>
     unique pose proof (length_le_split 32 x) end.
   progress repeat straightline.
-  progress repeat seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) H12 ltac:(rewrite ?length_le_split; Lia.lia).
+  progress repeat seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) H12 length_tac.
 
   (* postcondition *)
   use_sep_assumption.
@@ -277,9 +301,9 @@ Proof.
   rewrite ?length_le_split in *.
 
   let domem Hm :=
-  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_app, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil, ?Nat.min_l by (trivial; lia); trivial; lia);
-  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split, ?length_le_split, ?length_firstn, ?length_skipn; lia);
-  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split, ?length_firstn, ?length_skipn; lia);
+  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm length_tac;
+  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm length_tac;
+  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac;
   rewrite ?le_combine_split in Hm by lia 
   in domem H2; domem H3.
 
@@ -343,9 +367,9 @@ Proof.
   rewrite ?length_le_split in *.
 
   let domem Hm :=
-  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_app, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil, ?Nat.min_l by (trivial; lia); trivial; lia);
-  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split, ?length_le_split, ?length_firstn, ?length_skipn; lia);
-  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split, ?length_firstn, ?length_skipn; lia);
+  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm length_tac;
+  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm length_tac;
+  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac;
   rewrite ?le_combine_split, ?Z.shiftr_div_pow2 in Hm by lia 
   in domem H8; domem H9; domem H10.
 
@@ -419,9 +443,9 @@ Proof.
   rewrite ?length_le_split in *.
 
   let domem Hm :=
-  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_app, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil, ?Nat.min_l by (trivial; lia); trivial; lia);
-  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split, ?length_le_split, ?length_firstn, ?length_skipn; lia);
-  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split, ?length_firstn, ?length_skipn; lia);
+  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm length_tac;
+  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm length_tac;
+  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac;
   rewrite ?le_combine_split, ?Z.shiftr_div_pow2 in Hm by lia 
   in domem H8; domem H9; domem H10.
 
@@ -463,4 +487,29 @@ Proof.
 Qed.
 
 Lemma u256_set_p256_minushalf_conditional_ok : program_logic_goal_for_function! u256_set_p256_minushalf_conditional.
-Admitted.
+Proof.
+  straightline; repeat straightline_cleanup.
+  rename H into Hm.
+   
+  rewrite <-(firstn_skipn 8 out), <-(firstn_skipn 8 out[_:]), <-(firstn_skipn 8 out[_:][_:]), ?skipn_skipn, ?firstn_skipn in Hm.
+  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm length_tac.
+  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm length_tac.
+  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac.
+  simpl Z.of_nat in *.
+
+  repeat straightline; ssplit; trivial.
+
+  (* postcondition *)
+
+  clear Hm; rename H3 into Hm.
+  cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar Scalars.littleendian] in Hm.
+  repeat seprewrite_in_by ptsto_bytes.ptsto_bytes_iff_eq_of_list_word_at Hm ltac:(try rewrite ?length_le_split, ?Scalars.bytes_per_width_bytes_per_word; cbv [Memory.bytes_per_word]; try ZnWords.ZnWords).
+  rewrite ?HList.tuple.to_list_of_list, ?Scalars.bytes_per_width_bytes_per_word in Hm.
+  change (Memory.bytes_per access_size.word) with 8%nat in Hm.
+  repeat seprewrite_in_by (@ptsto_bytes.list_word_at_app_of_adjacent_eq) Hm ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
+
+  revert Hm; eassert ((_ ++ _) = _)%list as ->; [|intros;ecancel_assumption].
+  eapply le_combine_inj. { length_tac. } 
+  subst v v0 v1 v2 mask mh0 mh1 mh2 mh3.
+  case b; Decidable.vm_decide.
+Qed.

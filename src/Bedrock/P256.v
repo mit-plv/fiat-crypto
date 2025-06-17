@@ -59,21 +59,21 @@ Definition platform := &[,
 
 Definition libc := &[, memmove; br_memcpy;  br_memset].
 
+Local Definition c_func f : string := "static " ++ c_func f.
+
 Compute String.concat LF (List.map c_func platform).
 
 Definition jacobian := &[,
- p256_point_add_vartime_if_doubling;
- p256_point_add_nz_nz_neq;
- p256_point_double;
- p256_point_iszero;
-
  p256_coord_nonzero;
- p256_coord_add;
  p256_coord_sub;
+ p256_coord_add;
+ u256_shr;
+ u256_set_p256_minushalf_conditional;
  p256_coord_halve;
 
- u256_set_p256_minushalf_conditional;
- u256_shr
+ p256_point_double;
+ p256_point_add_nz_nz_neq;
+ p256_point_add_vartime_if_doubling
  ].
 
 Compute String.concat LF (List.map c_func jacobian).
@@ -106,7 +106,8 @@ Ltac pose_correctness lem :=
 
 Local Existing Instance memmove.spec_of_memmove.
 #[export] Instance spec_of_memmove : spec_of "memmove". apply memmove.spec_of_memmove. Defined.
-Lemma link_loopfn  : spec_of_p256_point_add_vartime_if_doubling (map.of_list funcs).
+
+Lemma link_jacobian  : spec_of_p256_point_add_vartime_if_doubling (map.of_list funcs).
 Proof.
   pose_correctness full_add_ok.
   pose_correctness full_sub_ok.
@@ -145,3 +146,5 @@ Proof.
 
   trivial.
 Qed.
+
+Print Assumptions link_jacobian.

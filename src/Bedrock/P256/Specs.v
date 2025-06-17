@@ -271,11 +271,6 @@ End List.
   { requires t m := m =*> x$@p_x /\ m =*> y$@p_y /\ m =* out$@p_out * R /\ length out = length x;
     ensures t' m := let r : coord := F.add x y in t' = t /\ m =* r$@p_out * R }.
 
-Definition spec_of_p256_coord_sub_nonmont : spec_of "p256_coord_sub" :=
-  fnspec! "p256_coord_sub" p_out p_x p_y / out (x y : F p256) R,
-  { requires t m := m =*> (le_split 32 x)$@p_x /\ m =*> (le_split 32 y)$@p_y /\ m =* out$@p_out * R /\ length out = 32%nat;
-    ensures t' m := t' = t /\ m =* (le_split 32 (x-y)%F)$@p_out * R }.
-
 #[export] Instance spec_of_p256_coord_sub : spec_of "p256_coord_sub" :=
   fnspec! "p256_coord_sub" p_out p_x p_y / out (x y : coord) R,
   { requires t m := m =*> x$@p_x /\ m =*> y$@p_y /\ m =* out$@p_out * R /\ length out = length x;
@@ -313,7 +308,7 @@ Definition spec_of_p256_coord_sub_nonmont : spec_of "p256_coord_sub" :=
 
 #[export] Instance spec_of_br_memcpy : spec_of "br_memcpy" :=
   fnspec! "br_memcpy" (p_d p_s n : word) / (d s : list byte) R,
-  { requires t m := m =* d$@p_d * s$@p_s * R /\ length d = n :> Z /\ length s = n :> Z;
+  { requires t m := m =* d$@p_d * s$@p_s * R /\ length d = n :> Z /\ length s = n :> Z /\ n <= 2^63;
     ensures t' m := t' = t /\ m =* s$@p_d * s$@p_s * R }.
 
 Definition br_memcpy := func! (d, s, n) {
@@ -344,22 +339,6 @@ Definition br_memcpy := func! (d, s, n) {
     ensures t' m := t' = t /\ exists out : point,
       m =* out$@p_out * P$@p_P * Q$@p_Q /\ Jacobian.eq out (Jacobian.add P Q)
   }%sep.
-
-#[export] Instance spec_of_u256_shr : spec_of "u256_shr" :=
-  fnspec! "u256_shr" p_out p_x n / out (x : Z) R,
-  { requires t m := m =*> (le_split 32 x)$@p_x /\ m =* out$@p_out * R /\ length out = 32%nat /\
-    0 <= x < 2^256 /\ word.unsigned n < 64;
-    ensures t' m := let r : Z := x/2^n in
-          t' = t /\ m =* (le_split 32 r)$@p_out * R }.
-
-
-#[export] Instance spec_of_p256_coord_set_minushalf_conditional : spec_of "u256_set_p256_minushalf_conditional" :=
-  fnspec! "u256_set_p256_minushalf_conditional" p_out mask / out R,
-  { requires t m := m =* out$@p_out * R /\ length out = 32%nat;
-    ensures t' m := exists r : F p256,
-          t' = t /\ m =* (le_split 32 r)$@p_out * R /\
-          (forall b, mask = word.broadcast b -> r = if b then F.opp (1/(1+1)) else F.zero)
-  }.
 
 #[export] Instance spec_of_p256_point_add_affine_nz_nz_neq : spec_of "p256_point_add_affine_nz_nz_neq" :=
   fnspec! "p256_point_add_affine_nz_nz_neq" p_x / (x : coord) ~> nz,
