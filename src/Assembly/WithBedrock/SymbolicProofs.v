@@ -19,7 +19,7 @@ Import Sorting.Permutation.
 
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
-Require Import bedrock2.Memory. Import WithoutTuples.
+Require Import bedrock2.Memory. Import coqutil.Map.Memory.
 Require Import coqutil.Map.Interface. (* coercions *)
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndianList.

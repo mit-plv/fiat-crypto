@@ -85,7 +85,7 @@ End Byte.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Map.Interface. (* coercions *)
 Require Import coqutil.Word.LittleEndianList.
-Require Import bedrock2.Memory. Import WithoutTuples.
+Require Import bedrock2.Memory. Import coqutil.Map.Memory.
 Require coqutil.Word.Naive coqutil.Map.SortedListWord.
 Definition mem_state := (SortedListWord.map (Naive.word 64) Byte.byte).
 
