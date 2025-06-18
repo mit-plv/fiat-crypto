@@ -809,20 +809,10 @@ Section WeakestPrecondition.
       forall s (m:mem) a post,
         load s map.empty a post -> load s m a post.
     Proof.
-      intros *.
-      cbv [load Memory.load Memory.load_Z Memory.load_bytes].
-      rewrite getmany_of_tuple_empty; intros;
-        repeat match goal with
-               | H : exists _, _ |- _ => destruct H
-               | H : _ /\ _ |- _ => destruct H
-               | _ => congruence
-               end.
-      cbv [Memory.bytes_per]; break_match; try congruence.
-      change 0%nat with (Z.to_nat 0).
-      pose proof word.width_pos.
-      rewrite Z2Nat.inj_iff by (try apply Z.div_pos; lia).
-      rewrite Z.eq_sym_iff.
-      apply Z.lt_neq, Z.div_str_pos; lia.
+      cbv [load Memory.load Memory.load_Z Map.Memory.load_bytes]; intros *.
+      destruct option_all eqn:E; [exfalso|intros (?&?&?); discriminate].
+      destruct BW as [ [-> | ->] ], s in E;
+        simpl map in E; rewrite ?map.get_empty in E; discriminate.
     Qed.
   End Load.
 
