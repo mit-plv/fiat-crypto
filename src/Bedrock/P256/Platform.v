@@ -75,13 +75,14 @@ Definition br_broadcast_nonzero := func! (x) ~> y {
 }.
 
 Lemma value_barrier_ok : program_logic_goal_for_function! br_value_barrier.
-Proof. repeat straightline. Qed.
+Proof. cbv [spec_of_value_barrier]; repeat straightline. Qed.
 
 Lemma br_declassify_ok : program_logic_goal_for_function! br_declassify.
-Proof. repeat straightline. Qed.
+Proof. cbv [spec_of_br_declassify]; repeat straightline. Qed.
 
 Lemma br_broadcast_odd_ok : program_logic_goal_for_function! br_broadcast_odd.
 Proof.
+  cbv [spec_of_br_broadcast_odd].
   repeat straightline.
   straightline_call; repeat straightline.
   subst x0 y.
@@ -95,6 +96,7 @@ Qed.
 
 Lemma br_broadcast_negative_ok : program_logic_goal_for_function! br_broadcast_negative.
 Proof.
+  cbv [spec_of_br_broadcast_negative].
   repeat straightline.
   straightline_call; repeat straightline.
   subst y.
@@ -105,6 +107,7 @@ Qed.
 
 Lemma br_broadcast_nonzero_ok : program_logic_goal_for_function! br_broadcast_nonzero.
 Proof.
+  cbv [spec_of_br_broadcast_nonzero].
   repeat straightline.
   straightline_call; repeat straightline.
   apply f_equal, Bool.eq_true_iff_eq; rewrite Bool.negb_true_iff, Z.eqb_neq, <-word.nz_signed.
@@ -123,6 +126,7 @@ Definition br_cmov := func! (c, vnz, vz) ~> r {
 
 Lemma br_cmov_ok : program_logic_goal_for_function! br_cmov.
 Proof.
+  cbv [spec_of_br_cmov].
   repeat (straightline || straightline_call).
   subst r x; cbn [Semantics.interp_op1] in *.
   pose proof word.unsigned_range vz.
@@ -165,6 +169,7 @@ Definition br_memcxor := func! (p_d, p_s, n, m) {
 
 Lemma br_memcpy_ok : program_logic_goal_for_function! br_memcpy.
 Proof.
+  cbv [spec_of_br_memcpy].
   repeat (straightline || straightline_call); intuition eauto; try ecancel_assumption; trivial.
 Qed.
 

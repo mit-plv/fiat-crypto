@@ -59,18 +59,15 @@ Definition platform := &[,
 
 Definition libc := &[, memmove; br_memcpy;  br_memset].
 
-Local Definition c_func f : string := "static " ++ c_func f.
+Local Definition c_func f : string := "static inline "++ c_func f.
 
 Compute String.concat LF (List.map c_func platform).
 
 Definition jacobian := &[,
- p256_coord_nonzero;
- p256_coord_sub;
- p256_coord_add;
- u256_shr;
- u256_set_p256_minushalf_conditional;
+ br_broadcast_odd;
  p256_coord_halve;
 
+ p256_point_iszero;
  p256_point_double;
  p256_point_add_nz_nz_neq;
  p256_point_add_vartime_if_doubling

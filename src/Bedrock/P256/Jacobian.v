@@ -42,6 +42,134 @@ Local Coercion F.to_Z : F >-> Z.
 Import Coq.micromega.Lia.
 Import coqutil.Tactics.Tactics.
 
+Definition p256_point_iszero := func! (p_P) ~> z {
+  unpack! nz = p256_coord_nonzero(p_P.+$32.+$32);
+  z = ~nz
+}.
+
+
+Lemma p256_point_iszero_ok : program_logic_goal_for_function! p256_point_iszero.
+Proof.
+  cbv [spec_of_fiat_p256_point_iszero].
+  repeat straightline.
+
+  rename H0 into Hm.
+  cbv [point.to_bytes] in *.
+  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?app_length, ?length_coord; trivial; try lia).
+  simpl Z.of_nat in *.
+
+  straightline_call; [eexists; ecancel_assumption|]; repeat straightline.
+
+  subst z x0.
+  setoid_rewrite word.not_broadcast; rewrite Bool.negb_involutive; trivial.
+Qed.
+
+Definition p256_coord_halve := func!(y, x) {
+  stackalloc 32 as mmh;
+  unpack! m = br_broadcast_odd(load(x));
+  u256_set_p256_minushalf_conditional(mmh, m);
+  u256_shr(y, x, $1);
+  p256_coord_sub(y, y, mmh)
+}.
+
+
+Local Ltac length_tac :=
+  repeat rewrite
+    ?length_coord, ?length_point,
+    ?length_app, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil,
+    ?Nat.min_l
+    by (trivial; lia); trivial; lia.
+
+Lemma p256_coord_halve_ok :
+  let '_ := spec_of_p256_coord_sub_nonmont in
+  program_logic_goal_for_function! p256_coord_halve.
+Proof.
+  cbv [spec_of_p256_coord_halve].
+  straightline; repeat straightline_cleanup.
+
+  pose proof (conj H3 H4) as Hm; clear H4 H3; pattern m in Hm.
+  progress change (?P m) with (id P m) in Hm.
+  repeat straightline.
+  eapply sep_and_l_fwd in Hm; case Hm as [Hm Hm'].
+
+  letexists; split.
+  { cbn. repeat straightline. eexists; split; [|reflexivity].
+    cbv [coord.to_bytes] in Hm.
+    rewrite <-(firstn_skipn 8 (le_split _ _)), List.firstn_le_split, skipn_le_split, ?Z.shiftr_shiftr in Hm by lia.
+    seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_le_split; trivial; lia).
+    seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split; lia).
+    seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split; lia).
+    rewrite le_combine_split in Hm.
+    repeat straightline. }
+
+  straightline_call; [eexists; ecancel_assumption|]; repeat straightline.
+  
+  seprewrite_in_by ptsto_bytes.array1_iff_eq_of_list_word_at Hm0 ltac:(Lia.lia).
+
+  straightline_call; ssplit; [ ecancel_assumption | trivial | exact eq_refl | ].
+  repeat straightline.
+
+  eapply sep_and_r_fwd in H10; case H10 as [Hm3 Hm3'].
+
+  straightline_call; ssplit.
+  { eexists. cbv [coord.to_bytes] in *. ecancel_assumption. }
+  { cbv [coord.to_bytes] in *. ecancel_assumption. }
+  { trivial. }
+  { eapply F.to_Z_range, eq_refl. }
+  { etransitivity; try eapply F.to_Z_range; eapply eq_refl. }
+  { ZnWords.ZnWords. }
+
+  repeat straightline.
+  rewrite ?Z.pow_1_r in *.
+  
+  set (Z.odd _) as b in *.
+
+  eapply WeakestPreconditionProperties.Proper_call; cycle -1;
+  [ eapply H2 | .. | intros ? ? ? ?]; ssplit.
+  { eexists.
+    use_sep_assumption; cancel.
+    cancel_seps_at_indices 0%nat 0%nat; [|cancel].
+
+    instantiate (1:=F.of_Z _ (F.to_Z (x*coord.R)%F / 2)).
+    rewrite F.to_Z_of_Z, Z.mod_small; trivial.
+    specialize (F.to_Z_range (x*coord.R) eq_refl); clear; PreOmega.Z.to_euclidean_division_equations; lia. }
+  { eexists. use_sep_assumption. cancel.
+    cancel_seps_at_indices 1%nat 0%nat. { exact eq_refl. }
+    cancel. }
+  { ecancel_assumption. }
+  { length_tac. }
+  
+  repeat straightline.
+
+  (* stackdealloc *)
+  progress repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) H12 length_tac.
+  progress repeat match type of H12 with context [Array.array ptsto _ _ (le_split 32 ?x)] =>
+    unique pose proof (length_le_split 32 x) end.
+  progress repeat straightline.
+  progress repeat seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) H12 length_tac.
+
+  (* postcondition *)
+  use_sep_assumption.
+  cancel.
+  cancel_seps_at_indices 0%nat 0%nat; [|cancel].
+  f_equal.
+  f_equal.
+  subst x2 b.
+  cbv [coord.to_bytes F.div].
+  progress Morphisms.f_equiv; [].
+  progress Morphisms.f_equiv; [].
+  transitivity (x * coord.R * F.inv (1 + 1))%F; [|ring].
+  set (x*coord.R)%F as xR; set (F.inv (1 + 1)) as i2.
+
+  (* NOTE: back-and-forth rewrite between Z.modulo and Z.odd *)
+  rewrite word.unsigned_of_Z; cbv [word.wrap]; rewrite Zdiv.Zmod_mod, Zdiv.Zodd_mod, Zdiv.Z.mod_mod_divide by (apply Divide.Z.divide_pow_le with (n:=1); lia).
+  symmetry; rewrite <-(F.of_Z_to_Z xR) at 1; rewrite (Z.div_mod xR 2) at 1 by lia.
+  rewrite Div.Z.div_sub_mod_exact, Zdiv.Zmod_odd by lia.
+
+  assert (F.of_Z p256 2 * i2 = F.one)%F as Hi2 by (cbv [i2]; clear; Decidable.vm_decide).
+  case Z.odd; cbn [Z.eqb Pos.eqb]; rewrite ?F.of_Z_add, ?F.of_Z_mul; fold (@F.zero p256); fold (@F.one p256); ring [Hi2].
+Qed.
+
 Definition p256_point_add_nz_nz_neq := func! (p_out, p_P, p_Q) ~> ok {
   stackalloc 32 as z1z1;
   stackalloc 32 as z2z2;
@@ -85,6 +213,7 @@ Definition p256_point_add_nz_nz_neq := func! (p_out, p_P, p_Q) ~> ok {
 
 Lemma p256_point_add_nz_nz_neq_ok : program_logic_goal_for_function! p256_point_add_nz_nz_neq.
 Proof.
+  cbv [spec_of_p256_point_add_nz_nz_neq].
   straightline; repeat straightline_cleanup.
   destruct P as (((x1 & y1) & z1) & p1),  Q as (((x2 & y2) & z2) & p2);
     cbv [proj1_sig proj2_sig fst snd point.to_bytes] in * |-.
@@ -175,6 +304,7 @@ Definition p256_point_add_vartime_if_doubling := func!(p_out, p_P, p_Q) {
 
 Lemma p256_point_add_vartime_if_doubling_ok : program_logic_goal_for_function! p256_point_add_vartime_if_doubling.
 Proof.
+  cbv [spec_of_p256_point_add_vartime_if_doubling].
   repeat straightline.
   straightline_call; repeat straightline. (*iszero*)
   { letexists. ecancel_assumption. }
@@ -336,6 +466,7 @@ Definition p256_point_double := func!(out, in1) {
 
 Lemma p256_point_double_ok : program_logic_goal_for_function! p256_point_double.
 Proof.
+  cbv [spec_of_p256_point_double].
   straightline; repeat straightline_cleanup.
   destruct P as (((x1 & y1) & z1) & p1);
     cbv [proj1_sig proj2_sig fst snd point.to_bytes] in * |-.

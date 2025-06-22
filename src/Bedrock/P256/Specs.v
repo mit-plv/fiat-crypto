@@ -5,6 +5,42 @@ From coqutil Require Import LittleEndianList.
 Import BinInt.
 Local Open Scope Z_scope.
 
+Module Import List.
+  Import Lists.List ListNotations PeanoNat micromega.Lia.
+  Local Open Scope nat_scope.
+
+  Lemma cons_hd_tl [A] (a : A) l : l <> nil -> hd a l :: tl l = l.
+  Proof. case l; cbn; congruence. Qed.
+
+  Lemma tl_chunk [A : Type] (k : nat) (Hk : k <> 0%nat) (bs : list A) :
+    tl (List.chunk k bs) = List.chunk k (List.skipn k bs).
+  Proof.
+    rewrite <-(Nat.mul_1_l k) at 3. rewrite <-List.skipn_chunk by trivial.
+    case List.chunk; trivial.
+  Qed.
+
+  Lemma firstn_le_split n m z : List.firstn n (le_split m z) = le_split (Nat.min n m) z.
+  Proof.
+    apply nth_error_ext; intros i.
+    case (Nat.ltb_spec i (Nat.min n m)) as [].
+    { rewrite nth_error_le_split, nth_error_firstn by trivial.
+      case Nat.ltb_spec; intros; rewrite ?nth_error_le_split; trivial; lia. }
+    rewrite 2(proj2 (nth_error_None _ _)); trivial;
+      rewrite ?length_firstn, ?length_le_split; trivial.
+  Qed.
+
+  (* TODO: move *)
+  Lemma le_split_0_l z : le_split 0 z = nil.
+  Proof. trivial. Qed.
+
+  (* TODO: move *)
+  Lemma le_split_0_r n : le_split n 0 = List.repeat Byte.x00 n.
+  Proof.
+    induction n; trivial.
+    cbn [List.repeat]; unfold le_split; eapply f_equal2; auto.
+  Qed.
+End List.
+
 Module Z.
   Notation to_bytes := le_split.
   Notation of_bytes := le_combine.
@@ -145,7 +181,7 @@ From bedrock2 Require Import ProgramLogic WeakestPrecondition.
 Import ProgramLogic.Coercions.
 From coqutil Require Import Word.Interface OfListWord Separation SeparationLogic.
 From coqutil Require Import letexists.
-From bedrock2 Require Import BasicC64Semantics.
+
 
 From bedrock2 Require Import ListIndexNotations.
 Local Open Scope list_index_scope.
@@ -156,79 +192,25 @@ Import PeanoNat Lia.
 Import Tactics.
 Require Import UniquePose.
 
-From bedrock2Examples Require shrd full_sub full_add full_mul memmove.
 Require Curves.Weierstrass.AffineProofs.
 From bedrock2 Require ToCString.
 From coqutil Require Macros.WithBaseName.
 
 Local Notation "xs $@ a" := (map.of_list_word_at a xs)
   (at level 10, format "xs $@ a").
-Local Notation "$ n" := (match word.of_Z n return word with w => w end) (at level 9, format "$ n").
-Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
+Local Notation "$ n" := (match word.of_Z n return word with w => w end) (only parsing, at level 9, format "$ n").
+Local Notation "p .+ n" := (word.add p (word.of_Z n)) (only parsing, at level 50, format "p .+ n", left associativity).
 Local Unset Printing Coercions.
 
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 Import micromega.Lia Word.Properties.
 
-Module word.
-  Lemma signed_opp_nowrap (x : word) : word.signed x <> -2^63 -> word.signed (word.opp x) = - word.signed x.
-  Proof.
-    pose proof word.signed_range x.
-    rewrite word.signed_opp.
-    rewrite word.swrap_as_div_mod.
-    PreOmega.Z.div_mod_to_equations; lia.
-  Qed.
-
-  Lemma nz_signed (x : word) : word.signed x <> 0 <-> word.unsigned x <> 0.
-  Proof.
-    rewrite word.signed_eq_swrap_unsigned.
-    rewrite word.swrap_as_div_mod.
-    intuition ZnWords.ZnWords.
-  Qed.
-
-  Lemma and_m1_l (x : word) : word.and (word.opp (word.of_Z (1))) x = x.
-  Proof.
-    apply word.unsigned_inj.
-    rewrite word.unsigned_and_nowrap, word.unsigned_opp_nowrap, Z.sub_1_r, <-Z.ones_equiv.
-    2: { rewrite word.unsigned_of_Z_1; inversion 1. }
-    rewrite Z.land_comm, Z.land_ones, word.wrap_unsigned; trivial; blia.
-  Qed.
-End word.
-
-Module Import List.
-  Import Lists.List ListNotations.
-  Local Open Scope nat_scope.
-
-  Lemma cons_hd_tl [A] (a : A) l : l <> nil -> hd a l :: tl l = l.
-  Proof. case l; cbn; congruence. Qed.
-
-  Lemma tl_chunk [A : Type] (k : nat) (Hk : k <> 0%nat) (bs : list A) :
-    tl (List.chunk k bs) = List.chunk k bs[k:].
-  Proof.
-    rewrite <-(Nat.mul_1_l k) at 3. rewrite <-List.skipn_chunk by trivial.
-    case List.chunk; trivial.
-  Qed.
-
-  Lemma firstn_le_split n m z : List.firstn n (le_split m z) = le_split (Nat.min n m) z.
-  Proof.
-    apply nth_error_ext; intros i.
-    case (Nat.ltb_spec i (Nat.min n m)) as [].
-    { rewrite nth_error_le_split, nth_error_firstn by trivial.
-      case Nat.ltb_spec; intros; rewrite ?nth_error_le_split; trivial; lia. }
-    rewrite 2(proj2 (nth_error_None _ _)); trivial;
-      rewrite ?length_firstn, ?length_le_split; trivial.
-  Qed.
-
-  Lemma le_split_0_l z : le_split 0 z = nil.
-  Proof. trivial. Qed.
-
-  Lemma le_split_0_r n : le_split n 0 = List.repeat x00 n.
-  Proof.
-    induction n; trivial.
-    cbn [repeat]; unfold le_split; eapply f_equal2; auto.
-  Qed.
-End List.
+Section WithSemantics.
+Context {width} {BW : Bitwidth.Bitwidth width} {word : word.word width}.
+Context {locals : Interface.map.map string word}.
+Context {mem : Interface.map.map word byte}.
+Context {ext_spec : Semantics.ExtSpec}.
 
 
 #[export] Instance spec_of_br_declassify : spec_of "br_declassify" :=
@@ -350,5 +332,61 @@ Definition br_memcpy := func! (d, s, n) {
   { requires t m := c < 2;
     ensures t' m' := t' = t /\ m' = m /\ r = if Z.eqb c 0 then vz else vnz }.
 
+(* Internal intermediate functions for field arithmetic: *)
+
+#[export] Instance spec_of_u256_shr : spec_of "u256_shr" :=
+  fnspec! "u256_shr" p_out p_x n / out (x : Z) R,
+  { requires t m := m =*> (le_split 32 x)$@p_x /\ m =* out$@p_out * R /\ length out = 32%nat /\
+    0 <= x < 2^256 /\ word.unsigned n < width;
+    ensures t' m := let r : Z := x/2^n in
+          t' = t /\ m =* (le_split 32 r)$@p_out * R }.
+
+Definition spec_of_p256_coord_sub_nonmont : spec_of "p256_coord_sub" :=
+  fnspec! "p256_coord_sub" p_out p_x p_y / out (x y : F p256) R,
+  { requires t m := m =*> (le_split 32 x)$@p_x /\ m =*> (le_split 32 y)$@p_y /\ m =* out$@p_out * R /\ length out = 32%nat;
+    ensures t' m := t' = t /\ m =* (le_split 32 (x-y)%F)$@p_out * R }.
+
+#[export] Instance spec_of_p256_coord_set_minushalf_conditional : spec_of "u256_set_p256_minushalf_conditional" :=
+  fnspec! "u256_set_p256_minushalf_conditional" p_out mask / b out R,
+  { requires t m := m =* out$@p_out * R /\ length out = 32%nat /\ mask = word.broadcast b;
+    ensures t' m := exists r : F p256,
+      t' = t /\ m =* (le_split 32 r)$@p_out * R /\ (r = if b then F.opp (1/(1+1)) else F.zero)
+  }.
+
+End WithSemantics.
+
+From bedrock2 Require Import BasicC64Semantics.
+From bedrock2Examples Require shrd full_sub full_add full_mul memmove.
 #[export] Existing Instance shrd.spec_of_shrd.
 #[export] Instance spec_of_memmove : spec_of "memmove". apply memmove.spec_of_memmove. Defined.
+#[export] Hint Mode Interface.map.map - - : typeclass_instances.
+#[export] Hint Mode word.word - : typeclass_instances.
+
+Goal spec_of "p256_coord_nonzero". exact _. all : fail. Abort.
+
+Module word.
+  Lemma signed_opp_nowrap (x : word) : word.signed x <> -2^63 -> word.signed (word.opp x) = - word.signed x.
+  Proof.
+    pose proof word.signed_range x.
+    rewrite word.signed_opp.
+    rewrite word.swrap_as_div_mod.
+    PreOmega.Z.div_mod_to_equations; lia.
+  Qed.
+
+  Lemma nz_signed (x : word) : word.signed x <> 0 <-> word.unsigned x <> 0.
+  Proof.
+    rewrite word.signed_eq_swrap_unsigned.
+    rewrite word.swrap_as_div_mod.
+    intuition ZnWords.ZnWords.
+  Qed.
+
+  Lemma and_m1_l (x : word) : word.and (word.opp (word.of_Z (1))) x = x.
+  Proof.
+    apply word.unsigned_inj.
+    rewrite word.unsigned_and_nowrap, word.unsigned_opp_nowrap, Z.sub_1_r, <-Z.ones_equiv.
+    2: { rewrite word.unsigned_of_Z_1; inversion 1. }
+    rewrite Z.land_comm, Z.land_ones, word.wrap_unsigned; trivial; blia.
+  Qed.
+End word.
+
+Add Field Private_field : (Algebra.Field.field_theory_for_stdlib_tactic (T:=F p256)).
