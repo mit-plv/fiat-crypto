@@ -7,14 +7,14 @@ Require Import Crypto.Bedrock.Field.Synthesis.New.ComputedOp.
 Require Import Crypto.Bedrock.Field.Synthesis.New.WordByWordMontgomery.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults64.
 Require Import Crypto.Bedrock.Specs.Field.
+Import BasicC64Semantics.
 Import ListNotations.
 
 (* Parameters for Secp256k1 field. *)
 Section Field.
   Definition m : Z := (2^256 - 2^32 - 977)%Z.
 
-  Existing Instances Bitwidth64.BW64
-    Defaults64.default_parameters Defaults64.default_parameters_ok.
+  Local Existing Instances Defaults64.default_parameters Defaults64.default_parameters_ok.
   Definition prefix : string := "secp256k1_"%string.
 
   (* Define Secp256k1 field *)

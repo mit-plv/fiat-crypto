@@ -617,11 +617,15 @@ Module Jacobian.
       fst (add_inequal_impl (proj1_sig P) (proj1_sig Q) false)) _).
     Proof. abstract faster_t_noclear. Defined.
 
-    Definition add_affine_inequal_nz_nz (P : point) (Q : Wpoint) (_ : ~ eq P (of_affine Q)) : point. refine (exist _ (
-      fst (add_inequal_impl (proj1_sig P) (proj1_sig (of_affine Q)) false)) _).
-    Proof. abstract faster_t_noclear. Defined.
+    Hint Unfold add_inequal_impl add_inequal_nz_nz : points_as_coordinates.
 
-    Hint Unfold add_inequal_impl add_inequal_nz_nz add_affine_inequal_nz_nz : points_as_coordinates.
+    Definition add_affine_inequal_nz_nz (P : point) (Q : Wpoint)
+      (_ : ~ eq P (of_affine Q)) (_ : ~ W.eq Q W.zero) : point.
+    refine (exist _ (
+      fst (add_inequal_impl (proj1_sig P) (proj1_sig (of_affine Q)) true)) _).
+    Proof. abstract faster_t. Defined.
+
+    Hint Unfold add_affine_inequal_nz_nz : points_as_coordinates.
 
     Lemma snd_add_inequal_impl (P Q : point) (HP : ~ iszero P) (HQ : ~ iszero Q) :
       snd (add_inequal_impl (proj1_sig P) (proj1_sig Q) false) = true :> bool <-> eq P Q.
@@ -654,32 +658,31 @@ Module Jacobian.
       rewrite to_affine_add_inequal_nz_nz by trivial; reflexivity.
     Qed.
 
-    Lemma add_affine_inequal_nz_nz_correct P Q H H':
-      eq (add_affine_inequal_nz_nz  P Q H) (add_inequal_nz_nz P (of_affine Q) H').
+    Lemma add_affine_inequal_nz_nz_correct P Q H H' H'':
+      eq (add_affine_inequal_nz_nz  P Q H H') (add_inequal_nz_nz P (of_affine Q) H'').
     Proof. faster_t. Qed.
 
-    Lemma to_affine_add_affine_inequal_nz_nz P Q H (_ : ~ iszero P) (_ : ~ W.eq Q W.zero) :
-      W.eq (to_affine (add_affine_inequal_nz_nz P Q H)) (W.add (to_affine P) Q).
+    Lemma to_affine_add_affine_inequal_nz_nz P Q H H' (_ : ~ iszero P) (_ : ~ W.eq Q W.zero) :
+      W.eq (to_affine (add_affine_inequal_nz_nz P Q H H')) (W.add (to_affine P) Q).
     Proof.
       unshelve rewrite @add_affine_inequal_nz_nz_correct, @to_affine_add_inequal_nz_nz, @to_affine_of_affine;
         trivial; try reflexivity.
       rewrite iszero_iff, to_affine_of_affine; trivial.
     Qed.
 
-    Definition add_affine_inequal (P : point) (Q : Wpoint) (H : ~ eq P _) : point :=
+    Definition add_affine_inequal (P : point) (Q : Wpoint) (H : ~ eq P _) H' : point :=
       if dec (snd (proj1_sig P) = 0) then of_affine Q
       else match W.coordinates Q with inr _ => P | _ =>
-      add_affine_inequal_nz_nz P Q H end.
+      add_affine_inequal_nz_nz P Q H H' end.
     Hint Unfold add_affine_inequal : points_as_coordinates.
 
-    Lemma to_affine_add_affine_inequal P Q H :
-      W.eq (to_affine (add_affine_inequal P Q H)) (W.add (to_affine P) Q).
+    Lemma to_affine_add_affine_inequal P Q H H' :
+      W.eq (to_affine (add_affine_inequal P Q H H')) (W.add (to_affine P) Q).
     Proof.
       cbv [add_affine_inequal].
       case dec as [HP|HP]; try (setoid_rewrite iszero_iff in HP; rewrite HP; t).
       case W.coordinates as [|[] ] eqn:E.
-      { rewrite to_affine_add_affine_inequal_nz_nz; trivial; try reflexivity.
-        cbv [W.eq]; rewrite E; cbv [W.coordinates W.zero]; case p; intuition idtac. }
+      { rewrite to_affine_add_affine_inequal_nz_nz; trivial; try reflexivity. }
       eassert (W.eq Q W.zero) as ->. { cbv [W.eq W.zero]. rewrite E. exact I. }
       faster_t.
     Qed.
