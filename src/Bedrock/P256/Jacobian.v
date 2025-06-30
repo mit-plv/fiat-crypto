@@ -545,14 +545,27 @@ rewrite ?length_app, ?length_coord in *.
   ecancel_assumption.
 Qed.
 
-Import BinInt. Local Open Scope Z_scope.
 
-Definition fe_set_1 := func! (o) {
-  o0 = $1; o1 = $0xffffffff00000000; o2 = -$1; o3 = $0xfffffffe;
-  store(o, o0); store(o+$8, o1); store(o+$16, o2); store(o+$24, o3)
-}.
 
-Definition p256_point_add_affine_nz_nz_neq := func! (out, in1, in2) ~> ok {
+
+
+
+Import WeierstrassCurve.
+
+Module Import (coercions) affine.
+  Definition point := @W.point coord eq F.add F.mul a b.
+  Definition add : point -> point -> point :=
+    @W.add coord eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div _ _ _ a b.
+  Coercion to_bytes (p : point) :=
+    match W.coordinates p with
+    | inl (x, y) => coord.to_bytes x ++ coord.to_bytes y
+    | inr _ => coord.to_bytes 0%F ++ coord.to_bytes 0%F
+    end.
+  Lemma length_point (x : point) : length x = 64%nat.
+  Proof. cbv [to_bytes]. BreakMatch.break_match; rewrite ?length_app, ?length_coord; reflexivity. Qed.
+End affine.
+
+Definition p256_point_add_affine_nz_nz_neq := func! (p_out, p_P, p_Q) ~> ok {
   stackalloc 32 as z1z1;
   stackalloc 32 as u2;
   stackalloc 32 as h;
@@ -561,45 +574,201 @@ Definition p256_point_add_affine_nz_nz_neq := func! (out, in1, in2) ~> ok {
   stackalloc 32 as Hsqr;
   stackalloc 32 as Hcub;
 
-  p256_coord_sqr(z1z1, in1.+$32.+$32);
-  p256_coord_mul(u2, in2, z1z1);
-  p256_coord_sub(h, u2, in1);
-  p256_coord_mul(s2, in1.+$32.+$32, z1z1);
-  p256_coord_mul(out.+$32.+$32, h, in1.+$32.+$32);
-  p256_coord_mul(s2, s2, in2.+$32);
-  p256_coord_sub(r, s2, in1.+$32);
+  p256_coord_sqr(z1z1, p_P.+$32.+$32);
+  p256_coord_mul(u2, p_Q, z1z1);
+  p256_coord_sub(h, u2, p_P);
+  p256_coord_mul(s2, p_P.+$32.+$32, z1z1);
+  p256_coord_mul(p_out.+$32.+$32, h, p_P.+$32.+$32);
+  p256_coord_mul(s2, s2, p_Q.+$32);
+  p256_coord_sub(r, s2, p_P.+$32);
   p256_coord_sqr(Hsqr, h);
-  p256_coord_sqr(out, r);
+  p256_coord_sqr(p_out, r);
   p256_coord_mul(Hcub, Hsqr, h);
-  p256_coord_mul(u2, in1, Hsqr);
+  p256_coord_mul(u2, p_P, Hsqr);
 
   unpack! different_x = p256_coord_nonzero(Hcub);
-  unpack! different_y = p256_coord_nonzero(out);
+  unpack! different_y = p256_coord_nonzero(p_out);
   unpack! ok = br_value_barrier(different_x | different_y);
 
-  p256_coord_sub(out, out, Hcub);
-  p256_coord_sub(out, out, u2);
-  p256_coord_sub(out, out, u2);
-  p256_coord_sub(h, u2, out);
-  p256_coord_mul(s2, Hcub, in1.+$32);
+  p256_coord_sub(p_out, p_out, Hcub);
+  p256_coord_sub(p_out, p_out, u2);
+  p256_coord_sub(p_out, p_out, u2);
+  p256_coord_sub(h, u2, p_out);
+  p256_coord_mul(s2, Hcub, p_P.+$32);
   p256_coord_mul(h, h, r); 
-  p256_coord_sub(out.+$32, h, s2)
+  p256_coord_sub(p_out.+$32, h, s2)
 }.
 
-Definition p256_point_add_affine_conditional := func! (out, in1, in2, c) {
-  unpack! p1zero = p256_point_iszero(in1.+$32.+$32);
-  unpack! p2zero = constant_time_is_zero_w(c);
-  stackalloc (3*32) as p_out;
-  unpack! ok = p256_point_add_affine_nz_nz_neq(p_out, in1, in2);
+#[export] Instance spec_of_p256_point_add_affine_nz_nz_neq : spec_of "p256_point_add_affine_nz_nz_neq" :=
+  fnspec! "p256_point_add_affine_nz_nz_neq" p_out p_P p_Q / (out : list byte) (P : point) (Q : affine.point) R ~> ok,
+  { requires t m := m =* out$@p_out * P$@p_P * Q$@p_Q * R /\ length out = 96 :> Z /\
+    ~ Jacobian.iszero P /\ ~ W.eq Q W.zero;
+    ensures t' m :=  exists out, 
+      m =* out$@p_out * P$@p_P * Q$@p_Q * R /\ length out = 96 :> Z /\
+      (ok <> word.of_Z 0 -> exists pfPneqQ pfnzQ, out = (Jacobian.add_affine_inequal_nz_nz P Q pfPneqQ pfnzQ : point)) /\
+      (ok = word.of_Z 0 -> Jacobian.eq P (Jacobian.of_affine Q)) }.
+
+Local Unset Printing Coercions.
+
+Lemma p256_point_add_affine_nz_nz_neq_ok : program_logic_goal_for_function! p256_point_add_affine_nz_nz_neq.
+Proof.
+  cbv [spec_of_p256_point_add_affine_nz_nz_neq].
+  straightline.
+  repeat match goal with H : ?A, G : ?B |- _ =>
+      constr_eq A B;
+      let h := Tactics.head A in
+      lazymatch type of h with context[@spec_of] => clear G end
+  end.
+  repeat straightline_cleanup.
+  rename H2 into Hm.
+
+  destruct P as (((x1 & y1) & z1) & p1), Q as [ [[x2 y2] | [] ] p2];
+    cbv [W.eq W.coordinates W.zero proj1_sig proj2_sig fst snd point.to_bytes affine.to_bytes] in * |-;
+    [|contradiction].
+  progress repeat seprewrite_in_by ptsto_bytes.sep_eq_of_list_word_at_app Hm
+     ltac:(rewrite ?length_app, ?length_coord; trivial; try Lia.lia).
+
+  repeat straightline.
+  repeat seprewrite_in_by ptsto_bytes.array1_iff_eq_of_list_word_at Hm ltac:(Lia.lia).
+
+  rewrite <-(firstn_skipn 32 out) in Hm.
+  rewrite <-(firstn_skipn 32 (List.skipn _ out)) in Hm.
+  rewrite !skipn_skipn in Hm.
+  progress repeat seprewrite_in_by ptsto_bytes.sep_eq_of_list_word_at_app Hm  length_tac.
+  progress change (Z.of_nat 32) with 32 in *.
+  progress repeat (set (List.skipn  _ _) in Hm || set (List.firstn  _ _) in Hm).
+
+  progress repeat (straightline_call; ssplit;
+    [ solve [repeat match goal with
+      | |- True => exact I
+      | |- exists _, _ => letexists
+      | |- _ =>
+          repeat match goal with x := _ : list _ |- _ => subst x end;
+          progress rewrite ?length_coord, ?length_firstn, ?length_skipn; lia
+      | _ => ecancel_assumption
+      end] ..
+    | repeat straightline ]).
+
+  (* stackdealloc *)
+
+  clear Hm; rename H48 into Hm.
+  progress repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm length_tac.
+  progress repeat match type of Hm with context [Array.array ptsto _ _ (coord.to_bytes ?x)] =>
+    unique pose proof (length_coord x) end.
+  repeat straightline.
+  progress repeat seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) Hm length_tac.
+  repeat straightline.
+
+  (* postcondition *)
+
+  eexists; split.
+  { cbv [affine.to_bytes W.coordinates point.to_bytes proj1_sig fst snd].
+    progress repeat seprewrite_in_by ptsto_bytes.list_word_at_app_of_adjacent_eq Hm ltac:(rewrite ?length_coord; listZnWords).
+    ecancel_assumption. }
+  repeat match goal with H: context[sep] |- _ => clear H end; repeat straightline_cleanup.
+  repeat match goal with H: Datatypes.length _ = _ |- _ => clear H end; repeat straightline_cleanup.
+  repeat match goal with H: Z.of_nat (Datatypes.length _) = _ |- _ => clear H end; repeat straightline_cleanup.
+  split. { length_tac. }
+  repeat match goal with x := _ |- _ => subst x end.
+  rewrite word.lor_0_iff, !word.broadcast_0_iff, !Bool.negb_false_iff, !@F.eqb_eq.
+  cbv [Jacobian.eq proj1_sig Jacobian.of_affine Jacobian.of_affine_impl Jacobian.add_affine_inequal_nz_nz W.eq W.coordinates Jacobian.add_inequal_impl fst snd to_bytes W.zero Jacobian.iszero] in *.
+  case Decidable.dec; try contradiction; []; intros _.
+  rewrite ?F.pow_2_r in *.
+  split; intros HE; [unshelve eexists _, _|]; trivial; [|]; repeat straightline_cleanup.
+  { intuition try Field.fsatz. destruct H22; intuition try Field.fsatz. }
+  repeat match goal with H : _ |- _ => apply Hierarchy.zero_product_zero_factor in H; destruct H end;
+  intuition try Field.fsatz.
+Qed.
+
+
+Definition p256_point_add_affine_conditional := func! (p_out, p_P, p_Q, c) {
+  unpack! p1zero = p256_point_iszero(p_P);
+  unpack! p2nonzero = br_broadcast_nonzero(c);
+  p2zero = ~p2nonzero;
+  stackalloc (3*32) as sum;
+  unpack! ok = p256_point_add_affine_nz_nz_neq(sum, p_P, p_Q);
   unpack! ok = br_declassify(p1zero | p2zero | ok);
   stackalloc (3*32) as t;
   br_memset(t, $0, $3*$32);
-  memcxor(t, p_out,  $3*$32,     ~p1zero & ~p2zero);
-  memcxor(t, in1,    $3*$32,     ~p1zero &  p2zero);
-  memcxor(t, in2,    $3*$32,      p1zero & ~p2zero);
-  if !ok { p256_point_double(t, in1) };
-  br_memcpy(out, t, $(3*32))
+  br_memcxor(t, sum,  $3*$32, ~p1zero & ~p2zero);
+  br_memcxor(t, p_P,  $3*$32, ~p1zero &  p2zero);
+  br_memcxor(t, p_Q,  $2*$32,  p1zero & ~p2zero);
+  if !ok { p256_point_double(t, p_P) };
+  br_memcpy(p_out, t, $(3*32))
 }.
+
+#[export] Instance spec_of_p256_point_add_affine_conditional : spec_of "p256_point_add_affine_conditional" :=
+  fnspec! "p256_point_add_affine_conditional" p_out p_P p_Q c / out (P : point) (Q : affine.point),
+  { requires t m := m =* out$@p_out * P$@p_P * Q$@p_Q /\ length out = length P;
+    ensures t' m := t' = t /\ exists out : point,
+      m =* out$@p_out * P$@p_P * Q$@p_Q /\
+      let Q' := if word.eqb c (word.of_Z 0) then W.zero else Q in
+      Jacobian.eq out (Jacobian.add P (Jacobian.of_affine Q'))
+  }%sep.
+
+Lemma p256_point_add_affine_conditional_ok : program_logic_goal_for_function! p256_point_add_affine_conditional.
+Proof.
+  cbv [p256_point_add_affine_conditional].
+  repeat straightline.
+  straightline_call; repeat straightline. (*iszero*)
+  { letexists. ecancel_assumption. }
+  straightline_call; repeat straightline. (*broadcast_nonzero*)
+  (* stackalloc *)
+  seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) H9 ltac:(lia).
+  straightline_call; ssplit. (*add*)
+  { ecancel_assumption. }
+  { length_tac. }
+  (* precpnditions of add, to be moved into premises of postcondition *)
+  1:admit.
+  1:admit.
+  repeat straightline.
+  straightline_call; repeat straightline (* br_declassify *).
+  (* stackalloc *)
+  seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) H16 ltac:(lia).
+  straightline_call; ssplit. (* memset *)
+  { ecancel_assumption. }
+  { ZnWords.ZnWords. }
+  repeat straightline.
+  straightline_call; repeat straightline; ssplit (* memcxor *).
+  { ecancel_assumption. }
+  { rewrite ?repeat_length; trivial. }
+  { length_tac. }
+  straightline_call; repeat straightline; ssplit (* memcxor *).
+  { ecancel_assumption. }
+  { rewrite ?repeat_length; trivial. }
+  { rewrite length_point; trivial. }
+
+  rename H35 into Hm.
+  rewrite <-(firstn_skipn 64 x5) in Hm.
+  seprewrite_in_by ptsto_bytes.sep_eq_of_list_word_at_app Hm ltac:(length_tac || listZnWords).
+
+  straightline_call; repeat straightline; ssplit (* memcxor *).
+  { ecancel_assumption. }
+  { listZnWords. }
+  { rewrite ?affine.length_point. listZnWords. }
+
+
+  (*
+  repeat
+   rewrite ?length_coord, ?length_point, ?length_app, ?length_firstn,
+    ?length_skipn, ?length_le_split, ?length_nil, ?Nat.min_l by
+    (trivial; lia).
+    length_tac.
+  { rewrite length_point; trivial. }
+
+  cbv [spec_of_p256_point_add_affine_nz_nz_neq].
+  straightline.
+  repeat match goal with H : ?A, G : ?B |- _ =>
+      constr_eq A B;
+      let h := Tactics.head A in
+      lazymatch type of h with context[@spec_of] => clear G end
+  end.
+  repeat straightline_cleanup.
+  rename H2 into Hm.
+   *) Abort.
+
+
+
 
 Definition sc_halve := func!(y, x) {
   unpack! m = br_value_barrier(-(load(x)&$1)); (* is x odd? *)
@@ -630,4 +799,9 @@ Definition sc_sub := func!(out, x, y) {
   store(out+$8, x12);
   store(out+$16, x14);
   store(out+$24, x16)
+}.
+
+Definition fe_set_1 := func! (o) {
+  o0 = $1; o1 = $0xffffffff00000000; o2 = -$1; o3 = $0xfffffffe;
+  store(o, o0); store(o+$8, o1); store(o+$16, o2); store(o+$24, o3)
 }.
