@@ -41,6 +41,7 @@ Import LittleEndianList.
 Import ListNotations.
 Import ProgramLogic.Coercions.
 Import WeakestPrecondition.
+Import BasicC64Semantics.
 
 Local Existing Instance field_parameters.
 Local Instance frep256k1 : Field.FieldRepresentation := field_representation Field256k1.m.

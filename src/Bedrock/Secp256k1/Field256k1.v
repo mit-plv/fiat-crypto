@@ -8,6 +8,7 @@ Require Import Crypto.Bedrock.Field.Synthesis.New.WordByWordMontgomery.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults64.
 Require Import Crypto.Bedrock.Specs.Field.
 Import ListNotations.
+Import BasicC64Semantics.
 
 (* Parameters for Secp256k1 field. *)
 Section Field.
