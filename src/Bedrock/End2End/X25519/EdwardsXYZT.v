@@ -101,6 +101,17 @@ Definition double := func! (ox, oy, oz, ota, otb, X, Y, Z, Ta, Tb) {
   fe25519_mul(oz, cZ, cT)
 }.
 
+(* Converting a normal point to a cached point to prepare it for readdition. *)
+Definition to_cached := func! (ohalf_ymx, ohalf_ypx, oz, otd, x, y, z, ta, tb, d) {
+  fe25519_sub(ohalf_ymx, y, x);
+  fe25519_half(ohalf_ymx, ohalf_ymx); (* This doesn't exist yet, work with spec for now. *)
+  fe25519_add(ohalf_ypx, y, x);
+  fe25519_half(ohalf_ypx, ohalf_ypx);
+  fe25519_mul(otd, ta, tb);
+  fe25519_mul(otd, otd, d);
+  fe25519_copy(oz, z)
+}.
+
 (* Equivalent of m1_readd in src/Curves/Edwards/XYZT/Readdition.v *)
 Definition readd := func! (ox, oy, oz, ota, otb, X1, Y1, Z1, Ta1, Tb1, half_YmX, half_YpX, Z2, Td) {
   stackalloc 40 as A;
@@ -136,7 +147,6 @@ Section WithParameters.
           {nonsquare_d : forall x, (F.mul x x) <> d}.
   Context {a_eq_minus1:a = F.opp F.one} {twice_d} {k_eq_2d:twice_d = (F.add d d)} {nonzero_d: d<>F.zero}.
 
-Local Coercion F.to_Z : F >-> Z.
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
 Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 
@@ -153,6 +163,12 @@ Local Notation m1double :=
            (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
            (a:=a)(d:=d)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)
            (a_eq_minus1:=a_eq_minus1)(twice_d:=twice_d)(k_eq_2d:=k_eq_2d)).
+Local Notation m1_prep :=
+  (m1_prep(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
+                  (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
+                  (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
+                  (a:=a)(d:=d)(nonzero_a:=nonzero_a)(a_eq_minus1:=a_eq_minus1)
+                  (twice_d:=twice_d)(k_eq_2d:=k_eq_2d)(nonzero_d:=nonzero_d)). 
 Local Notation m1_readd :=
   (m1_readd(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
            (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
@@ -160,6 +176,20 @@ Local Notation m1_readd :=
            (a:=a)(d:=d)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)
            (a_eq_minus1:=a_eq_minus1)(twice_d:=twice_d)(k_eq_2d:=k_eq_2d)(nonzero_d:=nonzero_d)).
 
+Instance spec_of_fe25519_half : spec_of "fe25519_half" :=
+  fnspec! "fe25519_half"
+    (result_location input_location: word) / (old_result input: felem)
+    (R: _ -> Prop),
+  { requires t m :=
+    bounded_by loose_bounds input /\
+    (exists Ra, m =* (FElem input_location input) * Ra) /\
+    m =* (FElem result_location old_result) * R;
+    ensures t' m' :=
+      t = t' /\
+      exists result,
+        bounded_by tight_bounds result /\
+        feval result = F.div (feval input) (F.add F.one F.one) /\
+        m' =* (FElem result_location result)  * R}.
 
 Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
   fnspec! "add_precomputed"
@@ -209,6 +239,34 @@ Global Instance spec_of_double : spec_of "double" :=
         bounded_by tight_bounds otb' /\
         m' =* (FElem XK X) * (FElem YK Y) * (FElem ZK Z) * (FElem TaK Ta) * (FElem TbK Tb) * (FElem oxK ox') * (FElem oyK oy') * (FElem ozK oz') * (FElem otaK ota') * (FElem otbK otb') * R }.
 
+Global Instance spec_of_to_cached: spec_of "to_cached" :=
+  fnspec! "to_cached"
+    (ohalf_ymxK ohalf_ypxK ozK otdK xK yK zK taK tbK dK : word) /
+    (ohalf_ymx ohalf_ypx oz otd x y z ta tb d1 : felem) (p: point) (R: _ -> Prop),
+  { requires t m :=
+      coordinates p = ((feval x), (feval y), (feval z), (feval ta), (feval tb)) /\
+      d = (feval d1) /\
+      bounded_by tight_bounds x /\
+      bounded_by tight_bounds y /\
+      bounded_by tight_bounds z /\
+      bounded_by tight_bounds ta /\
+      bounded_by tight_bounds tb /\
+      bounded_by tight_bounds d1 /\
+      m =* (FElem xK x) * (FElem yK y) * (FElem zK z) * (FElem taK ta) * (FElem tbK tb) *
+           (FElem ohalf_ymxK ohalf_ymx) * (FElem ohalf_ypxK ohalf_ypx) * (FElem ozK oz) * (FElem otdK otd) *
+           (FElem dK d1) * R;
+    ensures t' m' :=
+      t = t' /\
+     exists ohalf_ymx' ohalf_ypx' oz' otd',
+       cached_coordinates (@m1_prep p) = ((feval ohalf_ymx'), (feval ohalf_ypx'), (feval oz'), (feval otd')) /\
+       bounded_by tight_bounds ohalf_ymx' /\
+       bounded_by tight_bounds ohalf_ypx' /\
+       bounded_by tight_bounds oz' /\
+       bounded_by tight_bounds otd' /\
+       m' =* (FElem xK x) * (FElem yK y) * (FElem zK z) * (FElem taK ta) * (FElem tbK tb) *
+             (FElem ohalf_ymxK ohalf_ymx') * (FElem ohalf_ypxK ohalf_ypx') * (FElem ozK oz') * (FElem otdK otd') *
+             (FElem dK d1) * R }.
+
 Global Instance spec_of_readd : spec_of "readd" :=
   fnspec! "readd"
     ( oxK oyK ozK otaK otbK X1K Y1K Z1K Ta1K Tb1K half_YmXK half_YpXK Z2K TdK : word) /
@@ -245,6 +303,7 @@ Local Instance spec_of_fe25519_carry_add : spec_of "fe25519_carry_add" := Field.
 Local Instance spec_of_fe25519_sub : spec_of "fe25519_sub" := Field.spec_of_BinOp bin_sub.
 Local Instance spec_of_fe25519_carry_sub : spec_of "fe25519_carry_sub" := Field.spec_of_BinOp bin_carry_sub.
 Local Instance spec_of_fe25519_from_word : spec_of "fe25519_from_word" := Field.spec_of_from_word.
+Local Instance spec_of_fe26619_copy: spec_of "fe25519_copy" := Field.spec_of_felem_copy.
 
 Local Arguments word.rep : simpl never.
 Local Arguments word.wrap : simpl never.
@@ -315,6 +374,22 @@ Proof.
   (* Now set Strategy precedence... *)
   Strategy -1000 [bin_outbounds bin_add].
   reflexivity. (* ...and completes immediately *)
+Qed.
+
+Lemma to_cached_ok: program_logic_goal_for_function! to_cached.
+Proof.
+  repeat single_step. repeat straightline.
+  
+  exists x1, x3, z, x5; ssplit; try solve_bounds; try solve_mem.
+  
+  destruct p. 
+  cbv [bin_model bin_mul bin_add bin_carry_add bin_sub coordinates proj1_sig] in *.
+  cbv match beta delta [m1_prep cached_coordinates proj1_sig].
+  rewrite H31, H28, H26, H22, H20, H16.
+  simpl. rewrite H6. auto.
+
+    (* Without this, resolution of cbv stalls out Qed. *)
+  Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_model cached_coordinates proj1_sig bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
 Qed.
 
 Lemma add_precomputed_ok : program_logic_goal_for_function! add_precomputed.
