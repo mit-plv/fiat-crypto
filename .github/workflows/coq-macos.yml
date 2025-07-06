@@ -20,7 +20,7 @@ jobs:
         # macOS 12, 13 are x86_64; macOS 14 is arm64
         include:
         - os: { name: 'macOS 13', arch: 'x86_64', runs-on: 'macos-13' }
-          ocaml-compiler: '4.11.1'
+          ocaml-compiler: '4.13.0'
         - os: { name: 'macOS 14', arch: 'arm64' , runs-on: 'macos-14' }
           ocaml-compiler: '4.14.2'
 
