@@ -20,7 +20,7 @@ jobs:
         # macOS 12, 13 are x86_64; macOS 14 is arm64
         include:
         - os: { name: 'macOS 13', arch: 'x86_64', runs-on: 'macos-13' }
-          ocaml-compiler: '4.11.1'
+          ocaml-compiler: '4.13.0'
         - os: { name: 'macOS 14', arch: 'arm64' , runs-on: 'macos-14' }
           ocaml-compiler: '4.14.2'
 
@@ -71,8 +71,6 @@ jobs:
       run: opam exec -- etc/ci/github-actions-make.sh -j2 pre-standalone-extracted
     - name: all
       run: opam exec -- etc/ci/github-actions-make.sh -j2 all
-      if: ${{ matrix.os.arch != 'arm64' }}
-      # js_of_ocaml is too heavy for M1 GH Action runners which have only 7GB RAM, cf https://github.com/ocsigen/js_of_ocaml/issues/1612, https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners#standard-github-hosted-runners-for-public-repositories
     - run: find . -name "*.timing" | xargs tar -czvf timing-files.tgz
       if: failure()
     - name: upload generated timing files
@@ -85,7 +83,6 @@ jobs:
       run: opam exec -- etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
     - name: install-standalone-js-of-ocaml
       run: opam exec -- etc/ci/github-actions-make.sh install-standalone-js-of-ocaml
-      if: ${{ matrix.os.arch != 'arm64' }}
     - name: only-test-amd64-files-lite
       run: opam exec -- etc/ci/github-actions-make.sh -j2 only-test-amd64-files-lite SLOWEST_FIRST=1
 
