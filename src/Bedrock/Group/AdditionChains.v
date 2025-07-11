@@ -585,11 +585,6 @@ Section FElems.
 
         instantiate (2 := pout). instantiate (1 := Rr).
 
-        About fe25519.
-        Print UnOp.
-        Print Build_UnOp.
-        Search UnOp.
-
         eapply H6.
         compile_step.
 

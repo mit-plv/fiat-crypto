@@ -675,8 +675,10 @@ Section Scalars.
              (LittleEndianList.le_split (Z.to_nat bytes_per_word)
              (word.unsigned x))).
   Proof.
-    unfold scalar, truncated_word, truncated_scalar, littleendian, ptsto_bytes.ptsto_bytes.
-    rewrite HList.tuple.to_list_of_list; reflexivity.
+    unfold scalar, truncated_word, truncated_scalar.
+    symmetry; eapply array1_iff_eq_of_list_word_at; trivial.
+    rewrite length_le_split.
+    case BW as [ [ -> | -> ] ]; cbv; discriminate.
   Qed.
 
   Lemma truncated_scalar_one_ptsto_iff1 :
@@ -685,8 +687,12 @@ Section Scalars.
         (truncated_scalar access_size.one addr x)
         (ptsto addr (Byte.byte.of_Z x)).
   Proof. intros.
-    unfold scalar, truncated_word, truncated_scalar, littleendian, ptsto_bytes.ptsto_bytes.
-    rewrite HList.tuple.to_list_of_list. unfold Memory.bytes_per, le_split, array.
+    unfold scalar, truncated_word, truncated_scalar.
+    etransitivity. {
+      symmetry; eapply array1_iff_eq_of_list_word_at; trivial.
+      rewrite length_le_split.
+      case BW as [ [ -> | -> ] ]; cbv; discriminate. }
+    unfold Memory.bytes_per, le_split, array.
     cancel.
   Qed.
 
