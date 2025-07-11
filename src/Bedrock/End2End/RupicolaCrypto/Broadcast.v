@@ -639,7 +639,7 @@ Section with_parameters.
                                 (expr.op bopname.add a_var
                                                  (expr.op bopname.mul idx_var sz_word)))
                      scratch.
-  Proof using T_Fits_ok locals_ok mem_ok word_ok.
+  Proof using BW T_Fits_ok locals_ok mem_ok word_ok.
     unfold broadcast_expr; intuition idtac.
     repeat straightline.
     exists a_ptr; intuition idtac.
@@ -703,7 +703,7 @@ Section with_parameters.
            (expr.op bopname.add a_var
               (expr.op bopname.mul idx_var sz_word)))
         a_data.
-  Proof using T_Fits_ok locals_ok mem_ok word_ok.
+  Proof using T_Fits_ok locals_ok mem_ok word_ok BW.
     unfold broadcast_expr; intuition idtac.
     repeat straightline.
     exists a_ptr; intuition idtac.
@@ -799,25 +799,11 @@ Section with_parameters.
       reflexivity.
     }
     intros ptr t m.
-    split.
-    {
-      intro H.
-      unfold  truncated_word, truncated_scalar.
-      cbn.
-      rewrite word.unsigned_of_Z_nowrap.
-      rewrite word.byte_of_Z_unsigned.
-      ecancel_assumption.
-      apply byte_in_word_bounds.
-    }
-    {
-      intro H.
-      unfold truncated_word, truncated_scalar in H.
-      cbn in H.
-      rewrite word.unsigned_of_Z_nowrap in H.
-      rewrite word.byte_of_Z_unsigned in H.
-      ecancel_assumption.
-      apply byte_in_word_bounds.
-    }
+    cbv [truncated_word truncated_scalar].
+    simpl le_split.
+    rewrite word.unsigned_of_Z_nowrap, word.byte_of_Z_unsigned by apply byte_in_word_bounds.
+    rewrite OfListWord.map.of_list_word_singleton.
+    split; cbv [sepclause_of_map ptsto] in *; auto.
   Qed.
 
 

@@ -18,7 +18,7 @@ Require Import Crypto.Bedrock.Field.Common.Arrays.ByteBounds.
 Local Open Scope Z_scope.
 
 Section Bignum.
-  Import bedrock2.Memory bedrock2.ptsto_bytes.
+  Import bedrock2.Memory.
   Context  {width} {word : Interface.word width} {mem : map.map word Init.Byte.byte}.
 
   Local Notation k := (bytes_per_word width).
